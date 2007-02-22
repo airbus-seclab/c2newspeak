@@ -17,7 +17,6 @@ initdepend:
 depend: initdepend $(DIR)
 
 clean: $(DIR)
-	$(RM) $(DOC_DIR)*
 	$(RM) *~
 
 test: newspeak npkstats
