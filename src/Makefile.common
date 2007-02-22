@@ -1,0 +1,61 @@
+include ../config
+
+# commands
+RM = rm -f
+
+OCAMLLEX = ocamllex
+OCAMLYACC = ocamlyacc
+OCAMLC=ocamlc
+OCAMLOPT=ocamlopt
+OCAMLDEP=ocamldep
+OCAMLDOC=ocamldoc
+
+LIB  = unix.cma str.cma nums.cma $(CIL)/cil.cma
+LIBX = $(LIB:.cma=.cmxa)
+FLAGS=-I $(CIL) $(addprefix -I ../, $(DIR))
+MLI  = $(addsuffix .mli, $(OBJ))
+CMI  = $(addsuffix .cmi, $(OBJ))
+ML   = $(addsuffix .ml, $(OBJ))
+CMO  = $(addsuffix .cmo, $(OBJ))
+CMX  = $(addsuffix .cmx, $(OBJ))
+O    = $(addsuffix .o, $(OBJ))
+DOC_FILES = $(MLI) $(DOC_ML_FILES)
+
+.PHONY: all clean doc depend
+
+all: cilenv $(CMX) $(TGT)
+
+$(TGT): $(CMX)
+	$(OCAMLOPT) $(FLAGS) -o $(TGT) $(LIBX) $(CMX)
+
+# if we want to have bytecode
+#$(TGT): $(CMO)
+#	$(OCAMLC) $(FLAGS) -o $(TGT) $(LIB) $(CMO)
+
+doc: cilenv $(DOC_FILES)
+	-mkdir $(DOC_DIR)
+	$(OCAMLDOC) -d  $(DOC_DIR) -html -m A $(FLAGS) $(DOC_FILES)
+
+
+# Common rules
+.SUFFIXES: .ml .mli .cmo .cmi .cmx
+
+.ml.cmo: cilenv
+	$(OCAMLC) $(FLAGS) -c $<
+
+.mli.cmi: cilenv
+	$(OCAMLC) $(FLAGS) -c $<
+
+.ml.cmx: cilenv
+	$(OCAMLOPT) $(FLAGS) -c $<
+
+# Clean up
+clean:
+	$(RM) -r $(DOC_DIR)
+	$(RM) $(TGT) $(TGT).exe
+	$(RM) ../scalars/natural.ml $(CMI) $(CMO) $(CMX) $(O)
+	$(RM) *~
+
+# Dependencies
+depend:
+	$(OCAMLDEP) $(FLAGS) $(MLI) $(ML) > .depend
