@@ -1,5 +1,3 @@
-include ../config
-
 # commands
 RM = rm -f
 
@@ -23,7 +21,7 @@ DOC_FILES = $(MLI) $(DOC_ML_FILES)
 
 .PHONY: all clean doc depend
 
-all: cilenv $(CMX) $(TGT)
+all: $(CMX) $(TGT)
 
 $(TGT): $(CMX)
 	$(OCAMLOPT) $(FLAGS) -o $(TGT) $(LIBX) $(CMX)
@@ -32,7 +30,7 @@ $(TGT): $(CMX)
 #$(TGT): $(CMO)
 #	$(OCAMLC) $(FLAGS) -o $(TGT) $(LIB) $(CMO)
 
-doc: cilenv $(DOC_FILES)
+doc: $(DOC_FILES)
 	-mkdir $(DOC_DIR)
 	$(OCAMLDOC) -d  $(DOC_DIR) -html -m A $(FLAGS) $(DOC_FILES)
 
@@ -40,13 +38,13 @@ doc: cilenv $(DOC_FILES)
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
 
-.ml.cmo: cilenv
+.ml.cmo:
 	$(OCAMLC) $(FLAGS) -c $<
 
-.mli.cmi: cilenv
+.mli.cmi:
 	$(OCAMLC) $(FLAGS) -c $<
 
-.ml.cmx: cilenv
+.ml.cmx:
 	$(OCAMLOPT) $(FLAGS) -c $<
 
 # Clean up
