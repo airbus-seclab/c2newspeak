@@ -1,0 +1,10 @@
+syntax: glob
+*~
+**/.depend
+**/cil2newspeak
+**/cil2newspeak.exe
+**/npkstats
+**/npkstats.exe
+
+syntax: regexp
+(.*/)?\#[^/]*\#$
