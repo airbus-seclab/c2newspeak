@@ -3,7 +3,7 @@ open Newspeak
 let visit_unop x =
   match x with
       Belongs _ -> Npkstats.count Npkstats.array
-    | Coerce _ | Not | BNot | Cast _ | PtrToInt _ -> ()
+    | Coerce _ | Not | BNot _ | Cast _ | PtrToInt _ -> ()
 
 let visit_binop x =
   match x with
@@ -11,7 +11,7 @@ let visit_binop x =
     | PlusI | MinusI | MultI | DivI | Mod
     | PlusF _ | MinusF _ | MultF _ | DivF _
     | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt 
-    | MinusPP _ | Ge _ | Gt _ | Eq _ | Ne _ -> ()
+    | MinusPP | Ge _ | Gt _ | Eq _ | Ne _ -> ()
 
 let rec visit_lval x =
   match x with

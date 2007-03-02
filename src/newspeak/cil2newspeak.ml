@@ -370,7 +370,9 @@ and translate_exp e =
 	
     | UnOp (BNot, e, t) -> begin
 	match translate_typ t with
-	    K.Scalar (K.Int int_t) -> K.UnOp (K.BNot, translate_exp e)
+	    K.Scalar (K.Int int_t) -> 
+	      let b = K.domain_of_typ int_t in
+		K.UnOp (K.BNot b, translate_exp e)
 	  | _ -> error "Cil2newspeak.translate.translate_exp: integer type expected"
       end
 	
@@ -460,8 +462,9 @@ and translate_exp e =
     | BinOp (MinusPP, e1, e2, t) -> begin
 	match translate_typ (typeOf e1), translate_typ (typeOf e2), translate_typ t with
 	  | K.Scalar K.Ptr, K.Scalar K.Ptr, K.Scalar K.Int int_t -> 
-	      let op = K.MinusPP (K.domain_of_typ int_t) in 
-		K.BinOp (op, translate_exp e1, translate_exp e2)
+	      let v1 = translate_exp e1 in
+	      let v2 = translate_exp e2 in
+		K.make_int_coerce int_t (K.BinOp (K.MinusPP, v1, v2))
 	  | _ ->
 	      error ("Cil2newspeak.translate.translate_exp: data pointer type expected")
       end

@@ -56,7 +56,7 @@ and unop =
     Belongs of (Int64.t * Int64.t)
   | Coerce of (Int64.t * Int64.t)
   | Not
-  | BNot
+  | BNot of (Int64.t * Int64.t)
   | PtrToInt of ikind
   | Cast of (scalar_t * scalar_t)
 
@@ -68,7 +68,7 @@ and binop =
   | Shiftlt
   | Shiftrt
   | PlusPI
-  | MinusPP of (Int64.t * Int64.t)
+  | MinusPP
   | Ge of scalar_t | Gt of scalar_t
   | Eq of scalar_t | Ne of scalar_t
 
