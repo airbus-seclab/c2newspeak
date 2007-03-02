@@ -295,11 +295,11 @@ and translate_cast t e =
 			     ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
 		K.UnOp (K.PtrToInt (sign, sz), translate_exp e)
 		  
-	  | K.Scalar K.Ptr, K.Scalar (K.Int (_, sz))
+	  | (K.Scalar K.Ptr, K.Scalar (K.Int (_, sz) as int_t))
 	      when sz = pointer_size && !castor_allowed ->
 	      print_warning ("probable invalid cast '"^(string_of_type (typeOf e))^"' -> '"
 			     ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
-		translate_exp e
+		K.UnOp (K.Cast (int_t, K.Ptr), translate_exp e)
 		  
 	  | K.Scalar (K.Ptr as kt'), K.Scalar (K.FunPtr as kt) 
 	      when !castor_allowed ->
