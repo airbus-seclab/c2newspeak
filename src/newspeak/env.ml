@@ -266,7 +266,7 @@ let get_glb_decls_inits translate_exp =
     List.iter extract_cstrdecl (List.rev !cstr_list);
     print_debug "Processing global variables";
     total_nb := List.length !glb_list;
-    print_debug ("Number of global variables: "^(string_of_int !total_nb))
+    print_debug ("Number of global variables: "^(string_of_int !total_nb));
     List.iter extract_glbdecl (List.rev !glb_list);
     print_debug "Global variables processing over";
     Hashtbl.clear glb_tabl;

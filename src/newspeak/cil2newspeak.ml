@@ -250,7 +250,11 @@ let rec translate_const c =
     | CStr s -> get_cstr s
     | CChr c -> K.Const (K.CInt64 (Int64.of_int (Char.code c))) 
 	
-    | CReal (f, _, _) -> K.Const (K.Float64 f)
+    | CReal (f, _, Some s) -> K.Const (K.CFloat (f, s))
+    | CReal (f, _, None) ->
+	let s = string_of_float f in
+	  print_warning ("No string representation available for const "^s);
+	  K.Const (K.CFloat (f, s))
 	
     | CWStr _ | CEnum _
 	-> error ("Cil2newspeak.translate.translate_const")
@@ -367,7 +371,7 @@ and translate_exp e =
 	      (* TODO: check this transformation is really correct 
 		 i.e. source and destination expression have the same 
 		 semantics *)
-	      K.BinOp (K.MinusF sz, K.exp_of_float 0., translate_exp e)
+	      K.BinOp (K.MinusF sz, K.zero_f, translate_exp e)
 	  | _ -> error ("Cil2newspeak.translate.translate_exp: integer or float type expected")
       end
 	

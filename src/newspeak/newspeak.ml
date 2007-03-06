@@ -41,7 +41,7 @@ and exp =
 and cte = 
     CInt64 of Int64.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
-  | Float64 of float
+  | CFloat of float * string
   | Nil
 
 and unop =
@@ -105,10 +105,10 @@ and location = string * int * int
 (* Constants *)
 (*-----------*)
 
-let locUnknown = ("", -1, -1)
-
 let zero = Const (CInt64 (Int64.zero))
+let zero_f = Const (CFloat (0., "0."))
 
+let locUnknown = ("", -1, -1)
 
 
 
@@ -156,8 +156,6 @@ let init_of_string str =
 	res := (i, char_typ, exp_of_int c)::!res
     done;
     (len + 1, !res)
-
-let exp_of_float f = Const (Float64 f)
 
 
 let simplify_gotos blk =
@@ -343,7 +341,7 @@ let string_of_fid fid = fid
 let string_of_cte c =
   match c with
       CInt64 c -> Int64.to_string c
-    | Float64 f -> string_of_float f
+    | CFloat (_, s) -> s
     | Nil -> "nil"
 	
 

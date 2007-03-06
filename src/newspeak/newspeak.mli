@@ -49,7 +49,7 @@ and exp =
 and cte = 
     CInt64 of Int64.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
-  | Float64 of float
+  | CFloat of float * string
   | Nil
 
 and unop =
@@ -111,6 +111,7 @@ and location = string * int * int
 (** {1 Constants} *)
 
 val zero : exp
+val zero_f : exp
 
 val locUnknown : location
 
@@ -149,9 +150,6 @@ val init_of_string : string -> (int * (size_t * scalar_t * exp) list)
 
 (** [exp_of_int i] wraps i into a Newspeak expression *)
 val exp_of_int : int -> exp
-
-(** [exp_of_float f] wraps f into a Newspeak expression *)
-val exp_of_float : float -> exp
 
 (** Deletion of useless Gotos and Labels *)
 val simplify_gotos : blk -> blk
