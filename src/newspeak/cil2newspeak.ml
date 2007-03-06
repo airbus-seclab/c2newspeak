@@ -264,6 +264,9 @@ and translate_cast t e =
 	
     | t, e -> begin
 	match translate_typ t, translate_typ (typeOf e) with
+	    (K.Scalar (K.Int k1), K.Scalar (K.Int k2)) when k1 = k2 ->
+	      translate_exp e
+
 	  | K.Scalar (K.Int int_t), K.Scalar (K.Int _) ->
 	      K.make_int_coerce int_t (translate_exp e)
 		
@@ -471,7 +474,7 @@ and translate_exp e =
 	
     | Lval lv -> begin
 	match (translate_typ (typeOfLval lv)) with
-	  | K.Scalar s -> K.Lval (translate_lval lv, s)
+	    K.Scalar s -> K.Lval (translate_lval lv, s)
 	  | _ -> error ("Cil2newspeak.translate.translate_exp: "
 			^"scalar type expected for left value "
 			^(string_of_lval lv))
@@ -626,15 +629,46 @@ and translate_set lval typ e =
     | _ -> error "Cil2newspeak.translate.translate_set: invalid type"
 	
 
+(* TODO: either remove Not or remove Ne. Need to choose. *)
 and translate_if status e stmts1 stmts2 =
+  let if_loc = !cur_loc in
+  let (e, t) = 
+    match translate_typ (typeOf e) with
+	K.Scalar (K.Int _ as t) -> (e, t)
+      | K.Scalar (K.Ptr|K.FunPtr as t) -> (BinOp (Ne, e, null, intType), t)
+      | _ -> error ("Cil2newspeak.translate.translate_if: bad expression \""
+		    ^(string_of_exp e)^"\"")
+  in
+  let rec normalize e =
+    match e with
+	(* TODO: beware is the type t here really the same ? *)
+      | K.UnOp (K.Not, e) -> K.negate (normalize e)
+      | K.BinOp ((K.Ge _|K.Gt _|K.Eq _|K.Ne _), _, _) -> e
+      | _ -> K.BinOp (K.Ne t, e, K.zero)
+  in
+  let cond1 = normalize (translate_exp e) in
+  let cond2 = K.negate cond1 in
+  let body1 = translate_stmts status stmts1 in
+  let body2 = translate_stmts status stmts2 in
+    [K.ChooseAssert [([cond1], body1); ([cond2], body2)], if_loc]
+
+(*
+  let if_loc = !cur_loc in
+  let cond1 = translate_bool_exp e in
+  let cond2 = K.negate cond1
+
+
   match e with
     | UnOp (LNot, e', _) -> translate_if status e' stmts2 stmts1
 	
     | BinOp (Ge, _, _, _) | BinOp (Gt, _, _, _) | BinOp (Le, _, _, _) 
     | BinOp (Lt, _, _, _) | BinOp (Ne, _, _, _) | BinOp (Eq, _, _, _) ->
 	  let if_loc = !cur_loc in
+	    print_endline (Cilutils.string_of_exp e);
 	  let cond1 = translate_exp e in
+	    print_endline (K.string_of_exp cond1);
 	  let cond2 = K.negate cond1 in
+	    print_endline (K.string_of_exp cond2);
 	  let body1 = translate_stmts status stmts1 in
 	  let body2 = translate_stmts status stmts2 in
 	    [K.ChooseAssert [([cond1],body1); ([cond2], body2)], if_loc]
@@ -645,11 +679,11 @@ and translate_if status e stmts1 stmts2 =
 		let e = BinOp (Ne, e, CastE (typeOf e, zero), intType) in 
 		  translate_if status e stmts1 stmts2
 	    | K.Scalar K.Ptr | K.Scalar K.FunPtr ->
-		translate_if status (BinOp (Ne, e, null, intType)) stmts1 stmts2
+  translate_if status (BinOp (Ne, e, null, intType)) stmts1 stmts2
  	    | _ -> error ("Cil2newspeak.translate.translate_if: bad expression \""
 			  ^(string_of_exp e)^"\"");
       end
-
+*)
 
   (** Returns a set of blocks, each representing a choice of the case 
       statement. Each case is translated by appending a guard.

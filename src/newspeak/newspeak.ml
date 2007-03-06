@@ -145,15 +145,6 @@ let make_int_coerce int_t e =
 let make_belongs len e =
   UnOp (Belongs (Int64.zero, (Int64.of_int (len-1))), e)
 
-let rec negate exp =
-  match exp with
-    | BinOp (Ge t, e1, e2) -> BinOp (Gt t, e2, e1)
-    | BinOp (Gt t, e1, e2) -> BinOp (Ge t, e2, e1)
-    | BinOp (Ne t, e1, e2) -> BinOp (Eq t, e1, e2)
-    | BinOp (Eq t, e1, e2) -> BinOp (Ne t, e1, e2)
-    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
-    | _ -> invalid_arg "Newspeak.negate"
-
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
 let init_of_string str = 
@@ -389,7 +380,7 @@ and string_of_binop op =
     | Ge _ -> ">="
     | Gt _ -> ">"
     | Ne _ -> "<>"
-    | Eq _ -> "="
+    | Eq _ -> "=="
 
 
 let rec string_of_lval decls lv =
@@ -574,3 +565,14 @@ let dump (assumptions, gdecls, fundecs) =
     String_map.iter dump_fundec !funs;
     handle_globals gdecls;
     clear_tables ()
+
+let rec negate exp =
+  match exp with
+    | BinOp (Ge t, e1, e2) -> BinOp (Gt t, e2, e1)
+    | BinOp (Gt t, e1, e2) -> BinOp (Ge t, e2, e1)
+    | BinOp (Ne t, e1, e2) -> BinOp (Eq t, e1, e2)
+    | BinOp (Eq t, e1, e2) -> BinOp (Ne t, e1, e2)
+    | UnOp (Not, e) -> e
+    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
+    | _ -> invalid_arg "Newspeak.negate"
+
