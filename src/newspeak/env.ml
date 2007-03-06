@@ -260,17 +260,15 @@ let get_glb_decls_inits translate_exp =
       if !verb_debug then begin
 	processed := !processed + 1;
 	let progress = !processed*100/(!total_nb) in
-	  prerr_string ("Progress: "^(string_of_int progress)^"%\r")
+	  prerr_string ("Progress: "^(string_of_int progress)^"%\n")
       end
   in
     List.iter extract_cstrdecl (List.rev !cstr_list);
-    if !verb_debug then begin
-      print_debug "Processing global variables";
-      total_nb := List.length !glb_list;
-      print_debug ("Number of global variables: "^(string_of_int !total_nb))
-    end;
+    print_debug "Processing global variables";
+    total_nb := List.length !glb_list;
+    print_debug ("Number of global variables: "^(string_of_int !total_nb))
     List.iter extract_glbdecl (List.rev !glb_list);
-    if !verb_debug then print_debug "Global variables processing over";
+    print_debug "Global variables processing over";
     Hashtbl.clear glb_tabl;
     glb_list := [];
     cstr_list := [];

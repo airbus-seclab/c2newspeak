@@ -960,7 +960,7 @@ let declare fnames =
       if !verb_debug then begin
 	processed := !processed + 1;
 	let progress = !processed*100/total in
-	  prerr_string ("Progress: "^(string_of_int progress)^"%\r")
+	  prerr_string ("Progress: "^(string_of_int progress)^"%\n")
       end
   in
     update_loc locUnknown;
