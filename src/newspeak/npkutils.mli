@@ -25,6 +25,6 @@ val translate_rel_binop : Cil.typ -> Cil.typ -> Cil.binop -> Newspeak.binop
     Newspeak, if the transformation is possible *)
 val translate_typ : Cil.typ -> Newspeak.typ
 
-val compare_typs : Cil.typ -> Cil.typ -> bool
+(* val compare_typs : Cil.typ -> Cil.typ -> bool *)
 
 val isPtr : Cil.exp -> bool

@@ -2,12 +2,15 @@ open Cil
 open Cilutils
 
 open Npkcontext
-open Npkutils
-open Env
+(* open Npkutils *)
+(* open Env *)
+(* open Local_pass *)
 
 module K = Newspeak
 
 
+
+(*
 (*===================================*)
 (* Misc. functions used by translate *)
 (*===================================*)
@@ -44,148 +47,6 @@ let generate_body body decls =
 
 
 
-(*==================================================*)
-(* Preprocessing of mymerge : remove local temp     *)
-(*==================================================*)
-let vids = ref []
-
-class vistor_rm_tmp = object
-  inherit nopCilVisitor
-
-  method vfunc f =
-    vids := [];
-    let del_unused f =
-      let rec is_used v l =
-	match l with
-	  | [] -> false
-	  | a::_ when v.vid = a -> true
-	  | _::r -> is_used v r
-      in
-      let rec new_locals locs =
-	match locs with
-	  | [] -> []
-	  | v::r when is_used v !vids -> v::(new_locals r)
-	  | _::r -> new_locals r
-      in
-	f.slocals <- new_locals f.slocals;
-	f
-	  
-    in
-      ChangeDoChildrenPost (f, del_unused)
-
-  method vlval lv =
-    match lv with
-	Var {vtype = TFun _}, _ ->
-	  DoChildren
-      | Var v, _ ->
-	  if not v.vglob then vids := (v.vid)::(!vids);
-	  DoChildren
-      | _ -> DoChildren
-end
-
-
-let my_remove_tmp f =
-  visitCilFile (new vistor_rm_tmp) f
-
-
-
-
-
-(*=============*)
-(* First pass  *)
-(*=============*)
-(* The first pass consists in
- - deleting CIL's gotos (this piece of code might be highly
-   dependent on CIL and may have to change in the future. The
-   code that should be duplicated is stored in a hash table
-   and used when a Goto is encountered)
- - checking which global variables are used
- - simplifying some exps (StartOf, pointer equality)
- - collecting const string *)
-
-let code_to_duplicate = Hashtbl.create 100
-
-class vistor_first_pass = object
-  inherit nopCilVisitor
-  method vstmt s =
-    update_loc (get_stmtLoc s.skind);
-
-    let add_code goto_stmts label =
-      match label with
-	| Label (s, _, false) as l ->
-	    Hashtbl.add code_to_duplicate l goto_stmts
-	| _ -> ()
-    in
-
-    match s.skind with
-      | If (_, {bstmts = ({labels = l1}::_ as goto_stmts1)},
-	    {bstmts = ({labels = l2}::_ as goto_stmts2)}, _) ->
-	  List.iter (add_code goto_stmts1) l1;
-	  List.iter (add_code goto_stmts2) l2;
-	  DoChildren
-      | If (_, {bstmts = ({labels = l}::_ as goto_stmts)}, _, _)
-      | If (_, _, {bstmts = ({labels = l}::_ as goto_stmts)}, _) ->
-	  List.iter (add_code goto_stmts) l;
-	  DoChildren
-      | _ -> DoChildren
-
-  method vlval lv =
-    match lv with
-	Var {vtype = TFun _}, _ ->
-	  DoChildren
-      | Var v, _ ->
-	  glb_uses v;
-	  DoChildren
-      | _ -> DoChildren
-
-  method vglob g =
-    update_loc (get_globalLoc g);
-    DoChildren
-
-  method vexpr e =
-    match e with
-      | Const CStr s ->
-	  glb_make_cstr s;
-	  SkipChildren
-      | StartOf lv  -> 
-	  ChangeDoChildrenPost (AddrOf (addOffsetLval (Index (zero, NoOffset)) lv), fun x -> x)
-
-      | BinOp (Ne as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
-      | BinOp (Eq as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
-	  when size_of t = pointer_size && isPtr e1 && isPtr e2 ->
-	  ChangeDoChildrenPost (BinOp (o, e1, e2, t), fun x -> x)
-	    
-      | _ -> DoChildren
-
-end
-
-let rec visitInit visitor i =
-  match i with
-      SingleInit e -> SingleInit (visitCilExpr visitor e)
-    | CompoundInit (t, i) ->
-	let t = visitCilType visitor t in
-	let i = List.map (visitOffsetInit visitor) i in
-	  CompoundInit (t, i)
-
-and visitOffsetInit visitor (o, i) =
-  let o = visitCilOffset visitor o in
-  let i = visitInit visitor i in
-    (o, i)
-
-let visit_glb_t visitor _ x = 
-  x.gv_ctyp <- visitCilType visitor x.gv_ctyp;
-  match x.gv_cinit with
-      Some i -> x.gv_cinit <- Some (visitInit visitor i)
-    | None -> ()
-	    
-let visit_fun_spec_t visitor _ x = 
-  x.body <- List.map (visitCilStmt visitor) x.body
-
-let first_pass () =
-  update_loc locUnknown;
-  let visitor = new vistor_first_pass in
-    Hashtbl.iter (visit_glb_t visitor) glb_tabl;
-    Hashtbl.iter (visit_fun_spec_t visitor) fun_specs
 
 (* TODO: factor out print_warnings by putting together the warnings and 
    selecting which should be verb_warnings or not *)
@@ -1012,6 +873,7 @@ let gen_ir name =
       
       name
 
+
 let cil2newspeak fnames = 
   initCIL ();
   useLogicalOperators := false;
@@ -1045,10 +907,6 @@ let cil2newspeak fnames =
 
 (*
 let cil2newspeak fnames = 
-  initCIL ();
-  useLogicalOperators := false;
-
-  let cilfiles = ref [] in
 
   let get_cilfile name =
     let (is_c, cil_output) =
@@ -1135,3 +993,76 @@ let cil2newspeak fnames =
       end;
       kernel
 *)
+*)
+ 
+
+(*=========================================*)
+(* compile function, which wraps translate *)
+(*=========================================*)
+
+let compile name =
+  initCIL ();
+  useLogicalOperators := false;
+
+  print_debug ("Parsing "^name^"...");
+  let cil_file = Frontc.parse name () in
+    print_debug ("Parsing done.");
+    if !verb_cil then begin
+      print_newline ();
+      print_endline ("Cil output for "^name);
+      for i = 1 to String.length name do
+	print_string "-"
+      done;
+      print_endline "---------------";
+      dump stdout cil_file;
+      print_newline ();
+      print_newline ()
+    end;
+
+    ignore (Local_pass.translate cil_file);
+    
+(*    remove_local_tmp cil_file;
+
+
+    let (glbs, funs) = Local_pass.translate cilfile.globals in
+
+    let name = (Filename.chop_extension name)^".ir" in
+    let cout = open_out_bin name in
+      print_debug ("Exporting "^name^"...");
+      Marshal.to_channel cout glbs [];
+      Marshal.to_channel cout funs [];
+      close_out cout;
+      print_debug ("Exporting done.");
+      
+
+  (* First we gather global declarations and functions *)
+  declare fnames;
+
+  update_loc locUnknown;
+  (* Then we do our simplifications and collections on the entire file *)
+  print_debug "Beginning first pass...";
+  first_pass ();
+  update_loc locUnknown;
+  print_debug "First pass done."
+
+  let kernel = translate () in
+    print_debug "Translation complete.";
+    if !verb_newspeak then begin
+      print_endline "Newspeak output";
+      print_endline "---------------";
+      K.dump kernel;
+      print_newline ()
+    end;
+    
+    if (!newspeak_output <> "") then begin
+      let ch_out = open_out_bin !newspeak_output in
+	print_debug ("Writing "^(!newspeak_output)^"...");
+	Marshal.to_channel ch_out (fnames, kernel) [];
+	print_debug ("Writing done.");
+    end;
+      
+    kernel
+
+*)
+
+failwith "Toto"

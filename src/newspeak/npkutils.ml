@@ -92,6 +92,7 @@ let translate_typ t =
       translate_typ_aux t
     with Cil.LenOfArray -> error ("LenOfArray exception on "^string_of_type t)
 
+
 let translate_rel_binop t1 t2 o =
   let t = 
     match (translate_typ t1, translate_typ t2) with
@@ -107,7 +108,8 @@ let translate_rel_binop t1 t2 o =
       | Ne -> Newspeak.Ne t
       | _ -> error ("Npkutils.translate_rel_binop")
 
-let compare_typs t1 t2 =
+
+(*let compare_typs t1 t2 =
   let rec compare_typs_aux t1 t2 =
     match t1, t2 with
         TInt (i1, _), TInt (i2, _) -> i1 = i2
@@ -152,7 +154,7 @@ let compare_typs t1 t2 =
 
   in
     compare_typs_aux t1 t2
-
+*)
 
 let isPtr e =
   match translate_typ (typeOf e) with

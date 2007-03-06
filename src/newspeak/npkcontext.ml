@@ -2,27 +2,25 @@
 (* Command line options *)
 (*----------------------*)
 
-let assumptions = ref []
+
+(* Translation options *)
 
 let global_zero_init = ref true
-let remove_temp = ref true
-let accept_extern = ref false
 let castor_allowed = ref false
 let ignores_pragmas = ref false
-let ignores_cil_merge_errors = ref false
-let mergecil = ref false
+let remove_temp = ref true
+let accept_extern = ref false
+
+(* TODO: Handle assumptions correctly *)
+(* let assumptions = ref [] *)
+
+
+(* Verbose options *)
 
 let verb_warnings = ref false
 let verb_debug = ref false
 let verb_cil = ref false
-let verb_newspeak = ref false
-
-
-let exit_code = ref false
-
-let compile_only = ref false
-
-let newspeak_output = ref ""
+let verb_newspeak = ref true
 
 let verbose boolean () =
   verb_cil := boolean;
@@ -30,45 +28,115 @@ let verbose boolean () =
   verb_warnings := boolean;
   verb_newspeak := boolean
 
+let exit_code = ref false
+
+
+(* Preprocessing options *)
+
+let has_preprocess = ref true
+let incl_files = ref ""
+let include_dir x = incl_files:=" -I "^x^(!incl_files)
+
+let preprocess fname =
+  let length = String.length fname in
+    if (length <= 2) then invalid_arg ("file has not valid format: "^fname);
+    
+    let prf = String.sub fname 0 (length - 2) in
+    let sff = String.sub fname (length - 2) 2 in
+      if (String.compare sff ".c" <> 0) 
+      then invalid_arg ("file has not valid format: "^fname);
+      let resE = prf^"-E.c" in
+	ignore (Unix.system ("gcc"^(!incl_files)^" -E  "^fname^" > "^resE));
+	resE
+
+
+(* File options *)
+
+let list_of_files = ref []
+let input_files = ref []
+let anon_fun file = list_of_files:= file::!list_of_files
+let compile_only = ref false
+let output_file = ref ""
+
+
+
+let usage_msg = Sys.argv.(0)^" [options] [-help|--help] [file...]"
 
 let argslist = [    
-  ("--printer", Arg.String (Cilutils.setCilPrinter), "");
-  
-  ("--pretty", Arg.Set (Newspeak.pretty_print), "uses var names for display");
-  
-  ("--castor", Arg.Set castor_allowed, "");
-  
   ("--no-init", Arg.Clear (global_zero_init),
-   "Disables zero initialisation of the globals");
+   "disables zero initialisation of the globals");
 
+  ("--castor", Arg.Set castor_allowed,
+   "allows horrible casts to be translated");
+  
   ("--ignore-pragma", Arg.Set ignores_pragmas,
-   "Ignores any #pragma directive");
-
-  ("--ignore-cil-merge-errors", Arg.Set ignores_cil_merge_errors,
-   "Ignores cil errors during merge phase");
+   "ignores any #pragma directive");
 
   ("--keep-unused-vars", Arg.Clear (remove_temp),
-   "Do not remove unused variables");
+   "does not remove unused variables");
 
   ("--accept-extern", Arg.Set (accept_extern),
-   "Do not raise an error on variables declared but not defined");
+   "does not raise an error on variables declared but not defined\n");
 
-  ("--mergecil", Arg.Set (mergecil),
-   "Uses Mergecil to merge files before translating them");
+(* TODO: Handle assumptions correctly *)
+(*  ("--assume", Arg.String (fun x -> assumptions := x::(!assumptions)),
+   "adds an hypothesis to the analysis");*)
+
+
+  ("--cil", Arg.Set (verb_cil),
+   "verbose option: displays CIL output");
   
-  ("--assume", Arg.String (fun x -> assumptions := x::(!assumptions)),
-   "Add an hypothesis to the analysis")
+  ("--cil-printer", Arg.String (Cilutils.setCilPrinter),
+   "verbose options: uses \"default\" or \"plain\" Cil output");
+
+  ("--warnings", Arg.Set (verb_warnings),
+   "verbose options: displays more warnings");
+  
+  ("--debug", Arg.Set (verb_debug),
+   "verbose options: displays more debugging info");
+  
+  ("--newspeak", Arg.Set (verb_newspeak),
+   "verbose option: displays Newspeak output");
+
+(* TODO: Handle Newspeak.pretty_print boolean *)
+(*  ("--pretty", Arg.Set (Newspeak.pretty_print),
+   "verbose options: uses var names for Newspeak display"); *)
+
+  ("-v", Arg.Unit (verbose true),
+   "verbose mode: turn all verbose options on");
+    
+  ("-q", Arg.Unit (verbose false),
+   "quiet mode: turn display off");
+    
+  ("--exit-code", Arg.Set (exit_code), 
+   "returns exit code 1 if an error occured\n");
+
+
+  ("--no-preprocess", Arg.Clear has_preprocess,
+   "skips the C preprocessing step (gcc -E)");
+  
+  ("-I", Arg.String include_dir, 
+   "includes a pre-processing directory\n "^
+     "                    (must be repeated for each directory)\n");
+
+  ("-c", Arg.Set (compile_only),
+   "compiles only into a .il file");
+  
+  ("-o", Arg.Set_string (output_file), 
+   "gives the name of Newspeak output");
+
 ]
-  
-let verb_argslist = [
-  ("--cil", Arg.Set (verb_cil), "verbose option: displays CIL output");
-  
-  ("--warnings", Arg.Set (verb_warnings), "verbose options: displays more c2n warnings");
-  
-  ("--debug", Arg.Set (verb_debug), "verbose options: displays more c2n debugging info");
-  
-  ("--newspeak", Arg.Set (verb_newspeak), "verbose option: displays Newspeak output")
-]
+
+
+let handle_cmdline_options () = 
+  Arg.parse argslist anon_fun usage_msg;
+  input_files :=
+    if !has_preprocess
+    then List.map preprocess !list_of_files
+    else !list_of_files    
+
+
+
 
 
 

@@ -43,8 +43,6 @@ val dump : Pervasives.out_channel -> Cil.file -> unit
 
 (** {1 Miscellaneous } *)
 
-val null : Cil.exp
-
 val stmt_of_stmtkind : Cil.stmtkind -> Cil.stmt
 
-val main_svar : Cil.varinfo
+(* val null : Cil.exp *)
