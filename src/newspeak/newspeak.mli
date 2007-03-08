@@ -172,5 +172,6 @@ val pretty_print : bool ref
 val dump : t -> unit
 
 val string_of_typ : typ -> string
+val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
 
