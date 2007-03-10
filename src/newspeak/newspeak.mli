@@ -69,8 +69,8 @@ and binop =
   | Shiftrt
   | PlusPI
   | MinusPP
-  | Ge of scalar_t | Gt of scalar_t
-  | Eq of scalar_t | Ne of scalar_t
+  | Gt of scalar_t
+  | Eq of scalar_t
 
 and fn =
     FunId of fid

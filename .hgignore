@@ -11,6 +11,7 @@ syntax: glob
 *.cmo
 *.bak
 *.ir
+tests/newspeak/result
 
 syntax: regexp
 (.*/)?\#[^/]*\#$

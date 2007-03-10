@@ -646,9 +646,13 @@ and translate_if status e stmts1 stmts2 =
   let rec normalize e =
     match e with
 	(* TODO: beware is the type t here really the same ? *)
-      | K.UnOp (K.Not, e) -> K.negate (normalize e)
-      | K.BinOp ((K.Ge _|K.Gt _|K.Eq _|K.Ne _), _, _) -> e
-      | _ -> K.BinOp (K.Ne t, e, K.zero)
+      | K.UnOp (K.Not, K.UnOp (K.Not, e)) -> normalize e
+
+      | K.UnOp (K.Not, K.BinOp ((K.Gt _|K.Eq _), _, _))
+      | K.BinOp ((K.Gt _|K.Eq _), _, _) -> e
+
+      | K.UnOp (K.Not, e) -> K.BinOp (K.Eq t, e, K.zero)
+      | _ -> K.UnOp (K.Not, K.BinOp (K.Eq t, e, K.zero))
   in
   let cond1 = normalize (translate_exp e) in
   let cond2 = K.negate cond1 in
@@ -897,7 +901,7 @@ and translate_if status e stmts1 stmts2 =
 	  end
 
 (* TODO: add these as #pragma assume in the code, a lot easier *)
-let create_assumption str =
+(*let create_assumption str =
   let lexer = Genlex.make_lexer [">="] (Stream.of_string str) in
     try
       let x = 
@@ -918,7 +922,7 @@ let create_assumption str =
       let v = Env.get_glb_var x in
       let t = Env.get_glb_typ x in
 	(K.BinOp (K.Ge t, K.Lval (v, t), K.Const (K.CInt64 (Int64.of_int n))))
-    with _ -> error ("Unknown assumption: "^str)
+    with _ -> error ("Unknown assumption: "^str)*)
 
 
 let translate () =
@@ -943,9 +947,11 @@ let translate () =
       in
       let fun_defs = map_fun_specs add_fun in
 
-      let assumptions = List.map create_assumption !Npkcontext.assumptions in
+(*      let assumptions = List.map create_assumption !Npkcontext.assumptions in
 
-	(assumptions, glb_decls, fun_defs)
+	(assumptions, glb_decls, fun_defs)*)
+
+	([], glb_decls, fun_defs)
 
 let declare fnames =
   let total = List.length fnames in

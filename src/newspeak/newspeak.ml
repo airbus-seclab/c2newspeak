@@ -61,8 +61,8 @@ and binop =
   | Shiftrt
   | PlusPI
   | MinusPP
-  | Ge of scalar_t | Gt of scalar_t
-  | Eq of scalar_t | Ne of scalar_t
+  | Gt of scalar_t
+  | Eq of scalar_t
 
 and fn =
     FunId of fid
@@ -357,9 +357,15 @@ let string_of_unop op =
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
 	  
-and string_of_binop op =
+and string_of_binop neg op =
   match op with
-      PlusI -> "+"
+    | Gt _ when neg -> ">="
+    | Eq _ when neg -> "<>"
+    | Gt _ -> ">"
+    | Eq _ -> "=="
+    | _ when neg ->
+	failwith ("Newspeak.string_of_binop: unexpected negation")
+    | PlusI -> "+"
     | MinusI -> "-"
     | MultI -> "*"
     | Mod -> "%"
@@ -375,10 +381,6 @@ and string_of_binop op =
     | Shiftrt -> ">>"
     | PlusPI -> "+"
     | MinusPP -> "-"
-    | Ge _ -> ">="
-    | Gt _ -> ">"
-    | Ne _ -> "<>"
-    | Eq _ -> "=="
 
 
 let rec string_of_lval decls lv =
@@ -395,10 +397,18 @@ and string_of_exp decls e =
     | Lval (lv, t) -> (string_of_lval decls lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval decls lv)^")"
     | AddrOfFun fid -> "&fun"^(string_of_fid fid)
-    | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp decls exp)
+
+    (* TODO: Check this ! *)
+    (* Pretty printing for >= and != *)
+    | UnOp (Not, BinOp (op, e1, e2)) ->
+	"("^(string_of_exp decls e2)^" "^(string_of_binop true op)^
+	  " "^(string_of_exp decls e1)^")"
+
     | BinOp (op, e1, e2) ->
-	"("^(string_of_exp decls e1)^" "^(string_of_binop op)^
+	"("^(string_of_exp decls e1)^" "^(string_of_binop false op)^
 	  " "^(string_of_exp decls e2)^")"
+
+    | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp decls exp)
 
 	  
 and string_of_fn decls f =
@@ -566,11 +576,9 @@ let dump (assumptions, gdecls, fundecs) =
 
 let rec negate exp =
   match exp with
-    | BinOp (Ge t, e1, e2) -> BinOp (Gt t, e2, e1)
-    | BinOp (Gt t, e1, e2) -> BinOp (Ge t, e2, e1)
-    | BinOp (Ne t, e1, e2) -> BinOp (Eq t, e1, e2)
-    | BinOp (Eq t, e1, e2) -> BinOp (Ne t, e1, e2)
     | UnOp (Not, e) -> e
+    | BinOp (Gt t, e1, e2)
+    | BinOp (Eq t, e1, e2) as e -> UnOp (Not, e)
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
 
