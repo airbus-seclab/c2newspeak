@@ -400,7 +400,7 @@ and string_of_exp decls e =
 
     (* TODO: Check this ! *)
     (* Pretty printing for >= and != *)
-    | UnOp (Not, BinOp (op, e1, e2)) ->
+    | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
 	"("^(string_of_exp decls e2)^" "^(string_of_binop true op)^
 	  " "^(string_of_exp decls e1)^")"
 
@@ -576,9 +576,10 @@ let dump (assumptions, gdecls, fundecs) =
 
 let rec negate exp =
   match exp with
+    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
     | UnOp (Not, e) -> e
-    | BinOp (Gt t, e1, e2)
-    | BinOp (Eq t, e1, e2) as e -> UnOp (Not, e)
+    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
+    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e2, e1))
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
 

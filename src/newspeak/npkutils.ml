@@ -101,9 +101,6 @@ let translate_rel_binop t1 t2 o =
 		 ^"incompatible types for comparison")
   in
     match o with
-	(* TODO: Handle this ! *)
-      | Ge | Ne ->
-	  error ("Npkutils.translate_rel_binop: Ge and Ne not handled")
       | Gt -> Newspeak.Gt t
       | Eq -> Newspeak.Eq t
       | _ -> error ("Npkutils.translate_rel_binop")

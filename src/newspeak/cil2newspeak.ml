@@ -150,10 +150,13 @@ class vistor_first_pass = object
       | StartOf lv  -> 
 	  ChangeDoChildrenPost (AddrOf (addOffsetLval (Index (zero, NoOffset)) lv), fun x -> x)
 
-      | BinOp (Ne as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
-      | BinOp (Eq as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
+      | BinOp (Ne, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
 	  when size_of t = pointer_size && isPtr e1 && isPtr e2 ->
-	  ChangeDoChildrenPost (BinOp (o, e1, e2, t), fun x -> x)
+	  ChangeDoChildrenPost (BinOp (Ne, e1, e2, t), fun x -> x)
+
+      | BinOp (Eq, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
+	  when size_of t = pointer_size && isPtr e1 && isPtr e2 ->
+	  ChangeDoChildrenPost (BinOp (Eq, e1, e2, t), fun x -> x)
 	    
       | _ -> DoChildren
 
@@ -427,13 +430,14 @@ and translate_exp e =
       end
 	
     (* Equality and inequality, comparisons : between numbers or pointers *)
-    | BinOp ((Eq|Ne|Ge|Gt) as o, e1, e2, TInt _) -> 
+    | BinOp ((Eq|Gt) as o, e1, e2, TInt _) -> 
 	let op = translate_rel_binop (typeOf e1) (typeOf e2) o in
 	  K.BinOp (op, translate_exp e1, translate_exp e2)
 	
-    | BinOp (Le, e1, e2, t) -> translate_exp (BinOp (Ge, e2, e1, t))
-						
-    | BinOp (Lt, e1, e2, t) -> translate_exp (BinOp (Gt, e2, e1, t))
+    | BinOp (Le, e1, e2, (TInt _ as t)) -> translate_exp (BinOp (Ge, e2, e1, t))
+    | BinOp (Lt, e1, e2, (TInt _ as t)) -> translate_exp (BinOp (Gt, e2, e1, t))
+    | BinOp (Ge, e1, e2, (TInt _ as t)) -> K.UnOp (K.Not, translate_exp (BinOp (Gt, e2, e1, t)))
+    | BinOp (Ne, e1, e2, (TInt _ as t)) -> K.UnOp (K.Not, translate_exp (BinOp (Eq, e2, e1, t)))
 	
     (* Pointer / Integer addition *)
     | BinOp (IndexPI, e1, e2, t) | BinOp (PlusPI, e1, e2, t) -> begin
@@ -520,6 +524,7 @@ and translate_exp e =
     (* All the patterns remaining are not completely handled *)
     | BinOp (Eq, _, _, _) | BinOp (Ne, _, _, _)
     | BinOp (Gt, _, _, _) | BinOp (Ge, _, _, _)
+    | BinOp (Lt, _, _, _) | BinOp (Le, _, _, _)
     | BinOp (LAnd, _, _, _) | BinOp (LOr, _, _, _)
     | AlignOf _ | AlignOfE _
 	-> error ("Cil2newspeak.translate.translate_exp: \""^(string_of_exp e)^"\"")
@@ -652,8 +657,9 @@ and translate_if status e stmts1 stmts2 =
       | K.BinOp ((K.Gt _|K.Eq _), _, _) -> e
 
       | K.UnOp (K.Not, e) -> K.BinOp (K.Eq t, e, K.zero)
-      | _ -> K.UnOp (K.Not, K.BinOp (K.Eq t, e, K.zero))
+      | _ -> K.UnOp (K.Not, K.BinOp (K.Eq t, K.zero, e))
   in
+    print_debug (K.string_of_exp (translate_exp e));
   let cond1 = normalize (translate_exp e) in
   let cond2 = K.negate cond1 in
   let body1 = translate_stmts status stmts1 in

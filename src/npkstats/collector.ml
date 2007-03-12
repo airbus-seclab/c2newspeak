@@ -11,7 +11,7 @@ let visit_binop x =
     | PlusI | MinusI | MultI | DivI | Mod
     | PlusF _ | MinusF _ | MultF _ | DivF _
     | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt 
-    | MinusPP | Ge _ | Gt _ | Eq _ | Ne _ -> ()
+    | MinusPP | Gt _ | Eq _ -> ()
 
 let rec visit_lval x =
   match x with
