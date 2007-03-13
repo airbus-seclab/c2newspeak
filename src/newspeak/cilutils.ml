@@ -80,9 +80,5 @@ let dump stdout file = dumpFile !cilPrinter stdout "" file
 let stmt_of_stmtkind sk =
   {labels = []; skind = sk; sid = 0; succs = []; preds = []}
 
-let null = CastE (TPtr (TVoid [], []), zero)
+(* let null = CastE (TPtr (TVoid [], []), zero) *)
 
-let main_svar = {vname = "main"; vtype = TVoid []; vattr = [];
-		 vstorage = NoStorage; vglob = true; vinline = false;
-		 vdecl = locUnknown; vid = 0; vaddrof = true;
-		 vreferenced = false;}
