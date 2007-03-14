@@ -583,3 +583,20 @@ let rec negate exp =
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
 
+
+let string_of_ftyp (args, ret) = 
+  let res = ref "" in 
+    begin match args with
+	hd::[] -> res := string_of_typ hd
+      | hd::tl -> 
+	  res := "("^(string_of_typ hd);
+	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
+	  res := !res^")"
+      | [] -> res := "void"
+    end;
+    res := !res^" -> ";
+    begin match ret with
+	None -> res := !res^"void"
+      | Some t -> res := !res^(string_of_typ t)
+    end;
+    !res
