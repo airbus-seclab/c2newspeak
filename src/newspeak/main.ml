@@ -6,6 +6,9 @@ let _ =
   if !input_files = []
   then print_error ("no file specified. Try "^Sys.argv.(0)^" --help");
 
+  let [file] = !input_files in
+    compile file
+
 (* TODO: Handle c and il files before compiling and linking *)
 
 (*  try

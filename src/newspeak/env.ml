@@ -1,9 +1,23 @@
 open Cil
-open Cilutils
+(*open Cilutils*)
 open Npkcontext
 open Npkutils
 
 
+
+(*---------*)
+(* Globals *)
+(*---------*)
+let glb_uniquename v =
+  if not v.vglob
+  then error "Env.glb_uniquename: global variable expected";
+  if v.vstorage = Static
+  then (get_cur_file())^"."^v.vname
+  else v.vname
+
+
+
+(*
 (*-------*)
 (* Types *)
 (*-------*)
@@ -555,3 +569,4 @@ let retrieve_switch_label status loc =
 
 let mem_switch_label status loc =
   List.mem_assoc loc status.switch_lbls
+*)

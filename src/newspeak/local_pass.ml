@@ -2,6 +2,19 @@ open Cil
 open Cilutils
 open Npkcontext
 open Npkutils
+open Env
+
+module String_set = 
+  Set.Make (struct type t = string let compare = Pervasives.compare end)
+
+
+(* List collected during the pass *)
+let glb_decls = ref []
+let fun_defs = ref []
+let proto_decls = ref []
+let glb_used = ref (String_set.empty)
+let fun_called = ref (String_set.empty)
+let glb_cstr = ref (String_set.empty)
 
 
 let local_vids = ref []
@@ -64,25 +77,25 @@ class vistor_first_pass = object
     in
       ChangeDoChildrenPost (f, del_unused)
 
+  (* remembers the functions and global variables used *)
   method vlval lv =
     match lv with
-	Var {vtype = TFun _}, _ ->
+	Var {vtype = TFun _; vname = n}, _ ->
+	  fun_called := String_set.add n !fun_called;
 	  DoChildren
       | Var v, _ ->
-	  if not v.vglob then local_vids := (v.vid)::(!local_vids);
-	  (* TODO: Handle somewhere else *)
-	  (*	  glb_uses v; *)
+	  if not v.vglob
+	  then local_vids := (v.vid)::(!local_vids)
+	  else glb_used := String_set.add (glb_uniquename v) !glb_used;
 	  DoChildren
       | _ -> DoChildren
-
 
   (* simplifies some exps (StartOf, pointer equality) and collects
      const string *)
   method vexpr e =
     match e with
       | Const CStr s ->
-	  (* TODO: Handle this !!! *)
-	  (* 	  glb_make_cstr s; *)
+	  glb_cstr := String_set.add s !glb_cstr;
 	  SkipChildren
       | StartOf lv  -> 
 	  ChangeDoChildrenPost (AddrOf (addOffsetLval (Index (zero, NoOffset)) lv), fun x -> x)
@@ -110,15 +123,6 @@ and visitOffsetInit visitor (o, i) =
   let i = visitInit visitor i in
     (o, i)
 
-(* let visit_glb_t visitor _ x = 
-  x.gv_ctyp <- visitCilType visitor x.gv_ctyp;
-  match x.gv_cinit with
-      Some i -> x.gv_cinit <- Some (visitInit visitor i)
-    | None -> ()
-
-let visit_fun_spec_t visitor _ x = 
-  x.body <- List.map (visitCilStmt visitor) x.body
-*)
 
 
 
@@ -151,47 +155,48 @@ let translate f =
   update_loc locUnknown;
   let visitor = new vistor_first_pass in
     
-  let rec explore glb_decls fun_defs proto_decls glist = 
-    match glist with
-      | [] -> (List.rev glb_decls, List.rev fun_defs, List.rev proto_decls)
-      | g::r ->
-	  (* TODO: Handle the list returned ! *)
-	  let [g_modified] = visitCilGlobal visitor g in
-	  let loc = get_globalLoc g in begin
-	      update_loc loc;
-	      match g_modified with
-		| GType (t, _) ->
-		    if !verb_warnings then print_warning ("skip typedef "^t.tname);
-		    explore glb_decls fun_defs proto_decls r
-		| GEnumTag (info, _) -> 
-		    if !verb_warnings then print_warning ("skip enum "^info.ename);
-		    explore glb_decls fun_defs proto_decls r
-		| GCompTag (c, _) -> 
-		    if !verb_warnings then print_warning ("skip composite typedef "^c.cname);
-		    explore glb_decls fun_defs proto_decls r
-		| GCompTagDecl (c, _) -> 
-		    if !verb_warnings then print_warning ("skip composite declaration "^c.cname);
-		    explore glb_decls fun_defs proto_decls r
-		| GPragma (a, _) when !ignores_pragmas -> 
-		    print_warning ("Directive ignored: "
-				   ^"unknown #pragma "^(string_of_attribute a));
-		    explore glb_decls fun_defs proto_decls r
+  let rec explore g = 
+    let loc = get_globalLoc g in
+      update_loc loc;
+      let [g_modified] = visitCilGlobal visitor g in
+	match g_modified with
+	  | GType (t, _) ->
+	      if !verb_warnings then print_warning ("skip typedef "^t.tname)
+	  | GEnumTag (info, _) -> 
+	      if !verb_warnings then print_warning ("skip enum "^info.ename)
+	  | GCompTag (c, _) -> 
+	      if !verb_warnings then print_warning ("skip composite typedef "^c.cname)
+	  | GCompTagDecl (c, _) -> 
+	      if !verb_warnings then print_warning ("skip composite declaration "^c.cname)
+	  | GPragma (a, _) when !ignores_pragmas -> 
+	      print_warning ("Directive ignored: "
+			     ^"unknown #pragma "^(string_of_attribute a))
 		      
-		| GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _) ->
-		    explore glb_decls fun_defs (((name, ret, args), loc)::proto_decls) r
+	  | GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _) ->
+	      proto_decls := ((name, ret, args), loc)::(!proto_decls)
+	  
+	  | GFun (f, _) -> 
+	      (* Every defined function is kept *)
+	      fun_called := String_set.add f.svar.vname !fun_called;
+	      if (f.svar.vname = "main") then check_main_signature f.svar.vtype;      
+	      fun_defs := f::(!fun_defs)
 		      
-		| GFun (f, _) -> 
-		    if (f.svar.vname = "main") then check_main_signature f.svar.vtype;
-		     explore glb_decls (f::fun_defs) proto_decls r
+	  | GVarDecl (v, _) -> 
+	      glb_decls := ((v, false, None), loc)::(!glb_decls)
 		      
-		| GVarDecl (v, _) -> 
-		    explore (((v, false, None), loc)::glb_decls) fun_defs proto_decls r
-		      
-		| GVar (v, {init = i}, _) -> 
-		    explore (((v, true, i), loc)::glb_decls) fun_defs proto_decls r
-
-		| _ -> error ("Cil2newspeak.translate.explore: global "
-			      ^(string_of_global g)^" not supported")
-	    end;	    
-   in
-    explore [] [] [] f.globals
+	  | GVar (v, {init = i}, _) -> 
+	      glb_decls := ((v, true, i), loc)::(!glb_decls)
+		
+	  | _ -> error ("Cil2newspeak.translate.explore: global "
+			^(string_of_global g)^" not supported")
+  in
+    glb_decls := [];
+    fun_defs := [];
+    proto_decls := [];
+    glb_used := String_set.empty;
+    fun_called := String_set.empty;
+    glb_cstr := String_set.empty;
+    List.iter explore f.globals;
+    (List.rev !glb_decls, List.rev !fun_defs, List.rev !proto_decls,
+     String_set.elements !glb_used, String_set.elements !fun_called,
+     String_set.elements !glb_cstr)

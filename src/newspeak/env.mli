@@ -3,7 +3,7 @@
     status functions to keep track of current interesting labels *)
 
 
-
+(*
 (** {1 Types} *)
 
 (** The status type allows the translate functions to keep track of
@@ -44,15 +44,24 @@ type fun_spec_t = {
   mutable fun_loc  : Newspeak.location option;
 }
 
+*)
+
 
 
 
 (** {1 Globals} *)
 
+(** [glb_uniquename v] returns the standardized name of global
+    variable v: its name if it is a shared variable, its name prefixed
+    by the filename if it is a static variable. *)
+val glb_uniquename : Cil.varinfo -> string
+
+
+(*
 (** [glb_declare v defd init] adds the declaration of v in the global
-    list, and if the variable is defined, keeps the initializers for
-    later, or set to zero the corresponding zone if init=None and
-    global_zero_init is set *)
+  list, and if the variable is defined, keeps the initializers for
+  later, or set to zero the corresponding zone if init=None and
+  global_zero_init is set *)
 val glb_declare : (Cil.varinfo * bool * Cil.init option) -> unit
 
 
@@ -185,3 +194,4 @@ type glb_t = {
   mutable gv_used : bool;
 }
 val glb_tabl : (string, glb_t) Hashtbl.t
+*)

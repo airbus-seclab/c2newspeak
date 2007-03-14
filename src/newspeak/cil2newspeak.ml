@@ -816,72 +816,78 @@ let translate () =
 
 	([], glb_decls, fun_defs)
 
-let declare fnames =
-  let total = List.length fnames in
-  let processed = ref 0 in
-  let declare name =
-    let cin = open_in_bin name in
-    let glb_decls = Marshal.from_channel cin in
-    let (fun_decls, proto_decls) = Marshal.from_channel cin in
-      close_in cin;
-      (* TODO: this is a hack write again in a clean way *)
-      List.iter (fun (g, loc) -> update_loc loc; glb_declare g) glb_decls;
-      List.iter fun_declare fun_decls;
-      (* TODO: this is a hack write again in a clean way *)
-      List.iter (fun (g, loc) -> update_loc loc; fun_declare_prototype g) 
-	proto_decls;
-      if !verb_debug then begin
-	processed := !processed + 1;
-	let progress = !processed*100/total in
-	  prerr_string ("Progress: "^(string_of_int progress)^"%\n")
-      end
-  in
-    update_loc locUnknown;
-    print_debug "Collecting globals and function declarations...";
-    List.iter declare fnames;
-    print_debug "Collection of globals and function declarations done."
+*)
 
 
-let prepare fnames =
-  (* First we gather global declarations and functions *)
-  declare fnames;
 
-  update_loc locUnknown;
-  (* Then we do our simplifications and collections on the entire file *)
-  print_debug "Beginning first pass...";
-  first_pass ();
-  update_loc locUnknown;
-  print_debug "First pass done."
-    
-let gen_ir name =
-  if not (Filename.check_suffix name ".c") 
-  then error ("File '"^name^"' is not a .c file.");
+
+(*=========================================*)
+(* compile function, which wraps translate *)
+(*=========================================*)
+
+let compile name =
+  initCIL ();
+  useLogicalOperators := false;
+
   print_debug ("Parsing "^name^"...");
-  
-  let cilfile = Frontc.parse name () in
+  let cil_file = Frontc.parse name () in
     print_debug ("Parsing done.");
     if !verb_cil then begin
-      print_endline ("Cil output for "^name);
-      print_string (String.make (String.length name) '-');
-      print_endline "---------------";
-      dump stdout cilfile;
       print_newline ();
+      print_endline ("Cil output for "^name);
+      for i = 1 to String.length name do
+	print_string "-"
+      done;
+      print_endline "---------------";
+      dump stdout cil_file;
+      print_newline ();
+      print_newline ()
     end;
 
-    my_remove_tmp cilfile;
-    let (glbs, funs) = Local_pass.translate cilfile.globals in
+    print_debug "Running first pass...";
+    update_loc locUnknown;
+    let (glb_decls, fun_defs, proto_decls, glb_used, fun_called, glb_cstr) = Local_pass.translate cil_file in
+      update_loc locUnknown;
+      print_debug "First pass done.";
+  
+  print_debug ("Translating "^name^"...");
 
-    let name = (Filename.chop_extension name)^".ir" in
-    let cout = open_out_bin name in
-      print_debug ("Exporting "^name^"...");
-      Marshal.to_channel cout glbs [];
-      Marshal.to_channel cout funs [];
-      close_out cout;
-      print_debug ("Exporting done.");
+    (* TODO: find adequate types for glb_decls, fun_defs and proto_decls *)
+
+(*  let kernel = translate () in
+    print_debug "Translation complete.";
+    if !verb_newspeak then begin
+      print_endline "Newspeak output";
+      print_endline "---------------";
+      K.dump kernel;
+      print_newline ()
+    end;
+    
+    if (!newspeak_output <> "") then begin
+      let ch_out = open_out_bin !newspeak_output in
+	print_debug ("Writing "^(!newspeak_output)^"...");
+	Marshal.to_channel ch_out (fnames, kernel) [];
+	print_debug ("Writing done.");
+    end;
       
-      name
+    kernel *)
+
+  failwith "Toto"
 
 
+
+
+
+
+
+
+
+(*
+(*=====================================*)
+(* cil2newspeak, which wraps translate *)
+(*=====================================*)
+
+(*
 let cil2newspeak fnames = 
   initCIL ();
   useLogicalOperators := false;
@@ -909,11 +915,6 @@ let cil2newspeak fnames =
     kernel
 
 
-(*=====================================*)
-(* cil2newspeak, which wraps translate *)
-(*=====================================*)
-
-(*
 let cil2newspeak fnames = 
 
   let get_cilfile name =
@@ -1004,35 +1005,95 @@ let cil2newspeak fnames =
 *)
  
 
-(*=========================================*)
-(* compile function, which wraps translate *)
-(*=========================================*)
 
-let compile name =
-  initCIL ();
-  useLogicalOperators := false;
 
+
+(*
+let declare fnames =
+  let total = List.length fnames in
+  let processed = ref 0 in
+  let declare name =
+    let cin = open_in_bin name in
+    let glb_decls = Marshal.from_channel cin in
+    let (fun_decls, proto_decls) = Marshal.from_channel cin in
+      close_in cin;
+      (* TODO: this is a hack write again in a clean way *)
+      List.iter (fun (g, loc) -> update_loc loc; glb_declare g) glb_decls;
+      List.iter fun_declare fun_decls;
+      (* TODO: this is a hack write again in a clean way *)
+      List.iter (fun (g, loc) -> update_loc loc; fun_declare_prototype g) 
+	proto_decls;
+      if !verb_debug then begin
+	processed := !processed + 1;
+	let progress = !processed*100/total in
+	  prerr_string ("Progress: "^(string_of_int progress)^"%\n")
+      end
+  in
+    update_loc locUnknown;
+    print_debug "Collecting globals and function declarations...";
+    List.iter declare fnames;
+    print_debug "Collection of globals and function declarations done."
+
+
+let prepare fnames =
+  (* First we gather global declarations and functions *)
+  declare fnames;
+
+  update_loc locUnknown;
+  (* Then we do our simplifications and collections on the entire file *)
+  print_debug "Beginning first pass...";
+  first_pass ();
+  update_loc locUnknown;
+  print_debug "First pass done."
+    
+let gen_ir name =
+  if not (Filename.check_suffix name ".c") 
+  then error ("File '"^name^"' is not a .c file.");
   print_debug ("Parsing "^name^"...");
-  let cil_file = Frontc.parse name () in
+  
+  let cilfile = Frontc.parse name () in
     print_debug ("Parsing done.");
     if !verb_cil then begin
-      print_newline ();
       print_endline ("Cil output for "^name);
-      for i = 1 to String.length name do
-	print_string "-"
-      done;
+      print_string (String.make (String.length name) '-');
       print_endline "---------------";
-      dump stdout cil_file;
+      dump stdout cilfile;
       print_newline ();
-      print_newline ()
     end;
 
-    ignore (Local_pass.translate cil_file);
-    
-(*    remove_local_tmp cil_file;
-
-
+    my_remove_tmp cilfile;
     let (glbs, funs) = Local_pass.translate cilfile.globals in
+
+    let name = (Filename.chop_extension name)^".ir" in
+    let cout = open_out_bin name in
+      print_debug ("Exporting "^name^"...");
+      Marshal.to_channel cout glbs [];
+      Marshal.to_channel cout funs [];
+      close_out cout;
+      print_debug ("Exporting done.");
+      
+      name
+*)
+
+
+
+
+
+
+
+(*
+
+    let print_list title list =
+      print_endline title;
+      print_newline ();
+      List.iter print_endline list;
+      print_newline ();
+      print_newline ()
+    in
+      print_list "Global used" glb_used;
+      print_list "Functions called" fun_called;
+      print_list "Constant Strings" glb_cstr;
+
 
     let name = (Filename.chop_extension name)^".ir" in
     let cout = open_out_bin name in
@@ -1046,31 +1107,10 @@ let compile name =
   (* First we gather global declarations and functions *)
   declare fnames;
 
-  update_loc locUnknown;
   (* Then we do our simplifications and collections on the entire file *)
   print_debug "Beginning first pass...";
   first_pass ();
   update_loc locUnknown;
   print_debug "First pass done."
 
-  let kernel = translate () in
-    print_debug "Translation complete.";
-    if !verb_newspeak then begin
-      print_endline "Newspeak output";
-      print_endline "---------------";
-      K.dump kernel;
-      print_newline ()
-    end;
-    
-    if (!newspeak_output <> "") then begin
-      let ch_out = open_out_bin !newspeak_output in
-	print_debug ("Writing "^(!newspeak_output)^"...");
-	Marshal.to_channel ch_out (fnames, kernel) [];
-	print_debug ("Writing done.");
-    end;
-      
-    kernel
-
 *)
-
-failwith "Toto"
