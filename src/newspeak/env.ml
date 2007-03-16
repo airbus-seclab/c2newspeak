@@ -169,6 +169,7 @@ let mem_switch_label status loc =
 
 
 
+
 (*
 let new_decl d i l u = {var_decl = d; var_cil_vid = i; var_loc = l; var_used = u}
 
@@ -420,13 +421,9 @@ let get_glb_decls_inits translate_exp =
 
 
 
-
 (*----------*)
 (* Function *)
 (*----------*)
-
-(* Association table name -> specifications *)
-let fun_specs = Hashtbl.create 100
 
 let get_fun_spec name =
   try
@@ -549,14 +546,6 @@ let fun_declare_prototype (name, ret, args) =
 
 
 
-let map_fun_specs f =
-  let res = Hashtbl.create (Hashtbl.length fun_specs * 2) in
-  let translate name spec =
-    let key, value = f name spec in
-      Hashtbl.add res key value
-  in
-    Hashtbl.iter translate fun_specs;
-    res
 *)
 
 

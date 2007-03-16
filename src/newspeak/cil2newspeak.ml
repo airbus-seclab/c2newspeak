@@ -671,7 +671,20 @@ let translate_fun (f, loc) =
     
     let blk = K.simplify((translate_stmts status f.sbody.bstmts)@
 			   [K.Label status.return_lbl, floc]) in
-      generate_body blk (get_loc_decls ())
+    let body = generate_body blk (get_loc_decls ()) in
+
+    let ret_type = match f.svar.vtype with
+      | TFun (TVoid _, _, _, _) -> None
+      | TFun (t, _, _, _) -> Some (translate_typ t)
+      | _ ->
+	  error ("Env.ftyp_of_fundef: invalid type \""
+		 ^(string_of_type f.svar.vtype)^"\"")
+    in
+
+    let rec translate_formal f = translate_typ f.vtype in
+    let formals = List.map translate_formal f.sformals in
+      (formals, ret_type), Some body
+
 
 
 
@@ -707,10 +720,24 @@ let compile name =
   
     print_debug ("Translating "^name^"...");
 
-    (* call iter translate_fun and produce an intermediate result ! *)
-    (* a simple test is possible *)
+    let funs = Hashtbl.create (List.length !fun_defs) in
+    let translate_fun (f, loc) =
+      Hashtbl.add funs f.svar.vname (translate_fun (f, loc))
+    in
+      List.iter translate_fun !fun_defs;
 
-    failwith "Toto"
+      let kernel = ([], [], funs) in
+
+	if (!verb_newspeak) then begin
+	  print_endline "Newspeak output";
+	  print_endline "---------------";
+	  K.dump kernel;
+	  print_newline ();
+	end;
+
+	kernel
+
+
 
 
 
