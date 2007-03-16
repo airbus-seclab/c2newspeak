@@ -45,4 +45,4 @@ val dump : Pervasives.out_channel -> Cil.file -> unit
 
 val stmt_of_stmtkind : Cil.stmtkind -> Cil.stmt
 
-(* val null : Cil.exp *)
+val null : Cil.exp

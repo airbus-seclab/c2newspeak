@@ -2,15 +2,15 @@ open Cil
 open Cilutils
 
 open Npkcontext
-(* open Npkutils *)
-(* open Env *)
-(* open Local_pass *)
+open Npkutils
+open Env
+open Local_pass
 
 module K = Newspeak
 
 
 
-(*
+
 (*===================================*)
 (* Misc. functions used by translate *)
 (*===================================*)
@@ -39,66 +39,13 @@ let generate_body body decls =
   let rec generate_aux body decls =
     match decls with
       | [] -> body
-      | decl::r ->
-	  generate_aux [K.Decl (decl.var_decl, body), decl.var_loc] r
+      | (decl, loc)::r ->
+	  generate_aux [K.Decl (decl, body), loc] r
   in generate_aux body decls
 
 
 
 
-
-(* TODO: factor out print_warnings by putting together the warnings and 
-   selecting which should be verb_warnings or not *)
-
-(* Exploration of Cil's "globals" *)
-let explore g = 
-  update_loc (get_globalLoc g);
-  match g with
-    | GType (t, _) ->
-	if !verb_warnings then print_warning ("skip typedef "^t.tname)
-    | GEnumTag (info, _) -> 
-	if !verb_warnings then print_warning ("skip enum "^info.ename)
-    | GCompTag (c, _) -> 
-	if !verb_warnings then print_warning ("skip composite typedef "^c.cname)
-    | GCompTagDecl (c, _) -> 
-	if !verb_warnings then print_warning ("skip composite declaration "^c.cname)
-    | GPragma (a, _) when !ignores_pragmas -> 
-	print_warning ("Directive ignored: "
-		       ^"unknown #pragma "^(string_of_attribute a))
-	  
-    | GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _) ->
-	fun_declare_prototype (name, ret, args)
-	  
-    | GFun (f, _) -> 
-	if (f.svar.vname = "main") then begin
-	  let (ret, args) = 
-	    match unrollType f.svar.vtype with
-		TFun (ret, Some args, _, []) -> (ret, args)
-	      | _ -> error ("Cil2newspeak.translate.explore: "
-			    ^"main, should have a function type")
-	  in
-	    if (!verb_warnings) 
-	      && (unrollType ret <> TInt (IInt, [])) then
-		print_warning "return type of 'main' is not 'int'";
-	    match args with
-		[] -> ()
-	      | (_, arg1, [])::(_, arg2, [])::[] 
-		  when (unrollType arg1 = TInt (IInt, []))
-		    && (unrollTypeDeep arg2 = 
-			TPtr (TPtr (TInt (IChar, []), []), []))
-		    -> ()
-	      | _ -> error ("Invalid argument types for main: "
-			    ^"authorized forms are main() and"
-			    ^" main(int, char**)")
-	end;
-	fun_declare f
-	  
-    | GVarDecl (v, _) -> glb_declare (v, false, None)
-	
-    | GVar (v, {init = i}, _) -> glb_declare (v, true, i)
-	
-    | _ -> error ("Cil2newspeak.translate.explore: global "
-		  ^(string_of_global g)^" not supported")
 
 (*================================*)
 (* The central translate function *)
@@ -107,7 +54,8 @@ let explore g =
 let rec translate_const c =
   match c with
       CInt64 (i, _, _) -> K.Const (K.CInt64 i)
-    | CStr s -> get_cstr s
+(* TODO: Handle this ! *)
+(*     | CStr s -> get_cstr s *)
     | CChr c -> K.Const (K.CInt64 (Int64.of_int (Char.code c))) 
 	
     | CReal (f, _, Some s) -> K.Const (K.CFloat (f, s))
@@ -115,7 +63,7 @@ let rec translate_const c =
 	let s = string_of_float f in
 	  print_warning ("No string representation available for const "^s);
 	  K.Const (K.CFloat (f, s))
-	
+	    
     | CWStr _ | CEnum _
 	-> error ("Cil2newspeak.translate.translate_const")
 
@@ -290,7 +238,7 @@ and translate_exp e =
     | BinOp ((Eq|Gt) as o, e1, e2, TInt _) -> 
 	let op = translate_rel_binop (typeOf e1) (typeOf e2) o in
 	  K.BinOp (op, translate_exp e1, translate_exp e2)
-	
+	    
     | BinOp (Le, e1, e2, (TInt _ as t)) -> translate_exp (BinOp (Ge, e2, e1, t))
     | BinOp (Lt, e1, e2, (TInt _ as t)) -> translate_exp (BinOp (Gt, e2, e1, t))
     | BinOp (Ge, e1, e2, (TInt _ as t)) -> K.UnOp (K.Not, translate_exp (BinOp (Gt, e2, e1, t)))
@@ -347,12 +295,13 @@ and translate_exp e =
 	
     | AddrOf lv -> begin
 	match lv, translate_typ (typeOf e) with
-	  | (Var f, NoOffset), K.Scalar K.FunPtr -> begin
+(* TODO: Handle this ! *)
+(*	  | (Var f, NoOffset), K.Scalar K.FunPtr -> begin
 	      match get_fun_spec f.vname with
 		  None -> error ("Cil2newspeak.translate.translate_exp: "
 				 ^"unknown function "^f.vname)
 		| Some _ -> K.AddrOfFun f.vname
-	    end
+	    end *)
 	      
 	  | _, K.Scalar K.Ptr ->
 	      let (lv', offs) = removeOffsetLval lv in begin
@@ -446,8 +395,8 @@ and translate_stmts status stmts =
     | stmt::r ->
 	let labels = extract_labels status stmt.labels in
 	let first = translate_stmtkind status stmt.skind in
-	    labels@first@(translate_stmts status r)
-	      
+	  labels@first@(translate_stmts status r)
+	    
 
 and translate_instrlist il =
   match il with
@@ -464,38 +413,38 @@ and translate_instr i =
 	  let lval = translate_lval lv in
 	  let typ = translate_typ (typeOfLval lv) in
 	    [translate_set lval typ e, !cur_loc]
-	      
-    | Call (x, Lval lv, args, _) ->
-	translate_call x lv args
+
+(* TODO: Handle this *)
+(*  | Call (x, Lval lv, args, _) ->
+	translate_call x lv args*)
 	  
     | Call (_, _, _, _) ->
 	error ("Cil2newspeak.translate.translate_instr: bad call \""
 	       ^(string_of_instr i)^"\"");
     | Asm (_, _, _, _, _, _) ->
-	  error ("Cil2newspeak.translate.translate_instr: Asm block not supported")
-	    
+	error ("Cil2newspeak.translate.translate_instr: Asm block not supported")
+	  
 
-	    
-	    
+	  
+	  
 and translate_set lval typ e =
   match typ with
     | K.Scalar sca ->
 	let exp = translate_exp e in
 	  K.Set (lval,exp,sca)
-	  
+	    
     | K.Region (_, sz) -> begin
-	  match e with
-	    | Lval lv_src ->
-		let src = translate_lval lv_src in
-		  K.Copy (lval, src, sz)
-	    | _ -> error ("Cil2newspeak.translate.translate_set: left value expected \""
-			  ^(string_of_exp e)^"\"")
+	match e with
+	  | Lval lv_src ->
+	      let src = translate_lval lv_src in
+		K.Copy (lval, src, sz)
+	  | _ -> error ("Cil2newspeak.translate.translate_set: left value expected \""
+			^(string_of_exp e)^"\"")
       end
-	  
+	
     | _ -> error "Cil2newspeak.translate.translate_set: invalid type"
 	
 
-(* TODO: either remove Not or remove Ne. Need to choose. *)
 and translate_if status e stmts1 stmts2 =
   let if_loc = !cur_loc in
   let (e, t) = 
@@ -517,251 +466,262 @@ and translate_if status e stmts1 stmts2 =
       | _ -> K.UnOp (K.Not, K.BinOp (K.Eq t, K.zero, e))
   in
     print_debug (K.string_of_exp (translate_exp e));
-  let cond1 = normalize (translate_exp e) in
-  let cond2 = K.negate cond1 in
-  let body1 = translate_stmts status stmts1 in
-  let body2 = translate_stmts status stmts2 in
-    [K.ChooseAssert [([cond1], body1); ([cond2], body2)], if_loc]
-
-(*
-  let if_loc = !cur_loc in
-  let cond1 = translate_bool_exp e in
-  let cond2 = K.negate cond1
+    let cond1 = normalize (translate_exp e) in
+    let cond2 = K.negate cond1 in
+    let body1 = translate_stmts status stmts1 in
+    let body2 = translate_stmts status stmts2 in
+      [K.ChooseAssert [([cond1], body1); ([cond2], body2)], if_loc]
 
 
-  match e with
-    | UnOp (LNot, e', _) -> translate_if status e' stmts2 stmts1
-	
-    | BinOp (Ge, _, _, _) | BinOp (Gt, _, _, _) | BinOp (Le, _, _, _) 
-    | BinOp (Lt, _, _, _) | BinOp (Ne, _, _, _) | BinOp (Eq, _, _, _) ->
-	  let if_loc = !cur_loc in
-	    print_endline (Cilutils.string_of_exp e);
-	  let cond1 = translate_exp e in
-	    print_endline (K.string_of_exp cond1);
-	  let cond2 = K.negate cond1 in
-	    print_endline (K.string_of_exp cond2);
-	  let body1 = translate_stmts status stmts1 in
-	  let body2 = translate_stmts status stmts2 in
-	    [K.ChooseAssert [([cond1],body1); ([cond2], body2)], if_loc]
-	      
-    | _ -> begin
-	match translate_typ (typeOf e) with
-	    | K.Scalar (K.Int _) ->
-		let e = BinOp (Ne, e, CastE (typeOf e, zero), intType) in 
-		  translate_if status e stmts1 stmts2
-	    | K.Scalar K.Ptr | K.Scalar K.FunPtr ->
-  translate_if status (BinOp (Ne, e, null, intType)) stmts1 stmts2
- 	    | _ -> error ("Cil2newspeak.translate.translate_if: bad expression \""
-			  ^(string_of_exp e)^"\"");
-      end
-*)
+(** Returns a set of blocks, each representing a choice of the case 
+    statement. Each case is translated by appending a guard.
+    It also builds the guard of the default statement. *)
+and translate_switch status e stmt_list body =
+  let loc = !cur_loc in
+  let switch_exp = translate_exp e in
 
-  (** Returns a set of blocks, each representing a choice of the case 
-      statement. Each case is translated by appending a guard.
-      It also builds the guard of the default statement. *)
-  and translate_switch status e stmt_list body =
-    let loc = !cur_loc in
-    let switch_exp = translate_exp e in
+  let cases = ref [] in
 
-    let cases = ref [] in
+  let def_asserts = ref [] in
+  let status = ref (new_brk_status status) in
+  let def_goto = ref (K.Goto !status.brk_lbl, loc) in
 
-    let def_asserts = ref [] in
-    let status = ref (new_brk_status status) in
-    let def_goto = ref (K.Goto !status.brk_lbl, loc) in
+  let collect_label label =
+    match label with
+	Case (_, loc) | Default loc
+	    when mem_switch_label !status loc -> ()
+      | Case (v, loc) ->
+	  let t = 
+	    match translate_typ (typeOf v) with
+		K.Scalar i -> i
+	      | _ -> error "Env.add_cases: expression not scalar"
+	  in
+	  let case_exp = K.BinOp (K.Eq t, switch_exp, translate_exp v) in
+	  let def_exp = K.negate case_exp in
+	  let new_lbl = new_label () in
+	    status := add_switch_label !status loc new_lbl;
+	    def_asserts := def_exp::!def_asserts;
+	    cases := ([case_exp], [K.Goto new_lbl, translate_loc loc]):: (!cases)
+      | Default loc ->
+	  let new_lbl = new_label () in
+	    status := add_switch_label !status loc new_lbl;
+	    def_goto := (K.Goto new_lbl, translate_loc loc);
+	    ()
+      | _ -> error ("Env.add_cases: invalid label")
+  in
 
-    let collect_label label =
-      match label with
-	  Case (_, loc) | Default loc
-	      when mem_switch_label !status loc -> ()
-	| Case (v, loc) ->
-	    let t = 
-	      match translate_typ (typeOf v) with
-		  K.Scalar i -> i
-		| _ -> error "Env.add_cases: expression not scalar"
-	    in
-	    let case_exp = K.BinOp (K.Eq t, switch_exp, translate_exp v) in
-	    let def_exp = K.negate case_exp in
-	    let new_lbl = new_label () in
-	      status := add_switch_label !status loc new_lbl;
-	      def_asserts := def_exp::!def_asserts;
-	      cases := ([case_exp], [K.Goto new_lbl, translate_loc loc]):: (!cases)
-	| Default loc ->
-	    let new_lbl = new_label () in
-	      status := add_switch_label !status loc new_lbl;
-	      def_goto := (K.Goto new_lbl, translate_loc loc);
-		()
-	| _ -> error ("Env.add_cases: invalid label")
-    in
+  let collect_labels s = List.iter collect_label s.labels in
 
-    let collect_labels s = List.iter collect_label s.labels in
-
-      List.iter collect_labels stmt_list;
-      let choices = List.rev (!cases) in
-      let default_choice = (List.rev (!def_asserts), [!def_goto]) in
-      let body = translate_stmts !status body.bstmts in
+    List.iter collect_labels stmt_list;
+    let choices = List.rev (!cases) in
+    let default_choice = (List.rev (!def_asserts), [!def_goto]) in
+    let body = translate_stmts !status body.bstmts in
       ((K.ChooseAssert (default_choice::choices), loc)::body)@[K.Label !status.brk_lbl, loc]
 
 
 
+(* TODO: Handle this *)
+(*and translate_call x lv args_exps =
+  let loc = !cur_loc in
 
-  and translate_call x lv args_exps =
-    let loc = !cur_loc in
+  let handle_retval fname ret_type =
+    match ret_type, x with
+	(* No return value *)
+	None, None -> [], []
 
-    let handle_retval fname ret_type =
-      match ret_type, x with
-	  (* No return value *)
-	  None, None -> [], []
-
-	(* Return value ignored *)
-	| Some t, None ->
+      (* Return value ignored *)
+      | Some t, None ->
+	  push_local ();
+	  [new_decl (t, ("value_of_" ^ fname), (K.Init [])) 0 loc true], []
+	    
+      (* Return value put into Lval cil_lv *)
+      | Some t_given, Some cil_lv ->
+	  let t_expected = translate_typ (typeOfLval cil_lv) in
 	    push_local ();
-	    [new_decl (t, ("value_of_" ^ fname), (K.Init [])) 0 loc true], []
-	      
-	(* Return value put into Lval cil_lv *)
-	| Some t_given, Some cil_lv ->
-	    let t_expected = translate_typ (typeOfLval cil_lv) in
-	      push_local ();
-	      let lval = translate_lval cil_lv in
-	      let ret_decl = [new_decl (t_given, ("value_of_" ^ fname), (K.Init [])) 0 loc true] in
-	      let ret_epilog = match t_given, t_expected with
-		| K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
-		    [K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp), loc]
+	    let lval = translate_lval cil_lv in
+	    let ret_decl = [new_decl (t_given, ("value_of_" ^ fname), (K.Init [])) 0 loc true] in
+	    let ret_epilog = match t_given, t_expected with
+	      | K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
+		  [K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp), loc]
+		    
+	      | K.Scalar (K.Int _ as s_giv), K.Scalar (K.Int int_t as s_exp) ->
+		  let exp = K.make_int_coerce int_t (K.Lval (K.Local 0, s_giv)) in
+		    [K.Set (lval, exp, s_exp), loc]
 		      
-		| K.Scalar (K.Int _ as s_giv), K.Scalar (K.Int int_t as s_exp) ->
-		    let exp = K.make_int_coerce int_t (K.Lval (K.Local 0, s_giv)) in
-		      [K.Set (lval, exp, s_exp), loc]
-			
-		| K.Region (desc1, sz1), K.Region (desc2, sz2)
-		    when sz1 = sz2 && desc1 = desc2 ->
-		    [K.Copy (lval, K.Local 0, sz1), loc]
-		      
-		| _ -> error ("Cil2newspeak.translate.translate_call.handle_retval: invalid implicit cast")
-	      in
-		ret_decl, ret_epilog
-		  
-	| _ -> error ("Cil2newspeak.translate.translate_call.handle_retval: "
-		      ^"function "^fname^" has return type void")
-    in
-
-    let rec handle_args_decls fname formals exps =
-      let rec handle_args_decls_aux accu i formals exps =
-	match formals, exps with
-	  | None, []  -> accu
-	  | None, e::r_e ->
-	      push_local ();
-	      let t = translate_typ (typeOf e) in
-		handle_args_decls_aux 
-		  ((new_decl (t, ("arg" ^ (string_of_int i)), (K.Init [])) 0 loc true)::accu)
-		  (i+1) None r_e
-		  
-	  | Some [], [] -> accu
-	  | Some (decl::r_t), e::r_e ->
-	      let t_given = translate_typ (typeOf e) in
-	      let t_expected = extract_type decl in
-		if t_expected <> t_given then begin
-		  error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
-			 ^"type mismatch ("^(K.string_of_typ t_given)^" <> "^(K.string_of_typ t_expected)^
-			 ") in "^fname^" call are different");
-		end;
-		push_local ();
-		handle_args_decls_aux ({decl with var_loc = loc}::accu) (i+1) (Some r_t) r_e
-		  
-	  | _,_ -> error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
-			  ^"function "^fname^" called with incorrect number of args")
-      in
-	handle_args_decls_aux [] 0 formals exps
-    in
-
-    let rec handle_args_prolog accu n i args_exps =
-      match args_exps with
-	  [] -> accu
-	| e::r_e ->
-	    let t = translate_typ (typeOf e) in
-	    let lval = K.Local ((n-i) - 1) in
-	      handle_args_prolog ((translate_set lval t e, !cur_loc)::accu) n (i+1) r_e
-    in
-
-      save_loc_cnt ();
-      let res = match lv with
-	| Var f, NoOffset ->
-	    let spec = match get_fun_spec f.vname with
-	      | None -> error ("Cil2newspeak.translate.translate_call: "
-			       ^"Function not declared: "^f.vname)
-	      | Some s -> s
+	      | K.Region (desc1, sz1), K.Region (desc2, sz2)
+		  when sz1 = sz2 && desc1 = desc2 ->
+		  [K.Copy (lval, K.Local 0, sz1), loc]
+		    
+	      | _ -> error ("Cil2newspeak.translate.translate_call.handle_retval: invalid implicit cast")
 	    in
+	      ret_decl, ret_epilog
+		
+      | _ -> error ("Cil2newspeak.translate.translate_call.handle_retval: "
+		    ^"function "^fname^" has return type void")
+  in
 
-	    let name = f.vname in
-	    let ret_decl, ret_epilog = handle_retval name spec.ret_type in
-	    let args_decls = handle_args_decls name spec.formals args_exps in
+  let rec handle_args_decls fname formals exps =
+    let rec handle_args_decls_aux accu i formals exps =
+      match formals, exps with
+	| None, []  -> accu
+	| None, e::r_e ->
+	    push_local ();
+	    let t = translate_typ (typeOf e) in
+	      handle_args_decls_aux 
+		((new_decl (t, ("arg" ^ (string_of_int i)), (K.Init [])) 0 loc true)::accu)
+		(i+1) None r_e
+		
+	| Some [], [] -> accu
+	| Some (decl::r_t), e::r_e ->
+	    let t_given = translate_typ (typeOf e) in
+	    let t_expected = extract_type decl in
+	      if t_expected <> t_given then begin
+		error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
+		       ^"type mismatch ("^(K.string_of_typ t_given)^" <> "^(K.string_of_typ t_expected)^
+		       ") in "^fname^" call are different");
+	      end;
+	      push_local ();
+	      handle_args_decls_aux ({decl with var_loc = loc}::accu) (i+1) (Some r_t) r_e
+		
+	| _,_ -> error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
+			^"function "^fname^" called with incorrect number of args")
+    in
+      handle_args_decls_aux [] 0 formals exps
+  in
+
+  let rec handle_args_prolog accu n i args_exps =
+    match args_exps with
+	[] -> accu
+      | e::r_e ->
+	  let t = translate_typ (typeOf e) in
+	  let lval = K.Local ((n-i) - 1) in
+	    handle_args_prolog ((translate_set lval t e, !cur_loc)::accu) n (i+1) r_e
+  in
+
+    save_loc_cnt ();
+    let res = match lv with
+      | Var f, NoOffset ->
+	  let spec = match get_fun_spec f.vname with
+	    | None -> error ("Cil2newspeak.translate.translate_call: "
+			     ^"Function not declared: "^f.vname)
+	    | Some s -> s
+	  in
+
+	  let name = f.vname in
+	  let ret_decl, ret_epilog = handle_retval name spec.ret_type in
+	  let args_decls = handle_args_decls name spec.formals args_exps in
+	  let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
+	    
+	  let call_w_prolog = (K.Call (K.FunId f.vname), loc)::args_prolog in
+	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
+
+	    if (spec.formals = None)
+	    then update_fun_spec f.vname None (Some args_decls) [] [] None;
+	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
+	      
+      | Mem (Lval fptr), NoOffset ->
+	  let typ = translate_typ (typeOfLval fptr) in
+	    if typ <> K.Scalar K.FunPtr
+	    then error "Cil2newspeak.translate.translate_call: FunPtr expected";
+	    
+	    let (_, line, _) = loc in
+	    let name = "fptr_called_line_" ^ (string_of_int line) in
+	    let ret_type = match x with
+	      | None -> None
+	      | Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
+	    in
+	      
+	    let ret_decl, ret_epilog = handle_retval name ret_type in
+	    let args_decls = handle_args_decls name None args_exps in
 	    let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
 	      
-	    let call_w_prolog = (K.Call (K.FunId f.vname), loc)::args_prolog in
-	    let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
+	    let args_t = List.rev (List.map extract_type args_decls) in
+	    let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
 
-	      if (spec.formals = None)
-	      then update_fun_spec f.vname None (Some args_decls) [] [] None;
+	    let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
+	    let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
 	      generate_body (call_wo_ret@(ret_epilog)) ret_decl
 		
-	| Mem (Lval fptr), NoOffset ->
-	    let typ = translate_typ (typeOfLval fptr) in
-	      if typ <> K.Scalar K.FunPtr
-	      then error "Cil2newspeak.translate.translate_call: FunPtr expected";
-	      
-	      let (_, line, _) = loc in
-	      let name = "fptr_called_line_" ^ (string_of_int line) in
-	      let ret_type = match x with
-		| None -> None
-		| Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
-	      in
-		
-	      let ret_decl, ret_epilog = handle_retval name ret_type in
-	      let args_decls = handle_args_decls name None args_exps in
-	      let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
-		
-	      let args_t = List.rev (List.map extract_type args_decls) in
-	      let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
-
-	      let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
-	      let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
-		generate_body (call_wo_ret@(ret_epilog)) ret_decl
-		  
-	| _ -> error "Cil2newspeak.translate.translate_call: Left value not supported"
-	    
-      in
-	restore_loc_cnt ();
-	res
-
-
-
-  let translate_fun name spec =
-    let loc = match spec.fun_loc with
-	None -> K.locUnknown
-      | Some l -> l
+      | _ -> error "Cil2newspeak.translate.translate_call: Left value not supported"
+	  
     in
-      cur_loc := loc;
-      match (spec.formals, spec.body) with
-	  _, [] -> None
-	| None, _ -> error "Cil2newspeak.translate.translate_fun"
-	| Some args, stmts -> begin
-	    let init_frame () =
-	      let status = 
-		match spec.ret_type with
-		    None -> empty_status ()
-		  | Some t ->
-		      loc_declare false (new_decl (t, "", (K.Init [])) 0 K.locUnknown true);
-		      new_ret_status ()
-	      in
-		List.iter (loc_declare false) args;
-		List.iter (loc_declare true) spec.locals;
-		status
-	    in
-	      
-	    let status = init_frame () in
-	    let blk = K.simplify((translate_stmts status stmts)@[K.Label status.return_lbl, !cur_loc]) in
-	    let body = generate_body blk (get_loc_decls ()) in
-	      
-	      Some body
-	  end
+      restore_loc_cnt ();
+      res
+*)
+
+
+
+
+
+
+let translate_fun (f, loc) =
+  update_loc loc;
+  let floc = !cur_loc in
+  let status = 
+    match f.svar.vtype with
+      | TFun (TVoid _, _, _, _) -> empty_status ()
+      | TFun (t, _, _, _) ->
+	  push_local ();
+	  new_ret_status ()
+      | _ -> error ("Env.fun_declare: invalid type \""
+		    ^(string_of_type f.svar.vtype)^"\"")
+  in
+    List.iter (loc_declare false) f.sformals;
+    List.iter (loc_declare true) f.slocals;
+    
+    let blk = K.simplify((translate_stmts status f.sbody.bstmts)@
+			   [K.Label status.return_lbl, floc]) in
+      generate_body blk (get_loc_decls ())
+
+
+
+
+(*=========================================*)
+(* compile function, which wraps translate *)
+(*=========================================*)
+
+let compile name =
+  initCIL ();
+  useLogicalOperators := false;
+
+  print_debug ("Parsing "^name^"...");
+  let cil_file = Frontc.parse name () in
+    print_debug ("Parsing done.");
+    if !verb_cil then begin
+      print_newline ();
+      print_endline ("Cil output for "^name);
+      for i = 1 to String.length name do
+	print_string "-"
+      done;
+      print_endline "---------------";
+      dump stdout cil_file;
+      print_newline ();
+      print_newline ()
+    end;
+
+    print_debug "Running first pass...";
+    update_loc locUnknown;
+    first_pass cil_file;
+    update_loc locUnknown;
+    print_debug "First pass done.";
+  
+    print_debug ("Translating "^name^"...");
+
+    (* call iter translate_fun and produce an intermediate result ! *)
+    (* a simple test is possible *)
+
+    failwith "Toto"
+
+
+
+
+
+
+
+
+
+(*
+
 
 (* TODO: add these as #pragma assume in the code, a lot easier *)
 (*let create_assumption str =
@@ -786,6 +746,8 @@ and translate_if status e stmts1 stmts2 =
       let t = Env.get_glb_typ x in
 	(K.BinOp (K.Ge t, K.Lval (v, t), K.Const (K.CInt64 (Int64.of_int n))))
     with _ -> error ("Unknown assumption: "^str)*)
+
+
 
 
 let translate () =
@@ -816,63 +778,6 @@ let translate () =
 
 	([], glb_decls, fun_defs)
 
-*)
-
-
-
-
-(*=========================================*)
-(* compile function, which wraps translate *)
-(*=========================================*)
-
-let compile name =
-  initCIL ();
-  useLogicalOperators := false;
-
-  print_debug ("Parsing "^name^"...");
-  let cil_file = Frontc.parse name () in
-    print_debug ("Parsing done.");
-    if !verb_cil then begin
-      print_newline ();
-      print_endline ("Cil output for "^name);
-      for i = 1 to String.length name do
-	print_string "-"
-      done;
-      print_endline "---------------";
-      dump stdout cil_file;
-      print_newline ();
-      print_newline ()
-    end;
-
-    print_debug "Running first pass...";
-    update_loc locUnknown;
-    let (glb_decls, fun_defs, proto_decls, glb_used, fun_called, glb_cstr) = Local_pass.translate cil_file in
-      update_loc locUnknown;
-      print_debug "First pass done.";
-  
-  print_debug ("Translating "^name^"...");
-
-    (* TODO: find adequate types for glb_decls, fun_defs and proto_decls *)
-
-(*  let kernel = translate () in
-    print_debug "Translation complete.";
-    if !verb_newspeak then begin
-      print_endline "Newspeak output";
-      print_endline "---------------";
-      K.dump kernel;
-      print_newline ()
-    end;
-    
-    if (!newspeak_output <> "") then begin
-      let ch_out = open_out_bin !newspeak_output in
-	print_debug ("Writing "^(!newspeak_output)^"...");
-	Marshal.to_channel ch_out (fnames, kernel) [];
-	print_debug ("Writing done.");
-    end;
-      
-    kernel *)
-
-  failwith "Toto"
 
 
 
@@ -881,8 +786,6 @@ let compile name =
 
 
 
-
-(*
 (*=====================================*)
 (* cil2newspeak, which wraps translate *)
 (*=====================================*)

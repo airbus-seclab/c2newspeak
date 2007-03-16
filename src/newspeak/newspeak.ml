@@ -27,6 +27,7 @@ and blk = stmt list
 and lval =
     Local of vid
   | Global of vid
+  | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
@@ -46,6 +47,7 @@ and cte =
 
 and unop =
     Belongs of (Int64.t * Int64.t)
+  | Belongs_tmp of string
   | Coerce of (Int64.t * Int64.t)
   | Not
   | BNot of (Int64.t * Int64.t)
@@ -349,6 +351,7 @@ let string_of_unop op =
   match op with
       Belongs (l,u) ->
 	"belongs["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
+    | Belongs_tmp _ -> failwith "Newspeak.string_of_unop: Belongs_tmp"
     | Coerce (l,u) ->
 	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
     | Cast (typ, typ') ->
@@ -387,6 +390,7 @@ let rec string_of_lval decls lv =
   match lv with
       Local vid -> string_of_local decls vid
     | Global vid -> string_of_global vid
+    | Global_tmp _ -> failwith "Newspeak.string_of_lval: Global_tmp"
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
 

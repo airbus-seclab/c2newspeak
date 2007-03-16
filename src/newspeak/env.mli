@@ -3,7 +3,7 @@
     status functions to keep track of current interesting labels *)
 
 
-(*
+
 (** {1 Types} *)
 
 (** The status type allows the translate functions to keep track of
@@ -15,7 +15,44 @@ type status = {
   brk_lbl    : Newspeak.lbl;
 }
 
+type glb_type = {
+  gname : string;
+  gtype : Cil.typ;
+  gloc  : Cil.location;
+  gdefd : bool;
+  ginit : Cil.init option;
+}
 
+type proto_type = {
+  pname : string;
+  prett : Newspeak.typ option;
+  pargs : ((string * Newspeak.typ) list) option;
+  ploc  : Cil.location;
+}
+
+
+
+(** {1 Compilation variables} *)
+
+val glb_decls : (glb_type list) ref
+val fun_defs : ((Cil.fundec * Cil.location) list) ref
+val proto_decls : (proto_type list) ref
+val glb_used : Npkutils.String_set.t ref
+val fun_called : Npkutils.String_set.t ref
+val glb_cstr : Npkutils.String_set.t ref
+
+
+
+(** {1 Globals} *)
+
+(** [glb_uniquename v] returns the standardized name of global
+    variable v: its name if it is a shared variable, its name prefixed
+    by the filename if it is a static variable. *)
+val glb_uniquename : Cil.varinfo -> string
+
+
+
+(*
 (** This is the type of the declarations. We have to keep them in a
     list before we can translate them in Newspeak.Decl statement,
     because of the structure of Newspeak.Decl : (typ, blk).
@@ -49,14 +86,6 @@ type fun_spec_t = {
 
 
 
-(** {1 Globals} *)
-
-(** [glb_uniquename v] returns the standardized name of global
-    variable v: its name if it is a shared variable, its name prefixed
-    by the filename if it is a static variable. *)
-val glb_uniquename : Cil.varinfo -> string
-
-
 (*
 (** [glb_declare v defd init] adds the declaration of v in the global
   list, and if the variable is defined, keeps the initializers for
@@ -78,7 +107,7 @@ val glb_uses : Cil.varinfo -> unit
 (** [get_glb_decls_inits translate_exp] retrives the list of the
     global variables and translates the initializers *)
 val get_glb_decls_inits : (Cil.exp -> Newspeak.exp) -> Newspeak.decl list
-
+*)
 
 
 
@@ -89,11 +118,11 @@ val get_glb_decls_inits : (Cil.exp -> Newspeak.exp) -> Newspeak.decl list
 (** {2 Functions used in translate_fun} *)
 
 (** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : bool -> decl_t -> unit
+val loc_declare : bool -> Cil.varinfo -> unit
 
 (** [get_loc_decls ()] returns the current list of local declaration,
     and reset the local handler (counter, hashtable and decl list) *)
-val get_loc_decls : unit -> decl_t list
+val get_loc_decls : unit -> (Newspeak.decl * Newspeak.location) list
 
 
 (** {2 Functions used in translate_call} *)
@@ -111,7 +140,7 @@ val restore_loc_cnt : unit -> unit
 
 
 
-
+(*
 (** {1 Functions} *)
 
 (** allows to update the specification of a function (prototype) when
@@ -133,15 +162,15 @@ val get_fun_spec : string -> fun_spec_t option
 (** [get_fun_spec f] applies f to every specification and use the
     results of f as a couple (key, value) to fill a new hash table *)
 val map_fun_specs : (string -> fun_spec_t -> 'a * 'b) -> ('a, 'b) Hashtbl.t
-
+*)
 
 
 
 (** {1 Variable id retrieval} *)
 
-val get_glb_var : string -> Newspeak.lval
+(*val get_glb_var : string -> Newspeak.lval
 
-val get_glb_typ : string -> Newspeak.scalar_t
+val get_glb_typ : string -> Newspeak.scalar_t*)
 
 (** returns a Newspeak left value corresponding to a global or a local
     variable *)
@@ -149,7 +178,7 @@ val get_var : Cil.varinfo -> Newspeak.lval
 
 (** [get_cstr_kvid] returns the expression giving access to the
     constant string corresponding to s *)
-val get_cstr : string -> Newspeak.exp
+(*val get_cstr : string -> Newspeak.exp*)
 
 (** returns the Newspeak left value corresponding to the current return
     value *)
@@ -182,6 +211,9 @@ val retrieve_switch_label : status -> Cil.location -> Newspeak.lbl
 (** tells whether a switch label is already in the status *)
 val mem_switch_label : status -> Cil.location -> bool
 
+
+
+(*
 (* TODO: to be removed *)
 val fun_specs : (string, fun_spec_t) Hashtbl.t
 type glb_t = {

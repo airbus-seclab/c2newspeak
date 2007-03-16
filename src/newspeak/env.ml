@@ -4,6 +4,59 @@ open Npkcontext
 open Npkutils
 
 
+(*----------------------------*)
+(* Useful, non exported stuff *)
+(*----------------------------*)
+
+(* Counter are always incremented by incr*)
+let incr cnt = 
+  if !cnt = max_int
+  then error "Env.incr: too many objects";
+  incr cnt;
+  !cnt
+
+
+
+(*-------*)
+(* Types *)
+(*-------*)
+
+type status = {
+  return_var : Newspeak.vid;
+  return_lbl : Newspeak.lbl;
+  switch_lbls: (Cil.location * Newspeak.lbl) list;
+  brk_lbl    : Newspeak.lbl;
+}
+
+type glb_type = {
+  gname : string;
+  gtype : Cil.typ;
+  gloc  : Cil.location;
+  gdefd : bool;
+  ginit : Cil.init option;
+}
+
+type proto_type = {
+  pname : string;
+  prett : Newspeak.typ option;
+  pargs : ((string * Newspeak.typ) list) option;
+  ploc  : Cil.location;
+}
+
+
+
+(*-----------------------*)
+(* Compilation variables *)
+(*-----------------------*)
+
+let glb_decls = ref []
+let fun_defs = ref []
+let proto_decls = ref []
+let glb_used = ref (String_set.empty)
+let fun_called = ref (String_set.empty)
+let glb_cstr = ref (String_set.empty)
+
+
 
 (*---------*)
 (* Globals *)
@@ -17,30 +70,116 @@ let glb_uniquename v =
 
 
 
+(*--------*)
+(* Locals *)
+(*--------*)
+
+
+(* Counter *)
+let loc_cnt = ref 0
+
+(* Association table Cil.vid -> Newspeak.vid *)
+let loc_tabl = Hashtbl.create 100
+
+(* List of current declarations: the list grows as loc_declare is
+   called, and is emptied when retrieved by get_loc_decls *)
+let loc_decls = ref []
+
+(* This reference keeps the old counter when translating a call. The
+   programmer must check that only one save can be made at a time*)
+let loc_cnt_sav = ref 0
+
+let push_local () = ignore (incr loc_cnt)
+
+
+(* Functions used in translate_fun *)
+(*---------------------------------*)
+
+let loc_declare generate_stmt_decl v =
+  let vid = incr loc_cnt in
+    Hashtbl.add loc_tabl v.vid vid;
+    if generate_stmt_decl then loc_decls :=
+      ((translate_typ v.vtype, v.vname, Newspeak.Init []), translate_loc v.vdecl)::!loc_decls
+
+
+let get_loc_decls () =
+  let res = !loc_decls in
+    loc_decls := [];
+    loc_cnt := 0;
+    Hashtbl.clear loc_tabl;
+    res
+
+
+(* Functions used in translate_call *)
+(*----------------------------------*)
+
+let save_loc_cnt () = loc_cnt_sav := !loc_cnt
+
+let restore_loc_cnt () = loc_cnt := !loc_cnt_sav
+
+
+
+(*-----------------------*)
+(* Variable id retrieval *)
+(*-----------------------*)
+
+let get_var cil_var =
+  (* local variables *)
+  try
+    let vid = Hashtbl.find loc_tabl cil_var.vid in
+    let n = !loc_cnt - vid in
+      Newspeak.Local n
+  with Not_found ->
+    Newspeak.Global_tmp (glb_uniquename cil_var)
+
+
+let get_ret_var status = Newspeak.Local (!loc_cnt - status.return_var)
+
+
+
+(*------------------------------------------*)
+(* Status "Constructors" and label handling *)
+(*------------------------------------------*)
+
+(* Counter for labels *)
+let lbl_cnt = ref 0
+
+let empty_status () =
+  {return_var = -1; return_lbl = incr lbl_cnt;
+   switch_lbls = []; brk_lbl = -1;}
+
+let new_ret_status () =
+  {return_var = !loc_cnt; return_lbl = incr lbl_cnt;
+   switch_lbls = []; brk_lbl = -1;}
+
+let new_brk_status status = {status with brk_lbl = incr lbl_cnt}
+
+let new_label () = incr lbl_cnt
+
+let add_switch_label status loc new_lbl =
+  {status with switch_lbls = (loc, new_lbl)::status.switch_lbls}
+
+let retrieve_switch_label status loc =
+  List.assoc loc status.switch_lbls
+
+let mem_switch_label status loc =
+  List.mem_assoc loc status.switch_lbls
+
+
+
+
+
 (*
-(*-------*)
-(* Types *)
-(*-------*)
-
-type status = {
-  return_var : Newspeak.vid;
-  return_lbl : Newspeak.lbl;
-  switch_lbls: (Cil.location * Newspeak.lbl) list;
-  brk_lbl    : Newspeak.lbl;
-}
-
-
-type decl_t = {
-  var_decl    : Newspeak.decl;
-  var_cil_vid : int;
-  var_loc     : Newspeak.location;
-  mutable var_used : bool;
-}
-
 let new_decl d i l u = {var_decl = d; var_cil_vid = i; var_loc = l; var_used = u}
 
 let extract_type decl = let (t, _, _) = decl.var_decl in t
 
+
+type loc_type = {
+  var_decl    : Newspeak.decl;
+  var_cil_vid : int;
+  var_loc     : Newspeak.location;
+}
 
 type fun_spec_t = {
   mutable ret_type : Newspeak.typ option;
@@ -53,16 +192,6 @@ type fun_spec_t = {
 
 
 
-(*----------------------------*)
-(* Useful, non exported stuff *)
-(*----------------------------*)
-
-(* Counter are always incremented by incr*)
-let incr cnt = 
-  if !cnt = max_int
-  then error "Env.incr: too many objects";
-  incr cnt;
-  !cnt
 
 
 
@@ -292,55 +421,6 @@ let get_glb_decls_inits translate_exp =
 
 
 
-(*--------*)
-(* Locals *)
-(*--------*)
-
-
-(* Counter *)
-let loc_cnt = ref 0
-
-(* Association table Cil.vid -> Newspeak.vid *)
-let loc_tabl = Hashtbl.create 100
-
-(* List of current declarations: the list grows as loc_declare is
-   called, and is emptied when retrieved by get_loc_decls *)
-let loc_decls = ref []
-
-(* This reference keeps the old counter when translating a call. The
-   programmer must check that only one save can be made at a time*)
-let loc_cnt_sav = ref 0
-
-
-(* Functions used in translate_fun *)
-(*---------------------------------*)
-
-let loc_declare generate_stmt_decl decl =
-  let vid = incr loc_cnt in
-    Hashtbl.add loc_tabl decl.var_cil_vid vid;
-    if generate_stmt_decl then loc_decls := decl::!loc_decls
-
-
-let get_loc_decls () =
-  let res = !loc_decls in
-    loc_decls := [];
-    loc_cnt := 0;
-    Hashtbl.clear loc_tabl;
-    res
-
-
-(* Functions used in translate_call *)
-(*----------------------------------*)
-
-let push_local () = ignore (incr loc_cnt)
-
-let save_loc_cnt () = loc_cnt_sav := !loc_cnt
-
-let restore_loc_cnt () = loc_cnt := !loc_cnt_sav
-
-
-
-
 (*----------*)
 (* Function *)
 (*----------*)
@@ -477,15 +557,11 @@ let map_fun_specs f =
   in
     Hashtbl.iter translate fun_specs;
     res
+*)
 
 
 
-
-(*-----------------------*)
-(* Variable id retrieval *)
-(*-----------------------*)
-
-let get_glb_var vname =
+(*let get_glb_var vname =
   try 
     (* Static global variables *)
     try
@@ -506,27 +582,6 @@ let get_glb_typ vname =
       Hashtbl.find glb_tabl_typ vname
   with Not_found -> error ("Env.get_glb_typ: invalid vid for "^vname)
 
-let get_var cil_var =
-  (* local variables *)
-  try
-    let vid = Hashtbl.find loc_tabl cil_var.vid in
-    let n = !loc_cnt - vid in begin
-	try 
-	  let decl = List.nth !loc_decls n in
-	    decl.var_used <- true;
-	with Failure _ -> ()
-      end;
-      Newspeak.Local n
-  with Not_found ->
-    if !mergecil then begin
-      try
-	(* Mergecil *)
-	let kvid = Hashtbl.find glb_tabl_vid (string_of_int cil_var.vid) in
-	  Newspeak.Global (kvid)
-      with Not_found -> error ("Env.get_var: invalid vid for "^(cil_var.vname))
-    end else get_glb_var cil_var.vname
-
-
 
 let get_cstr s =
   try
@@ -537,36 +592,8 @@ let get_cstr s =
 
 
 let get_ret_var status = Newspeak.Local (!loc_cnt - status.return_var)
-
-
-
-
-
-(*------------------------------------------*)
-(* Status "Constructors" and label handling *)
-(*------------------------------------------*)
-
-(* Counter for labels *)
-let lbl_cnt = ref 0
-
-let empty_status () =
-  {return_var = -1; return_lbl = incr lbl_cnt;
-   switch_lbls = []; brk_lbl = -1;}
-
-let new_ret_status () =
-  {return_var = !loc_cnt; return_lbl = incr lbl_cnt;
-   switch_lbls = []; brk_lbl = -1;}
-
-let new_brk_status status = {status with brk_lbl = incr lbl_cnt}
-
-let new_label () = incr lbl_cnt
-
-let add_switch_label status loc new_lbl =
-  {status with switch_lbls = (loc, new_lbl)::status.switch_lbls}
-
-let retrieve_switch_label status loc =
-  List.assoc loc status.switch_lbls
-
-let mem_switch_label status loc =
-  List.mem_assoc loc status.switch_lbls
 *)
+
+
+
+

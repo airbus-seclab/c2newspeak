@@ -80,5 +80,5 @@ let dump stdout file = dumpFile !cilPrinter stdout "" file
 let stmt_of_stmtkind sk =
   {labels = []; skind = sk; sid = 0; succs = []; preds = []}
 
-(* let null = CastE (TPtr (TVoid [], []), zero) *)
+let null = CastE (TPtr (TVoid [], []), zero)
 

@@ -4,17 +4,7 @@ open Npkcontext
 open Npkutils
 open Env
 
-module String_set = 
-  Set.Make (struct type t = string let compare = Pervasives.compare end)
 
-
-(* List collected during the pass *)
-let glb_decls = ref []
-let fun_defs = ref []
-let proto_decls = ref []
-let glb_used = ref (String_set.empty)
-let fun_called = ref (String_set.empty)
-let glb_cstr = ref (String_set.empty)
 
 
 let local_vids = ref []
@@ -150,8 +140,9 @@ let check_main_signature t =
 
 
 (* Exploration of Cil's "globals" and first pass *)
-(* TODO: use something else than a tuple to return things *)
-let translate f =
+(* TODO: factor out print_warnings by putting together the warnings and 
+   selecting which should be verb_warnings or not *)
+let first_pass f =
   update_loc locUnknown;
   let visitor = new vistor_first_pass in
     
@@ -173,19 +164,44 @@ let translate f =
 			     ^"unknown #pragma "^(string_of_attribute a))
 		      
 	  | GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _) ->
-	      proto_decls := ((name, ret, args), loc)::(!proto_decls)
+	      let ret_type = match ret with
+		  | TVoid _ -> None
+		  | t -> Some (translate_typ t)
+	      in
+
+	      let rec translate_formals i l =
+		match l with
+		    [] -> []
+		  | (n, t, _)::r ->
+		      let name =
+			if n="" then "arg" ^ (string_of_int i) else n
+		      in
+			(name, translate_typ t)::(translate_formals (i+1) r)
+	      in
+	      let formals = match args with
+		  None ->
+		    print_warning ("missing or incomplete prototype for "^name);
+		    None
+		| Some l -> Some (translate_formals 0 l)
+	      in
+		proto_decls := {pname = name; prett = ret_type;
+				pargs = formals; ploc = loc;}::(!proto_decls)
 	  
 	  | GFun (f, _) -> 
 	      (* Every defined function is kept *)
 	      fun_called := String_set.add f.svar.vname !fun_called;
-	      if (f.svar.vname = "main") then check_main_signature f.svar.vtype;      
-	      fun_defs := f::(!fun_defs)
+	      if (f.svar.vname = "main") then check_main_signature f.svar.vtype;
+	      fun_defs := (f, loc)::(!fun_defs)
 		      
 	  | GVarDecl (v, _) -> 
-	      glb_decls := ((v, false, None), loc)::(!glb_decls)
+	      glb_decls := {gname = glb_uniquename v;
+			    gtype = v.vtype; gloc = v.vdecl;
+			    gdefd = false; ginit = None;}::(!glb_decls)
 		      
 	  | GVar (v, {init = i}, _) -> 
-	      glb_decls := ((v, true, i), loc)::(!glb_decls)
+	      glb_decls := {gname = glb_uniquename v;
+			    gtype = v.vtype; gloc = v.vdecl;
+			    gdefd = true; ginit = i;}::(!glb_decls)
 		
 	  | _ -> error ("Cil2newspeak.translate.explore: global "
 			^(string_of_global g)^" not supported")
@@ -196,7 +212,5 @@ let translate f =
     glb_used := String_set.empty;
     fun_called := String_set.empty;
     glb_cstr := String_set.empty;
-    List.iter explore f.globals;
-    (List.rev !glb_decls, List.rev !fun_defs, List.rev !proto_decls,
-     String_set.elements !glb_used, String_set.elements !fun_called,
-     String_set.elements !glb_cstr)
+
+    List.iter explore (List.rev f.globals)
