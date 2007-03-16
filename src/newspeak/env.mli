@@ -67,7 +67,6 @@ type decl_t = {
 
 val new_decl : Newspeak.decl -> int -> Newspeak.location -> bool -> decl_t
 
-val extract_type : decl_t -> Newspeak.typ
 
 
 (** A function specification contains all its local variables (return
@@ -140,9 +139,13 @@ val restore_loc_cnt : unit -> unit
 
 
 
-(*
 (** {1 Functions} *)
 
+val use_fun : Cil.varinfo -> unit
+
+val extract_type : Newspeak.decl * Newspeak.location -> Newspeak.typ
+
+(*
 (** allows to update the specification of a function (prototype) when
     called for example *)
 val update_fun_spec : string -> Newspeak.typ option -> decl_t list option -> decl_t list ->
@@ -159,9 +162,6 @@ val fun_declare_prototype :
     if possible *)
 val get_fun_spec : string -> fun_spec_t option
 
-(** [get_fun_spec f] applies f to every specification and use the
-    results of f as a couple (key, value) to fill a new hash table *)
-val map_fun_specs : (string -> fun_spec_t -> 'a * 'b) -> ('a, 'b) Hashtbl.t
 *)
 
 
@@ -176,9 +176,9 @@ val get_glb_typ : string -> Newspeak.scalar_t*)
     variable *)
 val get_var : Cil.varinfo -> Newspeak.lval
 
-(** [get_cstr_kvid] returns the expression giving access to the
+(** [get_cstr] returns the expression giving access to the
     constant string corresponding to s *)
-(*val get_cstr : string -> Newspeak.exp*)
+val get_cstr : string -> Newspeak.exp
 
 (** returns the Newspeak left value corresponding to the current return
     value *)

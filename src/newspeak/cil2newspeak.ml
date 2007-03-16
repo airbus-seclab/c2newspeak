@@ -54,8 +54,7 @@ let generate_body body decls =
 let rec translate_const c =
   match c with
       CInt64 (i, _, _) -> K.Const (K.CInt64 i)
-(* TODO: Handle this ! *)
-(*     | CStr s -> get_cstr s *)
+    | CStr s -> get_cstr s
     | CChr c -> K.Const (K.CInt64 (Int64.of_int (Char.code c))) 
 	
     | CReal (f, _, Some s) -> K.Const (K.CFloat (f, s))
@@ -295,13 +294,8 @@ and translate_exp e =
 	
     | AddrOf lv -> begin
 	match lv, translate_typ (typeOf e) with
-(* TODO: Handle this ! *)
-(*	  | (Var f, NoOffset), K.Scalar K.FunPtr -> begin
-	      match get_fun_spec f.vname with
-		  None -> error ("Cil2newspeak.translate.translate_exp: "
-				 ^"unknown function "^f.vname)
-		| Some _ -> K.AddrOfFun f.vname
-	    end *)
+	  | (Var f, NoOffset), K.Scalar K.FunPtr ->
+	      K.AddrOfFun f.vname
 	      
 	  | _, K.Scalar K.Ptr ->
 	      let (lv', offs) = removeOffsetLval lv in begin
@@ -414,9 +408,8 @@ and translate_instr i =
 	  let typ = translate_typ (typeOfLval lv) in
 	    [translate_set lval typ e, !cur_loc]
 
-(* TODO: Handle this *)
-(*  | Call (x, Lval lv, args, _) ->
-	translate_call x lv args*)
+    | Call (x, Lval lv, args, _) ->
+	translate_call x lv args
 	  
     | Call (_, _, _, _) ->
 	error ("Cil2newspeak.translate.translate_instr: bad call \""
@@ -520,8 +513,7 @@ and translate_switch status e stmt_list body =
 
 
 
-(* TODO: Handle this *)
-(*and translate_call x lv args_exps =
+and translate_call x lv args_exps =
   let loc = !cur_loc in
 
   let handle_retval fname ret_type =
@@ -532,14 +524,14 @@ and translate_switch status e stmt_list body =
       (* Return value ignored *)
       | Some t, None ->
 	  push_local ();
-	  [new_decl (t, ("value_of_" ^ fname), (K.Init [])) 0 loc true], []
+	  [(t, "value_of_"^fname, K.Init []), loc], []
 	    
       (* Return value put into Lval cil_lv *)
       | Some t_given, Some cil_lv ->
 	  let t_expected = translate_typ (typeOfLval cil_lv) in
 	    push_local ();
 	    let lval = translate_lval cil_lv in
-	    let ret_decl = [new_decl (t_given, ("value_of_" ^ fname), (K.Init [])) 0 loc true] in
+	    let ret_decl = [(t_given, "value_of_"^fname, K.Init []), loc] in
 	    let ret_epilog = match t_given, t_expected with
 	      | K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
 		  [K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp), loc]
@@ -568,20 +560,19 @@ and translate_switch status e stmt_list body =
 	    push_local ();
 	    let t = translate_typ (typeOf e) in
 	      handle_args_decls_aux 
-		((new_decl (t, ("arg" ^ (string_of_int i)), (K.Init [])) 0 loc true)::accu)
+		(((t, "arg"^(string_of_int i), K.Init []), loc)::accu)
 		(i+1) None r_e
 		
 	| Some [], [] -> accu
-	| Some (decl::r_t), e::r_e ->
+	| Some ((t_expected, _, _) as decl::r_t), e::r_e ->
 	    let t_given = translate_typ (typeOf e) in
-	    let t_expected = extract_type decl in
 	      if t_expected <> t_given then begin
 		error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
 		       ^"type mismatch ("^(K.string_of_typ t_given)^" <> "^(K.string_of_typ t_expected)^
 		       ") in "^fname^" call are different");
 	      end;
 	      push_local ();
-	      handle_args_decls_aux ({decl with var_loc = loc}::accu) (i+1) (Some r_t) r_e
+	      handle_args_decls_aux ((decl, loc)::accu) (i+1) (Some r_t) r_e
 		
 	| _,_ -> error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
 			^"function "^fname^" called with incorrect number of args")
@@ -599,56 +590,61 @@ and translate_switch status e stmt_list body =
   in
 
     save_loc_cnt ();
-    let res = match lv with
+    let name, ret_type, formals = match lv with
       | Var f, NoOffset ->
-	  let spec = match get_fun_spec f.vname with
-	    | None -> error ("Cil2newspeak.translate.translate_call: "
-			     ^"Function not declared: "^f.vname)
-	    | Some s -> s
+	  let ret = match f.vtype with
+	    | TFun (TVoid _, _, _, _) -> None
+	    | TFun (t, _, _, _) -> Some (translate_typ t)
+	    | _ -> error ("Env.fun_declare: invalid type \""
+			  ^(string_of_type f.vtype)^"\"")
 	  in
 
-	  let name = f.vname in
-	  let ret_decl, ret_epilog = handle_retval name spec.ret_type in
-	  let args_decls = handle_args_decls name spec.formals args_exps in
-	  let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
-	    
-	  let call_w_prolog = (K.Call (K.FunId f.vname), loc)::args_prolog in
-	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
+	  (* TODO: Check and update formals against the prototype's formals, and rettype ! *)
+	  (*	    if (spec.formals = None)
+		    then update_fun_spec f.vname None (Some args_decls) [] [] None; *)
+(*	  let decl_from_formal fs = (fs.vtype, fs.vname, K.Init []) in
+	  let formals = List.map decl_from_formal f.sformals in *)
 
-	    if (spec.formals = None)
-	    then update_fun_spec f.vname None (Some args_decls) [] [] None;
-	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
-	      
+	  let fs = None in
+
+	  (f.vname, ret, fs)
+
       | Mem (Lval fptr), NoOffset ->
 	  let typ = translate_typ (typeOfLval fptr) in
 	    if typ <> K.Scalar K.FunPtr
 	    then error "Cil2newspeak.translate.translate_call: FunPtr expected";
-	    
-	    let (_, line, _) = loc in
-	    let name = "fptr_called_line_" ^ (string_of_int line) in
-	    let ret_type = match x with
+
+	    let ret = match x with
 	      | None -> None
 	      | Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
 	    in
-	      
-	    let ret_decl, ret_epilog = handle_retval name ret_type in
-	    let args_decls = handle_args_decls name None args_exps in
-	    let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
-	      
-	    let args_t = List.rev (List.map extract_type args_decls) in
-	    let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
+	    let (_, line, _) = loc in
+	      ("fptr_called_line_" ^ (string_of_int line), ret, None)
 
-	    let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
-	    let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
-	      generate_body (call_wo_ret@(ret_epilog)) ret_decl
-		
+      | _ -> error "Cil2newspeak.translate.translate_call: Left value not supported"
+    in
+
+    let ret_decl, ret_epilog = handle_retval name ret_type in
+    let args_decls = handle_args_decls name formals args_exps in
+    let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
+
+    let res = match lv with
+      | Var f, NoOffset ->
+	  let call_w_prolog = (K.Call (K.FunId f.vname), loc)::args_prolog in
+	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
+	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
+      | Mem (Lval fptr), NoOffset ->
+	  let args_t = List.rev (List.map extract_type args_decls) in
+	  let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
+	    
+	  let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
+	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
+	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
       | _ -> error "Cil2newspeak.translate.translate_call: Left value not supported"
 	  
     in
       restore_loc_cnt ();
       res
-*)
-
 
 
 
@@ -727,13 +723,6 @@ let compile name =
       List.iter translate_fun !fun_defs;
 
       let kernel = ([], [], funs) in
-
-	if (!verb_newspeak) then begin
-	  print_endline "Newspeak output";
-	  print_endline "---------------";
-	  K.dump kernel;
-	  print_newline ();
-	end;
 
 	kernel
 
@@ -821,7 +810,6 @@ let translate () =
 let cil2newspeak fnames = 
   initCIL ();
   useLogicalOperators := false;
-  (* TODO: remove List.rev here *)
   let fnames = List.map gen_ir (List.rev fnames) in
 
     prepare fnames;
@@ -965,17 +953,6 @@ let declare fnames =
     print_debug "Collection of globals and function declarations done."
 
 
-let prepare fnames =
-  (* First we gather global declarations and functions *)
-  declare fnames;
-
-  update_loc locUnknown;
-  (* Then we do our simplifications and collections on the entire file *)
-  print_debug "Beginning first pass...";
-  first_pass ();
-  update_loc locUnknown;
-  print_debug "First pass done."
-    
 let gen_ir name =
   if not (Filename.check_suffix name ".c") 
   then error ("File '"^name^"' is not a .c file.");

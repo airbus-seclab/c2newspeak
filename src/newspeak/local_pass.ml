@@ -67,26 +67,18 @@ class vistor_first_pass = object
     in
       ChangeDoChildrenPost (f, del_unused)
 
-  (* remembers the functions and global variables used *)
+  (* remembers the local variables used *)
   method vlval lv =
     match lv with
-	Var {vtype = TFun _; vname = n}, _ ->
-	  fun_called := String_set.add n !fun_called;
-	  DoChildren
       | Var v, _ ->
 	  if not v.vglob
-	  then local_vids := (v.vid)::(!local_vids)
-	  else glb_used := String_set.add (glb_uniquename v) !glb_used;
+	  then local_vids := (v.vid)::(!local_vids);
 	  DoChildren
       | _ -> DoChildren
 
-  (* simplifies some exps (StartOf, pointer equality) and collects
-     const string *)
+  (* simplifies some exps (StartOf, pointer equality) *)
   method vexpr e =
     match e with
-      | Const CStr s ->
-	  glb_cstr := String_set.add s !glb_cstr;
-	  SkipChildren
       | StartOf lv  -> 
 	  ChangeDoChildrenPost (AddrOf (addOffsetLval (Index (zero, NoOffset)) lv), fun x -> x)
 
@@ -98,21 +90,6 @@ class vistor_first_pass = object
       | _ -> DoChildren
 
 end
-
-
-let rec visitInit visitor i =
-  match i with
-      SingleInit e -> SingleInit (visitCilExpr visitor e)
-    | CompoundInit (t, i) ->
-	let t = visitCilType visitor t in
-	let i = List.map (visitOffsetInit visitor) i in
-	  CompoundInit (t, i)
-
-and visitOffsetInit visitor (o, i) =
-  let o = visitCilOffset visitor o in
-  let i = visitInit visitor i in
-    (o, i)
-
 
 
 
@@ -189,8 +166,9 @@ let first_pass f =
 	  
 	  | GFun (f, _) -> 
 	      (* Every defined function is kept *)
-	      fun_called := String_set.add f.svar.vname !fun_called;
-	      if (f.svar.vname = "main") then check_main_signature f.svar.vtype;
+	      use_fun f.svar;
+	      if (f.svar.vname = "main")
+	      then check_main_signature f.svar.vtype;
 	      fun_defs := (f, loc)::(!fun_defs)
 		      
 	  | GVarDecl (v, _) -> 

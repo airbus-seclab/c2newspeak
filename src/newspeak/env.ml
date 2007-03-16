@@ -1,5 +1,5 @@
 open Cil
-(*open Cilutils*)
+open Cilutils
 open Npkcontext
 open Npkutils
 
@@ -119,19 +119,44 @@ let restore_loc_cnt () = loc_cnt := !loc_cnt_sav
 
 
 
+(*----------*)
+(* Function *)
+(*----------*)
+
+
+
+let use_fun v =
+  fun_called := String_set.add v.vname !fun_called
+
+let extract_type ((t, _, _), _) = t
+
+
+
 (*-----------------------*)
 (* Variable id retrieval *)
 (*-----------------------*)
 
 let get_var cil_var =
-  (* local variables *)
-  try
-    let vid = Hashtbl.find loc_tabl cil_var.vid in
-    let n = !loc_cnt - vid in
-      Newspeak.Local n
-  with Not_found ->
-    Newspeak.Global_tmp (glb_uniquename cil_var)
+  (* global variable *)
+  if cil_var.vglob then begin
+    let norm_name = glb_uniquename cil_var in
+      glb_used := String_set.add norm_name !glb_used;
+      Newspeak.Global_tmp norm_name
+  end else begin
+    (* local variables *)
+    try
+      let vid = Hashtbl.find loc_tabl cil_var.vid in
+      let n = !loc_cnt - vid in
+	Newspeak.Local n
+    with Not_found -> 
+      error ("Env.get_var: unexpected variable "^
+	       (string_of_lval (Var cil_var, NoOffset)))
+  end
 
+let get_cstr s =
+  glb_cstr := String_set.add s !glb_cstr;
+  Newspeak.AddrOf (Newspeak.Global_tmp ("!const_str_"^s),
+		   (String.length s) + 1)
 
 let get_ret_var status = Newspeak.Local (!loc_cnt - status.return_var)
 
@@ -170,10 +195,10 @@ let mem_switch_label status loc =
 
 
 
+
 (*
 let new_decl d i l u = {var_decl = d; var_cil_vid = i; var_loc = l; var_used = u}
 
-let extract_type decl = let (t, _, _) = decl.var_decl in t
 
 
 type loc_type = {
@@ -307,23 +332,6 @@ let glb_uses v =
       else error ("Env.glb_uses: global variable "
 		  ^v.vname^" is used but is never defined")
 *)
-
-let glb_make_cstr s =
-  let name = "!const_str_"^s in
-
-    if not (List.mem name !cstr_list) then begin
-      cstr_list := name::(!cstr_list);
-      let glob = 
-	{gv_name = name;
-	 gv_cstr = s;
-	 gv_ctyp = TVoid [];
-	 gv_cinit= None;
-	 gv_defd = true; 
-	 gv_cloc = locUnknown;
-	 gv_used = true;}
-      in
-	Hashtbl.replace glb_tabl name glob
-    end
 
 
 
@@ -572,12 +580,6 @@ let get_glb_typ vname =
   with Not_found -> error ("Env.get_glb_typ: invalid vid for "^vname)
 
 
-let get_cstr s =
-  try
-    let name = "!const_str_"^s in
-    let kvid = Hashtbl.find glb_tabl_vid name in
-      Newspeak.AddrOf (Newspeak.Global kvid, (String.length s) + 1)
-  with Not_found -> error ("Env.glb_cstr_kvid: unexpected const string '"^s^"'")
 
 
 let get_ret_var status = Newspeak.Local (!loc_cnt - status.return_var)

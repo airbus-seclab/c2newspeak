@@ -390,7 +390,7 @@ let rec string_of_lval decls lv =
   match lv with
       Local vid -> string_of_local decls vid
     | Global vid -> string_of_global vid
-    | Global_tmp _ -> failwith "Newspeak.string_of_lval: Global_tmp"
+    | Global_tmp name -> "Global_tmp("^name^")" (*failwith "Newspeak.string_of_lval: Global_tmp"*)
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
 

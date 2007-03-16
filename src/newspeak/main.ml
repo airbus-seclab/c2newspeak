@@ -7,7 +7,15 @@ let _ =
   then print_error ("no file specified. Try "^Sys.argv.(0)^" --help");
 
   let [file] = !input_files in
-    compile file
+  let kernel = compile file in
+    
+    if (!verb_newspeak) then begin
+      print_endline "Newspeak output";
+      print_endline "---------------";
+      Newspeak.dump kernel;
+      print_newline ();
+    end
+
 
 (* TODO: Handle c and il files before compiling and linking *)
 
