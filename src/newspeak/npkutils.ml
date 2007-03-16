@@ -5,11 +5,9 @@ open Npkcontext
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
-type strset = String_set.t
 
 module Int_set = 
   Set.Make (struct type t = int let compare = Pervasives.compare end)
-type intset = Int_set.t
 
 
 

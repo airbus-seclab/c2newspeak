@@ -43,6 +43,12 @@ type proto_type = {
   ploc  : Cil.location;
 }
 
+type intermediate =
+    (glb_type list) * (proto_type list) *
+      (Npkutils.String_set.t) *
+      (Npkutils.String_set.t) *
+      (Npkutils.String_set.t) *
+      (Newspeak.fid, Newspeak.fundec) Hashtbl.t
 
 
 (*-----------------------*)
@@ -191,15 +197,27 @@ let mem_switch_label status loc =
   List.mem_assoc loc status.switch_lbls
 
 
+let dump_npko (glb_decls, proto_decls, glb_used,
+	       fun_called, glb_cstr, funs) = 
+
+  let print_list title list =
+    print_endline title;
+    String_set.iter print_endline list;
+    print_newline ()
+  in
 
 
+    print_list "Global used" glb_used;
+    print_list "Functions called" fun_called;
+    print_list "Constant Strings" glb_cstr;
 
+    print_endline "Function definitions";
+    Newspeak.dump ([], [], funs);
+    print_newline ()
 
+    
 
 (*
-let new_decl d i l u = {var_decl = d; var_cil_vid = i; var_loc = l; var_used = u}
-
-
 
 type loc_type = {
   var_decl    : Newspeak.decl;

@@ -30,6 +30,7 @@ val accept_extern : bool ref
 val verb_warnings : bool ref
 val verb_debug : bool ref
 val verb_cil : bool ref
+val verb_npko : bool ref
 val verb_newspeak : bool ref
 
 

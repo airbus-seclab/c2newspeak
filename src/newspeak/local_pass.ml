@@ -126,21 +126,22 @@ let first_pass f =
   let rec explore g = 
     let loc = get_globalLoc g in
       update_loc loc;
-      let [g_modified] = visitCilGlobal visitor g in
-	match g_modified with
-	  | GType (t, _) ->
+      match visitCilGlobal visitor g with
+	  | [GType (t, _)] ->
 	      if !verb_warnings then print_warning ("skip typedef "^t.tname)
-	  | GEnumTag (info, _) -> 
+	  | [GEnumTag (info, _)] -> 
 	      if !verb_warnings then print_warning ("skip enum "^info.ename)
-	  | GCompTag (c, _) -> 
+	  | [GCompTag (c, _)] -> 
 	      if !verb_warnings then print_warning ("skip composite typedef "^c.cname)
-	  | GCompTagDecl (c, _) -> 
+	  | [GCompTagDecl (c, _)] -> 
 	      if !verb_warnings then print_warning ("skip composite declaration "^c.cname)
-	  | GPragma (a, _) when !ignores_pragmas -> 
+	  | [GPragma (a, _)] when !ignores_pragmas -> 
 	      print_warning ("Directive ignored: "
 			     ^"unknown #pragma "^(string_of_attribute a))
 		      
-	  | GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _) ->
+	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
+
+	      (* TODO: Regroup all prototypes declaration (old update_specs) *)
 	      let ret_type = match ret with
 		  | TVoid _ -> None
 		  | t -> Some (translate_typ t)
@@ -164,19 +165,20 @@ let first_pass f =
 		proto_decls := {pname = name; prett = ret_type;
 				pargs = formals; ploc = loc;}::(!proto_decls)
 	  
-	  | GFun (f, _) -> 
+	  | [GFun (f, _)] -> 
 	      (* Every defined function is kept *)
+	      (* TODO: add a prototype *)
 	      use_fun f.svar;
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
 	      fun_defs := (f, loc)::(!fun_defs)
 		      
-	  | GVarDecl (v, _) -> 
+	  | [GVarDecl (v, _)] -> 
 	      glb_decls := {gname = glb_uniquename v;
 			    gtype = v.vtype; gloc = v.vdecl;
 			    gdefd = false; ginit = None;}::(!glb_decls)
 		      
-	  | GVar (v, {init = i}, _) -> 
+	  | [GVar (v, {init = i}, _)] -> 
 	      glb_decls := {gname = glb_uniquename v;
 			    gtype = v.vtype; gloc = v.vdecl;
 			    gdefd = true; ginit = i;}::(!glb_decls)

@@ -20,7 +20,8 @@ let accept_extern = ref false
 let verb_warnings = ref false
 let verb_debug = ref false
 let verb_cil = ref false
-let verb_newspeak = ref true
+let verb_npko = ref true
+let verb_newspeak = ref false
 
 let verbose boolean () =
   verb_cil := boolean;
@@ -95,6 +96,9 @@ let argslist = [
   ("--debug", Arg.Set (verb_debug),
    "verbose options: displays more debugging info");
   
+  ("--npko", Arg.Set (verb_npko),
+   "verbose option: displays NewsPeaK Object intermediate output");
+
   ("--newspeak", Arg.Set (verb_newspeak),
    "verbose option: displays Newspeak output");
 

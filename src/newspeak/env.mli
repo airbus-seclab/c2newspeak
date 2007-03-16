@@ -30,6 +30,13 @@ type proto_type = {
   ploc  : Cil.location;
 }
 
+type intermediate =
+    (glb_type list) * (proto_type list) *
+      (Npkutils.String_set.t) *
+      (Npkutils.String_set.t) *
+      (Npkutils.String_set.t) *
+      (Newspeak.fid, Newspeak.fundec) Hashtbl.t
+
 
 
 (** {1 Compilation variables} *)
@@ -212,6 +219,10 @@ val retrieve_switch_label : status -> Cil.location -> Newspeak.lbl
 val mem_switch_label : status -> Cil.location -> bool
 
 
+
+
+
+val dump_npko : intermediate -> unit
 
 (*
 (* TODO: to be removed *)

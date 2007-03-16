@@ -8,8 +8,7 @@ module String_set :
     val empty : t
     val mem : elt -> t -> bool
     val add : elt -> t -> t
-    val cardinal : t -> int
-    val elements : t -> elt list
+    val iter : (elt -> unit) -> t -> unit
   end
 
 module Int_set :
@@ -19,8 +18,7 @@ module Int_set :
     val empty : t
     val mem : elt -> t -> bool
     val add : elt -> t -> t
-    val cardinal : t -> int
-    val elements : t -> elt list
+    val iter : (elt -> unit) -> t -> unit
   end
 
 (* 
@@ -33,7 +31,6 @@ module Int_set :
     val compare : t -> t -> int
     val equal : t -> t -> bool
     val subset : t -> t -> bool
-    val iter : (elt -> unit) -> t -> unit
     val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
     val for_all : (elt -> bool) -> t -> bool
     val exists : (elt -> bool) -> t -> bool
@@ -42,6 +39,8 @@ module Int_set :
     val min_elt : t -> elt
     val max_elt : t -> elt
     val choose : t -> elt
+    val cardinal : t -> int
+    val elements : t -> elt list
     val split : elt -> t -> t * bool * t*)
 
 

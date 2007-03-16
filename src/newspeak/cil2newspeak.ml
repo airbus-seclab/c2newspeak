@@ -3,8 +3,8 @@ open Cilutils
 
 open Npkcontext
 open Npkutils
-open Env
 open Local_pass
+open Env
 
 module K = Newspeak
 
@@ -599,7 +599,8 @@ and translate_call x lv args_exps =
 			  ^(string_of_type f.vtype)^"\"")
 	  in
 
-	  (* TODO: Check and update formals against the prototype's formals, and rettype ! *)
+	  (* TODO: Check and update formals against the prototype's
+	     formals, and rettype ! *)
 	  (*	    if (spec.formals = None)
 		    then update_fun_spec f.vname None (Some args_decls) [] [] None; *)
 (*	  let decl_from_formal fs = (fs.vtype, fs.vname, K.Init []) in
@@ -689,17 +690,17 @@ let translate_fun (f, loc) =
 (* compile function, which wraps translate *)
 (*=========================================*)
 
-let compile name =
+let compile in_name out_name  =
   initCIL ();
   useLogicalOperators := false;
 
-  print_debug ("Parsing "^name^"...");
-  let cil_file = Frontc.parse name () in
+  print_debug ("Parsing "^in_name^"...");
+  let cil_file = Frontc.parse in_name () in
     print_debug ("Parsing done.");
     if !verb_cil then begin
       print_newline ();
-      print_endline ("Cil output for "^name);
-      for i = 1 to String.length name do
+      print_endline ("Cil output for "^in_name);
+      for i = 1 to String.length in_name do
 	print_string "-"
       done;
       print_endline "---------------";
@@ -714,7 +715,7 @@ let compile name =
     update_loc locUnknown;
     print_debug "First pass done.";
   
-    print_debug ("Translating "^name^"...");
+    print_debug ("Translating "^in_name^"...");
 
     let funs = Hashtbl.create (List.length !fun_defs) in
     let translate_fun (f, loc) =
@@ -722,9 +723,26 @@ let compile name =
     in
       List.iter translate_fun !fun_defs;
 
-      let kernel = ([], [], funs) in
+      let npko = (!glb_decls, !proto_decls,
+		  !glb_used, !fun_called, !glb_cstr,
+		  funs) in
 
-	kernel
+        if (!verb_npko) then begin
+	  print_endline "Newspeak Object output";
+	  print_endline "----------------------";
+	  dump_npko npko;
+	  print_newline ();
+	end;
+	
+	if (out_name <> "") then begin
+	  let ch_out = open_out_bin out_name in
+	    print_debug ("Writing "^(out_name)^"...");
+	    Marshal.to_channel ch_out "NPKO" [];
+	    Marshal.to_channel ch_out npko [];
+	    print_debug ("Writing done.");
+	end;
+
+	npko
 
 
 
@@ -989,18 +1007,6 @@ let gen_ir name =
 
 
 (*
-
-    let print_list title list =
-      print_endline title;
-      print_newline ();
-      List.iter print_endline list;
-      print_newline ();
-      print_newline ()
-    in
-      print_list "Global used" glb_used;
-      print_list "Functions called" fun_called;
-      print_list "Constant Strings" glb_cstr;
-
 
     let name = (Filename.chop_extension name)^".ir" in
     let cout = open_out_bin name in

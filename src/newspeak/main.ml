@@ -3,19 +3,27 @@ open Cil2newspeak
 
 let _ =
   handle_cmdline_options ();
-  if !input_files = []
-  then print_error ("no file specified. Try "^Sys.argv.(0)^" --help");
 
-  let [file] = !input_files in
-  let kernel = compile file in
-    
-    if (!verb_newspeak) then begin
-      print_endline "Newspeak output";
-      print_endline "---------------";
-      Newspeak.dump kernel;
-      print_newline ();
-    end
+  match !input_files with
+      [] ->
+	print_error ("no file specified. Try "^Sys.argv.(0)^" --help")
+    | [file] when !compile_only
+	&& (!output_file <> "") ->
+	(* TODO: check that file is a .c file *)
+	ignore (compile file !output_file)
 
+    | _ when !compile_only
+	&& (!output_file <> "") ->
+	error ("You cannot specify the output filename for multiple "^
+		 "files when only compiling");
+    | files when !compile_only
+	&& (!output_file = "") -> ()
+	(* TODO: let npkos = List.map compile file ${file/.c/.no} *)
+    | files (* when not !compile_only *) ->
+	if (!output_file = "") then output_file := "a.npk";
+	(* TODO: let npkos = List.map compile_or_unmarshallize file *)
+	(* TODO: link *)
+	()
 
 (* TODO: Handle c and il files before compiling and linking *)
 
