@@ -2,6 +2,8 @@ open Cil
 open Cilutils
 open Npkcontext
 
+let c_suffix = ".c"
+let npko_suffix = ".no"
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)

@@ -686,11 +686,16 @@ let translate_fun (f, loc) =
 
 
 
+
+
 (*=========================================*)
 (* compile function, which wraps translate *)
 (*=========================================*)
 
 let compile in_name out_name  =
+  if not (Filename.check_suffix in_name c_suffix)
+  then error ("Npkcompile.compile: "^in_name^" is not a .c file");
+
   initCIL ();
   useLogicalOperators := false;
 
@@ -719,11 +724,16 @@ let compile in_name out_name  =
 
     let funs = Hashtbl.create (List.length !fun_defs) in
     let translate_fun (f, loc) =
+      (* TODO: Here, we should get the spec in fun_specs and update
+	 the body with the translation obtained from the definition *)
+      (* TODO: But it is needed that fun_defs are duplicated into
+	 prototypes / specs list *)
       Hashtbl.add funs f.svar.vname (translate_fun (f, loc))
     in
       List.iter translate_fun !fun_defs;
 
-      let npko = {iglobs = glb_decls; ifuns = fun_specs;
+      let npko = {ifilename = in_name;
+		  iglobs = glb_decls; ifuns = fun_specs;
 		  iusedglbs = !glb_used; iusedcstr = !glb_cstr;
 		  iusedfuns = !fun_called;} in
 
@@ -734,11 +744,13 @@ let compile in_name out_name  =
 	  print_newline ();
 	end;
 	
+	update_loc locUnknown;
 	if (out_name <> "") then begin
+	  print_debug ("Writing "^(out_name)^"...");
 	  let ch_out = open_out_bin out_name in
-	    print_debug ("Writing "^(out_name)^"...");
 	    Marshal.to_channel ch_out "NPKO" [];
 	    Marshal.to_channel ch_out npko [];
+	    close_out ch_out;
 	    print_debug ("Writing done.");
 	end;
 
@@ -826,32 +838,6 @@ let translate () =
 
 (*
 let cil2newspeak fnames = 
-  initCIL ();
-  useLogicalOperators := false;
-  let fnames = List.map gen_ir (List.rev fnames) in
-
-    prepare fnames;
-
-  let kernel = translate () in
-    print_debug "Translation complete.";
-    if !verb_newspeak then begin
-      print_endline "Newspeak output";
-      print_endline "---------------";
-      K.dump kernel;
-      print_newline ()
-    end;
-    
-    if (!newspeak_output <> "") then begin
-      let ch_out = open_out_bin !newspeak_output in
-	print_debug ("Writing "^(!newspeak_output)^"...");
-	Marshal.to_channel ch_out (fnames, kernel) [];
-	print_debug ("Writing done.");
-    end;
-      
-    kernel
-
-
-let cil2newspeak fnames = 
 
   let get_cilfile name =
     let (is_c, cil_output) =
@@ -923,19 +909,6 @@ let cil2newspeak fnames =
       end
     in
 
-      if (!newspeak_output <> "") then begin
-	let ch_out = open_out_bin !newspeak_output in
-	  print_debug ("Writing "^(!newspeak_output)^"...");
-	  Marshal.to_channel ch_out kernel [];
-	  print_debug ("Writing done.");
-      end;
-      
-      if !verb_newspeak then begin
-	print_endline "Newspeak output";
-	print_endline "---------------";
-	K.dump kernel;
-	print_newline ()
-      end;
       kernel
 *)
 *)
@@ -998,32 +971,4 @@ let gen_ir name =
       print_debug ("Exporting done.");
       
       name
-*)
-
-
-
-
-
-
-
-(*
-
-    let name = (Filename.chop_extension name)^".ir" in
-    let cout = open_out_bin name in
-      print_debug ("Exporting "^name^"...");
-      Marshal.to_channel cout glbs [];
-      Marshal.to_channel cout funs [];
-      close_out cout;
-      print_debug ("Exporting done.");
-      
-
-  (* First we gather global declarations and functions *)
-  declare fnames;
-
-  (* Then we do our simplifications and collections on the entire file *)
-  print_debug "Beginning first pass...";
-  first_pass ();
-  update_loc locUnknown;
-  print_debug "First pass done."
-
 *)

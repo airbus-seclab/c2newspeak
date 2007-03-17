@@ -1,31 +1,55 @@
 open Npkcontext
+open Npkutils
 open Cil2newspeak
+open Npklink
+
+let create_npko name = (Filename.chop_extension name) ^ npko_suffix
+
+let extract_npko name =
+  if Filename.check_suffix name npko_suffix then begin
+    let ch_in = open_in_bin name in
+      print_debug ("Importing "^name^"...");
+      let str = Marshal.from_channel ch_in in
+	if str = "NPKO" then begin 
+	  let res = Marshal.from_channel ch_in in
+	    print_debug ("Importing done.");
+	    close_in ch_in;
+	    res;
+	end else begin
+	  close_in ch_in;
+	  error ("Cil2kernel.extract_npko: "^name
+		 ^" is an invalid .npko file.");
+	end;
+  end else compile name ""
+
 
 let _ =
   handle_cmdline_options ();
 
-  match !input_files with
-      [] ->
-	print_error ("no file specified. Try "^Sys.argv.(0)^" --help")
-    | [file] when !compile_only
-	&& (!output_file <> "") ->
-	(* TODO: check that file is a .c file *)
-	ignore (compile file !output_file)
+  try
+    match !input_files with
+	[] ->
+	  print_error ("no file specified. Try "^Sys.argv.(0)^" --help")
+      | [file] when !compile_only && (!output_file <> "") ->
+	  ignore (compile file !output_file)
+	    
+      | _ when !compile_only && (!output_file <> "") ->
+	  error ("You cannot specify the output filename (-o) for multiple "^
+		   "files when only compiling (-c)");
 
-    | _ when !compile_only
-	&& (!output_file <> "") ->
-	error ("You cannot specify the output filename for multiple "^
-		 "files when only compiling");
-    | files when !compile_only
-	&& (!output_file = "") -> ()
-	(* TODO: let npkos = List.map compile file ${file/.c/.no} *)
-    | files (* when not !compile_only *) ->
-	if (!output_file = "") then output_file := "a.npk";
-	(* TODO: let npkos = List.map compile_or_unmarshallize file *)
-	(* TODO: link *)
-	()
+      | files when !compile_only && (!output_file = "") ->
+	  let aux f = ignore (compile f (create_npko f)) in
+	    List.iter aux files
 
-(* TODO: Handle c and il files before compiling and linking *)
+      | files (* when not !compile_only *) ->
+	  if (!output_file = "") then output_file := "a.npk";
+	  let npkos = List.map extract_npko files in
+	    link npkos !output_file;
+
+  with Invalid_argument s -> print_error s
+
+
+
 
 (*  let kernel = translate () in
     print_debug "Translation complete.";
@@ -45,6 +69,3 @@ let _ =
       
     kernel *)
 
-(*  try
-    ignore (Cil2newspeak.cil2newspeak !list_of_files)
-  with Invalid_argument s -> print_error s;*)

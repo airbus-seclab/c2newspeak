@@ -33,6 +33,7 @@ type fspec_type = {
 }
 
 type intermediate = {
+  ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
   ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
   iusedglbs : Npkutils.String_set.t;

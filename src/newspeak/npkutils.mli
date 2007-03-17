@@ -1,5 +1,7 @@
 (** Npkutils regroups simple translation functions *)
 
+val c_suffix : string
+val npko_suffix : string
 
 module String_set :
   sig
