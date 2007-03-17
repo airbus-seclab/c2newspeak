@@ -723,9 +723,9 @@ let compile in_name out_name  =
     in
       List.iter translate_fun !fun_defs;
 
-      let npko = (!glb_decls, !proto_decls,
-		  !glb_used, !fun_called, !glb_cstr,
-		  funs) in
+      let npko = {iglobs = glb_decls; ifuns = fun_specs;
+		  iusedglbs = !glb_used; iusedcstr = !glb_cstr;
+		  iusedfuns = !fun_called;} in
 
         if (!verb_npko) then begin
 	  print_endline "Newspeak Object output";

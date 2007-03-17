@@ -36,28 +36,32 @@ type glb_type = {
   ginit : Cil.init option;
 }
 
-type proto_type = {
+type fspec_type = {
   pname : string;
-  prett : Newspeak.typ option;
-  pargs : ((string * Newspeak.typ) list) option;
-  ploc  : Cil.location;
+  mutable prett : Newspeak.typ option;
+  mutable pargs : ((string * Newspeak.typ) list) option;
+  mutable plocs : ((string * Newspeak.typ) list) option;
+  mutable ploc  : Cil.location;
+  mutable pbody : Newspeak.fundec option
 }
 
-type intermediate =
-    (glb_type list) * (proto_type list) *
-      (Npkutils.String_set.t) *
-      (Npkutils.String_set.t) *
-      (Npkutils.String_set.t) *
-      (Newspeak.fid, Newspeak.fundec) Hashtbl.t
+type intermediate = {
+  iglobs : (string, glb_type) Hashtbl.t;
+  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
+  iusedglbs : Npkutils.String_set.t;
+  iusedcstr : Npkutils.String_set.t;
+  iusedfuns : Npkutils.String_set.t;
+}
+      
 
 
 (*-----------------------*)
 (* Compilation variables *)
 (*-----------------------*)
 
-let glb_decls = ref []
+let glb_decls = Hashtbl.create 100
 let fun_defs = ref []
-let proto_decls = ref []
+let fun_specs = Hashtbl.create 100
 let glb_used = ref (String_set.empty)
 let fun_called = ref (String_set.empty)
 let glb_cstr = ref (String_set.empty)
@@ -197,8 +201,7 @@ let mem_switch_label status loc =
   List.mem_assoc loc status.switch_lbls
 
 
-let dump_npko (glb_decls, proto_decls, glb_used,
-	       fun_called, glb_cstr, funs) = 
+let dump_npko inter = 
 
   let print_list title list =
     print_endline title;
@@ -207,38 +210,18 @@ let dump_npko (glb_decls, proto_decls, glb_used,
   in
 
 
-    print_list "Global used" glb_used;
-    print_list "Functions called" fun_called;
-    print_list "Constant Strings" glb_cstr;
+    print_list "Global used" inter.iusedglbs;
+    print_list "Functions called" inter.iusedfuns;
+    print_list "Constant Strings" inter.iusedcstr;
 
     print_endline "Function definitions";
-    Newspeak.dump ([], [], funs);
+(* TODO: Rewrite this ! *)
+(*    Newspeak.dump ([], [], inter.ifuns); *)
     print_newline ()
 
     
 
 (*
-
-type loc_type = {
-  var_decl    : Newspeak.decl;
-  var_cil_vid : int;
-  var_loc     : Newspeak.location;
-}
-
-type fun_spec_t = {
-  mutable ret_type : Newspeak.typ option;
-  mutable formals  : decl_t list option;
-  mutable locals   : decl_t list;
-  mutable body     : Cil.stmt list;
-  mutable fun_loc  : Newspeak.location option;
-}
-
-
-
-
-
-
-
 
 
 (*---------*)

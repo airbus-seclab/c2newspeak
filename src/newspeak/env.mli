@@ -23,27 +23,30 @@ type glb_type = {
   ginit : Cil.init option;
 }
 
-type proto_type = {
+type fspec_type = {
   pname : string;
-  prett : Newspeak.typ option;
-  pargs : ((string * Newspeak.typ) list) option;
-  ploc  : Cil.location;
+  mutable prett : Newspeak.typ option;
+  mutable pargs : ((string * Newspeak.typ) list) option;
+  mutable plocs : ((string * Newspeak.typ) list) option;
+  mutable ploc  : Cil.location;
+  mutable pbody : Newspeak.fundec option
 }
 
-type intermediate =
-    (glb_type list) * (proto_type list) *
-      (Npkutils.String_set.t) *
-      (Npkutils.String_set.t) *
-      (Npkutils.String_set.t) *
-      (Newspeak.fid, Newspeak.fundec) Hashtbl.t
+type intermediate = {
+  iglobs : (string, glb_type) Hashtbl.t;
+  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
+  iusedglbs : Npkutils.String_set.t;
+  iusedcstr : Npkutils.String_set.t;
+  iusedfuns : Npkutils.String_set.t;
+}
 
 
 
 (** {1 Compilation variables} *)
 
-val glb_decls : (glb_type list) ref
+val glb_decls : (string, glb_type) Hashtbl.t
 val fun_defs : ((Cil.fundec * Cil.location) list) ref
-val proto_decls : (proto_type list) ref
+val fun_specs : (Newspeak.fid, fspec_type) Hashtbl.t
 val glb_used : Npkutils.String_set.t ref
 val fun_called : Npkutils.String_set.t ref
 val glb_cstr : Npkutils.String_set.t ref
@@ -56,39 +59,6 @@ val glb_cstr : Npkutils.String_set.t ref
     variable v: its name if it is a shared variable, its name prefixed
     by the filename if it is a static variable. *)
 val glb_uniquename : Cil.varinfo -> string
-
-
-
-(*
-(** This is the type of the declarations. We have to keep them in a
-    list before we can translate them in Newspeak.Decl statement,
-    because of the structure of Newspeak.Decl : (typ, blk).
-
-    The var_id represents the corresponding cil id *)
-type decl_t = {
-  var_decl    : Newspeak.decl;
-  var_cil_vid : int;
-  var_loc     : Newspeak.location;
-  mutable var_used : bool;
-}
-
-val new_decl : Newspeak.decl -> int -> Newspeak.location -> bool -> decl_t
-
-
-
-(** A function specification contains all its local variables (return
-    variable, arguments and real local vars), its instructions and the
-    location where it is defined or declared *)
-type fun_spec_t = {
-  mutable ret_type : Newspeak.typ option;
-  mutable formals  : decl_t list option;
-  mutable locals   : decl_t list;
-  mutable body     : Cil.stmt list;
-  mutable fun_loc  : Newspeak.location option;
-}
-
-*)
-
 
 
 
