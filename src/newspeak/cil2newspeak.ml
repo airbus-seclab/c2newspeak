@@ -103,7 +103,7 @@ and translate_cast t e =
 			     ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
 	      translate_exp e
 		
-	  | (K.Scalar (K.Int (sign, sz)), K.Scalar K.Ptr)
+  | (K.Scalar (K.Int (sign, sz)), K.Scalar K.Ptr)
 	      when sz = pointer_size && !castor_allowed ->
 	      print_warning ("probable invalid cast '"^(string_of_type (typeOf e))^"' -> '"
 			     ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
@@ -651,36 +651,34 @@ and translate_call x lv args_exps =
 
 
 
-let translate_fun (f, loc) =
-  update_loc loc;
-  let floc = !cur_loc in
-  let status = 
-    match f.svar.vtype with
-      | TFun (TVoid _, _, _, _) -> empty_status ()
-      | TFun (t, _, _, _) ->
-	  push_local ();
-	  new_ret_status ()
-      | _ -> error ("Env.fun_declare: invalid type \""
-		    ^(string_of_type f.svar.vtype)^"\"")
-  in
-    List.iter (loc_declare false) f.sformals;
-    List.iter (loc_declare true) f.slocals;
-    
-    let blk = K.simplify((translate_stmts status f.sbody.bstmts)@
-			   [K.Label status.return_lbl, floc]) in
-    let body = generate_body blk (get_loc_decls ()) in
+let translate_fun spec =
+  match spec.pargs, spec.plocs, spec.pcil_body with
+      Some formals, Some locals, Some cil_body ->
+	update_loc spec.ploc;
+	let floc = !cur_loc in
+	let status = 
+	  match spec.prett with
+	    | None -> empty_status ()
+	    | Some _ ->
+		push_local ();
+		new_ret_status ()
+	in
+	  List.iter (loc_declare false) formals;
+	  List.iter (loc_declare true) locals;
+	  
+	  let blk = K.simplify((translate_stmts status cil_body.bstmts)@
+				 [K.Label status.return_lbl, floc]) in
+	  let body = generate_body blk (get_loc_decls ()) in
 
-    let ret_type = match f.svar.vtype with
-      | TFun (TVoid _, _, _, _) -> None
-      | TFun (t, _, _, _) -> Some (translate_typ t)
-      | _ ->
-	  error ("Env.ftyp_of_fundef: invalid type \""
-		 ^(string_of_type f.svar.vtype)^"\"")
-    in
+(* pbody should only be Newspeak.blk *)
 
-    let rec translate_formal f = translate_typ f.vtype in
-    let formals = List.map translate_formal f.sformals in
-      (formals, ret_type), Some body
+	    (* TODO ?: Check only one body exists *)
+	    spec.pcil_body <- None;
+	    spec.pbody <- Some body
+
+    (* TODO: Same question here *)
+    | _ -> ()
+
 
 
 
@@ -722,15 +720,15 @@ let compile in_name out_name  =
   
     print_debug ("Translating "^in_name^"...");
 
-    let funs = Hashtbl.create (List.length !fun_defs) in
     let translate_fun (f, loc) =
       (* TODO: Here, we should get the spec in fun_specs and update
 	 the body with the translation obtained from the definition *)
       (* TODO: But it is needed that fun_defs are duplicated into
 	 prototypes / specs list *)
-      Hashtbl.add funs f.svar.vname (translate_fun (f, loc))
+      print_endline ("__"^f.svar.vname^"__");
+(*      Hashtbl.add funs f.svar.vname (translate_fun (f, loc))*)
     in
-      List.iter translate_fun !fun_defs;
+(*      List.iter translate_fun !fun_defs;*)
 
       let npko = {ifilename = in_name;
 		  iglobs = glb_decls; ifuns = fun_specs;

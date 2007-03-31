@@ -57,6 +57,9 @@ let string_of_type t =
 let string_of_global x =
   Pretty.sprint 100 (printGlobal !cilPrinter () x)
 
+let string_of_init i =
+  Pretty.sprint 100 (printInit !cilPrinter () i)
+
 let string_of_exp e =
   Pretty.sprint 100 (printExp !cilPrinter () e)
 

@@ -141,13 +141,26 @@ let domain_of_typ (sign, size) =
     | (Signed, 4) -> (Int64.of_string "-2147483648", Int64.of_string "2147483647")
     | _ -> invalid_arg "Newspeak.domain_of_typ"
 
+
 let make_int_coerce int_t e =
   UnOp (Coerce (domain_of_typ int_t), e)
 
 let make_belongs len e =
   UnOp (Belongs (Int64.zero, (Int64.of_int (len-1))), e)
 
+
+let rec negate exp =
+  match exp with
+    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
+    | UnOp (Not, e) -> e
+    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
+    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e2, e1))
+    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
+    | _ -> invalid_arg "Newspeak.negate"
+
+
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
+
 
 let init_of_string str = 
   let len = String.length str in
@@ -160,6 +173,8 @@ let init_of_string str =
     (len + 1, !res)
 
 
+
+(* TODO: Look into the simplifications *)
 let simplify_gotos blk =
   let necessary_lbls = ref [] in
   let rec simplify_blk x =
@@ -188,7 +203,6 @@ let simplify_gotos blk =
       | _ -> Some (x, loc)
   in
     simplify_blk blk
-
 
 
 let simplify_coerce blk =
@@ -245,8 +259,6 @@ let simplify_coerce blk =
       | _ -> lv
   in
     List.map simplify_stmt blk
-
-
 
 
 let simplify b = simplify_coerce (simplify_gotos b)
@@ -319,6 +331,24 @@ let rec string_of_typ t =
     | Region (lst, sz) ->
 	let string_of_elt (off, t) = (string_of_typ t)^" "^(string_of_size_t off) in
 	  "{"^(seq ";" string_of_elt lst)^"}"^(string_of_size_t sz)
+
+
+let string_of_ftyp (args, ret) = 
+  let res = ref "" in 
+    begin match args with
+	hd::[] -> res := string_of_typ hd
+      | hd::tl -> 
+	  res := "("^(string_of_typ hd);
+	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
+	  res := !res^")"
+      | [] -> res := "void"
+    end;
+    res := !res^" -> ";
+    begin match ret with
+	None -> res := !res^"void"
+      | Some t -> res := !res^(string_of_typ t)
+    end;
+    !res
 
 
 
@@ -424,7 +454,6 @@ and string_of_fn decls f =
     | FunDeref (exp, (args_t, None)) ->
 	"["^(string_of_exp decls exp)^"]("^
 	  (seq ", " string_of_typ args_t)^")"
-
 
 
 (* Actual dump *)
@@ -578,29 +607,9 @@ let dump (assumptions, gdecls, fundecs) =
     handle_globals gdecls;
     clear_tables ()
 
-let rec negate exp =
-  match exp with
-    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
-    | UnOp (Not, e) -> e
-    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
-    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e2, e1))
-    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
-    | _ -> invalid_arg "Newspeak.negate"
 
-
-let string_of_ftyp (args, ret) = 
-  let res = ref "" in 
-    begin match args with
-	hd::[] -> res := string_of_typ hd
-      | hd::tl -> 
-	  res := "("^(string_of_typ hd);
-	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
-	  res := !res^")"
-      | [] -> res := "void"
-    end;
-    res := !res^" -> ";
-    begin match ret with
-	None -> res := !res^"void"
-      | Some t -> res := !res^(string_of_typ t)
-    end;
-    !res
+let dump_fundec name (_, body) =
+  let old_pretty = !pretty_print in
+    pretty_print := false;
+    dump_fundec name body;
+    pretty_print := old_pretty

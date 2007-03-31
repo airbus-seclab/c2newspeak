@@ -117,7 +117,7 @@ let translate_rel_binop t1 t2 o =
       | _ -> error ("Npkutils.translate_rel_binop")
 
 
-(*let compare_typs t1 t2 =
+let compare_typs t1 t2 =
   let rec compare_typs_aux t1 t2 =
     match t1, t2 with
         TInt (i1, _), TInt (i2, _) -> i1 = i2
@@ -162,7 +162,7 @@ let translate_rel_binop t1 t2 o =
 
   in
     compare_typs_aux t1 t2
-*)
+
 
 let isPtr e =
   match translate_typ (typeOf e) with

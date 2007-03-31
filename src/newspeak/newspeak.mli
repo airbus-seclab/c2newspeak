@@ -27,7 +27,6 @@ and stmtkind =
   | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
-
 and stmt = stmtkind * location
 
 and blk = stmt list
@@ -148,10 +147,10 @@ val make_belongs : int -> exp -> exp
 (** Negation of a boolean condition *)
 val negate : exp -> exp
 
-val init_of_string : string -> (int * (size_t * scalar_t * exp) list)
-
 (** [exp_of_int i] wraps i into a Newspeak expression *)
 val exp_of_int : int -> exp
+
+val init_of_string : string -> (int * (size_t * scalar_t * exp) list)
 
 (** Deletion of useless Gotos and Labels *)
 val simplify_gotos : blk -> blk
@@ -167,11 +166,12 @@ val simplify : blk -> blk
     displayed in a prettier way if possible (with their names) *)
 val pretty_print : bool ref
 
-(** [dump cout (fundecs, body)] prints the program (fundecs, body) to
-    cout *)
-val dump : t -> unit
-
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
 
+(** [dump cout (fundecs, body)] prints the program (fundecs, body) to
+    cout *)
+val dump : t -> unit
+
+val dump_fundec : string -> fundec -> unit

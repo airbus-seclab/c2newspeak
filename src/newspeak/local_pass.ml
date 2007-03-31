@@ -156,7 +156,7 @@ let first_pass f =
 		      let name =
 			if n="" then "arg" ^ (string_of_int i) else n
 		      in
-			(name, translate_typ t)::(translate_formals (i+1) r)
+			(-1, name, translate_typ t)::(translate_formals (i+1) r)
 	      in
 	      let formals = match args with
 		  None ->
@@ -166,41 +166,34 @@ let first_pass f =
 	      in
 		(* TODO: should be checked if already existing *)
 		Hashtbl.add fun_specs name
-		  {pname = name; prett = ret_type;
+		  {prett = ret_type;
 		   pargs = formals; plocs = None;
-		   ploc = loc; pbody = None;}
+		   ploc = loc; pbody = None;
+		   pcil_body = None;}
 		  
 	  | [GFun (f, _)] -> 
 	      (* Every defined function is kept *)
-	      (* TODO: add a prototype *)
 	      use_fun f.svar;
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
-	      fun_defs := (f, loc)::(!fun_defs)
-(*		fun_specs := {pname = name; prett = ret_type;
-			      pargs = formals; plocs = None;
-			      ploc = loc; pbody = None;}::(!fun_specs)*)
-		      
-	  | [GVarDecl (v, _)] -> 
-	      let name = glb_uniquename v in
+(*	      fun_defs := (f, loc)::(!fun_defs) *)
 		(* TODO: Should be checked of already existing *)
-		Hashtbl.add glb_decls name
-		  {gname = name; gtype = v.vtype; gloc = v.vdecl;
-		   gdefd = false; ginit = None;}
+	      (*fun_specs :=*)
+	      ignore ({prett = (*ret_type*) None;
+		       pargs = (*formals*) None; plocs = None;
+		       ploc = loc; pbody = None;
+		       pcil_body = Some f.sbody;})
+		      
+	  | [GVarDecl (v, _)] ->
+	      update_glob_decl v
 		  
 	  | [GVar (v, {init = i}, _)] -> 
-	      let name = glb_uniquename v in
-		(* TODO: Should be checked of already existing *)
-		Hashtbl.add glb_decls name
-		  {gname = name;
-		   gtype = v.vtype; gloc = v.vdecl;
-		   gdefd = true; ginit = i;}
+	      update_glob_def v i
 		
 	  | _ -> error ("Cil2newspeak.translate.explore: global "
 			^(string_of_global g)^" not supported")
   in
     Hashtbl.clear glb_decls;
-    fun_defs := [];
     Hashtbl.clear fun_specs;
     glb_used := String_set.empty;
     fun_called := String_set.empty;

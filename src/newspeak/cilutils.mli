@@ -31,8 +31,9 @@ val double_size : int
 val setCilPrinter : string -> unit
 
 val string_of_type : Cil.typ -> string
-val string_of_exp : Cil.exp -> string
 val string_of_global : Cil.global -> string
+val string_of_init : Cil.init -> string
+val string_of_exp : Cil.exp -> string
 val string_of_lval : Cil.lval -> string
 val string_of_instr : Cil.instr -> string
 val string_of_attribute : Cil.attribute -> string
