@@ -1,7 +1,7 @@
 # Project
 DIR = 
 OBJ = cilutils npkcontext newspeak npkutils env \
-      local_pass cil2newspeak npklink main
+      npkil local_pass cil2newspeak npklink main
 # OBJ = cilutils npkcontext newspeak npkutils#  npkenv \
 #      npkfirstpass npkcompile npklink cil2newspeak
 

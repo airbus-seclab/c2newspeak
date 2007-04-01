@@ -1,1 +1,1 @@
-val link : Env.intermediate list -> string -> unit
+val link : Npkil.intermediate list -> string -> unit

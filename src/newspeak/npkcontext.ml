@@ -20,8 +20,8 @@ let accept_extern = ref false
 let verb_warnings = ref false
 let verb_debug = ref false
 let verb_cil = ref false
-let verb_npko = ref true
-let verb_newspeak = ref false
+let verb_npko = ref false
+let verb_newspeak = ref true
 
 let verbose boolean () =
   verb_cil := boolean;

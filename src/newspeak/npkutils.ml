@@ -11,6 +11,14 @@ module String_set =
 module Int_set = 
   Set.Make (struct type t = int let compare = Pervasives.compare end)
 
+let merge_sets l =
+  let rec merge_aux accu l =
+    match l with
+      | [] -> accu
+      | s::r -> merge_aux (String_set.union accu s) r
+  in
+    merge_aux String_set.empty l
+
 
 
 let translate_loc loc =

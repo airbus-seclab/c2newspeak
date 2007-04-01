@@ -7,7 +7,7 @@ open Env
 
 
 
-let local_vids = ref []
+let local_vids = ref Int_set.empty
 let code_to_duplicate = Hashtbl.create 100
 
 class vistor_first_pass = object
@@ -47,21 +47,15 @@ class vistor_first_pass = object
 
   (* removes unused local vars *)
   method vfunc f =
-    local_vids := [];
+    local_vids := Int_set.empty;
     let del_unused f =
-      let rec is_used v l =
-	match l with
-	  | [] -> false
-	  | a::_ when v.vid = a -> true
-	  | _::r -> is_used v r
-      in
       let rec new_locals locs =
 	match locs with
 	  | [] -> []
-	  | v::r when is_used v !local_vids -> v::(new_locals r)
+	  | v::r when Int_set.mem v.vid !local_vids -> v::(new_locals r)
 	  | _::r -> new_locals r
       in
-	f.slocals <- new_locals f.slocals;
+	if !remove_temp then f.slocals <- new_locals f.slocals;
 	f
 	  
     in
@@ -72,7 +66,7 @@ class vistor_first_pass = object
     match lv with
       | Var v, _ ->
 	  if not v.vglob
-	  then local_vids := (v.vid)::(!local_vids);
+	  then local_vids := Int_set.add v.vid !local_vids;
 	  DoChildren
       | _ -> DoChildren
 
@@ -158,10 +152,5 @@ let first_pass f =
 	  | _ -> error ("Cil2newspeak.translate.explore: global "
 			^(string_of_global g)^" not supported")
   in
-    Hashtbl.clear glb_decls;
-    Hashtbl.clear fun_specs;
-    glb_used := String_set.empty;
-    fun_called := String_set.empty;
-    glb_cstr := String_set.empty;
-
+    init_env ();
     List.iter explore (List.rev f.globals)

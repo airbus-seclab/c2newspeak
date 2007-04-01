@@ -10,6 +10,7 @@ module String_set :
     val empty : t
     val mem : elt -> t -> bool
     val add : elt -> t -> t
+    val union : t -> t -> t
     val iter : (elt -> unit) -> t -> unit
   end
 
@@ -20,14 +21,17 @@ module Int_set :
     val empty : t
     val mem : elt -> t -> bool
     val add : elt -> t -> t
-    val iter : (elt -> unit) -> t -> unit
   end
 
+val merge_sets : String_set.t list -> String_set.t
+
+
 (* 
+    val union : t -> t -> t
+    val iter : (elt -> unit) -> t -> unit
     val is_empty : t -> bool
     val singleton : elt -> t
     val remove : elt -> t -> t
-    val union : t -> t -> t
     val inter : t -> t -> t
     val diff : t -> t -> t
     val compare : t -> t -> int

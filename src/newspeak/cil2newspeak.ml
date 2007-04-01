@@ -5,6 +5,7 @@ open Npkcontext
 open Npkutils
 open Local_pass
 open Env
+open Npkil
 
 module K = Newspeak
 
@@ -717,41 +718,33 @@ let compile in_name out_name  =
     print_debug "First pass done.";
   
     print_debug ("Translating "^in_name^"...");
-
-(*    let translate_fun (f, loc) =
-      Hashtbl.add funs f.svar.vname (translate_fun (f, loc))
-    in
-      List.iter translate_fun !fun_defs;*)
-
     Hashtbl.iter translate_fun fun_specs;
 
-      let npko = {ifilename = in_name;
-		  iglobs = glb_decls; ifuns = fun_specs;
-		  iusedglbs = !glb_used; iusedcstr = !glb_cstr;
-		  iusedfuns = !fun_called;} in
-
-        if (!verb_npko) then begin
-
-(* TODO: Uncomment *)
-(*	  print_endline "Newspeak Object output";
-	  print_endline "----------------------";*)
-	  print_endline "Newspeak output";
-	  print_endline "---------------";
-	  dump_npko npko;
-	  print_newline ();
-	end;
+    let npko = {ifilename = in_name;
+		iglobs = Hashtbl.copy glb_decls;
+		ifuns = Hashtbl.copy fun_specs;
+		iusedglbs = !glb_used; iusedcstr = !glb_cstr;
+		iusedfuns = !fun_called;} in
+      
+      if (!verb_npko) then begin
 	
-	update_loc locUnknown;
-	if (out_name <> "") then begin
-	  print_debug ("Writing "^(out_name)^"...");
-	  let ch_out = open_out_bin out_name in
-	    Marshal.to_channel ch_out "NPKO" [];
-	    Marshal.to_channel ch_out npko [];
-	    close_out ch_out;
-	    print_debug ("Writing done.");
-	end;
-
-	npko
+	print_endline "Newspeak Object output";
+	print_endline "----------------------";
+	dump_npko npko;
+	print_newline ();
+      end;
+      
+      update_loc locUnknown;
+      if (out_name <> "") then begin
+	print_debug ("Writing "^(out_name)^"...");
+	let ch_out = open_out_bin out_name in
+	  Marshal.to_channel ch_out "NPKO" [];
+	  Marshal.to_channel ch_out npko [];
+	  close_out ch_out;
+	  print_debug ("Writing done.");
+      end;
+      
+      npko
 
 
 

@@ -31,15 +31,6 @@ type fspec_type = {
   mutable pcil_body : Cil.block option
 }
 
-type intermediate = {
-  ifilename : string;
-  iglobs : (string, glb_type) Hashtbl.t;
-  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
-  iusedglbs : Npkutils.String_set.t;
-  iusedcstr : Npkutils.String_set.t;
-  iusedfuns : Npkutils.String_set.t;
-}
-
 
 
 (** {1 Compilation variables} *)
@@ -50,6 +41,7 @@ val glb_used : Npkutils.String_set.t ref
 val fun_called : Npkutils.String_set.t ref
 val glb_cstr : Npkutils.String_set.t ref
 
+val init_env : unit -> unit
 
 
 (** {1 Globals} *)
@@ -60,7 +52,7 @@ val glb_cstr : Npkutils.String_set.t ref
 
 val update_glob_decl : Cil.varinfo -> unit
 val update_glob_def : Cil.varinfo -> Cil.init option -> unit
-
+val update_glob_link : string -> glb_type -> unit
 
 
 (*
@@ -120,7 +112,7 @@ val update_fun_proto : string -> Cil.typ -> (string * Cil.typ * Cil.attributes) 
 (** declaration of a function from a definition *)
 val update_fun_def : Cil.fundec -> unit
 
-
+val update_fun_link : string -> fspec_type -> unit
 
 
 (** {1 Variable id retrieval} *)
@@ -168,10 +160,6 @@ val retrieve_switch_label : status -> Cil.location -> Newspeak.lbl
 (** tells whether a switch label is already in the status *)
 val mem_switch_label : status -> Cil.location -> bool
 
-
-
-
-val dump_npko : intermediate -> unit
 
 
 
