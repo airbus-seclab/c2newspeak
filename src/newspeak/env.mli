@@ -17,7 +17,7 @@ type status = {
 
 type glb_type = {
   mutable gtype : Cil.typ;
-  mutable gloc  : Cil.location;
+  mutable gloc  : Newspeak.location;
   mutable gdefd : bool;
   mutable ginit : Cil.init option;
 }
@@ -26,8 +26,8 @@ type fspec_type = {
   mutable prett : Newspeak.typ option;
   mutable pargs : ((int * string * Newspeak.typ) list) option;
   mutable plocs : ((int * string * Newspeak.typ) list) option;
-  mutable ploc  : Cil.location;
-  mutable pbody : Newspeak.fundec option;
+  mutable ploc  : Newspeak.location;
+  mutable pbody : Newspeak.blk option;
   mutable pcil_body : Cil.block option
 }
 
@@ -87,7 +87,7 @@ val loc_declare : bool -> (int * string * Newspeak.typ) -> unit
 
 (** [get_loc_decls ()] returns the current list of local declaration,
     and reset the local handler (counter, hashtable and decl list) *)
-val get_loc_decls : unit -> (Newspeak.decl * Newspeak.location) list
+val get_loc_decls : unit -> (Newspeak.ldecl * Newspeak.location) list
 
 
 (** {2 Functions used in translate_call} *)
@@ -109,26 +109,17 @@ val restore_loc_cnt : unit -> unit
 
 val use_fun : Cil.varinfo -> unit
 
-val extract_type : Newspeak.decl * Newspeak.location -> Newspeak.typ
+val extract_ldecl : (int * string * Newspeak.typ) -> Newspeak.ldecl
 
-(*
 (** allows to update the specification of a function (prototype) when
     called for example *)
-val update_fun_spec : string -> Newspeak.typ option -> decl_t list option -> decl_t list ->
-  Cil.stmt list -> Newspeak.location option -> unit
-
-(** declaration of a function from a definition *)
-val fun_declare : Cil.fundec -> unit
 
 (** declaration of a function from a prototype *)
-val fun_declare_prototype : 
-  (string * Cil.typ * (string * Cil.typ * Cil.attributes) list option) -> unit
+val update_fun_proto : string -> Cil.typ -> (string * Cil.typ * Cil.attributes) list option -> unit
 
-(** [get_fun_spec name] retrieves the specification of function name
-    if possible *)
-val get_fun_spec : string -> fun_spec_t option
+(** declaration of a function from a definition *)
+val update_fun_def : Cil.fundec -> unit
 
-*)
 
 
 
@@ -180,8 +171,12 @@ val mem_switch_label : status -> Cil.location -> bool
 
 
 
-
 val dump_npko : intermediate -> unit
+
+
+
+
+
 
 (*
 (* TODO: to be removed *)

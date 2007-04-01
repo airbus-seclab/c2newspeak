@@ -12,16 +12,18 @@
 
 (** The type of a program: function definitions and an block
     containing initialisation of the global variables *)
-type t = (exp list * decl list * (fid, fundec) Hashtbl.t)
+type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
 
-and decl = (typ * string * init_t)
+and gdecl = (string * typ * init_t)
+
+and ldecl = (string * typ)
 
 and fundec = ftyp * blk option
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (decl * blk)
+  | Decl of (ldecl * blk)
   | Label of lbl
   | Goto of lbl
   | Call of fn

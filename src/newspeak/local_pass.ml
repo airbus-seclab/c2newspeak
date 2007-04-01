@@ -140,49 +140,14 @@ let first_pass f =
 			     ^"unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
-
-	      (* TODO: Regroup all prototypes declaration (old
-		 update_specs : a function to check / update from a
-		 prototype and one from a definition) *)
-	      let ret_type = match ret with
-		| TVoid _ -> None
-		| t -> Some (translate_typ t)
-	      in
-
-	      let rec translate_formals i l =
-		match l with
-		    [] -> []
-		  | (n, t, _)::r ->
-		      let name =
-			if n="" then "arg" ^ (string_of_int i) else n
-		      in
-			(-1, name, translate_typ t)::(translate_formals (i+1) r)
-	      in
-	      let formals = match args with
-		  None ->
-		    print_warning ("missing or incomplete prototype for "^name);
-		    None
-		| Some l -> Some (translate_formals 0 l)
-	      in
-		(* TODO: should be checked if already existing *)
-		Hashtbl.add fun_specs name
-		  {prett = ret_type;
-		   pargs = formals; plocs = None;
-		   ploc = loc; pbody = None;
-		   pcil_body = None;}
+	      update_fun_proto name ret args
 		  
 	  | [GFun (f, _)] -> 
 	      (* Every defined function is kept *)
 	      use_fun f.svar;
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
-(*	      fun_defs := (f, loc)::(!fun_defs) *)
-		(* TODO: Should be checked of already existing *)
-	      (*fun_specs :=*)
-	      ignore ({prett = (*ret_type*) None;
-		       pargs = (*formals*) None; plocs = None;
-		       ploc = loc; pbody = None;
-		       pcil_body = Some f.sbody;})
+	      update_fun_def f;
 		      
 	  | [GVarDecl (v, _)] ->
 	      update_glob_decl v

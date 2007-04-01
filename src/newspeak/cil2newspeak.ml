@@ -458,7 +458,7 @@ and translate_if status e stmts1 stmts2 =
       | K.UnOp (K.Not, e) -> K.BinOp (K.Eq t, e, K.zero)
       | _ -> K.UnOp (K.Not, K.BinOp (K.Eq t, K.zero, e))
   in
-    print_debug (K.string_of_exp (translate_exp e));
+(*    print_debug (K.string_of_exp (translate_exp e)); *)
     let cond1 = normalize (translate_exp e) in
     let cond2 = K.negate cond1 in
     let body1 = translate_stmts status stmts1 in
@@ -524,14 +524,14 @@ and translate_call x lv args_exps =
       (* Return value ignored *)
       | Some t, None ->
 	  push_local ();
-	  [(t, "value_of_"^fname, K.Init []), loc], []
+	  [("value_of_"^fname, t), loc], []
 	    
       (* Return value put into Lval cil_lv *)
       | Some t_given, Some cil_lv ->
 	  let t_expected = translate_typ (typeOfLval cil_lv) in
 	    push_local ();
 	    let lval = translate_lval cil_lv in
-	    let ret_decl = [(t_given, "value_of_"^fname, K.Init []), loc] in
+	    let ret_decl = [("value_of_"^fname, t_given), loc] in
 	    let ret_epilog = match t_given, t_expected with
 	      | K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
 		  [K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp), loc]
@@ -560,11 +560,11 @@ and translate_call x lv args_exps =
 	    push_local ();
 	    let t = translate_typ (typeOf e) in
 	      handle_args_decls_aux 
-		(((t, "arg"^(string_of_int i), K.Init []), loc)::accu)
+		((("arg"^(string_of_int i), t), loc)::accu)
 		(i+1) None r_e
 		
 	| Some [], [] -> accu
-	| Some ((t_expected, _, _) as decl::r_t), e::r_e ->
+	| Some (((n, t_expected) as decl)::r_t), e::r_e ->
 	    let t_given = translate_typ (typeOf e) in
 	      if t_expected <> t_given then begin
 		error ("Cil2newspeak.translate.translate_call.handle_args_decls: "
@@ -592,23 +592,21 @@ and translate_call x lv args_exps =
     save_loc_cnt ();
     let name, ret_type, formals = match lv with
       | Var f, NoOffset ->
-	  let ret = match f.vtype with
-	    | TFun (TVoid _, _, _, _) -> None
-	    | TFun (t, _, _, _) -> Some (translate_typ t)
+	  let name = f.vname in
+	  let _ = match f.vtype with
+	      (* TODO: Here we should force the function to already be
+		 in the hash table ! *)
+	    | TFun (ret, args, _, _) -> update_fun_proto name ret args
 	    | _ -> error ("Env.fun_declare: invalid type \""
 			  ^(string_of_type f.vtype)^"\"")
 	  in
+	  let x = Hashtbl.find fun_specs name in
+	  let fs = match x.pargs with
+	    | None -> None
+	    | Some ld -> Some (List.map extract_ldecl ld)
+	  in
 
-	  (* TODO: Check and update formals against the prototype's
-	     formals, and rettype ! *)
-	  (*	    if (spec.formals = None)
-		    then update_fun_spec f.vname None (Some args_decls) [] [] None; *)
-(*	  let decl_from_formal fs = (fs.vtype, fs.vname, K.Init []) in
-	  let formals = List.map decl_from_formal f.sformals in *)
-
-	  let fs = None in
-
-	  (f.vname, ret, fs)
+	    (name, x.prett, fs)
 
       | Mem (Lval fptr), NoOffset ->
 	  let typ = translate_typ (typeOfLval fptr) in
@@ -635,7 +633,7 @@ and translate_call x lv args_exps =
 	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
 	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
       | Mem (Lval fptr), NoOffset ->
-	  let args_t = List.rev (List.map extract_type args_decls) in
+	  let args_t = List.rev (List.map (fun ((_, t), _) -> t) args_decls) in
 	  let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
 	    
 	  let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
@@ -651,10 +649,10 @@ and translate_call x lv args_exps =
 
 
 
-let translate_fun spec =
+let translate_fun name spec =
   match spec.pargs, spec.plocs, spec.pcil_body with
       Some formals, Some locals, Some cil_body ->
-	update_loc spec.ploc;
+	cur_loc := spec.ploc;
 	let floc = !cur_loc in
 	let status = 
 	  match spec.prett with
@@ -670,11 +668,11 @@ let translate_fun spec =
 				 [K.Label status.return_lbl, floc]) in
 	  let body = generate_body blk (get_loc_decls ()) in
 
-(* pbody should only be Newspeak.blk *)
-
 	    (* TODO ?: Check only one body exists *)
 	    spec.pcil_body <- None;
-	    spec.pbody <- Some body
+	    spec.pbody <- Some body(* pbody should only be Newspeak.blk *)
+
+
 
     (* TODO: Same question here *)
     | _ -> ()
@@ -720,15 +718,12 @@ let compile in_name out_name  =
   
     print_debug ("Translating "^in_name^"...");
 
-    let translate_fun (f, loc) =
-      (* TODO: Here, we should get the spec in fun_specs and update
-	 the body with the translation obtained from the definition *)
-      (* TODO: But it is needed that fun_defs are duplicated into
-	 prototypes / specs list *)
-      print_endline ("__"^f.svar.vname^"__");
-(*      Hashtbl.add funs f.svar.vname (translate_fun (f, loc))*)
+(*    let translate_fun (f, loc) =
+      Hashtbl.add funs f.svar.vname (translate_fun (f, loc))
     in
-(*      List.iter translate_fun !fun_defs;*)
+      List.iter translate_fun !fun_defs;*)
+
+    Hashtbl.iter translate_fun fun_specs;
 
       let npko = {ifilename = in_name;
 		  iglobs = glb_decls; ifuns = fun_specs;
@@ -736,8 +731,12 @@ let compile in_name out_name  =
 		  iusedfuns = !fun_called;} in
 
         if (!verb_npko) then begin
-	  print_endline "Newspeak Object output";
-	  print_endline "----------------------";
+
+(* TODO: Uncomment *)
+(*	  print_endline "Newspeak Object output";
+	  print_endline "----------------------";*)
+	  print_endline "Newspeak output";
+	  print_endline "---------------";
 	  dump_npko npko;
 	  print_newline ();
 	end;

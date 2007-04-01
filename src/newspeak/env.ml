@@ -30,18 +30,17 @@ type status = {
 
 type glb_type = {
   mutable gtype : Cil.typ;
-  mutable gloc  : Cil.location;
+  mutable gloc  : Newspeak.location;
   mutable gdefd : bool;
   mutable ginit : Cil.init option;
 }
 
-(* TODO: add kernel vids in a mutable field ? *)
 type fspec_type = {
   mutable prett : Newspeak.typ option;
   mutable pargs : ((int * string * Newspeak.typ) list) option;
   mutable plocs : ((int * string * Newspeak.typ) list) option;
-  mutable ploc  : Cil.location;
-  mutable pbody : Newspeak.fundec option;
+  mutable ploc  : Newspeak.location;
+  mutable pbody : Newspeak.blk option;
   mutable pcil_body : Cil.block option
 }
 
@@ -91,7 +90,7 @@ let update_glob_decl v =
 	  ^(string_of_type v.vtype)^"'")
     with Not_found ->
       Hashtbl.add glb_decls name
-	{gtype = v.vtype; gloc = v.vdecl;
+	{gtype = v.vtype; gloc = translate_loc v.vdecl;
 	 gdefd = false; ginit = None;}
 
 let update_glob_def v i =
@@ -103,15 +102,15 @@ let update_glob_def v i =
 	then error ("Env.update_glob_decl: different types for "
 	  ^name^": '"^(string_of_type x.gtype)^"' and '"
 	  ^(string_of_type v.vtype)^"'");
-	if x.gdefd
+	if x.gdefd (* Should there be an exception here ? *)
 	then error ("Env.glb_declare: multiple definition for "^name);
 	x.gtype <- v.vtype;
 	x.gdefd <- true;
-	x.gloc <- v.vdecl;
+	x.gloc <- translate_loc v.vdecl;
 	x.ginit <- i
     with Not_found ->
       Hashtbl.add glb_decls name
-	{gtype = v.vtype; gloc = v.vdecl;
+	{gtype = v.vtype; gloc = translate_loc v.vdecl;
 	 gdefd = true; ginit = i;}
 
 
@@ -144,7 +143,7 @@ let loc_declare generate_stmt_decl (cil_vid, n, t) =
   let vid = incr loc_cnt in
     Hashtbl.add loc_tabl cil_vid vid;
     if generate_stmt_decl then loc_decls :=
-      ((t, n, Newspeak.Init []), !cur_loc)::!loc_decls
+      ((n, t), !cur_loc)::!loc_decls
 
 
 let get_loc_decls () =
@@ -173,112 +172,15 @@ let restore_loc_cnt () = loc_cnt := !loc_cnt_sav
 let use_fun v =
   fun_called := String_set.add v.vname !fun_called
 
-let extract_type ((t, _, _), _) = t
-
-(*let update_fun_declare f =
-  let ret_type = match f.svar.vtype with
-    | TFun (TVoid _, _, _, _) -> None
-    | TFun (t, _, _, _) -> Some (translate_typ t)
-    | _ ->
-	error ("Env.update_fun_declare: invalid type \""
-	       ^(string_of_type f.svar.vtype)^"\"")
-  in
-  let translate_local f =
-    f.vname, translate_typ f.vtype
-  in
-  let formals = Some (List.map (translate_local true) f.sformals) in
-  let locals = List.map (translate_local false) f.slocals in
-
-  try
-    let x = Hashtbl.find fun_specs name in
+let extract_ldecl (_, n, t) = (n, t)
 
 
-    update_fun_spec f.svar.vname ret_type formals locals f.sbody.bstmts (Some (!cur_loc))
-
-  with 
-
-
-(* Updates the data about a function *)
-let update_fun_spec name ret_type formals locals body fun_loc =
-  match (get_fun_spec name) with
-    | None ->
-	Hashtbl.add fun_specs name {ret_type = ret_type;
-				    formals = formals; locals = locals;
-				    body = body; fun_loc = fun_loc}
-    | Some spec ->
-	let update_ret_type () = 
-	  match spec.ret_type, ret_type with
-	    | _ , None -> ()
-	    | None, Some _ -> spec.ret_type <- ret_type
-	    | Some t1, Some t2 when t1 = t2 -> ()
-	    | _ -> error ("Env.update_fun_spec: multiple declaration for \""
-			  ^name^"\" are incompatible")
-
-	and update_formals () =
-	  let rec compare_formals f1 f2 =
-	    match f1,f2 with
-	      | [],[] -> []
-	      | ({var_decl = (t1, n1, Newspeak.Init []); var_cil_vid = i1; var_loc = l1;} as decl1)::r1,
-		  {var_decl = (t2, n2, Newspeak.Init []); var_cil_vid = i2; var_loc = l2;}::r2
-		    when t1 = t2 && (i1 = i2 || i1 = 0 || i2 = 0) ->
-		  {decl1 with var_cil_vid = max i1 i2;
-		     var_loc = if l2 = Newspeak.locUnknown then l1 else l2}::(compare_formals r1 r2)
-		    
-	      | _ -> error ("Env.update_fun_spec: multiple declaration for \""
-			    ^name^"\" are incompatible")
-	  in
-	    match spec.formals, formals with
-		None, Some f -> spec.formals <- formals
-	      | _, None -> ()
-	      | Some f1, Some f2 ->
-		  spec.formals <- Some (compare_formals f1 f2)
-
-	and update_locals () =
-	  match spec.locals, locals with
-	    | _, [] -> ()
-	    | [], l -> spec.locals <- locals
-	    | _ -> error ("Env.update_fun_spec: multiple definition "
-			  ^"for \""^name^"\" (two lists of locals)")
-
-	and update_body () =
-	  match spec.body, body with
-	  | b, [] -> ()
-	  | [], b -> spec.body <- b
-	  | _ -> error ("Env.update_fun_spec: multiple definition "
-			^"for \""^name^"\" (two different bodies)")
-
-	and update_loc () =
-	  match spec.fun_loc, fun_loc with
-	    | None, Some _ -> spec.fun_loc <- fun_loc
-
-	    (* if we have two locations, we update it if the new spec
-	       corresponds to the definition *)
-	    | _, Some l when body <> [] -> spec.fun_loc <- fun_loc
-	    | _ -> ()
-
-	in
-	  update_ret_type ();
-	  update_formals ();
-	  update_locals ();
-	  update_body ();
-	  update_loc ()
-
-
-
-
-(* Function declarations *)
-(*-----------------------*)
-
-(* Case of a definition *)
-let fun_declare f =
-
-
-(* Case of a prototype *)
-let fun_declare_prototype (name, ret, args) =
-  let ret_type = match ret with
+let update_fun_proto name ret args =
+  let rettype = match ret with
     | TVoid _ -> None
     | t -> Some (translate_typ t)
   in
+
   let rec translate_formals i l =
     match l with
 	[] -> []
@@ -286,20 +188,125 @@ let fun_declare_prototype (name, ret, args) =
 	  let name =
 	    if n="" then "arg" ^ (string_of_int i) else n
 	  in
-	    (new_decl ((translate_typ t), name, (Newspeak.Init [])) 0 Newspeak.locUnknown true)::(translate_formals (i+1) r)
+	    (-1, name, translate_typ t)::(translate_formals (i+1) r)
   in
   let formals = match args with
-      None -> None
+      None ->
+	print_warning ("Env.update_fun_proto: missing or "
+		       ^"incomplete prototype for "^name);
+	None
     | Some l -> Some (translate_formals 0 l)
   in
-    if (args = None)
-    then print_warning ("missing or incomplete prototype for "^name);
-    update_fun_spec name ret_type formals [] [] None
+ 
+    try
+      let x = Hashtbl.find fun_specs name in
+
+      let _ = 
+	match x.prett, rettype with
+	    None, None -> ()
+	  | Some t1, Some t2 when t1 = t2 -> ()
+	  | _ ->
+	      (* TODO: add the respective types and locations ? *)
+	      error ("Env.update_fun_proto: different types for "
+		     ^"return type of prototype "^name)
+      in
+
+      let rec compare_formals l1 l2 =
+	match l1, l2 with
+	    [], [] -> ()
+	  | (_, _, t1)::r1, (_, _, t2)::r2 when t1 = t2 ->
+	      compare_formals r1 r2
+	  | [], _ | _, [] ->
+	      (* TODO: add the respective locations *)
+	      error ("Env.update_fun_proto: different number of args "
+		     ^"in declarations for function "^name)
+
+	  | (_, _, t1)::_, (_, n, t2)::_ ->
+	      (* TODO: add the respective locations *)
+	      error ("Env.update_fun_proto: different types for "
+		     ^"argument "^n^" in different declarations of "^name^": '"
+		     ^(Newspeak.string_of_typ t1)^"' and '"
+		     ^(Newspeak.string_of_typ t2)^"'")
+      in
+      let _ =
+	match x.pargs, formals with
+	  | _, None -> ()
+	  | None, Some _ -> x.pargs <- formals
+	  | Some l1, Some l2 -> compare_formals l1 l2
+      in ()
+    with Not_found ->
+      Hashtbl.add fun_specs name
+	{prett = rettype;
+	 pargs = formals; plocs = None;
+	 ploc = !cur_loc; pbody = None;
+	 pcil_body = None;}
 
 
+let update_fun_def f =
+  let name = f.svar.vname in
 
-*)
+  let rettype = match f.svar.vtype with
+    | TFun (TVoid _, _, _, _) -> None
+    | TFun (t, _, _, _) -> Some (translate_typ t)
+    | _ ->
+	error ("Env.update_fun_def: invalid type \""
+	       ^(string_of_type f.svar.vtype)^"\"")
+  in
 
+  let translate_local v = v.vid, v.vname, translate_typ v.vtype in
+  let formals = List.map translate_local f.sformals in
+  let locals = List.map translate_local f.slocals in
+
+  try
+    let x = Hashtbl.find fun_specs name in
+      if x.pcil_body <> None
+      then error ("Env.update_fun_def: multiple definition for "^name);
+
+      let _ = 
+	match x.prett, rettype with
+	    None, None -> ()
+	  | Some t1, Some t2 when t1 = t2 -> ()
+	  | _ ->
+	      (* TODO: add the respective types and locations ? *)
+	      error ("Env.update_fun_def: different types for "
+		     ^"return type of prototype "^name)
+      in
+
+      let rec compare_formals l1 l2 =
+	match l1, l2 with
+	    [], [] -> ()
+	  | (_, _, t1)::r1, (_, _, t2)::r2 when t1 = t2 ->
+	      compare_formals r1 r2
+	  | [], _ | _, [] ->
+	      (* TODO: add the respective locations *)
+	      error ("Env.update_fun_proto: different number of args "
+		     ^"in declarations for function "^name)
+
+	  | (_, _, t1)::_, (_, n, t2)::_ ->
+	      (* TODO: add the respective locations *)
+	      error ("Env.update_fun_proto: different types for "
+		     ^"argument "^n^" in different declarations of "^name^": '"
+		     ^(Newspeak.string_of_typ t1)^"' and '"
+		     ^(Newspeak.string_of_typ t2)^"'")
+      in
+      let _ =
+	match x.pargs with
+	  | None -> ()
+	  | Some l ->
+	      compare_formals l formals;
+
+      in
+	x.pargs <- Some formals;
+	x.plocs <- Some locals;
+	x.ploc <- !cur_loc;
+	x.pcil_body <- Some f.sbody
+
+    with Not_found ->
+      Hashtbl.add fun_specs name
+	{prett = rettype;
+	 pargs = Some formals; plocs = Some locals;
+	 ploc = !cur_loc; pbody = None;
+	 pcil_body = Some f.sbody;}
 
 
 
@@ -363,6 +370,9 @@ let mem_switch_label status loc =
   List.mem_assoc loc status.switch_lbls
 
 
+
+
+
 let dump_npko inter = 
 
   let print_list title list =
@@ -380,14 +390,13 @@ let dump_npko inter =
   in
 
   let print_fundef n f =
-    match f.pbody with
-      | None -> ()
-      | Some fdec ->
-	  Newspeak.dump_fundec n fdec;
-	  print_newline ()
+    Newspeak.dump_fundec n (([], None), f.pbody);
+(* TODO: Uncomment *)
+(*    if f.pbody <> None then print_newline () *)
   in
 
-    print_list "Global used" inter.iusedglbs;
+    (* TODO: Uncomment *)
+(*    print_list "Global used" inter.iusedglbs;
     print_list "Functions called" inter.iusedfuns;
     print_list "Constant Strings" inter.iusedcstr;
 
@@ -395,8 +404,15 @@ let dump_npko inter =
     Hashtbl.iter print_glob inter.iglobs;
     print_newline ();
 
-    print_endline "Function definitions";
+    print_endline "Function definitions";*)
     Hashtbl.iter print_fundef inter.ifuns;
+
+
+
+
+
+
+
 
     
 

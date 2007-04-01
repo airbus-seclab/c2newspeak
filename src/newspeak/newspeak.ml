@@ -4,16 +4,18 @@ open Cilutils
 (* Types *)
 (*-------*)
 
-type t = (exp list * decl list * (fid, fundec) Hashtbl.t)
+type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
 
-and decl = (typ * string * init_t)
+and gdecl = (string * typ * init_t)
+
+and ldecl = (string * typ)
 
 and fundec = ftyp * blk option
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (decl * blk)
+  | Decl of (ldecl * blk)
   | Label of lbl
   | Goto of lbl
   | Call of fn
@@ -210,10 +212,6 @@ let simplify_coerce blk =
     match x with
       | Set (lv, e, sca) -> (Set (simplify_lval lv, simplify_exp e, sca), loc)
       | Call (FunDeref (e, t)) -> (Call (FunDeref (simplify_exp e, t)), loc)
-      | Decl ((t, n, Init i), body) ->
-          let body = List.map simplify_stmt body in
-	  let i = List.map simplify_init i in
-          Decl ((t, n, Init i), body), loc
       | Decl (d, body) ->
           Decl (d, List.map simplify_stmt body), loc
       | ChooseAssert elts ->
@@ -223,8 +221,6 @@ let simplify_coerce blk =
           let body = List.map simplify_stmt body in
           (InfLoop body, loc)
       | _ -> (x, loc)
-
-  and simplify_init (o, s, e) = (o, s, simplify_exp e)
 
   and simplify_choose_elt (l, b) = (List.map simplify_exp l, List.map simplify_stmt b)
 
@@ -471,7 +467,12 @@ let string_of_lbl l =
       !lbl_index
     in !cur_fun^"_"^(string_of_int pretty_l)
 
-let dump_decl decls (t, name, i) =
+
+let dump_ldecl decls (name, t) =
+  print_endline ((string_of_typ t)^" "^name^";")
+
+
+let dump_gdecl decls (name, t, i) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp decls e));
   in
@@ -504,16 +505,16 @@ let rec dump_stmt align decls only (sk, _) =
 	print_endline ((string_of_lval decls lv1)^" ="^(string_of_size_t sz)^
 			 " "^(string_of_lval decls lv2)^";")
 
-    | Decl ((_, name, _) as d, body) ->
+    | Decl ((name, _) as d, body) ->
 	let new_decls = if !pretty_print then (name::decls) else [] in
 	  if only then begin
-	    dump_decl decls d;
+	    dump_ldecl decls d;
 	    dump_blk align new_decls body
 	  end else begin
 	    print_endline "{";
 	    let new_align = (align^"  ") in
 	      print_string new_align;
-	      dump_decl decls d;
+	      dump_ldecl decls d;
 	      dump_blk new_align new_decls body;
 	      print_endline (align^"}")
 	  end
@@ -583,7 +584,7 @@ let dump (assumptions, gdecls, fundecs) =
   let rec collect_globals_name g =
     match g with
 	[] -> ()
-      | (_, name, i)::r ->
+      | (name, _, i)::r ->
 	  incr (globals_index);
 	  Hashtbl.replace globals (!globals_index) name;
 	  collect_globals_name r
@@ -592,11 +593,14 @@ let dump (assumptions, gdecls, fundecs) =
     match g with
 	[] -> ()
       | d::r ->
-	  dump_decl [] d;
+	  dump_gdecl [] d;
 	  handle_globals r
   in
     clear_tables ();
     if !pretty_print then collect_globals_name gdecls;
+
+    (* TODO: Clean this mess... String_map *)
+
     List.iter 
       (fun x -> print_endline ("assume "^(string_of_exp x)))
       assumptions;
