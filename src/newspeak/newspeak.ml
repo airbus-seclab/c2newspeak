@@ -4,16 +4,18 @@ open Cilutils
 (* Types *)
 (*-------*)
 
-type t = (exp list * decl list * (fid, fundec) Hashtbl.t)
+type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
 
-and decl = (typ * string * init_t)
+and gdecl = (string * typ * init_t)
+
+and ldecl = (string * typ)
 
 and fundec = ftyp * blk option
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (decl * blk)
+  | Decl of (ldecl * blk)
   | Label of lbl
   | Goto of lbl
   | Call of fn
@@ -141,13 +143,26 @@ let domain_of_typ (sign, size) =
     | (Signed, 4) -> (Int64.of_string "-2147483648", Int64.of_string "2147483647")
     | _ -> invalid_arg "Newspeak.domain_of_typ"
 
+
 let make_int_coerce int_t e =
   UnOp (Coerce (domain_of_typ int_t), e)
 
 let make_belongs len e =
   UnOp (Belongs (Int64.zero, (Int64.of_int (len-1))), e)
 
+
+let rec negate exp =
+  match exp with
+    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
+    | UnOp (Not, e) -> e
+    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
+    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e2, e1))
+    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
+    | _ -> invalid_arg "Newspeak.negate"
+
+
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
+
 
 let init_of_string str = 
   let len = String.length str in
@@ -160,6 +175,8 @@ let init_of_string str =
     (len + 1, !res)
 
 
+
+(* TODO: Look into the simplifications *)
 let simplify_gotos blk =
   let necessary_lbls = ref [] in
   let rec simplify_blk x =
@@ -190,16 +207,11 @@ let simplify_gotos blk =
     simplify_blk blk
 
 
-
 let simplify_coerce blk =
   let rec simplify_stmt (x, loc) =
     match x with
       | Set (lv, e, sca) -> (Set (simplify_lval lv, simplify_exp e, sca), loc)
       | Call (FunDeref (e, t)) -> (Call (FunDeref (simplify_exp e, t)), loc)
-      | Decl ((t, n, Init i), body) ->
-          let body = List.map simplify_stmt body in
-	  let i = List.map simplify_init i in
-          Decl ((t, n, Init i), body), loc
       | Decl (d, body) ->
           Decl (d, List.map simplify_stmt body), loc
       | ChooseAssert elts ->
@@ -209,8 +221,6 @@ let simplify_coerce blk =
           let body = List.map simplify_stmt body in
           (InfLoop body, loc)
       | _ -> (x, loc)
-
-  and simplify_init (o, s, e) = (o, s, simplify_exp e)
 
   and simplify_choose_elt (l, b) = (List.map simplify_exp l, List.map simplify_stmt b)
 
@@ -245,8 +255,6 @@ let simplify_coerce blk =
       | _ -> lv
   in
     List.map simplify_stmt blk
-
-
 
 
 let simplify b = simplify_coerce (simplify_gotos b)
@@ -319,6 +327,24 @@ let rec string_of_typ t =
     | Region (lst, sz) ->
 	let string_of_elt (off, t) = (string_of_typ t)^" "^(string_of_size_t off) in
 	  "{"^(seq ";" string_of_elt lst)^"}"^(string_of_size_t sz)
+
+
+let string_of_ftyp (args, ret) = 
+  let res = ref "" in 
+    begin match args with
+	hd::[] -> res := string_of_typ hd
+      | hd::tl -> 
+	  res := "("^(string_of_typ hd);
+	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
+	  res := !res^")"
+      | [] -> res := "void"
+    end;
+    res := !res^" -> ";
+    begin match ret with
+	None -> res := !res^"void"
+      | Some t -> res := !res^(string_of_typ t)
+    end;
+    !res
 
 
 
@@ -426,7 +452,6 @@ and string_of_fn decls f =
 	  (seq ", " string_of_typ args_t)^")"
 
 
-
 (* Actual dump *)
 
 
@@ -442,7 +467,12 @@ let string_of_lbl l =
       !lbl_index
     in !cur_fun^"_"^(string_of_int pretty_l)
 
-let dump_decl decls (t, name, i) =
+
+let dump_ldecl decls (name, t) =
+  print_endline ((string_of_typ t)^" "^name^";")
+
+
+let dump_gdecl decls (name, t, i) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp decls e));
   in
@@ -475,16 +505,16 @@ let rec dump_stmt align decls only (sk, _) =
 	print_endline ((string_of_lval decls lv1)^" ="^(string_of_size_t sz)^
 			 " "^(string_of_lval decls lv2)^";")
 
-    | Decl ((_, name, _) as d, body) ->
+    | Decl ((name, _) as d, body) ->
 	let new_decls = if !pretty_print then (name::decls) else [] in
 	  if only then begin
-	    dump_decl decls d;
+	    dump_ldecl decls d;
 	    dump_blk align new_decls body
 	  end else begin
 	    print_endline "{";
 	    let new_align = (align^"  ") in
 	      print_string new_align;
-	      dump_decl decls d;
+	      dump_ldecl decls d;
 	      dump_blk new_align new_decls body;
 	      print_endline (align^"}")
 	  end
@@ -554,7 +584,7 @@ let dump (assumptions, gdecls, fundecs) =
   let rec collect_globals_name g =
     match g with
 	[] -> ()
-      | (_, name, i)::r ->
+      | (name, _, i)::r ->
 	  incr (globals_index);
 	  Hashtbl.replace globals (!globals_index) name;
 	  collect_globals_name r
@@ -563,11 +593,14 @@ let dump (assumptions, gdecls, fundecs) =
     match g with
 	[] -> ()
       | d::r ->
-	  dump_decl [] d;
+	  dump_gdecl [] d;
 	  handle_globals r
   in
     clear_tables ();
     if !pretty_print then collect_globals_name gdecls;
+
+    (* TODO: Clean this mess... String_map *)
+
     List.iter 
       (fun x -> print_endline ("assume "^(string_of_exp x)))
       assumptions;
@@ -578,29 +611,9 @@ let dump (assumptions, gdecls, fundecs) =
     handle_globals gdecls;
     clear_tables ()
 
-let rec negate exp =
-  match exp with
-    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
-    | UnOp (Not, e) -> e
-    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
-    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e2, e1))
-    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
-    | _ -> invalid_arg "Newspeak.negate"
 
-
-let string_of_ftyp (args, ret) = 
-  let res = ref "" in 
-    begin match args with
-	hd::[] -> res := string_of_typ hd
-      | hd::tl -> 
-	  res := "("^(string_of_typ hd);
-	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
-	  res := !res^")"
-      | [] -> res := "void"
-    end;
-    res := !res^" -> ";
-    begin match ret with
-	None -> res := !res^"void"
-      | Some t -> res := !res^(string_of_typ t)
-    end;
-    !res
+let dump_fundec name (_, body) =
+  let old_pretty = !pretty_print in
+    pretty_print := false;
+    dump_fundec name body;
+    pretty_print := old_pretty

@@ -140,67 +140,25 @@ let first_pass f =
 			     ^"unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
-
-	      (* TODO: Regroup all prototypes declaration (old
-		 update_specs : a function to check / update from a
-		 prototype and one from a definition) *)
-	      let ret_type = match ret with
-		| TVoid _ -> None
-		| t -> Some (translate_typ t)
-	      in
-
-	      let rec translate_formals i l =
-		match l with
-		    [] -> []
-		  | (n, t, _)::r ->
-		      let name =
-			if n="" then "arg" ^ (string_of_int i) else n
-		      in
-			(name, translate_typ t)::(translate_formals (i+1) r)
-	      in
-	      let formals = match args with
-		  None ->
-		    print_warning ("missing or incomplete prototype for "^name);
-		    None
-		| Some l -> Some (translate_formals 0 l)
-	      in
-		(* TODO: should be checked if already existing *)
-		Hashtbl.add fun_specs name
-		  {pname = name; prett = ret_type;
-		   pargs = formals; plocs = None;
-		   ploc = loc; pbody = None;}
+	      update_fun_proto name ret args
 		  
 	  | [GFun (f, _)] -> 
 	      (* Every defined function is kept *)
-	      (* TODO: add a prototype *)
 	      use_fun f.svar;
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
-	      fun_defs := (f, loc)::(!fun_defs)
-(*		fun_specs := {pname = name; prett = ret_type;
-			      pargs = formals; plocs = None;
-			      ploc = loc; pbody = None;}::(!fun_specs)*)
+	      update_fun_def f;
 		      
-	  | [GVarDecl (v, _)] -> 
-	      let name = glb_uniquename v in
-		(* TODO: Should be checked of already existing *)
-		Hashtbl.add glb_decls name
-		  {gname = name; gtype = v.vtype; gloc = v.vdecl;
-		   gdefd = false; ginit = None;}
+	  | [GVarDecl (v, _)] ->
+	      update_glob_decl v
 		  
 	  | [GVar (v, {init = i}, _)] -> 
-	      let name = glb_uniquename v in
-		(* TODO: Should be checked of already existing *)
-		Hashtbl.add glb_decls name
-		  {gname = name;
-		   gtype = v.vtype; gloc = v.vdecl;
-		   gdefd = true; ginit = i;}
+	      update_glob_def v i
 		
 	  | _ -> error ("Cil2newspeak.translate.explore: global "
 			^(string_of_global g)^" not supported")
   in
     Hashtbl.clear glb_decls;
-    fun_defs := [];
     Hashtbl.clear fun_specs;
     glb_used := String_set.empty;
     fun_called := String_set.empty;

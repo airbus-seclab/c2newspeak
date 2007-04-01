@@ -16,20 +16,19 @@ type status = {
 }
 
 type glb_type = {
-  gname : string;
-  gtype : Cil.typ;
-  gloc  : Cil.location;
-  gdefd : bool;
-  ginit : Cil.init option;
+  mutable gtype : Cil.typ;
+  mutable gloc  : Newspeak.location;
+  mutable gdefd : bool;
+  mutable ginit : Cil.init option;
 }
 
 type fspec_type = {
-  pname : string;
   mutable prett : Newspeak.typ option;
-  mutable pargs : ((string * Newspeak.typ) list) option;
-  mutable plocs : ((string * Newspeak.typ) list) option;
-  mutable ploc  : Cil.location;
-  mutable pbody : Newspeak.fundec option
+  mutable pargs : ((int * string * Newspeak.typ) list) option;
+  mutable plocs : ((int * string * Newspeak.typ) list) option;
+  mutable ploc  : Newspeak.location;
+  mutable pbody : Newspeak.blk option;
+  mutable pcil_body : Cil.block option
 }
 
 type intermediate = {
@@ -46,7 +45,6 @@ type intermediate = {
 (** {1 Compilation variables} *)
 
 val glb_decls : (string, glb_type) Hashtbl.t
-val fun_defs : ((Cil.fundec * Cil.location) list) ref
 val fun_specs : (Newspeak.fid, fspec_type) Hashtbl.t
 val glb_used : Npkutils.String_set.t ref
 val fun_called : Npkutils.String_set.t ref
@@ -56,30 +54,20 @@ val glb_cstr : Npkutils.String_set.t ref
 
 (** {1 Globals} *)
 
-(** [glb_uniquename v] returns the standardized name of global
+(* [glb_uniquename v] returns the standardized name of global
     variable v: its name if it is a shared variable, its name prefixed
     by the filename if it is a static variable. *)
-val glb_uniquename : Cil.varinfo -> string
+
+val update_glob_decl : Cil.varinfo -> unit
+val update_glob_def : Cil.varinfo -> Cil.init option -> unit
 
 
 
 (*
-(** [glb_declare v defd init] adds the declaration of v in the global
-  list, and if the variable is defined, keeps the initializers for
-  later, or set to zero the corresponding zone if init=None and
-  global_zero_init is set *)
-val glb_declare : (Cil.varinfo * bool * Cil.init option) -> unit
-
-
 (** The two following functions are called during the first pass *)
 
 (** [glb_make_cstr s] creates a global variable containing s *)
 val glb_make_cstr : string -> unit
-
-(** [glb_uses filename v] tells the environment that the variable v in
-    the file filename is used if v is global, or else does nothing *)
-val glb_uses : Cil.varinfo -> unit
-
 
 (** [get_glb_decls_inits translate_exp] retrives the list of the
     global variables and translates the initializers *)
@@ -95,11 +83,11 @@ val get_glb_decls_inits : (Cil.exp -> Newspeak.exp) -> Newspeak.decl list
 (** {2 Functions used in translate_fun} *)
 
 (** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : bool -> Cil.varinfo -> unit
+val loc_declare : bool -> (int * string * Newspeak.typ) -> unit
 
 (** [get_loc_decls ()] returns the current list of local declaration,
     and reset the local handler (counter, hashtable and decl list) *)
-val get_loc_decls : unit -> (Newspeak.decl * Newspeak.location) list
+val get_loc_decls : unit -> (Newspeak.ldecl * Newspeak.location) list
 
 
 (** {2 Functions used in translate_call} *)
@@ -121,26 +109,17 @@ val restore_loc_cnt : unit -> unit
 
 val use_fun : Cil.varinfo -> unit
 
-val extract_type : Newspeak.decl * Newspeak.location -> Newspeak.typ
+val extract_ldecl : (int * string * Newspeak.typ) -> Newspeak.ldecl
 
-(*
 (** allows to update the specification of a function (prototype) when
     called for example *)
-val update_fun_spec : string -> Newspeak.typ option -> decl_t list option -> decl_t list ->
-  Cil.stmt list -> Newspeak.location option -> unit
-
-(** declaration of a function from a definition *)
-val fun_declare : Cil.fundec -> unit
 
 (** declaration of a function from a prototype *)
-val fun_declare_prototype : 
-  (string * Cil.typ * (string * Cil.typ * Cil.attributes) list option) -> unit
+val update_fun_proto : string -> Cil.typ -> (string * Cil.typ * Cil.attributes) list option -> unit
 
-(** [get_fun_spec name] retrieves the specification of function name
-    if possible *)
-val get_fun_spec : string -> fun_spec_t option
+(** declaration of a function from a definition *)
+val update_fun_def : Cil.fundec -> unit
 
-*)
 
 
 
@@ -192,8 +171,12 @@ val mem_switch_label : status -> Cil.location -> bool
 
 
 
-
 val dump_npko : intermediate -> unit
+
+
+
+
+
 
 (*
 (* TODO: to be removed *)
