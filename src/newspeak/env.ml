@@ -119,24 +119,7 @@ let update_glob_def v i =
 	{gtype = v.vtype; gloc = translate_loc v.vdecl;
 	 gdefd = true; ginit = i;}
 
-let update_glob_link name g =
-  if (String_set.mem name !glb_used) || not !remove_temp then begin
-    try
-      let x = Hashtbl.find glb_decls name in
-	if not (compare_typs x.gtype g.gtype)
-	  (* TODO: add the respective locations *)
-	then error ("Env.update_glob_link: different types for "
-		    ^name^": '"^(string_of_type x.gtype)^"' and '"
-		    ^(string_of_type g.gtype)^"'");
-	match g, x with
-	    {ginit = None}, _ when not g.gdefd && x.gdefd -> ()
-	  | _, {ginit = None} when g.gdefd && not x.gdefd ->
-	      Hashtbl.replace glb_decls name g
-	  | _ when not x.gdefd && not g.gdefd -> ()
-	  | _ -> error ("Env.update_glob_link: multiple definition of "^name);
-    with Not_found ->
-      Hashtbl.add glb_decls name g
-  end
+  
 
 
 (*--------*)
@@ -200,6 +183,26 @@ let use_fun v =
 let extract_ldecl (_, n, t) = (n, t)
 
 
+let compare_formals name l1 l2 =
+  let rec compare_aux l1 l2 =
+    match l1, l2 with
+	[], [] -> ()
+      | (_, _, t1)::r1, (_, _, t2)::r2 when t1 = t2 ->
+	  compare_aux r1 r2
+      | [], _ | _, [] ->
+	  (* TODO: add the respective locations *)
+	error ("Env.update_fun_proto: different number of args "
+	       ^"in declarations for function "^name)
+	  
+      | (_, _, t1)::_, (_, n, t2)::_ ->
+	  (* TODO: add the respective locations *)
+	  error ("Env.update_fun_proto: different types for "
+		 ^"argument "^n^" in different declarations of "^name^": '"
+		 ^(Newspeak.string_of_typ t1)^"' and '"
+		 ^(Newspeak.string_of_typ t2)^"'")
+  in
+    compare_aux l1 l2
+
 let update_fun_proto name ret args =
   let rettype = match ret with
     | TVoid _ -> None
@@ -236,28 +239,11 @@ let update_fun_proto name ret args =
 		     ^"return type of prototype "^name)
       in
 
-      let rec compare_formals l1 l2 =
-	match l1, l2 with
-	    [], [] -> ()
-	  | (_, _, t1)::r1, (_, _, t2)::r2 when t1 = t2 ->
-	      compare_formals r1 r2
-	  | [], _ | _, [] ->
-	      (* TODO: add the respective locations *)
-	      error ("Env.update_fun_proto: different number of args "
-		     ^"in declarations for function "^name)
-
-	  | (_, _, t1)::_, (_, n, t2)::_ ->
-	      (* TODO: add the respective locations *)
-	      error ("Env.update_fun_proto: different types for "
-		     ^"argument "^n^" in different declarations of "^name^": '"
-		     ^(Newspeak.string_of_typ t1)^"' and '"
-		     ^(Newspeak.string_of_typ t2)^"'")
-      in
       let _ =
 	match x.pargs, formals with
 	  | _, None -> ()
 	  | None, Some _ -> x.pargs <- formals
-	  | Some l1, Some l2 -> compare_formals l1 l2
+	  | Some l1, Some l2 -> compare_formals name l1 l2
       in ()
     with Not_found ->
       Hashtbl.add fun_specs name
@@ -297,28 +283,11 @@ let update_fun_def f =
 		     ^"return type of prototype "^name)
       in
 
-      let rec compare_formals l1 l2 =
-	match l1, l2 with
-	    [], [] -> ()
-	  | (_, _, t1)::r1, (_, _, t2)::r2 when t1 = t2 ->
-	      compare_formals r1 r2
-	  | [], _ | _, [] ->
-	      (* TODO: add the respective locations *)
-	      error ("Env.update_fun_proto: different number of args "
-		     ^"in declarations for function "^name)
-
-	  | (_, _, t1)::_, (_, n, t2)::_ ->
-	      (* TODO: add the respective locations *)
-	      error ("Env.update_fun_proto: different types for "
-		     ^"argument "^n^" in different declarations of "^name^": '"
-		     ^(Newspeak.string_of_typ t1)^"' and '"
-		     ^(Newspeak.string_of_typ t2)^"'")
-      in
       let _ =
 	match x.pargs with
 	  | None -> ()
 	  | Some l ->
-	      compare_formals l formals;
+	      compare_formals name l formals;
 
       in
 	x.pargs <- Some formals;
@@ -334,11 +303,6 @@ let update_fun_def f =
 	 pcil_body = Some f.sbody;}
 
 
-(* TODO !!! *)
-let update_fun_link name f =
-  Hashtbl.add fun_specs name f
-(*  if (String_set.mem name !fun_called) || not !remove_temp
-  then Hashtbl.add fun_specs name f*)
 
 
 (*-----------------------*)
@@ -405,62 +369,95 @@ let mem_switch_label status loc =
 
 
 
+(*--------------*)
+(* Linking time *)
+(*--------------*)
 
-    
+let update_glob_link name g =
+  try
+    let x = Hashtbl.find glb_decls name in
+      if not (compare_typs x.gtype g.gtype)
+	(* TODO: add the respective locations *)
+      then error ("Env.update_glob_link: different types for "
+		  ^name^": '"^(string_of_type x.gtype)^"' and '"
+		  ^(string_of_type g.gtype)^"'");
+      match g, x with
+	  {ginit = None}, _ when not g.gdefd && x.gdefd -> ()
+	  | _, {ginit = None} when g.gdefd && not x.gdefd ->
+	      Hashtbl.replace glb_decls name g
+	  | _ when not x.gdefd && not g.gdefd -> ()
+	  | _ -> error ("Env.update_glob_link: multiple definition of "^name);
+  with Not_found ->
+    Hashtbl.add glb_decls name g
 
-(*
+let update_fun_link name f =
+  try
+    let x = Hashtbl.find fun_specs name in
+      
+    let _ = 
+      match x.prett, f.prett with
+	  None, None -> ()
+	| Some t1, Some t2 when t1 = t2 -> ()
+	| _ ->
+	    (* TODO: add the respective types and locations ? *)
+	    error ("Env.update_fun_link: different types for "
+		   ^"return type of prototype "^name)
+    in
+      
+    let _ =
+      match x.pcil_body, f.pcil_body with
+	| None, None -> ()
+	| _ -> error ("Env.update_fun_link: unexpected error for "^name)
+    in
+      
+    (* TODO: Do more checks ? about locs and body that should always be
+       defined at the same time ? *)
+    let _ =
+      match x.pargs, f.pargs, x.plocs, f.plocs, x.ploc, f.ploc, x.pbody, f.pbody with
+	| _, None, _, None, _, _, _, None -> ()
+	| None, Some _, None, _, _, _, None, _ ->
+	    x.pargs <- f.pargs;
+	    x.plocs <- f.plocs;
+	    x.ploc <- f.ploc;
+	    x.pbody <- f.pbody
+	| Some l1, Some l2, _, None, _, _, _, None ->
+	    compare_formals name l1 l2
+	| Some l1, Some l2, None, _, _, _, None, _ ->
+	    compare_formals name l1 l2;
+	    x.pargs <- f.pargs;
+	    x.plocs <- f.plocs;
+	    x.ploc <- f.ploc;
+	    x.pbody <- f.pbody
+	| _ -> error ("Env.update_fun_link: unexpected error for "^name)
+    in ()
+	 
+  with Not_found ->
+    Hashtbl.add fun_specs name f
 
 
 
 
-(* Functions used in the first pass *)
+(* Counter *)
+let glb_cnt = ref 0
 
-(* TODO: check that we still can accept extern *)
-(*
-      if glob.gv_defd || !accept_extern then begin
-	glob.gv_used <- true;
-	v.vtype <- glob.gv_ctyp
-      end 
-      else error ("Env.glb_uses: global variable "
-		  ^v.vname^" is used but is never defined")
-*)
-
-
-
-
-
-(* Final association table (stdname -> Newspeak.vid) *)
+(* Association table stdname -> Newspeak.vid *)
 let glb_tabl_vid = Hashtbl.create 100
 
 (* TODO: This is a hack for assumptions *)
 let glb_tabl_typ = Hashtbl.create 100
 
-(* Removes temp and gives each glb a number *)
-let get_glb_decls_inits translate_exp =
-  let total_nb = ref 0 in
-  let processed = ref 0 in
-  let glb_cnt = ref 0 in
-  let accu = ref [] in
-    
-  let extract_cstrdecl name =
-    let glb_decl = Hashtbl.find glb_tabl name in
-    (* glb_decl.gv_used is always true *)
-    let vid = incr glb_cnt in
-      Hashtbl.add glb_tabl_vid name vid;
-      let (len, str) = Newspeak.init_of_string glb_decl.gv_cstr in
-      let char_sca = Newspeak.Int (Newspeak.Signed, char_size) in
-      let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
-      let i = Newspeak.Init str in
-	accu := (t, glb_decl.gv_name, i)::(!accu)
-  in
+let glist = ref []
 
-  let translate_init cil_loc cil_t init =
+
+let handle_real_glob translate_exp g_used name g =
+
+  let translate_init loc t init =
     let glb_inits = ref [] in
       
     let rec expand off i =
       match i with
 	  SingleInit e ->
-	    let o = offset_of cil_t off in begin
+	    let o = offset_of t off in begin
 		match translate_typ (typeOf e) with
 		    Newspeak.Scalar s -> glb_inits := (o, s, translate_exp e)::(!glb_inits)
 		  | _ -> error "Env.translate_init: unexpected type of SingleInit"
@@ -474,74 +471,78 @@ let get_glb_decls_inits translate_exp =
 	    then Newspeak.Zero
 	    else Newspeak.Init []
 	| Some i -> 
-	    update_loc cil_loc;
+	    cur_loc := loc;
 	    expand NoOffset i;
             Newspeak.Init (List.rev (!glb_inits))
   in
 
-  let extract_glbdecl name =
-    let glb_decl = try
-      Hashtbl.find glb_tabl name 
-    with Not_found -> error ("Env.get_var: unexpected error")
+  if (String_set.mem name g_used) || not !remove_temp then begin
+    let t = translate_typ g.gtype in
+      glist := (name, t, translate_init g.gloc g.gtype g.ginit)::(!glist);
+      let vid = incr glb_cnt in
+	Hashtbl.add glb_tabl_vid name vid;
+	Hashtbl.add glb_tabl_typ name t
+  end
+    
+let handle_cstr str =
+  let name = ("!const_str_"^str) in 
+  let (len, str) = Newspeak.init_of_string str in
+  let char_sca = Newspeak.Int (Newspeak.Signed, char_size) in
+  let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
+  let i = Newspeak.Init str in
+    glist := (name, t, i)::(!glist);
+    let vid = incr glb_cnt in
+      Hashtbl.add glb_tabl_vid name vid
+   
+(* There is no need to reset everything here because it only happens
+   once *)
+let get_glob_decls () = List.rev (!glist)
+
+let get_glob_vid name =
+  try
+    Hashtbl.find glb_tabl_vid name
+  with
+      Not_found -> error ("Env.get_glob_vid: global variable "^name^" not found")
+
+let get_glob_typ name =
+  try
+    Hashtbl.find glb_tabl_typ name
+  with
+      Not_found -> error ("Env.get_glob_vid: type for global variable "^name^" not found")
+
+
+
+
+let final_specs = Hashtbl.create 100
+
+let extract_typ (_, _, t) = t
+
+let handle_funspec f_called name f =
+  (* TODO: Should we have here the !remove_temp ? *)
+  if (String_set.mem name !fun_called) || not !remove_temp then begin
+    let args = match f.pargs with
+      | None -> error ("Env.handle_funspec: unexpected error")
+      | Some l -> List.map extract_typ l
     in
-      if glb_decl.gv_used then begin
-	update_loc glb_decl.gv_cloc;
-	let vid = incr glb_cnt in
-	  Hashtbl.add glb_tabl_vid name vid;
-	  let t = translate_typ glb_decl.gv_ctyp in
-	    (* TODO: this is a hack for assumptions, rethink *)
-	    if (!Npkcontext.assumptions <> []) 
-	    then begin
-	      match t with
-		  Newspeak.Scalar t -> Hashtbl.add glb_tabl_typ name t
-		| _ -> ()
-	    end;
-	  let i = 
-	    translate_init glb_decl.gv_cloc glb_decl.gv_ctyp glb_decl.gv_cinit 
-	  in
-	    accu := (t, glb_decl.gv_name, i)::(!accu)
-      end;
-      if !verb_debug then begin
-	processed := !processed + 1;
-	let progress = !processed*100/(!total_nb) in
-	  prerr_string ("Progress: "^(string_of_int progress)^"%\n")
-      end
-  in
-    List.iter extract_cstrdecl (List.rev !cstr_list);
-    print_debug "Processing global variables";
-    total_nb := List.length !glb_list;
-    print_debug ("Number of global variables: "^(string_of_int !total_nb));
-    List.iter extract_glbdecl (List.rev !glb_list);
-    print_debug "Global variables processing over";
-    Hashtbl.clear glb_tabl;
-    glb_list := [];
-    cstr_list := [];
-    List.rev !accu
+      (* Parcourir les specs.body *)
+    let body = f.pbody in
+      Hashtbl.add final_specs name ((args, f.prett), body)
+  end  
+
+
+let get_funspecs () = final_specs;
+
+
+    
 
 
 
-
-
-(*let get_glb_var vname =
-  try 
-    (* Static global variables *)
-    try
-      let kvid = Hashtbl.find glb_tabl_vid (get_cur_file()^"."^vname) in
-	Newspeak.Global kvid
-    with Not_found ->
-      (* Global variables *)
-      let kvid = Hashtbl.find glb_tabl_vid vname in
-	Newspeak.Global kvid
-  with Not_found -> error ("Env.get_glb_var: invalid vid for "^vname)
-
-let get_glb_typ vname =
-  try 
-    (* Static global variables *)
-    try Hashtbl.find glb_tabl_typ (get_cur_file()^"."^vname)
-    with Not_found ->
-      (* Global variables *)
-      Hashtbl.find glb_tabl_typ vname
-  with Not_found -> error ("Env.get_glb_typ: invalid vid for "^vname)
-*)
-
+(* TODO: check that we still can accept extern *)
+(*
+      if glob.gv_defd || !accept_extern then begin
+	glob.gv_used <- true;
+	v.vtype <- glob.gv_ctyp
+      end 
+      else error ("Env.glb_uses: global variable "
+		  ^v.vname^" is used but is never defined")
 *)

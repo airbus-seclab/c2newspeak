@@ -725,6 +725,8 @@ let compile in_name out_name  =
 		ifuns = Hashtbl.copy fun_specs;
 		iusedglbs = !glb_used; iusedcstr = !glb_cstr;
 		iusedfuns = !fun_called;} in
+
+      init_env ();
       
       if (!verb_npko) then begin
 	
@@ -744,6 +746,7 @@ let compile in_name out_name  =
 	  print_debug ("Writing done.");
       end;
       
+      init_env();
       npko
 
 

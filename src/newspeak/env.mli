@@ -52,7 +52,6 @@ val init_env : unit -> unit
 
 val update_glob_decl : Cil.varinfo -> unit
 val update_glob_def : Cil.varinfo -> Cil.init option -> unit
-val update_glob_link : string -> glb_type -> unit
 
 
 (*
@@ -112,14 +111,8 @@ val update_fun_proto : string -> Cil.typ -> (string * Cil.typ * Cil.attributes) 
 (** declaration of a function from a definition *)
 val update_fun_def : Cil.fundec -> unit
 
-val update_fun_link : string -> fspec_type -> unit
-
 
 (** {1 Variable id retrieval} *)
-
-(*val get_glb_var : string -> Newspeak.lval
-
-val get_glb_typ : string -> Newspeak.scalar_t*)
 
 (** returns a Newspeak left value corresponding to a global or a local
     variable *)
@@ -161,22 +154,17 @@ val retrieve_switch_label : status -> Cil.location -> Newspeak.lbl
 val mem_switch_label : status -> Cil.location -> bool
 
 
+(** {1 Linking time} *)
 
+val update_glob_link : string -> glb_type -> unit
+val update_fun_link : string -> fspec_type -> unit
 
+val handle_real_glob : (Cil.exp -> Newspeak.exp) -> Npkutils.String_set.t -> string -> glb_type -> unit
+val handle_cstr : string -> unit
+val get_glob_decls : unit -> Newspeak.gdecl list
+val get_glob_vid : string -> Newspeak.vid
+val get_glob_typ : string -> Newspeak.typ
 
+val handle_funspec : Npkutils.String_set.t -> string -> fspec_type -> unit
+val get_funspecs : unit -> (Newspeak.fid, Newspeak.fundec) Hashtbl.t
 
-
-(*
-(* TODO: to be removed *)
-val fun_specs : (string, fun_spec_t) Hashtbl.t
-type glb_t = {
-  gv_name         : string;
-  gv_cstr         : string;
-  mutable gv_ctyp : Cil.typ;
-  mutable gv_cinit: Cil.init option;
-  mutable gv_defd : bool;
-  mutable gv_cloc : Cil.location;
-  mutable gv_used : bool;
-}
-val glb_tabl : (string, glb_t) Hashtbl.t
-*)
