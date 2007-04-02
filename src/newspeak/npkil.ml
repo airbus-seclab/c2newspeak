@@ -32,6 +32,7 @@ let dump_npko inter =
     Newspeak.dump_fundec n (([], None), f.pbody);
     if f.pbody <> None then print_newline ()
   in
+    print_endline inter.ifilename;
 
     print_list "Global used" inter.iusedglbs;
     print_list "Functions called" inter.iusedfuns;

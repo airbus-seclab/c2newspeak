@@ -310,8 +310,10 @@ let update_fun_def f =
 (*-----------------------*)
 
 let register_var cil_var =
-  let norm_name = glb_uniquename cil_var in
-    glb_used := String_set.add norm_name !glb_used
+  match cil_var.vtype with
+    | TFun _ -> ()
+    | _ -> let norm_name = glb_uniquename cil_var in
+	glb_used := String_set.add norm_name !glb_used
 
 let register_cstr s =
   glb_cstr := String_set.add s !glb_cstr
