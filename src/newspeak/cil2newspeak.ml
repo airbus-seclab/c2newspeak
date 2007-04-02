@@ -595,12 +595,18 @@ and translate_call x lv args_exps =
       | Var f, NoOffset ->
 	  let name = f.vname in
 	  let _ = match f.vtype with
-	      (* TODO: Here we should force the function to already be
-		 in the hash table ! *)
-	    | TFun (ret, args, _, _) -> update_fun_proto name ret args
+	    | TFun (ret, _, _, _) ->
+		let arg_from_exp e = ("", typeOf e, []) in begin
+		    try update_fun_proto name ret (Some (List.map arg_from_exp args_exps))
+		    with invalid_argument ->
+		      (* TODO: See if we can be as specific as before (int4 <> ptr) *)
+		      error ("Cil2newspeak.translate.translate_call.handle_args_decls: function "
+			     ^name^" called with args not matching prototype")
+		  end
+		  
 	    | _ -> error ("Env.fun_declare: invalid type \""
 			  ^(string_of_type f.vtype)^"\"")
-	  in
+	  in 
 	  let x = Hashtbl.find fun_specs name in
 	  let fs = match x.pargs with
 	    | None -> None

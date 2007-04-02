@@ -114,6 +114,12 @@ val update_fun_def : Cil.fundec -> unit
 
 (** {1 Variable id retrieval} *)
 
+(** [register_var v] stores the information that v has been seen *)
+val register_var : Cil.varinfo -> unit
+
+(** [register_cstr s] stores the information that s has been seen *)
+val register_cstr : string -> unit
+
 (** returns a Newspeak left value corresponding to a global or a local
     variable *)
 val get_var : Cil.varinfo -> Newspeak.lval
@@ -162,8 +168,8 @@ val update_fun_link : string -> fspec_type -> unit
 val handle_real_glob : (Cil.exp -> Newspeak.exp) -> Npkutils.String_set.t -> string -> glb_type -> unit
 val handle_cstr : string -> unit
 val get_glob_decls : unit -> Newspeak.gdecl list
-val get_glob_vid : string -> Newspeak.vid
-val get_glob_typ : string -> Newspeak.typ
+(*val get_glob_vid : string -> Newspeak.vid
+val get_glob_typ : string -> Newspeak.typ *)
 
 val handle_funspec : Npkutils.String_set.t -> string -> fspec_type -> unit
 val get_funspecs : unit -> (Newspeak.fid, Newspeak.fundec) Hashtbl.t

@@ -65,14 +65,19 @@ class vistor_first_pass = object
   method vlval lv =
     match lv with
       | Var v, _ ->
-	  if not v.vglob
-	  then local_vids := Int_set.add v.vid !local_vids;
+	  if v.vglob
+	  then register_var v
+	  else local_vids := Int_set.add v.vid !local_vids;
 	  DoChildren
       | _ -> DoChildren
 
   (* simplifies some exps (StartOf, pointer equality) *)
   method vexpr e =
     match e with
+      | Const (CStr s) ->
+	  register_cstr s;
+	  SkipChildren
+
       | StartOf lv  -> 
 	  ChangeDoChildrenPost (AddrOf (addOffsetLval (Index (zero, NoOffset)) lv), fun x -> x)
 
@@ -119,8 +124,9 @@ let first_pass f =
     
   let rec explore g = 
     let loc = get_globalLoc g in
+    let new_g = visitCilGlobal visitor g in
       update_loc loc;
-      match visitCilGlobal visitor g with
+      match new_g with
 	  | [GType (t, _)] ->
 	      if !verb_warnings then print_warning ("skip typedef "^t.tname)
 	  | [GEnumTag (info, _)] -> 
@@ -136,7 +142,7 @@ let first_pass f =
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
 	      update_fun_proto name ret args
 		  
-	  | [GFun (f, _)] -> 
+	  | [GFun (f, loc)] -> 
 	      (* Every defined function is kept *)
 	      use_fun f.svar;
 	      if (f.svar.vname = "main")
@@ -153,4 +159,4 @@ let first_pass f =
 			^(string_of_global g)^" not supported")
   in
     init_env ();
-    List.iter explore (List.rev f.globals)
+    List.iter explore f.globals

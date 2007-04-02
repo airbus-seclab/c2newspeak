@@ -191,12 +191,12 @@ let compare_formals name l1 l2 =
 	  compare_aux r1 r2
       | [], _ | _, [] ->
 	  (* TODO: add the respective locations *)
-	error ("Env.update_fun_proto: different number of args "
+	error ("Env.compare_formals: different number of args "
 	       ^"in declarations for function "^name)
 	  
       | (_, _, t1)::_, (_, n, t2)::_ ->
 	  (* TODO: add the respective locations *)
-	  error ("Env.update_fun_proto: different types for "
+	  error ("Env.compare_formals: different types for "
 		 ^"argument "^n^" in different declarations of "^name^": '"
 		 ^(Newspeak.string_of_typ t1)^"' and '"
 		 ^(Newspeak.string_of_typ t2)^"'")
@@ -309,11 +309,17 @@ let update_fun_def f =
 (* Variable id retrieval *)
 (*-----------------------*)
 
+let register_var cil_var =
+  let norm_name = glb_uniquename cil_var in
+    glb_used := String_set.add norm_name !glb_used
+
+let register_cstr s =
+  glb_cstr := String_set.add s !glb_cstr
+
 let get_var cil_var =
   (* global variable *)
   if cil_var.vglob then begin
     let norm_name = glb_uniquename cil_var in
-      glb_used := String_set.add norm_name !glb_used;
       Newspeak.Global_tmp norm_name
   end else begin
     (* local variables *)
@@ -327,7 +333,6 @@ let get_var cil_var =
   end
 
 let get_cstr s =
-  glb_cstr := String_set.add s !glb_cstr;
   Newspeak.AddrOf (Newspeak.Global_tmp ("!const_str_"^s),
 		   (String.length s) + 1)
 
@@ -449,6 +454,70 @@ let glb_tabl_typ = Hashtbl.create 100
 let glist = ref []
 
 
+
+
+(* Useful functions for final output *)
+let get_glob_vid name =
+  try
+    Hashtbl.find glb_tabl_vid name
+  with
+      Not_found -> error ("Env.get_glob_vid: global variable "^name^" not found")
+
+(* TODO *)
+(* Should be get_glob_typ name cil_offset *)
+let get_glob_typ name =
+  try
+    Hashtbl.find glb_tabl_typ name
+  with
+      Not_found -> error ("Env.get_glob_vid: type for global variable "^name^" not found")
+
+let rec replace_stmt (sk, l) =
+  let new_sk = match sk with
+    | Newspeak.Set (lv, e, sca) -> Newspeak.Set (replace_lv lv, replace_exp e, sca)
+    | Newspeak.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
+    | Newspeak.Decl (d, b) -> Newspeak.Decl (d, List.map replace_stmt b)
+    | Newspeak.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
+    | Newspeak.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
+    | Newspeak.Call fn -> Newspeak.Call (replace_fn fn)
+    | Newspeak.Goto _ | Newspeak.Label _ -> sk
+  in (new_sk, l)
+       
+and replace_chooseitem (exps, b) =
+  (List.map replace_exp exps, List.map replace_stmt b)
+    
+and replace_lv lv =
+  match lv with
+    | Newspeak.Global_tmp name -> Newspeak.Global (get_glob_vid name)
+    | Newspeak.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
+    | Newspeak.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
+    | Newspeak.Local _ | Newspeak.Global _ -> lv
+	
+and replace_exp e =
+  match e with
+    | Newspeak.Lval (lv, sca) -> Newspeak.Lval (replace_lv lv, sca)
+    | Newspeak.Const _ | Newspeak.AddrOfFun _ -> e
+    | Newspeak.AddrOf (lv, sz) -> Newspeak.AddrOf (replace_lv lv, sz)
+	(* TODO: Belongs_tmp !!!! *)
+    | Newspeak.UnOp (Newspeak.Belongs_tmp _, _) -> failwith ("Belongs_tmp: unexpected error");
+    | Newspeak.UnOp (o, e) -> Newspeak.UnOp (o, replace_exp e)
+    | Newspeak.BinOp (o, e1, e2) -> Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
+	
+and replace_fn fn =
+  match fn with
+    | Newspeak.FunId _ -> fn
+    | Newspeak.FunDeref (e, t) -> Newspeak.FunDeref (replace_exp e, t)
+
+and replace_body body = List.map replace_stmt body
+
+and replace_inits init =
+  match init with
+    | Newspeak.Zero -> Newspeak.Zero
+    | Newspeak.Init l -> Newspeak.Init (List.map replace_init l)
+
+and replace_init (sz, sca, e) = (sz, sca, replace_exp e)
+
+
+
 let handle_real_glob translate_exp g_used name g =
 
   let translate_init loc t init =
@@ -496,19 +565,14 @@ let handle_cstr str =
    
 (* There is no need to reset everything here because it only happens
    once *)
-let get_glob_decls () = List.rev (!glist)
+let get_glob_decls () =
+  let rec aux accu l =
+    match l with
+      | [] -> accu
+      | (n, t, i)::r -> aux ((n, t, replace_inits i)::accu) r
+  in aux [] !glist
 
-let get_glob_vid name =
-  try
-    Hashtbl.find glb_tabl_vid name
-  with
-      Not_found -> error ("Env.get_glob_vid: global variable "^name^" not found")
 
-let get_glob_typ name =
-  try
-    Hashtbl.find glb_tabl_typ name
-  with
-      Not_found -> error ("Env.get_glob_vid: type for global variable "^name^" not found")
 
 
 
@@ -517,6 +581,9 @@ let final_specs = Hashtbl.create 100
 
 let extract_typ (_, _, t) = t
 
+
+
+
 let handle_funspec f_called name f =
   (* TODO: Should we have here the !remove_temp ? *)
   if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
@@ -524,8 +591,11 @@ let handle_funspec f_called name f =
       | None -> error ("Env.handle_funspec: unexpected error")
       | Some l -> List.map extract_typ l
     in
-      (* Parcourir les specs.body *)
-    let body = f.pbody in
+    let body =
+      match f.pbody with
+	| None -> None
+	| Some b -> Some (replace_body b)
+    in
       Hashtbl.add final_specs name ((args, f.prett), body)
   end  
 
