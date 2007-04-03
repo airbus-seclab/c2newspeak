@@ -1,10 +1,12 @@
+open Npkutils
+
 type intermediate = {
   ifilename : string;
-  iglobs : (string, Env.glb_type) Hashtbl.t;
-  ifuns  : (Newspeak.fid, Env.fspec_type) Hashtbl.t;
-  iusedglbs : Npkutils.String_set.t;
-  iusedcstr : Npkutils.String_set.t;
-  iusedfuns : Npkutils.String_set.t;
+  iglobs : (string, Npkenv.glb_type) Hashtbl.t;
+  ifuns  : (Newspeak.fid, Npkenv.fspec_type) Hashtbl.t;
+  iusedglbs : String_set.t;
+  iusedcstr : String_set.t;
+  iusedfuns : String_set.t;
 }
 
 

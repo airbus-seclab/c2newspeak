@@ -1,8 +1,5 @@
 (** Npkutils regroups simple translation functions *)
 
-val c_suffix : string
-val npko_suffix : string
-
 module String_set :
   sig
     type elt = string
@@ -22,33 +19,6 @@ module Int_set :
     val mem : elt -> t -> bool
     val add : elt -> t -> t
   end
-
-val merge_sets : String_set.t list -> String_set.t
-
-
-(* 
-    val union : t -> t -> t
-    val iter : (elt -> unit) -> t -> unit
-    val is_empty : t -> bool
-    val singleton : elt -> t
-    val remove : elt -> t -> t
-    val inter : t -> t -> t
-    val diff : t -> t -> t
-    val compare : t -> t -> int
-    val equal : t -> t -> bool
-    val subset : t -> t -> bool
-    val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a
-    val for_all : (elt -> bool) -> t -> bool
-    val exists : (elt -> bool) -> t -> bool
-    val filter : (elt -> bool) -> t -> t
-    val partition : (elt -> bool) -> t -> t * t
-    val min_elt : t -> elt
-    val max_elt : t -> elt
-    val choose : t -> elt
-    val cardinal : t -> int
-    val elements : t -> elt list
-    val split : elt -> t -> t * bool * t*)
-
 
 
 

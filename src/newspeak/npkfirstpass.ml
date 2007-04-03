@@ -2,7 +2,7 @@ open Cil
 open Cilutils
 open Npkcontext
 open Npkutils
-open Env
+open Npkenv
 
 
 
@@ -98,7 +98,7 @@ let check_main_signature t =
   let (ret, args) = 
     match unrollType t with
 	TFun (ret, Some args, _, []) -> (ret, args)
-      | _ -> error ("Cil2newspeak.translate.explore: "
+      | _ -> error ("Npkfirstpass.check_main_signature: "
 		    ^"main, should have a function type")
   in
     if (!verb_warnings) && (unrollType ret <> TInt (IInt, [])) 
@@ -110,7 +110,8 @@ let check_main_signature t =
 	    && (unrollTypeDeep arg2 = 
 		TPtr (TPtr (TInt (IChar, []), []), []))
 	    -> ()
-      | _ -> error ("Invalid argument types for main: "
+      | _ -> error ("Npkfirstpass.check_main_signature: "
+		    ^"invalid argument types for main, "
 		    ^"authorized forms are main() and"
 		    ^" main(int, char**)")
 
@@ -128,15 +129,15 @@ let first_pass f =
       update_loc loc;
       match new_g with
 	  | [GType (t, _)] ->
-	      if !verb_warnings then print_warning ("skip typedef "^t.tname)
+	      if !verb_warnings then print_warning ("skipping typedef "^t.tname)
 	  | [GEnumTag (info, _)] -> 
-	      if !verb_warnings then print_warning ("skip enum "^info.ename)
+	      if !verb_warnings then print_warning ("skipping enum "^info.ename)
 	  | [GCompTag (c, _)] -> 
-	      if !verb_warnings then print_warning ("skip composite typedef "^c.cname)
+	      if !verb_warnings then print_warning ("skipping composite typedef "^c.cname)
 	  | [GCompTagDecl (c, _)] -> 
-	      if !verb_warnings then print_warning ("skip composite declaration "^c.cname)
+	      if !verb_warnings then print_warning ("skipping composite declaration "^c.cname)
 	  | [GPragma (a, _)] when !ignores_pragmas -> 
-	      print_warning ("Directive ignored: "
+	      print_warning ("ignoring directive: "
 			     ^"unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
@@ -155,7 +156,7 @@ let first_pass f =
 	  | [GVar (v, {init = i}, _)] -> 
 	      update_glob_def v i
 		
-	  | _ -> error ("Cil2newspeak.translate.explore: global "
+	  | _ -> error ("Npkfirstpass.first_pass.explore: global "
 			^(string_of_global g)^" not supported")
   in
     init_env ();

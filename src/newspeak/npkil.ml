@@ -1,6 +1,6 @@
 open Cilutils
 open Npkutils
-open Env
+open Npkenv
 
 type intermediate = {
   ifilename : string;

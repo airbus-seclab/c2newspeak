@@ -1,7 +1,10 @@
 (** Cilutils regroups useful functions that could have been provided
     by Cil *)
 
+
 (** {1 C types } *)
+
+(* TODO: Handle architecture dependent stuff *)
 
 val size_of : Cil.typ -> int
 
@@ -22,6 +25,7 @@ val long_size : int
 val pointer_size : int
 val float_size : int
 val double_size : int
+
 
 
 (** {1 Display functions } *)

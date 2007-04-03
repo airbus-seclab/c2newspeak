@@ -2,23 +2,14 @@ open Cil
 open Cilutils
 open Npkcontext
 
-let c_suffix = ".c"
-let npko_suffix = ".no"
-
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
 
 module Int_set = 
   Set.Make (struct type t = int let compare = Pervasives.compare end)
 
-let merge_sets l =
-  let rec merge_aux accu l =
-    match l with
-      | [] -> accu
-      | s::r -> merge_aux (String_set.union accu s) r
-  in
-    merge_aux String_set.empty l
 
+(* TODO: Should we put here incr ? *)
 
 
 let translate_loc loc =
@@ -38,7 +29,7 @@ let translate_arith_binop o =
     | Mult -> Newspeak.MultI
     | Div -> Newspeak.DivI
     | Mod -> Newspeak.Mod
-    | _ -> error ("Npkutils.translate_arith_binop")
+    | _ -> error ("Npkutils.translate_arith_binop: unexpected operator")
 
 let translate_float_binop sz o =
   match o with
@@ -46,7 +37,7 @@ let translate_float_binop sz o =
     | MinusA -> Newspeak.MinusF sz
     | Mult -> Newspeak.MultF sz
     | Div -> Newspeak.DivF sz
-    | _ -> error ("Npkutils.translate_float_binop")
+    | _ -> error ("Npkutils.translate_float_binop: unexpected operator")
 
 let translate_logical_binop t o =
   match o with
@@ -55,7 +46,7 @@ let translate_logical_binop t o =
     | BXor -> Newspeak.BXor (Newspeak.domain_of_typ t)
     | Shiftlt -> Newspeak.Shiftlt
     | Shiftrt -> Newspeak.Shiftrt
-    | _ -> error ("Npkutils.translate_arith_binop")
+    | _ -> error ("Npkutils.translate_arith_binop: unexpected operator")
 
 
 let translate_typ t =
@@ -108,7 +99,7 @@ let translate_typ t =
 
     try
       translate_typ_aux t
-    with Cil.LenOfArray -> error ("LenOfArray exception on "^string_of_type t)
+    with Cil.LenOfArray -> error ("Npkutils.translate_typ: LenOfArray exception on "^string_of_type t)
 
 
 let translate_rel_binop t1 t2 o =
@@ -122,7 +113,7 @@ let translate_rel_binop t1 t2 o =
     match o with
       | Gt -> Newspeak.Gt t
       | Eq -> Newspeak.Eq t
-      | _ -> error ("Npkutils.translate_rel_binop")
+      | _ -> error ("Npkutils.translate_rel_binop: unexpected operator")
 
 
 let compare_typs t1 t2 =

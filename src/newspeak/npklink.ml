@@ -1,7 +1,7 @@
 open Cil
 open Npkutils
 open Npkcontext
-open Env
+open Npkenv
 open Npkil
 
 
@@ -23,7 +23,8 @@ let handle_file npko =
 
 let generate_globals globs g_used cstrs =
   String_set.iter handle_cstr cstrs;
-  Hashtbl.iter (handle_real_glob Cil2newspeak.translate_exp g_used) globs;
+(* TODO: translate_exp should not be exported ? *)
+  Hashtbl.iter (handle_real_glob Npkcompile.translate_exp g_used) globs;
 (* TODO:
    print_debug "Processing global variables";
    total_nb := List.length !glb_list;
@@ -49,7 +50,7 @@ let link npkos out_name =
   (* TODO: Think about it *)
   update_loc Cil.locUnknown;
 
-  Env.init_env ();
+  init_env ();
 
   print_debug "Linking files...";
   List.iter handle_file npkos;

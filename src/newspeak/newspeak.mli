@@ -7,6 +7,11 @@
     display Newspeak programs. *)
 
 
+(** {1 File extensions} *)
+
+val c_suffix : string
+val npko_suffix : string
+
 
 (** {1 Types} *)
 

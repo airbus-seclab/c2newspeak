@@ -34,7 +34,7 @@ let exit_code = ref false
 
 (* Preprocessing options *)
 
-let has_preprocess = ref true
+let has_preprocess = ref false
 let incl_files = ref ""
 let include_dir x = incl_files:=" -I "^x^(!incl_files)
 
@@ -116,8 +116,8 @@ let argslist = [
    "returns exit code 1 if an error occured\n");
 
 
-  ("--no-preprocess", Arg.Clear has_preprocess,
-   "skips the C preprocessing step (gcc -E)");
+  ("--preprocess", Arg.Set has_preprocess,
+   "enables the C preprocessing step (gcc -E)");
   
   ("-I", Arg.String include_dir, 
    "includes a pre-processing directory\n "^

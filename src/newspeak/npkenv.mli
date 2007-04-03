@@ -1,7 +1,8 @@
-(** In the Env module are grouped all functions concerning the
+(** In the Npkenv module are grouped all functions concerning the
     declaration of globals, locals and functions. It also contains the
     status functions to keep track of current interesting labels *)
 
+open Npkutils
 
 
 (** {1 Types} *)
@@ -37,34 +38,17 @@ type fspec_type = {
 
 val glb_decls : (string, glb_type) Hashtbl.t
 val fun_specs : (Newspeak.fid, fspec_type) Hashtbl.t
-val glb_used : Npkutils.String_set.t ref
-val fun_called : Npkutils.String_set.t ref
-val glb_cstr : Npkutils.String_set.t ref
+val glb_used : String_set.t ref
+val fun_called : String_set.t ref
+val glb_cstr : String_set.t ref
 
 val init_env : unit -> unit
 
 
 (** {1 Globals} *)
 
-(* [glb_uniquename v] returns the standardized name of global
-    variable v: its name if it is a shared variable, its name prefixed
-    by the filename if it is a static variable. *)
-
 val update_glob_decl : Cil.varinfo -> unit
 val update_glob_def : Cil.varinfo -> Cil.init option -> unit
-
-
-(*
-(** The two following functions are called during the first pass *)
-
-(** [glb_make_cstr s] creates a global variable containing s *)
-val glb_make_cstr : string -> unit
-
-(** [get_glb_decls_inits translate_exp] retrives the list of the
-    global variables and translates the initializers *)
-val get_glb_decls_inits : (Cil.exp -> Newspeak.exp) -> Newspeak.decl list
-*)
-
 
 
 
@@ -165,12 +149,10 @@ val mem_switch_label : status -> Cil.location -> bool
 val update_glob_link : string -> glb_type -> unit
 val update_fun_link : string -> fspec_type -> unit
 
-val handle_real_glob : (Cil.exp -> Newspeak.exp) -> Npkutils.String_set.t -> string -> glb_type -> unit
+val handle_real_glob : (Cil.exp -> Newspeak.exp) -> String_set.t -> string -> glb_type -> unit
 val handle_cstr : string -> unit
 val get_glob_decls : unit -> Newspeak.gdecl list
-(*val get_glob_vid : string -> Newspeak.vid
-val get_glob_typ : string -> Newspeak.typ *)
 
-val handle_funspec : Npkutils.String_set.t -> string -> fspec_type -> unit
+val handle_funspec : String_set.t -> string -> fspec_type -> unit
 val get_funspecs : unit -> (Newspeak.fid, Newspeak.fundec) Hashtbl.t
 
