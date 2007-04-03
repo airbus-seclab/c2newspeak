@@ -20,6 +20,7 @@ module Int_set :
     val add : elt -> t -> t
   end
 
+val incr : int ref -> int
 
 
 (** [translate_loc cil_loc] translates a Cil.location cil_loc into a

@@ -98,11 +98,13 @@ let check_main_signature t =
   let (ret, args) = 
     match unrollType t with
 	TFun (ret, Some args, _, []) -> (ret, args)
-      | _ -> error ("Npkfirstpass.check_main_signature: "
-		    ^"main, should have a function type")
+      | _ ->
+	  error "Npkfirstpass.check_main_signature"
+	    "main, should have a function type"
   in
-    if (!verb_warnings) && (unrollType ret <> TInt (IInt, [])) 
-    then print_warning "return type of 'main' is not 'int'";
+    if (!verb_morewarns) && (unrollType ret <> TInt (IInt, [])) 
+    then print_warning "Npkfirstpass.check_main_signature"
+      "return type of 'main' is not 'int'";
     match args with
 	[] -> ()
       | (_, arg1, [])::(_, arg2, [])::[] 
@@ -110,10 +112,11 @@ let check_main_signature t =
 	    && (unrollTypeDeep arg2 = 
 		TPtr (TPtr (TInt (IChar, []), []), []))
 	    -> ()
-      | _ -> error ("Npkfirstpass.check_main_signature: "
-		    ^"invalid argument types for main, "
-		    ^"authorized forms are main() and"
-		    ^" main(int, char**)")
+      | _ ->
+	  error "Npkfirstpass.check_main_signature: "
+	    ("invalid argument types for main, "
+	     ^"authorized forms are main() and"
+	     ^" main(int, char**)")
 
 
 (* Exploration of Cil's "globals" and first pass *)
@@ -129,16 +132,20 @@ let first_pass f =
       update_loc loc;
       match new_g with
 	  | [GType (t, _)] ->
-	      if !verb_warnings then print_warning ("skipping typedef "^t.tname)
+	      print_morewarn "Npkfirstpass.first_pass.explore"
+		("skipping typedef "^t.tname)
 	  | [GEnumTag (info, _)] -> 
-	      if !verb_warnings then print_warning ("skipping enum "^info.ename)
+	      print_morewarn "Npkfirstpass.first_pass.explore"
+		("skipping enum "^info.ename)
 	  | [GCompTag (c, _)] -> 
-	      if !verb_warnings then print_warning ("skipping composite typedef "^c.cname)
+	      print_morewarn "Npkfirstpass.first_pass.explore"
+		("skipping composite typedef "^c.cname)
 	  | [GCompTagDecl (c, _)] -> 
-	      if !verb_warnings then print_warning ("skipping composite declaration "^c.cname)
+	      print_morewarn "Npkfirstpass.first_pass.explore"
+		("skipping composite declaration "^c.cname)
 	  | [GPragma (a, _)] when !ignores_pragmas -> 
-	      print_warning ("ignoring directive: "
-			     ^"unknown #pragma "^(string_of_attribute a))
+	      print_warning "Npkfirstpass.first_pass.explore"
+		("ignoring directive: unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
 	      update_fun_proto name ret args
@@ -156,8 +163,9 @@ let first_pass f =
 	  | [GVar (v, {init = i}, _)] -> 
 	      update_glob_def v i
 		
-	  | _ -> error ("Npkfirstpass.first_pass.explore: global "
-			^(string_of_global g)^" not supported")
+	  | _ ->
+	      error "Npkfirstpass.first_pass.explore"
+		("global "^(string_of_global g)^" not supported")
   in
     init_env ();
     List.iter explore f.globals

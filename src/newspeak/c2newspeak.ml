@@ -17,8 +17,8 @@ let extract_npko name =
 	    res;
 	end else begin
 	  close_in ch_in;
-	  error ("Cil2kernel.extract_npko: "^name
-		 ^" is an invalid .npko file.");
+	  error "C2newspeak.extract_npko"
+	    (name^" is an invalid .npko file");
 	end;
   end else compile name ""
 
@@ -34,8 +34,8 @@ let _ =
 	  ignore (compile file !output_file)
 	    
       | _ when !compile_only && (!output_file <> "") ->
-	  error ("You cannot specify the output filename (-o) for multiple "^
-		   "files when only compiling (-c)");
+	  error "" ("You cannot specify the output filename (-o) for multiple "
+		    ^"files when only compiling (-c)");
 
       | files when !compile_only && (!output_file = "") ->
 	  let aux f = ignore (compile f (create_npko f)) in

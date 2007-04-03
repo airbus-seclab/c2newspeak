@@ -1,14 +1,14 @@
 # Project
 DIR = 
-OBJ = cilutils npkcontext newspeak npkutils npkenv \
-      npkil npkfirstpass npkcompile npklink cil2newspeak
+OBJ = cilutils newspeak npkcontext npkutils npkenv \
+      npkil npkfirstpass npkcompile npklink c2newspeak
 
 
 # Documentation
 DOC_DIR = doc
 
 # Test
-TGT = cil2newspeak
+TGT = c2newspeak
 
 include ../Makefile.common
 

@@ -1,8 +1,8 @@
 syntax: glob
 *~
 **/.depend
-**/cil2newspeak
-**/cil2newspeak.exe
+**/c2newspeak
+**/c2newspeak.exe
 **/npkstats
 **/npkstats.exe
 *.o

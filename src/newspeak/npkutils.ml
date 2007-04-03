@@ -9,7 +9,18 @@ module Int_set =
   Set.Make (struct type t = int let compare = Pervasives.compare end)
 
 
-(* TODO: Should we put here incr ? *)
+(*----------------------------*)
+(* Useful, non exported stuff *)
+(*----------------------------*)
+
+(* Counter are always incremented by incr*)
+let incr cnt = 
+  if !cnt = max_int
+  then error "Npkutils.incr" "too many objects";
+  incr cnt;
+  !cnt
+
+
 
 
 let translate_loc loc =
@@ -29,7 +40,7 @@ let translate_arith_binop o =
     | Mult -> Newspeak.MultI
     | Div -> Newspeak.DivI
     | Mod -> Newspeak.Mod
-    | _ -> error ("Npkutils.translate_arith_binop: unexpected operator")
+    | _ -> error "Npkutils.translate_arith_binop" "unexpected operator"
 
 let translate_float_binop sz o =
   match o with
@@ -37,7 +48,7 @@ let translate_float_binop sz o =
     | MinusA -> Newspeak.MinusF sz
     | Mult -> Newspeak.MultF sz
     | Div -> Newspeak.DivF sz
-    | _ -> error ("Npkutils.translate_float_binop: unexpected operator")
+    | _ -> error "Npkutils.translate_float_binop" "unexpected operator"
 
 let translate_logical_binop t o =
   match o with
@@ -46,7 +57,7 @@ let translate_logical_binop t o =
     | BXor -> Newspeak.BXor (Newspeak.domain_of_typ t)
     | Shiftlt -> Newspeak.Shiftlt
     | Shiftrt -> Newspeak.Shiftrt
-    | _ -> error ("Npkutils.translate_arith_binop: unexpected operator")
+    | _ -> error "Npkutils.translate_arith_binop" "unexpected operator"
 
 
 let translate_typ t =
@@ -80,16 +91,17 @@ let translate_typ t =
           let sz = size_of t in
             Newspeak.Region (descr, sz)
 
-      | TBuiltin_va_list _ -> error ("Npkutils.translate_typ: "
-                                     ^" variable list of arguments not handled yet")
+      | TBuiltin_va_list _ ->
+	  error "Npkutils.translate_typ" 
+            "variable list of arguments not handled yet"
       
       | TFloat (FFloat, _) -> Newspeak.Scalar (Newspeak.Float float_size)
 
       | TFloat (FDouble, _) -> Newspeak.Scalar (Newspeak.Float double_size)
 
       | TInt _ | TVoid _ | TFloat _ | TFun _ ->
-          error ("Npkutils.translate_typ: the type "
-                 ^(string_of_type t)^" is not handled yet")
+          error "Npkutils.translate_typ"
+	    ("the type "^(string_of_type t)^" is not handled yet")
 
   and translate_field t f =
     let offset = offset_of t (Field(f, NoOffset)) in
@@ -99,7 +111,9 @@ let translate_typ t =
 
     try
       translate_typ_aux t
-    with Cil.LenOfArray -> error ("Npkutils.translate_typ: LenOfArray exception on "^string_of_type t)
+    with Cil.LenOfArray ->
+      error "Npkutils.translate_typ" 
+	("LenOfArray exception on "^string_of_type t)
 
 
 let translate_rel_binop t1 t2 o =
@@ -107,13 +121,15 @@ let translate_rel_binop t1 t2 o =
     match (translate_typ t1, translate_typ t2) with
 	(Newspeak.Scalar t1, Newspeak.Scalar t2) when t1 = t2 -> t1
       | _ -> 
-	  error ("Npkutils.translate_rel_binop: "
-		 ^"incompatible types for comparison")
+	  error "Npkutils.translate_rel_binop"
+	    "incompatible types for comparison"
   in
     match o with
       | Gt -> Newspeak.Gt t
       | Eq -> Newspeak.Eq t
-      | _ -> error ("Npkutils.translate_rel_binop: unexpected operator")
+      | _ ->
+	  error "Npkutils.translate_rel_binop"
+	    "unexpected operator"
 
 
 let compare_typs t1 t2 =

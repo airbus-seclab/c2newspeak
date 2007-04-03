@@ -4,19 +4,6 @@ open Npkcontext
 open Npkutils
 
 
-(*----------------------------*)
-(* Useful, non exported stuff *)
-(*----------------------------*)
-
-(* Counter are always incremented by incr*)
-let incr cnt = 
-  if !cnt = max_int
-  then error "Npkenv.incr: too many objects";
-  incr cnt;
-  !cnt
-
-
-
 (*-------*)
 (* Types *)
 (*-------*)
@@ -79,7 +66,7 @@ let init_env () =
 (*---------*)
 let glb_uniquename v =
   if not v.vglob
-  then error "Npkenv.glb_uniquename: global variable expected";
+  then error "Npkenv.glb_uniquename" "global variable expected";
   if v.vstorage = Static
   then (get_cur_file())^"."^v.vname
   else v.vname
@@ -91,8 +78,9 @@ let update_glob_decl v =
       let x = Hashtbl.find glb_decls name in
 	if not (compare_typs x.gtype v.vtype)
 	  (* TODO: add the respective locations *)
-	then error ("Npkenv.update_glob_decl: different types for "
-	  ^name^": '"^(string_of_type x.gtype)^"' and '"
+	then error "Npkenv.update_glob_decl"
+	  ("different types for "^name^": '"
+	  ^(string_of_type x.gtype)^"' and '"
 	  ^(string_of_type v.vtype)^"'")
     with Not_found ->
       Hashtbl.add glb_decls name
@@ -105,11 +93,12 @@ let update_glob_def v i =
       let x = Hashtbl.find glb_decls name in
 	if not (compare_typs x.gtype v.vtype)
 	  (* TODO: add the respective locations *)
-	then error ("Npkenv.update_glob_decl: different types for "
-	  ^name^": '"^(string_of_type x.gtype)^"' and '"
+	then error "Npkenv.update_glob_decl"
+	  ("different types for "^name^": '"
+	  ^(string_of_type x.gtype)^"' and '"
 	  ^(string_of_type v.vtype)^"'");
 	if x.gdefd (* Should there be an exception here ? *)
-	then error ("Npkenv.glb_declare: multiple definition for "^name);
+	then error "Npkenv.glb_declare" ("multiple definition for "^name);
 	x.gtype <- v.vtype;
 	x.gdefd <- true;
 	x.gloc <- translate_loc v.vdecl;
@@ -191,15 +180,15 @@ let compare_formals name l1 l2 =
 	  compare_aux r1 r2
       | [], _ | _, [] ->
 	  (* TODO: add the respective locations *)
-	error ("Npkenv.compare_formals: different number of args "
-	       ^"in declarations for function "^name)
+	error "Npkenv.compare_formals"
+	  ("different number of args in declarations for function "^name)
 	  
       | (_, _, t1)::_, (_, n, t2)::_ ->
 	  (* TODO: add the respective locations *)
-	  error ("Npkenv.compare_formals: different types for "
-		 ^"argument "^n^" in different declarations of "^name^": '"
-		 ^(Newspeak.string_of_typ t1)^"' and '"
-		 ^(Newspeak.string_of_typ t2)^"'")
+	  error "Npkenv.compare_formals"
+	    ("different types for argument "^n^" in different "
+	     ^"declarations of "^name^": '"^(Newspeak.string_of_typ t1)
+	     ^"' and '"^(Newspeak.string_of_typ t2)^"'")
   in
     compare_aux l1 l2
 
@@ -220,8 +209,8 @@ let update_fun_proto name ret args =
   in
   let formals = match args with
       None ->
-	print_warning ("Npkenv.update_fun_proto: missing or "
-		       ^"incomplete prototype for "^name);
+	print_warning "Npkenv.update_fun_proto"
+	  ("missing or incomplete prototype for "^name);
 	None
     | Some l -> Some (translate_formals 0 l)
   in
@@ -235,8 +224,8 @@ let update_fun_proto name ret args =
 	  | Some t1, Some t2 when t1 = t2 -> ()
 	  | _ ->
 	      (* TODO: add the respective types and locations ? *)
-	      error ("Npkenv.update_fun_proto: different types for "
-		     ^"return type of prototype "^name)
+	      error "Npkenv.update_fun_proto"
+		("different types for return type of prototype "^name)
       in
 
       let _ =
@@ -260,8 +249,8 @@ let update_fun_def f =
     | TFun (TVoid _, _, _, _) -> None
     | TFun (t, _, _, _) -> Some (translate_typ t)
     | _ ->
-	error ("Npkenv.update_fun_def: invalid type \""
-	       ^(string_of_type f.svar.vtype)^"\"")
+	error "Npkenv.update_fun_def"
+	  ("invalid type \""^(string_of_type f.svar.vtype)^"\"")
   in
 
   let translate_local v = v.vid, v.vname, translate_typ v.vtype in
@@ -271,7 +260,8 @@ let update_fun_def f =
   try
     let x = Hashtbl.find fun_specs name in
       if x.pcil_body <> None
-      then error ("Npkenv.update_fun_def: multiple definition for "^name);
+      then error "Npkenv.update_fun_def"
+	("multiple definition for "^name);
 
       let _ = 
 	match x.prett, rettype with
@@ -279,8 +269,8 @@ let update_fun_def f =
 	  | Some t1, Some t2 when t1 = t2 -> ()
 	  | _ ->
 	      (* TODO: add the respective types and locations ? *)
-	      error ("Npkenv.update_fun_def: different types for "
-		     ^"return type of prototype "^name)
+	      error "Npkenv.update_fun_def"
+		("different types for return type of prototype "^name)
       in
 
       let _ =
@@ -330,8 +320,8 @@ let get_var cil_var =
       let n = !loc_cnt - vid in
 	Newspeak.Local n
     with Not_found -> 
-      error ("Npkenv.get_var: unexpected variable "^
-	       (string_of_lval (Var cil_var, NoOffset)))
+      error "Npkenv.get_var"
+	("unexpected variable "^(string_of_lval (Var cil_var, NoOffset)))
   end
 
 let get_cstr s =
@@ -385,15 +375,17 @@ let update_glob_link name g =
     let x = Hashtbl.find glb_decls name in
       if not (compare_typs x.gtype g.gtype)
 	(* TODO: add the respective locations *)
-      then error ("Npkenv.update_glob_link: different types for "
-		  ^name^": '"^(string_of_type x.gtype)^"' and '"
-		  ^(string_of_type g.gtype)^"'");
+      then error "Npkenv.update_glob_link"
+	("different types for "^name^": '"
+	 ^(string_of_type x.gtype)^"' and '"
+	 ^(string_of_type g.gtype)^"'");
       match g, x with
 	  {ginit = None}, _ when not g.gdefd && x.gdefd -> ()
 	  | _, {ginit = None} when g.gdefd && not x.gdefd ->
 	      Hashtbl.replace glb_decls name g
 	  | _ when not x.gdefd && not g.gdefd -> ()
-	  | _ -> error ("Npkenv.update_glob_link: multiple definition of "^name);
+	  | _ -> error "Npkenv.update_glob_link"
+	      ("multiple definition of "^name);
   with Not_found ->
     Hashtbl.add glb_decls name g
 
@@ -407,14 +399,14 @@ let update_fun_link name f =
 	| Some t1, Some t2 when t1 = t2 -> ()
 	| _ ->
 	    (* TODO: add the respective types and locations ? *)
-	    error ("Npkenv.update_fun_link: different types for "
-		   ^"return type of prototype "^name)
+	    error "Npkenv.update_fun_link"
+	      ("different types for return type of prototype "^name)
     in
       
     let _ =
       match x.pcil_body, f.pcil_body with
 	| None, None -> ()
-	| _ -> error ("Npkenv.update_fun_link: unexpected error for "^name)
+	| _ -> error "Npkenv.update_fun_link" ("unexpected error for "^name)
     in
       
     (* TODO: Do more checks ? about locs and body that should always be
@@ -435,7 +427,7 @@ let update_fun_link name f =
 	    x.plocs <- f.plocs;
 	    x.ploc <- f.ploc;
 	    x.pbody <- f.pbody
-	| _ -> error ("Npkenv.update_fun_link: unexpected error for "^name)
+	| _ -> error "Npkenv.update_fun_link" ("unexpected error for "^name)
     in ()
 	 
   with Not_found ->
@@ -463,7 +455,8 @@ let get_glob_vid name =
   try
     Hashtbl.find glb_tabl_vid name
   with
-      Not_found -> error ("Npkenv.get_glob_vid: global variable "^name^" not found")
+      Not_found ->
+	error "Npkenv.get_glob_vid" ("global variable "^name^" not found")
 
 (* TODO *)
 (* Should be get_glob_typ name cil_offset *)
@@ -471,7 +464,8 @@ let get_glob_typ name =
   try
     Hashtbl.find glb_tabl_typ name
   with
-      Not_found -> error ("Npkenv.get_glob_vid: type for global variable "^name^" not found")
+      Not_found ->
+	error "Npkenv.get_glob_vid" ("type for global variable "^name^" not found")
 
 let rec replace_stmt (sk, l) =
   let new_sk = match sk with
@@ -531,7 +525,7 @@ let handle_real_glob translate_exp g_used name g =
 	    let o = offset_of t off in begin
 		match translate_typ (typeOf e) with
 		    Newspeak.Scalar s -> glb_inits := (o, s, translate_exp e)::(!glb_inits)
-		  | _ -> error "Npkenv.translate_init: unexpected type of SingleInit"
+		  | _ -> error "Npkenv.translate_init" "unexpected type of SingleInit"
 	      end;
 	| CompoundInit (_, c) -> List.iter (expand_elem off) c
     and expand_elem prefix (off, i) = expand (addOffset off prefix) i in
@@ -590,7 +584,7 @@ let handle_funspec f_called name f =
   (* TODO: Should we have here the !remove_temp ? *)
   if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
     let args = match f.pargs with
-      | None -> error ("Npkenv.handle_funspec: unexpected error")
+      | None -> error "Npkenv.handle_funspec" "unexpected error"
       | Some l -> List.map extract_typ l
     in
     let body =

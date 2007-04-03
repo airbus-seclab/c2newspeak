@@ -17,7 +17,7 @@ let accept_extern = ref false
 
 (* Verbose options *)
 
-let verb_warnings = ref false
+let verb_morewarns = ref false
 let verb_debug = ref false
 let verb_cil = ref false
 let verb_npko = ref false
@@ -26,7 +26,7 @@ let verb_newspeak = ref true
 let verbose boolean () =
   verb_cil := boolean;
   verb_debug := boolean;
-  verb_warnings := boolean;
+  verb_morewarns := boolean;
   verb_newspeak := boolean
 
 let exit_code = ref false
@@ -90,7 +90,7 @@ let argslist = [
   ("--cil-printer", Arg.String (Cilutils.setCilPrinter),
    "verbose options: uses \"default\" or \"plain\" Cil output");
 
-  ("--warnings", Arg.Set (verb_warnings),
+  ("--more-warnings", Arg.Set (verb_morewarns),
    "verbose options: displays more warnings");
   
   ("--debug", Arg.Set (verb_debug),
@@ -103,8 +103,8 @@ let argslist = [
    "verbose option: displays Newspeak output");
 
 (* TODO: Handle Newspeak.pretty_print boolean *)
-(*  ("--pretty", Arg.Set (Newspeak.pretty_print),
-   "verbose options: uses var names for Newspeak display"); *)
+  ("--pretty", Arg.Set (Newspeak.pretty_print),
+   "verbose options: uses var names for Newspeak display");
 
   ("-v", Arg.Unit (verbose true),
    "verbose mode: turn all verbose options on");
@@ -163,22 +163,38 @@ let string_of_loc (file, line, _) =
 (* Warnings/errors generation and display *)
 (*----------------------------------------*)
 
-let old_warnings = Hashtbl.create 100
 
-let print_warning msg =
-  let disp = msg^(string_of_loc !cur_loc) in
-    if not (Hashtbl.mem old_warnings disp)
+(* TODO: Watch this ! *)
+module String_set = 
+  Set.Make (struct type t = string let compare = Pervasives.compare end)
+
+let old_warnings = ref (String_set.empty)
+
+let print_warning where msg =
+  let disp = if !verb_debug
+  then "Warning ("^where^"): "^msg^(string_of_loc !cur_loc)
+  else "Warning: "^msg^(string_of_loc !cur_loc)
+  in
+    if not (String_set.mem disp !old_warnings)
     then  begin
-      prerr_endline ("Warning: "^disp);
-      Hashtbl.add old_warnings disp true
+      prerr_endline disp;
+      old_warnings := String_set.add disp !old_warnings
     end
 
+let print_morewarn where msg =
+  if !verb_morewarns then print_warning where msg
+
 let print_debug msg =
-  if !verb_debug then
+  if !verb_debug then 
     prerr_endline ("Debug: "^msg^(string_of_loc !cur_loc))
 
 
-let error msg = invalid_arg (msg^(string_of_loc !cur_loc))
+let error where msg =
+  let disp = if !verb_debug
+  then "("^where^") "^msg^(string_of_loc !cur_loc)
+  else msg^(string_of_loc !cur_loc)
+  in
+    invalid_arg disp
 
 let print_error msg =
   prerr_endline ("Fatal error: "^msg);

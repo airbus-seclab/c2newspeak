@@ -27,7 +27,7 @@ val accept_extern : bool ref
 
 (* val assumptions : string list ref *)
 
-val verb_warnings : bool ref
+val verb_morewarns : bool ref
 val verb_debug : bool ref
 val verb_cil : bool ref
 val verb_npko : bool ref
@@ -59,12 +59,13 @@ val cur_loc : Newspeak.location ref
 
 (** {1 Warnings/errors generation and display } *)
 
-val print_warning : string -> unit
+val print_warning : string -> string -> unit
+val print_morewarn : string -> string -> unit
 val print_debug : string -> unit
 (** Displays a message to the user *)
 
 (** Throws an Invalid_argument exception with a message *)
-val error : string -> 'a
+val error : string -> string -> 'a
 
 (** Displays a message as a fatal error and exits the program *)
 val print_error : string -> 'a
