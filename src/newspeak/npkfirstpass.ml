@@ -130,7 +130,8 @@ let first_pass f =
     let loc = get_globalLoc g in
     let new_g = visitCilGlobal visitor g in
       update_loc loc;
-      match new_g with
+      if loc.file <> "<compiler builtins>" then
+	match new_g with
 	  | [GType (t, _)] ->
 	      print_morewarn "Npkfirstpass.first_pass.explore"
 		("skipping typedef "^t.tname)
@@ -156,7 +157,7 @@ let first_pass f =
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
 	      update_fun_def f;
-		      
+	      
 	  | [GVarDecl (v, _)] ->
 	      update_glob_decl v
 		  
