@@ -17,14 +17,12 @@ type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
 
 and gdecl = (string * typ * init_t)
 
-and ldecl = (string * typ)
-
 and fundec = ftyp * blk option
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (ldecl * blk)
+  | Decl of (string * typ * blk)
   | Label of lbl
   | Goto of lbl
   | Call of fn
@@ -205,8 +203,7 @@ let simplify_gotos blk =
 	  necessary_lbls := l::!necessary_lbls;
 	  Some (x, loc)
       | Label l when not (List.mem l !necessary_lbls) -> None
-      | Decl (d, body) ->
-	  Some (Decl (d, simplify_blk body), loc)
+      | Decl (name, t, body) -> Some (Decl (name, t, simplify_blk body), loc)
       | ChooseAssert elts ->
 	  Some (ChooseAssert (List.map simplify_choose_elt elts), loc)
       | InfLoop body ->
@@ -221,8 +218,8 @@ let simplify_coerce blk =
     match x with
       | Set (lv, e, sca) -> (Set (simplify_lval lv, simplify_exp e, sca), loc)
       | Call (FunDeref (e, t)) -> (Call (FunDeref (simplify_exp e, t)), loc)
-      | Decl (d, body) ->
-          Decl (d, List.map simplify_stmt body), loc
+      | Decl (name, t, body) -> 
+	  Decl (name, t, List.map simplify_stmt body), loc
       | ChooseAssert elts ->
           let elts = List.map simplify_choose_elt elts in
             ChooseAssert (elts), loc
@@ -477,10 +474,6 @@ let string_of_lbl l =
     in !cur_fun^"_"^(string_of_int pretty_l)
 
 
-let dump_ldecl decls (name, t) =
-  print_endline ((string_of_typ t)^" "^name^";")
-
-
 let dump_gdecl decls (name, t, i) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp decls e));
@@ -514,16 +507,16 @@ let rec dump_stmt align decls only (sk, _) =
 	print_endline ((string_of_lval decls lv1)^" ="^(string_of_size_t sz)^
 			 " "^(string_of_lval decls lv2)^";")
 
-    | Decl ((name, _) as d, body) ->
+    | Decl (name, t, body) ->
 	let new_decls = if !pretty_print then (name::decls) else [] in
 	  if only then begin
-	    dump_ldecl decls d;
+	    print_endline ((string_of_typ t)^" "^name^";");
 	    dump_blk align new_decls body
 	  end else begin
 	    print_endline "{";
 	    let new_align = (align^"  ") in
 	      print_string new_align;
-	      dump_ldecl decls d;
+	      print_endline ((string_of_typ t)^" "^name^";");
 	      dump_blk new_align new_decls body;
 	      print_endline (align^"}")
 	  end

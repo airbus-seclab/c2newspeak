@@ -139,8 +139,7 @@ let push_local () = ignore (incr loc_cnt)
 let loc_declare generate_stmt_decl (cil_vid, n, t) =
   let vid = incr loc_cnt in
     Hashtbl.add loc_tabl cil_vid vid;
-    if generate_stmt_decl then loc_decls :=
-      ((n, t), !cur_loc)::!loc_decls
+    if generate_stmt_decl then loc_decls := (n, t, !cur_loc)::!loc_decls
 
 
 let get_loc_decls () =
@@ -471,7 +470,8 @@ let rec replace_stmt (sk, l) =
   let new_sk = match sk with
     | Newspeak.Set (lv, e, sca) -> Newspeak.Set (replace_lv lv, replace_exp e, sca)
     | Newspeak.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
-    | Newspeak.Decl (d, b) -> Newspeak.Decl (d, List.map replace_stmt b)
+    | Newspeak.Decl (name, t, b) -> 
+	Newspeak.Decl (name, t, List.map replace_stmt b)
     | Newspeak.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
     | Newspeak.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
     | Newspeak.Call fn -> Newspeak.Call (replace_fn fn)

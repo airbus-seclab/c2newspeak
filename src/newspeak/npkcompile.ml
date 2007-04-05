@@ -40,8 +40,8 @@ let generate_body body decls =
   let rec generate_aux body decls =
     match decls with
       | [] -> body
-      | (decl, loc)::r ->
-	  generate_aux [K.Decl (decl, body), loc] r
+      | (name, t, loc)::r ->
+	  generate_aux [K.Decl (name, t, body), loc] r
   in generate_aux body decls
 
 
@@ -532,14 +532,14 @@ and translate_call x lv args_exps =
       (* Return value ignored *)
       | Some t, None ->
 	  push_local ();
-	  [("value_of_"^fname, t), loc], []
+	  [("value_of_"^fname, t, loc)], []
 	    
       (* Return value put into Lval cil_lv *)
       | Some t_given, Some cil_lv ->
 	  let t_expected = translate_typ (typeOfLval cil_lv) in
 	    push_local ();
 	    let lval = translate_lval cil_lv in
-	    let ret_decl = [("value_of_"^fname, t_given), loc] in
+	    let ret_decl = ["value_of_"^fname, t_given, loc] in
 	    let ret_epilog = match t_given, t_expected with
 	      | K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
 		  [K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp), loc]
@@ -554,7 +554,7 @@ and translate_call x lv args_exps =
 		    
 	      | _ -> error "Npkcompile.translate_call" "invalid implicit cast"
 	    in
-	      ret_decl, ret_epilog
+	      (ret_decl, ret_epilog)
 		
       | _ ->
 	  error "Npkcompile.translate_call"
@@ -569,11 +569,11 @@ and translate_call x lv args_exps =
 	    push_local ();
 	    let t = translate_typ (typeOf e) in
 	      handle_args_decls_aux 
-		((("arg"^(string_of_int i), t), loc)::accu)
+		(("arg"^(string_of_int i), t, loc)::accu)
 		(i+1) None r_e
 		
 	| Some [], [] -> accu
-	| Some (((n, t_expected) as decl)::r_t), e::r_e ->
+	| Some ((n, t_expected)::r_t), e::r_e ->
 	    let t_given = translate_typ (typeOf e) in
 	      if t_expected <> t_given then begin
 		error "Npkcompile.translate_call"
@@ -581,7 +581,7 @@ and translate_call x lv args_exps =
 		   ^(K.string_of_typ t_expected)^"') in "^fname^" arguments")
 	      end;
 	      push_local ();
-	      handle_args_decls_aux ((decl, loc)::accu) (i+1) (Some r_t) r_e
+	      handle_args_decls_aux ((n, t_expected, loc)::accu) (i+1) (Some r_t) r_e
 		
 	| _,_ ->
 	    error "Npkcompile.translate_call"
@@ -650,7 +650,7 @@ and translate_call x lv args_exps =
 	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
 	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
       | Mem (Lval fptr), NoOffset ->
-	  let args_t = List.rev (List.map (fun ((_, t), _) -> t) args_decls) in
+	  let args_t = List.rev (List.map (fun (_, t, _) -> t) args_decls) in
 	  let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
 	    
 	  let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in

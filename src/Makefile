@@ -1,4 +1,5 @@
 DIR = newspeak npkstats
+DEP = $(addsuffix /.depend,$(DIR))
 
 #DOC_DIR= ../doc/ocamldoc/
 .PHONY: $(DIR) all doc depend clean initdepend
@@ -11,10 +12,8 @@ $(DIR):
 doc: $(DIR)
 #	cp newspeak/doc/* $(DOC_DIR)
 
-initdepend:
-	for i in $(DIR); do touch $$i/.depend; done
-
-depend: initdepend $(DIR)
+$(DEP):
+	touch $@
 
 clean: $(DIR)
 	$(RM) *~

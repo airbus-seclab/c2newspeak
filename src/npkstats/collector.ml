@@ -40,9 +40,7 @@ let rec visit_stmt (x, _) =
   match x with
       Set (lv, e, _) -> visit_lval lv; visit_exp e
     | Copy (dst, src, _) -> visit_lval dst; visit_lval src
-    | Decl (decl, body) -> 
-	visit_decl decl;
-	visit_blk body
+    | Decl (_, _, body) -> visit_blk body
     | Call fn -> visit_fn fn
     | ChooseAssert x -> List.iter visit_choice x
     | InfLoop body -> 
@@ -59,7 +57,6 @@ and visit_decl (_, _, init) =
       Zero -> ()
     | Init x -> List.iter visit_init_val x
 
-  
 and visit_init_val (_, _, e) = visit_exp e
 
 and visit_blk x = List.iter visit_stmt x

@@ -62,7 +62,7 @@ val loc_declare : bool -> (int * string * Newspeak.typ) -> unit
 
 (** [get_loc_decls ()] returns the current list of local declaration,
     and reset the local handler (counter, hashtable and decl list) *)
-val get_loc_decls : unit -> (Newspeak.ldecl * Newspeak.location) list
+val get_loc_decls : unit -> (string * Newspeak.typ * Newspeak.location) list
 
 
 (** {2 Functions used in translate_call} *)
@@ -84,7 +84,7 @@ val restore_loc_cnt : unit -> unit
 
 val use_fun : Cil.varinfo -> unit
 
-val extract_ldecl : (int * string * Newspeak.typ) -> Newspeak.ldecl
+val extract_ldecl : (int * string * Newspeak.typ) -> (string * Newspeak.typ)
 
 (** allows to update the specification of a function (prototype) when
     called for example *)

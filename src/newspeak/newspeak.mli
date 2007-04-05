@@ -21,19 +21,18 @@ type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
 
 and gdecl = (string * typ * init_t)
 
-and ldecl = (string * typ)
-
 and fundec = ftyp * blk option
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (ldecl * blk)
+  | Decl of (string * typ * blk)
   | Label of lbl
   | Goto of lbl
   | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
+
 and stmt = stmtkind * location
 
 and blk = stmt list

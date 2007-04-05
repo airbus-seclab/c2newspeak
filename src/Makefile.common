@@ -19,7 +19,7 @@ CMX  = $(addsuffix .cmx, $(OBJ))
 O    = $(addsuffix .o, $(OBJ))
 DOC_FILES = $(MLI) $(DOC_ML_FILES)
 
-.PHONY: all clean doc depend
+.PHONY: all clean doc
 
 all: $(CMX) $(TGT)
 
@@ -53,7 +53,8 @@ clean:
 	$(RM) $(TGT) $(TGT).exe
 	$(RM) ../scalars/natural.ml $(CMI) $(CMO) $(CMX) $(O)
 	$(RM) *~
+	$(RM) .depend
 
 # Dependencies
-depend:
+.depend:
 	$(OCAMLDEP) $(FLAGS) $(MLI) $(ML) > .depend
