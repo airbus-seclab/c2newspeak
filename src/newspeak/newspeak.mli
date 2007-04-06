@@ -43,7 +43,7 @@ and lval =
   | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
-  | Shift_tmp of (string * Cil.offset list)
+  | Shift_tmp of (string * exp)
 
 and exp =
     Const of cte
@@ -175,6 +175,7 @@ val pretty_print : bool ref
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
+val string_of_lval : lval -> string
 
 (** [dump cout (fundecs, body)] prints the program (fundecs, body) to
     cout *)

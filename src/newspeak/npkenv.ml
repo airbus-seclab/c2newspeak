@@ -440,8 +440,8 @@ let glb_cnt = ref 0
 (* Association table stdname -> Newspeak.vid *)
 let glb_tabl_vid = Hashtbl.create 100
 
-(* TODO: This is a hack for assumptions *)
-(* let glb_tabl_typ = Hashtbl.create 100 *)
+(* Association table stdname -> Newspeak.typ *)
+let glb_tabl_typ = Hashtbl.create 100
 
 let glist = ref []
 
@@ -456,13 +456,12 @@ let get_glob_vid name =
       Not_found ->
 	error "Npkenv.get_glob_vid" ("global variable "^name^" not found")
 
-(* TODO: Should be get_glob_typ name cil_offset *)
-(*let get_glob_typ name =
+let get_glob_typ name =
   try
     Hashtbl.find glb_tabl_typ name
   with
       Not_found ->
-	error "Npkenv.get_glob_vid" ("type for global variable "^name^" not found")*)
+	error "Npkenv.get_glob_vid" ("type for global variable "^name^" not found")
 
 let rec replace_stmt (sk, l) =
   let new_sk = match sk with
@@ -484,8 +483,22 @@ and replace_lv lv =
     | Newspeak.Global_tmp name -> Newspeak.Global (get_glob_vid name)
     | Newspeak.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Newspeak.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
-	(* TODO: Shift_tmp !!!! *)
-    | Newspeak.Shift_tmp _ -> failwith ("replace_lv: Shift_tmp: unexpected error");
+    | Newspeak.Shift_tmp (name, e) -> begin
+	let vid = get_glob_vid name in
+	  match get_glob_typ name with
+	      Newspeak.Array (t, len) ->
+		let sz = Newspeak.size_of t in
+		let index_exp =
+		  Newspeak.BinOp (Newspeak.MultI,
+				 Newspeak.make_belongs len (replace_exp e),
+				 Newspeak.exp_of_int sz)
+		in
+		let v = Newspeak.Global (vid) in
+		  Newspeak.Shift (v, index_exp)
+	    | _ -> error "Npkenv.replace_lval"
+		("type of lval "^(Newspeak.string_of_lval lv)
+		  ^" is not defined enough")
+      end
     | Newspeak.Local _ | Newspeak.Global _ -> lv
 	
 and replace_exp e =
@@ -544,11 +557,15 @@ let handle_real_glob translate_exp g_used name g =
   in
 
   if (String_set.mem name g_used) || not !remove_temp then begin
-    let t = translate_typ g.gtype in
-      glist := (name, t, translate_init g.gloc g.gtype g.ginit)::(!glist);
-      let vid = incr glb_cnt in
-	Hashtbl.add glb_tabl_vid name vid;
-(*	Hashtbl.add glb_tabl_typ name t *)
+    try
+      let t = translate_typ g.gtype in
+	glist := (name, t, translate_init g.gloc g.gtype g.ginit)::(!glist);
+	let vid = incr glb_cnt in
+	  Hashtbl.add glb_tabl_vid name vid;
+	  Hashtbl.add glb_tabl_typ name t
+    with LenOfArray ->
+      error "Npkenv.handle_real_glob"
+	("unspecified length for global array "^name)
   end
     
 let handle_cstr str =

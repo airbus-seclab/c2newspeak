@@ -1,4 +1,4 @@
-open Cilutils
+(*open Cilutils*)
 
 (*-----------------*)
 (* File extensions *)
@@ -39,7 +39,7 @@ and lval =
   | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
-  | Shift_tmp of (string * Cil.offset list)
+  | Shift_tmp of (string * exp)
 
 and exp =
     Const of cte
@@ -131,8 +131,8 @@ let size_of_scalar t =
   match t with
       Int (_, n) -> n
     | Float n -> n
-    | Ptr -> pointer_size
-    | FunPtr -> pointer_size
+    | Ptr -> Cilutils.pointer_size
+    | FunPtr -> Cilutils.pointer_size
 
 let rec size_of t =
   match t with
@@ -173,7 +173,7 @@ let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
 let init_of_string str = 
   let len = String.length str in
-  let char_typ = Int (Signed, char_size) in
+  let char_typ = Int (Signed, Cilutils.char_size) in
   let res = ref [(len, char_typ, exp_of_int 0)] in
     for i = len - 1 downto 0 do 
       let c = Char.code (String.get str i) in
@@ -423,14 +423,8 @@ let rec string_of_lval decls lv =
     | Global vid -> string_of_global vid
     | Global_tmp name -> "Global_tmp("^name^")"
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
-    | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)    | Shift_tmp (name, offsets) ->
-	let rec concat l =
-	  match l with 
-	      [] -> ""
-	    | s::r -> s^(concat r)
-	in
-	"Shift_tmp("^name^(concat (List.map string_of_offset offsets))^")"
-
+    | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
+    | Shift_tmp (name, e) -> "Shift_tmp("^name^"["^(string_of_exp decls e)^"])"
 
 
 and string_of_exp decls e =
@@ -587,6 +581,8 @@ and dump_fundec name body =
 (* Functions exported *)
 
 let string_of_exp e = (string_of_exp [] e)
+
+let string_of_lval lv = (string_of_lval [] lv)
 
 let dump (assumptions, gdecls, fundecs) =
   let rec collect_globals_name g =

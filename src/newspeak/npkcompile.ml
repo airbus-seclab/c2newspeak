@@ -165,24 +165,19 @@ and translate_lval lv =
 			  K.Shift (translate_lval lv', index_exp)
 			    
 		    | _ -> error "Npkcompile.translate_lval" "array expected"
-		with
-		    LenOfArray -> (* TODO: Think of something here... *)
-		      translate_undef_lval [] lv
+		with LenOfArray -> begin
+		  match lv', offs with
+		    | (Var v, NoOffset), Index (e, NoOffset) ->
+			K.Shift_tmp (v.vname, translate_exp e)
+		    | _ ->
+			error "Npkcompile.translate_lval"
+			  ("type of lval "^(string_of_lval lv')
+			    ^" is not defined enough")
+		end
 	      end
+
 	    | _ -> error "Npkcompile.translate_lval" "offset not handled"
 		
-
-and translate_undef_lval offsets lv =
-  match lv with
-    | Var v, NoOffset -> K.Shift_tmp (v.vname, offsets)
-	
-    | Mem e, NoOffset ->
-	error "Npkcompile.translate_undef_lval"
-	  ("unexpected Mem constructor, '"^(string_of_exp e)
-	    ^"' should be a Var")	    
-    | _ ->
-	let (lv', offs) = removeOffsetLval lv in
-	  translate_undef_lval (offs::offsets) lv'
 
 
 (* TODO: See if there cannot be any factorisation here *)

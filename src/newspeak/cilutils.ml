@@ -66,9 +66,6 @@ let string_of_exp e =
 let string_of_lval e =
   Pretty.sprint 100 (printLval !cilPrinter () e)
 
-let string_of_offset o =
-  Pretty.sprint 100 (d_offset Pretty.nil () o)
-
 let string_of_instr x =
   Pretty.sprint 100 (printInstr !cilPrinter () x)
 
