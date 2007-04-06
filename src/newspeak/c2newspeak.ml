@@ -1,3 +1,5 @@
+open Params
+
 open Newspeak
 open Npkcontext
 open Npkcompile
@@ -5,10 +7,10 @@ open Npklink
 
 let create_npko name = (Filename.chop_extension name) ^ npko_suffix
 
-let extract_npko name =
-  if Filename.check_suffix name npko_suffix then begin
-    let ch_in = open_in_bin name in
-      print_debug ("Importing "^name^"...");
+let extract_npko (n1, n2) =
+  if Filename.check_suffix n2 npko_suffix then begin
+    let ch_in = open_in_bin n2 in
+      print_debug ("Importing "^n2^"...");
       let str = Marshal.from_channel ch_in in
 	if str = "NPKO" then begin 
 	  let res = Marshal.from_channel ch_in in
@@ -18,9 +20,9 @@ let extract_npko name =
 	end else begin
 	  close_in ch_in;
 	  error "C2newspeak.extract_npko"
-	    (name^" is an invalid .npko file");
+	    (n2^" is an invalid .npko file");
 	end;
-  end else compile name ""
+  end else compile n1 ""
 
 
 let _ =
@@ -30,7 +32,7 @@ let _ =
     match !input_files with
 	[] ->
 	  print_error ("no file specified. Try "^Sys.argv.(0)^" --help")
-      | [file] when !compile_only && (!output_file <> "") ->
+      | [file, _] when !compile_only && (!output_file <> "") ->
 	  ignore (compile file !output_file)
 	    
       | _ when !compile_only && (!output_file <> "") ->
@@ -38,7 +40,7 @@ let _ =
 		    ^"files when only compiling (-c)");
 
       | files when !compile_only && (!output_file = "") ->
-	  let aux f = ignore (compile f (create_npko f)) in
+	  let aux (f1, f2) = ignore (compile f1 (create_npko f2)) in
 	    List.iter aux files
 
       | files (* when not !compile_only *) ->

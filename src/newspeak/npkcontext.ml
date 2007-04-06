@@ -1,3 +1,5 @@
+open Params
+
 (*----------------------*)
 (* Command line options *)
 (*----------------------*)
@@ -39,16 +41,11 @@ let incl_files = ref ""
 let include_dir x = incl_files:=" -I "^x^(!incl_files)
 
 let preprocess fname =
-  let length = String.length fname in
-    if (length <= 2) then invalid_arg ("file has not valid format: "^fname);
-    
-    let prf = String.sub fname 0 (length - 2) in
-    let sff = String.sub fname (length - 2) 2 in
-      if (String.compare sff ".c" <> 0) 
-      then invalid_arg ("file has not valid format: "^fname);
-      let resE = prf^"-E.c" in
-	ignore (Unix.system ("gcc"^(!incl_files)^" -E  "^fname^" > "^resE));
-	resE
+  if not (Filename.check_suffix fname c_suffix)
+  then invalid_arg (fname^"is not a .c file");
+  let ppd_file = (Filename.chop_extension fname)^"-E.c" in
+    ignore (Unix.system ("gcc"^(!incl_files)^" -E  "^fname^" > "^ppd_file));
+    ppd_file, fname
 
 
 (* File options *)
@@ -60,8 +57,14 @@ let compile_only = ref false
 let output_file = ref ""
 
 
+(* Version *)
 
-let usage_msg = Sys.argv.(0)^" [options] [-help|--help] [file...]"
+let version = ref false
+
+
+let usage_msg =
+  version_string ^ "\nUsage: "^
+    Sys.argv.(0)^" [options] [-help|--help] [file...]\n"
 
 let argslist = [    
   ("--no-init", Arg.Clear (global_zero_init),
@@ -120,24 +123,30 @@ let argslist = [
    "enables the C preprocessing step (gcc -E)");
   
   ("-I", Arg.String include_dir, 
-   "includes a pre-processing directory\n "^
-     "                    (must be repeated for each directory)\n");
+  "includes a pre-processing directory\n "^
+    "                    (must be repeated for each directory)\n");
 
-  ("-c", Arg.Set (compile_only),
-   "compiles only into a .il file");
+  ("-c", Arg.Set compile_only,
+  "compiles only into a .il file");
   
-  ("-o", Arg.Set_string (output_file), 
-   "gives the name of Newspeak output");
+  ("-o", Arg.Set_string output_file, 
+  "gives the name of Newspeak output\n");
 
+  ("--version", Arg.Set version,
+  "prints the version of the software");
 ]
 
 
 let handle_cmdline_options () = 
   Arg.parse argslist anon_fun usage_msg;
+  if !version then begin
+    print_version ();
+    exit 0
+  end;
   input_files :=
     if !has_preprocess
     then List.map preprocess !list_of_files
-    else !list_of_files    
+    else List.map (fun x -> (x,x)) !list_of_files    
 
 
 

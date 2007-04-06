@@ -1,3 +1,5 @@
+open Params
+
 open Cil
 open Cilutils
 
@@ -718,7 +720,7 @@ let translate_fun name spec =
 (*=========================================*)
 
 let compile in_name out_name  =
-  if not (Filename.check_suffix in_name K.c_suffix)
+  if not (Filename.check_suffix in_name c_suffix)
   then error "Npkcompile.compile" (in_name^" is not a .c file");
 
   initCIL ();

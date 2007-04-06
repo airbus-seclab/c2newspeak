@@ -1,14 +1,3 @@
-(*open Cilutils*)
-
-(*-----------------*)
-(* File extensions *)
-(*-----------------*)
-
-let c_suffix = ".c"
-let npko_suffix = ".no"
-
-
-
 (*-------*)
 (* Types *)
 (*-------*)

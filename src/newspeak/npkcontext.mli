@@ -34,8 +34,11 @@ val verb_npko : bool ref
 val verb_newspeak : bool ref
 
 
-(** Names of the files that are to be compiled / link *)
-val input_files : string list ref
+(** Names of the files that are to be compiled / link. The first
+    string is the name of the file that need to be read, the second is the
+    initial name of the .c file; they differ when the files are
+    preprocessed. *)
+val input_files : (string * string) list ref
 
 (** TODO: document *)
 val compile_only : bool ref

@@ -7,12 +7,6 @@
     display Newspeak programs. *)
 
 
-(** {1 File extensions} *)
-
-val c_suffix : string
-val npko_suffix : string
-
-
 (** {1 Types} *)
 
 (** The type of a program: function definitions and an block
