@@ -25,16 +25,6 @@ let generate_globals globs g_used cstrs =
   String_set.iter handle_cstr cstrs;
 (* TODO: translate_exp should not be exported ? *)
   Hashtbl.iter (handle_real_glob Npkcompile.translate_exp g_used) globs;
-(* TODO:
-   print_debug "Processing global variables";
-   total_nb := List.length !glb_list;
-   print_debug ("Number of global variables: "^(string_of_int !total_nb));
-   List.iter extract_glbdecl (List.rev !glb_list);
-   print_debug "Global variables processing over";
-   Hashtbl.clear glb_tabl;
-   glb_list := [];
-   cstr_list := [];
-   List.rev !accu*)
   get_glob_decls ()  
 
 
@@ -69,7 +59,6 @@ let link npkos out_name =
   print_debug ("Writing output to "^out_name^"...");
   let ch_out = open_out_bin out_name in
     Marshal.to_channel ch_out "NPK!" [];
-    (* TODO: Write something ;-) *)
-    (* Marshal.to_channel ch_out (fnames, kernel) []; *)
+    Marshal.to_channel ch_out (!filenames, kernel) [];
     close_out ch_out;
     print_debug (out_name^" written.")

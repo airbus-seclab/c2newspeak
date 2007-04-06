@@ -408,8 +408,6 @@ let update_fun_link name f =
 	| _ -> error "Npkenv.update_fun_link" ("unexpected error for "^name)
     in
       
-    (* TODO: Do more checks ? about locs and body that should always be
-       defined at the same time ? *)
     let _ =
       match x.pargs, f.pargs, x.plocs, f.plocs, x.ploc, f.ploc, x.pbody, f.pbody with
 	| _, None, _, None, _, _, _, None -> ()
@@ -426,6 +424,7 @@ let update_fun_link name f =
 	    x.plocs <- f.plocs;
 	    x.ploc <- f.ploc;
 	    x.pbody <- f.pbody
+	      (* TODO: Produce more precise errors *)
 	| _ -> error "Npkenv.update_fun_link" ("unexpected error for "^name)
     in ()
 	 
@@ -442,7 +441,7 @@ let glb_cnt = ref 0
 let glb_tabl_vid = Hashtbl.create 100
 
 (* TODO: This is a hack for assumptions *)
-let glb_tabl_typ = Hashtbl.create 100
+(* let glb_tabl_typ = Hashtbl.create 100 *)
 
 let glist = ref []
 
@@ -457,14 +456,13 @@ let get_glob_vid name =
       Not_found ->
 	error "Npkenv.get_glob_vid" ("global variable "^name^" not found")
 
-(* TODO *)
-(* Should be get_glob_typ name cil_offset *)
-let get_glob_typ name =
+(* TODO: Should be get_glob_typ name cil_offset *)
+(*let get_glob_typ name =
   try
     Hashtbl.find glb_tabl_typ name
   with
       Not_found ->
-	error "Npkenv.get_glob_vid" ("type for global variable "^name^" not found")
+	error "Npkenv.get_glob_vid" ("type for global variable "^name^" not found")*)
 
 let rec replace_stmt (sk, l) =
   let new_sk = match sk with
@@ -486,6 +484,8 @@ and replace_lv lv =
     | Newspeak.Global_tmp name -> Newspeak.Global (get_glob_vid name)
     | Newspeak.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Newspeak.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
+	(* TODO: Shift_tmp !!!! *)
+    | Newspeak.Shift_tmp _ -> failwith ("replace_lv: Shift_tmp: unexpected error");
     | Newspeak.Local _ | Newspeak.Global _ -> lv
 	
 and replace_exp e =
@@ -493,8 +493,6 @@ and replace_exp e =
     | Newspeak.Lval (lv, sca) -> Newspeak.Lval (replace_lv lv, sca)
     | Newspeak.Const _ | Newspeak.AddrOfFun _ -> e
     | Newspeak.AddrOf (lv, sz) -> Newspeak.AddrOf (replace_lv lv, sz)
-	(* TODO: Belongs_tmp !!!! *)
-    | Newspeak.UnOp (Newspeak.Belongs_tmp _, _) -> failwith ("Belongs_tmp: unexpected error");
     | Newspeak.UnOp (o, e) -> Newspeak.UnOp (o, replace_exp e)
     | Newspeak.BinOp (o, e1, e2) -> Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
 	
@@ -523,9 +521,13 @@ let handle_real_glob translate_exp g_used name g =
       match i with
 	  SingleInit e ->
 	    let o = offset_of t off in begin
+	      try
 		match translate_typ (typeOf e) with
 		    Newspeak.Scalar s -> glb_inits := (o, s, translate_exp e)::(!glb_inits)
 		  | _ -> error "Npkenv.translate_init" "unexpected type of SingleInit"
+	      with LenOfArray ->
+		error "Npkenv.translate_init"
+		  ("unspecified length for global array "^name)
 	      end;
 	| CompoundInit (_, c) -> List.iter (expand_elem off) c
     and expand_elem prefix (off, i) = expand (addOffset off prefix) i in
@@ -546,7 +548,7 @@ let handle_real_glob translate_exp g_used name g =
       glist := (name, t, translate_init g.gloc g.gtype g.ginit)::(!glist);
       let vid = incr glb_cnt in
 	Hashtbl.add glb_tabl_vid name vid;
-	Hashtbl.add glb_tabl_typ name t
+(*	Hashtbl.add glb_tabl_typ name t *)
   end
     
 let handle_cstr str =

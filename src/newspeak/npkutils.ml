@@ -109,11 +109,12 @@ let translate_typ t =
       (offset, typ)
   in
 
-    try
+(* TODO: Check this *)
+(*    try *)
       translate_typ_aux t
-    with Cil.LenOfArray ->
+(*    with Cil.LenOfArray ->
       error "Npkutils.translate_typ" 
-	("LenOfArray exception on "^string_of_type t)
+	("LenOfArray exception on "^string_of_type t) *)
 
 
 let translate_rel_binop t1 t2 o =

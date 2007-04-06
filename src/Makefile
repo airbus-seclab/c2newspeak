@@ -2,7 +2,7 @@ DIR = newspeak npkstats
 DEP = $(addsuffix /.depend,$(DIR))
 
 #DOC_DIR= ../doc/ocamldoc/
-.PHONY: $(DIR) all doc depend clean initdepend
+.PHONY: $(DIR) all doc depend clean
 
 all: $(DIR)
 

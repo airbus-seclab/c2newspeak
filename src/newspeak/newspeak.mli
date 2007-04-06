@@ -43,6 +43,7 @@ and lval =
   | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
+  | Shift_tmp of (string * Cil.offset list)
 
 and exp =
     Const of cte
@@ -60,7 +61,6 @@ and cte =
 
 and unop =
     Belongs of (Int64.t * Int64.t)
-  | Belongs_tmp of string
   | Coerce of (Int64.t * Int64.t)
   | Not
   | BNot of (Int64.t * Int64.t)

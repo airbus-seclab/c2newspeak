@@ -5,13 +5,14 @@ syntax: glob
 **/c2newspeak.exe
 **/npkstats
 **/npkstats.exe
-*.o
-*.cmx
-*.cmi
-*.cmo
-*.bak
-*.ir
-tests/newspeak/result
+src/**.o
+src/**.cmx
+src/**.cmi
+src/**.cmo
+tests/**.bak
+tests/**.no
+tests/**/result
+tests/**/a.npk
 
 syntax: regexp
 (.*/)?\#[^/]*\#$

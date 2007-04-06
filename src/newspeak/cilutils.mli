@@ -39,6 +39,7 @@ val string_of_global : Cil.global -> string
 val string_of_init : Cil.init -> string
 val string_of_exp : Cil.exp -> string
 val string_of_lval : Cil.lval -> string
+val string_of_offset : Cil.offset -> string
 val string_of_instr : Cil.instr -> string
 val string_of_attribute : Cil.attribute -> string
 
