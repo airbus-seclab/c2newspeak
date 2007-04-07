@@ -7,6 +7,7 @@ test:
 clean:
 	make clean -C src
 	make clean -C tests
+	make clean -C bin
 	rm -f *~
 
 tar: clean
