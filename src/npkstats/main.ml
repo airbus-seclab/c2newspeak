@@ -20,17 +20,16 @@ let speclist =
     
 let _ = 
   Arg.parse speclist anon_fun usage_msg;
-  
+
   if !fname = "" then begin
     print_endline ("Fatal error: no file specified. Try "
 		   ^Sys.argv.(0)^" --help");
     exit 0;
   end;
-  
+
   try
-    let prog = (*Cil2newspeak.cil2newspeak !fnames in*)
-      ([], [], Hashtbl.create 100) in
-      Collector.count prog;
+    let (_, npk) = Newspeak.read !fname in
+      Collector.count npk;
       print_endline (Npkstats.to_string ())
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);

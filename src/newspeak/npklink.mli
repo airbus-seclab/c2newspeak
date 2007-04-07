@@ -1,1 +1,1 @@
-val link : Npkil.intermediate list -> string -> unit
+val link : Npkil.intermediate list -> (string list * Newspeak.t)

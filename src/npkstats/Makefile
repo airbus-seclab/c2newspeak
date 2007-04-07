@@ -1,9 +1,9 @@
 # Project
 DIR = newspeak
-OBJ = ../newspeak/cilutils ../newspeak/newspeak ../newspeak/npkcontext \
-      ../newspeak/npkutils ../newspeak/npkenv ../newspeak/npkil \
-      ../newspeak/npkfirstpass ../newspeak/npkcompile ../newspeak/npklink \
-      ../newspeak/c2newspeak \
+OBJ = ../newspeak/params ../newspeak/cilutils ../newspeak/newspeak \
+      ../newspeak/npkcontext ../newspeak/npkutils ../newspeak/npkenv \
+      ../newspeak/npkil ../newspeak/npkfirstpass ../newspeak/npkcompile \
+      ../newspeak/npklink \
       npkstats collector main
 
 # Documentation

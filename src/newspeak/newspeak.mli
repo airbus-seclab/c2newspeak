@@ -176,3 +176,7 @@ val string_of_lval : lval -> string
 val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
+
+val write : string -> (string list * t) -> unit
+
+val read : string -> (string list * t)

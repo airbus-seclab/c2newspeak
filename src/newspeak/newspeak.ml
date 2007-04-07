@@ -610,3 +610,18 @@ let dump_fundec name (_, body) =
     pretty_print := false;
     dump_fundec name body;
     pretty_print := old_pretty
+
+let write name prog =
+  let cout = open_out_bin name in
+    Marshal.to_channel cout "NPK!" [];
+    Marshal.to_channel cout prog [];
+    close_out cout
+
+let read name = 
+  let cin = open_in_bin name in
+  let str = Marshal.from_channel cin in
+    if str <> "NPK!" 
+    then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
+    let prog = Marshal.from_channel cin in
+      close_in cin;
+      prog
