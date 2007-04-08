@@ -369,48 +369,6 @@ let update_glob_link name g =
   with Not_found ->
     Hashtbl.add glb_decls name g
 
-let update_fun_link name f =
-  try
-    let x = Hashtbl.find fun_specs name in
-      
-    let _ = 
-      match x.prett, f.prett with
-	  None, None -> ()
-	| Some t1, Some t2 when t1 = t2 -> ()
-	| _ ->
-	    (* TODO: add the respective types and locations ? *)
-	    error "Npkenv.update_fun_link"
-	      ("different types for return type of prototype "^name)
-    in
-      
-    let _ =
-      match x.pcil_body, f.pcil_body with
-	| None, None -> ()
-	| _ -> error "Npkenv.update_fun_link" ("unexpected error for "^name)
-    in
-      
-    let _ =
-      match x.pargs, f.pargs, x.plocs, f.plocs, x.ploc, f.ploc, x.pbody, f.pbody with
-	| _, None, _, None, _, _, _, None -> ()
-	| None, Some _, None, _, _, _, None, _ ->
-	    x.pargs <- f.pargs;
-	    x.plocs <- f.plocs;
-	    x.ploc <- f.ploc;
-	    x.pbody <- f.pbody
-	| Some l1, Some l2, _, None, _, _, _, None ->
-	    compare_formals name l1 l2
-	| Some l1, Some l2, None, _, _, _, None, _ ->
-	    compare_formals name l1 l2;
-	    x.pargs <- f.pargs;
-	    x.plocs <- f.plocs;
-	    x.ploc <- f.ploc;
-	    x.pbody <- f.pbody
-	      (* TODO: Produce more precise errors *)
-	| _ -> error "Npkenv.update_fun_link" ("unexpected error for "^name)
-    in ()
-	 
-  with Not_found ->
-    Hashtbl.add fun_specs name f
 
 
 
@@ -570,36 +528,6 @@ let get_glob_decls () =
 
 
 
-
-
-
-let final_specs = Hashtbl.create 100
-
-let extract_typ (_, _, t) = t
-
-
-
-
-let handle_funspec f_called name f =
-  (* TODO: Should we have here the !remove_temp ? *)
-  if (String_set.mem name f_called) (*|| not !remove_temp*) then begin
-    let args = match f.pargs with
-      | None -> error "Npkenv.handle_funspec" "unexpected error"
-      | Some l -> List.map extract_typ l
-    in
-    let body =
-      match f.pbody with
-	| None -> None
-	| Some b -> Some (replace_body b)
-    in
-      Hashtbl.add final_specs name ((args, f.prett), body)
-  end  
-
-
-let get_funspecs () = final_specs;
-
-
-    
 
 
 
