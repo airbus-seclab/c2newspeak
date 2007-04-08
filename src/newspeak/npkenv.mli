@@ -125,22 +125,6 @@ val retrieve_switch_label : status -> Cil.location -> Newspeak.lbl
 val mem_switch_label : status -> Cil.location -> bool
 
 
-(** {1 Linking time} *)
-
-val update_glob_link : string -> Npkil.glb_type -> unit
-(*val update_fun_link : string -> Npkil.fspec_type -> unit*)
-
-val handle_real_glob : (Cil.exp -> Newspeak.exp) -> String_set.t -> string -> Npkil.glb_type -> unit
-val handle_cstr : string -> unit
-val get_glob_decls : unit -> Newspeak.gdecl list
-
-(*
-val handle_funspec : String_set.t -> string -> Npkil.fspec_type -> unit
-val get_funspecs : unit -> (Newspeak.fid, Newspeak.fundec) Hashtbl.t
-
-*)
-val replace_body : Newspeak.blk -> Newspeak.blk
-
 val compare_formals : 
   string -> (int * string * Newspeak.typ) list 
   -> (int * string * Newspeak.typ) list -> unit
