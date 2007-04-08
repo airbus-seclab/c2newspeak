@@ -21,7 +21,7 @@ let comment =[
   " EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles";
   " Hymans.";
   "";
-  "   C2Newspeak compiles C code into Newspeak language, which allows simple";
+  "   C2Newspeak compiles C code into Newspeak language, which allows static";
   " analysis and statistics on C code thanks to a simpler and non ambiguous";
   " language."]
 

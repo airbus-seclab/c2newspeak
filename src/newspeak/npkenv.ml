@@ -582,7 +582,7 @@ let extract_typ (_, _, t) = t
 
 let handle_funspec f_called name f =
   (* TODO: Should we have here the !remove_temp ? *)
-  if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
+  if (String_set.mem name f_called) (*|| not !remove_temp*) then begin
     let args = match f.pargs with
       | None -> error "Npkenv.handle_funspec" "unexpected error"
       | Some l -> List.map extract_typ l
