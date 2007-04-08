@@ -750,11 +750,7 @@ let compile in_name out_name  =
     print_debug ("Translating "^in_name^"...");
     Hashtbl.iter translate_fun fun_specs;
 
-    let npko = {ifilename = in_name;
-		iglobs = Hashtbl.copy glb_decls;
-		ifuns = Hashtbl.copy fun_specs;
-		iusedglbs = !glb_used; iusedcstr = !glb_cstr;
-		iusedfuns = !fun_called;} in
+    let npko = Npkenv.create_npkil in_name in
 
       init_env ();
       

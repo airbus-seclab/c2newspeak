@@ -16,34 +16,16 @@ type status = {
   brk_lbl    : Newspeak.lbl;
 }
 
-type glb_type = {
-  mutable gtype : Cil.typ;
-  mutable gloc  : Newspeak.location;
-  mutable gdefd : bool;
-  mutable ginit : Cil.init option;
-}
-
-type fspec_type = {
-  mutable prett : Newspeak.typ option;
-  mutable pargs : ((int * string * Newspeak.typ) list) option;
-  mutable plocs : ((int * string * Newspeak.typ) list) option;
-  mutable ploc  : Newspeak.location;
-  mutable pbody : Newspeak.blk option;
-  mutable pcil_body : Cil.block option
-}
-
-
-
 (** {1 Compilation variables} *)
 
-val glb_decls : (string, glb_type) Hashtbl.t
-val fun_specs : (Newspeak.fid, fspec_type) Hashtbl.t
-val glb_used : String_set.t ref
+val glb_decls : (string, Npkil.glb_type) Hashtbl.t
+val fun_specs : (Newspeak.fid, Npkil.fspec_type) Hashtbl.t
 val fun_called : String_set.t ref
 val glb_cstr : String_set.t ref
 
 val init_env : unit -> unit
 
+val create_npkil : string -> Npkil.intermediate
 
 (** {1 Globals} *)
 
@@ -146,13 +128,13 @@ val mem_switch_label : status -> Cil.location -> bool
 
 (** {1 Linking time} *)
 
-val update_glob_link : string -> glb_type -> unit
-val update_fun_link : string -> fspec_type -> unit
+val update_glob_link : string -> Npkil.glb_type -> unit
+val update_fun_link : string -> Npkil.fspec_type -> unit
 
-val handle_real_glob : (Cil.exp -> Newspeak.exp) -> String_set.t -> string -> glb_type -> unit
+val handle_real_glob : (Cil.exp -> Newspeak.exp) -> String_set.t -> string -> Npkil.glb_type -> unit
 val handle_cstr : string -> unit
 val get_glob_decls : unit -> Newspeak.gdecl list
 
-val handle_funspec : String_set.t -> string -> fspec_type -> unit
+val handle_funspec : String_set.t -> string -> Npkil.fspec_type -> unit
 val get_funspecs : unit -> (Newspeak.fid, Newspeak.fundec) Hashtbl.t
 

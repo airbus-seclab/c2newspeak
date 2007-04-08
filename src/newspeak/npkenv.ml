@@ -2,7 +2,7 @@ open Cil
 open Cilutils
 open Npkcontext
 open Npkutils
-
+open Npkil
 
 (*-------*)
 (* Types *)
@@ -14,33 +14,6 @@ type status = {
   switch_lbls: (Cil.location * Newspeak.lbl) list;
   brk_lbl    : Newspeak.lbl;
 }
-
-type glb_type = {
-  mutable gtype : Cil.typ;
-  mutable gloc  : Newspeak.location;
-  mutable gdefd : bool;
-  mutable ginit : Cil.init option;
-}
-
-type fspec_type = {
-  mutable prett : Newspeak.typ option;
-  mutable pargs : ((int * string * Newspeak.typ) list) option;
-  mutable plocs : ((int * string * Newspeak.typ) list) option;
-  mutable ploc  : Newspeak.location;
-  mutable pbody : Newspeak.blk option;
-  mutable pcil_body : Cil.block option
-}
-
-type intermediate = {
-  ifilename : string;
-  iglobs : (string, glb_type) Hashtbl.t;
-  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
-  iusedglbs : Npkutils.String_set.t;
-  iusedcstr : Npkutils.String_set.t;
-  iusedfuns : Npkutils.String_set.t;
-}
-      
-
 
 (*-----------------------*)
 (* Compilation variables *)
@@ -59,7 +32,15 @@ let init_env () =
   fun_called := String_set.empty;
   glb_cstr := String_set.empty
 
-
+let create_npkil name =
+  { 
+    ifilename = name;
+    iglobs = Hashtbl.copy glb_decls;
+    ifuns = Hashtbl.copy fun_specs;
+    iusedglbs = !glb_used;
+    iusedcstr = !glb_cstr;
+    iusedfuns = !fun_called
+  }
 
 (*---------*)
 (* Globals *)
