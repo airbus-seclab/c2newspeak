@@ -292,23 +292,22 @@ let get_var cil_var =
   (* global variable *)
   if cil_var.vglob then begin
     let norm_name = glb_uniquename cil_var in
-      Newspeak.Global_tmp norm_name
+      Npkil.Global_tmp norm_name
   end else begin
     (* local variables *)
     try
       let vid = Hashtbl.find loc_tabl cil_var.vid in
       let n = !loc_cnt - vid in
-	Newspeak.Local n
+	Npkil.Local n
     with Not_found -> 
       error "Npkenv.get_var"
 	("unexpected variable "^(string_of_lval (Var cil_var, NoOffset)))
   end
 
 let get_cstr s =
-  Newspeak.AddrOf (Newspeak.Global_tmp ("!const_str_"^s),
-		   (String.length s) + 1)
+  Npkil.AddrOf (Npkil.Global_tmp ("!const_str_"^s), (String.length s) + 1)
 
-let get_ret_var status = Newspeak.Local (!loc_cnt - status.return_var)
+let get_ret_var status = Npkil.Local (!loc_cnt - status.return_var)
 
 
 

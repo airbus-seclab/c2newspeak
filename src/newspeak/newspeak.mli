@@ -34,7 +34,7 @@ and blk = stmt list
 and lval =
     Local of vid
   | Global of vid
-  | Global_tmp of string
+  | Global_tmp of string (* TODO: Let us remove this next *)
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
   | Shift_tmp of (string * exp)
@@ -129,13 +129,6 @@ val size_of_scalar : scalar_t -> size_t
 (** Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type *)
 val domain_of_typ : sign_t * size_t -> Int64.t * Int64.t
-
-(** [make_int_coerce t e] wraps e into a coerce expression using
-    integer bounds of type t *)
-val make_int_coerce : sign_t * size_t -> exp -> exp
-
-(** [make_belongs len e] wraps e into a belongs (0, len - 1) *)
-val make_belongs : int -> exp -> exp
 
 (** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]

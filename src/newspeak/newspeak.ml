@@ -140,13 +140,6 @@ let domain_of_typ (sign, size) =
     | _ -> invalid_arg "Newspeak.domain_of_typ"
 
 
-let make_int_coerce int_t e =
-  UnOp (Coerce (domain_of_typ int_t), e)
-
-let make_belongs len e =
-  UnOp (Belongs (Int64.zero, (Int64.of_int (len-1))), e)
-
-
 let rec negate exp =
   match exp with
     | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
@@ -405,7 +398,7 @@ and string_of_binop neg op =
     | PlusPI -> "+"
     | MinusPP -> "-"
 
-
+(* TODO: add name of locals, this will simplify this *)
 let rec string_of_lval decls lv =
   match lv with
       Local vid -> string_of_local decls vid

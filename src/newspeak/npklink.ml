@@ -46,68 +46,72 @@ let get_glob_typ name =
 	error "Npklink.get_glob_vid" ("type for global variable "^name^" not found")
 
 let rec replace_stmt (sk, l) =
-  let new_sk = match sk with
-    | Newspeak.Set (lv, e, sca) -> Newspeak.Set (replace_lv lv, replace_exp e, sca)
-    | Newspeak.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
-    | Newspeak.Decl (name, t, b) -> 
-	Newspeak.Decl (name, t, List.map replace_stmt b)
-    | Newspeak.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
-    | Newspeak.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
-    | Newspeak.Call fn -> Newspeak.Call (replace_fn fn)
-    | Newspeak.Goto _ | Newspeak.Label _ -> sk
-  in (new_sk, l)
+  let new_sk = 
+    match sk with
+      | Npkil.Set (lv, e, sca) -> Newspeak.Set (replace_lv lv, replace_exp e, sca)
+      | Npkil.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
+      | Npkil.Decl (name, t, b) -> 
+	  Newspeak.Decl (name, t, List.map replace_stmt b)
+      | Npkil.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
+      | Npkil.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
+      | Npkil.Call fn -> Newspeak.Call (replace_fn fn)
+      | Npkil.Goto lbl -> Newspeak.Goto lbl 
+      | Npkil.Label lbl -> Newspeak.Label lbl
+  in 
+    (new_sk, l)
        
 and replace_chooseitem (exps, b) =
   (List.map replace_exp exps, List.map replace_stmt b)
     
 and replace_lv lv =
   match lv with
-    | Newspeak.Global_tmp name -> Newspeak.Global (get_glob_vid name)
-    | Newspeak.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
-    | Newspeak.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
-    | Newspeak.Shift_tmp (name, e) -> begin
-	let vid = get_glob_vid name in
-	  match get_glob_typ name with
-	      Newspeak.Array (t, len) ->
-		let sz = Newspeak.size_of t in
-		let index_exp =
-		  Newspeak.BinOp (Newspeak.MultI,
-				 Newspeak.make_belongs len (replace_exp e),
-				 Newspeak.exp_of_int sz)
-		in
-		let v = Newspeak.Global (vid) in
-		  Newspeak.Shift (v, index_exp)
-	    | _ -> error "Npklink.replace_lval"
-		("type of lval "^(Newspeak.string_of_lval lv)
-		  ^" is not defined enough")
+    | Npkil.Global_tmp name -> Newspeak.Global (get_glob_vid name)
+    | Npkil.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
+    | Npkil.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
+    | Npkil.Shift_tmp (name, e) -> begin
+	match get_glob_typ name with
+	    Newspeak.Array (t, len) ->
+	      let sz = Newspeak.size_of t in
+	      let index_exp =
+		Npkil.BinOp (Newspeak.MultI,
+			    Npkil.make_belongs len e,
+			    Npkil.exp_of_int sz)
+	      in
+	      let v = Npkil.Global_tmp name in
+	      let lv = Npkil.Shift (v, index_exp) in
+		replace_lv lv
+	  | _ -> error "Npklink.replace_lval"
+	      ("type of lval "(*^(Npkil.string_of_lval lv)*)
+		^" is not defined enough")
       end
-    | Newspeak.Local _ | Newspeak.Global _ -> lv
+    | Npkil.Local v -> Newspeak.Local v
 	
 and replace_exp e =
   match e with
-    | Newspeak.Lval (lv, sca) -> Newspeak.Lval (replace_lv lv, sca)
-    | Newspeak.Const _ | Newspeak.AddrOfFun _ -> e
-    | Newspeak.AddrOf (lv, sz) -> Newspeak.AddrOf (replace_lv lv, sz)
-    | Newspeak.UnOp (o, e) -> Newspeak.UnOp (o, replace_exp e)
-    | Newspeak.BinOp (o, e1, e2) -> Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
+    | Npkil.Lval (lv, sca) -> Newspeak.Lval (replace_lv lv, sca)
+    | Npkil.Const c -> Newspeak.Const c 
+    | Npkil.AddrOfFun f -> Newspeak.AddrOfFun f
+    | Npkil.AddrOf (lv, sz) -> Newspeak.AddrOf (replace_lv lv, sz)
+    | Npkil.UnOp (o, e) -> Newspeak.UnOp (o, replace_exp e)
+    | Npkil.BinOp (o, e1, e2) -> Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
 	
 and replace_fn fn =
   match fn with
-    | Newspeak.FunId _ -> fn
-    | Newspeak.FunDeref (e, t) -> Newspeak.FunDeref (replace_exp e, t)
+    | Npkil.FunId f -> Newspeak.FunId f
+    | Npkil.FunDeref (e, t) -> Newspeak.FunDeref (replace_exp e, t)
 
 and replace_body body = List.map replace_stmt body
 
 and replace_inits init =
   match init with
-    | Newspeak.Zero -> Newspeak.Zero
-    | Newspeak.Init l -> Newspeak.Init (List.map replace_init l)
+    | Npkil.Zero -> Newspeak.Zero
+    | Npkil.Init l -> Newspeak.Init (List.map replace_init l)
 
 and replace_init (sz, sca, e) = (sz, sca, replace_exp e)
 
-
-
-let handle_real_glob translate_exp g_used name g =
+(* TODO: should never use Npkcompile here, how can I simplify this 
+   to remove it ? *)
+let handle_real_glob g_used name g =
 
   let translate_init loc t init =
     let glb_inits = ref [] in
@@ -118,7 +122,8 @@ let handle_real_glob translate_exp g_used name g =
 	    let o = Cilutils.offset_of t off in begin
 	      try
 		match translate_typ (typeOf e) with
-		    Newspeak.Scalar s -> glb_inits := (o, s, translate_exp e)::(!glb_inits)
+		    Newspeak.Scalar s -> 
+		      glb_inits := (o, s, replace_exp (Npkcompile.translate_exp e))::(!glb_inits)
 		  | _ -> error "Npklink.translate_init" "unexpected type of SingleInit"
 	      with LenOfArray ->
 		error "Npklink.translate_init"
@@ -166,8 +171,9 @@ let get_glob_decls () =
   let rec aux accu l =
     match l with
       | [] -> accu
-      | (n, t, i)::r -> aux ((n, t, replace_inits i)::accu) r
-  in aux [] !glist
+      | (n, t, i)::r -> aux ((n, t, (*TODO:replace_inits*) i)::accu) r
+  in 
+    aux [] !glist
 
 
 
@@ -247,7 +253,7 @@ let handle_file npko =
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
 (* TODO: translate_exp should not be exported ? *)
-  Hashtbl.iter (handle_real_glob Npkcompile.translate_exp !glb_used) 
+  Hashtbl.iter (handle_real_glob !glb_used) 
     globs;
   get_glob_decls ()
 
@@ -265,7 +271,7 @@ let generate_funspecs funs =
       let body =
 	match f.pbody with
 	  | None -> None
-	  | Some b -> Some (replace_body b)
+	  | Some b -> Some (Newspeak.simplify (replace_body b))
       in
 	Hashtbl.add final_specs name ((args, f.prett), body)
     end

@@ -20,6 +20,7 @@ module Int_set :
     val add : elt -> t -> t
   end
 
+(* TODO: should this name, dangerous *)
 val incr : int ref -> int
 
 

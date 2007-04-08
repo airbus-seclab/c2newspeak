@@ -7,4 +7,5 @@
     output file and returns it to the caller *)
 val compile : string -> string -> Npkil.intermediate
 
-val translate_exp : Cil.exp -> Newspeak.exp
+(* TODO: should no export this to remove! *)
+val translate_exp : Cil.exp -> Npkil.exp

@@ -6,10 +6,9 @@ open Cilutils
 open Npkcontext
 open Npkutils
 open Npkenv
-open Npkil
 open Npkfirstpass
 
-module K = Newspeak
+module K = Npkil
 
 
 
@@ -56,98 +55,103 @@ let generate_body body decls =
 
 let rec translate_const c =
   match c with
-      CInt64 (i, _, _) -> K.Const (K.CInt64 i)
+      CInt64 (i, _, _) -> K.Const (Newspeak.CInt64 i)
     | CStr s -> get_cstr s
-    | CChr c -> K.Const (K.CInt64 (Int64.of_int (Char.code c))) 
+    | CChr c -> K.Const (Newspeak.CInt64 (Int64.of_int (Char.code c))) 
 	
-    | CReal (f, _, Some s) -> K.Const (K.CFloat (f, s))
+    | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
     | CReal (f, _, None) ->
 	let s = string_of_float f in
 	  print_warning "Npkcompile.translate_const"
 	    ("No string representation available for const "^s);
-	  K.Const (K.CFloat (f, s))
+	  K.Const (Newspeak.CFloat (f, s))
 	    
     | CWStr _ | CEnum _
 	-> error "Npkcompile.translate_const"
 	("const '"^(string_of_exp (Const c))^"' not handled")
 
-	
 and translate_cast t e = 
   match t, e with
     | TNamed (info, _), e -> translate_cast info.ttype e
 	
-    | TPtr _, Const (CInt64 (c, _, _)) when c = Int64.zero -> K.Const K.Nil
+    | TPtr _, Const (CInt64 (c, _, _)) when c = Int64.zero -> 
+	K.Const Newspeak.Nil
 	
     | t, e -> begin
-	match translate_typ t, translate_typ (typeOf e) with
-	    (K.Scalar (K.Int k1), K.Scalar (K.Int k2)) when k1 = k2 ->
-	      translate_exp e
-
-	  | K.Scalar (K.Int int_t), K.Scalar (K.Int _) ->
-	      K.make_int_coerce int_t (translate_exp e)
-		
-	  | (K.Scalar (K.Float sz as t'), K.Scalar (K.Float _ as t)) -> 
-	      K.UnOp (K.Cast (t, t'), translate_exp e)
-		
-	  | (K.Scalar (K.Float sz' as t'), K.Scalar (K.Int (_, sz) as t)) ->
-	      K.UnOp (K.Cast (t, t'), translate_exp e)
-		
-	  | (K.Scalar (K.Int (sign, sz') as kt'), 
-	     K.Scalar (K.Float sz as kt)) ->
-	      if sign = K.Unsigned then
-		print_warning "Npkcompile.translate_cast"
-		  ("cast from float to unsigned integer: "
-		   ^"sign may be lost: "
-		   ^(string_of_type (typeOf e))^"' -> '"
-		   ^(string_of_type t)^"' in '"
-		   ^(string_of_exp (CastE (t, e)))^"'");
-	      K.UnOp (K.Cast (kt, kt'), translate_exp e)
-		
-	  | K.Scalar K.Ptr, K.Scalar K.Ptr -> translate_exp e
-	  | K.Scalar K.FunPtr, K.Scalar K.FunPtr ->
-	      print_warning "Npkcompile.translate_cast"
-		("probable dangerous cast: '"^(string_of_type (typeOf e))^"' -> '"
-		 ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
-	      translate_exp e
-		
-	  | (K.Scalar (K.Int (sign, sz)), K.Scalar K.Ptr)
-	      when sz = pointer_size && !castor_allowed ->
-	      print_warning "Npkcompile.translate_cast"
-		("probable invalid cast '"^(string_of_type (typeOf e))^"' -> '"
-		 ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
-		K.UnOp (K.PtrToInt (sign, sz), translate_exp e)
-		  
-	  | (K.Scalar K.Ptr, K.Scalar (K.Int (_, sz) as int_t))
-	      when sz = pointer_size && !castor_allowed ->
-	      print_warning "Npkcompile.translate_cast"
-		("probable invalid cast '"^(string_of_type (typeOf e))^"' -> '"
-		 ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'");
-		K.UnOp (K.Cast (int_t, K.Ptr), translate_exp e)
-		  
-	  | K.Scalar (K.Ptr as kt'), K.Scalar (K.FunPtr as kt) 
-	      when !castor_allowed ->
-	      print_warning "Npkcompile.translate_cast"
-		("probable invalid cast '"
-		 ^(string_of_type (typeOf e))^"' -> '"
-		 ^(string_of_type t)^"' in '"
-		 ^(string_of_exp (CastE (t,e)))^"'");
-		K.UnOp (K.Cast (kt, kt'), translate_exp e)
-		  
-	  | _ ->
-	      error "Npkcompile.translate_cast"
-		("translate cast: Invalid cast '"^(string_of_type (typeOf e))^"' -> '"
-		 ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'")
+	let t_e = typeOf e in
+	  match translate_typ t, translate_typ t_e with
+	      (Newspeak.Scalar s, Newspeak.Scalar s_e) ->
+		let str = 
+		  ""^(string_of_type t_e)^"' -> '"
+		  ^(string_of_type t)^"' in '"
+		  ^(string_of_exp (CastE (t, e)))^"'"
+		in
+		  translate_scalar_cast str e s s_e
+	    | _ ->
+		error "Npkcompile.translate_cast"
+		  ("translate cast: Invalid cast '"^(string_of_type (typeOf e))^"' -> '"
+		    ^(string_of_type t)^"' in '"^(string_of_exp (CastE (t,e)))^"'")
       end
 	
+(* TODO: optimize by putting translate_exp at the caller of this 
+   function! *)
+(* TODO: nice output *)
+and translate_scalar_cast str e t1 t2 = 
+  match (t1, t2) with
+      (Newspeak.Int k1, Newspeak.Int k2) when k1 = k2 -> 
+	translate_exp e
+	
+    | (Newspeak.Int int_t, Newspeak.Int _) -> 
+	K.make_int_coerce int_t (translate_exp e)
+	
+    | (Newspeak.Float _ as t', (Newspeak.Float _ as t))
+    | (Newspeak.Float _ as t', (Newspeak.Int _ as t)) ->
+	K.UnOp (Newspeak.Cast (t, t'), translate_exp e)
+	  
+    | (Newspeak.Int (sign, sz') as kt', (Newspeak.Float sz as kt)) ->
+	if sign = Newspeak.Unsigned then begin 
+	  print_warning "Npkcompile.translate_scalar_cast"
+	    ("cast from float to unsigned integer: "
+	      ^"sign may be lost: "^str)
+	end;
+	(K.UnOp (Newspeak.Cast (kt, kt'), translate_exp e))
+	  
+    | (Newspeak.Ptr, Newspeak.Ptr) -> translate_exp e
+
+    | (Newspeak.FunPtr, Newspeak.FunPtr) ->
+	print_warning "Npkcompile.translate_cast"
+	  ("probable dangerous cast: '"^str);
+	translate_exp e
+		      
+    | (Newspeak.Int (sign, sz), Newspeak.Ptr)
+	when sz = pointer_size && !castor_allowed ->
+	print_warning "Npkcompile.translate_cast"
+	  ("probable invalid cast '"^str);
+	  K.UnOp (Newspeak.PtrToInt (sign, sz), translate_exp e)
+	    
+    | (Newspeak.Ptr, (Newspeak.Int (_, sz) as int_t))
+	when sz = pointer_size && !castor_allowed ->
+	print_warning "Npkcompile.translate_cast"
+	  ("probable invalid cast '"^str);
+	  K.UnOp (Newspeak.Cast (int_t, Newspeak.Ptr), translate_exp e)
+	    
+    | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) when !castor_allowed ->
+	print_warning "Npkcompile.translate_cast"
+	  ("probable invalid cast '"^str);
+	K.UnOp (Newspeak.Cast (kt, kt'), translate_exp e)
+    
+    | _ -> 
+	error "Npkcompile.translate_cast"
+	  ("translate cast: Invalid cast '"^str)
 	
 and translate_lval lv =
   match lv with
     | Var v, NoOffset -> get_var v
-	
+
     | Mem e, NoOffset ->
 	let sz = size_of (typeOfLval lv) in
 	  K.Deref (translate_exp e, sz)
-	    
+
     | _ ->
 	let (lv', offs) = removeOffsetLval lv in
 	let t = typeOfLval lv' in
@@ -159,10 +163,10 @@ and translate_lval lv =
 	    | Index (e, NoOffset) -> begin
 		try
 		  match translate_typ t with
-		    | K.Array (t_elt, len) ->
+		    | Newspeak.Array (t_elt, len) ->
 			let index_exp =
-			  K.BinOp (K.MultI, K.make_belongs len (translate_exp e),
-				  K.exp_of_int (K.size_of t_elt))
+			  K.BinOp (Newspeak.MultI, K.make_belongs len (translate_exp e),
+				  K.exp_of_int (Newspeak.size_of t_elt))
 			in
 			  K.Shift (translate_lval lv', index_exp)
 			    
@@ -179,7 +183,6 @@ and translate_lval lv =
 	      end
 
 	    | _ -> error "Npkcompile.translate_lval" "offset not handled"
-		
 
 
 (* TODO: See if there cannot be any factorisation here *)
@@ -197,27 +200,28 @@ and translate_exp e =
 	
     | UnOp (Neg, e, t) -> begin
 	match translate_typ t with
-	  | K.Scalar (K.Int int_t) ->
-	      K.make_int_coerce int_t (K.BinOp (K.MinusI, K.exp_of_int 0, translate_exp e))
-	  | K.Scalar (K.Float sz) ->
+	  | Newspeak.Scalar (Newspeak.Int int_t) ->
+	      K.make_int_coerce int_t (K.BinOp (Newspeak.MinusI, K.exp_of_int 0, translate_exp e))
+	  | Newspeak.Scalar (Newspeak.Float sz) ->
 	      (* TODO: check this transformation is really correct 
 		 i.e. source and destination expression have the same 
 		 semantics *)
-	      K.BinOp (K.MinusF sz, K.zero_f, translate_exp e)
+	      K.BinOp (Newspeak.MinusF sz, K.zero_f, translate_exp e)
 	  | _ -> error "Npkcompile.translate_exp" "integer or float type expected"
       end
 	
     | UnOp (BNot, e, t) -> begin
 	match translate_typ t with
-	    K.Scalar (K.Int int_t) -> 
-	      let b = K.domain_of_typ int_t in
-		K.UnOp (K.BNot b, translate_exp e)
+	    Newspeak.Scalar (Newspeak.Int int_t) -> 
+	      let b = Newspeak.domain_of_typ int_t in
+		K.UnOp (Newspeak.BNot b, translate_exp e)
 	  | _ -> error "Npkcompile.translate_exp" "integer type expected"
       end
 	
     | UnOp (LNot, e, t) -> begin
 	match translate_typ t with
-	    K.Scalar (K.Int int_t) -> K.UnOp (K.Not, translate_exp e)
+	    Newspeak.Scalar (Newspeak.Int int_t) -> 
+	      K.UnOp (Newspeak.Not, translate_exp e)
 	  | _ -> error "Npkcompile.translate_exp" "integer type expected"
       end
 	
@@ -229,11 +233,11 @@ and translate_exp e =
     | BinOp (Mult as o, e1, e2, t)    | BinOp (Div as o, e1, e2, t) 
     | BinOp (Mod as o, e1, e2, t) -> begin
 	match translate_typ t with
-	  | K.Scalar (K.Int int_t) ->
+	  | Newspeak.Scalar (Newspeak.Int int_t) ->
 	      K.make_int_coerce int_t (K.BinOp (translate_arith_binop o,
 						translate_exp e1, translate_exp e2))
 		
-	  | K.Scalar (K.Float sz) ->
+	  | Newspeak.Scalar (Newspeak.Float sz) ->
 	      K.BinOp (translate_float_binop sz o, 
 		       translate_exp e1, translate_exp e2)
 	  | _ -> error "Npkcompile.translate_exp" "integer or float type expected"
@@ -243,7 +247,7 @@ and translate_exp e =
     | BinOp (BAnd as o, e1, e2, t)    | BinOp (BOr as o, e1, e2, t)
     | BinOp (BXor as o, e1, e2, t) -> begin
 	match translate_typ t with
-	  | K.Scalar (K.Int int_t) ->
+	  | Newspeak.Scalar (Newspeak.Int int_t) ->
 	      K.BinOp (translate_logical_binop int_t o,
 		       translate_exp e1, translate_exp e2)
 	  | _ -> error "Npkcompile.translate_exp" "integer type expected"
@@ -252,7 +256,7 @@ and translate_exp e =
     (* Logical operations *)
     | BinOp (Shiftlt as o, e1, e2, t) | BinOp (Shiftrt as o, e1, e2, t) -> begin
 	match translate_typ t with
-	  | K.Scalar (K.Int int_t) ->
+	  | Newspeak.Scalar (Newspeak.Int int_t) ->
 	      K.make_int_coerce int_t (K.BinOp (translate_logical_binop int_t o,
 						translate_exp e1, translate_exp e2))
 	  | _ -> error "Npkcompile.translate_exp" "integer type expected"
@@ -265,17 +269,17 @@ and translate_exp e =
 	    
     | BinOp (Le, e1, e2, (TInt _ as t)) -> translate_exp (BinOp (Ge, e2, e1, t))
     | BinOp (Lt, e1, e2, (TInt _ as t)) -> translate_exp (BinOp (Gt, e2, e1, t))
-    | BinOp (Ge, e1, e2, (TInt _ as t)) -> K.UnOp (K.Not, translate_exp (BinOp (Gt, e2, e1, t)))
-    | BinOp (Ne, e1, e2, (TInt _ as t)) -> K.UnOp (K.Not, translate_exp (BinOp (Eq, e2, e1, t)))
+    | BinOp (Ge, e1, e2, (TInt _ as t)) -> K.UnOp (Newspeak.Not, translate_exp (BinOp (Gt, e2, e1, t)))
+    | BinOp (Ne, e1, e2, (TInt _ as t)) -> K.UnOp (Newspeak.Not, translate_exp (BinOp (Eq, e2, e1, t)))
 	
     (* Pointer / Integer addition *)
     | BinOp (IndexPI, e1, e2, t) | BinOp (PlusPI, e1, e2, t) -> begin
 	match translate_typ t with
-	  | K.Scalar K.Ptr -> 
+	  | Newspeak.Scalar Newspeak.Ptr -> 
 	      let sz = size_of_subtyp t in
-		K.BinOp (K.PlusPI, translate_exp e1,
-			 K.BinOp (K.MultI, translate_exp e2, K.exp_of_int sz))
-	  | K.Scalar K.FunPtr ->
+		K.BinOp (Newspeak.PlusPI, translate_exp e1,
+			 K.BinOp (Newspeak.MultI, translate_exp e2, K.exp_of_int sz))
+	  | Newspeak.Scalar Newspeak.FunPtr ->
 	      error "Npkcompile.translate_exp"
 		"pointer arithmetics forbidden on function pointers"
 	  | _ -> error "Npkcompile.translate_exp" "data pointer type expected"
@@ -284,13 +288,13 @@ and translate_exp e =
     (* Pointer / Integer subtraction *) 
     | BinOp (MinusPI, e1, e2, t) -> begin
 	match translate_typ t with
-	  | K.Scalar K.Ptr -> 
+	  | Newspeak.Scalar Newspeak.Ptr -> 
 	      let sz = size_of_subtyp t in
 	      let v1 = translate_exp e1 in
-	      let v2 = K.BinOp (K.MultI, translate_exp e2, K.exp_of_int sz) in
-		K.BinOp (K.PlusPI, v1,
-			 K.BinOp (K.MinusI, K.exp_of_int 0, v2))
-	  | K.Scalar K.FunPtr ->
+	      let v2 = K.BinOp (Newspeak.MultI, translate_exp e2, K.exp_of_int sz) in
+		K.BinOp (Newspeak.PlusPI, v1,
+			 K.BinOp (Newspeak.MinusI, K.exp_of_int 0, v2))
+	  | Newspeak.Scalar Newspeak.FunPtr ->
 	      error "Npkcompile.translate_exp"
 		"pointer arithmetics forbidden on function pointers"
 	  | _ ->
@@ -300,34 +304,36 @@ and translate_exp e =
     (* Pointer difference *) 
     | BinOp (MinusPP, e1, e2, t) -> begin
 	match translate_typ (typeOf e1), translate_typ (typeOf e2), translate_typ t with
-	  | K.Scalar K.Ptr, K.Scalar K.Ptr, K.Scalar K.Int int_t -> 
+	  | Newspeak.Scalar Newspeak.Ptr, 
+	    Newspeak.Scalar Newspeak.Ptr, 
+	    Newspeak.Scalar Newspeak.Int int_t -> 
 	      let v1 = translate_exp e1 in
 	      let v2 = translate_exp e2 in
-		K.make_int_coerce int_t (K.BinOp (K.MinusPP, v1, v2))
+		K.make_int_coerce int_t (K.BinOp (Newspeak.MinusPP, v1, v2))
 	  | _ -> error "Npkcompile.translate_exp" "data pointer type expected"
       end
 	
     | Lval lv -> begin
 	match (translate_typ (typeOfLval lv)) with
-	    K.Scalar s -> K.Lval (translate_lval lv, s)
+	    Newspeak.Scalar s -> K.Lval (translate_lval lv, s)
 	  | _ -> error "Npkcompile.translate_exp"
 	      ("scalar type expected for left value "^(string_of_lval lv))
       end
 	
     | AddrOf lv -> begin
 	match lv, translate_typ (typeOf e) with
-	  | (Var f, NoOffset), K.Scalar K.FunPtr ->
+	  | (Var f, NoOffset), Newspeak.Scalar Newspeak.FunPtr ->
 	      K.AddrOfFun f.vname
 	      
-	  | _, K.Scalar K.Ptr ->
+	  | _, Newspeak.Scalar Newspeak.Ptr ->
 	      let (lv', offs) = removeOffsetLval lv in begin
 		  match offs with 
 		    | Index (e, NoOffset) -> begin
 			match translate_typ (typeOfLval lv') with
-			  | K.Array (t_elt, len) ->
-			      let sz = K.size_of t_elt in
-				K.BinOp (K.PlusPI, K.AddrOf (translate_lval lv', len * sz),
-					 K.BinOp (K.MultI, K.make_belongs len (translate_exp e), K.exp_of_int sz))
+			  | Newspeak.Array (t_elt, len) ->
+			      let sz = Newspeak.size_of t_elt in
+				K.BinOp (Newspeak.PlusPI, K.AddrOf (translate_lval lv', len * sz),
+					 K.BinOp (Newspeak.MultI, K.make_belongs len (translate_exp e), K.exp_of_int sz))
 			  | _ -> error "Npkcompile.translate_exp" "unexpected error"
 		      end
 			
@@ -424,6 +430,7 @@ and translate_instrlist il =
 and translate_instr i =
   update_loc (get_instrLoc i);
   match i with
+
     |	Set (lv, e, _) ->
 	  let lval = translate_lval lv in
 	  let typ = translate_typ (typeOfLval lv) in
@@ -431,10 +438,11 @@ and translate_instr i =
 
     | Call (x, Lval lv, args, _) ->
 	translate_call x lv args
-	  
+
     | Call (_, _, _, _) ->
 	error "Npkcompile.translate_instr"
 	  ("call '"^(string_of_instr i)^"' not handled")
+
     | Asm (_, _, _, _, _, _) ->
 	error "Npkcompile.translate_instr" "Asm block not supported"
 	  
@@ -443,11 +451,11 @@ and translate_instr i =
 	  
 and translate_set lval typ e =
   match typ with
-    | K.Scalar sca ->
+    | Newspeak.Scalar sca ->
 	let exp = translate_exp e in
 	  K.Set (lval,exp,sca)
 	    
-    | K.Region (_, sz) -> begin
+    | Newspeak.Region (_, sz) -> begin
 	match e with
 	  | Lval lv_src ->
 	      let src = translate_lval lv_src in
@@ -464,8 +472,9 @@ and translate_if status e stmts1 stmts2 =
   let if_loc = !cur_loc in
   let (e, t) = 
     match translate_typ (typeOf e) with
-	K.Scalar (K.Int _ as t) -> (e, t)
-      | K.Scalar (K.Ptr|K.FunPtr as t) -> (BinOp (Ne, e, null, intType), t)
+	Newspeak.Scalar (Newspeak.Int _ as t) -> (e, t)
+      | Newspeak.Scalar (Newspeak.Ptr|Newspeak.FunPtr as t) -> 
+	  (BinOp (Ne, e, null, intType), t)
       | _ ->
 	  error "Npkcompile.translate_if"
 	    ("bad expression '"^(string_of_exp e)^"'")
@@ -473,13 +482,13 @@ and translate_if status e stmts1 stmts2 =
   let rec normalize e =
     match e with
 	(* TODO: beware is the type t here really the same ? *)
-      | K.UnOp (K.Not, K.UnOp (K.Not, e)) -> normalize e
+      | K.UnOp (Newspeak.Not, K.UnOp (Newspeak.Not, e)) -> normalize e
 
-      | K.UnOp (K.Not, K.BinOp ((K.Gt _|K.Eq _), _, _))
-      | K.BinOp ((K.Gt _|K.Eq _), _, _) -> e
+      | K.UnOp (Newspeak.Not, K.BinOp ((Newspeak.Gt _|Newspeak.Eq _), _, _))
+      | K.BinOp ((Newspeak.Gt _|Newspeak.Eq _), _, _) -> e
 
-      | K.UnOp (K.Not, e) -> K.BinOp (K.Eq t, e, K.zero)
-      | _ -> K.UnOp (K.Not, K.BinOp (K.Eq t, K.zero, e))
+      | K.UnOp (Newspeak.Not, e) -> K.BinOp (Newspeak.Eq t, e, K.zero)
+      | _ -> K.UnOp (Newspeak.Not, K.BinOp (Newspeak.Eq t, K.zero, e))
   in
     let cond1 = normalize (translate_exp e) in
     let cond2 = K.negate cond1 in
@@ -508,10 +517,10 @@ and translate_switch status e stmt_list body =
       | Case (v, loc) ->
 	  let t = 
 	    match translate_typ (typeOf v) with
-		K.Scalar i -> i
+		Newspeak.Scalar i -> i
 	      | _ -> error "Npkcompile.tranlate_switch" "expression not scalar"
 	  in
-	  let case_exp = K.BinOp (K.Eq t, switch_exp, translate_exp v) in
+	  let case_exp = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
 	  let def_exp = K.negate case_exp in
 	  let new_lbl = new_label () in
 	    status := add_switch_label !status loc new_lbl;
@@ -555,14 +564,15 @@ and translate_call x lv args_exps =
 	    let lval = translate_lval cil_lv in
 	    let ret_decl = ["value_of_"^fname, t_given, loc] in
 	    let ret_epilog = match t_given, t_expected with
-	      | K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
+	      | Newspeak.Scalar s_giv, Newspeak.Scalar s_exp when s_giv = s_exp ->
 		  [K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp), loc]
 		    
-	      | K.Scalar (K.Int _ as s_giv), K.Scalar (K.Int int_t as s_exp) ->
+	      | Newspeak.Scalar (Newspeak.Int _ as s_giv), 
+		  Newspeak.Scalar (Newspeak.Int int_t as s_exp) ->
 		  let exp = K.make_int_coerce int_t (K.Lval (K.Local 0, s_giv)) in
 		    [K.Set (lval, exp, s_exp), loc]
 		      
-	      | K.Region (desc1, sz1), K.Region (desc2, sz2)
+	      | Newspeak.Region (desc1, sz1), Newspeak.Region (desc2, sz2)
 		  when sz1 = sz2 && desc1 = desc2 ->
 		  [K.Copy (lval, K.Local 0, sz1), loc]
 		    
@@ -591,8 +601,8 @@ and translate_call x lv args_exps =
 	    let t_given = translate_typ (typeOf e) in
 	      if t_expected <> t_given then begin
 		error "Npkcompile.translate_call"
-		  ("type mismatch on call ('"^(K.string_of_typ t_given)^"' <> '"
-		   ^(K.string_of_typ t_expected)^"') in "^fname^" arguments")
+		  ("type mismatch on call ('"^(Newspeak.string_of_typ t_given)^"' <> '"
+		   ^(Newspeak.string_of_typ t_expected)^"') in "^fname^" arguments")
 	      end;
 	      push_local ();
 	      handle_args_decls_aux ((n, t_expected, loc)::accu) (i+1) (Some r_t) r_e
@@ -632,16 +642,17 @@ and translate_call x lv args_exps =
 		  ("invalid type '"^(string_of_type f.vtype)^"'")
 	  in 
 	  let x = Hashtbl.find fun_specs name in
-	  let fs = match x.pargs with
+	    (* TODO: not nice! I must clean this up! *)
+	  let fs = match x.K.pargs with
 	    | None -> None
 	    | Some ld -> Some (List.map extract_ldecl ld)
 	  in
-
-	    (name, x.prett, fs)
+	    (* TODO: not nice! I must clean this up! *)
+	    (name, x.K.prett, fs)
 
       | Mem (Lval fptr), NoOffset ->
 	  let typ = translate_typ (typeOfLval fptr) in
-	    if typ <> K.Scalar K.FunPtr
+	    if typ <> Newspeak.Scalar Newspeak.FunPtr
 	    then error "Npkcompile.translate_call" "FunPtr expected";
 
 	    let ret = match x with
@@ -665,7 +676,7 @@ and translate_call x lv args_exps =
 	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
       | Mem (Lval fptr), NoOffset ->
 	  let args_t = List.rev (List.map (fun (_, t, _) -> t) args_decls) in
-	  let fptr_exp = K.Lval (translate_lval fptr, K.FunPtr) in
+	  let fptr_exp = K.Lval (translate_lval fptr, Newspeak.FunPtr) in
 	    
 	  let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
 	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
@@ -681,12 +692,12 @@ and translate_call x lv args_exps =
 
 
 let translate_fun name spec =
-  match spec.pargs, spec.plocs, spec.pcil_body with
+  match spec.K.pargs, spec.K.plocs, spec.K.pcil_body with
       Some formals, Some locals, Some cil_body ->
-	cur_loc := spec.ploc;
+	cur_loc := spec.K.ploc;
 	let floc = !cur_loc in
 	let status = 
-	  match spec.prett with
+	  match spec.K.prett with
 	    | None -> empty_status ()
 	    | Some _ ->
 		push_local ();
@@ -695,13 +706,15 @@ let translate_fun name spec =
 	  List.iter (loc_declare false) formals;
 	  List.iter (loc_declare true) locals;
 	  
-	  let blk = K.simplify((translate_stmts status cil_body.bstmts)@
-				 [K.Label status.return_lbl, floc]) in
+	  let blk = 
+	    (translate_stmts status cil_body.bstmts)@
+	      [K.Label status.return_lbl, floc] 
+	  in
 	  let body = generate_body blk (get_loc_decls ()) in
 
 	    (* TODO ?: Check only one body exists *)
-	    spec.pcil_body <- None;
-	    spec.pbody <- Some body(* pbody should only be Newspeak.blk *)
+	    spec.K.pcil_body <- None;
+	    spec.K.pbody <- Some body(* pbody should only be Newspeak.blk *)
 
 
 
@@ -758,7 +771,7 @@ let compile in_name out_name  =
 	
 	print_endline "Newspeak Object output";
 	print_endline "----------------------";
-	dump_npko npko;
+	Npkil.dump_npko npko;
 	print_newline ();
       end;
       

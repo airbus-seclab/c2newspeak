@@ -87,15 +87,15 @@ val register_cstr : string -> unit
 
 (** returns a Newspeak left value corresponding to a global or a local
     variable *)
-val get_var : Cil.varinfo -> Newspeak.lval
+val get_var : Cil.varinfo -> Npkil.lval
 
 (** [get_cstr] returns the expression giving access to the
     constant string corresponding to s *)
-val get_cstr : string -> Newspeak.exp
+val get_cstr : string -> Npkil.exp
 
 (** returns the Newspeak left value corresponding to the current return
     value *)
-val get_ret_var : status -> Newspeak.lval
+val get_ret_var : status -> Npkil.lval
 
 
 
