@@ -92,16 +92,15 @@ and translate_cast t e =
 (* TODO: optimize by putting translate_exp at the caller of this 
    function! *)
 and translate_scalar_cast cast e t1 t2 = 
+  let e' = translate_exp e in
   match (t1, t2) with
-      (Newspeak.Int k1, Newspeak.Int k2) when k1 = k2 -> 
-	translate_exp e
+      (Newspeak.Int k1, Newspeak.Int k2) when k1 = k2 -> e'
 	
-    | (Newspeak.Int int_t, Newspeak.Int _) -> 
-	K.make_int_coerce int_t (translate_exp e)
+    | (Newspeak.Int int_t, Newspeak.Int _) -> K.make_int_coerce int_t e'
 	
     | (Newspeak.Float _ as t', (Newspeak.Float _ as t))
     | (Newspeak.Float _ as t', (Newspeak.Int _ as t)) ->
-	K.UnOp (Newspeak.Cast (t, t'), translate_exp e)
+	K.UnOp (Newspeak.Cast (t, t'), e')
 	  
     | (Newspeak.Int (sign, sz') as kt', (Newspeak.Float sz as kt)) ->
 	if sign = Newspeak.Unsigned then begin 
@@ -109,31 +108,31 @@ and translate_scalar_cast cast e t1 t2 =
 	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(string_of_cast cast e))
 	end;
-	(K.UnOp (Newspeak.Cast (kt, kt'), translate_exp e))
+	(K.UnOp (Newspeak.Cast (kt, kt'), e'))
 	  
-    | (Newspeak.Ptr, Newspeak.Ptr) -> translate_exp e
+    | (Newspeak.Ptr, Newspeak.Ptr) -> e'
 
     | (Newspeak.FunPtr, Newspeak.FunPtr) ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("probable dangerous cast: "^(string_of_cast cast e));
-	translate_exp e
+	e'
 		      
     | (Newspeak.Int (sign, sz), Newspeak.Ptr)
 	when sz = pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("probable invalid cast "^(string_of_cast cast e));
-	  K.UnOp (Newspeak.PtrToInt (sign, sz), translate_exp e)
+	  K.UnOp (Newspeak.PtrToInt (sign, sz), e')
 	    
     | (Newspeak.Ptr, (Newspeak.Int (_, sz) as int_t))
 	when sz = pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("probable invalid cast "^(string_of_cast cast e));
-	  K.UnOp (Newspeak.Cast (int_t, Newspeak.Ptr), translate_exp e)
+	  K.UnOp (Newspeak.Cast (int_t, Newspeak.Ptr), e')
 	    
     | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) when !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("probable invalid cast "^(string_of_cast cast e));
-	K.UnOp (Newspeak.Cast (kt, kt'), translate_exp e)
+	K.UnOp (Newspeak.Cast (kt, kt'), e')
     
     | _ -> 
 	error "Npkcompile.translate_scalar_cast"
