@@ -11,6 +11,7 @@
 
 (** The type of a program: function definitions and an block
     containing initialisation of the global variables *)
+(* TODO: remove exp list *)
 type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
 
 and gdecl = (string * typ * init_t)

@@ -1,4 +1,7 @@
-open Npkcontext
+let char_size = Cilutils.char_size
+let pointer_size = Cilutils.pointer_size
+
+(* TODO: remove global variables as much as possible *)
 
 (*-------*)
 (* Types *)
@@ -120,8 +123,8 @@ let size_of_scalar t =
   match t with
       Int (_, n) -> n
     | Float n -> n
-    | Ptr -> Cilutils.pointer_size
-    | FunPtr -> Cilutils.pointer_size
+    | Ptr -> pointer_size
+    | FunPtr -> pointer_size
 
 let rec size_of t =
   match t with
@@ -261,6 +264,7 @@ let rec seq sep f l =
     | [e] -> f e
     | e::r -> (f e)^sep^(seq sep f r)
 
+let pretty_print = ref false
 
 let globals = Hashtbl.create 100
 let globals_index = ref 0
@@ -368,7 +372,7 @@ and string_of_binop neg op =
     | Gt _ -> ">"
     | Eq _ -> "=="
     | _ when neg ->
-	error "Newspeak.string_of_binop" "unexpected negation"
+	invalid_arg "Newspeak.string_of_binop: unexpected negation"
     | PlusI -> "+"
     | MinusI -> "-"
     | MultI -> "*"
@@ -606,7 +610,7 @@ let read name =
 
 let init_of_string str = 
   let len = String.length str in
-  let char_typ = Int (Signed, Cilutils.char_size) in
+  let char_typ = Int (Signed, char_size) in
   let res = ref [(len, char_typ, exp_of_int 0)] in
     for i = len - 1 downto 0 do 
       let c = Char.code (String.get str i) in

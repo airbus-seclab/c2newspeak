@@ -1,6 +1,6 @@
 # Project
 DIR = newspeak
-OBJ = ../newspeak/params ../newspeak/cilutils ../newspeak/npkcontext \
+OBJ = ../newspeak/cilutils \
       ../newspeak/newspeak \
       npkstats collector main
 
