@@ -33,6 +33,10 @@ val verb_cil : bool ref
 val verb_npko : bool ref
 val verb_newspeak : bool ref
 
+(** when the pretty_print boolean is set, locals and globals are
+    displayed in a prettier way if possible (with their names) *)
+val pretty_print : bool ref
+
 
 (** Names of the files that are to be compiled / link. The first
     string is the name of the file that need to be read, the second is the

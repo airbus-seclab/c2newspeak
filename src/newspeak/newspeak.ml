@@ -1,3 +1,5 @@
+open Npkcontext
+
 (*-------*)
 (* Types *)
 (*-------*)
@@ -260,8 +262,6 @@ let rec seq sep f l =
     | e::r -> (f e)^sep^(seq sep f r)
 
 
-let pretty_print = ref false
-
 let globals = Hashtbl.create 100
 let globals_index = ref 0
 
@@ -368,7 +368,7 @@ and string_of_binop neg op =
     | Gt _ -> ">"
     | Eq _ -> "=="
     | _ when neg ->
-	failwith ("Newspeak.string_of_binop: unexpected negation")
+	error "Newspeak.string_of_binop" "unexpected negation"
     | PlusI -> "+"
     | MinusI -> "-"
     | MultI -> "*"

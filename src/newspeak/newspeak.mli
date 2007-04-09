@@ -151,10 +151,6 @@ val simplify : blk -> blk
 
 (** {1 Display } *)
 
-(** when the pretty_print boolean is set, locals and globals are
-    displayed in a prettier way if possible (with their names) *)
-val pretty_print : bool ref
-
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string

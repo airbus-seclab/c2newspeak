@@ -256,7 +256,7 @@ let dump_npko inter =
   let lbl_index = ref 0 in
 
   let string_of_lbl l =
-    if not !pretty_print
+    if not !Npkcontext.pretty_print
     then "lbl"^(string_of_int l)
     else
       let pretty_l = try
@@ -287,7 +287,7 @@ let dump_npko inter =
 			    " "^(string_of_lval decls lv2)^";")
 	    
       | Decl (name, t, body) ->
-	  let new_decls = if !pretty_print then (name::decls) else [] in
+	  let new_decls = if !Npkcontext.pretty_print then (name::decls) else [] in
 	    if only then begin
 	      print_endline ((string_of_typ t)^" "^name^";");
 	      dump_blk align new_decls body

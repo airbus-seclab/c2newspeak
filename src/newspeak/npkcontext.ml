@@ -24,6 +24,7 @@ let verb_debug = ref false
 let verb_cil = ref false
 let verb_npko = ref false
 let verb_newspeak = ref true
+let pretty_print = ref false
 
 let verbose boolean () =
   verb_cil := boolean;
@@ -100,13 +101,12 @@ let argslist = [
    "verbose options: displays more debugging info");
   
   ("--npko", Arg.Set (verb_npko),
-   "verbose option: displays NewsPeaK Object intermediate output");
+   "verbose option: displays NewsPeak Object intermediate output");
 
   ("--newspeak", Arg.Set (verb_newspeak),
    "verbose option: displays Newspeak output");
 
-(* TODO: Handle Newspeak.pretty_print boolean *)
-  ("--pretty", Arg.Set (Newspeak.pretty_print),
+  ("--pretty", Arg.Set (pretty_print),
    "verbose options: uses var names for Newspeak display");
 
   ("-v", Arg.Unit (verbose true),
