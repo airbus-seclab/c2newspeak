@@ -10,4 +10,8 @@ val code_to_duplicate : (Cil.label, Cil.stmt list) Hashtbl.t
 
 
 (** TODO: document that *)
-val first_pass : Cil.file -> unit
+val first_pass : 
+  Cil.file -> 
+  (Npkil.String_set.t * Npkil.String_set.t 
+    * (Newspeak.fid, Npkil.fspec_type) Hashtbl.t * Npkil.String_set.t
+    * (string, Npkil.glb_type) Hashtbl.t)

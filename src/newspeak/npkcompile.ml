@@ -637,7 +637,7 @@ and translate_call x lv args_exps =
 		error "Npkcompile.translate_call"
 		  ("invalid type '"^(string_of_type f.vtype)^"'")
 	  in 
-	  let x = Hashtbl.find fun_specs name in
+	  let x = Hashtbl.find !fun_specs name in
 	    (* TODO: not nice! I must clean this up! *)
 	  let fs = match x.K.pargs with
 	    | None -> None
@@ -752,37 +752,45 @@ let compile in_name out_name  =
 
     print_debug "Running first pass...";
     update_loc locUnknown;
-    first_pass cil_file;
-    update_loc locUnknown;
-    print_debug "First pass done.";
-  
-    print_debug ("Translating "^in_name^"...");
-    Hashtbl.iter translate_fun fun_specs;
+    let (glb_used, glb_cstr, fun_specs, fun_called, glb_decls) = 
+      first_pass cil_file 
+    in
+      Npkenv.glb_used := glb_used;
+      Npkenv.glb_cstr := glb_cstr;
+      (* TODO: this is not very nice! *)
+      Npkenv.fun_specs := fun_specs;
+      Npkenv.fun_called := fun_called;
+      Npkenv.glb_decls := glb_decls;
 
-    let npko = Npkenv.create_npkil in_name in
-
-      init_env ();
-      
-      if (!verb_npko) then begin
-	
-	print_endline "Newspeak Object output";
-	print_endline "----------------------";
-	K.dump_npko npko;
-	print_newline ();
-      end;
-      
       update_loc locUnknown;
-      if (out_name <> "") then begin
-	print_debug ("Writing "^(out_name)^"...");
-	let ch_out = open_out_bin out_name in
-	  Marshal.to_channel ch_out "NPKO" [];
-	  Marshal.to_channel ch_out npko [];
-	  close_out ch_out;
-	  print_debug ("Writing done.");
-      end;
+      print_debug "First pass done.";
       
-      init_env();
-      npko
+      print_debug ("Translating "^in_name^"...");
+      Hashtbl.iter translate_fun !Npkenv.fun_specs;
+      
+      let npko = Npkenv.create_npkil in_name in
+	
+	init_env ();
+	
+	if (!verb_npko) then begin
+	  print_endline "Newspeak Object output";
+	  print_endline "----------------------";
+	  K.dump_npko npko;
+	  print_newline ();
+	end;
+	
+	update_loc locUnknown;
+	if (out_name <> "") then begin
+	  print_debug ("Writing "^(out_name)^"...");
+	  let ch_out = open_out_bin out_name in
+	    Marshal.to_channel ch_out "NPKO" [];
+	    Marshal.to_channel ch_out npko [];
+	    close_out ch_out;
+	    print_debug ("Writing done.");
+	end;
+	
+	init_env();
+	npko
 
 
 

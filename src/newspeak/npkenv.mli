@@ -18,21 +18,17 @@ type status = {
 
 (** {1 Compilation variables} *)
 
-val glb_decls : (string, Npkil.glb_type) Hashtbl.t
-val fun_specs : (Newspeak.fid, Npkil.fspec_type) Hashtbl.t
+val glb_decls : (string, Npkil.glb_type) Hashtbl.t ref
+val fun_specs : (Newspeak.fid, Npkil.fspec_type) Hashtbl.t ref
 val fun_called : String_set.t ref
+val glb_used : String_set.t ref
+val glb_cstr : String_set.t ref
+
+val glb_uniquename : Cil.varinfo -> string
 
 val init_env : unit -> unit
 
 val create_npkil : string -> Npkil.intermediate
-
-(** {1 Globals} *)
-
-val update_glob_decl : Cil.varinfo -> unit
-val update_glob_def : Cil.varinfo -> Cil.init option -> unit
-
-
-
 
 (** {1 Locals} *)
 
@@ -63,8 +59,6 @@ val restore_loc_cnt : unit -> unit
 
 (** {1 Functions} *)
 
-val use_fun : Cil.varinfo -> unit
-
 (* TODO: remove this function ??? strange *)
 val extract_ldecl : (int * string * Npkil.typ) -> (string * Npkil.typ)
 
@@ -74,17 +68,7 @@ val extract_ldecl : (int * string * Npkil.typ) -> (string * Npkil.typ)
 (** declaration of a function from a prototype *)
 val update_fun_proto : string -> Cil.typ -> (string * Cil.typ * Cil.attributes) list option -> unit
 
-(** declaration of a function from a definition *)
-val update_fun_def : Cil.fundec -> unit
-
-
 (** {1 Variable id retrieval} *)
-
-(** [register_var v] stores the information that v has been seen *)
-val register_var : Cil.varinfo -> unit
-
-(** [register_cstr s] stores the information that s has been seen *)
-val register_cstr : string -> unit
 
 (** returns a Newspeak left value corresponding to a global or a local
     variable *)

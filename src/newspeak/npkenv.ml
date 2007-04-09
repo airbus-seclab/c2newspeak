@@ -19,15 +19,15 @@ type status = {
 (* Compilation variables *)
 (*-----------------------*)
 
-let glb_decls = Hashtbl.create 100
-let fun_specs = Hashtbl.create 100
+let glb_decls = ref (Hashtbl.create 100)
+let fun_specs = ref (Hashtbl.create 100)
 let glb_used = ref (String_set.empty)
 let fun_called = ref (String_set.empty)
 let glb_cstr = ref (String_set.empty)
 
 let init_env () =
-  Hashtbl.clear glb_decls;
-  Hashtbl.clear fun_specs;
+  Hashtbl.clear !glb_decls;
+  Hashtbl.clear !fun_specs;
   glb_used := String_set.empty;
   fun_called := String_set.empty;
   glb_cstr := String_set.empty
@@ -35,8 +35,8 @@ let init_env () =
 let create_npkil name =
   { 
     ifilename = name;
-    iglobs = Hashtbl.copy glb_decls;
-    ifuns = Hashtbl.copy fun_specs;
+    iglobs = Hashtbl.copy !glb_decls;
+    ifuns = Hashtbl.copy !fun_specs;
     iusedglbs = !glb_used;
     iusedcstr = !glb_cstr;
     iusedfuns = !fun_called
@@ -51,46 +51,6 @@ let glb_uniquename v =
   if v.vstorage = Static
   then (get_cur_file())^"."^v.vname
   else v.vname
-
-
-let update_glob_decl v =
-  let name = glb_uniquename v in
-    try
-      let x = Hashtbl.find glb_decls name in
-	if not (compare_typs x.gtype v.vtype)
-	  (* TODO: add the respective locations *)
-	then error "Npkenv.update_glob_decl"
-	  ("different types for "^name^": '"
-	  ^(string_of_type x.gtype)^"' and '"
-	  ^(string_of_type v.vtype)^"'")
-    with Not_found ->
-      Hashtbl.add glb_decls name
-	{gtype = v.vtype; gloc = translate_loc v.vdecl;
-	 gdefd = false; ginit = None;}
-
-let update_glob_def v i =
-  let name = glb_uniquename v in
-    try
-      let x = Hashtbl.find glb_decls name in
-	if not (compare_typs x.gtype v.vtype)
-	  (* TODO: add the respective locations *)
-	then error "Npkenv.update_glob_decl"
-	  ("different types for "^name^": '"
-	  ^(string_of_type x.gtype)^"' and '"
-	  ^(string_of_type v.vtype)^"'");
-	if x.gdefd (* Should there be an exception here ? *)
-	then error "Npkenv.glb_declare" ("multiple definition for "^name);
-	x.gtype <- v.vtype;
-	x.gdefd <- true;
-	x.gloc <- translate_loc v.vdecl;
-	x.ginit <- i
-    with Not_found ->
-      Hashtbl.add glb_decls name
-	{gtype = v.vtype; gloc = translate_loc v.vdecl;
-	 gdefd = true; ginit = i;}
-
-  
-
 
 (*--------*)
 (* Locals *)
@@ -145,10 +105,6 @@ let restore_loc_cnt () = loc_cnt := !loc_cnt_sav
 (*----------*)
 
 
-
-let use_fun v =
-  fun_called := String_set.add v.vname !fun_called
-
 let extract_ldecl (_, n, t) = (n, t)
 
 
@@ -198,7 +154,7 @@ let update_fun_proto name ret args =
   in
  
     try
-      let x = Hashtbl.find fun_specs name in
+      let x = Hashtbl.find !fun_specs name in
 
       let _ = 
 	match x.prett, rettype with
@@ -217,62 +173,13 @@ let update_fun_proto name ret args =
 	  | Some l1, Some l2 -> compare_formals name l1 l2
       in ()
     with Not_found ->
-      Hashtbl.add fun_specs name
+      Hashtbl.add !fun_specs name
 	{prett = rettype;
 	 pargs = formals; plocs = None;
 	 ploc = !cur_loc; pbody = None;
 	 pcil_body = None;}
 
 
-let update_fun_def f =
-  let name = f.svar.vname in
-
-  let rettype = match f.svar.vtype with
-    | TFun (TVoid _, _, _, _) -> None
-    | TFun (t, _, _, _) -> Some (translate_typ t)
-    | _ ->
-	error "Npkenv.update_fun_def"
-	  ("invalid type \""^(string_of_type f.svar.vtype)^"\"")
-  in
-
-  let translate_local v = v.vid, v.vname, translate_typ v.vtype in
-  let formals = List.map translate_local f.sformals in
-  let locals = List.map translate_local f.slocals in
-
-  try
-    let x = Hashtbl.find fun_specs name in
-      if x.pcil_body <> None
-      then error "Npkenv.update_fun_def"
-	("multiple definition for "^name);
-
-      let _ = 
-	match x.prett, rettype with
-	    None, None -> ()
-	  | Some t1, Some t2 when t1 = t2 -> ()
-	  | _ ->
-	      (* TODO: add the respective types and locations ? *)
-	      error "Npkenv.update_fun_def"
-		("different types for return type of prototype "^name)
-      in
-
-      let _ =
-	match x.pargs with
-	  | None -> ()
-	  | Some l ->
-	      compare_formals name l formals;
-
-      in
-	x.pargs <- Some formals;
-	x.plocs <- Some locals;
-	x.ploc <- !cur_loc;
-	x.pcil_body <- Some f.sbody
-
-    with Not_found ->
-      Hashtbl.add fun_specs name
-	{prett = rettype;
-	 pargs = Some formals; plocs = Some locals;
-	 ploc = !cur_loc; pbody = None;
-	 pcil_body = Some f.sbody;}
 
 
 
@@ -280,15 +187,6 @@ let update_fun_def f =
 (*-----------------------*)
 (* Variable id retrieval *)
 (*-----------------------*)
-
-let register_var cil_var =
-  match cil_var.vtype with
-    | TFun _ -> ()
-    | _ -> let norm_name = glb_uniquename cil_var in
-	glb_used := String_set.add norm_name !glb_used
-
-let register_cstr s =
-  glb_cstr := String_set.add s !glb_cstr
 
 let get_var cil_var =
   (* global variable *)

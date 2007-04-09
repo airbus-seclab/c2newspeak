@@ -2,16 +2,19 @@ open Cil
 open Cilutils
 open Npkcontext
 open Npkutils
-open Npkenv
-
-
 
 
 let local_vids = ref Int_set.empty
 let code_to_duplicate = Hashtbl.create 100
 
-class vistor_first_pass = object
+class visitor_first_pass = 
+object (this)
   inherit nopCilVisitor
+
+  val mutable glb_used = Npkil.String_set.empty
+  val mutable glb_cstr = Npkil.String_set.empty
+
+  method get_used = (glb_used, glb_cstr)
 
   method vglob g =
     update_loc (get_globalLoc g);
@@ -61,12 +64,23 @@ class vistor_first_pass = object
     in
       ChangeDoChildrenPost (f, del_unused)
 
+  method register_var cil_var =
+    match cil_var.vtype with
+      | TFun _ -> ()
+      | _ -> 
+	  let norm_name = Npkenv.glb_uniquename cil_var in
+	    (*TODO: clean up String_set name here: *)
+	    glb_used <- Npkil.String_set.add norm_name glb_used
+	      
+  method register_cstr s =
+    glb_cstr <- Npkil.String_set.add s glb_cstr
+
   (* remembers the local variables used *)
   method vlval lv =
     match lv with
       | Var v, _ ->
 	  if v.vglob
-	  then register_var v
+	  then this#register_var v
 	  else local_vids := Int_set.add v.vid !local_vids;
 	  DoChildren
       | _ -> DoChildren
@@ -75,7 +89,7 @@ class vistor_first_pass = object
   method vexpr e =
     match e with
       | Const (CStr s) ->
-	  register_cstr s;
+	  this#register_cstr s;
 	  SkipChildren
 
       | StartOf lv  -> 
@@ -123,12 +137,162 @@ let check_main_signature t =
 (* TODO: factor out print_warnings by putting together the warnings and 
    selecting which should be verb_warnings or not *)
 let first_pass f =
-  update_loc locUnknown;
-  let visitor = new vistor_first_pass in
+  let glb_decls = Hashtbl.create 100 in
+  let fun_specs = Hashtbl.create 100 in
+  let fun_called = ref (Npkil.String_set.empty) in
+
+(* TODO: there is also one in npkenv remove, simplify ? *)
+  let update_fun_proto name ret args =
+    let ret_t =
+      match ret with
+	| TVoid _ -> None
+	| t -> Some (translate_typ t)
+    in
+
+    let rec translate_formals i l =
+      match l with
+	  [] -> []
+	| (n, t, _)::r ->
+	    let name =
+	      if n="" then "arg" ^ (string_of_int i) else n
+	    in
+	      (-1, name, translate_typ t)::(translate_formals (i+1) r)
+    in
+    let formals = 
+      match args with
+	  None ->
+	    print_warning "Npkenv.update_fun_proto"
+	      ("missing or incomplete prototype for "^name);
+	    None
+	| Some l -> Some (translate_formals 0 l)
+    in
+      
+      try
+	let x = Hashtbl.find fun_specs name in
+
+	let _ = 
+	  match x.Npkil.prett, ret_t with
+	      None, None -> ()
+	    | Some t1, Some t2 when t1 = t2 -> ()
+	    | _ ->
+		(* TODO: add the respective types and locations ? *)
+		error "Npkenv.update_fun_proto"
+		  ("different types for return type of prototype "^name)
+	in
+	  
+	let _ =
+	  match x.Npkil.pargs, formals with
+	    | _, None -> ()
+	    | None, Some _ -> x.Npkil.pargs <- formals
+	    | Some l1, Some l2 -> Npkenv.compare_formals name l1 l2
+	in ()
+      with Not_found ->
+	Hashtbl.add fun_specs name
+	  {prett = ret_t;
+	   Npkil.pargs = formals; Npkil.plocs = None;
+	   Npkil.ploc = !cur_loc; pbody = None;
+	   Npkil.pcil_body = None;}
+  in
+
+  let update_fun_def f =
+    let name = f.svar.vname in
+      
+    let rettype = 
+      match f.svar.vtype with
+	| TFun (TVoid _, _, _, _) -> None
+	| TFun (t, _, _, _) -> Some (translate_typ t)
+	| _ ->
+	    error "Npkenv.update_fun_def"
+	      ("invalid type \""^(string_of_type f.svar.vtype)^"\"")
+    in
+      
+    let translate_local v = v.vid, v.vname, translate_typ v.vtype in
+    let formals = List.map translate_local f.sformals in
+    let locals = List.map translate_local f.slocals in
+      
+      try
+	let x = Hashtbl.find fun_specs name in
+	  if x.Npkil.pcil_body <> None
+	  then error "Npkenv.update_fun_def"
+	    ("multiple definition for "^name);
+	  
+	  let _ = 
+	    match x.Npkil.prett, rettype with
+		None, None -> ()
+	      | Some t1, Some t2 when t1 = t2 -> ()
+	      | _ ->
+		  (* TODO: add the respective types and locations ? *)
+		  error "Npkenv.update_fun_def"
+		    ("different types for return type of prototype "^name)
+	  in
+
+	  let _ =
+	    match x.Npkil.pargs with
+	      | None -> ()
+	      | Some l -> Npkenv.compare_formals name l formals  
+	  in
+	    
+	    x.Npkil.pargs <- Some formals;
+	    x.Npkil.plocs <- Some locals;
+	    x.Npkil.ploc <- !cur_loc;
+	    x.Npkil.pcil_body <- Some f.sbody
+	      
+      with Not_found ->
+	Hashtbl.add fun_specs name
+	  {Npkil.prett = rettype;
+	   Npkil.pargs = Some formals; Npkil.plocs = Some locals;
+	   Npkil.ploc = !cur_loc; pbody = None;
+	   Npkil.pcil_body = Some f.sbody;}
+  in
+
+  let use_fun v =
+    fun_called := Npkil.String_set.add v.vname !fun_called
+  in
+    
+  let update_glob_decl v =
+    let name = Npkenv.glb_uniquename v in
+      try
+	let x = Hashtbl.find glb_decls name in
+	  if not (Npkutils.compare_typs x.Npkil.gtype v.vtype)
+	    (* TODO: add the respective locations *)
+	  then error "Npkenv.update_glob_decl"
+	    ("different types for "^name^": '"
+	      ^(string_of_type x.Npkil.gtype)^"' and '"
+	      ^(string_of_type v.vtype)^"'")
+      with Not_found ->
+	Hashtbl.add glb_decls name
+	  {Npkil.gtype = v.vtype; Npkil.gloc = translate_loc v.vdecl;
+	   Npkil.gdefd = false; Npkil.ginit = None;}
+  in
+
+
+  let update_glob_def v i =
+    let name = Npkenv.glb_uniquename v in
+      try
+	let x = Hashtbl.find glb_decls name in
+	  if not (compare_typs x.Npkil.gtype v.vtype)
+	    (* TODO: add the respective locations *)
+	  then error "Npkenv.update_glob_decl"
+	    ("different types for "^name^": '"
+	      ^(string_of_type x.Npkil.gtype)^"' and '"
+	      ^(string_of_type v.vtype)^"'");
+	  if x.Npkil.gdefd (* Should there be an exception here ? *)
+	  then error "Npkenv.glb_declare" ("multiple definition for "^name);
+	  x.Npkil.gtype <- v.vtype;
+	  x.Npkil.gdefd <- true;
+	  x.Npkil.gloc <- translate_loc v.vdecl;
+	  x.Npkil.ginit <- i
+      with Not_found ->
+	Hashtbl.add glb_decls name
+	  {Npkil.gtype = v.vtype; Npkil.gloc = translate_loc v.vdecl;
+	   Npkil.gdefd = true; Npkil.ginit = i;}
+  in
+
+  let visitor = new visitor_first_pass in
     
   let rec explore g = 
     let loc = get_globalLoc g in
-    let new_g = visitCilGlobal visitor g in
+    let new_g = visitCilGlobal (visitor :> Cil.cilVisitor) g in
       update_loc loc;
       if loc.file <> "<compiler builtins>" then
 	match new_g with
@@ -158,15 +322,17 @@ let first_pass f =
 	      then check_main_signature f.svar.vtype;
 	      update_fun_def f;
 	      
-	  | [GVarDecl (v, _)] ->
-	      update_glob_decl v
+	  | [GVarDecl (v, _)] -> update_glob_decl v
 		  
-	  | [GVar (v, {init = i}, _)] -> 
-	      update_glob_def v i
+	  | [GVar (v, {init = i}, _)] -> update_glob_def v i
 		
 	  | _ ->
 	      error "Npkfirstpass.first_pass.explore"
 		("global "^(string_of_global g)^" not supported")
   in
-    init_env ();
-    List.iter explore f.globals
+
+      update_loc locUnknown;
+      Npkenv.init_env ();
+      List.iter explore f.globals;
+      let (glb_used, glb_cstr) = visitor#get_used in
+	(glb_used, glb_cstr, fun_specs, !fun_called, glb_decls)

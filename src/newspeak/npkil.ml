@@ -74,8 +74,14 @@ type glb_type = {
 (* TODO: replace with typ *)
   mutable gtype : Cil.typ;
   mutable gloc  : Newspeak.location;
+(* This field is false when the global is false *)
+(* When this field is false, the next one is None *)
+(* TODO: should merge this field and the next one *)
   mutable gdefd : bool;
-(* TODO: replace with init_t *)
+(* TODO: replace with init_t option
+   None -> extern variable
+   Some init_t -> defined variable with given initialization value 
+*)
   mutable ginit : Cil.init option;
 }
 
