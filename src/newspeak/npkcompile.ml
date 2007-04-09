@@ -89,8 +89,6 @@ and translate_cast t e =
 		  ("translate cast: Invalid cast "^(string_of_cast cast e))
       end
 	
-(* TODO: optimize by putting translate_exp at the caller of this 
-   function! *)
 and translate_scalar_cast cast e t1 t2 = 
   let e' = translate_exp e in
   match (t1, t2) with

@@ -27,7 +27,6 @@ and lval =
   | Global of vid
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
-  | Shift_tmp of (string * exp)
 
 and exp =
     Const of cte
@@ -404,8 +403,6 @@ let rec string_of_lval decls lv =
     | Global vid -> string_of_global vid
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
-    | Shift_tmp (name, e) -> "Shift_tmp("^name^"["^(string_of_exp decls e)^"])"
-
 
 and string_of_exp decls e =
   match e with

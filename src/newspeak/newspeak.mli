@@ -36,7 +36,6 @@ and lval =
   | Global of vid
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
-  | Shift_tmp of (string * exp)
 
 and exp =
     Const of cte
