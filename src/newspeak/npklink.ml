@@ -51,7 +51,7 @@ let rec replace_stmt (sk, l) =
       | Npkil.Set (lv, e, sca) -> Newspeak.Set (replace_lv lv, replace_exp e, sca)
       | Npkil.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
       | Npkil.Decl (name, t, b) -> 
-	  Newspeak.Decl (name, t, List.map replace_stmt b)
+	  Newspeak.Decl (name, replace_typ t, List.map replace_stmt b)
       | Npkil.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
       | Npkil.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
       | Npkil.Call fn -> Newspeak.Call (replace_fn fn)
@@ -92,13 +92,41 @@ and replace_exp e =
     | Npkil.Const c -> Newspeak.Const c 
     | Npkil.AddrOfFun f -> Newspeak.AddrOfFun f
     | Npkil.AddrOf (lv, sz) -> Newspeak.AddrOf (replace_lv lv, sz)
-    | Npkil.UnOp (o, e) -> Newspeak.UnOp (o, replace_exp e)
-    | Npkil.BinOp (o, e1, e2) -> Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
-	
+    | Npkil.UnOp (o, e) -> Newspeak.UnOp (replace_unop o, replace_exp e)
+    | Npkil.BinOp (o, e1, e2) -> 
+	Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
+
+and replace_unop o =
+  match o with
+      Npkil.Belongs_tmp (l, u) -> Newspeak.Belongs (l, replace_tmp_int u)
+    | Npkil.Coerce r -> Newspeak.Coerce r
+    | Npkil.Not -> Newspeak.Not
+    | Npkil.BNot r -> Newspeak.BNot r
+    | Npkil.PtrToInt k -> Newspeak.PtrToInt k
+    | Npkil.Cast (t1, t2) -> Newspeak.Cast (t1, t2)
+
+and replace_tmp_int x =
+  match x with
+      Npkil.Known i -> i
+    | Npkil.Glob_array_lst name -> 
+	match get_glob_typ name with
+	    Newspeak.Array (_, len) -> Int64.of_int (len-1)
+	  | _ -> raise LenOfArray
+(*error "Npklink.replace_tmp_int" "array type expected"*)
+
 and replace_fn fn =
   match fn with
     | Npkil.FunId f -> Newspeak.FunId f
-    | Npkil.FunDeref (e, t) -> Newspeak.FunDeref (replace_exp e, t)
+    | Npkil.FunDeref (e, t) -> 
+	Newspeak.FunDeref (replace_exp e, replace_ftyp t)
+
+and replace_ftyp (args, ret) =
+  let ret = 
+    match ret with
+	None -> None
+      | Some t -> Some (replace_typ t)
+  in
+    (List.map replace_typ args, ret)
 
 and replace_body body = List.map replace_stmt body
 
@@ -108,6 +136,16 @@ and replace_inits init =
     | Npkil.Init l -> Newspeak.Init (List.map replace_init l)
 
 and replace_init (sz, sca, e) = (sz, sca, replace_exp e)
+
+and replace_typ t =
+  match t with
+      Npkil.Scalar x -> Newspeak.Scalar x
+    | Npkil.Array (t, Some l) -> Newspeak.Array (replace_typ t, l)
+    | Npkil.Array (_, None) -> raise LenOfArray
+    | Npkil.Region (fields, sz) -> 
+	Newspeak.Region (List.map replace_field fields, sz)
+
+and replace_field (offs, t) = (offs, replace_typ t)
 
 (* TODO: should never use Npkcompile here, how can I simplify this 
    to remove it ? *)
@@ -122,7 +160,7 @@ let handle_real_glob g_used name g =
 	    let o = Cilutils.offset_of t off in begin
 	      try
 		match translate_typ (typeOf e) with
-		    Newspeak.Scalar s -> 
+		    Npkil.Scalar s -> 
 		      glb_inits := (o, s, replace_exp (Npkcompile.translate_exp e))::(!glb_inits)
 		  | _ -> error "Npklink.translate_init" "unexpected type of SingleInit"
 	      with LenOfArray ->
@@ -146,10 +184,11 @@ let handle_real_glob g_used name g =
   if (String_set.mem name g_used) || not !remove_temp then begin
     try
       let t = translate_typ g.gtype in
-	glist := (name, t, translate_init g.gloc g.gtype g.ginit)::(!glist);
+	glist := (name, replace_typ t, 
+		 translate_init g.gloc g.gtype g.ginit)::(!glist);
 	let vid = incr glb_cnt in
 	  Hashtbl.add glb_tabl_vid name vid;
-	  Hashtbl.add glb_tabl_typ name t
+	  Hashtbl.add glb_tabl_typ name (replace_typ t)
     with LenOfArray ->
       error "Npklink.handle_real_glob"
 	("unspecified length for global array "^name)
@@ -253,8 +292,7 @@ let handle_file npko =
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
 (* TODO: translate_exp should not be exported ? *)
-  Hashtbl.iter (handle_real_glob !glb_used) 
-    globs;
+  Hashtbl.iter (handle_real_glob !glb_used) globs;
   get_glob_decls ()
 
 let extract_typ (_, _, t) = t
@@ -273,7 +311,8 @@ let generate_funspecs funs =
 	  | None -> None
 	  | Some b -> Some (Newspeak.simplify (replace_body b))
       in
-	Hashtbl.add final_specs name ((args, f.prett), body)
+      let ftyp = replace_ftyp (args, f.prett) in
+	Hashtbl.add final_specs name (ftyp, body)
     end
   in
     Hashtbl.iter (handle_funspec !fun_called) funs;

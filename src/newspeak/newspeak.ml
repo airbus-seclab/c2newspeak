@@ -151,16 +151,6 @@ let rec negate exp =
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
 
-let init_of_string str = 
-  let len = String.length str in
-  let char_typ = Int (Signed, Cilutils.char_size) in
-  let res = ref [(len, char_typ, exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
-	res := (i, char_typ, exp_of_int c)::!res
-    done;
-    (len + 1, !res)
-
 
 
 (* TODO: Look into the simplifications *)
@@ -613,3 +603,14 @@ let read name =
     let prog = Marshal.from_channel cin in
       close_in cin;
       prog
+
+let init_of_string str = 
+  let len = String.length str in
+  let char_typ = Int (Signed, Cilutils.char_size) in
+  let res = ref [(len, char_typ, exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code (String.get str i) in
+	res := (i, char_typ, exp_of_int c)::!res
+    done;
+    (len + 1, !res)
+

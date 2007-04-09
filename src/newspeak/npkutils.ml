@@ -2,9 +2,6 @@ open Cil
 open Cilutils
 open Npkcontext
 
-module String_set = 
-  Set.Make (struct type t = string let compare = Pervasives.compare end)
-
 module Int_set = 
   Set.Make (struct type t = int let compare = Pervasives.compare end)
 
@@ -59,45 +56,57 @@ let translate_logical_binop t o =
     | Shiftrt -> Newspeak.Shiftrt
     | _ -> error "Npkutils.translate_arith_binop" "unexpected operator"
 
-
+(* TODO: look at all callers to translate_typ to remove LenOfArray exception
+   catch *)
 let translate_typ t =
   let rec translate_typ_aux t =
     match t with
-        TInt (ISChar, _) | TInt (IChar, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Signed, char_size))
-      | TInt (IUChar, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Unsigned, char_size))
-      | TInt (IShort, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Signed, short_size))
-      | TInt (IUShort, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Unsigned, short_size))
-      | TInt (IInt, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Signed, int_size))
-      | TInt (IUInt, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Unsigned, int_size))
-      | TInt (ILong, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Signed, long_size))
-      | TInt (IULong, _) -> Newspeak.Scalar (Newspeak.Int (Newspeak.Unsigned, long_size))
+        TInt (ISChar, _) | TInt (IChar, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Signed, char_size))
+      | TInt (IUChar, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, char_size))
+      | TInt (IShort, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Signed, short_size))
+      | TInt (IUShort, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, short_size))
+      | TInt (IInt, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Signed, int_size))
+      | TInt (IUInt, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, int_size))
+      | TInt (ILong, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Signed, long_size))
+      | TInt (IULong, _) -> 
+	  Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, long_size))
 
       | TEnum _ -> translate_typ_aux intType
       | TNamed (info, _) -> translate_typ_aux info.ttype
 
-      | TPtr (TFun _, _) -> Newspeak.Scalar Newspeak.FunPtr
-      | TPtr (_, _) -> Newspeak.Scalar Newspeak.Ptr
+      | TPtr (TFun _, _) -> Npkil.Scalar Newspeak.FunPtr
+      | TPtr (_, _) -> Npkil.Scalar Newspeak.Ptr
           (* We don't have to check that the type pointed is handled
 	     If the pointer is not dereferenced, we don't care, and if
 	     it is dereferenced, we will translate the pointed type *)
 
       | TArray (t, l, _) ->
           let typ = translate_typ_aux t in
-          let len = lenOfArray l in
-            Newspeak.Array (typ, len)
+          let len = 
+	    try Some (lenOfArray l) 
+	    with LenOfArray -> None
+	  in
+            Npkil.Array (typ, len)
 
       | TComp (info, _) ->
           let descr = List.map (translate_field t) info.cfields in
           let sz = size_of t in
-            Newspeak.Region (descr, sz)
+            Npkil.Region (descr, sz)
 
       | TBuiltin_va_list _ ->
 	  error "Npkutils.translate_typ" 
             "variable list of arguments not handled yet"
       
-      | TFloat (FFloat, _) -> Newspeak.Scalar (Newspeak.Float float_size)
+      | TFloat (FFloat, _) -> Npkil.Scalar (Newspeak.Float float_size)
 
-      | TFloat (FDouble, _) -> Newspeak.Scalar (Newspeak.Float double_size)
+      | TFloat (FDouble, _) -> Npkil.Scalar (Newspeak.Float double_size)
 
       | TInt _ | TVoid _ | TFloat _ | TFun _ ->
           error "Npkutils.translate_typ"
@@ -120,7 +129,7 @@ let translate_typ t =
 let translate_rel_binop t1 t2 o =
   let t = 
     match (translate_typ t1, translate_typ t2) with
-	(Newspeak.Scalar t1, Newspeak.Scalar t2) when t1 = t2 -> t1
+	(Npkil.Scalar t1, Npkil.Scalar t2) when t1 = t2 -> t1
       | _ -> 
 	  error "Npkutils.translate_rel_binop"
 	    "incompatible types for comparison"
@@ -182,6 +191,6 @@ let compare_typs t1 t2 =
 
 let isPtr e =
   match translate_typ (typeOf e) with
-    | Newspeak.Scalar Newspeak.Ptr
-    | Newspeak.Scalar Newspeak.FunPtr -> true
+    | Npkil.Scalar Newspeak.Ptr
+    | Npkil.Scalar Newspeak.FunPtr -> true
     | _ -> false

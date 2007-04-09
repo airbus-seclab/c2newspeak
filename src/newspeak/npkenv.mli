@@ -2,7 +2,7 @@
     declaration of globals, locals and functions. It also contains the
     status functions to keep track of current interesting labels *)
 
-open Npkutils
+open Npkil
 
 
 (** {1 Types} *)
@@ -39,11 +39,11 @@ val update_glob_def : Cil.varinfo -> Cil.init option -> unit
 (** {2 Functions used in translate_fun} *)
 
 (** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : bool -> (int * string * Newspeak.typ) -> unit
+val loc_declare : bool -> (int * string * Npkil.typ) -> unit
 
 (** [get_loc_decls ()] returns the current list of local declaration,
     and reset the local handler (counter, hashtable and decl list) *)
-val get_loc_decls : unit -> (string * Newspeak.typ * Newspeak.location) list
+val get_loc_decls : unit -> (string * Npkil.typ * Newspeak.location) list
 
 
 (** {2 Functions used in translate_call} *)
@@ -65,7 +65,8 @@ val restore_loc_cnt : unit -> unit
 
 val use_fun : Cil.varinfo -> unit
 
-val extract_ldecl : (int * string * Newspeak.typ) -> (string * Newspeak.typ)
+(* TODO: remove this function ??? strange *)
+val extract_ldecl : (int * string * Npkil.typ) -> (string * Npkil.typ)
 
 (** allows to update the specification of a function (prototype) when
     called for example *)
@@ -126,5 +127,5 @@ val mem_switch_label : status -> Cil.location -> bool
 
 
 val compare_formals : 
-  string -> (int * string * Newspeak.typ) list 
-  -> (int * string * Newspeak.typ) list -> unit
+  string -> (int * string * Npkil.typ) list 
+  -> (int * string * Npkil.typ) list -> unit

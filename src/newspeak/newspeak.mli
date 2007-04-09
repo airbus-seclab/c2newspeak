@@ -141,8 +141,6 @@ val negate : exp -> exp
 (** [exp_of_int i] wraps i into a Newspeak expression *)
 val exp_of_int : int -> exp
 
-val init_of_string : string -> (int * (size_t * scalar_t * exp) list)
-
 (** Deletion of useless Gotos and Labels *)
 val simplify_gotos : blk -> blk
 
@@ -171,3 +169,5 @@ val dump_fundec : string -> fundec -> unit
 val write : string -> (string list * t) -> unit
 
 val read : string -> (string list * t)
+
+val init_of_string : string -> (int * (size_t * scalar_t * exp) list)

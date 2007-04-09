@@ -1,5 +1,4 @@
 open Cilutils
-open Npkutils
 open Newspeak
 
 type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
@@ -45,6 +44,39 @@ and init_t =
   | Zero
   | Init of (size_t * scalar_t * exp) list
 
+and unop =
+      Belongs_tmp of (Int64.t * tmp_int)
+    | Coerce of (Int64.t * Int64.t)
+    | Not
+    | BNot of (Int64.t * Int64.t)
+    | PtrToInt of ikind
+    | Cast of (scalar_t * scalar_t)
+
+and typ = 
+    Scalar of scalar_t
+  | Array of (typ * tmp_size_t)
+  | Region of (field list * size_t)
+
+and ftyp = typ list * typ option
+
+and field = offset * typ
+
+and tmp_int =
+      Known of Int64.t
+    | Glob_array_lst of string  (* last index of array *)
+
+and tmp_size_t = int option
+
+module String_set :
+  sig
+    type elt = string
+    type t
+    val empty : t
+    val mem : elt -> t -> bool
+    val add : elt -> t -> t
+    val union : t -> t -> t
+    val iter : (elt -> unit) -> t -> unit
+  end
 
 type glb_type = {
   mutable gtype : Cil.typ;
@@ -54,9 +86,9 @@ type glb_type = {
 }
 
 type fspec_type = {
-  mutable prett : Newspeak.typ option;
-  mutable pargs : ((int * string * Newspeak.typ) list) option;
-  mutable plocs : ((int * string * Newspeak.typ) list) option;
+  mutable prett : typ option;
+  mutable pargs : ((int * string * typ) list) option;
+  mutable plocs : ((int * string * typ) list) option;
   mutable ploc  : Newspeak.location;
   mutable pbody : blk option;
   mutable pcil_body : Cil.block option
@@ -66,9 +98,9 @@ type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
   ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
-  iusedglbs : Npkutils.String_set.t;
-  iusedcstr : Npkutils.String_set.t;
-  iusedfuns : Npkutils.String_set.t;
+  iusedglbs : String_set.t;
+  iusedcstr : String_set.t;
+  iusedfuns : String_set.t;
 }
 
 val zero : exp
@@ -77,6 +109,7 @@ val zero_f : exp
 (** [make_int_coerce t e] wraps e into a coerce expression using
     integer bounds of type t *)
 val make_int_coerce : sign_t * size_t -> exp -> exp
+
 
 (** [make_belongs len e] wraps e into a belongs (0, len - 1) *)
 val make_belongs : int -> exp -> exp
@@ -87,3 +120,7 @@ val exp_of_int : int -> exp
 val negate : exp -> exp
 
 val dump_npko : intermediate -> unit
+
+val string_of_typ : typ -> string
+
+val size_of : typ -> int

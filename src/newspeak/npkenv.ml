@@ -167,15 +167,16 @@ let compare_formals name l1 l2 =
 	  (* TODO: add the respective locations *)
 	  error "Npkenv.compare_formals"
 	    ("different types for argument "^n^" in different "
-	     ^"declarations of "^name^": '"^(Newspeak.string_of_typ t1)
-	     ^"' and '"^(Newspeak.string_of_typ t2)^"'")
+	     ^"declarations of "^name^": '"^(Npkil.string_of_typ t1)
+	     ^"' and '"^(Npkil.string_of_typ t2)^"'")
   in
     compare_aux l1 l2
 
 let update_fun_proto name ret args =
-  let rettype = match ret with
-    | TVoid _ -> None
-    | t -> Some (translate_typ t)
+  let rettype = 
+    match ret with
+      | TVoid _ -> None
+      | t -> Some (translate_typ t)
   in
 
   let rec translate_formals i l =
@@ -187,12 +188,13 @@ let update_fun_proto name ret args =
 	  in
 	    (-1, name, translate_typ t)::(translate_formals (i+1) r)
   in
-  let formals = match args with
-      None ->
-	print_warning "Npkenv.update_fun_proto"
-	  ("missing or incomplete prototype for "^name);
-	None
-    | Some l -> Some (translate_formals 0 l)
+  let formals = 
+    match args with
+	None ->
+	  print_warning "Npkenv.update_fun_proto"
+	    ("missing or incomplete prototype for "^name);
+	  None
+      | Some l -> Some (translate_formals 0 l)
   in
  
     try

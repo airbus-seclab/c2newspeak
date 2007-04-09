@@ -1,5 +1,4 @@
 open Cilutils
-open Npkutils
 open Newspeak
 
 type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
@@ -24,9 +23,11 @@ and blk = stmt list
 
 and lval =
     Local of vid
+(* TODO: replace Global_tmp by Global *)
   | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
+(* TODO: remove shift_tmp *)
   | Shift_tmp of (string * exp)
 
 and exp =
@@ -45,18 +46,45 @@ and init_t =
   | Zero
   | Init of (size_t * scalar_t * exp) list
 
+and unop =
+      Belongs_tmp of (Int64.t * tmp_int)
+    | Coerce of (Int64.t * Int64.t)
+    | Not
+    | BNot of (Int64.t * Int64.t)
+    | PtrToInt of ikind
+    | Cast of (scalar_t * scalar_t)
+
+and typ = 
+    Scalar of scalar_t
+  | Array of (typ * tmp_size_t)
+  | Region of (field list * size_t)
+
+and ftyp = typ list * typ option
+
+and field = offset * typ
+
+and tmp_int =
+      Known of Int64.t
+    | Glob_array_lst of string  (* last index of array *)
+
+and tmp_size_t = int option
+
+module String_set = 
+  Set.Make (struct type t = string let compare = Pervasives.compare end)
 
 type glb_type = {
+(* TODO: replace with typ *)
   mutable gtype : Cil.typ;
   mutable gloc  : Newspeak.location;
   mutable gdefd : bool;
+(* TODO: replace with init_t *)
   mutable ginit : Cil.init option;
 }
 
 type fspec_type = {
-  mutable prett : Newspeak.typ option;
-  mutable pargs : ((int * string * Newspeak.typ) list) option;
-  mutable plocs : ((int * string * Newspeak.typ) list) option;
+  mutable prett : typ option;
+  mutable pargs : ((int * string * typ) list) option;
+  mutable plocs : ((int * string * typ) list) option;
   mutable ploc  : Newspeak.location;
   mutable pbody : blk option;
   mutable pcil_body : Cil.block option
@@ -66,9 +94,9 @@ type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
   ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
-  iusedglbs : Npkutils.String_set.t;
-  iusedcstr : Npkutils.String_set.t;
-  iusedfuns : Npkutils.String_set.t;
+  iusedglbs : String_set.t;
+  iusedcstr : String_set.t;
+  iusedfuns : String_set.t;
 }
 
 let zero = Const (CInt64 (Int64.zero))
@@ -77,8 +105,10 @@ let zero_f = Const (CFloat (0., "0."))
 let make_int_coerce int_t e =
   UnOp (Coerce (domain_of_typ int_t), e)
 
+
 let make_belongs len e =
-  UnOp (Belongs (Int64.zero, (Int64.of_int (len-1))), e)
+  UnOp (Belongs_tmp (Int64.zero, Known (Int64.of_int (len-1))), e)
+
 
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
@@ -115,12 +145,28 @@ let string_of_scalar s =
     | Ptr -> "ptr"
     | FunPtr -> "fptr"
 
+let rec string_of_typ t =
+  match t with
+      Scalar s -> string_of_scalar s
+    | Array (t, Some sz) -> (string_of_typ t)^"["^(string_of_size_t sz)^"]"
+    | Array (t, None) -> (string_of_typ t)^"[]"
+    | Region (lst, sz) ->
+	let string_of_elt (off, t) = 
+	  (string_of_typ t)^" "^(string_of_size_t off) 
+	in
+	  "{"^(seq ";" string_of_elt lst)^"}"^(string_of_size_t sz)
+
 let string_of_fid fid = fid
+
+let string_of_tmp_int x =
+  match x with
+      Known i -> Int64.to_string i
+    | Glob_array_lst v -> "len("^v^")-1"
 
 let string_of_unop op =
   match op with
-      Belongs (l,u) ->
-	"belongs["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
+      Belongs_tmp (l,u) ->
+	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"]"
     | Coerce (l,u) ->
 	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
     | Cast (typ, typ') ->
@@ -129,7 +175,7 @@ let string_of_unop op =
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
 	  
-and string_of_binop neg op =
+let string_of_binop neg op =
   match op with
     | Gt _ when neg -> ">="
     | Eq _ when neg -> "<>"
@@ -193,7 +239,7 @@ and string_of_exp decls e =
     | BinOp (op, e1, e2) ->
 	"("^(string_of_exp decls e1)^" "^(string_of_binop false op)^
 	  " "^(string_of_exp decls e2)^")"
-
+	  
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp decls exp)
 
 	  
@@ -337,5 +383,12 @@ let dump_npko inter =
     print_newline ();
 
     print_endline "Function definitions";
-    Hashtbl.iter print_fundef inter.ifuns;
+    Hashtbl.iter print_fundef inter.ifuns
+
+let rec size_of t =
+  match t with
+    | Scalar t -> size_of_scalar t
+    | Array (t, Some n) -> (size_of t) * n
+    | Array (_, None) -> invalid_arg "Npkil.size_of: unknown size of array"
+    | Region (_, n) -> n
 

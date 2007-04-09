@@ -1,15 +1,5 @@
 (** Npkutils regroups simple translation functions *)
 
-module String_set :
-  sig
-    type elt = string
-    type t
-    val empty : t
-    val mem : elt -> t -> bool
-    val add : elt -> t -> t
-    val union : t -> t -> t
-    val iter : (elt -> unit) -> t -> unit
-  end
 
 module Int_set :
   sig
@@ -46,7 +36,7 @@ val translate_rel_binop : Cil.typ -> Cil.typ -> Cil.binop -> Newspeak.binop
 
 (** [translate_typ cil_typ] returns the translation of [cil_typ] in
     Newspeak, if the transformation is possible *)
-val translate_typ : Cil.typ -> Newspeak.typ
+val translate_typ : Cil.typ -> Npkil.typ
 
 val compare_typs : Cil.typ -> Cil.typ -> bool
 
