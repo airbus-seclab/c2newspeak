@@ -26,7 +26,6 @@ and lval =
   | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
-  | Shift_tmp of (string * exp)
 
 and exp =
     Const of cte

@@ -68,22 +68,6 @@ and replace_lv lv =
     | Npkil.Global_tmp name -> Newspeak.Global (get_glob_vid name)
     | Npkil.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Npkil.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
-    | Npkil.Shift_tmp (name, e) -> begin
-	match get_glob_typ name with
-	    Newspeak.Array (t, len) ->
-	      let sz = Newspeak.size_of t in
-	      let index_exp =
-		Npkil.BinOp (Newspeak.MultI,
-			    Npkil.make_belongs len e,
-			    Npkil.exp_of_int sz)
-	      in
-	      let v = Npkil.Global_tmp name in
-	      let lv = Npkil.Shift (v, index_exp) in
-		replace_lv lv
-	  | _ -> error "Npklink.replace_lval"
-	      ("type of lval "(*^(Npkil.string_of_lval lv)*)
-		^" is not defined enough")
-      end
     | Npkil.Local v -> Newspeak.Local v
 	
 and replace_exp e =

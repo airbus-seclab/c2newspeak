@@ -27,8 +27,6 @@ and lval =
   | Global_tmp of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
-(* TODO: remove shift_tmp *)
-  | Shift_tmp of (string * exp)
 
 and exp =
     Const of cte
@@ -220,8 +218,6 @@ let rec string_of_lval decls lv =
     | Global_tmp name -> "Global_tmp("^name^")"
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
-    | Shift_tmp (name, e) -> "Shift_tmp("^name^"["^(string_of_exp decls e)^"])"
-
 
 and string_of_exp decls e =
   match e with
