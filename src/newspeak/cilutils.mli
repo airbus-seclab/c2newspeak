@@ -42,6 +42,8 @@ val string_of_lval : Cil.lval -> string
 val string_of_instr : Cil.instr -> string
 val string_of_attribute : Cil.attribute -> string
 
+val string_of_cast : (Cil.typ * Cil.typ) -> Cil.exp -> string
+
 val dump : Pervasives.out_channel -> Cil.file -> unit
 
 

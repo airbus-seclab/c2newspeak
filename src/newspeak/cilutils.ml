@@ -72,6 +72,12 @@ let string_of_instr x =
 let string_of_attribute a =
   Pretty.sprint 100 (printAttr !cilPrinter () a)
 
+let string_of_cast (t_src, t_dst) e =
+  let cast = string_of_exp (CastE (t_dst, e)) in
+  let t_src = string_of_type t_src in
+  let t_dst = string_of_type t_dst in
+    "'"^t_src^"' -> '"^t_dst^"' in '"^cast^"'"
+
 let dump stdout file = dumpFile !cilPrinter stdout "" file
 
 
