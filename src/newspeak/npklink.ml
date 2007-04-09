@@ -114,12 +114,12 @@ and replace_ftyp (args, ret) =
 
 and replace_body body = List.map replace_stmt body
 
-and replace_inits init =
+and replace_init init =
   match init with
-    | Npkil.Zero -> Newspeak.Zero
-    | Npkil.Init l -> Newspeak.Init (List.map replace_init l)
+    | None -> if !global_zero_init then Newspeak.Zero else Newspeak.Init []
+    | Some l -> Newspeak.Init (List.map replace_init_field l)
 
-and replace_init (sz, sca, e) = (sz, sca, replace_exp e)
+and replace_init_field (sz, sca, e) = (sz, sca, replace_exp e)
 
 and replace_typ t =
   match t with
@@ -131,51 +131,30 @@ and replace_typ t =
 
 and replace_field (offs, t) = (offs, replace_typ t)
 
+
+(*
+  TODO: implement --accept-extern
+*)
+
 (* TODO: should never use Npkcompile here, how can I simplify this 
    to remove it ? *)
 let handle_real_glob g_used name g =
-
-  let translate_init loc t init =
-    let glb_inits = ref [] in
-      
-    let rec expand off i =
-      match i with
-	  SingleInit e ->
-	    let o = Cilutils.offset_of t off in begin
-	      try
-		match translate_typ (typeOf e) with
-		    Npkil.Scalar s -> 
-		      glb_inits := (o, s, replace_exp (Npkcompile.translate_exp e))::(!glb_inits)
-		  | _ -> error "Npklink.translate_init" "unexpected type of SingleInit"
-	      with LenOfArray ->
-		error "Npklink.translate_init"
-		  ("unspecified length for global array "^name)
-	      end;
-	| CompoundInit (_, c) -> List.iter (expand_elem off) c
-    and expand_elem prefix (off, i) = expand (addOffset off prefix) i in
-      
-      match init with
-	| None ->
-	    if !global_zero_init
-	    then Newspeak.Zero
-	    else Newspeak.Init []
-	| Some i -> 
-	    cur_loc := loc;
-	    expand NoOffset i;
-            Newspeak.Init (List.rev (!glb_inits))
-  in
-
   if (String_set.mem name g_used) || not !remove_temp then begin
-    try
-      let t = translate_typ g.gtype in
-	glist := (name, replace_typ t, 
-		 translate_init g.gloc g.gtype g.ginit)::(!glist);
-	let vid = incr glb_cnt in
-	  Hashtbl.add glb_tabl_vid name vid;
-	  Hashtbl.add glb_tabl_typ name (replace_typ t)
-    with LenOfArray ->
-      error "Npklink.handle_real_glob"
-	("unspecified length for global array "^name)
+    let i =
+      match g.ginit with
+	| Some i -> i
+	| None when !accept_extern -> None
+	| None -> invalid_arg "Npklink.handle_real_glob: extern not accepted"
+    in
+    let t = translate_typ g.gtype in
+      try
+	glist := (name, replace_typ t, replace_init i)::(!glist);
+      let vid = incr glb_cnt in
+	Hashtbl.add glb_tabl_vid name vid;
+	Hashtbl.add glb_tabl_typ name (replace_typ t)
+      with LenOfArray -> 
+	error "Npklink.handle_real_glob" 
+	  ("unspecified length for global array "^name)
   end
     
 let handle_cstr str =
@@ -210,13 +189,12 @@ let update_glob_link name g =
 	("different types for "^name^": '"
 	 ^(Cilutils.string_of_type x.gtype)^"' and '"
 	 ^(Cilutils.string_of_type g.gtype)^"'");
-      match g, x with
-	  {ginit = None}, _ when not g.gdefd && x.gdefd -> ()
-	  | _, {ginit = None} when g.gdefd && not x.gdefd ->
-	      Hashtbl.replace glb_decls name g
-	  | _ when not x.gdefd && not g.gdefd -> ()
-	  | _ -> error "Npklink.update_glob_link"
-	      ("multiple definition of "^name);
+      match g.ginit, x.ginit with
+	  (None, Some _) -> ()
+	| (Some _, None) -> Hashtbl.replace glb_decls name g
+	| (None, None) -> ()
+	| _ -> 
+	    error "Npklink.update_glob_link" ("multiple definition of "^name)
   with Not_found ->
     Hashtbl.add glb_decls name g
 

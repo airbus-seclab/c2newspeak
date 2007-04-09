@@ -39,9 +39,7 @@ and fn =
     FunId of fid
   | FunDeref of (exp * ftyp)
 
-and init_t = 
-  | Zero
-  | Init of (size_t * scalar_t * exp) list
+and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
       Belongs_tmp of (Int64.t * tmp_int)
@@ -77,11 +75,14 @@ module String_set :
     val iter : (elt -> unit) -> t -> unit
   end
 
+(* TODO: extern storage not well handled !!! 
+   By default, we accept extern as if they were declared but not defined 
+*)
 type glb_type = {
   mutable gtype : Cil.typ;
   mutable gloc  : Newspeak.location;
-  mutable gdefd : bool;
-  mutable ginit : Cil.init option;
+(* None is for extern *)
+  mutable ginit : init_t option;
 }
 
 type fspec_type = {

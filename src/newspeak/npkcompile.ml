@@ -6,7 +6,6 @@ open Cilutils
 open Npkcontext
 open Npkutils
 open Npkenv
-open Npkfirstpass
 
 module K = Npkil
 
@@ -393,7 +392,8 @@ and translate_stmtkind status kind =
 		[] -> error "Npkcompile.translate_stmtkind" "unexpected goto"
 	      | (Label (s, loc, false) as l)::r -> begin
 		  try
-		    translate_stmts status (Hashtbl.find code_to_duplicate l)
+		    translate_stmts status 
+		      (Hashtbl.find Npkfirstpass.code_to_duplicate l)
 		  with Not_found -> explore_labels r
 		end
 	      | lbl::r -> explore_labels r
@@ -718,9 +718,49 @@ let translate_fun name spec =
     | _ -> ()
 
 
+let translate_init x t =
+  let glb_inits = ref [] in
+    
+  let rec expand off i =
+    match i with
+	SingleInit e ->
+	  let o = Cilutils.offset_of t off in
+	  let v = 
+	    match translate_typ (typeOf e) with
+		K.Scalar s -> (o, s, translate_exp e)
+		  (* TODO: check all error messages! *)
+	      | _ -> 
+		  error "Npklink.translate_init" 
+		    "unexpected type of SingleInit"
+	  in
+	    glb_inits := v::(!glb_inits)
+      | CompoundInit (_, c) -> List.iter (expand_elem off) c
 
+  and expand_elem prefix (off, i) = 
+    expand (addOffset off prefix) i
+  in
 
+    match x with
+	None -> None
+      | Some i ->
+	  expand NoOffset i;
+	  Some (List.rev !glb_inits)
 
+let translate_glb name x =
+  let init =
+    if x.Npkfirstpass.gdefd then begin
+      Some (translate_init x.Npkfirstpass.ginit x.Npkfirstpass.gtype)
+    end else begin
+      assert (x.Npkfirstpass.ginit = None);
+      None
+    end
+  in
+  let glb = 
+    { K.gtype = x.Npkfirstpass.gtype; 
+      K.gloc = x.Npkfirstpass.gloc; 
+      K.ginit = init } 
+  in
+    Hashtbl.add Npkenv.glb_decls name glb
 
 
 
@@ -753,19 +793,20 @@ let compile in_name out_name  =
     print_debug "Running first pass...";
     update_loc locUnknown;
     let (glb_used, glb_cstr, fun_specs, fun_called, glb_decls) = 
-      first_pass cil_file 
+      Npkfirstpass.first_pass cil_file 
     in
       Npkenv.glb_used := glb_used;
       Npkenv.glb_cstr := glb_cstr;
       (* TODO: this is not very nice! *)
       Npkenv.fun_specs := fun_specs;
       Npkenv.fun_called := fun_called;
-      Npkenv.glb_decls := glb_decls;
 
       update_loc locUnknown;
       print_debug "First pass done.";
       
       print_debug ("Translating "^in_name^"...");
+
+      Hashtbl.iter translate_glb glb_decls;
       Hashtbl.iter translate_fun !Npkenv.fun_specs;
       
       let npko = Npkenv.create_npkil in_name in

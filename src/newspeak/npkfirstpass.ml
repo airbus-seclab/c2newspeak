@@ -3,6 +3,12 @@ open Cilutils
 open Npkcontext
 open Npkutils
 
+type glb_type = {
+  mutable gtype : Cil.typ;
+  mutable gloc : Newspeak.location;
+  mutable gdefd : bool;
+  mutable ginit : Cil.init option;
+}
 
 let local_vids = ref Int_set.empty
 let code_to_duplicate = Hashtbl.create 100
@@ -253,16 +259,16 @@ let first_pass f =
     let name = Npkenv.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
-	  if not (Npkutils.compare_typs x.Npkil.gtype v.vtype)
+	  if not (Npkutils.compare_typs x.gtype v.vtype)
 	    (* TODO: add the respective locations *)
 	  then error "Npkenv.update_glob_decl"
 	    ("different types for "^name^": '"
-	      ^(string_of_type x.Npkil.gtype)^"' and '"
+	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'")
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {Npkil.gtype = v.vtype; Npkil.gloc = translate_loc v.vdecl;
-	   Npkil.gdefd = false; Npkil.ginit = None;}
+	  {gtype = v.vtype; gloc = translate_loc v.vdecl;
+	   gdefd = false; ginit = None;}
   in
 
 
@@ -270,22 +276,22 @@ let first_pass f =
     let name = Npkenv.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
-	  if not (compare_typs x.Npkil.gtype v.vtype)
+	  if not (compare_typs x.gtype v.vtype)
 	    (* TODO: add the respective locations *)
 	  then error "Npkenv.update_glob_decl"
 	    ("different types for "^name^": '"
-	      ^(string_of_type x.Npkil.gtype)^"' and '"
+	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
-	  if x.Npkil.gdefd (* Should there be an exception here ? *)
+	  if x.gdefd (* Should there be an exception here ? *)
 	  then error "Npkenv.glb_declare" ("multiple definition for "^name);
-	  x.Npkil.gtype <- v.vtype;
-	  x.Npkil.gdefd <- true;
-	  x.Npkil.gloc <- translate_loc v.vdecl;
-	  x.Npkil.ginit <- i
+	  x.gtype <- v.vtype;
+	  x.gdefd <- true;
+	  x.gloc <- translate_loc v.vdecl;
+	  x.ginit <- i
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {Npkil.gtype = v.vtype; Npkil.gloc = translate_loc v.vdecl;
-	   Npkil.gdefd = true; Npkil.ginit = i;}
+	  {gtype = v.vtype; gloc = translate_loc v.vdecl;
+	   gdefd = true; ginit = i;}
   in
 
   let visitor = new visitor_first_pass in

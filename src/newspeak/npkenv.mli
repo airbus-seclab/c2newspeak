@@ -18,7 +18,7 @@ type status = {
 
 (** {1 Compilation variables} *)
 
-val glb_decls : (string, Npkil.glb_type) Hashtbl.t ref
+val glb_decls : (string, Npkil.glb_type) Hashtbl.t
 val fun_specs : (Newspeak.fid, Npkil.fspec_type) Hashtbl.t ref
 val fun_called : String_set.t ref
 val glb_used : String_set.t ref

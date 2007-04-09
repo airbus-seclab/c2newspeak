@@ -40,9 +40,7 @@ and fn =
     FunId of fid
   | FunDeref of (exp * ftyp)
 
-and init_t = 
-  | Zero
-  | Init of (size_t * scalar_t * exp) list
+and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
       Belongs_tmp of (Int64.t * tmp_int)
@@ -74,15 +72,7 @@ type glb_type = {
 (* TODO: replace with typ *)
   mutable gtype : Cil.typ;
   mutable gloc  : Newspeak.location;
-(* This field is false when the global is false *)
-(* When this field is false, the next one is None *)
-(* TODO: should merge this field and the next one *)
-  mutable gdefd : bool;
-(* TODO: replace with init_t option
-   None -> extern variable
-   Some init_t -> defined variable with given initialization value 
-*)
-  mutable ginit : Cil.init option;
+  mutable ginit : init_t option;
 }
 
 type fspec_type = {
@@ -341,8 +331,29 @@ let dump_npko inter =
 	  List.iter (dump_assert align2 decls) others;
 	  dump_blk align2 decls b
   in
-    
 
+  let dump_init i =
+    let dump_elt (o, s, e) =
+      print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "
+		     ^(string_of_exp [] e));
+    in
+    let rec dump_init l =
+      match l with
+	| [] -> ()
+	| [e] -> dump_elt e
+	| e::r ->
+	    dump_elt e;
+	    print_string ";";
+	    dump_init r
+    in
+      match i with
+	| None -> ()
+	| Some i -> 
+	    print_string " = {";
+	    dump_init i;
+	    print_endline "}"
+  in
+  
   let dump_fundec name body =
     match body with
 	None -> ()
@@ -363,11 +374,13 @@ let dump_npko inter =
   in
 
   let print_glob n g =
-    if not g.gdefd then print_string "extern ";
-    print_string ((string_of_type g.gtype)^" "^n);
-    match g.ginit with
-	None -> print_endline ";"
-      | Some i -> print_endline (" = "^(string_of_init i)^";")
+    let str = (string_of_type g.gtype)^" "^n in
+      match g.ginit with
+	  None -> print_endline ("extern "^str^";")
+	| Some i -> 
+	    print_string str;
+	    dump_init i;
+	    print_endline ";"
   in
 
   let print_fundef n f =

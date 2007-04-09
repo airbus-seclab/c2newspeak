@@ -19,14 +19,14 @@ type status = {
 (* Compilation variables *)
 (*-----------------------*)
 
-let glb_decls = ref (Hashtbl.create 100)
+let glb_decls = Hashtbl.create 100
 let fun_specs = ref (Hashtbl.create 100)
 let glb_used = ref (String_set.empty)
 let fun_called = ref (String_set.empty)
 let glb_cstr = ref (String_set.empty)
 
 let init_env () =
-  Hashtbl.clear !glb_decls;
+  Hashtbl.clear glb_decls;
   Hashtbl.clear !fun_specs;
   glb_used := String_set.empty;
   fun_called := String_set.empty;
@@ -35,7 +35,7 @@ let init_env () =
 let create_npkil name =
   { 
     ifilename = name;
-    iglobs = Hashtbl.copy !glb_decls;
+    iglobs = Hashtbl.copy glb_decls;
     ifuns = Hashtbl.copy !fun_specs;
     iusedglbs = !glb_used;
     iusedcstr = !glb_cstr;
