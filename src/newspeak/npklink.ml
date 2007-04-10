@@ -3,6 +3,8 @@ open Npkutils
 open Npkcontext
 open Npkil
 
+let (size_of_scalar, size_of) = Newspeak.create_size_of Cilutils.pointer_size
+
 let filenames = ref []
 
 
@@ -98,11 +100,9 @@ and replace_tmp_int x =
     | Npkil.Length name -> begin
 	match get_glob_typ name with
 	    Newspeak.Array (_, len) -> len
-	  | _ -> raise LenOfArray
+	  | _ -> error "Npklink.replace_tmp_int" "array type expected"
       end
-    | Npkil.SizeOf name ->
-	Newspeak.size_of Cilutils.pointer_size (get_glob_typ name)
-(*error "Npklink.replace_tmp_int" "array type expected"*)
+    | Npkil.SizeOf name -> size_of (get_glob_typ name)
 
 and replace_fn fn =
   match fn with
@@ -154,10 +154,11 @@ let handle_real_glob g_used name g =
     in
     let t = translate_typ g.gtype in
       try
-	glist := (name, replace_typ t, replace_init i)::(!glist);
-      let vid = incr glb_cnt in
-	Hashtbl.add glb_tabl_vid name vid;
-	Hashtbl.add glb_tabl_typ name (replace_typ t)
+	let t = replace_typ t in
+	let vid = incr glb_cnt in
+	  glist := (name, t, replace_init i)::(!glist);
+	  Hashtbl.add glb_tabl_vid name vid;
+	  Hashtbl.add glb_tabl_typ name t
       with LenOfArray -> 
 	error "Npklink.handle_real_glob" 
 	  ("unspecified length for global array "^name)
@@ -305,7 +306,7 @@ let link npkos =
   List.iter handle_file npkos;
   let decls = generate_globals glb_decls in
   let funs = generate_funspecs fun_specs in
-  let kernel = (decls, funs, Cilutils.pointer_size) in
+  let kernel = (decls, funs) in
   print_debug "File linked.";
 
   if !verb_newspeak then begin
@@ -315,4 +316,4 @@ let link npkos =
     print_newline ()
   end;
 
-  (!filenames, kernel)
+  (!filenames, kernel, Cilutils.pointer_size)

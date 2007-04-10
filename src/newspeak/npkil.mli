@@ -123,5 +123,3 @@ val negate : exp -> exp
 val dump_npko : intermediate -> unit
 
 val string_of_typ : typ -> string
-
-val size_of : typ -> int

@@ -81,6 +81,7 @@ type fspec_type = {
   mutable plocs : ((int * string * typ) list) option;
   mutable ploc  : Newspeak.location;
   mutable pbody : blk option;
+(* TODO: remove this *)
   mutable pcil_body : Cil.block option
 }
 
@@ -396,11 +397,4 @@ let dump_npko inter =
 
     print_endline "Function definitions";
     Hashtbl.iter print_fundef inter.ifuns
-
-let rec size_of t =
-  match t with
-    | Scalar t -> Newspeak.size_of_scalar Cilutils.pointer_size t
-    | Array (t, Some n) -> (size_of t) * n
-    | Array (_, None) -> invalid_arg "Npkil.size_of: unknown size of array"
-    | Region (_, n) -> n
 

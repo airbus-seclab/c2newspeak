@@ -28,7 +28,7 @@ let _ =
   end;
 
   try
-    let (_, npk) = Newspeak.read !fname in
+    let (_, npk, _) = Newspeak.read !fname in
       Collector.count npk;
       print_endline (Npkstats.to_string ())
   with Invalid_argument s -> 

@@ -4,7 +4,7 @@
 (* Types *)
 (*-------*)
 
-type t = (gdecl list * (fid, fundec) Hashtbl.t * size_t)
+type t = (gdecl list * (fid, fundec) Hashtbl.t)
 
 and gdecl = (string * typ * init_t)
 
@@ -98,7 +98,9 @@ and offset = int
 
 and location = string * int * int
 
+type size_of = typ -> size_t
 
+type size_of_scalar = scalar_t -> size_t
 
 
 (*-----------*)
@@ -116,18 +118,21 @@ let locUnknown = ("", -1, -1)
 (* Manipualtion and Simplifications *)
 (*----------------------------------*)
 
-let size_of_scalar ptr_sz t =
-  match t with
-      Int (_, n) -> n
-    | Float n -> n
-    | Ptr -> ptr_sz
-    | FunPtr -> ptr_sz
-
-let rec size_of ptr_sz t =
-  match t with
-    | Scalar t -> size_of_scalar ptr_sz t
-    | Array (t, n) -> (size_of ptr_sz t) * n
-    | Region (_, n) -> n
+let create_size_of ptr_sz =
+  let size_of_scalar t =
+    match t with
+	Int (_, n) -> n
+      | Float n -> n
+      | Ptr -> ptr_sz
+      | FunPtr -> ptr_sz
+  in
+  let rec size_of t =
+    match t with
+      | Scalar t -> size_of_scalar t
+      | Array (t, n) -> (size_of t) * n
+      | Region (_, n) -> n
+  in
+    (size_of_scalar, size_of)
 
 let domain_of_typ (sign, size) =
     match sign, size with
@@ -552,7 +557,7 @@ let string_of_exp e = (string_of_exp [] e)
 
 let string_of_lval lv = (string_of_lval [] lv)
 
-let dump (gdecls, fundecs, ptr_sz) =
+let dump (gdecls, fundecs) =
   let rec collect_globals_name g =
     match g with
 	[] -> ()
@@ -587,10 +592,12 @@ let dump_fundec name (_, body) =
     dump_fundec name body;
     pretty_print := old_pretty
 
-let write name prog =
+let write name (filenames, prog, ptr_sz) =
   let cout = open_out_bin name in
     Marshal.to_channel cout "NPK!" [];
+    Marshal.to_channel cout filenames [];
     Marshal.to_channel cout prog [];
+    Marshal.to_channel cout ptr_sz [];
     close_out cout
 
 let read name = 
@@ -598,9 +605,11 @@ let read name =
   let str = Marshal.from_channel cin in
     if str <> "NPK!" 
     then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
+    let filenames = Marshal.from_channel cin in
     let prog = Marshal.from_channel cin in
+    let ptr_sz = Marshal.from_channel cin in
       close_in cin;
-      prog
+      (filenames, prog, ptr_sz)
 
 
 (* Implement two dumps, a pretty and an bare one *)

@@ -11,7 +11,7 @@
 
 (** The type of a program: function definitions and an block
     containing initialisation of the global variables *)
-type t = (gdecl list * (fid, fundec) Hashtbl.t * size_t)
+type t = (gdecl list * (fid, fundec) Hashtbl.t)
 
 and gdecl = (string * typ * init_t)
 
@@ -118,14 +118,6 @@ val locUnknown : location
 
 (** {1 Manipualtion and Simplifications} *)
 
-(** [size_of ptr_sz t]
-    returns the size of a value of type as the number of bytes it
-    takes when stored in memory.
-    It needs the size of pointers
-*)
-val size_of : size_t -> typ -> size_t
-
-val size_of_scalar : size_t -> scalar_t -> size_t
 
 (** Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type *)
@@ -165,6 +157,19 @@ val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
 
-val write : string -> (string list * t) -> unit
+val write : string -> (string list * t * size_t) -> unit
 
-val read : string -> (string list * t)
+val read : string -> (string list * t * size_t)
+
+(** 
+    Type of size_of function.
+    [size_of ptr_sz t]
+    returns the size of a value of type as the number of bytes it
+    takes when stored in memory.
+    It needs the size of pointers
+*)
+type size_of = typ -> size_t
+
+type size_of_scalar = scalar_t -> size_t
+
+val create_size_of : size_t -> (size_of_scalar * size_of)

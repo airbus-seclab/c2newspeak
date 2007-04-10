@@ -135,27 +135,29 @@ and translate_scalar_cast cast e t1 t2 =
 	  ("translate cast: Invalid cast "^(string_of_cast cast e))
 
 and translate_access lv e =
-  match translate_typ (typeOfLval lv) with
-      K.Array (elt_t, len) ->
-	let elt_sz = K.size_of elt_t in
-	let (len, sz) =
-	  match (len, lv) with
-	    | (Some len, _) -> (K.Known len, K.Known (len * elt_sz))
-	    | (None, (Var v, NoOffset)) -> (K.Length v.vname, K.SizeOf v.vname)
-	    | _ -> 
-		error "Npkcompile.translate_access"
-		  ("type of lval "^(string_of_lval lv)
-		   ^" is not defined enough")
-	in
-	let checked_index = 
-	  K.UnOp (K.Belongs_tmp (Int64.zero, len), translate_exp e) 
-	in
-	let offs = 
-	  K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz) 
-	in
-	  (offs, sz)
-	    
-    | _ -> error "Npkcompile.translate_access" "array expected"
+  let t = typeOfLval lv in
+    match translate_typ t with
+	K.Array (elt_t, len) ->
+	  let elt_sz = size_of_subtyp t in
+	  let (len, sz) =
+	    match (len, lv) with
+	      | (Some len, _) -> (K.Known len, K.Known (len * elt_sz))
+	      | (None, (Var v, NoOffset)) -> 
+		  (K.Length v.vname, K.SizeOf v.vname)
+	      | _ -> 
+		  error "Npkcompile.translate_access"
+		    ("type of lval "^(string_of_lval lv)
+		      ^" is not defined enough")
+	  in
+	  let checked_index = 
+	    K.UnOp (K.Belongs_tmp (Int64.zero, len), translate_exp e) 
+	  in
+	  let offs = 
+	    K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz) 
+	  in
+	    (offs, sz)
+	      
+      | _ -> error "Npkcompile.translate_access" "array expected"
       
      
 and translate_lval lv =
