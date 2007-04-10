@@ -23,14 +23,14 @@ and blk = stmt list
 
 and lval =
     Local of vid
-  | Global_tmp of string
+  | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
 and exp =
     Const of cte
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * size_t)
+  | AddrOf of (lval * tmp_int)
   | AddrOfFun of fid
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
@@ -59,8 +59,9 @@ and ftyp = typ list * typ option
 and field = offset * typ
 
 and tmp_int =
-      Known of Int64.t
-    | Glob_array_lst of string  (* last index of array *)
+      Known of int
+    | Length of string
+    | SizeOf of string
 
 and tmp_size_t = int option
 
@@ -112,7 +113,7 @@ val make_int_coerce : sign_t * size_t -> exp -> exp
 
 
 (** [make_belongs len e] wraps e into a belongs (0, len - 1) *)
-val make_belongs : int -> exp -> exp
+(*val make_belongs : int -> exp -> exp*)
 
 (** [exp_of_int i] wraps i into a Newspeak expression *)
 val exp_of_int : int -> exp

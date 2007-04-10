@@ -65,7 +65,7 @@ and replace_chooseitem (exps, b) =
     
 and replace_lv lv =
   match lv with
-    | Npkil.Global_tmp name -> Newspeak.Global (get_glob_vid name)
+    | Npkil.Global name -> Newspeak.Global (get_glob_vid name)
     | Npkil.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Npkil.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
     | Npkil.Local v -> Newspeak.Local v
@@ -75,14 +75,17 @@ and replace_exp e =
     | Npkil.Lval (lv, sca) -> Newspeak.Lval (replace_lv lv, sca)
     | Npkil.Const c -> Newspeak.Const c 
     | Npkil.AddrOfFun f -> Newspeak.AddrOfFun f
-    | Npkil.AddrOf (lv, sz) -> Newspeak.AddrOf (replace_lv lv, sz)
+    | Npkil.AddrOf (lv, sz) -> 
+	Newspeak.AddrOf (replace_lv lv, replace_tmp_int sz)
     | Npkil.UnOp (o, e) -> Newspeak.UnOp (replace_unop o, replace_exp e)
     | Npkil.BinOp (o, e1, e2) -> 
 	Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
 
 and replace_unop o =
   match o with
-      Npkil.Belongs_tmp (l, u) -> Newspeak.Belongs (l, replace_tmp_int u)
+      Npkil.Belongs_tmp (l, u) -> 
+	let u = Int64.of_int (replace_tmp_int u - 1) in
+	  Newspeak.Belongs (l, u)
     | Npkil.Coerce r -> Newspeak.Coerce r
     | Npkil.Not -> Newspeak.Not
     | Npkil.BNot r -> Newspeak.BNot r
@@ -92,10 +95,12 @@ and replace_unop o =
 and replace_tmp_int x =
   match x with
       Npkil.Known i -> i
-    | Npkil.Glob_array_lst name -> 
+    | Npkil.Length name -> begin
 	match get_glob_typ name with
-	    Newspeak.Array (_, len) -> Int64.of_int (len-1)
+	    Newspeak.Array (_, len) -> len
 	  | _ -> raise LenOfArray
+      end
+    | Npkil.SizeOf name -> Newspeak.size_of (get_glob_typ name)
 (*error "Npklink.replace_tmp_int" "array type expected"*)
 
 and replace_fn fn =

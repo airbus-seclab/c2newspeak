@@ -23,15 +23,14 @@ and blk = stmt list
 
 and lval =
     Local of vid
-(* TODO: replace Global_tmp by Global *)
-  | Global_tmp of string
+  | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
 and exp =
     Const of cte
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * size_t)
+  | AddrOf of (lval * tmp_int)
   | AddrOfFun of fid
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
@@ -60,8 +59,9 @@ and ftyp = typ list * typ option
 and field = offset * typ
 
 and tmp_int =
-      Known of Int64.t
-    | Glob_array_lst of string  (* last index of array *)
+      Known of int
+    | Length of string  (* number of elements in a global array *)
+    | SizeOf of string (* size in number of bytes of a global array *)
 
 and tmp_size_t = int option
 
@@ -98,10 +98,6 @@ let zero_f = Const (CFloat (0., "0."))
 
 let make_int_coerce int_t e =
   UnOp (Coerce (domain_of_typ int_t), e)
-
-
-let make_belongs len e =
-  UnOp (Belongs_tmp (Int64.zero, Known (Int64.of_int (len-1))), e)
 
 
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
@@ -154,13 +150,14 @@ let string_of_fid fid = fid
 
 let string_of_tmp_int x =
   match x with
-      Known i -> Int64.to_string i
-    | Glob_array_lst v -> "len("^v^")-1"
+      Known i -> string_of_int i
+    | Length v -> "len("^v^")"
+    | SizeOf v -> "sizeof("^v^")"
 
 let string_of_unop op =
   match op with
       Belongs_tmp (l,u) ->
-	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"]"
+	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"-1]"
     | Coerce (l,u) ->
 	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
     | Cast (typ, typ') ->
@@ -211,7 +208,7 @@ let string_of_local decls vid =
 let rec string_of_lval decls lv =
   match lv with
       Local vid -> string_of_local decls vid
-    | Global_tmp name -> "Global_tmp("^name^")"
+    | Global name -> "Global("^name^")"
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
 
@@ -219,7 +216,7 @@ and string_of_exp decls e =
   match e with
       Const c -> string_of_cte c
     | Lval (lv, t) -> (string_of_lval decls lv)^"_"^(string_of_scalar t)
-    | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval decls lv)^")"
+    | AddrOf (lv, sz) -> "&_"^(string_of_tmp_int sz)^"("^(string_of_lval decls lv)^")"
     | AddrOfFun fid -> "&fun"^(string_of_fid fid)
 
     (* TODO: Check this ! *)

@@ -192,7 +192,7 @@ let get_var cil_var =
   (* global variable *)
   if cil_var.vglob then begin
     let norm_name = glb_uniquename cil_var in
-      Npkil.Global_tmp norm_name
+      Npkil.Global norm_name
   end else begin
     (* local variables *)
     try
@@ -205,7 +205,8 @@ let get_var cil_var =
   end
 
 let get_cstr s =
-  Npkil.AddrOf (Npkil.Global_tmp ("!const_str_"^s), (String.length s) + 1)
+  Npkil.AddrOf (Npkil.Global ("!const_str_"^s), 
+		Npkil.Known ((String.length s) + 1))
 
 let get_ret_var status = Npkil.Local (!loc_cnt - status.return_var)
 

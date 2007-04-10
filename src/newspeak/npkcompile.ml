@@ -133,7 +133,31 @@ and translate_scalar_cast cast e t1 t2 =
     | _ -> 
 	error "Npkcompile.translate_scalar_cast"
 	  ("translate cast: Invalid cast "^(string_of_cast cast e))
-	
+
+and translate_access lv e =
+  match translate_typ (typeOfLval lv) with
+      K.Array (elt_t, len) ->
+	let elt_sz = K.size_of elt_t in
+	let (len, sz) =
+	  match (len, lv) with
+	    | (Some len, _) -> (K.Known len, K.Known (len * elt_sz))
+	    | (None, (Var v, NoOffset)) -> (K.Length v.vname, K.SizeOf v.vname)
+	    | _ -> 
+		error "Npkcompile.translate_access"
+		  ("type of lval "^(string_of_lval lv)
+		   ^" is not defined enough")
+	in
+	let checked_index = 
+	  K.UnOp (K.Belongs_tmp (Int64.zero, len), translate_exp e) 
+	in
+	let offs = 
+	  K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz) 
+	in
+	  (offs, sz)
+	    
+    | _ -> error "Npkcompile.translate_access" "array expected"
+      
+     
 and translate_lval lv =
   match lv with
     | Var v, NoOffset -> get_var v
@@ -151,31 +175,8 @@ and translate_lval lv =
 		  K.Shift (translate_lval lv', K.exp_of_int o)
 		    
 	    | Index (e, NoOffset) ->
-		let (len, elt_sz) = 
-		  match translate_typ t with
-		    | K.Array (elt_t, len) ->
-			let len =
-			  match (len, lv') with
-			    | (Some len, _) -> K.Known (Int64.of_int (len-1))
-			    | (None, (Var v, NoOffset)) ->
-				K.Glob_array_lst v.vname
-			    | _ -> 
-				error "Npkcompile.translate_lval"
-				  ("type of lval "^(string_of_lval lv')
-				    ^" is not defined enough")
-			in
-			let elt_sz = K.exp_of_int (K.size_of elt_t) in
-			  (len, elt_sz)
-		    | _ -> 
-			error "Npkcompile.translate_lval" "array expected"
-		in
-		let checked_index = 
-		  K.UnOp (K.Belongs_tmp (Int64.zero, len), translate_exp e) 
-		in
-		let offset_exp =
-		  K.BinOp (Newspeak.MultI, checked_index, elt_sz)
-		in
-		  K.Shift (translate_lval lv', offset_exp)
+		let (offs, _) = translate_access lv' e in
+		  K.Shift (translate_lval lv', offs)
 		    
 	    | _ -> error "Npkcompile.translate_lval" "offset not handled"
 
@@ -323,17 +324,14 @@ and translate_exp e =
 	  | _, K.Scalar Newspeak.Ptr ->
 	      let (lv', offs) = removeOffsetLval lv in begin
 		  match offs with 
-		    | Index (e, NoOffset) -> begin
-			match translate_typ (typeOfLval lv') with
-			  | K.Array (t_elt, Some len) ->
-			      let sz = K.size_of t_elt in
-				K.BinOp (Newspeak.PlusPI, K.AddrOf (translate_lval lv', len * sz),
-					 K.BinOp (Newspeak.MultI, K.make_belongs len (translate_exp e), K.exp_of_int sz))
-			  | _ -> error "Npkcompile.translate_exp" "unexpected error"
-		      end
-			
-		    | _ -> let sz = size_of (typeOfLval lv) in
-			K.AddrOf (translate_lval lv, sz)
+		    | Index (e, NoOffset) -> 
+			let (offs, sz) = translate_access lv' e in
+			let lv' = translate_lval lv' in
+			  K.BinOp (Newspeak.PlusPI, K.AddrOf (lv', sz), offs)
+
+		    | _ -> 
+			let sz = size_of (typeOfLval lv) in
+			  K.AddrOf (translate_lval lv, K.Known sz)
 		end
 							 
 	  | _ -> error "Npkcompile.translate_exp"
