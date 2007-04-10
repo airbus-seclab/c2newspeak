@@ -1,2 +1,2 @@
 clean:
-	rm c2newspeak*
+	rm -f c2newspeak*
