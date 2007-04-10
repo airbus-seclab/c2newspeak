@@ -152,9 +152,8 @@ let handle_real_glob g_used name g =
 	| None when !accept_extern -> None
 	| None -> invalid_arg "Npklink.handle_real_glob: extern not accepted"
     in
-    let t = translate_typ g.gtype in
       try
-	let t = replace_typ t in
+	let t = replace_typ g.gtype in
 	let vid = incr glb_cnt in
 	  glist := (name, t, replace_init i)::(!glist);
 	  Hashtbl.add glb_tabl_vid name vid;
@@ -196,17 +195,15 @@ let get_glob_decls () =
     aux [] !glist
 
 
-
-
 let update_glob_link name g =
   try
     let x = Hashtbl.find glb_decls name in
-      if not (compare_typs x.gtype g.gtype)
+      if not (Npkil.compare_typs x.gtype g.gtype)
 	(* TODO: add the respective locations *)
       then error "Npklink.update_glob_link"
 	("different types for "^name^": '"
-	 ^(Cilutils.string_of_type x.gtype)^"' and '"
-	 ^(Cilutils.string_of_type g.gtype)^"'");
+	 ^(Npkil.string_of_typ x.gtype)^"' and '"
+	 ^(Npkil.string_of_typ g.gtype)^"'");
       match g.ginit, x.ginit with
 	  (None, Some _) -> ()
 	| (Some _, None) -> Hashtbl.replace glb_decls name g

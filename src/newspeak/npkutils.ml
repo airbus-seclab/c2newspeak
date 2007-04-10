@@ -141,54 +141,6 @@ let translate_rel_binop t1 t2 o =
 	  error "Npkutils.translate_rel_binop"
 	    "unexpected operator"
 
-
-let compare_typs t1 t2 =
-  let rec compare_typs_aux t1 t2 =
-    match t1, t2 with
-        TInt (i1, _), TInt (i2, _) -> i1 = i2
-      | TFloat (f1, _), TFloat (f2, _) -> f1 = f2
-      | TEnum (e1, _), TEnum (e2, _) -> compare_enum e1.eitems e2.eitems
-      | TNamed (info, _), t
-      | t, TNamed (info, _) -> compare_typs_aux info.ttype t
-      | TPtr (TFun _, _), TPtr (TFun _, _) -> true
-      | TPtr (_, _), TPtr (_, _) -> true
-
-      | TArray (st1, None, _), TArray (st2, _, _)
-      | TArray (st1, _, _), TArray (st2, None, _) ->
-	  compare_typs_aux st1 st2
-
-      | TArray (st1, l1, _), TArray (st2, l2, _) ->
-          let len1 = lenOfArray l1 in
-          let len2 = lenOfArray l2 in
-	    compare_typs_aux st1 st2 && len1 = len2
-
-      | TComp (info1, _), TComp (info2, _) ->
-	  compare_fields t1 t2 info1.cfields info2.cfields
-
-      | _, _ -> false
-
-  and compare_fields t1 t2 l1 l2 =
-    match l1, l2 with
-	[], [] -> true
-      | f1::r1, f2::r2 ->
-	  let offset1 = offset_of t1 (Field(f1, NoOffset)) in
-	  let offset2 = offset_of t2 (Field(f2, NoOffset)) in
-	    compare_typs_aux f1.ftype f2.ftype &&
-	      offset1 = offset2 &&
-	      compare_fields t1 t2 r1 r2
-      | _ -> false
-
-  and compare_enum e1 e2 =
-    match e1, e2 with
-      | [], [] -> true
-      | (s1, ex1, _)::r1, (s2, ex2, _)::r2 ->
-	  s1 = s2 && ex1 = ex2 && compare_enum r1 r2
-      | _ -> false
-
-  in
-    compare_typs_aux t1 t2
-
-
 let isPtr e =
   match translate_typ (typeOf e) with
     | Npkil.Scalar Newspeak.Ptr

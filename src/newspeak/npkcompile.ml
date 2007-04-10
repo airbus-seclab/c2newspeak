@@ -746,6 +746,7 @@ let translate_init x t =
 	  expand NoOffset i;
 	  Some (List.rev !glb_inits)
 
+(* TODO: maybe should put first pass into npkcompile ?? *)
 let translate_glb name x =
   let init =
     if x.Npkfirstpass.gdefd then begin
@@ -755,8 +756,9 @@ let translate_glb name x =
       None
     end
   in
+  let t = translate_typ x.Npkfirstpass.gtype in
   let glb = 
-    { K.gtype = x.Npkfirstpass.gtype; 
+    { K.gtype = t; 
       K.gloc = x.Npkfirstpass.gloc; 
       K.ginit = init } 
   in

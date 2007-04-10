@@ -259,7 +259,9 @@ let first_pass f =
     let name = Npkenv.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
-	  if not (Npkutils.compare_typs x.gtype v.vtype)
+	  if not (Npkil.compare_typs 
+		     (translate_typ x.gtype) 
+		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
 	  then error "Npkenv.update_glob_decl"
 	    ("different types for "^name^": '"
@@ -271,12 +273,14 @@ let first_pass f =
 	   gdefd = false; ginit = None;}
   in
 
-
+(* TODO: factor this code with the one up there *)
   let update_glob_def v i =
     let name = Npkenv.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
-	  if not (compare_typs x.gtype v.vtype)
+	  if not (Npkil.compare_typs 
+		     (translate_typ x.gtype) 
+		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
 	  then error "Npkenv.update_glob_decl"
 	    ("different types for "^name^": '"

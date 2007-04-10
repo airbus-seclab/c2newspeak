@@ -69,8 +69,7 @@ module String_set =
   Set.Make (struct type t = string let compare = Pervasives.compare end)
 
 type glb_type = {
-(* TODO: replace with typ *)
-  mutable gtype : Cil.typ;
+  mutable gtype : typ;
   mutable gloc  : Newspeak.location;
   mutable ginit : init_t option;
 }
@@ -372,7 +371,7 @@ let dump_npko inter =
   in
 
   let print_glob n g =
-    let str = (string_of_type g.gtype)^" "^n in
+    let str = (string_of_typ g.gtype)^" "^n in
       match g.ginit with
 	  None -> print_endline ("extern "^str^";")
 	| Some i -> 
@@ -397,4 +396,33 @@ let dump_npko inter =
 
     print_endline "Function definitions";
     Hashtbl.iter print_fundef inter.ifuns
+
+
+let compare_typs t1 t2 =
+  let rec compare_typs_aux t1 t2 =
+    match (t1, t2) with
+	(Scalar sc1, Scalar sc2) -> sc1 = sc2
+
+      | (Array (t1, None), Array (t2, _))
+      | (Array (t1, _), Array (t2, None)) ->
+	  compare_typs_aux t1 t2
+
+      | (Array (t1, Some l1), Array (t2, Some l2)) ->
+	  (compare_typs_aux t1 t2) && (l1 = l2)
+    
+      | (Region (f1, n1), Region (f2, n2)) ->
+	  (compare_fields f1 f2) && (n1 = n2)
+	    
+      | _ -> false
+
+  and compare_fields f1 f2 =
+    match (f1, f2) with
+	([], []) -> true
+      | ((o1, t1)::f1, (o2, t2)::f2) ->
+	  (compare_fields f1 f2)
+	  && (o1 = o2) && (compare_typs_aux t1 t2)
+      | _ -> false
+  in
+    
+    compare_typs_aux t1 t2
 

@@ -80,7 +80,7 @@ module String_set :
    By default, we accept extern as if they were declared but not defined 
 *)
 type glb_type = {
-  mutable gtype : Cil.typ;
+  mutable gtype : typ;
   mutable gloc  : Newspeak.location;
 (* None is for extern *)
   mutable ginit : init_t option;
@@ -123,3 +123,5 @@ val negate : exp -> exp
 val dump_npko : intermediate -> unit
 
 val string_of_typ : typ -> string
+
+val compare_typs : typ -> typ -> bool
