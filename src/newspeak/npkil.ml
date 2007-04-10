@@ -399,7 +399,7 @@ let dump_npko inter =
 
 let rec size_of t =
   match t with
-    | Scalar t -> size_of_scalar t
+    | Scalar t -> Newspeak.size_of_scalar Cilutils.pointer_size t
     | Array (t, Some n) -> (size_of t) * n
     | Array (_, None) -> invalid_arg "Npkil.size_of: unknown size of array"
     | Region (_, n) -> n

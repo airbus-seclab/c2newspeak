@@ -100,7 +100,8 @@ and replace_tmp_int x =
 	    Newspeak.Array (_, len) -> len
 	  | _ -> raise LenOfArray
       end
-    | Npkil.SizeOf name -> Newspeak.size_of (get_glob_typ name)
+    | Npkil.SizeOf name ->
+	Newspeak.size_of Cilutils.pointer_size (get_glob_typ name)
 (*error "Npklink.replace_tmp_int" "array type expected"*)
 
 and replace_fn fn =
@@ -161,10 +162,21 @@ let handle_real_glob g_used name g =
 	error "Npklink.handle_real_glob" 
 	  ("unspecified length for global array "^name)
   end
-    
+
+let init_of_string str = 
+  let len = String.length str in
+  let char_typ = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
+  let res = ref [(len, char_typ, Newspeak.exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code (String.get str i) in
+	res := (i, char_typ, Newspeak.exp_of_int c)::!res
+    done;
+    (len + 1, !res)
+
+
 let handle_cstr str =
   let name = ("!const_str_"^str) in 
-  let (len, str) = Newspeak.init_of_string str in
+  let (len, str) = init_of_string str in
   let char_sca = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
   let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
   let i = Newspeak.Init str in
@@ -293,7 +305,7 @@ let link npkos =
   List.iter handle_file npkos;
   let decls = generate_globals glb_decls in
   let funs = generate_funspecs fun_specs in
-  let kernel = ([], decls, funs) in
+  let kernel = (decls, funs, Cilutils.pointer_size) in
   print_debug "File linked.";
 
   if !verb_newspeak then begin

@@ -1,13 +1,10 @@
-let char_size = Cilutils.char_size
-let pointer_size = Cilutils.pointer_size
-
 (* TODO: remove global variables as much as possible *)
 
 (*-------*)
 (* Types *)
 (*-------*)
 
-type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
+type t = (gdecl list * (fid, fundec) Hashtbl.t * size_t)
 
 and gdecl = (string * typ * init_t)
 
@@ -119,17 +116,17 @@ let locUnknown = ("", -1, -1)
 (* Manipualtion and Simplifications *)
 (*----------------------------------*)
 
-let size_of_scalar t =
+let size_of_scalar ptr_sz t =
   match t with
       Int (_, n) -> n
     | Float n -> n
-    | Ptr -> pointer_size
-    | FunPtr -> pointer_size
+    | Ptr -> ptr_sz
+    | FunPtr -> ptr_sz
 
-let rec size_of t =
+let rec size_of ptr_sz t =
   match t with
-    | Scalar t -> size_of_scalar t
-    | Array (t, n) -> (size_of t) * n
+    | Scalar t -> size_of_scalar ptr_sz t
+    | Array (t, n) -> (size_of ptr_sz t) * n
     | Region (_, n) -> n
 
 let domain_of_typ (sign, size) =
@@ -555,7 +552,7 @@ let string_of_exp e = (string_of_exp [] e)
 
 let string_of_lval lv = (string_of_lval [] lv)
 
-let dump (assumptions, gdecls, fundecs) =
+let dump (gdecls, fundecs, ptr_sz) =
   let rec collect_globals_name g =
     match g with
 	[] -> ()
@@ -576,9 +573,6 @@ let dump (assumptions, gdecls, fundecs) =
 
     (* TODO: Clean this mess... String_map *)
 
-    List.iter 
-      (fun x -> print_endline ("assume "^(string_of_exp x)))
-      assumptions;
     Hashtbl.iter 
       (fun name (_, body) -> funs := (String_map.add name body !funs))
       fundecs;
@@ -608,13 +602,5 @@ let read name =
       close_in cin;
       prog
 
-let init_of_string str = 
-  let len = String.length str in
-  let char_typ = Int (Signed, char_size) in
-  let res = ref [(len, char_typ, exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
-	res := (i, char_typ, exp_of_int c)::!res
-    done;
-    (len + 1, !res)
 
+(* Implement two dumps, a pretty and an bare one *)

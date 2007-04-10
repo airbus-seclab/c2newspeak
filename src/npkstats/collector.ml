@@ -68,6 +68,6 @@ let visit_fundec (_, x) =
 	Npkstats.count Npkstats.funct;
 	visit_blk body
 
-let count (_, globs, fundecs) =
+let count (globs, fundecs, _) =
   List.iter visit_decl globs;
   Hashtbl.iter (fun _ f -> visit_fundec f) fundecs

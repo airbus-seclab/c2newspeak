@@ -11,8 +11,7 @@
 
 (** The type of a program: function definitions and an block
     containing initialisation of the global variables *)
-(* TODO: remove exp list *)
-type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
+type t = (gdecl list * (fid, fundec) Hashtbl.t * size_t)
 
 and gdecl = (string * typ * init_t)
 
@@ -119,11 +118,14 @@ val locUnknown : location
 
 (** {1 Manipualtion and Simplifications} *)
 
-(** [size_of t] returns the size of a value of type as the number of bytes it
-    takes when stored in memory *) 
-val size_of : typ -> size_t
+(** [size_of ptr_sz t]
+    returns the size of a value of type as the number of bytes it
+    takes when stored in memory.
+    It needs the size of pointers
+*)
+val size_of : size_t -> typ -> size_t
 
-val size_of_scalar : scalar_t -> size_t
+val size_of_scalar : size_t -> scalar_t -> size_t
 
 (** Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type *)
@@ -166,5 +168,3 @@ val dump_fundec : string -> fundec -> unit
 val write : string -> (string list * t) -> unit
 
 val read : string -> (string list * t)
-
-val init_of_string : string -> (int * (size_t * scalar_t * exp) list)
