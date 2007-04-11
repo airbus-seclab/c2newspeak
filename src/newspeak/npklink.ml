@@ -16,11 +16,11 @@ let glb_cstr = ref (String_set.empty)
 (*--------------*)
 (* Linking time *)
 (*--------------*)
-(* Counter *)
-let glb_cnt = ref 0
 
 (* Association table stdname -> Newspeak.typ *)
+(* TODO: put these together with glb_decls *)
 let glb_tabl_typ = Hashtbl.create 100
+let glb_tabl_name = Hashtbl.create 100
 
 let glist = ref []
 
@@ -78,7 +78,7 @@ and replace_chooseitem (exps, b) =
     
 and replace_lv lv =
   match lv with
-    | Npkil.Global name -> Newspeak.Global name
+    | Npkil.Global name -> Newspeak.Global (Hashtbl.find glb_tabl_name name)
     | Npkil.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Npkil.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
     | Npkil.Local v -> Newspeak.Local v
@@ -166,9 +166,9 @@ let handle_real_glob name g =
     in
       try
 	let t = replace_typ g.gtype in
-	let vid = incr glb_cnt in
 	  glist := (name, t, replace_init i)::(!glist);
-	  Hashtbl.add glb_tabl_typ name t
+	  Hashtbl.add glb_tabl_typ name t;
+	  Hashtbl.add glb_tabl_name name name
       with LenOfArray -> 
 	error "Npklink.handle_real_glob" 
 	  ("unspecified length for global array "^name)
@@ -191,8 +191,9 @@ let handle_cstr str =
   let char_sca = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
   let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
   let i = Newspeak.Init str in
-    glist := (name, t, i)::(!glist)
-   
+    glist := (name, t, i)::(!glist);
+    Hashtbl.add glb_tabl_name name name
+
 let update_glob_link name g =
   try
     let x = Hashtbl.find glb_decls name in
