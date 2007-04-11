@@ -45,6 +45,7 @@ let create_npkil name =
 (*---------*)
 (* Globals *)
 (*---------*)
+(* Maybe better not to recompute another string here !! *)
 let glb_uniquename v =
   if not v.vglob
   then error "Npkenv.glb_uniquename" "global variable expected";
