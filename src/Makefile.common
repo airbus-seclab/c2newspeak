@@ -52,6 +52,7 @@ clean:
 	$(RM) -r $(DOC_DIR)
 	$(RM) $(TGT) $(TGT).exe
 	$(RM) ../scalars/natural.ml $(CMI) $(CMO) $(CMX) $(O)
+	$(RM) *.orig
 	$(RM) *~
 	$(RM) .depend
 

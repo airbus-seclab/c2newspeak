@@ -42,7 +42,7 @@ val pretty_print : bool ref
     string is the name of the file that need to be read, the second is the
     initial name of the .c file; they differ when the files are
     preprocessed. *)
-val input_files : (string * string) list ref
+val input_files : string list ref
 
 (** TODO: document *)
 val compile_only : bool ref

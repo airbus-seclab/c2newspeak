@@ -7,22 +7,13 @@ open Npklink
 
 let create_npko name = (Filename.chop_extension name) ^ npko_suffix
 
-let extract_npko (n1, n2) =
-  if Filename.check_suffix n2 npko_suffix then begin
-    let ch_in = open_in_bin n2 in
-      print_debug ("Importing "^n2^"...");
-      let str = Marshal.from_channel ch_in in
-	if str = "NPKO" then begin 
-	  let res = Marshal.from_channel ch_in in
-	    print_debug ("Importing done.");
-	    close_in ch_in;
-	    res;
-	end else begin
-	  close_in ch_in;
-	  error "C2newspeak.extract_npko"
-	    (n2^" is an invalid .npko file");
-	end;
-  end else compile n1 ""
+let extract_npko fname =
+  if Filename.check_suffix fname npko_suffix then fname
+  else begin
+    let npko = create_npko fname in
+      ignore (compile fname npko);
+      npko
+  end
 
 
 let _ =
@@ -32,7 +23,7 @@ let _ =
     match !input_files with
 	[] ->
 	  print_error ("no file specified. Try "^Sys.argv.(0)^" --help")
-      | [file, _] when !compile_only && (!output_file <> "") ->
+      | file::[] when !compile_only && (!output_file <> "") ->
 	  ignore (compile file !output_file)
 	    
       | _ when !compile_only && (!output_file <> "") ->
@@ -40,7 +31,7 @@ let _ =
 		    ^"files when only compiling (-c)");
 
       | files when !compile_only && (!output_file = "") ->
-	  let aux (f1, f2) = ignore (compile f1 (create_npko f2)) in
+	  let aux f = ignore (compile f (create_npko f)) in
 	    List.iter aux files
 
       | files (* when not !compile_only *) ->

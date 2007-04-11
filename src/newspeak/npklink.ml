@@ -295,7 +295,23 @@ let generate_funspecs funs =
     Hashtbl.iter (handle_funspec !fun_called) funs;
     final_specs
 
+let read fname = 
+  let ch_in = open_in_bin fname in
+    print_debug ("Importing "^fname^"...");
+    let str = Marshal.from_channel ch_in in
+      if str = "NPKO" then begin 
+	let res = Marshal.from_channel ch_in in
+	  print_debug ("Importing done.");
+	  close_in ch_in;
+	  res;
+      end else begin
+	close_in ch_in;
+	error "C2newspeak.extract_npko"
+	  (fname^" is an invalid .npko file");
+      end
+
 let link npkos =
+  let npkos = List.map read npkos in
   (* TODO: Think about it *)
   update_loc Cil.locUnknown;
 
@@ -314,3 +330,4 @@ let link npkos =
   end;
 
   (!filenames, kernel, Cilutils.pointer_size)
+

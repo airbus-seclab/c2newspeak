@@ -1,2 +1,1 @@
-val link : 
-  Npkil.intermediate list -> (string list * Newspeak.t * Newspeak.size_t)
+val link : string list -> (string list * Newspeak.t * Newspeak.size_t)

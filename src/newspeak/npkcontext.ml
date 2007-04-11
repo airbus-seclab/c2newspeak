@@ -37,23 +37,22 @@ let exit_code = ref false
 
 (* Preprocessing options *)
 
-let has_preprocess = ref false
 let incl_files = ref ""
 let include_dir x = incl_files:=" -I "^x^(!incl_files)
 
+(* removed should be done by the tool user
 let preprocess fname =
   if not (Filename.check_suffix fname c_suffix)
   then invalid_arg (fname^"is not a .c file");
   let ppd_file = (Filename.chop_extension fname)^"-E.c" in
     ignore (Unix.system ("gcc"^(!incl_files)^" -E  "^fname^" > "^ppd_file));
     ppd_file, fname
-
+*)
 
 (* File options *)
 
-let list_of_files = ref []
 let input_files = ref []
-let anon_fun file = list_of_files:= file::!list_of_files
+let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
 let output_file = ref ""
 
@@ -118,10 +117,10 @@ let argslist = [
   ("--exit-code", Arg.Set (exit_code), 
    "returns exit code 1 if an error occured\n");
 
-
+(* Removed: should be done by the tool user
   ("--preprocess", Arg.Set has_preprocess,
    "enables the C preprocessing step (gcc -E)");
-  
+*)
   ("-I", Arg.String include_dir, 
   "includes a pre-processing directory\n "^
     "                    (must be repeated for each directory)\n");
@@ -142,11 +141,7 @@ let handle_cmdline_options () =
   if !version then begin
     print_version ();
     exit 0
-  end;
-  input_files :=
-    if !has_preprocess
-    then List.map preprocess !list_of_files
-    else List.map (fun x -> (x,x)) !list_of_files    
+  end
 
 
 
