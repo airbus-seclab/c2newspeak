@@ -84,6 +84,7 @@ type glb_type = {
   mutable gloc  : Newspeak.location;
 (* None is for extern *)
   mutable ginit : init_t option;
+  mutable gused : bool;
 }
 
 type fspec_type = {
@@ -99,7 +100,6 @@ type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
 (*  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;*)
-  iusedglbs : String_set.t;
   iusedcstr : String_set.t;
   iusedfuns : String_set.t;
 }

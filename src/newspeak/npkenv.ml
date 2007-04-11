@@ -21,14 +21,12 @@ type status = {
 
 let glb_decls = Hashtbl.create 100
 let fun_specs = ref (Hashtbl.create 100)
-let glb_used = ref (String_set.empty)
 let fun_called = ref (String_set.empty)
 let glb_cstr = ref (String_set.empty)
 
 let init_env () =
   Hashtbl.clear glb_decls;
   Hashtbl.clear !fun_specs;
-  glb_used := String_set.empty;
   fun_called := String_set.empty;
   glb_cstr := String_set.empty
 
@@ -37,7 +35,6 @@ let create_npkil name =
     { 
       ifilename = name;
       iglobs = Hashtbl.copy glb_decls;
-      iusedglbs = !glb_used;
       iusedcstr = !glb_cstr;
       iusedfuns = !fun_called
     }

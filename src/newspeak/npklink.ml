@@ -166,8 +166,9 @@ and replace_field (offs, t) = (offs, replace_typ t)
 
 (* TODO: should never use Npkcompile here, how can I simplify this 
    to remove it ? *)
-let handle_real_glob g_used name g =
-  if (String_set.mem name g_used) || not !remove_temp then begin
+let handle_real_glob name g =
+  let x = Hashtbl.find glb_decls name in
+  if x.gused || (not !remove_temp) then begin
     let i =
       match g.ginit with
 	| Some i -> i
@@ -215,19 +216,18 @@ let update_glob_link name g =
 	("different types for "^name^": '"
 	 ^(Npkil.string_of_typ x.gtype)^"' and '"
 	 ^(Npkil.string_of_typ g.gtype)^"'");
+      if g.gused then x.gused <- true;
       match g.ginit, x.ginit with
 	  (None, Some _) -> ()
-	| (Some _, None) -> Hashtbl.replace glb_decls name g
+	| (Some _, None) -> x.ginit <- g.ginit
 	| (None, None) -> ()
 	| _ -> 
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
-  with Not_found ->
-    Hashtbl.add glb_decls name g
+  with Not_found -> Hashtbl.add glb_decls name g
 
 
 let merge_headers npko =
   filenames := npko.ifilename::(!filenames);
-  glb_used := String_set.union !glb_used npko.iusedglbs;
   fun_called := String_set.union !fun_called npko.iusedfuns;
   glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
   Hashtbl.iter update_glob_link npko.iglobs
@@ -284,7 +284,7 @@ let update_fun_link fun_specs name f =
 
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
-  Hashtbl.iter (handle_real_glob !glb_used) globs;
+  Hashtbl.iter handle_real_glob globs;
   !glist
 
 let extract_typ (_, _, t) = t

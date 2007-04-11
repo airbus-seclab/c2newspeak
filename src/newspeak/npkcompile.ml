@@ -747,7 +747,7 @@ let translate_init x t =
 	  Some (List.rev !glb_inits)
 
 (* TODO: maybe should put first pass into npkcompile ?? *)
-let translate_glb name x =
+let translate_glb used_glb name x =
   let init =
     if x.Npkfirstpass.gdefd then begin
       Some (translate_init x.Npkfirstpass.ginit x.Npkfirstpass.gtype)
@@ -758,9 +758,12 @@ let translate_glb name x =
   in
   let t = translate_typ x.Npkfirstpass.gtype in
   let glb = 
-    { K.gtype = t; 
+    { 
+      K.gtype = t; 
       K.gloc = x.Npkfirstpass.gloc; 
-      K.ginit = init } 
+      K.ginit = init;
+      K.gused = K.String_set.mem name used_glb
+    } 
   in
     Hashtbl.add Npkenv.glb_decls name glb
 
@@ -797,7 +800,6 @@ let compile in_name out_name  =
     let (glb_used, glb_cstr, fun_specs, fun_called, glb_decls) = 
       Npkfirstpass.first_pass cil_file 
     in
-      Npkenv.glb_used := glb_used;
       Npkenv.glb_cstr := glb_cstr;
       (* TODO: this is not very nice! *)
       Npkenv.fun_specs := fun_specs;
@@ -808,7 +810,7 @@ let compile in_name out_name  =
       
       print_debug ("Translating "^in_name^"...");
 
-      Hashtbl.iter translate_glb glb_decls;
+      Hashtbl.iter (translate_glb glb_used) glb_decls;
       Hashtbl.iter translate_fun !Npkenv.fun_specs;
       
       let (globs, funs) = Npkenv.create_npkil in_name in

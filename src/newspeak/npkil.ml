@@ -72,6 +72,7 @@ type glb_type = {
   mutable gtype : typ;
   mutable gloc  : Newspeak.location;
   mutable ginit : init_t option;
+  mutable gused : bool;
 }
 
 type fspec_type = {
@@ -87,7 +88,7 @@ type fspec_type = {
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-  iusedglbs : String_set.t;
+(*  iusedglbs : String_set.t; *)
   iusedcstr : String_set.t;
   iusedfuns : String_set.t;
 }
@@ -373,6 +374,12 @@ let dump_npko (inter, funs) =
     print_newline ()
   in
 
+  let print_usedglbs title globs =
+    print_endline title;
+    Hashtbl.iter (fun x y -> if y.gused then print_endline x) globs;
+    print_newline ()
+  in
+
   let print_glob n g =
     let str = (string_of_typ g.gtype)^" "^n in
       match g.ginit with
@@ -389,7 +396,7 @@ let dump_npko (inter, funs) =
   in
     print_endline inter.ifilename;
 
-    print_list "Global used" inter.iusedglbs;
+    print_usedglbs "Global used" inter.iglobs;
     print_list "Functions called" inter.iusedfuns;
     print_list "Constant Strings" inter.iusedcstr;
 
