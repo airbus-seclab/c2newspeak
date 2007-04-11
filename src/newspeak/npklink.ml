@@ -232,6 +232,23 @@ let merge_headers npko =
   glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
   Hashtbl.iter update_glob_link npko.iglobs
 
+let update_fun tbl name (ftyp, body) =
+  try
+    let (prev_ftyp, prev_body) = Hashtbl.find tbl name in
+      if (ftyp <> prev_ftyp) then begin
+	error "Npklink.update_fun_link" 
+	  ("different types for prototype "^name)
+      end;
+      begin 
+	match (body, prev_body) with
+	    (None, _) -> ()
+	  | (_, None) -> Hashtbl.replace tbl name (ftyp, body)
+	  | _ -> error "Npklink.update_fun_link" ("unexpected error for "^name)
+      end
+      
+  with Not_found -> Hashtbl.add tbl name (ftyp, body)
+
+(*
 let update_fun_link fun_specs name f =
   try
     let x = Hashtbl.find fun_specs name in
@@ -242,20 +259,6 @@ let update_fun_link fun_specs name f =
 	  ("different types for return type of prototype "^name)
       end;
 
-(*
-    let _ = 
-      match x.prett, f.prett with
-	  None, None -> ()
-	| Some t1, Some t2 when t1 = t2 -> ()
-	| _ ->
-    in
-*)    
-    let _ =
-      match x.pcil_body, f.pcil_body with
-	| None, None -> ()
-	| _ -> error "Npklink.update_fun_link" ("unexpected error for "^name)
-    in
-      
     let _ =
       match x.pargs, f.pargs, x.plocs, f.plocs, x.ploc, f.ploc, x.pbody, f.pbody with
 	| _, None, _, None, _, _, _, None -> ()
@@ -276,27 +279,28 @@ let update_fun_link fun_specs name f =
 	| _ -> error "Npklink.update_fun_link" ("unexpected error for "^name)
     in ()
 	 
-  with Not_found ->
-    Hashtbl.add fun_specs name f
-
+  with Not_found -> Hashtbl.add fun_specs name f
+*)
 
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
   Hashtbl.iter (handle_real_glob !glb_used) globs;
-  !glist
+  (* TODO: remove List.rev *)
+  List.rev !glist
 
 let extract_typ (_, _, t) = t
 
 let generate_funspecs fnames =
-  let fun_specs = Hashtbl.create 100 in
+(*  let fun_specs = Hashtbl.create 100 in*)
   let final_specs = Hashtbl.create 100 in
   let handle_funspec name f =
-    update_fun_link fun_specs name f;
+(*    update_fun_link fun_specs name f;*)
     (* TODO: Should we have here the !remove_temp ? *)
     if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
-      let args = match f.pargs with
-	| None -> error "Npklink.handle_funspec" "unexpected error"
-	| Some l -> List.map extract_typ l
+      let args = 
+	match f.pargs with
+	  | None -> error "Npklink.handle_funspec" "unexpected error"
+	  | Some l -> List.map extract_typ l
       in
       let body =
 	match f.pbody with
@@ -304,7 +308,8 @@ let generate_funspecs fnames =
 	  | Some b -> Some (Newspeak.simplify (replace_body b))
       in
       let ftyp = replace_ftyp (args, f.prett) in
-	Hashtbl.add final_specs name (ftyp, body)
+	update_fun final_specs name (ftyp, body)
+(*	Hashtbl.add final_specs name (ftyp, body)*)
     end
   in
 
