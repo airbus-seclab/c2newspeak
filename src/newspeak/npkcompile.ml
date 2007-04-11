@@ -811,14 +811,14 @@ let compile in_name out_name  =
       Hashtbl.iter translate_glb glb_decls;
       Hashtbl.iter translate_fun !Npkenv.fun_specs;
       
-      let npko = Npkenv.create_npkil in_name in
+      let (globs, funs) = Npkenv.create_npkil in_name in
 	
 	init_env ();
 	
 	if (!verb_npko) then begin
 	  print_endline "Newspeak Object output";
 	  print_endline "----------------------";
-	  K.dump_npko npko;
+	  K.dump_npko (globs, funs);
 	  print_newline ();
 	end;
 	
@@ -827,13 +827,13 @@ let compile in_name out_name  =
 	  print_debug ("Writing "^(out_name)^"...");
 	  let ch_out = open_out_bin out_name in
 	    Marshal.to_channel ch_out "NPKO" [];
-	    Marshal.to_channel ch_out npko [];
+	    Marshal.to_channel ch_out globs [];
+	    Marshal.to_channel ch_out funs [];
 	    close_out ch_out;
 	    print_debug ("Writing done.");
 	end;
 	
-	init_env();
-	npko
+	init_env()
 
 
 

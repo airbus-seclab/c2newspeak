@@ -9,7 +9,6 @@ let filenames = ref []
 
 
 let glb_decls = Hashtbl.create 100
-let fun_specs = Hashtbl.create 100
 
 let glb_used = ref (String_set.empty)
 let fun_called = ref (String_set.empty)
@@ -30,7 +29,31 @@ let glb_tabl_typ = Hashtbl.create 100
 let glist = ref []
 
 
+let read_first fname = 
+  let ch_in = open_in_bin fname in
+    print_debug ("Importing "^fname^"...");
+    let str = Marshal.from_channel ch_in in
+      if str = "NPKO" then begin 
+	let res = Marshal.from_channel ch_in in
+(*	let funs = Marshal.from_channel ch_in in*)
+	  print_debug ("Importing done.");
+	  close_in ch_in;
+	  res
+      end else begin
+	close_in ch_in;
+	error "C2newspeak.extract_npko"
+	  (fname^" is an invalid .npko file");
+      end
 
+let read_fun fname = 
+  let ch_in = open_in_bin fname in
+    print_debug ("Importing funs from "^fname^"...");
+    let _ = Marshal.from_channel ch_in in
+    let _ = Marshal.from_channel ch_in in
+    let funs = Marshal.from_channel ch_in in
+      print_debug ("Funs import done.");
+      close_in ch_in;
+      funs
 
 (* Useful functions for final output *)
 let get_glob_vid name =
@@ -213,10 +236,10 @@ let update_glob_link name g =
   with Not_found ->
     Hashtbl.add glb_decls name g
 
-let update_fun_link name f =
+let update_fun_link fun_specs name f =
   try
     let x = Hashtbl.find fun_specs name in
-      
+
     let _ = 
       match x.prett, f.prett with
 	  None, None -> ()
@@ -263,22 +286,23 @@ let handle_file npko =
   glb_used := String_set.union !glb_used npko.iusedglbs;
   fun_called := String_set.union !fun_called npko.iusedfuns;
   glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
-  Hashtbl.iter update_glob_link npko.iglobs;
-  Hashtbl.iter update_fun_link npko.ifuns
+  Hashtbl.iter update_glob_link npko.iglobs
+(*  Hashtbl.iter update_fun_link funs*)
 
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
-(* TODO: translate_exp should not be exported ? *)
   Hashtbl.iter (handle_real_glob !glb_used) globs;
   get_glob_decls ()
 
 let extract_typ (_, _, t) = t
 
-let generate_funspecs funs =
+let generate_funspecs fnames =
+  let fun_specs = Hashtbl.create 100 in
   let final_specs = Hashtbl.create 100 in
-  let handle_funspec f_called name f =
+  let handle_funspec name f =
+    update_fun_link fun_specs name f;
     (* TODO: Should we have here the !remove_temp ? *)
-    if (String_set.mem name f_called) (*|| not !remove_temp*) then begin
+    if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
       let args = match f.pargs with
 	| None -> error "Npklink.handle_funspec" "unexpected error"
 	| Some l -> List.map extract_typ l
@@ -292,33 +316,25 @@ let generate_funspecs funs =
 	Hashtbl.add final_specs name (ftyp, body)
     end
   in
-    Hashtbl.iter (handle_funspec !fun_called) funs;
+
+  let read_all_funspec fname =
+    let funs = read_fun fname in
+      Hashtbl.iter handle_funspec funs
+  in
+    List.iter read_all_funspec fnames;
     final_specs
 
-let read fname = 
-  let ch_in = open_in_bin fname in
-    print_debug ("Importing "^fname^"...");
-    let str = Marshal.from_channel ch_in in
-      if str = "NPKO" then begin 
-	let res = Marshal.from_channel ch_in in
-	  print_debug ("Importing done.");
-	  close_in ch_in;
-	  res;
-      end else begin
-	close_in ch_in;
-	error "C2newspeak.extract_npko"
-	  (fname^" is an invalid .npko file");
-      end
-
 let link npkos =
-  let npkos = List.map read npkos in
+  let npkos_fst = List.map read_first npkos in
   (* TODO: Think about it *)
   update_loc Cil.locUnknown;
 
   print_debug "Linking files...";
-  List.iter handle_file npkos;
+  List.iter handle_file npkos_fst;
+  print_debug "Globals...";
   let decls = generate_globals glb_decls in
-  let funs = generate_funspecs fun_specs in
+  print_debug "Functions...";
+  let funs = generate_funspecs npkos in
   let kernel = (decls, funs) in
   print_debug "File linked.";
 

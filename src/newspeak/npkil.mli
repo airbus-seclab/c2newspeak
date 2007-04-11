@@ -98,7 +98,7 @@ type fspec_type = {
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
+(*  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;*)
   iusedglbs : String_set.t;
   iusedcstr : String_set.t;
   iusedfuns : String_set.t;
@@ -120,7 +120,7 @@ val exp_of_int : int -> exp
 
 val negate : exp -> exp
 
-val dump_npko : intermediate -> unit
+val dump_npko : (intermediate * (Newspeak.fid, fspec_type) Hashtbl.t) -> unit
 
 val string_of_typ : typ -> string
 

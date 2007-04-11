@@ -33,14 +33,17 @@ let init_env () =
   glb_cstr := String_set.empty
 
 let create_npkil name =
-  { 
-    ifilename = name;
-    iglobs = Hashtbl.copy glb_decls;
-    ifuns = Hashtbl.copy !fun_specs;
-    iusedglbs = !glb_used;
-    iusedcstr = !glb_cstr;
-    iusedfuns = !fun_called
-  }
+  let globs = 
+    { 
+      ifilename = name;
+      iglobs = Hashtbl.copy glb_decls;
+      iusedglbs = !glb_used;
+      iusedcstr = !glb_cstr;
+      iusedfuns = !fun_called
+    }
+  in
+  let funs = Hashtbl.copy !fun_specs in
+    (globs, funs)
 
 (*---------*)
 (* Globals *)

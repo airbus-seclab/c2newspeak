@@ -87,11 +87,14 @@ type fspec_type = {
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;
   iusedglbs : String_set.t;
   iusedcstr : String_set.t;
   iusedfuns : String_set.t;
 }
+
+(*
+    (Newspeak.fid, fspec_type) Hashtbl.t;
+*)
 
 let zero = Const (CInt64 (Int64.zero))
 let zero_f = Const (CFloat (0., "0."))
@@ -242,7 +245,7 @@ and string_of_fn decls f =
 	"["^(string_of_exp decls exp)^"]("^
 	  (seq ", " string_of_typ args_t)^")"
 
-let dump_npko inter = 
+let dump_npko (inter, funs) = 
   let cur_fun = ref "" in
 
   let lbls = ref (Int_map.empty) in
@@ -395,7 +398,7 @@ let dump_npko inter =
     print_newline ();
 
     print_endline "Function definitions";
-    Hashtbl.iter print_fundef inter.ifuns
+    Hashtbl.iter print_fundef funs
 
 
 let compare_typs t1 t2 =
