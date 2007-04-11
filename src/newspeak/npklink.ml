@@ -7,7 +7,6 @@ let (size_of_scalar, size_of) = Newspeak.create_size_of Cilutils.pointer_size
 
 let filenames = ref []
 
-
 let glb_decls = Hashtbl.create 100
 
 let glb_used = ref (String_set.empty)
@@ -29,21 +28,21 @@ let glb_tabl_typ = Hashtbl.create 100
 let glist = ref []
 
 
-let read_first fname = 
+let read_header fname = 
   let ch_in = open_in_bin fname in
     print_debug ("Importing "^fname^"...");
     let str = Marshal.from_channel ch_in in
-      if str = "NPKO" then begin 
-	let res = Marshal.from_channel ch_in in
-(*	let funs = Marshal.from_channel ch_in in*)
-	  print_debug ("Importing done.");
-	  close_in ch_in;
-	  res
-      end else begin
+      if str <> "NPKO" then begin 
 	close_in ch_in;
 	error "C2newspeak.extract_npko"
 	  (fname^" is an invalid .npko file");
-      end
+      end;
+      let res = Marshal.from_channel ch_in in
+	print_debug ("Importing done.");
+	close_in ch_in;
+	res
+
+
 
 let read_fun fname = 
   let ch_in = open_in_bin fname in
@@ -207,17 +206,6 @@ let handle_cstr str =
     let vid = incr glb_cnt in
       Hashtbl.add glb_tabl_vid name vid
    
-(* There is no need to reset everything here because it only happens
-   once *)
-let get_glob_decls () =
-  let rec aux accu l =
-    match l with
-      | [] -> accu
-      | (n, t, i)::r -> aux ((n, t, (*TODO:replace_inits*) i)::accu) r
-  in 
-    aux [] !glist
-
-
 let update_glob_link name g =
   try
     let x = Hashtbl.find glb_decls name in
@@ -236,20 +224,32 @@ let update_glob_link name g =
   with Not_found ->
     Hashtbl.add glb_decls name g
 
+
+let merge_headers npko =
+  filenames := npko.ifilename::(!filenames);
+  glb_used := String_set.union !glb_used npko.iusedglbs;
+  fun_called := String_set.union !fun_called npko.iusedfuns;
+  glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
+  Hashtbl.iter update_glob_link npko.iglobs
+
 let update_fun_link fun_specs name f =
   try
     let x = Hashtbl.find fun_specs name in
 
+      if (x.prett <> f.prett) then begin
+	(* TODO: add the respective types and locations ? *)
+	error "Npklink.update_fun_link"
+	  ("different types for return type of prototype "^name)
+      end;
+
+(*
     let _ = 
       match x.prett, f.prett with
 	  None, None -> ()
 	| Some t1, Some t2 when t1 = t2 -> ()
 	| _ ->
-	    (* TODO: add the respective types and locations ? *)
-	    error "Npklink.update_fun_link"
-	      ("different types for return type of prototype "^name)
     in
-      
+*)    
     let _ =
       match x.pcil_body, f.pcil_body with
 	| None, None -> ()
@@ -280,19 +280,10 @@ let update_fun_link fun_specs name f =
     Hashtbl.add fun_specs name f
 
 
-let handle_file npko =
-  (* TODO: Print debug... Handling file... *)
-  filenames := npko.ifilename::(!filenames);
-  glb_used := String_set.union !glb_used npko.iusedglbs;
-  fun_called := String_set.union !fun_called npko.iusedfuns;
-  glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
-  Hashtbl.iter update_glob_link npko.iglobs
-(*  Hashtbl.iter update_fun_link funs*)
-
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
   Hashtbl.iter (handle_real_glob !glb_used) globs;
-  get_glob_decls ()
+  !glist
 
 let extract_typ (_, _, t) = t
 
@@ -325,25 +316,25 @@ let generate_funspecs fnames =
     final_specs
 
 let link npkos =
-  let npkos_fst = List.map read_first npkos in
+  let headers = List.map read_header npkos in
   (* TODO: Think about it *)
   update_loc Cil.locUnknown;
 
   print_debug "Linking files...";
-  List.iter handle_file npkos_fst;
+  List.iter merge_headers headers;
   print_debug "Globals...";
   let decls = generate_globals glb_decls in
-  print_debug "Functions...";
-  let funs = generate_funspecs npkos in
-  let kernel = (decls, funs) in
-  print_debug "File linked.";
-
-  if !verb_newspeak then begin
-    print_endline "Newspeak output";
-    print_endline "---------------";
-    Newspeak.dump kernel;
-    print_newline ()
-  end;
-
-  (!filenames, kernel, Cilutils.pointer_size)
+    print_debug "Functions...";
+    let funs = generate_funspecs npkos in
+    let kernel = (decls, funs) in
+      print_debug "File linked.";
+      
+      if !verb_newspeak then begin
+	print_endline "Newspeak output";
+	print_endline "---------------";
+	Newspeak.dump kernel;
+	print_newline ()
+      end;
+      
+      (!filenames, kernel, Cilutils.pointer_size)
 
