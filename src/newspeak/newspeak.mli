@@ -33,7 +33,7 @@ and blk = stmt list
 
 and lval =
     Local of vid
-  | Global of vid
+  | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 

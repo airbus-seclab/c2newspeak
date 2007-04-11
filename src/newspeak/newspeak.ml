@@ -26,7 +26,7 @@ and blk = stmt list
 
 and lval =
     Local of vid
-  | Global of vid
+  | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
@@ -396,7 +396,7 @@ and string_of_binop neg op =
 let rec string_of_lval decls lv =
   match lv with
       Local vid -> string_of_local decls vid
-    | Global vid -> string_of_global vid
+    | Global name -> name
     | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
 

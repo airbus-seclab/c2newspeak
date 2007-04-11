@@ -19,9 +19,6 @@ let glb_cstr = ref (String_set.empty)
 (* Counter *)
 let glb_cnt = ref 0
 
-(* Association table stdname -> Newspeak.vid *)
-let glb_tabl_vid = Hashtbl.create 100
-
 (* Association table stdname -> Newspeak.typ *)
 let glb_tabl_typ = Hashtbl.create 100
 
@@ -54,20 +51,12 @@ let read_fun fname =
       close_in ch_in;
       funs
 
-(* Useful functions for final output *)
-let get_glob_vid name =
-  try
-    Hashtbl.find glb_tabl_vid name
-  with
-      Not_found ->
-	error "Npklink.get_glob_vid" ("global variable "^name^" not found")
-
 let get_glob_typ name =
   try
     Hashtbl.find glb_tabl_typ name
   with
       Not_found ->
-	error "Npklink.get_glob_vid" ("type for global variable "^name^" not found")
+	error "Npklink.get_glob_typ" ("type for global variable "^name^" not found")
 
 let rec replace_stmt (sk, l) =
   let new_sk = 
@@ -89,7 +78,7 @@ and replace_chooseitem (exps, b) =
     
 and replace_lv lv =
   match lv with
-    | Npkil.Global name -> Newspeak.Global (get_glob_vid name)
+    | Npkil.Global name -> Newspeak.Global name
     | Npkil.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Npkil.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
     | Npkil.Local v -> Newspeak.Local v
@@ -179,7 +168,6 @@ let handle_real_glob name g =
 	let t = replace_typ g.gtype in
 	let vid = incr glb_cnt in
 	  glist := (name, t, replace_init i)::(!glist);
-	  Hashtbl.add glb_tabl_vid name vid;
 	  Hashtbl.add glb_tabl_typ name t
       with LenOfArray -> 
 	error "Npklink.handle_real_glob" 
@@ -203,9 +191,7 @@ let handle_cstr str =
   let char_sca = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
   let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
   let i = Newspeak.Init str in
-    glist := (name, t, i)::(!glist);
-    let vid = incr glb_cnt in
-      Hashtbl.add glb_tabl_vid name vid
+    glist := (name, t, i)::(!glist)
    
 let update_glob_link name g =
   try
