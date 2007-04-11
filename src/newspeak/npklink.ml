@@ -285,8 +285,7 @@ let update_fun_link fun_specs name f =
 let generate_globals globs =
   String_set.iter handle_cstr !glb_cstr;
   Hashtbl.iter (handle_real_glob !glb_used) globs;
-  (* TODO: remove List.rev *)
-  List.rev !glist
+  !glist
 
 let extract_typ (_, _, t) = t
 
