@@ -145,7 +145,6 @@ let check_main_signature t =
 let first_pass f =
   let glb_decls = Hashtbl.create 100 in
   let fun_specs = Hashtbl.create 100 in
-  let fun_called = ref (Npkil.String_set.empty) in
 
 (* TODO: there is also one in npkenv remove, simplify ? *)
   let update_fun_proto name ret args =
@@ -251,10 +250,6 @@ let first_pass f =
 	   Npkil.pcil_body = Some f.sbody;}
   in
 
-  let use_fun v =
-    fun_called := Npkil.String_set.add v.vname !fun_called
-  in
-    
   let update_glob_decl v =
     let name = Npkenv.glb_uniquename v in
       try
@@ -332,8 +327,6 @@ let first_pass f =
 	      update_fun_proto name ret args
 		  
 	  | [GFun (f, loc)] -> 
-	      (* Every defined function is kept *)
-	      use_fun f.svar;
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
 	      update_fun_def f;
@@ -351,4 +344,4 @@ let first_pass f =
       Npkenv.init_env ();
       List.iter explore f.globals;
       let (glb_used, glb_cstr) = visitor#get_used in
-	(glb_used, glb_cstr, fun_specs, !fun_called, glb_decls)
+	(glb_used, glb_cstr, fun_specs, glb_decls)

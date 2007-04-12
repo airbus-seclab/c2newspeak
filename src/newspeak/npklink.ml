@@ -10,7 +10,6 @@ let filenames = ref []
 let glb_decls = Hashtbl.create 100
 
 let glb_used = ref (String_set.empty)
-let fun_called = ref (String_set.empty)
 let glb_cstr = ref (String_set.empty)
 
 (*--------------*)
@@ -194,7 +193,6 @@ let merge_headers npko =
   let npko = read_header npko in
 
     filenames := npko.ifilename::(!filenames);
-    fun_called := String_set.union !fun_called npko.iusedfuns;
     glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
     Hashtbl.iter update_glob_link npko.iglobs
 
@@ -285,40 +283,38 @@ let generate_funspecs cout npkos =
 
   let handle_funspec name f =
     (* TODO: Should we have here the !remove_temp ? *)
-    if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
-      let args = 
-	match f.pargs with
-	  | None -> error "Npklink.handle_funspec" "unexpected error"
-	  | Some l -> List.map extract_typ l
-      in
-      let body =
-	match f.pbody with
-	  | None -> None
-	  | Some b -> Some (Newspeak.simplify (replace_body b))
-      in
-      let ftyp = replace_ftyp (args, f.prett) in
-	
-	try 
-	  let prev_ftyp = Hashtbl.find encountered name in
-	    if (ftyp <> prev_ftyp) 
-	    then error "Npklink.generate_funspecs" 
-	      ("Function "^name^" type does not match");
-	    match body with
-		None -> ()
-	      | Some _ when Hashtbl.mem waiting name -> 
-		  Hashtbl.remove waiting name;
-		  write_fun cout name (ftyp, body)
-	      | Some _ -> error "Npklink.generate_funspecs" 
-		  ("Function "^name^" declared twice")
-		  
-	with Not_found -> 
-	  Hashtbl.add encountered name ftyp;
-	  match body with
-	      None -> Hashtbl.add waiting name (ftyp, None)
-	    | Some _ -> write_fun cout name (ftyp, body)
-    end
-  in
+    let args = 
+      match f.pargs with
+	| None -> error "Npklink.handle_funspec" "unexpected error"
+	| Some l -> List.map extract_typ l
+    in
+    let body =
+      match f.pbody with
+	| None -> None
+	| Some b -> Some (Newspeak.simplify (replace_body b))
+    in
+    let ftyp = replace_ftyp (args, f.prett) in
       
+      try 
+	let prev_ftyp = Hashtbl.find encountered name in
+	  if (ftyp <> prev_ftyp) 
+	  then error "Npklink.generate_funspecs" 
+	    ("Function "^name^" type does not match");
+	  match body with
+	      None -> ()
+	    | Some _ when Hashtbl.mem waiting name -> 
+		Hashtbl.remove waiting name;
+		write_fun cout name (ftyp, body)
+	    | Some _ -> error "Npklink.generate_funspecs" 
+		("Function "^name^" declared twice")
+		  
+      with Not_found -> 
+	Hashtbl.add encountered name ftyp;
+	match body with
+	    None -> Hashtbl.add waiting name (ftyp, None)
+	  | Some _ -> write_fun cout name (ftyp, body)
+  in
+    
   let read_all_funspec npko =
     let funs = read_fun npko in
       Hashtbl.iter handle_funspec funs

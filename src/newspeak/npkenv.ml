@@ -21,13 +21,15 @@ type status = {
 
 let glb_decls = Hashtbl.create 100
 let fun_specs = ref (Hashtbl.create 100)
-let fun_called = ref (String_set.empty)
 let glb_cstr = ref (String_set.empty)
+(* This table to avoid 
+   recomputing a different string here to improve sharing *)
+let static_glb_names = Hashtbl.create 100
 
 let init_env () =
   Hashtbl.clear glb_decls;
+  Hashtbl.clear static_glb_names;
   Hashtbl.clear !fun_specs;
-  fun_called := String_set.empty;
   glb_cstr := String_set.empty
 
 let create_npkil name =
@@ -35,8 +37,7 @@ let create_npkil name =
     { 
       ifilename = name;
       iglobs = Hashtbl.copy glb_decls;
-      iusedcstr = !glb_cstr;
-      iusedfuns = !fun_called
+      iusedcstr = !glb_cstr
     }
   in
   let funs = Hashtbl.copy !fun_specs in
@@ -45,13 +46,17 @@ let create_npkil name =
 (*---------*)
 (* Globals *)
 (*---------*)
-(* Maybe better not to recompute another string here !! *)
 let glb_uniquename v =
   if not v.vglob
   then error "Npkenv.glb_uniquename" "global variable expected";
-  if v.vstorage = Static
-  then (get_cur_file())^"."^v.vname
-  else v.vname
+  try
+    if v.vstorage = Static
+    then Hashtbl.find static_glb_names v
+    else v.vname
+  with Not_found ->
+    let str = (get_cur_file())^"."^v.vname in
+      Hashtbl.add static_glb_names v str;
+      str
 
 (*--------*)
 (* Locals *)

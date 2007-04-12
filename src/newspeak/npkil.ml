@@ -88,9 +88,8 @@ type fspec_type = {
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-(*  iusedglbs : String_set.t; *)
   iusedcstr : String_set.t;
-  iusedfuns : String_set.t;
+(*  iusedfuns : String_set.t;*)
 }
 
 (*
@@ -397,7 +396,7 @@ let dump_npko (inter, funs) =
     print_endline inter.ifilename;
 
     print_usedglbs "Global used" inter.iglobs;
-    print_list "Functions called" inter.iusedfuns;
+(*    print_list "Functions called" inter.iusedfuns;*)
     print_list "Constant Strings" inter.iusedcstr;
 
     print_endline "Global variables";

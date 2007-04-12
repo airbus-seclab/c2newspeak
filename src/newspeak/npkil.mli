@@ -101,7 +101,7 @@ type intermediate = {
   iglobs : (string, glb_type) Hashtbl.t;
 (*  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;*)
   iusedcstr : String_set.t;
-  iusedfuns : String_set.t;
+(*  iusedfuns : String_set.t;*)
 }
 
 val zero : exp

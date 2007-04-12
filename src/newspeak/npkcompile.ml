@@ -797,13 +797,12 @@ let compile in_name out_name  =
 
     print_debug "Running first pass...";
     update_loc locUnknown;
-    let (glb_used, glb_cstr, fun_specs, fun_called, glb_decls) = 
+    let (glb_used, glb_cstr, fun_specs, glb_decls) = 
       Npkfirstpass.first_pass cil_file 
     in
       Npkenv.glb_cstr := glb_cstr;
       (* TODO: this is not very nice! *)
       Npkenv.fun_specs := fun_specs;
-      Npkenv.fun_called := fun_called;
 
       update_loc locUnknown;
       print_debug "First pass done.";

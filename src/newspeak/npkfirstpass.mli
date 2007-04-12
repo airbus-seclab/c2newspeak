@@ -20,5 +20,5 @@ type glb_type = {
 val first_pass : 
   Cil.file -> 
   (Npkil.String_set.t * Npkil.String_set.t 
-    * (Newspeak.fid, Npkil.fspec_type) Hashtbl.t * Npkil.String_set.t
+    * (Newspeak.fid, Npkil.fspec_type) Hashtbl.t
     * (string, glb_type) Hashtbl.t)
