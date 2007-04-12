@@ -37,10 +37,7 @@ let _ =
       | files (* when not !compile_only *) ->
 	  if (!output_file = "") then output_file := "a.npk";
 	  let npkos = List.map extract_npko files in
-	  let prog = link npkos in
-	    print_debug ("Writing output to "^(!output_file)^"...");
-	    Newspeak.write !output_file prog;
-	    print_debug (!output_file^" written.")
+	    link npkos !output_file
 
   with Invalid_argument s -> print_error s
 

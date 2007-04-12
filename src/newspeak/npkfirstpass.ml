@@ -286,8 +286,14 @@ let first_pass f =
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
-	  if x.gdefd (* Should there be an exception here ? *)
-	  then error "Npkenv.glb_declare" ("multiple definition for "^name);
+	  if x.gdefd then begin
+	    if not !accept_mult_def then
+	      error "Npkenv.glb_declare" ("multiple definition for "^name);
+	    if (x.ginit <> None) && (i <> None) then
+	      error "Npkenv.glb_declare" ("multiple declarations for "^name);
+	    print_warning "Npkenv.glb_declare" 
+	      ("multiple declarations for "^name)
+	  end;
 	  x.gtype <- v.vtype;
 	  x.gdefd <- true;
 	  x.gloc <- translate_loc v.vdecl;

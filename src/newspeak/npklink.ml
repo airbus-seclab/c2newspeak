@@ -22,9 +22,6 @@ let glb_cstr = ref (String_set.empty)
 let glb_tabl_typ = Hashtbl.create 100
 let glb_tabl_name = Hashtbl.create 100
 
-let glist = ref []
-
-
 let read_header fname = 
   let ch_in = open_in_bin fname in
     print_debug ("Importing "^fname^"...");
@@ -34,7 +31,7 @@ let read_header fname =
 	error "C2newspeak.extract_npko"
 	  (fname^" is an invalid .npko file");
       end;
-      let res = Marshal.from_channel ch_in in
+      let (res, _) = Marshal.from_channel ch_in in
 	print_debug ("Importing done.");
 	close_in ch_in;
 	res
@@ -45,8 +42,7 @@ let read_fun fname =
   let ch_in = open_in_bin fname in
     print_debug ("Importing funs from "^fname^"...");
     let _ = Marshal.from_channel ch_in in
-    let _ = Marshal.from_channel ch_in in
-    let funs = Marshal.from_channel ch_in in
+    let (_, funs) = Marshal.from_channel ch_in in
       print_debug ("Funs import done.");
       close_in ch_in;
       funs
@@ -153,27 +149,6 @@ and replace_field (offs, t) = (offs, replace_typ t)
   TODO: implement --accept-extern
 *)
 
-(* TODO: should never use Npkcompile here, how can I simplify this 
-   to remove it ? *)
-let handle_real_glob name g =
-  let x = Hashtbl.find glb_decls name in
-  if x.gused || (not !remove_temp) then begin
-    let i =
-      match g.ginit with
-	| Some i -> i
-	| None when !accept_extern -> None
-	| None -> invalid_arg "Npklink.handle_real_glob: extern not accepted"
-    in
-      try
-	let t = replace_typ g.gtype in
-	  glist := (name, t, replace_init i)::(!glist);
-	  Hashtbl.add glb_tabl_typ name t;
-	  Hashtbl.add glb_tabl_name name name
-      with LenOfArray -> 
-	error "Npklink.handle_real_glob" 
-	  ("unspecified length for global array "^name)
-  end
-
 let init_of_string str = 
   let len = String.length str in
   let char_typ = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
@@ -184,15 +159,6 @@ let init_of_string str =
     done;
     (len + 1, !res)
 
-
-let handle_cstr str =
-  let name = ("!const_str_"^str) in 
-  let (len, str) = init_of_string str in
-  let char_sca = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
-  let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
-  let i = Newspeak.Init str in
-    glist := (name, t, i)::(!glist);
-    Hashtbl.add glb_tabl_name name name
 
 let update_glob_link name g =
   try
@@ -215,6 +181,11 @@ let update_glob_link name g =
 	  (None, Some _) -> ()
 	| (Some _, None) -> x.ginit <- g.ginit
 	| (None, None) -> ()
+	| (Some (Some _), Some (Some _)) -> 
+	    error "Npklink.update_glob_link" ("multiple declaration of "^name)
+	| _ when !accept_mult_def -> 
+	    print_warning "Npklink.update_glob_link" 
+	      ("multiple definition of "^name)
 	| _ -> 
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
   with Not_found -> Hashtbl.add glb_decls name g
@@ -227,22 +198,6 @@ let merge_headers npko =
     glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
     Hashtbl.iter update_glob_link npko.iglobs
 
-
-let update_fun tbl name (ftyp, body) =
-  try
-    let (prev_ftyp, prev_body) = Hashtbl.find tbl name in
-      if (ftyp <> prev_ftyp) then begin
-	error "Npklink.update_fun_link" 
-	  ("different types for prototype "^name)
-      end;
-      begin 
-	match (body, prev_body) with
-	    (None, _) -> ()
-	  | (_, None) -> Hashtbl.replace tbl name (ftyp, body)
-	  | _ -> error "Npklink.update_fun_link" ("unexpected error for "^name)
-      end
-      
-  with Not_found -> Hashtbl.add tbl name (ftyp, body)
 
 (*
 let update_fun_link fun_specs name f =
@@ -279,14 +234,55 @@ let update_fun_link fun_specs name f =
 *)
 
 let generate_globals globs =
-  String_set.iter handle_cstr !glb_cstr;
-  Hashtbl.iter handle_real_glob globs;
-  !glist
+  let glist = ref [] in
+
+
+  let handle_cstr str =
+    let name = ("!const_str_"^str) in 
+    let (len, str) = init_of_string str in
+    let char_sca = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
+    let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
+    let i = Newspeak.Init str in
+      glist := (name, t, i)::(!glist);
+      Hashtbl.add glb_tabl_name name name
+  in
+
+  let handle_real_glob name g =
+    let x = Hashtbl.find glb_decls name in
+      if x.gused || (not !remove_temp) then begin
+	let i =
+	  match g.ginit with
+	    | Some i -> i
+	    | None when !accept_extern -> None
+	    | None -> 
+		invalid_arg "Npklink.handle_real_glob: extern not accepted"
+	in
+	  try
+	    let t = replace_typ g.gtype in
+	      glist := (name, t, replace_init i)::(!glist);
+	      Hashtbl.add glb_tabl_typ name t;
+	      Hashtbl.add glb_tabl_name name name
+	  with LenOfArray -> 
+	    error "Npklink.handle_real_glob" 
+	      ("unspecified length for global array "^name)
+      end
+  in
+
+    String_set.iter handle_cstr !glb_cstr;
+    Hashtbl.iter handle_real_glob globs;
+    !glist
 
 let extract_typ (_, _, t) = t
 
-let generate_funspecs fnames =
-  let final_specs = Hashtbl.create 100 in
+let write_fun cout f spec =
+  print_debug ("Writing function: "^f);
+  Newspeak.write_fun cout f spec
+
+let generate_funspecs cout npkos =
+(* TODO: Use a String_set here, clean up sets *)
+  let waiting = Hashtbl.create 100 in
+  let encountered = Hashtbl.create 100 in  
+
   let handle_funspec name f =
     (* TODO: Should we have here the !remove_temp ? *)
     if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
@@ -301,36 +297,72 @@ let generate_funspecs fnames =
 	  | Some b -> Some (Newspeak.simplify (replace_body b))
       in
       let ftyp = replace_ftyp (args, f.prett) in
-	update_fun final_specs name (ftyp, body)
+	
+	try 
+	  let prev_ftyp = Hashtbl.find encountered name in
+	    if (ftyp <> prev_ftyp) 
+	    then error "Npklink.generate_funspecs" 
+	      ("Function "^name^" type does not match");
+	    match body with
+		None -> ()
+	      | Some _ when Hashtbl.mem waiting name -> 
+		  Hashtbl.remove waiting name;
+		  write_fun cout name (ftyp, body)
+	      | Some _ -> error "Npklink.generate_funspecs" 
+		  ("Function "^name^" declared twice")
+		  
+	with Not_found -> 
+	  Hashtbl.add encountered name ftyp;
+	  match body with
+	      None -> Hashtbl.add waiting name (ftyp, None)
+	    | Some _ -> write_fun cout name (ftyp, body)
     end
   in
-
-  let read_all_funspec fname =
-    let funs = read_fun fname in
+      
+  let read_all_funspec npko =
+    let funs = read_fun npko in
       Hashtbl.iter handle_funspec funs
+      (* TODO: Force garbage collection here *)
   in
-    List.iter read_all_funspec fnames;
-    final_specs
+    List.iter read_all_funspec npkos;
+    Hashtbl.iter (Newspeak.write_fun cout) waiting
+      
 
-let link npkos =
-  (* TODO: Think about it *)
-  update_loc Cil.locUnknown;
+(* TODO: clean up *)
+let link npkos output_file =
+  let cout = open_out_bin output_file in
+    (* TODO: Think about it *)
+    update_loc Cil.locUnknown;
+    
+    print_debug "Linking files...";
+    List.iter merge_headers npkos;
+    print_debug "Globals...";
+    let decls = generate_globals glb_decls in
+      Newspeak.write_hdr cout (!filenames, decls, Cilutils.pointer_size);
+      
+      print_debug "Functions...";
+      generate_funspecs cout npkos;
 
-  print_debug "Linking files...";
-  List.iter merge_headers npkos;
-  print_debug "Globals...";
-  let decls = generate_globals glb_decls in
-    print_debug "Functions...";
-    let funs = generate_funspecs npkos in
-    let kernel = (decls, funs) in
+      close_out cout;
+
       print_debug "File linked.";
       
       if !verb_newspeak then begin
 	print_endline "Newspeak output";
 	print_endline "---------------";
-	Newspeak.dump kernel;
-	print_newline ()
-      end;
+	let (_, kernel, _) = Newspeak.read output_file in
+	  Newspeak.dump kernel;
+	  print_newline ()
+      end
       
-      (!filenames, kernel, Cilutils.pointer_size)
 
+
+(*	Newspeak.write output_file (!filenames, kernel, Cilutils.pointer_size)*)
+(*	(!filenames, kernel, Cilutils.pointer_size)*)
+
+(*
+  let prog = link npkos in
+  print_debug ("Writing output to "^(!output_file)^"...");
+  Newspeak.write !output_file prog;
+  print_debug (!output_file^" written.")
+*)

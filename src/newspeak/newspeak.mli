@@ -157,6 +157,10 @@ val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
 
+val write_hdr : out_channel -> (string list * gdecl list * size_t) -> unit
+
+val write_fun : out_channel -> fid -> fundec -> unit
+
 val write : string -> (string list * t * size_t) -> unit
 
 val read : string -> (string list * t * size_t)

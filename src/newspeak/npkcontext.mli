@@ -25,6 +25,8 @@ val remove_temp : bool ref
     not defined *)
 val accept_extern : bool ref
 
+val accept_mult_def : bool ref
+
 (* val assumptions : string list ref *)
 
 val verb_morewarns : bool ref

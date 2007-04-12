@@ -592,12 +592,18 @@ let dump_fundec name (_, body) =
     dump_fundec name body;
     pretty_print := old_pretty
 
-let write name (filenames, prog, ptr_sz) =
+let write_hdr cout (filenames, decls, ptr_sz) =
+  Marshal.to_channel cout "NPK!" [];
+  Marshal.to_channel cout filenames [];
+  Marshal.to_channel cout ptr_sz [];
+  Marshal.to_channel cout decls []
+  
+let write_fun cout f spec = Marshal.to_channel cout (f, spec) []
+
+let write name (filenames, (decls, funs), ptr_sz) =
   let cout = open_out_bin name in
-    Marshal.to_channel cout "NPK!" [];
-    Marshal.to_channel cout filenames [];
-    Marshal.to_channel cout prog [];
-    Marshal.to_channel cout ptr_sz [];
+    write_hdr cout (filenames, decls, ptr_sz);
+    Hashtbl.iter (write_fun cout) funs;
     close_out cout
 
 let read name = 
@@ -606,10 +612,18 @@ let read name =
     if str <> "NPK!" 
     then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
     let filenames = Marshal.from_channel cin in
-    let prog = Marshal.from_channel cin in
     let ptr_sz = Marshal.from_channel cin in
+    let decls = Marshal.from_channel cin in
+    let funs = Hashtbl.create 100 in
+      begin try 
+	while true do
+	  let (f, spec) = Marshal.from_channel cin in
+	    Hashtbl.add funs f spec
+	done
+      with End_of_file -> ()
+      end;
       close_in cin;
-      (filenames, prog, ptr_sz)
+      (filenames, (decls, funs), ptr_sz)
 
 
 (* Implement two dumps, a pretty and an bare one *)

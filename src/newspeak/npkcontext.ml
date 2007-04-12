@@ -13,6 +13,8 @@ let ignores_pragmas = ref false
 let remove_temp = ref true
 let accept_extern = ref false
 
+let accept_mult_def = ref false
+
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
 
@@ -81,6 +83,9 @@ let argslist = [
 
   ("--accept-extern", Arg.Set (accept_extern),
    "does not raise an error on variables declared but not defined\n");
+
+  ("--accept-mult-def", Arg.Set (accept_mult_def),
+   "does not raise an error multiple definitions of the same variables\n");
 
 (* TODO: Handle assumptions correctly *)
 (*  ("--assume", Arg.String (fun x -> assumptions := x::(!assumptions)),
