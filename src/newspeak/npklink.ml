@@ -197,12 +197,19 @@ let handle_cstr str =
 let update_glob_link name g =
   try
     let x = Hashtbl.find glb_decls name in
-      if not (Npkil.compare_typs x.gtype g.gtype)
+      (* TODO: remove Npkil.compare_typs *)
+
+      begin try
+	if (Npkil.is_mp_typ g.gtype x.gtype) then 
+	  x.gtype <- g.gtype;
+      with Npkil.Uncomparable -> 
 	(* TODO: add the respective locations *)
-      then error "Npklink.update_glob_link"
-	("different types for "^name^": '"
-	 ^(Npkil.string_of_typ x.gtype)^"' and '"
-	 ^(Npkil.string_of_typ g.gtype)^"'");
+	error "Npklink.update_glob_link"
+	  ("different types for "^name^": '"
+	   ^(Npkil.string_of_typ x.gtype)^"' and '"
+	   ^(Npkil.string_of_typ g.gtype)^"'")
+      end;
+      
       if g.gused then x.gused <- true;
       match g.ginit, x.ginit with
 	  (None, Some _) -> ()
@@ -212,12 +219,14 @@ let update_glob_link name g =
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
   with Not_found -> Hashtbl.add glb_decls name g
 
-
 let merge_headers npko =
-  filenames := npko.ifilename::(!filenames);
-  fun_called := String_set.union !fun_called npko.iusedfuns;
-  glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
-  Hashtbl.iter update_glob_link npko.iglobs
+  let npko = read_header npko in
+
+    filenames := npko.ifilename::(!filenames);
+    fun_called := String_set.union !fun_called npko.iusedfuns;
+    glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
+    Hashtbl.iter update_glob_link npko.iglobs
+
 
 let update_fun tbl name (ftyp, body) =
   try
@@ -277,10 +286,8 @@ let generate_globals globs =
 let extract_typ (_, _, t) = t
 
 let generate_funspecs fnames =
-(*  let fun_specs = Hashtbl.create 100 in*)
   let final_specs = Hashtbl.create 100 in
   let handle_funspec name f =
-(*    update_fun_link fun_specs name f;*)
     (* TODO: Should we have here the !remove_temp ? *)
     if (String_set.mem name !fun_called) (*|| not !remove_temp*) then begin
       let args = 
@@ -295,7 +302,6 @@ let generate_funspecs fnames =
       in
       let ftyp = replace_ftyp (args, f.prett) in
 	update_fun final_specs name (ftyp, body)
-(*	Hashtbl.add final_specs name (ftyp, body)*)
     end
   in
 
@@ -307,12 +313,11 @@ let generate_funspecs fnames =
     final_specs
 
 let link npkos =
-  let headers = List.map read_header npkos in
   (* TODO: Think about it *)
   update_loc Cil.locUnknown;
 
   print_debug "Linking files...";
-  List.iter merge_headers headers;
+  List.iter merge_headers npkos;
   print_debug "Globals...";
   let decls = generate_globals glb_decls in
     print_debug "Functions...";

@@ -20,5 +20,6 @@ test: $(TGT)
 	@cp $(TGT) ../../tests/newspeak/
 	@cp $(TGT) ../../tests/multi-source/
 	@cp $(TGT) ../../bin
+	@cp $(TGT) ../../tests/profiling
 
 include .depend

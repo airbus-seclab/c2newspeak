@@ -407,6 +407,37 @@ let dump_npko (inter, funs) =
     print_endline "Function definitions";
     Hashtbl.iter print_fundef funs
 
+exception Uncomparable
+
+(* TODO: this is no good recode. Careful. *)
+let is_mp_typ t1 t2 =
+  let rec is_mp_typs_aux t1 t2 =
+    match (t1, t2) with
+	(Scalar sc1, Scalar sc2) when sc1 = sc2 -> true
+
+      | (Array (t1, None), Array (t2, Some _)) -> 
+	  ignore (is_mp_typs_aux t1 t2);
+	  false
+      | (Array (t1, _), Array (t2, None)) ->
+	  is_mp_typs_aux t1 t2
+
+      | (Array (t1, Some l1), Array (t2, Some l2)) when l1 = l2 ->
+	  (is_mp_typs_aux t1 t2)
+    
+      | (Region (f1, n1), Region (f2, n2)) when n1 = n2 ->
+	  (is_mp_fields f1 f2)
+	    
+      | _ -> raise Uncomparable
+
+  and is_mp_fields f1 f2 =
+    match (f1, f2) with
+	([], []) -> true
+      | ((o1, t1)::f1, (o2, t2)::f2) when o1 = o2 ->
+	  (is_mp_fields f1 f2) && (is_mp_typs_aux t1 t2)
+      | _ -> raise Uncomparable
+  in
+    
+    is_mp_typs_aux t1 t2
 
 let compare_typs t1 t2 =
   let rec compare_typs_aux t1 t2 =

@@ -124,4 +124,11 @@ val dump_npko : (intermediate * (Newspeak.fid, fspec_type) Hashtbl.t) -> unit
 
 val string_of_typ : typ -> string
 
+(* TODO: remove this function*)
 val compare_typs : typ -> typ -> bool
+
+exception Uncomparable
+
+(* More precise type 
+   TODO: change name, not well chosen *)
+val is_mp_typ : typ -> typ -> bool

@@ -23,7 +23,7 @@ let verb_morewarns = ref false
 let verb_debug = ref false
 let verb_cil = ref false
 let verb_npko = ref false
-let verb_newspeak = ref true
+let verb_newspeak = ref false
 let pretty_print = ref false
 
 let verbose boolean () =
