@@ -19,7 +19,7 @@ machdep: machdep.c
 test: $(TGT)
 	@cp $(TGT) ../../tests/newspeak/
 	@cp $(TGT) ../../tests/multi-source/
-	@cp $(TGT) ../../bin
 	@cp $(TGT) ../../tests/profiling
+	@cp $(TGT) ../../bin
 
 include .depend
