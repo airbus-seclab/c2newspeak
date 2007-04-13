@@ -1,0 +1,18 @@
+C2Newspeak is a library to compile C to the intermediate language Newspeak.
+Newspeak is designed for the purpose of static analysis.
+
+- CIL 1.3.5 (not the last one 1.3.6 !) should be installed
+- An environment variable CIL should be defined with the path of CIL library.
+  (cil/obj/x86_LINUX or cil/obj/x86_WIN32)
+- Then, do:
+    make install
+  This will compile and copy to the directory /bin the files:
+    c2newspeak		     C2Newspeak executable
+    newspeak.ml		     newspeak implementation
+    newspeak.mli	     newspeak interface
+    npkstats		     Npkstats executable
+
+- To compile to newspeak, use c2newspeak
+- To read newspeak files in your own project, use newspeak.ml and newspeak.mli
+- Npkstats is a small utilitary to compute statistics of C programs that uses
+  newspeak. It is also an example that shows how to use newspeak.

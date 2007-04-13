@@ -15,6 +15,8 @@ doc: $(DIR)
 $(DEP):
 	touch $@
 
+install: $(DIR)
+
 clean: $(DIR)
 	$(RM) *~
 

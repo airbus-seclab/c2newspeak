@@ -16,6 +16,11 @@ include ../Makefile.common
 machdep: machdep.c
 	gcc -o machdep machdep.c
 
+install: all
+	@cp $(TGT) ../../bin
+	@cp newspeak.ml ../../bin
+	@cp newspeak.mli ../../bin
+
 test: $(TGT)
 	@cp $(TGT) ../../tests/newspeak/
 	@cp $(TGT) ../../tests/multi-source/

@@ -26,6 +26,7 @@
   email: olivier.levillain@penjili.org
 *)
 
+
 (*-----------------*)
 (* File extensions *)
 (*-----------------*)
@@ -40,9 +41,9 @@ let npko_suffix = ".no"
 (*------------------------*)
 
 let software = "C2Newspeak"
-let version = "0.8"
+let version = "0.9"
 let authors = "Olivier Levillain and Charles Hymans"
-let licence = "LGPL v. ??"
+let licence = "LGPL v. 2.1"
 let copyright = "EADS"
 let comment =[
   "   The Newspeak language and C2Newspeak have initially been developped in";

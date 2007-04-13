@@ -1,14 +1,17 @@
-.PHONY = all clean test
+DIR = src tests bin paper
+
+.PHONY: $(DIR) all clean test install
+
+install: src
 
 all:
 
 test:
 
-clean:
-	make clean -C src
-	make clean -C tests
-	make clean -C bin
-	make clean -C paper
+$(DIR):
+	$(MAKE) -C $@ $(MAKECMDGOALS)
+
+clean: $(DIR)
 	rm -f *~
 
 tar: clean

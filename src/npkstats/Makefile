@@ -11,6 +11,9 @@ TGT = npkstats
 
 include ../Makefile.common
 
+install: all
+	@cp $(TGT) ../../bin/
+
 test: $(TGT)
 	@cp $(TGT) ../../tests/npkstats/$(TGT)
 
