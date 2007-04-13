@@ -17,8 +17,8 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
   Charles Hymans
-  EADS Innovation Works
-  SE/CS
+  EADS Innovation Works - SE/CS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   Email : charles.hymans_no@spam_eads.net
 
   Olivier Levillain
