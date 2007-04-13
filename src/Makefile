@@ -4,6 +4,8 @@ DEP = $(addsuffix /.depend,$(DIR))
 #DOC_DIR= ../doc/ocamldoc/
 .PHONY: $(DIR) all doc depend clean
 
+install: $(DIR)
+
 all: $(DIR)
 
 $(DIR):
@@ -14,8 +16,6 @@ doc: $(DIR)
 
 $(DEP):
 	touch $@
-
-install: $(DIR)
 
 clean: $(DIR)
 	$(RM) *~

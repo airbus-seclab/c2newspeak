@@ -9,10 +9,10 @@ DOC_DIR = doc
 # Test
 TGT = npkstats
 
-include ../Makefile.common
-
 install: all
 	@cp $(TGT) ../../bin/
+
+include ../Makefile.common
 
 test: $(TGT)
 	@cp $(TGT) ../../tests/npkstats/$(TGT)
