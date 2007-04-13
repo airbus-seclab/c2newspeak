@@ -347,7 +347,6 @@ let generate_funspecs cout npkos =
   let read_all_funspec npko =
     let funs = read_fun npko in
       Hashtbl.iter handle_funspec funs
-      (* TODO: Force garbage collection here *)
   in
     List.iter read_all_funspec npkos;
     Hashtbl.iter (Newspeak.write_fun cout) waiting
