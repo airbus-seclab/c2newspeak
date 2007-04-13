@@ -748,25 +748,28 @@ let translate_init x t =
 
 (* TODO: maybe should put first pass into npkcompile ?? *)
 let translate_glb used_glb name x =
-  let init =
-    if x.Npkfirstpass.gdefd then begin
-      Some (translate_init x.Npkfirstpass.ginit x.Npkfirstpass.gtype)
-    end else begin
-      assert (x.Npkfirstpass.ginit = None);
-      None
+  let used = K.String_set.mem name used_glb in
+  let defd = x.Npkfirstpass.gdefd in
+    if (defd || used) then begin
+      let init =
+	if defd then begin
+	  Some (translate_init x.Npkfirstpass.ginit x.Npkfirstpass.gtype)
+	end else begin
+	  assert (x.Npkfirstpass.ginit = None);
+	  None
+	end
+      in
+      let t = translate_typ x.Npkfirstpass.gtype in
+      let glb = 
+	{ 
+	  K.gtype = t; 
+	  K.gloc = x.Npkfirstpass.gloc; 
+	  K.ginit = init;
+	  K.gused = used
+	} 
+      in
+	Hashtbl.add Npkenv.glb_decls name glb
     end
-  in
-  let t = translate_typ x.Npkfirstpass.gtype in
-  let glb = 
-    { 
-      K.gtype = t; 
-      K.gloc = x.Npkfirstpass.gloc; 
-      K.ginit = init;
-      K.gused = K.String_set.mem name used_glb
-    } 
-  in
-    Hashtbl.add Npkenv.glb_decls name glb
-
 
 
 (*=========================================*)
