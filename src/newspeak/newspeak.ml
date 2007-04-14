@@ -269,6 +269,7 @@ let simplify_coerce blk =
     List.map simplify_stmt blk
 
 
+(* TODO: do this in one tree traversal, instead of 2 *)
 let simplify b = simplify_coerce (simplify_gotos b)
 
 
@@ -655,4 +656,11 @@ let read name =
       (filenames, (decls, funs), ptr_sz)
 
 
-(* Implement two dumps, a pretty and an bare one *)
+(* TODO: Implement two dumps, a pretty and an bare one *)
+
+(** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
+    - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]
+    - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[c;d\] if \[a;b\] contains \[c;d\]
+    - Coerce/belongs \[a;b\] (const c) becomes const c if c in \[a;b\]
+
+    Precondition: all Coerce (l,u) verify l <= u *)

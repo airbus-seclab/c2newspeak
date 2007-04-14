@@ -39,7 +39,7 @@
 (** {1 Types} *)
 
 (** The type of a program: function definitions and an block
-    containing initialisation of the global variables *)
+    containing initialisation of the global variables. *)
 type t = (gdecl list * (fid, fundec) Hashtbl.t)
 
 and gdecl = (string * typ * init_t)
@@ -149,26 +149,19 @@ val locUnknown : location
 
 
 (** Given the characteristics of an integer type, [domain_of_typ]
-    returns the bounds of the type *)
+    returns the bounds of the type. *)
 val domain_of_typ : sign_t * size_t -> Int64.t * Int64.t
 
-(** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
-    - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]
-    - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[c;d\] if \[a;b\] contains \[c;d\]
-    - Coerce/belongs \[a;b\] (const c) becomes const c if c in \[a;b\]
-
-    Precondition: all Coerce (l,u) verify l <= u *)
-
-(** Negation of a boolean condition *)
+(** Negation of a boolean condition. *)
 val negate : exp -> exp
 
-(** [exp_of_int i] wraps i into a Newspeak expression *)
+(** [exp_of_int i] wraps i into a Newspeak expression. *)
 val exp_of_int : int -> exp
 
-(** Deletion of useless Gotos and Labels *)
+(** Deletion of useless Gotos and Labels. *)
 val simplify_gotos : blk -> blk
 
-(** Run all simplifications *)
+(** Run all simplifications. *)
 val simplify : blk -> blk
 
 
@@ -180,29 +173,48 @@ val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
 val string_of_lval : lval -> string
 
-(** [dump cout (fundecs, body)] prints the program (fundecs, body) to
-    cout *)
+(** [dump cout (fundecs, body)] prints the program (fundecs, body) to cout. *)
 val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
 
-val write_hdr : out_channel -> (string list * gdecl list * size_t) -> unit
-
-val write_fun : out_channel -> fid -> fundec -> unit
-
+(** [write name (files, prog, ptr_sz) ] write the program prog, with
+    the list of its file names and the size of pointers to file name. *)
 val write : string -> (string list * t * size_t) -> unit
 
+(** [read name] retrieves the list of file names, program and size of
+    pointers from file name. *)
 val read : string -> (string list * t * size_t)
 
+(** [write_hdr cout (files, decls, ptr_sz] writes the list of file names,
+    global variable declarations and size of pointer to channel cout.
+    This is useful when incremental dump of Newspeak is needed because of
+    memory constraints.
+*)
+val write_hdr : out_channel -> (string list * gdecl list * size_t) -> unit
+
+(** [write_hdr cout fid spec] writes the function fid with its specification
+    spec to channel cout.
+    This is useful when incremental dump of Newspeak is needed because of
+    memory constraints. This function must be called after write_hdr in order
+    to have a correctly formated Newspeak file.
+*)
+val write_fun : out_channel -> fid -> fundec -> unit
+
 (** 
-    Type of size_of function.
-    [size_of ptr_sz t]
-    returns the size of a value of type as the number of bytes it
-    takes when stored in memory.
-    It needs the size of pointers
+    Type of the size_of function.
+    [size_of t] returns the size of any value of type t.
 *)
 type size_of = typ -> size_t
 
+(** 
+    Type of the size_of_scalar function.
+    [size_of_scalar sc_t] returns the size of any value of scalar type sc_t.
+*)
 type size_of_scalar = scalar_t -> size_t
 
+(**
+   [create_size_of ptr_size] creates functions size_of_scalar and size_of from
+   a given size of pointers ptr_size. On most standard machines ptr_size is 4.
+*)
 val create_size_of : size_t -> (size_of_scalar * size_of)
