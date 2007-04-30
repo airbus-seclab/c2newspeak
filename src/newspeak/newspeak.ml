@@ -337,8 +337,12 @@ let rec string_of_typ t =
       Scalar s -> string_of_scalar s
     | Array (t, sz) -> (string_of_typ t)^"["^(string_of_size_t sz)^"]"
     | Region (lst, sz) ->
-	let string_of_elt (off, t) = (string_of_typ t)^" "^(string_of_size_t off) in
-	  "{"^(seq ";" string_of_elt lst)^"}"^(string_of_size_t sz)
+	let res = ref "{ " in
+	let string_of_elt (off, t) = 
+	  res := !res^(string_of_typ t)^" "^(string_of_size_t off)^"; "
+	in
+	  List.iter string_of_elt lst;
+	  !res^"}"^(string_of_size_t sz)
 
 
 let string_of_ftyp (args, ret) = 
