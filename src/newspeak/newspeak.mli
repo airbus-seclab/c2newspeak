@@ -218,3 +218,9 @@ type size_of_scalar = scalar_t -> size_t
    a given size of pointers ptr_size. On most standard machines ptr_size is 4.
 *)
 val create_size_of : size_t -> (size_of_scalar * size_of)
+
+val build_call: fid -> ftyp -> blk
+
+val build_main_call : size_t -> ftyp -> string list -> (gdecl list * blk)
+
+val create_cstr: string -> string -> gdecl

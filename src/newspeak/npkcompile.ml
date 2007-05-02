@@ -65,15 +65,10 @@ let extract_labels status l =
    declarations decls. The order of the declaration must be carefully
    checked because in Newspeak, the variables are identified by their
    positions in the declaration stacks, not by their names *)
-let generate_body body decls =
-  let rec generate_aux body decls =
-    match decls with
-      | [] -> body
-      | (name, t, loc)::r ->
-	  generate_aux [K.Decl (name, t, body), loc] r
-  in generate_aux body decls
-
-
+let rec append_decls decls body =
+  match decls with
+      [] -> body
+    | (name, t, loc)::r -> append_decls r [K.Decl (name, t, body), loc]
 
 
 
@@ -610,7 +605,7 @@ and translate_call x lv args_exps =
 	    ("function "^fname^" has return type void")
   in
 
-  let rec handle_args_decls fname formals exps =
+  let handle_args_decls fname formals exps =
     let rec handle_args_decls_aux accu i formals exps =
       match formals, exps with
 	| None, []  -> accu
@@ -694,24 +689,20 @@ and translate_call x lv args_exps =
     let args_decls = handle_args_decls name formals args_exps in
     let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
 
-    let res = match lv with
-      | Var f, NoOffset ->
-	  let call_w_prolog = (K.Call (K.FunId f.vname), loc)::args_prolog in
-	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
-	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
-      | Mem (Lval fptr), NoOffset ->
-	  let args_t = List.rev (List.map (fun (_, t, _) -> t) args_decls) in
-	  let fptr_exp = K.Lval (translate_lval fptr, Newspeak.FunPtr) in
-	    
-	  let call_w_prolog = (K.Call (K.FunDeref (fptr_exp, (args_t, ret_type))), loc)::args_prolog in
-	  let call_wo_ret = generate_body (List.rev call_w_prolog) args_decls in
-	    generate_body (call_wo_ret@(ret_epilog)) ret_decl
-      | _ -> error "Npkcompile.translate_call" "Left value not supported"
-	  
+    let fexp = 
+      match lv with
+	| (Var f, NoOffset) -> K.FunId f.vname
+	| (Mem (Lval fptr), NoOffset) ->
+	    let args_t = List.rev (List.map (fun (_, t, _) -> t) args_decls) in
+	    let fptr_exp = K.Lval (translate_lval fptr, Newspeak.FunPtr) in
+	      K.FunDeref (fptr_exp, (args_t, ret_type))
+	| _ -> error "Npkcompile.translate_call" "Left value not supported"
     in
+    let call_w_prolog = (K.Call fexp, loc)::args_prolog in
+    let call_wo_ret = append_decls args_decls (List.rev call_w_prolog) in
+    let res = append_decls ret_decl (call_wo_ret@(ret_epilog)) in
       restore_loc_cnt ();
       res
-
 
 
 
@@ -735,7 +726,7 @@ let translate_fun name spec =
 	    (translate_stmts status cil_body.bstmts)@
 	      [K.Label status.return_lbl, floc] 
 	  in
-	  let body = generate_body blk (get_loc_decls ()) in
+	  let body = append_decls (get_loc_decls ()) blk in
 
 	    (* TODO ?: Check only one body exists *)
 	    spec.K.pcil_body <- None;

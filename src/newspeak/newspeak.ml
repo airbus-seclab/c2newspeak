@@ -55,6 +55,7 @@ and blk = stmt list
 
 and lval =
     Local of vid
+(* TODO: maybe this was a really bad idea, go back to a number ?? *)
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
@@ -668,3 +669,75 @@ let read name =
     - Coerce/belongs \[a;b\] (const c) becomes const c if c in \[a;b\]
 
     Precondition: all Coerce (l,u) verify l <= u *)
+
+(* TODO: architecture dependent ?? *)
+(* TODO: probably the best way to deal with this and all size problems
+   is to set all these global constants, when a npk file is read ?? 
+Some kind of data structure with all the sizes,
+then function read returns this data structure too
+and there is an init function *)
+let char_sz = 1
+let char_typ = Int (Signed, char_sz)
+
+let init_of_string str =
+  let len = String.length str in
+  let res = ref [(len, char_typ, exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code (String.get str i) in
+	res := (i, char_typ, exp_of_int c)::!res
+    done;
+    (len + 1, Init !res)
+
+let create_cstr name str =
+  let (len, init) = init_of_string str in
+  let t = Array (Scalar char_typ, len) in
+    (name, t, init)
+
+let build_call_aux f prolog (args_t, ret_t) =
+  let call = ref (prolog@[Call (FunId f), locUnknown]) in
+  let i = ref 0 in
+  let handle_arg t =
+    call := [Decl ("arg"^(string_of_int !i), t, !call), locUnknown];
+    incr i
+  in
+    begin match ret_t with
+	None -> ()
+      | Some t -> call := [Decl ("value_of_"^f, t, !call), locUnknown]
+    end;
+    List.iter handle_arg args_t;
+    !call
+
+let build_call f ftyp = build_call_aux f [] ftyp
+
+let build_main_call ptr_sz (args_t, ret_t) args =
+  let n = ref 0 in
+  let globs = ref [] in
+  let ptr_array_init = ref [] in
+  let handle_arg_aux str =
+    let name = "!arg"^(string_of_int !n) in
+    let (len, init) = init_of_string str in
+      globs := (name, Array (Scalar char_typ, len), init)::(!globs);
+      ptr_array_init := 
+	(!n * ptr_sz, Ptr, AddrOf (Global name, len))::(!ptr_array_init);
+      incr n
+  in
+  let handle_args () =
+    List.iter handle_arg_aux args;
+    let ptr_array = 
+      ("!ptr_array", Array (Scalar Ptr, !n*ptr_sz), Init !ptr_array_init) 
+    in
+    globs := ptr_array::(!globs)
+  in
+  let prolog =
+    match args_t with
+	[Scalar Int k; Scalar Ptr] -> 
+	  handle_args ();
+	  let set0 = 
+	    Set (Local 1, AddrOf (Global "!ptr_array", !n*ptr_sz), Ptr) 
+	  in
+	  let set1 = Set (Local 0, exp_of_int !n, Int k) in
+	    (set0, locUnknown)::(set1, locUnknown)::[]
+      | [] -> []
+      | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
+  in
+    (!globs, build_call_aux "main" prolog (args_t, ret_t))

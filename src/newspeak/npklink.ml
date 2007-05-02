@@ -177,17 +177,6 @@ and replace_field (offs, t) = (offs, replace_typ t)
   TODO: implement --accept-extern
 *)
 
-let init_of_string str = 
-  let len = String.length str in
-  let char_typ = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
-  let res = ref [(len, char_typ, Newspeak.exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
-	res := (i, char_typ, Newspeak.exp_of_int c)::!res
-    done;
-    (len + 1, !res)
-
-
 let update_glob_link name g =
   try
     let x = Hashtbl.find glb_decls name in
@@ -266,11 +255,9 @@ let generate_globals globs =
 
   let handle_cstr str =
     let name = ("!const_str_"^str) in 
-    let (len, str) = init_of_string str in
-    let char_sca = Newspeak.Int (Newspeak.Signed, Cilutils.char_size) in
-    let t = Newspeak.Array (Newspeak.Scalar char_sca, len) in
-    let i = Newspeak.Init str in
-      glist := (name, t, i)::(!glist);
+    let const_str = Newspeak.create_cstr name str in
+
+      glist := const_str::(!glist);
       Hashtbl.add glb_tabl_name name name
   in
 
