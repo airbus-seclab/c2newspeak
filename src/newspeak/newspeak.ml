@@ -710,15 +710,12 @@ let build_call_aux f prolog (args_t, ret_t) =
 let build_call f ftyp = build_call_aux f [] ftyp
 
 let build_main_call ptr_sz (args_t, ret_t) args =
-(* TODO: change to !ptr_array *)
-  let argv_name = "const_args" in
+  let argv_name = "!ptr_array" in
   let n = ref 0 in
   let globs = ref [] in
   let ptr_array_init = ref [] in
   let handle_arg_aux str =
-(* TODO: remove + 1 ?? *)
-(* TODO: add ! before const_str and call it arg_str *)
-    let name = "const_str"^(string_of_int (!n + 1)) in
+    let name = "!param_str"^(string_of_int (!n + 1)) in
     let (len, init) = init_of_string str in
       globs := (name, Array (Scalar char_typ, len), init)::(!globs);
       ptr_array_init := 
