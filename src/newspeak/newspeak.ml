@@ -700,21 +700,25 @@ let build_call_aux f prolog (args_t, ret_t) =
     call := [Decl ("arg"^(string_of_int !i), t, !call), locUnknown];
     incr i
   in
+    List.iter handle_arg args_t;
     begin match ret_t with
 	None -> ()
       | Some t -> call := [Decl ("value_of_"^f, t, !call), locUnknown]
     end;
-    List.iter handle_arg args_t;
     !call
 
 let build_call f ftyp = build_call_aux f [] ftyp
 
 let build_main_call ptr_sz (args_t, ret_t) args =
+(* TODO: change to !ptr_array *)
+  let argv_name = "const_args" in
   let n = ref 0 in
   let globs = ref [] in
   let ptr_array_init = ref [] in
   let handle_arg_aux str =
-    let name = "!arg"^(string_of_int !n) in
+(* TODO: remove + 1 ?? *)
+(* TODO: add ! before const_str and call it arg_str *)
+    let name = "const_str"^(string_of_int (!n + 1)) in
     let (len, init) = init_of_string str in
       globs := (name, Array (Scalar char_typ, len), init)::(!globs);
       ptr_array_init := 
@@ -724,20 +728,22 @@ let build_main_call ptr_sz (args_t, ret_t) args =
   let handle_args () =
     List.iter handle_arg_aux args;
     let ptr_array = 
-      ("!ptr_array", Array (Scalar Ptr, !n*ptr_sz), Init !ptr_array_init) 
+      (argv_name, Array (Scalar Ptr, !n), Init !ptr_array_init) 
     in
-    globs := ptr_array::(!globs)
+    globs := List.rev (ptr_array::(!globs))
   in
   let prolog =
     match args_t with
 	[Scalar Int k; Scalar Ptr] -> 
 	  handle_args ();
-	  let set0 = 
-	    Set (Local 1, AddrOf (Global "!ptr_array", !n*ptr_sz), Ptr) 
+	  let set_argv = 
+	    Set (Local 1, AddrOf (Global argv_name, !n*ptr_sz), Ptr) 
 	  in
-	  let set1 = Set (Local 0, exp_of_int !n, Int k) in
-	    (set0, locUnknown)::(set1, locUnknown)::[]
+	  let set_argc = Set (Local 0, exp_of_int !n, Int k) in
+	    (set_argv, locUnknown)::(set_argc, locUnknown)::[]
       | [] -> []
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
   in
     (!globs, build_call_aux "main" prolog (args_t, ret_t))
+
+let print_blk x = dump_blk "" [] x

@@ -224,3 +224,5 @@ val build_call: fid -> ftyp -> blk
 val build_main_call : size_t -> ftyp -> string list -> (gdecl list * blk)
 
 val create_cstr: string -> string -> gdecl
+
+val print_blk: blk -> unit
