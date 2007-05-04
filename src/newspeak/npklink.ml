@@ -301,7 +301,11 @@ let generate_funspecs cout npkos =
     (* TODO: Should we have here the !remove_temp ? *)
     let args = 
       match f.pargs with
-	| None -> error "Npklink.handle_funspec" "unexpected error"
+	  (* This case should only happen when:
+	     - the function arguments are not defined, 
+	     - the function body is not defined 
+	     - and the function is never called. *)
+	| None -> [] 
 	| Some l -> List.map extract_typ l
     in
     let body =
