@@ -642,6 +642,9 @@ object
   method process_exp (x: exp) = x
 end;;
 
+let contains (l1, u1) (l2, u2) = 
+  (Int64.compare l1 l2 <= 0) && (Int64.compare u2 u1 <= 0)
+
 class simplify_coerce =
 object 
   inherit simplification
@@ -650,20 +653,25 @@ object
     match e with
         (* Coerce [a;b] Coerce [c;d] e 
 	   -> Coerce [c;d] if [a;b] contains [c;d] *)
-      | UnOp (Coerce (l1,u1), UnOp(Coerce (l2, u2), e))
-          when Int64.compare l1 l2 <= 0 && Int64.compare u1 u2 >= 0
-            -> (UnOp (Coerce (l2, u2),e))
+      | UnOp (Coerce r1, UnOp (Coerce r2, e)) when contains r1 r2 -> 
+	  UnOp (Coerce r2, e)
 	  
       (* Coerce [a;b] Coerce [c;d] e -> Coerce [a;b] if [c;d] contains [a;b] *)
-      | UnOp (Coerce (l1,u1), UnOp(Coerce (l2, u2), e))
-          when Int64.compare l2 l1 <= 0 && Int64.compare u2 u1 >= 0
-            -> (UnOp (Coerce (l1, u1),e))
+      | UnOp (Coerce r1, UnOp (Coerce r2, e)) when contains r2 r1 -> 
+	  UnOp (Coerce r1, e)
 
       (* Coerce/Belongs [a;b] Const c -> Const c if c in [a;b] *)
       | UnOp (Coerce (l1,u1), Const (CInt64 c))
       | UnOp (Belongs (l1,u1), Const (CInt64 c))
           when Int64.compare l1 c <= 0 && Int64.compare c u1 <= 0 ->
           Const (CInt64 c)
+
+      (* Coerce/Belongs [a;b] Lval (lv, t) -> Lval (lv, t)
+	 if [a; b] contains dom(t) *)
+      | UnOp (Coerce r, (Lval (_, Int k) as lv))
+      | UnOp (Belongs r, (Lval (_, Int k) as lv)) 
+	  when contains r (domain_of_typ k) -> lv
+
       | _ -> e
 
 end;;
