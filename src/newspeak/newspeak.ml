@@ -196,10 +196,12 @@ let simplify_gotos blk =
     match x with
 	(Goto l1, _)::((Label l2, _)::_ as tl) when l1 = l2 -> simplify_blk tl
       | [] -> []
+      | (Label l, _)::tl when not (List.mem l !necessary_lbls) -> 
+	  simplify_blk tl
       | hd::tl -> 
-	  match (simplify_stmt hd) with
-	      None -> simplify_blk tl
-	    | Some stmt -> stmt::(simplify_blk tl)
+	  let hd = simplify_stmt hd in
+	  let tl = simplify_blk tl in
+	    hd::tl
 		
   and simplify_choose_elt (l, b) = l, simplify_blk b
 
@@ -207,14 +209,12 @@ let simplify_gotos blk =
     match x with
 	Goto l -> 
 	  necessary_lbls := l::!necessary_lbls;
-	  Some (x, loc)
-      | Label l when not (List.mem l !necessary_lbls) -> None
-      | Decl (name, t, body) -> Some (Decl (name, t, simplify_blk body), loc)
+	  (x, loc)
+      | Decl (name, t, body) -> (Decl (name, t, simplify_blk body), loc)
       | ChooseAssert elts ->
-	  Some (ChooseAssert (List.map simplify_choose_elt elts), loc)
-      | InfLoop body ->
-	  Some (InfLoop (simplify_blk body), loc)
-      | _ -> Some (x, loc)
+	  (ChooseAssert (List.map simplify_choose_elt elts), loc)
+      | InfLoop body -> (InfLoop (simplify_blk body), loc)
+      | _ -> (x, loc)
   in
     simplify_blk blk
 
