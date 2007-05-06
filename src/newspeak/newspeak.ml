@@ -184,7 +184,6 @@ let rec negate exp =
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
 
-
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
 
@@ -366,30 +365,12 @@ let string_of_ftyp (args, ret) =
 
 
 (* Expressions *)
-
-let string_of_vid = string_of_int
-
-let string_of_global vid =
-  if (!pretty_print) then Hashtbl.find globals vid
-  else (string_of_vid vid) ^ "+"	
-
-
-let string_of_local decls vid =
-  try
-    List.nth decls vid
-  with Failure _ -> (string_of_vid vid) ^ "-"
-	
-
-let string_of_fid fid = fid
-  
-
 let string_of_cte c =
   match c with
       CInt64 c -> Int64.to_string c
     | CFloat (_, s) -> s
     | Nil -> "nil"
 	
-
 let string_of_unop op =
   match op with
       Belongs (l,u) ->
@@ -402,7 +383,7 @@ let string_of_unop op =
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
 	  
-and string_of_binop neg op =
+let string_of_binop neg op =
   match op with
     | Gt _ when neg -> ">="
     | Eq _ when neg -> "<>"
@@ -428,47 +409,49 @@ and string_of_binop neg op =
     | MinusPP -> "-"
 
 (* TODO: add name of locals, this will simplify this *)
-let rec string_of_lval decls lv =
+let rec string_of_lval lv =
   match lv with
-      Local vid -> string_of_local decls vid
+      Local vid -> (string_of_int vid) ^ "-"
     | Global name -> name
-    | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
-    | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
+    | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
+    | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
 
-and string_of_exp decls e =
+and string_of_exp e =
   match e with
       Const c -> string_of_cte c
-    | Lval (lv, t) -> (string_of_lval decls lv)^"_"^(string_of_scalar t)
-    | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval decls lv)^")"
-    | AddrOfFun fid -> "&fun"^(string_of_fid fid)
+    | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
+    | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
+    | AddrOfFun fid -> "&fun"^fid
 
     (* TODO: Check this ! *)
     (* Pretty printing for >= and != *)
     | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
-	"("^(string_of_exp decls e2)^" "^(string_of_binop true op)^
-	  " "^(string_of_exp decls e1)^")"
+	"("^(string_of_exp e2)^" "^(string_of_binop true op)^
+	  " "^(string_of_exp e1)^")"
 
     | BinOp (op, e1, e2) ->
-	"("^(string_of_exp decls e1)^" "^(string_of_binop false op)^
-	  " "^(string_of_exp decls e2)^")"
+	"("^(string_of_exp e1)^" "^(string_of_binop false op)^
+	  " "^(string_of_exp e2)^")"
 
-    | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp decls exp)
+    | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
 
 	  
-and string_of_fn decls f =
+let string_of_fn f =
   match f with
-      FunId fid -> (string_of_fid fid)^"()"
+      FunId fid -> fid^"()"
     | FunDeref (exp, (args_t, Some ret_t)) ->
-	"["^(string_of_exp decls exp)^"]("^
+	"["^(string_of_exp exp)^"]("^
 	  (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
     | FunDeref (exp, (args_t, None)) ->
-	"["^(string_of_exp decls exp)^"]("^
-	  (seq ", " string_of_typ args_t)^")"
+	"["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
 
+let rec string_of_cond b =
+  match b with
+      [] -> "1"
+    | e::[] -> string_of_exp e
+    | e::b -> (string_of_exp e)^" & "^(string_of_cond b)
 
 (* Actual dump *)
-
-
 let string_of_lbl l =
   if not !pretty_print
   then "lbl"^(string_of_int l)
@@ -482,9 +465,9 @@ let string_of_lbl l =
     in !cur_fun^"_"^(string_of_int pretty_l)
 
 
-let dump_gdecl decls (name, t, i) =
+let dump_gdecl (name, t, i) =
   let dump_elt (o, s, e) =
-    print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp decls e));
+    print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp e));
   in
   let rec dump_init l =
     match l with
@@ -504,94 +487,90 @@ let dump_gdecl decls (name, t, i) =
 	  dump_init i;
 	  print_endline "};"
 
+let string_of_blk offset x =
+  let buf = Buffer.create 80 in
+  let offset = ref offset in
+  let incr_margin () = offset := !offset + 2 in
+  let decr_margin () = offset := !offset - 2 in
+  let dump_line str = 
+    let margin = String.make !offset ' ' in
+      Buffer.add_string buf (margin^str^"\n") 
+  in
 
-let rec dump_stmt align decls only (sk, _) =
-  print_string align;
-  match sk with
-      Set (lv, e, sc) ->
-	print_endline ((string_of_lval decls lv)^" =("^(string_of_scalar sc)^
-			 ") "^(string_of_exp decls e)^";")
-    | Copy (lv1, lv2, sz) ->
-	print_endline ((string_of_lval decls lv1)^" ="^(string_of_size_t sz)^
-			 " "^(string_of_lval decls lv2)^";")
-
-    | Decl (name, t, body) ->
-	let new_decls = if !pretty_print then (name::decls) else [] in
+  let rec dump_stmt only (sk, _) =
+    match sk with
+	Set (lv, e, sc) ->
+	  dump_line ((string_of_lval lv)^" =("^(string_of_scalar sc)^
+			") "^(string_of_exp e)^";")
+      | Copy (lv1, lv2, sz) ->
+	  dump_line ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
+			" "^(string_of_lval lv2)^";")
+	    
+      | Decl (name, t, body) ->
 	  if only then begin
-	    print_endline ((string_of_typ t)^" "^name^";");
-	    dump_blk align new_decls body
+	    dump_line ((string_of_typ t)^" "^name^";");
+	    dump_blk body
 	  end else begin
-	    print_endline "{";
-	    let new_align = (align^"  ") in
-	      print_string new_align;
-	      print_endline ((string_of_typ t)^" "^name^";");
-	      dump_blk new_align new_decls body;
-	      print_endline (align^"}")
+	    dump_line "{";
+	    incr_margin ();
+	    dump_line ((string_of_typ t)^" "^name^";");
+	    dump_blk body;
+	    decr_margin ();
+	    dump_line "}"
 	  end
+	    
+      | Label l -> dump_line ((string_of_lbl l)^":")
+      | Goto l -> dump_line ("goto "^(string_of_lbl l)^";")
+	  
+      | Call f -> dump_line ((string_of_fn f)^";")
+	  
+      | ChooseAssert elts ->
+	  dump_line "choose {";
+	  incr_margin ();
+	  List.iter dump_assertblk elts;
+	  decr_margin ();
+	  dump_line "}"
 
-    | Label l -> 
-	print_endline ((string_of_lbl l)^":")
-    | Goto l ->
-	print_endline ("goto "^(string_of_lbl l)^";")
+      | InfLoop body -> 
+	  dump_line "while (1) {";
+	  incr_margin ();
+	  dump_blk body;
+	  decr_margin ();
+	  dump_line "}"
 
-    | Call f ->
-	print_endline ((string_of_fn decls f)^";")
+(* TODO: Should change this output!! *)
+  and dump_assertblk (exps, body) =
+    dump_line ("| "^(string_of_cond exps)^" -->");
+    incr_margin ();
+    dump_blk body;
+    decr_margin ()
 
-    | ChooseAssert elts ->
-	print_endline "choose {";
-	List.iter (dump_assertblk (align^"--> ") (align^"    ") decls) elts;
-	print_endline (align^"}")
-
-    | InfLoop body -> 
-	print_endline "while (1) {";
-	dump_blk (align^"  ") decls body;
-	print_endline (align^"}")
-
-and dump_assert align decls e =
-  print_endline (align^"assert("^(string_of_exp decls e)^");")
-
-and dump_assertblk align1 align2 decls (exps, b) =
-   match exps, b with
-     | [], [] -> invalid_arg "Newspeak.dump_assertblk"
-     | [], hd::[] ->
-	 dump_stmt align1 decls true hd
-     | [], hd::r ->
-	 dump_stmt align1 decls false hd;
-	 List.iter (dump_stmt align2 decls false) r
-
-     | first::others, _ ->
-	 dump_assert align1 decls first;
-	 List.iter (dump_assert align2 decls) others;
-	 dump_blk align2 decls b
-
-and dump_blk align decls b =
-  match b with
-    | hd::[] -> dump_stmt align decls true hd
-    | hd::r ->
-	dump_stmt align decls false hd;
-	List.iter (dump_stmt align decls false) r
-    | [] -> ()
-
-
-and dump_fundec name body =
+  and dump_blk b =
+    match b with
+      | hd::[] -> dump_stmt true hd
+      | hd::r ->
+	  dump_stmt false hd;
+	  List.iter (dump_stmt false) r
+      | [] -> ()
+  in
+    
+    dump_blk x;
+    Buffer.contents buf
+  
+let dump_fundec name body =
   match body with
       None -> ()
     | Some body ->
 	cur_fun := name;
 	lbl_index := 0;
 	print_endline (name^"() {");
-	dump_blk "  " [] body;
+	print_string (string_of_blk 2 body);
 	print_endline "}";
 	print_newline ()
 
 
 
-(* Functions exported *)
-
-let string_of_exp e = (string_of_exp [] e)
-
-let string_of_lval lv = (string_of_lval [] lv)
-
+(* Exported print functions *)
 let dump (gdecls, fundecs) =
   let rec collect_globals_name g =
     match g with
@@ -605,7 +584,7 @@ let dump (gdecls, fundecs) =
     match g with
 	[] -> ()
       | d::r ->
-	  dump_gdecl [] d;
+	  dump_gdecl d;
 	  handle_globals r
   in
     clear_tables ();
@@ -627,6 +606,13 @@ let dump_fundec name (_, body) =
     dump_fundec name body;
     pretty_print := old_pretty
 
+let string_of_blk x = string_of_blk 0 x
+
+let string_of_stmt x = string_of_blk (x::[])
+
+(* TODO: Implement two dumps, a pretty and an bare one *)
+
+(* Input/output functions *)
 let write_hdr cout (filenames, decls, ptr_sz) =
   Marshal.to_channel cout "NPK!" [];
   Marshal.to_channel cout filenames [];
@@ -659,9 +645,6 @@ let read name =
       end;
       close_in cin;
       (filenames, (decls, funs), ptr_sz)
-
-
-(* TODO: Implement two dumps, a pretty and an bare one *)
 
 (** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]
@@ -742,5 +725,3 @@ let build_main_call ptr_sz (args_t, ret_t) args =
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
   in
     (!globs, build_call_aux "main" prolog (args_t, ret_t))
-
-let print_blk x = dump_blk "" [] x

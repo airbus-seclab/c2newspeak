@@ -173,6 +173,9 @@ val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
 val string_of_lval : lval -> string
 
+val string_of_stmt: stmt -> string
+val string_of_blk: blk -> string
+
 (** [dump cout (fundecs, body)] prints the program (fundecs, body) to cout. *)
 val dump : t -> unit
 
@@ -224,5 +227,3 @@ val build_call: fid -> ftyp -> blk
 val build_main_call : size_t -> ftyp -> string list -> (gdecl list * blk)
 
 val create_cstr: string -> string -> gdecl
-
-val print_blk: blk -> unit
