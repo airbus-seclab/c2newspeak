@@ -187,97 +187,6 @@ let rec negate exp =
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
 
-
-
-(* TODO: Look into the simplifications *)
-let simplify_gotos blk =
-  let necessary_lbls = ref [] in
-  let rec simplify_blk x =
-    match x with
-	(Goto l1, _)::((Label l2, _)::_ as tl) when l1 = l2 -> simplify_blk tl
-      | [] -> []
-      | (Label l, _)::tl when not (List.mem l !necessary_lbls) -> 
-	  simplify_blk tl
-      | hd::tl -> 
-	  let hd = simplify_stmt hd in
-	  let tl = simplify_blk tl in
-	    hd::tl
-		
-  and simplify_choose_elt (l, b) = l, simplify_blk b
-
-  and simplify_stmt (x, loc) =
-    match x with
-	Goto l -> 
-	  necessary_lbls := l::!necessary_lbls;
-	  (x, loc)
-      | Decl (name, t, body) -> (Decl (name, t, simplify_blk body), loc)
-      | ChooseAssert elts ->
-	  (ChooseAssert (List.map simplify_choose_elt elts), loc)
-      | InfLoop body -> (InfLoop (simplify_blk body), loc)
-      | _ -> (x, loc)
-  in
-    simplify_blk blk
-
-
-let simplify_coerce blk =
-  let rec simplify_stmt (x, loc) =
-    match x with
-      | Set (lv, e, sca) -> (Set (simplify_lval lv, simplify_exp e, sca), loc)
-      | Call (FunDeref (e, t)) -> (Call (FunDeref (simplify_exp e, t)), loc)
-      | Decl (name, t, body) -> 
-	  Decl (name, t, List.map simplify_stmt body), loc
-      | ChooseAssert elts ->
-          let elts = List.map simplify_choose_elt elts in
-            ChooseAssert (elts), loc
-      | InfLoop body ->
-          let body = List.map simplify_stmt body in
-          (InfLoop body, loc)
-      | _ -> (x, loc)
-
-  and simplify_choose_elt (l, b) = (List.map simplify_exp l, List.map simplify_stmt b)
-
-  and simplify_exp e =
-    match e with
-          (* Coerce [a;b] Coerce [c;d] e -> Coerce [c;d] if [a;b] contains [c;d] *)
-      | UnOp (Coerce (l1,u1), UnOp(Coerce (l2, u2), e))
-          when Int64.compare l1 l2 <= 0 && Int64.compare u1 u2 >= 0
-            -> simplify_exp (UnOp (Coerce (l2, u2),e))
-
-          (* Coerce [a;b] Coerce [c;d] e -> Coerce [a;b] if [c;d] contains [a;b] *)
-      | UnOp (Coerce (l1,u1), UnOp(Coerce (l2, u2), e))
-          when Int64.compare l2 l1 <= 0 && Int64.compare u2 u1 >= 0
-            -> simplify_exp (UnOp (Coerce (l1, u1),e))
-
-          (* Coerce/Belongs [a;b] Const c -> Const c if c in [a;b] *)
-      | UnOp (Coerce (l1,u1), Const (CInt64 c))
-      | UnOp (Belongs (l1,u1), Const (CInt64 c))
-          when Int64.compare l1 c <= 0 && Int64.compare c u1 <= 0 ->
-          Const (CInt64 c)
-
-      | Lval (lv, sca)  -> Lval (simplify_lval lv, sca)
-      | AddrOf (lv, sz) -> AddrOf (simplify_lval lv, sz)
-      | UnOp (o, e) -> UnOp (o, simplify_exp e)
-      | BinOp (o, e1, e2) -> BinOp (o, simplify_exp e1, simplify_exp e2)
-      | _ -> e
-
-  and simplify_lval lv =
-    match lv with
-      | Deref (e, sz) -> Deref (simplify_exp e, sz)
-      | Shift (l, e) -> Shift (simplify_lval l, simplify_exp e)
-      | _ -> lv
-  in
-    List.map simplify_stmt blk
-
-
-(* TODO: do this in one tree traversal, instead of 2 *)
-let simplify b = simplify_coerce (simplify_gotos b)
-
-
-
-
-
-
-
 (*---------*)
 (* Display *)
 (*---------*)
@@ -725,3 +634,107 @@ let build_main_call ptr_sz (args_t, ret_t) args =
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
   in
     (!globs, build_call_aux "main" prolog (args_t, ret_t))
+
+
+
+class simplification =
+object
+  method process_exp (x: exp) = x
+end;;
+
+class simplify_coerce =
+object 
+  inherit simplification
+
+  method process_exp e =
+    match e with
+        (* Coerce [a;b] Coerce [c;d] e 
+	   -> Coerce [c;d] if [a;b] contains [c;d] *)
+      | UnOp (Coerce (l1,u1), UnOp(Coerce (l2, u2), e))
+          when Int64.compare l1 l2 <= 0 && Int64.compare u1 u2 >= 0
+            -> (UnOp (Coerce (l2, u2),e))
+	  
+      (* Coerce [a;b] Coerce [c;d] e -> Coerce [a;b] if [c;d] contains [a;b] *)
+      | UnOp (Coerce (l1,u1), UnOp(Coerce (l2, u2), e))
+          when Int64.compare l2 l1 <= 0 && Int64.compare u2 u1 >= 0
+            -> (UnOp (Coerce (l1, u1),e))
+
+      (* Coerce/Belongs [a;b] Const c -> Const c if c in [a;b] *)
+      | UnOp (Coerce (l1,u1), Const (CInt64 c))
+      | UnOp (Belongs (l1,u1), Const (CInt64 c))
+          when Int64.compare l1 c <= 0 && Int64.compare c u1 <= 0 ->
+          Const (CInt64 c)
+      | _ -> e
+
+end;;
+
+let simplify_gotos blk =
+  let necessary_lbls = ref [] in
+  let rec simplify_blk x =
+    match x with
+	(Goto l1, _)::((Label l2, _)::_ as tl) when l1 = l2 -> simplify_blk tl
+      | [] -> []
+      | (Label l, _)::tl when not (List.mem l !necessary_lbls) -> 
+	  simplify_blk tl
+      | hd::tl -> 
+	  let hd = simplify_stmt hd in
+	  let tl = simplify_blk tl in
+	    hd::tl
+		
+  and simplify_choose_elt (l, b) = l, simplify_blk b
+
+  and simplify_stmt (x, loc) =
+    match x with
+	Goto l -> 
+	  necessary_lbls := l::!necessary_lbls;
+	  (x, loc)
+      | Decl (name, t, body) -> (Decl (name, t, simplify_blk body), loc)
+      | ChooseAssert elts ->
+	  (ChooseAssert (List.map simplify_choose_elt elts), loc)
+      | InfLoop body -> (InfLoop (simplify_blk body), loc)
+      | _ -> (x, loc)
+  in
+    simplify_blk blk
+
+
+let simplify_aux actions blk =
+  let rec simplify_stmt (x, loc) =
+    let x =
+      match x with
+	| Set (lv, e, sca) -> Set (simplify_lval lv, simplify_exp e, sca)
+	| Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp e, t))
+	| Decl (name, t, body) -> Decl (name, t, List.map simplify_stmt body)
+	| ChooseAssert elts ->
+            let elts = List.map simplify_choose_elt elts in
+              ChooseAssert (elts)
+	| InfLoop body ->
+            let body = List.map simplify_stmt body in
+              InfLoop body
+	| _ -> x
+    in
+      (x, loc)
+
+  and simplify_choose_elt (l, b) = 
+    (List.map simplify_exp l, List.map simplify_stmt b)
+
+  and simplify_exp e =
+    let e = ref e in
+      List.iter (fun x -> e := x#process_exp !e) actions;
+      match !e with
+	  Lval (lv, sca) -> Lval (simplify_lval lv, sca)
+	| AddrOf (lv, sz) -> AddrOf (simplify_lval lv, sz)
+	| UnOp (o, e) -> UnOp (o, simplify_exp e)
+	| BinOp (o, e1, e2) -> BinOp (o, simplify_exp e1, simplify_exp e2)
+	| _ -> !e
+
+  and simplify_lval lv =
+    match lv with
+      | Deref (e, sz) -> Deref (simplify_exp e, sz)
+      | Shift (l, e) -> Shift (simplify_lval l, simplify_exp e)
+      | _ -> lv
+  in
+    List.map simplify_stmt blk
+
+
+(* TODO: do this in one tree traversal, instead of 2 *)
+let simplify b = simplify_aux [new simplify_coerce] (simplify_gotos b)
