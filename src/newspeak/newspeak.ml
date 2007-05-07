@@ -640,6 +640,7 @@ let build_main_call ptr_sz (args_t, ret_t) args =
 class simplification =
 object
   method process_exp (x: exp) = x
+  method process_blk (x: blk) = x
 end;;
 
 let contains (l1, u1) (l2, u2) = 
@@ -676,6 +677,17 @@ object
 
 end;;
 
+class simplify_choose =
+object 
+  inherit simplification
+
+  method process_blk x =
+    match x with
+	(ChooseAssert [([], body)], _)::tl -> body@tl
+      | (ChooseAssert _, _)::_ -> x
+      | _ -> x
+end;;
+
 let simplify_gotos blk =
   let necessary_lbls = ref [] in
   let rec simplify_blk x =
@@ -689,7 +701,7 @@ let simplify_gotos blk =
 	  let tl = simplify_blk tl in
 	    hd::tl
 		
-  and simplify_choose_elt (l, b) = l, simplify_blk b
+  and simplify_choose_elt (l, b) = (l, simplify_blk b)
 
   and simplify_stmt (x, loc) =
     match x with
@@ -711,19 +723,21 @@ let simplify_aux actions blk =
       match x with
 	| Set (lv, e, sca) -> Set (simplify_lval lv, simplify_exp e, sca)
 	| Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp e, t))
-	| Decl (name, t, body) -> Decl (name, t, List.map simplify_stmt body)
+	| Decl (name, t, body) -> Decl (name, t, simplify_blk body)
 	| ChooseAssert elts ->
             let elts = List.map simplify_choose_elt elts in
-              ChooseAssert (elts)
+	      ChooseAssert (elts)
 	| InfLoop body ->
-            let body = List.map simplify_stmt body in
-              InfLoop body
+            let body = simplify_blk body in
+	      InfLoop body
 	| _ -> x
     in
       (x, loc)
 
-  and simplify_choose_elt (l, b) = 
-    (List.map simplify_exp l, List.map simplify_stmt b)
+  and simplify_choose_elt (cond, body) = 
+    let cond = List.map simplify_exp cond in
+    let body = simplify_blk body in
+      (cond, body)
 
   and simplify_exp e =
     let e = ref e in
@@ -740,9 +754,20 @@ let simplify_aux actions blk =
       | Deref (e, sz) -> Deref (simplify_exp e, sz)
       | Shift (l, e) -> Shift (simplify_lval l, simplify_exp e)
       | _ -> lv
+	  
+  and simplify_blk blk =
+    let blk = ref blk in
+      List.iter (fun x -> blk := x#process_blk !blk) actions;
+      match !blk with
+	  hd::tl -> 
+	    let hd = simplify_stmt hd in
+	    let tl = simplify_blk tl in
+	      hd::tl
+	| [] -> []
   in
-    List.map simplify_stmt blk
+    simplify_blk blk
 
 
 (* TODO: do this in one tree traversal, instead of 2 *)
-let simplify b = simplify_aux [new simplify_coerce] (simplify_gotos b)
+let simplify b = 
+  simplify_aux [new simplify_choose; new simplify_coerce] (simplify_gotos b)
