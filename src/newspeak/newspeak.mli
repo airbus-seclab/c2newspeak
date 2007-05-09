@@ -227,3 +227,8 @@ val build_call: fid -> ftyp -> blk
 val build_main_call : size_t -> ftyp -> string list -> (gdecl list * blk)
 
 val create_cstr: string -> string -> gdecl
+
+(* Tries to extract a while construct out of a block
+   returns the condition, the body, location and remaining of the block
+   if it succeeds *)
+val extract_while: blk -> (exp list * blk * location * blk) option

@@ -186,6 +186,27 @@ let rec negate exp =
 
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
+let extract_cond_body lbl x =
+  let rec extract x =
+    match x with
+	(ChooseAssert [(cond1::[], body); (cond2::[], [Goto lbl2, _])], _)::[] 
+	  when lbl = lbl2 && cond1 = negate cond2 ->
+	    cond1::(extract body)
+      | [] -> []
+      | _ -> raise Exit
+  in
+    try match x with
+	hd::body -> (extract [hd], body)
+      | [] -> ([], [])
+    with Exit -> ([], x)
+	  
+(* TODO: use this in a pretty printer *)
+let extract_while blk =
+  match blk with
+      (InfLoop body, loc)::((Label lbl, _)::_ as tl) -> 
+	let (cond, body) = extract_cond_body lbl body in
+	  Some (cond, body, loc, tl)
+    | _ -> None
 
 (*---------*)
 (* Display *)
@@ -466,6 +487,27 @@ let string_of_blk offset x =
     dump_blk x;
     Buffer.contents buf
   
+(*
+    match extract_while b with
+	Some (cond, body, _, tl) ->
+	  dump_line ("while ("^(string_of_cond cond)^") {");
+	  incr_margin ();
+	  dump_blk body;
+	  decr_margin ();
+	  dump_line "}";
+	  dump_blk tl
+      | None -> 
+
+	  match b with
+	    | hd::[] -> dump_stmt true hd
+	    | hd::r ->
+		dump_stmt false hd;
+dump_blk r;
+(*
+		List.iter (dump_stmt false) r
+*)
+	    | [] -> ()
+*)
 let dump_fundec name body =
   match body with
       None -> ()
@@ -476,7 +518,6 @@ let dump_fundec name body =
 	print_string (string_of_blk 2 body);
 	print_endline "}";
 	print_newline ()
-
 
 
 (* Exported print functions *)
@@ -771,3 +812,4 @@ let simplify_aux actions blk =
 (* TODO: do this in one tree traversal, instead of 2 *)
 let simplify b = 
   simplify_aux [new simplify_choose; new simplify_coerce] (simplify_gotos b)
+
