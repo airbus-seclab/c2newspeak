@@ -311,7 +311,13 @@ let generate_funspecs cout npkos =
     let body =
       match f.pbody with
 	| None -> None
-	| Some b -> Some (Newspeak.simplify (replace_body b))
+	| Some b -> 
+	    let body = replace_body b in
+	    let body = 
+	      if !Npkcontext.no_opt then body
+	      else Newspeak.simplify body
+	    in
+	      Some body
     in
     let ftyp = replace_ftyp (args, f.prett) in
       

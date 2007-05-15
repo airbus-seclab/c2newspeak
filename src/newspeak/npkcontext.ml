@@ -26,6 +26,13 @@
   email: olivier.levillain@penjili.org
 *)
 
+(* TODO: 
+   instead of having all parameters here and having all files depend
+   on it, 
+   Should have npkcontex at the end that sets the parameters of each file.
+   Not necessarily better ! Since some options are the same across several
+   different files.
+*)
 
 open Params
 
@@ -41,6 +48,8 @@ let castor_allowed = ref false
 let ignores_pragmas = ref false
 let remove_temp = ref true
 let accept_extern = ref false
+
+let no_opt = ref false
 
 let accept_mult_def = ref false
 
@@ -167,6 +176,8 @@ let argslist = [
 
   ("--version", Arg.Set version,
   "prints the version of the software");
+
+  ("--no-opt", Arg.Set no_opt, "Disables all code simplifications");
 ]
 
 
