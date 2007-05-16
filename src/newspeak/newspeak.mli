@@ -55,6 +55,7 @@ and stmtkind =
   | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
+(** The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
 
 and stmt = stmtkind * location
 
@@ -231,4 +232,9 @@ val create_cstr: string -> string -> gdecl
 (* Tries to extract a while construct out of a block
    returns the condition, the body, location and remaining of the block
    if it succeeds *)
-val extract_while: blk -> (exp list * blk * location * blk) option
+val extract_while: blk -> (exp list * blk * location * blk) option 
+(** [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
+If it fails, then it returns None.
+Else, it returns the while condition in a exp list. It is a list of booleans which 
+are evaluated until some of them is false (further booleans are not evaluated).
+It also returns two blk, the blk in the loop and the blk after the loop.   *)
