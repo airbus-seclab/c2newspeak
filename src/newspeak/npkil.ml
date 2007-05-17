@@ -494,4 +494,3 @@ let compare_typs t1 t2 =
   in
     
     compare_typs_aux t1 t2
-

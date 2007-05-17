@@ -205,7 +205,10 @@ let update_glob_link name g =
 	      ("multiple definition of "^name)
 	| _ -> 
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
-  with Not_found -> Hashtbl.add glb_decls name g
+  with Not_found -> 
+    Hashtbl.add glb_decls name g;
+    Hashtbl.add glb_tabl_name name name
+
 
 let merge_headers npko =
   let npko = read_header npko in
@@ -252,7 +255,6 @@ let update_fun_link fun_specs name f =
 let generate_globals globs =
   let glist = ref [] in
 
-
   let handle_cstr str =
     let name = ("!const_str_"^str) in 
     let const_str = Newspeak.create_cstr name str in
@@ -274,8 +276,7 @@ let generate_globals globs =
 	  try
 	    let t = replace_typ g.gtype in
 	      glist := (name, t, replace_init i)::(!glist);
-	      Hashtbl.add glb_tabl_typ name t;
-	      Hashtbl.add glb_tabl_name name name
+	      Hashtbl.add glb_tabl_typ name t
 	  with LenOfArray -> 
 	    error "Npklink.handle_real_glob" 
 	      ("unspecified length for global array "^name)
