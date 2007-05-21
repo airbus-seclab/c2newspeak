@@ -21,3 +21,4 @@ clean: $(DIR)
 	$(RM) *~
 
 test: newspeak npkstats
+

@@ -1,6 +1,6 @@
 DIR = src tests bin paper
 
-.PHONY: $(DIR) all clean test install
+.PHONY: $(DIR) all clean test install tar
 
 install: src
 
@@ -14,5 +14,6 @@ $(DIR):
 clean: $(DIR)
 	rm -f *~
 
-tar: clean
+tar:
+	make clean
 	cd ..; tar -czf newspeak.tgz newspeak
