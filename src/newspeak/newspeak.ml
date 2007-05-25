@@ -225,9 +225,7 @@ let rec seq sep f l =
     | [] -> ""
     | [e] -> f e
     | e::r -> (f e)^sep^(seq sep f r)
-
-let pretty_print = ref false
-
+(*
 let globals = Hashtbl.create 100
 let globals_index = ref 0
 
@@ -243,7 +241,7 @@ let clear_tables () =
   Hashtbl.clear globals;
   globals_index := 0;
   lbl_index := 0
-
+*)
 
 
 (* Types *)
@@ -382,18 +380,7 @@ let rec string_of_cond b =
     | e::b -> (string_of_exp e)^" & "^(string_of_cond b)
 
 (* Actual dump *)
-let string_of_lbl l =
-  if not !pretty_print
-  then "lbl"^(string_of_int l)
-  else
-    let pretty_l = try
-      Int_map.find l !lbls
-    with Not_found ->
-      incr lbl_index;
-      lbls := Int_map.add l !lbl_index !lbls;
-      !lbl_index
-    in !cur_fun^"_"^(string_of_int pretty_l)
-
+let string_of_lbl l = "lbl"^(string_of_int l)
 
 let dump_gdecl (name, t, i) =
   let dump_elt (o, s, e) =
@@ -487,33 +474,10 @@ let string_of_blk offset x =
     dump_blk x;
     Buffer.contents buf
   
-(*
-    match extract_while b with
-	Some (cond, body, _, tl) ->
-	  dump_line ("while ("^(string_of_cond cond)^") {");
-	  incr_margin ();
-	  dump_blk body;
-	  decr_margin ();
-	  dump_line "}";
-	  dump_blk tl
-      | None -> 
-
-	  match b with
-	    | hd::[] -> dump_stmt true hd
-	    | hd::r ->
-		dump_stmt false hd;
-dump_blk r;
-(*
-		List.iter (dump_stmt false) r
-*)
-	    | [] -> ()
-*)
 let dump_fundec name body =
   match body with
       None -> ()
     | Some body ->
-	cur_fun := name;
-	lbl_index := 0;
 	print_endline (name^"() {");
 	print_string (string_of_blk 2 body);
 	print_endline "}";
@@ -522,39 +486,17 @@ let dump_fundec name body =
 
 (* Exported print functions *)
 let dump (gdecls, fundecs) =
-  let rec collect_globals_name g =
-    match g with
-	[] -> ()
-      | (name, _, i)::r ->
-	  incr (globals_index);
-	  Hashtbl.replace globals (!globals_index) name;
-	  collect_globals_name r
-
-  and handle_globals g =
-    match g with
-	[] -> ()
-      | d::r ->
-	  dump_gdecl d;
-	  handle_globals r
-  in
-    clear_tables ();
-    if !pretty_print then collect_globals_name gdecls;
-
-    (* TODO: Clean this mess... String_map *)
-
+  (* TODO: Clean this mess... String_map *)
+  let funs = ref (String_map.empty) in
+    
     Hashtbl.iter 
-      (fun name (_, body) -> funs := (String_map.add name body !funs))
-      fundecs;
+    (fun name (_, body) -> funs := (String_map.add name body !funs))
+    fundecs;
     String_map.iter dump_fundec !funs;
-    handle_globals gdecls;
-    clear_tables ()
+    List.iter dump_gdecl gdecls
 
 
-let dump_fundec name (_, body) =
-  let old_pretty = !pretty_print in
-    pretty_print := false;
-    dump_fundec name body;
-    pretty_print := old_pretty
+let dump_fundec name (_, body) = dump_fundec name body
 
 let string_of_blk x = string_of_blk 0 x
 
