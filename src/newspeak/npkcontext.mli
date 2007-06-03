@@ -66,6 +66,7 @@ val verb_debug : bool ref
 val verb_cil : bool ref
 val verb_npko : bool ref
 val verb_newspeak : bool ref
+val verb_c : bool ref
 
 (** when the pretty_print boolean is set, locals and globals are
     displayed in a prettier way if possible (with their names) *)

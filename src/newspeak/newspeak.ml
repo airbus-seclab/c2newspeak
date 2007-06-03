@@ -272,7 +272,6 @@ let rec string_of_typ t =
 	  List.iter string_of_elt lst;
 	  !res^"}"^(string_of_size_t sz)
 
-
 let string_of_ftyp (args, ret) = 
   let res = ref "" in 
     begin match args with
@@ -494,7 +493,6 @@ let dump (gdecls, fundecs) =
     fundecs;
     String_map.iter dump_fundec !funs;
     List.iter dump_gdecl gdecls
-
 
 let dump_fundec name (_, body) = dump_fundec name body
 
@@ -755,3 +753,233 @@ let simplify_aux actions blk =
 let simplify b = 
   simplify_aux [new simplify_choose; new simplify_coerce] (simplify_gotos b)
 
+
+type c_prog = (c_typedef list * c_glob list * c_fun list)
+
+and c_typedef = ()
+
+and c_glob = (string * c_typ * c_init)
+
+and c_typ =
+    | C_scalar of scalar_t
+    | C_array of (c_typ * int)
+    | C_struct of c_field list
+    | C_union of c_field list
+
+and c_ftyp = c_typ list * c_typ option
+
+and c_field = (int * c_typ)
+
+and c_init = ()
+
+and c_fun = (string * c_ftyp * c_blk option)
+
+and c_blk = c_stmt list
+
+and c_stmt = ()
+
+let successive_fields x = 
+  let rec check o x =
+    match x with
+	(o', _)::tl when o < o' -> check o' tl
+      | [] -> true
+      | _ -> false
+  in
+    check 0 x
+
+let aligned_fields x = List.for_all (fun (o, _) -> o = 0) x
+
+let npk_to_c (gdecls, fundecs) = 
+  let type_tbl = Hashtbl.create 100 in
+  let field_cnt = ref 0 in
+  let typedefs = ref [] in
+
+  let c_fundecs = ref [] in
+    
+  let rec typ_to_c t =
+    if Hashtbl.mem type_tbl t then Hashtbl.find type_tbl t
+    else begin
+      match t with
+	  Scalar sc -> C_scalar sc
+	| Array (t, n) -> C_array (typ_to_c t, n)
+	| Region (fields, _) when successive_fields fields -> 
+	    C_struct (List.map field_to_c fields)
+	| Region (fields, _) when aligned_fields fields ->
+	    C_union (List.map field_to_c fields)
+	| _ -> 
+	    invalid_arg ("Newspeak.npk_to_c.typ_to_c: "
+			  ^"decompilation of newspeak type to C not possible")
+    end
+
+  and field_to_c (o, t) =
+    let name = !field_cnt in
+    let t = typ_to_c t in
+      incr field_cnt;
+      (name, t)
+  in
+
+  let init_t_to_c _ = () in
+    
+  let gdecl_to_c (string, t, init) =
+    let t = typ_to_c t in
+    let init = init_t_to_c init in
+      (string, t, init)
+  in
+
+  let ftyp_to_c (args, ret) = 
+    let args = List.map typ_to_c args in
+    let ret = 
+      match ret with
+	| Some t -> Some (typ_to_c t)
+	| None -> None
+    in
+      (args, ret)
+  in
+
+  let rec blk_to_c x = List.map stmt_to_c x
+
+  and stmt_to_c (x, loc) =
+    match x with
+      | _ -> 
+	  let stmt = string_of_stmt (x, loc) in
+	    invalid_arg ("Newspeak.npk_to_c.stmt_to_c: not implemented yet: "
+			  ^stmt)
+  in
+
+  let fundec_to_c fid (ftyp, body) = 
+    let ftyp = ftyp_to_c ftyp in
+    let body =
+      match body with
+	| Some body -> Some (blk_to_c body)
+	| None -> None
+    in
+      c_fundecs := (fid, ftyp, body)::(!c_fundecs)
+  in
+
+  let gdecls = List.map gdecl_to_c gdecls in
+    Hashtbl.iter fundec_to_c fundecs;
+    (!typedefs, gdecls, !c_fundecs)
+
+let print_c (typedefs, gdecls, fundecs) =
+  let string_of_c_typ t = 
+    match t with
+      | _ -> 
+	  invalid_arg "Newspeak.print_c.string_of_c_typ: not implemented yet"
+  in
+
+  let print_glob (name, t, _)  =
+    let t = string_of_c_typ t in
+      print_endline (t^" "^name^";")
+  in
+
+  let print_fun (string, t, body) =
+    print_endline ("void "^string^"()");
+    match body with
+	Some blk -> print_endline "{ }"
+      | None -> print_endline ";"
+  in
+
+    List.iter print_glob gdecls;
+    List.iter print_fun fundecs
+  
+
+let dump_as_C prog =
+  let c_prog = npk_to_c prog in
+    print_c c_prog
+(*
+and stmtkind =
+    Set of (lval * exp * scalar_t)
+  | Copy of (lval * lval * size_t)
+  | Decl of (string * typ * blk)
+  | Label of lbl
+  | Goto of lbl
+  | Call of fn
+  | ChooseAssert of (exp list * blk) list
+  | InfLoop of blk
+
+and stmt = stmtkind * location
+
+and blk = stmt list
+
+and lval =
+    Local of vid
+(* TODO: maybe this was a really bad idea, go back to a number ?? *)
+  | Global of string
+  | Deref of (exp * size_t)
+  | Shift of (lval * exp)
+
+and exp =
+    Const of cte
+  | Lval of (lval * scalar_t)
+  | AddrOf of (lval * size_t)
+  | AddrOfFun of fid
+  | UnOp of (unop * exp)
+  | BinOp of (binop * exp * exp)
+
+and cte = 
+    CInt64 of Int64.t
+  (* TODO: warning floats with more than 64 bits can not be represented *)
+  | CFloat of float * string
+  | Nil
+
+and unop =
+    Belongs of (Int64.t * Int64.t)
+  | Coerce of (Int64.t * Int64.t)
+  | Not
+  | BNot of (Int64.t * Int64.t)
+  | PtrToInt of ikind
+  | Cast of (scalar_t * scalar_t)
+
+and binop =
+  | PlusI | MinusI | MultI | DivI | Mod
+  | PlusF of size_t | MinusF of size_t | MultF of size_t | DivF of size_t
+  | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
+  | BXor of (Int64.t * Int64.t)
+  | Shiftlt
+  | Shiftrt
+  | PlusPI
+  | MinusPP
+  | Gt of scalar_t
+  | Eq of scalar_t
+
+and fn =
+    FunId of fid
+  | FunDeref of (exp * ftyp)
+
+and field = offset * typ
+
+and init_t = 
+  | Zero
+  | Init of (size_t * scalar_t * exp) list
+
+and ftyp = typ list * typ option
+
+and lbl = int
+and vid = int
+and fid = string
+
+and ikind = sign_t * size_t
+and sign_t = Unsigned | Signed
+and size_t = int
+and offset = int
+
+and location = string * int * int
+
+type size_of = typ -> size_t
+
+type size_of_scalar = scalar_t -> size_t
+*)
+(*
+let dump_as_c (gdecls, fundecs) =
+  (* TODO: Clean this mess... String_map *)
+  let funs = ref (String_map.empty) in
+  let add_fun name (_, body) =
+    funs := String_map.add name body !funs
+  in
+    Hashtbl.iter add_fun fundecs;
+    List.iter dump_gdecl_as_c gdecls
+    String_map.iter dump_fundec !funs;
+*)
+
+(* Needs to find the type of structures to be able to make assignment first,
+   and what about offsets in structures ?? *)

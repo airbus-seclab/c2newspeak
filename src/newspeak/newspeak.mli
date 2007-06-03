@@ -182,6 +182,8 @@ val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
 
+val dump_as_C : t -> unit
+
 (** [write name (files, prog, ptr_sz) ] write the program prog, with
     the list of its file names and the size of pointers to file name. *)
 val write : string -> (string list * t * size_t) -> unit
