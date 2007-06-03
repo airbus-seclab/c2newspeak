@@ -377,8 +377,6 @@ let link npkos output_file =
 	  print_newline ()
       end;
       if !verb_c then begin
-	print_endline "Newspeak as C";
-	print_endline "-------------";
 	let (_, kernel, _) = Newspeak.read output_file in
 	  Newspeak.dump_as_C kernel;
 	  print_newline ()

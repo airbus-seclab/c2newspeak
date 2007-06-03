@@ -776,7 +776,15 @@ and c_fun = (string * c_ftyp * c_blk option)
 
 and c_blk = c_stmt list
 
-and c_stmt = ()
+and c_stmt = 
+    | C_set of (c_lv * c_exp)
+    | C_decl of (string * c_typ * c_blk)
+
+and c_lv = 
+    | C_var of string
+
+and c_exp =
+    | C_const of cte
 
 let successive_fields x = 
   let rec check o x =
@@ -818,7 +826,11 @@ let npk_to_c (gdecls, fundecs) =
       (name, t)
   in
 
-  let init_t_to_c _ = () in
+  let init_t_to_c i = 
+    match i with
+	Zero -> ()
+      | _ -> invalid_arg "Newspeak.npk_to_c.init_t_to_c: not implemented yet" 
+  in
     
   let gdecl_to_c (string, t, init) =
     let t = typ_to_c t in
@@ -836,10 +848,32 @@ let npk_to_c (gdecls, fundecs) =
       (args, ret)
   in
 
-  let rec blk_to_c x = List.map stmt_to_c x
+  let rec exp_to_c env e = 
+    match e with
+	Const c -> C_const c
+      | _ -> invalid_arg ("Newspeak.npk_to_c.exp_to_c: not implemented yet: "
+			   ^(string_of_exp e))
 
-  and stmt_to_c (x, loc) =
+  and lv_to_c env lv =
+    match lv with
+	Local n -> C_var (List.nth env n)
+      | _ -> invalid_arg ("Newspeak.npk_to_c.lv_to_c: not implemented yet: "
+			   ^(string_of_lval lv))
+  in
+    
+  let rec blk_to_c env x = List.map (stmt_to_c env) x
+
+  and stmt_to_c env (x, loc) =
     match x with
+	Set (lv, e, _) -> 
+	  let lv = lv_to_c env lv in
+	  let e = exp_to_c env e in
+	    C_set (lv, e)
+      | Decl (name, t, body) ->
+	  let t = typ_to_c t in
+	  let env' = name::env in
+	  let body = blk_to_c env' body in
+	    C_decl (name, t, body)
       | _ -> 
 	  let stmt = string_of_stmt (x, loc) in
 	    invalid_arg ("Newspeak.npk_to_c.stmt_to_c: not implemented yet: "
@@ -850,7 +884,7 @@ let npk_to_c (gdecls, fundecs) =
     let ftyp = ftyp_to_c ftyp in
     let body =
       match body with
-	| Some body -> Some (blk_to_c body)
+	| Some body -> Some (blk_to_c [] body)
 	| None -> None
     in
       c_fundecs := (fid, ftyp, body)::(!c_fundecs)
@@ -861,8 +895,16 @@ let npk_to_c (gdecls, fundecs) =
     (!typedefs, gdecls, !c_fundecs)
 
 let print_c (typedefs, gdecls, fundecs) =
+  let string_of_scalar x =
+    match x with
+	Int (Signed, 4) -> "int"
+      | _ -> 
+	  invalid_arg "Newspeak.print_c.string_of_scalar: not implemented yet"
+  in
+
   let string_of_c_typ t = 
     match t with
+      | C_scalar sc -> string_of_scalar sc 
       | _ -> 
 	  invalid_arg "Newspeak.print_c.string_of_c_typ: not implemented yet"
   in
@@ -872,11 +914,59 @@ let print_c (typedefs, gdecls, fundecs) =
       print_endline (t^" "^name^";")
   in
 
-  let print_fun (string, t, body) =
-    print_endline ("void "^string^"()");
-    match body with
-	Some blk -> print_endline "{ }"
-      | None -> print_endline ";"
+  let string_of_args args =
+    match args with
+	[] ->  ""
+      | _ -> invalid_arg "Newpeak.print_c.string_of_args: not implemented yet"
+  in
+
+  let string_of_fid f (args, ret) =
+    let args = string_of_args args in
+    let ret =
+      match ret with
+	  None -> "void"
+	| _ -> invalid_arg "Newpeak.print_c.string_of_fid: not implemented yet"
+    in
+      ret^" "^f^"("^args^")"
+  in
+
+  let string_of_cte c =
+    match c with
+	CInt64 c -> Int64.to_string c
+      | CFloat (_, s) -> s
+      | Nil -> "0"
+  in
+
+  let rec string_of_lv lv =
+    match lv with
+	C_var name -> name
+
+  and string_of_exp e =
+    match e with
+	C_const c -> string_of_cte c
+  in
+
+  let rec print_stmt x =
+    match x with
+      | C_set (lv, e) ->
+	  let lv = string_of_lv lv in
+	  let e = string_of_exp e in
+	    print_endline (lv^" = "^e^";")
+      | C_decl (name, t, body) ->
+	  let t = string_of_c_typ t in
+	    print_endline (t^" "^name^";");
+	    print_blk body
+	      
+  and print_blk blk = List.iter print_stmt blk in
+    
+  let print_fun (f, t, body) =
+    let f = string_of_fid f t in 
+      match body with
+	  Some body -> 
+	    print_endline (f^" {");
+	    print_blk body;
+	    print_endline "}"
+	| None -> print_endline (f^";")
   in
 
     List.iter print_glob gdecls;
@@ -888,9 +978,7 @@ let dump_as_C prog =
     print_c c_prog
 (*
 and stmtkind =
-    Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (string * typ * blk)
   | Label of lbl
   | Goto of lbl
   | Call of fn
@@ -902,14 +990,11 @@ and stmt = stmtkind * location
 and blk = stmt list
 
 and lval =
-    Local of vid
-(* TODO: maybe this was a really bad idea, go back to a number ?? *)
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * size_t)
   | AddrOfFun of fid
