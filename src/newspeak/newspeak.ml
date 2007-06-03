@@ -779,12 +779,15 @@ and c_blk = c_stmt list
 and c_stmt = 
     | C_set of (c_lv * c_exp)
     | C_decl of (string * c_typ * c_blk)
+    | C_ite of (c_exp * c_blk * c_blk)
 
 and c_lv = 
     | C_var of string
 
 and c_exp =
     | C_const of cte
+    | C_lval of c_lv
+    | C_binop of (binop * c_exp * c_exp)
 
 let successive_fields x = 
   let rec check o x =
@@ -851,6 +854,8 @@ let npk_to_c (gdecls, fundecs) =
   let rec exp_to_c env e = 
     match e with
 	Const c -> C_const c
+      | Lval (lv, _) -> C_lval (lv_to_c env lv)
+      | BinOp (op, e1, e2) -> C_binop (op, exp_to_c env e1, exp_to_c env e2)
       | _ -> invalid_arg ("Newspeak.npk_to_c.exp_to_c: not implemented yet: "
 			   ^(string_of_exp e))
 
@@ -874,6 +879,12 @@ let npk_to_c (gdecls, fundecs) =
 	  let env' = name::env in
 	  let body = blk_to_c env' body in
 	    C_decl (name, t, body)
+      | ChooseAssert [([e1], body1); ([e2], body2)]
+	when e2 = negate e1 ->
+	  let e = exp_to_c env e1 in
+	  let body1 = blk_to_c env body1 in
+	  let body2 = blk_to_c env body2 in
+	    C_ite (e, body1, body2)
       | _ -> 
 	  let stmt = string_of_stmt (x, loc) in
 	    invalid_arg ("Newspeak.npk_to_c.stmt_to_c: not implemented yet: "
@@ -944,6 +955,12 @@ let print_c (typedefs, gdecls, fundecs) =
   and string_of_exp e =
     match e with
 	C_const c -> string_of_cte c
+      | C_lval lv -> string_of_lv lv
+      | C_binop (op, e1, e2) ->
+	  let e1 = string_of_exp e1 in
+	  let e2 = string_of_exp e2 in
+	  let op = string_of_binop false op in
+	    "("^e1^" "^op^" "^e2^")"
   in
 
   let rec print_stmt x =
@@ -956,6 +973,13 @@ let print_c (typedefs, gdecls, fundecs) =
 	  let t = string_of_c_typ t in
 	    print_endline (t^" "^name^";");
 	    print_blk body
+      | C_ite (e, body1, body2) ->
+	  let e = string_of_exp e in
+	    print_endline ("if "^e^" {");
+	    print_blk body1;
+	    print_endline ("} else { ");
+	    print_blk body2;
+	    print_endline "}"
 	      
   and print_blk blk = List.iter print_stmt blk in
     
