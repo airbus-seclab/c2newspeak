@@ -186,6 +186,15 @@ let rec negate exp =
 
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
+type alt_stmtkind =
+    (* the condition is a list of expression separated by && 
+       Careful! It behaves like the C operator: 
+       if the first expression evaluates to false, evaluation stops. *)
+    | While of (exp list * blk)
+    | Npk of stmtkind
+
+type alt_blk = (alt_stmtkind * location) list
+
 let extract_cond_body lbl x =
   let rec extract x =
     match x with
@@ -199,7 +208,16 @@ let extract_cond_body lbl x =
 	hd::body -> (extract [hd], body)
       | [] -> ([], [])
     with Exit -> ([], x)
-	  
+
+let rec convert_loops blk =
+  match blk with
+      (InfLoop body, loc)::(Label lbl, _)::tl ->
+	let (cond, body) = extract_cond_body lbl body in
+	  (While (cond, body), loc)::(convert_loops tl)
+    | (x, loc)::tl -> (Npk x, loc)::(convert_loops tl)
+    | [] -> []
+
+(* TODO: should be deprecated to remove *)
 (* TODO: use this in a pretty printer *)
 let extract_while blk =
   match blk with
