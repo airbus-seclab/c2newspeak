@@ -4,3 +4,4 @@ clean:
 	@rm -f newspeak.mli
 	@rm -f npkstats*
 	@rm -f *~
+	@rm -f *.cmi *.cmx *.o
