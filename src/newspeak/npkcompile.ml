@@ -711,6 +711,7 @@ let translate_fun name spec =
   match spec.K.pargs, spec.K.plocs, spec.K.pcil_body with
       Some formals, Some locals, Some cil_body ->
 	cur_loc := spec.K.ploc;
+	reset_lbl_gen ();
 	let floc = !cur_loc in
 	let status = 
 	  match spec.K.prett with

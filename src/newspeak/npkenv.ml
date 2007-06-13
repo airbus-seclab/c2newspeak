@@ -254,6 +254,8 @@ let get_ret_var status = Npkil.Local (!loc_cnt - status.return_var)
 (* Counter for labels *)
 let lbl_cnt = ref 0
 
+let reset_lbl_gen () = lbl_cnt := 0
+
 let empty_status () =
   {return_var = -1; return_lbl = incr lbl_cnt;
    switch_lbls = []; brk_lbl = -1;}

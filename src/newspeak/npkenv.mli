@@ -128,6 +128,9 @@ val new_brk_status : status -> status
 (** generates a fresh label *)
 val new_label : unit -> Newspeak.lbl
 
+(** resets label generator to first label *)
+val reset_lbl_gen : unit -> unit
+
 (** add a new switch label in the status *)
 val add_switch_label : status -> Cil.location -> Newspeak.lbl -> status
 
