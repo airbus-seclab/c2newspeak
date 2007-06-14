@@ -63,9 +63,12 @@ let char_size = size_of (TInt(IChar, []))
 let short_size = size_of (TInt(IShort, []))
 let int_size = size_of (TInt(IInt, []))
 let long_size = size_of (TInt (ILong, []))
+(* TODO: 8, is to have max_int unsigned, so put 4, here *)
+let long_long_size = 4
 let pointer_size = size_of (TPtr(TInt (IInt, []), []))
 let float_size = size_of (TFloat (FFloat, []))
 let double_size = size_of (TFloat (FDouble, []))
+let long_double_size = size_of (TFloat (FLongDouble, []))
 
 
 

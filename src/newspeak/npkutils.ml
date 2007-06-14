@@ -111,7 +111,13 @@ let rec translate_typ t =
 	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, long_size))
 	| TInt (IULong, _) -> 
 	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, long_size))
+
+	| TInt (ILongLong, _) -> 
+	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, long_long_size))
 	      
+	| TInt (IULongLong, _) -> 
+	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, long_long_size))
+
 	| TEnum _ -> translate_typ intType
 	| TNamed (info, _) -> translate_typ info.ttype
 	    
@@ -141,8 +147,11 @@ let rec translate_typ t =
 	| TFloat (FFloat, _) -> Npkil.Scalar (Newspeak.Float float_size)
 	    
 	| TFloat (FDouble, _) -> Npkil.Scalar (Newspeak.Float double_size)
+
+	| TFloat (FLongDouble, _) -> 
+	    Npkil.Scalar (Newspeak.Float long_double_size)
 	    
-	| TInt _ | TVoid _ | TFloat _ | TFun _ ->
+	| TVoid _ | TFun _ ->
             error "Npkutils.translate_typ"
 	      ("the type "^(string_of_type t)^" is not handled yet")
     in
