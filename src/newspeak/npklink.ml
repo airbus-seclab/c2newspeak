@@ -127,6 +127,7 @@ and replace_unop o =
     | Npkil.Not -> Newspeak.Not
     | Npkil.BNot r -> Newspeak.BNot r
     | Npkil.PtrToInt k -> Newspeak.PtrToInt k
+    | Npkil.IntToPtr k -> Newspeak.IntToPtr k
     | Npkil.Cast (t1, t2) -> Newspeak.Cast (t1, t2)
 
 and replace_tmp_int x =

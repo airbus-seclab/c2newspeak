@@ -80,6 +80,7 @@ and unop =
   | Not
   | BNot of (Int64.t * Int64.t)
   | PtrToInt of ikind
+  | IntToPtr of ikind
   | Cast of (scalar_t * scalar_t)
 
 and binop =
@@ -273,7 +274,7 @@ let string_of_sign_t sg =
 
 let string_of_scalar s =
   match s with
-      Int (sg,sz) -> (string_of_sign_t sg)^"int"^(string_of_size_t sz)
+      Int (sg, sz) -> (string_of_sign_t sg)^"int"^(string_of_size_t sz)
     | Float sz -> "float" ^ (string_of_size_t sz)
     | Ptr -> "ptr"
     | FunPtr -> "fptr"
@@ -327,6 +328,7 @@ let string_of_unop op =
     | Not -> "!"
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
+    | IntToPtr i -> "(ptr)"
 	  
 let string_of_binop neg op =
   match op with

@@ -143,11 +143,11 @@ and translate_scalar_cast cast e t1 t2 =
 	  ("probable invalid cast "^(string_of_cast cast e));
 	  K.UnOp (K.PtrToInt (sign, sz), e')
 	    
-    | (Newspeak.Ptr, (Newspeak.Int (_, sz) as int_t))
+    | (Newspeak.Ptr, Newspeak.Int (sign, sz))
 	when sz = pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("probable invalid cast "^(string_of_cast cast e));
-	  K.UnOp (K.Cast (int_t, Newspeak.Ptr), e')
+	  K.UnOp (K.IntToPtr (sign, sz), e')
 	    
     | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) when !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"

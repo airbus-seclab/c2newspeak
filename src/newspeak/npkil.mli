@@ -76,6 +76,7 @@ and unop =
     | Not
     | BNot of (Int64.t * Int64.t)
     | PtrToInt of ikind
+    | IntToPtr of ikind
     | Cast of (scalar_t * scalar_t)
 
 and typ = 

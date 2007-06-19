@@ -76,6 +76,7 @@ and unop =
     | Not
     | BNot of (Int64.t * Int64.t)
     | PtrToInt of ikind
+    | IntToPtr of ikind
     | Cast of (scalar_t * scalar_t)
 
 and typ = 
@@ -197,6 +198,7 @@ let string_of_unop op =
     | Not -> "!"
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
+    | IntToPtr i -> "(ptr)"
 	  
 let string_of_binop neg op =
   match op with
