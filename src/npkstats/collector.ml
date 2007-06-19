@@ -32,7 +32,7 @@ open Newspeak
 let visit_unop x =
   match x with
       Belongs _ -> Npkstats.count Npkstats.array
-    | Coerce _ | Not | BNot _ | Cast _ | PtrToInt _ -> ()
+    | Coerce _ | Not | BNot _ | Cast _ | PtrToInt _ | IntToPtr _ -> ()
 
 let visit_binop x =
   match x with
