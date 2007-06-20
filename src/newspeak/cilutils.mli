@@ -51,7 +51,6 @@ val char_size : int
 val short_size : int
 val int_size : int
 val long_size : int
-val long_long_size : int
 val pointer_size : int
 val float_size : int
 val double_size : int
