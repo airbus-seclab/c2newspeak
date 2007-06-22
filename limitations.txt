@@ -1,5 +1,2 @@
-Limitations
+Known limitations
 -----------
-
- - There can not be two functions with the same name in two different
-   files

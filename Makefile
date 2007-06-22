@@ -1,4 +1,4 @@
-DIR = src tests bin paper
+DIR = src bin
 
 .PHONY: $(DIR) all clean test install tar
 
