@@ -83,13 +83,6 @@ and visit_choice (cond, body) =
   List.iter visit_exp cond;
   visit_blk body
 
-and visit_decl (_, _, init) =
-  match init with
-      Zero -> ()
-    | Init x -> List.iter visit_init_val x
-
-and visit_init_val (_, _, e) = visit_exp e
-
 and visit_blk x = List.iter visit_stmt x
 
 let visit_fundec (_, x) =
@@ -99,6 +92,14 @@ let visit_fundec (_, x) =
 	Npkstats.count Npkstats.funct;
 	visit_blk body
 
+let visit_init (_, t, e) = visit_exp e
+
+let visit_gdecl (_, _, init) =
+  Npkstats.count Npkstats.globals;
+  match init with
+      Zero -> ()
+    | Init x -> List.iter visit_init x
+
 let count (globs, fundecs) =
-  List.iter visit_decl globs;
+  List.iter visit_gdecl globs;
   Hashtbl.iter (fun _ f -> visit_fundec f) fundecs

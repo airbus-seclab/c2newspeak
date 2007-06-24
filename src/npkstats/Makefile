@@ -14,8 +14,4 @@ install: all
 
 include ../Makefile.common
 
-test: $(TGT)
-	@cp $(TGT) ../../tests/npkstats/$(TGT)
-
-
 include .depend

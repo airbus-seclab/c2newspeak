@@ -32,6 +32,7 @@ type counter
 val count: counter -> unit
 val count_call: Newspeak.fid -> unit
 
+val globals: counter
 val array: counter
 val pointer_arith: counter
 val pointer_deref: counter

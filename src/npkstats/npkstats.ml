@@ -29,6 +29,9 @@
 
 type counter = int ref
 
+let globals = ref 0
+let bytes = ref 0
+
 let loop = ref 0
 let array = ref 0
 let pointer_deref = ref 0
@@ -43,15 +46,16 @@ let to_string () =
     str := !str^"Number of calls to "^f^": "^(string_of_int x)^"\n"
   in
     Hashtbl.iter string_of_call f_tbl;
+    "Number of global variables: "^(string_of_int (!globals))^"\n"^
     "Number of functions: "^(string_of_int (!funct))^"\n"^
     !str
     ^"Number of loops: "^(string_of_int (!loop))^"\n"
     ^"Number of array operations: "^(string_of_int (!array))^"\n"
-    ^"Number of pointer deref : "
+    ^"Number of pointer deref: "
     ^(string_of_int (!pointer_deref))^"\n"
-    ^"Number of pointer arithmetic (+) : "
+    ^"Number of pointer arithmetic (+): "
     ^(string_of_int (!pointer_arith))^"\n"
-    ^"Number of function pointer call : "
+    ^"Number of function pointer call: "
     ^(string_of_int (!fpointer))
 
 let count x = incr x
