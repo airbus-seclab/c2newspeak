@@ -63,7 +63,9 @@ and visit_exp x =
 let visit_fn x =
   match x with
       FunId f -> Npkstats.count_call f
-    | FunDeref _ -> Npkstats.count Npkstats.fpointer
+    | FunDeref (e, _) -> 
+	visit_exp e;
+	Npkstats.count Npkstats.fpointer
 
 let rec visit_stmt (x, _) = 
   match x with
