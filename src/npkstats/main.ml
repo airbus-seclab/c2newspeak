@@ -57,8 +57,8 @@ let _ =
   end;
 
   try
-    let (_, npk, _) = Newspeak.read !fname in
-      Collector.count npk;
+    let (_, npk, ptr_sz) = Newspeak.read !fname in
+      Collector.count ptr_sz npk;
       print_endline (Npkstats.to_string ())
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);

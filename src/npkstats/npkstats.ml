@@ -47,6 +47,7 @@ let to_string () =
   in
     Hashtbl.iter string_of_call f_tbl;
     "Number of global variables: "^(string_of_int (!globals))^"\n"^
+    "Total size of global variables (bytes): "^(string_of_int (!bytes))^"\n"^
     "Number of functions: "^(string_of_int (!funct))^"\n"^
     !str
     ^"Number of loops: "^(string_of_int (!loop))^"\n"
@@ -59,6 +60,10 @@ let to_string () =
     ^(string_of_int (!fpointer))
 
 let count x = incr x
+
+let incr_counter x i = 
+  assert (i < max_int - !x);
+  x := !x + i
 
 let count_call f = 
   try 

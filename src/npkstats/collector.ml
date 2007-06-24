@@ -29,6 +29,13 @@
 
 open Newspeak
 
+let size_of = ref (fun _ -> invalid_arg "Collector.sizeof: Not initialized")
+
+let init ptr_sz = 
+  let (_, f) = Newspeak.create_size_of ptr_sz in
+    size_of := f
+
+
 let visit_unop x =
   match x with
       Belongs _ -> Npkstats.count Npkstats.array
@@ -92,14 +99,16 @@ let visit_fundec (_, x) =
 	Npkstats.count Npkstats.funct;
 	visit_blk body
 
-let visit_init (_, t, e) = visit_exp e
+let visit_init (_, _, e) = visit_exp e
 
-let visit_gdecl (_, _, init) =
+let visit_gdecl (_, t, init) =
   Npkstats.count Npkstats.globals;
+  Npkstats.incr_counter Npkstats.bytes (!size_of t);
   match init with
       Zero -> ()
     | Init x -> List.iter visit_init x
 
-let count (globs, fundecs) =
+let count ptr_sz (globs, fundecs) =
+  init ptr_sz;
   List.iter visit_gdecl globs;
   Hashtbl.iter (fun _ f -> visit_fundec f) fundecs
