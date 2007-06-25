@@ -3,5 +3,6 @@ clean:
 	@rm -f newspeak.ml
 	@rm -f newspeak.mli
 	@rm -f npkstats*
+	@rm -f npkstrip*
 	@rm -f *~
 	@rm -f *.cmi *.cmx *.o

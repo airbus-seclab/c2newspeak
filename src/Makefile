@@ -1,4 +1,4 @@
-DIR = newspeak npkstats
+DIR = newspeak npkstats npkstrip
 DEP = $(addsuffix /.depend,$(DIR))
 
 #DOC_DIR= ../doc/ocamldoc/

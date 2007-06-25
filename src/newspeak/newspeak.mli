@@ -178,7 +178,8 @@ val string_of_lval : lval -> string
 val string_of_stmt: stmt -> string
 val string_of_blk: blk -> string
 
-(** [dump cout (fundecs, body)] prints the program (fundecs, body) to cout. *)
+(** [dump (fundecs, body)] prints the program (fundecs, body) 
+    to standard output. *)
 val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
