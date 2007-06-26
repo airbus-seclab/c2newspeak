@@ -35,6 +35,7 @@ val count_call: Newspeak.fid -> unit
 
 val globals: counter
 val bytes: counter
+val instrs: counter
 val array: counter
 val pointer_arith: counter
 val pointer_deref: counter

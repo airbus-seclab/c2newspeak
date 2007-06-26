@@ -75,6 +75,7 @@ let visit_fn x =
 	Npkstats.count Npkstats.fpointer
 
 let rec visit_stmt (x, _) = 
+  Npkstats.count Npkstats.instrs;
   match x with
       Set (lv, e, _) -> visit_lval lv; visit_exp e
     | Copy (dst, src, _) -> visit_lval dst; visit_lval src
