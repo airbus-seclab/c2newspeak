@@ -1,0 +1,102 @@
+CAREFUL with OPTIMIZATIONS: should not remove any operations that might
+be erroneous !!
+
+CIL
+---
+- CIL simplifies &(*ptr) into ptr. If ptr is out of bounds or NULL, 
+the erroneous pointer dereference will not be flagged.
+- CIL forgets const attribute for this example:
+void main () {
+  const int x = 5;
+  int* ptr;
+
+  ptr = &x;
+  printf ("%d\n", x);
+  *ptr = 6;
+  printf ("%d\n", x);
+  return 0;
+}
+
+C syntax
+--------
+- look at the possibility to do with the if/then/else as in the switch
+- volatile attribute: add flag.
+- volatile and assumptions: add the possibility to constraint a sensor
+  volatile variable
+- const attribute as a flag? impossible for CIL local consts.
+  Only for const strings?
+- cast int <-> enum: more precise ?
+- handle bitfields?
+void main () {
+  struct {
+    unsigned field1 :4;
+    unsigned        :2;
+    unsigned field2 :2;
+  }full_of_fields;
+
+  int x;
+
+  full_of_fields.field2 = 1;
+  full_of_fields.field1 = 0;
+
+  x = full_of_fields.field1;
+}
+
+
+Kernel
+------
+- in newspeak.mli, put in common all (Int64.t * Int64.t) by defining a new type
+- for merging different files two solutions:
+  Mergecil puis Cil2kernel ou Cil2kernel puis Mergekernel (compile / link)
+- merge: beware of extern storage?
+- Goto in Ifs -> document ml and mli and send a mail to sourceforge
+- sizeof(void)
+- cast from pointer to (int) and addition of integer same as addition of
+  pointers in two-complement...
+- handle error when function main not defined (in kernelmerge ?)
+- Problem of architecture dependent data. They are currently located in
+  Cilutils (sizeof* and offsetof). Think about another solution ?
+- Document the fact that all pointer comparisons are cast into uint
+  comparisons by CIL (Eq and Ne are arithmetic binary ops)
+- Write an interpreter. The simplest way would be to use the analyser
+  structure and change the abstract semantics to the concrete one
+- Write correctly the formalism of cil2kernel
+- Add some tests about TNamed types
+- Could make an option to replace all BNot by equivalent arithmetic operations
+according to the type: -(x+1) or max_int - x
+- create documentation files and directory
+- possible optimisation: 0 * x => 0, 0 + x => x
+- optimisation see example number 012.c !!
+- optimisation: what happens with multiple(5)  coerce with same bounds ?
+- maybe should add the type of function next to fid for function call ?
+- since we have operator boolean and in Newspeak expression 
+(always evaluated), boolean conditions are not necessary anymore ?
+- CAREFUL: match_while is problematic because it transforms expressions with
+possible side-effects (or errors) into a side-effects free boolean formula.
++ it is not able to handle or expressions.
+
+Organisation
+------------
+- remove npk prefix from all .ml files.
+- Really think where anything should go in the end : Npkutils, Npkil...
+
+
+Output
+------
+- output of the address of functions is not nice (&funf). Maybe a space is 
+missing.
+- should output global variables in the same order as they appear in the source
+code. What about multiple files ?
+
+Miscellaneous examples
+----------------------
+> char t[100]; 
+> // ici: i + n <= 100 
+> memcpy(&(t[i]), src, n) 
+>   
+> Or on traduit ca vers un &t + belongs([0; 99]) (i) 
+> Or n = 0 et i = 100 peut arriver et n'est pas un bug. 
+>   
+> Donc, je pense il faut traduire ca en &t + belongs([0; 100]) (i) 
+> (Seulement parce qu'il est acceptable d'avoir un pointeur qui pointe juste
+> apres la dernière case) 

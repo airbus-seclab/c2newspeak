@@ -1,2 +1,5 @@
 Known limitations
 -----------
+
+- does not handle bitfields
+- simplifies &(*ptr) into ptr. When ptr is out of bounds, error will be missed.
