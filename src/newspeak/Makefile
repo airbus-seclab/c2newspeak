@@ -22,10 +22,7 @@ machdep: machdep.c
 	gcc -o machdep machdep.c
 
 test: $(TGT)
-	@cp $(TGT) ../../tests/newspeak/
-	@cp $(TGT) ../../tests/dump_as_c/
-	@cp $(TGT) ../../tests/multi-source/
-	@cp $(TGT) ../../tests/profiling
+	@cp $(TGT) ../../tests/
 	@cp $(TGT) ../../bin
 
 include .depend

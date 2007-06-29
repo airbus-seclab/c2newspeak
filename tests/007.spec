@@ -1,4 +1,4 @@
-Warning: probable invalid cast 'int *' -> 'int ' in '(int )p' in 007.c line 6
+Warning: probable invalid cast 'int *' -> 'int ' in '(int )p' in 007.c line 34
 Newspeak output
 ---------------
 main() {
