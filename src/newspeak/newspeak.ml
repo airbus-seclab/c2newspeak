@@ -173,6 +173,9 @@ let domain_of_typ (sign, size) =
     | (Signed, 2) -> (Int64.of_string "-32768", Int64.of_string "32767")
     | (Unsigned, 4) -> (Int64.zero, Int64.of_string "4294967295")
     | (Signed, 4) -> (Int64.of_string "-2147483648", Int64.of_string "2147483647")
+    | (Signed, 8) -> (Int64.min_int, Int64.max_int)
+    | (Unsigned, 8) -> 
+	invalid_arg "Newspeak.domain_of_typ: domain not representable"
     | _ -> invalid_arg "Newspeak.domain_of_typ"
 
 
