@@ -78,7 +78,15 @@ let rec append_decls decls body =
 
 let rec translate_const c =
   match c with
-      CInt64 (i, _, _) -> K.Const (Newspeak.CInt64 i)
+      CInt64 (i, k, _) -> 
+	let (s, n) = translate_ikind k in
+	  if n > 8 
+	    || (n = 8 && s = Newspeak.Unsigned 
+		&& Int64.compare i Int64.zero < 0) 
+	  then error "Npkcompile.translate_const"
+	    "integer too large: not representable";
+	  K.Const (Newspeak.CInt64 i)
+	  
     | CStr s -> get_cstr s
     | CChr c -> K.Const (Newspeak.CInt64 (Int64.of_int (Char.code c))) 
 	

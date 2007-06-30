@@ -63,6 +63,8 @@ val translate_logical_binop : (Newspeak.sign_t * Newspeak.size_t) -> Cil.binop -
 val translate_rel_binop : Cil.typ -> Cil.typ -> Cil.binop -> Newspeak.binop
 
 
+val translate_ikind : Cil.ikind -> Newspeak.ikind
+
 (** [translate_typ cil_typ] returns the translation of [cil_typ] in
     Newspeak, if the transformation is possible *)
 val translate_typ : Cil.typ -> Npkil.typ

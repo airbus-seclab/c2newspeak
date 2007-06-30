@@ -88,6 +88,19 @@ let translate_logical_binop t o =
 
 let cache = Hashtbl.create 100
 
+let translate_ikind k =
+  match k with
+      ISChar | IChar -> (Newspeak.Signed, char_size)
+    | IUChar -> (Newspeak.Unsigned, char_size)
+    | IShort -> (Newspeak.Signed, short_size)
+    | IUShort -> (Newspeak.Unsigned, short_size)
+    | IInt -> (Newspeak.Signed, int_size)
+    | IUInt -> (Newspeak.Unsigned, int_size)
+    | ILong -> (Newspeak.Signed, long_size)
+    | IULong -> (Newspeak.Unsigned, long_size)
+    | ILongLong -> (Newspeak.Signed, long_long_size)
+    | IULongLong -> (Newspeak.Unsigned, long_long_size)
+
 (* TODO: look at all callers to translate_typ to remove LenOfArray exception
    catch *)
 let rec translate_typ t =
@@ -95,28 +108,9 @@ let rec translate_typ t =
   with Not_found -> 
     let t' =
       match t with
-	  TInt (ISChar, _) | TInt (IChar, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, char_size))
-	| TInt (IUChar, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, char_size))
-	| TInt (IShort, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, short_size))
-	| TInt (IUShort, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, short_size))
-	| TInt (IInt, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, int_size))
-	| TInt (IUInt, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, int_size))
-	| TInt (ILong, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, long_size))
-	| TInt (IULong, _) -> 
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, long_size))
-
-	| TInt (ILongLong, _) ->
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Signed, long_long_size))
-	
-	| TInt (IULongLong, _) ->
-	    Npkil.Scalar (Newspeak.Int (Newspeak.Unsigned, long_long_size))
+	  TInt (k, _) -> 
+	    let k = translate_ikind k in
+	      Npkil.Scalar (Newspeak.Int k)
 
 	| TEnum _ -> translate_typ intType
 	| TNamed (info, _) -> translate_typ info.ttype

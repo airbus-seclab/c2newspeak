@@ -1,5 +1,8 @@
 Known limitations
 -----------
 
-- does not handle bitfields
+- bitfields not handled
+- unsigned long long type not handled
+- functions with variable number of arguments not handled
+- goto statements not handled
 - simplifies &(*ptr) into ptr. When ptr is out of bounds, error will be missed.
