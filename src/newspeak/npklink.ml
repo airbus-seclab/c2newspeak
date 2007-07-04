@@ -319,6 +319,11 @@ let generate_funspecs cout npkos =
 	      if !Npkcontext.no_opt then body
 	      else Newspeak.simplify body
 	    in
+	    let body =
+	      if !Npkcontext.no_opt then body
+	      else if not !Npkcontext.normalize_loops then body
+	      else Newspeak.normalize_loops body
+	    in
 	      Some body
     in
     let ftyp = replace_ftyp (args, f.prett) in

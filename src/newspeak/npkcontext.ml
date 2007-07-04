@@ -50,6 +50,7 @@ let remove_temp = ref true
 let accept_extern = ref false
 
 let no_opt = ref false
+let normalize_loops = ref false
 
 let accept_mult_def = ref false
 
@@ -182,6 +183,8 @@ let argslist = [
   "prints the version of the software");
 
   ("--no-opt", Arg.Set no_opt, "Disables all code simplifications");
+
+  ("--one-loop", Arg.Set normalize_loops, "Normalizes loops");
 ]
 
 

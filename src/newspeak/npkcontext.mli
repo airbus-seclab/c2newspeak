@@ -59,6 +59,8 @@ val accept_mult_def : bool ref
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
 
+val normalize_loops : bool ref
+
 (* val assumptions : string list ref *)
 
 val verb_morewarns : bool ref

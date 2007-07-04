@@ -163,6 +163,9 @@ val exp_of_int : int -> exp
 (** Deletion of useless Gotos and Labels. *)
 val simplify_gotos : blk -> blk
 
+(** Normalization of loops *)
+val normalize_loops : blk -> blk
+
 (** Run all simplifications. *)
 val simplify : blk -> blk
 

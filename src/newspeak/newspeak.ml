@@ -692,6 +692,21 @@ object
       | _ -> x
 end;;
 
+
+let extract_cond_body lbl x =
+  let rec extract x =
+    match x with
+	(ChooseAssert [(cond1::[], body); (cond2::[], [Goto lbl2, _])], _)::[] 
+	  when lbl = lbl2 && cond1 = negate cond2 ->
+	    cond1::(extract body)
+      | [] -> []
+      | _ -> raise Exit
+  in
+    try match x with
+	hd::body -> (extract [hd], body)
+      | [] -> ([], [])
+    with Exit -> ([], x)
+
 let simplify_gotos blk =
   let necessary_lbls = ref [] in
   let rec simplify_blk x =
@@ -776,6 +791,42 @@ let simplify_aux actions blk =
 let simplify b = 
   simplify_aux [new simplify_choose; new simplify_coerce] (simplify_gotos b)
 
+let is_cond_jump lbl x =
+  let rec check x =
+    match x with
+	(ChooseAssert [(cond1::[], body); (cond2::[], [Goto lbl2, _])], _)::[] 
+	  when lbl = lbl2 && cond1 = negate cond2 ->
+	    check body
+      | [] -> true
+      | _ -> false
+  in
+    check x
+      
+let extract_body_cond lbl x =
+  match List.rev x with
+      hd::body when is_cond_jump lbl [hd] -> Some (List.rev body, hd)
+    | _ -> None
+
+let rec normalize_loop blk = 
+  match blk with
+      (InfLoop body, loc)::(Label lbl, loc')::tl -> 
+	let loop = 
+	  match extract_body_cond lbl body with
+	      None -> (InfLoop body, loc)::[]
+	    | Some (body, cond) -> body@(InfLoop (cond::body), loc)::[]
+	in
+	  loop@(Label lbl, loc')::(normalize_loop tl)
+    | hd::tl -> hd::(normalize_loop tl)
+    | [] -> []
+	
+class simplify_loops =
+object 
+  inherit simplification
+
+  method process_blk x = normalize_loop x
+end;;
+
+let normalize_loops b = simplify_aux [new simplify_loops] b
 
 type c_prog = (c_typedef list * c_glob list * c_fun list)
 
