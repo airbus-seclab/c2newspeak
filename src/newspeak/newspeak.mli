@@ -181,6 +181,18 @@ val string_of_lval : lval -> string
 val string_of_stmt: stmt -> string
 val string_of_blk: blk -> string
 
+(** Visitor *)
+class type visitor =
+object
+  method process_fn: fn -> bool
+  method process_lval: lval -> bool
+end
+
+class nop_visitor : visitor
+
+val visit_fun : visitor -> fid -> fundec -> unit
+val visit : visitor -> t -> unit
+
 (** [dump (fundecs, body)] prints the program (fundecs, body) 
     to standard output. *)
 val dump : t -> unit

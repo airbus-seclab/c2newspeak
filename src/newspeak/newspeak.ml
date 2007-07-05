@@ -828,6 +828,81 @@ end;;
 
 let normalize_loops b = simplify_aux [new simplify_loops] b
 
+
+(* Visitor *)
+class type visitor =
+object 
+  method process_fn: fn -> bool 
+  method process_lval: lval -> bool
+end
+
+class nop_visitor =
+object
+  method process_fn (_: fn) = true
+  method process_lval (_: lval) = true
+end;;
+
+
+let rec visit_lval visitor x =
+  let continue_visit = visitor#process_lval x in
+    match x with
+	Deref (e, _) when continue_visit -> visit_exp visitor e
+      | Shift (lv, e) when continue_visit ->
+	  visit_lval visitor lv;
+	  visit_exp visitor e
+      | _ -> ()
+  
+and visit_exp visitor x =
+  match x with
+      Lval (lv, _) -> visit_lval visitor lv
+    | AddrOf (lv, _) -> visit_lval visitor lv
+    | UnOp (_, e) -> visit_exp visitor e
+    | BinOp (_, e1, e2) ->
+	visit_exp visitor e1;
+	visit_exp visitor e2
+    | _ -> ()
+
+let visit_fn visitor x =
+  let continue_visit = visitor#process_fn x in
+    match x with
+	FunDeref (e, _) when continue_visit -> visit_exp visitor e
+      | _ -> ()
+  
+let rec visit_blk visitor x = List.iter (visit_stmt visitor) x
+    
+and visit_stmt visitor (x, _) =
+  match x with
+      Set (lv, e, _) -> 
+	visit_lval visitor lv;
+	visit_exp visitor e
+    | Copy (lv1, lv2, _) ->
+	visit_lval visitor lv1;
+	visit_lval visitor lv2
+    | Decl (_, _, body) -> visit_blk visitor body
+    | Call fn -> visit_fn visitor fn
+    | ChooseAssert choices -> List.iter (visit_choice visitor) choices
+    | InfLoop x -> visit_blk visitor x
+    | Label _ | Goto _ -> ()
+
+and visit_choice visitor (cond, body) =
+  List.iter (visit_exp visitor) cond;
+  visit_blk visitor body
+
+let visit_fun visitor fid (t, body) =
+  match body with
+      Some body -> visit_blk visitor body
+    | None -> ()
+
+let visit visitor (_, fundecs) = 
+  Hashtbl.iter (visit_fun visitor) fundecs
+
+
+(* Builder *)
+
+
+
+(* Decompilation towards C *)
+(* TODO: this is not finished and is very experimental *)
 type c_prog = (c_typedef list * c_glob list * c_fun list)
 
 and c_typedef = ()
