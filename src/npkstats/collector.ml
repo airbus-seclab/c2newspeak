@@ -35,81 +35,60 @@ let init ptr_sz =
   let (_, f) = Newspeak.create_size_of ptr_sz in
     size_of := f
 
+class collector =
+object 
+  inherit Newspeak.nop_visitor
+    
+  method process_unop x =
+    match x with
+	Belongs _ -> Npkstats.count Npkstats.array
+      | _ -> ()
 
-let visit_unop x =
-  match x with
-      Belongs _ -> Npkstats.count Npkstats.array
-    | Coerce _ | Not | BNot _ | Cast _ | PtrToInt _ | IntToPtr _ -> ()
+  method process_binop x =
+    match x with
+	PlusPI -> Npkstats.count Npkstats.pointer_arith
+      | _ -> ()
 
-let visit_binop x =
-  match x with
-      PlusPI -> Npkstats.count Npkstats.pointer_arith
-    | PlusI | MinusI | MultI | DivI | Mod
-    | PlusF _ | MinusF _ | MultF _ | DivF _
-    | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt 
-    | MinusPP | Gt _ | Eq _ -> ()
+  method process_lval x =
+    let _ =
+      match x with
+	  Deref _ -> Npkstats.count Npkstats.pointer_deref
+	| _ -> ()
+    in
+      true
 
-let rec visit_lval x =
-  match x with
-      Deref (ptr, _) -> 
-	Npkstats.count Npkstats.pointer_deref;
-	visit_exp ptr
-    | Shift (lv, off) -> 
-	visit_lval lv; 
-	visit_exp off
-    | Local _ | Global _ -> ()
+  method process_fn x =
+    let _ =
+      match x with
+	  FunId f -> Npkstats.count_call f
+	| FunDeref (e, _) -> Npkstats.count Npkstats.fpointer
+    in
+      true
 
-and visit_exp x =
-  match x with
-      Lval (lv, _) -> visit_lval lv
-    | AddrOf (lv, _) -> visit_lval lv
-    | UnOp (op, e) -> visit_unop op; visit_exp e
-    | BinOp (op, e1, e2) -> visit_binop op; visit_exp e1; visit_exp e2
-    | Const _ | AddrOfFun _ -> ()
+  method process_stmt (x, _) =
+    Npkstats.count Npkstats.instrs;
+    let _ = 
+      match x with
+	  InfLoop body -> Npkstats.count Npkstats.loop
+	| _ -> ()
+    in
+      true
 
-let visit_fn x =
-  match x with
-      FunId f -> Npkstats.count_call f
-    | FunDeref (e, _) -> 
-	visit_exp e;
-	Npkstats.count Npkstats.fpointer
+  method process_fun _ (_, x) =
+    let _ = 
+      match x with
+	  Some _ -> Npkstats.count Npkstats.funct
+	| _ -> ()
+    in
+      true
 
-let rec visit_stmt (x, _) = 
-  Npkstats.count Npkstats.instrs;
-  match x with
-      Set (lv, e, _) -> visit_lval lv; visit_exp e
-    | Copy (dst, src, _) -> visit_lval dst; visit_lval src
-    | Decl (_, _, body) -> visit_blk body
-    | Call fn -> visit_fn fn
-    | ChooseAssert x -> List.iter visit_choice x
-    | InfLoop body -> 
-	Npkstats.count Npkstats.loop;
-	visit_blk body
-    | Label _ | Goto _ -> ()
+  method process_gdecl (_, t, _) =
+    Npkstats.count Npkstats.globals;
+    Npkstats.incr_counter Npkstats.bytes (!size_of t);
+    true
 
-and visit_choice (cond, body) = 
-  List.iter visit_exp cond;
-  visit_blk body
+end
 
-and visit_blk x = List.iter visit_stmt x
-
-let visit_fundec (_, x) =
-  match x with
-      None -> ()
-    | Some body -> 
-	Npkstats.count Npkstats.funct;
-	visit_blk body
-
-let visit_init (_, _, e) = visit_exp e
-
-let visit_gdecl (_, t, init) =
-  Npkstats.count Npkstats.globals;
-  Npkstats.incr_counter Npkstats.bytes (!size_of t);
-  match init with
-      Zero -> ()
-    | Init x -> List.iter visit_init x
-
-let count ptr_sz (globs, fundecs) =
+let count ptr_sz prog =
   init ptr_sz;
-  List.iter visit_gdecl globs;
-  Hashtbl.iter (fun _ f -> visit_fundec f) fundecs
+  Newspeak.visit (new collector) prog
