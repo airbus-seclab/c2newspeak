@@ -230,23 +230,13 @@ val write_hdr : out_channel -> (string list * gdecl list * size_t) -> unit
 *)
 val write_fun : out_channel -> fid -> fundec -> unit
 
+val size_of_scalar : size_t -> scalar_t -> size_t
+
 (** 
     Type of the size_of function.
     [size_of t] returns the size of any value of type t.
 *)
-type size_of = typ -> size_t
-
-(** 
-    Type of the size_of_scalar function.
-    [size_of_scalar sc_t] returns the size of any value of scalar type sc_t.
-*)
-type size_of_scalar = scalar_t -> size_t
-
-(**
-   [create_size_of ptr_size] creates functions size_of_scalar and size_of from
-   a given size of pointers ptr_size. On most standard machines ptr_size is 4.
-*)
-val create_size_of : size_t -> (size_of_scalar * size_of)
+val size_of : size_t -> typ -> size_t
 
 val build_call: fid -> ftyp -> blk
 

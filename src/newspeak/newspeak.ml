@@ -129,11 +129,6 @@ and offset = int
 
 and location = string * int * int
 
-type size_of = typ -> size_t
-
-type size_of_scalar = scalar_t -> size_t
-
-
 (*-----------*)
 (* Constants *)
 (*-----------*)
@@ -146,24 +141,24 @@ let locUnknown = ("", -1, -1)
 
 
 (*----------------------------------*)
-(* Manipualtion and Simplifications *)
+(* Manipulation and Simplifications *)
 (*----------------------------------*)
+	
+let size_of_scalar ptr_sz t = 
+  match t with
+      Int (_, n) -> n
+    | Float n -> n
+    | Ptr -> ptr_sz
+    | FunPtr -> ptr_sz
 
-let create_size_of ptr_sz =
-  let size_of_scalar t =
-    match t with
-	Int (_, n) -> n
-      | Float n -> n
-      | Ptr -> ptr_sz
-      | FunPtr -> ptr_sz
-  in
+let size_of ptr_sz t =
   let rec size_of t =
     match t with
-      | Scalar t -> size_of_scalar t
+      | Scalar t -> size_of_scalar ptr_sz t
       | Array (t, n) -> (size_of t) * n
       | Region (_, n) -> n
   in
-    (size_of_scalar, size_of)
+    size_of t
 
 let domain_of_typ (sign, size) =
     match sign, size with

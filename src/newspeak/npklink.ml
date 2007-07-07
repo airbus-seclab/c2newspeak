@@ -32,7 +32,7 @@ open Npkutils
 open Npkcontext
 open Npkil
 
-let (size_of_scalar, size_of) = Newspeak.create_size_of Cilutils.pointer_size
+let size_of = Newspeak.size_of Cilutils.pointer_size
 
 let filenames = ref []
 
