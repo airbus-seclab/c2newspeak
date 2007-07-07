@@ -22,7 +22,6 @@ machdep: machdep.c
 	gcc -o machdep machdep.c
 
 test: $(TGT)
-	@cp $(TGT) ../../tests/
 	@cp $(TGT) ../../bin
 
 include .depend
