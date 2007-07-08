@@ -18,6 +18,7 @@ CMO  = $(addsuffix .cmo, $(OBJ))
 CMX  = $(addsuffix .cmx, $(OBJ))
 O    = $(addsuffix .o, $(OBJ))
 DOC_FILES = $(MLI) $(DOC_ML_FILES)
+DOC_DIR = doc
 
 .PHONY: all clean doc
 
@@ -34,6 +35,8 @@ doc: $(DOC_FILES)
 	-mkdir $(DOC_DIR)
 	$(OCAMLDOC) -d  $(DOC_DIR) -html -m A $(FLAGS) $(DOC_FILES)
 
+install: all
+	cp $(TGT) ../../bin
 
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx

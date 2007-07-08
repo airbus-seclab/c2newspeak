@@ -113,19 +113,19 @@ object (this)
       str := !str^"Number of calls to "^f^": "^(string_of_int x)^"\n"
     in
       Hashtbl.iter string_of_call f_tbl;
-      "Number of global variables: "^(string_of_int (globals))^"\n"
-      ^"Total size of global variables (bytes): "^(string_of_int (bytes))^"\n"
-      ^"Number of instructions: "^(string_of_int (instrs))^"\n"
-      ^"Number of functions: "^(string_of_int (funct))^"\n"
+      "Number of global variables: "^(string_of_int globals)^"\n"
+      ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
+      ^"Number of instructions: "^(string_of_int instrs)^"\n"
+      ^"Number of functions: "^(string_of_int funct)^"\n"
       ^(!str)
-      ^"Number of loops: "^(string_of_int (loop))^"\n"
-      ^"Number of array operations: "^(string_of_int (array))^"\n"
+      ^"Number of loops: "^(string_of_int loop)^"\n"
+      ^"Number of array operations: "^(string_of_int array)^"\n"
       ^"Number of pointer deref: "
-      ^(string_of_int (pointer_deref))^"\n"
+      ^(string_of_int pointer_deref)^"\n"
       ^"Number of pointer arithmetic (+): "
-      ^(string_of_int (pointer_arith))^"\n"
+      ^(string_of_int pointer_arith)^"\n"
       ^"Number of function pointer call: "
-      ^(string_of_int (fpointer))
+      ^(string_of_int fpointer)
 end
 
 let fname = ref ""
