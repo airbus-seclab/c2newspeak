@@ -1,0 +1,134 @@
+(*
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  well-suited for static analysis.
+  Copyright (C) 2007  Charles Hymans
+  
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+  
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+  
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+  Charles Hymans
+  EADS Innovation Works - SE/CS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: charles.hymans@penjili.org
+*)
+
+(* implementation of copy propagation for newspeak *)
+(* should do constant propagation *)
+(* should do expression propagation *)
+
+(*
+get_global
+
+get_local
+
+env maps variable to top or an expression
+*)
+(*
+  TODO: unused variables elimination
+*)
+(*
+  TODO: Assumption: to add as a sanity checks:
+  if x =(t) e; then x is declared with type t
+*)
+
+(*
+  TODO: idea for change for newspeak:
+  the number of the variable, should be the offset from the height of the
+  stack AT THE CALL of current function !
+*)
+
+open Newspeak
+
+let nb_of_params (args, ret) =
+  let n = List.length args in
+    match ret with
+	None -> n
+      | Some _ -> n + 1
+
+let rec process_exp env e =
+  match e with
+      Lval x -> Store.exp_of_local env x
+    | _ -> e
+
+let rec process_blk env x =
+  match x with
+      hd::tl -> 
+	let (env, hd) = process_stmt env hd in
+	let (env, tl) = process_blk env tl in
+	  (env, hd@tl)
+    | [] -> (env, [])
+  
+and process_stmt env (x, loc) =
+  match x with
+      Set (lv, e, t) ->
+	let e = process_exp env e in
+	let env = Store.assign env (lv, e, t) in
+	  (env, (Set (lv, e, t), loc)::[])
+    | Decl (_, t, body) -> 
+	let env = Store.push env in
+	  process_blk env body
+    | _ -> (Store.forget env, (x, loc)::[])
+
+let process_fundec (t, body) =
+  let body =
+    match body with
+	None -> None
+      | Some body -> 
+	  let n = nb_of_params t in
+	  let env = Store.universe n in
+	  let (_, body) = process_blk env body in
+	    Some body
+  in
+    (t, body)
+
+let process (gdecls, fundecs) =
+  let res = Hashtbl.create 100 in
+  let process_fun fid fundec = 
+    let fundec = process_fundec fundec in
+      Hashtbl.add res fid fundec
+  in
+    Hashtbl.iter process_fun fundecs ;
+    (gdecls, res)
+
+let input = ref ""
+let output = ref "a.npk"
+let print = ref false
+
+let anon_fun fname =
+  if !input = "" then input := fname
+  else invalid_arg "You can only simplify one file at a time."
+
+let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
+
+let speclist = 
+  [ ("--newspeak", Arg.Set print, "Print output");
+   
+    ("-o", Arg.Set_string output, 
+    "Choose name of output files, default is a.npk");
+  ]
+
+let _ =
+  try
+    Arg.parse speclist anon_fun usage_msg;
+    
+    if !input = ""
+    then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
+
+    let (files, prog, ptr_sz) = Newspeak.read !input in
+    let prog = process prog in
+      if !print then Newspeak.dump prog;
+      Newspeak.write !output (files, prog, ptr_sz)
+  with Invalid_argument s -> 
+    print_endline ("Fatal error: "^s);
+    exit 0

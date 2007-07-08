@@ -36,5 +36,6 @@ $(TESTS.SPEC): ../bin/c2newspeak
 	make -C .. install
 
 clean:
+	make -C npksimplify clean
 	$(RM) *~ *.bak result *.no *.npk
 
