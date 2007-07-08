@@ -73,7 +73,7 @@ and process_stmt env (x, loc) =
   match x with
       Set (lv, e, t) ->
 	let e = process_exp env e in
-	let env = Store.assign env (lv, e, t) in
+	let env = Store.assign env lv e in
 	  (env, (Set (lv, e, t), loc)::[])
     | Decl (_, t, body) -> 
 	let env = Store.push env in

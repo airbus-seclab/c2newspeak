@@ -26,6 +26,7 @@ open Newspeak
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: make an interface for this file !! *)
 exception Unknown
 
 let eval_lval n lv =
@@ -37,11 +38,10 @@ let universe n = (n, [])
 
 let forget (n, _) = (n, [])
 
-let assign (n, _) (lv, e, t) = 
+let assign (n, _) lv e = 
   try
     let x = eval_lval n lv in
-    let k = (x, t) in
-    let s = (k, e)::[] in
+    let s = (x, e)::[] in
       (n, s)
   with Unknown -> (n, [])
 
@@ -50,12 +50,11 @@ let push (n, s) = (n + 1, s)
 let exp_of_local (n, s) (lv, t) = 
   try 
     let x = eval_lval n lv in
-    let k = (x, t) in
-      List.assoc k s
+      List.assoc x s
   with Not_found | Unknown -> Lval (lv, t)
 
 let to_string (n, s) =
-  let string_of_assoc ((x, t), e) =
+  let string_of_assoc (x, e) =
     let x = string_of_int x in
     let v = Newspeak.string_of_exp e in
       x^" -> "^v
