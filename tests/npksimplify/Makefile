@@ -3,7 +3,7 @@ RM = rm -f
 C2NEWSPEAK = ../../bin/c2newspeak
 NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 
-TESTS = 000
+TESTS = 000 001
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 

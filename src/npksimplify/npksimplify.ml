@@ -59,6 +59,13 @@ let nb_of_params (args, ret) =
 let rec process_exp env e =
   match e with
       Lval x -> Store.exp_of_local env x
+    | UnOp (op, e) -> 
+	let e = process_exp env e in
+	  UnOp (op, e)
+    | BinOp (op, e1, e2) ->
+	let e1 = process_exp env e1 in
+	let e2 = process_exp env e2 in
+	  BinOp (op, e1, e2)
     | _ -> e
 
 let rec process_blk env x =
