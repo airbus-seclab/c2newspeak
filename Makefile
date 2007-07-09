@@ -16,4 +16,4 @@ clean: $(DIR)
 
 tar:
 	make clean
-	cd ..; tar -czf c2newspeak.tgz c2newspeak-public
+	cd ..; tar -czf c2newspeak.tgz c2newspeak-ref
