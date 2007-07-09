@@ -34,6 +34,22 @@ let eval_lval n lv =
       Local x -> n - x - 1
     | _ -> raise Unknown
 
+(* true when it is sure that x is not read during the evaluation of e
+   false otherwise *)
+let rec does_not_access n e x =
+  try
+    let rec check e =
+      match e with
+	  Const _ -> true
+	| Lval (lv, _) -> eval_lval n lv <> x
+	| AddrOf _ -> true
+	| AddrOfFun _ -> true
+	| UnOp (_, e) -> check e
+	| BinOp (_, e1, e2) -> (check e1) && (check e2)
+    in 
+      check e
+  with unknown -> false
+
 type t = (int * (int * Newspeak.exp) list)
 
 let universe n = (n, [])
@@ -44,6 +60,10 @@ let assign (n, _) lv e =
   try
     let x = eval_lval n lv in
     let s = (x, e)::[] in
+    let s = List.filter (fun (_, e) -> does_not_access n e x) s in
+(* remove from env all assoc *)
+(* supprimer de env toutes les associations qui ont x comme variable libre
+ou *)
       (n, s)
   with Unknown -> (n, [])
 
