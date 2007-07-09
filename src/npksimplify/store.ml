@@ -34,6 +34,8 @@ let eval_lval n lv =
       Local x -> n - x - 1
     | _ -> raise Unknown
 
+type t = (int * (int * Newspeak.exp) list)
+
 let universe n = (n, [])
 
 let forget (n, _) = (n, [])
@@ -46,6 +48,11 @@ let assign (n, _) lv e =
   with Unknown -> (n, [])
 
 let push (n, s) = (n + 1, s)
+
+let pop (n, s) = 
+  let n = n - 1 in
+  let s = List.remove_assoc n s in
+      (n, s)
 
 let exp_of_local (n, s) (lv, t) = 
   try 

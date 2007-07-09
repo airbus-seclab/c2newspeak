@@ -73,7 +73,7 @@ let rec process_blk env x =
       hd::tl -> 
 	let (env, hd) = process_stmt env hd in
 	let (env, tl) = process_blk env tl in
-	  (env, hd@tl)
+	  (env, hd::tl)
     | [] -> (env, [])
   
 and process_stmt env (x, loc) =
@@ -81,11 +81,22 @@ and process_stmt env (x, loc) =
       Set (lv, e, t) ->
 	let e = process_exp env e in
 	let env = Store.assign env lv e in
-	  (env, (Set (lv, e, t), loc)::[])
-    | Decl (_, t, body) -> 
+	  (env, (Set (lv, e, t), loc))
+    | Decl (v, t, body) -> 
 	let env = Store.push env in
-	  process_blk env body
-    | _ -> (Store.forget env, (x, loc)::[])
+	let (env, body) = process_blk env body in
+	let env = Store.pop env in
+	  (env, (Decl (v, t, body), loc))
+    | ChooseAssert choices ->
+	let choices = List.map (process_choice env) choices in
+	let env = Store.forget env in
+	  (env, (ChooseAssert choices, loc))
+    | _ -> (Store.forget env, (x, loc))
+
+and process_choice env (cond, body) =
+  let cond = List.map (process_exp env) cond in
+  let (_, body) = process_blk env body in
+    (cond, body)
 
 let process_fundec (t, body) =
   let body =
