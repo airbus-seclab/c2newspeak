@@ -8,13 +8,10 @@ OBJ = newspeak cilutils params \
 # Documentation
 DOC_DIR = doc
 
-# Test
+# Executable
 TGT = c2newspeak
 
-install: all
-	@cp $(TGT) ../../bin
-	@cp newspeak.ml ../../bin
-	@cp newspeak.mli ../../bin
+INSTALL_FILES = newspeak.mli newspeak.ml
 
 include ../Makefile.common
 

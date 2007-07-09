@@ -36,8 +36,7 @@ doc: $(DOC_FILES)
 	$(OCAMLDOC) -d  $(DOC_DIR) -html -m A $(FLAGS) $(DOC_FILES)
 
 install: all
-	cp $(TGT) ../../bin
-
+	cp $(TGT) $(INSTALL_FILES) ../../bin
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
 
