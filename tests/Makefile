@@ -11,6 +11,7 @@ TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 .PHONY: $(TESTS.SPEC)
 
 check: ../bin/c2newspeak $(TESTS)
+	make -C npksimplify check
 
 $(TESTS): ../bin/c2newspeak $@
 	eval $(C2NEWSPEAK) `[ -e $@.in ] && cat $@.in` $@.c &> $@.bak
