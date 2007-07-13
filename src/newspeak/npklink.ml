@@ -266,13 +266,18 @@ let generate_globals globs =
 
   let handle_real_glob name g =
     let x = Hashtbl.find glb_decls name in
+      cur_loc := x.gloc;
       if x.gused || (not !remove_temp) then begin
 	let i =
 	  match g.ginit with
 	    | Some i -> i
-	    | None when !accept_extern -> None
+	    | None when !accept_extern -> 
+		print_warning "Npklink.handle_real_glob:" 
+		("extern not accepted: "^name);
+		None
 	    | None -> 
-		invalid_arg "Npklink.handle_real_glob: extern not accepted"
+		error "Npklink.handle_real_glob:" 
+		  ("extern not accepted: "^name)
 	in
 	  try
 	    let t = replace_typ g.gtype in
@@ -286,6 +291,7 @@ let generate_globals globs =
 
     String_set.iter handle_cstr !glb_cstr;
     Hashtbl.iter handle_real_glob globs;
+    cur_loc := dummy_loc;
     !glist
 
 let extract_typ (_, _, t) = t

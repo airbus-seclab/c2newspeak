@@ -95,6 +95,8 @@ val handle_cmdline_options : unit -> unit
 
 (** {1 Location handling } *)
 
+val dummy_loc : Newspeak.location
+
 (** This reference always keeps trac of the current location in the
     file *)
 val cur_loc : Newspeak.location ref

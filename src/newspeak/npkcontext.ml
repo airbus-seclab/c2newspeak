@@ -204,7 +204,9 @@ let handle_cmdline_options () =
 (* Location handling *)
 (*-------------------*)
 
-let cur_loc = ref ("", -1, -1)
+let dummy_loc = ("", -1, -1)
+
+let cur_loc = ref dummy_loc
 
 let string_of_loc (file, line, _) =
   if (line > 0)

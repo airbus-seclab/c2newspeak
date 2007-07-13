@@ -50,8 +50,9 @@ let _ =
 
   try
     match !input_files with
-	[] ->
-	  print_error ("no file specified. Try "^Sys.argv.(0)^" --help")
+	[] -> 
+	  error "C2newspeak._" 
+	    ("no file specified. Try "^Sys.argv.(0)^" --help")
       | file::[] when !compile_only && (!output_file <> "") ->
 	  ignore (compile file !output_file)
 	    
@@ -68,7 +69,7 @@ let _ =
 	  let npkos = List.map extract_npko files in
 	    link npkos !output_file
 
-  with Invalid_argument s -> print_error s
+  with Invalid_argument msg -> print_error msg
 
 
 
