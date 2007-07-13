@@ -93,8 +93,10 @@ let rec translate_const c =
     | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
     | CReal (f, _, None) ->
 	let s = string_of_float f in
-	  print_warning "Npkcompile.translate_const"
-	    ("No string representation available for const "^s);
+	  if !verb_debug then begin
+	    print_warning "Npkcompile.translate_const"
+	      ("No string representation available for const "^s)
+	  end;
 	  K.Const (Newspeak.CFloat (f, s))
 	    
     | CWStr _ | CEnum _
@@ -779,6 +781,7 @@ let translate_init x t =
 let translate_glb used_glb name x =
   let used = K.String_set.mem name used_glb in
   let defd = x.Npkfirstpass.gdefd in
+    cur_loc := x.Npkfirstpass.gloc;
     if (defd || used) then begin
       let init =
 	if defd then begin

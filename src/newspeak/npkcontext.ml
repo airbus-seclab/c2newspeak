@@ -227,9 +227,10 @@ module String_set =
 let old_warnings = ref (String_set.empty)
 
 let print_warning where msg =
-  let disp = if (!verb_debug && where <> "")
-  then "Warning ("^where^"): "^msg^(string_of_loc !cur_loc)
-  else "Warning: "^msg^(string_of_loc !cur_loc)
+  let disp = 
+    if (!verb_debug && where <> "")
+    then "Warning ("^where^"): "^msg^(string_of_loc !cur_loc)
+    else "Warning: "^msg^(string_of_loc !cur_loc)
   in
     if not (String_set.mem disp !old_warnings)
     then  begin
