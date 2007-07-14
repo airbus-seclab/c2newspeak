@@ -34,7 +34,7 @@ open Npkutils
 
 type glb_type = {
   mutable gtype : Cil.typ;
-  mutable gloc : Newspeak.location;
+  mutable gloc : Cil.location;
   mutable gdefd : bool;
   mutable ginit : Cil.init option;
 }
@@ -52,7 +52,7 @@ object (this)
   method get_used = (glb_used, glb_cstr)
 
   method vglob g =
-    update_loc (get_globalLoc g);
+    Npkcontext.set_loc (get_globalLoc g);
     DoChildren
 
 
@@ -61,7 +61,7 @@ object (this)
      duplicated is stored in a hash table and used when a Goto is
      encountered) *)
   method vstmt s =
-    update_loc (get_stmtLoc s.skind);
+    Npkcontext.set_loc (get_stmtLoc s.skind);
 
     let add_code goto_stmts label =
       match label with
@@ -224,7 +224,7 @@ let first_pass f =
 	Hashtbl.add fun_specs name
 	  {prett = ret_t;
 	   Npkil.pargs = formals; Npkil.plocs = None;
-	   Npkil.ploc = !cur_loc; pbody = None;
+	   Npkil.ploc = Npkcontext.get_loc (); pbody = None;
 	   Npkil.pcil_body = None;}
   in
 
@@ -268,14 +268,14 @@ let first_pass f =
 	    
 	    x.Npkil.pargs <- Some formals;
 	    x.Npkil.plocs <- Some locals;
-	    x.Npkil.ploc <- !cur_loc;
+	    x.Npkil.ploc <- Npkcontext.get_loc ();
 	    x.Npkil.pcil_body <- Some f.sbody
 	      
       with Not_found ->
 	Hashtbl.add fun_specs name
 	  {Npkil.prett = rettype;
 	   Npkil.pargs = Some formals; Npkil.plocs = Some locals;
-	   Npkil.ploc = !cur_loc; pbody = None;
+	   Npkil.ploc = Npkcontext.get_loc (); pbody = None;
 	   Npkil.pcil_body = Some f.sbody;}
   in
 
@@ -293,7 +293,7 @@ let first_pass f =
 	      ^(string_of_type v.vtype)^"'")
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {gtype = v.vtype; gloc = translate_loc v.vdecl;
+	  {gtype = v.vtype; gloc = v.vdecl;
 	   gdefd = false; ginit = None;}
   in
 
@@ -320,11 +320,11 @@ let first_pass f =
 	  end;
 	  x.gtype <- v.vtype;
 	  x.gdefd <- true;
-	  x.gloc <- translate_loc v.vdecl;
+	  x.gloc <- v.vdecl;
 	  x.ginit <- i
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {gtype = v.vtype; gloc = translate_loc v.vdecl;
+	  {gtype = v.vtype; gloc = v.vdecl;
 	   gdefd = true; ginit = i;}
   in
 
@@ -333,7 +333,7 @@ let first_pass f =
   let rec explore g = 
     let loc = get_globalLoc g in
     let new_g = visitCilGlobal (visitor :> Cil.cilVisitor) g in
-      update_loc loc;
+      Npkcontext.set_loc loc;
       if loc.file <> "<compiler builtins>" then
 	match new_g with
 	  | [GType (t, _)] ->
@@ -369,7 +369,7 @@ let first_pass f =
 		("global "^(string_of_global g)^" not supported")
   in
 
-      update_loc locUnknown;
+      Npkcontext.forget_loc ();
       Npkenv.init_env ();
       List.iter explore f.globals;
       let (glb_used, glb_cstr) = visitor#get_used in

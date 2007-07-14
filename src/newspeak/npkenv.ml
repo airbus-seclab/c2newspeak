@@ -83,7 +83,7 @@ let glb_uniquename v =
     then Hashtbl.find static_glb_names v
     else v.vname
   with Not_found ->
-    let str = (get_cur_file())^"."^v.vname in
+    let str = (Npkcontext.get_fname ())^"."^v.vname in
       Hashtbl.add static_glb_names v str;
       str
 
@@ -115,7 +115,8 @@ let push_local () = ignore (incr loc_cnt)
 let loc_declare generate_stmt_decl (cil_vid, n, t) =
   let vid = incr loc_cnt in
     Hashtbl.add loc_tabl cil_vid vid;
-    if generate_stmt_decl then loc_decls := (n, t, !cur_loc)::!loc_decls
+    if generate_stmt_decl 
+    then loc_decls := (n, t, Npkcontext.get_loc ())::!loc_decls
 
 
 let get_loc_decls () =
@@ -211,7 +212,7 @@ let update_fun_proto name ret args =
       Hashtbl.add !fun_specs name
 	{prett = rettype;
 	 pargs = formals; plocs = None;
-	 ploc = !cur_loc; pbody = None;
+	 ploc = Npkcontext.get_loc (); pbody = None;
 	 pcil_body = None;}
 
 

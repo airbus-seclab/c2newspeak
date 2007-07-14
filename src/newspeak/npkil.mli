@@ -111,7 +111,7 @@ module String_set :
 *)
 type glb_type = {
   mutable gtype : typ;
-  mutable gloc  : Newspeak.location;
+  mutable gloc  : Cil.location;
 (* None is for extern *)
   mutable ginit : init_t option;
   mutable gused : bool;

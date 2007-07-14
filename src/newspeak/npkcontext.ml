@@ -34,6 +34,7 @@
    different files.
 *)
 
+open Cil
 open Params
 
 (*----------------------*)
@@ -208,12 +209,22 @@ let dummy_loc = ("", -1, -1)
 
 let cur_loc = ref dummy_loc
 
-let string_of_loc (file, line, _) =
-  if (line > 0)
-  then " in "^(file)^" line "^(string_of_int line)
-  else ""
+let set_loc loc =
+  let loc = (loc.file, loc.line, loc.byte) in
+    cur_loc := loc
+  
+let forget_loc () = cur_loc := dummy_loc
 
+let string_of_loc loc = 
+  let (file, line, _) = loc in
+    if loc = dummy_loc then ""
+    else " in "^file^" line "^(string_of_int line)
 
+let get_fname () =
+  let (file, _, _) = !cur_loc in 
+    file
+
+let get_loc () = !cur_loc
 
 
 

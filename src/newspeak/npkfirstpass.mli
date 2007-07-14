@@ -40,7 +40,7 @@ val code_to_duplicate : (Cil.label, Cil.stmt list) Hashtbl.t
 (* TODO: no need to be mutable *)
 type glb_type = {
   mutable gtype : Cil.typ;
-  mutable gloc : Newspeak.location;
+  mutable gloc : Cil.location;
   mutable gdefd : bool;
   mutable ginit : Cil.init option;
 }

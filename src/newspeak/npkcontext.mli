@@ -95,13 +95,15 @@ val handle_cmdline_options : unit -> unit
 
 (** {1 Location handling } *)
 
-val dummy_loc : Newspeak.location
+(** [set_loc cil_loc] translates a Cil.location cil_loc into a
+    Newspeak.location and stores it to track the position in the file *)
+val set_loc : Cil.location -> unit
 
-(** This reference always keeps trac of the current location in the
-    file *)
-val cur_loc : Newspeak.location ref
+val forget_loc : unit -> unit
 
+val get_loc : unit -> Newspeak.location
 
+val get_fname : unit -> string
 
 (** {1 Warnings/errors generation and display } *)
 

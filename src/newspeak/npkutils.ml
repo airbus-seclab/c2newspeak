@@ -46,19 +46,6 @@ let incr cnt =
   incr cnt;
   !cnt
 
-
-
-
-let translate_loc loc =
-  (loc.file, loc.line, loc.byte)
-
-let update_loc loc =
-  cur_loc := translate_loc loc
-
-let get_cur_file () =
-  let (file, _, _) = !cur_loc in file
-
-
 let translate_arith_binop o =
   match o with
     | PlusA -> Newspeak.PlusI

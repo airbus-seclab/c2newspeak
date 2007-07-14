@@ -266,7 +266,7 @@ let generate_globals globs =
 
   let handle_real_glob name g =
     let x = Hashtbl.find glb_decls name in
-      cur_loc := x.gloc;
+      Npkcontext.set_loc x.gloc;
       if x.gused || (not !remove_temp) then begin
 	let i =
 	  match g.ginit with
@@ -291,7 +291,7 @@ let generate_globals globs =
 
     String_set.iter handle_cstr !glb_cstr;
     Hashtbl.iter handle_real_glob globs;
-    cur_loc := dummy_loc;
+    Npkcontext.forget_loc ();
     !glist
 
 let extract_typ (_, _, t) = t
@@ -365,8 +365,7 @@ let generate_funspecs cout npkos =
 (* TODO: clean up *)
 let link npkos output_file =
   let cout = open_out_bin output_file in
-    (* TODO: Think about it *)
-    update_loc Cil.locUnknown;
+    Npkcontext.forget_loc ();
     
     print_debug "Linking files...";
     List.iter merge_headers npkos;

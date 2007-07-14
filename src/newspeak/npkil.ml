@@ -100,7 +100,7 @@ module String_set =
 
 type glb_type = {
   mutable gtype : typ;
-  mutable gloc  : Newspeak.location;
+  mutable gloc  : Cil.location;
   mutable ginit : init_t option;
   mutable gused : bool;
 }
