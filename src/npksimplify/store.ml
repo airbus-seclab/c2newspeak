@@ -1,6 +1,3 @@
-(* TODO: to remove this n, change interpretation of locals! *)
-
-open Newspeak
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
@@ -25,6 +22,10 @@ open Newspeak
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
+
+(* TODO: to remove this n, change interpretation of locals! *)
+
+open Newspeak
 
 (* TODO: make an interface for this file !! *)
 exception Unknown
