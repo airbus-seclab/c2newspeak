@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  int8 x;
-  0- =(int8) 1;
+  (-1)^int8 x;
+  (33)^0- =(int8) 1;
 }
 
 

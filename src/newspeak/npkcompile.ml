@@ -395,8 +395,7 @@ and translate_stmtkind status kind =
     match kind with
       | Instr il -> translate_instrlist il
 	  
-      | Return (None, _) ->
-	  [K.Goto status.return_lbl, loc]
+      | Return (None, _) -> [K.Goto status.return_lbl, loc]
 	    
       | Return (Some e, _) ->
 	  let typ = translate_typ (typeOf e) in
@@ -404,8 +403,7 @@ and translate_stmtkind status kind =
 	    [translate_set lval typ e, loc;
 	     K.Goto status.return_lbl, loc]
 
-      | If (e, blk1, blk2, _) ->
-	  translate_if status e blk1.bstmts blk2.bstmts
+      | If (e, blk1, blk2, _) -> translate_if status e blk1.bstmts blk2.bstmts
 	    
       | Block b -> translate_stmts status b.bstmts
 	  
@@ -500,6 +498,7 @@ and translate_set lval typ e =
 	
 
 and translate_if status e stmts1 stmts2 =
+  let loc = Npkcontext.get_loc () in
   let (e, t) = 
     match translate_typ (typeOf e) with
 	K.Scalar (Newspeak.Int _ as t) -> (e, t)
@@ -524,8 +523,7 @@ and translate_if status e stmts1 stmts2 =
     let cond2 = K.negate cond1 in
     let body1 = translate_stmts status stmts1 in
     let body2 = translate_stmts status stmts2 in
-    let choice = K.ChooseAssert [([cond1], body1); ([cond2], body2)] in
-      [build_stmt choice]
+      [(K.ChooseAssert [([cond1], body1); ([cond2], body2)], loc)]
 
 
 (** Returns a set of blocks, each representing a choice of the case 

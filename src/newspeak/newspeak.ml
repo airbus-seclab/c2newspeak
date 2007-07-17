@@ -430,22 +430,28 @@ let string_of_blk offset x =
     let margin = String.make !offset ' ' in
       Buffer.add_string buf (margin^str^"\n") 
   in
+  let dump_line_at loc str = 
+    let (_, line, _) = loc in
+    let line = string_of_int line in
+    let margin = String.make !offset ' ' in
+      Buffer.add_string buf (margin^"("^line^")^"^str^"\n") 
+  in
 
-  let rec dump_stmt only (sk, _) =
+  let rec dump_stmt only (sk, loc) =
     match sk with
 	Set (lv, e, sc) ->
-	  dump_line ((string_of_lval lv)^" =("^(string_of_scalar sc)^
+	  dump_line_at loc ((string_of_lval lv)^" =("^(string_of_scalar sc)^
 			") "^(string_of_exp e)^";")
       | Copy (lv1, lv2, sz) ->
-	  dump_line ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
+	  dump_line_at loc ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			" "^(string_of_lval lv2)^";")
 	    
       | Decl (name, t, body) ->
 	  if only then begin
-	    dump_line ((string_of_typ t)^" "^name^";");
+	    dump_line_at loc ((string_of_typ t)^" "^name^";");
 	    dump_blk body
 	  end else begin
-	    dump_line "{";
+	    dump_line_at loc "{";
 	    incr_margin ();
 	    dump_line ((string_of_typ t)^" "^name^";");
 	    dump_blk body;
@@ -453,20 +459,20 @@ let string_of_blk offset x =
 	    dump_line "}"
 	  end
 	    
-      | Label l -> dump_line ((string_of_lbl l)^":")
-      | Goto l -> dump_line ("goto "^(string_of_lbl l)^";")
+      | Label l -> dump_line_at loc ((string_of_lbl l)^":")
+      | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
 	  
-      | Call f -> dump_line ((string_of_fn f)^";")
+      | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
       | ChooseAssert elts ->
-	  dump_line "choose {";
+	  dump_line_at loc "choose {";
 	  incr_margin ();
 	  List.iter dump_assertblk elts;
 	  decr_margin ();
 	  dump_line "}"
 
       | InfLoop body -> 
-	  dump_line "while (1) {";
+	  dump_line_at loc "while (1) {";
 	  incr_margin ();
 	  dump_blk body;
 	  decr_margin ();
