@@ -123,7 +123,9 @@ type fspec_type = {
   mutable plocs : ((int * string * typ) list) option;
   mutable ploc  : Newspeak.location;
   mutable pbody : blk option;
+(*
   mutable pcil_body : Cil.block option
+*)
 }
 
 type intermediate = {

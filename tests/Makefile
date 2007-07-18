@@ -3,7 +3,7 @@ RM = rm -f
 C2NEWSPEAK = ../bin/c2newspeak --newspeak
 
 TESTS = 000 001 002 003 004 005 006 007 008 009 010 \
-	011 012 013 014 015
+	011 012 013 014 015 016
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 
@@ -27,6 +27,7 @@ $(TESTS): ../bin/c2newspeak $@
 	  cat $@.bak; false; \
 	fi;
 	$(RM) $@.bak result
+	touch $@
 
 $(TESTS.SPEC): ../bin/c2newspeak
 	eval $(C2NEWSPEAK) `[ -e $(basename $@).in ] && cat $(basename $@).in` $(basename $@).c &> $@
@@ -37,6 +38,7 @@ $(TESTS.SPEC): ../bin/c2newspeak
 	make -C .. install
 
 clean:
+	$(RM) $(TESTS)
 	make -C npksimplify clean
 	$(RM) *~ *.bak result *.no *.npk
 

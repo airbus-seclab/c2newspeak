@@ -36,6 +36,7 @@ open Npkcontext
 open Npkutils
 open Npkenv
 
+module F = Npkfirstpass
 module K = Npkil
 
 
@@ -426,7 +427,7 @@ and translate_stmtkind status kind =
 	      | (Label (s, loc, false) as l)::r -> begin
 		  try
 		    translate_stmts status 
-		      (Hashtbl.find Npkfirstpass.code_to_duplicate l)
+		      (Hashtbl.find F.code_to_duplicate l)
 		  with Not_found -> explore_labels r
 		end
 	      | lbl::r -> explore_labels r
@@ -657,47 +658,49 @@ and translate_call x lv args_exps =
   in
 
     save_loc_cnt ();
-    let name, ret_type, formals = match lv with
-      | Var f, NoOffset ->
-	  let name = f.vname in
-	  let _ = match f.vtype with
-	    | TFun (ret, _, _, _) ->
-		let arg_from_exp e = ("", typeOf e, []) in begin
-		    try update_fun_proto name ret (Some (List.map arg_from_exp args_exps))
+    let name, ret_type, formals = 
+      match lv with
+	| Var f, NoOffset ->
+	    let name = f.vname in
+	    let _ = match f.vtype with
+	      | TFun (ret, _, _, _) ->
+		  let arg_from_exp e = ("", typeOf e, []) in begin
+		    try update_fun_proto name ret 
+		      (Some (List.map arg_from_exp args_exps))
 		    with invalid_argument ->
 		      (* TODO: See if we can be as specific as before (int4 <> ptr) *)
 		      error "Npkcompile.translate_call" 
 			("function "^name^" called with args not matching prototype")
 		  end
 		  
-	    | _ ->
-		error "Npkcompile.translate_call"
-		  ("invalid type '"^(string_of_type f.vtype)^"'")
-	  in 
-	  let x = Hashtbl.find !fun_specs name in
-	    (* TODO: not nice! I must clean this up! *)
-	  let fs = match x.K.pargs with
-	    | None -> None
-	    | Some ld -> Some (List.map extract_ldecl ld)
-	  in
-	    (* TODO: not nice! I must clean this up! *)
-	    (name, x.K.prett, fs)
-
-      | Mem (Lval fptr), NoOffset ->
-	  let typ = translate_typ (typeOfLval fptr) in
-	    if typ <> K.Scalar Newspeak.FunPtr
-	    then error "Npkcompile.translate_call" "FunPtr expected";
-
-	    let ret = match x with
-	      | None -> None
-	      | Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
+	      | _ ->
+		  error "Npkcompile.translate_call"
+		    ("invalid type '"^(string_of_type f.vtype)^"'")
 	    in
-	    let (_, line, _) = loc in
-	      ("fptr_called_line_" ^ (string_of_int line), ret, None)
+	    let x = Hashtbl.find !fun_specs name in
+	      (* TODO: not nice! I must clean this up! *)
+	    let fs = match x.K.pargs with
+	      | None -> None
+	      | Some ld -> Some (List.map extract_ldecl ld)
+	    in
+	      (* TODO: not nice! I must clean this up! *)
+	      (name, x.K.prett, fs)
 
-      | _ -> error "Npkcompile.translate_call" "Left value not supported"
+	| Mem (Lval fptr), NoOffset ->
+	    let typ = translate_typ (typeOfLval fptr) in
+	      if typ <> K.Scalar Newspeak.FunPtr
+	      then error "Npkcompile.translate_call" "FunPtr expected";
+	      
+	      let ret = match x with
+		| None -> None
+		| Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
+	      in
+	      let (_, line, _) = loc in
+		("fptr_called_line_" ^ (string_of_int line), ret, None)
+		  
+	| _ -> error "Npkcompile.translate_call" "Left value not supported"
     in
-
+      
     let ret_decl, ret_epilog = handle_retval name ret_type in
     let args_decls = handle_args_decls name formals args_exps in
     let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
@@ -721,7 +724,12 @@ and translate_call x lv args_exps =
 
 
 let translate_fun name spec =
-  match spec.K.pargs, spec.K.plocs, spec.K.pcil_body with
+  let body = spec.F.pbody in
+  let spec = 
+    { K.prett = spec.F.prett; K.pargs = spec.F.pargs; 
+      K.plocs = spec.F.plocs; K.ploc = spec.F.ploc; K.pbody = None }
+  in
+  match spec.K.pargs, spec.K.plocs, body with
       Some formals, Some locals, Some cil_body ->
 (*	Npkcontext.set_loc spec.K.ploc; *)
 	reset_lbl_gen ();
@@ -743,13 +751,11 @@ let translate_fun name spec =
 	  let body = append_decls (get_loc_decls ()) blk in
 
 	    (* TODO ?: Check only one body exists *)
-	    spec.K.pcil_body <- None;
-	    spec.K.pbody <- Some body(* pbody should only be Newspeak.blk *)
-
-
+	    spec.K.pbody <- Some body;
+	    Hashtbl.add !Npkenv.fun_specs name spec
 
     (* TODO: Same question here *)
-    | _ -> ()
+    | _ -> Hashtbl.add !Npkenv.fun_specs name spec
 
 
 let translate_init x t =
@@ -783,22 +789,22 @@ let translate_init x t =
 (* TODO: maybe should put first pass into npkcompile ?? *)
 let translate_glb used_glb name x =
   let used = K.String_set.mem name used_glb in
-  let defd = x.Npkfirstpass.gdefd in
-    Npkcontext.set_loc x.Npkfirstpass.gloc;
+  let defd = x.F.gdefd in
+    Npkcontext.set_loc x.F.gloc;
     if (defd || used) then begin
       let init =
 	if defd then begin
-	  Some (translate_init x.Npkfirstpass.ginit x.Npkfirstpass.gtype)
+	  Some (translate_init x.F.ginit x.F.gtype)
 	end else begin
-	  assert (x.Npkfirstpass.ginit = None);
+	  assert (x.F.ginit = None);
 	  None
 	end
       in
-      let t = translate_typ x.Npkfirstpass.gtype in
+      let t = translate_typ x.F.gtype in
       let glb = 
 	{ 
 	  K.gtype = t; 
-	  K.gloc = x.Npkfirstpass.gloc;
+	  K.gloc = x.F.gloc;
 	  K.ginit = init;
 	  K.gused = used
 	} 
@@ -839,16 +845,14 @@ let compile in_name out_name  =
       Npkfirstpass.first_pass cil_file 
     in
       Npkenv.glb_cstr := glb_cstr;
-      (* TODO: this is not very nice! *)
-      Npkenv.fun_specs := fun_specs;
 
       Npkcontext.forget_loc ();
       print_debug "First pass done.";
       
       print_debug ("Translating "^in_name^"...");
 
+      Hashtbl.iter translate_fun fun_specs;
       Hashtbl.iter (translate_glb glb_used) glb_decls;
-      Hashtbl.iter translate_fun !Npkenv.fun_specs;
       
       let (globs, funs) = Npkenv.create_npkil in_name in
 	

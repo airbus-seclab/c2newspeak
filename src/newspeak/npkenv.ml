@@ -213,7 +213,7 @@ let update_fun_proto name ret args =
 	{prett = rettype;
 	 pargs = formals; plocs = None;
 	 ploc = Npkcontext.get_loc (); pbody = None;
-	 pcil_body = None;}
+	}
 
 
 

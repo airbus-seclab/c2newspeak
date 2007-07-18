@@ -26,12 +26,13 @@
   email: olivier.levillain@penjili.org
 */
 
-int f2(int);
+// There is much more! Feel free to experiment and let us know your thoughts.
 
-int f1 (int n1) {
-  return f2(n1);
-}
+// This is a placeholder for your own non-regression test.
+// 1) write your code
+// 2) add 012 to TESTS in Makefile
+// 3) run make 012.spec to generate the output
+// 4) run make 012 to check the output (for instance, after you have modified 
+// c2newspeak source code)
 
-int f2 (int n2) {
-  return f1(n2);
-}
+// You can optionally add parameters to pass to c2newspeak in a file 012.in

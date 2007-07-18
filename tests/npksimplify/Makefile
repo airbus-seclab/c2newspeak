@@ -27,6 +27,7 @@ $(TESTS): $(C2NEWSPEAK) $@
 	  cat $@.bak; false; \
 	fi;
 	$(RM) $@.bak result
+	touch $@
 
 $(TESTS.SPEC): $(C2NEWSPEAK)
 	eval $(C2NEWSPEAK) `[ -e $(basename $@).in ] && cat $(basename $@).in` $(basename $@).c
@@ -38,5 +39,6 @@ $(C2NEWSPEAK):
 	make -C ../.. install
 
 clean:
+	$(RM) $(TESTS)
 	$(RM) *~ *.bak result *.no *.npk
 

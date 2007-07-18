@@ -39,6 +39,14 @@ type glb_type = {
   mutable ginit : Cil.init option;
 }
 
+type fspec_type = {
+  mutable prett : Npkil.typ option;
+  mutable pargs : ((int * string * Npkil.typ) list) option;
+  mutable plocs : ((int * string * Npkil.typ) list) option;
+  mutable ploc  : Newspeak.location;
+  mutable pbody : Cil.block option;
+}
+
 let local_vids = ref Int_set.empty
 let code_to_duplicate = Hashtbl.create 100
 
@@ -203,9 +211,9 @@ let first_pass f =
       
       try
 	let x = Hashtbl.find fun_specs name in
-
+	  (* TODO: this code can be factored !!! *)
 	let _ = 
-	  match x.Npkil.prett, ret_t with
+	  match x.prett, ret_t with
 	      None, None -> ()
 	    | Some t1, Some t2 when t1 = t2 -> ()
 	    | _ ->
@@ -214,18 +222,15 @@ let first_pass f =
 		  ("different types for return type of prototype "^name)
 	in
 	  
-	let _ =
-	  match x.Npkil.pargs, formals with
+	  match x.pargs, formals with
 	    | _, None -> ()
-	    | None, Some _ -> x.Npkil.pargs <- formals
+	    | None, Some _ -> x.pargs <- formals
 	    | Some l1, Some l2 -> Npkenv.compare_formals name l1 l2
-	in ()
+		
       with Not_found ->
 	Hashtbl.add fun_specs name
-	  {prett = ret_t;
-	   Npkil.pargs = formals; Npkil.plocs = None;
-	   Npkil.ploc = Npkcontext.get_loc (); pbody = None;
-	   Npkil.pcil_body = None;}
+	  { prett = ret_t; pargs = formals; plocs = None;
+	    ploc = Npkcontext.get_loc (); pbody = None }
   in
 
   let update_fun_def f =
@@ -243,40 +248,39 @@ let first_pass f =
     let translate_local v = v.vid, v.vname, translate_typ v.vtype in
     let formals = List.map translate_local f.sformals in
     let locals = List.map translate_local f.slocals in
+    let loc = Npkcontext.get_loc () in
       
       try
 	let x = Hashtbl.find fun_specs name in
-	  if x.Npkil.pcil_body <> None
+	  if x.pbody <> None
 	  then error "Npkenv.update_fun_def"
 	    ("multiple definition for "^name);
 	  
 	  let _ = 
-	    match x.Npkil.prett, rettype with
-		None, None -> ()
-	      | Some t1, Some t2 when t1 = t2 -> ()
-	      | _ ->
+	    match (x.prett, rettype) with
+		(None, None) -> ()
+	      | (Some t1, Some t2) when t1 = t2 -> ()
+	      | _ -> 
 		  (* TODO: add the respective types and locations ? *)
 		  error "Npkenv.update_fun_def"
 		    ("different types for return type of prototype "^name)
 	  in
 
-	  let _ =
-	    match x.Npkil.pargs with
-	      | None -> ()
-	      | Some l -> Npkenv.compare_formals name l formals  
+	  let _ = 
+	    match x.pargs with
+		None -> ()
+	      | Some l -> Npkenv.compare_formals name l formals
 	  in
 	    
-	    x.Npkil.pargs <- Some formals;
-	    x.Npkil.plocs <- Some locals;
-	    x.Npkil.ploc <- Npkcontext.get_loc ();
-	    x.Npkil.pcil_body <- Some f.sbody
+	    x.pargs <- Some formals;
+	    x.plocs <- Some locals;
+	    x.ploc <- loc;
+	    x.pbody <- Some f.sbody;
 	      
       with Not_found ->
-	Hashtbl.add fun_specs name
-	  {Npkil.prett = rettype;
-	   Npkil.pargs = Some formals; Npkil.plocs = Some locals;
-	   Npkil.ploc = Npkcontext.get_loc (); pbody = None;
-	   Npkil.pcil_body = Some f.sbody;}
+	  Hashtbl.add fun_specs name
+	    { prett = rettype; pargs = Some formals; plocs = Some locals;
+	      ploc = loc; pbody = Some f.sbody }
   in
 
   let update_glob_decl v =

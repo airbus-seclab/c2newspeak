@@ -45,9 +45,17 @@ type glb_type = {
   mutable ginit : Cil.init option;
 }
 
+type fspec_type = {
+  mutable prett : Npkil.typ option;
+  mutable pargs : ((int * string * Npkil.typ) list) option;
+  mutable plocs : ((int * string * Npkil.typ) list) option;
+  mutable ploc  : Newspeak.location;
+  mutable pbody : Cil.block option;
+}
+
 (** TODO: document that *)
 val first_pass : 
   Cil.file -> 
   (Npkil.String_set.t * Npkil.String_set.t 
-    * (Newspeak.fid, Npkil.fspec_type) Hashtbl.t
+    * (Newspeak.fid, fspec_type) Hashtbl.t
     * (string, glb_type) Hashtbl.t)
