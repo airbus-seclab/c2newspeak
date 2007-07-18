@@ -10,8 +10,8 @@ main() {
   (33)^int4 z;
   (38)^int4 value_of_f;
   (38)^{
-    int4 a;
-    (38)^int4 b;
+    int4 arg0;
+    (38)^int4 arg1;
     (38)^1- =(int4) 5-_int4;
     (38)^0- =(int4) 4-_int4;
     (38)^f();

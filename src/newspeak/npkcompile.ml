@@ -617,33 +617,19 @@ and translate_call x lv args_exps =
 	    ("function "^fname^" has return type void")
   in
 
-  let handle_args_decls fname formals exps =
-    let rec handle_args_decls_aux accu i formals exps =
-      match formals, exps with
-	| None, []  -> accu
-	| None, e::r_e ->
+  let handle_args_decls fname exps =
+    let rec handle_args_decls_aux accu i exps =
+      match exps with
+(* TODO: remove this accu !!*)
+	  [] -> accu
+	| e::r_e ->
 	    push_local ();
 	    let t = translate_typ (typeOf e) in
 	      handle_args_decls_aux 
 		(("arg"^(string_of_int i), t, loc)::accu)
-		(i+1) None r_e
-		
-	| Some [], [] -> accu
-	| Some ((n, t_expected)::r_t), e::r_e ->
-	    let t_given = translate_typ (typeOf e) in
-	      if t_expected <> t_given then begin
-		error "Npkcompile.translate_call"
-		  ("type mismatch on call ('"^(K.string_of_typ t_given)^"' <> '"
-		   ^(K.string_of_typ t_expected)^"') in "^fname^" arguments")
-	      end;
-	      push_local ();
-	      handle_args_decls_aux ((n, t_expected, loc)::accu) (i+1) (Some r_t) r_e
-		
-	| _,_ ->
-	    error "Npkcompile.translate_call"
-	      ("function "^fname^" called with incorrect number of args")
+		(i+1) r_e
     in
-      handle_args_decls_aux [] 0 formals exps
+      handle_args_decls_aux [] 0 exps
   in
 
   let rec handle_args_prolog accu n i args_exps =
@@ -657,7 +643,7 @@ and translate_call x lv args_exps =
   in
 
     save_loc_cnt ();
-    let name, ret_type, formals = 
+    let (name, ret_type) = 
       match lv with
 	| Var f, NoOffset ->
 	    let name = f.vname in
@@ -679,13 +665,10 @@ and translate_call x lv args_exps =
 	    in
 	    let x = Hashtbl.find Npkenv.fun_specs name in
 	      (* TODO: not nice! I must clean this up! *)
-	    let fs = 
-	      match x.K.pargs with
-		| None -> None
-		| Some ld -> Some (List.map extract_ldecl ld)
-	    in
+(* TODO: remove ?? (List.map extract_ldecl ld)*)
+
 	      (* TODO: not nice! I must clean this up! *)
-	      (name, x.K.prett, fs)
+	      (name, x.K.prett)
 
 	| Mem (Lval fptr), NoOffset ->
 	    let typ = translate_typ (typeOfLval fptr) in
@@ -697,13 +680,13 @@ and translate_call x lv args_exps =
 		| Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
 	      in
 	      let (_, line, _) = loc in
-		("fptr_called_line_" ^ (string_of_int line), ret, None)
+		("fptr_called_line_" ^ (string_of_int line), ret)
 		  
 	| _ -> error "Npkcompile.translate_call" "Left value not supported"
     in
       
     let ret_decl, ret_epilog = handle_retval name ret_type in
-    let args_decls = handle_args_decls name formals args_exps in
+    let args_decls = handle_args_decls name args_exps in
     let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
 
     let fexp = 
