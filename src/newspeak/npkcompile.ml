@@ -618,18 +618,16 @@ and translate_call x lv args_exps =
   in
 
   let handle_args_decls fname exps =
-    let rec handle_args_decls_aux accu i exps =
+    let rec handle_args_decls_aux i exps =
       match exps with
-(* TODO: remove this accu !!*)
-	  [] -> accu
-	| e::r_e ->
+	  [] -> []
+	| e::tl ->
 	    push_local ();
 	    let t = translate_typ (typeOf e) in
-	      handle_args_decls_aux 
-		(("arg"^(string_of_int i), t, loc)::accu)
-		(i+1) r_e
+	    let tl = handle_args_decls_aux (i+1) tl in
+	      ("arg"^(string_of_int i), t, loc)::tl
     in
-      handle_args_decls_aux [] 0 exps
+      List.rev (handle_args_decls_aux 0 exps)
   in
 
   let rec handle_args_prolog accu n i args_exps =
