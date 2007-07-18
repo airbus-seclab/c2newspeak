@@ -111,21 +111,18 @@ module String_set :
 *)
 type glb_type = {
   mutable gtype : typ;
-  mutable gloc  : Cil.location;
+  gloc  : Cil.location;
 (* None is for extern *)
   mutable ginit : init_t option;
   mutable gused : bool;
 }
 
 type fspec_type = {
-  mutable prett : typ option;
+  prett : typ option;
   mutable pargs : ((int * string * typ) list) option;
-  mutable plocs : ((int * string * typ) list) option;
-  mutable ploc  : Newspeak.location;
+  plocs : ((int * string * typ) list) option;
+  ploc  : Newspeak.location;
   mutable pbody : blk option;
-(*
-  mutable pcil_body : Cil.block option
-*)
 }
 
 type intermediate = {
