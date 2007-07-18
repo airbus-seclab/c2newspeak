@@ -36,7 +36,7 @@ open Npkcontext
 open Npkutils
 open Npkenv
 
-module F = Npkfirstpass
+module F = Firstpass
 module K = Npkil
 
 
@@ -842,7 +842,7 @@ let compile in_name out_name  =
     print_debug "Running first pass...";
     Npkcontext.forget_loc ();
     let (glb_used, glb_cstr, fun_specs, glb_decls) = 
-      Npkfirstpass.first_pass cil_file 
+      Firstpass.first_pass cil_file 
     in
       Npkenv.glb_cstr := glb_cstr;
 
