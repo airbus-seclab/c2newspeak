@@ -466,8 +466,7 @@ and translate_instr i =
 	  let assignment = translate_set lval typ e in
 	    (build_stmt assignment)::[]
 
-    | Call (x, Lval lv, args, _) ->
-	translate_call x lv args
+    | Call (x, Lval lv, args, _) -> translate_call x lv args
 
     | Call (_, _, _, _) ->
 	error "Npkcompile.translate_instr"
@@ -580,7 +579,7 @@ and translate_call x lv args_exps =
   let loc = Npkcontext.get_loc () in
 
   let handle_retval fname ret_type =
-    match ret_type, x with
+    match ret_type, x  with
 	(* No return value *)
 	None, None -> [], []
 
@@ -662,26 +661,28 @@ and translate_call x lv args_exps =
       match lv with
 	| Var f, NoOffset ->
 	    let name = f.vname in
-	    let _ = match f.vtype with
-	      | TFun (ret, _, _, _) ->
-		  let arg_from_exp e = ("", typeOf e, []) in begin
-		    try update_fun_proto name ret 
-		      (Some (List.map arg_from_exp args_exps))
-		    with invalid_argument ->
-		      (* TODO: See if we can be as specific as before (int4 <> ptr) *)
-		      error "Npkcompile.translate_call" 
-			("function "^name^" called with args not matching prototype")
-		  end
-		  
-	      | _ ->
-		  error "Npkcompile.translate_call"
-		    ("invalid type '"^(string_of_type f.vtype)^"'")
+	    let _ = 
+	      match f.vtype with
+		| TFun (ret, _, _, _) ->
+		    let arg_from_exp e = ("", typeOf e, []) in begin
+		      try update_fun_proto name ret 
+			(Some (List.map arg_from_exp args_exps))
+		      with invalid_argument ->
+			(* TODO: See if we can be as specific as before (int4 <> ptr) *)
+			error "Npkcompile.translate_call" 
+			  ("function "^name^" called with args not matching prototype")
+		    end
+							      
+		| _ ->
+		    error "Npkcompile.translate_call"
+		      ("invalid type '"^(string_of_type f.vtype)^"'")
 	    in
-	    let x = Hashtbl.find !fun_specs name in
+	    let x = Hashtbl.find Npkenv.fun_specs name in
 	      (* TODO: not nice! I must clean this up! *)
-	    let fs = match x.K.pargs with
-	      | None -> None
-	      | Some ld -> Some (List.map extract_ldecl ld)
+	    let fs = 
+	      match x.K.pargs with
+		| None -> None
+		| Some ld -> Some (List.map extract_ldecl ld)
 	    in
 	      (* TODO: not nice! I must clean this up! *)
 	      (name, x.K.prett, fs)
@@ -752,10 +753,10 @@ let translate_fun name spec =
 
 	    (* TODO ?: Check only one body exists *)
 	    spec.K.pbody <- Some body;
-	    Hashtbl.add !Npkenv.fun_specs name spec
+	    Hashtbl.add Npkenv.fun_specs name spec
 
     (* TODO: Same question here *)
-    | _ -> Hashtbl.add !Npkenv.fun_specs name spec
+    | _ -> Hashtbl.add Npkenv.fun_specs name spec
 
 
 let translate_init x t =
@@ -877,219 +878,3 @@ let compile in_name out_name  =
 	
 	init_env()
 
-
-
-
-
-
-
-
-
-
-
-(*
-
-
-(* TODO: add these as #pragma assume in the code, a lot easier *)
-(*let create_assumption str =
-  let lexer = Genlex.make_lexer [">="] (Stream.of_string str) in
-    try
-      let x = 
-	match Stream.next lexer with
-	    Genlex.Ident id -> id
-	  | _ -> raise Exit
-      in
-      let _ = 
-	match Stream.next lexer with
-	    Genlex.Kwd ">=" -> ()
-	  | _ -> raise Exit
-      in
-      let n =  
-	match Stream.next lexer with
-	    Genlex.Int n -> n
-	  | _ -> raise Exit
-      in
-      let v = Env.get_glb_var x in
-      let t = Env.get_glb_typ x in
-	(K.BinOp (K.Ge t, K.Lval (v, t), K.Const (K.CInt64 (Int64.of_int n))))
-    with _ -> error ("Unknown assumption: "^str)*)
-
-
-
-
-let translate () =
-    (* Finally, our work with the globals is finished *)
-    print_debug "Generating global declarations...";
-    let glb_decls = get_glb_decls_inits translate_exp in
-      update_loc locUnknown;
-      print_debug "Declarations generated.";
-      
-      (* Here takes place the translation of the functions, from a name ->
-	 specs hash table to a K.fid -> K.fundec hash_table *)
-      let add_fun name spec =
-	print_debug ("Translating function "^name^"...");
-	let fun_body = translate_fun name spec in
-	let extract_args_typs decl_list = match decl_list with
-	    None -> []
-	  | Some l -> List.map extract_type l
-	in
-	let res = name, ((extract_args_typs spec.formals, spec.ret_type), fun_body) in
-	  print_debug ("Function "^name^" translated.");
-	  res
-      in
-      let fun_defs = map_fun_specs add_fun in
-
-(*      let assumptions = List.map create_assumption !Npkcontext.assumptions in
-
-	(assumptions, glb_decls, fun_defs)*)
-
-	([], glb_decls, fun_defs)
-
-
-
-
-
-
-
-
-
-(*=====================================*)
-(* cil2newspeak, which wraps translate *)
-(*=====================================*)
-
-(*
-let cil2newspeak fnames = 
-
-  let get_cilfile name =
-    let (is_c, cil_output) =
-      try 
-	if (String.sub name ((String.length name) - 2) 2) = ".c"
-	then (true, name^"il")
-	else if (String.sub name ((String.length name) - 4) 4) = ".cil"
-	then (false, name)
-	else error ("File '"^name^"' is not a .c neither a .cil file");
-      with Invalid_argument _ -> error ("File '"^name^"' is not a .c neither a .cil file");
-    in
-      if not is_c && !compile_only
-      then print_warning ("Nothing to do for '"^name^"'")
-      else begin
-	let cilfile = 
-	  if is_c then begin
-	    print_debug ("Parsing "^name^"...");
-	    let tmp = Frontc.parse name () in
-	      print_debug ("Parsing done.");
-	      if !verb_cil then begin
-		print_endline ("Cil output for "^name);
-		for i = 1 to String.length name do
-		  print_string "-"
-		done;
-		print_endline "---------------";
-		dump stdout tmp;
-		print_endline "";
-	      end;
-	      tmp
-	  end else
-	    let ch_in = open_in_bin name in
-	      print_debug ("Importing "^name^"...");
-	      let tmp = Marshal.from_channel ch_in in
-		print_debug ("Importing done.");
-		tmp
-	in
-	  if !compile_only then  begin
-	    let ch_out = open_out_bin cil_output in
-	      print_debug ("Exporting "^cil_output^"...");
-	      Marshal.to_channel ch_out cilfile [];
-	      print_debug ("Exporting done.")
-	  end else cilfiles := cilfile::(!cilfiles)
-      end
-  in
-    List.iter get_cilfile fnames;
-    if !cilfiles = [] then exit 0;
-
-    let kernel = 
-      if !mergecil then begin
-	(*  MergeCil  *)
-	let file = Mergecil.merge !cilfiles "File" in    
-	  if !Errormsg.hadErrors then begin 
-	    if not !ignores_cil_merge_errors
-	    then error "fnames: Errors during merge phase";
-	    prerr_newline ();
-	  end;
-	  Rmtmps.removeUnusedTemps file;
-	  
-	  if !verb_cil then begin
-	    print_endline "Cil output";
-	    print_endline "----------";
-	    dump stdout file;
-	    print_endline "";
-	  end;
-	  translate [file]
-      end else begin
-	List.iter my_remove_tmp !cilfiles;
-	translate !cilfiles
-      end
-    in
-
-      kernel
-*)
-*)
- 
-
-
-
-
-(*
-let declare fnames =
-  let total = List.length fnames in
-  let processed = ref 0 in
-  let declare name =
-    let cin = open_in_bin name in
-    let glb_decls = Marshal.from_channel cin in
-    let (fun_decls, proto_decls) = Marshal.from_channel cin in
-      close_in cin;
-      (* TODO: this is a hack write again in a clean way *)
-      List.iter (fun (g, loc) -> update_loc loc; glb_declare g) glb_decls;
-      List.iter fun_declare fun_decls;
-      (* TODO: this is a hack write again in a clean way *)
-      List.iter (fun (g, loc) -> update_loc loc; fun_declare_prototype g) 
-	proto_decls;
-      if !verb_debug then begin
-	processed := !processed + 1;
-	let progress = !processed*100/total in
-	  prerr_string ("Progress: "^(string_of_int progress)^"%\n")
-      end
-  in
-    update_loc locUnknown;
-    print_debug "Collecting globals and function declarations...";
-    List.iter declare fnames;
-    print_debug "Collection of globals and function declarations done."
-
-
-let gen_ir name =
-  if not (Filename.check_suffix name ".c") 
-  then error ("File '"^name^"' is not a .c file.");
-  print_debug ("Parsing "^name^"...");
-  
-  let cilfile = Frontc.parse name () in
-    print_debug ("Parsing done.");
-    if !verb_cil then begin
-      print_endline ("Cil output for "^name);
-      print_string (String.make (String.length name) '-');
-      print_endline "---------------";
-      dump stdout cilfile;
-      print_newline ();
-    end;
-
-    my_remove_tmp cilfile;
-    let (glbs, funs) = Local_pass.translate cilfile.globals in
-
-    let name = (Filename.chop_extension name)^".ir" in
-    let cout = open_out_bin name in
-      print_debug ("Exporting "^name^"...");
-      Marshal.to_channel cout glbs [];
-      Marshal.to_channel cout funs [];
-      close_out cout;
-      print_debug ("Exporting done.");
-      
-      name
-*)

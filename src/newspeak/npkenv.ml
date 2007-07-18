@@ -49,7 +49,7 @@ type status = {
 (*-----------------------*)
 
 let glb_decls = Hashtbl.create 100
-let fun_specs = ref (Hashtbl.create 100)
+let fun_specs = Hashtbl.create 100
 let glb_cstr = ref (String_set.empty)
 (* This table to avoid 
    recomputing a different string here to improve sharing *)
@@ -58,7 +58,7 @@ let static_glb_names = Hashtbl.create 100
 let init_env () =
   Hashtbl.clear glb_decls;
   Hashtbl.clear static_glb_names;
-  Hashtbl.clear !fun_specs;
+  Hashtbl.clear fun_specs;
   glb_cstr := String_set.empty
 
 let create_npkil name =
@@ -69,7 +69,7 @@ let create_npkil name =
       iusedcstr = !glb_cstr
     }
   in
-  let funs = Hashtbl.copy !fun_specs in
+  let funs = Hashtbl.copy fun_specs in
     (globs, funs)
 
 (*---------*)
@@ -190,7 +190,7 @@ let update_fun_proto name ret args =
   in
  
     try
-      let x = Hashtbl.find !fun_specs name in
+      let x = Hashtbl.find fun_specs name in
 
       let _ = 
 	match x.prett, rettype with
@@ -209,7 +209,7 @@ let update_fun_proto name ret args =
 	  | Some l1, Some l2 -> compare_formals name l1 l2
       in ()
     with Not_found ->
-      Hashtbl.add !fun_specs name
+      Hashtbl.add fun_specs name
 	{prett = rettype;
 	 pargs = formals; plocs = None;
 	 ploc = Npkcontext.get_loc (); pbody = None;
