@@ -56,4 +56,6 @@ val translate_ikind : Cil.ikind -> Newspeak.ikind
     Newspeak, if the transformation is possible *)
 val translate_typ : Cil.typ -> Npkil.typ
 
+val translate_ret_typ : Cil.typ -> Npkil.typ option
+
 val isPtr : Cil.exp -> bool

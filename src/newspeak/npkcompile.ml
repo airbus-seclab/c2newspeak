@@ -645,37 +645,35 @@ and translate_call x lv args_exps =
       match lv with
 	| Var f, NoOffset ->
 	    let name = f.vname in
-	    let _ = 
+	    let ret = 
 	      match f.vtype with
-		| TFun (ret, _, _, _) ->
-		    let arg_from_exp e = ("", typeOf e, []) in begin
-		      try update_fun_proto name ret 
-			(Some (List.map arg_from_exp args_exps))
+		| TFun (ret, _, _, _) -> 
+		    let ret = Npkutils.translate_ret_typ ret in
+		    let arg_from_exp e = ("", typeOf e, []) in 
+		    let args = Some (List.map arg_from_exp args_exps) in begin
+		      try update_fun_proto name ret args 
 		      with invalid_argument ->
 			(* TODO: See if we can be as specific as before (int4 <> ptr) *)
 			error "Npkcompile.translate_call" 
 			  ("function "^name^" called with args not matching prototype")
-		    end
+		    end;
+		    ret
 							      
 		| _ ->
 		    error "Npkcompile.translate_call"
 		      ("invalid type '"^(string_of_type f.vtype)^"'")
 	    in
-	    let x = Hashtbl.find Npkenv.fun_specs name in
-	      (* TODO: not nice! I must clean this up! *)
-(* TODO: remove ?? (List.map extract_ldecl ld)*)
-
-	      (* TODO: not nice! I must clean this up! *)
-	      (name, x.K.prett)
+	      (name, ret)
 
 	| Mem (Lval fptr), NoOffset ->
 	    let typ = translate_typ (typeOfLval fptr) in
 	      if typ <> K.Scalar Newspeak.FunPtr
 	      then error "Npkcompile.translate_call" "FunPtr expected";
 	      
-	      let ret = match x with
-		| None -> None
-		| Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
+	      let ret = 
+		match x with
+		  | None -> None
+		  | Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
 	      in
 	      let (_, line, _) = loc in
 		("fptr_called_line_" ^ (string_of_int line), ret)

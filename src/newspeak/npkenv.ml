@@ -165,12 +165,6 @@ let compare_formals name l1 l2 =
     compare_aux l1 l2
 
 let update_fun_proto name ret args =
-  let rettype = 
-    match ret with
-      | TVoid _ -> None
-      | t -> Some (translate_typ t)
-  in
-
   let rec translate_formals i l =
     match l with
 	[] -> []
@@ -193,7 +187,7 @@ let update_fun_proto name ret args =
       let x = Hashtbl.find fun_specs name in
 
       let _ = 
-	match x.prett, rettype with
+	match x.prett, ret with
 	    None, None -> ()
 	  | Some t1, Some t2 when t1 = t2 -> ()
 	  | _ ->
@@ -210,7 +204,7 @@ let update_fun_proto name ret args =
       in ()
     with Not_found ->
       Hashtbl.add fun_specs name
-	{prett = rettype;
+	{prett = ret;
 	 pargs = formals; plocs = None;
 	 ploc = Npkcontext.get_loc (); pbody = None;
 	}

@@ -144,6 +144,10 @@ and translate_field t f =
   let typ = translate_typ f.ftype in
     (offset, typ)
 
+let translate_ret_typ x =
+  match x with
+      TVoid _ -> None
+    | t -> Some (translate_typ t)
 
 let translate_rel_binop t1 t2 o =
   let t = 
