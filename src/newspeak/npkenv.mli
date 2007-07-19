@@ -93,8 +93,13 @@ val extract_ldecl : (int * string * Npkil.typ) -> (string * Npkil.typ)
 (** allows to update the specification of a function (prototype) when
     called for example *)
 
+val translate_formals : 
+  string -> (string * Cil.typ * Cil.attributes) list option 
+  -> (int * string * Npkil.typ) list option
+
 (** declaration of a function from a prototype *)
-val update_fun_proto : string -> Npkil.typ option -> (string * Cil.typ * Cil.attributes) list option -> unit
+val update_fun_proto : 
+  string -> Npkil.typ option -> (int * string * Npkil.typ) list option -> unit
 
 (** {1 Variable id retrieval} *)
 

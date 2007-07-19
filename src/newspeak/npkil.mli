@@ -110,27 +110,25 @@ module String_set :
    By default, we accept extern as if they were declared but not defined 
 *)
 type glb_type = {
-  mutable gtype : typ;
   gloc  : Cil.location;
+  mutable gtype : typ;
 (* None is for extern *)
   mutable ginit : init_t option;
   mutable gused : bool;
 }
 
 type fspec_type = {
+  ploc  : Newspeak.location;
   prett : typ option;
   mutable pargs : ((int * string * typ) list) option;
-  plocs : ((int * string * typ) list) option;
-  ploc  : Newspeak.location;
+  mutable plocs : ((int * string * typ) list) option;
   mutable pbody : blk option;
 }
 
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-(*  ifuns  : (Newspeak.fid, fspec_type) Hashtbl.t;*)
   iusedcstr : String_set.t;
-(*  iusedfuns : String_set.t;*)
 }
 
 val zero : exp

@@ -164,50 +164,48 @@ let compare_formals name l1 l2 =
   in
     compare_aux l1 l2
 
-let update_fun_proto name ret args =
-  let rec translate_formals i l =
+let translate_formals name args =
+  let rec translate i l =
     match l with
 	[] -> []
       | (n, t, _)::r ->
-	  let name =
-	    if n="" then "arg" ^ (string_of_int i) else n
-	  in
-	    (-1, name, translate_typ t)::(translate_formals (i+1) r)
+	  let name = if n ="" then "arg" ^ (string_of_int i) else n in
+	    (-1, name, translate_typ t)::(translate (i+1) r)
   in
-  let formals = 
     match args with
 	None ->
-	  print_warning "Npkenv.update_fun_proto"
+	  print_warning "Npkenv.translate_formals"
 	    ("missing or incomplete prototype for "^name);
 	  None
-      | Some l -> Some (translate_formals 0 l)
-  in
- 
-    try
-      let x = Hashtbl.find fun_specs name in
+      | Some l -> Some (translate 0 l)
 
-      let _ = 
-	match x.prett, ret with
-	    None, None -> ()
-	  | Some t1, Some t2 when t1 = t2 -> ()
-	  | _ ->
-	      (* TODO: add the respective types and locations ? *)
-	      error "Npkenv.update_fun_proto"
-		("different types for return type of prototype "^name)
-      in
 
-      let _ =
-	match x.pargs, formals with
-	  | _, None -> ()
-	  | None, Some _ -> x.pargs <- formals
-	  | Some l1, Some l2 -> compare_formals name l1 l2
-      in ()
-    with Not_found ->
-      Hashtbl.add fun_specs name
-	{prett = ret;
-	 pargs = formals; plocs = None;
-	 ploc = Npkcontext.get_loc (); pbody = None;
-	}
+let update_fun_proto name ret args =
+  try
+    let x = Hashtbl.find fun_specs name in
+      
+    let _ = 
+      match x.prett, ret with
+	  None, None -> ()
+	| Some t1, Some t2 when t1 = t2 -> ()
+	| _ ->
+	    (* TODO: add the respective types and locations ? *)
+	    error "Npkenv.update_fun_proto"
+	      ("different types for return type of prototype "^name)
+    in
+      
+    let _ =
+      match x.pargs, args with
+	| _, None -> ()
+	| None, Some _ -> x.pargs <- args
+	| Some l1, Some l2 -> compare_formals name l1 l2
+    in ()
+  with Not_found ->
+    Hashtbl.add fun_specs name
+      {prett = ret;
+       pargs = args; plocs = None;
+       ploc = Npkcontext.get_loc (); pbody = None;
+      }
 
 
 

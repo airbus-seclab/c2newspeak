@@ -183,56 +183,6 @@ let first_pass f =
   let glb_decls = Hashtbl.create 100 in
   let fun_specs = Hashtbl.create 100 in
 
-(* TODO: there is also one in npkenv remove, simplify ? *)
-  let update_fun_proto name ret args =
-    let ret_t =
-      match ret with
-	| TVoid _ -> None
-	| t -> Some (translate_typ t)
-    in
-
-    let rec translate_formals i l =
-      match l with
-	  [] -> []
-	| (n, t, _)::r ->
-	    let name =
-	      if n="" then "arg" ^ (string_of_int i) else n
-	    in
-	      (-1, name, translate_typ t)::(translate_formals (i+1) r)
-    in
-    let formals = 
-      match args with
-	  None ->
-	    print_warning "Npkenv.update_fun_proto"
-	      ("missing or incomplete prototype for "^name);
-	    None
-	| Some l -> Some (translate_formals 0 l)
-    in
-      
-      try
-	let x = Hashtbl.find fun_specs name in
-	  (* TODO: this code can be factored !!! *)
-	let _ = 
-	  match x.prett, ret_t with
-	      None, None -> ()
-	    | Some t1, Some t2 when t1 = t2 -> ()
-	    | _ ->
-		(* TODO: add the respective types and locations ? *)
-		error "Npkenv.update_fun_proto"
-		  ("different types for return type of prototype "^name)
-	in
-	  
-	  match x.pargs, formals with
-	    | _, None -> ()
-	    | None, Some _ -> x.pargs <- formals
-	    | Some l1, Some l2 -> Npkenv.compare_formals name l1 l2
-		
-      with Not_found ->
-	Hashtbl.add fun_specs name
-	  { prett = ret_t; pargs = formals; plocs = None;
-	    ploc = Npkcontext.get_loc (); pbody = None }
-  in
-
   let update_fun_def f =
     let name = f.svar.vname in
       
@@ -250,37 +200,13 @@ let first_pass f =
     let locals = List.map translate_local f.slocals in
     let loc = Npkcontext.get_loc () in
       
-      try
-	let x = Hashtbl.find fun_specs name in
-	  if x.pbody <> None
-	  then error "Npkenv.update_fun_def"
-	    ("multiple definition for "^name);
-	  
-	  let _ = 
-	    match (x.prett, rettype) with
-		(None, None) -> ()
-	      | (Some t1, Some t2) when t1 = t2 -> ()
-	      | _ -> 
-		  (* TODO: add the respective types and locations ? *)
-		  error "Npkenv.update_fun_def"
-		    ("different types for return type of prototype "^name)
-	  in
+      (* TODO: remove this Some ?? *)
+      Npkenv.update_fun_proto name rettype (Some formals);
 
-	  let _ = 
-	    match x.pargs with
-		None -> ()
-	      | Some l -> Npkenv.compare_formals name l formals
-	  in
-	    
-	    x.pargs <- Some formals;
-	    x.plocs <- Some locals;
-	    x.ploc <- loc;
-	    x.pbody <- Some f.sbody;
-	      
-      with Not_found ->
-	  Hashtbl.add fun_specs name
-	    { prett = rettype; pargs = Some formals; plocs = Some locals;
-	      ploc = loc; pbody = Some f.sbody }
+      if (Hashtbl.mem fun_specs name) 
+      then error "Npkenv.update_fun_def" ("multiple definition for "^name);
+      
+      Hashtbl.add fun_specs name (locals, formals, f.sbody)
   in
 
   let update_glob_decl v =
@@ -357,7 +283,9 @@ let first_pass f =
 		("ignoring directive: unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
-	      update_fun_proto name ret args
+	      let ret = Npkutils.translate_ret_typ ret in
+	      let args = Npkenv.translate_formals name args in
+		Npkenv.update_fun_proto name ret args
 		  
 	  | [GFun (f, loc)] -> 
 	      if (f.svar.vname = "main")

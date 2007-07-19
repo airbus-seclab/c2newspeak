@@ -99,17 +99,17 @@ module String_set =
   Set.Make (struct type t = string let compare = Pervasives.compare end)
 
 type glb_type = {
-  mutable gtype : typ;
   gloc  : Cil.location;
+  mutable gtype : typ;
   mutable ginit : init_t option;
   mutable gused : bool;
 }
 
 type fspec_type = {
+  ploc  : Newspeak.location;
   prett : typ option;
   mutable pargs : ((int * string * typ) list) option;
-  plocs : ((int * string * typ) list) option;
-  ploc  : Newspeak.location;
+  mutable plocs : ((int * string * typ) list) option;
   mutable pbody : blk option;
 }
 

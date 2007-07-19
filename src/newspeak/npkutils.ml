@@ -144,11 +144,6 @@ and translate_field t f =
   let typ = translate_typ f.ftype in
     (offset, typ)
 
-let translate_ret_typ x =
-  match x with
-      TVoid _ -> None
-    | t -> Some (translate_typ t)
-
 let translate_rel_binop t1 t2 o =
   let t = 
     match (translate_typ t1, translate_typ t2) with
@@ -169,3 +164,9 @@ let isPtr e =
     | Npkil.Scalar Newspeak.Ptr
     | Npkil.Scalar Newspeak.FunPtr -> true
     | _ -> false
+
+let translate_ret_typ x =
+  match x with
+      TVoid _ -> None
+    | t -> Some (translate_typ t)
+

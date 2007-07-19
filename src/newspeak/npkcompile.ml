@@ -650,15 +650,16 @@ and translate_call x lv args_exps =
 		| TFun (ret, _, _, _) -> 
 		    let ret = Npkutils.translate_ret_typ ret in
 		    let arg_from_exp e = ("", typeOf e, []) in 
-		    let args = Some (List.map arg_from_exp args_exps) in begin
-		      try update_fun_proto name ret args 
-		      with invalid_argument ->
+		    let args = Some (List.map arg_from_exp args_exps) in 
+		    let args = Npkenv.translate_formals name args in begin
+		      try Npkenv.update_fun_proto name ret args 
+		      with Invalid_argument _ ->
 			(* TODO: See if we can be as specific as before (int4 <> ptr) *)
 			error "Npkcompile.translate_call" 
 			  ("function "^name^" called with args not matching prototype")
 		    end;
 		    ret
-							      
+			
 		| _ ->
 		    error "Npkcompile.translate_call"
 		      ("invalid type '"^(string_of_type f.vtype)^"'")
@@ -701,43 +702,35 @@ and translate_call x lv args_exps =
       res
 
 
+let translate_fun name (locals, formals, body) =
+  assert (Hashtbl.mem Npkenv.fun_specs name);
+  let spec = Hashtbl.find Npkenv.fun_specs name in
+    (* TODO: cleanup, should call a Npkenv update function *)
+    spec.K.plocs <- Some locals;
+    spec.K.pargs <- Some formals;
 
-
-let translate_fun name spec =
-  let body = spec.F.pbody in
-  let spec = 
-    { K.prett = spec.F.prett; K.pargs = spec.F.pargs; 
-      K.plocs = spec.F.plocs; K.ploc = spec.F.ploc; K.pbody = None }
-  in
-  match spec.K.pargs, spec.K.plocs, body with
-      Some formals, Some locals, Some cil_body ->
-(*	Npkcontext.set_loc spec.K.ploc; *)
-	reset_lbl_gen ();
-	let floc = spec.K.ploc in
-	let status = 
-	  match spec.K.prett with
-	    | None -> empty_status ()
-	    | Some _ ->
-		push_local ();
-		new_ret_status ()
-	in
-	  List.iter (loc_declare false) formals;
-	  List.iter (loc_declare true) locals;
-	  
-	  let blk = 
-	    (translate_stmts status cil_body.bstmts)@
-	      [K.Label status.return_lbl, floc] 
-	  in
-	  let body = append_decls (get_loc_decls ()) blk in
-
-	    (* TODO ?: Check only one body exists *)
-	    spec.K.pbody <- Some body;
-	    Hashtbl.add Npkenv.fun_specs name spec
-
-    (* TODO: Same question here *)
-    | _ -> Hashtbl.add Npkenv.fun_specs name spec
-
-
+    (*	Npkcontext.set_loc spec.K.ploc; *)
+    reset_lbl_gen ();
+    let floc = spec.K.ploc in
+    let status = 
+      match spec.K.prett with
+	| None -> empty_status ()
+	| Some _ ->
+	    push_local ();
+	    new_ret_status ()
+    in
+      List.iter (loc_declare false) formals;
+      List.iter (loc_declare true) locals;
+      
+      let blk = 
+	(translate_stmts status body.bstmts)@
+	  [K.Label status.return_lbl, floc] 
+      in
+      let body = append_decls (get_loc_decls ()) blk in
+	
+	(* TODO ?: Check only one body exists *)
+	spec.K.pbody <- Some body
+	
 let translate_init x t =
   let glb_inits = ref [] in
     
