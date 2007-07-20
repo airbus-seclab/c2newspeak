@@ -62,6 +62,11 @@ val create_npkil :
 
 (** {2 Functions used in translate_fun} *)
 
+(* returns the arguments of the function,
+   None when unknown 
+*)
+val get_args : string -> ((int * string * typ) list) option
+
 (** [loc_declare v] adds the declaration of v in the local list *)
 val loc_declare : bool -> (int * string * Npkil.typ) -> unit
 

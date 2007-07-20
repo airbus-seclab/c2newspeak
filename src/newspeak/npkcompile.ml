@@ -618,16 +618,37 @@ and translate_call x lv args_exps =
   in
 
   let handle_args_decls fname exps =
-    let rec handle_args_decls_aux i exps =
-      match exps with
-	  [] -> []
-	| e::tl ->
+    let res = ref [] in
+    let build_unknown_args exps =
+      let rec build_args exps i = 
+	match exps with
+	    [] -> []
+	  | e::tl ->
+	      let t = translate_typ (typeOf e) in
+	      let tl = build_args tl (i+1) in
+		(-1, "arg"^(string_of_int i), t)::tl
+      in
+	build_args exps 0
+    in
+    let rec handle_args exps args =
+      match (exps, args) with
+	  ([], []) -> ()
+	| (e::tl, (_, str, _)::args) ->
 	    push_local ();
 	    let t = translate_typ (typeOf e) in
-	    let tl = handle_args_decls_aux (i+1) tl in
-	      ("arg"^(string_of_int i), t, loc)::tl
+	      res := (str, t, loc)::!res;
+	      handle_args tl args
+	| _ -> 
+	    error "Npkcompile.translate_call.handle_args_decls.handle_args" 
+	      "This code should be unreachable"
     in
-      List.rev (handle_args_decls_aux 0 exps)
+    let args = 
+      match Npkenv.get_args fname with
+	  None -> build_unknown_args exps 
+	| Some args -> args
+    in
+      handle_args exps args;
+      !res
   in
 
   let rec handle_args_prolog accu n i args_exps =

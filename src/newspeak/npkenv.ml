@@ -209,7 +209,11 @@ let update_fun_proto name ret args =
 
 
 
-
+let get_args f = 
+  try
+    let x = Hashtbl.find fun_specs f in
+      x.pargs
+  with Not_found -> None
 
 
 (*-----------------------*)
