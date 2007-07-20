@@ -198,7 +198,7 @@ let first_pass f =
     let translate_local v = v.vid, v.vname, translate_typ v.vtype in
     let formals = List.map translate_local f.sformals in
     let locals = List.map translate_local f.slocals in
-    let loc = Npkcontext.get_loc () in
+(*    let loc = Npkcontext.get_loc () in *)
       
       (* TODO: remove this Some ?? *)
       Npkenv.update_fun_proto name rettype (Some formals);

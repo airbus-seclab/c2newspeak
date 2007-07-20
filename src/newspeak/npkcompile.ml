@@ -703,15 +703,15 @@ and translate_call x lv args_exps =
 
 
 let translate_fun name (locals, formals, body) =
-  assert (Hashtbl.mem Npkenv.fun_specs name);
+ assert (Hashtbl.mem Npkenv.fun_specs name);
   let spec = Hashtbl.find Npkenv.fun_specs name in
+  let floc = spec.K.ploc in
+    (*Npkcontext.set_loc floc;*)
     (* TODO: cleanup, should call a Npkenv update function *)
     spec.K.plocs <- Some locals;
     spec.K.pargs <- Some formals;
 
-    (*	Npkcontext.set_loc spec.K.ploc; *)
     reset_lbl_gen ();
-    let floc = spec.K.ploc in
     let status = 
       match spec.K.prett with
 	| None -> empty_status ()
@@ -726,7 +726,7 @@ let translate_fun name (locals, formals, body) =
 	(translate_stmts status body.bstmts)@
 	  [K.Label status.return_lbl, floc] 
       in
-      let body = append_decls (get_loc_decls ()) blk in
+      let body = append_decls (Npkenv.get_loc_decls ()) blk in
 	
 	(* TODO ?: Check only one body exists *)
 	spec.K.pbody <- Some body
