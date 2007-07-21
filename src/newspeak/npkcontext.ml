@@ -54,6 +54,7 @@ let no_opt = ref false
 let normalize_loops = ref false
 
 let accept_mult_def = ref false
+let force_labels = ref false
 
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
@@ -127,6 +128,9 @@ let argslist = [
 
   ("--accept-mult-def", Arg.Set (accept_mult_def),
    "does not raise an error multiple definitions of the same variables\n");
+
+  ("--force-labels", Arg.Set (force_labels),
+   "force the use of labels instead of do with constructs");
 
 (* TODO: Handle assumptions correctly *)
 (*  ("--assume", Arg.String (fun x -> assumptions := x::(!assumptions)),

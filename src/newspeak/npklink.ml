@@ -92,7 +92,11 @@ let rec replace_stmt (sk, l) =
       | Npkil.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
       | Npkil.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
       | Npkil.Call fn -> Newspeak.Call (replace_fn fn)
-      | Npkil.Goto lbl -> Newspeak.Goto lbl 
+      | Npkil.Goto lbl -> Newspeak.Goto lbl
+      | Npkil.DoWith (body, lbl, action) ->
+	  let body = List.map replace_stmt body in
+	  let action = List.map replace_stmt action in
+	    Newspeak.DoWith (body, lbl, action)
       | Npkil.Label lbl -> Newspeak.Label lbl
   in 
     (new_sk, l)

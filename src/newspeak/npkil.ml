@@ -40,11 +40,12 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | Label of lbl
-  | Goto of lbl
-  | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
+  | DoWith of (blk * lbl * blk)
+  | Goto of lbl
+  | Call of fn
+  | Label of lbl
 
 and stmt = stmtkind * location
 
@@ -274,6 +275,7 @@ and string_of_fn decls f =
 	"["^(string_of_exp decls exp)^"]("^
 	  (seq ", " string_of_typ args_t)^")"
 
+(* TODO: remove pretty option here and Npkcontext *)
 let dump_npko (inter, funs) = 
   let cur_fun = ref "" in
 
@@ -318,13 +320,20 @@ let dump_npko (inter, funs) =
 	      dump_blk align new_decls body
 	    end else begin
 	      print_endline "{";
-	      let new_align = (align^"  ") in
+	      let new_align = align^"  " in
 		print_string new_align;
 		print_endline ((string_of_typ t)^" "^name^";");
 		dump_blk new_align new_decls body;
 		print_endline (align^"}")
 	    end
-	      
+	     
+      | DoWith  (body, lbl, action) ->
+	  print_endline "do {";
+	  dump_blk (align^"  ") decls body;
+	  print_endline (align^"} with lbl"^(string_of_int lbl)^": {");
+	  dump_blk (align^"  ") decls action;
+	  print_endline (align^"}")
+
       | Label l -> 
 	  print_endline ((string_of_lbl l)^":")
       | Goto l ->

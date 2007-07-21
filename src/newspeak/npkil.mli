@@ -40,11 +40,12 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | Label of lbl
-  | Goto of lbl
-  | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
+  | DoWith of (blk * lbl * blk)
+  | Goto of lbl
+  | Call of fn
+  | Label of lbl
 
 and stmt = stmtkind * location
 

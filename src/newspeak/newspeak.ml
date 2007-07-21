@@ -43,11 +43,12 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | Label of lbl
-  | Goto of lbl
-  | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
+  | DoWith of (blk * lbl * blk)
+  | Goto of lbl
+  | Call of fn
+  | Label of lbl
 
 and stmt = stmtkind * location
 
@@ -459,8 +460,18 @@ let string_of_blk offset x =
 	    dump_line "}"
 	  end
 	    
-      | Label l -> dump_line_at loc ((string_of_lbl l)^":")
+      | DoWith (body, lbl, action) ->
+	  dump_line_at loc "do {";
+	  incr_margin ();
+	  dump_blk body;
+	  decr_margin ();
+	  dump_line ("} with lbl"^(string_of_int lbl)^": {");
+	  incr_margin ();
+	  dump_blk action;
+	  decr_margin ();
+	  dump_line "}"
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
+      | Label l -> dump_line_at loc ((string_of_lbl l)^":")
 	  
       | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
@@ -693,6 +704,14 @@ object
       | _ -> x
 end;;
 
+let remove_final_goto l blk =
+  let rec remove blk = 
+    match blk with
+      	(Goto l', _)::[] when l = l' -> []
+      | hd::tl -> hd::(remove tl)
+      | [] -> []
+  in
+    remove blk
 
 let extract_cond_body lbl x =
   let rec extract x =
@@ -714,12 +733,10 @@ let simplify_gotos blk =
     match x with
 	(Goto l1, _)::((Label l2, _)::_ as tl) when l1 = l2 -> simplify_blk tl
       | [] -> []
-      | (Label l, _)::tl when not (List.mem l !necessary_lbls) -> 
-	  simplify_blk tl
       | hd::tl -> 
 	  let hd = simplify_stmt hd in
 	  let tl = simplify_blk tl in
-	    hd::tl
+	    hd@tl
 		
   and simplify_choose_elt (l, b) = (l, simplify_blk b)
 
@@ -727,12 +744,20 @@ let simplify_gotos blk =
     match x with
 	Goto l -> 
 	  necessary_lbls := l::!necessary_lbls;
-	  (x, loc)
-      | Decl (name, t, body) -> (Decl (name, t, simplify_blk body), loc)
+	  [x, loc]
+      | Label l when not (List.mem l !necessary_lbls) -> []
+      | Decl (name, t, body) -> [Decl (name, t, simplify_blk body), loc]
+      | DoWith (body, l, action) ->
+	  let body = remove_final_goto l body in
+	  let body = simplify_blk body in
+	    if List.mem l !necessary_lbls then begin
+	      let action = simplify_blk action in
+		[DoWith (body, l, action), loc]
+	    end else body
       | ChooseAssert elts ->
-	  (ChooseAssert (List.map simplify_choose_elt elts), loc)
-      | InfLoop body -> (InfLoop (simplify_blk body), loc)
-      | _ -> (x, loc)
+	  [ChooseAssert (List.map simplify_choose_elt elts), loc]
+      | InfLoop body -> [InfLoop (simplify_blk body), loc]
+      | _ -> [x, loc]
   in
     simplify_blk blk
 
@@ -904,6 +929,9 @@ and visit_stmt visitor (x, loc) =
 	| Call fn -> visit_fn visitor fn
 	| ChooseAssert choices -> List.iter (visit_choice visitor) choices
 	| InfLoop x -> visit_blk visitor x
+	| DoWith (body, _, action) -> 
+	    visit_blk visitor body;
+	    visit_blk visitor action
 	| Label _ | Goto _ -> ()
     end else ()
 

@@ -94,6 +94,9 @@ and process_stmt env (x, loc) =
 	let env = Store.forget env in
 	let (_, body) = process_blk env body in
 	  (env, (InfLoop body, loc))
+    | DoWith (body, l, []) ->
+	let (_, body) = process_blk env body in
+	  (Store.forget env, (DoWith (body, l, []), loc))
     | _ -> (Store.forget env, (x, loc))
 
 and process_choice env (cond, body) =

@@ -46,6 +46,25 @@ let build_stmt stmtkind = (stmtkind, Npkcontext.get_loc ())
 (* Misc. functions used by translate *)
 (*===================================*)
 
+let hoist_labels blk =
+  let rec remove_labels blk =
+    match blk with
+	[] -> ([], [])
+      | (K.Label l, loc)::tl ->
+	  let (lbls, tl) = remove_labels tl in
+	    ((l, loc)::lbls, tl)
+      | hd::tl -> 
+	  let (lbls, tl) = remove_labels tl in
+	    (lbls, hd::tl)
+  in
+  let rec append_labels lbls blk =
+    match lbls with
+	[] -> blk
+      | (l, loc)::tl -> append_labels tl [K.DoWith (blk, l, []), loc]
+  in
+  let (lbls, blk) = remove_labels blk in
+    append_labels lbls blk
+
 (* extract case and default labels *)
 let extract_labels status l = 
   let rec extract_aux l = match l with 
@@ -408,12 +427,13 @@ and translate_stmtkind status kind =
 	    
       | Block b -> translate_stmts status b.bstmts
 	  
-      | Loop (body, _, _, _) ->
+      | Loop (body, _, _, _)  ->
 	  let status = new_brk_status status in
 	  let loop = (K.InfLoop (translate_stmts status body.bstmts), loc) in
-	  let lbl = (K.Label status.brk_lbl, loc) in
-	    [loop;lbl]
-	      
+	    if !Npkcontext.force_labels then begin
+	      let lbl = (K.Label status.brk_lbl, loc) in
+		[loop;lbl]
+	    end else [K.DoWith ([loop], status.brk_lbl, []), loc]
 	      
       | Break _ -> [K.Goto status.brk_lbl, loc]
 	  
@@ -569,10 +589,16 @@ and translate_switch status e stmt_list body =
     List.iter collect_labels stmt_list;
     let choices = List.rev (!cases) in
     let default_choice = (List.rev (!def_asserts), [!def_goto]) in
-    let body = translate_stmts !status body.bstmts in
     let choice = K.ChooseAssert (default_choice::choices) in
-      (build_stmt choice::body)@[build_stmt (K.Label !status.brk_lbl)]
-
+    let body = translate_stmts !status body.bstmts in
+    let body = (build_stmt choice)::body in
+      
+      if !Npkcontext.force_labels 
+      then body@[build_stmt (K.Label !status.brk_lbl)]
+      else begin
+	let body = hoist_labels body in
+	  [build_stmt (K.DoWith (body, !status.brk_lbl, []))]
+      end
 
 
 and translate_call x lv args_exps =
@@ -743,9 +769,11 @@ let translate_fun name (locals, formals, body) =
       List.iter (loc_declare false) formals;
       List.iter (loc_declare true) locals;
       
+      let body = translate_stmts status body.bstmts in
       let blk = 
-	(translate_stmts status body.bstmts)@
-	  [K.Label status.return_lbl, floc] 
+	if !Npkcontext.force_labels
+	then body@[K.Label status.return_lbl, floc]
+	else [K.DoWith (body, status.return_lbl, []), floc]
       in
       let body = append_decls (Npkenv.get_loc_decls ()) blk in
 	

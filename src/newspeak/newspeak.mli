@@ -46,16 +46,18 @@ and gdecl = (string * typ * init_t)
 
 and fundec = ftyp * blk option
 
+(** The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | Label of lbl
-  | Goto of lbl
-  | Call of fn
   | ChooseAssert of (exp list * blk) list
   | InfLoop of blk
-(** The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
+  | DoWith of (blk * lbl * blk)
+  | Goto of lbl
+  | Call of fn
+  | Label of lbl
+
 
 and stmt = stmtkind * location
 
