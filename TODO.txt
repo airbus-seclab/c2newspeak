@@ -74,6 +74,7 @@ according to the type: -(x+1) or max_int - x
 - CAREFUL: match_while is problematic because it transforms expressions with
 possible side-effects (or errors) into a side-effects free boolean formula.
 + it is not able to handle or expressions.
+- do some sanity checks
 
 Organisation
 ------------
