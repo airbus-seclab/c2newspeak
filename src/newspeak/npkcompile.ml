@@ -34,7 +34,6 @@ open Cilutils
 
 open Npkcontext
 open Npkutils
-open Npkenv
 
 module F = Firstpass
 module K = Npkil
@@ -71,7 +70,7 @@ let extract_labels status l =
     | [] -> []
     | (Case (_, loc))::r | (Default loc)::r -> begin
 	try
-	  let lbl = K.Label (retrieve_switch_label status loc) in
+	  let lbl = K.Label (Env.retrieve_switch_label status loc) in
 	    (build_stmt lbl)::(extract_aux r)
 	with Not_found -> error "Npkcompile.translate_labels" "unexpected label"
       end
@@ -108,7 +107,7 @@ let rec translate_const c =
 	    "integer too large: not representable";
 	  K.Const (Newspeak.CInt64 i)
 	  
-    | CStr s -> get_cstr s
+    | CStr s -> Env.get_cstr s
     | CChr c -> K.Const (Newspeak.CInt64 (Int64.of_int (Char.code c))) 
 	
     | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
@@ -217,7 +216,7 @@ and translate_access lv e =
      
 and translate_lval lv =
   match lv with
-    | Var v, NoOffset -> get_var v
+    | Var v, NoOffset -> Env.get_var v
 
     | Mem e, NoOffset ->
 	let sz = size_of (typeOfLval lv) in
@@ -415,27 +414,28 @@ and translate_stmtkind status kind =
     match kind with
       | Instr il -> translate_instrlist il
 	  
-      | Return (None, _) -> [K.Goto status.return_lbl, loc]
+      | Return (None, _) -> [K.Goto (Env.get_ret_lbl status), loc]
 	    
       | Return (Some e, _) ->
 	  let typ = translate_typ (typeOf e) in
-	  let lval = get_ret_var status in
-	    [translate_set lval typ e, loc;
-	     K.Goto status.return_lbl, loc]
+	  let lval = Env.get_ret_var status in
+	  let lbl = Env.get_ret_lbl status in
+	    [translate_set lval typ e, loc; K.Goto lbl, loc]
 
       | If (e, blk1, blk2, _) -> translate_if status e blk1.bstmts blk2.bstmts
 	    
       | Block b -> translate_stmts status b.bstmts
 	  
       | Loop (body, _, _, _)  ->
-	  let status = new_brk_status status in
+	  let status = Env.new_brk_status status in
 	  let loop = (K.InfLoop (translate_stmts status body.bstmts), loc) in
+	  let lbl = Env.get_brk_lbl status in
 	    if !Npkcontext.force_labels then begin
-	      let lbl = (K.Label status.brk_lbl, loc) in
+	      let lbl = (K.Label lbl, loc) in
 		[loop;lbl]
-	    end else [K.DoWith ([loop], status.brk_lbl, []), loc]
+	    end else [K.DoWith ([loop], lbl, []), loc]
 	      
-      | Break _ -> [K.Goto status.brk_lbl, loc]
+      | Break _ -> [K.Goto (Env.get_brk_lbl status), loc]
 	  
       | Switch (e, body, stmt_list, _) ->
 	  translate_switch status e stmt_list body
@@ -555,12 +555,13 @@ and translate_switch status e stmt_list body =
   let cases = ref [] in
 
   let def_asserts = ref [] in
-  let status = ref (new_brk_status status) in
-  let def_goto = ref (build_stmt (K.Goto !status.brk_lbl)) in
+  let status = ref (Env.new_brk_status status) in
+  let lbl = Env.get_brk_lbl !status in
+  let def_goto = ref (build_stmt (K.Goto lbl)) in
 
   let collect_label label =
     match label with
-	Case (_, loc) | Default loc when mem_switch_label !status loc -> ()
+	Case (_, loc) | Default loc when Env.mem_switch_label !status loc -> ()
       | Case (v, loc) ->
 	  Npkcontext.set_loc loc;
 	  let t = 
@@ -570,15 +571,15 @@ and translate_switch status e stmt_list body =
 	  in
 	  let case_exp = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
 	  let def_exp = K.negate case_exp in
-	  let new_lbl = new_label () in
+	  let new_lbl = Env.new_label () in
 	  let goto_lbl = K.Goto new_lbl in
-	    status := add_switch_label !status loc new_lbl;
+	    status := Env.add_switch_label !status loc new_lbl;
 	    def_asserts := def_exp::!def_asserts;
 	    cases := ([case_exp], [build_stmt goto_lbl]):: (!cases)
       | Default loc ->
 	  Npkcontext.set_loc loc;
-	  let new_lbl = new_label () in
-	    status := add_switch_label !status loc new_lbl;
+	  let new_lbl = Env.new_label () in
+	    status := Env.add_switch_label !status loc new_lbl;
 	    def_goto := build_stmt (K.Goto new_lbl);
 	    ()
       | _ -> error "Npkcompile.tranlate_switch" "invalid label"
@@ -592,12 +593,13 @@ and translate_switch status e stmt_list body =
     let choice = K.ChooseAssert (default_choice::choices) in
     let body = translate_stmts !status body.bstmts in
     let body = (build_stmt choice)::body in
-      
+    let lbl = Env.get_brk_lbl !status in
+
       if !Npkcontext.force_labels 
-      then body@[build_stmt (K.Label !status.brk_lbl)]
+      then body@[build_stmt (K.Label lbl)]
       else begin
 	let body = hoist_labels body in
-	  [build_stmt (K.DoWith (body, !status.brk_lbl, []))]
+	  [build_stmt (K.DoWith (body, lbl, []))]
       end
 
 
@@ -611,13 +613,13 @@ and translate_call x lv args_exps =
 
       (* Return value ignored *)
       | Some t, None ->
-	  push_local ();
+	  Env.push_local ();
 	  [("value_of_"^fname, t, loc)], []
 	    
       (* Return value put into Lval cil_lv *)
       | Some t_given, Some cil_lv ->
 	  let t_expected = translate_typ (typeOfLval cil_lv) in
-	    push_local ();
+	    Env.push_local ();
 	    let lval = translate_lval cil_lv in
 	    let ret_decl = ["value_of_"^fname, t_given, loc] in
 	    let ret_epilog = match t_given, t_expected with
@@ -660,7 +662,7 @@ and translate_call x lv args_exps =
       match (exps, args) with
 	  ([], []) -> ()
 	| (e::tl, (_, str, _)::args) ->
-	    push_local ();
+	    Env.push_local ();
 	    let t = translate_typ (typeOf e) in
 	      res := (str, t, loc)::!res;
 	      handle_args tl args
@@ -669,7 +671,7 @@ and translate_call x lv args_exps =
 	      "This code should be unreachable"
     in
     let args = 
-      match Npkenv.get_args fname with
+      match Env.get_args fname with
 	  None -> build_unknown_args exps 
 	| Some args -> args
     in
@@ -687,7 +689,7 @@ and translate_call x lv args_exps =
 	    handle_args_prolog ((build_stmt set)::accu) n (i+1) r_e
   in
 
-    save_loc_cnt ();
+    Env.save_loc_cnt ();
     let (name, ret_type) = 
       match lv with
 	| Var f, NoOffset ->
@@ -698,8 +700,8 @@ and translate_call x lv args_exps =
 		    let ret = Npkutils.translate_ret_typ ret in
 		    let arg_from_exp e = ("", typeOf e, []) in 
 		    let args = Some (List.map arg_from_exp args_exps) in 
-		    let args = Npkenv.translate_formals name args in begin
-		      try Npkenv.update_fun_proto name ret args 
+		    let args = Env.translate_formals name args in begin
+		      try Env.update_fun_proto name ret args 
 		      with Invalid_argument _ ->
 			(* TODO: See if we can be as specific as before (int4 <> ptr) *)
 			error "Npkcompile.translate_call" 
@@ -745,37 +747,37 @@ and translate_call x lv args_exps =
     let call_w_prolog = (K.Call fexp, loc)::args_prolog in
     let call_wo_ret = append_decls args_decls (List.rev call_w_prolog) in
     let res = append_decls ret_decl (call_wo_ret@(ret_epilog)) in
-      restore_loc_cnt ();
+      Env.restore_loc_cnt ();
       res
 
 
 let translate_fun name (locals, formals, body) =
- assert (Hashtbl.mem Npkenv.fun_specs name);
-  let spec = Hashtbl.find Npkenv.fun_specs name in
+ assert (Hashtbl.mem Env.fun_specs name);
+  let spec = Hashtbl.find Env.fun_specs name in
   let floc = spec.K.ploc in
     (*Npkcontext.set_loc floc;*)
-    (* TODO: cleanup, should call a Npkenv update function *)
+    (* TODO: cleanup, should call a Env update function *)
     spec.K.plocs <- Some locals;
     spec.K.pargs <- Some formals;
 
-    reset_lbl_gen ();
+    Env.reset_lbl_gen ();
     let status = 
       match spec.K.prett with
-	| None -> empty_status ()
+	| None -> Env.empty_status ()
 	| Some _ ->
-	    push_local ();
-	    new_ret_status ()
+	    Env.push_local ();
+	    Env.new_ret_status ()
     in
-      List.iter (loc_declare false) formals;
-      List.iter (loc_declare true) locals;
+      List.iter (Env.loc_declare false) formals;
+      List.iter (Env.loc_declare true) locals;
       
       let body = translate_stmts status body.bstmts in
+      let lbl = Env.get_ret_lbl status in
       let blk = 
-	if !Npkcontext.force_labels
-	then body@[K.Label status.return_lbl, floc]
-	else [K.DoWith (body, status.return_lbl, []), floc]
+	if !Npkcontext.force_labels then body@[K.Label lbl, floc]
+	else [K.DoWith (body, lbl, []), floc]
       in
-      let body = append_decls (Npkenv.get_loc_decls ()) blk in
+      let body = append_decls (Env.get_loc_decls ()) blk in
 	
 	(* TODO ?: Check only one body exists *)
 	spec.K.pbody <- Some body
@@ -831,7 +833,7 @@ let translate_glb used_glb name x =
 	  K.gused = used
 	} 
       in
-	Hashtbl.add Npkenv.glb_decls name glb
+	Hashtbl.add Env.glb_decls name glb
     end
 
 
@@ -866,7 +868,7 @@ let compile in_name out_name  =
     let (glb_used, glb_cstr, fun_specs, glb_decls) = 
       Firstpass.first_pass cil_file 
     in
-      Npkenv.glb_cstr := glb_cstr;
+      Env.glb_cstr := glb_cstr;
 
       Npkcontext.forget_loc ();
       print_debug "First pass done.";
@@ -876,9 +878,9 @@ let compile in_name out_name  =
       Hashtbl.iter translate_fun fun_specs;
       Hashtbl.iter (translate_glb glb_used) glb_decls;
       
-      let (globs, funs) = Npkenv.create_npkil in_name in
+      let (globs, funs) = Env.create_npkil in_name in
 	
-	init_env ();
+	Env.init_env ();
 	
 	if (!verb_npko) then begin
 	  print_endline "Newspeak Object output";
@@ -897,5 +899,5 @@ let compile in_name out_name  =
 	    print_debug ("Writing done.");
 	end;
 	
-	init_env()
+	Env.init_env()
 

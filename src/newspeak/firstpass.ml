@@ -111,7 +111,7 @@ object (this)
     match cil_var.vtype with
       | TFun _ -> ()
       | _ -> 
-	  let norm_name = Npkenv.glb_uniquename cil_var in
+	  let norm_name = Env.glb_uniquename cil_var in
 	    (*TODO: clean up String_set name here: *)
 	    glb_used <- Npkil.String_set.add norm_name glb_used
 	      
@@ -191,7 +191,7 @@ let first_pass f =
 	| TFun (TVoid _, _, _, _) -> None
 	| TFun (t, _, _, _) -> Some (translate_typ t)
 	| _ ->
-	    error "Npkenv.update_fun_def"
+	    error "Firstpass.first_pass.update_fun_def"
 	      ("invalid type \""^(string_of_type f.svar.vtype)^"\"")
     in
       
@@ -201,23 +201,24 @@ let first_pass f =
 (*    let loc = Npkcontext.get_loc () in *)
       
       (* TODO: remove this Some ?? *)
-      Npkenv.update_fun_proto name rettype (Some formals);
+      Env.update_fun_proto name rettype (Some formals);
 
       if (Hashtbl.mem fun_specs name) 
-      then error "Npkenv.update_fun_def" ("multiple definition for "^name);
+      then error "Firstpass.first_pass.update_fun_def" 
+	("multiple definition for "^name);
       
       Hashtbl.add fun_specs name (locals, formals, f.sbody)
   in
 
   let update_glob_decl v =
-    let name = Npkenv.glb_uniquename v in
+    let name = Env.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
-	  then error "Npkenv.update_glob_decl"
+	  then error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'")
@@ -229,23 +230,25 @@ let first_pass f =
 
 (* TODO: factor this code with the one up there *)
   let update_glob_def v i =
-    let name = Npkenv.glb_uniquename v in
+    let name = Env.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
-	  then error "Npkenv.update_glob_decl"
+	  then error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
 	  if x.gdefd then begin
-	    if not !accept_mult_def then
-	      error "Npkenv.glb_declare" ("multiple definition for "^name);
-	    if (x.ginit <> None) && (i <> None) then
-	      error "Npkenv.glb_declare" ("multiple declarations for "^name);
-	    print_warning "Npkenv.glb_declare" 
+	    if not !accept_mult_def 
+	    then error "Firstpass.first_pass.glb_declare" 
+	      ("multiple definition for "^name);
+	    if (x.ginit <> None) && (i <> None) 
+	    then error "Firstpass.first_pass.glb_declare" 
+	      ("multiple declarations for "^name);
+	    print_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name)
 	  end;
 	  x.gtype <- v.vtype;
@@ -284,8 +287,8 @@ let first_pass f =
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
 	      let ret = Npkutils.translate_ret_typ ret in
-	      let args = Npkenv.translate_formals name args in
-		Npkenv.update_fun_proto name ret args
+	      let args = Env.translate_formals name args in
+		Env.update_fun_proto name ret args
 		  
 	  | [GFun (f, loc)] -> 
 	      if (f.svar.vname = "main")
@@ -297,12 +300,12 @@ let first_pass f =
 	  | [GVar (v, {init = i}, _)] -> update_glob_def v i
 		
 	  | _ ->
-	      error "Npkfirstpass.first_pass.explore"
+	      error "Firstpass.first_pass.explore"
 		("global "^(string_of_global g)^" not supported")
   in
 
       Npkcontext.forget_loc ();
-      Npkenv.init_env ();
+      Env.init_env ();
       List.iter explore f.globals;
       let (glb_used, glb_cstr) = visitor#get_used in
 	(glb_used, glb_cstr, fun_specs, glb_decls)

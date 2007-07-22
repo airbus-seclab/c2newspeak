@@ -241,7 +241,9 @@ let get_cstr s =
 
 let get_ret_var status = Npkil.Local (!loc_cnt - 1)
 
+let get_ret_lbl status = status.return_lbl
 
+let get_brk_lbl status = status.brk_lbl
 
 (*------------------------------------------*)
 (* Status "Constructors" and label handling *)

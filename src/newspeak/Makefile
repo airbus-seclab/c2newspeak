@@ -1,7 +1,7 @@
 # Project
 DIR = 
 OBJ = newspeak cilutils params \
-      npkcontext npkil npkutils npkenv \
+      npkcontext npkil npkutils env \
       firstpass npkcompile npklink c2newspeak
 
 

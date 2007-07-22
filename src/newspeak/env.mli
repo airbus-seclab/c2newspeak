@@ -38,11 +38,7 @@ open Npkil
 
 (** The status type allows the translate functions to keep track of
     the current return and switch infos *)
-type status = {
-  return_lbl : Newspeak.lbl;
-  switch_lbls: (Cil.location * Newspeak.lbl) list;
-  brk_lbl    : Newspeak.lbl;
-}
+type status
 
 (** {1 Compilation variables} *)
 
@@ -119,8 +115,9 @@ val get_cstr : string -> Npkil.exp
     value *)
 val get_ret_var : status -> Npkil.lval
 
+val get_ret_lbl : status -> Newspeak.lbl
 
-
+val get_brk_lbl : status -> Newspeak.lbl
 
 (** {1 Status "constructors" and label handling} *)
 
