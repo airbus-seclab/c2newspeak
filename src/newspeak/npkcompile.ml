@@ -416,7 +416,6 @@ and translate_stmtkind status kind =
       | Block b -> translate_stmts status b.bstmts
 	  
       | Loop (body, _, _, _)  ->
-	  let status = Env.new_brk_status status in
 	  let loop = (K.InfLoop (translate_stmts status body.bstmts), loc) in
 	  let lbl = Env.get_brk_lbl () in
 	    [K.DoWith ([loop], lbl, []), loc]
@@ -593,6 +592,8 @@ and translate_switch_cases status e labels =
     in
       translate_aux x.labels
   in
+    
+    Env.reset_lbl_gen ();
     List.iter translate_case (List.rev labels);
     let default_choice = (!default_cond, !default_goto) in
       (!status, [build_stmt (K.ChooseAssert (default_choice::!cases))])
@@ -778,13 +779,9 @@ let translate_fun name (locals, formals, body) =
     spec.K.pargs <- Some formals;
 
     Env.reset_lbl_gen ();
-    let status = 
-      match spec.K.prett with
-	| None -> Env.empty_status ()
-	| Some _ ->
-	    Env.push_local ();
-	    Env.new_ret_status ()
-    in
+    let status = Env.empty_status () in
+
+      if spec.K.prett <> None then Env.push_local ();
       List.iter (Env.loc_declare false) formals;
       List.iter (Env.loc_declare true) locals;
       

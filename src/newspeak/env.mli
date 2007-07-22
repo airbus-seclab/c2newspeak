@@ -124,13 +124,6 @@ val get_brk_lbl : unit -> Newspeak.lbl
 (** creates an empty status *)
 val empty_status : unit -> status
 
-(** creates a fresh local variable and creates a status with this
-    variable as return value *)
-val new_ret_status : unit -> status
-
-(** modify a status with a fresh label break *)
-val new_brk_status : status -> status
-
 (** generates a fresh label *)
 val new_lbl : unit -> Newspeak.lbl
 

@@ -19,21 +19,21 @@ main() {
           (34)^do {
             (34)^choose {
               | (0-_int4 <> 2) & (0-_int4 <> 3) -->
-                (34)^goto lbl3;
+                (34)^goto lbl2;
               | (0-_int4 == 2) -->
-                (34)^goto lbl5;
-              | (0-_int4 == 3) -->
                 (34)^goto lbl4;
+              | (0-_int4 == 3) -->
+                (34)^goto lbl3;
             }
-          } with lbl5: {
+          } with lbl4: {
           }
           (36)^0- =(int4) 2;
           (37)^goto lbl1;
-        } with lbl4: {
+        } with lbl3: {
         }
         (40)^0- =(int4) 3;
         (41)^goto lbl1;
-      } with lbl3: {
+      } with lbl2: {
       }
       (44)^0- =(int4) 4;
     } with lbl1: {

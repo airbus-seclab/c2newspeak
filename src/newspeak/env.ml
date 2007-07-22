@@ -47,8 +47,10 @@ let brk_lbl = 1
 (* Types *)
 (*-------*)
 
-(* TODO: should not be a record anymore *)
-type status = { switch_lbls: (Cil.location * Newspeak.lbl) list }
+(* maps every location corresponding to a case statement of a switch
+   to a newspeak label 
+*)
+type status = (Cil.location * Newspeak.lbl) list
 
 (*-----------------------*)
 (* Compilation variables *)
@@ -257,31 +259,16 @@ let get_brk_lbl () = brk_lbl
 (*------------------------------------------*)
 
 (* Counter for labels *)
-(* TODO: check 2 or 1 ??? *)
 let lbl_cnt = ref 1
 
 let reset_lbl_gen () = lbl_cnt := 1
 
-let empty_status () = {switch_lbls = [] }
+let empty_status () = []
 
-(* TODO: remove this function *)
-let new_ret_status () = {switch_lbls = []}
-
-(* TODO: remove this function *)
-let new_brk_status status = status
-
-(* TODO: remove this function ??? *)
 let new_lbl () = incr lbl_cnt
 
-(* TODO: should do that another way... *)
-let add_switch_lbl status loc lbl =
-  {status with switch_lbls = (loc, lbl)::status.switch_lbls}
+let add_switch_lbl status loc lbl = (loc, lbl)::status
 
-let get_switch_lbl status loc =
-  List.assoc loc status.switch_lbls
+let get_switch_lbl status loc = List.assoc loc status
 
-(* TODO: remove ?? *)
-let mem_switch_lbl status loc =
-  List.mem_assoc loc status.switch_lbls
-
-(* TODO: do so that switch labels are restarted at each new switch *)
+let mem_switch_lbl status loc = List.mem_assoc loc status
