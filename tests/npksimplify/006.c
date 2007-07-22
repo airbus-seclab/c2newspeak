@@ -1,7 +1,7 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,38 +21,37 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
+char t[10];
 
-let input = ref ""
-let output = ref "a.npk"
-let print = ref false
+int getIndex(int *ptr) {
+  int found;
+  int x;
+  
+  found = 0;
+  x = 0;
+  do {
+    if (t[x]) {
+      *ptr = x;
+      found = 1;
+    }
+  } while ((x < 10) && !found);
+  
+  if (found) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
 
-let anon_fun fname =
-  if !input = "" then input := fname
-  else invalid_arg "You can only simplify one file at a time."
-
-let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
-
-let speclist = 
-  [ ("--newspeak", Arg.Set print, "Print output");
-   
-    ("-o", Arg.Set_string output, 
-    "Choose name of output files, default is a.npk");
-  ]
-
-let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    
-    if !input = ""
-    then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
-
-    let (files, prog, ptr_sz) = Newspeak.read !input in
-    let prog = Copy_propagation.process prog in
-    let prog = Inline.process prog in
-      if !print then Newspeak.dump prog;
-      Newspeak.write !output (files, prog, ptr_sz)
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+void main() {
+  int i;
+  int c;
+  
+  c = getIndex(&i);
+  
+  if (c) {
+    t[i] = 0;
+  }
+}

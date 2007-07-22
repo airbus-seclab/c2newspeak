@@ -1,7 +1,7 @@
 # Project
 DIR = newspeak
 OBJ = ../newspeak/newspeak \
-	store npksimplify
+	store inline copy_propagation npksimplify
 
 # Executable
 TGT = npksimplify
