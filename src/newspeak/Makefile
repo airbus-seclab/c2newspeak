@@ -2,7 +2,7 @@
 DIR = 
 OBJ = newspeak cilutils params \
       npkcontext npkil npkutils env \
-      firstpass npkcompile npklink c2newspeak
+      firstpass compile npklink c2newspeak
 
 
 # Documentation

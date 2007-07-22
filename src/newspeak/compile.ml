@@ -30,7 +30,6 @@
 open Params
 
 open Cil
-open Cilutils
 
 open Npkcontext
 open Npkutils
@@ -44,27 +43,6 @@ let build_stmt stmtkind = (stmtkind, Npkcontext.get_loc ())
 (*===================================*)
 (* Misc. functions used by translate *)
 (*===================================*)
-
-let rec append_labels loc lbls blk =
-  match lbls with
-      [] -> blk
-    | l::tl -> append_labels loc tl [K.DoWith (blk, l, []), loc]
-
-(* TODO: remove *)
-let hoist_labels blk = blk
-(*  let rec remove_labels blk =
-    match blk with
-	[] -> ([], [])
-      | (K.Label l, loc)::tl ->
-	  let (lbls, tl) = remove_labels tl in
-	    ((l, loc)::lbls, tl)
-      | hd::tl -> 
-	  let (lbls, tl) = remove_labels tl in
-	    (lbls, hd::tl)
-  in
-  let (lbls, blk) = remove_labels blk in
-    append_labels lbls blk
-*)
 
 let is_cil_label x =
   match x with
@@ -110,7 +88,7 @@ let rec translate_const c =
 	    
     | CWStr _ | CEnum _
 	-> error "Npkcompile.translate_const"
-	("const '"^(string_of_exp (Const c))^"' not handled")
+	("const '"^(Cilutils.string_of_exp (Const c))^"' not handled")
 
 and translate_cast t e = 
   match t, e with
@@ -127,7 +105,8 @@ and translate_cast t e =
 		  
 	    | _ ->
 		error "Npkcompile.translate_cast"
-		  ("translate cast: Invalid cast "^(string_of_cast cast e))
+		  ("translate cast: Invalid cast "
+		    ^(Cilutils.string_of_cast cast e))
       end
 	
 and translate_scalar_cast cast e t1 t2 = 
@@ -145,7 +124,7 @@ and translate_scalar_cast cast e t1 t2 =
 	if sign = Newspeak.Unsigned then begin 
 	  print_warning "Npkcompile.translate_scalar_cast"
 	    ("cast from float to unsigned integer: "
-	      ^"sign may be lost: "^(string_of_cast cast e))
+	      ^"sign may be lost: "^(Cilutils.string_of_cast cast e))
 	end;
 	(K.UnOp (K.Cast (kt, kt'), e'))
 	  
@@ -153,35 +132,35 @@ and translate_scalar_cast cast e t1 t2 =
 
     | (Newspeak.FunPtr, Newspeak.FunPtr) ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable dangerous cast: "^(string_of_cast cast e));
+	  ("probable dangerous cast: "^(Cilutils.string_of_cast cast e));
 	e'
 		      
     | (Newspeak.Int (sign, sz), Newspeak.Ptr)
-	when sz = pointer_size && !castor_allowed ->
+	when sz = Cilutils.pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(string_of_cast cast e));
+	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
 	  K.UnOp (K.PtrToInt (sign, sz), e')
 	    
     | (Newspeak.Ptr, Newspeak.Int (sign, sz))
-	when sz = pointer_size && !castor_allowed ->
+	when sz = Cilutils.pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(string_of_cast cast e));
+	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
 	  K.UnOp (K.IntToPtr (sign, sz), e')
 	    
     | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) when !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(string_of_cast cast e));
+	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
 	K.UnOp (K.Cast (kt, kt'), e')
     
     | _ -> 
 	error "Npkcompile.translate_scalar_cast"
-	  ("translate cast: Invalid cast "^(string_of_cast cast e))
+	  ("translate cast: Invalid cast "^(Cilutils.string_of_cast cast e))
 
 and translate_access lv e =
   let t = typeOfLval lv in
     match translate_typ t with
 	K.Array (elt_t, len) ->
-	  let elt_sz = size_of_subtyp t in
+	  let elt_sz = Cilutils.size_of_subtyp t in
 	  let (len, sz) =
 	    match (len, lv) with
 	      | (Some len, _) -> (K.Known len, K.Known (len * elt_sz))
@@ -189,7 +168,7 @@ and translate_access lv e =
 		  (K.Length v.vname, K.SizeOf v.vname)
 	      | _ -> 
 		  error "Npkcompile.translate_access"
-		    ("type of lval "^(string_of_lval lv)
+		    ("type of lval "^(Cilutils.string_of_lval lv)
 		      ^" is not defined enough")
 	  in
 	  let checked_index = 
@@ -208,7 +187,7 @@ and translate_lval lv =
     | Var v, NoOffset -> Env.get_var v
 
     | Mem e, NoOffset ->
-	let sz = size_of (typeOfLval lv) in
+	let sz = Cilutils.size_of (typeOfLval lv) in
 	  K.Deref (translate_exp e, sz)
 
     | _ ->
@@ -216,7 +195,7 @@ and translate_lval lv =
 	let t = typeOfLval lv' in
 	  match offs with
 	      Field (info, NoOffset) ->
-		let o = offset_of t offs in
+		let o = Cilutils.offset_of t offs in
 		  K.Shift (translate_lval lv', K.exp_of_int o)
 		    
 	    | Index (e, NoOffset) ->
@@ -230,8 +209,8 @@ and translate_lval lv =
 and translate_exp e =
   match e with
       Const c -> translate_const c
-    | SizeOf t -> K.exp_of_int (size_of t)
-    | SizeOfE e -> K.exp_of_int (size_of (typeOf e))
+    | SizeOf t -> K.exp_of_int (Cilutils.size_of t)
+    | SizeOfE e -> K.exp_of_int (Cilutils.size_of (typeOf e))
     | SizeOfStr s -> K.exp_of_int (String.length s + 1)
 	
     | CastE (t, e) -> translate_cast t e
@@ -318,7 +297,7 @@ and translate_exp e =
     | BinOp (IndexPI, e1, e2, t) | BinOp (PlusPI, e1, e2, t) -> begin
 	match translate_typ t with
 	  | K.Scalar Newspeak.Ptr -> 
-	      let sz = size_of_subtyp t in
+	      let sz = Cilutils.size_of_subtyp t in
 		K.BinOp (Newspeak.PlusPI, translate_exp e1,
 			 K.BinOp (Newspeak.MultI, translate_exp e2, K.exp_of_int sz))
 	  | K.Scalar Newspeak.FunPtr ->
@@ -331,7 +310,7 @@ and translate_exp e =
     | BinOp (MinusPI, e1, e2, t) -> begin
 	match translate_typ t with
 	  | K.Scalar Newspeak.Ptr -> 
-	      let sz = size_of_subtyp t in
+	      let sz = Cilutils.size_of_subtyp t in
 	      let v1 = translate_exp e1 in
 	      let v2 = K.BinOp (Newspeak.MultI, translate_exp e2, K.exp_of_int sz) in
 		K.BinOp (Newspeak.PlusPI, v1,
@@ -358,7 +337,8 @@ and translate_exp e =
 	match (translate_typ (typeOfLval lv)) with
 	    K.Scalar s -> K.Lval (translate_lval lv, s)
 	  | _ -> error "Npkcompile.translate_exp"
-	      ("scalar type expected for left value "^(string_of_lval lv))
+	      ("scalar type expected for left value "
+		^(Cilutils.string_of_lval lv))
       end
 	
     | AddrOf lv -> begin
@@ -375,12 +355,13 @@ and translate_exp e =
 			  K.BinOp (Newspeak.PlusPI, K.AddrOf (lv', sz), offs)
 
 		    | _ -> 
-			let sz = size_of (typeOfLval lv) in
+			let sz = Cilutils.size_of (typeOfLval lv) in
 			  K.AddrOf (translate_lval lv, K.Known sz)
 		end
 							 
 	  | _ -> error "Npkcompile.translate_exp"
-	      ("unexpected left value in AddrOf "^(string_of_lval lv))
+	      ("unexpected left value in AddrOf "
+		^(Cilutils.string_of_lval lv))
       end
 	
     (* These patterns are deleted during the 1st pass *)
@@ -393,7 +374,7 @@ and translate_exp e =
     | BinOp (LAnd, _, _, _) | BinOp (LOr, _, _, _)
     | AlignOf _ | AlignOfE _ ->
 	error "Npkcompile.translate_exp"
-	  ("expression '"^(string_of_exp e)^"' not handled")
+	  ("expression '"^(Cilutils.string_of_exp e)^"' not handled")
 	
 	
 	
@@ -479,7 +460,7 @@ and translate_instr i =
 
     | Call (_, _, _, _) ->
 	error "Npkcompile.translate_instr"
-	  ("call '"^(string_of_instr i)^"' not handled")
+	  ("call '"^(Cilutils.string_of_instr i)^"' not handled")
 
     | Asm (_, _, _, _, _, _) ->
 	error "Npkcompile.translate_instr" "Asm block not supported"
@@ -500,7 +481,8 @@ and translate_set lval typ e =
 		K.Copy (lval, src, sz)
 	  | _ ->
 	      error "Npkcompile.translate_set"
-		("left value expected instead of '"^(string_of_exp e)^"'")
+		("left value expected instead of '"
+		  ^(Cilutils.string_of_exp e)^"'")
       end
 	
     | _ -> error "Npkcompile.translate_set" "invalid type"
@@ -512,10 +494,10 @@ and translate_if status e stmts1 stmts2 =
     match translate_typ (typeOf e) with
 	K.Scalar (Newspeak.Int _ as t) -> (e, t)
       | K.Scalar (Newspeak.Ptr|Newspeak.FunPtr as t) -> 
-	  (BinOp (Ne, e, null, intType), t)
+	  (BinOp (Ne, e, Cilutils.null, intType), t)
       | _ ->
 	  error "Npkcompile.translate_if"
-	    ("bad expression '"^(string_of_exp e)^"'")
+	    ("bad expression '"^(Cilutils.string_of_exp e)^"'")
   in
   let rec normalize e =
     match e with
@@ -540,9 +522,7 @@ and translate_if status e stmts1 stmts2 =
     It also builds the guard of the default statement. *)
 and translate_switch status e stmt_list body =
   let (status, choices) = translate_switch_cases status e stmt_list in
-  let body = translate_switch_body status choices body.bstmts in
-    (* TODO: add the DoWith of the break statement ?? *)
-    body
+    translate_switch_body status choices body.bstmts
     
 and translate_switch_cases status e labels =
   let status = ref status in
@@ -565,7 +545,6 @@ and translate_switch_cases status e labels =
 	  (Case (_, loc) | Default loc)::tl 
 	    when Env.mem_switch_lbl !status loc -> translate_aux tl
       | (Case (v, loc))::tl ->
-(*	TODO: remove ??  Npkcontext.set_loc loc;*)
 	  let t = 
 	    match translate_typ (typeOf v) with
 		K.Scalar i -> i
@@ -578,10 +557,8 @@ and translate_switch_cases status e labels =
 	    translate_aux tl
 
       | (Default loc)::tl -> 
-(* TODO: remove ?? *)
-(*	  Npkcontext.set_loc loc;*)
 	  (* TODO: have a get_default_lbl instead, with a default number 
-	     for it *)
+	     for it, maybe, maybe not?? *)
 	    status := Env.add_switch_lbl !status loc lbl;
 	    default_goto := [build_stmt (K.Goto lbl)];
 	    translate_aux tl
@@ -598,7 +575,6 @@ and translate_switch_cases status e labels =
     let default_choice = (!default_cond, !default_goto) in
       (!status, [build_stmt (K.ChooseAssert (default_choice::!cases))])
 
-(* TODO: should err on labels that one doesn't know *)
 and translate_switch_body status body stmts =
   match stmts with
       [] -> [build_stmt (K.DoWith (List.rev body, Env.get_brk_lbl (), []))]
@@ -729,7 +705,7 @@ and translate_call x lv args_exps =
 			
 		| _ ->
 		    error "Npkcompile.translate_call"
-		      ("invalid type '"^(string_of_type f.vtype)^"'")
+		      ("invalid type '"^(Cilutils.string_of_type f.vtype)^"'")
 	    in
 	      (name, ret)
 
@@ -869,7 +845,7 @@ let compile in_name out_name  =
 	print_string "-"
       done;
       print_endline "---------------";
-      dump stdout cil_file;
+      Cilutils.dump stdout cil_file;
       print_newline ();
       print_newline ()
     end;

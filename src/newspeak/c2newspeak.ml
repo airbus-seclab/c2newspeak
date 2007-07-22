@@ -31,7 +31,7 @@ open Params
 
 open Newspeak
 open Npkcontext
-open Npkcompile
+open Compile
 open Npklink
 
 let create_npko name = (Filename.chop_extension name) ^ npko_suffix
