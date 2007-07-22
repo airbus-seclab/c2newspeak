@@ -56,9 +56,6 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
-(* TODO: remove this!!!! *)
-  | Label of lbl
-
 
 and stmt = stmtkind * location
 
@@ -247,10 +244,6 @@ val build_main_call : size_t -> ftyp -> string list -> (gdecl list * blk)
 
 val create_cstr: string -> string -> gdecl
 
-(* Tries to extract a while construct out of a block
-   returns the condition, the body, location and remaining of the block
-   if it succeeds *)
-val extract_while: blk -> (exp list * blk * location * blk) option 
 (** [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
 If it fails, then it returns None.
 Else, it returns the while condition in a exp list. It is a list of booleans which 

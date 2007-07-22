@@ -97,7 +97,6 @@ let rec replace_stmt (sk, l) =
 	  let body = List.map replace_stmt body in
 	  let action = List.map replace_stmt action in
 	    Newspeak.DoWith (body, lbl, action)
-      | Npkil.Label lbl -> Newspeak.Label lbl
   in 
     (new_sk, l)
        

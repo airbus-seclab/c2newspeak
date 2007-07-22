@@ -45,7 +45,6 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
-  | Label of lbl
 
 and stmt = stmtkind * location
 

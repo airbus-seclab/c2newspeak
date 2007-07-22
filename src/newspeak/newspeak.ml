@@ -48,7 +48,6 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
-  | Label of lbl
 
 and stmt = stmtkind * location
 
@@ -77,6 +76,7 @@ and cte =
 
 and unop =
     Belongs of (Int64.t * Int64.t)
+  (* TODO: warning coercion to unsigned long long can not be represented *)
   | Coerce of (Int64.t * Int64.t)
   | Not
   | BNot of (Int64.t * Int64.t)
@@ -209,22 +209,15 @@ let extract_cond_body lbl x =
       | [] -> ([], [])
     with Exit -> ([], x)
 
-let rec convert_loops blk =
+let rec convert_loops blk = invalid_arg "Not implemented yet"
+(*
   match blk with
       (InfLoop body, loc)::(Label lbl, _)::tl ->
 	let (cond, body) = extract_cond_body lbl body in
 	  (While (cond, body), loc)::(convert_loops tl)
     | (x, loc)::tl -> (Npk x, loc)::(convert_loops tl)
     | [] -> []
-
-(* TODO: should be deprecated to remove *)
-(* TODO: use this in a pretty printer *)
-let extract_while blk =
-  match blk with
-      (InfLoop body, loc)::((Label lbl, _)::_ as tl) -> 
-	let (cond, body) = extract_cond_body lbl body in
-	  Some (cond, body, loc, tl)
-    | _ -> None
+*)
 
 (*---------*)
 (* Display *)
@@ -354,7 +347,6 @@ let string_of_binop neg op =
     | PlusPI -> "+"
     | MinusPP -> "-"
 
-(* TODO: add name of locals, this will simplify this *)
 let rec string_of_lval lv =
   match lv with
       Local vid -> (string_of_int vid) ^ "-"
@@ -471,7 +463,6 @@ let string_of_blk offset x =
 	  decr_margin ();
 	  dump_line "}"
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
-      | Label l -> dump_line_at loc ((string_of_lbl l)^":")
 	  
       | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
@@ -535,7 +526,8 @@ let string_of_blk x = string_of_blk 0 x
 
 let string_of_stmt x = string_of_blk (x::[])
 
-(* TODO: Implement two dumps, a pretty and an bare one *)
+(* TODO: Implement two dumps, a pretty and an bare one
+   implement the pretty one in a separate utility: npkpretty *)
 
 (* Input/output functions *)
 let write_hdr cout (filenames, decls, ptr_sz) =
@@ -731,7 +723,6 @@ let simplify_gotos blk =
   let necessary_lbls = ref [] in
   let rec simplify_blk x =
     match x with
-	(Goto l1, _)::((Label l2, _)::_ as tl) when l1 = l2 -> simplify_blk tl
       | [] -> []
       | hd::tl -> 
 	  let hd = simplify_stmt hd in
@@ -745,7 +736,6 @@ let simplify_gotos blk =
 	Goto l -> 
 	  necessary_lbls := l::!necessary_lbls;
 	  [x, loc]
-      | Label l when not (List.mem l !necessary_lbls) -> []
       | Decl (name, t, body) -> [Decl (name, t, simplify_blk body), loc]
       | DoWith (body, l, action) ->
 	  let body = remove_final_goto l body in
@@ -821,34 +811,39 @@ let simplify_aux actions blk =
 let simplify b = 
   simplify_aux [new simplify_choose; new simplify_coerce] (simplify_gotos b)
 
-let is_cond_jump lbl x =
-  let rec check x =
-    match x with
-	(ChooseAssert [(cond1::[], body); (cond2::[], [Goto lbl2, _])], _)::[] 
-	  when lbl = lbl2 && cond1 = negate cond2 ->
-	    check body
-      | [] -> true
-      | _ -> false
-  in
-    check x
-      
-let extract_body_cond lbl x =
-  match List.rev x with
-      hd::body when is_cond_jump lbl [hd] -> Some (List.rev body, hd)
-    | _ -> None
+let has_goto lbl x =
+  let rec blk_has_goto x = List.exists has_goto x
 
-let rec normalize_loop blk = 
+  and has_goto (x, _) =
+  match x with
+      Decl (_, _, body) | InfLoop body -> blk_has_goto body
+    | ChooseAssert choices -> 
+	List.exists (fun (_, x) -> blk_has_goto x) choices
+    | DoWith (body, _, action) -> (blk_has_goto body) && (blk_has_goto action)
+    | Goto lbl' -> lbl = lbl'
+    | _ -> false
+  in
+    has_goto x
+
+let split_loop lbl body =
+  let rec split x =
+    match x with
+	hd::tl when not (has_goto lbl hd) -> 
+	  let (prefix, suffix) = split tl in
+	    (hd::prefix, suffix)
+      | _ -> ([], x)
+  in
+    split body
+
+let rec normalize_loop blk =
   match blk with
-      (InfLoop body, loc)::(Label lbl, loc')::tl -> 
-	let loop = 
-	  match extract_body_cond lbl body with
-	      None -> (InfLoop body, loc)::[]
-	    | Some (body, cond) -> body@(InfLoop (cond::body), loc)::[]
-	in
-	  loop@(Label lbl, loc')::(normalize_loop tl)
+      (DoWith ([InfLoop body, loc], lbl, action), loc')::tl ->
+	let (prefix, suffix) = split_loop lbl body in
+	let body = prefix@[InfLoop (suffix@prefix), loc] in
+	  (DoWith (body, lbl, action), loc')::(normalize_loop tl)
     | hd::tl -> hd::(normalize_loop tl)
     | [] -> []
-	
+
 class simplify_loops =
 object 
   inherit simplification
@@ -936,7 +931,7 @@ and visit_stmt visitor (x, loc) =
 	| DoWith (body, _, action) -> 
 	    visit_blk visitor body;
 	    visit_blk visitor action
-	| Label _ | Goto _ -> ()
+	| Goto _ -> ()
     end else ()
 
 and visit_choice visitor (cond, body) =
@@ -1213,95 +1208,3 @@ let print_c (typedefs, gdecls, fundecs) =
 let dump_as_C prog =
   let c_prog = npk_to_c prog in
     print_c c_prog
-(*
-and stmtkind =
-  | Copy of (lval * lval * size_t)
-  | Label of lbl
-  | Goto of lbl
-  | Call of fn
-  | ChooseAssert of (exp list * blk) list
-  | InfLoop of blk
-
-and stmt = stmtkind * location
-
-and blk = stmt list
-
-and lval =
-  | Global of string
-  | Deref of (exp * size_t)
-  | Shift of (lval * exp)
-
-and exp =
-  | Lval of (lval * scalar_t)
-  | AddrOf of (lval * size_t)
-  | AddrOfFun of fid
-  | UnOp of (unop * exp)
-  | BinOp of (binop * exp * exp)
-
-and cte = 
-    CInt64 of Int64.t
-  (* TODO: warning floats with more than 64 bits can not be represented *)
-  | CFloat of float * string
-  | Nil
-
-and unop =
-    Belongs of (Int64.t * Int64.t)
-  | Coerce of (Int64.t * Int64.t)
-  | Not
-  | BNot of (Int64.t * Int64.t)
-  | PtrToInt of ikind
-  | Cast of (scalar_t * scalar_t)
-
-and binop =
-  | PlusI | MinusI | MultI | DivI | Mod
-  | PlusF of size_t | MinusF of size_t | MultF of size_t | DivF of size_t
-  | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
-  | BXor of (Int64.t * Int64.t)
-  | Shiftlt
-  | Shiftrt
-  | PlusPI
-  | MinusPP
-  | Gt of scalar_t
-  | Eq of scalar_t
-
-and fn =
-    FunId of fid
-  | FunDeref of (exp * ftyp)
-
-and field = offset * typ
-
-and init_t = 
-  | Zero
-  | Init of (size_t * scalar_t * exp) list
-
-and ftyp = typ list * typ option
-
-and lbl = int
-and vid = int
-and fid = string
-
-and ikind = sign_t * size_t
-and sign_t = Unsigned | Signed
-and size_t = int
-and offset = int
-
-and location = string * int * int
-
-type size_of = typ -> size_t
-
-type size_of_scalar = scalar_t -> size_t
-*)
-(*
-let dump_as_c (gdecls, fundecs) =
-  (* TODO: Clean this mess... String_map *)
-  let funs = ref (String_map.empty) in
-  let add_fun name (_, body) =
-    funs := String_map.add name body !funs
-  in
-    Hashtbl.iter add_fun fundecs;
-    List.iter dump_gdecl_as_c gdecls
-    String_map.iter dump_fundec !funs;
-*)
-
-(* Needs to find the type of structures to be able to make assignment first,
-   and what about offsets in structures ?? *)

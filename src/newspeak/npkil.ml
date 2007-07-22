@@ -45,7 +45,6 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
-  | Label of lbl
 
 and stmt = stmtkind * location
 
@@ -334,8 +333,6 @@ let dump_npko (inter, funs) =
 	  dump_blk (align^"  ") decls action;
 	  print_endline (align^"}")
 
-      | Label l -> 
-	  print_endline ((string_of_lbl l)^":")
       | Goto l ->
 	  print_endline ("goto "^(string_of_lbl l)^";")
 	    
