@@ -5,14 +5,16 @@ main() {
   (35)^do {
     (32)^do {
       (32)^choose {
-        | (0-_int4 <> 2) -->
+        | (0-_int4 <> 2) & (0-_int4 <> 1) -->
           (32)^goto lbl1;
         | (0-_int4 == 2) -->
+          (32)^goto lbl2;
+        | (0-_int4 == 1) -->
           (32)^goto lbl2;
       }
     } with lbl2: {
     }
-    (34)^0- =(int4) 1;
+    (35)^0- =(int4) 1;
   } with lbl1: {
   }
 }

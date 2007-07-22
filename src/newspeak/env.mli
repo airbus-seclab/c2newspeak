@@ -113,11 +113,11 @@ val get_cstr : string -> Npkil.exp
 
 (** returns the Newspeak left value corresponding to the current return
     value *)
-val get_ret_var : status -> Npkil.lval
+val get_ret_var : unit -> Npkil.lval
 
-val get_ret_lbl : status -> Newspeak.lbl
+val get_ret_lbl : unit -> Newspeak.lbl
 
-val get_brk_lbl : status -> Newspeak.lbl
+val get_brk_lbl : unit -> Newspeak.lbl
 
 (** {1 Status "constructors" and label handling} *)
 
@@ -132,19 +132,19 @@ val new_ret_status : unit -> status
 val new_brk_status : status -> status
 
 (** generates a fresh label *)
-val new_label : unit -> Newspeak.lbl
+val new_lbl : unit -> Newspeak.lbl
 
 (** resets label generator to first label *)
 val reset_lbl_gen : unit -> unit
 
 (** add a new switch label in the status *)
-val add_switch_label : status -> Cil.location -> Newspeak.lbl -> status
+val add_switch_lbl : status -> Cil.location -> Newspeak.lbl -> status
 
 (** retrieves a switch label from the status *)
-val retrieve_switch_label : status -> Cil.location -> Newspeak.lbl
+val get_switch_lbl : status -> Cil.location -> Newspeak.lbl
 
 (** tells whether a switch label is already in the status *)
-val mem_switch_label : status -> Cil.location -> bool
+val mem_switch_lbl : status -> Cil.location -> bool
 
 
 val compare_formals : 

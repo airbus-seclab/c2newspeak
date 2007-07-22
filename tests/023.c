@@ -26,12 +26,11 @@
   email: olivier.levillain@penjili.org
 */
 
-
-void main() {
+void main () {
   int x;
   switch (x) {
-  case 1:
-  case 2:
-    x = 1;
+    do {
+    case 1: x = 1;
+    } while (x);
   }
 }

@@ -26,12 +26,11 @@
   email: olivier.levillain@penjili.org
 */
 
-
 void main() {
-  int x;
-  switch (x) {
-  case 1:
-  case 2:
-    x = 1;
+  int a, b, c;
+  if (a && b) {
+    a = 1;
+  } else if (c) {
+    b = 2;
   }
 }

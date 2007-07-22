@@ -26,12 +26,14 @@
   email: olivier.levillain@penjili.org
 */
 
+// There is much more! Feel free to experiment and let us know your thoughts.
 
-void main() {
-  int x;
-  switch (x) {
-  case 1:
-  case 2:
-    x = 1;
-  }
-}
+// This is a placeholder for your own non-regression test.
+// 1) write your code
+// 2) add <filestem> to TESTS in Makefile
+// 3) run make <filestem>.spec to generate the output
+// 4) run make <filestem> to check the output 
+// (for instance, every time you modify c2newspeak source code, 
+// before any commit)
+
+// You can optionally add parameters to pass to c2newspeak in a file 012.in

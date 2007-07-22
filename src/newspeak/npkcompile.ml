@@ -45,8 +45,14 @@ let build_stmt stmtkind = (stmtkind, Npkcontext.get_loc ())
 (* Misc. functions used by translate *)
 (*===================================*)
 
-let hoist_labels blk =
-  let rec remove_labels blk =
+let rec append_labels loc lbls blk =
+  match lbls with
+      [] -> blk
+    | l::tl -> append_labels loc tl [K.DoWith (blk, l, []), loc]
+
+(* TODO: remove *)
+let hoist_labels blk = blk
+(*  let rec remove_labels blk =
     match blk with
 	[] -> ([], [])
       | (K.Label l, loc)::tl ->
@@ -56,30 +62,14 @@ let hoist_labels blk =
 	  let (lbls, tl) = remove_labels tl in
 	    (lbls, hd::tl)
   in
-  let rec append_labels lbls blk =
-    match lbls with
-	[] -> blk
-      | (l, loc)::tl -> append_labels tl [K.DoWith (blk, l, []), loc]
-  in
   let (lbls, blk) = remove_labels blk in
     append_labels lbls blk
+*)
 
-(* extract case and default labels *)
-let extract_labels status l = 
-  let rec extract_aux l = match l with 
-    | [] -> []
-    | (Case (_, loc))::r | (Default loc)::r -> begin
-	try
-	  let lbl = K.Label (Env.retrieve_switch_label status loc) in
-	    (build_stmt lbl)::(extract_aux r)
-	with Not_found -> error "Npkcompile.translate_labels" "unexpected label"
-      end
-    | (Label (_, _, false))::r -> extract_aux r
-    | _ -> error "Npkcompile.translate_labels" "invalid label"
-  in
-    extract_aux l
-
-
+let is_cil_label x =
+  match x with
+      Label (_, _, false) -> true
+    | _ -> false
 
 (* Generates a Newspeak statement by wrapping a block body with
    declarations decls. The order of the declaration must be carefully
@@ -89,7 +79,6 @@ let rec append_decls decls body =
   match decls with
       [] -> body
     | (name, t, loc)::r -> append_decls r [K.Decl (name, t, body), loc]
-
 
 
 (*================================*)
@@ -414,12 +403,12 @@ and translate_stmtkind status kind =
     match kind with
       | Instr il -> translate_instrlist il
 	  
-      | Return (None, _) -> [K.Goto (Env.get_ret_lbl status), loc]
+      | Return (None, _) -> [K.Goto (Env.get_ret_lbl ()), loc]
 	    
       | Return (Some e, _) ->
 	  let typ = translate_typ (typeOf e) in
-	  let lval = Env.get_ret_var status in
-	  let lbl = Env.get_ret_lbl status in
+	  let lval = Env.get_ret_var () in
+	  let lbl = Env.get_ret_lbl () in
 	    [translate_set lval typ e, loc; K.Goto lbl, loc]
 
       | If (e, blk1, blk2, _) -> translate_if status e blk1.bstmts blk2.bstmts
@@ -429,13 +418,10 @@ and translate_stmtkind status kind =
       | Loop (body, _, _, _)  ->
 	  let status = Env.new_brk_status status in
 	  let loop = (K.InfLoop (translate_stmts status body.bstmts), loc) in
-	  let lbl = Env.get_brk_lbl status in
-	    if !Npkcontext.force_labels then begin
-	      let lbl = (K.Label lbl, loc) in
-		[loop;lbl]
-	    end else [K.DoWith ([loop], lbl, []), loc]
+	  let lbl = Env.get_brk_lbl () in
+	    [K.DoWith ([loop], lbl, []), loc]
 	      
-      | Break _ -> [K.Goto (Env.get_brk_lbl status), loc]
+      | Break _ -> [K.Goto (Env.get_brk_lbl ()), loc]
 	  
       | Switch (e, body, stmt_list, _) ->
 	  translate_switch status e stmt_list body
@@ -463,11 +449,15 @@ and translate_stmtkind status kind =
 and translate_stmts status stmts =
   match stmts with
       [] -> []
-    | stmt::r ->
-	let labels = extract_labels status stmt.labels in
+    | stmt::r when List.for_all is_cil_label stmt.labels ->
 	let first = translate_stmtkind status stmt.skind in
-	  labels@first@(translate_stmts status r)
-	    
+	  first@(translate_stmts status r)
+    | stmt::r ->
+	match stmt.labels with
+	    (Case _ | Default _)::_ ->
+	      error "Npkcompile.translate_stmts" 
+		"unstructed use of switch statement"
+	  | _ -> error "Npkcompile.translate_stmts" "unexpected label"
 
 and translate_instrlist il =
   match il with
@@ -550,59 +540,86 @@ and translate_if status e stmts1 stmts2 =
     statement. Each case is translated by appending a guard.
     It also builds the guard of the default statement. *)
 and translate_switch status e stmt_list body =
+  let (status, choices) = translate_switch_cases status e stmt_list in
+  let body = translate_switch_body status choices body.bstmts in
+    (* TODO: add the DoWith of the break statement ?? *)
+    body
+    
+and translate_switch_cases status e labels =
+  let status = ref status in
+  let cases = ref [] in
+  let default_cond = ref [] in
+  let default_goto = ref [build_stmt (K.Goto (Env.get_brk_lbl ()))] in
+
   let switch_exp = translate_exp e in
 
-  let cases = ref [] in
+  let translate_case x =
+    let lbl = Env.new_lbl () in
 
-  let def_asserts = ref [] in
-  let status = ref (Env.new_brk_status status) in
-  let lbl = Env.get_brk_lbl !status in
-  let def_goto = ref (build_stmt (K.Goto lbl)) in
-
-  let collect_label label =
-    match label with
-	Case (_, loc) | Default loc when Env.mem_switch_label !status loc -> ()
-      | Case (v, loc) ->
-	  Npkcontext.set_loc loc;
+    let rec translate_aux labels =
+      match labels with
+	  (* When two cases have the same body, then CIL creates only one 
+	     instruction with several labels.
+	     However this instruction is present several time in the list 
+	     of labels.
+	  *)
+	  (Case (_, loc) | Default loc)::tl 
+	    when Env.mem_switch_lbl !status loc -> translate_aux tl
+      | (Case (v, loc))::tl ->
+(*	TODO: remove ??  Npkcontext.set_loc loc;*)
 	  let t = 
 	    match translate_typ (typeOf v) with
 		K.Scalar i -> i
 	      | _ -> error "Npkcompile.tranlate_switch" "expression not scalar"
 	  in
-	  let case_exp = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
-	  let def_exp = K.negate case_exp in
-	  let new_lbl = Env.new_label () in
-	  let goto_lbl = K.Goto new_lbl in
-	    status := Env.add_switch_label !status loc new_lbl;
-	    def_asserts := def_exp::!def_asserts;
-	    cases := ([case_exp], [build_stmt goto_lbl]):: (!cases)
-      | Default loc ->
-	  Npkcontext.set_loc loc;
-	  let new_lbl = Env.new_label () in
-	    status := Env.add_switch_label !status loc new_lbl;
-	    def_goto := build_stmt (K.Goto new_lbl);
-	    ()
-      | _ -> error "Npkcompile.tranlate_switch" "invalid label"
+	  let cond = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
+	    status := Env.add_switch_lbl !status loc lbl;
+	    cases := (cond::[], build_stmt (K.Goto lbl)::[])::!cases;
+	    default_cond := (K.negate cond)::!default_cond;
+	    translate_aux tl
+
+      | (Default loc)::tl -> 
+(* TODO: remove ?? *)
+(*	  Npkcontext.set_loc loc;*)
+	  (* TODO: have a get_default_lbl instead, with a default number 
+	     for it *)
+	    status := Env.add_switch_lbl !status loc lbl;
+	    default_goto := [build_stmt (K.Goto lbl)];
+	    translate_aux tl
+
+      | [] -> ()
+
+      | _ -> error "Npkcompile.translate_switch_cases" "invalid label"
+    in
+      translate_aux x.labels
   in
+    List.iter translate_case (List.rev labels);
+    let default_choice = (!default_cond, !default_goto) in
+      (!status, [build_stmt (K.ChooseAssert (default_choice::!cases))])
 
-  let collect_labels s = List.iter collect_label s.labels in
+(* TODO: should err on labels that one doesn't know *)
+and translate_switch_body status body stmts =
+  match stmts with
+      [] -> [build_stmt (K.DoWith (List.rev body, Env.get_brk_lbl (), []))]
 
-    List.iter collect_labels stmt_list;
-    let choices = List.rev (!cases) in
-    let default_choice = (List.rev (!def_asserts), [!def_goto]) in
-    let choice = K.ChooseAssert (default_choice::choices) in
-    let body = translate_stmts !status body.bstmts in
-    let body = (build_stmt choice)::body in
-    let lbl = Env.get_brk_lbl !status in
+    | hd::tl when hd.labels = [] ->
+	let hd = translate_stmtkind status hd.skind in
+	  translate_switch_body status (hd@body) tl
 
-      if !Npkcontext.force_labels 
-      then body@[build_stmt (K.Label lbl)]
-      else begin
-	let body = hoist_labels body in
-	  [build_stmt (K.DoWith (body, lbl, []))]
-      end
+    | hd::tl -> 
+	let lbl = 
+	  match hd.labels with
+	      (Case (_, loc))::_ | (Default loc)::_ ->
+		Env.get_switch_lbl status loc		
+	    | _ -> error "Npkcompile.translate_switch_body" "invalid label"
+	in
 
+	let body = [build_stmt (K.DoWith (List.rev body, lbl, []))] in
+	  
+	let hd = translate_stmtkind status hd.skind in
+	  translate_switch_body status (hd@body) tl
 
+	  
 and translate_call x lv args_exps =
   let loc = Npkcontext.get_loc () in
 
@@ -772,11 +789,8 @@ let translate_fun name (locals, formals, body) =
       List.iter (Env.loc_declare true) locals;
       
       let body = translate_stmts status body.bstmts in
-      let lbl = Env.get_ret_lbl status in
-      let blk = 
-	if !Npkcontext.force_labels then body@[K.Label lbl, floc]
-	else [K.DoWith (body, lbl, []), floc]
-      in
+      let lbl = Env.get_ret_lbl () in
+      let blk = [K.DoWith (body, lbl, []), floc] in
       let body = append_decls (Env.get_loc_decls ()) blk in
 	
 	(* TODO ?: Check only one body exists *)

@@ -8,11 +8,11 @@ main() {
       (35)^choose {
         | (10 > 0-_int4) -->
         | (0-_int4 >= 10) -->
-          (35)^goto lbl2;
+          (35)^goto lbl1;
       }
       (36)^0- =(int4) coerce[-2147483648,2147483647] (0-_int4 + 1);
     }
-  } with lbl2: {
+  } with lbl1: {
   }
 }
 

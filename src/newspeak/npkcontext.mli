@@ -56,8 +56,6 @@ val accept_extern : bool ref
 
 val accept_mult_def : bool ref
 
-val force_labels : bool ref
-
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
 

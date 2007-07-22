@@ -56,6 +56,7 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+(* TODO: remove this!!!! *)
   | Label of lbl
 
 

@@ -775,6 +775,10 @@ let simplify_aux actions blk =
 	| InfLoop body ->
             let body = simplify_blk body in
 	      InfLoop body
+	| DoWith (body, l, action) -> 
+	    let body = simplify_blk body in
+	    let action = simplify_blk action in
+	      DoWith (body, l, action)
 	| _ -> x
     in
       (x, loc)

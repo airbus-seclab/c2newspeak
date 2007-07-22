@@ -33,15 +33,22 @@ open Npkcontext
 open Npkutils
 open Npkil
 
+(*-----------*)
+(* Constants *)
+(*-----------*)
+
+let return_lbl = 0
+
+let brk_lbl = 1
+
+(* TODO: continue ?? *)
+
 (*-------*)
 (* Types *)
 (*-------*)
 
-type status = {
-  return_lbl : Newspeak.lbl;
-  switch_lbls: (Cil.location * Newspeak.lbl) list;
-  brk_lbl    : Newspeak.lbl;
-}
+(* TODO: should not be a record anymore *)
+type status = { switch_lbls: (Cil.location * Newspeak.lbl) list }
 
 (*-----------------------*)
 (* Compilation variables *)
@@ -239,53 +246,42 @@ let get_cstr s =
   Npkil.AddrOf (Npkil.Global ("!const_str_"^s), 
 		Npkil.Known ((String.length s) + 1))
 
-let get_ret_var status = Npkil.Local (!loc_cnt - 1)
+let get_ret_var () = Npkil.Local (!loc_cnt - 1)
 
-let get_ret_lbl status = status.return_lbl
+let get_ret_lbl () = return_lbl
 
-let get_brk_lbl status = status.brk_lbl
+let get_brk_lbl () = brk_lbl
 
 (*------------------------------------------*)
 (* Status "Constructors" and label handling *)
 (*------------------------------------------*)
 
 (* Counter for labels *)
-let lbl_cnt = ref 0
+(* TODO: check 2 or 1 ??? *)
+let lbl_cnt = ref 1
 
-let reset_lbl_gen () = lbl_cnt := 0
+let reset_lbl_gen () = lbl_cnt := 1
 
-let empty_status () =
-  {return_lbl = incr lbl_cnt;
-   switch_lbls = []; brk_lbl = -1;}
+let empty_status () = {switch_lbls = [] }
 
-let new_ret_status () =
-  {return_lbl = incr lbl_cnt; switch_lbls = []; brk_lbl = -1;}
+(* TODO: remove this function *)
+let new_ret_status () = {switch_lbls = []}
 
-let new_brk_status status = {status with brk_lbl = incr lbl_cnt}
+(* TODO: remove this function *)
+let new_brk_status status = status
 
-let new_label () = incr lbl_cnt
+(* TODO: remove this function ??? *)
+let new_lbl () = incr lbl_cnt
 
-let add_switch_label status loc new_lbl =
-  {status with switch_lbls = (loc, new_lbl)::status.switch_lbls}
+(* TODO: should do that another way... *)
+let add_switch_lbl status loc lbl =
+  {status with switch_lbls = (loc, lbl)::status.switch_lbls}
 
-let retrieve_switch_label status loc =
+let get_switch_lbl status loc =
   List.assoc loc status.switch_lbls
 
-let mem_switch_label status loc =
+(* TODO: remove ?? *)
+let mem_switch_lbl status loc =
   List.mem_assoc loc status.switch_lbls
 
-
-
-
-
-
-
-(* TODO: check that we still can accept extern *)
-(*
-      if glob.gv_defd || !accept_extern then begin
-	glob.gv_used <- true;
-	v.vtype <- glob.gv_ctyp
-      end 
-      else error ("Npkenv.glb_uses: global variable "
-		  ^v.vname^" is used but is never defined")
-*)
+(* TODO: do so that switch labels are restarted at each new switch *)
