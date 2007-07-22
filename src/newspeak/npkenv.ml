@@ -38,7 +38,6 @@ open Npkil
 (*-------*)
 
 type status = {
-  return_var : Newspeak.vid;
   return_lbl : Newspeak.lbl;
   switch_lbls: (Cil.location * Newspeak.lbl) list;
   brk_lbl    : Newspeak.lbl;
@@ -240,7 +239,7 @@ let get_cstr s =
   Npkil.AddrOf (Npkil.Global ("!const_str_"^s), 
 		Npkil.Known ((String.length s) + 1))
 
-let get_ret_var status = Npkil.Local (!loc_cnt - status.return_var)
+let get_ret_var status = Npkil.Local (!loc_cnt - 1)
 
 
 
@@ -254,12 +253,11 @@ let lbl_cnt = ref 0
 let reset_lbl_gen () = lbl_cnt := 0
 
 let empty_status () =
-  {return_var = -1; return_lbl = incr lbl_cnt;
+  {return_lbl = incr lbl_cnt;
    switch_lbls = []; brk_lbl = -1;}
 
 let new_ret_status () =
-  {return_var = !loc_cnt; return_lbl = incr lbl_cnt;
-   switch_lbls = []; brk_lbl = -1;}
+  {return_lbl = incr lbl_cnt; switch_lbls = []; brk_lbl = -1;}
 
 let new_brk_status status = {status with brk_lbl = incr lbl_cnt}
 

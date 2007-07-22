@@ -39,7 +39,6 @@ open Npkil
 (** The status type allows the translate functions to keep track of
     the current return and switch infos *)
 type status = {
-  return_var : Newspeak.vid;
   return_lbl : Newspeak.lbl;
   switch_lbls: (Cil.location * Newspeak.lbl) list;
   brk_lbl    : Newspeak.lbl;
