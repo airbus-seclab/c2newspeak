@@ -135,6 +135,7 @@ and location = string * int * int
 (*-----------*)
 
 let zero = Const (CInt64 (Int64.zero))
+let one = Const (CInt64 (Int64.one))
 let zero_f = Const (CFloat (0., "0."))
 
 let locUnknown = ("", -1, -1)
@@ -322,14 +323,10 @@ let string_of_unop op =
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
     | IntToPtr i -> "(ptr)"
 	  
-let string_of_binop neg op =
+let string_of_binop op =
   match op with
-    | Gt _ when neg -> ">="
-    | Eq _ when neg -> "<>"
     | Gt _ -> ">"
     | Eq _ -> "=="
-    | _ when neg ->
-	invalid_arg "Newspeak.string_of_binop: unexpected negation"
     | PlusI -> "+"
     | MinusI -> "-"
     | MultI -> "*"
@@ -361,14 +358,8 @@ and string_of_exp e =
     | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun fid -> "&fun"^fid
 
-    (* TODO: Check this ! *)
-    (* Pretty printing for >= and != *)
-    | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
-	"("^(string_of_exp e2)^" "^(string_of_binop true op)^
-	  " "^(string_of_exp e1)^")"
-
     | BinOp (op, e1, e2) ->
-	"("^(string_of_exp e1)^" "^(string_of_binop false op)^
+	"("^(string_of_exp e1)^" "^(string_of_binop op)^
 	  " "^(string_of_exp e2)^")"
 
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
@@ -1167,7 +1158,7 @@ let print_c (typedefs, gdecls, fundecs) =
       | C_binop (op, e1, e2) ->
 	  let e1 = string_of_exp e1 in
 	  let e2 = string_of_exp e2 in
-	  let op = string_of_binop false op in
+	  let op = string_of_binop op in
 	    "("^e1^" "^op^" "^e2^")"
   in
 

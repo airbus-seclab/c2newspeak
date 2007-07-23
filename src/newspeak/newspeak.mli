@@ -91,16 +91,18 @@ and unop =
   | Cast of (scalar_t * scalar_t)
 
 and binop =
+(* Integer operations *)
   | PlusI | MinusI | MultI | DivI | Mod
+(* floating point operations *)
   | PlusF of size_t | MinusF of size_t | MultF of size_t | DivF of size_t
+(* bitwise operations *)
   | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
   | BXor of (Int64.t * Int64.t)
-  | Shiftlt
-  | Shiftrt
-  | PlusPI
-  | MinusPP
-  | Gt of scalar_t
-  | Eq of scalar_t
+  | Shiftlt | Shiftrt
+(* pointer operations *)
+  | PlusPI | MinusPP
+(* comparisons *)
+  | Gt of scalar_t | Eq of scalar_t
 
 and fn =
     FunId of fid
@@ -141,6 +143,7 @@ and location = string * int * int
 (** {1 Constants} *)
 
 val zero : exp
+val one : exp
 val zero_f : exp
 
 val locUnknown : location
