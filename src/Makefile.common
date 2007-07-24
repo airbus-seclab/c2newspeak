@@ -53,7 +53,7 @@ install: all
 clean:
 	$(RM) -r $(DOC_DIR)
 	$(RM) $(TGT) $(TGT).exe
-	$(RM) ../scalars/natural.ml $(CMI) $(CMO) $(CMX) $(O)
+	$(RM) ../scalars/natural.ml *.cmi *.cmo *.cmx *.o
 	$(RM) *.orig
 	$(RM) *~
 	$(RM) .depend
