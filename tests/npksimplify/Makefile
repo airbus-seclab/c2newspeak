@@ -13,7 +13,7 @@ TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 check: $(C2NEWSPEAK) $(TESTS)
 
 $(TESTS): $(C2NEWSPEAK) $@
-	eval $(C2NEWSPEAK) `[ -e $@.in ] && cat $@.in` $@.c
+	eval $(C2NEWSPEAK) $@.c
 	eval $(NPKSIMPLIFY) `[ -e $@.in ] && cat $@.in` a.npk &> $@.bak
 	dos2unix $@.bak
 	if [ -e $@.spec ]; \
@@ -30,7 +30,7 @@ $(TESTS): $(C2NEWSPEAK) $@
 	touch $@
 
 $(TESTS.SPEC): $(C2NEWSPEAK)
-	eval $(C2NEWSPEAK) `[ -e $(basename $@).in ] && cat $(basename $@).in` $(basename $@).c
+	eval $(C2NEWSPEAK) $(basename $@).c
 	eval $(NPKSIMPLIFY) `[ -e $(basename $@).in ] && cat $(basename $@).in` a.npk &> $@
 	dos2unix $@
 	cat $@

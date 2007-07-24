@@ -27,6 +27,7 @@
 let input = ref ""
 let output = ref "a.npk"
 let print = ref false
+let inline = ref false
 
 let anon_fun fname =
   if !input = "" then input := fname
@@ -39,6 +40,9 @@ let speclist =
    
     ("-o", Arg.Set_string output, 
     "Choose name of output files, default is a.npk");
+
+    ("--inline", Arg.Set inline, 
+    "Applies function inlining of depth 1");
   ]
 
 let _ =
@@ -50,7 +54,7 @@ let _ =
 
     let (files, prog, ptr_sz) = Newspeak.read !input in
     let prog = Copy_propagation.process prog in
-    let prog = Inline.process prog in
+    let prog = if !inline then Inline.process prog else prog in
       if !print then Newspeak.dump prog;
       Newspeak.write !output (files, prog, ptr_sz)
   with Invalid_argument s -> 
