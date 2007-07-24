@@ -23,10 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
-void main() { 
-  int x; 
-  if ((x <= 10) != 0) { 
-    x = 1; 
-  } 
-} 
+void f(int a) {
+  int b;
+  a = b;
+}
 
+void main() {
+  int x;
+  f(x);
+  x = 1;
+}

@@ -1,7 +1,7 @@
 # Project
 DIR = newspeak
 OBJ = ../newspeak/newspeak \
-	normalize store copy_propagation inline npksimplify
+	normalize store copy_propagation inline var_hoist npksimplify
 
 # Executable
 TGT = npksimplify
