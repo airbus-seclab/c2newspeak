@@ -90,8 +90,10 @@ and field = offset * typ
 
 and tmp_int =
       Known of int
-    | Length of string  (* number of elements in a global array *)
-    | SizeOf of string (* size in number of bytes of a global array *)
+    | Length of string (* number of elements in global array named by string *)
+    | SizeOf of string (* size in number of bytes of 
+			  global array named by string *)
+    | Decr of tmp_int  (* tmp_int - 1 *)
 
 and tmp_size_t = int option
 
@@ -179,16 +181,17 @@ let rec string_of_typ t =
 
 let string_of_fid fid = fid
 
-let string_of_tmp_int x =
+let rec string_of_tmp_int x =
   match x with
       Known i -> string_of_int i
     | Length v -> "len("^v^")"
     | SizeOf v -> "sizeof("^v^")"
+    | Decr i -> (string_of_tmp_int i)^" - 1"
 
 let string_of_unop op =
   match op with
       Belongs_tmp (l,u) ->
-	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"-1]"
+	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"]"
     | Coerce (l,u) ->
 	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
     | Cast (typ, typ') ->

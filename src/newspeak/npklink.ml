@@ -124,7 +124,7 @@ and replace_exp e =
 and replace_unop o =
   match o with
       Npkil.Belongs_tmp (l, u) -> 
-	let u = Int64.of_int (replace_tmp_int u - 1) in
+	let u = Int64.of_int (replace_tmp_int u) in
 	  Newspeak.Belongs (l, u)
     | Npkil.Coerce r -> Newspeak.Coerce r
     | Npkil.Not -> Newspeak.Not
@@ -142,6 +142,7 @@ and replace_tmp_int x =
 	  | _ -> error "Npklink.replace_tmp_int" "array type expected"
       end
     | Npkil.SizeOf name -> size_of (get_glob_typ name)
+    | Npkil.Decr i -> (replace_tmp_int i) - 1
 
 and replace_fn fn =
   match fn with

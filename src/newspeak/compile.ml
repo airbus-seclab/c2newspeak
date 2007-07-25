@@ -156,7 +156,7 @@ and translate_scalar_cast cast e t1 t2 =
 	error "Npkcompile.translate_scalar_cast"
 	  ("translate cast: Invalid cast "^(Cilutils.string_of_cast cast e))
 
-and translate_access lv e =
+and translate_access strict lv e =
   let t = typeOfLval lv in
     match translate_typ t with
 	K.Array (elt_t, len) ->
@@ -171,6 +171,7 @@ and translate_access lv e =
 		    ("type of lval "^(Cilutils.string_of_lval lv)
 		      ^" is not defined enough")
 	  in
+	  let len = if strict then K.Decr len else len in
 	  let checked_index = 
 	    K.UnOp (K.Belongs_tmp (Int64.zero, len), translate_exp e) 
 	  in
@@ -199,7 +200,7 @@ and translate_lval lv =
 		  K.Shift (translate_lval lv', K.exp_of_int o)
 		    
 	    | Index (e, NoOffset) ->
-		let (offs, _) = translate_access lv' e in
+		let (offs, _) = translate_access true lv' e in
 		  K.Shift (translate_lval lv', offs)
 		    
 	    | _ -> error "Npkcompile.translate_lval" "offset not handled"
@@ -350,7 +351,7 @@ and translate_exp e =
 	      let (lv', offs) = removeOffsetLval lv in begin
 		  match offs with 
 		    | Index (e, NoOffset) -> 
-			let (offs, sz) = translate_access lv' e in
+			let (offs, sz) = translate_access false lv' e in
 			let lv' = translate_lval lv' in
 			  K.BinOp (Newspeak.PlusPI, K.AddrOf (lv', sz), offs)
 

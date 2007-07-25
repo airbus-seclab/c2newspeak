@@ -92,6 +92,7 @@ and tmp_int =
       Known of int
     | Length of string
     | SizeOf of string
+    | Decr of tmp_int
 
 and tmp_size_t = int option
 
