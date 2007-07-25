@@ -32,7 +32,6 @@ open Params
 open Newspeak
 open Npkcontext
 open Compile
-open Npklink
 
 let create_npko name = (Filename.chop_extension name) ^ npko_suffix
 
@@ -67,7 +66,7 @@ let _ =
       | files (* when not !compile_only *) ->
 	  if (!output_file = "") then output_file := "a.npk";
 	  let npkos = List.map extract_npko files in
-	    link npkos !output_file
+	    Link.link npkos !output_file
 
   with Invalid_argument msg -> print_error msg
 
