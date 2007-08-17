@@ -189,6 +189,7 @@ class type visitor =
 object
   method process_gdecl: gdecl -> bool
   method process_fun: fid -> fundec -> bool
+  method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
   method process_fn: fn -> bool
   method process_exp: exp -> bool

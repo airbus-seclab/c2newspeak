@@ -27,33 +27,61 @@
 *)
 open Newspeak
 
-let f_tbl = Hashtbl.create 10
-let count_call f = 
-  try 
-    let n = Hashtbl.find f_tbl f in
-      Hashtbl.replace f_tbl f (n+1)
-  with Not_found -> ()
+let verbose = ref false
 
-let add_counted_call f = Hashtbl.add f_tbl f 0
+let fun_to_count = ref []
+
+let add_counted_call f = fun_to_count := f::!fun_to_count
 
 let speclist = 
-  ["--count-call", Arg.String add_counted_call, 
-  "count the number of function calls"]
+  [("--count-call", Arg.String add_counted_call, 
+    "count the number of function calls");
+    
+   ("--verbose", Arg.Set verbose, 
+    "prints out the detailed statistics for each function")]
 
+type counters = 
+    { mutable instrs: int; mutable loop: int; mutable array: int;
+      mutable pointer_deref: int; mutable pointer_arith: int;
+      mutable fpointer: int
+    }
+
+let init_counters () = 
+  { instrs = 0; loop = 0; array = 0; pointer_deref = 0; pointer_arith = 0;
+    fpointer = 0 }
+
+let incr_counters dest src =
+  dest.instrs <- dest.instrs + src.instrs;
+  dest.loop <- dest.loop + src.loop;
+  dest.array <- dest.array + src.array;
+  dest.pointer_deref <- dest.pointer_deref + src.pointer_deref;
+  dest.pointer_arith <- dest.pointer_arith + src.pointer_arith;
+  dest.fpointer <- dest.fpointer + src.fpointer
+
+let string_of_counters counters =
+  "Number of instructions: "^(string_of_int counters.instrs)^"\n"
+  ^"Number of loops: "^(string_of_int counters.loop)^"\n"
+  ^"Number of array operations: "^(string_of_int counters.array)^"\n"
+  ^"Number of pointer deref: "
+  ^(string_of_int counters.pointer_deref)^"\n"
+  ^"Number of pointer arithmetic (+): "
+  ^(string_of_int counters.pointer_arith)^"\n"
+  ^"Number of function pointer call: "
+  ^(string_of_int counters.fpointer)
+    
 class collector ptr_sz =
 object (this)
   inherit Newspeak.nop_visitor
     
   val mutable globals = 0
   val mutable bytes = 0
-
-  val mutable instrs = 0
-  val mutable loop = 0
-  val mutable array = 0
-  val mutable pointer_deref = 0
-  val mutable pointer_arith = 0
-  val mutable fpointer = 0
-  val mutable funct = 0
+  val counters = init_counters ()
+  val funstats = Hashtbl.create 0
+  val mutable current_counters = init_counters ()
+    
+  method count_call f =
+    let (nb_of_calls, counters) = Hashtbl.find funstats f in
+      Hashtbl.replace funstats f (nb_of_calls + 1, counters)
 
   method incr_bytes i = 
     assert (i < max_int - bytes);
@@ -61,18 +89,20 @@ object (this)
 
   method process_unop x =
     match x with
-	Belongs _ -> array <- array + 1
+	Belongs _ -> current_counters.array <- current_counters.array + 1
       | _ -> ()
 
   method process_binop x =
     match x with
-	PlusPI -> pointer_arith <- pointer_arith + 1
+	PlusPI -> 
+	  current_counters.pointer_arith <- current_counters.pointer_arith + 1
       | _ -> ()
 
   method process_lval x =
     let _ =
       match x with
-	  Deref _ -> pointer_deref <- pointer_deref + 1
+	  Deref _ -> 
+	    current_counters.pointer_deref <- current_counters.pointer_deref + 1
 	| _ -> ()
     in
       true
@@ -80,27 +110,33 @@ object (this)
   method process_fn x =
     let _ =
       match x with
-	  FunId f -> count_call f
-	| FunDeref (e, _) -> fpointer <- fpointer + 1
+	  FunId f -> this#count_call f
+	| FunDeref (e, _) -> 
+	    current_counters.fpointer <- current_counters.fpointer + 1
     in
       true
 
   method process_stmt (x, _) =
-    instrs <- instrs + 1;
+    current_counters.instrs <- current_counters.instrs + 1;
     let _ = 
       match x with
-	  InfLoop body -> loop <- loop + 1
+	  InfLoop body -> 
+	    current_counters.loop <- current_counters.loop + 1
 	| _ -> ()
     in
       true
 
-  method process_fun _ (_, x) =
+  method process_fun f (_, x) =
     let _ = 
       match x with
-	  Some _ -> funct <- funct + 1
+	  Some _ -> Hashtbl.add funstats f (0, current_counters);
 	| _ -> ()
     in
       true
+
+  method process_fun_after () =
+    incr_counters counters current_counters;
+    current_counters <- init_counters ()
 
   method process_gdecl (_, t, _) =
     globals <- globals + 1;
@@ -108,24 +144,22 @@ object (this)
     true
 
   method to_string () = 
-    let str = ref "" in
-    let string_of_call f x = 
-      str := !str^"Number of calls to "^f^": "^(string_of_int x)^"\n"
+    let res = ref 
+      ("Number of global variables: "^(string_of_int globals)^"\n"
+       ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
+       ^"Number of functions: "^(string_of_int (Hashtbl.length funstats))^"\n"
+       ^(string_of_counters counters))
     in
-      Hashtbl.iter string_of_call f_tbl;
-      "Number of global variables: "^(string_of_int globals)^"\n"
-      ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
-      ^"Number of instructions: "^(string_of_int instrs)^"\n"
-      ^"Number of functions: "^(string_of_int funct)^"\n"
-      ^(!str)
-      ^"Number of loops: "^(string_of_int loop)^"\n"
-      ^"Number of array operations: "^(string_of_int array)^"\n"
-      ^"Number of pointer deref: "
-      ^(string_of_int pointer_deref)^"\n"
-      ^"Number of pointer arithmetic (+): "
-      ^(string_of_int pointer_arith)^"\n"
-      ^"Number of function pointer call: "
-      ^(string_of_int fpointer)
+    let string_of_call f = 
+      let (x, _) = Hashtbl.find funstats f in
+	res := !res^"\n"^"Number of calls to "^f^": "^(string_of_int x)
+    in
+    let string_of_fun f (_, counters) =
+      res := !res^"\n"^"Function: "^f^"\n"^(string_of_counters counters)
+    in
+      List.iter string_of_call !fun_to_count;
+      if !verbose then Hashtbl.iter string_of_fun funstats;
+      !res
 end
 
 let fname = ref ""

@@ -850,6 +850,7 @@ class type visitor =
 object 
   method process_gdecl: gdecl -> bool
   method process_fun: fid -> fundec -> bool
+  method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
   method process_fn: fn -> bool
   method process_exp: exp -> bool
@@ -862,6 +863,7 @@ class nop_visitor =
 object
   method process_gdecl (_: gdecl) = true
   method process_fun (_: fid) (_: fundec) = true
+  method process_fun_after () = ()
   method process_stmt (_: stmt) = true
   method process_fn (_: fn) = true
   method process_exp (_: exp) = true
@@ -932,7 +934,9 @@ and visit_choice visitor (cond, body) =
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in
     match body with
-	Some body when continue -> visit_blk visitor body
+	Some body when continue -> 
+	  visit_blk visitor body;
+	  visitor#process_fun_after ()
       | _ -> ()
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
