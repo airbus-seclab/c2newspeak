@@ -69,19 +69,22 @@ let string_of_counters counters =
   ^"Number of function pointer call: "
   ^(string_of_int counters.fpointer)
     
-class collector ptr_sz =
+class collector ptr_sz fun_to_count =
 object (this)
   inherit Newspeak.nop_visitor
     
   val mutable globals = 0
   val mutable bytes = 0
   val counters = init_counters ()
-  val funstats = Hashtbl.create 0
+  val funstats = Hashtbl.create 10
   val mutable current_counters = init_counters ()
-    
+  val callstats = Hashtbl.create 10
+  
   method count_call f =
-    let (nb_of_calls, counters) = Hashtbl.find funstats f in
-      Hashtbl.replace funstats f (nb_of_calls + 1, counters)
+    try
+      let nb_of_calls = Hashtbl.find callstats f in
+	Hashtbl.replace callstats f (nb_of_calls + 1)
+    with Not_found -> ()
 
   method incr_bytes i = 
     assert (i < max_int - bytes);
@@ -129,7 +132,7 @@ object (this)
   method process_fun f (_, x) =
     let _ = 
       match x with
-	  Some _ -> Hashtbl.add funstats f (0, current_counters);
+	  Some _ -> Hashtbl.add funstats f current_counters;
 	| _ -> ()
     in
       true
@@ -143,23 +146,24 @@ object (this)
     this#incr_bytes (size_of ptr_sz t);
     true
 
-  method to_string () = 
+  method to_string verbose = 
     let res = ref 
       ("Number of global variables: "^(string_of_int globals)^"\n"
        ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
        ^"Number of functions: "^(string_of_int (Hashtbl.length funstats))^"\n"
        ^(string_of_counters counters))
     in
-    let string_of_call f = 
-      let (x, _) = Hashtbl.find funstats f in
-	res := !res^"\n"^"Number of calls to "^f^": "^(string_of_int x)
+    let string_of_call f x = 
+      res := !res^"\n"^"Number of calls to "^f^": "^(string_of_int x)
     in
-    let string_of_fun f (_, counters) =
+    let string_of_fun f counters =
       res := !res^"\n"^"Function: "^f^"\n"^(string_of_counters counters)
     in
-      List.iter string_of_call !fun_to_count;
-      if !verbose then Hashtbl.iter string_of_fun funstats;
+      Hashtbl.iter string_of_call callstats;
+      if verbose then Hashtbl.iter string_of_fun funstats;
       !res
+
+  initializer List.iter (fun f -> Hashtbl.add callstats f 0) fun_to_count
 end
 
 let fname = ref ""
@@ -180,9 +184,9 @@ let _ =
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
     let (_, prog, ptr_sz) = Newspeak.read !fname in
-    let collector = new collector ptr_sz in
+    let collector = new collector ptr_sz !fun_to_count in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
-      print_endline (collector#to_string ())
+      print_endline (collector#to_string !verbose)
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0
