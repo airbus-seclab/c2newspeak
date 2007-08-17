@@ -29,6 +29,8 @@ open Newspeak
 
 let verbose = ref false
 
+let obfuscate = ref false
+
 let fun_to_count = ref []
 
 let add_counted_call f = fun_to_count := f::!fun_to_count
@@ -38,7 +40,9 @@ let speclist =
     "count the number of function calls");
     
    ("--verbose", Arg.Set verbose, 
-    "prints out the detailed statistics for each function")]
+    "prints out the detailed statistics for each function");
+  
+   ("--obfuscate", Arg.Set obfuscate, "Obfuscates output")]
 
 type counters = 
     { mutable instrs: int; mutable loop: int; mutable array: int;
@@ -147,21 +151,27 @@ object (this)
     true
 
   method to_string verbose = 
-    let res = ref 
-      ("Number of global variables: "^(string_of_int globals)^"\n"
-       ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
-       ^"Number of functions: "^(string_of_int (Hashtbl.length funstats))^"\n"
-       ^(string_of_counters counters))
-    in
+    let res = Buffer.create 100 in
+    let fun_counter = ref 0 in
     let string_of_call f x = 
-      res := !res^"\n"^"Number of calls to "^f^": "^(string_of_int x)
+      Buffer.add_string res 
+	("\n"^"Number of calls to "^f^": "^(string_of_int x))
     in
     let string_of_fun f counters =
-      res := !res^"\n"^"Function: "^f^"\n"^(string_of_counters counters)
+      let f = if !obfuscate then string_of_int !fun_counter else f in
+	incr fun_counter;
+	Buffer.add_string res 
+	  ("\n"^"Function: "^f^"\n"^(string_of_counters counters))
     in
+      Buffer.add_string res 
+	("Number of global variables: "^(string_of_int globals)^"\n"
+	 ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
+	 ^"Number of functions: "
+	 ^(string_of_int (Hashtbl.length funstats))^"\n");
+      Buffer.add_string res (string_of_counters counters);
       Hashtbl.iter string_of_call callstats;
       if verbose then Hashtbl.iter string_of_fun funstats;
-      !res
+      Buffer.contents res
 
   initializer List.iter (fun f -> Hashtbl.add callstats f 0) fun_to_count
 end
