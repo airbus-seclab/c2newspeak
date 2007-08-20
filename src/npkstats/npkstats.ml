@@ -33,6 +33,10 @@ let obfuscate = ref false
 
 let fun_to_count = ref []
 
+let graphs = ref false
+
+let output = ref "a"
+
 let add_counted_call f = fun_to_count := f::!fun_to_count
 
 let speclist = 
@@ -42,7 +46,12 @@ let speclist =
    ("--verbose", Arg.Set verbose, 
     "prints out the detailed statistics for each function");
   
-   ("--obfuscate", Arg.Set obfuscate, "Obfuscates output")]
+   ("--obfuscate", Arg.Set obfuscate, "obfuscates output");
+   
+   ("--graphs", Arg.Set graphs, "generates graphs to file");
+
+   ("-o", Arg.Set_string output, "changes name of output, default is 'a'")
+  ]
 
 type counters = 
     { mutable instrs: int; mutable loop: int; mutable array: int;
@@ -72,7 +81,24 @@ let string_of_counters counters =
   ^(string_of_int counters.pointer_arith)^"\n"
   ^"Number of function pointer call: "
   ^(string_of_int counters.fpointer)
-    
+
+let collect filter funstats =
+  let stats = ref [] in
+  let get_data _ counters = stats := (filter counters)::(!stats) in
+    Hashtbl.iter get_data funstats;
+    List.sort compare !stats
+
+let plot f stats fname =
+    let cout = open_out fname in
+    let x = ref 0 in
+    let y = ref 0 in
+    let dump v = 
+      f x y v;
+      output_string cout ((string_of_int !x)^", "^(string_of_int !y)^"\n")
+    in
+      List.iter dump stats;
+      close_out cout
+
 class collector ptr_sz fun_to_count =
 object (this)
   inherit Newspeak.nop_visitor
@@ -150,6 +176,32 @@ object (this)
     this#incr_bytes (size_of ptr_sz t);
     true
 
+  method gen filter fname =
+    let stats = collect filter funstats in
+    let f x y v = x := !x + 1; y := v in
+      plot f stats fname
+
+  method gen_sz filter fname =
+    let filter counters = 
+      let v = filter counters in
+      let density = (float_of_int v) /. (float_of_int counters.instrs) in
+	(density, counters.instrs, v)
+    in
+    let stats = collect filter funstats in
+    let f x y (_, sz, n) = x := !x + sz; y := !y + n in
+      plot f stats fname
+
+
+  method gen_graphs fname =
+    let filter_aob counters = counters.array in
+    let filter_ptr counters = 
+      counters.pointer_deref + counters.pointer_arith 
+    in
+      this#gen filter_aob (fname^"_aob.csv");
+      this#gen_sz filter_aob (fname^"_aobsz.csv");
+      this#gen filter_ptr (fname^"_ptr.csv");
+      this#gen_sz filter_ptr (fname^"_ptrsz.csv")
+
   method to_string verbose = 
     let res = Buffer.create 100 in
     let fun_counter = ref 0 in
@@ -176,11 +228,11 @@ object (this)
   initializer List.iter (fun f -> Hashtbl.add callstats f 0) fun_to_count
 end
 
-let fname = ref ""
+let input = ref ""
 
 let anon_fun file =
-  if !fname = ""
-  then fname := file
+  if !input = ""
+  then input := file
   else invalid_arg "You can only get statistics on one file at a time."
 
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
@@ -190,13 +242,14 @@ let _ =
   try
     Arg.parse speclist anon_fun usage_msg;
 
-    if !fname = "" 
+    if !input = "" 
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
-    let (_, prog, ptr_sz) = Newspeak.read !fname in
+    let (_, prog, ptr_sz) = Newspeak.read !input in
     let collector = new collector ptr_sz !fun_to_count in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
-      print_endline (collector#to_string !verbose)
+      print_endline (collector#to_string !verbose);
+      if !graphs then collector#gen_graphs !output
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0
