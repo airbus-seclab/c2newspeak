@@ -48,7 +48,7 @@ let speclist =
   
    ("--obfuscate", Arg.Set obfuscate, "obfuscates output");
    
-   ("--graphs", Arg.Set graphs, "generates graphs to file");
+   ("--csv", Arg.Set graphs, "generates data into csv format");
 
    ("-o", Arg.Set_string output, "changes name of output, default is 'a'")
   ]
@@ -82,6 +82,7 @@ let string_of_counters counters =
   ^"Number of function pointer call: "
   ^(string_of_int counters.fpointer)
 
+(*
 let collect filter funstats =
   let stats = ref [] in
   let get_data _ counters = stats := (filter counters)::(!stats) in
@@ -98,6 +99,7 @@ let plot f stats fname =
     in
       List.iter dump stats;
       close_out cout
+*)
 
 class collector ptr_sz fun_to_count =
 object (this)
@@ -176,6 +178,7 @@ object (this)
     this#incr_bytes (size_of ptr_sz t);
     true
 
+(*
   method gen filter fname =
     let stats = collect filter funstats in
     let f x y v = x := !x + 1; y := v in
@@ -190,17 +193,30 @@ object (this)
     let stats = collect filter funstats in
     let f x y (_, sz, n) = x := !x + sz; y := !y + n in
       plot f stats fname
-
+*)
 
   method gen_graphs fname =
-    let filter_aob counters = counters.array in
-    let filter_ptr counters = 
-      counters.pointer_deref + counters.pointer_arith 
+    let cout = open_out (fname^".csv") in
+    let cnt = ref 0 in
+    let dump f counters =
+      incr cnt;
+      let f = if !obfuscate then "f"^(string_of_int !cnt) else f in
+	output_string cout (f^"; ");
+	output_string cout ((string_of_int counters.instrs)^"; ");
+	output_string cout ((string_of_int counters.loop)^"; ");
+	output_string cout ((string_of_int counters.array)^"; ");
+	output_string cout ((string_of_int counters.pointer_deref)^"; ");
+	output_string cout ((string_of_int counters.pointer_arith)^"; ");
+	output_string cout ((string_of_int counters.fpointer)^"\n")
     in
-      this#gen filter_aob (fname^"_aob.csv");
-      this#gen_sz filter_aob (fname^"_aobsz.csv");
-      this#gen filter_ptr (fname^"_ptr.csv");
-      this#gen_sz filter_ptr (fname^"_ptrsz.csv")
+      output_string cout "name; number of instructions; number of loops; ";
+      output_string cout "number of array accesses; ";
+      output_string cout "number of pointer dereference; ";
+      output_string cout "number of pointer arithmetic; ";
+      output_string cout "number of function pointer\n";
+      Hashtbl.iter dump funstats;
+      close_out cout
+
 
   method to_string verbose = 
     let res = Buffer.create 100 in
