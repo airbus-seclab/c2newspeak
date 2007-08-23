@@ -37,6 +37,7 @@ doc: $(DOC_FILES)
 
 install: all
 	cp $(TGT) $(INSTALL_FILES) ../../bin
+
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
 

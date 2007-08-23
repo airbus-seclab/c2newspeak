@@ -142,6 +142,27 @@ object (this)
       | BinOp (Eq as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
 	  when size_of t = pointer_size && isPtr e1 && isPtr e2 ->
 	  ChangeDoChildrenPost (BinOp (o, e1, e2, t), fun x -> x)
+
+(* Reverts strange CIL behavior, which translates 
+   (x == -2147483648) into (((unsigned int) x) == 2147483648) *)
+      | BinOp ((Ne|Eq) as op, CastE(TInt (IUInt, []), e), 
+	      Const (CInt64 (i, IUInt, None)), 
+	      TInt (IInt, [])) 
+	  when Int64.compare i (Int64.of_string "2147483648") = 0 -> 
+	  let min_int = Int64.of_string "-2147483648" in 
+	    ChangeDoChildrenPost (BinOp (op,
+					Const (CInt64 (min_int, IInt, None)), 
+					e,
+					TInt (IInt, [])), fun x -> x) 
+	      
+      | BinOp ((Ne|Eq) as op, Const (CInt64 (i, IUInt, None)), 
+	      CastE(TInt (IUInt, []), e), TInt (IInt, [])) 
+	  when Int64.compare i (Int64.of_string "2147483648") = 0 -> 
+	  let min_int = Int64.of_string "-2147483648" in 
+	    ChangeDoChildrenPost (BinOp (op, 
+					e,
+					Const (CInt64 (min_int, IInt, None)), 
+					TInt (IInt, [])), fun x -> x) 
 	    
       | _ -> DoChildren
 

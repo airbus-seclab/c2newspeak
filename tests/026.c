@@ -26,10 +26,15 @@
   email: olivier.levillain@penjili.org
 */
 
-void main() {
-  int x;
-  x = (x == -2147483648);
-  x = (-2147483648 == x);
-  x = (-2147483648 != x);
-  x = (x != -2147483648);
-}
+// There is much more! Feel free to experiment and let us know your thoughts.
+
+// This is a placeholder for your own non-regression test.
+// 1) write your code
+// 2) add <filestem> to TESTS in Makefile
+// 3) run make <filestem>.spec to generate the output
+// 4) run make <filestem> to check the output 
+// (for instance, every time you modify c2newspeak source code, 
+// before any commit)
+
+// You can optionally add parameters to pass to c2newspeak 
+// in a file <filestem>.in
