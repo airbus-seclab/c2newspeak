@@ -148,20 +148,22 @@ object (this)
       | BinOp ((Ne|Eq) as op, CastE(TInt (IUInt, []), e), 
 	      Const (CInt64 (i, IUInt, None)), 
 	      TInt (IInt, [])) 
-	  when Int64.compare i (Int64.of_string "2147483648") = 0 -> 
+	  when Int64.compare i (Int64.of_string "2147483648") = 0 
+	    && Cilutils.is_integer IInt (typeOf e) -> 
 	  let min_int = Int64.of_string "-2147483648" in 
 	    ChangeDoChildrenPost (BinOp (op,
-					Const (CInt64 (min_int, IInt, None)), 
 					e,
+					Const (CInt64 (min_int, IInt, None)), 
 					TInt (IInt, [])), fun x -> x) 
 	      
       | BinOp ((Ne|Eq) as op, Const (CInt64 (i, IUInt, None)), 
 	      CastE(TInt (IUInt, []), e), TInt (IInt, [])) 
-	  when Int64.compare i (Int64.of_string "2147483648") = 0 -> 
+	  when Int64.compare i (Int64.of_string "2147483648") = 0 
+	    && Cilutils.is_integer IInt (typeOf e) -> 
 	  let min_int = Int64.of_string "-2147483648" in 
 	    ChangeDoChildrenPost (BinOp (op, 
-					e,
 					Const (CInt64 (min_int, IInt, None)), 
+					e,
 					TInt (IInt, [])), fun x -> x) 
 	    
       | _ -> DoChildren

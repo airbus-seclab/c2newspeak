@@ -292,7 +292,7 @@ and translate_exp e =
     | BinOp (Ge, e1, e2, (TInt _ as t)) -> 
 	K.UnOp (K.Not, translate_exp (BinOp (Gt, e2, e1, t)))
     | BinOp (Ne, e1, e2, (TInt _ as t)) -> 
-	K.UnOp (K.Not, translate_exp (BinOp (Eq, e2, e1, t)))
+	K.UnOp (K.Not, translate_exp (BinOp (Eq, e1, e2, t)))
 	
     (* Pointer / Integer addition *)
     | BinOp (IndexPI, e1, e2, t) | BinOp (PlusPI, e1, e2, t) -> begin

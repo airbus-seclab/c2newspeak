@@ -111,7 +111,10 @@ let string_of_cast (t_src, t_dst) e =
 
 let dump stdout file = dumpFile !cilPrinter stdout "" file
 
-
+let is_integer k t = 
+  match t with
+      TInt (k', [])  -> (k == k')
+    | _ -> false
 
 (*---------------*)
 (* Miscellaneous *)
