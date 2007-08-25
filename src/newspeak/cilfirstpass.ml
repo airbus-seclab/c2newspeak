@@ -32,6 +32,8 @@ open Cilutils
 open Npkcontext
 open Npkutils
 
+let set_loc loc = Npkcontext.set_loc (Npkutils.translate_loc loc)
+
 type glb_type = {
   mutable gtype : Cil.typ;
   mutable gloc : Cil.location;
@@ -60,7 +62,7 @@ object (this)
   method get_used = (glb_used, glb_cstr)
 
   method vglob g =
-    Npkcontext.set_loc (get_globalLoc g);
+    set_loc (get_globalLoc g);
     DoChildren
 
 
@@ -69,7 +71,7 @@ object (this)
      duplicated is stored in a hash table and used when a Goto is
      encountered) *)
   method vstmt s =
-    Npkcontext.set_loc (get_stmtLoc s.skind);
+    set_loc (get_stmtLoc s.skind);
 
     let add_code goto_stmts label =
       match label with
@@ -289,7 +291,7 @@ let first_pass f =
   let rec explore g = 
     let loc = get_globalLoc g in
     let new_g = visitCilGlobal (visitor :> Cil.cilVisitor) g in
-      Npkcontext.set_loc loc;
+      set_loc loc;
       if loc.file <> "<compiler builtins>" then
 	match new_g with
 	  | [GType (t, _)] ->

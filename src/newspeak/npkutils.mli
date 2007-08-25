@@ -59,3 +59,5 @@ val translate_typ : Cil.typ -> Npkil.typ
 val translate_ret_typ : Cil.typ -> Npkil.typ option
 
 val isPtr : Cil.exp -> bool
+
+val translate_loc: Cil.location -> Newspeak.location

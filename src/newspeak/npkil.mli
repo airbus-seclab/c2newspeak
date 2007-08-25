@@ -111,9 +111,8 @@ module String_set :
    By default, we accept extern as if they were declared but not defined 
 *)
 type glb_type = {
-(* TODO: code cleanup: if possible remove this! *)
-  gloc  : Cil.location;
   mutable gtype : typ;
+  gloc : location;
 (* None is for extern *)
   mutable ginit : init_t option;
   mutable gused : bool;

@@ -97,7 +97,7 @@ val handle_cmdline_options : unit -> unit
 
 (** [set_loc cil_loc] translates a Cil.location cil_loc into a
     Newspeak.location and stores it to track the position in the file *)
-val set_loc : Cil.location -> unit
+val set_loc : Newspeak.location -> unit
 
 val forget_loc : unit -> unit
 

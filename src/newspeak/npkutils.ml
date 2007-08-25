@@ -170,3 +170,4 @@ let translate_ret_typ x =
       TVoid _ -> None
     | t -> Some (translate_typ t)
 
+let translate_loc loc = (loc.file, loc.line, loc.byte) 

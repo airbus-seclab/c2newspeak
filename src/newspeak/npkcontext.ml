@@ -205,9 +205,7 @@ let dummy_loc = ("", -1, -1)
 
 let cur_loc = ref dummy_loc
 
-let set_loc loc =
-  let loc = (loc.file, loc.line, loc.byte) in
-    cur_loc := loc
+let set_loc loc = cur_loc := loc
   
 let forget_loc () = cur_loc := dummy_loc
 

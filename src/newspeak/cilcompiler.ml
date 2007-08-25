@@ -37,6 +37,7 @@ open Npkutils
 module F = Cilfirstpass
 module K = Npkil
 
+let set_loc loc = Npkcontext.set_loc (Npkutils.translate_loc loc)
 
 let build_stmt stmtkind = (stmtkind, Npkcontext.get_loc ())
 
@@ -380,7 +381,7 @@ and translate_exp e =
 	
 	
 and translate_stmtkind status kind =
-  Npkcontext.set_loc (get_stmtLoc kind);
+  set_loc (get_stmtLoc kind);
   let loc = Npkcontext.get_loc () in
     match kind with
       | Instr il -> translate_instrlist il
@@ -449,7 +450,7 @@ and translate_instrlist il =
 	    
 	    
 and translate_instr i =
-  Npkcontext.set_loc (get_instrLoc i);
+  set_loc (get_instrLoc i);
   match i with
       Set (lv, e, _) ->
 	  let lval = translate_lval lv in
@@ -802,7 +803,8 @@ let translate_init x t =
 let translate_glb used_glb name x =
   let used = K.String_set.mem name used_glb in
   let defd = x.F.gdefd in
-    Npkcontext.set_loc x.F.gloc;
+  let loc = Npkutils.translate_loc x.F.gloc in
+    Npkcontext.set_loc loc;
     if (defd || used) then begin
       let init =
 	if defd then begin
@@ -816,7 +818,7 @@ let translate_glb used_glb name x =
       let glb = 
 	{ 
 	  K.gtype = t; 
-	  K.gloc = x.F.gloc;
+	  K.gloc = loc;
 	  K.ginit = init;
 	  K.gused = used
 	} 

@@ -106,8 +106,8 @@ type fspec_type = {
 }
 
 type glb_type = {
-  gloc  : Cil.location;
   mutable gtype : typ;
+  gloc : location;
   mutable ginit : init_t option;
   mutable gused : bool;
 }
@@ -547,8 +547,8 @@ let create_cstr str =
   let (len, init) = init_of_string str in
     {
       gtype = Array (Scalar char_typ, Some len); 
-(* TODO: code cleanup, not nice *)
-      gloc = Cil.locUnknown;
+(* TODO: code cleanup: not nice *)
+      gloc = ("", -1, -1);
       ginit = Some init;
       gused = true
     }
