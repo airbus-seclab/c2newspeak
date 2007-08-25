@@ -100,7 +100,7 @@ let compile_only = ref false
 let output_file = ref ""
 
 
-let use_cil = ref false
+let use_cil = ref true
 
 (* Version *)
 

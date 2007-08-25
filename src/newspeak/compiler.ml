@@ -24,3 +24,6 @@
 *)
 
 let compile fname = 
+  let globals = Hashtbl.create 100 in
+  let fundefs = Hashtbl.create 100 in
+    (fname, globals, fundefs)

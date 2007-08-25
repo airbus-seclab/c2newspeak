@@ -117,3 +117,5 @@ val error : string -> string -> 'a
 
 (** Displays a message as a fatal error and exits the program *)
 val print_error : string -> 'a
+
+val use_cil: bool ref

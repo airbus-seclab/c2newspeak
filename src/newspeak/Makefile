@@ -3,7 +3,7 @@ DIR =
 OBJ = lexer parser \
       newspeak cilutils params \
       npkcontext npkil npkutils env \
-      cilfirstpass cilcompiler link c2newspeak
+      cilfirstpass cilcompiler compiler link c2newspeak
 
 DEPEND = parser.mli parser.ml lexer.ml
 CLEANFILES = $(DEPEND) parser.output
