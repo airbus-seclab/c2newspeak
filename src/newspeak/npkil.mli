@@ -30,9 +30,9 @@
 open Cilutils
 open Newspeak
 
-type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
+(* TODO: cleanup npkil.ml and npkil.mli type definitions *)
 
-and gdecl = (string * typ * init_t)
+type gdecl = (string * typ * init_t)
 
 and fundec = ftyp * blk option
 
@@ -132,6 +132,8 @@ type intermediate = {
   iusedcstr : String_set.t;
 }
 
+type t = (intermediate * (fid, fspec_type) Hashtbl.t)
+
 val zero : exp
 val zero_f : exp
 
@@ -160,3 +162,5 @@ exception Uncomparable
 (* More precise type 
    TODO: change name, not well chosen *)
 val is_mp_typ : typ -> typ -> bool
+
+val write: string -> t -> unit

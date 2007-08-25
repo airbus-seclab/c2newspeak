@@ -26,13 +26,10 @@
   email: olivier.levillain@penjili.org
 *)
 
-
 open Cilutils
 open Newspeak
 
-type t = (exp list * gdecl list * (fid, fundec) Hashtbl.t)
-
-and gdecl = (string * typ * init_t)
+type gdecl = (string * typ * init_t)
 
 and fundec = ftyp * blk option
 
@@ -100,13 +97,6 @@ and tmp_size_t = int option
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
 
-type glb_type = {
-  gloc  : Cil.location;
-  mutable gtype : typ;
-  mutable ginit : init_t option;
-  mutable gused : bool;
-}
-
 type fspec_type = {
   ploc  : Newspeak.location;
   prett : typ option;
@@ -115,16 +105,20 @@ type fspec_type = {
   mutable pbody : blk option;
 }
 
+type glb_type = {
+  gloc  : Cil.location;
+  mutable gtype : typ;
+  mutable ginit : init_t option;
+  mutable gused : bool;
+}
+
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
   iusedcstr : String_set.t;
-(*  iusedfuns : String_set.t;*)
 }
 
-(*
-    (Newspeak.fid, fspec_type) Hashtbl.t;
-*)
+type t = (intermediate * (fid, fspec_type) Hashtbl.t)
 
 let zero = Const (CInt64 (Int64.zero))
 let zero_f = Const (CFloat (0., "0."))
@@ -503,3 +497,13 @@ let compare_typs t1 t2 =
   in
     
     compare_typs_aux t1 t2
+
+let write out_name (globs, funs) = 
+  Npkcontext.print_debug ("Writing "^(out_name)^"...");
+  let ch_out = open_out_bin out_name in
+    Marshal.to_channel ch_out "NPKO" [];
+    Marshal.to_channel ch_out (globs, funs) [];
+    close_out ch_out;
+    Npkcontext.print_debug ("Writing done.")
+      
+

@@ -878,14 +878,6 @@ let compile in_name out_name  =
 	end;
 	
 	Npkcontext.forget_loc ();
-	if (out_name <> "") then begin
-	  print_debug ("Writing "^(out_name)^"...");
-	  let ch_out = open_out_bin out_name in
-	    Marshal.to_channel ch_out "NPKO" [];
-	    Marshal.to_channel ch_out (globs, funs) [];
-	    close_out ch_out;
-	    print_debug ("Writing done.");
-	end;
 	
-	Env.init_env()
-
+	Env.init_env ();
+	(globs, funs)

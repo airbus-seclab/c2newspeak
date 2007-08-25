@@ -6,6 +6,7 @@ OBJ = lexer parser \
       cilfirstpass cilcompiler link c2newspeak
 
 DEPEND = parser.mli parser.ml lexer.ml
+CLEANFILES = $(DEPEND) parser.output
 
 # Documentation
 DOC_DIR = doc

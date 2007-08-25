@@ -100,6 +100,8 @@ let compile_only = ref false
 let output_file = ref ""
 
 
+let use_cil = ref false
+
 (* Version *)
 
 let version = ref false
@@ -186,16 +188,10 @@ let argslist = [
   ("--no-opt", Arg.Set no_opt, "Disables all code simplifications");
 
   ("--one-loop", Arg.Set normalize_loops, "Normalizes loops");
+
+  ("--experimental", Arg.Clear use_cil, 
+  "Use own lexer and parser instead of CIL: still experimental")
 ]
-
-
-let handle_cmdline_options () = 
-  Arg.parse argslist anon_fun usage_msg;
-  if !version then begin
-    print_version ();
-    exit 0
-  end
-
 
 
 
@@ -269,6 +265,31 @@ let error where msg =
 let print_error msg =
   prerr_endline ("Fatal error: "^msg);
   exit (if !exit_code then 1 else 0)
+
+
+
+
+
+let handle_cmdline_options () = 
+  Arg.parse argslist anon_fun usage_msg;
+  if !input_files = [] then begin
+    error "C2Newspeak.handle_cmdline_options"
+      ("no file specified. Try "^Sys.argv.(0)^" --help")
+  end;
+  
+  if (List.length !input_files > 1) && !compile_only 
+    && (!output_file <> "") then begin
+    error "C2Newspeak.handle_cmdline_options" 
+      ("You cannot specify the output filename (-o) for multiple "
+	^"files when only compiling (-c)")
+  end;
+
+  if (not !compile_only) && (!output_file = "") then output_file := "a.npk";
+
+  if !version then begin
+    print_version ();
+    exit 0
+  end
 
 
 

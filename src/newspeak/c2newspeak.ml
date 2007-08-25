@@ -28,44 +28,32 @@
 
 let compile = Cilcompiler.compile
 
-let create_npko name = (Filename.chop_extension name) ^ Params.npko_suffix
+let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
-let extract_npko fname =
+let extract_no fname =
   if Filename.check_suffix fname Params.npko_suffix then fname
   else begin
-    let npko = create_npko fname in
-      ignore (compile fname npko);
-      npko
+    let no = create_no fname in
+    let prog = compile fname no in
+      Npkil.write no prog;
+      no
   end
 
 
 let _ =
-  Npkcontext.handle_cmdline_options ();
-
   try
+    Npkcontext.handle_cmdline_options ();
+
     match !Npkcontext.input_files with
-	[] -> 
-	  Npkcontext.error "C2newspeak._" 
-	    ("no file specified. Try "^Sys.argv.(0)^" --help")
-
-      | file::[] 
+	file::[] 
 	  when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	  ignore (compile file !Npkcontext.output_file)
-	    
-      | _ when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	  Npkcontext.error "" 
-	    ("You cannot specify the output filename (-o) for multiple "
-	      ^"files when only compiling (-c)");
-
-      | files 
-	  when !Npkcontext.compile_only && (!Npkcontext.output_file = "") ->
-	  let aux f = ignore (compile f (create_npko f)) in
-	    List.iter aux files
-
+	    let _ = compile file !Npkcontext.output_file in
+	      ()
+	      
       | files ->
-	  if (!Npkcontext.output_file = "") 
-	  then Npkcontext.output_file := "a.npk";
-	  let npkos = List.map extract_npko files in
-	    Link.link npkos !Npkcontext.output_file
+	  let nos = List.map extract_no files in
+	    if not !Npkcontext.compile_only then begin
+	      Link.link nos !Npkcontext.output_file
+	    end
 
   with Invalid_argument msg -> Npkcontext.print_error msg
