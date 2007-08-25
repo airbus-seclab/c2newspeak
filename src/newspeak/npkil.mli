@@ -111,6 +111,7 @@ module String_set :
    By default, we accept extern as if they were declared but not defined 
 *)
 type glb_type = {
+(* TODO: code cleanup: if possible remove this! *)
   gloc  : Cil.location;
   mutable gtype : typ;
 (* None is for extern *)
@@ -129,7 +130,6 @@ type fspec_type = {
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-  iusedcstr : String_set.t;
 }
 
 type t = (intermediate * (fid, fspec_type) Hashtbl.t)
@@ -164,3 +164,5 @@ exception Uncomparable
 val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
+
+val create_cstr: string -> glb_type

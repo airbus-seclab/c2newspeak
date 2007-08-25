@@ -829,7 +829,12 @@ let translate_glb used_glb name x =
 (* compile function, which wraps translate *)
 (*=========================================*)
 
-let compile in_name out_name  =
+let add_glb_cstr str =
+  let name = "!const_str_"^str in
+  let glb = K.create_cstr str in
+    Hashtbl.add Env.glb_decls name glb
+
+let compile in_name =
   if not (Filename.check_suffix in_name c_suffix)
   then error "Npkcompile.compile" (in_name^" is not a .c file");
 
@@ -853,10 +858,8 @@ let compile in_name out_name  =
 
     print_debug "Running first pass...";
     Npkcontext.forget_loc ();
-    let (glb_used, glb_cstr, fun_specs, glb_decls) = 
-      F.first_pass cil_file 
-    in
-      Env.glb_cstr := glb_cstr;
+    let (glb_used, glb_cstr, fun_specs, glb_decls) = F.first_pass cil_file in
+      K.String_set.iter add_glb_cstr glb_cstr;
 
       Npkcontext.forget_loc ();
       print_debug "First pass done.";

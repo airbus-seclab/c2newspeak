@@ -39,7 +39,6 @@ let filenames = ref []
 let glb_decls = Hashtbl.create 100
 
 let glb_used = ref (String_set.empty)
-let glb_cstr = ref (String_set.empty)
 
 (*--------------*)
 (* Linking time *)
@@ -219,7 +218,6 @@ let merge_headers npko =
   let npko = read_header npko in
 
     filenames := npko.ifilename::(!filenames);
-    glb_cstr := String_set.union !glb_cstr npko.iusedcstr;
     Hashtbl.iter update_glob_link npko.iglobs
 
 
@@ -260,14 +258,6 @@ let update_fun_link fun_specs name f =
 let generate_globals globs =
   let glist = ref [] in
 
-  let handle_cstr str =
-    let name = ("!const_str_"^str) in 
-    let const_str = Newspeak.create_cstr name str in
-
-      glist := const_str::(!glist);
-      Hashtbl.add glb_tabl_name name name
-  in
-
   let handle_real_glob name g =
     let x = Hashtbl.find glb_decls name in
       Npkcontext.set_loc x.gloc;
@@ -293,7 +283,6 @@ let generate_globals globs =
       end
   in
 
-    String_set.iter handle_cstr !glb_cstr;
     Hashtbl.iter handle_real_glob globs;
     Npkcontext.forget_loc ();
     !glist

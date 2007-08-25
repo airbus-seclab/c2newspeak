@@ -115,8 +115,9 @@ type glb_type = {
 type intermediate = {
   ifilename : string;
   iglobs : (string, glb_type) Hashtbl.t;
-  iusedcstr : String_set.t;
 }
+
+type filename = string
 
 type t = (intermediate * (fid, fspec_type) Hashtbl.t)
 
@@ -428,8 +429,6 @@ let dump_npko (inter, funs) =
     print_endline inter.ifilename;
 
     print_usedglbs "Global used" inter.iglobs;
-(*    print_list "Functions called" inter.iusedfuns;*)
-    print_list "Constant Strings" inter.iusedcstr;
 
     print_endline "Global variables";
     Hashtbl.iter print_glob inter.iglobs;
@@ -505,5 +504,32 @@ let write out_name (globs, funs) =
     Marshal.to_channel ch_out (globs, funs) [];
     close_out ch_out;
     Npkcontext.print_debug ("Writing done.")
-      
+    
 
+(* TODO: architecture dependent ?? *)
+(* TODO: probably the best way to deal with this and all size problems
+   is to set all these global constants, when a npk file is read ?? 
+Some kind of data structure with all the sizes,
+then function read returns this data structure too
+and there is an init function *)
+let char_sz = 1
+let char_typ = Int (Signed, char_sz)
+
+let init_of_string str =
+  let len = String.length str in
+  let res = ref [(len, char_typ, exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code (String.get str i) in
+	res := (i, char_typ, exp_of_int c)::!res
+    done;
+    (len + 1, Some !res)
+
+let create_cstr str =
+  let (len, init) = init_of_string str in
+    {
+      gtype = Array (Scalar char_typ, Some len); 
+(* TODO: code cleanup, not nice *)
+      gloc = Cil.locUnknown;
+      ginit = Some init;
+      gused = true
+    }

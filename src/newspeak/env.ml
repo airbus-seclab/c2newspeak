@@ -58,7 +58,7 @@ type status = (Cil.location * Newspeak.lbl) list
 
 let glb_decls = Hashtbl.create 100
 let fun_specs = Hashtbl.create 100
-let glb_cstr = ref (String_set.empty)
+
 (* This table to avoid 
    recomputing a different string here to improve sharing *)
 let static_glb_names = Hashtbl.create 100
@@ -66,15 +66,13 @@ let static_glb_names = Hashtbl.create 100
 let init_env () =
   Hashtbl.clear glb_decls;
   Hashtbl.clear static_glb_names;
-  Hashtbl.clear fun_specs;
-  glb_cstr := String_set.empty
+  Hashtbl.clear fun_specs
 
 let create_npkil name =
   let globs = 
     { 
       ifilename = name;
       iglobs = Hashtbl.copy glb_decls;
-      iusedcstr = !glb_cstr
     }
   in
   let funs = Hashtbl.copy fun_specs in
