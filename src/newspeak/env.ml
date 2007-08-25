@@ -68,15 +68,8 @@ let init_env () =
   Hashtbl.clear static_glb_names;
   Hashtbl.clear fun_specs
 
-let create_npkil name =
-  let globs = 
-    { 
-      ifilename = name;
-      iglobs = Hashtbl.copy glb_decls;
-    }
-  in
-  let funs = Hashtbl.copy fun_specs in
-    (globs, funs)
+(* TODO: code optimization, why copy ? *)
+let create_npkil name = (name, Hashtbl.copy glb_decls, Hashtbl.copy fun_specs)
 
 (*---------*)
 (* Globals *)

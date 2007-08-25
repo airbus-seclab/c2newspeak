@@ -127,12 +127,10 @@ type fspec_type = {
   mutable pbody : blk option;
 }
 
-type intermediate = {
-  ifilename : string;
-  iglobs : (string, glb_type) Hashtbl.t;
-}
+type filename = string
 
-type t = (intermediate * (fid, fspec_type) Hashtbl.t)
+type t = 
+    (filename * (string, glb_type) Hashtbl.t * (fid, fspec_type) Hashtbl.t)
 
 val zero : exp
 val zero_f : exp
@@ -150,7 +148,7 @@ val exp_of_int : int -> exp
 
 val negate : exp -> exp
 
-val dump_npko : (intermediate * (Newspeak.fid, fspec_type) Hashtbl.t) -> unit
+val dump_npko : t -> unit
 
 val string_of_typ : typ -> string
 
@@ -164,5 +162,9 @@ exception Uncomparable
 val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
+
+val read_header: string -> (filename * (string, glb_type) Hashtbl.t)
+
+val read_fundefs: string -> (fid, fspec_type) Hashtbl.t
 
 val create_cstr: string -> glb_type

@@ -49,8 +49,7 @@ val glb_uniquename : Cil.varinfo -> string
 
 val init_env : unit -> unit
 
-val create_npkil : 
-  string -> (Npkil.intermediate * (string, Npkil.fspec_type) Hashtbl.t)
+val create_npkil : string -> Npkil.t
 
 (** {1 Locals} *)
 

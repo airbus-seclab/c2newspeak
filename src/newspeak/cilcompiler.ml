@@ -869,18 +869,18 @@ let compile in_name =
       Hashtbl.iter translate_fun fun_specs;
       Hashtbl.iter (translate_glb glb_used) glb_decls;
       
-      let (globs, funs) = Env.create_npkil in_name in
+      let prog = Env.create_npkil in_name in
 	
 	Env.init_env ();
 	
 	if (!verb_npko) then begin
 	  print_endline "Newspeak Object output";
 	  print_endline "----------------------";
-	  K.dump_npko (globs, funs);
+	  K.dump_npko prog;
 	  print_newline ();
 	end;
 	
 	Npkcontext.forget_loc ();
 	
 	Env.init_env ();
-	(globs, funs)
+	prog

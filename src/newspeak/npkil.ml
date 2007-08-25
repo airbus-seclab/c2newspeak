@@ -112,14 +112,10 @@ type glb_type = {
   mutable gused : bool;
 }
 
-type intermediate = {
-  ifilename : string;
-  iglobs : (string, glb_type) Hashtbl.t;
-}
-
 type filename = string
 
-type t = (intermediate * (fid, fspec_type) Hashtbl.t)
+type t = 
+    (filename * (string, glb_type) Hashtbl.t * (fid, fspec_type) Hashtbl.t)
 
 let zero = Const (CInt64 (Int64.zero))
 let zero_f = Const (CFloat (0., "0."))
@@ -273,7 +269,7 @@ and string_of_fn decls f =
 	  (seq ", " string_of_typ args_t)^")"
 
 (* TODO: remove pretty option here and Npkcontext *)
-let dump_npko (inter, funs) = 
+let dump_npko (fname, globs, funs) = 
   let cur_fun = ref "" in
 
   let lbls = ref (Int_map.empty) in
@@ -426,12 +422,12 @@ let dump_npko (inter, funs) =
     dump_fundec n f.pbody;
     if f.pbody <> None then print_newline ()
   in
-    print_endline inter.ifilename;
+    print_endline fname;
 
-    print_usedglbs "Global used" inter.iglobs;
+    print_usedglbs "Global used" globs;
 
     print_endline "Global variables";
-    Hashtbl.iter print_glob inter.iglobs;
+    Hashtbl.iter print_glob globs;
     print_newline ();
 
     print_endline "Function definitions";
@@ -497,14 +493,37 @@ let compare_typs t1 t2 =
     
     compare_typs_aux t1 t2
 
-let write out_name (globs, funs) = 
+let write out_name prog = 
   Npkcontext.print_debug ("Writing "^(out_name)^"...");
   let ch_out = open_out_bin out_name in
     Marshal.to_channel ch_out "NPKO" [];
-    Marshal.to_channel ch_out (globs, funs) [];
+    Marshal.to_channel ch_out prog [];
     close_out ch_out;
     Npkcontext.print_debug ("Writing done.")
     
+
+let read_header fname =
+  let cin = open_in_bin fname in
+    Npkcontext.print_debug ("Importing "^fname^"...");
+    let str = Marshal.from_channel cin in
+      if str <> "NPKO" then begin 
+	close_in cin;
+	Npkcontext.error 
+	  "Npkil.read_header" (fname^" is an invalid .npko file")
+      end;
+      let (srcname, globs, _) = Marshal.from_channel cin in
+	Npkcontext.print_debug ("Importing done.");
+	close_in cin;
+	(srcname, globs)
+
+let read_fundefs fname =
+  let cin = open_in_bin fname in
+    Npkcontext.print_debug ("Importing funs from "^fname^"...");
+    let _ = Marshal.from_channel cin in
+    let (_, _, funs) = Marshal.from_channel cin in
+      Npkcontext.print_debug ("Funs import done.");
+      close_in cin;
+      funs
 
 (* TODO: architecture dependent ?? *)
 (* TODO: probably the best way to deal with this and all size problems

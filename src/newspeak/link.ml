@@ -49,31 +49,6 @@ let glb_used = ref (String_set.empty)
 let glb_tabl_typ = Hashtbl.create 100
 let glb_tabl_name = Hashtbl.create 100
 
-let read_header fname = 
-  let ch_in = open_in_bin fname in
-    print_debug ("Importing "^fname^"...");
-    let str = Marshal.from_channel ch_in in
-      if str <> "NPKO" then begin 
-	close_in ch_in;
-	error "C2newspeak.extract_npko"
-	  (fname^" is an invalid .npko file");
-      end;
-      let (res, _) = Marshal.from_channel ch_in in
-	print_debug ("Importing done.");
-	close_in ch_in;
-	res
-
-
-
-let read_fun fname = 
-  let ch_in = open_in_bin fname in
-    print_debug ("Importing funs from "^fname^"...");
-    let _ = Marshal.from_channel ch_in in
-    let (_, funs) = Marshal.from_channel ch_in in
-      print_debug ("Funs import done.");
-      close_in ch_in;
-      funs
-
 let get_glob_typ name =
   try
     Hashtbl.find glb_tabl_typ name
@@ -215,10 +190,10 @@ let update_glob_link name g =
 
 
 let merge_headers npko =
-  let npko = read_header npko in
+  let (fname, globs) = Npkil.read_header npko in
 
-    filenames := npko.ifilename::(!filenames);
-    Hashtbl.iter update_glob_link npko.iglobs
+    filenames := fname::(!filenames);
+    Hashtbl.iter update_glob_link globs
 
 
 (*
@@ -348,7 +323,7 @@ let generate_funspecs cout npkos =
   in
     
   let read_all_funspec npko =
-    let funs = read_fun npko in
+    let funs = read_fundefs npko in
       Hashtbl.iter handle_funspec funs
   in
     List.iter read_all_funspec npkos;
