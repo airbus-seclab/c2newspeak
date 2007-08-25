@@ -60,5 +60,5 @@ clean:
 	$(RM) .depend
 
 # Dependencies
-.depend:
+.depend: $(DEPEND)
 	$(OCAMLDEP) $(FLAGS) $(MLI) $(ML) > .depend

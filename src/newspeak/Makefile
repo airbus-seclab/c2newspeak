@@ -1,9 +1,11 @@
 # Project
 DIR = 
-OBJ = newspeak cilutils params \
+OBJ = lexer parser \
+      newspeak cilutils params \
       npkcontext npkil npkutils env \
-      firstpass compile link c2newspeak
+      cilfirstpass cilcompiler link c2newspeak
 
+DEPEND = parser.mli parser.ml lexer.ml
 
 # Documentation
 DOC_DIR = doc
@@ -20,5 +22,11 @@ machdep: machdep.c
 
 test: $(TGT)
 	@cp $(TGT) ../../bin
+
+%.ml: %.mll
+	ocamllex $<
+
+%.mli %.ml: %.mly
+	ocamlyacc -v $<
 
 include .depend
