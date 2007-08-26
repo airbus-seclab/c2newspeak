@@ -42,8 +42,8 @@ type status
 
 (** {1 Compilation variables} *)
 
-val glb_decls : (string, Npkil.glb_type) Hashtbl.t
-val fun_specs : (Newspeak.fid, Npkil.fspec_type) Hashtbl.t
+val glb_decls : (string, Npkil.ginfo) Hashtbl.t
+val fun_specs : (Newspeak.fid, Npkil.funinfo) Hashtbl.t
 
 val glb_uniquename : Cil.varinfo -> string
 

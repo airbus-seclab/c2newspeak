@@ -31,10 +31,28 @@ open Cilutils
 open Newspeak
 
 (* TODO: cleanup npkil.ml and npkil.mli type definitions *)
+(* TODO: extern storage not well handled !!! 
+   By default, we accept extern as if they were declared but not defined 
+*)
+type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 
-type gdecl = (string * typ * init_t)
+and filename = string
 
-and fundec = ftyp * blk option
+and ginfo = {
+  mutable gtype : typ;
+  gloc : location;
+(* None is for extern *)
+  mutable ginit : init_t option;
+  mutable gused : bool;
+}
+
+and funinfo = {
+  ploc  : Newspeak.location;
+  prett : typ option;
+  mutable pargs : ((int * string * typ) list) option;
+  mutable plocs : ((int * string * typ) list) option;
+  mutable pbody : blk option;
+}
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -107,29 +125,6 @@ module String_set :
     val iter : (elt -> unit) -> t -> unit
   end
 
-(* TODO: extern storage not well handled !!! 
-   By default, we accept extern as if they were declared but not defined 
-*)
-type glb_type = {
-  mutable gtype : typ;
-  gloc : location;
-(* None is for extern *)
-  mutable ginit : init_t option;
-  mutable gused : bool;
-}
-
-type fspec_type = {
-  ploc  : Newspeak.location;
-  prett : typ option;
-  mutable pargs : ((int * string * typ) list) option;
-  mutable plocs : ((int * string * typ) list) option;
-  mutable pbody : blk option;
-}
-
-type filename = string
-
-type t = 
-    (filename * (string, glb_type) Hashtbl.t * (fid, fspec_type) Hashtbl.t)
 
 val zero : exp
 val zero_f : exp
@@ -162,8 +157,8 @@ val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
 
-val read_header: string -> (filename * (string, glb_type) Hashtbl.t)
+val read_header: string -> (filename * (string, ginfo) Hashtbl.t)
 
-val read_fundefs: string -> (fid, fspec_type) Hashtbl.t
+val read_fundefs: string -> (fid, funinfo) Hashtbl.t
 
-val create_cstr: string -> glb_type
+val create_cstr: string -> ginfo

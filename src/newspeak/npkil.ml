@@ -29,9 +29,25 @@
 open Cilutils
 open Newspeak
 
-type gdecl = (string * typ * init_t)
+type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 
-and fundec = ftyp * blk option
+and filename = string
+
+and ginfo = {
+  mutable gtype : typ;
+  gloc : location;
+(* None is for extern *)
+  mutable ginit : init_t option;
+  mutable gused : bool;
+}
+
+and funinfo = {
+  ploc  : Newspeak.location;
+  prett : typ option;
+  mutable pargs : ((int * string * typ) list) option;
+  mutable plocs : ((int * string * typ) list) option;
+  mutable pbody : blk option;
+}
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -96,26 +112,6 @@ and tmp_size_t = int option
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
-
-type fspec_type = {
-  ploc  : Newspeak.location;
-  prett : typ option;
-  mutable pargs : ((int * string * typ) list) option;
-  mutable plocs : ((int * string * typ) list) option;
-  mutable pbody : blk option;
-}
-
-type glb_type = {
-  mutable gtype : typ;
-  gloc : location;
-  mutable ginit : init_t option;
-  mutable gused : bool;
-}
-
-type filename = string
-
-type t = 
-    (filename * (string, glb_type) Hashtbl.t * (fid, fspec_type) Hashtbl.t)
 
 let zero = Const (CInt64 (Int64.zero))
 let zero_f = Const (CFloat (0., "0."))
