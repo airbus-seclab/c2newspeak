@@ -24,17 +24,59 @@
 */
 
 %{
+open Csyntax
+
+(*
+let parse_error _ = 
+*)
 %}
 
-%token VOID
-%token LBRACE RBRACE
+%token VOID INT
+%token LBRACE RBRACE LBRACKET RBRACKET EQ SEMICOLON
 
-%type <unit list> cprog
+%token <string> IDENTIFIER
+%token <Int64.t> INTEGER
+
+%type <Csyntax.prog> cprog
 
 %start cprog
 
 %%
 
 cprog:
-                     { [] }
+  VOID IDENTIFIER LBRACKET RBRACKET block        { ($2, $5)::[] }
+;;
+
+block:
+  LBRACE statement_list RBRACE                   { $2 }
+;;
+
+statement_list:
+  statement statement_list                       { $1::$2 }
+|                                                { [] }
+;;
+
+statement:
+  declaration SEMICOLON                          { Decl $1 }
+| assignment SEMICOLON                           { Set $1 }
+;;
+
+declaration:
+  ctyp IDENTIFIER                                { ($2, $1) }
+;;
+
+assignment:
+  left_value EQ expression                       { ($1, $3) }
+;;
+
+left_value:
+  IDENTIFIER                                     { Var $1 }
+;;
+
+expression:
+  INTEGER                                        { Const $1 }
+;;
+
+ctyp:
+  INT                                            { Int }
 ;;

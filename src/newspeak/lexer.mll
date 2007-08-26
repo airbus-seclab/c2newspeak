@@ -25,26 +25,62 @@
 
 {
 open Parser
+open Lexing
 
-let line_cnt = ref 1
+let cnt_line lexbuf =
+  let pos = 
+    { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 }
+  in
+  lexbuf.lex_curr_p <- pos
 
-let unknown_lexeme lexeme =
-  let line = string_of_int (!line_cnt) in
-    "Lexer.mlll: line: "^line^", unknown keyword: "^lexeme
+let unknown_lexeme lexbuf =
+  let pos = Lexing.lexeme_start_p lexbuf in
+  let line = string_of_int pos.pos_lnum in
+    "Lexer.mlll: line: "^line^", unknown keyword: "^(Lexing.lexeme lexbuf)
 }
 
+let white_space = ' ' | '\t'
+let line_terminator = '\r' | '\n' | "\r\n"
+
+let line_comment = "//" [^'\r''\n']* line_terminator
+
+let letter = ['a'-'z'] | ['A'-'Z']
 let digit = ['0'-'9']
 
 let integer = digit+
+let identifier = letter (letter|digit)*
 
 rule token = parse
 
 (* keywords *)
 (* types *)
-    "void"              { VOID }
+    "int"               { INT }
+  | "void"              { VOID }
+
+(* values *)
+  | integer             { INTEGER (Int64.of_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)
   | "{"                 { LBRACE }
   | "}"                 { RBRACE }
+  | "("                 { LBRACKET }
+  | ")"                 { RBRACKET }
+  | "="                 { EQ }
+  | ";"                 { SEMICOLON }
+
+  | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
+
+  | "/*"                { comment lexbuf }
+  | line_comment        { cnt_line lexbuf; token lexbuf }
+  | line_terminator     { cnt_line lexbuf; token lexbuf }
+  | white_space         { token lexbuf }
+
 (* error fallback *)
-  | _                   { invalid_arg (unknown_lexeme (Lexing.lexeme lexbuf)) }
+  | _                   { invalid_arg (unknown_lexeme lexbuf) }
+
+
+and comment = parse
+
+  | "*/"                { token lexbuf }
+  | line_terminator     { cnt_line lexbuf; comment lexbuf }
+  | _                   { comment lexbuf }

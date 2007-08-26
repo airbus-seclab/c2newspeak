@@ -23,39 +23,27 @@
   email: charles.hymans@penjili.org
 *)
 
-open Lexing 
+type prog = global list
 
-let parse fname =
-  let cin = open_in fname in
-  let lexbuf = Lexing.from_channel cin in
-  
-    try
-      let cprog = Parser.cprog Lexer.token lexbuf 
-      in
-	close_in cin;
-	cprog
-    with Parsing.Parse_error -> 
-      let pos = Lexing.lexeme_start_p lexbuf in
-      let line_nb = string_of_int pos.pos_lnum in
-      let lexeme = Lexing.lexeme lexbuf in
-	Npkcontext.error "Parser.parse_error" 
-	  ("syntax error: line "^line_nb^", unexpected token: "^lexeme)
+and global = fundec
 
-(* TODO: code cleanup: remove this: remove any use of this *)
-let dummy_loc = ("", -1, -1)
+and fundec = (fname * blk)
 
+and typ = Int
 
-let compile fname = 
-  let globals = Hashtbl.create 100 in
-  let fundefs = Hashtbl.create 100 in
+and blk = stmt list
 
-  let translate_fundec (f, body) = 
-    Hashtbl.add fundefs f ([], None, Some []) 
-  in
-
-  let translate_global x = translate_fundec x in
-
-  let cprog = parse fname in
+and stmt =
+    | Decl of (vname * typ)
+    | Set of (lv * exp)
     
-    List.iter translate_global cprog;
-    (fname, globals, fundefs)
+and lv = Var of vname
+ 
+and exp = Const of cst
+
+and cst = Int64.t
+
+and fname = string
+
+and vname = string
+
