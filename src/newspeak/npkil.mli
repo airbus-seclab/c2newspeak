@@ -30,7 +30,6 @@
 open Cilutils
 open Newspeak
 
-(* TODO: cleanup npkil.ml and npkil.mli type definitions *)
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
@@ -50,7 +49,6 @@ and funinfo = {
   ploc  : Newspeak.location;
   prett : typ option;
   mutable pargs : ((int * string * typ) list) option;
-  mutable plocs : ((int * string * typ) list) option;
   mutable pbody : blk option;
 }
 

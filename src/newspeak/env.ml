@@ -202,7 +202,7 @@ let update_fun_proto name ret args =
   with Not_found ->
     Hashtbl.add fun_specs name
       {prett = ret;
-       pargs = args; plocs = None;
+       pargs = args;
        ploc = Npkcontext.get_loc (); pbody = None;
       }
 

@@ -753,7 +753,6 @@ let translate_fun name (locals, formals, body) =
   let floc = spec.K.ploc in
     (*Npkcontext.set_loc floc;*)
     (* TODO: cleanup, should call a Env update function *)
-    spec.K.plocs <- Some locals;
     spec.K.pargs <- Some formals;
 
     Env.reset_lbl_gen ();

@@ -195,41 +195,6 @@ let merge_headers npko =
     filenames := fname::(!filenames);
     Hashtbl.iter update_glob_link globs
 
-
-(*
-let update_fun_link fun_specs name f =
-  try
-    let x = Hashtbl.find fun_specs name in
-
-      if (x.prett <> f.prett) then begin
-	(* TODO: add the respective types and locations ? *)
-	error "Npklink.update_fun_link"
-	  ("different types for return type of prototype "^name)
-      end;
-
-    let _ =
-      match x.pargs, f.pargs, x.plocs, f.plocs, x.ploc, f.ploc, x.pbody, f.pbody with
-	| _, None, _, None, _, _, _, None -> ()
-	| None, Some _, None, _, _, _, None, _ ->
-	    x.pargs <- f.pargs;
-	    x.plocs <- f.plocs;
-	    x.ploc <- f.ploc;
-	    x.pbody <- f.pbody
-	| Some l1, Some l2, _, None, _, _, _, None ->
-	    Npkenv.compare_formals name l1 l2
-	| Some l1, Some l2, None, _, _, _, None, _ ->
-	    Npkenv.compare_formals name l1 l2;
-	    x.pargs <- f.pargs;
-	    x.plocs <- f.plocs;
-	    x.ploc <- f.ploc;
-	    x.pbody <- f.pbody
-	      (* TODO: Produce more precise errors *)
-	| _ -> error "Npklink.update_fun_link" ("unexpected error for "^name)
-    in ()
-	 
-  with Not_found -> Hashtbl.add fun_specs name f
-*)
-
 let generate_globals globs =
   let glist = ref [] in
 

@@ -45,7 +45,6 @@ and funinfo = {
   ploc  : Newspeak.location;
   prett : typ option;
   mutable pargs : ((int * string * typ) list) option;
-  mutable plocs : ((int * string * typ) list) option;
   mutable pbody : blk option;
 }
 
