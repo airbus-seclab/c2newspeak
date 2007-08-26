@@ -842,15 +842,7 @@ let translate_glb used_glb name x =
 	end
       in
       let t = translate_typ x.F.gtype in
-      let glb = 
-	{ 
-	  K.gtype = t; 
-	  K.gloc = loc;
-	  K.ginit = init;
-	  K.gused = used
-	} 
-      in
-	Hashtbl.add Env.glb_decls name glb
+	Hashtbl.add Env.glb_decls name (t, loc, init, used)
     end
 
 

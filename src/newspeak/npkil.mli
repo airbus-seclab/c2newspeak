@@ -37,13 +37,8 @@ type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 
 and filename = string
 
-and ginfo = {
-  mutable gtype : typ;
-  gloc : location;
 (* None is for extern *)
-  mutable ginit : init_t option;
-  mutable gused : bool;
-}
+and ginfo = (typ * location * init_t option * bool)
 
 (* TODO: code cleanup, remove everything unecessary for link *)
 and funinfo = (typ list * typ option * blk option)

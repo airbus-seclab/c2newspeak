@@ -156,36 +156,42 @@ and replace_field (offs, t) = (offs, replace_typ t)
   TODO: implement --accept-extern
 *)
 
-let update_glob_link name g =
+let update_glob_link name (t, loc, init, used) =
   try
-    let x = Hashtbl.find glb_decls name in
+    let (prev_t, prev_loc, prev_init, prev_used) = Hashtbl.find glb_decls name in
       (* TODO: remove Npkil.compare_typs *)
 
-      begin try
-	if (Npkil.is_mp_typ g.gtype x.gtype) then 
-	  x.gtype <- g.gtype;
+    let t =
+      try
+	if (Npkil.is_mp_typ t prev_t) then t
+	else prev_t
       with Npkil.Uncomparable -> 
 	(* TODO: add the respective locations *)
 	error "Npklink.update_glob_link"
 	  ("different types for "^name^": '"
-	   ^(Npkil.string_of_typ x.gtype)^"' and '"
-	   ^(Npkil.string_of_typ g.gtype)^"'")
-      end;
-      
-      if g.gused then x.gused <- true;
-      match g.ginit, x.ginit with
-	  (None, Some _) -> ()
-	| (Some _, None) -> x.ginit <- g.ginit
-	| (None, None) -> ()
+	    ^(Npkil.string_of_typ prev_t)^"' and '"
+	    ^(Npkil.string_of_typ t)^"'")
+    in
+    let loc = prev_loc in
+    let used = used || prev_used in
+    let init = 
+      match init, prev_init with
+	  (None, Some _) -> prev_init
+	| (Some _, None) -> init
+	| (None, None) -> prev_init
 	| (Some (Some _), Some (Some _)) -> 
 	    error "Npklink.update_glob_link" ("multiple declaration of "^name)
 	| _ when !accept_mult_def -> 
 	    print_warning "Npklink.update_glob_link" 
-	      ("multiple definition of "^name)
+	      ("multiple definition of "^name);
+	    prev_init
 	| _ -> 
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
+    in
+      Hashtbl.replace glb_decls name (t, loc, init, used)
+      
   with Not_found -> 
-    Hashtbl.add glb_decls name g;
+    Hashtbl.add glb_decls name (t, loc, init, used);
     Hashtbl.add glb_tabl_name name name
 
 
@@ -198,12 +204,12 @@ let merge_headers npko =
 let generate_globals globs =
   let glist = ref [] in
 
-  let handle_real_glob name g =
-    let x = Hashtbl.find glb_decls name in
-      Npkcontext.set_loc x.gloc;
-      if x.gused || (not !remove_temp) then begin
+  let handle_real_glob name (t, _, init, _) =
+    let (_, loc, _, used) = Hashtbl.find glb_decls name in
+      Npkcontext.set_loc loc;
+      if used || (not !remove_temp) then begin
 	let i =
-	  match g.ginit with
+	  match init with
 	    | Some i -> i
 	    | None when !accept_extern -> 
 		print_warning "Npklink.handle_real_glob:" 
@@ -214,7 +220,7 @@ let generate_globals globs =
 		  ("extern not accepted: "^name)
 	in
 	  try
-	    let t = replace_typ g.gtype in
+	    let t = replace_typ t in
 	      glist := (name, t, replace_init i)::(!glist);
 	      Hashtbl.add glb_tabl_typ name t
 	  with LenOfArray -> 

@@ -33,13 +33,8 @@ type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 
 and filename = string
 
-and ginfo = {
-  mutable gtype : typ;
-  gloc : location;
 (* None is for extern *)
-  mutable ginit : init_t option;
-  mutable gused : bool;
-}
+and ginfo = (typ * location * init_t option * bool)
 
 and funinfo = (typ list * typ option * blk option)
 
@@ -394,13 +389,13 @@ let dump_npko (fname, globs, funs) =
 
   let print_usedglbs title globs =
     print_endline title;
-    Hashtbl.iter (fun x y -> if y.gused then print_endline x) globs;
+    Hashtbl.iter (fun x (_, _, _, used) -> if used then print_endline x) globs;
     print_newline ()
   in
 
-  let print_glob n g =
-    let str = (string_of_typ g.gtype)^" "^n in
-      match g.ginit with
+  let print_glob n (t, _, init, _) =
+    let str = (string_of_typ t)^" "^n in
+      match init with
 	  None -> print_endline ("extern "^str^";")
 	| Some i -> 
 	    print_string str;
@@ -535,10 +530,7 @@ let init_of_string str =
 
 let create_cstr str =
   let (len, init) = init_of_string str in
-    {
-      gtype = Array (Scalar char_typ, Some len); 
+    (Array (Scalar char_typ, Some len), 
 (* TODO: code cleanup: not nice *)
-      gloc = ("", -1, -1);
-      ginit = Some init;
-      gused = true
-    }
+    ("", -1, -1), 
+    Some init, true)
