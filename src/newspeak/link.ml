@@ -227,8 +227,6 @@ let generate_globals globs =
     Npkcontext.forget_loc ();
     !glist
 
-let extract_typ (_, _, t) = t
-
 let write_fun cout f spec =
   print_debug ("Writing function: "^f);
   Newspeak.write_fun cout f spec
@@ -238,19 +236,20 @@ let generate_funspecs cout npkos =
   let waiting = Hashtbl.create 100 in
   let encountered = Hashtbl.create 100 in  
 
-  let handle_funspec name f =
+  let handle_funspec name (_, args, ret, body) =
     (* TODO: Should we have here the !remove_temp ? *)
     let args = 
-      match f.pargs with
-	  (* This case should only happen when:
+      match args with
+	  (* TODO: add syntactic check here that:
+	     This case should only happen when:
 	     - the function arguments are not defined, 
 	     - the function body is not defined 
 	     - and the function is never called. *)
 	| None -> [] 
-	| Some l -> List.map extract_typ l
+	| Some t -> t
     in
     let body =
-      match f.pbody with
+      match body with
 	| None -> None
 	| Some b -> 
 	    let body = replace_body b in
@@ -265,7 +264,7 @@ let generate_funspecs cout npkos =
 	    in
 	      Some body
     in
-    let ftyp = replace_ftyp (args, f.prett) in
+    let ftyp = replace_ftyp (args, ret) in
       
       try 
 	let prev_ftyp = Hashtbl.find encountered name in

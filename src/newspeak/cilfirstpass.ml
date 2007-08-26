@@ -211,28 +211,25 @@ let first_pass f =
   let update_fun_def f =
     let name = f.svar.vname in
       
-    let rettype = 
+    let ftyp =
       match f.svar.vtype with
-	| TFun (TVoid _, _, _, _) -> None
-	| TFun (t, _, _, _) -> Some (translate_typ t)
-	| _ ->
-	    error "Firstpass.first_pass.update_fun_def"
-	      ("invalid type \""^(string_of_type f.svar.vtype)^"\"")
+	  TFun (ret, args, _, _) -> (args, ret)
+	| _ -> error "Cilfirstpass.first_pass" "TODO"
     in
+    let ftyp = Npkutils.translate_ftyp ftyp in
       
-    let translate_local v = v.vid, v.vname, translate_typ v.vtype in
-    let formals = List.map translate_local f.sformals in
-    let locals = List.map translate_local f.slocals in
 (*    let loc = Npkcontext.get_loc () in *)
       
-      (* TODO: remove this Some ?? *)
-      Env.update_fun_proto name rettype (Some formals);
+      Env.update_fun_proto name ftyp;
 
       if (Hashtbl.mem fun_specs name) 
       then error "Firstpass.first_pass.update_fun_def" 
 	("multiple definition for "^name);
       
-      Hashtbl.add fun_specs name (locals, formals, f.sbody)
+      let translate_vinfo v = v.vid, v.vname, translate_typ v.vtype in
+      let formals = List.map translate_vinfo f.sformals in
+      let locals = List.map translate_vinfo f.slocals in
+	Hashtbl.add fun_specs name (locals, formals, f.sbody)
   in
 
   let update_glob_decl v =
@@ -310,10 +307,8 @@ let first_pass f =
 	      print_warning "Npkfirstpass.first_pass.explore"
 		("ignoring directive: unknown #pragma "^(string_of_attribute a))
 		      
-	  | [GVarDecl ({vname = name; vtype = TFun (ret,args,_,_)}, _)] ->
-	      let ret = Npkutils.translate_ret_typ ret in
-	      let args = Env.translate_formals name args in
-		Env.update_fun_proto name ret args
+	  | [GVarDecl ({vname = name; vtype = TFun (ret, args, _, _)}, _)] ->
+	      Env.update_fun_proto name (Npkutils.translate_ftyp (args, ret))
 		  
 	  | [GFun (f, loc)] -> 
 	      if (f.svar.vname = "main")

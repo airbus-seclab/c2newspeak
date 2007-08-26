@@ -644,20 +644,17 @@ and translate_call x lv args_exps =
   let handle_args_decls fname exps =
     let res = ref [] in
     let build_unknown_args exps =
-      let rec build_args exps i = 
-	match exps with
-	    [] -> []
-	  | e::tl ->
-	      let t = translate_typ (typeOf e) in
-	      let tl = build_args tl (i+1) in
-		(-1, "arg"^(string_of_int i), t)::tl
+      let i = ref (-1) in
+      let build_arg _ =
+	i := !i + 1;
+	"arg"^(string_of_int !i)
       in
-	build_args exps 0
+	List.map build_arg exps
     in
     let rec handle_args exps args =
       match (exps, args) with
 	  ([], []) -> ()
-	| (e::tl, (_, str, _)::args) ->
+	| (e::tl, str::args) ->
 	    Env.push_local ();
 	    let t = translate_typ (typeOf e) in
 	      res := (str, t, loc)::!res;
@@ -667,9 +664,8 @@ and translate_call x lv args_exps =
 	      "This code should be unreachable"
     in
     let args = 
-      match Env.get_args fname with
-	  None -> build_unknown_args exps 
-	| Some args -> args
+      try Env.get_args fname 
+      with Not_found -> build_unknown_args exps 
     in
       handle_args exps args;
       !res
@@ -690,26 +686,40 @@ and translate_call x lv args_exps =
       match lv with
 	| Var f, NoOffset ->
 	    let name = f.vname in
-	    let ret = 
-	      match f.vtype with
+	      (* TODO: code cleanup remove these ? *)
+	    let arg_from_exp e = ("", typeOf e, []) in 
+	    let args = Some (List.map arg_from_exp args_exps) in
+	    let ret = match f.vtype with
+		TFun (ret, _, _, _) -> ret
+	      | _ -> 		    
+		  error "Npkcompile.translate_call"
+		    ("invalid type '"^(Cilutils.string_of_type f.vtype)^"'")
+	    in
+	    let (args, ret) = Npkutils.translate_ftyp (args, ret) in
+	      Env.update_fun_proto name (args, ret);
+	      (name, ret)
+
+	(*	      match f.vtype with
 		| TFun (ret, _, _, _) -> 
-		    let ret = Npkutils.translate_ret_typ ret in
-		    let arg_from_exp e = ("", typeOf e, []) in 
-		    let args = Some (List.map arg_from_exp args_exps) in 
-		    let args = Env.translate_formals name args in begin
-		      try Env.update_fun_proto name ret args 
+		    (* TODO: code cleanup here!! *)
+		    let (_, ret) = Npkutils.translate_ftyp (ret, args) in
+		    ret
+(*
+		    begin
+		      try 
 		      with Invalid_argument _ ->
 			(* TODO: See if we can be as specific as before (int4 <> ptr) *)
 			error "Npkcompile.translate_call" 
 			  ("function "^name^" called with args not matching prototype")
 		    end;
-		    ret
+*)
 			
 		| _ ->
 		    error "Npkcompile.translate_call"
 		      ("invalid type '"^(Cilutils.string_of_type f.vtype)^"'")
 	    in
 	      (name, ret)
+  *)
 
 	| Mem (Lval fptr), NoOffset ->
 	    let typ = translate_typ (typeOfLval fptr) in
@@ -748,17 +758,34 @@ and translate_call x lv args_exps =
 
 
 let translate_fun name (locals, formals, body) =
- assert (Hashtbl.mem Env.fun_specs name);
-  let spec = Hashtbl.find Env.fun_specs name in
+  let (floc, ret_t) = Env.get_funspec name in
+
+  let args = Some (List.map (fun (_, name, t) -> (name, t)) formals) in
+    Env.reset_lbl_gen ();
+    let status = Env.empty_status () in
+      
+      if ret_t <> None then Env.push_local ();
+      List.iter (Env.loc_declare false) formals;
+      List.iter (Env.loc_declare true) locals;
+
+      let body = translate_stmts status body.bstmts in
+      let lbl = Env.get_ret_lbl () in
+      let blk = [K.DoWith (body, lbl, []), floc] in
+      let body = append_decls (Env.get_loc_decls ()) blk in
+
+	Env.update_funspec name (args, body)
+
+(*
+  let spec = Env.get_funspec name in
   let floc = spec.K.ploc in
     (*Npkcontext.set_loc floc;*)
     (* TODO: cleanup, should call a Env update function *)
-    spec.K.pargs <- Some formals;
+    spec.K.fargs <- Some (List.map (fun (_, _, t) -> t) formals);
 
     Env.reset_lbl_gen ();
     let status = Env.empty_status () in
 
-      if spec.K.prett <> None then Env.push_local ();
+      if spec.K.frett <> None then Env.push_local ();
       List.iter (Env.loc_declare false) formals;
       List.iter (Env.loc_declare true) locals;
       
@@ -769,7 +796,8 @@ let translate_fun name (locals, formals, body) =
 	
 	(* TODO ?: Check only one body exists *)
 	spec.K.pbody <- Some body
-	
+*)	
+
 let translate_init x t =
   let glb_inits = ref [] in
     

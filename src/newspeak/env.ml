@@ -33,6 +33,13 @@ open Npkcontext
 open Npkutils
 open Npkil
 
+type funinfo = {
+  ploc  : Newspeak.location;
+  mutable fargs : (string * typ) list option;
+  frett : typ option;
+  mutable pbody : blk option;
+}
+
 (*-----------*)
 (* Constants *)
 (*-----------*)
@@ -57,7 +64,19 @@ type status = (Cil.location * Newspeak.lbl) list
 (*-----------------------*)
 
 let glb_decls = Hashtbl.create 100
+(* TODO: code cleanup: fusion fun_specs and fun_args in one table *)
 let fun_specs = Hashtbl.create 100
+
+let get_funspec name =
+  assert (Hashtbl.mem fun_specs name);
+  let info = Hashtbl.find fun_specs name in
+    (info.ploc, info.frett)
+
+let update_funspec name (args, body) =
+  assert (Hashtbl.mem fun_specs name);
+  let info = Hashtbl.find fun_specs name in
+    info.fargs <- args;
+    info.pbody <- Some body
 
 (* This table to avoid 
    recomputing a different string here to improve sharing *)
@@ -69,7 +88,19 @@ let init_env () =
   Hashtbl.clear fun_specs
 
 (* TODO: code optimization, why copy ? *)
-let create_npkil name = (name, Hashtbl.copy glb_decls, Hashtbl.copy fun_specs)
+let create_npkil name = 
+  let fundefs = Hashtbl.create 100 in
+  let filter_arg (_, t) = t in
+  let add_funinfo f x = 
+    let args = 
+      match x.fargs with
+	  None -> None
+	| Some args -> Some (List.map filter_arg args)
+    in
+    Hashtbl.add fundefs f (x.ploc, args, x.frett, x.pbody)
+  in
+    Hashtbl.iter add_funinfo fun_specs;
+    (name, Hashtbl.copy glb_decls, fundefs)
 
 (*---------*)
 (* Globals *)
@@ -144,47 +175,39 @@ let extract_ldecl (_, n, t) = (n, t)
 
 
 let compare_formals name l1 l2 =
+  let res = ref false in
   let rec compare_aux l1 l2 =
     match l1, l2 with
 	[], [] -> ()
-      | (_, _, t1)::r1, (_, _, t2)::r2 when t1 = t2 ->
+      | (str, t1)::r1, (_, t2)::r2 when t1 = t2 ->
+	  if (str = "") then res := true;
 	  compare_aux r1 r2
+
       | [], _ | _, [] ->
 	  (* TODO: add the respective locations *)
 	error "Npkenv.compare_formals"
-	  ("different number of args in declarations for function "^name)
+	  ("different number of arguments for function "^name)
 	  
-      | (_, _, t1)::_, (_, n, t2)::_ ->
+      | (_, t1)::_, (_, t2)::_ ->
 	  (* TODO: add the respective locations *)
 	  error "Npkenv.compare_formals"
-	    ("different types for argument "^n^" in different "
-	     ^"declarations of "^name^": '"^(Npkil.string_of_typ t1)
-	     ^"' and '"^(Npkil.string_of_typ t2)^"'")
+	    ("different arguments types for function "^name)
   in
-    compare_aux l1 l2
+    compare_aux l1 l2;
+    !res
 
-let translate_formals name args =
-  let rec translate i l =
-    match l with
-	[] -> []
-      | (n, t, _)::r ->
-	  let name = if n ="" then "arg" ^ (string_of_int i) else n in
-	    (-1, name, translate_typ t)::(translate (i+1) r)
-  in
-    match args with
-	None ->
-	  print_warning "Npkenv.translate_formals"
-	    ("missing or incomplete prototype for "^name);
-	  None
-      | Some l -> Some (translate 0 l)
-
-
-let update_fun_proto name ret args =
+let update_fun_proto name (args, ret) =
+  if (args = None) then begin
+    print_warning "Npkenv.translate_formals"
+      ("missing or incomplete prototype for "^name)
+  end;
+(* TODO: code cleanup necessary for cilcompiler, because much 
+   effort done multiple times *)
   try
     let x = Hashtbl.find fun_specs name in
       
     let _ = 
-      match x.prett, ret with
+      match x.frett, ret with
 	  None, None -> ()
 	| Some t1, Some t2 when t1 = t2 -> ()
 	| _ ->
@@ -194,25 +217,31 @@ let update_fun_proto name ret args =
     in
       
     let _ =
-      match x.pargs, args with
+      match x.fargs, args with
 	| _, None -> ()
-	| None, Some _ -> x.pargs <- args
-	| Some l1, Some l2 -> compare_formals name l1 l2
+	| None, Some _ -> x.fargs <- args
+	| Some l1, Some l2 -> 
+	    if (compare_formals name l1 l2) then x.fargs <- args
     in ()
+
   with Not_found ->
-    Hashtbl.add fun_specs name
-      {prett = ret;
-       pargs = args;
-       ploc = Npkcontext.get_loc (); pbody = None;
+    Hashtbl.add fun_specs name 
+      { 
+	frett = ret;
+	fargs = args;
+	ploc = Npkcontext.get_loc ();
+	pbody = None;
       }
 
-
-
 let get_args f = 
-  try
-    let x = Hashtbl.find fun_specs f in
-      x.pargs
-  with Not_found -> None
+  let funinfo = Hashtbl.find fun_specs f in
+  let get (str, _) = 
+    if str = "" then raise Not_found;
+    str
+  in
+    match funinfo.fargs with
+	None -> raise Not_found
+      | Some args -> List.map get args
 
 
 (*-----------------------*)

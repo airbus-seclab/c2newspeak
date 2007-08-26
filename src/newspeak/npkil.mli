@@ -45,12 +45,8 @@ and ginfo = {
   mutable gused : bool;
 }
 
-and funinfo = {
-  ploc  : Newspeak.location;
-  prett : typ option;
-  mutable pargs : ((int * string * typ) list) option;
-  mutable pbody : blk option;
-}
+(* TODO: code cleanup, remove everything unecessary for link *)
+and funinfo = (Newspeak.location * typ list option * typ option * blk option)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)

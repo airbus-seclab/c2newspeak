@@ -40,10 +40,22 @@ open Npkil
     the current return and switch infos *)
 type status
 
+type funinfo = {
+  ploc  : Newspeak.location;
+  mutable fargs : (string * typ) list option;
+  frett : typ option;
+  mutable pbody : blk option;
+}
+
 (** {1 Compilation variables} *)
 
 val glb_decls : (string, Npkil.ginfo) Hashtbl.t
-val fun_specs : (Newspeak.fid, Npkil.funinfo) Hashtbl.t
+
+val get_funspec : string -> (Newspeak.location * Npkil.typ option)
+
+val update_funspec : 
+  string -> ((string * typ) list option * blk) -> unit
+(*val fun_specs : (Newspeak.fid, Npkil.funinfo) Hashtbl.t*)
 
 val glb_uniquename : Cil.varinfo -> string
 
@@ -58,7 +70,7 @@ val create_npkil : string -> Npkil.t
 (* returns the arguments of the function,
    None when unknown 
 *)
-val get_args : string -> ((int * string * typ) list) option
+val get_args : string -> string list
 
 (** [loc_declare v] adds the declaration of v in the local list *)
 val loc_declare : bool -> (int * string * Npkil.typ) -> unit
@@ -85,19 +97,15 @@ val restore_loc_cnt : unit -> unit
 
 (** {1 Functions} *)
 
-(* TODO: remove this function ??? strange *)
+(* TODO: code cleanup: remove this function ??? strange *)
 val extract_ldecl : (int * string * Npkil.typ) -> (string * Npkil.typ)
 
 (** allows to update the specification of a function (prototype) when
     called for example *)
 
-val translate_formals : 
-  string -> (string * Cil.typ * Cil.attributes) list option 
-  -> (int * string * Npkil.typ) list option
-
 (** declaration of a function from a prototype *)
 val update_fun_proto : 
-  string -> Npkil.typ option -> (int * string * Npkil.typ) list option -> unit
+  string -> ((string * Npkil.typ) list option * Npkil.typ option) -> unit
 
 (** {1 Variable id retrieval} *)
 
@@ -136,8 +144,3 @@ val get_switch_lbl : status -> Cil.location -> Newspeak.lbl
 
 (** tells whether a switch label is already in the status *)
 val mem_switch_lbl : status -> Cil.location -> bool
-
-
-val compare_formals : 
-  string -> (int * string * Npkil.typ) list 
-  -> (int * string * Npkil.typ) list -> unit

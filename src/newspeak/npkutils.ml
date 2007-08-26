@@ -165,9 +165,25 @@ let isPtr e =
     | Npkil.Scalar Newspeak.FunPtr -> true
     | _ -> false
 
-let translate_ret_typ x =
-  match x with
-      TVoid _ -> None
-    | t -> Some (translate_typ t)
+let translate_ftyp (args, ret) =
+  let translate_ret t =
+    match t with
+	TVoid _ -> None
+      | t -> Some (translate_typ t)
+  in
+  let translate_arg (x, t, _) = (x, translate_typ t) in
+  let args =
+    match args with
+	None -> None
+      | Some args -> Some (List.map translate_arg args)
+  in
+    (args, translate_ret ret)
 
+(*
+    match x with
+	TFun (ret, args, _, _) -> 
+      | _ -> 
+	  error "Npkutils.translate_ftyp" 
+	    ("invalid type '"^(Cilutils.string_of_type x)^"'") 
+*)
 let translate_loc loc = (loc.file, loc.line, loc.byte) 
