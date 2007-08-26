@@ -237,17 +237,6 @@ let generate_funspecs cout npkos =
   let encountered = Hashtbl.create 100 in  
 
   let handle_funspec name (args, ret, body) =
-    (* TODO: Should we have here the !remove_temp ? *)
-    let args = 
-      match args with
-	  (* TODO: add syntactic check here that:
-	     This case should only happen when:
-	     - the function arguments are not defined, 
-	     - the function body is not defined 
-	     - and the function is never called. *)
-	| None -> [] 
-	| Some t -> t
-    in
     let body =
       match body with
 	| None -> None

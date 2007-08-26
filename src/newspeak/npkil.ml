@@ -41,7 +41,7 @@ and ginfo = {
   mutable gused : bool;
 }
 
-and funinfo = (typ list option * typ option * blk option)
+and funinfo = (typ list * typ option * blk option)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)

@@ -92,12 +92,17 @@ let create_npkil name =
   let fundefs = Hashtbl.create 100 in
   let filter_arg (_, t) = t in
   let add_funinfo f x = 
-    let args = 
-      match x.fargs with
-	  None -> None
-	| Some args -> Some (List.map filter_arg args)
-    in
-    Hashtbl.add fundefs f (args, x.frett, x.pbody)
+    match (x.fargs, x.pbody) with
+	(Some args, _) -> 
+	  let args = List.map filter_arg args in
+	    Hashtbl.add fundefs f (args, x.frett, x.pbody)
+
+     (* In this case, the function is a prototype which is never called: 
+	ignore *)
+      | (None, None) -> ()
+     (* if the functions arguments are undetermined, then the function
+	is necessarily a prototype *)
+      | (None, _) -> error "Env.create_npkil" "Code unreachable"
   in
     Hashtbl.iter add_funinfo fun_specs;
     (name, Hashtbl.copy glb_decls, fundefs)
