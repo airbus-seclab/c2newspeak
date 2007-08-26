@@ -236,7 +236,7 @@ let generate_funspecs cout npkos =
   let waiting = Hashtbl.create 100 in
   let encountered = Hashtbl.create 100 in  
 
-  let handle_funspec name (_, args, ret, body) =
+  let handle_funspec name (args, ret, body) =
     (* TODO: Should we have here the !remove_temp ? *)
     let args = 
       match args with

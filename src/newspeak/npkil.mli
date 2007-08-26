@@ -46,7 +46,7 @@ and ginfo = {
 }
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and funinfo = (Newspeak.location * typ list option * typ option * blk option)
+and funinfo = (typ list option * typ option * blk option)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)

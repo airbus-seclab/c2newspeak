@@ -218,7 +218,7 @@ let first_pass f =
     in
     let ftyp = Npkutils.translate_ftyp ftyp in
       
-(*    let loc = Npkcontext.get_loc () in *)
+      (*    let loc = Npkcontext.get_loc () in *)
       
       Env.update_fun_proto name ftyp;
 
@@ -308,9 +308,10 @@ let first_pass f =
 		("ignoring directive: unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret, args, _, _)}, _)] ->
-	      Env.update_fun_proto name (Npkutils.translate_ftyp (args, ret))
+	      let ftyp = Npkutils.translate_ftyp (args, ret) in
+		Env.update_fun_proto name ftyp
 		  
-	  | [GFun (f, loc)] -> 
+	  | [GFun (f, _)] -> 
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
 	      update_fun_def f;

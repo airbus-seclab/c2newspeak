@@ -97,7 +97,7 @@ let create_npkil name =
 	  None -> None
 	| Some args -> Some (List.map filter_arg args)
     in
-    Hashtbl.add fundefs f (x.ploc, args, x.frett, x.pbody)
+    Hashtbl.add fundefs f (args, x.frett, x.pbody)
   in
     Hashtbl.iter add_funinfo fun_specs;
     (name, Hashtbl.copy glb_decls, fundefs)

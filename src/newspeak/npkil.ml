@@ -41,8 +41,7 @@ and ginfo = {
   mutable gused : bool;
 }
 
-(* TODO: code cleanup have this as a pair with nothing mutable *)
-and funinfo = (Newspeak.location * typ list option * typ option * blk option)
+and funinfo = (typ list option * typ option * blk option)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -409,7 +408,7 @@ let dump_npko (fname, globs, funs) =
 	    print_endline ";"
   in
 
-  let print_fundef n (_, _, _, pbody) =
+  let print_fundef n (_, _, pbody) =
     dump_fundec n pbody;
     if pbody <> None then print_newline ()
   in
