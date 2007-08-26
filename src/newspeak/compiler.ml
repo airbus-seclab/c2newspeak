@@ -26,4 +26,13 @@
 let compile fname = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
-    (fname, globals, fundefs)
+
+  let translate_global _ = () in
+
+  let cin = open_in fname in
+  let lexbuf = Lexing.from_channel cin in
+  let cprog = Parser.cprog Lexer.token lexbuf in
+    close_in cin;
+    
+    List.iter translate_global cprog;
+      (fname, globals, fundefs)

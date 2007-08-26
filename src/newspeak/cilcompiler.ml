@@ -856,9 +856,6 @@ let add_glb_cstr str =
     Hashtbl.add Env.glb_decls name glb
 
 let compile in_name =
-  if not (Filename.check_suffix in_name c_suffix)
-  then error "Npkcompile.compile" (in_name^" is not a .c file");
-
   initCIL ();
   useLogicalOperators := false;
 

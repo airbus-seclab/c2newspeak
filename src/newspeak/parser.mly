@@ -29,12 +29,12 @@
 %token VOID
 %token LBRACE RBRACE
 
-%type <unit> program
+%type <unit list> cprog
 
-%start program
+%start cprog
 
 %%
 
-program:
-                     { () }
+cprog:
+                     { [] }
 ;;

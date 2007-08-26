@@ -26,15 +26,20 @@
   email: olivier.levillain@penjili.org
 *)
 
+open Npkcontext
+
+let compile fname =
+  if not (Filename.check_suffix fname Params.c_suffix)
+  then error "C2newspeak.compile" (fname^" is not a .c file");
+
+  if !Npkcontext.use_cil then Cilcompiler.compile fname
+  else Compiler.compile fname
+
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
 let _ =
   try
     Npkcontext.handle_cmdline_options ();
-    let compile =
-      if !Npkcontext.use_cil then Cilcompiler.compile
-      else Compiler.compile
-    in
     let extract_no fname =
       if Filename.check_suffix fname Params.npko_suffix then fname
       else begin
