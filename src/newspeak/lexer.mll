@@ -55,6 +55,7 @@ rule token = parse
 (* keywords *)
 (* types *)
     "int"               { INT }
+  | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
 
 (* values *)

@@ -29,7 +29,9 @@ and global = fundec
 
 and fundec = (fname * blk)
 
-and typ = Int
+and typ = 
+    | Int
+    | UInt
 
 and blk = stmt list
 

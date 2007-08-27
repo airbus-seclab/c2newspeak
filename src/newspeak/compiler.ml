@@ -56,6 +56,7 @@ let scalar_of_t t =
 let translate_typ t =
   match t with
       Int -> K.Scalar (N.Int (N.Signed, Config.size_of_int))
+    | UInt -> K.Scalar (N.Int (N.Unsigned, Config.size_of_int))
 
 let get_var env x =
   let rec get n env =

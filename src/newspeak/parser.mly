@@ -35,7 +35,7 @@ let append_decl (x, t) body = (Decl (x, t, body), get_loc ())::[]
 
 %}
 
-%token VOID INT
+%token VOID INT UNSIGNED
 %token LBRACE RBRACE LBRACKET RBRACKET EQ SEMICOLON
 
 %token <string> IDENTIFIER
@@ -79,4 +79,5 @@ expression:
 
 ctyp:
   INT                                          { Int }
+| UNSIGNED INT                                 { UInt }
 ;;
