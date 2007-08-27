@@ -79,23 +79,23 @@ and translate_exp env e =
 
 let rec translate_blk env x =
   match x with
-      (Decl (x, t))::body ->
-	let t = translate_typ t in
-	let body = translate_blk ((x, t)::env) body in
-	  (K.Decl (x, t, body), dummy_loc)::[]
     | hd::tl -> (translate_stmt env hd)::(translate_blk env tl)
     | [] -> []
-	
-and translate_stmt env x =
+
+and translate_stmt env (x, loc) = (translate_stmtkind env x, loc)
+
+and translate_stmtkind env x =
   match x with
-      Set (lv, e) -> 
+      Decl (x, t, body) ->
+	let t = translate_typ t in
+	let body = translate_blk ((x, t)::env) body in
+	  K.Decl (x, t, body)
+
+    | Set (lv, e) -> 
 	let (lv, t) = translate_lv env lv in
 	let e = translate_exp env e in
 	  let t = scalar_of_t t in
-	    (K.Set (lv, e, t), dummy_loc)
-    | Decl _ -> 
-	Npkcontext.error "Compiler.compile.translate_stmt"
-	  "should be unreachable code"
+	    K.Set (lv, e, t)
 
 let compile fname = 
   let globals = Hashtbl.create 100 in

@@ -25,10 +25,14 @@
 
 %{
 open Csyntax
+open Lexing
 
-(*
-let parse_error _ = 
-*)
+let get_loc () =
+  let pos = symbol_start_pos () in
+    (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
+
+let append_decl (x, t) body = (Decl (x, t, body), get_loc ())::[]
+
 %}
 
 %token VOID INT
@@ -44,39 +48,35 @@ let parse_error _ =
 %%
 
 cprog:
-  VOID IDENTIFIER LBRACKET RBRACKET block        { ($2, $5)::[] }
+  VOID IDENTIFIER LBRACKET RBRACKET block      { ($2, $5)::[] }
 ;;
 
 block:
-  LBRACE statement_list RBRACE                   { $2 }
+  LBRACE statement_list RBRACE                 { $2 }
 ;;
 
 statement_list:
-  statement statement_list                       { $1::$2 }
-|                                                { [] }
-;;
-
-statement:
-  declaration SEMICOLON                          { Decl $1 }
-| assignment SEMICOLON                           { Set $1 }
+  assignment statement_list                    { ($1, get_loc ())::$2 }
+| declaration statement_list                   { append_decl $1 $2 } 
+|                                              { [] }
 ;;
 
 declaration:
-  ctyp IDENTIFIER                                { ($2, $1) }
+  ctyp IDENTIFIER SEMICOLON                    { ($2, $1) }
 ;;
 
 assignment:
-  left_value EQ expression                       { ($1, $3) }
+  left_value EQ expression SEMICOLON           { Set ($1, $3) }
 ;;
 
 left_value:
-  IDENTIFIER                                     { Var $1 }
+  IDENTIFIER                                   { Var $1 }
 ;;
 
 expression:
-  INTEGER                                        { Const $1 }
+  INTEGER                                      { Const $1 }
 ;;
 
 ctyp:
-  INT                                            { Int }
+  INT                                          { Int }
 ;;

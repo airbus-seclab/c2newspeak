@@ -33,8 +33,10 @@ and typ = Int
 
 and blk = stmt list
 
-and stmt =
-    | Decl of (vname * typ)
+and stmt = (stmtkind * location)
+
+and stmtkind =
+    | Decl of (vname * typ * blk)
     | Set of (lv * exp)
     
 and lv = Var of vname
@@ -42,6 +44,14 @@ and lv = Var of vname
 and exp = Const of cst
 
 and cst = Int64.t
+
+and location = (file * line_nb * charac)
+
+and file = string
+
+and line_nb = int
+
+and charac = int
 
 and fname = string
 
