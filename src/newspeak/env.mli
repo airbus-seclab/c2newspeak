@@ -73,7 +73,8 @@ val create_npkil : string -> Npkil.t
 val get_args : string -> string list
 
 (** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : bool -> (int * string * Npkil.typ) -> unit
+val loc_declare : 
+  bool -> (int * string * Npkil.typ * Newspeak.location) -> unit
 
 (** [get_loc_decls ()] returns the current list of local declaration,
     and reset the local handler (counter, hashtable and decl list) *)

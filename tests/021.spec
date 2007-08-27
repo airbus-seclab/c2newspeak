@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (-1)^int4 x;
-  (-1)^int4 y;
+  (30)^int4 x;
+  (31)^int4 y;
   (46)^do {
     (32)^do {
       (32)^choose {

@@ -3,7 +3,7 @@ f() {
 }
 
 g() {
-  (27)^int4 tmp;
+  (31)^int4 tmp;
   (32)^{
     int4 value_of_f;
     (32)^{
@@ -19,13 +19,13 @@ g() {
 }
 
 main() {
-  (33)^int4 a;
-  (33)^int4 b;
+  (37)^int4 a;
+  (37)^int4 b;
   (39)^int4 value_of_g;
   (39)^{
     int4 x;
     (39)^0- =(int4) 3-_int4;
-    (27)^{
+    (31)^{
       int4 tmp;
       (32)^{
         int4 value_of_f;

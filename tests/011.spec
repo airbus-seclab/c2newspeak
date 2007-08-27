@@ -5,9 +5,9 @@ f() {
 }
 
 main() {
-  (33)^int4 x;
-  (33)^int4 y;
-  (33)^int4 z;
+  (37)^int4 x;
+  (37)^int4 y;
+  (37)^int4 z;
   (38)^int4 value_of_f;
   (38)^{
     int4 a;

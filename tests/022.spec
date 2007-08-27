@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
 main() {
-  (-1)^int4 a;
-  (-1)^int4 b;
-  (-1)^int4 c;
+  (30)^int4 a;
+  (30)^int4 b;
+  (30)^int4 c;
   (31)^choose {
     | ! (0 == 2-_int4) -->
       (31)^choose {

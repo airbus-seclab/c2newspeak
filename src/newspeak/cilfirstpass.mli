@@ -58,6 +58,7 @@ val first_pass :
   Cil.file -> 
   (Npkil.String_set.t * Npkil.String_set.t 
     * (Newspeak.fid, 
-      (int * string * Npkil.typ) list 
-      * (int * string * Npkil.typ) list * Cil.block) Hashtbl.t
+      (int * string * Npkil.typ * Newspeak.location) list 
+      * (int * string * Npkil.typ * Newspeak.location) list 
+      * Cil.block) Hashtbl.t
     * (string, glb_type) Hashtbl.t)

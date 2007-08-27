@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 main() {
-  (-1)^int4 x;
+  (31)^int4 x;
   (35)^do {
     (32)^do {
       (32)^choose {

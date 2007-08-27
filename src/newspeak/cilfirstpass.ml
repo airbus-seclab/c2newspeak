@@ -218,15 +218,15 @@ let first_pass f =
     in
     let ftyp = Npkutils.translate_ftyp ftyp in
       
-      (*    let loc = Npkcontext.get_loc () in *)
-      
       Env.update_fun_proto name ftyp;
 
       if (Hashtbl.mem fun_specs name) 
       then error "Firstpass.first_pass.update_fun_def" 
 	("multiple definition for "^name);
       
-      let translate_vinfo v = v.vid, v.vname, translate_typ v.vtype in
+      let translate_vinfo v = 
+	(v.vid, v.vname, translate_typ v.vtype, Npkutils.translate_loc v.vdecl)
+      in
       let formals = List.map translate_vinfo f.sformals in
       let locals = List.map translate_vinfo f.slocals in
 	Hashtbl.add fun_specs name (locals, formals, f.sbody)
@@ -311,7 +311,7 @@ let first_pass f =
 	      let ftyp = Npkutils.translate_ftyp (args, ret) in
 		Env.update_fun_proto name ftyp
 		  
-	  | [GFun (f, _)] -> 
+	  | [GFun (f, loc)] -> 
 	      if (f.svar.vname = "main")
 	      then check_main_signature f.svar.vtype;
 	      update_fun_def f;

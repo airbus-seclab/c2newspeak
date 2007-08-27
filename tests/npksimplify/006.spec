@@ -1,6 +1,6 @@
 getIndex() {
-  (57)^int4 found;
-  (57)^int4 x;
+  (29)^int4 found;
+  (30)^int4 x;
   (28)^do {
     (32)^1- =(int4) 0;
     (33)^0- =(int4) 0;
@@ -38,16 +38,16 @@ getIndex() {
 }
 
 main() {
-  (-1)^int4 i;
-  (-1)^int4 c;
+  (49)^int4 i;
+  (50)^int4 c;
   (52)^{
     int4 value_of_getIndex;
     (52)^{
       ptr ptr;
       (52)^0- =(ptr) &_4(3-);
-      (57)^{
+      (29)^{
         int4 found;
-        (57)^int4 x;
+        (30)^int4 x;
         (28)^do {
           (32)^1- =(int4) 0;
           (33)^0- =(int4) 0;

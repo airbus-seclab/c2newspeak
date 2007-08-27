@@ -15,7 +15,7 @@ f1() {
 }
 
 f2() {
-  (32)^int4 tmp;
+  (-1)^int4 tmp;
   (36)^{
     int4 value_of_f1;
     (36)^{

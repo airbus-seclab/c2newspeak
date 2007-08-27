@@ -699,28 +699,6 @@ and translate_call x lv args_exps =
 	      Env.update_fun_proto name (args, ret);
 	      (name, ret)
 
-	(*	      match f.vtype with
-		| TFun (ret, _, _, _) -> 
-		    (* TODO: code cleanup here!! *)
-		    let (_, ret) = Npkutils.translate_ftyp (ret, args) in
-		    ret
-(*
-		    begin
-		      try 
-		      with Invalid_argument _ ->
-			(* TODO: See if we can be as specific as before (int4 <> ptr) *)
-			error "Npkcompile.translate_call" 
-			  ("function "^name^" called with args not matching prototype")
-		    end;
-*)
-			
-		| _ ->
-		    error "Npkcompile.translate_call"
-		      ("invalid type '"^(Cilutils.string_of_type f.vtype)^"'")
-	    in
-	      (name, ret)
-  *)
-
 	| Mem (Lval fptr), NoOffset ->
 	    let typ = translate_typ (typeOfLval fptr) in
 	      if typ <> K.Scalar Newspeak.FunPtr
@@ -760,7 +738,7 @@ and translate_call x lv args_exps =
 let translate_fun name (locals, formals, body) =
   let (floc, ret_t) = Env.get_funspec name in
 
-  let args = Some (List.map (fun (_, name, t) -> (name, t)) formals) in
+  let args = Some (List.map (fun (_, name, t, _) -> (name, t)) formals) in
     Env.reset_lbl_gen ();
     let status = Env.empty_status () in
       
@@ -775,28 +753,6 @@ let translate_fun name (locals, formals, body) =
 
 	Env.update_funspec name (args, body)
 
-(*
-  let spec = Env.get_funspec name in
-  let floc = spec.K.ploc in
-    (*Npkcontext.set_loc floc;*)
-    (* TODO: cleanup, should call a Env update function *)
-    spec.K.fargs <- Some (List.map (fun (_, _, t) -> t) formals);
-
-    Env.reset_lbl_gen ();
-    let status = Env.empty_status () in
-
-      if spec.K.frett <> None then Env.push_local ();
-      List.iter (Env.loc_declare false) formals;
-      List.iter (Env.loc_declare true) locals;
-      
-      let body = translate_stmts status body.bstmts in
-      let lbl = Env.get_ret_lbl () in
-      let blk = [K.DoWith (body, lbl, []), floc] in
-      let body = append_decls (Env.get_loc_decls ()) blk in
-	
-	(* TODO ?: Check only one body exists *)
-	spec.K.pbody <- Some body
-*)	
 
 let translate_init x t =
   let glb_inits = ref [] in
