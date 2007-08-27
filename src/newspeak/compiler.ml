@@ -23,7 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-open Lexing 
+open Lexing
+open Csyntax
+
+module N = Newspeak
+module K = Npkil
 
 let parse fname =
   let cin = open_in fname in
@@ -44,13 +48,62 @@ let parse fname =
 (* TODO: code cleanup: remove this: remove any use of this *)
 let dummy_loc = ("", -1, -1)
 
+let scalar_of_t t = 
+  match t with 
+      K.Scalar t -> t
+    | _ -> Npkcontext.error "Compiler.translate_stmt" "scalar type expected"
+
+let translate_typ t =
+  match t with
+      Int -> K.Scalar (N.Int (N.Signed, Config.size_of_int))
+
+let get_var env x =
+  let rec get n env =
+    match env with
+      | (y, t)::_ when y = x -> (n, t)
+      | _::tl -> get (n+1) tl
+      | [] -> 
+	  Npkcontext.error "Compiler.get_var" ("Variable "^x^"not declared")
+  in
+    get 0 env
+
+let rec translate_lv env lv =
+  match lv with
+      Var x -> 
+	let (n, t) = get_var env x in
+	  (K.Local n, t)
+
+and translate_exp env e =
+  match e with
+      Const i -> K.Const (N.CInt64 i)
+
+let rec translate_blk env x =
+  match x with
+      (Decl (x, t))::body ->
+	let t = translate_typ t in
+	let body = translate_blk ((x, t)::env) body in
+	  (K.Decl (x, t, body), dummy_loc)::[]
+    | hd::tl -> (translate_stmt env hd)::(translate_blk env tl)
+    | [] -> []
+	
+and translate_stmt env x =
+  match x with
+      Set (lv, e) -> 
+	let (lv, t) = translate_lv env lv in
+	let e = translate_exp env e in
+	  let t = scalar_of_t t in
+	    (K.Set (lv, e, t), dummy_loc)
+    | Decl _ -> 
+	Npkcontext.error "Compiler.compile.translate_stmt"
+	  "should be unreachable code"
 
 let compile fname = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
   let translate_fundec (f, body) = 
-    Hashtbl.add fundefs f ([], None, Some []) 
+    let body = translate_blk [] body in
+      Hashtbl.add fundefs f ([], None, Some body) 
   in
 
   let translate_global x = translate_fundec x in
