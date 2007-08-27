@@ -380,13 +380,6 @@ let dump_npko (fname, globs, funs) =
 	  print_newline ()
   in
 
-
-  let print_list title list =
-    print_endline title;
-    String_set.iter print_endline list;
-    print_newline ()
-  in
-
   let print_usedglbs title globs =
     print_endline title;
     Hashtbl.iter (fun x (_, _, _, used) -> if used then print_endline x) globs;
