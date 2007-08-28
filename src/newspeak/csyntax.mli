@@ -34,11 +34,13 @@ and declaration = (base_typ * var_modifier)
 and base_typ = 
     | Integer of (sign * ityp)    
     | Struct of declaration list
+    | Union of declaration list
 
 and var_modifier =
     | Variable of string
     | Array of (var_modifier * Int64.t)
     | Pointer of var_modifier
+    | Function of (var_modifier * base_typ list)
 
 and ityp = 
     | Char 

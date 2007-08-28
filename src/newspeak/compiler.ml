@@ -94,13 +94,11 @@ let translate_var_modifier b v =
       | Array (v, n) -> 
 	  let n = Some (int64_to_int n) in
 	    translate (K.Array (b, n)) v
-(*	  let (t, x) = translate v in
-	    (K.Array (t, n), x)
-*)
+      | Function (Pointer v, _) -> translate (K.Scalar N.FunPtr) v
       | Pointer v -> translate (K.Scalar N.Ptr) v
-(*	  let (_, x) = translate v in
-	  (K.Scalar N.Ptr, x)
-*)
+      | Function _ -> 
+	  Npkcontext.error "Compiler.translate_var_modifier" 
+	    "case not implemented yet"
   in
     translate b v
 
@@ -111,9 +109,10 @@ let rec translate_decl (b, v) =
 and translate_base_typ t =
   match t with
       Integer (s, t) -> K.Scalar (translate_ityp (translate_sign s) t)
-    | Struct f -> K.Region (translate_fields f)
+    | Struct f -> K.Region (translate_struct_fields f)
+    | Union f -> K.Region (translate_union_fields f)
 
-and translate_fields f =
+and translate_struct_fields f =
   let rec translate o f =
     match f with
 	(b, v)::f -> 
@@ -125,6 +124,16 @@ and translate_fields f =
       | [] -> ([], 0)
   in
     translate 0 f
+
+and translate_union_fields f =
+  let n = ref 0 in
+  let translate (b, v) =
+    let (t, _) = translate_decl (b, v) in
+    let sz = K.size_of t in
+      if !n < sz then n := sz;
+      (0, t)
+  in
+    (List.map translate f, !n)
 
 let rec translate_lv env lv =
   match lv with

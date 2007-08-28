@@ -57,6 +57,7 @@ rule token = parse
     "char"              { CHAR }
   | "int"               { INT }
   | "struct"            { STRUCT }
+  | "union"             { UNION }
   | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
 
@@ -64,6 +65,7 @@ rule token = parse
   | integer             { INTEGER (Int64.of_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)
+  | ","                 { COMMA }
   | "{"                 { LBRACE }
   | "}"                 { RBRACE }
   | "("                 { LPAREN }

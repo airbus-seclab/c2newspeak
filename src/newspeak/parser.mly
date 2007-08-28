@@ -35,14 +35,15 @@ let append_decl (x, t) body = (Decl ((x, t), body), get_loc ())::[]
 
 %}
 
-%token CHAR INT STRUCT UNSIGNED VOID
-%token LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON STAR
+%token CHAR INT STRUCT UNION UNSIGNED VOID
+%token COMMA LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON STAR
 
 %token <string> IDENTIFIER
 %token <Int64.t> INTEGER
 
 
 %left STAR
+%left LPAREN
 %left LBRACKET
 
 %type <Csyntax.prog> cprog
@@ -85,6 +86,7 @@ base_typ:
   ityp                                         { Integer (Signed, $1) }
 | UNSIGNED ityp                                { Integer (Unsigned, $2) }
 | STRUCT LBRACE declaration_list RBRACE        { Struct $3 }
+| UNION LBRACE declaration_list RBRACE         { Union $3 }
 ;;
 
 declaration_list:
@@ -96,7 +98,18 @@ var_modifier:
   IDENTIFIER                                   { Variable $1 }
 | var_modifier LBRACKET INTEGER RBRACKET       { Array ($1, $3) }
 | STAR var_modifier                            { Pointer $2 }
+| var_modifier LPAREN base_typ_list RPAREN     { Function ($1, $3) }
 | LPAREN var_modifier RPAREN                   { $2 }
+;;
+
+base_typ_list:
+  non_empty_base_typ_list                      { $1 }
+|                                              { [] }
+;;
+
+non_empty_base_typ_list:
+  base_typ COMMA base_typ_list                 { $1::$3 }
+| base_typ                                     { $1::[] }
 ;;
 
 ityp:
