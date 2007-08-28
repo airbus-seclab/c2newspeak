@@ -36,19 +36,22 @@ let append_decl (x, t) body = (Decl (x, t, body), get_loc ())::[]
 %}
 
 %token CHAR INT UNSIGNED VOID
-%token LBRACE RBRACE LBRACKET RBRACKET EQ SEMICOLON STAR
+%token LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON STAR
 
 %token <string> IDENTIFIER
 %token <Int64.t> INTEGER
 
-%type <Csyntax.prog> cprog
 
+%left STAR
+%left LBRACKET
+
+%type <Csyntax.prog> cprog
 %start cprog
 
 %%
 
 cprog:
-  VOID IDENTIFIER LBRACKET RBRACKET block      { ($2, $5)::[] }
+  VOID IDENTIFIER LPAREN RPAREN block          { ($2, $5)::[] }
 ;;
 
 block:
@@ -62,7 +65,7 @@ statement_list:
 ;;
 
 declaration:
-  ctyp IDENTIFIER SEMICOLON                    { ($2, $1) }
+  base_typ var_modifier SEMICOLON              { ($1, $2) }
 ;;
 
 assignment:
@@ -77,17 +80,20 @@ expression:
   INTEGER                                      { Const $1 }
 ;;
 
-ctyp:
-  sign ityp                                    { Integer ($1, $2) }
-| ctyp STAR                                    { Pointer $1 }
+// carefull not to have any empty rule: this deceives line number location
+base_typ:
+  ityp                                         { Integer (Signed, $1) }
+| UNSIGNED ityp                                { Integer (Unsigned, $2) }
+;;
+
+var_modifier:
+  IDENTIFIER                                   { Variable $1 }
+| var_modifier LBRACKET INTEGER RBRACKET       { Array ($1, $3) }
+| STAR var_modifier                            { Pointer $2 }
+| LPAREN var_modifier RPAREN                   { $2 }
 ;;
 
 ityp:
   CHAR                                         { Char }
 | INT                                          { Int }
-;;
-
-sign:
-                                               { Signed }
-| UNSIGNED                                     { Unsigned }
 ;;

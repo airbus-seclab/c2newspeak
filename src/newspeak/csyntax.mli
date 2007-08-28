@@ -29,9 +29,13 @@ and global = fundec
 
 and fundec = (fname * blk)
 
-and typ = 
-    | Integer of (sign * ityp)
-    | Pointer of typ
+and base_typ = 
+    | Integer of (sign * ityp)    
+
+and var_modifier =
+    | Variable of string
+    | Array of (var_modifier * Int64.t)
+    | Pointer of var_modifier
 
 and ityp = 
     | Char 
@@ -46,7 +50,7 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-    | Decl of (vname * typ * blk)
+    | Decl of (base_typ * var_modifier * blk)
     | Set of (lv * exp)
     
 and lv = Var of vname

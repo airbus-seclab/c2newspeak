@@ -29,6 +29,13 @@ open Csyntax
 module N = Newspeak
 module K = Npkil
 
+let int64_to_int x =
+  if Int64.compare x (Int64.of_int max_int) > 0 
+  then Npkcontext.error "Compiler.int64_to_int" "integer too big";
+  if Int64.compare x (Int64.of_int max_int) > 0 
+  then Npkcontext.error "Compiler.int64_to_int" "expecting positive integer";
+  Int64.to_int x
+
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
@@ -53,6 +60,16 @@ let scalar_of_t t =
       K.Scalar t -> t
     | _ -> Npkcontext.error "Compiler.translate_stmt" "scalar type expected"
 
+let get_var env x =
+  let rec get n env =
+    match env with
+      | (y, t)::_ when y = x -> (n, t)
+      | _::tl -> get (n+1) tl
+      | [] -> 
+	  Npkcontext.error "Compiler.get_var" ("Variable "^x^"not declared")
+  in
+    get 0 env
+
 let translate_sign s =
   match s with
       Signed -> N.Signed
@@ -63,20 +80,30 @@ let translate_ityp s t =
       Char -> N.Int (s, Config.size_of_char)
     | Int -> N.Int (s, Config.size_of_int)
 
-let translate_typ t =
+let translate_base_typ t =
   match t with
       Integer (s, t) -> K.Scalar (translate_ityp (translate_sign s) t)
-    | Pointer _ -> K.Scalar N.Ptr
 
-let get_var env x =
-  let rec get n env =
-    match env with
-      | (y, t)::_ when y = x -> (n, t)
-      | _::tl -> get (n+1) tl
-      | [] -> 
-	  Npkcontext.error "Compiler.get_var" ("Variable "^x^"not declared")
+let translate_var_modifier b v =
+  let rec translate b v =
+    match v with
+	Variable x -> (b, x)
+      | Array (v, n) -> 
+	  let n = Some (int64_to_int n) in
+	    translate (K.Array (b, n)) v
+(*	  let (t, x) = translate v in
+	    (K.Array (t, n), x)
+*)
+      | Pointer v -> translate (K.Scalar N.Ptr) v
+(*	  let (_, x) = translate v in
+	  (K.Scalar N.Ptr, x)
+*)
   in
-    get 0 env
+    translate b v
+
+let translate_decl (b, v) =
+  let b = translate_base_typ b in
+    translate_var_modifier b v
 
 let rec translate_lv env lv =
   match lv with
@@ -97,8 +124,8 @@ and translate_stmt env (x, loc) = (translate_stmtkind env x, loc)
 
 and translate_stmtkind env x =
   match x with
-      Decl (x, t, body) ->
-	let t = translate_typ t in
+      Decl (b, v, body) ->
+	let (t, x) = translate_decl (b, v) in
 	let body = translate_blk ((x, t)::env) body in
 	  K.Decl (x, t, body)
 

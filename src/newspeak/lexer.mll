@@ -31,7 +31,7 @@ let cnt_line lexbuf =
   let pos = 
     { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 }
   in
-  lexbuf.lex_curr_p <- pos
+    lexbuf.lex_curr_p <- pos
 
 let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
@@ -65,8 +65,10 @@ rule token = parse
 (* punctuation *)
   | "{"                 { LBRACE }
   | "}"                 { RBRACE }
-  | "("                 { LBRACKET }
-  | ")"                 { RBRACKET }
+  | "("                 { LPAREN }
+  | ")"                 { RPAREN }
+  | "["                 { LBRACKET }
+  | "]"                 { RBRACKET }
   | "="                 { EQ }
   | ";"                 { SEMICOLON }
   | "*"                 { STAR }
