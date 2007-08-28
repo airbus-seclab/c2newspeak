@@ -25,3 +25,4 @@
 
 let size_of_char = 1
 let size_of_int = 4
+let size_of_ptr = 4

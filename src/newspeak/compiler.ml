@@ -29,6 +29,13 @@ open Csyntax
 module N = Newspeak
 module K = Npkil
 
+(* TODO: check this for various architecture ? 
+   Here align everything on 4 *)
+let align t o = 
+  if (o mod 4) = 0 then o
+  else if K.size_of t <= (4 - (o mod 4)) then o
+  else o + (4 - (o mod 4))
+
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 
   then Npkcontext.error "Compiler.int64_to_int" "integer too big";
@@ -80,10 +87,6 @@ let translate_ityp s t =
       Char -> N.Int (s, Config.size_of_char)
     | Int -> N.Int (s, Config.size_of_int)
 
-let translate_base_typ t =
-  match t with
-      Integer (s, t) -> K.Scalar (translate_ityp (translate_sign s) t)
-
 let translate_var_modifier b v =
   let rec translate b v =
     match v with
@@ -101,9 +104,27 @@ let translate_var_modifier b v =
   in
     translate b v
 
-let translate_decl (b, v) =
+let rec translate_decl (b, v) =
   let b = translate_base_typ b in
     translate_var_modifier b v
+
+and translate_base_typ t =
+  match t with
+      Integer (s, t) -> K.Scalar (translate_ityp (translate_sign s) t)
+    | Struct f -> K.Region (translate_fields f)
+
+and translate_fields f =
+  let rec translate o f =
+    match f with
+	(b, v)::f -> 
+	  let (t, _) = translate_decl (b, v) in
+	  let sz = K.size_of t in
+	  let o = align t o in
+	  let (f, n) = translate (o+sz) f in
+	    ((o, t)::f, n+sz)
+      | [] -> ([], 0)
+  in
+    translate 0 f
 
 let rec translate_lv env lv =
   match lv with
@@ -124,7 +145,7 @@ and translate_stmt env (x, loc) = (translate_stmtkind env x, loc)
 
 and translate_stmtkind env x =
   match x with
-      Decl (b, v, body) ->
+      Decl ((b, v), body) ->
 	let (t, x) = translate_decl (b, v) in
 	let body = translate_blk ((x, t)::env) body in
 	  K.Decl (x, t, body)

@@ -56,6 +56,7 @@ rule token = parse
 (* types *)
     "char"              { CHAR }
   | "int"               { INT }
+  | "struct"            { STRUCT }
   | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
 

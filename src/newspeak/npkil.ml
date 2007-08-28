@@ -527,3 +527,10 @@ let create_cstr str =
 (* TODO: code cleanup: not nice *)
     ("", -1, -1), 
     Some init, true)
+
+let rec size_of t =
+  match t with
+      Scalar t -> Newspeak.size_of_scalar Config.size_of_ptr t
+    | Array (t, Some n) -> (size_of t) * n
+    | Region (_, n) -> n
+    | Array _ -> Npkcontext.error "Npkil.size_of" "unknown size of array"

@@ -31,11 +31,11 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let append_decl (x, t) body = (Decl (x, t, body), get_loc ())::[]
+let append_decl (x, t) body = (Decl ((x, t), body), get_loc ())::[]
 
 %}
 
-%token CHAR INT UNSIGNED VOID
+%token CHAR INT STRUCT UNSIGNED VOID
 %token LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON STAR
 
 %token <string> IDENTIFIER
@@ -84,6 +84,12 @@ expression:
 base_typ:
   ityp                                         { Integer (Signed, $1) }
 | UNSIGNED ityp                                { Integer (Unsigned, $2) }
+| STRUCT LBRACE declaration_list RBRACE        { Struct $3 }
+;;
+
+declaration_list:
+  declaration declaration_list                 { $1::$2 }
+| declaration                                  { $1::[] }
 ;;
 
 var_modifier:
