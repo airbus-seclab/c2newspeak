@@ -23,4 +23,5 @@
   email: charles.hymans@penjili.org
 *)
 
+let size_of_char = 1
 let size_of_int = 4

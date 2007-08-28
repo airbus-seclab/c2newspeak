@@ -30,8 +30,16 @@ and global = fundec
 and fundec = (fname * blk)
 
 and typ = 
+    | Integer of (sign * ityp)
+    | Pointer of typ
+
+and ityp = 
+    | Char 
     | Int
-    | UInt
+
+and sign =
+    | Signed
+    | Unsigned
 
 and blk = stmt list
 

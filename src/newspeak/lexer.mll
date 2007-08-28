@@ -54,7 +54,8 @@ rule token = parse
 
 (* keywords *)
 (* types *)
-    "int"               { INT }
+    "char"              { CHAR }
+  | "int"               { INT }
   | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
 
@@ -68,6 +69,7 @@ rule token = parse
   | ")"                 { RBRACKET }
   | "="                 { EQ }
   | ";"                 { SEMICOLON }
+  | "*"                 { STAR }
 
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 

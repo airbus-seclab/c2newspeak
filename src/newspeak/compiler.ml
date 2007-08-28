@@ -53,10 +53,20 @@ let scalar_of_t t =
       K.Scalar t -> t
     | _ -> Npkcontext.error "Compiler.translate_stmt" "scalar type expected"
 
+let translate_sign s =
+  match s with
+      Signed -> N.Signed
+    | Unsigned -> N.Unsigned
+
+let translate_ityp s t =
+  match t with
+      Char -> N.Int (s, Config.size_of_char)
+    | Int -> N.Int (s, Config.size_of_int)
+
 let translate_typ t =
   match t with
-      Int -> K.Scalar (N.Int (N.Signed, Config.size_of_int))
-    | UInt -> K.Scalar (N.Int (N.Unsigned, Config.size_of_int))
+      Integer (s, t) -> K.Scalar (translate_ityp (translate_sign s) t)
+    | Pointer _ -> K.Scalar N.Ptr
 
 let get_var env x =
   let rec get n env =

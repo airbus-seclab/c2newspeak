@@ -35,8 +35,8 @@ let append_decl (x, t) body = (Decl (x, t, body), get_loc ())::[]
 
 %}
 
-%token VOID INT UNSIGNED
-%token LBRACE RBRACE LBRACKET RBRACKET EQ SEMICOLON
+%token CHAR INT UNSIGNED VOID
+%token LBRACE RBRACE LBRACKET RBRACKET EQ SEMICOLON STAR
 
 %token <string> IDENTIFIER
 %token <Int64.t> INTEGER
@@ -78,6 +78,16 @@ expression:
 ;;
 
 ctyp:
-  INT                                          { Int }
-| UNSIGNED INT                                 { UInt }
+  sign ityp                                    { Integer ($1, $2) }
+| ctyp STAR                                    { Pointer $1 }
+;;
+
+ityp:
+  CHAR                                         { Char }
+| INT                                          { Int }
+;;
+
+sign:
+                                               { Signed }
+| UNSIGNED                                     { Unsigned }
 ;;
