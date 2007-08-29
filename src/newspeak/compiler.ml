@@ -117,7 +117,7 @@ and translate_base_typ t =
 and translate_struct_fields f =
   let rec translate o f =
     match f with
-	(b, v)::f -> 
+	(b, v, _)::f -> 
 	  let (t, _) = translate_decl (b, v) in
 	  let sz = K.size_of t in
 	  let o = align t o in
@@ -128,7 +128,7 @@ and translate_struct_fields f =
 	    ([], o)
   in
     match f with
-	(b, v)::[] -> 
+	(b, v, _)::[] -> 
 	  let (t, _) = translate_decl (b, v) in
 	  let sz = K.size_of t in
 	    ((0, t)::[], sz)
@@ -136,13 +136,29 @@ and translate_struct_fields f =
 
 and translate_union_fields f =
   let n = ref 0 in
-  let translate (b, v) =
+  let translate (b, v, _) =
     let (t, _) = translate_decl (b, v) in
     let sz = K.size_of t in
       if !n < sz then n := sz;
       (0, t)
   in
     (List.map translate f, !n)
+
+let rec translate_decl_list env x =
+  match x with
+      (b, v, loc)::tl ->
+	let (t, x) = translate_decl (b, v) in
+	let (tl, env) = translate_decl_list env tl in
+	  ((x, t, loc)::tl, (x, t)::env)
+    | [] -> ([], env)
+
+let rec append_decls decls body =
+  match decls with
+      (x, t, loc)::tl -> 
+	let (_, n,_) = loc in
+	let body = append_decls tl body in
+	  (K.Decl (x, t, body), loc)::[]
+    | [] -> body
 
 let rec translate_lv env lv =
   match lv with
@@ -154,20 +170,15 @@ and translate_exp env e =
   match e with
       Const i -> K.Const (N.CInt64 i)
 
-let rec translate_blk env x =
-  match x with
-    | hd::tl -> (translate_stmt env hd)::(translate_blk env tl)
-    | [] -> []
+let rec translate_blk env (decls, body) =
+  let (decls, env) = translate_decl_list env decls in
+  let body = List.map (translate_stmt env) body in
+    append_decls decls body
 
 and translate_stmt env (x, loc) = (translate_stmtkind env x, loc)
 
 and translate_stmtkind env x =
   match x with
-      Decl ((b, v), body) ->
-	let (t, x) = translate_decl (b, v) in
-	let body = translate_blk ((x, t)::env) body in
-	  K.Decl (x, t, body)
-
     | Set (lv, e) -> 
 	let (lv, t) = translate_lv env lv in
 	let e = translate_exp env e in

@@ -31,7 +31,9 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let append_decl (x, t) body = (Decl ((x, t), body), get_loc ())::[]
+let flatten_decl (b, m) = 
+  let (v, l) = m in 
+    (b, v, l)
 
 %}
 
@@ -56,17 +58,17 @@ cprog:
 ;;
 
 block:
-  LBRACE statement_list RBRACE                 { $2 }
+  LBRACE declaration_list statement_list 
+  RBRACE                                       { ($2, $3) }
 ;;
 
 statement_list:
   assignment statement_list                    { ($1, get_loc ())::$2 }
-| declaration statement_list                   { append_decl $1 $2 } 
 |                                              { [] }
 ;;
 
 declaration:
-  base_typ var_modifier SEMICOLON              { ($1, $2) }
+  base_typ anchored_var_modifier SEMICOLON     { flatten_decl ($1, $2) }
 ;;
 
 assignment:
@@ -92,6 +94,10 @@ base_typ:
 declaration_list:
   declaration declaration_list                 { $1::$2 }
 | declaration                                  { $1::[] }
+;;
+
+anchored_var_modifier:
+  var_modifier                                 { ($1, get_loc ()) }
 ;;
 
 var_modifier:

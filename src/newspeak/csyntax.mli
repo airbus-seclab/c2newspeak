@@ -29,7 +29,7 @@ and global = fundec
 
 and fundec = (fname * blk)
 
-and declaration = (base_typ * var_modifier)
+and declaration = (base_typ * var_modifier * location)
 
 and base_typ = 
     | Integer of (sign * ityp)    
@@ -50,12 +50,11 @@ and sign =
     | Signed
     | Unsigned
 
-and blk = stmt list
+and blk = declaration list * stmt list
 
 and stmt = (stmtkind * location)
 
 and stmtkind =
-    | Decl of (declaration * blk)
     | Set of (lv * exp)
     
 and lv = Var of vname
