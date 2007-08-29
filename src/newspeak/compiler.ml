@@ -36,6 +36,8 @@ let align t o =
   else if K.size_of t <= (4 - (o mod 4)) then o
   else o + (4 - (o mod 4))
 
+let align_end o = align (K.Scalar (N.Int (N.Signed, 4))) o
+
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 
   then Npkcontext.error "Compiler.int64_to_int" "integer too big";
@@ -120,10 +122,17 @@ and translate_struct_fields f =
 	  let sz = K.size_of t in
 	  let o = align t o in
 	  let (f, n) = translate (o+sz) f in
-	    ((o, t)::f, n+sz)
-      | [] -> ([], 0)
+	    ((o, t)::f, n)
+      | [] -> 
+	  let o = align_end o in
+	    ([], o)
   in
-    translate 0 f
+    match f with
+	(b, v)::[] -> 
+	  let (t, _) = translate_decl (b, v) in
+	  let sz = K.size_of t in
+	    ((0, t)::[], sz)
+      | _ -> translate 0 f
 
 and translate_union_fields f =
   let n = ref 0 in
