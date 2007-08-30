@@ -1,4 +1,4 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -21,59 +21,9 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
 
-type prog = global list
+  Olivier Levillain
+  email: olivier.levillain@penjili.org
+*/
 
-and global =
-    | FunctionDef of (declaration * blk)
-    | GlobalDecl of declaration
-
-and declaration = (base_typ * var_modifier * location)
-
-and base_typ =
-    | Void 
-    | Integer of (sign * ityp)    
-    | Struct of declaration list
-    | Union of declaration list
-
-and var_modifier =
-    | Variable of string
-    | FunctionName of fname
-    | Array of (var_modifier * Int64.t)
-    | Pointer of var_modifier
-    | FunctionProto of (var_modifier * base_typ list)
-
-and ityp = 
-    | Char 
-    | Int
-
-and sign =
-    | Signed
-    | Unsigned
-
-and blk = declaration list * stmt list
-
-and stmt = (stmtkind * location)
-
-and stmtkind =
-    | Set of (lv * exp)
-    
-and lv = Var of vname
- 
-and exp = Const of cst
-
-and cst = Int64.t
-
-and location = (file * line_nb * charac)
-
-and file = string
-
-and line_nb = int
-
-and charac = int
-
-and fname = string
-
-and vname = string
-
+int x;

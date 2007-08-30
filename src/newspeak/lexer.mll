@@ -83,6 +83,7 @@ rule token = parse
   | line_terminator     { cnt_line lexbuf; token lexbuf }
   | white_space         { token lexbuf }
 
+  | eof                 { EOF }
 (* error fallback *)
   | _                   { invalid_arg (unknown_lexeme lexbuf) }
 

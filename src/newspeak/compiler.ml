@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: code optimization: get rid of env, and use the globals Hashtbl
+   rename it to env ! *)
 open Lexing
 open Csyntax
 
@@ -89,36 +91,63 @@ let translate_ityp s t =
       Char -> N.Int (s, Config.size_of_char)
     | Int -> N.Int (s, Config.size_of_int)
 
-let translate_var_modifier b v =
+let rec translate_fun_decl (b, v, loc) =
+  let b = 
+    match b with
+	Void -> None
+      | _ -> Some (translate_base_typ b) 
+  in
   let rec translate b v =
     match v with
-	Variable x -> (b, x)
-      | Array (v, n) -> 
-	  let n = Some (int64_to_int n) in
-	    translate (K.Array (b, n)) v
-      | Function (Pointer v, _) -> translate (K.Scalar N.FunPtr) v
-      | Pointer v -> translate (K.Scalar N.Ptr) v
-      | Function _ -> 
+	Variable x -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
+      | FunctionName f -> (b, f, loc)
+      | Array _ -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" 
+	    "function can not return array"
+      | FunctionProto (Pointer v, _) -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" 
+	    "function can not return function pointer"
+      | Pointer v -> translate (Some (K.Scalar N.Ptr)) v
+      | FunctionProto _ -> 
 	  Npkcontext.error "Compiler.translate_var_modifier" 
 	    "case not implemented yet"
   in
     translate b v
 
-let rec translate_decl (b, v) =
+and translate_decl (b, v, loc) =
   let b = translate_base_typ b in
-    translate_var_modifier b v
+  let rec translate b v =
+    match v with
+	Variable x -> (b, x, loc)
+      | FunctionName x -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" 
+	    "local function definition not allowed"
+      | Array (v, n) -> 
+	  let n = Some (int64_to_int n) in
+	    translate (K.Array (b, n)) v
+      | FunctionProto (Pointer v, _) -> translate (K.Scalar N.FunPtr) v
+      | Pointer v -> translate (K.Scalar N.Ptr) v
+      | FunctionProto _ -> 
+	  Npkcontext.error "Compiler.translate_var_modifier" 
+	    "case not implemented yet"
+  in
+    translate b v
 
 and translate_base_typ t =
   match t with
       Integer (s, t) -> K.Scalar (translate_ityp (translate_sign s) t)
     | Struct f -> K.Region (translate_struct_fields f)
     | Union f -> K.Region (translate_union_fields f)
+    | Void -> 
+	Npkcontext.error "Compiler.translate_base_typ"
+	  "void type not allowed in variable declaration"
 
 and translate_struct_fields f =
   let rec translate o f =
     match f with
-	(b, v, _)::f -> 
-	  let (t, _) = translate_decl (b, v) in
+	d::f -> 
+	  let (t, _, _) = translate_decl d in
 	  let sz = K.size_of t in
 	  let o = align t o in
 	  let (f, n) = translate (o+sz) f in
@@ -128,16 +157,16 @@ and translate_struct_fields f =
 	    ([], o)
   in
     match f with
-	(b, v, _)::[] -> 
-	  let (t, _) = translate_decl (b, v) in
+	d::[] -> 
+	  let (t, _, _) = translate_decl d in
 	  let sz = K.size_of t in
 	    ((0, t)::[], sz)
       | _ -> translate 0 f
 
 and translate_union_fields f =
   let n = ref 0 in
-  let translate (b, v, _) =
-    let (t, _) = translate_decl (b, v) in
+  let translate d =
+    let (t, _, _) = translate_decl d in
     let sz = K.size_of t in
       if !n < sz then n := sz;
       (0, t)
@@ -146,8 +175,8 @@ and translate_union_fields f =
 
 let rec translate_decl_list env x =
   match x with
-      (b, v, loc)::tl ->
-	let (t, x) = translate_decl (b, v) in
+      d::tl ->
+	let (t, x, loc) = translate_decl d in
 	let (tl, env) = translate_decl_list env tl in
 	  ((x, t, loc)::tl, (x, t)::env)
     | [] -> ([], env)
@@ -182,19 +211,24 @@ and translate_stmtkind env x =
     | Set (lv, e) -> 
 	let (lv, t) = translate_lv env lv in
 	let e = translate_exp env e in
-	  let t = scalar_of_t t in
-	    K.Set (lv, e, t)
-
+	let t = scalar_of_t t in
+	  K.Set (lv, e, t)
+	    
 let compile fname = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
+    
+  let translate_global x =
+    match x with
+	FunctionDef (d, body) -> 
+	  let (t, f, _) = translate_fun_decl d in
+	  let body = translate_blk [] body in
+	    Hashtbl.add fundefs f ([], None, Some body) 
 
-  let translate_fundec (f, body) = 
-    let body = translate_blk [] body in
-      Hashtbl.add fundefs f ([], None, Some body) 
+      | GlobalDecl d -> 
+	  let (t, x, loc) = translate_decl d in
+	    Hashtbl.add globals x (t, loc, Some None, false)
   in
-
-  let translate_global x = translate_fundec x in
 
   let cprog = parse fname in
     

@@ -39,11 +39,12 @@ let flatten_decl (b, m) =
 
 %token CHAR INT STRUCT UNION UNSIGNED VOID
 %token COMMA LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON STAR
+%token EOF
 
 %token <string> IDENTIFIER
 %token <Int64.t> INTEGER
 
-
+%left IDENTIFIER
 %left STAR
 %left LPAREN
 %left LBRACKET
@@ -54,7 +55,26 @@ let flatten_decl (b, m) =
 %%
 
 cprog:
-  VOID IDENTIFIER LPAREN RPAREN block          { ($2, $5)::[] }
+  global cprog                                 { $1::$2 }
+| global                                       { $1::[] }
+;;
+
+global:
+| declaration block                            { FunctionDef ($1, $2) }
+| declaration SEMICOLON                        { GlobalDecl $1 }
+;;
+
+declaration_list:
+  declaration SEMICOLON declaration_list       { $1::$3 }
+|                                              { [] }
+;;
+
+declaration:
+  base_typ anchored_var_modifier               { flatten_decl ($1, $2) }
+;;
+
+anchored_var_modifier:
+   var_modifier                                { ($1, get_loc ()) }
 ;;
 
 block:
@@ -65,10 +85,6 @@ block:
 statement_list:
   assignment statement_list                    { ($1, get_loc ())::$2 }
 |                                              { [] }
-;;
-
-declaration:
-  base_typ anchored_var_modifier SEMICOLON     { flatten_decl ($1, $2) }
 ;;
 
 assignment:
@@ -85,26 +101,19 @@ expression:
 
 // carefull not to have any empty rule: this deceives line number location
 base_typ:
-  ityp                                         { Integer (Signed, $1) }
+  VOID                                         { Void }
+| ityp                                         { Integer (Signed, $1) }
 | UNSIGNED ityp                                { Integer (Unsigned, $2) }
 | STRUCT LBRACE declaration_list RBRACE        { Struct $3 }
 | UNION LBRACE declaration_list RBRACE         { Union $3 }
 ;;
 
-declaration_list:
-  declaration declaration_list                 { $1::$2 }
-| declaration                                  { $1::[] }
-;;
-
-anchored_var_modifier:
-  var_modifier                                 { ($1, get_loc ()) }
-;;
-
 var_modifier:
   IDENTIFIER                                   { Variable $1 }
+| IDENTIFIER LPAREN RPAREN                     { FunctionName $1 }
 | var_modifier LBRACKET INTEGER RBRACKET       { Array ($1, $3) }
 | STAR var_modifier                            { Pointer $2 }
-| var_modifier LPAREN base_typ_list RPAREN     { Function ($1, $3) }
+| var_modifier LPAREN base_typ_list RPAREN     { FunctionProto ($1, $3) }
 | LPAREN var_modifier RPAREN                   { $2 }
 ;;
 

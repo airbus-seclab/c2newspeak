@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (3)^int4 x;
-  (4)^0- =(int4) 0;
+  (31)^int4 x;
+  (32)^0- =(int4) 0;
 }
 
 
