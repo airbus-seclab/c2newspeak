@@ -71,16 +71,6 @@ let scalar_of_t t =
       K.Scalar t -> t
     | _ -> Npkcontext.error "Compiler.translate_stmt" "scalar type expected"
 
-let get_var env x =
-  let rec get n env =
-    match env with
-      | (y, t)::_ when y = x -> (n, t)
-      | _::tl -> get (n+1) tl
-      | [] -> 
-	  Npkcontext.error "Compiler.get_var" ("Variable "^x^"not declared")
-  in
-    get 0 env
-
 let translate_sign s =
   match s with
       Signed -> N.Signed
@@ -172,62 +162,80 @@ and translate_union_fields f =
       (0, t)
   in
     (List.map translate f, !n)
-
-let rec translate_decl_list env x =
-  match x with
-      d::tl ->
-	let (t, x, loc) = translate_decl d in
-	let (tl, env) = translate_decl_list env tl in
-	  ((x, t, loc)::tl, (x, t)::env)
-    | [] -> ([], env)
-
-let rec append_decls decls body =
-  match decls with
-      (x, t, loc)::tl -> 
-	let (_, n,_) = loc in
-	let body = append_decls tl body in
-	  (K.Decl (x, t, body), loc)::[]
-    | [] -> body
-
-let rec translate_lv env lv =
-  match lv with
-      Var x -> 
-	let (n, t) = get_var env x in
-	  (K.Local n, t)
-
-and translate_exp env e =
-  match e with
-      Const i -> K.Const (N.CInt64 i)
-
-let rec translate_blk env (decls, body) =
-  let (decls, env) = translate_decl_list env decls in
-  let body = List.map (translate_stmt env) body in
-    append_decls decls body
-
-and translate_stmt env (x, loc) = (translate_stmtkind env x, loc)
-
-and translate_stmtkind env x =
-  match x with
-    | Set (lv, e) -> 
-	let (lv, t) = translate_lv env lv in
-	let e = translate_exp env e in
-	let t = scalar_of_t t in
-	  K.Set (lv, e, t)
 	    
 let compile fname = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
+  let env = Hashtbl.create 100 in
+  let vcnt = ref 0 in
+  let push_local x t =
+    incr vcnt;
+    Hashtbl.add env x (!vcnt, t)
+  in
+  let pop x =
+    vcnt := !vcnt - 1;
+    Hashtbl.remove env x
+  in
+  let get_var x =
+    try 
+      let (n, t) = Hashtbl.find env x in
+	(K.Local (!vcnt - n), t)
+    with Not_found -> 
+      try
+	let (t, _, _, _) = Hashtbl.find globals x in
+	  (K.Global x, t)
+      with Not_found ->
+	Npkcontext.error "Compiler.get_var" ("Variable "^x^" not declared")
+  in
     
-  let translate_global x =
+  let rec translate_lv lv =
+    match lv with
+	Var x -> get_var x
+
+  and translate_exp e =
+    match e with
+	Const i -> K.Const (N.CInt64 i)
+      | Lval lv -> 
+	  let (lv, t) = translate_lv lv in
+	    begin match t with
+		K.Scalar t -> K.Lval (lv, t)
+	      | _ -> 
+		  Npkcontext.error "Compiler.translate_exp" 
+		    "scalar value expected in expression"
+	    end
+  in
+
+  let rec translate_blk (decls, body) =
+    match decls with
+	[] -> List.map translate_stmt body
+      | d::tl ->
+	  let (t, x, loc) = translate_decl d in
+	    push_local x t;
+	    let body = translate_blk (tl, body) in
+	      pop x;
+	      (K.Decl (x, t, body), loc)::[]
+	      
+  and translate_stmt (x, loc) = (translate_stmtkind x, loc)
+    
+  and translate_stmtkind x =
+    match x with
+      | Set (lv, e) -> 
+	  let (lv, t) = translate_lv lv in
+	  let e = translate_exp e in
+	  let t = scalar_of_t t in
+	    K.Set (lv, e, t)
+  in
+
+let translate_global x =
     match x with
 	FunctionDef (d, body) -> 
 	  let (t, f, _) = translate_fun_decl d in
-	  let body = translate_blk [] body in
+	  let body = translate_blk body in
 	    Hashtbl.add fundefs f ([], None, Some body) 
 
       | GlobalDecl d -> 
 	  let (t, x, loc) = translate_decl d in
-	    Hashtbl.add globals x (t, loc, Some None, false)
+	    Hashtbl.add globals x (t, loc, Some None, true)
   in
 
   let cprog = parse fname in

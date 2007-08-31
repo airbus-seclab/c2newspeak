@@ -61,7 +61,9 @@ and stmtkind =
     
 and lv = Var of vname
  
-and exp = Const of cst
+and exp = 
+    | Const of cst
+    | Lval of lv
 
 and cst = Int64.t
 

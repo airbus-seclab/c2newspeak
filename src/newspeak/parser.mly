@@ -97,6 +97,7 @@ left_value:
 
 expression:
   INTEGER                                      { Const $1 }
+| left_value                                   { Lval $1 }
 ;;
 
 // carefull not to have any empty rule: this deceives line number location
