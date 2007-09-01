@@ -162,11 +162,10 @@ and translate_access strict lv e =
     match translate_typ t with
 	K.Array (elt_t, len) ->
 	  let elt_sz = Cilutils.size_of_subtyp t in
-	  let (len, sz) =
+	  let len =
 	    match (len, lv) with
-	      | (Some len, _) -> (K.Known len, K.Known (len * elt_sz))
-	      | (None, (Var v, NoOffset)) -> 
-		  (K.Length v.vname, K.SizeOf v.vname)
+	      | (Some len, _) -> K.Known len
+	      | (None, (Var v, NoOffset)) -> K.Length v.vname
 	      | _ -> 
 		  error "Npkcompile.translate_access"
 		    ("type of lval "^(Cilutils.string_of_lval lv)
@@ -179,6 +178,7 @@ and translate_access strict lv e =
 	  let offs = 
 	    K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz) 
 	  in
+	  let sz = K.Mult (len, elt_sz) in
 	    (offs, sz)
 	      
       | _ -> error "Npkcompile.translate_access" "array expected"

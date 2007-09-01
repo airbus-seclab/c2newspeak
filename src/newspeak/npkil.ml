@@ -95,8 +95,7 @@ and field_name = string
 and tmp_int =
       Known of int
     | Length of string (* number of elements in global array named by string *)
-    | SizeOf of string (* size in number of bytes of 
-			  global array named by string *)
+    | Mult of (tmp_int * int) (* tmp_int * int *)
     | Decr of tmp_int  (* tmp_int - 1 *)
 
 and tmp_size_t = int option
@@ -163,7 +162,7 @@ let rec string_of_tmp_int x =
   match x with
       Known i -> string_of_int i
     | Length v -> "len("^v^")"
-    | SizeOf v -> "sizeof("^v^")"
+    | Mult (v, n) -> "("^(string_of_tmp_int v)^" * "^(string_of_int n)^")"
     | Decr i -> (string_of_tmp_int i)^" - 1"
 
 let string_of_unop op =

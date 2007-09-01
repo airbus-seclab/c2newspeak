@@ -46,7 +46,7 @@ let build_decl b m =
 %token RETURN
 %token CHAR INT STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
-%token PLUS STAR 
+%token AMPERSAND PLUS STAR 
 %token EOF
 
 %token <string> IDENTIFIER
@@ -111,6 +111,7 @@ expression:
 | left_value                                  { Lval $1 }
 | expression PLUS expression                  { Binop (Plus, $1, $3) }
 | expression STAR expression                  { Binop (Mult, $1, $3) }
+| AMPERSAND left_value                        { AddrOf $2 }
 ;;
 
 // carefull not to have any empty rule: this deceives line number location

@@ -79,6 +79,7 @@ rule token = parse
   | ";"                 { SEMICOLON }
 
 (* operators *)
+  | "&"                 { AMPERSAND }
   | "+"                 { PLUS }
   | "*"                 { STAR }
 

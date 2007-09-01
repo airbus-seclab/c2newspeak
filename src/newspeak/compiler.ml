@@ -204,8 +204,7 @@ let cast e t =
     | (K.Lval (lv, t'), _) when t <> t' -> 
 	Npkcontext.error "Compiler.cast" "case not implemented yet"
     | (K.Lval _, _) -> e
-    | (K.BinOp ((N.PlusI|N.MultI), _, _), N.Int t) ->
-	K.make_int_coerce t e
+    | (K.BinOp ((N.PlusI|N.MultI), _, _), N.Int t) -> K.make_int_coerce t e
     | _ -> Npkcontext.error "Compiler.cast" "case not implemented yet"
 
 let translate_binop op e1 e2 =
@@ -270,10 +269,27 @@ let compile fname =
   and translate_exp e =
     match e with
 	Const i -> K.Const (N.CInt64 i)
+
       | Lval lv -> 
 	  let (lv, t) = translate_lv lv in
 	  let t = scalar_of_typ t in
 	    K.Lval (lv, t)
+
+      | AddrOf Index (lv, e) ->
+	  let (lv, t) = translate_lv lv in
+	  let (t, n) = array_of_typ lv t in
+	  let i = translate_exp e in
+	  let sz = K.Const (N.CInt64 (Int64.of_int (K.size_of t))) in
+	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), i) in
+	  let o = K.BinOp (N.MultI, o, sz) in
+	  let n = K.Mult (n, K.size_of t) in
+	    K.BinOp (N.PlusPI, K.AddrOf (lv, n), o)
+
+      | AddrOf lv ->
+	  let (lv, t) = translate_lv lv in
+	  let sz = K.size_of t in
+	    K.AddrOf (lv, K.Known sz)
+
       | Binop (op, e1, e2) ->
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in

@@ -101,7 +101,7 @@ and field_name = string
 and tmp_int =
       Known of int
     | Length of string
-    | SizeOf of string
+    | Mult of (tmp_int * int)
     | Decr of tmp_int
 
 and tmp_size_t = int option

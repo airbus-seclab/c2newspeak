@@ -115,7 +115,7 @@ and replace_tmp_int x =
 	    Newspeak.Array (_, len) -> len
 	  | _ -> error "Npklink.replace_tmp_int" "array type expected"
       end
-    | Npkil.SizeOf name -> size_of (get_glob_typ name)
+    | Npkil.Mult (v, n) -> (replace_tmp_int v) * n
     | Npkil.Decr i -> (replace_tmp_int i) - 1
 
 and replace_fn fn =

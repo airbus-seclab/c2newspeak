@@ -68,6 +68,7 @@ and field = string
 and exp = 
     | Const of cst
     | Lval of lv
+    | AddrOf of lv
     | Binop of (binop * exp * exp)
 
 and binop =
