@@ -88,7 +88,7 @@ and unop =
 
 and typ = 
     Scalar of scalar_t
-  | Array of (typ * tmp_int)
+  | Array of (typ * tmp_size_t)
   | Region of (field list * size_t)
 
 and ftyp = typ list * typ option
@@ -97,6 +97,7 @@ and field = field_name * offset * typ
 
 and field_name = string
 
+(* TODO: code cleanup: think about this! *)
 and tmp_int =
       Known of int
     | Length of string
