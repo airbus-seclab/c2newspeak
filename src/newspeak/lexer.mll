@@ -53,8 +53,10 @@ let identifier = letter (letter|digit)*
 rule token = parse
 
 (* keywords *)
+    "return"            { RETURN }
+
 (* types *)
-    "char"              { CHAR }
+  | "char"              { CHAR }
   | "int"               { INT }
   | "struct"            { STRUCT }
   | "union"             { UNION }

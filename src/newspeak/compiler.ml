@@ -31,6 +31,8 @@ open Csyntax
 module N = Newspeak
 module K = Npkil
 
+let ret_vname = "!return"
+
 (* TODO: check this for various architecture ? 
    Here align everything on 4 *)
 let align t o = 
@@ -101,37 +103,13 @@ let translate_ityp s t =
       Char -> N.Int (s, Config.size_of_char)
     | Int -> N.Int (s, Config.size_of_int)
 
-let rec translate_fun_decl (b, v, loc) =
-  let b = 
-    match b with
-	Void -> None
-      | _ -> Some (translate_base_typ b) 
-  in
-  let rec translate b v =
-    match v with
-	Variable x -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
-      | FunctionName f -> (b, f, loc)
-      | Array _ -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" 
-	    "function can not return array"
-      | FunctionProto (Pointer v, _) -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" 
-	    "function can not return function pointer"
-      | Pointer v -> translate (Some (K.Scalar N.Ptr)) v
-      | FunctionProto _ -> 
-	  Npkcontext.error "Compiler.translate_var_modifier" 
-	    "case not implemented yet"
-  in
-    translate b v
-
-and translate_decl (b, v, loc) =
+let rec translate_decl (b, v, loc) =
   let b = translate_base_typ b in
   let rec translate b v =
     match v with
 	Variable x -> (b, x, loc)
       | FunctionName x -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" 
+	  Npkcontext.error "Compiler.translate_decl" 
 	    "local function definition not allowed"
       | Array (v, n) -> 
 	  let n = Some (int64_to_int n) in
@@ -183,12 +161,51 @@ and translate_union_fields f =
   in
     (List.map translate f, !n)
 	    
+let rec translate_fun_decl (b, v, loc) =
+  let b = 
+    match b with
+	Void -> None
+      | _ -> Some (translate_base_typ b) 
+  in
+  let rec translate b v =
+    match v with
+	Variable x -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
+      | FunctionName f -> (b, f, loc)
+      | Array _ -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" 
+	    "function can not return array"
+      | FunctionProto (Pointer v, _) -> 
+	  Npkcontext.error "Compiler.translate_fun_decl" 
+	    "function can not return function pointer"
+      | Pointer v -> translate (Some (K.Scalar N.Ptr)) v
+      | FunctionProto _ -> 
+	  Npkcontext.error "Compiler.translate_var_modifier" 
+	    "case not implemented yet"
+  in
+    translate b v
+
+let get_ret_lbl () = 0
+
+(* TODO: code cleanup: this could be in npkil and also used by cilcompiler ? *)
+let cast e t =
+  match (e, t) with
+      (K.Const N.CInt64 _, N.Int _) -> e
+    | (K.Const N.CInt64 c, N.Ptr) when c = Int64.zero -> K.Const N.Nil
+    | (K.Const N.CInt64 c, N.Ptr) -> 
+	Npkcontext.error "Compiler.cast" "cast from pointer to int forbidden"
+    | (K.Lval (lv, t'), _) when t <> t' -> 
+	Npkcontext.error "Compiler.cast" "case not implemented yet"
+    | (K.Lval _, _) -> e
+    | _ -> Npkcontext.error "Compiler.cast" "case not implemented yet"
+	
+
 let compile fname = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let env = Hashtbl.create 100 in
   let vcnt = ref 0 in
-  let push_local x t =
+  let push x t =
     incr vcnt;
     Hashtbl.add env x (!vcnt, t)
   in
@@ -207,6 +224,14 @@ let compile fname =
       with Not_found ->
 	Npkcontext.error "Compiler.get_var" ("Variable "^x^" not declared")
   in
+  let get_ret_var () = 
+    try
+      let (n, t) = Hashtbl.find env ret_vname in
+	(K.Local (!vcnt - n), t)
+    with Not_found -> 
+	Npkcontext.error "Compiler.get_ret_var" 
+	  ("function does not return a value")
+  in
     
   let rec translate_lv lv =
     match lv with
@@ -217,7 +242,7 @@ let compile fname =
 	  let (o, t) = offset_of f r in
 	  let o = K.Const (N.CInt64 (Int64.of_int o)) in
 	    (K.Shift (lv, o), t)
-      | Index (lv, e) ->
+      | Index (lv, e) -> 
 	  let (lv, t) = translate_lv lv in
 	  let (t, n) = array_of_typ lv t in
 	  let i = translate_exp e in
@@ -237,32 +262,54 @@ let compile fname =
 
   let rec translate_blk (decls, body) =
     match decls with
-	[] -> List.map translate_stmt body
+	[] -> translate_stmt_list body
       | d::tl ->
 	  let (t, x, loc) = translate_decl d in
-	    push_local x t;
+	    push x t;
 	    let body = translate_blk (tl, body) in
 	      pop x;
 	      (K.Decl (x, t, body), loc)::[]
-	      
-  and translate_stmt (x, loc) = (translate_stmtkind x, loc)
-    
-  and translate_stmtkind x =
+
+  and translate_stmt_list x =
+    match x with
+	hd::tl -> (translate_stmt hd)@(translate_stmt_list tl)
+      | [] -> []
+
+  and translate_stmt (x, loc) =
     match x with
       | Set (lv, e) -> 
 	  let (lv, t) = translate_lv lv in
 	  let e = translate_exp e in
+(* TODO: code cleanup: put these two together ?? *)
 	  let t = scalar_of_typ t in
-	    K.Set (lv, e, t)
+	  let e = cast e t in
+	    (K.Set (lv, e, t), loc)::[]
+
+      | Return e -> 
+	  let e = translate_exp e in
+	  let (lv, t) = get_ret_var () in
+	  let t = scalar_of_typ t in
+	  let e = cast e t in
+	  let lbl = get_ret_lbl () in
+	    (K.Set (lv, e, t), loc)::(K.Goto lbl, loc)::[]
   in
 
-let translate_global x =
+  let translate_global x =
     match x with
 	FunctionDef (d, body) -> 
-	  let (t, f, _) = translate_fun_decl d in
-	  let body = translate_blk body in
-	    Hashtbl.add fundefs f ([], None, Some body) 
-
+	  let (t, f, loc) = translate_fun_decl d in
+	  let body =
+	    match t with
+		None -> translate_blk body
+	      | Some t -> 
+		  push ret_vname t;
+		  let body = translate_blk body in
+		    pop ret_vname;
+		    body
+	  in
+	  let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
+	    Hashtbl.add fundefs f ([], t, Some body) 
+	      
       | GlobalDecl d -> 
 	  let (t, x, loc) = translate_decl d in
 	    Hashtbl.add globals x (t, loc, Some None, true)

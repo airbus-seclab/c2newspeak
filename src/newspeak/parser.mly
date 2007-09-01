@@ -37,6 +37,7 @@ let flatten_decl (b, m) =
 
 %}
 
+%token RETURN
 %token CHAR INT STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN 
 %token EQ SEMICOLON STAR
@@ -79,12 +80,13 @@ block:
 ;;
 
 statement_list:
-  assignment statement_list                    { ($1, get_loc ())::$2 }
+  statement statement_list                    { ($1, get_loc ())::$2 }
 |                                              { [] }
 ;;
 
-assignment:
+statement:
   left_value EQ expression SEMICOLON           { Set ($1, $3) }
+| RETURN expression SEMICOLON                  { Return $2 }
 ;;
 
 left_value:

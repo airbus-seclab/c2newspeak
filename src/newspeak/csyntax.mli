@@ -58,7 +58,8 @@ and stmt = (stmtkind * location)
 
 and stmtkind =
     | Set of (lv * exp)
-    
+    | Return of exp
+
 and lv = 
     | Var of vname
     | Field of (lv * field)
