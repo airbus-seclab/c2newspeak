@@ -77,6 +77,9 @@ rule token = parse
   | "]"                 { RBRACKET }
   | "="                 { EQ }
   | ";"                 { SEMICOLON }
+
+(* operators *)
+  | "+"                 { PLUS }
   | "*"                 { STAR }
 
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }

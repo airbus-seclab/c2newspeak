@@ -45,12 +45,21 @@ let build_decl b m =
 
 %token RETURN
 %token CHAR INT STRUCT UNION UNSIGNED VOID
-%token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN 
-%token EQ SEMICOLON STAR
+%token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
+%token PLUS STAR 
 %token EOF
 
 %token <string> IDENTIFIER
 %token <Int64.t> INTEGER
+
+/*
+%left LT GT EQ NE LE GE
+%left PLUS MINUS
+%left MULTIPLY DIVIDE
+*/
+
+%left PLUS
+%left STAR
 
 %type <Csyntax.prog> cprog
 %start cprog
@@ -60,17 +69,6 @@ let build_decl b m =
 cprog:
   declaration_list                            { $1 }
 ;;
-
-/*
-  global cprog                                { $1::$2 }
-| global                                      { $1::[] }
-;;
-
-global:
-| declaration block                           { FunctionDef ($1, $2) }
-| declaration SEMICOLON                       { GlobalDecl $1 }
-;;
-*/
 
 declaration_list:
   declaration declaration_list                { $1@$2 }
@@ -111,6 +109,8 @@ left_value:
 expression:
   INTEGER                                     { Const $1 }
 | left_value                                  { Lval $1 }
+| expression PLUS expression                  { Binop (Plus, $1, $3) }
+| expression STAR expression                  { Binop (Mult, $1, $3) }
 ;;
 
 // carefull not to have any empty rule: this deceives line number location

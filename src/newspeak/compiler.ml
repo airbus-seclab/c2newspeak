@@ -204,8 +204,17 @@ let cast e t =
     | (K.Lval (lv, t'), _) when t <> t' -> 
 	Npkcontext.error "Compiler.cast" "case not implemented yet"
     | (K.Lval _, _) -> e
+    | (K.BinOp ((N.PlusI|N.MultI), _, _), N.Int t) ->
+	K.make_int_coerce t e
     | _ -> Npkcontext.error "Compiler.cast" "case not implemented yet"
-	
+
+let translate_binop op e1 e2 =
+  let op =
+    match op with
+	Plus -> N.PlusI
+      | Mult -> N.MultI
+  in
+    K.BinOp (op, e1, e2)
 
 let compile fname = 
   let globals = Hashtbl.create 100 in
@@ -265,6 +274,10 @@ let compile fname =
 	  let (lv, t) = translate_lv lv in
 	  let t = scalar_of_typ t in
 	    K.Lval (lv, t)
+      | Binop (op, e1, e2) ->
+	  let e1 = translate_exp e1 in
+	  let e2 = translate_exp e2 in
+	    translate_binop op e1 e2
   in
 
   let rec translate_blk (decls, body) =

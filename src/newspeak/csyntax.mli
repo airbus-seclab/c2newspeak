@@ -68,6 +68,11 @@ and field = string
 and exp = 
     | Const of cst
     | Lval of lv
+    | Binop of (binop * exp * exp)
+
+and binop =
+    | Plus
+    | Mult
 
 and cst = Int64.t
 
