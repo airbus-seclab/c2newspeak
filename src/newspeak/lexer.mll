@@ -36,7 +36,7 @@ let cnt_line lexbuf =
 let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
   let line = string_of_int pos.pos_lnum in
-    "Lexer.mlll: line: "^line^", unknown keyword: "^(Lexing.lexeme lexbuf)
+    "Lexer.mll: line: "^line^", unknown keyword: "^(Lexing.lexeme lexbuf)
 }
 
 let white_space = ' ' | '\t'

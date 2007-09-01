@@ -23,13 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-type prog = global list
+type prog = declaration list
 
-and global =
-    | FunctionDef of (declaration * blk)
-    | GlobalDecl of declaration
-
-and declaration = (base_typ * var_modifier * location)
+and declaration =
+    | FunctionDef of (base_typ * var_modifier * location * blk)
+    | Declaration of (base_typ * var_modifier * location)
 
 and base_typ =
     | Void 
