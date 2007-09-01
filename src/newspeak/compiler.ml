@@ -84,9 +84,10 @@ let region_of_typ t =
 	Npkcontext.error "Compiler.region_of_typ" 
 	  "struct or union type expected"
 
-let array_of_typ t =
-  match t with
-      K.Array (t, Some n) -> (t, n)
+let array_of_typ lv t =
+  match (t, lv) with
+      (K.Array (t, Some n), _) -> (t, K.Known n)
+    | (K.Array (t, None), K.Global x) -> (t, K.Length x)
     | _ -> 
 	Npkcontext.error "Compiler.array_of_typ" "Array of known size expected"
 
@@ -216,15 +217,15 @@ let compile fname =
 	  let (o, t) = offset_of f r in
 	  let o = K.Const (N.CInt64 (Int64.of_int o)) in
 	    (K.Shift (lv, o), t)
-(*      | Index (lv, e) ->
+      | Index (lv, e) ->
 	  let (lv, t) = translate_lv lv in
-	  let (t, n) = array_of_typ t in
+	  let (t, n) = array_of_typ lv t in
 	  let i = translate_exp e in
 	  let sz = K.Const (N.CInt64 (Int64.of_int (K.size_of t))) in
-	  let o = K.BinOp (N.MultI, i, sz) in
-	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), o) in
+	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, K.Decr n), i) in
+	  let o = K.BinOp (N.MultI, o, sz) in
 	    (K.Shift (lv, o), t)
-*)
+
   and translate_exp e =
     match e with
 	Const i -> K.Const (N.CInt64 i)
