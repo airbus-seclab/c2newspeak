@@ -62,6 +62,7 @@ and stmtkind =
 and lv = 
     | Var of vname
     | Field of (lv * field)
+    | Index of (lv * exp)
 
 and field = string
 

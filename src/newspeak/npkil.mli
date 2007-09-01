@@ -88,7 +88,7 @@ and unop =
 
 and typ = 
     Scalar of scalar_t
-  | Array of (typ * tmp_size_t)
+  | Array of (typ * tmp_int)
   | Region of (field list * size_t)
 
 and ftyp = typ list * typ option

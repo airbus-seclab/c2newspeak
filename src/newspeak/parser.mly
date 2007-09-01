@@ -45,11 +45,6 @@ let flatten_decl (b, m) =
 %token <string> IDENTIFIER
 %token <Int64.t> INTEGER
 
-%left IDENTIFIER
-%left STAR
-%left LPAREN
-%left LBRACKET
-
 %type <Csyntax.prog> cprog
 %start cprog
 
@@ -95,6 +90,7 @@ assignment:
 left_value:
   IDENTIFIER                                   { Var $1 }
 | left_value DOT IDENTIFIER                    { Field ($1, $3) }
+| left_value LBRACKET expression RBRACKET      { Index ($1, $3) }
 ;;
 
 expression:
