@@ -88,7 +88,9 @@ and typ =
 
 and ftyp = typ list * typ option
 
-and field = offset * typ
+and field = field_name * offset * typ
+
+and field_name = string
 
 and tmp_int =
       Known of int
@@ -150,7 +152,7 @@ let rec string_of_typ t =
     | Array (t, Some sz) -> (string_of_typ t)^"["^(string_of_size_t sz)^"]"
     | Array (t, None) -> (string_of_typ t)^"[]"
     | Region (lst, sz) ->
-	let string_of_elt (off, t) = 
+	let string_of_elt (_, off, t) = 
 	  (string_of_typ t)^" "^(string_of_size_t off) 
 	in
 	  "{"^(seq ";" string_of_elt lst)^"}"^(string_of_size_t sz)
@@ -436,7 +438,7 @@ let is_mp_typ t1 t2 =
   and is_mp_fields f1 f2 =
     match (f1, f2) with
 	([], []) -> true
-      | ((o1, t1)::f1, (o2, t2)::f2) when o1 = o2 ->
+      | ((_, o1, t1)::f1, (_, o2, t2)::f2) when o1 = o2 ->
 	  (is_mp_fields f1 f2) && (is_mp_typs_aux t1 t2)
       | _ -> raise Uncomparable
   in
@@ -463,7 +465,7 @@ let compare_typs t1 t2 =
   and compare_fields f1 f2 =
     match (f1, f2) with
 	([], []) -> true
-      | ((o1, t1)::f1, (o2, t2)::f2) ->
+      | ((_, o1, t1)::f1, (_, o2, t2)::f2) ->
 	  (compare_fields f1 f2)
 	  && (o1 = o2) && (compare_typs_aux t1 t2)
       | _ -> false

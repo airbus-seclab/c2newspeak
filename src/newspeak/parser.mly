@@ -38,7 +38,8 @@ let flatten_decl (b, m) =
 %}
 
 %token CHAR INT STRUCT UNION UNSIGNED VOID
-%token COMMA LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON STAR
+%token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN 
+%token EQ SEMICOLON STAR
 %token EOF
 
 %token <string> IDENTIFIER
@@ -93,6 +94,7 @@ assignment:
 
 left_value:
   IDENTIFIER                                   { Var $1 }
+| left_value DOT IDENTIFIER                    { Field ($1, $3) }
 ;;
 
 expression:

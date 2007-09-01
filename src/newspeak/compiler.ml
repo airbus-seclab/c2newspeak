@@ -40,6 +40,13 @@ let align t o =
 
 let align_end o = align (K.Scalar (N.Int (N.Signed, 4))) o
 
+let rec offset_of f t =
+  match t with
+      (x, _, _)::tl when x <> f -> offset_of f tl
+    | (_, o, t)::_ -> (o, t)
+    | [] -> Npkcontext.error "Compiler.offset_of" ("field "^f^" not defined")
+      
+
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 
   then Npkcontext.error "Compiler.int64_to_int" "integer too big";
@@ -50,7 +57,6 @@ let int64_to_int x =
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-  
     try
       let cprog = Parser.cprog Lexer.token lexbuf 
       in
@@ -66,10 +72,17 @@ let parse fname =
 (* TODO: code cleanup: remove this: remove any use of this *)
 let dummy_loc = ("", -1, -1)
 
-let scalar_of_t t = 
+let scalar_of_typ t = 
   match t with 
       K.Scalar t -> t
-    | _ -> Npkcontext.error "Compiler.translate_stmt" "scalar type expected"
+    | _ -> Npkcontext.error "Compiler.scalar_of_typ" "scalar type expected"
+
+let region_of_typ t =
+  match t with
+      K.Region (fields, _) -> fields
+    | _ -> 
+	Npkcontext.error "Compiler.region_of_typ" 
+	  "struct or union type expected"
 
 let translate_sign s =
   match s with
@@ -137,29 +150,29 @@ and translate_struct_fields f =
   let rec translate o f =
     match f with
 	d::f -> 
-	  let (t, _, _) = translate_decl d in
+	  let (t, x, _) = translate_decl d in
 	  let sz = K.size_of t in
 	  let o = align t o in
 	  let (f, n) = translate (o+sz) f in
-	    ((o, t)::f, n)
+	    ((x, o, t)::f, n)
       | [] -> 
 	  let o = align_end o in
 	    ([], o)
   in
     match f with
 	d::[] -> 
-	  let (t, _, _) = translate_decl d in
+	  let (t, x, _) = translate_decl d in
 	  let sz = K.size_of t in
-	    ((0, t)::[], sz)
+	    ((x, 0, t)::[], sz)
       | _ -> translate 0 f
 
 and translate_union_fields f =
   let n = ref 0 in
   let translate d =
-    let (t, _, _) = translate_decl d in
+    let (t, x, _) = translate_decl d in
     let sz = K.size_of t in
       if !n < sz then n := sz;
-      (0, t)
+      (x, 0, t)
   in
     (List.map translate f, !n)
 	    
@@ -191,18 +204,20 @@ let compile fname =
   let rec translate_lv lv =
     match lv with
 	Var x -> get_var x
+      | Field (lv, f) ->
+	  let (lv, t) = translate_lv lv in
+	  let t = region_of_typ t in
+	  let (o, t) = offset_of f t in
+	  let o = K.Const (N.CInt64 (Int64.of_int o)) in
+	    (K.Shift (lv, o), t)
 
   and translate_exp e =
     match e with
 	Const i -> K.Const (N.CInt64 i)
       | Lval lv -> 
 	  let (lv, t) = translate_lv lv in
-	    begin match t with
-		K.Scalar t -> K.Lval (lv, t)
-	      | _ -> 
-		  Npkcontext.error "Compiler.translate_exp" 
-		    "scalar value expected in expression"
-	    end
+	  let t = scalar_of_typ t in
+	    K.Lval (lv, t)
   in
 
   let rec translate_blk (decls, body) =
@@ -222,7 +237,7 @@ let compile fname =
       | Set (lv, e) -> 
 	  let (lv, t) = translate_lv lv in
 	  let e = translate_exp e in
-	  let t = scalar_of_t t in
+	  let t = scalar_of_typ t in
 	    K.Set (lv, e, t)
   in
 

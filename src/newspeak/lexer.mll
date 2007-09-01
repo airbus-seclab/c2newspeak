@@ -66,6 +66,7 @@ rule token = parse
 
 (* punctuation *)
   | ","                 { COMMA }
+  | "."                 { DOT }
   | "{"                 { LBRACE }
   | "}"                 { RBRACE }
   | "("                 { LPAREN }

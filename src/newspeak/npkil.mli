@@ -93,7 +93,9 @@ and typ =
 
 and ftyp = typ list * typ option
 
-and field = offset * typ
+and field = field_name * offset * typ
+
+and field_name = string
 
 and tmp_int =
       Known of int

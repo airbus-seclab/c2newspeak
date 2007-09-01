@@ -59,8 +59,12 @@ and stmt = (stmtkind * location)
 and stmtkind =
     | Set of (lv * exp)
     
-and lv = Var of vname
- 
+and lv = 
+    | Var of vname
+    | Field of (lv * field)
+
+and field = string
+
 and exp = 
     | Const of cst
     | Lval of lv

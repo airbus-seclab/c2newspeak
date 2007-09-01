@@ -149,7 +149,7 @@ and replace_typ t =
     | Npkil.Region (fields, sz) -> 
 	Newspeak.Region (List.map replace_field fields, sz)
 
-and replace_field (offs, t) = (offs, replace_typ t)
+and replace_field (_, offs, t) = (offs, replace_typ t)
 
 
 (*
