@@ -56,14 +56,29 @@ and cfield = (string * int * ctyp)
 
 let ret_vname = "!return"
 
+let size_of_cscalar t = 
+  match t with
+      CInt (_, n) -> n
+    | CFloat n -> n
+    | CPtr _ -> Config.size_of_ptr
+    | CFunPtr -> Config.size_of_ptr
+
+let rec size_of t =
+  match t with
+      CScalar t -> size_of_cscalar t
+    | CArray (t, Some n) -> (size_of t) * n
+    | CRegion (_, n) -> n
+    | CArray _ -> Npkcontext.error "Compiler.size_of" "unknown size of array"
+    | CVoid -> Npkcontext.error "Compiler.size_of" "size of void unknown"
+
 (* TODO: check this for various architecture ? 
    Here align everything on 4 *)
 let align t o = 
   if (o mod 4) = 0 then o
-  else if K.size_of t <= (4 - (o mod 4)) then o
+  else if size_of t <= (4 - (o mod 4)) then o
   else o + (4 - (o mod 4))
 
-let align_end o = align (K.Scalar (N.Int (N.Signed, 4))) o
+let align_end o = align (CScalar (CInt (N.Signed, 4))) o
 
 let rec offset_of f t =
   match t with
@@ -190,8 +205,8 @@ and translate_struct_fields f =
     match f with
 	d::f -> 
 	  let (t, x, _) = translate_decl d in
-	  let sz = K.size_of (typ_of_ctyp t) in
-	  let o = align (typ_of_ctyp t) o in
+	  let sz = size_of t in
+	  let o = align t o in
 	  let (f, n) = translate (o+sz) f in
 	    ((x, o, t)::f, n)
       | [] -> 
@@ -201,7 +216,7 @@ and translate_struct_fields f =
     match f with
 	d::[] -> 
 	  let (t, x, _) = translate_decl d in
-	  let sz = K.size_of (typ_of_ctyp t) in
+	  let sz = size_of t in
 	    ((x, 0, t)::[], sz)
       | _ -> translate 0 f
 
@@ -209,7 +224,7 @@ and translate_union_fields f =
   let n = ref 0 in
   let translate d =
     let (t, x, _) = translate_decl d in
-    let sz = K.size_of (typ_of_ctyp t) in
+    let sz = size_of t in
       if !n < sz then n := sz;
       (x, 0, t)
   in
@@ -311,7 +326,7 @@ let compile fname =
 	  let (lv, t) = translate_lv lv in
 	  let (t, n) = array_of_ctyp lv t in
 	  let (i, _) = translate_exp e in
-	  let sz = K.size_of (typ_of_ctyp t) in
+	  let sz = size_of t in
 	  let sz = K.Const (N.CInt64 (Int64.of_int sz)) in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, K.Decr n), i) in
 	  let o = K.BinOp (N.MultI, o, sz) in
@@ -320,7 +335,7 @@ let compile fname =
       | Deref e ->
 	  let (e, t) = translate_exp e in
 	  let t = deref_ctyp t in
-	    (K.Deref (e, K.size_of (typ_of_ctyp t)), t)
+	    (K.Deref (e, size_of t), t)
 
   and translate_exp e =
     match e with
@@ -335,7 +350,7 @@ let compile fname =
 	  let (lv, t) = translate_lv lv in
 	  let (i, _) = translate_exp e in
 	  let (t', n) = array_of_ctyp lv t in
-	  let sz = K.size_of (typ_of_ctyp t') in
+	  let sz = size_of t' in
 	  let sz_e = K.Const (N.CInt64 (Int64.of_int sz)) in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), i) in
 	  let o = K.BinOp (N.MultI, o, sz_e) in
@@ -344,7 +359,7 @@ let compile fname =
 
       | AddrOf lv ->
 	  let (lv, t) = translate_lv lv in
-	  let sz = K.size_of (typ_of_ctyp t) in
+	  let sz = size_of t in
 	    (K.AddrOf (lv, K.Known sz), CPtr t)
 
       | Binop (op, e1, e2) ->
