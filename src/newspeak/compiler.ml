@@ -38,7 +38,7 @@ let kind_of_int64 i =
   let sign = 
     if Int64.compare i Int64.zero >= 0 then N.Unsigned else N.Signed
   in
-    (sign, 4)
+    (sign, Config.size_of_int)
 
 type ctyp =
     | CVoid
@@ -238,7 +238,7 @@ let get_ret_lbl () = 0
 
 (* TODO: code cleanup: this could be in npkil and also used by cilcompiler ? *)
 let cast t e t' =
-  match (e, t) with
+  match (e, t') with
       _ when t = t' -> e
     | (K.Const N.CInt64 _, N.Int _) -> e
     | (K.Const N.CInt64 c, N.Ptr) when c = Int64.zero -> K.Const N.Nil
@@ -247,16 +247,20 @@ let cast t e t' =
     | (K.Lval (lv, t'), _) when t <> t' -> 
 	Npkcontext.error "Compiler.cast" "case not implemented yet"
     | (K.Lval _, _) -> e
-    | (K.BinOp ((N.PlusI|N.MultI), _, _), N.Int t) -> K.make_int_coerce t e
     | _ -> Npkcontext.error "Compiler.cast" "case not implemented yet"
 
 let translate_binop op (e1, t1) (e2, t2) =
-  let op =
-    match op with
-	Plus -> N.PlusI
-      | Mult -> N.MultI
-  in
-    (K.BinOp (op, e1, e2), t1)
+  match (op, t1, t2) with
+      (Plus, CInt k1, CInt k2) when k1 = k2 -> 
+	(K.make_int_coerce k1 (K.BinOp (N.PlusI, e1, e2)), t1)
+    | (Mult, CInt k1, CInt k2) when k1 = k2 -> 
+	(K.make_int_coerce k1 (K.BinOp (N.MultI, e1, e2)), t1)
+    | (Plus, CPtr _, CInt _) ->	
+	let stride = K.Const (N.CInt64 (Int64.of_int Config.size_of_ptr)) in 
+	  (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
+    | _ -> 
+	Npkcontext.error "Compiler.translate_binop" 
+	  "unexpected binary operator and arguments"
 
 let compile fname = 
   let globals = Hashtbl.create 100 in
