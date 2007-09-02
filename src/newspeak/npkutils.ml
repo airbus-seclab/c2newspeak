@@ -142,7 +142,7 @@ let rec translate_typ t =
 and translate_field t f =
   let offset = offset_of t (Field(f, NoOffset)) in
   let typ = translate_typ f.ftype in
-    (f.fname, offset, typ)
+    (offset, typ)
 
 let translate_rel_binop t1 t2 o =
   let t = 

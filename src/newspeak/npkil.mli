@@ -93,9 +93,7 @@ and typ =
 
 and ftyp = typ list * typ option
 
-and field = field_name * offset * typ
-
-and field_name = string
+and field = offset * typ
 
 (* TODO: code cleanup: think about this! *)
 and tmp_int =

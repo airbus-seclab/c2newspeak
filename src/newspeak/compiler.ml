@@ -111,7 +111,7 @@ and scalar_of_cscalar t =
     | CPtr _ -> N.Ptr
     | CFunPtr -> N.FunPtr
 
-and field_of_cfield (n, o, t) = (n, o, typ_of_ctyp t)
+and field_of_cfield (n, o, t) = (o, typ_of_ctyp t)
 
 let ret_typ_of_ctyp t =
   match t with
