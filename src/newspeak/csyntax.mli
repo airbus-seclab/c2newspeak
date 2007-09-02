@@ -62,6 +62,7 @@ and lv =
     | Var of vname
     | Field of (lv * field)
     | Index of (lv * exp)
+    | Deref of exp
 
 and field = string
 

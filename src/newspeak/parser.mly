@@ -104,6 +104,7 @@ left_value:
   IDENTIFIER                                  { Var $1 }
 | left_value DOT IDENTIFIER                   { Field ($1, $3) }
 | left_value LBRACKET expression RBRACKET     { Index ($1, $3) }
+| STAR expression                             { Deref $2 }
 ;;
 
 expression:
