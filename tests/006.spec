@@ -1,1 +1,1 @@
-Fatal error: translate cast: Invalid cast 'int *' -> 'int ' in '(int )p' in 006.c line 34
+Fatal error: Invalid cast from integer to pointer in 006.c line 34

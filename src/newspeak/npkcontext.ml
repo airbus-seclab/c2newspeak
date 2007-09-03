@@ -265,9 +265,6 @@ let print_error msg =
   exit (if !exit_code then 1 else 0)
 
 
-
-
-
 let handle_cmdline_options () = 
   Arg.parse argslist anon_fun usage_msg;
   if !input_files = [] then begin
@@ -289,5 +286,13 @@ let handle_cmdline_options () =
     exit 0
   end
 
-
-
+let invalid_cast origin t1 t2 =
+  let msg = 
+    match (t1, t2) with
+	(Newspeak.Int _, Newspeak.Ptr) -> " from integer to pointer"
+      | (Newspeak.Ptr, Newspeak.Int _) -> " from pointer to integer"
+      | _ -> 
+	  ": "^(Newspeak.string_of_scalar t1)
+	  ^" -> "^(Newspeak.string_of_scalar t2)
+  in
+    error origin ("Invalid cast"^msg)

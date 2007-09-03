@@ -119,3 +119,5 @@ val error : string -> string -> 'a
 val print_error : string -> 'a
 
 val use_cil: bool ref
+
+val invalid_cast: string -> Newspeak.scalar_t -> Newspeak.scalar_t -> 'a

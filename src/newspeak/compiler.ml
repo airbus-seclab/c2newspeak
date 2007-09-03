@@ -34,6 +34,7 @@ module K = Npkil
    do factorisation, when possible. In particular K.size_of  and align *)
 
 (* TODO: code cleanup: think about this!! *)
+(* TODO: check that integer don't have a default type (like int) *)
 let kind_of_int64 i =
   let sign = 
     if Int64.compare i Int64.zero >= 0 then N.Unsigned else N.Signed
@@ -97,9 +98,9 @@ let int64_to_int x =
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
+    Lexer.init fname lexbuf;
     try
-      let cprog = Parser.cprog Lexer.token lexbuf 
-      in
+      let cprog = Parser.cprog Lexer.token lexbuf in
 	close_in cin;
 	cprog
     with Parsing.Parse_error -> 
@@ -253,15 +254,17 @@ let get_ret_lbl () = 0
 
 (* TODO: code cleanup: this could be in npkil and also used by cilcompiler ? *)
 let cast t e t' =
-  match (e, t') with
+  match (t, t') with
       _ when t = t' -> e
-    | (K.Const N.CInt64 _, N.Int _) -> e
-    | (K.Const N.CInt64 c, N.Ptr) when c = Int64.zero -> K.Const N.Nil
-    | (K.Const N.CInt64 c, N.Ptr) -> 
-	Npkcontext.error "Compiler.cast" "cast from pointer to int forbidden"
-    | (K.Lval (lv, t'), _) when t <> t' -> 
-	Npkcontext.error "Compiler.cast" "case not implemented yet"
-    | (K.Lval _, _) -> e
+    | (CPtr _, CPtr _) -> e
+    | (CInt _, CInt k) -> K.make_int_coerce k e
+    | (CInt _, CPtr _) when e = K.Const (N.CInt64 Int64.zero) -> K.Const N.Nil
+    | (CInt _, CPtr _) -> 
+	Npkcontext.invalid_cast "Compiler.cast" 
+	  (scalar_of_cscalar t) (scalar_of_cscalar t')
+    | (CPtr _, CInt _) -> 
+	Npkcontext.invalid_cast "Compiler.cast" 
+	  (scalar_of_cscalar t) (scalar_of_cscalar t')
     | _ -> Npkcontext.error "Compiler.cast" "case not implemented yet"
 
 let translate_binop op (e1, t1) (e2, t2) =
@@ -385,24 +388,25 @@ let compile fname =
       | [] -> []
 
   and translate_stmt (x, loc) =
+    Npkcontext.set_loc loc;
     match x with
       | Set (lv, e) -> 
 	  (* TODO: code cleanup *)
 	  let (lv, t) = translate_lv lv in
 	  let (e, t') = translate_exp e in
 (* TODO: code cleanup: put these two together ?? *)
-	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
-	  let e = cast (scalar_of_cscalar t') e t in
-	    (K.Set (lv, e, t), loc)::[]
+	  let t = cscalar_of_ctyp t in
+	  let e = cast t' e t in
+	    (K.Set (lv, e, scalar_of_cscalar t), loc)::[]
 
       | Return e -> 
 	  (* TODO: code cleanup *)
 	  let (lv, t) = get_ret_var () in
 	  let (e, t') = translate_exp e in
-	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
-	  let e = cast (scalar_of_cscalar t') e t in
+	  let t = cscalar_of_ctyp t in
+	  let e = cast t' e t in
 	  let lbl = get_ret_lbl () in
-	    (K.Set (lv, e, t), loc)::(K.Goto lbl, loc)::[]
+	    (K.Set (lv, e, scalar_of_cscalar t), loc)::(K.Goto lbl, loc)::[]
   in
 
   let translate_global x =

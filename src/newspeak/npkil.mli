@@ -152,5 +152,3 @@ val read_header: string -> (filename * (string, ginfo) Hashtbl.t)
 val read_fundefs: string -> (fid, funinfo) Hashtbl.t
 
 val create_cstr: string -> ginfo
-
-val size_of: typ -> int

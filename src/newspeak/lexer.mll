@@ -27,6 +27,12 @@
 open Parser
 open Lexing
 
+let init fname lexbuf = 
+  let pos = 
+    { lexbuf.lex_curr_p with pos_fname = fname }
+  in
+    lexbuf.lex_curr_p <- pos
+  
 let cnt_line lexbuf =
   let pos = 
     { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 }

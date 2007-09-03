@@ -153,10 +153,8 @@ and translate_scalar_cast cast e t1 t2 =
 	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
 	K.UnOp (K.Cast (kt, kt'), e')
     
-    | _ -> 
-	error "Npkcompile.translate_scalar_cast"
-	  ("translate cast: Invalid cast "^(Cilutils.string_of_cast cast e))
-
+    | _ -> Npkcontext.invalid_cast "Cilcompiler.translate_scalar_cast" t1 t2
+	  
 and translate_access strict lv e =
   let t = typeOfLval lv in
     match translate_typ t with

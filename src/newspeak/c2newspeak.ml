@@ -45,7 +45,9 @@ let _ =
       else begin
 	let no = create_no fname in
 	let prog = compile fname in
+	  Npkcontext.print_debug ("Writing "^no^"...");
 	  Npkil.write no prog;
+	  Npkcontext.print_debug ("Writing done.");
 	  no
       end
     in

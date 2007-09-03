@@ -176,6 +176,7 @@ val simplify : blk -> blk
 
 (** {1 Display } *)
 
+val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
