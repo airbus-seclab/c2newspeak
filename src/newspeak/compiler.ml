@@ -256,16 +256,16 @@ let get_ret_lbl () = 0
 let cast t e t' =
   match (t, t') with
       _ when t = t' -> e
-    | (CPtr _, CPtr _) -> e
-    | (CInt _, CInt k) -> K.make_int_coerce k e
-    | (CInt _, CPtr _) when e = K.Const (N.CInt64 Int64.zero) -> K.Const N.Nil
-    | (CInt _, CPtr _) -> 
-	Npkcontext.invalid_cast "Compiler.cast" 
-	  (scalar_of_cscalar t) (scalar_of_cscalar t')
-    | (CPtr _, CInt _) -> 
-	Npkcontext.invalid_cast "Compiler.cast" 
-	  (scalar_of_cscalar t) (scalar_of_cscalar t')
-    | _ -> Npkcontext.error "Compiler.cast" "case not implemented yet"
+    | (N.Int _, N.Int k) -> K.make_int_coerce k e
+    | (N.Int _, N.Ptr) when e = K.Const (N.CInt64 Int64.zero) -> K.Const N.Nil
+
+    | (N.Ptr, N.Int k) when !Npkcontext.castor_allowed -> 
+	Npkcontext.print_warning "Compiler.cast"
+	  ("Probable invalid cast "^(K.string_of_cast t t'));
+	K.UnOp (K.PtrToInt k, e)
+    | _ -> 
+	Npkcontext.error "Compiler.cast"
+	  ("Invalid cast "^(K.string_of_cast t t'))
 
 let translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
@@ -395,18 +395,20 @@ let compile fname =
 	  let (lv, t) = translate_lv lv in
 	  let (e, t') = translate_exp e in
 (* TODO: code cleanup: put these two together ?? *)
-	  let t = cscalar_of_ctyp t in
+	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
+	  let t' = scalar_of_cscalar t' in
 	  let e = cast t' e t in
-	    (K.Set (lv, e, scalar_of_cscalar t), loc)::[]
+	    (K.Set (lv, e, t), loc)::[]
 
       | Return e -> 
 	  (* TODO: code cleanup *)
 	  let (lv, t) = get_ret_var () in
 	  let (e, t') = translate_exp e in
-	  let t = cscalar_of_ctyp t in
+	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
+	  let t' = scalar_of_cscalar t' in
 	  let e = cast t' e t in
 	  let lbl = get_ret_lbl () in
-	    (K.Set (lv, e, scalar_of_cscalar t), loc)::(K.Goto lbl, loc)::[]
+	    (K.Set (lv, e, t), loc)::(K.Goto lbl, loc)::[]
   in
 
   let translate_global x =

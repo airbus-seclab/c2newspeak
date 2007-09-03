@@ -133,27 +133,29 @@ and translate_scalar_cast cast e t1 t2 =
 
     | (Newspeak.FunPtr, Newspeak.FunPtr) ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable dangerous cast: "^(Cilutils.string_of_cast cast e));
+	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
 	e'
 		      
     | (Newspeak.Int (sign, sz), Newspeak.Ptr)
 	when sz = Cilutils.pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
+	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
 	  K.UnOp (K.PtrToInt (sign, sz), e')
 	    
     | (Newspeak.Ptr, Newspeak.Int (sign, sz))
 	when sz = Cilutils.pointer_size && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
+	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
 	  K.UnOp (K.IntToPtr (sign, sz), e')
 	    
     | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) when !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(Cilutils.string_of_cast cast e));
+	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
 	K.UnOp (K.Cast (kt, kt'), e')
     
-    | _ -> Npkcontext.invalid_cast "Cilcompiler.translate_scalar_cast" t1 t2
+    | _ -> 
+	Npkcontext.error "Cilcompiler.translate_scalar_cast"
+	  ("Invalid cast "^(Npkil.string_of_cast t2 t1))
 	  
 and translate_access strict lv e =
   let t = typeOfLval lv in

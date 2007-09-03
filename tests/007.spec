@@ -1,4 +1,4 @@
-Warning: probable invalid cast 'int *' -> 'int ' in '(int )p' in 007.c line 34
+Warning: Probable invalid cast from pointer to integer in 007.c line 34
 Newspeak output
 ---------------
 main() {

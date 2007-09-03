@@ -533,3 +533,9 @@ let rec size_of t =
     | Array (t, Some n) -> (size_of t) * n
     | Region (_, n) -> n
     | Array _ -> Npkcontext.error "Npkil.size_of" "unknown size of array"
+
+let string_of_cast t1 t2 =
+  match (t1, t2) with
+      (Newspeak.Int _, Newspeak.Ptr) -> "from integer to pointer"
+    | (Newspeak.Ptr, Newspeak.Int _) -> "from pointer to integer"
+    | _ -> (Newspeak.string_of_scalar t1)^" -> "^(Newspeak.string_of_scalar t2)

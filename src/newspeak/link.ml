@@ -196,9 +196,7 @@ let update_glob_link name (t, loc, init, used) =
 
 
 let merge_headers npko =
-  Npkcontext.print_debug ("Importing "^npko^"...");
   let (fname, globs) = Npkil.read_header npko in
-    Npkcontext.print_debug ("Importing done.");
     filenames := fname::(!filenames);
     Hashtbl.iter update_glob_link globs
 

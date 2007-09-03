@@ -285,14 +285,3 @@ let handle_cmdline_options () =
     print_version ();
     exit 0
   end
-
-let invalid_cast origin t1 t2 =
-  let msg = 
-    match (t1, t2) with
-	(Newspeak.Int _, Newspeak.Ptr) -> " from integer to pointer"
-      | (Newspeak.Ptr, Newspeak.Int _) -> " from pointer to integer"
-      | _ -> 
-	  ": "^(Newspeak.string_of_scalar t1)
-	  ^" -> "^(Newspeak.string_of_scalar t2)
-  in
-    error origin ("Invalid cast"^msg)
