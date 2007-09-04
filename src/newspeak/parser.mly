@@ -43,10 +43,10 @@ let build_decl b m =
 
 %}
 
-%token RETURN
+%token IF RETURN
 %token CHAR INT STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
-%token AMPERSAND PLUS STAR 
+%token AMPERSAND PLUS PLUSPLUS STAR LT
 %token EOF
 
 %token <string> IDENTIFIER
@@ -58,6 +58,7 @@ let build_decl b m =
 %left MULTIPLY DIVIDE
 */
 
+%left LT
 %left PLUS
 %left STAR
 
@@ -97,6 +98,11 @@ statement_list:
 
 statement:
   left_value EQ expression SEMICOLON          { Set ($1, $3) }
+| left_value PLUSPLUS SEMICOLON               { Set ($1, 
+						    Binop (Plus,
+							  Lval $1, 
+							  Const Int64.one)) }
+| IF LPAREN expression RPAREN block           { If ($3, $5) }
 | RETURN expression SEMICOLON                 { Return $2 }
 ;;
 
@@ -112,6 +118,7 @@ expression:
 | left_value                                  { Lval $1 }
 | expression PLUS expression                  { Binop (Plus, $1, $3) }
 | expression STAR expression                  { Binop (Mult, $1, $3) }
+| expression LT expression                    { Binop (Gt, $3, $1) }
 | AMPERSAND left_value                        { AddrOf $2 }
 ;;
 

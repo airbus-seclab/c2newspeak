@@ -56,6 +56,7 @@ and stmt = (stmtkind * location)
 
 and stmtkind =
     | Set of (lv * exp)
+    | If of (exp * blk)
     | Return of exp
 
 and lv = 
@@ -75,6 +76,7 @@ and exp =
 and binop =
     | Plus
     | Mult
+    | Gt
 
 and cst = Int64.t
 

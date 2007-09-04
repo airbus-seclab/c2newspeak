@@ -59,7 +59,8 @@ let identifier = letter (letter|digit)*
 rule token = parse
 
 (* keywords *)
-    "return"            { RETURN }
+    "if"                { IF }
+  | "return"            { RETURN }
 
 (* types *)
   | "char"              { CHAR }
@@ -87,7 +88,9 @@ rule token = parse
 (* operators *)
   | "&"                 { AMPERSAND }
   | "+"                 { PLUS }
+  | "++"                { PLUSPLUS }
   | "*"                 { STAR }
+  | "<"                 { LT }
 
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 

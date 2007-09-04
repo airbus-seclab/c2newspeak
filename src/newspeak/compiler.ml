@@ -36,8 +36,9 @@ module K = Npkil
 (* TODO: code cleanup: think about this!! *)
 (* TODO: check that integer don't have a default type (like int) *)
 let kind_of_int64 i =
-  let sign = 
-    if Int64.compare i Int64.zero >= 0 then N.Unsigned else N.Signed
+  let sign =
+    if Int64.compare i (Int64.of_string "2147483647") > 0 
+    then N.Unsigned else N.Signed
   in
     (sign, Config.size_of_int)
 
@@ -276,6 +277,11 @@ let translate_binop op (e1, t1) (e2, t2) =
     | (Plus, CPtr _, CInt _) ->	
 	let stride = K.Const (N.CInt64 (Int64.of_int Config.size_of_ptr)) in 
 	  (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
+(* TODO: clean bug ? maybe a cast is necessary ? *)
+    | (Gt, _, _) -> 
+	let t = CInt (N.Signed, Config.size_of_int) in
+	  (K.BinOp (N.Gt (scalar_of_cscalar t1), e1, e2), t)
+    
     | _ -> 
 	Npkcontext.error "Compiler.translate_binop" 
 	  "unexpected binary operator and arguments"
@@ -399,6 +405,12 @@ let compile fname =
 	  let t' = scalar_of_cscalar t' in
 	  let e = cast t' e t in
 	    (K.Set (lv, e, t), loc)::[]
+
+      | If (e, body) ->
+	  let (cond1, _) = translate_exp e in
+	  let cond2 = K.negate cond1 in
+	  let body = translate_blk body in
+	    (K.ChooseAssert [([cond1], body); ([cond2], [])], loc)::[]
 
       | Return e -> 
 	  (* TODO: code cleanup *)
