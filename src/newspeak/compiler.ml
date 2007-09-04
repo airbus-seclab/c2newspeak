@@ -286,15 +286,23 @@ let translate_binop op (e1, t1) (e2, t2) =
 	Npkcontext.error "Compiler.translate_binop" 
 	  "unexpected binary operator and arguments"
 
+let rec append_decls d body =
+  match d with
+      (x, t, loc)::tl -> 
+	let t = typ_of_ctyp t in
+	  (K.Decl (x, t, append_decls tl body), loc)::[]
+    | [] -> body
+
+
 let compile fname = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let global_env = Hashtbl.create 100 in
   let env = Hashtbl.create 100 in
   let vcnt = ref 0 in
-  let push x t =
+  let push x t loc =
     incr vcnt;
-    Hashtbl.add env x (!vcnt, t)
+    Hashtbl.add env x (!vcnt, t, loc)
   in
   let pop x =
     vcnt := !vcnt - 1;
@@ -302,7 +310,7 @@ let compile fname =
   in
   let get_var x =
     try 
-      let (n, t) = Hashtbl.find env x in
+      let (n, t, _) = Hashtbl.find env x in
 	(K.Local (!vcnt - n), t)
     with Not_found -> 
       try
@@ -313,11 +321,20 @@ let compile fname =
   in
   let get_ret_var () = 
     try
-      let (n, t) = Hashtbl.find env ret_vname in
+      let (n, t, _) = Hashtbl.find env ret_vname in
 	(K.Local (!vcnt - n), t)
     with Not_found -> 
 	Npkcontext.error "Compiler.get_ret_var" 
 	  ("function does not return a value")
+  in
+  let get_locals () =
+    let res = ref [] in
+    let get_var x (i, t, loc) = res := (i, (x, t, loc))::!res in
+      Hashtbl.iter get_var env;
+      Hashtbl.clear env;
+      let res = List.sort (fun (i, _) (j, _) -> compare i j) !res in
+      let (_, res) = List.split res in
+	res
   in
     
   let rec translate_lv lv =
@@ -382,11 +399,8 @@ let compile fname =
 	[] -> translate_stmt_list body
       | d::tl ->
 	  let (t, x, loc) = translate_decl d in
-	    push x t;
-	    let body = translate_blk (tl, body) in
-	    let t = typ_of_ctyp t in
-	      pop x;
-	      (K.Decl (x, t, body), loc)::[]
+	    push x t loc;
+	    translate_blk (tl, body)
 
   and translate_stmt_list x =
     match x with
@@ -427,11 +441,13 @@ let compile fname =
     match x with
 	FunctionDef (b, v, loc, body) -> 
 	  let (t, f) = translate_fun_decl (b, v) in
-	    push ret_vname t;
+	    push ret_vname t loc;
 	    let body = translate_blk body in
 	      pop ret_vname;
-	      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
 	      let t = ret_typ_of_ctyp t in
+	      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
+	      let decls = get_locals () in
+	      let body = append_decls decls body in
 		Hashtbl.add fundefs f ([], t, Some body) 
 	      
       | Declaration _ -> 
