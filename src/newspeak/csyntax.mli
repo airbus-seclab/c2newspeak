@@ -57,6 +57,7 @@ and stmt = (stmtkind * location)
 and stmtkind =
     | Set of (lv * exp)
     | If of (exp * blk)
+    | While of (exp * blk)
     | Return of exp
 
 and lv = 

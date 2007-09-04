@@ -61,6 +61,7 @@ rule token = parse
 (* keywords *)
     "if"                { IF }
   | "return"            { RETURN }
+  | "while"             { WHILE }
 
 (* types *)
   | "char"              { CHAR }

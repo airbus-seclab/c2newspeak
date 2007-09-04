@@ -252,6 +252,7 @@ let rec translate_fun_decl (b, v) =
     translate (translate_base_typ b) v
 
 let get_ret_lbl () = 0
+let get_brk_lbl () = 1
 
 (* TODO: code cleanup: this could be in npkil and also used by cilcompiler ? *)
 let cast t e t' =
@@ -425,6 +426,16 @@ let compile fname =
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
 	    (K.ChooseAssert [([cond1], body); ([cond2], [])], loc)::[]
+
+      | While (e, body) ->
+	  let (cond1, _) = translate_exp e in
+	  let cond2 = K.negate cond1 in
+	  let body = translate_blk body in
+	  let lbl = get_brk_lbl () in
+	  let brk = (K.Goto lbl, loc)::[] in
+	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
+	  let loop = (K.InfLoop ((cond, loc)::body), loc)::[] in
+	    (K.DoWith (loop, lbl, []), loc)::[]
 
       | Return e -> 
 	  (* TODO: code cleanup *)

@@ -43,7 +43,7 @@ let build_decl b m =
 
 %}
 
-%token IF RETURN
+%token IF RETURN WHILE
 %token CHAR INT STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
 %token AMPERSAND PLUS PLUSPLUS STAR LT
@@ -103,6 +103,7 @@ statement:
 							  Lval $1, 
 							  Const Int64.one)) }
 | IF LPAREN expression RPAREN block           { If ($3, $5) }
+| WHILE LPAREN expression RPAREN block        { While ($3, $5) }
 | RETURN expression SEMICOLON                 { Return $2 }
 ;;
 
