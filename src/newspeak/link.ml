@@ -281,9 +281,7 @@ let generate_funspecs cout npkos =
   in
     
   let read_all_funspec npko =
-    Npkcontext.print_debug ("Importing funs from "^npko^"...");
     let funs = read_fundefs npko in
-      Npkcontext.print_debug ("Funs import done.");
       Hashtbl.iter handle_funspec funs
   in
     List.iter read_all_funspec npkos;
