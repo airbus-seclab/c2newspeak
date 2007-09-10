@@ -270,7 +270,8 @@ let get_var cil_var =
   end
 
 let get_cstr s =
-  Npkil.AddrOf (Npkil.Global ("!const_str_"^s), 
+  let fname = Npkcontext.get_fname () in
+  Npkil.AddrOf (Npkil.Global ("!"^fname^".const_str_"^s), 
 		Npkil.Known ((String.length s) + 1))
 
 let get_ret_var () = Npkil.Local (!loc_cnt - 1)

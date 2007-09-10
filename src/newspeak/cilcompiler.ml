@@ -807,7 +807,8 @@ let translate_glb used_glb name x =
 (*=========================================*)
 
 let add_glb_cstr str =
-  let name = "!const_str_"^str in
+  let fname = Npkcontext.get_fname () in
+  let name = "!"^fname^".const_str_"^str in
   let glb = K.create_cstr str in
     Hashtbl.add Env.glb_decls name glb
 
