@@ -33,9 +33,9 @@
 (* Types *)
 (*-------*)
 
-type t = (gdecl list * (fid, fundec) Hashtbl.t)
+type t = ((string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t)
 
-and gdecl = (string * typ * init_t)
+and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
 
@@ -383,7 +383,7 @@ let rec string_of_cond b =
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-let dump_gdecl (name, t, i) =
+let dump_gdecl name (t, i) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp e));
   in
@@ -503,13 +503,16 @@ let dump_fundec name body =
 (* Exported print functions *)
 let dump (gdecls, fundecs) =
   (* TODO: Clean this mess... String_map *)
+  let glbs = ref (String_map.empty) in
   let funs = ref (String_map.empty) in
-    
     Hashtbl.iter 
-    (fun name (_, body) -> funs := (String_map.add name body !funs))
-    fundecs;
+      (fun name (_, body) -> funs := (String_map.add name body !funs))
+      fundecs;
     String_map.iter dump_fundec !funs;
-    List.iter dump_gdecl gdecls
+    Hashtbl.iter 
+      (fun name info -> glbs := (String_map.add name info !glbs)) 
+      gdecls;
+    String_map.iter dump_gdecl !glbs
 
 let dump_fundec name (_, body) = dump_fundec name body
 
@@ -582,7 +585,7 @@ let init_of_string str =
 let create_cstr name str =
   let (len, init) = init_of_string str in
   let t = Array (Scalar char_typ, len) in
-    (name, t, init)
+    (name, (t, init))
 
 let build_call_aux f prolog (args_t, ret_t) =
   let call = ref (prolog@[Call (FunId f), locUnknown]) in
@@ -603,22 +606,20 @@ let build_call f ftyp = build_call_aux f [] ftyp
 let build_main_call ptr_sz (args_t, ret_t) args =
   let argv_name = "!ptr_array" in
   let n = ref 0 in
-  let globs = ref [] in
+  let globs = Hashtbl.create 10 in
   let ptr_array_init = ref [] in
   let handle_arg_aux str =
     let name = "!param_str"^(string_of_int (!n + 1)) in
     let (len, init) = init_of_string str in
-      globs := (name, Array (Scalar char_typ, len), init)::(!globs);
+      Hashtbl.add globs name ((Array (Scalar char_typ, len), init));
       ptr_array_init := 
 	(!n * ptr_sz, Ptr, AddrOf (Global name, len))::(!ptr_array_init);
       incr n
   in
   let handle_args () =
     List.iter handle_arg_aux args;
-    let ptr_array = 
-      (argv_name, Array (Scalar Ptr, !n), Init !ptr_array_init) 
-    in
-    globs := List.rev (ptr_array::(!globs))
+    let info = ((Array (Scalar Ptr, !n), Init !ptr_array_init)) in
+      Hashtbl.add globs argv_name info
   in
   let prolog =
     match args_t with
@@ -632,7 +633,7 @@ let build_main_call ptr_sz (args_t, ret_t) args =
       | [] -> []
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
   in
-    (!globs, build_call_aux "main" prolog (args_t, ret_t))
+    (globs, build_call_aux "main" prolog (args_t, ret_t))
 
 
 
@@ -848,7 +849,7 @@ let normalize_loops b = simplify_aux [new simplify_loops] b
 (* Visitor *)
 class type visitor =
 object 
-  method process_gdecl: gdecl -> bool
+  method process_gdecl: string -> gdecl -> bool
   method process_fun: fid -> fundec -> bool
   method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
@@ -861,7 +862,7 @@ end
 
 class nop_visitor =
 object
-  method process_gdecl (_: gdecl) = true
+  method process_gdecl (_: string) (_: gdecl) = true
   method process_fun (_: fid) (_: fundec) = true
   method process_fun_after () = ()
   method process_stmt (_: stmt) = true
@@ -941,14 +942,14 @@ let visit_fun visitor fid (t, body) =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_gdecl visitor (id, t, init) =
-  let continue = visitor#process_gdecl (id, t, init) in
+let visit_glb visitor id (t, init) =
+  let continue = visitor#process_gdecl id (t, init) in
     match init with
 	Init x when continue -> List.iter (visit_init visitor) x 
       | _ -> ()
 
-let visit visitor (gdecls, fundecs) =
-  List.iter (visit_gdecl visitor) gdecls;
+let visit visitor (globals, fundecs) =
+  Hashtbl.iter (visit_glb visitor) globals;
   Hashtbl.iter (visit_fun visitor) fundecs
 
 (* Builder *)

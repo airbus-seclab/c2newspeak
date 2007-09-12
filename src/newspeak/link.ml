@@ -46,12 +46,14 @@ let glb_used = ref (String_set.empty)
 
 (* Association table stdname -> Newspeak.typ *)
 (* TODO: put these together with glb_decls *)
-let glb_tabl_typ = Hashtbl.create 100
+let globals = Hashtbl.create 100
+(* TODO: code cleanup remove this ?? *)
 let glb_tabl_name = Hashtbl.create 100
 
 let get_glob_typ name =
   try
-    Hashtbl.find glb_tabl_typ name
+    let (t, _) = Hashtbl.find globals name in
+      t
   with
       Not_found ->
 	error "Npklink.get_glob_typ" ("type for global variable "^name^" not found")
@@ -201,8 +203,6 @@ let merge_headers npko =
     Hashtbl.iter update_glob_link globs
 
 let generate_globals globs =
-  let glist = ref [] in
-
   let handle_real_glob name (t, _, init, _) =
     let (_, loc, _, used) = Hashtbl.find glb_decls name in
       Npkcontext.set_loc loc;
@@ -220,8 +220,7 @@ let generate_globals globs =
 	in
 	  try
 	    let t = replace_typ t in
-	      glist := (name, t, replace_init i)::(!glist);
-	      Hashtbl.add glb_tabl_typ name t
+	      Hashtbl.add globals name (t, replace_init i)
 	  with LenOfArray -> 
 	    error "Npklink.handle_real_glob" 
 	      ("unspecified length for global array "^name)
@@ -229,8 +228,7 @@ let generate_globals globs =
   in
 
     Hashtbl.iter handle_real_glob globs;
-    Npkcontext.forget_loc ();
-    !glist
+    Npkcontext.forget_loc ()
 
 let write_fun cout f spec =
   print_debug ("Writing function: "^f);
@@ -296,29 +294,23 @@ let link npkos output_file =
     print_debug "Linking files...";
     List.iter merge_headers npkos;
     print_debug "Globals...";
-    let decls = generate_globals glb_decls in
-      Newspeak.write_hdr cout (!filenames, decls, Cilutils.pointer_size);
-      
-      print_debug "Functions...";
-      generate_funspecs cout npkos;
-
-      close_out cout;
-
-      print_debug "File linked.";
-      
-      if !verb_newspeak then begin
-	print_endline "Newspeak output";
-	print_endline "---------------";
-	let (_, kernel, _) = Newspeak.read output_file in
-	  Newspeak.dump kernel;
-	  print_newline ()
-      end;
-      if !verb_c then begin
-	let (_, kernel, _) = Newspeak.read output_file in
-	  Newspeak.dump_as_C kernel;
-	  print_newline ()
-      end
-      
+    generate_globals glb_decls;
+    Newspeak.write_hdr cout (!filenames, globals, Cilutils.pointer_size);
+    
+    print_debug "Functions...";
+    generate_funspecs cout npkos;
+    
+    close_out cout;
+    
+    print_debug "File linked.";
+    
+    if !verb_newspeak then begin
+      print_endline "Newspeak output";
+      print_endline "---------------";
+      let (_, kernel, _) = Newspeak.read output_file in
+	Newspeak.dump kernel;
+	print_newline ()
+    end
 
 
 (*	Newspeak.write output_file (!filenames, kernel, Cilutils.pointer_size)*)

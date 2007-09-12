@@ -40,9 +40,9 @@
 
 (** The type of a program: function definitions and an block
     containing initialisation of the global variables. *)
-type t = (gdecl list * (fid, fundec) Hashtbl.t)
+type t = ((string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t)
 
-and gdecl = (string * typ * init_t)
+and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
 
@@ -188,7 +188,7 @@ val string_of_blk: blk -> string
 (** Visitor *)
 class type visitor =
 object
-  method process_gdecl: gdecl -> bool
+  method process_gdecl: string -> gdecl -> bool
   method process_fun: fid -> fundec -> bool
   method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
@@ -202,6 +202,7 @@ end
 class nop_visitor : visitor
 
 val visit_fun : visitor -> fid -> fundec -> unit
+val visit_glb : visitor -> string -> gdecl -> unit
 val visit : visitor -> t -> unit
 
 (** [dump (fundecs, body)] prints the program (fundecs, body) 
@@ -209,8 +210,6 @@ val visit : visitor -> t -> unit
 val dump : t -> unit
 
 val dump_fundec : string -> fundec -> unit
-
-val dump_as_C : t -> unit
 
 (** [write name (files, prog, ptr_sz) ] write the program prog, with
     the list of its file names and the size of pointers to file name. *)
@@ -225,7 +224,8 @@ val read : string -> (string list * t * size_t)
     This is useful when incremental dump of Newspeak is needed because of
     memory constraints.
 *)
-val write_hdr : out_channel -> (string list * gdecl list * size_t) -> unit
+val write_hdr : 
+  out_channel -> (string list * (string, gdecl) Hashtbl.t * size_t) -> unit
 
 (** [write_hdr cout fid spec] writes the function fid with its specification
     spec to channel cout.
@@ -245,9 +245,10 @@ val size_of : size_t -> typ -> size_t
 
 val build_call: fid -> ftyp -> blk
 
-val build_main_call : size_t -> ftyp -> string list -> (gdecl list * blk)
+val build_main_call : 
+  size_t -> ftyp -> string list -> ((string, gdecl) Hashtbl.t * blk)
 
-val create_cstr: string -> string -> gdecl
+val create_cstr: string -> string -> string * gdecl
 
 (** [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
 If it fails, then it returns None.

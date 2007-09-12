@@ -66,7 +66,6 @@ let verb_debug = ref false
 let verb_cil = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
-let verb_c = ref false
 let pretty_print = ref false
 
 let verbose boolean () =
@@ -152,9 +151,6 @@ let argslist = [
 
   ("--newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
-
-  ("--C", Arg.Set verb_c,
-   "verbose option: displays output as C code");
 
   ("--pretty", Arg.Set (pretty_print),
    "verbose options: uses var names for Newspeak display");

@@ -49,10 +49,17 @@ let speclist =
 
 module StringSet = Set.Make(String)
 
-class collector fundecs used_gvars used_funs =
+class collector (globals, fundecs) used_gvars used_funs =
 object (this)
   inherit Newspeak.nop_visitor
-  
+
+  method add_global x =
+    if not (Hashtbl.mem used_gvars x) then begin
+      let gdecl = Hashtbl.find globals x in
+	Hashtbl.add used_gvars x gdecl;
+	Newspeak.visit_glb (this :> Newspeak.visitor) x gdecl
+    end
+
   method visit_fun f = 
     if not (Hashtbl.mem used_funs f) then begin
       let fundec = Hashtbl.find fundecs f in
@@ -72,18 +79,18 @@ object (this)
   method process_lval x =
     match x with
 	Global x -> 
-	  used_gvars := StringSet.add x !used_gvars;
+	  this#add_global x;
 	  true
       | _ -> true
 
 end
 
-let collect_used (globs, fundecs) =
-  let used_gvars = ref StringSet.empty in
+let collect_used prog =
+  let used_gvars = Hashtbl.create 100 in
   let used_funs = Hashtbl.create 100 in
-  let collector = new collector fundecs used_gvars used_funs in
+  let collector = new collector prog used_gvars used_funs in
     collector#visit_fun !main;
-    (!used_gvars, used_funs)
+    (used_gvars, used_funs)
         
 let filter_globals used_gvars globals = 
   let is_used (x, _, _) = StringSet.mem x used_gvars in
@@ -92,10 +99,8 @@ let filter_globals used_gvars globals =
 let _ = 
   try 
     Arg.parse speclist anon_fun usage_msg;
-    let (files, (globals, fundecs), ptr_sz) = Newspeak.read !input in
-    let (used_gvars, stripped_fundecs) = collect_used (globals, fundecs) in
-    let stripped_globals = filter_globals used_gvars globals in
-    let stripped_npk = (stripped_globals, stripped_fundecs) in
+    let (files, prog, ptr_sz) = Newspeak.read !input in
+    let stripped_npk = collect_used prog in
       if !print then Newspeak.dump stripped_npk;
       Newspeak.write !output (files, stripped_npk, ptr_sz)
   with Invalid_argument s ->
