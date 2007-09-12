@@ -47,8 +47,6 @@ let glb_used = ref (String_set.empty)
 (* Association table stdname -> Newspeak.typ *)
 (* TODO: put these together with glb_decls *)
 let globals = Hashtbl.create 100
-(* TODO: code cleanup remove this ?? *)
-let glb_tabl_name = Hashtbl.create 100
 
 let get_glob_typ name =
   try
@@ -81,7 +79,7 @@ and replace_chooseitem (exps, b) =
     
 and replace_lv lv =
   match lv with
-    | Npkil.Global name -> Newspeak.Global (Hashtbl.find glb_tabl_name name)
+    | Npkil.Global name -> Newspeak.Global name
     | Npkil.Deref (e, sz) -> Newspeak.Deref (replace_exp e, sz)
     | Npkil.Shift (lv', e) -> Newspeak.Shift (replace_lv lv', replace_exp e)
     | Npkil.Local v -> Newspeak.Local v
@@ -193,8 +191,7 @@ let update_glob_link name (t, loc, init, used) =
       Hashtbl.replace glb_decls name (t, loc, init, used)
       
   with Not_found -> 
-    Hashtbl.add glb_decls name (t, loc, init, used);
-    Hashtbl.add glb_tabl_name name name
+    Hashtbl.add glb_decls name (t, loc, init, used)
 
 
 let merge_headers npko =
