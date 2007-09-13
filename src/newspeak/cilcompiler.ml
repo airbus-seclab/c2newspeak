@@ -240,12 +240,19 @@ and translate_exp e =
 	  | _ -> error "Npkcompile.translate_exp" "integer type expected"
       end
 	
-    | UnOp (LNot, e, t) -> begin
-	match translate_typ t with
-	    K.Scalar (Newspeak.Int int_t) -> K.UnOp (K.Not, translate_exp e)
-	  | _ -> error "Npkcompile.translate_exp" "integer type expected"
-      end
-	
+    | UnOp (LNot, e, t) -> 
+	let t' = translate_typ t in 
+	let t = translate_typ (typeOf e) in begin
+	    match (t, t') with
+		(K.Scalar (Newspeak.Int k), K.Scalar (Newspeak.Int k')) 
+		  when k = k' -> 
+		    K.UnOp (K.Not, translate_exp e)
+	      | (K.Scalar Newspeak.Ptr, K.Scalar (Newspeak.Int k')) ->
+		  let e = translate_exp e in
+		    K.BinOp (Newspeak.Eq Newspeak.Ptr, e, K.Const Newspeak.Nil)
+	      | _ -> error "Npkcompile.translate_exp" "integer type expected"
+	  end
+				      
     (* Binary operators *)
     (*------------------*)
 	
@@ -492,6 +499,8 @@ and translate_set lval typ e =
 
 and translate_if status e stmts1 stmts2 =
   let loc = Npkcontext.get_loc () in
+    (* TODO: check the switch also *)
+    (* TODO: make a sanity check algorithm *)
   let (e, t) = 
     match translate_typ (typeOf e) with
 	K.Scalar (Newspeak.Int _ as t) -> (e, t)
