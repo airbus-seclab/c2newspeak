@@ -7,16 +7,16 @@ getIndex() {
     (34)^do {
       (34)^while (1) {
         (35)^choose {
-          | ! (0 == t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+          | ! (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
             (36)^[2-_ptr]4 =(int4) 0-_int4;
             (37)^1- =(int4) 1;
-          | (0 == t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+          | (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
         }
         (34)^choose {
           | (10 > 0-_int4) -->
             (34)^choose {
-              | (0 == 1-_int4) -->
-              | ! (0 == 1-_int4) -->
+              | (0 ==_int4 1-_int4) -->
+              | ! (0 ==_int4 1-_int4) -->
                 (34)^goto lbl1;
             }
           | ! (10 > 0-_int4) -->
@@ -26,10 +26,10 @@ getIndex() {
     } with lbl1: {
     }
     (41)^choose {
-      | ! (0 == 1-_int4) -->
+      | ! (0 ==_int4 1-_int4) -->
         (42)^3- =(int4) 1;
         (42)^goto lbl0;
-      | (0 == 1-_int4) -->
+      | (0 ==_int4 1-_int4) -->
         (44)^3- =(int4) 0;
         (44)^goto lbl0;
     }
@@ -54,16 +54,16 @@ main() {
           (34)^do {
             (34)^while (1) {
               (35)^choose {
-                | ! (0 == t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+                | ! (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
                   (36)^[2-_ptr]4 =(int4) 0-_int4;
                   (37)^1- =(int4) 1;
-                | (0 == t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+                | (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
               }
               (34)^choose {
                 | (10 > 0-_int4) -->
                   (34)^choose {
-                    | (0 == 1-_int4) -->
-                    | ! (0 == 1-_int4) -->
+                    | (0 ==_int4 1-_int4) -->
+                    | ! (0 ==_int4 1-_int4) -->
                       (34)^goto lbl1;
                   }
                 | ! (10 > 0-_int4) -->
@@ -73,10 +73,10 @@ main() {
           } with lbl1: {
           }
           (41)^choose {
-            | ! (0 == 1-_int4) -->
+            | ! (0 ==_int4 1-_int4) -->
               (42)^3- =(int4) 1;
               (42)^goto lbl0;
-            | (0 == 1-_int4) -->
+            | (0 ==_int4 1-_int4) -->
               (44)^3- =(int4) 0;
               (44)^goto lbl0;
           }
@@ -87,9 +87,9 @@ main() {
     (52)^1- =(int4) 0-_int4;
   }
   (54)^choose {
-    | ! (0 == 0-_int4) -->
+    | ! (0 ==_int4 0-_int4) -->
       (55)^t + (belongs[0,9] 1-_int4 * 1) =(int1) 0;
-    | (0 == 0-_int4) -->
+    | (0 ==_int4 0-_int4) -->
   }
 }
 

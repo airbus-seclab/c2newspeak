@@ -326,7 +326,7 @@ let string_of_unop op =
 let string_of_binop op =
   match op with
     | Gt _ -> ">"
-    | Eq _ -> "=="
+    | Eq t -> "==_"^(string_of_scalar t)
     | PlusI -> "+"
     | MinusI -> "-"
     | MultI -> "*"

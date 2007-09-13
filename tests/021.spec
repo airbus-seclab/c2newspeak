@@ -6,9 +6,9 @@ main() {
   (46)^do {
     (32)^do {
       (32)^choose {
-        | ! (1 == 1-_int4) -->
+        | ! (1 ==_int4 1-_int4) -->
           (32)^goto lbl1;
-        | (1-_int4 == 1) -->
+        | (1-_int4 ==_int4 1) -->
           (32)^goto lbl2;
       }
     } with lbl2: {
@@ -18,11 +18,11 @@ main() {
         (37)^do {
           (34)^do {
             (34)^choose {
-              | ! (2 == 0-_int4) & ! (3 == 0-_int4) -->
+              | ! (2 ==_int4 0-_int4) & ! (3 ==_int4 0-_int4) -->
                 (34)^goto lbl2;
-              | (0-_int4 == 2) -->
+              | (0-_int4 ==_int4 2) -->
                 (34)^goto lbl4;
-              | (0-_int4 == 3) -->
+              | (0-_int4 ==_int4 3) -->
                 (34)^goto lbl3;
             }
           } with lbl4: {
