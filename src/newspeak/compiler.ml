@@ -185,15 +185,10 @@ let rec translate_var_modifier b v =
 	Npkcontext.error "Compiler.translate_var_modifier" 
 	  "case not implemented yet"
 
-let rec translate_decl d =
-  match d with
-      Declaration (b, v, loc) -> 
-	let b = translate_base_typ b in
-	let (t, x) = translate_var_modifier b v in
-	  (t, x, loc)
-    | _ -> 
-	Npkcontext.error "Compiler.translate_decl" 
-	  "Unexpected function definition"
+let rec translate_decl (b, v, loc) =
+  let b = translate_base_typ b in
+  let (t, x) = translate_var_modifier b v in
+    (t, x, loc)
 
 and translate_base_typ t =
   match t with
@@ -232,12 +227,12 @@ and translate_union_fields f =
   in
     (List.map translate f, !n)
 	    
-let rec translate_fun_decl (b, v) =
+let rec translate_fun_decl (b, v, loc) =
   let rec translate b v =
     match v with
 	Variable x -> 
 	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
-      | FunctionName f -> (b, f)
+      | FunctionName (f, _) -> (b, f, loc)
       | Array _ -> 
 	  Npkcontext.error "Compiler.translate_fun_decl" 
 	    "function can not return array"
@@ -450,8 +445,8 @@ let compile fname =
 
   let translate_global x =
     match x with
-	FunctionDef (b, v, loc, body) -> 
-	  let (t, f) = translate_fun_decl (b, v) in
+	FunctionDef (x, body) -> 
+	  let (t, f, loc) = translate_fun_decl x in
 	    push ret_vname t loc;
 	    let body = translate_blk body in
 	      pop ret_vname;
@@ -461,7 +456,7 @@ let compile fname =
 	      let body = append_decls decls body in
 		Hashtbl.add fundefs f ([], t, Some body) 
 	      
-      | Declaration _ -> 
+      | Declaration x -> 
 	  let (t, x, loc) = translate_decl x in
 	    Hashtbl.add global_env x t;
 	    Hashtbl.add globals x (typ_of_ctyp t, loc, Some None, true)

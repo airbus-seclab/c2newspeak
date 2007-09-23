@@ -23,11 +23,13 @@
   email: charles.hymans@penjili.org
 *)
 
-type prog = declaration list
+type prog = global list
 
-and declaration =
-    | FunctionDef of (base_typ * var_modifier * location * blk)
-    | Declaration of (base_typ * var_modifier * location)
+and global =
+    | FunctionDef of (declaration * blk)
+    | Declaration of declaration
+
+and declaration = (base_typ * var_modifier * location)
 
 and base_typ =
     | Void 
@@ -37,7 +39,7 @@ and base_typ =
 
 and var_modifier =
     | Variable of string
-    | FunctionName of fname
+    | FunctionName of (fname * declaration list)
     | Array of (var_modifier * Int64.t)
     | Pointer of var_modifier
     | FunctionProto of (var_modifier * base_typ list)
@@ -59,6 +61,7 @@ and stmtkind =
     | If of (exp * blk)
     | While of (exp * blk)
     | Return of exp
+    | Call of (lv * fname * exp list)
 
 and lv = 
     | Var of vname

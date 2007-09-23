@@ -35,11 +35,13 @@ let flatten_decl b m =
   let (v, l) = m in 
     (b, v, l)
 
-let build_fundef b v body = FunctionDef (b, v, get_loc (), body)
+let build_fundef b v body = (FunctionDef ((b, v, get_loc ()), body))::[]
 
 let build_decl b m =
-  let build (v, l) = Declaration (b, v, l) in
+  let build (v, l) = (b, v, l) in
     List.map build m
+
+let build_glbdecl d = List.map (fun x -> Declaration x) d
 
 %}
 
@@ -68,17 +70,17 @@ let build_decl b m =
 %%
 
 cprog:
-  declaration_list                            { $1 }
+  global_list                                { $1 }
 ;;
 
-declaration_list:
-  declaration declaration_list                { $1@$2 }
-|                                             { [] }
+global_list:
+  global global_list                         { $1@$2 }
+|                                            { [] }
 ;;
 
-declaration:
-  base_typ var_modifier_list SEMICOLON      { build_decl $1 $2 }
-| base_typ var_modifier block                 { (build_fundef $1 $2 $3)::[] }
+global:
+  declaration SEMICOLON                       { build_glbdecl $1 }
+| base_typ var_modifier block                 { build_fundef $1 $2 $3 }
 ;;
 
 var_modifier_list:
@@ -89,6 +91,15 @@ var_modifier_list:
 block:
   LBRACE declaration_list statement_list 
   RBRACE                                      { ($2, $3) }
+;;
+
+declaration_list:
+  declaration SEMICOLON declaration_list      { $1@$3 }
+|                                             { [] }
+;;
+
+declaration:
+  base_typ var_modifier_list                  { build_decl $1 $2 }
 ;;
 
 statement_list:
@@ -105,6 +116,19 @@ statement:
 | IF LPAREN expression RPAREN block           { If ($3, $5) }
 | WHILE LPAREN expression RPAREN block        { While ($3, $5) }
 | RETURN expression SEMICOLON                 { Return $2 }
+| left_value EQ 
+  IDENTIFIER LPAREN expression_list RPAREN
+  SEMICOLON                                   { Call ($1, $3, $5) }
+;;
+
+expression_list:
+  non_empty_expression_list                   { $1 }
+|                                             { [] }
+;;
+
+non_empty_expression_list:
+  expression COMMA non_empty_expression_list  { $1::$3 }
+| expression                                  { $1::[] }
 ;;
 
 left_value:
@@ -134,11 +158,22 @@ base_typ:
 
 var_modifier:
   IDENTIFIER                                  { Variable $1 }
-| IDENTIFIER LPAREN RPAREN                    { FunctionName $1 }
+| IDENTIFIER LPAREN arg_list RPAREN           { FunctionName ($1, $3) }
 | var_modifier LBRACKET INTEGER RBRACKET      { Array ($1, $3) }
 | STAR var_modifier                           { Pointer $2 }
 | var_modifier LPAREN base_typ_list RPAREN    { FunctionProto ($1, $3) }
 | LPAREN var_modifier RPAREN                  { $2 }
+;;
+
+arg_list:
+  non_empty_arg_list                          { $1}
+|                                             { [] }
+;;
+
+non_empty_arg_list:
+  base_typ var_modifier COMMA 
+  non_empty_arg_list                          { ($1, $2, get_loc ())::$4 }
+| base_typ var_modifier                       { ($1, $2, get_loc ())::[]}
 ;;
 
 base_typ_list:
