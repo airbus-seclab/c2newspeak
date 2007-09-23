@@ -232,7 +232,7 @@ let rec translate_fun_decl (b, v, loc) =
     match v with
 	Variable x -> 
 	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
-      | FunctionName (f, _) -> (b, f, loc)
+      | FunctionName (f, args) -> (b, f, List.map translate_decl args, loc)
       | Array _ -> 
 	  Npkcontext.error "Compiler.translate_fun_decl" 
 	    "function can not return array"
@@ -284,7 +284,7 @@ let translate_binop op (e1, t1) (e2, t2) =
 
 let rec append_decls d body =
   match d with
-      (x, t, loc)::tl -> 
+      (t, x, loc)::tl -> 
 	let t = typ_of_ctyp t in
 	  (K.Decl (x, t, append_decls tl body), loc)::[]
     | [] -> body
@@ -295,8 +295,10 @@ let compile fname =
   let fundefs = Hashtbl.create 100 in
   let global_env = Hashtbl.create 100 in
   let env = Hashtbl.create 100 in
+    (* maps each function name to its list of formal declarations *)
+  let formals = Hashtbl.create 100 in
   let vcnt = ref 0 in
-  let push x t loc =
+  let push (t, x, loc) =
     incr vcnt;
     Hashtbl.add env x (!vcnt, t, loc)
   in
@@ -304,6 +306,11 @@ let compile fname =
     vcnt := !vcnt - 1;
     Hashtbl.remove env x
   in
+
+  let push_dummy loc = push (CVoid, "dummy", loc) in
+
+  let pop_dummy () = pop "dummy" in
+
   let get_var x =
     try 
       let (n, t, _) = Hashtbl.find env x in
@@ -325,14 +332,41 @@ let compile fname =
   in
   let get_locals () =
     let res = ref [] in
-    let get_var x (i, t, loc) = res := (i, (x, t, loc))::!res in
+    let get_var x (i, t, loc) = res := (i, (t, x, loc))::!res in
       Hashtbl.iter get_var env;
       Hashtbl.clear env;
       let res = List.sort (fun (i, _) (j, _) -> compare i j) !res in
       let (_, res) = List.split res in
 	res
   in
-    
+  let register_formals f t = Hashtbl.add formals f t in
+
+   
+  let build_args f args loc =
+    let formals =
+      try Hashtbl.find formals f
+      with Not_found -> 
+	let i = ref (-1) in
+	let build (_, t) =
+	  incr i;
+	  (CScalar t, "arg"^(string_of_int !i), loc)
+	in
+	  List.map build args
+    in
+    let decls = 
+      List.map2 (fun (_, t) (_, x, _) -> (CScalar t, x, loc)) args formals
+    in
+    let i = ref (-1) in
+    let build_set (e, t) =
+      incr i;
+      let lv = K.Local !i in
+	(K.Set (lv, e, scalar_of_cscalar t), loc)
+    in
+      (* TODO: code optimization: remove these List.rev!!! *)
+    let set = List.rev (List.map build_set (List.rev args)) in
+      (decls, set)
+  in
+
   let rec translate_lv lv =
     match lv with
 	Var x -> get_var x
@@ -390,13 +424,10 @@ let compile fname =
 	    translate_binop op v1 v2
   in
 
+
   let rec translate_blk (decls, body) =
-    match decls with
-	[] -> translate_stmt_list body
-      | d::tl ->
-	  let (t, x, loc) = translate_decl d in
-	    push x t loc;
-	    translate_blk (tl, body)
+    List.iter (fun x -> push (translate_decl x)) decls;
+    translate_stmt_list body
 
   and translate_stmt_list x =
     match x with
@@ -441,14 +472,55 @@ let compile fname =
 	  let e = cast t' e t in
 	  let lbl = get_ret_lbl () in
 	    (K.Set (lv, e, t), loc)::(K.Goto lbl, loc)::[]
+
+      | Call x -> translate_call loc x
+
+
+  and translate_call loc (r, f, args) =
+    (* TODO: code robustness: should compare arguments types and 
+       expected function type *)
+    
+    (* push_dummy is a bit of a hack, since we do not have the type of 
+       the return value or arguments, but still need to compile expressions
+       with the right number of local variable,
+       we push a dummy variable in the local env.
+    *)
+    push_dummy loc;
+    let (r, t) = translate_lv r in
+    let ret_decl = (t, "value_of_"^f, loc) in
+    let ret_t = scalar_of_cscalar (cscalar_of_ctyp t) in
+    let ret_set = (K.Set (r, K.Lval (K.Local 0, ret_t), ret_t), loc) in
+
+      (* TODO: code cleanup put this together with the first push_dummy *)
+    List.iter (fun _ -> push_dummy loc) args;
+
+    let args = (List.map translate_exp args) in
+    let (decls, set) = build_args f args loc in
+      pop_dummy ();
+      List.iter (fun _ -> pop_dummy ()) args;
+
+    let call = (K.Call (K.FunId f), loc)::[] in
+    let call = set@call in
+    let call = append_decls decls call in
+      (* TODO: code optimization: write this so that there is no @ 
+	 (by putting ret_set under the scope of local variables too) *)
+    let call = call@(ret_set::[]) in
+    let call = append_decls (ret_decl::[]) call in
+      call
   in
+
+      
 
   let translate_global x =
     match x with
 	FunctionDef (x, body) -> 
-	  let (t, f, loc) = translate_fun_decl x in
-	    push ret_vname t loc;
+	  let (t, f, args, loc) = translate_fun_decl x in
+	    push (t, ret_vname, loc);
+	    List.iter push args;
+	    register_formals f args;
 	    let body = translate_blk body in
+	    let args = List.map (fun (_, x, _) -> x) args in
+	      List.iter pop args;
 	      pop ret_vname;
 	      let t = ret_typ_of_ctyp t in
 	      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
