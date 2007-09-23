@@ -47,6 +47,7 @@ and var_modifier =
 and ityp = 
     | Char 
     | Int
+    | LongLong
 
 and sign =
     | Signed

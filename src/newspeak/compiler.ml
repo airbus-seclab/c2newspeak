@@ -168,6 +168,7 @@ let translate_ityp s t =
   match t with
       Char -> CInt (s, Config.size_of_char)
     | Int -> CInt (s, Config.size_of_int)
+    | LongLong -> CInt (s, Config.size_of_longlong)
 
 let rec translate_var_modifier b v =
   match v with

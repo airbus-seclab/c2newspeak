@@ -66,6 +66,7 @@ rule token = parse
 (* types *)
   | "char"              { CHAR }
   | "int"               { INT }
+  | "long"              { LONG }
   | "struct"            { STRUCT }
   | "union"             { UNION }
   | "unsigned"          { UNSIGNED }

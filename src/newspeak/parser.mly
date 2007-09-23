@@ -46,7 +46,7 @@ let build_glbdecl d = List.map (fun x -> Declaration x) d
 %}
 
 %token IF RETURN WHILE
-%token CHAR INT STRUCT UNION UNSIGNED VOID
+%token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
 %token AMPERSAND PLUS PLUSPLUS STAR LT
 %token EOF
@@ -189,4 +189,5 @@ non_empty_base_typ_list:
 ityp:
   CHAR                                        { Char }
 | INT                                         { Int }
+| LONG LONG                                   { LongLong }
 ;;
