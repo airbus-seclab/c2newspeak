@@ -61,6 +61,7 @@ rule token = parse
 (* keywords *)
     "if"                { IF }
   | "return"            { RETURN }
+  | "typedef"           { TYPEDEF }
   | "while"             { WHILE }
 
 (* types *)

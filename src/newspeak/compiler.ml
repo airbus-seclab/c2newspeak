@@ -186,10 +186,10 @@ let rec translate_var_modifier b v =
 	Npkcontext.error "Compiler.translate_var_modifier" 
 	  "case not implemented yet"
 
-let rec translate_decl (b, v, loc) =
+let rec translate_decl (b, v) =
   let b = translate_base_typ b in
   let (t, x) = translate_var_modifier b v in
-    (t, x, loc)
+    (t, x)
 
 and translate_base_typ t =
   match t with
@@ -202,7 +202,7 @@ and translate_struct_fields f =
   let rec translate o f =
     match f with
 	d::f -> 
-	  let (t, x, _) = translate_decl d in
+	  let (t, x) = translate_decl d in
 	  let sz = size_of t in
 	  let o = align t o in
 	  let (f, n) = translate (o+sz) f in
@@ -213,7 +213,7 @@ and translate_struct_fields f =
   in
     match f with
 	d::[] -> 
-	  let (t, x, _) = translate_decl d in
+	  let (t, x) = translate_decl d in
 	  let sz = size_of t in
 	    ((x, 0, t)::[], sz)
       | _ -> translate 0 f
@@ -221,19 +221,19 @@ and translate_struct_fields f =
 and translate_union_fields f =
   let n = ref 0 in
   let translate d =
-    let (t, x, _) = translate_decl d in
+    let (t, x) = translate_decl d in
     let sz = size_of t in
       if !n < sz then n := sz;
       (x, 0, t)
   in
     (List.map translate f, !n)
 	    
-let rec translate_fun_decl (b, v, loc) =
+let rec translate_fun_decl (b, v) =
   let rec translate b v =
     match v with
 	Variable x -> 
 	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
-      | FunctionName (f, args) -> (b, f, List.map translate_decl args, loc)
+      | FunctionName (f, args) -> (b, f, List.map translate_decl args)
       | Array _ -> 
 	  Npkcontext.error "Compiler.translate_fun_decl" 
 	    "function can not return array"
@@ -299,7 +299,7 @@ let compile fname =
     (* maps each function name to its list of formal declarations *)
   let formals = Hashtbl.create 100 in
   let vcnt = ref 0 in
-  let push (t, x, loc) =
+  let push loc (t, x) =
     incr vcnt;
     Hashtbl.add env x (!vcnt, t, loc)
   in
@@ -308,7 +308,7 @@ let compile fname =
     Hashtbl.remove env x
   in
 
-  let push_dummy loc = push (CVoid, "dummy", loc) in
+  let push_dummy loc = push loc (CVoid, "dummy") in
 
   let pop_dummy () = pop "dummy" in
 
@@ -350,12 +350,12 @@ let compile fname =
 	let i = ref (-1) in
 	let build (_, t) =
 	  incr i;
-	  (CScalar t, "arg"^(string_of_int !i), loc)
+	  (CScalar t, "arg"^(string_of_int !i))
 	in
 	  List.map build args
     in
     let decls = 
-      List.map2 (fun (_, t) (_, x, _) -> (CScalar t, x, loc)) args formals
+      List.map2 (fun (_, t) (_, x) -> (CScalar t, x, loc)) args formals
     in
     let i = ref (-1) in
     let build_set (e, t) =
@@ -426,9 +426,12 @@ let compile fname =
   in
 
 
-  let rec translate_blk (decls, body) =
-    List.iter (fun x -> push (translate_decl x)) decls;
-    translate_stmt_list body
+  let rec translate_blk body =
+    match body with
+      | (Decl x, loc)::tl ->
+	  push loc (translate_decl x);
+	  translate_blk tl
+      | _ -> translate_stmt_list body
 
   and translate_stmt_list x =
     match x with
@@ -512,15 +515,15 @@ let compile fname =
 
       
 
-  let translate_global x =
+  let translate_global (x, loc) =
     match x with
 	FunctionDef (x, body) -> 
-	  let (t, f, args, loc) = translate_fun_decl x in
-	    push (t, ret_vname, loc);
-	    List.iter push args;
+	  let (t, f, args) = translate_fun_decl x in
+	    push loc (t, ret_vname);
+	    List.iter (push loc) args;
 	    register_formals f args;
 	    let body = translate_blk body in
-	    let args = List.map (fun (_, x, _) -> x) args in
+	    let args = List.map (fun (_, x) -> x) args in
 	      List.iter pop args;
 	      pop ret_vname;
 	      let t = ret_typ_of_ctyp t in
@@ -529,8 +532,8 @@ let compile fname =
 	      let body = append_decls decls body in
 		Hashtbl.add fundefs f ([], t, Some body) 
 	      
-      | Declaration x -> 
-	  let (t, x, loc) = translate_decl x in
+      | GlbDecl x -> 
+	  let (t, x) = translate_decl x in
 	    Hashtbl.add global_env x t;
 	    Hashtbl.add globals x (typ_of_ctyp t, loc, Some None, true)
   in

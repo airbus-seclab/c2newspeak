@@ -35,17 +35,26 @@ let flatten_decl b m =
   let (v, l) = m in 
     (b, v, l)
 
-let build_fundef b v body = (FunctionDef ((b, v, get_loc ()), body))::[]
+let build_fundef b v body = (FunctionDef ((b, v), body), get_loc ())::[]
 
-let build_decl b m =
-  let build (v, l) = (b, v, l) in
+let build_typedef b v = (Typedef (b, v), get_loc ())::[]
+
+let build_decl (b, m) =
+  let build (v, _) = (b, v) in
     List.map build m
 
-let build_glbdecl d = List.map (fun x -> Declaration x) d
+let build_stmtdecl (b, m) =
+  let (_, line, _) = get_loc () in
+  let build (v, l) = (Decl (b, v), l) in
+    List.map build m
 
+(* TODO: remove location in v ???? *)
+let build_glbdecl (b, m) = 
+  let build (v, _) = (GlbDecl (b, v), get_loc ()) in
+    List.map build m
 %}
 
-%token IF RETURN WHILE
+%token IF RETURN TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
 %token AMPERSAND PLUS PLUSPLUS STAR LT
@@ -70,124 +79,128 @@ let build_glbdecl d = List.map (fun x -> Declaration x) d
 %%
 
 cprog:
-  global_list                                { $1 }
+  global_list                              { $1 }
 ;;
 
 global_list:
-  global global_list                         { $1@$2 }
-|                                            { [] }
+  global global_list                       { $1@$2 }
+|                                          { [] }
 ;;
 
 global:
-  declaration SEMICOLON                       { build_glbdecl $1 }
-| base_typ var_modifier block                 { build_fundef $1 $2 $3 }
+  declaration SEMICOLON                    { build_glbdecl $1 }
+| base_typ var_modifier block              { build_fundef $1 $2 $3 }
+| TYPEDEF base_typ var_modifier SEMICOLON  { build_typedef $2 $3 }
 ;;
 
 var_modifier_list:
-  var_modifier COMMA var_modifier_list        { ($1, get_loc ())::$3 }
-| var_modifier                                { ($1, get_loc ())::[] }
+  var_modifier COMMA var_modifier_list     { ($1, get_loc ())::$3 }
+| var_modifier                             { ($1, get_loc ())::[] }
 ;;
 
 block:
-  LBRACE declaration_list statement_list 
-  RBRACE                                      { ($2, $3) }
+  LBRACE statement_list RBRACE             { $2 }
 ;;
 
 declaration_list:
-  declaration SEMICOLON declaration_list      { $1@$3 }
-|                                             { [] }
+  declaration SEMICOLON declaration_list   { (build_decl $1)@$3 }
+|                                          { [] }
 ;;
 
 declaration:
-  base_typ var_modifier_list                  { build_decl $1 $2 }
+  base_typ var_modifier_list               { ($1, $2) }
 ;;
 
 statement_list:
-  statement statement_list                    { ($1, get_loc ())::$2 }
-|                                             { [] }
+  statement statement_list                 { $1@$2 }
+|                                          { [] }
 ;;
 
 statement:
-  left_value EQ expression SEMICOLON          { Set ($1, $3) }
-| left_value PLUSPLUS SEMICOLON               { Set ($1, 
-						    Binop (Plus,
-							  Lval $1, 
-							  Const Int64.one)) }
-| IF LPAREN expression RPAREN block           { If ($3, $5) }
-| WHILE LPAREN expression RPAREN block        { While ($3, $5) }
-| RETURN expression SEMICOLON                 { Return $2 }
+  declaration SEMICOLON                    { build_stmtdecl $1 }
+| left_value EQ expression SEMICOLON       { [Set ($1, $3), get_loc ()] }
+| left_value PLUSPLUS SEMICOLON            { [Set ($1, 
+						  Binop (Plus,
+							Lval $1, 
+							Const Int64.one)),
+					     get_loc ()]}
+| IF LPAREN expression RPAREN block        { [If ($3, $5), get_loc ()] }
+| WHILE LPAREN expression RPAREN block     { [While ($3, $5), get_loc ()] }
+| RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
 | left_value EQ 
   IDENTIFIER LPAREN expression_list RPAREN
-  SEMICOLON                                   { Call ($1, $3, $5) }
+  SEMICOLON                                { [Call ($1, $3, $5), get_loc ()] }
 ;;
 
 expression_list:
-  non_empty_expression_list                   { $1 }
-|                                             { [] }
+  non_empty_expression_list                { $1 }
+|                                          { [] }
 ;;
 
 non_empty_expression_list:
-  expression COMMA non_empty_expression_list  { $1::$3 }
-| expression                                  { $1::[] }
+  expression COMMA 
+  non_empty_expression_list                { $1::$3 }
+| expression                               { $1::[] }
 ;;
 
 left_value:
-  IDENTIFIER                                  { Var $1 }
-| left_value DOT IDENTIFIER                   { Field ($1, $3) }
-| left_value LBRACKET expression RBRACKET     { Index ($1, $3) }
-| STAR expression                             { Deref $2 }
+  IDENTIFIER                               { Var $1 }
+| left_value DOT IDENTIFIER                { Field ($1, $3) }
+| left_value LBRACKET expression RBRACKET  { Index ($1, $3) }
+| STAR expression                          { Deref $2 }
 ;;
 
 expression:
-  INTEGER                                     { Const $1 }
-| left_value                                  { Lval $1 }
-| expression PLUS expression                  { Binop (Plus, $1, $3) }
-| expression STAR expression                  { Binop (Mult, $1, $3) }
-| expression LT expression                    { Binop (Gt, $3, $1) }
-| AMPERSAND left_value                        { AddrOf $2 }
+  INTEGER                                  { Const $1 }
+| left_value                               { Lval $1 }
+| expression PLUS expression               { Binop (Plus, $1, $3) }
+| expression STAR expression               { Binop (Mult, $1, $3) }
+| expression LT expression                 { Binop (Gt, $3, $1) }
+| AMPERSAND left_value                     { AddrOf $2 }
 ;;
 
 // carefull not to have any empty rule: this deceives line number location
 base_typ:
-  VOID                                        { Void }
-| ityp                                        { Integer (Signed, $1) }
-| UNSIGNED ityp                               { Integer (Unsigned, $2) }
-| STRUCT LBRACE declaration_list RBRACE       { Struct $3 }
-| UNION LBRACE declaration_list RBRACE        { Union $3 }
+  VOID                                     { Void }
+| ityp                                     { Integer (Signed, $1) }
+| UNSIGNED ityp                            { Integer (Unsigned, $2) }
+| STRUCT LBRACE declaration_list RBRACE    { Struct $3 }
+| UNION LBRACE declaration_list RBRACE     { Union $3 }
+| IDENTIFIER                               { Name $1 }
 ;;
 
 var_modifier:
-  IDENTIFIER                                  { Variable $1 }
-| IDENTIFIER LPAREN arg_list RPAREN           { FunctionName ($1, $3) }
-| var_modifier LBRACKET INTEGER RBRACKET      { Array ($1, $3) }
-| STAR var_modifier                           { Pointer $2 }
-| var_modifier LPAREN base_typ_list RPAREN    { FunctionProto ($1, $3) }
-| LPAREN var_modifier RPAREN                  { $2 }
+  IDENTIFIER                               { Variable $1 }
+| IDENTIFIER LPAREN arg_list RPAREN        { FunctionName ($1, $3) }
+| var_modifier LBRACKET INTEGER RBRACKET   { Array ($1, $3) }
+| STAR var_modifier                        { Pointer $2 }
+| var_modifier LPAREN base_typ_list RPAREN { FunctionProto ($1, $3) }
+| LPAREN var_modifier RPAREN               { $2 }
 ;;
 
 arg_list:
-  non_empty_arg_list                          { $1}
-|                                             { [] }
+  non_empty_arg_list                       { $1}
+|                                          { [] }
 ;;
 
 non_empty_arg_list:
   base_typ var_modifier COMMA 
-  non_empty_arg_list                          { ($1, $2, get_loc ())::$4 }
-| base_typ var_modifier                       { ($1, $2, get_loc ())::[]}
+  non_empty_arg_list                       { ($1, $2)::$4 }
+| base_typ var_modifier                    { ($1, $2)::[]}
 ;;
 
 base_typ_list:
-  non_empty_base_typ_list                     { $1 }
-|                                             { [] }
+  non_empty_base_typ_list                  { $1 }
+|                                          { [] }
 ;;
 
 non_empty_base_typ_list:
-  base_typ COMMA base_typ_list                { $1::$3 }
-| base_typ                                    { $1::[] }
+  base_typ COMMA base_typ_list             { $1::$3 }
+| base_typ                                 { $1::[] }
 ;;
 
 ityp:
-  CHAR                                        { Char }
-| INT                                         { Int }
-| LONG LONG                                   { LongLong }
+  CHAR                                     { Char }
+| INT                                      { Int }
+| LONG LONG                                { LongLong }
 ;;

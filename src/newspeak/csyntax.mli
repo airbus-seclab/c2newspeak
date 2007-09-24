@@ -23,19 +23,21 @@
   email: charles.hymans@penjili.org
 *)
 
-type prog = global list
+type prog = (global * location) list
 
 and global =
     | FunctionDef of (declaration * blk)
-    | Declaration of declaration
+    | GlbDecl of declaration
+    | Typedef of declaration
 
-and declaration = (base_typ * var_modifier * location)
+and declaration = (base_typ * var_modifier)
 
 and base_typ =
     | Void 
     | Integer of (sign * ityp)    
     | Struct of declaration list
     | Union of declaration list
+    | Name of string
 
 and var_modifier =
     | Variable of string
@@ -53,11 +55,12 @@ and sign =
     | Signed
     | Unsigned
 
-and blk = declaration list * stmt list
-
 and stmt = (stmtkind * location)
 
+and blk = stmt list
+
 and stmtkind =
+    | Decl of declaration
     | Set of (lv * exp)
     | If of (exp * blk)
     | While of (exp * blk)
