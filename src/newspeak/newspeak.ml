@@ -302,6 +302,8 @@ let string_of_ftyp (args, ret) =
     !res
 
 
+let string_of_loc (fname, line, carac) = 
+  (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
 
 (* Expressions *)
 let string_of_cte c =
