@@ -428,9 +428,16 @@ let compile fname =
 
   let rec translate_blk body =
     match body with
-      | (Decl x, loc)::tl ->
-	  push loc (translate_decl x);
-	  translate_blk tl
+      | (Decl (x, init), loc)::tl ->
+	  let (t, x) = translate_decl x in
+	    push loc (t, x);
+	    let init = 
+	      match init with
+		  None -> []
+		| Some e -> translate_stmt (Set (Var x, e), loc)
+	    in
+	    let blk = translate_blk tl in
+	      init@blk
       | _ -> translate_stmt_list body
 
   and translate_stmt_list x =
@@ -513,7 +520,11 @@ let compile fname =
       call
   in
 
-      
+  let translate_init x =
+    match x with
+	None -> None
+      | Some e -> invalid_arg "Compiler.translate_init: Not implemented yet"
+  in
 
   let translate_global (x, loc) =
     match x with
@@ -532,10 +543,13 @@ let compile fname =
 	      let body = append_decls decls body in
 		Hashtbl.add fundefs f ([], t, Some body) 
 	      
-      | GlbDecl x -> 
+      | GlbDecl (x, init) -> 
 	  let (t, x) = translate_decl x in
+	  let init = translate_init init in
+	    (* TODO: maybe do this in a first, since there may be the need for
+	       a variable not encountered yet, in init*)
 	    Hashtbl.add global_env x t;
-	    Hashtbl.add globals x (typ_of_ctyp t, loc, Some None, true)
+	    Hashtbl.add globals x (typ_of_ctyp t, loc, Some init, true)
   in
 
   let cprog = parse fname in

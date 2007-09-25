@@ -31,10 +31,6 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let flatten_decl b m = 
-  let (v, l) = m in 
-    (b, v, l)
-
 let build_fundef b v body = (FunctionDef ((b, v), body), get_loc ())::[]
 
 let build_typedef b v = (Typedef (b, v), get_loc ())::[]
@@ -44,13 +40,12 @@ let build_decl (b, m) =
     List.map build m
 
 let build_stmtdecl (b, m) =
-  let (_, line, _) = get_loc () in
-  let build (v, l) = (Decl (b, v), l) in
+  let build ((v, init), l) = (Decl ((b, v), init), l) in
     List.map build m
 
 (* TODO: remove location in v ???? *)
 let build_glbdecl (b, m) = 
-  let build (v, _) = (GlbDecl (b, v), get_loc ()) in
+  let build ((v, init), _) = (GlbDecl ((b, v), init), get_loc ()) in
     List.map build m
 %}
 
@@ -98,17 +93,24 @@ var_modifier_list:
 | var_modifier                             { ($1, get_loc ())::[] }
 ;;
 
+init_var_modifier_list:
+  init_var_modifier COMMA 
+  init_var_modifier_list                   { ($1, get_loc ())::$3 }
+| init_var_modifier                        { ($1, get_loc ())::[] }
+;;
+
 block:
   LBRACE statement_list RBRACE             { $2 }
 ;;
 
-declaration_list:
-  declaration SEMICOLON declaration_list   { (build_decl $1)@$3 }
+field_list:
+  base_typ var_modifier_list 
+  SEMICOLON field_list                     { (build_decl ($1, $2))@$4 }
 |                                          { [] }
 ;;
 
 declaration:
-  base_typ var_modifier_list               { ($1, $2) }
+  base_typ init_var_modifier_list          { ($1, $2) }
 ;;
 
 statement_list:
@@ -164,9 +166,14 @@ base_typ:
   VOID                                     { Void }
 | ityp                                     { Integer (Signed, $1) }
 | UNSIGNED ityp                            { Integer (Unsigned, $2) }
-| STRUCT LBRACE declaration_list RBRACE    { Struct $3 }
-| UNION LBRACE declaration_list RBRACE     { Union $3 }
+| STRUCT LBRACE field_list RBRACE          { Struct $3 }
+| UNION LBRACE field_list RBRACE           { Union $3 }
 | IDENTIFIER                               { Name $1 }
+;;
+
+init_var_modifier:
+  var_modifier                             { ($1, None) }
+| var_modifier EQ expression               { ($1, Some $3) }
 ;;
 
 var_modifier:

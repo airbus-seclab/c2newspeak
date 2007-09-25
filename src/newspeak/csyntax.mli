@@ -27,10 +27,12 @@ type prog = (global * location) list
 
 and global =
     | FunctionDef of (declaration * blk)
-    | GlbDecl of declaration
+    | GlbDecl of (declaration * init)
     | Typedef of declaration
 
 and declaration = (base_typ * var_modifier)
+
+and init = exp option
 
 and base_typ =
     | Void 
@@ -60,7 +62,7 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    | Decl of declaration
+    | Decl of (declaration * init)
     | Set of (lv * exp)
     | If of (exp * blk)
     | While of (exp * blk)
