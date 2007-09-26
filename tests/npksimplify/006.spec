@@ -7,10 +7,10 @@ getIndex() {
     (34)^do {
       (34)^while (1) {
         (35)^choose {
-          | ! (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+          | ! (0 ==_int4 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
             (36)^[2-_ptr]4 =(int4) 0-_int4;
             (37)^1- =(int4) 1;
-          | (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+          | (0 ==_int4 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
         }
         (34)^choose {
           | (10 > 0-_int4) -->
@@ -54,10 +54,10 @@ main() {
           (34)^do {
             (34)^while (1) {
               (35)^choose {
-                | ! (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+                | ! (0 ==_int4 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
                   (36)^[2-_ptr]4 =(int4) 0-_int4;
                   (37)^1- =(int4) 1;
-                | (0 ==_int1 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
+                | (0 ==_int4 t + (belongs[0,9] 0-_int4 * 1)_int1) -->
               }
               (34)^choose {
                 | (10 > 0-_int4) -->
