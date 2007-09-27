@@ -514,15 +514,21 @@ and translate_if status e stmts1 stmts2 =
       | UnOp (LNot, e, t') -> begin
 	  match translate_typ (typeOf e) with
 	      K.Scalar (Newspeak.Ptr|Newspeak.FunPtr) -> 
-		BinOp (Eq, e, Cilutils.null, intType)
-	    | _ -> BinOp (Eq, Cil.mkCast e intType, Cil.zero, intType)
+		BinOp (Eq, e, Cilutils.null, Cil.intType)
+	    | K.Scalar (Newspeak.Int (Newspeak.Unsigned, _)) ->
+		BinOp (Eq, Cil.mkCast e Cil.uintType, 
+		       Cil.mkCast Cil.zero Cil.uintType, Cil.uintType)
+	    | _ -> BinOp (Eq, Cil.mkCast e Cil.intType, Cil.zero, Cil.intType)
 	end
-(* invert these !!!*)
+(* TODO: invert these !!!*)
       | _ -> begin
 	  match translate_typ (typeOf e) with
 	      K.Scalar (Newspeak.Ptr|Newspeak.FunPtr) -> 
-		BinOp (Ne, e, Cilutils.null, intType)
-	    | _ -> BinOp (Ne, Cil.zero, Cil.mkCast e intType, intType)
+		BinOp (Ne, e, Cilutils.null, Cil.intType)
+	    | K.Scalar (Newspeak.Int (Newspeak.Unsigned, _)) ->
+		BinOp (Ne, Cil.mkCast Cil.zero Cil.uintType, 
+		       Cil.mkCast e Cil.uintType, Cil.uintType)
+	    | _ -> BinOp (Ne, Cil.zero, Cil.mkCast e Cil.intType, Cil.intType)
 	end
   in
   let e = normalize e in
