@@ -526,9 +526,10 @@ and translate_if status e stmts1 stmts2 =
 	      K.Scalar (Newspeak.Ptr|Newspeak.FunPtr) -> 
 		BinOp (Ne, e, Cilutils.null, Cil.intType)
 	    | K.Scalar (Newspeak.Int (Newspeak.Unsigned, _)) ->
-		BinOp (Ne, Cil.mkCast Cil.zero Cil.uintType, 
-		       Cil.mkCast e Cil.uintType, Cil.uintType)
-	    | _ -> BinOp (Ne, Cil.zero, Cil.mkCast e Cil.intType, Cil.intType)
+		BinOp (Ne, Cil.mkCast e Cil.uintType, 
+		       Cil.mkCast Cil.zero Cil.uintType, Cil.uintType)
+	    | _ -> BinOp (Ne, Cil.mkCast e Cil.intType, 
+			  Cil.zero, Cil.intType)
 	end
   in
   let e = normalize e in
