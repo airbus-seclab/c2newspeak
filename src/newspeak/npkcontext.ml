@@ -173,7 +173,7 @@ let argslist = [
     "                    (must be repeated for each directory)\n");
 
   ("-c", Arg.Set compile_only,
-  "compiles only into a .il file");
+  "compiles only into a .no file");
   
   ("-o", Arg.Set_string output_file, 
   "gives the name of Newspeak output\n");
