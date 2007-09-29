@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: code cleanup: define an Env and primitives on it, and get it 
+   out of this *)
 (* TODO: code optimization: get rid of env, and use the globals Hashtbl
    rename it to env ! *)
 open Lexing
@@ -186,67 +188,6 @@ let rec translate_var_modifier b v =
 	Npkcontext.error "Compiler.translate_var_modifier" 
 	  "case not implemented yet"
 
-let rec translate_decl (b, v) =
-  let b = translate_base_typ b in
-  let (t, x) = translate_var_modifier b v in
-    (t, x)
-
-and translate_base_typ t =
-  match t with
-      Integer (s, t) -> CScalar (translate_ityp (translate_sign s) t)
-    | Struct f -> CRegion (translate_struct_fields f)
-    | Union f -> CRegion (translate_union_fields f)
-    | Void -> CVoid
-
-and translate_struct_fields f =
-  let rec translate o f =
-    match f with
-	d::f -> 
-	  let (t, x) = translate_decl d in
-	  let sz = size_of t in
-	  let o = align t o in
-	  let (f, n) = translate (o+sz) f in
-	    ((x, o, t)::f, n)
-      | [] -> 
-	  let o = align_end o in
-	    ([], o)
-  in
-    match f with
-	d::[] -> 
-	  let (t, x) = translate_decl d in
-	  let sz = size_of t in
-	    ((x, 0, t)::[], sz)
-      | _ -> translate 0 f
-
-and translate_union_fields f =
-  let n = ref 0 in
-  let translate d =
-    let (t, x) = translate_decl d in
-    let sz = size_of t in
-      if !n < sz then n := sz;
-      (x, 0, t)
-  in
-    (List.map translate f, !n)
-	    
-let rec translate_fun_decl (b, v) =
-  let rec translate b v =
-    match v with
-	Variable x -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
-      | FunctionName (f, args) -> (b, f, List.map translate_decl args)
-      | Array _ -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" 
-	    "function can not return array"
-      | FunctionProto (Pointer v, _) -> 
-	  Npkcontext.error "Compiler.translate_fun_decl" 
-	    "function can not return function pointer"
-      | Pointer v -> translate (CScalar (CPtr b)) v
-      | FunctionProto _ -> 
-	  Npkcontext.error "Compiler.translate_var_modifier" 
-	    "case not implemented yet"
-  in
-    translate (translate_base_typ b) v
-
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1
 
@@ -298,6 +239,8 @@ let compile fname =
   let env = Hashtbl.create 100 in
     (* maps each function name to its list of formal declarations *)
   let formals = Hashtbl.create 100 in
+    (* maps each defined typedef to the type it denotes *)
+  let typedefs = Hashtbl.create 100 in
   let vcnt = ref 0 in
   let push loc (t, x) =
     incr vcnt;
@@ -343,6 +286,73 @@ let compile fname =
   let register_formals f t = Hashtbl.add formals f t in
 
    
+  let rec translate_decl (b, v) =
+    let b = translate_base_typ b in
+    let (t, x) = translate_var_modifier b v in
+      (t, x)
+	
+  and translate_base_typ t =
+    match t with
+	Integer (s, t) -> CScalar (translate_ityp (translate_sign s) t)
+      | Struct f -> CRegion (translate_struct_fields f)
+      | Union f -> CRegion (translate_union_fields f)
+      | Void -> CVoid
+      | Name x -> 
+	  try Hashtbl.find typedefs x
+	  with Not_found -> 
+	    Npkcontext.error "Compiler.translate_base_typ" ("Unknown type "^x)
+	      
+  and translate_struct_fields f =
+    let rec translate o f =
+      match f with
+	  d::f -> 
+	    let (t, x) = translate_decl d in
+	    let sz = size_of t in
+	    let o = align t o in
+	    let (f, n) = translate (o+sz) f in
+	      ((x, o, t)::f, n)
+	| [] -> 
+	    let o = align_end o in
+	      ([], o)
+    in
+      match f with
+	  d::[] -> 
+	    let (t, x) = translate_decl d in
+	    let sz = size_of t in
+	      ((x, 0, t)::[], sz)
+	| _ -> translate 0 f
+	    
+  and translate_union_fields f =
+    let n = ref 0 in
+    let translate d =
+      let (t, x) = translate_decl d in
+      let sz = size_of t in
+	if !n < sz then n := sz;
+	(x, 0, t)
+    in
+      (List.map translate f, !n)
+  in
+    
+  let rec translate_fun_decl (b, v) =
+    let rec translate b v =
+      match v with
+	  Variable x -> 
+	    Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
+	| FunctionName (f, args) -> (b, f, List.map translate_decl args)
+	| Array _ -> 
+	    Npkcontext.error "Compiler.translate_fun_decl" 
+	      "function can not return array"
+	| FunctionProto (Pointer v, _) -> 
+	    Npkcontext.error "Compiler.translate_fun_decl" 
+	      "function can not return function pointer"
+	| Pointer v -> translate (CScalar (CPtr b)) v
+	| FunctionProto _ -> 
+	    Npkcontext.error "Compiler.translate_var_modifier" 
+	      "case not implemented yet"
+    in
+      translate (translate_base_typ b) v
+  in
+    
   let build_args f args loc =
     let formals =
       try Hashtbl.find formals f
@@ -485,6 +495,9 @@ let compile fname =
 	    (K.Set (lv, e, t), loc)::(K.Goto lbl, loc)::[]
 
       | Call x -> translate_call loc x
+      | Decl _ -> 
+	  Npkcontext.error "Compiler.translate_stmt" 
+	    "Variable declaration can be done at the start of blocks only"
 
 
   and translate_call loc (r, f, args) =
@@ -550,6 +563,10 @@ let compile fname =
 	       a variable not encountered yet, in init*)
 	    Hashtbl.add global_env x t;
 	    Hashtbl.add globals x (typ_of_ctyp t, loc, Some init, true)
+
+      | Typedef x ->
+	  let (t, x) = translate_decl x in
+	    Hashtbl.add typedefs x t
   in
 
   let cprog = parse fname in
