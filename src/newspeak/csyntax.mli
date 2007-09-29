@@ -68,6 +68,7 @@ and stmtkind =
     | Set of (lv * exp)
     | If of (exp * blk)
     | While of (exp * blk)
+    | DoWhile of (blk * exp)
     | Return of exp
     | Call of (lv * fname * exp list)
 

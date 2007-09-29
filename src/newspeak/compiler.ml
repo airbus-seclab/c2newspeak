@@ -484,6 +484,16 @@ let compile fname =
 	  let loop = (K.InfLoop ((cond, loc)::body), loc)::[] in
 	    (K.DoWith (loop, lbl, []), loc)::[]
 
+      | DoWhile (body, e) ->
+	  let (cond1, _) = translate_exp e in
+	  let cond2 = K.negate cond1 in
+	  let body = translate_blk body in
+	  let lbl = get_brk_lbl () in
+	  let brk = (K.Goto lbl, loc)::[] in
+	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
+	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
+	    (K.DoWith (loop, lbl, []), loc)::[]
+
       | Return e -> 
 	  (* TODO: code cleanup *)
 	  let (lv, t) = get_ret_var () in

@@ -49,7 +49,7 @@ let build_glbdecl (b, m) =
     List.map build m
 %}
 
-%token IF RETURN TYPEDEF WHILE
+%token DO IF RETURN TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
 %token AMPERSAND PLUS PLUSPLUS STAR LT
@@ -128,6 +128,8 @@ statement:
 					     get_loc ()]}
 | IF LPAREN expression RPAREN block        { [If ($3, $5), get_loc ()] }
 | WHILE LPAREN expression RPAREN block     { [While ($3, $5), get_loc ()] }
+| DO block 
+  WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
 | left_value EQ 
   IDENTIFIER LPAREN expression_list RPAREN

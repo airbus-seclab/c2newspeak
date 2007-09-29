@@ -76,7 +76,8 @@ let identifier = letter (letter|digit)*
 rule token = parse
 
 (* keywords *)
-    "if"                { IF }
+    "do"                { DO }
+  | "if"                { IF }
   | "return"            { RETURN }
   | "typedef"           { TYPEDEF }
   | "while"             { WHILE }
