@@ -43,6 +43,22 @@ let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
   let line = string_of_int pos.pos_lnum in
     "Lexer.mll: line: "^line^", unknown keyword: "^(Lexing.lexeme lexbuf)
+
+let int64_of_ull lexbuf = 
+  let lexeme = Lexing.lexeme lexbuf in
+  let len = (String.length lexeme) - 3 in
+  let lexeme = String.sub lexeme 0 len in
+    (* checks that Int64.of_string does not silently overflows *)
+  let i = Int64.of_string lexeme in
+  let str = Int64.to_string i in
+    (* TODO: code cleanup: should use Npkcontext.error here too: *)
+    if str <> lexeme 
+    then begin
+      let pos = Lexing.lexeme_start_p lexbuf in
+      let pos = pos.pos_fname^" line "^(string_of_int pos.pos_lnum) in
+      invalid_arg ("integer too large: not representable in "^pos)
+    end;
+    i
 }
 
 let white_space = ' ' | '\t'
@@ -54,6 +70,7 @@ let letter = ['a'-'z'] | ['A'-'Z']
 let digit = ['0'-'9']
 
 let integer = digit+
+let ull_integer = digit+ "ULL"
 let identifier = letter (letter|digit)*
 
 rule token = parse
@@ -75,6 +92,7 @@ rule token = parse
 
 (* values *)
   | integer             { INTEGER (Int64.of_string (Lexing.lexeme lexbuf)) }
+  | ull_integer         { INTEGER (int64_of_ull lexbuf) }
 
 (* punctuation *)
   | ","                 { COMMA }
