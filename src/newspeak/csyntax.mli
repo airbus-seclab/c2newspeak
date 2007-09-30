@@ -43,10 +43,10 @@ and base_typ =
 
 and var_modifier =
     | Variable of string
-    | FunctionName of (fname * declaration list)
+    | Function of (var_modifier * declaration list)
     | Array of (var_modifier * Int64.t)
     | Pointer of var_modifier
-    | FunctionProto of (var_modifier * base_typ list)
+    | Absent
 
 and ityp = 
     | Char 

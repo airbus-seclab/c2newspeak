@@ -102,9 +102,9 @@ init_var_modifier_list:
 block:
   LBRACE statement_list RBRACE             { $2 }
 ;;
-
+/* TODO: simplify code by generalizing!!! */
 field_list:
-  base_typ var_modifier_list 
+  base_typ var_modifier_list
   SEMICOLON field_list                     { (build_decl ($1, $2))@$4 }
 |                                          { [] }
 ;;
@@ -180,10 +180,9 @@ init_var_modifier:
 
 var_modifier:
   IDENTIFIER                               { Variable $1 }
-| IDENTIFIER LPAREN arg_list RPAREN        { FunctionName ($1, $3) }
 | var_modifier LBRACKET INTEGER RBRACKET   { Array ($1, $3) }
 | STAR var_modifier                        { Pointer $2 }
-| var_modifier LPAREN base_typ_list RPAREN { FunctionProto ($1, $3) }
+| var_modifier LPAREN arg_list RPAREN      { Function ($1, $3) }
 | LPAREN var_modifier RPAREN               { $2 }
 ;;
 
@@ -193,19 +192,13 @@ arg_list:
 ;;
 
 non_empty_arg_list:
-  base_typ var_modifier COMMA 
-  non_empty_arg_list                       { ($1, $2)::$4 }
-| base_typ var_modifier                    { ($1, $2)::[]}
+  arg COMMA non_empty_arg_list             { $1::$3 }
+| arg                                      { $1::[]}
 ;;
 
-base_typ_list:
-  non_empty_base_typ_list                  { $1 }
-|                                          { [] }
-;;
-
-non_empty_base_typ_list:
-  base_typ COMMA base_typ_list             { $1::$3 }
-| base_typ                                 { $1::[] }
+arg:
+  base_typ var_modifier                    { ($1, $2) }
+| base_typ                                 { ($1, Absent) }
 ;;
 
 ityp:

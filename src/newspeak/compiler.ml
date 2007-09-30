@@ -49,6 +49,7 @@ type ctyp =
     | CScalar of cscalar_t
     | CArray of (ctyp * int option)
     | CRegion of (cfield list * int)
+    | CFun of (ctyp * (ctyp * string) list)
 
 and cscalar_t =
     | CInt of N.ikind
@@ -74,6 +75,7 @@ let rec size_of t =
     | CRegion (_, n) -> n
     | CArray _ -> Npkcontext.error "Compiler.size_of" "unknown size of array"
     | CVoid -> Npkcontext.error "Compiler.size_of" "size of void unknown"
+    | CFun _ -> Npkcontext.error "Compiler.size_of" "size of function"
 
 (* TODO: check this for various architecture ? 
    Here align everything on 4 *)
@@ -122,6 +124,8 @@ let rec typ_of_ctyp t =
     | CScalar t -> K.Scalar (scalar_of_cscalar t)
     | CArray (t, sz) -> K.Array (typ_of_ctyp t, sz)
     | CRegion (f, sz) -> K.Region (List.map field_of_cfield f, sz)
+    | CFun _ -> 
+	Npkcontext.error "Compiler.typ_of_ctyp" "function not allowed here"
 
 and scalar_of_cscalar t = 
   match t with
@@ -159,7 +163,13 @@ let array_of_ctyp lv t =
 let deref_ctyp t =
   match t with
       CPtr t -> t
-    | _ -> Npkcontext.error "Compiler.deref_ctyp" "pointer type expected"
+    | _ -> Npkcontext.error "Compiler.deref_ctyp" "Pointer type expected"
+
+let fun_of_ctyp t =
+  match t with
+      CFun x -> x
+    | _ -> 
+	Npkcontext.error "Compiler.fun_of_ctyp" "Function type expected"
 
 let translate_sign s =
   match s with
@@ -172,22 +182,7 @@ let translate_ityp s t =
     | Int -> CInt (s, Config.size_of_int)
     | LongLong -> CInt (s, Config.size_of_longlong)
 
-let rec translate_var_modifier b v =
-  match v with
-      Variable x -> (b, x)
-    | FunctionName x -> 
-	Npkcontext.error "Compiler.translate_var_modifier" 
-	  "local function definition not allowed"
-    | Array (v, n) -> 
-	let n = Some (int64_to_int n) in
-	  translate_var_modifier (CArray (b, n)) v
-    | FunctionProto (Pointer v, _) -> 
-	translate_var_modifier (CScalar CFunPtr) v
-    | Pointer v -> translate_var_modifier (CScalar (CPtr b)) v
-    | FunctionProto _ -> 
-	Npkcontext.error "Compiler.translate_var_modifier" 
-	  "case not implemented yet"
-
+ 
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1
 
@@ -284,7 +279,6 @@ let compile fname =
 	res
   in
   let register_formals f t = Hashtbl.add formals f t in
-
    
   let rec translate_decl (b, v) =
     let b = translate_base_typ b in
@@ -331,28 +325,26 @@ let compile fname =
 	(x, 0, t)
     in
       (List.map translate f, !n)
+	
+  (* TODO: put this and types inside the parser !!! *)
+  and translate_var_modifier b v =
+    match v with
+	Variable x -> (b, x)
+        (* TODO: cleanup, this is kind of a hack *)
+      | Absent -> (b, "unknown!")
+      | Function (Variable f, args) -> 
+	  (CFun (b, List.map translate_decl args), f)
+      | Function (Pointer v, _) -> 
+	  translate_var_modifier (CScalar CFunPtr) v
+      | Array (v, n) -> 
+	  let n = Some (int64_to_int n) in
+	    translate_var_modifier (CArray (b, n)) v
+      | Pointer v -> translate_var_modifier (CScalar (CPtr b)) v
+      | Function _ -> 
+	  Npkcontext.error "Compiler.translate_var_modifier" 
+	    "case not implemented yet"
   in
-    
-  let rec translate_fun_decl (b, v) =
-    let rec translate b v =
-      match v with
-	  Variable x -> 
-	    Npkcontext.error "Compiler.translate_fun_decl" "unreachable code"
-	| FunctionName (f, args) -> (b, f, List.map translate_decl args)
-	| Array _ -> 
-	    Npkcontext.error "Compiler.translate_fun_decl" 
-	      "function can not return array"
-	| FunctionProto (Pointer v, _) -> 
-	    Npkcontext.error "Compiler.translate_fun_decl" 
-	      "function can not return function pointer"
-	| Pointer v -> translate (CScalar (CPtr b)) v
-	| FunctionProto _ -> 
-	    Npkcontext.error "Compiler.translate_var_modifier" 
-	      "case not implemented yet"
-    in
-      translate (translate_base_typ b) v
-  in
-    
+        
   let build_args f args loc =
     let formals =
       try Hashtbl.find formals f
@@ -546,13 +538,30 @@ let compile fname =
   let translate_init x =
     match x with
 	None -> None
-      | Some e -> invalid_arg "Compiler.translate_init: Not implemented yet"
+      | Some e -> 
+	  Npkcontext.error "Compiler.translate_init" "Not implemented yet"
+  in
+
+  let translate_glbdecl loc (d, init) =
+    let (t, x) = translate_decl d in
+      match (t, init) with
+	  (CFun (t, args), None) -> ()
+	| (CFun _, _) ->
+	    Npkcontext.error "Compiler.translate_glbdecl" 
+	      "Unexpected initialization"
+	| _ ->
+	    let init = translate_init init in
+	    (* TODO: maybe do this in a first, since there may be the need for
+		a variable not encountered yet, in init*)
+	      Hashtbl.add global_env x t;
+	      Hashtbl.add globals x (typ_of_ctyp t, loc, Some init, true)
   in
 
   let translate_global (x, loc) =
     match x with
 	FunctionDef (x, body) -> 
-	  let (t, f, args) = translate_fun_decl x in
+	  let (t, f) = translate_decl x in
+	  let (t, args) = fun_of_ctyp t in
 	    push loc (t, ret_vname);
 	    List.iter (push loc) args;
 	    register_formals f args;
@@ -565,14 +574,8 @@ let compile fname =
 	      let decls = get_locals () in
 	      let body = append_decls decls body in
 		Hashtbl.add fundefs f ([], t, Some body) 
-	      
-      | GlbDecl (x, init) -> 
-	  let (t, x) = translate_decl x in
-	  let init = translate_init init in
-	    (* TODO: maybe do this in a first, since there may be the need for
-	       a variable not encountered yet, in init*)
-	    Hashtbl.add global_env x t;
-	    Hashtbl.add globals x (typ_of_ctyp t, loc, Some init, true)
+
+      | GlbDecl x -> translate_glbdecl loc x
 
       | Typedef x ->
 	  let (t, x) = translate_decl x in
