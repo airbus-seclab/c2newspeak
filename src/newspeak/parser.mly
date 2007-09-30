@@ -44,12 +44,12 @@ let build_stmtdecl (b, m) =
     List.map build m
 
 (* TODO: remove location in v ???? *)
-let build_glbdecl (b, m) = 
-  let build ((v, init), _) = (GlbDecl ((b, v), init), get_loc ()) in
+let build_glbdecl is_extern (b, m) = 
+  let build ((v, init), _) = (GlbDecl (is_extern, (b, v), init), get_loc ()) in
     List.map build m
 %}
 
-%token DO IF RETURN TYPEDEF WHILE
+%token DO EXTERN IF RETURN TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
 %token AMPERSAND PLUS PLUSPLUS STAR LT
@@ -83,7 +83,8 @@ global_list:
 ;;
 
 global:
-  declaration SEMICOLON                    { build_glbdecl $1 }
+  declaration SEMICOLON                    { build_glbdecl false $1 }
+| EXTERN declaration SEMICOLON             { build_glbdecl true $2 }
 | base_typ var_modifier block              { build_fundef $1 $2 $3 }
 | TYPEDEF base_typ var_modifier SEMICOLON  { build_typedef $2 $3 }
 ;;
@@ -133,7 +134,11 @@ statement:
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
 | left_value EQ 
   IDENTIFIER LPAREN expression_list RPAREN
-  SEMICOLON                                { [Call ($1, $3, $5), get_loc ()] }
+  SEMICOLON                                { [Call (Some $1, $3, $5), 
+					     get_loc ()] }
+| IDENTIFIER LPAREN expression_list RPAREN
+  SEMICOLON                                { [Call (None, $1, $3), 
+					     get_loc ()] }
 ;;
 
 expression_list:

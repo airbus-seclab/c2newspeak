@@ -77,6 +77,7 @@ rule token = parse
 
 (* keywords *)
     "do"                { DO }
+  | "extern"            { EXTERN }
   | "if"                { IF }
   | "return"            { RETURN }
   | "typedef"           { TYPEDEF }

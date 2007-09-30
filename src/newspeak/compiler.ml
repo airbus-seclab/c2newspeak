@@ -427,6 +427,29 @@ let compile fname =
 	    translate_binop op v1 v2
   in
 
+  let update_fundef f (ret, args) body =
+    let ret = ret_typ_of_ctyp ret in
+    let args = List.map typ_of_ctyp args in
+      try
+	let (prev_args, prev_ret, prev_body) = Hashtbl.find fundefs f in
+	  if args <> prev_args 
+	  then begin 
+	    Npkcontext.error "Compiler.update_fundef" 
+	      ("different number of arguments for function "^f)
+	  end;
+	  if ret <> prev_ret 
+	  then begin
+	    Npkcontext.error "Compiler.update_fundef" 
+	      "Return type do not match"
+	  end;
+	  match (body, prev_body) with
+	      (None, _) -> ()
+	    | (Some _, None) -> Hashtbl.replace fundefs f (args, ret, body)
+	    | (Some _, Some _) -> 
+		Npkcontext.error "Compiler.update_fundef" 
+		  "Multiple definition of function body"
+      with Not_found -> Hashtbl.add fundefs f (args, ret, body)
+  in
 
   let rec translate_blk body =
     match body with
@@ -512,49 +535,63 @@ let compile fname =
        we push a dummy variable in the local env.
     *)
     push_dummy loc;
-    let (r, t) = translate_lv r in
-    let ret_decl = (t, "value_of_"^f, loc) in
-    let ret_t = scalar_of_cscalar (cscalar_of_ctyp t) in
-    let ret_set = (K.Set (r, K.Lval (K.Local 0, ret_t), ret_t), loc) in
-
+    let (ret_t, ret_decl, ret_set) = 
+      match r with
+	  None -> (CVoid, [], [])
+	| Some lv -> 
+	    let (r, t) = translate_lv lv in
+	    let ret_t = scalar_of_cscalar (cscalar_of_ctyp t) in
+	      (t,
+	      (t, "value_of_"^f, loc)::[], 
+	      (K.Set (r, K.Lval (K.Local 0, ret_t), ret_t), loc)::[])
+    in
       (* TODO: code cleanup put this together with the first push_dummy *)
     List.iter (fun _ -> push_dummy loc) args;
 
     let args = (List.map translate_exp args) in
+    let args_t = List.map (fun (_, x) -> CScalar x) args in
     let (decls, set) = build_args f args loc in
       pop_dummy ();
       List.iter (fun _ -> pop_dummy ()) args;
+      update_fundef f (ret_t, args_t) None;
 
     let call = (K.Call (K.FunId f), loc)::[] in
     let call = set@call in
     let call = append_decls decls call in
       (* TODO: code optimization: write this so that there is no @ 
 	 (by putting ret_set under the scope of local variables too) *)
-    let call = call@(ret_set::[]) in
-    let call = append_decls (ret_decl::[]) call in
+    let call = call@ret_set in
+    let call = append_decls ret_decl call in
       call
   in
 
-  let translate_init x =
+  let translate_init is_extern x =
     match x with
-	None -> None
+	None when is_extern -> None
+      | _ when is_extern -> 
+	  Npkcontext.error "Compiler.translate_init" 
+	    "Extern globals can not be initizalized"
+      | None -> Some None
       | Some e -> 
 	  Npkcontext.error "Compiler.translate_init" "Not implemented yet"
   in
 
-  let translate_glbdecl loc (d, init) =
+  let translate_glbdecl loc (is_extern, d, init) =
     let (t, x) = translate_decl d in
       match (t, init) with
-	  (CFun (t, args), None) -> ()
+	  (CFun (t, args), None) ->
+	      let (args_t, _) = List.split args in
+		update_fundef x (t, args_t) None
+
 	| (CFun _, _) ->
 	    Npkcontext.error "Compiler.translate_glbdecl" 
 	      "Unexpected initialization"
 	| _ ->
-	    let init = translate_init init in
+	    let init = translate_init is_extern init in
 	    (* TODO: maybe do this in a first, since there may be the need for
 		a variable not encountered yet, in init*)
 	      Hashtbl.add global_env x t;
-	      Hashtbl.add globals x (typ_of_ctyp t, loc, Some init, true)
+	      Hashtbl.add globals x (typ_of_ctyp t, loc, init, true)
   in
 
   let translate_global (x, loc) =
@@ -566,14 +603,13 @@ let compile fname =
 	    List.iter (push loc) args;
 	    register_formals f args;
 	    let body = translate_blk body in
-	    let args = List.map (fun (_, x) -> x) args in
-	      List.iter pop args;
+	    let (args_t, args_name) = List.split args in
+	      List.iter pop args_name;
 	      pop ret_vname;
-	      let t = ret_typ_of_ctyp t in
 	      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
 	      let decls = get_locals () in
 	      let body = append_decls decls body in
-		Hashtbl.add fundefs f ([], t, Some body) 
+		update_fundef f (t, args_t) (Some body)
 
       | GlbDecl x -> translate_glbdecl loc x
 

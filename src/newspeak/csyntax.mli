@@ -27,7 +27,8 @@ type prog = (global * location) list
 
 and global =
     | FunctionDef of (declaration * blk)
-    | GlbDecl of (declaration * init)
+(* true for extern *)
+    | GlbDecl of (bool * declaration * init)
     | Typedef of declaration
 
 and declaration = (base_typ * var_modifier)
@@ -70,7 +71,7 @@ and stmtkind =
     | While of (exp * blk)
     | DoWhile of (blk * exp)
     | Return of exp
-    | Call of (lv * fname * exp list)
+    | Call of (lv option * fname * exp list)
 
 and lv = 
     | Var of vname
