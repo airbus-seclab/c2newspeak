@@ -71,7 +71,7 @@ and stmtkind =
     | While of (exp * blk)
     | DoWhile of (blk * exp)
     | Return of exp
-    | Call of (lv option * fname * exp list)
+    | Exp of exp
 
 and lv = 
     | Var of vname
@@ -86,6 +86,7 @@ and exp =
     | Lval of lv
     | AddrOf of lv
     | Binop of (binop * exp * exp)
+    | Call of (fname * exp list)
 
 and binop =
     | Plus

@@ -261,14 +261,6 @@ let compile fname =
       with Not_found ->
 	Npkcontext.error "Compiler.get_var" ("Variable "^x^" not declared")
   in
-  let get_ret_var () = 
-    try
-      let (n, t, _) = Hashtbl.find env ret_vname in
-	(K.Local (!vcnt - n), t)
-    with Not_found -> 
-	Npkcontext.error "Compiler.get_ret_var" 
-	  ("function does not return a value")
-  in
   let get_locals () =
     let res = ref [] in
     let get_var x (i, t, loc) = res := (i, (t, x, loc))::!res in
@@ -425,6 +417,10 @@ let compile fname =
 	  let v1 = translate_exp e1 in
 	  let v2 = translate_exp e2 in
 	    translate_binop op v1 v2
+
+      | Call _ -> 
+	  Npkcontext.error "Compiler.translate_exp" 
+	    "Call inside expression not implemented yet"
   in
 
   let update_fundef f (ret, args) body =
@@ -470,18 +466,23 @@ let compile fname =
 	hd::tl -> (translate_stmt hd)@(translate_stmt_list tl)
       | [] -> []
 
+  and translate_set loc (lv, e) =
+    (* TODO: code cleanup *)
+    let (lv, t) = translate_lv lv in
+    let (e, t') = translate_exp e in
+      (* TODO: code cleanup: put these two together ?? *)
+    let t = scalar_of_cscalar (cscalar_of_ctyp t) in
+    let t' = scalar_of_cscalar t' in
+    let e = cast t' e t in
+      (K.Set (lv, e, t), loc)
+    
+
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-      | Set (lv, e) -> 
-	  (* TODO: code cleanup *)
-	  let (lv, t) = translate_lv lv in
-	  let (e, t') = translate_exp e in
-(* TODO: code cleanup: put these two together ?? *)
-	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
-	  let t' = scalar_of_cscalar t' in
-	  let e = cast t' e t in
-	    (K.Set (lv, e, t), loc)::[]
+      | Set (lv, Call x) -> translate_call loc (Some lv) x
+
+      | Set (lv, e) -> (translate_set loc (lv, e))::[]
 
       | If (e, body) ->
 	  let (cond1, _) = translate_exp e in
@@ -509,23 +510,25 @@ let compile fname =
 	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
 	    (K.DoWith (loop, lbl, []), loc)::[]
 
-      | Return e -> 
-	  (* TODO: code cleanup *)
-	  let (lv, t) = get_ret_var () in
-	  let (e, t') = translate_exp e in
-	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
-	  let t' = scalar_of_cscalar t' in
-	  let e = cast t' e t in
-	  let lbl = get_ret_lbl () in
-	    (K.Set (lv, e, t), loc)::(K.Goto lbl, loc)::[]
+      | Return (Call x) -> translate_call loc (Some (Var ret_vname)) x
 
-      | Call x -> translate_call loc x
+      | Return e -> 
+	  let set = translate_set loc (Var ret_vname, e) in
+	  let lbl = get_ret_lbl () in
+	    set::(K.Goto lbl, loc)::[]
+
+      | Exp (Call x) -> translate_call loc None x
+
+      | Exp _ -> 
+	  Npkcontext.error "Compiler.translate_stmt" 
+	    "Expressions as statements not implemented yet"
+
       | Decl _ -> 
 	  Npkcontext.error "Compiler.translate_stmt" 
 	    "Variable declaration can be done at the start of blocks only"
 
 
-  and translate_call loc (r, f, args) =
+  and translate_call loc r (f, args) =
     (* TODO: code robustness: should compare arguments types and 
        expected function type *)
     

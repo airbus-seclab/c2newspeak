@@ -132,14 +132,9 @@ statement:
 | DO block 
   WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
-| left_value EQ 
-  IDENTIFIER LPAREN expression_list RPAREN
-  SEMICOLON                                { [Call (Some $1, $3, $5), 
-					     get_loc ()] }
-| IDENTIFIER LPAREN expression_list RPAREN
-  SEMICOLON                                { [Call (None, $1, $3), 
-					     get_loc ()] }
-;;
+| IDENTIFIER 
+  LPAREN expression_list RPAREN SEMICOLON  { [Exp (Call ($1, $3)), 
+					     get_loc ()] };;
 
 expression_list:
   non_empty_expression_list                { $1 }
@@ -165,6 +160,7 @@ expression:
 | expression PLUS expression               { Binop (Plus, $1, $3) }
 | expression STAR expression               { Binop (Mult, $1, $3) }
 | expression LT expression                 { Binop (Gt, $3, $1) }
+| IDENTIFIER LPAREN expression_list RPAREN { Call ($1, $3) }
 | AMPERSAND left_value                     { AddrOf $2 }
 ;;
 
