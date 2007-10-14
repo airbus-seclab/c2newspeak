@@ -590,17 +590,18 @@ let compile fname =
     let default_cond = ref [] in
     let (switch_exp, _) = translate_exp e in
 
-    let lbl_cnt = ref 1 in
+    let lbl_cnt = ref 2 in
     let choices = ref [] in
     let translate_case (v, body) =
       let (v, t) = translate_exp v in
       let t = scalar_of_cscalar t in
       let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
       let body = translate_blk body in
+      let lbl = !lbl_cnt in
 	default_cond := (K.negate cond)::!default_cond;
-	incr lbl_cnt;
-	choices := (cond::[], [K.Goto !lbl_cnt, loc])::!choices;
-	(!lbl_cnt, body)
+	if body <> [] then incr lbl_cnt;
+	choices := (cond::[], [K.Goto lbl, loc])::!choices;
+	(lbl, body)
     in
 
     let cases = List.map translate_case cases in
@@ -609,7 +610,8 @@ let compile fname =
     let switch = ref [K.ChooseAssert (default_choice::!choices), loc] in
 
     let add_case (lbl, body) =
-      switch := (K.DoWith (!switch, lbl, []), loc)::body
+      if body <> [] 
+      then switch := (K.DoWith (!switch, lbl, []), loc)::body
     in
       List.iter add_case cases;
       [K.DoWith (!switch, default_lbl, []), loc]
