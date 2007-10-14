@@ -434,12 +434,12 @@ let string_of_blk offset x =
 	    
       | Decl (name, t, body) ->
 	  if only then begin
-	    dump_line_at loc ((string_of_typ t)^" "^name^";");
+	    dump_line_at loc ((string_of_typ t)^";");
 	    dump_blk body
 	  end else begin
 	    dump_line_at loc "{";
 	    incr_margin ();
-	    dump_line ((string_of_typ t)^" "^name^";");
+	    dump_line ((string_of_typ t)^";");
 	    dump_blk body;
 	    decr_margin ();
 	    dump_line "}"

@@ -1,13 +1,13 @@
 Newspeak output
 ---------------
 main() {
-  (30)^int1 a;
-  (31)^uint1 b;
-  (32)^int2 c;
-  (33)^uint2 d;
-  (34)^int4 e;
-  (35)^uint4 f;
-  (36)^ptr ptr;
+  (30)^int1;
+  (31)^uint1;
+  (32)^int2;
+  (33)^uint2;
+  (34)^int4;
+  (35)^uint4;
+  (36)^ptr;
   (38)^6- =(int1) coerce[-128,127] (6-_int1 + 5-_uint1);
   (39)^6- =(int1) coerce[-128,127] (6-_int1 + 4-_int2);
   (40)^6- =(int1) coerce[-128,127] (6-_int1 + 3-_uint2);

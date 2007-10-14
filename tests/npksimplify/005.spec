@@ -3,12 +3,12 @@ f() {
 }
 
 g() {
-  (31)^int4 tmp;
+  (31)^int4;
   (32)^{
-    int4 value_of_f;
+    int4;
     (32)^{
-      int4 x;
-      (32)^int4 y;
+      int4;
+      (32)^int4;
       (32)^1- =(int4) 4-_int4;
       (32)^0- =(int4) 4-_int4;
       (27)^2- =(int4) coerce[-2147483648,2147483647] (1-_int4 + 0-_int4);
@@ -19,19 +19,19 @@ g() {
 }
 
 main() {
-  (37)^int4 a;
-  (37)^int4 b;
-  (39)^int4 value_of_g;
+  (37)^int4;
+  (37)^int4;
+  (39)^int4;
   (39)^{
-    int4 x;
+    int4;
     (39)^0- =(int4) 3-_int4;
     (31)^{
-      int4 tmp;
+      int4;
       (32)^{
-        int4 value_of_f;
+        int4;
         (32)^{
-          int4 x;
-          (32)^int4 y;
+          int4;
+          (32)^int4;
           (32)^1- =(int4) 4-_int4;
           (32)^0- =(int4) 4-_int4;
           (32)^f();

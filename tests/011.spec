@@ -5,13 +5,13 @@ f() {
 }
 
 main() {
-  (37)^int4 x;
-  (37)^int4 y;
-  (37)^int4 z;
-  (38)^int4 value_of_f;
+  (37)^int4;
+  (37)^int4;
+  (37)^int4;
+  (38)^int4;
   (38)^{
-    int4 a;
-    (38)^int4 b;
+    int4;
+    (38)^int4;
     (38)^1- =(int4) 5-_int4;
     (38)^0- =(int4) 4-_int4;
     (38)^f();
