@@ -480,7 +480,8 @@ let compile fname =
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-      | Set (lv, Call x) -> translate_call loc (Some lv) x
+      | Set (lv, Call x) -> 
+	  translate_call loc (Some lv) x
 
       | Set (lv, e) -> (translate_set loc (lv, e))::[]
 
@@ -510,7 +511,19 @@ let compile fname =
 	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
 	    (K.DoWith (loop, lbl, []), loc)::[]
 
-      | Return (Call x) -> translate_call loc (Some (Var ret_vname)) x
+      | Return (Call x) -> 
+	  let (_, t) = translate_lv (Var ret_vname) in
+	  let () = push loc (t, "tmp") in
+	    (* TODO: this is totally a hack, clean up by having an 
+	       intermediate language
+	       with explicit types :*)
+	  let (lv, t) = translate_lv (Var ret_vname) in
+	  let decl = (t, "tmp", dummy_loc)::[] in
+	  let call = translate_call loc (Some (Var "tmp")) x in
+	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
+	  let set = (K.Set (lv, K.Lval (K.Local 0, t), t), loc)::[] in
+	    pop "tmp";
+	    append_decls decl (call@set)
 
       | Return e -> 
 	  let set = translate_set loc (Var ret_vname, e) in

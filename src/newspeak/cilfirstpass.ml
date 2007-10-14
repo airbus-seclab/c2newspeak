@@ -29,7 +29,6 @@
 
 open Cil
 open Cilutils
-open Npkcontext
 open Npkutils
 
 let set_loc loc = Npkcontext.set_loc (Npkutils.translate_loc loc)
@@ -103,7 +102,7 @@ object (this)
 	  | v::r when Int_set.mem v.vid !local_vids -> v::(new_locals r)
 	  | _::r -> new_locals r
       in
-	if !remove_temp then f.slocals <- new_locals f.slocals;
+	if !Npkcontext.remove_temp then f.slocals <- new_locals f.slocals;
 	f
 	  
     in
@@ -181,11 +180,11 @@ let check_main_signature t =
     match unrollType t with
 	TFun (ret, Some args, _, []) -> (ret, args)
       | _ ->
-	  error "Npkfirstpass.check_main_signature"
+	  Npkcontext.error "Npkfirstpass.check_main_signature"
 	    "main, should have a function type"
   in
-    if (!verb_morewarns) && (unrollType ret <> TInt (IInt, [])) 
-    then print_warning "Npkfirstpass.check_main_signature"
+    if (!Npkcontext.verb_morewarns) && (unrollType ret <> TInt (IInt, [])) 
+    then Npkcontext.print_warning "Npkfirstpass.check_main_signature"
       "return type of 'main' is not 'int'";
     match args with
 	[] -> ()
@@ -195,7 +194,7 @@ let check_main_signature t =
 		TPtr (TPtr (TInt (IChar, []), []), []))
 	    -> ()
       | _ ->
-	  error "Npkfirstpass.check_main_signature: "
+	  Npkcontext.error "Npkfirstpass.check_main_signature: "
 	    ("invalid argument types for main, "
 	     ^"authorized forms are main() and"
 	     ^" main(int, char**)")
@@ -214,14 +213,14 @@ let first_pass f =
     let ftyp =
       match f.svar.vtype with
 	  TFun (ret, args, _, _) -> (args, ret)
-	| _ -> error "Cilfirstpass.first_pass" "TODO"
+	| _ -> Npkcontext.error "Cilfirstpass.first_pass" "TODO"
     in
     let ftyp = Npkutils.translate_ftyp ftyp in
       
       Env.update_fun_proto name ftyp;
 
       if (Hashtbl.mem fun_specs name) 
-      then error "Firstpass.first_pass.update_fun_def" 
+      then Npkcontext.error "Firstpass.first_pass.update_fun_def" 
 	("multiple definition for "^name);
       
       let translate_vinfo v = 
@@ -240,7 +239,7 @@ let first_pass f =
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
-	  then error "Firstpass.first_pass.update_glob_decl"
+	  then Npkcontext.error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'")
@@ -259,18 +258,18 @@ let first_pass f =
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
-	  then error "Firstpass.first_pass.update_glob_decl"
+	  then Npkcontext.error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
 	  if x.gdefd then begin
-	    if not !accept_mult_def 
-	    then error "Firstpass.first_pass.glb_declare" 
+	    if not !Npkcontext.accept_mult_def 
+	    then Npkcontext.error "Firstpass.first_pass.glb_declare" 
 	      ("multiple definition for "^name);
 	    if (x.ginit <> None) && (i <> None) 
-	    then error "Firstpass.first_pass.glb_declare" 
+	    then Npkcontext.error "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name);
-	    print_warning "Firstpass.first_pass.glb_declare" 
+	    Npkcontext.print_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name)
 	  end;
 	  x.gtype <- v.vtype;
@@ -292,19 +291,19 @@ let first_pass f =
       if loc.file <> "<compiler builtins>" then
 	match new_g with
 	  | [GType (t, _)] ->
-	      print_morewarn "Npkfirstpass.first_pass.explore"
+	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
 		("skipping typedef "^t.tname)
 	  | [GEnumTag (info, _)] -> 
-	      print_morewarn "Npkfirstpass.first_pass.explore"
+	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
 		("skipping enum "^info.ename)
 	  | [GCompTag (c, _)] -> 
-	      print_morewarn "Npkfirstpass.first_pass.explore"
+	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
 		("skipping composite typedef "^c.cname)
 	  | [GCompTagDecl (c, _)] -> 
-	      print_morewarn "Npkfirstpass.first_pass.explore"
+	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
 		("skipping composite declaration "^c.cname)
-	  | [GPragma (a, _)] when !ignores_pragmas -> 
-	      print_warning "Npkfirstpass.first_pass.explore"
+	  | [GPragma (a, _)] when !Npkcontext.ignores_pragmas -> 
+	      Npkcontext.print_warning "Npkfirstpass.first_pass.explore"
 		("ignoring directive: unknown #pragma "^(string_of_attribute a))
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret, args, _, _)}, _)] ->
@@ -321,7 +320,7 @@ let first_pass f =
 	  | [GVar (v, {init = i}, _)] -> update_glob_def v i
 		
 	  | _ ->
-	      error "Firstpass.first_pass.explore"
+	      Npkcontext.error "Firstpass.first_pass.explore"
 		("global "^(string_of_global g)^" not supported")
   in
 
