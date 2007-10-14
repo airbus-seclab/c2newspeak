@@ -3,7 +3,7 @@ Newspeak output
 main() {
   (31)^int4;
   (32)^do {
-    (32)^do {
+    (33)^do {
       (32)^choose {
         | ! (2 ==_int4 0-_int4) -->
           (32)^goto lbl1;

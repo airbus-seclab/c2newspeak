@@ -548,7 +548,6 @@ and translate_switch status e stmt_list body =
   let cases = ref [] in
   let default_cond = ref [] in
   let default_goto = ref [build_stmt (K.Goto (Env.get_brk_lbl ()))] in
-  let default_loc = ref (Npkcontext.get_loc ()) in
 
   let switch_exp = translate_exp e in
 
@@ -577,7 +576,6 @@ and translate_switch status e stmt_list body =
 	    translate_aux tl
 
       | (Default loc)::tl -> 
-	  default_loc := Npkutils.translate_loc loc;
 	  (* TODO: have a get_default_lbl instead, with a default number 
 	     for it, maybe, maybe not?? *)
 	  status := Env.add_switch_lbl !status loc lbl;
@@ -596,20 +594,21 @@ and translate_switch status e stmt_list body =
     let default_choice = (!default_cond, !default_goto) in
     let choices = [build_stmt (K.ChooseAssert (default_choice::!cases))] in
 
-      translate_switch_body !default_loc !status choices body.bstmts
+      translate_switch_body (Npkcontext.get_loc ()) !status choices body.bstmts
 
-and translate_switch_body default_loc status body stmts =
+and translate_switch_body loc status body stmts =
   match stmts with
-      [] -> [K.DoWith (List.rev body, Env.get_brk_lbl (), []), default_loc]
+      [] -> [K.DoWith (List.rev body, Env.get_brk_lbl (), []), loc]
 
     | hd::tl when hd.labels = [] ->
 	let hd = translate_stmtkind status hd.skind in
-	  translate_switch_body default_loc status (hd@body) tl
+	  translate_switch_body loc status (hd@body) tl
 
     | hd::tl -> 
 	let lbl = 
 	  match hd.labels with
 	      (Case (_, loc))::_ | (Default loc)::_ ->
+		set_loc loc;
 		Env.get_switch_lbl status loc		
 	    | _ -> error "Npkcompile.translate_switch_body" "invalid label"
 	in
@@ -617,7 +616,7 @@ and translate_switch_body default_loc status body stmts =
 	let body = [build_stmt (K.DoWith (List.rev body, lbl, []))] in
 	  
 	let hd = translate_stmtkind status hd.skind in
-	  translate_switch_body default_loc status (hd@body) tl
+	  translate_switch_body loc status (hd@body) tl
 
 	  
 and translate_call x lv args_exps =

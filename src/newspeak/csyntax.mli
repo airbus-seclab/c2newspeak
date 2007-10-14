@@ -68,7 +68,7 @@ and stmtkind =
     | Decl of (declaration * init)
     | Set of (lv * exp)
     | If of (exp * blk)
-    | Switch of (exp * (exp * blk) list)
+    | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)
     | DoWhile of (blk * exp)
     | Return of exp

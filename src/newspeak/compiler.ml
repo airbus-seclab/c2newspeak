@@ -587,31 +587,40 @@ let compile fname =
       call
 
   and translate_switch loc e cases =
-    let default_cond = ref [] in
     let (switch_exp, _) = translate_exp e in
+    let default_lbl = get_brk_lbl () in
+    let default_cond = ref [] in
+    let default_goto = ref [K.Goto default_lbl, loc] in
 
     let lbl_cnt = ref 2 in
     let choices = ref [] in
-    let translate_case (v, body) =
-      let (v, t) = translate_exp v in
-      let t = scalar_of_cscalar t in
-      let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
-      let body = translate_blk body in
+    let translate_case (v, body, case_loc) =
       let lbl = !lbl_cnt in
-	default_cond := (K.negate cond)::!default_cond;
+      let body = translate_blk body in
 	if body <> [] then incr lbl_cnt;
-	choices := (cond::[], [K.Goto lbl, loc])::!choices;
-	(lbl, body)
+	let _ = 
+	  match v with
+	      Some v -> 
+		let (v, t) = translate_exp v in
+		let t = scalar_of_cscalar t in
+		let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
+		  default_cond := (K.negate cond)::!default_cond;
+		  choices := (cond::[], [K.Goto lbl, loc])::!choices;
+	    | None -> default_goto := [K.Goto lbl, loc]
+	in
+	  (lbl, body, case_loc)
     in
 
     let cases = List.map translate_case cases in
-    let default_lbl = get_brk_lbl () in
-    let default_choice = (!default_cond, [K.Goto default_lbl, loc]) in
+    let default_choice = (!default_cond, !default_goto) in
     let switch = ref [K.ChooseAssert (default_choice::!choices), loc] in
 
-    let add_case (lbl, body) =
-      if body <> [] 
-      then switch := (K.DoWith (!switch, lbl, []), loc)::body
+    let needs_lbl = ref true in
+    let add_case (lbl, body, loc) =
+      if !needs_lbl then
+	switch := (K.DoWith (!switch, lbl, []), loc)::[];
+      switch := !switch@body;
+      needs_lbl := body <> []
     in
       List.iter add_case cases;
       [K.DoWith (!switch, default_lbl, []), loc]

@@ -4,7 +4,7 @@ main() {
   (30)^int4;
   (31)^int4;
   (32)^do {
-    (32)^do {
+    (33)^do {
       (32)^choose {
         | ! (1 ==_int4 1-_int4) -->
           (32)^goto lbl1;
@@ -13,10 +13,10 @@ main() {
       }
     } with lbl2: {
     }
-    (43)^do {
-      (41)^do {
-        (37)^do {
-          (34)^do {
+    (34)^do {
+      (43)^do {
+        (39)^do {
+          (35)^do {
             (34)^choose {
               | ! (2 ==_int4 0-_int4) & ! (3 ==_int4 0-_int4) -->
                 (34)^goto lbl2;

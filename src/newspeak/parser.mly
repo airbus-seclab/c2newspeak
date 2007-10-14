@@ -49,7 +49,7 @@ let build_glbdecl is_extern (b, m) =
     List.map build m
 %}
 
-%token BREAK CASE DO EXTERN IF RETURN SWITCH TYPEDEF WHILE
+%token BREAK CASE DEFAULT DO EXTERN IF RETURN SWITCH TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
@@ -148,7 +148,8 @@ case_list:
 ;;
 
 case:
-  CASE expression COLON statement_list     { ($2, $4) }
+  CASE expression COLON statement_list     { (Some $2, $4, get_loc ()) }
+| DEFAULT COLON statement_list             { (None, $3, get_loc ()) }
 ;;
 
 expression_list:

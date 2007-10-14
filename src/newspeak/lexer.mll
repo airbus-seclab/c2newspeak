@@ -78,6 +78,7 @@ rule token = parse
 (* keywords *)
     "break"             { BREAK }
   | "case"              { CASE }
+  | "default"           { DEFAULT }
   | "do"                { DO }
   | "extern"            { EXTERN }
   | "if"                { IF }
