@@ -49,9 +49,10 @@ let build_glbdecl is_extern (b, m) =
     List.map build m
 %}
 
-%token DO EXTERN IF RETURN TYPEDEF WHILE
+%token BREAK CASE DO EXTERN IF RETURN SWITCH TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
-%token COMMA DOT LBRACE RBRACE LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
+%token COLON COMMA DOT LBRACE RBRACE 
+%token LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
 %token AMPERSAND PLUS PLUSPLUS STAR LT
 %token EOF
 
@@ -128,13 +129,27 @@ statement:
 							Const Int64.one)),
 					     get_loc ()]}
 | IF LPAREN expression RPAREN block        { [If ($3, $5), get_loc ()] }
+| SWITCH LPAREN expression RPAREN LBRACE
+  case_list
+  RBRACE                                   { [Switch ($3, $6), get_loc ()] }
 | WHILE LPAREN expression RPAREN block     { [While ($3, $5), get_loc ()] }
 | DO block 
   WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
 | IDENTIFIER 
   LPAREN expression_list RPAREN SEMICOLON  { [Exp (Call ($1, $3)), 
-					     get_loc ()] };;
+					     get_loc ()] }
+| BREAK SEMICOLON                          { [Break, get_loc ()] }
+;;
+
+case_list:
+  case case_list                           { $1::$2 }
+| case                                     { $1::[] }
+;;
+
+case:
+  CASE expression COLON statement_list     { ($2, $4) }
+;;
 
 expression_list:
   non_empty_expression_list                { $1 }

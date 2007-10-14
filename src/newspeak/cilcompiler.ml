@@ -544,14 +544,11 @@ and translate_if status e stmts1 stmts2 =
     statement. Each case is translated by appending a guard.
     It also builds the guard of the default statement. *)
 and translate_switch status e stmt_list body =
-  let (status, choices) = translate_switch_cases status e stmt_list in
-    translate_switch_body status choices body.bstmts
-    
-and translate_switch_cases status e labels =
   let status = ref status in
   let cases = ref [] in
   let default_cond = ref [] in
   let default_goto = ref [build_stmt (K.Goto (Env.get_brk_lbl ()))] in
+  let default_loc = ref (Npkcontext.get_loc ()) in
 
   let switch_exp = translate_exp e in
 
@@ -580,11 +577,12 @@ and translate_switch_cases status e labels =
 	    translate_aux tl
 
       | (Default loc)::tl -> 
+	  default_loc := Npkutils.translate_loc loc;
 	  (* TODO: have a get_default_lbl instead, with a default number 
 	     for it, maybe, maybe not?? *)
-	    status := Env.add_switch_lbl !status loc lbl;
-	    default_goto := [build_stmt (K.Goto lbl)];
-	    translate_aux tl
+	  status := Env.add_switch_lbl !status loc lbl;
+	  default_goto := [build_stmt (K.Goto lbl)];
+	  translate_aux tl
 
       | [] -> ()
 
@@ -594,17 +592,19 @@ and translate_switch_cases status e labels =
   in
     
     Env.reset_lbl_gen ();
-    List.iter translate_case (List.rev labels);
+    List.iter translate_case (List.rev stmt_list);
     let default_choice = (!default_cond, !default_goto) in
-      (!status, [build_stmt (K.ChooseAssert (default_choice::!cases))])
+    let choices = [build_stmt (K.ChooseAssert (default_choice::!cases))] in
 
-and translate_switch_body status body stmts =
+      translate_switch_body !default_loc !status choices body.bstmts
+
+and translate_switch_body default_loc status body stmts =
   match stmts with
-      [] -> [build_stmt (K.DoWith (List.rev body, Env.get_brk_lbl (), []))]
+      [] -> [K.DoWith (List.rev body, Env.get_brk_lbl (), []), default_loc]
 
     | hd::tl when hd.labels = [] ->
 	let hd = translate_stmtkind status hd.skind in
-	  translate_switch_body status (hd@body) tl
+	  translate_switch_body default_loc status (hd@body) tl
 
     | hd::tl -> 
 	let lbl = 
@@ -617,7 +617,7 @@ and translate_switch_body status body stmts =
 	let body = [build_stmt (K.DoWith (List.rev body, lbl, []))] in
 	  
 	let hd = translate_stmtkind status hd.skind in
-	  translate_switch_body status (hd@body) tl
+	  translate_switch_body default_loc status (hd@body) tl
 
 	  
 and translate_call x lv args_exps =

@@ -68,10 +68,12 @@ and stmtkind =
     | Decl of (declaration * init)
     | Set of (lv * exp)
     | If of (exp * blk)
+    | Switch of (exp * (exp * blk) list)
     | While of (exp * blk)
     | DoWhile of (blk * exp)
     | Return of exp
     | Exp of exp
+    | Break
 
 and lv = 
     | Var of vname

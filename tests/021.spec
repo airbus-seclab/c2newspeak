@@ -3,7 +3,7 @@ Newspeak output
 main() {
   (30)^int4;
   (31)^int4;
-  (46)^do {
+  (32)^do {
     (32)^do {
       (32)^choose {
         | ! (1 ==_int4 1-_int4) -->
@@ -13,7 +13,7 @@ main() {
       }
     } with lbl2: {
     }
-    (44)^do {
+    (43)^do {
       (41)^do {
         (37)^do {
           (34)^do {

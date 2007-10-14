@@ -76,10 +76,13 @@ let identifier = letter (letter|digit)*
 rule token = parse
 
 (* keywords *)
-    "do"                { DO }
+    "break"             { BREAK }
+  | "case"              { CASE }
+  | "do"                { DO }
   | "extern"            { EXTERN }
   | "if"                { IF }
   | "return"            { RETURN }
+  | "switch"            { SWITCH }
   | "typedef"           { TYPEDEF }
   | "while"             { WHILE }
 
@@ -98,6 +101,7 @@ rule token = parse
 
 (* punctuation *)
   | ","                 { COMMA }
+  | ":"                 { COLON }
   | "."                 { DOT }
   | "{"                 { LBRACE }
   | "}"                 { RBRACE }

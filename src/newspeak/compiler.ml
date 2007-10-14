@@ -37,6 +37,8 @@ module K = Npkil
 
 (* TODO: code cleanup: think about this!! *)
 (* TODO: check that integer don't have a default type (like int) *)
+(* TODO: put Env in common with cilcompiler, pass Env as an argument to 
+   translation (or as a global local to translation) *)
 let kind_of_int64 i =
   let sign =
     if Int64.compare i (Int64.of_string "2147483647") > 0 
@@ -531,6 +533,10 @@ let compile fname =
 	    set::(K.Goto lbl, loc)::[]
 
       | Exp (Call x) -> translate_call loc None x
+      
+      | Break -> [K.Goto (get_brk_lbl ()), loc]
+      
+      | Switch (e, cases) -> translate_switch loc e cases
 
       | Exp _ -> 
 	  Npkcontext.error "Compiler.translate_stmt" 
@@ -579,6 +585,35 @@ let compile fname =
     let call = call@ret_set in
     let call = append_decls ret_decl call in
       call
+
+  and translate_switch loc e cases =
+    let default_cond = ref [] in
+    let (switch_exp, _) = translate_exp e in
+
+    let lbl_cnt = ref 1 in
+    let choices = ref [] in
+    let translate_case (v, body) =
+      let (v, t) = translate_exp v in
+      let t = scalar_of_cscalar t in
+      let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
+      let body = translate_blk body in
+	default_cond := (K.negate cond)::!default_cond;
+	incr lbl_cnt;
+	choices := (cond::[], [K.Goto !lbl_cnt, loc])::!choices;
+	(!lbl_cnt, body)
+    in
+
+    let cases = List.map translate_case cases in
+    let default_lbl = get_brk_lbl () in
+    let default_choice = (!default_cond, [K.Goto default_lbl, loc]) in
+    let switch = ref [K.ChooseAssert (default_choice::!choices), loc] in
+
+    let add_case (lbl, body) =
+      switch := (K.DoWith (!switch, lbl, []), loc)::body
+    in
+      List.iter add_case cases;
+      [K.DoWith (!switch, default_lbl, []), loc]
+	
   in
 
   let translate_init is_extern x =
