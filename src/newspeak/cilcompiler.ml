@@ -571,9 +571,9 @@ and translate_switch status e stmt_list body =
 	  in
 	  let cond = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
 	    status := Env.add_switch_lbl !status loc lbl;
+	    translate_aux tl;
 	    cases := (cond::[], build_stmt (K.Goto lbl)::[])::!cases;
-	    default_cond := (K.negate cond)::!default_cond;
-	    translate_aux tl
+	    default_cond := (K.negate cond)::!default_cond
 
       | (Default loc)::tl -> 
 	  (* TODO: have a get_default_lbl instead, with a default number 

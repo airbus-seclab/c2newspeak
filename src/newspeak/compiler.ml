@@ -594,36 +594,45 @@ let compile fname =
 
     let lbl_cnt = ref 2 in
     let choices = ref [] in
-    let translate_case (v, body, case_loc) =
-      let lbl = !lbl_cnt in
-      let body = translate_blk body in
-	if body <> [] then incr lbl_cnt;
-	let _ = 
-	  match v with
-	      Some v -> 
-		let (v, t) = translate_exp v in
-		let t = scalar_of_cscalar t in
-		let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
-		  default_cond := (K.negate cond)::!default_cond;
-		  choices := (cond::[], [K.Goto lbl, loc])::!choices;
-	    | None -> default_goto := [K.Goto lbl, loc]
-	in
-	  (lbl, body, case_loc)
+
+    let found_case lbl v =
+      match v with
+	  Some v ->
+	    let (v, t) = translate_exp v in
+	    let t = scalar_of_cscalar t in
+	    let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
+	      default_cond := (K.negate cond)::!default_cond;
+	      choices := (cond::[], [K.Goto lbl, loc])::!choices
+	| None -> default_goto := [K.Goto lbl, loc]
+    in
+    let rec translate_cases x =
+      match x with
+	  (v, [], case_loc)::(v', body, _)::tl ->
+	    let (lbl, cases) = translate_cases ((v', body, case_loc)::tl) in
+	    found_case (lbl - 1) v;
+	      (lbl, cases)
+	| (v, body, case_loc)::tl ->
+	    let (lbl, tl) = translate_cases tl in
+	    let body = translate_blk body in
+	      found_case lbl v;
+	      (lbl + 1, (lbl, body, case_loc)::tl)
+	| [] -> (2, [])
     in
 
-    let cases = List.map translate_case cases in
+    let (_, cases) = translate_cases cases in
     let default_choice = (!default_cond, !default_goto) in
-    let switch = ref [K.ChooseAssert (default_choice::!choices), loc] in
+    let switch = [K.ChooseAssert (default_choice::!choices), loc] in
 
-    let needs_lbl = ref true in
-    let add_case (lbl, body, loc) =
-      if !needs_lbl then
-	switch := (K.DoWith (!switch, lbl, []), loc)::[];
-      switch := !switch@body;
-      needs_lbl := body <> []
+    let rec append_cases x =
+      match x with
+	  (lbl, body, loc)::tl -> 
+	    let tl = append_cases tl in
+	      (K.DoWith (tl, lbl, []), loc)::body
+	| [] -> switch
     in
-      List.iter add_case cases;
-      [K.DoWith (!switch, default_lbl, []), loc]
+      (* TODO: optimize this, do not rev cases, maybe have it as a reference *)
+    let switch = append_cases (List.rev cases) in
+      [K.DoWith (switch, default_lbl, []), loc]
 	
   in
 
