@@ -390,6 +390,14 @@ let compile fname =
 	  let t = deref_ctyp t in
 	    (K.Deref (e, size_of t), t)
 
+  and translate_bexp e =
+    let (e, t) = translate_exp e in
+    let t = scalar_of_cscalar t in
+      match (e, t) with
+	  (K.Lval _, N.Int _) -> 
+	    K.negate (K.BinOp (N.Eq t, e, K.Const (N.CInt64 Int64.zero))) 
+	| _ -> e
+
   and translate_exp e =
     match e with
 	Const i -> (K.Const (N.CInt64 i), CInt (kind_of_int64 i))
@@ -487,14 +495,17 @@ let compile fname =
 
       | Set (lv, e) -> (translate_set loc (lv, e))::[]
 
-      | If (e, body) ->
-	  let (cond1, _) = translate_exp e in
+      | If ((e, body, loc)::tl) ->
+	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
-	    (K.ChooseAssert [([cond1], body); ([cond2], [])], loc)::[]
+	  let else_body = translate_stmt (If tl, loc) in
+	    (K.ChooseAssert [([cond1], body); ([cond2], else_body)], loc)::[]
+
+      | If [] -> []
 
       | While (e, body) ->
-	  let (cond1, _) = translate_exp e in
+	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
 	  let lbl = get_brk_lbl () in
@@ -504,7 +515,7 @@ let compile fname =
 	    (K.DoWith (loop, lbl, []), loc)::[]
 
       | DoWhile (body, e) ->
-	  let (cond1, _) = translate_exp e in
+	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
 	  let lbl = get_brk_lbl () in

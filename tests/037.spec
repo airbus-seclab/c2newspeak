@@ -6,7 +6,7 @@ main() {
     (35)^do {
       (32)^do {
         (31)^choose {
-          | ! (2 ==_int4 0-_int4) & ! (1 ==_int4 0-_int4) -->
+          | ! (0-_int4 ==_int4 2) & ! (0-_int4 ==_int4 1) -->
             (31)^goto lbl1;
           | (0-_int4 ==_int4 2) -->
             (31)^goto lbl3;

@@ -80,6 +80,7 @@ rule token = parse
   | "case"              { CASE }
   | "default"           { DEFAULT }
   | "do"                { DO }
+  | "else"              { ELSE }
   | "extern"            { EXTERN }
   | "if"                { IF }
   | "return"            { RETURN }
@@ -117,6 +118,7 @@ rule token = parse
   | "&"                 { AMPERSAND }
   | "+"                 { PLUS }
   | "++"                { PLUSPLUS }
+  | "&&"                { AND }
   | "*"                 { STAR }
   | "<"                 { LT }
 

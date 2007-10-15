@@ -49,11 +49,11 @@ let build_glbdecl is_extern (b, m) =
     List.map build m
 %}
 
-%token BREAK CASE DEFAULT DO EXTERN IF RETURN SWITCH TYPEDEF WHILE
+%token BREAK CASE DEFAULT DO ELSE EXTERN IF RETURN SWITCH TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
-%token AMPERSAND PLUS PLUSPLUS STAR LT
+%token AMPERSAND AND PLUS PLUSPLUS STAR LT
 %token EOF
 
 %token <string> IDENTIFIER
@@ -66,6 +66,7 @@ let build_glbdecl is_extern (b, m) =
 */
 
 %left LT
+%left AND
 %left PLUS
 %left STAR
 
@@ -128,7 +129,9 @@ statement:
 							Lval $1, 
 							Const Int64.one)),
 					     get_loc ()]}
-| IF LPAREN expression RPAREN block        { [If ($3, $5), get_loc ()] }
+| IF LPAREN expression RPAREN block
+    elsif_list                             { [If (($3, $5, get_loc ())::$6), 
+					     get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
   case_list
   RBRACE                                   { [Switch ($3, $6), get_loc ()] }
@@ -140,6 +143,12 @@ statement:
   LPAREN expression_list RPAREN SEMICOLON  { [Exp (Call ($1, $3)), 
 					     get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
+;;
+
+elsif_list:
+  ELSE IF LPAREN expression RPAREN block
+  elsif_list                               { ($4, $6, get_loc ())::$7 }
+|                                          { [] }
 ;;
 
 case_list:
@@ -173,6 +182,7 @@ left_value:
 expression:
   INTEGER                                  { Const $1 }
 | left_value                               { Lval $1 }
+| expression AND expression                { Binop (And, $1, $3) }
 | expression PLUS expression               { Binop (Plus, $1, $3) }
 | expression STAR expression               { Binop (Mult, $1, $3) }
 | expression LT expression                 { Binop (Gt, $3, $1) }

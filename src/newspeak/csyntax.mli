@@ -67,7 +67,7 @@ and blk = stmt list
 and stmtkind =
     | Decl of (declaration * init)
     | Set of (lv * exp)
-    | If of (exp * blk)
+    | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)
     | DoWhile of (blk * exp)
@@ -91,6 +91,7 @@ and exp =
     | Call of (fname * exp list)
 
 and binop =
+    | And
     | Plus
     | Mult
     | Gt

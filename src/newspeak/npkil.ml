@@ -115,9 +115,9 @@ let rec negate exp =
     | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
     | UnOp (Not, e) -> e
     | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
-    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e2, e1))
+    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
-    | _ -> invalid_arg "Newspeak.negate"
+    | _ -> invalid_arg "Npkil.negate"
 
 
 module Int_map = 
