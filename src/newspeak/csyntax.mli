@@ -87,11 +87,11 @@ and exp =
     | Const of cst
     | Lval of lv
     | AddrOf of lv
+    | And of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (fname * exp list)
 
 and binop =
-    | And
     | Plus
     | Mult
     | Gt

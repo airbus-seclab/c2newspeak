@@ -431,6 +431,10 @@ let compile fname =
       | Call _ -> 
 	  Npkcontext.error "Compiler.translate_exp" 
 	    "Call inside expression not implemented yet"
+
+      | And _ -> 
+	  Npkcontext.error "Compiler.translate_exp" 
+	    "should be unreachable statement"
   in
 
   let update_fundef f (ret, args) body =
@@ -494,6 +498,11 @@ let compile fname =
 	  translate_call loc (Some lv) x
 
       | Set (lv, e) -> (translate_set loc (lv, e))::[]
+
+
+      | If ((And (e1, e2), body, loc)::tl) ->
+	  let body = [If ((e2, body, loc)::tl), loc] in
+	    translate_stmt (If ((e1, body, loc)::tl), loc)
 
       | If ((e, body, loc)::tl) ->
 	  let cond1 = translate_bexp e in

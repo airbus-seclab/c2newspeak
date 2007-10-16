@@ -182,7 +182,7 @@ left_value:
 expression:
   INTEGER                                  { Const $1 }
 | left_value                               { Lval $1 }
-| expression AND expression                { Binop (And, $1, $3) }
+| expression AND expression                { And ($1, $3) }
 | expression PLUS expression               { Binop (Plus, $1, $3) }
 | expression STAR expression               { Binop (Mult, $1, $3) }
 | expression LT expression                 { Binop (Gt, $3, $1) }
