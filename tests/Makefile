@@ -1,6 +1,13 @@
 # commands
 RM = rm -f
-C2NEWSPEAK = ../bin/c2newspeak --newspeak #--experimental
+EXPERIMENTAL = 0
+# TODO: find cleaner way to do these conditionals in Makefile
+ifeq ($(EXPERIMENTAL),1)
+FLAG = --experimental
+else
+FLAG =
+endif
+C2NEWSPEAK = ../bin/c2newspeak --newspeak $(FLAG)
 
 TESTS = 000 001 002 003 004 005 006 007 008 009 \
         010 011 012 013 014 015 016 017 018 019 \
@@ -26,23 +33,28 @@ check: ../bin/c2newspeak $(TESTS)
 $(TESTS): $@
 	eval $(C2NEWSPEAK) `[ -e $@.in ] && cat $@.in` $@.c &> $@.bak
 	dos2unix $@.bak
-	if [ -e $@.spec ]; \
+	SPEC=$@.spec; \
+	if [ $(EXPERIMENTAL) == 1 ]; \
+	then if [ -e $@.spec2 ]; then SPEC=$@.spec2; fi; fi; \
+	if [ -e $$SPEC ]; \
 	then \
-	  if diff $@.spec $@.bak > result; \
-            then true; \
-            else cat result; false; \
+	  if diff $$SPEC $@.bak > result; \
+	  then true; \
+	  else cat result; false; \
 	  fi; \
 	else \
 	  echo "$@.spec does not exist; printing output instead of diffing"; \
 	  cat $@.bak; false; \
-	fi;
+	fi
 	$(RM) $@.bak result
 	touch $@
 
 $(TESTS.SPEC): ../bin/c2newspeak
-	eval $(C2NEWSPEAK) `[ -e $(basename $@).in ] && cat $(basename $@).in` $(basename $@).c &> $@
-	dos2unix $@
-	cat $@
+	OUT=$@; \
+	if [ $(EXPERIMENTAL) == 1 ]; then OUT=$@2; fi; \
+	eval $(C2NEWSPEAK) `[ -e $(basename $@).in ] && cat $(basename $@).in` $(basename $@).c &> $$OUT; \
+	dos2unix $$OUT; \
+	cat $$OUT \
 
 ../bin/c2newspeak: 
 	make -C .. install
