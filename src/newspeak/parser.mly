@@ -52,7 +52,7 @@ let build_glbdecl is_extern (b, m) =
 %token BREAK CASE DEFAULT DO ELSE EXTERN IF RETURN SWITCH TYPEDEF WHILE
 %token CHAR INT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
-%token LBRACKET RBRACKET LPAREN RPAREN EQ SEMICOLON
+%token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND AND PLUS PLUSPLUS STAR LT
 %token EOF
 
@@ -65,7 +65,7 @@ let build_glbdecl is_extern (b, m) =
 %left MULTIPLY DIVIDE
 */
 
-%left LT
+%left LT EQEQ NOTEQ
 %left AND
 %left PLUS
 %left STAR
@@ -188,6 +188,9 @@ expression:
 | expression LT expression                 { Binop (Gt, $3, $1) }
 | IDENTIFIER LPAREN expression_list RPAREN { Call ($1, $3) }
 | AMPERSAND left_value                     { AddrOf $2 }
+| LPAREN expression RPAREN                 { $2 }
+| expression EQEQ expression               { Binop (Eq, $1, $3) }
+| expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
 ;;
 
 // carefull not to have any empty rule: this deceives line number location

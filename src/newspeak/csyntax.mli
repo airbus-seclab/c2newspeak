@@ -88,13 +88,18 @@ and exp =
     | Lval of lv
     | AddrOf of lv
     | And of (exp * exp)
+    | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
     | Call of (fname * exp list)
+
+and unop = 
+    | Not
 
 and binop =
     | Plus
     | Mult
     | Gt
+    | Eq
 
 and cst = Int64.t
 

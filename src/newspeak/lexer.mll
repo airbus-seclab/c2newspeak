@@ -69,7 +69,7 @@ let line_comment = "//" [^'\r''\n']* line_terminator
 let letter = ['a'-'z'] | ['A'-'Z']
 let digit = ['0'-'9']
 
-let integer = digit+
+let integer = digit+ | '-'digit+
 let ull_integer = digit+ "ULL"
 let identifier = letter (letter|digit)*
 
@@ -111,6 +111,8 @@ rule token = parse
   | ")"                 { RPAREN }
   | "["                 { LBRACKET }
   | "]"                 { RBRACKET }
+  | "=="                { EQEQ }
+  | "!="                { NOTEQ }
   | "="                 { EQ }
   | ";"                 { SEMICOLON }
 
