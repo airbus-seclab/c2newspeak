@@ -203,6 +203,10 @@ let cast t e t' =
 	Npkcontext.error "Compiler.cast"
 	  ("Invalid cast "^(K.string_of_cast t t'))
 
+let translate_unop op (e, t) =
+  match op with
+      Not -> (K.UnOp (K.Not, e), CInt (N.Signed, Config.size_of_int))
+
 let translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
       (Plus, CInt k1, CInt k2) when k1 = k2 -> 
@@ -216,6 +220,11 @@ let translate_binop op (e1, t1) (e2, t2) =
     | (Gt, _, _) -> 
 	let t = CInt (N.Signed, Config.size_of_int) in
 	  (K.BinOp (N.Gt (scalar_of_cscalar t1), e1, e2), t)
+
+    | (Eq, t1, t2) when t1 = t2 -> 
+	(* TODO: code cleanup factor return type, with Not *)
+	let t = scalar_of_cscalar t1 in
+	  (K.BinOp (N.Eq t, e1, e2), CInt (N.Signed, Config.size_of_int))
     
     | _ -> 
 	Npkcontext.error "Compiler.translate_binop" 
@@ -422,6 +431,10 @@ let compile fname =
 	  let (lv, t) = translate_lv lv in
 	  let sz = size_of t in
 	    (K.AddrOf (lv, K.Known sz), CPtr t)
+
+      | Unop (op, e) -> 
+	  let v = translate_exp e in
+	    translate_unop op v
 
       | Binop (op, e1, e2) ->
 	  let v1 = translate_exp e1 in
