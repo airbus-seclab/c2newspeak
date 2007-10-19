@@ -181,7 +181,9 @@ let translate_sign s =
 let translate_ityp s t =
   match t with
       Char -> CInt (s, Config.size_of_char)
+    | Short -> CInt (s, Config.size_of_short)
     | Int -> CInt (s, Config.size_of_int)
+    | Long -> CInt (s, Config.size_of_long)
     | LongLong -> CInt (s, Config.size_of_longlong)
 
  
@@ -207,14 +209,27 @@ let translate_unop op (e, t) =
   match op with
       Not -> (K.UnOp (K.Not, e), CInt (N.Signed, Config.size_of_int))
 
+let promote k = 
+  match k with
+      (_, n) when n < Config.size_of_int -> (N.Signed, Config.size_of_int)
+    | _ -> k
+
 let translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
-      (Plus, CInt k1, CInt k2) when k1 = k2 -> 
-	(K.make_int_coerce k1 (K.BinOp (N.PlusI, e1, e2)), t1)
+      (Plus, CInt k1, CInt k2) -> 
+	let k1 = promote k1 in
+	let k2 = promote k2 in
+	let k = N.max_ikind k1 k2 in
+	let e1 = K.make_int_coerce k e1 in
+	let e2 = K.make_int_coerce k e2 in
+	  (K.make_int_coerce k (K.BinOp (N.PlusI, e1, e2)), CInt k)
     | (Mult, CInt k1, CInt k2) when k1 = k2 -> 
 	(K.make_int_coerce k1 (K.BinOp (N.MultI, e1, e2)), t1)
-    | (Plus, CPtr _, CInt _) ->	
-	let stride = K.Const (N.CInt64 (Int64.of_int Config.size_of_ptr)) in 
+
+    | (Plus, CPtr t, CInt _) ->	
+	(* TODO: code cleanup: do not use size_of on csyntax, use it
+	   on newspeak type. Remove redundant code. *)
+	let stride = K.Const (N.CInt64 (Int64.of_int (size_of t))) in 
 	  (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
 (* TODO: clean bug ? maybe a cast is necessary ? *)
     | (Gt, _, _) -> 

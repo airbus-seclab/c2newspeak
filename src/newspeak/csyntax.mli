@@ -51,7 +51,9 @@ and var_modifier =
 
 and ityp = 
     | Char 
+    | Short
     | Int
+    | Long
     | LongLong
 
 and sign =

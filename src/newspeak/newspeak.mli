@@ -132,7 +132,7 @@ and vid = int
 and fid = string
 
 and ikind = sign_t * size_t
-and sign_t = Unsigned | Signed
+and sign_t = Signed | Unsigned
 and size_t = int
 and offset = int
 
@@ -267,3 +267,5 @@ type alt_blk = (alt_stmtkind * location) list
 
 (* Tries to convert all infinite loops in the blk to while loops *)
 val convert_loops: blk -> alt_blk
+
+val max_ikind: ikind -> ikind -> ikind

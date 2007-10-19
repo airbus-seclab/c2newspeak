@@ -50,7 +50,7 @@ let build_glbdecl is_extern (b, m) =
 %}
 
 %token BREAK CASE DEFAULT DO ELSE EXTERN IF RETURN SWITCH TYPEDEF WHILE
-%token CHAR INT LONG STRUCT UNION UNSIGNED VOID
+%token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND AND PLUS PLUSPLUS STAR LT
@@ -233,6 +233,8 @@ arg:
 
 ityp:
   CHAR                                     { Char }
+| SHORT                                    { Short }
 | INT                                      { Int }
+| LONG                                     { Long }
 | LONG LONG                                { LongLong }
 ;;

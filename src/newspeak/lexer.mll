@@ -91,6 +91,7 @@ rule token = parse
 (* types *)
   | "char"              { CHAR }
   | "int"               { INT }
+  | "short"             { SHORT }
   | "long"              { LONG }
   | "struct"            { STRUCT }
   | "union"             { UNION }
