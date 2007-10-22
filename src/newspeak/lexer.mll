@@ -51,12 +51,12 @@ let int64_of_ull lexbuf =
     (* checks that Int64.of_string does not silently overflows *)
   let i = Int64.of_string lexeme in
   let str = Int64.to_string i in
-    (* TODO: code cleanup: should use Npkcontext.error here too: *)
     if str <> lexeme 
     then begin
       let pos = Lexing.lexeme_start_p lexbuf in
       let pos = pos.pos_fname^" line "^(string_of_int pos.pos_lnum) in
-      invalid_arg ("integer too large: not representable in "^pos)
+	Npkcontext.error "Lexer.int64_of_ull" 
+	  ("integer too large: not representable in "^pos)
     end;
     i
 }

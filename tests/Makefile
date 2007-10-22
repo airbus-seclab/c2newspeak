@@ -1,6 +1,6 @@
 # commands
 RM = rm -f
-EXPERIMENTAL = 0
+EXPERIMENTAL = 1
 # TODO: find cleaner way to do these conditionals in Makefile
 ifeq ($(EXPERIMENTAL),1)
 FLAG = --experimental
