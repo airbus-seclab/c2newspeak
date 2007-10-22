@@ -43,7 +43,6 @@ let build_stmtdecl (b, m) =
   let build ((v, init), l) = (Decl ((b, v), init), l) in
     List.map build m
 
-(* TODO: remove location in v ???? *)
 let build_glbdecl is_extern (b, m) = 
   let build ((v, init), _) = (GlbDecl (is_extern, (b, v), init), get_loc ()) in
     List.map build m
@@ -105,7 +104,9 @@ init_var_modifier_list:
 block:
   LBRACE statement_list RBRACE             { $2 }
 ;;
-/* TODO: simplify code by generalizing!!! */
+/* TODO: simplify code by generalizing!!! 
+try to remove multiple occurence of same pattern: factor as much as possible
+*/
 field_list:
   base_typ var_modifier_list
   SEMICOLON field_list                     { (build_decl ($1, $2))@$4 }
@@ -213,16 +214,12 @@ var_modifier:
 | var_modifier LBRACKET INTEGER RBRACKET   { Array ($1, $3) }
 | STAR var_modifier                        { Pointer $2 }
 | var_modifier LPAREN arg_list RPAREN      { Function ($1, $3) }
+| var_modifier LPAREN RPAREN               { Function ($1, []) }
 | LPAREN var_modifier RPAREN               { $2 }
 ;;
 
 arg_list:
-  non_empty_arg_list                       { $1}
-|                                          { [] }
-;;
-
-non_empty_arg_list:
-  arg COMMA non_empty_arg_list             { $1::$3 }
+  arg COMMA arg_list                       { $1::$3 }
 | arg                                      { $1::[]}
 ;;
 
