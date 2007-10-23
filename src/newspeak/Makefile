@@ -1,6 +1,7 @@
 # Project
 DIR = 
-OBJ = cilutils params npkcontext lexer newspeak csyntax parser \
+OBJ = cilutils params npkcontext lexer parser \
+      newspeak \
       config npkil npkutils env \
       cilfirstpass cilcompiler compiler link c2newspeak
 
