@@ -192,8 +192,8 @@ expression:
 
 base_typ:
   VOID                                     { Void }
-| ityp                                     { Integer (Signed, $1) }
-| UNSIGNED ityp                            { Integer (Unsigned, $2) }
+| ityp                                     { Integer (Newspeak.Signed, $1) }
+| UNSIGNED ityp                            { Integer (Newspeak.Unsigned, $2) }
 | STRUCT LBRACE field_list RBRACE          { Struct $3 }
 | UNION LBRACE field_list RBRACE           { Union $3 }
 | IDENTIFIER                               { Name $1 }
@@ -218,9 +218,10 @@ arg_list:
 | arg                                      { $1::[]}
 ;;
 
+// TODO: careful, this is a bit of a hack
 arg:
   base_typ var_modifier                    { ($1, $2) }
-| base_typ                                 { ($1, Absent) }
+| base_typ                                 { ($1, Variable "undefined!") }
 ;;
 
 ityp:

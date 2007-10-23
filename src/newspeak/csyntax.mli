@@ -37,7 +37,7 @@ and init = exp option
 
 and base_typ =
     | Void 
-    | Integer of (sign * ityp)    
+    | Integer of (Newspeak.sign_t * ityp)    
     | Struct of declaration list
     | Union of declaration list
     | Name of string
@@ -47,7 +47,6 @@ and var_modifier =
     | Function of (var_modifier * declaration list)
     | Array of (var_modifier * Int64.t)
     | Pointer of var_modifier
-    | Absent
 
 and ityp = 
     | Char 
@@ -55,10 +54,6 @@ and ityp =
     | Int
     | Long
     | LongLong
-
-and sign =
-    | Signed
-    | Unsigned
 
 and stmt = (stmtkind * location)
 

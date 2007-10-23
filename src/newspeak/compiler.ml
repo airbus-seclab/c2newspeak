@@ -173,20 +173,14 @@ let fun_of_ctyp t =
     | _ -> 
 	Npkcontext.error "Compiler.fun_of_ctyp" "Function type expected"
 
-let translate_sign s =
-  match s with
-      Signed -> N.Signed
-    | Unsigned -> N.Unsigned
-
-let translate_ityp s t =
+let size_of_ityp t =
   match t with
-      Char -> CInt (s, Config.size_of_char)
-    | Short -> CInt (s, Config.size_of_short)
-    | Int -> CInt (s, Config.size_of_int)
-    | Long -> CInt (s, Config.size_of_long)
-    | LongLong -> CInt (s, Config.size_of_longlong)
+      Char -> Config.size_of_char
+    | Short -> Config.size_of_short
+    | Int -> Config.size_of_int
+    | Long -> Config.size_of_long
+    | LongLong -> Config.size_of_longlong
 
- 
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1
 
@@ -294,6 +288,7 @@ let compile fname =
       with Not_found ->
 	Npkcontext.error "Compiler.get_var" ("Variable "^x^" not declared")
   in
+
   let get_locals () =
     let res = ref [] in
     let get_var x (i, t, loc) = res := (i, (t, x, loc))::!res in
@@ -303,6 +298,7 @@ let compile fname =
       let (_, res) = List.split res in
 	res
   in
+
   let register_formals f t = Hashtbl.add formals f t in
    
   let rec translate_decl (b, v) =
@@ -312,7 +308,7 @@ let compile fname =
 	
   and translate_base_typ t =
     match t with
-	Integer (s, t) -> CScalar (translate_ityp (translate_sign s) t)
+	Integer (s, t) -> CScalar (CInt (s, size_of_ityp t))
       | Struct f -> CRegion (translate_struct_fields f)
       | Union f -> CRegion (translate_union_fields f)
       | Void -> CVoid
@@ -355,8 +351,6 @@ let compile fname =
   and translate_var_modifier b v =
     match v with
 	Variable x -> (b, x)
-        (* TODO: cleanup, this is kind of a hack *)
-      | Absent -> (b, "unknown!")
       | Function (Variable f, args) -> 
 	  (CFun (b, List.map translate_decl args), f)
       | Function (Pointer v, _) -> 
