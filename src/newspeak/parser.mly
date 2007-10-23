@@ -26,17 +26,24 @@
 %{
 open Csyntax
 open Lexing
-
+(* TODO: write checks for all the syntax that is thrown away in these functions
+   !! *)
 let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let build_fundef b v body = (FunctionDef ((b, v), body), get_loc ())::[]
+let build_fundef (b, m) body = 
+  let loc = get_loc () in
+  let build ((v, _), _)  = (FunctionDef ((b, v), body), loc) in
+    List.map build m
 
-let build_typedef b v = (Typedef (b, v), get_loc ())::[]
+let build_typedef (b, m) =
+  let loc = get_loc () in
+  let build ((v, _), _) = (Typedef (b, v), loc) in
+    List.map build m
 
 let build_decl (b, m) =
-  let build (v, _) = (b, v) in
+  let build ((v, _), _) = (b, v) in
     List.map build m
 
 let build_stmtdecl (b, m) =
@@ -73,26 +80,25 @@ let build_glbdecl is_extern (b, m) =
 %start cprog
 
 %%
+/* TODO: simplify code by generalizing!!! 
+try to remove multiple occurence of same pattern: factor as much as possible
+*/
+// carefull not to have any empty rule: this deceives line number location
 
 cprog:
-  global_list                              { $1 }
-;;
-
-global_list:
-  global global_list                       { $1@$2 }
+  global cprog                             { $1@$2 }
 |                                          { [] }
 ;;
 
 global:
   declaration SEMICOLON                    { build_glbdecl false $1 }
 | EXTERN declaration SEMICOLON             { build_glbdecl true $2 }
-| base_typ var_modifier block              { build_fundef $1 $2 $3 }
-| TYPEDEF base_typ var_modifier SEMICOLON  { build_typedef $2 $3 }
+| declaration block                        { build_fundef $1 $2 }
+| TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 ;;
 
-var_modifier_list:
-  var_modifier COMMA var_modifier_list     { ($1, get_loc ())::$3 }
-| var_modifier                             { ($1, get_loc ())::[] }
+declaration:
+  base_typ init_var_modifier_list          { ($1, $2) }
 ;;
 
 init_var_modifier_list:
@@ -104,17 +110,10 @@ init_var_modifier_list:
 block:
   LBRACE statement_list RBRACE             { $2 }
 ;;
-/* TODO: simplify code by generalizing!!! 
-try to remove multiple occurence of same pattern: factor as much as possible
-*/
-field_list:
-  base_typ var_modifier_list
-  SEMICOLON field_list                     { (build_decl ($1, $2))@$4 }
-|                                          { [] }
-;;
 
-declaration:
-  base_typ init_var_modifier_list          { ($1, $2) }
+field_list:
+  declaration SEMICOLON field_list         { (build_decl $1)@$3 }
+|                                          { [] }
 ;;
 
 statement_list:
@@ -140,9 +139,7 @@ statement:
 | DO block 
   WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
-| IDENTIFIER 
-  LPAREN expression_list RPAREN SEMICOLON  { [Exp (Call ($1, $3)), 
-					     get_loc ()] }
+| call SEMICOLON                           { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 ;;
 
@@ -162,14 +159,13 @@ case:
 | DEFAULT COLON statement_list             { (None, $3, get_loc ()) }
 ;;
 
-expression_list:
-  non_empty_expression_list                { $1 }
-|                                          { [] }
+call:
+| IDENTIFIER LPAREN RPAREN                 { Call ($1, []) }
+| IDENTIFIER LPAREN expression_list RPAREN { Call ($1, $3) }
 ;;
 
-non_empty_expression_list:
-  expression COMMA 
-  non_empty_expression_list                { $1::$3 }
+expression_list:
+  expression COMMA expression_list         { $1::$3 }
 | expression                               { $1::[] }
 ;;
 
@@ -187,14 +183,13 @@ expression:
 | expression PLUS expression               { Binop (Plus, $1, $3) }
 | expression STAR expression               { Binop (Mult, $1, $3) }
 | expression LT expression                 { Binop (Gt, $3, $1) }
-| IDENTIFIER LPAREN expression_list RPAREN { Call ($1, $3) }
+| call                                     { $1 }
 | AMPERSAND left_value                     { AddrOf $2 }
 | LPAREN expression RPAREN                 { $2 }
 | expression EQEQ expression               { Binop (Eq, $1, $3) }
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
 ;;
 
-// carefull not to have any empty rule: this deceives line number location
 base_typ:
   VOID                                     { Void }
 | ityp                                     { Integer (Signed, $1) }
