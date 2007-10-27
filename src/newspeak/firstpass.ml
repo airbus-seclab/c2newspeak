@@ -112,6 +112,30 @@ let translate cprog =
 	    "case not implemented yet"
   in
     
+  let rec translate_lv x =
+    match x with
+	Var x -> C.Var x
+      | Field (lv, f) -> C.Field (translate_lv lv, f)
+      | Index (lv, e) -> C.Index (translate_lv lv, translate_exp e)
+      | Deref e -> C.Deref (translate_exp e)
+
+  and translate_exp x =
+    match x with
+	Const c -> C.Const c
+      | Lval lv -> C.Lval (translate_lv lv)
+      | AddrOf lv -> C.AddrOf (translate_lv lv) 
+      | Unop (op, e) -> C.Unop (op, translate_exp e)
+      | Binop (op, e1, e2) -> C.Binop (op, translate_exp e1, translate_exp e2)
+      | Call (f, args) -> C.Call (f, List.map translate_exp args)
+      | And _ -> 
+	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
+  in
+
+  let translate_exp_option e =
+    match e with
+	None -> None
+      | Some e -> Some (translate_exp e)
+  in
 
   let rec translate_blk x =
     match x with
@@ -131,28 +155,42 @@ let translate cprog =
 
   and translate_stmt (x, loc) =
     match x with
-	Set (lv, e) -> (C.Set (lv, e), loc)
+	Set (lv, e) -> 
+	  let lv = translate_lv lv in
+	  let e = translate_exp e in
+	  (C.Set (lv, e), loc)
+
+      | If ((And (e1, e2), body, loc)::tl) ->
+	  let body = (If ((e2, body, loc)::tl), loc)::[] in
+	    translate_stmt (If ((e1, body, loc)::tl), loc)
 
       | If branches -> 
-	  let translate (e, body, loc) = (e, translate_blk body, loc) in
-	  let branches = List.map translate branches in
+	  let translate_case (e, body, loc) = 
+	    (translate_exp e, translate_blk body, loc) 
+	  in
+	  let branches = List.map translate_case branches in
 	    (C.If branches, loc)
 
       | While (e, body) ->
+	  let e = translate_exp e in
 	  let body = translate_blk body in
 	    (C.While (e, body), loc)
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
+	  let e = translate_exp e in
 	    (C.DoWhile (body, e), loc)
 
-      | Return e -> (C.Return e, loc)
+      | Return e -> (C.Return (translate_exp e), loc)
 
-      | Exp e -> (C.Exp e, loc)
+      | Exp e -> (C.Exp (translate_exp e), loc)
 
       | Switch (e, cases) -> 
-	  let translate (e, body, loc) = (e, translate_blk body, loc) in
-	  let cases = List.map translate cases in
+	  let e = translate_exp e in
+	  let translate_case (e, body, loc) = 
+	    (translate_exp_option e, translate_blk body, loc) 
+	  in
+	  let cases = List.map translate_case cases in
 	    (C.Switch (e, cases), loc)
 
       | Break -> (C.Break, loc)
@@ -172,6 +210,7 @@ let translate cprog =
  
       | GlbDecl (is_extern, d, init) -> 
 	  let (t, x) = translate_decl d in
+	  let init = translate_exp_option init in
 	    Hashtbl.add glbdecls x (t, loc, init, is_extern)
 	  
       | Typedef x -> 

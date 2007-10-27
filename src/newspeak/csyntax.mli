@@ -77,8 +77,6 @@ and exp =
     | Const of cst
     | Lval of lv
     | AddrOf of lv
-(* TODO: remove And *)
-    | And of (exp * exp)
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)

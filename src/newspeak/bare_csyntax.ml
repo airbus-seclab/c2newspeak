@@ -74,6 +74,21 @@ and stmtkind =
 
 and field = string
 
+and lv = 
+    | Var of string
+    | Field of (lv * string)
+    | Index of (lv * exp)
+    | Deref of exp
+
+and exp = 
+    | Const of cst
+    | Lval of lv
+    | AddrOf of lv
+    | Unop of (unop * exp)
+    | And of (exp * exp)
+    | Binop of (binop * exp * exp)
+    | Call of (string * exp list)
+
 and cst = Int64.t
 
 let size_of_ityp t =
