@@ -59,8 +59,6 @@ and ityp =
 
 and stmt = (stmtkind * location)
 
-(* TODO: code cleanup: have the block be a declaration list followed by a 
-   stmt list, remove Decl from possible statements *)
 and blk = stmt list
 
 and stmtkind =

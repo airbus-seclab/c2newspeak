@@ -361,14 +361,9 @@ let translate fname (_, cglbdecls, cfundefs) =
       | [] -> body
   in
 
-  let rec translate_blk (decls, body) =
-    let push_local (d, loc) = push loc d in
-      List.iter push_local decls;
-      translate_stmt_list body
-
-  and translate_stmt_list x =
+  let rec translate_blk x =
     match x with
-	hd::tl -> (translate_stmt hd)@(translate_stmt_list tl)
+	hd::tl -> (translate_stmt hd)@(translate_blk tl)
       | [] -> []
 
   and translate_set loc (lv, e) =
@@ -385,6 +380,10 @@ let translate fname (_, cglbdecls, cfundefs) =
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
+      | Decl (d, body) -> 
+	  push loc d;
+	  translate_blk body
+
       | Set (lv, Call x) -> 
 	  translate_call loc (Some lv) x
 
@@ -392,7 +391,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
 
       | If ((And (e1, e2), body, loc)::tl) ->
-	  let body = ([], [If ((e2, body, loc)::tl), loc]) in
+	  let body = (If ((e2, body, loc)::tl), loc)::[] in
 	    translate_stmt (If ((e1, body, loc)::tl), loc)
 
       | If ((e, body, loc)::tl) ->
@@ -514,7 +513,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     in
     let rec translate_cases x =
       match x with
-	  (v, ([], []), case_loc)::(v', body, _)::tl ->
+	  (v, [], case_loc)::(v', body, _)::tl ->
 	    let (lbl, cases) = translate_cases ((v', body, case_loc)::tl) in
 	    found_case (lbl - 1) v;
 	      (lbl, cases)

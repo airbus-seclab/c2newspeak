@@ -112,23 +112,21 @@ let translate cprog =
 	    "case not implemented yet"
   in
     
-  let rec translate_blk body =
-    match body with
-      | (Decl (x, init), loc)::tl -> 
-	  let (t, x) = translate_decl x in
-	  let (decls, body) = translate_blk tl in
-	  let body =
-	    match init with
-		None -> body
-	      | Some e -> (translate_stmt (Set (Var x, e), loc))::body
-	  in
-	    (((t, x), loc)::decls, body)
 
-      | _ -> ([], translate_stmt_list body)
-
-  and translate_stmt_list x =
+  let rec translate_blk x =
     match x with
-	hd::tl -> (translate_stmt hd)::(translate_stmt_list tl)
+      | (Decl (d, init), loc)::tl -> 
+	  let (t, x) = translate_decl d in
+	  let tl =
+	    match init with
+		None -> tl
+	      | Some e -> (Set (Var x, e), loc)::tl
+	  in
+	  let tl = translate_blk tl in
+	    (C.Decl ((t, x), tl), loc)::[]
+
+      | hd::tl -> (translate_stmt hd)::(translate_blk tl)
+
       | [] -> []
 
   and translate_stmt (x, loc) =

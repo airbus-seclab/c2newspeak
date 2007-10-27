@@ -54,13 +54,14 @@ and scalar_t =
     | Float of int
     | Ptr of typ
 
-and blk = (localdecl list * stmt list)
+and blk = stmt list
 
 and localdecl = (decl * location)
 
 and stmt = (stmtkind * location)
 
 and stmtkind =
+    | Decl of (decl * blk)
     | Set of (lv * exp)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)

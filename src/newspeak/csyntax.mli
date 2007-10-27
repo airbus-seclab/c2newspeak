@@ -52,13 +52,12 @@ and scalar_t =
     | Float of int
     | Ptr of typ
 
-and blk = (localdecl list * stmt list)
-
-and localdecl = (decl * location)
+and blk = stmt list
 
 and stmt = (stmtkind * location)
 
 and stmtkind =
+    | Decl of (decl * blk)
     | Set of (lv * exp)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
@@ -78,6 +77,7 @@ and exp =
     | Const of cst
     | Lval of lv
     | AddrOf of lv
+(* TODO: remove And *)
     | And of (exp * exp)
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
