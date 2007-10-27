@@ -23,42 +23,48 @@
   email: charles.hymans@penjili.org
 *)
 open Newspeak
+open Csyntax
 
-type prog = (composites * glbdecls * fundefs)
+type prog = (global * location) list
 
-and composites = (string, typ) Hashtbl.t
+and global =
+    | FunctionDef of (declaration * blk)
+(* true for extern *)
+    | GlbDecl of (bool * declaration * init)
+    | Typedef of declaration
 
-and glbdecls = (string, typ * location * exp option * bool) Hashtbl.t
+and declaration = (base_typ * var_modifier)
 
-and fundefs = (string, ftyp * location * blk) Hashtbl.t
+and init = exp option
 
-and decl = (typ * string)
+and base_typ =
+    | Void 
+    | Integer of (sign_t * ityp)    
+    | Struct of declaration list
+    | Union of declaration list
+    | Name of string
 
-and ftyp = typ * decl list
+and var_modifier =
+    | Variable of string
+    | Function of (var_modifier * declaration list)
+    | Array of (var_modifier * Int64.t)
+    | Pointer of var_modifier
 
-and typ =
-    | Void
-    | Scalar of scalar_t
-    | Array of array_t
-    | StructOrUnion of (bool * fields_t * int) (* true for a structure *)
-    | Fun of ftyp
-
-and fields_t = (string * (int * typ)) list
-
-and array_t = (typ * int option)
-
-and scalar_t =
-    | Int of ikind
-    | Float of int
-    | Ptr of typ
-
-and blk = (localdecl list * stmt list)
-
-and localdecl = (decl * location)
+and ityp = 
+    | Char 
+    | Short
+    | Int
+    | Long
+    | LongLong
 
 and stmt = (stmtkind * location)
 
+(* TODO: code cleanup: have the block be a declaration list followed by a 
+   stmt list, remove Decl from possible statements *)
+and blk = stmt list
+
 and stmtkind =
+    | Decl of (declaration * init)
     | Set of (lv * exp)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
@@ -68,40 +74,14 @@ and stmtkind =
     | Exp of exp
     | Break
 
-and lv = 
-    | Var of string
-    | Field of (lv * string)
-    | Index of (lv * exp)
-    | Deref of exp
-
-and exp = 
-    | Const of cst
-    | Lval of lv
-    | AddrOf of lv
-    | And of (exp * exp)
-    | Unop of (unop * exp)
-    | Binop of (binop * exp * exp)
-    | Call of (string * exp list)
-
-and unop = 
-    | Not
-
-and binop =
-    | Plus
-    | Mult
-    | Gt
-    | Eq
+and field = string
 
 and cst = Int64.t
 
-val ftyp_of_typ: typ -> ftyp
-
-val fields_of_typ: typ -> fields_t
-
-val array_of_typ: typ -> array_t
-
-val scalar_of_typ: typ -> scalar_t
-
-val deref_scalar: scalar_t -> typ
-
-val size_of: typ -> int
+let size_of_ityp t =
+  match t with
+      Char -> Config.size_of_char
+    | Short -> Config.size_of_short
+    | Int -> Config.size_of_int
+    | Long -> Config.size_of_long
+    | LongLong -> Config.size_of_longlong

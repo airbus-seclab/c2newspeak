@@ -46,30 +46,17 @@ let kind_of_int64 i =
   in
     (sign, Config.size_of_int)
 
-type ctyp =
-    | CVoid
-    | CScalar of cscalar_t
-    | CArray of (ctyp * int option)
-    | CRegion of (cfield list * int)
-    | CFun of (ctyp * (ctyp * string) list)
-
-and cscalar_t =
-    | CInt of N.ikind
-    | CFloat of int
-    | CPtr of ctyp
-    | CFunPtr
-
-and cfield = (string * int * ctyp)
-
 let ret_vname = "!return"
 
+(*
 let size_of_cscalar t = 
   match t with
       CInt (_, n) -> n
     | CFloat n -> n
     | CPtr _ -> Config.size_of_ptr
     | CFunPtr -> Config.size_of_ptr
-
+*)
+(* TODO: remove any function that is dead code
 let rec size_of t =
   match t with
       CScalar t -> size_of_cscalar t
@@ -78,29 +65,7 @@ let rec size_of t =
     | CArray _ -> Npkcontext.error "Compiler.size_of" "unknown size of array"
     | CVoid -> Npkcontext.error "Compiler.size_of" "size of void unknown"
     | CFun _ -> Npkcontext.error "Compiler.size_of" "size of function"
-
-(* TODO: check this for various architecture ? 
-   Here align everything on 4 *)
-let align t o = 
-  if (o mod 4) = 0 then o
-  else if size_of t <= (4 - (o mod 4)) then o
-  else o + (4 - (o mod 4))
-
-let align_end o = align (CScalar (CInt (N.Signed, 4))) o
-
-let rec offset_of f t =
-  match t with
-      (x, _, _)::tl when x <> f -> offset_of f tl
-    | (_, o, t)::_ -> (o, t)
-    | [] -> Npkcontext.error "Compiler.offset_of" ("field "^f^" not defined")
-      
-
-let int64_to_int x =
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Compiler.int64_to_int" "integer too big";
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Compiler.int64_to_int" "expecting positive integer";
-  Int64.to_int x
+*)
 
 let parse fname =
   let cin = open_in fname in
@@ -119,67 +84,6 @@ let parse fname =
 
 (* TODO: code cleanup: remove this: remove any use of this *)
 let dummy_loc = ("", -1, -1)
-
-let rec typ_of_ctyp t =
-  match t with
-      CVoid -> Npkcontext.error "Compiler.typ_of_ctyp" "void not allowed here"
-    | CScalar t -> K.Scalar (scalar_of_cscalar t)
-    | CArray (t, sz) -> K.Array (typ_of_ctyp t, sz)
-    | CRegion (f, sz) -> K.Region (List.map field_of_cfield f, sz)
-    | CFun _ -> 
-	Npkcontext.error "Compiler.typ_of_ctyp" "function not allowed here"
-
-and scalar_of_cscalar t = 
-  match t with
-      CInt i -> N.Int i
-    | CFloat n -> N.Float n
-    | CPtr _ -> N.Ptr
-    | CFunPtr -> N.FunPtr
-
-and field_of_cfield (n, o, t) = (o, typ_of_ctyp t)
-
-let ret_typ_of_ctyp t =
-  match t with
-      CVoid -> None
-    | _ -> Some (typ_of_ctyp t)
-
-let cscalar_of_ctyp t = 
-  match t with 
-      CScalar t -> t
-    | _ -> Npkcontext.error "Compiler.scalar_of_typ" "scalar type expected"
-
-let region_of_ctyp t =
-  match t with
-      CRegion (fields, _) -> fields
-    | _ -> 
-	Npkcontext.error "Compiler.region_of_typ" 
-	  "struct or union type expected"
-
-let array_of_ctyp lv t =
-  match (t, lv) with
-      (CArray (t, Some n), _) -> (t, K.Known n)
-    | (CArray (t, None), K.Global x) -> (t, K.Length x)
-    | _ -> 
-	Npkcontext.error "Compiler.array_of_typ" "Array of known size expected"
-
-let deref_ctyp t =
-  match t with
-      CPtr t -> t
-    | _ -> Npkcontext.error "Compiler.deref_ctyp" "Pointer type expected"
-
-let fun_of_ctyp t =
-  match t with
-      CFun x -> x
-    | _ -> 
-	Npkcontext.error "Compiler.fun_of_ctyp" "Function type expected"
-
-let size_of_ityp t =
-  match t with
-      Char -> Config.size_of_char
-    | Short -> Config.size_of_short
-    | Int -> Config.size_of_int
-    | Long -> Config.size_of_long
-    | LongLong -> Config.size_of_longlong
 
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1
@@ -201,7 +105,7 @@ let cast t e t' =
 
 let translate_unop op (e, t) =
   match op with
-      Not -> (K.UnOp (K.Not, e), CInt (N.Signed, Config.size_of_int))
+      Not -> (K.UnOp (K.Not, e), Int (N.Signed, Config.size_of_int))
 
 let promote k = 
   match k with
@@ -216,43 +120,15 @@ let translate_arithmop op =
 	Npkcontext.error "Compiler.translate_arithmop" 
 	  "Unexpected arithmetic operator"
 
-let translate_binop op (e1, t1) (e2, t2) =
-  match (op, t1, t2) with
-      ((Mult|Plus), CInt k1, CInt k2) -> 
-	let k1 = promote k1 in
-	let k2 = promote k2 in
-	let k = N.max_ikind k1 k2 in
-	let e1 = K.make_int_coerce k e1 in
-	let e2 = K.make_int_coerce k e2 in
-	let op = translate_arithmop op in
-	  (K.make_int_coerce k (K.BinOp (op, e1, e2)), CInt k)
-
-    | (Plus, CPtr t, CInt _) ->	
-	(* TODO: code cleanup: do not use size_of on csyntax, use it
-	   on newspeak type. Remove redundant code. *)
-	let stride = K.Const (N.CInt64 (Int64.of_int (size_of t))) in 
-	  (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
-(* TODO: clean bug ? maybe a cast is necessary ? *)
-    | (Gt, _, _) -> 
-	let t = CInt (N.Signed, Config.size_of_int) in
-	  (K.BinOp (N.Gt (scalar_of_cscalar t1), e1, e2), t)
-
-    | (Eq, t1, t2) when t1 = t2 -> 
-	(* TODO: code cleanup factor return type, with Not *)
-	let t = scalar_of_cscalar t1 in
-	  (K.BinOp (N.Eq t, e1, e2), CInt (N.Signed, Config.size_of_int))
-    
-    | _ -> 
-	Npkcontext.error "Compiler.translate_binop" 
-	  "unexpected binary operator and arguments"
-
-let rec append_decls d body =
-  match d with
-      (t, x, loc)::tl -> 
-	let t = typ_of_ctyp t in
-	  (K.Decl (x, t, append_decls tl body), loc)::[]
-    | [] -> body
-
+let translate_array lv a =
+  let (t, n) = array_of_typ a in
+  let n =
+    match (n, lv) with
+	(Some n, _) -> K.Known n
+      | (_, K.Global x) -> K.Length x
+      | _ -> Npkcontext.error "Compiler.translate_array" "Unknown array size"
+  in
+    (t, n)
 
 let compile fname = 
   let globals = Hashtbl.create 100 in
@@ -260,9 +136,8 @@ let compile fname =
   let global_env = Hashtbl.create 100 in
   let env = Hashtbl.create 100 in
     (* maps each function name to its list of formal declarations *)
+    (* TODO: remove this: not necessary anymore !!! *)
   let formals = Hashtbl.create 100 in
-    (* maps each defined typedef to the type it denotes *)
-  let typedefs = Hashtbl.create 100 in
   let vcnt = ref 0 in
   let push loc (t, x) =
     incr vcnt;
@@ -273,7 +148,7 @@ let compile fname =
     Hashtbl.remove env x
   in
 
-  let push_dummy loc = push loc (CVoid, "dummy") in
+  let push_dummy loc = push loc (Void, "dummy") in
 
   let pop_dummy () = pop "dummy" in
 
@@ -299,71 +174,65 @@ let compile fname =
 	res
   in
 
-  let register_formals f t = Hashtbl.add formals f t in
-   
-  let rec translate_decl (b, v) =
-    let b = translate_base_typ b in
-    let (t, x) = translate_var_modifier b v in
-      (t, x)
-	
-  and translate_base_typ t =
+  let rec translate_typ t =
     match t with
-	Integer (s, t) -> CScalar (CInt (s, size_of_ityp t))
-      | Struct f -> CRegion (translate_struct_fields f)
-      | Union f -> CRegion (translate_union_fields f)
-      | Void -> CVoid
-      | Name x -> 
-	  try Hashtbl.find typedefs x
-	  with Not_found -> 
-	    Npkcontext.error "Compiler.translate_base_typ" ("Unknown type "^x)
-	      
-  and translate_struct_fields f =
-    let rec translate o f =
-      match f with
-	  d::f -> 
-	    let (t, x) = translate_decl d in
-	    let sz = size_of t in
-	    let o = align t o in
-	    let (f, n) = translate (o+sz) f in
-	      ((x, o, t)::f, n)
-	| [] -> 
-	    let o = align_end o in
-	      ([], o)
-    in
-      match f with
-	  d::[] -> 
-	    let (t, x) = translate_decl d in
-	    let sz = size_of t in
-	      ((x, 0, t)::[], sz)
-	| _ -> translate 0 f
+	Void -> 
+	  Npkcontext.error "Compiler.translate_typ" "void not allowed here"
+      | Scalar t -> K.Scalar (translate_scalar t)
+      | Array (t, sz) -> K.Array (translate_typ t, sz)
+      | StructOrUnion (_, fields, n) -> 
+	  let translate_field (_, (o, t)) = (o, translate_typ t) in
+	  K.Region (List.map translate_field fields, n)
+      | Fun _ -> 
+	  Npkcontext.error "Compiler.translate_typ" "function not allowed here"
 	    
-  and translate_union_fields f =
-    let n = ref 0 in
-    let translate d =
-      let (t, x) = translate_decl d in
-      let sz = size_of t in
-	if !n < sz then n := sz;
-	(x, 0, t)
-    in
-      (List.map translate f, !n)
-	
-  (* TODO: put this and types inside the parser !!! *)
-  and translate_var_modifier b v =
-    match v with
-	Variable x -> (b, x)
-      | Function (Variable f, args) -> 
-	  (CFun (b, List.map translate_decl args), f)
-      | Function (Pointer v, _) -> 
-	  translate_var_modifier (CScalar CFunPtr) v
-      | Array (v, n) -> 
-	  let n = Some (int64_to_int n) in
-	    translate_var_modifier (CArray (b, n)) v
-      | Pointer v -> translate_var_modifier (CScalar (CPtr b)) v
-      | Function _ -> 
-	  Npkcontext.error "Compiler.translate_var_modifier" 
-	    "case not implemented yet"
+  and translate_scalar t = 
+    match t with
+	Int i -> N.Int i
+      | Float n -> N.Float n      
+      | Ptr (Fun _) -> N.FunPtr
+      | Ptr _ -> N.Ptr
   in
-        
+  
+  let translate_typ_as_ret t =
+    match t with
+	Void -> None
+      | _ -> Some (translate_typ t)
+  in
+
+  let translate_binop op (e1, t1) (e2, t2) =
+    match (op, t1, t2) with
+	((Mult|Plus), Int k1, Int k2) -> 
+	  let k1 = promote k1 in
+	  let k2 = promote k2 in
+	  let k = N.max_ikind k1 k2 in
+	  let e1 = K.make_int_coerce k e1 in
+	  let e2 = K.make_int_coerce k e2 in
+	  let op = translate_arithmop op in
+	    (K.make_int_coerce k (K.BinOp (op, e1, e2)), Int k)
+	      
+      | (Plus, Ptr t, Int _) ->	
+	  (* TODO: code cleanup: do not use size_of on csyntax, use it
+	     on newspeak type. Remove redundant code. *)
+	  let stride = K.exp_of_int (size_of t) in 
+	    (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
+	      (* TODO: clean bug ? maybe a cast is necessary ? *)
+      | (Gt, _, _) -> 
+	  let t = Int (N.Signed, Config.size_of_int) in
+	    (K.BinOp (N.Gt (translate_scalar t1), e1, e2), t)
+	      
+      | (Eq, t1, t2) when t1 = t2 -> 
+	  (* TODO: code cleanup factor return type, with Not *)
+	  let t = translate_scalar t1 in
+	    (K.BinOp (N.Eq t, e1, e2), Int (N.Signed, Config.size_of_int))
+	      
+      | _ -> 
+	  Npkcontext.error "Compiler.translate_binop" 
+	    "unexpected binary operator and arguments"
+  in
+
+  let register_formals f t = Hashtbl.add formals f t in
+  
   let build_args f args loc =
     let formals =
       try Hashtbl.find formals f
@@ -371,18 +240,18 @@ let compile fname =
 	let i = ref (-1) in
 	let build (_, t) =
 	  incr i;
-	  (CScalar t, "arg"^(string_of_int !i))
+	  (Scalar t, "arg"^(string_of_int !i))
 	in
 	  List.map build args
     in
     let decls = 
-      List.map2 (fun (_, t) (_, x) -> (CScalar t, x, loc)) args formals
+      List.map2 (fun (_, t) (_, x) -> (Scalar t, x, loc)) args formals
     in
     let i = ref (-1) in
     let build_set (e, t) =
       incr i;
       let lv = K.Local !i in
-	(K.Set (lv, e, scalar_of_cscalar t), loc)
+	(K.Set (lv, e, translate_scalar t), loc)
     in
       (* TODO: code optimization: remove these List.rev!!! *)
     let set = List.rev (List.map build_set (List.rev args)) in
@@ -395,58 +264,56 @@ let compile fname =
 
       | Field (lv, f) ->
 	  let (lv, t) = translate_lv lv in
-	  let r = region_of_ctyp t in
-	  let (o, t) = offset_of f r in
+	  let r = fields_of_typ t in
+	  let (o, t) = List.assoc f r in
 	  let o = K.Const (N.CInt64 (Int64.of_int o)) in
 	    (K.Shift (lv, o), t)
 
       | Index (lv, e) -> 
 	  let (lv, t) = translate_lv lv in
-	  let (t, n) = array_of_ctyp lv t in
+	  let (t, n) = translate_array lv t in
 	  let (i, _) = translate_exp e in
-	  let sz = size_of t in
-	  let sz = K.Const (N.CInt64 (Int64.of_int sz)) in
+	  let sz = K.exp_of_int (size_of t) in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, K.Decr n), i) in
 	  let o = K.BinOp (N.MultI, o, sz) in
 	    (K.Shift (lv, o), t)
 
       | Deref e ->
 	  let (e, t) = translate_exp e in
-	  let t = deref_ctyp t in
+	  let t = deref_scalar t in
 	    (K.Deref (e, size_of t), t)
 
   and translate_bexp e =
     let (e, t) = translate_exp e in
-    let t = scalar_of_cscalar t in
+    let t = translate_scalar t in
       match (e, t) with
-	  (K.Lval _, N.Int _) -> 
-	    K.negate (K.BinOp (N.Eq t, e, K.Const (N.CInt64 Int64.zero))) 
+	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero)) 
 	| _ -> e
 
   and translate_exp e =
     match e with
-	Const i -> (K.Const (N.CInt64 i), CInt (kind_of_int64 i))
+	Const i -> (K.Const (N.CInt64 i), Int (kind_of_int64 i))
 
       | Lval lv -> 
 	  let (lv, t) = translate_lv lv in
-	  let t = cscalar_of_ctyp t in
-	    (K.Lval (lv, scalar_of_cscalar t), t)
+	  let t = scalar_of_typ t in
+	    (K.Lval (lv, translate_scalar t), t)
 
       | AddrOf Index (lv, e) ->
 	  let (lv, t) = translate_lv lv in
 	  let (i, _) = translate_exp e in
-	  let (t', n) = array_of_ctyp lv t in
+	  let (t', n) = translate_array lv t in
 	  let sz = size_of t' in
 	  let sz_e = K.Const (N.CInt64 (Int64.of_int sz)) in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), i) in
 	  let o = K.BinOp (N.MultI, o, sz_e) in
 	  let n = K.Mult (n, sz) in
-	    (K.BinOp (N.PlusPI, K.AddrOf (lv, n), o), CPtr t)
+	    (K.BinOp (N.PlusPI, K.AddrOf (lv, n), o), Ptr t)
 
       | AddrOf lv ->
 	  let (lv, t) = translate_lv lv in
 	  let sz = size_of t in
-	    (K.AddrOf (lv, K.Known sz), CPtr t)
+	    (K.AddrOf (lv, K.Known sz), Ptr t)
 
       | Unop (op, e) -> 
 	  let v = translate_exp e in
@@ -467,8 +334,8 @@ let compile fname =
   in
 
   let update_fundef f (ret, args) body =
-    let ret = ret_typ_of_ctyp ret in
-    let args = List.map typ_of_ctyp args in
+    let ret = translate_typ_as_ret ret in
+    let args = List.map translate_typ args in
       try
 	let (prev_args, prev_ret, prev_body) = Hashtbl.find fundefs f in
 	  if args <> prev_args 
@@ -489,20 +356,19 @@ let compile fname =
 		  "Multiple definition of function body"
       with Not_found -> Hashtbl.add fundefs f (args, ret, body)
   in
+  
+  let rec append_decls d body =
+    match d with
+	(t, x, loc)::tl -> 
+	  let t = translate_typ t in
+	    (K.Decl (x, t, append_decls tl body), loc)::[]
+      | [] -> body
+  in
 
-  let rec translate_blk body =
-    match body with
-      | (Decl (x, init), loc)::tl ->
-	  let (t, x) = translate_decl x in
-	    push loc (t, x);
-	    let init = 
-	      match init with
-		  None -> []
-		| Some e -> translate_stmt (Set (Var x, e), loc)
-	    in
-	    let blk = translate_blk tl in
-	      init@blk
-      | _ -> translate_stmt_list body
+  let rec translate_blk (decls, body) =
+    let push_local (d, loc) = push loc d in
+      List.iter push_local decls;
+      translate_stmt_list body
 
   and translate_stmt_list x =
     match x with
@@ -514,8 +380,8 @@ let compile fname =
     let (lv, t) = translate_lv lv in
     let (e, t') = translate_exp e in
       (* TODO: code cleanup: put these two together ?? *)
-    let t = scalar_of_cscalar (cscalar_of_ctyp t) in
-    let t' = scalar_of_cscalar t' in
+    let t = translate_scalar (scalar_of_typ t) in
+    let t' = translate_scalar t' in
     let e = cast t' e t in
       (K.Set (lv, e, t), loc)
     
@@ -530,7 +396,7 @@ let compile fname =
 
 
       | If ((And (e1, e2), body, loc)::tl) ->
-	  let body = [If ((e2, body, loc)::tl), loc] in
+	  let body = ([], [If ((e2, body, loc)::tl), loc]) in
 	    translate_stmt (If ((e1, body, loc)::tl), loc)
 
       | If ((e, body, loc)::tl) ->
@@ -571,7 +437,7 @@ let compile fname =
 	  let (lv, t) = translate_lv (Var ret_vname) in
 	  let decl = (t, "tmp", dummy_loc)::[] in
 	  let call = translate_call loc (Some (Var "tmp")) x in
-	  let t = scalar_of_cscalar (cscalar_of_ctyp t) in
+	  let t = translate_scalar (scalar_of_typ t) in
 	  let set = (K.Set (lv, K.Lval (K.Local 0, t), t), loc)::[] in
 	    pop "tmp";
 	    append_decls decl (call@set)
@@ -591,11 +457,6 @@ let compile fname =
 	  Npkcontext.error "Compiler.translate_stmt" 
 	    "Expressions as statements not implemented yet"
 
-      | Decl _ -> 
-	  Npkcontext.error "Compiler.translate_stmt" 
-	    "Variable declaration can be done at the start of blocks only"
-
-
   and translate_call loc r (f, args) =
     (* TODO: code robustness: should compare arguments types and 
        expected function type *)
@@ -608,10 +469,11 @@ let compile fname =
     push_dummy loc;
     let (ret_t, ret_decl, ret_set) = 
       match r with
-	  None -> (CVoid, [], [])
+	  None -> (Void, [], [])
 	| Some lv -> 
 	    let (r, t) = translate_lv lv in
-	    let ret_t = scalar_of_cscalar (cscalar_of_ctyp t) in
+	      (* TODO: code factorisation: many occurences of this: *)
+	    let ret_t = translate_scalar (scalar_of_typ t) in
 	      (t,
 	      (t, "value_of_"^f, loc)::[], 
 	      (K.Set (r, K.Lval (K.Local 0, ret_t), ret_t), loc)::[])
@@ -620,7 +482,7 @@ let compile fname =
     List.iter (fun _ -> push_dummy loc) args;
 
     let args = (List.map translate_exp args) in
-    let args_t = List.map (fun (_, x) -> CScalar x) args in
+    let args_t = List.map (fun (_, x) -> Scalar x) args in
     let (decls, set) = build_args f args loc in
       pop_dummy ();
       List.iter (fun _ -> pop_dummy ()) args;
@@ -648,7 +510,7 @@ let compile fname =
       match v with
 	  Some v ->
 	    let (v, t) = translate_exp v in
-	    let t = scalar_of_cscalar t in
+	    let t = translate_scalar t in
 	    let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
 	      default_cond := (K.negate cond)::!default_cond;
 	      choices := (cond::[], [K.Goto lbl, loc])::!choices
@@ -656,7 +518,7 @@ let compile fname =
     in
     let rec translate_cases x =
       match x with
-	  (v, [], case_loc)::(v', body, _)::tl ->
+	  (v, ([], []), case_loc)::(v', body, _)::tl ->
 	    let (lbl, cases) = translate_cases ((v', body, case_loc)::tl) in
 	    found_case (lbl - 1) v;
 	      (lbl, cases)
@@ -696,49 +558,40 @@ let compile fname =
 	  Npkcontext.error "Compiler.translate_init" "Not implemented yet"
   in
 
-  let translate_glbdecl loc (is_extern, d, init) =
-    let (t, x) = translate_decl d in
-      match (t, init) with
-	  (CFun (t, args), None) ->
-	      let (args_t, _) = List.split args in
-		update_fundef x (t, args_t) None
-
-	| (CFun _, _) ->
-	    Npkcontext.error "Compiler.translate_glbdecl" 
-	      "Unexpected initialization"
-	| _ ->
-	    let init = translate_init is_extern init in
+  let translate_glbdecl x (t, loc, init, is_extern) =
+    match (t, init) with
+	(Fun (t, args), None) ->
+	  let (args_t, _) = List.split args in
+	    update_fundef x (t, args_t) None
+	      
+      | (Fun _, _) ->
+	  Npkcontext.error "Compiler.translate_glbdecl" 
+	    "Unexpected initialization"
+      | _ ->
+	  let init = translate_init is_extern init in
 	    (* TODO: maybe do this in a first, since there may be the need for
-		a variable not encountered yet, in init*)
-	      Hashtbl.add global_env x t;
-	      Hashtbl.add globals x (typ_of_ctyp t, loc, init, true)
+	       a variable not encountered yet, in init*)
+	    Hashtbl.add global_env x t;
+	    Hashtbl.add globals x (translate_typ t, loc, init, true)
   in
 
-  let translate_global (x, loc) =
-    match x with
-	FunctionDef (x, body) -> 
-	  let (t, f) = translate_decl x in
-	  let (t, args) = fun_of_ctyp t in
-	    push loc (t, ret_vname);
-	    List.iter (push loc) args;
-	    register_formals f args;
-	    let body = translate_blk body in
-	    let (args_t, args_name) = List.split args in
-	      List.iter pop args_name;
-	      pop ret_vname;
-	      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
-	      let decls = get_locals () in
-	      let body = append_decls decls body in
-		update_fundef f (t, args_t) (Some body)
-
-      | GlbDecl x -> translate_glbdecl loc x
-
-      | Typedef x ->
-	  let (t, x) = translate_decl x in
-	    Hashtbl.add typedefs x t
+  let translate_fundef f ((t, args), loc, body) =
+    push loc (t, ret_vname);
+    List.iter (push loc) args;
+    register_formals f args;
+    let body = translate_blk body in
+    let (args_t, args_name) = List.split args in
+      List.iter pop args_name;
+      pop ret_vname;
+      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
+      let decls = get_locals () in
+      let body = append_decls decls body in
+	update_fundef f (t, args_t) (Some body)
   in
 
   let cprog = parse fname in
+  let (_, g, f) = Firstpass.translate cprog in
     
-    List.iter translate_global cprog;
+    Hashtbl.iter translate_glbdecl g;
+    Hashtbl.iter translate_fundef f;
     (fname, globals, fundefs)

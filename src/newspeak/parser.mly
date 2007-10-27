@@ -25,6 +25,7 @@
 
 %{
 open Csyntax
+open Bare_csyntax
 open Lexing
 (* TODO: write checks for all the syntax that is thrown away in these functions
    !! *)
@@ -76,7 +77,7 @@ let build_glbdecl is_extern (b, m) =
 %left PLUS
 %left STAR
 
-%type <Csyntax.prog> cprog
+%type <Bare_csyntax.prog> cprog
 %start cprog
 
 %%

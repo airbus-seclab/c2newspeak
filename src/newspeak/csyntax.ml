@@ -22,6 +22,8 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
+
+(* TODO: create a stmt Block!!! *)
 open Newspeak
 
 type prog = (composites * glbdecls * fundefs)
@@ -40,7 +42,7 @@ and typ =
     | Void
     | Scalar of scalar_t
     | Array of array_t
-    | StructOrUnion of (bool * fields_t * int) (* true for a structure *)
+    | StructOrUnion of (bool * fields_t * int) (* true for Struct *)
     | Fun of ftyp
 
 and fields_t = (string * (int * typ)) list
@@ -94,14 +96,45 @@ and binop =
 
 and cst = Int64.t
 
-val ftyp_of_typ: typ -> ftyp
+let ftyp_of_typ t =
+  match t with
+      Fun x -> x
+    | _ -> Npkcontext.error "Csyntax.fun_of_typ" "Function type expected"
 
-val fields_of_typ: typ -> fields_t
+let fields_of_typ t =
+  match t with
+      StructOrUnion (_, f, _) -> f
+    | _ -> 
+	Npkcontext.error "Csyntax.fields_of_typ" 
+	  "Struct or union type expected"
 
-val array_of_typ: typ -> array_t
+let array_of_typ t =
+  match t with
+      Array a -> a
+    | _ -> Npkcontext.error "Csyntax.array_of_typ" "Array type expected"
 
-val scalar_of_typ: typ -> scalar_t
+let scalar_of_typ t =
+  match t with
+      Scalar t -> t
+    | _ -> Npkcontext.error "Csyntax.scalar_of_typ" "Scalar type expected"
 
-val deref_scalar: scalar_t -> typ
+let deref_scalar t =
+  match t with
+      Ptr t -> t
+    | _ -> Npkcontext.error "Csyntax.deref_typ" "Pointer type expected"
 
-val size_of: typ -> int
+let size_of_scalar t = 
+  match t with
+      Int (_, n) -> n 
+    | Float n -> n
+    | Ptr _ -> Config.size_of_ptr
+
+let rec size_of t =
+  match t with
+    | Scalar t -> size_of_scalar t
+    | Array (t, Some n) -> (size_of t) * n
+    | StructOrUnion (_, _, n) -> n
+    | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
+    | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
+    | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
+
