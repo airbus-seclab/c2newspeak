@@ -130,14 +130,11 @@ let translate_array lv a =
   in
     (t, n)
 
-let compile fname = 
+let translate fname (_, cglbdecls, cfundefs) = 
   let globals = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let global_env = Hashtbl.create 100 in
   let env = Hashtbl.create 100 in
-    (* maps each function name to its list of formal declarations *)
-    (* TODO: remove this: not necessary anymore !!! *)
-  let formals = Hashtbl.create 100 in
   let vcnt = ref 0 in
   let push loc (t, x) =
     incr vcnt;
@@ -231,11 +228,11 @@ let compile fname =
 	    "unexpected binary operator and arguments"
   in
 
-  let register_formals f t = Hashtbl.add formals f t in
-  
   let build_args f args loc =
     let formals =
-      try Hashtbl.find formals f
+      try 
+	let ((_, args), _, _) = Hashtbl.find cfundefs f in
+	  args
       with Not_found -> 
 	let i = ref (-1) in
 	let build (_, t) =
@@ -244,17 +241,16 @@ let compile fname =
 	in
 	  List.map build args
     in
-    let decls = 
-      List.map2 (fun (_, t) (_, x) -> (Scalar t, x, loc)) args formals
+    let decls = List.map (fun (t, x) -> (t, x, loc)) formals in
+    let rec build_set args =
+      match args with
+	  (e, t)::tl -> 
+	    let (i, tl) = build_set tl in
+	    let lv = K.Local i in
+	      (i+1, (K.Set (lv, e, translate_scalar t), loc)::tl)
+	| [] -> (0, [])
     in
-    let i = ref (-1) in
-    let build_set (e, t) =
-      incr i;
-      let lv = K.Local !i in
-	(K.Set (lv, e, translate_scalar t), loc)
-    in
-      (* TODO: code optimization: remove these List.rev!!! *)
-    let set = List.rev (List.map build_set (List.rev args)) in
+    let (_, set) = build_set args in
       (decls, set)
   in
 
@@ -578,7 +574,6 @@ let compile fname =
   let translate_fundef f ((t, args), loc, body) =
     push loc (t, ret_vname);
     List.iter (push loc) args;
-    register_formals f args;
     let body = translate_blk body in
     let (args_t, args_name) = List.split args in
       List.iter pop args_name;
@@ -589,9 +584,13 @@ let compile fname =
 	update_fundef f (t, args_t) (Some body)
   in
 
-  let cprog = parse fname in
-  let (_, g, f) = Firstpass.translate cprog in
-    
-    Hashtbl.iter translate_glbdecl g;
-    Hashtbl.iter translate_fundef f;
+    Hashtbl.iter translate_glbdecl cglbdecls;
+    Hashtbl.iter translate_fundef cfundefs;
     (fname, globals, fundefs)
+
+
+let compile fname =
+  let prog = parse fname in
+  let prog = Firstpass.translate prog in
+    translate fname prog
+  
