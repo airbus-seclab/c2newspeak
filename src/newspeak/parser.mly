@@ -56,7 +56,7 @@ let build_glbdecl is_extern (b, m) =
     List.map build m
 %}
 
-%token BREAK CASE DEFAULT DO ELSE EXTERN IF RETURN SWITCH TYPEDEF WHILE
+%token BREAK CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SWITCH TYPEDEF WHILE
 %token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
@@ -124,18 +124,22 @@ statement_list:
 
 statement:
   declaration SEMICOLON                    { build_stmtdecl $1 }
-| left_value EQ expression SEMICOLON       { [Set ($1, $3), get_loc ()] }
-| left_value PLUSPLUS SEMICOLON            { [Set ($1, 
-						  Binop (Plus,
-							Lval $1, 
-							Const Int64.one)),
-					     get_loc ()]}
+| assignment SEMICOLON                     { [Set $1, get_loc ()] }
 | IF LPAREN expression RPAREN statement
     elsif_list                             { [If (($3, $5, get_loc ())::$6), 
 					     get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
   case_list
   RBRACE                                   { [Switch ($3, $6), get_loc ()] }
+| FOR LPAREN assignment SEMICOLON 
+      expression SEMICOLON 
+      assignment RPAREN
+      statement                            { let loc = get_loc () in
+                                               (Set $3, loc)
+					       ::(While ($5, 
+							$9@(Set $7, loc)::[]), 
+							loc)
+					       ::[] }
 | WHILE LPAREN expression RPAREN statement { [While ($3, $5), get_loc ()] }
 | DO statement
   WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
@@ -143,6 +147,12 @@ statement:
 | call SEMICOLON                           { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | block                                    { [Block $1, get_loc ()]}
+;;
+
+assignment:
+  left_value EQ expression                 { ($1, $3) }
+| left_value PLUSPLUS                      { ($1, Binop (Plus, Lval $1, 
+							Const Int64.one)) }
 ;;
 
 elsif_list:

@@ -81,6 +81,7 @@ rule token = parse
   | "default"           { DEFAULT }
   | "do"                { DO }
   | "else"              { ELSE }
+  | "for"               { FOR }
   | "extern"            { EXTERN }
   | "if"                { IF }
   | "return"            { RETURN }
