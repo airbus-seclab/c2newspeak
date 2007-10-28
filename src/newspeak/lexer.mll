@@ -124,6 +124,7 @@ rule token = parse
   | "&&"                { AND }
   | "*"                 { STAR }
   | "<"                 { LT }
+  | ">"                 { GT }
 
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 
@@ -142,3 +143,5 @@ and comment = parse
   | "*/"                { token lexbuf }
   | line_terminator     { cnt_line lexbuf; comment lexbuf }
   | _                   { comment lexbuf }
+
+
