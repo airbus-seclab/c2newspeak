@@ -112,7 +112,7 @@ object (this)
     match cil_var.vtype with
       | TFun _ -> ()
       | _ -> 
-	  let norm_name = Env.glb_uniquename cil_var in
+	  let norm_name = Cilenv.glb_uniquename cil_var in
 	    (*TODO: clean up String_set name here: *)
 	    glb_used <- Npkil.String_set.add norm_name glb_used
 	      
@@ -217,7 +217,7 @@ let first_pass f =
     in
     let ftyp = Npkutils.translate_ftyp ftyp in
       
-      Env.update_fun_proto name ftyp;
+      Cilenv.update_fun_proto name ftyp;
 
       if (Hashtbl.mem fun_specs name) 
       then Npkcontext.error "Firstpass.first_pass.update_fun_def" 
@@ -232,7 +232,7 @@ let first_pass f =
   in
 
   let update_glob_decl v =
-    let name = Env.glb_uniquename v in
+    let name = Cilenv.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 
@@ -251,7 +251,7 @@ let first_pass f =
 
 (* TODO: factor this code with the one up there *)
   let update_glob_def v i =
-    let name = Env.glb_uniquename v in
+    let name = Cilenv.glb_uniquename v in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 
@@ -308,7 +308,7 @@ let first_pass f =
 		      
 	  | [GVarDecl ({vname = name; vtype = TFun (ret, args, _, _)}, _)] ->
 	      let ftyp = Npkutils.translate_ftyp (args, ret) in
-		Env.update_fun_proto name ftyp
+		Cilenv.update_fun_proto name ftyp
 		  
 	  | [GFun (f, loc)] -> 
 	      if (f.svar.vname = "main")
@@ -325,7 +325,7 @@ let first_pass f =
   in
 
       Npkcontext.forget_loc ();
-      Env.init_env ();
+      Cilenv.init_env ();
       List.iter explore f.globals;
       let (glb_used, glb_cstr) = visitor#get_used in
 	(glb_used, glb_cstr, fun_specs, glb_decls)

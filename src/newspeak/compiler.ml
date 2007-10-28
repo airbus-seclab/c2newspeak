@@ -35,11 +35,6 @@ module K = Npkil
 (* TODO: code cleanup: break this file in several module. 
    do factorisation, when possible. In particular K.size_of  and align *)
 
-(* TODO: put this in Env *)
-let ret_vname = "!return"
-let get_ret_lbl () = 0
-let get_brk_lbl () = 1
-
 (* TODO: check that integer don't have a default type (like int) *)
 let kind_of_int64 i =
   let sign =
@@ -75,46 +70,16 @@ let translate_array lv a =
   in
     (t, n)
 
-let translate fname (_, cglbdecls, cfundefs) = 
-  let globals = Hashtbl.create 100 in
-  let fundefs = Hashtbl.create 100 in
-  let global_env = Hashtbl.create 100 in
-  let env = Hashtbl.create 100 in
-  let vcnt = ref 0 in
-  let push loc (t, x) =
-    incr vcnt;
-    Hashtbl.add env x (!vcnt, t, loc)
-  in
-  let pop x =
-    vcnt := !vcnt - 1;
-    Hashtbl.remove env x
-  in
+let translate fname (_, glbdecls, fundefs) = 
+  let env = Env.create () in
+
+  let push loc (t, x) = Env.push env x t loc in
+  let pop = Env.pop env in
+  let get_var = Env.get_var env in
+  let get_ret_typ () = Env.get_ret_typ env in
 
   let push_dummy loc = push loc (Void, "dummy") in
-
   let pop_dummy () = pop "dummy" in
-
-  let get_var x =
-    try 
-      let (n, t, _) = Hashtbl.find env x in
-	(K.Local (!vcnt - n), t)
-    with Not_found -> 
-      try
-	let t = Hashtbl.find global_env x in
-	  (K.Global x, t)
-      with Not_found ->
-	Npkcontext.error "Compiler.get_var" ("Variable "^x^" not declared")
-  in
-
-  let get_locals () =
-    let res = ref [] in
-    let get_var x (i, t, loc) = res := (i, (t, x, loc))::!res in
-      Hashtbl.iter get_var env;
-      Hashtbl.clear env;
-      let res = List.sort (fun (i, _) (j, _) -> compare i j) !res in
-      let (_, res) = List.split res in
-	res
-  in
 
   let rec translate_typ t =
     match t with
@@ -149,6 +114,10 @@ let translate fname (_, cglbdecls, cfundefs) =
       (args, ret)
   in
 
+  let update_fundef = Env.update_funbody env in
+
+  let update_ftyp f ftyp = Env.update_ftyp env f (translate_ftyp ftyp) in
+
   let translate_binop op (e1, t1) (e2, t2) =
     match (op, t1, t2) with
 	((Mult|Plus), Int k1, Int k2) -> 
@@ -180,7 +149,7 @@ let translate fname (_, cglbdecls, cfundefs) =
   let build_args f args loc =
     let formals =
       try 
-	let ((args, _), _, _) = Hashtbl.find cfundefs f in
+	let ((args, _), _, _) = Hashtbl.find fundefs f in
 	  args
       with Not_found -> 
 	let i = ref (-1) in
@@ -273,24 +242,6 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    "Call inside expression not implemented yet"
   in
 
-  let update_fundef f ftyp body =
-    let ftyp = translate_ftyp ftyp in
-      try
-	let (prev_ftyp, prev_body) = Hashtbl.find fundefs f in
-	  if ftyp <> prev_ftyp 
-	  then begin 
-	    Npkcontext.error "Compiler.update_fundef" 
-	      ("Different types for function "^f)
-	  end;
-	  match (body, prev_body) with
-	      (None, _) -> ()
-	    | (Some _, None) -> Hashtbl.replace fundefs f (ftyp, body)
-	    | (Some _, Some _) -> 
-		Npkcontext.error "Compiler.update_fundef" 
-		  "Multiple definition of function body"
-      with Not_found -> Hashtbl.add fundefs f (ftyp, body)
-  in
-  
   let rec append_decls d body =
     match d with
 	(t, x, loc)::tl -> 
@@ -338,7 +289,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
-	  let lbl = get_brk_lbl () in
+	  let lbl = Env.get_brk_lbl () in
 	  let brk = (K.Goto lbl, loc)::[] in
 	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
 	  let loop = (K.InfLoop ((cond, loc)::body), loc)::[] in
@@ -348,19 +299,16 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
-	  let lbl = get_brk_lbl () in
+	  let lbl = Env.get_brk_lbl () in
 	  let brk = (K.Goto lbl, loc)::[] in
 	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
 	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
 	    (K.DoWith (loop, lbl, []), loc)::[]
 
       | Return (Call x) -> 
-	  let (_, t) = translate_lv (Var ret_vname) in
+	  let t = get_ret_typ () in
 	  let () = push loc (t, "tmp") in
-	    (* TODO: this is totally a hack, clean up by having an 
-	       intermediate language
-	       with explicit types :*)
-	  let (lv, t) = translate_lv (Var ret_vname) in
+	  let (lv, t) = translate_lv (Var (Env.get_ret_name ())) in
 	  let decl = (t, "tmp", Newspeak.dummy_loc fname)::[] in
 	  let call = translate_call loc (Some (Var "tmp")) x in
 	  let t = translate_scalar t in
@@ -369,13 +317,13 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    append_decls decl (call@set)
 
       | Return e -> 
-	  let set = translate_set loc (Var ret_vname, e) in
-	  let lbl = get_ret_lbl () in
+	  let set = translate_set loc (Var (Env.get_ret_name ()), e) in
+	  let lbl = Env.get_ret_lbl () in
 	    set::(K.Goto lbl, loc)::[]
 
       | Exp (Call x) -> translate_call loc None x
       
-      | Break -> [K.Goto (get_brk_lbl ()), loc]
+      | Break -> [K.Goto (Env.get_brk_lbl ()), loc]
       
       | Switch (e, cases) -> translate_switch loc e cases
 
@@ -412,7 +360,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     let (decls, set) = build_args f args loc in
       pop_dummy ();
       List.iter (fun _ -> pop_dummy ()) args;
-      update_fundef f (args_t, ret_t) None;
+      update_ftyp f (args_t, ret_t);
 
     let call = (K.Call (K.FunId f), loc)::[] in
     let call = set@call in
@@ -425,7 +373,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   and translate_switch loc e cases =
     let (switch_exp, _) = translate_exp e in
-    let default_lbl = get_brk_lbl () in
+    let default_lbl = Env.get_brk_lbl () in
     let default_cond = ref [] in
     let default_goto = ref [K.Goto default_lbl, loc] in
 
@@ -488,7 +436,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     match (t, init) with
 	(Fun (args, t), None) ->
 	  let (args_t, _) = List.split args in
-	    update_fundef x (args_t, t) None
+	    update_ftyp x (args_t, t)
 	      
       | (Fun _, _) ->
 	  Npkcontext.error "Compiler.translate_glbdecl" 
@@ -497,26 +445,27 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let init = translate_init is_extern init in
 	    (* TODO: maybe do this in a first, since there may be the need for
 	       a variable not encountered yet, in init*)
-	    Hashtbl.add global_env x t;
-	    Hashtbl.add globals x (translate_typ t, loc, init, true)
+	    Env.add_global env x t (translate_typ t, loc, init, true)
   in
 
   let translate_fundef f ((args, t), loc, body) =
-    push loc (t, ret_vname);
-    List.iter (push loc) args;
-    let body = translate_blk body in
     let (args_t, args_name) = List.split args in
-      List.iter pop args_name;
-      pop ret_vname;
-      let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
-      let decls = get_locals () in
-      let body = append_decls decls body in
-	update_fundef f (args_t, t) (Some body)
+      update_ftyp f (args_t, t);
+      push loc (t, Env.get_ret_name ());
+      List.iter (push loc) args;
+      let body = translate_blk body in
+	List.iter pop args_name;
+	pop (Env.get_ret_name ());
+	let body = (K.DoWith (body, Env.get_ret_lbl (), []), loc)::[] in
+	let decls = Env.get_locals env in
+	let body = append_decls decls body in
+	  update_fundef f body
   in
 
-    Hashtbl.iter translate_glbdecl cglbdecls;
-    Hashtbl.iter translate_fundef cfundefs;
-    (fname, globals, fundefs)
+    Hashtbl.iter translate_glbdecl glbdecls;
+    Hashtbl.iter translate_fundef fundefs;
+
+    Env.extract_prog env fname
 
 
 let parse fname =

@@ -75,7 +75,7 @@ let rec translate_const c =
 	    "integer too large: not representable";
 	  K.Const (Newspeak.CInt64 i)
 	  
-    | CStr s -> Env.get_cstr s
+    | CStr s -> Cilenv.get_cstr s
     | CChr c -> K.Const (Newspeak.CInt64 (Int64.of_int (Char.code c))) 
 	
     | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
@@ -184,7 +184,7 @@ and translate_access strict lv e =
      
 and translate_lval lv =
   match lv with
-    | Var v, NoOffset -> Env.get_var v
+    | Var v, NoOffset -> Cilenv.get_var v
 
     | Mem e, NoOffset ->
 	let sz = Cilutils.size_of (typeOfLval lv) in
@@ -396,12 +396,12 @@ and translate_stmtkind status kind =
     match kind with
       | Instr il -> translate_instrlist il
 	  
-      | Return (None, _) -> [K.Goto (Env.get_ret_lbl ()), loc]
+      | Return (None, _) -> [K.Goto (Cilenv.get_ret_lbl ()), loc]
 	    
       | Return (Some e, _) ->
 	  let typ = translate_typ (typeOf e) in
-	  let lval = Env.get_ret_var () in
-	  let lbl = Env.get_ret_lbl () in
+	  let lval = Cilenv.get_ret_var () in
+	  let lbl = Cilenv.get_ret_lbl () in
 	    [translate_set lval typ e, loc; K.Goto lbl, loc]
 
       | If (e, blk1, blk2, _) -> translate_if status e blk1.bstmts blk2.bstmts
@@ -410,10 +410,10 @@ and translate_stmtkind status kind =
 	  
       | Loop (body, _, _, _)  ->
 	  let loop = (K.InfLoop (translate_stmts status body.bstmts), loc) in
-	  let lbl = Env.get_brk_lbl () in
+	  let lbl = Cilenv.get_brk_lbl () in
 	    [K.DoWith ([loop], lbl, []), loc]
 	      
-      | Break _ -> [K.Goto (Env.get_brk_lbl ()), loc]
+      | Break _ -> [K.Goto (Cilenv.get_brk_lbl ()), loc]
 	  
       | Switch (e, body, stmt_list, _) ->
 	  translate_switch status e stmt_list body
@@ -547,12 +547,12 @@ and translate_switch status e stmt_list body =
   let status = ref status in
   let cases = ref [] in
   let default_cond = ref [] in
-  let default_goto = ref [build_stmt (K.Goto (Env.get_brk_lbl ()))] in
+  let default_goto = ref [build_stmt (K.Goto (Cilenv.get_brk_lbl ()))] in
 
   let switch_exp = translate_exp e in
 
   let translate_case x =
-    let lbl = Env.new_lbl () in
+    let lbl = Cilenv.new_lbl () in
 
     let rec translate_aux labels =
       match labels with
@@ -562,7 +562,7 @@ and translate_switch status e stmt_list body =
 	     of labels.
 	  *)
 	  (Case (_, loc) | Default loc)::tl 
-	    when Env.mem_switch_lbl !status loc -> translate_aux tl
+	    when Cilenv.mem_switch_lbl !status loc -> translate_aux tl
       | (Case (v, loc))::tl ->
 	  let t = 
 	    match translate_typ (typeOf v) with
@@ -570,7 +570,7 @@ and translate_switch status e stmt_list body =
 	      | _ -> error "Npkcompile.tranlate_switch" "expression not scalar"
 	  in
 	  let cond = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
-	    status := Env.add_switch_lbl !status loc lbl;
+	    status := Cilenv.add_switch_lbl !status loc lbl;
 	    translate_aux tl;
 	    cases := (cond::[], build_stmt (K.Goto lbl)::[])::!cases;
 	    default_cond := (K.negate cond)::!default_cond
@@ -578,7 +578,7 @@ and translate_switch status e stmt_list body =
       | (Default loc)::tl -> 
 	  (* TODO: have a get_default_lbl instead, with a default number 
 	     for it, maybe, maybe not?? *)
-	  status := Env.add_switch_lbl !status loc lbl;
+	  status := Cilenv.add_switch_lbl !status loc lbl;
 	  default_goto := [build_stmt (K.Goto lbl)];
 	  translate_aux tl
 
@@ -589,7 +589,7 @@ and translate_switch status e stmt_list body =
       translate_aux x.labels
   in
     
-    Env.reset_lbl_gen ();
+    Cilenv.reset_lbl_gen ();
     List.iter translate_case (List.rev stmt_list);
     let default_choice = (!default_cond, !default_goto) in
     let choices = [build_stmt (K.ChooseAssert (default_choice::!cases))] in
@@ -598,7 +598,7 @@ and translate_switch status e stmt_list body =
 
 and translate_switch_body loc status body stmts =
   match stmts with
-      [] -> [K.DoWith (List.rev body, Env.get_brk_lbl (), []), loc]
+      [] -> [K.DoWith (List.rev body, Cilenv.get_brk_lbl (), []), loc]
 
     | hd::tl when hd.labels = [] ->
 	let hd = translate_stmtkind status hd.skind in
@@ -609,7 +609,7 @@ and translate_switch_body loc status body stmts =
 	  match hd.labels with
 	      (Case (_, loc))::_ | (Default loc)::_ ->
 		set_loc loc;
-		Env.get_switch_lbl status loc		
+		Cilenv.get_switch_lbl status loc		
 	    | _ -> error "Npkcompile.translate_switch_body" "invalid label"
 	in
 
@@ -629,13 +629,13 @@ and translate_call x lv args_exps =
 
       (* Return value ignored *)
       | Some t, None ->
-	  Env.push_local ();
+	  Cilenv.push_local ();
 	  [("value_of_"^fname, t, loc)], []
 	    
       (* Return value put into Lval cil_lv *)
       | Some t_given, Some cil_lv ->
 	  let t_expected = translate_typ (typeOfLval cil_lv) in
-	    Env.push_local ();
+	    Cilenv.push_local ();
 	    let lval = translate_lval cil_lv in
 	    let ret_decl = ["value_of_"^fname, t_given, loc] in
 	    let ret_epilog = match t_given, t_expected with
@@ -675,7 +675,7 @@ and translate_call x lv args_exps =
       match (exps, args) with
 	  ([], []) -> ()
 	| (e::tl, str::args) ->
-	    Env.push_local ();
+	    Cilenv.push_local ();
 	    let t = translate_typ (typeOf e) in
 	      res := (str, t, loc)::!res;
 	      handle_args tl args
@@ -684,7 +684,7 @@ and translate_call x lv args_exps =
 	      "This code should be unreachable"
     in
     let args = 
-      try Env.get_args fname 
+      try Cilenv.get_args fname 
       with Not_found -> build_unknown_args exps 
     in
       handle_args exps args;
@@ -701,7 +701,7 @@ and translate_call x lv args_exps =
 	    handle_args_prolog ((build_stmt set)::accu) n (i+1) r_e
   in
 
-    Env.save_loc_cnt ();
+    Cilenv.save_loc_cnt ();
     let (name, ret_type) = 
       match lv with
 	| Var f, NoOffset ->
@@ -716,7 +716,7 @@ and translate_call x lv args_exps =
 		    ("invalid type '"^(Cilutils.string_of_type f.vtype)^"'")
 	    in
 	    let (args, ret) = Npkutils.translate_ftyp (args, ret) in
-	      Env.update_fun_proto name (args, ret);
+	      Cilenv.update_fun_proto name (args, ret);
 	      (name, ret)
 
 	| Mem (Lval fptr), NoOffset ->
@@ -751,27 +751,27 @@ and translate_call x lv args_exps =
     let call_w_prolog = (K.Call fexp, loc)::args_prolog in
     let call_wo_ret = append_decls args_decls (List.rev call_w_prolog) in
     let res = append_decls ret_decl (call_wo_ret@(ret_epilog)) in
-      Env.restore_loc_cnt ();
+      Cilenv.restore_loc_cnt ();
       res
 
 
 let translate_fun name (locals, formals, body) =
-  let (floc, ret_t) = Env.get_funspec name in
+  let (floc, ret_t) = Cilenv.get_funspec name in
 
   let args = Some (List.map (fun (_, name, t, _) -> (name, t)) formals) in
-    Env.reset_lbl_gen ();
-    let status = Env.empty_status () in
+    Cilenv.reset_lbl_gen ();
+    let status = Cilenv.empty_status () in
       
-      if ret_t <> None then Env.push_local ();
-      List.iter (Env.loc_declare false) formals;
-      List.iter (Env.loc_declare true) locals;
+      if ret_t <> None then Cilenv.push_local ();
+      List.iter (Cilenv.loc_declare false) formals;
+      List.iter (Cilenv.loc_declare true) locals;
 
       let body = translate_stmts status body.bstmts in
-      let lbl = Env.get_ret_lbl () in
+      let lbl = Cilenv.get_ret_lbl () in
       let blk = [K.DoWith (body, lbl, []), floc] in
-      let body = append_decls (Env.get_loc_decls ()) blk in
+      let body = append_decls (Cilenv.get_loc_decls ()) blk in
 
-	Env.update_funspec name (args, body)
+	Cilenv.update_funspec name (args, body)
 
 
 let translate_init x t =
@@ -818,7 +818,7 @@ let translate_glb used_glb name x =
 	end
       in
       let t = translate_typ x.F.gtype in
-	Hashtbl.add Env.glb_decls name (t, loc, init, used)
+	Hashtbl.add Cilenv.glb_decls name (t, loc, init, used)
     end
 
 
@@ -830,7 +830,7 @@ let add_glb_cstr str =
   let fname = Npkcontext.get_fname () in
   let name = "!"^fname^".const_str_"^str in
   let glb = K.create_cstr str in
-    Hashtbl.add Env.glb_decls name glb
+    Hashtbl.add Cilenv.glb_decls name glb
 
 let compile in_name =
   initCIL ();
@@ -864,9 +864,9 @@ let compile in_name =
       Hashtbl.iter translate_fun fun_specs;
       Hashtbl.iter (translate_glb glb_used) glb_decls;
       
-      let prog = Env.create_npkil in_name in
+      let prog = Cilenv.create_npkil in_name in
 	
-	Env.init_env ();
+	Cilenv.init_env ();
 	
 	if (!verb_npko) then begin
 	  print_endline "Newspeak Object output";
@@ -877,5 +877,5 @@ let compile in_name =
 	
 	Npkcontext.forget_loc ();
 	
-	Env.init_env ();
+	Cilenv.init_env ();
 	prog
