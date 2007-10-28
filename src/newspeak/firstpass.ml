@@ -149,7 +149,7 @@ let translate cprog =
 	  let tl = translate_blk tl in
 	    (C.Decl ((t, x), tl), loc)::[]
 
-      | hd::tl -> (translate_stmt hd)::(translate_blk tl)
+      | hd::tl -> (translate_stmt hd)@(translate_blk tl)
 
       | [] -> []
 
@@ -158,7 +158,7 @@ let translate cprog =
 	Set (lv, e) -> 
 	  let lv = translate_lv lv in
 	  let e = translate_exp e in
-	  (C.Set (lv, e), loc)
+	  (C.Set (lv, e), loc)::[]
 
       | If ((And (e1, e2), body, loc)::tl) ->
 	  let body = (If ((e2, body, loc)::tl), loc)::[] in
@@ -169,21 +169,21 @@ let translate cprog =
 	    (translate_exp e, translate_blk body, loc) 
 	  in
 	  let branches = List.map translate_case branches in
-	    (C.If branches, loc)
+	    (C.If branches, loc)::[]
 
       | While (e, body) ->
 	  let e = translate_exp e in
 	  let body = translate_blk body in
-	    (C.While (e, body), loc)
+	    (C.While (e, body), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
 	  let e = translate_exp e in
-	    (C.DoWhile (body, e), loc)
+	    (C.DoWhile (body, e), loc)::[]
 
-      | Return e -> (C.Return (translate_exp e), loc)
+      | Return e -> (C.Return (translate_exp e), loc)::[]
 
-      | Exp e -> (C.Exp (translate_exp e), loc)
+      | Exp e -> (C.Exp (translate_exp e), loc)::[]
 
       | Switch (e, cases) -> 
 	  let e = translate_exp e in
@@ -191,9 +191,11 @@ let translate cprog =
 	    (translate_exp_option e, translate_blk body, loc) 
 	  in
 	  let cases = List.map translate_case cases in
-	    (C.Switch (e, cases), loc)
+	    (C.Switch (e, cases), loc)::[]
 
-      | Break -> (C.Break, loc)
+      | Break -> (C.Break, loc)::[]
+
+      | Block body -> translate_blk body
 
       | Decl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt"

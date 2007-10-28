@@ -71,6 +71,7 @@ and stmtkind =
     | Return of exp
     | Exp of exp
     | Break
+    | Block of blk
 
 and field = string
 
