@@ -529,7 +529,21 @@ let create_cstr str =
 
 let string_of_cast t1 t2 =
   match (t1, t2) with
-      (Newspeak.Int _, Newspeak.Ptr) -> "from integer to pointer"
-    | (Newspeak.Ptr, Newspeak.Int _) -> "from pointer to integer"
-    | _ -> (Newspeak.string_of_scalar t1)^" -> "^(Newspeak.string_of_scalar t2)
+      (Int _, Ptr) -> "from integer to pointer"
+    | (Ptr, Int _) -> "from pointer to integer"
+    | _ -> (string_of_scalar t1)^" -> "^(string_of_scalar t2)
 
+(* TODO: code cleanup: this could be also used by cilcompiler ? *)
+let cast t e t' =
+    match (t, t') with
+      _ when t = t' -> e
+    | (Int _, Int k) -> make_int_coerce k e
+    | (Int _, Ptr) when e = zero -> Const Nil
+
+    | (Ptr, Int k) when !Npkcontext.castor_allowed -> 
+	Npkcontext.print_warning "Compiler.cast"
+	  ("Probable invalid cast "^(string_of_cast t t'));
+	UnOp (PtrToInt k, e)
+    | _ -> 
+	Npkcontext.error "Compiler.cast"
+	  ("Invalid cast "^(string_of_cast t t'))

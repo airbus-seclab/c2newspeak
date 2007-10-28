@@ -39,7 +39,9 @@ and ftyp = typ * decl list
 
 and typ =
     | Void
-    | Scalar of scalar_t
+    | Int of ikind
+    | Float of int
+    | Ptr of typ
     | Array of array_t
     | StructOrUnion of (bool * fields_t * int) (* true for Struct *)
     | Fun of ftyp
@@ -47,11 +49,6 @@ and typ =
 and fields_t = (string * (int * typ)) list
 
 and array_t = (typ * int option)
-
-and scalar_t =
-    | Int of ikind
-    | Float of int
-    | Ptr of typ
 
 and blk = stmt list
 
@@ -112,25 +109,16 @@ let array_of_typ t =
       Array a -> a
     | _ -> Npkcontext.error "Csyntax.array_of_typ" "Array type expected"
 
-let scalar_of_typ t =
-  match t with
-      Scalar t -> t
-    | _ -> Npkcontext.error "Csyntax.scalar_of_typ" "Scalar type expected"
-
-let deref_scalar t =
+let deref_typ t =
   match t with
       Ptr t -> t
     | _ -> Npkcontext.error "Csyntax.deref_typ" "Pointer type expected"
 
-let size_of_scalar t = 
+let rec size_of t =
   match t with
       Int (_, n) -> n 
     | Float n -> n
     | Ptr _ -> Config.size_of_ptr
-
-let rec size_of t =
-  match t with
-    | Scalar t -> size_of_scalar t
     | Array (t, Some n) -> (size_of t) * n
     | StructOrUnion (_, _, n) -> n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"

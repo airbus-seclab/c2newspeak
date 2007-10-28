@@ -155,3 +155,4 @@ val create_cstr: string -> ginfo
 
 val string_of_cast: Newspeak.scalar_t -> Newspeak.scalar_t -> string
 
+val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp

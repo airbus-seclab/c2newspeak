@@ -38,9 +38,11 @@
 
 (** {1 Types} *)
 
-(** The type of a program: function definitions and an block
-    containing initialisation of the global variables. *)
-type t = ((string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t)
+(** The type of a program: file names, global variable declarations,
+    function definitions and the size of pointers. *)
+type t = (file list * prog * size_t)
+
+and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
 
 and gdecl = typ * init_t
 
@@ -130,6 +132,7 @@ and ftyp = typ list * typ option
 and lbl = int
 and vid = int
 and fid = string
+and file = string
 
 and ikind = sign_t * size_t
 and sign_t = Signed | Unsigned
@@ -203,21 +206,21 @@ class nop_visitor : visitor
 
 val visit_fun : visitor -> fid -> fundec -> unit
 val visit_glb : visitor -> string -> gdecl -> unit
-val visit : visitor -> t -> unit
+val visit : visitor -> prog -> unit
 
 (** [dump (fundecs, body)] prints the program (fundecs, body) 
     to standard output. *)
-val dump : t -> unit
+val dump : prog -> unit
 
 val dump_fundec : string -> fundec -> unit
 
 (** [write name (files, prog, ptr_sz) ] write the program prog, with
     the list of its file names and the size of pointers to file name. *)
-val write : string -> (string list * t * size_t) -> unit
+val write : string -> t -> unit
 
 (** [read name] retrieves the list of file names, program and size of
     pointers from file name. *)
-val read : string -> (string list * t * size_t)
+val read : string -> t
 
 (** [write_hdr cout (files, decls, ptr_sz] writes the list of file names,
     global variable declarations and size of pointer to channel cout.
@@ -269,3 +272,5 @@ type alt_blk = (alt_stmtkind * location) list
 val convert_loops: blk -> alt_blk
 
 val max_ikind: ikind -> ikind -> ikind
+
+val dummy_loc: string -> location

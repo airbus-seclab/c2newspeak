@@ -38,7 +38,9 @@ and ftyp = typ * decl list
 
 and typ =
     | Void
-    | Scalar of scalar_t
+    | Int of ikind
+    | Float of int
+    | Ptr of typ
     | Array of array_t
     | StructOrUnion of (bool * fields_t * int) (* true for a structure *)
     | Fun of ftyp
@@ -46,11 +48,6 @@ and typ =
 and fields_t = (string * (int * typ)) list
 
 and array_t = (typ * int option)
-
-and scalar_t =
-    | Int of ikind
-    | Float of int
-    | Ptr of typ
 
 and blk = stmt list
 
@@ -98,8 +95,6 @@ val fields_of_typ: typ -> fields_t
 
 val array_of_typ: typ -> array_t
 
-val scalar_of_typ: typ -> scalar_t
-
-val deref_scalar: scalar_t -> typ
+val deref_typ: typ -> typ
 
 val size_of: typ -> int

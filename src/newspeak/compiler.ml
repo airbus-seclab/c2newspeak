@@ -25,8 +25,8 @@
 
 (* TODO: code cleanup: define an Env and primitives on it, and get it 
    out of this *)
-(* TODO: code optimization: get rid of env, and use the globals Hashtbl
-   rename it to env ! *)
+(* TODO: put Env in common with cilcompiler, pass Env as an argument to 
+   translation (or as a global local to translation) *)
 open Lexing
 open Csyntax
 
@@ -35,10 +35,12 @@ module K = Npkil
 (* TODO: code cleanup: break this file in several module. 
    do factorisation, when possible. In particular K.size_of  and align *)
 
-(* TODO: code cleanup: think about this!! *)
+(* TODO: put this in Env *)
+let ret_vname = "!return"
+let get_ret_lbl () = 0
+let get_brk_lbl () = 1
+
 (* TODO: check that integer don't have a default type (like int) *)
-(* TODO: put Env in common with cilcompiler, pass Env as an argument to 
-   translation (or as a global local to translation) *)
 let kind_of_int64 i =
   let sign =
     if Int64.compare i (Int64.of_string "2147483647") > 0 
@@ -46,71 +48,14 @@ let kind_of_int64 i =
   in
     (sign, Config.size_of_int)
 
-let ret_vname = "!return"
-
-(*
-let size_of_cscalar t = 
-  match t with
-      CInt (_, n) -> n
-    | CFloat n -> n
-    | CPtr _ -> Config.size_of_ptr
-    | CFunPtr -> Config.size_of_ptr
-*)
-(* TODO: remove any function that is dead code
-let rec size_of t =
-  match t with
-      CScalar t -> size_of_cscalar t
-    | CArray (t, Some n) -> (size_of t) * n
-    | CRegion (_, n) -> n
-    | CArray _ -> Npkcontext.error "Compiler.size_of" "unknown size of array"
-    | CVoid -> Npkcontext.error "Compiler.size_of" "size of void unknown"
-    | CFun _ -> Npkcontext.error "Compiler.size_of" "size of function"
-*)
-
-let parse fname =
-  let cin = open_in fname in
-  let lexbuf = Lexing.from_channel cin in
-    Lexer.init fname lexbuf;
-    try
-      let cprog = Parser.cprog Lexer.token lexbuf in
-	close_in cin;
-	cprog
-    with Parsing.Parse_error -> 
-      let pos = Lexing.lexeme_start_p lexbuf in
-      let line_nb = string_of_int pos.pos_lnum in
-      let lexeme = Lexing.lexeme lexbuf in
-	Npkcontext.error "Parser.parse_error" 
-	  ("syntax error: line "^line_nb^", unexpected token: "^lexeme)
-
-(* TODO: code cleanup: remove this: remove any use of this *)
-let dummy_loc = ("", -1, -1)
-
-let get_ret_lbl () = 0
-let get_brk_lbl () = 1
-
-(* TODO: code cleanup: this could be in npkil and also used by cilcompiler ? *)
-let cast t e t' =
-  match (t, t') with
-      _ when t = t' -> e
-    | (N.Int _, N.Int k) -> K.make_int_coerce k e
-    | (N.Int _, N.Ptr) when e = K.Const (N.CInt64 Int64.zero) -> K.Const N.Nil
-
-    | (N.Ptr, N.Int k) when !Npkcontext.castor_allowed -> 
-	Npkcontext.print_warning "Compiler.cast"
-	  ("Probable invalid cast "^(K.string_of_cast t t'));
-	K.UnOp (K.PtrToInt k, e)
-    | _ -> 
-	Npkcontext.error "Compiler.cast"
-	  ("Invalid cast "^(K.string_of_cast t t'))
-
-let translate_unop op (e, t) =
-  match op with
-      Not -> (K.UnOp (K.Not, e), Int (N.Signed, Config.size_of_int))
-
 let promote k = 
   match k with
       (_, n) when n < Config.size_of_int -> (N.Signed, Config.size_of_int)
     | _ -> k
+
+let translate_unop op (e, t) =
+  match op with
+      Not -> (K.UnOp (K.Not, e), Int (N.Signed, Config.size_of_int))
 
 let translate_arithmop op =
   match op with
@@ -175,22 +120,25 @@ let translate fname (_, cglbdecls, cfundefs) =
     match t with
 	Void -> 
 	  Npkcontext.error "Compiler.translate_typ" "void not allowed here"
-      | Scalar t -> K.Scalar (translate_scalar t)
+      | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
       | Array (t, sz) -> K.Array (translate_typ t, sz)
       | StructOrUnion (_, fields, n) -> 
 	  let translate_field (_, (o, t)) = (o, translate_typ t) in
 	  K.Region (List.map translate_field fields, n)
       | Fun _ -> 
 	  Npkcontext.error "Compiler.translate_typ" "function not allowed here"
-	    
-  and translate_scalar t = 
+
+  and translate_scalar t =
     match t with
-	Int i -> N.Int i
-      | Float n -> N.Float n      
+      | Int i -> N.Int i
+      | Float n -> N.Float n
       | Ptr (Fun _) -> N.FunPtr
       | Ptr _ -> N.Ptr
+      | _ -> 
+	  Npkcontext.error "Compiler.translate_scalar" 
+	    "Unexpected non scalar type"
   in
-  
+
   let translate_typ_as_ret t =
     match t with
 	Void -> None
@@ -209,8 +157,6 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    (K.make_int_coerce k (K.BinOp (op, e1, e2)), Int k)
 	      
       | (Plus, Ptr t, Int _) ->	
-	  (* TODO: code cleanup: do not use size_of on csyntax, use it
-	     on newspeak type. Remove redundant code. *)
 	  let stride = K.exp_of_int (size_of t) in 
 	    (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
 	      (* TODO: clean bug ? maybe a cast is necessary ? *)
@@ -219,7 +165,6 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    (K.BinOp (N.Gt (translate_scalar t1), e1, e2), t)
 	      
       | (Eq, t1, t2) when t1 = t2 -> 
-	  (* TODO: code cleanup factor return type, with Not *)
 	  let t = translate_scalar t1 in
 	    (K.BinOp (N.Eq t, e1, e2), Int (N.Signed, Config.size_of_int))
 	      
@@ -237,7 +182,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	let i = ref (-1) in
 	let build (_, t) =
 	  incr i;
-	  (Scalar t, "arg"^(string_of_int !i))
+	  (t, "arg"^(string_of_int !i))
 	in
 	  List.map build args
     in
@@ -276,7 +221,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
       | Deref e ->
 	  let (e, t) = translate_exp e in
-	  let t = deref_scalar t in
+	  let t = deref_typ t in
 	    (K.Deref (e, size_of t), t)
 
   and translate_bexp e =
@@ -292,7 +237,6 @@ let translate fname (_, cglbdecls, cfundefs) =
 
       | Lval lv -> 
 	  let (lv, t) = translate_lv lv in
-	  let t = scalar_of_typ t in
 	    (K.Lval (lv, translate_scalar t), t)
 
       | AddrOf Index (lv, e) ->
@@ -366,10 +310,9 @@ let translate fname (_, cglbdecls, cfundefs) =
     (* TODO: code cleanup *)
     let (lv, t) = translate_lv lv in
     let (e, t') = translate_exp e in
-      (* TODO: code cleanup: put these two together ?? *)
-    let t = translate_scalar (scalar_of_typ t) in
+    let t = translate_scalar t in
     let t' = translate_scalar t' in
-    let e = cast t' e t in
+    let e = K.cast t' e t in
       (K.Set (lv, e, t), loc)
     
 
@@ -421,9 +364,9 @@ let translate fname (_, cglbdecls, cfundefs) =
 	       intermediate language
 	       with explicit types :*)
 	  let (lv, t) = translate_lv (Var ret_vname) in
-	  let decl = (t, "tmp", dummy_loc)::[] in
+	  let decl = (t, "tmp", Newspeak.dummy_loc fname)::[] in
 	  let call = translate_call loc (Some (Var "tmp")) x in
-	  let t = translate_scalar (scalar_of_typ t) in
+	  let t = translate_scalar t in
 	  let set = (K.Set (lv, K.Lval (K.Local 0, t), t), loc)::[] in
 	    pop "tmp";
 	    append_decls decl (call@set)
@@ -459,7 +402,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	| Some lv -> 
 	    let (r, t) = translate_lv lv in
 	      (* TODO: code factorisation: many occurences of this: *)
-	    let ret_t = translate_scalar (scalar_of_typ t) in
+	    let ret_t = translate_scalar t in
 	      (t,
 	      (t, "value_of_"^f, loc)::[], 
 	      (K.Set (r, K.Lval (K.Local 0, ret_t), ret_t), loc)::[])
@@ -468,7 +411,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     List.iter (fun _ -> push_dummy loc) args;
 
     let args = (List.map translate_exp args) in
-    let args_t = List.map (fun (_, x) -> Scalar x) args in
+    let args_t = List.map snd args in
     let (decls, set) = build_args f args loc in
       pop_dummy ();
       List.iter (fun _ -> pop_dummy ()) args;
@@ -577,6 +520,22 @@ let translate fname (_, cglbdecls, cfundefs) =
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
     (fname, globals, fundefs)
+
+
+let parse fname =
+  let cin = open_in fname in
+  let lexbuf = Lexing.from_channel cin in
+    Lexer.init fname lexbuf;
+    try
+      let cprog = Parser.cprog Lexer.token lexbuf in
+	close_in cin;
+	cprog
+    with Parsing.Parse_error -> 
+      let pos = Lexing.lexeme_start_p lexbuf in
+      let line_nb = string_of_int pos.pos_lnum in
+      let lexeme = Lexing.lexeme lexbuf in
+	Npkcontext.error "Parser.parse_error" 
+	  ("syntax error: line "^line_nb^", unexpected token: "^lexeme)
 
 
 let compile fname =

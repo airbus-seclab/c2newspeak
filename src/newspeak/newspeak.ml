@@ -33,7 +33,9 @@
 (* Types *)
 (*-------*)
 
-type t = ((string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t)
+type t = (file list * prog * size_t)
+
+and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
 
 and gdecl = typ * init_t
 
@@ -122,6 +124,7 @@ and ftyp = typ list * typ option
 and lbl = int
 and vid = int
 and fid = string
+and file = string
 
 and ikind = sign_t * size_t
 and sign_t = Signed | Unsigned
@@ -1208,3 +1211,5 @@ let dump_as_C prog =
     print_c c_prog
 
 let max_ikind = max
+
+let dummy_loc fname = (fname, -1, -1)

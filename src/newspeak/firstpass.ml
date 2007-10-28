@@ -55,7 +55,7 @@ let translate cprog =
 	
   and translate_base_typ t =
     match t with
-	Integer (s, t) -> C.Scalar (C.Int (s, size_of_ityp t))
+	Integer (s, t) -> C.Int (s, size_of_ityp t)
       | Struct f -> C.StructOrUnion (translate_struct_fields f)
       | Union f -> C.StructOrUnion (translate_union_fields f)
       | Void -> C.Void
@@ -102,11 +102,11 @@ let translate cprog =
 	  (C.Fun (b, List.map translate_decl args), f)
       | Function (Pointer v, args) -> 
 	  let args = List.map translate_decl args in
-	    translate_var_modifier (C.Scalar (C.Ptr (C.Fun (b, args)))) v
+	    translate_var_modifier (C.Ptr (C.Fun (b, args))) v
       | Array (v, n) -> 
 	  let n = Some (int64_to_int n) in
 	    translate_var_modifier (C.Array (b, n)) v
-      | Pointer v -> translate_var_modifier (C.Scalar (C.Ptr b)) v
+      | Pointer v -> translate_var_modifier (C.Ptr b) v
       | Function _ -> 
 	  Npkcontext.error "Firstpass.translate_var_modifier" 
 	    "case not implemented yet"
