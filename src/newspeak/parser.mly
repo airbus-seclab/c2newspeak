@@ -72,8 +72,8 @@ let build_glbdecl is_extern (b, m) =
 %left MULTIPLY DIVIDE
 */
 
-%left LT GT EQEQ NOTEQ
 %left AND
+%left LT GT EQEQ NOTEQ
 %left PLUS
 %left STAR
 
