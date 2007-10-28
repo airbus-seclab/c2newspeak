@@ -1,1 +1,1 @@
-Fatal error: different number of arguments for function f in 017.c line 32
+Fatal error: Different types for function f in 017.c line 32

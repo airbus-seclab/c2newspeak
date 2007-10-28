@@ -35,7 +35,7 @@ and fundefs = (string, ftyp * location * blk) Hashtbl.t
 
 and decl = (typ * string)
 
-and ftyp = typ * decl list
+and ftyp = decl list * typ
 
 and typ =
     | Void

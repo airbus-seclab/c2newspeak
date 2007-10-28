@@ -139,10 +139,14 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    "Unexpected non scalar type"
   in
 
-  let translate_typ_as_ret t =
-    match t with
-	Void -> None
-      | _ -> Some (translate_typ t)
+  let translate_ftyp (args, ret) =
+    let args = List.map translate_typ args in
+    let ret =
+      match ret with
+	  Void -> None
+	| _ -> Some (translate_typ ret)
+    in
+      (args, ret)
   in
 
   let translate_binop op (e1, t1) (e2, t2) =
@@ -176,7 +180,7 @@ let translate fname (_, cglbdecls, cfundefs) =
   let build_args f args loc =
     let formals =
       try 
-	let ((_, args), _, _) = Hashtbl.find cfundefs f in
+	let ((args, _), _, _) = Hashtbl.find cfundefs f in
 	  args
       with Not_found -> 
 	let i = ref (-1) in
@@ -269,28 +273,22 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    "Call inside expression not implemented yet"
   in
 
-  let update_fundef f (ret, args) body =
-    let ret = translate_typ_as_ret ret in
-    let args = List.map translate_typ args in
+  let update_fundef f ftyp body =
+    let ftyp = translate_ftyp ftyp in
       try
-	let (prev_args, prev_ret, prev_body) = Hashtbl.find fundefs f in
-	  if args <> prev_args 
+	let (prev_ftyp, prev_body) = Hashtbl.find fundefs f in
+	  if ftyp <> prev_ftyp 
 	  then begin 
 	    Npkcontext.error "Compiler.update_fundef" 
-	      ("different number of arguments for function "^f)
-	  end;
-	  if ret <> prev_ret 
-	  then begin
-	    Npkcontext.error "Compiler.update_fundef" 
-	      "Return type do not match"
+	      ("Different types for function "^f)
 	  end;
 	  match (body, prev_body) with
 	      (None, _) -> ()
-	    | (Some _, None) -> Hashtbl.replace fundefs f (args, ret, body)
+	    | (Some _, None) -> Hashtbl.replace fundefs f (ftyp, body)
 	    | (Some _, Some _) -> 
 		Npkcontext.error "Compiler.update_fundef" 
 		  "Multiple definition of function body"
-      with Not_found -> Hashtbl.add fundefs f (args, ret, body)
+      with Not_found -> Hashtbl.add fundefs f (ftyp, body)
   in
   
   let rec append_decls d body =
@@ -307,7 +305,6 @@ let translate fname (_, cglbdecls, cfundefs) =
       | [] -> []
 
   and translate_set loc (lv, e) =
-    (* TODO: code cleanup *)
     let (lv, t) = translate_lv lv in
     let (e, t') = translate_exp e in
     let t = translate_scalar t in
@@ -415,7 +412,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     let (decls, set) = build_args f args loc in
       pop_dummy ();
       List.iter (fun _ -> pop_dummy ()) args;
-      update_fundef f (ret_t, args_t) None;
+      update_fundef f (args_t, ret_t) None;
 
     let call = (K.Call (K.FunId f), loc)::[] in
     let call = set@call in
@@ -489,9 +486,9 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   let translate_glbdecl x (t, loc, init, is_extern) =
     match (t, init) with
-	(Fun (t, args), None) ->
+	(Fun (args, t), None) ->
 	  let (args_t, _) = List.split args in
-	    update_fundef x (t, args_t) None
+	    update_fundef x (args_t, t) None
 	      
       | (Fun _, _) ->
 	  Npkcontext.error "Compiler.translate_glbdecl" 
@@ -504,7 +501,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    Hashtbl.add globals x (translate_typ t, loc, init, true)
   in
 
-  let translate_fundef f ((t, args), loc, body) =
+  let translate_fundef f ((args, t), loc, body) =
     push loc (t, ret_vname);
     List.iter (push loc) args;
     let body = translate_blk body in
@@ -514,7 +511,7 @@ let translate fname (_, cglbdecls, cfundefs) =
       let body = (K.DoWith (body, get_ret_lbl (), []), loc)::[] in
       let decls = get_locals () in
       let body = append_decls decls body in
-	update_fundef f (t, args_t) (Some body)
+	update_fundef f (args_t, t) (Some body)
   in
 
     Hashtbl.iter translate_glbdecl cglbdecls;

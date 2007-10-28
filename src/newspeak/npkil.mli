@@ -41,7 +41,7 @@ and filename = string
 and ginfo = (typ * location * init_t option * bool)
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and funinfo = (typ list * typ option * blk option)
+and funinfo = (ftyp * blk option)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)

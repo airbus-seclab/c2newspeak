@@ -95,7 +95,7 @@ let create_npkil name =
     match (x.fargs, x.pbody) with
 	(Some args, _) -> 
 	  let args = List.map filter_arg args in
-	    Hashtbl.add fundefs f (args, x.frett, x.pbody)
+	    Hashtbl.add fundefs f ((args, x.frett), x.pbody)
 
      (* In this case, the function is a prototype which is never called: 
 	ignore *)
@@ -178,7 +178,6 @@ let restore_loc_cnt () = loc_cnt := !loc_cnt_sav
 
 let extract_ldecl (_, n, t) = (n, t)
 
-
 let compare_formals name l1 l2 =
   let res = ref false in
   let rec compare_aux l1 l2 =
@@ -188,15 +187,10 @@ let compare_formals name l1 l2 =
 	  if (str = "") then res := true;
 	  compare_aux r1 r2
 
-      | [], _ | _, [] ->
+      | _ ->
 	  (* TODO: add the respective locations *)
 	error "Npkenv.compare_formals"
-	  ("different number of arguments for function "^name)
-	  
-      | (_, t1)::_, (_, t2)::_ ->
-	  (* TODO: add the respective locations *)
-	  error "Npkenv.compare_formals"
-	    ("different arguments types for function "^name)
+	  ("Different types for function "^name)
   in
     compare_aux l1 l2;
     !res

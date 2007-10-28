@@ -236,7 +236,7 @@ let generate_funspecs cout npkos =
   let waiting = Hashtbl.create 100 in
   let encountered = Hashtbl.create 100 in  
 
-  let handle_funspec name (args, ret, body) =
+  let handle_funspec name (ftyp, body) =
     let body =
       match body with
 	| None -> None
@@ -253,7 +253,7 @@ let generate_funspecs cout npkos =
 	    in
 	      Some body
     in
-    let ftyp = replace_ftyp (args, ret) in
+    let ftyp = replace_ftyp ftyp in
       
       try 
 	let prev_ftyp = Hashtbl.find encountered name in

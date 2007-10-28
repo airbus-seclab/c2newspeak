@@ -99,10 +99,10 @@ let translate cprog =
     match v with
 	Variable x -> (b, x)
       | Function (Variable f, args) -> 
-	  (C.Fun (b, List.map translate_decl args), f)
+	  (C.Fun (List.map translate_decl args, b), f)
       | Function (Pointer v, args) -> 
 	  let args = List.map translate_decl args in
-	    translate_var_modifier (C.Ptr (C.Fun (b, args))) v
+	    translate_var_modifier (C.Ptr (C.Fun (args, b))) v
       | Array (v, n) -> 
 	  let n = Some (int64_to_int n) in
 	    translate_var_modifier (C.Array (b, n)) v

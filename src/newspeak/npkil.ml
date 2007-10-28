@@ -36,7 +36,7 @@ and filename = string
 (* None is for extern *)
 and ginfo = (typ * location * init_t option * bool)
 
-and funinfo = (typ list * typ option * blk option)
+and funinfo = (ftyp * blk option)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -395,7 +395,7 @@ let dump_npko (fname, globs, funs) =
 	    print_endline ";"
   in
 
-  let print_fundef n (_, _, pbody) =
+  let print_fundef n (_, pbody) =
     dump_fundec n pbody;
     if pbody <> None then print_newline ()
   in
