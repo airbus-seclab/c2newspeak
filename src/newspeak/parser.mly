@@ -94,7 +94,7 @@ cprog:
 global:
   declaration SEMICOLON                    { build_glbdecl false $1 }
 | EXTERN declaration SEMICOLON             { build_glbdecl true $2 }
-| declaration block                        { build_fundef $1 $2 }
+| declaration statement                    { build_fundef $1 $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 ;;
 
@@ -130,17 +130,15 @@ statement:
 							Lval $1, 
 							Const Int64.one)),
 					     get_loc ()]}
-| IF LPAREN expression RPAREN block
+| IF LPAREN expression RPAREN statement
     elsif_list                             { [If (($3, $5, get_loc ())::$6), 
 					     get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
   case_list
   RBRACE                                   { [Switch ($3, $6), get_loc ()] }
-| WHILE LPAREN expression RPAREN block     { [While ($3, $5), get_loc ()] }
+| WHILE LPAREN expression RPAREN statement { [While ($3, $5), get_loc ()] }
 | DO statement
-  WHILE LPAREN expression RPAREN SEMICOLON { let loc = get_loc () in
-					       [DoWhile ($2, $5), 
-					       get_loc ()] }
+  WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
 | call SEMICOLON                           { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
@@ -148,7 +146,7 @@ statement:
 ;;
 
 elsif_list:
-  ELSE IF LPAREN expression RPAREN block
+  ELSE IF LPAREN expression RPAREN statement
   elsif_list                               { ($4, $6, get_loc ())::$7 }
 |                                          { [] }
 ;;
