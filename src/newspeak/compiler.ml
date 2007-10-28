@@ -201,7 +201,7 @@ let translate fname (_, glbdecls, fundefs) =
     let (e, t) = translate_exp e in
     let t = translate_scalar t in
       match (e, t) with
-	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero)) 
+	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero))
 	| _ -> e
 
   and translate_exp e =
@@ -278,10 +278,16 @@ let translate fname (_, glbdecls, fundefs) =
 
       | If ((e, body, loc)::tl) ->
 	  let cond1 = translate_bexp e in
-	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
-	  let else_body = translate_stmt (If tl, loc) in
-	    (K.ChooseAssert [([cond1], body); ([cond2], else_body)], loc)::[]
+	  let else_body = translate_stmt (If tl, loc) in begin
+	    match cond1 with
+		K.Const N.CInt64 i when Int64.compare i Int64.zero <> 0 -> body
+	      | K.Const N.CInt64 _ -> else_body
+	      | _ -> 
+		  let cond2 = K.negate cond1 in
+		    (K.ChooseAssert [([cond1], body); 
+				     ([cond2], else_body)], loc)::[]
+	  end
 
       | If [] -> []
 

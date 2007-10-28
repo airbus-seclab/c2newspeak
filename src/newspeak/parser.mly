@@ -148,6 +148,8 @@ statement:
 elsif_list:
   ELSE IF LPAREN expression RPAREN statement
   elsif_list                               { ($4, $6, get_loc ())::$7 }
+| ELSE statement                           { [Const Int64.one, $2, 
+					     get_loc ()] }
 |                                          { [] }
 ;;
 
