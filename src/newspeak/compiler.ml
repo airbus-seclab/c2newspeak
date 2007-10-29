@@ -427,20 +427,23 @@ let translate fname (_, glbdecls, fundefs) =
 	
   in
 
-  let translate_init is_extern x =
+  let translate_init x =
     match x with
-	None when is_extern -> None
-      | _ when is_extern -> 
-	  Npkcontext.error "Compiler.translate_init" 
-	    "Extern globals can not be initizalized"
-      | None -> Some None
-      | Some e -> 
-	  Npkcontext.error "Compiler.translate_init" "Not implemented yet"
+	None -> None 
+      | Some None -> Some None
+      | Some Some init ->
+	  let translate (o, t, e) = 
+	    (* TODO: should I take t, or translate the one I get from e ??? *)
+	    let (e, _) = translate_exp e in
+	      (o, translate_scalar t, e) 
+	  in
+	  let init = List.map translate init in
+	    Some (Some init)
   in
 
-  let translate_glbdecl x (t, loc, init, is_extern) =
+  let translate_glbdecl x (t, loc, init) =
     match (t, init) with
-	(Fun (args, t), None) ->
+	(Fun (args, t), (None | Some None)) ->
 	  let (args_t, _) = List.split args in
 	    update_ftyp x (args_t, t)
 	      
@@ -448,9 +451,9 @@ let translate fname (_, glbdecls, fundefs) =
 	  Npkcontext.error "Compiler.translate_glbdecl" 
 	    "Unexpected initialization"
       | _ ->
-	  let init = translate_init is_extern init in
+	  let init = translate_init init in
 	    (* TODO: maybe do this in a first, since there may be the need for
-	       a variable not encountered yet, in init*)
+	       a variable not encountered yet, in init *)
 	    Env.add_global env x t (translate_typ t, loc, init, true)
   in
 

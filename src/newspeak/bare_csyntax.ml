@@ -30,12 +30,14 @@ type prog = (global * location) list
 and global =
     | FunctionDef of (declaration * blk)
 (* true for extern *)
-    | GlbDecl of (bool * declaration * init)
+    | GlbDecl of (bool * declaration * init option)
     | Typedef of declaration
 
 and declaration = (base_typ * var_modifier)
 
-and init = exp option
+and init = 
+    | Data of exp
+    | Sequence of init list
 
 and base_typ =
     | Void 
@@ -62,8 +64,9 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    | Decl of (declaration * init)
+    | Decl of (declaration * init option)
     | Set of (lv * exp)
+(* TODO: simplify if then else syntax !!! *)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)

@@ -28,11 +28,14 @@ type prog = (composites * glbdecls * fundefs)
 
 and composites = (string, typ) Hashtbl.t
 
-and glbdecls = (string, typ * location * exp option * bool) Hashtbl.t
+(* None is for extern *)
+and glbdecls = (string, typ * location * init option) Hashtbl.t
 
 and fundefs = (string, ftyp * location * blk) Hashtbl.t
 
 and decl = (typ * string)
+
+and init = (int * typ * exp) list option
 
 and ftyp = decl list * typ
 

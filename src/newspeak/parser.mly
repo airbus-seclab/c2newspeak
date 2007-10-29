@@ -125,9 +125,13 @@ statement_list:
 statement:
   declaration SEMICOLON                    { build_stmtdecl $1 }
 | assignment SEMICOLON                     { [Set $1, get_loc ()] }
-| IF LPAREN expression RPAREN statement
-    elsif_list                             { [If (($3, $5, get_loc ())::$6), 
+| IF LPAREN expression RPAREN statement    { [If (($3, $5, get_loc ())::[]), 
 					     get_loc ()] }
+| IF LPAREN expression RPAREN statement
+  ELSE statement                           { [If (($3, $5, get_loc ())
+						   ::(Const Int64.one, $7, 
+						     get_loc ())::[]), 
+						 get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
   case_list
   RBRACE                                   { [Switch ($3, $6), get_loc ()] }
@@ -146,21 +150,13 @@ statement:
 | RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
 | call SEMICOLON                           { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
-| block                                    { [Block $1, get_loc ()]}
+| block                                    { [Block $1, get_loc ()] }
 ;;
 
 assignment:
   left_value EQ expression                 { ($1, $3) }
 | left_value PLUSPLUS                      { ($1, Binop (Plus, Lval $1, 
 							Const Int64.one)) }
-;;
-
-elsif_list:
-  ELSE IF LPAREN expression RPAREN statement
-  elsif_list                               { ($4, $6, get_loc ())::$7 }
-| ELSE statement                           { [Const Int64.one, $2, 
-					     get_loc ()] }
-|                                          { [] }
 ;;
 
 case_list:
@@ -216,7 +212,18 @@ base_typ:
 
 init_var_modifier:
   var_modifier                             { ($1, None) }
-| var_modifier EQ expression               { ($1, Some $3) }
+| var_modifier EQ init                     { ($1, Some $3) }
+;;
+
+init:
+  expression                               { Data $1 }
+| LBRACE init_list RBRACE                  { Sequence $2 }
+| LBRACE RBRACE                            { Sequence [] }
+;;
+
+init_list:
+  init COMMA init_list                     { $1::$3 }
+| init                                     { $1::[] }
 ;;
 
 var_modifier:

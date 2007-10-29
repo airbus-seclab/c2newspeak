@@ -137,6 +137,30 @@ let translate cprog =
       | Some e -> Some (translate_exp e)
   in
 
+  let translate_init t x =
+    let res = ref [] in
+    let o = ref 0 in
+    let rec translate t x =
+      match (x, t) with
+	  (Data e, _) -> res := (!o, t, translate_exp e)::(!res)
+	| (Sequence seq, C.Array (t, Some len)) -> 
+	    let sz = C.size_of t in
+	    let translate_elt x =
+	      translate t x;
+	      o := !o + sz
+	    in
+	      List.iter translate_elt seq
+	| _ -> 
+	    Npkcontext.error "Firstpass.translate_init"
+	      "This type of initialization not implemented yet"
+    in
+      match x with
+	  None -> None
+	| Some x -> 
+	    translate t x;
+	    Some (List.rev !res)
+  in
+
   let rec translate_blk x =
     match x with
       | (Decl (d, init), loc)::tl -> 
@@ -144,7 +168,11 @@ let translate cprog =
 	  let tl =
 	    match init with
 		None -> tl
-	      | Some e -> (Set (Var x, e), loc)::tl
+	      | Some Data e -> (Set (Var x, e), loc)::tl
+	      | Some _ -> 
+		  Npkcontext.error "Firstpass.translate_blk" 
+		    ("Initialization of local with multiple values "
+		      ^"not implemented")
 	  in
 	  let tl = translate_blk tl in
 	    (C.Decl ((t, x), tl), loc)::[]
@@ -209,11 +237,16 @@ let translate cprog =
 	  let ft = C.ftyp_of_typ t in
 	  let body = translate_blk body in
 	    Hashtbl.add fundefs x (ft, loc, body)
+
+      | GlbDecl (is_extern, _, Some _) when is_extern -> 
+	  Npkcontext.error "Firstpass.translate_global"
+	    "Extern globals can not be initizalized"
  
       | GlbDecl (is_extern, d, init) -> 
 	  let (t, x) = translate_decl d in
-	  let init = translate_exp_option init in
-	    Hashtbl.add glbdecls x (t, loc, init, is_extern)
+	  let init = translate_init t init in
+	  let init = if is_extern then None else Some init in
+	    Hashtbl.add glbdecls x (t, loc, init)
 	  
       | Typedef x -> 
 	  let (t, x) = translate_decl x in
