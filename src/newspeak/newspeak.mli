@@ -174,6 +174,7 @@ val normalize_loops : blk -> blk
 
 (** Run all simplifications. *)
 val simplify : blk -> blk
+val simplify_exp: exp -> exp
 
 
 

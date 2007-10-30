@@ -826,12 +826,6 @@ let translate_glb used_glb name x =
 (* compile function, which wraps translate *)
 (*=========================================*)
 
-let add_glb_cstr str =
-  let fname = Npkcontext.get_fname () in
-  let name = "!"^fname^".const_str_"^str in
-  let glb = K.create_cstr str in
-    Hashtbl.add Cilenv.glb_decls name glb
-
 let compile in_name =
   initCIL ();
   useLogicalOperators := false;
@@ -854,7 +848,7 @@ let compile in_name =
     print_debug "Running first pass...";
     Npkcontext.forget_loc ();
     let (glb_used, glb_cstr, fun_specs, glb_decls) = F.first_pass cil_file in
-      K.String_set.iter add_glb_cstr glb_cstr;
+      K.String_set.iter Cilenv.add_glb_cstr glb_cstr;
 
       Npkcontext.forget_loc ();
       print_debug "First pass done.";

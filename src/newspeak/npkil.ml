@@ -508,24 +508,27 @@ let read_fundefs fname =
 Some kind of data structure with all the sizes,
 then function read returns this data structure too
 and there is an init function *)
-let char_sz = 1
-let char_typ = Int (Signed, char_sz)
+let char_typ = Int (Signed, Config.size_of_char)
 
 let init_of_string str =
   let len = String.length str in
   let res = ref [(len, char_typ, exp_of_int 0)] in
     for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
+      let c = Char.code str.[i] in
 	res := (i, char_typ, exp_of_int c)::!res
     done;
     (len + 1, Some !res)
 
 let create_cstr str =
+  (* TODO: see firstpass.ml, maybe this should not be in npkil! *)
+  let fname = Npkcontext.get_fname () in
+  let name = "!"^fname^".const_str_"^str in
   let (len, init) = init_of_string str in
-    (Array (Scalar char_typ, Some len), 
-(* TODO: code cleanup: not nice *)
-    ("", -1, -1), 
-    Some init, true)
+  let t = Array (Scalar char_typ, Some len) in
+    (name, (t, 
+    (* TODO: code cleanup: not nice *)
+    (fname, -1, -1), 
+    Some init, true))
 
 let string_of_cast t1 t2 =
   match (t1, t2) with

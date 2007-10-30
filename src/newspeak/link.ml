@@ -139,7 +139,10 @@ and replace_init init =
     | None -> if !global_zero_init then Newspeak.Zero else Newspeak.Init []
     | Some l -> Newspeak.Init (List.map replace_init_field l)
 
-and replace_init_field (sz, sca, e) = (sz, sca, replace_exp e)
+and replace_init_field (sz, sca, e) = 
+  let e = replace_exp e in
+  let e = if !Npkcontext.no_opt then e else Newspeak.simplify_exp e in
+    (sz, sca, e)
 
 and replace_typ t =
   match t with

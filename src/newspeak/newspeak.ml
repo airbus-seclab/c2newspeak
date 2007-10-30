@@ -646,7 +646,7 @@ class simplification =
 object
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
-end;;
+end
 
 let contains (l1, u1) (l2, u2) = 
   (Int64.compare l1 l2 <= 0) && (Int64.compare u2 u1 <= 0)
@@ -680,7 +680,22 @@ object
 
       | _ -> e
 
-end;;
+end
+
+class simplify_exp =
+object 
+  inherit simplification
+    
+  method process_exp e =
+    match e with
+	BinOp (MultI, Const CInt64 x, Const CInt64 y) 
+	  when (Int64.compare x Int64.zero = 0) 
+	    || (Int64.compare x Int64.zero = 0) -> zero
+      | BinOp (PlusI, Const CInt64 x, e) | BinOp (PlusI, e, Const CInt64 x) 
+      | BinOp (PlusPI, e, Const CInt64 x) 
+	    when (Int64.compare x Int64.zero = 0) -> e
+      | _ -> e
+end
 
 class simplify_choose =
 object 
@@ -691,7 +706,7 @@ object
 	(ChooseAssert [([], body)], _)::tl -> body@tl
       | (ChooseAssert _, _)::_ -> x
       | _ -> x
-end;;
+end
 
 let remove_final_goto l blk =
   let rec remove blk = 
@@ -749,64 +764,80 @@ let simplify_gotos blk =
     simplify_blk blk
 
 
-let simplify_aux actions blk =
-  let rec simplify_stmt (x, loc) =
-    let x =
-      match x with
-	| Set (lv, e, sca) -> Set (simplify_lval lv, simplify_exp e, sca)
-	| Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp e, t))
-	| Decl (name, t, body) -> Decl (name, t, simplify_blk body)
-	| ChooseAssert elts ->
-            let elts = List.map simplify_choose_elt elts in
-	      ChooseAssert (elts)
-	| InfLoop body ->
-            let body = simplify_blk body in
-	      InfLoop body
-	| DoWith (body, l, action) -> 
-	    let body = simplify_blk body in
-	    let action = simplify_blk action in
-	      DoWith (body, l, action)
-	| _ -> x
-    in
-      (x, loc)
-
-  and simplify_choose_elt (cond, body) = 
-    let cond = List.map simplify_exp cond in
-    let body = simplify_blk body in
-      (cond, body)
-
-  and simplify_exp e =
-    let e = ref e in
-      List.iter (fun x -> e := x#process_exp !e) actions;
+let rec simplify_stmt actions (x, loc) =
+  let x =
+    match x with
+      | Set (lv, e, sca) -> 
+	  Set (simplify_lval actions lv, simplify_exp actions e, sca)
+      | Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp actions e, t))
+      | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
+      | ChooseAssert elts ->
+          let elts = List.map (simplify_choose_elt actions) elts in
+	    ChooseAssert elts
+      | InfLoop body ->
+          let body = simplify_blk actions body in
+	    InfLoop body
+      | DoWith (body, l, action) -> 
+	  let body = simplify_blk actions body in
+	  let action = simplify_blk actions action in
+	    DoWith (body, l, action)
+      | _ -> x
+  in
+    (x, loc)
+      
+and simplify_choose_elt actions (cond, body) = 
+  let cond = List.map (simplify_exp actions) cond in
+  let body = simplify_blk actions body in
+    (cond, body)
+      
+and simplify_exp actions e =
+  let e = 
+    match e with
+	Lval (lv, sca) -> Lval (simplify_lval actions lv, sca)
+      | AddrOf (lv, sz) -> AddrOf (simplify_lval actions lv, sz)
+      | UnOp (o, e) -> UnOp (o, simplify_exp actions e)
+      | BinOp (o, e1, e2) -> 
+	  BinOp (o, simplify_exp actions e1, simplify_exp actions e2)
+      | _ -> e
+  in
+  let e = ref e in
+    List.iter (fun x -> e := x#process_exp !e) actions;
+    !e
+	(* TODO: remove
       match !e with
 	  Lval (lv, sca) -> Lval (simplify_lval lv, sca)
 	| AddrOf (lv, sz) -> AddrOf (simplify_lval lv, sz)
 	| UnOp (o, e) -> UnOp (o, simplify_exp e)
 	| BinOp (o, e1, e2) -> BinOp (o, simplify_exp e1, simplify_exp e2)
 	| _ -> !e
+*)
 
-  and simplify_lval lv =
-    match lv with
-      | Deref (e, sz) -> Deref (simplify_exp e, sz)
-      | Shift (l, e) -> Shift (simplify_lval l, simplify_exp e)
-      | _ -> lv
-	  
-  and simplify_blk blk =
-    let blk = ref blk in
-      List.iter (fun x -> blk := x#process_blk !blk) actions;
-      match !blk with
-	  hd::tl -> 
-	    let hd = simplify_stmt hd in
-	    let tl = simplify_blk tl in
-	      hd::tl
-	| [] -> []
-  in
-    simplify_blk blk
+and simplify_lval actions lv =
+  match lv with
+    | Deref (e, sz) -> Deref (simplify_exp actions e, sz)
+    | Shift (l, e) -> Shift (simplify_lval actions l, simplify_exp actions e)
+    | _ -> lv
+	
+and simplify_blk actions blk =
+  let blk = ref blk in
+    List.iter (fun x -> blk := x#process_blk !blk) actions;
+    match !blk with
+	hd::tl -> 
+	  let hd = simplify_stmt actions hd in
+	  let tl = simplify_blk actions tl in
+	    hd::tl
+      | [] -> []
 
 
 (* TODO: do this in one tree traversal, instead of 2 *)
+(* TODO: code optimization, this could be optimized, 
+   maybe using inheritance ?? *)
 let simplify b = 
-  simplify_aux [new simplify_choose; new simplify_coerce] (simplify_gotos b)
+  simplify_blk [new simplify_choose; new simplify_exp; new simplify_coerce] 
+    (simplify_gotos b)
+
+let simplify_exp e =
+  simplify_exp [new simplify_choose; new simplify_exp; new simplify_coerce] e
 
 let has_goto lbl x =
   let rec blk_has_goto x = List.exists has_goto x
@@ -846,9 +877,9 @@ object
   inherit simplification
 
   method process_blk x = normalize_loop x
-end;;
+end
 
-let normalize_loops b = simplify_aux [new simplify_loops] b
+let normalize_loops b = simplify_blk [new simplify_loops] b
 
 
 (* Visitor *)
@@ -878,7 +909,7 @@ object
   method process_binop (_: binop) = ()
   method process_fn (_: fn) = true
   method process_lval (_: lval) = true
-end;;
+end
 
 let rec visit_lval visitor x =
   let continue = visitor#process_lval x in

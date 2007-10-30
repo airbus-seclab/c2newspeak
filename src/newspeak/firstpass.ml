@@ -43,10 +43,36 @@ let align o sz =
   else if offset + sz <= 4 then o
   else (o - offset) + 4
 
-let translate cprog =
+let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
+
+  (* TODO: code cleanup: find a way to factor this with create_cstr
+     in Npkil *)
+let init_of_string str =
+  let len = String.length str in
+  let res = ref [(len, char_typ, C.Const Int64.zero)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code str.[i] in
+	res := (i, char_typ, C.Const (Int64.of_int c))::!res
+    done;
+    (len + 1, Some !res)
+
+let translate fname cprog =
   let typedefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
+
+  let add_glb_cstr str = 
+    (* TODO: code cleanup: find a way to factor this with create_cstr
+       in Npkil *)
+    let name = "!"^fname^".const_str_"^str in
+      if not (Hashtbl.mem glbdecls name) then begin
+	let (len, init) = init_of_string str in
+	let t = C.Array (char_typ, Some len) in
+	let loc = (fname, -1, -1) in
+	  Hashtbl.add glbdecls name (t, loc, Some init)
+      end;
+      name
+  in
 
   let rec translate_decl (b, v) =
     let b = translate_base_typ b in
@@ -150,6 +176,10 @@ let translate cprog =
 	      o := !o + sz
 	    in
 	      List.iter translate_elt seq
+	| (CstStr str, Ptr _) -> 
+	    let name = add_glb_cstr str in
+	    let e = C.AddrOf (C.Index (C.Var name, C.Const Int64.zero)) in
+	      res := (!o, t, e)::(!res)
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init"
 	      "This type of initialization not implemented yet"

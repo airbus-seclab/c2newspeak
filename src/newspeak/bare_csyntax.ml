@@ -38,6 +38,7 @@ and declaration = (base_typ * var_modifier)
 and init = 
     | Data of exp
     | Sequence of init list
+    | CstStr of string
 
 and base_typ =
     | Void 

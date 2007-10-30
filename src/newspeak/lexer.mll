@@ -59,6 +59,8 @@ let int64_of_ull lexbuf =
 	  ("integer too large: not representable in "^pos)
     end;
     i
+
+let extract_string s = String.sub s 1 (String.length s - 2)
 }
 
 let white_space = ' ' | '\t'
@@ -68,6 +70,8 @@ let line_comment = "//" [^'\r''\n']* line_terminator
 
 let letter = ['a'-'z'] | ['A'-'Z']
 let digit = ['0'-'9']
+
+let string = '"' [^'"']* '"'
 
 let integer = digit+ | '-'digit+
 let ull_integer = digit+ "ULL"
@@ -102,6 +106,7 @@ rule token = parse
 (* values *)
   | integer             { INTEGER (Int64.of_string (Lexing.lexeme lexbuf)) }
   | ull_integer         { INTEGER (int64_of_ull lexbuf) }
+  | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)
   | ","                 { COMMA }

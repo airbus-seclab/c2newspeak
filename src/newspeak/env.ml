@@ -29,16 +29,16 @@
 type t = {
   fundefs: (string, Npkil.funinfo) Hashtbl.t;
   globals: (string, Npkil.ginfo) Hashtbl.t;
-  global_env: (string, Csyntax.typ) Hashtbl.t;
+  global_env: Csyntax.glbdecls;
   local_env: (string, int * Csyntax.typ * Newspeak.location) Hashtbl.t;
   mutable vcnt: int
 }
 
-let create () =
+let create glbdecls =
   {
     fundefs = Hashtbl.create 100;
     globals = Hashtbl.create 100;
-    global_env = Hashtbl.create 100;
+    global_env = glbdecls;
     local_env = Hashtbl.create 100;
     vcnt = 0
   }
@@ -60,7 +60,7 @@ let get_var env x =
       (Npkil.Local (env.vcnt - n), t)
   with Not_found ->
     try
-      let t = Hashtbl.find env.global_env x in
+      let (t, _, _) = Hashtbl.find env.global_env x in
 	(Npkil.Global x, t)
     with Not_found -> 
       Npkcontext.error "Env.get_var" ("Variable "^x^" not declared")
@@ -74,9 +74,7 @@ let get_locals env =
     let (_, res) = List.split res in
       res
 
-let add_global env x t data =
-  Hashtbl.add env.global_env x t;
-  Hashtbl.add env.globals x data
+let add_global env x data = Hashtbl.add env.globals x data
 
 let get_ret_name () = "!return"
 

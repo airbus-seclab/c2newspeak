@@ -54,6 +54,7 @@ let build_stmtdecl (b, m) =
 let build_glbdecl is_extern (b, m) = 
   let build ((v, init), _) = (GlbDecl (is_extern, (b, v), init), get_loc ()) in
     List.map build m
+
 %}
 
 %token BREAK CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SWITCH TYPEDEF WHILE
@@ -64,6 +65,7 @@ let build_glbdecl is_extern (b, m) =
 %token EOF
 
 %token <string> IDENTIFIER
+%token <string> STRING
 %token <Int64.t> INTEGER
 
 /*
@@ -219,6 +221,7 @@ init:
   expression                               { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
 | LBRACE RBRACE                            { Sequence [] }
+| STRING                                   { CstStr $1 }
 ;;
 
 init_list:

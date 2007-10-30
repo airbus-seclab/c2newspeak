@@ -71,7 +71,7 @@ let translate_array lv a =
     (t, n)
 
 let translate fname (_, glbdecls, fundefs) = 
-  let env = Env.create () in
+  let env = Env.create glbdecls in
 
   let push loc (t, x) = Env.push env x t loc in
   let pop = Env.pop env in
@@ -149,6 +149,7 @@ let translate fname (_, glbdecls, fundefs) =
   let build_args f args loc =
     let formals =
       try 
+	(* TODO: code cleanup: put this in Env *)
 	let ((args, _), _, _) = Hashtbl.find fundefs f in
 	  args
       with Not_found -> 
@@ -435,7 +436,7 @@ let translate fname (_, glbdecls, fundefs) =
 	  let translate (o, t, e) = 
 	    (* TODO: should I take t, or translate the one I get from e ??? *)
 	    let (e, _) = translate_exp e in
-	      (o, translate_scalar t, e) 
+	      (o, translate_scalar t, e)
 	  in
 	  let init = List.map translate init in
 	    Some (Some init)
@@ -452,9 +453,10 @@ let translate fname (_, glbdecls, fundefs) =
 	    "Unexpected initialization"
       | _ ->
 	  let init = translate_init init in
+	  let t = translate_typ t in
 	    (* TODO: maybe do this in a first, since there may be the need for
 	       a variable not encountered yet, in init *)
-	    Env.add_global env x t (translate_typ t, loc, init, true)
+	    Env.add_global env x (t, loc, init, true)
   in
 
   let translate_fundef f ((args, t), loc, body) =
@@ -495,6 +497,6 @@ let parse fname =
 
 let compile fname =
   let prog = parse fname in
-  let prog = Firstpass.translate prog in
+  let prog = Firstpass.translate fname prog in
     translate fname prog
   

@@ -107,6 +107,10 @@ let create_npkil name =
     Hashtbl.iter add_funinfo fun_specs;
     (name, Hashtbl.copy glb_decls, fundefs)
 
+let add_glb_cstr str =
+  let (name, glb) = Npkil.create_cstr str in
+    Hashtbl.add glb_decls name glb
+
 (*---------*)
 (* Globals *)
 (*---------*)
