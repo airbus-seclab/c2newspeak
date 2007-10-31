@@ -644,6 +644,7 @@ let build_main_call ptr_sz (args_t, ret_t) args =
 
 class simplification =
 object
+  method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
 end
@@ -686,6 +687,11 @@ class simplify_exp =
 object 
   inherit simplification
     
+  method process_lval x =
+    match x with
+	Shift (lv, Const CInt64 x) when Int64.compare x Int64.zero = 0 -> lv
+      | _ -> x
+
   method process_exp e =
     match e with
 	BinOp (MultI, Const CInt64 x, Const CInt64 y) 
@@ -803,20 +809,17 @@ and simplify_exp actions e =
   let e = ref e in
     List.iter (fun x -> e := x#process_exp !e) actions;
     !e
-	(* TODO: remove
-      match !e with
-	  Lval (lv, sca) -> Lval (simplify_lval lv, sca)
-	| AddrOf (lv, sz) -> AddrOf (simplify_lval lv, sz)
-	| UnOp (o, e) -> UnOp (o, simplify_exp e)
-	| BinOp (o, e1, e2) -> BinOp (o, simplify_exp e1, simplify_exp e2)
-	| _ -> !e
-*)
 
 and simplify_lval actions lv =
-  match lv with
-    | Deref (e, sz) -> Deref (simplify_exp actions e, sz)
-    | Shift (l, e) -> Shift (simplify_lval actions l, simplify_exp actions e)
-    | _ -> lv
+  let lv =
+    match lv with
+      | Deref (e, sz) -> Deref (simplify_exp actions e, sz)
+      | Shift (l, e) -> Shift (simplify_lval actions l, simplify_exp actions e)
+      | _ -> lv
+  in
+  let lv = ref lv in
+    List.iter (fun x -> lv := x#process_lval !lv) actions;
+    !lv
 	
 and simplify_blk actions blk =
   let blk = ref blk in
