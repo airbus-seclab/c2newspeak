@@ -231,7 +231,8 @@ init_list:
 
 var_modifier:
   IDENTIFIER                               { Variable $1 }
-| var_modifier LBRACKET INTEGER RBRACKET   { Array ($1, $3) }
+| var_modifier LBRACKET INTEGER RBRACKET   { Array ($1, Some $3) }
+| var_modifier LBRACKET RBRACKET           { Array ($1, None) }
 | STAR var_modifier                        { Pointer $2 }
 | var_modifier LPAREN arg_list RPAREN      { Function ($1, $3) }
 | var_modifier LPAREN RPAREN               { Function ($1, []) }

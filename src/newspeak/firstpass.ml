@@ -45,6 +45,7 @@ let align o sz =
 
 let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 
+(* TODO: remove this code
   (* TODO: code cleanup: find a way to factor this with create_cstr
      in Npkil *)
 let init_of_string str =
@@ -55,24 +56,21 @@ let init_of_string str =
 	res := (i, char_typ, C.Const (Int64.of_int c))::!res
     done;
     (len + 1, Some !res)
+*)
+
+let seq_of_string str =
+  let len = String.length str in
+  let res = ref [Data (Const Int64.zero)] in
+    for i = len - 1 downto 0 do
+      let c = Char.code str.[i] in
+	res := (Data (Const (Int64.of_int c)))::!res
+    done;
+    !res
 
 let translate fname cprog =
   let typedefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
-
-  let add_glb_cstr str = 
-    (* TODO: code cleanup: find a way to factor this with create_cstr
-       in Npkil *)
-    let name = "!"^fname^".const_str_"^str in
-      if not (Hashtbl.mem glbdecls name) then begin
-	let (len, init) = init_of_string str in
-	let t = C.Array (char_typ, Some len) in
-	let loc = (fname, -1, -1) in
-	  Hashtbl.add glbdecls name (t, loc, Some init)
-      end;
-      name
-  in
 
   let rec translate_decl (b, v) =
     let b = translate_base_typ b in
@@ -130,7 +128,11 @@ let translate fname cprog =
 	  let args = List.map translate_decl args in
 	    translate_var_modifier (C.Ptr (C.Fun (args, b))) v
       | Array (v, n) -> 
-	  let n = Some (int64_to_int n) in
+	  let n = 
+	    match n with
+		None -> None
+	      | Some n -> Some (int64_to_int n) 
+	  in
 	    translate_var_modifier (C.Array (b, n)) v
       | Pointer v -> translate_var_modifier (C.Ptr b) v
       | Function _ -> 
@@ -163,34 +165,89 @@ let translate fname cprog =
       | Some e -> Some (translate_exp e)
   in
 
-  let translate_init t x =
+  let rec translate_init t x =
     let res = ref [] in
     let o = ref 0 in
     let rec translate t x =
       match (x, t) with
-	  (Data e, _) -> res := (!o, t, translate_exp e)::(!res)
-	| (Sequence seq, C.Array (t, Some len)) -> 
-	    let sz = C.size_of t in
-	    let translate_elt x =
-	      translate t x;
-	      o := !o + sz
+	  (Data e, _) -> 
+	    res := (!o, t, translate_exp e)::!res;
+	    t
+	| (Sequence seq, C.Array (t, sz)) -> 
+	    let n = 
+	      match sz with
+		  Some n -> n
+		| None -> List.length seq
 	    in
-	      List.iter translate_elt seq
-	| (CstStr str, Ptr _) -> 
+	      translate_sequence t n seq;
+	      C.Array (t, Some n)
+
+	| (CstStr str, C.Array _) -> 
+	    let seq = seq_of_string str in
+	      translate t (Sequence seq)
+
+	| (CstStr str, C.Ptr _) -> 
 	    let name = add_glb_cstr str in
 	    let e = C.AddrOf (C.Index (C.Var name, C.Const Int64.zero)) in
-	      res := (!o, t, e)::(!res)
+	      res := (!o, t, e)::!res;
+	      t
+
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init"
 	      "This type of initialization not implemented yet"
+
+    and translate_sequence t n seq =
+      match seq with
+	  hd::tl when n > 0 -> 
+	    let _ = translate t hd in
+	      o := !o + C.size_of t;
+	      translate_sequence t (n-1) tl
+	| _::_ -> 
+	    Npkcontext.print_warning 
+	      "Firstpass.translate_init.translate_sequence" 
+	      "Too many initializers for array"
+
+	(* TODO: code cleanup: We fill with zeros, because CIL does too. 
+	   But it shouldn't be done like that:
+	   the region should be init to 0 by default and then filled with
+	   values.*)
+	| [] when n > 0 -> 
+	    let _ = fill_with_zeros t in
+	      o := !o + C.size_of t;
+	      translate_sequence t (n-1) []
+	| [] -> ()
+
+    and fill_with_zeros t =
+      match t with
+	  C.Int _ -> res := (!o, t, C.Const Int64.zero)::!res
+	| C.Array (t, Some n) -> 
+	    let sz = C.size_of t in
+	      for i = 0 to n - 1 do
+		fill_with_zeros t;
+		o := !o + sz
+	      done
+
+	| _ -> 
+	    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
+	      "This type of initialization not implemented yet"
     in
       match x with
-	  None -> None
-	| Some x -> 
-	    translate t x;
-	    Some (List.rev !res)
-  in
+	  None -> (t, None)
+	| Some x -> 	    
+	    let t = translate t x in
+	      (t, Some (List.rev !res))
 
+  and add_glb_cstr str =
+    let name = "!"^fname^".const_str_"^str in
+      if not (Hashtbl.mem glbdecls name) then begin
+	let loc = (fname, -1, -1) in
+	let t = C.Array (char_typ, None) in
+	let (t, init) = translate_init t (Some (CstStr str)) in
+	  Hashtbl.add glbdecls name (t, loc, Some init)
+      end;
+      name
+  in
+	  
   let rec translate_blk x =
     match x with
       | (Decl (d, init), loc)::tl -> 
@@ -261,6 +318,7 @@ let translate fname cprog =
   in
 
   let translate_global (x, loc) =
+    Npkcontext.set_loc loc;
     match x with
 	FunctionDef (x, body) ->
 	  let (t, x) = translate_decl x in
@@ -274,7 +332,7 @@ let translate fname cprog =
  
       | GlbDecl (is_extern, d, init) -> 
 	  let (t, x) = translate_decl d in
-	  let init = translate_init t init in
+	  let (t, init) = translate_init t init in
 	  let init = if is_extern then None else Some init in
 	    Hashtbl.add glbdecls x (t, loc, init)
 	  

@@ -50,7 +50,7 @@ and base_typ =
 and var_modifier =
     | Variable of string
     | Function of (var_modifier * declaration list)
-    | Array of (var_modifier * Int64.t)
+    | Array of (var_modifier * Int64.t option)
     | Pointer of var_modifier
 
 and ityp = 
