@@ -683,7 +683,7 @@ object
 
 end
 
-class simplify_exp =
+class simplify_arith =
 object 
   inherit simplification
     
@@ -697,6 +697,10 @@ object
 	BinOp (MultI, Const CInt64 x, Const CInt64 y) 
 	  when (Int64.compare x Int64.zero = 0) 
 	    || (Int64.compare x Int64.zero = 0) -> zero
+
+      | BinOp (MultI, e, Const CInt64 o) | BinOp (MultI, Const CInt64 o, e) 
+	    when Int64.compare o Int64.one = 0 -> e
+
       | BinOp (PlusI, Const CInt64 x, e) | BinOp (PlusI, e, Const CInt64 x) 
       | BinOp (PlusPI, e, Const CInt64 x) 
 	    when (Int64.compare x Int64.zero = 0) -> e
@@ -836,11 +840,11 @@ and simplify_blk actions blk =
 (* TODO: code optimization, this could be optimized, 
    maybe using inheritance ?? *)
 let simplify b = 
-  simplify_blk [new simplify_choose; new simplify_exp; new simplify_coerce] 
+  simplify_blk [new simplify_choose; new simplify_arith; new simplify_coerce] 
     (simplify_gotos b)
 
 let simplify_exp e =
-  simplify_exp [new simplify_choose; new simplify_exp; new simplify_coerce] e
+  simplify_exp [new simplify_arith; new simplify_coerce] e
 
 let has_goto lbl x =
   let rec blk_has_goto x = List.exists has_goto x
