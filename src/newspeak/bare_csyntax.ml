@@ -93,6 +93,7 @@ and exp =
     | And of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
+    | Sizeof of string
 
 and cst = Int64.t
 

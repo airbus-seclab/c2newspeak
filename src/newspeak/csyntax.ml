@@ -84,6 +84,7 @@ and exp =
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
+    | Sizeof of string
 
 and unop = 
     | Not

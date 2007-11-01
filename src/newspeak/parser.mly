@@ -57,7 +57,8 @@ let build_glbdecl is_extern (b, m) =
 
 %}
 
-%token BREAK CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SWITCH TYPEDEF WHILE
+%token BREAK CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SIZEOF 
+%token SWITCH TYPEDEF WHILE
 %token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
@@ -201,6 +202,7 @@ expression:
 | LPAREN expression RPAREN                 { $2 }
 | expression EQEQ expression               { Binop (Eq, $1, $3) }
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
+| SIZEOF LPAREN IDENTIFIER RPAREN          { Sizeof $3 }
 ;;
 
 base_typ:

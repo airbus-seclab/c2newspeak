@@ -238,6 +238,11 @@ let translate fname (_, glbdecls, fundefs) =
 	  let v2 = translate_exp e2 in
 	    translate_binop op v1 v2
 
+      | Sizeof x -> 
+	  let (_, t) = get_var x in
+	  let i = size_of t in
+	    (K.exp_of_int i, Int (kind_of_int64 (Int64.of_int i)))
+
       | Call _ -> 
 	  Npkcontext.error "Compiler.translate_exp" 
 	    "Call inside expression not implemented yet"

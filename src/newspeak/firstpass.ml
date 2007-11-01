@@ -156,6 +156,7 @@ let translate fname cprog =
       | Unop (op, e) -> C.Unop (op, translate_exp e)
       | Binop (op, e1, e2) -> C.Binop (op, translate_exp e1, translate_exp e2)
       | Call (f, args) -> C.Call (f, List.map translate_exp args)
+      | Sizeof x -> C.Sizeof x
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
   in

@@ -89,6 +89,7 @@ rule token = parse
   | "extern"            { EXTERN }
   | "if"                { IF }
   | "return"            { RETURN }
+  | "sizeof"            { SIZEOF }
   | "switch"            { SWITCH }
   | "typedef"           { TYPEDEF }
   | "while"             { WHILE }
