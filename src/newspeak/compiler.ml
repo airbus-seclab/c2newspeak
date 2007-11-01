@@ -150,7 +150,7 @@ let translate fname (_, glbdecls, fundefs) =
     let formals =
       try 
 	(* TODO: code cleanup: put this in Env *)
-	let ((args, _), _, _) = Hashtbl.find fundefs f in
+	let ((args, _), _, _, _) = Hashtbl.find fundefs f in
 	  args
       with Not_found -> 
 	let i = ref (-1) in
@@ -264,13 +264,17 @@ let translate fname (_, glbdecls, fundefs) =
     let e = K.cast t' e t in
       (K.Set (lv, e, t), loc)
     
+  and translate_local_init loc x (offset, t, e) =
+    let (lv, _) = translate_lv (Var x) in
+    let lv = K.Shift (lv, K.exp_of_int offset) in
+    let t = translate_scalar t in
+    let (e, _) = translate_exp e in
+      (K.Set (lv, e, t), loc)
 
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-      | Decl (d, body) -> 
-	  push loc d;
-	  translate_blk body
+      | Init (x, init) -> List.map (translate_local_init loc x) init
 
       | Set (lv, Call x) -> 
 	  translate_call loc (Some lv) x
@@ -459,11 +463,12 @@ let translate fname (_, glbdecls, fundefs) =
 	    Env.add_global env x (t, loc, init, true)
   in
 
-  let translate_fundef f ((args, t), loc, body) =
+  let translate_fundef f ((args, t), loc, locals, body) =
     let (args_t, args_name) = List.split args in
       update_ftyp f (args_t, t);
       push loc (t, Env.get_ret_name ());
       List.iter (push loc) args;
+      List.iter (fun (d, loc) -> push loc d) locals;
       let body = translate_blk body in
 	List.iter pop args_name;
 	pop (Env.get_ret_name ());

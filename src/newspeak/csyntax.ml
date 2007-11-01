@@ -30,13 +30,14 @@ type prog = (composites * glbdecls * fundefs)
 and composites = (string, typ) Hashtbl.t
 
 (* None for extern *)
-and glbdecls = (string, typ * location * init option) Hashtbl.t
+and glbdecls = (string, typ * location * init option option) Hashtbl.t
 
-and fundefs = (string, ftyp * location * blk) Hashtbl.t
+and fundefs = 
+(string, ftyp * location * (decl * location) list * blk) Hashtbl.t
 
 and decl = (typ * string)
 
-and init = (int * typ * exp) list option
+and init = (int * typ * exp) list
 
 and ftyp = decl list * typ
 
@@ -60,7 +61,7 @@ and localdecl = (decl * location)
 and stmt = (stmtkind * location)
 
 and stmtkind =
-    | Decl of (decl * blk)
+    | Init of (string * init)
     | Set of (lv * exp)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)

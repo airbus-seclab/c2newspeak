@@ -71,6 +71,7 @@ let translate fname cprog =
   let typedefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
+  let locals = ref [] in
 
   let rec translate_decl (b, v) =
     let b = translate_base_typ b in
@@ -250,25 +251,15 @@ let translate fname cprog =
 	  
   let rec translate_blk x =
     match x with
-      | (Decl (d, init), loc)::tl -> 
-	  let (t, x) = translate_decl d in
-	  let tl =
-	    match init with
-		None -> tl
-	      | Some Data e -> (Set (Var x, e), loc)::tl
-	      | Some _ -> 
-		  Npkcontext.error "Firstpass.translate_blk" 
-		    ("Initialization of local with multiple values "
-		      ^"not implemented")
-	  in
+      | hd::tl -> 
+	  let hd = translate_stmt hd in
 	  let tl = translate_blk tl in
-	    (C.Decl ((t, x), tl), loc)::[]
-
-      | hd::tl -> (translate_stmt hd)@(translate_blk tl)
+	    hd@tl
 
       | [] -> []
 
   and translate_stmt (x, loc) =
+    Npkcontext.set_loc loc;
     match x with
 	Set (lv, e) -> 
 	  let lv = translate_lv lv in
@@ -312,9 +303,14 @@ let translate fname cprog =
 
       | Block body -> translate_blk body
 
-      | Decl _ -> 
-	  Npkcontext.error "Firstpass.translate_stmt"
-	    "Variable declaration is allowed at the start of blocks only "
+      | Decl (d, init) -> 
+	  Npkcontext.set_loc loc;
+	  let (t, x) = translate_decl d in
+	  let (t, init) = translate_init t init in
+	    locals := ((t, x), loc)::!locals;
+	    match init with
+		None -> []
+	      | Some init -> (C.Init (x, init), loc)::[]
   in
 
   let translate_global (x, loc) =
@@ -324,7 +320,9 @@ let translate fname cprog =
 	  let (t, x) = translate_decl x in
 	  let ft = C.ftyp_of_typ t in
 	  let body = translate_blk body in
-	    Hashtbl.add fundefs x (ft, loc, body)
+	  let decls = List.rev !locals in
+	    locals := [];
+	    Hashtbl.add fundefs x (ft, loc, decls, body)
 
       | GlbDecl (is_extern, _, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
