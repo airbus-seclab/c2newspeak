@@ -48,6 +48,7 @@ and base_typ =
     | Name of string
 
 and var_modifier =
+    | Abstract
     | Variable of string
     | Function of (var_modifier * declaration list)
     | Array of (var_modifier * Int64.t option)
@@ -92,7 +93,8 @@ and exp =
     | And of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
-    | Sizeof of string
+    | Sizeof of declaration
+    | SizeofV of string
 
 and cst = Int64.t
 

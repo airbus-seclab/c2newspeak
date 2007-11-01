@@ -33,7 +33,7 @@ and composites = (string, typ) Hashtbl.t
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
 
 and fundefs = 
-(string, ftyp * location * (decl * location) list * blk) Hashtbl.t
+    (string, ftyp * location * (decl * location) list * blk) Hashtbl.t
 
 and decl = (typ * string)
 
@@ -84,7 +84,7 @@ and exp =
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
-    | Sizeof of string
+    | SizeofV of string
 
 and unop = 
     | Not
@@ -130,3 +130,4 @@ let rec size_of t =
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
     | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
 
+let undefined = "!undefined"

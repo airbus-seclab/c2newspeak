@@ -122,7 +122,8 @@ let translate fname cprog =
 
   and translate_var_modifier b v =
     match v with
-	Variable x -> (b, x)
+	Abstract -> (b, C.undefined)
+      | Variable x -> (b, x)
       | Function (Variable f, args) -> 
 	  (C.Fun (List.map translate_decl args, b), f)
       | Function (Pointer v, args) -> 
@@ -156,7 +157,11 @@ let translate fname cprog =
       | Unop (op, e) -> C.Unop (op, translate_exp e)
       | Binop (op, e1, e2) -> C.Binop (op, translate_exp e1, translate_exp e2)
       | Call (f, args) -> C.Call (f, List.map translate_exp args)
-      | Sizeof x -> C.Sizeof x
+      | SizeofV x -> C.SizeofV x
+      | Sizeof d ->
+	  let (t, _) = translate_decl d in
+	  let sz = size_of t in
+	    translate_exp (Const (Int64.of_int sz))
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
   in

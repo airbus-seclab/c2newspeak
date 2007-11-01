@@ -30,4 +30,5 @@
 void main() {
   int x;
   x = sizeof(x);
+  x = sizeof(int);
 }

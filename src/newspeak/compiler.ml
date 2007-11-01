@@ -238,7 +238,7 @@ let translate fname (_, glbdecls, fundefs) =
 	  let v2 = translate_exp e2 in
 	    translate_binop op v1 v2
 
-      | Sizeof x -> 
+      | SizeofV x -> 
 	  let (_, t) = get_var x in
 	  let i = size_of t in
 	    (K.exp_of_int i, Int (kind_of_int64 (Int64.of_int i)))
@@ -494,7 +494,7 @@ let parse fname =
   let lexbuf = Lexing.from_channel cin in
     Lexer.init fname lexbuf;
     try
-      let cprog = Parser.cprog Lexer.token lexbuf in
+      let cprog = Parser.translation_unit Lexer.token lexbuf in
 	close_in cin;
 	cprog
     with Parsing.Parse_error -> 

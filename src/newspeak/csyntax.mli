@@ -81,7 +81,7 @@ and exp =
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
-    | Sizeof of string
+    | SizeofV of string
 
 and unop = 
     | Not
@@ -103,3 +103,6 @@ val array_of_typ: typ -> array_t
 val deref_typ: typ -> typ
 
 val size_of: typ -> int
+
+(* TODO: this is a bit of a hack, think about it *)
+val undefined: string

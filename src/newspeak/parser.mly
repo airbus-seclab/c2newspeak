@@ -80,8 +80,8 @@ let build_glbdecl is_extern (b, m) =
 %left PLUS
 %left STAR
 
-%type <Bare_csyntax.prog> cprog
-%start cprog
+%type <Bare_csyntax.prog> translation_unit
+%start translation_unit
 
 %%
 /* TODO: simplify code by generalizing!!! 
@@ -89,12 +89,12 @@ try to remove multiple occurence of same pattern: factor as much as possible
 */
 // carefull not to have any empty rule: this deceives line number location
 
-cprog:
-  global cprog                             { $1@$2 }
+translation_unit:
+  external_declaration translation_unit    { $1@$2 }
 |                                          { [] }
 ;;
 
-global:
+external_declaration:
   declaration SEMICOLON                    { build_glbdecl false $1 }
 | EXTERN declaration SEMICOLON             { build_glbdecl true $2 }
 | declaration statement                    { build_fundef $1 $2 }
@@ -102,13 +102,13 @@ global:
 ;;
 
 declaration:
-  base_typ init_var_modifier_list          { ($1, $2) }
+  type_specifier init_declarator_list          { ($1, $2) }
 ;;
 
-init_var_modifier_list:
-  init_var_modifier COMMA 
-  init_var_modifier_list                   { ($1, get_loc ())::$3 }
-| init_var_modifier                        { ($1, get_loc ())::[] }
+init_declarator_list:
+  init_declarator COMMA 
+  init_declarator_list                   { ($1, get_loc ())::$3 }
+| init_declarator                        { ($1, get_loc ())::[] }
 ;;
 
 block:
@@ -202,21 +202,13 @@ expression:
 | LPAREN expression RPAREN                 { $2 }
 | expression EQEQ expression               { Binop (Eq, $1, $3) }
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
-| SIZEOF LPAREN IDENTIFIER RPAREN          { Sizeof $3 }
+| SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
+| SIZEOF LPAREN type_name RPAREN           { Sizeof $3 }
 ;;
 
-base_typ:
-  VOID                                     { Void }
-| ityp                                     { Integer (Newspeak.Signed, $1) }
-| UNSIGNED ityp                            { Integer (Newspeak.Unsigned, $2) }
-| STRUCT LBRACE field_list RBRACE          { Struct $3 }
-| UNION LBRACE field_list RBRACE           { Union $3 }
-| IDENTIFIER                               { Name $1 }
-;;
-
-init_var_modifier:
-  var_modifier                             { ($1, None) }
-| var_modifier EQ init                     { ($1, Some $3) }
+init_declarator:
+  declarator                             { ($1, None) }
+| declarator EQ init                     { ($1, Some $3) }
 ;;
 
 init:
@@ -231,25 +223,49 @@ init_list:
 | init                                     { $1::[] }
 ;;
 
-var_modifier:
-  IDENTIFIER                               { Variable $1 }
-| var_modifier LBRACKET INTEGER RBRACKET   { Array ($1, Some $3) }
-| var_modifier LBRACKET RBRACKET           { Array ($1, None) }
-| STAR var_modifier                        { Pointer $2 }
-| var_modifier LPAREN arg_list RPAREN      { Function ($1, $3) }
-| var_modifier LPAREN RPAREN               { Function ($1, []) }
-| LPAREN var_modifier RPAREN               { $2 }
+abstract_declarator:
+| STAR abstract_declarator                 { Pointer $2 }
+| LPAREN abstract_declarator RPAREN        { $2 }
+| LBRACKET RBRACKET                        { Array (Abstract, None) }
+| LBRACKET INTEGER RBRACKET                { Array (Abstract, Some $2) }
+| abstract_declarator LPAREN parameter_list RPAREN      { Function ($1, $3) }
+| abstract_declarator LPAREN RPAREN               { Function ($1, []) }
 ;;
 
-arg_list:
-  arg COMMA arg_list                       { $1::$3 }
-| arg                                      { $1::[]}
+declarator:
+| STAR declarator                          { Pointer $2 }
+| LPAREN declarator RPAREN                 { $2 }
+| IDENTIFIER                               { Variable $1 }
+| declarator LBRACKET INTEGER RBRACKET     { Array ($1, Some $3) }
+| declarator LBRACKET RBRACKET           { Array ($1, None) }
+| declarator LPAREN parameter_list RPAREN      { Function ($1, $3) }
+| declarator LPAREN RPAREN               { Function ($1, []) }
+;;
+
+parameter_list:
+  parameter_declaration COMMA parameter_list                       { $1::$3 }
+| parameter_declaration                                      { $1::[]}
 ;;
 
 // TODO: careful, this is a bit of a hack
-arg:
-  base_typ var_modifier                    { ($1, $2) }
-| base_typ                                 { ($1, Variable "undefined!") }
+parameter_declaration:
+  type_specifier declarator              { ($1, $2) }
+| type_specifier abstract_declarator     { ($1, $2) }
+| type_specifier                           { ($1, Abstract) }
+;;
+
+type_name:
+  type_specifier abstract_declarator      { ($1, $2) }
+| type_specifier                          { ($1, Abstract) }
+;;
+
+type_specifier:
+  VOID                                     { Void }
+| ityp                                     { Integer (Newspeak.Signed, $1) }
+| UNSIGNED ityp                            { Integer (Newspeak.Unsigned, $2) }
+| STRUCT LBRACE field_list RBRACE          { Struct $3 }
+| UNION LBRACE field_list RBRACE           { Union $3 }
+| IDENTIFIER                               { Name $1 }
 ;;
 
 ityp:
