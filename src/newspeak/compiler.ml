@@ -70,8 +70,10 @@ let translate_array lv a =
   in
     (t, n)
 
-let translate fname (_, glbdecls, fundefs) = 
-  let env = Env.create glbdecls in
+let translate fname (_, cglbdecls, cfundefs) = 
+  let glbdecls = Hashtbl.create 100 in
+  let fundefs = Hashtbl.create 100 in
+  let env = Env.create (cglbdecls, cfundefs) in
 
   let push loc (t, x) = Env.push env x t loc in
   let pop = Env.pop env in
@@ -114,10 +116,6 @@ let translate fname (_, glbdecls, fundefs) =
       (args, ret)
   in
 
-  let update_fundef = Env.update_funbody env in
-
-  let update_ftyp f ftyp = Env.update_ftyp env f (translate_ftyp ftyp) in
-
   let translate_binop op (e1, t1) (e2, t2) =
     match (op, t1, t2) with
 	((Mult|Plus), Int k1, Int k2) -> 
@@ -144,33 +142,6 @@ let translate fname (_, glbdecls, fundefs) =
       | _ -> 
 	  Npkcontext.error "Compiler.translate_binop" 
 	    "unexpected binary operator and arguments"
-  in
-
-  let build_args f args loc =
-    let formals =
-      try 
-	(* TODO: code cleanup: put this in Env *)
-	let ((args, _), _, _, _) = Hashtbl.find fundefs f in
-	  args
-      with Not_found -> 
-	let i = ref (-1) in
-	let build (_, t) =
-	  incr i;
-	  (t, "arg"^(string_of_int !i))
-	in
-	  List.map build args
-    in
-    let decls = List.map (fun (t, x) -> (t, x, loc)) formals in
-    let rec build_set args =
-      match args with
-	  (e, t)::tl -> 
-	    let (i, tl) = build_set tl in
-	    let lv = K.Local i in
-	      (i+1, (K.Set (lv, e, translate_scalar t), loc)::tl)
-	| [] -> (0, [])
-    in
-    let (_, set) = build_set args in
-      (decls, set)
   in
 
   let rec translate_lv lv =
@@ -281,8 +252,7 @@ let translate fname (_, glbdecls, fundefs) =
     match x with
       | Init (x, init) -> List.map (translate_local_init loc x) init
 
-      | Set (lv, Call x) -> 
-	  translate_call loc (Some lv) x
+      | Set (lv, Call x) -> translate_call loc (Some lv) x
 
       | Set (lv, e) -> (translate_set loc (lv, e))::[]
 
@@ -347,45 +317,47 @@ let translate fname (_, glbdecls, fundefs) =
 	  Npkcontext.error "Compiler.translate_stmt" 
 	    "Expressions as statements not implemented yet"
 
-  and translate_call loc r (f, args) =
-    (* TODO: code robustness: should compare arguments types and 
-       expected function type *)
-    
-    (* push_dummy is a bit of a hack, since we do not have the type of 
-       the return value or arguments, but still need to compile expressions
-       with the right number of local variable,
-       we push a dummy variable in the local env.
-    *)
-    push_dummy loc;
-    let (ret_t, ret_decl, ret_set) = 
-      match r with
-	  None -> (Void, [], [])
-	| Some lv -> 
-	    let (r, t) = translate_lv lv in
-	      (* TODO: code factorisation: many occurences of this: *)
-	    let ret_t = translate_scalar t in
-	      (t,
-	      (t, "value_of_"^f, loc)::[], 
-	      (K.Set (r, K.Lval (K.Local 0, ret_t), ret_t), loc)::[])
+  and translate_call loc r (f, args_exp) =
+    let (args_t, ret_t) = Env.get_ftyp env f in
+    let ret_name = "value_of_"^f in
+    let (ret_decl, ret_set) = 
+      match (r, ret_t) with
+	  (None, _) -> ([], [])
+	| (Some _, Void) -> 
+(* TODO: code cleanup: change error message *)
+	    Npkcontext.error "Compiler.translate_call" "No return value"
+	| (Some lv, _) -> 
+	    push loc (ret_t, ret_name);
+	    let ret_decl = (ret_t, ret_name, loc) in
+	    let ret_set = translate_set loc (lv, Lval (Var ret_name)) in
+	      (ret_decl::[], ret_set::[])
     in
-      (* TODO: code cleanup put this together with the first push_dummy *)
-    List.iter (fun _ -> push_dummy loc) args;
+      List.iter (push loc) args_t;
 
-    let args = (List.map translate_exp args) in
-    let args_t = List.map snd args in
-    let (decls, set) = build_args f args loc in
-      pop_dummy ();
-      List.iter (fun _ -> pop_dummy ()) args;
-      update_ftyp f (args_t, ret_t);
+(* TODO: code cleanup: change error message *)
+      if (List.length args_t <> List.length args_exp) then begin
+	Npkcontext.error "Compiler.translate_call" 
+	  ("Different types for function "^f)
+      end;
 
-    let call = (K.Call (K.FunId f), loc)::[] in
-    let call = set@call in
-    let call = append_decls decls call in
-      (* TODO: code optimization: write this so that there is no @ 
-	 (by putting ret_set under the scope of local variables too) *)
-    let call = call@ret_set in
-    let call = append_decls ret_decl call in
-      call
+      let decls_sets = List.map2 (translate_arg loc) args_t args_exp in
+      let (decls, sets) = List.split decls_sets in
+	pop ret_name;
+	List.iter (fun (_, x) -> pop x) args_t;
+	
+	let call = (K.Call (K.FunId f), loc)::[] in
+	let call = sets@call in
+	let call = append_decls decls call in
+	  (* TODO: code optimization: write this so that there is no @ 
+	     (by putting ret_set under the scope of local variables too) *)
+	let call = call@ret_set in
+	let call = append_decls ret_decl call in
+	  call
+
+  and translate_arg loc (t, x) e = 
+    let decl = (t, x, loc) in
+    let set = translate_set loc (Var x, e) in
+      (decl, set)
 
   and translate_switch loc e cases =
     let (switch_exp, _) = translate_exp e in
@@ -452,41 +424,38 @@ let translate fname (_, glbdecls, fundefs) =
   in
 
   let translate_glbdecl x (t, loc, init) =
-    match (t, init) with
-	(Fun (args, t), (None | Some None)) ->
-	  let (args_t, _) = List.split args in
-	    update_ftyp x (args_t, t)
-	      
-      | (Fun _, _) ->
-	  Npkcontext.error "Compiler.translate_glbdecl" 
-	    "Unexpected initialization"
-      | _ ->
-	  let init = translate_init init in
-	  let t = translate_typ t in
-	    (* TODO: maybe do this in a first, since there may be the need for
-	       a variable not encountered yet, in init *)
-	    Env.add_global env x (t, loc, init, true)
+    let init = translate_init init in
+    let t = translate_typ t in
+      (* TODO: maybe do this in a first, since there may be the need for
+	 a variable not encountered yet, in init *)
+      Hashtbl.add glbdecls x (t, loc, init, true)
   in
 
-  let translate_fundef f ((args, t), loc, locals, body) =
+  let translate_fundef f ((args, t), loc, body) =
     let (args_t, args_name) = List.split args in
-      update_ftyp f (args_t, t);
-      push loc (t, Env.get_ret_name ());
-      List.iter (push loc) args;
-      List.iter (fun (d, loc) -> push loc d) locals;
-      let body = translate_blk body in
-	List.iter pop args_name;
-	pop (Env.get_ret_name ());
-	let body = (K.DoWith (body, Env.get_ret_lbl (), []), loc)::[] in
-	let decls = Env.get_locals env in
-	let body = append_decls decls body in
-	  update_fundef f body
+    let body =
+      match body with
+	  None -> None
+	| Some (locals, body) ->
+	    push loc (t, Env.get_ret_name ());
+	    List.iter (push loc) args;
+	    List.iter (fun (d, loc) -> push loc d) locals;
+	    let body = translate_blk body in
+	      List.iter pop args_name;
+	      pop (Env.get_ret_name ());
+	      let body = (K.DoWith (body, Env.get_ret_lbl (), []), loc)::[] in
+	      let decls = Env.get_locals env in
+	      let body = append_decls decls body in
+		Some body
+    in
+    let ft = translate_ftyp (args_t, t) in
+      Hashtbl.add fundefs f (ft, body)
   in
 
-    Hashtbl.iter translate_glbdecl glbdecls;
-    Hashtbl.iter translate_fundef fundefs;
+    Hashtbl.iter translate_glbdecl cglbdecls;
+    Hashtbl.iter translate_fundef cfundefs;
 
-    Env.extract_prog env fname
+    (fname, glbdecls, fundefs)
 
 
 let parse fname =

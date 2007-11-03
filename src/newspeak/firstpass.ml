@@ -319,6 +319,29 @@ let translate fname cprog =
 	      | Some init -> (C.Init (x, init), loc)::[]
   in
 
+(* TODO: code cleanup: put in Csyntax, change function name!!! *)
+  let compare f (args, ret) (prev_args, prev_ret) =
+    let (args, _) = List.split args in
+    let (prev_args, _) = List.split prev_args in
+      if (args, ret) <> (prev_args, prev_ret) then begin
+	Npkcontext.error "Firstpass.update_fundef"
+	  ("Different types for function "^f)
+      end
+  in
+
+  let update_fundef f (t, loc, body) =
+    try
+      let (prev_t, _, prev_body) = Hashtbl.find fundefs f in
+	compare f t prev_t;
+	match (body, prev_body) with
+	    (None, _) -> ()
+	  | (Some _, None) -> Hashtbl.replace fundefs f (t, loc, body)
+	  | (Some _, Some _) -> 
+	      Npkcontext.error "Firstpass.update_fundef"
+		("Multiple definitions of function "^f^" body")
+    with Not_found -> Hashtbl.add fundefs f (t, loc, body) 
+  in
+
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
@@ -328,7 +351,7 @@ let translate fname cprog =
 	  let body = translate_blk body in
 	  let decls = List.rev !locals in
 	    locals := [];
-	    Hashtbl.add fundefs x (ft, loc, decls, body)
+	    update_fundef x (ft, loc, Some (decls, body))
 
       | GlbDecl (is_extern, _, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
@@ -336,10 +359,17 @@ let translate fname cprog =
  
       | GlbDecl (is_extern, d, init) -> 
 	  let (t, x) = translate_decl d in
-	  let (t, init) = translate_init t init in
-	  let init = if is_extern then None else Some init in
-	    Hashtbl.add glbdecls x (t, loc, init)
-	  
+	    begin match (t, init) with
+		(Fun ft, None) -> update_fundef x (ft, loc, None)
+	      | (Fun ft, Some _) -> 
+		  Npkcontext.error "Firstpass.translate_global"
+		    ("Unexpected initialization of function "^x)
+	      | _ -> 
+		  let (t, init) = translate_init t init in
+		  let init = if is_extern then None else Some init in
+		    Hashtbl.add glbdecls x (t, loc, init)
+	    end
+
       | Typedef x -> 
 	  let (t, x) = translate_decl x in
 	    Hashtbl.add typedefs x t

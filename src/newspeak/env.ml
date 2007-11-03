@@ -27,24 +27,19 @@
 *)
 
 type t = {
-  fundefs: (string, Npkil.funinfo) Hashtbl.t;
-  globals: (string, Npkil.ginfo) Hashtbl.t;
+  fun_env: Csyntax.fundefs;
   global_env: Csyntax.glbdecls;
   local_env: (string, int * Csyntax.typ * Newspeak.location) Hashtbl.t;
   mutable vcnt: int
 }
 
-let create glbdecls =
+let create (glbdecls, fundefs) =
   {
-    fundefs = Hashtbl.create 100;
-    globals = Hashtbl.create 100;
+    fun_env = fundefs;
     global_env = glbdecls;
     local_env = Hashtbl.create 100;
     vcnt = 0
   }
-
-let extract_prog env fname =
-  (fname, env.globals, env.fundefs)
 
 let push env x t loc =
   env.vcnt <- env.vcnt + 1;
@@ -74,8 +69,6 @@ let get_locals env =
     let (_, res) = List.split res in
       res
 
-let add_global env x data = Hashtbl.add env.globals x data
-
 let get_ret_name () = "!return"
 
 let get_ret_typ env =
@@ -88,24 +81,10 @@ let get_ret_typ env =
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1
 
-let update_funbody env f body =
+let get_ftyp env f =
   try
-    let (ftyp, prev_body) = Hashtbl.find env.fundefs f in
-      match prev_body with
-	| None -> Hashtbl.replace env.fundefs f (ftyp, Some body)
-	| Some _ -> 
-	    Npkcontext.error "Compiler.update_fundef" 
-		"Multiple definition of function body"
-  with Not_found -> 
-    Npkcontext.error "Compiler.update_fundef" "Function should be defined"
-      
-let update_ftyp env f ftyp =
-  try
-    let (prev_ftyp, _) = Hashtbl.find env.fundefs f in
-      if ftyp <> prev_ftyp 
-      then begin 
-	Npkcontext.error "Compiler.update_ftyp" 
-	  ("Different types for function "^f)
-      end
-  with Not_found -> Hashtbl.add env.fundefs f (ftyp, None)
-
+    let (ftyp, _, _) = Hashtbl.find env.fun_env f in
+      ftyp
+  with Not_found ->
+    Npkcontext.error "Env.get_ftyp" 
+      ("Unknown function "^f^" Please provide a prototype")

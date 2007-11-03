@@ -28,20 +28,15 @@
 
 type t
 
-val create: Csyntax.glbdecls -> t
-val extract_prog: t -> string -> Npkil.t
+val create: (Csyntax.glbdecls * Csyntax.fundefs) -> t
 
 val push: t -> string -> Csyntax.typ -> Newspeak.location -> unit
 val pop: t -> string -> unit
 val get_var: t -> string -> (Npkil.lval * Csyntax.typ)
 val get_locals: t -> (Csyntax.typ * string * Newspeak.location) list
-val add_global: t -> string -> Npkil.ginfo -> unit
 
 val get_ret_typ: t -> Csyntax.typ
 val get_ret_name: unit -> string
 val get_ret_lbl: unit -> Newspeak.lbl
 val get_brk_lbl: unit -> Newspeak.lbl
-
-val update_funbody: t -> string -> Npkil.blk -> unit
-
-val update_ftyp: t -> string -> Npkil.ftyp -> unit
+val get_ftyp: t -> string -> Csyntax.ftyp
