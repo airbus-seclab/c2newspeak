@@ -244,7 +244,9 @@ let translate fname (_, cglbdecls, cfundefs) =
     let (lv, _) = translate_lv (Var x) in
     let lv = K.Shift (lv, K.exp_of_int offset) in
     let t = translate_scalar t in
-    let (e, _) = translate_exp e in
+    let (e, t') = translate_exp e in
+    let t' = translate_scalar t' in
+    let e = K.cast t' e t in
       (K.Set (lv, e, t), loc)
 
   and translate_stmt (x, loc) =
