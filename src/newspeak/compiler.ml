@@ -324,7 +324,11 @@ let translate fname (_, cglbdecls, cfundefs) =
     let ret_name = "value_of_"^f in
     let (ret_decl, ret_set) = 
       match (r, ret_t) with
-	  (None, _) -> ([], [])
+	  (None, Void) -> ([], [])
+	| (None, _) ->
+	    push loc (ret_t, ret_name);
+	    let ret_decl = (ret_t, ret_name, loc) in
+	      (ret_decl::[], [])
 	| (Some _, Void) -> 
 (* TODO: code cleanup: change error message *)
 	    Npkcontext.error "Compiler.translate_call" "No return value"
