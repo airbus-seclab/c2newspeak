@@ -55,6 +55,7 @@ let translate_unop op (e, t) =
 let translate_arithmop op =
   match op with
       Plus -> N.PlusI
+    | Minus -> N.MinusI
     | Mult -> N.MultI
     | _ -> 
 	Npkcontext.error "Compiler.translate_arithmop" 
@@ -118,7 +119,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   let translate_binop op (e1, t1) (e2, t2) =
     match (op, t1, t2) with
-	((Mult|Plus), Int k1, Int k2) -> 
+	((Mult|Plus|Minus), Int k1, Int k2) -> 
 	  let k1 = promote k1 in
 	  let k2 = promote k2 in
 	  let k = N.max_ikind k1 k2 in

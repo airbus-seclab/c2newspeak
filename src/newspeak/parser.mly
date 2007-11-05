@@ -62,7 +62,7 @@ let build_glbdecl is_extern (b, m) =
 %token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND AND PLUS PLUSPLUS STAR LT GT
+%token AMPERSAND AND MINUS PLUS PLUSPLUS STAR LT GT
 %token EOF
 
 %token <string> IDENTIFIER
@@ -77,7 +77,7 @@ let build_glbdecl is_extern (b, m) =
 
 %left AND
 %left LT GT EQEQ NOTEQ
-%left PLUS
+%left PLUS MINUS
 %left STAR
 
 %type <Bare_csyntax.prog> translation_unit
@@ -194,6 +194,7 @@ expression:
 | left_value                               { Lval $1 }
 | expression AND expression                { And ($1, $3) }
 | expression PLUS expression               { Binop (Plus, $1, $3) }
+| expression MINUS expression              { Binop (Minus, $1, $3) }
 | expression STAR expression               { Binop (Mult, $1, $3) }
 | expression GT expression                 { Binop (Gt, $1, $3) }
 | expression LT expression                 { Binop (Gt, $3, $1) }

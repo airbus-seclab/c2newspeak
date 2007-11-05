@@ -127,6 +127,7 @@ rule token = parse
 (* operators *)
   | "&"                 { AMPERSAND }
   | "+"                 { PLUS }
+  | "-"                 { MINUS }
   | "++"                { PLUSPLUS }
   | "&&"                { AND }
   | "*"                 { STAR }

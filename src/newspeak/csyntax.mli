@@ -88,6 +88,7 @@ and unop =
 
 and binop =
     | Plus
+    | Minus
     | Mult
     | Gt
     | Eq
