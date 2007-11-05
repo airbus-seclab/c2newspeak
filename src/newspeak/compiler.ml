@@ -142,7 +142,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	      
       | _ -> 
 	  Npkcontext.error "Compiler.translate_binop" 
-	    "unexpected binary operator and arguments"
+	    "Unexpected binary operator and arguments"
   in
 
   let rec translate_lv lv =

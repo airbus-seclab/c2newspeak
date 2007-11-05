@@ -106,3 +106,8 @@ let size_of_ityp t =
     | Int -> Config.size_of_int
     | Long -> Config.size_of_long
     | LongLong -> Config.size_of_longlong
+
+let negate e = 
+  match e with
+      Const i when i <> Int64.min_int -> Const (Int64.neg i)
+    | _ -> Binop (Minus, Const Int64.zero, e)

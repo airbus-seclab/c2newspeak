@@ -692,6 +692,10 @@ object
 	Shift (lv, Const CInt64 x) when Int64.compare x Int64.zero = 0 -> lv
       | _ -> x
 
+  (* TODO: generatlization of all this: do the operations with bignums
+     and then come back to Int64 *)
+  (* TODO: should use string to representer constants, not Int64, since 
+     not all unsigned long long can be represented *)
   method process_exp e =
     match e with
 	BinOp (MultI, Const CInt64 x, Const CInt64 y) 
@@ -704,6 +708,12 @@ object
       | BinOp (PlusI, Const CInt64 x, e) | BinOp (PlusI, e, Const CInt64 x) 
       | BinOp (PlusPI, e, Const CInt64 x) 
 	    when (Int64.compare x Int64.zero = 0) -> e
+
+      | BinOp (MinusI, Const CInt64 x, Const CInt64 y) 
+	when (Int64.compare x Int64.zero = 0)
+	  && (Int64.compare y Int64.min_int <> 0) ->
+	  Const (CInt64 (Int64.neg  y))
+
       | _ -> e
 end
 

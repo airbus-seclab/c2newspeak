@@ -191,6 +191,7 @@ left_value:
 
 expression:
   INTEGER                                  { Const $1 }
+| MINUS expression                         { negate $2 }
 | left_value                               { Lval $1 }
 | expression AND expression                { And ($1, $3) }
 | expression PLUS expression               { Binop (Plus, $1, $3) }

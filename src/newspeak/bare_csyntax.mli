@@ -99,3 +99,5 @@ and exp =
 and cst = Int64.t
 
 val size_of_ityp: ityp -> int
+
+val negate: exp -> exp
