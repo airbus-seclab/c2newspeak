@@ -26,13 +26,20 @@
   email: olivier.levillain@penjili.org
 *)
 
-type t
+(* TODO: hide this, cleanup this implementation *)
+type t = {
+  fun_env: Csyntax.fundefs;
+  global_env: Csyntax.glbdecls;
+  local_env: (string, int * Csyntax.typ * Newspeak.location) Hashtbl.t;
+  mutable vcnt: int
+}
 
 val create: (Csyntax.glbdecls * Csyntax.fundefs) -> t
 
 val push: t -> string -> Csyntax.typ -> Newspeak.location -> unit
 val pop: t -> string -> unit
-val get_var: t -> string -> (Npkil.lval * Csyntax.typ)
+val get_ret: t -> (int * Csyntax.typ)
+val get_var: t -> int -> Npkil.lval
 val get_locals: t -> (Csyntax.typ * string * Newspeak.location) list
 
 val get_ret_typ: t -> Csyntax.typ

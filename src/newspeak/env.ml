@@ -26,6 +26,7 @@
   email: olivier.levillain@penjili.org
 *)
 
+(* TODO: code cleanup: remove unused functions *)
 type t = {
   fun_env: Csyntax.fundefs;
   global_env: Csyntax.glbdecls;
@@ -49,16 +50,7 @@ let pop env x =
   env.vcnt <- env.vcnt - 1;
   Hashtbl.remove env.local_env x
 
-let get_var env x =
-  try
-    let (n, t, _) = Hashtbl.find env.local_env x in
-      (Npkil.Local (env.vcnt - n), t)
-  with Not_found ->
-    try
-      let (t, _, _) = Hashtbl.find env.global_env x in
-	(Npkil.Global x, t)
-    with Not_found -> 
-      Npkcontext.error "Env.get_var" ("Variable "^x^" not declared")
+let get_var env x = Npkil.Local (env.vcnt - x)
 
 let get_locals env =
   let res = ref [] in
@@ -77,6 +69,9 @@ let get_ret_typ env =
       t
   with Not_found ->
     Npkcontext.error "Env.get_ret_typ" "Return variable not declared"
+
+(* TODO: code cleanup *)
+let get_ret env = (1, get_ret_typ env)
 
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1

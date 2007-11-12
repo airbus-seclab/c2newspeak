@@ -68,10 +68,60 @@ let seq_of_string str =
     !res
 
 let translate fname cprog =
+(* TODO: use Env!!! *)
   let typedefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
+(* TODO: have just an env! *)
+  let local_env = Hashtbl.create 100 in
+  let vcnt = ref 0 in
   let locals = ref [] in
+
+  let add_local x t loc = locals := (t, x, loc)::!locals in
+  let get_locals () =
+    let x = !locals in
+      locals := [];
+      vcnt := 0;
+      x
+  in
+(* TODO: don't use vcnt ??? Do not correspond !!! *)
+  let typ_of_fun f =
+    let (t, _, _) = Hashtbl.find fundefs f in
+      t
+  in
+
+  let push_var x t loc = 
+    incr vcnt;
+    Hashtbl.add local_env x (!vcnt, t, loc);
+    !vcnt
+  in
+  let pop_var x = 
+    Hashtbl.remove local_env x 
+  in
+
+(* TODO: code cleanup, use Env always *)
+  let push_formals (args, t) loc =
+    let _ = push_var (Env.get_ret_name ()) t loc in
+      List.iter (fun (t, x) -> let _ = push_var x t loc in ()) args
+  in
+(* TODO: code cleanup, this is probably unnecessary *)
+  let pop_formals (args, _) =
+    List.iter (fun (_, x) -> pop_var x) args;
+    pop_var (Env.get_ret_name ())
+  in
+
+  let get_var x = 
+    try 
+      let (n, t, _) = Hashtbl.find local_env x in
+	(C.Local (n, t), t)
+    with Not_found -> 
+      try 
+	let (t, _, _) = Hashtbl.find glbdecls x in
+	  (C.Global (x, t), t)
+      with Not_found ->
+	Npkcontext.error "Firstpass.translate.typ_of_var" 
+	  ("Unknown variable "^x)
+  in
 
   let rec translate_decl (b, v) =
     let b = translate_base_typ b in
@@ -144,23 +194,54 @@ let translate fname cprog =
     
   let rec translate_lv x =
     match x with
-	Var x -> C.Var x
-      | Field (lv, f) -> C.Field (translate_lv lv, f)
-      | Index (lv, e) -> C.Index (translate_lv lv, translate_exp e)
-      | Deref e -> C.Deref (translate_exp e)
+	Var x -> get_var x
+      | Field (lv, f) -> 
+	  let (lv, t) = translate_lv lv in
+	  let r = C.fields_of_typ t in
+	  let (o, t) = List.assoc f r in
+	    (C.Field (lv, f, o), t)
+      | Index (lv, e) -> 
+	  let (lv, t) = translate_lv lv in
+	  let (t, _) = array_of_typ t in
+	  let (i, _) = translate_exp e in
+	    (C.Index (lv, i), t)
+      | Deref e -> 
+	  let (e, t) = translate_exp e in
+	  let t = deref_typ t in
+	    (C.Deref e, t)
 
   and translate_exp x =
     match x with
-	Const c -> C.Const c
-      | Lval lv -> C.Lval (translate_lv lv)
-      | AddrOf lv -> C.AddrOf (translate_lv lv) 
-      | Unop (op, e) -> C.Unop (op, translate_exp e)
-      | Binop (op, e1, e2) -> C.Binop (op, translate_exp e1, translate_exp e2)
-      | Call (f, args) -> C.Call (f, List.map translate_exp args)
-      | SizeofV x -> C.SizeofV x
+	Const i -> (C.Const i, C.typ_of_cst i)
+      | Lval lv -> 
+	  let (lv, t) = translate_lv lv in
+	    (C.Lval lv, t)
+      | AddrOf lv -> 
+	  let (lv, t) = translate_lv lv in
+	    (C.AddrOf lv, C.Ptr t) 
+      | Unop (op, e) -> 
+	  let (e, t) = translate_exp e in
+	  let t = C.typ_of_unop op in
+	    (C.Unop (op, e), t)
+      | Binop (op, e1, e2) -> 
+	  let (e1, t1) = translate_exp e1 in
+	  let (e2, t2) = translate_exp e2 in
+	  let t = C.typ_of_binop op t1 t2 in
+	    (C.Binop (op, e1, e2), t)
+      | Call (f, args) -> 
+	  let (_, t) = typ_of_fun f in
+	  let translate_arg x = 
+	    let (e, _) = translate_exp x in
+	      e
+	  in
+	    (C.Call (f, List.map translate_arg args), t)
+      | SizeofV x -> 
+	  let (e, _) = translate_exp (Lval (Var x)) in
+	    (C.Sizeof e, C.int_typ)
       | Sizeof d ->
 	  let (t, _) = translate_decl d in
 	  let sz = size_of t in
+(* TODO: should check that the size of all declarations is less than max_int *)
 	    translate_exp (Const (Int64.of_int sz))
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
@@ -169,7 +250,9 @@ let translate fname cprog =
   let translate_exp_option e =
     match e with
 	None -> None
-      | Some e -> Some (translate_exp e)
+      | Some e -> 
+	  let (e, _) = translate_exp e in
+	    Some e
   in
 
   let rec translate_init t x =
@@ -178,8 +261,9 @@ let translate fname cprog =
     let rec translate t x =
       match (x, t) with
 	  (Data e, _) -> 
-	    res := (!o, t, translate_exp e)::!res;
-	    t
+	    let (v, _) = translate_exp e in 
+	      res := (!o, t, v)::!res;
+	      t
 	| (Sequence seq, C.Array (t, sz)) -> 
 	    let n = 
 	      match sz with
@@ -194,8 +278,7 @@ let translate fname cprog =
 	      translate t (Sequence seq)
 
 	| (CstStr str, C.Ptr _) -> 
-	    let name = add_glb_cstr str in
-	    let e = C.AddrOf (C.Index (C.Var name, C.Const Int64.zero)) in
+	    let e = add_glb_cstr str in
 	      res := (!o, t, e)::!res;
 	      t
 
@@ -238,25 +321,42 @@ let translate fname cprog =
 	    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
 	      "This type of initialization not implemented yet"
     in
-      match x with
-	  None -> (t, None)
-	| Some x -> 	    
-	    let t = translate t x in
-	      (t, Some (List.rev !res))
+    match x with
+	None -> (t, None)
+      | Some init -> 
+	  let t = translate t init in
+	    (t, Some (List.rev !res))
 
   and add_glb_cstr str =
     let name = "!"^fname^".const_str_"^str in
-      if not (Hashtbl.mem glbdecls name) then begin
+    let t = C.Array (char_typ, None) in
+    let t =
+      if (Hashtbl.mem glbdecls name) then t
+      else begin
 	let loc = (fname, -1, -1) in
-	let t = C.Array (char_typ, None) in
 	let (t, init) = translate_init t (Some (CstStr str)) in
-	  Hashtbl.add glbdecls name (t, loc, Some init)
-      end;
-      name
+	  Hashtbl.add glbdecls name (t, loc, Some init);
+	  t
+      end
+    in
+      C.AddrOf (C.Index (C.Global (name, t), C.Const Int64.zero))
   in
-	  
+
   let rec translate_blk x =
     match x with
+      | (Decl (d, init), loc)::tl -> 
+	  Npkcontext.set_loc loc;
+	  let (t, x) = translate_decl d in
+	  let (t, init) = translate_init t init in
+	  let n = push_var x t loc in
+	  let tl = translate_blk tl in begin 
+	    pop_var x;
+	    add_local x t loc;
+	    match init with
+		None -> tl
+	      | Some init -> (C.Init ((n, t), init), loc)::tl
+	  end
+
       | hd::tl -> 
 	  let hd = translate_stmt hd in
 	  let tl = translate_blk tl in
@@ -268,8 +368,8 @@ let translate fname cprog =
     Npkcontext.set_loc loc;
     match x with
 	Set (lv, e) -> 
-	  let lv = translate_lv lv in
-	  let e = translate_exp e in
+	  let (lv, _) = translate_lv lv in
+	  let (e, _) = translate_exp e in
 	  (C.Set (lv, e), loc)::[]
 
       | If ((And (e1, e2), body, loc)::tl) ->
@@ -278,27 +378,32 @@ let translate fname cprog =
 
       | If branches -> 
 	  let translate_case (e, body, loc) = 
-	    (translate_exp e, translate_blk body, loc) 
+	    let (e, _) = translate_exp e in
+	      (e, translate_blk body, loc) 
 	  in
 	  let branches = List.map translate_case branches in
 	    (C.If branches, loc)::[]
 
       | While (e, body) ->
-	  let e = translate_exp e in
+	  let (e, _) = translate_exp e in
 	  let body = translate_blk body in
 	    (C.While (e, body), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
-	  let e = translate_exp e in
+	  let (e, _) = translate_exp e in
 	    (C.DoWhile (body, e), loc)::[]
 
-      | Return e -> (C.Return (translate_exp e), loc)::[]
+      | Return e -> 
+	  let (e, _) = translate_exp e in
+	  (C.Return e, loc)::[]
 
-      | Exp e -> (C.Exp (translate_exp e), loc)::[]
+      | Exp e -> 
+	  let (e, _) = translate_exp e in
+	    (C.Exp e, loc)::[]
 
       | Switch (e, cases) -> 
-	  let e = translate_exp e in
+	  let (e, _) = translate_exp e in
 	  let translate_case (e, body, loc) = 
 	    (translate_exp_option e, translate_blk body, loc) 
 	  in
@@ -309,14 +414,9 @@ let translate fname cprog =
 
       | Block body -> translate_blk body
 
-      | Decl (d, init) -> 
-	  Npkcontext.set_loc loc;
-	  let (t, x) = translate_decl d in
-	  let (t, init) = translate_init t init in
-	    locals := ((t, x), loc)::!locals;
-	    match init with
-		None -> []
-	      | Some init -> (C.Init (x, init), loc)::[]
+      | Decl _ -> 
+	  Npkcontext.error "Firstpass.translate.translate_stmt" 
+	    "Unreachable statement"
   in
 
 (* TODO: code cleanup: put in Csyntax, change function name!!! *)
@@ -348,10 +448,14 @@ let translate fname cprog =
 	FunctionDef (x, body) ->
 	  let (t, x) = translate_decl x in
 	  let ft = C.ftyp_of_typ t in
+	  let () = push_formals ft loc in
 	  let body = translate_blk body in
-	  let decls = List.rev !locals in
-	    locals := [];
-	    update_fundef x (ft, loc, Some (decls, body))
+(*
+	  let () = pop_formals ft in*)
+(* TODO: cleanup *)
+	    Hashtbl.clear local_env;
+	  let locals = get_locals () in
+	    update_fundef x (ft, loc, Some (locals, body))
 
       | GlbDecl (is_extern, _, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"

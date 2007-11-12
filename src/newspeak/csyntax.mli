@@ -31,14 +31,13 @@ and composites = (string, typ) Hashtbl.t
 (* first None is for extern, second None for no init *)
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
 
-and fundefs = 
-    (string, ftyp * location * ((decl * location) list * blk) option) Hashtbl.t
+and fundefs = (string, ftyp * location * body option) Hashtbl.t
 
-and decl = (typ * string)
+and body = (typ * string * location) list * blk
 
 and init = (int * typ * exp) list
 
-and ftyp = decl list * typ
+and ftyp = (typ * string) list * typ
 
 and typ =
     | Void
@@ -58,7 +57,7 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-    | Init of (string * init)
+    | Init of ((int * typ) * init)
     | Set of (lv * exp)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
@@ -69,8 +68,9 @@ and stmtkind =
     | Break
 
 and lv = 
-    | Var of string
-    | Field of (lv * string)
+    | Local of (int * typ)
+    | Global of (string * typ)
+    | Field of (lv * string * int)
     | Index of (lv * exp)
     | Deref of exp
 
@@ -81,7 +81,7 @@ and exp =
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
-    | SizeofV of string
+    | Sizeof of exp
 
 and unop = 
     | Not
@@ -107,3 +107,11 @@ val size_of: typ -> int
 
 (* TODO: this is a bit of a hack, think about it *)
 val undefined: string
+
+val int_typ: typ
+
+val typ_of_cst: cst -> typ
+
+val typ_of_unop: unop -> typ
+
+val typ_of_binop: binop -> typ -> typ -> typ

@@ -147,12 +147,15 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   let rec translate_lv lv =
     match lv with
-	Var x -> get_var x
+(* TODO: code cleanup *)
+	Local (x, t) -> (Env.get_var env x, t)
 
-      | Field (lv, f) ->
+      | Global (x, t) -> (K.Global x, t)
+
+      | Field (lv, f, o) ->
 	  let (lv, t) = translate_lv lv in
 	  let r = fields_of_typ t in
-	  let (o, t) = List.assoc f r in
+	  let (_, t) = List.assoc f r in
 	  let o = K.Const (N.CInt64 (Int64.of_int o)) in
 	    (K.Shift (lv, o), t)
 
@@ -210,8 +213,8 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let v2 = translate_exp e2 in
 	    translate_binop op v1 v2
 
-      | SizeofV x -> 
-	  let (_, t) = get_var x in
+      | Sizeof e -> 
+	  let (_, t) = translate_exp e in
 	  let i = size_of t in
 	    (K.exp_of_int i, Int (kind_of_int64 (Int64.of_int i)))
 
@@ -242,7 +245,7 @@ let translate fname (_, cglbdecls, cfundefs) =
       (K.Set (lv, e, t), loc)
     
   and translate_local_init loc x (offset, t, e) =
-    let (lv, _) = translate_lv (Var x) in
+    let (lv, _) = translate_lv (Local x) in
     let lv = K.Shift (lv, K.exp_of_int offset) in
     let t = translate_scalar t in
     let (e, t') = translate_exp e in
@@ -297,16 +300,19 @@ let translate fname (_, cglbdecls, cfundefs) =
       | Return (Call x) -> 
 	  let t = get_ret_typ () in
 	  let () = push loc (t, "tmp") in
-	  let (lv, t) = translate_lv (Var (Env.get_ret_name ())) in
+(* TODO: code cleanup *)
+	  let (lv, t) = translate_lv (Local (Env.get_ret env)) in
 	  let decl = (t, "tmp", Newspeak.dummy_loc fname)::[] in
-	  let call = translate_call loc (Some (Var "tmp")) x in
+(* TODO: code cleanup *)
+	  let call = translate_call loc (Some (Local (env.Env.vcnt, t))) x in
 	  let t = translate_scalar t in
 	  let set = (K.Set (lv, K.Lval (K.Local 0, t), t), loc)::[] in
 	    pop "tmp";
 	    append_decls decl (call@set)
 
       | Return e -> 
-	  let set = translate_set loc (Var (Env.get_ret_name ()), e) in
+(* TODO: code cleanup *)
+	  let set = translate_set loc (Local (Env.get_ret env), e) in
 	  let lbl = Env.get_ret_lbl () in
 	    set::(K.Goto lbl, loc)::[]
 
@@ -336,7 +342,8 @@ let translate fname (_, cglbdecls, cfundefs) =
 	| (Some lv, _) -> 
 	    push loc (ret_t, ret_name);
 	    let ret_decl = (ret_t, ret_name, loc) in
-	    let ret_set = translate_set loc (lv, Lval (Var ret_name)) in
+(* TODO: code cleanup, merge with push ?? *)
+	    let ret_set = translate_set loc (lv, Lval (Local (env.Env.vcnt, ret_t))) in
 	      (ret_decl::[], ret_set::[])
     in
       List.iter (push loc) args_t;
@@ -347,8 +354,12 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  ("Different types for function "^f)
       end;
 
+(* TODO: code cleanup: merge with push *)
+      let (decls, sets) = translate_args loc args_t args_exp in
+(*
       let decls_sets = List.map2 (translate_arg loc) args_t args_exp in
       let (decls, sets) = List.split decls_sets in
+*)
 	pop ret_name;
 	List.iter (fun (_, x) -> pop x) args_t;
 	
@@ -361,10 +372,21 @@ let translate fname (_, cglbdecls, cfundefs) =
 	let call = append_decls ret_decl call in
 	  call
 
-  and translate_arg loc (t, x) e = 
-    let decl = (t, x, loc) in
-    let set = translate_set loc (Var x, e) in
-      (decl, set)
+(* TODO: code cleanup *)
+  and translate_args loc args_t args_e =
+    let rec translate args_t args_e =
+    match (args_t, args_e) with
+	((t, x)::args_t, e::args_e) ->
+	  let decl = (t, x, loc) in
+	  let (decls, sets, n) = translate args_t args_e in
+	  let set = translate_set loc (Local ((env.Env.vcnt - n), t), e) in
+	    (decl::decls, set::sets, n+1)
+
+      | ([], []) -> ([], [], 0)
+      | _ -> invalid_arg "Unreachable statement"
+    in
+    let (decls, sets, _) = translate args_t args_e in
+      (decls, sets)
 
   and translate_switch loc e cases =
     let (switch_exp, _) = translate_exp e in
@@ -446,13 +468,16 @@ let translate fname (_, cglbdecls, cfundefs) =
 	| Some (locals, body) ->
 	    push loc (t, Env.get_ret_name ());
 	    List.iter (push loc) args;
-	    List.iter (fun (d, loc) -> push loc d) locals;
+(* TODO: change arguments organisation of push arguments to avoid currification *)
+	    List.iter (fun (t, x, loc) -> push loc (t, x)) locals;
 	    let body = translate_blk body in
 	      List.iter pop args_name;
 	      pop (Env.get_ret_name ());
 	      let body = (K.DoWith (body, Env.get_ret_lbl (), []), loc)::[] in
+(* TODO: code cleanup, this is strange *)
 	      let decls = Env.get_locals env in
 	      let body = append_decls decls body in
+		List.iter (fun (t, x, loc) -> pop x) locals;
 		Some body
     in
     let ft = translate_ftyp (args_t, t) in
