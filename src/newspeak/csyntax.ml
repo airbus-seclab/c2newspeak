@@ -36,7 +36,7 @@ and fundefs = (string, ftyp * location * body option) Hashtbl.t
 
 and body = (typ * string * location) list * blk
 
-and init = (int * typ * exp) list
+and init = (int * typ * typ_exp) list
 
 and ftyp = (typ * string) list * typ
 
@@ -61,26 +61,30 @@ and stmtkind =
 (* TODO: remove Init *)
     | Init of ((int * typ) * init)
     | Set of (lv * exp)
-    | If of (exp * blk * location) list
+    | If of (typ_exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
-    | While of (exp * blk)
-    | DoWhile of (blk * exp)
+    | While of (typ_exp * blk)
+    | DoWhile of (blk * typ_exp)
     | Return of exp
     | Exp of exp
     | Break
 	
+(* TODO: put it as a scalar ?? *)
+and typ_exp = (exp * typ)
+
 and lv = 
-(* TODO: remove typ *)
+(* TODO: remove typ ? *)
     | Local of (int * typ)
-(* TODO: remove typ *)
+(* TODO: remove typ ? *)
     | Global of (string * typ)
     | Field of (lv * string * int)
     | Index of (lv * exp)
-    | Deref of exp
+    | Deref of (exp * int)
 
 and exp = 
     | Const of cst
     | Lval of lv
+(* TODO: remove typ ? *)
     | AddrOf of lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)

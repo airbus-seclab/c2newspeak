@@ -48,9 +48,9 @@ let promote k =
       (_, n) when n < Config.size_of_int -> (N.Signed, Config.size_of_int)
     | _ -> k
 
-let translate_unop op (e, t) =
+let translate_unop op e =
   match op with
-      Not -> (K.UnOp (K.Not, e), Int (N.Signed, Config.size_of_int))
+      Not -> (K.UnOp (K.Not, e), int_typ)
 
 let translate_arithmop op =
   match op with
@@ -168,13 +168,13 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let o = K.BinOp (N.MultI, o, sz) in
 	    (K.Shift (lv, o), t)
 
-      | Deref e ->
+      | Deref (e, sz) ->
 	  let (e, t) = translate_exp e in
 	  let t = deref_typ t in
-	    (K.Deref (e, size_of t), t)
+	    (K.Deref (e, sz), t)
 
-  and translate_bexp e =
-    let (e, t) = translate_exp e in
+  and translate_bexp (e, t) =
+    let (e, _) = translate_exp e in
     let t = translate_scalar t in
       match (e, t) with
 	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero))
@@ -205,8 +205,8 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    (K.AddrOf (lv, K.Known sz), Ptr t)
 
       | Unop (op, e) -> 
-	  let v = translate_exp e in
-	    translate_unop op v
+	  let (e, _) = translate_exp e in
+	    translate_unop op e
 
       | Binop (op, e1, e2) ->
 	  let v1 = translate_exp e1 in
@@ -244,14 +244,14 @@ let translate fname (_, cglbdecls, cfundefs) =
     let e = K.cast t' e t in
       (K.Set (lv, e, t), loc)
     
-  and translate_local_init loc x (offset, t, e) =
+  and translate_local_init loc x (offset, t', (e, t)) =
     let (lv, _) = translate_lv (Local x) in
     let lv = K.Shift (lv, K.exp_of_int offset) in
+    let (e, _) = translate_exp e in
     let t = translate_scalar t in
-    let (e, t') = translate_exp e in
     let t' = translate_scalar t' in
-    let e = K.cast t' e t in
-      (K.Set (lv, e, t), loc)
+    let e = K.cast t e t' in
+      (K.Set (lv, e, t'), loc)
 
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
@@ -443,10 +443,14 @@ let translate fname (_, cglbdecls, cfundefs) =
 	None -> None 
       | Some None -> Some None
       | Some Some init ->
-	  let translate (o, t, e) = 
+	  (* TODO: code factorisation with the local init ??? *)
+	  let translate (o, t', (e, t)) = 
 	    (* TODO: should I take t, or translate the one I get from e ??? *)
 	    let (e, _) = translate_exp e in
-	      (o, translate_scalar t, e)
+	    let t = translate_scalar t in
+	    let t' = translate_scalar t' in
+	    let e = K.cast t e t' in
+	      (o, t', e)
 	  in
 	  let init = List.map translate init in
 	    Some (Some init)

@@ -208,7 +208,7 @@ let translate fname cprog =
       | Deref e -> 
 	  let (e, t) = translate_exp e in
 	  let t = deref_typ t in
-	    (C.Deref e, t)
+	    (C.Deref (e, size_of t), t)
 
   and translate_exp x =
     match x with
@@ -261,9 +261,10 @@ let translate fname cprog =
     let rec translate t x =
       match (x, t) with
 	  (Data e, _) -> 
-	    let (v, _) = translate_exp e in 
-	      res := (!o, t, v)::!res;
+	    let e = translate_exp e in 
+	      res := (!o, t, e)::!res;
 	      t
+
 	| (Sequence seq, C.Array (t, sz)) -> 
 	    let n = 
 	      match sz with
@@ -309,7 +310,7 @@ let translate fname cprog =
 
     and fill_with_zeros t =
       match t with
-	  C.Int _ -> res := (!o, t, C.Const Int64.zero)::!res
+	  C.Int _ -> res := (!o, t, (C.Const Int64.zero, t))::!res
 	| C.Array (t, Some n) -> 
 	    let sz = C.size_of t in
 	      for i = 0 to n - 1 do
@@ -339,7 +340,7 @@ let translate fname cprog =
 	  t
       end
     in
-      C.AddrOf (C.Index (C.Global (name, t), C.Const Int64.zero))
+      (C.AddrOf (C.Index (C.Global (name, t), C.Const Int64.zero)), C.Ptr t)
   in
 
   let rec translate_blk x =
@@ -378,20 +379,19 @@ let translate fname cprog =
 
       | If branches -> 
 	  let translate_case (e, body, loc) = 
-	    let (e, _) = translate_exp e in
-	      (e, translate_blk body, loc) 
+	    (translate_exp e, translate_blk body, loc) 
 	  in
 	  let branches = List.map translate_case branches in
 	    (C.If branches, loc)::[]
 
       | While (e, body) ->
-	  let (e, _) = translate_exp e in
+	  let e = translate_exp e in
 	  let body = translate_blk body in
 	    (C.While (e, body), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
-	  let (e, _) = translate_exp e in
+	  let e = translate_exp e in
 	    (C.DoWhile (body, e), loc)::[]
 
       | Return e -> 
