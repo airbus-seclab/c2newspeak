@@ -67,6 +67,28 @@ let seq_of_string str =
     done;
     !res
 
+let kind_of_arithmop k1 k2 =
+  let k1 = C.promote k1 in
+  let k2 = C.promote k2 in
+    Newspeak.max_ikind k1 k2
+
+let translate_unop op = 
+  match op with
+      Not -> C.Not
+
+let translate_binop op t1 t2 =
+  match (op, t1, t2) with
+      (Mult, C.Int k1, C.Int k2) -> C.Mult (kind_of_arithmop k1 k2)
+    | (Plus, C.Int k1, C.Int k2) -> C.Plus (kind_of_arithmop k1 k2)
+    | (Minus, C.Int k1, C.Int k2) -> C.Minus (kind_of_arithmop k1 k2)
+    | (Plus, C.Ptr t, C.Int _) -> C.PlusP t
+    | (Gt, _, _) when t1 = t2 -> C.Gt t1
+    | (Eq, _, _) when t1 = t2 -> C.Eq t1
+    | _ ->
+	Npkcontext.error "Csyntax.type_of_binop" 
+	  "Unexpected binary operator and arguments"
+
+
 let translate fname cprog =
 (* TODO: use Env!!! *)
   let typedefs = Hashtbl.create 100 in
@@ -221,12 +243,14 @@ let translate fname cprog =
 	    (C.AddrOf lv, C.Ptr t) 
       | Unop (op, e) -> 
 	  let (e, t) = translate_exp e in
+	  let op = translate_unop op in
 	  let t = C.typ_of_unop op in
 	    (C.Unop (op, e), t)
       | Binop (op, e1, e2) -> 
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
-	  let t = C.typ_of_binop op t1 t2 in
+	  let op = translate_binop op t1 t2 in
+	  let t = C.typ_of_binop op in
 	    (C.Binop (op, e1, e2), t)
       | Call (f, args) -> 
 	  let (_, t) = typ_of_fun f in

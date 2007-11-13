@@ -91,11 +91,12 @@ and unop =
     | Not
 
 and binop =
-    | Plus
-    | Minus
-    | Mult
-    | Gt
-    | Eq
+    | Plus of ikind 
+    | Minus of ikind
+    | Mult of ikind
+    | PlusP of typ
+    | Gt of typ
+    | Eq of typ
 
 and cst = Int64.t
 
@@ -118,4 +119,6 @@ val typ_of_cst: cst -> typ
 
 val typ_of_unop: unop -> typ
 
-val typ_of_binop: binop -> typ -> typ -> typ
+val typ_of_binop: binop -> typ
+
+val promote: ikind -> ikind

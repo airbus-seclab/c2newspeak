@@ -43,23 +43,9 @@ let kind_of_int64 i =
   in
     (sign, Config.size_of_int)
 
-let promote k = 
-  match k with
-      (_, n) when n < Config.size_of_int -> (N.Signed, Config.size_of_int)
-    | _ -> k
-
 let translate_unop op e =
   match op with
       Not -> (K.UnOp (K.Not, e), int_typ)
-
-let translate_arithmop op =
-  match op with
-      Plus -> N.PlusI
-    | Minus -> N.MinusI
-    | Mult -> N.MultI
-    | _ -> 
-	Npkcontext.error "Compiler.translate_arithmop" 
-	  "Unexpected arithmetic operator"
 
 let translate_array lv a =
   let (t, n) = array_of_typ a in
@@ -117,32 +103,28 @@ let translate fname (_, cglbdecls, cfundefs) =
       (args, ret)
   in
 
-  let translate_binop op (e1, t1) (e2, t2) =
-    match (op, t1, t2) with
-	((Mult|Plus|Minus), Int k1, Int k2) -> 
-	  let k1 = promote k1 in
-	  let k2 = promote k2 in
-	  let k = N.max_ikind k1 k2 in
-	  let e1 = K.make_int_coerce k e1 in
-	  let e2 = K.make_int_coerce k e2 in
-	  let op = translate_arithmop op in
-	    (K.make_int_coerce k (K.BinOp (op, e1, e2)), Int k)
-	      
-      | (Plus, Ptr t, Int _) ->	
-	  let stride = K.exp_of_int (size_of t) in 
-	    (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), t1)
-	      (* TODO: clean bug ? maybe a cast is necessary ? *)
-      | (Gt, _, _) -> 
-	  let t = Int (N.Signed, Config.size_of_int) in
-	    (K.BinOp (N.Gt (translate_scalar t1), e1, e2), t)
-	      
-      | (Eq, t1, t2) when t1 = t2 -> 
-	  let t = translate_scalar t1 in
-	    (K.BinOp (N.Eq t, e1, e2), Int (N.Signed, Config.size_of_int))
-	      
-      | _ -> 
-	  Npkcontext.error "Compiler.translate_binop" 
-	    "Unexpected binary operator and arguments"
+  let translate_binop op e1 e2 =
+    let translate_arithmop op k = 
+      let e1 = K.make_int_coerce k e1 in
+      let e2 = K.make_int_coerce k e2 in
+	(K.make_int_coerce k (K.BinOp (op, e1, e2)), Int k)
+    in
+
+      match op with
+	  Mult k -> translate_arithmop N.MultI k
+	| Plus k -> translate_arithmop N.PlusI k
+	| Minus k -> translate_arithmop N.MinusI k
+	| PlusP t ->	
+	    let stride = K.exp_of_int (size_of t) in 
+	      (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), Ptr t)
+		(* TODO: clean bug ? maybe a cast is necessary ? *)
+	| Gt t -> 
+	    let t = translate_scalar t in
+	      (K.BinOp (N.Gt t, e1, e2), int_typ)
+	    
+	| Eq t -> 
+	    let t = translate_scalar t in
+	      (K.BinOp (N.Eq t, e1, e2), int_typ)
   in
 
   let rec translate_lv lv =
@@ -209,9 +191,9 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    translate_unop op e
 
       | Binop (op, e1, e2) ->
-	  let v1 = translate_exp e1 in
-	  let v2 = translate_exp e2 in
-	    translate_binop op v1 v2
+	  let (e1, _) = translate_exp e1 in
+	  let (e2, _) = translate_exp e2 in
+	    translate_binop op e1 e2
 
       | Sizeof e -> 
 	  let (_, t) = translate_exp e in

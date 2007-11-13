@@ -23,7 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 open Newspeak
-open Csyntax
 
 type prog = (global * location) list
 
@@ -98,6 +97,15 @@ and exp =
     | SizeofV of string
 
 and cst = Int64.t
+
+and unop = Not
+
+and binop =
+    | Plus
+    | Minus
+    | Mult
+    | Gt
+    | Eq
 
 let size_of_ityp t =
   match t with

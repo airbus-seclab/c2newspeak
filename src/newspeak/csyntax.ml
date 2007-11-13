@@ -95,11 +95,12 @@ and unop =
     | Not
 
 and binop =
-    | Plus
-    | Minus
-    | Mult
-    | Gt
-    | Eq
+    | Plus of ikind
+    | Minus of ikind
+    | Mult of ikind
+    | PlusP of typ
+    | Gt of typ
+    | Eq of typ
 
 and cst = Int64.t
 
@@ -148,24 +149,17 @@ let typ_of_cst i =
 
 let int_typ = Int (Signed, Config.size_of_int)
 
-let typ_of_unop op =
-  match op with
-      Not -> int_typ
-
 let promote k = 
   match k with
       (_, n) when n < Config.size_of_int -> (Signed, Config.size_of_int)
     | _ -> k
 
-let typ_of_binop op t1 t2 =
-  match (op, t1, t2) with
-      ((Mult|Plus|Minus), Int k1, Int k2) ->
-	let k1 = promote k1 in
-	let k2 = promote k2 in
-	let k = max_ikind k1 k2 in
-	  Int k
-    | (Plus, Ptr _, Int _) -> t1
-    | ((Gt|Eq), _, _) -> int_typ
-    | _ ->
-	Npkcontext.error "Csyntax.type_of_binop" 
-	  "Unexpected binary operator and arguments"
+let typ_of_unop op =
+  match op with
+      Not -> int_typ
+
+let typ_of_binop op =
+  match op with
+      Mult k | Plus k | Minus k -> Int k
+    | PlusP t -> Ptr t
+    | Gt _ | Eq _ -> int_typ
