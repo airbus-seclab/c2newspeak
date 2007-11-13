@@ -38,7 +38,7 @@ val create: (Csyntax.glbdecls * Csyntax.fundefs) -> t
 
 val push: t -> string -> Csyntax.typ -> Newspeak.location -> unit
 val pop: t -> string -> unit
-val get_ret: t -> (int * Csyntax.typ)
+val get_ret: t -> int
 val get_var: t -> int -> Npkil.lval
 val get_locals: t -> (Csyntax.typ * string * Newspeak.location) list
 

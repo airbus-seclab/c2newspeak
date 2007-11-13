@@ -71,7 +71,7 @@ let get_ret_typ env =
     Npkcontext.error "Env.get_ret_typ" "Return variable not declared"
 
 (* TODO: code cleanup *)
-let get_ret env = (1, get_ret_typ env)
+let get_ret env = 1
 
 let get_ret_lbl () = 0
 let get_brk_lbl () = 1

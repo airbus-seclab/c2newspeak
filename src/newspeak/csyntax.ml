@@ -59,37 +59,35 @@ and stmt = (stmtkind * location)
 
 and stmtkind =
 (* TODO: remove Init *)
-    | Init of ((int * typ) * init)
-    | Set of (lv * exp)
+    | Init of (int * init)
+    | Set of (typ_lv * typ_exp)
     | If of (typ_exp * blk * location) list
-    | Switch of (exp * (exp option * blk * location) list)
+    | Switch of (exp * (typ_exp option * blk * location) list)
     | While of (typ_exp * blk)
     | DoWhile of (blk * typ_exp)
-    | Return of exp
+    | Return of typ_exp
     | Exp of exp
     | Break
 	
 (* TODO: put it as a scalar ?? *)
 and typ_exp = (exp * typ)
 
+and typ_lv = (lv * typ)
+
 and lv = 
-(* TODO: remove typ ? *)
-    | Local of (int * typ)
-(* TODO: remove typ ? *)
-    | Global of (string * typ)
+    | Local of int
+    | Global of string
     | Field of (lv * string * int)
-    | Index of (lv * exp)
+    | Index of (lv * array_t * exp)
     | Deref of (exp * int)
 
 and exp = 
     | Const of cst
-    | Lval of lv
-(* TODO: remove typ ? *)
-    | AddrOf of lv
+    | Lval of typ_lv
+    | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
-    | Call of (string * exp list)
-    | Sizeof of exp
+    | Call of (string * typ_exp list)
 
 and unop = 
     | Not
@@ -163,3 +161,5 @@ let typ_of_binop op =
       Mult k | Plus k | Minus k -> Int k
     | PlusP t -> Ptr t
     | Gt _ | Eq _ -> int_typ
+
+let exp_of_int n = Const (Int64.of_int n)

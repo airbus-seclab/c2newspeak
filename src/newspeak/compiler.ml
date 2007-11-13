@@ -45,10 +45,9 @@ let kind_of_int64 i =
 
 let translate_unop op e =
   match op with
-      Not -> (K.UnOp (K.Not, e), int_typ)
+      Not -> K.UnOp (K.Not, e)
 
-let translate_array lv a =
-  let (t, n) = array_of_typ a in
+let translate_array lv (t, n) =
   let n =
     match (n, lv) with
 	(Some n, _) -> K.Known n
@@ -107,7 +106,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     let translate_arithmop op k = 
       let e1 = K.make_int_coerce k e1 in
       let e2 = K.make_int_coerce k e2 in
-	(K.make_int_coerce k (K.BinOp (op, e1, e2)), Int k)
+	K.make_int_coerce k (K.BinOp (op, e1, e2))
     in
 
       match op with
@@ -116,47 +115,45 @@ let translate fname (_, cglbdecls, cfundefs) =
 	| Minus k -> translate_arithmop N.MinusI k
 	| PlusP t ->	
 	    let stride = K.exp_of_int (size_of t) in 
-	      (K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride)), Ptr t)
-		(* TODO: clean bug ? maybe a cast is necessary ? *)
+	      K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
+	
+	(* TODO: clean bug ? maybe a cast is necessary ? *)
 	| Gt t -> 
 	    let t = translate_scalar t in
-	      (K.BinOp (N.Gt t, e1, e2), int_typ)
-	    
+	      K.BinOp (N.Gt t, e1, e2)
+	   
 	| Eq t -> 
 	    let t = translate_scalar t in
-	      (K.BinOp (N.Eq t, e1, e2), int_typ)
+	      K.BinOp (N.Eq t, e1, e2)
   in
 
   let rec translate_lv lv =
     match lv with
 (* TODO: code cleanup *)
-	Local (x, t) -> (Env.get_var env x, t)
+	Local x -> Env.get_var env x
 
-      | Global (x, t) -> (K.Global x, t)
+      | Global x -> K.Global x
 
       | Field (lv, f, o) ->
-	  let (lv, t) = translate_lv lv in
-	  let r = fields_of_typ t in
-	  let (_, t) = List.assoc f r in
-	  let o = K.Const (N.CInt64 (Int64.of_int o)) in
-	    (K.Shift (lv, o), t)
+	  let lv = translate_lv lv in
+	  let o = K.exp_of_int o in
+	    K.Shift (lv, o)
 
-      | Index (lv, e) -> 
-	  let (lv, t) = translate_lv lv in
-	  let (t, n) = translate_array lv t in
-	  let (i, _) = translate_exp e in
+      | Index (lv, a, e) -> 
+	  let lv = translate_lv lv in
+	  let (t, n) = translate_array lv a in
+	  let i = translate_exp e in
 	  let sz = K.exp_of_int (size_of t) in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, K.Decr n), i) in
 	  let o = K.BinOp (N.MultI, o, sz) in
-	    (K.Shift (lv, o), t)
+	    K.Shift (lv, o)
 
       | Deref (e, sz) ->
-	  let (e, t) = translate_exp e in
-	  let t = deref_typ t in
-	    (K.Deref (e, sz), t)
+	  let e = translate_exp e in
+	    K.Deref (e, sz)
 
   and translate_bexp (e, t) =
-    let (e, _) = translate_exp e in
+    let e = translate_exp e in
     let t = translate_scalar t in
       match (e, t) with
 	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero))
@@ -164,41 +161,36 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   and translate_exp e =
     match e with
-	Const i -> (K.Const (N.CInt64 i), Int (kind_of_int64 i))
+	Const i -> K.Const (N.CInt64 i)
 
-      | Lval lv -> 
-	  let (lv, t) = translate_lv lv in
-	    (K.Lval (lv, translate_scalar t), t)
+      | Lval (lv, t) -> 
+	  let lv = translate_lv lv in
+	    K.Lval (lv, translate_scalar t)
 
-      | AddrOf Index (lv, e) ->
-	  let (lv, t) = translate_lv lv in
-	  let (i, _) = translate_exp e in
-	  let (t', n) = translate_array lv t in
-	  let sz = size_of t' in
-	  let sz_e = K.Const (N.CInt64 (Int64.of_int sz)) in
+      | AddrOf (Index (lv, a, e), _) ->
+	  let lv = translate_lv lv in
+	  let i = translate_exp e in
+	  let (t, n) = translate_array lv a in
+	  let sz = size_of t in
+	  let sz_e = K.exp_of_int sz in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), i) in
 	  let o = K.BinOp (N.MultI, o, sz_e) in
 	  let n = K.Mult (n, sz) in
-	    (K.BinOp (N.PlusPI, K.AddrOf (lv, n), o), Ptr t)
+	    K.BinOp (N.PlusPI, K.AddrOf (lv, n), o)
 
-      | AddrOf lv ->
-	  let (lv, t) = translate_lv lv in
+      | AddrOf (lv, t) ->
+	  let lv = translate_lv lv in
 	  let sz = size_of t in
-	    (K.AddrOf (lv, K.Known sz), Ptr t)
+	    K.AddrOf (lv, K.Known sz)
 
       | Unop (op, e) -> 
-	  let (e, _) = translate_exp e in
+	  let e = translate_exp e in
 	    translate_unop op e
 
       | Binop (op, e1, e2) ->
-	  let (e1, _) = translate_exp e1 in
-	  let (e2, _) = translate_exp e2 in
+	  let e1 = translate_exp e1 in
+	  let e2 = translate_exp e2 in
 	    translate_binop op e1 e2
-
-      | Sizeof e -> 
-	  let (_, t) = translate_exp e in
-	  let i = size_of t in
-	    (K.exp_of_int i, Int (kind_of_int64 (Int64.of_int i)))
 
       | Call _ -> 
 	  Npkcontext.error "Compiler.translate_exp" 
@@ -218,18 +210,18 @@ let translate fname (_, cglbdecls, cfundefs) =
 	hd::tl -> (translate_stmt hd)@(translate_blk tl)
       | [] -> []
 
-  and translate_set loc (lv, e) =
-    let (lv, t) = translate_lv lv in
-    let (e, t') = translate_exp e in
+  and translate_set loc ((lv, t), (e, t')) =
+    let lv = translate_lv lv in
     let t = translate_scalar t in
+    let e = translate_exp e in
     let t' = translate_scalar t' in
     let e = K.cast t' e t in
       (K.Set (lv, e, t), loc)
     
   and translate_local_init loc x (offset, t', (e, t)) =
-    let (lv, _) = translate_lv (Local x) in
+    let lv = translate_lv (Local x) in
     let lv = K.Shift (lv, K.exp_of_int offset) in
-    let (e, _) = translate_exp e in
+    let e = translate_exp e in
     let t = translate_scalar t in
     let t' = translate_scalar t' in
     let e = K.cast t e t' in
@@ -240,7 +232,7 @@ let translate fname (_, cglbdecls, cfundefs) =
     match x with
       | Init (x, init) -> List.map (translate_local_init loc x) init
 
-      | Set (lv, Call x) -> translate_call loc (Some lv) x
+      | Set (lv, (Call x, _)) -> translate_call loc (Some lv) x
 
       | Set (lv, e) -> (translate_set loc (lv, e))::[]
 
@@ -279,14 +271,14 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
 	    (K.DoWith (loop, lbl, []), loc)::[]
 
-      | Return (Call x) -> 
+      | Return (Call x, _) -> 
 	  let t = get_ret_typ () in
 	  let () = push loc (t, "tmp") in
 (* TODO: code cleanup *)
-	  let (lv, t) = translate_lv (Local (Env.get_ret env)) in
+	  let lv = translate_lv (Local (Env.get_ret env)) in
 	  let decl = (t, "tmp", Newspeak.dummy_loc fname)::[] in
 (* TODO: code cleanup *)
-	  let call = translate_call loc (Some (Local (env.Env.vcnt, t))) x in
+	  let call = translate_call loc (Some ((Local env.Env.vcnt, t))) x in
 	  let t = translate_scalar t in
 	  let set = (K.Set (lv, K.Lval (K.Local 0, t), t), loc)::[] in
 	    pop "tmp";
@@ -294,7 +286,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
       | Return e -> 
 (* TODO: code cleanup *)
-	  let set = translate_set loc (Local (Env.get_ret env), e) in
+	  let set = translate_set loc ((Local (Env.get_ret env), Env.get_ret_typ env), e) in
 	  let lbl = Env.get_ret_lbl () in
 	    set::(K.Goto lbl, loc)::[]
 
@@ -325,7 +317,9 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    push loc (ret_t, ret_name);
 	    let ret_decl = (ret_t, ret_name, loc) in
 (* TODO: code cleanup, merge with push ?? *)
-	    let ret_set = translate_set loc (lv, Lval (Local (env.Env.vcnt, ret_t))) in
+	    let ret_set = translate_set loc 
+	      (lv, (Lval (Local env.Env.vcnt, ret_t), ret_t)) 
+	    in
 	      (ret_decl::[], ret_set::[])
     in
       List.iter (push loc) args_t;
@@ -361,7 +355,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	((t, x)::args_t, e::args_e) ->
 	  let decl = (t, x, loc) in
 	  let (decls, sets, n) = translate args_t args_e in
-	  let set = translate_set loc (Local ((env.Env.vcnt - n), t), e) in
+	  let set = translate_set loc ((Local (env.Env.vcnt - n), t), e) in
 	    (decl::decls, set::sets, n+1)
 
       | ([], []) -> ([], [], 0)
@@ -371,7 +365,7 @@ let translate fname (_, cglbdecls, cfundefs) =
       (decls, sets)
 
   and translate_switch loc e cases =
-    let (switch_exp, _) = translate_exp e in
+    let switch_exp = translate_exp e in
     let default_lbl = Env.get_brk_lbl () in
     let default_cond = ref [] in
     let default_goto = ref [K.Goto default_lbl, loc] in
@@ -381,8 +375,8 @@ let translate fname (_, cglbdecls, cfundefs) =
 
     let found_case lbl v =
       match v with
-	  Some v ->
-	    let (v, t) = translate_exp v in
+	  Some (v, t) ->
+	    let v = translate_exp v in
 	    let t = translate_scalar t in
 	    let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
 	      default_cond := (K.negate cond)::!default_cond;
@@ -428,7 +422,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  (* TODO: code factorisation with the local init ??? *)
 	  let translate (o, t', (e, t)) = 
 	    (* TODO: should I take t, or translate the one I get from e ??? *)
-	    let (e, _) = translate_exp e in
+	    let e = translate_exp e in
 	    let t = translate_scalar t in
 	    let t' = translate_scalar t' in
 	    let e = K.cast t e t' in

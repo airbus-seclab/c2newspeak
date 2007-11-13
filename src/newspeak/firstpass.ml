@@ -135,11 +135,11 @@ let translate fname cprog =
   let get_var x = 
     try 
       let (n, t, _) = Hashtbl.find local_env x in
-	(C.Local (n, t), t)
+	(C.Local n, t)
     with Not_found -> 
       try 
 	let (t, _, _) = Hashtbl.find glbdecls x in
-	  (C.Global (x, t), t)
+	  (C.Global x, t)
       with Not_found ->
 	Npkcontext.error "Firstpass.translate.typ_of_var" 
 	  ("Unknown variable "^x)
@@ -224,9 +224,9 @@ let translate fname cprog =
 	    (C.Field (lv, f, o), t)
       | Index (lv, e) -> 
 	  let (lv, t) = translate_lv lv in
-	  let (t, _) = array_of_typ t in
+	  let (t, n) = array_of_typ t in
 	  let (i, _) = translate_exp e in
-	    (C.Index (lv, i), t)
+	    (C.Index (lv, (t, n), i), t)
       | Deref e -> 
 	  let (e, t) = translate_exp e in
 	  let t = deref_typ t in
@@ -235,38 +235,41 @@ let translate fname cprog =
   and translate_exp x =
     match x with
 	Const i -> (C.Const i, C.typ_of_cst i)
+
       | Lval lv -> 
 	  let (lv, t) = translate_lv lv in
-	    (C.Lval lv, t)
+	    (C.Lval (lv, t), t)
+
       | AddrOf lv -> 
 	  let (lv, t) = translate_lv lv in
-	    (C.AddrOf lv, C.Ptr t) 
+	    (C.AddrOf (lv, t), C.Ptr t) 
+
       | Unop (op, e) -> 
 	  let (e, t) = translate_exp e in
 	  let op = translate_unop op in
 	  let t = C.typ_of_unop op in
 	    (C.Unop (op, e), t)
+
       | Binop (op, e1, e2) -> 
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
 	  let op = translate_binop op t1 t2 in
 	  let t = C.typ_of_binop op in
 	    (C.Binop (op, e1, e2), t)
+
       | Call (f, args) -> 
 	  let (_, t) = typ_of_fun f in
-	  let translate_arg x = 
-	    let (e, _) = translate_exp x in
-	      e
-	  in
-	    (C.Call (f, List.map translate_arg args), t)
+	    (C.Call (f, List.map translate_exp args), t)
+
       | SizeofV x -> 
-	  let (e, _) = translate_exp (Lval (Var x)) in
-	    (C.Sizeof e, C.int_typ)
+	  let (e, t) = translate_exp (Lval (Var x)) in
+	    (C.exp_of_int (size_of t), int_typ)
+
       | Sizeof d ->
 	  let (t, _) = translate_decl d in
-	  let sz = size_of t in
 (* TODO: should check that the size of all declarations is less than max_int *)
-	    translate_exp (Const (Int64.of_int sz))
+	    (C.exp_of_int (size_of t), int_typ)
+
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
   in
@@ -274,9 +277,7 @@ let translate fname cprog =
   let translate_exp_option e =
     match e with
 	None -> None
-      | Some e -> 
-	  let (e, _) = translate_exp e in
-	    Some e
+      | Some e -> Some (translate_exp e)
   in
 
   let rec translate_init t x =
@@ -354,17 +355,15 @@ let translate fname cprog =
 
   and add_glb_cstr str =
     let name = "!"^fname^".const_str_"^str in
-    let t = C.Array (char_typ, None) in
-    let t =
-      if (Hashtbl.mem glbdecls name) then t
-      else begin
+    let a = (char_typ, Some ((String.length str) + 1)) in
+    let t = C.Array a in
+      if not (Hashtbl.mem glbdecls name) then begin
 	let loc = (fname, -1, -1) in
 	let (t, init) = translate_init t (Some (CstStr str)) in
-	  Hashtbl.add glbdecls name (t, loc, Some init);
-	  t
-      end
-    in
-      (C.AddrOf (C.Index (C.Global (name, t), C.Const Int64.zero)), C.Ptr t)
+	  Hashtbl.add glbdecls name (t, loc, Some init)
+      end;
+      (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
+      C.Ptr t)
   in
 
   let rec translate_blk x =
@@ -379,7 +378,7 @@ let translate fname cprog =
 	    add_local x t loc;
 	    match init with
 		None -> tl
-	      | Some init -> (C.Init ((n, t), init), loc)::tl
+	      | Some init -> (C.Init (n, init), loc)::tl
 	  end
 
       | hd::tl -> 
@@ -393,8 +392,8 @@ let translate fname cprog =
     Npkcontext.set_loc loc;
     match x with
 	Set (lv, e) -> 
-	  let (lv, _) = translate_lv lv in
-	  let (e, _) = translate_exp e in
+	  let lv = translate_lv lv in
+	  let e = translate_exp e in
 	  (C.Set (lv, e), loc)::[]
 
       | If ((And (e1, e2), body, loc)::tl) ->
@@ -419,7 +418,7 @@ let translate fname cprog =
 	    (C.DoWhile (body, e), loc)::[]
 
       | Return e -> 
-	  let (e, _) = translate_exp e in
+	  let e = translate_exp e in
 	  (C.Return e, loc)::[]
 
       | Exp e -> 
