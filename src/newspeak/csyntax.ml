@@ -65,7 +65,7 @@ and stmtkind =
     | Switch of (exp * (typ_exp option * blk * location) list)
     | While of (typ_exp * blk)
     | DoWhile of (blk * typ_exp)
-    | Return of typ_exp
+    | Return
     | Exp of exp
     | Break
 	
@@ -87,7 +87,9 @@ and exp =
     | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
-    | Call of (string * typ_exp list)
+    | Call of (fn * typ_exp list)
+
+and fn = string * ftyp
 
 and unop = 
     | Not

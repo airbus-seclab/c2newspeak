@@ -150,7 +150,8 @@ statement:
 | WHILE LPAREN expression RPAREN statement { [While ($3, $5), get_loc ()] }
 | DO statement
   WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
-| RETURN expression SEMICOLON              { [Return $2, get_loc ()] }
+| RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
+| RETURN SEMICOLON                         { [Return None, get_loc ()] }
 | call SEMICOLON                           { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | block                                    { [Block $1, get_loc ()] }

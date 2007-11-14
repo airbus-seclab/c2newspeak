@@ -28,6 +28,9 @@ open Csyntax
 open Bare_csyntax
 module C = Csyntax
 
+let ret_pos = 1
+let ret_name = "!return"
+
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 
   then Npkcontext.error "Firstpass.int64_to_int" "integer too big";
@@ -123,13 +126,13 @@ let translate fname cprog =
 
 (* TODO: code cleanup, use Env always *)
   let push_formals (args, t) loc =
-    let _ = push_var (Env.get_ret_name ()) t loc in
+    let _ = push_var ret_name t loc in
       List.iter (fun (t, x) -> let _ = push_var x t loc in ()) args
   in
 (* TODO: code cleanup, this is probably unnecessary *)
   let pop_formals (args, _) =
     List.iter (fun (_, x) -> pop_var x) args;
-    pop_var (Env.get_ret_name ())
+    pop_var ret_name
   in
 
   let get_var x = 
@@ -143,6 +146,16 @@ let translate fname cprog =
       with Not_found ->
 	Npkcontext.error "Firstpass.translate.typ_of_var" 
 	  ("Unknown variable "^x)
+  in
+
+  let get_ret_typ () =
+    try 
+      let (_, t, _) = Hashtbl.find local_env ret_name in
+	t
+    with Not_found -> 
+      Npkcontext.error "Firstpass.get_ret_typ" 
+	"Function does not return any value"
+
   in
 
   let rec translate_decl (b, v) =
@@ -258,8 +271,9 @@ let translate fname cprog =
 	    (C.Binop (op, e1, e2), t)
 
       | Call (f, args) -> 
-	  let (_, t) = typ_of_fun f in
-	    (C.Call (f, List.map translate_exp args), t)
+	  let (args_t, ret_t) = typ_of_fun f in
+	  let fn = (f, (args_t, ret_t)) in
+	    (C.Call (fn, List.map translate_exp args), ret_t)
 
       | SizeofV x -> 
 	  let (e, t) = translate_exp (Lval (Var x)) in
@@ -417,9 +431,12 @@ let translate fname cprog =
 	  let e = translate_exp e in
 	    (C.DoWhile (body, e), loc)::[]
 
-      | Return e -> 
+      | Return None -> (C.Return, loc)::[]
+	      
+      | Return (Some e) ->
+	  let lv = (Local ret_pos, get_ret_typ ()) in
 	  let e = translate_exp e in
-	  (C.Return e, loc)::[]
+	    (C.Set (lv, e), loc)::(translate_stmt (Return None, loc))
 
       | Exp e -> 
 	  let (e, _) = translate_exp e in

@@ -23,17 +23,17 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: code cleanup: define an Env and primitives on it, and get it 
-   out of this *)
-(* TODO: put Env in common with cilcompiler, pass Env as an argument to 
-   translation (or as a global local to translation) *)
 open Lexing
 open Csyntax
 
+(* TODO: code cleanup: break this file in several module. 
+   do factorisation (with Cilcompiler too), when possible. 
+   In particular K.size_of  and align *)
 module N = Newspeak
 module K = Npkil
-(* TODO: code cleanup: break this file in several module. 
-   do factorisation, when possible. In particular K.size_of  and align *)
+
+let ret_lbl = 0
+let brk_lbl = 1
 
 (* TODO: check that integer don't have a default type (like int) *)
 let kind_of_int64 i =
@@ -59,15 +59,10 @@ let translate_array lv (t, n) =
 let translate fname (_, cglbdecls, cfundefs) = 
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
-  let env = Env.create (cglbdecls, cfundefs) in
+  let stack_height = ref 0 in
 
-  let push loc (t, x) = Env.push env x t loc in
-  let pop = Env.pop env in
-  let get_var = Env.get_var env in
-  let get_ret_typ () = Env.get_ret_typ env in
-
-  let push_dummy loc = push loc (Void, "dummy") in
-  let pop_dummy () = pop "dummy" in
+  let push () = incr stack_height in
+  let pop () = decr stack_height in
 
   let rec translate_typ t =
     match t with
@@ -130,7 +125,7 @@ let translate fname (_, cglbdecls, cfundefs) =
   let rec translate_lv lv =
     match lv with
 (* TODO: code cleanup *)
-	Local x -> Env.get_var env x
+	Local x -> K.Local (!stack_height - x)
 
       | Global x -> K.Global x
 
@@ -255,44 +250,25 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
-	  let lbl = Env.get_brk_lbl () in
-	  let brk = (K.Goto lbl, loc)::[] in
+	  let brk = (K.Goto brk_lbl, loc)::[] in
 	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
 	  let loop = (K.InfLoop ((cond, loc)::body), loc)::[] in
-	    (K.DoWith (loop, lbl, []), loc)::[]
+	    (K.DoWith (loop, brk_lbl, []), loc)::[]
 
       | DoWhile (body, e) ->
 	  let cond1 = translate_bexp e in
 	  let cond2 = K.negate cond1 in
 	  let body = translate_blk body in
-	  let lbl = Env.get_brk_lbl () in
-	  let brk = (K.Goto lbl, loc)::[] in
+	  let brk = (K.Goto brk_lbl, loc)::[] in
 	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
 	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
-	    (K.DoWith (loop, lbl, []), loc)::[]
+	    (K.DoWith (loop, brk_lbl, []), loc)::[]
 
-      | Return (Call x, _) -> 
-	  let t = get_ret_typ () in
-	  let () = push loc (t, "tmp") in
-(* TODO: code cleanup *)
-	  let lv = translate_lv (Local (Env.get_ret env)) in
-	  let decl = (t, "tmp", Newspeak.dummy_loc fname)::[] in
-(* TODO: code cleanup *)
-	  let call = translate_call loc (Some ((Local env.Env.vcnt, t))) x in
-	  let t = translate_scalar t in
-	  let set = (K.Set (lv, K.Lval (K.Local 0, t), t), loc)::[] in
-	    pop "tmp";
-	    append_decls decl (call@set)
-
-      | Return e -> 
-(* TODO: code cleanup *)
-	  let set = translate_set loc ((Local (Env.get_ret env), Env.get_ret_typ env), e) in
-	  let lbl = Env.get_ret_lbl () in
-	    set::(K.Goto lbl, loc)::[]
+      | Return -> (K.Goto ret_lbl, loc)::[]
 
       | Exp (Call x) -> translate_call loc None x
       
-      | Break -> [K.Goto (Env.get_brk_lbl ()), loc]
+      | Break -> (K.Goto brk_lbl, loc)::[]
       
       | Switch (e, cases) -> translate_switch loc e cases
 
@@ -300,29 +276,28 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  Npkcontext.error "Compiler.translate_stmt" 
 	    "Expressions as statements not implemented yet"
 
-  and translate_call loc r (f, args_exp) =
-    let (args_t, ret_t) = Env.get_ftyp env f in
+  and translate_call loc r ((f, (args_t, ret_t)), args_exp) =
     let ret_name = "value_of_"^f in
     let (ret_decl, ret_set) = 
       match (r, ret_t) with
 	  (None, Void) -> ([], [])
 	| (None, _) ->
-	    push loc (ret_t, ret_name);
+	    push ();
 	    let ret_decl = (ret_t, ret_name, loc) in
 	      (ret_decl::[], [])
 	| (Some _, Void) -> 
 (* TODO: code cleanup: change error message *)
 	    Npkcontext.error "Compiler.translate_call" "No return value"
 	| (Some lv, _) -> 
-	    push loc (ret_t, ret_name);
+	    push ();
 	    let ret_decl = (ret_t, ret_name, loc) in
 (* TODO: code cleanup, merge with push ?? *)
 	    let ret_set = translate_set loc 
-	      (lv, (Lval (Local env.Env.vcnt, ret_t), ret_t)) 
+	      (lv, (Lval (Local !stack_height, ret_t), ret_t)) 
 	    in
 	      (ret_decl::[], ret_set::[])
     in
-      List.iter (push loc) args_t;
+      List.iter (fun _ -> push ()) args_t;
 
 (* TODO: code cleanup: change error message *)
       if (List.length args_t <> List.length args_exp) then begin
@@ -332,12 +307,8 @@ let translate fname (_, cglbdecls, cfundefs) =
 
 (* TODO: code cleanup: merge with push *)
       let (decls, sets) = translate_args loc args_t args_exp in
-(*
-      let decls_sets = List.map2 (translate_arg loc) args_t args_exp in
-      let (decls, sets) = List.split decls_sets in
-*)
-	pop ret_name;
-	List.iter (fun (_, x) -> pop x) args_t;
+	pop ();
+	List.iter (fun _ -> pop ()) args_t;
 	
 	let call = (K.Call (K.FunId f), loc)::[] in
 	let call = sets@call in
@@ -355,7 +326,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	((t, x)::args_t, e::args_e) ->
 	  let decl = (t, x, loc) in
 	  let (decls, sets, n) = translate args_t args_e in
-	  let set = translate_set loc ((Local (env.Env.vcnt - n), t), e) in
+	  let set = translate_set loc ((Local (!stack_height - n), t), e) in
 	    (decl::decls, set::sets, n+1)
 
       | ([], []) -> ([], [], 0)
@@ -366,7 +337,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   and translate_switch loc e cases =
     let switch_exp = translate_exp e in
-    let default_lbl = Env.get_brk_lbl () in
+    let default_lbl = brk_lbl in
     let default_cond = ref [] in
     let default_goto = ref [K.Goto default_lbl, loc] in
 
@@ -446,18 +417,16 @@ let translate fname (_, cglbdecls, cfundefs) =
       match body with
 	  None -> None
 	| Some (locals, body) ->
-	    push loc (t, Env.get_ret_name ());
-	    List.iter (push loc) args;
+	    push ();
+	    List.iter (fun _ -> push ()) args;
 (* TODO: change arguments organisation of push arguments to avoid currification *)
-	    List.iter (fun (t, x, loc) -> push loc (t, x)) locals;
+	    List.iter (fun _ -> push ()) locals;
 	    let body = translate_blk body in
-	      List.iter pop args_name;
-	      pop (Env.get_ret_name ());
-	      let body = (K.DoWith (body, Env.get_ret_lbl (), []), loc)::[] in
-(* TODO: code cleanup, this is strange *)
-	      let decls = Env.get_locals env in
-	      let body = append_decls decls body in
-		List.iter (fun (t, x, loc) -> pop x) locals;
+	      List.iter (fun _ -> pop ()) args_name;
+	      pop ();
+	      let body = (K.DoWith (body, ret_lbl, []), loc)::[] in
+	      let body = append_decls locals body in
+		List.iter (fun _ -> pop ()) locals;
 		Some body
     in
     let ft = translate_ftyp (args_t, t) in

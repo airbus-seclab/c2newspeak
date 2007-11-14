@@ -72,7 +72,7 @@ and stmtkind =
     | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)
     | DoWhile of (blk * exp)
-    | Return of exp
+    | Return of exp option
     | Exp of exp
     | Break
     | Block of blk
