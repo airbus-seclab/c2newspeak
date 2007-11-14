@@ -102,13 +102,13 @@ external_declaration:
 ;;
 
 declaration:
-  type_specifier init_declarator_list          { ($1, $2) }
+  type_specifier init_declarator_list      { ($1, $2) }
 ;;
 
 init_declarator_list:
   init_declarator COMMA 
-  init_declarator_list                   { ($1, get_loc ())::$3 }
-| init_declarator                        { ($1, get_loc ())::[] }
+  init_declarator_list                     { ($1, get_loc ())::$3 }
+| init_declarator                          { ($1, get_loc ())::[] }
 ;;
 
 block:
@@ -210,8 +210,8 @@ expression:
 ;;
 
 init_declarator:
-  declarator                             { ($1, None) }
-| declarator EQ init                     { ($1, Some $3) }
+  declarator                               { ($1, None) }
+| declarator EQ init                       { ($1, Some $3) }
 ;;
 
 init:
@@ -231,8 +231,9 @@ abstract_declarator:
 | LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
 | LBRACKET INTEGER RBRACKET                { Array (Abstract, Some $2) }
-| abstract_declarator LPAREN parameter_list RPAREN      { Function ($1, $3) }
-| abstract_declarator LPAREN RPAREN               { Function ($1, []) }
+| abstract_declarator 
+  LPAREN parameter_list RPAREN             { Function ($1, $3) }
+| abstract_declarator LPAREN RPAREN        { Function ($1, []) }
 ;;
 
 declarator:
@@ -240,26 +241,27 @@ declarator:
 | LPAREN declarator RPAREN                 { $2 }
 | IDENTIFIER                               { Variable $1 }
 | declarator LBRACKET INTEGER RBRACKET     { Array ($1, Some $3) }
-| declarator LBRACKET RBRACKET           { Array ($1, None) }
-| declarator LPAREN parameter_list RPAREN      { Function ($1, $3) }
-| declarator LPAREN RPAREN               { Function ($1, []) }
+| declarator LBRACKET RBRACKET             { Array ($1, None) }
+| declarator LPAREN parameter_list RPAREN  { Function ($1, $3) }
+| declarator LPAREN RPAREN                 { Function ($1, []) }
 ;;
 
 parameter_list:
-  parameter_declaration COMMA parameter_list                       { $1::$3 }
-| parameter_declaration                                      { $1::[]}
+  parameter_declaration COMMA 
+  parameter_list                           { $1::$3 }
+| parameter_declaration                    { $1::[]}
 ;;
 
 // TODO: careful, this is a bit of a hack
 parameter_declaration:
-  type_specifier declarator              { ($1, $2) }
-| type_specifier abstract_declarator     { ($1, $2) }
+  type_specifier declarator                { ($1, $2) }
+| type_specifier abstract_declarator       { ($1, $2) }
 | type_specifier                           { ($1, Abstract) }
 ;;
 
 type_name:
-  type_specifier abstract_declarator      { ($1, $2) }
-| type_specifier                          { ($1, Abstract) }
+  type_specifier abstract_declarator       { ($1, $2) }
+| type_specifier                           { ($1, Abstract) }
 ;;
 
 type_specifier:

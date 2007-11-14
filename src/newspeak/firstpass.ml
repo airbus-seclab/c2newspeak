@@ -48,19 +48,8 @@ let align o sz =
 
 let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 
-(* TODO: remove this code
-  (* TODO: code cleanup: find a way to factor this with create_cstr
-     in Npkil *)
-let init_of_string str =
-  let len = String.length str in
-  let res = ref [(len, char_typ, C.Const Int64.zero)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code str.[i] in
-	res := (i, char_typ, C.Const (Int64.of_int c))::!res
-    done;
-    (len + 1, Some !res)
-*)
-
+(* TODO: code cleanup: find a way to factor this with create_cstr
+   in Npkil *)
 let seq_of_string str =
   let len = String.length str in
   let res = ref [Data (Const Int64.zero)] in
@@ -93,20 +82,20 @@ let translate_binop op t1 t2 =
 
 
 let translate fname cprog =
-(* TODO: use Env!!! *)
   let typedefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
-(* TODO: have just an env! *)
-  let local_env = Hashtbl.create 100 in
+
+(* Local variables environment *)
   let vcnt = ref 0 in
+  let local_env = Hashtbl.create 100 in
   let locals = ref [] in
 
-  let add_local x t loc = locals := (t, x, loc)::!locals in
   let get_locals () =
     let x = !locals in
       locals := [];
       vcnt := 0;
+      Hashtbl.clear local_env;
       x
   in
 (* TODO: don't use vcnt ??? Do not correspond !!! *)
@@ -115,24 +104,21 @@ let translate fname cprog =
       t
   in
 
-  let push_var x t loc = 
+  let push_var loc (t, x) = 
     incr vcnt;
     Hashtbl.add local_env x (!vcnt, t, loc);
     !vcnt
   in
-  let pop_var x = 
+    
+  let push_local = push_var in
+  let pop_local loc (t, x) = 
+    locals := (t, x, loc)::!locals;
     Hashtbl.remove local_env x 
   in
-
-(* TODO: code cleanup, use Env always *)
-  let push_formals (args, t) loc =
-    let _ = push_var ret_name t loc in
-      List.iter (fun (t, x) -> let _ = push_var x t loc in ()) args
-  in
-(* TODO: code cleanup, this is probably unnecessary *)
-  let pop_formals (args, _) =
-    List.iter (fun (_, x) -> pop_var x) args;
-    pop_var ret_name
+  let push_formals loc (args_t, ret_t) = 
+    let _ = push_var loc (ret_t, ret_name) in
+    let _ = List.map (push_var loc) args_t in
+      ()
   in
 
   let get_var x = 
@@ -340,7 +326,7 @@ let translate fname cprog =
 	(* TODO: code cleanup: We fill with zeros, because CIL does too. 
 	   But it shouldn't be done like that:
 	   the region should be init to 0 by default and then filled with
-	   values.*)
+	   values ?? *)
 	| [] when n > 0 -> 
 	    let _ = fill_with_zeros t in
 	      o := !o + C.size_of t;
@@ -386,10 +372,9 @@ let translate fname cprog =
 	  Npkcontext.set_loc loc;
 	  let (t, x) = translate_decl d in
 	  let (t, init) = translate_init t init in
-	  let n = push_var x t loc in
+	  let n = push_local loc (t, x) in
 	  let tl = translate_blk tl in begin 
-	    pop_var x;
-	    add_local x t loc;
+	    pop_local loc (t, x);
 	    match init with
 		None -> tl
 	      | Some init -> (C.Init (n, init), loc)::tl
@@ -459,20 +444,13 @@ let translate fname cprog =
 	    "Unreachable statement"
   in
 
-(* TODO: code cleanup: put in Csyntax, change function name!!! *)
-  let compare f (args, ret) (prev_args, prev_ret) =
-    let (args, _) = List.split args in
-    let (prev_args, _) = List.split prev_args in
-      if (args, ret) <> (prev_args, prev_ret) then begin
-	Npkcontext.error "Firstpass.update_fundef"
-	  ("Different types for function "^f)
-      end
-  in
-
   let update_fundef f (t, loc, body) =
     try
       let (prev_t, _, prev_body) = Hashtbl.find fundefs f in
-	compare f t prev_t;
+	if not (C.ftyp_equals t prev_t) then begin
+	  Npkcontext.error "Firstpass.update_fundef"
+	    ("Different types for function "^f)
+	end;
 	match (body, prev_body) with
 	    (None, _) -> ()
 	  | (Some _, None) -> Hashtbl.replace fundefs f (t, loc, body)
@@ -488,12 +466,8 @@ let translate fname cprog =
 	FunctionDef (x, body) ->
 	  let (t, x) = translate_decl x in
 	  let ft = C.ftyp_of_typ t in
-	  let () = push_formals ft loc in
+	  let _ = push_formals loc ft in
 	  let body = translate_blk body in
-(*
-	  let () = pop_formals ft in*)
-(* TODO: cleanup *)
-	    Hashtbl.clear local_env;
 	  let locals = get_locals () in
 	    update_fundef x (ft, loc, Some (locals, body))
 

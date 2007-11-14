@@ -125,3 +125,5 @@ val typ_of_binop: binop -> typ
 val promote: ikind -> ikind
 
 val exp_of_int: int -> exp
+
+val ftyp_equals: ftyp -> ftyp -> bool

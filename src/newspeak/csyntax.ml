@@ -165,3 +165,8 @@ let typ_of_binop op =
     | Gt _ | Eq _ -> int_typ
 
 let exp_of_int n = Const (Int64.of_int n)
+
+let ftyp_equals (args1, ret1) (args2, ret2) =
+  let (args1, _) = List.split args1 in
+  let (args2, _) = List.split args2 in
+    (args1, ret1) = (args2, ret2)
