@@ -35,14 +35,6 @@ module K = Npkil
 let ret_lbl = 0
 let brk_lbl = 1
 
-(* TODO: check that integer don't have a default type (like int) *)
-let kind_of_int64 i =
-  let sign =
-    if Int64.compare i (Int64.of_string "2147483647") > 0 
-    then N.Unsigned else N.Signed
-  in
-    (sign, Config.size_of_int)
-
 let translate_unop op e =
   match op with
       Not -> K.UnOp (K.Not, e)
@@ -61,8 +53,12 @@ let translate fname (_, cglbdecls, cfundefs) =
   let fundefs = Hashtbl.create 100 in
   let stack_height = ref 0 in
 
-  let push () = incr stack_height in
+  let push () = 
+    incr stack_height;
+    Local !stack_height
+  in
   let pop () = decr stack_height in
+  let index_of_var x = !stack_height - x in
 
   let rec translate_typ t =
     match t with
@@ -124,8 +120,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   let rec translate_lv lv =
     match lv with
-(* TODO: code cleanup *)
-	Local x -> K.Local (!stack_height - x)
+	Local x -> K.Local (index_of_var x)
 
       | Global x -> K.Global x
 
@@ -277,63 +272,53 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    "Expressions as statements not implemented yet"
 
   and translate_call loc r ((f, (args_t, ret_t)), args_exp) =
-    let ret_name = "value_of_"^f in
-    let (ret_decl, ret_set) = 
-      match (r, ret_t) with
-	  (None, Void) -> ([], [])
-	| (None, _) ->
-	    push ();
-	    let ret_decl = (ret_t, ret_name, loc) in
-	      (ret_decl::[], [])
-	| (Some _, Void) -> 
-(* TODO: code cleanup: change error message *)
-	    Npkcontext.error "Compiler.translate_call" "No return value"
-	| (Some lv, _) -> 
-	    push ();
-	    let ret_decl = (ret_t, ret_name, loc) in
-(* TODO: code cleanup, merge with push ?? *)
-	    let ret_set = translate_set loc 
-	      (lv, (Lval (Local !stack_height, ret_t), ret_t)) 
-	    in
-	      (ret_decl::[], ret_set::[])
+    let build_decl (t, x) = (t, x, loc) in
+    let (ret_var, ret_decl) =
+      match ret_t with
+	  Void -> (None, [])
+	| _ -> (Some (push ()), build_decl (ret_t, "value_of_"^f)::[])
     in
-      List.iter (fun _ -> push ()) args_t;
-
-(* TODO: code cleanup: change error message *)
-      if (List.length args_t <> List.length args_exp) then begin
-	Npkcontext.error "Compiler.translate_call" 
-	  ("Different types for function "^f)
-      end;
-
-(* TODO: code cleanup: merge with push *)
-      let (decls, sets) = translate_args loc args_t args_exp in
-	pop ();
-	List.iter (fun _ -> pop ()) args_t;
-	
-	let call = (K.Call (K.FunId f), loc)::[] in
-	let call = sets@call in
-	let call = append_decls decls call in
-	  (* TODO: code optimization: write this so that there is no @ 
-	     (by putting ret_set under the scope of local variables too) *)
-	let call = call@ret_set in
-	let call = append_decls ret_decl call in
-	  call
-
-(* TODO: code cleanup *)
-  and translate_args loc args_t args_e =
-    let rec translate args_t args_e =
-    match (args_t, args_e) with
-	((t, x)::args_t, e::args_e) ->
-	  let decl = (t, x, loc) in
-	  let (decls, sets, n) = translate args_t args_e in
-	  let set = translate_set loc ((Local (!stack_height - n), t), e) in
-	    (decl::decls, set::sets, n+1)
-
-      | ([], []) -> ([], [], 0)
-      | _ -> invalid_arg "Unreachable statement"
+    let ret_set = 
+      match (r, ret_var) with
+	  (None, _) -> []
+	| (Some lv, Some v) -> 
+	    let ret_e = (Lval (v, ret_t), ret_t) in
+	    let set = translate_set loc (lv, ret_e) in
+	      set::[]
+	| _ -> 
+	    (* TODO: code cleanup: change error message *)
+	    Npkcontext.error "Compiler.translate_call" "No return value";
     in
-    let (decls, sets, _) = translate args_t args_e in
-      (decls, sets)
+    let args_var = List.map (fun (t, _) -> (push (), t)) args_t in
+    let decls = List.map build_decl args_t in
+    let sets = translate_args f loc args_var args_exp in
+      pop ();
+      List.iter (fun _ -> pop ()) args_t;
+      
+      let call = (K.Call (K.FunId f), loc)::[] in
+      let call = sets@call in
+      let call = append_decls decls call in
+	(* TODO: code optimization: write this so that there is no @ 
+	   (by putting ret_set under the scope of local variables too) *)
+      let call = call@ret_set in
+      let call = append_decls ret_decl call in
+	call
+
+  and translate_args f loc args_var args_exp =
+    let rec translate args_v args_e =
+      match (args_v, args_e) with
+	  (d::args_v, e::args_e) ->
+	    let (sets, n) = translate args_v args_e in
+	    let set = translate_set loc (d, e) in
+	      (set::sets, n+1)		
+	| ([], []) -> ([], 0)
+	| _ -> 
+	    (* TODO: code cleanup: change error message *)
+	    Npkcontext.error "Compiler.translate_call" 
+	      ("Different types for function "^f)
+    in
+    let (sets, _) = translate args_var args_exp in
+      sets
 
   and translate_switch loc e cases =
     let switch_exp = translate_exp e in
@@ -406,7 +391,7 @@ let translate fname (_, cglbdecls, cfundefs) =
   let translate_glbdecl x (t, loc, init) =
     let init = translate_init init in
     let t = translate_typ t in
-      (* TODO: maybe do this in a first, since there may be the need for
+      (* TODO: maybe do this in a first pass, since there may be the need for
 	 a variable not encountered yet, in init *)
       Hashtbl.add glbdecls x (t, loc, init, true)
   in
@@ -417,17 +402,19 @@ let translate fname (_, cglbdecls, cfundefs) =
       match body with
 	  None -> None
 	| Some (locals, body) ->
-	    push ();
-	    List.iter (fun _ -> push ()) args;
-(* TODO: change arguments organisation of push arguments to avoid currification *)
-	    List.iter (fun _ -> push ()) locals;
-	    let body = translate_blk body in
-	      List.iter (fun _ -> pop ()) args_name;
-	      pop ();
-	      let body = (K.DoWith (body, ret_lbl, []), loc)::[] in
-	      let body = append_decls locals body in
-		List.iter (fun _ -> pop ()) locals;
-		Some body
+	    (* push return value *)
+	    let _ = push () in
+	      (* push arguments *)
+	      List.iter (fun _ -> let _ = push () in ()) args;
+	      (* push local variables *)
+	      List.iter (fun _ -> let _ = push () in ()) locals;
+	      let body = translate_blk body in
+		List.iter (fun _ -> pop ()) args_name;
+		pop ();
+		let body = (K.DoWith (body, ret_lbl, []), loc)::[] in
+		let body = append_decls locals body in
+		  List.iter (fun _ -> pop ()) locals;
+		  Some body
     in
     let ft = translate_ftyp (args_t, t) in
       Hashtbl.add fundefs f (ft, body)

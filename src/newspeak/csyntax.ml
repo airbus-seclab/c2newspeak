@@ -69,7 +69,6 @@ and stmtkind =
     | Exp of exp
     | Break
 	
-(* TODO: put it as a scalar ?? *)
 and typ_exp = (exp * typ)
 
 and typ_lv = (lv * typ)
