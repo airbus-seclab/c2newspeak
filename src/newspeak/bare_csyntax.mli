@@ -28,8 +28,8 @@ type prog = (global * location) list
 
 and global =
     | FunctionDef of (declaration * blk)
-(* true for extern *)
-    | GlbDecl of (bool * declaration * init option)
+(* true for extern, true for const *)
+    | GlbDecl of (bool * bool * declaration * init option)
     | Typedef of declaration
 
 and declaration = (base_typ * var_modifier)

@@ -82,6 +82,7 @@ rule token = parse
 (* keywords *)
     "break"             { BREAK }
   | "case"              { CASE }
+  | "const"             { CONST }
   | "default"           { DEFAULT }
   | "do"                { DO }
   | "else"              { ELSE }

@@ -86,3 +86,5 @@ val stmt_of_stmtkind : Cil.stmtkind -> Cil.stmt
 val null : Cil.exp
 
 val is_integer: Cil.ikind -> Cil.typ -> bool
+
+val is_const: Cil.typ -> bool

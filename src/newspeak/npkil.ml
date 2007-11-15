@@ -34,7 +34,11 @@ type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 and filename = string
 
 (* None is for extern *)
-and ginfo = (typ * location * init_t option * bool)
+and ginfo = (typ * location * init_t option * const * used)
+
+and const = bool
+
+and used = bool
 
 and funinfo = (ftyp * blk option)
 
@@ -381,12 +385,14 @@ let dump_npko (fname, globs, funs) =
 
   let print_usedglbs title globs =
     print_endline title;
-    Hashtbl.iter (fun x (_, _, _, used) -> if used then print_endline x) globs;
+    Hashtbl.iter (fun x (_, _, _, _, used) -> if used then print_endline x) 
+      globs;
     print_newline ()
   in
 
-  let print_glob n (t, _, init, _) =
-    let str = (string_of_typ t)^" "^n in
+  let print_glob n (t, _, init, const, _) =
+    let str = if const then "const " else "" in
+    let str = str^(string_of_typ t)^" "^n in
       match init with
 	  None -> print_endline ("extern "^str^";")
 	| Some i -> 
@@ -528,7 +534,7 @@ let create_cstr str =
     (name, (t, 
     (* TODO: code cleanup: not nice *)
     (fname, -1, -1), 
-    Some init, true))
+    Some init, true, true))
 
 let string_of_cast t1 t2 =
   match (t1, t2) with

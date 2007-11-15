@@ -125,3 +125,18 @@ let stmt_of_stmtkind sk =
 
 let null = CastE (TPtr (TVoid [], []), zero)
 
+let rec has_const_attr attr =
+  match attr with
+      (Attr ("const", _))::_ -> true
+    | _::tl -> has_const_attr tl
+    | [] -> false
+
+let rec is_const typ =
+  match typ with
+      TVoid a | TInt (_, a) | TFloat (_, a) | TPtr (_, a)
+    | TArray (_, _, a) | TFun (_, _, _, a) 
+    | TComp (_, a) | TEnum (_, a) -> has_const_attr a
+    | TNamed (tinfo, a) -> (has_const_attr a) || (is_const tinfo.ttype)
+    | TBuiltin_va_list _ -> 
+	invalid_arg ("Cilutils.is_const: "
+		     ^"variable number of arguments not implemented")

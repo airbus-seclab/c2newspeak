@@ -37,7 +37,8 @@ type t = (file list * prog * size_t)
 
 and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
 
-and gdecl = typ * init_t
+(* true if const *)
+and gdecl = typ * init_t * bool
 
 and fundec = ftyp * blk option
 
@@ -388,7 +389,7 @@ let rec string_of_cond b =
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-let dump_gdecl name (t, i) =
+let dump_gdecl name (t, i, const) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp e));
   in
@@ -401,6 +402,7 @@ let dump_gdecl name (t, i) =
 	  print_string ";";
 	  dump_init r
   in
+    if const then print_string "const ";
     print_string ((string_of_typ t)^" "^name);
     match i with
       | Zero -> print_endline " = 0;"
@@ -590,7 +592,7 @@ let init_of_string str =
 let create_cstr name str =
   let (len, init) = init_of_string str in
   let t = Array (Scalar char_typ, len) in
-    (name, (t, init))
+    (name, (t, init, true))
 
 let build_call_aux f prolog (args_t, ret_t) =
   let call = ref (prolog@[Call (FunId f), locUnknown]) in
@@ -616,14 +618,14 @@ let build_main_call ptr_sz (args_t, ret_t) args =
   let handle_arg_aux str =
     let name = "!param_str"^(string_of_int (!n + 1)) in
     let (len, init) = init_of_string str in
-      Hashtbl.add globs name ((Array (Scalar char_typ, len), init));
+      Hashtbl.add globs name ((Array (Scalar char_typ, len), init, false));
       ptr_array_init := 
 	(!n * ptr_sz, Ptr, AddrOf (Global name, len))::(!ptr_array_init);
       incr n
   in
   let handle_args () =
     List.iter handle_arg_aux args;
-    let info = ((Array (Scalar Ptr, !n), Init !ptr_array_init)) in
+    let info = ((Array (Scalar Ptr, !n), Init !ptr_array_init, false)) in
       Hashtbl.add globs argv_name info
   in
   let prolog =
@@ -995,8 +997,8 @@ let visit_fun visitor fid (t, body) =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, init) =
-  let continue = visitor#process_gdecl id (t, init) in
+let visit_glb visitor id (t, init, const) =
+  let continue = visitor#process_gdecl id (t, init, const) in
     match init with
 	Init x when continue -> List.iter (visit_init visitor) x 
       | _ -> ()

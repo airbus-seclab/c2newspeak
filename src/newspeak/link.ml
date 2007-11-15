@@ -50,7 +50,7 @@ let globals = Hashtbl.create 100
 
 let get_glob_typ name =
   try
-    let (t, _) = Hashtbl.find globals name in
+    let (t, _, _) = Hashtbl.find globals name in
       t
   with
       Not_found ->
@@ -159,9 +159,11 @@ and replace_field (offs, t) = (offs, replace_typ t)
   TODO: implement --accept-extern
 *)
 
-let update_glob_link name (t, loc, init, used) =
+let update_glob_link name (t, loc, init, const, used) =
   try
-    let (prev_t, prev_loc, prev_init, prev_used) = Hashtbl.find glb_decls name in
+    let (prev_t, prev_loc, prev_init, prev_const, prev_used) = 
+      Hashtbl.find glb_decls name 
+    in
       (* TODO: remove Npkil.compare_typs *)
 
     let t =
@@ -191,10 +193,12 @@ let update_glob_link name (t, loc, init, used) =
 	| _ -> 
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
     in
-      Hashtbl.replace glb_decls name (t, loc, init, used)
+      if (const <> prev_const) then error "Npklink.update_glob_link" 
+	("Global "^name^" should be constant");
+      Hashtbl.replace glb_decls name (t, loc, init, const, used)
       
   with Not_found -> 
-    Hashtbl.add glb_decls name (t, loc, init, used)
+    Hashtbl.add glb_decls name (t, loc, init, const, used)
 
 
 let merge_headers npko =
@@ -202,33 +206,27 @@ let merge_headers npko =
     filenames := fname::(!filenames);
     Hashtbl.iter update_glob_link globs
 
-let generate_globals globs =
-  let handle_real_glob name (t, _, init, _) =
-    let (_, loc, _, used) = Hashtbl.find glb_decls name in
-      Npkcontext.set_loc loc;
-      if used || (not !remove_temp) then begin
-	let i =
-	  match init with
-	    | Some i -> i
-	    | None when !accept_extern -> 
-		print_warning "Npklink.handle_real_glob:" 
-		("extern not accepted: "^name);
-		None
-	    | None -> 
-		error "Npklink.handle_real_glob:" 
-		  ("extern not accepted: "^name)
-	in
-	  try
-	    let t = replace_typ t in
-	      Hashtbl.add globals name (t, replace_init i)
-	  with LenOfArray -> 
-	    error "Npklink.handle_real_glob" 
-	      ("unspecified length for global array "^name)
-      end
-  in
-
-    Hashtbl.iter handle_real_glob globs;
-    Npkcontext.forget_loc ()
+let generate_global name (t, loc, init, const, used) =
+  Npkcontext.set_loc loc;
+  if used || (not !remove_temp) then begin
+    let i =
+      match init with
+	| Some i -> i
+	| None when !accept_extern -> 
+	    print_warning "Npklink.handle_real_glob:" 
+	      ("extern not accepted: "^name);
+	    None
+	| None -> 
+	    error "Npklink.handle_real_glob:" 
+	      ("extern not accepted: "^name)
+    in
+      try
+	let t = replace_typ t in
+	  Hashtbl.add globals name (t, replace_init i, const)
+      with LenOfArray -> 
+	error "Npklink.handle_real_glob" 
+	  ("unspecified length for global array "^name)
+  end
 
 let write_fun cout f spec =
   print_debug ("Writing function: "^f);
@@ -294,7 +292,10 @@ let link npkos output_file =
     print_debug "Linking files...";
     List.iter merge_headers npkos;
     print_debug "Globals...";
-    generate_globals glb_decls;
+
+    Hashtbl.iter generate_global glb_decls;
+    Npkcontext.forget_loc ();
+
     Newspeak.write_hdr cout (!filenames, globals, Cilutils.pointer_size);
     
     print_debug "Functions...";

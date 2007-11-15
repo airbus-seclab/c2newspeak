@@ -326,7 +326,6 @@ let translate fname (_, cglbdecls, cfundefs) =
     let default_cond = ref [] in
     let default_goto = ref [K.Goto default_lbl, loc] in
 
-    let lbl_cnt = ref 2 in
     let choices = ref [] in
 
     let found_case lbl v =
@@ -388,12 +387,12 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    Some (Some init)
   in
 
-  let translate_glbdecl x (t, loc, init) =
+  let translate_glbdecl x (t, loc, init, const) =
     let init = translate_init init in
     let t = translate_typ t in
       (* TODO: maybe do this in a first pass, since there may be the need for
 	 a variable not encountered yet, in init *)
-      Hashtbl.add glbdecls x (t, loc, init, true)
+      Hashtbl.add glbdecls x (t, loc, init, const, true)
   in
 
   let translate_fundef f ((args, t), loc, body) =

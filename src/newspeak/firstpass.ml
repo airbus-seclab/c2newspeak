@@ -127,7 +127,7 @@ let translate fname cprog =
 	(C.Local n, t)
     with Not_found -> 
       try 
-	let (t, _, _) = Hashtbl.find glbdecls x in
+	let (t, _, _, _) = Hashtbl.find glbdecls x in
 	  (C.Global x, t)
       with Not_found ->
 	Npkcontext.error "Firstpass.translate.typ_of_var" 
@@ -360,7 +360,7 @@ let translate fname cprog =
       if not (Hashtbl.mem glbdecls name) then begin
 	let loc = (fname, -1, -1) in
 	let (t, init) = translate_init t (Some (CstStr str)) in
-	  Hashtbl.add glbdecls name (t, loc, Some init)
+	  Hashtbl.add glbdecls name (t, loc, Some init, true)
       end;
       (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
       C.Ptr t)
@@ -471,11 +471,11 @@ let translate fname cprog =
 	  let locals = get_locals () in
 	    update_fundef x (ft, loc, Some (locals, body))
 
-      | GlbDecl (is_extern, _, Some _) when is_extern -> 
+      | GlbDecl (is_extern, _, _, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbDecl (is_extern, d, init) -> 
+      | GlbDecl (is_extern, is_const, d, init) -> 
 	  let (t, x) = translate_decl d in
 	    begin match (t, init) with
 		(Fun ft, None) -> update_fundef x (ft, loc, None)
@@ -485,7 +485,7 @@ let translate fname cprog =
 	      | _ -> 
 		  let (t, init) = translate_init t init in
 		  let init = if is_extern then None else Some init in
-		    Hashtbl.add glbdecls x (t, loc, init)
+		    Hashtbl.add glbdecls x (t, loc, init, is_const)
 	    end
 
       | Typedef x -> 

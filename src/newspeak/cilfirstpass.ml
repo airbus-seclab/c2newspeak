@@ -37,6 +37,7 @@ type glb_type = {
   mutable gtype : Cil.typ;
   mutable gloc : Cil.location;
   mutable gdefd : bool;
+  mutable gconst : bool;
   mutable ginit : Cil.init option;
 }
 
@@ -199,7 +200,6 @@ let check_main_signature t =
 	     ^"authorized forms are main() and"
 	     ^" main(int, char**)")
 
-
 (* Exploration of Cil's "globals" and first pass *)
 (* TODO: factor out print_warnings by putting together the warnings and 
    selecting which should be verb_warnings or not *)
@@ -233,8 +233,10 @@ let first_pass f =
 
   let update_glob_decl v =
     let name = Cilenv.glb_uniquename v in
+    let const = is_const v.vtype in
       try
 	let x = Hashtbl.find glb_decls name in
+	  (* TODO: code cleanup, try to merge with link ?? *)
 	  if not (Npkil.compare_typs 
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
@@ -242,16 +244,21 @@ let first_pass f =
 	  then Npkcontext.error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
-	      ^(string_of_type v.vtype)^"'")
+	      ^(string_of_type v.vtype)^"'");
+	  if x.gconst <> const
+	  then Npkcontext.error 
+	    "Firstpass.first_pass.update_glob_decl"
+	    ("Variable "^name^" should be const")
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {gtype = v.vtype; gloc = v.vdecl;
+	  {gtype = v.vtype; gloc = v.vdecl; gconst = const;
 	   gdefd = false; ginit = None;}
   in
 
-(* TODO: factor this code with the one up there *)
+(* TODO: factor this code with the one up there!!! *)
   let update_glob_def v i =
     let name = Cilenv.glb_uniquename v in
+    let const = is_const v.vtype in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 
@@ -272,13 +279,17 @@ let first_pass f =
 	    Npkcontext.print_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name)
 	  end;
+	  if x.gconst <> const
+	  then Npkcontext.error 
+	    "Firstpass.first_pass.update_glob_decl"
+	    ("Variable "^name^" should be const");
 	  x.gtype <- v.vtype;
 	  x.gdefd <- true;
 	  x.gloc <- v.vdecl;
 	  x.ginit <- i
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {gtype = v.vtype; gloc = v.vdecl;
+	  {gtype = v.vtype; gloc = v.vdecl; gconst = const;
 	   gdefd = true; ginit = i;}
   in
 
