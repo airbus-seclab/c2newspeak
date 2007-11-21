@@ -47,7 +47,8 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_t
-    | StructOrUnion of (bool * fields_t * int) (* true for a structure *)
+    | Struct of (fields_t * int)
+    | Union of (fields_t * int)
     | Fun of ftyp
 
 and fields_t = (string * (int * typ)) list
@@ -113,9 +114,6 @@ val deref_typ: typ -> typ
 
 val size_of: typ -> int
 
-(* TODO: this is a bit of a hack, think about it *)
-val undefined: string
-
 val int_typ: typ
 
 val typ_of_cst: cst -> typ
@@ -129,3 +127,5 @@ val promote: ikind -> ikind
 val exp_of_int: int -> exp
 
 val ftyp_equals: ftyp -> ftyp -> bool
+
+val undefined: string

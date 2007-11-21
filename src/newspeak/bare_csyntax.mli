@@ -27,45 +27,23 @@ open Newspeak
 type prog = (global * location) list
 
 and global =
-    | FunctionDef of (declaration * blk)
-(* true for extern, true for const *)
-    | GlbDecl of (bool * bool * declaration * init option)
-    | Typedef of declaration
+    | FunctionDef of (string * typ * blk)
+(* true for extern *)
+    | GlbDecl of (bool * string * typ * init option)
 
-and declaration = (base_typ * var_modifier)
+and typ = Csyntax.typ
 
 and init = 
     | Data of exp
     | Sequence of init list
     | CstStr of string
 
-and base_typ =
-    | Void 
-    | Integer of (sign_t * ityp)    
-    | Struct of declaration list
-    | Union of declaration list
-    | Name of string
-
-and var_modifier =
-    | Abstract
-    | Variable of string
-    | Function of (var_modifier * declaration list)
-    | Array of (var_modifier * Int64.t option)
-    | Pointer of var_modifier
-
-and ityp = 
-    | Char 
-    | Short
-    | Int
-    | Long
-    | LongLong
-
 and stmt = (stmtkind * location)
 
 and blk = stmt list
 
 and stmtkind =
-    | Decl of (declaration * init option)
+    | Decl of (string * typ * init option)
     | Set of (lv * exp)
     | If of (exp * blk * location) list
     | Switch of (exp * (exp option * blk * location) list)
@@ -85,14 +63,14 @@ and lv =
     | Deref of exp
 
 and exp = 
-    | Const of cst
+    | Cst of cst
     | Lval of lv
     | AddrOf of lv
     | Unop of (unop * exp)
     | And of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (string * exp list)
-    | Sizeof of declaration
+    | Sizeof of Csyntax.typ
     | SizeofV of string
 
 and cst = Int64.t
@@ -105,7 +83,5 @@ and binop =
     | Mult
     | Gt
     | Eq
-
-val size_of_ityp: ityp -> int
 
 val negate: exp -> exp

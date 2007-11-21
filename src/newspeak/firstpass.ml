@@ -31,31 +31,16 @@ module C = Csyntax
 let ret_pos = 1
 let ret_name = "!return"
 
-let int64_to_int x =
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Firstpass.int64_to_int" "integer too big";
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Firstpass.int64_to_int" "expecting positive integer";
-  Int64.to_int x
-
-(* TODO: check this for various architecture ? 
-   Here align everything on 4 *)
-let align o sz = 
-  let offset = o mod 4 in
-  if offset = 0 then o
-  else if offset + sz <= 4 then o
-  else (o - offset) + 4
-
 let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [Data (Const Int64.zero)] in
+  let res = ref [Data (Cst Int64.zero)] in
     for i = len - 1 downto 0 do
       let c = Char.code str.[i] in
-	res := (Data (Const (Int64.of_int c)))::!res
+	res := (Data (Cst (Int64.of_int c)))::!res
     done;
     !res
 
@@ -79,10 +64,9 @@ let translate_binop op t1 t2 =
     | _ ->
 	Npkcontext.error "Csyntax.type_of_binop" 
 	  "Unexpected binary operator and arguments"
-
+  
 
 let translate fname cprog =
-  let typedefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -144,75 +128,6 @@ let translate fname cprog =
 
   in
 
-  let rec translate_decl (b, v) =
-    let b = translate_base_typ b in
-    let (t, x) = translate_var_modifier b v in
-      (t, x)
-	
-  and translate_base_typ t =
-    match t with
-	Integer (s, t) -> C.Int (s, size_of_ityp t)
-      | Struct f -> C.StructOrUnion (translate_struct_fields f)
-      | Union f -> C.StructOrUnion (translate_union_fields f)
-      | Void -> C.Void
-      | Name x -> 
-	  try Hashtbl.find typedefs x
-	  with Not_found -> 
-	    Npkcontext.error "Firstpass.translate_base_typ" ("Unknown type "^x)
-
-  and translate_struct_fields f =
-    let rec translate o f =
-      match f with
-	  d::f ->
-	    let (t, x) = translate_decl d in
-	    let sz = C.size_of t in
-	    let o = align o sz in
-	    let (f, n) = translate (o+sz) f in
-	      ((x, (o, t))::f, n)
-	| [] -> ([], align o Config.size_of_int)
-    in
-    let (f, n) = 
-      match f with
-	  d::[] ->
-	    let (t, x) = translate_decl d in
-	    let sz = C.size_of t in
-	      ((x, (0, t))::[], sz)
-	| _ -> translate 0 f 
-    in
-      (true, f, n)
-
-  and translate_union_fields f =
-    let n = ref 0 in
-    let translate d =
-      let (t, x) = translate_decl d in
-      let sz = size_of t in
-	if !n < sz then n := sz;
-	(x, (0, t))
-    in
-      (false, List.map translate f, !n)
-
-  and translate_var_modifier b v =
-    match v with
-	Abstract -> (b, C.undefined)
-      | Variable x -> (b, x)
-      | Function (Variable f, args) -> 
-	  (C.Fun (List.map translate_decl args, b), f)
-      | Function (Pointer v, args) -> 
-	  let args = List.map translate_decl args in
-	    translate_var_modifier (C.Ptr (C.Fun (args, b))) v
-      | Array (v, n) -> 
-	  let n = 
-	    match n with
-		None -> None
-	      | Some n -> Some (int64_to_int n) 
-	  in
-	    translate_var_modifier (C.Array (b, n)) v
-      | Pointer v -> translate_var_modifier (C.Ptr b) v
-      | Function _ -> 
-	  Npkcontext.error "Firstpass.translate_var_modifier" 
-	    "case not implemented yet"
-  in
-    
   let rec translate_lv x =
     match x with
 	Var x -> get_var x
@@ -233,7 +148,7 @@ let translate fname cprog =
 
   and translate_exp x =
     match x with
-	Const i -> (C.Const i, C.typ_of_cst i)
+	Cst i -> (C.Const i, C.typ_of_cst i)
 
       | Lval lv -> 
 	  let (lv, t) = translate_lv lv in
@@ -265,10 +180,8 @@ let translate fname cprog =
 	  let (e, t) = translate_exp (Lval (Var x)) in
 	    (C.exp_of_int (size_of t), int_typ)
 
-      | Sizeof d ->
-	  let (t, _) = translate_decl d in
-(* TODO: should check that the size of all declarations is less than max_int *)
-	    (C.exp_of_int (size_of t), int_typ)
+      (* TODO: should check that the size of all declarations is less than max_int *)
+      | Sizeof t -> (C.exp_of_int (size_of t), int_typ)
 
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
@@ -368,9 +281,8 @@ let translate fname cprog =
 
   let rec translate_blk x =
     match x with
-      | (Decl (d, init), loc)::tl -> 
+      | (Decl (x, t, init), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  let (t, x) = translate_decl d in
 	  let (t, init) = translate_init t init in
 	  let n = push_local loc (t, x) in
 	  let tl = translate_blk tl in begin 
@@ -463,8 +375,7 @@ let translate fname cprog =
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (x, body) ->
-	  let (t, x) = translate_decl x in
+	FunctionDef (x, t, body) ->
 	  let ft = C.ftyp_of_typ t in
 	  let _ = push_formals loc ft in
 	  let body = translate_blk body in
@@ -475,8 +386,8 @@ let translate fname cprog =
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbDecl (is_extern, is_const, d, init) -> 
-	  let (t, x) = translate_decl d in
+      | GlbDecl (is_extern, x, t, init) ->
+	  let is_const = false in
 	    begin match (t, init) with
 		(Fun ft, None) -> update_fundef x (ft, loc, None)
 	      | (Fun ft, Some _) -> 
@@ -487,10 +398,6 @@ let translate fname cprog =
 		  let init = if is_extern then None else Some init in
 		    Hashtbl.add glbdecls x (t, loc, init, is_const)
 	    end
-
-      | Typedef x -> 
-	  let (t, x) = translate_decl x in
-	    Hashtbl.add typedefs x t
   in
   
   List.iter translate_global cprog;

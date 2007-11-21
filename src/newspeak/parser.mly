@@ -27,35 +27,51 @@
 open Csyntax
 open Bare_csyntax
 open Lexing
+open Synthack
+
 (* TODO: write checks for all the syntax that is thrown away in these functions
    !! *)
+
 let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
+let build_glbdecl is_extern (b, m) = 
+  let build ((v, init), loc) = 
+    let (t, x) = Synthack.normalize_decl (b, v) in
+      (GlbDecl (is_extern, x, t, init), loc)
+  in
+    List.map build m
+
 let build_fundef (b, m) body = 
-  let loc = get_loc () in
-  let build ((v, _), _)  = (FunctionDef ((b, v), body), loc) in
+  let build ((v, _), loc)  = 
+    let (t, x) = Synthack.normalize_decl (b, v) in
+      (FunctionDef (x, t, body), loc) 
+  in
     List.map build m
 
 let build_typedef (b, m) =
-  let loc = get_loc () in
-  let build ((v, _), _) = (Typedef (b, v), loc) in
-    List.map build m
+  let build ((v, _), _) = 
+    let (t, x) = Synthack.normalize_decl (b, v) in
+      Synthack.define_type x t
+  in
+    List.iter build m;
+    []
 
-let build_decl (b, m) =
-  let build ((v, _), _) = (b, v) in
+let build_field (b, m) =
+  let build ((v, _), _) = Synthack.normalize_decl (b, v) in
     List.map build m
 
 let build_stmtdecl (b, m) =
-  let build ((v, init), l) = (Decl ((b, v), init), l) in
-    List.map build m
-
-let build_glbdecl is_extern is_const (b, m) = 
-  let build ((v, init), _) = 
-    (GlbDecl (is_extern, is_const, (b, v), init), get_loc ()) 
+  let build ((v, init), l) = 
+    let (t, x) = Synthack.normalize_decl (b, v) in
+      (Decl (x, t, init), l) 
   in
     List.map build m
+
+let build_type_name d =
+  let (t, _) = Synthack.normalize_decl d in
+    t
 
 %}
 
@@ -68,6 +84,7 @@ let build_glbdecl is_extern is_const (b, m) =
 %token EOF
 
 %token <string> IDENTIFIER
+%token <string> TYPEDEF_NAME
 %token <string> STRING
 %token <Int64.t> INTEGER
 
@@ -82,8 +99,8 @@ let build_glbdecl is_extern is_const (b, m) =
 %left PLUS MINUS
 %left STAR
 
-%type <Bare_csyntax.prog> translation_unit
-%start translation_unit
+%type <Bare_csyntax.prog> parse
+%start parse
 
 %%
 /* TODO: simplify code by generalizing!!! 
@@ -91,20 +108,40 @@ try to remove multiple occurence of same pattern: factor as much as possible
 */
 // carefull not to have any empty rule: this deceives line number location
 
+parse:
+  translation_unit                         { let prog = $1 in 
+					       Synthack.clean (); prog }
+;;
+
 translation_unit:
   external_declaration translation_unit    { $1@$2 }
 |                                          { [] }
 ;;
 
 external_declaration:
-  declaration SEMICOLON                    { build_glbdecl false false $1 }
-| EXTERN declaration SEMICOLON             { build_glbdecl true false $2 }
+  declaration SEMICOLON                    { build_glbdecl false $1 }
+| EXTERN declaration SEMICOLON             { build_glbdecl true $2 }
 | declaration statement                    { build_fundef $1 $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 ;;
 
 declaration:
-  type_specifier init_declarator_list      { ($1, $2) }
+  declaration_specifiers init_declarator_list      { ($1, $2) }
+;;
+
+declaration_specifiers:
+  type_qualifier_list 
+type_specifier// type_qualifier_list 
+{ $2 }
+;;
+
+type_qualifier_list:
+  type_qualifier type_qualifier_list {}
+| {}
+;;
+
+type_qualifier:
+  CONST {}
 ;;
 
 init_declarator_list:
@@ -115,11 +152,6 @@ init_declarator_list:
 
 block:
   LBRACE statement_list RBRACE             { $2 }
-;;
-
-field_list:
-  declaration SEMICOLON field_list         { (build_decl $1)@$3 }
-|                                          { [] }
 ;;
 
 statement_list:
@@ -134,7 +166,7 @@ statement:
 					     get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If (($3, $5, get_loc ())
-						   ::(Const Int64.one, $7, 
+						   ::(Cst Int64.one, $7, 
 						     get_loc ())::[]), 
 						 get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
@@ -162,7 +194,7 @@ statement:
 assignment:
   left_value EQ expression                 { ($1, $3) }
 | left_value PLUSPLUS                      { ($1, Binop (Plus, Lval $1, 
-							Const Int64.one)) }
+							Cst Int64.one)) }
 ;;
 
 case_list:
@@ -193,7 +225,7 @@ left_value:
 ;;
 
 expression:
-  INTEGER                                  { Const $1 }
+  INTEGER                                  { Cst $1 }
 | MINUS expression                         { negate $2 }
 | left_value                               { Lval $1 }
 | expression AND expression                { And ($1, $3) }
@@ -208,7 +240,7 @@ expression:
 | expression EQEQ expression               { Binop (Eq, $1, $3) }
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
 | SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
-| SIZEOF LPAREN type_name RPAREN           { Sizeof $3 }
+| SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_name $3) }
 ;;
 
 init_declarator:
@@ -248,22 +280,31 @@ declarator:
 | declarator LPAREN RPAREN                 { Function ($1, []) }
 ;;
 
+field_list:
+  field_declaration SEMICOLON field_list   { $1::$3 } 
+| field_declaration SEMICOLON              { $1::[] }
+;;
+
 parameter_list:
   parameter_declaration COMMA 
   parameter_list                           { $1::$3 }
 | parameter_declaration                    { $1::[]}
 ;;
 
+field_declaration:
+  declaration_specifiers declarator        { ($1, $2) }
+;;
+
 // TODO: careful, this is a bit of a hack
 parameter_declaration:
-  type_specifier declarator                { ($1, $2) }
-| type_specifier abstract_declarator       { ($1, $2) }
-| type_specifier                           { ($1, Abstract) }
+  declaration_specifiers declarator                { ($1, $2) }
+| declaration_specifiers abstract_declarator       { ($1, $2) }
+| declaration_specifiers                           { ($1, Abstract) }
 ;;
 
 type_name:
-  type_specifier abstract_declarator       { ($1, $2) }
-| type_specifier                           { ($1, Abstract) }
+  declaration_specifiers abstract_declarator       { ($1, $2) }
+| declaration_specifiers                           { ($1, Abstract) }
 ;;
 
 type_specifier:
@@ -272,7 +313,7 @@ type_specifier:
 | UNSIGNED ityp                            { Integer (Newspeak.Unsigned, $2) }
 | STRUCT LBRACE field_list RBRACE          { Struct $3 }
 | UNION LBRACE field_list RBRACE           { Union $3 }
-| IDENTIFIER                               { Name $1 }
+| TYPEDEF_NAME                             { Name $1 }
 ;;
 
 ityp:

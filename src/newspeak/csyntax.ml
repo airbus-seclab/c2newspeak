@@ -48,7 +48,8 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_t
-    | StructOrUnion of (bool * fields_t * int) (* true for Struct *)
+    | Struct of (fields_t * int)
+    | Union of (fields_t * int)
     | Fun of ftyp
 
 and fields_t = (string * (int * typ)) list
@@ -112,7 +113,7 @@ let ftyp_of_typ t =
 
 let fields_of_typ t =
   match t with
-      StructOrUnion (_, f, _) -> f
+      Struct (f, _) | Union (f, _) -> f
     | _ -> 
 	Npkcontext.error "Csyntax.fields_of_typ" 
 	  "Struct or union type expected"
@@ -133,12 +134,10 @@ let rec size_of t =
     | Float n -> n
     | Ptr _ -> Config.size_of_ptr
     | Array (t, Some n) -> (size_of t) * n
-    | StructOrUnion (_, _, n) -> n
+    | Struct (_, n) | Union (_, n) -> n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
     | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
-
-let undefined = "!undefined"
 
 (* TODO: check that integer don't have a default type (like int) *)
 let typ_of_cst i =
@@ -171,3 +170,6 @@ let ftyp_equals (args1, ret1) (args2, ret2) =
   let (args1, _) = List.split args1 in
   let (args2, _) = List.split args2 in
     (args1, ret1) = (args2, ret2)
+
+(* TODO: this is a bit of a hack. Avoid? *)
+let undefined = "!undefined"

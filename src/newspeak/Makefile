@@ -1,10 +1,11 @@
 # Project
 DIR = 
-OBJ = cilutils params npkcontext config bare_csyntax lexer parser \
+OBJ = cilutils params npkcontext config \
+      bare_csyntax csyntax synthack lexer parser \
       newspeak \
       npkil npkutils cilenv \
       cilfirstpass cilcompiler \
-      csyntax firstpass compiler \
+      firstpass compiler \
       link c2newspeak
 
 DEPEND = parser.mli parser.ml lexer.ml

@@ -61,6 +61,10 @@ let int64_of_string lexbuf strip_cnt =
     i
 
 let extract_string s = String.sub s 1 (String.length s - 2)
+
+let token_of_ident str = 
+  if Synthack.is_type str then TYPEDEF_NAME str else IDENTIFIER str
+
 }
 
 let white_space = ' ' | '\t'
@@ -135,7 +139,7 @@ rule token = parse
   | "<"                 { LT }
   | ">"                 { GT }
 
-  | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
+  | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
   | "/*"                { comment lexbuf }
   | line_comment        { cnt_line lexbuf; token lexbuf }

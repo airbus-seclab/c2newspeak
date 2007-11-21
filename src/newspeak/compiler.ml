@@ -66,9 +66,9 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  Npkcontext.error "Compiler.translate_typ" "void not allowed here"
       | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
       | Array (t, sz) -> K.Array (translate_typ t, sz)
-      | StructOrUnion (_, fields, n) -> 
+      | Struct (fields, n) | Union (fields, n) -> 
 	  let translate_field (_, (o, t)) = (o, translate_typ t) in
-	  K.Region (List.map translate_field fields, n)
+	    K.Region (List.map translate_field fields, n)
       | Fun _ -> 
 	  Npkcontext.error "Compiler.translate_typ" "function not allowed here"
 
@@ -430,7 +430,7 @@ let parse fname =
   let lexbuf = Lexing.from_channel cin in
     Lexer.init fname lexbuf;
     try
-      let cprog = Parser.translation_unit Lexer.token lexbuf in
+      let cprog = Parser.parse Lexer.token lexbuf in
 	close_in cin;
 	cprog
     with Parsing.Parse_error -> 
