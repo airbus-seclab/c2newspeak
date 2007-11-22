@@ -382,22 +382,22 @@ let translate fname cprog =
 	  let locals = get_locals () in
 	    update_fundef x (ft, loc, Some (locals, body))
 
-      | GlbDecl (is_extern, _, _, Some _) when is_extern -> 
+(* TODO: put this check in parser ?? *)
+      | GlbDecl (_, _, is_extern, _, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbDecl (is_extern, x, t, init) ->
-	  let is_const = false in
-	    begin match (t, init) with
-		(Fun ft, None) -> update_fundef x (ft, loc, None)
-	      | (Fun ft, Some _) -> 
-		  Npkcontext.error "Firstpass.translate_global"
-		    ("Unexpected initialization of function "^x)
-	      | _ -> 
-		  let (t, init) = translate_init t init in
-		  let init = if is_extern then None else Some init in
-		    Hashtbl.add glbdecls x (t, loc, init, is_const)
-	    end
+      | GlbDecl (x, t, is_extern, is_const, init) ->
+	  begin match (t, init) with
+	      (Fun ft, None) -> update_fundef x (ft, loc, None)
+	    | (Fun ft, Some _) -> 
+		Npkcontext.error "Firstpass.translate_global"
+		  ("Unexpected initialization of function "^x)
+	    | _ -> 
+		let (t, init) = translate_init t init in
+		let init = if is_extern then None else Some init in
+		  Hashtbl.add glbdecls x (t, loc, init, is_const)
+	  end
   in
   
   List.iter translate_global cprog;

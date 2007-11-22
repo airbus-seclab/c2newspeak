@@ -38,8 +38,8 @@ let get_loc () =
 
 let build_glbdecl is_extern (b, m) = 
   let build ((v, init), loc) = 
-    let (t, x) = Synthack.normalize_decl (b, v) in
-      (GlbDecl (is_extern, x, t, init), loc)
+    let (t, x, is_const) = Synthack.normalize_glbdecl (b, v) in
+      (GlbDecl (x, t, is_extern, is_const, init), loc)
   in
     List.map build m
 
@@ -69,9 +69,11 @@ let build_stmtdecl (b, m) =
   in
     List.map build m
 
-let build_type_name d =
+let build_type_decl d =
   let (t, _) = Synthack.normalize_decl d in
     t
+
+let build_pointer attrs p = Pointer (Synthack.append_attrs attrs p)
 
 %}
 
@@ -129,19 +131,35 @@ declaration:
   declaration_specifiers init_declarator_list      { ($1, $2) }
 ;;
 
+field_declaration:
+  declaration_specifiers declarator        { ($1, $2) }
+;;
+
+// TODO: careful, this is a bit of a hack
+parameter_declaration:
+  declaration_specifiers declarator                { ($1, $2) }
+| declaration_specifiers abstract_declarator       { ($1, $2) }
+| declaration_specifiers                           { ($1, Abstract) }
+;;
+
+type_declaration:
+  declaration_specifiers abstract_declarator       { ($1, $2) }
+| declaration_specifiers                           { ($1, Abstract) }
+;;
+
+
 declaration_specifiers:
-  type_qualifier_list 
-type_specifier// type_qualifier_list 
-{ $2 }
+  type_qualifier_list type_specifier type_qualifier_list 
+                                           { ($2, $1@$3) }
 ;;
 
 type_qualifier_list:
-  type_qualifier type_qualifier_list {}
-| {}
+  type_qualifier type_qualifier_list       { $1::$2 }
+|                                          { [] }
 ;;
 
 type_qualifier:
-  CONST {}
+  CONST                                    { Const }
 ;;
 
 init_declarator_list:
@@ -240,7 +258,7 @@ expression:
 | expression EQEQ expression               { Binop (Eq, $1, $3) }
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
 | SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
-| SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_name $3) }
+| SIZEOF LPAREN type_declaration RPAREN    { Sizeof (build_type_decl $3) }
 ;;
 
 init_declarator:
@@ -261,7 +279,7 @@ init_list:
 ;;
 
 abstract_declarator:
-| STAR abstract_declarator                 { Pointer $2 }
+| pointer abstract_declarator              { build_pointer $1 $2 }
 | LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
 | LBRACKET INTEGER RBRACKET                { Array (Abstract, Some $2) }
@@ -271,13 +289,17 @@ abstract_declarator:
 ;;
 
 declarator:
-| STAR declarator                          { Pointer $2 }
+| pointer declarator                       { build_pointer $1 $2 }
 | LPAREN declarator RPAREN                 { $2 }
 | IDENTIFIER                               { Variable $1 }
 | declarator LBRACKET INTEGER RBRACKET     { Array ($1, Some $3) }
 | declarator LBRACKET RBRACKET             { Array ($1, None) }
 | declarator LPAREN parameter_list RPAREN  { Function ($1, $3) }
 | declarator LPAREN RPAREN                 { Function ($1, []) }
+;;
+
+pointer:
+  STAR type_qualifier_list                 { $2 }
 ;;
 
 field_list:
@@ -289,22 +311,6 @@ parameter_list:
   parameter_declaration COMMA 
   parameter_list                           { $1::$3 }
 | parameter_declaration                    { $1::[]}
-;;
-
-field_declaration:
-  declaration_specifiers declarator        { ($1, $2) }
-;;
-
-// TODO: careful, this is a bit of a hack
-parameter_declaration:
-  declaration_specifiers declarator                { ($1, $2) }
-| declaration_specifiers abstract_declarator       { ($1, $2) }
-| declaration_specifiers                           { ($1, Abstract) }
-;;
-
-type_name:
-  declaration_specifiers abstract_declarator       { ($1, $2) }
-| declaration_specifiers                           { ($1, Abstract) }
 ;;
 
 type_specifier:

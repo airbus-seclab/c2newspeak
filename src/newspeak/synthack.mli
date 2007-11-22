@@ -13,6 +13,9 @@ and var_modifier =
     | Function of (var_modifier * decl list)
     | Array of (var_modifier * Int64.t option)
     | Pointer of var_modifier
+    | Attr of (attr list * var_modifier)
+
+and attr = Const
 
 and ityp = 
     | Char 
@@ -21,7 +24,9 @@ and ityp =
     | Long
     | LongLong
 
-and decl = (base_typ * var_modifier)
+and decl = ((base_typ * attr list) * var_modifier)
+
+val normalize_glbdecl: decl -> (Csyntax.typ * string * bool)
 
 val normalize_decl: decl -> (Csyntax.typ * string)
 
@@ -30,3 +35,5 @@ val clean: unit -> unit
 val define_type: string -> Csyntax.typ -> unit
 
 val is_type: string -> bool
+
+val append_attrs: attr list -> var_modifier -> var_modifier
