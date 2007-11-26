@@ -160,3 +160,9 @@ val create_cstr: string -> (string * ginfo)
 val string_of_cast: Newspeak.scalar_t -> Newspeak.scalar_t -> string
 
 val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
+
+(* Generates a Newspeak statement by wrapping a block body with
+   declarations decls. The order of the declaration must be carefully
+   checked because in Newspeak, the variables are identified by their
+   positions in the declaration stacks, not by their names *)
+val append_decls: (string * typ * location) list -> blk -> blk

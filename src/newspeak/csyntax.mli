@@ -62,12 +62,12 @@ and stmt = (stmtkind * location)
 and stmtkind =
     | Init of (int * init)
     | Set of (typ_lv * typ_exp)
-    | If of (typ_exp * blk * location) list
+    | If of (typ_exp * blk * blk)
     | Switch of (exp * (typ_exp option * blk * location) list)
-    | While of (typ_exp * blk)
-    | DoWhile of (blk * typ_exp)
+(* TODO: incorrect translation, have a loop *)
+    | Loop of blk
     | Return
-    | Exp of exp
+    | Call of (typ_lv option * fn * typ_exp list)
     | Break
 
 and typ_exp = (exp * typ)
@@ -87,7 +87,6 @@ and exp =
     | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
-    | Call of (fn * typ_exp list)
 
 and fn = string * ftyp
 

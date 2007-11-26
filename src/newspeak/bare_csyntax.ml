@@ -47,8 +47,8 @@ and blk = stmt list
 and stmtkind =
     | Decl of (string * typ * init option)
     | Set of (lv * exp)
-(* TODO: simplify if then else syntax !!! *)
-    | If of (exp * blk * location) list
+(* TODO: simplify if then else syntax !!! Only two cases at most!!! *)
+    | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)
     | DoWhile of (blk * exp)

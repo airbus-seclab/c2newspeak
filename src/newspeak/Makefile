@@ -5,7 +5,7 @@ OBJ = cilutils params npkcontext config \
       newspeak \
       npkil npkutils cilenv \
       cilfirstpass cilcompiler \
-      firstpass compiler \
+      lstutils firstpass compiler \
       link c2newspeak
 
 DEPEND = parser.mli parser.ml lexer.ml

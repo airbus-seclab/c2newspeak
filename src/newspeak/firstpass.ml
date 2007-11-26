@@ -95,9 +95,10 @@ let translate fname cprog =
   in
     
   let push_local = push_var in
-  let pop_local loc (t, x) = 
-    locals := (t, x, loc)::!locals;
-    Hashtbl.remove local_env x 
+  let pop_local x =
+    let (_, t, loc) = Hashtbl.find local_env x in
+      locals := (t, x, loc)::!locals;
+      Hashtbl.remove local_env x 
   in
   let push_formals loc (args_t, ret_t) = 
     let _ = push_var loc (ret_t, ret_name) in
@@ -118,6 +119,11 @@ let translate fname cprog =
 	  ("Unknown variable "^x)
   in
 
+  let typ_of_var x =
+    let (_, t) = get_var x in
+      t
+  in
+
   let get_ret_typ () =
     try 
       let (_, t, _) = Hashtbl.find local_env ret_name in
@@ -130,58 +136,72 @@ let translate fname cprog =
 
   let rec translate_lv x =
     match x with
-	Var x -> get_var x
+	Var x -> ([], get_var x)
       | Field (lv, f) -> 
-	  let (lv, t) = translate_lv lv in
+	  let (pref, (lv, t)) = translate_lv lv in
 	  let r = C.fields_of_typ t in
 	  let (o, t) = List.assoc f r in
-	    (C.Field (lv, f, o), t)
+	    (pref, (C.Field (lv, f, o), t))
       | Index (lv, e) -> 
-	  let (lv, t) = translate_lv lv in
+	  let (lv_pref, (lv, t)) = translate_lv lv in
 	  let (t, n) = array_of_typ t in
-	  let (i, _) = translate_exp e in
-	    (C.Index (lv, (t, n), i), t)
+	  let (e_pref, (i, _)) = translate_exp e in
+	    (lv_pref@e_pref, (C.Index (lv, (t, n), i), t))
       | Deref e -> 
-	  let (e, t) = translate_exp e in
+	  let (pref, (e, t)) = translate_exp e in
 	  let t = deref_typ t in
-	    (C.Deref (e, size_of t), t)
+	    (pref, (C.Deref (e, size_of t), t))
 
   and translate_exp x =
     match x with
-	Cst i -> (C.Const i, C.typ_of_cst i)
+	Cst i -> ([], (C.Const i, C.typ_of_cst i))
 
       | Lval lv -> 
-	  let (lv, t) = translate_lv lv in
-	    (C.Lval (lv, t), t)
+	  let (pref, (lv, t)) = translate_lv lv in
+	    (pref, (C.Lval (lv, t), t))
 
       | AddrOf lv -> 
-	  let (lv, t) = translate_lv lv in
-	    (C.AddrOf (lv, t), C.Ptr t) 
+	  let (pref, (lv, t)) = translate_lv lv in
+	    (pref, (C.AddrOf (lv, t), C.Ptr t))
 
       | Unop (op, e) -> 
-	  let (e, t) = translate_exp e in
+	  let (pref, (e, t)) = translate_exp e in
 	  let op = translate_unop op in
 	  let t = C.typ_of_unop op in
-	    (C.Unop (op, e), t)
+	    (pref, (C.Unop (op, e), t))
 
       | Binop (op, e1, e2) -> 
-	  let (e1, t1) = translate_exp e1 in
-	  let (e2, t2) = translate_exp e2 in
+	  let (pref1, (e1, t1)) = translate_exp e1 in
+	  let (pref2, (e2, t2)) = translate_exp e2 in
 	  let op = translate_binop op t1 t2 in
 	  let t = C.typ_of_binop op in
-	    (C.Binop (op, e1, e2), t)
+	    (pref1@pref2, (C.Binop (op, e1, e2), t))
 
       | Call (f, args) -> 
+(* TODO: simplify this by putting code in comme with Set (lv, Call ) *)
+	  let loc = Npkcontext.get_loc () in
 	  let (args_t, ret_t) = typ_of_fun f in
 	  let fn = (f, (args_t, ret_t)) in
-	    (C.Call (fn, List.map translate_exp args), ret_t)
+	  let (pref, args) = List.split (List.map translate_exp args) in
+	  let pref = List.concat pref in
+	  let (lv, e) =
+	    match ret_t with
+		(* Any value is ok, since it is going to be thrown away *)
+		Void -> (None, C.exp_of_int 1)
+	      | _ -> 
+		  let tmp = (C.Local (push_local loc (ret_t, "tmp")), ret_t) in
+		    pop_local "tmp";
+		    (Some tmp, C.Lval tmp)
+	  in
+	  let call = (C.Call (lv, fn, args), loc) in
+	    (pref@(call::[]), (e, ret_t))
 
       | SizeofV x -> 
-	  let (e, t) = translate_exp (Lval (Var x)) in
-	    (C.exp_of_int (size_of t), int_typ)
+	  let t = typ_of_var x in
+	    translate_exp (Sizeof t)
 
       (* TODO: should check that the size of all declarations is less than max_int *)
-      | Sizeof t -> (C.exp_of_int (size_of t), int_typ)
+      | Sizeof t -> ([], (C.exp_of_int (size_of t), int_typ))
 
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
@@ -189,8 +209,10 @@ let translate fname cprog =
 
   let translate_exp_option e =
     match e with
-	None -> None
-      | Some e -> Some (translate_exp e)
+	None -> ([], None)
+      | Some e -> 
+	  let (pref, e) = translate_exp e in
+	    (pref, Some e)
   in
 
   let rec translate_init t x =
@@ -199,7 +221,11 @@ let translate fname cprog =
     let rec translate t x =
       match (x, t) with
 	  (Data e, _) -> 
-	    let e = translate_exp e in 
+	    let (pref, e) = translate_exp e in 
+	      if (pref <> []) then begin 
+		Npkcontext.error "Firstpass.translate_init"
+		  "Expression without side-effects expected"
+	      end;
 	      res := (!o, t, e)::!res;
 	      t
 
@@ -286,7 +312,7 @@ let translate fname cprog =
 	  let (t, init) = translate_init t init in
 	  let n = push_local loc (t, x) in
 	  let tl = translate_blk tl in begin 
-	    pop_local loc (t, x);
+	    pop_local x;
 	    match init with
 		None -> tl
 	      | Some init -> (C.Init (n, init), loc)::tl
@@ -302,50 +328,73 @@ let translate fname cprog =
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	Set (lv, e) -> 
-	  let lv = translate_lv lv in
-	  let e = translate_exp e in
-	  (C.Set (lv, e), loc)::[]
+	Set (lv, Call (f, args))  ->
+	  let (lv_pref, lv) = translate_lv lv in
+	  let (args_t, ret_t) = typ_of_fun f in
+	    if ret_t = C.Void then begin
+	      Npkcontext.error "Firstpass.translate_stmt" 
+		"Expression should have type void"
+	    end;
+	    let fn = (f, (args_t, ret_t)) in
+	    let (pref, args) = List.split (List.map translate_exp args) in
+	    let pref = List.concat pref in
+	    let call = (C.Call (Some lv, fn, args), loc) in
+	      lv_pref@pref@(call::[])
 
-      | If ((And (e1, e2), body, loc)::tl) ->
-	  let body = (If ((e2, body, loc)::tl), loc)::[] in
-	    translate_stmt (If ((e1, body, loc)::tl), loc)
+      | Set (lv, e) -> 
+	  let (lv_pref, lv) = translate_lv lv in
+	  let (e_pref, e) = translate_exp e in
+	    lv_pref@e_pref@((C.Set (lv, e), loc)::[])
+	      
+      | If (And (e1, e2), blk1, blk2) ->
+	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
+	    translate_stmt (If (e1, if_e1_blk, blk2), loc)
 
-      | If branches -> 
-	  let translate_case (e, body, loc) = 
-	    (translate_exp e, translate_blk body, loc) 
-	  in
-	  let branches = List.map translate_case branches in
-	    (C.If branches, loc)::[]
+      | If (e, blk1, blk2) ->
+	  let (pref, e) = translate_exp e in
+	  let blk1 = translate_blk blk1 in
+	  let blk2 = translate_blk blk2 in
+	    pref@((C.If (e, blk1, blk2), loc)::[])
 
       | While (e, body) ->
-	  let e = translate_exp e in
+	  let (pref, e) = translate_exp e in
 	  let body = translate_blk body in
-	    (C.While (e, body), loc)::[]
+	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
+	  let body = pref@(loop_exit::body) in
+	    (C.Loop (body), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
-	  let e = translate_exp e in
-	    (C.DoWhile (body, e), loc)::[]
+	  let (pref, e) = translate_exp e in
+	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
+	  let body = body@pref@(loop_exit::[]) in
+	    (C.Loop body, loc)::[]
 
       | Return None -> (C.Return, loc)::[]
 	      
       | Return (Some e) ->
-	  let lv = (Local ret_pos, get_ret_typ ()) in
-	  let e = translate_exp e in
-	    (C.Set (lv, e), loc)::(translate_stmt (Return None, loc))
+	  let set = (Set (Var ret_name, e), loc) in
+	  let return = (Return None, loc) in
+	    translate_blk (set::return::[])
 
-      | Exp e -> 
-	  let (e, _) = translate_exp e in
-	    (C.Exp e, loc)::[]
+      | Exp e ->
+	  let (pref, (_, t)) = translate_exp e in
+	    if t <> C.Void then begin
+	      Npkcontext.error "Firstpass.translate_stmt" 
+		"Expression should have type void"
+	    end;
+	    pref
 
       | Switch (e, cases) -> 
-	  let (e, _) = translate_exp e in
+	  let (pref, (e, _)) = translate_exp e in
+	  let pref = ref pref in
 	  let translate_case (e, body, loc) = 
-	    (translate_exp_option e, translate_blk body, loc) 
+	    let (pref_case, e) = translate_exp_option e in
+	      pref := pref_case@(!pref);
+	      (e, translate_blk body, loc) 
 	  in
 	  let cases = List.map translate_case cases in
-	    (C.Switch (e, cases), loc)::[]
+	    !pref@(C.Switch (e, cases), loc)::[]
 
       | Break -> (C.Break, loc)::[]
 

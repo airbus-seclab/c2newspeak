@@ -64,12 +64,11 @@ and stmtkind =
 (* TODO: remove Init *)
     | Init of (int * init)
     | Set of (typ_lv * typ_exp)
-    | If of (typ_exp * blk * location) list
+    | If of (typ_exp * blk * blk)
     | Switch of (exp * (typ_exp option * blk * location) list)
-    | While of (typ_exp * blk)
-    | DoWhile of (blk * typ_exp)
+    | Loop of blk
     | Return
-    | Exp of exp
+    | Call of (typ_lv option * fn * typ_exp list)
     | Break
 	
 and typ_exp = (exp * typ)
@@ -83,13 +82,13 @@ and lv =
     | Index of (lv * array_t * exp)
     | Deref of (exp * int)
 
+(* Side-effect free expressions *)
 and exp = 
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
-    | Call of (fn * typ_exp list)
 
 and fn = string * ftyp
 

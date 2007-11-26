@@ -556,3 +556,8 @@ let cast t e t' =
     | _ -> 
 	Npkcontext.error "Compiler.cast"
 	  ("Invalid cast "^(string_of_cast t t'))
+
+let rec append_decls d body =
+  match d with
+      (x, t, loc)::tl -> (Decl (x, t, append_decls tl body), loc)::[]
+    | [] -> body

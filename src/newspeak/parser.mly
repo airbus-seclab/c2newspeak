@@ -180,13 +180,9 @@ statement_list:
 statement:
   declaration SEMICOLON                    { build_stmtdecl $1 }
 | assignment SEMICOLON                     { [Set $1, get_loc ()] }
-| IF LPAREN expression RPAREN statement    { [If (($3, $5, get_loc ())::[]), 
-					     get_loc ()] }
+| IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
-  ELSE statement                           { [If (($3, $5, get_loc ())
-						   ::(Cst Int64.one, $7, 
-						     get_loc ())::[]), 
-						 get_loc ()] }
+  ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
   case_list
   RBRACE                                   { [Switch ($3, $6), get_loc ()] }

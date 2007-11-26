@@ -181,18 +181,6 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
 	    translate_binop op e1 e2
-
-      | Call _ -> 
-	  Npkcontext.error "Compiler.translate_exp" 
-	    "Call inside expression not implemented yet"
-  in
-
-  let rec append_decls d body =
-    match d with
-	(t, x, loc)::tl -> 
-	  let t = translate_typ t in
-	    (K.Decl (x, t, append_decls tl body), loc)::[]
-      | [] -> body
   in
 
   let rec translate_blk x =
@@ -200,7 +188,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	hd::tl -> (translate_stmt hd)@(translate_blk tl)
       | [] -> []
 
-  and translate_set loc ((lv, t), (e, t')) =
+  and translate_set loc (lv, t) (e, t') =
     let lv = translate_lv lv in
     let t = translate_scalar t in
     let e = translate_exp e in
@@ -222,103 +210,79 @@ let translate fname (_, cglbdecls, cfundefs) =
     match x with
       | Init (x, init) -> List.map (translate_local_init loc x) init
 
-      | Set (lv, (Call x, _)) -> translate_call loc (Some lv) x
+      | Set (lv, e) -> (translate_set loc lv e)::[]
 
-      | Set (lv, e) -> (translate_set loc (lv, e))::[]
-
-      | If ((e, body, loc)::tl) ->
+      | If (e, body1, body2) ->
 	  let cond1 = translate_bexp e in
-	  let body = translate_blk body in
-	  let else_body = translate_stmt (If tl, loc) in begin
+	  let body1 = translate_blk body1 in
+	  let body2 = translate_blk body2 in begin
 	    match cond1 with
-		K.Const N.CInt64 i when Int64.compare i Int64.zero <> 0 -> body
-	      | K.Const N.CInt64 _ -> else_body
+		K.Const N.CInt64 i when Int64.compare i Int64.zero <> 0 -> 
+		  body1
+	      | K.Const N.CInt64 _ -> body2
 	      | _ -> 
 		  let cond2 = K.negate cond1 in
-		    (K.ChooseAssert [([cond1], body); 
-				     ([cond2], else_body)], loc)::[]
+		    (K.ChooseAssert [([cond1], body1); 
+				     ([cond2], body2)], loc)::[]
 	  end
 
-      | If [] -> []
-
-      | While (e, body) ->
-	  let cond1 = translate_bexp e in
-	  let cond2 = K.negate cond1 in
+      | Loop body ->
 	  let body = translate_blk body in
-	  let brk = (K.Goto brk_lbl, loc)::[] in
-	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
-	  let loop = (K.InfLoop ((cond, loc)::body), loc)::[] in
-	    (K.DoWith (loop, brk_lbl, []), loc)::[]
-
-      | DoWhile (body, e) ->
-	  let cond1 = translate_bexp e in
-	  let cond2 = K.negate cond1 in
-	  let body = translate_blk body in
-	  let brk = (K.Goto brk_lbl, loc)::[] in
-	  let cond = K.ChooseAssert [([cond1], []); ([cond2], brk)] in
-	  let loop = (K.InfLoop (body@[cond, loc]), loc)::[] in
+	  let loop = (K.InfLoop body, loc)::[] in
 	    (K.DoWith (loop, brk_lbl, []), loc)::[]
 
       | Return -> (K.Goto ret_lbl, loc)::[]
 
-      | Exp (Call x) -> translate_call loc None x
+      | Call f -> translate_call loc f
       
       | Break -> (K.Goto brk_lbl, loc)::[]
       
       | Switch (e, cases) -> translate_switch loc e cases
 
-      | Exp _ -> 
-	  Npkcontext.error "Compiler.translate_stmt" 
-	    "Expressions as statements not implemented yet"
+  and translate_decl loc (t, x) =
+    let t = translate_typ t in
+      (x, t, loc)
 
-  and translate_call loc r ((f, (args_t, ret_t)), args_exp) =
-    let build_decl (t, x) = (t, x, loc) in
+  and translate_call loc (r, (f, (args_t, ret_t)), args_exp) =
     let (ret_var, ret_decl) =
       match ret_t with
 	  Void -> (None, [])
-	| _ -> (Some (push ()), build_decl (ret_t, "value_of_"^f)::[])
+	| _ -> 
+	    let v = push () in
+	    let d = translate_decl loc (ret_t, "value_of_"^f) in
+	      (Some v, d::[])
     in
     let ret_set = 
       match (r, ret_var) with
 	  (None, _) -> []
 	| (Some lv, Some v) -> 
 	    let ret_e = (Lval (v, ret_t), ret_t) in
-	    let set = translate_set loc (lv, ret_e) in
+	    let set = translate_set loc lv ret_e in
 	      set::[]
 	| _ -> 
 	    (* TODO: code cleanup: change error message *)
 	    Npkcontext.error "Compiler.translate_call" "No return value";
     in
     let args_var = List.map (fun (t, _) -> (push (), t)) args_t in
-    let decls = List.map build_decl args_t in
-    let sets = translate_args f loc args_var args_exp in
+    let decls = List.map (translate_decl loc) args_t in
+    let sets = 
+      try List.map2 (translate_set loc) args_var args_exp 
+      with Invalid_argument _ -> 
+	(* TODO: code cleanup: change error message *)
+	Npkcontext.error "Compiler.translate_call" 
+	  ("Different types for function "^f)
+    in
       pop ();
       List.iter (fun _ -> pop ()) args_t;
       
       let call = (K.Call (K.FunId f), loc)::[] in
       let call = sets@call in
-      let call = append_decls decls call in
+      let call = K.append_decls decls call in
 	(* TODO: code optimization: write this so that there is no @ 
 	   (by putting ret_set under the scope of local variables too) *)
       let call = call@ret_set in
-      let call = append_decls ret_decl call in
+      let call = K.append_decls ret_decl call in
 	call
-
-  and translate_args f loc args_var args_exp =
-    let rec translate args_v args_e =
-      match (args_v, args_e) with
-	  (d::args_v, e::args_e) ->
-	    let (sets, n) = translate args_v args_e in
-	    let set = translate_set loc (d, e) in
-	      (set::sets, n+1)		
-	| ([], []) -> ([], 0)
-	| _ -> 
-	    (* TODO: code cleanup: change error message *)
-	    Npkcontext.error "Compiler.translate_call" 
-	      ("Different types for function "^f)
-    in
-    let (sets, _) = translate args_var args_exp in
-      sets
 
   and translate_switch loc e cases =
     let switch_exp = translate_exp e in
@@ -395,6 +359,11 @@ let translate fname (_, cglbdecls, cfundefs) =
       Hashtbl.add glbdecls x (t, loc, init, const, true)
   in
 
+  let translate_local (t, x, loc) = 
+    let _ = push () in
+      translate_decl loc (t, x)
+  in
+
   let translate_fundef f ((args, t), loc, body) =
     let (args_t, args_name) = List.split args in
     let body =
@@ -404,16 +373,16 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    (* push return value *)
 	    let _ = push () in
 	      (* push arguments *)
-	      List.iter (fun _ -> let _ = push () in ()) args;
+	    let _ = List.map (fun _ -> push ()) args in
 	      (* push local variables *)
-	      List.iter (fun _ -> let _ = push () in ()) locals;
-	      let body = translate_blk body in
-		List.iter (fun _ -> pop ()) args_name;
-		pop ();
-		let body = (K.DoWith (body, ret_lbl, []), loc)::[] in
-		let body = append_decls locals body in
-		  List.iter (fun _ -> pop ()) locals;
-		  Some body
+	    let locals = List.map translate_local locals in
+	    let body = translate_blk body in
+	      List.iter (fun _ -> pop ()) args_name;
+	      pop ();
+	      let body = (K.DoWith (body, ret_lbl, []), loc)::[] in
+	      let body = K.append_decls locals body in
+		List.iter (fun _ -> pop ()) locals;
+		Some body
     in
     let ft = translate_ftyp (args_t, t) in
       Hashtbl.add fundefs f (ft, body)
