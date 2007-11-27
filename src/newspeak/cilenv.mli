@@ -75,13 +75,7 @@ val add_glb_cstr: string -> unit
 val get_args : string -> string list
 
 (** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : 
-  bool -> (int * string * Npkil.typ * Newspeak.location) -> unit
-
-(** [get_loc_decls ()] returns the current list of local declaration,
-    and reset the local handler (counter, hashtable and decl list) *)
-val get_loc_decls : unit -> (string * Npkil.typ * Newspeak.location) list
-
+val loc_declare : (int * string * Npkil.typ * Newspeak.location) -> unit
 
 (** {2 Functions used in translate_call} *)
 

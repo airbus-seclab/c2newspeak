@@ -131,15 +131,13 @@ let glb_uniquename v =
 (*--------*)
 
 
+(* TODO: put loc_cnt and loc_tabl inside the status, 
+   thus removing some unecessary global variables *)
 (* Counter *)
 let loc_cnt = ref 0
 
 (* Association table Cil.vid -> Newspeak.vid *)
 let loc_tabl = Hashtbl.create 100
-
-(* List of current declarations: the list grows as loc_declare is
-   called, and is emptied when retrieved by get_loc_decls *)
-let loc_decls = ref []
 
 (* This reference keeps the old counter when translating a call. The
    programmer must check that only one save can be made at a time*)
@@ -151,20 +149,9 @@ let push_local () = ignore (incr loc_cnt)
 (* Functions used in translate_fun *)
 (*---------------------------------*)
 
-let loc_declare generate_stmt_decl (cil_vid, n, t, loc) =
+let loc_declare (cil_vid, n, t, loc) =
   let vid = incr loc_cnt in
-    Hashtbl.add loc_tabl cil_vid vid;
-    if generate_stmt_decl 
-    then loc_decls := (n, t, loc)::!loc_decls
-
-
-let get_loc_decls () =
-  let res = !loc_decls in
-    loc_decls := [];
-    loc_cnt := 0;
-    Hashtbl.clear loc_tabl;
-    res
-
+    Hashtbl.add loc_tabl cil_vid vid
 
 (* Functions used in translate_call *)
 (*----------------------------------*)
@@ -287,7 +274,10 @@ let lbl_cnt = ref 1
 
 let reset_lbl_gen () = lbl_cnt := 1
 
-let empty_status () = []
+let empty_status () = 
+  loc_cnt := 0;
+  Hashtbl.clear loc_tabl;
+  []
 
 let new_lbl () = incr lbl_cnt
 

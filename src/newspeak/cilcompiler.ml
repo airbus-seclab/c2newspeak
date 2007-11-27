@@ -50,16 +50,6 @@ let is_cil_label x =
       Label (_, _, false) -> true
     | _ -> false
 
-(* Generates a Newspeak statement by wrapping a block body with
-   declarations decls. The order of the declaration must be carefully
-   checked because in Newspeak, the variables are identified by their
-   positions in the declaration stacks, not by their names *)
-let rec append_decls decls body =
-  match decls with
-      [] -> body
-    | (name, t, loc)::r -> append_decls r [K.Decl (name, t, body), loc]
-
-
 (*================================*)
 (* The central translate function *)
 (*================================*)
@@ -662,7 +652,6 @@ and translate_call x lv args_exps =
   in
 
   let handle_args_decls fname exps =
-    let res = ref [] in
     let build_unknown_args exps =
       let i = ref (-1) in
       let build_arg _ =
@@ -671,24 +660,19 @@ and translate_call x lv args_exps =
       in
 	List.map build_arg exps
     in
-    let rec handle_args exps args =
-      match (exps, args) with
-	  ([], []) -> ()
-	| (e::tl, str::args) ->
-	    Cilenv.push_local ();
-	    let t = translate_typ (typeOf e) in
-	      res := (str, t, loc)::!res;
-	      handle_args tl args
-	| _ -> 
-	    error "Npkcompile.translate_call.handle_args_decls.handle_args" 
-	      "This code should be unreachable"
+    let rec handle_args e str =
+      Cilenv.push_local ();
+      let t = translate_typ (typeOf e) in
+	(str, t, loc)
     in
     let args = 
       try Cilenv.get_args fname 
       with Not_found -> build_unknown_args exps 
     in
-      handle_args exps args;
-      !res
+      try List.map2 handle_args exps args
+      with Invalid_argument _ -> 
+	error "Npkcompile.translate_call.handle_args_decls.handle_args" 
+	  "This code should be unreachable"
   in
 
   let rec handle_args_prolog accu n i args_exps =
@@ -748,12 +732,16 @@ and translate_call x lv args_exps =
 	      K.FunDeref (fptr_exp, (args_t, ret_type))
 	| _ -> error "Npkcompile.translate_call" "Left value not supported"
     in
-    let call_w_prolog = (K.Call fexp, loc)::args_prolog in
-    let call_wo_ret = append_decls args_decls (List.rev call_w_prolog) in
-    let res = append_decls ret_decl (call_wo_ret@(ret_epilog)) in
+    let call_w_prolog = (List.rev args_prolog)@((K.Call fexp, loc)::[]) in
+    let call_wo_ret = K.append_decls args_decls call_w_prolog in
+    let res = K.append_decls ret_decl (call_wo_ret@ret_epilog) in
       Cilenv.restore_loc_cnt ();
       res
 
+let translate_local d =
+  Cilenv.loc_declare d;
+  let (_, n, t, loc) = d in
+    (n, t, loc)
 
 let translate_fun name (locals, formals, body) =
   let (floc, ret_t) = Cilenv.get_funspec name in
@@ -763,13 +751,13 @@ let translate_fun name (locals, formals, body) =
     let status = Cilenv.empty_status () in
       
       if ret_t <> None then Cilenv.push_local ();
-      List.iter (Cilenv.loc_declare false) formals;
-      List.iter (Cilenv.loc_declare true) locals;
+      List.iter Cilenv.loc_declare formals;
+      let locals = List.map translate_local locals in
 
       let body = translate_stmts status body.bstmts in
       let lbl = Cilenv.get_ret_lbl () in
       let blk = [K.DoWith (body, lbl, []), floc] in
-      let body = append_decls (Cilenv.get_loc_decls ()) blk in
+      let body = K.append_decls locals blk in
 
 	Cilenv.update_funspec name (args, body)
 
