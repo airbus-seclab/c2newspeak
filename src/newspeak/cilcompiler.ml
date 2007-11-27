@@ -727,7 +727,7 @@ and translate_call x lv args_exps =
       match lv with
 	| (Var f, NoOffset) -> K.FunId f.vname
 	| (Mem (Lval fptr), NoOffset) ->
-	    let args_t = List.rev (List.map (fun (_, t, _) -> t) args_decls) in
+	    let args_t = List.map (fun (_, t, _) -> t) args_decls in
 	    let fptr_exp = K.Lval (translate_lval fptr, Newspeak.FunPtr) in
 	      K.FunDeref (fptr_exp, (args_t, ret_type))
 	| _ -> error "Npkcompile.translate_call" "Left value not supported"

@@ -1,6 +1,6 @@
 # commands
 RM = rm -f
-EXPERIMENTAL = 1
+EXPERIMENTAL = 0
 # TODO: find cleaner way to do these conditionals in Makefile
 ifeq ($(EXPERIMENTAL),1)
 FLAG = --experimental
@@ -15,7 +15,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	030 031 032 033 034 035 036 037 038 039 \
 	040 041 042 043 044 045 046 047 048 049 \
 	050 051 052 053 054 055 056 057 058 059 \
-	060 061 062 063 064 065 066 067 068
+	060 061 062 063 064 065 066 067 068 069
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 
