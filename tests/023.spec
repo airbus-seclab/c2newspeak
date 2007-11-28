@@ -1,1 +1,1 @@
-Fatal error: unstructed use of switch statement in 023.c line 32
+Fatal error: syntax error: line 32, unexpected token: do

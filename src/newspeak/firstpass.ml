@@ -82,11 +82,6 @@ let translate fname cprog =
       Hashtbl.clear local_env;
       x
   in
-(* TODO: don't use vcnt ??? Do not correspond !!! *)
-  let typ_of_fun f =
-    let (t, _, _) = Hashtbl.find fundefs f in
-      t
-  in
 
   let push_var loc (t, x) = 
     incr vcnt;
@@ -106,6 +101,7 @@ let translate fname cprog =
       ()
   in
 
+(* TODO: could be a function name inside *)
   let get_var x = 
     try 
       let (n, t, _) = Hashtbl.find local_env x in
@@ -115,8 +111,12 @@ let translate fname cprog =
 	let (t, _, _, _) = Hashtbl.find glbdecls x in
 	  (C.Global x, t)
       with Not_found ->
-	Npkcontext.error "Firstpass.translate.typ_of_var" 
-	  ("Unknown variable "^x)
+	try 
+	  let (ft, _, _) = Hashtbl.find fundefs x in
+	    (C.Global x, C.Fun ft)
+	with Not_found ->
+	  Npkcontext.error "Firstpass.translate.typ_of_var" 
+	    ("Unknown variable "^x)
   in
 
   let typ_of_var x =
@@ -150,7 +150,7 @@ let translate fname cprog =
       | Deref e -> 
 	  let (pref, (e, t)) = translate_exp e in
 	  let t = deref_typ t in
-	    (pref, (C.Deref (e, size_of t), t))
+	    (pref, (C.Deref (e, t), t))
 
   and translate_exp x =
     match x with
@@ -177,24 +177,7 @@ let translate fname cprog =
 	  let t = C.typ_of_binop op in
 	    (pref1@pref2, (C.Binop (op, e1, e2), t))
 
-      | Call (f, args) -> 
-(* TODO: simplify this by putting code in comme with Set (lv, Call ) *)
-	  let loc = Npkcontext.get_loc () in
-	  let (args_t, ret_t) = typ_of_fun f in
-	  let fn = (f, (args_t, ret_t)) in
-	  let (pref, args) = List.split (List.map translate_exp args) in
-	  let pref = List.concat pref in
-	  let (lv, e) =
-	    match ret_t with
-		(* Any value is ok, since it is going to be thrown away *)
-		Void -> (None, C.exp_of_int 1)
-	      | _ -> 
-		  let tmp = (C.Local (push_local loc (ret_t, "tmp")), ret_t) in
-		    pop_local "tmp";
-		    (Some tmp, C.Lval tmp)
-	  in
-	  let call = (C.Call (lv, fn, args), loc) in
-	    (pref@(call::[]), (e, ret_t))
+      | Call (f, args) -> translate_call None f args
 
       | SizeofV x -> 
 	  let t = typ_of_var x in
@@ -205,6 +188,35 @@ let translate fname cprog =
 
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
+
+  and translate_call r f args =
+    let loc = Npkcontext.get_loc () in
+    let (pref_fn, fn) = translate_fn f in
+    let (_, (_, t)) = fn in
+    let (pref, args) = List.split (List.map translate_exp args) in
+    let pref = List.concat pref in
+    let (lv, e) =
+      match (t, r) with
+	  (* Any expression is ok, since it is going to be thrown away *)
+	  (C.Void, _) -> (None, C.exp_of_int 1)
+	| (_, None) -> 
+	    let tmp = (C.Local (push_local loc (t, "tmp")), t) in
+	      pop_local "tmp";
+	      (Some tmp, C.Lval tmp)
+	| (_, Some lv) -> (Some lv, C.Lval lv)
+    in
+    let call = (C.Call (lv, fn, args), loc) in
+      (pref_fn@pref@(call::[]), (e, t))
+
+  and translate_fn f =
+    let (pref, (f, t)) = translate_lv f in
+    let (fn, t) = 
+      match t with
+	  C.Ptr ft -> (C.Deref (C.Lval (f, t), ft), ft)
+	| _ -> (f, t)
+    in
+    let t = C.ftyp_of_typ t in
+      (pref, (fn, t))
   in
 
   let translate_exp_option e =
@@ -328,18 +340,15 @@ let translate fname cprog =
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
+(* TODO: put this code in common with Call in Exp *)
 	Set (lv, Call (f, args))  ->
 	  let (lv_pref, lv) = translate_lv lv in
-	  let (args_t, ret_t) = typ_of_fun f in
-	    if ret_t = C.Void then begin
-	      Npkcontext.error "Firstpass.translate_stmt" 
+	  let (call, (_, t)) = translate_call (Some lv) f args in
+	    if t = C.Void then begin
+	      Npkcontext.error "Firstpass.translate_stmt"
 		"Expression should have type void"
 	    end;
-	    let fn = (f, (args_t, ret_t)) in
-	    let (pref, args) = List.split (List.map translate_exp args) in
-	    let pref = List.concat pref in
-	    let call = (C.Call (Some lv, fn, args), loc) in
-	      lv_pref@pref@(call::[])
+	    lv_pref@call
 
       | Set (lv, e) -> 
 	  let (lv_pref, lv) = translate_lv lv in

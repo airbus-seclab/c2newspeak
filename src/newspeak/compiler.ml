@@ -84,7 +84,7 @@ let translate fname (_, cglbdecls, cfundefs) =
   in
 
   let translate_ftyp (args, ret) =
-    let args = List.map translate_typ args in
+    let args = List.map (fun (t, _) -> translate_typ t) args in
     let ret =
       match ret with
 	  Void -> None
@@ -138,8 +138,9 @@ let translate fname (_, cglbdecls, cfundefs) =
 	  let o = K.BinOp (N.MultI, o, sz) in
 	    K.Shift (lv, o)
 
-      | Deref (e, sz) ->
+      | Deref (e, t) ->
 	  let e = translate_exp e in
+	  let sz = size_of t in
 	    K.Deref (e, sz)
 
   and translate_bexp (e, t) =
@@ -234,7 +235,7 @@ let translate fname (_, cglbdecls, cfundefs) =
       | Return -> (K.Goto ret_lbl, loc)::[]
 
       | Call f -> translate_call loc f
-      
+ 
       | Break -> (K.Goto brk_lbl, loc)::[]
       
       | Switch (e, cases) -> translate_switch loc e cases
@@ -244,12 +245,17 @@ let translate fname (_, cglbdecls, cfundefs) =
       (x, t, loc)
 
   and translate_call loc (r, (f, (args_t, ret_t)), args_exp) =
+    let fid = 
+      match f with
+	  Global f -> f
+	| _ -> "fptr_call"
+    in
     let (ret_var, ret_decl) =
       match ret_t with
 	  Void -> (None, [])
 	| _ -> 
 	    let v = push () in
-	    let d = translate_decl loc (ret_t, "value_of_"^f) in
+	    let d = translate_decl loc (ret_t, "value_of_"^fid) in
 	      (Some v, d::[])
     in
     let ret_set = 
@@ -270,12 +276,23 @@ let translate fname (_, cglbdecls, cfundefs) =
       with Invalid_argument _ -> 
 	(* TODO: code cleanup: change error message *)
 	Npkcontext.error "Compiler.translate_call" 
-	  ("Different types for function "^f)
+	  ("Different types for function "^fid)
     in
+    let fn = 
+      match f with
+	  Global f -> K.FunId f 
+	| Deref (e, Fun ft) ->
+	    let e = translate_exp e in
+	    let ft = translate_ftyp (args_t, ret_t) in
+	      K.FunDeref (e, ft)
+	| _ -> 
+	    Npkcontext.error "Compiler.translate_call" "Unreachable statement"
+    in
+
       pop ();
       List.iter (fun _ -> pop ()) args_t;
       
-      let call = (K.Call (K.FunId f), loc)::[] in
+      let call = (K.Call fn, loc)::[] in
       let call = sets@call in
       let call = K.append_decls decls call in
 	(* TODO: code optimization: write this so that there is no @ 
@@ -365,7 +382,6 @@ let translate fname (_, cglbdecls, cfundefs) =
   in
 
   let translate_fundef f ((args, t), loc, body) =
-    let (args_t, args_name) = List.split args in
     let body =
       match body with
 	  None -> None
@@ -377,14 +393,14 @@ let translate fname (_, cglbdecls, cfundefs) =
 	      (* push local variables *)
 	    let locals = List.map translate_local locals in
 	    let body = translate_blk body in
-	      List.iter (fun _ -> pop ()) args_name;
+	      List.iter (fun _ -> pop ()) args;
 	      pop ();
 	      let body = (K.DoWith (body, ret_lbl, []), loc)::[] in
 	      let body = K.append_decls locals body in
 		List.iter (fun _ -> pop ()) locals;
 		Some body
     in
-    let ft = translate_ftyp (args_t, t) in
+    let ft = translate_ftyp (args, t) in
       Hashtbl.add fundefs f (ft, body)
   in
 

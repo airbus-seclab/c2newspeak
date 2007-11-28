@@ -1,3 +1,6 @@
+Warning: Too many initializers for array in 050.c line 30
+Warning: Too many initializers for array in 050.c line 35
+Warning: Too many initializers for array in 050.c line 36
 Newspeak output
 ---------------
 main() {
@@ -13,7 +16,3 @@ int1[3] b3 = {0: int1 97;1: int1 98;2: int1 99};
 int1[4] b4 = {0: int1 97;1: int1 98;2: int1 99;3: int1 0};
 int1[5] b5 = {0: int1 97;1: int1 98;2: int1 99;3: int1 0;4: int1 0};
 
-
-050.c:30: Warning: Too many initializers for array a2
-
-050.c:35: Warning: Too many initializers for character array b2

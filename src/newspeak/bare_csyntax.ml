@@ -72,7 +72,7 @@ and exp =
     | Unop of (unop * exp)
     | And of (exp * exp)
     | Binop of (binop * exp * exp)
-    | Call of (string * exp list)
+    | Call of (lv * exp list)
     | Sizeof of Csyntax.typ
     | SizeofV of string
 

@@ -68,7 +68,7 @@ and stmtkind =
     | Switch of (exp * (typ_exp option * blk * location) list)
     | Loop of blk
     | Return
-    | Call of (typ_lv option * fn * typ_exp list)
+    | Call of (typ_lv option * (lv * ftyp) * typ_exp list)
     | Break
 	
 and typ_exp = (exp * typ)
@@ -80,7 +80,7 @@ and lv =
     | Global of string
     | Field of (lv * string * int)
     | Index of (lv * array_t * exp)
-    | Deref of (exp * int)
+    | Deref of (exp * typ)
 
 (* Side-effect free expressions *)
 and exp = 
@@ -89,8 +89,6 @@ and exp =
     | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
-
-and fn = string * ftyp
 
 and unop = 
     | Not

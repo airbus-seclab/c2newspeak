@@ -222,8 +222,8 @@ case:
 ;;
 
 call:
-| IDENTIFIER LPAREN RPAREN                 { Call ($1, []) }
-| IDENTIFIER LPAREN expression_list RPAREN { Call ($1, $3) }
+| left_value LPAREN RPAREN                 { Call ($1, []) }
+| left_value LPAREN expression_list RPAREN { Call ($1, $3) }
 ;;
 
 expression_list:

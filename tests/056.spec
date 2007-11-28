@@ -1,12 +1,1 @@
-Newspeak output
----------------
-f() {
-  (30)^0- =(int4) 0;
-}
-
-main() {
-  (34)^int4;
-  (34)^f();
-}
-
-
+Fatal error: Expression should have type void in 056.c line 34

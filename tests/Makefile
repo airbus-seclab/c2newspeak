@@ -1,13 +1,11 @@
 # commands
+# TODO: defining functions/macros ?
 RM = rm -f
-EXPERIMENTAL = 0
-# TODO: find cleaner way to do these conditionals in Makefile
-ifeq ($(EXPERIMENTAL),1)
 FLAG = --experimental
-else
-FLAG =
-endif
-C2NEWSPEAK = ../bin/c2newspeak --newspeak $(FLAG)
+FLAG.CIL = 
+C2N = ../bin/c2newspeak --newspeak
+C2NEWSPEAK = $(C2N) $(FLAG)
+C2NEWSPEAK.CIL = $(C2N) $(FLAG.CIL)
 
 TESTS = 000 001 002 003 004 005 006 007 008 009 \
         010 011 012 013 014 015 016 017 018 019 \
@@ -19,8 +17,12 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 
+TESTS.CIL = $(addsuffix .cil, $(TESTS))
+
+TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
+
 .SILENT: check $(TESTS)
-.PHONY: $(TESTS.SPEC)
+.PHONY: $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
 check: ../bin/c2newspeak $(TESTS)
 	make -C npksimplify check
@@ -38,31 +40,60 @@ check: ../bin/c2newspeak $(TESTS)
 050: 051
 063: 066
 
+$(TESTS): OPT=$@.in
+$(TESTS): SRC=$@.c
+$(TESTS): TMP=$@.bak
+$(TESTS): SPEC=$@.spec
+$(TESTS): CIL_SPEC=$(if $(shell [ -e $@.cil.spec ] && echo true), \
+	  $@.cil.spec,$@.spec)
 $(TESTS): $@
-	eval $(C2NEWSPEAK) `[ -e $@.in ] && cat $@.in` $@.c &> $@.bak
-	dos2unix $@.bak
-	SPEC=$@.spec; \
-	if [ $(EXPERIMENTAL) == 1 ]; \
-	then if [ -e $@.spec2 ]; then SPEC=$@.spec2; fi; fi; \
-	if [ -e $$SPEC ]; \
+	eval $(C2NEWSPEAK) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP)
+	dos2unix $(TMP) 2&> /dev/null; true
+	if [ -e $(SPEC) ]; \
 	then \
-	  if diff $$SPEC $@.bak > result; \
+	  if diff $(SPEC) $(TMP) > result; \
 	  then true; \
 	  else cat result; false; \
 	  fi; \
 	else \
-	  echo "$@.spec does not exist; printing output instead of diffing"; \
-	  cat $@.bak; false; \
+	  echo "$(SPEC) does not exist; printing output instead of diffing"; \
+	  cat $(TMP); false; \
 	fi
-	$(RM) $@.bak result
+	$(RM) $(TMP) result
+	eval $(C2NEWSPEAK.CIL) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP);
+	dos2unix $(TMP) 2&> /dev/null; true 
+	if [ -e $(CIL_SPEC) ]; \
+	then \
+	  if diff $(CIL_SPEC) $(TMP) > result; \
+	  then true; \
+	  else cat result; false; \
+	  fi; \
+	else \
+	  echo "$(CIL_SPEC) does not exist; printing output instead of diffing"; \
+	  cat $(TMP); false; \
+	fi;
+	$(RM) $(TMP) result
 	touch $@
+	echo $@
 
 $(TESTS.SPEC): ../bin/c2newspeak
-	OUT=$@; \
-	if [ $(EXPERIMENTAL) == 1 ]; then OUT=$@2; fi; \
-	eval $(C2NEWSPEAK) `[ -e $(basename $@).in ] && cat $(basename $@).in` $(basename $@).c &> $$OUT; \
+	BASE=$(basename $(basename $@)); \
+	OPT=$$BASE.in; \
+	SRC=$$BASE.c; \
+	OUT=$$BASE.spec; \
+	eval $(C2NEWSPEAK) `[ -e $$OPT ] && cat $$OPT` $$SRC &> $$OUT; \
 	dos2unix $$OUT; \
-	cat $$OUT \
+	cat $$OUT
+
+$(TESTS.CIL.SPEC): ../bin/c2newspeak
+	BASE=$(basename $(basename $@)); \
+	OPT=$$BASE.in; \
+	SRC=$$BASE.c; \
+	OUT=$$BASE.cil.spec; \
+	eval $(C2NEWSPEAK.CIL) `[ -e $$OPT ] && cat $$OPT` $$SRC &> $$OUT; \
+	dos2unix $$OUT; \
+	cat $$OUT
+
 
 ../bin/c2newspeak: 
 	make -C .. install
