@@ -60,6 +60,8 @@ let int64_of_string lexbuf strip_cnt =
     end;
     i
 
+let int64_of_character str = Int64.of_int (int_of_char (str.[1]))
+
 let extract_string s = String.sub s 1 (String.length s - 2)
 
 let token_of_ident str = 
@@ -80,6 +82,7 @@ let string = '"' [^'"']* '"'
 let integer = digit+
 let ull_integer = digit+ "ULL"
 let identifier = letter (letter|digit)*
+let character = '\'' _ '\''
 
 rule token = parse
 
@@ -112,6 +115,7 @@ rule token = parse
 (* values *)
   | integer             { INTEGER (int64_of_string lexbuf 0) }
   | ull_integer         { INTEGER (int64_of_string lexbuf 3) }
+  | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)
