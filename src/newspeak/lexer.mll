@@ -83,6 +83,7 @@ let integer = digit+
 let ull_integer = digit+ "ULL"
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
+let backslash_character = "\'\\0\'"
 
 rule token = parse
 
@@ -116,6 +117,7 @@ rule token = parse
   | integer             { INTEGER (int64_of_string lexbuf 0) }
   | ull_integer         { INTEGER (int64_of_string lexbuf 3) }
   | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
+  | backslash_character { INTEGER Int64.zero }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)
