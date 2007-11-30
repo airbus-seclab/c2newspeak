@@ -148,8 +148,7 @@ object (this)
 (* Reverts strange CIL behavior, which translates 
    (x == -2147483648) into (((unsigned int) x) == 2147483648) *)
       | BinOp ((Ne|Eq) as op, CastE(TInt (IUInt, []), e), 
-	      Const (CInt64 (i, IUInt, None)), 
-	      TInt (IInt, [])) 
+	      Const (CInt64 (i, IUInt, None)), TInt (IInt, [])) 
 	  when Int64.compare i (Int64.of_string "2147483648") = 0 
 	    && Cilutils.is_integer IInt (typeOf e) -> 
 	  let min_int = Int64.of_string "-2147483648" in 
@@ -233,7 +232,7 @@ let first_pass f =
 
   let update_glob_decl v =
     let name = Cilenv.glb_uniquename v in
-    let const = is_const v.vtype in
+    let const = Cilutils.is_const v.vtype in
       try
 	let x = Hashtbl.find glb_decls name in
 	  (* TODO: code cleanup, try to merge with link ?? *)
@@ -258,7 +257,7 @@ let first_pass f =
 (* TODO: factor this code with the one up there!!! *)
   let update_glob_def v i =
     let name = Cilenv.glb_uniquename v in
-    let const = is_const v.vtype in
+    let const = Cilutils.is_const v.vtype in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 

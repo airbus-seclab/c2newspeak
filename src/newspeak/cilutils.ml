@@ -133,8 +133,9 @@ let rec has_const_attr attr =
 
 let rec is_const typ =
   match typ with
-      TVoid a | TInt (_, a) | TFloat (_, a) | TPtr (_, a)
-    | TArray (_, _, a) | TFun (_, _, _, a) 
+      TArray (t, _, a) -> (has_const_attr a) || (is_const t)
+    | TVoid a | TInt (_, a) | TFloat (_, a) | TPtr (_, a)
+    | TFun (_, _, _, a) 
     | TComp (_, a) | TEnum (_, a) -> has_const_attr a
     | TNamed (tinfo, a) -> (has_const_attr a) || (is_const tinfo.ttype)
     | TBuiltin_va_list _ -> 

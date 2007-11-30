@@ -119,7 +119,7 @@ and normalize_var_modifier b v is_const =
 	      None -> None
 	    | Some n -> Some (int64_to_int n) 
 	in
-	  normalize_var_modifier (C.Array (b, n)) v false
+	  normalize_var_modifier (C.Array (b, n)) v is_const
     | Pointer v -> normalize_var_modifier (C.Ptr b) v false
     | Attr (Const::_, v) -> normalize_var_modifier b v true
     | Function _ -> 
