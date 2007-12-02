@@ -548,7 +548,6 @@ let cast t e t' =
       _ when t = t' -> e
     | (Int _, Int k) -> make_int_coerce k e
     | (Int _, Ptr) when e = zero -> Const Nil
-
     | (Ptr, Int k) when !Npkcontext.castor_allowed -> 
 	Npkcontext.print_warning "Compiler.cast"
 	  ("Probable invalid cast "^(string_of_cast t t'));

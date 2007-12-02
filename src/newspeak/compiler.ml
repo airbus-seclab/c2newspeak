@@ -184,26 +184,35 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    translate_binop op e1 e2
   in
 
+  let translate_exp_cast t e t' =
+    let (e, t) =
+      match (t, e, t') with
+	  (Array (elt_t, _), Lval (lv, Array a), Ptr elt_t') 
+	    when elt_t = elt_t' -> 
+	      (AddrOf (Index (lv, a, exp_of_int 0), elt_t), t')
+	| _ -> (e, t)
+    in
+    let t = translate_scalar t in
+    let e = translate_exp e in
+    let t' = translate_scalar t' in
+      (K.cast t e t', t')
+  in
+
   let rec translate_blk x =
     match x with
 	hd::tl -> (translate_stmt hd)@(translate_blk tl)
       | [] -> []
 
-  and translate_set loc (lv, t) (e, t') =
+  and translate_set loc (lv, t') (e, t) =
     let lv = translate_lv lv in
-    let t = translate_scalar t in
-    let e = translate_exp e in
-    let t' = translate_scalar t' in
-    let e = K.cast t' e t in
-      (K.Set (lv, e, t), loc)
+    let (e, t') = translate_exp_cast t e t' in
+      (K.Set (lv, e, t'), loc)
     
+(* TODO: replace inits by sets !!*)
   and translate_local_init loc x (offset, t', (e, t)) =
     let lv = translate_lv (Local x) in
     let lv = K.Shift (lv, K.exp_of_int offset) in
-    let e = translate_exp e in
-    let t = translate_scalar t in
-    let t' = translate_scalar t' in
-    let e = K.cast t e t' in
+    let (e, t') = translate_exp_cast t e t' in
       (K.Set (lv, e, t'), loc)
 
   and translate_stmt (x, loc) =

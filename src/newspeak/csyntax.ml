@@ -61,7 +61,7 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-(* TODO: remove Init *)
+(* TODO: remove Init, replace by set!!! *)
     | Init of (int * init)
     | Set of (typ_lv * typ_exp)
     | If of (typ_exp * blk * blk)
