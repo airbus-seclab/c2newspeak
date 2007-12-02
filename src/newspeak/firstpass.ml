@@ -143,10 +143,16 @@ let translate fname cprog =
 	  let (o, t) = List.assoc f r in
 	    (pref, (C.Field (lv, f, o), t))
       | Index (lv, e) -> 
-	  let (lv_pref, (lv, t)) = translate_lv lv in
-	  let (t, n) = array_of_typ t in
-	  let (e_pref, (i, _)) = translate_exp e in
-	    (lv_pref@e_pref, (C.Index (lv, (t, n), i), t))
+	  let (lv_pref, (lv', t)) = translate_lv lv in begin
+	    match t with
+		Array (t, n) ->
+		  let (e_pref, (i, _)) = translate_exp e in
+		    (lv_pref@e_pref, (C.Index (lv', (t, n), i), t))
+	      | Ptr _ -> translate_lv (Deref (Binop (Plus, Lval lv, e)))
+	      | _ -> 
+		  Npkcontext.error "Firstpass.translate_lv" 
+		    "Array or pointer type expected"
+	  end
       | Deref e -> 
 	  let (pref, (e, t)) = translate_exp e in
 	  let t = deref_typ t in
