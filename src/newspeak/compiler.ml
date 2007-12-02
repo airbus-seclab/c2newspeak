@@ -187,9 +187,8 @@ let translate fname (_, cglbdecls, cfundefs) =
   let translate_exp_cast t e t' =
     let (e, t) =
       match (t, e, t') with
-	  (Array (elt_t, _), Lval (lv, Array a), Ptr elt_t') 
-	    when elt_t = elt_t' -> 
-	      (AddrOf (Index (lv, a, exp_of_int 0), elt_t), t')
+	  (Array (elt_t, _), Lval (lv, Array a), Ptr _) -> 
+	      (AddrOf (Index (lv, a, exp_of_int 0), elt_t), Ptr elt_t)
 	| _ -> (e, t)
     in
     let t = translate_scalar t in
