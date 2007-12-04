@@ -44,8 +44,7 @@ type t = (file list * prog * size_t)
 
 and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
 
-(* true if const *)
-and gdecl = typ * init_t * bool
+and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
 

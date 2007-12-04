@@ -35,10 +35,6 @@ module K = Npkil
 let ret_lbl = 0
 let brk_lbl = 1
 
-let translate_unop op e =
-  match op with
-      Not -> K.UnOp (K.Not, e)
-
 let translate_array lv (t, n) =
   let n =
     match (n, lv) with
@@ -48,6 +44,65 @@ let translate_array lv (t, n) =
   in
     (t, n)
 
+let rec translate_typ t =
+  match t with
+      Void -> 
+	Npkcontext.error "Compiler.translate_typ" "void not allowed here"
+    | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
+    | Array (t, sz) -> K.Array (translate_typ t, sz)
+    | Struct (fields, n) | Union (fields, n) -> 
+	let translate_field (_, (o, t)) = (o, translate_typ t) in
+	  K.Region (List.map translate_field fields, n)
+    | Fun _ -> 
+	Npkcontext.error "Compiler.translate_typ" "function not allowed here"
+	  
+and translate_scalar t =
+  match t with
+    | Int i -> N.Int i
+    | Float n -> N.Float n
+    | Ptr (Fun _) -> N.FunPtr
+    | Ptr _ -> N.Ptr
+    | _ -> 
+	Npkcontext.error "Compiler.translate_scalar" 
+	  "Unexpected non scalar type"
+
+let translate_ftyp (args, ret) =
+  let args = List.map (fun (t, _) -> translate_typ t) args in
+  let ret =
+    match ret with
+	Void -> None
+      | _ -> Some (translate_typ ret)
+  in
+    (args, ret)
+      
+let translate_unop op e =
+  match op with
+      Not -> K.UnOp (K.Not, e)
+    | Cast (t, t') -> 
+	let t = translate_scalar t in
+	let t' = translate_scalar t' in
+	  K.cast t e t'
+
+let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
+
+let translate_binop op e1 e2 =
+  match op with
+      Mult k -> translate_arithmop N.MultI e1 e2 k
+    | Plus k -> translate_arithmop N.PlusI e1 e2 k
+    | Minus k -> translate_arithmop N.MinusI e1 e2 k
+    | PlusP t ->	
+	let stride = K.exp_of_int (size_of t) in 
+	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
+	    
+    (* TODO: clean bug ? maybe a cast is necessary ? *)
+    | Gt t -> 
+	let t = translate_scalar t in
+	  K.BinOp (N.Gt t, e1, e2)
+	    
+    | Eq t -> 
+	let t = translate_scalar t in
+	  K.BinOp (N.Eq t, e1, e2)
+	    
 let translate fname (_, cglbdecls, cfundefs) = 
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
@@ -59,64 +114,6 @@ let translate fname (_, cglbdecls, cfundefs) =
   in
   let pop () = decr stack_height in
   let index_of_var x = !stack_height - x in
-
-  let rec translate_typ t =
-    match t with
-	Void -> 
-	  Npkcontext.error "Compiler.translate_typ" "void not allowed here"
-      | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
-      | Array (t, sz) -> K.Array (translate_typ t, sz)
-      | Struct (fields, n) | Union (fields, n) -> 
-	  let translate_field (_, (o, t)) = (o, translate_typ t) in
-	    K.Region (List.map translate_field fields, n)
-      | Fun _ -> 
-	  Npkcontext.error "Compiler.translate_typ" "function not allowed here"
-
-  and translate_scalar t =
-    match t with
-      | Int i -> N.Int i
-      | Float n -> N.Float n
-      | Ptr (Fun _) -> N.FunPtr
-      | Ptr _ -> N.Ptr
-      | _ -> 
-	  Npkcontext.error "Compiler.translate_scalar" 
-	    "Unexpected non scalar type"
-  in
-
-  let translate_ftyp (args, ret) =
-    let args = List.map (fun (t, _) -> translate_typ t) args in
-    let ret =
-      match ret with
-	  Void -> None
-	| _ -> Some (translate_typ ret)
-    in
-      (args, ret)
-  in
-
-  let translate_binop op e1 e2 =
-    let translate_arithmop op k = 
-      let e1 = K.make_int_coerce k e1 in
-      let e2 = K.make_int_coerce k e2 in
-	K.make_int_coerce k (K.BinOp (op, e1, e2))
-    in
-
-      match op with
-	  Mult k -> translate_arithmop N.MultI k
-	| Plus k -> translate_arithmop N.PlusI k
-	| Minus k -> translate_arithmop N.MinusI k
-	| PlusP t ->	
-	    let stride = K.exp_of_int (size_of t) in 
-	      K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
-	
-	(* TODO: clean bug ? maybe a cast is necessary ? *)
-	| Gt t -> 
-	    let t = translate_scalar t in
-	      K.BinOp (N.Gt t, e1, e2)
-	   
-	| Eq t -> 
-	    let t = translate_scalar t in
-	      K.BinOp (N.Eq t, e1, e2)
-  in
 
   let rec translate_lv lv =
     match lv with
@@ -184,35 +181,29 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    translate_binop op e1 e2
   in
 
-  let translate_exp_cast t e t' =
-    let (e, t) =
-      match (t, e, t') with
-	  (Array (elt_t, _), Lval (lv, Array a), Ptr _) -> 
-	      (AddrOf (Index (lv, a, exp_of_int 0), elt_t), Ptr elt_t)
-	| _ -> (e, t)
-    in
-    let t = translate_scalar t in
-    let e = translate_exp e in
-    let t' = translate_scalar t' in
-      (K.cast t e t', t')
-  in
-
   let rec translate_blk x =
     match x with
 	hd::tl -> (translate_stmt hd)@(translate_blk tl)
       | [] -> []
 
-  and translate_set loc (lv, t') (e, t) =
+  and translate_set loc (lv, t) e =
     let lv = translate_lv lv in
-    let (e, t') = translate_exp_cast t e t' in
-      (K.Set (lv, e, t'), loc)
+    let e = cast e t in
+    let e = translate_exp e in
+    let t = translate_scalar t in
+      (K.Set (lv, e, t), loc)
+
+  and translate_init (o, t, e) =
+    let t = translate_scalar t in
+    let e = translate_exp e in
+      (o, t, e)
     
 (* TODO: replace inits by sets !!*)
-  and translate_local_init loc x (offset, t', (e, t)) =
+  and translate_local_init loc x init =
+    let (o, t, e) = translate_init init in 
     let lv = translate_lv (Local x) in
-    let lv = K.Shift (lv, K.exp_of_int offset) in
-    let (e, t') = translate_exp_cast t e t' in
-      (K.Set (lv, e, t'), loc)
+    let lv = K.Shift (lv, K.exp_of_int o) in
+      (K.Set (lv, e, t), loc)
 
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
@@ -363,16 +354,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	None -> None 
       | Some None -> Some None
       | Some Some init ->
-	  (* TODO: code factorisation with the local init ??? *)
-	  let translate (o, t', (e, t)) = 
-	    (* TODO: should I take t, or translate the one I get from e ??? *)
-	    let e = translate_exp e in
-	    let t = translate_scalar t in
-	    let t' = translate_scalar t' in
-	    let e = K.cast t e t' in
-	      (o, t', e)
-	  in
-	  let init = List.map translate init in
+	  let init = List.map translate_init init in
 	    Some (Some init)
   in
 

@@ -38,7 +38,7 @@ and fundefs = (string, ftyp * location * body option) Hashtbl.t
 
 and body = (typ * string * location) list * blk
 
-and init = (int * typ * typ_exp) list
+and init = (int * typ * exp) list
 
 and ftyp = (typ * string) list * typ
 
@@ -92,6 +92,7 @@ and exp =
 
 and unop = 
     | Not
+    | Cast of (typ * typ)
 
 and binop =
     | Plus of ikind
@@ -154,6 +155,7 @@ let promote k =
 let typ_of_unop op =
   match op with
       Not -> int_typ
+    | Cast (_, t) -> t
 
 let typ_of_binop op =
   match op with
@@ -170,3 +172,13 @@ let ftyp_equals (args1, ret1) (args2, ret2) =
 
 (* TODO: this is a bit of a hack. Avoid? *)
 let undefined = "!undefined"
+
+let cast (e, t) t' =
+  let (e, t) =
+    match (t, e, t') with
+	(Array (elt_t, _), Lval (lv, Array a), Ptr _) ->
+	  (AddrOf (Index (lv, a, exp_of_int 0), elt_t), Ptr elt_t)
+      | _ -> (e, t)
+  in
+    if (t = t') then e
+    else Unop (Cast (t, t'), e)

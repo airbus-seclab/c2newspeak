@@ -37,7 +37,7 @@ and fundefs = (string, ftyp * location * body option) Hashtbl.t
 
 and body = (typ * string * location) list * blk
 
-and init = (int * typ * typ_exp) list
+and init = (int * typ * exp) list
 
 and ftyp = (typ * string) list * typ
 
@@ -64,7 +64,6 @@ and stmtkind =
     | Set of (typ_lv * typ_exp)
     | If of (typ_exp * blk * blk)
     | Switch of (exp * (typ_exp option * blk * location) list)
-(* TODO: incorrect translation, have a loop *)
     | Loop of blk
     | Return
     | Call of (typ_lv option * (lv * ftyp) * typ_exp list)
@@ -90,9 +89,10 @@ and exp =
 
 and unop = 
     | Not
+    | Cast of (typ * typ)
 
 and binop =
-    | Plus of ikind 
+    | Plus of ikind
     | Minus of ikind
     | Mult of ikind
     | PlusP of typ
@@ -126,3 +126,5 @@ val exp_of_int: int -> exp
 val ftyp_equals: ftyp -> ftyp -> bool
 
 val undefined: string
+
+val cast: (exp * typ) -> typ -> exp

@@ -37,8 +37,7 @@ type t = (file list * prog * size_t)
 
 and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
 
-(* true if const *)
-and gdecl = typ * init_t * bool
+and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
 
@@ -389,7 +388,7 @@ let rec string_of_cond b =
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-let dump_gdecl name (t, i, const) =
+let dump_gdecl name (t, i) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp e));
   in
@@ -402,7 +401,6 @@ let dump_gdecl name (t, i, const) =
 	  print_string ";";
 	  dump_init r
   in
-    if const then print_string "const ";
     print_string ((string_of_typ t)^" "^name);
     match i with
       | Zero -> print_endline " = 0;"
@@ -997,8 +995,8 @@ let visit_fun visitor fid (t, body) =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, init, const) =
-  let continue = visitor#process_gdecl id (t, init, const) in
+let visit_glb visitor id (t, init) =
+  let continue = visitor#process_gdecl id (t, init) in
     match init with
 	Init x when continue -> List.iter (visit_init visitor) x 
       | _ -> ()

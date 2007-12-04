@@ -44,27 +44,32 @@ let seq_of_string str =
     done;
     !res
 
-let kind_of_arithmop k1 k2 =
-  let k1 = C.promote k1 in
-  let k2 = C.promote k2 in
-    Newspeak.max_ikind k1 k2
+let translate_arithmop op (e1, k1) (e2, k2) =
+  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
+  let t = C.Int k in
+    (op k, C.cast (e1, C.Int k1) t, C.cast (e2, C.Int k2) t)
 
 let translate_unop op = 
   match op with
       Not -> C.Not
 
-let translate_binop op t1 t2 =
+let rec translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
-      (Mult, C.Int k1, C.Int k2) -> C.Mult (kind_of_arithmop k1 k2)
-    | (Plus, C.Int k1, C.Int k2) -> C.Plus (kind_of_arithmop k1 k2)
-    | (Minus, C.Int k1, C.Int k2) -> C.Minus (kind_of_arithmop k1 k2)
-    | (Plus, C.Ptr t, C.Int _) -> C.PlusP t
-    | (Gt, _, _) when t1 = t2 -> C.Gt t1
-    | (Eq, _, _) when t1 = t2 -> C.Eq t1
+      (Mult, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
+    | (Plus, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.Plus x) (e1, k1) (e2, k2)
+    | (Minus, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
+    | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2)
+    | (Plus, C.Array (elt_t, _), _) -> 
+	let t = C.Ptr elt_t in
+	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
+    | (Gt, _, _) when t1 = t2 -> (C.Gt t1, e1, e2)
+    | (Eq, _, _) when t1 = t2 -> (C.Eq t1, e1, e2)
     | _ ->
 	Npkcontext.error "Csyntax.type_of_binop" 
 	  "Unexpected binary operator and arguments"
-  
 
 let translate fname cprog =
   let glbdecls = Hashtbl.create 100 in
@@ -177,9 +182,9 @@ let translate fname cprog =
 	    (pref, (C.Unop (op, e), t))
 
       | Binop (op, e1, e2) -> 
-	  let (pref1, (e1, t1)) = translate_exp e1 in
-	  let (pref2, (e2, t2)) = translate_exp e2 in
-	  let op = translate_binop op t1 t2 in
+	  let (pref1, e1) = translate_exp e1 in
+	  let (pref2, e2) = translate_exp e2 in
+	  let (op, e1, e2) = translate_binop op e1 e2 in
 	  let t = C.typ_of_binop op in
 	    (pref1@pref2, (C.Binop (op, e1, e2), t))
 
@@ -197,22 +202,22 @@ let translate fname cprog =
 
   and translate_call r f args =
     let loc = Npkcontext.get_loc () in
-    let (pref_fn, fn) = translate_fn f in
-    let (_, (_, t)) = fn in
+    let (pref_fn, fn, ft) = translate_fn f in
+    let (_, ret_t) = ft in
     let (pref, args) = List.split (List.map translate_exp args) in
     let pref = List.concat pref in
     let (lv, e) =
-      match (t, r) with
+      match (ret_t, r) with
 	  (* Any expression is ok, since it is going to be thrown away *)
 	  (C.Void, _) -> (None, C.exp_of_int 1)
 	| (_, None) -> 
-	    let tmp = (C.Local (push_local loc (t, "tmp")), t) in
+	    let tmp = (C.Local (push_local loc (ret_t, "tmp")), ret_t) in
 	      pop_local "tmp";
 	      (Some tmp, C.Lval tmp)
-	| (_, Some lv) -> (Some lv, C.Lval lv)
+	| (_, Some lv) -> (Some lv, C.Lval lv) 
     in
-    let call = (C.Call (lv, fn, args), loc) in
-      (pref_fn@pref@(call::[]), (e, t))
+    let call = (C.Call (lv, (fn, ft), args), loc) in
+      (pref_fn@pref@(call::[]), (e, ret_t))
 
   and translate_fn f =
     let (pref, (f, t)) = translate_lv f in
@@ -222,7 +227,7 @@ let translate fname cprog =
 	| _ -> (f, t)
     in
     let t = C.ftyp_of_typ t in
-      (pref, (fn, t))
+      (pref, fn, t)
   in
 
   let translate_exp_option e =
@@ -240,6 +245,7 @@ let translate fname cprog =
       match (x, t) with
 	  (Data e, _) -> 
 	    let (pref, e) = translate_exp e in 
+	    let e = cast e t in
 	      if (pref <> []) then begin 
 		Npkcontext.error "Firstpass.translate_init"
 		  "Expression without side-effects expected"
@@ -292,7 +298,7 @@ let translate fname cprog =
 
     and fill_with_zeros t =
       match t with
-	  C.Int _ -> res := (!o, t, (C.Const Int64.zero, t))::!res
+	  C.Int _ -> res := (!o, t, C.Const Int64.zero)::!res
 	| C.Array (t, Some n) -> 
 	    let sz = C.size_of t in
 	      for i = 0 to n - 1 do
@@ -319,8 +325,7 @@ let translate fname cprog =
 	let (t, init) = translate_init t (Some (CstStr str)) in
 	  Hashtbl.add glbdecls name (t, loc, Some init, true)
       end;
-      (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
-      C.Ptr t)
+      C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t)
   in
 
   let rec translate_blk x =
@@ -355,7 +360,6 @@ let translate fname cprog =
 		"Expression should have type void"
 	    end;
 	    lv_pref@call
-
       | Set (lv, e) -> 
 	  let (lv_pref, lv) = translate_lv lv in
 	  let (e_pref, e) = translate_exp e in

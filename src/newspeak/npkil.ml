@@ -26,6 +26,8 @@
   email: olivier.levillain@penjili.org
 *)
 
+(* TODO: should count local variables from beginning of function !! *)
+
 open Cilutils
 open Newspeak
 
