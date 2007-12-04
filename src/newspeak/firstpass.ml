@@ -113,7 +113,7 @@ let translate fname cprog =
 	(C.Local n, t)
     with Not_found -> 
       try 
-	let (t, _, _, _) = Hashtbl.find glbdecls x in
+	let (t, _, _) = Hashtbl.find glbdecls x in
 	  (C.Global x, t)
       with Not_found ->
 	try 
@@ -323,7 +323,7 @@ let translate fname cprog =
       if not (Hashtbl.mem glbdecls name) then begin
 	let loc = (fname, -1, -1) in
 	let (t, init) = translate_init t (Some (CstStr str)) in
-	  Hashtbl.add glbdecls name (t, loc, Some init, true)
+	  Hashtbl.add glbdecls name (t, loc, Some init)
       end;
       C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t)
   in
@@ -451,11 +451,11 @@ let translate fname cprog =
 	    update_fundef x (ft, loc, Some (locals, body))
 
 (* TODO: put this check in parser ?? *)
-      | GlbDecl (_, _, is_extern, _, Some _) when is_extern -> 
+      | GlbDecl (_, _, is_extern, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbDecl (x, t, is_extern, is_const, init) ->
+      | GlbDecl (x, t, is_extern, init) ->
 	  begin match (t, init) with
 	      (Fun ft, None) -> update_fundef x (ft, loc, None)
 	    | (Fun ft, Some _) -> 
@@ -464,7 +464,7 @@ let translate fname cprog =
 	    | _ -> 
 		let (t, init) = translate_init t init in
 		let init = if is_extern then None else Some init in
-		  Hashtbl.add glbdecls x (t, loc, init, is_const)
+		  Hashtbl.add glbdecls x (t, loc, init)
 	  end
   in
   

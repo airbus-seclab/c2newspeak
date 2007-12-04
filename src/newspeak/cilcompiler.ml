@@ -794,7 +794,6 @@ let translate_init x t =
 let translate_glb used_glb name x =
   let used = K.String_set.mem name used_glb in
   let defd = x.F.gdefd in
-  let const = x.F.gconst in
   let loc = Npkutils.translate_loc x.F.gloc in
     Npkcontext.set_loc loc;
     if (defd || used) then begin
@@ -807,7 +806,7 @@ let translate_glb used_glb name x =
 	end
       in
       let t = translate_typ x.F.gtype in
-	Hashtbl.add Cilenv.glb_decls name (t, loc, init, const, used)
+	Hashtbl.add Cilenv.glb_decls name (t, loc, init, used)
     end
 
 

@@ -358,12 +358,12 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    Some (Some init)
   in
 
-  let translate_glbdecl x (t, loc, init, const) =
+  let translate_glbdecl x (t, loc, init) =
     let init = translate_init init in
     let t = translate_typ t in
       (* TODO: maybe do this in a first pass, since there may be the need for
 	 a variable not encountered yet, in init *)
-      Hashtbl.add glbdecls x (t, loc, init, const, true)
+      Hashtbl.add glbdecls x (t, loc, init, true)
   in
 
   let translate_local (t, x, loc) = 

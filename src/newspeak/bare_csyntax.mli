@@ -29,7 +29,7 @@ type prog = (global * location) list
 and global =
     | FunctionDef of (string * typ * blk)
 (* true for extern, true for const *)
-    | GlbDecl of (string * typ * bool * bool * init option)
+    | GlbDecl of (string * typ * bool * init option)
 
 and typ = Csyntax.typ
 

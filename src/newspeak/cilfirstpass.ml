@@ -37,7 +37,6 @@ type glb_type = {
   mutable gtype : Cil.typ;
   mutable gloc : Cil.location;
   mutable gdefd : bool;
-  mutable gconst : bool;
   mutable ginit : Cil.init option;
 }
 
@@ -232,7 +231,6 @@ let first_pass f =
 
   let update_glob_decl v =
     let name = Cilenv.glb_uniquename v in
-    let const = Cilutils.is_const v.vtype in
       try
 	let x = Hashtbl.find glb_decls name in
 	  (* TODO: code cleanup, try to merge with link ?? *)
@@ -244,20 +242,14 @@ let first_pass f =
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
-	  if x.gconst <> const
-	  then Npkcontext.error 
-	    "Firstpass.first_pass.update_glob_decl"
-	    ("Variable "^name^" should be const")
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {gtype = v.vtype; gloc = v.vdecl; gconst = const;
-	   gdefd = false; ginit = None;}
+	  {gtype = v.vtype; gloc = v.vdecl; gdefd = false; ginit = None;}
   in
 
 (* TODO: factor this code with the one up there!!! *)
   let update_glob_def v i =
     let name = Cilenv.glb_uniquename v in
-    let const = Cilutils.is_const v.vtype in
       try
 	let x = Hashtbl.find glb_decls name in
 	  if not (Npkil.compare_typs 
@@ -278,18 +270,13 @@ let first_pass f =
 	    Npkcontext.print_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name)
 	  end;
-	  if x.gconst <> const
-	  then Npkcontext.error 
-	    "Firstpass.first_pass.update_glob_decl"
-	    ("Variable "^name^" should be const");
 	  x.gtype <- v.vtype;
 	  x.gdefd <- true;
 	  x.gloc <- v.vdecl;
 	  x.ginit <- i
       with Not_found ->
 	Hashtbl.add glb_decls name
-	  {gtype = v.vtype; gloc = v.vdecl; gconst = const;
-	   gdefd = true; ginit = i;}
+	  {gtype = v.vtype; gloc = v.vdecl; gdefd = true; ginit = i;}
   in
 
   let visitor = new visitor_first_pass in

@@ -50,7 +50,7 @@ let globals = Hashtbl.create 100
 
 let get_glob_typ name =
   try
-    let (t, _, _) = Hashtbl.find globals name in
+    let (t, _) = Hashtbl.find globals name in
       t
   with
       Not_found ->
@@ -159,9 +159,9 @@ and replace_field (offs, t) = (offs, replace_typ t)
   TODO: implement --accept-extern
 *)
 
-let update_glob_link name (t, loc, init, const, used) =
+let update_glob_link name (t, loc, init, used) =
   try
-    let (prev_t, prev_loc, prev_init, prev_const, prev_used) = 
+    let (prev_t, prev_loc, prev_init, prev_used) = 
       Hashtbl.find glb_decls name 
     in
       (* TODO: remove Npkil.compare_typs *)
@@ -193,12 +193,9 @@ let update_glob_link name (t, loc, init, const, used) =
 	| _ -> 
 	    error "Npklink.update_glob_link" ("multiple definition of "^name)
     in
-      if (const <> prev_const) then error "Npklink.update_glob_link" 
-	("Global "^name^" should be constant");
-      Hashtbl.replace glb_decls name (t, loc, init, const, used)
+      Hashtbl.replace glb_decls name (t, loc, init, used)
       
-  with Not_found -> 
-    Hashtbl.add glb_decls name (t, loc, init, const, used)
+  with Not_found -> Hashtbl.add glb_decls name (t, loc, init, used)
 
 
 let merge_headers npko =
@@ -206,7 +203,7 @@ let merge_headers npko =
     filenames := fname::(!filenames);
     Hashtbl.iter update_glob_link globs
 
-let generate_global name (t, loc, init, const, used) =
+let generate_global name (t, loc, init, used) =
   Npkcontext.set_loc loc;
   if used || (not !remove_temp) then begin
     let i =
@@ -222,7 +219,7 @@ let generate_global name (t, loc, init, const, used) =
     in
       try
 	let t = replace_typ t in
-	  Hashtbl.add globals name (t, replace_init i, const)
+	  Hashtbl.add globals name (t, replace_init i)
       with LenOfArray -> 
 	error "Npklink.handle_real_glob" 
 	  ("unspecified length for global array "^name)
@@ -292,7 +289,7 @@ let link npkos output_file =
     print_debug "Linking files...";
     List.iter merge_headers npkos;
     print_debug "Globals...";
-
+    
     Hashtbl.iter generate_global glb_decls;
     Npkcontext.forget_loc ();
 

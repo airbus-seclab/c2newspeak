@@ -590,7 +590,7 @@ let init_of_string str =
 let create_cstr name str =
   let (len, init) = init_of_string str in
   let t = Array (Scalar char_typ, len) in
-    (name, (t, init, true))
+    (name, (t, init))
 
 let build_call_aux f prolog (args_t, ret_t) =
   let call = ref (prolog@[Call (FunId f), locUnknown]) in
@@ -616,14 +616,14 @@ let build_main_call ptr_sz (args_t, ret_t) args =
   let handle_arg_aux str =
     let name = "!param_str"^(string_of_int (!n + 1)) in
     let (len, init) = init_of_string str in
-      Hashtbl.add globs name ((Array (Scalar char_typ, len), init, false));
+      Hashtbl.add globs name ((Array (Scalar char_typ, len), init));
       ptr_array_init := 
 	(!n * ptr_sz, Ptr, AddrOf (Global name, len))::(!ptr_array_init);
       incr n
   in
   let handle_args () =
     List.iter handle_arg_aux args;
-    let info = ((Array (Scalar Ptr, !n), Init !ptr_array_init, false)) in
+    let info = (Array (Scalar Ptr, !n), Init !ptr_array_init) in
       Hashtbl.add globs argv_name info
   in
   let prolog =

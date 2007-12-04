@@ -42,7 +42,6 @@ type glb_type = {
   mutable gtype : Cil.typ;
   mutable gloc : Cil.location;
   mutable gdefd : bool;
-  mutable gconst : bool;
   mutable ginit : Cil.init option;
 }
 (* TODO: remove *)

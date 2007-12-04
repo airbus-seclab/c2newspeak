@@ -38,8 +38,8 @@ let get_loc () =
 
 let build_glbdecl is_extern (b, m) = 
   let build ((v, init), loc) = 
-    let (t, x, is_const) = Synthack.normalize_glbdecl (b, v) in
-      (GlbDecl (x, t, is_extern, is_const, init), loc)
+    let (t, x) = Synthack.normalize_decl (b, v) in
+      (GlbDecl (x, t, is_extern, init), loc)
   in
     List.map build m
 
@@ -72,8 +72,6 @@ let build_stmtdecl (b, m) =
 let build_type_decl d =
   let (t, _) = Synthack.normalize_decl d in
     t
-
-let build_pointer attrs p = Pointer (Synthack.append_attrs attrs p)
 
 %}
 
@@ -150,16 +148,16 @@ type_declaration:
 
 declaration_specifiers:
   type_qualifier_list type_specifier type_qualifier_list 
-                                           { ($2, $1@$3) }
+                                           { $2 }
 ;;
 
 type_qualifier_list:
-  type_qualifier type_qualifier_list       { $1::$2 }
-|                                          { [] }
+  type_qualifier type_qualifier_list       { }
+|                                          { }
 ;;
 
 type_qualifier:
-  CONST                                    { Const }
+  CONST                                    { }
 ;;
 
 init_declarator_list:
@@ -275,7 +273,7 @@ init_list:
 ;;
 
 abstract_declarator:
-| pointer abstract_declarator              { build_pointer $1 $2 }
+| pointer abstract_declarator              { Pointer $2 }
 | LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
 | LBRACKET INTEGER RBRACKET                { Array (Abstract, Some $2) }
@@ -285,7 +283,7 @@ abstract_declarator:
 ;;
 
 declarator:
-| pointer declarator                       { build_pointer $1 $2 }
+| pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
 | IDENTIFIER                               { Variable $1 }
 | declarator LBRACKET INTEGER RBRACKET     { Array ($1, Some $3) }
@@ -295,7 +293,7 @@ declarator:
 ;;
 
 pointer:
-  STAR type_qualifier_list                 { $2 }
+  STAR type_qualifier_list                 {  }
 ;;
 
 field_list:
