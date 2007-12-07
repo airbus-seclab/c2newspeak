@@ -36,7 +36,6 @@ and typ = Csyntax.typ
 and init = 
     | Data of exp
     | Sequence of init list
-    | CstStr of string
 
 and stmt = (stmtkind * location)
 
@@ -74,6 +73,7 @@ and exp =
     | Call of (lv * exp list)
     | Sizeof of Csyntax.typ
     | SizeofV of string
+    | Str of string
 
 and cst = Int64.t
 

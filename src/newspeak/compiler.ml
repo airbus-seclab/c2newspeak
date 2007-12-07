@@ -184,7 +184,10 @@ let translate fname (_, cglbdecls, cfundefs) =
 
   let rec translate_blk x =
     match x with
-	hd::tl -> (translate_stmt hd)@(translate_blk tl)
+	hd::tl -> 
+	  let hd = translate_stmt hd in
+	  let tl = translate_blk tl in
+	    hd@tl
       | [] -> []
 
   and translate_set loc (lv, t) e =
@@ -293,7 +296,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    Npkcontext.error "Compiler.translate_call" "Unreachable statement"
     in
 
-      pop ();
+      if ret_t <> Void then pop ();
       List.iter (fun _ -> pop ()) args_t;
       
       let call = (K.Call fn, loc)::[] in

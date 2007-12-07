@@ -197,6 +197,10 @@ let translate fname cprog =
       (* TODO: should check that the size of all declarations is less than max_int *)
       | Sizeof t -> ([], (C.exp_of_int (size_of t), int_typ))
 
+      | Str str -> 
+	  let e = add_glb_cstr str in
+	    ([], e)
+
       | And _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
 
@@ -228,22 +232,32 @@ let translate fname cprog =
     in
     let t = C.ftyp_of_typ t in
       (pref, fn, t)
-  in
 
-  let translate_exp_option e =
+  and translate_exp_option e =
     match e with
 	None -> ([], None)
       | Some e -> 
 	  let (pref, e) = translate_exp e in
 	    (pref, Some e)
-  in
 
-  let rec translate_init t x =
+(*
+*)
+
+  and translate_init t x =
     let res = ref [] in
     let o = ref 0 in
     let rec translate t x =
       match (x, t) with
-	  (Data e, _) -> 
+	  (Data (Str str), C.Array _) -> 
+	    let seq = seq_of_string str in
+	      translate t (Sequence seq)
+(*
+	| (Data (Str str), C.Ptr _) -> 
+	    let (e, _) = add_glb_cstr str in
+	      res := (!o, t, e)::!res;
+	      t
+*)
+	| (Data e, _) -> 
 	    let (pref, e) = translate_exp e in 
 	    let e = cast e t in
 	      if (pref <> []) then begin 
@@ -261,15 +275,6 @@ let translate fname cprog =
 	    in
 	      translate_sequence t n seq;
 	      C.Array (t, Some n)
-
-	| (CstStr str, C.Array _) -> 
-	    let seq = seq_of_string str in
-	      translate t (Sequence seq)
-
-	| (CstStr str, C.Ptr _) -> 
-	    let e = add_glb_cstr str in
-	      res := (!o, t, e)::!res;
-	      t
 
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init"
@@ -322,10 +327,11 @@ let translate fname cprog =
     let t = C.Array a in
       if not (Hashtbl.mem glbdecls name) then begin
 	let loc = (fname, -1, -1) in
-	let (t, init) = translate_init t (Some (CstStr str)) in
+	let (t, init) = translate_init t (Some (Data (Str str))) in
 	  Hashtbl.add glbdecls name (t, loc, Some init)
       end;
-      C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t)
+      (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
+      C.Ptr char_typ)
   in
 
   let rec translate_blk x =
@@ -360,11 +366,12 @@ let translate fname cprog =
 		"Expression should have type void"
 	    end;
 	    lv_pref@call
+
       | Set (lv, e) -> 
 	  let (lv_pref, lv) = translate_lv lv in
 	  let (e_pref, e) = translate_exp e in
 	    lv_pref@e_pref@((C.Set (lv, e), loc)::[])
-	      
+  
       | If (And (e1, e2), blk1, blk2) ->
 	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
 	    translate_stmt (If (e1, if_e1_blk, blk2), loc)

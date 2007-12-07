@@ -253,6 +253,7 @@ expression:
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
 | SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
 | SIZEOF LPAREN type_declaration RPAREN    { Sizeof (build_type_decl $3) }
+| STRING                                   { Str $1 }
 ;;
 
 init_declarator:
@@ -264,7 +265,6 @@ init:
   expression                               { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
 | LBRACE RBRACE                            { Sequence [] }
-| STRING                                   { CstStr $1 }
 ;;
 
 init_list:
