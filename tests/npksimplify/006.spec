@@ -17,13 +17,13 @@ getIndex() {
             (34)^choose {
               | (0 ==_int4 1-_int4) -->
               | ! (0 ==_int4 1-_int4) -->
-                (34)^goto lbl1;
+                (34)^goto lbl2;
             }
           | ! (10 > 0-_int4) -->
-            (34)^goto lbl1;
+            (34)^goto lbl2;
         }
       }
-    } with lbl1: {
+    } with lbl2: {
     }
     (41)^choose {
       | ! (0 ==_int4 1-_int4) -->
@@ -64,13 +64,13 @@ main() {
                   (34)^choose {
                     | (0 ==_int4 1-_int4) -->
                     | ! (0 ==_int4 1-_int4) -->
-                      (34)^goto lbl1;
+                      (34)^goto lbl2;
                   }
                 | ! (10 > 0-_int4) -->
-                  (34)^goto lbl1;
+                  (34)^goto lbl2;
               }
             }
-          } with lbl1: {
+          } with lbl2: {
           }
           (41)^choose {
             | ! (0 ==_int4 1-_int4) -->

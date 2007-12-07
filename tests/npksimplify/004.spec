@@ -9,10 +9,10 @@ main() {
       (31)^choose {
         | (10 > 0-_int4) -->
         | ! (10 > 0-_int4) -->
-          (31)^goto lbl1;
+          (31)^goto lbl2;
       }
     }
-  } with lbl1: {
+  } with lbl2: {
   }
 }
 

@@ -33,7 +33,8 @@ module N = Newspeak
 module K = Npkil
 
 let ret_lbl = 0
-let brk_lbl = 1
+let cnt_lbl = 1
+let brk_lbl = 2
 
 let translate_array lv (t, n) =
   let n =
@@ -226,8 +227,10 @@ let translate fname (_, cglbdecls, cfundefs) =
 				     ([cond2], body2)], loc)::[]
 	  end
 
-      | Loop body ->
-	  let body = translate_blk body in
+      | Loop (body1, body2) ->
+	  let body1 = translate_blk body1 in
+	  let body2 = translate_blk body2 in
+	  let body = (K.DoWith (body1, cnt_lbl, []), loc)::body2 in
 	  let loop = (K.InfLoop body, loc)::[] in
 	    (K.DoWith (loop, brk_lbl, []), loc)::[]
 
@@ -236,6 +239,8 @@ let translate fname (_, cglbdecls, cfundefs) =
       | Call f -> translate_call loc f
  
       | Break -> (K.Goto brk_lbl, loc)::[]
+
+      | Continue -> (K.Goto cnt_lbl, loc)::[]
       
       | Switch (e, cases) -> translate_switch loc e cases
 
@@ -329,7 +334,7 @@ let translate fname (_, cglbdecls, cfundefs) =
 	    let body = translate_blk body in
 	      found_case lbl v;
 	      (lbl + 1, (lbl, body, case_loc)::tl)
-	| [] -> (2, [])
+	| [] -> (brk_lbl + 1, [])
     in
 
     let (_, cases) = translate_cases cases in

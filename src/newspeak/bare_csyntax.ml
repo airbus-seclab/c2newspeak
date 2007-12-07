@@ -50,11 +50,16 @@ and stmtkind =
 (* TODO: simplify if then else syntax !!! Only two cases at most!!! *)
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
+(* TODO: remove While and DoWhile *)
     | While of (exp * blk)
     | DoWhile of (blk * exp)
+(* while exp is true do blk and then blk, continue jumps before the second
+   blk *)
+    | For of (blk * exp * blk * blk)
     | Return of exp option
     | Exp of exp
     | Break
+    | Continue
     | Block of blk
 
 and field = string

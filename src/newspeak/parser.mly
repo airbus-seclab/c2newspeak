@@ -75,7 +75,7 @@ let build_type_decl d =
 
 %}
 
-%token BREAK CONST CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SIZEOF 
+%token BREAK CONST CONTINUE CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
 %token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
@@ -188,10 +188,9 @@ statement:
       expression SEMICOLON 
       assignment RPAREN
       statement                            { let loc = get_loc () in
-                                               (Set $3, loc)
-					       ::(While ($5, 
-							$9@(Set $7, loc)::[]), 
-							loc)
+                                               (For ((Set $3, loc)::[], 
+						    $5, $9, 
+						    (Set $7, loc)::[]), loc)
 					       ::[] }
 | WHILE LPAREN expression RPAREN statement { [While ($3, $5), get_loc ()] }
 | DO statement
@@ -200,6 +199,7 @@ statement:
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
 | call SEMICOLON                           { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
+| CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | block                                    { [Block $1, get_loc ()] }
 ;;
 

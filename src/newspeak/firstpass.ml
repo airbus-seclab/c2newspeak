@@ -377,17 +377,23 @@ let translate fname cprog =
 
       | While (e, body) ->
 	  let (pref, e) = translate_exp e in
-	  let body = translate_blk body in
 	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
-	  let body = pref@(loop_exit::body) in
-	    (C.Loop (body), loc)::[]
+	  let body = translate_blk body in
+	    (C.Loop (pref@(loop_exit::body), []), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
 	  let (pref, e) = translate_exp e in
 	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
-	  let body = body@pref@(loop_exit::[]) in
-	    (C.Loop body, loc)::[]
+	    (C.Loop (body@pref@(loop_exit::[]), []), loc)::[]
+
+      | For (init, e, body, step) ->
+	  let init = translate_blk init in
+	  let (pref, e) = translate_exp e in
+	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
+	  let body = translate_blk body in
+	  let step = translate_blk step in
+	    init@(C.Loop (pref@(loop_exit::body), step), loc)::[]
 
       | Return None -> (C.Return, loc)::[]
 	      
@@ -416,6 +422,8 @@ let translate fname cprog =
 	    !pref@(C.Switch (e, cases), loc)::[]
 
       | Break -> (C.Break, loc)::[]
+
+      | Continue -> (C.Continue, loc)::[]
 
       | Block body -> translate_blk body
 

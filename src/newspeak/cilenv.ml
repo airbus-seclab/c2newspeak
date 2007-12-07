@@ -46,7 +46,9 @@ type funinfo = {
 
 let return_lbl = 0
 
-let brk_lbl = 1
+let cnt_lbl = 1
+
+let brk_lbl = 2
 
 (* TODO: continue ?? *)
 
@@ -263,6 +265,8 @@ let get_ret_var () = Npkil.Local (!loc_cnt - 1)
 
 let get_ret_lbl () = return_lbl
 
+let get_cnt_lbl () = cnt_lbl
+
 let get_brk_lbl () = brk_lbl
 
 (*------------------------------------------*)
@@ -270,9 +274,9 @@ let get_brk_lbl () = brk_lbl
 (*------------------------------------------*)
 
 (* Counter for labels *)
-let lbl_cnt = ref 1
+let lbl_cnt = ref brk_lbl
 
-let reset_lbl_gen () = lbl_cnt := 1
+let reset_lbl_gen () = lbl_cnt := brk_lbl
 
 let empty_status () = 
   loc_cnt := 0;

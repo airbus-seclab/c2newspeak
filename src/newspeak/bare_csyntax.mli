@@ -49,9 +49,11 @@ and stmtkind =
     | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)
     | DoWhile of (blk * exp)
+    | For of (blk * exp * blk * blk)
     | Return of exp option
     | Exp of exp
     | Break
+    | Continue
     | Block of blk
 
 and field = string

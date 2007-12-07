@@ -6,14 +6,14 @@ main() {
     (33)^do {
       (32)^choose {
         | ! (0-_int4 ==_int4 2) -->
-          (32)^goto lbl1;
-        | (0-_int4 ==_int4 2) -->
           (32)^goto lbl2;
+        | (0-_int4 ==_int4 2) -->
+          (32)^goto lbl3;
       }
-    } with lbl2: {
+    } with lbl3: {
     }
     (34)^0- =(int4) 1;
-  } with lbl1: {
+  } with lbl2: {
   }
 }
 

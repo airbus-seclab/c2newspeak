@@ -17,11 +17,11 @@ main() {
       (32)^choose {
         | ! (0-_int4 ==_int4 0) -->
         | (0 ==_int4 0-_int4) -->
-          (32)^goto lbl1;
+          (32)^goto lbl2;
       }
       (33)^1- =(int4) coerce[-2147483648,2147483647] (1-_int4 + 1);
     }
-  } with lbl1: {
+  } with lbl2: {
   }
 }
 

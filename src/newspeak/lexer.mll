@@ -91,6 +91,7 @@ rule token = parse
     "break"             { BREAK }
   | "case"              { CASE }
   | "const"             { CONST }
+  | "continue"          { CONTINUE }
   | "default"           { DEFAULT }
   | "do"                { DO }
   | "else"              { ELSE }
