@@ -214,6 +214,14 @@ let translate fname (_, cglbdecls, cfundefs) =
     match x with
       | Init (x, init) -> List.map (translate_local_init loc x) init
 
+      (* TODO: assumes lv and e types are the same,
+	 this check should be done in firstpass which performs typing *)
+      | Set ((lv1, (Struct _ | Union _ as t)), (Lval (lv2, _), _)) ->
+	  let n = size_of t in
+	  let lv1 = translate_lv lv1 in
+	  let lv2 = translate_lv lv2 in
+	    (K.Copy (lv1, lv2, n), loc)::[]
+
       | Set (lv, e) -> (translate_set loc lv e)::[]
 
       | If (e, body1, body2) ->
