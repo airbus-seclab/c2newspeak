@@ -37,7 +37,7 @@ type base_typ =
 
 and var_modifier = 
     | Abstract
-    | Variable of string
+    | Variable of (string * location)
     | Function of (var_modifier * decl list)
     | Array of (var_modifier * Int64.t option)
     | Pointer of var_modifier
@@ -107,7 +107,7 @@ and normalize_struct_fields f =
   let rec normalize o f=
     match f with
 	d::f ->
-	  let (t, x) = normalize_decl d in
+	  let (t, x) = normalize_arg d in
 	  let sz = C.size_of t in
 	  let o = align o sz in
 	  let (f, n) = normalize (o+sz) f in
@@ -117,7 +117,7 @@ and normalize_struct_fields f =
   let (f, n) = 
     match f with
 	d::[] ->
-	  let (t, x) = normalize_decl d in
+	  let (t, x) = normalize_arg d in
 	  let sz = C.size_of t in
 	    ((x, (0, t))::[], sz)
       | _ -> normalize 0 f 
@@ -127,7 +127,7 @@ and normalize_struct_fields f =
 and normalize_union_fields f =
   let n = ref 0 in
   let normalize d =
-    let (t, x) = normalize_decl d in
+    let (t, x) = normalize_arg d in
     let sz = C.size_of t in
       if !n < sz then n := sz;
       (x, (0, t))
@@ -137,12 +137,12 @@ and normalize_union_fields f =
 
 and normalize_var_modifier b v =
   match v with
-      Abstract -> (b, C.undefined)
-    | Variable x -> (b, x)
-    | Function (Variable f, args) -> 
-	(C.Fun (List.map normalize_decl args, b), f)
+      Abstract -> (b, C.undefined, Newspeak.dummy_loc "")
+    | Variable (x, loc) -> (b, x, loc)
+    | Function (Variable (f, loc), args) -> 
+	(C.Fun (List.map normalize_arg args, b), f, loc)
     | Function (Pointer v, args) -> 
-	let args = List.map normalize_decl args in
+	let args = List.map normalize_arg args in
 	  normalize_var_modifier (C.Ptr (C.Fun (args, b))) v
     | Array (v, n) -> 
 	let n = 
@@ -156,7 +156,10 @@ and normalize_var_modifier b v =
 	Npkcontext.error "Synthack.normalize_var_modifier" 
 	  "case not implemented yet"
 	  
+and normalize_arg a = 
+  let (t, x, _) = normalize_decl a in
+    (t, x)
+
 and normalize_decl (b, v) =
-  let b = normalize_base_typ b in
-    normalize_var_modifier b v
-      
+  let t = normalize_base_typ b in
+    normalize_var_modifier t v

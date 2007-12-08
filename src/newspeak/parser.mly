@@ -42,41 +42,40 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let build_glbdecl is_extern (b, m) = 
-  let build ((v, init), loc) = 
-    let (t, x) = Synthack.normalize_decl (b, v) in
-      (GlbDecl (x, t, is_extern, init), loc)
+let process_decls f (b, m) =
+  let b = Synthack.normalize_base_typ b in
+  let process (v, init) =
+    let (t, x, loc) = Synthack.normalize_var_modifier b v in
+      f (t, x, init, loc)
   in
-    List.map build m
+    List.map process m
 
-let build_fundef (b, m) body = 
-  let build ((v, _), loc)  = 
-    let (t, x) = Synthack.normalize_decl (b, v) in
-      (FunctionDef (x, t, body), loc) 
-  in
-    List.map build m
+let build_glbdecl is_extern d = 
+  let build (t, x, init, loc) = (GlbDecl (x, t, is_extern, init), loc) in
+    process_decls build d
 
-let build_typedef (b, m) =
-  let build ((v, _), _) = 
-    let (t, x) = Synthack.normalize_decl (b, v) in
-      Synthack.define_type x t
-  in
-    List.iter build m;
+let build_fundef d body = 
+  let (t, x, loc) = Synthack.normalize_decl d in
+    (FunctionDef (x, t, body), loc)
+      
+let build_typedef d =
+  let build (t, x, _, _) = Synthack.define_type x t in
+  let _ = process_decls build d in
     []
 
 let build_field (b, m) =
-  let build ((v, _), _) = Synthack.normalize_decl (b, v) in
-    List.map build m
-
-let build_stmtdecl (b, m) =
-  let build ((v, init), l) = 
-    let (t, x) = Synthack.normalize_decl (b, v) in
-      (Decl (x, t, init), l) 
+  let build ((v, _), _) = 
+    let (t, x, _) = Synthack.normalize_decl (b, v) in
+      (t, x)
   in
     List.map build m
 
+let build_stmtdecl d =
+  let build (t, x, init, loc) = (Decl (x, t, init), loc) in
+    process_decls build d
+
 let build_type_decl d =
-  let (t, _) = Synthack.normalize_decl d in
+  let (t, _, _) = Synthack.normalize_decl d in
     t
 
 %}
@@ -125,14 +124,17 @@ translation_unit:
 ;;
 
 external_declaration:
-  declaration SEMICOLON                    { build_glbdecl false $1 }
-| EXTERN declaration SEMICOLON             { build_glbdecl true $2 }
-| declaration statement                    { build_fundef $1 $2 }
-| TYPEDEF declaration SEMICOLON            { build_typedef $2 }
+  declaration                              { build_glbdecl false $1 }
+| EXTERN declaration                       { build_glbdecl true $2 }
+| declaration_specifiers declarator 
+  statement                                { (build_fundef ($1, $2) $3)::[] }
+| TYPEDEF declaration                      { build_typedef $2 }
 ;;
 
 declaration:
-  declaration_specifiers init_declarator_list      { ($1, $2) }
+  declaration_specifiers init_declarator_list 
+  SEMICOLON                                { ($1, $2) }
+| declaration_specifiers SEMICOLON         { ($1, []) }
 ;;
 
 field_declaration:
@@ -141,20 +143,22 @@ field_declaration:
 
 // TODO: careful, this is a bit of a hack
 parameter_declaration:
-  declaration_specifiers declarator                { ($1, $2) }
-| declaration_specifiers abstract_declarator       { ($1, $2) }
-| declaration_specifiers                           { ($1, Abstract) }
+  declaration_specifiers declarator        { ($1, $2) }
+| declaration_specifiers 
+  abstract_declarator                      { ($1, $2) }
+| declaration_specifiers                   { ($1, Abstract) }
 ;;
 
 type_declaration:
-  declaration_specifiers abstract_declarator       { ($1, $2) }
-| declaration_specifiers                           { ($1, Abstract) }
+  declaration_specifiers 
+  abstract_declarator                      { ($1, $2) }
+| declaration_specifiers                   { ($1, Abstract) }
 ;;
 
 
 declaration_specifiers:
-  type_qualifier_list type_specifier type_qualifier_list 
-                                           { $2 }
+  type_qualifier_list type_specifier 
+  type_qualifier_list                      { $2 }
 ;;
 
 type_qualifier_list:
@@ -168,8 +172,8 @@ type_qualifier:
 
 init_declarator_list:
   init_declarator COMMA 
-  init_declarator_list                     { ($1, get_loc ())::$3 }
-| init_declarator                          { ($1, get_loc ())::[] }
+  init_declarator_list                     { $1::$3 }
+| init_declarator                          { $1::[] }
 ;;
 
 block:
@@ -182,7 +186,7 @@ statement_list:
 ;;
 
 statement:
-  declaration SEMICOLON                    { build_stmtdecl $1 }
+  declaration                              { build_stmtdecl $1 }
 | assignment SEMICOLON                     { [Set $1, get_loc ()] }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
@@ -291,7 +295,7 @@ abstract_declarator:
 declarator:
 | pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
-| IDENTIFIER                               { Variable $1 }
+| IDENTIFIER                               { Variable ($1, get_loc ()) }
 | declarator LBRACKET INTEGER RBRACKET     { Array ($1, Some $3) }
 | declarator LBRACKET RBRACKET             { Array ($1, None) }
 | declarator LPAREN parameter_list RPAREN  { Function ($1, $3) }

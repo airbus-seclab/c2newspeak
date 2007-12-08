@@ -1,8 +1,7 @@
 # Project
 DIR = 
-OBJ = cilutils params npkcontext config \
+OBJ = cilutils params npkcontext config newspeak \
       bare_csyntax csyntax synthack lexer parser \
-      newspeak \
       npkil npkutils cilenv \
       cilfirstpass cilcompiler \
       lstutils firstpass compiler \

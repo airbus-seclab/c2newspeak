@@ -9,7 +9,7 @@ type base_typ =
 
 and var_modifier = 
     | Abstract
-    | Variable of string
+    | Variable of (string * location)
     | Function of (var_modifier * decl list)
     | Array of (var_modifier * Int64.t option)
     | Pointer of var_modifier
@@ -23,7 +23,12 @@ and ityp =
 
 and decl = (base_typ * var_modifier)
 
-val normalize_decl: decl -> (Csyntax.typ * string)
+val normalize_base_typ: base_typ -> Csyntax.typ
+
+val normalize_var_modifier: 
+  Csyntax.typ -> var_modifier -> (Csyntax.typ * string * location)
+
+val normalize_decl: decl -> (Csyntax.typ * string * location)
 
 val clean: unit -> unit
 
