@@ -51,7 +51,7 @@ let rec translate_typ t =
 	Npkcontext.error "Compiler.translate_typ" "void not allowed here"
     | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
     | Array (t, sz) -> K.Array (translate_typ t, sz)
-    | Struct (fields, n) | Union (fields, n) -> 
+    | Struct { contents = (fields, n) } | Union { contents = (fields, n) } -> 
 	let translate_field (_, (o, t)) = (o, translate_typ t) in
 	  K.Region (List.map translate_field fields, n)
     | Fun _ -> 
@@ -104,7 +104,7 @@ let translate_binop op e1 e2 =
 	let t = translate_scalar t in
 	  K.BinOp (N.Eq t, e1, e2)
 	    
-let translate fname (_, cglbdecls, cfundefs) = 
+let translate fname (cglbdecls, cfundefs) = 
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let stack_height = ref 0 in
@@ -421,7 +421,8 @@ let parse fname =
   let lexbuf = Lexing.from_channel cin in
     Lexer.init fname lexbuf;
     try
-      let cprog = Parser.parse Lexer.token lexbuf in
+      let cprog = Parser.parse (Lexer.token ) lexbuf in
+	Synthack.clean ();
 	close_in cin;
 	cprog
     with Parsing.Parse_error -> 

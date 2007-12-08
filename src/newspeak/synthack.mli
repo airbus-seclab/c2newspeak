@@ -3,8 +3,8 @@ open Newspeak
 type base_typ =
     | Void 
     | Integer of (sign_t * ityp)    
-    | Struct of decl list
-    | Union of decl list
+    | Struct of (string * decl list option)
+    | Union of (string * decl list option)
     | Name of string
 
 and var_modifier = 

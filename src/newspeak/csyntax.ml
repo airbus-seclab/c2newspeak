@@ -25,10 +25,8 @@
 
 open Newspeak
   
-type prog = (composites * glbdecls * fundefs)
+type prog = (glbdecls * fundefs)
     
-and composites = (string, typ) Hashtbl.t
-
 (* None for extern *)
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
  
@@ -46,9 +44,12 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_t
-    | Struct of (fields_t * int)
-    | Union of (fields_t * int)
+    | Struct of composite
+    | Union of composite
     | Fun of ftyp
+
+(* Because of the possibility of infinite types (lists), this a ref *)
+and composite = (fields_t * int) ref
 
 and fields_t = (string * (int * typ)) list
 
@@ -112,7 +113,9 @@ let ftyp_of_typ t =
 
 let fields_of_typ t =
   match t with
-      Struct (f, _) | Union (f, _) -> f
+      Struct c | Union c -> 
+	let (f, _) = !c in
+	  f
     | _ -> 
 	Npkcontext.error "Csyntax.fields_of_typ" 
 	  "Struct or union type expected"
@@ -133,7 +136,9 @@ let rec size_of t =
     | Float n -> n
     | Ptr _ -> Config.size_of_ptr
     | Array (t, Some n) -> (size_of t) * n
-    | Struct (_, n) | Union (_, n) -> n
+    | Struct c | Union c -> 
+	let (_, n) = !c in
+	  n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
     | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"

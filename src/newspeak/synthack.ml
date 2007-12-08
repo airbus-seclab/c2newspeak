@@ -3,18 +3,36 @@ open Newspeak
 module C = Csyntax
 
 let typedefs = Hashtbl.create 100
+let compdefs = Hashtbl.create 100
 
-let clean () = Hashtbl.clear typedefs
+let clean () = 
+  Hashtbl.clear typedefs;
+  Hashtbl.clear compdefs
 
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
 
+let create_comp n =
+  if Hashtbl.mem compdefs n then begin
+    Npkcontext.error "Synthack.create_comp" 
+      ("Struct or union "^n^" already defined")
+  end;
+  let dummy_comp = ref ([], -1) in
+    Hashtbl.add compdefs n dummy_comp;
+    dummy_comp
+
+let find_comp n = 
+  try Hashtbl.find compdefs n
+  with Not_found -> 
+    Npkcontext.error "Synthack.find_comp"
+      ("Unknown struct or union: "^n)
+
 type base_typ =
     | Void 
     | Integer of (sign_t * ityp)    
-    | Struct of decl list
-    | Union of decl list
+    | Struct of (string * decl list option)
+    | Union of (string * decl list option)
     | Name of string
 
 and var_modifier = 
@@ -59,8 +77,26 @@ let align o sz =
 let rec normalize_base_typ t =
   match t with
       Integer (s, t) -> C.Int (s, size_of_ityp t)
-    | Struct f -> C.Struct (normalize_struct_fields f)
-    | Union f -> C.Union (normalize_union_fields f)
+    | Struct (n, f) ->
+	let comp = 
+	  match f with
+	      None -> find_comp n
+	    | Some f ->
+		let comp = create_comp n in
+		  comp := normalize_struct_fields f;
+		  comp
+	in
+	  C.Struct comp
+    | Union (n, f) -> 
+	let comp = 
+	  match f with
+	      None -> find_comp n
+	    | Some f ->
+		let comp = create_comp n in
+		  comp := normalize_union_fields f;
+		  comp
+	in
+	  C.Union comp
     | Void -> C.Void
     | Name x -> 
 	try Hashtbl.find typedefs x

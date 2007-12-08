@@ -71,7 +71,7 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	Npkcontext.error "Csyntax.type_of_binop" 
 	  "Unexpected binary operator and arguments"
 
-let translate fname cprog =
+let translate fname globals =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -483,5 +483,5 @@ let translate fname cprog =
 	  end
   in
   
-  List.iter translate_global cprog;
-  (Hashtbl.create 100, glbdecls, fundefs)
+    List.iter translate_global globals;
+    (glbdecls, fundefs)

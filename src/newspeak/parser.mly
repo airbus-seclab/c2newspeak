@@ -29,6 +29,12 @@ open Bare_csyntax
 open Lexing
 open Synthack
 
+let struct_cnt = ref 0
+
+let gen_struct_id () = 
+  incr struct_cnt;
+  "anon_struct"^(string_of_int !struct_cnt)
+  
 (* TODO: write checks for all the syntax that is thrown away in these functions
    !! *)
 
@@ -308,13 +314,21 @@ parameter_list:
 ;;
 
 type_specifier:
-  VOID                                     { Void }
-| ityp                                     { Integer (Newspeak.Signed, $1) }
-| UNSIGNED ityp                            { Integer (Newspeak.Unsigned, $2) }
-| STRUCT LBRACE field_list RBRACE          { Struct $3 }
-| UNION LBRACE field_list RBRACE           { Union $3 }
-| TYPEDEF_NAME                             { Name $1 }
+  VOID                                   { Void }
+| ityp                                   { Integer (Newspeak.Signed, $1) }
+| UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
+| STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
+| STRUCT IDENTIFIER                      { Struct ($2, None) }
+| STRUCT IDENTIFIER field_blk            { Struct ($2, Some $3) }
+| UNION field_blk                        { Union (gen_struct_id (), Some $2) }
+| UNION IDENTIFIER                       { Union ($2, None) }
+| UNION IDENTIFIER field_blk             { Union ($2, Some $3) }
+| TYPEDEF_NAME                           { Name $1 }
 ;;
+
+field_blk:
+  LBRACE field_list RBRACE                 { $2 }
+;;  
 
 ityp:
   CHAR                                     { Char }
