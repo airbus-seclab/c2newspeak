@@ -80,7 +80,8 @@ let build_type_decl d =
 
 %}
 
-%token BREAK CONST CONTINUE CASE DEFAULT DO ELSE EXTERN FOR IF RETURN SIZEOF 
+%token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM 
+%token EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
 %token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
@@ -327,16 +328,22 @@ type_specifier:
 | UNION IDENTIFIER                       { Union ($2, None) }
 | UNION IDENTIFIER field_blk             { Union ($2, Some $3) }
 | TYPEDEF_NAME                           { Name $1 }
+| ENUM LBRACE enum_list RBRACE           { Enum $3 }
+;;
+
+enum_list:
+  IDENTIFIER                             { $1::[] }
+| IDENTIFIER COMMA enum_list             { $1::$3 }
 ;;
 
 field_blk:
-  LBRACE field_list RBRACE                 { $2 }
+  LBRACE field_list RBRACE               { $2 }
 ;;  
 
 ityp:
-  CHAR                                     { Char }
-| SHORT                                    { Short }
-| INT                                      { Int }
-| LONG                                     { Long }
-| LONG LONG                                { LongLong }
+  CHAR                                   { Char }
+| SHORT                                  { Short }
+| INT                                    { Int }
+| LONG                                   { Long }
+| LONG LONG                              { LongLong }
 ;;

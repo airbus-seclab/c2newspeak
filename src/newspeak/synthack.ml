@@ -3,11 +3,13 @@ open Newspeak
 module C = Csyntax
 
 let typedefs = Hashtbl.create 100
+let enumdefs = Hashtbl.create 100
 let compdefs = ref (Hashtbl.create 100)
 
 let get_compdefs () = 
   let res = !compdefs in
     Hashtbl.clear typedefs;
+    Hashtbl.clear enumdefs;
     compdefs := Hashtbl.create 100;
     res
 
@@ -17,12 +19,29 @@ let is_type x = Hashtbl.mem typedefs x
 
 let define_comp n f = Hashtbl.add !compdefs n f
 
+let define_enum e =
+  let rec define_enum e n =
+    match e with
+	x::tl ->
+	  if Hashtbl.mem enumdefs x then begin
+	    Npkcontext.error "Synthack.define_enum"
+	      ("Enum "^x^" already defined")
+	  end;
+	  Hashtbl.add enumdefs x (Int64.of_int n);
+	  define_enum tl (n+1)
+      | [] -> ()
+  in
+    define_enum e 0
+
+let find_enum x = Hashtbl.find enumdefs x
+
 type base_typ =
     | Void 
     | Integer of (sign_t * ityp)    
     | Struct of (string * decl list option)
     | Union of (string * decl list option)
     | Name of string
+    | Enum of string list
 
 and var_modifier = 
     | Abstract
@@ -83,6 +102,7 @@ let rec normalize_base_typ t =
 	end;
 	C.Union n
     | Void -> C.Void
+    | Enum f -> C.int_typ
     | Name x -> 
 	try Hashtbl.find typedefs x
 	with Not_found ->

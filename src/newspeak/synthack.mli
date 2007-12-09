@@ -6,6 +6,7 @@ type base_typ =
     | Struct of (string * decl list option)
     | Union of (string * decl list option)
     | Name of string
+    | Enum of string list
 
 and var_modifier = 
     | Abstract
@@ -36,3 +37,4 @@ val define_type: string -> Csyntax.typ -> unit
 
 val is_type: string -> bool
 
+val find_enum: string -> Int64.t
