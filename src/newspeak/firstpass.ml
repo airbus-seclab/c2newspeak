@@ -245,18 +245,12 @@ let translate fname (compdefs, globals) =
 
   and translate_init t x =
     let res = ref [] in
-    let o = ref 0 in
-    let rec translate t x =
+    let rec translate o t x =
       match (x, t) with
 	  (Data (Str str), C.Array _) -> 
 	    let seq = seq_of_string str in
-	      translate t (Sequence seq)
-(*
-	| (Data (Str str), C.Ptr _) -> 
-	    let (e, _) = add_glb_cstr str in
-	      res := (!o, t, e)::!res;
-	      t
-*)
+	      translate o t (Sequence seq)
+
 	| (Data e, _) -> 
 	    let (pref, e) = translate_exp e in 
 	    let e = cast e t in
@@ -264,7 +258,7 @@ let translate fname (compdefs, globals) =
 		Npkcontext.error "Firstpass.translate_init"
 		  "Expression without side-effects expected"
 	      end;
-	      res := (!o, t, e)::!res;
+	      res := (o, t, e)::!res;
 	      t
 
 	| (Sequence seq, C.Array (t, sz)) -> 
@@ -273,19 +267,29 @@ let translate fname (compdefs, globals) =
 		  Some n -> n
 		| None -> List.length seq
 	    in
-	      translate_sequence t n seq;
+	      translate_sequence o t n seq;
 	      C.Array (t, Some n)
+
+	| (Sequence seq, C.Struct n) -> 
+	    let (f, _) = Hashtbl.find compdefs n in
+	      List.iter2 (translate_field_sequence o) f seq;
+	      C.Struct n
 
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init"
 	      "This type of initialization not implemented yet"
 
-    and translate_sequence t n seq =
+    and translate_field_sequence o (f, (f_o, t)) x =
+      let o = o + f_o in
+      let _ = translate o t x in
+	()
+
+    and translate_sequence o t n seq =
       match seq with
 	  hd::tl when n > 0 -> 
-	    let _ = translate t hd in
-	      o := !o + C.size_of compdefs t;
-	      translate_sequence t (n-1) tl
+	    let _ = translate o t hd in
+	    let o = o + C.size_of compdefs t in
+	      translate_sequence o t (n-1) tl
 	| _::_ -> 
 	    Npkcontext.print_warning 
 	      "Firstpass.translate_init.translate_sequence" 
@@ -296,18 +300,19 @@ let translate fname (compdefs, globals) =
 	   the region should be init to 0 by default and then filled with
 	   values ?? *)
 	| [] when n > 0 -> 
-	    let _ = fill_with_zeros t in
-	      o := !o + C.size_of compdefs t;
-	      translate_sequence t (n-1) []
+	    let _ = fill_with_zeros o t in
+	    let o = o + C.size_of compdefs t in
+	      translate_sequence o t (n-1) []
 	| [] -> ()
 
-    and fill_with_zeros t =
+    and fill_with_zeros o t =
       match t with
-	  C.Int _ -> res := (!o, t, C.Const Int64.zero)::!res
+	  C.Int _ -> res := (o, t, C.Const Int64.zero)::!res
 	| C.Array (t, Some n) -> 
 	    let sz = C.size_of compdefs t in
+	    let o = ref o in
 	      for i = 0 to n - 1 do
-		fill_with_zeros t;
+		fill_with_zeros !o t;
 		o := !o + sz
 	      done
 
@@ -318,7 +323,7 @@ let translate fname (compdefs, globals) =
     match x with
 	None -> (t, None)
       | Some init -> 
-	  let t = translate t init in
+	  let t = translate 0 t init in
 	    (t, Some (List.rev !res))
 
   and add_glb_cstr str =
