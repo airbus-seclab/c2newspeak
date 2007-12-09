@@ -41,7 +41,7 @@ type base_typ =
     | Struct of (string * decl list option)
     | Union of (string * decl list option)
     | Name of string
-    | Enum of string list
+    | Enum of string list option
 
 and var_modifier = 
     | Abstract
@@ -102,8 +102,11 @@ let rec normalize_base_typ t =
 	end;
 	C.Union n
     | Void -> C.Void
-    | Enum f -> 
-	define_enum f; 
+    | Enum f ->
+	begin match f with
+	    None -> ()
+	  | Some f -> define_enum f
+	end; 
 	C.int_typ
     | Name x -> 
 	try Hashtbl.find typedefs x

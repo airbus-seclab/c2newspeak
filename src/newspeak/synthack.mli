@@ -6,7 +6,7 @@ type base_typ =
     | Struct of (string * decl list option)
     | Union of (string * decl list option)
     | Name of string
-    | Enum of string list
+    | Enum of string list option
 
 and var_modifier = 
     | Abstract

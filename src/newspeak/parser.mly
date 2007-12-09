@@ -328,7 +328,10 @@ type_specifier:
 | UNION IDENTIFIER                       { Union ($2, None) }
 | UNION IDENTIFIER field_blk             { Union ($2, Some $3) }
 | TYPEDEF_NAME                           { Name $1 }
-| ENUM LBRACE enum_list RBRACE           { Enum $3 }
+| ENUM LBRACE enum_list RBRACE           { Enum (Some $3) }
+| ENUM IDENTIFIER                        { Enum None }
+| ENUM IDENTIFIER 
+  LBRACE enum_list RBRACE                { Enum (Some $4) }
 ;;
 
 enum_list:
