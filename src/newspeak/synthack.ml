@@ -3,30 +3,19 @@ open Newspeak
 module C = Csyntax
 
 let typedefs = Hashtbl.create 100
-let compdefs = Hashtbl.create 100
+let compdefs = ref (Hashtbl.create 100)
 
-let clean () = 
-  Hashtbl.clear typedefs;
-  Hashtbl.clear compdefs
+let get_compdefs () = 
+  let res = !compdefs in
+    Hashtbl.clear typedefs;
+    compdefs := Hashtbl.create 100;
+    res
 
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
 
-let create_comp n =
-  if Hashtbl.mem compdefs n then begin
-    Npkcontext.error "Synthack.create_comp" 
-      ("Struct or union "^n^" already defined")
-  end;
-  let dummy_comp = ref ([], -1) in
-    Hashtbl.add compdefs n dummy_comp;
-    dummy_comp
-
-let find_comp n = 
-  try Hashtbl.find compdefs n
-  with Not_found -> 
-    Npkcontext.error "Synthack.find_comp"
-      ("Unknown struct or union: "^n)
+let define_comp n f = Hashtbl.add !compdefs n f
 
 type base_typ =
     | Void 
@@ -77,26 +66,22 @@ let align o sz =
 let rec normalize_base_typ t =
   match t with
       Integer (s, t) -> C.Int (s, size_of_ityp t)
-    | Struct (n, f) ->
-	let comp = 
-	  match f with
-	      None -> find_comp n
-	    | Some f ->
-		let comp = create_comp n in
-		  comp := normalize_struct_fields f;
-		  comp
-	in
-	  C.Struct comp
+    | Struct (n, f) -> 
+	begin match f with
+	    None -> ()
+	  | Some f -> 
+	      let f = normalize_struct_fields f in
+		define_comp n f
+	end;
+	C.Struct n
     | Union (n, f) -> 
-	let comp = 
-	  match f with
-	      None -> find_comp n
-	    | Some f ->
-		let comp = create_comp n in
-		  comp := normalize_union_fields f;
-		  comp
-	in
-	  C.Union comp
+	begin match f with
+	    None -> ()
+	  | Some f -> 
+	      let f = normalize_union_fields f in
+		define_comp n f
+	end;
+	C.Union n
     | Void -> C.Void
     | Name x -> 
 	try Hashtbl.find typedefs x
@@ -108,7 +93,7 @@ and normalize_struct_fields f =
     match f with
 	d::f ->
 	  let (t, x) = normalize_arg d in
-	  let sz = C.size_of t in
+	  let sz = C.size_of !compdefs t in
 	  let o = align o sz in
 	  let (f, n) = normalize (o+sz) f in
 	    ((x, (o, t))::f, n)
@@ -118,7 +103,7 @@ and normalize_struct_fields f =
     match f with
 	d::[] ->
 	  let (t, x) = normalize_arg d in
-	  let sz = C.size_of t in
+	  let sz = C.size_of !compdefs t in
 	    ((x, (0, t))::[], sz)
       | _ -> normalize 0 f 
   in
@@ -128,7 +113,7 @@ and normalize_union_fields f =
   let n = ref 0 in
   let normalize d =
     let (t, x) = normalize_arg d in
-    let sz = C.size_of t in
+    let sz = C.size_of !compdefs t in
       if !n < sz then n := sz;
       (x, (0, t))
   in

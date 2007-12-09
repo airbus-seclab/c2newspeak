@@ -24,7 +24,9 @@
 *)
 open Newspeak
 
-type prog = (glbdecls * fundefs)
+type prog = (compdefs * glbdecls * fundefs)
+
+and compdefs = (string, (fields_t * int)) Hashtbl.t
 
 (* first None is for extern, second None for no init *)
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
@@ -43,11 +45,9 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_t
-    | Struct of composite
-    | Union of composite
+    | Struct of string
+    | Union of string
     | Fun of ftyp
-
-and composite = (fields_t * int) ref
 
 and fields_t = (string * (int * typ)) list
 
@@ -102,13 +102,13 @@ and cst = Int64.t
 
 val ftyp_of_typ: typ -> ftyp
 
-val fields_of_typ: typ -> fields_t
+val fields_of_typ: compdefs -> typ -> fields_t
 
 val array_of_typ: typ -> array_t
 
 val deref_typ: typ -> typ
 
-val size_of: typ -> int
+val size_of: compdefs -> typ -> int
 
 val int_typ: typ
 

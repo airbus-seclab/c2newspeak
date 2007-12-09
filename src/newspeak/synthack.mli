@@ -30,7 +30,7 @@ val normalize_var_modifier:
 
 val normalize_decl: decl -> (Csyntax.typ * string * location)
 
-val clean: unit -> unit
+val get_compdefs: unit -> Csyntax.compdefs
 
 val define_type: string -> Csyntax.typ -> unit
 

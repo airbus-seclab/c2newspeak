@@ -24,7 +24,7 @@
 *)
 open Newspeak
 
-type prog = (global * location) list
+type prog = (Csyntax.compdefs * (global * location) list)
 
 and global =
     | FunctionDef of (string * typ * blk)

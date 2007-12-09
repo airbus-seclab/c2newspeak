@@ -71,7 +71,7 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	Npkcontext.error "Csyntax.type_of_binop" 
 	  "Unexpected binary operator and arguments"
 
-let translate fname globals =
+let translate fname (compdefs, globals) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -144,7 +144,7 @@ let translate fname globals =
 	Var x -> ([], get_var x)
       | Field (lv, f) -> 
 	  let (pref, (lv, t)) = translate_lv lv in
-	  let r = C.fields_of_typ t in
+	  let r = C.fields_of_typ compdefs t in
 	  let (o, t) = List.assoc f r in
 	    (pref, (C.Field (lv, f, o), t))
       | Index (lv, e) -> 
@@ -195,7 +195,7 @@ let translate fname globals =
 	    translate_exp (Sizeof t)
 
       (* TODO: should check that the size of all declarations is less than max_int *)
-      | Sizeof t -> ([], (C.exp_of_int (size_of t), int_typ))
+      | Sizeof t -> ([], (C.exp_of_int (size_of compdefs t), int_typ))
 
       | Str str -> 
 	  let e = add_glb_cstr str in
@@ -284,7 +284,7 @@ let translate fname globals =
       match seq with
 	  hd::tl when n > 0 -> 
 	    let _ = translate t hd in
-	      o := !o + C.size_of t;
+	      o := !o + C.size_of compdefs t;
 	      translate_sequence t (n-1) tl
 	| _::_ -> 
 	    Npkcontext.print_warning 
@@ -297,7 +297,7 @@ let translate fname globals =
 	   values ?? *)
 	| [] when n > 0 -> 
 	    let _ = fill_with_zeros t in
-	      o := !o + C.size_of t;
+	      o := !o + C.size_of compdefs t;
 	      translate_sequence t (n-1) []
 	| [] -> ()
 
@@ -305,7 +305,7 @@ let translate fname globals =
       match t with
 	  C.Int _ -> res := (!o, t, C.Const Int64.zero)::!res
 	| C.Array (t, Some n) -> 
-	    let sz = C.size_of t in
+	    let sz = C.size_of compdefs t in
 	      for i = 0 to n - 1 do
 		fill_with_zeros t;
 		o := !o + sz
@@ -484,4 +484,4 @@ let translate fname globals =
   in
   
     List.iter translate_global globals;
-    (glbdecls, fundefs)
+    (compdefs, glbdecls, fundefs)

@@ -114,8 +114,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // carefull not to have any empty rule: this deceives line number location
 
 parse:
-  translation_unit                         { let prog = $1 in 
-					       Synthack.clean (); prog }
+  translation_unit                         { (Synthack.get_compdefs (), $1) }
 ;;
 
 translation_unit:

@@ -25,8 +25,10 @@
 
 open Newspeak
   
-type prog = (glbdecls * fundefs)
-    
+type prog = (compdefs * glbdecls * fundefs)
+
+and compdefs = (string, (fields_t * int)) Hashtbl.t
+
 (* None for extern *)
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
  
@@ -44,12 +46,9 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_t
-    | Struct of composite
-    | Union of composite
+    | Struct of string
+    | Union of string
     | Fun of ftyp
-
-(* Because of the possibility of infinite types (lists), this a ref *)
-and composite = (fields_t * int) ref
 
 and fields_t = (string * (int * typ)) list
 
@@ -111,10 +110,10 @@ let ftyp_of_typ t =
       Fun x -> x
     | _ -> Npkcontext.error "Csyntax.fun_of_typ" "Function type expected"
 
-let fields_of_typ t =
+let fields_of_typ compdefs t =
   match t with
-      Struct c | Union c -> 
-	let (f, _) = !c in
+      Struct n | Union n -> 
+	let (f, _) = Hashtbl.find compdefs n in
 	  f
     | _ -> 
 	Npkcontext.error "Csyntax.fields_of_typ" 
@@ -130,18 +129,21 @@ let deref_typ t =
       Ptr t -> t
     | _ -> Npkcontext.error "Csyntax.deref_typ" "Pointer type expected"
 
-let rec size_of t =
-  match t with
-      Int (_, n) -> n 
-    | Float n -> n
-    | Ptr _ -> Config.size_of_ptr
-    | Array (t, Some n) -> (size_of t) * n
-    | Struct c | Union c -> 
-	let (_, n) = !c in
-	  n
-    | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
-    | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
-    | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
+let rec size_of compdefs t =
+  let rec size_of t =
+    match t with
+	Int (_, n) -> n 
+      | Float n -> n
+      | Ptr _ -> Config.size_of_ptr
+      | Array (t, Some n) -> (size_of t) * n
+      | Struct n | Union n -> 
+	  let (_, sz) = Hashtbl.find compdefs n in
+	    sz
+      | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
+      | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
+      | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
+  in
+    size_of t
 
 (* TODO: check that integer don't have a default type (like int) *)
 let typ_of_cst i =
@@ -186,5 +188,5 @@ let cast (e, t) t' =
 	  (AddrOf (Index (lv, a, exp_of_int 0), elt_t), Ptr elt_t)
       | _ -> (e, t)
   in
-    if (t = t') then e
+    if t = t' then e
     else Unop (Cast (t, t'), e)

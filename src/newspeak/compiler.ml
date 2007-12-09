@@ -45,19 +45,7 @@ let translate_array lv (t, n) =
   in
     (t, n)
 
-let rec translate_typ t =
-  match t with
-      Void -> 
-	Npkcontext.error "Compiler.translate_typ" "void not allowed here"
-    | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
-    | Array (t, sz) -> K.Array (translate_typ t, sz)
-    | Struct { contents = (fields, n) } | Union { contents = (fields, n) } -> 
-	let translate_field (_, (o, t)) = (o, translate_typ t) in
-	  K.Region (List.map translate_field fields, n)
-    | Fun _ -> 
-	Npkcontext.error "Compiler.translate_typ" "function not allowed here"
-	  
-and translate_scalar t =
+let translate_scalar t =
   match t with
     | Int i -> N.Int i
     | Float n -> N.Float n
@@ -67,15 +55,6 @@ and translate_scalar t =
 	Npkcontext.error "Compiler.translate_scalar" 
 	  "Unexpected non scalar type"
 
-let translate_ftyp (args, ret) =
-  let args = List.map (fun (t, _) -> translate_typ t) args in
-  let ret =
-    match ret with
-	Void -> None
-      | _ -> Some (translate_typ ret)
-  in
-    (args, ret)
-      
 let translate_unop op e =
   match op with
       Not -> K.UnOp (K.Not, e)
@@ -86,25 +65,7 @@ let translate_unop op e =
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 
-let translate_binop op e1 e2 =
-  match op with
-      Mult k -> translate_arithmop N.MultI e1 e2 k
-    | Plus k -> translate_arithmop N.PlusI e1 e2 k
-    | Minus k -> translate_arithmop N.MinusI e1 e2 k
-    | PlusP t ->	
-	let stride = K.exp_of_int (size_of t) in 
-	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
-	    
-    (* TODO: clean bug ? maybe a cast is necessary ? *)
-    | Gt t -> 
-	let t = translate_scalar t in
-	  K.BinOp (N.Gt t, e1, e2)
-	    
-    | Eq t -> 
-	let t = translate_scalar t in
-	  K.BinOp (N.Eq t, e1, e2)
-	    
-let translate fname (cglbdecls, cfundefs) = 
+let translate fname (compdefs, cglbdecls, cfundefs) = 
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let stack_height = ref 0 in
@@ -115,6 +76,54 @@ let translate fname (cglbdecls, cfundefs) =
   in
   let pop () = decr stack_height in
   let index_of_var x = !stack_height - x in
+
+  let rec translate_typ t =
+    match t with
+	Void -> 
+	  Npkcontext.error "Compiler.translate_typ" "void not allowed here"
+      | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
+      | Array (t, sz) -> K.Array (translate_typ t, sz)
+      | Struct n | Union n -> 
+	  let (fields, sz) = 
+	    try Hashtbl.find compdefs n 
+	    with Not_found -> 
+	      Npkcontext.error "Compiler.translate_typ"
+		("Unknown structure or union: "^n)
+	  in
+	  let translate_field (_, (o, t)) = (o, translate_typ t) in
+	    K.Region (List.map translate_field fields, sz)
+      | Fun _ -> 
+	  Npkcontext.error "Compiler.translate_typ" "function not allowed here"
+  in
+    
+  let translate_ftyp (args, ret) =
+    let args = List.map (fun (t, _) -> translate_typ t) args in
+    let ret =
+      match ret with
+	  Void -> None
+	| _ -> Some (translate_typ ret)
+    in
+      (args, ret)
+  in
+
+  let translate_binop op e1 e2 =
+    match op with
+	Mult k -> translate_arithmop N.MultI e1 e2 k
+      | Plus k -> translate_arithmop N.PlusI e1 e2 k
+      | Minus k -> translate_arithmop N.MinusI e1 e2 k
+      | PlusP t ->	
+	  let stride = K.exp_of_int (size_of compdefs t) in 
+	    K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
+	      
+      (* TODO: clean bug ? maybe a cast is necessary ? *)
+      | Gt t -> 
+	  let t = translate_scalar t in
+	    K.BinOp (N.Gt t, e1, e2)
+	      
+      | Eq t -> 
+	  let t = translate_scalar t in
+	    K.BinOp (N.Eq t, e1, e2)
+  in
 
   let rec translate_lv lv =
     match lv with
@@ -131,14 +140,14 @@ let translate fname (cglbdecls, cfundefs) =
 	  let lv = translate_lv lv in
 	  let (t, n) = translate_array lv a in
 	  let i = translate_exp e in
-	  let sz = K.exp_of_int (size_of t) in
+	  let sz = K.exp_of_int (size_of compdefs t) in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, K.Decr n), i) in
 	  let o = K.BinOp (N.MultI, o, sz) in
 	    K.Shift (lv, o)
 
       | Deref (e, t) ->
 	  let e = translate_exp e in
-	  let sz = size_of t in
+	  let sz = size_of compdefs t in
 	    K.Deref (e, sz)
 
   and translate_bexp (e, t) =
@@ -160,7 +169,7 @@ let translate fname (cglbdecls, cfundefs) =
 	  let lv = translate_lv lv in
 	  let i = translate_exp e in
 	  let (t, n) = translate_array lv a in
-	  let sz = size_of t in
+	  let sz = size_of compdefs t in
 	  let sz_e = K.exp_of_int sz in
 	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), i) in
 	  let o = K.BinOp (N.MultI, o, sz_e) in
@@ -169,7 +178,7 @@ let translate fname (cglbdecls, cfundefs) =
 
       | AddrOf (lv, t) ->
 	  let lv = translate_lv lv in
-	  let sz = size_of t in
+	  let sz = size_of compdefs t in
 	    K.AddrOf (lv, K.Known sz)
 
       | Unop (op, e) -> 
@@ -190,7 +199,7 @@ let translate fname (cglbdecls, cfundefs) =
 	    hd@tl
       | [] -> []
 
-  and translate_set loc (lv, t) e =
+  and translate_set loc (lv, t) e =  
     let lv = translate_lv lv in
     let e = cast e t in
     let e = translate_exp e in
@@ -217,7 +226,7 @@ let translate fname (cglbdecls, cfundefs) =
       (* TODO: assumes lv and e types are the same,
 	 this check should be done in firstpass which performs typing *)
       | Set ((lv1, (Struct _ | Union _ as t)), (Lval (lv2, _), _)) ->
-	  let n = size_of t in
+	  let n = size_of compdefs t in
 	  let lv1 = translate_lv lv1 in
 	  let lv2 = translate_lv lv2 in
 	    (K.Copy (lv1, lv2, n), loc)::[]
@@ -421,8 +430,7 @@ let parse fname =
   let lexbuf = Lexing.from_channel cin in
     Lexer.init fname lexbuf;
     try
-      let cprog = Parser.parse (Lexer.token ) lexbuf in
-	Synthack.clean ();
+      let cprog = Parser.parse Lexer.token lexbuf in
 	close_in cin;
 	cprog
     with Parsing.Parse_error -> 
