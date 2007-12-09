@@ -65,8 +65,10 @@ let rec translate_binop op (e1, t1) (e2, t2) =
     | (Plus, C.Array (elt_t, _), _) -> 
 	let t = C.Ptr elt_t in
 	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
-    | (Gt, _, _) when t1 = t2 -> (C.Gt t1, e1, e2)
-    | (Eq, _, _) when t1 = t2 -> (C.Eq t1, e1, e2)
+    | (Gt, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
+    | (Eq, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
     | _ ->
 	Npkcontext.error "Csyntax.type_of_binop" 
 	  "Unexpected binary operator and arguments"
