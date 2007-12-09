@@ -335,8 +335,13 @@ type_specifier:
 ;;
 
 enum_list:
-  IDENTIFIER                             { $1::[] }
-| IDENTIFIER COMMA enum_list             { $1::$3 }
+  enum                                   { $1::[] }
+| enum COMMA enum_list                   { $1::$3 }
+;;
+
+enum:
+  IDENTIFIER                             { ($1, None) }
+| IDENTIFIER EQ INTEGER                  { ($1, Some $3) }
 ;;
 
 field_blk:

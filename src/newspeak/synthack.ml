@@ -22,16 +22,21 @@ let define_comp n f = Hashtbl.add !compdefs n f
 let define_enum e =
   let rec define_enum e n =
     match e with
-	x::tl ->
+	(x, v)::tl ->
 	  if Hashtbl.mem enumdefs x then begin
 	    Npkcontext.error "Synthack.define_enum"
 	      ("Enum "^x^" already defined")
 	  end;
-	  Hashtbl.add enumdefs x (Int64.of_int n);
-	  define_enum tl (n+1)
+	  let n = 
+	    match v with
+		None -> n
+	      | Some n -> n
+	  in
+	  Hashtbl.add enumdefs x n;
+	  define_enum tl (Int64.succ n)
       | [] -> ()
   in
-    define_enum e 0
+    define_enum e Int64.zero
 
 let find_enum x = Hashtbl.find enumdefs x
 
@@ -41,7 +46,7 @@ type base_typ =
     | Struct of (string * decl list option)
     | Union of (string * decl list option)
     | Name of string
-    | Enum of string list option
+    | Enum of (string * Int64.t option) list option
 
 and var_modifier = 
     | Abstract
