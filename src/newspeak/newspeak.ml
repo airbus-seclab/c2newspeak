@@ -700,14 +700,26 @@ object
     match e with
 	BinOp (MultI, Const CInt64 x, Const CInt64 y) 
 	  when (Int64.compare x Int64.zero = 0) 
-	    || (Int64.compare x Int64.zero = 0) -> zero
+	    || (Int64.compare y Int64.zero = 0) -> zero
 
-      | BinOp (MultI, e, Const CInt64 o) | BinOp (MultI, Const CInt64 o, e) 
-	    when Int64.compare o Int64.one = 0 -> e
+(* Carefull: 
+      | BinOp (MultI, e, Const CInt64 o)
+      | BinOp (MultI, Const CInt64 o, e) when Int64.compare o Int64.one = 0 -> 
+   will evaluate to false on (1 * 4), because it will match the first pattern
+   and evaluate the side-condition to false.
+   It is thus, not equivalent to the following code:
+*)
+      | BinOp (MultI, e, Const CInt64 o) 
+	  when Int64.compare o Int64.one = 0 -> e
+      | BinOp (MultI, Const CInt64 o, e) 
+	  when Int64.compare o Int64.one = 0 -> e
 
-      | BinOp (PlusI, Const CInt64 x, e) | BinOp (PlusI, e, Const CInt64 x) 
+      | BinOp (PlusI, Const CInt64 x, e) 
+	  when (Int64.compare x Int64.zero = 0) -> e
+      | BinOp (PlusI, e, Const CInt64 x) 
+	  when (Int64.compare x Int64.zero = 0) -> e
       | BinOp (PlusPI, e, Const CInt64 x) 
-	    when (Int64.compare x Int64.zero = 0) -> e
+	  when (Int64.compare x Int64.zero = 0) -> e
 
       | BinOp (MinusI, Const CInt64 x, Const CInt64 y) 
 	when (Int64.compare x Int64.zero = 0)
