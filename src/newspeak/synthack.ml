@@ -102,7 +102,9 @@ let rec normalize_base_typ t =
 	end;
 	C.Union n
     | Void -> C.Void
-    | Enum f -> C.int_typ
+    | Enum f -> 
+	define_enum f; 
+	C.int_typ
     | Name x -> 
 	try Hashtbl.find typedefs x
 	with Not_found ->
