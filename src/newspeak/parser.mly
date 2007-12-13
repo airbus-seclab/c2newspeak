@@ -86,7 +86,7 @@ let build_type_decl d =
 %token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND AND MINUS PLUS PLUSPLUS STAR LT GT
+%token AMPERSAND AND MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token EOF
 
 %token <string> IDENTIFIER
@@ -101,7 +101,7 @@ let build_type_decl d =
 */
 
 %left AND
-%left LT GT EQEQ NOTEQ
+%left LT LTEQ GT GTEQ EQEQ NOTEQ
 %left PLUS MINUS
 %left STAR
 
@@ -255,7 +255,9 @@ expression:
 | expression MINUS expression              { Binop (Minus, $1, $3) }
 | expression STAR expression               { Binop (Mult, $1, $3) }
 | expression GT expression                 { Binop (Gt, $1, $3) }
+| expression GTEQ expression               { Unop (Not, Binop (Gt, $3, $1)) }
 | expression LT expression                 { Binop (Gt, $3, $1) }
+| expression LTEQ expression               { Unop (Not, Binop (Gt, $1, $3)) }
 | call                                     { $1 }
 | AMPERSAND left_value                     { AddrOf $2 }
 | LPAREN expression RPAREN                 { $2 }

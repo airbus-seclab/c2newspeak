@@ -148,7 +148,9 @@ rule token = parse
   | "&&"                { AND }
   | "*"                 { STAR }
   | "<"                 { LT }
+  | "<="                { LTEQ }
   | ">"                 { GT }
+  | ">="                { GTEQ }
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
