@@ -82,6 +82,8 @@ let translate fname (compdefs, globals) =
   let local_env = Hashtbl.create 100 in
   let locals = ref [] in
 
+  let tmp_cnt = ref 0 in
+
   let get_locals () =
     let x = !locals in
       locals := [];
@@ -106,6 +108,14 @@ let translate fname (compdefs, globals) =
     let _ = push_var loc (ret_t, ret_name) in
     let _ = List.map (push_var loc) args_t in
       ()
+  in
+
+  let create_tmp t loc = 
+    let name = "tmp"^(string_of_int !tmp_cnt) in
+    let x = push_local loc (t, name) in
+    let e = (C.Local x, t) in
+      incr tmp_cnt;
+      (e, name)
   in
 
 (* TODO: could be a function name inside *)
@@ -203,8 +213,18 @@ let translate fname (compdefs, globals) =
 	  let e = add_glb_cstr str in
 	    ([], e)
 
-      | And _ -> 
-	  Npkcontext.error "Firstpass.translate_exp" "Unexpected And operator"
+      | And (e1, e2) -> 
+	  let loc = Npkcontext.get_loc () in
+	  let (tmp, tmp_name) = create_tmp int_typ loc in
+	  let tmp_e = (C.Lval tmp, int_typ) in
+	  let stmt = 
+	    If (And (e1, e2), 
+	       (Set (Var tmp_name, Cst Int64.one), loc)::[], 
+	       (Set (Var tmp_name, Cst Int64.zero), loc)::[])
+	  in
+	  let pref = translate_stmt (stmt, loc) in
+	    pop_local tmp_name;
+	    (pref, tmp_e)
 
   and translate_call r f args =
     let loc = Npkcontext.get_loc () in
@@ -217,8 +237,8 @@ let translate fname (compdefs, globals) =
 	  (* Any expression is ok, since it is going to be thrown away *)
 	  (C.Void, _) -> (None, C.exp_of_int 1)
 	| (_, None) -> 
-	    let tmp = (C.Local (push_local loc (ret_t, "tmp")), ret_t) in
-	      pop_local "tmp";
+	    let (tmp, tmp_name) = create_tmp ret_t loc in
+	      pop_local tmp_name;
 	      (Some tmp, C.Lval tmp)
 	| (_, Some lv) -> (Some lv, C.Lval lv) 
     in
@@ -241,9 +261,6 @@ let translate fname (compdefs, globals) =
       | Some e -> 
 	  let (pref, e) = translate_exp e in
 	    (pref, Some e)
-
-(*
-*)
 
   and translate_init t x =
     let res = ref [] in
@@ -339,9 +356,8 @@ let translate fname (compdefs, globals) =
       end;
       (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
       C.Ptr char_typ)
-  in
 
-  let rec translate_blk x =
+  and translate_blk x =
     match x with
       | (Decl (x, t, init), loc)::tl -> 
 	  Npkcontext.set_loc loc;
