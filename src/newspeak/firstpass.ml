@@ -406,24 +406,21 @@ let translate fname (compdefs, globals) =
 	    pref@((C.If (e, blk1, blk2), loc)::[])
 
       | While (e, body) ->
-	  let (pref, e) = translate_exp e in
-	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
+	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
 	  let body = translate_blk body in
-	    (C.Loop (pref@(loop_exit::body), []), loc)::[]
+	    (C.Loop (loop_exit@body, []), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
-	  let (pref, e) = translate_exp e in
-	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
-	    (C.Loop (body@pref@(loop_exit::[]), []), loc)::[]
+	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
+	    (C.Loop (body@loop_exit, []), loc)::[]
 
       | For (init, e, body, step) ->
 	  let init = translate_blk init in
-	  let (pref, e) = translate_exp e in
-	  let loop_exit = (C.If (e, [], (C.Break, loc)::[]), loc) in
+	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
 	  let body = translate_blk body in
 	  let step = translate_blk step in
-	    init@(C.Loop (pref@(loop_exit::body), step), loc)::[]
+	    init@(C.Loop (loop_exit@body, step), loc)::[]
 
       | Return None -> (C.Return, loc)::[]
 	      
