@@ -42,7 +42,8 @@ let find_enum x = Hashtbl.find enumdefs x
 
 type base_typ =
     | Void 
-    | Integer of (sign_t * ityp)    
+    | Integer of ikind
+    | Float of int
     | Struct of (string * decl list option)
     | Union of (string * decl list option)
     | Name of string
@@ -55,22 +56,7 @@ and var_modifier =
     | Array of (var_modifier * Int64.t option)
     | Pointer of var_modifier
 
-and ityp = 
-    | Char 
-    | Short
-    | Int
-    | Long
-    | LongLong
-
 and decl = (base_typ * var_modifier)
-
-let size_of_ityp t =
-  match t with
-      Char -> Config.size_of_char
-    | Short -> Config.size_of_short
-    | Int -> Config.size_of_int
-    | Long -> Config.size_of_long
-    | LongLong -> Config.size_of_longlong
 
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 
@@ -89,7 +75,8 @@ let align o sz =
 
 let rec normalize_base_typ t =
   match t with
-      Integer (s, t) -> C.Int (s, size_of_ityp t)
+      Integer k -> C.Int k
+    | Float n -> C.Float n
     | Struct (n, f) -> 
 	begin match f with
 	    None -> ()

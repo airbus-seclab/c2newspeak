@@ -4,3 +4,4 @@ val size_of_int: int
 val size_of_long: int
 val size_of_longlong: int
 val size_of_ptr: int
+val size_of_float: int

@@ -110,6 +110,7 @@ rule token = parse
 
 (* types *)
   | "char"              { CHAR }
+  | "float"             { FLOAT }
   | "int"               { INT }
   | "short"             { SHORT }
   | "long"              { LONG }

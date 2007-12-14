@@ -83,7 +83,7 @@ let build_type_decl d =
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM 
 %token EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
-%token CHAR INT SHORT LONG STRUCT UNION UNSIGNED VOID
+%token CHAR FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND AND MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
@@ -324,6 +324,7 @@ type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
+| ftyp                                   { Float $1 }
 | STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
 | STRUCT IDENTIFIER                      { Struct ($2, None) }
 | STRUCT IDENTIFIER field_blk            { Struct ($2, Some $3) }
@@ -352,9 +353,13 @@ field_blk:
 ;;  
 
 ityp:
-  CHAR                                   { Char }
-| SHORT                                  { Short }
-| INT                                    { Int }
-| LONG                                   { Long }
-| LONG LONG                              { LongLong }
+  CHAR                                   { Config.size_of_char }
+| SHORT                                  { Config.size_of_short }
+| INT                                    { Config.size_of_int }
+| LONG                                   { Config.size_of_long }
+| LONG LONG                              { Config.size_of_longlong }
+;;
+
+ftyp:
+  FLOAT                                  { Config.size_of_float }
 ;;
