@@ -186,6 +186,7 @@ let cast (e, t) t' =
     match (t, e, t') with
 	(Array (elt_t, _), Lval (lv, Array a), Ptr _) ->
 	  (AddrOf (Index (lv, a, exp_of_int 0), elt_t), Ptr elt_t)
+      | (Fun _, Lval lv, Ptr (Fun _)) -> (AddrOf lv, Ptr t)
       | _ -> (e, t)
   in
     if t = t' then e

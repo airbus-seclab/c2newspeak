@@ -165,6 +165,8 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
+      | AddrOf (Global f, Fun t) -> K.AddrOfFun f
+
       | AddrOf (Index (lv, a, e), _) ->
 	  let lv = translate_lv lv in
 	  let i = translate_exp e in

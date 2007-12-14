@@ -361,7 +361,7 @@ and string_of_exp e =
       Const c -> string_of_cte c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
-    | AddrOfFun fid -> "&fun"^fid
+    | AddrOfFun fid -> "&_fun("^fid^")"
 
     | BinOp (op, e1, e2) ->
 	"("^(string_of_exp e1)^" "^(string_of_binop op)^
