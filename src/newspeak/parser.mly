@@ -288,6 +288,7 @@ init_list:
 ;;
 
 abstract_declarator:
+| pointer                                  { Pointer Abstract }
 | pointer abstract_declarator              { Pointer $2 }
 | LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
