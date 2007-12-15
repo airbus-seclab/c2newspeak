@@ -158,6 +158,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     let t = translate_scalar t in
       match (e, t) with
 	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero))
+	| (K.Lval _, N.Ptr) -> K.negate (K.BinOp (N.Eq t, e, K.Const N.Nil))
 	| _ -> e
 
   and translate_exp e =

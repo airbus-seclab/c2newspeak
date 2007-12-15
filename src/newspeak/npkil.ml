@@ -114,16 +114,6 @@ let make_int_coerce int_t e =
 
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 
-let rec negate exp =
-  match exp with
-    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
-    | UnOp (Not, e) -> e
-    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
-    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
-    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
-    | _ -> invalid_arg "Npkil.negate"
-
-
 module Int_map = 
   Map.Make (struct type t = int let compare = Pervasives.compare end)
 
@@ -336,7 +326,7 @@ let dump_npko (fname, globs, funs) =
       
   and dump_assertblk align1 align2 decls (exps, b) =
     match exps, b with
-      | [], [] -> invalid_arg "Newspeak.dump_assertblk"
+      | [], [] -> Npkcontext.error "Newspeak.dump_assertblk" "Error in output"
       | [], hd::[] ->
 	  dump_stmt align1 decls true hd
       | [], hd::r ->
@@ -558,3 +548,15 @@ let rec append_decls d body =
   match d with
       (x, t, loc)::tl -> (Decl (x, t, append_decls tl body), loc)::[]
     | [] -> body
+
+let rec negate e =
+  match e with
+    | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
+    | UnOp (Not, e) -> e
+    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
+    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
+    | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
+    | _ -> 
+	Npkcontext.error "Npkil.negate" 
+	  ("Negation of expression: "^(string_of_exp [] e)
+	    ^" not implemented yet")
