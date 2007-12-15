@@ -77,7 +77,7 @@ let line_terminator = '\r' | '\n' | "\r\n"
 
 let line_comment = "//" [^'\r''\n']* line_terminator
 
-let letter = ['a'-'z'] | ['A'-'Z']
+let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
 
 let string = '"' [^'"']* '"'
