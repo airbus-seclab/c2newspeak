@@ -204,9 +204,15 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
   and translate_set loc (lv, t) e =  
     let lv = translate_lv lv in
     let e = cast e t in
-    let e = translate_exp e in
-    let t = translate_scalar t in
-      (K.Set (lv, e, t), loc)
+      match (t, e) with
+	  ((Struct _ | Union _), Lval (lv_src, _)) -> 
+	    let lv_src = translate_lv lv_src in
+	    let sz = size_of compdefs t in
+	      (K.Copy (lv, lv_src, sz), loc)
+	| _ ->
+	    let e = translate_exp e in
+	    let t = translate_scalar t in
+	      (K.Set (lv, e, t), loc)
 
   and translate_init (o, t, e) =
     let t = translate_scalar t in
@@ -224,14 +230,6 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     Npkcontext.set_loc loc;
     match x with
       | Init (x, init) -> List.map (translate_local_init loc x) init
-
-      (* TODO: assumes lv and e types are the same,
-	 this check should be done in firstpass which performs typing *)
-      | Set ((lv1, (Struct _ | Union _ as t)), (Lval (lv2, _), _)) ->
-	  let n = size_of compdefs t in
-	  let lv1 = translate_lv lv1 in
-	  let lv2 = translate_lv lv2 in
-	    (K.Copy (lv1, lv2, n), loc)::[]
 
       | Set (lv, e) -> (translate_set loc lv e)::[]
 
@@ -299,7 +297,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     let decls = List.map (translate_decl loc) args_t in
     let sets = 
       try List.map2 (translate_set loc) args_var args_exp 
-      with Invalid_argument _ -> 
+      with Invalid_argument "List.map2" ->
 	(* TODO: code cleanup: change error message *)
 	Npkcontext.error "Compiler.translate_call" 
 	  ("Different types for function "^fid)
