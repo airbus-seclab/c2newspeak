@@ -437,6 +437,9 @@ let translate fname (compdefs, globals) =
 	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
 	    translate_stmt (If (e1, if_e1_blk, blk2), loc)
 
+      | If (Unop (Not, (And _ as e)), blk1, blk2) ->
+	  translate_stmt (If (e, blk2, blk1), loc)
+
       | If (e, blk1, blk2) ->
 	  let e = simplify_bexp e in
 	  let (pref, (e, _)) = translate_exp e in
