@@ -55,6 +55,7 @@ let translate_unop op =
 
 let rec translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
+      (* Arithmetic operations *)
       (Mult, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
     | (Plus, C.Int k1, C.Int k2) -> 
@@ -65,10 +66,22 @@ let rec translate_binop op (e1, t1) (e2, t2) =
     | (Plus, C.Array (elt_t, _), _) -> 
 	let t = C.Ptr elt_t in
 	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
+
+      (* Integer comparisons *)
     | (Gt, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
     | (Eq, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
+
+      (* Pointer comparisons *)
+    | (Eq, C.Ptr _, C.Ptr _) ->	(C.Eq t1, e1, e2)
+    | (Eq, C.Int _, C.Ptr _) ->
+	let e1 = C.cast (e1, t1) t2 in
+	  (C.Eq t2, e1, e2)
+    | (Eq, C.Ptr _, C.Int _) ->
+	let e2 = C.cast (e2, t2) t1 in
+	  (C.Eq t1, e1, e2)
+	  
     | _ ->
 	Npkcontext.error "Csyntax.type_of_binop" 
 	  "Unexpected binary operator and arguments"
