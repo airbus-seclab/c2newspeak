@@ -267,6 +267,8 @@ expression:
 | SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
 | SIZEOF LPAREN type_declaration RPAREN    { Sizeof (build_type_decl $3) }
 | STRING                                   { Str $1 }
+| LPAREN type_declaration RPAREN 
+  expression                               { Cast ($4, build_type_decl $2) }
 ;;
 
 init_declarator:

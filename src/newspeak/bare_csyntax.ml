@@ -80,6 +80,7 @@ and exp =
     | Sizeof of Csyntax.typ
     | SizeofV of string
     | Str of string
+    | Cast of (exp * typ)
 
 and cst = Int64.t
 

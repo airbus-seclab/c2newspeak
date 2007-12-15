@@ -226,6 +226,11 @@ let translate fname (compdefs, globals) =
 	    pop_local tmp_name;
 	    (pref, tmp_e)
 
+      | Cast (e, t) -> 
+	  let (pref, e) = translate_exp e in
+	  let e = C.cast e t in
+	    (pref, (e, t))
+
   and translate_call r f args =
     let loc = Npkcontext.get_loc () in
     let (pref_fn, fn, ft) = translate_fn f in
