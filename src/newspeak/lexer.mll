@@ -136,6 +136,7 @@ rule token = parse
   | ")"                 { RPAREN }
   | "["                 { LBRACKET }
   | "]"                 { RBRACKET }
+  | "!"                 { NOT }
   | "=="                { EQEQ }
   | "!="                { NOTEQ }
   | "="                 { EQ }

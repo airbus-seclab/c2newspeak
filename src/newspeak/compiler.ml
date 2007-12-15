@@ -57,7 +57,7 @@ let translate_scalar t =
 
 let translate_unop op e =
   match op with
-      Not -> K.UnOp (K.Not, e)
+      Not -> K.negate e
     | Cast (t, t') -> 
 	let t = translate_scalar t in
 	let t' = translate_scalar t' in
@@ -153,14 +153,6 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	  let sz = size_of compdefs t in
 	    K.Deref (e, sz)
 
-  and translate_bexp (e, t) =
-    let e = translate_exp e in
-    let t = translate_scalar t in
-      match (e, t) with
-	  (K.Lval _, N.Int _) -> K.negate (K.BinOp (N.Eq t, e, K.zero))
-	| (K.Lval _, N.Ptr) -> K.negate (K.BinOp (N.Eq t, e, K.Const N.Nil))
-	| _ -> e
-
   and translate_exp e =
     match e with
 	Const i -> K.Const (N.CInt64 i)
@@ -238,7 +230,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       | Set (lv, e) -> (translate_set loc lv e)::[]
 
       | If (e, body1, body2) ->
-	  let cond1 = translate_bexp e in
+	  let cond1 = translate_exp e in
 	  let body1 = translate_blk body1 in
 	  let body2 = translate_blk body2 in begin
 	    match cond1 with

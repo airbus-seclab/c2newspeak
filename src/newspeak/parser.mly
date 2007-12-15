@@ -85,7 +85,7 @@ let build_type_decl d =
 %token SWITCH TYPEDEF WHILE
 %token CHAR FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
-%token LBRACKET RBRACKET LPAREN RPAREN EQ EQEQ NOTEQ SEMICOLON
+%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND AND MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token EOF
 
@@ -262,6 +262,7 @@ expression:
 | call                                     { $1 }
 | AMPERSAND left_value                     { AddrOf $2 }
 | LPAREN expression RPAREN                 { $2 }
+| NOT expression                           { Unop (Not, $2) }
 | expression EQEQ expression               { Binop (Eq, $1, $3) }
 | expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
 | SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }

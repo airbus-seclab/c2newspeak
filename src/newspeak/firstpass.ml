@@ -33,6 +33,12 @@ let ret_name = "!return"
 
 let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 
+let rec simplify_bexp e =
+  match e with
+      Lval _ | Call _ -> Unop (Not, Binop (Eq, e, Cst Int64.zero))
+    | Unop (Not, e) -> Unop (Not, simplify_bexp e)
+    | _ -> e
+
 let translate_proto_ftyp f (args, ret) = 
   let args =
     match args with
@@ -432,7 +438,8 @@ let translate fname (compdefs, globals) =
 	    translate_stmt (If (e1, if_e1_blk, blk2), loc)
 
       | If (e, blk1, blk2) ->
-	  let (pref, e) = translate_exp e in
+	  let e = simplify_bexp e in
+	  let (pref, (e, _)) = translate_exp e in
 	  let blk1 = translate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
 	    pref@((C.If (e, blk1, blk2), loc)::[])

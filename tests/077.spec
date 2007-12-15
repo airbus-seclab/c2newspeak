@@ -17,7 +17,7 @@ main() {
         (31)^choose {
           | ! (0-_int4 ==_int4 0) -->
             (32)^goto lbl1;
-          | (0 ==_int4 0-_int4) -->
+          | (0-_int4 ==_int4 0) -->
         }
       } with lbl1: {
       }
