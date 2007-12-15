@@ -139,9 +139,9 @@ let rec size_of compdefs t =
       | Struct n | Union n -> 
 	  let (_, sz) = Hashtbl.find compdefs n in
 	    sz
-      | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
-      | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
-      | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
+      | Fun _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of function"
+      | Array _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of array"
+      | Void -> Npkcontext.error "Csyntax.size_of" "Unknown size of void"
   in
     size_of t
 

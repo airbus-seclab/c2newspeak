@@ -23,10 +23,7 @@
   email: charles.hymans@penjili.org
 */
 
-extern void f(int);
-
 void main() {
-  int* ptr;
-
-  ptr = f;
+  void (*fptr)(int);
+  fptr++;
 }

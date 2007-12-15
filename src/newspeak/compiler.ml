@@ -111,7 +111,10 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	Mult k -> translate_arithmop N.MultI e1 e2 k
       | Plus k -> translate_arithmop N.PlusI e1 e2 k
       | Minus k -> translate_arithmop N.MinusI e1 e2 k
-      | PlusP t ->	
+      | PlusP (Fun _) -> 
+	  Npkcontext.error "Compiler.translate_binop" 
+	    "Pointer arithmetic forbidden on function pointers"
+      | PlusP t -> 
 	  let stride = K.exp_of_int (size_of compdefs t) in 
 	    K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
 	      
