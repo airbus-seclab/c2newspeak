@@ -33,6 +33,20 @@ let ret_name = "!return"
 
 let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 
+let translate_proto_ftyp f (args, ret) = 
+  let args =
+    match args with
+	[] -> 
+	  Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
+	    ("Incomplete prototype for function "^f);
+	  []
+      | (C.Void, _)::[] -> []
+      | _ -> args  
+  in
+  (args, ret)
+
+
+
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
 let seq_of_string str =
@@ -510,7 +524,9 @@ let translate fname (compdefs, globals) =
  
       | GlbDecl (x, t, is_extern, init) ->
 	  begin match (t, init) with
-	      (Fun ft, None) -> update_fundef x (ft, loc, None)
+	      (Fun ft, None) -> 
+		let ft = translate_proto_ftyp x ft in
+		  update_fundef x (ft, loc, None)
 	    | (Fun ft, Some _) -> 
 		Npkcontext.error "Firstpass.translate_global"
 		  ("Unexpected initialization of function "^x)

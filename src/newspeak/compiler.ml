@@ -80,7 +80,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
   let rec translate_typ t =
     match t with
 	Void -> 
-	  Npkcontext.error "Compiler.translate_typ" "void not allowed here"
+	  Npkcontext.error "Compiler.translate_typ" "Void not allowed here"
       | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
       | Array (t, sz) -> K.Array (translate_typ t, sz)
       | Struct n | Union n -> 
@@ -93,7 +93,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	  let translate_field (_, (o, t)) = (o, translate_typ t) in
 	    K.Region (List.map translate_field fields, sz)
       | Fun _ -> 
-	  Npkcontext.error "Compiler.translate_typ" "function not allowed here"
+	  Npkcontext.error "Compiler.translate_typ" "Function not allowed here"
   in
     
   let translate_ftyp (args, ret) =
