@@ -54,9 +54,9 @@ let build_glbdecl is_extern d =
   let build (t, x, init, loc) = (GlbDecl (x, t, is_extern, init), loc) in
     process_decls build d
 
-let build_fundef d body = 
-  let (t, x, loc) = Synthack.normalize_decl d in
-    (FunctionDef (x, t, body), loc)
+let build_fundef (b, m, body) = 
+  let (t, x, loc) = Synthack.normalize_decl (b, m) in
+    (FunctionDef (x, t, body), loc)::[]
       
 let build_typedef d =
   let build (t, x, _, _) = Synthack.define_type x t in
@@ -86,7 +86,7 @@ let build_type_decl d =
 %token CHAR FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND AND MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
+%token AMPERSAND ARROW AND MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token EOF
 
 %token <string> IDENTIFIER
@@ -95,16 +95,11 @@ let build_type_decl d =
 %token <Int64.t> INTEGER
 
 /*
-%left LT GT EQ NE LE GE
-%left PLUS MINUS
-%left MULTIPLY DIVIDE
-*/
-
 %left AND
 %left LT LTEQ GT GTEQ EQEQ NOTEQ
 %left PLUS MINUS
 %left STAR
-
+*/
 %type <Bare_csyntax.prog> parse
 %start parse
 
@@ -113,6 +108,8 @@ let build_type_decl d =
 try to remove multiple occurence of same pattern: factor as much as possible
 */
 // carefull not to have any empty rule: this deceives line number location
+
+// TODO: simplify parser and link it to C standard sections!!!
 
 parse:
   translation_unit                         { (Synthack.get_compdefs (), $1) }
@@ -126,15 +123,19 @@ translation_unit:
 external_declaration:
   declaration                              { build_glbdecl false $1 }
 | EXTERN declaration                       { build_glbdecl true $2 }
-| declaration_specifiers declarator 
-  statement                                { (build_fundef ($1, $2) $3)::[] }
+| function_definition                      { build_fundef $1 }
 | TYPEDEF declaration                      { build_typedef $2 }
 ;;
 
+function_definition:
+  declaration_specifiers declarator 
+  compound_statement                       { ($1, $2, $3) }
+;;
+
 declaration:
-  declaration_specifiers init_declarator_list 
-  SEMICOLON                                { ($1, $2) }
-| declaration_specifiers SEMICOLON         { ($1, []) }
+  declaration_specifiers SEMICOLON         { ($1, []) }
+| declaration_specifiers 
+  init_declarator_list SEMICOLON           { ($1, $2) }
 ;;
 
 field_declaration:
@@ -149,10 +150,10 @@ parameter_declaration:
 | declaration_specifiers                   { ($1, Abstract) }
 ;;
 
-type_declaration:
-  declaration_specifiers 
+type_name:
+  declaration_specifiers                   { ($1, Abstract) }
+| declaration_specifiers 
   abstract_declarator                      { ($1, $2) }
-| declaration_specifiers                   { ($1, Abstract) }
 ;;
 
 
@@ -176,7 +177,7 @@ init_declarator_list:
 | init_declarator                          { $1::[] }
 ;;
 
-block:
+compound_statement:
   LBRACE statement_list RBRACE             { $2 }
 ;;
 
@@ -187,36 +188,29 @@ statement_list:
 
 statement:
   declaration                              { build_stmtdecl $1 }
-| assignment SEMICOLON                     { [Set $1, get_loc ()] }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
 | SWITCH LPAREN expression RPAREN LBRACE
   case_list
   RBRACE                                   { [Switch ($3, $6), get_loc ()] }
-| FOR LPAREN assignment SEMICOLON 
+| FOR LPAREN assignment_expression SEMICOLON 
       expression SEMICOLON 
-      assignment RPAREN
+      assignment_expression RPAREN
       statement                            { let loc = get_loc () in
-                                               (For ((Set $3, loc)::[], 
+                                               (For ((Exp $3, loc)::[], 
 						    $5, $9, 
-						    (Set $7, loc)::[]), loc)
+						    (Exp $7, loc)::[]), loc)
 					       ::[] }
 | WHILE LPAREN expression RPAREN statement { [While ($3, $5), get_loc ()] }
 | DO statement
   WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
-| call SEMICOLON                           { [Exp $1, get_loc ()] }
+| assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
-| block                                    { [Block $1, get_loc ()] }
-;;
-
-assignment:
-  left_value EQ expression                 { ($1, $3) }
-| left_value PLUSPLUS                      { ($1, Binop (Plus, Lval $1, 
-							Cst Int64.one)) }
+| compound_statement                       { [Block $1, get_loc ()] }
 ;;
 
 case_list:
@@ -229,47 +223,118 @@ case:
 | DEFAULT COLON statement_list             { (None, $3, get_loc ()) }
 ;;
 
-call:
-| left_value LPAREN RPAREN                 { Call ($1, []) }
-| left_value LPAREN expression_list RPAREN { Call ($1, $3) }
-;;
-
-expression_list:
-  expression COMMA expression_list         { $1::$3 }
-| expression                               { $1::[] }
-;;
-
-left_value:
+primary_expression:
   IDENTIFIER                               { Var $1 }
-| left_value DOT IDENTIFIER                { Field ($1, $3) }
-| left_value LBRACKET expression RBRACKET  { Index ($1, $3) }
-| STAR expression                          { Deref $2 }
-| LPAREN left_value RPAREN                 { $2 }
+| INTEGER                                  { Cst $1 }
+| STRING                                   { Str $1 }
+| LPAREN expression RPAREN                 { $2 }
+;;
+
+postfix_expression:
+  primary_expression                       { $1 }
+| postfix_expression 
+  LBRACKET expression RBRACKET             { Index ($1, $3) }
+| postfix_expression LPAREN RPAREN         { Call ($1, []) }
+| postfix_expression 
+  LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
+| postfix_expression DOT IDENTIFIER        { Field ($1, $3) }
+| postfix_expression ARROW IDENTIFIER      { Field (Deref $1, $3) }
+| postfix_expression PLUSPLUS              { ExpPlusPlus $1 }
+;;
+
+unary_expression:
+  postfix_expression                       { $1 }
+| AMPERSAND cast_expression                { AddrOf $2 }
+| STAR cast_expression                     { Deref $2 }
+| MINUS cast_expression                    { negate $2 }
+| NOT cast_expression                      { Unop (Not, $2) }
+| SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
+| SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_decl $3) }
+;;
+
+cast_expression:
+  unary_expression                         { $1 }
+| LPAREN type_name RPAREN 
+  cast_expression                          { Cast ($4, build_type_decl $2) }
+;;
+
+multiplicative_expression:
+  cast_expression                          { $1 }
+| multiplicative_expression STAR 
+  cast_expression                          { Binop (Mult, $1, $3) }
+;;
+
+additive_expression:
+  multiplicative_expression                { $1 }
+| additive_expression PLUS 
+  multiplicative_expression                { Binop (Plus, $1, $3) }
+| additive_expression MINUS 
+  multiplicative_expression                { Binop (Minus, $1, $3) }
+;;
+
+shift_expression:
+  additive_expression                      { $1 }
+;;
+
+relational_expression:
+  shift_expression                         { $1 }
+| relational_expression GT 
+  shift_expression                         { Binop (Gt, $1, $3) }
+| relational_expression GTEQ 
+  shift_expression                         { Unop (Not, Binop (Gt, $3, $1)) }
+| relational_expression LT 
+  shift_expression                         { Binop (Gt, $3, $1) }
+| relational_expression LTEQ 
+  shift_expression                         { Unop (Not, Binop (Gt, $1, $3)) }
+;;
+
+equality_expression:
+  relational_expression                    { $1 }
+| equality_expression EQEQ 
+  relational_expression                    { Binop (Eq, $1, $3) }
+| equality_expression NOTEQ 
+  relational_expression                    { Unop (Not, Binop (Eq, $1, $3)) }
+;;
+
+and_expression:
+  equality_expression                      { $1 }
+;;
+
+exclusive_or_expression:
+  and_expression                           { $1 }
+;;
+
+inclusive_or_expression:
+  exclusive_or_expression                  { $1 }
+;;
+
+logical_and_expression:
+  inclusive_or_expression                  { $1 }
+| logical_and_expression AND 
+  inclusive_or_expression                  { And ($1, $3) }
+;;
+
+logical_or_expression:
+  logical_and_expression                   { $1 }
+;;
+
+conditional_expression:
+  logical_or_expression                    { $1 }
 ;;
 
 expression:
-  INTEGER                                  { Cst $1 }
-| MINUS expression                         { negate $2 }
-| left_value                               { Lval $1 }
-| expression AND expression                { And ($1, $3) }
-| expression PLUS expression               { Binop (Plus, $1, $3) }
-| expression MINUS expression              { Binop (Minus, $1, $3) }
-| expression STAR expression               { Binop (Mult, $1, $3) }
-| expression GT expression                 { Binop (Gt, $1, $3) }
-| expression GTEQ expression               { Unop (Not, Binop (Gt, $3, $1)) }
-| expression LT expression                 { Binop (Gt, $3, $1) }
-| expression LTEQ expression               { Unop (Not, Binop (Gt, $1, $3)) }
-| call                                     { $1 }
-| AMPERSAND left_value                     { AddrOf $2 }
-| LPAREN expression RPAREN                 { $2 }
-| NOT expression                           { Unop (Not, $2) }
-| expression EQEQ expression               { Binop (Eq, $1, $3) }
-| expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
-| SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
-| SIZEOF LPAREN type_declaration RPAREN    { Sizeof (build_type_decl $3) }
-| STRING                                   { Str $1 }
-| LPAREN type_declaration RPAREN 
-  expression                               { Cast ($4, build_type_decl $2) }
+  conditional_expression                   { $1 }
+;;
+
+assignment_expression:
+  conditional_expression                   { $1 }
+| unary_expression EQ expression           { Set ($1, $3) }
+;;
+
+argument_expression_list:
+  expression                               { $1::[] }
+| expression 
+  COMMA argument_expression_list           { $1::$3 }
 ;;
 
 init_declarator:

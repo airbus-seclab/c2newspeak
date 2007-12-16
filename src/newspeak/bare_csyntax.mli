@@ -43,7 +43,6 @@ and blk = stmt list
 
 and stmtkind =
     | Decl of (string * typ * init option)
-    | Set of (lv * exp)
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
     | While of (exp * blk)
@@ -57,24 +56,24 @@ and stmtkind =
 
 and field = string
 
-and lv = 
-    | Var of string
-    | Field of (lv * string)
-    | Index of (lv * exp)
-    | Deref of exp
-
 and exp = 
     | Cst of cst
-    | Lval of lv
-    | AddrOf of lv
+    | Var of string
+    | Field of (exp * string)
+    | Index of (exp * exp)
+    | Deref of exp
+    | AddrOf of exp
     | Unop of (unop * exp)
     | And of (exp * exp)
     | Binop of (binop * exp * exp)
-    | Call of (lv * exp list)
+    | Call of (exp * exp list)
     | Sizeof of Csyntax.typ
     | SizeofV of string
     | Str of string
     | Cast of (exp * typ)
+    | Set of (exp * exp)
+(* returns the value and then increment it *)
+    | ExpPlusPlus of exp
 
 and cst = Int64.t
 

@@ -1,6 +1,25 @@
 open Newspeak
 
+module B = Bare_csyntax
 module C = Csyntax
+
+type base_typ =
+    | Void 
+    | Integer of ikind
+    | Float of int
+    | Struct of (string * decl list option)
+    | Union of (string * decl list option)
+    | Name of string
+    | Enum of (string * Int64.t option) list option
+
+and var_modifier = 
+    | Abstract
+    | Variable of (string * location)
+    | Function of (var_modifier * decl list)
+    | Array of (var_modifier * Int64.t option)
+    | Pointer of var_modifier
+
+and decl = (base_typ * var_modifier)
 
 let typedefs = Hashtbl.create 100
 let enumdefs = Hashtbl.create 100
@@ -39,24 +58,6 @@ let define_enum e =
     define_enum e Int64.zero
 
 let find_enum x = Hashtbl.find enumdefs x
-
-type base_typ =
-    | Void 
-    | Integer of ikind
-    | Float of int
-    | Struct of (string * decl list option)
-    | Union of (string * decl list option)
-    | Name of string
-    | Enum of (string * Int64.t option) list option
-
-and var_modifier = 
-    | Abstract
-    | Variable of (string * location)
-    | Function of (var_modifier * decl list)
-    | Array of (var_modifier * Int64.t option)
-    | Pointer of var_modifier
-
-and decl = (base_typ * var_modifier)
 
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 

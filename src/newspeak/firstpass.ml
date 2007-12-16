@@ -35,7 +35,8 @@ let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 
 let rec simplify_bexp e =
   match e with
-      Lval _ | Call _ -> Unop (Not, Binop (Eq, e, Cst Int64.zero))
+      Var _ | Field _ | Index _ | Deref _ | Call _ -> 
+	Unop (Not, Binop (Eq, e, Cst Int64.zero))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
 
@@ -198,7 +199,7 @@ let translate fname (compdefs, globals) =
 		Array (t, n) ->
 		  let (e_pref, (i, _)) = translate_exp e in
 		    (lv_pref@e_pref, (C.Index (lv', (t, n), i), t))
-	      | Ptr _ -> translate_lv (Deref (Binop (Plus, Lval lv, e)))
+	      | Ptr _ -> translate_lv (Deref (Binop (Plus, lv, e)))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
 		    "Array or pointer type expected"
@@ -208,12 +209,14 @@ let translate fname (compdefs, globals) =
 	  let t = deref_typ t in
 	    (pref, (C.Deref (e, t), t))
 
+      | _ -> Npkcontext.error "Firstpass.translate_lv" "Left value expected"
+
   and translate_exp x =
     match x with
 	Cst i -> ([], (C.Const i, C.typ_of_cst i))
 
-      | Lval lv -> 
-	  let (pref, (lv, t)) = translate_lv lv in
+      | Var _ | Field _ | Index _ | Deref _ -> 
+	  let (pref, (lv, t)) = translate_lv x in
 	    (pref, (C.Lval (lv, t), t))
 
       | AddrOf lv -> 
@@ -233,7 +236,7 @@ let translate fname (compdefs, globals) =
 	  let t = C.typ_of_binop op in
 	    (pref1@pref2, (C.Binop (op, e1, e2), t))
 
-      | Call (f, args) -> translate_call None f args
+      | Call (f, args) -> translate_call f args
 
       | SizeofV x -> 
 	  let t = typ_of_var x in
@@ -252,8 +255,8 @@ let translate fname (compdefs, globals) =
 	  let tmp_e = (C.Lval tmp, int_typ) in
 	  let stmt = 
 	    If (And (e1, e2), 
-	       (Set (Var tmp_name, Cst Int64.one), loc)::[], 
-	       (Set (Var tmp_name, Cst Int64.zero), loc)::[])
+	       (Exp (Set (Var tmp_name, Cst Int64.one)), loc)::[], 
+	       (Exp (Set (Var tmp_name, Cst Int64.zero)), loc)::[])
 	  in
 	  let pref = translate_stmt (stmt, loc) in
 	    pop_local tmp_name;
@@ -264,21 +267,40 @@ let translate fname (compdefs, globals) =
 	  let e = C.cast e t in
 	    (pref, (e, t))
 
-  and translate_call r f args =
+      | Set (lv, e) -> 
+	  let loc = Npkcontext.get_loc () in
+	  let (lv_pref, lv) = translate_lv lv in
+	  let (e_pref, e) = translate_exp e in
+	    (lv_pref@e_pref@((C.Set (lv, e), loc)::[]), (Lval lv, snd lv))
+
+      | ExpPlusPlus lv ->
+	  let loc = Npkcontext.get_loc () in
+	  let (pref_lv, (lv', t)) = translate_lv lv in
+	  let (tmp, tmp_name) = create_tmp t loc in
+	  let e = (C.Lval (lv', t), t) in
+	  let sav_set = (C.Set (tmp, e), loc) in
+	  let incr_set = Set (lv, Binop (Plus, Var tmp_name, Cst Int64.one)) in
+	  let (pref, _) = translate_exp incr_set in
+	    pop_local tmp_name;
+	    (pref_lv@(sav_set::pref), (C.Lval tmp, t))
+
+  (*
+    TODO: a final optimization to remove unused variables....
+  *)
+  and translate_call f args =
     let loc = Npkcontext.get_loc () in
     let (pref_fn, fn, ft) = translate_fn f in
     let (_, ret_t) = ft in
     let (pref, args) = List.split (List.map translate_exp args) in
     let pref = List.concat pref in
     let (lv, e) =
-      match (ret_t, r) with
+      match ret_t with
 	  (* Any expression is ok, since it is going to be thrown away *)
-	  (C.Void, _) -> (None, C.exp_of_int 1)
-	| (_, None) -> 
+	  C.Void -> (None, C.exp_of_int 1)
+	| _ -> 
 	    let (tmp, tmp_name) = create_tmp ret_t loc in
 	      pop_local tmp_name;
 	      (Some tmp, C.Lval tmp)
-	| (_, Some lv) -> (Some lv, C.Lval lv) 
     in
     let call = (C.Call (lv, (fn, ft), args), loc) in
       (pref_fn@pref@(call::[]), (e, ret_t))
@@ -418,22 +440,7 @@ let translate fname (compdefs, globals) =
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-(* TODO: put this code in common with Call in Exp *)
-	Set (lv, Call (f, args))  ->
-	  let (lv_pref, lv) = translate_lv lv in
-	  let (call, (_, t)) = translate_call (Some lv) f args in
-	    if t = C.Void then begin
-	      Npkcontext.error "Firstpass.translate_stmt"
-		"Expression should have type void"
-	    end;
-	    lv_pref@call
-
-      | Set (lv, e) -> 
-	  let (lv_pref, lv) = translate_lv lv in
-	  let (e_pref, e) = translate_exp e in
-	    lv_pref@e_pref@((C.Set (lv, e), loc)::[])
-  
-      | If (And (e1, e2), blk1, blk2) ->
+	If (And (e1, e2), blk1, blk2) ->
 	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
 	    translate_stmt (If (e1, if_e1_blk, blk2), loc)
 
@@ -467,16 +474,12 @@ let translate fname (compdefs, globals) =
       | Return None -> (C.Return, loc)::[]
 	      
       | Return (Some e) ->
-	  let set = (Set (Var ret_name, e), loc) in
+	  let set = (Exp (Set (Var ret_name, e)), loc) in
 	  let return = (Return None, loc) in
 	    translate_blk (set::return::[])
 
       | Exp e ->
-	  let (pref, (_, t)) = translate_exp e in
-	    if t <> C.Void then begin
-	      Npkcontext.error "Firstpass.translate_stmt" 
-		"Expression should have type void"
-	    end;
+	  let (pref, _) = translate_exp e in
 	    pref
 
       | Switch (e, cases) -> 

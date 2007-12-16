@@ -144,6 +144,7 @@ rule token = parse
 
 (* operators *)
   | "&"                 { AMPERSAND }
+  | "->"                { ARROW }
   | "+"                 { PLUS }
   | "-"                 { MINUS }
   | "++"                { PLUSPLUS }

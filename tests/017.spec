@@ -1,1 +1,1 @@
-Fatal error: Expression should have type void in 017.c line 32
+Fatal error: Different types for function f in 017.c line 32
