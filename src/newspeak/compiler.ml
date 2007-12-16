@@ -197,9 +197,8 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	    hd@tl
       | [] -> []
 
-  and translate_set loc (lv, t) e =  
+  and translate_set loc (lv, t, e) =  
     let lv = translate_lv lv in
-    let e = cast e t in
       match (t, e) with
 	  ((Struct _ | Union _), Lval (lv_src, _)) -> 
 	    let lv_src = translate_lv lv_src in
@@ -227,7 +226,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     match x with
       | Init (x, init) -> List.map (translate_local_init loc x) init
 
-      | Set (lv, e) -> (translate_set loc lv e)::[]
+      | Set set -> (translate_set loc set)::[]
 
       | If (e, body1, body2) ->
 	  let cond1 = translate_exp e in
@@ -282,8 +281,8 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       match (r, ret_var) with
 	  (None, _) -> []
 	| (Some lv, Some v) -> 
-	    let ret_e = (Lval (v, ret_t), ret_t) in
-	    let set = translate_set loc lv ret_e in
+	    let ret_e = Lval (v, ret_t) in
+	    let set = translate_set loc (lv, ret_t, ret_e) in
 	      set::[]
 	| _ -> 
 	    (* TODO: code cleanup: change error message *)
@@ -291,8 +290,9 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     in
     let args_var = List.map (fun (t, _) -> (push (), t)) args_t in
     let decls = List.map (translate_decl loc) args_t in
+    let translate_arg (lv, t) e = translate_set loc (lv, t, e) in
     let sets = 
-      try List.map2 (translate_set loc) args_var args_exp 
+      try List.map2 translate_arg args_var args_exp
       with Invalid_argument "List.map2" ->
 	(* TODO: code cleanup: change error message *)
 	Npkcontext.error "Compiler.translate_call" 

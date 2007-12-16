@@ -59,12 +59,12 @@ and stmt = (stmtkind * location)
 
 and stmtkind =
     | Init of (int * init)
-    | Set of (typ_lv * typ_exp)
+    | Set of (lv * typ * exp)
     | If of (exp * blk * blk)
     | Switch of (exp * (typ_exp option * blk * location) list)
     | Loop of (blk * blk)
     | Return
-    | Call of (typ_lv option * (lv * ftyp) * typ_exp list)
+    | Call of (lv option * (lv * ftyp) * exp list)
     | Break
     | Continue
 

@@ -147,9 +147,8 @@ let translate fname (compdefs, globals) =
   let create_tmp t loc = 
     let name = "tmp"^(string_of_int !tmp_cnt) in
     let x = push_local loc (t, name) in
-    let e = (C.Local x, t) in
       incr tmp_cnt;
-      (e, name)
+      (C.Local x, name)
   in
 
 (* TODO: could be a function name inside *)
@@ -252,7 +251,7 @@ let translate fname (compdefs, globals) =
       | And (e1, e2) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (tmp, tmp_name) = create_tmp int_typ loc in
-	  let tmp_e = (C.Lval tmp, int_typ) in
+	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
 	  let stmt = 
 	    If (And (e1, e2), 
 	       (Exp (Set (Var tmp_name, Cst Int64.one)), loc)::[], 
@@ -269,20 +268,26 @@ let translate fname (compdefs, globals) =
 
       | Set (lv, e) -> 
 	  let loc = Npkcontext.get_loc () in
-	  let (lv_pref, lv) = translate_lv lv in
+	  let (lv_pref, (lv, t)) = translate_lv lv in
 	  let (e_pref, e) = translate_exp e in
-	    (lv_pref@e_pref@((C.Set (lv, e), loc)::[]), (Lval lv, snd lv))
+	  let e = C.cast e t in
+	    (lv_pref@e_pref@((C.Set (lv, t, e), loc)::[]), (Lval (lv, t), t))
 
       | ExpPlusPlus lv ->
 	  let loc = Npkcontext.get_loc () in
 	  let (pref_lv, (lv', t)) = translate_lv lv in
 	  let (tmp, tmp_name) = create_tmp t loc in
-	  let e = (C.Lval (lv', t), t) in
-	  let sav_set = (C.Set (tmp, e), loc) in
+	  let e = C.Lval (lv', t) in
+	  let sav_set = (C.Set (tmp, t, e), loc) in
 	  let incr_set = Set (lv, Binop (Plus, Var tmp_name, Cst Int64.one)) in
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
-	    (pref_lv@(sav_set::pref), (C.Lval tmp, t))
+	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
+
+
+  and translate_arg e (t, _) = 
+    let (pref, e) = translate_exp e in
+      (pref, C.cast e t)
 
   (*
     TODO: a final optimization to remove unused variables....
@@ -290,8 +295,13 @@ let translate fname (compdefs, globals) =
   and translate_call f args =
     let loc = Npkcontext.get_loc () in
     let (pref_fn, fn, ft) = translate_fn f in
-    let (_, ret_t) = ft in
-    let (pref, args) = List.split (List.map translate_exp args) in
+    let (args_t, ret_t) = ft in
+    let (pref, args) = 
+      try List.split (List.map2 translate_arg args args_t) 
+      with Invalid_argument "List.map2" ->
+	Npkcontext.error "Compiler.translate_call" 
+	  ("Different types at function call")
+    in
     let pref = List.concat pref in
     let (lv, e) =
       match ret_t with
@@ -300,7 +310,7 @@ let translate fname (compdefs, globals) =
 	| _ -> 
 	    let (tmp, tmp_name) = create_tmp ret_t loc in
 	      pop_local tmp_name;
-	      (Some tmp, C.Lval tmp)
+	      (Some tmp, C.Lval (tmp, ret_t))
     in
     let call = (C.Call (lv, (fn, ft), args), loc) in
       (pref_fn@pref@(call::[]), (e, ret_t))
