@@ -68,7 +68,7 @@ let seq_of_string str =
 let translate_arithmop op (e1, k1) (e2, k2) =
   let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
   let t = C.Int k in
-    (op k, C.cast (e1, C.Int k1) t, C.cast (e2, C.Int k2) t)
+    (op k, C.cast (e1, C.Int k1) t, C.cast (e2, C.Int k2) t, t)
 
 let translate_unop op = 
   match op with
@@ -83,7 +83,9 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	translate_arithmop (fun x -> C.Plus x) (e1, k1) (e2, k2)
     | (Minus, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
-    | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2)
+    | (Mod, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
+    | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
     | (Plus, C.Array (elt_t, _), _) -> 
 	let t = C.Ptr elt_t in
 	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
@@ -95,13 +97,13 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
 
       (* Pointer comparisons *)
-    | (Eq, C.Ptr _, C.Ptr _) ->	(C.Eq t1, e1, e2)
+    | (Eq, C.Ptr _, C.Ptr _) ->	(C.Eq t1, e1, e2, int_typ)
     | (Eq, C.Int _, C.Ptr _) ->
 	let e1 = C.cast (e1, t1) t2 in
-	  (C.Eq t2, e1, e2)
+	  (C.Eq t2, e1, e2, int_typ)
     | (Eq, C.Ptr _, C.Int _) ->
 	let e2 = C.cast (e2, t2) t1 in
-	  (C.Eq t1, e1, e2)
+	  (C.Eq t1, e1, e2, int_typ)
 	  
     | _ ->
 	Npkcontext.error "Csyntax.type_of_binop" 
@@ -231,8 +233,7 @@ let translate fname (compdefs, globals) =
       | Binop (op, e1, e2) -> 
 	  let (pref1, e1) = translate_exp e1 in
 	  let (pref2, e2) = translate_exp e2 in
-	  let (op, e1, e2) = translate_binop op e1 e2 in
-	  let t = C.typ_of_binop op in
+	  let (op, e1, e2, t) = translate_binop op e1 e2 in
 	    (pref1@pref2, (C.Binop (op, e1, e2), t))
 
       | Call (f, args) -> translate_call f args

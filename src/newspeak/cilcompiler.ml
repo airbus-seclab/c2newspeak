@@ -248,12 +248,23 @@ and translate_exp e =
 	
     (* Arithmetic and floating point operations *)
     | BinOp (PlusA as o, e1, e2, t)   | BinOp (MinusA as o, e1, e2, t)
-    | BinOp (Mult as o, e1, e2, t)    | BinOp (Div as o, e1, e2, t) 
-    | BinOp (Mod as o, e1, e2, t) -> begin
+    | BinOp (Mult as o, e1, e2, t)    | BinOp (Div as o, e1, e2, t) -> begin
 	match translate_typ t with
 	  | K.Scalar (Newspeak.Int int_t) ->
 	      K.make_int_coerce int_t (K.BinOp (translate_arith_binop o,
-						translate_exp e1, translate_exp e2))
+					       translate_exp e1, translate_exp e2))
+		
+	  | K.Scalar (Newspeak.Float sz) ->
+	      K.BinOp (translate_float_binop sz o, 
+		       translate_exp e1, translate_exp e2)
+	  | _ -> error "Npkcompile.translate_exp" "integer or float type expected"
+      end
+
+    | BinOp (Mod as o, e1, e2, t) -> begin
+	match translate_typ t with
+	  | K.Scalar (Newspeak.Int int_t) ->
+	      (K.BinOp (translate_arith_binop o,
+		       translate_exp e1, translate_exp e2))
 		
 	  | K.Scalar (Newspeak.Float sz) ->
 	      K.BinOp (translate_float_binop sz o, 

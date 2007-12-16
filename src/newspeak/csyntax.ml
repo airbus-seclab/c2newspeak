@@ -99,6 +99,7 @@ and binop =
     | Plus of ikind
     | Minus of ikind
     | Mult of ikind
+    | Mod
     | PlusP of typ
     | Gt of typ
     | Eq of typ
@@ -164,12 +165,6 @@ let typ_of_unop op =
   match op with
       Not -> int_typ
     | Cast (_, t) -> t
-
-let typ_of_binop op =
-  match op with
-      Mult k | Plus k | Minus k -> Int k
-    | PlusP t -> Ptr t
-    | Gt _ | Eq _ -> int_typ
 
 let exp_of_int n = Const (Int64.of_int n)
 

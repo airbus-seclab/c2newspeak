@@ -94,6 +94,7 @@ and binop =
     | Plus of ikind
     | Minus of ikind
     | Mult of ikind
+    | Mod
     | PlusP of typ
     | Gt of typ
     | Eq of typ
@@ -115,8 +116,6 @@ val int_typ: typ
 val typ_of_cst: cst -> typ
 
 val typ_of_unop: unop -> typ
-
-val typ_of_binop: binop -> typ
 
 val promote: ikind -> ikind
 

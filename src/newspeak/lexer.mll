@@ -147,6 +147,7 @@ rule token = parse
   | "->"                { ARROW }
   | "+"                 { PLUS }
   | "-"                 { MINUS }
+  | "%"                 { MOD }
   | "++"                { PLUSPLUS }
   | "&&"                { AND }
   | "||"                { OR }
