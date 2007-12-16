@@ -119,10 +119,7 @@ and translate_scalar_cast (e, t2) t1 =
 	  
     | (Newspeak.Ptr, Newspeak.Ptr) -> e
 
-    | (Newspeak.FunPtr, Newspeak.FunPtr) ->
-	print_warning "Npkcompile.translate_scalar_cast"
-	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
-	e
+    | (Newspeak.FunPtr, Newspeak.FunPtr) -> e
 		      
     | (Newspeak.Int (sign, sz), Newspeak.Ptr)
 	when sz = Cilutils.pointer_size && !castor_allowed ->
