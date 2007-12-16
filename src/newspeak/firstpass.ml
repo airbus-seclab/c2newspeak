@@ -248,6 +248,8 @@ let translate fname (compdefs, globals) =
 	  let e = add_glb_cstr str in
 	    ([], e)
 
+      (* TODO: this could be the unique place with And (remove the And down in 
+	 the code of if then else !!! *)
       | And (e1, e2) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (tmp, tmp_name) = create_tmp int_typ loc in
@@ -260,6 +262,20 @@ let translate fname (compdefs, globals) =
 	  let pref = translate_stmt (stmt, loc) in
 	    pop_local tmp_name;
 	    (pref, tmp_e)
+
+      | Or (e1, e2) -> 
+	  let loc = Npkcontext.get_loc () in
+	  let (tmp, tmp_name) = create_tmp int_typ loc in
+	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
+	  let stmt = 
+	    If (Or (e1, e2), 
+	       (Exp (Set (Var tmp_name, Cst Int64.one)), loc)::[], 
+	       (Exp (Set (Var tmp_name, Cst Int64.zero)), loc)::[])
+	  in
+	  let pref = translate_stmt (stmt, loc) in
+	    pop_local tmp_name;
+	    (pref, tmp_e)
+
 
       | Cast (e, t) -> 
 	  let (pref, e) = translate_exp e in
@@ -453,6 +469,10 @@ let translate fname (compdefs, globals) =
 	If (And (e1, e2), blk1, blk2) ->
 	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
 	    translate_stmt (If (e1, if_e1_blk, blk2), loc)
+
+      | If (Or (e1, e2), blk1, blk2) ->
+	  let if_not_e1_blk = (If (e2, blk1, blk2), loc)::[] in
+	    translate_stmt (If (e1, blk1, if_not_e1_blk), loc)
 
       | If (Unop (Not, (And _ as e)), blk1, blk2) ->
 	  translate_stmt (If (e, blk2, blk1), loc)

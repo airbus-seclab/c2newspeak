@@ -86,7 +86,7 @@ let build_type_decl d =
 %token CHAR FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND ARROW AND MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
+%token AMPERSAND ARROW AND OR MINUS PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token EOF
 
 %token <string> IDENTIFIER
@@ -316,6 +316,8 @@ logical_and_expression:
 
 logical_or_expression:
   logical_and_expression                   { $1 }
+| logical_or_expression OR
+  logical_and_expression                   { Or ($1, $3) }
 ;;
 
 conditional_expression:

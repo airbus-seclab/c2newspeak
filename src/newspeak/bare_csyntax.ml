@@ -71,6 +71,7 @@ and exp =
     | AddrOf of exp
     | Unop of (unop * exp)
     | And of (exp * exp)
+    | Or of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
     | Sizeof of Csyntax.typ

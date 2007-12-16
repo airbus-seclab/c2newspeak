@@ -149,6 +149,7 @@ rule token = parse
   | "-"                 { MINUS }
   | "++"                { PLUSPLUS }
   | "&&"                { AND }
+  | "||"                { OR }
   | "*"                 { STAR }
   | "<"                 { LT }
   | "<="                { LTEQ }
