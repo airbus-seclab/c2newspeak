@@ -166,7 +166,7 @@ let translate fname (compdefs, globals) =
 	    (C.Global x, C.Fun ft)
 	with Not_found ->
 	  Npkcontext.error "Firstpass.translate.typ_of_var" 
-	    ("Unknown variable "^x)
+	    ("Unknown identifier "^x)
   in
 
   let typ_of_var x =
