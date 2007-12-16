@@ -77,6 +77,7 @@ let translate_unop op =
 let rec translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
       (* Arithmetic operations *)
+      (* TODO: code cleanup? factor? *)
       (Mult, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
     | (Plus, C.Int k1, C.Int k2) -> 
@@ -85,6 +86,10 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
     | (Mod, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
+    | (BAnd, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.BAnd x) (e1, k1) (e2, k2)
+
+    (* Pointer operations *)
     | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
     | (Plus, C.Array (elt_t, _), _) -> 
 	let t = C.Ptr elt_t in

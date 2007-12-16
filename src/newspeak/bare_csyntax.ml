@@ -93,6 +93,7 @@ and binop =
     | Mod
     | Gt
     | Eq
+    | BAnd
 
 let negate e = 
   match e with

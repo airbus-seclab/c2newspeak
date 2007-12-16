@@ -300,6 +300,8 @@ equality_expression:
 
 and_expression:
   equality_expression                      { $1 }
+| and_expression AMPERSAND 
+  equality_expression                      { Binop (BAnd, $1, $3) }
 ;;
 
 exclusive_or_expression:

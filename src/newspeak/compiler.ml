@@ -111,6 +111,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	Mult k -> translate_arithmop N.MultI e1 e2 k
       | Plus k -> translate_arithmop N.PlusI e1 e2 k
       | Minus k -> translate_arithmop N.MinusI e1 e2 k
+      | BAnd k -> K.BinOp (N.BAnd (N.domain_of_typ k), e1, e2)
       | Mod -> K.BinOp (N.Mod, e1, e2)
       | PlusP (Fun _) -> 
 	  Npkcontext.error "Compiler.translate_binop" 
