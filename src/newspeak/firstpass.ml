@@ -40,17 +40,20 @@ let rec simplify_bexp e =
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
 
-let translate_proto_ftyp f (args, ret) = 
+let translate_ftyp (args, ret) =
   let args =
     match args with
-	[] -> 
-	  Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
-	    ("Incomplete prototype for function "^f);
-	  []
-      | (C.Void, _)::[] -> []
-      | _ -> args  
+	(C.Void, _)::[] -> []
+      | _ -> args
   in
-  (args, ret)
+    (args, ret)
+
+let translate_proto_ftyp f (args, ret) = 
+  if args = [] then begin
+    Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
+      ("Incomplete prototype for function "^f);
+  end;
+  translate_ftyp (args, ret)
 
 
 (* TODO: code cleanup: find a way to factor this with create_cstr
@@ -357,6 +360,7 @@ let translate fname (compdefs, globals) =
 	| _ -> (f, t)
     in
     let t = C.ftyp_of_typ t in
+    let t = translate_ftyp t in
       (pref, fn, t)
 
   and translate_exp_option e =
@@ -571,6 +575,7 @@ let translate fname (compdefs, globals) =
     match x with
 	FunctionDef (x, t, body) ->
 	  let ft = C.ftyp_of_typ t in
+	  let ft = translate_ftyp ft in
 	  let _ = push_formals loc ft in
 	  let body = translate_blk body in
 	  let locals = get_locals () in
