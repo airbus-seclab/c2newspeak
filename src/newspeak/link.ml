@@ -148,7 +148,8 @@ and replace_typ t =
   match t with
       Npkil.Scalar x -> Newspeak.Scalar x
     | Npkil.Array (t, Some l) -> Newspeak.Array (replace_typ t, l)
-    | Npkil.Array (_, None) -> raise LenOfArray
+    | Npkil.Array (_, None) -> 
+	Npkcontext.error "Link.replace_typ" "Unknown array length"
     | Npkil.Region (fields, sz) -> 
 	Newspeak.Region (List.map replace_field fields, sz)
 

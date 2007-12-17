@@ -249,7 +249,7 @@ unary_expression:
 | STAR cast_expression                     { Deref $2 }
 | MINUS cast_expression                    { negate $2 }
 | NOT cast_expression                      { Unop (Not, $2) }
-| SIZEOF LPAREN IDENTIFIER RPAREN          { SizeofV $3 }
+| SIZEOF LPAREN unary_expression RPAREN    { SizeofE $3 }
 | SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_decl $3) }
 ;;
 

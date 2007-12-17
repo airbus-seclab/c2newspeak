@@ -69,7 +69,7 @@ and exp =
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
     | Sizeof of Csyntax.typ
-    | SizeofV of string
+    | SizeofE of exp
     | Str of string
     | Cast of (exp * typ)
     | Set of (exp * exp)

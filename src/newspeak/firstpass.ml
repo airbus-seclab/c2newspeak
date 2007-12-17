@@ -53,7 +53,6 @@ let translate_proto_ftyp f (args, ret) =
   (args, ret)
 
 
-
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
 let seq_of_string str =
@@ -256,8 +255,8 @@ let translate fname (compdefs, globals) =
 
       | Call (f, args) -> translate_call f args
 
-      | SizeofV x -> 
-	  let t = typ_of_var x in
+      | SizeofE e ->
+	  let (_, (_, t)) = translate_exp e in
 	    translate_exp (Sizeof t)
 
       (* TODO: should check that the size of all declarations is less than max_int *)
@@ -368,6 +367,7 @@ let translate fname (compdefs, globals) =
 	    (pref, Some e)
 
   and translate_init t x =
+    let pref = ref [] in
     let res = ref [] in
     let rec translate o t x =
       match (x, t) with
@@ -376,13 +376,10 @@ let translate fname (compdefs, globals) =
 	      translate o t (Sequence seq)
 
 	| (Data e, _) -> 
-	    let (pref, e) = translate_exp e in 
+	    let (pref_e, e) = translate_exp e in 
 	    let e = cast e t in
-	      if (pref <> []) then begin 
-		Npkcontext.error "Firstpass.translate_init"
-		  "Expression without side-effects expected"
-	      end;
 	      res := (o, t, e)::!res;
+	      pref := !pref@pref_e;
 	      t
 
 	| (Sequence seq, C.Array (t, sz)) -> 
@@ -445,10 +442,10 @@ let translate fname (compdefs, globals) =
 	      "This type of initialization not implemented yet"
     in
     match x with
-	None -> (t, None)
+	None -> ([], t, None)
       | Some init -> 
 	  let t = translate 0 t init in
-	    (t, Some (List.rev !res))
+	    (!pref, t, Some (List.rev !res))
 
   and add_glb_cstr str =
     let name = "!"^fname^".const_str_"^str in
@@ -456,7 +453,7 @@ let translate fname (compdefs, globals) =
     let t = C.Array a in
       if not (Hashtbl.mem glbdecls name) then begin
 	let loc = (fname, -1, -1) in
-	let (t, init) = translate_init t (Some (Data (Str str))) in
+	let (_, t, init) = translate_init t (Some (Data (Str str))) in
 	  Hashtbl.add glbdecls name (t, loc, Some init)
       end;
       (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
@@ -466,13 +463,13 @@ let translate fname (compdefs, globals) =
     match x with
       | (Decl (x, t, init), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  let (t, init) = translate_init t init in
+	  let (pref, t, init) = translate_init t init in
 	  let n = push_local loc (t, x) in
-	  let tl = translate_blk tl in begin 
+	  let tl = translate_blk tl in
 	    pop_local x;
-	    match init with
-		None -> tl
-	      | Some init -> (C.Init (n, init), loc)::tl
+	    begin match init with
+		None -> pref@tl
+	      | Some init -> pref@((C.Init (n, init), loc)::tl)
 	  end
 
       | hd::tl -> 
@@ -593,9 +590,13 @@ let translate fname (compdefs, globals) =
 		Npkcontext.error "Firstpass.translate_global"
 		  ("Unexpected initialization of function "^x)
 	    | _ -> 
-		let (t, init) = translate_init t init in
-		let init = if is_extern then None else Some init in
-		  Hashtbl.add glbdecls x (t, loc, init)
+		let (pref, t, init) = translate_init t init in
+		  if (pref <> []) then begin 
+		    Npkcontext.error "Firstpass.translate_init"
+		      "Expression without side-effects expected"
+		  end;
+		  let init = if is_extern then None else Some init in
+		    Hashtbl.add glbdecls x (t, loc, init)
 	  end
   in
   
