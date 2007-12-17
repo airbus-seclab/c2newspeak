@@ -51,6 +51,8 @@ let translate_scalar t =
     | Float n -> N.Float n
     | Ptr (Fun _) -> N.FunPtr
     | Ptr _ -> N.Ptr
+    | Void -> Npkcontext.error "Compiler.translate_scalar" 
+	"Value void not ignored as it ought to be"
     | _ -> 
 	Npkcontext.error "Compiler.translate_scalar" 
 	  "Unexpected non scalar type"
