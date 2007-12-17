@@ -88,5 +88,7 @@ and binop =
     | Gt
     | Eq
     | BAnd
+    | Shiftl
+    | Shiftr
 
 val negate: exp -> exp

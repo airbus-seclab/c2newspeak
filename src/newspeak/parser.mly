@@ -87,6 +87,7 @@ let build_type_decl d =
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
+%token SHIFTL SHIFTR
 %token EOF
 
 %token <string> IDENTIFIER
@@ -276,6 +277,10 @@ additive_expression:
 
 shift_expression:
   additive_expression                      { $1 }
+| shift_expression SHIFTL 
+  additive_expression                      { Binop (Shiftl, $1, $3) }
+| shift_expression SHIFTR
+  additive_expression                      { Binop (Shiftr, $1, $3) }
 ;;
 
 relational_expression:

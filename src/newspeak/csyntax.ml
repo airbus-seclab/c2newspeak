@@ -104,6 +104,8 @@ and binop =
     | PlusP of typ
     | Gt of typ
     | Eq of typ
+    | Shiftl of ikind
+    | Shiftr of ikind
 
 and cst = Int64.t
 

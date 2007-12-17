@@ -115,13 +115,15 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       | Minus k -> translate_arithmop N.MinusI e1 e2 k
       | BAnd k -> K.BinOp (N.BAnd (N.domain_of_typ k), e1, e2)
       | Mod -> K.BinOp (N.Mod, e1, e2)
+      | Shiftl k -> K.make_int_coerce k (K.BinOp (N.Shiftlt, e1, e2))
+      | Shiftr k -> K.make_int_coerce k (K.BinOp (N.Shiftrt, e1, e2))
       | PlusP (Fun _) -> 
 	  Npkcontext.error "Compiler.translate_binop" 
 	    "Pointer arithmetic forbidden on function pointers"
       | PlusP t -> 
 	  let stride = K.exp_of_int (size_of compdefs t) in 
 	    K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
-	      
+
       (* TODO: clean bug ? maybe a cast is necessary ? *)
       | Gt t -> 
 	  let t = translate_scalar t in

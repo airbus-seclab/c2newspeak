@@ -94,6 +94,8 @@ and binop =
     | Gt
     | Eq
     | BAnd
+    | Shiftl
+    | Shiftr
 
 let negate e = 
   match e with
