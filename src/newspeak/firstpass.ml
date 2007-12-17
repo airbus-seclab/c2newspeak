@@ -258,6 +258,10 @@ let translate fname (compdefs, globals) =
 
       | Call (f, args) -> translate_call f args
 
+      | SizeofE (Str str) ->
+	  let sz = String.length str + 1 in
+	    ([], (C.exp_of_int sz, int_typ))
+
       | SizeofE e ->
 	  let (_, (_, t)) = translate_exp e in
 	    translate_exp (Sizeof t)
