@@ -87,7 +87,7 @@ let build_type_decl d =
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
-%token SHIFTL SHIFTR
+%token SHIFTL SHIFTR BXOR BOR
 %token EOF
 
 %token <string> IDENTIFIER
@@ -311,10 +311,14 @@ and_expression:
 
 exclusive_or_expression:
   and_expression                           { $1 }
+| exclusive_or_expression BXOR 
+  and_expression                           { Binop (BXor, $1, $3) }
 ;;
 
 inclusive_or_expression:
   exclusive_or_expression                  { $1 }
+| inclusive_or_expression BOR 
+  exclusive_or_expression                  { Binop (BOr, $1, $3) }
 ;;
 
 logical_and_expression:

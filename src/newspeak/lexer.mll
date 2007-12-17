@@ -158,6 +158,8 @@ rule token = parse
   | ">="                { GTEQ }
   | "<<"                { SHIFTL }
   | ">>"                { SHIFTR }
+  | "^"                 { BXOR }
+  | "|"                 { BOR }
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 

@@ -88,6 +88,10 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
     | (BAnd, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.BAnd x) (e1, k1) (e2, k2)
+    | (BXor, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.BXor x) (e1, k1) (e2, k2)
+    | (BOr, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.BOr x) (e1, k1) (e2, k2)
 
     | (Shiftl, C.Int k1, C.Int k2) -> 
 	let k = C.promote k1 in

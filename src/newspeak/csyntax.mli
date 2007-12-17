@@ -95,6 +95,8 @@ and binop =
     | Minus of ikind
     | Mult of ikind
     | BAnd of ikind
+    | BXor of ikind
+    | BOr of ikind
     | Mod
     | PlusP of typ
     | Gt of typ

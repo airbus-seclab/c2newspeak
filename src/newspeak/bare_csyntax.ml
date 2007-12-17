@@ -94,6 +94,8 @@ and binop =
     | Gt
     | Eq
     | BAnd
+    | BXor
+    | BOr
     | Shiftl
     | Shiftr
 
