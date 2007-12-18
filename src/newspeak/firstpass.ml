@@ -557,21 +557,27 @@ let translate fname (compdefs, globals) =
 	  Npkcontext.error "Firstpass.translate.translate_stmt" 
 	    "Unreachable statement"
   in
-
-  let update_fundef f (t, loc, body) =
+    
+  let update_funtyp f t loc =
     try
-      let (prev_t, _, prev_body) = Hashtbl.find fundefs f in
+      let (prev_t, _, _) = Hashtbl.find fundefs f in
 	if not (C.ftyp_equals t prev_t) then begin
 	  Npkcontext.error "Firstpass.update_fundef"
 	    ("Different types for function "^f)
-	end;
-	match (body, prev_body) with
-	    (None, _) -> ()
-	  | (Some _, None) -> Hashtbl.replace fundefs f (t, loc, body)
-	  | (Some _, Some _) -> 
+	end
+    with Not_found -> Hashtbl.add fundefs f (t, loc, None) 
+  in
+
+  let update_funbody f body =
+    try
+      let (t, loc, prev_body) = Hashtbl.find fundefs f in
+	match prev_body with
+	    None -> Hashtbl.replace fundefs f (t, loc, Some body)
+	  | Some _ -> 
 	      Npkcontext.error "Firstpass.update_fundef"
 		("Multiple definitions of function "^f^" body")
-    with Not_found -> Hashtbl.add fundefs f (t, loc, body) 
+    with Not_found ->
+      Npkcontext.error "Firstpass.update_funbody" "Unreachable statement"
   in
 
   let translate_global (x, loc) =
@@ -580,10 +586,11 @@ let translate fname (compdefs, globals) =
 	FunctionDef (x, t, body) ->
 	  let ft = C.ftyp_of_typ t in
 	  let ft = translate_ftyp ft in
-	  let _ = push_formals loc ft in
-	  let body = translate_blk body in
-	  let locals = get_locals () in
-	    update_fundef x (ft, loc, Some (locals, body))
+	    update_funtyp x ft loc;
+	    let _ = push_formals loc ft in
+	    let body = translate_blk body in
+	    let locals = get_locals () in
+	      update_funbody x (locals, body)
 
 (* TODO: put this check in parser ?? *)
       | GlbDecl (_, _, is_extern, Some _) when is_extern -> 
@@ -594,7 +601,8 @@ let translate fname (compdefs, globals) =
 	  begin match (t, init) with
 	      (Fun ft, None) -> 
 		let ft = translate_proto_ftyp x ft in
-		  update_fundef x (ft, loc, None)
+		  update_funtyp x ft loc
+
 	    | (Fun ft, Some _) -> 
 		Npkcontext.error "Firstpass.translate_global"
 		  ("Unexpected initialization of function "^x)
