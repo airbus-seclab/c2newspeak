@@ -307,10 +307,7 @@ let first_pass f =
 	      let ftyp = Npkutils.translate_ftyp (args, ret) in
 		Cilenv.update_fun_proto name ftyp
 		  
-	  | [GFun (f, loc)] -> 
-	      if (f.svar.vname = "main")
-	      then check_main_signature f.svar.vtype;
-	      update_fun_def f;
+	  | [GFun (f, loc)] -> update_fun_def f
 	      
 	  | [GVarDecl (v, _)] -> update_glob_decl v
 		  

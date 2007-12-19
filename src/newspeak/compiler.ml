@@ -41,7 +41,7 @@ let translate_array lv (t, n) =
     match (n, lv) with
 	(Some n, _) -> K.Known n
       | (_, K.Global x) -> K.Length x
-      | _ -> Npkcontext.error "Compiler.translate_array" "Unknown array size"
+      | _ -> Npkcontext.error "Compiler.translate_array" "Unknown array length"
   in
     (t, n)
 
@@ -97,9 +97,15 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       | Fun _ -> 
 	  Npkcontext.error "Compiler.translate_typ" "Function not allowed here"
   in
-    
+
+  let rec translate_atyp t =
+    match t with
+	Array (t, _) -> K.Scalar (translate_scalar t)
+      | _ -> translate_typ t
+  in
+
   let translate_ftyp (args, ret) =
-    let args = List.map (fun (t, _) -> translate_typ t) args in
+    let args = List.map (fun (t, _) -> translate_atyp t) args in
     let ret =
       match ret with
 	  Void -> None
