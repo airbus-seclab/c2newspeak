@@ -536,10 +536,18 @@ let cast t e t' =
       _ when t = t' -> e
     | (Int _, Int k) -> make_int_coerce k e
     | (Int _, Ptr) when e = zero -> Const Nil
-    | (Ptr, Int k) when !Npkcontext.castor_allowed -> 
-	Npkcontext.print_warning "Compiler.cast"
+    | (Ptr, Int ((_, n) as k)) 
+	when (!Npkcontext.castor_allowed 
+	       && (n = Config.size_of_ptr)) -> 
+	Npkcontext.print_warning "Npkil.cast"
 	  ("Probable invalid cast "^(string_of_cast t t'));
-	UnOp (PtrToInt k, e)
+	  UnOp (PtrToInt k, e)
+    | (Int ((_, n) as k), Ptr) 
+	when (!Npkcontext.castor_allowed 
+	       && (n = Config.size_of_ptr)) -> 
+	Npkcontext.print_warning "Npkil.cast"
+	  ("Probable invalid cast "^(string_of_cast t t'));
+	  UnOp (IntToPtr k, e)
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | _ -> 
 	Npkcontext.error "Compiler.cast"
