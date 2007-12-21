@@ -50,8 +50,8 @@ let process_decls f (b, m) =
   in
     List.map process m
 
-let build_glbdecl is_extern d = 
-  let build (t, x, init, loc) = (GlbDecl (x, t, is_extern, init), loc) in
+let build_glbdecl (static, extern) d =
+  let build (t, x, init, loc) = (GlbDecl (x, t, static, extern, init), loc) in
     process_decls build d
 
 let build_fundef (b, m, body) = 
@@ -70,8 +70,8 @@ let build_field (b, m) =
   in
     List.map build m
 
-let build_stmtdecl d =
-  let build (t, x, init, loc) = (Decl (x, t, init), loc) in
+let build_stmtdecl static d =
+  let build (t, x, init, loc) = (Decl (x, t, static, init), loc) in
     process_decls build d
 
 let build_type_decl d =
@@ -80,7 +80,7 @@ let build_type_decl d =
 
 %}
 
-%token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM 
+%token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
 %token EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
 %token CHAR FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
@@ -122,8 +122,9 @@ translation_unit:
 ;;
 
 external_declaration:
-  declaration                              { build_glbdecl false $1 }
-| EXTERN declaration                       { build_glbdecl true $2 }
+  declaration                              { build_glbdecl (false, false) $1 }
+| EXTERN declaration                       { build_glbdecl (false, true) $2 }
+| STATIC declaration                       { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef $1 }
 | TYPEDEF declaration                      { build_typedef $2 }
 ;;
@@ -188,7 +189,8 @@ statement_list:
 ;;
 
 statement:
-  declaration                              { build_stmtdecl $1 }
+  declaration                              { build_stmtdecl false $1 }
+| STATIC declaration                       { build_stmtdecl true $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }

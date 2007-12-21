@@ -99,11 +99,12 @@ rule token = parse
   | "do"                { DO }
   | "else"              { ELSE }
   | "for"               { FOR }
-  | "enum"            { ENUM }
+  | "enum"              { ENUM }
   | "extern"            { EXTERN }
   | "if"                { IF }
   | "return"            { RETURN }
   | "sizeof"            { SIZEOF }
+  | "static"            { STATIC }
   | "switch"            { SWITCH }
   | "typedef"           { TYPEDEF }
   | "while"             { WHILE }

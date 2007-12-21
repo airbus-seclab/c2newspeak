@@ -28,8 +28,8 @@ type prog = (Csyntax.compdefs * (global * location) list)
 
 and global = 
     | FunctionDef of (string * typ * blk)
-(* true for extern, true for const *)
-    | GlbDecl of (string * typ * bool * init option)
+(* true for extern *)
+    | GlbDecl of (string * typ * static * bool * init option)
 
 and declaration = (Csyntax.typ * string)
 
@@ -44,7 +44,7 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    | Decl of (string * typ * init option)
+    | Decl of (string * typ * static * init option)
 (* TODO: simplify if then else syntax !!! Only two cases at most!!! *)
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
@@ -59,6 +59,8 @@ and stmtkind =
     | Break
     | Continue
     | Block of blk
+
+and static = bool
 
 and field = string
 

@@ -136,9 +136,11 @@ let translate fname (compdefs, globals) =
 (* Local variables environment *)
   let vcnt = ref 0 in
   let local_env = Hashtbl.create 100 in
+  let global_env = Hashtbl.create 100 in
   let locals = ref [] in
 
   let tmp_cnt = ref 0 in
+  let static_pref = ref ("!"^fname^".") in
 
   let get_locals () =
     let x = !locals in
@@ -147,6 +149,21 @@ let translate fname (compdefs, globals) =
       Hashtbl.clear local_env;
       x
   in
+
+  let add_global x d =
+    let (t, _, _) = d in
+      Hashtbl.add global_env x (t, x);
+      Hashtbl.add glbdecls x d
+  in
+
+  let add_static x d =
+    let (t, _, _) = d in
+    let name = !static_pref^x in
+      Hashtbl.add global_env x (t, name);
+      Hashtbl.add glbdecls name d
+  in
+
+  let remove_static x = Hashtbl.remove global_env x in
 
   let push_var loc (t, x) = 
     incr vcnt;
@@ -180,8 +197,8 @@ let translate fname (compdefs, globals) =
 	(C.Local n, t)
     with Not_found -> 
       try 
-	let (t, _, _) = Hashtbl.find glbdecls x in
-	  (C.Global x, t)
+	let (t, g) = Hashtbl.find global_env x in
+	  (C.Global g, t)
       with Not_found ->
 	try 
 	  let (ft, _, _) = Hashtbl.find fundefs x in
@@ -462,14 +479,25 @@ let translate fname (compdefs, globals) =
       if not (Hashtbl.mem glbdecls name) then begin
 	let loc = (fname, -1, -1) in
 	let (_, t, init) = translate_init t (Some (Data (Str str))) in
-	  Hashtbl.add glbdecls name (t, loc, Some init)
+	  add_global name (t, loc, Some init)
       end;
       (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
       C.Ptr char_typ)
 
   and translate_blk x =
     match x with
-      | (Decl (x, t, init), loc)::tl -> 
+      | (Decl (x, t, static, init), loc)::tl when static -> 
+	  let (pref, t, init) = translate_init t init in
+	    if (pref <> []) then begin 
+	      Npkcontext.error "Firstpass.translate_init"
+		"Expression without side-effects expected"
+	    end;
+	    add_static x (t, loc, Some init);
+	    let tl = translate_blk tl in
+	      remove_static x;
+	      tl
+
+      | (Decl (x, t, _, init), loc)::tl -> 
 	  Npkcontext.set_loc loc;
 	  let (pref, t, init) = translate_init t init in
 	  let n = push_local loc (t, x) in
@@ -584,6 +612,7 @@ let translate fname (compdefs, globals) =
     Npkcontext.set_loc loc;
     match x with
 	FunctionDef (x, t, body) ->
+	  static_pref := "!"^fname^"."^x^".";
 	  let ft = C.ftyp_of_typ t in
 	  let ft = translate_ftyp ft in
 	    update_funtyp x ft loc;
@@ -593,11 +622,12 @@ let translate fname (compdefs, globals) =
 	      update_funbody x (locals, body)
 
 (* TODO: put this check in parser ?? *)
-      | GlbDecl (_, _, is_extern, Some _) when is_extern -> 
+      | GlbDecl (_, _, _, is_extern, Some _) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbDecl (x, t, is_extern, init) ->
+      | GlbDecl (x, t, static, is_extern, init) ->
+	  static_pref := "!"^fname^".";
 	  begin match (t, init) with
 	      (Fun ft, None) -> 
 		let ft = translate_proto_ftyp x ft in
@@ -613,7 +643,8 @@ let translate fname (compdefs, globals) =
 		      "Expression without side-effects expected"
 		  end;
 		  let init = if is_extern then None else Some init in
-		    Hashtbl.add glbdecls x (t, loc, init)
+		    if static then add_static x (t, loc, init)
+		    else add_global x (t, loc, init)
 	  end
   in
   
