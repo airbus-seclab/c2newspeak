@@ -116,7 +116,9 @@ and binop =
     | DivF of int
     | MultF of int
 
-and cst = Int64.t
+and cst = 
+    | CInt of Int64.t
+    | CFloat of string
 
 let ftyp_of_typ t =
   match t with
@@ -160,11 +162,15 @@ let rec size_of compdefs t =
 
 (* TODO: check that integer don't have a default type (like int) *)
 let typ_of_cst i =
-  let sign =
-    if Int64.compare i (Int64.of_string "2147483647") > 0 
-    then Unsigned else Signed
-  in
-    Int (sign, Config.size_of_int)
+  match i with
+      CInt i ->
+	let sign =
+	  if Int64.compare i (Int64.of_string "2147483647") > 0 
+	  then Unsigned else Signed
+	in
+	  Int (sign, Config.size_of_int)
+    | CFloat v -> Float Config.size_of_double
+	
 
 let int_kind = (Signed, Config.size_of_int)
 
@@ -175,7 +181,7 @@ let promote k =
       (_, n) when n < Config.size_of_int -> (Signed, Config.size_of_int)
     | _ -> k
 
-let exp_of_int n = Const (Int64.of_int n)
+let exp_of_int n = Const (CInt (Int64.of_int n))
 
 let ftyp_equals (args1, ret1) (args2, ret2) =
   let (args1, _) = List.split args1 in

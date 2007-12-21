@@ -59,7 +59,7 @@ and static = bool
 and field = string
 
 and exp = 
-    | Cst of cst
+    | Cst of Csyntax.cst
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -78,8 +78,6 @@ and exp =
 (* returns the value and then increment it *)
     | ExpPlusPlus of exp
 
-and cst = Int64.t
-
 and unop = Not | BNot
 
 and binop =
@@ -97,3 +95,5 @@ and binop =
     | Shiftr
 
 val negate: exp -> exp
+
+val exp_of_int: int -> exp

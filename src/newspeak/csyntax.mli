@@ -111,7 +111,9 @@ and binop =
     | DivF of int
     | MultF of int
 
-and cst = Int64.t
+and cst = 
+    | CInt of Int64.t
+    | CFloat of string
 
 val ftyp_of_typ: typ -> ftyp
 

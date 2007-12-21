@@ -36,7 +36,7 @@ let char_typ = C.Int (Newspeak.Signed, Config.size_of_char)
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ -> 
-	Unop (Not, Binop (Eq, e, Cst Int64.zero))
+	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
 
@@ -60,10 +60,10 @@ let translate_proto_ftyp f (args, ret) =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [Data (Cst Int64.zero)] in
+  let res = ref [Data (exp_of_int 0)] in
     for i = len - 1 downto 0 do
       let c = Char.code str.[i] in
-	res := (Data (Cst (Int64.of_int c)))::!res
+	res := (Data (exp_of_int c))::!res
     done;
     !res
 
@@ -140,7 +140,7 @@ let rec translate_binop op (e1, t1) (e2, t2) =
     | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
     | (Minus, C.Ptr _, C.Int _) -> 
 	let (op, e1', e2', t2) = 
-	  translate_binop Minus (exp_of_int 0, t2) (e2, t2) 
+	  translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) 
 	in
 	let e2 = C.Binop (op, e1', e2') in
  	  translate_binop Plus (e1, t1) (e2, t2)
@@ -342,8 +342,8 @@ let translate fname (compdefs, globals) =
 	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
 	  let stmt = 
 	    If (And (e1, e2), 
-	       (Exp (Set (Var tmp_name, Cst Int64.one)), loc)::[], 
-	       (Exp (Set (Var tmp_name, Cst Int64.zero)), loc)::[])
+	       (Exp (Set (Var tmp_name, exp_of_int 1)), loc)::[], 
+	       (Exp (Set (Var tmp_name, exp_of_int 0)), loc)::[])
 	  in
 	  let pref = translate_stmt (stmt, loc) in
 	    pop_local tmp_name;
@@ -355,8 +355,8 @@ let translate fname (compdefs, globals) =
 	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
 	  let stmt = 
 	    If (Or (e1, e2), 
-	       (Exp (Set (Var tmp_name, Cst Int64.one)), loc)::[], 
-	       (Exp (Set (Var tmp_name, Cst Int64.zero)), loc)::[])
+	       (Exp (Set (Var tmp_name, exp_of_int 1)), loc)::[], 
+	       (Exp (Set (Var tmp_name, exp_of_int 0)), loc)::[])
 	  in
 	  let pref = translate_stmt (stmt, loc) in
 	    pop_local tmp_name;
@@ -381,7 +381,7 @@ let translate fname (compdefs, globals) =
 	  let (tmp, tmp_name) = create_tmp t loc in
 	  let e = C.Lval (lv', t) in
 	  let sav_set = (C.Set (tmp, t, e), loc) in
-	  let incr_set = Set (lv, Binop (Plus, Var tmp_name, Cst Int64.one)) in
+	  let incr_set = Set (lv, Binop (Plus, Var tmp_name, exp_of_int 1)) in
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
@@ -497,7 +497,7 @@ let translate fname (compdefs, globals) =
 
     and fill_with_zeros o t =
       match t with
-	  C.Int _ -> res := (o, t, C.Const Int64.zero)::!res
+	  C.Int _ -> res := (o, t, C.exp_of_int 0)::!res
 	| C.Array (t, Some n) -> 
 	    let sz = C.size_of compdefs t in
 	    let o = ref o in
@@ -525,7 +525,7 @@ let translate fname (compdefs, globals) =
 	let (_, t, init) = translate_init t (Some (Data (Str str))) in
 	  add_global name (t, loc, Some init)
       end;
-      (C.AddrOf (C.Index (C.Global name, a, C.Const Int64.zero), t), 
+      (C.AddrOf (C.Index (C.Global name, a, C.exp_of_int 0), t), 
       C.Ptr char_typ)
 
   and translate_blk x =

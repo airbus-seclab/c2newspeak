@@ -68,6 +68,17 @@ let translate_unop op e =
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 
+let translate_cst c =
+  match c with
+      CInt i -> N.CInt64 i
+    | CFloat s -> 
+	let c = 
+	  try float_of_string s 
+	  with Failure "float_of_string" -> 
+	    Npkcontext.error "Compiler.translate_cst" "Float not representable"
+	in
+	  N.CFloat (c, s)
+
 let translate fname (compdefs, cglbdecls, cfundefs) = 
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
@@ -176,7 +187,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 
   and translate_exp e =
     match e with
-	Const i -> K.Const (N.CInt64 i)
+	Const i -> K.Const (translate_cst i)
 
       | Lval (lv, t) -> 
 	  let lv = translate_lv lv in

@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 open Newspeak
+open Csyntax
 
 type prog = (Csyntax.compdefs * (global * location) list)
 
@@ -65,7 +66,7 @@ and static = bool
 and field = string
 
 and exp = 
-    | Cst of cst
+    | Cst of Csyntax.cst
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -84,8 +85,6 @@ and exp =
 (* returns the value and then increment it *)
     | ExpPlusPlus of exp
 
-and cst = Int64.t
-
 and unop = Not | BNot
 
 and binop =
@@ -102,7 +101,10 @@ and binop =
     | Shiftl
     | Shiftr
 
+let exp_of_int i = Cst (CInt (Int64.of_int i))
+
 let negate e = 
   match e with
-      Cst i when i <> Int64.min_int -> Cst (Int64.neg i)
-    | _ -> Binop (Minus, Cst Int64.zero, e)
+      Cst CInt i when i <> Int64.min_int -> Cst (CInt (Int64.neg i))
+    | _ -> Binop (Minus, exp_of_int 0, e)
+

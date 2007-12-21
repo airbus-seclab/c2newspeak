@@ -83,6 +83,7 @@ let digit = ['0'-'9']
 let string = '"' [^'"']* '"'
 
 let integer = digit+
+let float = digit+ '.' digit+
 let ull_integer = digit+ "ULL"
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
@@ -111,7 +112,7 @@ rule token = parse
 
 (* types *)
   | "char"              { CHAR }
-  | "double"             { DOUBLE }
+  | "double"            { DOUBLE }
   | "float"             { FLOAT }
   | "int"               { INT }
   | "short"             { SHORT }
@@ -126,6 +127,7 @@ rule token = parse
   | ull_integer         { INTEGER (int64_of_string lexbuf 3) }
   | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
   | backslash_character { INTEGER Int64.zero }
+  | float               { FLOATCST (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)

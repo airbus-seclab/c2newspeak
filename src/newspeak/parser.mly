@@ -94,6 +94,7 @@ let build_type_decl d =
 %token <string> TYPEDEF_NAME
 %token <string> STRING
 %token <Int64.t> INTEGER
+%token <string> FLOATCST
 
 /*
 %left AND
@@ -228,7 +229,8 @@ case:
 
 primary_expression:
   IDENTIFIER                               { Var $1 }
-| INTEGER                                  { Cst $1 }
+| INTEGER                                     { Cst (CInt $1) }
+| FLOATCST                                 { Cst (CFloat $1) }
 | STRING                                   { Str $1 }
 | LPAREN expression RPAREN                 { $2 }
 ;;
@@ -378,7 +380,7 @@ abstract_declarator:
 | pointer abstract_declarator              { Pointer $2 }
 | LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
-| LBRACKET INTEGER RBRACKET                { Array (Abstract, Some $2) }
+| LBRACKET INTEGER RBRACKET                   { Array (Abstract, Some $2) }
 | abstract_declarator 
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | abstract_declarator LPAREN RPAREN        { Function ($1, []) }
@@ -388,7 +390,7 @@ declarator:
 | pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
 | IDENTIFIER                               { Variable ($1, get_loc ()) }
-| declarator LBRACKET INTEGER RBRACKET     { Array ($1, Some $3) }
+| declarator LBRACKET INTEGER RBRACKET        { Array ($1, Some $3) }
 | declarator LBRACKET RBRACKET             { Array ($1, None) }
 | declarator LPAREN parameter_list RPAREN  { Function ($1, $3) }
 | declarator LPAREN RPAREN                 { Function ($1, []) }
