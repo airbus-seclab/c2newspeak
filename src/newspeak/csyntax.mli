@@ -94,6 +94,7 @@ and unop =
 and binop =
     | Plus of ikind
     | Minus of ikind
+    | Div of ikind
     | Mult of ikind
     | BAnd of ikind
     | BXor of ikind

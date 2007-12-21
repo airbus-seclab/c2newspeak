@@ -86,7 +86,7 @@ let build_type_decl d =
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND ARROW AND OR MINUS MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
+%token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token EOF
 
@@ -266,6 +266,8 @@ multiplicative_expression:
   cast_expression                          { $1 }
 | multiplicative_expression STAR 
   cast_expression                          { Binop (Mult, $1, $3) }
+| multiplicative_expression DIV 
+  cast_expression                          { Binop (Div, $1, $3) }
 | multiplicative_expression MOD 
   cast_expression                          { Binop (Mod, $1, $3) }
 ;;

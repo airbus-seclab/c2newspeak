@@ -93,6 +93,8 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	translate_arithmop (fun x -> C.Plus x) (e1, k1) (e2, k2)
     | (Minus, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
+    | (Div, C.Int k1, C.Int k2) -> 
+	translate_arithmop (fun x -> C.Div x) (e1, k1) (e2, k2)
     | (Mod, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
     | (BAnd, C.Int k1, C.Int k2) -> 

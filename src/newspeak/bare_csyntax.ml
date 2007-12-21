@@ -92,6 +92,7 @@ and binop =
     | Plus
     | Minus
     | Mult
+    | Div
     | Mod
     | Gt
     | Eq
