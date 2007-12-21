@@ -117,6 +117,13 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	let t = C.Ptr elt_t in
 	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
 
+    | (Minus, (C.Ptr _ | C.Array _), C.Int _) -> 
+	let (op, e1', e2', t2) = 
+	  translate_binop Minus (exp_of_int 0, t2) (e2, t2) 
+	in
+	let e2 = C.Binop (op, e1', e2') in
+ 	  translate_binop Plus (e1, t1) (e2, t2)
+
       (* Integer comparisons *)
     | (Gt, C.Int k1, C.Int k2) -> 
 	translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
@@ -227,7 +234,6 @@ let translate fname (compdefs, globals) =
     with Not_found -> 
       Npkcontext.error "Firstpass.get_ret_typ" 
 	"Function does not return any value"
-
   in
 
   let rec translate_lv x =

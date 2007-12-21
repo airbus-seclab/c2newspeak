@@ -714,6 +714,16 @@ object
       | BinOp (MultI, Const CInt64 o, e) 
 	  when Int64.compare o Int64.one = 0 -> e
 
+      | BinOp (MultI, Const CInt64 i1, Const CInt64 i2) 
+	  when (Int64.compare i1 (Int64.of_int (-1)) = 0) 
+	    && (Int64.compare i2 Int64.min_int <> 0)  -> 
+	  Const (CInt64 (Int64.neg i2))
+
+      | BinOp (MultI, Const CInt64 i2, Const CInt64 i1) 
+	  when (Int64.compare i1 (Int64.of_int (-1)) = 0) 
+	    && (Int64.compare i2 Int64.min_int <> 0)  -> 
+	  Const (CInt64 (Int64.neg i2))
+
       | BinOp (PlusI, Const CInt64 x, e) 
 	  when (Int64.compare x Int64.zero = 0) -> e
       | BinOp (PlusI, e, Const CInt64 x) 
