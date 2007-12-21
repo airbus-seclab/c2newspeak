@@ -87,7 +87,7 @@ let build_type_decl d =
 %token COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
-%token SHIFTL SHIFTR BXOR BOR
+%token SHIFTL SHIFTR BXOR BOR BNOT
 %token EOF
 
 %token <string> IDENTIFIER
@@ -249,6 +249,7 @@ unary_expression:
   postfix_expression                       { $1 }
 | AMPERSAND cast_expression                { AddrOf $2 }
 | STAR cast_expression                     { Deref $2 }
+| BNOT cast_expression                     { Unop (BNot, $2) }
 | MINUS cast_expression                    { negate $2 }
 | NOT cast_expression                      { Unop (Not, $2) }
 | SIZEOF LPAREN unary_expression RPAREN    { SizeofE $3 }

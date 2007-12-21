@@ -80,7 +80,7 @@ and exp =
 
 and cst = Int64.t
 
-and unop = Not
+and unop = Not | BNot
 
 and binop =
     | Plus

@@ -162,6 +162,7 @@ rule token = parse
   | ">>"                { SHIFTR }
   | "^"                 { BXOR }
   | "|"                 { BOR }
+  | "~"                 { BNOT }
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 

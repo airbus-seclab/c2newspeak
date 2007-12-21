@@ -88,6 +88,7 @@ and exp =
 
 and unop = 
     | Not
+    | BNot of ikind
     | Cast of (typ * typ)
 
 and binop =
@@ -119,8 +120,6 @@ val size_of: compdefs -> typ -> int
 val int_typ: typ
 
 val typ_of_cst: cst -> typ
-
-val typ_of_unop: unop -> typ
 
 val promote: ikind -> ikind
 

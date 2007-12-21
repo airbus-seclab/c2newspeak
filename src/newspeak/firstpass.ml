@@ -72,9 +72,16 @@ let translate_arithmop op (e1, k1) (e2, k2) =
   let t = C.Int k in
     (op k, C.cast (e1, C.Int k1) t, C.cast (e2, C.Int k2) t, t)
 
-let translate_unop op = 
-  match op with
-      Not -> C.Not
+let translate_unop op (e, t) = 
+  match (op, t) with
+      (Not, C.Int _) -> (C.Not, e, int_typ)
+    | (BNot, C.Int k) -> 
+	let k' = C.promote k in
+	let t' = C.Int k' in
+	  (C.BNot k', C.cast (e, t) t', t')
+    | _ -> 
+	Npkcontext.error "Csyntax.translate_unop" 
+	  "Unexpected unary operator and argument"
 
 let rec translate_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
@@ -126,7 +133,7 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	  (C.Eq t1, e1, e2, int_typ)
 	  
     | _ ->
-	Npkcontext.error "Csyntax.type_of_binop" 
+	Npkcontext.error "Csyntax.translate_binop" 
 	  "Unexpected binary operator and arguments"
 
 let translate fname (compdefs, globals) =
@@ -262,9 +269,8 @@ let translate fname (compdefs, globals) =
 	    (pref, (C.AddrOf (lv, t), C.Ptr t))
 
       | Unop (op, e) -> 
-	  let (pref, (e, t)) = translate_exp e in
-	  let op = translate_unop op in
-	  let t = C.typ_of_unop op in
+	  let (pref, e) = translate_exp e in
+	  let (op, e, t) = translate_unop op e in
 	    (pref, (C.Unop (op, e), t))
 
       | Binop (op, e1, e2) -> 

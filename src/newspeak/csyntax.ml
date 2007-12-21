@@ -93,6 +93,7 @@ and exp =
 
 and unop = 
     | Not
+    | BNot of ikind
     | Cast of (typ * typ)
 
 and binop =
@@ -165,11 +166,6 @@ let promote k =
   match k with
       (_, n) when n < Config.size_of_int -> (Signed, Config.size_of_int)
     | _ -> k
-
-let typ_of_unop op =
-  match op with
-      Not -> int_typ
-    | Cast (_, t) -> t
 
 let exp_of_int n = Const (Int64.of_int n)
 

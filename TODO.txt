@@ -1,3 +1,6 @@
+FOREACH operator do non-regression tests with all possible types.
+
+
 CAREFUL with OPTIMIZATIONS: should not remove any operations that might
 be erroneous !!
 
