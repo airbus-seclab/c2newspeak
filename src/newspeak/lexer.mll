@@ -111,6 +111,7 @@ rule token = parse
 
 (* types *)
   | "char"              { CHAR }
+  | "double"             { DOUBLE }
   | "float"             { FLOAT }
   | "int"               { INT }
   | "short"             { SHORT }
