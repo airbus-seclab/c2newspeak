@@ -540,7 +540,7 @@ let cast t e t' =
 	Npkcontext.print_warning "Compiler.cast"
 	  ("Probable invalid cast "^(string_of_cast t t'));
 	UnOp (PtrToInt k, e)
-    | (Float _, Float _) -> UnOp (Cast (t, t'), e)
+    | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | _ -> 
 	Npkcontext.error "Compiler.cast"
 	  ("Invalid cast "^(string_of_cast t t'))
