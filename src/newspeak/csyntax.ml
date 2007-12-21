@@ -105,6 +105,7 @@ and binop =
     | BOr of ikind
     | Mod
     | PlusP of typ
+    | MinusP
     | Gt of typ
     | Eq of typ
     | Shiftl of ikind
@@ -160,7 +161,9 @@ let typ_of_cst i =
   in
     Int (sign, Config.size_of_int)
 
-let int_typ = Int (Signed, Config.size_of_int)
+let int_kind = (Signed, Config.size_of_int)
+
+let int_typ = Int int_kind
 
 let promote k = 
   match k with

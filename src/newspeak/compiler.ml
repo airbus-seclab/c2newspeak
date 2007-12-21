@@ -132,6 +132,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       | PlusP t -> 
 	  let stride = K.exp_of_int (size_of compdefs t) in 
 	    K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
+      | MinusP -> K.make_int_coerce int_kind (K.BinOp (N.MinusPP, e1, e2))
 
       (* TODO: clean bug ? maybe a cast is necessary ? *)
       | Gt t -> 

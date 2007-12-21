@@ -100,6 +100,7 @@ and binop =
     | BOr of ikind
     | Mod
     | PlusP of typ
+    | MinusP
     | Gt of typ
     | Eq of typ
     | Shiftl of ikind
@@ -116,6 +117,8 @@ val array_of_typ: typ -> array_t
 val deref_typ: typ -> typ
 
 val size_of: compdefs -> typ -> int
+
+val int_kind: ikind
 
 val int_typ: typ
 

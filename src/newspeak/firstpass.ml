@@ -113,16 +113,23 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 
     (* Pointer operations *)
     | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
-    | (Plus, C.Array (elt_t, _), _) -> 
-	let t = C.Ptr elt_t in
-	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
-
-    | (Minus, (C.Ptr _ | C.Array _), C.Int _) -> 
+    | (Minus, C.Ptr _, C.Int _) -> 
 	let (op, e1', e2', t2) = 
 	  translate_binop Minus (exp_of_int 0, t2) (e2, t2) 
 	in
 	let e2 = C.Binop (op, e1', e2') in
  	  translate_binop Plus (e1, t1) (e2, t2)
+    | (Minus, C.Ptr _, C.Ptr _) -> (C.MinusP, e1, e2, int_typ)
+
+    | (Plus, C.Array (elt_t, _), _) -> 
+	let t = C.Ptr elt_t in
+	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
+    | (Minus, C.Array (elt_t, _), _) ->
+	let t = C.Ptr elt_t in
+	  translate_binop Minus (C.cast (e1, t1) t, t) (e2, t2)
+    | (Minus, _, C.Array (elt_t, _)) ->
+	let t = C.Ptr elt_t in
+	  translate_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
 
       (* Integer comparisons *)
     | (Gt, C.Int k1, C.Int k2) -> 
