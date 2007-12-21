@@ -121,6 +121,10 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       | Plus k -> translate_arithmop N.PlusI e1 e2 k
       | Minus k -> translate_arithmop N.MinusI e1 e2 k
       | Div k -> translate_arithmop N.DivI e1 e2 k
+      | MultF n -> K.BinOp (N.MultF n, e1, e2)
+      | PlusF n -> K.BinOp (N.PlusF n, e1, e2)
+      | MinusF n -> K.BinOp (N.MinusF n, e1, e2)
+      | DivF n -> K.BinOp (N.DivF n, e1, e2)
       | BAnd k -> K.BinOp (N.BAnd (N.domain_of_typ k), e1, e2)
       | BXor k -> K.BinOp (N.BXor (N.domain_of_typ k), e1, e2)
       | BOr k -> K.BinOp (N.BOr (N.domain_of_typ k), e1, e2)

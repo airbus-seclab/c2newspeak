@@ -111,6 +111,10 @@ and binop =
     | Eq of typ
     | Shiftl of ikind
     | Shiftr of ikind
+    | PlusF of int
+    | MinusF of int
+    | DivF of int
+    | MultF of int
 
 and cst = Int64.t
 

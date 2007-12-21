@@ -549,6 +549,13 @@ let cast t e t' =
 	  ("Probable invalid cast "^(string_of_cast t t'));
 	  UnOp (IntToPtr k, e)
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
+    | (Float _, Int (sign, _)) -> 
+	if (sign = Unsigned) then begin
+	  Npkcontext.print_warning "Npkil.cast"
+	    ("Cast from float to unsigned integer: "
+	      ^"sign may be lost: "^(string_of_cast t t'))
+	end;
+	UnOp (Cast (t, t'), e)
     | _ -> 
 	Npkcontext.error "Compiler.cast"
 	  ("Invalid cast "^(string_of_cast t t'))

@@ -72,6 +72,11 @@ let translate_arithmop op (e1, k1) (e2, k2) =
   let t = C.Int k in
     (op k, C.cast (e1, C.Int k1) t, C.cast (e2, C.Int k2) t, t)
 
+let translate_floatop op (e1, n1) (e2, n2) =
+  let n = max n1 n2 in
+  let t = C.Float n in
+    (op n, C.cast (e1, C.Float n1) t, C.cast (e2, C.Float n2) t, t)
+
 let translate_unop op (e, t) = 
   match (op, t) with
       (Not, C.Int _) -> (C.Not, e, int_typ)
@@ -112,6 +117,24 @@ let rec translate_binop op (e1, t1) (e2, t2) =
 	let k = C.promote k1 in
 	let t = C.Int k in
 	  (C.Shiftr k, e1, e2, t)
+
+     (* Float operations *)
+    | (Mult, C.Float n1, C.Float n2) -> 
+	translate_floatop (fun x -> C.MultF x) (e1, n1) (e2, n2)
+    | (Plus, C.Float n1, C.Float n2) -> 
+	translate_floatop (fun x -> C.PlusF x) (e1, n1) (e2, n2)
+    | (Minus, C.Float n1, C.Float n2) -> 
+	translate_floatop (fun x -> C.MinusF x) (e1, n1) (e2, n2)
+    | (Div, C.Float n1, C.Float n2) -> 
+	translate_floatop (fun x -> C.DivF x) (e1, n1) (e2, n2)
+
+    | (Mult|Plus|Minus|Div as op, C.Float _, C.Int _) ->
+	let e2 = C.cast (e2, t2) t1 in
+	  translate_binop op (e1, t1) (e2, t1)
+
+    | (Mult|Plus|Minus|Div as op, C.Int _, C.Float _) ->
+	let e1 = C.cast (e1, t1) t2 in
+	  translate_binop op (e1, t2) (e2, t2)
 
     (* Pointer operations *)
     | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
