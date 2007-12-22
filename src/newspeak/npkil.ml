@@ -535,7 +535,7 @@ let cast t e t' =
     match (t, t') with
       _ when t = t' -> e
     | (Int _, Int k) -> make_int_coerce k e
-    | (Int _, Ptr) when e = zero -> Const Nil
+    | (Int _, (Ptr|FunPtr)) when e = zero -> Const Nil
     | (Ptr, Int ((_, n) as k)) 
 	when (!Npkcontext.castor_allowed 
 	       && (n = Config.size_of_ptr)) -> 

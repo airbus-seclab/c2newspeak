@@ -84,7 +84,7 @@ let int64_of_string lexbuf strip_cnt =
       let pos = Lexing.lexeme_start_p lexbuf in
       let pos = pos.pos_fname^" line "^(string_of_int pos.pos_lnum) in
 	Npkcontext.error "Lexer.int64_of_string" 
-	  ("integer too large: not representable in "^pos)
+	  ("integer too large: not representable")
     end;
     i
 
