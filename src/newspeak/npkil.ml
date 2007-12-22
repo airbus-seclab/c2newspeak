@@ -548,6 +548,10 @@ let cast t e t' =
 	Npkcontext.print_warning "Npkil.cast"
 	  ("Probable invalid cast "^(string_of_cast t t'));
 	  UnOp (IntToPtr k, e)
+    | (FunPtr, Ptr) when !Npkcontext.castor_allowed ->
+	Npkcontext.print_warning "Npkil.cast"
+	  ("Probable invalid cast "^(string_of_cast t t'));
+	UnOp (Cast (t, t'), e)
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | (Float _, Int (sign, _)) -> 
 	if (sign = Unsigned) then begin
