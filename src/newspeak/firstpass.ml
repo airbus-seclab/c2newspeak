@@ -92,11 +92,10 @@ let rec simplify_binop op (e1, t1) (e2, t2) =
     | (Minus, C.Array (elt_t, _), _) ->
 	let t = C.Ptr elt_t in
 	  simplify_binop Minus (C.cast (e1, t1) t, t) (e2, t2)
-
     | (Minus, _, C.Array (elt_t, _)) ->
 	let t = C.Ptr elt_t in
 	  simplify_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
-	    
+
     | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Float _, C.Int _) ->
 	let e2 = C.cast (e2, t2) t1 in
 	  (op, (e1, t1), (e2, t1))
@@ -106,6 +105,23 @@ let rec simplify_binop op (e1, t1) (e2, t2) =
 	  (op, (e1, t2), (e2, t2))
 	    
     | _ -> (op, (e1, t1), (e2, t2))
+
+(*	    
+    | (Gt, C.Array (elt_t, _), C.Int _) -> 
+	let t = C.Ptr elt_t in
+	  simplify_binop Gt (C.cast (e1, t1) t, t) (e2, t2)
+    | (Gt, C.Int _, C.Array (elt_t, _)) ->
+	let t = C.Ptr elt_t in
+	  simplify_binop Gt (e1, t1) (C.cast (e2, t2) t, t)
+
+    | (Eq, C.Array (elt_t, _), C.Int _) -> 
+	let t = C.Ptr elt_t in
+	  simplify_binop Eq (C.cast (e1, t1) t, t) (e2, t2)
+    | (Eq, C.Int _, C.Array (elt_t, _)) ->
+	let t = C.Ptr elt_t in
+	  simplify_binop Eq (e1, t1) (C.cast (e2, t2) t, t)
+*)
+
 
 and translate_binop op e1 e2 =
   let (op, (e1, t1), (e2, t2)) = simplify_binop op e1 e2 in

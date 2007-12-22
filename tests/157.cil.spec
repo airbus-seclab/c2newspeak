@@ -1,0 +1,6 @@
+Newspeak output
+---------------
+main() {
+}
+
+
