@@ -236,17 +236,34 @@ let translate fname (compdefs, globals) =
       x
   in
 
-  let add_global x d =
-    let (t, _, _) = d in
-      Hashtbl.add global_env x (t, x);
-      Hashtbl.add glbdecls x d
+  let update_global x name (t, loc, init) =
+    try 
+      let (prev_t, _, prev_init) = Hashtbl.find glbdecls name in
+	if (t <> prev_t) then begin
+	  Npkcontext.error "Firstpass.update_global" 
+	    ("Global variable "^x^" declared with different types")
+	end;
+	let init = 
+	  match (prev_init, init) with
+	      (None, Some _) | (Some None, Some _) -> init
+	    | (Some _, None) | (Some _, Some None) -> prev_init
+	    | (None, None) -> None
+	    | (Some Some _, Some Some _) -> 
+		Npkcontext.error "Firstpass.update_global"
+		  ("Global variable "^x^" initialized twice")
+	in
+	  Hashtbl.replace global_env x (t, name);
+	  Hashtbl.replace glbdecls name (t, loc, init)	  
+    with Not_found -> 
+      Hashtbl.add global_env x (t, name);
+      Hashtbl.add glbdecls name (t, loc, init)
   in
 
+  let add_global x d = update_global x x d in
+
   let add_static x d =
-    let (t, _, _) = d in
     let name = !static_pref^x in
-      Hashtbl.add global_env x (t, name);
-      Hashtbl.add glbdecls name d
+      update_global x name d
   in
 
   let remove_static x = Hashtbl.remove global_env x in
