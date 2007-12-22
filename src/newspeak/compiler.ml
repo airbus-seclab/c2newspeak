@@ -470,7 +470,16 @@ let parse fname =
 
 
 let compile fname =
+  Npkcontext.print_debug ("Parsing "^fname^"...");
   let prog = parse fname in
-  let prog = Firstpass.translate fname prog in
-    translate fname prog
+    Npkcontext.forget_loc ();
+    Npkcontext.print_debug "Parsing done.";
+    Npkcontext.print_debug "Running first pass...";
+    let prog = Firstpass.translate fname prog in
+      Npkcontext.forget_loc ();
+      Npkcontext.print_debug "First pass done.";
+      Npkcontext.print_debug ("Translating "^fname^"...");
+      let prog = translate fname prog in
+	Npkcontext.forget_loc ();
+	prog
   
