@@ -32,8 +32,18 @@ let compile fname =
   if not (Filename.check_suffix fname Params.c_suffix)
   then error "C2newspeak.compile" (fname^" is not a .c file");
 
-  if !Npkcontext.use_cil then Cilcompiler.compile fname
-  else Compiler.compile fname
+  let prog =
+    if !Npkcontext.use_cil then Cilcompiler.compile fname
+    else Compiler.compile fname
+  in
+    if (!Npkcontext.verb_npko) then begin
+      print_endline "Newspeak Object output";
+      print_endline "----------------------";
+      Npkil.dump_npko prog;
+      print_newline ();
+    end;
+    prog
+
 
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 

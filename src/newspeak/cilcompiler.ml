@@ -856,16 +856,6 @@ let compile in_name =
       
       let prog = Cilenv.create_npkil in_name in
 	
-	Cilenv.init_env ();
-	
-	if (!verb_npko) then begin
-	  print_endline "Newspeak Object output";
-	  print_endline "----------------------";
-	  K.dump_npko prog;
-	  print_newline ();
-	end;
-	
 	Npkcontext.forget_loc ();
-	
 	Cilenv.init_env ();
 	prog

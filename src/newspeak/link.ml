@@ -218,12 +218,8 @@ let generate_global name (t, loc, init, used) =
 	    error "Npklink.handle_real_glob:" 
 	      ("extern not accepted: "^name)
     in
-      try
-	let t = replace_typ t in
-	  Hashtbl.add globals name (t, replace_init i)
-      with LenOfArray -> 
-	error "Npklink.handle_real_glob" 
-	  ("unspecified length for global array "^name)
+    let t = replace_typ t in
+      Hashtbl.add globals name (t, replace_init i)
   end
 
 let write_fun cout f spec =
