@@ -77,103 +77,121 @@ let translate_floatop op (e1, n1) (e2, n2) =
   let t = C.Float n in
     (op n, C.cast (e1, C.Float n1) t, C.cast (e2, C.Float n2) t, t)
 
+let translate_cst c = (C.Const c, C.typ_of_cst c)
+
+let rec simplify_binop op (e1, t1) (e2, t2) =
+  match (op, t1, t2) with
+    | (Minus, C.Ptr _, C.Int _) -> 
+	let e2 = translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) in
+ 	  (Plus, (e1, t1), e2)
+
+    | (Plus, C.Array (elt_t, _), _) -> 
+	let t = C.Ptr elt_t in
+	  (Plus, (C.cast (e1, t1) t, t), (e2, t2))
+
+    | (Minus, C.Array (elt_t, _), _) ->
+	let t = C.Ptr elt_t in
+	  simplify_binop Minus (C.cast (e1, t1) t, t) (e2, t2)
+
+    | (Minus, _, C.Array (elt_t, _)) ->
+	let t = C.Ptr elt_t in
+	  simplify_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
+	    
+    | (Mult|Plus|Minus|Div as op, C.Float _, C.Int _) ->
+	let e2 = C.cast (e2, t2) t1 in
+	  (op, (e1, t1), (e2, t1))
+	    
+    | (Mult|Plus|Minus|Div as op, C.Int _, C.Float _) ->
+	let e1 = C.cast (e1, t1) t2 in
+	  (op, (e1, t2), (e2, t2))
+	    
+    | _ -> (op, (e1, t1), (e2, t2))
+
+and translate_binop op e1 e2 =
+  let (op, (e1, t1), (e2, t2)) = simplify_binop op e1 e2 in
+  let (op, e1, e2, t) =
+    match (op, t1, t2) with
+	(* Arithmetic operations *)
+	(* TODO: code cleanup? factor? *)
+	(Mult, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
+      | (Plus, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.Plus x) (e1, k1) (e2, k2)
+      | (Minus, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
+      | (Div, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.Div x) (e1, k1) (e2, k2)
+      | (Mod, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
+      | (BAnd, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.BAnd x) (e1, k1) (e2, k2)
+      | (BXor, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.BXor x) (e1, k1) (e2, k2)
+      | (BOr, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.BOr x) (e1, k1) (e2, k2)
+	    
+      | (Shiftl, C.Int k1, C.Int k2) -> 
+	  let k = C.promote k1 in
+	  let t = C.Int k in
+	    (C.Shiftl k, e1, e2, t)
+      | (Shiftr, C.Int k1, C.Int k2) -> 
+	  let k = C.promote k1 in
+	  let t = C.Int k in
+	    (C.Shiftr k, e1, e2, t)
+	      
+      (* Float operations *)
+      | (Mult, C.Float n1, C.Float n2) -> 
+	  translate_floatop (fun x -> C.MultF x) (e1, n1) (e2, n2)
+      | (Plus, C.Float n1, C.Float n2) -> 
+	  translate_floatop (fun x -> C.PlusF x) (e1, n1) (e2, n2)
+      | (Minus, C.Float n1, C.Float n2) -> 
+	  translate_floatop (fun x -> C.MinusF x) (e1, n1) (e2, n2)
+      | (Div, C.Float n1, C.Float n2) -> 
+	  translate_floatop (fun x -> C.DivF x) (e1, n1) (e2, n2)
+	    
+      (* Pointer operations *)
+      | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
+
+      | (Minus, C.Ptr _, C.Ptr _) -> (C.MinusP, e1, e2, int_typ)
+	  
+      (* Integer comparisons *)
+      | (Gt, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
+      | (Eq, C.Int k1, C.Int k2) -> 
+	  translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
+	    
+      (* Pointer comparisons *)
+      | (Eq, C.Ptr _, C.Ptr _) -> (C.Eq t1, e1, e2, int_typ)
+      | (Eq, C.Int _, C.Ptr _) ->
+	  let e1 = C.cast (e1, t1) t2 in
+	    (C.Eq t2, e1, e2, int_typ)
+      | (Eq, C.Ptr _, C.Int _) ->
+	  let e2 = C.cast (e2, t2) t1 in
+	    (C.Eq t1, e1, e2, int_typ)
+	      
+      | _ ->
+	  Npkcontext.error "Csyntax.translate_binop" 
+	    "Unexpected binary operator and arguments"
+  in
+    (C.Binop (op, e1, e2), t)
+
 let translate_unop op (e, t) = 
-  match (op, t) with
-      (Not, C.Int _) -> (C.Not, e, int_typ)
-    | (BNot, C.Int k) -> 
+  match (op, t, e) with
+      (Neg, C.Int _, C.Const C.CInt c) 
+	when Int64.compare c Int64.min_int <> 0 -> 
+	  translate_cst (C.CInt (Int64.neg c))
+    | (Neg, C.Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
+    | (Neg, C.Float _, _) -> 
+	translate_binop Minus (C.Const (CFloat "0."), t) (e, t)
+    | (Not, C.Int _, _) -> (C.Unop (C.Not, e), int_typ)
+    | (BNot, C.Int k, _) -> 
 	let k' = C.promote k in
 	let t' = C.Int k' in
-	  (C.BNot k', C.cast (e, t) t', t')
+	  (C.Unop (C.BNot k', C.cast (e, t) t'), t')
     | _ -> 
 	Npkcontext.error "Csyntax.translate_unop" 
 	  "Unexpected unary operator and argument"
 
-let rec translate_binop op (e1, t1) (e2, t2) =
-  match (op, t1, t2) with
-      (* Arithmetic operations *)
-      (* TODO: code cleanup? factor? *)
-      (Mult, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
-    | (Plus, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.Plus x) (e1, k1) (e2, k2)
-    | (Minus, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
-    | (Div, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.Div x) (e1, k1) (e2, k2)
-    | (Mod, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
-    | (BAnd, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.BAnd x) (e1, k1) (e2, k2)
-    | (BXor, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.BXor x) (e1, k1) (e2, k2)
-    | (BOr, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.BOr x) (e1, k1) (e2, k2)
-
-    | (Shiftl, C.Int k1, C.Int k2) -> 
-	let k = C.promote k1 in
-	let t = C.Int k in
-	  (C.Shiftl k, e1, e2, t)
-    | (Shiftr, C.Int k1, C.Int k2) -> 
-	let k = C.promote k1 in
-	let t = C.Int k in
-	  (C.Shiftr k, e1, e2, t)
-
-     (* Float operations *)
-    | (Mult, C.Float n1, C.Float n2) -> 
-	translate_floatop (fun x -> C.MultF x) (e1, n1) (e2, n2)
-    | (Plus, C.Float n1, C.Float n2) -> 
-	translate_floatop (fun x -> C.PlusF x) (e1, n1) (e2, n2)
-    | (Minus, C.Float n1, C.Float n2) -> 
-	translate_floatop (fun x -> C.MinusF x) (e1, n1) (e2, n2)
-    | (Div, C.Float n1, C.Float n2) -> 
-	translate_floatop (fun x -> C.DivF x) (e1, n1) (e2, n2)
-
-    | (Mult|Plus|Minus|Div as op, C.Float _, C.Int _) ->
-	let e2 = C.cast (e2, t2) t1 in
-	  translate_binop op (e1, t1) (e2, t1)
-
-    | (Mult|Plus|Minus|Div as op, C.Int _, C.Float _) ->
-	let e1 = C.cast (e1, t1) t2 in
-	  translate_binop op (e1, t2) (e2, t2)
-
-    (* Pointer operations *)
-    | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
-    | (Minus, C.Ptr _, C.Int _) -> 
-	let (op, e1', e2', t2) = 
-	  translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) 
-	in
-	let e2 = C.Binop (op, e1', e2') in
- 	  translate_binop Plus (e1, t1) (e2, t2)
-    | (Minus, C.Ptr _, C.Ptr _) -> (C.MinusP, e1, e2, int_typ)
-
-    | (Plus, C.Array (elt_t, _), _) -> 
-	let t = C.Ptr elt_t in
-	  translate_binop Plus (C.cast (e1, t1) t, t) (e2, t2)
-    | (Minus, C.Array (elt_t, _), _) ->
-	let t = C.Ptr elt_t in
-	  translate_binop Minus (C.cast (e1, t1) t, t) (e2, t2)
-    | (Minus, _, C.Array (elt_t, _)) ->
-	let t = C.Ptr elt_t in
-	  translate_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
-
-      (* Integer comparisons *)
-    | (Gt, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
-    | (Eq, C.Int k1, C.Int k2) -> 
-	translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
-
-      (* Pointer comparisons *)
-    | (Eq, C.Ptr _, C.Ptr _) ->	(C.Eq t1, e1, e2, int_typ)
-    | (Eq, C.Int _, C.Ptr _) ->
-	let e1 = C.cast (e1, t1) t2 in
-	  (C.Eq t2, e1, e2, int_typ)
-    | (Eq, C.Ptr _, C.Int _) ->
-	let e2 = C.cast (e2, t2) t1 in
-	  (C.Eq t1, e1, e2, int_typ)
-	  
-    | _ ->
-	Npkcontext.error "Csyntax.translate_binop" 
-	  "Unexpected binary operator and arguments"
 
 let translate fname (compdefs, globals) =
   let glbdecls = Hashtbl.create 100 in
@@ -296,7 +314,7 @@ let translate fname (compdefs, globals) =
 
   and translate_exp x =
     match x with
-	Cst i -> ([], (C.Const i, C.typ_of_cst i))
+	Cst i -> ([], translate_cst i)
 
       | Var _ | Field _ | Index _ | Deref _ -> 
 	  let (pref, (lv, t)) = translate_lv x in
@@ -308,14 +326,14 @@ let translate fname (compdefs, globals) =
 
       | Unop (op, e) -> 
 	  let (pref, e) = translate_exp e in
-	  let (op, e, t) = translate_unop op e in
-	    (pref, (C.Unop (op, e), t))
+	  let e = translate_unop op e in
+	    (pref, e)
 
       | Binop (op, e1, e2) -> 
 	  let (pref1, e1) = translate_exp e1 in
 	  let (pref2, e2) = translate_exp e2 in
-	  let (op, e1, e2, t) = translate_binop op e1 e2 in
-	    (pref1@pref2, (C.Binop (op, e1, e2), t))
+	  let e = translate_binop op e1 e2 in
+	    (pref1@pref2, e)
 
       | Call (f, args) -> translate_call f args
 
@@ -385,7 +403,6 @@ let translate fname (compdefs, globals) =
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
-
 
   and translate_arg e (t, _) = 
     let (pref, e) = translate_exp e in

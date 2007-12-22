@@ -85,7 +85,7 @@ and exp =
 (* returns the value and then increment it *)
     | ExpPlusPlus of exp
 
-and unop = Not | BNot
+and unop = Neg | Not | BNot
 
 and binop =
     | Plus
@@ -102,9 +102,4 @@ and binop =
     | Shiftr
 
 let exp_of_int i = Cst (CInt (Int64.of_int i))
-
-let negate e = 
-  match e with
-      Cst CInt i when i <> Int64.min_int -> Cst (CInt (Int64.neg i))
-    | _ -> Binop (Minus, exp_of_int 0, e)
 

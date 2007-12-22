@@ -78,7 +78,7 @@ and exp =
 (* returns the value and then increment it *)
     | ExpPlusPlus of exp
 
-and unop = Not | BNot
+and unop = Neg | Not | BNot
 
 and binop =
     | Plus
@@ -93,7 +93,5 @@ and binop =
     | BOr
     | Shiftl
     | Shiftr
-
-val negate: exp -> exp
 
 val exp_of_int: int -> exp
