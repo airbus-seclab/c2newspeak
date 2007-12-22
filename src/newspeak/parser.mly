@@ -192,6 +192,7 @@ statement_list:
 statement:
   declaration                              { build_stmtdecl false $1 }
 | STATIC declaration                       { build_stmtdecl true $2 }
+| TYPEDEF declaration                      { build_typedef $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
