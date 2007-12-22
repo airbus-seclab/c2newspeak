@@ -97,11 +97,11 @@ let rec simplify_binop op (e1, t1) (e2, t2) =
 	let t = C.Ptr elt_t in
 	  simplify_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
 	    
-    | (Mult|Plus|Minus|Div as op, C.Float _, C.Int _) ->
+    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Float _, C.Int _) ->
 	let e2 = C.cast (e2, t2) t1 in
 	  (op, (e1, t1), (e2, t1))
 	    
-    | (Mult|Plus|Minus|Div as op, C.Int _, C.Float _) ->
+    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Int _, C.Float _) ->
 	let e1 = C.cast (e1, t1) t2 in
 	  (op, (e1, t2), (e2, t2))
 	    
@@ -159,6 +159,12 @@ and translate_binop op e1 e2 =
 	  translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
       | (Eq, C.Int k1, C.Int k2) -> 
 	  translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
+
+      (* Float comparisons *)
+      | (Gt, C.Float n1, C.Float n2) -> 
+	  translate_floatop (fun x -> C.Gt (C.Float x)) (e1, n1) (e2, n2)
+      | (Eq, C.Float n1, C.Float n2) -> 
+	  translate_floatop (fun x -> C.Eq (C.Float x)) (e1, n1) (e2, n2)
 	    
       (* Pointer comparisons *)
       | (Eq, C.Ptr _, C.Ptr _) -> (C.Eq t1, e1, e2, int_typ)
