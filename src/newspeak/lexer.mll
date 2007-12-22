@@ -27,22 +27,50 @@
 open Parser
 open Lexing
 
+let set_loc pos = 
+  Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
+
+
 let init fname lexbuf = 
   let pos = 
     { lexbuf.lex_curr_p with pos_fname = fname }
   in
-    lexbuf.lex_curr_p <- pos
+    lexbuf.lex_curr_p <- pos;
+    set_loc pos
   
 let cnt_line lexbuf =
   let pos = 
     { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 }
   in
-    lexbuf.lex_curr_p <- pos
+    lexbuf.lex_curr_p <- pos;
+    set_loc pos
+
+let report_pragma lexeme =
+  let start = 8 in (* The number of characters in #pragma_ *)
+  let end_idx  = 
+    try String.index lexeme '\r' 
+    with Not_found -> 
+      try String.index lexeme '\n'
+      with Not_found -> 
+	Npkcontext.error "Lexer.report_pragma" 
+	  "Unreachable statement"
+  in
+  let len = end_idx - start in
+  let lexeme = String.sub lexeme start len in
+    if !Npkcontext.ignores_pragmas then begin
+      Npkcontext.print_warning "Lexer.report_pragma" 
+	("Directive #pragma ignored: "^lexeme)
+    end else begin
+      Npkcontext.error "Lexer.report_pragma"
+	("Directive #pragma not supported: "^lexeme)
+    end
 
 let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
   let line = string_of_int pos.pos_lnum in
-    "Lexer.mll: line: "^line^", unknown keyword: "^(Lexing.lexeme lexbuf)
+  let lexeme = Lexing.lexeme lexbuf in
+  let err_msg = "Lexer.mll: line: "^line^", unknown keyword: "^lexeme in
+    Npkcontext.error "Lexer.unknown_lexeme" err_msg
 
 let int64_of_string lexbuf strip_cnt = 
   let lexeme = Lexing.lexeme lexbuf in
@@ -74,8 +102,10 @@ let token_of_ident str =
 
 let white_space = ' ' | '\t'
 let line_terminator = '\r' | '\n' | "\r\n"
+let line = [^'\r''\n']* line_terminator
 
-let line_comment = "//" [^'\r''\n']* line_terminator
+let line_comment = "//" line
+let pragma = "#pragma" line
 
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
@@ -169,6 +199,9 @@ rule token = parse
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
+  | pragma              { report_pragma (Lexing.lexeme lexbuf);
+			  cnt_line lexbuf; 
+			  token lexbuf }
   | "/*"                { comment lexbuf }
   | line_comment        { cnt_line lexbuf; token lexbuf }
   | line_terminator     { cnt_line lexbuf; token lexbuf }
@@ -176,7 +209,7 @@ rule token = parse
 
   | eof                 { EOF }
 (* error fallback *)
-  | _                   { invalid_arg (unknown_lexeme lexbuf) }
+  | _                   { unknown_lexeme lexbuf }
 
 
 and comment = parse

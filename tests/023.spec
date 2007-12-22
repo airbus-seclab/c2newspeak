@@ -1,1 +1,1 @@
-Fatal error: syntax error: line 32, unexpected token: do
+Fatal error: syntax error: unexpected token: do in 023.c line 32

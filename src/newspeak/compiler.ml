@@ -466,7 +466,7 @@ let parse fname =
       let line_nb = string_of_int pos.pos_lnum in
       let lexeme = Lexing.lexeme lexbuf in
 	Npkcontext.error "Parser.parse_error" 
-	  ("syntax error: line "^line_nb^", unexpected token: "^lexeme)
+	  ("syntax error: unexpected token: "^lexeme)
 
 
 let compile fname =
