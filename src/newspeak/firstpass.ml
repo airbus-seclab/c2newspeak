@@ -40,11 +40,19 @@ let rec simplify_bexp e =
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
 
+let translate_atyp t =
+  match t with
+      (C.Array (t, _), x) -> (Ptr t, x)
+    | (C.Void, _) -> 
+	Npkcontext.error "Firstpass.translate_atyp"
+	  "Argument type void not allowed"
+    | _ -> t
+
 let translate_ftyp (args, ret) =
   let args =
     match args with
 	(C.Void, _)::[] -> []
-      | _ -> args
+      | _ -> List.map translate_atyp args
   in
     (args, ret)
 
