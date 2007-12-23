@@ -6,3 +6,4 @@ val size_of_longlong: int
 val size_of_ptr: int
 val size_of_float: int
 val size_of_double: int
+val size_of_longdouble: int

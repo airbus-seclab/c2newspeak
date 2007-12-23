@@ -455,4 +455,5 @@ ityp:
 ftyp:
   FLOAT                                  { Config.size_of_float }
 | DOUBLE                                 { Config.size_of_double }
+| LONG DOUBLE                            { Config.size_of_longdouble }
 ;;
