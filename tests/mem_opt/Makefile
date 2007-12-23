@@ -1,9 +1,8 @@
 # commands
 RM = rm -f
-C2NEWSPEAK = ../../bin/c2newspeak --experimental
-NPKSIMPLIFY = ../../bin/npksimplify --newspeak
+C2NEWSPEAK = ../../bin/c2newspeak --experimental -c
 
-TESTS = 000 001 002 003 004 005 006 007 008
+TESTS = 000
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 
@@ -14,7 +13,7 @@ check: $(TESTS)
 
 $(TESTS): ../../bin/c2newspeak $@
 	eval $(C2NEWSPEAK) $@.c
-	eval $(NPKSIMPLIFY) `[ -e $@.in ] && cat $@.in` a.npk &> $@.bak
+	wc -c $@.no > $@.bak
 	dos2unix $@.bak
 	if [ -e $@.spec ]; \
 	then \
@@ -31,11 +30,11 @@ $(TESTS): ../../bin/c2newspeak $@
 
 $(TESTS.SPEC): ../../bin/c2newspeak
 	eval $(C2NEWSPEAK) $(basename $@).c
-	eval $(NPKSIMPLIFY) `[ -e $(basename $@).in ] && cat $(basename $@).in` a.npk &> $@
+	wc -c $(basename $@).no > $@
 	dos2unix $@
 	cat $@
 
-$(C2NEWSPEAK): 
+../../bin/c2newspeak: 
 	make -C ../.. install
 
 clean:

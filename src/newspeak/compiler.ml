@@ -84,6 +84,9 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
   let fundefs = Hashtbl.create 100 in
   let stack_height = ref 0 in
 
+  (* Hashtbl of already translated types, to as to have some sharing *)
+  let translated_typ = Hashtbl.create 100 in
+
   let push () = 
     incr stack_height;
     Local !stack_height
@@ -92,22 +95,29 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
   let index_of_var x = !stack_height - x in
 
   let rec translate_typ t =
-    match t with
-	Void -> 
-	  Npkcontext.error "Compiler.translate_typ" "Void not allowed here"
-      | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
-      | Array (t, sz) -> K.Array (translate_typ t, sz)
-      | Struct n | Union n -> 
-	  let (fields, sz) = 
-	    try Hashtbl.find compdefs n 
-	    with Not_found -> 
-	      Npkcontext.error "Compiler.translate_typ"
-		("Unknown structure or union: "^n)
-	  in
-	  let translate_field (_, (o, t)) = (o, translate_typ t) in
-	    K.Region (List.map translate_field fields, sz)
-      | Fun _ -> 
-	  Npkcontext.error "Compiler.translate_typ" "Function not allowed here"
+    try Hashtbl.find translated_typ t 
+    with Not_found ->
+      let t' =
+	match t with
+	    Void -> 
+	      Npkcontext.error "Compiler.translate_typ" "Void not allowed here"
+	  | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
+	  | Array (t, sz) -> K.Array (translate_typ t, sz)
+	  | Struct n | Union n -> 
+	      let (fields, sz) = 
+		try Hashtbl.find compdefs n 
+		with Not_found -> 
+		  Npkcontext.error "Compiler.translate_typ"
+		    ("Unknown structure or union: "^n)
+	      in
+	      let translate_field (_, (o, t)) = (o, translate_typ t) in
+		K.Region (List.map translate_field fields, sz)
+	  | Fun _ -> 
+	      Npkcontext.error "Compiler.translate_typ" 
+		"Function not allowed here"
+      in
+	Hashtbl.add translated_typ t t';
+	t'
   in
 
   let translate_ftyp (args, ret) =
