@@ -85,7 +85,7 @@ let build_type_decl d =
 %token SWITCH TYPEDEF WHILE
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token COLON COMMA DOT LBRACE RBRACE 
-%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ EQEQ NOTEQ SEMICOLON
+%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ PLUSEQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token EOF
@@ -96,12 +96,6 @@ let build_type_decl d =
 %token <Int64.t> INTEGER
 %token <string> FLOATCST
 
-/*
-%left AND
-%left LT LTEQ GT GTEQ EQEQ NOTEQ
-%left PLUS MINUS
-%left STAR
-*/
 %type <Bare_csyntax.prog> parse
 %start parse
 
@@ -352,6 +346,7 @@ expression:
 assignment_expression:
   conditional_expression                   { $1 }
 | unary_expression EQ expression           { Set ($1, $3) }
+| unary_expression PLUSEQ expression       { Set ($1, Binop (Plus, $1, $3)) }
 ;;
 
 argument_expression_list:

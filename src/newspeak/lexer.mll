@@ -174,6 +174,7 @@ rule token = parse
   | "=="                { EQEQ }
   | "!="                { NOTEQ }
   | "="                 { EQ }
+  | "+="                { PLUSEQ }
   | ";"                 { SEMICOLON }
 
 (* operators *)
