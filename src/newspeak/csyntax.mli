@@ -135,6 +135,8 @@ val promote: ikind -> ikind
 
 val exp_of_int: int -> exp
 
+val exp_of_float: float -> exp
+
 val ftyp_equals: ftyp -> ftyp -> bool
 
 val undefined: string

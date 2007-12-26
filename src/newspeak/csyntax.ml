@@ -183,6 +183,8 @@ let promote k =
 
 let exp_of_int n = Const (CInt (Int64.of_int n))
 
+let exp_of_float x = Const (CFloat (string_of_float x))
+
 let ftyp_equals (args1, ret1) (args2, ret2) =
   let (args1, _) = List.split args1 in
   let (args2, _) = List.split args2 in

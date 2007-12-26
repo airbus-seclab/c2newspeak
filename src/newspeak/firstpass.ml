@@ -212,7 +212,7 @@ let translate_unop op (e, t) =
 	  translate_cst (C.CInt (Int64.neg c))
     | (Neg, C.Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
     | (Neg, C.Float _, _) -> 
-	translate_binop Minus (C.Const (CFloat "0."), t) (e, t)
+	translate_binop Minus (C.exp_of_float 0., t) (e, t)
     | (Not, C.Int _, _) -> (C.Unop (C.Not, e), int_typ)
     | (BNot, C.Int k, _) -> 
 	let k' = C.promote k in
@@ -562,6 +562,7 @@ let translate fname (compdefs, globals) =
     and fill_with_zeros o t =
       match t with
 	  C.Int _ -> res := (o, t, C.exp_of_int 0)::!res
+	| C.Float _ -> res := (o, t, C.exp_of_float 0.)::!res
 	| C.Array (t, Some n) -> 
 	    let sz = C.size_of compdefs t in
 	    let o = ref o in
