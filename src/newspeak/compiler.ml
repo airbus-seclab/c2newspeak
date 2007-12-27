@@ -466,8 +466,6 @@ let parse fname =
 	close_in cin;
 	cprog
     with Parsing.Parse_error -> 
-      let pos = Lexing.lexeme_start_p lexbuf in
-      let line_nb = string_of_int pos.pos_lnum in
       let lexeme = Lexing.lexeme lexbuf in
 	Npkcontext.error "Parser.parse_error" 
 	  ("syntax error: unexpected token: "^lexeme)

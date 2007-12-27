@@ -45,31 +45,11 @@ let cnt_line lexbuf =
     lexbuf.lex_curr_p <- pos;
     set_loc pos
 
-let report_pragma lexeme =
-  let start = 8 in (* The number of characters in #pragma_ *)
-  let end_idx  = 
-    try String.index lexeme '\r' 
-    with Not_found -> 
-      try String.index lexeme '\n'
-      with Not_found -> 
-	Npkcontext.error "Lexer.report_pragma" 
-	  "Unreachable statement"
-  in
-  let len = end_idx - start in
-  let lexeme = String.sub lexeme start len in
-    if !Npkcontext.ignores_pragmas then begin
-      Npkcontext.print_warning "Lexer.report_pragma" 
-	("Directive #pragma ignored: "^lexeme)
-    end else begin
-      Npkcontext.error "Lexer.report_pragma"
-	("Directive #pragma not supported: "^lexeme)
-    end
-
 let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
   let line = string_of_int pos.pos_lnum in
   let lexeme = Lexing.lexeme lexbuf in
-  let err_msg = "Lexer.mll: line: "^line^", unknown keyword: "^lexeme in
+  let err_msg = "Line: "^line^", unknown keyword: "^lexeme in
     Npkcontext.error "Lexer.unknown_lexeme" err_msg
 
 let int64_of_string lexbuf strip_cnt = 
@@ -81,10 +61,8 @@ let int64_of_string lexbuf strip_cnt =
   let str = Int64.to_string i in
     if str <> lexeme
     then begin
-      let pos = Lexing.lexeme_start_p lexbuf in
-      let pos = pos.pos_fname^" line "^(string_of_int pos.pos_lnum) in
-	Npkcontext.error "Lexer.int64_of_string" 
-	  ("integer too large: not representable")
+      Npkcontext.error "Lexer.int64_of_string"
+	"integer too large: not representable"
     end;
     i
 
@@ -101,11 +79,10 @@ let token_of_ident str =
 }
 
 let white_space = ' ' | '\t'
-let line_terminator = '\r' | '\n' | "\r\n"
-let line = [^'\r''\n']* line_terminator
+let new_line = '\r' | '\n' | "\r\n"
+let line = [^'\r''\n']* new_line
 
 let line_comment = "//" line
-let pragma = "#pragma" line
 
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
@@ -200,12 +177,12 @@ rule token = parse
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
-  | pragma              { report_pragma (Lexing.lexeme lexbuf);
-			  cnt_line lexbuf; 
-			  token lexbuf }
+  | "#" line            { Preprocess.parse (Lexing.lexeme lexbuf); 
+			  cnt_line lexbuf; token lexbuf }
+
   | "/*"                { comment lexbuf }
   | line_comment        { cnt_line lexbuf; token lexbuf }
-  | line_terminator     { cnt_line lexbuf; token lexbuf }
+  | new_line            { cnt_line lexbuf; token lexbuf }
   | white_space         { token lexbuf }
 
   | eof                 { EOF }
@@ -216,7 +193,6 @@ rule token = parse
 and comment = parse
 
   | "*/"                { token lexbuf }
-  | line_terminator     { cnt_line lexbuf; comment lexbuf }
+  | new_line            { cnt_line lexbuf; comment lexbuf }
   | _                   { comment lexbuf }
-
 
