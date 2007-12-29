@@ -1,3 +1,31 @@
+(*
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  well-suited for static analysis.
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+  
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+  
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+  Charles Hymans
+  EADS Innovation Works - SE/CS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: charles.hymans@penjili.org
+*)
+
+(* TODO: this is a bit of a hack... *)
+let undefined = "!undefined"
+
 open Newspeak
 
 module B = Bare_csyntax
@@ -16,27 +44,28 @@ and var_modifier =
     | Abstract
     | Variable of (string * location)
     | Function of (var_modifier * decl list)
-    | Array of (var_modifier * Int64.t option)
+    | Array of (var_modifier * B.exp option)
     | Pointer of var_modifier
 
 and decl = (base_typ * var_modifier)
 
 let typedefs = Hashtbl.create 100
 let enumdefs = Hashtbl.create 100
-let compdefs = ref (Hashtbl.create 100)
+let compdefs = ref []
 
 let get_compdefs () = 
-  let res = !compdefs in
+  let res = List.rev !compdefs in
     Hashtbl.clear typedefs;
     Hashtbl.clear enumdefs;
-    compdefs := Hashtbl.create 100;
+    compdefs := [];
     res
 
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
 
-let define_comp n f = Hashtbl.add !compdefs n f
+let define_comp n is_struct f = 
+  compdefs := (n, is_struct, f)::(!compdefs)
 
 let define_enum e =
   let rec define_enum e n =
@@ -66,95 +95,46 @@ let int64_to_int x =
   then Npkcontext.error "Firstpass.int64_to_int" "expecting positive integer";
   Int64.to_int x
 
-(* TODO: check this for various architecture ? 
-   Here align everything on 4 *)
-let align o sz = 
-  let offset = o mod 4 in
-  if offset = 0 then o
-  else if offset + sz <= 4 then o
-  else (o - offset) + 4
-
 let rec normalize_base_typ t =
   match t with
-      Integer k -> C.Int k
-    | Float n -> C.Float n
+      Integer k -> B.Int k
+    | Float n -> B.Float n
     | Struct (n, f) -> 
-	begin match f with
-	    None -> ()
-	  | Some f -> 
-	      let f = normalize_struct_fields f in
-		define_comp n f
-	end;
-	C.Struct n
+	normalize_compdef n true f;
+	B.Struct n
     | Union (n, f) -> 
-	begin match f with
-	    None -> ()
-	  | Some f -> 
-	      let f = normalize_union_fields f in
-		define_comp n f
-	end;
-	C.Union n
-    | Void -> C.Void
+	normalize_compdef n false f;
+	B.Union n
+    | Void -> B.Void
     | Enum f ->
 	begin match f with
 	    None -> ()
 	  | Some f -> define_enum f
 	end; 
-	C.int_typ
+	B.Int C.int_kind
     | Name x -> 
 	try Hashtbl.find typedefs x
 	with Not_found ->
 	  Npkcontext.error "Synthack.normalize_base_typ" ("Unknown type "^x)
 
-and normalize_struct_fields f =
-  let rec normalize o f=
-    match f with
-	d::f ->
-	  let (t, x) = normalize_arg d in
-	  let sz = C.size_of !compdefs t in
-	  let o = align o sz in
-	  let (f, n) = normalize (o+sz) f in
-	    ((x, (o, t))::f, n)
-      | [] -> ([], align o Config.size_of_int)
-  in
-  let (f, n) = 
-    match f with
-	d::[] ->
-	  let (t, x) = normalize_arg d in
-	  let sz = C.size_of !compdefs t in
-	    ((x, (0, t))::[], sz)
-      | _ -> normalize 0 f 
-  in
-    (f, n)
-
-and normalize_union_fields f =
-  let n = ref 0 in
-  let normalize d =
-    let (t, x) = normalize_arg d in
-    let sz = C.size_of !compdefs t in
-      if !n < sz then n := sz;
-      (x, (0, t))
-  in
-  let f = List.map normalize f in
-    (f, !n)
+and normalize_compdef n is_struct f =
+  match f with
+      None -> ()
+    | Some f -> 
+	let f = List.map normalize_arg f in
+	  define_comp n is_struct f
 
 and normalize_var_modifier b v =
   match v with
-      Abstract -> (b, C.undefined, Newspeak.dummy_loc "")
+      Abstract -> (b, undefined, Newspeak.dummy_loc "")
     | Variable (x, loc) -> (b, x, loc)
     | Function (Variable (f, loc), args) -> 
-	(C.Fun (List.map normalize_arg args, b), f, loc)
+	(B.Fun (List.map normalize_arg args, b), f, loc)
     | Function (Pointer v, args) -> 
 	let args = List.map normalize_arg args in
-	  normalize_var_modifier (C.Ptr (C.Fun (args, b))) v
-    | Array (v, n) -> 
-	let n = 
-	  match n with
-	      None -> None
-	    | Some n -> Some (int64_to_int n) 
-	in
-	  normalize_var_modifier (C.Array (b, n)) v
-    | Pointer v -> normalize_var_modifier (C.Ptr b) v
+	  normalize_var_modifier (B.Ptr (B.Fun (args, b))) v
+    | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
+    | Pointer v -> normalize_var_modifier (B.Ptr b) v
     | Function _ -> 
 	Npkcontext.error "Synthack.normalize_var_modifier" 
 	  "case not implemented yet"

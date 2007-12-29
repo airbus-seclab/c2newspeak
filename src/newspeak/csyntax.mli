@@ -43,6 +43,7 @@ and typ =
     | Void
     | Int of ikind
     | Float of int
+(* TODO: simplification: remove typ here ??? *)
     | Ptr of typ
     | Array of array_t
     | Struct of string
@@ -137,8 +138,12 @@ val exp_of_int: int -> exp
 
 val exp_of_float: float -> exp
 
-val ftyp_equals: ftyp -> ftyp -> bool
-
 val undefined: string
 
 val cast: (exp * typ) -> typ -> exp
+
+val len_of_exp: exp -> int
+
+val align: int -> int -> int
+
+val ftyp_equal: ftyp -> ftyp -> bool

@@ -13,21 +13,21 @@ and var_modifier =
     | Abstract
     | Variable of (string * location)
     | Function of (var_modifier * decl list)
-    | Array of (var_modifier * Int64.t option)
+    | Array of (var_modifier * Bare_csyntax.exp option)
     | Pointer of var_modifier
 
 and decl = (base_typ * var_modifier)
 
-val normalize_base_typ: base_typ -> Csyntax.typ
+val normalize_base_typ: base_typ -> Bare_csyntax.typ
 
 val normalize_var_modifier: 
-  Csyntax.typ -> var_modifier -> (Csyntax.typ * string * location)
+  Bare_csyntax.typ -> var_modifier -> (Bare_csyntax.typ * string * location)
 
-val normalize_decl: decl -> (Csyntax.typ * string * location)
+val normalize_decl: decl -> (Bare_csyntax.typ * string * location)
 
-val get_compdefs: unit -> Csyntax.compdefs
+val get_compdefs: unit -> Bare_csyntax.compdefs
 
-val define_type: string -> Csyntax.typ -> unit
+val define_type: string -> Bare_csyntax.typ -> unit
 
 val is_type: string -> bool
 

@@ -40,29 +40,6 @@ let rec simplify_bexp e =
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
 
-let translate_atyp t =
-  match t with
-      (C.Array (t, _), x) -> (Ptr t, x)
-    | (C.Void, _) -> 
-	Npkcontext.error "Firstpass.translate_atyp"
-	  "Argument type void not allowed"
-    | _ -> t
-
-let translate_ftyp (args, ret) =
-  let args =
-    match args with
-	(C.Void, _)::[] -> []
-      | _ -> List.map translate_atyp args
-  in
-    (args, ret)
-
-let translate_proto_ftyp f (args, ret) = 
-  if args = [] then begin
-    Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
-      ("Incomplete prototype for function "^f);
-  end;
-  translate_ftyp (args, ret)
-
 
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
@@ -223,7 +200,8 @@ let translate_unop op (e, t) =
 	  "Unexpected unary operator and argument"
 
 
-let translate fname (compdefs, globals) =
+let translate fname (bare_compdefs, globals) =
+  let compdefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -319,20 +297,6 @@ let translate fname (compdefs, globals) =
 	    ("Unknown identifier "^x)
   in
 
-  let typ_of_var x =
-    let (_, t) = get_var x in
-      t
-  in
-
-  let get_ret_typ () =
-    try 
-      let (_, t, _) = Hashtbl.find local_env ret_name in
-	t
-    with Not_found -> 
-      Npkcontext.error "Firstpass.get_ret_typ" 
-	"Function does not return any value"
-  in
-
   let rec translate_lv x =
     match x with
 	Var x -> ([], get_var x)
@@ -344,10 +308,10 @@ let translate fname (compdefs, globals) =
       | Index (lv, e) -> 
 	  let (lv_pref, (lv', t)) = translate_lv lv in begin
 	    match t with
-		Array (t, n) ->
+		C.Array (t, n) ->
 		  let (e_pref, (i, _)) = translate_exp e in
 		    (lv_pref@e_pref, (C.Index (lv', (t, n), i), t))
-	      | Ptr _ -> translate_lv (Deref (Binop (Plus, lv, e)))
+	      | C.Ptr _ -> translate_lv (Deref (Binop (Plus, lv, e)))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
 		    "Array or pointer type expected"
@@ -390,10 +354,12 @@ let translate fname (compdefs, globals) =
 
       | SizeofE e ->
 	  let (_, (_, t)) = translate_exp e in
-	    translate_exp (Sizeof t)
+	    ([], (C.exp_of_int (C.size_of compdefs t), int_typ))
 
       (* TODO: should check that the size of all declarations is less than max_int *)
-      | Sizeof t -> ([], (C.exp_of_int (size_of compdefs t), int_typ))
+      | Sizeof t -> 
+	  let t = translate_typ t in
+	    ([], (C.exp_of_int (C.size_of compdefs t), int_typ))
 
       | Str str -> 
 	  let e = add_glb_cstr str in
@@ -430,6 +396,7 @@ let translate fname (compdefs, globals) =
 
       | Cast (e, t) -> 
 	  let (pref, e) = translate_exp e in
+	  let t = translate_typ t in
 	  let e = C.cast e t in
 	    (pref, (e, t))
 
@@ -450,6 +417,60 @@ let translate fname (compdefs, globals) =
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
+
+  and translate_ftyp (args, ret) =
+    let translate_arg (t, x) =
+      let t =
+	match t with
+	    Array (t, _) -> C.Ptr (translate_typ t)
+	  | Void -> 
+	      Npkcontext.error "Firstpass.translate_atyp"
+		"Argument type void not allowed"
+	  | _ -> translate_typ t
+      in
+	(t, x)
+    in
+    let args =
+      match args with
+	  (Void, _)::[] -> []
+	| _ -> List.map translate_arg args
+    in
+    let ret = translate_typ ret in
+      (args, ret)
+	
+  and translate_proto_ftyp f (args, ret) = 
+    if args = [] then begin
+      Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
+	("Incomplete prototype for function "^f);
+    end;
+    translate_ftyp (args, ret)
+
+  and translate_typ t =
+    match t with
+	Void -> C.Void
+      | Int k -> C.Int k
+      | Float n -> C.Float n
+      | Ptr t -> C.Ptr (translate_typ t)
+      | Array (t, len) -> 
+	  let t = translate_typ t in
+	  let len = 
+	    match len with
+		None -> None
+	      | Some e -> 
+		  let (pref, (e, _)) = translate_exp e in
+		    if (pref <> []) 
+		    then begin 
+		      Npkcontext.error "Firstpass.translate_typ" 
+			("expression without side-effects expected "
+			  ^"for array size")
+		    end;
+		    let i = C.len_of_exp e in
+		      Some i
+	  in
+	    C.Array (t, len)
+      | Struct n -> C.Struct n
+      | Union n -> C.Union n
+      | Fun ft -> C.Fun (translate_ftyp ft)
 
   and translate_arg e (t, _) = 
     let (pref, e) = translate_exp e in
@@ -489,7 +510,6 @@ let translate fname (compdefs, globals) =
 	| _ -> (f, t)
     in
     let t = C.ftyp_of_typ t in
-    let t = translate_ftyp t in
       (pref, fn, t)
 
   and translate_exp_option e =
@@ -596,6 +616,7 @@ let translate fname (compdefs, globals) =
   and translate_blk x =
     match x with
       | (Decl (x, t, static, init), loc)::tl when static -> 
+	  let t = translate_typ t in
 	  let (pref, t, init) = translate_init t init in
 	    if (pref <> []) then begin 
 	      Npkcontext.error "Firstpass.translate_init"
@@ -608,6 +629,7 @@ let translate fname (compdefs, globals) =
 
       | (Decl (x, t, _, init), loc)::tl -> 
 	  Npkcontext.set_loc loc;
+	  let t = translate_typ t in
 	  let (pref, t, init) = translate_init t init in
 	  let n = push_local loc (t, x) in
 	  let tl = translate_blk tl in
@@ -698,11 +720,11 @@ let translate fname (compdefs, globals) =
   let update_funtyp f t loc =
     try
       let (prev_t, _, _) = Hashtbl.find fundefs f in
-	if not (C.ftyp_equals t prev_t) then begin
+	if not (ftyp_equal t prev_t) then begin
 	  Npkcontext.error "Firstpass.update_fundef"
 	    ("Different types for function "^f)
 	end
-    with Not_found -> Hashtbl.add fundefs f (t, loc, None) 
+    with Not_found -> Hashtbl.add fundefs f (t, loc, None)
   in
 
   let update_funbody f body =
@@ -722,8 +744,8 @@ let translate fname (compdefs, globals) =
     match x with
 	FunctionDef (x, t, body) ->
 	  static_pref := "!"^fname^"."^x^".";
+	  let t = translate_typ t in
 	  let ft = C.ftyp_of_typ t in
-	  let ft = translate_ftyp ft in
 	    update_funtyp x ft loc;
 	    let _ = push_formals loc ft in
 	    let body = translate_blk body in
@@ -746,6 +768,7 @@ let translate fname (compdefs, globals) =
 		Npkcontext.error "Firstpass.translate_global"
 		  ("Unexpected initialization of function "^x)
 	    | _ -> 
+		let t = translate_typ t in
 		let (pref, t, init) = translate_init t init in
 		  if (pref <> []) then begin 
 		    Npkcontext.error "Firstpass.translate_init"
@@ -756,6 +779,49 @@ let translate fname (compdefs, globals) =
 		    else add_global x (t, loc, init)
 	  end
   in
-  
+
+  let translate_struct_fields f =
+    let rec translate o f=
+      match f with
+	  (t, x)::f ->
+	    let t = translate_typ t in
+	    let sz = C.size_of compdefs t in
+	    let o = C.align o sz in
+	    let (f, n) = translate (o+sz) f in
+	      ((x, (o, t))::f, n)
+	| [] -> ([], C.align o Config.size_of_int)
+    in
+    let (f, n) = 
+      match f with
+	  (t, x)::[] ->
+	    let t = translate_typ t in
+	    let sz = C.size_of compdefs t in
+	      ((x, (0, t))::[], sz)
+	| _ -> translate 0 f 
+    in
+      (f, n)
+  in
+
+  let translate_union_fields f =
+    let n = ref 0 in
+    let translate (t, x) =
+      let t = translate_typ t in
+      let sz = C.size_of compdefs t in
+	if !n < sz then n := sz;
+	(x, (0, t))
+    in
+    let f = List.map translate f in
+      (f, !n)
+  in
+
+  let translate_compdef (n, is_struct, fields) =
+    let fields =
+      if is_struct then translate_struct_fields fields
+      else translate_union_fields fields
+    in
+      Hashtbl.add compdefs n fields
+  in
+    
+    List.iter translate_compdef bare_compdefs;
     List.iter translate_global globals;
     (compdefs, glbdecls, fundefs)

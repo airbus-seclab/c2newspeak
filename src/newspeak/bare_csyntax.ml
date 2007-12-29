@@ -22,19 +22,33 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
+
 open Newspeak
 open Csyntax
 
-type prog = (Csyntax.compdefs * (global * location) list)
+type prog = (compdefs * (global * location) list)
+
+(* true for structure/ false for union *)
+and compdefs = (string * bool * declaration list) list
 
 and global = 
     | FunctionDef of (string * typ * blk)
 (* true for extern *)
     | GlbDecl of (string * typ * static * bool * init option)
 
-and declaration = (Csyntax.typ * string)
+and declaration = (typ * string)
 
-and typ = Csyntax.typ
+and ftyp = (typ * string) list * typ
+
+and typ =
+    | Void
+    | Int of ikind
+    | Float of int
+    | Ptr of typ
+    | Array of (typ * exp option)
+    | Struct of string
+    | Union of string
+    | Fun of ftyp
 
 and init = 
     | Data of exp
@@ -77,7 +91,7 @@ and exp =
     | Or of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
-    | Sizeof of Csyntax.typ
+    | Sizeof of typ
     | SizeofE of exp
     | Str of string
     | Cast of (exp * typ)

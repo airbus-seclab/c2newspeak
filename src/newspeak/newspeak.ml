@@ -946,8 +946,6 @@ object
   method process_lval (_: lval) = true
   method process_unop (_: unop) = ()
   method process_binop (_: binop) = ()
-  method process_fn (_: fn) = true
-  method process_lval (_: lval) = true
 end
 
 let rec visit_lval visitor x =

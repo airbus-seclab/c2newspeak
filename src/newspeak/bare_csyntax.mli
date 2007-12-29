@@ -24,14 +24,29 @@
 *)
 open Newspeak
 
-type prog = (Csyntax.compdefs * (global * location) list)
+type prog = (compdefs * (global * location) list)
+
+(* true for structure/false for union *)
+and compdefs = (string * bool * declaration list) list
 
 and global =
     | FunctionDef of (string * typ * blk)
 (* true for extern, true for const *)
     | GlbDecl of (string * typ * static * bool * init option)
 
-and typ = Csyntax.typ
+and declaration = (typ * string)
+
+and ftyp = (typ * string) list * typ
+
+and typ =
+    | Void
+    | Int of ikind
+    | Float of int
+    | Ptr of typ
+    | Array of (typ * exp option)
+    | Struct of string
+    | Union of string
+    | Fun of ftyp
 
 and init = 
     | Data of exp
@@ -70,7 +85,7 @@ and exp =
     | Or of (exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
-    | Sizeof of Csyntax.typ
+    | Sizeof of typ
     | SizeofE of exp
     | Str of string
     | Cast of (exp * typ)

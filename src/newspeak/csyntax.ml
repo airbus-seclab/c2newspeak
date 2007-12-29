@@ -185,11 +185,6 @@ let exp_of_int n = Const (CInt (Int64.of_int n))
 
 let exp_of_float x = Const (CFloat (string_of_float x))
 
-let ftyp_equals (args1, ret1) (args2, ret2) =
-  let (args1, _) = List.split args1 in
-  let (args2, _) = List.split args2 in
-    (args1, ret1) = (args2, ret2)
-
 (* TODO: this is a bit of a hack. Avoid? *)
 let undefined = "!undefined"
 
@@ -203,3 +198,26 @@ let cast (e, t) t' =
   in
     if t = t' then e
     else Unop (Cast (t, t'), e)
+
+let rec len_of_exp e =
+  match e with
+      Const (CInt i) 
+	when Int64.compare i Int64.zero >= 0 
+	  && Int64.compare i (Int64.of_int max_int) < 0 -> Int64.to_int i 
+    | Const (CInt i) -> 
+	Npkcontext.error "Csyntax.len_of_exp" 
+	  ("invalid size for an array: "^(Int64.to_string i))
+    | _ -> Npkcontext.error "Csyntaxt.len_of_exp" "static expression expected"
+      
+(* TODO: check this for various architecture ? 
+   Here align everything on 4 *)
+let align o sz = 
+  let offset = o mod 4 in
+    if offset = 0 then o
+    else if offset + sz <= 4 then o
+    else (o - offset) + 4
+
+let ftyp_equal (args1, ret1) (args2, ret2) =
+  let (args1, _) = List.split args1 in
+  let (args2, _) = List.split args2 in
+    (args1, ret1) = (args2, ret2)
