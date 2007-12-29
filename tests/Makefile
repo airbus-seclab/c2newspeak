@@ -23,7 +23,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	130 131 132 133 134 135 136 137 138 139 \
 	140 141 142 143 144 145 146 147 148 149 \
 	150 151 152 153 154 155 156 157 158 159 \
-	160 161 162 163 164 165
+	160 161 162 163 164 165 166 167
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 
@@ -63,7 +63,7 @@ $(TESTS): SPEC=$@.spec
 $(TESTS): CIL_SPEC=$(if $(shell [ -e $@.cil.spec ] && echo true), \
 	  $@.cil.spec,$@.spec)
 $(TESTS): $@
-	eval $(C2NEWSPEAK) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP)
+	eval $(C2NEWSPEAK) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP); true
 	dos2unix $(TMP) 2&> /dev/null; true
 	if [ -e $(SPEC) ]; \
 	then \
@@ -76,7 +76,8 @@ $(TESTS): $@
 	  cat $(TMP); false; \
 	fi
 	$(RM) $(TMP) result
-	eval $(C2NEWSPEAK.CIL) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP);
+	eval $(C2NEWSPEAK.CIL) `[ -e $(OPT) ] && cat $(OPT)` \
+	$(SRC) &> $(TMP); true
 	dos2unix $(TMP) 2&> /dev/null; true 
 	if [ -e $(CIL_SPEC) ]; \
 	then \

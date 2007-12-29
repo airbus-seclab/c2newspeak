@@ -200,15 +200,36 @@ let cast (e, t) t' =
     else Unop (Cast (t, t'), e)
 
 let rec len_of_exp e =
-  match e with
-      Const (CInt i) 
-	when Int64.compare i Int64.zero >= 0 
-	  && Int64.compare i (Int64.of_int max_int) < 0 -> Int64.to_int i 
-    | Const (CInt i) -> 
-	Npkcontext.error "Csyntax.len_of_exp" 
-	  ("invalid size for an array: "^(Int64.to_string i))
-    | _ -> Npkcontext.error "Csyntaxt.len_of_exp" "static expression expected"
-      
+  let i = 
+    match e with
+	Const (CInt i) -> i
+      | Binop (Plus _, e1, e2) ->
+	  let i1 = Int64.of_int (len_of_exp e1) in
+	  let i2 = Int64.of_int (len_of_exp e2) in
+	    Int64.add i1 i2
+      | Binop (Minus _, e1, e2) ->
+	  let i1 = Int64.of_int (len_of_exp e1) in
+	  let i2 = Int64.of_int (len_of_exp e2) in
+	    Int64.sub i1 i2
+      | Binop (Mult _, e1, e2) ->
+	  let i1 = Int64.of_int (len_of_exp e1) in
+	  let i2 = Int64.of_int (len_of_exp e2) in
+	    Int64.mul i1 i2
+      | Binop (Div _, e1, e2) ->
+	  let i1 = Int64.of_int (len_of_exp e1) in
+	  let i2 = Int64.of_int (len_of_exp e2) in
+	    Int64.div i1 i2
+      | _ -> 
+	  Npkcontext.error "Csyntaxt.len_of_exp" 
+	    "static expression expected"
+  in
+    if ((Int64.compare i Int64.zero <= 0) 
+	 || (Int64.compare i (Int64.of_int max_int) > 0)) then begin
+      Npkcontext.error "Csyntax.len_of_exp" 
+	("invalid size for array: "^(Int64.to_string i))
+    end;
+    Int64.to_int i
+
 (* TODO: check this for various architecture ? 
    Here align everything on 4 *)
 let align o sz = 

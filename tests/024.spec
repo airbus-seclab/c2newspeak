@@ -1,11 +1,1 @@
-Newspeak output
----------------
-main() {
-  (30)^int4[10];
-  (31)^int4[0];
-  (32)^ptr;
-  (34)^0- =(ptr) (&_40(2-) + (10 * 4));
-  (35)^0- =(ptr) &_0(1-);
-}
-
-
+Fatal error: invalid size for array: 0 in 024.c line 31

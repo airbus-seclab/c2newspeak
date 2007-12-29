@@ -6,3 +6,5 @@ Known limitations
 - functions with variable number of arguments not handled
 - goto statements not handled
 - simplifies &(*ptr) into ptr. When ptr is out of bounds, error will be missed.
+- largest size of array handled is 1073741823
+- every function calls need to be defined before hand
