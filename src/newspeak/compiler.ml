@@ -120,8 +120,10 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	t'
   in
 
-  let translate_ftyp (args, ret) =
+  let translate_ftyp (args, va_list, ret) =
+    let va_list = if va_list then [K.Scalar N.Ptr] else [] in
     let args = List.map (fun (t, _) -> translate_typ t) args in
+    let args = args@va_list in
     let ret =
       match ret with
 	  Void -> None
@@ -299,7 +301,11 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     let t = translate_typ t in
       (x, t, loc)
 
-  and translate_call loc (r, (f, (args_t, ret_t)), args_exp) =
+  and translate_call loc (r, (f, (args_t, va_list, ret_t)), args_exp) =
+    if va_list then begin
+      Npkcontext.error "Compiler.translate_call" 
+	"functions with variable argument list not supported"
+    end;
     let fid = 
       match f with
 	  Global f -> f
@@ -339,7 +345,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	  Global f -> K.FunId f 
 	| Deref (e, Fun ft) ->
 	    let e = translate_exp e in
-	    let ft = translate_ftyp (args_t, ret_t) in
+	    let ft = translate_ftyp ft in
 	      K.FunDeref (e, ft)
 	| _ -> 
 	    Npkcontext.error "Compiler.translate_call" "Unreachable statement"
@@ -428,7 +434,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       translate_decl loc (t, x)
   in
 
-  let translate_fundef f ((args, t), loc, body) =
+  let translate_fundef f ((args, va_list, t), loc, body) =
     let body =
       match body with
 	  None -> None
@@ -447,7 +453,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 		List.iter (fun _ -> pop ()) locals;
 		Some body
     in
-    let ft = translate_ftyp (args, t) in
+    let ft = translate_ftyp (args, va_list, t) in
       Hashtbl.add fundefs f (ft, body)
   in
 

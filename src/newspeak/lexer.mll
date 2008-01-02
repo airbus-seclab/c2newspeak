@@ -138,6 +138,7 @@ rule token = parse
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)
+  | "..."               { ELLIPSIS }
   | ","                 { COMMA }
   | ":"                 { COLON }
   | "."                 { DOT }

@@ -38,7 +38,8 @@ and body = (typ * string * location) list * blk
 
 and init = (int * typ * exp) list
 
-and ftyp = (typ * string) list * typ
+(* true if variable list of arguments *)
+and ftyp = (typ * string) list * bool * typ
 
 and typ =
     | Void
@@ -238,7 +239,7 @@ let align o sz =
     else if offset + sz <= 4 then o
     else (o - offset) + 4
 
-let ftyp_equal (args1, ret1) (args2, ret2) =
+let ftyp_equal (args1, va_list1, ret1) (args2, va_list2, ret2) =
   let (args1, _) = List.split args1 in
   let (args2, _) = List.split args2 in
-    (args1, ret1) = (args2, ret2)
+    (args1, va_list1, ret1) = (args2, va_list2, ret2)

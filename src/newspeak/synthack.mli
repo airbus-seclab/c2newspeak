@@ -12,7 +12,8 @@ type base_typ =
 and var_modifier = 
     | Abstract
     | Variable of (string * location)
-    | Function of (var_modifier * decl list)
+(* true is variable argument list *)
+    | Function of (var_modifier * decl list * bool)
     | Array of (var_modifier * Bare_csyntax.exp option)
     | Pointer of var_modifier
 

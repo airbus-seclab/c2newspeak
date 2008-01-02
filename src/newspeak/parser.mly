@@ -84,7 +84,7 @@ let build_type_decl d =
 %token EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
-%token COLON COMMA DOT LBRACE RBRACE 
+%token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ PLUSEQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
@@ -224,7 +224,7 @@ case:
 
 primary_expression:
   IDENTIFIER                               { Var $1 }
-| INTEGER                                     { Cst (CInt $1) }
+| INTEGER                                  { Cst (CInt $1) }
 | FLOATCST                                 { Cst (CFloat $1) }
 | STRING                                   { Str $1 }
 | LPAREN expression RPAREN                 { $2 }
@@ -378,8 +378,9 @@ abstract_declarator:
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
 | LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
 | abstract_declarator 
-  LPAREN parameter_list RPAREN             { Function ($1, $3) }
-| abstract_declarator LPAREN RPAREN        { Function ($1, []) }
+  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
+					       Function ($1, args, va_list) }
+| abstract_declarator LPAREN RPAREN        { Function ($1, [], false) }
 ;;
 
 declarator:
@@ -388,8 +389,10 @@ declarator:
 | IDENTIFIER                               { Variable ($1, get_loc ()) }
 | declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
 | declarator LBRACKET RBRACKET             { Array ($1, None) }
-| declarator LPAREN parameter_list RPAREN  { Function ($1, $3) }
-| declarator LPAREN RPAREN                 { Function ($1, []) }
+| declarator 
+  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
+					       Function ($1, args, va_list) }
+| declarator LPAREN RPAREN                 { Function ($1, [], false) }
 ;;
 
 pointer:
@@ -403,8 +406,10 @@ field_list:
 
 parameter_list:
   parameter_declaration COMMA 
-  parameter_list                           { $1::$3 }
-| parameter_declaration                    { $1::[]}
+  parameter_list                           { let (tl, va_list) = $3 in 
+					       ($1::tl, va_list) }
+| parameter_declaration                    { ($1::[], false) }
+| ELLIPSIS                                 { ([], true) }
 ;;
 
 type_specifier:

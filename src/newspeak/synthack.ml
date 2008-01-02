@@ -43,7 +43,8 @@ type base_typ =
 and var_modifier = 
     | Abstract
     | Variable of (string * location)
-    | Function of (var_modifier * decl list)
+(* true if variable argument list *)
+    | Function of (var_modifier * decl list * bool)
     | Array of (var_modifier * B.exp option)
     | Pointer of var_modifier
 
@@ -128,11 +129,11 @@ and normalize_var_modifier b v =
   match v with
       Abstract -> (b, undefined, Newspeak.dummy_loc "")
     | Variable (x, loc) -> (b, x, loc)
-    | Function (Variable (f, loc), args) -> 
-	(B.Fun (List.map normalize_arg args, b), f, loc)
-    | Function (Pointer v, args) -> 
+    | Function (Variable (f, loc), args, va_list) -> 
+	(B.Fun (List.map normalize_arg args, va_list, b), f, loc)
+    | Function (Pointer v, args, va_list) -> 
 	let args = List.map normalize_arg args in
-	  normalize_var_modifier (B.Ptr (B.Fun (args, b))) v
+	  normalize_var_modifier (B.Ptr (B.Fun (args, va_list, b))) v
     | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
     | Pointer v -> normalize_var_modifier (B.Ptr b) v
     | Function _ -> 

@@ -266,7 +266,7 @@ let translate fname (bare_compdefs, globals) =
       locals := (t, x, loc)::!locals;
       Hashtbl.remove local_env x 
   in
-  let push_formals loc (args_t, ret_t) = 
+  let push_formals loc (args_t, _, ret_t) = 
     let _ = push_var loc (ret_t, ret_name) in
     let _ = List.map (push_var loc) args_t in
       ()
@@ -418,7 +418,7 @@ let translate fname (bare_compdefs, globals) =
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
 
-  and translate_ftyp (args, ret) =
+  and translate_ftyp (args, va_list, ret) =
     let translate_arg (t, x) =
       let t =
 	match t with
@@ -436,14 +436,14 @@ let translate fname (bare_compdefs, globals) =
 	| _ -> List.map translate_arg args
     in
     let ret = translate_typ ret in
-      (args, ret)
+      (args, va_list, ret)
 	
-  and translate_proto_ftyp f (args, ret) = 
+  and translate_proto_ftyp f (args, va_list, ret) = 
     if args = [] then begin
       Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
 	("Incomplete prototype for function "^f);
     end;
-    translate_ftyp (args, ret)
+    translate_ftyp (args, va_list, ret)
 
   and translate_typ t =
     match t with
@@ -482,7 +482,7 @@ let translate fname (bare_compdefs, globals) =
   and translate_call f args =
     let loc = Npkcontext.get_loc () in
     let (pref_fn, fn, ft) = translate_fn f in
-    let (args_t, ret_t) = ft in
+    let (args_t, _, ret_t) = ft in
     let (pref, args) = 
       try List.split (List.map2 translate_arg args args_t) 
       with Invalid_argument "List.map2" ->

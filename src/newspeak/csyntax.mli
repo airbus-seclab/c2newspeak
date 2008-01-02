@@ -37,7 +37,8 @@ and body = (typ * string * location) list * blk
 
 and init = (int * typ * exp) list
 
-and ftyp = (typ * string) list * typ
+(* true if variable list of arguments *)
+and ftyp = (typ * string) list * bool * typ
 
 and typ =
     | Void

@@ -36,7 +36,8 @@ and global =
 
 and declaration = (typ * string)
 
-and ftyp = (typ * string) list * typ
+(* true if variable list of arguments *)
+and ftyp = (typ * string) list * bool * typ
 
 and typ =
     | Void
