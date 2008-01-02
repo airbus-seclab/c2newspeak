@@ -188,7 +188,9 @@ let rec negate exp =
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
 
-let exp_of_int x = Const (CInt64 (Int64.of_int x))
+let exp_of_int64 x = Const (CInt64 x)
+
+let exp_of_int x = exp_of_int64 (Int64.of_int x)
 
 type alt_stmtkind =
     (* the condition is a list of expression separated by && 
