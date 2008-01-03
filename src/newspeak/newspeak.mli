@@ -166,6 +166,8 @@ val negate : exp -> exp
 (** [exp_of_int i] wraps i into a Newspeak expression. *)
 val exp_of_int : int -> exp
 
+val exp_of_int64 : Int64.t -> exp
+
 (** Deletion of useless Gotos and Labels. *)
 val simplify_gotos : blk -> blk
 
