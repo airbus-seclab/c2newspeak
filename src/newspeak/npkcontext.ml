@@ -263,6 +263,12 @@ let print_error msg =
 
 let handle_cmdline_options () = 
   Arg.parse argslist anon_fun usage_msg;
+
+  if !version then begin
+    print_version ();
+    exit 0
+  end;
+
   if !input_files = [] then begin
     error "C2Newspeak.handle_cmdline_options"
       ("no file specified. Try "^Sys.argv.(0)^" --help")
@@ -275,9 +281,4 @@ let handle_cmdline_options () =
 	^"files when only compiling (-c)")
   end;
 
-  if (not !compile_only) && (!output_file = "") then output_file := "a.npk";
-
-  if !version then begin
-    print_version ();
-    exit 0
-  end
+  if (not !compile_only) && (!output_file = "") then output_file := "a.npk"

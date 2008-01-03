@@ -1,5 +1,4 @@
 # Project
-DIR = 
 OBJ = cilutils params npkcontext config newspeak \
       pp_syntax pp_lexer pp_parser preprocess \
       bare_csyntax csyntax synthack lexer parser \
@@ -13,9 +12,6 @@ DEPEND = pp_lexer.ml pp_parser.mli pp_parser.ml \
 
 CLEANFILES = $(DEPEND) pp_parser.output parser.output
 
-# Documentation
-DOC_DIR = doc
-
 # Executable
 TGT = c2newspeak
 
@@ -25,14 +21,5 @@ include ../Makefile.common
 
 machdep: machdep.c
 	gcc -o machdep machdep.c
-
-test: $(TGT)
-	@cp $(TGT) ../../bin
-
-%.ml: %.mll
-	ocamllex $<
-
-%.mli %.ml: %.mly
-	ocamlyacc -v $<
 
 include .depend

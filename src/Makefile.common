@@ -8,19 +8,21 @@ OCAMLOPT=ocamlopt
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
+FILES = ../date $(OBJ)
+
 LIB  = unix.cma str.cma nums.cma $(CIL)/cil.cma
 LIBX = $(LIB:.cma=.cmxa)
-FLAGS=-I $(CIL) $(addprefix -I ../, $(DIR))
-MLI  = $(addsuffix .mli, $(OBJ))
-CMI  = $(addsuffix .cmi, $(OBJ))
-ML   = $(addsuffix .ml, $(OBJ))
-CMO  = $(addsuffix .cmo, $(OBJ))
-CMX  = $(addsuffix .cmx, $(OBJ))
-O    = $(addsuffix .o, $(OBJ))
+FLAGS=-I $(CIL) -I .. $(addprefix -I ../, $(DIR))
+MLI  = $(addsuffix .mli, $(FILES))
+CMI  = $(addsuffix .cmi, $(FILES))
+ML   = $(addsuffix .ml, $(FILES))
+CMO  = $(addsuffix .cmo, $(FILES))
+CMX  = $(addsuffix .cmx, $(FILES))
+O    = $(addsuffix .o, $(FILES))
 DOC_FILES = $(MLI) $(DOC_ML_FILES)
 DOC_DIR = doc
 
-.PHONY: all clean doc
+.PHONY: all clean doc date.ml
 
 all: $(CMX) $(TGT)
 
@@ -35,8 +37,12 @@ doc: $(DOC_FILES)
 	-mkdir $(DOC_DIR)
 	$(OCAMLDOC) -d  $(DOC_DIR) -html -m A $(FLAGS) $(DOC_FILES)
 
-install: all
+install: ../date.ml all
 	cp $(TGT) $(INSTALL_FILES) ../../bin
+
+../date.ml:
+	echo -n "let date = " > ../date.ml
+	date +%Y%m%d >> ../date.ml
 
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
@@ -50,6 +56,12 @@ install: all
 .ml.cmx:
 	$(OCAMLOPT) $(FLAGS) -c $<
 
+%.ml: %.mll
+	ocamllex $<
+
+%.mli %.ml: %.mly
+	ocamlyacc -v $<
+
 # Clean up
 clean:
 	$(RM) $(CLEANFILES)
@@ -59,6 +71,7 @@ clean:
 	$(RM) *.orig
 	$(RM) *~
 	$(RM) .depend
+	$(RM) $(CMO) $(CMI) $(CMX) $(O)
 
 # Dependencies
 .depend: $(DEPEND)

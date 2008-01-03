@@ -41,7 +41,7 @@ let npko_suffix = ".no"
 (*------------------------*)
 
 let software = "C2Newspeak"
-let version = "0.9"
+let version = "1.0"
 let authors = "Olivier Levillain and Charles Hymans"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
@@ -56,8 +56,8 @@ let comment =[
 
 
 let version_string =
-  software^" v."^version^" by "^authors^".\nSoftware under "
-  ^licence^". Copyright "^copyright^".\n"
+  software^" version "^version^" build "^(string_of_int Date.date)
+  ^" by "^authors^".\nSoftware under "^licence^". Copyright "^copyright^".\n"
 
 
 let print_version () =
