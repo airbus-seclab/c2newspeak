@@ -63,13 +63,6 @@ let build_typedef d =
   let _ = process_decls build d in
     []
 
-let build_field (b, m) =
-  let build ((v, _), _) = 
-    let (t, x, _) = Synthack.normalize_decl (b, v) in
-      (t, x)
-  in
-    List.map build m
-
 let build_stmtdecl static d =
   let build (t, x, init, loc) = (Decl (x, t, static, init), loc) in
     process_decls build d
@@ -77,6 +70,8 @@ let build_stmtdecl static d =
 let build_type_decl d =
   let (t, _, _) = Synthack.normalize_decl d in
     t
+
+let flatten_field_decl (b, x) = List.map (fun v -> (b, v)) x
 
 %}
 
@@ -136,7 +131,12 @@ declaration:
 ;;
 
 field_declaration:
-  declaration_specifiers declarator        { ($1, $2) }
+  declaration_specifiers declarator_list   { flatten_field_decl ($1, $2) }
+;;
+
+declarator_list:
+  declarator COMMA declarator_list         { $1::$3 }
+| declarator                               { $1::[] }
 ;;
 
 // TODO: careful, this is a bit of a hack
@@ -400,8 +400,8 @@ pointer:
 ;;
 
 field_list:
-  field_declaration SEMICOLON field_list   { $1::$3 } 
-| field_declaration SEMICOLON              { $1::[] }
+  field_declaration SEMICOLON field_list   { $1@$3 } 
+| field_declaration SEMICOLON              { $1 }
 ;;
 
 parameter_list:
