@@ -146,8 +146,12 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
       | BXor k -> K.BinOp (N.BXor (N.domain_of_typ k), e1, e2)
       | BOr k -> K.BinOp (N.BOr (N.domain_of_typ k), e1, e2)
       | Mod -> K.BinOp (N.Mod, e1, e2)
-      | Shiftl k -> K.make_int_coerce k (K.BinOp (N.Shiftlt, e1, e2))
-      | Shiftr k -> K.make_int_coerce k (K.BinOp (N.Shiftrt, e1, e2))
+      | Shiftl k -> 
+	  let n = Newspeak.bits_of_ikind k in
+	    (K.BinOp (N.Shiftlt n, e1, e2))
+      | Shiftr k -> 
+	  let n = Newspeak.bits_of_ikind k in
+	    (K.BinOp (N.Shiftrt n, e1, e2))
       | PlusP (Fun _) -> 
 	  Npkcontext.error "Compiler.translate_binop" 
 	    "Pointer arithmetic forbidden on function pointers"

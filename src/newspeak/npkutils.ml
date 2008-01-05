@@ -68,8 +68,8 @@ let translate_logical_binop t o =
     | BOr -> Newspeak.BOr (Newspeak.domain_of_typ t)
     | BAnd -> Newspeak.BAnd (Newspeak.domain_of_typ t)
     | BXor -> Newspeak.BXor (Newspeak.domain_of_typ t)
-    | Shiftlt -> Newspeak.Shiftlt
-    | Shiftrt -> Newspeak.Shiftrt
+    | Shiftlt -> Newspeak.Shiftlt (Newspeak.bits_of_ikind t)
+    | Shiftrt -> Newspeak.Shiftrt (Newspeak.bits_of_ikind t)
     | _ -> error "Npkutils.translate_arith_binop" "unexpected operator"
 
 

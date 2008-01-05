@@ -170,31 +170,6 @@ let string_of_unop op =
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
     | IntToPtr i -> "(ptr)"
 	  
-let string_of_binop neg op =
-  match op with
-    | Gt _ when neg -> ">="
-    | Eq _ when neg -> "<>"
-    | Gt _ -> ">"
-    | Eq _ -> "=="
-    | _ when neg ->
-	failwith ("Newspeak.string_of_binop: unexpected negation")
-    | PlusI -> "+"
-    | MinusI -> "-"
-    | MultI -> "*"
-    | Mod -> "%"
-    | DivI -> "/"
-    | PlusF _ -> "+."
-    | MinusF _ -> "-."
-    | MultF _ -> "*."
-    | DivF _ -> "/."
-    | BAnd _ -> "&"
-    | BOr _ -> "|"
-    | BXor _ -> "^"
-    | Shiftlt -> "<<"
-    | Shiftrt -> ">>"
-    | PlusPI -> "+"
-    | MinusPP -> "-"
-
 let string_of_cte c =
   match c with
       CInt64 c -> Int64.to_string c
@@ -226,11 +201,11 @@ and string_of_exp decls e =
     (* TODO: Check this ! *)
     (* Pretty printing for >= and != *)
     | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
-	"("^(string_of_exp decls e2)^" "^(string_of_binop true op)^
+	"("^(string_of_exp decls e2)^" "^(string_of_binop op)^
 	  " "^(string_of_exp decls e1)^")"
 
     | BinOp (op, e1, e2) ->
-	"("^(string_of_exp decls e1)^" "^(string_of_binop false op)^
+	"!("^(string_of_exp decls e1)^" "^(string_of_binop op)^
 	  " "^(string_of_exp decls e2)^")"
 	  
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp decls exp)
