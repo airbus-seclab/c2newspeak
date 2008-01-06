@@ -91,8 +91,7 @@ and binop =
   | PlusF of size_t | MinusF of size_t | MultF of size_t | DivF of size_t
   | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
   | BXor of (Int64.t * Int64.t)
-(* number of bits for the shift*)
-  | Shiftlt of int | Shiftrt of int
+  | Shiftlt | Shiftrt
   | PlusPI
   | MinusPP
   | Gt of scalar_t
@@ -177,8 +176,6 @@ let domain_of_typ (sign, size) =
     | (Unsigned, 8) -> 
 	invalid_arg "Newspeak.domain_of_typ: domain not representable"
     | _ -> invalid_arg "Newspeak.domain_of_typ"
-
-let bits_of_ikind (_, n) = n*8
 
 let rec negate exp =
   match exp with
@@ -347,8 +344,8 @@ let string_of_binop op =
     | BAnd _ -> "&"
     | BOr _ -> "|"
     | BXor _ -> "^"
-    | Shiftlt n -> "<<_"^(string_of_int n)
-    | Shiftrt n -> ">>_"^(string_of_int n)
+    | Shiftlt -> "<<"
+    | Shiftrt -> ">>"
     | PlusPI -> "+"
     | MinusPP -> "-"
 

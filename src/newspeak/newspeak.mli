@@ -100,7 +100,7 @@ and binop =
 (* bitwise operations *)
   | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
   | BXor of (Int64.t * Int64.t)
-  | Shiftlt of int | Shiftrt of int
+  | Shiftlt | Shiftrt
 (* pointer operations *)
   | PlusPI | MinusPP
 (* comparisons *)
@@ -279,5 +279,3 @@ val max_ikind: ikind -> ikind -> ikind
 val dummy_loc: string -> location
 
 val string_of_binop: binop -> string
-
-val bits_of_ikind: ikind -> int
