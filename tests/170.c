@@ -23,5 +23,10 @@
   email: charles.hymans@penjili.org
 */
 
-void main() {
+extern unsigned int f(void);
+
+void main(void) {
+  int *x;
+
+  x = (int *) f();
 }

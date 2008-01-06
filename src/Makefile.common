@@ -43,6 +43,8 @@ install: ../date.ml all
 ../date.ml:
 	echo -n "let date = " > ../date.ml
 	date +%Y%m%d >> ../date.ml
+	echo -n "let revision = " >> ../date.ml
+	hg parents --template '{rev}' >> ../date.ml
 
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
@@ -65,6 +67,7 @@ install: ../date.ml all
 # Clean up
 clean:
 	$(RM) $(CLEANFILES)
+	$(RM) ../date.ml
 	$(RM) -r $(DOC_DIR)
 	$(RM) $(TGT) $(TGT).exe
 	$(RM) ../scalars/natural.ml *.cmi *.cmo *.cmx *.o

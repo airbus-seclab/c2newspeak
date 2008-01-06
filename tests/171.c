@@ -22,11 +22,21 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 */
+// TODO: see 6.3.1.8 in the ANSI C standard
+void main() {
+  unsigned int x;
+  unsigned int y;
+  int z;
+  
+  y = 1 << 31;  // no integer overflow
+  z = 1 << 31;  // integer overflow (sign change)
+  x = 31;
+  y = 1 << x;  // no integer overflow
+  z = 1 << x;  // integer overflow
 
-extern unsigned int f(void);
-
-void main(void) {
-  int *x;
-
-  x = (int *) f();
+  y = 1 << 32;  // integer overflow
+  z = 1 << 32;  // integer overflow
+  x = 32;
+  y = 1 << x;  // integer overflow
+  z = 1 << x;  // integer overflow
 }

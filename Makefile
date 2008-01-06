@@ -7,6 +7,7 @@ install: src
 all:
 
 test:
+	$(MAKE) -C tests
 
 $(DIR):
 	$(MAKE) -C $@ $(MAKECMDGOALS)

@@ -19,6 +19,7 @@ $(DEP):
 
 clean: $(DIR)
 	$(RM) *~
+	$(RM) date.ml
 
 test: newspeak npkstats
 
