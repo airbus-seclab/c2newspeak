@@ -54,10 +54,8 @@ let comment =[
   " analysis and statistics on C code thanks to a simpler and non ambiguous";
   " language."]
 
-
 let version_string =
-  software^" version "^version^" build "
-  ^(string_of_int Date.revision)^"+"^(string_of_int Date.date)^".\n"
+  software^" version "^version^" build "^Date.revision^" ("^Date.date^").\n"
   ^"Software under "^licence^". Copyright "^copyright^".\n"
   ^"Authors "^authors^".\n"
 

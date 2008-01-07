@@ -41,10 +41,8 @@ install: ../date.ml all
 	cp $(TGT) $(INSTALL_FILES) ../../bin
 
 ../date.ml:
-	echo -n "let date = " > ../date.ml
-	date +%Y%m%d >> ../date.ml
-	echo -n "let revision = " >> ../date.ml
-	hg parents --template '{rev}' >> ../date.ml
+	hg parents --template 'let date = "{date|shortdate}"\n' > ../date.ml
+	hg parents --template 'let revision = "{node|short}"\n' >> ../date.ml
 
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
