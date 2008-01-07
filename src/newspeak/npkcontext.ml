@@ -44,6 +44,8 @@ open Params
 
 (* Translation options *)
 
+let dirty_syntax = ref false
+
 let global_zero_init = ref true
 let castor_allowed = ref false
 let ignores_pragmas = ref false
@@ -116,6 +118,9 @@ let argslist = [
 
   ("--castor", Arg.Set castor_allowed,
    "allows horrible casts to be translated");
+
+  ("--dirty", Arg.Set dirty_syntax,
+   "allows dirty syntax");
   
   ("--ignore-pragma", Arg.Set ignores_pragmas,
    "ignores any #pragma directive");

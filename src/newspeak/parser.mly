@@ -416,6 +416,14 @@ type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
+| UNSIGNED                               { 
+    if (not !Npkcontext.dirty_syntax) 
+    then begin
+      Npkcontext.error "Parser.type_specifier" 
+	"Integer kind should be specified"
+    end;
+    Integer (Newspeak.Unsigned, Config.size_of_int) 
+  }
 | ftyp                                   { Float $1 }
 | STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
 | STRUCT IDENTIFIER                      { Struct ($2, None) }

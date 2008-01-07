@@ -43,6 +43,9 @@ val global_zero_init : bool ref
 (** This option allows horrible casts (int <-> ptr) to be translated *)
 val castor_allowed : bool ref
 
+
+val dirty_syntax : bool ref
+
 (** This option allows pragmas and ignores them *)
 val ignores_pragmas : bool ref
 
