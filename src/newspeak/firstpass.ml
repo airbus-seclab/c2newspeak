@@ -307,7 +307,7 @@ let translate fname (bare_compdefs, globals) =
 	  let (pref, (lv, t)) = translate_lv lv in
 	  let r = C.fields_of_typ compdefs t in
 	  let (o, t) = List.assoc f r in
-	    (pref, (C.Field (lv, f, o), t))
+	    (pref, (C.Field (lv, o), t))
       | Index (lv, e) -> 
 	  let (lv_pref, (lv', t)) = translate_lv lv in begin
 	    match t with
@@ -357,12 +357,14 @@ let translate fname (bare_compdefs, globals) =
 
       | SizeofE e ->
 	  let (_, (_, t)) = translate_exp e in
-	    ([], (C.exp_of_int (C.size_of compdefs t), int_typ))
+	  let sz = (C.size_of compdefs t) / 8 in
+	    ([], (C.exp_of_int sz, int_typ))
 
       (* TODO: should check that the size of all declarations is less than max_int *)
       | Sizeof t -> 
 	  let t = translate_typ t in
-	    ([], (C.exp_of_int (C.size_of compdefs t), int_typ))
+	  let sz = (C.size_of compdefs t) / 8 in
+	    ([], (C.exp_of_int sz, int_typ))
 
       | Str str -> 
 	  let e = add_glb_cstr str in
@@ -474,6 +476,9 @@ let translate fname (bare_compdefs, globals) =
       | Struct n -> C.Struct n
       | Union n -> C.Union n
       | Fun ft -> C.Fun (translate_ftyp ft)
+      | Bitfield _ -> 
+	  Npkcontext.error "Firstpass.translate_typ" 
+	    "bitfields not allowed outside of structures"
 
   and translate_arg e (t, _) = 
     let (pref, e) = translate_exp e in
@@ -548,7 +553,7 @@ let translate fname (bare_compdefs, globals) =
 	      C.Array (t, Some n)
 
 	| (Sequence seq, C.Struct n) -> 
-	    let (f, _) = Hashtbl.find compdefs n in
+	    let (f, _, _) = Hashtbl.find compdefs n in
 	      List.iter2 (translate_field_sequence o) f seq;
 	      C.Struct n
 
@@ -784,37 +789,43 @@ let translate fname (bare_compdefs, globals) =
   in
 
   let translate_struct_fields f =
-    let rec translate o f=
-      match f with
-	  (t, x)::f ->
-	    let t = translate_typ t in
-	    let sz = C.size_of compdefs t in
-	    let o = C.align o sz in
+    let o = ref 0 in
+    let align = ref 1 in
+    let rec translate (t, x) =
+(* TODO
+	  (Bitfield ((s, n), sz), x)::f -> 
+	    let t = translate_typ (Int (s, sz)) in
+	    let next_align = C.align o n in
+	    let o = if o + sz <= next_align then o else next_align in
 	    let (f, n) = translate (o+sz) f in
 	      ((x, (o, t))::f, n)
-	| [] -> ([], C.align o Config.size_of_int)
+*) (*????*)
+      let t = translate_typ t in
+      let sz = C.size_of compdefs t in
+      let align' = C.align_of compdefs t in
+      let o' = C.next_align !o align' in
+	align := max !align align';
+	o := !o+sz;
+	(x, (o', t))
     in
-    let (f, n) = 
-      match f with
-	  (t, x)::[] ->
-	    let t = translate_typ t in
-	    let sz = C.size_of compdefs t in
-	      ((x, (0, t))::[], sz)
-	| _ -> translate 0 f 
-    in
-      (f, n)
+    let f = List.map translate f in
+      (f, C.next_align !o !align, !align)
+      
   in
 
   let translate_union_fields f =
     let n = ref 0 in
+    let align = ref 0 in
     let translate (t, x) =
       let t = translate_typ t in
       let sz = C.size_of compdefs t in
+      let align' = C.align_of compdefs t in
+	align := max !align align';
 	if !n < sz then n := sz;
 	(x, (0, t))
     in
     let f = List.map translate f in
-      (f, !n)
+      (f, !n, !align)
   in
 
   let translate_compdef (n, is_struct, fields) =

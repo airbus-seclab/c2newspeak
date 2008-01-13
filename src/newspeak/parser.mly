@@ -71,7 +71,7 @@ let build_type_decl d =
   let (t, _, _) = Synthack.normalize_decl d in
     t
 
-let flatten_field_decl (b, x) = List.map (fun v -> (b, v)) x
+let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
 %}
 
@@ -131,12 +131,14 @@ declaration:
 ;;
 
 field_declaration:
-  declaration_specifiers declarator_list   { flatten_field_decl ($1, $2) }
+  declaration_specifiers 
+  struct_declarator_list                   { flatten_field_decl ($1, $2) }
 ;;
 
-declarator_list:
-  declarator COMMA declarator_list         { $1::$3 }
-| declarator                               { $1::[] }
+struct_declarator_list:
+  struct_declarator COMMA 
+  struct_declarator_list                   { $1::$3 }
+| struct_declarator                        { $1::[] }
 ;;
 
 // TODO: careful, this is a bit of a hack
@@ -393,6 +395,11 @@ declarator:
   LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
 					       Function ($1, args, va_list) }
 | declarator LPAREN RPAREN                 { Function ($1, [], false) }
+;;
+
+struct_declarator:
+  declarator                               { ($1, None) }
+| declarator COLON INTEGER                 { ($1, Some $3) }
 ;;
 
 pointer:

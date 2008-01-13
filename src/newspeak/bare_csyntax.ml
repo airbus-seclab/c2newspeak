@@ -44,6 +44,7 @@ and ftyp = (typ * string) list * bool * typ
 and typ =
     | Void
     | Int of ikind
+    | Bitfield of (ikind * int)
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
@@ -77,8 +78,6 @@ and stmtkind =
     | Block of blk
 
 and static = bool
-
-and field = string
 
 and exp = 
     | Cst of Csyntax.cst

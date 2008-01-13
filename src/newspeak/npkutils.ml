@@ -77,16 +77,16 @@ let cache = Hashtbl.create 100
 
 let translate_ikind k =
   match k with
-      ISChar | IChar -> (Newspeak.Signed, char_size)
-    | IUChar -> (Newspeak.Unsigned, char_size)
-    | IShort -> (Newspeak.Signed, short_size)
-    | IUShort -> (Newspeak.Unsigned, short_size)
-    | IInt -> (Newspeak.Signed, int_size)
-    | IUInt -> (Newspeak.Unsigned, int_size)
-    | ILong -> (Newspeak.Signed, long_size)
-    | IULong -> (Newspeak.Unsigned, long_size)
-    | ILongLong -> (Newspeak.Signed, long_long_size)
-    | IULongLong -> (Newspeak.Unsigned, long_long_size)
+      ISChar | IChar -> (Newspeak.Signed, Config.size_of_char)
+    | IUChar -> (Newspeak.Unsigned, Config.size_of_char)
+    | IShort -> (Newspeak.Signed, Config.size_of_short)
+    | IUShort -> (Newspeak.Unsigned, Config.size_of_short)
+    | IInt -> (Newspeak.Signed, Config.size_of_int)
+    | IUInt -> (Newspeak.Unsigned, Config.size_of_int)
+    | ILong -> (Newspeak.Signed, Config.size_of_long)
+    | IULong -> (Newspeak.Unsigned, Config.size_of_long)
+    | ILongLong -> (Newspeak.Signed, Config.size_of_longlong)
+    | IULongLong -> (Newspeak.Unsigned, Config.size_of_longlong)
 
 (* TODO: look at all callers to translate_typ to remove LenOfArray exception
    catch *)
@@ -125,12 +125,14 @@ let rec translate_typ t =
 	    error "Npkutils.translate_typ" 
               "variable list of arguments not handled yet"
 	      
-	| TFloat (FFloat, _) -> Npkil.Scalar (Newspeak.Float float_size)
+	| TFloat (FFloat, _) -> 
+	    Npkil.Scalar (Newspeak.Float Config.size_of_float)
 	    
-	| TFloat (FDouble, _) -> Npkil.Scalar (Newspeak.Float double_size)
+	| TFloat (FDouble, _) -> 
+	    Npkil.Scalar (Newspeak.Float Config.size_of_double)
 
 	| TFloat (FLongDouble, _) -> 
-	    Npkil.Scalar (Newspeak.Float long_double_size)
+	    Npkil.Scalar (Newspeak.Float Config.size_of_longdouble)
 	    
 	| TVoid _ | TFun _ ->
             error "Npkutils.translate_typ"
@@ -140,7 +142,7 @@ let rec translate_typ t =
       t'
 
 and translate_field t f =
-  let offset = offset_of t (Field(f, NoOffset)) in
+  let offset = Cilutils.offset_of t (Field(f, NoOffset)) in
   let typ = translate_typ f.ftype in
     (offset, typ)
 

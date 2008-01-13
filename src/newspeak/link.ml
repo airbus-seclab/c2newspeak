@@ -32,7 +32,7 @@ open Npkutils
 open Npkcontext
 open Npkil
 
-let size_of = Newspeak.size_of Cilutils.pointer_size
+let size_of = Newspeak.size_of Config.size_of_ptr
 
 let filenames = ref []
 
@@ -290,7 +290,7 @@ let link npkos output_file =
     Hashtbl.iter generate_global glb_decls;
     Npkcontext.forget_loc ();
 
-    Newspeak.write_hdr cout (!filenames, globals, Cilutils.pointer_size);
+    Newspeak.write_hdr cout (!filenames, globals, Config.size_of_ptr);
     
     print_debug "Functions...";
     generate_funspecs cout npkos;
@@ -303,17 +303,7 @@ let link npkos output_file =
       print_endline "Newspeak output";
       print_endline "---------------";
       let (_, kernel, _) = Newspeak.read output_file in
+      let kernel = Newspeak.build (new Newspeak.tobytesz) kernel in
 	Newspeak.dump kernel;
 	print_newline ()
     end
-
-
-(*	Newspeak.write output_file (!filenames, kernel, Cilutils.pointer_size)*)
-(*	(!filenames, kernel, Cilutils.pointer_size)*)
-
-(*
-  let prog = link npkos in
-  print_debug ("Writing output to "^(!output_file)^"...");
-  Newspeak.write !output_file prog;
-  print_debug (!output_file^" written.")
-*)

@@ -26,7 +26,7 @@ open Newspeak
 
 type prog = (compdefs * glbdecls * fundefs)
 
-and compdefs = (string, (fields_t * int)) Hashtbl.t
+and compdefs = (string, (fields_t * int * int)) Hashtbl.t
 
 (* first None is for extern, second None for no init *)
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
@@ -77,7 +77,7 @@ and typ_lv = (lv * typ)
 and lv = 
     | Local of int
     | Global of string
-    | Field of (lv * string * int)
+    | Field of (lv * int)
     | Index of (lv * array_t * exp)
     | Deref of (exp * typ)
 
@@ -127,6 +127,8 @@ val deref_typ: typ -> typ
 
 val size_of: compdefs -> typ -> int
 
+val align_of: compdefs -> typ -> int
+
 val int_kind: ikind
 
 val int_typ: typ
@@ -145,6 +147,6 @@ val cast: (exp * typ) -> typ -> exp
 
 val len_of_exp: exp -> int
 
-val align: int -> int -> int
+val next_align: int -> int -> int
 
 val ftyp_equal: ftyp -> ftyp -> bool

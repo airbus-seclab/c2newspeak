@@ -43,22 +43,6 @@ val size_of_subtyp : Cil.typ -> int
 
 val offset_of : Cil.typ -> Cil.offset -> int
 
-(** Thanks to size_of, we store in the following variables the sizes
-    in bytes of the types used. As these sizes are architecture
-    dependant, they are computed by Cil when Cilutils is loaded *)
-
-val char_size : int
-val short_size : int
-val int_size : int
-val long_size : int
-val long_long_size : int
-val pointer_size : int
-val float_size : int
-val double_size : int
-val long_double_size : int
-
-
-
 (** {1 Display functions } *)
 
 (** setCilPrinter allows to choose between the "plain" CilPrinter and

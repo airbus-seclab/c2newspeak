@@ -141,7 +141,7 @@ object (this)
 
       | BinOp (Ne as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
       | BinOp (Eq as o, CastE(TInt _, e1), CastE(TInt _, e2), (TInt _ as t))
-	  when size_of t = pointer_size && isPtr e1 && isPtr e2 ->
+	  when size_of t = Config.size_of_ptr && isPtr e1 && isPtr e2 ->
 	  ChangeDoChildrenPost (BinOp (o, e1, e2, t), fun x -> x)
 
 (* Reverts strange CIL behavior, which translates 

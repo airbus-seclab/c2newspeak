@@ -112,7 +112,7 @@ and fn =
 
 and typ =
     Scalar of scalar_t
-  | Array of (typ * size_t)
+  | Array of (typ * length)
   | Region of (field list * size_t)
 
 and field = offset * typ
@@ -125,7 +125,7 @@ and scalar_t =
 
 and init_t = 
   | Zero
-  | Init of (size_t * scalar_t * exp) list
+  | Init of (offset * scalar_t * exp) list
 
 and ftyp = typ list * typ option
 
@@ -137,7 +137,8 @@ and file = string
 and ikind = sign_t * size_t
 and sign_t = Signed | Unsigned
 and size_t = int
-and offset = int
+and offset = size_t
+and length = int
 
 and location = string * int * int
 
@@ -210,6 +211,20 @@ class nop_visitor : visitor
 val visit_fun : visitor -> fid -> fundec -> unit
 val visit_glb : visitor -> string -> gdecl -> unit
 val visit : visitor -> prog -> unit
+
+class builder:
+object
+  method process_lval: lval -> lval
+  method process_exp: exp -> exp
+  method process_blk: blk -> blk
+  method process_size_t: size_t -> size_t
+end
+
+class tobytesz:
+object inherit builder
+end
+
+val build : builder -> prog -> prog
 
 (** [dump (fundecs, body)] prints the program (fundecs, body) 
     to standard output. *)

@@ -27,7 +27,8 @@ open Newspeak
   
 type prog = (compdefs * glbdecls * fundefs)
 
-and compdefs = (string, (fields_t * int)) Hashtbl.t
+(* size and alignment *)
+and compdefs = (string, (fields_t * int * int)) Hashtbl.t
 
 (* None for extern *)
 and glbdecls = (string, typ * location * init option option) Hashtbl.t
@@ -80,7 +81,7 @@ and typ_lv = (lv * typ)
 and lv = 
     | Local of int
     | Global of string
-    | Field of (lv * string * int)
+    | Field of (lv * int)
     | Index of (lv * array_t * exp)
     | Deref of (exp * typ)
 
@@ -129,7 +130,7 @@ let ftyp_of_typ t =
 let fields_of_typ compdefs t =
   match t with
       Struct n | Union n -> 
-	let (f, _) = Hashtbl.find compdefs n in
+	let (f, _, _) = Hashtbl.find compdefs n in
 	  f
     | _ -> 
 	Npkcontext.error "Csyntax.fields_of_typ" 
@@ -145,7 +146,7 @@ let deref_typ t =
       Ptr t -> t
     | _ -> Npkcontext.error "Csyntax.deref_typ" "Pointer type expected"
 
-let rec size_of compdefs t =
+let size_of compdefs t =
   let rec size_of t =
     match t with
 	Int (_, n) -> n 
@@ -153,13 +154,24 @@ let rec size_of compdefs t =
       | Ptr _ -> Config.size_of_ptr
       | Array (t, Some n) -> (size_of t) * n
       | Struct n | Union n -> 
-	  let (_, sz) = Hashtbl.find compdefs n in
+	  let (_, sz, _) = Hashtbl.find compdefs n in
 	    sz
       | Fun _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of function"
       | Array _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of array"
       | Void -> Npkcontext.error "Csyntax.size_of" "Unknown size of void"
   in
     size_of t
+
+let align_of compdefs t =
+  let rec align_of t =
+    match t with
+	Struct n | Union n ->
+	  let (_, _, a) = Hashtbl.find compdefs n in
+	    a
+      | Array (t, _) -> align_of t
+      | _ -> size_of compdefs t
+  in
+    align_of t
 
 (* TODO: check that integer don't have a default type (like int) *)
 let typ_of_cst i =
@@ -179,7 +191,7 @@ let int_typ = Int int_kind
 
 let promote k = 
   match k with
-      (_, n) when n < Config.size_of_int -> (Signed, Config.size_of_int)
+      (_, n) when n < Config.size_of_int -> int_kind
     | _ -> k
 
 let exp_of_int n = Const (CInt (Int64.of_int n))
@@ -232,12 +244,19 @@ let rec len_of_exp e =
     Int64.to_int i
 
 (* TODO: check this for various architecture ? 
-   Here align everything on 4 *)
-let align o sz = 
+   Here align everything on 4
+   let align o sz = 
   let offset = o mod 4 in
     if offset = 0 then o
     else if offset + sz <= 4 then o
     else (o - offset) + 4
+*)
+
+(* [align o x] returns the smallest integer greater or equal than o,
+   which is equal to 0 modulo x *)
+let next_align o x =
+  let m = o mod x in
+    if m = 0 then o else o + x - m
 
 let ftyp_equal (args1, va_list1, ret1) (args2, va_list2, ret2) =
   let (args1, _) = List.split args1 in

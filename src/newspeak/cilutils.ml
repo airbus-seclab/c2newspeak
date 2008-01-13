@@ -36,7 +36,7 @@ open Cil
 
 (* TODO: this is dangerous because of silent overflows when the sizeof are 
    really large *)
-let size_of t = bitsSizeOf(t) / 8
+let size_of t = bitsSizeOf(t)
 
 let rec size_of_subtyp t =
   match t with
@@ -53,22 +53,10 @@ let rec size_of_subtyp t =
 
 let offset_of typ o = 
   let (from_base, _) = (Cil.bitsOffset typ o) in  
-    from_base/8
+    from_base
 
 (* We have to call initCIL before using size_of *)
 let _ = initCIL ()
-
-(* For efficiency reasons, use these variables instead of size_of *)
-let char_size = size_of (TInt(IChar, []))
-let short_size = size_of (TInt(IShort, []))
-let int_size = size_of (TInt(IInt, []))
-let long_size = size_of (TInt (ILong, []))
-let long_long_size = size_of (TInt (ILongLong, []))
-let pointer_size = size_of (TPtr(TInt (IInt, []), []))
-let float_size = size_of (TFloat (FFloat, []))
-let double_size = size_of (TFloat (FDouble, []))
-let long_double_size = size_of (TFloat (FLongDouble, []))
-
 
 
 (*-------------------*)

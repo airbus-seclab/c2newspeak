@@ -482,10 +482,10 @@ let char_typ = Int (Signed, Config.size_of_char)
 
 let init_of_string str =
   let len = String.length str in
-  let res = ref [(len, char_typ, exp_of_int 0)] in
+  let res = ref [(len*8, char_typ, exp_of_int 0)] in
     for i = len - 1 downto 0 do 
       let c = Char.code str.[i] in
-	res := (i, char_typ, exp_of_int c)::!res
+	res := (i*8, char_typ, exp_of_int c)::!res
     done;
     (len + 1, Some !res)
 

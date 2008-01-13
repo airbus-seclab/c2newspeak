@@ -103,7 +103,7 @@ and fn =
 
 and typ =
     Scalar of scalar_t
-  | Array of (typ * size_t)
+  | Array of (typ * length)
   | Region of (field list * size_t)
 
 and field = offset * typ
@@ -127,8 +127,10 @@ and file = string
 
 and ikind = sign_t * size_t
 and sign_t = Signed | Unsigned
+(* a size in number of bits *)
+and length = int
+and offset = size_t
 and size_t = int
-and offset = int
 
 and location = string * int * int
 
@@ -165,16 +167,22 @@ let size_of ptr_sz t =
     size_of t
 
 let domain_of_typ (sign, size) =
-    match sign, size with
-      (Unsigned, 1) -> (Int64.zero, Int64.of_string "255")
-    | (Signed, 1) -> (Int64.of_string "-128", Int64.of_string "127")
-    | (Unsigned, 2) -> (Int64.zero, Int64.of_string "65535")
-    | (Signed, 2) -> (Int64.of_string "-32768", Int64.of_string "32767")
-    | (Unsigned, 4) -> (Int64.zero, Int64.of_string "4294967295")
-    | (Signed, 4) -> (Int64.of_string "-2147483648", Int64.of_string "2147483647")
-    | (Signed, 8) -> (Int64.min_int, Int64.max_int)
-    | (Unsigned, 8) -> 
+    match (sign, size) with
+      (Unsigned, 8) -> (Int64.zero, Int64.of_string "255")
+    | (Signed, 8) -> (Int64.of_string "-128", Int64.of_string "127")
+    | (Unsigned, 16) -> (Int64.zero, Int64.of_string "65535")
+    | (Signed, 16) -> (Int64.of_string "-32768", Int64.of_string "32767")
+    | (Unsigned, 32) -> (Int64.zero, Int64.of_string "4294967295")
+    | (Signed, 32) -> (Int64.of_string "-2147483648", 
+		     Int64.of_string "2147483647")
+    | (Signed, 64) -> (Int64.min_int, Int64.max_int)
+    | (Unsigned, 64) -> 
 	invalid_arg "Newspeak.domain_of_typ: domain not representable"
+    | (Signed, n) when n < 64 -> 
+	let x = Int64.shift_left Int64.one (n - 1) in
+	  (Int64.neg x, Int64.pred x)
+    | (Unsigned, n) when n < 64 -> 
+	(Int64.zero, Int64.pred (Int64.shift_left Int64.one n))
     | _ -> invalid_arg "Newspeak.domain_of_typ"
 
 let rec negate exp =
@@ -641,12 +649,12 @@ let build_main_call ptr_sz (args_t, ret_t) args =
     (globs, build_call_aux "main" prolog (args_t, ret_t))
 
 
-
-class simplification =
+class builder =
 object
   method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
+  method process_size_t (x: size_t) = x
 end
 
 let contains (l1, u1) (l2, u2) = 
@@ -654,7 +662,7 @@ let contains (l1, u1) (l2, u2) =
 
 class simplify_coerce =
 object 
-  inherit simplification
+  inherit builder
 
   method process_exp e =
     match e with
@@ -684,8 +692,8 @@ object
 end
 
 class simplify_arith =
-object 
-  inherit simplification
+object (self)
+  inherit builder
     
   method process_lval x =
     match x with
@@ -731,6 +739,18 @@ object
       | BinOp (PlusPI, e, Const CInt64 x) 
 	  when (Int64.compare x Int64.zero = 0) -> e
 
+      | BinOp (DivI, Const CInt64 i1, Const CInt64 i2) 
+	  when Int64.compare i2 Int64.zero <> 0 ->
+	  let i = Int64.div i1 i2 in
+	    exp_of_int64 i
+
+(* TODO: this is a but adhoc, do better than this by generalizing !! *)
+      | BinOp (DivI, BinOp (MultI, e, Const CInt64 i1), Const CInt64 i2) 
+	  when Int64.compare i2 Int64.zero <> 0 ->
+	  let i = Int64.div i1 i2 in
+	  let i = exp_of_int64 i in
+	    self#process_exp (BinOp (MultI, e, i))
+	      
       | BinOp (MinusI, Const CInt64 x, Const CInt64 y) 
 	when (Int64.compare x Int64.zero = 0)
 	  && (Int64.compare y Int64.min_int <> 0) ->
@@ -741,7 +761,7 @@ end
 
 class simplify_choose =
 object 
-  inherit simplification
+  inherit builder
 
   method process_blk x =
     match x with
@@ -913,13 +933,245 @@ let rec normalize_loop blk =
 
 class simplify_loops =
 object 
-  inherit simplification
+  inherit builder
 
   method process_blk x = normalize_loop x
 end
 
 let normalize_loops b = simplify_blk [new simplify_loops] b
 
+class tobytesz =
+object
+  inherit builder
+
+  method process_size_t sz =
+    if (sz mod 8) <> 0 
+    then invalid_arg "Newspeak.process_size_t: size not multiple of 8 bits";
+    sz / 8
+
+  method process_lval lv =
+    match lv with
+	Shift (lv, e) ->
+	  let e = BinOp (DivI, e, exp_of_int 8) in
+	  let e = simplify_exp e in
+	    Shift (lv, e)
+      | _ -> lv
+
+  method process_exp e =
+    match e with
+	BinOp (PlusPI, p, i) ->
+	  let i = BinOp (DivI, i, exp_of_int 8) in
+	  let i = simplify_exp i in
+	    BinOp (PlusPI, p, i)
+      | _ -> e
+end
+
+let rec build builder (globals, fundecs) = 
+  let globals' = Hashtbl.create 100 in
+  let fundecs' = Hashtbl.create 100 in
+  let build_global x gdecl = 
+    let gdecl = build_gdecl builder gdecl in
+      Hashtbl.add globals' x gdecl
+  in
+  let build_fundec f fundec =
+    let fundec = build_fundec builder fundec in
+      Hashtbl.add fundecs' f fundec
+  in
+    Hashtbl.iter build_global globals;
+    Hashtbl.iter build_fundec fundecs;
+    (globals', fundecs')
+
+and build_gdecl builder (t, init) =
+  let t = build_typ builder t in
+  let init = build_init_t builder init in
+    (t, init)
+
+and build_fundec builder (ft, body) = 
+  let ft = build_ftyp builder ft in
+  let body = 
+    match body with
+	Some body -> Some (build_blk builder body)
+      | None -> None
+  in
+    (ft, body)
+
+and build_typ builder t =
+  match t with
+      Scalar t -> Scalar (build_scalar_t builder t)
+    | Array (t, n) ->
+	let t = build_typ builder t in
+	  Array (t, n)
+    | Region (fields, sz) ->
+	let fields = List.map (build_field builder) fields in
+	let sz = build_size_t builder sz in
+	  Region (fields, sz)
+
+and build_scalar_t builder t =
+  match t with
+      Int k ->
+	let k = build_ikind builder k in
+	  Int k
+    | Float sz ->
+	let sz = build_size_t builder sz in
+	  Float sz
+    | Ptr -> t
+    | FunPtr -> t
+
+and build_field builder (o, t) =
+  let o = build_size_t builder o in
+  let t = build_typ builder t in
+    (o, t)
+
+and build_ikind builder (sign, sz) =
+  let sz = build_size_t builder sz in
+    (sign, sz)
+
+and build_ftyp builder (args, ret) =
+  let args = List.map (build_typ builder) args in
+  let ret = 
+    match ret with
+	Some t -> Some (build_typ builder t)
+      | None -> None
+  in
+    (args, ret)
+
+and build_init_t builder init =
+  match init with
+      Zero -> Zero
+    | Init cells -> 
+	let cells = List.map (build_cell builder) cells in
+	  Init cells
+
+and build_cell builder (o, t, e) =
+  let o = build_size_t builder o in
+  let t = build_scalar_t builder t in
+  let e = build_exp builder e in
+    (o, t, e)
+
+and build_size_t builder sz = builder#process_size_t sz
+
+and build_blk builder blk = List.map (build_stmt builder) blk
+
+and build_stmt builder (x, loc) =
+  let x = build_stmtkind builder x in
+    (x, loc)
+
+and build_stmtkind builder x =
+  match x with
+      Set (lv, e, t) ->
+	let lv = build_lval builder lv in
+	let e = build_exp builder e in
+	let t = build_scalar_t builder t in
+	  Set (lv, e, t)
+
+    | Copy (lv1, lv2, n) ->
+	let lv1 = build_lval builder lv1 in
+	let lv2 = build_lval builder lv2 in
+	let n = build_size_t builder n in
+	  Copy (lv1, lv2, n)
+
+    | Decl (x, t, body) ->
+	let t = build_typ builder t in
+	let body = build_blk builder body in
+	  Decl (x, t, body)
+
+    | ChooseAssert choices -> 
+	let choices = List.map (build_choice builder) choices in
+	  ChooseAssert choices
+
+    | InfLoop body ->
+	let body = build_blk builder body in
+	  InfLoop body
+
+    | DoWith (body, lbl, action) ->
+	let body = build_blk builder body in
+	let action = build_blk builder action in
+	  DoWith (body, lbl, action)
+
+    | Goto lbl -> Goto lbl
+
+    | Call fn -> 
+	let fn = build_fn builder fn in
+	  Call fn
+
+and build_choice builder (cond, body) =
+  let cond = List.map (build_exp builder) cond in
+  let body = build_blk builder body in
+    (cond, body)
+
+and build_fn builder fn =
+  match fn with
+      FunId f -> FunId f
+    | FunDeref (e, ft) ->
+	let e = build_exp builder e in
+	let ft = build_ftyp builder ft in
+	  FunDeref (e, ft)
+
+and build_lval builder lv =
+  let lv =
+    match lv with
+	Local x -> Local x
+      | Global str -> Global str
+      | Deref (e, sz) -> 
+	  let e = build_exp builder e in
+	  let sz = build_size_t builder sz in
+	    Deref (e, sz)
+      | Shift (lv, e) ->
+	  let lv = build_lval builder lv in
+	  let e = build_exp builder e in
+	    Shift (lv, e)
+  in
+    builder#process_lval lv
+
+and build_exp builder e =
+  let e =
+    match e with
+	Const c -> Const c
+      | Lval (lv, t) ->
+	  let lv = build_lval builder lv in
+	  let t = build_scalar_t builder t in
+	    Lval (lv, t)
+      | AddrOf (lv, sz) -> 
+	  let lv = build_lval builder lv in
+	  let sz = build_size_t builder sz in
+	    AddrOf (lv, sz)
+      | AddrOfFun f -> AddrOfFun f
+      | UnOp (op, e) ->
+	  let op = build_unop builder op in
+	  let e = build_exp builder e in
+	    UnOp (op, e)
+      | BinOp (op, e1, e2) ->
+	  let op = build_binop builder op in
+	  let e1 = build_exp builder e1 in
+	  let e2 = build_exp builder e2 in
+	    BinOp (op, e1, e2)
+  in
+    builder#process_exp e
+
+and build_unop builder op =
+  match op with
+      PtrToInt k ->
+	let k = build_ikind builder k in
+	  PtrToInt k
+    | IntToPtr k ->
+	let k = build_ikind builder k in
+	  IntToPtr k
+    | Cast (t1, t2) ->
+	let t1 = build_scalar_t builder t1 in
+	let t2 = build_scalar_t builder t2 in
+	  Cast (t1, t2)
+    | Belongs _ | Coerce _ | Not | BNot _-> op
+
+and build_binop builder op =
+  match op with
+      PlusF sz -> PlusF (build_size_t builder sz)
+    | MinusF sz -> MinusF (build_size_t builder sz)
+    | MultF sz -> MultF (build_size_t builder sz)
+    | DivF sz -> DivF (build_size_t builder sz)
+    | Gt t -> Gt (build_scalar_t builder t)
+    | Eq t -> Eq (build_scalar_t builder t)
+    | PlusI | MinusI | MultI | DivI | Mod
+    | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt | PlusPI | MinusPP -> op
 
 (* Visitor *)
 class type visitor =
@@ -1024,9 +1276,6 @@ let visit_glb visitor id (t, init) =
 let visit visitor (globals, fundecs) =
   Hashtbl.iter (visit_glb visitor) globals;
   Hashtbl.iter (visit_fun visitor) fundecs
-
-(* Builder *)
-
 
 
 (* Decompilation towards C *)

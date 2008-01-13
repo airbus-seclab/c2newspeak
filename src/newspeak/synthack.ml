@@ -31,12 +31,19 @@ open Newspeak
 module B = Bare_csyntax
 module C = Csyntax
 
+let int64_to_int x =
+  if Int64.compare x (Int64.of_int max_int) > 0 
+  then Npkcontext.error "Firstpass.int64_to_int" "integer too big";
+  if Int64.compare x (Int64.of_int max_int) > 0 
+  then Npkcontext.error "Firstpass.int64_to_int" "expecting positive integer";
+  Int64.to_int x
+
 type base_typ =
     | Void 
     | Integer of ikind
     | Float of int
-    | Struct of (string * decl list option)
-    | Union of (string * decl list option)
+    | Struct of (string * field list option)
+    | Union of (string * field list option)
     | Name of string
     | Enum of (string * Int64.t option) list option
 
@@ -49,6 +56,8 @@ and var_modifier =
     | Pointer of var_modifier
 
 and decl = (base_typ * var_modifier)
+
+and field = (base_typ * var_modifier * Int64.t option)
 
 let typedefs = Hashtbl.create 100
 let enumdefs = Hashtbl.create 100
@@ -89,13 +98,6 @@ let define_enum e =
 
 let find_enum x = Hashtbl.find enumdefs x
 
-let int64_to_int x =
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Firstpass.int64_to_int" "integer too big";
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Firstpass.int64_to_int" "expecting positive integer";
-  Int64.to_int x
-
 let rec normalize_base_typ t =
   match t with
       Integer k -> B.Int k
@@ -122,7 +124,7 @@ and normalize_compdef n is_struct f =
   match f with
       None -> ()
     | Some f -> 
-	let f = List.map normalize_arg f in
+	let f = List.map normalize_field f in
 	  define_comp n is_struct f
 
 and normalize_var_modifier b v =
@@ -142,6 +144,20 @@ and normalize_var_modifier b v =
 	  
 and normalize_arg a = 
   let (t, x, _) = normalize_decl a in
+    (t, x)
+
+and normalize_field (b, v, bits) =
+  let (t, x, _) = normalize_decl (b, v) in
+  let t =
+    match (bits, t) with
+	(None, _) -> t
+      | (Some n, B.Int k) ->
+	  let n = int64_to_int n in
+	    B.Bitfield (k, n)
+      | _ -> 
+	  Npkcontext.error "Synthack.normalize_field" 
+	    "bit-fields allowed only with integer types"
+  in
     (t, x)
 
 and normalize_decl (b, v) =

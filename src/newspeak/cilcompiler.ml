@@ -58,8 +58,8 @@ let rec translate_const c =
   match c with
       CInt64 (i, k, _) -> 
 	let (s, n) = translate_ikind k in
-	  if n > 8 
-	    || (n = 8 && s = Newspeak.Unsigned 
+	  if n > 64
+	    || (n = 64 && s = Newspeak.Unsigned 
 		&& Int64.compare i Int64.zero < 0) 
 	  then error "Npkcompile.translate_const"
 	    "integer too large: not representable";
@@ -93,6 +93,7 @@ and translate_cast t e =
 	  match (translate_typ t, translate_typ t_e) with
 	      (K.Scalar s, K.Scalar s_e) -> 
 		translate_scalar_cast (translate_exp e, s_e) s
+
 	    | _ ->
 		error "Npkcompile.translate_cast"
 		  ("translate cast: Invalid cast "
@@ -122,13 +123,13 @@ and translate_scalar_cast (e, t2) t1 =
     | (Newspeak.FunPtr, Newspeak.FunPtr) -> e
 		      
     | (Newspeak.Int (sign, sz), Newspeak.Ptr)
-	when sz = Cilutils.pointer_size && !castor_allowed ->
+	when sz = Config.size_of_ptr && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
 	  K.UnOp (K.PtrToInt (sign, sz), e)
 	    
     | (Newspeak.Ptr, Newspeak.Int (sign, sz))
-	when sz = Cilutils.pointer_size && !castor_allowed ->
+	when sz = Config.size_of_ptr && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
 	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
 	  K.UnOp (K.IntToPtr (sign, sz), e)
@@ -196,8 +197,8 @@ and translate_lval lv =
 and translate_exp e =
   match e with
       Const c -> translate_const c
-    | SizeOf t -> K.exp_of_int (Cilutils.size_of t)
-    | SizeOfE e -> K.exp_of_int (Cilutils.size_of (typeOf e))
+    | SizeOf t -> K.exp_of_int ((Cilutils.size_of t) / 8)
+    | SizeOfE e -> K.exp_of_int ((Cilutils.size_of (typeOf e)) / 8)
     | SizeOfStr s -> K.exp_of_int (String.length s + 1)
 	
     | CastE (t, e) -> translate_cast t e
@@ -788,9 +789,7 @@ let translate_init x t =
 	    glb_inits := v::(!glb_inits)
       | CompoundInit (_, c) -> List.iter (expand_elem off) c
 
-  and expand_elem prefix (off, i) = 
-    expand (addOffset off prefix) i
-  in
+  and expand_elem prefix (off, i) = expand (addOffset off prefix) i in
 
     match x with
 	None -> None

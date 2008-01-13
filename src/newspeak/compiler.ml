@@ -104,7 +104,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 	  | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
 	  | Array (t, sz) -> K.Array (translate_typ t, sz)
 	  | Struct n | Union n -> 
-	      let (fields, sz) = 
+	      let (fields, sz, _) = 
 		try Hashtbl.find compdefs n 
 		with Not_found -> 
 		  Npkcontext.error "Compiler.translate_typ"
@@ -172,7 +172,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
 
       | Global x -> K.Global x
 
-      | Field (lv, f, o) ->
+      | Field (lv, o) ->
 	  let lv = translate_lv lv in
 	  let o = K.exp_of_int o in
 	    K.Shift (lv, o)

@@ -4,8 +4,8 @@ type base_typ =
     | Void 
     | Integer of ikind
     | Float of int
-    | Struct of (string * decl list option)
-    | Union of (string * decl list option)
+    | Struct of (string * field list option)
+    | Union of (string * field list option)
     | Name of string
     | Enum of (string * Int64.t option) list option
 
@@ -18,6 +18,8 @@ and var_modifier =
     | Pointer of var_modifier
 
 and decl = (base_typ * var_modifier)
+
+and field = (base_typ * var_modifier * Int64.t option)
 
 val normalize_base_typ: base_typ -> Bare_csyntax.typ
 
