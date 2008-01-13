@@ -3,5 +3,5 @@ Newspeak output
 main() {
 }
 
-int1[3] x = {0: int1 1;1: int1 2;2: int1 3};
+int8[3] x = {0: int8 1;8: int8 2;16: int8 3};
 

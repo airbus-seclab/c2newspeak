@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (30)^x =(int4) 2;
+  (30)^x =(int32) 2;
 }
 
-int4 x = {0: int4 3};
+int32 x = {0: int32 3};
 

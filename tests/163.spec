@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (29)^x =(float4) (float4 <= float8) 1.0;
+  (29)^x =(float32) (float32 <= float64) 1.0;
 }
 
-float4[3] x = {0: float4 (float4 <= float8) 0.4;4: float4 (float4 <= float8) 9.4;8: float4 0.};
+float32[3] x = {0: float32 (float32 <= float64) 0.4;32: float32 (float32 <= float64) 9.4;64: float32 0.};
 

@@ -1,4 +1,4 @@
-DIR = newspeak npkstats npkstrip npksimplify
+DIR = newspeak npkstats npkstrip npksimplify npk2bytesz
 DEP = $(addsuffix /.depend,$(DIR))
 
 #DOC_DIR= ../doc/ocamldoc/
@@ -20,6 +20,4 @@ $(DEP):
 clean: $(DIR)
 	$(RM) *~
 	$(RM) date.ml
-
-test: newspeak npkstats
 

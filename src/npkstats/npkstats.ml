@@ -103,7 +103,7 @@ let plot f stats fname =
 
 class collector ptr_sz fun_to_count =
 object (this)
-  inherit Newspeak.nop_visitor
+  inherit Newspeak.visitor
     
   val mutable globals = 0
   val mutable bytes = 0

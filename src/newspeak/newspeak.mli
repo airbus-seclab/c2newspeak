@@ -193,7 +193,7 @@ val string_of_stmt: stmt -> string
 val string_of_blk: blk -> string
 
 (** Visitor *)
-class type visitor =
+class visitor:
 object
   method process_gdecl: string -> gdecl -> bool
   method process_fun: fid -> fundec -> bool
@@ -206,8 +206,6 @@ object
   method process_binop: binop -> unit
 end
 
-class nop_visitor : visitor
-
 val visit_fun : visitor -> fid -> fundec -> unit
 val visit_glb : visitor -> string -> gdecl -> unit
 val visit : visitor -> prog -> unit
@@ -218,10 +216,6 @@ object
   method process_exp: exp -> exp
   method process_blk: blk -> blk
   method process_size_t: size_t -> size_t
-end
-
-class tobytesz:
-object inherit builder
 end
 
 val build : builder -> prog -> prog

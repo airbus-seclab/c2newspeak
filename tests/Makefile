@@ -38,6 +38,7 @@ TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 check: ../bin/c2newspeak $(TESTS)
 	make -C npksimplify check
 	make -C mem_opt check
+	make -C npk2bytesz check
 
 001: 026 028 176 177
 000: 030 031
@@ -119,6 +120,7 @@ $(TESTS.CIL.SPEC): ../bin/c2newspeak
 clean:
 	$(RM) $(TESTS)
 	make -C npksimplify clean
+	make -C npk2bytesz clean
 	make -C mem_opt clean
 	$(RM) *~ *.bak result *.no *.npk
 

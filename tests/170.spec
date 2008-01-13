@@ -3,13 +3,13 @@ Newspeak output
 ---------------
 main() {
   (29)^ptr;
-  (31)^uint4;
+  (31)^uint32;
   (31)^{
-    uint4;
+    uint32;
     (31)^f();
-    (31)^1- =(uint4) 0-_uint4;
+    (31)^1- =(uint32) 0-_uint32;
   }
-  (31)^1- =(ptr) (ptr) 0-_uint4;
+  (31)^1- =(ptr) (ptr) 0-_uint32;
 }
 
 

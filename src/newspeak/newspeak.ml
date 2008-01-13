@@ -940,32 +940,6 @@ end
 
 let normalize_loops b = simplify_blk [new simplify_loops] b
 
-class tobytesz =
-object
-  inherit builder
-
-  method process_size_t sz =
-    if (sz mod 8) <> 0 
-    then invalid_arg "Newspeak.process_size_t: size not multiple of 8 bits";
-    sz / 8
-
-  method process_lval lv =
-    match lv with
-	Shift (lv, e) ->
-	  let e = BinOp (DivI, e, exp_of_int 8) in
-	  let e = simplify_exp e in
-	    Shift (lv, e)
-      | _ -> lv
-
-  method process_exp e =
-    match e with
-	BinOp (PlusPI, p, i) ->
-	  let i = BinOp (DivI, i, exp_of_int 8) in
-	  let i = simplify_exp i in
-	    BinOp (PlusPI, p, i)
-      | _ -> e
-end
-
 let rec build builder (globals, fundecs) = 
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
@@ -1174,21 +1148,8 @@ and build_binop builder op =
     | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt | PlusPI | MinusPP -> op
 
 (* Visitor *)
-class type visitor =
+class visitor =
 object 
-  method process_gdecl: string -> gdecl -> bool
-  method process_fun: fid -> fundec -> bool
-  method process_fun_after: unit -> unit
-  method process_stmt: stmt -> bool
-  method process_fn: fn -> bool
-  method process_exp: exp -> bool
-  method process_lval: lval -> bool
-  method process_unop: unop -> unit
-  method process_binop: binop -> unit
-end
-
-class nop_visitor =
-object
   method process_gdecl (_: string) (_: gdecl) = true
   method process_fun (_: fid) (_: fundec) = true
   method process_fun_after () = ()

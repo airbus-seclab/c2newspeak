@@ -1,12 +1,10 @@
 DIR = src bin tests
 
-.PHONY: $(DIR) all clean test install tar
+.PHONY: $(DIR) all clean check install tar
 
 install: src
 
-all:
-
-test:
+check: 
 	$(MAKE) -C tests
 
 $(DIR):

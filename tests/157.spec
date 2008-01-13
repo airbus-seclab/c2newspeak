@@ -3,5 +3,5 @@ Newspeak output
 main() {
 }
 
-int4 x = 0;
+int32 x = 0;
 

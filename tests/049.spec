@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 main() {
-  (32)^int1;
-  (33)^0- =(int1) [x_ptr]1_int1;
+  (32)^int8;
+  (33)^0- =(int8) [x_ptr]8_int8;
 }
 
-int1[6] !049.c.const_str_Hello = {0: int1 72;1: int1 101;2: int1 108;3: int1 108;4: int1 111;5: int1 0};
-ptr x = {0: ptr &_6(!049.c.const_str_Hello)};
+int8[6] !049.c.const_str_Hello = {0: int8 72;8: int8 101;16: int8 108;24: int8 108;32: int8 111;40: int8 0};
+ptr x = {0: ptr &_48(!049.c.const_str_Hello)};
 

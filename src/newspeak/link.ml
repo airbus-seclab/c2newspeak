@@ -303,7 +303,6 @@ let link npkos output_file =
       print_endline "Newspeak output";
       print_endline "---------------";
       let (_, kernel, _) = Newspeak.read output_file in
-      let kernel = Newspeak.build (new Newspeak.tobytesz) kernel in
 	Newspeak.dump kernel;
 	print_newline ()
     end

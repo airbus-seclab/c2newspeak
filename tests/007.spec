@@ -3,8 +3,8 @@ Newspeak output
 ---------------
 main() {
   (32)^ptr;
-  (33)^int4;
-  (34)^0- =(int4) (int4) 1-_ptr;
+  (33)^int32;
+  (34)^0- =(int32) (int32) 1-_ptr;
 }
 
 

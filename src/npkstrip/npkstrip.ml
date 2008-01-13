@@ -51,7 +51,7 @@ module StringSet = Set.Make(String)
 
 class collector (globals, fundecs) used_gvars used_funs =
 object (this)
-  inherit Newspeak.nop_visitor
+  inherit Newspeak.visitor
 
   method add_global x =
     if not (Hashtbl.mem used_gvars x) then begin

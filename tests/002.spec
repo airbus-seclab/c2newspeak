@@ -1,11 +1,11 @@
 Newspeak output
 ---------------
 main() {
-  (37)^int4;
-  (38)^int4;
-  (40)^x =(int4) 1-_int4;
-  (41)^x =(int4) 0-_int4;
+  (37)^int32;
+  (38)^int32;
+  (40)^x =(int32) 1-_int32;
+  (41)^x =(int32) 0-_int32;
 }
 
-int4 x = 0;
+int32 x = 0;
 
