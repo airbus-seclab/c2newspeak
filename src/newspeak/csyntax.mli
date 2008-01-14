@@ -147,6 +147,6 @@ val cast: (exp * typ) -> typ -> exp
 
 val len_of_exp: exp -> int
 
-val next_align: int -> int -> int
+val next_aligned: int -> int -> int
 
 val ftyp_equal: ftyp -> ftyp -> bool

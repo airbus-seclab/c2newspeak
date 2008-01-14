@@ -254,7 +254,7 @@ let rec len_of_exp e =
 
 (* [align o x] returns the smallest integer greater or equal than o,
    which is equal to 0 modulo x *)
-let next_align o x =
+let next_aligned o x =
   let m = o mod x in
     if m = 0 then o else o + x - m
 

@@ -1,10 +1,28 @@
 Known limitations
------------
-
-- bitfields not handled
+-----------------
 - unsigned long long type not handled
 - functions with variable number of arguments not handled
 - goto statements not handled
 - simplifies &(*ptr) into ptr. When ptr is out of bounds, error will be missed.
-- largest size of array handled is 1073741823
-- every function calls need to be defined before hand
+- largest size of array handled is 1073741823/8
+- every function prototype (or body) needs to be defined before the call
+- unstructured switch not handled
+
+C subset handled
+----------------
+types
+- bitfields
+
+expressions
+
+statements
+- assignment
+- for
+- do while
+- while do
+- if then
+- if then else 
+- structured switch
+- break
+- return
+- continue

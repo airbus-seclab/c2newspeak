@@ -790,8 +790,21 @@ let translate fname (bare_compdefs, globals) =
 
   let translate_struct_fields f =
     let o = ref 0 in
-    let align = ref 1 in
+    let last_align = ref 1 in
     let rec translate (t, x) =
+      match t with
+	  Bitfield ((_, n), sz) when sz > n ->
+	    Npkcontext.error "Firstpass.translate_struct_fields"
+	      "width of bitfield exceeds its type"
+	| Bitfield ((s, n), sz) ->
+	    let t = translate_typ (Int (s, n)) in
+	    let cur_align = C.align_of compdefs t in
+	    let o' = C.next_aligned !o cur_align in
+	    let o' = if !o + sz <= o' then !o else o' in
+	    let t = translate_typ (Int (s, sz)) in
+	      last_align := max !last_align cur_align;
+	      o := !o + sz;
+	      (x, (o', t))
 (* TODO
 	  (Bitfield ((s, n), sz), x)::f -> 
 	    let t = translate_typ (Int (s, sz)) in
@@ -800,16 +813,17 @@ let translate fname (bare_compdefs, globals) =
 	    let (f, n) = translate (o+sz) f in
 	      ((x, (o, t))::f, n)
 *) (*????*)
-      let t = translate_typ t in
-      let sz = C.size_of compdefs t in
-      let align' = C.align_of compdefs t in
-      let o' = C.next_align !o align' in
-	align := max !align align';
-	o := !o+sz;
-	(x, (o', t))
+	| _ ->
+	    let t = translate_typ t in
+	    let sz = C.size_of compdefs t in
+	    let cur_align = C.align_of compdefs t in
+	    let o' = C.next_aligned !o cur_align in
+	      last_align := max !last_align cur_align;
+	      o := o'+sz;
+	      (x, (o', t))
     in
     let f = List.map translate f in
-      (f, C.next_align !o !align, !align)
+      (f, C.next_aligned !o !last_align, !last_align)
       
   in
 
