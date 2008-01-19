@@ -42,33 +42,51 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let process_decls f (b, m) =
-  let b = Synthack.normalize_base_typ b in
+let process_decls build (b, m) =
+  let (enumdecls, b) = Synthack.normalize_base_typ b in
   let process (v, init) =
-    let (t, x, loc) = Synthack.normalize_var_modifier b v in
-      f (t, x, init, loc)
+    let d = Synthack.normalize_var_modifier b v in
+      build d init
   in
-    List.map process m
+    (enumdecls, List.map process m)
 
 let build_glbdecl (static, extern) d =
-  let build (t, x, init, loc) = (GlbDecl (x, t, static, extern, init), loc) in
-    process_decls build d
+  let build_edecl (d, loc) = (GlbEDecl d, loc) in
+  let build_vdecl (t, x, loc) init = 
+    (GlbVDecl ((x, t, static, init), extern), loc) 
+  in
+  let (edecls, vdecls) = process_decls build_vdecl d in
+  let edecls = List.map build_edecl edecls in
+    (edecls@vdecls)
 
 let build_fundef (b, m, body) = 
-  let (t, x, loc) = Synthack.normalize_decl (b, m) in
+  let (enumdecls, (t, x, loc)) = Synthack.normalize_decl (b, m) in
     (FunctionDef (x, t, body), loc)::[]
       
+let build_glbtypedef d =
+  let build_edecl (d, loc) = (GlbEDecl d, loc) in
+  let build_vdecl (t, x, _) _ = Synthack.define_type x t in
+  let (edecls, _) = process_decls build_vdecl d in
+    List.map build_edecl edecls
+
 let build_typedef d =
-  let build (t, x, _, _) = Synthack.define_type x t in
-  let _ = process_decls build d in
-    []
+  let build_edecl (d, loc) = (EDecl d, loc) in
+  let build_vdecl (t, x, _) _ = Synthack.define_type x t in
+  let (edecls, _) = process_decls build_vdecl d in
+    List.map build_edecl edecls
 
 let build_stmtdecl static d =
-  let build (t, x, init, loc) = (Decl (x, t, static, init), loc) in
-    process_decls build d
+  let build_edecl (d, loc) = (EDecl d, loc) in
+  let build_vdecl (t, x, loc) init = (VDecl (x, t, static, init), loc) in
+  let (edecls, vdecls) = process_decls build_vdecl d in
+  let edecls = List.map build_edecl edecls in
+    edecls@vdecls
 
 let build_type_decl d =
-  let (t, _, _) = Synthack.normalize_decl d in
+  let (edecls, (t, _, _)) = Synthack.normalize_decl d in
+    if (edecls <> []) then begin 
+      Npkcontext.error "Parser.build_type_decl" "unexpected enum declaration"
+    end;
     t
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
@@ -116,7 +134,7 @@ external_declaration:
 | EXTERN declaration                       { build_glbdecl (false, true) $2 }
 | STATIC declaration                       { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef $1 }
-| TYPEDEF declaration                      { build_typedef $2 }
+| TYPEDEF declaration                      { build_glbtypedef $2 }
 ;;
 
 function_definition:
@@ -151,7 +169,7 @@ parameter_declaration:
 
 type_name:
   declaration_specifiers                   { ($1, Abstract) }
-| declaration_specifiers 
+| declaration_specifiers
   abstract_declarator                      { ($1, $2) }
 ;;
 
@@ -439,10 +457,10 @@ type_specifier:
 | UNION IDENTIFIER                       { Union ($2, None) }
 | UNION IDENTIFIER field_blk             { Union ($2, Some $3) }
 | TYPEDEF_NAME                           { Name $1 }
-| ENUM LBRACE enum_list RBRACE           { Enum (Some $3) }
+| ENUM LBRACE enum_list RBRACE           { Enum (Some ($3, get_loc ())) }
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
-  LBRACE enum_list RBRACE                { Enum (Some $4) }
+  LBRACE enum_list RBRACE                { Enum (Some ($4, get_loc ())) }
 ;;
 
 enum_list:

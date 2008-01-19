@@ -7,7 +7,7 @@ type base_typ =
     | Struct of (string * field list option)
     | Union of (string * field list option)
     | Name of string
-    | Enum of (string * Int64.t option) list option
+    | Enum of ((string * Int64.t option) list * Newspeak.location) option
 
 and var_modifier = 
     | Abstract
@@ -21,17 +21,17 @@ and decl = (base_typ * var_modifier)
 
 and field = (base_typ * var_modifier * Int64.t option)
 
-val normalize_base_typ: base_typ -> Bare_csyntax.typ
+type vdecl = (Bare_csyntax.typ * string * location)
+type edecl = (Bare_csyntax.enumdecl * Newspeak.location)
 
-val normalize_var_modifier: 
-  Bare_csyntax.typ -> var_modifier -> (Bare_csyntax.typ * string * location)
+val normalize_base_typ: base_typ -> (edecl list * Bare_csyntax.typ)
 
-val normalize_decl: decl -> (Bare_csyntax.typ * string * location)
+val normalize_var_modifier: Bare_csyntax.typ -> var_modifier -> vdecl
+
+val normalize_decl: decl -> (edecl list * vdecl)
 
 val get_compdefs: unit -> Bare_csyntax.compdefs
 
 val define_type: string -> Bare_csyntax.typ -> unit
 
 val is_type: string -> bool
-
-val find_enum: string -> Int64.t

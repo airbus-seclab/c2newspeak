@@ -33,8 +33,16 @@ and compdefs = (string * bool * declaration list) list
 
 and global = 
     | FunctionDef of (string * typ * blk)
+(* enum declaration *)
+    | GlbEDecl of enumdecl
 (* true for extern *)
-    | GlbDecl of (string * typ * static * bool * init option)
+    | GlbVDecl of (vardecl * extern)
+
+and extern = bool
+
+and vardecl = string * typ * static * init option
+
+and enumdecl = string * Int64.t
 
 and declaration = (typ * string)
 
@@ -61,7 +69,8 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    | Decl of (string * typ * static * init option)
+    | EDecl of enumdecl
+    | VDecl of vardecl
 (* TODO: simplify if then else syntax !!! Only two cases at most!!! *)
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)

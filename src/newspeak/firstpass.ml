@@ -91,23 +91,6 @@ let rec simplify_binop op (e1, t1) (e2, t2) =
 	    
     | _ -> (op, (e1, t1), (e2, t2))
 
-(*	    
-    | (Gt, C.Array (elt_t, _), C.Int _) -> 
-	let t = C.Ptr elt_t in
-	  simplify_binop Gt (C.cast (e1, t1) t, t) (e2, t2)
-    | (Gt, C.Int _, C.Array (elt_t, _)) ->
-	let t = C.Ptr elt_t in
-	  simplify_binop Gt (e1, t1) (C.cast (e2, t2) t, t)
-
-    | (Eq, C.Array (elt_t, _), C.Int _) -> 
-	let t = C.Ptr elt_t in
-	  simplify_binop Eq (C.cast (e1, t1) t, t) (e2, t2)
-    | (Eq, C.Int _, C.Array (elt_t, _)) ->
-	let t = C.Ptr elt_t in
-	  simplify_binop Eq (e1, t1) (C.cast (e2, t2) t, t)
-*)
-
-
 and translate_binop op e1 e2 =
   let (op, (e1, t1), (e2, t2)) = simplify_binop op e1 e2 in
   let (op, e1, e2, t) =
@@ -202,27 +185,31 @@ let translate_unop op (e, t) =
 	Npkcontext.error "Csyntax.translate_unop" 
 	  "Unexpected unary operator and argument"
 
+(* TODO: simplify by get a location for all of them *)
+type symb =
+    | Enum of Int64.t
+    | Glb of string 
+    | Local of (int * Newspeak.location)
 
+(* TODO: remove variables hoisting at the function level *)
 let translate fname (bare_compdefs, globals) =
   let compdefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
-(* Local variables environment *)
+  let symbtbl = Hashtbl.create 100 in
   let vcnt = ref 0 in
-  let local_env = Hashtbl.create 100 in
-  let global_env = Hashtbl.create 100 in
   let locals = ref [] in
 
   let tmp_cnt = ref 0 in
   let static_pref = ref ("!"^fname^".") in
 
   let get_locals () =
-    let x = !locals in
+    let res = !locals in
       locals := [];
       vcnt := 0;
-      Hashtbl.clear local_env;
-      x
+      List.iter (fun (_, x, _) -> Hashtbl.remove symbtbl x) res;
+      res
   in
 
   let update_global x name (t, loc, init) =
@@ -241,10 +228,10 @@ let translate fname (bare_compdefs, globals) =
 		Npkcontext.error "Firstpass.update_global"
 		  ("Global variable "^x^" initialized twice")
 	in
-	  Hashtbl.replace global_env x (t, name);
+	  Hashtbl.replace symbtbl x (Glb name, t);
 	  Hashtbl.replace glbdecls name (t, loc, init)	  
     with Not_found -> 
-      Hashtbl.add global_env x (t, name);
+      Hashtbl.add symbtbl x (Glb name, t);
       Hashtbl.add glbdecls name (t, loc, init)
   in
 
@@ -255,20 +242,33 @@ let translate fname (bare_compdefs, globals) =
       update_global x name d
   in
 
-  let remove_static x = Hashtbl.remove global_env x in
+  let remove_static x = Hashtbl.remove symbtbl x in
+
+  let push_enum (x, i) loc = 
+    Hashtbl.add symbtbl x (Enum i, C.int_typ) 
+  in
+
+  let pop_enum x = Hashtbl.remove symbtbl x in
 
   let push_var loc (t, x) = 
     incr vcnt;
-    Hashtbl.add local_env x (!vcnt, t, loc);
+    Hashtbl.add symbtbl x (Local (!vcnt, loc), t);
     !vcnt
   in
-    
+
   let push_local = push_var in
   let pop_local x =
-    let (_, t, loc) = Hashtbl.find local_env x in
+    let (v, t) = Hashtbl.find symbtbl x in
+    let loc = 
+      match v with
+	  Local (_, loc) -> loc
+	| _ -> Npkcontext.error "Firstpass.pop_local" "unreachable statement"
+    in
+      
       locals := (t, x, loc)::!locals;
-      Hashtbl.remove local_env x 
+      Hashtbl.remove symbtbl x 
   in
+    
   let push_formals loc (args_t, _, ret_t) = 
     let _ = push_var loc (ret_t, ret_name) in
     let _ = List.map (push_var loc) args_t in
@@ -283,26 +283,28 @@ let translate fname (bare_compdefs, globals) =
   in
 
 (* TODO: could be a function name inside *)
-  let get_var x = 
-    try 
-      let (n, t, _) = Hashtbl.find local_env x in
-	(C.Local n, t)
-    with Not_found -> 
-      try 
-	let (t, g) = Hashtbl.find global_env x in
-	  (C.Global g, t)
-      with Not_found ->
-	try 
-	  let (ft, _, _) = Hashtbl.find fundefs x in
-	    (C.Global x, C.Fun ft)
-	with Not_found ->
+  let lv_of_var x =
+    match x with
+	Local (n, _) -> C.Local n
+      | Glb g -> C.Global g
+      | Enum _ -> 
 	  Npkcontext.error "Firstpass.translate.typ_of_var" 
-	    ("Unknown identifier "^x)
+	    "enum identifier can not be used as left value"
+  in
+    
+  let find_symb x = 
+    try Hashtbl.find symbtbl x
+    with Not_found -> 
+      Npkcontext.error "Firstpass.translate.typ_of_var" 
+	("Unknown identifier "^x)
   in
 
   let rec translate_lv x =
     match x with
-	Var x -> ([], get_var x)
+	Var x -> 
+	  let (v, t) = find_symb x in
+	  let lv = lv_of_var v in
+	    ([], (lv, t))
       | Field (lv, f) -> 
 	  let (pref, (lv, t)) = translate_lv lv in
 	  let r = C.fields_of_typ compdefs t in
@@ -330,7 +332,18 @@ let translate fname (bare_compdefs, globals) =
     match x with
 	Cst i -> ([], translate_cst i)
 
-      | Var _ | Field _ | Index _ | Deref _ -> 
+      | Var x -> 
+	  let (v, t) = find_symb x in
+	  let e = 
+	    match v with
+		Enum i -> C.Const (C.CInt i)
+	      | _ -> 
+		  let lv = lv_of_var v in
+		    C.Lval (lv, t)
+	  in
+	    ([], (e, t))
+
+      | Field _ | Index _ | Deref _ -> 
 	  let (pref, (lv, t)) = translate_lv x in
 	    (pref, (C.Lval (lv, t), t))
 
@@ -623,7 +636,12 @@ let translate fname (bare_compdefs, globals) =
 
   and translate_blk x =
     match x with
-      | (Decl (x, t, static, init), loc)::tl when static -> 
+      | (EDecl (x, v), loc)::body -> 
+	  push_enum (x, v) loc;
+	  let body = translate_blk body in
+	    pop_enum x;
+	    body
+      | (VDecl (x, t, static, init), loc)::tl when static -> 
 	  let t = translate_typ t in
 	  let (pref, t, init) = translate_init t init in
 	    if (pref <> []) then begin 
@@ -635,7 +653,7 @@ let translate fname (bare_compdefs, globals) =
 	      remove_static x;
 	      tl
 
-      | (Decl (x, t, _, init), loc)::tl -> 
+      | (VDecl (x, t, _, init), loc)::tl -> 
 	  Npkcontext.set_loc loc;
 	  let t = translate_typ t in
 	  let (pref, t, init) = translate_init t init in
@@ -720,7 +738,7 @@ let translate fname (bare_compdefs, globals) =
 
       | Block body -> translate_blk body
 
-      | Decl _ -> 
+      | VDecl _ | EDecl _ -> 
 	  Npkcontext.error "Firstpass.translate.translate_stmt" 
 	    "Unreachable statement"
   in
@@ -732,7 +750,9 @@ let translate fname (bare_compdefs, globals) =
 	  Npkcontext.error "Firstpass.update_fundef"
 	    ("Different types for function "^f)
 	end
-    with Not_found -> Hashtbl.add fundefs f (t, loc, None)
+    with Not_found -> 
+      Hashtbl.add symbtbl f (Glb f, C.Fun t);
+      Hashtbl.add fundefs f (t, loc, None)
   in
 
   let update_funbody f body =
@@ -760,12 +780,14 @@ let translate fname (bare_compdefs, globals) =
 	    let locals = get_locals () in
 	      update_funbody x (locals, body)
 
+      | GlbEDecl d -> push_enum d loc
+
 (* TODO: put this check in parser ?? *)
-      | GlbDecl (_, _, _, is_extern, Some _) when is_extern -> 
+      | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbDecl (x, t, static, is_extern, init) ->
+      | GlbVDecl ((x, t, static, init), is_extern) ->
 	  static_pref := "!"^fname^".";
 	  begin match (t, init) with
 	      (Fun ft, None) -> 

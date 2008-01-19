@@ -45,7 +45,7 @@ type base_typ =
     | Struct of (string * field list option)
     | Union of (string * field list option)
     | Name of string
-    | Enum of (string * Int64.t option) list option
+    | Enum of ((string * Int64.t option) list * location) option
 
 and var_modifier = 
     | Abstract
@@ -59,14 +59,15 @@ and decl = (base_typ * var_modifier)
 
 and field = (base_typ * var_modifier * Int64.t option)
 
+type vdecl = (B.typ * string * location)
+type edecl = (B.enumdecl * location)
+
 let typedefs = Hashtbl.create 100
-let enumdefs = Hashtbl.create 100
 let compdefs = ref []
 
 let get_compdefs () = 
   let res = List.rev !compdefs in
     Hashtbl.clear typedefs;
-    Hashtbl.clear enumdefs;
     compdefs := [];
     res
 
@@ -77,55 +78,68 @@ let is_type x = Hashtbl.mem typedefs x
 let define_comp n is_struct f = 
   compdefs := (n, is_struct, f)::(!compdefs)
 
-let define_enum e =
+let define_enum e loc =
   let rec define_enum e n =
     match e with
 	(x, v)::tl ->
-	  if Hashtbl.mem enumdefs x then begin
-	    Npkcontext.error "Synthack.define_enum"
-	      ("Enum "^x^" already defined")
-	  end;
 	  let n = 
 	    match v with
 		None -> n
 	      | Some n -> n
 	  in
-	  Hashtbl.add enumdefs x n;
-	  define_enum tl (Int64.succ n)
-      | [] -> ()
+	    ((x, n), loc)::(define_enum tl (Int64.succ n))
+      | [] -> []
   in
     define_enum e Int64.zero
 
-let find_enum x = Hashtbl.find enumdefs x
-
 let rec normalize_base_typ t =
   match t with
-      Integer k -> B.Int k
-    | Float n -> B.Float n
+      Integer k -> ([], B.Int k)
+    | Float n -> ([], B.Float n)
     | Struct (n, f) -> 
-	normalize_compdef n true f;
-	B.Struct n
+	let enumdecls = normalize_compdef n true f in
+	  (enumdecls, B.Struct n)
     | Union (n, f) -> 
-	normalize_compdef n false f;
-	B.Union n
-    | Void -> B.Void
+	let enumdecls = normalize_compdef n false f in
+	  (enumdecls, B.Union n)
+    | Void -> ([], B.Void)
     | Enum f ->
-	begin match f with
-	    None -> ()
-	  | Some f -> define_enum f
-	end; 
-	B.Int C.int_kind
+	let enumdecls = 
+	  match f with
+	      None -> []
+	    | Some (f, loc) -> define_enum f loc
+	in
+	  (enumdecls, B.Int C.int_kind)
     | Name x -> 
-	try Hashtbl.find typedefs x
+	try ([], Hashtbl.find typedefs x)
 	with Not_found ->
 	  Npkcontext.error "Synthack.normalize_base_typ" ("Unknown type "^x)
 
 and normalize_compdef n is_struct f =
   match f with
-      None -> ()
+      None -> []
     | Some f -> 
-	let f = List.map normalize_field f in
-	  define_comp n is_struct f
+	let (enumdecls, f) = normalize_fields f in
+	  define_comp n is_struct f;
+	  enumdecls
+
+and normalize_fields f =
+  match f with
+      (b, v, bits)::tl ->
+	let (enumdecls, (t, x, _)) = normalize_decl (b, v) in
+	let t =
+	  match (bits, t) with
+	      (None, _) -> t
+	    | (Some n, B.Int k) ->
+		let n = int64_to_int n in
+		  B.Bitfield (k, n)
+	    | _ -> 
+		Npkcontext.error "Synthack.normalize_field" 
+		  "bit-fields allowed only with integer types"
+	in
+	let (enumdecls', f) = normalize_fields tl in
+	  (enumdecls@enumdecls', (t, x)::f)
+    | [] -> ([], [])
 
 and normalize_var_modifier b v =
   match v with
@@ -143,23 +157,14 @@ and normalize_var_modifier b v =
 	  "case not implemented yet"
 	  
 and normalize_arg a = 
-  let (t, x, _) = normalize_decl a in
-    (t, x)
-
-and normalize_field (b, v, bits) =
-  let (t, x, _) = normalize_decl (b, v) in
-  let t =
-    match (bits, t) with
-	(None, _) -> t
-      | (Some n, B.Int k) ->
-	  let n = int64_to_int n in
-	    B.Bitfield (k, n)
-      | _ -> 
-	  Npkcontext.error "Synthack.normalize_field" 
-	    "bit-fields allowed only with integer types"
-  in
+  let (enumdecls, (t, x, _)) = normalize_decl a in
+    if enumdecls <> [] 
+    then Npkcontext.error "Synthack.normalize_arg" 
+      "enum definition not allowed in argument";
     (t, x)
 
 and normalize_decl (b, v) =
-  let t = normalize_base_typ b in
-    normalize_var_modifier t v
+  let (enumdecls, t) = normalize_base_typ b in
+  let d = normalize_var_modifier t v in
+    (enumdecls, d)
+

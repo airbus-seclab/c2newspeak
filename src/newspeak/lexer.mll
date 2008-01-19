@@ -71,11 +71,8 @@ let int64_of_character str = Int64.of_int (int_of_char (str.[1]))
 let extract_string s = String.sub s 1 (String.length s - 2)
 
 let token_of_ident str = 
-  try
-    if Synthack.is_type str then TYPEDEF_NAME str 
-    else INTEGER (Synthack.find_enum str)
-  with Not_found -> IDENTIFIER str
-
+  if Synthack.is_type str then TYPEDEF_NAME str 
+  else IDENTIFIER str
 }
 
 let white_space = ' ' | '\t'

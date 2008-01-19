@@ -78,6 +78,7 @@ and typ_exp = (exp * typ)
 
 and typ_lv = (lv * typ)
 
+(* Side-effect free expressions *)
 and lv = 
     | Local of int
     | Global of string
@@ -85,7 +86,6 @@ and lv =
     | Index of (lv * array_t * exp)
     | Deref of (exp * typ)
 
-(* Side-effect free expressions *)
 and exp = 
     | Const of cst
     | Lval of typ_lv
