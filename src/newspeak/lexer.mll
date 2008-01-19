@@ -56,15 +56,15 @@ let int64_of_string lexbuf strip_cnt =
   let lexeme = Lexing.lexeme lexbuf in
   let len = (String.length lexeme) - strip_cnt in
   let lexeme = String.sub lexeme 0 len in
-  let i = Int64.of_string lexeme in
-    (* checks that Int64.of_string does not silently overflows *)
-  let str = Int64.to_string i in
-    if str <> lexeme
-    then begin
+    try 
+      let i = Int64.of_string lexeme in
+	(* do this because Int64.of_string "Int64.max_int + 1 as a string" 
+	   returns Int64.min_int!!! *)
+	if Int64.compare i Int64.zero < 0 then raise Exit;
+	i
+    with _ ->
       Npkcontext.error "Lexer.int64_of_string"
 	"integer too large: not representable"
-    end;
-    i
 
 let int64_of_character str = Int64.of_int (int_of_char (str.[1]))
 
@@ -83,12 +83,14 @@ let line_comment = "//" line
 
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
+let hex_digit = digit | ['A'-'F']
 
 let string = '"' [^'"']* '"'
 
 let integer = digit+
 let float = digit+ '.' digit+
 let ull_integer = digit+ "ULL"
+let hex_integer = "0x" hex_digit+
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let backslash_character = "\'\\0\'"
@@ -129,6 +131,7 @@ rule token = parse
 (* values *)
   | integer             { INTEGER (int64_of_string lexbuf 0) }
   | ull_integer         { INTEGER (int64_of_string lexbuf 3) }
+  | hex_integer         { INTEGER (int64_of_string lexbuf 0) }
   | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
   | backslash_character { INTEGER Int64.zero }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
