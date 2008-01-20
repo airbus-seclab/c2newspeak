@@ -52,12 +52,16 @@ let unknown_lexeme lexbuf =
   let err_msg = "Line: "^line^", unknown keyword: "^lexeme in
     Npkcontext.error "Lexer.unknown_lexeme" err_msg
 
-let int64_of_string lexbuf strip_cnt = 
+let strip lexbuf before after = 
   let lexeme = Lexing.lexeme lexbuf in
-  let len = (String.length lexeme) - strip_cnt in
-  let lexeme = String.sub lexeme 0 len in
+  let len = String.length lexeme in
+  let str = String.sub lexeme before (len-(before+after)) in
+    str
+
+let int64_of_string base str = 
+  let str = String.concat "" [base; str] in
     try 
-      let i = Int64.of_string lexeme in
+      let i = Int64.of_string str in
 	(* do this because Int64.of_string "Int64.max_int + 1 as a string" 
 	   returns Int64.min_int!!! *)
 	if Int64.compare i Int64.zero < 0 then raise Exit;
@@ -91,6 +95,7 @@ let integer = digit+
 let float = digit+ '.' digit+
 let ull_integer = digit+ "ULL"
 let hex_integer = "0x" hex_digit+
+let oct_integer = "0" digit+
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let backslash_character = "\'\\0\'"
@@ -129,9 +134,10 @@ rule token = parse
   | "void"              { VOID }
 
 (* values *)
-  | integer             { INTEGER (int64_of_string lexbuf 0) }
-  | ull_integer         { INTEGER (int64_of_string lexbuf 3) }
-  | hex_integer         { INTEGER (int64_of_string lexbuf 0) }
+  | oct_integer         { INTEGER (int64_of_string "0o" (strip lexbuf 1 0)) }
+  | integer             { INTEGER (int64_of_string "" (strip lexbuf 0 0)) }
+  | ull_integer         { INTEGER (int64_of_string "" (strip lexbuf 0 3)) }
+  | hex_integer         { INTEGER (int64_of_string "0x" (strip lexbuf 2 0)) }
   | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
   | backslash_character { INTEGER Int64.zero }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
