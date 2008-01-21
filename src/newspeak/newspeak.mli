@@ -212,6 +212,8 @@ val visit : visitor -> prog -> unit
 
 class builder:
 object
+  method set_curloc: location -> unit
+  method curloc: location
   method process_lval: lval -> lval
   method process_exp: exp -> exp
   method process_blk: blk -> blk

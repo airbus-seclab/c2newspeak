@@ -3,7 +3,7 @@ include ../Makefile.common
 C2NEWSPEAK = ../../bin/c2newspeak --experimental
 NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
 
-TESTS = 000 001 002 003 004 005
+TESTS = 000 001 002 003 004 005 006
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 

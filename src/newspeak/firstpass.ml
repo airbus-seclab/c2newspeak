@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO:1 make expressions side-effect free
+   2: translate *)
 (* Translates bare_csyntax to csyntax *)
 open Csyntax
 open Bare_csyntax

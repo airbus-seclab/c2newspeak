@@ -648,9 +648,13 @@ let build_main_call ptr_sz (args_t, ret_t) args =
   in
     (globs, build_call_aux "main" prolog (args_t, ret_t))
 
+let dummy_loc fname = (fname, -1, -1)
 
 class builder =
 object
+  val mutable curloc = dummy_loc ""
+  method set_curloc loc = curloc <- loc
+  method curloc = curloc
   method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
@@ -1027,6 +1031,7 @@ and build_size_t builder sz = builder#process_size_t sz
 and build_blk builder blk = List.map (build_stmt builder) blk
 
 and build_stmt builder (x, loc) =
+  builder#set_curloc loc;
   let x = build_stmtkind builder x in
     (x, loc)
 
@@ -1490,4 +1495,3 @@ let dump_as_C prog =
 
 let max_ikind = max
 
-let dummy_loc fname = (fname, -1, -1)

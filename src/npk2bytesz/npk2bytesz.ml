@@ -41,12 +41,15 @@ let anon_fun file =
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 class to_byte_sz =
-object
+object (self)
   inherit Newspeak.builder
 
   method process_size_t sz =
     if (sz mod 8) <> 0 
-    then invalid_arg "Newspeak.process_size_t: size not multiple of 8 bits";
+    then begin
+      invalid_arg ((Newspeak.string_of_loc self#curloc)
+		    ^": size not multiple of 8 bits")
+    end;
     sz / 8
 
   method process_lval lv =
