@@ -21,11 +21,14 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
 */
 
+struct {
+  int a:8;
+  int b:1;
+} x;
+
 void main() {
-  int x;
-  x = 04000;
-  x = 004000;
-  x = 0004000;
+  x.a = 1;
 }

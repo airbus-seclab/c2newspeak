@@ -655,6 +655,8 @@ object
   val mutable curloc = dummy_loc ""
   method set_curloc loc = curloc <- loc
   method curloc = curloc
+  method meet_global (_: string) (_: gdecl) = ()
+  method process_global (_: string) (x: gdecl) = x
   method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
@@ -948,7 +950,9 @@ let rec build builder (globals, fundecs) =
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
+    builder#meet_global x gdecl;
     let gdecl = build_gdecl builder gdecl in
+    let gdecl = builder#process_global x gdecl in
       Hashtbl.add globals' x gdecl
   in
   let build_fundec f fundec =

@@ -214,6 +214,8 @@ class builder:
 object
   method set_curloc: location -> unit
   method curloc: location
+  method meet_global: string -> gdecl -> unit
+  method process_global: string -> gdecl -> gdecl
   method process_lval: lval -> lval
   method process_exp: exp -> exp
   method process_blk: blk -> blk
@@ -221,6 +223,8 @@ object
 end
 
 val build : builder -> prog -> prog
+
+val build_gdecl: builder -> gdecl -> gdecl
 
 (** [dump (fundecs, body)] prints the program (fundecs, body) 
     to standard output. *)
