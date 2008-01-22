@@ -44,23 +44,17 @@ class to_byte_sz =
 object (self)
   inherit Newspeak.builder
 
-  val mutable curglob = ""
-
   method process_size_t sz =
     if (sz mod 8) <> 0 
     then begin
-      let msg = Newspeak.string_of_loc self#curloc in
-      let msg = msg^": size not multiple of 8 bits" in
-      let msg = if curglob = "" then msg else msg^" for global variable x" in
+      let msg = 
+	if self#curloc = dummy_loc "" then ""
+	else (Newspeak.string_of_loc self#curloc)^": "
+      in
+      let msg = msg^"size not multiple of 8 bits" in
 	invalid_arg msg
     end;
     sz / 8
-
-  method meet_global x (_: gdecl) = curglob <- x
-
-  method process_global (_: string) gdecl = 
-    curglob <- "";
-    gdecl
 
   method process_lval lv =
     match lv with

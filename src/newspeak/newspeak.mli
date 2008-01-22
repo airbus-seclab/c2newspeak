@@ -214,7 +214,6 @@ class builder:
 object
   method set_curloc: location -> unit
   method curloc: location
-  method meet_global: string -> gdecl -> unit
   method process_global: string -> gdecl -> gdecl
   method process_lval: lval -> lval
   method process_exp: exp -> exp
