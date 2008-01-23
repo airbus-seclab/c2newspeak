@@ -23,4 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = Non_directive | Pragma
+type t = 
+    | Non_directive 
+    | Pragma
+    | Line of (string * int)

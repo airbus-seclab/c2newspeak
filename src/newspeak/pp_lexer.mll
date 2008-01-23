@@ -25,6 +25,11 @@
 
 {
 open Pp_parser
+
+let remove_quotes str =
+  let len = String.length str in
+    String.sub str 1 (len-2)
+
 }
 
 let white_space = ' ' | '\t'
@@ -44,8 +49,8 @@ rule token = parse
     
   | "pragma"              { PRAGMA }
   | identifier            { IDENTIFIER }
-  | integer               { INTEGER }
-  | string                { STRING }
+  | integer               { INTEGER (int_of_string (Lexing.lexeme lexbuf)) }
+  | string                { STRING (remove_quotes (Lexing.lexeme lexbuf)) }
   | white_space           { token lexbuf }
   | new_line              { NEW_LINE }
 

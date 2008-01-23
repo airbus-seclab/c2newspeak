@@ -1,6 +1,6 @@
 # Project
 OBJ = config cilutils params npkcontext newspeak \
-      pp_syntax pp_lexer pp_parser preprocess \
+      pp_syntax pp_lexer pp_parser \
       bare_csyntax csyntax synthack lexer parser \
       npkil npkutils cilenv \
       cilfirstpass cilcompiler \

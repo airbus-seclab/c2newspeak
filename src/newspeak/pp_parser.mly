@@ -27,7 +27,9 @@
 open Pp_syntax
 %}
 
-%token PRAGMA SHARP INTEGER STRING NEW_LINE IDENTIFIER PUNCTUATOR
+%token PRAGMA SHARP IDENTIFIER PUNCTUATOR NEW_LINE
+%token <string> STRING
+%token <int> INTEGER
 %type <Pp_syntax.t> parse
 %start parse
 
@@ -35,6 +37,8 @@ open Pp_syntax
 
 parse:
   SHARP PRAGMA pp_token_list NEW_LINE   { Pragma }
+| SHARP INTEGER STRING 
+  integer_list NEW_LINE                 { Line ($3, $2) }
 | SHARP pp_token_list NEW_LINE          { Non_directive }
 ;;
 
@@ -50,3 +54,7 @@ pp_token:
 | PUNCTUATOR                            { }
 ;;
 
+integer_list:
+  INTEGER integer_list                  { }
+|                                       { }
+;;

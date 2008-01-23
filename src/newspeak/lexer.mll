@@ -26,24 +26,21 @@
 {
 open Parser
 open Lexing
+open Pp_syntax
 
-let set_loc pos = 
+let set_loc lexbuf pos = 
+  lexbuf.lex_curr_p <- pos;
   Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-
 let init fname lexbuf = 
-  let pos = 
-    { lexbuf.lex_curr_p with pos_fname = fname }
-  in
-    lexbuf.lex_curr_p <- pos;
-    set_loc pos
+  let pos = { lexbuf.lex_curr_p with pos_fname = fname } in
+    set_loc lexbuf pos
   
 let cnt_line lexbuf =
   let pos = 
     { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 }
   in
-    lexbuf.lex_curr_p <- pos;
-    set_loc pos
+    set_loc lexbuf pos
 
 let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
@@ -77,6 +74,37 @@ let extract_string s = String.sub s 1 (String.length s - 2)
 let token_of_ident str = 
   if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
+
+let trim_newline str = 
+  let i = 
+    try String.index str '\r' 
+    with Not_found -> 
+      try String.index str '\n' 
+      with Not_found -> 
+	Npkcontext.error "Preprocess.trim_newline" "end of line expected"
+  in
+    String.sub str 0 i
+
+let preprocess lexbuf =
+  let line = Lexing.lexeme lexbuf in
+  let directive = Pp_parser.parse Pp_lexer.token (Lexing.from_string line) in
+  let line = trim_newline line in
+    match directive with
+      | Line (fname, line_nb) ->
+	  let line_nb = line_nb - 1 in (* Because we are then 
+					  going to count a new line *)
+	  let pos = { 
+	    lexbuf.lex_curr_p with 
+	      pos_fname = fname; pos_lnum = line_nb; pos_cnum = 0; 
+	  } in
+ 	    set_loc lexbuf pos
+      | Pragma when !Npkcontext.ignores_pragmas -> 
+	  Npkcontext.print_warning "Preprocessor.parse" 
+	    ("Directive ignored: "^line)
+      | Pragma -> 
+	  Npkcontext.error "Preprocessor.parse"
+	    ("Directive not supported: "^line)
+      | _ -> ()
 }
 
 let white_space = ' ' | '\t'
@@ -184,8 +212,7 @@ rule token = parse
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
-  | "#" line            { Preprocess.parse (Lexing.lexeme lexbuf); 
-			  cnt_line lexbuf; token lexbuf }
+  | "#" line            { preprocess lexbuf; cnt_line lexbuf; token lexbuf }
 
   | "/*"                { comment lexbuf }
   | line_comment        { cnt_line lexbuf; token lexbuf }
