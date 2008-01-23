@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (27)^ptr;
-  (28)^choose {
+  (104.c:27#1073)^ptr;
+  (104.c:28#1080)^choose {
     | ! (0-_ptr ==_ptr nil) -->
     | (0-_ptr ==_ptr nil) -->
   }

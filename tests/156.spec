@@ -17,8 +17,8 @@ Debug: File linked.
 Newspeak output
 ---------------
 main() {
-  (27)^int32;
-  (28)^0- =(int32) 3;
+  (156.c:27#1072)^int32;
+  (156.c:28#1077)^0- =(int32) 3;
 }
 
 

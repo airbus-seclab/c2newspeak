@@ -428,10 +428,9 @@ let string_of_blk offset x =
       Buffer.add_string buf (margin^str^"\n") 
   in
   let dump_line_at loc str = 
-    let (_, line, _) = loc in
-    let line = string_of_int line in
+    let loc = string_of_loc loc in
     let margin = String.make !offset ' ' in
-      Buffer.add_string buf (margin^"("^line^")^"^str^"\n") 
+      Buffer.add_string buf (margin^"("^loc^")^"^str^"\n") 
   in
 
   let rec dump_stmt only (sk, loc) =

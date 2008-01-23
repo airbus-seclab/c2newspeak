@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (27)^float96;
-  (28)^0- =(float96) (float96 <= float64) 1.0;
+  (160.c:27#1080)^float96;
+  (160.c:28#1085)^0- =(float96) (float96 <= float64) 1.0;
 }
 
 

@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (29)^fptr;
-  (30)^0- =(fptr) &_fun(f);
+  (097.c:29#1094)^fptr;
+  (097.c:30#1108)^0- =(fptr) &_fun(f);
 }
 
 

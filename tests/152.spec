@@ -1,8 +1,8 @@
 Newspeak output
 ---------------
 main() {
-  (27)^fptr;
-  (28)^0- =(fptr) nil;
+  (152.c:27#1074)^fptr;
+  (152.c:28#1087)^0- =(fptr) nil;
 }
 
 

@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
 main() {
-  (30)^float64;
-  (31)^float32;
-  (32)^0- =(float32) (float32 <= float64) 1-_float64;
+  (138.c:30#1135)^float64;
+  (138.c:31#1146)^float32;
+  (138.c:32#1151)^0- =(float32) (float32 <= float64) 1-_float64;
 }
 
 
