@@ -39,11 +39,24 @@ let anon_fun file =
   else invalid_arg "You can only get statistics on one file at a time."
 
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
-
+  
+let eight = Int64.of_int 8
+  
+let rec div e =
+  match e with
+      Const CInt64 i -> 
+	let i = Int64.div i eight in
+	  exp_of_int64 i
+    | BinOp (MultI, e, Const CInt64 i) 
+	when Int64.compare i eight = 0 -> e
+    | BinOp (MultI, e, (Const CInt64 _ as i)) -> 
+	BinOp (MultI, e, div i)
+    | _ -> BinOp (DivI, e, exp_of_int 8)
+	
 class to_byte_sz =
 object (self)
   inherit Newspeak.builder
-
+    
   method process_size_t sz =
     if (sz mod 8) <> 0 
     then begin
@@ -58,18 +71,12 @@ object (self)
 
   method process_lval lv =
     match lv with
-	Shift (lv, e) ->
-	  let e = BinOp (DivI, e, exp_of_int 8) in
-	  let e = simplify_exp e in
-	    Shift (lv, e)
+	Shift (lv, e) -> Shift (lv, div e)
       | _ -> lv
 
   method process_exp e =
     match e with
-	BinOp (PlusPI, p, i) ->
-	  let i = BinOp (DivI, i, exp_of_int 8) in
-	  let i = simplify_exp i in
-	    BinOp (PlusPI, p, i)
+	BinOp (PlusPI, p, i) -> BinOp (PlusPI, p, div i)
       | _ -> e
 end
 

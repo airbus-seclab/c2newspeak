@@ -682,7 +682,7 @@ object
 
       (* Coerce/Belongs [a;b] Const c -> Const c if c in [a;b] *)
       | UnOp (Coerce (l1,u1), Const (CInt64 c))
-      | UnOp (Belongs (l1,u1), Const (CInt64 c))
+      | UnOp (Belongs (l1, u1), Const (CInt64 c))
           when Int64.compare l1 c <= 0 && Int64.compare c u1 <= 0 ->
           Const (CInt64 c)
 
@@ -749,13 +749,6 @@ object (self)
 	  let i = Int64.div i1 i2 in
 	    exp_of_int64 i
 
-(* TODO: this is a but adhoc, do better than this by generalizing !! *)
-      | BinOp (DivI, BinOp (MultI, e, Const CInt64 i1), Const CInt64 i2) 
-	  when Int64.compare i2 Int64.zero <> 0 ->
-	  let i = Int64.div i1 i2 in
-	  let i = exp_of_int64 i in
-	    self#process_exp (BinOp (MultI, e, i))
-	      
       | BinOp (MinusI, Const CInt64 x, Const CInt64 y) 
 	when (Int64.compare x Int64.zero = 0)
 	  && (Int64.compare y Int64.min_int <> 0) ->
