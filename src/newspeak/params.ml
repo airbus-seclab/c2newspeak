@@ -41,7 +41,7 @@ let npko_suffix = ".no"
 (*------------------------*)
 
 let software = "C2Newspeak"
-let version = "1.0"
+let version = "1.1"
 let authors = "Charles Hymans and Olivier Levillain"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
