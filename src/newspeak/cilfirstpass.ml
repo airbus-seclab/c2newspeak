@@ -56,9 +56,8 @@ object (this)
   inherit nopCilVisitor
 
   val mutable glb_used = Npkil.String_set.empty
-  val mutable glb_cstr = Npkil.String_set.empty
 
-  method get_used = (glb_used, glb_cstr)
+  method get_used = glb_used
 
   method vglob g =
     set_loc (get_globalLoc g);
@@ -116,9 +115,6 @@ object (this)
 	    (*TODO: clean up String_set name here: *)
 	    glb_used <- Npkil.String_set.add norm_name glb_used
 	      
-  method register_cstr s =
-    glb_cstr <- Npkil.String_set.add s glb_cstr
-
   (* remembers the local variables used *)
   method vlval lv =
     match lv with
@@ -132,10 +128,6 @@ object (this)
   (* simplifies some exps (StartOf, pointer equality) *)
   method vexpr e =
     match e with
-      | Const (CStr s) ->
-	  this#register_cstr s;
-	  SkipChildren
-
       | StartOf lv  -> 
 	  ChangeDoChildrenPost (AddrOf (addOffsetLval (Index (zero, NoOffset)) lv), fun x -> x)
 
@@ -321,5 +313,5 @@ let first_pass f =
       Npkcontext.forget_loc ();
       Cilenv.init_env ();
       List.iter explore f.globals;
-      let (glb_used, glb_cstr) = visitor#get_used in
-	(glb_used, glb_cstr, fun_specs, glb_decls)
+      let glb_used = visitor#get_used in
+	(glb_used, fun_specs, glb_decls)

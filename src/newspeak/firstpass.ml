@@ -631,7 +631,8 @@ let translate (bare_compdefs, globals) =
 	    (!pref, t, Some (List.rev !res))
 
   and add_glb_cstr str =
-    let name = "!const_str_"^str in
+    let fname = Npkcontext.get_fname () in
+    let name = "!"^fname^".const_str_"^str in
     let a = (char_typ, Some ((String.length str) + 1)) in
     let t = C.Array a in
       if not (Hashtbl.mem glbdecls name) then begin

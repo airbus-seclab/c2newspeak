@@ -66,6 +66,7 @@ let rec translate_const c =
 	  K.Const (Newspeak.CInt64 i)
 	  
     | CStr s -> Cilenv.get_cstr s
+
     | CChr c -> K.Const (Newspeak.CInt64 (Int64.of_int (Char.code c))) 
 	
     | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
@@ -842,9 +843,7 @@ let compile in_name =
 
     print_debug "Running first pass...";
     Npkcontext.forget_loc ();
-    let (glb_used, glb_cstr, fun_specs, glb_decls) = F.first_pass cil_file in
-      K.String_set.iter Cilenv.add_glb_cstr glb_cstr;
-
+    let (glb_used, fun_specs, glb_decls) = F.first_pass cil_file in
       Npkcontext.forget_loc ();
       print_debug "First pass done.";
       

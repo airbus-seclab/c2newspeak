@@ -56,7 +56,7 @@ type fspec_type = {
 (** TODO: document and clean this up *)
 val first_pass : 
   Cil.file -> 
-  (Npkil.String_set.t * Npkil.String_set.t 
+  (Npkil.String_set.t
     * (Newspeak.fid, 
       (int * string * Npkil.typ * Newspeak.location) list 
       * (int * string * Npkil.typ * Newspeak.location) list 

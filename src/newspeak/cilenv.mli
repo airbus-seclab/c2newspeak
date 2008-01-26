@@ -63,8 +63,6 @@ val init_env : unit -> unit
 
 val create_npkil : string -> Npkil.t
 
-val add_glb_cstr: string -> unit
-
 (** {1 Locals} *)
 
 (** {2 Functions used in translate_fun} *)

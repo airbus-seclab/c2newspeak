@@ -26,7 +26,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	160 161 162 163 164 165 166 167 168 169 \
 	170 171 172 173 174 175 176 177 178 179 \
 	180 181 182 183 184 185 186 187 188 189 \
-	190 191
+	190 191 192 193
 
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 
@@ -38,6 +38,7 @@ TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 .PHONY: $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
 check: ../bin/c2newspeak $(TESTS)
+	make -C mult-files check
 	make -C npksimplify check
 	make -C mem_opt check
 	make -C npk2bytesz check
@@ -123,6 +124,7 @@ $(TESTS.CIL.SPEC): ../bin/c2newspeak
 
 clean:
 	$(RM) $(TESTS)
+	make -C mult-files clean
 	make -C npksimplify clean
 	make -C npk2bytesz clean
 	make -C mem_opt clean
