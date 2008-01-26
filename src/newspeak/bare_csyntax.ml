@@ -71,7 +71,6 @@ and blk = stmt list
 and stmtkind =
     | EDecl of enumdecl
     | VDecl of vardecl
-(* TODO: simplify if then else syntax !!! Only two cases at most!!! *)
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
 (* TODO: remove While and DoWhile *)
