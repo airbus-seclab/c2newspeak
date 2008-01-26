@@ -22,44 +22,11 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 */
-
-%{
-open Pp_syntax
-%}
-
-%token PRAGMA SHARP IDENTIFIER PUNCTUATOR NEW_LINE 
-// TODO: section introduced to handle gcc preprocessor output
-// it has <built-in> and <command line> in directives
-// is this a valid hack??
-%token SECTION
-%token <string> STRING
-%token <int> INTEGER
-%type <Pp_syntax.t> parse
-%start parse
-
-%%
-
-parse:
-  SHARP PRAGMA pp_token_list NEW_LINE   { Pragma }
-| SHARP INTEGER STRING 
-  integer_list NEW_LINE                 { Line ($3, $2) }
-| SHARP pp_token_list NEW_LINE          { Non_directive }
-;;
-
-pp_token_list:
-  pp_token pp_token_list                { }
-|                                       { }
-;;
-
-pp_token:
-  INTEGER                               { }
-| STRING                                { }
-| SECTION                               { }
-| IDENTIFIER                            { }
-| PUNCTUATOR                            { }
-;;
-
-integer_list:
-  INTEGER integer_list                  { }
-|                                       { }
-;;
+# 1 "a.c"
+# 1 "<built-in>" 
+# 1 "<command line>" 
+# 1 "a.c"
+void main () {
+  int y;
+  y = 1;
+}

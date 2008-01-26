@@ -33,6 +33,7 @@ let remove_quotes str =
 }
 
 let white_space = ' ' | '\t'
+let section = '"''<' [^'>']* '>''"'
 let string = '"' [^'"']* '"'
 
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
@@ -50,6 +51,7 @@ rule token = parse
   | "pragma"              { PRAGMA }
   | identifier            { IDENTIFIER }
   | integer               { INTEGER (int_of_string (Lexing.lexeme lexbuf)) }
+  | section               { SECTION }
   | string                { STRING (remove_quotes (Lexing.lexeme lexbuf)) }
   | white_space           { token lexbuf }
   | new_line              { NEW_LINE }
