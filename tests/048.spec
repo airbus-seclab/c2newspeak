@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+048.c
 main() {
   (048.c:32#1157)^y =(int32) y + 32_int32;
 }

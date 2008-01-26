@@ -1,6 +1,7 @@
 Warning: Probable invalid cast from pointer to integer in 007.c line 34
 Newspeak output
 ---------------
+007.c
 main() {
   (007.c:32#1164)^ptr;
   (007.c:33#1175)^int32;

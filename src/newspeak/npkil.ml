@@ -31,9 +31,9 @@
 open Cilutils
 open Newspeak
 
-type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
+type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 
-and filename = string
+and filenames = string list
 
 (* None is for extern *)
 and ginfo = (typ * location * init_t option * used)
@@ -222,7 +222,7 @@ and string_of_fn decls f =
 	  (seq ", " string_of_typ args_t)^")"
 
 (* TODO: remove pretty option here and Npkcontext *)
-let dump_npko (fname, globs, funs) = 
+let dump_npko (fnames, globs, funs) = 
   let cur_fun = ref "" in
 
   let lbls = ref (Int_map.empty) in
@@ -369,7 +369,7 @@ let dump_npko (fname, globs, funs) =
     dump_fundec n pbody;
     if pbody <> None then print_newline ()
   in
-    print_endline fname;
+    List.iter (fun x -> print_endline x) fnames;
 
     print_usedglbs "Global used" globs;
 

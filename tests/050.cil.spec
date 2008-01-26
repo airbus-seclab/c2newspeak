@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+050.c
 main() {
 }
 

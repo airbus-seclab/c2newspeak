@@ -35,3 +35,7 @@ val get_compdefs: unit -> Bare_csyntax.compdefs
 val define_type: string -> Bare_csyntax.typ -> unit
 
 val is_type: string -> bool
+
+val get_fnames: unit -> string list
+
+val add_fname: string -> unit

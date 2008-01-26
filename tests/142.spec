@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+142.c
 main() {
   (142.c:30#1134)^float32;
   (142.c:31#1146)^float64;

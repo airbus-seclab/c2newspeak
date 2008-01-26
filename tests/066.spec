@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+066.c
 f() {
 }
 

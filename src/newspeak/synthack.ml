@@ -31,6 +31,8 @@ open Newspeak
 module B = Bare_csyntax
 module C = Csyntax
 
+module String_set = Set.Make(String)
+
 let int64_to_int x =
   if Int64.compare x (Int64.of_int max_int) > 0 
   then Npkcontext.error "Firstpass.int64_to_int" "integer too big";
@@ -64,6 +66,7 @@ type edecl = (B.enumdecl * location)
 
 let typedefs = Hashtbl.create 100
 let compdefs = ref []
+let fnames = ref String_set.empty
 
 let get_compdefs () = 
   let res = List.rev !compdefs in
@@ -168,3 +171,10 @@ and normalize_decl (b, v) =
   let d = normalize_var_modifier t v in
     (enumdecls, d)
 
+let add_fname x =
+  fnames := String_set.add x !fnames
+
+let get_fnames () =
+  let res = String_set.elements !fnames in
+    fnames := String_set.empty;
+    res

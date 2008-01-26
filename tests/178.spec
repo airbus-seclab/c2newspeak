@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+178.c
 main() {
   (178.c:37#1221)^x =(uint7) 1;
   (178.c:38#1232)^x + 7 =(uint1) coerce[0,1] 2;

@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val translate: string -> Bare_csyntax.prog -> Csyntax.prog
+val translate: Bare_csyntax.prog -> Csyntax.prog

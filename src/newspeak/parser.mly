@@ -109,7 +109,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token <Int64.t> INTEGER
 %token <string> FLOATCST
 
-%type <Bare_csyntax.prog> parse
+%type <string list * Bare_csyntax.prog> parse
 %start parse
 
 %%
@@ -121,7 +121,8 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit                         { (Synthack.get_compdefs (), $1) }
+  translation_unit                         { (Synthack.get_fnames (), 
+					     (Synthack.get_compdefs (), $1)) }
 ;;
 
 translation_unit:

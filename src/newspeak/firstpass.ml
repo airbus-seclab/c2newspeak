@@ -194,7 +194,7 @@ type symb =
     | Local of (int * Newspeak.location)
 
 (* TODO: remove variables hoisting at the function level *)
-let translate fname (bare_compdefs, globals) =
+let translate (bare_compdefs, globals) =
   let compdefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
@@ -204,7 +204,8 @@ let translate fname (bare_compdefs, globals) =
   let locals = ref [] in
 
   let tmp_cnt = ref 0 in
-  let static_pref = ref ("!"^fname^".") in
+
+  let current_fun = ref "" in
 
   let get_locals () =
     let res = !locals in
@@ -214,7 +215,7 @@ let translate fname (bare_compdefs, globals) =
       res
   in
 
-  let update_global x name (t, loc, init) =
+  let update_global x name loc (t, init) =
     try 
       let (prev_t, _, prev_init) = Hashtbl.find glbdecls name in
 	if (t <> prev_t) then begin
@@ -237,11 +238,16 @@ let translate fname (bare_compdefs, globals) =
       Hashtbl.add glbdecls name (t, loc, init)
   in
 
-  let add_global x d = update_global x x d in
+  let add_global x loc d = update_global x x loc d in
 
-  let add_static x d =
-    let name = !static_pref^x in
-      update_global x name d
+  let add_static x loc d =
+    let (fname, _, _) = loc in
+    let prefix = "!"^fname^"." in
+    let prefix =
+      if !current_fun = "" then prefix
+      else prefix^(!current_fun)^"."
+    in
+      update_global x (prefix^x) loc d
   in
 
   let remove_static x = Hashtbl.remove symbtbl x in
@@ -625,13 +631,13 @@ let translate fname (bare_compdefs, globals) =
 	    (!pref, t, Some (List.rev !res))
 
   and add_glb_cstr str =
-    let name = "!"^fname^".const_str_"^str in
+    let name = "!const_str_"^str in
     let a = (char_typ, Some ((String.length str) + 1)) in
     let t = C.Array a in
       if not (Hashtbl.mem glbdecls name) then begin
-	let loc = (fname, -1, -1) in
+	let loc = ("", -1, -1) in
 	let (_, t, init) = translate_init t (Some (Data (Str str))) in
-	  add_global name (t, loc, Some init)
+	  add_global name loc (t, Some init)
       end;
       (C.AddrOf (C.Index (C.Global name, a, C.exp_of_int 0), t), 
       C.Ptr char_typ)
@@ -650,7 +656,7 @@ let translate fname (bare_compdefs, globals) =
 	      Npkcontext.error "Firstpass.translate_init"
 		"Expression without side-effects expected"
 	    end;
-	    add_static x (t, loc, Some init);
+	    add_static x loc (t, Some init);
 	    let tl = translate_blk tl in
 	      remove_static x;
 	      tl
@@ -773,7 +779,8 @@ let translate fname (bare_compdefs, globals) =
     Npkcontext.set_loc loc;
     match x with
 	FunctionDef (x, t, body) ->
-	  static_pref := "!"^fname^"."^x^".";
+(* TODO: needs to get a loc fname *)
+	  current_fun := x;
 	  let t = translate_typ t in
 	  let ft = C.ftyp_of_typ t in
 	    update_funtyp x ft loc;
@@ -790,7 +797,7 @@ let translate fname (bare_compdefs, globals) =
 	    "Extern globals can not be initizalized"
  
       | GlbVDecl ((x, t, static, init), is_extern) ->
-	  static_pref := "!"^fname^".";
+	  current_fun := "";
 	  begin match (t, init) with
 	      (Fun ft, None) -> 
 		let ft = translate_proto_ftyp x ft in
@@ -807,8 +814,8 @@ let translate fname (bare_compdefs, globals) =
 		      "Expression without side-effects expected"
 		  end;
 		  let init = if is_extern then None else Some init in
-		    if static then add_static x (t, loc, init)
-		    else add_global x (t, loc, init)
+		    if static then add_static x loc (t, init)
+		    else add_global x loc (t, init)
 	  end
   in
 

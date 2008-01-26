@@ -33,9 +33,9 @@ open Newspeak
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
-type t = (filename * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
+type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
 
-and filename = string
+and filenames = string list
 
 (* None is for extern *)
 and ginfo = (typ * location * init_t option * used)
@@ -149,7 +149,7 @@ val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
 
-val read_header: string -> (filename * (string, ginfo) Hashtbl.t)
+val read_header: string -> (filenames* (string, ginfo) Hashtbl.t)
 
 val read_fundefs: string -> (fid, funinfo) Hashtbl.t
 

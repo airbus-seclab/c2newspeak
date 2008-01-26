@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+104.c
 main() {
   (104.c:27#1073)^ptr;
   (104.c:28#1080)^choose {

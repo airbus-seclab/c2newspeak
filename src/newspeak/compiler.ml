@@ -79,7 +79,7 @@ let translate_cst c =
 	in
 	  N.CFloat (c, s)
 
-let translate fname (compdefs, cglbdecls, cfundefs) = 
+let translate (compdefs, cglbdecls, cfundefs) = 
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let stack_height = ref 0 in
@@ -460,7 +460,7 @@ let translate fname (compdefs, cglbdecls, cfundefs) =
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
 
-    (fname, glbdecls, fundefs)
+    (glbdecls, fundefs)
 
 
 let parse fname =
@@ -479,15 +479,16 @@ let parse fname =
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let prog = parse fname in
+  let (fnames, prog) = parse fname in
+  let fnames = if fnames = [] then fname::[] else fnames in
     Npkcontext.forget_loc ();
     Npkcontext.print_debug "Parsing done.";
     Npkcontext.print_debug "Running first pass...";
-    let prog = Firstpass.translate fname prog in
+    let prog = Firstpass.translate prog in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "First pass done.";
       Npkcontext.print_debug ("Translating "^fname^"...");
-      let prog = translate fname prog in
+      let (glbdecls, fundefs) = translate prog in
 	Npkcontext.forget_loc ();
-	prog
+	(fnames, glbdecls, fundefs)
   

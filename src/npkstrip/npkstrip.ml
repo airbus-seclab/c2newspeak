@@ -100,9 +100,10 @@ let _ =
   try 
     Arg.parse speclist anon_fun usage_msg;
     let (files, prog, ptr_sz) = Newspeak.read !input in
-    let stripped_npk = collect_used prog in
-      if !print then Newspeak.dump stripped_npk;
-      Newspeak.write !output (files, stripped_npk, ptr_sz)
+    let prog = collect_used prog in
+    let npk = (files, prog, ptr_sz) in
+      if !print then Newspeak.dump npk;
+      Newspeak.write !output npk
   with Invalid_argument s ->
     print_endline ("Fatal error: "^s);
     exit 0

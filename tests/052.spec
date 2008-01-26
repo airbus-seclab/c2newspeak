@@ -3,6 +3,7 @@ Warning: Too many initializers for array in 052.c line 38
 Warning: Too many initializers for array in 052.c line 39
 Newspeak output
 ---------------
+052.c
 main() {
   (052.c:31#1135)^ptr;
   (052.c:32#1155)^int8[3];
@@ -14,7 +15,7 @@ main() {
   (052.c:39#1302)^int8[3];
   (052.c:40#1324)^int8[4];
   (052.c:41#1346)^int8[5];
-  (052.c:31#1135)^9- =(ptr) &_48(!052.c.const_str_Hello);
+  (052.c:31#1135)^9- =(ptr) &_48(!const_str_Hello);
   (052.c:32#1155)^8- =(int8) 1;
   (052.c:32#1155)^8- + 8 =(int8) 2;
   (052.c:32#1155)^8- + 16 =(int8) 3;
@@ -47,5 +48,5 @@ main() {
   (052.c:41#1346)^0- + 32 =(int8) 0;
 }
 
-int8[6] !052.c.const_str_Hello = {0: int8 72;8: int8 101;16: int8 108;24: int8 108;32: int8 111;40: int8 0};
+int8[6] !const_str_Hello = {0: int8 72;8: int8 101;16: int8 108;24: int8 108;32: int8 111;40: int8 0};
 

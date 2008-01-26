@@ -225,9 +225,11 @@ val build : builder -> prog -> prog
 
 val build_gdecl: builder -> gdecl -> gdecl
 
+val dump : t -> unit
+
 (** [dump (fundecs, body)] prints the program (fundecs, body) 
     to standard output. *)
-val dump : prog -> unit
+val dump_prog : prog -> unit
 
 val dump_fundec : string -> fundec -> unit
 

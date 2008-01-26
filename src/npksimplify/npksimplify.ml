@@ -60,8 +60,9 @@ let _ =
     let prog = Copy_propagation.process prog in
     let prog = if !inline then Inline.process prog else prog in
     let prog = if !hoist then Var_hoist.process prog else prog in
-      if !print then Newspeak.dump prog;
-      Newspeak.write !output (files, prog, ptr_sz)
+    let npk = (files, prog, ptr_sz) in
+      if !print then Newspeak.dump npk;
+      Newspeak.write !output npk
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0

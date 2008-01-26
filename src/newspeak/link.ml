@@ -32,13 +32,15 @@ open Npkutils
 open Npkcontext
 open Npkil
 
+module Str_set = Set.Make(String)
+
 let size_of = Newspeak.size_of Config.size_of_ptr
 
-let filenames = ref []
+let filenames = ref Str_set.empty
 
 let glb_decls = Hashtbl.create 100
 
-let glb_used = ref (String_set.empty)
+let glb_used = ref (Str_set.empty)
 
 (*--------------*)
 (* Linking time *)
@@ -198,10 +200,11 @@ let update_glob_link name (t, loc, init, used) =
       
   with Not_found -> Hashtbl.add glb_decls name (t, loc, init, used)
 
+let add_filename x = filenames := Str_set.add x !filenames
 
 let merge_headers npko =
-  let (fname, globs) = Npkil.read_header npko in
-    filenames := fname::(!filenames);
+  let (fnames, globs) = Npkil.read_header npko in
+    List.iter add_filename fnames;
     Hashtbl.iter update_glob_link globs
 
 let generate_global name (t, loc, init, used) =
@@ -289,20 +292,22 @@ let link npkos output_file =
     
     Hashtbl.iter generate_global glb_decls;
     Npkcontext.forget_loc ();
+    
+    let filenames = Str_set.elements !filenames in
 
-    Newspeak.write_hdr cout (!filenames, globals, Config.size_of_ptr);
-    
-    print_debug "Functions...";
-    generate_funspecs cout npkos;
-    
-    close_out cout;
-    
-    print_debug "File linked.";
-    
-    if !verb_newspeak then begin
-      print_endline "Newspeak output";
-      print_endline "---------------";
-      let (_, kernel, _) = Newspeak.read output_file in
-	Newspeak.dump kernel;
-	print_newline ()
-    end
+      Newspeak.write_hdr cout (filenames, globals, Config.size_of_ptr);
+      
+      print_debug "Functions...";
+      generate_funspecs cout npkos;
+      
+      close_out cout;
+      
+      print_debug "File linked.";
+      
+      if !verb_newspeak then begin
+	print_endline "Newspeak output";
+	print_endline "---------------";
+	let npk = Newspeak.read output_file in
+	  Newspeak.dump npk;
+	  print_newline ()
+      end

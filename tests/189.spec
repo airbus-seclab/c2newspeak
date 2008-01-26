@@ -1,5 +1,6 @@
 Newspeak output
 ---------------
+189.c
 main() {
   (189.c:1#5)^do {
     (189.c:2#17)^while (1) {

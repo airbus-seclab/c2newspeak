@@ -16,6 +16,7 @@ Debug: Writing function: main
 Debug: File linked.
 Newspeak output
 ---------------
+156.c
 main() {
   (156.c:27#1072)^int32;
   (156.c:28#1077)^0- =(int32) 3;

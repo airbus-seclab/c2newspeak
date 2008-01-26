@@ -248,23 +248,6 @@ let rec seq sep f l =
     | [] -> ""
     | [e] -> f e
     | e::r -> (f e)^sep^(seq sep f r)
-(*
-let globals = Hashtbl.create 100
-let globals_index = ref 0
-
-let funs = ref (String_map.empty)
-let cur_fun = ref ""
-
-let lbls = ref (Int_map.empty)
-let lbl_index = ref 0
-
-let clear_tables () =
-  funs := String_map.empty;
-  lbls := Int_map.empty;
-  Hashtbl.clear globals;
-  globals_index := 0;
-  lbl_index := 0
-*)
 
 
 (* Types *)
@@ -513,7 +496,7 @@ let dump_fundec name body =
 
 
 (* Exported print functions *)
-let dump (gdecls, fundecs) =
+let dump_prog (gdecls, fundecs) =
   (* TODO: Clean this mess... String_map *)
   let glbs = ref (String_map.empty) in
   let funs = ref (String_map.empty) in
@@ -525,6 +508,10 @@ let dump (gdecls, fundecs) =
       (fun name info -> glbs := (String_map.add name info !glbs)) 
       gdecls;
     String_map.iter dump_gdecl !glbs
+
+let dump (fnames, prog, _) =
+  List.iter (fun x -> print_endline x) fnames;
+  dump_prog prog
 
 let dump_fundec name (_, body) = dump_fundec name body
 

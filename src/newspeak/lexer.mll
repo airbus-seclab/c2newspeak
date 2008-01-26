@@ -91,6 +91,7 @@ let preprocess lexbuf =
   let line = trim_newline line in
     match directive with
       | Line (fname, line_nb) ->
+	  Synthack.add_fname fname;
 	  let line_nb = line_nb - 1 in (* Because we are then 
 					  going to count a new line *)
 	  let pos = { 

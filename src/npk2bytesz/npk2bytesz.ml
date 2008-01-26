@@ -90,8 +90,9 @@ let _ =
     let (files, prog, ptr_sz) = Newspeak.read !input in
     let builder = new to_byte_sz in
     let prog = Newspeak.build builder prog in
-      if !print then Newspeak.dump prog;
-      Newspeak.write !output (files, prog, ptr_sz)
+    let npk = (files, prog, ptr_sz) in
+      if !print then Newspeak.dump npk;
+      Newspeak.write !output npk
 
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
