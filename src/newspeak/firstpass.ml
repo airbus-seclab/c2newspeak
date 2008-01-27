@@ -32,6 +32,7 @@ open Csyntax
 open Bare_csyntax
 module C = Csyntax
 
+(*
 let remove_side_effects blk =
   let tmp_cnt = ref (-1) in
   let fresh_var () = 
@@ -81,7 +82,7 @@ let remove_side_effects blk =
   in
 
     remove_blk blk
-
+*)
 
 let ret_pos = 1
 let ret_name = "!return"
@@ -325,7 +326,6 @@ let translate (bare_compdefs, globals) =
 	  Local (_, loc) -> loc
 	| _ -> Npkcontext.error "Firstpass.pop_local" "unreachable statement"
     in
-      
       locals := (t, x, loc)::!locals;
       Hashtbl.remove symbtbl x 
   in
@@ -446,6 +446,19 @@ let translate (bare_compdefs, globals) =
 	  let e = add_glb_cstr str in
 	    ([], e)
 
+      | And (e1, e2) -> 
+	  let loc = Npkcontext.get_loc () in
+	  let (tmp, tmp_name) = create_tmp int_typ loc in
+	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
+	  let stmt = 
+	    If (And (e1, e2), 
+	       (Exp (Set (Var tmp_name, exp_of_int 1)), loc)::[], 
+	       (Exp (Set (Var tmp_name, exp_of_int 0)), loc)::[])
+	  in
+	  let pref = translate_stmt (stmt, loc) in
+	    pop_local tmp_name;
+	    (pref, tmp_e)
+
       | Or (e1, e2) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (tmp, tmp_name) = create_tmp int_typ loc in
@@ -482,10 +495,6 @@ let translate (bare_compdefs, globals) =
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
-
-      | And _ -> 
-	  Npkcontext.error "Firstpass.translate_exp" 
-	    "Unreachable statement: side effects should have been removed"
 
   and translate_ftyp (args, va_list, ret) =
     let translate_arg (t, x) =
@@ -829,7 +838,6 @@ let translate (bare_compdefs, globals) =
 	  let ft = C.ftyp_of_typ t in
 	    update_funtyp x ft loc;
 	    let _ = push_formals loc ft in
-	    let body = remove_side_effects body in
 	    let body = translate_blk body in
 	    let locals = get_locals () in
 	      update_funbody x (locals, body)
