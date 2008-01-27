@@ -23,12 +23,65 @@
   email: charles.hymans@penjili.org
 *)
 
+(* And Or PlusPlus Call introduce intermediate variables *)
+
 (* TODO:1 make expressions side-effect free
    2: translate *)
 (* Translates bare_csyntax to csyntax *)
 open Csyntax
 open Bare_csyntax
 module C = Csyntax
+
+let remove_side_effects blk =
+  let tmp_cnt = ref (-1) in
+  let fresh_var () = 
+    incr tmp_cnt;
+    "tmp"^(string_of_int !tmp_cnt)
+  in
+  let rec remove_blk x =
+    match x with 
+	hd::tl -> (remove_stmt hd)::(remove_blk tl)
+      | [] -> []
+	  
+  and remove_stmt (x, loc) = 
+    Npkcontext.set_loc loc;
+    let x = remove_stmtkind x in
+      (x, loc)
+
+  and remove_stmtkind x =
+    match x with
+      | Exp e -> 
+	  let loc = Npkcontext.get_loc () in
+	  let (pref, e) = remove_exp e in
+	    Block (pref@((Exp e, loc)::[]))
+      | _ -> x
+  
+  and remove_exp e =
+    match e with
+      | And (e1, e2) ->
+	  let loc = Npkcontext.get_loc () in
+	  let v = fresh_var () in
+	  let decl = VDecl (v, Int C.int_kind, false, None) in
+	  let tmp = Var v in
+	  let set =
+	    If (And (e1, e2), 
+	       (Exp (Set (tmp, exp_of_int 1)), loc)::[], 
+	       (Exp (Set (tmp, exp_of_int 0)), loc)::[])
+	  in
+	  let pref = (decl, loc)::(set, loc)::[] in
+	  let pref = remove_blk pref in
+	    (pref, tmp)
+	      
+      | Set (e1, e2) ->
+	  let (pref1, e1) = remove_exp e1 in
+	  let (pref2, e2) = remove_exp e2 in
+	    (pref1@pref2, Set (e1, e2))
+
+      | _ -> ([], e)
+  in
+
+    remove_blk blk
+
 
 let ret_pos = 1
 let ret_name = "!return"
@@ -336,6 +389,8 @@ let translate (bare_compdefs, globals) =
 
       | _ -> Npkcontext.error "Firstpass.translate_lv" "Left value expected"
 
+(* TODO: should remove the need for a pref here, with the first pass that
+   remove side effects *)
   and translate_exp x =
     match x with
 	Cst i -> ([], translate_cst i)
@@ -391,21 +446,6 @@ let translate (bare_compdefs, globals) =
 	  let e = add_glb_cstr str in
 	    ([], e)
 
-      (* TODO: this could be the unique place with And (remove the And down in 
-	 the code of if then else !!! *)
-      | And (e1, e2) -> 
-	  let loc = Npkcontext.get_loc () in
-	  let (tmp, tmp_name) = create_tmp int_typ loc in
-	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
-	  let stmt = 
-	    If (And (e1, e2), 
-	       (Exp (Set (Var tmp_name, exp_of_int 1)), loc)::[], 
-	       (Exp (Set (Var tmp_name, exp_of_int 0)), loc)::[])
-	  in
-	  let pref = translate_stmt (stmt, loc) in
-	    pop_local tmp_name;
-	    (pref, tmp_e)
-
       | Or (e1, e2) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (tmp, tmp_name) = create_tmp int_typ loc in
@@ -418,7 +458,6 @@ let translate (bare_compdefs, globals) =
 	  let pref = translate_stmt (stmt, loc) in
 	    pop_local tmp_name;
 	    (pref, tmp_e)
-
 
       | Cast (e, t) -> 
 	  let (pref, e) = translate_exp e in
@@ -443,6 +482,10 @@ let translate (bare_compdefs, globals) =
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
+
+      | And _ -> 
+	  Npkcontext.error "Firstpass.translate_exp" 
+	    "Unreachable statement: side effects should have been removed"
 
   and translate_ftyp (args, va_list, ret) =
     let translate_arg (t, x) =
@@ -786,6 +829,7 @@ let translate (bare_compdefs, globals) =
 	  let ft = C.ftyp_of_typ t in
 	    update_funtyp x ft loc;
 	    let _ = push_formals loc ft in
+	    let body = remove_side_effects body in
 	    let body = translate_blk body in
 	    let locals = get_locals () in
 	      update_funbody x (locals, body)
@@ -837,14 +881,6 @@ let translate (bare_compdefs, globals) =
 	      last_align := max !last_align cur_align;
 	      o := !o + sz;
 	      (x, (o', t))
-(* TODO
-	  (Bitfield ((s, n), sz), x)::f -> 
-	    let t = translate_typ (Int (s, sz)) in
-	    let next_align = C.align o n in
-	    let o = if o + sz <= next_align then o else next_align in
-	    let (f, n) = translate (o+sz) f in
-	      ((x, (o, t))::f, n)
-*) (*????*)
 	| _ ->
 	    let t = translate_typ t in
 	    let sz = C.size_of compdefs t in
