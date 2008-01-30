@@ -569,15 +569,15 @@ let read name =
 Some kind of data structure with all the sizes,
 then function read returns this data structure too
 and there is an init function *)
-let char_sz = 1
+let char_sz = 8
 let char_typ = Int (Signed, char_sz)
 
 let init_of_string str =
   let len = String.length str in
-  let res = ref [(len, char_typ, exp_of_int 0)] in
+  let res = ref [(len*char_sz, char_typ, exp_of_int 0)] in
     for i = len - 1 downto 0 do 
       let c = Char.code (String.get str i) in
-	res := (i, char_typ, exp_of_int c)::!res
+	res := (i*char_sz, char_typ, exp_of_int c)::!res
     done;
     (len + 1, Init !res)
 
@@ -612,7 +612,8 @@ let build_main_call ptr_sz (args_t, ret_t) args =
     let (len, init) = init_of_string str in
       Hashtbl.add globs name ((Array (Scalar char_typ, len), init));
       ptr_array_init := 
-	(!n * ptr_sz, Ptr, AddrOf (Global name, len))::(!ptr_array_init);
+	(!n * ptr_sz, Ptr, AddrOf (Global name, len * char_sz))
+      ::(!ptr_array_init);
       incr n
   in
   let handle_args () =
