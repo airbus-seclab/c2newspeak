@@ -33,23 +33,23 @@ open Bare_csyntax
 module C = Csyntax
 
 (*
-let remove_side_effects blk =
+let desugar blk =
   let tmp_cnt = ref (-1) in
   let fresh_var () = 
     incr tmp_cnt;
     "tmp"^(string_of_int !tmp_cnt)
   in
-  let rec remove_blk x =
+  let rec desugar_blk x =
     match x with 
-	hd::tl -> (remove_stmt hd)::(remove_blk tl)
+	hd::tl -> (desugar_stmt hd)::(desugar_blk tl)
       | [] -> []
 	  
-  and remove_stmt (x, loc) = 
+  and desugar_stmt (x, loc) = 
     Npkcontext.set_loc loc;
-    let x = remove_stmtkind x in
+    let x = desugar_stmtkind x in
       (x, loc)
 
-  and remove_stmtkind x =
+  and desugar_stmtkind x =
     match x with
       | Exp e -> 
 	  let loc = Npkcontext.get_loc () in
@@ -57,7 +57,7 @@ let remove_side_effects blk =
 	    Block (pref@((Exp e, loc)::[]))
       | _ -> x
   
-  and remove_exp e =
+  and desugar_exp e =
     match e with
       | And (e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
@@ -81,7 +81,7 @@ let remove_side_effects blk =
       | _ -> ([], e)
   in
 
-    remove_blk blk
+    desugar_blk blk
 *)
 
 let ret_pos = 1
@@ -753,11 +753,6 @@ let translate (bare_compdefs, globals) =
 	  let blk1 = translate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
 	    pref@((C.If (e, blk1, blk2), loc)::[])
-
-      | While (e, body) ->
-	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
-	  let body = translate_blk body in
-	    (C.Loop (loop_exit@body, []), loc)::[]
 
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in

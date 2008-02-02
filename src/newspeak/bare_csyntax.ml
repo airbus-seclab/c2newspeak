@@ -73,8 +73,7 @@ and stmtkind =
     | VDecl of vardecl
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
-(* TODO: remove While and DoWhile *)
-    | While of (exp * blk)
+(* TODO: remove DoWhile *)
     | DoWhile of (blk * exp)
 (* while exp is true do blk and then blk, continue jumps before the second
    blk *)
