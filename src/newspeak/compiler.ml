@@ -280,12 +280,14 @@ let translate (compdefs, cglbdecls, cfundefs) =
 				     ([cond2], body2)], loc)::[]
 	  end
 
-      | Loop (body1, body2) ->
-	  let body1 = translate_blk body1 in
-	  let body2 = translate_blk body2 in
-	  let body = (K.DoWith (body1, cnt_lbl, []), loc)::body2 in
+      | Loop (init, body, suffix) ->
+	  let init = translate_blk init in
+	  let body = translate_blk body in
+	  let suffix = translate_blk suffix in
+	  let init = (K.DoWith (init, cnt_lbl, []), loc) in
+	  let body = (K.DoWith (body, cnt_lbl, []), loc)::suffix in
 	  let loop = (K.InfLoop body, loc)::[] in
-	    (K.DoWith (loop, brk_lbl, []), loc)::[]
+	    (K.DoWith (init::loop, brk_lbl, []), loc)::[]
 
       | Return -> (K.Goto ret_lbl, loc)::[]
 

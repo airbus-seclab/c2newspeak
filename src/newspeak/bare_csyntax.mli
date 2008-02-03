@@ -70,7 +70,6 @@ and stmtkind =
     | VDecl of vardecl
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
-    | DoWhile of (blk * exp)
     | For of (blk * exp * blk * blk)
     | Return of exp option
     | Exp of exp

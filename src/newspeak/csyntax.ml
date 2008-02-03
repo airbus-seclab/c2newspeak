@@ -66,9 +66,9 @@ and stmtkind =
     | Set of (lv * typ * exp)
     | If of (exp * blk * blk)
     | Switch of (exp * (typ_exp option * blk * location) list)
-(* body, suffix 
+(* (init, body, suffix)
    continue jumps directly before the suffix *)
-    | Loop of (blk * blk)
+    | Loop of (blk * blk * blk)
     | Return
     | Call of (lv option * (lv * ftyp) * exp list)
     | Break

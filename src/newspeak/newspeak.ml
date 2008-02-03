@@ -778,6 +778,75 @@ let extract_cond_body lbl x =
       | [] -> ([], [])
     with Exit -> ([], x)
 
+module Lbl = 
+struct
+  type t = lbl
+  let compare = compare
+end
+
+module LblSet = Set.Make(Lbl)
+
+let simplify_gotos blk =
+  let rec simplify_blk x =
+    match x with
+      | [] -> ([], LblSet.empty)
+      | hd::tl -> 
+	  let (hd, hd_lbls) = simplify_stmt hd in
+	  let (tl, tl_lbls) = simplify_blk tl in
+	    (hd@tl, LblSet.union hd_lbls tl_lbls)
+    
+  and simplify_stmt (x, loc) =
+    match x with
+	Goto l -> ([x, loc], LblSet.singleton l)
+      | Decl (name, t, body) -> 
+	  let (body, lbls) = simplify_blk body in
+	    if not (LblSet.is_empty lbls) 
+	    then invalid_arg "Newspeak.simplify_gotos";
+	    ([Decl (name, t, body), loc], lbls)
+
+      | DoWith ((Goto l1, _)::[], l2, []) when l1 = l2 -> ([], LblSet.empty)
+      | DoWith ([], _, []) -> ([], LblSet.empty)
+
+      | DoWith (hd::tl, l, []) ->
+	  let (hd, hd_lbls) = simplify_stmt hd in
+	  let tl = remove_final_goto l tl in
+	    if LblSet.mem l hd_lbls then begin
+	      let (tl, tl_lbls) = simplify_blk tl in
+	      let lbls = LblSet.union hd_lbls tl_lbls in
+	      let lbls = LblSet.remove l lbls in
+		((DoWith (hd@tl, l, []), loc)::[], lbls)
+	    end else begin
+	      let (tl, tl_lbls) = simplify_stmt (DoWith (tl, l, []), loc) in
+	      let lbls = LblSet.union hd_lbls tl_lbls in
+		(hd@tl, lbls)
+	    end
+
+      | ChooseAssert elts ->
+	  let lbls = ref LblSet.empty in
+	  let simplify_choice (cond, body) = 
+	    let (body, choice_lbls) = simplify_blk body in
+	      lbls := LblSet.union !lbls choice_lbls;
+	      (cond, body)
+	  in
+	  let choices = List.map simplify_choice elts in
+	    ([ChooseAssert choices, loc], !lbls)
+
+      | InfLoop body -> 
+	  let (body, lbls) = simplify_blk body in
+	    ([InfLoop body, loc], lbls)
+
+      | DoWith _ -> 
+	  invalid_arg "Newspeak.simplify_gotos: empty action expected"
+
+      | _ -> ([x, loc], LblSet.empty)
+  in
+    
+  let (blk, lbls) = simplify_blk blk in
+    if not (LblSet.is_empty lbls) 
+    then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";
+    blk
+
+(*
 let simplify_gotos blk =
   let necessary_lbls = ref [] in
   let rec simplify_blk x =
@@ -809,7 +878,7 @@ let simplify_gotos blk =
       | _ -> [x, loc]
   in
     simplify_blk blk
-
+*)
 
 let rec simplify_stmt actions (x, loc) =
   let x =
@@ -876,6 +945,9 @@ and simplify_blk actions blk =
 (* TODO: do this in one tree traversal, instead of 2 *)
 (* TODO: code optimization, this could be optimized, 
    maybe using inheritance ?? *)
+(* TODO: once simplify choose is applied, there are opportunities for 
+   simplify_gotos
+   Fixpoint ??? *)
 let simplify b = 
   simplify_blk [new simplify_choose; new simplify_arith; new simplify_coerce] 
     (simplify_gotos b)

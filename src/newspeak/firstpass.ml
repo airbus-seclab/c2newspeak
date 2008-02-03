@@ -754,17 +754,12 @@ let translate (bare_compdefs, globals) =
 	  let blk2 = translate_blk blk2 in
 	    pref@((C.If (e, blk1, blk2), loc)::[])
 
-      | DoWhile (body, e) -> 
-	  let body = translate_blk body in
-	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
-	    (C.Loop (body@loop_exit, []), loc)::[]
-
       | For (init, e, body, step) ->
 	  let init = translate_blk init in
 	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
 	  let body = translate_blk body in
 	  let step = translate_blk step in
-	    init@(C.Loop (loop_exit@body, step), loc)::[]
+	    (C.Loop (init, loop_exit@body, step), loc)::[]
 
       | Return None -> (C.Return, loc)::[]
 	      

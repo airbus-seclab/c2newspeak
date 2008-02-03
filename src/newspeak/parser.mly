@@ -225,7 +225,8 @@ statement:
 | WHILE LPAREN expression RPAREN statement { [For ([], $3, $5, []), 
 					     get_loc ()] }
 | DO statement
-  WHILE LPAREN expression RPAREN SEMICOLON { [DoWhile ($2, $5), get_loc ()] }
+  WHILE LPAREN expression RPAREN SEMICOLON { [For ($2, $5, $2, []), 
+					     get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
 | assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
