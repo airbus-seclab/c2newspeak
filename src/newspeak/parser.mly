@@ -349,13 +349,13 @@ inclusive_or_expression:
 logical_and_expression:
   inclusive_or_expression                  { $1 }
 | logical_and_expression AND 
-  inclusive_or_expression                  { And ($1, $3) }
+  inclusive_or_expression                  { Boolop (And, $1, $3) }
 ;;
 
 logical_or_expression:
   logical_and_expression                   { $1 }
 | logical_or_expression OR
-  logical_and_expression                   { Or ($1, $3) }
+  logical_and_expression                   { Boolop (Or, $1, $3) }
 ;;
 
 conditional_expression:

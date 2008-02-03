@@ -23,10 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
-(* And Or PlusPlus Call introduce intermediate variables *)
+(* And Or PlusPlus Call introduce intermediate variables 
+   Call needs to know the type
+*)
 
-(* TODO:1 make expressions side-effect free
-   2: translate *)
 (* Translates bare_csyntax to csyntax *)
 open Csyntax
 open Bare_csyntax
@@ -47,15 +47,15 @@ let desugar blk =
   and desugar_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	If (And (e1, e2), blk1, blk2) ->
+	If (Boolop (And, e1, e2), blk1, blk2) ->
 	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
 	    desugar_stmt (If (e1, if_e1_blk, blk2), loc)
 	      
-      | If (Or (e1, e2), blk1, blk2) ->
+      | If (Boolop (Or, e1, e2), blk1, blk2) ->
 	  let if_not_e1_blk = (If (e2, blk1, blk2), loc)::[] in
 	    desugar_stmt (If (e1, blk1, if_not_e1_blk), loc)
 	      
-      | If (Unop (Not, (And _ as e)), blk1, blk2) ->
+      | If (Unop (Not, (Boolop _ as e)), blk1, blk2) ->
 	  desugar_stmt (If (e, blk2, blk1), loc)
 	    
       | If (e, blk1, blk2) ->
@@ -82,40 +82,27 @@ let desugar blk =
 (* TODO: VDecl, Switch + examples *)
       | _ -> (x, loc)
   
+(* TODO: put together and and or as Boolop *)
   and desugar_exp e =
     match e with
-      | And (e1, e2) ->
+      | Boolop (op, e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
 	  let v = fresh_var () in
 	  let decl = VDecl (v, Int C.int_kind, false, None) in
 	  let tmp = Var v in
 	  let set =
-	    If (And (e1, e2), 
+	    If (Boolop (op, e1, e2), 
 	       (Exp (Set (tmp, exp_of_int 1)), loc)::[], 
 	       (Exp (Set (tmp, exp_of_int 0)), loc)::[])
 	  in
 	  let pref = (decl, loc)::(set, loc)::[] in
 	  let pref = desugar_blk pref in
 	    (pref, tmp, [])
-	      
-      | Or (e1, e2) ->
-	  let loc = Npkcontext.get_loc () in
-	  let v = fresh_var () in
-	  let decl = VDecl (v, Int C.int_kind, false, None) in
-	  let tmp = Var v in
-	  let set =
-	    If (Or (e1, e2), 
-	       (Exp (Set (tmp, exp_of_int 1)), loc)::[], 
-	       (Exp (Set (tmp, exp_of_int 0)), loc)::[])
-	  in
-	  let pref = (decl, loc)::(set, loc)::[] in
-	  let pref = desugar_blk pref in
-	    (pref, tmp, [])
-	      
-      | Set (e1, e2) ->
-	  let (pref1, e1, post1) = desugar_exp e1 in
-	  let (pref2, e2, post2) = desugar_exp e2 in
-	    (pref1@pref2, Set (e1, e2), post1@post2)
+	      	      
+      | Set (lv, e) ->
+	  let (pref_lv, lv, post_lv) = desugar_exp lv in
+	  let (pref_e, e, post_e) = desugar_exp e in
+	    (pref_lv@pref_e, Set (lv, e), post_lv@post_e)
 
       | ExpPlusPlus lv ->
 	  let loc = Npkcontext.get_loc () in
@@ -444,7 +431,7 @@ let translate (bare_compdefs, globals) =
       | _ -> Npkcontext.error "Firstpass.translate_lv" "Left value expected"
 
 (* TODO: should remove the need for a pref here, with the first pass that
-   remove side effects *)
+   remove side effects!!! *)
   and translate_exp x =
     match x with
 	Cst i -> ([], translate_cst i)
@@ -479,6 +466,10 @@ let translate (bare_compdefs, globals) =
 	  let e = translate_binop op e1 e2 in
 	    (pref1@pref2, e)
 
+(* TODO: Keep call expressions in csyntax, remove pref in firstpass
+   put a pref in compiler 
+   will be better for casts!! a lot better!!! 
+   careful, maybe can not do pref in compiler because of decls *)
       | Call (f, args) -> translate_call f args
 
       | SizeofE (Str str) ->
@@ -499,33 +490,6 @@ let translate (bare_compdefs, globals) =
       | Str str -> 
 	  let e = add_glb_cstr str in
 	    ([], e)
-(*
-      | And (e1, e2) -> 
-	  let loc = Npkcontext.get_loc () in
-	  let (tmp, tmp_name) = create_tmp int_typ loc in
-	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
-	  let stmt = 
-	    If (And (e1, e2), 
-	       (Exp (Set (Var tmp_name, exp_of_int 1)), loc)::[], 
-	       (Exp (Set (Var tmp_name, exp_of_int 0)), loc)::[])
-	  in
-	  let pref = translate_stmt (stmt, loc) in
-	    pop_local tmp_name;
-	    (pref, tmp_e)
-
-      | Or (e1, e2) -> 
-	  let loc = Npkcontext.get_loc () in
-	  let (tmp, tmp_name) = create_tmp int_typ loc in
-	  let tmp_e = (C.Lval (tmp, int_typ), int_typ) in
-	  let stmt = 
-	    If (Or (e1, e2), 
-	       (Exp (Set (Var tmp_name, exp_of_int 1)), loc)::[], 
-	       (Exp (Set (Var tmp_name, exp_of_int 0)), loc)::[])
-	  in
-	  let pref = translate_stmt (stmt, loc) in
-	    pop_local tmp_name;
-	    (pref, tmp_e)
-*)
 
       | Cast (e, t) -> 
 	  let (pref, e) = translate_exp e in
@@ -539,18 +503,7 @@ let translate (bare_compdefs, globals) =
 	  let (e_pref, e) = translate_exp e in
 	  let e = C.cast e t in
 	    (lv_pref@e_pref@((C.Set (lv, t, e), loc)::[]), (Lval (lv, t), t))
-(*
-      | ExpPlusPlus lv ->
-	  let loc = Npkcontext.get_loc () in
-	  let (pref_lv, (lv', t)) = translate_lv lv in
-	  let (tmp, tmp_name) = create_tmp t loc in
-	  let e = C.Lval (lv', t) in
-	  let sav_set = (C.Set (tmp, t, e), loc) in
-	  let incr_set = Set (lv, Binop (Plus, Var tmp_name, exp_of_int 1)) in
-	  let (pref, _) = translate_exp incr_set in
-	    pop_local tmp_name;
-	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
-	    *)
+
   and translate_ftyp (args, va_list, ret) =
     let translate_arg (t, x) =
       let t =

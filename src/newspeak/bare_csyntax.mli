@@ -87,8 +87,7 @@ and exp =
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
-    | And of (exp * exp)
-    | Or of (exp * exp)
+    | Boolop of (boolop * exp * exp)
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
     | Sizeof of typ
@@ -100,6 +99,8 @@ and exp =
     | ExpPlusPlus of exp
 
 and unop = Neg | Not | BNot
+
+and boolop = And | Or
 
 and binop =
     | Plus
