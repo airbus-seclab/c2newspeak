@@ -23,17 +23,7 @@
   email: charles.hymans@penjili.org
 */
 
-struct s {
-  int a;
-};
-
 void main() {
   int x;
-  struct s *ptr;
-  x = (ptr++)->a;
+  x++;
 }
-
-/* equivalent to:
-   x = ptr->a;
-   ptr = ptr+1;
- */

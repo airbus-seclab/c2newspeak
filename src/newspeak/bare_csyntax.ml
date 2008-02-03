@@ -73,13 +73,15 @@ and stmtkind =
     | VDecl of vardecl
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
-(* while exp is true do blk and then blk, continue jumps before the second
-   blk *)
+(* init, while exp is true do blk and then blk, 
+   continue jumps before the second blk 
+   init may cotain break or continue stmt!
+*)
     | For of (blk * exp * blk * blk)
-    | Return of exp option
     | Exp of exp
     | Break
     | Continue
+    | Return of exp option
     | Block of blk
 
 and static = bool

@@ -32,7 +32,7 @@ open Csyntax
 open Bare_csyntax
 module C = Csyntax
 
-(*
+
 let desugar blk =
   let tmp_cnt = ref (-1) in
   let fresh_var () = 
@@ -44,18 +44,43 @@ let desugar blk =
 	hd::tl -> (desugar_stmt hd)::(desugar_blk tl)
       | [] -> []
 	  
-  and desugar_stmt (x, loc) = 
+  and desugar_stmt (x, loc) =
     Npkcontext.set_loc loc;
-    let x = desugar_stmtkind x in
-      (x, loc)
-
-  and desugar_stmtkind x =
     match x with
+	If (And (e1, e2), blk1, blk2) ->
+	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
+	    desugar_stmt (If (e1, if_e1_blk, blk2), loc)
+	      
+      | If (Or (e1, e2), blk1, blk2) ->
+	  let if_not_e1_blk = (If (e2, blk1, blk2), loc)::[] in
+	    desugar_stmt (If (e1, blk1, if_not_e1_blk), loc)
+	      
+      | If (Unop (Not, (And _ as e)), blk1, blk2) ->
+	  desugar_stmt (If (e, blk2, blk1), loc)
+	    
+      | If (e, blk1, blk2) ->
+	  let (pref, e, post) = desugar_exp e in
+	  let blk1 = desugar_blk blk1 in
+	  let blk2 = desugar_blk blk2 in
+(* TODO: duplicated code, not nice *)
+	  let if_stmt = (If (e, post@blk1, post@blk2), loc) in
+	    (Block (pref@(if_stmt::[])), loc)
+	      
       | Exp e -> 
-	  let loc = Npkcontext.get_loc () in
-	  let (pref, e) = remove_exp e in
-	    Block (pref@((Exp e, loc)::[]))
-      | _ -> x
+	  let (pref, e, post) = desugar_exp e in
+	    (Block (pref@((Exp e, loc)::post)), loc)
+
+      | For (init, e, body, suffix) ->
+	  let init = desugar_blk init in
+	  let guard = desugar_stmt (If (e, [], (Break, loc)::[]), loc) in
+	  let body = desugar_blk body in
+	  let suffix = desugar_blk suffix in
+	    (For (init, exp_of_int 1, guard::body, suffix), loc)
+
+      | Block blk -> (Block (desugar_blk blk), loc)
+
+(* TODO: VDecl, Switch + examples *)
+      | _ -> (x, loc)
   
   and desugar_exp e =
     match e with
@@ -70,19 +95,48 @@ let desugar blk =
 	       (Exp (Set (tmp, exp_of_int 0)), loc)::[])
 	  in
 	  let pref = (decl, loc)::(set, loc)::[] in
-	  let pref = remove_blk pref in
-	    (pref, tmp)
+	  let pref = desugar_blk pref in
+	    (pref, tmp, [])
+	      
+      | Or (e1, e2) ->
+	  let loc = Npkcontext.get_loc () in
+	  let v = fresh_var () in
+	  let decl = VDecl (v, Int C.int_kind, false, None) in
+	  let tmp = Var v in
+	  let set =
+	    If (Or (e1, e2), 
+	       (Exp (Set (tmp, exp_of_int 1)), loc)::[], 
+	       (Exp (Set (tmp, exp_of_int 0)), loc)::[])
+	  in
+	  let pref = (decl, loc)::(set, loc)::[] in
+	  let pref = desugar_blk pref in
+	    (pref, tmp, [])
 	      
       | Set (e1, e2) ->
-	  let (pref1, e1) = remove_exp e1 in
-	  let (pref2, e2) = remove_exp e2 in
-	    (pref1@pref2, Set (e1, e2))
+	  let (pref1, e1, post1) = desugar_exp e1 in
+	  let (pref2, e2, post2) = desugar_exp e2 in
+	    (pref1@pref2, Set (e1, e2), post1@post2)
 
-      | _ -> ([], e)
+      | ExpPlusPlus lv ->
+	  let loc = Npkcontext.get_loc () in
+	  let (pref_lv, lv, post_lv) = desugar_exp lv in
+	  let incr = (Exp (Set (lv, Binop (Plus, lv, exp_of_int 1))), loc) in
+(* TODO: check this!!! *)
+	    (pref_lv, lv, incr::post_lv)
+
+      | Field (e, f) -> 
+	  let (pref, e, post) = desugar_exp e in
+	    (pref, Field (e, f), post)
+
+      | Deref e -> 
+	  let (pref, e, post) = desugar_exp e in
+	    (pref, Deref e, post)
+
+(* TODO: Index, AddrOf, Unop, Binop, Call, Sizeof, SizeofE, Cast + examples *)
+      | _ -> ([], e, [])
   in
 
     desugar_blk blk
-*)
 
 let ret_pos = 1
 let ret_name = "!return"
@@ -445,7 +499,7 @@ let translate (bare_compdefs, globals) =
       | Str str -> 
 	  let e = add_glb_cstr str in
 	    ([], e)
-
+(*
       | And (e1, e2) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (tmp, tmp_name) = create_tmp int_typ loc in
@@ -471,6 +525,7 @@ let translate (bare_compdefs, globals) =
 	  let pref = translate_stmt (stmt, loc) in
 	    pop_local tmp_name;
 	    (pref, tmp_e)
+*)
 
       | Cast (e, t) -> 
 	  let (pref, e) = translate_exp e in
@@ -484,7 +539,7 @@ let translate (bare_compdefs, globals) =
 	  let (e_pref, e) = translate_exp e in
 	  let e = C.cast e t in
 	    (lv_pref@e_pref@((C.Set (lv, t, e), loc)::[]), (Lval (lv, t), t))
-
+(*
       | ExpPlusPlus lv ->
 	  let loc = Npkcontext.get_loc () in
 	  let (pref_lv, (lv', t)) = translate_lv lv in
@@ -495,7 +550,7 @@ let translate (bare_compdefs, globals) =
 	  let (pref, _) = translate_exp incr_set in
 	    pop_local tmp_name;
 	    (pref_lv@(sav_set::pref), (C.Lval (tmp, t), t))
-
+	    *)
   and translate_ftyp (args, va_list, ret) =
     let translate_arg (t, x) =
       let t =
@@ -736,17 +791,6 @@ let translate (bare_compdefs, globals) =
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	If (And (e1, e2), blk1, blk2) ->
-	  let if_e1_blk = (If (e2, blk1, blk2), loc)::[] in
-	    translate_stmt (If (e1, if_e1_blk, blk2), loc)
-
-      | If (Or (e1, e2), blk1, blk2) ->
-	  let if_not_e1_blk = (If (e2, blk1, blk2), loc)::[] in
-	    translate_stmt (If (e1, blk1, if_not_e1_blk), loc)
-
-      | If (Unop (Not, (And _ as e)), blk1, blk2) ->
-	  translate_stmt (If (e, blk2, blk1), loc)
-
       | If (e, blk1, blk2) ->
 	  let e = simplify_bexp e in
 	  let (pref, (e, _)) = translate_exp e in
@@ -754,12 +798,22 @@ let translate (bare_compdefs, globals) =
 	  let blk2 = translate_blk blk2 in
 	    pref@((C.If (e, blk1, blk2), loc)::[])
 
+(* TODO: remove expression in For?? *)
+      | For (init, Cst C.CInt c, body, step) 
+	  when Int64.compare c Int64.one = 0->
+	  let init = translate_blk init in
+	  let body = translate_blk body in
+	  let step = translate_blk step in
+	    (C.Loop (init, body, step), loc)::[]
+
+(*
       | For (init, e, body, step) ->
 	  let init = translate_blk init in
 	  let loop_exit = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
 	  let body = translate_blk body in
 	  let step = translate_blk step in
 	    (C.Loop (init, loop_exit@body, step), loc)::[]
+*)
 
       | Return None -> (C.Return, loc)::[]
 	      
@@ -828,6 +882,7 @@ let translate (bare_compdefs, globals) =
 	  let ft = C.ftyp_of_typ t in
 	    update_funtyp x ft loc;
 	    let _ = push_formals loc ft in
+	    let body = desugar body in
 	    let body = translate_blk body in
 	    let locals = get_locals () in
 	      update_funbody x (locals, body)

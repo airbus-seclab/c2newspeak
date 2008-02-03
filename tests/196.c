@@ -28,3 +28,22 @@ void main () {
   
   x = x++ || x++;
 }
+
+/* 
+   check that!!!
+   equivalent to:
+   if (x) {
+     x++;
+     tmp = 1;
+   } else {
+     x++;
+     if (x) {
+       x++;
+       tmp = 1;
+     } else {
+       x++;
+       tmp = 0;
+     }
+   }
+   x = tmp;
+ */

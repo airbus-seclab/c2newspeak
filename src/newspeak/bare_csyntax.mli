@@ -71,10 +71,10 @@ and stmtkind =
     | If of (exp * blk * blk)
     | Switch of (exp * (exp option * blk * location) list)
     | For of (blk * exp * blk * blk)
-    | Return of exp option
     | Exp of exp
     | Break
     | Continue
+    | Return of exp option
     | Block of blk
 
 and static = bool
