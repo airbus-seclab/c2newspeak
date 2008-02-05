@@ -949,8 +949,8 @@ and simplify_blk actions blk =
    simplify_gotos
    Fixpoint ??? *)
 let simplify b = 
-  simplify_blk [new simplify_choose; new simplify_arith; new simplify_coerce] 
-    (simplify_gotos b)
+  simplify_gotos (simplify_blk [new simplify_choose; new simplify_arith; 
+				new simplify_coerce] b)
 
 let simplify_exp e =
   simplify_exp [new simplify_arith; new simplify_coerce] e

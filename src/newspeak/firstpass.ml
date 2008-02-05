@@ -34,8 +34,10 @@ open Bare_csyntax
 module C = Csyntax
 
 
-(* TODO: see if simplifications in Newspeak should not be in a different 
-   order *)
+(* TODO: structure syntax trees
+   bare_csyntax
+   csyntax
+   typed_csyntax *)
 
 let desugar blk =
   let tmp_cnt = ref (-1) in
