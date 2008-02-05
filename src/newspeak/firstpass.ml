@@ -23,8 +23,9 @@
   email: charles.hymans@penjili.org
 *)
 
-(* And Or PlusPlus Call introduce intermediate variables 
+(* And Or Call introduce intermediate variables 
    Call needs to know the type
+   PlusPlus introduces a post-treatment
 *)
 
 (* Translates bare_csyntax to csyntax *)
@@ -32,6 +33,10 @@ open Csyntax
 open Bare_csyntax
 module C = Csyntax
 
+
+(* TODO: have default necessarily last of switch!!! *)
+(* TODO: see if simplifications in Newspeak should not be in a different 
+   order *)
 
 let desugar blk =
   let tmp_cnt = ref (-1) in
@@ -79,8 +84,28 @@ let desugar blk =
 
       | Block blk -> (Block (desugar_blk blk), loc)
 
-(* TODO: VDecl, Switch + examples *)
+      | Switch (e, choices) ->
+	  let (pref, e, post) = desugar_exp e in
+	  let choices = List.map (desugar_choice post) choices in
+	    (Switch (e, choices), loc)
+
       | _ -> (x, loc)
+
+(* TODO: duplicated code, not nice *)
+  and desugar_choice pref (e, body, loc) =
+    let e =
+      match e with
+	  None -> None
+	| Some e -> 
+	    let (pref, e, post) = desugar_exp e in
+	      if (pref <> []) || (post <> []) then begin
+		Npkcontext.error "Firstpass.desugar_choice" 
+		  "Integer constant expression expected"
+	      end;
+	      Some e
+    in
+    let body = desugar_blk body in
+      (e, pref@body, loc)
   
 (* TODO: put together and and or as Boolop *)
   and desugar_exp e =
@@ -781,14 +806,16 @@ let translate (bare_compdefs, globals) =
 
       | Switch (e, cases) -> 
 	  let (pref, (e, _)) = translate_exp e in
-	  let pref = ref pref in
 	  let translate_case (e, body, loc) = 
-	    let (pref_case, e) = translate_exp_option e in
-	      pref := pref_case@(!pref);
+	    let (pref, e) = translate_exp_option e in
+	      if (pref <> []) then begin
+		Npkcontext.error "Firstpass.switch" 
+		  "Integer constant expression expected"
+	      end;
 	      (e, translate_blk body, loc) 
 	  in
 	  let cases = List.map translate_case cases in
-	    !pref@(C.Switch (e, cases), loc)::[]
+	    pref@(C.Switch (e, cases), loc)::[]
 
       | Break -> (C.Break, loc)::[]
 
