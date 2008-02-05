@@ -63,7 +63,7 @@ and stmtkind =
     | Init of (int * init)
     | Set of (lv * typ * exp)
     | If of (exp * blk * blk)
-    | Switch of (exp * (typ_exp option * blk * location) list)
+    | Switch of (exp * (typ_exp * blk * location) list * blk)
 (* init, body, suffix
    continue jumps just before suffix *)
     | Loop of (blk * blk * blk)

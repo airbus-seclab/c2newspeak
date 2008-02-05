@@ -72,7 +72,7 @@ and stmtkind =
     | EDecl of enumdecl
     | VDecl of vardecl
     | If of (exp * blk * blk)
-    | Switch of (exp * (exp option * blk * location) list)
+    | Switch of (exp * (exp * blk * location) list * blk)
 (* init, while exp is true do blk and then blk, 
    continue jumps before the second blk 
    init may cotain break or continue stmt!

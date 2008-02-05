@@ -35,6 +35,7 @@ module K = Npkil
 let ret_lbl = 0
 let cnt_lbl = 1
 let brk_lbl = 2
+let default_lbl = 3
 
 let translate_array lv (t, n) =
   let n =
@@ -297,7 +298,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 
       | Continue -> (K.Goto cnt_lbl, loc)::[]
       
-      | Switch (e, cases) -> translate_switch loc e cases
+      | Switch (e, cases, default) -> translate_switch loc e cases default
 
   and translate_decl loc (t, x) =
     let t = translate_typ t in
@@ -365,40 +366,35 @@ let translate (compdefs, cglbdecls, cfundefs) =
       let call = K.append_decls ret_decl call in
 	call
 
-  and translate_switch loc e cases =
+  and translate_switch loc e cases default_blk =
     let switch_exp = translate_exp e in
-    let default_lbl = brk_lbl in
+    let default_blk = translate_blk default_blk in
     let default_cond = ref [] in
-    let default_goto = ref [K.Goto default_lbl, loc] in
-
     let choices = ref [] in
 
-    let found_case lbl v =
-      match v with
-	  Some (v, t) ->
-	    let v = translate_exp v in
-	    let t = translate_scalar t in
-	    let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
-	      default_cond := (K.negate cond)::!default_cond;
-	      choices := (cond::[], [K.Goto lbl, loc])::!choices
-	| None -> default_goto := [K.Goto lbl, loc]
+    let found_case lbl (v, t) =
+      let v = translate_exp v in
+      let t = translate_scalar t in
+      let cond = K.BinOp (Newspeak.Eq t, switch_exp, v) in
+	default_cond := (K.negate cond)::!default_cond;
+	choices := (cond::[], [K.Goto lbl, loc])::!choices
     in
     let rec translate_cases x =
       match x with
 	  (v, [], case_loc)::(v', body, _)::tl ->
 	    let (lbl, cases) = translate_cases ((v', body, case_loc)::tl) in
-	    found_case (lbl - 1) v;
+	      found_case (lbl - 1) v;
 	      (lbl, cases)
 	| (v, body, case_loc)::tl ->
 	    let (lbl, tl) = translate_cases tl in
 	    let body = translate_blk body in
 	      found_case lbl v;
 	      (lbl + 1, (lbl, body, case_loc)::tl)
-	| [] -> (brk_lbl + 1, [])
+	| [] -> (default_lbl + 1, [])
     in
 
     let (_, cases) = translate_cases cases in
-    let default_choice = (!default_cond, !default_goto) in
+    let default_choice = (!default_cond, [K.Goto default_lbl, loc]) in
     let switch = [K.ChooseAssert (default_choice::!choices), loc] in
 
     let rec append_cases x =
@@ -410,8 +406,12 @@ let translate (compdefs, cglbdecls, cfundefs) =
     in
       (* TODO: optimize this, do not rev cases, maybe have it as a reference *)
     let switch = append_cases (List.rev cases) in
-      [K.DoWith (switch, default_lbl, []), loc]
-	
+      (* TODO: have a newspeak optimization when default_blk = [] 
+	 look at all the switch to optimize them (by removing as much
+	 as possible gotos)
+      *)
+    let switch = (K.DoWith (switch, default_lbl, []), loc)::default_blk in
+      [K.DoWith (switch, brk_lbl, []), loc]
   in
 
   let translate_init x =

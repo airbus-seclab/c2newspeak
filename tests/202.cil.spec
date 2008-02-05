@@ -3,7 +3,7 @@ Newspeak output
 202.c
 main() {
   (202.c:27#1072)^int32;
-  (202.c:29#1078)^do {
+  (202.c:30#1093)^do {
     (202.c:29#1078)^goto lbl3;
   } with lbl3: {
   }

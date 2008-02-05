@@ -34,7 +34,6 @@ open Bare_csyntax
 module C = Csyntax
 
 
-(* TODO: have default necessarily last of switch!!! *)
 (* TODO: see if simplifications in Newspeak should not be in a different 
    order *)
 
@@ -84,29 +83,24 @@ let desugar blk =
 
       | Block blk -> (Block (desugar_blk blk), loc)
 
-      | Switch (e, choices) ->
+      | Switch (e, choices, default) ->
 	  let (pref, e, post) = desugar_exp e in
 	  let choices = List.map (desugar_choice post) choices in
-	    (Switch (e, choices), loc)
+	  let default = desugar_blk default in
+	    (Switch (e, choices, default), loc)
 
       | _ -> (x, loc)
 
 (* TODO: duplicated code, not nice *)
   and desugar_choice pref (e, body, loc) =
-    let e =
-      match e with
-	  None -> None
-	| Some e -> 
-	    let (pref, e, post) = desugar_exp e in
-	      if (pref <> []) || (post <> []) then begin
-		Npkcontext.error "Firstpass.desugar_choice" 
-		  "Integer constant expression expected"
-	      end;
-	      Some e
-    in
+    let (pref, e, post) = desugar_exp e in
     let body = desugar_blk body in
-      (e, pref@body, loc)
-  
+      if (pref <> []) || (post <> []) then begin
+	Npkcontext.error "Firstpass.desugar_choice" 
+	  "Integer constant expression expected"
+      end;
+      (e, body, loc)
+	  
 (* TODO: put together and and or as Boolop *)
   and desugar_exp e =
     match e with
@@ -626,13 +620,6 @@ let translate (bare_compdefs, globals) =
     let t = C.ftyp_of_typ t in
       (pref, fn, t)
 
-  and translate_exp_option e =
-    match e with
-	None -> ([], None)
-      | Some e -> 
-	  let (pref, e) = translate_exp e in
-	    (pref, Some e)
-
   and translate_init t x =
     let pref = ref [] in
     let res = ref [] in
@@ -804,10 +791,10 @@ let translate (bare_compdefs, globals) =
 	  let (pref, _) = translate_exp e in
 	    pref
 
-      | Switch (e, cases) -> 
+      | Switch (e, cases, default) -> 
 	  let (pref, (e, _)) = translate_exp e in
 	  let translate_case (e, body, loc) = 
-	    let (pref, e) = translate_exp_option e in
+	    let (pref, e) = translate_exp e in
 	      if (pref <> []) then begin
 		Npkcontext.error "Firstpass.switch" 
 		  "Integer constant expression expected"
@@ -815,7 +802,8 @@ let translate (bare_compdefs, globals) =
 	      (e, translate_blk body, loc) 
 	  in
 	  let cases = List.map translate_case cases in
-	    pref@(C.Switch (e, cases), loc)::[]
+	  let default = translate_blk default in
+	    pref@(C.Switch (e, cases, default), loc)::[]
 
       | Break -> (C.Break, loc)::[]
 

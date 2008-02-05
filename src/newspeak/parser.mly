@@ -211,9 +211,7 @@ statement:
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
-| SWITCH LPAREN expression RPAREN LBRACE
-  case_list
-  RBRACE                                   { [Switch ($3, $6), get_loc ()] }
+| switch_stmt                              { [Switch $1, get_loc ()] }
 | FOR LPAREN assignment_expression SEMICOLON 
       expression SEMICOLON 
       assignment_expression RPAREN
@@ -235,14 +233,21 @@ statement:
 | compound_statement                       { [Block $1, get_loc ()] }
 ;;
 
-case_list:
-  case case_list                           { $1::$2 }
-| case                                     { $1::[] }
+
+switch_stmt:
+  SWITCH LPAREN expression RPAREN LBRACE
+    case_list
+  RBRACE                                   { ($3, $6, []) }
+| SWITCH LPAREN expression RPAREN LBRACE
+    case_list
+    DEFAULT COLON statement_list
+  RBRACE                                   { ($3, $6, $9) }
 ;;
 
-case:
-  CASE expression COLON statement_list     { (Some $2, $4, get_loc ()) }
-| DEFAULT COLON statement_list             { (None, $3, get_loc ()) }
+case_list:
+  CASE expression COLON statement_list 
+  case_list                                { ($2, $4, get_loc ())::$5 }
+|                                          { [] }
 ;;
 
 primary_expression:

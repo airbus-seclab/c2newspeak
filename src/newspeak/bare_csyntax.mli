@@ -69,7 +69,7 @@ and stmtkind =
     | EDecl of enumdecl
     | VDecl of vardecl
     | If of (exp * blk * blk)
-    | Switch of (exp * (exp option * blk * location) list)
+    | Switch of (exp * (exp * blk * location) list * blk)
     | For of (blk * exp * blk * blk)
     | Exp of exp
     | Break
