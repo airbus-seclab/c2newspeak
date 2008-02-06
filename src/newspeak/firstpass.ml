@@ -38,6 +38,7 @@ module C = Csyntax
    bare_csyntax
    csyntax
    typed_csyntax *)
+(* TODO: remove all warnings at compile time *)
 
 let desugar blk =
   let tmp_cnt = ref (-1) in
@@ -103,7 +104,6 @@ let desugar blk =
       end;
       (e, body, loc)
 	  
-(* TODO: put together and and or as Boolop *)
   and desugar_exp e =
     match e with
       | Boolop (op, e1, e2) ->
@@ -135,12 +135,17 @@ let desugar blk =
       | Field (e, f) -> 
 	  let (pref, e, post) = desugar_exp e in
 	    (pref, Field (e, f), post)
+	      
+      | Index (e1, e2) ->
+	  let (pref1, e1, post1) = desugar_exp e1 in
+	  let (pref2, e2, post2) = desugar_exp e2 in
+	    (pref1@pref2, Index (e1, e2), post1@post2)
 
       | Deref e -> 
 	  let (pref, e, post) = desugar_exp e in
 	    (pref, Deref e, post)
 
-(* TODO: Index, AddrOf, Unop, Binop, Call, Sizeof, SizeofE, Cast + examples *)
+(* TODO: AddrOf, Unop, Binop, Call, Sizeof, SizeofE, Cast + examples *)
       | _ -> ([], e, [])
   in
 
