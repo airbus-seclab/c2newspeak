@@ -153,7 +153,12 @@ let desugar blk =
 	  let (pref, e, post) = desugar_exp e in
 	    (pref, Unop (op, e), post)
 
-(* TODO: Binop, Call, Sizeof, SizeofE, Cast + examples *)
+      | Binop (op, e1, e2) ->
+	  let (pref1, e1, post1) = desugar_exp e1 in
+	  let (pref2, e2, post2) = desugar_exp e2 in
+	    (pref1@pref2, Binop (op, e1, e2), post1@post2)
+	  
+(* TODO: Call, Sizeof, SizeofE, Cast + examples *)
       | _ -> ([], e, [])
   in
 
