@@ -145,7 +145,11 @@ let desugar blk =
 	  let (pref, e, post) = desugar_exp e in
 	    (pref, Deref e, post)
 
-(* TODO: AddrOf, Unop, Binop, Call, Sizeof, SizeofE, Cast + examples *)
+      | AddrOf e -> 
+	  let (pref, e, post) = desugar_exp e in
+	    (pref, AddrOf e, post)
+
+(* TODO: Unop, Binop, Call, Sizeof, SizeofE, Cast + examples *)
       | _ -> ([], e, [])
   in
 
