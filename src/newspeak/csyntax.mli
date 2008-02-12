@@ -24,18 +24,24 @@
 *)
 open Newspeak
 
-type prog = (compdefs * glbdecls * fundefs)
+type prog = (compdefs * (global * location) list)
 
-and compdefs = (string, (fields_t * int * int)) Hashtbl.t
+(* true for structure/false for union *)
+and compdefs = (string * bool * declaration list) list
 
-(* first None is for extern, second None for no init *)
-and glbdecls = (string, typ * location * init option option) Hashtbl.t
+and global =
+    | FunctionDef of (string * typ * blk)
+    | GlbEDecl of enumdecl
+(* true for extern *)
+    | GlbVDecl of (vardecl * extern)
 
-and fundefs = (string, ftyp * location * body option) Hashtbl.t
+and extern = bool
 
-and body = (typ * string * location) list * blk
+and vardecl = string * typ * static * init option
 
-and init = (int * typ * exp) list
+and enumdecl = string * Int64.t
+
+and declaration = (typ * string)
 
 (* true if variable list of arguments *)
 and ftyp = (typ * string) list * bool * typ
@@ -43,112 +49,69 @@ and ftyp = (typ * string) list * bool * typ
 and typ =
     | Void
     | Int of ikind
+    | Bitfield of (ikind * int)
     | Float of int
-(* TODO: simplification: remove typ here ??? *)
     | Ptr of typ
-    | Array of array_t
+    | Array of (typ * exp option)
     | Struct of string
     | Union of string
     | Fun of ftyp
 
-and fields_t = (string * (int * typ)) list
-
-and array_t = (typ * int option)
-
-and blk = stmt list
+and init = 
+    | Data of exp
+    | Sequence of init list
 
 and stmt = (stmtkind * location)
 
+and blk = stmt list
+
 and stmtkind =
-    | Init of (int * init)
-    | Set of (lv * typ * exp)
+    | EDecl of enumdecl
+    | VDecl of vardecl
     | If of (exp * blk * blk)
-    | Switch of (exp * (typ_exp * blk * location) list * blk)
-(* init, body, suffix
-   continue jumps just before suffix *)
-    | Loop of (blk * blk * blk)
-    | Return
-    | Call of (lv option * (lv * ftyp) * exp list)
+    | CSwitch of (exp * (exp * blk * location) list * blk)
+    | For of (blk * exp * blk * blk)
+    | Exp of exp
     | Break
     | Continue
+    | Return of exp option
+    | Block of blk
 
-and typ_exp = (exp * typ)
-
-and typ_lv = (lv * typ)
-
-and lv = 
-    | Local of int
-    | Global of string
-    | Field of (lv * int)
-    | Index of (lv * array_t * exp)
-    | Deref of (exp * typ)
+and static = bool
 
 and exp = 
-    | Const of cst
-    | Lval of typ_lv
-    | AddrOf of typ_lv
+    | Cst of Cir.cst
+    | Var of string
+    | Field of (exp * string)
+    | Index of (exp * exp)
+    | Deref of exp
+    | AddrOf of exp
     | Unop of (unop * exp)
+    | IfExp of (exp * exp * exp)
     | Binop of (binop * exp * exp)
+    | Call of (exp * exp list)
+    | Sizeof of typ
+    | SizeofE of exp
+    | Str of string
+    | Cast of (exp * typ)
+    | Set of (exp * exp)
+(* returns the value and then increment it *)
+    | ExpPlusPlus of exp
 
-and unop = 
-    | Not
-    | BNot of ikind
-    | Cast of (typ * typ)
+and unop = Neg | Not | BNot
 
 and binop =
-    | Plus of ikind
-    | Minus of ikind
-    | Div of ikind
-    | Mult of ikind
-    | BAnd of ikind
-    | BXor of ikind
-    | BOr of ikind
+    | Plus
+    | Minus
+    | Mult
+    | Div
     | Mod
-    | PlusP of typ
-    | MinusP
-    | Gt of typ
-    | Eq of typ
-    | Shiftl of ikind
-    | Shiftr of ikind
-    | PlusF of int
-    | MinusF of int
-    | DivF of int
-    | MultF of int
-
-and cst = 
-    | CInt of Int64.t
-    | CFloat of string
-
-val ftyp_of_typ: typ -> ftyp
-
-val fields_of_typ: compdefs -> typ -> fields_t
-
-val array_of_typ: typ -> array_t
-
-val deref_typ: typ -> typ
-
-val size_of: compdefs -> typ -> int
-
-val align_of: compdefs -> typ -> int
-
-val int_kind: ikind
-
-val int_typ: typ
-
-val typ_of_cst: cst -> typ
-
-val promote: ikind -> ikind
+    | Gt
+    | Eq
+    | BAnd
+    | BXor
+    | BOr
+    | Shiftl
+    | Shiftr
 
 val exp_of_int: int -> exp
-
-val exp_of_float: float -> exp
-
-val undefined: string
-
-val cast: (exp * typ) -> typ -> exp
-
-val len_of_exp: exp -> int
-
-val next_aligned: int -> int -> int
-
-val ftyp_equal: ftyp -> ftyp -> bool

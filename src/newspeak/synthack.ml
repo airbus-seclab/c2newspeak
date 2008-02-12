@@ -28,8 +28,8 @@ let undefined = "!undefined"
 
 open Newspeak
 
-module B = Bare_csyntax
-module C = Csyntax
+module B = Csyntax
+module C = Cir
 
 module String_set = Set.Make(String)
 

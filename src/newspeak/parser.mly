@@ -24,8 +24,8 @@
 */
 
 %{
+open Cir
 open Csyntax
-open Bare_csyntax
 open Lexing
 open Synthack
 
@@ -109,7 +109,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token <Int64.t> INTEGER
 %token <string> FLOATCST
 
-%type <string list * Bare_csyntax.prog> parse
+%type <string list * Csyntax.prog> parse
 %start parse
 
 %%
@@ -211,7 +211,7 @@ statement:
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
-| switch_stmt                              { [Switch $1, get_loc ()] }
+| switch_stmt                              { [CSwitch $1, get_loc ()] }
 | FOR LPAREN assignment_expression SEMICOLON 
       expression SEMICOLON 
       assignment_expression RPAREN
@@ -354,13 +354,13 @@ inclusive_or_expression:
 logical_and_expression:
   inclusive_or_expression                  { $1 }
 | logical_and_expression AND 
-  inclusive_or_expression                  { Boolop (And, $1, $3) }
+  inclusive_or_expression                  { IfExp ($1, $3, exp_of_int 0) }
 ;;
 
 logical_or_expression:
   logical_and_expression                   { $1 }
 | logical_or_expression OR
-  logical_and_expression                   { Boolop (Or, $1, $3) }
+  logical_and_expression                   { IfExp ($1, exp_of_int 1, $3) }
 ;;
 
 conditional_expression:
