@@ -683,6 +683,13 @@ object
 
 end
 
+let big_int_op op =
+  match op with
+      PlusI -> Big_int.add_big_int
+    | MinusI -> Big_int.sub_big_int
+    | MultI -> Big_int.mult_big_int
+    | _ -> invalid_arg "Newspeak.big_int_op: unexpected operator"
+
 class simplify_arith =
 object (self)
   inherit builder
@@ -698,36 +705,23 @@ object (self)
      not all unsigned long long can be represented *)
   method process_exp e =
     match e with
-	BinOp (MultI, Const CInt64 x, Const CInt64 y) 
-	  when (Int64.compare x Int64.zero = 0) 
-	    || (Int64.compare y Int64.zero = 0) -> zero
+	BinOp (MultI|PlusI|MinusI as op, Const CInt64 x, Const CInt64 y) ->
+	  let x = Big_int.big_int_of_string (Int64.to_string x) in
+	  let y = Big_int.big_int_of_string (Int64.to_string y) in
+	  let z = (big_int_op op) x y in
+	  let min_int = 
+	    Big_int.big_int_of_string (Int64.to_string Int64.min_int) 
+	  in
+	  let max_int = 
+	    Big_int.big_int_of_string (Int64.to_string Int64.max_int) 
+	  in
+	    if ((Big_int.compare_big_int z min_int < 0) 
+		 || (Big_int.compare_big_int z max_int > 0)) then e
+	    else begin
+	      let z = Int64.of_string (Big_int.string_of_big_int z) in
+		Const (CInt64 z)
+	    end
 
-(* Carefull: 
-      | BinOp (MultI, e, Const CInt64 o)
-      | BinOp (MultI, Const CInt64 o, e) when Int64.compare o Int64.one = 0 -> 
-   will evaluate to false on (1 * 4), because it will match the first pattern
-   and evaluate the side-condition to false.
-   It is thus, not equivalent to the following code:
-*)
-      | BinOp (MultI, e, Const CInt64 o) 
-	  when Int64.compare o Int64.one = 0 -> e
-      | BinOp (MultI, Const CInt64 o, e) 
-	  when Int64.compare o Int64.one = 0 -> e
-
-      | BinOp (MultI, Const CInt64 i1, Const CInt64 i2) 
-	  when (Int64.compare i1 (Int64.of_int (-1)) = 0) 
-	    && (Int64.compare i2 Int64.min_int <> 0)  -> 
-	  Const (CInt64 (Int64.neg i2))
-
-      | BinOp (MultI, Const CInt64 i2, Const CInt64 i1) 
-	  when (Int64.compare i1 (Int64.of_int (-1)) = 0) 
-	    && (Int64.compare i2 Int64.min_int <> 0)  -> 
-	  Const (CInt64 (Int64.neg i2))
-
-      | BinOp (PlusI, Const CInt64 x, e) 
-	  when (Int64.compare x Int64.zero = 0) -> e
-      | BinOp (PlusI, e, Const CInt64 x) 
-	  when (Int64.compare x Int64.zero = 0) -> e
       | BinOp (PlusPI, e, Const CInt64 x) 
 	  when (Int64.compare x Int64.zero = 0) -> e
 
@@ -735,11 +729,6 @@ object (self)
 	  when Int64.compare i2 Int64.zero <> 0 ->
 	  let i = Int64.div i1 i2 in
 	    exp_of_int64 i
-
-      | BinOp (MinusI, Const CInt64 x, Const CInt64 y) 
-	when (Int64.compare x Int64.zero = 0)
-	  && (Int64.compare y Int64.min_int <> 0) ->
-	  Const (CInt64 (Int64.neg  y))
 
       | _ -> e
 end

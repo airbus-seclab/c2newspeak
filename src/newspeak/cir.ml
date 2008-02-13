@@ -92,6 +92,7 @@ and lv =
    rid of unnecessary temporary variable??? If better *)
     | Post of (lv * stmt)
 
+(* TODO: should put coercion already into exp *)
 and exp =
     | Const of cst
     | Lval of typ_lv
@@ -105,7 +106,9 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
+(* TODO: use Npkil unop and binop *)
 and unop = 
+    | Coerce of (Int64.t * Int64.t)
     | Not
     | BNot of ikind
     | Cast of (typ * typ)
@@ -553,3 +556,6 @@ let normalize x =
 
   let (body, _) = set_scope_blk (normalize_blk x) in
     body
+
+(* TODO: try to factor this with Npkil.make_int_coerce *)
+let make_int_coerce t e = Unop (Coerce (Newspeak.domain_of_typ t), e)

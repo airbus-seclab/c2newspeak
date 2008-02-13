@@ -108,9 +108,7 @@ module String_set =
 let zero = Const (CInt64 (Int64.zero))
 let zero_f = Const (CFloat (0., "0."))
 
-let make_int_coerce int_t e =
-  UnOp (Coerce (domain_of_typ int_t), e)
-
+let make_int_coerce t e = UnOp (Coerce (Newspeak.domain_of_typ t), e)
 
 let exp_of_int x = Const (CInt64 (Int64.of_int x))
 

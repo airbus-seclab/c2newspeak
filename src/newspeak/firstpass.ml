@@ -40,7 +40,7 @@ let default_lbl = 3
 (* types *)
 type symb =
     | VarSymb of C.lv 
-    | Enum of Int64.t
+    | Enum of C.exp
 
 (* functions *)
 
@@ -218,6 +218,13 @@ let translate (bare_compdefs, globals) =
       (decl, id)
   in
 
+  let gen_tmp loc t =
+    let x = "tmp"^(string_of_int !tmp_cnt) in
+    let (decl, id) = add_var loc (t, x) in
+      incr tmp_cnt;
+      (x, decl, C.Var id)
+  in
+
   let remove_symb x = Hashtbl.remove symbtbl x in
 
   let add_formals loc (args_t, _, ret_t) =
@@ -279,7 +286,15 @@ let translate (bare_compdefs, globals) =
       update_global x name loc d
   in
 
-  let push_enum (x, i) loc = Hashtbl.add symbtbl x (Enum i, C.int_typ, loc) in
+  let push_enum (x, i) loc = 
+    let (pref, i, post) = C.normalize_exp i in
+      if (pref <> []) || (post <> []) then begin
+	Npkcontext.error "Firstpass.push_enum" 
+	  "expression without side-effects expected"
+      end;
+      let i = C.make_int_coerce C.int_kind i in
+	Hashtbl.add symbtbl x (Enum i, C.int_typ, loc) 
+  in
 
   let update_funtyp f t loc =
     try
@@ -452,7 +467,7 @@ let translate (bare_compdefs, globals) =
 	  let (v, t, _) = find_symb x in
 	  let e = 
 	    match v with
-		Enum i -> C.Const (C.CInt i)
+		Enum i -> i
 	      | VarSymb lv -> C.Lval (lv, t)
 	  in
 	    (e, t)
@@ -478,15 +493,15 @@ let translate (bare_compdefs, globals) =
       | IfExp (c, e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
 
-	  let x = "tmp" in
+	  let t = C.Int C.int_kind in
+	  let (x, decl, v) = gen_tmp loc t in
 	  let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
 	  let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
 	  let set = (If (c, blk1, blk2), loc) in
 
-	  let t = C.Int C.int_kind in
-	  let (decl, id) = add_var loc (t, x) in
 	  let set = translate_stmt set in
-	    (C.Pref (decl::set, C.Lval (C.Var id, t)), t)
+	    remove_symb x;
+	    (C.Pref (decl::set, C.Lval (v, t)), t)
 
       | SizeofE (Str str) ->
 	  let sz = String.length str + 1 in
@@ -587,10 +602,14 @@ let translate (bare_compdefs, globals) =
     let init = List.map build_set init in
       decl::init
 
+  and translate_enum (x, v) loc =
+    let (v, _) = translate_exp v in
+      push_enum (x, v) loc
+
   and translate_blk x = 
     match x with
       | (EDecl (x, v), loc)::body -> 
-	  push_enum (x, v) loc;
+	  translate_enum (x, v) loc;
 	  let body = translate_blk body in
 	    remove_symb x;
 	    body
@@ -720,7 +739,7 @@ let translate (bare_compdefs, globals) =
 	      remove_formals ft;
 	      current_fun := ""
 
-      | GlbEDecl d -> push_enum d loc
+      | GlbEDecl d -> translate_enum d loc
 
 (* TODO: put this check in parser ?? *)
       | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 

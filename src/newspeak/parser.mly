@@ -478,7 +478,7 @@ enum_list:
 
 enum:
   IDENTIFIER                             { ($1, None) }
-| IDENTIFIER EQ INTEGER                  { ($1, Some $3) }
+| IDENTIFIER EQ expression               { ($1, Some $3) }
 ;;
 
 field_blk:

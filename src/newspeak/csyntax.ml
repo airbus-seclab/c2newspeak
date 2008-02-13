@@ -42,7 +42,7 @@ and extern = bool
 
 and vardecl = string * typ * static * init option
 
-and enumdecl = string * Int64.t
+and enumdecl = string * exp
 
 and declaration = (typ * string)
 

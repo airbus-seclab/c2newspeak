@@ -47,7 +47,7 @@ type base_typ =
     | Struct of (string * field list option)
     | Union of (string * field list option)
     | Name of string
-    | Enum of ((string * Int64.t option) list * location) option
+    | Enum of ((string * B.exp option) list * location) option
 
 and var_modifier = 
     | Abstract
@@ -90,10 +90,11 @@ let define_enum e loc =
 		None -> n
 	      | Some n -> n
 	  in
-	    ((x, n), loc)::(define_enum tl (Int64.succ n))
+	  let n' = B.Binop (B.Plus, n, B.exp_of_int 1) in
+	    ((x, n), loc)::(define_enum tl n')
       | [] -> []
   in
-    define_enum e Int64.zero
+    define_enum e (B.exp_of_int 0)
 
 let rec normalize_base_typ t =
   match t with
@@ -161,7 +162,7 @@ and normalize_var_modifier b v =
 	  
 and normalize_arg a = 
   let (enumdecls, (t, x, _)) = normalize_decl a in
-    if enumdecls <> [] 
+    if (enumdecls <> [])
     then Npkcontext.error "Synthack.normalize_arg" 
       "enum definition not allowed in argument";
     (t, x)

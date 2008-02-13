@@ -59,7 +59,8 @@ let translate_scalar t =
 
 let translate_unop op e =
   match op with
-      Not -> K.negate e
+      Coerce d -> K.UnOp (K.Coerce d, e)
+    | Not -> K.negate e
     | BNot k -> K.UnOp (K.BNot (N.domain_of_typ k), e)
     | Cast (t, t') -> 
 	let t = translate_scalar t in

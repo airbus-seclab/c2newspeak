@@ -7,7 +7,7 @@ type base_typ =
     | Struct of (string * field list option)
     | Union of (string * field list option)
     | Name of string
-    | Enum of ((string * Int64.t option) list * Newspeak.location) option
+    | Enum of ((string * Csyntax.exp option) list * Newspeak.location) option
 
 and var_modifier = 
     | Abstract
