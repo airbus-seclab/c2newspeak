@@ -33,7 +33,15 @@ let fresh_id () =
     incr vcnt;
     id
   
-type prog = (fundefs)
+type prog = (compdefs * glbdecls * fundefs)
+
+and glbdecls = (string, typ * location * init option) Hashtbl.t
+
+and init = (int * typ * exp) list option
+
+and compdefs = (string, (field list * int * int)) Hashtbl.t
+
+and field = (string * (int * typ))
 
 and fundefs = (string, (ftyp * Newspeak.location * funbody option)) Hashtbl.t
 
@@ -148,6 +156,7 @@ let ftyp_of_typ t =
       Fun x -> x
     | _ -> Npkcontext.error "Csyntax.fun_of_typ" "Function type expected"
 	
+(* TODO: try to avoid this (need for names in args ??) *)
 let ftyp_equal (args1, va_list1, ret1) (args2, va_list2, ret2) =
   let (args1, _) = List.split args1 in
   let (args2, _) = List.split args2 in
