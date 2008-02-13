@@ -538,6 +538,10 @@ let translate (bare_compdefs, globals) =
 	  in
 	    (C.Call (ft, f, args), ret_t)
 
+      | Set _ -> 
+	  Npkcontext.error "Firstpass.translate_exp" 
+	    "assignments within expressions forbidden"
+
   and translate_arg loc e (t, _) = C.cast (translate_exp e) t 
 
   and translate_typ t =
@@ -560,7 +564,6 @@ let translate (bare_compdefs, globals) =
 	    C.Array (t, len)
       | Struct n -> C.Struct n
       | Union n -> C.Union n
-      | Fun ft -> C.Fun (translate_ftyp ft)
       | Bitfield _ -> 
 	  Npkcontext.error "Firstpass.translate_typ" 
 	    "bitfields not allowed outside of structures"
@@ -696,7 +699,11 @@ let translate (bare_compdefs, globals) =
    for instance, here when default (see 019.c) *)
 	  let body = (C.Block (body, Some default_lbl), loc)::default in
 	    (C.Block (body, Some brk_lbl), loc)::[]
-      
+
+      | VDecl _ | EDecl _ -> 
+	  Npkcontext.error "Firstpass.translate_stmt"
+	    "unreachable code"
+
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->

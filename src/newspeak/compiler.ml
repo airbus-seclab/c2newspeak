@@ -198,6 +198,10 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let sz = size_of compdefs t in
 	    K.Deref (e, sz)
 
+      | Post _ ->
+	  Npkcontext.error "Compiler.translate_lval"
+	    "unexpected side-effect in left value"
+
   and translate_exp e =
     match e with
 	Const i -> K.Const (translate_cst i)
@@ -230,6 +234,14 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
 	    translate_binop compdefs op e1 e2
+
+      | Pref _ -> 
+	  Npkcontext.error "Compiler.translate_exp"
+	    "unexpected side-effect in expression"
+
+      | Call _ -> 
+	  Npkcontext.error "Compiler.translate_exp"
+	    "unexpected call in expression"	  
   in
 
   let rec translate_blk x = 
@@ -301,6 +313,13 @@ let translate (compdefs, cglbdecls, cfundefs) =
       | Exp (Call c) -> 
 	  let call = translate_call loc None c in
 	    call::[]
+
+      | Exp _ -> 
+	  Npkcontext.error "Compiler.translate_stmt" 
+	    "unexpected expression as statement"
+
+      | Decl _ -> 
+	  Npkcontext.error "Compiler.translate_stmt" "unreachable code"
 
   and append_args loc args f =
     let rec append args =
