@@ -23,11 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
-}
-
-void main() {
+void main () {
   int x;
-
-  f(x++);
+  
+  x = (x && x);
 }

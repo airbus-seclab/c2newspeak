@@ -23,11 +23,11 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
+void f(int x, int y) {
+  // under gcc x = 0, y = 1
 }
 
 void main() {
-  int x;
-
-  f(x++);
+  int x = 0;
+  f(x++, x++);
 }

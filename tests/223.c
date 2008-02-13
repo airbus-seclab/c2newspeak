@@ -23,11 +23,9 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
-}
-
 void main() {
   int x;
-
-  f(x++);
+  if (!(!(x < 10))) {
+    x = 1;
+  }
 }

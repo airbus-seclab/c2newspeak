@@ -7,8 +7,8 @@ Global variables
 
 Function definitions
 main() {
-  int32 x;
   do {
+    int32 x;
     0- =(int32) 3;
   } with lbl0: {
   }

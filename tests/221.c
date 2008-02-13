@@ -23,11 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
+void f() {
+  // carefull: initialization is performed only once
+  static int x = 3;
+  x = x + 1;
 }
 
 void main() {
-  int x;
-
-  f(x++);
+  f();
+  f();
 }

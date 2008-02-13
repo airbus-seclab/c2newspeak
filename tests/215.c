@@ -23,11 +23,15 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
+int x = 1;
+
+int f() {
+  // x should be 2 here
+  return 4;
 }
 
 void main() {
-  int x;
-
-  f(x++);
+  int t[10];
+  // x should be 1 here
+  t[x++] = f();
 }

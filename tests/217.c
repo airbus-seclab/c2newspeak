@@ -21,13 +21,15 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Olivier Levillain
+  email: olivier.levillain@penjili.org
 */
 
-void f(int x) {
-}
+// Function return statements are replaced by jumps and labels
 
-void main() {
+int main() {
   int x;
-
-  f(x++);
+  x = 0;
+  return 1;
 }

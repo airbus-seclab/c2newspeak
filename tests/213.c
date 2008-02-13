@@ -23,11 +23,10 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
-}
+extern int f(void);
 
 void main() {
-  int x;
-
-  f(x++);
+  if (f()) {
+    return;
+  }
 }

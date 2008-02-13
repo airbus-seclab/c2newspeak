@@ -23,11 +23,27 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
-}
-
-void main() {
+void main () {
   int x;
-
-  f(x++);
+  
+  x = x++ || x;
 }
+
+/* 
+   check that!!!
+   equivalent to:
+   if (x) {
+     x++;
+     tmp = 1;
+   } else {
+     x++;
+     if (x) {
+       x++;
+       tmp = 1;
+     } else {
+       x++;
+       tmp = 0;
+     }
+   }
+   x = tmp;
+ */

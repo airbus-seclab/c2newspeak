@@ -23,11 +23,12 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
+int f() {
+  return 0;
 }
 
 void main() {
   int x;
-
-  f(x++);
+  x = f() + 1;
+  x = 2;
 }

@@ -1,3 +1,4 @@
+Warning: the order of execution of side-effects in expressions not specified, picking a random one, be careful in 209.c line 29
 Newspeak output
 ---------------
 209.c

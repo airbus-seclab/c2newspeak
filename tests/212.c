@@ -23,11 +23,9 @@
   email: charles.hymans@penjili.org
 */
 
-void f(int x) {
-}
 
 void main() {
-  int x;
-
-  f(x++);
+  int x = 0;
+  int t[] = { x++, x++ };
+  /* array contains { 0, 1 } */
 }
