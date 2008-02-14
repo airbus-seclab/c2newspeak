@@ -167,3 +167,5 @@ val append_decls: (string * typ * location) list -> blk -> blk
 val array_of_typ: typ -> lval -> (typ * tmp_int)
 
 val size_of: typ -> int
+
+val size_of_array: typ -> lval -> tmp_int

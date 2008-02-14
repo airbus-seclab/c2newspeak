@@ -49,8 +49,7 @@ let translate_array lv n =
       (Some n, _) -> K.Known n
 	(* TODO: there may be a problem if x is a function ?? *)
     | (_, C.Global x) -> K.Length x
-    | _ -> 
-	Npkcontext.error "Firstpass.translate_array" "Unknown array length"
+    | _ -> Npkcontext.error "Firstpass.translate_array" "Unknown array length"
 
 let rec simplify_bexp e =
   match e with

@@ -571,3 +571,7 @@ let array_of_typ t lv =
 	  (elt_t, len)
 
     | _ -> Npkcontext.error "Npkil.size_of_array" "array expected"
+
+let size_of_array t lv = 
+  let (elt_t, len) = array_of_typ t lv in
+    Mult (len, size_of elt_t)

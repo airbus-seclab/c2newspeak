@@ -31,15 +31,6 @@ open Cir
 module N = Newspeak
 module K = Npkil
 
-let translate_array lv (t, n) =
-  let n =
-    match (n, lv) with
-	(Some n, _) -> K.Known n
-      | (_, K.Global x) -> K.Length x
-      | _ -> Npkcontext.error "Compiler.translate_array" "Unknown array length"
-  in
-    (t, n)
-
 let translate_scalar t =
   match t with
     | Int i -> N.Int i
@@ -193,8 +184,13 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
-(* TODO: have addroffun in cir!!*)
       | AddrOf (Global f, Fun t) -> K.AddrOfFun f
+
+      | AddrOf (lv, (Array _ as t)) ->
+	  let lv = translate_lv lv in
+	  let t = translate_typ t in
+	  let sz = K.size_of_array t lv in
+	    K.AddrOf (lv, sz)
 
       | AddrOf (lv, t) ->
 	  let lv = translate_lv lv in

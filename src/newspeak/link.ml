@@ -114,7 +114,7 @@ and replace_tmp_int x =
       Npkil.Known i -> i
     | Npkil.Length name -> begin
 	match get_glob_typ name with
-	    Newspeak.Array (_, len) -> (len-1)
+	    Newspeak.Array (_, len) -> len
 	  | _ -> error "Npklink.replace_tmp_int" "array type expected"
       end
     | Npkil.Mult (v, n) -> (replace_tmp_int v) * n

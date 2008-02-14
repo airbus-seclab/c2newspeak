@@ -349,8 +349,7 @@ and translate_exp e =
 		      let t = typeOfLval lv' in
 		      let t = translate_typ t in
 		      let lv' = translate_lval lv' in
-		      let (elt_t, len) = K.array_of_typ t lv' in
-		      let sz = K.Mult (len, K.size_of elt_t) in
+		      let sz = K.size_of_array t lv' in
 			K.AddrOf (lv', sz)
 			  
 		  | Index (e, NoOffset) ->
