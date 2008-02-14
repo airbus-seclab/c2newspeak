@@ -24,7 +24,6 @@
 *)
 
 (* TODO: should rename firstpass to semantic ??? see compiler Appel book *)
-(* TODO: have npkil syntax be cir... *)
 open Csyntax
 module C = Cir
 module K = Npkil
@@ -451,7 +450,7 @@ let translate (bare_compdefs, globals) =
 		  let (i, _) = translate_exp e in
 		  let n = translate_array lv' n in
 		  let sz = C.exp_of_int (C.size_of compdefs t) in
-		  let o = C.Unop (C.Belongs_tmp (Int64.zero, K.Decr n), i) in
+		  let o = C.Unop (C.Belongs_tmp (Int64.zero, n), i) in
 		  let o = C.Binop (C.MultI, o, sz) in
 		    (C.Shift (lv', o), t)
 

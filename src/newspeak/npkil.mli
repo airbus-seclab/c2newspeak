@@ -102,7 +102,6 @@ and tmp_int =
       Known of int
     | Length of string
     | Mult of (tmp_int * int)
-    | Decr of tmp_int
 
 and tmp_size_t = int option
 
@@ -164,3 +163,7 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
    checked because in Newspeak, the variables are identified by their
    positions in the declaration stacks, not by their names *)
 val append_decls: (string * typ * location) list -> blk -> blk
+
+val array_of_typ: typ -> lval -> (typ * tmp_int)
+
+val size_of: typ -> int

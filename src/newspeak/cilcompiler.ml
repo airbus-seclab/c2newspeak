@@ -143,33 +143,6 @@ and translate_scalar_cast (e, t2) t1 =
     | _ -> 
 	Npkcontext.error "Cilcompiler.translate_scalar_cast"
 	  ("Invalid cast "^(K.string_of_cast t2 t1))
-
-and translate_access strict lv e =
-  let t = typeOfLval lv in
-    match translate_typ t with
-	K.Array (elt_t, len) ->
-	  let elt_sz = Cilutils.size_of_subtyp t in
-	  let len =
-	    match (len, lv) with
-	      | (Some len, _) -> K.Known len
-	      | (None, (Var v, NoOffset)) -> K.Length v.vname
-	      | _ -> 
-		  error "Npkcompile.translate_access"
-		    ("type of lval "^(Cilutils.string_of_lval lv)
-		      ^" is not defined enough")
-	  in
-	  let len = if strict then K.Decr len else len in
-	  let checked_index = 
-	    K.UnOp (K.Belongs_tmp (Int64.zero, len), translate_exp e) 
-	  in
-	  let offs = 
-	    K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz) 
-	  in
-	  let sz = K.Mult (len, elt_sz) in
-	    (offs, sz)
-	      
-      | _ -> error "Npkcompile.translate_access" "array expected"
-      
      
 and translate_lval lv =
   match lv with
@@ -187,9 +160,19 @@ and translate_lval lv =
 		let o = Cilutils.offset_of t offs in
 		  K.Shift (translate_lval lv', K.exp_of_int o)
 		    
-	    | Index (e, NoOffset) ->
-		let (offs, _) = translate_access true lv' e in
-		  K.Shift (translate_lval lv', offs)
+	    | Index (idx, NoOffset) ->
+		let t = translate_typ t in
+		let lv' = translate_lval lv' in
+		let (elt_t, len) = K.array_of_typ t lv' in
+		let elt_sz = K.size_of elt_t in
+		let idx = translate_exp idx in
+		let checked_index = 
+		  K.UnOp (K.Belongs_tmp (Int64.zero, len), idx) 
+		in
+		let offs = 
+		  K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz)
+		in
+		  K.Shift (lv', offs)
 		    
 	    | _ -> error "Npkcompile.translate_lval" "offset not handled"
 
@@ -360,15 +343,25 @@ and translate_exp e =
 	      
 	  | _, K.Scalar Newspeak.Ptr ->
 	      let (lv', offs) = removeOffsetLval lv in begin
-		  match offs with 
-		    | Index (e, NoOffset) -> 
-			let (offs, sz) = translate_access false lv' e in
-			let lv' = translate_lval lv' in
-			  K.BinOp (Newspeak.PlusPI, K.AddrOf (lv', sz), offs)
-
-		    | _ -> 
-			let sz = Cilutils.size_of (typeOfLval lv) in
-			  K.AddrOf (translate_lval lv, K.Known sz)
+		match offs with 
+		  | Index (Const CInt64 (i, _, _), NoOffset) 
+		      when Int64.compare i Int64.zero = 0 -> 
+		      let t = typeOfLval lv' in
+		      let t = translate_typ t in
+		      let lv' = translate_lval lv' in
+		      let (elt_t, len) = K.array_of_typ t lv' in
+		      let sz = K.Mult (len, K.size_of elt_t) in
+			K.AddrOf (lv', sz)
+			  
+		  | Index (e, NoOffset) ->
+		      let t = TPtr (typeOfLval lv, []) in
+		      let offset = Index (Cil.zero, NoOffset) in
+		      let base = AddrOf (addOffsetLval offset lv') in
+			translate_exp (BinOp (PlusPI, base, e, t))
+			
+		  | _ -> 
+		      let sz = Cilutils.size_of (typeOfLval lv) in
+			K.AddrOf (translate_lval lv, K.Known sz)
 		end
 							 
 	  | _ -> error "Npkcompile.translate_exp"

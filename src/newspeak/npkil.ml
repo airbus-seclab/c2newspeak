@@ -77,6 +77,7 @@ and fn =
 and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
+(* right bound is excluded! *)
       Belongs_tmp of (Int64.t * tmp_int)
     | Coerce of (Int64.t * Int64.t)
     | Not
@@ -90,17 +91,16 @@ and typ =
   | Array of (typ * tmp_size_t)
   | Region of (field list * size_t)
 
+and tmp_size_t = int option
+
 and ftyp = typ list * typ option
 
 and field = offset * typ
 
-and tmp_int =
-      Known of int
-    | Length of string (* number of elements in global array named by string *)
-    | Mult of (tmp_int * int) (* tmp_int * int *)
-    | Decr of tmp_int  (* tmp_int - 1 *)
-
-and tmp_size_t = int option
+and tmp_int = 
+    | Known of int
+    | Length of string (* length of global array *)
+    | Mult of (tmp_int * int)
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
@@ -153,12 +153,11 @@ let rec string_of_tmp_int x =
       Known i -> string_of_int i
     | Length v -> "len("^v^")"
     | Mult (v, n) -> "("^(string_of_tmp_int v)^" * "^(string_of_int n)^")"
-    | Decr i -> (string_of_tmp_int i)^" - 1"
 
 let string_of_unop op =
   match op with
       Belongs_tmp (l,u) ->
-	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"]"
+	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"-1]"
     | Coerce (l,u) ->
 	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
     | Cast (typ, typ') ->
@@ -550,3 +549,25 @@ let rec negate e =
     | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> UnOp (Not, e)
+
+
+let rec size_of t =
+  match t with
+      Scalar c -> Newspeak.size_of_scalar Config.size_of_ptr c
+    | Array (t, Some len) -> (size_of t) * len
+    | Region (_, n) -> n
+    | Array (_, None) -> 
+	Npkcontext.error "Npkil.size_of" "unknown size of type"
+
+let array_of_typ t lv =
+  match t with
+      Array (elt_t, len) -> 
+	let len =
+	  match (len, lv) with
+	      (Some len, _) -> Known len
+	    | (None, Global v) -> Length v
+	    | _ -> Npkcontext.error "Npkil.size_of" "unknown length of array"
+	in
+	  (elt_t, len)
+
+    | _ -> Npkcontext.error "Npkil.size_of_array" "array expected"
