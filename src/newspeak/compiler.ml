@@ -31,11 +31,6 @@ open Cir
 module N = Newspeak
 module K = Npkil
 
-(* TODO: should remove this *)
-let brk_lbl = 2
-let default_lbl = 3
-
-
 let translate_array lv (t, n) =
   let n =
     match (n, lv) with
@@ -59,7 +54,8 @@ let translate_scalar t =
 
 let translate_unop op e =
   match op with
-      Coerce d -> K.UnOp (K.Coerce d, e)
+      Belongs_tmp r -> K.UnOp (K.Belongs_tmp r, e)
+    | Coerce r -> K.UnOp (K.Coerce r, e)
     | Not -> K.negate e
     | BNot k -> K.UnOp (K.BNot (N.domain_of_typ k), e)
     | Cast (t, t') -> 
@@ -71,7 +67,8 @@ let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 
 let translate_binop compdefs op e1 e2 =
   match op with
-      Mult k -> translate_arithmop N.MultI e1 e2 k
+      MultI -> K.BinOp (N.MultI, e1, e2)
+    | Mult k -> translate_arithmop N.MultI e1 e2 k
     | Plus k -> translate_arithmop N.PlusI e1 e2 k
     | Minus k -> translate_arithmop N.MinusI e1 e2 k
     | Div k -> translate_arithmop N.DivI e1 e2 k
@@ -175,24 +172,11 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let x = Hashtbl.find env id in
 	    K.Local (!stack_height - x)
       | Global x -> K.Global x
-      | Field (lv, o) ->
-	  let lv = translate_lv lv in
-	  let o = K.exp_of_int o in
-	    K.Shift (lv, o)
       | Shift (lv, o) ->
 	  let lv = translate_lv lv in
 	  let o = translate_exp o in
 	    K.Shift (lv, o)
 
-(* TODO: replace these by the shift *)
-      | Index (lv, a, e) -> 
-	  let lv = translate_lv lv in
-	  let (t, n) = translate_array lv a in
-	  let i = translate_exp e in
-	  let sz = K.exp_of_int (size_of compdefs t) in
-	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, K.Decr n), i) in
-	  let o = K.BinOp (N.MultI, o, sz) in
-	    K.Shift (lv, o)
       | Deref (e, t) ->
 	  let e = translate_exp e in
 	  let sz = size_of compdefs t in
@@ -209,18 +193,8 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
+(* TODO: have addroffun in cir!!*)
       | AddrOf (Global f, Fun t) -> K.AddrOfFun f
-
-      | AddrOf (Index (lv, a, e), _) ->
-	  let lv = translate_lv lv in
-	  let i = translate_exp e in
-	  let (t, n) = translate_array lv a in
-	  let sz = size_of compdefs t in
-	  let sz_e = K.exp_of_int sz in
-	  let o = K.UnOp (K.Belongs_tmp (Int64.zero, n), i) in
-	  let o = K.BinOp (N.MultI, o, sz_e) in
-	  let n = K.Mult (n, sz) in
-	    K.BinOp (N.PlusPI, K.AddrOf (lv, n), o)
 
       | AddrOf (lv, t) ->
 	  let lv = translate_lv lv in

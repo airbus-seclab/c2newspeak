@@ -27,6 +27,7 @@
 (* TODO: have npkil syntax be cir... *)
 open Csyntax
 module C = Cir
+module K = Npkil
 
 (* Constants *)
 let ret_name = "!return"
@@ -43,6 +44,14 @@ type symb =
     | Enum of C.exp
 
 (* functions *)
+(* TODO: put in cir.ml *)
+let translate_array lv n =
+  match (n, lv) with
+      (Some n, _) -> K.Known n
+	(* TODO: there may be a problem if x is a function ?? *)
+    | (_, C.Global x) -> K.Length x
+    | _ -> 
+	Npkcontext.error "Firstpass.translate_array" "Unknown array length"
 
 let rec simplify_bexp e =
   match e with
@@ -413,8 +422,7 @@ let translate (bare_compdefs, globals) =
 	let (t, init) = translate_glb_init t (Some (Data (Str str))) in
 	  add_global name loc (t, Some init)
       end;
-      (C.AddrOf (C.Index (C.Global name, a, C.exp_of_int 0), t), 
-      C.Ptr C.char_typ)
+      (C.AddrOf (C.Shift (C.Global name, C.exp_of_int 0), t), C.Ptr C.char_typ)
   
   and translate_lv x =
     match x with
@@ -433,14 +441,20 @@ let translate (bare_compdefs, globals) =
 	  let (lv, t) = translate_lv lv in
 	  let r = C.fields_of_typ compdefs t in
 	  let (o, t) = List.assoc f r in
-	    (C.Field (lv, o), t)
+	  let o = C.exp_of_int o in
+	    (C.Shift (lv, o), t)
 
       | Index (lv, e) -> 
 	  let (lv', t) = translate_lv lv in begin
 	    match t with
 		C.Array (t, n) ->
 		  let (i, _) = translate_exp e in
-		    (C.Index (lv', (t, n), i), t)
+		  let n = translate_array lv' n in
+		  let sz = C.exp_of_int (C.size_of compdefs t) in
+		  let o = C.Unop (C.Belongs_tmp (Int64.zero, K.Decr n), i) in
+		  let o = C.Binop (C.MultI, o, sz) in
+		    (C.Shift (lv', o), t)
+
 	      | C.Ptr _ -> translate_lv (Deref (Binop (Plus, lv, e)))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
@@ -475,8 +489,28 @@ let translate (bare_compdefs, globals) =
       | Field _ | Index _ | Deref _ | ExpPlusPlus _ -> 
 	  let (lv, t) = translate_lv e in
 	    (C.Lval (lv, t), t)
-	      
-      | AddrOf lv -> 
+	    
+      | AddrOf (Deref _) -> 
+	  Npkcontext.error "Firstpass.translate_exp" 
+	    ("unecessary creation of a pointer from a dereference:"
+	      ^" rewrite the code")
+
+      | AddrOf (Index (lv, Cst (C.CInt i))) 
+	  when Int64.compare i Int64.zero = 0 ->
+	  let (lv', t) = translate_lv lv in begin
+	    match t with
+		C.Array (elt_t, _) -> (C.AddrOf (lv', t), C.Ptr elt_t)
+	      | C.Ptr _ -> translate_exp (AddrOf (Deref lv))
+	      | _ -> 
+		  Npkcontext.error "Firstpass.translate_lv" 
+		    "Array type expected"
+	  end
+
+      | AddrOf (Index (lv, e)) -> 
+	  let base = AddrOf (Index (lv, exp_of_int 0)) in
+	    translate_exp (Binop (Plus, base, e))
+	    
+      | AddrOf lv ->
 	  let (lv, t) = translate_lv lv in
 	    (C.AddrOf (lv, t), C.Ptr t)
 	      

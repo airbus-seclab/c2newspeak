@@ -69,7 +69,7 @@ and ftyp = (typ * string) list * bool * typ
 and blk = stmt list
 
 and stmt = (stmtkind * location)
-(* TODO: remove all warnings. *)
+
 and stmtkind =
     | Block of (blk * lbl option)
     | Goto of lbl
@@ -91,9 +91,6 @@ and lv =
    a new variable *)
     | Var of vid
     | Global of string
-(* TODO: replace Field and Index by Shift *)
-    | Field of (lv * int)
-    | Index of (lv * array_t * exp)
     | Shift of (lv * exp)
     | Deref of (exp * typ)
 (* TODO: remove Post by using Pref instead and having some optimization get
@@ -104,6 +101,7 @@ and lv =
 and exp =
     | Const of cst
     | Lval of typ_lv
+(* TODO: have AddrOfFun, + AddrOf should be with size instead of typ *)
     | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
@@ -114,17 +112,20 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
-(* TODO: use Npkil unop and binop *)
+(* TODO: use Npkil unop and binop (if possible) *)
 and unop = 
+    | Belongs_tmp of (Int64.t * Npkil.tmp_int)
     | Coerce of (Int64.t * Int64.t)
     | Not
     | BNot of ikind
     | Cast of (typ * typ)
 
+(* TODO: use K.binops *)
 and binop =
     | Plus of ikind
     | Minus of ikind
     | Div of ikind
+    | MultI
     | Mult of ikind
     | BAnd of ikind
     | BXor of ikind
@@ -180,8 +181,8 @@ let exp_of_float x = Const (CFloat (string_of_float x))
 let cast (e, t) t' =
   let (e, t) =
     match (t, e, t') with
-	(Array (elt_t, _), Lval (lv, Array a), (Ptr _|Int _)) ->
-	  (AddrOf (Index (lv, a, exp_of_int 0), elt_t), Ptr elt_t)
+	(Array (elt_t, _), Lval (lv, Array _), (Ptr _|Int _)) ->
+	  (AddrOf (Shift (lv, exp_of_int 0), t), Ptr elt_t)
       | (Fun _, Lval lv, (Ptr _|Int _)) -> (AddrOf lv, Ptr t)
       | _ -> (e, t)
   in
@@ -339,15 +340,6 @@ let rec normalize_exp x =
 and normalize_lv x =
   match x with
       Var _ | Global _ -> ([], x, [])
-    | Field (lv, o) ->
-	let (pref, lv, post) = normalize_lv lv in
-	  (pref, Field (lv, o), post)
-    | Index (lv, a, e) ->
-	let (pref1, lv, post1) = normalize_lv lv in
-	let (pref2, e, post2) = normalize_exp e in
-	let pref = concat_effects pref1 pref2 in
-	let post = concat_effects post1 post2 in
-	  (pref, Index (lv, a, e), post)
     | Shift (lv, e) ->
 	let (pref1, lv, post1) = normalize_lv lv in
 	let (pref2, e, post2) = normalize_exp e in

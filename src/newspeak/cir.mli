@@ -83,9 +83,6 @@ and lv =
    a new variable *)
     | Var of vid
     | Global of string
-(* TODO: replace Field and Index by Shift *)
-    | Field of (lv * int)
-    | Index of (lv * array_t * exp)
     | Shift of (lv * exp)
     | Deref of (exp * typ)
 (* TODO: remove Post by using Pref instead and having some optimization get
@@ -108,6 +105,7 @@ and funexp =
 
 (* TODO: use Npkil unop and binop *)
 and unop = 
+    | Belongs_tmp of (Int64.t * Npkil.tmp_int)
     | Coerce of (Int64.t * Int64.t)
     | Not
     | BNot of Newspeak.ikind
@@ -117,6 +115,7 @@ and binop =
     | Plus of Newspeak.ikind
     | Minus of Newspeak.ikind
     | Div of Newspeak.ikind
+    | MultI
     | Mult of Newspeak.ikind
     | BAnd of Newspeak.ikind
     | BXor of Newspeak.ikind
