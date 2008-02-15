@@ -63,116 +63,104 @@ let seq_of_string str =
 
 let translate_cst c = (C.Const c, C.typ_of_cst c)
 
-let translate_arithmop op (e1, k1) (e2, k2) =
-  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
-  let t = C.Int k in
-    (op k, C.cast (e1, C.Int k1) t, C.cast (e2, C.Int k2) t, t)
-
-let translate_floatop op (e1, n1) (e2, n2) =
-  let n = max n1 n2 in
-  let t = C.Float n in
-    (op n, C.cast (e1, C.Float n1) t, C.cast (e2, C.Float n2) t, t)
-
-let rec simplify_binop op (e1, t1) (e2, t2) =
+let rec normalize_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
     | (Minus, C.Ptr _, C.Int _) -> 
 	let e2 = translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) in
  	  (Plus, (e1, t1), e2)
-
+	    
     | (Plus, C.Array (elt_t, _), _) -> 
 	let t = C.Ptr elt_t in
 	  (Plus, (C.cast (e1, t1) t, t), (e2, t2))
-
+	    
     | (Minus, C.Array (elt_t, _), _) ->
 	let t = C.Ptr elt_t in
-	  simplify_binop Minus (C.cast (e1, t1) t, t) (e2, t2)
+	  normalize_binop Minus (C.cast (e1, t1) t, t) (e2, t2)
     | (Minus, _, C.Array (elt_t, _)) ->
 	let t = C.Ptr elt_t in
-	  simplify_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
+	  normalize_binop Minus (e1, t1) (C.cast (e2, t2) t, t)
 
-    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Float _, C.Int _) ->
+    | (Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq as op, 
+      C.Int k1, C.Int k2) -> 
+	let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
+	let t = C.Int k in
+	let e1 = C.cast (e1, C.Int k1) t in
+	let e2 = C.cast (e2, C.Int k2) t in
+	  (op, (e1, t), (e2, t))
+
+    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Float n1, C.Float n2) -> 
+	let n = max n1 n2 in
+	let t = C.Float n in
+	let e1 = C.cast (e1, C.Float n1) t in
+	let e2 = C.cast (e2, C.Float n2) t in
+	  (op, (e1, t), (e2, t))
+
+    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Float _, C.Int _)
+    | (Gt|Eq as op, C.Ptr _, C.Int _) ->
 	let e2 = C.cast (e2, t2) t1 in
 	  (op, (e1, t1), (e2, t1))
 	    
-    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Int _, C.Float _) ->
+    | (Mult|Plus|Minus|Div|Gt|Eq as op, C.Int _, C.Float _)
+    | (Gt|Eq as op, C.Int _, C.Ptr _) -> 
 	let e1 = C.cast (e1, t1) t2 in
 	  (op, (e1, t2), (e2, t2))
+	    
+    | (Shiftl|Shiftr as op, C.Int (_, n), C.Int _) -> 
+	let k = (Newspeak.Unsigned, n) in
+	let t = C.Int k in
+	let e1 = C.cast (e1, t1) t in
+	  (op, (e1, t), (e2, t))
 	    
     | _ -> (op, (e1, t1), (e2, t2))
 
 and translate_binop op e1 e2 =
-  let (op, (e1, t1), (e2, t2)) = simplify_binop op e1 e2 in
-  let (op, e1, e2, t) =
+  let (op, (e1, t1), (e2, t2)) = normalize_binop op e1 e2 in
+  let (op, t) =
     match (op, t1, t2) with
 	(* Arithmetic operations *)
-	(Mult, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
-      | (Plus, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.Plus x) (e1, k1) (e2, k2)
-      | (Minus, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.Minus x) (e1, k1) (e2, k2)
-      | (Div, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.Div x) (e1, k1) (e2, k2)
-      | (Mod, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun _ -> C.Mod) (e1, k1) (e2, k2)
-      | (BAnd, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.BAnd x) (e1, k1) (e2, k2)
-      | (BXor, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.BXor x) (e1, k1) (e2, k2)
-      | (BOr, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.BOr x) (e1, k1) (e2, k2)
+	(* Thanks to normalization t1 = t2 *)
+	(Mult, C.Int k, C.Int _) -> (C.Mult k, t1)
+      | (Plus, C.Int k, C.Int _) -> (C.Plus k, t1)
+      | (Minus, C.Int k, C.Int _) -> (C.Minus k, t1)
+      | (Div, C.Int k, C.Int _) -> (C.Div k, t1)
+      | (Mod, C.Int k, C.Int _) -> (C.Mod, t1)
+      | (BAnd, C.Int k, C.Int _) -> (C.BAnd k, t1)
+      | (BXor, C.Int k, C.Int _) -> (C.BXor k, t1)
+      | (BOr, C.Int k, C.Int _) -> (C.BOr k, t1)
 	    
-      | (Shiftl, C.Int (_, n), C.Int _) -> 
-	  let k = (Newspeak.Unsigned, n) in
-	  let t = C.Int k in
-	  let e1 = C.cast (e1, t1) t in
-	    (C.Shiftl k, e1, e2, t)
-
-      | (Shiftr, C.Int (_, n), C.Int _) -> 
-	  let k = (Newspeak.Unsigned, n) in
-	  let t = C.Int k in
-	  let e1 = C.cast (e1, t1) t in
-	    (C.Shiftr k, e1, e2, t)
+      (* Thanks to normalization t1 = t2 *)
+      | (Shiftl, C.Int k, C.Int _) -> (C.Shiftl k, t1)
+      | (Shiftr, C.Int k, C.Int _) -> (C.Shiftr k, t1)
 	      
       (* Float operations *)
-      | (Mult, C.Float n1, C.Float n2) -> 
-	  translate_floatop (fun x -> C.MultF x) (e1, n1) (e2, n2)
-      | (Plus, C.Float n1, C.Float n2) -> 
-	  translate_floatop (fun x -> C.PlusF x) (e1, n1) (e2, n2)
-      | (Minus, C.Float n1, C.Float n2) -> 
-	  translate_floatop (fun x -> C.MinusF x) (e1, n1) (e2, n2)
-      | (Div, C.Float n1, C.Float n2) -> 
-	  translate_floatop (fun x -> C.DivF x) (e1, n1) (e2, n2)
+      (* Thanks to normalization t1 = t2 *)
+      | (Mult, C.Float n, C.Float _) -> (C.MultF n, t1)
+      | (Plus, C.Float n, C.Float _) -> (C.PlusF n, t1)
+      | (Minus, C.Float n, C.Float _) -> (C.MinusF n, t1)
+      | (Div, C.Float n, C.Float _) -> (C.DivF n, t1)
 	    
       (* Pointer operations *)
-      | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, e1, e2, t1)
+      | (Plus, C.Ptr t, C.Int _) -> (C.PlusP t, t1)
 
-      | (Minus, C.Ptr _, C.Ptr _) -> (C.MinusP, e1, e2, C.int_typ)
+      | (Minus, C.Ptr _, C.Ptr _) -> (C.MinusP, C.int_typ)
 	  
       (* Integer comparisons *)
-      | (Gt, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.Gt (C.Int x)) (e1, k1) (e2, k2)
-      | (Eq, C.Int k1, C.Int k2) -> 
-	  translate_arithmop (fun x -> C.Eq (C.Int x)) (e1, k1) (e2, k2)
+      (* Thanks to normalization t1 = t2 *)
+      | (Gt, C.Int _, C.Int _) -> (C.Gt t1, C.int_typ)
+      | (Eq, C.Int _, C.Int _) -> (C.Eq t1, C.int_typ)
 
       (* Float comparisons *)
-      | (Gt, C.Float n1, C.Float n2) -> 
-	  translate_floatop (fun x -> C.Gt (C.Float x)) (e1, n1) (e2, n2)
-      | (Eq, C.Float n1, C.Float n2) -> 
-	  translate_floatop (fun x -> C.Eq (C.Float x)) (e1, n1) (e2, n2)
+      (* Thanks to normalization t1 = t2 *)
+      | (Gt, C.Float _, C.Float _) -> (C.Gt t1, C.int_typ)
+      | (Eq, C.Float _, C.Float _) -> (C.Eq t1, C.int_typ)
 	    
       (* Pointer comparisons *)
-      | (Eq, C.Ptr _, C.Ptr _) -> (C.Eq t1, e1, e2, C.int_typ)
-      | (Eq, C.Int _, C.Ptr _) ->
-	  let e1 = C.cast (e1, t1) t2 in
-	    (C.Eq t2, e1, e2, C.int_typ)
-      | (Eq, C.Ptr _, C.Int _) ->
-	  let e2 = C.cast (e2, t2) t1 in
-	    (C.Eq t1, e1, e2, C.int_typ)
-	      
+      | (Eq, C.Ptr _, C.Ptr _) -> (C.Eq t1, C.int_typ)
+      | (Gt, C.Ptr _, C.Ptr _) -> (C.Gt t1, C.int_typ)
+(* TODO: simplify by having only op and t returned *)	      
       | _ ->
 	  Npkcontext.error "Csyntax.translate_binop" 
-	    "Unexpected binary operator and arguments"
+	    "unexpected binary operator and arguments"
   in
     (C.Binop (op, e1, e2), t)
 

@@ -384,8 +384,6 @@ let translate (compdefs, cglbdecls, cfundefs) =
   let translate_glbdecl x (t, loc, init) =
     let init = translate_glb_init init in
     let t = translate_typ t in
-      (* TODO: maybe do this in a first pass, since there may be the need for
-	 a variable not encountered yet, in init *)
       Hashtbl.add glbdecls x (t, loc, init, true)
   in
 
@@ -415,7 +413,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 
 
 (**********************************************************************)
-(* TODO: should be compiler in a different file!!*)
+(* TODO: this portion of code should be in a different file!!*)
 open Csyntax
 
 let parse fname =
