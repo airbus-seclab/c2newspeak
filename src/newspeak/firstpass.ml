@@ -284,15 +284,7 @@ let translate (bare_compdefs, globals) =
       update_global x name loc d
   in
 
-  let push_enum (x, i) loc = 
-    let (pref, i, post) = C.normalize_exp i in
-      if (pref <> []) || (post <> []) then begin
-	Npkcontext.error "Firstpass.push_enum" 
-	  "expression without side-effects expected"
-      end;
-      let i = C.make_int_coerce C.int_kind i in
-	Hashtbl.add symbtbl x (Enum i, C.int_typ, loc) 
-  in
+  let push_enum (x, i) loc = Hashtbl.add symbtbl x (Enum i, C.int_typ, loc) in
 
   let update_funtyp f t loc =
     try
@@ -630,7 +622,13 @@ let translate (bare_compdefs, globals) =
       decl::init
 
   and translate_enum (x, v) loc =
-    let (v, _) = translate_exp v in
+    let v = translate_exp v in
+    let v = C.cast v C.int_typ in
+    let (pref, v, post) = C.normalize_exp v in
+      if (pref <> []) || (post <> []) then begin
+	Npkcontext.error "Firstpass.push_enum" 
+	  "expression without side-effects expected"
+      end;
       push_enum (x, v) loc
 
   and translate_blk x = 

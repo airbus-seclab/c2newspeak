@@ -46,7 +46,6 @@ let translate_scalar t =
 let translate_unop op e =
   match op with
       Belongs_tmp r -> K.UnOp (K.Belongs_tmp r, e)
-    | Coerce r -> K.UnOp (K.Coerce r, e)
     | Not -> K.negate e
     | BNot k -> K.UnOp (K.BNot (N.domain_of_typ k), e)
     | Cast (t, t') -> 

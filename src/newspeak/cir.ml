@@ -111,7 +111,6 @@ and funexp =
 
 and unop = 
     | Belongs_tmp of (Int64.t * Npkil.tmp_int)
-    | Coerce of (Int64.t * Int64.t)
     | Not
     | BNot of ikind
     | Cast of (typ * typ)
@@ -552,9 +551,6 @@ let normalize x =
 
   let (body, _) = set_scope_blk (normalize_blk x) in
     body
-
-(* TODO: try to factor this with Npkil.make_int_coerce *)
-let make_int_coerce t e = Unop (Coerce (Newspeak.domain_of_typ t), e)
 
 let len_of_array n lv =
   match (n, lv) with

@@ -105,7 +105,6 @@ and funexp =
 (* TODO: use Npkil unop and binop *)
 and unop = 
     | Belongs_tmp of (Int64.t * Npkil.tmp_int)
-    | Coerce of (Int64.t * Int64.t)
     | Not
     | BNot of Newspeak.ikind
     | Cast of (typ * typ)
@@ -162,8 +161,6 @@ val fresh_id: unit -> vid
 val normalize_exp: exp -> (blk * exp * blk)
 
 val normalize: blk -> blk
-
-val make_int_coerce: Newspeak.ikind -> exp -> exp
 
 val ftyp_equal: ftyp -> ftyp -> bool
 
