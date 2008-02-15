@@ -84,10 +84,10 @@ and cte =
   | Nil
 
 and unop =
-    Belongs of (Int64.t * Int64.t)
-  | Coerce of (Int64.t * Int64.t)
+    Belongs of bounds
+  | Coerce of bounds
   | Not
-  | BNot of (Int64.t * Int64.t)
+  | BNot of bounds
   | PtrToInt of ikind
   | IntToPtr of ikind
   | Cast of (scalar_t * scalar_t)
@@ -98,8 +98,7 @@ and binop =
 (* floating point operations *)
   | PlusF of size_t | MinusF of size_t | MultF of size_t | DivF of size_t
 (* bitwise operations *)
-  | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
-  | BXor of (Int64.t * Int64.t)
+  | BOr of bounds | BAnd of bounds | BXor of bounds
   | Shiftlt | Shiftrt
 (* pointer operations *)
   | PlusPI | MinusPP
@@ -139,9 +138,9 @@ and sign_t = Signed | Unsigned
 and size_t = int
 and offset = size_t
 and length = int
+and bounds = (Int64.t * Int64.t)
 
 and location = string * int * int
-
 
 
 (** {1 Constants} *)
@@ -159,7 +158,9 @@ val locUnknown : location
 
 (** Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type. *)
-val domain_of_typ : sign_t * size_t -> Int64.t * Int64.t
+val domain_of_typ : sign_t * size_t -> bounds
+
+val is_in_bounds: bounds -> Int64.t -> bool
 
 (** Negation of a boolean condition. *)
 val negate : exp -> exp

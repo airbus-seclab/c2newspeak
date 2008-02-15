@@ -77,11 +77,11 @@ and cte =
   | Nil
 
 and unop =
-    Belongs of (Int64.t * Int64.t)
+    Belongs of bounds
   (* TODO: warning coercion to unsigned long long can not be represented *)
-  | Coerce of (Int64.t * Int64.t)
+  | Coerce of bounds
   | Not
-  | BNot of (Int64.t * Int64.t)
+  | BNot of bounds
   | PtrToInt of ikind
   | IntToPtr of ikind
   | Cast of (scalar_t * scalar_t)
@@ -89,8 +89,7 @@ and unop =
 and binop =
   | PlusI | MinusI | MultI | DivI | Mod
   | PlusF of size_t | MinusF of size_t | MultF of size_t | DivF of size_t
-  | BOr of (Int64.t * Int64.t) | BAnd of (Int64.t * Int64.t)
-  | BXor of (Int64.t * Int64.t)
+  | BOr of bounds | BAnd of bounds | BXor of bounds
   | Shiftlt | Shiftrt
   | PlusPI
   | MinusPP
@@ -131,6 +130,7 @@ and sign_t = Signed | Unsigned
 and length = int
 and offset = size_t
 and size_t = int
+and bounds = (Int64.t * Int64.t)
 
 and location = string * int * int
 
@@ -1540,3 +1540,6 @@ let dump_as_C prog =
 
 let max_ikind = max
 
+let is_in_bounds (l, u) i = 
+  (Int64.compare l i <= 0) && (Int64.compare i u <= 0)
+  

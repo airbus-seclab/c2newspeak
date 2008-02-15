@@ -57,7 +57,6 @@ and typ =
     | Array of array_t
     | Struct of string
     | Union of string
-(* TODO: see if Ptr Fun ft can be transformed into FPtr?? *)
     | Fun of ftyp
 
 and array_t = (typ * int option)
@@ -97,11 +96,9 @@ and lv =
    rid of unnecessary temporary variable??? If better *)
     | Post of (lv * stmt)
 
-(* TODO: should put coercion already into exp *)
 and exp =
     | Const of cst
     | Lval of typ_lv
-(* TODO: have AddrOfFun, + AddrOf should be with size instead of typ *)
     | AddrOf of typ_lv
     | Unop of (unop * exp)
     | Binop of (binop * exp * exp)
@@ -112,7 +109,6 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
-(* TODO: use Npkil unop and binop (if possible) *)
 and unop = 
     | Belongs_tmp of (Int64.t * Npkil.tmp_int)
     | Coerce of (Int64.t * Int64.t)
@@ -120,7 +116,6 @@ and unop =
     | BNot of ikind
     | Cast of (typ * typ)
 
-(* TODO: use K.binops *)
 and binop =
     | Plus of ikind
     | Minus of ikind
@@ -560,3 +555,11 @@ let normalize x =
 
 (* TODO: try to factor this with Npkil.make_int_coerce *)
 let make_int_coerce t e = Unop (Coerce (Newspeak.domain_of_typ t), e)
+
+let len_of_array n lv =
+  match (n, lv) with
+      (Some n, _) -> Npkil.Known n
+    | (_, Global x) -> Npkil.Length x
+    | _ -> Npkcontext.error "Cir.len_of_array" "unknown array length"
+
+  

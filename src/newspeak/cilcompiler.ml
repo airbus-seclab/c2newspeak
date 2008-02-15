@@ -297,7 +297,7 @@ and translate_exp e =
 			 K.BinOp (Newspeak.MultI, translate_exp e2, K.exp_of_int sz))
 	  | K.Scalar Newspeak.FunPtr ->
 	      error "Npkcompile.translate_exp"
-		"Pointer arithmetic forbidden on function pointers"
+		"pointer arithmetic forbidden on function pointers"
 	  | _ -> error "Npkcompile.translate_exp" "data pointer type expected"
       end
 	
@@ -312,7 +312,7 @@ and translate_exp e =
 			 K.BinOp (Newspeak.MinusI, K.exp_of_int 0, v2))
 	  | K.Scalar Newspeak.FunPtr ->
 	      error "Npkcompile.translate_exp"
-		"Pointer arithmetic forbidden on function pointers"
+		"pointer arithmetic forbidden on function pointers"
 	  | _ ->
 	      error "Npkcompile.translate_exp" "data pointer type expected"
       end

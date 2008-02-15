@@ -43,14 +43,6 @@ type symb =
     | Enum of C.exp
 
 (* functions *)
-(* TODO: put in cir.ml *)
-let translate_array lv n =
-  match (n, lv) with
-      (Some n, _) -> K.Known n
-	(* TODO: there may be a problem if x is a function ?? *)
-    | (_, C.Global x) -> K.Length x
-    | _ -> Npkcontext.error "Firstpass.translate_array" "Unknown array length"
-
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | ExpPlusPlus _ -> 
@@ -113,7 +105,6 @@ and translate_binop op e1 e2 =
   let (op, e1, e2, t) =
     match (op, t1, t2) with
 	(* Arithmetic operations *)
-	(* TODO: code cleanup? factor? *)
 	(Mult, C.Int k1, C.Int k2) -> 
 	  translate_arithmop (fun x -> C.Mult x) (e1, k1) (e2, k2)
       | (Plus, C.Int k1, C.Int k2) -> 
@@ -447,9 +438,9 @@ let translate (bare_compdefs, globals) =
 	    match t with
 		C.Array (t, n) ->
 		  let (i, _) = translate_exp e in
-		  let n = translate_array lv' n in
+		  let len = C.len_of_array n lv' in
 		  let sz = C.exp_of_int (C.size_of compdefs t) in
-		  let o = C.Unop (C.Belongs_tmp (Int64.zero, n), i) in
+		  let o = C.Unop (C.Belongs_tmp (Int64.zero, len), i) in
 		  let o = C.Binop (C.MultI, o, sz) in
 		    (C.Shift (lv', o), t)
 
@@ -521,7 +512,7 @@ let translate (bare_compdefs, globals) =
 	  let e2 = translate_exp e2 in
 	    translate_binop op e1 e2
 
-(* TODO: there may be a need for a coercion here ??? int types ?? *)
+      (* TODO: there may be a need for a coercion here ??? int types ?? *)
       | IfExp (c, e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
 
@@ -544,7 +535,8 @@ let translate (bare_compdefs, globals) =
 	  let sz = (C.size_of compdefs t) / 8 in
 	    (C.exp_of_int sz, C.int_typ)
 
-      (* TODO: should check that the size of all declarations is less than max_int *)
+      (* TODO: should check that the size of all declarations is less than 
+	 max_int *)
       | Sizeof t -> 
 	  let t = translate_typ t in
 	  let sz = (C.size_of compdefs t) / 8 in

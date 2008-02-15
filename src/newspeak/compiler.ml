@@ -75,7 +75,7 @@ let translate_binop compdefs op e1 e2 =
     | Shiftr k -> K.make_int_coerce k (K.BinOp (N.Shiftrt, e1, e2))
     | PlusP (Fun _) -> 
 	Npkcontext.error "Compiler.translate_binop" 
-	  "Pointer arithmetic forbidden on function pointers"
+	  "pointer arithmetic forbidden on function pointers"
     | PlusP t -> 
 	let stride = K.exp_of_int (size_of compdefs t) in 
 	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
@@ -184,7 +184,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
-      | AddrOf (Global f, Fun t) -> K.AddrOfFun f
+      | AddrOf (Global f, Fun _) -> K.AddrOfFun f
 
       | AddrOf (lv, (Array _ as t)) ->
 	  let lv = translate_lv lv in

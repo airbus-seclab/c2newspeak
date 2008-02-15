@@ -49,7 +49,6 @@ and typ =
     | Array of array_t
     | Struct of string
     | Union of string
-(* TODO: see if Ptr Fun ft can be transformed into FPtr?? *)
     | Fun of ftyp
 
 and array_t = (typ * int option)
@@ -185,3 +184,5 @@ val funexp_of_lv: typ_lv -> (funexp * ftyp)
 val len_of_exp: exp -> int
 
 val ftyp_of_typ: typ -> ftyp
+
+val len_of_array: int option -> lv -> Npkil.tmp_int
