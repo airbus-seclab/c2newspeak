@@ -61,9 +61,8 @@ and typ =
 
 and array_t = (typ * int option)
 
-(* TODO: simplify ftyp by removing string ??? *)
 (* true if variable list of arguments *)
-and ftyp = (typ * string) list * bool * typ
+and ftyp = typ list * bool * typ
 
 and blk = stmt list
 
@@ -145,18 +144,7 @@ let create_tmp loc t =
   let decl = (Decl (t, "!tmp", id), loc) in
   let v = Var id in
     (decl, v)
-
-let ftyp_of_typ t =
-  match t with
-      Fun x -> x
-    | _ -> Npkcontext.error "Csyntax.fun_of_typ" "Function type expected"
 	
-(* TODO: try to avoid this (need for names in args ??) *)
-let ftyp_equal (args1, va_list1, ret1) (args2, va_list2, ret2) =
-  let (args1, _) = List.split args1 in
-  let (args2, _) = List.split args2 in
-    (args1, va_list1, ret1) = (args2, va_list2, ret2)
-
 (* TODO: check that integer don't have a default type (like int) *)
 let typ_of_cst i =
   match i with
@@ -434,7 +422,7 @@ and normalize_rets loc rets t =
 	
 and normalize_args loc args args_t =
   match (args, args_t) with
-      (e::args, (t, _)::args_t) -> 
+      (e::args, t::args_t) -> 
 	let (pref1, args) = normalize_args loc args args_t in
 	let (pref2, e) = normalize_exp_post loc e t in
 	let pref = concat_effects pref1 pref2 in

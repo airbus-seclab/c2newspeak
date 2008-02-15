@@ -146,7 +146,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 
   let translate_ftyp (args, va_list, ret) =
     let va_list = if va_list then [K.Scalar N.Ptr] else [] in
-    let args = List.map (fun (t, _) -> translate_typ t) args in
+    let args = List.map translate_typ args in
     let args = args@va_list in
     let ret =
       match ret with
@@ -291,23 +291,24 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  Npkcontext.error "Compiler.translate_stmt" "unreachable code"
 
   and append_args loc args f =
-    let rec append args =
+    let rec append x args =
       match args with
-	  (e::args, (t, x)::args_t) ->
+	  (e::args, t::args_t) ->
 	    let id = fresh_id () in
 	      push id;
 	      let lv = Var id in
 	      let set = translate_set (lv, t, e) in
 	      let t = translate_typ t in
-	      let call = append (args, args_t) in
+	      let call = append (x+1) (args, args_t) in
+	      let arg = "arg"^(string_of_int x) in
 		pop id;
-		(K.Decl (x, t, (set, loc)::call::[]), loc)
+		(K.Decl (arg, t, (set, loc)::call::[]), loc)
 		  
 	| _ -> 
 	    let fn = translate_fn f in
 	      (K.Call fn, loc)
     in
-      append args
+      append 1 args
       
   and translate_fn fn =
     match fn with

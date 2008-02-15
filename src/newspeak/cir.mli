@@ -53,14 +53,13 @@ and typ =
 
 and array_t = (typ * int option)
 
-(* TODO: simplify ftyp by removing string ??? *)
 (* true if variable list of arguments *)
-and ftyp = (typ * string) list * bool * typ
+and ftyp = typ list * bool * typ
 
 and blk = stmt list
 
 and stmt = (stmtkind * Newspeak.location)
-(* TODO: remove all warnings. *)
+
 and stmtkind =
     | Block of (blk * lbl option)
     | Goto of lbl
@@ -88,7 +87,6 @@ and lv =
    rid of unnecessary temporary variable??? If better *)
     | Post of (lv * stmt)
 
-(* TODO: should put coercion already into exp *)
 and exp =
     | Const of cst
     | Lval of typ_lv
@@ -102,7 +100,6 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
-(* TODO: use Npkil unop and binop *)
 and unop = 
     | Belongs_tmp of (Int64.t * Npkil.tmp_int)
     | Not
@@ -162,8 +159,6 @@ val normalize_exp: exp -> (blk * exp * blk)
 
 val normalize: blk -> blk
 
-val ftyp_equal: ftyp -> ftyp -> bool
-
 val align_of: compdefs -> typ -> int
 
 (** [next_aligned o x] returns the smallest integer greater or equal than o,
@@ -179,7 +174,5 @@ val deref: typ_exp -> typ_lv
 val funexp_of_lv: typ_lv -> (funexp * ftyp)
 
 val len_of_exp: exp -> int
-
-val ftyp_of_typ: typ -> ftyp
 
 val len_of_array: int option -> lv -> Npkil.tmp_int

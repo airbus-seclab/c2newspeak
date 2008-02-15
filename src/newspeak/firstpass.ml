@@ -225,19 +225,19 @@ let translate (bare_compdefs, globals) =
 
   let remove_symb x = Hashtbl.remove symbtbl x in
 
-  let add_formals loc (args_t, _, ret_t) =
-    let add_var x = 
-      let (_, id) = add_var loc x in
+  let add_formals loc args_name (args_t, _, ret_t) =
+    let add_var t x = 
+      let (_, id) = add_var loc (t, x) in
 	id
     in
-    let ret_id = add_var (ret_t, ret_name) in
-    let args_id = List.map add_var args_t in
+    let ret_id = add_var ret_t ret_name in
+    let args_id = List.map2 add_var args_t args_name in
       (ret_id, args_id)
   in
     
-  let remove_formals (args_t, _, ret_t) = 
+  let remove_formals args_name =
     remove_symb ret_name;
-    List.iter (fun (_, x) -> remove_symb x) args_t
+    List.iter remove_symb args_name
   in
 
   let find_symb x = 
@@ -289,7 +289,7 @@ let translate (bare_compdefs, globals) =
   let update_funtyp f t loc =
     try
       let (prev_t, _, _) = Hashtbl.find fundefs f in
-	if not (C.ftyp_equal t prev_t) then begin
+	if (t <> prev_t) then begin
 	  Npkcontext.error "Firstpass.update_fundef"
 	    ("Different types for function "^f)
 	end
@@ -558,13 +558,15 @@ let translate (bare_compdefs, globals) =
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "assignments within expressions forbidden"
 
-  and translate_arg loc e (t, _) = C.cast (translate_exp e) t 
+  and translate_arg loc e t = C.cast (translate_exp e) t 
 
   and translate_typ t =
     match t with
 	Void -> C.Void
       | Int k -> C.Int k
-      | Fun ft -> C.Fun (translate_ftyp ft)
+      | Fun ft -> 
+	  let (ft, _) = translate_ftyp ft in
+	    C.Fun ft
       | Float n -> C.Float n
       | Ptr t -> C.Ptr (translate_typ t)
       | Array (t, len) -> 
@@ -596,13 +598,15 @@ let translate (bare_compdefs, globals) =
       in
 	(t, x)
     in
-    let args =
+    let (args_t, args_name) =
       match args with
-	  (Void, _)::[] -> []
-	| _ -> List.map translate_arg args
+	  (Void, _)::[] -> ([], [])
+	| _ -> 
+	    let args = List.map translate_arg args in
+	      List.split args
     in
     let ret = translate_typ ret in
-      (args, va_list, ret)
+      ((args_t, va_list, ret), args_name)
 
   and translate_local_decl (x, t, init) loc =
     Npkcontext.set_loc loc;
@@ -745,28 +749,32 @@ let translate (bare_compdefs, globals) =
       | [] -> body
   in
 
-  let  translate_proto_ftyp f (args, va_list, ret) = 
+  let translate_proto_ftyp f (args, va_list, ret) = 
     if args = [] then begin
       Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
 	("Incomplete prototype for function "^f);
     end;
-    translate_ftyp (args, va_list, ret)
+    let (ft, _) = translate_ftyp (args, va_list, ret) in
+      ft
   in
 
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (x, t, body) ->
-	  let t = translate_typ t in
-	  let ft = C.ftyp_of_typ t in
+	FunctionDef (x, Fun ((args, _, _) as ft), body) ->
+	  let (ft, args) = translate_ftyp ft in
 	    update_funtyp x ft loc;
 	    current_fun := x;
-	    let formalids = add_formals loc ft in
+	    let formalids = add_formals loc args ft in
 	    let body = translate_blk body in
 	    let body = (C.Block (body, Some ret_lbl), loc)::[] in
 	      update_funbody x (formalids, body);
-	      remove_formals ft;
+	      remove_formals args;
 	      current_fun := ""
+
+      | FunctionDef _ -> 
+	  Npkcontext.error "Firstpass.translate_global" 
+	    "function type expected"
 
       | GlbEDecl d -> translate_enum d loc
 
