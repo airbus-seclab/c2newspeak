@@ -157,7 +157,7 @@ and translate_binop op e1 e2 =
       (* Pointer comparisons *)
       | (Eq, C.Ptr _, C.Ptr _) -> (C.Eq t1, C.int_typ)
       | (Gt, C.Ptr _, C.Ptr _) -> (C.Gt t1, C.int_typ)
-(* TODO: simplify by having only op and t returned *)	      
+
       | _ ->
 	  Npkcontext.error "Csyntax.translate_binop" 
 	    "unexpected binary operator and arguments"
@@ -492,7 +492,6 @@ let translate (bare_compdefs, globals) =
 	  let e2 = translate_exp e2 in
 	    translate_binop op e1 e2
 
-      (* TODO: there may be a need for a coercion here ??? int types ?? *)
       | IfExp (c, e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
 
@@ -501,7 +500,6 @@ let translate (bare_compdefs, globals) =
 	  let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
 	  let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
 	  let set = (If (c, blk1, blk2), loc) in
-
 	  let set = translate_stmt set in
 	    remove_symb x;
 	    (C.Pref (decl::set, C.Lval (v, t)), t)
@@ -515,8 +513,6 @@ let translate (bare_compdefs, globals) =
 	  let sz = (C.size_of compdefs t) / 8 in
 	    (C.exp_of_int sz, C.int_typ)
 
-      (* TODO: should check that the size of all declarations is less than 
-	 max_int *)
       | Sizeof t -> 
 	  let t = translate_typ t in
 	  let sz = (C.size_of compdefs t) / 8 in
@@ -709,8 +705,6 @@ let translate (bare_compdefs, globals) =
 	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
 	  let body = translate_cases (last_lbl, switch) choices in
 	  let default = translate_blk default in
-(* TODO: have Newspeak optimization that removes duplicated lbls
-   for instance, here when default (see 019.c) *)
 	  let body = (C.Block (body, Some default_lbl), loc)::default in
 	    (C.Block (body, Some brk_lbl), loc)::[]
 

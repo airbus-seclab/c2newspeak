@@ -26,8 +26,6 @@
 (* TODO: should be in another file *)
 open Cir
 
-(* TODO: some optimizations are possible to remove unused vars, see 110.c *)
-
 module N = Newspeak
 module K = Npkil
 
@@ -80,7 +78,6 @@ let translate_binop compdefs op e1 e2 =
 	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
     | MinusP -> K.make_int_coerce int_kind (K.BinOp (N.MinusPP, e1, e2))
 	
-    (* TODO: clean bug ? maybe a cast is necessary ? *)
     | Gt t -> 
 	let t = translate_scalar t in
 	  K.BinOp (N.Gt t, e1, e2)
