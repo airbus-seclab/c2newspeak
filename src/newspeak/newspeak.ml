@@ -185,6 +185,9 @@ let domain_of_typ (sign, size) =
 	(Int64.zero, Int64.pred (Int64.shift_left Int64.one n))
     | _ -> invalid_arg "Newspeak.domain_of_typ"
 
+let is_in_bounds (l, u) i = 
+  (Int64.compare l i <= 0) && (Int64.compare i u <= 0)
+
 let rec negate exp =
   match exp with
     | UnOp (Not, BinOp (Eq t, e2, e1)) -> BinOp (Eq t, e1, e2)
@@ -730,6 +733,22 @@ object (self)
 	  let i = Int64.div i1 i2 in
 	    exp_of_int64 i
 
+(* TODO: could do this after a sanity checks that checks the largest and 
+   smallest integer ever computed in expressions!! *)
+      | UnOp (Coerce (c_l, c_u), 
+	     (BinOp (MultI, UnOp (Belongs (l, u), _), 
+		    Const CInt64 x) as e')) -> 
+	  let l = Big_int.big_int_of_string (Int64.to_string l) in
+	  let u = Big_int.big_int_of_string (Int64.to_string u) in
+	  let x = Big_int.big_int_of_string (Int64.to_string x) in
+	  let c_l = Big_int.big_int_of_string (Int64.to_string c_l) in
+	  let c_u = Big_int.big_int_of_string (Int64.to_string c_u) in
+	  let l = Big_int.mult_big_int l x in
+	  let u = Big_int.mult_big_int u x in
+	    if Big_int.compare_big_int l c_l < 0 then e
+	    else if Big_int.compare_big_int c_u u < 0 then e
+	    else e'
+
       | _ -> e
 end
 
@@ -835,40 +854,6 @@ let simplify_gotos blk =
     then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";
     blk
 
-(*
-let simplify_gotos blk =
-  let necessary_lbls = ref [] in
-  let rec simplify_blk x =
-    match x with
-      | [] -> []
-      | hd::tl -> 
-	  let hd = simplify_stmt hd in
-	  let tl = simplify_blk tl in
-	    hd@tl
-		
-  and simplify_choose_elt (l, b) = (l, simplify_blk b)
-
-  and simplify_stmt (x, loc) =
-    match x with
-	Goto l -> 
-	  necessary_lbls := l::!necessary_lbls;
-	  [x, loc]
-      | Decl (name, t, body) -> [Decl (name, t, simplify_blk body), loc]
-      | DoWith (body, l, action) ->
-	  let body = remove_final_goto l body in
-	  let body = simplify_blk body in
-	    if List.mem l !necessary_lbls then begin
-	      let action = simplify_blk action in
-		[DoWith (body, l, action), loc]
-	    end else body
-      | ChooseAssert elts ->
-	  [ChooseAssert (List.map simplify_choose_elt elts), loc]
-      | InfLoop body -> [InfLoop (simplify_blk body), loc]
-      | _ -> [x, loc]
-  in
-    simplify_blk blk
-*)
-
 let rec simplify_stmt actions (x, loc) =
   let x =
     match x with
@@ -895,6 +880,10 @@ and simplify_choose_elt actions (cond, body) =
   let body = simplify_blk actions body in
     (cond, body)
       
+(* TODO: clean up simplifications, systematic:
+   have a class list of simplifications, instead of applying a list,
+   have an option to continue,
+   suppress simplify_arithmexp *)
 and simplify_exp actions e =
   let e = 
     match e with
@@ -1539,7 +1528,4 @@ let dump_as_C prog =
     print_c c_prog
 
 let max_ikind = max
-
-let is_in_bounds (l, u) i = 
-  (Int64.compare l i <= 0) && (Int64.compare i u <= 0)
   

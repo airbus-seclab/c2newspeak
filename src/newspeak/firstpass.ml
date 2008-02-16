@@ -421,7 +421,7 @@ let translate (bare_compdefs, globals) =
 		  let len = C.len_of_array n lv' in
 		  let sz = C.exp_of_int (C.size_of compdefs t) in
 		  let o = C.Unop (C.Belongs_tmp (Int64.zero, len), i) in
-		  let o = C.Binop (C.MultI, o, sz) in
+		  let o = C.Binop (C.Mult C.int_kind, o, sz) in
 		    (C.Shift (lv', o), t)
 
 	      | C.Ptr _ -> translate_lv (Deref (Binop (Plus, lv, e)))

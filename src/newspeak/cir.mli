@@ -110,7 +110,6 @@ and binop =
     | Plus of Newspeak.ikind
     | Minus of Newspeak.ikind
     | Div of Newspeak.ikind
-    | MultI
     | Mult of Newspeak.ikind
     | BAnd of Newspeak.ikind
     | BXor of Newspeak.ikind

@@ -55,8 +55,7 @@ let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 
 let translate_binop compdefs op e1 e2 =
   match op with
-      MultI -> K.BinOp (N.MultI, e1, e2)
-    | Mult k -> translate_arithmop N.MultI e1 e2 k
+      Mult k -> translate_arithmop N.MultI e1 e2 k
     | Plus k -> translate_arithmop N.PlusI e1 e2 k
     | Minus k -> translate_arithmop N.MinusI e1 e2 k
     | Div k -> translate_arithmop N.DivI e1 e2 k
