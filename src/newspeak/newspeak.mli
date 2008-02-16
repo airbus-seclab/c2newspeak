@@ -33,7 +33,7 @@
     - precise: its semantics is precisely defined, 
     (see {e Newspeak, Doubleplussimple Minilang for Goodthinkful Static 
     Analysis of C} for a thorough and formal description. Available from
-    {{:"www.penjili.org"}www.penjili.org})
+    {{:http://www.penjili.org}www.penjili.org})
     - simple: its primitives are as few, as standard and as concise as 
     possible,
     - minimal: no language primitive or fragment of primitive should be 
