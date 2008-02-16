@@ -27,18 +27,38 @@
 *)
 
 
-(** The Newspeak module describes the internal language used to analyse
-    C code. It is a kind of high-level assembly language.
 
-    The names used in Newspeak are similar to those used in CIL.
+(** Newspeak is a language designed for the purpose of static analysis. 
+    It was designed with these features in mind:
+    - precise: its semantics is precisely defined, 
+    (see {e Newspeak, Doubleplussimple Minilang for Goodthinkful Static 
+    Analysis of C} for a thorough and formal description. Available from
+    {{:"www.penjili.org"}www.penjili.org})
+    - simple: its primitives are as few, as standard and as concise as 
+    possible,
+    - minimal: no language primitive or fragment of primitive should be 
+    expressible as a combination of other primitives,
+    - explicit: primitives are context-free, i.e. all semantic information
+    needed to execute it are readily available,
+    - analysis-friendly: annotations useless for execution are added to allow
+    a static analysis tool to perform correctness checks,
+    - architecture-independent: all architecture or compiler dependent features
+    (size of types, offsets of structure fields, order of executions, ...)
+    are made explicit byt the translation to Newspeak,
+    - expressive: it should be possible to translate most C programs into 
+    Newspeak.
 
-    This module also exports some useful functions to manipulate and
-    display Newspeak programs. *)
+    Newspeak can be seen as a kind of high-level assembly language with 
+    annotations for analysis.
+    The type of Newspeak programs, types, statements and expressions are 
+    described in this module.
+    Additionnally, some functions to create, manipulate, export and display 
+    Newspeak programs are provided. 
+*)
 
+(** {2 Types} *)
 
-(** {1 Types} *)
-
-(** The type of a program: file names, global variable declarations,
+(* The type of a program: file names, global variable declarations,
     function definitions and the size of pointers. *)
 type t = (file list * prog * size_t)
 
@@ -48,7 +68,7 @@ and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
 
-(** The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
+(* The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
@@ -143,7 +163,7 @@ and bounds = (Int64.t * Int64.t)
 and location = string * int * int
 
 
-(** {1 Constants} *)
+(* {1 Constants} *)
 
 val zero : exp
 val one : exp
@@ -153,36 +173,36 @@ val locUnknown : location
 
 
 
-(** {1 Manipualtion and Simplifications} *)
+(* {1 Manipualtion and Simplifications} *)
 
 
-(** Given the characteristics of an integer type, [domain_of_typ]
+(* Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type. *)
 val domain_of_typ : sign_t * size_t -> bounds
 
 val is_in_bounds: bounds -> Int64.t -> bool
 
-(** Negation of a boolean condition. *)
+(* Negation of a boolean condition. *)
 val negate : exp -> exp
 
-(** [exp_of_int i] wraps i into a Newspeak expression. *)
+(* [exp_of_int i] wraps i into a Newspeak expression. *)
 val exp_of_int : int -> exp
 
 val exp_of_int64 : Int64.t -> exp
 
-(** Deletion of useless Gotos and Labels. *)
+(* Deletion of useless Gotos and Labels. *)
 val simplify_gotos : blk -> blk
 
-(** Normalization of loops *)
+(* Normalization of loops *)
 val normalize_loops : blk -> blk
 
-(** Run all simplifications. *)
+(* Run all simplifications. *)
 val simplify : blk -> blk
 val simplify_exp: exp -> exp
 
 
 
-(** {1 Display } *)
+(* {1 Display } *)
 val string_of_loc : location -> string
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
@@ -193,7 +213,7 @@ val string_of_lval : lval -> string
 val string_of_stmt: stmt -> string
 val string_of_blk: blk -> string
 
-(** Visitor *)
+(* Visitor *)
 class visitor:
 object
   method process_gdecl: string -> gdecl -> bool
@@ -228,21 +248,21 @@ val build_gdecl: builder -> gdecl -> gdecl
 
 val dump : t -> unit
 
-(** [dump (fundecs, body)] prints the program (fundecs, body) 
+(* [dump (fundecs, body)] prints the program (fundecs, body) 
     to standard output. *)
 val dump_prog : prog -> unit
 
 val dump_fundec : string -> fundec -> unit
 
-(** [write name (files, prog, ptr_sz) ] write the program prog, with
+(* [write name (files, prog, ptr_sz) ] write the program prog, with
     the list of its file names and the size of pointers to file name. *)
 val write : string -> t -> unit
 
-(** [read name] retrieves the list of file names, program and size of
+(* [read name] retrieves the list of file names, program and size of
     pointers from file name. *)
 val read : string -> t
 
-(** [write_hdr cout (files, decls, ptr_sz] writes the list of file names,
+(* [write_hdr cout (files, decls, ptr_sz] writes the list of file names,
     global variable declarations and size of pointer to channel cout.
     This is useful when incremental dump of Newspeak is needed because of
     memory constraints.
@@ -250,7 +270,7 @@ val read : string -> t
 val write_hdr : 
   out_channel -> (string list * (string, gdecl) Hashtbl.t * size_t) -> unit
 
-(** [write_hdr cout fid spec] writes the function fid with its specification
+(* [write_hdr cout fid spec] writes the function fid with its specification
     spec to channel cout.
     This is useful when incremental dump of Newspeak is needed because of
     memory constraints. This function must be called after write_hdr in order
@@ -260,7 +280,7 @@ val write_fun : out_channel -> fid -> fundec -> unit
 
 val size_of_scalar : size_t -> scalar_t -> size_t
 
-(** 
+(* 
     Type of the size_of function.
     [size_of t] returns the size of any value of type t.
 *)
@@ -273,7 +293,7 @@ val build_main_call :
 
 val create_cstr: string -> string -> string * gdecl
 
-(** [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
+(* [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
 If it fails, then it returns None.
 Else, it returns the while condition in a exp list. It is a list of booleans which 
 are evaluated until some of them is false (further booleans are not evaluated).
