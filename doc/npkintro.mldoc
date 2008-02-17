@@ -52,15 +52,16 @@
    - [npksimplify]:	      performs some newspeak simplifications
 
   This will also produce the documentation in html format and copy it to 
-  the doc/ directory. The main documentation file is index.html.
+  the doc/ directory. 
 
 {2 Getting started }
 - To compile a C file to Newspeak, use {{:#c2newspeak}c2newspeak}.
 - To read and manipulate Newspeak programs in your own projects, use the 
   functions provided in the library newspeak. 
-  Use files newspeak.cma (for bytecode) or newspeak.cmxa (for native-code). 
-  Don't forget to have the interface newspeak.cmi visible from you compilation
-  path.
+  Use files [newspeak.cma] (for bytecode) 
+  or [newspeak.cmxa] (for native-code). 
+  Don't forget to have the interface file [newspeak.cmi] visible from your 
+  compilation path.
 - The functions in the library are described there {!Newspeak}.
 
 {2 Newspeak tools }
@@ -77,3 +78,15 @@
 {2 Index }
 
 {!indexlist}
+
+{2 Authors }
+The Newspeak language was designed by Charles Hymans. 
+The first version of the compiler c2newspeak was entirely written by Olivier
+Levillain.
+The main author is Charles Hymans with contributions from Olivier Levillain, 
+Wenceslas Godard and Xavier Allamigeon. 
+
+{2 Questions, bug reports, comments }
+If you find a bug, have a comment or a question, don't hesitate to visit
+{{:http://www.penjili.org/}http://www.penjili.org/} and submit a ticket, 
+or directly send an email to charles.hymans(@)penjili.org.
