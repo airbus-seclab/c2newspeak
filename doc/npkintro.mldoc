@@ -80,11 +80,14 @@
 {!indexlist}
 
 {2 Authors }
+The main author is Charles Hymans with significant contributions from 
+Olivier Levillain. 
 The Newspeak language was designed by Charles Hymans. 
-The first version of the compiler c2newspeak was entirely written by Olivier
-Levillain.
-The main author is Charles Hymans with contributions from Olivier Levillain, 
-Wenceslas Godard and Xavier Allamigeon. 
+The first version of the compiler c2newspeak compiler was entirely written by 
+Olivier Levillain.
+
+We thank Wenceslas Godard, Xavier Allamigeon
+and Jean-Loup Carre for comments, discussions and bug reports. 
 
 {2 Questions, bug reports, comments }
 If you find a bug, have a comment or a question, don't hesitate to visit
