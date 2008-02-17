@@ -224,7 +224,7 @@ let extract_cond_body lbl x =
       | [] -> ([], [])
     with Exit -> ([], x)
 
-let rec convert_loops blk = invalid_arg "Not implemented yet"
+let rec convert_loops _ = invalid_arg "Not implemented yet"
 (*
   match blk with
       (InfLoop body, loc)::(Label lbl, _)::tl ->
@@ -320,7 +320,7 @@ let string_of_unop op =
     | Not -> "!"
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
-    | IntToPtr i -> "(ptr)"
+    | IntToPtr _ -> "(ptr)"
 	  
 let string_of_binop op =
   match op with
@@ -428,7 +428,7 @@ let string_of_blk offset x =
 	  dump_line_at loc ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			" "^(string_of_lval lv2)^";")
 	    
-      | Decl (name, t, body) ->
+      | Decl (_, t, body) ->
 	  if only then begin
 	    dump_line_at loc ((string_of_typ t)^";");
 	    dump_blk body
@@ -694,7 +694,7 @@ let big_int_op op =
     | _ -> invalid_arg "Newspeak.big_int_op: unexpected operator"
 
 class simplify_arith =
-object (self)
+object
   inherit builder
     
   method process_lval x =
@@ -1276,256 +1276,6 @@ let visit_glb visitor id (t, init) =
 let visit visitor (globals, fundecs) =
   Hashtbl.iter (visit_glb visitor) globals;
   Hashtbl.iter (visit_fun visitor) fundecs
-
-
-(* Decompilation towards C *)
-(* TODO: this is not finished and is very experimental *)
-type c_prog = (c_typedef list * c_glob list * c_fun list)
-
-and c_typedef = ()
-
-and c_glob = (string * c_typ * c_init)
-
-and c_typ =
-    | C_scalar of scalar_t
-    | C_array of (c_typ * int)
-    | C_struct of c_field list
-    | C_union of c_field list
-
-and c_ftyp = c_typ list * c_typ option
-
-and c_field = (int * c_typ)
-
-and c_init = ()
-
-and c_fun = (string * c_ftyp * c_blk option)
-
-and c_blk = c_stmt list
-
-and c_stmt = 
-    | C_set of (c_lv * c_exp)
-    | C_decl of (string * c_typ * c_blk)
-    | C_ite of (c_exp * c_blk * c_blk)
-
-and c_lv = 
-    | C_var of string
-
-and c_exp =
-    | C_const of cte
-    | C_lval of c_lv
-    | C_binop of (binop * c_exp * c_exp)
-
-let successive_fields x = 
-  let rec check o x =
-    match x with
-	(o', _)::tl when o < o' -> check o' tl
-      | [] -> true
-      | _ -> false
-  in
-    check 0 x
-
-let aligned_fields x = List.for_all (fun (o, _) -> o = 0) x
-
-let npk_to_c (gdecls, fundecs) = 
-  let type_tbl = Hashtbl.create 100 in
-  let field_cnt = ref 0 in
-  let typedefs = ref [] in
-
-  let c_fundecs = ref [] in
-    
-  let rec typ_to_c t =
-    if Hashtbl.mem type_tbl t then Hashtbl.find type_tbl t
-    else begin
-      match t with
-	  Scalar sc -> C_scalar sc
-	| Array (t, n) -> C_array (typ_to_c t, n)
-	| Region (fields, _) when successive_fields fields -> 
-	    C_struct (List.map field_to_c fields)
-	| Region (fields, _) when aligned_fields fields ->
-	    C_union (List.map field_to_c fields)
-	| _ -> 
-	    invalid_arg ("Newspeak.npk_to_c.typ_to_c: "
-			  ^"decompilation of newspeak type to C not possible")
-    end
-
-  and field_to_c (o, t) =
-    let name = !field_cnt in
-    let t = typ_to_c t in
-      incr field_cnt;
-      (name, t)
-  in
-
-  let init_t_to_c i = 
-    match i with
-	Zero -> ()
-      | _ -> invalid_arg "Newspeak.npk_to_c.init_t_to_c: not implemented yet" 
-  in
-    
-  let gdecl_to_c (string, t, init) =
-    let t = typ_to_c t in
-    let init = init_t_to_c init in
-      (string, t, init)
-  in
-
-  let ftyp_to_c (args, ret) = 
-    let args = List.map typ_to_c args in
-    let ret = 
-      match ret with
-	| Some t -> Some (typ_to_c t)
-	| None -> None
-    in
-      (args, ret)
-  in
-
-  let rec exp_to_c env e = 
-    match e with
-	Const c -> C_const c
-      | Lval (lv, _) -> C_lval (lv_to_c env lv)
-      | BinOp (op, e1, e2) -> C_binop (op, exp_to_c env e1, exp_to_c env e2)
-      | _ -> invalid_arg ("Newspeak.npk_to_c.exp_to_c: not implemented yet: "
-			   ^(string_of_exp e))
-
-  and lv_to_c env lv =
-    match lv with
-	Local n -> C_var (List.nth env n)
-      | _ -> invalid_arg ("Newspeak.npk_to_c.lv_to_c: not implemented yet: "
-			   ^(string_of_lval lv))
-  in
-    
-  let rec blk_to_c env x = List.map (stmt_to_c env) x
-
-  and stmt_to_c env (x, loc) =
-    match x with
-	Set (lv, e, _) -> 
-	  let lv = lv_to_c env lv in
-	  let e = exp_to_c env e in
-	    C_set (lv, e)
-      | Decl (name, t, body) ->
-	  let t = typ_to_c t in
-	  let env' = name::env in
-	  let body = blk_to_c env' body in
-	    C_decl (name, t, body)
-      | ChooseAssert [([e1], body1); ([e2], body2)]
-	when e2 = negate e1 ->
-	  let e = exp_to_c env e1 in
-	  let body1 = blk_to_c env body1 in
-	  let body2 = blk_to_c env body2 in
-	    C_ite (e, body1, body2)
-      | _ -> 
-	  let stmt = string_of_stmt (x, loc) in
-	    invalid_arg ("Newspeak.npk_to_c.stmt_to_c: not implemented yet: "
-			  ^stmt)
-  in
-
-  let fundec_to_c fid (ftyp, body) = 
-    let ftyp = ftyp_to_c ftyp in
-    let body =
-      match body with
-	| Some body -> Some (blk_to_c [] body)
-	| None -> None
-    in
-      c_fundecs := (fid, ftyp, body)::(!c_fundecs)
-  in
-
-  let gdecls = List.map gdecl_to_c gdecls in
-    Hashtbl.iter fundec_to_c fundecs;
-    (!typedefs, gdecls, !c_fundecs)
-
-let print_c (typedefs, gdecls, fundecs) =
-  let string_of_scalar x =
-    match x with
-	Int (Signed, 4) -> "int"
-      | _ -> 
-	  invalid_arg "Newspeak.print_c.string_of_scalar: not implemented yet"
-  in
-
-  let string_of_c_typ t = 
-    match t with
-      | C_scalar sc -> string_of_scalar sc 
-      | _ -> 
-	  invalid_arg "Newspeak.print_c.string_of_c_typ: not implemented yet"
-  in
-
-  let print_glob (name, t, _)  =
-    let t = string_of_c_typ t in
-      print_endline (t^" "^name^";")
-  in
-
-  let string_of_args args =
-    match args with
-	[] ->  ""
-      | _ -> invalid_arg "Newpeak.print_c.string_of_args: not implemented yet"
-  in
-
-  let string_of_fid f (args, ret) =
-    let args = string_of_args args in
-    let ret =
-      match ret with
-	  None -> "void"
-	| _ -> invalid_arg "Newpeak.print_c.string_of_fid: not implemented yet"
-    in
-      ret^" "^f^"("^args^")"
-  in
-
-  let string_of_cte c =
-    match c with
-	CInt64 c -> Int64.to_string c
-      | CFloat (_, s) -> s
-      | Nil -> "0"
-  in
-
-  let rec string_of_lv lv =
-    match lv with
-	C_var name -> name
-
-  and string_of_exp e =
-    match e with
-	C_const c -> string_of_cte c
-      | C_lval lv -> string_of_lv lv
-      | C_binop (op, e1, e2) ->
-	  let e1 = string_of_exp e1 in
-	  let e2 = string_of_exp e2 in
-	  let op = string_of_binop op in
-	    "("^e1^" "^op^" "^e2^")"
-  in
-
-  let rec print_stmt x =
-    match x with
-      | C_set (lv, e) ->
-	  let lv = string_of_lv lv in
-	  let e = string_of_exp e in
-	    print_endline (lv^" = "^e^";")
-      | C_decl (name, t, body) ->
-	  let t = string_of_c_typ t in
-	    print_endline (t^" "^name^";");
-	    print_blk body
-      | C_ite (e, body1, body2) ->
-	  let e = string_of_exp e in
-	    print_endline ("if "^e^" {");
-	    print_blk body1;
-	    print_endline ("} else { ");
-	    print_blk body2;
-	    print_endline "}"
-	      
-  and print_blk blk = List.iter print_stmt blk in
-    
-  let print_fun (f, t, body) =
-    let f = string_of_fid f t in 
-      match body with
-	  Some body -> 
-	    print_endline (f^" {");
-	    print_blk body;
-	    print_endline "}"
-	| None -> print_endline (f^";")
-  in
-
-    List.iter print_glob gdecls;
-    List.iter print_fun fundecs
-  
-
-let dump_as_C prog =
-  let c_prog = npk_to_c prog in
-    print_c c_prog
 
 let max_ikind = max
   

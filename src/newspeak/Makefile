@@ -15,8 +15,6 @@ CLEANFILES = $(DEPEND) pp_parser.output parser.output
 # Executable
 TGT = c2newspeak
 
-INSTALL_FILES = newspeak.mli newspeak.ml
-
 include ../Makefile.common
 
 machdep: machdep.c
