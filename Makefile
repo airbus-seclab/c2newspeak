@@ -45,7 +45,7 @@ $(DIR):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 doc:
-	$(OCAMLDOC) src/newspeak/newspeak.mli -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc
+	$(OCAMLDOC) src/newspeak/newspeak.mli -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 clean: $(DIR)
 	$(RM) *~ .depend

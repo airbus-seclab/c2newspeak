@@ -6,13 +6,24 @@ Newspeak is designed for the purpose of static analysis.
   (cil/obj/x86_LINUX or cil/obj/x86_WIN32)
 - Then, do:
     make install
-  This will compile and copy to the directory /bin the files:
-    c2newspeak		     C2Newspeak executable
-    newspeak.ml		     newspeak implementation
-    newspeak.mli	     newspeak interface
-    npkstats		     Npkstats executable
+  This will compile and copy to the bin/ directory the files:
+    newspeak.cmi	     newspeak compiled interface
+    newspeak.cma	     newspeak library for caml bytecode compiler
+    newspeak.a newspeak.cmxa newspeak library for caml native-code compiler
+    c2newspeak		     compiler from C to Newspeak
+    npkstats		     statistics on Newspeak files
+    npkstrip		     removes all functions not called from main
+    npksimplify		     performs some newspeak simplifications
 
-- To compile to newspeak, use c2newspeak
-- To read newspeak files in your own project, use newspeak.ml and newspeak.mli
-- Npkstats is a small utilitary to compute statistics of C programs that uses
-  newspeak. It is also an example that shows how to use newspeak.
+  This will produce the documentation in html in the doc/ directory. 
+  The documentation index file is index.html.
+
+- To compile a C file to Newspeak, use c2newspeak
+- To read and manipulate Newspeak files in your own project, use the libraries 
+  newspeak.cma (for bytecode) 
+  or newspeak.a and newspeak.cmxa (for native-code).
+- Please refer to the documentation doc/index.html.
+
+If you find a bug, have a comment or a question, don't hesitate to visit
+http://www.penjili.org/ and submit a ticket, or directly send an email to
+charles.hymans(@)penjili.org.

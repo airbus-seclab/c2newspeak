@@ -34,16 +34,44 @@
   Full text license available {{:lgpl.txt}here}.
 
 {2 Installation }
+{ol
+{- CIL 1.3.5 (not the last version) should be installed,}
+{- An environment variable CIL should be defined with the path of CIL library.
+  (cil/obj/x86_LINUX or cil/obj/x86_WIN32),}
+{- Then, do:
+    {v make install v}}
+}
+  This will compile and copy to the bin/ directory the files:
+   - [newspeak.cmi]:	      newspeak compiled interface
+   - [newspeak.cma]:	      newspeak library for caml bytecode compiler
+   - [newspeak.a], [newspeak.cmxa]: 
+      newspeak library for caml native-code compiler
+   - [c2newspeak]:		      compiler from C to Newspeak
+   - [npkstats]:		      statistics on Newspeak files
+   - [npkstrip]:	      removes all functions not called from main
+   - [npksimplify]:	      performs some newspeak simplifications
+
+  This will also produce the documentation in html format and copy it to 
+  the doc/ directory. The main documentation file is index.html.
+
+{2 Getting started }
+- To compile a C file to Newspeak, use {{:#c2newspeak}c2newspeak}.
+- To read and manipulate Newspeak programs in your own projects, use the 
+  functions provided in the library newspeak. 
+  Use files newspeak.cma (for bytecode) or newspeak.cmxa (for native-code). 
+  Don't forget to have the interface newspeak.cmi visible from you compilation
+  path.
+- The functions in the library are described there {!Newspeak}.
 
 {2 Newspeak tools }
 
-{3 c2newspeak}
+{3:c2newspeak c2newspeak}
 {3 npk2bytesz}
 {3 npkstats}
 {3 npkstrip}
 {3 npksimplify}
 
-{2 Newspeak language }
+{2:newspeak Newspeak language }
 {!modules: Newspeak}
 
 {2 Index }
