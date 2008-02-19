@@ -43,6 +43,7 @@ and compdefs = (string, (field list * int * int)) Hashtbl.t
 
 and field = (string * (int * typ))
 
+(* TODO: remove location, unused! *)
 and fundefs = (string, (ftyp * Newspeak.location * funbody option)) Hashtbl.t
 
 and funbody = ((vid * vid list) * blk)
@@ -114,6 +115,8 @@ and unop =
     | BNot of ikind
     | Cast of (typ * typ)
 
+(* TODO: remove ikind for operations (add a coerce operator), be closer to 
+   npkil and more low level!! *)
 and binop =
     | Plus of ikind
     | Minus of ikind
@@ -153,7 +156,7 @@ let typ_of_cst i =
 	  then Unsigned else Signed
 	in
 	  Int (sign, Config.size_of_int)
-    | CFloat v -> Float Config.size_of_double
+    | CFloat _ -> Float Config.size_of_double
 
 let exp_of_int i = Const (CInt (Int64.of_int i))
 
@@ -380,7 +383,7 @@ and normalize_stmt (x, loc) =
 	  pref@(Exp call, loc)::[]
 
     | Exp e ->
-	let (pref, e, post) = normalize_exp e in
+	let (pref, _, post) = normalize_exp e in
 	  (Block (concat_effects pref post, None), loc)::[]
 	    
 and normalize_call loc (ft, f, args) =
@@ -482,7 +485,7 @@ let normalize x =
 
   let rec set_scope_blk x =
     match x with
-	((Decl _, loc) as decl)::body ->
+	((Decl _, _) as decl)::body ->
 	  let (body, used_lbls) = set_scope_blk body in
 	  let body =
 	    if Set.is_empty used_lbls then decl::body

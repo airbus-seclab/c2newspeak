@@ -1,6 +1,6 @@
 # Project
 DIR = newspeak
-OBJ = ../newspeak/newspeak npk2bytesz
+OBJ = ../version ../newspeak/newspeak npk2bytesz
 
 # Documentation
 DOC_DIR = doc

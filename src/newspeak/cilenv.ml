@@ -147,7 +147,7 @@ let push_local () = ignore (incr loc_cnt)
 (* Functions used in translate_fun *)
 (*---------------------------------*)
 
-let loc_declare (cil_vid, n, t, loc) =
+let loc_declare (cil_vid, _, _, _) =
   let vid = incr loc_cnt in
     Hashtbl.add loc_tabl cil_vid vid
 

@@ -165,7 +165,7 @@ let string_of_unop op =
     | Not -> "!"
     | BNot _ -> "~"
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
-    | IntToPtr i -> "(ptr)"
+    | IntToPtr _ -> "(ptr)"
 	  
 let string_of_cte c =
   match c with

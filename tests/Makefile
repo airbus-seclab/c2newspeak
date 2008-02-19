@@ -7,6 +7,8 @@ C2N = ../bin/c2newspeak --newspeak
 C2NEWSPEAK = $(C2N) $(FLAG)
 C2NEWSPEAK.CIL = $(C2N) $(FLAG.CIL)
 
+DIR=mult-files npksimplify mem_opt npk2bytesz newspeak
+
 TESTS = 000 001 002 003 004 005 006 007 008 009 \
         010 011 012 013 014 015 016 017 018 019 \
 	020 021 022 023 024 025 026 027 028 029 \
@@ -43,10 +45,7 @@ TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 .PHONY: $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
 check: ../bin/c2newspeak $(TESTS)
-	make -C mult-files check
-	make -C npksimplify check
-	make -C mem_opt check
-	make -C npk2bytesz check
+	for i in $(DIR); do make -C $$i check; done
 
 001: 026 028 176 177
 000: 030 031
@@ -84,7 +83,7 @@ $(TESTS): TMP=$@.bak
 $(TESTS): SPEC=$@.spec
 $(TESTS): CIL_SPEC=$(if $(shell [ -e $@.cil.spec ] && echo true), \
 	  $@.cil.spec,$@.spec)
-$(TESTS): $@
+$(TESTS):
 	eval $(C2NEWSPEAK) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP); true
 	dos2unix $(TMP) 2&> /dev/null; true
 	if [ -e $(SPEC) ]; \
@@ -139,9 +138,6 @@ $(TESTS.CIL.SPEC): ../bin/c2newspeak
 
 clean:
 	$(RM) $(TESTS)
-	make -C mult-files clean
-	make -C npksimplify clean
-	make -C npk2bytesz clean
-	make -C mem_opt clean
+	for i in $(DIR); do make -C $$i clean; done
 	$(RM) *~ *.bak result *.no *.npk
 

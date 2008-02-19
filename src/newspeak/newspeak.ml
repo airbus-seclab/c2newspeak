@@ -528,6 +528,8 @@ let string_of_stmt x = string_of_blk (x::[])
 (* Input/output functions *)
 let write_hdr cout (filenames, decls, ptr_sz) =
   Marshal.to_channel cout "NPK!" [];
+  Marshal.to_channel cout Version.version [];
+  Marshal.to_channel cout Version.revision [];
   Marshal.to_channel cout filenames [];
   Marshal.to_channel cout ptr_sz [];
   Marshal.to_channel cout decls []
@@ -545,20 +547,30 @@ let read name =
   let str = Marshal.from_channel cin in
     if str <> "NPK!" 
     then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
-    let filenames = Marshal.from_channel cin in
-    let ptr_sz = Marshal.from_channel cin in
-    let decls = Marshal.from_channel cin in
-    let funs = Hashtbl.create 100 in
-      begin try 
-	while true do
-	  let (f, spec) = Marshal.from_channel cin in
-	    Hashtbl.add funs f spec
-	done
-      with End_of_file -> ()
+    let version = Marshal.from_channel cin in
+    let revision = Marshal.from_channel cin in
+      if (version <> Version.version) 
+	|| (revision <> Version.revision) then begin
+	invalid_arg ("Newspeak.read: this file was generated with a "
+		      ^"different version of c2newspeak. "
+		      ^"Please regenerate your file or install the latest "
+		      ^"version of newspeak."^
+		      " Operation aborted.");
       end;
-      close_in cin;
-      (filenames, (decls, funs), ptr_sz)
-
+      let filenames = Marshal.from_channel cin in
+      let ptr_sz = Marshal.from_channel cin in
+      let decls = Marshal.from_channel cin in
+      let funs = Hashtbl.create 100 in
+	begin try 
+	    while true do
+	      let (f, spec) = Marshal.from_channel cin in
+		Hashtbl.add funs f spec
+	    done
+	  with End_of_file -> ()
+	end;
+	close_in cin;
+	(filenames, (decls, funs), ptr_sz)
+	    
 (** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[c;d\] if \[a;b\] contains \[c;d\]

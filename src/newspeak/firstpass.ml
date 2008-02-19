@@ -123,7 +123,7 @@ and translate_binop op e1 e2 =
       | (Plus, C.Int k, C.Int _) -> (C.Plus k, t1)
       | (Minus, C.Int k, C.Int _) -> (C.Minus k, t1)
       | (Div, C.Int k, C.Int _) -> (C.Div k, t1)
-      | (Mod, C.Int k, C.Int _) -> (C.Mod, t1)
+      | (Mod, C.Int _, C.Int _) -> (C.Mod, t1)
       | (BAnd, C.Int k, C.Int _) -> (C.BAnd k, t1)
       | (BXor, C.Int k, C.Int _) -> (C.BXor k, t1)
       | (BOr, C.Int k, C.Int _) -> (C.BOr k, t1)
@@ -329,7 +329,7 @@ let translate (bare_compdefs, globals) =
 	    Npkcontext.error "Firstpass.translate_init"
 	      "This type of initialization not implemented yet"
 	      
-    and translate_field_sequence o (f, (f_o, t)) x =
+    and translate_field_sequence o (_, (f_o, t)) x =
       let o = o + f_o in
       let _ = translate o t x in
 	()
@@ -527,11 +527,10 @@ let translate (bare_compdefs, globals) =
 	    (e, t)
 
       | Call (f, args) -> 
-	  let loc = Npkcontext.get_loc () in
 	  let (f, ft) = C.funexp_of_lv (translate_lv f) in
 	  let (args_t, _, ret_t) = ft in
 	  let args = 
-	      try List.map2 (translate_arg loc) args args_t 
+	      try List.map2 translate_arg args args_t 
 	      with Invalid_argument "List.map2" ->
 		Npkcontext.error "Firstpass.translate_exp" 
 		  ("Different types at function call")
@@ -542,7 +541,7 @@ let translate (bare_compdefs, globals) =
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "assignments within expressions forbidden"
 
-  and translate_arg loc e t = C.cast (translate_exp e) t 
+  and translate_arg e t = C.cast (translate_exp e) t 
 
   and translate_typ t =
     match t with
@@ -743,7 +742,7 @@ let translate (bare_compdefs, globals) =
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (x, Fun ((args, _, _) as ft), body) ->
+	FunctionDef (x, Fun ft, body) ->
 	  let (ft, args) = translate_ftyp ft in
 	    update_funtyp x ft loc;
 	    current_fun := x;
@@ -771,7 +770,7 @@ let translate (bare_compdefs, globals) =
 		let ft = translate_proto_ftyp x ft in
 		  update_funtyp x ft loc
 
-	    | (Fun ft, Some _) -> 
+	    | (Fun _, Some _) -> 
 		Npkcontext.error "Firstpass.translate_global"
 		  ("Unexpected initialization of function "^x)
 	    | _ -> 

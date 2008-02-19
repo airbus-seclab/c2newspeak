@@ -1,6 +1,6 @@
 # Project
 DIR = newspeak
-OBJ = ../newspeak/newspeak \
+OBJ = ../version ../newspeak/newspeak \
 	normalize store copy_propagation inline var_hoist npksimplify
 
 # Executable

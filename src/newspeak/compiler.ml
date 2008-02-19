@@ -383,7 +383,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
       Hashtbl.add glbdecls x (t, loc, init, true)
   in
 
-  let translate_fundef f ((args, va_list, t), loc, body) =
+  let translate_fundef f ((args, va_list, t), _, body) =
     let body =
       match body with
 	  None -> None

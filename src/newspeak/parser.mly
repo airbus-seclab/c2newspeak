@@ -60,7 +60,7 @@ let build_glbdecl (static, extern) d =
     (edecls@vdecls)
 
 let build_fundef (b, m, body) = 
-  let (enumdecls, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
     (FunctionDef (x, t, body), loc)::[]
       
 let build_glbtypedef d =

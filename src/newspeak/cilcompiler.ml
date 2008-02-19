@@ -111,7 +111,7 @@ and translate_scalar_cast (e, t2) t1 =
     | (Newspeak.Float _ as t', (Newspeak.Int _ as t)) ->
 	K.UnOp (K.Cast (t, t'), e)
 	  
-    | (Newspeak.Int (sign, sz') as kt', (Newspeak.Float sz as kt)) ->
+    | (Newspeak.Int (sign, _) as kt', (Newspeak.Float _ as kt)) ->
 	if sign = Newspeak.Unsigned then begin 
 	  print_warning "Npkcompile.translate_scalar_cast"
 	    ("cast from float to unsigned integer: "
@@ -156,7 +156,7 @@ and translate_lval lv =
 	let (lv', offs) = removeOffsetLval lv in
 	let t = typeOfLval lv' in
 	  match offs with
-	      Field (info, NoOffset) ->
+	      Field (_, NoOffset) ->
 		let o = Cilutils.offset_of t offs in
 		  K.Shift (translate_lval lv', K.exp_of_int o)
 		    
@@ -221,7 +221,7 @@ and translate_exp e =
 			(Newspeak.Int k')
 		    in
 		      K.UnOp (K.Not, e)
-	      | (K.Scalar Newspeak.Ptr, K.Scalar (Newspeak.Int k')) ->
+	      | (K.Scalar Newspeak.Ptr, K.Scalar (Newspeak.Int _)) ->
 		  let e = translate_exp e in
 		    K.BinOp (Newspeak.Eq Newspeak.Ptr, e, K.Const Newspeak.Nil)
 	      | _ -> 
@@ -247,7 +247,7 @@ and translate_exp e =
 
     | BinOp (Mod as o, e1, e2, t) -> begin
 	match translate_typ t with
-	  | K.Scalar (Newspeak.Int int_t) ->
+	  | K.Scalar (Newspeak.Int _) ->
 	      (K.BinOp (translate_arith_binop o,
 		       translate_exp e1, translate_exp e2))
 		
@@ -414,13 +414,13 @@ and translate_stmtkind status kind =
 	  let rec explore_labels l =
 	    match l with
 		[] -> error "Npkcompile.translate_stmtkind" "unexpected goto"
-	      | (Label (s, loc, false) as l)::r -> begin
+	      | (Label (_, _, false) as l)::r -> begin
 		  try
 		    translate_stmts status 
 		      (Hashtbl.find F.code_to_duplicate l)
 		  with Not_found -> explore_labels r
 		end
-	      | lbl::r -> explore_labels r
+	      | _::r -> explore_labels r
 	  in
 	    explore_labels (!x.labels)
 	      
@@ -436,7 +436,7 @@ and translate_stmts status stmts =
     | stmt::r when List.for_all is_cil_label stmt.labels ->
 	let first = translate_stmtkind status stmt.skind in
 	  first@(translate_stmts status r)
-    | stmt::r ->
+    | stmt::_ ->
 	match stmt.labels with
 	    (Case _ | Default _)::_ ->
 	      error "Npkcompile.translate_stmts" 
@@ -503,7 +503,7 @@ and translate_if status e stmts1 stmts2 =
       | CastE (t, e) -> CastE (t, normalize e)
       | UnOp (LNot, BinOp ((Lt|Le|Gt|Ge|Eq|Ne|LAnd|LOr), _, _, _), _)
       | BinOp ((Lt|Le|Gt|Ge|Eq|Ne|LAnd|LOr), _, _, _) -> e
-      | UnOp (LNot, e, t') -> begin
+      | UnOp (LNot, e, _) -> begin
 	  match translate_typ (typeOf e) with
 	      K.Scalar (Newspeak.Ptr|Newspeak.FunPtr) -> 
 		BinOp (Eq, e, Cilutils.null, Cil.intType)

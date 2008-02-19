@@ -26,10 +26,10 @@
   Charles Hymans
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: charles.hymans(\@)penjili.org
+  email: charles.hymans(at)penjili.org
 
   Olivier Levillain
-  email: olivier.levillain(\@)penjili.org
+  email: olivier.levillain(at)penjili.org
 
   Full text license available {{:lgpl.txt}here}.
 
@@ -55,15 +55,24 @@
   the doc/ directory. 
 
 {2 Getting started }
-- To compile a C file to Newspeak, use {{:#c2newspeak}c2newspeak}.
-- To read and manipulate Newspeak programs in your own projects, use the 
+{ul
+{- To compile a C file to Newspeak, use {{:#c2newspeak}c2newspeak}.}
+{- To read and manipulate Newspeak programs in your own projects, use the 
   functions provided in the library newspeak. 
   Use files [newspeak.cma] (for bytecode) 
   or [newspeak.cmxa] (for native-code). 
   Don't forget to have the interface file [newspeak.cmi] visible from your 
   compilation path.
-- The functions in the library are described there {!Newspeak}.
-
+  Note that some functions in library newspeak use arbitrary precision integer
+  arithmetic from the num library so programs that use the newspeak must be
+  linked as follows:
+{ul
+ {- [ocamlc -I $(NEWSPEAK) nums.cma newspeak.cma \[files\]...]}
+ {- [ocamlopt -I $(NEWSPEAK) nums.cmxa newspeak.cmxa \[files\]...]}
+}
+  where [$(NEWSPEAK)] is the directory that contains file [newspeak.cmi].}
+{- The functions in the library are described there {!Newspeak}.}
+}
 {2 Newspeak tools }
 
 {3:c2newspeak c2newspeak}
@@ -92,4 +101,4 @@ and Jean-Loup Carre for comments, discussions and bug reports.
 {2 Questions, bug reports, comments }
 If you find a bug, have a comment or a question, don't hesitate to visit
 {{:http://www.penjili.org/}http://www.penjili.org/} and submit a ticket, 
-or directly send an email to charles.hymans(@)penjili.org.
+or directly send an email to charles.hymans(at)penjili.org.

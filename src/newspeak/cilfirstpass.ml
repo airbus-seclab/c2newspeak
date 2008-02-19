@@ -73,7 +73,7 @@ object (this)
 
     let add_code goto_stmts label =
       match label with
-	| Label (s, _, false) as l ->
+	| Label (_, _, false) as l ->
 	    Hashtbl.add code_to_duplicate l goto_stmts
 	| _ -> ()
     in
@@ -299,7 +299,7 @@ let first_pass f =
 	      let ftyp = Npkutils.translate_ftyp (args, ret) in
 		Cilenv.update_fun_proto name ftyp
 		  
-	  | [GFun (f, loc)] -> update_fun_def f
+	  | [GFun (f, _)] -> update_fun_def f
 	      
 	  | [GVarDecl (v, _)] -> update_glob_decl v
 		  
