@@ -198,6 +198,7 @@ rule token = parse
   | "/"                 { DIV }
   | "%"                 { MOD }
   | "++"                { PLUSPLUS }
+  | "--"                { MINUSMINUS }
   | "&&"                { AND }
   | "||"                { OR }
   | "*"                 { STAR }

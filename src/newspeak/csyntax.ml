@@ -102,8 +102,9 @@ and exp =
     | Str of string
     | Cast of (exp * typ)
     | Set of (exp * exp)
-(* returns the value and then increment it *)
-    | ExpPlusPlus of exp
+(* returns the value and then increment it (if binop is Plus) or 
+   decrement it if binop is Minus *)
+    | ExpIncr of (binop * exp)
 
 and unop = Neg | Not | BNot
 

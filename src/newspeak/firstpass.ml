@@ -45,7 +45,7 @@ type symb =
 (* functions *)
 let rec simplify_bexp e =
   match e with
-      Var _ | Field _ | Index _ | Deref _ | Call _ | ExpPlusPlus _ -> 
+      Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ -> 
 	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
@@ -432,11 +432,11 @@ let translate (bare_compdefs, globals) =
 
       | Deref e -> C.deref (translate_exp e)
 
-      | ExpPlusPlus lv ->
+      | ExpIncr (op, lv) ->
 	  let (lv, t) = translate_lv lv in
 	  let e = C.Lval (lv, t) in
 	  let one = (C.exp_of_int 1, C.int_typ) in
-	  let (incr_e, _) = translate_binop Plus (e, t) one in
+	  let (incr_e, _) = translate_binop op (e, t) one in
 	  let incr = (C.Set (lv, t, incr_e), Npkcontext.get_loc ()) in
 	    (C.Post (lv, incr), t)
 
@@ -455,7 +455,7 @@ let translate (bare_compdefs, globals) =
 	  in
 	    (e, t)
 	      
-      | Field _ | Index _ | Deref _ | ExpPlusPlus _ -> 
+      | Field _ | Index _ | Deref _ | ExpIncr _ -> 
 	  let (lv, t) = translate_lv e in
 	    (C.Lval (lv, t), t)
 	    

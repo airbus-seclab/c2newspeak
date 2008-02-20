@@ -96,6 +96,8 @@ clean: $(DIR)
 	$(RM) src/newspeak/parser.output src/newspeak/lexer.ml
 	$(RM) src/newspeak/pp_parser.ml src/newspeak/pp_parser.mli
 	$(RM) src/newspeak/pp_parser.output src/newspeak/pp_lexer.ml
+	$(RM) src/newspeak/c2newspeak.exe 
+	$(RM) src/newspeak/.depend src/npkstrip/.depend
 	$(RM) src/version.ml
 	$(RM) doc/*.html doc/*~
 

@@ -99,7 +99,8 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ PLUSEQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS PLUSPLUS STAR LT LTEQ GT GTEQ
+%token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS 
+%token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token EOF
 
@@ -268,7 +269,8 @@ postfix_expression:
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
 | postfix_expression DOT IDENTIFIER        { Field ($1, $3) }
 | postfix_expression ARROW IDENTIFIER      { Field (Deref $1, $3) }
-| postfix_expression PLUSPLUS              { ExpPlusPlus $1 }
+| postfix_expression PLUSPLUS              { ExpIncr (Plus, $1) }
+| postfix_expression MINUSMINUS            { ExpIncr (Minus, $1) }
 ;;
 
 unary_expression:
