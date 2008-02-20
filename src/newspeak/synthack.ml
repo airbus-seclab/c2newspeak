@@ -61,25 +61,24 @@ and decl = (base_typ * var_modifier)
 
 and field = (base_typ * var_modifier * Int64.t option)
 
-type vdecl = (B.typ * string * location)
+type vdecl = (B.typ * string option * location)
 type edecl = (B.enumdecl * location)
 
 let typedefs = Hashtbl.create 100
-let compdefs = ref []
 let fnames = ref String_set.empty
 
-let get_compdefs () = 
-  let res = List.rev !compdefs in
+let add_fname x =
+  fnames := String_set.add x !fnames
+
+let get_fnames () =
+  let res = String_set.elements !fnames in
     Hashtbl.clear typedefs;
-    compdefs := [];
+    fnames := String_set.empty;
     res
 
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
-
-let define_comp n is_struct f = 
-  compdefs := (n, is_struct, f)::(!compdefs)
 
 let define_enum e loc =
   let rec define_enum e n =
@@ -101,11 +100,11 @@ let rec normalize_base_typ t =
       Integer k -> ([], B.Int k)
     | Float n -> ([], B.Float n)
     | Struct (n, f) -> 
-	let enumdecls = normalize_compdef n true f in
-	  (enumdecls, B.Struct n)
+	let (enumdecls, f) = normalize_compdef f in
+	  (enumdecls, B.Struct (n, f))
     | Union (n, f) -> 
-	let enumdecls = normalize_compdef n false f in
-	  (enumdecls, B.Union n)
+	let (enumdecls, f) = normalize_compdef f in
+	  (enumdecls, B.Union (n, f))
     | Void -> ([], B.Void)
     | Enum f ->
 	let enumdecls = 
@@ -117,15 +116,14 @@ let rec normalize_base_typ t =
     | Name x -> 
 	try ([], Hashtbl.find typedefs x)
 	with Not_found ->
-	  Npkcontext.error "Synthack.normalize_base_typ" ("Unknown type "^x)
+	  Npkcontext.error "Synthack.normalize_base_typ" ("unknown type "^x)
 
-and normalize_compdef n is_struct f =
+and normalize_compdef f =
   match f with
-      None -> []
+      None -> ([], None)
     | Some f -> 
 	let (enumdecls, f) = normalize_fields f in
-	  define_comp n is_struct f;
-	  enumdecls
+	  (enumdecls, Some f)
 
 and normalize_fields f =
   match f with
@@ -141,16 +139,23 @@ and normalize_fields f =
 		Npkcontext.error "Synthack.normalize_field" 
 		  "bit-fields allowed only with integer types"
 	in
+	let x = 
+	  match x with
+	      Some x -> x
+	    | None -> 
+		Npkcontext.error "Synthack.normalize_field" 
+		  "unknown field name"
+	in
 	let (enumdecls', f) = normalize_fields tl in
 	  (enumdecls@enumdecls', (t, x)::f)
     | [] -> ([], [])
 
 and normalize_var_modifier b v =
   match v with
-      Abstract -> (b, undefined, Newspeak.dummy_loc "")
-    | Variable (x, loc) -> (b, x, loc)
+      Abstract -> (b, None, Newspeak.dummy_loc "")
+    | Variable (x, loc) -> (b, Some x, loc)
     | Function (Variable (f, loc), args, va_list) -> 
-	(B.Fun (List.map normalize_arg args, va_list, b), f, loc)
+	(B.Fun (List.map normalize_arg args, va_list, b), Some f, loc)
     | Function (Pointer v, args, va_list) -> 
 	let args = List.map normalize_arg args in
 	  normalize_var_modifier (B.Ptr (B.Fun (args, va_list, b))) v
@@ -162,9 +167,15 @@ and normalize_var_modifier b v =
 	  
 and normalize_arg a = 
   let (enumdecls, (t, x, _)) = normalize_decl a in
-    if (enumdecls <> [])
-    then Npkcontext.error "Synthack.normalize_arg" 
-      "enum definition not allowed in argument";
+  let x = 
+    match x with
+	Some x -> x
+      | None -> "silent argument"
+  in
+    if (enumdecls <> []) then begin
+      Npkcontext.error "Synthack.normalize_arg" 
+	"enum definition not allowed in argument"
+    end;
     (t, x)
 
 and normalize_decl (b, v) =
@@ -172,10 +183,3 @@ and normalize_decl (b, v) =
   let d = normalize_var_modifier t v in
     (enumdecls, d)
 
-let add_fname x =
-  fnames := String_set.add x !fnames
-
-let get_fnames () =
-  let res = String_set.elements !fnames in
-    fnames := String_set.empty;
-    res

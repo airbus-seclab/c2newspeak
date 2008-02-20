@@ -192,36 +192,41 @@ let size_of compdefs t =
   in
     size_of t
 
-let rec len_of_exp e =
-  let i = 
+let len_of_exp e =
+  let rec len_of_exp e =
     match e with
-	Const (CInt i) -> i
+	Const (CInt i) -> Big_int.big_int_of_string (Int64.to_string i)
       | Binop (Plus _, e1, e2) ->
-	  let i1 = Int64.of_int (len_of_exp e1) in
-	  let i2 = Int64.of_int (len_of_exp e2) in
-	    Int64.add i1 i2
+	  let i1 = len_of_exp e1 in
+	  let i2 = len_of_exp e2 in
+	    Big_int.add_big_int i1 i2
       | Binop (Minus _, e1, e2) ->
-	  let i1 = Int64.of_int (len_of_exp e1) in
-	  let i2 = Int64.of_int (len_of_exp e2) in
-	    Int64.sub i1 i2
+	  let i1 = len_of_exp e1 in
+	  let i2 = len_of_exp e2 in
+	    Big_int.sub_big_int i1 i2
       | Binop (Mult _, e1, e2) ->
-	  let i1 = Int64.of_int (len_of_exp e1) in
-	  let i2 = Int64.of_int (len_of_exp e2) in
-	    Int64.mul i1 i2
+	  let i1 = len_of_exp e1 in
+	  let i2 = len_of_exp e2 in
+	    Big_int.mult_big_int i1 i2
       | Binop (Div _, e1, e2) ->
-	  let i1 = Int64.of_int (len_of_exp e1) in
-	  let i2 = Int64.of_int (len_of_exp e2) in
-	    Int64.div i1 i2
+	  let i1 = len_of_exp e1 in
+	  let i2 = len_of_exp e2 in
+	    Big_int.div_big_int i1 i2
       | _ -> 
 	  Npkcontext.error "Csyntaxt.len_of_exp" 
 	    "static expression expected"
   in
-    if ((Int64.compare i Int64.zero <= 0) 
-	 || (Int64.compare i (Int64.of_int max_int) > 0)) then begin
+  let i = len_of_exp e in
+    if not (Big_int.is_int_big_int i) then begin
       Npkcontext.error "Csyntax.len_of_exp" 
-	("invalid size for array: "^(Int64.to_string i))
+	("invalid size for array: "^(Big_int.string_of_big_int i))
     end;
-    Int64.to_int i
+    let i = Big_int.int_of_big_int i in
+      if i <= 0 then begin
+	Npkcontext.error "Csyntax.len_of_exp" 
+	  ("invalid size for array: "^(string_of_int i))
+      end;
+      i
 
 let fields_of_typ compdefs t =
   match t with

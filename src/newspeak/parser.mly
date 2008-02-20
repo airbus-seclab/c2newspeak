@@ -51,27 +51,52 @@ let process_decls build (b, m) =
     (enumdecls, List.map process m)
 
 let build_glbdecl (static, extern) d =
-  let build_edecl (d, loc) = (GlbEDecl d, loc) in
   let build_vdecl (t, x, loc) init = 
     (GlbVDecl ((x, t, static, init), extern), loc) 
   in
   let (edecls, vdecls) = process_decls build_vdecl d in
+  let build_edecl (d, loc) = (GlbEDecl d, loc) in
   let edecls = List.map build_edecl edecls in
     (edecls@vdecls)
 
 let build_fundef (b, m, body) = 
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let x =
+    match x with
+	Some x -> x
+      | None -> 
+	  (* TODO: code cleanup remove these things !!! *)
+	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+  in
     (FunctionDef (x, t, body), loc)::[]
       
 let build_glbtypedef d =
   let build_edecl (d, loc) = (GlbEDecl d, loc) in
-  let build_vdecl (t, x, _) _ = Synthack.define_type x t in
+  let build_vdecl (t, x, _) _ = 
+    let x =
+      match x with
+	  Some x -> x
+	| None -> 
+	    (* TODO: code cleanup remove these things !!! *)
+	    Npkcontext.error "Firstpass.translate_global" "type name"
+    in
+      Synthack.define_type x t 
+  in
   let (edecls, _) = process_decls build_vdecl d in
     List.map build_edecl edecls
 
 let build_typedef d =
   let build_edecl (d, loc) = (EDecl d, loc) in
-  let build_vdecl (t, x, _) _ = Synthack.define_type x t in
+  let build_vdecl (t, x, _) _ = 
+    let x =
+      match x with
+	  Some x -> x
+	| None -> 
+	    (* TODO: code cleanup remove these things !!! *)
+	    Npkcontext.error "Firstpass.translate_global" "type name"
+    in
+      Synthack.define_type x t 
+  in
   let (edecls, _) = process_decls build_vdecl d in
     List.map build_edecl edecls
 
@@ -122,8 +147,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit                         { (Synthack.get_fnames (), 
-					     (Synthack.get_compdefs (), $1)) }
+  translation_unit                         { (Synthack.get_fnames (), $1) }
 ;;
 
 translation_unit:
@@ -145,7 +169,7 @@ function_definition:
 ;;
 
 declaration:
-  declaration_specifiers SEMICOLON         { ($1, []) }
+  declaration_specifiers SEMICOLON         { ($1, (Abstract, None)::[]) }
 | declaration_specifiers 
   init_declarator_list SEMICOLON           { ($1, $2) }
 ;;

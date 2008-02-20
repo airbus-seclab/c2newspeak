@@ -186,7 +186,7 @@ let translate_unop op (e, t) =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate (bare_compdefs, globals) =
+let translate globals =
   let compdefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
@@ -563,12 +563,63 @@ let translate (bare_compdefs, globals) =
 		    Some i
 	  in
 	    C.Array (t, len)
-      | Struct n -> C.Struct n
-      | Union n -> C.Union n
+      | Struct (n, None) -> C.Struct n
+      | Union (n, None) -> C.Union n
+      | Struct (n, Some f) -> 
+	  let f = translate_struct_fields f in
+	    Hashtbl.add compdefs n f;
+	    C.Struct n
+      | Union (n, Some f) -> 
+	  let f = translate_union_fields f in
+	    Hashtbl.add compdefs n f;
+	    C.Union n
       | Bitfield _ -> 
 	  Npkcontext.error "Firstpass.translate_typ" 
 	    "bitfields not allowed outside of structures"
   
+  and translate_struct_fields f =
+    let o = ref 0 in
+    let last_align = ref 1 in
+    let rec translate (t, x) =
+      match t with
+	  Bitfield ((_, n), sz) when sz > n ->
+	    Npkcontext.error "Firstpass.translate_struct_fields"
+	      "width of bitfield exceeds its type"
+	| Bitfield ((s, n), sz) ->
+	    let t = translate_typ (Int (s, n)) in
+	    let cur_align = C.align_of compdefs t in
+	    let o' = C.next_aligned !o cur_align in
+	    let o' = if !o + sz <= o' then !o else o' in
+	    let t = translate_typ (Int (s, sz)) in
+	      last_align := max !last_align cur_align;
+	      o := !o + sz;
+	      (x, (o', t))
+	| _ ->
+	    let t = translate_typ t in
+	    let sz = C.size_of compdefs t in
+	    let cur_align = C.align_of compdefs t in
+	    let o' = C.next_aligned !o cur_align in
+	      last_align := max !last_align cur_align;
+	      o := o'+sz;
+	      (x, (o', t))
+    in
+    let f = List.map translate f in
+      (f, C.next_aligned !o !last_align, !last_align)
+      
+  and translate_union_fields f =
+    let n = ref 0 in
+    let align = ref 0 in
+    let translate (t, x) =
+      let t = translate_typ t in
+      let sz = C.size_of compdefs t in
+      let align' = C.align_of compdefs t in
+	align := max !align align';
+	if !n < sz then n := sz;
+	(x, (0, t))
+    in
+    let f = List.map translate f in
+      (f, !n, !align)
+
   and translate_ftyp (args, va_list, ret) =
     let translate_arg (t, x) =
       let t =
@@ -626,7 +677,13 @@ let translate (bare_compdefs, globals) =
 	    remove_symb x;
 	    body
 
-      | (VDecl (x, t, static, init), loc)::body when static -> 
+      (* TODO: not good, simplify code *)
+      | (VDecl (None, t, _, _), loc)::body -> 
+	  Npkcontext.set_loc loc;
+	  let _ = translate_typ t in
+	    translate_blk body
+
+      | (VDecl (Some x, t, static, init), loc)::body when static -> 
 	  Npkcontext.set_loc loc;
 	  let t = translate_typ t in
 	  let (t, init) = translate_glb_init t init in
@@ -635,7 +692,7 @@ let translate (bare_compdefs, globals) =
 	      remove_symb x;
 	      body
 	  
-      | (VDecl (x, t, _, init), loc)::body -> 
+      | (VDecl (Some x, t, _, init), loc)::body -> 
 	  let init = translate_local_decl (x, t, init) loc in
 	  let body = translate_blk body in
 	    remove_symb x;
@@ -759,12 +816,17 @@ let translate (bare_compdefs, globals) =
 
       | GlbEDecl d -> translate_enum d loc
 
+      (* TODO: not good, simplify this code *)
+      | GlbVDecl ((None, t, _, _), _) -> 
+	  let _ = translate_typ t in
+	    ()
+
 (* TODO: put this check in parser ?? *)
       | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbVDecl ((x, t, static, init), is_extern) ->
+      | GlbVDecl ((Some x, t, static, init), is_extern) ->
 	  begin match (t, init) with
 	      (Fun ft, None) -> 
 		let ft = translate_proto_ftyp x ft in
@@ -782,60 +844,5 @@ let translate (bare_compdefs, globals) =
 	  end
   in
 
-  let translate_struct_fields f =
-    let o = ref 0 in
-    let last_align = ref 1 in
-    let rec translate (t, x) =
-      match t with
-	  Bitfield ((_, n), sz) when sz > n ->
-	    Npkcontext.error "Firstpass.translate_struct_fields"
-	      "width of bitfield exceeds its type"
-	| Bitfield ((s, n), sz) ->
-	    let t = translate_typ (Int (s, n)) in
-	    let cur_align = C.align_of compdefs t in
-	    let o' = C.next_aligned !o cur_align in
-	    let o' = if !o + sz <= o' then !o else o' in
-	    let t = translate_typ (Int (s, sz)) in
-	      last_align := max !last_align cur_align;
-	      o := !o + sz;
-	      (x, (o', t))
-	| _ ->
-	    let t = translate_typ t in
-	    let sz = C.size_of compdefs t in
-	    let cur_align = C.align_of compdefs t in
-	    let o' = C.next_aligned !o cur_align in
-	      last_align := max !last_align cur_align;
-	      o := o'+sz;
-	      (x, (o', t))
-    in
-    let f = List.map translate f in
-      (f, C.next_aligned !o !last_align, !last_align)
-      
-  in
-
-  let translate_union_fields f =
-    let n = ref 0 in
-    let align = ref 0 in
-    let translate (t, x) =
-      let t = translate_typ t in
-      let sz = C.size_of compdefs t in
-      let align' = C.align_of compdefs t in
-	align := max !align align';
-	if !n < sz then n := sz;
-	(x, (0, t))
-    in
-    let f = List.map translate f in
-      (f, !n, !align)
-  in
-
-  let translate_compdef (n, is_struct, fields) =
-    let fields =
-      if is_struct then translate_struct_fields fields
-      else translate_union_fields fields
-    in
-      Hashtbl.add compdefs n fields
-  in
-    
-    List.iter translate_compdef bare_compdefs;
     List.iter translate_global globals;
     (compdefs, glbdecls, fundefs)

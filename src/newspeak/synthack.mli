@@ -21,7 +21,7 @@ and decl = (base_typ * var_modifier)
 
 and field = (base_typ * var_modifier * Int64.t option)
 
-type vdecl = (Csyntax.typ * string * location)
+type vdecl = (Csyntax.typ * string option * location)
 type edecl = (Csyntax.enumdecl * Newspeak.location)
 
 val normalize_base_typ: base_typ -> (edecl list * Csyntax.typ)
@@ -29,8 +29,6 @@ val normalize_base_typ: base_typ -> (edecl list * Csyntax.typ)
 val normalize_var_modifier: Csyntax.typ -> var_modifier -> vdecl
 
 val normalize_decl: decl -> (edecl list * vdecl)
-
-val get_compdefs: unit -> Csyntax.compdefs
 
 val define_type: string -> Csyntax.typ -> unit
 

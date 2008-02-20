@@ -26,10 +26,7 @@
 open Newspeak
 open Cir
 
-type prog = (compdefs * (global * location) list)
-
-(* true for structure/ false for union *)
-and compdefs = (string * bool * declaration list) list
+type prog = (global * location) list
 
 and global = 
     | FunctionDef of (string * typ * blk)
@@ -40,7 +37,7 @@ and global =
 
 and extern = bool
 
-and vardecl = string * typ * static * init option
+and vardecl = string option * typ * static * init option
 
 and enumdecl = string * exp
 
@@ -56,8 +53,8 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
-    | Struct of string
-    | Union of string
+    | Struct of (string * declaration list option)
+    | Union of (string * declaration list option)
     | Fun of ftyp
 
 and init = 
