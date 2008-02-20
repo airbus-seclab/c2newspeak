@@ -184,7 +184,11 @@ let size_of compdefs t =
       | Ptr _ -> Config.size_of_ptr
       | Array (t, Some n) -> (size_of t) * n
       | Struct n | Union n -> 
-	  let (_, sz, _) = Hashtbl.find compdefs n in
+	  let (_, sz, _) = 
+	    try Hashtbl.find compdefs n 
+	    with Not_found -> 
+	      Npkcontext.error "Cir.size_of" ("unknown structure or union "^n)
+	  in
 	    sz
       | Fun _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of function"
       | Array _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of array"

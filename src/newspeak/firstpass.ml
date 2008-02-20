@@ -320,8 +320,13 @@ let translate globals =
 	      translate_sequence o t n seq;
 	      C.Array (t, Some n)
 	
-	| (Sequence seq, C.Struct n) -> 
-	    let (f, _, _) = Hashtbl.find compdefs n in
+	| (Sequence seq, C.Struct n) ->
+	    let (f, _, _) = 
+	      try Hashtbl.find compdefs n 
+	      with Not_found -> 
+		Npkcontext.error "Firstpass.translate_init" 
+		  ("unknown structure "^n)
+	    in
 	      List.iter2 (translate_field_sequence o) f seq;
 	      C.Struct n
 			

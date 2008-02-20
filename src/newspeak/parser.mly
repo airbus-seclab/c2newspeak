@@ -72,7 +72,7 @@ let build_fundef (b, m, body) =
       
 let build_glbtypedef d =
   let build_edecl (d, loc) = (GlbEDecl d, loc) in
-  let build_vdecl (t, x, _) _ = 
+  let build_vdecl (t, x, loc) init = 
     let x =
       match x with
 	  Some x -> x
@@ -80,14 +80,17 @@ let build_glbtypedef d =
 	    (* TODO: code cleanup remove these things !!! *)
 	    Npkcontext.error "Firstpass.translate_global" "type name"
     in
-      Synthack.define_type x t 
+      Synthack.define_type x t;
+      (* TODO: clean this up *)
+      (GlbVDecl ((None, t, false, init), false), loc) 
   in
-  let (edecls, _) = process_decls build_vdecl d in
-    List.map build_edecl edecls
+  let (edecls, vdecls) = process_decls build_vdecl d in
+  let edecls = List.map build_edecl edecls in
+    edecls@vdecls
 
 let build_typedef d =
   let build_edecl (d, loc) = (EDecl d, loc) in
-  let build_vdecl (t, x, _) _ = 
+  let build_vdecl (t, x, loc) init = 
     let x =
       match x with
 	  Some x -> x
@@ -95,10 +98,12 @@ let build_typedef d =
 	    (* TODO: code cleanup remove these things !!! *)
 	    Npkcontext.error "Firstpass.translate_global" "type name"
     in
-      Synthack.define_type x t 
+      Synthack.define_type x t;
+      (VDecl (None, t, false, init), loc)
   in
-  let (edecls, _) = process_decls build_vdecl d in
-    List.map build_edecl edecls
+  let (edecls, vdecls) = process_decls build_vdecl d in
+  let edecls = List.map build_edecl edecls in
+    edecls@vdecls
 
 let build_stmtdecl static d =
   let build_edecl (d, loc) = (EDecl d, loc) in
