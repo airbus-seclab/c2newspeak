@@ -1,1 +1,1 @@
-Fatal error: unecessary creation of a pointer from a dereference: rewrite the code in 232.c line 30
+Fatal error: unnecessary creation of a pointer from a dereference: rewrite the code in 232.c line 30

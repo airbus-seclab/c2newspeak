@@ -464,9 +464,17 @@ let translate globals =
 	  let (lv, t) = translate_lv e in
 	    (C.Lval (lv, t), t)
 	    
+      | AddrOf (Deref e) when !Npkcontext.dirty_syntax ->
+	  Npkcontext.print_warning "Firstpass.translate_exp" 
+	    ("unnecessary creation of a pointer from a dereference:"
+	     ^" rewrite the code");
+	  let e = translate_exp e in
+	  let (e, t) = C.deref e in
+	    (C.AddrOf (e, t), C.Ptr t)
+
       | AddrOf (Deref _) -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
-	    ("unecessary creation of a pointer from a dereference:"
+	    ("unnecessary creation of a pointer from a dereference:"
 	      ^" rewrite the code")
 
       | AddrOf (Index (lv, Cst (C.CInt i))) 
