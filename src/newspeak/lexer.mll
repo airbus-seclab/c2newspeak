@@ -67,6 +67,12 @@ let int64_of_string base str =
       Npkcontext.error "Lexer.int64_of_string"
 	"integer too large: not representable"
 
+let int64_of_hex_character str =
+  let len = String.length str in
+  let str = String.sub str 3 (len - 4) in
+  let str = "0x"^str in
+    Int64.of_string str
+      
 let int64_of_character str = Int64.of_int (int_of_char (str.[1]))
 
 let extract_string s = String.sub s 1 (String.length s - 2)
@@ -127,6 +133,7 @@ let hex_integer = "0x" hex_digit+
 let oct_integer = "0" digit+
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
+let hex_character = '\'' "\\x" hex_digit hex_digit '\''
 let backslash_character = "\'\\0\'"
 
 rule token = parse
@@ -168,6 +175,8 @@ rule token = parse
   | ull_integer         { INTEGER (int64_of_string "" (strip lexbuf 0 3)) }
   | hex_integer         { INTEGER (int64_of_string "0x" (strip lexbuf 2 0)) }
   | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
+  | hex_character       { INTEGER (int64_of_hex_character 
+				     (Lexing.lexeme lexbuf)) }
   | backslash_character { INTEGER Int64.zero }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
