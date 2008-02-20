@@ -231,6 +231,7 @@ statement:
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | compound_statement                       { [Block $1, get_loc ()] }
+| SEMICOLON                                { [] }
 ;;
 
 
