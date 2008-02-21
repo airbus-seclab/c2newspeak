@@ -43,6 +43,31 @@ type symb =
     | Enum of C.exp
 
 (* functions *)
+let simplify_if loc if_stmt =
+  let rec simplify (e, blk1, blk2) =
+    match e with
+	IfExp (c, e1, e2) ->
+	  let blk1 = (If (e1, blk1, blk2), loc)::[] in
+	  let blk2 = (If (e2, blk1, blk2), loc)::[] in
+	    simplify (c, blk1, blk2)
+
+      | Unop (Not, e) -> (e, blk2, blk1)
+      | _ -> (e, blk1, blk2)
+  in
+    simplify if_stmt
+(*
+      | If (IfExp (c, e1, e2), blk1, blk2) ->
+	  let if_e1_blk = (If (e1, blk1, blk2), loc)::[] in
+	  let if_e2_blk = (If (e2, blk1, blk2), loc)::[] in
+	    print_endline "U";
+	    let t = translate_stmt (If (c, if_e1_blk, if_e2_blk), loc) in
+	      print_endline "V";
+	      t
+
+      | If (Unop (Not, (IfExp _ as e)), blk1, blk2) ->
+	  translate_stmt (If (e, blk2, blk1), loc)
+*)
+
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ -> 
@@ -741,20 +766,10 @@ let translate globals =
 	  let return = (Return None, loc) in
 	    translate_blk (set::return::[])
 
-      | If (IfExp (c, e1, e2), blk1, blk2) ->
-	  let if_e1_blk = (If (e1, blk1, blk2), loc)::[] in
-	  let if_e2_blk = (If (e2, blk1, blk2), loc)::[] in
-	    translate_stmt (If (c, if_e1_blk, if_e2_blk), loc)
-
-      | If (Unop (Not, (IfExp _ as e)), blk1, blk2) ->
-	  translate_stmt (If (e, blk2, blk1), loc)
-
       | If (e, blk1, blk2) ->
-	  let e = simplify_bexp e in
-	  let (e, _) = translate_exp e in
 	  let blk1 = translate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
-	    (C.If (e, blk1, blk2), loc)::[]
+	    translate_if loc (e, blk1, blk2)
 
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
@@ -780,6 +795,42 @@ let translate globals =
       | VDecl _ | EDecl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt"
 	    "unreachable code"
+
+  and translate_if loc if_stmt =
+    let rec translate (e, blk1, blk2) =
+      match e with
+	  IfExp (c, e1, e2) ->
+	    let blk1' = translate (e1, blk1, blk2) in
+	    let blk2' = translate (e2, blk1, blk2) in
+	      translate (c, blk1', blk2')
+
+	| Unop (Not, e) -> translate (e, blk2, blk1)
+
+	| Cst (C.CInt c) when Int64.compare c Int64.zero <> 0 -> blk1
+	    
+	| Cst (C.CInt _) -> blk2
+    
+	| _ -> 
+	    let e = simplify_bexp e in
+	    let (e, _) = translate_exp e in
+	      (C.If (e, blk1, blk2), loc)::[]
+    in
+      translate if_stmt
+(*
+let simplify_if loc if_stmt =
+  let rec simplify (e, blk1, blk2) =
+    match e with
+	IfExp (c, e1, e2) ->
+	  let blk1 = (If (e1, blk1, blk2), loc)::[] in
+	  let blk2 = (If (e2, blk1, blk2), loc)::[] in
+	    simplify (c, blk1, blk2)
+
+      | Unop (Not, e) -> (e, blk2, blk1)
+      | _ -> (e, blk1, blk2)
+  in
+    simplify if_stmt
+*)
+
 
   and translate_switch x =
     match x with

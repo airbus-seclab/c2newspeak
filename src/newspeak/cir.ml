@@ -141,6 +141,7 @@ and cst =
     | CInt of Int64.t
     | CFloat of string
 
+
 let create_tmp loc t = 
   let id = fresh_id () in
   let decl = (Decl (t, "!tmp", id), loc) in
@@ -381,6 +382,7 @@ and normalize_stmt (x, loc) =
 	     could add a variable instead, if variable elimination later 
 	     on is good enough *)
 	  pref@(If (e, post@body1, post@body2), loc)::[]
+
     | Switch (e, choices, default) ->
 	let (pref, e, post) = normalize_exp e in
 	let choices = List.map (normalize_choice post) choices in
@@ -547,8 +549,9 @@ let normalize x =
 	    ((e, body)::tl, Set.union used_lbls1 used_lbls2)
       | [] -> ([], Set.empty)
   in
-
-  let (body, _) = set_scope_blk (normalize_blk x) in
+    
+  let x = normalize_blk x in
+  let (body, _) = set_scope_blk x in
     body
 
 let len_of_array n lv =

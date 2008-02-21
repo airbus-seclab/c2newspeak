@@ -260,6 +260,8 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let body1 = translate_blk body1 in
 	  let body2 = translate_blk body2 in begin
 	    match cond1 with
+(* TODO: remove this code and have it as a simplification for newspeak rather 
+*)
 		K.Const N.CInt64 i when Int64.compare i Int64.zero <> 0 -> 
 		  body1
 	      | K.Const N.CInt64 _ -> body2
