@@ -43,31 +43,6 @@ type symb =
     | Enum of C.exp
 
 (* functions *)
-let simplify_if loc if_stmt =
-  let rec simplify (e, blk1, blk2) =
-    match e with
-	IfExp (c, e1, e2) ->
-	  let blk1 = (If (e1, blk1, blk2), loc)::[] in
-	  let blk2 = (If (e2, blk1, blk2), loc)::[] in
-	    simplify (c, blk1, blk2)
-
-      | Unop (Not, e) -> (e, blk2, blk1)
-      | _ -> (e, blk1, blk2)
-  in
-    simplify if_stmt
-(*
-      | If (IfExp (c, e1, e2), blk1, blk2) ->
-	  let if_e1_blk = (If (e1, blk1, blk2), loc)::[] in
-	  let if_e2_blk = (If (e2, blk1, blk2), loc)::[] in
-	    print_endline "U";
-	    let t = translate_stmt (If (c, if_e1_blk, if_e2_blk), loc) in
-	      print_endline "V";
-	      t
-
-      | If (Unop (Not, (IfExp _ as e)), blk1, blk2) ->
-	  translate_stmt (If (e, blk2, blk1), loc)
-*)
-
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ -> 
@@ -804,7 +779,7 @@ let translate globals =
 	    let blk2' = translate (e2, blk1, blk2) in
 	      translate (c, blk1', blk2')
 
-	| Unop (Not, e) -> translate (e, blk2, blk1)
+	| Unop (Not, (IfExp _ as e)) -> translate (e, blk2, blk1)
 
 	| Cst (C.CInt c) when Int64.compare c Int64.zero <> 0 -> blk1
 	    
@@ -816,20 +791,6 @@ let translate globals =
 	      (C.If (e, blk1, blk2), loc)::[]
     in
       translate if_stmt
-(*
-let simplify_if loc if_stmt =
-  let rec simplify (e, blk1, blk2) =
-    match e with
-	IfExp (c, e1, e2) ->
-	  let blk1 = (If (e1, blk1, blk2), loc)::[] in
-	  let blk2 = (If (e2, blk1, blk2), loc)::[] in
-	    simplify (c, blk1, blk2)
-
-      | Unop (Not, e) -> (e, blk2, blk1)
-      | _ -> (e, blk1, blk2)
-  in
-    simplify if_stmt
-*)
 
 
   and translate_switch x =

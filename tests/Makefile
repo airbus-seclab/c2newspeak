@@ -46,8 +46,10 @@ TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 .SILENT: check $(TESTS)
 .PHONY: $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
-check: ../bin/c2newspeak $(TESTS)
-	for i in $(DIR); do make -C $$i check; done
+check: ../bin/c2newspeak $(TESTS) $(addsuffix .check, $(DIR))
+
+%.check: ../bin/c2newspeak
+	make -C $*
 
 001: 026 028 176 177
 000: 030 031
@@ -138,8 +140,9 @@ $(TESTS.CIL.SPEC): ../bin/c2newspeak
 ../bin/c2newspeak: 
 	make -C .. install
 
-clean:
+clean: $(addsuffix .clean, $(DIR))
 	$(RM) $(TESTS)
-	for i in $(DIR); do make -C $$i clean; done
 	$(RM) *~ *.bak result *.no *.npk
 
+%.clean: 
+	make -C $* clean
