@@ -423,12 +423,20 @@ init_declarator:
 init:
   expression                               { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
-| LBRACE RBRACE                            { Sequence [] }
 ;;
 
 init_list:
   init COMMA init_list                     { $1::$3 }
 | init                                     { $1::[] }
+|                                          {
+  let report_error = 
+    if !Npkcontext.dirty_syntax 
+    then Npkcontext.print_warning
+    else Npkcontext.error
+  in
+    report_error "Parser.type_specifier" "ugly initializer syntax";
+    []
+  }
 ;;
 
 abstract_declarator:
@@ -482,11 +490,12 @@ type_specifier:
 | ityp                                   { Integer (Newspeak.Signed, $1) }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
-    if (not !Npkcontext.dirty_syntax) 
-    then begin
-      Npkcontext.error "Parser.type_specifier" 
-	"Integer kind should be specified"
-    end;
+  let report_error = 
+    if !Npkcontext.dirty_syntax 
+    then Npkcontext.print_warning
+    else Npkcontext.error
+  in
+    report_error "Parser.type_specifier" "Integer kind should be specified";
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 | ftyp                                   { Float $1 }
