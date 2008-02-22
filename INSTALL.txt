@@ -21,7 +21,8 @@ Newspeak is designed for the purpose of static analysis.
 - To compile a C file to Newspeak, use c2newspeak
 - To read and manipulate Newspeak files in your own project, use the libraries 
   newspeak.cma (for bytecode) 
-  or newspeak.a and newspeak.cmxa (for native-code).
+  or newspeak.a and newspeak.cmxa (for native-code). (Note that newspeak.cmxa
+  needs the standard ocaml nums.cmxa)
 - Please refer to the documentation doc/index.html.
 
 If you find a bug, have a comment or a question, don't hesitate to visit

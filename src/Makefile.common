@@ -8,7 +8,7 @@ OCAMLOPT=ocamlopt
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-FILES = ../date $(OBJ)
+FILES = $(OBJ)
 
 LIB  = unix.cma str.cma nums.cma $(CIL)/cil.cma
 LIBX = $(LIB:.cma=.cmxa)
@@ -22,7 +22,7 @@ O    = $(addsuffix .o, $(FILES))
 DOC_FILES = $(MLI) $(DOC_ML_FILES)
 DOC_DIR = doc
 
-.PHONY: all clean doc date.ml
+.PHONY: all clean doc
 
 all: $(CMX) $(TGT)
 
@@ -37,12 +37,8 @@ doc: $(DOC_FILES)
 	-mkdir $(DOC_DIR)
 	$(OCAMLDOC) -d  $(DOC_DIR) -html -m A $(FLAGS) $(DOC_FILES)
 
-install: ../date.ml all
+install: all
 	cp $(TGT) $(INSTALL_FILES) ../../bin
-
-../date.ml:
-	hg parents --template 'let date = "{date|shortdate}"\n' > ../date.ml
-	hg parents --template 'let revision = "{node|short}"\n' >> ../date.ml
 
 # Common rules
 .SUFFIXES: .ml .mli .cmo .cmi .cmx
@@ -65,7 +61,6 @@ install: ../date.ml all
 # Clean up
 clean:
 	$(RM) $(CLEANFILES)
-	$(RM) ../date.ml
 	$(RM) -r $(DOC_DIR)
 	$(RM) $(TGT) $(TGT).exe
 	$(RM) ../scalars/natural.ml *.cmi *.cmo *.cmx *.o

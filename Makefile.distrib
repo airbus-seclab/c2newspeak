@@ -1,0 +1,113 @@
+VERSION=1.2
+
+CP=cp
+RM=rm -rf
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc
+OCAMLC=ocamlc -w Ael -warn-error Ael
+OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 10 -noassert -unsafe
+OCAMLDEP=ocamldep
+OCAMLDOC=ocamldoc
+
+DIR=src bin tests
+
+INCLUDE=-I $(CIL) -I src/ -I src/newspeak/
+LIB=nums.cma
+LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)/cil.cmxa
+
+C2NFILES:=config cilutils params npkcontext newspeak \
+         pp_syntax pp_lexer pp_parser \
+         csyntax cir synthack lexer parser \
+         npkil npkutils cilenv \
+         cilfirstpass cilcompiler \
+         firstpass compiler \
+         link c2newspeak
+C2NFILES:=version $(addprefix newspeak/, $(C2NFILES))
+C2NFILES:=$(addprefix src/, $(C2NFILES))
+C2NCMX=$(addsuffix .cmx, $(C2NFILES))
+
+MLI=$(addsuffix .mli, $(C2NFILES))
+ML=$(addsuffix .ml, $(C2NFILES))
+
+NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a
+
+CLEANFILES=*~ .depend \
+           *.a *.cma *.cmxa \
+           bin/*.a bin/*.cma bin/*.cmxa \
+           src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
+           src/npkstrip/*.cmi src/npkstrip/*.cmx src/npkstrip/*.o \
+           src/npkstrip/npkstrip src/npkstrip/npkstrip.exe \
+           src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
+           src/newspeak/*~ \
+           src/newspeak/parser.ml src/newspeak/parser.mli \
+           src/newspeak/parser.output src/newspeak/lexer.ml \
+           src/newspeak/pp_parser.ml src/newspeak/pp_parser.mli \
+           src/newspeak/pp_parser.output src/newspeak/pp_lexer.ml \
+           src/newspeak/c2newspeak.exe \
+           src/newspeak/.depend src/npkstrip/.depend \
+           src/version.o src/version.cmi src/version.cmo src/version.cmx \
+           doc/*.html doc/*~ \
+           bin/*.exe bin/*.cmi \
+           bin/c2newspeak bin/npk2bytesz bin/npksimplify \
+           bin/npkstats bin/npkstrip
+
+.PHONY: $(DIR) all clean check install tar doc
+
+#TODO: remove this recursive call
+install: c2newspeak doc npkstrip newspeak
+	make -C src install
+
+newspeak: $(NPKFILES)
+	$(CP) $(NPKFILES) bin
+
+c2newspeak: $(C2NCMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(C2NCMX) -o bin/c2newspeak
+
+#TODO: clean up this
+npkstrip: src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx -o bin/npkstrip
+
+#TODO: clean up this
+newspeak.cma: src/version.cmi src/version.cmx src/newspeak/newspeak.ml
+	$(OCAMLC) $(INCLUDE) $(LIB) -a src/version.ml src/newspeak/newspeak.ml -o newspeak.cma
+
+#TODO: clean up this
+newspeak.a newspeak.cmxa: src/version.cmi src/version.cmx src/newspeak/newspeak.ml
+	$(OCAMLOPT) $(INCLUDE) -a src/version.cmx src/newspeak/newspeak.ml -o newspeak.cmxa
+
+#Implicit rules
+%.cmi: %.mli
+	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+
+%.cmo: %.ml
+	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+
+%.cmx: %.ml
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
+
+%.ml: %.mll
+	$(OCAMLLEX) $<
+
+%.mli %.ml: %.mly
+	$(OCAMLYACC) -v $<
+
+check: 
+	$(MAKE) -C tests
+
+doc:
+	$(OCAMLDOC) src/newspeak/newspeak.mli -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
+
+#TODO: do not call clean recursively
+clean: $(DIR)
+	make -C tests clean
+	make -C src clean
+	$(RM) $(CLEANFILES)
+
+tar:
+	make clean
+	cd ..; tar -czf c2newspeak.tgz c2newspeak-ref
+
+.depend: $(ML)
+	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
+
+include .depend
