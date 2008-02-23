@@ -6,7 +6,7 @@ TESTS = 000 001 002
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 CHECK=$(addsuffix .checked, $(TESTS))
 
-.SILENT: check $(TESTS)
+.SILENT: check $(CHECK)
 .PHONY: $(TESTS.SPEC)
 
 check: $(CHECK)
@@ -25,7 +25,7 @@ check: $(CHECK)
 	  cat $*.bak; false; \
 	fi;
 	$(RM) $*.bak result
-	touch $*
+	touch $*.checked
 
 %.spec: ../../bin/c2newspeak %-a.c %-b.c
 	eval $(C2NEWSPEAK) $*-a.c $*-b.c &> $*.spec

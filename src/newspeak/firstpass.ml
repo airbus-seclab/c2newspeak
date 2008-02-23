@@ -443,7 +443,15 @@ let translate globals =
 	  let one = (C.exp_of_int 1, C.int_typ) in
 	  let (incr_e, _) = translate_binop op (e, t) one in
 	  let incr = (C.Set (lv, t, incr_e), Npkcontext.get_loc ()) in
-	    (C.Post (lv, incr), t)
+	    (C.Post_lv (lv, incr), t)
+
+      | IncrExp (op, lv) ->
+	  let (lv, t) = translate_lv lv in
+	  let e = C.Lval (lv, t) in
+	  let one = (C.exp_of_int 1, C.int_typ) in
+	  let (incr_e, _) = translate_binop op (e, t) one in
+	  let incr = (C.Set (lv, t, incr_e), Npkcontext.get_loc ()) in
+	    (C.Pref_lv (incr, lv), t)
 
       | _ -> Npkcontext.error "Firstpass.translate_lv" "Left value expected"
 
@@ -460,7 +468,7 @@ let translate globals =
 	  in
 	    (e, t)
 	      
-      | Field _ | Index _ | Deref _ | ExpIncr _ -> 
+      | Field _ | Index _ | Deref _ | ExpIncr _ | IncrExp _ -> 
 	  let (lv, t) = translate_lv e in
 	    (C.Lval (lv, t), t)
 	    

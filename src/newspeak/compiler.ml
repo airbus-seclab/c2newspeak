@@ -168,7 +168,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let sz = size_of compdefs t in
 	    K.Deref (e, sz)
 
-      | Post _ ->
+      | Post_lv _ | Pref_lv _ ->
 	  Npkcontext.error "Compiler.translate_lval"
 	    "unexpected side-effect in left value"
 

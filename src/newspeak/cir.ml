@@ -85,6 +85,7 @@ and typ_lv = (lv * typ)
 
 and typ_exp = (exp * typ)
 
+(* TODO: maybe still keep together lv and exp ?? *)
 and lv =
 (* variable identified by its unique id. Use fresh_id () to generate
    a new variable *)
@@ -94,7 +95,8 @@ and lv =
     | Deref of (exp * typ)
 (* TODO: remove Post by using Pref instead and having some optimization get
    rid of unnecessary temporary variable??? If better *)
-    | Post of (lv * stmt)
+    | Post_lv of (lv * stmt)
+    | Pref_lv of (stmt * lv)
 
 and exp =
     | Const of cst
@@ -343,7 +345,12 @@ and normalize_lv x =
     | Deref (e, t) ->
 	let (pref, e, post) = normalize_exp e in
 	  (pref, Deref (e, t), post)
-    | Post (lv, stmt) ->
+    | Pref_lv (stmt, lv) ->
+	let (pref, lv, post) = normalize_lv lv in
+	let stmt = normalize_stmt stmt in
+	let pref = concat_effects stmt pref in
+	  (pref, lv, post)
+    | Post_lv (lv, stmt) ->
 	let (pref, lv, post) = normalize_lv lv in
 	let stmt = normalize_stmt stmt in
 	let post = concat_effects post stmt in

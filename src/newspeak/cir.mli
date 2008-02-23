@@ -85,7 +85,8 @@ and lv =
     | Deref of (exp * typ)
 (* TODO: remove Post by using Pref instead and having some optimization get
    rid of unnecessary temporary variable??? If better *)
-    | Post of (lv * stmt)
+    | Post_lv of (lv * stmt)
+    | Pref_lv of (stmt * lv)
 
 and exp =
     | Const of cst

@@ -95,6 +95,7 @@ and exp =
     | SetOp of (exp * binop * exp)
 (* returns the value and then increment it or decrement it *)
     | ExpIncr of (binop * exp)
+    | IncrExp of (binop * exp)
 
 and unop = Neg | Not | BNot
 

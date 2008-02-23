@@ -103,6 +103,7 @@ and exp =
 (* returns the value and then increment it (if binop is Plus) or 
    decrement it if binop is Minus *)
     | ExpIncr of (binop * exp)
+    | IncrExp of (binop * exp)
 
 and unop = Neg | Not | BNot
 

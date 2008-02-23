@@ -8,13 +8,12 @@ TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 CHECK=$(addsuffix .checked, $(TESTS))
 
 .SILENT: check $(CHECK)
-.PHONY: $(TESTS.SPEC)
 
 check: $(CHECK)
 
-%.checked: ../../bin/c2newspeak %.c
+%.checked: %.c
 	eval $(C2NEWSPEAK) $*.c
-	eval $(NPKSIMPLIFY) `[ -e $@.in ] && cat $@.in` a.npk &> $*.bak
+	eval $(NPKSIMPLIFY) `[ -e $*.in ] && cat $*.in` a.npk &> $*.bak
 	dos2unix $*.bak
 	if [ -e $*.spec ]; \
 	then \
@@ -27,9 +26,9 @@ check: $(CHECK)
 	  cat $*.bak; false; \
 	fi;
 	$(RM) $*.bak result
-	touch $*
+	touch $*.checked
 
-%.spec: ../../bin/c2newspeak %.c
+%.spec: %.c
 	eval $(C2NEWSPEAK) $*.c
 	eval $(NPKSIMPLIFY) `[ -e $*.in ] && cat $*.in` a.npk &> $*.spec
 	dos2unix $*.spec

@@ -13,9 +13,9 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/newspeak/002.npk tests/newspeak/*.bak \
             tests/newspeak/*.cmi tests/newspeak/*.cmo tests/newspeak/read \
             tests/mult-files/*.no tests/mult-files/*.npk \
-            tests/mult-files/*.checked \
+            tests/mult-files/*.checked tests/mult-files/*~ \
             tests/mem_opt/000 tests/mem_opt/*.no \
-            tests/*.no tests/*.checked tests/*~
+            tests/*.no tests/*.checked tests/*~ tests/*.npk
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > src/version.ml; \
@@ -26,7 +26,9 @@ hg parents --template 'let revision = "{node|short}"\n' >> src/version.ml
 src/version.ml:
 	$(genversion)
 
-distrib: 
+distrib: $(DISTDIR)
+
+$(DISTDIR): 
 	$(genversion)
 	-mkdir $(DISTDIR)
 	$(CP) -r bin $(DISTDIR)
@@ -36,6 +38,6 @@ distrib:
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)
 
-check: distrib
+check: $(DISTDIR)
 	$(MAKE) -C tests
 	cd $(DISTDIR); $(MAKE) clean; $(MAKE) install
