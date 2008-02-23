@@ -242,19 +242,7 @@ statement:
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
-| FOR LPAREN assignment_expression SEMICOLON 
-      expression SEMICOLON 
-      assignment_expression RPAREN
-      statement                            { let loc = get_loc () in
-                                               (For ((Exp $3, loc)::[], 
-						    $5, $9, 
-						    (Exp $7, loc)::[]), loc)
-					       ::[] }
-| WHILE LPAREN expression RPAREN statement { [For ([], $3, $5, []), 
-					     get_loc ()] }
-| DO statement
-  WHILE LPAREN expression RPAREN SEMICOLON { [For ($2, $5, $2, []), 
-					     get_loc ()] }
+| iteration_statement                      { [For $1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
 | assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
@@ -264,6 +252,20 @@ statement:
 | SEMICOLON                                { [] }
 ;;
 
+iteration_statement:
+| FOR LPAREN assignment_expression SEMICOLON 
+      expression SEMICOLON 
+      assignment_expression RPAREN
+      statement                            { 
+	let loc = get_loc () in
+          ([Exp $3, loc], $5, $9, [Exp $7, loc]) 
+      }
+| FOR LPAREN SEMICOLON SEMICOLON RPAREN
+  statement                                { ([], exp_of_int 1, $6, []) }
+| WHILE LPAREN expression RPAREN statement { ([], $3, $5, []) }
+| DO statement
+  WHILE LPAREN expression RPAREN SEMICOLON { ($2, $5, $2, []) }
+;;
 
 switch_stmt:
   SWITCH LPAREN expression RPAREN LBRACE
