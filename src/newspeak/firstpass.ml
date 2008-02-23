@@ -302,10 +302,11 @@ let translate globals =
     let res = ref [] in
     let rec translate o t x =
       match (x, t) with
-	  (Data (Str str), C.Array _) -> 
+	  ((Data (Str str) | Sequence [Data (Str str)]), 
+	  C.Array (C.Int (_, n), _)) when n = Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      translate o t (Sequence seq)
-		
+
 	| (Data e, _) -> 
 	    let e = C.cast (translate_exp e) t in
 	      res := (o, t, e)::!res;
@@ -882,9 +883,9 @@ let translate globals =
 	    | _ -> 
 		let t = translate_typ t in
 		let (t, init) = translate_glb_init t init in
-		  let init = if is_extern then None else Some init in
-		    if static then add_static x loc (t, init)
-		    else add_global x loc (t, init)
+		let init = if is_extern then None else Some init in
+		  if static then add_static x loc (t, init)
+		  else add_global x loc (t, init)
 	  end
   in
 

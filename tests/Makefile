@@ -34,7 +34,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	220 221 222 223 224 225 226 227 228 229 \
 	230 231 232 233 234 235 236 237 238 239 \
 	240 241 242 243 244 245 246 247 248 249 \
-	250 251 252 253 254 255 256
+	250 251 252 253 254 255 256 257 258 259
 
 
 CHECK=$(addsuffix .checked, $(TESTS))
@@ -43,7 +43,6 @@ TESTS.CIL = $(addsuffix .cil, $(TESTS))
 TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 
 .SILENT: check $(CHECK)
-.PHONY: $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
 check: ../bin/c2newspeak $(CHECK) $(addsuffix .check, $(DIR))
 
@@ -71,6 +70,7 @@ check: ../bin/c2newspeak $(CHECK) $(addsuffix .check, $(DIR))
 063: 066 219
 066: 080
 068: 110 213
+070: 259
 076: 146
 095: 222 223
 114: 115
@@ -113,15 +113,15 @@ check: ../bin/c2newspeak $(CHECK) $(addsuffix .check, $(DIR))
 	touch $*.checked
 	echo $*
 
-%.spec: ../bin/c2newspeak %.c
+%.spec: %.c
 	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.spec; \
 	dos2unix $*.spec; \
 	cat $*.spec
 
-%.cil.spec: ../bin/c2newspeak %.c
-	eval $(C2NEWSPEAK.CIL) `[ -e $*.in ] && cat $*.in` $*.c &> $*.spec; \
-	dos2unix $*.spec; \
-	cat $*.spec
+%.cil.spec: %.c
+	eval $(C2NEWSPEAK.CIL) `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.spec; \
+	dos2unix $*.cil.spec; \
+	cat $*.cil.spec
 
 
 ../bin/c2newspeak: 

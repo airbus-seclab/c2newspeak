@@ -380,6 +380,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
   in
 
   let translate_glbdecl x (t, loc, init) =
+    Npkcontext.set_loc loc;
     let init = translate_glb_init init in
     let t = translate_typ t in
       Hashtbl.add glbdecls x (t, loc, init, true)
