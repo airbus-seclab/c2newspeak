@@ -23,3 +23,7 @@ distrib:
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)
+
+check: distrib
+	$(MAKE) -C tests
+	cd $(DISTDIR); $(MAKE) clean; ($MAKE) install
