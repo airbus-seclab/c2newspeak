@@ -26,4 +26,4 @@ distrib:
 
 check: distrib
 	$(MAKE) -C tests
-	cd $(DISTDIR); $(MAKE) clean; ($MAKE) install
+	cd $(DISTDIR); $(MAKE) clean; $(MAKE) install
