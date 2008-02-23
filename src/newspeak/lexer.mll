@@ -196,6 +196,7 @@ rule token = parse
   | "=="                { EQEQ }
   | "!="                { NOTEQ }
   | "="                 { EQ }
+  | "|="                { OREQ }
   | "+="                { PLUSEQ }
   | ";"                 { SEMICOLON }
 

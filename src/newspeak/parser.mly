@@ -128,7 +128,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token SWITCH TYPEDEF WHILE
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
-%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ PLUSEQ EQEQ NOTEQ SEMICOLON
+%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ OREQ PLUSEQ EQEQ NOTEQ SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS 
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
@@ -408,7 +408,13 @@ expression:
 assignment_expression:
   conditional_expression                   { $1 }
 | unary_expression EQ expression           { Set ($1, $3) }
-| unary_expression PLUSEQ expression       { Set ($1, Binop (Plus, $1, $3)) }
+| unary_expression assignment_operator
+  expression                               { SetOp ($1, $2, $3) }
+;;
+
+assignment_operator:
+  PLUSEQ                                   { Plus }
+| OREQ                                     { BOr }
 ;;
 
 argument_expression_list:

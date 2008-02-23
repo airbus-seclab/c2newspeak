@@ -99,6 +99,7 @@ and exp =
     | Str of string
     | Cast of (exp * typ)
     | Set of (exp * exp)
+    | SetOp of (exp * binop * exp)
 (* returns the value and then increment it (if binop is Plus) or 
    decrement it if binop is Minus *)
     | ExpIncr of (binop * exp)

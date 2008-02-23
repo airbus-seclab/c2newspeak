@@ -156,6 +156,8 @@ val fresh_id: unit -> vid
     to be executed respectively before and after e. *)
 val normalize_exp: exp -> (blk * exp * blk)
 
+val normalize_lv: lv -> (blk * lv * blk)
+
 val normalize: blk -> blk
 
 val align_of: compdefs -> typ -> int

@@ -550,7 +550,7 @@ let translate globals =
 	  in
 	    (C.Call (ft, f, args), ret_t)
 
-      | Set _ -> 
+      | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "assignments within expressions forbidden"
 
@@ -725,6 +725,17 @@ let translate globals =
 	  let (lv, t) = translate_lv lv in
 	  let e = C.cast (translate_exp e) t in
 	    (C.Set (lv, t, e), loc)::[]
+
+      | Exp (SetOp (lv, op, e)) ->
+	  let (lv', _) = translate_lv lv in
+	  let (pref, _, post) = C.normalize_lv lv' in
+	    (* TODO: should factor this code *)
+	    if (pref <> []) || (post <> []) then begin
+	      Npkcontext.error "Firstpass.translate_stmt" 
+		"expression without side-effects expected"
+	    end;
+	    let e = Binop (op, lv, e) in
+	      translate_stmt (Exp (Set (lv, e)), loc)
 
       | Exp e -> 
 	  let (e, _) = translate_exp e in
