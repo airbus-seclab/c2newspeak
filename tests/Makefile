@@ -34,13 +34,12 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	220 221 222 223 224 225 226 227 228 229 \
 	230 231 232 233 234 235 236 237 238 239 \
 	240 241 242 243 244 245 246 247 248 249 \
-	250 251 252 253 254
+	250 251 252 253 254 255
 
 
+CHECK=$(addsuffix .checked, $(TESTS))
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
-
 TESTS.CIL = $(addsuffix .cil, $(TESTS))
-
 TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 
 .SILENT: check $(TESTS)
@@ -81,68 +80,53 @@ check: ../bin/c2newspeak $(TESTS) $(addsuffix .check, $(DIR))
 213: 220
 216: 226
 
-$(TESTS): OPT=$@.in
-$(TESTS): SRC=$@.c
-$(TESTS): TMP=$@.bak
-$(TESTS): SPEC=$@.spec
-$(TESTS): CIL_SPEC=$(if $(shell [ -e $@.cil.spec ] && echo true), \
-	  $@.cil.spec,$@.spec)
-$(TESTS):
-	eval $(C2NEWSPEAK) `[ -e $(OPT) ] && cat $(OPT)` $(SRC) &> $(TMP); true
-	dos2unix $(TMP) 2&> /dev/null; true
-	if [ -e $(SPEC) ]; \
+%.checked: CIL_SPEC=$(if $(shell [ -e $*.cil.spec ] && echo true), \
+	  $*.cil.spec,$*.spec)
+%.checked: %.c
+	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.bak; true
+	dos2unix $*.bak 2&> /dev/null; true
+	if [ -e $*.spec ]; \
 	then \
-	  if diff $(SPEC) $(TMP) > result; \
+	  if diff $*.spec $*.bak > result; \
 	  then true; \
 	  else cat result; false; \
 	  fi; \
 	else \
-	  echo "$(SPEC) does not exist; printing output instead of diffing"; \
-	  cat $(TMP); false; \
+	  echo "$*.spec does not exist; printing output instead of diffing"; \
+	  cat $*.bak; false; \
 	fi
-	$(RM) $(TMP) result
-	eval $(C2NEWSPEAK.CIL) `[ -e $(OPT) ] && cat $(OPT)` \
-	$(SRC) &> $(TMP); true
-	dos2unix $(TMP) 2&> /dev/null; true 
+	$(RM) $*.bak result
+	eval $(C2NEWSPEAK.CIL) `[ -e $*.in ] && cat $*.in` \
+	$*.c &> $*.bak; true
+	dos2unix $*.bak 2&> /dev/null; true 
 	if [ -e $(CIL_SPEC) ]; \
 	then \
-	  if diff $(CIL_SPEC) $(TMP) > result; \
+	  if diff $(CIL_SPEC) $*.bak > result; \
 	  then true; \
 	  else cat result; false; \
 	  fi; \
 	else \
 	  echo "$(CIL_SPEC) does not exist; printing output instead of diffing"; \
-	  cat $(TMP); false; \
+	  cat $*.bak; false; \
 	fi;
-	$(RM) $(TMP) result
-	touch $@
-	echo $@
+	$(RM) $*.bak result
+	touch $*.checked
+	echo $*
 
-$(TESTS.SPEC): ../bin/c2newspeak
-	BASE=$(basename $(basename $@)); \
-	OPT=$$BASE.in; \
-	SRC=$$BASE.c; \
-	OUT=$$BASE.spec; \
-	eval $(C2NEWSPEAK) `[ -e $$OPT ] && cat $$OPT` $$SRC &> $$OUT; \
-	dos2unix $$OUT; \
-	cat $$OUT
+%.spec: ../bin/c2newspeak %.c
+	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.spec; \
+	dos2unix $*.spec; \
+	cat $*.spec
 
-$(TESTS.CIL.SPEC): ../bin/c2newspeak
-	BASE=$(basename $(basename $@)); \
-	OPT=$$BASE.in; \
-	SRC=$$BASE.c; \
-	OUT=$$BASE.cil.spec; \
-	eval $(C2NEWSPEAK.CIL) `[ -e $$OPT ] && cat $$OPT` $$SRC &> $$OUT; \
-	dos2unix $$OUT; \
-	cat $$OUT
+%.cil.spec: ../bin/c2newspeak %.c
+	eval $(C2NEWSPEAK.CIL) `[ -e $*.in ] && cat $*.in` $*.c &> $*.spec; \
+	dos2unix $*.spec; \
+	cat $*.spec
 
 
 ../bin/c2newspeak: 
 	make -C .. install
 
-clean: $(addsuffix .clean, $(DIR))
+clean: 
 	$(RM) $(TESTS)
 	$(RM) *~ *.bak result *.no *.npk
-
-%.clean: 
-	make -C $* clean

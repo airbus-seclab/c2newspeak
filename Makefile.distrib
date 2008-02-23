@@ -9,7 +9,7 @@ OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 10 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-DIR=src bin tests
+DIR=src bin
 
 INCLUDE=-I $(CIL) -I src/ -I src/newspeak/
 LIB=nums.cma
@@ -51,7 +51,7 @@ CLEANFILES=*~ .depend \
            bin/c2newspeak bin/npk2bytesz bin/npksimplify \
            bin/npkstats bin/npkstrip
 
-.PHONY: $(DIR) all clean check install tar doc
+.PHONY: $(DIR) all clean install tar doc
 
 #TODO: remove this recursive call
 install: c2newspeak doc npkstrip newspeak
@@ -91,15 +91,11 @@ newspeak.a newspeak.cmxa: src/version.cmi src/version.cmx src/newspeak/newspeak.
 %.mli %.ml: %.mly
 	$(OCAMLYACC) -v $<
 
-check: 
-	$(MAKE) -C tests
-
 doc:
 	$(OCAMLDOC) src/newspeak/newspeak.mli -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 #TODO: do not call clean recursively
 clean: $(DIR)
-	make -C tests clean
 	make -C src clean
 	$(RM) $(CLEANFILES)
 

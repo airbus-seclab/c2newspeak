@@ -1,8 +1,21 @@
 include Makefile.distrib
 
+.PHONY: check
 DISTDIR=newspeak-$(VERSION)
 DISTFILE=$(DISTDIR).tgz
-CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE)
+CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
+            tests/npksimplify/*.no tests/npksimplify/*.npk \
+            tests/npksimplify/*.checked tests/npksimplify/*~ \
+            tests/npk2bytesz/*.no tests/npk2bytesz/*.npk \
+            tests/npk2bytesz/*.checked tests/npk2bytesz/*~ \
+            tests/newspeak/*.no tests/newspeak/result \
+            tests/newspeak/*.checked tests/newspeak/*~ \
+            tests/newspeak/002.npk tests/newspeak/*.bak \
+            tests/newspeak/*.cmi tests/newspeak/*.cmo tests/newspeak/read \
+            tests/mult-files/*.no tests/mult-files/*.npk \
+            tests/mult-files/*.checked \
+            tests/mem_opt/000 tests/mem_opt/*.no \
+            tests/*.no tests/*.checked tests/*~
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > src/version.ml; \
@@ -19,7 +32,6 @@ distrib:
 	$(CP) -r bin $(DISTDIR)
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
-	$(CP) -r tests $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)

@@ -134,7 +134,6 @@ let oct_integer = "0" digit+
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" hex_digit hex_digit '\''
-let backslash_character = "\'\\0\'"
 
 rule token = parse
 
@@ -177,7 +176,8 @@ rule token = parse
   | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
   | hex_character       { INTEGER (int64_of_hex_character 
 				     (Lexing.lexeme lexbuf)) }
-  | backslash_character { INTEGER Int64.zero }
+  | "\'\\0\'"           { INTEGER Int64.zero }
+  | "\'\\n\'"           { INTEGER (Int64.of_int 10) }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
