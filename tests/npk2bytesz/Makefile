@@ -29,7 +29,7 @@ check: $(CHECK)
 	$(RM) $*.1.bak $*.bak result
 	touch $*.spec
 
-%.spec: ../../bin/c2newspeak %.c
+$(TESTS.SPEC): %.spec: ../../bin/c2newspeak %.c
 	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c
 	eval $(NPK2BYTESZ) a.npk &> $*.spec
 	dos2unix $*.spec

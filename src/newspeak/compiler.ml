@@ -29,6 +29,8 @@ open Cir
 module N = Newspeak
 module K = Npkil
 
+module Set = Set.Make(String)
+
 let translate_scalar t =
   match t with
     | Int i -> N.Int i
@@ -100,6 +102,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
+  let used_glbs = ref Set.empty in
   let stack_height = ref 0 in
   let env = Hashtbl.create 50 in
   let push id = 
@@ -157,7 +160,10 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	Var id -> 
 	  let x = Hashtbl.find env id in
 	    K.Local (!stack_height - x)
-      | Global x -> K.Global x
+      | Global x -> 
+	  used_glbs := Set.add x !used_glbs;
+	  K.Global x
+
       | Shift (lv, o) ->
 	  let lv = translate_lv lv in
 	  let o = translate_exp o in
@@ -383,7 +389,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
     Npkcontext.set_loc loc;
     let init = translate_glb_init init in
     let t = translate_typ t in
-      Hashtbl.add glbdecls x (t, loc, init, true)
+      Hashtbl.add glbdecls x (t, loc, init, false)
   in
 
   let translate_fundef f ((args, va_list, t), _, body) =
@@ -405,8 +411,14 @@ let translate (compdefs, cglbdecls, cfundefs) =
       Hashtbl.add fundefs f (ft, body)
   in
 
+  let flag_glb x =
+    let (t, loc, init, _) = Hashtbl.find glbdecls x in
+      Hashtbl.replace glbdecls x (t, loc, init, true)
+  in
+
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
+    Set.iter flag_glb !used_glbs;
     (glbdecls, fundefs)
   
 

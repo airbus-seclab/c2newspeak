@@ -26,9 +26,9 @@ hg parents --template 'let revision = "{node|short}"\n' >> src/version.ml
 src/version.ml:
 	$(genversion)
 
-distrib: $(DISTDIR)
+distrib: clean $(DISTDIR)
 
-$(DISTDIR): 
+$(DISTDIR):
 	$(genversion)
 	-mkdir $(DISTDIR)
 	$(CP) -r bin $(DISTDIR)

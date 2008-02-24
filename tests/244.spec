@@ -4,5 +4,4 @@ Newspeak output
 main() {
 }
 
-{ int32[3] 0; }96 x = 0;
 

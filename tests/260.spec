@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-244.c
+260.c
 main() {
 }
 
