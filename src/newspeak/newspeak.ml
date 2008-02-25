@@ -695,7 +695,16 @@ object
 	  when contains r (domain_of_typ k) -> lv
 
       | _ -> e
+end
 
+class simplify_ptr =
+object
+  inherit builder
+
+  method process_lval lv =
+    match lv with
+	Deref (AddrOf (lv, n), n') when n = n' -> lv
+      | _ -> lv
 end
 
 let big_int_op op =
@@ -939,11 +948,11 @@ and simplify_blk actions blk =
    simplify_gotos
    Fixpoint ??? *)
 let simplify b = 
-  simplify_gotos (simplify_blk [new simplify_choose; new simplify_arith; 
-				new simplify_coerce] b)
+  simplify_gotos (simplify_blk [new simplify_choose; new simplify_ptr;
+				new simplify_arith; new simplify_coerce] b)
 
 let simplify_exp e =
-  simplify_exp [new simplify_arith; new simplify_coerce] e
+  simplify_exp [new simplify_ptr; new simplify_arith; new simplify_coerce] e
 
 let has_goto lbl x =
   let rec blk_has_goto x = List.exists has_goto x

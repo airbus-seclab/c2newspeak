@@ -449,7 +449,7 @@ let translate globals =
 	  let incr = (C.Set (lv, t, incr_e), Npkcontext.get_loc ()) in
 	    (C.Pref_lv (incr, lv), t)
 
-      | _ -> Npkcontext.error "Firstpass.translate_lv" "Left value expected"
+      | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
   and translate_exp e = 
     match e with
