@@ -29,7 +29,8 @@ C2NCMX=$(addsuffix .cmx, $(C2NFILES))
 MLI=$(addsuffix .mli, $(C2NFILES))
 ML=$(addsuffix .ml, $(C2NFILES))
 
-NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a
+NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
+         src/lib/stdarg.h
 
 CLEANFILES=*~ .depend \
            *.a *.cma *.cmxa \
