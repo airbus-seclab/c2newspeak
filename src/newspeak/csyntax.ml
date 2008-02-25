@@ -24,7 +24,6 @@
 *)
 
 open Newspeak
-open Cir
 
 type prog = (global * location) list
 
@@ -49,7 +48,7 @@ and ftyp = (typ * string) list * bool * typ
 and typ =
     | Void
     | Int of ikind
-    | Bitfield of (ikind * int)
+    | Bitfield of (ikind * exp)
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
@@ -84,7 +83,8 @@ and stmtkind =
 and static = bool
 
 and exp = 
-    | Cst of Cir.cst
+    | CInt of (Int64.t * ikind)
+    | CFloat of string
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -121,6 +121,70 @@ and binop =
     | Shiftl
     | Shiftr
 
-let exp_of_int i = Cst (CInt (Int64.of_int i))
 
+let exp_of_int i = CInt (Int64.of_int i, (Signed, Config.size_of_int))
 
+let char_kind = (Signed, Config.size_of_char)
+
+let big_int_of_lexeme base x =
+  let base = 
+    match base with
+	None -> 10
+      | Some "0" -> 8
+      | Some "0x" -> 16
+      | _ -> Npkcontext.error "Csyntax.big_int_of_lexeme" "invalid base"
+  in
+  let v = ref Big_int.zero_big_int in
+  let read_digit c =
+    let d = (int_of_char c) - (int_of_char '0') in
+      v := Big_int.mult_int_big_int base !v;
+      v := Big_int.add_int_big_int d !v
+  in
+    String.iter read_digit x;
+    !v
+
+let int64_of_big_int x =
+  let min_int64 = Big_int.big_int_of_string (Int64.to_string Int64.min_int) in
+  let max_int64 = Big_int.big_int_of_string (Int64.to_string Int64.max_int) in
+    if (Big_int.compare_big_int x min_int64 < 0 
+	 || Big_int.compare_big_int max_int64 x < 0) then begin
+      Npkcontext.error "Csyntax.int64_of_big_int" 
+	"integer too large: not representable"
+    end;
+    Int64.of_string (Big_int.string_of_big_int x)
+
+let ikind_tbl =
+  [(Signed, Config.size_of_int); (Unsigned, Config.size_of_int); 
+   (Signed, Config.size_of_long); (Unsigned, Config.size_of_long); 
+   (Signed, Config.size_of_longlong); (Unsigned, Config.size_of_longlong)
+  ]    
+
+(* See C standard ANSI 6.4.4 *)
+let int_cst_of_lexeme (base, x, sign, min_sz) = 
+  let x = big_int_of_lexeme base x in
+  let x = int64_of_big_int x in
+  let possible_signs = 
+    match (base, sign) with
+(* TODO: not in conformance with standard. strange *)
+	(None, None) -> [Signed; Unsigned]
+      | (Some _, None) -> [Signed; Unsigned]
+      | (_, Some 'U') -> Unsigned::[]
+      | _ -> 
+	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
+  in
+  let min_sz =
+    match min_sz with
+	None -> Config.size_of_int
+      | Some "LL" -> Config.size_of_longlong
+      | _ -> 
+	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
+  in
+  let is_kind (sign, sz)  =
+    ((sz >= min_sz)
+      && (List.mem sign possible_signs)
+      && (Newspeak.is_in_bounds (Newspeak.domain_of_typ (sign, sz)) x))
+  in
+  let k = List.find is_kind ikind_tbl in
+    CInt (x, k)
+
+let char_cst_of_lexeme x = CInt (Int64.of_int x, char_kind)

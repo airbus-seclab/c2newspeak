@@ -1,1 +1,1 @@
-Fatal error: integer too large: not representable in 014.c line 35
+Fatal error: Newspeak.domain_of_typ: domain not representable

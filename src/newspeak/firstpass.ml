@@ -61,8 +61,6 @@ let seq_of_string str =
     done;
     !res
 
-let translate_cst c = (C.Const c, C.typ_of_cst c)
-
 let rec normalize_binop op (e1, t1) (e2, t2) =
   match (op, t1, t2) with
     | (Minus, C.Ptr _, C.Int _) -> 
@@ -166,9 +164,6 @@ and translate_binop op e1 e2 =
 
 let translate_unop op (e, t) = 
   match (op, t, e) with
-      (Neg, C.Int _, C.Const C.CInt c) 
-	when Int64.compare c Int64.min_int <> 0 -> 
-	  translate_cst (C.CInt (Int64.neg c))
     | (Neg, C.Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
     | (Neg, C.Float _, _) -> 
 	translate_binop Minus (C.exp_of_float 0., t) (e, t)
@@ -458,7 +453,10 @@ let translate globals =
 
   and translate_exp e = 
     match e with
-	Cst i -> translate_cst i
+	CInt (i, k) -> (C.Const (C.CInt i), C.Int k)
+
+      (* TODO: bug? this is probably an erroneous type!!! *)
+      | CFloat f -> (C.Const (C.CFloat f), C.Float Config.size_of_double)
 
       | Var x -> 
 	  let (v, t, _) = find_symb x in
@@ -486,7 +484,7 @@ let translate globals =
 	    ("unnecessary creation of a pointer from a dereference:"
 	      ^" rewrite the code")
 
-      | AddrOf (Index (lv, Cst (C.CInt i))) 
+      | AddrOf (Index (lv, CInt (i, _))) 
 	  when Int64.compare i Int64.zero = 0 ->
 	  let (lv', t) = translate_lv lv in begin
 	    match t with
@@ -505,6 +503,10 @@ let translate globals =
 	  let (lv, t) = translate_lv lv in
 	    (C.AddrOf (lv, t), C.Ptr t)
 	      
+(* Here c is necessarily positive *)
+      | Unop (Neg, CInt (c, (_, sz))) -> 
+	  (C.Const (C.CInt (Int64.neg c)), C.Int (Newspeak.Signed, sz))
+
       | Unop (op, e) -> 
 	  let e = translate_exp e in
 	    translate_unop op e
@@ -581,7 +583,11 @@ let translate globals =
 		None -> None
 	      | Some e -> 
 		  let (e, _) = translate_exp e in
-		  let i = C.len_of_exp e in
+		  let i = C.int_of_exp e in
+		    if i <= 0 then begin
+		      Npkcontext.error "Firstpass.translate_typ" 
+			("invalid size for array: "^(string_of_int i))
+		    end;
 		    Some i
 	  in
 	    C.Array (t, len)
@@ -604,18 +610,27 @@ let translate globals =
     let last_align = ref 1 in
     let rec translate (t, x) =
       match t with
-	  Bitfield ((_, n), sz) when sz > n ->
-	    Npkcontext.error "Firstpass.translate_struct_fields"
-	      "width of bitfield exceeds its type"
-	| Bitfield ((s, n), sz) ->
-	    let t = translate_typ (Int (s, n)) in
-	    let cur_align = C.align_of compdefs t in
-	    let o' = C.next_aligned !o cur_align in
-	    let o' = if !o + sz <= o' then !o else o' in
-	    let t = translate_typ (Int (s, sz)) in
-	      last_align := max !last_align cur_align;
-	      o := !o + sz;
-	      (x, (o', t))
+	  Bitfield ((s, n), sz) ->
+	    let (sz, _) = translate_exp sz in
+	      (* TODO: factor this code *)
+	    let (pref, sz, post) = C.normalize_exp sz in
+	    let sz = C.int_of_exp sz in
+	      if (pref <> []) || (post <> []) then begin
+		Npkcontext.error "Firstpass.push_enum" 
+		  "expression without side-effects expected"
+	      end;
+	      if sz > n then begin
+		Npkcontext.error "Firstpass.translate_struct_fields"
+		  "width of bitfield exceeds its type"
+	      end;
+	      let t = translate_typ (Int (s, n)) in
+	      let cur_align = C.align_of compdefs t in
+	      let o' = C.next_aligned !o cur_align in
+	      let o' = if !o + sz <= o' then !o else o' in
+	      let t = translate_typ (Int (s, sz)) in
+		last_align := max !last_align cur_align;
+		o := !o + sz;
+		(x, (o', t))
 	| _ ->
 	    let t = translate_typ t in
 	    let sz = C.size_of compdefs t in
@@ -684,6 +699,7 @@ let translate globals =
   and translate_enum (x, v) loc =
     let v = translate_exp v in
     let v = C.cast v C.int_typ in
+      (* TODO: factor this code *)
     let (pref, v, post) = C.normalize_exp v in
       if (pref <> []) || (post <> []) then begin
 	Npkcontext.error "Firstpass.push_enum" 
@@ -801,9 +817,9 @@ let translate globals =
 
 	| Unop (Not, (IfExp _ as e)) -> translate (e, blk2, blk1)
 
-	| Cst (C.CInt c) when Int64.compare c Int64.zero <> 0 -> blk1
+	| CInt (c, _) when Int64.compare c Int64.zero <> 0 -> blk1
 	    
-	| Cst (C.CInt _) -> blk2
+	| CInt _ -> blk2
     
 	| _ -> 
 	    let e = simplify_bexp e in

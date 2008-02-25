@@ -33,13 +33,6 @@ module C = Cir
 
 module String_set = Set.Make(String)
 
-let int64_to_int x =
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Firstpass.int64_to_int" "integer too big";
-  if Int64.compare x (Int64.of_int max_int) > 0 
-  then Npkcontext.error "Firstpass.int64_to_int" "expecting positive integer";
-  Int64.to_int x
-
 type base_typ =
     | Void 
     | Integer of ikind
@@ -59,7 +52,7 @@ and var_modifier =
 
 and decl = (base_typ * var_modifier)
 
-and field = (base_typ * var_modifier * Int64.t option)
+and field = (base_typ * var_modifier * B.exp option)
 
 type vdecl = (B.typ * string option * location)
 type edecl = (B.enumdecl * location)
@@ -132,9 +125,7 @@ and normalize_fields f =
 	let t =
 	  match (bits, t) with
 	      (None, _) -> t
-	    | (Some n, B.Int k) ->
-		let n = int64_to_int n in
-		  B.Bitfield (k, n)
+	    | (Some n, B.Int k) -> B.Bitfield (k, n)
 	    | _ -> 
 		Npkcontext.error "Synthack.normalize_field" 
 		  "bit-fields allowed only with integer types"
@@ -182,4 +173,3 @@ and normalize_decl (b, v) =
   let (enumdecls, t) = normalize_base_typ b in
   let d = normalize_var_modifier t v in
     (enumdecls, d)
-

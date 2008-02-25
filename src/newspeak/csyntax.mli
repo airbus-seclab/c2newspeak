@@ -46,7 +46,7 @@ and ftyp = (typ * string) list * bool * typ
 and typ =
     | Void
     | Int of ikind
-    | Bitfield of (ikind * int)
+    | Bitfield of (ikind * exp)
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
@@ -77,7 +77,8 @@ and stmtkind =
 and static = bool
 
 and exp = 
-    | Cst of Cir.cst
+    | CInt of (Int64.t * ikind)
+    | CFloat of string
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -114,3 +115,10 @@ and binop =
     | Shiftr
 
 val exp_of_int: int -> exp
+
+val char_kind: ikind
+
+val int_cst_of_lexeme: 
+  (string option * string * char option * string option) -> exp
+
+val char_cst_of_lexeme: int -> exp

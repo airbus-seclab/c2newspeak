@@ -140,8 +140,6 @@ val char_typ: typ
 (** type of C int type *)
 val int_typ: typ
 
-val typ_of_cst: cst -> typ
-
 val promote: Newspeak.ikind -> Newspeak.ikind
 
 val cast: typ_exp -> typ -> exp
@@ -175,6 +173,6 @@ val deref: typ_exp -> typ_lv
 
 val funexp_of_lv: typ_lv -> (funexp * ftyp)
 
-val len_of_exp: exp -> int
+val int_of_exp: exp -> int
 
 val len_of_array: int option -> lv -> Npkil.tmp_int

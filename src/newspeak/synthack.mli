@@ -19,7 +19,7 @@ and var_modifier =
 
 and decl = (base_typ * var_modifier)
 
-and field = (base_typ * var_modifier * Int64.t option)
+and field = (base_typ * var_modifier * Csyntax.exp option)
 
 type vdecl = (Csyntax.typ * string option * location)
 type edecl = (Csyntax.enumdecl * Newspeak.location)

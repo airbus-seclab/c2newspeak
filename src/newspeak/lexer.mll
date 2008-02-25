@@ -55,6 +55,7 @@ let strip lexbuf before after =
   let str = String.sub lexeme before (len-(before+after)) in
     str
 
+(* TODO: remove this code *)
 let int64_of_string base str = 
   let str = String.concat "" [base; str] in
     try 
@@ -67,13 +68,13 @@ let int64_of_string base str =
       Npkcontext.error "Lexer.int64_of_string"
 	"integer too large: not representable"
 
-let int64_of_hex_character str =
+let int_of_hex_character str =
   let len = String.length str in
   let str = String.sub str 3 (len - 4) in
   let str = "0x"^str in
-    Int64.of_string str
+    int_of_string str
       
-let int64_of_character str = Int64.of_int (int_of_char (str.[1]))
+let int_of_character str = int_of_char (str.[1])
 
 let extract_string s = String.sub s 1 (String.length s - 2)
 
@@ -126,11 +127,11 @@ let hex_digit = digit | ['A'-'F']
 
 let string = '"' [^'"']* '"'
 
-let integer = digit+
+let base = ("0x" | "0") as base
+let sign = "U" as sign
+let length = "LL" as length
+let integer = base? (digit+ as value) sign? length?
 let float = digit+ '.' digit+
-let ull_integer = digit+ "ULL"
-let hex_integer = "0x" hex_digit+
-let oct_integer = "0" digit+
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" hex_digit hex_digit '\''
@@ -169,15 +170,12 @@ rule token = parse
   | "void"              { VOID }
 
 (* values *)
-  | oct_integer         { INTEGER (int64_of_string "0o" (strip lexbuf 1 0)) }
-  | integer             { INTEGER (int64_of_string "" (strip lexbuf 0 0)) }
-  | ull_integer         { INTEGER (int64_of_string "" (strip lexbuf 0 3)) }
-  | hex_integer         { INTEGER (int64_of_string "0x" (strip lexbuf 2 0)) }
-  | character           { INTEGER (int64_of_character (Lexing.lexeme lexbuf)) }
-  | hex_character       { INTEGER (int64_of_hex_character 
-				     (Lexing.lexeme lexbuf)) }
-  | "\'\\0\'"           { INTEGER Int64.zero }
-  | "\'\\n\'"           { INTEGER (Int64.of_int 10) }
+  | integer             { INTEGER (base, value, sign, length) }
+  | character           { CHARACTER (int_of_character (Lexing.lexeme lexbuf)) }
+  | hex_character       { CHARACTER (int_of_hex_character 
+					(Lexing.lexeme lexbuf)) }
+  | "\'\\0\'"           { CHARACTER 0 }
+  | "\'\\n\'"           { CHARACTER 10 }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 

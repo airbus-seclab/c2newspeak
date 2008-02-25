@@ -150,17 +150,6 @@ let create_tmp loc t =
   let v = Var id in
     (decl, v)
 	
-(* TODO: check that integer don't have a default type (like int) *)
-let typ_of_cst i =
-  match i with
-      CInt i ->
-	let sign =
-	  if Int64.compare i (Int64.of_string "2147483647") > 0 
-	  then Unsigned else Signed
-	in
-	  Int (sign, Config.size_of_int)
-    | CFloat _ -> Float Config.size_of_double
-
 let exp_of_int i = Const (CInt (Int64.of_int i))
 
 let exp_of_float x = Const (CFloat (string_of_float x))
@@ -199,41 +188,36 @@ let size_of compdefs t =
   in
     size_of t
 
-let len_of_exp e =
-  let rec len_of_exp e =
+let int_of_exp e =
+  let rec int_of_exp e =
     match e with
 	Const (CInt i) -> Big_int.big_int_of_string (Int64.to_string i)
       | Binop (Plus _, e1, e2) ->
-	  let i1 = len_of_exp e1 in
-	  let i2 = len_of_exp e2 in
+	  let i1 = int_of_exp e1 in
+	  let i2 = int_of_exp e2 in
 	    Big_int.add_big_int i1 i2
       | Binop (Minus _, e1, e2) ->
-	  let i1 = len_of_exp e1 in
-	  let i2 = len_of_exp e2 in
+	  let i1 = int_of_exp e1 in
+	  let i2 = int_of_exp e2 in
 	    Big_int.sub_big_int i1 i2
       | Binop (Mult _, e1, e2) ->
-	  let i1 = len_of_exp e1 in
-	  let i2 = len_of_exp e2 in
+	  let i1 = int_of_exp e1 in
+	  let i2 = int_of_exp e2 in
 	    Big_int.mult_big_int i1 i2
       | Binop (Div _, e1, e2) ->
-	  let i1 = len_of_exp e1 in
-	  let i2 = len_of_exp e2 in
+	  let i1 = int_of_exp e1 in
+	  let i2 = int_of_exp e2 in
 	    Big_int.div_big_int i1 i2
       | _ -> 
-	  Npkcontext.error "Csyntaxt.len_of_exp" 
+	  Npkcontext.error "Csyntaxt.int_of_exp" 
 	    "static expression expected"
   in
-  let i = len_of_exp e in
+  let i = int_of_exp e in
     if not (Big_int.is_int_big_int i) then begin
       Npkcontext.error "Csyntax.len_of_exp" 
 	("invalid size for array: "^(Big_int.string_of_big_int i))
     end;
-    let i = Big_int.int_of_big_int i in
-      if i <= 0 then begin
-	Npkcontext.error "Csyntax.len_of_exp" 
-	  ("invalid size for array: "^(string_of_int i))
-      end;
-      i
+    Big_int.int_of_big_int i
 
 let fields_of_typ compdefs t =
   match t with

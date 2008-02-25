@@ -120,7 +120,7 @@ let build_type_decl d =
     t
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
-
+  
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -137,7 +137,8 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token <string> IDENTIFIER
 %token <string> TYPEDEF_NAME
 %token <string> STRING
-%token <Int64.t> INTEGER
+%token <string option * string * char option * string option> INTEGER
+%token <int> CHARACTER
 %token <string> FLOATCST
 
 %type <string list * Csyntax.prog> parse
@@ -285,8 +286,9 @@ case_list:
 
 primary_expression:
   IDENTIFIER                               { Var $1 }
-| INTEGER                                  { Cst (CInt $1) }
-| FLOATCST                                 { Cst (CFloat $1) }
+| CHARACTER                                { Csyntax.char_cst_of_lexeme $1 }
+| INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
+| FLOATCST                                 { CFloat $1 }
 | STRING                                   { Str $1 }
 | LPAREN expression RPAREN                 { $2 }
 ;;
@@ -474,7 +476,7 @@ declarator:
 
 struct_declarator:
   declarator                               { ($1, None) }
-| declarator COLON INTEGER                 { ($1, Some $3) }
+| declarator COLON conditional_expression  { ($1, Some $3) }
 ;;
 
 pointer:
