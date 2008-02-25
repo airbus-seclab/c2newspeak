@@ -122,3 +122,5 @@ val int_cst_of_lexeme:
   (string option * string * char option * string option) -> exp
 
 val char_cst_of_lexeme: int -> exp
+
+val va_arg: (typ * string)

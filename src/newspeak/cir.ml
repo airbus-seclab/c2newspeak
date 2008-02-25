@@ -62,8 +62,7 @@ and typ =
 
 and array_t = (typ * int option)
 
-(* true if variable list of arguments *)
-and ftyp = typ list * bool * typ
+and ftyp = typ list * typ
 
 and blk = stmt list
 
@@ -306,7 +305,7 @@ let rec normalize_exp x =
     | Call (ft, f, args) ->
 	let loc = Npkcontext.get_loc () in
 	let (pref, call) = normalize_call loc (ft, f, args) in
-	let (_, _, t) = ft in
+	let (_, t) = ft in
 	let (decl, v) = create_tmp loc t in
 	let call = (Set (v, t, call), loc) in
 	  (pref@decl::call::[], Lval (v, t), [])
@@ -390,7 +389,7 @@ and normalize_stmt (x, loc) =
 	    
 and normalize_call loc (ft, f, args) =
   let (pref1, f) = normalize_funexp loc f in
-  let (args_t, _, _) = ft in
+  let (args_t, _) = ft in
   let (pref2, args) = normalize_args loc args args_t in
   let pref = concat_effects pref1 pref2 in
     (pref, Call (ft, f, args))

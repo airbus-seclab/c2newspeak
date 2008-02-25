@@ -143,10 +143,9 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	t'
   in
 
-  let translate_ftyp (args, va_list, ret) =
-    let va_list = if va_list then [K.Scalar N.Ptr] else [] in
+  let translate_ftyp (args, ret) =
     let args = List.map translate_typ args in
-    let args = args@va_list in
+    let args = args in
     let ret =
       match ret with
 	  Void -> None
@@ -322,11 +321,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	  let ft = translate_ftyp ft in
 	    K.FunDeref (e, ft)
 
-  and translate_call loc ret ((args_t, va_list, ret_t), f, args) =
-    if va_list then begin
-      Npkcontext.error "Compiler.translate_exp"
-	"functions with variable argument list not supported"
-    end;
+  and translate_call loc ret ((args_t, ret_t), f, args) =
     let args = (args, args_t) in
       match ret_t with
 	  Void -> append_args loc args f
@@ -392,7 +387,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
       Hashtbl.add glbdecls x (t, loc, init, false)
   in
 
-  let translate_fundef f ((args, va_list, t), _, body) =
+  let translate_fundef f ((args, t), _, body) =
     let body =
       match body with
 	  None -> None
@@ -407,7 +402,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	      pop ret_id;
 	      Some body
     in
-    let ft = translate_ftyp (args, va_list, t) in
+    let ft = translate_ftyp (args, t) in
       Hashtbl.add fundefs f (ft, body)
   in
 

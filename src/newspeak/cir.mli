@@ -53,8 +53,7 @@ and typ =
 
 and array_t = (typ * int option)
 
-(* true if variable list of arguments *)
-and ftyp = typ list * bool * typ
+and ftyp = typ list * typ
 
 and blk = stmt list
 

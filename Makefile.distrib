@@ -48,7 +48,7 @@ CLEANFILES=*~ .depend \
            src/newspeak/.depend src/npkstrip/.depend \
            src/version.o src/version.cmi src/version.cmo src/version.cmx \
            doc/*.html doc/*~ \
-           bin/*.exe bin/*.cmi \
+           bin/*.exe bin/*.cmi bin/stdarg.h \
            bin/c2newspeak bin/npk2bytesz bin/npksimplify \
            bin/npkstats bin/npkstrip
 

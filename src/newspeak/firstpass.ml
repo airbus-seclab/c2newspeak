@@ -208,7 +208,7 @@ let translate globals =
 
   let remove_symb x = Hashtbl.remove symbtbl x in
 
-  let add_formals loc args_name (args_t, _, ret_t) =
+  let add_formals loc args_name (args_t, ret_t) =
     let add_var t x = 
       let (_, id) = add_var loc (t, x) in
 	id
@@ -552,7 +552,7 @@ let translate globals =
 
       | Call (f, args) -> 
 	  let (f, ft) = C.funexp_of_lv (translate_lv f) in
-	  let (args_t, _, ret_t) = ft in
+	  let (args_t, ret_t) = ft in
 	  let args = 
 	      try List.map2 translate_arg args args_t 
 	      with Invalid_argument "List.map2" ->
@@ -658,6 +658,7 @@ let translate globals =
       (f, !n, !align)
 
   and translate_ftyp (args, va_list, ret) =
+    let args = if va_list then args@va_arg::[] else args in
     let translate_arg (t, x) =
       let t =
 	match t with
@@ -677,7 +678,7 @@ let translate globals =
 	      List.split args
     in
     let ret = translate_typ ret in
-      ((args_t, va_list, ret), args_name)
+      ((args_t, ret), args_name)
 
   and translate_local_decl (x, t, init) loc =
     Npkcontext.set_loc loc;

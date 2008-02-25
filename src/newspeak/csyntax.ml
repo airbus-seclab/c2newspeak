@@ -121,10 +121,11 @@ and binop =
     | Shiftl
     | Shiftr
 
+let char_kind = (Signed, Config.size_of_char)
+
+let va_arg = (Ptr (Int char_kind), "__builtin_newspeak_va_arg")
 
 let exp_of_int i = CInt (Int64.of_int i, (Signed, Config.size_of_int))
-
-let char_kind = (Signed, Config.size_of_char)
 
 let big_int_of_lexeme base x =
   let base = 
