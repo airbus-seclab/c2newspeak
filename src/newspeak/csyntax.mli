@@ -118,9 +118,17 @@ val exp_of_int: int -> exp
 
 val char_kind: ikind
 
+val char_typ: typ
+
+val int_typ: typ
+
 val int_cst_of_lexeme: 
   (string option * string * char option * string option) -> exp
 
 val char_cst_of_lexeme: int -> exp
 
 val va_arg: (typ * string)
+
+val comp_of_typ: typ -> string
+
+val normalize_ftyp: ftyp -> (ftyp * string list)

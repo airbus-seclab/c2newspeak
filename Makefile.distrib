@@ -52,7 +52,7 @@ CLEANFILES=*~ .depend \
            bin/c2newspeak bin/npk2bytesz bin/npksimplify \
            bin/npkstats bin/npkstrip
 
-.PHONY: $(DIR) all clean install tar doc
+.PHONY: $(DIR) all clean install doc
 
 #TODO: remove this recursive call
 install: c2newspeak doc npkstrip newspeak
@@ -99,10 +99,6 @@ doc:
 clean: $(DIR)
 	make -C src clean
 	$(RM) $(CLEANFILES)
-
-tar:
-	make clean
-	cd ..; tar -czf c2newspeak.tgz c2newspeak-ref
 
 .depend: $(ML)
 	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend

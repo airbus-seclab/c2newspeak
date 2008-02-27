@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: remove size_of, put in csyntax *)
 open Newspeak
 
 let vcnt = ref min_int
@@ -33,13 +34,11 @@ let fresh_id () =
     incr vcnt;
     id
   
-type prog = (compdefs * glbdecls * fundefs)
+type prog = (glbdecls * fundefs)
 
 and glbdecls = (string, typ * location * init option) Hashtbl.t
 
 and init = (int * typ * exp) list option
-
-and compdefs = (string, (field list * int * int)) Hashtbl.t
 
 and field = (string * (int * typ))
 
@@ -54,10 +53,13 @@ and typ =
     | Void
     | Int of ikind
     | Float of int
-    | Ptr of typ
+    | Ptr
+    | FunPtr
     | Array of array_t
-    | Struct of string
-    | Union of string
+(* TODO: remove string in Struct and Union 
+   merge them as a Region *)
+    | Struct of (string * field list * int)
+    | Union of (string * field list * int)
     | Fun of ftyp
 
 and array_t = (typ * int option)
@@ -153,39 +155,18 @@ let exp_of_int i = Const (CInt (Int64.of_int i))
 
 let exp_of_float x = Const (CFloat (string_of_float x))
 
-let cast (e, t) t' =
-  let (e, t) =
-    match (t, e, t') with
-	(Array (elt_t, _), Lval (lv, Array _), (Ptr _|Int _)) ->
-	  (AddrOf (Shift (lv, exp_of_int 0), t), Ptr elt_t)
-      | (Fun _, Lval lv, (Ptr _|Int _)) -> (AddrOf lv, Ptr t)
-      | _ -> (e, t)
-  in
-    if t = Void then begin
-      Npkcontext.error "Cir.cast" "value void not ignored as it ought to be"
-    end;
-    if t = t' then e
-    else Unop (Cast (t, t'), e)
-
-let size_of compdefs t =
-  let rec size_of t =
-    match t with
-	Int (_, n) -> n 
-      | Float n -> n
-      | Ptr _ -> Config.size_of_ptr
-      | Array (t, Some n) -> (size_of t) * n
-      | Struct n | Union n -> 
-	  let (_, sz, _) = 
-	    try Hashtbl.find compdefs n 
-	    with Not_found -> 
-	      Npkcontext.error "Cir.size_of" ("unknown structure or union "^n)
-	  in
-	    sz
-      | Fun _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of function"
-      | Array _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of array"
-      | Void -> Npkcontext.error "Csyntax.size_of" "Unknown size of void"
-  in
-    size_of t
+(* TODO: this is a temporary hack, remove this function and align_of 
+   put in csyntax *)
+let rec size_of t =
+  match t with
+      Int (_, n) -> n 
+    | Float n -> n
+    | Ptr | FunPtr -> Config.size_of_ptr
+    | Array (t, Some n) -> (size_of t) * n
+    | Struct (_, _, n) | Union (_, _, n) -> n
+    | Fun _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of function"
+    | Array _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of array"
+    | Void -> Npkcontext.error "Csyntax.size_of" "Unknown size of void"
 
 let int_of_exp e =
   let rec int_of_exp e =
@@ -218,23 +199,13 @@ let int_of_exp e =
     end;
     Big_int.int_of_big_int i
 
-let fields_of_typ compdefs t =
-  match t with
-      Struct n | Union n -> 
-	let (f, _, _) = Hashtbl.find compdefs n in
-	  f
-    | _ -> 
-	Npkcontext.error "Csyntax.fields_of_typ" 
-	  "Struct or union type expected"
-
-let align_of compdefs t =
+(* TODO: this is a temporary hack, remove and put in csyntax *)
+let align_of align_of_struct t =
   let rec align_of t =
     match t with
-	Struct n | Union n ->
-	  let (_, _, a) = Hashtbl.find compdefs n in
-	    a
+	Struct (n, _, _) | Union (n, _, _) -> align_of_struct n
       | Array (t, _) -> align_of t
-      | _ -> size_of compdefs t
+      | _ -> size_of t
   in
     align_of t
 
@@ -244,6 +215,8 @@ let next_aligned o x =
   let m = o mod x in
     if m = 0 then o else o + x - m
 
+(* TODO: if possible remove int_kind, int_typ and char_typ, they are
+   in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
 
 let int_typ = Int int_kind
@@ -254,18 +227,6 @@ let promote k =
   match k with
       (_, n) when n < Config.size_of_int -> int_kind
     | _ -> k
-
-let deref (e, t) =
-  match t with
-      Ptr t -> (Deref (e, t), t)
-    | _ -> Npkcontext.error "Csyntax.deref_typ" "Pointer type expected"
-
-let funexp_of_lv (lv, t) =
-  match (lv, t) with
-      (_, Ptr (Fun ft)) -> (FunDeref (Lval (lv, t), ft), ft)
-    | (Global f, Fun ft) -> (Fname f, ft)
-    | (Deref (e, _), Fun ft) -> (FunDeref (e, ft), ft)
-    | _ -> Npkcontext.error "Csyntax.fun_of_typ" "Function type expected"
 
 let concat_effects blk1 blk2 =
   if (blk1 <> []) && (blk2 <> []) then begin
@@ -398,7 +359,7 @@ and normalize_funexp loc f =
   match f with
       Fname _ -> ([], f)
     | FunDeref (e, ft) ->
-	let (pref, e) = normalize_exp_post loc e (Ptr (Fun ft)) in
+	let (pref, e) = normalize_exp_post loc e FunPtr in
 	  (pref, FunDeref (e, ft))
 	      
 and normalize_lv_post loc lv t =
@@ -550,4 +511,29 @@ let len_of_array n lv =
     | (_, Global x) -> Npkil.Length x
     | _ -> Npkcontext.error "Cir.len_of_array" "unknown array length"
 
-  
+(* TODO: this should be probably put in firstpass *)
+let cast (e, t) t' =
+  let (e, t) =
+    match (t, e, t') with
+	(Array _, Lval (lv, Array _), (Ptr|Int _)) ->
+	  (AddrOf (Shift (lv, exp_of_int 0), t), Ptr)
+      | (Fun _, Lval lv, (FunPtr|Ptr|Int _)) -> (AddrOf lv, FunPtr)
+      | _ -> (e, t)
+  in
+    if t = Void then begin
+      Npkcontext.error "Cir.cast" "value void not ignored as it ought to be"
+    end;
+    if t = t' then e
+    else Unop (Cast (t, t'), e)
+
+let string_of_typ t =
+  match t with
+    | Void -> "void"
+    | Int _ -> "int"
+    | Float _ -> "float"
+    | Ptr -> "ptr"
+    | FunPtr -> "fptr"
+    | Array _ -> "a[i]"
+    | Struct _ -> "{}"
+    | Union _ -> "{}"
+    | Fun _ -> "fun"

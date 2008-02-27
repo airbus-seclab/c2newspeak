@@ -123,7 +123,11 @@ and binop =
 
 let char_kind = (Signed, Config.size_of_char)
 
-let va_arg = (Ptr (Int char_kind), "__builtin_newspeak_va_arg")
+let char_typ = Int char_kind
+
+let int_typ = Int (Signed, Config.size_of_int)
+
+let va_arg = (Ptr char_typ, "__builtin_newspeak_va_arg")
 
 let exp_of_int i = CInt (Int64.of_int i, (Signed, Config.size_of_int))
 
@@ -189,3 +193,31 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
     CInt (x, k)
 
 let char_cst_of_lexeme x = CInt (Int64.of_int x, char_kind)
+
+let comp_of_typ t =
+  match t with
+      Struct (n, _) | Union (n, _) -> n
+    | _ -> 
+	Npkcontext.error "Csyntax.fields_of_typ" 
+	  "Struct or union type expected"
+
+let normalize_ftyp (args, va_list, ret_t) =
+  let args = if va_list then args@va_arg::[] else args in
+  let normalize_arg (t, x) =
+    let t =
+      match t with
+	  Array (elt_t, _) -> Ptr elt_t
+	| Void -> 
+	    Npkcontext.error "Firstpass.translate_atyp"
+	      "Argument type void not allowed"
+	| _ -> t
+    in
+      (t, x)
+  in
+  let args_t =
+    match args with
+	(Void, _)::[] -> []
+      | _ -> List.map normalize_arg args
+  in
+  let (_, args_name) = List.split args_t in
+    ((args_t, va_list, ret_t), args_name)

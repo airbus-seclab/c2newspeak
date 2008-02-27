@@ -35,13 +35,13 @@ let translate_scalar t =
   match t with
     | Int i -> N.Int i
     | Float n -> N.Float n
-    | Ptr (Fun _) -> N.FunPtr
-    | Ptr _ -> N.Ptr
+    | FunPtr -> N.FunPtr
+    | Ptr -> N.Ptr
     | Void -> Npkcontext.error "Compiler.translate_scalar" 
 	"Value void not ignored as it ought to be"
     | _ -> 
 	Npkcontext.error "Compiler.translate_scalar" 
-	  "Unexpected non scalar type"
+	  "unexpected non scalar type"
 
 let translate_unop op e =
   match op with
@@ -55,7 +55,7 @@ let translate_unop op e =
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 
-let translate_binop compdefs op e1 e2 =
+let translate_binop op e1 e2 =
   match op with
       Mult k -> translate_arithmop N.MultI e1 e2 k
     | Plus k -> translate_arithmop N.PlusI e1 e2 k
@@ -75,7 +75,7 @@ let translate_binop compdefs op e1 e2 =
 	Npkcontext.error "Compiler.translate_binop" 
 	  "pointer arithmetic forbidden on function pointers"
     | PlusP t -> 
-	let stride = K.exp_of_int (size_of compdefs t) in 
+	let stride = K.exp_of_int (size_of t) in 
 	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
     | MinusP -> K.make_int_coerce int_kind (K.BinOp (N.MinusPP, e1, e2))
 	
@@ -98,7 +98,7 @@ let translate_cst c =
 	in
 	  N.CFloat (c, s)
 
-let translate (compdefs, cglbdecls, cfundefs) =
+let translate (cglbdecls, cfundefs) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -124,15 +124,9 @@ let translate (compdefs, cglbdecls, cfundefs) =
 	match t with
 	    Void -> 
 	      Npkcontext.error "Compiler.translate_typ" "Void not allowed here"
-	  | Int _ | Float _ | Ptr _ -> K.Scalar (translate_scalar t)
+	  | Int _ | Float _ | Ptr | FunPtr -> K.Scalar (translate_scalar t)
 	  | Array (t, sz) -> K.Array (translate_typ t, sz)
-	  | Struct n | Union n -> 
-	      let (fields, sz, _) = 
-		try Hashtbl.find compdefs n 
-		with Not_found -> 
-		  Npkcontext.error "Compiler.translate_typ"
-		    ("Unknown structure or union: "^n)
-	      in
+	  | Struct (_, fields, sz) | Union (_, fields, sz) -> 
 	      let translate_field (_, (o, t)) = (o, translate_typ t) in
 		K.Region (List.map translate_field fields, sz)
 	  | Fun _ -> 
@@ -170,7 +164,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 
       | Deref (e, t) ->
 	  let e = translate_exp e in
-	  let sz = size_of compdefs t in
+	  let sz = size_of t in
 	    K.Deref (e, sz)
 
       | Post_lv _ | Pref_lv _ ->
@@ -194,7 +188,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
 
       | AddrOf (lv, t) ->
 	  let lv = translate_lv lv in
-	  let sz = size_of compdefs t in
+	  let sz = size_of t in
 	    K.AddrOf (lv, K.Known sz)
 
       | Unop (op, e) -> 
@@ -203,7 +197,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
       | Binop (op, e1, e2) ->
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
-	    translate_binop compdefs op e1 e2
+	    translate_binop op e1 e2
 
       | Pref _ -> 
 	  Npkcontext.error "Compiler.translate_exp"
@@ -235,7 +229,7 @@ let translate (compdefs, cglbdecls, cfundefs) =
       match (t, e) with
 	  ((Struct _| Union _), Lval (lv', _)) -> 
 	    let lv' = translate_lv lv' in
-	    let sz = size_of compdefs t in
+	    let sz = size_of t in
 	      K.Copy (lv, lv', sz)
       | _ ->
 	  let e = translate_exp e in
