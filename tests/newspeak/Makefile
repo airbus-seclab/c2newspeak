@@ -3,6 +3,7 @@ TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 CHECK=$(addsuffix .checked, $(TESTS))
 
 .SILENT: $(CHECK)
+.PHONY: read
 
 check: $(CHECK)
 

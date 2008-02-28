@@ -87,6 +87,7 @@ $(TESTS): %: %.checked
 %.checked: CIL_SPEC=$(if $(shell [ -e $*.cil.spec ] && echo true), \
 	  $*.cil.spec,$*.spec)
 %.checked: %.c
+	unix2dos $*.c 2&> /dev/null; true
 	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.bak; true
 	dos2unix $*.bak 2&> /dev/null; true
 	if [ -e $*.spec ]; \
