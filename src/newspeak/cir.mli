@@ -24,9 +24,7 @@
 *)
 
 
-type prog = (compdefs * glbdecls * fundefs)
-
-and compdefs = (string, (field list * int * int)) Hashtbl.t
+type prog = (glbdecls * fundefs)
 
 and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
 
@@ -45,10 +43,11 @@ and typ =
     | Void
     | Int of Newspeak.ikind
     | Float of int
-    | Ptr of typ
+    | Ptr
+    | FunPtr
     | Array of array_t
-    | Struct of string
-    | Union of string
+    | Struct of (string * field list * int)
+    | Union of (string * field list * int)
     | Fun of ftyp
 
 and array_t = (typ * int option)
@@ -141,8 +140,6 @@ val int_typ: typ
 
 val promote: Newspeak.ikind -> Newspeak.ikind
 
-val cast: typ_exp -> typ -> exp
-
 val exp_of_int: int -> exp
 
 val exp_of_float: float -> exp
@@ -158,20 +155,18 @@ val normalize_lv: lv -> (blk * lv * blk)
 
 val normalize: blk -> blk
 
-val align_of: compdefs -> typ -> int
+val align_of: (string -> int) -> typ -> int
 
 (** [next_aligned o x] returns the smallest integer greater or equal than o,
     which is equal to 0 modulo x *)
 val next_aligned: int -> int -> int
 
-val size_of: compdefs -> typ -> int
-
-val fields_of_typ: compdefs -> typ -> field list
-
-val deref: typ_exp -> typ_lv
-
-val funexp_of_lv: typ_lv -> (funexp * ftyp)
+val size_of: typ -> int
 
 val int_of_exp: exp -> int
 
 val len_of_array: int option -> lv -> Npkil.tmp_int
+
+val cast: (exp * typ) -> typ -> exp
+
+val string_of_typ: typ -> string
