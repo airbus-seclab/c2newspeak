@@ -608,7 +608,7 @@ let build_call_aux f prolog (args_t, ret_t) =
     call := [Decl ("arg"^(string_of_int !i), t, !call), locUnknown];
     incr i
   in
-    List.iter handle_arg args_t;
+    List.iter handle_arg (List.rev args_t);
     begin match ret_t with
 	None -> ()
       | Some t -> call := [Decl ("value_of_"^f, t, !call), locUnknown]
@@ -641,9 +641,9 @@ let build_main_call ptr_sz (args_t, ret_t) args =
 	[Scalar Int k; Scalar Ptr] -> 
 	  handle_args ();
 	  let set_argv = 
-	    Set (Local 1, AddrOf (Global argv_name, !n*ptr_sz), Ptr) 
+	    Set (Local 0, AddrOf (Global argv_name, !n*ptr_sz), Ptr) 
 	  in
-	  let set_argc = Set (Local 0, exp_of_int !n, Int k) in
+	  let set_argc = Set (Local 1, exp_of_int !n, Int k) in
 	    (set_argv, locUnknown)::(set_argc, locUnknown)::[]
       | [] -> []
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
