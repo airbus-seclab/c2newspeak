@@ -35,7 +35,9 @@
 
 type t = (file list * prog * size_t)
 
-and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
+and prog = globals * (fid, fundec) Hashtbl.t
+
+and globals = (string, gdecl) Hashtbl.t
 
 and gdecl = typ * init_t
 
@@ -498,19 +500,23 @@ let dump_fundec name body =
 	print_newline ()
 
 
+let dump_globals gdecls = 
+  (* TODO: Clean this mess... String_map *)
+  let glbs = ref (String_map.empty) in
+    Hashtbl.iter 
+      (fun name info -> glbs := (String_map.add name info !glbs)) 
+      gdecls;
+    String_map.iter dump_gdecl !glbs
+      
 (* Exported print functions *)
 let dump_prog (gdecls, fundecs) =
   (* TODO: Clean this mess... String_map *)
-  let glbs = ref (String_map.empty) in
   let funs = ref (String_map.empty) in
     Hashtbl.iter 
       (fun name (_, body) -> funs := (String_map.add name body !funs))
       fundecs;
     String_map.iter dump_fundec !funs;
-    Hashtbl.iter 
-      (fun name info -> glbs := (String_map.add name info !glbs)) 
-      gdecls;
-    String_map.iter dump_gdecl !glbs
+    dump_globals gdecls
 
 let dump (fnames, prog, _) =
   List.iter (fun x -> print_endline x) fnames;

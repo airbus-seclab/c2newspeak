@@ -95,8 +95,8 @@ The Newspeak language was designed by Charles Hymans.
 The first version of the compiler c2newspeak compiler was entirely written by 
 Olivier Levillain.
 
-We thank Wenceslas Godard, Xavier Allamigeon
-and Jean-Loup Carre for comments, discussions and bug reports. 
+We thank Wenceslas Godard, Xavier Allamigeon,
+Jean-Loup Carre and Sarah Zennou for comments, discussions and bug reports. 
 
 {2 Questions, bug reports, comments }
 If you find a bug, have a comment or a question, don't hesitate to visit

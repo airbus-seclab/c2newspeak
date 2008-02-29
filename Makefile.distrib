@@ -50,7 +50,9 @@ CLEANFILES=*~ .depend \
            doc/*.html doc/*~ \
            bin/*.exe bin/*.cmi bin/stdarg.h \
            bin/c2newspeak bin/npk2bytesz bin/npksimplify \
-           bin/npkstats bin/npkstrip
+           bin/npkstats bin/npkstrip \
+           tests/newspeak/000 tests/newspeak/001 tests/newspeak/002 \
+           tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk
 
 .PHONY: $(DIR) all clean install doc
 

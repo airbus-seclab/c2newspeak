@@ -62,7 +62,9 @@
     function definitions and the size of pointers. *)
 type t = (file list * prog * size_t)
 
-and prog = (string, gdecl) Hashtbl.t * (fid, fundec) Hashtbl.t
+and prog = globals * (fid, fundec) Hashtbl.t
+
+and globals = (string, gdecl) Hashtbl.t
 
 and gdecl = typ * init_t
 
@@ -202,7 +204,7 @@ val simplify_exp: exp -> exp
 
 
 
-(* {1 Display } *)
+(** {1 Display } *)
 val string_of_loc : location -> string
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
@@ -211,7 +213,24 @@ val string_of_exp : exp -> string
 val string_of_lval : lval -> string
 
 val string_of_stmt: stmt -> string
+
+(** [string_of_block blk] returns the string representation of block [blk]. *)
 val string_of_blk: blk -> string
+
+val dump : t -> unit
+
+(* [dump (fundecs, body)] prints the program (fundecs, body) 
+    to standard output. *)
+val dump_prog : prog -> unit
+
+(** [dump_globals glbdecls] prints the global definitions [glbdecls] to
+    standard output. *)
+val dump_globals: globals -> unit
+
+val dump_fundec : string -> fundec -> unit
+
+val string_of_binop: binop -> string
+
 
 (* Visitor *)
 class visitor:
@@ -246,20 +265,16 @@ val build : builder -> prog -> prog
 
 val build_gdecl: builder -> gdecl -> gdecl
 
-val dump : t -> unit
-
-(* [dump (fundecs, body)] prints the program (fundecs, body) 
-    to standard output. *)
-val dump_prog : prog -> unit
-
-val dump_fundec : string -> fundec -> unit
-
 (* [write name (files, prog, ptr_sz) ] write the program prog, with
     the list of its file names and the size of pointers to file name. *)
 val write : string -> t -> unit
 
-(* [read name] retrieves the list of file names, program and size of
-    pointers from file name. *)
+(** [read name] retrieves the list of file names, program and size of
+    pointers from a .npk file. 
+    @param name of the .npk file to read
+    @raise Invalid_argument if the input file is not a valid .npk file, or its
+    newspeak version is not the same as this file's.
+*)
 val read : string -> t
 
 (* [write_hdr cout (files, decls, ptr_sz] writes the list of file names,
@@ -288,8 +303,13 @@ val size_of : size_t -> typ -> size_t
 
 val build_call: fid -> ftyp -> blk
 
-val build_main_call : 
-  size_t -> ftyp -> string list -> ((string, gdecl) Hashtbl.t * blk)
+(** [build_main_call ptr_sz ft params] returns a table of globals and a block
+   of newspeak code to call the main function with parameters [params].
+   @param ptr_sz the size of pointers
+   @param the type of main
+   @param the parameters with which [main] is called
+*)
+val build_main_call: size_t -> ftyp -> string list -> (globals * blk)
 
 val create_cstr: string -> string -> string * gdecl
 
@@ -314,5 +334,3 @@ val convert_loops: blk -> alt_blk
 val max_ikind: ikind -> ikind -> ikind
 
 val dummy_loc: string -> location
-
-val string_of_binop: binop -> string
