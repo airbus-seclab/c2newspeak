@@ -94,8 +94,8 @@ newspeak.a newspeak.cmxa: src/version.cmi src/version.cmx src/newspeak/newspeak.
 %.mli %.ml: %.mly
 	$(OCAMLYACC) -v $<
 
-doc:
-	$(OCAMLDOC) src/newspeak/newspeak.mli -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
+doc: src/version.cmi src/newspeak/newspeak.cmi
+	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 #TODO: do not call clean recursively
 clean: $(DIR)

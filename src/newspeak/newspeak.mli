@@ -270,8 +270,8 @@ val build_gdecl: builder -> gdecl -> gdecl
 val write : string -> t -> unit
 
 (** [read name] retrieves the list of file names, program and size of
-    pointers from a .npk file. 
-    @param name of the .npk file to read
+    pointers from a .npk file.
+    @param name file name of the .npk file to read
     @raise Invalid_argument if the input file is not a valid .npk file, or its
     newspeak version is not the same as this file's.
 *)
