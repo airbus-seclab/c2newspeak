@@ -489,26 +489,29 @@ let translate globals =
 		  Npkcontext.error "Firstpass.translate_exp" 
 		    "Function type expected"
 	  in
-	  let (args_t, _, ret_t) = ft in
-	  let args = 
-	    try List.map2 translate_arg args args_t 
-	    with Invalid_argument "List.map2" ->
-	      Npkcontext.error "Firstpass.translate_exp" 
-		("different types at function call")
-	  in
+	  let (args_t, va_list, ret_t) = ft in
+	  let args = translate_args va_list args args_t in
 	    (C.Call (ft', f, args), ret_t)
 
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "assignments within expressions forbidden"
 
-	    (* TODO: not nice, redundant code with cast?? *)
-  and translate_arg e (t, _) = cast (translate_exp e) t
-(*
-    let (e, t) = translate_exp e in
-    let t = translate_typ t in
-      C.cast (e, t) t' 
-*)
+  and translate_args va_list args args_t =
+    let rec translate_args args args_t =
+      match (args, args_t) with
+	  ([], (t, _)::[]) when va_list ->
+	    let e = cast (translate_exp (exp_of_int 0)) t in
+	      e::[]
+	| (e::args, (t, _)::args_t) ->
+	    let e = cast (translate_exp e) t in
+	      e::(translate_args args args_t)
+	| ([], []) -> []
+	| _ -> 
+	    Npkcontext.error "Firstpass.translate_exp" 
+	      "different types at function call"
+    in
+      translate_args args args_t
 
   and gen_tmp loc t =
     let x = "tmp"^(string_of_int !tmp_cnt) in

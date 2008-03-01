@@ -167,12 +167,6 @@ let string_of_unop op =
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
     | IntToPtr _ -> "(ptr)"
 	  
-let string_of_cte c =
-  match c with
-      CInt64 c -> Int64.to_string c
-    | CFloat (_, s) -> s
-    | Nil -> "nil"
-
 let string_of_vid = string_of_int
 
 let string_of_local decls vid =
@@ -190,7 +184,7 @@ let rec string_of_lval decls lv =
 
 and string_of_exp decls e =
   match e with
-      Const c -> string_of_cte c
+      Const c -> Newspeak.string_of_cte c
     | Lval (lv, t) -> (string_of_lval decls lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_tmp_int sz)^"("^(string_of_lval decls lv)^")"
     | AddrOfFun fid -> "&fun"^(string_of_fid fid)

@@ -204,8 +204,11 @@ val simplify_exp: exp -> exp
 
 
 
-(** {1 Display } *)
+(** {1 Display} *)
 val string_of_loc : location -> string
+
+(** [string_of_cte c] returns the string representation of constant c. *)
+val string_of_cte : cte -> string
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
