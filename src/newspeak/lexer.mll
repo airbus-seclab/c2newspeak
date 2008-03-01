@@ -123,14 +123,16 @@ let line_comment = "//" line
 
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
+let oct_digit = ['0'-'7']
 let hex_digit = digit | ['A'-'F']
 
 let string = '"' [^'"']* '"'
 
-let base = ("0x" | "0") as base
 let sign = "U" as sign
 let length = "LL" as length
-let integer = base? (digit+ as value) sign? length?
+let oct_integer = "0" (oct_digit+ as value) sign? length?
+let hex_integer = "0x" (hex_digit+ as value) sign? length?
+let integer = (digit+ as value) sign? length?
 let float = digit+ '.' digit+
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
@@ -170,7 +172,9 @@ rule token = parse
   | "void"              { VOID }
 
 (* values *)
-  | integer             { INTEGER (base, value, sign, length) }
+  | oct_integer         { INTEGER (Some "0", value, sign, length) }
+  | integer             { INTEGER (None, value, sign, length) }
+  | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | character           { CHARACTER (int_of_character (Lexing.lexeme lexbuf)) }
   | hex_character       { CHARACTER (int_of_hex_character 
 					(Lexing.lexeme lexbuf)) }

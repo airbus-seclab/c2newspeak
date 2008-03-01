@@ -131,21 +131,27 @@ let va_arg = (Ptr char_typ, "__builtin_newspeak_va_arg")
 
 let exp_of_int i = CInt (Int64.of_int i, (Signed, Config.size_of_int))
 
+
 let big_int_of_lexeme base x =
-  let base = 
+  let read_digit c = (int_of_char c) - (int_of_char '0') in
+  let read_hex_digit c =
+    if ('0' <= c) && (c <= '9') then (int_of_char c) - (int_of_char '0')
+    else (int_of_char c) - (int_of_char 'A') + 10
+  in
+  let (read_digit, base) =
     match base with
-	None -> 10
-      | Some "0" -> 8
-      | Some "0x" -> 16
+	None -> (read_digit, 10)
+      | Some "0" -> (read_digit, 8)
+      | Some "0x" -> (read_hex_digit, 16)
       | _ -> Npkcontext.error "Csyntax.big_int_of_lexeme" "invalid base"
   in
   let v = ref Big_int.zero_big_int in
-  let read_digit c =
-    let d = (int_of_char c) - (int_of_char '0') in
+  let add_digit c =
+    let d = read_digit c in
       v := Big_int.mult_int_big_int base !v;
       v := Big_int.add_int_big_int d !v
   in
-    String.iter read_digit x;
+    String.iter add_digit x;
     !v
 
 let int64_of_big_int x =
