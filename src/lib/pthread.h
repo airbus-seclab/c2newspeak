@@ -23,7 +23,4 @@
   email: charles.hymans@penjili.org
 */
 
-#define	LOG_NOTICE	5
-#define	LOG_DEBUG	7
-
-void syslog(int, const char *, ...);
+#include <sys/types.h>

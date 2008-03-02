@@ -26,6 +26,7 @@
 #ifndef _SYS_TYPES_H
 #define _SYS_TYPES_H
 
+typedef unsigned int pthread_t;
 typedef long time_t;
 
 #endif	/* _SYS_TYPES_H */

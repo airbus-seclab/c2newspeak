@@ -29,5 +29,6 @@
 int chroot(const char*);
 int close(int);
 unsigned int sleep(unsigned int);
+char *getpass(const char*);
 
 #endif /* _UNISTD_H_ */
