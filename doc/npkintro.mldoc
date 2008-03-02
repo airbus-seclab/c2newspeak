@@ -47,16 +47,26 @@
    - [newspeak.a], [newspeak.cmxa]: 
       newspeak library for caml native-code compiler
    - [c2newspeak]:		      compiler from C to Newspeak
+   - [npk2bytesz]:		      converts all size into number of bytes
    - [npkstats]:		      statistics on Newspeak files
    - [npkstrip]:	      removes all functions not called from main
    - [npksimplify]:	      performs some newspeak simplifications
+   - [fcntl.h]                standard C library for c2newspeak
+   - [stdarg.h]               standard C library for c2newspeak
+   - [stdio.h]                standard C library for c2newspeak
+   - [string.h]                standard C library for c2newspeak
+   - [unistd.h]                standard C library for c2newspeak
 
   This will also produce the documentation in html format and copy it to 
   the doc/ directory. 
 
 {2 Getting started }
 {ul
-{- To compile a C file to Newspeak, use {{:#c2newspeak}c2newspeak}.}
+{- To compile a C file to Newspeak, use {{:#c2newspeak}c2newspeak}.
+The file shoud have already been macro-expanded.
+(For instance with gcc use the option -E. You may also tell gcc to first
+in the bin/ directory to include library with option -I. 
+}
 {- To read and manipulate Newspeak programs in your own projects, use the 
   functions provided in the library newspeak. 
   Use files [newspeak.cma] (for bytecode) 

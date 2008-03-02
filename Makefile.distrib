@@ -9,7 +9,7 @@ OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 10 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-DIR=src bin
+DIR=src
 
 INCLUDE=-I $(CIL) -I src/ -I src/newspeak/
 LIB=nums.cma
@@ -30,11 +30,11 @@ MLI=$(addsuffix .mli, $(C2NFILES))
 ML=$(addsuffix .ml, $(C2NFILES))
 
 NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
-         src/lib/stdarg.h
+         src/lib/*
 
 CLEANFILES=*~ .depend \
            *.a *.cma *.cmxa \
-           bin/*.a bin/*.cma bin/*.cmxa \
+           bin/* \
            src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
            src/npkstrip/*.cmi src/npkstrip/*.cmx src/npkstrip/*.o \
            src/npkstrip/npkstrip src/npkstrip/npkstrip.exe \
@@ -48,11 +48,9 @@ CLEANFILES=*~ .depend \
            src/newspeak/.depend src/npkstrip/.depend \
            src/version.o src/version.cmi src/version.cmo src/version.cmx \
            doc/*.html doc/*~ \
-           bin/*.exe bin/*.cmi bin/stdarg.h \
-           bin/c2newspeak bin/npk2bytesz bin/npksimplify \
-           bin/npkstats bin/npkstrip \
            tests/newspeak/000 tests/newspeak/001 tests/newspeak/002 \
-           tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk
+           tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
+	   src/lib/*~ src/lib/sys/*~
 
 .PHONY: $(DIR) all clean install doc
 
@@ -61,7 +59,7 @@ install: c2newspeak doc npkstrip newspeak
 	make -C src install
 
 newspeak: $(NPKFILES)
-	$(CP) $(NPKFILES) bin
+	$(CP) -r $(NPKFILES) bin
 
 c2newspeak: $(C2NCMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(C2NCMX) -o bin/c2newspeak
