@@ -23,4 +23,9 @@
   email: charles.hymans@penjili.org
 */
 
+#ifndef _SYS_TYPES_H
+#define _SYS_TYPES_H
+
 typedef long time_t;
+
+#endif	/* _SYS_TYPES_H */

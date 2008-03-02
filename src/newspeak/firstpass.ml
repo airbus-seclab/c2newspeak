@@ -567,12 +567,23 @@ let translate globals =
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
+(* TODO: put Cir Struct and Union into just a region *)
       | Struct (n, None) -> 
-	  let (f, sz, _) = Hashtbl.find compdefs n in
+	  let (f, sz, _) = 
+	    try Hashtbl.find compdefs n 
+	    with Not_found -> 
+	      Npkcontext.error "Firstpass.translate_typ" 
+		("unknown structure "^n)
+	  in
 	  let f = List.map translate_field f in
 	    C.Struct (n, f, sz)	    
       | Union (n, None) -> 
-	  let (f, sz, _) = Hashtbl.find compdefs n in
+	  let (f, sz, _) = 
+	    try Hashtbl.find compdefs n 
+	    with Not_found -> 
+	      Npkcontext.error "Firstpass.translate_typ" 
+		("unknown union "^n)
+	  in
 	  let f = List.map translate_field f in
 	    C.Union (n, f, sz)
       | Struct (n, Some f) -> 

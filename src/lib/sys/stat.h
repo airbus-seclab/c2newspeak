@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 */
 
-// TODO: should be a struct stat*, but does not matter for newspeak...
-// a pointer is a pointer
-int lstat(const char*, void*);
+#include <sys/types.h>
+// TODO: this type is incomplete!
+struct stat {
+  time_t st_ctime;
+};
+
+int lstat(const char*, struct stat*);

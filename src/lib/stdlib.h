@@ -31,5 +31,6 @@
 void free(void *);
 void exit(int);
 void *malloc(size_t);
+int system(const char *);
 
 #endif /* _STDLIB_H_ */
