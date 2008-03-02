@@ -76,9 +76,6 @@ let verbose boolean () =
   verb_morewarns := boolean;
   verb_newspeak := boolean
 
-let exit_code = ref false
-
-
 (* Preprocessing options *)
 
 let incl_files = ref ""
@@ -166,9 +163,6 @@ let argslist = [
   ("-q", Arg.Unit (verbose false),
    "quiet mode: turn display off");
     
-  ("--exit-code", Arg.Set (exit_code), 
-   "returns exit code 1 if an error occured\n");
-
 (* Removed: should be done by the tool user
   ("--preprocess", Arg.Set has_preprocess,
    "enables the C preprocessing step (gcc -E)");
@@ -263,7 +257,7 @@ let error where msg =
 
 let print_error msg =
   prerr_endline ("Fatal error: "^msg);
-  exit (if !exit_code then 1 else 0)
+  exit 1
 
 
 let handle_cmdline_options () = 
