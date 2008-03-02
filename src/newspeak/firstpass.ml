@@ -497,12 +497,43 @@ let translate globals =
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "assignments within expressions forbidden"
 
+  and init_va_args loc lv x =
+    let rec init_va_args lv x =
+      match x with
+	  (e, t)::tl ->
+	    let t = translate_typ t in
+	    let set = (C.Set (lv, t, e), loc) in
+	    let sz = C.size_of t in
+	    let lv = C.Shift (lv, C.exp_of_int sz) in
+	    let init = init_va_args lv tl in
+	      set::init
+	| [] -> []
+    in
+      init_va_args lv x
+
+  and size_of_va_args x =
+    match x with
+	(* TODO: have a size_of on csyntax *)
+	(_, t)::tl -> (size_of_va_args tl) + C.size_of (translate_typ t)
+      | [] -> 0
+
   and translate_args va_list args args_t =
     let rec translate_args args args_t =
       match (args, args_t) with
 	  ([], (t, _)::[]) when va_list ->
 	    let e = cast (translate_exp (exp_of_int 0)) t in
 	      e::[]
+	| (_, _::[]) when va_list -> 
+	    let args = List.map translate_exp args in
+	      (* TODO: not so nice of a code! constant *)
+	    let sz = (size_of_va_args args) / 8 in
+	    let loc = Npkcontext.get_loc () in
+	    let t = Array (char_typ, Some (exp_of_int sz)) in
+	    let (_, decl, v) = gen_tmp loc t in
+	    let t = translate_typ t in
+	    let init = init_va_args loc v args in
+	      (C.Pref (decl::init, C.AddrOf (v, t)))::[]
+
 	| (e::args, (t, _)::args_t) ->
 	    let e = cast (translate_exp e) t in
 	      e::(translate_args args args_t)

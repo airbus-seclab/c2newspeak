@@ -713,6 +713,12 @@ object
       | _ -> lv
 end
 
+let big_int_is_int64 x =
+  let min_int = Big_int.big_int_of_string (Int64.to_string Int64.min_int) in
+  let max_int = Big_int.big_int_of_string (Int64.to_string Int64.max_int) in
+    (Big_int.compare_big_int min_int x <= 0) 
+    && (Big_int.compare_big_int x max_int <= 0)
+
 let big_int_op op =
   match op with
       PlusI -> Big_int.add_big_int
@@ -721,12 +727,21 @@ let big_int_op op =
     | _ -> invalid_arg "Newspeak.big_int_op: unexpected operator"
 
 class simplify_arith =
-object
+object (self)
   inherit builder
     
   method process_lval x =
     match x with
-	Shift (lv, Const CInt64 x) when Int64.compare x Int64.zero = 0 -> lv
+	Shift (lv, Const CInt64 c) when Int64.compare c Int64.zero = 0 -> lv
+      | Shift (Shift (lv, Const CInt64 c1), Const CInt64 c2) ->
+	  let c1 = Big_int.big_int_of_string (Int64.to_string c1) in
+	  let c2 = Big_int.big_int_of_string (Int64.to_string c2) in
+	  let c = Big_int.add_big_int c1 c2 in
+	    if big_int_is_int64 c then begin
+	      let c = Int64.of_string (Big_int.string_of_big_int c) in
+	      let lv = Shift (lv, Const (CInt64 c)) in
+		self#process_lval lv
+	    end else x
       | _ -> x
 
   (* TODO: generatlization of all this: do the operations with bignums
@@ -739,18 +754,10 @@ object
 	  let x = Big_int.big_int_of_string (Int64.to_string x) in
 	  let y = Big_int.big_int_of_string (Int64.to_string y) in
 	  let z = (big_int_op op) x y in
-	  let min_int = 
-	    Big_int.big_int_of_string (Int64.to_string Int64.min_int) 
-	  in
-	  let max_int = 
-	    Big_int.big_int_of_string (Int64.to_string Int64.max_int) 
-	  in
-	    if ((Big_int.compare_big_int z min_int < 0) 
-		 || (Big_int.compare_big_int z max_int > 0)) then e
-	    else begin
+	    if big_int_is_int64 z then begin
 	      let z = Int64.of_string (Big_int.string_of_big_int z) in
 		Const (CInt64 z)
-	    end
+	    end else e
 
       | BinOp (PlusPI, e, Const CInt64 x) 
 	  when (Int64.compare x Int64.zero = 0) -> e
