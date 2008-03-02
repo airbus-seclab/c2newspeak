@@ -129,7 +129,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT EQ OREQ PLUSEQ EQEQ NOTEQ SEMICOLON
-%token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS 
+%token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token EOF
@@ -402,8 +402,23 @@ logical_or_expression:
 
 conditional_expression:
   logical_or_expression                    { $1 }
+| logical_or_expression QMARK 
+  expression COLON conditional_expression  {
+    let report_error = 
+      if !Npkcontext.dirty_syntax 
+      then Npkcontext.print_warning
+      else Npkcontext.error
+    in
+      report_error "Parser.type_specifier" 
+	"conditional expression are ugly: use if else instead";
+      IfExp ($1, $3, $5)
+  }
 ;;
 
+// I do not want to have expression be assignment_expression
+// this would allow assignments within expressions 
+// it is error-prone, for instance typos may make you write
+// if (x = 0) instead of if (x == 0)
 expression:
   conditional_expression                   { $1 }
 ;;

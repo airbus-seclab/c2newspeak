@@ -23,8 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
-int printf(const char*, ...);
-// TODO: should be a FILE* but does not matter here since all pointers go
-// to a unique type in newspeak
-int fprintf(void *, const char *, ...);
-int scanf(const char*, ...);
+void main() {
+  int x;
+  int y;
+  y = x?0:1;
+}

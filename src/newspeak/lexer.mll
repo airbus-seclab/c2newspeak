@@ -187,6 +187,7 @@ rule token = parse
   | "..."               { ELLIPSIS }
   | ","                 { COMMA }
   | ":"                 { COLON }
+  | "?"                 { QMARK }
   | "."                 { DOT }
   | "{"                 { LBRACE }
   | "}"                 { RBRACE }
