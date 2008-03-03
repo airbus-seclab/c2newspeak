@@ -199,22 +199,6 @@ let int_of_exp e =
     end;
     Big_int.int_of_big_int i
 
-(* TODO: this is a temporary hack, remove and put in csyntax *)
-let align_of align_of_struct t =
-  let rec align_of t =
-    match t with
-	Struct (n, _, _) | Union (n, _, _) -> align_of_struct n
-      | Array (t, _) -> align_of t
-      | _ -> size_of t
-  in
-    align_of t
-
-(* [align o x] returns the smallest integer greater or equal than o,
-   which is equal to 0 modulo x *)
-let next_aligned o x =
-  let m = o mod x in
-    if m = 0 then o else o + x - m
-
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
