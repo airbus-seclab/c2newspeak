@@ -5,7 +5,7 @@ RM=rm -rf
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc
 OCAMLC=ocamlc -w Ael -warn-error Ael
-OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 10 -noassert -unsafe
+OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 

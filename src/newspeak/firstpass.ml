@@ -345,6 +345,8 @@ let translate globals =
 	Ptr t -> (C.Deref (e, translate_typ t), t)
       | _ -> Npkcontext.error "Firstpass.deref_typ" "Pointer type expected"
 
+  and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
+
   and translate_exp e = 
     match e with
 	CInt (i, k) -> (C.Const (C.CInt i), Int k)
@@ -370,8 +372,7 @@ let translate globals =
 	    ("unnecessary creation of a pointer from a dereference:"
 	     ^" rewrite the code");
 	  let e = translate_exp e in
-	  let (e, t) = deref e in
-	    (C.AddrOf (e, translate_typ t), Ptr t)
+	    addr_of (deref e)
 
       | AddrOf (Deref _) -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
@@ -383,8 +384,8 @@ let translate globals =
 	  let (lv', t) = translate_lv lv in begin
 	    match t with
 		Array (elt_t, _) -> 
-		  (* TODO: factor AddrOf (translate_typ), like deref *)
-		  (C.AddrOf (lv', translate_typ t), Ptr elt_t)
+		  let (e, _) = addr_of (lv', t) in
+		    (e, Ptr elt_t)
 	      | Ptr _ -> translate_exp (AddrOf (Deref lv))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
@@ -395,10 +396,7 @@ let translate globals =
 	  let base = AddrOf (Index (lv, exp_of_int 0)) in
 	    translate_exp (Binop (Plus, base, e))
 	    
-      | AddrOf lv ->
-	  let (lv, t) = translate_lv lv in
-	    (* TODO: factor code *)
-	    (C.AddrOf (lv, translate_typ t), Ptr t)
+      | AddrOf lv -> addr_of (translate_lv lv)
 	      
 (* Here c is necessarily positive *)
       | Unop (Neg, CInt (c, (_, sz))) -> 
@@ -429,7 +427,6 @@ let translate globals =
 
       | SizeofE e ->
 	  let (_, t) = translate_exp e in
-	    (* TODO: have a size_of on csyntax's typ *)
 	  let sz = (size_of t) / 8 in
 	    (C.exp_of_int sz, int_typ)
 
