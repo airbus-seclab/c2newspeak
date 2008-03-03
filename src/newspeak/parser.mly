@@ -557,6 +557,16 @@ ityp:
 | SHORT                                  { Config.size_of_short }
 | INT                                    { Config.size_of_int }
 | LONG                                   { Config.size_of_long }
+| LONG INT                               { 
+    let report_error = 
+      if !Npkcontext.dirty_syntax 
+      then Npkcontext.print_warning
+      else Npkcontext.error
+    in
+      report_error "Parser.type_specifier" 
+	"long int is not normalized: use long instead";
+    Config.size_of_long 
+  }
 | LONG LONG                              { Config.size_of_longlong }
 ;;
 
