@@ -128,7 +128,8 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token SWITCH TYPEDEF WHILE
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
-%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ OREQ SHIFTLEQ PLUSEQ EQEQ NOTEQ 
+%token LBRACKET RBRACKET LPAREN RPAREN NOT 
+%token EQ OREQ SHIFTLEQ MINUSEQ PLUSEQ EQEQ NOTEQ 
 %token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
@@ -433,6 +434,7 @@ assignment_expression:
 
 assignment_operator:
   PLUSEQ                                   { Plus }
+| MINUSEQ                                  { Minus }
 | OREQ                                     { BOr }
 | SHIFTLEQ                                 { Shiftl }
 ;;

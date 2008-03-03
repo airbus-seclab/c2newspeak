@@ -200,6 +200,7 @@ rule token = parse
   | "!="                { NOTEQ }
   | "="                 { EQ }
   | "|="                { OREQ }
+  | "-="                { MINUSEQ }
   | "+="                { PLUSEQ }
   | "<<="               { SHIFTLEQ }
   | ";"                 { SEMICOLON }
