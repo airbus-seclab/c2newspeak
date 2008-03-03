@@ -201,6 +201,7 @@ rule token = parse
   | "="                 { EQ }
   | "|="                { OREQ }
   | "+="                { PLUSEQ }
+  | "<<="               { SHIFTLEQ }
   | ";"                 { SEMICOLON }
 
 (* operators *)
