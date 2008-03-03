@@ -168,6 +168,7 @@ rule token = parse
   | "long"              { LONG }
   | "struct"            { STRUCT }
   | "union"             { UNION }
+  | "signed"            { SIGNED }
   | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
 

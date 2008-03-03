@@ -126,7 +126,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
 %token EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
-%token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
+%token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
 %token EQ OREQ SHIFTLEQ MINUSEQ PLUSEQ EQEQ NOTEQ 
@@ -518,6 +518,16 @@ parameter_list:
 type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
+| SIGNED ityp                            {
+    let report_error = 
+      if !Npkcontext.dirty_syntax 
+      then Npkcontext.print_warning
+      else Npkcontext.error
+    in
+      report_error "Parser.type_specifier" 
+	"signed specifier not necessary";
+      Integer (Newspeak.Signed, $2)
+  }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
   let report_error = 
@@ -567,7 +577,7 @@ ityp:
       then Npkcontext.print_warning
       else Npkcontext.error
     in
-      report_error "Parser.type_specifier" 
+      report_error "Parser.ityp" 
 	"long int is not normalized: use long instead";
     Config.size_of_long 
   }
