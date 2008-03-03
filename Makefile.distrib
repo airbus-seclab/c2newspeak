@@ -30,7 +30,7 @@ MLI=$(addsuffix .mli, $(C2NFILES))
 ML=$(addsuffix .ml, $(C2NFILES))
 
 NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
-         src/lib/*
+         lib/*
 
 CLEANFILES=*~ .depend \
            *.a *.cma *.cmxa \
@@ -50,7 +50,7 @@ CLEANFILES=*~ .depend \
            doc/*.html doc/*~ \
            tests/newspeak/000 tests/newspeak/001 tests/newspeak/002 \
            tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
-	   src/lib/*~ src/lib/sys/*~
+	   lib/*~ lib/sys/*~
 
 .PHONY: $(DIR) all clean install doc
 
