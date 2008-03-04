@@ -27,19 +27,22 @@ hg parents --template 'let revision = "{node|short}"\n' >> src/version.ml
 src/version.ml:
 	$(genversion)
 
-distrib: clean $(DISTDIR)
+distrib: $(DISTDIR)
 
-$(DISTDIR):
+$(DISTDIR): clean-all
 	$(genversion)
 	-mkdir $(DISTDIR)
 	$(CP) -r bin $(DISTDIR)
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
 	$(CP) -r lib $(DISTDIR)
+	$(CP) -r cil $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)
 
-check: $(DISTDIR)
+check:
 	$(MAKE) -C tests
-	cd $(DISTDIR); $(MAKE) clean; $(MAKE) install
+
+check-all: check $(DISTDIR)
+	cd $(DISTDIR); $(MAKE) install

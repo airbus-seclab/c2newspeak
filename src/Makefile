@@ -1,4 +1,4 @@
-DIR = npkstats npksimplify npk2bytesz
+DIR = npk2bytesz
 DEP = $(addsuffix /.depend,$(DIR))
 
 #DOC_DIR= ../doc/ocamldoc/

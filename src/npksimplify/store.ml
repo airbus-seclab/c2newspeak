@@ -49,7 +49,7 @@ let rec does_not_access n e x =
 	| BinOp (_, e1, e2) -> (check e1) && (check e2)
     in 
       check e
-  with unknown -> false
+  with Unknown -> false
 
 type t = (int * (int * Newspeak.exp) list)
 
@@ -81,7 +81,7 @@ let exp_of_local (n, s) (lv, t) =
       List.assoc x s
   with Not_found | Unknown -> Lval (lv, t)
 
-let to_string (n, s) =
+let to_string (_, s) =
   let string_of_assoc (x, e) =
     let x = string_of_int x in
     let v = Newspeak.string_of_exp e in
