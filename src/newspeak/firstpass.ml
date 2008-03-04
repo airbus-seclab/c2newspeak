@@ -31,7 +31,6 @@ module K = Npkil
 (* Constants *)
 let max_array_length = 1073741823
 let ret_name = "!return"
-let tmp_name = "!tmp"
 
 let ret_lbl = 0
 let cnt_lbl = 1

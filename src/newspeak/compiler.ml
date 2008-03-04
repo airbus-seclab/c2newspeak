@@ -38,7 +38,7 @@ let translate_scalar t =
     | FunPtr -> N.FunPtr
     | Ptr -> N.Ptr
     | Void -> Npkcontext.error "Compiler.translate_scalar" 
-	"Value void not ignored as it ought to be"
+	"value void not ignored as it ought to be"
     | _ -> 
 	Npkcontext.error "Compiler.translate_scalar" 
 	  "unexpected non scalar type"
@@ -338,7 +338,7 @@ let translate (cglbdecls, cfundefs) =
 	      in
 	      let call = append_args loc args f in
 		pop id;
-		(K.Decl ("Value_of_"^fid, t, call::post), loc)
+		(K.Decl ("value_of_"^fid, t, call::post), loc)
 		
   and translate_switch (e, cases, default) =
     let e = translate_exp e in

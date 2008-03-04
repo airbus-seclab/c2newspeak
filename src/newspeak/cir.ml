@@ -147,7 +147,8 @@ and cst =
 
 let create_tmp loc t = 
   let id = fresh_id () in
-  let decl = (Decl (t, "!tmp", id), loc) in
+  let x = "!tmp"^(string_of_int id) in
+  let decl = (Decl (t, x, id), loc) in
   let v = Var id in
     (decl, v)
 	
@@ -314,10 +315,11 @@ and normalize_stmt (x, loc) =
 	let (pref, e, post) = normalize_exp e in
 	let body1 = normalize_blk body1 in
 	let body2 = normalize_blk body2 in
+	let body = pref@(If (e, post@body1, post@body2), loc)::[] in
 	  (* TODO: not good, code duplication!!! 
 	     could add a variable instead, if variable elimination later 
 	     on is good enough *)
-	  pref@(If (e, post@body1, post@body2), loc)::[]
+	  (Block (body, None), loc)::[]
 
     | Switch (e, choices, default) ->
 	let (pref, e, post) = normalize_exp e in

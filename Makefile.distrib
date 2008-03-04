@@ -64,7 +64,8 @@ CLEANFILES=*~ .depend \
            src/npkstats/*~ \
            src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
            src/npksimplify/*~ \
-           src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx 
+           src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \
+           tests/*.bak tests/result
 
 
 .PHONY: all clean install doc cil
