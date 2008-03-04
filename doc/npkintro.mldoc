@@ -35,10 +35,7 @@
 
 {2 Installation }
 {ol
-{- CIL 1.3.5 (not the last version) should be installed,}
-{- An environment variable CIL should be defined with the path of CIL library.
-  (cil/obj/x86_LINUX or cil/obj/x86_WIN32),}
-{- Then, do:
+{- Do:
     {v make install v}}
 }
   This will compile and copy to the bin/ directory the files:
