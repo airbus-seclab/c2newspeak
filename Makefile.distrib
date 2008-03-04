@@ -10,7 +10,7 @@ OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
 CILDIR=cil/obj/current
-CIL=$(CILDIR)/cil.cmxa
+CIL=$(CILDIR)/newspeak.cmxa
 CILFILES:=Makefile bin/CilConfig.pm bin/cilly.bat bin/patcher.bat \
           config.h config.log config.status ocamlutil/perfcount.c \
           src/formatparse.output src/frontc/cparser.output
@@ -71,16 +71,19 @@ CLEANFILES=*~ .depend \
            src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx 
 
 
-.PHONY: all clean install doc
+.PHONY: all clean install doc cil
 
 #TODO: remove this recursive call
-install: $(CIL) c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
+install: cil c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
          newspeak
 
+cil: $(CIL)
+
 $(CIL):
+	tar xzf cil-1.3.5.tar.gz
 	cd cil; ./configure
-	$(CP) cil/machdep.ml cil/obj/x86_WIN32/
-	$(CP) cil/machdep.ml cil/obj/x86_LINUX/
+	$(CP) machdep.ml cil/obj/x86_WIN32/
+	$(CP) machdep.ml cil/obj/x86_LINUX/
 	cd cil; make
 	-$(CP) cil/obj/x86_WIN32/* cil/obj/current
 	-$(CP) cil/obj/x86_LINUX/* cil/obj/current
