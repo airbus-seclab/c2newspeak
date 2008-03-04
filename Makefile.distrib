@@ -79,6 +79,8 @@ install: $(CIL) c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
 
 $(CIL):
 	cd cil; ./configure
+	$(CP) cil/machdep.ml cil/obj/x86_WIN32/
+	$(CP) cil/machdep.ml cil/obj/x86_LINUX/
 	cd cil; make
 	-$(CP) cil/obj/x86_WIN32/* cil/obj/current
 	-$(CP) cil/obj/x86_LINUX/* cil/obj/current
