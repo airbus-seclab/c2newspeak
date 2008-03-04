@@ -195,7 +195,8 @@ let int_of_exp e =
   let i = int_of_exp e in
     if not (Big_int.is_int_big_int i) then begin
       Npkcontext.error "Csyntax.len_of_exp" 
-	("invalid size for array: "^(Big_int.string_of_big_int i))
+	("expression can not be evaluated to an int: "
+	 ^(Big_int.string_of_big_int i))
     end;
     Big_int.int_of_big_int i
 

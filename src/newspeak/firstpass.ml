@@ -29,6 +29,7 @@ module C = Cir
 module K = Npkil
 
 (* Constants *)
+let max_array_length = 1073741823
 let ret_name = "!return"
 let tmp_name = "!tmp"
 
@@ -584,8 +585,13 @@ let translate globals =
 	None -> None
       | Some e -> 
 	  let (e, _) = translate_exp e in
-	  let i = C.int_of_exp e in
-	    if i <= 0 then begin
+	  let i = 
+	    try C.int_of_exp e 
+	    with Invalid_argument _ -> 
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"invalid size for array"
+	  in
+	    if (i <= 0) || (i >= max_array_length) then begin
 	      Npkcontext.error "Firstpass.translate_typ" 
 		("invalid size for array: "^(string_of_int i))
 	    end;
