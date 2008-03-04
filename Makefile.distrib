@@ -9,12 +9,8 @@ OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-CILDIR=cil/obj/current
-CIL=$(CILDIR)/newspeak.cmxa
-CILFILES:=Makefile bin/CilConfig.pm bin/cilly.bat bin/patcher.bat \
-          config.h config.log config.status ocamlutil/perfcount.c \
-          src/formatparse.output src/frontc/cparser.output
-CILFILES:=$(addprefix cil/, $(CILFILES))
+CILDIR=cil/bin
+CIL=$(CILDIR)/cil.cmxa
 
 INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify
 LIB=nums.cma
@@ -85,8 +81,8 @@ $(CIL):
 	$(CP) machdep.ml cil/obj/x86_WIN32/
 	$(CP) machdep.ml cil/obj/x86_LINUX/
 	cd cil; make
-	-$(CP) cil/obj/x86_WIN32/* cil/obj/current
-	-$(CP) cil/obj/x86_LINUX/* cil/obj/current
+	-$(CP) cil/obj/x86_WIN32/* cil/bin
+	-$(CP) cil/obj/x86_LINUX/* cil/bin
 
 newspeak: $(NPKFILES)
 	$(CP) -r $(NPKFILES) bin
@@ -143,9 +139,7 @@ clean:
 	$(RM) $(CLEANFILES)
 
 clean-all: clean
-	-cd cil; make clean
-	$(RM) cil/obj/current/*
-	$(RM) $(CILFILES)
+	$(RM) -r cil
 
 .depend: $(ML)
 	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
