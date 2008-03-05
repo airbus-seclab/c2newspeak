@@ -32,7 +32,6 @@ distrib: $(DISTDIR)
 $(DISTDIR): clean-all
 	$(genversion)
 	-mkdir $(DISTDIR)
-	$(CP) -r bin $(DISTDIR)
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
 	$(CP) -r lib $(DISTDIR)
