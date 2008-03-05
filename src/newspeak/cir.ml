@@ -418,6 +418,7 @@ let normalize x =
   let pop_lbl lbl body loc =
     let decls = Hashtbl.find lbl_tbl lbl in
     let body = List.rev_append decls ((Block (body, Some lbl), loc)::[]) in
+    let body = (Block (body, None), loc)::[] in
       decr stack_height;
       Hashtbl.remove age_tbl !stack_height;
       Hashtbl.remove lbl_tbl lbl;
