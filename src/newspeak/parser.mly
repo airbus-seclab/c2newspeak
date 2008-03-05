@@ -311,6 +311,7 @@ postfix_expression:
 unary_expression:
   postfix_expression                       { $1 }
 | PLUSPLUS unary_expression                { IncrExp (Plus, $2) }
+| MINUSMINUS unary_expression              { IncrExp (Minus, $2) }
 | AMPERSAND cast_expression                { AddrOf $2 }
 | STAR cast_expression                     { Deref $2 }
 | BNOT cast_expression                     { Unop (BNot, $2) }
