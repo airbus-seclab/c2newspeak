@@ -9,7 +9,7 @@ OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-CILDIR=cil/bin
+CILDIR=cil-data/
 CIL=$(CILDIR)/cil.cmxa
 
 INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify
@@ -77,13 +77,13 @@ install: cil c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
 cil: $(CIL)
 
 $(CIL):
-	tar xzf cil-1.3.5.tar.gz
+	cd $(CILDIR); tar xzf cil-1.3.5.tar.gz
 	cd cil; ./configure
 	$(CP) machdep.ml cil/obj/x86_WIN32/
 	$(CP) machdep.ml cil/obj/x86_LINUX/
 	cd cil; make
-	-$(CP) cil/obj/x86_WIN32/* cil/bin
-	-$(CP) cil/obj/x86_LINUX/* cil/bin
+	-$(CP) cil/obj/x86_WIN32/* $(CILDIR)
+	-$(CP) cil/obj/x86_LINUX/* $(CILDIR)
 
 newspeak: $(NPKFILES)
 	$(CP) -r $(NPKFILES) bin
