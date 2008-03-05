@@ -125,9 +125,10 @@ and binop =
     | DivF of int
     | MultF of int
 
+(* TODO: try to have the same constants as newspeak Nil ??*)
 and cst =
     | CInt of Int64.t
-    | CFloat of string
+    | CFloat of (float * string)
 
 (** kind of C int type *)
 val int_kind: Newspeak.ikind

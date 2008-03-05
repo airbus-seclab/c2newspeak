@@ -290,7 +290,7 @@ primary_expression:
   IDENTIFIER                               { Var $1 }
 | CHARACTER                                { Csyntax.char_cst_of_lexeme $1 }
 | INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
-| FLOATCST                                 { CFloat $1 }
+| FLOATCST                                 { Csyntax.float_cst_of_lexeme $1 }
 | STRING                                   { Str $1 }
 | LPAREN expression RPAREN                 { $2 }
 ;;

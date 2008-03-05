@@ -142,7 +142,7 @@ and binop =
 
 and cst =
     | CInt of Int64.t
-    | CFloat of string
+    | CFloat of (float * string)
 
 
 let create_tmp loc t = 
@@ -154,7 +154,7 @@ let create_tmp loc t =
 	
 let exp_of_int i = Const (CInt (Int64.of_int i))
 
-let exp_of_float x = Const (CFloat (string_of_float x))
+let exp_of_float x = Const (CFloat (x, string_of_float x))
 
 (* TODO: this is a temporary hack, remove this function and align_of 
    put in csyntax *)

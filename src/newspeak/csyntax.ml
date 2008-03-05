@@ -84,7 +84,7 @@ and static = bool
 
 and exp = 
     | CInt of (Int64.t * ikind)
-    | CFloat of string
+    | CFloat of (float * string)
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -228,3 +228,11 @@ let normalize_ftyp (args, va_list, ret_t) =
   in
   let (_, args_name) = List.split args_t in
     ((args_t, va_list, ret_t), args_name)
+
+let float_cst_of_lexeme lexeme =
+  let f = 
+    try float_of_string lexeme 
+    with Failure "float_of_string" -> 
+      Npkcontext.error "Csyntax.float_cst_of_lexeme" "float not representable"
+  in
+    CFloat (f, lexeme)

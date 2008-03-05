@@ -133,7 +133,7 @@ let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
 let hex_integer = "0x" (hex_digit+ as value) sign? length?
 let integer = (digit+ as value) sign? length?
-let float = digit+ '.' digit+
+let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" hex_digit hex_digit '\''
@@ -181,7 +181,7 @@ rule token = parse
 					(Lexing.lexeme lexbuf)) }
   | "\'\\0\'"           { CHARACTER 0 }
   | "\'\\n\'"           { CHARACTER 10 }
-  | float               { FLOATCST (Lexing.lexeme lexbuf) }
+  | float               { FLOATCST  (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
 (* punctuation *)

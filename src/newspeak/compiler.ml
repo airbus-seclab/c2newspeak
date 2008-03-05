@@ -90,13 +90,7 @@ let translate_binop op e1 e2 =
 let translate_cst c =
   match c with
       CInt i -> N.CInt64 i
-    | CFloat s -> 
-	let c = 
-	  try float_of_string s 
-	  with Failure "float_of_string" -> 
-	    Npkcontext.error "Compiler.translate_cst" "Float not representable"
-	in
-	  N.CFloat (c, s)
+    | CFloat f -> N.CFloat f
 
 let translate (cglbdecls, cfundefs) =
   let glbdecls = Hashtbl.create 100 in
