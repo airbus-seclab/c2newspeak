@@ -129,7 +129,7 @@ let hex_digit = digit | ['A'-'F']
 let string = '"' [^'"']* '"'
 
 let sign = "U" as sign
-let length = "LL" as length
+let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
 let hex_integer = "0x" (hex_digit+ as value) sign? length?
 let integer = (digit+ as value) sign? length?

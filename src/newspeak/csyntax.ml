@@ -186,6 +186,7 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
   let min_sz =
     match min_sz with
 	None -> Config.size_of_int
+      | Some "L" -> Config.size_of_long
       | Some "LL" -> Config.size_of_longlong
       | _ -> 
 	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
