@@ -36,7 +36,7 @@ $(DISTDIR): clean-all
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
 	$(CP) -r lib $(DISTDIR)
-	$(CP) -r cil-1.3.5.tar.gz machdep.ml $(DISTDIR)
+	$(CP) -r cil $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)

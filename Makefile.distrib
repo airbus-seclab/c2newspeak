@@ -9,7 +9,7 @@ OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-CILDIR=cil-data/
+CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
 INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify
@@ -41,7 +41,7 @@ NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
 
 CLEANFILES=*~ .depend \
            *.a *.cma *.cmxa \
-           bin/* \
+           bin \
            src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
            src/newspeak/*.cmo \
            src/*~ \
@@ -76,35 +76,35 @@ install: cil c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
 
 cil: $(CIL)
 
-$(CIL):
-	cd $(CILDIR); tar xzf cil-1.3.5.tar.gz
-	cd cil; ./configure
-	$(CP) machdep.ml cil/obj/x86_WIN32/
-	$(CP) machdep.ml cil/obj/x86_LINUX/
-	cd cil; make
-	-$(CP) cil/obj/x86_WIN32/* $(CILDIR)
-	-$(CP) cil/obj/x86_LINUX/* $(CILDIR)
+$(CIL): $(CILDIR)
+	cd cil; tar xzf cil-1.3.5.tar.gz
+	cd cil/cil; ./configure
+	$(CP) cil/machdep.ml cil/cil/obj/x86_WIN32/
+	$(CP) cil/machdep.ml cil/cil/obj/x86_LINUX/
+	cd cil/cil; make
+	-$(CP) cil/cil/obj/x86_WIN32/* $(CILDIR)
+	-$(CP) cil/cil/obj/x86_LINUX/* $(CILDIR)
 
-newspeak: $(NPKFILES)
+newspeak: bin $(NPKFILES)
 	$(CP) -r $(NPKFILES) bin
 
-c2newspeak: $(C2NCMX)
+c2newspeak: bin $(C2NCMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(C2NCMX) -o bin/c2newspeak
 
 #TODO: clean up this
-npkstrip: src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
+npkstrip: bin src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx -o bin/npkstrip
 
 #TODO: clean this up
-npkstats: src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx
+npkstats: bin src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx -o bin/npkstats
 
 #TODO: clean this up
-npksimplify: $(NSCMX)
+npksimplify: bin $(NSCMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(NSCMX) -o bin/npksimplify
 
 #TODO: clean this up
-npk2bytesz: src/version.cmx src/newspeak/newspeak.cmx \
+npk2bytesz: bin src/version.cmx src/newspeak/newspeak.cmx \
             src/npk2bytesz/npk2bytesz.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npk2bytesz/npk2bytesz.cmx -o bin/npk2bytesz
 
@@ -140,9 +140,15 @@ clean:
 	$(RM) $(CLEANFILES)
 
 clean-all: clean
-	$(RM) -r cil
+	$(RM) -r cil/cil $(CILDIR)
 
-.depend: $(ML)
+bin:
+	mkdir bin
+
+$(CILDIR):
+	mkdir $(CILDIR)
+
+.depend: $(CILDIR) $(ML)
 	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
 
 include .depend
