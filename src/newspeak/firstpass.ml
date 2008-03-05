@@ -587,12 +587,14 @@ let translate globals =
 	  let i = 
 	    try C.int_of_exp e 
 	    with Invalid_argument _ -> 
+(* TODO: should print the expression e?? *)
 	      Npkcontext.error "Firstpass.translate_typ" 
 		"invalid size for array"
 	  in
 	    if (i <= 0) || (i >= max_array_length) then begin
+(* TODO: should print the expression e?? *)
 	      Npkcontext.error "Firstpass.translate_typ" 
-		("invalid size for array: "^(string_of_int i))
+		"invalid size for array"
 	    end;
 	    Some i
 
