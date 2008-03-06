@@ -125,9 +125,10 @@ and binop =
     | DivF of int
     | MultF of int
 
+(* TODO: try to have the same constants as newspeak Nil ??*)
 and cst =
     | CInt of Int64.t
-    | CFloat of string
+    | CFloat of (float * string)
 
 (** kind of C int type *)
 val int_kind: Newspeak.ikind
@@ -155,14 +156,6 @@ val normalize_lv: lv -> (blk * lv * blk)
 
 val normalize: blk -> blk
 
-val align_of: (string -> int) -> typ -> int
-
-(** [next_aligned o x] returns the smallest integer greater or equal than o,
-    which is equal to 0 modulo x *)
-val next_aligned: int -> int -> int
-
-val size_of: typ -> int
-
 val int_of_exp: exp -> int
 
 val len_of_array: int option -> lv -> Npkil.tmp_int
@@ -170,3 +163,5 @@ val len_of_array: int option -> lv -> Npkil.tmp_int
 val cast: (exp * typ) -> typ -> exp
 
 val string_of_typ: typ -> string
+
+val size_of: typ -> int

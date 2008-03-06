@@ -47,7 +47,7 @@ let process (gdecls, fundecs) =
 
   let rec process_blk x = 
     match x with
-	(Call (FunId f), loc)::tl when has_body f ->
+	(Call (FunId f), _)::tl when has_body f -> 
 	  (get_body f)@(process_blk tl)
       | (x, loc)::tl -> (process_stmtkind x, loc)::(process_blk tl)
       | [] -> []

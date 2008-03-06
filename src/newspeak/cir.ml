@@ -142,18 +142,19 @@ and binop =
 
 and cst =
     | CInt of Int64.t
-    | CFloat of string
+    | CFloat of (float * string)
 
 
 let create_tmp loc t = 
   let id = fresh_id () in
-  let decl = (Decl (t, "!tmp", id), loc) in
+  let x = "!tmp"^(string_of_int id) in
+  let decl = (Decl (t, x, id), loc) in
   let v = Var id in
     (decl, v)
 	
 let exp_of_int i = Const (CInt (Int64.of_int i))
 
-let exp_of_float x = Const (CFloat (string_of_float x))
+let exp_of_float x = Const (CFloat (x, string_of_float x))
 
 (* TODO: this is a temporary hack, remove this function and align_of 
    put in csyntax *)
@@ -195,25 +196,10 @@ let int_of_exp e =
   let i = int_of_exp e in
     if not (Big_int.is_int_big_int i) then begin
       Npkcontext.error "Csyntax.len_of_exp" 
-	("invalid size for array: "^(Big_int.string_of_big_int i))
+	("expression can not be evaluated to an int: "
+	 ^(Big_int.string_of_big_int i))
     end;
     Big_int.int_of_big_int i
-
-(* TODO: this is a temporary hack, remove and put in csyntax *)
-let align_of align_of_struct t =
-  let rec align_of t =
-    match t with
-	Struct (n, _, _) | Union (n, _, _) -> align_of_struct n
-      | Array (t, _) -> align_of t
-      | _ -> size_of t
-  in
-    align_of t
-
-(* [align o x] returns the smallest integer greater or equal than o,
-   which is equal to 0 modulo x *)
-let next_aligned o x =
-  let m = o mod x in
-    if m = 0 then o else o + x - m
 
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
@@ -329,10 +315,11 @@ and normalize_stmt (x, loc) =
 	let (pref, e, post) = normalize_exp e in
 	let body1 = normalize_blk body1 in
 	let body2 = normalize_blk body2 in
+	let body = pref@(If (e, post@body1, post@body2), loc)::[] in
 	  (* TODO: not good, code duplication!!! 
 	     could add a variable instead, if variable elimination later 
 	     on is good enough *)
-	  pref@(If (e, post@body1, post@body2), loc)::[]
+	  (Block (body, None), loc)::[]
 
     | Switch (e, choices, default) ->
 	let (pref, e, post) = normalize_exp e in
@@ -431,6 +418,7 @@ let normalize x =
   let pop_lbl lbl body loc =
     let decls = Hashtbl.find lbl_tbl lbl in
     let body = List.rev_append decls ((Block (body, Some lbl), loc)::[]) in
+    let body = (Block (body, None), loc)::[] in
       decr stack_height;
       Hashtbl.remove age_tbl !stack_height;
       Hashtbl.remove lbl_tbl lbl;

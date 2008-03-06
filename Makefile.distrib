@@ -5,15 +5,16 @@ RM=rm -rf
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc
 OCAMLC=ocamlc -w Ael -warn-error Ael
-OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 10 -noassert -unsafe
+OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-DIR=src
+CILDIR=cil/obj
+CIL=$(CILDIR)/cil.cmxa
 
-INCLUDE=-I $(CIL) -I src/ -I src/newspeak/
+INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify
 LIB=nums.cma
-LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)/cil.cmxa
+LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
 C2NFILES:=config cilutils params npkcontext newspeak \
          pp_syntax pp_lexer pp_parser \
@@ -26,16 +27,24 @@ C2NFILES:=version $(addprefix newspeak/, $(C2NFILES))
 C2NFILES:=$(addprefix src/, $(C2NFILES))
 C2NCMX=$(addsuffix .cmx, $(C2NFILES))
 
+NSFILES:=normalize store copy_propagation inline var_hoist npksimplify
+NSFILES:=$(addprefix npksimplify/,$(NSFILES))
+NSFILES:=$(addprefix src/,$(NSFILES))
+NSCMX=src/version.cmx src/newspeak/newspeak.cmx $(addsuffix .cmx, $(NSFILES))
+
+
 MLI=$(addsuffix .mli, $(C2NFILES))
-ML=$(addsuffix .ml, $(C2NFILES))
+ML=$(addsuffix .ml, $(C2NFILES)) $(addsuffix .ml, $(NSFILES))
 
 NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
-         src/lib/*
+         lib/*
 
 CLEANFILES=*~ .depend \
            *.a *.cma *.cmxa \
            bin/* \
            src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
+           src/newspeak/*.cmo \
+           src/*~ \
            src/npkstrip/*.cmi src/npkstrip/*.cmx src/npkstrip/*.o \
            src/npkstrip/npkstrip src/npkstrip/npkstrip.exe \
            src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
@@ -50,13 +59,29 @@ CLEANFILES=*~ .depend \
            doc/*.html doc/*~ \
            tests/newspeak/000 tests/newspeak/001 tests/newspeak/002 \
            tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
-	   src/lib/*~ src/lib/sys/*~
+	   lib/*~ lib/sys/*~ \
+           src/npkstats/*.o src/npkstats/*.cmi src/npkstats/*.cmx \
+           src/npkstats/*~ \
+           src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
+           src/npksimplify/*~ \
+           src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \
+           tests/*.bak tests/result
 
-.PHONY: $(DIR) all clean install doc
+
+.PHONY: all clean install doc
 
 #TODO: remove this recursive call
-install: c2newspeak doc npkstrip newspeak
-	make -C src install
+install: $(CIL) c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
+         newspeak
+
+$(CIL):
+	cd cil; tar xzf cil-1.3.5.tar.gz
+	cd cil/cil; ./configure
+	$(CP) cil/machdep.ml cil/cil/obj/x86_WIN32/
+	$(CP) cil/machdep.ml cil/cil/obj/x86_LINUX/
+	cd cil/cil; make
+	-$(CP) cil/cil/obj/x86_WIN32/* $(CILDIR)
+	-$(CP) cil/cil/obj/x86_LINUX/* $(CILDIR)
 
 newspeak: $(NPKFILES)
 	$(CP) -r $(NPKFILES) bin
@@ -67,6 +92,19 @@ c2newspeak: $(C2NCMX)
 #TODO: clean up this
 npkstrip: src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx -o bin/npkstrip
+
+#TODO: clean this up
+npkstats: src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx -o bin/npkstats
+
+#TODO: clean this up
+npksimplify: $(NSCMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(NSCMX) -o bin/npksimplify
+
+#TODO: clean this up
+npk2bytesz: src/version.cmx src/newspeak/newspeak.cmx \
+            src/npk2bytesz/npk2bytesz.cmx
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npk2bytesz/npk2bytesz.cmx -o bin/npk2bytesz
 
 #TODO: clean up this
 newspeak.cma: src/version.cmi src/version.cmx src/newspeak/newspeak.ml
@@ -96,11 +134,16 @@ doc: src/version.cmi src/newspeak/newspeak.cmi
 	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 #TODO: do not call clean recursively
-clean: $(DIR)
-	make -C src clean
+clean:
 	$(RM) $(CLEANFILES)
 
+clean-all: clean
+	$(RM) -r cil/cil $(CILDIR)
+
 .depend: $(ML)
+	-mkdir bin
+	-mkdir $(CILDIR)
 	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
 
 include .depend
+

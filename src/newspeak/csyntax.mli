@@ -78,7 +78,7 @@ and static = bool
 
 and exp = 
     | CInt of (Int64.t * ikind)
-    | CFloat of string
+    | CFloat of (float * string)
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -126,6 +126,8 @@ val int_cst_of_lexeme:
   (string option * string * char option * string option) -> exp
 
 val char_cst_of_lexeme: int -> exp
+
+val float_cst_of_lexeme: string -> exp
 
 val va_arg: (typ * string)
 

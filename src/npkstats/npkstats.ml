@@ -146,7 +146,7 @@ object (this)
     let _ =
       match x with
 	  FunId f -> this#count_call f
-	| FunDeref (e, _) -> 
+	| FunDeref _ -> 
 	    current_counters.fpointer <- current_counters.fpointer + 1
     in
       true
@@ -155,7 +155,7 @@ object (this)
     current_counters.instrs <- current_counters.instrs + 1;
     let _ = 
       match x with
-	  InfLoop body -> 
+	  InfLoop _ -> 
 	    current_counters.loop <- current_counters.loop + 1
 	| _ -> ()
     in

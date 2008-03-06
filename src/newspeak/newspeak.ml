@@ -75,7 +75,7 @@ and exp =
 and cte = 
     CInt64 of Int64.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
-  | CFloat of float * string
+  | CFloat of (float * string)
   | Nil
 
 and unop =

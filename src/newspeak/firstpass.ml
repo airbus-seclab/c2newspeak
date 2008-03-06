@@ -29,8 +29,8 @@ module C = Cir
 module K = Npkil
 
 (* Constants *)
+let max_array_length = 1073741823
 let ret_name = "!return"
-let tmp_name = "!tmp"
 
 let ret_lbl = 0
 let cnt_lbl = 1
@@ -43,6 +43,12 @@ type symb =
     | Enum of C.exp
 
 (* functions *)
+(* [align o x] returns the smallest integer greater or equal than o,
+   which is equal to 0 modulo x *)
+let next_aligned o x =
+  let m = o mod x in
+    if m = 0 then o else o + x - m
+
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ -> 
@@ -73,16 +79,6 @@ let translate globals =
   let symbtbl = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
-
-  let align_of_struct n =
-    let (_, _, a) = 
-      try Hashtbl.find compdefs n
-      with Not_found -> 
-	Npkcontext.error "Firstpass.size_of_struct" 
-	  ("unknown structure or union"^n) 
-    in
-      a
-  in
 
   let tmp_cnt = ref 0 in
 
@@ -204,11 +200,7 @@ let translate globals =
 	      Array (t, Some (exp_of_int n))
 	
 	| (Sequence seq, Struct (n, Some f)) ->
-	    (* TODO: think about it: do twice the job with a later 
-	       translate_typ, not good! *)
-	    let (f, sz, a) = translate_struct_fields f in
-	      (* TODO: maybe factor code with translate_typ *)
-	      Hashtbl.add compdefs n (f, sz, a);
+	    let (f, _) = process_struct_fields n f in
 	      List.iter2 (translate_field_sequence o) f seq;
 	      Struct (n, None)
 			
@@ -225,8 +217,7 @@ let translate globals =
       match seq with
 	  hd::tl when n > 0 -> 
 	    let _ = translate o t hd in
-	      (* TODO: optimize this with size_of on csyntax!!! *)
-	    let o = o + C.size_of (translate_typ t) in
+	    let o = o + size_of t in
 	      translate_sequence o t (n-1) tl
 	| _::_ -> 
 	    Npkcontext.print_warning 
@@ -239,8 +230,7 @@ let translate globals =
 	   values ?? *)
 	| [] when n > 0 -> 
 	    let _ = fill_with_zeros o t in
-	      (* TODO: optimize this with size_of on csyntax!!! *)
-	    let o = o + C.size_of (translate_typ t) in
+	    let o = o + size_of t in
 	      translate_sequence o t (n-1) []
 	| [] -> ()
 	    
@@ -256,8 +246,7 @@ let translate globals =
 		    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
 		      "unreachable statement"
 	    in
-	      (* TODO: optimize this with size_of on csyntax!!! *)
-	    let sz = C.size_of (translate_typ t) in
+	    let sz = size_of t in
 	    let o = ref o in
 	      for i = 0 to n - 1 do
 		fill_with_zeros !o t;
@@ -317,8 +306,7 @@ let translate globals =
 		  let (i, _) = translate_exp e in
 		  let n = translate_array_len len in
 		  let len = C.len_of_array n lv' in
-		    (* TODO: have a size_of in csyntax, instead od Cir *)
-		  let sz = C.exp_of_int (C.size_of (translate_typ t)) in
+		  let sz = C.exp_of_int (size_of t) in
 		  let o = C.Unop (C.Belongs_tmp (Int64.zero, len), i) in
 		  let o = C.Binop (C.Mult C.int_kind, o, sz) in
 		    (C.Shift (lv', o), t)
@@ -357,6 +345,8 @@ let translate globals =
 	Ptr t -> (C.Deref (e, translate_typ t), t)
       | _ -> Npkcontext.error "Firstpass.deref_typ" "Pointer type expected"
 
+  and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
+
   and translate_exp e = 
     match e with
 	CInt (i, k) -> (C.Const (C.CInt i), Int k)
@@ -382,8 +372,7 @@ let translate globals =
 	    ("unnecessary creation of a pointer from a dereference:"
 	     ^" rewrite the code");
 	  let e = translate_exp e in
-	  let (e, t) = deref e in
-	    (C.AddrOf (e, translate_typ t), Ptr t)
+	    addr_of (deref e)
 
       | AddrOf (Deref _) -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
@@ -395,8 +384,8 @@ let translate globals =
 	  let (lv', t) = translate_lv lv in begin
 	    match t with
 		Array (elt_t, _) -> 
-		  (* TODO: factor AddrOf (translate_typ), like deref *)
-		  (C.AddrOf (lv', translate_typ t), Ptr elt_t)
+		  let (e, _) = addr_of (lv', t) in
+		    (e, Ptr elt_t)
 	      | Ptr _ -> translate_exp (AddrOf (Deref lv))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
@@ -407,10 +396,7 @@ let translate globals =
 	  let base = AddrOf (Index (lv, exp_of_int 0)) in
 	    translate_exp (Binop (Plus, base, e))
 	    
-      | AddrOf lv ->
-	  let (lv, t) = translate_lv lv in
-	    (* TODO: factor code *)
-	    (C.AddrOf (lv, translate_typ t), Ptr t)
+      | AddrOf lv -> addr_of (translate_lv lv)
 	      
 (* Here c is necessarily positive *)
       | Unop (Neg, CInt (c, (_, sz))) -> 
@@ -441,14 +427,11 @@ let translate globals =
 
       | SizeofE e ->
 	  let (_, t) = translate_exp e in
-	    (* TODO: have a size_of on csyntax's typ *)
-	  let t = translate_typ t in
-	  let sz = (C.size_of t) / 8 in
+	  let sz = (size_of t) / 8 in
 	    (C.exp_of_int sz, int_typ)
 
       | Sizeof t -> 
-	  let t = translate_typ t in
-	  let sz = (C.size_of t) / 8 in
+	  let sz = (size_of t) / 8 in
 	    (C.exp_of_int sz, int_typ)
 
       | Str str -> add_glb_cstr str
@@ -501,9 +484,9 @@ let translate globals =
     let rec init_va_args lv x =
       match x with
 	  (e, t)::tl ->
+	    let sz = size_of t in
 	    let t = translate_typ t in
 	    let set = (C.Set (lv, t, e), loc) in
-	    let sz = C.size_of t in
 	    let lv = C.Shift (lv, C.exp_of_int sz) in
 	    let init = init_va_args lv tl in
 	      set::init
@@ -513,8 +496,7 @@ let translate globals =
 
   and size_of_va_args x =
     match x with
-	(* TODO: have a size_of on csyntax *)
-	(_, t)::tl -> (size_of_va_args tl) + C.size_of (translate_typ t)
+	(_, t)::tl -> (size_of_va_args tl) + size_of t
       | [] -> 0
 
   and translate_args va_list args args_t =
@@ -552,8 +534,7 @@ let translate globals =
       incr tmp_cnt;
       (x, decl, C.Var id)
 
-  and translate_field (x, (o, t)) =
-      (x, (o, translate_typ t))
+  and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
   and translate_typ t =
     match t with
@@ -587,15 +568,13 @@ let translate globals =
 	  let f = List.map translate_field f in
 	    C.Union (n, f, sz)
       | Struct (n, Some f) -> 
-	  let (f, sz, a) = translate_struct_fields f in
-	  let f' = List.map translate_field f in
-	    Hashtbl.add compdefs n (f, sz, a);
-	    C.Struct (n, f', sz)
+	  let (f, sz) = process_struct_fields n f in
+	  let f = List.map translate_field f in
+	    C.Struct (n, f, sz)
       | Union (n, Some f) -> 
-	  let (f, sz, a) = translate_union_fields f in
-	  let f' = List.map translate_field f in
-	    Hashtbl.add compdefs n (f, sz, a);
-	    C.Union (n, f', sz)
+	  let (f, sz) = process_union_fields n f in
+	  let f = List.map translate_field f in
+	    C.Union (n, f, sz)
       | Bitfield _ -> 
 	  Npkcontext.error "Firstpass.translate_typ" 
 	    "bitfields not allowed outside of structures"
@@ -605,14 +584,21 @@ let translate globals =
 	None -> None
       | Some e -> 
 	  let (e, _) = translate_exp e in
-	  let i = C.int_of_exp e in
-	    if i <= 0 then begin
+	  let i = 
+	    try C.int_of_exp e 
+	    with Invalid_argument _ -> 
+(* TODO: should print the expression e?? *)
 	      Npkcontext.error "Firstpass.translate_typ" 
-		("invalid size for array: "^(string_of_int i))
+		"invalid size for array"
+	  in
+	    if (i <= 0) || (i >= max_array_length) then begin
+(* TODO: should print the expression e?? *)
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"invalid size for array"
 	    end;
 	    Some i
 
-  and translate_struct_fields f =
+  and process_struct_fields name f =
     let o = ref 0 in
     let last_align = ref 1 in
     let rec translate (t, x) =
@@ -627,43 +613,41 @@ let translate globals =
 		  "expression without side-effects expected"
 	      end;
 	      if sz > n then begin
-		Npkcontext.error "Firstpass.translate_struct_fields"
+		Npkcontext.error "Firstpass.process_struct_fields"
 		  "width of bitfield exceeds its type"
 	      end;
-	      let t' = translate_typ (Int (s, n)) in
-	      let cur_align = C.align_of align_of_struct t' in
-	      let o' = C.next_aligned !o cur_align in
+	      let cur_align = align_of (Int (s, n)) in
+	      let o' = next_aligned !o cur_align in
 	      let o' = if !o + sz <= o' then !o else o' in
 		last_align := max !last_align cur_align;
 		o := !o + sz;
 		(x, (o', Int (s, sz)))
 	| _ ->
-	    (* TODO: have a size on type *)
-	    let t' = translate_typ t in
-	    let sz = C.size_of t' in
-	    let cur_align = C.align_of align_of_struct t' in
-	    let o' = C.next_aligned !o cur_align in
+	    let sz = size_of t in
+	    let cur_align = align_of t in
+	    let o' = next_aligned !o cur_align in
 	      last_align := max !last_align cur_align;
 	      o := o'+sz;
 	      (x, (o', t))
     in
     let f = List.map translate f in
-      (f, C.next_aligned !o !last_align, !last_align)
-      
-  and translate_union_fields f =
+    let sz = next_aligned !o !last_align in
+      Hashtbl.add compdefs name (f, sz, !last_align);
+      (f, sz)
+
+  and process_union_fields name f =
     let n = ref 0 in
     let align = ref 0 in
     let translate (t, x) =
-      (* TODO: have a size_of and align_of on csyntax typ *)
-      let t' = translate_typ t in
-      let sz = C.size_of t' in
-      let align' = C.align_of align_of_struct t' in
+      let sz = size_of t in
+      let align' = align_of t in
 	align := max !align align';
 	if !n < sz then n := sz;
 	(x, (0, t))
     in
     let f = List.map translate f in
-      (f, !n, !align)
+      Hashtbl.add compdefs name (f, !n, !align);
+      (f, !n)
 
   and translate_ftyp (args, _, ret) =
     let args = List.map (fun (t, _) -> translate_typ t) args in
@@ -957,6 +941,20 @@ let translate globals =
 	  Npkcontext.error "Csyntax.translate_unop" 
 	    "Unexpected unary operator and argument"
 
+  and size_of t = C.size_of (translate_typ t)
+
+  and align_of t =
+    match t with
+	Struct (n, _) | Union (n, _) ->
+	  let (_, _, a) = 
+	    try Hashtbl.find compdefs n
+	    with Not_found -> 
+	      Npkcontext.error "Firstpass.size_of_struct" 
+		("unknown structure or union"^n) 
+	  in
+	    a
+      | Array (t, _) -> align_of t
+      | _ -> size_of t
   in
 
   let translate_proto_ftyp f (args, va_list, ret) = 

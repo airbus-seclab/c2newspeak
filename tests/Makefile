@@ -36,7 +36,8 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	240 241 242 243 244 245 246 247 248 249 \
 	250 251 252 253 254 255 256 257 258 259 \
 	260 261 262 263 264 265 266 267 268 269 \
-	270 271 272
+	270 271 272 273 274 275 276 277 278 279 \
+	280 281 282
 
 CHECK=$(addsuffix .checked, $(TESTS))
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
@@ -87,7 +88,6 @@ $(TESTS): %: %.checked
 %.checked: CIL_SPEC=$(if $(shell [ -e $*.cil.spec ] && echo true), \
 	  $*.cil.spec,$*.spec)
 %.checked: %.c
-	unix2dos $*.c 2&> /dev/null; true
 	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.bak; true
 	dos2unix $*.bak 2&> /dev/null; true
 	if [ -e $*.spec ]; \

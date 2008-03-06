@@ -16,7 +16,7 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/mult-files/*.checked tests/mult-files/*~ \
             tests/mem_opt/000 tests/mem_opt/*.no \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
-            tests/newspeak/read.exe tests/newspeak/read
+            tests/newspeak/*.exe tests/newspeak/read 
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > src/version.ml; \
@@ -27,18 +27,21 @@ hg parents --template 'let revision = "{node|short}"\n' >> src/version.ml
 src/version.ml:
 	$(genversion)
 
-distrib: clean $(DISTDIR)
+distrib: $(DISTDIR)
 
-$(DISTDIR):
+$(DISTDIR): clean-all
 	$(genversion)
 	-mkdir $(DISTDIR)
-	$(CP) -r bin $(DISTDIR)
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
+	$(CP) -r lib $(DISTDIR)
+	$(CP) -r cil $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)
 
-check: $(DISTDIR)
+check:
 	$(MAKE) -C tests
-	cd $(DISTDIR); $(MAKE) clean; $(MAKE) install
+
+check-all: check $(DISTDIR)
+	cd $(DISTDIR); $(MAKE) install

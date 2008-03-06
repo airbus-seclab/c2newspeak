@@ -126,9 +126,11 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
 %token EXTERN FOR IF RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE
-%token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION UNSIGNED VOID
+%token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
-%token LBRACKET RBRACKET LPAREN RPAREN NOT EQ OREQ PLUSEQ EQEQ NOTEQ SEMICOLON
+%token LBRACKET RBRACKET LPAREN RPAREN NOT 
+%token EQ OREQ SHIFTLEQ MINUSEQ PLUSEQ EQEQ NOTEQ 
+%token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
@@ -288,7 +290,7 @@ primary_expression:
   IDENTIFIER                               { Var $1 }
 | CHARACTER                                { Csyntax.char_cst_of_lexeme $1 }
 | INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
-| FLOATCST                                 { CFloat $1 }
+| FLOATCST                                 { Csyntax.float_cst_of_lexeme $1 }
 | STRING                                   { Str $1 }
 | LPAREN expression RPAREN                 { $2 }
 ;;
@@ -309,6 +311,7 @@ postfix_expression:
 unary_expression:
   postfix_expression                       { $1 }
 | PLUSPLUS unary_expression                { IncrExp (Plus, $2) }
+| MINUSMINUS unary_expression              { IncrExp (Minus, $2) }
 | AMPERSAND cast_expression                { AddrOf $2 }
 | STAR cast_expression                     { Deref $2 }
 | BNOT cast_expression                     { Unop (BNot, $2) }
@@ -432,7 +435,9 @@ assignment_expression:
 
 assignment_operator:
   PLUSEQ                                   { Plus }
+| MINUSEQ                                  { Minus }
 | OREQ                                     { BOr }
+| SHIFTLEQ                                 { Shiftl }
 ;;
 
 argument_expression_list:
@@ -514,6 +519,16 @@ parameter_list:
 type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
+| SIGNED ityp                            {
+    let report_error = 
+      if !Npkcontext.dirty_syntax 
+      then Npkcontext.print_warning
+      else Npkcontext.error
+    in
+      report_error "Parser.type_specifier" 
+	"signed specifier not necessary";
+      Integer (Newspeak.Signed, $2)
+  }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
   let report_error = 
@@ -557,6 +572,16 @@ ityp:
 | SHORT                                  { Config.size_of_short }
 | INT                                    { Config.size_of_int }
 | LONG                                   { Config.size_of_long }
+| LONG INT                               { 
+    let report_error = 
+      if !Npkcontext.dirty_syntax 
+      then Npkcontext.print_warning
+      else Npkcontext.error
+    in
+      report_error "Parser.ityp" 
+	"long int is not normalized: use long instead";
+    Config.size_of_long 
+  }
 | LONG LONG                              { Config.size_of_longlong }
 ;;
 
