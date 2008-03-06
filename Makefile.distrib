@@ -9,7 +9,7 @@ OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 
-CILDIR=cil/bin
+CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
 INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify
