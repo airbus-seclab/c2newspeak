@@ -41,7 +41,7 @@ NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
 
 CLEANFILES=*~ .depend \
            *.a *.cma *.cmxa \
-           bin \
+           bin/* \
            src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
            src/newspeak/*.cmo \
            src/*~ \
@@ -75,7 +75,6 @@ install: $(CIL) c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
          newspeak
 
 $(CIL):
-	-mkdir $(CILDIR)
 	cd cil; tar xzf cil-1.3.5.tar.gz
 	cd cil/cil; ./configure
 	$(CP) cil/machdep.ml cil/cil/obj/x86_WIN32/
@@ -84,26 +83,26 @@ $(CIL):
 	-$(CP) cil/cil/obj/x86_WIN32/* $(CILDIR)
 	-$(CP) cil/cil/obj/x86_LINUX/* $(CILDIR)
 
-newspeak: bin $(NPKFILES)
+newspeak: $(NPKFILES)
 	$(CP) -r $(NPKFILES) bin
 
-c2newspeak: bin $(C2NCMX)
+c2newspeak: $(C2NCMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(C2NCMX) -o bin/c2newspeak
 
 #TODO: clean up this
-npkstrip: bin src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
+npkstrip: src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx -o bin/npkstrip
 
 #TODO: clean this up
-npkstats: bin src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx
+npkstats: src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx -o bin/npkstats
 
 #TODO: clean this up
-npksimplify: bin $(NSCMX)
+npksimplify: $(NSCMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(NSCMX) -o bin/npksimplify
 
 #TODO: clean this up
-npk2bytesz: bin src/version.cmx src/newspeak/newspeak.cmx \
+npk2bytesz: src/version.cmx src/newspeak/newspeak.cmx \
             src/npk2bytesz/npk2bytesz.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npk2bytesz/npk2bytesz.cmx -o bin/npk2bytesz
 
@@ -141,10 +140,8 @@ clean:
 clean-all: clean
 	$(RM) -r cil/cil $(CILDIR)
 
-bin:
-	-mkdir bin
-
 .depend: $(ML)
+	-mkdir bin
 	-mkdir $(CILDIR)
 	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
 
