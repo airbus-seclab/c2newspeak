@@ -120,6 +120,10 @@ let build_type_decl d =
     t
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
+
+let report_error msg err = 
+  if !Npkcontext.dirty_syntax then Npkcontext.print_warning msg err
+  else Npkcontext.error msg err
   
 %}
 
@@ -168,6 +172,11 @@ external_declaration:
 | EXTERN declaration                       { build_glbdecl (false, true) $2 }
 | STATIC declaration                       { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef $1 }
+| EXTERN function_definition               { 
+    report_error "Parser.external_declaration" 
+      "defined functions should not be extern";
+    build_fundef $2 
+}
 | TYPEDEF declaration                      { build_glbtypedef $2 }
 ;;
 
@@ -407,14 +416,9 @@ conditional_expression:
   logical_or_expression                    { $1 }
 | logical_or_expression QMARK 
   expression COLON conditional_expression  {
-    let report_error = 
-      if !Npkcontext.dirty_syntax 
-      then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report_error "Parser.type_specifier" 
-	"conditional expression are ugly: use if else instead";
-      IfExp ($1, $3, $5)
+    report_error "Parser.type_specifier" 
+      "conditional expression are ugly: use if else instead";
+    IfExp ($1, $3, $5)
   }
 ;;
 
@@ -460,13 +464,8 @@ init_list:
   init COMMA init_list                     { $1::$3 }
 | init                                     { $1::[] }
 |                                          {
-  let report_error = 
-    if !Npkcontext.dirty_syntax 
-    then Npkcontext.print_warning
-    else Npkcontext.error
-  in
-    report_error "Parser.type_specifier" "ugly initializer syntax";
-    []
+  report_error "Parser.type_specifier" "ugly initializer syntax";
+  []
   }
 ;;
 
@@ -520,22 +519,12 @@ type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
 | SIGNED ityp                            {
-    let report_error = 
-      if !Npkcontext.dirty_syntax 
-      then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report_error "Parser.type_specifier" 
-	"signed specifier not necessary";
-      Integer (Newspeak.Signed, $2)
+    report_error "Parser.type_specifier" 
+      "signed specifier not necessary";
+    Integer (Newspeak.Signed, $2)
   }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
-  let report_error = 
-    if !Npkcontext.dirty_syntax 
-    then Npkcontext.print_warning
-    else Npkcontext.error
-  in
     report_error "Parser.type_specifier" "Integer kind should be specified";
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
@@ -573,13 +562,8 @@ ityp:
 | INT                                    { Config.size_of_int }
 | LONG                                   { Config.size_of_long }
 | LONG INT                               { 
-    let report_error = 
-      if !Npkcontext.dirty_syntax 
-      then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report_error "Parser.ityp" 
-	"long int is not normalized: use long instead";
+    report_error "Parser.ityp" 
+      "long int is not normalized: use long instead";
     Config.size_of_long 
   }
 | LONG LONG                              { Config.size_of_longlong }
