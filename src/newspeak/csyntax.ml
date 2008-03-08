@@ -27,6 +27,13 @@ open Newspeak
 
 type prog = (global * location) list
 
+and spec = spec_token list list
+
+and spec_token = 
+    | CustomToken of string
+    | VarToken of string
+    | CstToken of Cir.cst
+
 and global = 
     | FunctionDef of (string * typ * blk)
 (* enum declaration *)
@@ -83,8 +90,7 @@ and stmtkind =
 and static = bool
 
 and exp = 
-    | CInt of (Int64.t * ikind)
-    | CFloat of (float * string)
+    | Cst of cst
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -104,6 +110,8 @@ and exp =
    decrement it if binop is Minus *)
     | ExpIncr of (binop * exp)
     | IncrExp of (binop * exp)
+
+and cst = (Cir.cst * typ)
 
 and unop = Neg | Not | BNot
 
@@ -129,7 +137,9 @@ let int_typ = Int (Signed, Config.size_of_int)
 
 let va_arg = (Ptr char_typ, "__builtin_newspeak_va_arg")
 
-let exp_of_int i = CInt (Int64.of_int i, (Signed, Config.size_of_int))
+let exp_of_int i = 
+  let t = Int (Signed, Config.size_of_int) in
+  Cst (Cir.CInt (Int64.of_int i), t)
 
 
 let big_int_of_lexeme base x =
@@ -197,9 +207,9 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       && (Newspeak.is_in_bounds (Newspeak.domain_of_typ (sign, sz)) x))
   in
   let k = List.find is_kind ikind_tbl in
-    CInt (x, k)
+    (Cir.CInt x, Int k)
 
-let char_cst_of_lexeme x = CInt (Int64.of_int x, char_kind)
+let char_cst_of_lexeme x = (Cir.CInt (Int64.of_int x), char_typ)
 
 let comp_of_typ t =
   match t with
@@ -235,4 +245,5 @@ let float_cst_of_lexeme lexeme =
     with Failure "float_of_string" -> 
       Npkcontext.error "Csyntax.float_cst_of_lexeme" "float not representable"
   in
-    CFloat (f, lexeme)
+    (* TODO: bug? this is probably an erroneous type!!! *)
+    (Cir.CFloat (f, lexeme), Float Config.size_of_double)

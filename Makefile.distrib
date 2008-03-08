@@ -141,9 +141,9 @@ clean-all: clean
 	$(RM) -r cil/cil $(CILDIR)
 
 .depend: $(ML)
-	-mkdir bin
-	-mkdir $(CILDIR)
-	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
+	@mkdir bin 2> /dev/null; true
+	@mkdir $(CILDIR) 2> /dev/null; true
+	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > .depend
 
 include .depend
 

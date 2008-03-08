@@ -55,19 +55,6 @@ let strip lexbuf before after =
   let str = String.sub lexeme before (len-(before+after)) in
     str
 
-(* TODO: remove this code *)
-let int64_of_string base str = 
-  let str = String.concat "" [base; str] in
-    try 
-      let i = Int64.of_string str in
-	(* do this because Int64.of_string "Int64.max_int + 1 as a string" 
-	   returns Int64.min_int!!! *)
-	if Int64.compare i Int64.zero < 0 then raise Exit;
-	i
-    with _ ->
-      Npkcontext.error "Lexer.int64_of_string"
-	"integer too large: not representable"
-
 let int_of_hex_character str =
   let len = String.length str in
   let str = String.sub str 3 (len - 4) in

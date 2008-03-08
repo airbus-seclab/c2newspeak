@@ -423,15 +423,30 @@ let parse fname =
 	Npkcontext.error "Parser.parse_error" 
 	  ("syntax error: unexpected token: "^lexeme)
 
+(* TODO: factor code with parse *)
+let parse_spec fname = 
+  let cin = open_in fname in
+  let lexbuf = Lexing.from_channel cin in
+    Spec_lexer.init fname lexbuf;
+    try
+      let spec = Spec_parser.parse Spec_lexer.token lexbuf in
+	close_in cin;
+	spec
+    with Parsing.Parse_error -> 
+      let lexeme = Lexing.lexeme lexbuf in
+	Npkcontext.error "Parser.parse_spec" 
+	  ("syntax error in specifications: unexpected token: "^lexeme)
+
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
   let (fnames, prog) = parse fname in
   let fnames = if fnames = [] then fname::[] else fnames in
+  let spec = parse_spec fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_debug "Parsing done.";
     Npkcontext.print_debug "Running first pass...";
-    let prog = Firstpass.translate prog in
+    let prog = Firstpass.translate (prog, spec) in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "First pass done.";
       Npkcontext.print_debug ("Translating "^fname^"...");

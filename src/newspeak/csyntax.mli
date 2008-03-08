@@ -26,6 +26,13 @@ open Newspeak
 
 type prog = (global * location) list
 
+and spec = spec_token list list
+
+and spec_token = 
+    | CustomToken of string
+    | VarToken of string
+    | CstToken of Cir.cst
+
 and global =
     | FunctionDef of (string * typ * blk)
     | GlbEDecl of enumdecl
@@ -77,8 +84,7 @@ and stmtkind =
 and static = bool
 
 and exp = 
-    | CInt of (Int64.t * ikind)
-    | CFloat of (float * string)
+    | Cst of cst
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -98,6 +104,8 @@ and exp =
     | ExpIncr of (binop * exp)
     | IncrExp of (binop * exp)
 
+and cst = (Cir.cst * typ)
+
 and unop = Neg | Not | BNot
 
 and binop =
@@ -116,18 +124,16 @@ and binop =
 
 val exp_of_int: int -> exp
 
-val char_kind: ikind
-
 val char_typ: typ
 
 val int_typ: typ
 
 val int_cst_of_lexeme: 
-  (string option * string * char option * string option) -> exp
+  (string option * string * char option * string option) -> cst
 
-val char_cst_of_lexeme: int -> exp
+val char_cst_of_lexeme: int -> cst
 
-val float_cst_of_lexeme: string -> exp
+val float_cst_of_lexeme: string -> cst
 
 val va_arg: (typ * string)
 

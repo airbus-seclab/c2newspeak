@@ -1,4 +1,4 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -21,6 +21,32 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-val translate: Csyntax.prog * Csyntax.spec -> Cir.prog
+%{
+open Csyntax
+%}
+
+%token MINUS EOF
+
+%token <string> IDENTIFIER
+%token <string> CUSTOM
+%token <string option * string * char option * string option> INTEGER
+%token <string> FLOATCST
+
+%type <Csyntax.spec> parse
+%start parse
+
+%%
+
+parse:
+  CUSTOM parse                             { (TokCustom $1)::$2 }
+| IDENTIFIER parse                         { (TokVar $1)::$2 }
+| constant parse                           { (TokCst $1)::$2 }
+|                                          { [] }
+;;
+
+constant:
+| INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
+| FLOATCST                                 { Csyntax.float_cst_of_lexeme $1 }
+;;

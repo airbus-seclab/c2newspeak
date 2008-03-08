@@ -71,7 +71,7 @@ let seq_of_string str =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate globals =
+let translate (globals, spec) =
   let compdefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
@@ -349,10 +349,7 @@ let translate globals =
 
   and translate_exp e = 
     match e with
-	CInt (i, k) -> (C.Const (C.CInt i), Int k)
-
-      (* TODO: bug? this is probably an erroneous type!!! *)
-      | CFloat f -> (C.Const (C.CFloat f), Float Config.size_of_double)
+      | Cst (c, t) -> (C.Const c, t)
 
       | Var x -> 
 	  let (v, t, _) = find_symb x in
@@ -379,7 +376,7 @@ let translate globals =
 	    ("unnecessary creation of a pointer from a dereference:"
 	      ^" rewrite the code")
 
-      | AddrOf (Index (lv, CInt (i, _))) 
+      | AddrOf (Index (lv, Cst (C.CInt i, _)))
 	  when Int64.compare i Int64.zero = 0 ->
 	  let (lv', t) = translate_lv lv in begin
 	    match t with
@@ -399,7 +396,7 @@ let translate globals =
       | AddrOf lv -> addr_of (translate_lv lv)
 	      
 (* Here c is necessarily positive *)
-      | Unop (Neg, CInt (c, (_, sz))) -> 
+      | Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
 	  (C.Const (C.CInt (Int64.neg c)), Int (Newspeak.Signed, sz))
 
       | Unop (op, e) -> 
@@ -794,9 +791,9 @@ let translate globals =
 
 	| Unop (Not, (IfExp _ as e)) -> translate (e, blk2, blk1)
 
-	| CInt (c, _) when Int64.compare c Int64.zero <> 0 -> blk1
+	| Cst (C.CInt c, _) when Int64.compare c Int64.zero <> 0 -> blk1
 	    
-	| CInt _ -> blk2
+	| Cst (C.CInt _, _) -> blk2
     
 	| _ -> 
 	    let e = simplify_bexp e in
@@ -1017,6 +1014,16 @@ let translate globals =
 		  else add_global x loc (t, init, t')
 	  end
   in
-
+    
+  let translate_token x =
+    match x with
+	CustomToken x -> C.CustomToken x
+      | VarToken x -> 
+	  let (lv, _) = translate_lv (Var x) in
+	    C.LvalToken lv
+      | CstToken c -> C.CstToken c
+  in
+    
     List.iter translate_global globals;
-    (glbdecls, fundefs)
+    let spec = List.map (List.map translate_token) spec in
+      (glbdecls, fundefs, spec)

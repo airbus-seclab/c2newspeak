@@ -24,7 +24,14 @@
 *)
 
 
-type prog = (glbdecls * fundefs)
+type prog = (glbdecls * fundefs * assertion list)
+
+and assertion = spec_token list
+
+and spec_token =
+    | CustomToken of string
+    | LvalToken of lv
+    | CstToken of cst
 
 and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
 
