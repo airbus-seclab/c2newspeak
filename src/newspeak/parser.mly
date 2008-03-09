@@ -133,7 +133,7 @@ let report_error msg err =
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
-%token EQ OREQ SHIFTLEQ MINUSEQ PLUSEQ EQEQ NOTEQ 
+%token EQ OREQ SHIFTLEQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ
 %token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
@@ -446,6 +446,7 @@ assignment_expression:
 assignment_operator:
   PLUSEQ                                   { Plus }
 | MINUSEQ                                  { Minus }
+| STAREQ                                   { Mult }
 | OREQ                                     { BOr }
 | SHIFTLEQ                                 { Shiftl }
 ;;
