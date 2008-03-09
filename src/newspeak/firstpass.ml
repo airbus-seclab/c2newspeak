@@ -212,9 +212,20 @@ let translate (globals, spec) =
 	      List.iter2 (translate_field_sequence o) f seq;
 	      Struct (n, None)
 			
+	| (Sequence seq, Struct (n, None)) ->
+(* TODO: factor this code with translate_typ *)
+	    let (f, _, _) = 
+	      try Hashtbl.find compdefs n 
+	      with Not_found -> 
+		Npkcontext.error "Firstpass.translate_typ" 
+		  ("unknown union "^n)
+	    in
+	      List.iter2 (translate_field_sequence o) f seq;
+	      Struct (n, None)
+
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init"
-	      "This type of initialization not implemented yet"
+	      "this type of initialization not implemented yet"
 	      
     and translate_field_sequence o (_, (f_o, t)) x =
       let o = o + f_o in
