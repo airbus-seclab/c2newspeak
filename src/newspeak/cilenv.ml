@@ -107,7 +107,7 @@ let create_npkil name =
       | (None, _) -> error "Env.create_npkil" "Code unreachable"
   in
     Hashtbl.iter add_funinfo fun_specs;
-    (name::[], Hashtbl.copy glb_decls, fundefs)
+    (name::[], Hashtbl.copy glb_decls, fundefs, [])
 
 (*---------*)
 (* Globals *)

@@ -70,31 +70,26 @@ let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
 let identifier = letter (letter|digit)*
 
 rule token = parse
-
-  | "/*!npk"            { spec lexbuf }
-  | new_line            { cnt_line lexbuf; token lexbuf }
-  | eof                 { EOF }
-  | _                   { token lexbuf }
-
-and spec = parse
 (* values *)
   | oct_integer         { INTEGER (Some "0", value, sign, length) }
   | integer             { INTEGER (None, value, sign, length) }
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
 
-(* punctuation *)
   | "="                 { CUSTOM (Lexing.lexeme lexbuf) }
   | ","                 { CUSTOM (Lexing.lexeme lexbuf) }
   | "["                 { CUSTOM (Lexing.lexeme lexbuf) }
   | "]"                 { CUSTOM (Lexing.lexeme lexbuf) }
-
-(* operators *)
   | "-"                 { CUSTOM (Lexing.lexeme lexbuf) }
+
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 
-  | "*/"                { token lexbuf }
-  | white_space         { spec lexbuf }
+  | "/*!npk"            { START }
+  | "*/"                { END }
 
+  | white_space         { token lexbuf }
+  | new_line            { cnt_line lexbuf; token lexbuf }
+
+  | eof                 { EOF }
 (* error fallback *)
   | _                   { unknown_lexeme lexbuf }

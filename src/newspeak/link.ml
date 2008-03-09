@@ -42,6 +42,8 @@ let glb_decls = Hashtbl.create 100
 
 let glb_used = ref (Str_set.empty)
 
+let specs = ref []
+
 (*--------------*)
 (* Linking time *)
 (*--------------*)
@@ -49,6 +51,8 @@ let glb_used = ref (Str_set.empty)
 (* Association table stdname -> Newspeak.typ *)
 (* TODO: put these together with glb_decls *)
 let globals = Hashtbl.create 100
+
+let add_specs x = specs := x@(!specs)
 
 let get_glob_typ name =
   try
@@ -201,10 +205,13 @@ let update_glob_link name (t, loc, init, used) =
 
 let add_filename x = filenames := Str_set.add x !filenames
 
+(* TODO: optimization, this is probably not efficient to read the whole
+   program and then again a second time!!! reprogram Npkil.read and write *)
 let merge_headers npko =
-  let (fnames, globs) = Npkil.read_header npko in
+  let (fnames, globs, specs) = Npkil.read_header npko in
     List.iter add_filename fnames;
-    Hashtbl.iter update_glob_link globs
+    Hashtbl.iter update_glob_link globs;
+    add_specs specs
 
 let generate_global name (t, loc, init, used) =
   Npkcontext.set_loc loc;
@@ -294,7 +301,7 @@ let link npkos output_file =
     
     let filenames = Str_set.elements !filenames in
 
-      Newspeak.write_hdr cout (filenames, globals, Config.size_of_ptr);
+      Newspeak.write_hdr cout (filenames, globals, !specs, Config.size_of_ptr);
       
       print_debug "Functions...";
       generate_funspecs cout npkos;

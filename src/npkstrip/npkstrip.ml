@@ -85,12 +85,12 @@ object (this)
 
 end
 
-let collect_used prog =
+let collect_used (globals, fundecs, specs) =
   let used_gvars = Hashtbl.create 100 in
   let used_funs = Hashtbl.create 100 in
-  let collector = new collector prog used_gvars used_funs in
+  let collector = new collector (globals, fundecs) used_gvars used_funs in
     collector#visit_fun !main;
-    (used_gvars, used_funs)
+    (used_gvars, used_funs, specs)
         
 let filter_globals used_gvars globals = 
   let is_used (x, _, _) = StringSet.mem x used_gvars in

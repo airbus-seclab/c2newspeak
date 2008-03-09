@@ -31,7 +31,7 @@ and spec = spec_token list list
 and spec_token = 
     | CustomToken of string
     | VarToken of string
-    | CstToken of Cir.cst
+    | CstToken of cst
 
 and global =
     | FunctionDef of (string * typ * blk)

@@ -62,13 +62,22 @@
     function definitions and the size of pointers. *)
 type t = (file list * prog * size_t)
 
-and prog = globals * (fid, fundec) Hashtbl.t
+and prog = globals * (fid, fundec) Hashtbl.t * specs
 
 and globals = (string, gdecl) Hashtbl.t
 
 and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
+
+and specs = assertion list
+
+and assertion = spec_token list
+
+and spec_token =
+    | CustomToken of string
+    | VarToken of string
+    | CstToken of cte
 
 (* The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
 and stmtkind =
@@ -286,7 +295,8 @@ val read : string -> t
     memory constraints.
 *)
 val write_hdr : 
-  out_channel -> (string list * (string, gdecl) Hashtbl.t * size_t) -> unit
+  out_channel -> 
+  (string list * (string, gdecl) Hashtbl.t * specs * size_t) -> unit
 
 (* [write_hdr cout fid spec] writes the function fid with its specification
     spec to channel cout.

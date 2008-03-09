@@ -92,7 +92,7 @@ let translate_cst c =
       CInt i -> N.CInt64 i
     | CFloat f -> N.CFloat f
 
-let translate (cglbdecls, cfundefs) =
+let translate (cglbdecls, cfundefs, specs) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -402,7 +402,7 @@ let translate (cglbdecls, cfundefs) =
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
     Set.iter flag_glb !used_glbs;
-    (glbdecls, fundefs)
+    (glbdecls, fundefs, specs)
   
 
 
@@ -413,36 +413,24 @@ open Csyntax
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
+  let specbuf = Buffer.create 800 in
     Lexer.init fname lexbuf;
     try
-      let cprog = Parser.parse Lexer.token lexbuf in
+      let cprog = Parser.parse (Lexer.token specbuf) lexbuf in
+      let specbuf = Lexing.from_string (Buffer.contents specbuf) in
+      let spec = Spec_parser.parse Spec_lexer.token specbuf in
 	close_in cin;
-	cprog
+	(cprog, spec)
     with Parsing.Parse_error -> 
       let lexeme = Lexing.lexeme lexbuf in
 	Npkcontext.error "Parser.parse_error" 
 	  ("syntax error: unexpected token: "^lexeme)
 
-(* TODO: factor code with parse *)
-let parse_spec fname = 
-  let cin = open_in fname in
-  let lexbuf = Lexing.from_channel cin in
-    Spec_lexer.init fname lexbuf;
-    try
-      let spec = Spec_parser.parse Spec_lexer.token lexbuf in
-	close_in cin;
-	spec
-    with Parsing.Parse_error -> 
-      let lexeme = Lexing.lexeme lexbuf in
-	Npkcontext.error "Parser.parse_spec" 
-	  ("syntax error in specifications: unexpected token: "^lexeme)
-
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (fnames, prog) = parse fname in
+  let ((fnames, prog), spec) = parse fname in
   let fnames = if fnames = [] then fname::[] else fnames in
-  let spec = parse_spec fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_debug "Parsing done.";
     Npkcontext.print_debug "Running first pass...";
@@ -450,7 +438,7 @@ let compile fname =
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "First pass done.";
       Npkcontext.print_debug ("Translating "^fname^"...");
-      let (glbdecls, fundefs) = translate prog in
+      let (glbdecls, fundefs, specs) = translate prog in
 	Npkcontext.forget_loc ();
-	(fnames, glbdecls, fundefs)
+	(fnames, glbdecls, fundefs, specs)
   

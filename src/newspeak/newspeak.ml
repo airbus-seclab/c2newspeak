@@ -35,13 +35,22 @@
 
 type t = (file list * prog * size_t)
 
-and prog = globals * (fid, fundec) Hashtbl.t
+and prog = globals * (fid, fundec) Hashtbl.t * specs
 
 and globals = (string, gdecl) Hashtbl.t
 
 and gdecl = typ * init_t
 
 and fundec = ftyp * blk option
+
+and specs = assertion list
+
+and assertion = spec_token list
+
+and spec_token =
+    | CustomToken of string
+    | VarToken of string
+    | CstToken of cte
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -508,15 +517,29 @@ let dump_globals gdecls =
       gdecls;
     String_map.iter dump_gdecl !glbs
       
+let dump_token x = 
+  let t =
+    match x with
+	CustomToken x -> x
+      | VarToken x -> x
+      | CstToken c -> string_of_cte c
+  in
+    print_string ("'"^t^"' ")
+
+let dump_assertion x = 
+  List.iter dump_token x;
+  print_newline ()
+
 (* Exported print functions *)
-let dump_prog (gdecls, fundecs) =
+let dump_prog (gdecls, fundecs, spec) =
   (* TODO: Clean this mess... String_map *)
   let funs = ref (String_map.empty) in
     Hashtbl.iter 
       (fun name (_, body) -> funs := (String_map.add name body !funs))
       fundecs;
     String_map.iter dump_fundec !funs;
-    dump_globals gdecls
+    dump_globals gdecls;
+    List.iter dump_assertion spec
 
 let dump (fnames, prog, _) =
   List.iter (fun x -> print_endline x) fnames;
@@ -532,19 +555,20 @@ let string_of_stmt x = string_of_blk (x::[])
    implement the pretty one in a separate utility: npkpretty *)
 
 (* Input/output functions *)
-let write_hdr cout (filenames, decls, ptr_sz) =
+let write_hdr cout (filenames, decls, specs, ptr_sz) =
   Marshal.to_channel cout "NPK!" [];
   Marshal.to_channel cout Version.version [];
   Marshal.to_channel cout Version.revision [];
   Marshal.to_channel cout filenames [];
   Marshal.to_channel cout ptr_sz [];
-  Marshal.to_channel cout decls []
+  Marshal.to_channel cout decls [];
+  Marshal.to_channel cout specs []
   
 let write_fun cout f spec = Marshal.to_channel cout (f, spec) []
 
-let write name (filenames, (decls, funs), ptr_sz) =
+let write name (filenames, (decls, funs, specs), ptr_sz) =
   let cout = open_out_bin name in
-    write_hdr cout (filenames, decls, ptr_sz);
+    write_hdr cout (filenames, decls, specs, ptr_sz);
     Hashtbl.iter (write_fun cout) funs;
     close_out cout
 
@@ -566,6 +590,7 @@ let read name =
       let filenames = Marshal.from_channel cin in
       let ptr_sz = Marshal.from_channel cin in
       let decls = Marshal.from_channel cin in
+      let specs = Marshal.from_channel cin in
       let funs = Hashtbl.create 100 in
 	begin try 
 	    while true do
@@ -575,7 +600,7 @@ let read name =
 	  with End_of_file -> ()
 	end;
 	close_in cin;
-	(filenames, (decls, funs), ptr_sz)
+	(filenames, (decls, funs, specs), ptr_sz)
 	    
 (** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]
@@ -1009,7 +1034,7 @@ end
 
 let normalize_loops b = simplify_blk [new simplify_loops] b
 
-let rec build builder (globals, fundecs) = 
+let rec build builder (globals, fundecs, spec) = 
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
@@ -1025,7 +1050,7 @@ let rec build builder (globals, fundecs) =
   in
     Hashtbl.iter build_global globals;
     Hashtbl.iter build_fundec fundecs;
-    (globals', fundecs')
+    (globals', fundecs', spec)
 
 and build_gdecl builder (t, init) =
   let t = build_typ builder t in
@@ -1307,7 +1332,7 @@ let visit_glb visitor id (t, init) =
 	Init x when continue -> List.iter (visit_init visitor) x 
       | _ -> ()
 
-let visit visitor (globals, fundecs) =
+let visit visitor (globals, fundecs, _) =
   Hashtbl.iter (visit_glb visitor) globals;
   Hashtbl.iter (visit_fun visitor) fundecs
 

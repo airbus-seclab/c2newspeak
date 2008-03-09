@@ -57,6 +57,7 @@ and field = (base_typ * var_modifier * B.exp option)
 type vdecl = (B.typ * string option * location)
 type edecl = (B.enumdecl * location)
 
+(** TODO: remove these globals, by putting them as argument of the lexer ?? *)
 let typedefs = Hashtbl.create 100
 let fnames = ref String_set.empty
 

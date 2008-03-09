@@ -121,11 +121,11 @@ let process_fundec (t, body) =
   in
     (t, body)
 
-let process (gdecls, fundecs) =
+let process (gdecls, fundecs, specs) =
   let res = Hashtbl.create 100 in
   let process_fun fid fundec = 
     let fundec = process_fundec fundec in
       Hashtbl.add res fid fundec
   in
     Hashtbl.iter process_fun fundecs ;
-    (gdecls, res)
+    (gdecls, res, specs)

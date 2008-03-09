@@ -28,7 +28,7 @@
 
 open Newspeak
 
-let process (gdecls, fundecs) =
+let process (gdecls, fundecs, specs) =
   let res = Hashtbl.create 100 in
     
   let has_body f = 
@@ -75,4 +75,4 @@ let process (gdecls, fundecs) =
   in
 
     Hashtbl.iter process_fun fundecs;
-    (gdecls, res)
+    (gdecls, res, specs)

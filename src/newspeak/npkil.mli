@@ -33,7 +33,8 @@ open Newspeak
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
-type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
+type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t
+	   * assertion list)
 
 and filenames = string list
 
@@ -148,7 +149,7 @@ val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
 
-val read_header: string -> (filenames* (string, ginfo) Hashtbl.t)
+val read_header: string -> (filenames* (string, ginfo) Hashtbl.t * specs)
 
 val read_fundefs: string -> (fid, funinfo) Hashtbl.t
 

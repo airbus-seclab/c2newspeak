@@ -31,7 +31,10 @@
 open Cilutils
 open Newspeak
 
-type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t)
+type t = (filenames 
+	   * (string, ginfo) Hashtbl.t 
+	   * (fid, funinfo) Hashtbl.t 
+	   * specs)
 
 and filenames = string list
 
@@ -213,7 +216,7 @@ and string_of_fn decls f =
 	  (seq ", " string_of_typ args_t)^")"
 
 (* TODO: remove pretty option here and Npkcontext *)
-let dump_npko (fnames, globs, funs) = 
+let dump_npko (fnames, globs, funs, _) = 
   let cur_fun = ref "" in
 
   let lbls = ref (Int_map.empty) in
@@ -449,16 +452,16 @@ let read_header fname =
 	Npkcontext.error 
 	  "Npkil.read_header" (fname^" is an invalid .npko file")
       end;
-      let (srcname, globs, _) = Marshal.from_channel cin in
+      let (srcname, globs, _, specs) = Marshal.from_channel cin in
 	Npkcontext.print_debug ("Importing done.");
 	close_in cin;
-	(srcname, globs)
+	(srcname, globs, specs)
 
 let read_fundefs fname =
   let cin = open_in_bin fname in
     Npkcontext.print_debug ("Importing funs from "^fname^"...");
     let _ = Marshal.from_channel cin in
-    let (_, _, funs) = Marshal.from_channel cin in
+    let (_, _, funs, _x) = Marshal.from_channel cin in
       Npkcontext.print_debug ("Funs import done.");
       close_in cin;
       funs

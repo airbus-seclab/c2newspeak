@@ -27,7 +27,7 @@
 open Csyntax
 %}
 
-%token MINUS EOF
+%token MINUS EOF START END
 
 %token <string> IDENTIFIER
 %token <string> CUSTOM
@@ -40,9 +40,14 @@ open Csyntax
 %%
 
 parse:
-  CUSTOM parse                             { (TokCustom $1)::$2 }
-| IDENTIFIER parse                         { (TokVar $1)::$2 }
-| constant parse                           { (TokCst $1)::$2 }
+  START assertion END parse                { $2::$4 }
+|                                          { [] }
+;;
+
+assertion:
+  CUSTOM assertion                         { (CustomToken $1)::$2 }
+| IDENTIFIER assertion                     { (VarToken $1)::$2 }
+| constant assertion                       { (CstToken $1)::$2 }
 |                                          { [] }
 ;;
 

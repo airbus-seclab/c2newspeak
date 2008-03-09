@@ -125,7 +125,7 @@ let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" hex_digit hex_digit '\''
 
-rule token = parse
+rule token spec_buf = parse
 
 (* keywords *)
     "break"             { BREAK }
@@ -217,21 +217,31 @@ rule token = parse
 
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
-  | "#" line            { preprocess lexbuf; cnt_line lexbuf; token lexbuf }
+  | "#" line            { preprocess lexbuf; cnt_line lexbuf; 
+			  token spec_buf lexbuf }
 
-  | "/*"                { comment lexbuf }
-  | line_comment        { cnt_line lexbuf; token lexbuf }
-  | new_line            { cnt_line lexbuf; token lexbuf }
-  | white_space         { token lexbuf }
+  | "/*!npk"            { Buffer.add_string spec_buf "/*!npk"; 
+			  spec spec_buf lexbuf }
+  | "/*"                { comment spec_buf lexbuf }
+  | line_comment        { cnt_line lexbuf; token spec_buf lexbuf }
+  | new_line            { cnt_line lexbuf; token spec_buf lexbuf }
+  | white_space         { token spec_buf lexbuf }
 
   | eof                 { EOF }
 (* error fallback *)
   | _                   { unknown_lexeme lexbuf }
 
 
-and comment = parse
+and comment spec_buf = parse
 
-  | "*/"                { token lexbuf }
-  | new_line            { cnt_line lexbuf; comment lexbuf }
-  | _                   { comment lexbuf }
+  | "*/"                { token spec_buf lexbuf }
+  | new_line            { cnt_line lexbuf; comment spec_buf lexbuf }
+  | _                   { comment spec_buf lexbuf }
 
+and spec spec_buf = parse
+  | "*/"                { Buffer.add_string spec_buf "*/";
+			  token spec_buf lexbuf }
+  | new_line            { Buffer.add_string spec_buf (Lexing.lexeme lexbuf);
+			  cnt_line lexbuf; token spec_buf lexbuf }
+  | _ as c              { Buffer.add_char spec_buf c; 
+			  spec spec_buf lexbuf }

@@ -1017,11 +1017,20 @@ let translate (globals, spec) =
     
   let translate_token x =
     match x with
-	CustomToken x -> C.CustomToken x
+	CustomToken x -> Newspeak.CustomToken x
       | VarToken x -> 
-	  let (lv, _) = translate_lv (Var x) in
-	    C.LvalToken lv
-      | CstToken c -> C.CstToken c
+	  let (v, _, _) = find_symb x in
+	  let x = 
+	    match v with
+		VarSymb (C.Global x) -> x
+	      | _ -> 
+		  Npkcontext.error "Firstpass.translate_token"
+		    "unexpected variable in specification"
+	  in
+	    Newspeak.VarToken x
+(* TODO: not good, do this in compile phase *)
+      | CstToken (C.CInt i, _) -> Newspeak.CstToken (Newspeak.CInt64 i)
+      | CstToken (C.CFloat f, _) -> Newspeak.CstToken (Newspeak.CFloat f)
   in
     
     List.iter translate_global globals;

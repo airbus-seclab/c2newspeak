@@ -19,6 +19,7 @@ LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 C2NFILES:=config cilutils params npkcontext newspeak \
          pp_syntax pp_lexer pp_parser \
          csyntax cir synthack lexer parser \
+         spec_lexer spec_parser \
          npkil npkutils cilenv \
          cilfirstpass cilcompiler \
          firstpass compiler \
@@ -46,6 +47,7 @@ CLEANFILES=*~ .depend \
            src/newspeak/*.cmo \
            src/*~ \
            src/npkstrip/*.cmi src/npkstrip/*.cmx src/npkstrip/*.o \
+           src/npkstrip/*~ \
            src/npkstrip/npkstrip src/npkstrip/npkstrip.exe \
            src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
            src/newspeak/*~ \
@@ -53,6 +55,8 @@ CLEANFILES=*~ .depend \
            src/newspeak/parser.output src/newspeak/lexer.ml \
            src/newspeak/pp_parser.ml src/newspeak/pp_parser.mli \
            src/newspeak/pp_parser.output src/newspeak/pp_lexer.ml \
+           src/newspeak/spec_parser.ml src/newspeak/spec_parser.mli \
+           src/newspeak/spec_parser.output src/newspeak/spec_lexer.ml \
            src/newspeak/c2newspeak.exe \
            src/newspeak/.depend src/npkstrip/.depend \
            src/version.o src/version.cmi src/version.cmo src/version.cmx \
@@ -65,7 +69,8 @@ CLEANFILES=*~ .depend \
            src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
            src/npksimplify/*~ \
            src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \
-           tests/*.bak tests/result
+           tests/*.bak tests/result \
+           tests/mem_opt/*~
 
 
 .PHONY: all clean install doc
