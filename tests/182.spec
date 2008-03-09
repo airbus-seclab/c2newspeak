@@ -1,11 +1,1 @@
-Newspeak output
----------------
-182.c
-A() {
-}
-
-main() {
-  (182.c:37#1173)^A();
-}
-
-
+Fatal error: previous definition of A does not match in 182.c line 33

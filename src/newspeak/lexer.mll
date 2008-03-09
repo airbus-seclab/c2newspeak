@@ -129,6 +129,7 @@ let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" hex_digit hex_digit '\''
 
+(* TODO: remove argument spec_buf, it's a pain, put it in synthack ? *)
 rule token spec_buf = parse
 
 (* keywords *)

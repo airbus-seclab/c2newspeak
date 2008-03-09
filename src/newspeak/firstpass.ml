@@ -147,16 +147,24 @@ let translate (globals, spec) =
 
   let push_enum (x, i) loc = Hashtbl.add symbtbl x (Enum i, int_typ, loc) in
 
-  let update_funtyp f ct t loc =
-    try
-      let (prev_t, _, _) = Hashtbl.find fundefs f in
-	if (t <> prev_t) then begin
+  let update_funtyp f static ct t loc =
+    let (fname, _, _) = loc in
+    let f' = if static then "!"^fname^"."^f else f in
+      if Hashtbl.mem symbtbl f then begin
+	try
+	  let (prev_t, _, _) = Hashtbl.find fundefs f' in
+	    if (t <> prev_t) then begin
+	      Npkcontext.error "Firstpass.update_fundef"
+		("different types for function "^f)
+	    end
+	with Not_found ->
 	  Npkcontext.error "Firstpass.update_fundef"
-	    ("Different types for function "^f)
-	end
-    with Not_found ->
-      Hashtbl.add symbtbl f (VarSymb (C.Global f), Fun ct, loc);
-      Hashtbl.add fundefs f (t, loc, None)
+	    ("previous definition of "^f^" does not match")
+      end else begin
+	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct, loc);
+	Hashtbl.add fundefs f' (t, loc, None)
+      end;
+      f'
   in
 
   let update_funbody f body =
@@ -966,16 +974,16 @@ let translate (globals, spec) =
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (x, Fun ft, body) ->
+	FunctionDef (f, Fun ft, static, body) ->
+	  current_fun := f;
 	  let (ft, args) = normalize_ftyp ft in
 	  let ft'= translate_ftyp ft in
-(* TODO: not nice the signature of this function is not good *)
-	  update_funtyp x ft ft' loc;
-	  current_fun := x;
+	    (* TODO: not nice the signature of this function is not good *)
+	  let f' = update_funtyp f static ft ft' loc in
 	  let formalids = add_formals loc ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some ret_lbl), loc)::[] in
-	    update_funbody x (formalids, body);
+	    update_funbody f' (formalids, body);
 	    remove_formals args;
 	    current_fun := ""
 
@@ -1000,7 +1008,8 @@ let translate (globals, spec) =
 	      (Fun ft, None) -> 
 		let ft' = translate_proto_ftyp x ft in
 		  (* TODO not nice, this function signature is not good *)
-		  update_funtyp x ft ft' loc
+		let _ = update_funtyp x static ft ft' loc in
+		  ()
 
 	    | (Fun _, Some _) -> 
 		Npkcontext.error "Firstpass.translate_global"

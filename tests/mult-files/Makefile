@@ -2,17 +2,15 @@
 RM = rm -f
 C2NEWSPEAK = ../../bin/c2newspeak --experimental --newspeak
 
-TESTS = 000 001 002
+TESTS = 000 001 002 003 004
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 CHECK=$(addsuffix .checked, $(TESTS))
 
-.SILENT: check $(CHECK)
+.SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)
 
-check: $(CHECK)
-
-%.checked: ../../bin/c2newspeak %-a.c %-b.c
-	eval $(C2NEWSPEAK) $*-a.c $*-b.c &> $*.bak
+$(TESTS):%: ../../bin/c2newspeak %-a.c %-b.c
+	eval $(C2NEWSPEAK) $*-a.c $*-b.c &> $*.bak; true
 	dos2unix $*.bak
 	if [ -e $*.spec ]; \
 	then \
@@ -25,10 +23,10 @@ check: $(CHECK)
 	  cat $*.bak; false; \
 	fi;
 	$(RM) $*.bak result
-	touch $*.checked
+	touch $*
 
-%.spec: ../../bin/c2newspeak %-a.c %-b.c
-	eval $(C2NEWSPEAK) $*-a.c $*-b.c &> $*.spec
+$(TESTS.SPEC):%.spec: ../../bin/c2newspeak %-a.c %-b.c
+	eval $(C2NEWSPEAK) $*-a.c $*-b.c &> $*.spec; true
 	dos2unix $*.spec
 	cat $*.spec
 

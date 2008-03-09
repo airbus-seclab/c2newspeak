@@ -35,7 +35,8 @@ and spec_token =
     | CstToken of cst
 
 and global = 
-    | FunctionDef of (string * typ * blk)
+(* true if static *)
+    | FunctionDef of (string * typ * bool * blk)
 (* enum declaration *)
     | GlbEDecl of enumdecl
 (* true for extern *)

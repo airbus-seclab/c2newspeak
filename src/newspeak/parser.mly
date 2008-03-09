@@ -59,16 +59,16 @@ let build_glbdecl (static, extern) d =
   let edecls = List.map build_edecl edecls in
     (edecls@vdecls)
 
-let build_fundef (b, m, body) = 
+let build_fundef static (b, m, body) = 
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
   let x =
     match x with
-	Some x -> x
+      | Some x -> x
       | None -> 
 	  (* TODO: code cleanup remove these things !!! *)
 	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
   in
-    (FunctionDef (x, t, body), loc)::[]
+    (FunctionDef (x, t, static, body), loc)::[]
       
 let build_glbtypedef d =
   let build_edecl (d, loc) = (GlbEDecl d, loc) in
@@ -171,11 +171,12 @@ external_declaration:
   declaration                              { build_glbdecl (false, false) $1 }
 | EXTERN declaration                       { build_glbdecl (false, true) $2 }
 | STATIC declaration                       { build_glbdecl (true, false) $2 }
-| function_definition                      { build_fundef $1 }
+| function_definition                      { build_fundef false $1 }
+| STATIC function_definition               { build_fundef true $2 }
 | EXTERN function_definition               { 
     report_error "Parser.external_declaration" 
       "defined functions should not be extern";
-    build_fundef $2 
+    build_fundef false $2 
 }
 | TYPEDEF declaration                      { build_glbtypedef $2 }
 ;;

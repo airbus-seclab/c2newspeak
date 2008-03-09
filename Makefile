@@ -16,7 +16,7 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/mult-files/*.checked tests/mult-files/*~ \
             tests/mem_opt/000 tests/mem_opt/*.no \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
-            tests/newspeak/*.exe tests/newspeak/read 
+            $(addprefix tests/mult-files/,000 001 002 003 004)
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > src/version.ml; \
