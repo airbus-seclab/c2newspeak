@@ -265,13 +265,10 @@ statement:
 ;;
 
 iteration_statement:
-| FOR LPAREN assignment_expression SEMICOLON 
+| FOR LPAREN assignment_expression_list SEMICOLON 
       expression SEMICOLON 
-      assignment_expression RPAREN
-      statement                            { 
-	let loc = get_loc () in
-          ([Exp $3, loc], $5, $9, [Exp $7, loc]) 
-      }
+      assignment_expression_list RPAREN
+      statement                            { ($3, $5, $9, $7) }
 | FOR LPAREN SEMICOLON SEMICOLON RPAREN
   statement                                { ([], exp_of_int 1, $6, []) }
 | WHILE LPAREN expression RPAREN statement { ([], $3, $5, []) }
@@ -293,6 +290,12 @@ case_list:
   CASE expression COLON statement_list 
   case_list                                { ($2, $4, get_loc ())::$5 }
 |                                          { [] }
+;;
+
+assignment_expression_list:
+  assignment_expression COMMA 
+  assignment_expression_list               { (Exp $1, get_loc ())::$3 }
+| assignment_expression                    { (Exp $1, get_loc ())::[] }
 ;;
 
 primary_expression:
