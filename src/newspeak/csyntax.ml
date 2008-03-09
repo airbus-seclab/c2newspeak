@@ -146,6 +146,8 @@ let big_int_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in
   let read_hex_digit c =
     if ('0' <= c) && (c <= '9') then (int_of_char c) - (int_of_char '0')
+    else if  ('a' <= c) && (c <= 'f') 
+    then (int_of_char c) - (int_of_char 'a') + 10
     else (int_of_char c) - (int_of_char 'A') + 10
   in
   let (read_digit, base) =

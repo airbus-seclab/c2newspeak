@@ -111,14 +111,18 @@ let line_comment = "//" line
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
 let oct_digit = ['0'-'7']
-let hex_digit = digit | ['A'-'F']
+let hex_digit = digit | ['A'-'F'] 
+let lower_case_hex_digit = digit | ['a'-'f']
 
 let string = '"' [^'"']* '"'
 
 let sign = "U" as sign
 let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
-let hex_integer = "0x" (hex_digit+ as value) sign? length?
+let hex_integer = 
+    ("0x" (hex_digit+ as value) sign? length?)
+  | ("0x" (lower_case_hex_digit+ as value) sign? length?)
+
 let integer = (digit+ as value) sign? length?
 let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
 let identifier = letter (letter|digit)*
