@@ -273,14 +273,23 @@ statement:
 
 iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
-      expression SEMICOLON 
+      expression_statement
       assignment_expression_list RPAREN
-      statement                            { ($3, $5, $9, $7) }
+      statement                            { ($3, $5, $8, $6) }
 | FOR LPAREN SEMICOLON SEMICOLON RPAREN
   statement                                { ([], exp_of_int 1, $6, []) }
 | WHILE LPAREN expression RPAREN statement { ([], $3, $5, []) }
 | DO statement
   WHILE LPAREN expression RPAREN SEMICOLON { ($2, $5, $2, []) }
+;;
+
+expression_statement:
+  SEMICOLON                                { 
+    report_strict_error "Parser.expression_statement" 
+      "expression should be explicit";
+    exp_of_int 1
+  }
+| expression SEMICOLON                     { $1 }
 ;;
 
 switch_stmt:
