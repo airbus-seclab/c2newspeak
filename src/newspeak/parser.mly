@@ -548,16 +548,28 @@ type_specifier:
   }
 | ftyp                                   { Float $1 }
 | STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
-| STRUCT IDENTIFIER                      { Struct ($2, None) }
-| STRUCT IDENTIFIER field_blk            { Struct ($2, Some $3) }
+| STRUCT ident_or_tname                  { Struct ($2, None) }
+| STRUCT ident_or_tname field_blk        { Struct ($2, Some $3) }
 | UNION field_blk                        { Union (gen_struct_id (), Some $2) }
-| UNION IDENTIFIER                       { Union ($2, None) }
-| UNION IDENTIFIER field_blk             { Union ($2, Some $3) }
+| UNION ident_or_tname                   { Union ($2, None) }
+| UNION ident_or_tname field_blk         { Union ($2, Some $3) }
 | TYPEDEF_NAME                           { Name $1 }
 | ENUM LBRACE enum_list RBRACE           { Enum (Some ($3, get_loc ())) }
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some ($4, get_loc ())) }
+;;
+
+// ident_or_tname necessary because the namespace of structure and typedefs
+// are not disjoint
+ident_or_tname:
+  IDENTIFIER                             { $1 }
+| TYPEDEF_NAME                           {
+    report_strict_error "Parser.ident_or_tname" 
+      ("identifier "^$1^" is defined as a type, avoid using it for "
+	^"another purpose");
+    $1 
+  }
 ;;
 
 enum_list:
