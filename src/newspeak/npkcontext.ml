@@ -45,6 +45,7 @@ open Params
 (* Translation options *)
 
 let dirty_syntax = ref false
+let strict_syntax = ref false
 
 let global_zero_init = ref true
 let castor_allowed = ref false
@@ -118,6 +119,9 @@ let argslist = [
 
   ("--dirty", Arg.Set dirty_syntax,
    "allows dirty syntax");
+
+  ("--strict", Arg.Set strict_syntax,
+   "sets strict syntax");
   
   ("--ignore-pragma", Arg.Set ignores_pragmas,
    "ignores any #pragma directive");

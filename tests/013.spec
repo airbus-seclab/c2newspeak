@@ -1,3 +1,4 @@
+Warning: 'long long' is not normalized: use 'long long int' instead in 013.c line 29
 Newspeak output
 ---------------
 013.c

@@ -121,9 +121,15 @@ let build_type_decl d =
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
+(* TODO: this should be put in Npkcontext *)
 let report_error msg err = 
   if !Npkcontext.dirty_syntax then Npkcontext.print_warning msg err
   else Npkcontext.error msg err
+  
+(* TODO: this should be put in Npkcontext *)
+let report_strict_error msg err = 
+  if !Npkcontext.strict_syntax then Npkcontext.error msg err
+  else Npkcontext.print_warning msg err
   
 %}
 
@@ -572,13 +578,18 @@ ityp:
   CHAR                                   { Config.size_of_char }
 | SHORT                                  { Config.size_of_short }
 | INT                                    { Config.size_of_int }
-| LONG                                   { Config.size_of_long }
-| LONG INT                               { 
-    report_error "Parser.ityp" 
-      "long int is not normalized: use long instead";
+| LONG                                   { 
+    report_strict_error "Parser.ityp" 
+      "'long' is not normalized: use 'long int' instead";
     Config.size_of_long 
   }
-| LONG LONG                              { Config.size_of_longlong }
+| LONG INT                               { Config.size_of_long }
+| LONG LONG                              { 
+    report_strict_error "Parser.ityp" 
+      "'long long' is not normalized: use 'long long int' instead";
+    Config.size_of_longlong 
+  }
+| LONG LONG INT                          { Config.size_of_longlong }
 ;;
 
 ftyp:
