@@ -282,6 +282,10 @@ let translate (globals, spec) =
     and fill_with_zeros o t =
       match t with
 	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
+	| Ptr _ -> 
+	    let t = translate_typ t in
+	    let e = C.cast (C.exp_of_int 0, C.int_typ) t in
+	      res := (o, t, e)::!res
 	| Float _ -> res := (o, translate_typ t, C.exp_of_float 0.)::!res
 	| Array (t, n) ->
 	    let n = 
@@ -300,7 +304,7 @@ let translate (globals, spec) =
 		
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
-	      "This type of initialization not implemented yet"
+	      "this type of initialization not implemented yet"
     in
     let t = translate 0 t x in
       (List.rev !res, t)
