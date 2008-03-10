@@ -1,6 +1,6 @@
-Warning: Too many initializers for array in 050.c line 30
-Warning: Too many initializers for array in 050.c line 35
-Warning: Too many initializers for array in 050.c line 36
+Warning: too many initializers for array in 050.c line 30
+Warning: too many initializers for array in 050.c line 35
+Warning: too many initializers for array in 050.c line 36
 Newspeak output
 ---------------
 050.c

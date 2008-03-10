@@ -82,6 +82,11 @@ let translate (globals, spec) =
 
   let tmp_cnt = ref 0 in
 
+  let report_error = 
+    if !Npkcontext.dirty_syntax then Npkcontext.print_warning 
+    else Npkcontext.error 
+  in
+
   let add_var loc (t, x) =
     let id = C.fresh_id () in
       Hashtbl.add symbtbl x (VarSymb (C.Var id), t, loc);
@@ -209,7 +214,7 @@ let translate (globals, spec) =
 	
 	| (Sequence seq, Struct (n, Some f)) ->
 	    let (f, _) = process_struct_fields n f in
-	      List.iter2 (translate_field_sequence o) f seq;
+	      translate_field_sequence o f seq;
 	      Struct (n, None)
 			
 	| (Sequence seq, Struct (n, None)) ->
@@ -220,17 +225,35 @@ let translate (globals, spec) =
 		Npkcontext.error "Firstpass.translate_typ" 
 		  ("unknown union "^n)
 	    in
-	      List.iter2 (translate_field_sequence o) f seq;
+	      translate_field_sequence o f seq;
 	      Struct (n, None)
 
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
-	      
-    and translate_field_sequence o (_, (f_o, t)) x =
-      let o = o + f_o in
-      let _ = translate o t x in
-	()
+
+    and translate_field_sequence o fields seq =
+      match (fields, seq) with
+	  ((_, (f_o, t))::fields, hd::seq) ->
+	    let o = o + f_o in
+	    let _ = translate o t hd in
+	      translate_field_sequence o fields seq
+
+	| ([], []) -> ()
+
+	| ((_, (f_o, t))::fields, []) ->
+	    let o = o + f_o in
+	    let _ = fill_with_zeros o t in
+	      if (fields = []) then begin
+		report_error 
+		  "Firstpass.translate_init.translate_field_sequence" 
+		  "not enough initializers for structure"
+	      end;
+	      translate_field_sequence o fields []
+
+	| ([], _) -> 
+	    report_error "Firstpass.translate_init.translate_field_sequence" 
+	      "too many initializers for structure"
 	  
     and translate_sequence o t n seq =
       match seq with
@@ -239,9 +262,8 @@ let translate (globals, spec) =
 	    let o = o + size_of t in
 	      translate_sequence o t (n-1) tl
 	| _::_ -> 
-	    Npkcontext.print_warning 
-	      "Firstpass.translate_init.translate_sequence" 
-	      "Too many initializers for array"
+	    report_error "Firstpass.translate_init.translate_sequence" 
+	      "too many initializers for array"
 	      
 	(* TODO: code cleanup: We fill with zeros, because CIL does too. 
 	   But it shouldn't be done like that:
@@ -251,7 +273,11 @@ let translate (globals, spec) =
 	    let _ = fill_with_zeros o t in
 	    let o = o + size_of t in
 	      translate_sequence o t (n-1) []
-	| [] -> ()
+	| [] -> 
+	    if (n > 0) then begin
+	      report_error "Firstpass.translate_init.translate_sequence" 
+		"not enough initializers for array"
+	    end
 	    
     and fill_with_zeros o t =
       match t with
