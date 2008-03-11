@@ -459,13 +459,15 @@ let translate (globals, spec) =
 
       | IfExp (c, e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
-	  let (x, decl, v) = gen_tmp loc int_typ in
+	    (* TODO: this is a bit inefficient, e1 gets translated twice!! *)
+	  let (_, t) = translate_exp e1 in
+	  let (x, decl, v) = gen_tmp loc t in
 	  let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
 	  let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
 	  let set = (If (c, blk1, blk2), loc) in
 	  let set = translate_stmt set in
 	    remove_symb x;
-	    (C.Pref (decl::set, C.Lval (v, translate_typ int_typ)), int_typ)
+	    (C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
 
       | SizeofE (Str str) ->
 	  let sz = String.length str + 1 in
