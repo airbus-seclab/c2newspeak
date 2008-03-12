@@ -1069,8 +1069,8 @@ let translate (globals, spec) =
     
   let translate_token x =
     match x with
-	CustomToken x -> Newspeak.CustomToken x
-      | VarToken x -> 
+	SymbolToken x -> Newspeak.SymbolToken x
+      | IdentToken x when Hashtbl.mem symbtbl x -> 
 	  let (v, _, _) = find_symb x in
 	  let x = 
 	    match v with
@@ -1080,6 +1080,7 @@ let translate (globals, spec) =
 		    "unexpected variable in specification"
 	  in
 	    Newspeak.VarToken x
+      | IdentToken x -> Newspeak.IdentToken x
 (* TODO: not good, do this in compile phase *)
       | CstToken (C.CInt i, _) -> Newspeak.CstToken (Newspeak.CInt64 i)
       | CstToken (C.CFloat f, _) -> Newspeak.CstToken (Newspeak.CFloat f)

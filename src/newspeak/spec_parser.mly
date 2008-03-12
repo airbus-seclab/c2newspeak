@@ -30,7 +30,7 @@ open Csyntax
 %token MINUS EOF START END
 
 %token <string> IDENTIFIER
-%token <string> CUSTOM
+%token <char> SYMBOL
 %token <string option * string * char option * string option> INTEGER
 %token <string> FLOATCST
 
@@ -45,8 +45,8 @@ parse:
 ;;
 
 assertion:
-  CUSTOM assertion                         { (CustomToken $1)::$2 }
-| IDENTIFIER assertion                     { (VarToken $1)::$2 }
+  SYMBOL assertion                         { (SymbolToken $1)::$2 }
+| IDENTIFIER assertion                     { (IdentToken $1)::$2 }
 | constant assertion                       { (CstToken $1)::$2 }
 |                                          { [] }
 ;;

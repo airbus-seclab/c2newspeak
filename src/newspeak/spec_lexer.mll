@@ -76,12 +76,6 @@ rule token = parse
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | float               { FLOATCST (Lexing.lexeme lexbuf) }
 
-  | "="                 { CUSTOM (Lexing.lexeme lexbuf) }
-  | ","                 { CUSTOM (Lexing.lexeme lexbuf) }
-  | "["                 { CUSTOM (Lexing.lexeme lexbuf) }
-  | "]"                 { CUSTOM (Lexing.lexeme lexbuf) }
-  | "-"                 { CUSTOM (Lexing.lexeme lexbuf) }
-
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 
   | "/*!npk"            { START }
@@ -91,5 +85,4 @@ rule token = parse
   | new_line            { cnt_line lexbuf; token lexbuf }
 
   | eof                 { EOF }
-(* error fallback *)
-  | _                   { unknown_lexeme lexbuf }
+  | _ as c              { SYMBOL c }
