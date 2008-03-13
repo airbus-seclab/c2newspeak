@@ -348,19 +348,19 @@ let translate (globals, spec) =
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
-      | Index (lv, e) -> 
-	  let (lv', t) = translate_lv lv in begin
-	    match t with
-		Array (t, len) ->
-		  let (i, _) = translate_exp e in
+      | Index (e, idx) -> 
+	  let (e', t) = translate_exp e in begin
+	    match (e', t) with
+		(C.Lval (lv, _), Array (t, len)) ->
+		  let (i, _) = translate_exp idx in
 		  let n = translate_array_len len in
-		  let len = C.len_of_array n lv' in
+		  let len = C.len_of_array n lv in
 		  let sz = C.exp_of_int (size_of t) in
 		  let o = C.Unop (C.Belongs_tmp (Int64.zero, len), i) in
 		  let o = C.Binop (C.Mult C.int_kind, o, sz) in
-		    (C.Shift (lv', o), t)
+		    (C.Shift (lv, o), t)
 
-	      | Ptr _ -> translate_lv (Deref (Binop (Plus, lv, e)))
+	      | (_, Ptr _) -> translate_lv (Deref (Binop (Plus, e, idx)))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
 		    "Array or pointer type expected"

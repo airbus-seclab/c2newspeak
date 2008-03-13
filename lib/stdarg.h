@@ -25,6 +25,14 @@
 
 typedef char *va_list;
 
+
 #define va_start(v,p)   v = __builtin_newspeak_va_arg;
 #define va_arg(v,t)     *((*((t**)(&v)))++)
 #define va_end(v)       
+
+/* deprecated, not standard C:
+#define va_start(v,p)   v = __builtin_newspeak_va_arg;
+#define va_arg(v,t)     *(((t*)v)++)
+#define va_end(v)       
+*/
+
