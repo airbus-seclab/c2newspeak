@@ -530,12 +530,12 @@ let translate (globals, spec) =
 	  let (lv, t', _) = set in
 	  let e = C.Lval (lv, t') in
 	    Npkcontext.print_warning "Firstpass.translate_exp" 
-	      "avoid ssignments within expressions";
+	      "avoid assignments within expressions";
 	    (C.Pref ((C.Set set, loc)::[], e), t)
  
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
-	    "avoid ssignments within expressions"
+	    "avoid assignments within expressions"
 
   and translate_set (lv, e) =
     let (lv, t) = translate_lv lv in

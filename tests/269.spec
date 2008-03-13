@@ -1,1 +1,1 @@
-Fatal error: syntax error: unexpected token: = in 269.c line 28
+Fatal error: avoid ssignments within expressions in 269.c line 28
