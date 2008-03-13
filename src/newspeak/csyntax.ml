@@ -30,8 +30,8 @@ type prog = (global * location) list
 and spec = spec_token list list
 
 and spec_token = 
-    | CustomToken of string
-    | VarToken of string
+    | SymbolToken of char
+    | IdentToken of string
     | CstToken of cst
 
 and global = 

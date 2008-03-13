@@ -75,7 +75,8 @@ and specs = assertion list
 and assertion = spec_token list
 
 and spec_token =
-    | CustomToken of string
+    | SymbolToken of char
+    | IdentToken of string
     | VarToken of string
     | CstToken of cte
 

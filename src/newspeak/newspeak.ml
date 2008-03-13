@@ -48,7 +48,8 @@ and specs = assertion list
 and assertion = spec_token list
 
 and spec_token =
-    | CustomToken of string
+    | SymbolToken of char
+    | IdentToken of string
     | VarToken of string
     | CstToken of cte
 
@@ -520,11 +521,12 @@ let dump_globals gdecls =
 let dump_token x = 
   let t =
     match x with
-	CustomToken x -> x
-      | VarToken x -> x
+	SymbolToken x -> String.make 1 x
+      | IdentToken x -> x
+      | VarToken x -> "'"^x^"'"
       | CstToken c -> string_of_cte c
   in
-    print_string ("'"^t^"' ")
+    print_string (t^" ")
 
 let dump_assertion x = 
   List.iter dump_token x;
