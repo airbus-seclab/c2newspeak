@@ -1,4 +1,4 @@
-Warning: avoid ssignments within expressions in 301.c line 28
+Warning: avoid assignments within expressions in 301.c line 28
 Newspeak output
 ---------------
 301.c
