@@ -524,9 +524,23 @@ let translate (globals, spec) =
 	  let args = translate_args va_list args args_t in
 	    (C.Call (ft', f, args), ret_t)
 
+      | Set set when !Npkcontext.dirty_syntax ->
+	  let loc = Npkcontext.get_loc () in
+	  let (set, t) = translate_set set in
+	  let (lv, t', _) = set in
+	  let e = C.Lval (lv, t') in
+	    Npkcontext.print_warning "Firstpass.translate_exp" 
+	      "avoid ssignments within expressions";
+	    (C.Pref ((C.Set set, loc)::[], e), t)
+ 
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
-	    "assignments within expressions forbidden"
+	    "avoid ssignments within expressions"
+
+  and translate_set (lv, e) =
+    let (lv, t) = translate_lv lv in
+    let e = cast (translate_exp e) t in
+      ((lv, translate_typ t, e), t)
 
   and init_va_args loc lv x =
     let rec init_va_args lv x =
@@ -770,11 +784,9 @@ let translate (globals, spec) =
   and translate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
     match x with
-      | Exp (Set (lv, e)) ->
-	  let (lv, t) = translate_lv lv in
-	  let e = cast (translate_exp e) t in
-	  let t = translate_typ t in
-	    (C.Set (lv, t, e), loc)::[]
+      | Exp (Set set) -> 
+	  let (set, _) = translate_set set in
+	    (C.Set set, loc)::[]
 
       | Exp (SetOp (lv, op, e)) ->
 	  let (lv', _) = translate_lv lv in

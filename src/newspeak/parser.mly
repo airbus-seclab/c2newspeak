@@ -452,7 +452,7 @@ conditional_expression:
 // it is error-prone, for instance typos may make you write
 // if (x = 0) instead of if (x == 0)
 expression:
-  conditional_expression                   { $1 }
+  assignment_expression                   { $1 }
 ;;
 
 assignment_expression:
