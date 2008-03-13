@@ -30,5 +30,6 @@ char *strncpy(char*, const char*, size_t);
 char *strcpy(char *, const char *);
 size_t strlen(const char *);
 void *memcpy(void *, const void *, size_t);
+char *strcat(char *, const char *);
 char *strncat(char *, const char *, size_t);
 int memcmp(const void*, const void*, size_t);
