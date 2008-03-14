@@ -249,7 +249,7 @@ let get_var cil_var =
 	Npkil.Local n
     with Not_found -> 
       error "Npkenv.get_var"
-	("unexpected variable "^(string_of_lval (Var cil_var, NoOffset)))
+	("unexpected variable "^(Cilutils.string_of_lval (Var cil_var, NoOffset)))
   end
 
 let get_cstr str =

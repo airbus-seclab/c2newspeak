@@ -172,47 +172,43 @@ let string_of_unop op =
 	  
 let string_of_vid = string_of_int
 
-let string_of_local decls vid =
-  try
-    List.nth decls vid
-  with Failure _ -> (string_of_vid vid) ^ "-"
+let string_of_local vid = (string_of_vid vid) ^ "-"
 
-
-let rec string_of_lval decls lv =
+let rec string_of_lval lv =
   match lv with
-      Local vid -> string_of_local decls vid
+      Local vid -> string_of_local vid
     | Global name -> "Global("^name^")"
-    | Deref (e, sz) -> "["^(string_of_exp decls e)^"]"^(string_of_size_t sz)
-    | Shift (lv, sh) -> (string_of_lval decls lv)^" + "^(string_of_exp decls sh)
+    | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
+    | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
 
-and string_of_exp decls e =
+and string_of_exp e =
   match e with
       Const c -> Newspeak.string_of_cte c
-    | Lval (lv, t) -> (string_of_lval decls lv)^"_"^(string_of_scalar t)
-    | AddrOf (lv, sz) -> "&_"^(string_of_tmp_int sz)^"("^(string_of_lval decls lv)^")"
+    | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
+    | AddrOf (lv, sz) -> "&_"^(string_of_tmp_int sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun fid -> "&fun"^(string_of_fid fid)
 
     (* TODO: Check this ! *)
     (* Pretty printing for >= and != *)
     | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
-	"("^(string_of_exp decls e2)^" "^(string_of_binop op)^
-	  " "^(string_of_exp decls e1)^")"
+	"("^(string_of_exp e2)^" "^(string_of_binop op)^
+	  " "^(string_of_exp e1)^")"
 
     | BinOp (op, e1, e2) ->
-	"!("^(string_of_exp decls e1)^" "^(string_of_binop op)^
-	  " "^(string_of_exp decls e2)^")"
+	"!("^(string_of_exp e1)^" "^(string_of_binop op)^
+	  " "^(string_of_exp e2)^")"
 	  
-    | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp decls exp)
+    | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
 
 	  
-and string_of_fn decls f =
+and string_of_fn f =
   match f with
       FunId fid -> (string_of_fid fid)^"()"
     | FunDeref (exp, (args_t, Some ret_t)) ->
-	"["^(string_of_exp decls exp)^"]("^
+	"["^(string_of_exp exp)^"]("^
 	  (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
     | FunDeref (exp, (args_t, None)) ->
-	"["^(string_of_exp decls exp)^"]("^
+	"["^(string_of_exp exp)^"]("^
 	  (seq ", " string_of_typ args_t)^")"
 
 (* TODO: remove pretty option here and Npkcontext *)
@@ -247,11 +243,11 @@ let dump_npko (fnames, globs, funs, _) =
     print_string align;
     match sk with
 	Set (lv, e, sc) ->
-	  print_endline ((string_of_lval decls lv)^" =("^(string_of_scalar sc)^
-			    ") "^(string_of_exp decls e)^";")
+	  print_endline ((string_of_lval lv)^" =("^(string_of_scalar sc)^
+			    ") "^(string_of_exp e)^";")
       | Copy (lv1, lv2, sz) ->
-	  print_endline ((string_of_lval decls lv1)^" ="^(string_of_size_t sz)^
-			    " "^(string_of_lval decls lv2)^";")
+	  print_endline ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
+			    " "^(string_of_lval lv2)^";")
 	    
       | Decl (name, t, body) ->
 	  let new_decls = if !Npkcontext.pretty_print then (name::decls) else [] in
@@ -278,7 +274,7 @@ let dump_npko (fnames, globs, funs, _) =
 	  print_endline ("goto "^(string_of_lbl l)^";")
 	    
       | Call f ->
-	  print_endline ((string_of_fn decls f)^";")
+	  print_endline ((string_of_fn f)^";")
 	    
       | ChooseAssert elts ->
 	  print_endline "choose {";
@@ -290,8 +286,8 @@ let dump_npko (fnames, globs, funs, _) =
 	  dump_blk (align^"  ") decls body;
 	  print_endline (align^"}")
 	    
-  and dump_assert align decls e =
-    print_endline (align^"assert("^(string_of_exp decls e)^");")
+  and dump_assert align e =
+    print_endline (align^"assert("^(string_of_exp e)^");")
       
   and dump_assertblk align1 align2 decls (exps, b) =
     match exps, b with
@@ -303,15 +299,15 @@ let dump_npko (fnames, globs, funs, _) =
 	  List.iter (dump_stmt align2 decls false) r
 	    
       | first::others, _ ->
-	  dump_assert align1 decls first;
-	  List.iter (dump_assert align2 decls) others;
+	  dump_assert align1 first;
+	  List.iter (dump_assert align2) others;
 	  dump_blk align2 decls b
   in
 
   let dump_init i =
     let dump_elt (o, s, e) =
       print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "
-		     ^(string_of_exp [] e));
+		     ^(string_of_exp e));
     in
     let rec dump_init l =
       match l with

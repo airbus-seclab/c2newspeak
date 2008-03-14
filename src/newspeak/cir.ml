@@ -503,8 +503,7 @@ let len_of_array n lv =
 let cast (e, t) t' =
   let (e, t) =
     match (t, e, t') with
-	(Array _, Lval (lv, Array _), (Ptr|Int _)) ->
-	  (AddrOf (Shift (lv, exp_of_int 0), t), Ptr)
+	(Array _, Lval (lv, Array _), (Ptr|Int _)) -> (AddrOf (lv, t), Ptr)
       | (Fun _, Lval lv, (FunPtr|Ptr|Int _)) -> (AddrOf lv, FunPtr)
       | _ -> (e, t)
   in

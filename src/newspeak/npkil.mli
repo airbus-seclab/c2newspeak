@@ -138,6 +138,8 @@ val dump_npko : t -> unit
 
 val string_of_typ : typ -> string
 
+val string_of_lval: lval -> string
+
 (* TODO: remove this function*)
 val compare_typs : typ -> typ -> bool
 
