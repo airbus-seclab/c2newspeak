@@ -28,3 +28,4 @@ int printf(const char*, ...);
 // to a unique type in newspeak
 int fprintf(void *, const char *, ...);
 int scanf(const char*, ...);
+char *gets(char *s);
