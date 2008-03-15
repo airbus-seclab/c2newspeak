@@ -556,10 +556,25 @@ let translate (globals, spec) =
     in
       init_va_args lv x
 
-  and size_of_va_args x =
+  and translate_va_args x =
     match x with
-	(_, t)::tl -> (size_of_va_args tl) + size_of t
-      | [] -> 0
+	e::tl -> 
+	  let (args, sz) = translate_va_args tl in
+	  let e = translate_exp e in
+(* TODO: how to factor this with other places where a pointer is expected
+   instead of an array
+   Maybe should do a preliminary pass that does typing and these kinds of 
+   simplifications.
+*)
+	  let (e, t) =
+	    match e with
+		(_, Array (t, _)) -> 
+		  let t = Ptr t in
+		    (cast e t, t)
+	      | _ -> e
+	  in
+	    ((e, t)::args, size_of t + sz)
+      | [] -> ([], 0)
 
   and translate_args va_list args args_t =
     let rec translate_args args args_t =
@@ -568,11 +583,9 @@ let translate (globals, spec) =
 	    let e = cast (translate_exp (exp_of_int 0)) t in
 	      e::[]
 	| (_, _::[]) when va_list -> 
-	    let args = List.map translate_exp args in
-	      (* TODO: not so nice of a code! constant *)
-	    let sz = (size_of_va_args args) / 8 in
+	    let (args, sz) = translate_va_args args in
 	    let loc = Npkcontext.get_loc () in
-	    let t = Array (char_typ, Some (exp_of_int sz)) in
+	    let t = Array (char_typ, Some (exp_of_int (sz/8))) in
 	    let (_, decl, v) = gen_tmp loc t in
 	    let t = translate_typ t in
 	    let init = init_va_args loc v args in
