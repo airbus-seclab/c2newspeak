@@ -32,5 +32,6 @@ void free(void *);
 void exit(int);
 void *malloc(size_t);
 int system(const char *);
+char *realpath(const char *file_name, char *resolved_name);
 
 #endif /* _STDLIB_H_ */
