@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 */
 
+#define	LOG_CRIT	2
 #define	LOG_NOTICE	5
 #define	LOG_DEBUG	7
 
