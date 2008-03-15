@@ -34,3 +34,4 @@ char *strcat(char *, const char *);
 char *strncat(char *, const char *, size_t);
 int memcmp(const void*, const void*, size_t);
 char *strstr(const char *, const char *);
+void *memmove(void *, const void *, size_t); 
