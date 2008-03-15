@@ -115,6 +115,7 @@ let hex_digit = digit | ['A'-'F']
 let lower_case_hex_digit = digit | ['a'-'f']
 
 let string = '"' [^'"']* '"'
+let wide_string = 'L''"' [^'"']* '"'
 
 let sign = "U" as sign
 let length = ("L"|"LL") as length
@@ -178,7 +179,8 @@ rule token spec_buf = parse
 			    "wide characters not supported" }
   | float               { FLOATCST  (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
-
+  | wide_string         { Npkcontext.error "Lexer.token" 
+			    "wide string literals not supported" }
 (* punctuation *)
   | "..."               { ELLIPSIS }
   | ","                 { COMMA }
