@@ -196,6 +196,7 @@ rule token spec_buf = parse
   | "-="                { MINUSEQ }
   | "+="                { PLUSEQ }
   | "*="                { STAREQ }
+  | "/="                { DIVEQ }
   | "<<="               { SHIFTLEQ }
   | ">>="               { SHIFTREQ }
   | ";"                 { SEMICOLON }
