@@ -1,5 +1,3 @@
-Warning: 'long' is not normalized: use 'long int' instead in 042.c line 36
-Warning: 'long' is not normalized: use 'long int' instead in 042.c line 37
 Newspeak output
 ---------------
 042.c
