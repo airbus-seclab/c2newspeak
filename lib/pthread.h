@@ -25,7 +25,11 @@
 
 #include <sys/types.h>
 
+#define PTHREAD_MUTEX_INITIALIZER (pthread_mutex_t)20
+
 void pthread_exit(void *retval);
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 		   void *(*start_routine)(void*), void *arg);
 int pthread_join(pthread_t thread, void **value_ptr);
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
