@@ -663,7 +663,8 @@ let translate (globals, spec) =
   and process_struct_fields name f =
     let o = ref 0 in
     let last_align = ref 1 in
-    let rec translate (t, x) =
+    let rec translate (t, x, loc) =
+      Npkcontext.set_loc loc;
       match t with
 	  Bitfield ((s, n), sz) ->
 	    let (sz, _) = translate_exp sz in
@@ -700,7 +701,8 @@ let translate (globals, spec) =
   and process_union_fields name f =
     let n = ref 0 in
     let align = ref 0 in
-    let translate (t, x) =
+    let translate (t, x, loc) =
+      Npkcontext.set_loc loc;
       let sz = size_of t in
       let align' = align_of t in
 	align := max !align align';

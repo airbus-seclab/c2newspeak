@@ -122,7 +122,7 @@ and normalize_compdef f =
 and normalize_fields f =
   match f with
       (b, v, bits)::tl ->
-	let (enumdecls, (t, x, _)) = normalize_decl (b, v) in
+	let (enumdecls, (t, x, loc)) = normalize_decl (b, v) in
 	let t =
 	  match (bits, t) with
 	      (None, _) -> t
@@ -139,7 +139,7 @@ and normalize_fields f =
 		  "unknown field name"
 	in
 	let (enumdecls', f) = normalize_fields tl in
-	  (enumdecls@enumdecls', (t, x)::f)
+	  (enumdecls@enumdecls', (t, x, loc)::f)
     | [] -> ([], [])
 
 and normalize_var_modifier b v =

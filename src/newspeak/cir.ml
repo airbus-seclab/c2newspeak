@@ -165,9 +165,9 @@ let rec size_of t =
     | Ptr | FunPtr -> Config.size_of_ptr
     | Array (t, Some n) -> (size_of t) * n
     | Struct (_, _, n) | Union (_, _, n) -> n
-    | Fun _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of function"
-    | Array _ -> Npkcontext.error "Csyntax.size_of" "Unknown size of array"
-    | Void -> Npkcontext.error "Csyntax.size_of" "Unknown size of void"
+    | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
+    | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
+    | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
 
 let int_of_exp e =
   let rec int_of_exp e =

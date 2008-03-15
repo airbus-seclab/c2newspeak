@@ -46,7 +46,7 @@ and vardecl = string option * typ * static * init option
 
 and enumdecl = string * exp
 
-and declaration = (typ * string)
+and declaration = (typ * string * location)
 
 (* true if variable list of arguments *)
 and ftyp = (typ * string) list * bool * typ
