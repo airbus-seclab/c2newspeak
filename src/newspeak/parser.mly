@@ -605,18 +605,18 @@ ityp:
   CHAR                                   { Config.size_of_char }
 | SHORT                                  { Config.size_of_short }
 | INT                                    { Config.size_of_int }
-| LONG                                   { 
+| LONG                                   { Config.size_of_long }
+| LONG LONG                              { Config.size_of_longlong }
+| LONG INT                               { 
     report_strict_error "Parser.ityp" 
-      "'long' is not normalized: use 'long int' instead";
+      "'long int' is not normalized: use 'long' instead";
     Config.size_of_long 
   }
-| LONG INT                               { Config.size_of_long }
-| LONG LONG                              { 
+| LONG LONG INT                          { 
     report_strict_error "Parser.ityp" 
-      "'long long' is not normalized: use 'long long int' instead";
+      "'long long int' is not normalized: use 'long long' instead";
     Config.size_of_longlong 
   }
-| LONG LONG INT                          { Config.size_of_longlong }
 ;;
 
 ftyp:
