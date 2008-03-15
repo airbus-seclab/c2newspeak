@@ -28,5 +28,10 @@
 
 typedef unsigned int pthread_t;
 typedef long time_t;
+typedef struct {
+  int is_initialized;
+  void *stackaddr;
+  int stacksize;
+} pthread_attr_t;
 
 #endif	/* _SYS_TYPES_H */
