@@ -356,7 +356,7 @@ unary_expression:
 | BNOT cast_expression                     { Unop (BNot, $2) }
 | MINUS cast_expression                    { Unop (Neg, $2) }
 | NOT cast_expression                      { Unop (Not, $2) }
-| SIZEOF LPAREN unary_expression RPAREN    { SizeofE $3 }
+| SIZEOF unary_expression                  { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_decl $3) }
 ;;
 

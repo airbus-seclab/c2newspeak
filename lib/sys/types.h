@@ -27,6 +27,7 @@
 #define _SYS_TYPES_H
 
 typedef unsigned int pthread_t;
+typedef unsigned int pthread_mutex_t;
 typedef long time_t;
 typedef struct {
   int is_initialized;
