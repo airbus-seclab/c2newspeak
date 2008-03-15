@@ -23,9 +23,20 @@
   email: charles.hymans@penjili.org
 */
 
+#ifndef _STDIO_H_
+#define _STDIO_H_
+
+struct _FILE {
+  unsigned char *p;
+};
+typedef struct _FILE FILE;
+
+FILE *stdin;
+
 int printf(const char*, ...);
-// TODO: should be a FILE* but does not matter here since all pointers go
-// to a unique type in newspeak
-int fprintf(void *, const char *, ...);
+int fprintf(FILE *, const char *, ...);
 int scanf(const char*, ...);
+char *fgets(char *s, int n, FILE *stream);
 char *gets(char *s);
+
+#endif /* _STDIO_H_ */
