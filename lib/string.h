@@ -35,3 +35,4 @@ char *strncat(char *, const char *, size_t);
 int memcmp(const void*, const void*, size_t);
 char *strstr(const char *, const char *);
 void *memmove(void *, const void *, size_t); 
+void* memccpy(void *, const void *, int, size_t);
