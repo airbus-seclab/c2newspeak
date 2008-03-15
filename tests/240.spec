@@ -1,5 +1,3 @@
-Warning: 'long' is not normalized: use 'long int' instead in 240.c line 33
-Warning: 'long' is not normalized: use 'long int' instead in 240.c line 34
 Warning: Probable invalid cast from integer to pointer in 240.c line 97
 Warning: Probable invalid cast from integer to pointer in 240.c line 109
 Warning: Probable invalid cast from integer to pointer in 240.c line 121
