@@ -170,6 +170,11 @@ parse:
 
 translation_unit:
   external_declaration translation_unit    { $1@$2 }
+| SEMICOLON translation_unit               { 
+    report_error "Parser.translation_unit" 
+      "unnecessary semicolon";
+    $2 
+  }
 |                                          { [] }
 ;;
 
