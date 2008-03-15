@@ -128,6 +128,7 @@ let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" hex_digit hex_digit '\''
+let wide_character = 'L''\'' _ '\''
 
 (* TODO: remove argument spec_buf, it's a pain, put it in synthack ? *)
 rule token spec_buf = parse
@@ -173,6 +174,8 @@ rule token spec_buf = parse
 					(Lexing.lexeme lexbuf)) }
   | "\'\\0\'"           { CHARACTER 0 }
   | "\'\\n\'"           { CHARACTER 10 }
+  | wide_character      { Npkcontext.error "Lexer.token" 
+			    "wide characters not supported" }
   | float               { FLOATCST  (Lexing.lexeme lexbuf) }
   | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
 
