@@ -23,7 +23,24 @@
   email: charles.hymans@penjili.org
 */
 
+#include <stddef.h>
 #include <sys/types.h>
 
-#define IPC_PRIVATE ((key_t) 0)
-#define IPC_RMID 0x1000
+struct shmid_ds
+{
+  //  struct ipc_perm    shm_perm;	/* Operation permission structure. */
+  size_t             shm_segsz;	/* Size of segment in bytes. */
+  //  pid_t              shm_lpid;	/* Process ID of last operation. */
+  //  pid_t              shm_cpid;	/* Process ID of creator. */
+  //  shmatt_t           shm_nattch;/* Number of current attaches. */
+  //  timestruc_t        shm_atim;	/* Time of last shmat (). */
+  //  timestruc_t        shm_dtim;	/* Time of last shmdt (). */
+  //  timestruc_t        shm_ctim;	/* Time of last change by shmctl (). */
+  //  long               shm_spare4[2];
+};
+
+int shmget(key_t key, size_t size, int shmflg);
+int shmctl(int shmid, int cmd, struct shmid_ds *buf);
+void *shmat(int shmid, const void *shmaddr, int shmflg);
+int shmdt(const void *shmaddr);
+

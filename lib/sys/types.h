@@ -27,6 +27,7 @@
 #define _SYS_TYPES_H
 
 typedef long ssize_t;
+typedef long key_t;
 
 typedef unsigned int pthread_t;
 typedef unsigned int pthread_mutex_t;

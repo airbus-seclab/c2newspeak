@@ -289,6 +289,13 @@ iteration_statement:
 	  "init statement expected";
 	([], $4, $7, $5) 
       }
+| FOR LPAREN assignment_expression_list SEMICOLON 
+      expression_statement RPAREN
+      statement                            { 
+	report_strict_error "Parser.iteration_statement" 
+	  "increment statement expected";
+	($3, $5, [], $7) 
+      }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
 	report_strict_error "Parser.iteration_statement" 
