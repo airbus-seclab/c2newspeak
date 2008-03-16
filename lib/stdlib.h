@@ -37,6 +37,7 @@ unsigned long strtoul(const char *str, char **endptr, int base);
 void srand(unsigned seed);
 int rand(void);
 char *getenv(const char *name);
+int atoi(const char *str);
 
 
 #endif /* _STDLIB_H_ */
