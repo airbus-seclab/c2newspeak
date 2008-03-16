@@ -607,6 +607,11 @@ ityp:
 | INT                                    { Config.size_of_int }
 | LONG                                   { Config.size_of_long }
 | LONG LONG                              { Config.size_of_longlong }
+| SHORT INT                              { 
+    report_strict_error "Parser.ityp" 
+      "'short int' is not normalized: use 'short' instead";
+    Config.size_of_short 
+  }
 | LONG INT                               { 
     report_strict_error "Parser.ityp" 
       "'long int' is not normalized: use 'long' instead";
