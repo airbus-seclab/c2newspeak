@@ -23,10 +23,19 @@
   email: charles.hymans@penjili.org
 */
 
-#define	SIGHUP	1
-#define	SIGALRM	14
-#define	SIGTERM	15
+#include <sys/types.h>
 
-typedef void (*_sig_func_ptr)(int);
+#define ITIMER_REAL    0
 
-_sig_func_ptr signal(int, _sig_func_ptr);
+struct timeval {
+  time_t      tv_sec;
+  suseconds_t tv_usec;
+};
+
+struct  itimerval {
+  struct  timeval it_interval;
+  struct  timeval it_value;
+};
+
+int setitimer(int which, const struct itimerval *value,
+	      struct itimerval *ovalue);

@@ -36,6 +36,7 @@ int execl(const char *path, const char *arg0, ... /*, (char *)0 */);
 ssize_t read(int fildes, void *buf, size_t nbyte);
 char *getcwd(char *buf, size_t size);
 int chown(const char *path, uid_t owner, gid_t group);
+int pause(void);
 
 
 #endif /* _UNISTD_H_ */

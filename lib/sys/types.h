@@ -31,6 +31,8 @@ typedef long key_t;
 
 typedef unsigned int pthread_t;
 typedef unsigned int pthread_mutex_t;
+typedef unsigned long useconds_t;
+typedef long suseconds_t;
 typedef long time_t;
 typedef struct {
   int is_initialized;
