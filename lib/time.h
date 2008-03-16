@@ -23,19 +23,7 @@
   email: charles.hymans@penjili.org
 */
 
-#ifndef _STDLIB_H_
-#define _STDLIB_H_
+#include <sys/types.h>
 
-#include <stddef.h>
+time_t time(time_t *tloc);
 
-void free(void *);
-void exit(int);
-void *malloc(size_t);
-int system(const char *);
-char *realpath(const char *file_name, char *resolved_name);
-unsigned long strtoul(const char *str, char **endptr, int base);
-void srand(unsigned seed);
-int rand(void);
-
-
-#endif /* _STDLIB_H_ */
