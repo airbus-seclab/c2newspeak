@@ -61,10 +61,10 @@ let rec simplify_bexp e =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [Data (exp_of_int 0)] in
+  let res = ref [(None, Data (exp_of_int 0))] in
     for i = len - 1 downto 0 do
       let c = Char.code str.[i] in
-	res := (Data (exp_of_int c))::!res
+	res := (None, Data (exp_of_int c))::!res
     done;
     !res
 
@@ -194,7 +194,7 @@ let translate (globals, spec) =
     let res = ref [] in
     let rec translate o t x =
       match (x, t) with
-	  ((Data (Str str) | Sequence [Data (Str str)]), 
+	  ((Data (Str str) | Sequence ([(None, Data (Str str))])), 
 	  Array (Int (_, n), _)) when n = Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      translate o t (Sequence seq)
@@ -235,8 +235,15 @@ let translate (globals, spec) =
 
     and translate_field_sequence o fields seq =
       match (fields, seq) with
-	  ((_, (f_o, t))::fields, hd::seq) ->
+	  ((fname, (f_o, t))::fields, (expected_f, hd)::seq) ->
 	    let o = o + f_o in
+	    let _ = 
+	      match expected_f with
+		  Some f when fname <> f ->
+		    Npkcontext.error "Firstpass.translate_field_sequence" 
+		      ("initialization of field "^fname^" expected")
+		| _ -> ()
+	    in
 	    let _ = translate o t hd in
 	      translate_field_sequence o fields seq
 
@@ -258,10 +265,14 @@ let translate (globals, spec) =
 	  
     and translate_sequence o t n seq =
       match seq with
-	  hd::tl when n > 0 -> 
+	  (None, hd)::tl when n > 0 -> 
 	    let _ = translate o t hd in
 	    let o = o + size_of t in
 	      translate_sequence o t (n-1) tl
+	| (Some _, _)::_ ->
+	    Npkcontext.error "Firstpass.translate_init.translate_sequence" 
+	      "anonymous initializer expected for array"
+	    
 	| _::_ -> 
 	    report_error "Firstpass.translate_init.translate_sequence" 
 	      "too many initializers for array"

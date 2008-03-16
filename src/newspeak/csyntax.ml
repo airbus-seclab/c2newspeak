@@ -66,7 +66,7 @@ and typ =
 
 and init = 
     | Data of exp
-    | Sequence of init list
+    | Sequence of (string option * init) list
 
 and stmt = (stmtkind * location)
 

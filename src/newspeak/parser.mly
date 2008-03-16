@@ -510,11 +510,21 @@ init_declarator:
 init:
   expression                               { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
+| LBRACE named_init_list RBRACE            { Sequence $2 }
+;;
+
+named_init_list:
+  named_init COMMA named_init_list         { $1::$3 }
+| named_init                               { $1::[] }
+;;
+
+named_init:
+  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
 ;;
 
 init_list:
-  init COMMA init_list                     { $1::$3 }
-| init                                     { $1::[] }
+  init COMMA init_list                     { (None, $1)::$3 }
+| init                                     { (None, $1)::[] }
 |                                          {
   report_error "Parser.type_specifier" "ugly initializer syntax";
   []
@@ -618,7 +628,7 @@ enum:
 
 field_blk:
   LBRACE field_list RBRACE               { $2 }
-;;  
+;;
 
 ityp:
   CHAR                                   { Config.size_of_char }
