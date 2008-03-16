@@ -1,4 +1,4 @@
-Warning: expression should be explicit in 296.c line 28
+Warning: halting condition should be explicit in 296.c line 28
 Newspeak output
 ---------------
 296.c

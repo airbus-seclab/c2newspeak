@@ -281,8 +281,20 @@ iteration_statement:
       expression_statement
       assignment_expression_list RPAREN
       statement                            { ($3, $5, $8, $6) }
-| FOR LPAREN SEMICOLON SEMICOLON RPAREN
-  statement                                { ([], exp_of_int 1, $6, []) }
+| FOR LPAREN SEMICOLON 
+      expression_statement
+      assignment_expression_list RPAREN
+      statement                            { 
+	report_strict_error "Parser.iteration_statement" 
+	  "init statement expected";
+	([], $4, $7, $5) 
+      }
+| FOR LPAREN SEMICOLON expression_statement RPAREN
+      statement                            { 
+	report_strict_error "Parser.iteration_statement" 
+	  "init statement expected";
+	([], $4, $6, []) 
+      }
 | WHILE LPAREN expression RPAREN statement { ([], $3, $5, []) }
 | DO statement
   WHILE LPAREN expression RPAREN SEMICOLON { ($2, $5, $2, []) }
@@ -291,7 +303,7 @@ iteration_statement:
 expression_statement:
   SEMICOLON                                { 
     report_strict_error "Parser.expression_statement" 
-      "expression should be explicit";
+      "halting condition should be explicit";
     exp_of_int 1
   }
 | expression SEMICOLON                     { $1 }
