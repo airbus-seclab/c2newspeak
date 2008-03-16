@@ -461,6 +461,15 @@ let translate (globals, spec) =
 	  let loc = Npkcontext.get_loc () in
 	    (* TODO: this is a bit inefficient, e1 gets translated twice!! *)
 	  let (_, t) = translate_exp e1 in
+	    (* TODO: here expects a scalar type, this is really a hack, 
+	       how to make better? *)
+	    (* TODO: could be factored somehow 
+	       (similar in translate_va_args), not good *)
+	  let t = 
+	    match t with
+		Array (t, _) -> Ptr t
+	      | _ -> t
+	  in
 	  let (x, decl, v) = gen_tmp loc t in
 	  let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
 	  let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
