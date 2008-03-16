@@ -51,7 +51,8 @@ let next_aligned o x =
 
 let rec simplify_bexp e =
   match e with
-      Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ -> 
+      Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ 
+    | Set _ | SetOp _ -> 
 	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
@@ -533,6 +534,7 @@ let translate (globals, spec) =
 	  let args = translate_args va_list args args_t in
 	    (C.Call (ft', f, args), ret_t)
 
+(* TODO: should find a way to put this and SetOp together!! *)
       | Set set when !Npkcontext.dirty_syntax ->
 	  let loc = Npkcontext.get_loc () in
 	  let (set, t) = translate_set set in
@@ -541,6 +543,18 @@ let translate (globals, spec) =
 	    Npkcontext.print_warning "Firstpass.translate_exp" 
 	      "avoid assignments within expressions";
 	    (C.Pref ((C.Set set, loc)::[], e), t)
+
+      | SetOp (lv, op, e) when !Npkcontext.dirty_syntax ->
+(* TODO: is this check really necessary!!! *)
+	  let (lv', _) = translate_lv lv in
+	  let (pref, _, post) = C.normalize_lv lv' in
+	    (* TODO: should factor this code *)
+	    if (pref <> []) || (post <> []) then begin
+	      Npkcontext.error "Firstpass.translate_stmt" 
+		"expression without side-effects expected"
+	    end;
+	    let e = Binop (op, lv, e) in
+	      translate_exp (Set (lv, e))
  
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
