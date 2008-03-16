@@ -36,6 +36,7 @@ char *realpath(const char *file_name, char *resolved_name);
 unsigned long strtoul(const char *str, char **endptr, int base);
 void srand(unsigned seed);
 int rand(void);
+char *getenv(const char *name);
 
 
 #endif /* _STDLIB_H_ */

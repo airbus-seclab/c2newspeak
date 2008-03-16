@@ -42,6 +42,9 @@ char *fgets(char *s, int n, FILE *stream);
 char *gets(char *s);
 int snprintf(char *s, size_t n, const char *format, ...);
 int sprintf(char *s, const char *format, ...);
+FILE *fopen(const char *filename, const char *mode);
+int fclose(FILE *stream);
+
 
 
 #endif /* _STDIO_H_ */
