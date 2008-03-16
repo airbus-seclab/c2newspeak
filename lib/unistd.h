@@ -35,5 +35,4 @@ char *getpass(const char*);
 int execl(const char *path, const char *arg0, ... /*, (char *)0 */);
 ssize_t read(int fildes, void *buf, size_t nbyte);
 
-
 #endif /* _UNISTD_H_ */
