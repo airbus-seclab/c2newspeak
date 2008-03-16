@@ -26,6 +26,8 @@
 #ifndef _UNISTD_H_
 #define _UNISTD_H_
 
+#include <sys/types.h>
+
 int chroot(const char*);
 int close(int);
 unsigned int sleep(unsigned int);
