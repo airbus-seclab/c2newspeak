@@ -38,5 +38,7 @@ int fprintf(FILE *, const char *, ...);
 int scanf(const char*, ...);
 char *fgets(char *s, int n, FILE *stream);
 char *gets(char *s);
+int snprintf(char *s, size_t n, const char *format, ...);
+
 
 #endif /* _STDIO_H_ */
