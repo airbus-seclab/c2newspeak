@@ -46,4 +46,6 @@ typedef	int pid_t;
 typedef	unsigned short	uid_t;
 typedef	unsigned short	gid_t;
 
+typedef unsigned char u_char;
+
 #endif	/* _SYS_TYPES_H */
