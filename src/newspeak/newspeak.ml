@@ -736,7 +736,7 @@ object
 
   method process_lval lv =
     match lv with
-	Deref (AddrOf (lv, n), n') when n = n' -> lv
+	Deref (AddrOf (lv, n), n') when n' <= n -> lv
       | _ -> lv
 end
 

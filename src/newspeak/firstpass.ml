@@ -378,7 +378,7 @@ let translate (globals, spec) =
 		    "Array or pointer type expected"
 	  end
 
-      | Deref e -> deref (translate_exp e)
+      | Deref e -> deref e
 
 (* TODO: factor this case and the next case *)
       | ExpIncr (op, lv) ->
@@ -401,11 +401,19 @@ let translate (globals, spec) =
 
       | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
-  and deref (e, t) =
-    match t with
-	Ptr t -> (C.Deref (e, translate_typ t), t)
-      | _ -> Npkcontext.error "Firstpass.deref_typ" "Pointer type expected"
-
+  and deref e =
+    let (e, t) = translate_exp e in
+      match t with
+	  Ptr t -> (C.Deref (e, translate_typ t), t)
+	    (* TODO: this code could be somehow factored with other similar 
+	       checks do it as a first typing pass?? *)
+	| Array (t', _) -> 
+	    (* TODO: code cleanup?? *)
+	    let t = translate_typ t in
+	    let e = C.cast (e, t) C.Ptr in
+	      (C.Deref (e, translate_typ t'), t')
+	| _ -> Npkcontext.error "Firstpass.deref_typ" "pointer type expected"
+	    
   and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
 
   and translate_exp e = 
@@ -429,7 +437,6 @@ let translate (globals, spec) =
 	  Npkcontext.print_warning "Firstpass.translate_exp" 
 	    ("unnecessary creation of a pointer from a dereference:"
 	     ^" rewrite the code");
-	  let e = translate_exp e in
 	    addr_of (deref e)
 
       | AddrOf (Deref _) -> 
