@@ -38,3 +38,4 @@ void *memmove(void *, const void *, size_t);
 void* memccpy(void *, const void *, int, size_t);
 void bcopy(const void *s1, void *s2, size_t n);
 int strcmp(const char *s1, const char *s2);
+void *memset(void *b, int c, size_t n);

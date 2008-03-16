@@ -23,6 +23,9 @@
   email: charles.hymans@penjili.org
 */
 
+#include <sys/types.h>
+
 #define	O_RDONLY	0		/* +1 == FREAD */
 
 int open(const char*, int, ...);
+int creat(const char *path, mode_t mode);

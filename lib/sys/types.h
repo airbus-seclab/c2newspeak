@@ -38,4 +38,9 @@ typedef struct {
   int stacksize;
 } pthread_attr_t;
 
+typedef int mode_t;
+
+typedef	unsigned short	uid_t;
+typedef	unsigned short	gid_t;
+
 #endif	/* _SYS_TYPES_H */
