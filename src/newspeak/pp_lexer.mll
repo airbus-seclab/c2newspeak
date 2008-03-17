@@ -62,6 +62,6 @@ rule token = parse
 
 (* error fallback *)
   | _                     { Npkcontext.error "Preprocess_lexer" 
-			      ("Unknown keyword: "
+			      ("unknown keyword: "
 				^(Lexing.lexeme lexbuf)
 				^" in preprocessing directive") }

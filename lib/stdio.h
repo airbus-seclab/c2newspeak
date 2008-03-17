@@ -44,6 +44,8 @@ int snprintf(char *s, size_t n, const char *format, ...);
 int sprintf(char *s, const char *format, ...);
 FILE *fopen(const char *filename, const char *mode);
 int fclose(FILE *stream);
+int fputs(const char *s, FILE *stream);
+int fputc(int c, FILE *stream);
 
 
 
