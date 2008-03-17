@@ -506,7 +506,8 @@ let translate (globals, spec) =
       | Str str -> add_glb_cstr str
 
       | Cast (e, t) -> 
-	  let e = translate_exp e in
+(* TODO: is this ok?? *)
+	  let e = translate_exp_wo_array e in
 	  let e = cast e t in
 	    (e, t)
 
@@ -573,7 +574,7 @@ let translate (globals, spec) =
 
   and translate_set (lv, e) =
     let (lv, t) = translate_lv lv in
-    let e = cast (translate_exp e) t in
+    let e = cast (translate_exp_wo_array e) t in
       ((lv, translate_typ t, e), t)
 
   and init_va_args loc lv x =
