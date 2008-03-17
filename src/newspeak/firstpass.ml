@@ -401,17 +401,19 @@ let translate (globals, spec) =
 
       | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
-  and deref e =
+
+  and translate_exp_wo_array e =
     let (e, t) = translate_exp e in
+      match (e, t) with
+	| (C.Lval (lv, _), Array (t', _)) -> 
+	    let t = translate_typ t in
+	      (C.AddrOf (lv, t), Ptr t')
+	| _ -> (e, t)
+
+  and deref e =
+    let (e, t) = translate_exp_wo_array e in
       match t with
 	  Ptr t -> (C.Deref (e, translate_typ t), t)
-	    (* TODO: this code could be somehow factored with other similar 
-	       checks do it as a first typing pass?? *)
-	| Array (t', _) -> 
-	    (* TODO: code cleanup?? *)
-	    let t = translate_typ t in
-	    let e = C.cast (e, t) C.Ptr in
-	      (C.Deref (e, translate_typ t'), t')
 	| _ -> Npkcontext.error "Firstpass.deref_typ" "pointer type expected"
 	    
   and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
@@ -468,27 +470,18 @@ let translate (globals, spec) =
 	  (C.Const (C.CInt (Int64.neg c)), Int (Newspeak.Signed, sz))
 
       | Unop (op, e) -> 
-	  let e = translate_exp e in
+	  let e = translate_exp_wo_array e in
 	    translate_unop op e
 
       | Binop (op, e1, e2) -> 
-	  let e1 = translate_exp e1 in
-	  let e2 = translate_exp e2 in
+	  let e1 = translate_exp_wo_array e1 in
+	  let e2 = translate_exp_wo_array e2 in
 	    translate_binop op e1 e2
 
       | IfExp (c, e1, e2) ->
 	  let loc = Npkcontext.get_loc () in
 	    (* TODO: this is a bit inefficient, e1 gets translated twice!! *)
-	  let (_, t) = translate_exp e1 in
-	    (* TODO: here expects a scalar type, this is really a hack, 
-	       how to make better? *)
-	    (* TODO: could be factored somehow 
-	       (similar in translate_va_args), not good *)
-	  let t = 
-	    match t with
-		Array (t, _) -> Ptr t
-	      | _ -> t
-	  in
+	  let (_, t) = translate_exp_wo_array e1 in
 	  let (x, decl, v) = gen_tmp loc t in
 	  let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
 	  let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
@@ -601,19 +594,7 @@ let translate (globals, spec) =
     match x with
 	e::tl -> 
 	  let (args, sz) = translate_va_args tl in
-	  let e = translate_exp e in
-(* TODO: how to factor this with other places where a pointer is expected
-   instead of an array
-   Maybe should do a preliminary pass that does typing and these kinds of 
-   simplifications.
-*)
-	  let (e, t) =
-	    match e with
-		(_, Array (t, _)) -> 
-		  let t = Ptr t in
-		    (cast e t, t)
-	      | _ -> e
-	  in
+	  let (e, t) = translate_exp_wo_array e in
 	    ((e, t)::args, size_of t + sz)
       | [] -> ([], 0)
 
@@ -941,18 +922,6 @@ let translate (globals, spec) =
       | (Minus, Ptr _, Int _) -> 
 	  let e2 = translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) in
  	    (Plus, (e1, t1), e2)
-	      
-      | (Plus, Array (elt_t, _), _) -> 
-	  let t = Ptr elt_t in
-	    (Plus, (cast (e1, t1) t, t), (e2, t2))
-	      
-      | (Minus, Array (elt_t, _), _) ->
-	  let t = Ptr elt_t in
-	    normalize_binop Minus (cast (e1, t1) t, t) (e2, t2)
-	      
-      | (Minus, _, Array (elt_t, _)) ->
-	  let t = Ptr elt_t in
-	    normalize_binop Minus (e1, t1) (cast (e2, t2) t, t)
 	      
       | (Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq as op, Int k1, Int k2) -> 
 (* TODO: put promote in csyntax!! *)

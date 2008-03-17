@@ -503,6 +503,7 @@ let len_of_array n lv =
 let cast (e, t) t' =
   let (e, t) =
     match (t, e, t') with
+(* TODO: remove this first check, it should be done in firstpass. *)
 	(Array _, Lval (lv, Array _), (Ptr|Int _)) -> (AddrOf (lv, t), Ptr)
       | (Fun _, Lval lv, (FunPtr|Ptr|Int _)) -> (AddrOf lv, FunPtr)
       | _ -> (e, t)
