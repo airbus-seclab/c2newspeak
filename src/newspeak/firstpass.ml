@@ -200,7 +200,7 @@ let translate (globals, spec) =
 	      translate o t (Sequence seq)
 
 	| (Data e, _) -> 
-	    let e = cast (translate_exp e) t in
+	    let e = cast (translate_exp_wo_array e) t in
 	      res := (o, translate_typ t, e)::!res;
 	      t
 	      
@@ -615,7 +615,7 @@ let translate (globals, spec) =
 	      (C.Pref (decl::init, C.AddrOf (v, t)))::[]
 
 	| (e::args, (t, _)::args_t) ->
-	    let e = cast (translate_exp e) t in
+	    let e = cast (translate_exp_wo_array e) t in
 	      e::(translate_args args args_t)
 	| ([], []) -> []
 	| _ -> 
