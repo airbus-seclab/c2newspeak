@@ -192,7 +192,7 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
 (* TODO: not in conformance with standard. strange *)
 	(None, None) -> [Signed; Unsigned]
       | (Some _, None) -> [Signed; Unsigned]
-      | (_, Some 'U') -> Unsigned::[]
+      | (_, Some ('u'|'U')) -> Unsigned::[]
       | _ -> 
 	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
   in

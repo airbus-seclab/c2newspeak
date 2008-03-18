@@ -117,7 +117,7 @@ let lower_case_hex_digit = digit | ['a'-'f']
 let string = '"' [^'"']* '"'
 let wide_string = 'L''"' [^'"']* '"'
 
-let sign = "U" as sign
+let sign = ("U"|"u") as sign
 let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
 let hex_integer = 
