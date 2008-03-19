@@ -16,6 +16,7 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/mult-files/*.checked tests/mult-files/*~ \
             tests/mem_opt/000 tests/mem_opt/*.no \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
+            tests/npkstats/*~ tests/npkstats/*.no tests/npkstats/*.npk \
             $(addprefix tests/mult-files/,000 001 002 003 004) \
             tests/newspeak/*.exe
 

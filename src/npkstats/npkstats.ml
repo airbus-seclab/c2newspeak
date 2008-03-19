@@ -175,7 +175,7 @@ object (this)
 
   method process_gdecl _ (t, _) =
     globals <- globals + 1;
-    this#incr_bytes (size_of ptr_sz t);
+    this#incr_bytes ((size_of ptr_sz t) / 8);
     true
 
 (*
@@ -254,7 +254,6 @@ let anon_fun file =
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 let _ = 
-
   try
     Arg.parse speclist anon_fun usage_msg;
 
@@ -265,6 +264,7 @@ let _ =
     let collector = new collector ptr_sz !fun_to_count in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
       print_endline (collector#to_string !verbose);
+      Stackcount.count ptr_sz prog;
       if !graphs then collector#gen_graphs !output
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);

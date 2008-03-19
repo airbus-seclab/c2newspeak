@@ -12,7 +12,7 @@ OCAMLDOC=ocamldoc
 CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
-INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify
+INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify -I src/npkstats
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
@@ -33,9 +33,10 @@ NSFILES:=$(addprefix npksimplify/,$(NSFILES))
 NSFILES:=$(addprefix src/,$(NSFILES))
 NSCMX=src/version.cmx src/newspeak/newspeak.cmx $(addsuffix .cmx, $(NSFILES))
 
+STATFILES=src/npkstats/stackcount src/npkstats/npkstats
 
 MLI=$(addsuffix .mli, $(C2NFILES))
-ML=$(addsuffix .ml, $(C2NFILES)) $(addsuffix .ml, $(NSFILES))
+ML=$(addsuffix .ml, $(C2NFILES) $(NSFILES) $(STATFILES)) $(addsuffix .ml, )
 
 NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
          lib/*
@@ -99,8 +100,8 @@ npkstrip: src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstrip/npkstrip.cmx -o bin/npkstrip
 
 #TODO: clean this up
-npkstats: src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstats/npkstats.cmx -o bin/npkstats
+npkstats: src/version.cmx src/newspeak/newspeak.cmx src/npkstats/stackcount.cmx src/npkstats/npkstats.cmx
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkstats/stackcount.cmx src/npkstats/npkstats.cmx -o bin/npkstats
 
 #TODO: clean this up
 npksimplify: $(NSCMX)
