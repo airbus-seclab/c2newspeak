@@ -1,3 +1,4 @@
+Warning: 'long' is not normalized: use 'long int' instead in 280.c line 27
 Newspeak output
 ---------------
 280.c

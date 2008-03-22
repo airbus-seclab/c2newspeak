@@ -1,3 +1,28 @@
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 45
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 75
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 81
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 93
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 98
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 99
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 111
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 116
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 123
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 129
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 130
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 135
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 141
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 147
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 153
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 159
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 165
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 176
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 177
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 178
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 202
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 215
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 242
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 243
+Warning: 'short' is not normalized: use 'short int' instead in 179.c line 261
 Newspeak output
 ---------------
 179.c

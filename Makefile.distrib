@@ -66,7 +66,7 @@ CLEANFILES=*~ .depend \
            tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
 	   lib/*~ lib/sys/*~ \
            src/npkstats/*.o src/npkstats/*.cmi src/npkstats/*.cmx \
-           src/npkstats/*~ \
+           src/npkstats/*~ tests/npkstats/000 \
            src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
            src/npksimplify/*~ \
            src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \

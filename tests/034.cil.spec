@@ -1,5 +1,3 @@
-Warning: 'short' is not normalized: use 'short int' instead in 034.c line 32
-Warning: 'short' is not normalized: use 'short int' instead in 034.c line 33
 Newspeak output
 ---------------
 034.c

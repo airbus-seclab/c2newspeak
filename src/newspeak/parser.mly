@@ -630,25 +630,32 @@ field_blk:
   LBRACE field_list RBRACE               { $2 }
 ;;
 
+/*
+From ANSI C norm
+4 There are five standard signed integer types, designated as signed 
+char, short int, int, long int, and long long int. (These and other 
+types may be designated in several additional ways, as described in 
+6.7.2.)
+*/
 ityp:
   CHAR                                   { Config.size_of_char }
-| SHORT                                  { Config.size_of_short }
+| SHORT INT                              { Config.size_of_short }
 | INT                                    { Config.size_of_int }
-| LONG                                   { Config.size_of_long }
-| LONG LONG                              { Config.size_of_longlong }
-| SHORT INT                              { 
+| LONG INT                               { Config.size_of_long }
+| LONG LONG INT                          { Config.size_of_longlong }
+| SHORT                                  { 
     report_strict_error "Parser.ityp" 
-      "'short int' is not normalized: use 'short' instead";
+      "'short' is not normalized: use 'short int' instead";
     Config.size_of_short 
   }
-| LONG INT                               { 
+| LONG                                   { 
     report_strict_error "Parser.ityp" 
-      "'long int' is not normalized: use 'long' instead";
+      "'long' is not normalized: use 'long int' instead";
     Config.size_of_long 
   }
-| LONG LONG INT                          { 
+| LONG LONG                              { 
     report_strict_error "Parser.ityp" 
-      "'long long int' is not normalized: use 'long long' instead";
+      "'long long' is not standard: use 'long long int' instead";
     Config.size_of_longlong 
   }
 ;;
