@@ -23,14 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
-int z;
-
-void f(int a) {
-  z = a;
-}
+extern void f(void);
 
 void main() {
-  int x;
-  x = 0;
-  f(x);
+  f();
 }

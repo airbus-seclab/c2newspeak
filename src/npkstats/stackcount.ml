@@ -28,10 +28,13 @@
 
 open Newspeak
 
+type stats = (bool * int * int)
 
 let count ptr_sz (_, fundecs, _) =
+  let exact = ref true in
   let max_nb = ref 0 in
   let max_sz = ref 0 in
+
   let rec count_call f sz =
     let (_, body) = 
       try Hashtbl.find fundecs f 
@@ -39,15 +42,17 @@ let count ptr_sz (_, fundecs, _) =
     in
       match body with
 	  Some body -> count_blk body sz
-	| None -> invalid_arg ("function "^f^" not defined")
-
+	| None -> 
+	    prerr_endline ("Warning: function "^f^" body not defined");
+	    exact := false
+	      
   and count_blk x sz =
     match x with
 	(stmt, _)::blk -> 
 	  count_stmt stmt sz;
 	  count_blk blk sz
       | [] -> ()
-  
+	  
   and count_stmt x info =
     match x with
       | Decl (_, t, body) -> 
@@ -56,7 +61,7 @@ let count ptr_sz (_, fundecs, _) =
 	  let sz = sz + ((Newspeak.size_of ptr_sz t) / 8) in 
 	    if !max_nb < nb then max_nb := nb;
 	    if !max_sz < sz then max_sz := sz;
-	    count_blk body (nb, sz)
+	  count_blk body (nb, sz)
       | DoWith (body, _, []) -> count_blk body info
       | Call (FunId f) -> count_call f info
       | ChooseAssert choices -> 
@@ -66,10 +71,13 @@ let count ptr_sz (_, fundecs, _) =
       | DoWith _ -> invalid_arg "case not handle yet"
       | _ -> ()
   in
-
-(* TODO: arguments of main not counted ! *)
+    (* TODO: arguments of main not counted ! *)
     count_call "main" (0, 0);
+    (!exact, !max_nb, !max_sz)
+      
+let print (exact, max_nb, max_sz) =
+  let symb = if exact then "" else ">= " in
     print_endline ("Maximum number of variables on the stack: "
-		   ^(string_of_int !max_nb));
+		    ^symb^(string_of_int max_nb));
     print_endline ("Maximum height of the stack (bytes): "
-		   ^(string_of_int !max_sz))
+		    ^symb^(string_of_int max_sz))

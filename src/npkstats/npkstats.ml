@@ -262,9 +262,10 @@ let _ =
 
     let (_, prog, ptr_sz) = Newspeak.read !input in
     let collector = new collector ptr_sz !fun_to_count in
+    let stack_height = Stackcount.count ptr_sz prog in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
       print_endline (collector#to_string !verbose);
-      Stackcount.count ptr_sz prog;
+      Stackcount.print stack_height;
       if !graphs then collector#gen_graphs !output
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);

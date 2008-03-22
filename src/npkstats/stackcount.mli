@@ -26,4 +26,7 @@
   email: olivier.levillain@penjili.org
 *)
 
-val count: Newspeak.size_t -> Newspeak.prog -> unit
+type stats
+
+val count: Newspeak.size_t -> Newspeak.prog -> stats
+val print: stats -> unit

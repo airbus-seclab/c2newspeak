@@ -4,7 +4,7 @@ C2N = ../../bin/c2newspeak
 NPKSTATS=../../bin/npkstats
 C2NEWSPEAK=$(C2N) --experimental
 
-TESTS= 000
+TESTS= 000 001
 TESTS.SPEC= $(addsuffix .spec, $(TESTS))
 CHECK=$(addsuffix .checked, $(TESTS))
 
