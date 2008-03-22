@@ -2,16 +2,18 @@
 RM = rm -f
 C2N = ../../bin/c2newspeak
 NPKSTATS=../../bin/npkstats
-C2NEWSPEAK=$(C2N) --experimental --newspeak
+C2NEWSPEAK=$(C2N) --experimental
 
-TESTS = 000
-TESTS.SPEC = $(addsuffix .spec, $(TESTS))
+TESTS= 000
+TESTS.SPEC= $(addsuffix .spec, $(TESTS))
 CHECK=$(addsuffix .checked, $(TESTS))
 
 .SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)
 
-$(TESTS):%: $(C2N) %.c %.spec
+check: $(TESTS)
+
+$(TESTS):%: $(C2N) %.c
 	eval $(C2NEWSPEAK) $*.c
 	eval $(NPKSTATS) `[ -e $*.in ] && cat $*.in` a.npk &> $*.bak
 	dos2unix $*.bak

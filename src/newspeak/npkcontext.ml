@@ -285,3 +285,9 @@ let handle_cmdline_options () =
   end;
 
   if (not !compile_only) && (!output_file = "") then output_file := "a.npk"
+
+let report_dirty_warning msg err =
+  if !dirty_syntax then print_warning msg err else error msg err
+
+let report_strict_error msg err =
+  if !strict_syntax then error msg err else print_warning msg err

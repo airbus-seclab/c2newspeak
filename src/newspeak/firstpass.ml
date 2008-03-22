@@ -83,11 +83,6 @@ let translate (globals, spec) =
 
   let tmp_cnt = ref 0 in
 
-  let report_error = 
-    if !Npkcontext.dirty_syntax then Npkcontext.print_warning 
-    else Npkcontext.error 
-  in
-
   let add_var loc (t, x) =
     let id = C.fresh_id () in
       Hashtbl.add symbtbl x (VarSymb (C.Var id), t, loc);
@@ -213,23 +208,12 @@ let translate (globals, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Struct (n, Some f)) ->
-	    let (f, _) = process_struct_fields n f in
-	      translate_field_sequence o f seq;
-	      Struct (n, None)
-			
-	| (Sequence seq, Struct (n, None)) ->
-(* TODO: factor this code with translate_typ *)
-	    let (f, _, _) = 
-	      try Hashtbl.find compdefs n 
-	      with Not_found -> 
-		Npkcontext.error "Firstpass.translate_typ" 
-		  ("unknown union "^n)
-	    in
+	| (Sequence seq, Struct (n, f)) ->
+	    let (f, _) = process_struct (n, f) in
 	      translate_field_sequence o f seq;
 	      Struct (n, None)
 
-	| _ -> 
+	| (Sequence _, _) -> 
 	    Npkcontext.error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
 
@@ -253,14 +237,15 @@ let translate (globals, spec) =
 	    let o = o + f_o in
 	    let _ = fill_with_zeros o t in
 	      if (fields = []) then begin
-		report_error 
+		Npkcontext.report_dirty_warning 
 		  "Firstpass.translate_init.translate_field_sequence" 
 		  "not enough initializers for structure"
 	      end;
 	      translate_field_sequence o fields []
 
 	| ([], _) -> 
-	    report_error "Firstpass.translate_init.translate_field_sequence" 
+	    Npkcontext.report_dirty_warning 
+	      "Firstpass.translate_init.translate_field_sequence" 
 	      "too many initializers for structure"
 	  
     and translate_sequence o t n seq =
@@ -274,7 +259,8 @@ let translate (globals, spec) =
 	      "anonymous initializer expected for array"
 	    
 	| _::_ -> 
-	    report_error "Firstpass.translate_init.translate_sequence" 
+	    Npkcontext.report_dirty_warning 
+	      "Firstpass.translate_init.translate_sequence" 
 	      "too many initializers for array"
 	      
 	(* TODO: code cleanup: We fill with zeros, because CIL does too. 
@@ -284,12 +270,14 @@ let translate (globals, spec) =
 	| [] when n > 0 -> 
 	    let _ = fill_with_zeros o t in
 	    let o = o + size_of t in
-	      translate_sequence o t (n-1) []
-	| [] -> 
-	    if (n > 0) then begin
-	      report_error "Firstpass.translate_init.translate_sequence" 
-		"not enough initializers for array"
-	    end
+	    let n = n - 1 in
+	      if (n = 0) then begin
+		Npkcontext.print_warning 
+		  "Firstpass.translate_init.translate_sequence" 
+		  "not enough initializers for array"
+	      end;
+	      translate_sequence o t n []
+	| [] -> ()
 	    
     and fill_with_zeros o t =
       match t with
@@ -314,9 +302,14 @@ let translate (globals, spec) =
 		o := !o + sz
 	      done
 		
+	| Struct s -> 
+	    let (f, _) = process_struct s in
+	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
+	      List.iter fill_field f
+
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
-	      "this type of initialization not implemented yet"
+	      "this type of zero initialization not implemented yet"
     in
     let t = translate 0 t x in
       (List.rev !res, t)
@@ -646,17 +639,11 @@ let translate (globals, spec) =
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
-(* TODO: put Cir Struct and Union into just a region *)
-      | Struct (n, _) when Hashtbl.mem compdefs n -> 
-	  let (f, sz, _) = Hashtbl.find compdefs n in
-	  let f = List.map translate_field f in
-	    C.Struct (n, f, sz)	    
-      | Struct (n, Some f) -> 
-	  let (f, sz) = process_struct_fields n f in
+(* TODO: do the same coding for Union *)
+      | Struct (n, f) -> 
+	  let (f, sz) = process_struct (n, f) in
 	  let f = List.map translate_field f in
 	    C.Struct (n, f, sz)
-      | Struct (n, _) -> 
-	  Npkcontext.error "Firstpass.translate_typ" ("unknown structure "^n)
       | Union (n, _) when Hashtbl.mem compdefs n -> 
 	  let (f, sz, _) = Hashtbl.find compdefs n in
 	  let f = List.map translate_field f in
@@ -691,7 +678,21 @@ let translate (globals, spec) =
 	    end;
 	    Some i
 
-  and process_struct_fields name f =
+  and process_struct (name, f) =
+    try
+      let (f, sz, _) = Hashtbl.find compdefs name in
+	(f, sz)
+    with Not_found ->
+      match f with
+	  Some f -> 
+	    let (f, sz, a) = process_struct_fields f in
+	      Hashtbl.add compdefs name (f, sz, a);
+	      (f, sz)
+	| None ->
+	    Npkcontext.error "Firstpass.process_struct" 
+	      ("unknown structure "^name) 
+
+  and process_struct_fields f =
     let o = ref 0 in
     let last_align = ref 1 in
     let rec translate (t, x, loc) =
@@ -726,8 +727,7 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-      Hashtbl.add compdefs name (f, sz, !last_align);
-      (f, sz)
+      (f, sz, !last_align)
 
   and process_union_fields name f =
     let n = ref 0 in

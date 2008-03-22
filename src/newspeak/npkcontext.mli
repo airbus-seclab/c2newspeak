@@ -110,10 +110,14 @@ val get_fname : unit -> string
 
 (** {1 Warnings/errors generation and display } *)
 
+(* TODO: unify these functions!!! into one, with a level!!! *)
 val print_warning : string -> string -> unit
 val print_morewarn : string -> string -> unit
-val print_debug : string -> unit
+val report_dirty_warning: string -> string -> unit
+val report_strict_error: string -> string -> unit
+
 (** Displays a message to the user *)
+val print_debug : string -> unit
 
 (** Throws an Invalid_argument exception with a message *)
 val error : string -> string -> 'a

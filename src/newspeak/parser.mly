@@ -121,16 +121,6 @@ let build_type_decl d =
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
-(* TODO: this should be put in Npkcontext *)
-let report_error msg err = 
-  if !Npkcontext.dirty_syntax then Npkcontext.print_warning msg err
-  else Npkcontext.error msg err
-  
-(* TODO: this should be put in Npkcontext *)
-let report_strict_error msg err = 
-  if !Npkcontext.strict_syntax then Npkcontext.error msg err
-  else Npkcontext.print_warning msg err
-  
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -171,7 +161,7 @@ parse:
 translation_unit:
   external_declaration translation_unit    { $1@$2 }
 | SEMICOLON translation_unit               { 
-    report_error "Parser.translation_unit" 
+    Npkcontext.report_dirty_warning "Parser.translation_unit" 
       "unnecessary semicolon";
     $2 
   }
@@ -185,7 +175,7 @@ external_declaration:
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | EXTERN function_definition               { 
-    report_error "Parser.external_declaration" 
+    Npkcontext.report_dirty_warning "Parser.external_declaration" 
       "defined functions should not be extern";
     build_fundef false $2 
 }
@@ -285,20 +275,20 @@ iteration_statement:
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
-	report_strict_error "Parser.iteration_statement" 
+	Npkcontext.report_strict_error "Parser.iteration_statement" 
 	  "init statement expected";
 	([], $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
-	report_strict_error "Parser.iteration_statement" 
+	Npkcontext.report_strict_error "Parser.iteration_statement" 
 	  "increment statement expected";
 	($3, $5, [], $7) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
-	report_strict_error "Parser.iteration_statement" 
+	Npkcontext.report_strict_error "Parser.iteration_statement" 
 	  "init statement expected";
 	([], $4, $6, []) 
       }
@@ -309,7 +299,7 @@ iteration_statement:
 
 expression_statement:
   SEMICOLON                                { 
-    report_strict_error "Parser.expression_statement" 
+    Npkcontext.report_strict_error "Parser.expression_statement" 
       "halting condition should be explicit";
     exp_of_int 1
   }
@@ -465,7 +455,7 @@ conditional_expression:
   logical_or_expression                    { $1 }
 | logical_or_expression QMARK 
   expression COLON conditional_expression  {
-    report_error "Parser.type_specifier" 
+    Npkcontext.report_dirty_warning "Parser.type_specifier" 
       "conditional expression are ugly: use if else instead";
     IfExp ($1, $3, $5)
   }
@@ -526,7 +516,8 @@ init_list:
   init COMMA init_list                     { (None, $1)::$3 }
 | init                                     { (None, $1)::[] }
 |                                          {
-  report_error "Parser.type_specifier" "ugly initializer syntax";
+  Npkcontext.report_dirty_warning "Parser.type_specifier" 
+    "ugly initializer syntax";
   []
   }
 ;;
@@ -581,13 +572,14 @@ type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
 | SIGNED ityp                            {
-    report_error "Parser.type_specifier" 
+    Npkcontext.report_dirty_warning "Parser.type_specifier" 
       "signed specifier not necessary";
     Integer (Newspeak.Signed, $2)
   }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
-    report_error "Parser.type_specifier" "Integer kind should be specified";
+    Npkcontext.report_dirty_warning "Parser.type_specifier" 
+      "Integer kind should be specified";
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 | ftyp                                   { Float $1 }
@@ -609,7 +601,7 @@ type_specifier:
 ident_or_tname:
   IDENTIFIER                             { $1 }
 | TYPEDEF_NAME                           {
-    report_strict_error "Parser.ident_or_tname" 
+    Npkcontext.report_strict_error "Parser.ident_or_tname" 
       ("identifier "^$1^" is defined as a type, avoid using it for "
 	^"another purpose");
     $1 
@@ -644,17 +636,17 @@ ityp:
 | LONG INT                               { Config.size_of_long }
 | LONG LONG INT                          { Config.size_of_longlong }
 | SHORT                                  { 
-    report_strict_error "Parser.ityp" 
+    Npkcontext.report_strict_error "Parser.ityp" 
       "'short' is not normalized: use 'short int' instead";
     Config.size_of_short 
   }
 | LONG                                   { 
-    report_strict_error "Parser.ityp" 
+    Npkcontext.report_strict_error "Parser.ityp" 
       "'long' is not normalized: use 'long int' instead";
     Config.size_of_long 
   }
 | LONG LONG                              { 
-    report_strict_error "Parser.ityp" 
+    Npkcontext.report_strict_error "Parser.ityp" 
       "'long long' is not standard: use 'long long int' instead";
     Config.size_of_longlong 
   }

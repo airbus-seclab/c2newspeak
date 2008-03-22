@@ -1,4 +1,3 @@
-Warning: not enough initializers for array in 163.c line 26
 Newspeak output
 ---------------
 163.c
