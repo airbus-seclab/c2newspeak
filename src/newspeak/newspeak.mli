@@ -181,8 +181,8 @@ val zero : exp
 val one : exp
 val zero_f : exp
 
-val locUnknown : location
-
+val unknown_loc: location
+val dummy_loc: string -> location
 
 
 (* {1 Manipualtion and Simplifications} *)
@@ -315,15 +315,26 @@ val size_of_scalar : size_t -> scalar_t -> size_t
 *)
 val size_of : size_t -> typ -> size_t
 
-val build_call: fid -> ftyp -> blk
+(** [bind_var x t blk] encloses the block [blk] with the declaration of 
+    variable [x] of type [t] and then binds all occurances of [x] as a global
+    variable in [blk].
+*)
+val bind_var: string -> typ -> blk -> stmtkind
 
-(** [build_main_call ptr_sz ft params] returns a table of globals and a block
+(** [build_call f ft args] builds the call to function [f] of type [ft] with
+    arguments [args].
+    @raise Invalid_argument "Newspeak.build_call: non scalar argument" if
+    some argument is not of scalar type
+*)
+val build_call: fid -> ftyp -> exp list -> blk
+
+(** [build_main_call ptr_sz ft params] returns a block
    of newspeak code to call the main function with parameters [params].
    @param ptr_sz the size of pointers
    @param the type of main
    @param the parameters with which [main] is called
 *)
-val build_main_call: size_t -> ftyp -> string list -> (globals * blk)
+val build_main_call: size_t -> ftyp -> string list -> blk
 
 val create_cstr: string -> string -> string * gdecl
 
@@ -347,4 +358,3 @@ val convert_loops: blk -> alt_blk
 
 val max_ikind: ikind -> ikind -> ikind
 
-val dummy_loc: string -> location

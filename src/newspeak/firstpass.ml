@@ -325,7 +325,7 @@ let translate (globals, spec) =
     let fname = Npkcontext.get_fname () in
     let name = "!"^fname^".const_str_"^str in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
-    let loc = ("", -1, -1) in
+    let loc = Npkcontext.get_loc () in
     let (t, init) = translate_glb_init t (Some (Data (Str str))) in
     let t' = translate_typ t in
       if not (Hashtbl.mem glbdecls name) 

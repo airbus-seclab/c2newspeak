@@ -485,9 +485,10 @@ let create_cstr str =
   let name = "!"^fname^".const_str_"^str in
   let (len, init) = init_of_string str in
   let t = Array (Scalar char_typ, Some len) in
+  let loc = Newspeak.dummy_loc fname in
     (name, (t, 
-    (* TODO: code cleanup: not nice *)
-    (fname, -1, -1), Some init, true))
+	   (* TODO: code cleanup: not nice *)
+	   loc, Some init, true))
 
 let string_of_cast t1 t2 =
   match (t1, t2) with

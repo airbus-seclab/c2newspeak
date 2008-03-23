@@ -61,7 +61,7 @@ object (self)
     if (sz mod 8) <> 0 
     then begin
       let msg = 
-	if self#curloc = dummy_loc "" then ""
+	if self#curloc = Newspeak.unknown_loc then ""
 	else (Newspeak.string_of_loc self#curloc)^": "
       in
       let msg = msg^"size not multiple of 8 bits" in

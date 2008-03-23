@@ -16,7 +16,7 @@ INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify -I src/npkstats
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
-C2NFILES:=config cilutils params npkcontext newspeak \
+C2NFILES:=config cilutils params newspeak npkcontext \
          pp_syntax pp_lexer pp_parser \
          csyntax cir synthack lexer parser \
          spec_lexer spec_parser \
@@ -49,6 +49,7 @@ CLEANFILES=*~ .depend \
            src/*~ \
            src/npkstrip/*.cmi src/npkstrip/*.cmx src/npkstrip/*.o \
            src/npkstrip/*~ \
+           src/npk2bytesz/*~ \
            src/npkstrip/npkstrip src/npkstrip/npkstrip.exe \
            src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
            src/newspeak/*~ \

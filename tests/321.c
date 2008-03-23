@@ -1,4 +1,4 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -21,13 +21,11 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
 
-let _ =
-  try
-    let (_, (_, fundefs, _), ptr_sz) = Newspeak.read Sys.argv.(1) in
-    let (ft, _) = Hashtbl.find fundefs "main" in
-    let args = ["Hello"; "World"] in
-    let body = Newspeak.build_main_call ptr_sz ft args in
-      print_endline (Newspeak.string_of_blk body)
-  with Invalid_argument str -> print_endline str
+  Olivier Levillain
+  email: olivier.levillain@penjili.org
+*/
+
+void main() {
+  int (*fp)(int);
+}

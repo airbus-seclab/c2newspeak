@@ -3,7 +3,7 @@ Newspeak output
 094.c
 main() {
   (094.c:27#1072)^int32;
-  (:-1#-1)^int32;
+  int32;
   (094.c:28#1077)^choose {
     | ! (0 > 1-_int32) -->
       (094.c:28#1077)^choose {

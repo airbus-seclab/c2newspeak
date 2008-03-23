@@ -41,7 +41,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	290 291 292 293 294 295 296 297 298 299 \
 	300 301 302 303 304 305 306 307 308 309 \
 	310 311 312 313 314 315 316 317 318 319 \
-	320
+	320 321
 
 CHECK=$(addsuffix .checked, $(TESTS))
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
@@ -51,13 +51,13 @@ TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 .SILENT: check $(CHECK)
 .PHONY: $(TESTS) $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
-check: ../bin/c2newspeak $(CHECK) $(addsuffix .check, $(DIR))
+check: ../bin/c2newspeak $(TESTS) $(addsuffix .check, $(DIR))
 
 %.check: ../bin/c2newspeak
 	make -C $*
 
-001: 026 028 176 177
 000: 030 031
+001: 026 028 176 177 321
 003: 032
 005: 233
 008: 200

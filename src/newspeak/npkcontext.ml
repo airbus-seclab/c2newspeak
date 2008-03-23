@@ -200,17 +200,15 @@ let argslist = [
 (* Location handling *)
 (*-------------------*)
 
-let dummy_loc = ("", -1, -1)
-
-let cur_loc = ref dummy_loc
+let cur_loc = ref Newspeak.unknown_loc
 
 let set_loc loc = cur_loc := loc
   
-let forget_loc () = cur_loc := dummy_loc
+let forget_loc () = cur_loc := Newspeak.unknown_loc
 
 let string_of_loc loc = 
   let (file, line, _) = loc in
-    if loc = dummy_loc then ""
+    if loc = Newspeak.unknown_loc then ""
     else " in "^file^" line "^(string_of_int line)
 
 let get_fname () =

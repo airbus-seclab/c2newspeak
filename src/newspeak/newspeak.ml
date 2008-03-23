@@ -154,8 +154,6 @@ let zero = Const (CInt64 (Int64.zero))
 let one = Const (CInt64 (Int64.one))
 let zero_f = Const (CFloat (0., "0."))
 
-let locUnknown = ("", -1, -1)
-
 
 
 (*----------------------------------*)
@@ -312,7 +310,20 @@ let string_of_ftyp (args, ret) =
 
 
 let string_of_loc (fname, line, carac) = 
-  (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
+  if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
+  if (line = -1) && (carac = -1) then fname
+  else if (line >= 0) && (carac >= 0) 
+  then (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
+  else invalid_arg "Newspeak.string_of_loc: invalid location"
+  
+  
+let dummy_loc fname = 
+  if fname = "" 
+  then invalid_arg "Newspeak.dummy_loc: invalid function name for location";
+  (fname, -1, -1)
+
+let unknown_loc = ("", -1, -1)
+
 
 (* Expressions *)
 let string_of_cte c =
@@ -425,10 +436,10 @@ let string_of_blk offset x =
     let margin = String.make !offset ' ' in
       Buffer.add_string buf (margin^str^"\n") 
   in
-  let dump_line_at loc str = 
-    let loc = string_of_loc loc in
+  let dump_line_at loc str =
+    let loc = if loc = unknown_loc then "" else "("^(string_of_loc loc)^")^" in
     let margin = String.make !offset ' ' in
-      Buffer.add_string buf (margin^"("^loc^")^"^str^"\n") 
+      Buffer.add_string buf (margin^loc^str^"\n") 
   in
 
   let rec dump_stmt only (sk, loc) =
@@ -627,67 +638,75 @@ let init_of_string str =
       let c = Char.code (String.get str i) in
 	res := (i*char_sz, char_typ, exp_of_int c)::!res
     done;
-    (len + 1, Init !res)
+    (len + 1, !res)
 
 let create_cstr name str =
   let (len, init) = init_of_string str in
   let t = Array (Scalar char_typ, len) in
-    (name, (t, init))
+    (name, (t, Init init))
 
-let build_call_aux f prolog (args_t, ret_t) =
-  let call = ref (prolog@[Call (FunId f), locUnknown]) in
-  let i = ref 0 in
-  let handle_arg t =
-    call := [Decl ("arg"^(string_of_int !i), t, !call), locUnknown];
-    incr i
+let bind_var x t body =
+  let rec bind_in_lval n lv =
+    match lv with
+	Local x -> Local x
+      | Global y when x = y -> Local n
+      | Deref (e, sz) -> Deref (bind_in_exp n e, sz)
+      | Shift (lv, e) -> Shift (bind_in_lval n lv, bind_in_exp n e)
+      | _ -> lv
+
+  and bind_in_exp n e =
+    match e with
+	Lval (lv, t) -> Lval (bind_in_lval n lv, t)
+      | AddrOf (lv, sz) -> AddrOf (bind_in_lval n lv, sz)
+      | UnOp (op, e) -> UnOp (op, bind_in_exp n e)
+      | BinOp (op, e1, e2) -> BinOp (op, bind_in_exp n e1, bind_in_exp n e2)
+      | _ -> e
   in
-    List.iter handle_arg (List.rev args_t);
-    begin match ret_t with
-	None -> ()
-      | Some t -> call := [Decl ("value_of_"^f, t, !call), locUnknown]
-    end;
-    !call
 
-let build_call f ftyp = build_call_aux f [] ftyp
+  let rec bind_in_blk n x = List.map (bind_in_stmt n) x
 
-let build_main_call ptr_sz (args_t, ret_t) args =
-  let argv_name = "!ptr_array" in
-  let n = ref 0 in
-  let globs = Hashtbl.create 10 in
-  let ptr_array_init = ref [] in
-  let handle_arg_aux str =
-    let name = "!param_str"^(string_of_int (!n + 1)) in
-    let (len, init) = init_of_string str in
-      Hashtbl.add globs name ((Array (Scalar char_typ, len), init));
-      ptr_array_init := 
-	(!n * ptr_sz, Ptr, AddrOf (Global name, len * char_sz))
-      ::(!ptr_array_init);
-      incr n
+  and bind_in_stmt n (x, loc) = (bind_in_stmtkind n x, loc)
+
+  and bind_in_stmtkind n x =
+    match x with
+	Set (lv, e, t) ->
+	  let lv = bind_in_lval n lv in
+	  let e = bind_in_exp n e in
+	    Set (lv, e, t)
+      | Copy (lv1, lv2, sz) ->
+	  let lv1 = bind_in_lval n lv1 in
+	  let lv2 = bind_in_lval n lv2 in
+	    Copy (lv1, lv2, sz)
+      | Decl (x, t, body) -> 
+	  let body = bind_in_blk (n+1) body in
+	    Decl (x, t, body)
+      | ChooseAssert choices -> 
+	  let choices = List.map (bind_in_choice n) choices in
+	    ChooseAssert choices
+      | InfLoop body -> 
+	  let body = bind_in_blk n body in
+	    InfLoop body
+      | DoWith (body, lbl, action) -> 
+	  let body = bind_in_blk n body in
+	  let action = bind_in_blk n action in
+	    DoWith (body, lbl, action)
+      | Call (FunDeref (e, t)) ->
+	  let e = bind_in_exp n e in
+	    Call (FunDeref (e, t))
+      | _ -> x
+
+  and bind_in_choice n (b, body) =
+    let b = List.map (bind_in_exp n) b in
+    let body = bind_in_blk n body in
+      (b, body)
   in
-  let handle_args () =
-    List.iter handle_arg_aux args;
-    let info = (Array (Scalar Ptr, !n), Init !ptr_array_init) in
-      Hashtbl.add globs argv_name info
-  in
-  let prolog =
-    match args_t with
-	[Scalar Int k; Scalar Ptr] -> 
-	  handle_args ();
-	  let set_argv = 
-	    Set (Local 0, AddrOf (Global argv_name, !n*ptr_sz), Ptr) 
-	  in
-	  let set_argc = Set (Local 1, exp_of_int !n, Int k) in
-	    (set_argv, locUnknown)::(set_argc, locUnknown)::[]
-      | [] -> []
-      | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
-  in
-    (globs, build_call_aux "main" prolog (args_t, ret_t))
-
-let dummy_loc fname = (fname, -1, -1)
-
+    
+  let body = bind_in_blk 0 body in
+    Decl (x, t, body)    
+  
 class builder =
 object
-  val mutable curloc = dummy_loc ""
+  val mutable curloc = unknown_loc
   method set_curloc loc = curloc <- loc
   method curloc = curloc
   method process_global (_: string) (x: gdecl) = x
@@ -994,6 +1013,69 @@ let simplify b =
 let simplify_exp e =
   simplify_exp [new simplify_ptr; new simplify_arith; new simplify_coerce] e
 
+
+let build_call f (args_t, ret_t) args =
+  let loc = dummy_loc ("!Newspeak.build_call_"^f) in
+  let call = ref [Call (FunId f), loc] in
+  let i = ref 0 in
+  let create_arg t e =
+    match t with
+	Scalar st ->
+	  call := (Set (Local 0, e, st), loc)::!call;
+	  call := [Decl ("arg"^(string_of_int !i), t, !call), loc];
+	  incr i
+      | _ -> invalid_arg "Newspeak.build_call: non scalar argument type"
+  in
+    List.iter2 create_arg (List.rev args_t) (List.rev args);
+    begin match ret_t with
+	None -> ()
+      | Some t -> call := [Decl ("value_of_"^f, t, !call), loc]
+    end;
+    !call
+
+let set_of_init loc name init =
+  let set_of_init (offs, t, e) = 
+    (Set (Shift (Global name, exp_of_int offs), e, t), loc)
+  in
+    List.map set_of_init init
+
+let build_main_args ptr_sz loc params =
+  let argv_name = "!ptr_array" in
+  let process_param (n, globals, init) p =
+    let name = "!param_str"^(string_of_int n) in
+    let (len, param_init) = init_of_string p in
+    let param_init = List.rev (set_of_init loc name param_init) in
+    let lv = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
+    let e = AddrOf (Global name, len*char_sz) in
+    let init_argv = (Set (lv, e, Ptr), loc) in
+    let globals = (name, Array (Scalar char_typ, len))::globals in
+    let init = init_argv::param_init@init in
+      (n+1, globals, init)
+  in
+  let (n, globals, init) = List.fold_left process_param (0, [], []) params in
+  let init = List.rev init in
+  let argv_glob = (argv_name, Array (Scalar Ptr, n)) in
+  let argc = exp_of_int n in
+  let argv = AddrOf (Global argv_name, n*ptr_sz) in
+    (argv_glob::globals, init, argc::argv::[])
+
+
+let build_main_call ptr_sz ft params =
+  let fname = "main" in
+  let loc = dummy_loc "!Newspeak.build_call_main" in
+  let (args_t, _) = ft in
+    match args_t with
+	[Scalar Int _; Scalar Ptr] ->
+	  let (globals, init, args) = build_main_args ptr_sz loc params in
+	  let call = build_call fname ft args in
+	  let call = ref (init@call) in
+	  let bind_global (x, t) = call := [bind_var x t !call, loc] in
+	    List.iter bind_global globals;
+	    simplify !call
+      | [] -> build_call fname ft []
+      | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
+
+
 let has_goto lbl x =
   let rec blk_has_goto x = List.exists has_goto x
 
@@ -1040,13 +1122,13 @@ let rec build builder (globals, fundecs, spec) =
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
-    builder#set_curloc (dummy_loc "");
+    builder#set_curloc unknown_loc;
     let gdecl = build_gdecl builder gdecl in
     let gdecl = builder#process_global x gdecl in
       Hashtbl.add globals' x gdecl
   in
   let build_fundec f fundec =
-    builder#set_curloc (dummy_loc "");
+    builder#set_curloc unknown_loc;
     let fundec = build_fundec builder fundec in
       Hashtbl.add fundecs' f fundec
   in

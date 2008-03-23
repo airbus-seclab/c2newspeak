@@ -144,7 +144,7 @@ and normalize_fields f =
 
 and normalize_var_modifier b v =
   match v with
-      Abstract -> (b, None, Newspeak.dummy_loc "")
+      Abstract -> (b, None, Newspeak.unknown_loc)
     | Variable (x, loc) -> (b, Some x, loc)
     | Function (Variable (f, loc), args, va_list) -> 
 	(B.Fun (List.map normalize_arg args, va_list, b), Some f, loc)
