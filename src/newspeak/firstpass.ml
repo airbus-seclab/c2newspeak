@@ -27,6 +27,7 @@
 open Csyntax
 module C = Cir
 module K = Npkil
+module Nat = Newspeak.Nat
 
 (* Constants *)
 let max_array_length = 1073741823
@@ -361,7 +362,7 @@ let translate (globals, spec) =
 		  let n = translate_array_len len in
 		  let len = C.len_of_array n lv in
 		  let sz = C.exp_of_int (size_of t) in
-		  let o = C.Unop (C.Belongs_tmp (Int64.zero, len), i) in
+		  let o = C.Unop (C.Belongs_tmp (Nat.zero, len), i) in
 		  let o = C.Binop (C.Mult C.int_kind, o, sz) in
 		    (C.Shift (lv, o), t)
 
@@ -440,7 +441,7 @@ let translate (globals, spec) =
 	      ^" rewrite the code")
 
       | AddrOf (Index (lv, Cst (C.CInt i, _)))
-	  when Int64.compare i Int64.zero = 0 ->
+	  when Nat.compare i Nat.zero = 0 ->
 	  let (lv', t) = translate_lv lv in begin
 	    match t with
 		Array (elt_t, _) -> 
@@ -460,7 +461,7 @@ let translate (globals, spec) =
 	      
 (* Here c is necessarily positive *)
       | Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
-	  (C.Const (C.CInt (Int64.neg c)), Int (Newspeak.Signed, sz))
+	  (C.Const (C.CInt (Nat.neg c)), Int (Newspeak.Signed, sz))
 
       | Unop (op, e) -> 
 	  let e = translate_exp_wo_array e in
@@ -887,7 +888,7 @@ let translate (globals, spec) =
 
 	| Unop (Not, (IfExp _ as e)) -> translate (e, blk2, blk1)
 
-	| Cst (C.CInt c, _) when Int64.compare c Int64.zero <> 0 -> blk1
+	| Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> blk1
 	    
 	| Cst (C.CInt _, _) -> blk2
     
@@ -1115,7 +1116,7 @@ let translate (globals, spec) =
 	    Newspeak.VarToken x
       | IdentToken x -> Newspeak.IdentToken x
 (* TODO: not good, do this in compile phase *)
-      | CstToken (C.CInt i, _) -> Newspeak.CstToken (Newspeak.CInt64 i)
+      | CstToken (C.CInt i, _) -> Newspeak.CstToken (Newspeak.CInt i)
       | CstToken (C.CFloat f, _) -> Newspeak.CstToken (Newspeak.CFloat f)
   in
     

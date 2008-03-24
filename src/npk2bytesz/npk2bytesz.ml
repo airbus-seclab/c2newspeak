@@ -40,18 +40,14 @@ let anon_fun file =
 
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
   
-let eight = Int64.of_int 8
+let eight = Nat.of_int 8
   
 let rec div e =
   match e with
-      Const CInt64 i -> 
-	let i = Int64.div i eight in
-	  exp_of_int64 i
-    | BinOp (MultI, e, Const CInt64 i) 
-	when Int64.compare i eight = 0 -> e
-    | BinOp (MultI, e, (Const CInt64 _ as i)) -> 
-	BinOp (MultI, e, div i)
-    | _ -> BinOp (DivI, e, exp_of_int 8)
+      Const CInt i -> Const (CInt (Nat.div i eight))
+    | BinOp (MultI, e, Const CInt i) when Nat.compare i eight = 0 -> e
+    | BinOp (MultI, e, (Const CInt _ as i)) -> BinOp (MultI, e, div i)
+    | _ -> BinOp (DivI, e, Newspeak.exp_of_int 8)
 	
 class to_byte_sz =
 object (self)

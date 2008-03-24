@@ -41,23 +41,19 @@ let is_bexp e =
 let process_unop op e = 
   match (op, e) with
       (Not, UnOp (Not, e)) -> e
-    | (Not, Const CInt64 c) ->
-	if Int64.compare c Int64.zero = 0 then Newspeak.one
-	else Newspeak.zero
+    | (Not, Const CInt c) ->
+	if Nat.compare c Nat.zero = 0 then Newspeak.one else Newspeak.zero
     | _ -> UnOp (op, e)
 
 let rec process_binop op e1 e2 =
   match (op, e1, e2) with
       (Eq Int _, e1, e2) when e1 > e2 -> process_binop op e2 e1
-    | (Eq Int _, Const CInt64 c, e) when is_bexp e ->
-	if Int64.compare c Int64.zero = 0 then Newspeak.negate e
-	else e
-    | (Gt Int _, Const CInt64 c1, Const CInt64 c2) ->
-	if Int64.compare c1 c2 > 0 then Newspeak.one
-	else Newspeak.zero
-    | (Eq Int _, Const CInt64 c1, Const CInt64 c2) ->
-	if Int64.compare c1 c2 = 0 then Newspeak.one
-	else Newspeak.zero
+    | (Eq Int _, Const CInt c, e) when is_bexp e ->
+	if Nat.compare c Nat.zero = 0 then Newspeak.negate e else e
+    | (Gt Int _, Const CInt c1, Const CInt c2) ->
+	if Nat.compare c1 c2 > 0 then Newspeak.one else Newspeak.zero
+    | (Eq Int _, Const CInt c1, Const CInt c2) ->
+	if Nat.compare c1 c2 = 0 then Newspeak.one else Newspeak.zero
     | _ -> BinOp (op, e1, e2)
 
 let rec process_lval lv = 

@@ -33,6 +33,55 @@
 (* Types *)
 (*-------*)
 
+(* TODO: put this in another file?? *)
+module Nat =
+struct
+  type t = string
+      
+  let zero = "0"
+  let one = "1"
+  let of_string x = x
+  let of_int x = string_of_int x
+  let of_big_int = Big_int.string_of_big_int
+  let to_big_int = Big_int.big_int_of_string
+
+  let apply_big_int_op op x y =
+    let x = Big_int.big_int_of_string x in
+    let y = Big_int.big_int_of_string y in
+    let z = op x y in
+      Big_int.string_of_big_int z
+
+  let add = apply_big_int_op Big_int.add_big_int
+
+  let sub = apply_big_int_op Big_int.sub_big_int
+
+  let mul = apply_big_int_op Big_int.mult_big_int
+
+  let div = apply_big_int_op Big_int.div_big_int
+
+  let neg x = 
+    let x = Big_int.big_int_of_string x in
+    let y = Big_int.minus_big_int x in
+      Big_int.string_of_big_int y
+
+  let add_int i x = 
+    let x = Big_int.big_int_of_string x in
+    let y = Big_int.add_int_big_int i x in
+      Big_int.string_of_big_int y
+
+  let mul_int i x = 
+    let x = Big_int.big_int_of_string x in
+    let y = Big_int.mult_int_big_int i x in
+      Big_int.string_of_big_int y
+
+  let compare x y = 
+    let x = Big_int.big_int_of_string x in
+    let y = Big_int.big_int_of_string y in
+      Big_int.compare_big_int x y
+
+  let to_string x = x
+end
+
 type t = (file list * prog * size_t)
 
 and prog = globals * (fid, fundec) Hashtbl.t * specs
@@ -83,7 +132,7 @@ and exp =
   | BinOp of (binop * exp * exp)
 
 and cte = 
-    CInt64 of Int64.t
+    CInt of Nat.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
   | CFloat of (float * string)
   | Nil
@@ -142,16 +191,21 @@ and sign_t = Signed | Unsigned
 and length = int
 and offset = size_t
 and size_t = int
-and bounds = (Int64.t * Int64.t)
+and bounds = (Nat.t * Nat.t)
 
 and location = string * int * int
+
+let belongs c (l, u) = (Nat.compare l c <= 0) && (Nat.compare c u <= 0)
+
+let contains (l1, u1) (l2, u2) = 
+  (Nat.compare l1 l2 <= 0) && (Nat.compare u2 u1 <= 0)
 
 (*-----------*)
 (* Constants *)
 (*-----------*)
 
-let zero = Const (CInt64 (Int64.zero))
-let one = Const (CInt64 (Int64.one))
+let zero = Const (CInt Nat.zero)
+let one = Const (CInt Nat.one)
 let zero_f = Const (CFloat (0., "0."))
 
 
@@ -178,25 +232,26 @@ let size_of ptr_sz t =
 
 let domain_of_typ (sign, size) =
     match (sign, size) with
-      (Unsigned, 8) -> (Int64.zero, Int64.of_string "255")
-    | (Signed, 8) -> (Int64.of_string "-128", Int64.of_string "127")
-    | (Unsigned, 16) -> (Int64.zero, Int64.of_string "65535")
-    | (Signed, 16) -> (Int64.of_string "-32768", Int64.of_string "32767")
-    | (Unsigned, 32) -> (Int64.zero, Int64.of_string "4294967295")
-    | (Signed, 32) -> (Int64.of_string "-2147483648", 
-		     Int64.of_string "2147483647")
-    | (Signed, 64) -> (Int64.min_int, Int64.max_int)
-    | (Unsigned, 64) -> 
-	invalid_arg "Newspeak.domain_of_typ: domain not representable"
-    | (Signed, n) when n < 64 -> 
-	let x = Int64.shift_left Int64.one (n - 1) in
-	  (Int64.neg x, Int64.pred x)
-    | (Unsigned, n) when n < 64 -> 
-	(Int64.zero, Int64.pred (Int64.shift_left Int64.one n))
+      (Unsigned, 8) -> (Nat.zero, Nat.of_string "255")
+    | (Signed, 8) -> (Nat.of_string "-128", Nat.of_string "127")
+    | (Unsigned, 16) -> (Nat.zero, Nat.of_string "65535")
+    | (Signed, 16) -> (Nat.of_string "-32768", Nat.of_string "32767")
+    | (Unsigned, 32) -> (Nat.zero, Nat.of_string "4294967295")
+    | (Signed, 32) -> (Nat.of_string "-2147483648", Nat.of_string "2147483647")
+    | (Signed, 64) -> 
+	(Nat.of_string "-9223372036854775808", 
+	Nat.of_string "9223372036854775807")
+    | (Unsigned, 64) -> (Nat.zero, Nat.of_string "18446744073709551615")
+(* For bitfields *)
+    | (Signed, n) when n < 64 ->
+	let x = Int64.shift_left Int64.one (n-1) in
+	let l = Int64.to_string (Int64.neg x) in
+	let u = Int64.to_string (Int64.pred x) in
+	  (Nat.of_string l, Nat.of_string u)
+    | (Unsigned, n) when n < 64 ->
+	let x = Int64.pred (Int64.shift_left Int64.one n) in
+	  (Nat.zero, Nat.of_string (Int64.to_string x))
     | _ -> invalid_arg "Newspeak.domain_of_typ"
-
-let is_in_bounds (l, u) i = 
-  (Int64.compare l i <= 0) && (Int64.compare i u <= 0)
 
 let rec negate exp =
   match exp with
@@ -207,9 +262,7 @@ let rec negate exp =
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
 
-let exp_of_int64 x = Const (CInt64 x)
-
-let exp_of_int x = exp_of_int64 (Int64.of_int x)
+let exp_of_int x = Const (CInt (Nat.of_int x))
 
 type alt_stmtkind =
     (* the condition is a list of expression separated by && 
@@ -328,16 +381,16 @@ let unknown_loc = ("", -1, -1)
 (* Expressions *)
 let string_of_cte c =
   match c with
-      CInt64 c -> Int64.to_string c
+      CInt c -> Nat.to_string c
     | CFloat (_, s) -> s
     | Nil -> "nil"
 	
+let string_of_bounds (l, u) = "["^(Nat.to_string l)^","^(Nat.to_string u)^"]"
+
 let string_of_unop op =
   match op with
-      Belongs (l,u) ->
-	"belongs["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
-    | Coerce (l,u) ->
-	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
+      Belongs r -> "belongs"^(string_of_bounds r)
+    | Coerce r -> "coerce"^(string_of_bounds r)
     | Cast (typ, typ') ->
 	"("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
     | Not -> "!"
@@ -716,13 +769,11 @@ object
   method process_size_t (x: size_t) = x
 end
 
-let contains (l1, u1) (l2, u2) = 
-  (Int64.compare l1 l2 <= 0) && (Int64.compare u2 u1 <= 0)
-
 class simplify_coerce =
 object 
   inherit builder
 
+(* TODO: put these theorems in Newspeak semantics paper *)
   method process_exp e =
     match e with
         (* Coerce [a;b] Coerce [c;d] e 
@@ -735,15 +786,14 @@ object
 	  UnOp (Coerce r1, e)
 
       (* Coerce/Belongs [a;b] Const c -> Const c if c in [a;b] *)
-      | UnOp (Coerce (l1,u1), Const (CInt64 c))
-      | UnOp (Belongs (l1, u1), Const (CInt64 c))
-          when Int64.compare l1 c <= 0 && Int64.compare c u1 <= 0 ->
-          Const (CInt64 c)
+      | UnOp (Coerce r, Const (CInt c)) 
+      | UnOp (Belongs r, Const (CInt c)) when belongs c r ->
+          Const (CInt c)
 
       (* Coerce/Belongs [a;b] Lval (lv, t) -> Lval (lv, t)
 	 if [a; b] contains dom(t) *)
       | UnOp (Coerce r, (Lval (_, Int k) as lv))
-      | UnOp (Belongs r, (Lval (_, Int k) as lv)) 
+      | UnOp (Belongs r, (Lval (_, Int k) as lv))
 	  when contains r (domain_of_typ k) -> lv
 
       | _ -> e
@@ -759,17 +809,11 @@ object
       | _ -> lv
 end
 
-let big_int_is_int64 x =
-  let min_int = Big_int.big_int_of_string (Int64.to_string Int64.min_int) in
-  let max_int = Big_int.big_int_of_string (Int64.to_string Int64.max_int) in
-    (Big_int.compare_big_int min_int x <= 0) 
-    && (Big_int.compare_big_int x max_int <= 0)
-
-let big_int_op op =
+let nat_op op =
   match op with
-      PlusI -> Big_int.add_big_int
-    | MinusI -> Big_int.sub_big_int
-    | MultI -> Big_int.mult_big_int
+      PlusI -> Nat.add
+    | MinusI -> Nat.sub
+    | MultI -> Nat.mul
     | _ -> invalid_arg "Newspeak.big_int_op: unexpected operator"
 
 class simplify_arith =
@@ -778,16 +822,11 @@ object (self)
     
   method process_lval x =
     match x with
-	Shift (lv, Const CInt64 c) when Int64.compare c Int64.zero = 0 -> lv
-      | Shift (Shift (lv, Const CInt64 c1), Const CInt64 c2) ->
-	  let c1 = Big_int.big_int_of_string (Int64.to_string c1) in
-	  let c2 = Big_int.big_int_of_string (Int64.to_string c2) in
-	  let c = Big_int.add_big_int c1 c2 in
-	    if big_int_is_int64 c then begin
-	      let c = Int64.of_string (Big_int.string_of_big_int c) in
-	      let lv = Shift (lv, Const (CInt64 c)) in
-		self#process_lval lv
-	    end else x
+	Shift (lv, Const CInt c) when Nat.compare c Nat.zero = 0 -> lv
+      | Shift (Shift (lv, Const CInt c1), Const CInt c2) ->
+	  let c = Nat.add c1 c2 in
+	  let lv = Shift (lv, Const (CInt c)) in
+	    self#process_lval lv
       | _ -> x
 
   (* TODO: generatlization of all this: do the operations with bignums
@@ -796,38 +835,23 @@ object (self)
      not all unsigned long long can be represented *)
   method process_exp e =
     match e with
-	BinOp (MultI|PlusI|MinusI as op, Const CInt64 x, Const CInt64 y) ->
-	  let x = Big_int.big_int_of_string (Int64.to_string x) in
-	  let y = Big_int.big_int_of_string (Int64.to_string y) in
-	  let z = (big_int_op op) x y in
-	    if big_int_is_int64 z then begin
-	      let z = Int64.of_string (Big_int.string_of_big_int z) in
-		Const (CInt64 z)
-	    end else e
+	BinOp (MultI|PlusI|MinusI as op, Const CInt x, Const CInt y) ->
+	  let z = (nat_op op) x y in
+	    Const (CInt z)
 
-      | BinOp (PlusPI, e, Const CInt64 x) 
-	  when (Int64.compare x Int64.zero = 0) -> e
+      | BinOp (PlusPI, e, Const CInt x) when (Nat.compare x Nat.zero = 0) -> e
 
-      | BinOp (DivI, Const CInt64 i1, Const CInt64 i2) 
-	  when Int64.compare i2 Int64.zero <> 0 ->
-	  let i = Int64.div i1 i2 in
-	    exp_of_int64 i
+      | BinOp (DivI, Const CInt i1, Const CInt i2) 
+	  when Nat.compare i2 Nat.zero <> 0 ->
+	  Const (CInt (Nat.div i1 i2))
 
 (* TODO: could do this after a sanity checks that checks the largest and 
    smallest integer ever computed in expressions!! *)
-      | UnOp (Coerce (c_l, c_u), 
-	     (BinOp (MultI, UnOp (Belongs (l, u), _), 
-		    Const CInt64 x) as e')) -> 
-	  let l = Big_int.big_int_of_string (Int64.to_string l) in
-	  let u = Big_int.big_int_of_string (Int64.to_string u) in
-	  let x = Big_int.big_int_of_string (Int64.to_string x) in
-	  let c_l = Big_int.big_int_of_string (Int64.to_string c_l) in
-	  let c_u = Big_int.big_int_of_string (Int64.to_string c_u) in
-	  let l = Big_int.mult_big_int l x in
-	  let u = Big_int.mult_big_int u x in
-	    if Big_int.compare_big_int l c_l < 0 then e
-	    else if Big_int.compare_big_int c_u u < 0 then e
-	    else e'
+      | UnOp (Coerce r, 
+	     (BinOp (MultI, UnOp (Belongs (l, u), _), Const CInt x) as e')) -> 
+	  let l = Nat.mul l x in
+	  let u = Nat.mul u x in
+	    if contains r (l, u) then e' else e
 
       | _ -> e
 end

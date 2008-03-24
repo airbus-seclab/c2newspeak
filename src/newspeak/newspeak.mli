@@ -58,6 +58,31 @@
 
 (** {2 Types} *)
 
+module Nat: sig 
+  type t
+  val zero: t
+  val one: t
+  val of_string: string -> t
+  val of_int: int -> t
+
+  val of_big_int: Big_int.big_int -> t
+  val to_big_int: t -> Big_int.big_int
+
+  val add: t -> t -> t
+  val mul: t -> t -> t
+  val sub: t -> t -> t
+  val div: t -> t -> t
+
+  val neg: t -> t
+
+  val add_int: int -> t -> t
+  val mul_int: int -> t -> t
+
+  val compare: t -> t -> int
+ 
+  val to_string: t -> string
+end
+
 (* The type of a program: file names, global variable declarations,
     function definitions and the size of pointers. *)
 type t = (file list * prog * size_t)
@@ -110,7 +135,7 @@ and exp =
   | BinOp of (binop * exp * exp)
 
 and cte = 
-    CInt64 of Int64.t
+    CInt of Nat.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
   | CFloat of (float * string)
   | Nil
@@ -170,7 +195,7 @@ and sign_t = Signed | Unsigned
 and size_t = int
 and offset = size_t
 and length = int
-and bounds = (Int64.t * Int64.t)
+and bounds = (Nat.t * Nat.t)
 
 and location = string * int * int
 
@@ -192,15 +217,13 @@ val dummy_loc: string -> location
     returns the bounds of the type. *)
 val domain_of_typ : sign_t * size_t -> bounds
 
-val is_in_bounds: bounds -> Int64.t -> bool
+val belongs: Nat.t -> bounds -> bool
 
 (* Negation of a boolean condition. *)
 val negate : exp -> exp
 
 (* [exp_of_int i] wraps i into a Newspeak expression. *)
 val exp_of_int : int -> exp
-
-val exp_of_int64 : Int64.t -> exp
 
 (* Deletion of useless Gotos and Labels. *)
 val simplify_gotos : blk -> blk
@@ -217,8 +240,12 @@ val simplify_exp: exp -> exp
 (** {1 Display} *)
 val string_of_loc : location -> string
 
-(** [string_of_cte c] returns the string representation of constant c. *)
+(** [string_of_bounds r] returns the string representation of range [r]. *)
+val string_of_bounds : bounds -> string
+
+(** [string_of_cte c] returns the string representation of constant [c]. *)
 val string_of_cte : cte -> string
+
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string

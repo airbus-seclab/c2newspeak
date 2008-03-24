@@ -140,10 +140,9 @@ let va_arg = (Ptr char_typ, "__builtin_newspeak_va_arg")
 
 let exp_of_int i = 
   let t = Int (Signed, Config.size_of_int) in
-  Cst (Cir.CInt (Int64.of_int i), t)
+    Cst (Cir.CInt (Nat.of_int i), t)
 
-
-let big_int_of_lexeme base x =
+let nat_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in
   let read_hex_digit c =
     if ('0' <= c) && (c <= '9') then (int_of_char c) - (int_of_char '0')
@@ -156,26 +155,16 @@ let big_int_of_lexeme base x =
 	None -> (read_digit, 10)
       | Some "0" -> (read_digit, 8)
       | Some "0x" -> (read_hex_digit, 16)
-      | _ -> Npkcontext.error "Csyntax.big_int_of_lexeme" "invalid base"
+      | _ -> Npkcontext.error "Csyntax.nat_of_lexeme" "invalid base"
   in
-  let v = ref Big_int.zero_big_int in
+  let v = ref Nat.zero in
   let add_digit c =
     let d = read_digit c in
-      v := Big_int.mult_int_big_int base !v;
-      v := Big_int.add_int_big_int d !v
+      v := Nat.mul_int base !v;
+      v := Nat.add_int d !v
   in
     String.iter add_digit x;
     !v
-
-let int64_of_big_int x =
-  let min_int64 = Big_int.big_int_of_string (Int64.to_string Int64.min_int) in
-  let max_int64 = Big_int.big_int_of_string (Int64.to_string Int64.max_int) in
-    if (Big_int.compare_big_int x min_int64 < 0 
-	 || Big_int.compare_big_int max_int64 x < 0) then begin
-      Npkcontext.error "Csyntax.int64_of_big_int" 
-	"integer too large: not representable"
-    end;
-    Int64.of_string (Big_int.string_of_big_int x)
 
 let ikind_tbl =
   [(Signed, Config.size_of_int); (Unsigned, Config.size_of_int); 
@@ -185,8 +174,7 @@ let ikind_tbl =
 
 (* See C standard ANSI 6.4.4 *)
 let int_cst_of_lexeme (base, x, sign, min_sz) = 
-  let x = big_int_of_lexeme base x in
-  let x = int64_of_big_int x in
+  let x = nat_of_lexeme base x in
   let possible_signs = 
     match (base, sign) with
 (* TODO: not in conformance with standard. strange *)
@@ -207,12 +195,12 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
   let is_kind (sign, sz)  =
     ((sz >= min_sz)
       && (List.mem sign possible_signs)
-      && (Newspeak.is_in_bounds (Newspeak.domain_of_typ (sign, sz)) x))
+      && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))
   in
   let k = List.find is_kind ikind_tbl in
     (Cir.CInt x, Int k)
 
-let char_cst_of_lexeme x = (Cir.CInt (Int64.of_int x), char_typ)
+let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
 
 let comp_of_typ t =
   match t with

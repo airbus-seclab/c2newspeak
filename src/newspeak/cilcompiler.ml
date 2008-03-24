@@ -37,6 +37,8 @@ open Npkutils
 module F = Cilfirstpass
 module K = Npkil
 
+module Nat = Newspeak.Nat
+
 let set_loc loc = Npkcontext.set_loc (Npkutils.translate_loc loc)
 
 let build_stmt stmtkind = (stmtkind, Npkcontext.get_loc ())
@@ -56,18 +58,25 @@ let is_cil_label x =
 
 let rec translate_const c =
   match c with
-      CInt64 (i, k, _) -> 
+    | CInt64 (i, k, _) ->
+	let x = Nat.of_string (Int64.to_string i) in
 	let (s, n) = translate_ikind k in
-	  if n > 64
-	    || (n = 64 && s = Newspeak.Unsigned 
-		&& Int64.compare i Int64.zero < 0) 
-	  then error "Npkcompile.translate_const"
-	    "integer too large: not representable";
-	  K.Const (Newspeak.CInt64 i)
+	let x =
+	  match s with
+(* Carefull that CIL uses Int64 negative values to represent large 
+   unsigned 64 bits integers! *)
+	      Newspeak.Unsigned when i < Int64.zero -> Nat.neg x
+	    | _ -> x
+	in
+	  if n > 64 then begin
+	    Npkcontext.error "Cilcompiler.translate_const" 
+	      "integer too large: not representable"
+	  end;
+	  K.Const (Newspeak.CInt x)
 	  
     | CStr s -> Cilenv.get_cstr s
 
-    | CChr c -> K.Const (Newspeak.CInt64 (Int64.of_int (Char.code c))) 
+    | CChr c -> K.exp_of_int (Char.code c)
 	
     | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
     | CReal (f, _, None) ->
@@ -167,7 +176,7 @@ and translate_lval lv =
 		let elt_sz = K.size_of elt_t in
 		let idx = translate_exp idx in
 		let checked_index = 
-		  K.UnOp (K.Belongs_tmp (Int64.zero, len), idx) 
+		  K.UnOp (K.Belongs_tmp (Nat.zero, len), idx) 
 		in
 		let offs = 
 		  K.BinOp (Newspeak.MultI, checked_index, K.exp_of_int elt_sz)

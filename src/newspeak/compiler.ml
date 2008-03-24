@@ -29,6 +29,8 @@ open Cir
 module N = Newspeak
 module K = Npkil
 
+module Nat = Newspeak.Nat
+
 module Set = Set.Make(String)
 
 let translate_scalar t =
@@ -89,7 +91,7 @@ let translate_binop op e1 e2 =
 
 let translate_cst c =
   match c with
-      CInt i -> N.CInt64 i
+      CInt i -> N.CInt i
     | CFloat f -> N.CFloat f
 
 let translate (cglbdecls, cfundefs, specs) =
@@ -254,10 +256,11 @@ let translate (cglbdecls, cfundefs, specs) =
 	  let body2 = translate_blk body2 in begin
 	    match cond1 with
 (* TODO: remove this code and have it as a simplification for newspeak rather 
-*)
-		K.Const N.CInt64 i when Int64.compare i Int64.zero <> 0 -> 
+*) 
+		(* TODO: isn't this redundant with firstpass?? *)
+		K.Const N.CInt i when Nat.compare i Nat.zero <> 0 -> 
 		  body1
-	      | K.Const N.CInt64 _ -> body2
+	      | K.Const N.CInt _ -> body2
 	      | _ -> 
 		  let cond2 = K.negate cond1 in
 		    (K.ChooseAssert [([cond1], body1); 

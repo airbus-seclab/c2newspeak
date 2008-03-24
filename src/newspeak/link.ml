@@ -26,11 +26,9 @@
   email: olivier.levillain@penjili.org
 *)
 
-
-open Cil
-open Npkutils
-open Npkcontext
 open Npkil
+
+module Nat = Newspeak.Nat
 
 module Str_set = Set.Make(String)
 
@@ -60,7 +58,8 @@ let get_glob_typ name =
       t
   with
       Not_found ->
-	error "Npklink.get_glob_typ" ("type for global variable "^name^" not found")
+	Npkcontext.error "Npklink.get_glob_typ" 
+	  ("type for global variable "^name^" not found")
 
 let rec replace_stmt (sk, l) =
   let new_sk = 
@@ -104,7 +103,7 @@ and replace_exp e =
 and replace_unop o =
   match o with
       Npkil.Belongs_tmp (l, u) -> 
-	let u = Int64.of_int ((replace_tmp_int u) - 1) in
+	let u = Nat.of_int ((replace_tmp_int u) - 1) in
 	  Newspeak.Belongs (l, u)
     | Npkil.Coerce r -> Newspeak.Coerce r
     | Npkil.Not -> Newspeak.Not
@@ -119,7 +118,9 @@ and replace_tmp_int x =
     | Npkil.Length name -> begin
 	match get_glob_typ name with
 	    Newspeak.Array (_, len) -> len
-	  | _ -> error "Npklink.replace_tmp_int" "array type expected"
+	  | _ -> 
+	      Npkcontext.error "Npklink.replace_tmp_int" 
+		"array type expected"
       end
     | Npkil.Mult (v, n) -> (replace_tmp_int v) * n
 
@@ -141,7 +142,9 @@ and replace_body body = List.map replace_stmt body
 
 and replace_init init =
   match init with
-    | None -> if !global_zero_init then Newspeak.Zero else Newspeak.Init []
+    | None -> 
+	if !Npkcontext.global_zero_init then Newspeak.Zero 
+	else Newspeak.Init []
     | Some l -> Newspeak.Init (List.map replace_init_field l)
 
 and replace_init_field (sz, sca, e) = 
@@ -178,7 +181,7 @@ let update_glob_link name (t, loc, init, used) =
 	else prev_t
       with Npkil.Uncomparable -> 
 	(* TODO: add the respective locations *)
-	error "Npklink.update_glob_link"
+	Npkcontext.error "Npklink.update_glob_link"
 	  ("different types for "^name^": '"
 	    ^(Npkil.string_of_typ prev_t)^"' and '"
 	    ^(Npkil.string_of_typ t)^"'")
@@ -191,13 +194,15 @@ let update_glob_link name (t, loc, init, used) =
 	| (Some _, None) -> init
 	| (None, None) -> prev_init
 	| (Some (Some _), Some (Some _)) -> 
-	    error "Npklink.update_glob_link" ("multiple declaration of "^name)
-	| _ when !accept_mult_def -> 
-	    print_warning "Npklink.update_glob_link" 
+	    Npkcontext.error "Npklink.update_glob_link" 
+	      ("multiple declaration of "^name)
+	| _ when !Npkcontext.accept_mult_def -> 
+	    Npkcontext.print_warning "Npklink.update_glob_link" 
 	      ("multiple definition of "^name);
 	    prev_init
 	| _ -> 
-	    error "Npklink.update_glob_link" ("multiple definition of "^name)
+	    Npkcontext.error "Npklink.update_glob_link" 
+	      ("multiple definition of "^name)
     in
       Hashtbl.replace glb_decls name (t, loc, init, used)
       
@@ -215,16 +220,16 @@ let merge_headers npko =
 
 let generate_global name (t, loc, init, used) =
   Npkcontext.set_loc loc;
-  if used || (not !remove_temp) then begin
+  if used || (not !Npkcontext.remove_temp) then begin
     let i =
       match init with
 	| Some i -> i
-	| None when !accept_extern -> 
-	    print_warning "Npklink.handle_real_glob:" 
+	| None when !Npkcontext.accept_extern -> 
+	    Npkcontext.print_warning "Npklink.handle_real_glob:" 
 	      ("extern not accepted: "^name);
 	    None
 	| None -> 
-	    error "Npklink.handle_real_glob:" 
+	    Npkcontext.error "Npklink.handle_real_glob:" 
 	      ("extern not accepted: "^name)
     in
     let t = replace_typ t in
@@ -232,7 +237,7 @@ let generate_global name (t, loc, init, used) =
   end
 
 let write_fun cout f spec =
-  print_debug ("Writing function: "^f);
+  Npkcontext.print_debug ("Writing function: "^f);
   Newspeak.write_fun cout f spec
 
 let generate_funspecs cout npkos =
@@ -262,15 +267,16 @@ let generate_funspecs cout npkos =
       try 
 	let prev_ftyp = Hashtbl.find encountered name in
 	  if (ftyp <> prev_ftyp) 
-	  then error "Npklink.generate_funspecs" 
+	  then Npkcontext.error "Npklink.generate_funspecs" 
 	    ("Function "^name^" type does not match");
 	  match body with
 	      None -> ()
 	    | Some _ when Hashtbl.mem waiting name -> 
 		Hashtbl.remove waiting name;
 		write_fun cout name (ftyp, body)
-	    | Some _ -> error "Npklink.generate_funspecs" 
-		("Function "^name^" declared twice")
+	    | Some _ -> 
+		Npkcontext.error "Npklink.generate_funspecs" 
+		  ("Function "^name^" declared twice")
 		  
       with Not_found -> 
 	Hashtbl.add encountered name ftyp;
@@ -292,9 +298,9 @@ let link npkos output_file =
   let cout = open_out_bin output_file in
     Npkcontext.forget_loc ();
     
-    print_debug "Linking files...";
+    Npkcontext.print_debug "Linking files...";
     List.iter merge_headers npkos;
-    print_debug "Globals...";
+    Npkcontext.print_debug "Globals...";
     
     Hashtbl.iter generate_global glb_decls;
     Npkcontext.forget_loc ();
@@ -303,14 +309,14 @@ let link npkos output_file =
 
       Newspeak.write_hdr cout (filenames, globals, !specs, Config.size_of_ptr);
       
-      print_debug "Functions...";
+      Npkcontext.print_debug "Functions...";
       generate_funspecs cout npkos;
       
       close_out cout;
       
-      print_debug "File linked.";
+      Npkcontext.print_debug "File linked.";
       
-      if !verb_newspeak then begin
+      if !Npkcontext.verb_newspeak then begin
 	print_endline "Newspeak output";
 	print_endline "---------------";
 	let npk = Newspeak.read output_file in

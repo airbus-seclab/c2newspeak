@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
+open Newspeak
 
 type prog = (glbdecls * fundefs * Newspeak.specs)
 
@@ -100,7 +101,7 @@ and funexp =
     | FunDeref of (exp * ftyp)
 
 and unop = 
-    | Belongs_tmp of (Int64.t * Npkil.tmp_int)
+    | Belongs_tmp of (Nat.t * Npkil.tmp_int)
     | Not
     | BNot of Newspeak.ikind
     | Cast of (typ * typ)
@@ -127,7 +128,7 @@ and binop =
 
 (* TODO: try to have the same constants as newspeak Nil ??*)
 and cst =
-    | CInt of Int64.t
+    | CInt of Nat.t
     | CFloat of (float * string)
 
 (** kind of C int type *)

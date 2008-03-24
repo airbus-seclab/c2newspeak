@@ -81,10 +81,10 @@ and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
 (* right bound is excluded! *)
-      Belongs_tmp of (Int64.t * tmp_int)
-    | Coerce of (Int64.t * Int64.t)
+      Belongs_tmp of (Nat.t * tmp_int)
+    | Coerce of bounds
     | Not
-    | BNot of (Int64.t * Int64.t)
+    | BNot of bounds
     | PtrToInt of ikind
     | IntToPtr of ikind
     | Cast of (scalar_t * scalar_t)
@@ -108,12 +108,12 @@ and tmp_int =
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
 
-let zero = Const (CInt64 (Int64.zero))
+let zero = Const (CInt Nat.zero)
 let zero_f = Const (CFloat (0., "0."))
 
 let make_int_coerce t e = UnOp (Coerce (Newspeak.domain_of_typ t), e)
 
-let exp_of_int x = Const (CInt64 (Int64.of_int x))
+let exp_of_int x = Const (CInt (Nat.of_int x))
 
 module Int_map = 
   Map.Make (struct type t = int let compare = Pervasives.compare end)
@@ -159,10 +159,9 @@ let rec string_of_tmp_int x =
 
 let string_of_unop op =
   match op with
-      Belongs_tmp (l,u) ->
-	"belongs["^(Int64.to_string l)^","^(string_of_tmp_int u)^"-1]"
-    | Coerce (l,u) ->
-	"coerce["^(Int64.to_string l)^","^(Int64.to_string u)^"]"
+      Belongs_tmp (l, u) ->
+	"belongs["^(Nat.to_string l)^","^(string_of_tmp_int u)^"-1]"
+    | Coerce r -> "coerce"^(Newspeak.string_of_bounds r)
     | Cast (typ, typ') ->
 	"("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
     | Not -> "!"

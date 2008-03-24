@@ -81,10 +81,10 @@ and fn =
 and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
-      Belongs_tmp of (Int64.t * tmp_int)
-    | Coerce of (Int64.t * Int64.t)
+      Belongs_tmp of (Nat.t * tmp_int)
+    | Coerce of Newspeak.bounds
     | Not
-    | BNot of (Int64.t * Int64.t)
+    | BNot of Newspeak.bounds
     | PtrToInt of ikind
     | IntToPtr of ikind
     | Cast of (scalar_t * scalar_t)

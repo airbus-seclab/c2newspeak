@@ -113,7 +113,7 @@ and funexp =
     | FunDeref of (exp * ftyp)
 
 and unop = 
-    | Belongs_tmp of (Int64.t * Npkil.tmp_int)
+    | Belongs_tmp of (Nat.t * Npkil.tmp_int)
     | Not
     | BNot of ikind
     | Cast of (typ * typ)
@@ -141,7 +141,7 @@ and binop =
     | MultF of int
 
 and cst =
-    | CInt of Int64.t
+    | CInt of Nat.t
     | CFloat of (float * string)
 
 
@@ -152,7 +152,7 @@ let create_tmp loc t =
   let v = Var id in
     (decl, v)
 	
-let exp_of_int i = Const (CInt (Int64.of_int i))
+let exp_of_int i = Const (CInt (Nat.of_int i))
 
 let exp_of_float x = Const (CFloat (x, string_of_float x))
 
@@ -172,30 +172,32 @@ let rec size_of t =
 let int_of_exp e =
   let rec int_of_exp e =
     match e with
-	Const (CInt i) -> Big_int.big_int_of_string (Int64.to_string i)
+	Const (CInt i) -> i
       | Binop (Plus _, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
-	    Big_int.add_big_int i1 i2
+	    Nat.add i1 i2
       | Binop (Minus _, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
-	    Big_int.sub_big_int i1 i2
+	    Nat.sub i1 i2
       | Binop (Mult _, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
-	    Big_int.mult_big_int i1 i2
+	    Nat.mul i1 i2
       | Binop (Div _, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
-	    Big_int.div_big_int i1 i2
+	    if (Nat.compare i2 Nat.zero = 0) 
+	    then Npkcontext.error "Cir.int_of_exp" "division by zero";
+	    Nat.div i1 i2
       | _ -> 
-	  Npkcontext.error "Csyntaxt.int_of_exp" 
+	  Npkcontext.error "Cir.int_of_exp" 
 	    "static expression expected"
   in
-  let i = int_of_exp e in
+  let i = Nat.to_big_int (int_of_exp e) in
     if not (Big_int.is_int_big_int i) then begin
-      Npkcontext.error "Csyntax.len_of_exp" 
+      Npkcontext.error "Cir.int_of_exp" 
 	("expression can not be evaluated to an int: "
 	 ^(Big_int.string_of_big_int i))
     end;
