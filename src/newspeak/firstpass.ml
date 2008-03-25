@@ -328,10 +328,10 @@ let translate (globals, spec) =
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
     let loc = Npkcontext.get_loc () in
     let (t, init) = translate_glb_init t (Some (Data (Str str))) in
-    let t' = translate_typ t in
+(* TODO: is it necessary to have translate_typ t ??? *)
       if not (Hashtbl.mem glbdecls name) 
-      then add_global name loc (t, Some init, t');
-      (C.AddrOf (C.Shift (C.Global name, C.exp_of_int 0), t'), Ptr char_typ)
+      then add_global name loc (t, Some init, translate_typ t);
+      (C.Global name, t)
   
   and translate_lv x =
     match x with
@@ -393,6 +393,8 @@ let translate (globals, spec) =
 	  let incr = (C.Set (lv, t', incr_e), Npkcontext.get_loc ()) in
 	    (C.Pref_lv (incr, lv), t)
 
+      | Str str -> add_glb_cstr str
+
       | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
 
@@ -425,7 +427,7 @@ let translate (globals, spec) =
 	  in
 	    (e, t)
 	      
-      | Field _ | Index _ | Deref _ | ExpIncr _ | IncrExp _ -> 
+      | Field _ | Index _ | Deref _ | ExpIncr _ | IncrExp _ | Str _ -> 
 	  let (lv, t) = translate_lv e in
 	    (C.Lval (lv, translate_typ t), t)
 	    
@@ -484,10 +486,6 @@ let translate (globals, spec) =
 	    remove_symb x;
 	    (C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
 
-      | SizeofE (Str str) ->
-	  let sz = String.length str + 1 in
-	    (C.exp_of_int sz, int_typ)
-
       | SizeofE e ->
 	  let (_, t) = translate_exp e in
 	  let sz = (size_of t) / 8 in
@@ -496,8 +494,6 @@ let translate (globals, spec) =
       | Sizeof t -> 
 	  let sz = (size_of t) / 8 in
 	    (C.exp_of_int sz, int_typ)
-
-      | Str str -> add_glb_cstr str
 
       | Cast (e, t) -> 
 (* TODO: is this ok?? *)
