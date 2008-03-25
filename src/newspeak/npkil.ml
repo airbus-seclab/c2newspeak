@@ -160,7 +160,7 @@ let rec string_of_tmp_int x =
 let string_of_unop op =
   match op with
       Belongs_tmp (l, u) ->
-	"belongs["^(Nat.to_string l)^","^(string_of_tmp_int u)^"-1]"
+	"belongs["^l^","^(string_of_tmp_int u)^"-1]"
     | Coerce r -> "coerce"^(Newspeak.string_of_bounds r)
     | Cast (typ, typ') ->
 	"("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"

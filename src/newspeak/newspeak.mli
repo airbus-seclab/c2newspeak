@@ -59,7 +59,7 @@
 (** {2 Types} *)
 
 module Nat: sig 
-  type t
+  type t = string
   val zero: t
   val one: t
   val of_string: string -> t
@@ -79,8 +79,6 @@ module Nat: sig
   val mul_int: int -> t -> t
 
   val compare: t -> t -> int
- 
-  val to_string: t -> string
 end
 
 (* The type of a program: file names, global variable declarations,
