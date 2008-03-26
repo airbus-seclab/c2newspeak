@@ -767,6 +767,7 @@ object
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
   method process_size_t (x: size_t) = x
+  method process_offset (x: offset) = x
 end
 
 class simplify_coerce =
@@ -1197,6 +1198,7 @@ and build_scalar_t builder t =
     | FunPtr -> t
 
 and build_field builder (o, t) =
+  let o = build_offset builder o in
   let t = build_typ builder t in
     (o, t)
 
@@ -1225,6 +1227,8 @@ and build_cell builder (o, t, e) =
   let t = build_scalar_t builder t in
   let e = build_exp builder e in
     (o, t, e)
+
+and build_offset builder o = builder#process_offset o
 
 and build_size_t builder sz = builder#process_size_t sz
 

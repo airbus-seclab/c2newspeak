@@ -297,6 +297,7 @@ object
   method process_exp: exp -> exp
   method process_blk: blk -> blk
   method process_size_t: size_t -> size_t
+  method process_offset: offset -> offset
 end
 
 val build : builder -> prog -> prog

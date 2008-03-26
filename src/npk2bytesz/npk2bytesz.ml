@@ -65,6 +65,8 @@ object (self)
     end;
     sz / 8
 
+  method process_offset = self#process_size_t
+
   method process_lval lv =
     match lv with
 	Shift (lv, e) -> Shift (lv, div e)
