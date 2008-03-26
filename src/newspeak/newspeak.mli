@@ -191,7 +191,7 @@ and file = string
 and ikind = sign_t * size_t
 and sign_t = Signed | Unsigned
 and size_t = int
-and offset = size_t
+and offset = int
 and length = int
 and bounds = (Nat.t * Nat.t)
 

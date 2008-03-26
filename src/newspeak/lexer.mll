@@ -46,24 +46,18 @@ let unknown_lexeme lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
   let line = string_of_int pos.pos_lnum in
   let lexeme = Lexing.lexeme lexbuf in
-  let err_msg = "Line: "^line^", unknown keyword: "^lexeme in
+  let err_msg = "line: "^line^", unknown keyword: "^lexeme in
     Npkcontext.error "Lexer.unknown_lexeme" err_msg
 
-let strip lexbuf before after = 
-  let lexeme = Lexing.lexeme lexbuf in
-  let len = String.length lexeme in
-  let str = String.sub lexeme before (len-(before+after)) in
-    str
-
 let int_of_hex_character str =
-  let len = String.length str in
-  let str = String.sub str 3 (len - 4) in
   let str = "0x"^str in
+    int_of_string str
+
+let int_of_oct_character str =
+  let str = "0o"^str in
     int_of_string str
       
 let int_of_character str = int_of_char (str.[1])
-
-let extract_string s = String.sub s 1 (String.length s - 2)
 
 let token_of_ident str = 
   if Synthack.is_type str then TYPEDEF_NAME str 
@@ -114,7 +108,7 @@ let oct_digit = ['0'-'7']
 let hex_digit = digit | ['A'-'F'] 
 let lower_case_hex_digit = digit | ['a'-'f']
 
-let string = '"' [^'"']* '"'
+let string = '"' ([^'"']* as value) '"'
 let wide_string = 'L''"' [^'"']* '"'
 
 let sign = ("U"|"u") as sign
@@ -128,7 +122,11 @@ let integer = (digit+ as value) sign? length?
 let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
-let hex_character = '\'' "\\x" hex_digit hex_digit '\''
+let hex_character = '\'' "\\x" (hex_digit hex_digit as value) '\''
+let oct_character = 
+  ("\'\\" (oct_digit as value) "\'")
+  | ("\'\\" (oct_digit oct_digit as value) "\'")
+  | ("\'\\" (oct_digit oct_digit oct_digit as value) "\'")
 let wide_character = 'L''\'' _ '\''
 
 (* TODO: remove argument spec_buf, it's a pain, put it in synthack ? *)
@@ -171,14 +169,13 @@ rule token spec_buf = parse
   | integer             { INTEGER (None, value, sign, length) }
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | character           { CHARACTER (int_of_character (Lexing.lexeme lexbuf)) }
-  | hex_character       { CHARACTER (int_of_hex_character 
-					(Lexing.lexeme lexbuf)) }
-  | "\'\\0\'"           { CHARACTER 0 }
+  | oct_character       { CHARACTER (int_of_oct_character value) }
+  | hex_character       { CHARACTER (int_of_hex_character value) }
   | "\'\\n\'"           { CHARACTER 10 }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST  (Lexing.lexeme lexbuf) }
-  | string              { STRING (extract_string (Lexing.lexeme lexbuf)) }
+  | string              { STRING value }
   | wide_string         { Npkcontext.error "Lexer.token" 
 			    "wide string literals not supported" }
 (* punctuation *)

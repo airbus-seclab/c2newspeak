@@ -189,7 +189,7 @@ and ikind = sign_t * size_t
 and sign_t = Signed | Unsigned
 (* a size in number of bits *)
 and length = int
-and offset = size_t
+and offset = int
 and size_t = int
 and bounds = (Nat.t * Nat.t)
 
@@ -1197,7 +1197,6 @@ and build_scalar_t builder t =
     | FunPtr -> t
 
 and build_field builder (o, t) =
-  let o = build_size_t builder o in
   let t = build_typ builder t in
     (o, t)
 

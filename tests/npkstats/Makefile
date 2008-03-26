@@ -6,7 +6,6 @@ C2NEWSPEAK=$(C2N) --experimental
 
 TESTS= 000 001
 TESTS.SPEC= $(addsuffix .spec, $(TESTS))
-CHECK=$(addsuffix .checked, $(TESTS))
 
 .SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)
@@ -36,6 +35,6 @@ $(TESTS.SPEC):%.spec: $(C2N) %.c
 	dos2unix $*.spec
 	cat $*.spec
 
-../../bin/c2newspeak: 
+$(C2N):
 	make -C ../.. install
 
