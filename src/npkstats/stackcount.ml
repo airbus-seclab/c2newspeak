@@ -31,6 +31,7 @@ open Newspeak
 type stats = (bool * int * int)
 
 let count ptr_sz (_, fundecs, _) =
+  let unknown_funs = ref [] in
   let exact = ref true in
   let max_nb = ref 0 in
   let max_sz = ref 0 in
@@ -43,7 +44,10 @@ let count ptr_sz (_, fundecs, _) =
       match body with
 	  Some body -> count_blk body sz
 	| None -> 
-	    prerr_endline ("Warning: function "^f^" body not defined");
+	    if not (List.mem f !unknown_funs) then begin
+	      unknown_funs := f::!unknown_funs;
+	      prerr_endline ("Warning: function "^f^" body not defined")
+	    end;
 	    exact := false
 	      
   and count_blk x sz =
