@@ -526,3 +526,28 @@ let string_of_typ t =
     | Struct _ -> "{}"
     | Union _ -> "{}"
     | Fun _ -> "fun"
+
+let rec is_subtyp t1 t2 =
+  match (t1, t2) with
+      (Array (t1, l1), Array (t2, l2)) -> 
+	(is_sublen l1 l2) && (is_subtyp t1 t2)
+    | (Struct (_, f1, n1), Struct (_, f2, n2)) 
+    | (Union (_, f1, n1), Union (_, f2, n2)) -> begin
+	try (n1 = n2) && (List.for_all2 is_subfield f1 f2)
+	with Invalid_argument _ -> false
+      end
+    | (Fun f1, Fun f2) -> is_subftyp f1 f2
+    | _ -> t1 = t2
+
+and is_sublen l1 l2 =
+  match (l1, l2) with
+      (_, None) -> true
+    | (Some i1, Some i2) -> i1 = i2
+    | (None, _) -> false
+
+and is_subfield (f1, (o1, t1)) (f2, (o2, t2)) =
+  (f1 = f2) && (o1 = o2) && (is_subtyp t1 t2)
+
+and is_subftyp (args1, ret1) (args2, ret2) =
+  try (is_subtyp ret1 ret2) && (List.for_all2 is_subtyp args1 args2)
+  with Invalid_argument _ -> false

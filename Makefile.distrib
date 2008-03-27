@@ -68,7 +68,7 @@ CLEANFILES=*~ .depend \
            tests/npk2bytesz/*.bak \
 	   lib/*~ lib/sys/*~ \
            src/npkstats/*.o src/npkstats/*.cmi src/npkstats/*.cmx \
-           src/npkstats/*~ tests/npkstats/000 tests/npkstats/001 \
+           src/npkstats/*~ \
            src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
            src/npksimplify/*~ \
            src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \

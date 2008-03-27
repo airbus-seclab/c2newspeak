@@ -166,3 +166,5 @@ val cast: (exp * typ) -> typ -> exp
 val string_of_typ: typ -> string
 
 val size_of: typ -> int
+
+val is_subtyp: typ -> typ -> bool

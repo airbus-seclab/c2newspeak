@@ -18,6 +18,7 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
             tests/npkstats/*~ tests/npkstats/*.no tests/npkstats/*.npk \
             $(addprefix tests/mult-files/,000 001 002 003 004) \
+            $(addprefix tests/npkstats/,000 001 002) \
             tests/newspeak/*.exe
 
 genversion=\

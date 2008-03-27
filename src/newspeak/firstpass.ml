@@ -114,9 +114,9 @@ let translate (globals, spec) =
     let v = VarSymb (C.Global name) in
       try 
 	let (prev_t, _, prev_init) = Hashtbl.find glbdecls name in
-	  if (t <> prev_t) then begin
+	  if not (Cir.is_subtyp t prev_t) then begin
 	    Npkcontext.error "Firstpass.update_global" 
-	      ("Global variable "^x^" declared with different types")
+	      ("global variable "^x^" declared with different types")
 	  end;
 	  let init = 
 	    match (prev_init, init) with
@@ -125,10 +125,10 @@ let translate (globals, spec) =
 	      | (None, None) -> None
 	      | (Some Some _, Some Some _) -> 
 		  Npkcontext.error "Firstpass.update_global"
-		    ("Global variable "^x^" initialized twice")
+		    ("global variable "^x^" initialized twice")
 	  in
 	    Hashtbl.replace symbtbl x (v, ct, loc);
-	    Hashtbl.replace glbdecls name (t, loc, init)	  
+	    Hashtbl.replace glbdecls name (t, loc, init)
       with Not_found -> 
 	Hashtbl.add symbtbl x (v, ct, loc);
 	Hashtbl.add glbdecls name (t, loc, init)
