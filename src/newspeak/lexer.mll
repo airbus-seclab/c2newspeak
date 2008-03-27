@@ -114,9 +114,10 @@ let wide_string = 'L''"' [^'"']* '"'
 let sign = ("U"|"u") as sign
 let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
+let hex_prefix = "0x" | "0X"
 let hex_integer = 
-    ("0x" (hex_digit+ as value) sign? length?)
-  | ("0x" (lower_case_hex_digit+ as value) sign? length?)
+    (hex_prefix (hex_digit+ as value) sign? length?)
+  | (hex_prefix (lower_case_hex_digit+ as value) sign? length?)
 
 let integer = (digit+ as value) sign? length?
 let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
