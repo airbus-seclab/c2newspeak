@@ -7,7 +7,7 @@ C2N = ../bin/c2newspeak --newspeak
 C2NEWSPEAK = $(C2N) $(FLAG)
 C2NEWSPEAK.CIL = $(C2N) $(FLAG.CIL)
 
-DIR=mult-files npkstats npksimplify mem_opt npk2bytesz newspeak
+DIR=mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck newspeak
 
 TESTS = 000 001 002 003 004 005 006 007 008 009 \
         010 011 012 013 014 015 016 017 018 019 \

@@ -50,6 +50,8 @@ CLEANFILES=*~ .depend \
            src/npkstrip/*.cmi src/npkstrip/*.cmx src/npkstrip/*.o \
            src/npkstrip/*~ \
            src/npk2bytesz/*~ \
+	   src/npkcheck/*~ src/npkcheck/*.cmi src/npkcheck/*.cmx \
+           src/npkcheck/*.o \
            src/npkstrip/npkstrip src/npkstrip/npkstrip.exe \
            src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
            src/newspeak/*~ \
@@ -80,7 +82,7 @@ CLEANFILES=*~ .depend \
 
 #TODO: remove this recursive call
 install: $(CIL) c2newspeak doc npkstrip npkstats npksimplify npk2bytesz \
-         newspeak
+         npkcheck newspeak
 
 $(CIL):
 	cd cil; tar xzf cil-1.3.5.tar.gz
@@ -113,6 +115,10 @@ npksimplify: $(NSCMX)
 npk2bytesz: src/version.cmx src/newspeak/newspeak.cmx \
             src/npk2bytesz/npk2bytesz.cmx
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npk2bytesz/npk2bytesz.cmx -o bin/npk2bytesz
+
+npkcheck: src/version.cmx src/newspeak/newspeak.cmx \
+          src/npkcheck/npkcheck.cmx
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkcheck/npkcheck.cmx -o bin/npkcheck
 
 #TODO: clean up this
 newspeak.cma: src/version.cmi src/version.cmx src/newspeak/newspeak.ml

@@ -3,22 +3,23 @@ include Makefile.distrib
 .PHONY: check
 DISTDIR=newspeak-$(VERSION)
 DISTFILE=$(DISTDIR).tgz
+TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkcheck npk2bytesz)
 CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
-            tests/npksimplify/*.no tests/npksimplify/*.npk \
-            tests/npksimplify/*.checked tests/npksimplify/*~ \
-            tests/npk2bytesz/*.no tests/npk2bytesz/*.npk \
-            tests/npk2bytesz/*.checked tests/npk2bytesz/*~ \
+            $(addsuffix /*.no,$(TESTSDIR)) \
+            $(addsuffix /*.npk,$(TESTSDIR)) \
+            $(addsuffix /*~,$(TESTSDIR)) \
+            tests/npksimplify/*.checked \
+            tests/npk2bytesz/*.checked \
             tests/newspeak/*.no tests/newspeak/result \
             tests/newspeak/*.checked tests/newspeak/*~ \
             tests/newspeak/002.npk tests/newspeak/*.bak \
             tests/newspeak/*.cmi tests/newspeak/*.cmo tests/newspeak/read \
-            tests/mult-files/*.no tests/mult-files/*.npk \
-            tests/mult-files/*.checked tests/mult-files/*~ \
-            tests/mem_opt/000 tests/mem_opt/*.no \
+            tests/mult-files/*.checked \
+            tests/mem_opt/000 \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
-            tests/npkstats/*~ tests/npkstats/*.no tests/npkstats/*.npk \
             $(addprefix tests/mult-files/,000 001 002 003 004) \
             $(addprefix tests/npkstats/,000 001 002) \
+            $(addprefix tests/npkcheck/,000) \
             tests/newspeak/*.exe
 
 genversion=\
