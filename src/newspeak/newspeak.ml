@@ -1359,6 +1359,9 @@ and build_binop builder op =
 (* Visitor *)
 class visitor =
 object 
+  val mutable cur_loc = unknown_loc
+  method set_loc loc = cur_loc <- loc
+
   method process_gdecl (_: string) (_: gdecl) = true
   method process_fun (_: fid) (_: fundec) = true
   method process_fun_after () = ()
@@ -1368,12 +1371,55 @@ object
   method process_lval (_: lval) = true
   method process_unop (_: unop) = ()
   method process_binop (_: binop) = ()
+  method process_size_t (_: size_t) = ()
+  method process_length (_: length) = ()
+
+  method raise_error msg = 
+    let (file, line, _) = cur_loc in
+    let pos = 
+      if cur_loc = unknown_loc then ""
+      else " in "^file^" line "^(string_of_int line)
+    in
+      (invalid_arg (msg^pos) : unit)
 end
+
+let visit_size_t visitor x = visitor#process_size_t x
+
+let visit_length visitor x = visitor#process_length x
+
+let visit_ikind visitor (_, sz) = visit_size_t visitor sz
+
+let visit_scalar_t visitor t =
+  match t with
+      Int k -> visit_ikind visitor k
+    | Float sz -> visit_size_t visitor sz
+    | Ptr -> ()
+    | FunPtr -> ()
+
+let rec visit_typ visitor t =
+  match t with
+      Scalar t -> visit_scalar_t visitor t
+    | Array (t, n) -> 
+	visit_typ visitor t;
+	visit_length visitor n
+    | Region (fields, sz) ->
+	List.iter (visit_field visitor) fields;
+	visit_size_t visitor sz
+
+and visit_field visitor (_, t) = visit_typ visitor t
+
+let visit_ftyp visitor (args, ret) =
+  List.iter (visit_typ visitor) args;
+  match ret with
+      Some t -> visit_typ visitor t
+    | None -> ()
 
 let rec visit_lval visitor x =
   let continue = visitor#process_lval x in
     match x with
-	Deref (e, _) when continue -> visit_exp visitor e
+	Deref (e, sz) when continue -> 
+	  visit_exp visitor e;
+	  visit_size_t visitor sz
       | Shift (lv, e) when continue ->
 	  visit_lval visitor lv;
 	  visit_exp visitor e
@@ -1384,36 +1430,50 @@ and visit_exp visitor x =
     if continue then begin
       match x with
 	  Lval (lv, _) -> visit_lval visitor lv
-	| AddrOf (lv, _) -> visit_lval visitor lv
+	| AddrOf (lv, sz) -> 
+	    visit_lval visitor lv;
+	    visit_size_t visitor sz
 	| UnOp (op, e) -> 
 	    visitor#process_unop op;
 	    visit_exp visitor e
 	| BinOp (bop, e1, e2) ->
 	    visitor#process_binop bop;
+	    visit_binop visitor bop;
 	    visit_exp visitor e1;
 	    visit_exp visitor e2
 	| _ -> ()
-    end else ()
+    end
+
+and visit_binop visitor op =
+  match op with
+      PlusF sz | MinusF sz | MultF sz | DivF sz -> visit_size_t visitor sz
+    | _ -> ()
 
 let visit_fn visitor x =
   let continue = visitor#process_fn x in
     match x with
-	FunDeref (e, _) when continue -> visit_exp visitor e
+	FunDeref (e, t) when continue -> 
+	  visit_exp visitor e;
+	  visit_ftyp visitor t
       | _ -> ()
-  
+
 let rec visit_blk visitor x = List.iter (visit_stmt visitor) x
     
 and visit_stmt visitor (x, loc) =
+  visitor#set_loc loc;
   let continue = visitor#process_stmt (x, loc) in
     if continue then begin
       match x with
 	  Set (lv, e, _) -> 
 	    visit_lval visitor lv;
 	    visit_exp visitor e
-	| Copy (lv1, lv2, _) ->
+	| Copy (lv1, lv2, sz) ->
 	    visit_lval visitor lv1;
-	    visit_lval visitor lv2
-	| Decl (_, _, body) -> visit_blk visitor body
+	    visit_lval visitor lv2;
+	    visit_size_t visitor sz
+	| Decl (_, t, body) -> 
+	    visit_typ visitor t;
+	    visit_blk visitor body
 	| Call fn -> visit_fn visitor fn
 	| ChooseAssert choices -> List.iter (visit_choice visitor) choices
 	| InfLoop x -> visit_blk visitor x
@@ -1429,6 +1489,7 @@ and visit_choice visitor (cond, body) =
 
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in
+  if continue then visit_ftyp visitor t;
     match body with
 	Some body when continue -> 
 	  visit_blk visitor body;
@@ -1439,6 +1500,7 @@ let visit_init visitor (_, _, e) = visit_exp visitor e
 
 let visit_glb visitor id (t, init) =
   let continue = visitor#process_gdecl id (t, init) in
+    if continue then visit_typ visitor t;
     match init with
 	Init x when continue -> List.iter (visit_init visitor) x 
       | _ -> ()

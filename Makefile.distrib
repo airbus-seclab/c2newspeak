@@ -12,7 +12,7 @@ OCAMLDOC=ocamldoc
 CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
-INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify -I src/npkstats
+INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify/ -I src/npkstats/
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
@@ -34,9 +34,12 @@ NSFILES:=$(addprefix src/,$(NSFILES))
 NSCMX=src/version.cmx src/newspeak/newspeak.cmx $(addsuffix .cmx, $(NSFILES))
 
 STATFILES=src/npkstats/stackcount src/npkstats/npkstats
+STRIPFILES=src/npkstrip/npkstrip
+BYTESFILES=src/npk2bytesz/npk2bytesz
 
-MLI=$(addsuffix .mli, $(C2NFILES))
-ML=$(addsuffix .ml, $(C2NFILES) $(NSFILES) $(STATFILES)) $(addsuffix .ml, )
+MLI=$(addsuffix .mli, $(C2NFILES) $(STATFILES) $(NSFILES))
+ML=$(addsuffix .ml, $(C2NFILES) $(NSFILES) $(STATFILES) $(STRIPFILES) \
+   $(BYTESFILES) src/npkcheck/npkcheck)
 
 NPKFILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa newspeak.a \
          lib/*

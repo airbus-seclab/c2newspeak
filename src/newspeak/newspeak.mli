@@ -282,6 +282,11 @@ object
   method process_lval: lval -> bool
   method process_unop: unop -> unit
   method process_binop: binop -> unit
+  method process_size_t: size_t -> unit
+  method process_length: length -> unit
+
+  method set_loc : location -> unit
+  method raise_error: string -> unit
 end
 
 val visit_fun : visitor -> fid -> fundec -> unit

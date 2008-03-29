@@ -47,11 +47,12 @@ let speclist =
   [  ]
 
 class checker =
-object
+object (self)
   inherit Newspeak.visitor
 
-  method process_size_t x = 
-    if x <= 0 then invalid_arg ("invalid size: "^(string_of_int x))
+  method process_length x =
+    if x <= 0 
+    then self#raise_error ("invalid length for array")
 
 end
 

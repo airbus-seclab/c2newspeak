@@ -251,11 +251,12 @@ let print_debug msg =
 
 
 let error where msg =
-  let disp = if (!verb_debug && where <> "")
-  then "("^where^") "^msg^(string_of_loc !cur_loc)
-  else msg^(string_of_loc !cur_loc)
-  in
-    invalid_arg disp
+    let disp = 
+      if (!verb_debug && where <> "")
+      then "("^where^") "^msg^(string_of_loc !cur_loc)
+      else msg^(string_of_loc !cur_loc)
+    in
+      invalid_arg disp
 
 let print_error msg =
   prerr_endline ("Fatal error: "^msg);

@@ -1,6 +1,6 @@
 # commands
 RM = rm -f
-C2NEWSPEAK=../../bin/c2newspeak --experimental
+C2NEWSPEAK=../../bin/c2newspeak
 NPKCHECK=../../bin/npkcheck
 
 TESTS= 000
@@ -13,7 +13,7 @@ check: $(TESTS)
 
 $(TESTS):%: %.c
 	eval $(C2NEWSPEAK) $*.c
-	eval $(NPKCHECK) `[ -e $*.in ] && cat $*.in` a.npk &> $*.bak
+	eval $(NPKCHECK) `[ -e $*.in ] && cat $*.in` a.npk &> $*.bak; true
 	dos2unix $*.bak
 	if [ -e $*.spec ]; \
 	then \
@@ -30,7 +30,7 @@ $(TESTS):%: %.c
 
 $(TESTS.SPEC):%.spec: %.c
 	eval $(C2NEWSPEAK) $*.c
-	eval $(NPKCHECK) `[ -e $*.in ] && cat $*.in` a.npk &> $*.spec
+	eval $(NPKCHECK) `[ -e $*.in ] && cat $*.in` a.npk &> $*.spec; true
 	dos2unix $*.spec
 	cat $*.spec
 
