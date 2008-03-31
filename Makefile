@@ -42,6 +42,7 @@ $(DISTDIR): clean-all
 	$(CP) -r cil $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r Makefile.distrib $(DISTDIR)/Makefile
+	$(CP) -r *.Makefile $(DISTDIR)
 	tar czf $(DISTFILE) $(DISTDIR)
 
 check:
