@@ -417,14 +417,12 @@ let normalize x =
     Hashtbl.add age_tbl !stack_height lbl;
     incr stack_height
   in
-  let pop_lbl lbl body loc =
+  let pop_lbl lbl =
     let decls = Hashtbl.find lbl_tbl lbl in
-    let body = List.rev_append decls ((Block (body, Some lbl), loc)::[]) in
-    let body = (Block (body, None), loc)::[] in
       decr stack_height;
       Hashtbl.remove age_tbl !stack_height;
       Hashtbl.remove lbl_tbl lbl;
-      body
+      decls
   in
   let register_decl lbl x =
     let decls = 
@@ -452,8 +450,19 @@ let normalize x =
       | (Block (body, Some lbl), loc)::tl -> 
 	  push_lbl lbl;
 	  let (body, used_lbls) = set_scope_blk body in
-	  let body = pop_lbl lbl body loc in
 	  let used_lbls1 = Set.remove lbl used_lbls in
+	  let decls = pop_lbl lbl in
+	  let body = ((Block (body, Some lbl), loc)::[]) in
+	  let body = 
+	    if Set.is_empty used_lbls1 then begin
+	      let body = List.rev_append decls  body in
+		(Block (body, None), loc)::[]
+	    end else begin
+	      let lbl = Set.min_elt used_lbls in
+		List.iter (register_decl lbl) decls;
+		body
+	    end
+	  in
 	  let (tl, used_lbls2) = set_scope_blk tl in
 	    (body@tl, Set.union used_lbls1 used_lbls2)
 	      
