@@ -230,11 +230,22 @@ let normalize_ftyp (args, va_list, ret_t) =
   let (_, args_name) = List.split args_t in
     ((args_t, va_list, ret_t), args_name)
 
-let float_cst_of_lexeme lexeme =
+(* ANSI C: 6.4.4.2 *)
+let float_cst_of_lexeme (value, suffix) =
   let f = 
-    try float_of_string lexeme 
+    try float_of_string value 
     with Failure "float_of_string" -> 
       Npkcontext.error "Csyntax.float_cst_of_lexeme" "float not representable"
   in
-    (* TODO: bug? this is probably an erroneous type!!! *)
-    (Cir.CFloat (f, lexeme), Float Config.size_of_double)
+(* TODO: should really think about floating points, I don't know whether it
+   is really necessary to keep the suffix on the bare string representation of
+   the float??? *)
+  let (lexeme, sz) = 
+    match suffix with
+	None -> (value, Config.size_of_double)
+      | Some 'F' -> (value^"F", Config.size_of_float)
+      | _ -> 
+	  Npkcontext.error "Csyntax.float_cst_of_lexeme" 
+	    "unknown suffix for float"
+  in
+    (Cir.CFloat (f, lexeme), Float sz)

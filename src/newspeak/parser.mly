@@ -141,7 +141,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token <string> STRING
 %token <string option * string * char option * string option> INTEGER
 %token <int> CHARACTER
-%token <string> FLOATCST
+%token <string * char option> FLOATCST
 
 %type <string list * Csyntax.prog> parse
 %start parse

@@ -120,7 +120,9 @@ let hex_integer =
   | (hex_prefix (lower_case_hex_digit+ as value) sign? length?)
 
 let integer = (digit+ as value) sign? length?
-let float = (digit+ | digit+ '.' digit+) (('e'|'E') '-'? digit+)?
+let float = 
+  ((digit+ | digit+ '.' digit+) (('e'|'E') '-'? digit+)? as value)
+  ("F" as suffix)?
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
 let hex_character = '\'' "\\x" (hex_digit hex_digit as value) '\''
@@ -175,7 +177,7 @@ rule token spec_buf = parse
   | "\'\\n\'"           { CHARACTER 10 }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
-  | float               { FLOATCST (Lexing.lexeme lexbuf) }
+  | float               { FLOATCST (value, suffix) }
   | string              { STRING value }
   | wide_string         { Npkcontext.error "Lexer.token" 
 			    "wide string literals not supported" }

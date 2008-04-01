@@ -32,7 +32,7 @@ open Csyntax
 %token <string> IDENTIFIER
 %token <char> SYMBOL
 %token <string option * string * char option * string option> INTEGER
-%token <string> FLOATCST
+%token <string * char option> FLOATCST
 
 %type <Csyntax.spec> parse
 %start parse

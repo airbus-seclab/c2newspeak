@@ -134,7 +134,7 @@ val int_cst_of_lexeme:
 
 val char_cst_of_lexeme: int -> cst
 
-val float_cst_of_lexeme: string -> cst
+val float_cst_of_lexeme: (string * char option) -> cst
 
 val va_arg: (typ * string)
 

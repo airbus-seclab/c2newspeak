@@ -66,7 +66,9 @@ let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
 let hex_integer = "0x" (hex_digit+ as value) sign? length?
 let integer = (digit+ as value) sign? length?
-let float = (digit+ | digit+ '.' digit+) ('E' '-' digit+)?
+let float = 
+  ((digit+ | digit+ '.' digit+) (('e'|'E') '-'? digit+)? as value)
+  ("F" as suffix)?
 let identifier = letter (letter|digit)*
 
 rule token = parse
@@ -74,7 +76,8 @@ rule token = parse
   | oct_integer         { INTEGER (Some "0", value, sign, length) }
   | integer             { INTEGER (None, value, sign, length) }
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
-  | float               { FLOATCST (Lexing.lexeme lexbuf) }
+(* TODO: same as for lexer.mll, find a way to factor lexer code???? *)
+  | float               { FLOATCST (value, suffix) }
 
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 
