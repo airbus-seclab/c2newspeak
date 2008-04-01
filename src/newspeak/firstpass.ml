@@ -81,6 +81,10 @@ let translate (globals, spec) =
   let symbtbl = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
+  (* Counter of static variables, necessary to distinguish 2 statics in 
+     different scope of the same function, who would have the same name
+  *)
+  let static_cnt = ref 0 in
 
   let tmp_cnt = ref 0 in
 
@@ -143,7 +147,8 @@ let translate (globals, spec) =
       if !current_fun = "" then prefix
       else prefix^(!current_fun)^"."
     in
-    let name = prefix^x in
+    let name = prefix^(string_of_int !static_cnt)^"."^x in
+      incr static_cnt;
       update_global x name loc d
   in
 
