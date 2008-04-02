@@ -77,10 +77,11 @@ let translate_binop op e1 e2 =
 	Npkcontext.error "Compiler.translate_binop" 
 	  "pointer arithmetic forbidden on function pointers"
     | PlusP t -> 
-	let stride = K.exp_of_int (size_of t) in 
-	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, stride))
-    | MinusP -> K.make_int_coerce int_kind (K.BinOp (N.MinusPP, e1, e2))
-	
+	let step = K.exp_of_int (size_of t) in 
+	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, step))
+    | MinusP t -> 
+	let step = size_of t in
+	  K.make_int_coerce int_kind (K.BinOp (N.MinusPP step, e1, e2))
     | Gt t -> 
 	let t = translate_scalar t in
 	  K.BinOp (N.Gt t, e1, e2)

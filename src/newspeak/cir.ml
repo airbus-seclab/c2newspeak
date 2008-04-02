@@ -130,7 +130,7 @@ and binop =
     | BOr of ikind
     | Mod
     | PlusP of typ
-    | MinusP
+    | MinusP of typ
     | Gt of typ
     | Eq of typ
     | Shiftl of ikind

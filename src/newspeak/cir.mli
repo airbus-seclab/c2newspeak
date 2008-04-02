@@ -116,7 +116,7 @@ and binop =
     | BOr of Newspeak.ikind
     | Mod
     | PlusP of typ
-    | MinusP
+    | MinusP of typ
     | Gt of typ
     | Eq of typ
     | Shiftl of Newspeak.ikind

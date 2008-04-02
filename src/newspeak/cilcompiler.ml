@@ -328,12 +328,15 @@ and translate_exp e =
 	
     (* Pointer difference *) 
     | BinOp (MinusPP, e1, e2, t) -> begin
-	match translate_typ (typeOf e1), translate_typ (typeOf e2), translate_typ t with
+	let t1 = typeOf e1 in
+	let t2 = typeOf e2 in
+	match translate_typ t1, translate_typ t2, translate_typ t with
 	  | K.Scalar Newspeak.Ptr, K.Scalar Newspeak.Ptr, 
 	    K.Scalar Newspeak.Int int_t -> 
 	      let v1 = translate_exp e1 in
 	      let v2 = translate_exp e2 in
-		K.make_int_coerce int_t (K.BinOp (Newspeak.MinusPP, v1, v2))
+	      let n = Cilutils.size_of_subtyp t1 in
+		K.make_int_coerce int_t (K.BinOp (Newspeak.MinusPP n, v1, v2))
 	  | _ -> error "Npkcompile.translate_exp" "data pointer type expected"
       end
 	

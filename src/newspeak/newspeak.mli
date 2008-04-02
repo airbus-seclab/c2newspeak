@@ -156,7 +156,7 @@ and binop =
   | BOr of bounds | BAnd of bounds | BXor of bounds
   | Shiftlt | Shiftrt
 (* pointer operations *)
-  | PlusPI | MinusPP
+  | PlusPI | MinusPP of int
 (* comparisons *)
   | Gt of scalar_t | Eq of scalar_t
 

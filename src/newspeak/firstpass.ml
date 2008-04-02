@@ -988,7 +988,7 @@ let translate (globals, spec) =
 	(* Pointer operations *)
 	| (Plus, Ptr t, Int _) -> (C.PlusP (translate_typ t), t1)
 	    
-	| (Minus, Ptr _, Ptr _) -> (C.MinusP, int_typ)
+	| (Minus, Ptr t, Ptr _) -> (C.MinusP (translate_typ t), int_typ)
 	    
 	(* Integer comparisons *)
 	(* Thanks to normalization t1 = t2 *)
