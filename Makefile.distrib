@@ -29,7 +29,7 @@ C2NFILES:=$(addprefix src/, $(C2NFILES))
 C2NCMX=$(addsuffix .cmx, $(C2NFILES))
 
 MLI=$(addsuffix .mli, $(C2NFILES))
-ML=$(addsuffix .ml, $(C2NFILES) src/npkcheck/npkcheck)
+ML=$(addsuffix .ml, $(C2NFILES))
 
 INSTALL.FILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
               newspeak.a lib/*
@@ -40,8 +40,6 @@ CLEANFILES=*~ .depend \
            src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
            src/newspeak/*.cmo \
            src/*~ \
-	   src/npkcheck/*~ src/npkcheck/*.cmi src/npkcheck/*.cmx \
-           src/npkcheck/*.o \
            src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
            src/newspeak/*~ \
            src/newspeak/parser.ml src/newspeak/parser.mli \
@@ -63,10 +61,9 @@ CLEANFILES=*~ .depend \
 
 .PHONY: all clean install doc
 
-#TODO: remove this recursive call
-install: $(CIL) c2newspeak doc bin/npkstrip bin/npkstats \
+install: $(CIL) c2newspeak bin/npkstrip bin/npkstats \
          bin/npksimplify bin/npk2bytesz \
-         npkcheck newspeak
+         bin/npkcheck newspeak doc
 
 $(CIL):
 	cd cil; tar xzf cil-1.3.5.tar.gz
@@ -85,10 +82,6 @@ c2newspeak: $(C2NCMX)
 
 bin/%: %.Makefile
 	make -f $*.Makefile
-
-npkcheck: src/version.cmx src/newspeak/newspeak.cmx \
-          src/npkcheck/npkcheck.cmx
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npkcheck/npkcheck.cmx -o bin/npkcheck
 
 #TODO: clean up this
 newspeak.cma: src/version.cmi src/version.cmx src/newspeak/newspeak.ml
@@ -117,12 +110,13 @@ newspeak.a newspeak.cmxa: src/version.cmi src/version.cmx src/newspeak/newspeak.
 doc: src/version.cmi src/newspeak/newspeak.cmi
 	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
-#TODO: do not call clean recursively
+#TODO: clean up ???
 clean:
 	make -f npkstrip.Makefile clean
 	make -f npkstats.Makefile clean
 	make -f npksimplify.Makefile clean
 	make -f npk2bytesz.Makefile clean
+	make -f npkcheck.Makefile clean
 	$(RM) $(CLEANFILES)
 
 clean-all: clean
