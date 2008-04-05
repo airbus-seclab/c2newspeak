@@ -25,14 +25,14 @@ all: $(CMX)
 %.cmx: %.ml
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
 
-$(.DEPEND).depend: $(MLI) $(ML)
+$(TARGET).depend: $(MLI) $(ML)
 	@mkdir bin 2> /dev/null; true
-	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(.DEPEND).depend
+	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(TARGET).depend
 
-include $(.DEPEND).depend
+include $(TARGET).depend
 
 clean:
-	$(RM) $(.DEPEND).depend
+	$(RM) $(TARGET).depend
 	$(RM) $(addsuffix /*.cmi, $(FULLDIRS))
 	$(RM) $(addsuffix /*.cmx, $(FULLDIRS))
 	$(RM) $(addsuffix /*.o, $(FULLDIRS))

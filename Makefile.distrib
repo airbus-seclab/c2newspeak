@@ -12,7 +12,7 @@ OCAMLDOC=ocamldoc
 CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
-INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify/
+INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
@@ -28,16 +28,10 @@ C2NFILES:=version $(addprefix newspeak/, $(C2NFILES))
 C2NFILES:=$(addprefix src/, $(C2NFILES))
 C2NCMX=$(addsuffix .cmx, $(C2NFILES))
 
-NSFILES:=normalize store copy_propagation inline var_hoist npksimplify
-NSFILES:=$(addprefix npksimplify/,$(NSFILES))
-NSFILES:=$(addprefix src/,$(NSFILES))
-NSCMX=src/version.cmx src/newspeak/newspeak.cmx $(addsuffix .cmx, $(NSFILES))
-
-
 BYTESFILES=src/npk2bytesz/npk2bytesz
 
-MLI=$(addsuffix .mli, $(C2NFILES) $(NSFILES))
-ML=$(addsuffix .ml, $(C2NFILES) $(NSFILES) $(BYTESFILES) src/npkcheck/npkcheck)
+MLI=$(addsuffix .mli, $(C2NFILES))
+ML=$(addsuffix .ml, $(C2NFILES) $(BYTESFILES) src/npkcheck/npkcheck)
 
 INSTALL.FILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
               newspeak.a lib/*
@@ -67,8 +61,6 @@ CLEANFILES=*~ .depend \
            tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
            tests/npk2bytesz/*.bak \
 	   lib/*~ lib/sys/*~ \
-           src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
-           src/npksimplify/*~ \
            src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \
            tests/*.bak tests/result \
            tests/mem_opt/*~
@@ -78,7 +70,7 @@ CLEANFILES=*~ .depend \
 
 #TODO: remove this recursive call
 install: $(CIL) c2newspeak doc bin/npkstrip bin/npkstats \
-         npksimplify npk2bytesz \
+         bin/npksimplify npk2bytesz \
          npkcheck newspeak
 
 $(CIL):
@@ -96,15 +88,8 @@ newspeak: $(INSTALL.FILES)
 c2newspeak: $(C2NCMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(C2NCMX) -o bin/c2newspeak
 
-bin/npkstrip: 
-	make -f npkstrip.Makefile
-
-bin/npkstats: 
-	make -f npkstats.Makefile
-
-#TODO: clean this up
-npksimplify: $(NSCMX)
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(NSCMX) -o bin/npksimplify
+bin/%: %.Makefile
+	make -f $*.Makefile
 
 #TODO: clean this up
 npk2bytesz: src/version.cmx src/newspeak/newspeak.cmx \
@@ -146,6 +131,7 @@ doc: src/version.cmi src/newspeak/newspeak.cmi
 clean:
 	make -f npkstrip.Makefile clean
 	make -f npkstats.Makefile clean
+	make -f npksimplify.Makefile clean
 	$(RM) $(CLEANFILES)
 
 clean-all: clean
