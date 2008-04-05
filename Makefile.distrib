@@ -12,7 +12,7 @@ OCAMLDOC=ocamldoc
 CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
-INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify/ -I src/npkstats/
+INCLUDE=-I $(CILDIR) -I src/ -I src/newspeak/ -I src/npksimplify/
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
@@ -36,14 +36,8 @@ NSCMX=src/version.cmx src/newspeak/newspeak.cmx $(addsuffix .cmx, $(NSFILES))
 
 BYTESFILES=src/npk2bytesz/npk2bytesz
 
-NPKSTATS.FILES=src/npkstats/stackcount src/npkstats/npkstats
-
-COMMON.CMX=src/version.cmx src/newspeak/newspeak.cmx
-NPKSTATS.CMX=$(addsuffix .cmx,$(NPKSTATS.FILES))
-
-MLI=$(addsuffix .mli, $(C2NFILES) $(NPKSTATS.FILES) $(NSFILES))
-ML=$(addsuffix .ml, $(C2NFILES) $(NSFILES) $(NPKSTATS.FILES) \
-   $(BYTESFILES) src/npkcheck/npkcheck)
+MLI=$(addsuffix .mli, $(C2NFILES) $(NSFILES))
+ML=$(addsuffix .ml, $(C2NFILES) $(NSFILES) $(BYTESFILES) src/npkcheck/npkcheck)
 
 INSTALL.FILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
               newspeak.a lib/*
@@ -73,8 +67,6 @@ CLEANFILES=*~ .depend \
            tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
            tests/npk2bytesz/*.bak \
 	   lib/*~ lib/sys/*~ \
-           src/npkstats/*.o src/npkstats/*.cmi src/npkstats/*.cmx \
-           src/npkstats/*~ \
            src/npksimplify/*.o src/npksimplify/*.cmi src/npksimplify/*.cmx \
            src/npksimplify/*~ \
            src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \
@@ -107,8 +99,8 @@ c2newspeak: $(C2NCMX)
 bin/npkstrip: 
 	make -f npkstrip.Makefile
 
-bin/npkstats: $(COMMON.CMX) $(NPKSTATS.CMX)
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(COMMON.CMX) $(NPKSTATS.CMX) -o $@
+bin/npkstats: 
+	make -f npkstats.Makefile
 
 #TODO: clean this up
 npksimplify: $(NSCMX)
@@ -153,6 +145,7 @@ doc: src/version.cmi src/newspeak/newspeak.cmi
 #TODO: do not call clean recursively
 clean:
 	make -f npkstrip.Makefile clean
+	make -f npkstats.Makefile clean
 	$(RM) $(CLEANFILES)
 
 clean-all: clean
