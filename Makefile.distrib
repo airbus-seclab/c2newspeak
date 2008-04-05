@@ -28,10 +28,8 @@ C2NFILES:=version $(addprefix newspeak/, $(C2NFILES))
 C2NFILES:=$(addprefix src/, $(C2NFILES))
 C2NCMX=$(addsuffix .cmx, $(C2NFILES))
 
-BYTESFILES=src/npk2bytesz/npk2bytesz
-
 MLI=$(addsuffix .mli, $(C2NFILES))
-ML=$(addsuffix .ml, $(C2NFILES) $(BYTESFILES) src/npkcheck/npkcheck)
+ML=$(addsuffix .ml, $(C2NFILES) src/npkcheck/npkcheck)
 
 INSTALL.FILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
               newspeak.a lib/*
@@ -42,7 +40,6 @@ CLEANFILES=*~ .depend \
            src/newspeak/*.a src/newspeak/*.cma src/newspeak/*.cmxa \
            src/newspeak/*.cmo \
            src/*~ \
-           src/npk2bytesz/*~ \
 	   src/npkcheck/*~ src/npkcheck/*.cmi src/npkcheck/*.cmx \
            src/npkcheck/*.o \
            src/newspeak/*.o src/newspeak/*.cmi src/newspeak/*.cmx \
@@ -59,9 +56,7 @@ CLEANFILES=*~ .depend \
            doc/*.html doc/*~ \
            tests/newspeak/000 tests/newspeak/001 tests/newspeak/002 \
            tests/newspeak/003 tests/newspeak/*_check tests/newspeak/003.npk \
-           tests/npk2bytesz/*.bak \
 	   lib/*~ lib/sys/*~ \
-           src/npk2bytesz/*.o src/npk2bytesz/*.cmi src/npk2bytesz/*.cmx \
            tests/*.bak tests/result \
            tests/mem_opt/*~
 
@@ -70,7 +65,7 @@ CLEANFILES=*~ .depend \
 
 #TODO: remove this recursive call
 install: $(CIL) c2newspeak doc bin/npkstrip bin/npkstats \
-         bin/npksimplify npk2bytesz \
+         bin/npksimplify bin/npk2bytesz \
          npkcheck newspeak
 
 $(CIL):
@@ -90,11 +85,6 @@ c2newspeak: $(C2NCMX)
 
 bin/%: %.Makefile
 	make -f $*.Makefile
-
-#TODO: clean this up
-npk2bytesz: src/version.cmx src/newspeak/newspeak.cmx \
-            src/npk2bytesz/npk2bytesz.cmx
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) src/version.cmx src/newspeak/newspeak.cmx src/npk2bytesz/npk2bytesz.cmx -o bin/npk2bytesz
 
 npkcheck: src/version.cmx src/newspeak/newspeak.cmx \
           src/npkcheck/npkcheck.cmx
@@ -132,6 +122,7 @@ clean:
 	make -f npkstrip.Makefile clean
 	make -f npkstats.Makefile clean
 	make -f npksimplify.Makefile clean
+	make -f npk2bytesz.Makefile clean
 	$(RM) $(CLEANFILES)
 
 clean-all: clean
