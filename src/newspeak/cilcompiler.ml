@@ -336,7 +336,9 @@ and translate_exp e =
 	      let v1 = translate_exp e1 in
 	      let v2 = translate_exp e2 in
 	      let n = Cilutils.size_of_subtyp t1 in
-		K.make_int_coerce int_t (K.BinOp (Newspeak.MinusPP n, v1, v2))
+		K.make_int_coerce int_t (
+		  K.BinOp (Newspeak.DivI, 
+			 K.BinOp (Newspeak.MinusPP, v1, v2), K.exp_of_int n))
 	  | _ -> error "Npkcompile.translate_exp" "data pointer type expected"
       end
 	

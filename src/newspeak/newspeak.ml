@@ -153,8 +153,7 @@ and binop =
   | BOr of bounds | BAnd of bounds | BXor of bounds
   | Shiftlt | Shiftrt
   | PlusPI
-  | MinusPP of size_t 
-      (* the argument is the size of an element in nb of bits *)
+  | MinusPP
   | Gt of scalar_t
   | Eq of scalar_t
 
@@ -418,7 +417,7 @@ let string_of_binop op =
     | Shiftlt -> "<<"
     | Shiftrt -> ">>"
     | PlusPI -> "+"
-    | MinusPP n -> "-_"^(string_of_size_t n)
+    | MinusPP -> "-"
 
 let rec string_of_lval lv =
   match lv with
@@ -1352,7 +1351,7 @@ and build_binop builder op =
     | MinusF sz -> MinusF (build_size_t builder sz)
     | MultF sz -> MultF (build_size_t builder sz)
     | DivF sz -> DivF (build_size_t builder sz)
-    | MinusPP sz -> MinusPP (build_size_t builder sz)
+    | MinusPP -> MinusPP
     | Gt t -> Gt (build_scalar_t builder t)
     | Eq t -> Eq (build_scalar_t builder t)
     | PlusI | MinusI | MultI | DivI | Mod
@@ -1448,8 +1447,7 @@ and visit_exp visitor x =
 
 and visit_binop visitor op =
   match op with
-      PlusF sz | MinusF sz | MultF sz | DivF sz | MinusPP sz -> 
-	visit_size_t visitor sz
+      PlusF sz | MinusF sz | MultF sz | DivF sz -> visit_size_t visitor sz
     | _ -> ()
 
 let visit_fn visitor x =

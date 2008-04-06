@@ -86,7 +86,7 @@ npkcheck.FILES:=$(addprefix src/,$(npkcheck.FILES))
 
 FILES=$(c2newspeak.FILES) $(npkstrip.FILES) $(npkstats.FILES) \
       $(npksimplify.FILES) $(npk2bytesz.FILES) $(npkcheck.FILES)
-ML=$(addsuffix .ml, $(FILES))
+ML=$(addsuffix .ml,$(FILES))
 
 COMPONENTS:=c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck
 COMPONENTS:=$(addprefix bin/,$(COMPONENTS))
@@ -157,10 +157,10 @@ clean-all: clean
 clean:
 	$(RM) $(CLEANFILES)
 
-.depend: $(ML)
+.depend: $(MLI) $(ML)
 	@mkdir bin 2> /dev/null; true
 	@mkdir $(CILDIR) 2> /dev/null; true
-	@$(OCAMLDEP) $(INCLUDE) $(ML) > $(TARGET).depend
+	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(TARGET).depend
 
 $(COMPONENTS): bin/%: $(CIL) $$(call suffix.cmx,$$($$*.FILES))
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(call suffix.cmx,$($*.FILES)) -o bin/$*
