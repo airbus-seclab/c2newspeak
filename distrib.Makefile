@@ -99,6 +99,7 @@ c2newspeak.CLEANFILES:=$(addsuffix .ml, $(c2newspeak.CLEANFILES)) \
                        parser.output pp_parser.output spec_parser.output
 c2newspeak.CLEANFILES:=$(addprefix src/newspeak/,$(c2newspeak.CLEANFILES))
 CLEANFILES=*~ .depend \
+	$(addsuffix *~,$(DIRS)) \
 	*.a *.cma *.cmxa \
         bin/* src/*~ \
         doc/*.html doc/*~ \
