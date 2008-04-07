@@ -285,7 +285,13 @@ object
   method process_size_t: size_t -> unit
   method process_length: length -> unit
 
-  method set_loc : location -> unit
+  (* Sets current location *)
+  method set_loc: location -> unit
+  (* Gets current location *)
+  method get_loc: unit -> location
+  method print_warning: string -> unit
+  (* Throws an Invalid_argument in a standard way, with the file and line
+     number *)
   method raise_error: string -> unit
 end
 

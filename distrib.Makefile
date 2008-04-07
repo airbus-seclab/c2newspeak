@@ -45,7 +45,11 @@ vpath %.cmi src:src/newspeak
 CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
-DIRS:=newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck
+COMPNAMES=c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck \
+            npkbugfind
+COMPONENTS=$(addprefix bin/,$(COMPNAMES))
+
+DIRS:=newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck npkbugfind
 DIRS:= $(CILDIR) src/ $(addsuffix /,$(addprefix src/,$(DIRS)))
 INCLUDE=$(addprefix -I ,$(DIRS))
 LIB=nums.cma
@@ -84,12 +88,11 @@ npk2bytesz.FILES:=$(addprefix src/,$(npk2bytesz.FILES))
 npkcheck.FILES:=version newspeak/newspeak npkcheck/npkcheck
 npkcheck.FILES:=$(addprefix src/,$(npkcheck.FILES))
 
-FILES=$(c2newspeak.FILES) $(npkstrip.FILES) $(npkstats.FILES) \
-      $(npksimplify.FILES) $(npk2bytesz.FILES) $(npkcheck.FILES)
-ML=$(addsuffix .ml,$(FILES))
+npkbugfind.FILES:=version newspeak/newspeak npkbugfind/npkbugfind
+npkbugfind.FILES:=$(addprefix src/,$(npkbugfind.FILES))
 
-COMPONENTS:=c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck
-COMPONENTS:=$(addprefix bin/,$(COMPONENTS))
+FILES=$(foreach comp,$(COMPNAMES),$($(comp).FILES))
+ML=$(addsuffix .ml,$(FILES))
 
 NEWSPEAK=src/version.ml src/newspeak/newspeak.ml
 

@@ -1362,6 +1362,7 @@ class visitor =
 object 
   val mutable cur_loc = unknown_loc
   method set_loc loc = cur_loc <- loc
+  method get_loc () = cur_loc
 
   method process_gdecl (_: string) (_: gdecl) = true
   method process_fun (_: fid) (_: fundec) = true
@@ -1382,6 +1383,14 @@ object
       else " in "^file^" line "^(string_of_int line)
     in
       (invalid_arg (msg^pos) : unit)
+
+  method print_warning msg = 
+    let (file, line, _) = cur_loc in
+    let pos = 
+      if cur_loc = unknown_loc then ""
+      else " in "^file^" line "^(string_of_int line)
+    in
+      print_endline ("Warning: "^msg^pos)
 end
 
 let visit_size_t visitor x = visitor#process_size_t x

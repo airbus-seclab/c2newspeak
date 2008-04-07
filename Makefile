@@ -29,7 +29,7 @@ include distrib.Makefile
 .PHONY: check
 DISTDIR=newspeak-$(VERSION)
 DISTFILE=$(DISTDIR).tgz
-TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkcheck npk2bytesz)
+TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkcheck npk2bytesz npkbugfind)
 CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             $(addsuffix /*.no,$(TESTSDIR)) \
             $(addsuffix /*.npk,$(TESTSDIR)) \
