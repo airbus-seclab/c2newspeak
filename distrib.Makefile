@@ -24,7 +24,6 @@
 # email: charles.hymans@penjili.org
 #
 
-#TODO: simplify more by using vpath
 VERSION=1.2
 
 #utils
@@ -39,7 +38,6 @@ OCAMLYACC=ocamlyacc
 
 #Makefile setup
 .SECONDEXPANSION:
-vpath %.cmi src:src/newspeak
 
 #FILES
 CILDIR=cil/obj
@@ -132,10 +130,10 @@ $(CIL):
 bin/newspeak.cmxa: $(INSTALL.FILES)
 	$(CP) -r $(INSTALL.FILES) bin
 
-newspeak.cma: version.cmi newspeak.cmi $(NEWSPEAK)
+newspeak.cma: src/version.cmi src/newspeak/newspeak.cmi $(NEWSPEAK)
 	$(OCAMLC) $(INCLUDE) $(LIB) -a $(NEWSPEAK) -o newspeak.cma
 
-newspeak.a newspeak.cmxa: version.cmi newspeak.cmi $(NEWSPEAK)
+newspeak.a newspeak.cmxa: src/version.cmi src/newspeak/newspeak.cmi $(NEWSPEAK)
 	$(OCAMLOPT) $(INCLUDE) -a $(NEWSPEAK) -o newspeak.cmxa
 
 %.cmi: %.mli
@@ -171,3 +169,4 @@ $(COMPONENTS): bin/%: $(CIL) $$(call suffix.cmx,$$($$*.FILES))
 
 include .depend
 
+#TODO: simplify more by using vpath ??
