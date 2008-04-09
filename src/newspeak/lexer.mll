@@ -175,6 +175,7 @@ rule token spec_buf = parse
   | oct_character       { CHARACTER (int_of_oct_character value) }
   | hex_character       { CHARACTER (int_of_hex_character value) }
   | "\'\\n\'"           { CHARACTER 10 }
+  | "\'\\r\'"           { CHARACTER 13 }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }

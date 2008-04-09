@@ -26,14 +26,14 @@
 #ifndef _SYS_TYPES_H
 #define _SYS_TYPES_H
 
-typedef long ssize_t;
-typedef long key_t;
+typedef long int ssize_t;
+typedef long int key_t;
 
 typedef unsigned int pthread_t;
 typedef unsigned int pthread_mutex_t;
-typedef unsigned long useconds_t;
-typedef long suseconds_t;
-typedef long time_t;
+typedef unsigned long int useconds_t;
+typedef long int suseconds_t;
+typedef long int time_t;
 typedef struct {
   int is_initialized;
   void *stackaddr;

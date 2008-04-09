@@ -33,7 +33,7 @@ void exit(int);
 void *malloc(size_t);
 int system(const char *);
 char *realpath(const char *file_name, char *resolved_name);
-unsigned long strtoul(const char *str, char **endptr, int base);
+unsigned long int strtoul(const char *str, char **endptr, int base);
 void srand(unsigned int seed);
 int rand(void);
 char *getenv(const char *name);
