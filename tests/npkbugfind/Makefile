@@ -3,7 +3,7 @@ RM = rm -f
 NPKBUGFIND=../../bin/npkbugfind
 C2NEWSPEAK=../../bin/c2newspeak --experimental
 
-TESTS= 000 001
+TESTS= 000 001 002 003
 TESTS.SPEC= $(addsuffix .spec, $(TESTS))
 
 .SILENT: $(TESTS)
@@ -12,7 +12,7 @@ TESTS.SPEC= $(addsuffix .spec, $(TESTS))
 check: $(TESTS)
 
 $(TESTS):%: %.c
-	eval $(C2NEWSPEAK) $*.c
+	eval $(C2NEWSPEAK) $*.c &> /dev/null
 	eval $(NPKBUGFIND) `[ -e $*.in ] && cat $*.in` a.npk &> $*.bak
 	dos2unix $*.bak
 	if [ -e $*.spec ]; \
@@ -29,7 +29,7 @@ $(TESTS):%: %.c
 	touch $*
 
 $(TESTS.SPEC):%.spec: %.c
-	eval $(C2NEWSPEAK) $*.c
+	eval $(C2NEWSPEAK) $*.c &> /dev/null
 	eval $(NPKBUGFIND) `[ -e $*.in ] && cat $*.in` a.npk &> $*.spec
 	dos2unix $*.spec
 	cat $*.spec

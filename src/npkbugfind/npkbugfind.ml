@@ -47,6 +47,9 @@ object (this)
 	  UnOp (Cast (Float _, Int _), Const _) -> 
 	    this#print_warning 
 	      "useless float constant: immediate cast to an int"
+	| UnOp (Coerce b, Const CInt x) when not (Newspeak.belongs x b) ->
+	    this#print_warning 
+	      "invalid type for integer constant: integer overflow" 
 	| _ -> ()
     in
       true
