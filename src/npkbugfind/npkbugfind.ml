@@ -63,10 +63,80 @@ object (this)
 
 end
 
+let cur_loc = ref Newspeak.unknown_loc
+
+let print_warning msg =
+  let (file, line, _) = !cur_loc in
+  let pos = 
+    if !cur_loc = Newspeak.unknown_loc then ""
+    else " in "^file^" line "^(string_of_int line)
+  in
+    print_endline ("Warning: "^msg^pos)
+
+let scan_unop env op e =
+  match op with
+      Belongs _ -> e::env
+    | _ -> env
+
+let scan_binop env op e1 e2 =
+  match op with
+      Eq (Int _) | Gt (Int _) when (List.mem e1 env) || (List.mem e2 env) ->
+	print_warning ("expression checked after being used for array access: "
+			^"make sure array access is really protected");
+       env
+      | _ -> env
+
+let rec scan_exp env x =
+  match x with
+      Lval (lv, _) | AddrOf (lv, _) -> scan_lval env lv
+    | UnOp (op, e) -> 
+	let env = scan_exp env e in
+	  scan_unop env op e
+    | BinOp (op, e1, e2) -> 
+	let env = scan_exp env e1 in
+	let env = scan_exp env e2 in
+	  scan_binop env op e1 e2
+    | Const _ | AddrOfFun _ -> env
+
+and scan_lval env x =
+  match x with
+      Local _ | Global _ -> env
+    | Deref (e, _) -> scan_exp env e
+    | Shift (lv, e) -> 
+	let env = scan_lval env lv in
+	  scan_exp env e
+
+let rec scan_blk env x = List.iter (scan_stmt env) x
+
+and scan_stmt env (x, loc) =
+  cur_loc := loc;
+  match x with
+      ChooseAssert choices -> List.iter (scan_choice env) choices
+    | InfLoop body | Decl (_, _, body) -> scan_blk env body
+    | DoWith (body, _, action) ->
+	scan_blk env body;
+	scan_blk env action
+    | Goto _ | Call _ | Set _ | Copy _ -> ()
+
+and scan_choice env (conds, body) =
+  let env = ref env in
+  let scan_exp x = env := scan_exp !env x in
+    List.iter scan_exp conds;
+    scan_blk !env body
+
+let scan_fundef _ (_, body) =
+  match body with
+      Some blk -> scan_blk [] blk
+    | _ -> ()
+
+let scan_prog (_, fundefs, _) = 
+  Hashtbl.iter scan_fundef fundefs
+
 let scan f =
   let (_, prog, _) = Newspeak.read f in
   let scanner = (new scanner :> Newspeak.visitor) in
-    Newspeak.visit scanner prog
+    Newspeak.visit scanner prog;
+    scan_prog prog
 
 let _ = 
   try
