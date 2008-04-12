@@ -50,6 +50,13 @@ object (this)
 	| UnOp (Coerce b, Const CInt x) when not (Newspeak.belongs x b) ->
 	    this#print_warning 
 	      "invalid type for integer constant: integer overflow" 
+	| UnOp (Cast (t1, t2), 
+		BinOp (_, 
+		       UnOp (Cast (t2a, t1a), _), 
+		       UnOp (Cast (t2b, t1b), _)))
+	    when t1 = t1a && t1 = t1b && t2 = t2a && t2 = t2b ->
+	    this#print_warning 
+	      "maybe unnecessary casts, due to improper operator" 
 	| _ -> ()
     in
       true
