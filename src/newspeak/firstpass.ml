@@ -237,7 +237,7 @@ let translate (globals, spec) =
     and translate_field_sequence o fields seq =
       match (fields, seq) with
 	  ((fname, (f_o, t))::fields, (expected_f, hd)::seq) ->
-	    let o = o + f_o in
+	    let f_o = o + f_o in
 	    let _ = 
 	      match expected_f with
 		  Some f when fname <> f ->
@@ -245,14 +245,14 @@ let translate (globals, spec) =
 		      ("initialization of field "^fname^" expected")
 		| _ -> ()
 	    in
-	    let _ = translate o t hd in
+	    let _ = translate f_o t hd in
 	      translate_field_sequence o fields seq
 
 	| ([], []) -> ()
 
 	| ((_, (f_o, t))::fields, []) ->
-	    let o = o + f_o in
-	    let _ = fill_with_zeros o t in
+	    let f_o = o + f_o in
+	    let _ = fill_with_zeros f_o t in
 	      if (fields = []) then begin
 		Npkcontext.report_dirty_warning 
 		  "Firstpass.translate_init.translate_field_sequence" 
