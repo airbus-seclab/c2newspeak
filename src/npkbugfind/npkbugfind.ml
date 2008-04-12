@@ -57,6 +57,10 @@ object (this)
 	    when t1 = t1a && t1 = t1b && t2 = t2a && t2 = t2b ->
 	    this#print_warning 
 	      "maybe unnecessary casts, due to improper operator" 
+	| BinOp (MinusI, Const CInt x, Lval (_, Int (Signed, _))) 
+	    when Nat.compare x Nat.zero = 0 -> 
+	    this#print_warning 
+	      "negation of a variable: make sure it cannot be min_int"
 	| _ -> ()
     in
       true
