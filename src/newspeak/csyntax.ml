@@ -87,6 +87,10 @@ and stmtkind =
     | Continue
     | Return of exp option
     | Block of blk
+    | Goto of lbl
+    | Label of lbl
+
+and lbl = string
 
 and static = bool
 

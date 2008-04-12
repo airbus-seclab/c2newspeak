@@ -12,7 +12,7 @@ TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 check: $(TESTS)
 
 $(TESTS): ../../bin/c2newspeak $@
-	eval $(C2NEWSPEAK) $@.c
+	eval $(C2NEWSPEAK) $@.c &> /dev/null
 	wc -c $@.no > $@.bak
 	dos2unix $@.bak
 	if [ -e $@.spec ]; \

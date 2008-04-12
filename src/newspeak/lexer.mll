@@ -146,6 +146,7 @@ rule token spec_buf = parse
   | "for"               { FOR }
   | "enum"              { ENUM }
   | "extern"            { EXTERN }
+  | "goto"              { GOTO }
   | "if"                { IF }
   | "return"            { RETURN }
   | "sizeof"            { SIZEOF }

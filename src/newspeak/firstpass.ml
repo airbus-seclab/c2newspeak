@@ -88,6 +88,9 @@ let translate (globals, spec) =
 
   let tmp_cnt = ref 0 in
 
+  let lbl_tbl = Hashtbl.create 10 in
+  let lbl_cnt = ref default_lbl in
+
   let add_var loc (t, x) =
     let id = C.fresh_id () in
       Hashtbl.add symbtbl x (VarSymb (C.Var id), t, loc);
@@ -184,6 +187,14 @@ let translate (globals, spec) =
 		("Multiple definitions of function "^f^" body")
     with Not_found ->
       Npkcontext.error "Firstpass.update_funbody" "Unreachable statement"
+  in
+
+  let translate_lbl lbl =
+    try Hashtbl.find lbl_tbl lbl
+    with Not_found -> 
+      incr lbl_cnt;
+      Hashtbl.add lbl_tbl lbl !lbl_cnt;
+      !lbl_cnt
   in
 
   let rec cast (e, t) t' = 
@@ -780,42 +791,60 @@ let translate (globals, spec) =
       push_enum (x, v) loc
 
   and translate_blk x = 
+    let rec translate x =
     match x with
       | (EDecl (x, v), loc)::body -> 
 	  translate_enum (x, v) loc;
 	  let body = translate_blk body in
 	    remove_symb x;
-	    body
-
+	    (body, [])
+	      
       (* TODO: not good, simplify code *)
       | (VDecl (None, t, _, _), loc)::body -> 
 	  Npkcontext.set_loc loc;
 	  let _ = translate_typ t in
-	    translate_blk body
-
+	    (translate_blk body, [])
+	      
       | (VDecl (Some x, t, static, init), loc)::body when static -> 
 	  Npkcontext.set_loc loc;
 	  let (t, init) = translate_glb_init t init in
 	  let t' = translate_typ t in
-(* TODO: code not nice: the signature of this function is not good *)
+          (* TODO: code not nice: the signature of this function is not good *)
 	    add_static x loc (t, Some init, t');
 	    let body = translate_blk body in
 	      remove_symb x;
-	      body
+	      (body, [])
 	  
       | (VDecl (Some x, t, _, init), loc)::body -> 
 	  let init = translate_local_decl (x, t, init) loc in
 	  let body = translate_blk body in
 	    remove_symb x;
-	    init@body
+	    (init@body, [])
+	      
+      | (Label lbl, loc)::tl -> 
+	  Npkcontext.report_dirty_warning "Firstpass.translate_blk"
+	    ("labels and goto statements are error-prone, "
+	      ^"they should be avoided at all costs");
+	  let lbl = translate_lbl lbl in
+	  let (x, tl) = translate tl in
+	    ([], (lbl, loc, x)::tl)
 
       | hd::tl -> 
 	  let hd = translate_stmt hd in
-	  let tl = translate_blk tl in
-	    hd@tl
+	  let (x, tl) = translate tl in
+	    (hd@x, tl)
+	      
+      | [] -> ([], [])      
+    in
+    let rec stitch (x, tl) =
+      match tl with
+	  [] -> x
+	| (lbl, loc, blk)::tl -> 
+	    let blk = (C.Block (x, Some lbl), loc)::blk in
+	      stitch (blk, tl)
+    in
+      stitch (translate x)
 
-      | [] -> []
-  
   and translate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
     match x with
@@ -849,6 +878,13 @@ let translate (globals, spec) =
 	  let return = (Return None, loc) in
 	    translate_blk (set::return::[])
 
+      | Goto lbl -> 
+	  Npkcontext.report_dirty_warning "Firstpass.translate_blk"
+	    ("labels and goto statements are error-prone, "
+	      ^"they should be avoided at all costs");
+	  let lbl = translate_lbl lbl in
+	    (C.Goto lbl, loc)::[]
+
       | If (e, blk1, blk2) ->
 	  let blk1 = translate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
@@ -875,7 +911,7 @@ let translate (globals, spec) =
 	  let body = (C.Block (body, Some default_lbl), loc)::default in
 	    (C.Block (body, Some brk_lbl), loc)::[]
 
-      | VDecl _ | EDecl _ -> 
+      | Label _ | VDecl _ | EDecl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt"
 	    "unreachable code"
 
@@ -1063,7 +1099,9 @@ let translate (globals, spec) =
 	  let body = (C.Block (body, Some ret_lbl), loc)::[] in
 	    update_funbody f' (formalids, body);
 	    remove_formals args;
-	    current_fun := ""
+	    current_fun := "";
+	    Hashtbl.clear lbl_tbl;
+	    lbl_cnt := default_lbl
 
       | FunctionDef _ -> 
 	  Npkcontext.error "Firstpass.translate_global" 

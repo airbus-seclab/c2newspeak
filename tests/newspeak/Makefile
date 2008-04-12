@@ -31,7 +31,7 @@ $(EXEC): %_check: %.ml
 	ocamlc -I ../../bin ../../bin/newspeak.cma $*.ml -o $*_check
 
 %.npk: %.c
-	../../bin/c2newspeak $*.c -o $*.npk
+	@../../bin/c2newspeak $*.c -o $*.npk
 
 
 clean:

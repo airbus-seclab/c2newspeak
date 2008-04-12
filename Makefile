@@ -77,4 +77,4 @@ check:
 	$(MAKE) -C tests
 
 check-all: check $(DISTDIR)
-	cd $(DISTDIR); $(MAKE) install
+	cd $(DISTDIR); $(MAKE) all

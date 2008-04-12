@@ -114,9 +114,9 @@ CLEANFILES=*~ .depend \
 suffix.cmx=$(addsuffix .cmx,$(1))
 
 #rules
-.PHONY: all clean install doc
+.PHONY: all clean all doc
 
-install: $(COMPONENTS) bin/newspeak.cmxa doc
+all: $(COMPONENTS) bin/newspeak.cmxa doc
 
 $(CIL):
 	cd cil; tar xzf cil-1.3.5.tar.gz

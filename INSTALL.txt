@@ -2,7 +2,7 @@ C2Newspeak is a library to compile C to the intermediate language Newspeak.
 Newspeak is designed for the purpose of static analysis.
 
 - Do:
-    make install
+    make
   This will compile and copy to the bin/ directory the files:
     newspeak.cmi	     newspeak compiled interface
     newspeak.cma	     newspeak library for caml bytecode compiler

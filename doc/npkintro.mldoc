@@ -36,7 +36,7 @@
 {2 Installation }
 {ol
 {- Do:
-    {v make install v}}
+    {v make v}}
 }
   This will compile and copy to the bin/ directory the files:
    - [newspeak.cmi]:	      newspeak compiled interface

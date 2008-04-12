@@ -125,7 +125,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
 %token EXTERN FOR IF RETURN SIZEOF 
-%token SWITCH TYPEDEF WHILE
+%token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
@@ -249,7 +249,8 @@ statement_list:
 ;;
 
 statement:
-  declaration                              { build_stmtdecl false $1 }
+  IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
+| declaration                              { build_stmtdecl false $1 }
 | STATIC declaration                       { build_stmtdecl true $2 }
 | TYPEDEF declaration                      { build_typedef $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
@@ -262,6 +263,7 @@ statement:
 | assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
+| GOTO IDENTIFIER SEMICOLON                { [Goto $2, get_loc ()] }
 | compound_statement                       { [Block $1, get_loc ()] }
 | SEMICOLON                                { [] }
 ;;
