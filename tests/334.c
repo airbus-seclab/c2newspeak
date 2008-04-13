@@ -23,13 +23,11 @@
   email: charles.hymans@penjili.org
 */
 
-struct {
-  int a;
-  int b;
-  int c;
-} x = { 1, 2, 3 };
-
 void main() {
-  int y;
-  y = x.c;
+  int x;
+ lbl:
+  while (x) {
+    goto lbl;
+    x = 0;
+  }
 }

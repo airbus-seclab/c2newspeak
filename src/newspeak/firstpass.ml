@@ -821,6 +821,13 @@ let translate (globals, spec) =
 	    remove_symb x;
 	    (init@body, [])
 	      
+      (* TODO: do the case where suffix is <> [] *)
+      (* TODO: remove body, suffix from For, use goto and labels
+	 remove break. Use goto... *)
+      | ((Label _, _) as stmt)::(For ([], e, body, []), loc)::tl ->
+	  let blk = ((For ([], e, body@(stmt::[]), []), loc)::tl) in
+	    translate blk
+
       | (Label lbl, loc)::tl -> 
 	  Npkcontext.report_dirty_warning "Firstpass.translate_blk"
 	    ("labels and goto statements are error-prone, "
