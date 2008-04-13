@@ -1,5 +1,4 @@
-Warning: labels and goto statements are error-prone, they should be avoided at all costs in 332.c line 29
-Warning: labels and goto statements are error-prone, they should be avoided at all costs in 332.c line 31
+Warning: goto statements are error-prone, they should be avoided at all costs in 332.c line 29
 Newspeak output
 ---------------
 332.c

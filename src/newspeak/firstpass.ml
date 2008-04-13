@@ -829,9 +829,6 @@ let translate (globals, spec) =
 	    translate blk
 
       | (Label lbl, loc)::tl -> 
-	  Npkcontext.report_dirty_warning "Firstpass.translate_blk"
-	    ("labels and goto statements are error-prone, "
-	      ^"they should be avoided at all costs");
 	  let lbl = translate_lbl lbl in
 	  let (x, tl) = translate tl in
 	    ([], (lbl, loc, x)::tl)
@@ -886,9 +883,6 @@ let translate (globals, spec) =
 	    translate_blk (set::return::[])
 
       | Goto lbl -> 
-	  Npkcontext.report_dirty_warning "Firstpass.translate_blk"
-	    ("labels and goto statements are error-prone, "
-	      ^"they should be avoided at all costs");
 	  let lbl = translate_lbl lbl in
 	    (C.Goto lbl, loc)::[]
 

@@ -263,7 +263,11 @@ statement:
 | assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
-| GOTO IDENTIFIER SEMICOLON                { [Goto $2, get_loc ()] }
+| GOTO IDENTIFIER SEMICOLON                { 
+    Npkcontext.report_dirty_warning "Parser.statement"
+      "goto statements are error-prone, they should be avoided at all costs";
+    [Goto $2, get_loc ()] 
+  }
 | compound_statement                       { [Block $1, get_loc ()] }
 | SEMICOLON                                { [] }
 ;;
