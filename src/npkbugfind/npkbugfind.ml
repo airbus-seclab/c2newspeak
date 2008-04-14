@@ -84,12 +84,12 @@ let scan_unop env op e =
 
 let scan_binop env op e1 e2 =
   match op with
-      Eq (Int _) | Gt (Int _) when (List.mem e1 env) || (List.mem e2 env) ->
+    | Gt (Int _) when (List.mem e1 env) || (List.mem e2 env) ->
 	print_warning ("expression checked after being used for array access: "
-			^"make sure array access is really protected");
-       env
-      | _ -> env
-
+		       ^"make sure array access is really protected");
+	env
+    | _ -> env
+	
 let rec scan_exp env x =
   match x with
       Lval (lv, _) | AddrOf (lv, _) -> scan_lval env lv
