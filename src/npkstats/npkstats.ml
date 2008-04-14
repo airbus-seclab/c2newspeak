@@ -27,6 +27,8 @@
 *)
 open Newspeak
 
+let debug = ref false
+
 let verbose = ref false
 
 let obfuscate = ref false
@@ -42,7 +44,7 @@ let add_counted_call f = fun_to_count := f::!fun_to_count
 let speclist = 
   [("--count-call", Arg.String add_counted_call, 
     "count the number of function calls");
-    
+
    ("--verbose", Arg.Set verbose, 
     "prints out the detailed statistics for each function");
   
@@ -50,7 +52,9 @@ let speclist =
    
    ("--csv", Arg.Set graphs, "generates data into csv format");
 
-   ("-o", Arg.Set_string output, "changes name of output, default is 'a'")
+   ("-o", Arg.Set_string output, "changes name of output, default is 'a'");
+
+   ("--debug", Arg.Set debug, "debugging mode")
   ]
 
 type counters = 
@@ -262,7 +266,7 @@ let _ =
 
     let (_, prog, ptr_sz) = Newspeak.read !input in
     let collector = new collector ptr_sz !fun_to_count in
-    let stack_height = Stackcount.count ptr_sz prog in
+    let stack_height = Stackcount.count !debug ptr_sz prog in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
       print_endline (collector#to_string !verbose);
       Stackcount.print stack_height;
