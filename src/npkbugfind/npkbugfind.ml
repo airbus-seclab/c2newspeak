@@ -36,10 +36,24 @@ let anon_fun file = input := file::!input
 
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
+let warnings = ref []
+
+let print_warning loc msg =
+  if not (List.mem (loc, msg) !warnings) then begin
+    warnings := (loc, msg)::!warnings;
+    let (file, line, _) = loc in
+    let pos = 
+      if loc = Newspeak.unknown_loc then ""
+      else " in "^file^" line "^(string_of_int line)
+    in
+      print_endline ("Warning: "^msg^pos)
+  end
 
 class scanner =
 object (this)
   inherit Newspeak.visitor
+
+  method print_warning msg = print_warning (this#get_loc ()) msg
     
   method process_exp e =
     let _ = 
@@ -69,14 +83,6 @@ end
 
 let cur_loc = ref Newspeak.unknown_loc
 
-let print_warning msg =
-  let (file, line, _) = !cur_loc in
-  let pos = 
-    if !cur_loc = Newspeak.unknown_loc then ""
-    else " in "^file^" line "^(string_of_int line)
-  in
-    print_endline ("Warning: "^msg^pos)
-
 let scan_unop env op e =
   match op with
       Belongs _ -> e::env
@@ -85,8 +91,9 @@ let scan_unop env op e =
 let scan_binop env op e1 e2 =
   match op with
     | Gt (Int _) when (List.mem e1 env) || (List.mem e2 env) ->
-	print_warning ("expression checked after being used for array access: "
-		       ^"make sure array access is really protected");
+	print_warning !cur_loc 
+	  ("expression checked after being used for array access: "
+	   ^"make sure array access is really protected");
 	env
     | _ -> env
 	

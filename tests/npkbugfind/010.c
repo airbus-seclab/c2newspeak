@@ -22,17 +22,14 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 */
-// npkbugfind should not signal any warning here
+// npkbugfind should report only one warning, not two
 
 void main() {
-  int x;
-  int y;
-  int u;
-  int t[10];
-  y = 5;
-  if (u>t[y]) { 
-    while (x<y) {
-      x=x+1;
-    }
+  int i;
+  char t[10];
+  
+  i = 0 ;
+  while ((t[i] != 0) && (i < 10)) {
+    i++;
   }
 }
