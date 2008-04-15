@@ -48,7 +48,7 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             $(addprefix tests/npkcheck/,000) \
             $(addprefix tests/newspeak/,000 001 002 003) \
             $(addprefix tests/npkbugfind/,000 001 002 003 004 005 006 007) \
-            $(addprefix tests/npkbugfind/,008) \
+            $(addprefix tests/npkbugfind/,008 009) \
             tests/newspeak/*.exe tests/newspeak/003.npk \
             tests/newspeak/*_check
 

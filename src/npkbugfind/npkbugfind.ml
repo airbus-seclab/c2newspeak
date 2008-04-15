@@ -116,7 +116,7 @@ and scan_stmt env (x, loc) =
   cur_loc := loc;
   match x with
       ChooseAssert choices -> List.iter (scan_choice env) choices
-    | InfLoop body | Decl (_, _, body) -> scan_blk env body
+    | InfLoop body | Decl (_, _, body) -> scan_blk [] body
     | DoWith (body, _, action) ->
 	scan_blk env body;
 	scan_blk env action
