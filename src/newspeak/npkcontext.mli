@@ -44,6 +44,7 @@ val global_zero_init : bool ref
 val castor_allowed : bool ref
 
 
+val forward_goto : bool ref
 val dirty_syntax : bool ref
 val strict_syntax : bool ref
 

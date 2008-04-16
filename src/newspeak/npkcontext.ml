@@ -44,6 +44,8 @@ open Params
 
 (* Translation options *)
 
+let forward_goto = ref false
+
 let dirty_syntax = ref false
 let strict_syntax = ref false
 
@@ -119,6 +121,9 @@ let argslist = [
 
   ("--dirty", Arg.Set dirty_syntax,
    "allows dirty syntax");
+
+  ("--accept-forward-goto", Arg.Set forward_goto,
+   "accepts forward goto statements");
 
   ("--strict", Arg.Set strict_syntax,
    "sets strict syntax");
