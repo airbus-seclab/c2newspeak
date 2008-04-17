@@ -1,7 +1,3 @@
-Warning: 'short' is not normalized: use 'short int' instead in 124.c line 29
-Warning: 'short' is not normalized: use 'short int' instead in 124.c line 30
-Warning: 'long' is not normalized: use 'long int' instead in 124.c line 33
-Warning: 'long' is not normalized: use 'long int' instead in 124.c line 34
 Newspeak output
 ---------------
 124.c

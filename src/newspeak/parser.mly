@@ -285,20 +285,20 @@ iteration_statement:
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
-	Npkcontext.report_strict_error "Parser.iteration_statement" 
+	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "init statement expected";
 	([], $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
-	Npkcontext.report_strict_error "Parser.iteration_statement" 
+	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "increment statement expected";
 	($3, $5, [], $7) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
-	Npkcontext.report_strict_error "Parser.iteration_statement" 
+	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "init statement expected";
 	([], $4, $6, []) 
       }
@@ -309,7 +309,7 @@ iteration_statement:
 
 expression_statement:
   SEMICOLON                                { 
-    Npkcontext.report_strict_error "Parser.expression_statement" 
+    Npkcontext.print_warning "Parser.expression_statement" 
       "halting condition should be explicit";
     exp_of_int 1
   }
@@ -611,7 +611,7 @@ type_specifier:
 ident_or_tname:
   IDENTIFIER                             { $1 }
 | TYPEDEF_NAME                           {
-    Npkcontext.report_strict_error "Parser.ident_or_tname" 
+    Npkcontext.print_warning "Parser.ident_or_tname" 
       ("identifier "^$1^" is defined as a type, avoid using it for "
 	^"another purpose");
     $1 
@@ -646,17 +646,17 @@ ityp:
 | LONG INT                               { Config.size_of_long }
 | LONG LONG INT                          { Config.size_of_longlong }
 | SHORT                                  { 
-    Npkcontext.report_strict_error "Parser.ityp" 
+    Npkcontext.report_strict_warning "Parser.ityp" 
       "'short' is not normalized: use 'short int' instead";
     Config.size_of_short 
   }
 | LONG                                   { 
-    Npkcontext.report_strict_error "Parser.ityp" 
+    Npkcontext.report_strict_warning "Parser.ityp" 
       "'long' is not normalized: use 'long int' instead";
     Config.size_of_long 
   }
 | LONG LONG                              { 
-    Npkcontext.report_strict_error "Parser.ityp" 
+    Npkcontext.report_strict_warning "Parser.ityp" 
       "'long long' is not standard: use 'long long int' instead";
     Config.size_of_longlong 
   }

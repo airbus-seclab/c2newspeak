@@ -115,7 +115,7 @@ val get_fname : unit -> string
 val print_warning : string -> string -> unit
 val print_morewarn : string -> string -> unit
 val report_dirty_warning: string -> string -> unit
-val report_strict_error: string -> string -> unit
+val report_strict_warning: string -> string -> unit
 
 (** Displays a message to the user *)
 val print_debug : string -> unit

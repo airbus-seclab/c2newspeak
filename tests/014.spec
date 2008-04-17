@@ -1,4 +1,3 @@
-Warning: 'long long' is not standard: use 'long long int' instead in 014.c line 33
 Newspeak output
 ---------------
 014.c
