@@ -134,6 +134,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
+%token EXTENSION
 %token EOF
 
 %token <string> IDENTIFIER
@@ -145,6 +146,8 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
 %type <string list * Csyntax.prog> parse
 %start parse
+%type <Csyntax.prog> translation_unit
+%start translation_unit
 
 %%
 /* TODO: simplify code by generalizing!!! 
@@ -179,7 +182,7 @@ external_declaration:
       "defined functions should not be extern";
     build_fundef false $2 
 }
-| TYPEDEF declaration                      { build_glbtypedef $2 }
+| global_typedef                           { build_glbtypedef $1 }
 ;;
 
 function_definition:
@@ -666,4 +669,10 @@ ftyp:
   FLOAT                                  { Config.size_of_float }
 | DOUBLE                                 { Config.size_of_double }
 | LONG DOUBLE                            { Config.size_of_longdouble }
+;;
+
+//Section that is dependent on version of the compiler (standard ANSI or GNU)
+global_typedef:
+  TYPEDEF declaration                      { $2 }
+| EXTENSION TYPEDEF declaration            { $3 }
 ;;

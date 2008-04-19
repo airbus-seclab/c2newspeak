@@ -44,6 +44,8 @@ open Params
 
 (* Translation options *)
 
+let gnuc = ref false
+
 let forward_goto = ref false
 
 let dirty_syntax = ref false
@@ -145,8 +147,10 @@ let argslist = [
    "adds an hypothesis to the analysis");*)
 
 
-  ("--cil", Arg.Set (verb_cil),
+  ("--cil", Arg.Set verb_cil,
    "verbose option: displays CIL output");
+
+  ("--gnuc", Arg.Set gnuc, "allow GNU C extensions");
   
   ("--cil-printer", Arg.String (Cilutils.setCilPrinter),
    "verbose options: uses \"default\" or \"plain\" Cil output");

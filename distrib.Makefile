@@ -96,7 +96,8 @@ npkbugfind.CMX:=$(addsuffix .cmx,$(npkbugfind.FILES))
 FILES=$(foreach comp,$(COMPNAMES),$($(comp).FILES))
 ML=$(addsuffix .ml,$(FILES))
 
-c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer spec_parser spec_lexer
+c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer \
+                       spec_parser spec_lexer
 c2newspeak.CLEANFILES:=$(addsuffix .ml, $(c2newspeak.CLEANFILES)) \
                        $(addsuffix .mli, $(c2newspeak.CLEANFILES)) \
                        parser.output pp_parser.output spec_parser.output
@@ -110,7 +111,7 @@ CLEANFILES=*~ .depend \
 	src/version.cmo src/newspeak/newspeak.cmo \
 	$(addsuffix .cmi,$(FILES)) $(addsuffix .cmx,$(FILES)) \
 	$(addsuffix .o,$(FILES)) \
-	$(c2newspeak.CLEANFILES)
+	$(c2newspeak.CLEANFILES) 
 
 #functions
 suffix.cmx=$(addsuffix .cmx,$(1))

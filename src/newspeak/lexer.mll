@@ -60,7 +60,9 @@ let int_of_oct_character str =
 let int_of_character str = int_of_char (str.[1])
 
 let token_of_ident str = 
-  if Synthack.is_type str then TYPEDEF_NAME str 
+  (* GNU C extensions keywords *)
+  if (!Npkcontext.gnuc) && (str = "__extension__") then EXTENSION
+  else if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
 
 let trim_newline str = 

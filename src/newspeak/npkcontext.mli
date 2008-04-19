@@ -43,7 +43,7 @@ val global_zero_init : bool ref
 (** This option allows horrible casts (int <-> ptr) to be translated *)
 val castor_allowed : bool ref
 
-
+val gnuc : bool ref
 val forward_goto : bool ref
 val dirty_syntax : bool ref
 val strict_syntax : bool ref
