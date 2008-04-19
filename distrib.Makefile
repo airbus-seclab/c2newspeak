@@ -36,15 +36,12 @@ OCAMLDOC=ocamldoc
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc
 
-#Makefile setup
-.SECONDEXPANSION:
-
 #FILES
 CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
 COMPNAMES=c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck \
-            npkbugfind
+          npkbugfind
 COMPONENTS=$(addprefix bin/,$(COMPNAMES))
 
 DIRS:=newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck npkbugfind
@@ -67,32 +64,37 @@ c2newspeak.FILES:=\
         link c2newspeak
 c2newspeak.FILES:=version $(addprefix newspeak/, $(c2newspeak.FILES))
 c2newspeak.FILES:=$(addprefix src/,$(c2newspeak.FILES))
+c2newspeak.CMX:=$(addsuffix .cmx,$(c2newspeak.FILES))
 
 npkstrip.FILES:=version newspeak/newspeak npkstrip/npkstrip
 npkstrip.FILES:=$(addprefix src/,$(npkstrip.FILES))
+npkstrip.CMX:=$(addsuffix .cmx,$(npkstrip.FILES))
 
 npkstats.FILES:=version newspeak/newspeak npkstats/stackcount npkstats/npkstats
 npkstats.FILES:=$(addprefix src/,$(npkstats.FILES))
+npkstats.CMX:=$(addsuffix .cmx,$(npkstats.FILES))
 
 npksimplify.FILES:=normalize store copy_propagation inline \
                    var_hoist npksimplify
 npksimplify.FILES:=version newspeak/newspeak \
                    $(addprefix npksimplify/,$(npksimplify.FILES))
 npksimplify.FILES:=$(addprefix src/,$(npksimplify.FILES))
+npksimplify.CMX:=$(addsuffix .cmx,$(npksimplify.FILES))
 
 npk2bytesz.FILES:=version newspeak/newspeak npk2bytesz/npk2bytesz
 npk2bytesz.FILES:=$(addprefix src/,$(npk2bytesz.FILES))
+npk2bytesz.CMX:=$(addsuffix .cmx,$(npk2bytesz.FILES))
 
 npkcheck.FILES:=version newspeak/newspeak npkcheck/npkcheck
 npkcheck.FILES:=$(addprefix src/,$(npkcheck.FILES))
+npkcheck.CMX:=$(addsuffix .cmx,$(npkcheck.FILES))
 
 npkbugfind.FILES:=version newspeak/newspeak npkbugfind/npkbugfind
 npkbugfind.FILES:=$(addprefix src/,$(npkbugfind.FILES))
+npkbugfind.CMX:=$(addsuffix .cmx,$(npkbugfind.FILES))
 
 FILES=$(foreach comp,$(COMPNAMES),$($(comp).FILES))
 ML=$(addsuffix .ml,$(FILES))
-
-NEWSPEAK=src/version.ml src/newspeak/newspeak.ml
 
 c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer spec_parser spec_lexer
 c2newspeak.CLEANFILES:=$(addsuffix .ml, $(c2newspeak.CLEANFILES)) \
@@ -114,7 +116,7 @@ CLEANFILES=*~ .depend \
 suffix.cmx=$(addsuffix .cmx,$(1))
 
 #rules
-.PHONY: all clean all doc
+.PHONY: clean doc
 
 all: $(COMPONENTS) bin/newspeak.cmxa doc
 
@@ -130,13 +132,20 @@ $(CIL):
 bin/newspeak.cmxa: $(INSTALL.FILES)
 	$(CP) -r $(INSTALL.FILES) bin
 
-newspeak.cma: src/version.cmi src/newspeak/newspeak.cmi $(NEWSPEAK)
-	$(OCAMLC) $(INCLUDE) $(LIB) -a $(NEWSPEAK) -o newspeak.cma
+NEWSPEAK:=src/version src/newspeak/newspeak
+NEWSPEAK.CMO:=$(addsuffix .cmo,$(NEWSPEAK))
+NEWSPEAK.CMX:=$(addsuffix .cmx,$(NEWSPEAK))
 
-newspeak.a newspeak.cmxa: src/version.cmi src/newspeak/newspeak.cmi $(NEWSPEAK)
-	$(OCAMLOPT) $(INCLUDE) -a $(NEWSPEAK) -o newspeak.cmxa
+newspeak.cma: $(NEWSPEAK.CMO)
+	$(OCAMLC) $(INCLUDE) $(LIB) -a $(NEWSPEAK.CMO) -o newspeak.cma
+
+newspeak.a newspeak.cmxa: $(NEWSPEAK.CMX)
+	$(OCAMLOPT) $(INCLUDE) -a $(NEWSPEAK.CMX) -o newspeak.cmxa
 
 %.cmi: %.mli
+	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+
+%.cmo: %.ml
 	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
 
 %.cmx: %.ml
@@ -164,8 +173,27 @@ clean:
 	@mkdir $(CILDIR) 2> /dev/null; true
 	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(TARGET).depend
 
-$(COMPONENTS): bin/%: $(CIL) $$(call suffix.cmx,$$($$*.FILES))
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(call suffix.cmx,$($*.FILES)) -o bin/$*
+bin/c2newspeak: $(CIL) $(c2newspeak.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(c2newspeak.CMX) -o $@
+
+bin/npkstrip: $(CIL) $(npkstrip.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npkstrip.CMX) -o $@
+
+bin/npkstats: $(CIL) $(npkstats.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npkstats.CMX) -o $@
+
+bin/npksimplify: $(CIL) $(npksimplify.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npksimplify.CMX) -o $@
+
+bin/npk2bytesz: $(CIL) $(npk2bytesz.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npk2bytesz.CMX) -o $@
+
+bin/npkcheck: $(CIL) $(npkcheck.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npkcheck.CMX) -o $@
+
+bin/npkbugfind: $(CIL) $(npkbugfind.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npkbugfind.CMX) -o $@
+
 
 include .depend
 
