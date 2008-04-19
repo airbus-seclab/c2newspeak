@@ -123,7 +123,7 @@ let hex_integer =
 
 let integer = (digit+ as value) sign? length?
 let float = 
-  ((digit+ | digit+ '.' digit+) (('e'|'E') '-'? digit+)? as value)
+  ((digit+ | digit+ '.' digit+ | '.' digit+) (('e'|'E') '-'? digit+)? as value)
   ("F" as suffix)?
 let identifier = letter (letter|digit)*
 let character = '\'' _ '\''
