@@ -46,6 +46,7 @@ FILE *fopen(const char *filename, const char *mode);
 int fclose(FILE *stream);
 int fputs(const char *s, FILE *stream);
 int fputc(int c, FILE *stream);
+size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
 
 
 
