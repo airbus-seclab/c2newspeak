@@ -31,6 +31,7 @@
 void free(void *);
 void exit(int);
 void *malloc(size_t);
+void *realloc(void *ptr, size_t size);
 int system(const char *);
 char *realpath(const char *file_name, char *resolved_name);
 unsigned long int strtoul(const char *str, char **endptr, int base);
