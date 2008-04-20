@@ -62,6 +62,7 @@ let int_of_character str = int_of_char (str.[1])
 let token_of_ident str = 
   (* GNU C extensions keywords *)
   if (!Npkcontext.gnuc) && (str = "__extension__") then EXTENSION
+  else if (!Npkcontext.gnuc) && (str = "__attribute__") then ATTRIBUTE
   else if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
 

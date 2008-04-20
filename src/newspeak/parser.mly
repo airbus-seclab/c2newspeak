@@ -134,7 +134,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token EXTENSION
+%token ATTRIBUTE EXTENSION
 %token EOF
 
 %token <string> IDENTIFIER
@@ -194,11 +194,6 @@ declaration:
   declaration_specifiers SEMICOLON         { ($1, (Abstract, None)::[]) }
 | declaration_specifiers 
   init_declarator_list SEMICOLON           { ($1, $2) }
-;;
-
-field_declaration:
-  declaration_specifiers 
-  struct_declarator_list                   { flatten_field_decl ($1, $2) }
 ;;
 
 struct_declarator_list:
@@ -535,18 +530,6 @@ init_list:
   }
 ;;
 
-abstract_declarator:
-| pointer                                  { Pointer Abstract }
-| pointer abstract_declarator              { Pointer $2 }
-| LPAREN abstract_declarator RPAREN        { $2 }
-| LBRACKET RBRACKET                        { Array (Abstract, None) }
-| LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
-| abstract_declarator 
-  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
-					       Function ($1, args, va_list) }
-| abstract_declarator LPAREN RPAREN        { Function ($1, [], false) }
-;;
-
 declarator:
 | pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
@@ -557,6 +540,18 @@ declarator:
   LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
 					       Function ($1, args, va_list) }
 | declarator LPAREN RPAREN                 { Function ($1, [], false) }
+;;
+
+abstract_declarator:
+| pointer                                  { Pointer Abstract }
+| pointer abstract_declarator              { Pointer $2 }
+| LPAREN abstract_declarator RPAREN        { $2 }
+| LBRACKET RBRACKET                        { Array (Abstract, None) }
+| LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
+| abstract_declarator 
+  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
+					       Function ($1, args, va_list) }
+| abstract_declarator LPAREN RPAREN        { Function ($1, [], false) }
 ;;
 
 struct_declarator:
@@ -678,7 +673,25 @@ ftyp:
 ;;
 
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
+
 global_typedef:
   TYPEDEF declaration                      { $2 }
+// GNU C extension
 | EXTENSION TYPEDEF declaration            { $3 }
+;;
+
+field_declaration:
+  declaration_specifiers 
+  struct_declarator_list                   { flatten_field_decl ($1, $2) }
+// GNU C extension
+| declaration_specifiers attribute
+  struct_declarator_list                   { flatten_field_decl ($1, $3) }
+;;
+
+attribute:
+  ATTRIBUTE LPAREN LPAREN IDENTIFIER 
+  RPAREN RPAREN                            { 
+    if $4 <> "__cdecl__" 
+    then Npkcontext.error "Parser.attribute" ("unknown attribute: "^$4)
+  }
 ;;
