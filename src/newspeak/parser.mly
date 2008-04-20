@@ -686,6 +686,8 @@ field_declaration:
 // GNU C extension
 | declaration_specifiers attribute
   struct_declarator_list                   { flatten_field_decl ($1, $3) }
+| EXTENSION declaration_specifiers
+  struct_declarator_list                   { flatten_field_decl ($2, $3) }
 ;;
 
 attribute:
