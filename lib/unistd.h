@@ -29,6 +29,7 @@
 #include <sys/types.h>
 
 int chroot(const char*);
+int chdir(const char *path);
 int close(int);
 unsigned int sleep(unsigned int);
 char *getpass(const char*);
