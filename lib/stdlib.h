@@ -39,6 +39,6 @@ void srand(unsigned int seed);
 int rand(void);
 char *getenv(const char *name);
 int atoi(const char *str);
-
+int atexit(void (*func)(void));
 
 #endif /* _STDLIB_H_ */
