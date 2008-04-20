@@ -607,6 +607,12 @@ type_specifier:
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some ($4, get_loc ())) }
+| SHORT UNSIGNED INT                     { 
+    Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short unsigned int' is not normalized: "
+	^"use 'usigned short int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_short) 
+  }
 ;;
 
 // ident_or_tname necessary because the namespace of structure and typedefs
