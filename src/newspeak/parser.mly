@@ -171,20 +171,6 @@ translation_unit:
 |                                          { [] }
 ;;
 
-external_declaration:
-  declaration                              { build_glbdecl (false, false) $1 }
-| EXTERN declaration                       { build_glbdecl (false, true) $2 }
-| STATIC declaration                       { build_glbdecl (true, false) $2 }
-| function_definition                      { build_fundef false $1 }
-| STATIC function_definition               { build_fundef true $2 }
-| EXTERN function_definition               { 
-    Npkcontext.report_dirty_warning "Parser.external_declaration" 
-      "defined functions should not be extern";
-    build_fundef false $2 
-}
-| global_typedef                           { build_glbtypedef $1 }
-;;
-
 function_definition:
   declaration_specifiers declarator 
   compound_statement                       { ($1, $2, $3) }
@@ -194,6 +180,11 @@ declaration:
   declaration_specifiers SEMICOLON         { ($1, (Abstract, None)::[]) }
 | declaration_specifiers 
   init_declarator_list SEMICOLON           { ($1, $2) }
+;;
+
+init_declarator:
+  declarator                               { ($1, None) }
+| declarator EQ init                       { ($1, Some $3) }
 ;;
 
 struct_declarator_list:
@@ -500,11 +491,6 @@ argument_expression_list:
   COMMA argument_expression_list           { $1::$3 }
 ;;
 
-init_declarator:
-  declarator                               { ($1, None) }
-| declarator EQ init                       { ($1, Some $3) }
-;;
-
 init:
   expression                               { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
@@ -528,18 +514,6 @@ init_list:
     "ugly initializer syntax";
   []
   }
-;;
-
-declarator:
-| pointer declarator                       { Pointer $2 }
-| LPAREN declarator RPAREN                 { $2 }
-| IDENTIFIER                               { Variable ($1, get_loc ()) }
-| declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
-| declarator LBRACKET RBRACKET             { Array ($1, None) }
-| declarator 
-  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
-					       Function ($1, args, va_list) }
-| declarator LPAREN RPAREN                 { Function ($1, [], false) }
 ;;
 
 abstract_declarator:
@@ -673,27 +647,54 @@ ftyp:
 ;;
 
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
-
-global_typedef:
-  TYPEDEF declaration                      { $2 }
+//TODO: find a way to factor some of these, possible!!!
+external_declaration:
+  declaration                              { build_glbdecl (false, false) $1 }
+| EXTERN declaration                       { build_glbdecl (false, true) $2 }
+| STATIC declaration                       { build_glbdecl (true, false) $2 }
+| function_definition                      { build_fundef false $1 }
+| STATIC function_definition               { build_fundef true $2 }
+| EXTERN function_definition               { 
+    Npkcontext.report_dirty_warning "Parser.external_declaration" 
+      "defined functions should not be extern";
+    build_fundef false $2 
+}
+| TYPEDEF declaration                      { build_glbtypedef $2 }
 // GNU C extension
-| EXTENSION TYPEDEF declaration            { $3 }
+| EXTENSION TYPEDEF declaration            { build_glbtypedef $3 }
+| EXTERN attribute declaration             { build_glbdecl (false, true) $3 }
 ;;
 
 field_declaration:
   declaration_specifiers 
   struct_declarator_list                   { flatten_field_decl ($1, $2) }
 // GNU C extension
-| declaration_specifiers attribute
-  struct_declarator_list                   { flatten_field_decl ($1, $3) }
 | EXTENSION declaration_specifiers
   struct_declarator_list                   { flatten_field_decl ($2, $3) }
+;;
+
+declarator:
+| pointer declarator                       { Pointer $2 }
+| LPAREN declarator RPAREN                 { $2 }
+| IDENTIFIER                               { Variable ($1, get_loc ()) }
+| declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
+| declarator LBRACKET RBRACKET             { Array ($1, None) }
+| declarator 
+  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
+					       Function ($1, args, va_list) }
+| declarator LPAREN RPAREN                 { Function ($1, [], false) }
+// GNU C extension
+| attribute declarator                     { $2 }
 ;;
 
 attribute:
   ATTRIBUTE LPAREN LPAREN IDENTIFIER 
   RPAREN RPAREN                            { 
-    if $4 <> "__cdecl__" 
+    if $4 = "dllimport" then begin
+      Npkcontext.print_warning "Parser.attribute" 
+	"ignoring attribute dllimport"
+    end;
+    if ($4 <> "__cdecl__" && $4 <> "dllimport") 
     then Npkcontext.error "Parser.attribute" ("unknown attribute: "^$4)
   }
 ;;
