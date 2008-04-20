@@ -158,6 +158,13 @@ rule token spec_buf = parse
   | "typedef"           { TYPEDEF }
   | "while"             { WHILE }
 
+(* additional keywords, syntax to avoid *)
+  | "__const"           { 
+      Npkcontext.report_dirty_warning "Lexer.spec_buf" 
+	("'__const' is not normalized: use 'const' instead");
+      CONST
+    }
+
 (* types *)
   | "char"              { CHAR }
   | "double"            { DOUBLE }
