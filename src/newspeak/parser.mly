@@ -177,9 +177,9 @@ function_definition:
 ;;
 
 declaration:
-  declaration_specifiers SEMICOLON         { ($1, (Abstract, None)::[]) }
+  declaration_specifiers                   { ($1, (Abstract, None)::[]) }
 | declaration_specifiers 
-  init_declarator_list SEMICOLON           { ($1, $2) }
+  init_declarator_list                     { ($1, $2) }
 ;;
 
 init_declarator:
@@ -239,9 +239,9 @@ statement_list:
 
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
-| declaration                              { build_stmtdecl false $1 }
-| STATIC declaration                       { build_stmtdecl true $2 }
-| TYPEDEF declaration                      { build_typedef $2 }
+| declaration SEMICOLON                    { build_stmtdecl false $1 }
+| STATIC declaration SEMICOLON             { build_stmtdecl true $2 }
+| TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
   ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
@@ -649,9 +649,9 @@ ftyp:
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
-  declaration                              { build_glbdecl (false, false) $1 }
-| EXTERN declaration                       { build_glbdecl (false, true) $2 }
-| STATIC declaration                       { build_glbdecl (true, false) $2 }
+  declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
+| EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $2 }
+| STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | EXTERN function_definition               { 
@@ -659,10 +659,11 @@ external_declaration:
       "defined functions should not be extern";
     build_fundef false $2 
 }
-| TYPEDEF declaration                      { build_glbtypedef $2 }
+| TYPEDEF declaration SEMICOLON            { build_glbtypedef $2 }
 // GNU C extension
-| EXTENSION TYPEDEF declaration            { build_glbtypedef $3 }
-| EXTERN attribute declaration             { build_glbdecl (false, true) $3 }
+| EXTENSION TYPEDEF declaration SEMICOLON  { build_glbtypedef $3 }
+| EXTERN attribute declaration SEMICOLON   { build_glbdecl (false, true) $3 }
+| declaration attribute SEMICOLON          { build_glbdecl (false, false) $1 }
 ;;
 
 field_declaration:
@@ -694,7 +695,7 @@ attribute:
       Npkcontext.print_warning "Parser.attribute" 
 	"ignoring attribute dllimport"
     end;
-    if ($4 <> "__cdecl__" && $4 <> "dllimport") 
+    if ($4 <> "__cdecl__") && ($4 <> "dllimport") && ($4 <> "noreturn") 
     then Npkcontext.error "Parser.attribute" ("unknown attribute: "^$4)
   }
 ;;
