@@ -28,6 +28,8 @@
 
 #include <stddef.h>
 
+#define	EOF	(-1)
+
 struct _FILE {
   unsigned char *p;
 };
@@ -38,6 +40,7 @@ FILE *stdin;
 int printf(const char*, ...);
 int fprintf(FILE *, const char *, ...);
 int scanf(const char*, ...);
+int getc(FILE *stream);
 char *fgets(char *s, int n, FILE *stream);
 char *gets(char *s);
 int snprintf(char *s, size_t n, const char *format, ...);
