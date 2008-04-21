@@ -48,8 +48,7 @@ and enumdecl = string * exp
 
 and declaration = (typ * string * location)
 
-(* true if variable list of arguments *)
-and ftyp = (typ * string) list * bool * typ
+and ftyp = (typ * string) list * typ
 
 and typ =
     | Void

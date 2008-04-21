@@ -99,7 +99,7 @@ let translate (globals, spec) =
 
   let remove_symb x = Hashtbl.remove symbtbl x in
 
-  let add_formals loc (args_t, _, ret_t) =
+  let add_formals loc (args_t, ret_t) =
     let ret_id = add_var loc (ret_t, ret_name) in
     let args_id = List.map (add_var loc) args_t in
       (ret_id, args_id)
@@ -548,8 +548,8 @@ let translate (globals, spec) =
 		  Npkcontext.error "Firstpass.translate_exp" 
 		    "Function type expected"
 	  in
-	  let (args_t, va_list, ret_t) = ft in
-	  let args = translate_args va_list args args_t in
+	  let (args_t, ret_t) = ft in
+	  let args = translate_args args args_t in
 	    (C.Call (ft', f, args), ret_t)
 
 (* TODO: should find a way to put this and SetOp together!! *)
@@ -605,13 +605,14 @@ let translate (globals, spec) =
 	    ((e, t)::args, size_of t + sz)
       | [] -> ([], 0)
 
-  and translate_args va_list args args_t =
+  and translate_args args args_t =
     let rec translate_args args args_t =
       match (args, args_t) with
-	  ([], (t, _)::[]) when va_list ->
+(* TODO: clean up, have this string in somewhere unique Or a distinct type *)
+	  ([], (t, "__builtin_newspeak_va_arg")::[]) ->
 	    let e = cast (translate_exp (exp_of_int 0)) t in
 	      e::[]
-	| (_, _::[]) when va_list -> 
+	| (_, (_, "__builtin_newspeak_va_arg")::[]) -> 
 	    let (args, sz) = translate_va_args args in
 	    let loc = Npkcontext.get_loc () in
 	    let t = Array (char_typ, Some (exp_of_int (sz/8))) in
@@ -757,7 +758,7 @@ let translate (globals, spec) =
       Hashtbl.add compdefs name (f, !n, !align);
       (f, !n)
 
-  and translate_ftyp (args, _, ret) =
+  and translate_ftyp (args, ret) =
     let args = List.map (fun (t, _) -> translate_typ t) args in
     let ret = translate_typ ret in
       (args, ret)
@@ -1077,12 +1078,12 @@ let translate (globals, spec) =
       | _ -> size_of t
   in
 
-  let translate_proto_ftyp f (args, va_list, ret) = 
+  let translate_proto_ftyp f (args, ret) = 
     if args = [] then begin
       Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
 	("Incomplete prototype for function "^f);
     end;
-    let (ft, _) = normalize_ftyp (args, va_list, ret) in
+    let (ft, _) = normalize_ftyp (args, ret) in
       translate_ftyp ft
   in
 

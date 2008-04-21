@@ -523,9 +523,8 @@ abstract_declarator:
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
 | LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
 | abstract_declarator 
-  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
-					       Function ($1, args, va_list) }
-| abstract_declarator LPAREN RPAREN        { Function ($1, [], false) }
+  LPAREN parameter_list RPAREN             { Function ($1, $3) }
+| abstract_declarator LPAREN RPAREN        { Function ($1, []) }
 ;;
 
 struct_declarator:
@@ -544,10 +543,15 @@ field_list:
 
 parameter_list:
   parameter_declaration COMMA 
-  parameter_list                           { let (tl, va_list) = $3 in 
-					       ($1::tl, va_list) }
-| parameter_declaration                    { ($1::[], false) }
-| ELLIPSIS                                 { ([], true) }
+  parameter_list                           { $1::$3 }
+| parameter_declaration                    { $1::[] }
+| ELLIPSIS                                 {
+    let loc = get_loc () in
+    let char_typ = Integer (Newspeak.Signed, Config.size_of_char) in
+(* TODO: this is a bit of a hack, 
+   maybe have a distinct type for builtin_va_arg *)
+      (char_typ, Pointer (Variable ("__builtin_newspeak_va_arg", loc)))::[] 
+  }
 ;;
 
 type_specifier:
@@ -681,9 +685,8 @@ declarator:
 | declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
 | declarator LBRACKET RBRACKET             { Array ($1, None) }
 | declarator 
-  LPAREN parameter_list RPAREN             { let (args, va_list) = $3 in
-					       Function ($1, args, va_list) }
-| declarator LPAREN RPAREN                 { Function ($1, [], false) }
+  LPAREN parameter_list RPAREN             { Function ($1, $3) }
+| declarator LPAREN RPAREN                 { Function ($1, []) }
 // GNU C extension
 | attribute declarator                     { $2 }
 ;;

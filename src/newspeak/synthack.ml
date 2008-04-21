@@ -23,9 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: this is a bit of a hack... *)
-let undefined = "!undefined"
-
 open Newspeak
 
 module B = Csyntax
@@ -45,8 +42,7 @@ type base_typ =
 and var_modifier = 
     | Abstract
     | Variable of (string * location)
-(* true if variable argument list *)
-    | Function of (var_modifier * decl list * bool)
+    | Function of (var_modifier * decl list)
     | Array of (var_modifier * B.exp option)
     | Pointer of var_modifier
 
@@ -147,11 +143,11 @@ and normalize_var_modifier b v =
   match v with
       Abstract -> (b, None, Newspeak.unknown_loc)
     | Variable (x, loc) -> (b, Some x, loc)
-    | Function (Variable (f, loc), args, va_list) -> 
-	(B.Fun (List.map normalize_arg args, va_list, b), Some f, loc)
-    | Function (Pointer v, args, va_list) -> 
+    | Function (Variable (f, loc), args) -> 
+	(B.Fun (List.map normalize_arg args, b), Some f, loc)
+    | Function (Pointer v, args) -> 
 	let args = List.map normalize_arg args in
-	  normalize_var_modifier (B.Ptr (B.Fun (args, va_list, b))) v
+	  normalize_var_modifier (B.Ptr (B.Fun (args, b))) v
     | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
     | Pointer v -> normalize_var_modifier (B.Ptr b) v
     | Function _ -> 

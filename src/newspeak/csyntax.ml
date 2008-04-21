@@ -50,8 +50,7 @@ and enumdecl = string * exp
 
 and declaration = (typ * string * location)
 
-(* true if variable list of arguments *)
-and ftyp = (typ * string) list * bool * typ
+and ftyp = (typ * string) list * typ
 
 and typ =
     | Void
@@ -213,8 +212,7 @@ let comp_of_typ t =
 	Npkcontext.error "Csyntax.fields_of_typ" 
 	  "Struct or union type expected"
 
-let normalize_ftyp (args, va_list, ret_t) =
-  let args = if va_list then args@va_arg::[] else args in
+let normalize_ftyp (args, ret_t) =
   let normalize_arg (t, x) =
     let t =
       match t with
@@ -232,7 +230,7 @@ let normalize_ftyp (args, va_list, ret_t) =
       | _ -> List.map normalize_arg args
   in
   let (_, args_name) = List.split args_t in
-    ((args_t, va_list, ret_t), args_name)
+    ((args_t, ret_t), args_name)
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
