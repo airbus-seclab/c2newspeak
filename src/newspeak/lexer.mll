@@ -180,7 +180,10 @@ rule token spec_buf = parse
   | character           { CHARACTER (int_of_character (Lexing.lexeme lexbuf)) }
   | oct_character       { CHARACTER (int_of_oct_character value) }
   | hex_character       { CHARACTER (int_of_hex_character value) }
+  | "\'\\t\'"           { CHARACTER 9 }
   | "\'\\n\'"           { CHARACTER 10 }
+  | "\'\\v\'"           { CHARACTER 11 }
+  | "\'\\f\'"           { CHARACTER 12 }
   | "\'\\r\'"           { CHARACTER 13 }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
