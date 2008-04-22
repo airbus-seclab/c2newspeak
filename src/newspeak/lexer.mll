@@ -60,9 +60,11 @@ let int_of_oct_character str =
 let int_of_character str = int_of_char (str.[1])
 
 let token_of_ident str = 
+  (* TODO: put them in a hashtbl! *)
   (* GNU C extensions keywords *)
   if (!Npkcontext.gnuc) && (str = "__extension__") then EXTENSION
   else if (!Npkcontext.gnuc) && (str = "__attribute__") then ATTRIBUTE
+  else if (!Npkcontext.gnuc) && (str = "__const") then CONST
   else if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
 
@@ -157,13 +159,6 @@ rule token spec_buf = parse
   | "switch"            { SWITCH }
   | "typedef"           { TYPEDEF }
   | "while"             { WHILE }
-
-(* additional keywords, syntax to avoid *)
-  | "__const"           { 
-      Npkcontext.report_dirty_warning "Lexer.spec_buf" 
-	("'__const' is not normalized: use 'const' instead");
-      CONST
-    }
 
 (* types *)
   | "char"              { CHAR }
