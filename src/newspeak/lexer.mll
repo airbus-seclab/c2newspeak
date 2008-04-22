@@ -65,6 +65,7 @@ let token_of_ident str =
   if (!Npkcontext.gnuc) && (str = "__extension__") then EXTENSION
   else if (!Npkcontext.gnuc) && (str = "__attribute__") then ATTRIBUTE
   else if (!Npkcontext.gnuc) && (str = "__const") then CONST
+  else if (!Npkcontext.gnuc) && (str = "__builtin_va_list") then VA_LIST
   else if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
 

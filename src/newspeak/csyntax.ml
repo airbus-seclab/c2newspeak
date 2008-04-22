@@ -62,6 +62,7 @@ and typ =
     | Struct of (string * declaration list option)
     | Union of (string * declaration list option)
     | Fun of ftyp
+    | Va_arg
 
 and init = 
     | Data of exp
@@ -139,7 +140,9 @@ let char_typ = Int char_kind
 
 let int_typ = Int (Signed, Config.size_of_int)
 
-let va_arg = (Ptr char_typ, "__builtin_newspeak_va_arg")
+(*
+let va_arg = (, "__builtin_newspeak_va_arg")
+  Ptr char_typ *)
 
 let exp_of_int i = 
   let t = Int (Signed, Config.size_of_int) in

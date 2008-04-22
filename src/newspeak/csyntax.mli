@@ -60,6 +60,7 @@ and typ =
     | Struct of (string * declaration list option)
     | Union of (string * declaration list option)
     | Fun of ftyp
+    | Va_arg
 
 and init = 
     | Data of exp
@@ -138,8 +139,6 @@ val int_cst_of_lexeme:
 val char_cst_of_lexeme: int -> cst
 
 val float_cst_of_lexeme: (string * char option) -> cst
-
-val va_arg: (typ * string)
 
 val comp_of_typ: typ -> string
 

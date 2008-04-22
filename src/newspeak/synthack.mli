@@ -8,6 +8,7 @@ type base_typ =
     | Union of (string * field list option)
     | Name of string
     | Enum of ((string * Csyntax.exp option) list * Newspeak.location) option
+    | Va_arg
 
 and var_modifier = 
     | Abstract

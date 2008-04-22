@@ -134,7 +134,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION
+%token ATTRIBUTE EXTENSION VA_LIST
 %token EOF
 
 %token <string> IDENTIFIER
@@ -547,10 +547,7 @@ parameter_list:
 | parameter_declaration                    { $1::[] }
 | ELLIPSIS                                 {
     let loc = get_loc () in
-    let char_typ = Integer (Newspeak.Signed, Config.size_of_char) in
-(* TODO: this is a bit of a hack, 
-   maybe have a distinct type for builtin_va_arg *)
-      (char_typ, Pointer (Variable ("__builtin_newspeak_va_arg", loc)))::[] 
+      (Va_arg, Variable ("__builtin_newspeak_va_arg", loc))::[] 
   }
 ;;
 
@@ -586,6 +583,7 @@ type_specifier:
 	^"use 'usigned short int' instead");
     Integer (Newspeak.Unsigned, Config.size_of_short) 
   }
+| VA_LIST                                { Va_arg }
 ;;
 
 // ident_or_tname necessary because the namespace of structure and typedefs

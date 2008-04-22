@@ -608,11 +608,10 @@ let translate (globals, spec) =
   and translate_args args args_t =
     let rec translate_args args args_t =
       match (args, args_t) with
-(* TODO: clean up, have this string in somewhere unique Or a distinct type *)
-	  ([], (t, "__builtin_newspeak_va_arg")::[]) ->
-	    let e = cast (translate_exp (exp_of_int 0)) t in
+	  ([], (Va_arg, _)::[]) ->
+	    let e = cast (translate_exp (exp_of_int 0)) (Ptr char_typ) in
 	      e::[]
-	| (_, (_, "__builtin_newspeak_va_arg")::[]) -> 
+	| (_, (Va_arg, _)::[]) -> 
 	    let (args, sz) = translate_va_args args in
 	    let loc = Npkcontext.get_loc () in
 	    let t = Array (char_typ, Some (exp_of_int (sz/8))) in
@@ -668,6 +667,8 @@ let translate (globals, spec) =
 	    C.Union (n, f, sz)
       | Union (n, _) -> 
 	  Npkcontext.error "Firstpass.translate_typ" ("unknown union "^n)
+
+      | Va_arg -> C.Ptr
 
       | Bitfield _ -> 
 	  Npkcontext.error "Firstpass.translate_typ" 

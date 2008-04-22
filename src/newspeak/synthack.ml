@@ -38,6 +38,7 @@ type base_typ =
     | Union of (string * field list option)
     | Name of string
     | Enum of ((string * B.exp option) list * location) option
+    | Va_arg
 
 and var_modifier = 
     | Abstract
@@ -104,6 +105,7 @@ let rec normalize_base_typ t =
 	    | Some (f, loc) -> define_enum f loc
 	in
 	  (enumdecls, B.Int C.int_kind)
+    | Va_arg -> ([], B.Va_arg)
     | Name x -> 
 	try ([], Hashtbl.find typedefs x)
 	with Not_found ->
