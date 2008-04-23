@@ -653,7 +653,7 @@ let translate (globals, spec) =
 	  let len = translate_array_len len in
 	    C.Array (t, len)
 (* TODO: do the same coding for Union *)
-      | Struct (n, f) -> 
+      | Struct (n, f) ->
 	  let (f, sz) = process_struct (n, f) in
 	  let f = List.map translate_field f in
 	    C.Struct (n, f, sz)
@@ -703,9 +703,9 @@ let translate (globals, spec) =
 	    let (f, sz, a) = process_struct_fields f in
 	      Hashtbl.add compdefs name (f, sz, a);
 	      (f, sz)
-	| None ->
+	| None -> 
 	    Npkcontext.error "Firstpass.process_struct" 
-	      ("unknown structure "^name) 
+	      ("unknown structure "^name)
 
   and process_struct_fields f =
     let o = ref 0 in
@@ -1161,7 +1161,21 @@ let translate (globals, spec) =
       | CstToken (C.CInt i, _) -> Newspeak.CstToken (Newspeak.CInt i)
       | CstToken (C.CFloat f, _) -> Newspeak.CstToken (Newspeak.CFloat f)
   in
-    
+
+(* TODO: a tad hacky!! Think about it *)
+  let collect_glb_structdefs (x, _) =
+    match x with
+	GlbVDecl ((_, t, _, _), _) -> 
+	  begin try 
+	    let _ = translate_typ t in
+	      ()
+	  with _ -> ()
+	  end
+      | _ -> ()
+  in
+
+(* TODO: a tad inefficient *)
+    List.iter collect_glb_structdefs globals;
     List.iter translate_global globals;
     let spec = List.map (List.map translate_token) spec in
       (glbdecls, fundefs, spec)
