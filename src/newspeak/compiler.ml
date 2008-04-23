@@ -127,7 +127,7 @@ let translate (cglbdecls, cfundefs, specs) =
 	      Npkcontext.error "Compiler.translate_typ" "Void not allowed here"
 	  | Int _ | Float _ | Ptr | FunPtr -> K.Scalar (translate_scalar t)
 	  | Array (t, sz) -> K.Array (translate_typ t, sz)
-	  | Struct (_, fields, sz) | Union (_, fields, sz) -> 
+	  | Struct (fields, sz) | Union (fields, sz) -> 
 	      let translate_field (_, (o, t)) = (o, translate_typ t) in
 		K.Region (List.map translate_field fields, sz)
 	  | Fun _ -> 

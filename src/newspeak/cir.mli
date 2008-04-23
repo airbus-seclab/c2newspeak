@@ -47,8 +47,8 @@ and typ =
     | Ptr
     | FunPtr
     | Array of array_t
-    | Struct of (string * field list * int)
-    | Union of (string * field list * int)
+    | Struct of (field list * int)
+    | Union of (field list * int)
     | Fun of ftyp
 
 and array_t = (typ * int option)

@@ -56,10 +56,10 @@ and typ =
     | Ptr
     | FunPtr
     | Array of array_t
-(* TODO: remove string in Struct and Union 
+(* TODO: Struct and Union 
    merge them as a Region *)
-    | Struct of (string * field list * int)
-    | Union of (string * field list * int)
+    | Struct of (field list * int)
+    | Union of (field list * int)
     | Fun of ftyp
 
 and array_t = (typ * int option)
@@ -164,7 +164,7 @@ let rec size_of t =
     | Float n -> n
     | Ptr | FunPtr -> Config.size_of_ptr
     | Array (t, Some n) -> (size_of t) * n
-    | Struct (_, _, n) | Union (_, _, n) -> n
+    | Struct (_, n) | Union (_, n) -> n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
     | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
@@ -540,8 +540,8 @@ let rec is_subtyp t1 t2 =
   match (t1, t2) with
       (Array (t1, l1), Array (t2, l2)) -> 
 	(is_sublen l1 l2) && (is_subtyp t1 t2)
-    | (Struct (_, f1, n1), Struct (_, f2, n2)) 
-    | (Union (_, f1, n1), Union (_, f2, n2)) -> begin
+    | (Struct (f1, n1), Struct (f2, n2)) 
+    | (Union (f1, n1), Union (f2, n2)) -> begin
 	try (n1 = n2) && (List.for_all2 is_subfield f1 f2)
 	with Invalid_argument _ -> false
       end

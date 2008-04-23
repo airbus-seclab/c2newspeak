@@ -656,15 +656,15 @@ let translate (globals, spec) =
       | Struct (n, f) ->
 	  let (f, sz) = process_struct (n, f) in
 	  let f = List.map translate_field f in
-	    C.Struct (n, f, sz)
+	    C.Struct (f, sz)
       | Union (n, _) when Hashtbl.mem compdefs n -> 
 	  let (f, sz, _) = Hashtbl.find compdefs n in
 	  let f = List.map translate_field f in
-	    C.Union (n, f, sz)
+	    C.Union (f, sz)
       | Union (n, Some f) -> 
 	  let (f, sz) = process_union_fields n f in
 	  let f = List.map translate_field f in
-	    C.Union (n, f, sz)
+	    C.Union (f, sz)
       | Union (n, _) -> 
 	  Npkcontext.error "Firstpass.translate_typ" ("unknown union "^n)
 
