@@ -134,7 +134,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST
+%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF CDECL NORETURN DLLIMPORT
 %token EOF
 
 %token <string> IDENTIFIER
@@ -690,13 +690,18 @@ declarator:
 ;;
 
 attribute:
-  ATTRIBUTE LPAREN LPAREN IDENTIFIER 
-  RPAREN RPAREN                            { 
-    if $4 = "dllimport" then begin
-      Npkcontext.print_warning "Parser.attribute" 
-	"ignoring attribute dllimport"
-    end;
-    if ($4 <> "__cdecl__") && ($4 <> "dllimport") && ($4 <> "noreturn") 
-    then Npkcontext.error "Parser.attribute" ("unknown attribute: "^$4)
+  ATTRIBUTE LPAREN LPAREN attribute_name
+  RPAREN RPAREN                            { }
+;;
+
+attribute_name:
+  DLLIMPORT                                {
+    Npkcontext.print_warning "Parser.attribute" 
+      "ignoring attribute dllimport"
   }
+| CDECL                                    { }
+| NORETURN                                 { }
+| FORMAT LPAREN 
+    PRINTF COMMA INTEGER COMMA INTEGER 
+  RPAREN                                   { }
 ;;

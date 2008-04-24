@@ -28,6 +28,19 @@ open Parser
 open Lexing
 open Pp_syntax
 
+let gnuc_tok_tbl = Hashtbl.create 50
+
+let _ = 
+  Hashtbl.add gnuc_tok_tbl "__extension__" EXTENSION;
+  Hashtbl.add gnuc_tok_tbl "__attribute__" ATTRIBUTE;
+  Hashtbl.add gnuc_tok_tbl "__const" CONST;
+  Hashtbl.add gnuc_tok_tbl "__format__" FORMAT;
+  Hashtbl.add gnuc_tok_tbl "__printf__" PRINTF;
+  Hashtbl.add gnuc_tok_tbl "__builtin_va_list" VA_LIST;
+  Hashtbl.add gnuc_tok_tbl "__cdecl__" CDECL;
+  Hashtbl.add gnuc_tok_tbl "noreturn" NORETURN;
+  Hashtbl.add gnuc_tok_tbl "dllimport" DLLIMPORT
+
 let set_loc lexbuf pos = 
   lexbuf.lex_curr_p <- pos;
   Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
@@ -59,15 +72,15 @@ let int_of_oct_character str =
       
 let int_of_character str = int_of_char (str.[1])
 
-let token_of_ident str = 
-  (* TODO: put them in a hashtbl! *)
-  (* GNU C extensions keywords *)
-  if (!Npkcontext.gnuc) && (str = "__extension__") then EXTENSION
-  else if (!Npkcontext.gnuc) && (str = "__attribute__") then ATTRIBUTE
-  else if (!Npkcontext.gnuc) && (str = "__const") then CONST
-  else if (!Npkcontext.gnuc) && (str = "__builtin_va_list") then VA_LIST
-  else if Synthack.is_type str then TYPEDEF_NAME str 
+let standard_token str =
+  if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
+
+let token_of_ident str = 
+  if !Npkcontext.gnuc then begin
+    try Hashtbl.find gnuc_tok_tbl str
+    with Not_found -> standard_token str
+  end else standard_token str
 
 let trim_newline str = 
   let i = 
