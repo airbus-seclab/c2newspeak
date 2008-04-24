@@ -135,6 +135,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
+%token INLINE ALWAYS_INLINE
 %token EOF
 
 %token <string> IDENTIFIER
@@ -652,8 +653,8 @@ ftyp:
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
   declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
-| EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $2 }
 | STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
+| EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | EXTERN function_definition               { 
@@ -664,8 +665,19 @@ external_declaration:
 | TYPEDEF declaration SEMICOLON            { build_glbtypedef $2 }
 // GNU C extension
 | EXTENSION TYPEDEF declaration SEMICOLON  { build_glbtypedef $3 }
-| EXTERN attribute declaration SEMICOLON   { build_glbdecl (false, true) $3 }
+| EXTERN function_attr_list declaration 
+  SEMICOLON                                { build_glbdecl (false, true) $3 }
 | declaration attribute SEMICOLON          { build_glbdecl (false, false) $1 }
+;;
+
+function_attr_list:
+  function_attribute function_attr_list    { }
+| function_attribute                       { }
+;;
+
+function_attribute:
+  INLINE                                   { }
+| attribute                                { }
 ;;
 
 field_declaration:
@@ -704,6 +716,7 @@ attribute_name:
 | FORMAT LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
   RPAREN                                   { }
+| ALWAYS_INLINE                            { }
 ;;
 
 format_fun:
