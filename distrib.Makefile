@@ -124,11 +124,9 @@ all: $(COMPONENTS) bin/newspeak.cmxa doc
 $(CIL):
 	cd cil; tar xzf cil-1.3.5.tar.gz
 	cd cil/cil; ./configure
-	$(CP) cil/machdep.ml cil/cil/obj/x86_WIN32/
-	$(CP) cil/machdep.ml cil/cil/obj/x86_LINUX/
+	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
 	cd cil/cil; make
-	-$(CP) cil/cil/obj/x86_WIN32/* $(CILDIR)
-	-$(CP) cil/cil/obj/x86_LINUX/* $(CILDIR)
+	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
 
 bin/newspeak.cmxa: $(INSTALL.FILES)
 	$(CP) -r $(INSTALL.FILES) bin
