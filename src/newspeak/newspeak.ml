@@ -639,35 +639,38 @@ let write name (filenames, (decls, funs, specs), ptr_sz) =
     close_out cout
 
 let read name = 
-  let cin = open_in_bin name in
-  let str = Marshal.from_channel cin in
-    if str <> "NPK!" 
-    then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
-    let version = Marshal.from_channel cin in
-    let revision = Marshal.from_channel cin in
-      if (version <> Version.version) 
-	|| (revision <> Version.revision) then begin
-	invalid_arg ("Newspeak.read: this file was generated with a "
-		      ^"different version of c2newspeak. "
-		      ^"Please regenerate your file or install the latest "
-		      ^"version of newspeak."^
-		      " Operation aborted.");
-      end;
-      let filenames = Marshal.from_channel cin in
-      let ptr_sz = Marshal.from_channel cin in
-      let decls = Marshal.from_channel cin in
-      let specs = Marshal.from_channel cin in
-      let funs = Hashtbl.create 100 in
-	begin try 
+  try
+    let cin = open_in_bin name in
+    let str = Marshal.from_channel cin in
+      if str <> "NPK!" 
+      then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
+      let version = Marshal.from_channel cin in
+      let revision = Marshal.from_channel cin in
+	if (version <> Version.version) 
+	  || (revision <> Version.revision) then begin
+	    invalid_arg ("Newspeak.read: this file was generated with a "
+			 ^"different version of c2newspeak. "
+			 ^"Please regenerate your file or install the latest "
+			 ^"version of newspeak."^
+			 " Operation aborted.");
+	  end;
+	let filenames = Marshal.from_channel cin in
+	let ptr_sz = Marshal.from_channel cin in
+	let decls = Marshal.from_channel cin in
+	let specs = Marshal.from_channel cin in
+	let funs = Hashtbl.create 100 in
+	  begin try 
 	    while true do
 	      let (f, spec) = Marshal.from_channel cin in
 		Hashtbl.add funs f spec
 	    done
 	  with End_of_file -> ()
-	end;
-	close_in cin;
-	(filenames, (decls, funs, specs), ptr_sz)
-	    
+	  end;
+	  close_in cin;
+	  (filenames, (decls, funs, specs), ptr_sz)
+  with Failure "input_value: bad object" -> 
+    invalid_arg ("Newspeak.read: "^name^" is not an .npk file")
+
 (** Simplifications of coerces and belongs in [make_belongs] and [make_int_coerce]:
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[a;b\] if \[c;d\] contains \[a;b\]
     - Coerce \[a;b\] Coerce \[c;d\] e -> Coerce \[c;d\] if \[a;b\] contains \[c;d\]
