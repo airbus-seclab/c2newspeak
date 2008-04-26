@@ -133,9 +133,7 @@ and normalize_fields f =
 	let x = 
 	  match x with
 	      Some x -> x
-	    | None -> 
-		Npkcontext.error "Synthack.normalize_field" 
-		  "unknown field name"
+	    | None -> "!anonymous_field"
 	in
 	let (enumdecls', f) = normalize_fields tl in
 	  (enumdecls@enumdecls', (t, x, loc)::f)

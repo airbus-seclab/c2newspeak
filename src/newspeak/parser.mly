@@ -686,14 +686,6 @@ function_attribute:
 | attribute                                { }
 ;;
 
-field_declaration:
-  declaration_specifiers 
-  struct_declarator_list                   { flatten_field_decl ($1, $2) }
-// GNU C extension
-| EXTENSION declaration_specifiers
-  struct_declarator_list                   { flatten_field_decl ($2, $3) }
-;;
-
 declarator:
 | pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
@@ -705,6 +697,24 @@ declarator:
 | declarator LPAREN RPAREN                 { Function ($1, []) }
 // GNU C extension
 | attribute declarator                     { $2 }
+;;
+
+field_declaration:
+  declaration_specifiers 
+  struct_declarator_list                   { flatten_field_decl ($1, $2) }
+| declaration_specifiers                   { 
+    Npkcontext.report_dirty_warning "Parser.field_declaration"
+      "anonymous field declaration in structure";
+    flatten_field_decl ($1, (Abstract, None)::[]) 
+  }
+// GNU C extension
+| EXTENSION declaration_specifiers
+  struct_declarator_list                   { flatten_field_decl ($2, $3) }
+| EXTENSION declaration_specifiers         { 
+    Npkcontext.report_dirty_warning "Parser.field_declaration"
+      "anonymous field declaration in structure";
+    flatten_field_decl ($2, (Abstract, None)::[]) 
+  }
 ;;
 
 attribute:
