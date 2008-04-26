@@ -668,6 +668,12 @@ external_declaration:
 | EXTERN function_attr_list declaration 
   SEMICOLON                                { build_glbdecl (false, true) $3 }
 | declaration attribute SEMICOLON          { build_glbdecl (false, false) $1 }
+| EXTERN function_attr_list 
+    function_definition                    { 
+    Npkcontext.report_dirty_warning "Parser.external_declaration" 
+      "defined functions should not be extern";
+    build_fundef false $3 
+}
 ;;
 
 function_attr_list:
