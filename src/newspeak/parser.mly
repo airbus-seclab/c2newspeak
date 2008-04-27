@@ -194,6 +194,16 @@ struct_declarator_list:
 | struct_declarator                        { $1::[] }
 ;;
 
+struct_declarator:
+  declarator                               { ($1, None) }
+| declarator COLON conditional_expression  { ($1, Some $3) }
+| COLON conditional_expression             { 
+    Npkcontext.report_dirty_warning "Parser.struct_declarator"
+      "anonymous field declaration in structure";
+    (Abstract, Some $2) 
+  }
+;;
+
 // TODO: careful, this is a bit of a hack
 parameter_declaration:
   declaration_specifiers declarator        { ($1, $2) }
@@ -526,11 +536,6 @@ abstract_declarator:
 | abstract_declarator 
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | abstract_declarator LPAREN RPAREN        { Function ($1, []) }
-;;
-
-struct_declarator:
-  declarator                               { ($1, None) }
-| declarator COLON conditional_expression  { ($1, Some $3) }
 ;;
 
 pointer:
