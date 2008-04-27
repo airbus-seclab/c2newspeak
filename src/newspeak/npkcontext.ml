@@ -43,7 +43,7 @@ open Params
 
 
 (* Translation options *)
-
+let ignores_asm = ref false
 let gnuc = ref false
 
 let forward_goto = ref false
@@ -132,6 +132,9 @@ let argslist = [
   
   ("--ignore-pragma", Arg.Set ignores_pragmas,
    "ignores any #pragma directive");
+
+  ("--ignore-asm", Arg.Set ignores_asm,
+   "ignores any asm directive");
 
   ("--keep-unused-vars", Arg.Clear (remove_temp),
    "does not remove unused variables");

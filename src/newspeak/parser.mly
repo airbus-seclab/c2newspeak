@@ -135,7 +135,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
-%token INLINE ALWAYS_INLINE
+%token INLINE ALWAYS_INLINE ASM
 %token EOF
 
 %token <string> IDENTIFIER
@@ -668,6 +668,7 @@ external_declaration:
 | EXTERN function_attr_list declaration 
   SEMICOLON                                { build_glbdecl (false, true) $3 }
 | declaration attribute SEMICOLON          { build_glbdecl (false, false) $1 }
+| EXTERN declaration attribute SEMICOLON   { build_glbdecl (false, true) $2 }
 | EXTERN function_attr_list 
     function_definition                    { 
     Npkcontext.report_dirty_warning "Parser.external_declaration" 
@@ -720,6 +721,13 @@ field_declaration:
 attribute:
   ATTRIBUTE LPAREN LPAREN attribute_name
   RPAREN RPAREN                            { }
+| ASM LPAREN STRING RPAREN                 { 
+    let report = 
+      if !Npkcontext.ignores_asm then Npkcontext.print_warning
+      else Npkcontext.error
+    in
+      report "Parser.attribute" ("ignoring asm directive '"^$3^"'")
+  }
 ;;
 
 attribute_name:
