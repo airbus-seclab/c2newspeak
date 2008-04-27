@@ -188,6 +188,17 @@ init_declarator:
 | declarator EQ init                       { ($1, Some $3) }
 ;;
 
+declarator:
+| pointer declarator                       { Pointer $2 }
+| LPAREN declarator RPAREN                 { $2 }
+| IDENTIFIER                               { Variable ($1, get_loc ()) }
+| declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
+| declarator LBRACKET RBRACKET             { Array ($1, None) }
+| declarator 
+  LPAREN parameter_list RPAREN             { Function ($1, $3) }
+| declarator LPAREN RPAREN                 { Function ($1, []) }
+;;
+
 struct_declarator_list:
   struct_declarator COMMA 
   struct_declarator_list                   { $1::$3 }
@@ -227,10 +238,6 @@ declaration_specifiers:
 type_qualifier_list:
   type_qualifier type_qualifier_list       { }
 |                                          { }
-;;
-
-type_qualifier:
-  CONST                                    { }
 ;;
 
 init_declarator_list:
@@ -672,39 +679,13 @@ external_declaration:
 | TYPEDEF declaration SEMICOLON            { build_glbtypedef $2 }
 // GNU C extension
 | EXTENSION TYPEDEF declaration SEMICOLON  { build_glbtypedef $3 }
-| EXTERN function_attr_list declaration 
-  SEMICOLON                                { build_glbdecl (false, true) $3 }
 | declaration attribute SEMICOLON          { build_glbdecl (false, false) $1 }
 | EXTERN declaration attribute SEMICOLON   { build_glbdecl (false, true) $2 }
-| EXTERN function_attr_list 
-    function_definition                    { 
-    Npkcontext.report_dirty_warning "Parser.external_declaration" 
-      "defined functions should not be extern";
-    build_fundef false $3 
-}
 ;;
 
-function_attr_list:
-  function_attribute function_attr_list    { }
-| function_attribute                       { }
-;;
-
-function_attribute:
-  INLINE                                   { }
+type_qualifier:
+  CONST                                    { }
 | attribute                                { }
-;;
-
-declarator:
-| pointer declarator                       { Pointer $2 }
-| LPAREN declarator RPAREN                 { $2 }
-| IDENTIFIER                               { Variable ($1, get_loc ()) }
-| declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
-| declarator LBRACKET RBRACKET             { Array ($1, None) }
-| declarator 
-  LPAREN parameter_list RPAREN             { Function ($1, $3) }
-| declarator LPAREN RPAREN                 { Function ($1, []) }
-// GNU C extension
-| attribute declarator                     { $2 }
 ;;
 
 field_declaration:
@@ -735,6 +716,7 @@ attribute:
     in
       report "Parser.attribute" ("ignoring asm directive '"^$3^"'")
   }
+| INLINE                                   { }
 ;;
 
 attribute_name:
