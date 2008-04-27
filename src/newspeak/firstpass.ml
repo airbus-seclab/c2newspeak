@@ -995,6 +995,13 @@ let translate (globals, spec) =
 	  let t = Int k in
 	  let e1 = cast (e1, t1) t in
 	    (op, (e1, t), (e2, t))
+
+      | (Plus, Int _, Ptr _) -> 
+	  Npkcontext.report_dirty_warning 
+	    "Firstpass.normalize_binop"
+	    ("addition of a pointer to an integer,"
+	      ^" please swap the arguments of operator '+'");
+	  (Plus, (e2, t2), (e1, t1))
 	      
       | _ -> (op, (e1, t1), (e2, t2))
 	  
