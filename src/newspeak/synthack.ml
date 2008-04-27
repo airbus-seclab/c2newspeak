@@ -59,14 +59,22 @@ type edecl = (B.enumdecl * location)
 let typedefs = Hashtbl.create 100
 let fnames = ref String_set.empty
 
+let init_tbls () =
+  Hashtbl.clear typedefs;
+  fnames := String_set.empty;
+(* initialize table of predefined types *)
+(* GNU C predefined types *)
+  if !Npkcontext.gnuc then begin
+    Hashtbl.add typedefs "_Bool" (B.Int (Newspeak.Unsigned, 1))
+  end
+
+let _ = 
+  init_tbls ()
+
 let add_fname x =
   fnames := String_set.add x !fnames
 
-let get_fnames () =
-  let res = String_set.elements !fnames in
-    Hashtbl.clear typedefs;
-    fnames := String_set.empty;
-    res
+let get_fnames () = String_set.elements !fnames
 
 let define_type x t = Hashtbl.add typedefs x t
 

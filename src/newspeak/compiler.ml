@@ -423,6 +423,7 @@ let parse fname =
   let lexbuf = Lexing.from_channel cin in
   let specbuf = Buffer.create 800 in
     Lexer.init fname lexbuf;
+    Synthack.init_tbls ();
     try
       let cprog = Parser.parse (Lexer.token specbuf) lexbuf in
       let specbuf = Lexing.from_string (Buffer.contents specbuf) in

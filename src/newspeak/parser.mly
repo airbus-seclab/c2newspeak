@@ -557,6 +557,69 @@ parameter_list:
   }
 ;;
 
+/*
+From ANSI C norm
+4 There are five standard signed integer types, designated as signed 
+char, short int, int, long int, and long long int. (These and other 
+types may be designated in several additional ways, as described in 
+6.7.2.)
+*/
+ityp:
+  CHAR                                   { Config.size_of_char }
+| SHORT INT                              { Config.size_of_short }
+| INT                                    { Config.size_of_int }
+| LONG INT                               { Config.size_of_long }
+| LONG LONG INT                          { Config.size_of_longlong }
+| SHORT                                  { 
+    Npkcontext.report_strict_warning "Parser.ityp" 
+      "'short' is not normalized: use 'short int' instead";
+    Config.size_of_short 
+  }
+| LONG                                   { 
+    Npkcontext.report_strict_warning "Parser.ityp" 
+      "'long' is not normalized: use 'long int' instead";
+    Config.size_of_long 
+  }
+| LONG LONG                              { 
+    Npkcontext.report_strict_warning "Parser.ityp" 
+      "'long long' is not standard: use 'long long int' instead";
+    Config.size_of_longlong 
+  }
+;;
+
+
+// ident_or_tname necessary because the namespace of structure and typedefs
+// are not disjoint
+ident_or_tname:
+  IDENTIFIER                             { $1 }
+| TYPEDEF_NAME                           {
+    Npkcontext.print_warning "Parser.ident_or_tname" 
+      ("identifier "^$1^" is defined as a type, avoid using it for "
+	^"another purpose");
+    $1 
+  }
+;;
+
+enum_list:
+  enum                                   { $1::[] }
+| enum COMMA enum_list                   { $1::$3 }
+;;
+
+enum:
+  IDENTIFIER                             { ($1, None) }
+| IDENTIFIER EQ expression               { ($1, Some $3) }
+;;
+
+field_blk:
+  LBRACE field_list RBRACE               { $2 }
+;;
+
+ftyp:
+  FLOAT                                  { Config.size_of_float }
+| DOUBLE                                 { Config.size_of_double }
+| LONG DOUBLE                            { Config.size_of_longdouble }
+;;
+
 type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
@@ -592,67 +655,6 @@ type_specifier:
 | VA_LIST                                { Va_arg }
 ;;
 
-// ident_or_tname necessary because the namespace of structure and typedefs
-// are not disjoint
-ident_or_tname:
-  IDENTIFIER                             { $1 }
-| TYPEDEF_NAME                           {
-    Npkcontext.print_warning "Parser.ident_or_tname" 
-      ("identifier "^$1^" is defined as a type, avoid using it for "
-	^"another purpose");
-    $1 
-  }
-;;
-
-enum_list:
-  enum                                   { $1::[] }
-| enum COMMA enum_list                   { $1::$3 }
-;;
-
-enum:
-  IDENTIFIER                             { ($1, None) }
-| IDENTIFIER EQ expression               { ($1, Some $3) }
-;;
-
-field_blk:
-  LBRACE field_list RBRACE               { $2 }
-;;
-
-/*
-From ANSI C norm
-4 There are five standard signed integer types, designated as signed 
-char, short int, int, long int, and long long int. (These and other 
-types may be designated in several additional ways, as described in 
-6.7.2.)
-*/
-ityp:
-  CHAR                                   { Config.size_of_char }
-| SHORT INT                              { Config.size_of_short }
-| INT                                    { Config.size_of_int }
-| LONG INT                               { Config.size_of_long }
-| LONG LONG INT                          { Config.size_of_longlong }
-| SHORT                                  { 
-    Npkcontext.report_strict_warning "Parser.ityp" 
-      "'short' is not normalized: use 'short int' instead";
-    Config.size_of_short 
-  }
-| LONG                                   { 
-    Npkcontext.report_strict_warning "Parser.ityp" 
-      "'long' is not normalized: use 'long int' instead";
-    Config.size_of_long 
-  }
-| LONG LONG                              { 
-    Npkcontext.report_strict_warning "Parser.ityp" 
-      "'long long' is not standard: use 'long long int' instead";
-    Config.size_of_longlong 
-  }
-;;
-
-ftyp:
-  FLOAT                                  { Config.size_of_float }
-| DOUBLE                                 { Config.size_of_double }
-| LONG DOUBLE                            { Config.size_of_longdouble }
-;;
 
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
