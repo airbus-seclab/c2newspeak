@@ -203,6 +203,7 @@ rule token spec_buf = parse
   | "\'\\v\'"           { CHARACTER 11 }
   | "\'\\f\'"           { CHARACTER 12 }
   | "\'\\r\'"           { CHARACTER 13 }
+  | "\'\\\\\'"          { CHARACTER 92 }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }
