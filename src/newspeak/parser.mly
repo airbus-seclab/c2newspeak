@@ -659,6 +659,12 @@ type_specifier:
 	^"use 'usigned short int' instead");
     Integer (Newspeak.Unsigned, Config.size_of_short) 
   }
+| LONG UNSIGNED INT                     { 
+    Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long unsigned int' is not normalized: "
+	^"use 'usigned long int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_long) 
+  }
 | VA_LIST                                { Va_arg }
 ;;
 
