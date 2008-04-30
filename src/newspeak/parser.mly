@@ -135,7 +135,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
-%token INLINE ALWAYS_INLINE ASM
+%token INLINE ALWAYS_INLINE ASM CDECL_ATTR
 %token EOF
 
 %token <string> IDENTIFIER
@@ -723,6 +723,7 @@ attribute:
       report "Parser.attribute" ("ignoring asm directive '"^$3^"'")
   }
 | INLINE                                   { }
+| CDECL                                    { }
 ;;
 
 attribute_name:
@@ -730,7 +731,7 @@ attribute_name:
     Npkcontext.print_warning "Parser.attribute" 
       "ignoring attribute dllimport"
   }
-| CDECL                                    { }
+| CDECL_ATTR                               { }
 | NORETURN                                 { }
 | FORMAT LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 

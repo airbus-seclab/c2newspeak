@@ -38,12 +38,13 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__printf__" PRINTF;
   Hashtbl.add gnuc_tok_tbl "__scanf__" SCANF;
   Hashtbl.add gnuc_tok_tbl "__builtin_va_list" VA_LIST;
-  Hashtbl.add gnuc_tok_tbl "__cdecl__" CDECL;
+  Hashtbl.add gnuc_tok_tbl "__cdecl__" CDECL_ATTR;
   Hashtbl.add gnuc_tok_tbl "__inline__" INLINE;
   Hashtbl.add gnuc_tok_tbl "__always_inline__" ALWAYS_INLINE;
   Hashtbl.add gnuc_tok_tbl "noreturn" NORETURN;
   Hashtbl.add gnuc_tok_tbl "dllimport" DLLIMPORT;
-  Hashtbl.add gnuc_tok_tbl "__asm__" ASM
+  Hashtbl.add gnuc_tok_tbl "__asm__" ASM;
+  Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL
 
 let set_loc lexbuf pos = 
   lexbuf.lex_curr_p <- pos;
