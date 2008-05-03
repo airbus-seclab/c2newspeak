@@ -289,7 +289,7 @@ let translate (cglbdecls, cfundefs, specs) =
       | Decl _ -> 
 	  Npkcontext.error "Compiler.translate_stmt" "unreachable code"
 
-  and append_args loc args f =
+  and append_args loc args fid f =
     let rec append x args =
       match args with
 	  (e::args, t::args_t) ->
@@ -299,7 +299,7 @@ let translate (cglbdecls, cfundefs, specs) =
 	      let set = translate_set (lv, t, e) in
 	      let t = translate_typ t in
 	      let call = append (x+1) (args, args_t) in
-	      let arg = "arg"^(string_of_int x) in
+	      let arg = fid^".arg"^(string_of_int x) in
 		pop id;
 		(K.Decl (arg, t, (set, loc)::call::[]), loc)
 		  
@@ -318,9 +318,14 @@ let translate (cglbdecls, cfundefs, specs) =
 	    K.FunDeref (e, ft)
 
   and translate_call loc ret ((args_t, ret_t), f, args) =
+    let fid =
+      match f with
+	  Fname f -> f
+	| _ -> "fptr_call"
+    in
     let args = (args, args_t) in
       match ret_t with
-	  Void -> append_args loc args f
+	  Void -> append_args loc args fid f
 	| _ ->
 	    let t = translate_typ ret_t in
 	    let id = fresh_id () in
@@ -333,12 +338,7 @@ let translate (cglbdecls, cfundefs, specs) =
 			(set, loc)::[]
 		  | None -> []
 	      in
-	      let fid =
-		match f with
-		    Fname f -> f
-		  | _ -> "fptr_call"
-	      in
-	      let call = append_args loc args f in
+	      let call = append_args loc args fid f in
 		pop id;
 		(K.Decl ("value_of_"^fid, t, call::post), loc)
 		

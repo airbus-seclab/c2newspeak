@@ -1,6 +1,6 @@
-(!Newspeak.build_call_main)^int8[6];
-(!Newspeak.build_call_main)^int8[6];
-(!Newspeak.build_call_main)^ptr[2];
+(!Newspeak.build_call_main)^int8[6] !param_str0;
+(!Newspeak.build_call_main)^int8[6] !param_str1;
+(!Newspeak.build_call_main)^ptr[2] !ptr_array;
 (!Newspeak.build_call_main)^2- =(int8) 72;
 (!Newspeak.build_call_main)^2- + 8 =(int8) 101;
 (!Newspeak.build_call_main)^2- + 16 =(int8) 108;
@@ -16,11 +16,11 @@
 (!Newspeak.build_call_main)^1- + 40 =(int8) 0;
 (!Newspeak.build_call_main)^0- + 32 =(ptr) &_48(1-);
 (!Newspeak.build_call_main)^{
-  int32;
-  (!Newspeak.build_call_main)^int32;
+  int32 value_of_main;
+  (!Newspeak.build_call_main)^int32 arg1;
   (!Newspeak.build_call_main)^0- =(int32) 2;
   (!Newspeak.build_call_main)^{
-    ptr;
+    ptr arg0;
     (!Newspeak.build_call_main)^0- =(ptr) &_64(3-);
     (!Newspeak.build_call_main)^main();
   }

@@ -504,14 +504,14 @@ let string_of_blk offset x =
 	  dump_line_at loc ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			" "^(string_of_lval lv2)^";")
 	    
-      | Decl (_, t, body) ->
+      | Decl (x, t, body) ->
 	  if only then begin
-	    dump_line_at loc ((string_of_typ t)^";");
+	    dump_line_at loc ((string_of_typ t)^" "^x^";");
 	    dump_blk body
 	  end else begin
 	    dump_line_at loc "{";
 	    incr_margin ();
-	    dump_line ((string_of_typ t)^";");
+	    dump_line ((string_of_typ t)^" "^x^";");
 	    dump_blk body;
 	    decr_margin ();
 	    dump_line "}"

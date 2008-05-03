@@ -2,8 +2,8 @@ Newspeak output
 ---------------
 224.c
 main() {
-  (224.c:27#1073)^int32;
-  int32;
+  (224.c:27#1073)^int32 x;
+  int32 tmp;
   (224.c:29#1081)^choose {
     | ! (1-_int32 ==_int32 0) -->
       (224.c:29#1081)^choose {

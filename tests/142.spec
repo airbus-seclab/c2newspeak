@@ -2,9 +2,9 @@ Newspeak output
 ---------------
 142.c
 main() {
-  (142.c:30#1134)^float32;
-  (142.c:31#1146)^float64;
-  (142.c:32#1155)^int32;
+  (142.c:30#1134)^float32 x;
+  (142.c:31#1146)^float64 y;
+  (142.c:32#1155)^int32 z;
   (142.c:34#1163)^2- =(float32) (2-_float32 *. 2-_float32);
   (142.c:35#1176)^2- =(float32) (float32 <= float64) ((float64 <= float32) 2-_float32 *. 1-_float64);
   (142.c:36#1189)^2- =(float32) (2-_float32 *. (float32 <= int32) 0-_int32);

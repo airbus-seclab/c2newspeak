@@ -3,7 +3,7 @@ Newspeak output
 ---------------
 151.c
 main() {
-  (151.c:29#1093)^ptr;
+  (151.c:29#1093)^ptr ptr;
   (151.c:30#1100)^0- =(ptr) (ptr <= fptr) &_fun(f);
 }
 

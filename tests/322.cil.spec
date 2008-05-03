@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 322.c
 main() {
-  (322.c:27#1073)^ptr;
+  (322.c:27#1073)^ptr ptr;
   (322.c:28#1081)^0- =(ptr) &_48(!322.c.const_str_Hello);
 }
 
