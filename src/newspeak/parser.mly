@@ -541,6 +541,8 @@ abstract_declarator:
 | LBRACKET RBRACKET                        { Array (Abstract, None) }
 | LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
 | abstract_declarator 
+  LBRACKET expression RBRACKET             { Array ($1, Some $3) }
+| abstract_declarator 
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | abstract_declarator LPAREN RPAREN        { Function ($1, []) }
 ;;
