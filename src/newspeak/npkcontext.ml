@@ -279,7 +279,7 @@ let handle_cmdline_options () =
   Arg.parse argslist anon_fun usage_msg;
 
   if !version then begin
-    print_version ();
+    Params.print_version ();
     exit 0
   end;
 
