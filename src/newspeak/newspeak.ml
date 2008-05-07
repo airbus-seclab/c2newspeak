@@ -79,6 +79,10 @@ struct
     let y = Big_int.big_int_of_string y in
       Big_int.compare_big_int x y
 
+  (* WARNING: this function is not exported, because it may be an arbitrary
+     string from the source code and not the representation of the normalized
+     integer 
+  *)
   let to_string x = x
 end
 

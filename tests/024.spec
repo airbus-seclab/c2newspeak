@@ -1,1 +1,1 @@
-Fatal error: invalid size for array in 024.c line 31
+Fatal error: array should have at least 1 element in 024.c line 31

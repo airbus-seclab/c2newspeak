@@ -95,6 +95,7 @@ npkbugfind.CMX:=$(addsuffix .cmx,$(npkbugfind.FILES))
 
 FILES=$(foreach comp,$(COMPNAMES),$($(comp).FILES))
 ML=$(addsuffix .ml,$(FILES))
+MLI=$(addsuffix .ml,$(FILES))
 
 c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer \
                        spec_parser spec_lexer
@@ -168,7 +169,7 @@ clean-all: clean
 clean:
 	$(RM) $(CLEANFILES)
 
-.depend: $(MLI) $(ML)
+.depend: $(ML)
 	@mkdir bin 2> /dev/null; true
 	@mkdir $(CILDIR) 2> /dev/null; true
 	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(TARGET).depend

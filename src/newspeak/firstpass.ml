@@ -614,7 +614,8 @@ let translate (globals, spec) =
 	| (_, (Va_arg, _)::[]) -> 
 	    let (args, sz) = translate_va_args args in
 	    let loc = Npkcontext.get_loc () in
-	    let t = Array (char_typ, Some (exp_of_int (sz/8))) in
+	    let sz = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
+	    let t = Array (char_typ, Some (exp_of_int sz)) in
 	    let (_, decl, v) = gen_tmp loc t in
 	    let t = translate_typ t in
 	    let init = init_va_args loc v args in
@@ -686,10 +687,14 @@ let translate (globals, spec) =
 	      Npkcontext.error "Firstpass.translate_typ" 
 		"invalid size for array"
 	  in
-	    if (i <= 0) || (i >= max_array_length) then begin
+	    if (i < 0) || (i >= max_array_length) then begin
 (* TODO: should print the expression e?? *)
 	      Npkcontext.error "Firstpass.translate_typ" 
 		"invalid size for array"
+	    end;
+	    if (i = 0) then begin
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"array should have at least 1 element"
 	    end;
 	    Some i
 
