@@ -34,7 +34,8 @@ let count debug ptr_sz (_, fundecs, _) =
   let unknown_funs = ref [] in
   let exact = ref true in
   let fun_tbl = Hashtbl.create 100 in
-
+  let current_loc = ref Newspeak.unknown_loc in
+    
   let max_info (nb1, sz1) (nb2, sz2) = (max nb1 nb2, max sz1 sz2) in
 
   let rec count_call f =
@@ -61,7 +62,8 @@ let count debug ptr_sz (_, fundecs, _) =
 	      
   and count_blk x info =
     match x with
-	(stmt, _)::blk -> 
+	(stmt, loc)::blk -> 
+	  current_loc := loc;
 	  let info1 = count_stmt stmt info in
 	  let info2 = count_blk blk info in
 	    max_info info1 info2
@@ -91,7 +93,11 @@ let count debug ptr_sz (_, fundecs, _) =
       max_info info' max_so_far
   in
     (* TODO: arguments of main not counted ! *)
-  let (nb, sz) = count_call "main" in
+  let (nb, sz) = 
+    try count_call "main" 
+    with Invalid_argument msg -> 
+      invalid_arg (msg^" at "^(Newspeak.string_of_loc !current_loc))
+  in
     (!exact, nb, sz)
       
 let print (exact, max_nb, max_sz) =

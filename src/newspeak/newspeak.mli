@@ -236,6 +236,10 @@ val simplify_exp: exp -> exp
 
 
 (** {1 Display} *)
+
+(** @raises Invalid_argument "Newspeak.string_of_loc: unknown location" 
+    if the file name is unknown
+*)
 val string_of_loc : location -> string
 
 (** [string_of_bounds r] returns the string representation of range [r]. *)

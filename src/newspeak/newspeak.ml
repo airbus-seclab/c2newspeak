@@ -368,11 +368,8 @@ let string_of_ftyp (args, ret) =
 
 let string_of_loc (fname, line, carac) = 
   if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
-  if (line = -1) && (carac = -1) then fname
-  else if (line >= 0) && (carac >= 0) 
-  then (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
-  else invalid_arg "Newspeak.string_of_loc: invalid location"
-  
+  if (line < 0) || (carac < 0) then fname
+  else (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
   
 let dummy_loc fname = 
   if fname = "" 
