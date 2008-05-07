@@ -82,10 +82,11 @@ and lv =
     | Global of string
     | Shift of (lv * exp)
     | Deref of (exp * typ)
-(* TODO: remove Post by using Pref instead and having some optimization get
+(* the boolean is true if stmt is after, false otherwise *)
+(* TODO: remove the boolean, by adding temporary variables and then
+   having some optimization get
    rid of unnecessary temporary variable??? If better *)
-    | Post_lv of (lv * stmt)
-    | Pref_lv of (stmt * lv)
+    | Stmt_lv of (stmt * lv * bool)
 
 and exp =
     | Const of cst

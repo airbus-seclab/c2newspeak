@@ -94,10 +94,11 @@ and lv =
     | Global of string
     | Shift of (lv * exp)
     | Deref of (exp * typ)
-(* TODO: remove Post by using Pref instead and having some optimization get
+(* the boolean is true if stmt is after, false otherwise *)
+(* TODO: remove the boolean, by adding temporary variables and then
+   having some optimization get
    rid of unnecessary temporary variable??? If better *)
-    | Post_lv of (lv * stmt)
-    | Pref_lv of (stmt * lv)
+    | Stmt_lv of (stmt * lv * bool)
 
 and exp =
     | Const of cst
@@ -292,15 +293,13 @@ and normalize_lv x =
     | Deref (e, t) ->
 	let (pref, e, post) = normalize_exp e in
 	  (pref, Deref (e, t), post)
-    | Pref_lv (stmt, lv) ->
+    | Stmt_lv (stmt, lv, is_after) -> 
 	let (pref, lv, post) = normalize_lv lv in
 	let stmt = normalize_stmt stmt in
-	let pref = concat_effects stmt pref in
-	  (pref, lv, post)
-    | Post_lv (lv, stmt) ->
-	let (pref, lv, post) = normalize_lv lv in
-	let stmt = normalize_stmt stmt in
-	let post = concat_effects post stmt in
+	let (pref, post) = 
+	  if is_after then (pref, concat_effects post stmt)
+	  else (concat_effects stmt pref, post)
+	in
 	  (pref, lv, post)
 	    
 and normalize_stmt (x, loc) = 

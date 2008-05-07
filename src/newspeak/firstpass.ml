@@ -396,16 +396,16 @@ let translate (globals, spec) =
 	  let loc = Npkcontext.get_loc () in
 	  let e = Binop (op, lv, Cst (C.CInt (Nat.of_int 1), int_typ)) in
 	  let (incr, t) = translate_set (lv, e) in
-	  let (lv, _, _) = incr in begin
+	  let (lv, _, _) = incr in
+	  let is_after = 
 	    match x with
-		ExpIncr _ -> 
-		  (C.Post_lv (lv, (C.Set incr, loc)), t)
-	      | IncrExp _ -> 
-		  (C.Pref_lv ((C.Set incr, loc), lv), t)
+		ExpIncr _ -> true
+	      | IncrExp _ -> false
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv"
 		    "unreachable code"
-	    end
+	  in
+	    (C.Stmt_lv ((C.Set incr, loc), lv, is_after), t)
 
       | Str str -> add_glb_cstr str
 
