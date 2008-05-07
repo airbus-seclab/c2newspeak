@@ -390,24 +390,22 @@ let translate (globals, spec) =
 
       | Deref e -> deref e
 
-(* TODO: factor this case and the next case *)
-      | ExpIncr (op, lv) ->
-	  let (lv, t) = translate_lv lv in
-	  let t' = translate_typ t in
-	  let e = C.Lval (lv, t') in
-	  let one = (C.exp_of_int 1, int_typ) in
-	  let (incr_e, _) = translate_binop op (e, t) one in
-	  let incr = (C.Set (lv, t', incr_e), Npkcontext.get_loc ()) in
-	    (C.Post_lv (lv, incr), t)
-
-      | IncrExp (op, lv) ->
-	  let (lv, t) = translate_lv lv in
-	  let t' = translate_typ t in
-	  let e = C.Lval (lv, t') in
-	  let one = (C.exp_of_int 1, int_typ) in
-	  let (incr_e, _) = translate_binop op (e, t) one in
-	  let incr = (C.Set (lv, t', incr_e), Npkcontext.get_loc ()) in
-	    (C.Pref_lv (incr, lv), t)
+(* TODO: put Post_lv and Pref_lv together in Cir
+   Put ExpIncr and IncrExp together in csyntax  *)
+      | ExpIncr (op, lv) | IncrExp (op, lv) ->
+	  let loc = Npkcontext.get_loc () in
+	  let e = Binop (op, lv, Cst (C.CInt (Nat.of_int 1), int_typ)) in
+	  let (incr, t) = translate_set (lv, e) in
+	  let (lv, _, _) = incr in begin
+	    match x with
+		ExpIncr _ -> 
+		  (C.Post_lv (lv, (C.Set incr, loc)), t)
+	      | IncrExp _ -> 
+		  (C.Pref_lv ((C.Set incr, loc), lv), t)
+	      | _ -> 
+		  Npkcontext.error "Firstpass.translate_lv"
+		    "unreachable code"
+	    end
 
       | Str str -> add_glb_cstr str
 
