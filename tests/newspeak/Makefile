@@ -1,4 +1,4 @@
-TESTS=000 001 002 003 004
+TESTS=000 001 002 003 004 005
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
 EXEC=$(addsuffix _check, $(TESTS))
 

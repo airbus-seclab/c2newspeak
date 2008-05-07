@@ -1524,4 +1524,25 @@ let visit visitor (globals, fundecs, _) =
   Hashtbl.iter (visit_fun visitor) fundecs
 
 let max_ikind = max
-  
+
+class fid_addrof_visitor =
+object 
+  inherit visitor
+  val mutable fid_list = []
+
+  method get_fid_list () = fid_list
+
+  method process_exp e = 
+    begin match e with
+	AddrOfFun id when not (List.mem id fid_list) ->
+	  fid_list <- id::fid_list
+      | _ -> ()
+    end;
+    true
+end
+
+
+let collect_fid_addrof prog =
+  let collector = new fid_addrof_visitor in
+    visit collector prog;
+    collector#get_fid_list ()

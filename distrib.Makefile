@@ -95,7 +95,7 @@ npkbugfind.CMX:=$(addsuffix .cmx,$(npkbugfind.FILES))
 
 FILES=$(foreach comp,$(COMPNAMES),$($(comp).FILES))
 ML=$(addsuffix .ml,$(FILES))
-MLI=$(addsuffix .ml,$(FILES))
+MLI=$(addsuffix .mli,$(FILES))
 
 c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer \
                        spec_parser spec_lexer

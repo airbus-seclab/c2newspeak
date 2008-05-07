@@ -399,3 +399,6 @@ val convert_loops: blk -> alt_blk
 
 val max_ikind: ikind -> ikind -> ikind
 
+(** returns the list of all function identifiers that are stored as function
+    pointers in the program. *)
+val collect_fid_addrof: prog -> fid list

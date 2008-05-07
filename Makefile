@@ -45,10 +45,11 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             $(addprefix tests/mult-files/,000 001 002 003 004) \
             $(addprefix tests/npkstats/,000 001 002 003 004) \
             $(addprefix tests/npkcheck/,000) \
-            $(addprefix tests/newspeak/,000 001 002 003 004) \
+            $(addprefix tests/newspeak/,000 001 002 003 004 005) \
             $(addprefix tests/npkbugfind/,000 001 002 003 004 005 006 007) \
             $(addprefix tests/npkbugfind/,008 009 010) \
             tests/newspeak/*.exe tests/newspeak/003.npk \
+            tests/newspeak/005.npk \
             tests/newspeak/*_check
 
 genversion=\
