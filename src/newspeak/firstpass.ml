@@ -52,7 +52,7 @@ let next_aligned o x =
 
 let rec simplify_bexp e =
   match e with
-      Var _ | Field _ | Index _ | Deref _ | Call _ | ExpIncr _ 
+      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
     | Set _ | SetOp _ -> 
 	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
@@ -390,21 +390,11 @@ let translate (globals, spec) =
 
       | Deref e -> deref e
 
-(* TODO: put Post_lv and Pref_lv together in Cir
-   Put ExpIncr and IncrExp together in csyntax  *)
-      | ExpIncr (op, lv) | IncrExp (op, lv) ->
+      | OpExp (op, lv, is_after) ->
 	  let loc = Npkcontext.get_loc () in
 	  let e = Binop (op, lv, Cst (C.CInt (Nat.of_int 1), int_typ)) in
 	  let (incr, t) = translate_set (lv, e) in
 	  let (lv, _, _) = incr in
-	  let is_after = 
-	    match x with
-		ExpIncr _ -> true
-	      | IncrExp _ -> false
-	      | _ -> 
-		  Npkcontext.error "Firstpass.translate_lv"
-		    "unreachable code"
-	  in
 	    (C.Stmt_lv ((C.Set incr, loc), lv, is_after), t)
 
       | Str str -> add_glb_cstr str
@@ -441,7 +431,7 @@ let translate (globals, spec) =
 	  in
 	    (e, t)
 	      
-      | Field _ | Index _ | Deref _ | ExpIncr _ | IncrExp _ | Str _ -> 
+      | Field _ | Index _ | Deref _ | OpExp _ | Str _ -> 
 	  let (lv, t) = translate_lv e in
 	    (C.Lval (lv, translate_typ t), t)
 	    

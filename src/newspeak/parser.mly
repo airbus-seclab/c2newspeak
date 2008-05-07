@@ -369,14 +369,14 @@ postfix_expression:
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
 | postfix_expression DOT IDENTIFIER        { Field ($1, $3) }
 | postfix_expression ARROW IDENTIFIER      { Field (Deref $1, $3) }
-| postfix_expression PLUSPLUS              { ExpIncr (Plus, $1) }
-| postfix_expression MINUSMINUS            { ExpIncr (Minus, $1) }
+| postfix_expression PLUSPLUS              { OpExp (Plus, $1, true) }
+| postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
 ;;
 
 unary_expression:
   postfix_expression                       { $1 }
-| PLUSPLUS unary_expression                { IncrExp (Plus, $2) }
-| MINUSMINUS unary_expression              { IncrExp (Minus, $2) }
+| PLUSPLUS unary_expression                { OpExp (Plus, $2, false) }
+| MINUSMINUS unary_expression              { OpExp (Minus, $2, false) }
 | AMPERSAND cast_expression                { AddrOf $2 }
 | STAR cast_expression                     { Deref $2 }
 | BNOT cast_expression                     { Unop (BNot, $2) }

@@ -105,9 +105,9 @@ and exp =
     | Cast of (exp * typ)
     | Set of (exp * exp)
     | SetOp of (exp * binop * exp)
-(* returns the value and then increment it or decrement it *)
-    | ExpIncr of (binop * exp)
-    | IncrExp of (binop * exp)
+(* boolean is true if the operation is appled after the evaluation of the 
+   expression *)
+    | OpExp of (binop * exp * bool)
 
 and cst = (Cir.cst * typ)
 
