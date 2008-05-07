@@ -17,7 +17,7 @@ $(TESTS): ../../bin/c2newspeak $@
 	dos2unix $@.bak
 	if [ -e $@.spec ]; \
 	then \
-	  if diff $@.spec $@.bak > result; \
+	  if diff -w $@.spec $@.bak > result; \
             then true; \
             else cat result; false; \
 	  fi; \
