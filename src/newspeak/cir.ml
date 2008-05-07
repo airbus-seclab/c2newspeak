@@ -203,6 +203,21 @@ let int_of_exp e =
     end;
     Big_int.int_of_big_int i
 
+let string_of_op x =
+  match x with
+      Plus _ -> "+"
+    | Minus _ -> "-"
+    | Mult _ -> "*"
+    | Div _ -> "/"
+    | _ -> Npkcontext.error "Cir.string_of_op" "case not implemented yet"
+
+let rec string_of_exp e =
+  match e with
+      Const (CInt i) -> Big_int.string_of_big_int (Nat.to_big_int i)
+    | Binop (op, e1, e2) -> 
+	(string_of_exp e1)^" "^(string_of_op op)^" "^(string_of_exp e2)
+    | _ -> Npkcontext.error "Cir.string_of_exp" "case not implemented yet"
+
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)

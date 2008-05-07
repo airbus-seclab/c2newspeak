@@ -168,3 +168,5 @@ val string_of_typ: typ -> string
 val size_of: typ -> int
 
 val is_subtyp: typ -> typ -> bool
+
+val string_of_exp: exp -> string
