@@ -1,40 +1,28 @@
-include ../Makefile.common
-# commands
-C2NEWSPEAK = ../../bin/c2newspeak --experimental
-NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
+#  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+#  well-suited for static analysis.
+#  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+#  
+#  This library is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Lesser General Public
+#  License as published by the Free Software Foundation; either
+#  version 2.1 of the License, or (at your option) any later version.
+#  
+#  This library is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  Lesser General Public License for more details.
+#  
+#  You should have received a copy of the GNU Lesser General Public
+#  License along with this library; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#
+#  Charles Hymans
+#  EADS Innovation Works - SE/CS
+#  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+#  email: charles.hymans@penjili.org
 
+COMMAND=$(NPK2BYTESZ)
 TESTS = 000 001 002 003 004 005 006 007 008 009
-TESTS.SPEC = $(addsuffix .spec, $(TESTS))
-CHECK=$(addsuffix .checked, $(TESTS))
 
-.SILENT: check $(CHECK)
-.PHONY: $(TESTS.SPEC)
-
-check: $(CHECK)
-
-%.checked: ../../bin/c2newspeak %.c
-	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.1.bak
-	eval $(NPK2BYTESZ) a.npk &> $*.bak
-	dos2unix $*.bak
-	if [ -e $*.spec ]; \
-	then \
-	  if diff $*.spec $*.bak > result; \
-            then true; \
-            else cat result; false; \
-	  fi; \
-	else \
-	  echo "$*.spec does not exist; printing output instead of diffing"; \
-	  cat $*.bak; false; \
-	fi;
-	$(RM) $*.1.bak $*.bak result
-	touch $*.spec
-
-$(TESTS.SPEC): %.spec: ../../bin/c2newspeak %.c
-	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c
-	eval $(NPK2BYTESZ) a.npk &> $*.spec
-	dos2unix $*.spec
-	cat $*.spec
-
-$(C2NEWSPEAK): 
-	make -C ../.. install
+include ../common.Makefile
 
