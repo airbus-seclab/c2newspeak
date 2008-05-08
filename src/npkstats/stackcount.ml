@@ -30,11 +30,17 @@ open Newspeak
 
 type stats = (bool * int * int)
 
-let count debug ptr_sz (_, fundecs, _) =
+let count debug ptr_sz prog =
+  let (_, fundecs, _) = prog in
+  let fid_addrof = Newspeak.collect_fid_addrof prog in
   let unknown_funs = ref [] in
   let exact = ref true in
   let fun_tbl = Hashtbl.create 100 in
   let current_loc = ref Newspeak.unknown_loc in
+
+  let raise_error msg = 
+    invalid_arg (msg^" at "^(Newspeak.string_of_loc !current_loc))
+  in
     
   let max_info (nb1, sz1) (nb2, sz2) = (max nb1 nb2, max sz1 sz2) in
 
@@ -44,7 +50,7 @@ let count debug ptr_sz (_, fundecs, _) =
       if debug then print_endline ("counting stack height of "^f);
       let (_, body) = 
 	try Hashtbl.find fundecs f 
-	with Not_found -> invalid_arg ("function "^f^" not defined")
+	with Not_found -> raise_error ("function "^f^" not defined")
       in
       let height = 
 	match body with
@@ -81,23 +87,24 @@ let count debug ptr_sz (_, fundecs, _) =
 	  let (nb, sz) = info in
 	  let (f_nb, f_sz) = count_call f in
 	    (nb + f_nb, sz + f_sz)
+      | Call _ -> 
+	  let build_call f = (Call (FunId f), !current_loc)::[] in
+	  let alternatives = List.map build_call fid_addrof in
+	    exact := false;
+	    List.fold_left (count_alternatives info) (0, 0) alternatives
       | ChooseAssert choices -> 
-	  List.fold_left (count_choice info) (0, 0) choices
+	  let choices = List.map snd choices in
+	    List.fold_left (count_alternatives info) (0, 0) choices
       | InfLoop body -> count_blk body info
-      | Call _ -> invalid_arg "case not handle yet"
-      | DoWith _ -> invalid_arg "case not handle yet"
+      | DoWith _ -> raise_error "case not handle yet"
       | _ -> info
 
-  and count_choice info max_so_far (_, body) =
+  and count_alternatives info max_so_far body =
     let info' = count_blk body info in
       max_info info' max_so_far
   in
     (* TODO: arguments of main not counted ! *)
-  let (nb, sz) = 
-    try count_call "main" 
-    with Invalid_argument msg -> 
-      invalid_arg (msg^" at "^(Newspeak.string_of_loc !current_loc))
-  in
+  let (nb, sz) = count_call "main" in
     (!exact, nb, sz)
       
 let print (exact, max_nb, max_sz) =

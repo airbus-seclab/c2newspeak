@@ -43,7 +43,7 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/mem_opt/000 \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
             $(addprefix tests/mult-files/,000 001 002 003 004) \
-            $(addprefix tests/npkstats/,000 001 002 003 004) \
+            $(addprefix tests/npkstats/,000 001 002 003 004 005) \
             $(addprefix tests/npkcheck/,000) \
             $(addprefix tests/newspeak/,000 001 002 003 004 005) \
             $(addprefix tests/npkbugfind/,000 001 002 003 004 005 006 007) \
