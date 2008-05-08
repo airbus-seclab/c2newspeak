@@ -33,23 +33,12 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             $(addsuffix /*.no,$(TESTSDIR)) \
             $(addsuffix /*.npk,$(TESTSDIR)) \
             $(addsuffix /*~,$(TESTSDIR)) \
-            tests/npksimplify/*.checked \
-            tests/newspeak/*.no tests/newspeak/result \
-            tests/newspeak/*.checked tests/newspeak/*~ \
-            tests/newspeak/002.npk tests/newspeak/*.bak \
-            tests/newspeak/*.cmi tests/newspeak/*.cmo tests/newspeak/read \
-            tests/mult-files/*.checked \
-            tests/mem_opt/000 \
+            $(addsuffix /*.ok,$(TESTSDIR)) \
             tests/*.no tests/*.checked tests/*~ tests/*.npk \
-            $(addprefix tests/mult-files/,000 001 002 003 004) \
-            tests/npkstats/*.ok tests/npkstrip/*.ok tests/npk2bytesz/*.ok \
-            $(addprefix tests/npkcheck/,000) \
-            $(addprefix tests/newspeak/,000 001 002 003 004 005) \
-            $(addprefix tests/npkbugfind/,000 001 002 003 004 005 006 007) \
-            $(addprefix tests/npkbugfind/,008 009 010) \
-            tests/newspeak/*.exe tests/newspeak/003.npk \
-            tests/newspeak/005.npk \
-            tests/newspeak/*_check
+            tests/newspeak/*~ tests/newspeak/*.ok tests/newspeak/*.exe \
+            tests/newspeak/*_check tests/newspeak/*.cmi tests/newspeak/*.cmo \
+            tests/newspeak/*.no tests/newspeak/002.npk tests/newspeak/003.npk \
+            tests/newspeak/005.npk
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > src/version.ml; \

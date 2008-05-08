@@ -1,1 +1,1 @@
-Fatal error: invalid length for array in 000.c line 30
+Fatal error: exception Sys_error("a.npk: No such file or directory")

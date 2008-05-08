@@ -23,22 +23,25 @@
 
 #commands
 RM=rm -f
+WC=wc -c
 C2NEWSPEAK=../../bin/c2newspeak --experimental
 NPKSTATS=../../bin/npkstats
 NPKSTRIP=../../bin/npkstrip --newspeak
 NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
-
-.SILENT: $(TESTS.OK)
-.PHONY: $(TESTS.SPEC)
+NPKBUGFIND=../../bin/npkbugfind
+NPKCHECK=../../bin/npkcheck
+NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 
 TESTS.OK= $(addsuffix .ok, $(TESTS))
 TESTS.SPEC= $(addsuffix .spec, $(TESTS))
 
+.SILENT: $(TESTS.OK)
+.PHONY: $(TESTS.SPEC)
+
 check: $(TESTS.OK)
 
-$(TESTS.OK): %.ok: %.c
-	eval $(C2NEWSPEAK) `[ -e $*.in1 ] && cat $*.in1` $*.c &> /dev/null
-	eval $(COMMAND) `[ -e $*.in2 ] && cat $*.in2` a.npk &> $*.bak
+$(TESTS.OK): %.ok: $(PREREQ)
+	$(COMMAND) &> $*.bak; true
 	dos2unix $*.bak &> /dev/null
 	if [ -e $*.spec ]; \
 	then \
@@ -58,8 +61,7 @@ $(TESTS):
 	make $@.ok
 
 
-$(TESTS.SPEC): %.spec: %.c
-	eval $(C2NEWSPEAK) $*.c
-	eval $(COMMAND) `[ -e $*.in ] && cat $*.in` a.npk &> $*.spec
+$(TESTS.SPEC): %.spec: $(PREREQ)
+	$(COMMAND) &> $*.spec; true
 	dos2unix $*.spec
 	cat $*.spec

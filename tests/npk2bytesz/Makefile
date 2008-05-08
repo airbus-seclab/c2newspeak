@@ -21,8 +21,10 @@
 #  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 #  email: charles.hymans@penjili.org
 
-COMMAND=$(NPK2BYTESZ)
-TESTS = 000 001 002 003 004 005 006 007 008 009
+COMMAND=$(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> /dev/null; \
+        $(NPK2BYTESZ) a.npk
+PREREQ=%.c
+TESTS=000 001 002 003 004 005 006 007 008 009
 
 include ../common.Makefile
 
