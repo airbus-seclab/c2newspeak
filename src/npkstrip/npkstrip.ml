@@ -49,7 +49,7 @@ let speclist =
 
 module StringSet = Set.Make(String)
 
-class collector (globals, fundecs) used_gvars used_funs =
+class collector (globals, fundecs) used_gvars used_funs fid_addrof =
 object (this)
   inherit Newspeak.visitor
 
@@ -68,13 +68,11 @@ object (this)
     end
 
   method process_fn x =
-    match x with
-	FunId f -> 
-	  this#visit_fun f;
-	  false
-      | FunDeref _ -> 
-	  invalid_arg ("Main.collect_used.visit_fn: "
-			^"Function pointer called: can not strip")
+    begin match x with
+	FunId f -> this#visit_fun f
+      | FunDeref _ -> List.iter this#visit_fun fid_addrof
+    end;
+    false
 
   method process_lval x =
     match x with
@@ -85,10 +83,14 @@ object (this)
 
 end
 
-let collect_used (globals, fundecs, specs) =
+let collect_used prog =
+  let (globals, fundecs, specs) = prog in
   let used_gvars = Hashtbl.create 100 in
   let used_funs = Hashtbl.create 100 in
-  let collector = new collector (globals, fundecs) used_gvars used_funs in
+  let fid_addrof = Newspeak.collect_fid_addrof prog in
+  let collector = 
+    new collector (globals, fundecs) used_gvars used_funs fid_addrof
+  in
     collector#visit_fun !main;
     (used_gvars, used_funs, specs)
         
