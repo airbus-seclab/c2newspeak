@@ -28,19 +28,19 @@
 
 #include <sys/types.h>
 
-int chroot(const char*);
 int chdir(const char *path);
+int chown(const char *path, uid_t owner, gid_t group);
+int chroot(const char*);
 int close(int);
-unsigned int sleep(unsigned int);
-char *getpass(const char*);
 int execl(const char *path, const char *arg0, ... /*, (char *)0 */);
 int execlp(const char *file, const char *arg0, ... /*, (char *)0 */);
-ssize_t read(int fildes, void *buf, size_t nbyte);
-char *getcwd(char *buf, size_t size);
-int chown(const char *path, uid_t owner, gid_t group);
 int fchown(int fildes, uid_t owner, gid_t group);
-int pause(void);
 pid_t fork(void);
+char *getcwd(char *buf, size_t size);
+char *getpass(const char*);
+int pause(void);
+ssize_t read(int fildes, void *buf, size_t nbyte);
+unsigned int sleep(unsigned int);
 
 
 

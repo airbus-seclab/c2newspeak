@@ -25,17 +25,18 @@
 
 #include <stddef.h>
 
-char *strdup(const char *);
-char *strncpy(char*, const char*, size_t);
-char *strcpy(char *, const char *);
-size_t strlen(const char *);
-void *memcpy(void *, const void *, size_t);
-char *strcat(char *, const char *);
-char *strncat(char *, const char *, size_t);
-int memcmp(const void*, const void*, size_t);
-char *strstr(const char *, const char *);
-void *memmove(void *, const void *, size_t); 
-void* memccpy(void *, const void *, int, size_t);
 void bcopy(const void *s1, void *s2, size_t n);
+void* memccpy(void *, const void *, int, size_t);
+int memcmp(const void *p1, const void *p2, size_t n);
+void *memcpy(void *, const void *, size_t n);
+void *memmove(void *, const void *, size_t n); 
+void *memset(void *p, int c, size_t n);
+char *strcat(char *dst, const char *src);
+int strncmp(const char *s1, const char *s2, size_t n);
 int strcmp(const char *s1, const char *s2);
-void *memset(void *b, int c, size_t n);
+char *strcpy(char *, const char *);
+char *strdup(const char *);
+size_t strlen(const char *);
+char *strncat(char *, const char *, size_t);
+char *strncpy(char*, const char*, size_t);
+char *strstr(const char *, const char *);
