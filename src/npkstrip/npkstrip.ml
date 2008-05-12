@@ -61,11 +61,13 @@ object (this)
     end
 
   method visit_fun f = 
-    if not (Hashtbl.mem used_funs f) then begin
-      let fundec = Hashtbl.find fundecs f in
-	Hashtbl.add used_funs f fundec;
-	Newspeak.visit_fun (this :> Newspeak.visitor) f fundec
-    end
+    try
+      if not (Hashtbl.mem used_funs f) then begin
+	let fundec = Hashtbl.find fundecs f in
+	  Hashtbl.add used_funs f fundec;
+	  Newspeak.visit_fun (this :> Newspeak.visitor) f fundec
+      end
+    with Not_found -> ()
 
   method process_fn x =
     begin match x with
