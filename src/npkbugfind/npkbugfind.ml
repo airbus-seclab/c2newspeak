@@ -135,10 +135,7 @@ and scan_choice env (conds, body) =
     List.iter scan_exp conds;
     scan_blk !env body
 
-let scan_fundef _ (_, body) =
-  match body with
-      Some blk -> scan_blk [] blk
-    | _ -> ()
+let scan_fundef _ (_, body) = scan_blk [] body
 
 let scan_prog (_, fundefs, _) = 
   Hashtbl.iter scan_fundef fundefs

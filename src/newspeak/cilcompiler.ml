@@ -353,7 +353,16 @@ and translate_exp e =
     | AddrOf lv -> begin
 	match lv, translate_typ (typeOf e) with
 	  | (Var f, NoOffset), K.Scalar Newspeak.FunPtr ->
-	      K.AddrOfFun f.vname
+	      let ft = Npkutils.ftyp_of_typ (typeOfLval lv) in
+	      let (args, ret) = Npkutils.translate_ftyp ft in
+	      let ft =
+		match args with
+		    Some args -> (List.map snd args, ret)
+		  | None -> 
+		      Npkcontext.error "Cilcompiler.translate_exp" 
+			"case not handled yet"
+	      in
+		K.AddrOfFun (f.vname, ft)
 	      
 	  | _, K.Scalar Newspeak.Ptr ->
 	      let (lv', offs) = removeOffsetLval lv in begin

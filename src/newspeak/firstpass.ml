@@ -633,7 +633,10 @@ let translate (globals, spec) =
     match t with
 	Void -> C.Void
       | Int k -> C.Int k
-      | Fun ft -> C.Fun (translate_ftyp ft)
+      | Fun ft -> 
+	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
+	  let (ft, _) = normalize_ftyp ft in
+	    C.Fun (translate_ftyp ft)
       | Float n -> C.Float n
       | Ptr (Fun _) -> C.FunPtr
       | Ptr _ -> C.Ptr

@@ -41,8 +41,7 @@ module Int_set =
 
 (* Counter are always incremented by incr*)
 let incr cnt = 
-  if !cnt = max_int
-  then error "Npkutils.incr" "too many objects";
+  if !cnt = max_int then Npkcontext.error "Npkutils.incr" "too many objects";
   incr cnt;
   !cnt
 
@@ -189,3 +188,9 @@ let translate_ftyp (args, ret) =
 	    ("invalid type '"^(Cilutils.string_of_type x)^"'") 
 *)
 let translate_loc loc = (loc.file, loc.line, loc.byte) 
+
+let rec ftyp_of_typ t = 
+  match t with
+      TFun (ret, args, _, _) -> (args, ret)
+    | TNamed (info, _) -> ftyp_of_typ info.ttype
+    | _ -> Npkcontext.error "Npkutils.ftyp_of_typ" "function type expected"

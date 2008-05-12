@@ -63,3 +63,6 @@ val translate_ftyp :
 val isPtr : Cil.exp -> bool
 
 val translate_loc: Cil.location -> Newspeak.location
+
+val ftyp_of_typ: 
+  Cil.typ -> (string * Cil.typ * Cil.attributes) list option * Cil.typ

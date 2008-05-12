@@ -31,18 +31,15 @@ open Newspeak
 let process (gdecls, fundecs, specs) =
   let res = Hashtbl.create 100 in
     
-  let has_body f = 
-    let (_, body) = Hashtbl.find fundecs f in
-      body <> None
-  in
+  let has_body f = Hashtbl.mem fundecs f in
     
   let get_body f =
-    let (_, body) = Hashtbl.find fundecs f in
-      match body with
-	  Some body -> body
-	| None -> 
-	    invalid_arg ("Inline.process.get_body: function "^f
-			  ^"'s body not defined")
+    try
+      let (_, body) = Hashtbl.find fundecs f in
+	body
+    with Not_found ->
+      invalid_arg ("Inline.process.get_body: function "^f
+		    ^"'s body not defined")
   in
 
   let rec process_blk x = 
@@ -66,11 +63,7 @@ let process (gdecls, fundecs, specs) =
   and process_choice (cond, body) =  (cond, process_blk body) in
 
   let process_fun fid (t, body) =
-    let body = 
-    match body with
-	None -> None 
-      | Some body -> Some (process_blk body)
-    in
+    let body = process_blk body in
       Hashtbl.add res fid (t, body)
   in
 

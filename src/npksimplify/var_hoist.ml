@@ -102,11 +102,7 @@ let process (gdecls, fundecs, specs) =
 
   let res = Hashtbl.create 100 in
   let process_fun fid (t, body) =
-    let body = 
-    match body with
-	None -> None 
-      | Some body -> Some (process_blk body)
-    in
+    let body = process_blk body in
       Hashtbl.add res fid (t, body)
   in
 

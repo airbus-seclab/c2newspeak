@@ -94,7 +94,7 @@ and globals = (string, gdecl) Hashtbl.t
 
 and gdecl = typ * init_t
 
-and fundec = ftyp * blk option
+and fundec = ftyp * blk
 
 and specs = assertion list
 
@@ -131,7 +131,7 @@ and exp =
     Const of cte
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * size_t)
-  | AddrOfFun of fid
+  | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
@@ -432,8 +432,7 @@ and string_of_exp e =
       Const c -> string_of_cte c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
-    | AddrOfFun fid -> "&_fun("^fid^")"
-
+    | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp ft)^"}("^fid^")"
     | BinOp (op, e1, e2) ->
 	"("^(string_of_exp e1)^" "^(string_of_binop op)^
 	  " "^(string_of_exp e2)^")"
@@ -566,13 +565,10 @@ let string_of_blk offset x =
     Buffer.contents buf
   
 let dump_fundec name body =
-  match body with
-      None -> ()
-    | Some body ->
-	print_endline (name^"() {");
-	print_string (string_of_blk 2 body);
-	print_endline "}";
-	print_newline ()
+  print_endline (name^"() {");
+  print_string (string_of_blk 2 body);
+  print_endline "}";
+  print_newline ()
 
 
 let dump_globals gdecls = 
@@ -1172,11 +1168,7 @@ and build_gdecl builder (t, init) =
 
 and build_fundec builder (ft, body) = 
   let ft = build_ftyp builder ft in
-  let body = 
-    match body with
-	Some body -> Some (build_blk builder body)
-      | None -> None
-  in
+  let body = build_blk builder body in
     (ft, body)
 
 and build_typ builder t =
@@ -1503,12 +1495,11 @@ and visit_choice visitor (cond, body) =
 
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in
-  if continue then visit_ftyp visitor t;
-    match body with
-	Some body when continue -> 
-	  visit_blk visitor body;
-	  visitor#process_fun_after ()
-      | _ -> ()
+  if continue then begin
+    visit_ftyp visitor t;
+    visit_blk visitor body;
+    visitor#process_fun_after ()
+  end
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
@@ -1534,7 +1525,7 @@ object
 
   method process_exp e = 
     begin match e with
-	AddrOfFun id when not (List.mem id fid_list) ->
+	AddrOfFun (id, _) when not (List.mem id fid_list) ->
 	  fid_list <- id::fid_list
       | _ -> ()
     end;

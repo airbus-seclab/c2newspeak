@@ -124,7 +124,8 @@ let translate (cglbdecls, cfundefs, specs) =
       let t' =
 	match t with
 	    Void -> 
-	      Npkcontext.error "Compiler.translate_typ" "Void not allowed here"
+	      Npkcontext.error "Compiler.translate_typ" 
+		"type void not allowed here"
 	  | Int _ | Float _ | Ptr | FunPtr -> K.Scalar (translate_scalar t)
 	  | Array (t, sz) -> K.Array (translate_typ t, sz)
 	  | Struct (fields, sz) | Union (fields, sz) -> 
@@ -179,7 +180,7 @@ let translate (cglbdecls, cfundefs, specs) =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
-      | AddrOf (Global f, Fun _) -> K.AddrOfFun f
+      | AddrOf (Global f, Fun ft) -> K.AddrOfFun (f, translate_ftyp ft)
 
       | AddrOf (lv, (Array _ as t)) ->
 	  let lv = translate_lv lv in

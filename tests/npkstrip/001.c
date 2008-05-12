@@ -21,18 +21,11 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-
 */
 
-typedef struct {
-  int c:3;
-  int d:1;
-} s;
-
-void a(s) {
-}
+extern void f(void);
 
 void main() {
-  int x;
-  x = 1;
+  void (*fptr)(void);
+  fptr = &f;
 }

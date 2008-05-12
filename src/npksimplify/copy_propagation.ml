@@ -111,13 +111,10 @@ and process_choice env (cond, body) =
 
 let process_fundec (t, body) =
   let body =
-    match body with
-	None -> None
-      | Some body -> 
-	  let n = nb_of_params t in
-	  let env = Store.universe n in
-	  let (_, body) = process_blk env body in
-	    Some body
+    let n = nb_of_params t in
+    let env = Store.universe n in
+    let (_, body) = process_blk env body in
+      body
   in
     (t, body)
 

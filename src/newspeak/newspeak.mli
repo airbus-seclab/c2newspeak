@@ -91,7 +91,7 @@ and globals = (string, gdecl) Hashtbl.t
 
 and gdecl = typ * init_t
 
-and fundec = ftyp * blk option
+and fundec = ftyp * blk
 
 and specs = assertion list
 
@@ -128,7 +128,7 @@ and exp =
     Const of cte
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * size_t)
-  | AddrOfFun of fid
+  | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 

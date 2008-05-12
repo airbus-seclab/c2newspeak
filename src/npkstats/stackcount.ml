@@ -48,20 +48,17 @@ let count debug ptr_sz prog =
     try Hashtbl.find fun_tbl f
     with Not_found -> 
       if debug then print_endline ("counting stack height of "^f);
-      let (_, body) = 
-	try Hashtbl.find fundecs f 
-	with Not_found -> raise_error ("function "^f^" not defined")
-      in
       let height = 
-	match body with
-	    Some body -> count_blk body (0, 0)
-	  | None -> 
-	      if not (List.mem f !unknown_funs) then begin
-		unknown_funs := f::!unknown_funs;
-		prerr_endline ("Warning: function "^f^" body not defined")
-	      end;
-	      exact := false;
-	      (0, 0)
+	try 
+	  let (_, body) = Hashtbl.find fundecs f in
+	    count_blk body (0, 0)
+	with Not_found -> 
+	  if not (List.mem f !unknown_funs) then begin
+	    unknown_funs := f::!unknown_funs;
+	    prerr_endline ("Warning: function "^f^" body not defined")
+	  end;
+	  exact := false;
+	  (0, 0)
       in
 	Hashtbl.add fun_tbl f height;
 	height

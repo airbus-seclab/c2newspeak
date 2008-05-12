@@ -165,13 +165,9 @@ object (this)
     in
       true
 
-  method process_fun f (_, x) =
-    let _ = 
-      match x with
-	  Some _ -> Hashtbl.add funstats f current_counters;
-	| _ -> ()
-    in
-      true
+  method process_fun f _ =
+    Hashtbl.add funstats f current_counters;
+    true
 
   method process_fun_after () =
     incr_counters counters current_counters;

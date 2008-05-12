@@ -70,7 +70,7 @@ and exp =
     Const of cte
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * tmp_int)
-  | AddrOfFun of fid
+  | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 

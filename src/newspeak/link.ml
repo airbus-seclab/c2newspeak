@@ -93,7 +93,7 @@ and replace_exp e =
   match e with
     | Npkil.Lval (lv, sca) -> Newspeak.Lval (replace_lv lv, sca)
     | Npkil.Const c -> Newspeak.Const c 
-    | Npkil.AddrOfFun f -> Newspeak.AddrOfFun f
+    | Npkil.AddrOfFun (fid, ft) -> Newspeak.AddrOfFun (fid, replace_ftyp ft)
     | Npkil.AddrOf (lv, sz) -> 
 	Newspeak.AddrOf (replace_lv lv, replace_tmp_int sz)
     | Npkil.UnOp (o, e) -> Newspeak.UnOp (replace_unop o, replace_exp e)
@@ -271,7 +271,7 @@ let generate_funspecs cout npkos =
 	    ("Function "^name^" type does not match");
 	  match body with
 	      None -> ()
-	    | Some _ when Hashtbl.mem waiting name -> 
+	    | Some body when Hashtbl.mem waiting name -> 
 		Hashtbl.remove waiting name;
 		write_fun cout name (ftyp, body)
 	    | Some _ -> 
@@ -282,15 +282,14 @@ let generate_funspecs cout npkos =
 	Hashtbl.add encountered name ftyp;
 	match body with
 	    None -> Hashtbl.add waiting name (ftyp, None)
-	  | Some _ -> write_fun cout name (ftyp, body)
+	  | Some body -> write_fun cout name (ftyp, body)
   in
     
   let read_all_funspec npko =
     let funs = read_fundefs npko in
       Hashtbl.iter handle_funspec funs
   in
-    List.iter read_all_funspec npkos;
-    Hashtbl.iter (Newspeak.write_fun cout) waiting
+    List.iter read_all_funspec npkos
       
 
 (* TODO: clean up *)

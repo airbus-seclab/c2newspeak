@@ -69,7 +69,7 @@ and exp =
     Const of cte
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * tmp_int)
-  | AddrOfFun of fid
+  | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
@@ -185,7 +185,7 @@ and string_of_exp e =
       Const c -> Newspeak.string_of_cte c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_tmp_int sz)^"("^(string_of_lval lv)^")"
-    | AddrOfFun fid -> "&fun"^(string_of_fid fid)
+    | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)
 
     (* TODO: Check this ! *)
     (* Pretty printing for >= and != *)
