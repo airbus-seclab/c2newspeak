@@ -217,6 +217,8 @@ val domain_of_typ : sign_t * size_t -> bounds
 
 val belongs: Nat.t -> bounds -> bool
 
+val contains: bounds -> bounds -> bool
+
 (* Negation of a boolean condition. *)
 val negate : exp -> exp
 
