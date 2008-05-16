@@ -920,16 +920,20 @@ let simplify_gotos blk =
       | DoWith ((Goto l1, _)::[], l2, []) when l1 = l2 -> ([], LblSet.empty)
       | DoWith ([], _, []) -> ([], LblSet.empty)
 
-      | DoWith (hd::tl, l, []) ->
+      | DoWith (hd::tl, l, action) ->
 	  let (hd, hd_lbls) = simplify_stmt hd in
 	  let tl = remove_final_goto l tl in
 	    if LblSet.mem l hd_lbls then begin
 	      let (tl, tl_lbls) = simplify_blk tl in
+	      let (action, act_lbls) = simplify_blk action in
 	      let lbls = LblSet.union hd_lbls tl_lbls in
 	      let lbls = LblSet.remove l lbls in
-		((DoWith (hd@tl, l, []), loc)::[], lbls)
+	      let lbls = LblSet.union lbls act_lbls in
+		((DoWith (hd@tl, l, action), loc)::[], lbls)
 	    end else begin
-	      let (tl, tl_lbls) = simplify_stmt (DoWith (tl, l, []), loc) in
+	      let (tl, tl_lbls) = 
+		simplify_stmt (DoWith (tl, l, action), loc) 
+	      in
 	      let lbls = LblSet.union hd_lbls tl_lbls in
 		(hd@tl, lbls)
 	    end
@@ -947,9 +951,6 @@ let simplify_gotos blk =
       | InfLoop body -> 
 	  let (body, lbls) = simplify_blk body in
 	    ([InfLoop body, loc], lbls)
-
-      | DoWith _ -> 
-	  invalid_arg "Newspeak.simplify_gotos: empty action expected"
 
       | _ -> ([x, loc], LblSet.empty)
   in

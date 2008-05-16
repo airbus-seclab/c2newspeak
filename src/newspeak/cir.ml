@@ -71,7 +71,7 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-    | Block of (blk * lbl option)
+    | Block of (blk * (lbl * blk) option)   (* DoWith construct *)
     | Goto of lbl
     | Decl of (typ * string * int)
     | Set of (lv * typ * exp)
@@ -461,15 +461,16 @@ let normalize x =
 	  in
 	    (body, used_lbls)
 
-      | (Block (body, Some lbl), loc)::tl -> 
+      | (Block (body, Some (lbl, act_blk)), loc)::tl -> 
 	  push_lbl lbl;
 	  let (body, used_lbls) = set_scope_blk body in
 	  let used_lbls1 = Set.remove lbl used_lbls in
 	  let decls = pop_lbl lbl in
-	  let body = ((Block (body, Some lbl), loc)::[]) in
+	  let (act_blk, used_lbls2) = set_scope_blk act_blk in
+	  let body = ((Block (body, Some (lbl, act_blk)), loc)::[]) in
 	  let body = 
 	    if Set.is_empty used_lbls1 then begin
-	      let body = List.rev_append decls  body in
+	      let body = List.rev_append decls body in
 		(Block (body, None), loc)::[]
 	    end else begin
 	      let lbl = Set.min_elt used_lbls in
@@ -477,8 +478,8 @@ let normalize x =
 		body
 	    end
 	  in
-	  let (tl, used_lbls2) = set_scope_blk tl in
-	    (body@tl, Set.union used_lbls1 used_lbls2)
+	  let (tl, used_lbls3) = set_scope_blk tl in
+	    (body@tl, Set.union (Set.union used_lbls1 used_lbls2) used_lbls3)
 	      
       | (x, loc)::tl -> 
 	  let (x, used_lbls1) = set_scope_stmtkind x in
@@ -574,3 +575,52 @@ and is_subfield (f1, (o1, t1)) (f2, (o2, t2)) =
 and is_subftyp (args1, ret1) (args2, ret2) =
   try (is_subtyp ret1 ret2) && (List.for_all2 is_subtyp args1 args2)
   with Invalid_argument _ -> false
+
+(* a large block has at least 3 instructions or has a call *)
+let is_large_blk x =
+  let cnt = ref 0 in
+  let rec check_blk x =
+    match x with
+	(hd, _)::tl -> 
+	  incr cnt;
+	  if !cnt > 2 then raise Exit;
+	  check_stmt hd;
+	  check_blk tl
+      | [] -> ()
+
+  and check_stmt x =
+    match x with
+	Block (x, None) | Loop x -> check_blk x
+      | Block (x, Some (_, y)) -> check_blk x; check_blk y
+      | If (e, x, y) -> check_blk x; check_blk y; check_exp e
+      | Switch (e, choices, x) -> 
+	  check_exp e;
+	  List.iter check_choice choices;
+	  check_blk x;
+      | Set (lv, _, e) -> check_lval lv; check_exp e
+      | Exp e -> check_exp e
+      | _ -> ()
+
+  and check_choice ((e, _), blk) = check_exp e; check_blk blk
+
+  and check_lval x =
+    match x with
+      | Shift (lv, e) -> check_lval lv; check_exp e
+      | Deref (e, _) -> check_exp e
+      | Stmt_lv ((stmt, _), lv, _) -> check_stmt stmt; check_lval lv
+      | _ -> ()
+
+  and check_exp e =
+    match e with
+      | Lval (lv, _) | AddrOf (lv, _) -> check_lval lv
+      | Unop (_, e) -> check_exp e
+      | Binop (_, e1, e2) -> check_exp e1; check_exp e2
+      | Call _ -> raise Exit
+      | Pref (blk, e) -> check_blk blk; check_exp e
+      | _ -> ()
+  in
+    try 
+      check_blk x;
+      false
+    with Exit -> true
+

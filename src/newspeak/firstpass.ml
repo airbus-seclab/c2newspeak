@@ -43,6 +43,34 @@ type symb =
     | VarSymb of C.lv 
     | Enum of C.exp
 
+
+type btree =
+    TLeft
+  | TRight
+  | TExp of (exp * btree * btree)
+
+let build_tree e =
+  let rec build_tree e t1 t2 =
+    match e with
+	IfExp (c, e1, e2) ->
+	  let t1' = build_tree e1 t1 t2 in
+	  let t2' = build_tree e2 t1 t2 in
+	    build_tree c t1' t2'
+	      
+      | Unop (Not, (IfExp _ as e)) -> build_tree e t2 t1
+	  
+      | Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> t1
+	  
+      | Cst (C.CInt _, _) -> t2
+	  
+      | _ -> 
+	  let (t1, l1, r1) = t1 in
+	  let (t2, l2, r2) = t2 in
+	    (TExp (e, t1, t2), l1 + l2, r1 + r2)
+  in
+  let (t, l, r) = build_tree e (TLeft, 1, 0) (TRight, 0, 1) in
+    (t, l > 1, r > 1)
+
 (* functions *)
 (* [align o x] returns the smallest integer greater or equal than o,
    which is equal to 0 modulo x *)
@@ -90,6 +118,11 @@ let translate (globals, spec) =
 
   let lbl_tbl = Hashtbl.create 10 in
   let lbl_cnt = ref default_lbl in
+
+  let new_lbl () =
+    incr lbl_cnt;
+    !lbl_cnt
+  in
 
   let add_var loc (t, x) =
     let id = C.fresh_id () in
@@ -192,9 +225,9 @@ let translate (globals, spec) =
   let translate_lbl lbl =
     try Hashtbl.find lbl_tbl lbl
     with Not_found -> 
-      incr lbl_cnt;
-      Hashtbl.add lbl_tbl lbl !lbl_cnt;
-      !lbl_cnt
+      let lbl' = new_lbl () in
+	Hashtbl.add lbl_tbl lbl lbl';
+	lbl'
   in
 
   let rec cast (e, t) t' = 
@@ -842,7 +875,7 @@ let translate (globals, spec) =
       match tl with
 	  [] -> x
 	| (lbl, loc, blk)::tl -> 
-	    let blk = (C.Block (x, Some lbl), loc)::blk in
+	    let blk = (C.Block (x, Some (lbl, [])), loc)::blk in
 	      stitch (blk, tl)
     in
       stitch (translate x)
@@ -892,13 +925,13 @@ let translate (globals, spec) =
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
       | For (init, e, body, suffix) ->
-	  let init = (C.Block (translate_blk init, Some cnt_lbl), loc) in
+	  let init = (C.Block (translate_blk init, Some (cnt_lbl, [])), loc) in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
 	  let body = translate_blk body in
-	  let body = (C.Block (guard@body, Some cnt_lbl), loc) in
+	  let body = (C.Block (guard@body, Some (cnt_lbl, [])), loc) in
 	  let suffix = translate_blk suffix in
 	  let loop = (C.Loop (body::suffix), loc) in
-	    (C.Block (init::loop::[], Some brk_lbl), loc)::[]
+	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
 
       | CSwitch (e, choices, default) -> 
 	  let (e, _) = translate_exp e in
@@ -907,33 +940,40 @@ let translate (globals, spec) =
 	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
 	  let body = translate_cases (last_lbl, switch) choices in
 	  let default = translate_blk default in
-	  let body = (C.Block (body, Some default_lbl), loc)::default in
-	    (C.Block (body, Some brk_lbl), loc)::[]
+	  let body = (C.Block (body, Some (default_lbl, [])), loc)::default in
+	    (C.Block (body, Some (brk_lbl, [])), loc)::[]
 
       | Label _ | VDecl _ | EDecl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt"
 	    "unreachable code"
 
-  and translate_if loc if_stmt =
-    let rec translate (e, blk1, blk2) =
-      match e with
-	  IfExp (c, e1, e2) ->
-	    let blk1' = translate (e1, blk1, blk2) in
-	    let blk2' = translate (e2, blk1, blk2) in
-	      translate (c, blk1', blk2')
-
-	| Unop (Not, (IfExp _ as e)) -> translate (e, blk2, blk1)
-
-	| Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> blk1
-	    
-	| Cst (C.CInt _, _) -> blk2
-    
-	| _ -> 
+  and translate_if loc (e, blk1, blk2) =
+    let (t, duplicate_blk1, duplicate_blk2) = build_tree e in
+    let duplicate_blk1 = duplicate_blk1 && C.is_large_blk blk1 in
+    let duplicate_blk2 = duplicate_blk2 && C.is_large_blk blk2 in
+    let lbl1 = if duplicate_blk1 then new_lbl () else -1 in
+    let lbl2 = if duplicate_blk2 then new_lbl () else -1 in
+    let branch1 = if duplicate_blk1 then (C.Goto lbl1, loc)::[] else blk1 in
+    let branch2 = if duplicate_blk2 then (C.Goto lbl2, loc)::[] else blk2 in
+    let rec translate_tree t =
+      match t with
+	  TLeft -> branch1
+	| TRight -> branch2
+	| TExp (e, t1, t2) ->
 	    let e = simplify_bexp e in
 	    let (e, _) = translate_exp e in
+	    let blk1 = translate_tree t1 in
+	    let blk2 = translate_tree t2 in
 	      (C.If (e, blk1, blk2), loc)::[]
     in
-      translate if_stmt
+    let x = translate_tree t in
+    let x = 
+      if duplicate_blk1 then (C.Block (x, Some (lbl1, blk1)), loc)::[] else x 
+    in
+    let x = 
+      if duplicate_blk2 then (C.Block (x, Some (lbl2, blk2)), loc)::[] else x 
+    in
+      x
 
 
   and translate_switch x =
@@ -951,7 +991,7 @@ let translate (globals, spec) =
 	(_, [], _)::tl -> translate_cases (lbl, body) tl
       | (_, case, loc)::tl ->
 	  let case = translate_blk case in
-	  let body = (C.Block (body, Some lbl), loc)::case in
+	  let body = (C.Block (body, Some (lbl, [])), loc)::case in
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
@@ -1102,7 +1142,7 @@ let translate (globals, spec) =
 	  let f' = update_funtyp f static ft ft' loc in
 	  let formalids = add_formals loc ft in
 	  let body = translate_blk body in
-	  let body = (C.Block (body, Some ret_lbl), loc)::[] in
+	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
 	    update_funbody f' (formalids, body);
 	    remove_formals args;
 	    current_fun := "";

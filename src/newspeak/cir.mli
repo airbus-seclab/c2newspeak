@@ -60,7 +60,7 @@ and blk = stmt list
 and stmt = (stmtkind * Newspeak.location)
 
 and stmtkind =
-    | Block of (blk * lbl option)
+    | Block of (blk * (lbl * blk) option)
     | Goto of lbl
     | Decl of (typ * string * int)
     | Set of (lv * typ * exp)
@@ -171,3 +171,5 @@ val size_of: typ -> int
 val is_subtyp: typ -> typ -> bool
 
 val string_of_exp: exp -> string
+
+val is_large_blk: blk -> bool

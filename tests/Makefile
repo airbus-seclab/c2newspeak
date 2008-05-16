@@ -47,7 +47,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	340 341 342 343 344 345 346 347 348 349 \
 	350 351 352 353 354 355 356 357 358 359 \
 	360 361 362 363 364 365 366 367 368 369 \
-	370 371
+	370 371 372
 
 CHECK=$(addsuffix .checked, $(TESTS))
 TESTS.SPEC = $(addsuffix .spec, $(TESTS))
@@ -102,29 +102,27 @@ $(TESTS): %: %.checked
 	dos2unix $*.bak 2&> /dev/null; true
 	if [ -e $*.spec ]; \
 	then \
-	  if diff $*.spec $*.bak > result; \
+	  if diff $*.spec $*.bak > $*.res; \
 	  then true; \
-	  else cat result; false; \
+	  else cat $*.res; false; \
 	  fi; \
 	else \
 	  echo "$*.spec does not exist; printing output instead of diffing"; \
 	  cat $*.bak; false; \
 	fi
-	$(RM) $*.bak result
 	eval $(C2NEWSPEAK.CIL) `[ -e $*.in ] && cat $*.in` \
 	$*.c &> $*.bak; true
 	dos2unix $*.bak 2&> /dev/null; true 
 	if [ -e $(CIL_SPEC) ]; \
 	then \
-	  if diff $(CIL_SPEC) $*.bak > result; \
+	  if diff $(CIL_SPEC) $*.bak > $*.res; \
 	  then true; \
-	  else cat result; false; \
+	  else cat $*.res; false; \
 	  fi; \
 	else \
 	  echo "$(CIL_SPEC) does not exist; printing output instead of diffing"; \
 	  cat $*.bak; false; \
 	fi;
-	$(RM) $*.bak result
 	touch $*.checked
 	echo $*
 
@@ -143,5 +141,5 @@ $(TESTS.CIL.SPEC): %.cil.spec: %.c
 	make -C .. install
 
 clean: 
-	$(RM) $(TESTS)
-	$(RM) *~ *.bak result *.no *.npk
+	$(RM) $(CHECK)
+	$(RM) *~ *.bak *.res *.no *.npk
