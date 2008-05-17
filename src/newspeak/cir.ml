@@ -515,19 +515,20 @@ let normalize x =
 	  let used_lbls1 = Set.remove lbl used_lbls1 in
 	  let decls = pop_lbl lbl in
 	  let (act_blk, used_lbls2) = set_scope_blk act_blk in
+	  let used_lbls = Set.union used_lbls1 used_lbls2 in
 	  let body = ((Block (body, Some (lbl, act_blk)), loc)::[]) in
 	  let body = 
-	    if Set.is_empty used_lbls1 then begin
+	    if Set.is_empty used_lbls then begin
 	      let body = List.rev_append decls body in
 		(Block (body, None), loc)::[]
 	    end else begin
-	      let lbl = Set.min_elt used_lbls1 in
+	      let lbl = Set.min_elt used_lbls in
 		List.iter (register_decl lbl) decls;
 		body
 	    end
 	  in
-	  let (tl, used_lbls3) = set_scope_blk tl in
-	    (body@tl, Set.union (Set.union used_lbls1 used_lbls2) used_lbls3)
+	  let (tl, used_lbls') = set_scope_blk tl in
+	    (body@tl, Set.union used_lbls used_lbls')
 	      
       | (x, loc)::tl -> 
 	  let (x, used_lbls1) = set_scope_stmtkind x in
