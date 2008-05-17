@@ -146,6 +146,36 @@ and cst =
     | CFloat of (float * string)
 
 
+let rec string_of_blk margin x =
+  match x with
+      [] -> ""
+    | (Block (body, None), _)::tl -> 
+	(string_of_blk margin body)^(string_of_blk margin tl)
+    | hd::tl -> 
+	margin^(string_of_stmt margin hd)^"\n"^(string_of_blk margin tl)
+
+and string_of_stmt margin (x, _) =
+  match x with
+    | Block (body, Some (lbl, action)) ->
+	"{\n"
+	^(string_of_blk (margin^"  ") body)
+	^margin^"} with lbl"^(string_of_int lbl)^" {\n"
+	^(string_of_blk (margin^"  ") action)
+	^margin^"}"
+    | Goto lbl -> "goto lbl"^(string_of_int lbl)^";"
+    | Decl (_, x, _) -> "typ "^x^";"
+    | Set _ -> "lv = e;"
+    | If (_, br1, br2) -> 
+	"if exp {\n"
+	^(string_of_blk (margin^"  ") br1)
+	^margin^"} else {\n"
+	^(string_of_blk (margin^"  ") br2)
+	^margin^"}"
+    | Exp _ -> "exp"
+    | _ -> "not implemented yet"
+
+let string_of_blk x = string_of_blk "" x
+
 let create_tmp loc t = 
   let id = fresh_id () in
   let x = "!tmp"^(string_of_int id) in
@@ -423,7 +453,8 @@ module Set = Set.Make(Int)
 
 let normalize x =
   let stack_height = ref 0 in
-  let lbl_tbl = Hashtbl.create 20 in
+  let lbl_tbl = Hashtbl.create 20 in 
+    (* maps each lbl to the variable that should be declared at this block *)
   let age_tbl = Hashtbl.create 20 in
 
   let push_lbl lbl =
@@ -442,7 +473,8 @@ let normalize x =
     let decls = 
       try Hashtbl.find lbl_tbl lbl 
       with Not_found -> 
-	Npkcontext.error "Cir.normalize.register_decl" "unexpected label"
+	Npkcontext.error "Cir.normalize.register_decl" 
+	  ("unexpected label lbl"^(string_of_int lbl))
     in
       Hashtbl.replace lbl_tbl lbl (x::decls)
   in
@@ -463,8 +495,8 @@ let normalize x =
 
       | (Block (body, Some (lbl, act_blk)), loc)::tl -> 
 	  push_lbl lbl;
-	  let (body, used_lbls) = set_scope_blk body in
-	  let used_lbls1 = Set.remove lbl used_lbls in
+	  let (body, used_lbls1) = set_scope_blk body in
+	  let used_lbls1 = Set.remove lbl used_lbls1 in
 	  let decls = pop_lbl lbl in
 	  let (act_blk, used_lbls2) = set_scope_blk act_blk in
 	  let body = ((Block (body, Some (lbl, act_blk)), loc)::[]) in
@@ -473,7 +505,7 @@ let normalize x =
 	      let body = List.rev_append decls body in
 		(Block (body, None), loc)::[]
 	    end else begin
-	      let lbl = Set.min_elt used_lbls in
+	      let lbl = Set.min_elt used_lbls1 in
 		List.iter (register_decl lbl) decls;
 		body
 	    end

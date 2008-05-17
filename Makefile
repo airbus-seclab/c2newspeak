@@ -34,7 +34,8 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             $(addsuffix /*.npk,$(TESTSDIR)) \
             $(addsuffix /*~,$(TESTSDIR)) \
             $(addsuffix /*.ok,$(TESTSDIR)) \
-            tests/*.no tests/*.checked tests/*~ tests/*.npk \
+            tests/*.no tests/*.checked tests/*~ tests/*.npk tests/*.bak \
+            tests/*.res \
             tests/newspeak/*~ tests/newspeak/*.ok tests/newspeak/*.exe \
             tests/newspeak/*_check tests/newspeak/*.cmi tests/newspeak/*.cmo \
             tests/newspeak/*.no tests/newspeak/002.npk tests/newspeak/003.npk \

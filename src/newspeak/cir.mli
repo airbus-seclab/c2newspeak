@@ -173,3 +173,5 @@ val is_subtyp: typ -> typ -> bool
 val string_of_exp: exp -> string
 
 val is_large_blk: blk -> bool
+
+val string_of_blk: blk -> string
