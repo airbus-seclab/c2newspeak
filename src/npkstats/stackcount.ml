@@ -37,10 +37,6 @@ let count debug ptr_sz prog =
   let exact = ref true in
   let fun_tbl = Hashtbl.create 100 in
   let current_loc = ref Newspeak.unknown_loc in
-
-  let raise_error msg = 
-    invalid_arg (msg^" at "^(Newspeak.string_of_loc !current_loc))
-  in
     
   let max_info (nb1, sz1) (nb2, sz2) = (max nb1 nb2, max sz1 sz2) in
 
@@ -79,7 +75,10 @@ let count debug ptr_sz prog =
 	  let nb = nb + 1 in
 	  let sz = sz + ((Newspeak.size_of ptr_sz t) / 8) in 
 	    count_blk body (nb, sz)
-      | DoWith (body, _, []) -> count_blk body info
+      | DoWith (body, _, action) -> 
+	  let body_info = count_blk body info in
+	  let action_info = count_blk action info in
+	    max_info body_info action_info
       | Call (FunId f) -> 
 	  let (nb, sz) = info in
 	  let (f_nb, f_sz) = count_call f in
@@ -93,7 +92,6 @@ let count debug ptr_sz prog =
 	  let choices = List.map snd choices in
 	    List.fold_left (count_alternatives info) (0, 0) choices
       | InfLoop body -> count_blk body info
-      | DoWith _ -> raise_error "case not handle yet"
       | _ -> info
 
   and count_alternatives info max_so_far body =
