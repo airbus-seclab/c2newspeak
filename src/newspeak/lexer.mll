@@ -35,6 +35,7 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__attribute__" ATTRIBUTE;
   Hashtbl.add gnuc_tok_tbl "__const" CONST;
   Hashtbl.add gnuc_tok_tbl "__format__" FORMAT;
+  Hashtbl.add gnuc_tok_tbl "__format_arg__" FORMAT_ARG;
   Hashtbl.add gnuc_tok_tbl "__printf__" PRINTF;
   Hashtbl.add gnuc_tok_tbl "__scanf__" SCANF;
   Hashtbl.add gnuc_tok_tbl "__builtin_va_list" VA_LIST;
