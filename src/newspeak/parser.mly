@@ -674,9 +674,7 @@ type_specifier:
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
-  declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
-| STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
-| EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $2 }
+  STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | EXTERN function_definition               { 
@@ -687,8 +685,14 @@ external_declaration:
 | TYPEDEF declaration SEMICOLON            { build_glbtypedef $2 }
 // GNU C extension
 | EXTENSION TYPEDEF declaration SEMICOLON  { build_glbtypedef $3 }
-| declaration attribute SEMICOLON          { build_glbdecl (false, false) $1 }
-| EXTERN declaration attribute SEMICOLON   { build_glbdecl (false, true) $2 }
+| declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
+| EXTERN declaration attribute_list 
+  SEMICOLON                                { build_glbdecl (false, true) $2 }
+;;
+
+attribute_list:
+  attribute attribute_list                { }
+|                                         { }
 ;;
 
 type_qualifier:
