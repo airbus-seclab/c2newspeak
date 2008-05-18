@@ -135,7 +135,7 @@ let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
-%token INLINE ALWAYS_INLINE ASM CDECL_ATTR FORMAT_ARG
+%token INLINE ALWAYS_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT
 %token EOF
 
 %token <string> IDENTIFIER
@@ -737,6 +737,7 @@ attribute:
   }
 | INLINE                                   { }
 | CDECL                                    { }
+| RESTRICT                                 { }
 ;;
 
 attribute_name:
