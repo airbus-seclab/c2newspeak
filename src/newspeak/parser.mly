@@ -193,7 +193,8 @@ declarator:
 | LPAREN declarator RPAREN                 { $2 }
 | IDENTIFIER                               { Variable ($1, get_loc ()) }
 | declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
-| declarator LBRACKET RBRACKET             { Array ($1, None) }
+| declarator LBRACKET 
+             type_qualifier_list RBRACKET  { Array ($1, None) }
 | declarator 
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | declarator LPAREN RPAREN                 { Function ($1, []) }
@@ -229,7 +230,8 @@ type_name:
   abstract_declarator                      { ($1, $2) }
 ;;
 
-
+// TODO: this part should be rewritten!!!, using for instance
+// the grammar from here http://www.quut.com/c/ANSI-C-grammar-y.html
 declaration_specifiers:
   type_qualifier_list type_specifier 
   type_qualifier_list                      { $2 }
@@ -538,7 +540,7 @@ abstract_declarator:
 | pointer                                  { Pointer Abstract }
 | pointer abstract_declarator              { Pointer $2 }
 | LPAREN abstract_declarator RPAREN        { $2 }
-| LBRACKET RBRACKET                        { Array (Abstract, None) }
+| LBRACKET type_qualifier_list RBRACKET    { Array (Abstract, None) }
 | LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
 | abstract_declarator 
   LBRACKET expression RBRACKET             { Array ($1, Some $3) }
