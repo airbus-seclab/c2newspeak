@@ -74,7 +74,7 @@ object (this)
 	FunId f -> this#visit_fun f
       | FunDeref _ -> List.iter this#visit_fun fid_addrof
     end;
-    false
+    true
 
   method process_lval x =
     match x with
