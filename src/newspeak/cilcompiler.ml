@@ -613,25 +613,25 @@ and translate_switch status e stmt_list body =
 
 and translate_switch_body loc status body stmts =
   match stmts with
-      [] -> [K.DoWith (List.rev body, Cilenv.get_brk_lbl (), []), loc]
+      [] -> [K.DoWith (body, Cilenv.get_brk_lbl (), []), loc]
 
     | hd::tl when hd.labels = [] ->
 	let hd = translate_stmtkind status hd.skind in
-	  translate_switch_body loc status (hd@body) tl
+	  translate_switch_body loc status (body@hd) tl
 
     | hd::tl -> 
 	let lbl = 
 	  match hd.labels with
 	      (Case (_, loc))::_ | (Default loc)::_ ->
 		set_loc loc;
-		Cilenv.get_switch_lbl status loc		
+		Cilenv.get_switch_lbl status loc
 	    | _ -> error "Npkcompile.translate_switch_body" "invalid label"
 	in
 
-	let body = [build_stmt (K.DoWith (List.rev body, lbl, []))] in
+	let body = [build_stmt (K.DoWith (body, lbl, []))] in
 	  
 	let hd = translate_stmtkind status hd.skind in
-	  translate_switch_body loc status (hd@body) tl
+	  translate_switch_body loc status (body@hd) tl
 
 	  
 and translate_call x lv args_exps =
