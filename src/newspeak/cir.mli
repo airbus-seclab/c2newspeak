@@ -29,7 +29,7 @@ type prog = (glbdecls * fundefs * Newspeak.specs)
 
 and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
 
-and init = (int * typ * exp) list option
+and init = (int * scalar_t * exp) list option
 
 (** field's name, offset and typ *)
 and field = (string * (int * typ))
@@ -42,10 +42,7 @@ and vid = int
 
 and typ =
     | Void
-    | Int of Newspeak.ikind
-    | Float of int
-    | Ptr
-    | FunPtr
+    | Scalar of Newspeak.scalar_t
     | Array of array_t
     | Struct of (field list * int)
     | Union of (field list * int)
@@ -71,9 +68,9 @@ and stmtkind =
 
 and lbl = int
 
-and typ_lv = (lv * typ)
+and typ_lv = (lv * typ) (* TODO: could this be switched to scalar_t too? *)
 
-and typ_exp = (exp * typ)
+and typ_exp = (exp * scalar_t)
 
 and lv =
 (* variable identified by its unique id. Use fresh_id () to generate
@@ -106,7 +103,7 @@ and unop =
     | Coerce of bounds
     | Not
     | BNot of Newspeak.ikind
-    | Cast of (typ * typ)
+    | Cast of (Newspeak.scalar_t * Newspeak.scalar_t)
 
 and binop =
     | Plus of Newspeak.ikind
@@ -119,8 +116,8 @@ and binop =
     | Mod
     | PlusP of typ
     | MinusP of typ
-    | Gt of typ
-    | Eq of typ
+    | Gt of scalar_t
+    | Eq of scalar_t
     | Shiftl of Newspeak.ikind
     | Shiftr of Newspeak.ikind
     | PlusF of int

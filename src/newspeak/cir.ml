@@ -38,7 +38,7 @@ type prog = (glbdecls * fundefs * Newspeak.specs)
 
 and glbdecls = (string, typ * location * init option) Hashtbl.t
 
-and init = (int * typ * exp) list option
+and init = (int * scalar_t * exp) list option
 
 and field = (string * (int * typ))
 
@@ -51,10 +51,7 @@ and vid = int
 
 and typ =
     | Void
-    | Int of ikind
-    | Float of int
-    | Ptr
-    | FunPtr
+    | Scalar of Newspeak.scalar_t
     | Array of array_t
 (* TODO: Struct and Union 
    merge them as a Region *)
@@ -84,7 +81,7 @@ and lbl = int
 
 and typ_lv = (lv * typ)
 
-and typ_exp = (exp * typ)
+and typ_exp = (exp * scalar_t)
 
 (* TODO: maybe still keep together lv and exp ?? *)
 and lv =
@@ -119,7 +116,7 @@ and unop =
     | Coerce of bounds
     | Not
     | BNot of ikind
-    | Cast of (typ * typ)
+    | Cast of (Newspeak.scalar_t * Newspeak.scalar_t)
 
 (* TODO: remove ikind for operations (add a coerce operator), be closer to 
    npkil and more low level!! *)
@@ -134,8 +131,8 @@ and binop =
     | Mod
     | PlusP of typ
     | MinusP of typ
-    | Gt of typ
-    | Eq of typ
+    | Gt of scalar_t
+    | Eq of scalar_t
     | Shiftl of ikind
     | Shiftr of ikind
     | PlusF of int
@@ -219,9 +216,7 @@ let exp_of_float x = Const (CFloat (x, string_of_float x))
    put in csyntax *)
 let rec size_of t =
   match t with
-      Int (_, n) -> n 
-    | Float n -> n
-    | Ptr | FunPtr -> Config.size_of_ptr
+      Scalar t -> Newspeak.size_of_scalar Config.size_of_ptr t
     | Array (t, Some n) -> (size_of t) * n
     | Struct (_, n) | Union (_, n) -> n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
@@ -270,9 +265,9 @@ let int_of_exp e =
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
 
-let int_typ = Int int_kind
+let char_typ = Scalar (Int (Signed, Config.size_of_char))
 
-let char_typ = Int (Signed, Config.size_of_char)
+let int_typ = Scalar (Int int_kind)
 
 let promote k = 
   match k with
@@ -414,7 +409,7 @@ and normalize_funexp loc f =
   match f with
       Fname _ -> ([], f)
     | FunDeref (e, ft) ->
-	let (pref, e) = normalize_exp_post loc e FunPtr in
+	let (pref, e) = normalize_exp_post loc e (Scalar Newspeak.FunPtr) in
 	  (pref, FunDeref (e, ft))
 	      
 and normalize_lv_post loc lv t =
@@ -582,25 +577,26 @@ let len_of_array n lv =
 
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =
-  let (e, t) =
-    match (t, e, t') with
-(* TODO: this should be probably put in firstpass *)
-	(Fun _, Lval lv, (FunPtr|Ptr|Int _)) -> (AddrOf lv, FunPtr)
-      | _ -> (e, t)
-  in
-    if t = Void then begin
-      Npkcontext.error "Cir.cast" "value void not ignored as it ought to be"
-    end;
-    if t = t' then e
-    else Unop (Cast (t, t'), e)
+  if t = t' then e
+  else begin
+    let (t, e, t') =
+      match (t, e, t') with
+	  (* TODO: this should be probably put in firstpass *)
+	| (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
+	    (FunPtr, AddrOf lv, t')
+	| (Scalar t, _, Scalar t') -> (t, e, t')
+	| (Void, _, _) -> 
+	    Npkcontext.error "Cir.cast" 
+	      "value void not ignored as it ought to be"
+	| _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
+    in
+      Unop (Cast (t, t'), e)
+  end
 
 let string_of_typ t =
   match t with
     | Void -> "void"
-    | Int _ -> "int"
-    | Float _ -> "float"
-    | Ptr -> "ptr"
-    | FunPtr -> "fptr"
+    | Scalar t -> Newspeak.string_of_scalar t
     | Array _ -> "a[i]"
     | Struct _ -> "{}"
     | Union _ -> "{}"

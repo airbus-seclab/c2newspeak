@@ -231,6 +231,9 @@ let translate (globals, spec) =
   in
 
   let rec cast (e, t) t' = 
+    (* TODO: code cleanup and factor??? 
+       let e = translate_exp_wo_array e in
+    *)
     let t = translate_typ t in
     let t' = translate_typ t' in
       C.cast (e, t) t'
@@ -246,7 +249,7 @@ let translate (globals, spec) =
 
 	| (Data e, _) -> 
 	    let e = cast (translate_exp_wo_array e) t in
-	      res := (o, translate_typ t, e)::!res;
+	      res := (o, translate_scalar_typ t, e)::!res;
 	      t
 	      
 	| (Sequence seq, Array (t, len)) -> 
@@ -331,12 +334,13 @@ let translate (globals, spec) =
 	    
     and fill_with_zeros o t =
       match t with
-	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
+	  Int _ -> res := (o, translate_scalar_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
-	    let t = translate_typ t in
-	    let e = C.cast (C.exp_of_int 0, C.int_typ) t in
-	      res := (o, t, e)::!res
-	| Float _ -> res := (o, translate_typ t, C.exp_of_float 0.)::!res
+	    (* TODO: inefficient: t is translated twice *)
+	    let e = cast (translate_exp (exp_of_int 0)) t in
+	      res := (o, translate_scalar_typ t, e)::!res
+	| Float _ -> 
+	    res := (o, translate_scalar_typ t, C.exp_of_float 0.)::!res
 	| Array (t, n) ->
 	    let n = 
 	      match translate_array_len n with
@@ -662,17 +666,26 @@ let translate (globals, spec) =
 
   and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
+  and translate_scalar_typ t =
+    match t with
+      | Int k -> Newspeak.Int k
+      | Float n -> Newspeak.Float n	
+      | Ptr (Fun _) -> Newspeak.FunPtr
+      | Ptr _ -> Newspeak.Ptr
+      | Va_arg -> Newspeak.Ptr
+      | _ -> 
+	  Npkcontext.error "Firstpass.translate_scalar_typ" 
+	    "scalar type expected"
+
   and translate_typ t =
     match t with
 	Void -> C.Void
-      | Int k -> C.Int k
+      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
+	  C.Scalar (translate_scalar_typ t)
       | Fun ft -> 
 	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
 	  let (ft, _) = normalize_ftyp ft in
 	    C.Fun (translate_ftyp ft)
-      | Float n -> C.Float n
-      | Ptr (Fun _) -> C.FunPtr
-      | Ptr _ -> C.Ptr
       | Array (t, len) -> 
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
@@ -692,8 +705,6 @@ let translate (globals, spec) =
 	    C.Union (f, sz)
       | Union (n, _) -> 
 	  Npkcontext.error "Firstpass.translate_typ" ("unknown union "^n)
-
-      | Va_arg -> C.Ptr
 
       | Bitfield _ -> 
 	  Npkcontext.error "Firstpass.translate_typ" 
@@ -804,7 +815,7 @@ let translate (globals, spec) =
     let v = C.Var id in
     let build_set (o, t, e) =
       let lv = C.Shift (v, C.exp_of_int o) in
-	(C.Set (lv, t, e), loc)
+	(C.Set (lv, C.Scalar t, e), loc)
     in
     let init = List.map build_set init in
     let decl = (C.Decl (translate_typ t, x, id), loc) in
@@ -980,7 +991,7 @@ let translate (globals, spec) =
     match x with
 	(e, body, loc)::tl ->
 	  let (e, t) = translate_exp e in
-	  let t = translate_typ t in
+	  let t = translate_scalar_typ t in
 	  let (lbl, tl) = translate_switch tl in
 	  let lbl = if body = [] then lbl else lbl+1 in
 	    (lbl, ((e, t), (C.Goto lbl, loc)::[])::tl)
@@ -1074,18 +1085,11 @@ let translate (globals, spec) =
 	    
 	(* Integer comparisons *)
 	(* Thanks to normalization t1 = t2 *)
-	| (Gt, Int _, Int _) -> (C.Gt (translate_typ t1), int_typ)
-	| (Eq, Int _, Int _) -> (C.Eq (translate_typ t1), int_typ)
-	    
-	(* Float comparisons *)
-	(* Thanks to normalization t1 = t2 *)
-	| (Gt, Float _, Float _) -> (C.Gt (translate_typ t1), int_typ)
-	| (Eq, Float _, Float _) -> (C.Eq (translate_typ t1), int_typ)
-	    
-	(* Pointer comparisons *)
-	| (Eq, Ptr _, Ptr _) -> (C.Eq (translate_typ t1), int_typ)
-	| (Gt, Ptr _, Ptr _) -> (C.Gt (translate_typ t1), int_typ)
-	    
+	(* Function translate_scalar_typ will ensure they are both scalar 
+	   types *)
+	| (Gt, _, _) -> (C.Gt (translate_scalar_typ t1), int_typ)
+	| (Eq, _, _) -> (C.Eq (translate_scalar_typ t1), int_typ)
+	    	    
 	| _ ->
 	    Npkcontext.error "Csyntax.translate_binop" 
 	      "unexpected binary operator and arguments"
