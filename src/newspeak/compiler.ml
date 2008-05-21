@@ -48,6 +48,7 @@ let translate_scalar t =
 let translate_unop op e =
   match op with
       Belongs_tmp r -> K.UnOp (K.Belongs_tmp r, e)
+    | Coerce b -> K.UnOp (K.Coerce b, e)
     | Not -> K.negate e
     | BNot k -> K.UnOp (K.BNot (N.domain_of_typ k), e)
     | Cast (t, t') -> 
@@ -59,7 +60,7 @@ let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 
 let translate_binop op e1 e2 =
   match op with
-      Mult k -> translate_arithmop N.MultI e1 e2 k
+      Mult -> K.BinOp (N.MultI, e1, e2)
     | Plus k -> translate_arithmop N.PlusI e1 e2 k
     | Minus k -> translate_arithmop N.MinusI e1 e2 k
     | Div k -> translate_arithmop N.DivI e1 e2 k

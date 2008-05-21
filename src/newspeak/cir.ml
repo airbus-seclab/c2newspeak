@@ -113,8 +113,10 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
+(* TODO: try to use Npkil unop and binop!! *)
 and unop = 
     | Belongs_tmp of (Nat.t * Npkil.tmp_int)
+    | Coerce of bounds
     | Not
     | BNot of ikind
     | Cast of (typ * typ)
@@ -125,7 +127,7 @@ and binop =
     | Plus of ikind
     | Minus of ikind
     | Div of ikind
-    | Mult of ikind
+    | Mult
     | BAnd of ikind
     | BXor of ikind
     | BOr of ikind
@@ -150,7 +152,7 @@ let string_of_op x =
   match x with
       Plus _ -> "+"
     | Minus _ -> "-"
-    | Mult _ -> "*"
+    | Mult -> "*"
     | Div _ -> "/"
     | _ -> "op"
 
@@ -238,7 +240,7 @@ let int_of_exp e =
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.sub i1 i2
-      | Binop (Mult _, e1, e2) ->
+      | Binop (Mult, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.mul i1 i2
@@ -248,6 +250,10 @@ let int_of_exp e =
 	    if (Nat.compare i2 Nat.zero = 0) 
 	    then Npkcontext.error "Cir.int_of_exp" "division by zero";
 	    Nat.div i1 i2
+      | Unop (Coerce b, e) -> 
+	  let i = int_of_exp e in
+	    if Newspeak.belongs i b then i 
+	    else Npkcontext.error "Cir.int_of_exp" "integer overflow"
       | _ -> 
 	  Npkcontext.error "Cir.int_of_exp" 
 	    "static expression expected"

@@ -103,6 +103,7 @@ and funexp =
 
 and unop = 
     | Belongs_tmp of (Nat.t * Npkil.tmp_int)
+    | Coerce of bounds
     | Not
     | BNot of Newspeak.ikind
     | Cast of (typ * typ)
@@ -111,7 +112,7 @@ and binop =
     | Plus of Newspeak.ikind
     | Minus of Newspeak.ikind
     | Div of Newspeak.ikind
-    | Mult of Newspeak.ikind
+    | Mult
     | BAnd of Newspeak.ikind
     | BXor of Newspeak.ikind
     | BOr of Newspeak.ikind

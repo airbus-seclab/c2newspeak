@@ -21,9 +21,6 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-
-  Olivier Levillain
-  email: olivier.levillain@penjili.org
 */
 
 typedef struct {

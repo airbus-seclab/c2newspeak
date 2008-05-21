@@ -412,7 +412,7 @@ let translate (globals, spec) =
 		  let len = C.len_of_array n lv in
 		  let sz = C.exp_of_int (size_of t) in
 		  let o = C.Unop (C.Belongs_tmp (Nat.zero, len), i) in
-		  let o = C.Binop (C.Mult C.int_kind, o, sz) in
+		  let o = C.Binop (C.Mult, o, sz) in
 		    (C.Shift (lv, o), t)
 
 	      | (_, Ptr _) -> translate_lv (Deref (Binop (Plus, e, idx)))
@@ -1047,7 +1047,7 @@ let translate (globals, spec) =
       match (op, t1, t2) with
 	  (* Arithmetic operations *)
 	  (* Thanks to normalization t1 = t2 *)
-	  (Mult, Int k, Int _) -> (C.Mult k, t1)
+	  (Mult, Int _, Int _) -> (C.Mult, t1)
 	| (Plus, Int k, Int _) -> (C.Plus k, t1)
 	| (Minus, Int k, Int _) -> (C.Minus k, t1)
 	| (Div, Int k, Int _) -> (C.Div k, t1)
@@ -1090,7 +1090,14 @@ let translate (globals, spec) =
 	    Npkcontext.error "Csyntax.translate_binop" 
 	      "unexpected binary operator and arguments"
     in
-      (C.Binop (op, e1, e2), t)
+    let e = C.Binop (op, e1, e2) in
+      (* add coerce if necessary *)
+    let e =
+      match (op, t) with
+	  (C.Mult, Int k) -> C.Unop (C.Coerce (Newspeak.domain_of_typ k), e)
+	| _ -> e
+    in
+      (e, t)
 
   and translate_unop op (e, t) = 
     match (op, t, e) with
