@@ -27,6 +27,7 @@
 open Csyntax
 module C = Cir
 module K = Npkil
+module N = Newspeak
 module Nat = Newspeak.Nat
 
 (* Constants *)
@@ -415,8 +416,8 @@ let translate (globals, spec) =
 		  let n = translate_array_len len in
 		  let len = C.len_of_array n lv in
 		  let sz = C.exp_of_int (size_of t) in
-		  let o = C.Unop (C.Belongs_tmp (Nat.zero, len), i) in
-		  let o = C.Binop (C.Mult, o, sz) in
+		  let o = C.Unop (K.Belongs_tmp (Nat.zero, len), i) in
+		  let o = C.Binop (N.MultI, o, sz) in
 		    (C.Shift (lv, o), t)
 
 	      | (_, Ptr _) -> translate_lv (Deref (Binop (Plus, e, idx)))
@@ -504,7 +505,7 @@ let translate (globals, spec) =
 	      
 (* Here c is necessarily positive *)
       | Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
-	  (C.Const (C.CInt (Nat.neg c)), Int (Newspeak.Signed, sz))
+	  (C.Const (C.CInt (Nat.neg c)), Int (N.Signed, sz))
 
       | Unop (op, e) -> 
 	  let e = translate_exp_wo_array e in
@@ -668,11 +669,11 @@ let translate (globals, spec) =
 
   and translate_scalar_typ t =
     match t with
-      | Int k -> Newspeak.Int k
-      | Float n -> Newspeak.Float n	
-      | Ptr (Fun _) -> Newspeak.FunPtr
-      | Ptr _ -> Newspeak.Ptr
-      | Va_arg -> Newspeak.Ptr
+      | Int k -> N.Int k
+      | Float n -> N.Float n	
+      | Ptr (Fun _) -> N.FunPtr
+      | Ptr _ -> N.Ptr
+      | Va_arg -> N.Ptr
       | _ -> 
 	  Npkcontext.error "Firstpass.translate_scalar_typ" 
 	    "scalar type expected"
@@ -1038,7 +1039,7 @@ let translate (globals, spec) =
 	    (op, (e1, t2), (e2, t2))
 	      
       | (Shiftl|Shiftr as op, Int (_, n), Int _) -> 
-	  let k = (Newspeak.Unsigned, n) in
+	  let k = (N.Unsigned, n) in
 	  let t = Int k in
 	  let e1 = cast (e1, t1) t in
 	    (op, (e1, t), (e2, t))
@@ -1053,52 +1054,70 @@ let translate (globals, spec) =
       | _ -> (op, (e1, t1), (e2, t2))
 	  
   and translate_binop op e1 e2 =
+    (* TODO: think about it, maybe there are nicer ways to write this!!!*)
     let (op, (e1, t1), (e2, t2)) = normalize_binop op e1 e2 in
     let (op, t) =
       match (op, t1, t2) with
 	  (* Arithmetic operations *)
 	  (* Thanks to normalization t1 = t2 *)
-	  (Mult, Int _, Int _) -> (C.Mult, t1)
-	| (Plus, Int k, Int _) -> (C.Plus k, t1)
-	| (Minus, Int k, Int _) -> (C.Minus k, t1)
-	| (Div, Int k, Int _) -> (C.Div k, t1)
-	| (Mod, Int _, Int _) -> (C.Mod, t1)
-	| (BAnd, Int k, Int _) -> (C.BAnd k, t1)
-	| (BXor, Int k, Int _) -> (C.BXor k, t1)
-	| (BOr, Int k, Int _) -> (C.BOr k, t1)
+	  (Mult, Int _, Int _) -> (N.MultI, t1)
+	| (Plus, Int _, Int _) -> (N.PlusI, t1)
+	| (Minus, Int _, Int _) -> (N.MinusI, t1)
+	| (Div, Int _, Int _) -> (N.DivI, t1)
+	| (Mod, Int _, Int _) -> (N.Mod, t1)
+	| (BAnd, Int k, Int _) -> (N.BAnd (Newspeak.domain_of_typ k), t1)
+	| (BXor, Int k, Int _) -> (N.BXor (Newspeak.domain_of_typ k), t1)
+	| (BOr, Int k, Int _) -> (N.BOr (Newspeak.domain_of_typ k), t1)
 	    
 	(* Thanks to normalization t1 = t2 *)
-	| (Shiftl, Int k, Int _) -> (C.Shiftl k, t1)
-	| (Shiftr, Int k, Int _) -> (C.Shiftr k, t1)
+	| (Shiftl, Int _, Int _) -> (N.Shiftlt, t1)
+	| (Shiftr, Int _, Int _) -> (N.Shiftrt, t1)
 	    
 	(* Float operations *)
 	(* Thanks to normalization t1 = t2 *)
-	| (Mult, Float n, Float _) -> (C.MultF n, t1)
-	| (Plus, Float n, Float _) -> (C.PlusF n, t1)
-	| (Minus, Float n, Float _) -> (C.MinusF n, t1)
-	| (Div, Float n, Float _) -> (C.DivF n, t1)
+	| (Mult, Float n, Float _) -> (N.MultF n, t1)
+	| (Plus, Float n, Float _) -> (N.PlusF n, t1)
+	| (Minus, Float n, Float _) -> (N.MinusF n, t1)
+	| (Div, Float n, Float _) -> (N.DivF n, t1)
 	    
 	(* Pointer operations *)
-	| (Plus, Ptr t, Int _) -> (C.PlusP (translate_typ t), t1)
+	| (Plus, Ptr _, Int _) -> (N.PlusPI, t1)
 	    
-	| (Minus, Ptr t, Ptr _) -> (C.MinusP (translate_typ t), int_typ)
+	| (Minus, Ptr _, Ptr _) -> (N.MinusPP, int_typ)
 	    
 	(* Integer comparisons *)
 	(* Thanks to normalization t1 = t2 *)
 	(* Function translate_scalar_typ will ensure they are both scalar 
 	   types *)
-	| (Gt, _, _) -> (C.Gt (translate_scalar_typ t1), int_typ)
-	| (Eq, _, _) -> (C.Eq (translate_scalar_typ t1), int_typ)
+	| (Gt, _, _) -> (N.Gt (translate_scalar_typ t1), int_typ)
+	| (Eq, _, _) -> (N.Eq (translate_scalar_typ t1), int_typ)
 	    	    
 	| _ ->
 	    Npkcontext.error "Csyntax.translate_binop" 
 	      "unexpected binary operator and arguments"
     in
+    let e2 = 
+      match (op, t) with
+	  (N.PlusPI, Ptr (Fun _)) ->
+	    Npkcontext.error "Firstpass.translate_binop"
+	      "pointer arithmetic forbidden on function pointers"
+	| (N.PlusPI, Ptr t) -> 
+	    let t = translate_typ t in
+	    let step = C.exp_of_int (C.size_of t) in
+	      C.Binop (N.MultI, e2, step)
+	| _ -> e2
+    in
     let e = C.Binop (op, e1, e2) in
       (* add coerce if necessary *)
     let e =
-      match (op, t) with
-	  (C.Mult, Int k) -> C.Unop (C.Coerce (Newspeak.domain_of_typ k), e)
+      match (op, t1, t) with
+	  ((N.PlusI|N.MinusI|N.MultI|N.DivI|N.Shiftlt|N.Shiftrt), _, Int k) -> 
+	    C.Unop (K.Coerce (Newspeak.domain_of_typ k), e)
+	| (N.MinusPP, Ptr t, _) -> 
+	    let t = translate_typ t in
+	    let step = C.size_of t in
+	    let e = C.Binop (N.DivI, e, C.exp_of_int step) in
+	      C.Unop (K.Coerce (Newspeak.domain_of_typ C.int_kind), e)
 	| _ -> e
     in
       (e, t)
@@ -1108,11 +1127,11 @@ let translate (globals, spec) =
       | (Neg, Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
       | (Neg, Float _, _) -> 
 	  translate_binop Minus (C.exp_of_float 0., t) (e, t)
-      | (Not, Int _, _) -> (C.Unop (C.Not, e), int_typ)
+      | (Not, Int _, _) -> (C.Unop (K.Not, e), int_typ)
       | (BNot, Int k, _) -> 
 	  let k' = C.promote k in
 	  let t' = Int k' in
-	    (C.Unop (C.BNot k', cast (e, t) t'), t')
+	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), cast (e, t) t'), t')
       | _ -> 
 	  Npkcontext.error "Csyntax.translate_unop" 
 	    "Unexpected unary operator and argument"

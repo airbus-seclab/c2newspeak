@@ -42,48 +42,7 @@ let translate_scalar t =
 	Npkcontext.error "Compiler.translate_scalar" 
 	  "unexpected non scalar type"
 
-let translate_unop op e =
-  match op with
-      Belongs_tmp r -> K.UnOp (K.Belongs_tmp r, e)
-    | Coerce b -> K.UnOp (K.Coerce b, e)
-    | Not -> K.negate e
-    | BNot k -> K.UnOp (K.BNot (N.domain_of_typ k), e)
-    | Cast (t, t') -> K.cast t e t'
-
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
-
-let translate_binop op e1 e2 =
-  match op with
-      Mult -> K.BinOp (N.MultI, e1, e2)
-    | Plus k -> translate_arithmop N.PlusI e1 e2 k
-    | Minus k -> translate_arithmop N.MinusI e1 e2 k
-    | Div k -> translate_arithmop N.DivI e1 e2 k
-    | MultF n -> K.BinOp (N.MultF n, e1, e2)
-    | PlusF n -> K.BinOp (N.PlusF n, e1, e2)
-    | MinusF n -> K.BinOp (N.MinusF n, e1, e2)
-    | DivF n -> K.BinOp (N.DivF n, e1, e2)
-    | BAnd k -> K.BinOp (N.BAnd (N.domain_of_typ k), e1, e2)
-    | BXor k -> K.BinOp (N.BXor (N.domain_of_typ k), e1, e2)
-    | BOr k -> K.BinOp (N.BOr (N.domain_of_typ k), e1, e2)
-    | Mod -> K.BinOp (N.Mod, e1, e2)
-    | Shiftl k -> K.make_int_coerce k (K.BinOp (N.Shiftlt, e1, e2))
-    | Shiftr k -> K.make_int_coerce k (K.BinOp (N.Shiftrt, e1, e2))
-    | PlusP (Fun _) -> 
-	Npkcontext.error "Compiler.translate_binop" 
-	  "pointer arithmetic forbidden on function pointers"
-    | PlusP t -> 
-	(* TODO: push this in firstpass!! *)
-	let step = K.exp_of_int (size_of t) in 
-	  K.BinOp (N.PlusPI, e1, K.BinOp (N.MultI, e2, step))
-    | MinusP t -> 
-	let e = K.BinOp (N.MinusPP, e1, e2) in
-	(* TODO: push this in firstpass!! *)
-	let step = size_of t in
-	let e = K.BinOp (N.DivI, e, K.exp_of_int step) in
-	  K.make_int_coerce int_kind e
-    | Gt t -> K.BinOp (N.Gt t, e1, e2)
-	    
-    | Eq t -> K.BinOp (N.Eq t, e1, e2)
 
 let translate_cst c =
   match c with
@@ -184,13 +143,20 @@ let translate (cglbdecls, cfundefs, specs) =
 	  let sz = size_of t in
 	    K.AddrOf (lv, K.Known sz)
 
+      | Unop (K.Not, e) -> K.negate (translate_exp e)
+
+      | Unop (K.Cast (t, t'), e) -> 
+	  let e = translate_exp e in
+	    K.cast t e t'
+
       | Unop (op, e) -> 
 	  let e = translate_exp e in
-	    translate_unop op e
+	    K.UnOp (op, e)
+
       | Binop (op, e1, e2) ->
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
-	    translate_binop op e1 e2
+	    K.BinOp (op, e1, e2)
 
       | Pref _ -> 
 	  Npkcontext.error "Compiler.translate_exp"

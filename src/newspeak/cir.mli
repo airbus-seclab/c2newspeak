@@ -89,41 +89,14 @@ and exp =
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
-    | Unop of (unop * exp)
-    | Binop of (binop * exp * exp)
+    | Unop of (Npkil.unop * exp)
+    | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
     | Pref of (blk * exp)
 
 and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
-
-and unop = 
-    | Belongs_tmp of (Nat.t * Npkil.tmp_int)
-    | Coerce of bounds
-    | Not
-    | BNot of Newspeak.ikind
-    | Cast of (Newspeak.scalar_t * Newspeak.scalar_t)
-
-and binop =
-    | Plus of Newspeak.ikind
-    | Minus of Newspeak.ikind
-    | Div of Newspeak.ikind
-    | Mult
-    | BAnd of Newspeak.ikind
-    | BXor of Newspeak.ikind
-    | BOr of Newspeak.ikind
-    | Mod
-    | PlusP of typ
-    | MinusP of typ
-    | Gt of scalar_t
-    | Eq of scalar_t
-    | Shiftl of Newspeak.ikind
-    | Shiftr of Newspeak.ikind
-    | PlusF of int
-    | MinusF of int
-    | DivF of int
-    | MultF of int
 
 (* TODO: try to have the same constants as newspeak Nil ??*)
 and cst =

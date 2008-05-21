@@ -25,6 +25,7 @@
 
 (* TODO: remove size_of, put in csyntax *)
 open Newspeak
+open Npkil
 
 let vcnt = ref min_int
 
@@ -101,8 +102,8 @@ and exp =
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
-    | Unop of (unop * exp)
-    | Binop of (binop * exp * exp)
+    | Unop of (Npkil.unop * exp)
+    | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
     | Pref of (blk * exp)
 
@@ -110,48 +111,9 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
-(* TODO: try to use Npkil unop and binop!! *)
-and unop = 
-    | Belongs_tmp of (Nat.t * Npkil.tmp_int)
-    | Coerce of bounds
-    | Not
-    | BNot of ikind
-    | Cast of (Newspeak.scalar_t * Newspeak.scalar_t)
-
-(* TODO: remove ikind for operations (add a coerce operator), be closer to 
-   npkil and more low level!! *)
-and binop =
-    | Plus of ikind
-    | Minus of ikind
-    | Div of ikind
-    | Mult
-    | BAnd of ikind
-    | BXor of ikind
-    | BOr of ikind
-    | Mod
-    | PlusP of typ
-    | MinusP of typ
-    | Gt of scalar_t
-    | Eq of scalar_t
-    | Shiftl of ikind
-    | Shiftr of ikind
-    | PlusF of int
-    | MinusF of int
-    | DivF of int
-    | MultF of int
-
 and cst =
     | CInt of Nat.t
     | CFloat of (float * string)
-
-
-let string_of_op x =
-  match x with
-      Plus _ -> "+"
-    | Minus _ -> "-"
-    | Mult -> "*"
-    | Div _ -> "/"
-    | _ -> "op"
 
 
 let rec string_of_exp margin e =
@@ -163,7 +125,7 @@ let rec string_of_exp margin e =
     | Unop (_, e) -> "op "^(string_of_exp margin e)
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1)
-	^" "^(string_of_op op)^" "
+	^" "^(Newspeak.string_of_binop op)^" "
 	^(string_of_exp margin e2)
     | Call _ -> "f()"
     | Pref (blk, e) -> 
@@ -227,19 +189,19 @@ let int_of_exp e =
   let rec int_of_exp e =
     match e with
 	Const (CInt i) -> i
-      | Binop (Plus _, e1, e2) ->
+      | Binop (PlusI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.add i1 i2
-      | Binop (Minus _, e1, e2) ->
+      | Binop (MinusI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.sub i1 i2
-      | Binop (Mult, e1, e2) ->
+      | Binop (MultI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.mul i1 i2
-      | Binop (Div _, e1, e2) ->
+      | Binop (DivI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    if (Nat.compare i2 Nat.zero = 0) 
@@ -590,7 +552,7 @@ let cast (e, t) t' =
 	      "value void not ignored as it ought to be"
 	| _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
     in
-      Unop (Cast (t, t'), e)
+      Unop (Npkil.Cast (t, t'), e)
   end
 
 let string_of_typ t =
