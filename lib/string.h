@@ -40,3 +40,4 @@ size_t strlen(const char *);
 char *strncat(char *, const char *, size_t);
 char *strncpy(char*, const char*, size_t);
 char *strstr(const char *, const char *);
+char *strchr(const char *, int);
