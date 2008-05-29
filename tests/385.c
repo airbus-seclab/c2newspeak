@@ -24,6 +24,9 @@
 */
 
 void main() {
-  int x[0];
-  x[0] = 1;
+  int i;
+  int t[2];
+  int *ptr;
+
+  ptr = &t[i];
 }

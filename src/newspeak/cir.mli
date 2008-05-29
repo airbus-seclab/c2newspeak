@@ -29,7 +29,7 @@ type prog = (glbdecls * fundefs * Newspeak.specs)
 
 and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
 
-and init = (int * typ * exp) list option
+and init = (int * scalar_t * exp) list option
 
 (** field's name, offset and typ *)
 and field = (string * (int * typ))
@@ -42,10 +42,7 @@ and vid = int
 
 and typ =
     | Void
-    | Int of Newspeak.ikind
-    | Float of int
-    | Ptr
-    | FunPtr
+    | Scalar of Newspeak.scalar_t
     | Array of array_t
     | Struct of (field list * int)
     | Union of (field list * int)
@@ -71,9 +68,9 @@ and stmtkind =
 
 and lbl = int
 
-and typ_lv = (lv * typ)
+and typ_lv = (lv * typ) (* TODO: could this be switched to scalar_t too? *)
 
-and typ_exp = (exp * typ)
+and typ_exp = (exp * scalar_t)
 
 and lv =
 (* variable identified by its unique id. Use fresh_id () to generate
@@ -92,40 +89,14 @@ and exp =
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
-    | Unop of (unop * exp)
-    | Binop of (binop * exp * exp)
+    | Unop of (Npkil.unop * exp)
+    | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
     | Pref of (blk * exp)
 
 and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
-
-and unop = 
-    | Belongs_tmp of (Nat.t * Npkil.tmp_int)
-    | Not
-    | BNot of Newspeak.ikind
-    | Cast of (typ * typ)
-
-and binop =
-    | Plus of Newspeak.ikind
-    | Minus of Newspeak.ikind
-    | Div of Newspeak.ikind
-    | Mult of Newspeak.ikind
-    | BAnd of Newspeak.ikind
-    | BXor of Newspeak.ikind
-    | BOr of Newspeak.ikind
-    | Mod
-    | PlusP of typ
-    | MinusP of typ
-    | Gt of typ
-    | Eq of typ
-    | Shiftl of Newspeak.ikind
-    | Shiftr of Newspeak.ikind
-    | PlusF of int
-    | MinusF of int
-    | DivF of int
-    | MultF of int
 
 (* TODO: try to have the same constants as newspeak Nil ??*)
 and cst =

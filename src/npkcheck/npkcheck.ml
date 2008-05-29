@@ -52,8 +52,17 @@ object (self)
 
   method process_length x =
     if x <= 0 
-    then self#raise_error ("invalid length for array")
+    then self#raise_error "invalid length for array"
 
+  method process_lval x =
+    let _ =
+      match x with
+	  Shift (_, BinOp (MultI, _, Const CInt _)) -> ()
+	| Shift (_, Const CInt _) -> ()
+	| Shift (_, _) -> self#raise_error "unexpected expression in shift"
+	| _ -> ()
+    in
+      true
 end
 
 let check_file fname =

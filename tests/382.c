@@ -23,7 +23,17 @@
   email: charles.hymans@penjili.org
 */
 
+// bug in c2newspeak, seems to reverse the order of instructions inside the 
+// cases of the switch!
 void main() {
-  int x[0];
-  x[0] = 1;
+  int i;
+
+  i=0;
+  switch(0) {
+  case 0:
+    i = 1;
+    i = 2;
+    
+  default:
+  }
 }

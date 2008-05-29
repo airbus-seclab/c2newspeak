@@ -23,7 +23,12 @@
   email: charles.hymans@penjili.org
 */
 
+int i;
+int j;
+
 void main() {
-  int x[0];
-  x[0] = 1;
+  int y[2][2];
+  int *ptr;
+
+  ptr = &y[i][j];
 }

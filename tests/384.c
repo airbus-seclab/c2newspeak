@@ -23,7 +23,17 @@
   email: charles.hymans@penjili.org
 */
 
+typedef struct {
+  int a;
+  int b;
+} s;
+
+int i;
+int j;
+
 void main() {
-  int x[0];
-  x[0] = 1;
+  s y[2];
+  int *ptr;
+
+  ptr = &y[i].b;
 }

@@ -25,6 +25,7 @@
 
 (* TODO: remove size_of, put in csyntax *)
 open Newspeak
+open Npkil
 
 let vcnt = ref min_int
 
@@ -38,7 +39,7 @@ type prog = (glbdecls * fundefs * Newspeak.specs)
 
 and glbdecls = (string, typ * location * init option) Hashtbl.t
 
-and init = (int * typ * exp) list option
+and init = (int * scalar_t * exp) list option
 
 and field = (string * (int * typ))
 
@@ -51,10 +52,7 @@ and vid = int
 
 and typ =
     | Void
-    | Int of ikind
-    | Float of int
-    | Ptr
-    | FunPtr
+    | Scalar of Newspeak.scalar_t
     | Array of array_t
 (* TODO: Struct and Union 
    merge them as a Region *)
@@ -84,7 +82,7 @@ and lbl = int
 
 and typ_lv = (lv * typ)
 
-and typ_exp = (exp * typ)
+and typ_exp = (exp * scalar_t)
 
 (* TODO: maybe still keep together lv and exp ?? *)
 and lv =
@@ -104,8 +102,8 @@ and exp =
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
-    | Unop of (unop * exp)
-    | Binop of (binop * exp * exp)
+    | Unop of (Npkil.unop * exp)
+    | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
     | Pref of (blk * exp)
 
@@ -113,46 +111,9 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
-and unop = 
-    | Belongs_tmp of (Nat.t * Npkil.tmp_int)
-    | Not
-    | BNot of ikind
-    | Cast of (typ * typ)
-
-(* TODO: remove ikind for operations (add a coerce operator), be closer to 
-   npkil and more low level!! *)
-and binop =
-    | Plus of ikind
-    | Minus of ikind
-    | Div of ikind
-    | Mult of ikind
-    | BAnd of ikind
-    | BXor of ikind
-    | BOr of ikind
-    | Mod
-    | PlusP of typ
-    | MinusP of typ
-    | Gt of typ
-    | Eq of typ
-    | Shiftl of ikind
-    | Shiftr of ikind
-    | PlusF of int
-    | MinusF of int
-    | DivF of int
-    | MultF of int
-
 and cst =
     | CInt of Nat.t
     | CFloat of (float * string)
-
-
-let string_of_op x =
-  match x with
-      Plus _ -> "+"
-    | Minus _ -> "-"
-    | Mult _ -> "*"
-    | Div _ -> "/"
-    | _ -> "op"
 
 
 let rec string_of_exp margin e =
@@ -164,7 +125,7 @@ let rec string_of_exp margin e =
     | Unop (_, e) -> "op "^(string_of_exp margin e)
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1)
-	^" "^(string_of_op op)^" "
+	^" "^(Newspeak.string_of_binop op)^" "
 	^(string_of_exp margin e2)
     | Call _ -> "f()"
     | Pref (blk, e) -> 
@@ -217,9 +178,7 @@ let exp_of_float x = Const (CFloat (x, string_of_float x))
    put in csyntax *)
 let rec size_of t =
   match t with
-      Int (_, n) -> n 
-    | Float n -> n
-    | Ptr | FunPtr -> Config.size_of_ptr
+      Scalar t -> Newspeak.size_of_scalar Config.size_of_ptr t
     | Array (t, Some n) -> (size_of t) * n
     | Struct (_, n) | Union (_, n) -> n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
@@ -230,24 +189,28 @@ let int_of_exp e =
   let rec int_of_exp e =
     match e with
 	Const (CInt i) -> i
-      | Binop (Plus _, e1, e2) ->
+      | Binop (PlusI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.add i1 i2
-      | Binop (Minus _, e1, e2) ->
+      | Binop (MinusI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.sub i1 i2
-      | Binop (Mult _, e1, e2) ->
+      | Binop (MultI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    Nat.mul i1 i2
-      | Binop (Div _, e1, e2) ->
+      | Binop (DivI, e1, e2) ->
 	  let i1 = int_of_exp e1 in
 	  let i2 = int_of_exp e2 in
 	    if (Nat.compare i2 Nat.zero = 0) 
 	    then Npkcontext.error "Cir.int_of_exp" "division by zero";
 	    Nat.div i1 i2
+      | Unop (Coerce b, e) -> 
+	  let i = int_of_exp e in
+	    if Newspeak.belongs i b then i 
+	    else Npkcontext.error "Cir.int_of_exp" "integer overflow"
       | _ -> 
 	  Npkcontext.error "Cir.int_of_exp" 
 	    "static expression expected"
@@ -264,9 +227,9 @@ let int_of_exp e =
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
 
-let int_typ = Int int_kind
+let char_typ = Scalar (Int (Signed, Config.size_of_char))
 
-let char_typ = Int (Signed, Config.size_of_char)
+let int_typ = Scalar (Int int_kind)
 
 let promote k = 
   match k with
@@ -408,7 +371,7 @@ and normalize_funexp loc f =
   match f with
       Fname _ -> ([], f)
     | FunDeref (e, ft) ->
-	let (pref, e) = normalize_exp_post loc e FunPtr in
+	let (pref, e) = normalize_exp_post loc e (Scalar Newspeak.FunPtr) in
 	  (pref, FunDeref (e, ft))
 	      
 and normalize_lv_post loc lv t =
@@ -576,25 +539,26 @@ let len_of_array n lv =
 
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =
-  let (e, t) =
-    match (t, e, t') with
-(* TODO: this should be probably put in firstpass *)
-	(Fun _, Lval lv, (FunPtr|Ptr|Int _)) -> (AddrOf lv, FunPtr)
-      | _ -> (e, t)
-  in
-    if t = Void then begin
-      Npkcontext.error "Cir.cast" "value void not ignored as it ought to be"
-    end;
-    if t = t' then e
-    else Unop (Cast (t, t'), e)
+  if t = t' then e
+  else begin
+    let (t, e, t') =
+      match (t, e, t') with
+	  (* TODO: this should be probably put in firstpass *)
+	| (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
+	    (FunPtr, AddrOf lv, t')
+	| (Scalar t, _, Scalar t') -> (t, e, t')
+	| (Void, _, _) -> 
+	    Npkcontext.error "Cir.cast" 
+	      "value void not ignored as it ought to be"
+	| _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
+    in
+      Unop (Npkil.Cast (t, t'), e)
+  end
 
 let string_of_typ t =
   match t with
     | Void -> "void"
-    | Int _ -> "int"
-    | Float _ -> "float"
-    | Ptr -> "ptr"
-    | FunPtr -> "fptr"
+    | Scalar t -> Newspeak.string_of_scalar t
     | Array _ -> "a[i]"
     | Struct _ -> "{}"
     | Union _ -> "{}"
