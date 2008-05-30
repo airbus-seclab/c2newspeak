@@ -358,8 +358,13 @@ primary_expression:
 | FLOATCST                                 { 
     Cst (Csyntax.float_cst_of_lexeme $1) 
   }
-| STRING                                   { Str $1 }
+| string_literal                           { Str $1 }
 | LPAREN expression RPAREN                 { $2 }
+;;
+
+string_literal:
+  STRING                                   { $1 }
+| STRING string_literal                    { $1^$2 }
 ;;
 
 postfix_expression:
