@@ -185,12 +185,6 @@ translation_unit:
 function_definition:
   declaration_specifiers declarator 
   compound_statement                       { ($1, $2, $3) }
-| declaration_specifiers 
-  declarator LPAREN identifier_list RPAREN
-  parameter_declaration_list
-  compound_statement                       { 
-    ($1, Function ($2, build_funparams $4 $6), $7) 
-  }
 ;;
 
 parameter_declaration_list:
@@ -220,6 +214,12 @@ declarator:
 | declarator 
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | declarator LPAREN RPAREN                 { Function ($1, []) }
+| declarator LPAREN identifier_list RPAREN
+  parameter_declaration_list               { 
+    Npkcontext.report_dirty_warning "Parser.function definition"
+      "deprecated style of function definition";
+    Function ($1, build_funparams $3 $5) 
+  }
 ;;
 
 identifier_list:
