@@ -121,6 +121,16 @@ let build_type_decl d =
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
+(* TODO: simplify and put in synthack so as to optimize?? *)
+let build_funparams params types =
+  let has_name x d =
+    match Synthack.normalize_decl d with
+	(_, (_, Some y, _)) when x = y -> true
+      | _ -> false
+  in
+  let add_param_type x = List.find (has_name x) types in
+  List.map add_param_type params
+
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -175,6 +185,18 @@ translation_unit:
 function_definition:
   declaration_specifiers declarator 
   compound_statement                       { ($1, $2, $3) }
+| declaration_specifiers 
+  declarator LPAREN identifier_list RPAREN
+  parameter_declaration_list
+  compound_statement                       { 
+    ($1, Function ($2, build_funparams $4 $6), $7) 
+  }
+;;
+
+parameter_declaration_list:
+  parameter_declaration SEMICOLON 
+  parameter_declaration_list                { $1::$3 }
+| parameter_declaration SEMICOLON           { $1::[] }
 ;;
 
 declaration:
@@ -198,6 +220,11 @@ declarator:
 | declarator 
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | declarator LPAREN RPAREN                 { Function ($1, []) }
+;;
+
+identifier_list:
+  IDENTIFIER COMMA identifier_list         { $1::$3 }
+| IDENTIFIER                               { $1::[] }
 ;;
 
 struct_declarator_list:
