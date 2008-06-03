@@ -910,6 +910,11 @@ let translate (globals, spec) =
 	    let e = Binop (op, lv, e) in
 	      translate_stmt (Exp (Set (lv, e)), loc)
 
+      | Exp (Cast (e, Void)) -> 
+	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
+	    "cast to void should be avoided";
+	  translate_stmt (Exp e, loc)
+
       | Exp e -> 
 	  let (e, _) = translate_exp e in
 	    (C.Exp e, loc)::[]
