@@ -28,11 +28,13 @@
 
 (* Sanity check for Newspeak programs:
    - check that all array sizes are > 0
+   - check that all shifts are necessarily of the form + int or + (e * int)
 TODO:
    - check that for all belongs, coerce l, u l <= u
    - check that all goto are enclosed within a DoWith
    - check that the size of all types is less than max_int (the sum of all??)
    - check conditions are normalized??
+   - check that for each assignment lv =_t e, e is of type t
 *)
 
 open Newspeak
