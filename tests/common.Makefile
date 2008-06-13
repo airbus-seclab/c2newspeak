@@ -31,6 +31,7 @@ NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
 NPKBUGFIND=../../bin/npkbugfind
 NPKCHECK=../../bin/npkcheck
 NPKSIMPLIFY = ../../bin/npksimplify --newspeak
+NPKDIFF=../../bin/npkdiff
 
 TESTS.OK= $(addsuffix .ok, $(TESTS))
 TESTS.SPEC= $(addsuffix .spec, $(TESTS))

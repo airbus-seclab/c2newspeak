@@ -41,10 +41,11 @@ CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
 COMPNAMES=c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck \
-          npkbugfind
+          npkbugfind npkdiff
 COMPONENTS=$(addprefix bin/,$(COMPNAMES))
 
-DIRS:=newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck npkbugfind
+DIRS:=newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck npkbugfind \
+      npkdiff
 DIRS:= $(CILDIR) src/ $(addsuffix /,$(addprefix src/,$(DIRS)))
 INCLUDE=$(addprefix -I ,$(DIRS))
 LIB=nums.cma
@@ -92,6 +93,10 @@ npkcheck.CMX:=$(addsuffix .cmx,$(npkcheck.FILES))
 npkbugfind.FILES:=version newspeak/newspeak npkbugfind/npkbugfind
 npkbugfind.FILES:=$(addprefix src/,$(npkbugfind.FILES))
 npkbugfind.CMX:=$(addsuffix .cmx,$(npkbugfind.FILES))
+
+npkdiff.FILES:=version newspeak/newspeak npkdiff/npkdiff
+npkdiff.FILES:=$(addprefix src/,$(npkdiff.FILES))
+npkdiff.CMX:=$(addsuffix .cmx,$(npkdiff.FILES))
 
 FILES=$(foreach comp,$(COMPNAMES),$($(comp).FILES))
 ML=$(addsuffix .ml,$(FILES))
@@ -194,6 +199,9 @@ bin/npkcheck: $(CIL) $(npkcheck.CMX)
 
 bin/npkbugfind: $(CIL) $(npkbugfind.CMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npkbugfind.CMX) -o $@
+
+bin/npkdiff: $(CIL) $(npkdiff.CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(npkdiff.CMX) -o $@
 
 
 include .depend
