@@ -7,5 +7,6 @@ Number of array operations: 0
 Number of pointer deref: 0
 Number of pointer arithmetic (+): 0
 Number of function pointer call: 1
-Maximum number of variables on the stack: >= 1
-Maximum height of the stack (bytes): >= 4
+Maximum number of variables on the stack: 1
+Maximum height of the stack (bytes): 4
+Maximum depth of imbricated loops: 0

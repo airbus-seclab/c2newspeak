@@ -26,7 +26,7 @@
   email: olivier.levillain@penjili.org
 *)
 
-type stats
+type t
 
-val count: bool -> Newspeak.size_t -> Newspeak.prog -> stats
-val print: stats -> unit
+val count: bool -> Newspeak.size_t -> Newspeak.prog -> t
+val print: t -> unit

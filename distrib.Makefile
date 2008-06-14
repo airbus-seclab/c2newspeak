@@ -71,7 +71,7 @@ npkstrip.FILES:=version newspeak/newspeak npkstrip/npkstrip
 npkstrip.FILES:=$(addprefix src/,$(npkstrip.FILES))
 npkstrip.CMX:=$(addsuffix .cmx,$(npkstrip.FILES))
 
-npkstats.FILES:=version newspeak/newspeak npkstats/stackcount npkstats/npkstats
+npkstats.FILES:=version newspeak/newspeak npkstats/maxcount npkstats/npkstats
 npkstats.FILES:=$(addprefix src/,$(npkstats.FILES))
 npkstats.CMX:=$(addsuffix .cmx,$(npkstats.FILES))
 

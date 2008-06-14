@@ -28,7 +28,36 @@
 
 open Newspeak
 
-type stats = (bool * int * int)
+type stats = {
+  nb_vars: int;
+  sz_vars: int;
+  loop_depth: int;
+}
+
+type t = bool * stats
+
+let add_stats st1 st2 =
+  { 
+    nb_vars = st1.nb_vars + st2.nb_vars;
+    sz_vars = st1.sz_vars + st2.sz_vars;
+    loop_depth = st1.loop_depth + st2.loop_depth;
+  }
+
+let max_stats st1 st2 =
+  { 
+    nb_vars = max st1.nb_vars st2.nb_vars;
+    sz_vars = max st1.sz_vars st2.sz_vars;
+    loop_depth = max st1.loop_depth st2.loop_depth;
+  }
+
+let init_stats = { nb_vars = 0; sz_vars = 0; loop_depth = 0; }
+
+let count_decl ptr_sz t st =
+  let nb = st.nb_vars + 1 in
+  let sz = st.sz_vars + ((Newspeak.size_of ptr_sz t) / 8) in 
+    { st with nb_vars = nb; sz_vars = sz; }
+
+let count_loop st = { st with loop_depth = st.loop_depth + 1 }
 
 let count debug ptr_sz prog =
   let (_, fundecs, _) = prog in
@@ -38,8 +67,6 @@ let count debug ptr_sz prog =
   let fun_tbl = Hashtbl.create 100 in
   let current_loc = ref Newspeak.unknown_loc in
     
-  let max_info (nb1, sz1) (nb2, sz2) = (max nb1 nb2, max sz1 sz2) in
-
   let rec count_call f =
     try Hashtbl.find fun_tbl f
     with Not_found -> 
@@ -47,14 +74,13 @@ let count debug ptr_sz prog =
       let height = 
 	try 
 	  let (_, body) = Hashtbl.find fundecs f in
-	    count_blk body (0, 0)
+	    count_blk body init_stats
 	with Not_found -> 
 	  if not (List.mem f !unknown_funs) then begin
 	    unknown_funs := f::!unknown_funs;
 	    prerr_endline ("Warning: function "^f^" body not defined")
 	  end;
-	  exact := false;
-	  (0, 0)
+	  init_stats
       in
 	Hashtbl.add fun_tbl f height;
 	height
@@ -65,46 +91,48 @@ let count debug ptr_sz prog =
 	  current_loc := loc;
 	  let info1 = count_stmt stmt info in
 	  let info2 = count_blk blk info in
-	    max_info info1 info2
+	    max_stats info1 info2
       | [] -> info
 	  
   and count_stmt x info =
     match x with
       | Decl (_, t, body) -> 
-	  let (nb, sz) = info in
-	  let nb = nb + 1 in
-	  let sz = sz + ((Newspeak.size_of ptr_sz t) / 8) in 
-	    count_blk body (nb, sz)
+	  let info = count_decl ptr_sz t info in
+	    count_blk body info
       | DoWith (body, _, action) -> 
 	  let body_info = count_blk body info in
 	  let action_info = count_blk action info in
-	    max_info body_info action_info
+	    max_stats body_info action_info
       | Call (FunId f) -> 
-	  let (nb, sz) = info in
-	  let (f_nb, f_sz) = count_call f in
-	    (nb + f_nb, sz + f_sz)
+	  let info_f = count_call f in
+	    add_stats info info_f
       | Call _ -> 
 	  let build_call f = (Call (FunId f), !current_loc)::[] in
 	  let alternatives = List.map build_call fid_addrof in
-	    exact := false;
-	    List.fold_left (count_alternatives info) (0, 0) alternatives
+	    if alternatives <> [] then exact := false;
+	    List.fold_left (count_alternatives info) init_stats alternatives
       | ChooseAssert choices -> 
-	  let choices = List.map snd choices in
-	    List.fold_left (count_alternatives info) (0, 0) choices
-      | InfLoop body -> count_blk body info
+	  let (_, choices) = List.split choices in
+	    List.fold_left (count_alternatives info) init_stats choices
+      | InfLoop body -> 
+	  let info = count_loop info in
+	    count_blk body info
       | _ -> info
 
   and count_alternatives info max_so_far body =
     let info' = count_blk body info in
-      max_info info' max_so_far
+      max_stats info' max_so_far
   in
     (* TODO: arguments of main not counted ! *)
-  let (nb, sz) = count_call "main" in
-    (!exact, nb, sz)
+  let stats = count_call "main" in
+    (!exact, stats)
       
-let print (exact, max_nb, max_sz) =
-  let symb = if exact then "" else ">= " in
+let print (exact, st) =
+  let symb = if exact then "" else "<= " in
     print_endline ("Maximum number of variables on the stack: "
-		    ^symb^(string_of_int max_nb));
+		    ^symb^(string_of_int st.nb_vars));
     print_endline ("Maximum height of the stack (bytes): "
-		    ^symb^(string_of_int max_sz))
+		    ^symb^(string_of_int st.sz_vars));
+    print_endline ("Maximum depth of imbricated loops: "
+		    ^symb^(string_of_int st.loop_depth))
+
