@@ -41,6 +41,7 @@ struct
   let zero = "0"
   let one = "1"
   let of_string x = x
+  let to_string x = x
   let of_int x = string_of_int x
   let of_big_int = Big_int.string_of_big_int
   let to_big_int = Big_int.big_int_of_string

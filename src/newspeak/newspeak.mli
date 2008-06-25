@@ -63,6 +63,7 @@ module Nat: sig
   val zero: t
   val one: t
   val of_string: string -> t
+  val to_string: t -> string
   val of_int: int -> t
 
   val of_big_int: Big_int.big_int -> t
