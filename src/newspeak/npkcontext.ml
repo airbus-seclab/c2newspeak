@@ -261,14 +261,12 @@ let print_debug msg =
   if !verb_debug then 
     prerr_endline ("Debug: "^msg^(string_of_loc !cur_loc))
 
+let string_of_error where msg =
+  if (!verb_debug && where <> "")
+  then "("^where^") "^msg^(string_of_loc !cur_loc)
+  else msg^(string_of_loc !cur_loc)
 
-let error where msg =
-    let disp = 
-      if (!verb_debug && where <> "")
-      then "("^where^") "^msg^(string_of_loc !cur_loc)
-      else msg^(string_of_loc !cur_loc)
-    in
-      invalid_arg disp
+let error where msg = invalid_arg (string_of_error where msg)
 
 let print_error msg =
   prerr_endline ("Fatal error: "^msg);
@@ -298,7 +296,11 @@ let handle_cmdline_options () =
   if (not !compile_only) && (!output_file = "") then output_file := "a.npk"
 
 let report_dirty_warning msg err =
-  if !dirty_syntax then print_warning msg err else error msg err
+  if !dirty_syntax then print_warning msg err 
+  else begin
+    let msg = string_of_error msg err in
+      invalid_arg (msg^". Clean up your code or try option --dirty.")
+  end
 
 let report_strict_warning msg err =
   if !strict_syntax then print_warning msg err
