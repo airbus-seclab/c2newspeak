@@ -40,8 +40,6 @@ struct
       
   let zero = "0"
   let one = "1"
-  let of_string x = x
-  let to_string x = x
   let of_int x = string_of_int x
   let of_big_int = Big_int.string_of_big_int
   let to_big_int = Big_int.big_int_of_string
@@ -80,11 +78,8 @@ struct
     let y = Big_int.big_int_of_string y in
       Big_int.compare_big_int x y
 
-  (* WARNING: this function is not exported, because it may be an arbitrary
-     string from the source code and not the representation of the normalized
-     integer 
-  *)
   let to_string x = x
+  let of_string x = x
 end
 
 type t = (file list * prog * size_t)
