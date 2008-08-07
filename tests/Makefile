@@ -59,7 +59,7 @@ TESTS.CIL.SPEC = $(addsuffix .spec, $(TESTS.CIL))
 .SILENT: check $(CHECK)
 .PHONY: $(TESTS) $(TESTS.SPEC) $(TESTS.CIL.SPEC)
 
-check: ../bin/c2newspeak $(TESTS) $(addsuffix .check, $(DIR))
+check: ../bin/c2newspeak $(TESTS) $(addsuffix .check, $(DIR)) ada2newspeak.test
 
 %.check: ../bin/c2newspeak
 	make -C $*
@@ -138,10 +138,13 @@ $(TESTS.CIL.SPEC): %.cil.spec: %.c
 	dos2unix $*.cil.spec; \
 	cat $*.cil.spec
 
+ada2newspeak.test:
+	make -C ada2newspeak
 
 ../bin/c2newspeak: 
-	make -C .. install
+	make -C ..
 
 clean: 
 	$(RM) $(CHECK)
 	$(RM) *~ *.bak *.res *.no *.npk
+	make clean -C ada2newspeak

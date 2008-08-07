@@ -40,8 +40,9 @@ INCLUDE=$(addprefix -I ,$(DIRS))
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
+version.FILE=../newspeak/version
+
 newspeak.FILES:=\
-	version \
 	config cilutils newspeak npkcontext \
 	npkil npkutils cir \
 	cir2npkil link
@@ -66,7 +67,8 @@ EXEC = ../../bin/ada2newspeak
 
 MLI=syntax_ada.mli
 ML=$(addsuffix .ml, $(ada2newspeak.FILES))
-OBJS=$(addsuffix .cmx, $(ada2newspeak.FILES))
+OBJS=$(addsuffix .cmx, $(version.FILE)) \
+     $(addsuffix .cmx, $(ada2newspeak.FILES)) \
 
 CLEANFILES=*~ .depend \
 	$(addsuffix *~,$(DIRS)) \
@@ -79,7 +81,7 @@ CLEANFILES=*~ .depend \
 	$(ada2newspeak.CLEANFILES)
 
 
-all: depend $(EXEC)
+all: $(EXEC)
 
 $(EXEC): $(OBJS)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(OBJS) -o $(EXEC)
@@ -102,7 +104,7 @@ $(EXEC): $(OBJS)
 clean:
 	$(RM) $(CLEANFILES)
 
-depend: $(ML) $(MLI)
-	$(OCAMLDEP) $(INCLUDE) $(ML) $(MLI) > .depend	
+.depend: $(ML) $(MLI)
+	 $(OCAMLDEP) $(INCLUDE) $(ML) $(MLI) $(version.FILE).ml > .depend	
 
 include .depend

@@ -188,7 +188,7 @@ clean:
 	@mkdir $(CILDIR) 2> /dev/null; true
 	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(TARGET).depend
 
-bin/ada2newspeak: $(CIL)
+bin/ada2newspeak: $(CIL) src/newspeak/version.cmx
 	$(MAKE) -C src/ada2newspeak
 
 bin/c2newspeak: $(CIL) $(c2newspeak.CMX)
