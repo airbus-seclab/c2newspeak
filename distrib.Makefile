@@ -44,8 +44,8 @@ COMPNAMES=c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck \
           npkbugfind npkdiff
 COMPONENTS=$(addprefix bin/,$(COMPNAMES))
 
-DIRS:=newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck npkbugfind \
-      npkdiff
+DIRS:=newspeak c2newspeak npkstrip npkstats npksimplify npk2bytesz npkcheck \
+      npkbugfind npkdiff
 DIRS:= $(CILDIR) src/ $(addsuffix /,$(addprefix src/,$(DIRS)))
 INCLUDE=$(addprefix -I ,$(DIRS))
 LIB=nums.cma
@@ -54,47 +54,55 @@ LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 INSTALL.FILES=src/newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
               newspeak.a lib/*
 
+newspeak.FILES:=\
+	version \
+	config cilutils newspeak npkcontext \
+	npkil npkutils cir \
+	cir2npkil link
+newspeak.FILES:=$(addprefix newspeak/, $(newspeak.FILES))
+
 c2newspeak.FILES:=\
-        config cilutils params newspeak npkcontext \
         pp_syntax pp_lexer pp_parser \
-        csyntax cir synthack lexer parser \
+        csyntax synthack lexer parser \
         spec_lexer spec_parser \
-        npkil npkutils cilenv \
-        cilfirstpass cilcompiler \
+        cilenv cilfirstpass cilcompiler \
         firstpass compiler \
-        link c2newspeak
-c2newspeak.FILES:=version $(addprefix newspeak/, $(c2newspeak.FILES))
+	params \
+        c2newspeak
+c2newspeak.FILES:=$(newspeak.FILES) \
+	          $(addprefix c2newspeak/, $(c2newspeak.FILES))
 c2newspeak.FILES:=$(addprefix src/,$(c2newspeak.FILES))
+
 c2newspeak.CMX:=$(addsuffix .cmx,$(c2newspeak.FILES))
 
-npkstrip.FILES:=version newspeak/newspeak npkstrip/npkstrip
+npkstrip.FILES:=newspeak/version newspeak/newspeak npkstrip/npkstrip
 npkstrip.FILES:=$(addprefix src/,$(npkstrip.FILES))
 npkstrip.CMX:=$(addsuffix .cmx,$(npkstrip.FILES))
 
-npkstats.FILES:=version newspeak/newspeak npkstats/maxcount npkstats/npkstats
+npkstats.FILES:=newspeak/version newspeak/newspeak npkstats/maxcount npkstats/npkstats
 npkstats.FILES:=$(addprefix src/,$(npkstats.FILES))
 npkstats.CMX:=$(addsuffix .cmx,$(npkstats.FILES))
 
 npksimplify.FILES:=normalize store copy_propagation inline \
                    var_hoist npksimplify
-npksimplify.FILES:=version newspeak/newspeak \
+npksimplify.FILES:=newspeak/version newspeak/newspeak \
                    $(addprefix npksimplify/,$(npksimplify.FILES))
 npksimplify.FILES:=$(addprefix src/,$(npksimplify.FILES))
 npksimplify.CMX:=$(addsuffix .cmx,$(npksimplify.FILES))
 
-npk2bytesz.FILES:=version newspeak/newspeak npk2bytesz/npk2bytesz
+npk2bytesz.FILES:=newspeak/version newspeak/newspeak npk2bytesz/npk2bytesz
 npk2bytesz.FILES:=$(addprefix src/,$(npk2bytesz.FILES))
 npk2bytesz.CMX:=$(addsuffix .cmx,$(npk2bytesz.FILES))
 
-npkcheck.FILES:=version newspeak/newspeak npkcheck/npkcheck
+npkcheck.FILES:=newspeak/version newspeak/newspeak npkcheck/npkcheck
 npkcheck.FILES:=$(addprefix src/,$(npkcheck.FILES))
 npkcheck.CMX:=$(addsuffix .cmx,$(npkcheck.FILES))
 
-npkbugfind.FILES:=version newspeak/newspeak npkbugfind/npkbugfind
+npkbugfind.FILES:=newspeak/version newspeak/newspeak npkbugfind/npkbugfind
 npkbugfind.FILES:=$(addprefix src/,$(npkbugfind.FILES))
 npkbugfind.CMX:=$(addsuffix .cmx,$(npkbugfind.FILES))
 
-npkdiff.FILES:=version newspeak/newspeak npkdiff/npkdiff
+npkdiff.FILES:=newspeak/version newspeak/newspeak npkdiff/npkdiff
 npkdiff.FILES:=$(addprefix src/,$(npkdiff.FILES))
 npkdiff.CMX:=$(addsuffix .cmx,$(npkdiff.FILES))
 
@@ -107,14 +115,14 @@ c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer \
 c2newspeak.CLEANFILES:=$(addsuffix .ml, $(c2newspeak.CLEANFILES)) \
                        $(addsuffix .mli, $(c2newspeak.CLEANFILES)) \
                        parser.output pp_parser.output spec_parser.output
-c2newspeak.CLEANFILES:=$(addprefix src/newspeak/,$(c2newspeak.CLEANFILES))
+c2newspeak.CLEANFILES:=$(addprefix src/c2newspeak/,$(c2newspeak.CLEANFILES))
 CLEANFILES=*~ .depend \
 	$(addsuffix *~,$(DIRS)) \
 	*.a *.cma *.cmxa \
         bin/* src/*~ \
         doc/*.html doc/*~ \
 	lib/*~ lib/sys/*~ \
-	src/version.cmo src/newspeak/newspeak.cmo \
+	src/newspeak/version.cmo src/newspeak/newspeak.cmo \
 	$(addsuffix .cmi,$(FILES)) $(addsuffix .cmx,$(FILES)) \
 	$(addsuffix .o,$(FILES)) \
 	$(c2newspeak.CLEANFILES) 
@@ -125,7 +133,7 @@ suffix.cmx=$(addsuffix .cmx,$(1))
 #rules
 .PHONY: clean doc
 
-all: $(COMPONENTS) bin/newspeak.cmxa doc
+all: $(COMPONENTS) bin/ada2newspeak bin/newspeak.cmxa doc
 
 $(CIL):
 	cd cil; tar xzf cil-1.3.5.tar.gz
@@ -138,7 +146,7 @@ $(CIL):
 bin/newspeak.cmxa: $(INSTALL.FILES)
 	$(CP) -r $(INSTALL.FILES) bin
 
-NEWSPEAK:=src/version src/newspeak/newspeak
+NEWSPEAK:=src/newspeak/version src/newspeak/newspeak
 NEWSPEAK.CMO:=$(addsuffix .cmo,$(NEWSPEAK))
 NEWSPEAK.CMX:=$(addsuffix .cmx,$(NEWSPEAK))
 
@@ -165,7 +173,7 @@ newspeak.a newspeak.cmxa: $(NEWSPEAK.CMX)
 
 doc: doc/index.html
 
-doc/index.html: src/version.cmi src/newspeak/newspeak.cmi
+doc/index.html: src/newspeak/version.cmi src/newspeak/newspeak.cmi
 	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 clean-all: clean
@@ -173,11 +181,15 @@ clean-all: clean
 
 clean:
 	$(RM) $(CLEANFILES)
+	$(MAKE) clean -C src/ada2newspeak
 
 .depend: $(ML)
 	@mkdir bin 2> /dev/null; true
 	@mkdir $(CILDIR) 2> /dev/null; true
 	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $(TARGET).depend
+
+bin/ada2newspeak: $(CIL)
+	$(MAKE) -C src/ada2newspeak
 
 bin/c2newspeak: $(CIL) $(c2newspeak.CMX)
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(c2newspeak.CMX) -o $@

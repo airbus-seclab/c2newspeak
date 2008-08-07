@@ -43,22 +43,17 @@ let software = "C2Newspeak"
 let authors = "Charles Hymans and Olivier Levillain"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
-let comment = [
-  "   The Newspeak language and C2Newspeak have initially been developped in ";
-  " EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles";
-  " Hymans.";
-  "";
-  "   C2Newspeak compiles C code into Newspeak language, which allows static ";
-  " analysis and statistics on C code thanks to a simpler and non ambiguous  ";
-  " language."]
+let comment_string = 
+  "   The Newspeak language and C2Newspeak have initially been developped in \n"
+  ^" EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles\n"
+  ^" Hymans.\n"
+  ^"\n"
+  ^"   C2Newspeak compiles C code into Newspeak language, which allows static\n"
+  ^" analysis and statistics on C code thanks to a simpler and non ambiguous \n"
+  ^" language.\n"
   
 let version_string =
   software^" version "^Version.version
   ^" build "^Version.revision^" ("^Version.date^").\n"
   ^"Software under "^licence^". Copyright "^copyright^".\n"
   ^"Authors "^authors^".\n"
-
-
-let print_version () =
-  print_endline version_string;
-  List.iter print_endline comment

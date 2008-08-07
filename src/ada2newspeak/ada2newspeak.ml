@@ -17,24 +17,18 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-  Charles Hymans
-  EADS Innovation Works - SE/CS
-  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: charles.hymans@penjili.org
-
-  Olivier Levillain
-  email: olivier.levillain@penjili.org
+  Jasmine Duchon
+  email : jasmine . duchon AT free . fr
+  
 *)
 
 open Npkcontext
 
 let compile fname =
-  if not (Filename.check_suffix fname Params.c_suffix)
-  then error "C2newspeak.compile" (fname^" is not a .c file");
+  if not (Filename.check_suffix fname Params.ada_suffix)
+  then error "Ada2newspeak.compile" (fname^" is not a .adb file");
 
-  let prog =
-    if !Npkcontext.use_cil then Cilcompiler.compile fname
-    else Compiler.compile fname
+  let prog = Compiler.compile fname
   in
     if (!Npkcontext.verb_npko) then begin
       print_endline "Newspeak Object output";
@@ -49,7 +43,9 @@ let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
 let _ =
   try
-    Npkcontext.handle_cmdline_options ();
+    Npkcontext.handle_cmdline_options 
+      Params.version_string Params.comment_string;
+    Npkcontext.accept_extern := true;
     let extract_no fname =
       if Filename.check_suffix fname Params.npko_suffix then fname
       else begin

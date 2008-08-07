@@ -29,7 +29,8 @@ include distrib.Makefile
 DISTDIR=newspeak-$(VERSION)
 DISTFILE=$(DISTDIR).tar.gz
 TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkstrip npkcheck npk2bytesz npkbugfind npkdiff)
-CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
+VERSION.FILE=src/newspeak/version.ml
+CLEANFILES+=$(VERSION.FILE) $(DISTDIR) $(DISTFILE) \
             $(addsuffix /*.no,$(TESTSDIR)) \
             $(addsuffix /*.npk,$(TESTSDIR)) \
             $(addsuffix /*~,$(TESTSDIR)) \
@@ -42,12 +43,12 @@ CLEANFILES+=src/version.ml $(DISTDIR) $(DISTFILE) \
             tests/newspeak/005.npk
 
 genversion=\
-hg parents --template 'let date = "{date|shortdate}"\n' > src/version.ml; \
-hg parents --template 'let version = "$(VERSION)"\n' >> src/version.ml; \
-hg parents --template 'let revision = "{node|short}"\n' >> src/version.ml
+hg parents --template 'let date = "{date|shortdate}"\n' > $(VERSION.FILE); \
+hg parents --template 'let version = "$(VERSION)"\n' >> $(VERSION.FILE); \
+hg parents --template 'let revision = "{node|short}"\n' >> $(VERSION.FILE)
 
 #Version number generation
-src/version.ml:
+$(VERSION.FILE):
 	$(genversion)
 
 distrib: $(DISTDIR)

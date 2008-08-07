@@ -21,15 +21,10 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Jasmine Duchon
+  email : jasmine . duchon AT free . fr
+  
 *)
 
-val size_of_boolean: int
-val size_of_char: int
-val size_of_short: int
-val size_of_int: int
-val size_of_long: int
-val size_of_longlong: int
-val size_of_ptr: int
-val size_of_float: int
-val size_of_double: int
-val size_of_longdouble: int
+val compile: string -> Npkil.t

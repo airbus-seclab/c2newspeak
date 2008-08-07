@@ -35,7 +35,6 @@
 *)
 
 open Cil
-open Params
 
 (*----------------------*)
 (* Command line options *)
@@ -74,6 +73,7 @@ let verb_cil = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
 let pretty_print = ref false
+let print_ast = ref false
 
 let verbose boolean () =
   verb_cil := boolean;
@@ -108,11 +108,6 @@ let use_cil = ref true
 (* Version *)
 
 let version = ref false
-
-
-let usage_msg =
-  version_string ^ "\nUsage: "^
-    Sys.argv.(0)^" [options] [-help|--help] [file...]\n"
 
 let argslist = [    
   ("--no-init", Arg.Clear (global_zero_init),
@@ -169,6 +164,9 @@ let argslist = [
 
   ("--newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
+
+  ("--ast", Arg.Set print_ast,
+   "print only Abstract Syntax Tree");
 
   ("--pretty", Arg.Set (pretty_print),
    "verbose options: uses var names for Newspeak display");
@@ -273,28 +271,34 @@ let print_error msg =
   exit 1
 
 
-let handle_cmdline_options () = 
-  Arg.parse argslist anon_fun usage_msg;
+let handle_cmdline_options version_string comment_string = 
 
-  if !version then begin
-    Params.print_version ();
-    exit 0
-  end;
-
-  if !input_files = [] then begin
-    error "C2Newspeak.handle_cmdline_options"
-      ("no file specified. Try "^Sys.argv.(0)^" --help")
-  end;
-  
-  if (List.length !input_files > 1) && !compile_only 
-    && (!output_file <> "") then begin
-    error "C2Newspeak.handle_cmdline_options" 
-      ("You cannot specify the output filename (-o) for multiple "
-	^"files when only compiling (-c)")
-  end;
-
-  if (not !compile_only) && (!output_file = "") then output_file := "a.npk"
-
+  let usage_msg =
+    version_string ^ "\nUsage: "^
+      Sys.argv.(0)^" [options] [-help|--help] [file...]\n" in
+    
+    Arg.parse argslist anon_fun usage_msg;
+    
+    if !version then begin
+      print_endline version_string;
+      print_endline comment_string;
+      exit 0
+    end;
+    
+    if !input_files = [] then begin
+      error "C2Newspeak.handle_cmdline_options"
+	("no file specified. Try "^Sys.argv.(0)^" --help")
+    end;
+    
+    if (List.length !input_files > 1) && !compile_only 
+      && (!output_file <> "") then begin
+	error "C2Newspeak.handle_cmdline_options" 
+	  ("You cannot specify the output filename (-o) for multiple "
+	   ^"files when only compiling (-c)")
+      end;
+    
+    if (not !compile_only) && (!output_file = "") then output_file := "a.npk"
+      
 let report_dirty_warning msg err =
   if !dirty_syntax then print_warning msg err 
   else begin

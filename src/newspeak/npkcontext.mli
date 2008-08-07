@@ -75,7 +75,7 @@ val verb_debug : bool ref
 val verb_cil : bool ref
 val verb_npko : bool ref
 val verb_newspeak : bool ref
-
+val print_ast : bool ref
 (** when the pretty_print boolean is set, locals and globals are
     displayed in a prettier way if possible (with their names) *)
 val pretty_print : bool ref
@@ -95,7 +95,7 @@ val output_file : string ref
 
 
 (** TODO: document that *)
-val handle_cmdline_options : unit -> unit
+val handle_cmdline_options : string -> string -> unit
 
 
 
