@@ -1,3 +1,5 @@
+#TODO: rather include ../common.Makefile
+
 COMPILER=../../bin/ada2newspeak
 OPTION=--npko --newspeak
 
@@ -49,10 +51,12 @@ $(TESTS): %: %.checked
 	@$(COMPILER) $(OPTION) $< >$@
 
 %.checked: %.adb %.ref
-	@$(COMPILER) $(OPTION) $< >$@
-	@diff $@ $*.ref
+	@$(COMPILER) $(OPTION) $< >$*.bak
+	@dos2unix $*.bak &> /dev/null
+	@diff $*.bak $*.ref
 	@echo $*
-	@rm $@ $*.no
+	@rm $*.bak $*.no
+	@touch $*.checked
 
 ref:	$(TESTS.REF)
 
@@ -62,6 +66,7 @@ $(COMPILER) :
 clean :
 	rm -f $(DIRCLEAN)
 	rm -f $(TESTS)
+	rm -rf *.checked
 
 cleanref : clean
 	rm -f $(DIRCLEANREF)

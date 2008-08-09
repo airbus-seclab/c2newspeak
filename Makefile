@@ -40,7 +40,8 @@ CLEANFILES+=$(VERSION.FILE) $(DISTDIR) $(DISTFILE) \
             tests/newspeak/*~ tests/newspeak/*.ok tests/newspeak/*.exe \
             tests/newspeak/*_check tests/newspeak/*.cmi tests/newspeak/*.cmo \
             tests/newspeak/*.no tests/newspeak/002.npk tests/newspeak/003.npk \
-            tests/newspeak/005.npk
+            tests/newspeak/005.npk \
+            tests/ada2newspeak/*.checked tests/ada2newspeak/*/*.checked
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > $(VERSION.FILE); \
