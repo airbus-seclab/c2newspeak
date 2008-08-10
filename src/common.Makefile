@@ -24,44 +24,52 @@
 # email: charles.hymans@penjili.org
 #
 
-VERSION=1.3
-
 #utils
 CP=cp
 RM=rm -rf
+OCAMLC=ocamlc -w Ael -warn-error Ael
+OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
+OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc
 
-#FILES
-COMPONENTS=newspeak c2newspeak npkstrip npkstats npksimplify npk2bytesz \
-           npkcheck npkbugfind npkdiff ada2newspeak
+CILDIR=../cil/obj
+CIL=$(CILDIR)/cil.cmxa
+INCLUDE=$(addprefix -I ,$(DIRS))
 
-CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
+CMX=$(addsuffix .cmx,$(FILES))
+ML=$(addsuffix .ml,$(FILES))
+MLI=$(addsuffix .mli,$(FILES))
 
-#rules
-.PHONY: clean doc
+CLEANFILES+=\
+	$(TARGET).depend *~ \
+	$(addsuffix .cmi,$(FILES)) \
+	$(addsuffix .cmx,$(FILES)) $(addsuffix .o,$(FILES)) 
 
-all: $(CIL) $(COMPONENTS) doc
-	-mkdir bin
-	$(CP) -r lib/* bin
+../bin/$(TARGET): $(CIL) $(CMX)
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(CMX) -o $@
 
-$(COMPONENTS): src/version.ml
-	$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
+$(TARGET).depend: $(ML)
+	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $@
 
-$(CIL):
-	cd cil; tar xzf cil-1.3.5.tar.gz
-	cd cil/cil; patch Makefile.in ../Makefile.in.patch
-	cd cil/cil; ./configure
-	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
-	cd cil/cil; make
-	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
-
-doc: doc/index.html
-
-doc/index.html:
-	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
-
-clean: $(COMPONENTS)
+clean:
 	$(RM) $(CLEANFILES)
 
-clean-all: clean
-	$(RM) -r cil/cil $(CILDIR)
+#automatic rules
+%.cmi: %.mli
+	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+
+%.cmo: %.ml
+	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+
+%.cmx: %.ml
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
+
+%.mli %.ml: %.mly
+	$(OCAMLYACC) -v $<
+
+%.ml: %.mll
+	$(OCAMLLEX) $<
+
+include $(TARGET).depend

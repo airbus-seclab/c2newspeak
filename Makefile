@@ -29,7 +29,7 @@ include distrib.Makefile
 DISTDIR=newspeak-$(VERSION)
 DISTFILE=$(DISTDIR).tar.gz
 TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkstrip npkcheck npk2bytesz npkbugfind npkdiff ada2newspeak)
-VERSION.FILE=src/newspeak/version.ml
+VERSION.FILE=src/version.ml
 CLEANFILES+=$(VERSION.FILE) $(DISTDIR) $(DISTFILE) \
             $(addsuffix /*.no,$(TESTSDIR)) \
             $(addsuffix /*.npk,$(TESTSDIR)) \

@@ -40,7 +40,7 @@ INCLUDE=$(addprefix -I ,$(DIRS))
 LIB=nums.cma
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
-version.FILE=../newspeak/version
+version.FILE=../version
 
 newspeak.FILES:=\
 	config cilutils newspeak npkcontext \

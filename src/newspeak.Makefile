@@ -24,44 +24,26 @@
 # email: charles.hymans@penjili.org
 #
 
-VERSION=1.3
+INSTALL.FILES=newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
+              newspeak.a
 
-#utils
-CP=cp
-RM=rm -rf
-OCAMLDOC=ocamldoc
+all: $(INSTALL.FILES)
+	$(CP) $(INSTALL.FILES) ../bin
 
-#FILES
-COMPONENTS=newspeak c2newspeak npkstrip npkstats npksimplify npk2bytesz \
-           npkcheck npkbugfind npkdiff ada2newspeak
+FILES=version newspeak/newspeak
+FILES.CMO=$(addsuffix .cmo,$(FILES))
+FILES.CMX=$(addsuffix .cmx,$(FILES))
 
-CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
+newspeak.cma: $(FILES.CMO)
+	$(OCAMLC) nums.cma -a $(FILES.CMO) -o newspeak.cma
 
-#rules
-.PHONY: clean doc
+newspeak.a newspeak.cmxa: $(FILES.CMX)
+	$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
 
-all: $(CIL) $(COMPONENTS) doc
-	-mkdir bin
-	$(CP) -r lib/* bin
+CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo
 
-$(COMPONENTS): src/version.ml
-	$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
+TARGET=newspeak
+DIRS=newspeak/
+LIBX=nums.cmxa
 
-$(CIL):
-	cd cil; tar xzf cil-1.3.5.tar.gz
-	cd cil/cil; patch Makefile.in ../Makefile.in.patch
-	cd cil/cil; ./configure
-	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
-	cd cil/cil; make
-	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
-
-doc: doc/index.html
-
-doc/index.html:
-	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
-
-clean: $(COMPONENTS)
-	$(RM) $(CLEANFILES)
-
-clean-all: clean
-	$(RM) -r cil/cil $(CILDIR)
+include common.Makefile
