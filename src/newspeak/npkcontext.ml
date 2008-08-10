@@ -69,14 +69,13 @@ let accept_mult_def = ref false
 
 let verb_morewarns = ref false
 let verb_debug = ref false
-let verb_cil = ref false
+let verb_ast = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
 let pretty_print = ref false
-let print_ast = ref false
 
 let verbose boolean () =
-  verb_cil := boolean;
+  verb_ast := boolean;
   verb_debug := boolean;
   verb_morewarns := boolean;
   verb_newspeak := boolean
@@ -103,13 +102,13 @@ let compile_only = ref false
 let output_file = ref ""
 
 
-let use_cil = ref true
+let use_cil = ref false
 
 (* Version *)
 
 let version = ref false
 
-let argslist = [    
+let argslist = [
   ("--no-init", Arg.Clear (global_zero_init),
    "disables zero initialisation of the globals");
 
@@ -131,42 +130,37 @@ let argslist = [
   ("--ignore-asm", Arg.Set ignores_asm,
    "ignores any asm directive");
 
-  ("--keep-unused-vars", Arg.Clear (remove_temp),
+  ("--keep-unused-vars", Arg.Clear remove_temp,
    "does not remove unused variables");
 
-  ("--accept-extern", Arg.Set (accept_extern),
+  ("--accept-extern", Arg.Set accept_extern,
    "does not raise an error on variables declared but not defined\n");
 
-  ("--accept-mult-def", Arg.Set (accept_mult_def),
+  ("--accept-mult-def", Arg.Set accept_mult_def,
    "does not raise an error multiple definitions of the same variables\n");
 
-(* TODO: Handle assumptions correctly *)
-(*  ("--assume", Arg.String (fun x -> assumptions := x::(!assumptions)),
-   "adds an hypothesis to the analysis");*)
-
-
-  ("--cil", Arg.Set verb_cil,
-   "verbose option: displays CIL output");
+  ("--cil", Arg.Set use_cil, 
+   "use CIL lexer and parser instead of our own");
 
   ("--gnuc", Arg.Set gnuc, "allow GNU C extensions");
   
   ("--cil-printer", Arg.String (Cilutils.setCilPrinter),
    "verbose options: uses \"default\" or \"plain\" Cil output");
 
-  ("--more-warnings", Arg.Set (verb_morewarns),
+  ("--more-warnings", Arg.Set verb_morewarns,
    "verbose options: displays more warnings");
   
-  ("--debug", Arg.Set (verb_debug),
+  ("--debug", Arg.Set verb_debug,
    "verbose options: displays more debugging info");
   
-  ("--npko", Arg.Set (verb_npko),
+  ("--ast", Arg.Set verb_ast,
+   "verbose option: displays Abstract Syntax Tree output");
+
+  ("--npko", Arg.Set verb_npko,
    "verbose option: displays NewsPeak Object intermediate output");
 
   ("--newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
-
-  ("--ast", Arg.Set print_ast,
-   "print only Abstract Syntax Tree");
 
   ("--pretty", Arg.Set (pretty_print),
    "verbose options: uses var names for Newspeak display");
@@ -177,29 +171,22 @@ let argslist = [
   ("-q", Arg.Unit (verbose false),
    "quiet mode: turn display off");
     
-(* Removed: should be done by the tool user
-  ("--preprocess", Arg.Set has_preprocess,
-   "enables the C preprocessing step (gcc -E)");
-*)
   ("-I", Arg.String include_dir, 
-  "includes a pre-processing directory\n "^
-    "                    (must be repeated for each directory)\n");
+   "includes a pre-processing directory\n "
+   ^"                    (must be repeated for each directory)\n");
 
   ("-c", Arg.Set compile_only,
   "compiles only into a .no file");
   
   ("-o", Arg.Set_string output_file, 
-  "gives the name of Newspeak output\n");
+   "gives the name of Newspeak output\n");
 
   ("--version", Arg.Set version,
-  "prints the version of the software");
+   "prints the version of the software");
 
   ("--no-opt", Arg.Set no_opt, "Disables all code simplifications");
 
   ("--one-loop", Arg.Set normalize_loops, "Normalizes loops");
-
-  ("--experimental", Arg.Clear use_cil, 
-  "Use own lexer and parser instead of CIL: still experimental")
 ]
 
 

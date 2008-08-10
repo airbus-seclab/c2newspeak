@@ -1,8 +1,8 @@
 # commands
 # TODO: defining functions/macros ?
 RM = rm -f
-FLAG = --experimental
-FLAG.CIL = 
+FLAG =
+FLAG.CIL = --cil
 C2N = ../bin/c2newspeak --newspeak
 C2NEWSPEAK = $(C2N) $(FLAG)
 C2NEWSPEAK.CIL = $(C2N) $(FLAG.CIL)

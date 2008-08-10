@@ -39,7 +39,7 @@ let compile fname =
     Npkcontext.print_debug ("Parsing "^fname^"...");
     let (ast:Syntax_ada.compilation_unit) = 
       Ada_parse.parse base_name in
-      if (!Npkcontext.print_ast) then begin
+      if (!Npkcontext.verb_ast) then begin
 	print_endline "Abstract Syntax Tree";
 	print_endline "----------------------";
 	Print_syntax_ada.print_ast [ast];

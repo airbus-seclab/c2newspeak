@@ -844,7 +844,7 @@ let compile in_name =
   print_debug ("Parsing "^in_name^"...");
   let cil_file = Frontc.parse in_name () in
     print_debug ("Parsing done.");
-    if !verb_cil then begin
+    if !verb_ast then begin
       print_newline ();
       print_endline ("Cil output for "^in_name);
       for i = 1 to String.length in_name do

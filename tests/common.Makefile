@@ -24,7 +24,7 @@
 #commands
 RM=rm -f
 WC=wc -c
-C2NEWSPEAK=../../bin/c2newspeak --experimental
+C2NEWSPEAK=../../bin/c2newspeak
 NPKSTATS=../../bin/npkstats
 NPKSTRIP=../../bin/npkstrip --newspeak
 NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
