@@ -31,6 +31,9 @@ CP=cp
 RM=rm -rf
 OCAMLDOC=ocamldoc
 
+CILDIR=cil/obj
+CIL=$(CILDIR)/cil.cmxa
+
 #FILES
 COMPONENTS=newspeak c2newspeak npkstrip npkstats npksimplify npk2bytesz \
            npkcheck npkbugfind npkdiff ada2newspeak
@@ -53,6 +56,7 @@ $(CIL):
 	cd cil/cil; ./configure
 	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
 	cd cil/cil; make
+	-mkdir $(CILDIR)
 	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
 
 doc: doc/index.html
@@ -63,5 +67,6 @@ doc/index.html:
 clean: $(COMPONENTS)
 	$(RM) $(CLEANFILES)
 
-clean-all: clean
+clean-all:
+	$(MAKE) clean
 	$(RM) -r cil/cil $(CILDIR)

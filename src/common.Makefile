@@ -58,10 +58,10 @@ clean:
 
 #automatic rules
 %.cmi: %.mli
-	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmo: %.ml
-	$(OCAMLC) $(INCLUDE) $(LIB) -c $<
+	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmx: %.ml
 	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
