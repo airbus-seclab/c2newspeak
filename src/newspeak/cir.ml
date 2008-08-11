@@ -122,7 +122,7 @@ let rec string_of_exp margin e =
     | Const _ -> "cst"
     | Lval _ -> "lv"
     | AddrOf _ -> "&lv"
-    | Unop (_, e) -> "op "^(string_of_exp margin e)
+    | Unop (op, e) -> (Npkil.string_of_unop op)^"("^(string_of_exp margin e)^")"
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1)
 	^" "^(Newspeak.string_of_binop op)^" "
@@ -539,21 +539,18 @@ let len_of_array n lv =
 
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =
-  if t = t' then e
-  else begin
-    let (t, e, t') =
-      match (t, e, t') with
-	  (* TODO: this should be probably put in firstpass *)
-	| (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
-	    (FunPtr, AddrOf lv, t')
-	| (Scalar t, _, Scalar t') -> (t, e, t')
-	| (Void, _, _) -> 
-	    Npkcontext.error "Cir.cast" 
-	      "value void not ignored as it ought to be"
-	| _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
-    in
-      Unop (Npkil.Cast (t, t'), e)
-  end
+  match (t, e, t') with
+    | _ when t = t' -> e
+	(* TODO: this should be probably put in firstpass *)
+    | (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
+	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
+    | (Scalar (Int _), _, Scalar (Int k)) -> 
+	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
+    | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
+    | (Void, _, _) -> 
+	Npkcontext.error "Cir.cast" 
+	  "value void not ignored as it ought to be"
+    | _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
 
 let string_of_typ t =
   match t with

@@ -499,7 +499,6 @@ let string_of_cast t1 t2 =
 let cast t e t' =
     match (t, t') with
       _ when t = t' -> e
-    | (Int _, Int k) -> make_int_coerce k e
     | (Int _, (Ptr|FunPtr)) when e = zero -> Const Nil
     | (Ptr, Int ((_, n) as k)) 
 	when (!Npkcontext.castor_allowed 

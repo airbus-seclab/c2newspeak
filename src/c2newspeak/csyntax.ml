@@ -139,6 +139,8 @@ let char_typ = Int char_kind
 
 let int_typ = Int (Signed, Config.size_of_int)
 
+let uint_typ = Int (Unsigned, Config.size_of_int)
+
 (*
 let va_arg = (, "__builtin_newspeak_va_arg")
   Ptr char_typ *)

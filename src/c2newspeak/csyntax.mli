@@ -133,6 +133,8 @@ val char_typ: typ
 
 val int_typ: typ
 
+val uint_typ: typ
+
 val int_cst_of_lexeme: 
   (string option * string * char option * string option) -> cst
 

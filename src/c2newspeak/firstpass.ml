@@ -531,11 +531,11 @@ let translate (globals, spec) =
       | SizeofE e ->
 	  let (_, t) = translate_exp e in
 	  let sz = (size_of t) / 8 in
-	    (C.exp_of_int sz, int_typ)
+	    (C.exp_of_int sz, uint_typ)
 
       | Sizeof t -> 
 	  let sz = (size_of t) / 8 in
-	    (C.exp_of_int sz, int_typ)
+	    (C.exp_of_int sz, uint_typ)
 
       | Cast (e, t) -> 
 (* TODO: is this ok?? *)
