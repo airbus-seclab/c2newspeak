@@ -104,7 +104,6 @@ let rec typ_to_string typ = match typ with
   | Declared(typ_decl,loc) -> "Declared("
       ^(typ_declaration_to_string typ_decl)^","
       ^(line_of_loc loc)^")"
-  | TypName(name) -> "TypIdent("^(name_to_string name)^")"
   | String -> "String"
 
 and typ_declaration_to_string typ_decl = match typ_decl with

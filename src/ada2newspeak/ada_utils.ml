@@ -194,9 +194,6 @@ let eq_base_typ subtyp1 subtyp2 =
 let rec integer_class typ = match typ with
   | Integer -> true
   | IntegerConst -> true
-  | TypName(_) -> Npkcontext.error 
-      "Ada_utils.integer_class"
-	"internal error : unexpected Type Ident"
   | Declared(typdef, _) ->
       (match typdef with
 	 | Enum(_) -> false

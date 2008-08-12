@@ -48,7 +48,6 @@ type typ =
   | Boolean 
   | Character
   | Declared of typ_declaration*location
-  | TypName of name
   | String
 
 and typ_declaration =

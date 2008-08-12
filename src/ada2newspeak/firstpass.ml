@@ -151,8 +151,6 @@ let translate compil_unit =
     | Boolean -> C.Scalar(Npk.Int(Npk.Unsigned, Config.size_of_boolean))
     | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Config.size_of_char))
     | Declared(typ_decl, _) -> translate_declared typ_decl
-    | TypName _ -> Npkcontext.error "Firstpass.translate_typ"
-	"internal error : unexpected Type Ident"
     | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Config.size_of_int))
     | String -> Npkcontext.error "Firstpass.translate_typ"
 	"String not implemented"
