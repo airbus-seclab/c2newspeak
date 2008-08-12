@@ -103,6 +103,7 @@ let output_file = ref ""
 
 
 let use_cil = ref false
+let cil_printer = ref "default"
 
 (* Version *)
 
@@ -144,7 +145,7 @@ let argslist = [
 
   ("--gnuc", Arg.Set gnuc, "allow GNU C extensions");
   
-  ("--cil-printer", Arg.String (Cilutils.setCilPrinter),
+  ("--cil-printer", Arg.Set_string cil_printer,
    "verbose options: uses \"default\" or \"plain\" Cil output");
 
   ("--more-warnings", Arg.Set verb_morewarns,
@@ -162,7 +163,7 @@ let argslist = [
   ("--newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
 
-  ("--pretty", Arg.Set (pretty_print),
+  ("--pretty", Arg.Set pretty_print,
    "verbose options: uses var names for Newspeak display");
 
   ("-v", Arg.Unit (verbose true),

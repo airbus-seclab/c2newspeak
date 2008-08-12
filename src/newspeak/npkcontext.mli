@@ -128,4 +128,8 @@ val error : string -> string -> 'a
 (** Displays a message as a fatal error and exits the program *)
 val print_error : string -> 'a
 
+(** Whether to use CIL lexer and parser *)
 val use_cil: bool ref
+
+(** Name of the printer to use to output CIL syntactic elements *)
+val cil_printer: string ref

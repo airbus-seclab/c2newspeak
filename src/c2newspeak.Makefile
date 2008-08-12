@@ -29,15 +29,15 @@ DIRS=$(CILDIR) newspeak/ c2newspeak/
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
 newspeak.FILES=\
-	config cilutils newspeak npkcontext \
-	npkil npkutils cir \
+	config newspeak npkcontext \
+	npkil cir \
 	cir2npkil link
 
 c2newspeak.FILES=\
         pp_syntax pp_lexer pp_parser \
         csyntax synthack lexer parser \
         spec_lexer spec_parser \
-        cilenv cilfirstpass cilcompiler \
+        cilutils npkutils cilenv cilfirstpass cilcompiler \
         firstpass compiler \
 	params \
         c2newspeak

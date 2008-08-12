@@ -27,8 +27,8 @@
 TARGET=ada2newspeak
 DIRS=$(CILDIR) newspeak/ ada2newspeak/
 newspeak.FILES=\
-	config cilutils newspeak npkcontext \
-	npkil npkutils cir \
+	config newspeak npkcontext \
+	npkil cir \
 	cir2npkil link
 ada2newspeak.FILES=\
 	params \

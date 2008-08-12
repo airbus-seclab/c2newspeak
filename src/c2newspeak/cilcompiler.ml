@@ -839,6 +839,7 @@ let translate_glb used_glb name x =
 
 let compile in_name =
   initCIL ();
+  Cilutils.setCilPrinter !Npkcontext.cil_printer;
   useLogicalOperators := false;
 
   print_debug ("Parsing "^in_name^"...");
