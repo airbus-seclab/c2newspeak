@@ -130,11 +130,13 @@ $(TESTS): %: %.checked
 	echo $*
 
 $(TESTS.SPEC): %.spec: %.c
+	dos2unix $*.c
 	eval $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c &> $*.spec; \
 	dos2unix $*.spec; \
 	cat $*.spec
 
 $(TESTS.CIL.SPEC): %.cil.spec: %.c
+	dos2unix $*.c
 	eval $(C2NEWSPEAK.CIL) `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.spec; \
 	dos2unix $*.cil.spec; \
 	cat $*.cil.spec
