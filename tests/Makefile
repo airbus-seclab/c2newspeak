@@ -25,9 +25,11 @@
 #
 
 DIR=c2newspeak mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck \
-    npkbugfind npkdiff newspeak
+    npkbugfind npkdiff newspeak npkstrip ada2newspeak
 
 .PHONY: $(DIR)
+
+all: $(DIR)
 
 $(DIR):
 	$(MAKE) -C $@ $(MAKECMDGOALS)

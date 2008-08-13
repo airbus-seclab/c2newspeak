@@ -28,20 +28,19 @@ include distrib.Makefile
 .PHONY: check
 DISTDIR=newspeak-$(VERSION)
 DISTFILE=$(DISTDIR).tar.gz
-TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkstrip npkcheck npk2bytesz npkbugfind npkdiff ada2newspeak)
+TESTSDIR=$(addprefix tests/,npksimplify mult-files mem_opt npkstats npkstrip npkcheck npk2bytesz npkbugfind npkdiff ada2newspeak c2newspeak)
 VERSION.FILE=src/version.ml
-CLEANFILES+=$(VERSION.FILE) $(DISTDIR) $(DISTFILE) \
-            $(addsuffix /*.no,$(TESTSDIR)) \
-            $(addsuffix /*.npk,$(TESTSDIR)) \
-            $(addsuffix /*~,$(TESTSDIR)) \
-            $(addsuffix /*.ok,$(TESTSDIR)) \
-            tests/*.no tests/*.checked tests/*~ tests/*.npk tests/*.bak \
-            tests/*.res \
-            tests/newspeak/*~ tests/newspeak/*.ok tests/newspeak/*.exe \
-            tests/newspeak/*_check tests/newspeak/*.cmi tests/newspeak/*.cmo \
-            tests/newspeak/*.no tests/newspeak/002.npk tests/newspeak/003.npk \
-            tests/newspeak/005.npk \
-            tests/ada2newspeak/*.checked tests/ada2newspeak/*/*.checked
+CLEANFILES+= \
+  $(VERSION.FILE) $(DISTDIR) $(DISTFILE) \
+  $(addsuffix /*.no,$(TESTSDIR)) \
+  $(addsuffix /*.npk,$(TESTSDIR)) \
+  $(addsuffix /*~,$(TESTSDIR)) \
+  $(addsuffix /???,$(TESTSDIR)) \
+  tests/c2newspeak/*.cil.bak tests/*~ \
+  tests/newspeak/*.exe tests/newspeak/??? tests/newspeak/*.no \
+  tests/newspeak/002.npk tests/newspeak/003.npk tests/newspeak/005.npk \
+  tests/newspeak/*_check tests/newspeak/*.cmi tests/newspeak/*.cmo \
+  tests/ada2newspeak/*.checked tests/ada2newspeak/*/*.checked
 
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > $(VERSION.FILE); \
