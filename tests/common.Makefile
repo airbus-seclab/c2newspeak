@@ -33,15 +33,19 @@ NPKCHECK=../../bin/npkcheck
 NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 NPKDIFF=../../bin/npkdiff
 
-TESTS.OK= $(addsuffix .ok, $(TESTS))
-TESTS.SPEC= $(addsuffix .spec, $(TESTS))
+ifeq ($(strip $(DIFF)),)
+DIFF=diff $*.spec $*.bak
+endif
 
-.SILENT: $(TESTS.OK)
+TESTS.SPEC=$(addsuffix .spec, $(TESTS))
+CLEANFILES+=??? $(addsuffix .bak, $(TESTS)) result *.no *~ *.npk
+
+.SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)
 
-check: $(TESTS.OK)
+check: $(TESTS)
 
-$(TESTS.OK): %.ok: $(PREREQ)
+$(TESTS): %: $(PREREQ)
 	$(COMMAND) &> $*.bak; true
 	dos2unix $*.bak &> /dev/null
 	if [ -e $*.spec ]; \
@@ -55,14 +59,13 @@ $(TESTS.OK): %.ok: $(PREREQ)
 	  cat $*.bak; false; \
 	fi;
 	$(RM) $*.bak result
-	touch $*.ok
+	touch $*
 	echo $*
-
-$(TESTS):
-	make $@.ok
-
 
 $(TESTS.SPEC): %.spec: $(PREREQ)
 	$(COMMAND) &> $*.spec; true
 	dos2unix $*.spec
 	cat $*.spec
+
+clean:
+	$(RM) $(CLEANFILES)
