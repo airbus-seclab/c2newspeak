@@ -43,9 +43,11 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 #rules
 .PHONY: clean doc
 
-all: $(CIL) $(COMPONENTS) doc
-	-mkdir bin
+all: bin $(CIL) $(COMPONENTS) doc
 	$(CP) -r lib/* bin
+
+bin:
+	mkdir bin
 
 $(COMPONENTS): src/version.ml
 	$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
