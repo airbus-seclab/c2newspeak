@@ -34,7 +34,7 @@ NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 NPKDIFF=../../bin/npkdiff
 
 ifeq ($(strip $(DIFF)),)
-DIFF=diff $*.spec $*.bak
+DIFF=echo "this"; diff $*.spec $*.bak
 endif
 
 TESTS.SPEC=$(addsuffix .spec, $(TESTS))
@@ -50,14 +50,14 @@ $(TESTS): %: $(PREREQ)
 	dos2unix $*.bak &> /dev/null
 	if [ -e $*.spec ]; \
 	then \
-	  if diff $*.spec $*.bak > result; \
+	  if $(DIFF) > result; \
             then true; \
             else cat result; false; \
 	  fi; \
 	else \
 	  echo "$*.spec does not exist; printing output instead of diffing"; \
 	  cat $*.bak; false; \
-	fi;
+	fi
 	$(RM) $*.bak result
 	touch $*
 	echo $*
