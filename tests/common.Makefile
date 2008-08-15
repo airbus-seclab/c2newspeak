@@ -25,6 +25,7 @@
 RM=rm -f
 WC=wc -c
 C2NEWSPEAK=../../bin/c2newspeak
+ADA2NEWSPEAK=../../bin/ada2newspeak
 NPKSTATS=../../bin/npkstats
 NPKSTRIP=../../bin/npkstrip --newspeak
 NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
@@ -34,11 +35,12 @@ NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 NPKDIFF=../../bin/npkdiff
 
 ifeq ($(strip $(DIFF)),)
-DIFF=echo "this"; diff $*.spec $*.bak
+DIFF=diff $*.spec $*.bak
 endif
 
 TESTS.SPEC=$(addsuffix .spec, $(TESTS))
-CLEANFILES+=??? $(addsuffix .bak, $(TESTS)) result *.no *~ *.npk
+CLEANFILES+=$(TESTS) $(addsuffix .bak, $(TESTS)) *.no \
+            result *~ a.npk b.npk *.cmi *.cmo
 
 .SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)

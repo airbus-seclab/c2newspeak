@@ -26,5 +26,6 @@ COMMAND=$(C2NEWSPEAK) --keep-unused-vars $*-a.c -o a.npk &> /dev/null; \
         $(NPKDIFF) a.npk b.npk
 PREREQ=%-a.c %-b.c
 TESTS=000
+CLEANFILES=*.npk *.no
 
 include ../common.Makefile

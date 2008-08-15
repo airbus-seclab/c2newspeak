@@ -19,6 +19,7 @@ t042() {
 
 
 
+Warning: extern not accepted: t042a.z in t042a.ads line 3
 Newspeak output
 ---------------
 t042/t042.adb

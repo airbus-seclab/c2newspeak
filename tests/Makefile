@@ -31,6 +31,8 @@ DIR=c2newspeak mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck \
 
 all: $(DIR)
 
+clean: $(DIR)
+
 $(DIR):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 

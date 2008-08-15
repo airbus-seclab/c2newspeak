@@ -1,16 +1,15 @@
+Warning: Unreachable code in t008.adb line 5
 Newspeak Object output
 ----------------------
-t041/t041.adb
+t008.adb
 Global used
-t041a.z
 
 Global variables
-extern uint1 t041a.z;
 
 Function definitions
-t041() {
+t008() {
   do {
-    Global(t041a.z) =(uint1) 0;
+    goto lbl0;
   } with lbl0: {
   }
 }
@@ -19,10 +18,8 @@ t041() {
 
 Newspeak output
 ---------------
-t041/t041.adb
-t041() {
-  (t041.adb:7#100)^t041a.z =(uint1) 0;
+t008.adb
+t008() {
 }
 
-uint1 t041a.z = 0;
 
