@@ -40,9 +40,14 @@ struct
       
   let zero = "0"
   let one = "1"
-  let of_int x = string_of_int x
   let of_big_int = Big_int.string_of_big_int
   let to_big_int = Big_int.big_int_of_string
+  let of_int x = string_of_int x
+  let to_int x = 
+    let i = to_big_int x in
+    if not (Big_int.is_int_big_int i) 
+    then invalid_arg "Newspeak.Nat.to_int: not representable as an int";
+    Big_int.int_of_big_int i
 
   let apply_big_int_op op x y =
     let x = Big_int.big_int_of_string x in
@@ -72,6 +77,12 @@ struct
     let x = Big_int.big_int_of_string x in
     let y = Big_int.mult_int_big_int i x in
       Big_int.string_of_big_int y
+
+  let shift_left x n =
+    let x = Big_int.big_int_of_string x in
+    let y = Big_int.power_int_positive_int 2 n in
+    let z = Big_int.mult_big_int x y in
+      Big_int.string_of_big_int z
 
   let compare x y = 
     let x = Big_int.big_int_of_string x in

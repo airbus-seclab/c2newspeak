@@ -66,6 +66,10 @@ module Nat: sig
   val to_string: t -> string
   val of_int: int -> t
 
+  (** [to_int x] returns the integer representation of [x], when possible.
+      @raise Invalid_argument "Newspeak.Nat.to_int: not representable as an int" otherwise. *)
+  val to_int: t -> int
+
   val of_big_int: Big_int.big_int -> t
   val to_big_int: t -> Big_int.big_int
 
@@ -78,6 +82,9 @@ module Nat: sig
 
   val add_int: int -> t -> t
   val mul_int: int -> t -> t
+
+  (** [shift_left x n] multiplies [x] by 2 to the power [n]. *)
+  val shift_left: t -> int -> t
 
   val compare: t -> t -> int
 end

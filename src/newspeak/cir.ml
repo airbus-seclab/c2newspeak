@@ -207,6 +207,11 @@ let int_of_exp e =
 	    if (Nat.compare i2 Nat.zero = 0) 
 	    then Npkcontext.error "Cir.int_of_exp" "division by zero";
 	    Nat.div i1 i2
+      | Binop (Shiftlt, e1, e2) -> 
+	  let i1 = int_of_exp e1 in
+	  let i2 = int_of_exp e2 in
+	  let i2 = Nat.to_int i2 in
+	    Nat.shift_left i1 i2
       | Unop (Coerce b, e) -> 
 	  let i = int_of_exp e in
 	    if Newspeak.belongs i b then i 
@@ -215,13 +220,7 @@ let int_of_exp e =
 	  Npkcontext.error "Cir.int_of_exp" 
 	    "static expression expected"
   in
-  let i = Nat.to_big_int (int_of_exp e) in
-    if not (Big_int.is_int_big_int i) then begin
-      Npkcontext.error "Cir.int_of_exp" 
-	("expression can not be evaluated to an int: "
-	 ^(Big_int.string_of_big_int i))
-    end;
-    Big_int.int_of_big_int i
+    Nat.to_int (int_of_exp e)
 
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)

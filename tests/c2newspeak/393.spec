@@ -1,1 +1,1 @@
-Fatal error: type name in 393.c line 1
+Fatal error: type name in 393.c line 26

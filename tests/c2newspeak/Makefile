@@ -74,7 +74,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	360 361 362 363 364 365 366 367 368 369 \
 	370 371 372 373 374 375 376 377 378 379 \
 	380 381 382 383 384 385 386 387 388 389 \
-	390 391 392 393
+	390 391 392 393 394
 
 PREREQ=%.c
 CLEANFILES=$(addsuffix .cil.bak, $(TESTS))
@@ -112,3 +112,12 @@ include ../common.Makefile
 197: 198 199
 213: 220
 216: 226
+
+TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
+
+.PHONY: $(TESTS.CIL.SPEC)
+
+$(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
+	$(C2NEWSPEAK) --newspeak --cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
+	dos2unix $@
+	cat $@
