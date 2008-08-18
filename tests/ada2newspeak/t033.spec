@@ -23,7 +23,7 @@ t033.appelfonction() {
 
 t033.f() {
   do {
-    1- =(int32) !(0-_int32 + 1);
+    1- =(int32) (0-_int32 + 1);
     goto lbl0;
   } with lbl0: {
   }

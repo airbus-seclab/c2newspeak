@@ -17,10 +17,10 @@ t026() {
         choose {
         --> assert((0 > 1-_int32));
             goto lbl2;
-        --> assert(!(1-_int32 > 0));
+        --> assert((1-_int32 > 0));
         }
-        0- =(int32) !(0-_int32 + 1-_int32);
-        1- =(int32) !(1-_int32 - 1);
+        0- =(int32) (0-_int32 + 1-_int32);
+        1- =(int32) (1-_int32 - 1);
       }
     } with lbl2: {
     }

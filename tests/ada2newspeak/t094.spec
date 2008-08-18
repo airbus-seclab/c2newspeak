@@ -8,7 +8,7 @@ Global variables
 Function definitions
 t094.z() {
   do {
-    1- =(uint1) !(0 > 0-_int32);
+    1- =(uint1) (0 > 0-_int32);
     goto lbl0;
   } with lbl0: {
   }

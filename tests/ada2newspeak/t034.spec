@@ -22,7 +22,7 @@ t034.appelfonction() {
 
 t034.f() {
   do {
-    Global(t034.x) =(int32) !(Global(t034.x)_int32 + 1);
+    Global(t034.x) =(int32) (Global(t034.x)_int32 + 1);
     0- =(int32) Global(t034.x)_int32;
     goto lbl0;
   } with lbl0: {

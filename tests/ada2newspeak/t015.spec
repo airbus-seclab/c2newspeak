@@ -11,10 +11,10 @@ t015() {
     int32 x;
     0- =(int32) 10;
     choose {
-    --> assert(!(2 > 0-_int32));
-        0- =(int32) !(0-_int32 + 1);
+    --> assert((2 > 0-_int32));
+        0- =(int32) (0-_int32 + 1);
     --> assert((0-_int32 > 2));
-        0- =(int32) !(0-_int32 - 1);
+        0- =(int32) (0-_int32 - 1);
     }
   } with lbl0: {
   }

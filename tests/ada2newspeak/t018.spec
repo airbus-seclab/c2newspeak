@@ -15,13 +15,13 @@ t018() {
     1- =(uint3) 6;
     0- =(uint3) 3;
     choose {
-    --> assert(!(0 ==_uint3 2-_uint3));
+    --> assert((0 ==_uint3 2-_uint3));
     --> assert((2-_uint3 ==_uint3 0));
         choose {
-        --> assert(!(2 ==_uint3 1-_uint3));
+        --> assert((2 ==_uint3 1-_uint3));
         --> assert((1-_uint3 ==_uint3 2));
             choose {
-            --> assert(!(4 ==_uint3 0-_uint3));
+            --> assert((4 ==_uint3 0-_uint3));
             --> assert((0-_uint3 ==_uint3 4));
             }
         }

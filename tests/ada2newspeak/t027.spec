@@ -14,10 +14,10 @@ t027() {
     0- =(int32) 0;
     do {
       while (1) {
-        0- =(int32) !(0-_int32 + 1-_int32);
-        1- =(int32) !(1-_int32 - 1);
+        0- =(int32) (0-_int32 + 1-_int32);
+        1- =(int32) (1-_int32 - 1);
         choose {
-        --> assert(!(0 > 1-_int32));
+        --> assert((0 > 1-_int32));
             goto lbl2;
         --> assert((1-_int32 > 0));
         }

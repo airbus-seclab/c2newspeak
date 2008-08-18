@@ -19,7 +19,7 @@ Function definitions
 t035.chose() {
   do {
     choose {
-    --> assert(!(0-_uint2 ==_uint2 3));
+    --> assert((0-_uint2 ==_uint2 3));
         Global(t035.z) =(int32) 3;
         2- =(int32) 0;
         goto lbl0;

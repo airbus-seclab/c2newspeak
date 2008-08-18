@@ -17,9 +17,9 @@ t017() {
     choose {
     --> assert((1 > 0));
         2- =(uint2) 0;
-    --> assert(!(0 > 1));
+    --> assert((0 > 1));
         choose {
-        --> assert(!(1 ==_uint2 1-_uint2));
+        --> assert((1 ==_uint2 1-_uint2));
             1- =(uint2) 3;
             0- =(uint3) 4;
         --> assert((1-_uint2 ==_uint2 1));

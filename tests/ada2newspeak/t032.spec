@@ -10,7 +10,7 @@ int32 t032.x;
 Function definitions
 t032.proc() {
   do {
-    Global(t032.x) =(int32) !(Global(t032.x)_int32 + 2);
+    Global(t032.x) =(int32) (Global(t032.x)_int32 + 2);
   } with lbl0: {
   }
 }

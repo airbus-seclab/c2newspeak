@@ -194,7 +194,7 @@ and string_of_exp e =
 	  " "^(string_of_exp e1)^")"
 
     | BinOp (op, e1, e2) ->
-	"!("^(string_of_exp e1)^" "^(string_of_binop op)^
+	"("^(string_of_exp e1)^" "^(string_of_binop op)^
 	  " "^(string_of_exp e2)^")"
 	  
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)

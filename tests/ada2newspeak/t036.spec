@@ -19,7 +19,7 @@ t036.set() {
 
 t036.inc() {
   do {
-    Global(t036.x) =(int32) !(Global(t036.x)_int32 + 1);
+    Global(t036.x) =(int32) (Global(t036.x)_int32 + 1);
   } with lbl0: {
   }
 }

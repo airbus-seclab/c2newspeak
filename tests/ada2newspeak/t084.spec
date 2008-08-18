@@ -13,9 +13,9 @@ t084() {
     uint1 j;
     uint1 f;
     3- =(int32) 3;
-    2- =(uint1) !(3-_int32 ==_int32 5);
-    1- =(uint1) !(!(3-_int32 + 5) ==_int32 7);
-    0- =(uint1) !(0 ==_uint2 1);
+    2- =(uint1) (3-_int32 ==_int32 5);
+    1- =(uint1) ((3-_int32 + 5) ==_int32 7);
+    0- =(uint1) (0 ==_uint2 1);
   } with lbl0: {
   }
 }

@@ -20,7 +20,7 @@ t058() {
       1- =(int32) 0-_int32;
     }
     choose {
-    --> assert(!(0-_int32 > 15));
+    --> assert((0-_int32 > 15));
         int32 value_of_t058a;
         {
           int32 t058a.arg1;
@@ -32,7 +32,7 @@ t058() {
         int32 value_of_t058a;
         {
           int32 t058a.arg1;
-          0- =(int32) !(0 - 2);
+          0- =(int32) (0 - 2);
           t058a();
         }
         2- =(int32) 0-_int32;

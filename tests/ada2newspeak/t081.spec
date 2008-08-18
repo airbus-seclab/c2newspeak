@@ -27,7 +27,7 @@ t081.main() {
       t081.a();
       2- =(int32) 0-_int32;
     }
-    0- =(int32) !(!(!(1-_int32 + 15) + Global(t081.c)_int32) + 15);
+    0- =(int32) (((1-_int32 + 15) + Global(t081.c)_int32) + 15);
   } with lbl0: {
   }
 }

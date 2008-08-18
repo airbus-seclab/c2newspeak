@@ -11,22 +11,22 @@ t012() {
   do {
     0- =(int32) 3;
     choose {
-    --> assert(!(0-_int32 > 2));
-        0- =(int32) !(0-_int32 + 1);
-        0- =(int32) !(0-_int32 + 4);
+    --> assert((0-_int32 > 2));
+        0- =(int32) (0-_int32 + 1);
+        0- =(int32) (0-_int32 + 4);
         choose {
-        --> assert(!(10 > 0-_int32));
-            0- =(int32) !(0-_int32 * 2);
+        --> assert((10 > 0-_int32));
+            0- =(int32) (0-_int32 * 2);
         --> assert((0-_int32 > 10));
             choose {
-            --> assert(!(0-_int32 ==_int32 42));
+            --> assert((0-_int32 ==_int32 42));
                 goto lbl0;
             --> assert((42 ==_int32 0-_int32));
                 choose {
-                --> assert(!(26 > 0-_int32));
+                --> assert((26 > 0-_int32));
                     0- =(int32) 42;
                 --> assert((0-_int32 > 26));
-                    0- =(int32) !(0-_int32 - 1);
+                    0- =(int32) (0-_int32 - 1);
                 }
             }
         }

@@ -13,10 +13,10 @@ t028() {
     do {
       while (1) {
         choose {
-        --> assert(!(100 > 0-_int32));
-            0- =(int32) !(0-_int32 + 1);
+        --> assert((100 > 0-_int32));
+            0- =(int32) (0-_int32 + 1);
         --> assert((0-_int32 > 100));
-            0- =(int32) !(0-_int32 - 100);
+            0- =(int32) (0-_int32 - 100);
         }
       }
     } with lbl2: {

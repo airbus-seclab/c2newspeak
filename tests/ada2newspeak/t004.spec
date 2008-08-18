@@ -8,8 +8,8 @@ Global variables
 Function definitions
 t004() {
   do {
-    [1-_int32]32 =(int32) !(4 + 3);
-    [0-_float32]32 =(float32) !(4.5 +. 5.3);
+    [1-_int32]32 =(int32) (4 + 3);
+    [0-_float32]32 =(float32) (4.5 +. 5.3);
   } with lbl0: {
   }
 }

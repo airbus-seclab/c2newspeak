@@ -8,7 +8,7 @@ Global variables
 Function definitions
 t058a() {
   do {
-    1- =(int32) !(2 * 0-_int32);
+    1- =(int32) (2 * 0-_int32);
     goto lbl0;
   } with lbl0: {
   }
