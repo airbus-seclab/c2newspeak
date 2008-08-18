@@ -131,10 +131,9 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
       | AddrOf (Global f, Fun ft) -> K.AddrOfFun (f, translate_ftyp ft)
 
-      | AddrOf (lv, (Array _ as t)) ->
+      | AddrOf (lv, Array (elt_t, len)) ->
 	  let lv = translate_lv lv in
-	  let t = translate_typ t in
-	  let sz = K.size_of_array t lv in
+	  let sz = K.Mult (K.length_of_array len lv, size_of elt_t) in
 	    K.AddrOf (lv, sz)
 
       | AddrOf (lv, t) ->

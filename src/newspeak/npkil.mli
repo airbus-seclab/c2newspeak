@@ -169,8 +169,11 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
    positions in the declaration stacks, not by their names *)
 val append_decls: (string * typ * location) list -> blk -> blk
 
-val array_of_typ: typ -> lval -> (typ * tmp_int)
+val length_of_array: tmp_size_t -> lval -> tmp_int
 
+(* TODO: remove these 3 functions *)
 val size_of: typ -> int
+
+val array_of_typ: typ -> lval -> (typ * tmp_int)
 
 val size_of_array: typ -> lval -> tmp_int

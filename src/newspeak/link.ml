@@ -122,7 +122,13 @@ and replace_tmp_int x =
 	      Npkcontext.error "Npklink.replace_tmp_int" 
 		"array type expected"
       end
-    | Npkil.Mult (v, n) -> (replace_tmp_int v) * n
+    | Npkil.Mult (v, n) -> 
+	let i = replace_tmp_int v in
+	  if (i > Config.max_sizeof/n) 
+	  then Npkcontext.error "Link.replace_tmp_int" 
+	    ("size too large: maximum allowed is "
+	     ^(string_of_int Config.max_sizeof)^" bits");
+	  i * n
 
 and replace_fn fn =
   match fn with

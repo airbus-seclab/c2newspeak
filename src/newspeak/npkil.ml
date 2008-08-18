@@ -542,7 +542,13 @@ let rec negate e =
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> UnOp (Not, e)
 
+let length_of_array len lv =
+  match (len, lv) with
+      (Some len, _) -> Known len
+    | (None, Global v) -> Length v
+    | _ -> Npkcontext.error "Npkil.length_of_array" "unknown length of array"
 
+(* TODO: remove these 3 functions!!! *)
 let rec size_of t =
   match t with
       Scalar c -> Newspeak.size_of_scalar Config.size_of_ptr c
