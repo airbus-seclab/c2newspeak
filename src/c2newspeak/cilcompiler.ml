@@ -52,6 +52,25 @@ let is_cil_label x =
       Label (_, _, false) -> true
     | _ -> false
 
+let size_of_array t lv =
+  let (elt_sz, len) =
+    match Cil.unrollType t with
+	TArray (elt_t, len, _) -> (Cilutils.size_of elt_t, len)
+    | _ -> Npkcontext.error "Cilcompiler.size_of_array" "array expected"
+  in
+  let len =
+    try K.Known (Cil.lenOfArray len) 
+    with LenOfArray -> 
+      match lv with
+	  K.Global v -> K.Length v
+	| _ -> 
+	    Npkcontext.error "Cilcompiler.size_of_array" 
+	      "unknown length of array"
+  in
+    (len, elt_sz)
+	    
+
+
 (*================================*)
 (* The central translate function *)
 (*================================*)
@@ -170,10 +189,8 @@ and translate_lval lv =
 		  K.Shift (translate_lval lv', K.exp_of_int o)
 		    
 	    | Index (idx, NoOffset) ->
-		let t = translate_typ t in
 		let lv' = translate_lval lv' in
-		let (elt_t, len) = K.array_of_typ t lv' in
-		let elt_sz = K.size_of elt_t in
+		let (len, elt_sz) = size_of_array t lv' in
 		let idx = translate_exp idx in
 		let checked_index = 
 		  K.UnOp (K.Belongs_tmp (Nat.zero, len), idx) 
@@ -370,9 +387,8 @@ and translate_exp e =
 		  | Index (Const CInt64 (i, _, _), NoOffset) 
 		      when Int64.compare i Int64.zero = 0 -> 
 		      let t = typeOfLval lv' in
-		      let t = translate_typ t in
 		      let lv' = translate_lval lv' in
-		      let sz = K.size_of_array t lv' in
+		      let sz = K.Mult (size_of_array t lv') in
 			K.AddrOf (lv', sz)
 			  
 		  | Index (e, NoOffset) ->

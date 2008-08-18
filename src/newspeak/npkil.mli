@@ -26,8 +26,6 @@
   email: olivier.levillain@penjili.org
 *)
 
-
-open Cilutils
 open Newspeak
 
 (* TODO: extern storage not well handled !!! 
@@ -170,10 +168,3 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
 val append_decls: (string * typ * location) list -> blk -> blk
 
 val length_of_array: tmp_size_t -> lval -> tmp_int
-
-(* TODO: remove these 3 functions *)
-val size_of: typ -> int
-
-val array_of_typ: typ -> lval -> (typ * tmp_int)
-
-val size_of_array: typ -> lval -> tmp_int

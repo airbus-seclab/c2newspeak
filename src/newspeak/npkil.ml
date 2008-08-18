@@ -548,28 +548,3 @@ let length_of_array len lv =
     | (None, Global v) -> Length v
     | _ -> Npkcontext.error "Npkil.length_of_array" "unknown length of array"
 
-(* TODO: remove these 3 functions!!! *)
-let rec size_of t =
-  match t with
-      Scalar c -> Newspeak.size_of_scalar Config.size_of_ptr c
-    | Array (t, Some len) -> (size_of t) * len
-    | Region (_, n) -> n
-    | Array (_, None) -> 
-	Npkcontext.error "Npkil.size_of" "unknown size of type"
-
-let array_of_typ t lv =
-  match t with
-      Array (elt_t, len) -> 
-	let len =
-	  match (len, lv) with
-	      (Some len, _) -> Known len
-	    | (None, Global v) -> Length v
-	    | _ -> Npkcontext.error "Npkil.size_of" "unknown length of array"
-	in
-	  (elt_t, len)
-
-    | _ -> Npkcontext.error "Npkil.size_of_array" "array expected"
-
-let size_of_array t lv = 
-  let (elt_t, len) = array_of_typ t lv in
-    Mult (len, size_of elt_t)
