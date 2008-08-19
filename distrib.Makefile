@@ -49,17 +49,19 @@ all: bin $(CIL) $(COMPONENTS) doc
 bin:
 	mkdir bin
 
-$(COMPONENTS): src/version.ml
+$(COMPONENTS): $(CILDIR) src/version.ml
 	$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
 
-$(CIL):
+$(CIL): $(CILDIR)
 	cd cil; tar xzf cil-1.3.5.tar.gz
 	cd cil/cil; patch Makefile.in ../Makefile.in.patch
 	cd cil/cil; ./configure
 	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
 	cd cil/cil; make
-	-mkdir $(CILDIR)
 	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
+
+$(CILDIR):
+	mkdir $(CILDIR)
 
 doc: doc/index.html
 
