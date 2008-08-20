@@ -67,7 +67,7 @@ module Nat: sig
   val of_int: int -> t
 
   (** [to_int x] returns the integer representation of [x], when possible.
-      @raise Invalid_argument "Newspeak.Nat.to_int: not representable as an int" otherwise. *)
+      @raise Invalid_argument "Newspeak.Nat.to_int" otherwise. *)
   val to_int: t -> int
 
   val of_big_int: Big_int.big_int -> t

@@ -67,7 +67,7 @@ and lval =
 and exp =
     Const of cte
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * tmp_int)
+  | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
@@ -79,7 +79,7 @@ and fn =
 and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
-      Belongs_tmp of (Nat.t * tmp_int)
+      Belongs_tmp of (Nat.t * tmp_nat)
     | Coerce of Newspeak.bounds
     | Not
     | BNot of Newspeak.bounds
@@ -97,10 +97,10 @@ and ftyp = typ list * typ option
 and field = offset * typ
 
 (* TODO: code cleanup: think about this! *)
-and tmp_int =
-      Known of int
+and tmp_nat =
+      Known of Nat.t
     | Length of string
-    | Mult of (tmp_int * int)
+    | Mult of (tmp_nat * int)
 
 and tmp_size_t = int option
 
@@ -166,5 +166,3 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
    checked because in Newspeak, the variables are identified by their
    positions in the declaration stacks, not by their names *)
 val append_decls: (string * typ * location) list -> blk -> blk
-
-val length_of_array: tmp_size_t -> lval -> tmp_int

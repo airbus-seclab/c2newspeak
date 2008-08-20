@@ -53,14 +53,12 @@ and vid = int
 and typ =
     | Void
     | Scalar of Newspeak.scalar_t
-    | Array of array_t
+    | Array of (typ * Npkil.tmp_size_t)
 (* TODO: Struct and Union 
    merge them as a Region *)
     | Struct of (field list * int)
     | Union of (field list * int)
     | Fun of ftyp
-
-and array_t = (typ * int option)
 
 and ftyp = typ list * typ
 
@@ -530,12 +528,6 @@ let normalize x =
   let (body, _) = set_scope_blk x in
     body
 
-let len_of_array n lv =
-  match (n, lv) with
-      (Some n, _) -> Npkil.Known n
-    | (_, Global x) -> Npkil.Length x
-    | _ -> Npkcontext.error "Cir.len_of_array" "unknown array length"
-
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =
   match (t, e, t') with
@@ -632,4 +624,10 @@ let is_large_blk x =
       check_blk x;
       false
     with Exit -> true
+
+let length_of_array len lv =
+  match (len, lv) with
+      (Some len, _) -> Known (Nat.of_int len)
+    | (None, Global v) -> Length v
+    | _ -> Npkcontext.error "Npkil.length_of_array" "unknown length of array"
 

@@ -33,6 +33,8 @@ open Npkcontext
 open Npkutils
 open Npkil
 
+module Nat = Newspeak.Nat
+
 type funinfo = {
   ploc  : Newspeak.location;
   mutable fargs : (string * typ) list option;
@@ -257,8 +259,8 @@ let get_cstr str =
     if not (Hashtbl.mem glb_decls name) then Hashtbl.add glb_decls name glb;
     (* TODO: this is a hack, should return a cil expression rather,
        or even better should be done in first pass *)
-    Npkil.AddrOf (Npkil.Global name, 
-		 Npkil.Known (((String.length str) + 1) * 8))
+    let sz = Nat.of_int (((String.length str) + 1) * Config.size_of_char) in
+      Npkil.AddrOf (Npkil.Global name, Npkil.Known sz)
 
 let get_ret_var () = Npkil.Local (!loc_cnt - 1)
 

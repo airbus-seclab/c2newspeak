@@ -68,7 +68,7 @@ and lval =
 and exp =
     Const of cte
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * tmp_int)
+  | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
@@ -81,7 +81,7 @@ and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
 (* right bound is excluded! *)
-      Belongs_tmp of (Nat.t * tmp_int)
+      Belongs_tmp of (Nat.t * tmp_nat)
     | Coerce of bounds
     | Not
     | BNot of bounds
@@ -100,10 +100,10 @@ and ftyp = typ list * typ option
 
 and field = offset * typ
 
-and tmp_int = 
-    | Known of int
+and tmp_nat = 
+    | Known of Nat.t
     | Length of string (* length of global array *)
-    | Mult of (tmp_int * int)
+    | Mult of (tmp_nat * int)
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
@@ -151,16 +151,16 @@ let rec string_of_typ t =
 
 let string_of_fid fid = fid
 
-let rec string_of_tmp_int x =
+let rec string_of_tmp_nat x =
   match x with
-      Known i -> string_of_int i
+      Known i -> Nat.to_string i
     | Length v -> "len("^v^")"
-    | Mult (v, n) -> "("^(string_of_tmp_int v)^" * "^(string_of_int n)^")"
+    | Mult (v, n) -> "("^(string_of_tmp_nat v)^" * "^(string_of_int n)^")"
 
 let string_of_unop op =
   match op with
       Belongs_tmp (l, u) ->
-	"belongs["^l^","^(string_of_tmp_int u)^"-1]"
+	"belongs["^l^","^(string_of_tmp_nat u)^"-1]"
     | Coerce r -> "coerce"^(Newspeak.string_of_bounds r)
     | Cast (typ, typ') ->
 	"("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
@@ -184,7 +184,7 @@ and string_of_exp e =
   match e with
       Const c -> Newspeak.string_of_cte c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
-    | AddrOf (lv, sz) -> "&_"^(string_of_tmp_int sz)^"("^(string_of_lval lv)^")"
+    | AddrOf (lv, sz) -> "&_"^(string_of_tmp_nat sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)
 
     (* TODO: Check this ! *)
@@ -541,10 +541,4 @@ let rec negate e =
     | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> UnOp (Not, e)
-
-let length_of_array len lv =
-  match (len, lv) with
-      (Some len, _) -> Known len
-    | (None, Global v) -> Length v
-    | _ -> Npkcontext.error "Npkil.length_of_array" "unknown length of array"
 

@@ -59,7 +59,7 @@ let size_of_array t lv =
     | _ -> Npkcontext.error "Cilcompiler.size_of_array" "array expected"
   in
   let len =
-    try K.Known (Cil.lenOfArray len) 
+    try K.Known (Nat.of_int (Cil.lenOfArray len))
     with LenOfArray -> 
       match lv with
 	  K.Global v -> K.Length v
@@ -399,7 +399,7 @@ and translate_exp e =
 			
 		  | _ -> 
 		      let sz = Cilutils.size_of (typeOfLval lv) in
-			K.AddrOf (translate_lval lv, K.Known sz)
+			K.AddrOf (translate_lval lv, K.Known (Nat.of_int sz))
 		end
 							 
 	  | _ -> error "Npkcompile.translate_exp"

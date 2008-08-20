@@ -43,12 +43,10 @@ and vid = int
 and typ =
     | Void
     | Scalar of Newspeak.scalar_t
-    | Array of array_t
+    | Array of (typ * Npkil.tmp_size_t)
     | Struct of (field list * int)
     | Union of (field list * int)
     | Fun of ftyp
-
-and array_t = (typ * int option)
 
 and ftyp = typ list * typ
 
@@ -131,8 +129,6 @@ val normalize: blk -> blk
 
 val int_of_exp: exp -> int
 
-val len_of_array: int option -> lv -> Npkil.tmp_int
-
 val cast: (exp * typ) -> typ -> exp
 
 val string_of_typ: typ -> string
@@ -146,3 +142,5 @@ val string_of_exp: exp -> string
 val is_large_blk: blk -> bool
 
 val string_of_blk: blk -> string
+
+val length_of_array: Npkil.tmp_size_t -> lv -> Npkil.tmp_nat

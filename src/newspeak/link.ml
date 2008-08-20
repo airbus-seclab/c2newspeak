@@ -95,7 +95,15 @@ and replace_exp e =
     | Npkil.Const c -> Newspeak.Const c 
     | Npkil.AddrOfFun (fid, ft) -> Newspeak.AddrOfFun (fid, replace_ftyp ft)
     | Npkil.AddrOf (lv, sz) -> 
-	Newspeak.AddrOf (replace_lv lv, replace_tmp_int sz)
+	let sz = 
+	  try Nat.to_int (replace_tmp_nat sz) 
+	  with Invalid_argument "Newspeak.Nat.to_int" -> Config.max_sizeof
+	in
+	  if (sz > Config.max_sizeof) 
+	  then Npkcontext.error "Link.replace_exp" 
+	    ("size too large: maximum allowed is "
+	     ^(string_of_int Config.max_sizeof)^" bits");
+	  Newspeak.AddrOf (replace_lv lv, sz)
     | Npkil.UnOp (o, e) -> Newspeak.UnOp (replace_unop o, replace_exp e)
     | Npkil.BinOp (o, e1, e2) -> 
 	Newspeak.BinOp (o, replace_exp e1, replace_exp e2)
@@ -103,7 +111,7 @@ and replace_exp e =
 and replace_unop o =
   match o with
       Npkil.Belongs_tmp (l, u) -> 
-	let u = Nat.of_int ((replace_tmp_int u) - 1) in
+	let u = Nat.sub (replace_tmp_nat u) Nat.one in
 	  Newspeak.Belongs (l, u)
     | Npkil.Coerce r -> Newspeak.Coerce r
     | Npkil.Not -> Newspeak.Not
@@ -112,23 +120,19 @@ and replace_unop o =
     | Npkil.IntToPtr k -> Newspeak.IntToPtr k
     | Npkil.Cast (t1, t2) -> Newspeak.Cast (t1, t2)
 
-and replace_tmp_int x =
+and replace_tmp_nat x =
   match x with
       Npkil.Known i -> i
     | Npkil.Length name -> begin
 	match get_glob_typ name with
-	    Newspeak.Array (_, len) -> len
+	    Newspeak.Array (_, len) -> Nat.of_int len
 	  | _ -> 
-	      Npkcontext.error "Npklink.replace_tmp_int" 
+	      Npkcontext.error "Npklink.replace_tmp_nat" 
 		"array type expected"
       end
     | Npkil.Mult (v, n) -> 
-	let i = replace_tmp_int v in
-	  if (i > Config.max_sizeof/n) 
-	  then Npkcontext.error "Link.replace_tmp_int" 
-	    ("size too large: maximum allowed is "
-	     ^(string_of_int Config.max_sizeof)^" bits");
-	  i * n
+	let i = replace_tmp_nat v in
+	  Nat.mul_int n i
 
 and replace_fn fn =
   match fn with

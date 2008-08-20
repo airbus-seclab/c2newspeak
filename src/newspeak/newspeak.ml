@@ -46,7 +46,7 @@ struct
   let to_int x = 
     let i = to_big_int x in
     if not (Big_int.is_int_big_int i) 
-    then invalid_arg "Newspeak.Nat.to_int: not representable as an int";
+    then invalid_arg "Newspeak.Nat.to_int";
     Big_int.int_of_big_int i
 
   let apply_big_int_op op x y =
