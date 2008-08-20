@@ -23,9 +23,12 @@
 *)
 
 open Syntax_ada
+module Nat = Newspeak.Nat
 
 exception AmbiguousTypeException
 exception NonStaticExpression = Ada_utils.NonStaticExpression
+
+let float_to_flottant f = (f, string_of_float f) 
 
 let tmp_cnt = ref 0
 
@@ -89,9 +92,9 @@ let eval_static exp expected_typ csttbl context with_package
 	  let typ = Ada_utils.check_typ expected_typ IntegerConst
 	  in (IntVal(i), typ)
 	       
-      | CFloat(f,_) -> 
+      | CFloat(f,s) -> 
 	  let typ = Ada_utils.check_typ expected_typ Float
-	  in (FloatVal(f), typ)
+	  in (FloatVal(f,s), typ)
 	       
       | CChar(c) -> 	  
 	  (EnumVal(c), Ada_utils.check_typ expected_typ Character)
@@ -155,29 +158,30 @@ let eval_static exp expected_typ csttbl context with_package
       match (op,val1,val2) with	  
 	  (* opérations sur entiers ou flottants *)
 	| (Plus, IntVal(v1), IntVal(v2)) -> 
-	    (IntVal(v1 + v2), typ)
-	| (Plus, FloatVal(v1), FloatVal(v2)) -> 
-	    (FloatVal(v1 +. v2), typ)
+	    (IntVal(Nat.add v1 v2), typ)
+	| (Plus, FloatVal(v1,_), FloatVal(v2,_)) -> 
+	    (FloatVal(float_to_flottant (v1 +. v2)), typ)
 	      
 	| (Moins, IntVal(v1), IntVal(v2)) -> 
-	    (IntVal(v1 - v2), typ)
-	| (Moins, FloatVal(v1), FloatVal(v2)) -> 
-	    (FloatVal(v1 -. v2), typ)
+	    (IntVal(Nat.sub v1 v2), typ)
+	| (Moins, FloatVal(v1,_), FloatVal(v2,_)) -> 
+	    (FloatVal(float_to_flottant(v1 -. v2)), typ)
 	      
 	| (Fois, IntVal(v1), IntVal(v2)) -> 
-	    (IntVal(v1 * v2), typ)
-	| (Fois, FloatVal(v1), FloatVal(v2)) -> 
-	    (FloatVal(v1 *. v2), typ)
+	    (IntVal(Nat.mul v1 v2), typ)
+	| (Fois, FloatVal(v1,_), FloatVal(v2,_)) -> 
+	    (FloatVal(float_to_flottant(v1 *. v2)), typ)
 	      
 	| (Div, IntVal(v1), IntVal(v2)) -> 
-	    (IntVal(v1 / v2), typ)
-	| (Div, FloatVal(v1), FloatVal(v2)) -> 
-	    (FloatVal(v1 /. v2), typ)
+	    (IntVal(Nat.div v1 v2), typ)
+	| (Div, FloatVal(v1,_), FloatVal(v2,_)) -> 
+	    (FloatVal(float_to_flottant (v1 /. v2)), typ)
 	      
 	| (Puissance, IntVal(v1), IntVal(v2)) -> 
 	    (IntVal(Ada_utils.puiss v1 v2), typ)
-	| (Puissance, FloatVal(v1), IntVal(v2)) -> 
-	    (FloatVal(v1 ** (float_of_int v2)), typ)
+	| (Puissance, FloatVal(v1,_), IntVal(v2)) -> 
+	    (FloatVal(float_to_flottant (v1 ** (float_of_int (Nat.to_int v2)))), 
+		      typ)
 	      
 	(*opérations sur les entiers*)
 	| (Rem, IntVal(v1), IntVal(v2)) ->
@@ -231,9 +235,9 @@ let eval_static exp expected_typ csttbl context with_package
       match (eval_static_exp exp expected_typ) with
 	| (IntVal(i), t) 
 	    when (Ada_utils.integer_class t) -> 
-	    (IntVal(-i), t)
-	| (FloatVal(f), Float) -> 
-	    (FloatVal(-.f), Float)
+	    (IntVal(Nat.neg i), t)
+	| (FloatVal(f,_), Float) -> 
+	    (FloatVal(float_to_flottant (-.f)), Float)
 	| _ -> Npkcontext.error 
 	    "Ada_normalize.eval_static_exp"
 	      "invalid operator and argument"
@@ -242,9 +246,11 @@ let eval_static exp expected_typ csttbl context with_package
       match (eval_static_exp exp expected_typ) with
 	| (IntVal(i), t) 
 	    when (Ada_utils.integer_class t) -> 
-	    (IntVal(abs i), t)
-	| (FloatVal(f), Float) -> 
-	    (FloatVal(abs_float f), Float)
+	    let abs = if (Nat.compare i Nat.zero)<0 then Nat.neg i
+	    else i
+	    in (IntVal(abs), t)
+	| (FloatVal(f,_), Float) -> 
+	    (FloatVal(float_to_flottant (abs_float f)), Float)
 	| _ -> Npkcontext.error 
 	    "Ada_normalize.eval_static_exp"
 	      "invalid operator and argument"
@@ -998,29 +1004,23 @@ and normalization compil_unit extern =
 		 then FloatRangeConstraint(f1, f2)
 		 else NullRange
 	     | (IntVal(i1), IntVal(i2)) -> 
-		 if static || i1<=i2
-		 then 
-		   let bounds = (Newspeak.Nat.of_int i1, 
-				 Newspeak.Nat.of_int i2) 
-		   in IntegerRangeConstraint(i1, i2, bounds)
+		 if static || (Nat.compare i1 i2)<=0
+		 then IntegerRangeConstraint(i1, i2)
 		 else NullRange
 	     | (EnumVal(i1), EnumVal(i2)) -> 
 		 if i1<=i2
 		 then 
 		   let bounds = (Newspeak.Nat.of_int i1, 
 				 Newspeak.Nat.of_int i2) 
-		   in IntegerRangeConstraint(i1, i2, bounds)
+		   in IntegerRangeConstraint(bounds)
 		 else NullRange
 		   
 	     | (BoolVal(b1), BoolVal(b2)) -> 
-		 let i1 = Ada_utils.int_of_bool b1
-		 and i2 = Ada_utils.int_of_bool b2
+		 let i1 = Ada_utils.nat_of_bool b1
+		 and i2 = Ada_utils.nat_of_bool b2
 		 in
 		   if b1 <= b2
-		   then
-		     let bounds = (Newspeak.Nat.of_int i1, 
-				   Newspeak.Nat.of_int i2) 
-		     in IntegerRangeConstraint(i1, i2, bounds)
+		   then IntegerRangeConstraint(i1, i2)
 		   else NullRange
 		     
 	     | (_, _) -> 
@@ -1158,10 +1158,10 @@ and normalization compil_unit extern =
 	      let norm_contrainte = 
 		normalize_contrainte contrainte IntegerConst true 
 	      in match norm_contrainte with
-		| IntegerRangeConstraint(min, max, _) ->
+		| IntegerRangeConstraint(min, max) ->
 		    let ikind = Ada_utils.ikind_of_range min max 
 		    in 
-		      if min<=max
+		      if (Nat.compare min max) <= 0
 		      then IntegerRange(ident, norm_contrainte, 
 					Some(ikind))
 		      else IntegerRange(ident, NullRange, 

@@ -24,34 +24,58 @@
 
 
 open Syntax_ada
+module Nat = Newspeak.Nat
+
 exception NonStaticExpression
 (* arithmétique*)
 let log2_sup n = 
-  let rec aux n p = match n with
-    | 0 -> 1
-    | 1 -> p
-    | _ -> aux (n/2 + (n mod 2)) (p+1)
-   in aux n 0  
+  let zero = Big_int.zero_big_int
+  and one = Big_int.unit_big_int in
+  let two = Big_int.succ_big_int one
+  and eq_big_int a b = (Big_int.compare_big_int a b)=0 
+  in
+  let rec aux n p = 
+    if eq_big_int n zero then one
+    else
+      if eq_big_int n one then p
+      else aux (Big_int.add_big_int 
+		  (Big_int.div_big_int n two) (Big_int.mod_big_int n two)) 
+	(Big_int.succ_big_int p)
+  in Big_int.int_of_big_int (aux n zero)
 	
 (* fonction propre à Ada *)
-let puiss a b =
-  let rec aux p b = match b with
-    | 0 -> p
-    | _ -> aux (p*a) (b-1)
-  in
-    if b<0
+let puiss a b = 
+  let a = Nat.to_big_int a
+  and b = Nat.to_big_int b in
+    if (Big_int.sign_big_int b)<0
     then
       Npkcontext.error
 	"Ada_utils.puiss"
 	"integer exponent negative"
     else
-      aux 1 b
+      Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
       
 let mod_ada a b = 
-  (a mod b) + (if a<0 or b<0 then b
-	       else 0)
+  let a = Nat.to_big_int a
+  and b = Nat.to_big_int b in
+  let r = Big_int.mod_big_int a b in
+  let r_mod =
+    if (Big_int.sign_big_int b) < 0
+    then Big_int.sub_big_int r b 
+    else r
+  in
+    Nat.of_big_int r_mod
 
-let rem_ada = (mod)
+let rem_ada na nb = 
+  let a = Nat.to_big_int na
+  and b = Nat.to_big_int nb in
+  let r = Big_int.mod_big_int a b in
+  let r_mod =
+    if (Big_int.sign_big_int a) < 0
+    then Big_int.sub_big_int r b 
+    else r
+  in
+    Nat.of_big_int r_mod
 
 let xor a b = (a && (not b)) || ((not a) && b)
 
@@ -72,7 +96,7 @@ let eq_val v1 v2 =
 let inf_val v1 v2 =
   let inf a b = a<b in
     match (v1, v2) with
-      | (IntVal(v1), IntVal(v2)) -> inf v1 v2
+      | (IntVal(v1), IntVal(v2)) -> (Nat.compare v1 v2) < 0
       | (BoolVal(v1), BoolVal(v2)) -> inf v1 v2
       | (FloatVal(v1), FloatVal(v2)) -> inf v1 v2
       | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2
@@ -83,25 +107,37 @@ let inf_val v1 v2 =
 
 (* contraintes *)
 
-let int_of_bool b = match b with
-  | true -> 1
-  | false -> 0  
+let nat_of_bool b = match b with
+  | true -> Newspeak.Nat.one
+  | false -> Newspeak.Nat.zero
 
 
 (* vérifie que a <= n <= b *)
-let between a b n = a <= n && n <= b
+let between a b n  = 
+  a <= n && n <= b
+
+let between_nat a b n =
+  (Nat.compare n a)>=0 && (Nat.compare b n)>=0
 
 let numeric_constraint_compatibility ref1 ref2 fils1 fils2 = 
   if ref2<ref1
   then fils2<fils1
-  else (between ref1 ref2 fils1) && (between ref1 ref2 fils2)
+  else 
+    (between ref1 ref2 fils1) && (between ref1 ref2 fils2)
+
+let nat_constraint_compatibility ref1 ref2 fils1 fils2 = 
+  if (Nat.compare ref2 ref1) < 0
+  then (Nat.compare fils2 fils1) < 0
+  else 
+    (between_nat ref1 ref2 fils1) && (between_nat ref1 ref2 fils2)
+
 
 (* vérifie que la contrainte courante est compatible avec cref *)
 let constraint_is_constraint_compatible cref courante = 
   match (cref, courante) with
-    | (IntegerRangeConstraint(ref1, ref2, _),
-       IntegerRangeConstraint(cour1, cour2, _)) ->
-	numeric_constraint_compatibility ref1 ref2 cour1 cour2
+    | (IntegerRangeConstraint(ref1, ref2),
+       IntegerRangeConstraint(cour1, cour2)) ->
+	nat_constraint_compatibility ref1 ref2 cour1 cour2
     | (FloatRangeConstraint(ref1, ref2),
        FloatRangeConstraint(cour1, cour2)) ->
 	numeric_constraint_compatibility ref1 ref2 cour1 cour2
@@ -112,7 +148,7 @@ let constraint_is_constraint_compatible cref courante =
        (FloatRangeConstraint _| IntegerRangeConstraint _)) -> true
     | (NullRange, RangeConstraint _) -> true 
 	(* non connu à la compilation *)
-    | (NullRange, IntegerRangeConstraint(v1, v2, _)) -> v2 < v1
+    | (NullRange, IntegerRangeConstraint(v1, v2)) -> (Nat.compare v2 v1) < 0
     | (NullRange, FloatRangeConstraint(v1, v2)) -> v2 < v1
     | (_, NullRange) -> true
     | (IntegerRangeConstraint _, FloatRangeConstraint _) 
@@ -130,10 +166,12 @@ let constraint_is_constraint_compatible cref courante =
 let value_is_static_constraint_compatible contrainte value = 
   match (value,contrainte) with
     | (_, NullRange) -> false
-    | ((EnumVal(n)|IntVal(n)), IntegerRangeConstraint(inf,sup,_)) ->
+    | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
+	between inf sup (Newspeak.Nat.of_int n)
+    | (IntVal(n), IntegerRangeConstraint(inf,sup)) ->
 	between inf sup n
-    | (BoolVal(b), IntegerRangeConstraint(inf,sup,_)) ->
-	between inf sup (int_of_bool b)
+    | (BoolVal(b), IntegerRangeConstraint(inf,sup)) ->
+	between inf sup (nat_of_bool b)
     | (FloatVal(n), FloatRangeConstraint(inf,sup)) ->
 	between inf sup n
     | ((BoolVal _|IntVal _| EnumVal _), FloatRangeConstraint _) 
@@ -317,31 +355,27 @@ let make_enum nom list_val =
        | v::r -> make_id r ((v,next_id)::list_val_id) (next_id +1)
   in 
   let (list_assoc,taille) = make_id list_val [] 0
-  in Enum(nom, list_assoc, log2_sup taille)
+  in Enum(nom, list_assoc, log2_sup (Big_int.big_int_of_int taille))
  
 
 let ikind_of_range inf sup = 
   let (b_inf, b_sup) = 
-    if inf <= sup then (inf, sup)
+    if (Nat.compare inf sup)<=0 then (inf, sup)
     else (sup, inf)
   in
-    if b_inf > b_sup
-    then 
-      Npkcontext.error 
-	"Ada_utils.ikind_of_range" 
-	"invalid range"
-    else
-      begin
-	let (bit_signe,signe) = 
-	  if b_inf < 0 then (1,Newspeak.Signed)
-	  else (0,Newspeak.Unsigned)
-	in
-	let max = max (abs b_inf) (abs b_sup + 1)
-	in
-	let nb_bit = (log2_sup max) + bit_signe
-	in 
-	  (signe, nb_bit)
-      end
+    begin
+      let (bit_signe,signe) = 
+	if (Nat.compare b_inf Nat.zero)<0 then (1,Newspeak.Signed)
+	else (0,Newspeak.Unsigned)
+      in
+      let max = Big_int.max_big_int
+	(Big_int.abs_big_int (Nat.to_big_int b_inf))
+	(Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int b_sup)))
+      in
+      let nb_bit = (log2_sup max) + bit_signe
+      in 
+	(signe, nb_bit)
+    end
 	
 let make_range nom exp_b_inf exp_b_sup = 
   IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)

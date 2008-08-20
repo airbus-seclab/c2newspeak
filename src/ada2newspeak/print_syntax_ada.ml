@@ -30,6 +30,8 @@ open Syntax_ada
    si crochet = true, sans [ ] sinon
  *)
 
+let nat_to_string = Newspeak.Nat.to_string
+
 let list_to_string list to_string sep crochet = 
   match list with
     | a::r -> 
@@ -125,8 +127,8 @@ and typ_declaration_to_string typ_decl = match typ_decl with
 	  
 and exp_to_string exp = match exp with
   | NullExpr -> "NullExpr"
-  | CInt(i) -> "CInt("^(string_of_int i)^")"
-  | CFloat(f,s) -> "CFloat("^(string_of_float f)^s^")"
+  | CInt(i) -> "CInt("^(nat_to_string i)^")"
+  | CFloat(_,s) -> "CFloat("^s^")"
   | CBool(b) -> "CBool("^(string_of_bool b)^")"
   | CChar(c) -> "CChar("^(string_of_int c)^")"
   | CString(s) -> "CString("^s^")"
@@ -161,18 +163,15 @@ and contrainte_to_string contrainte = match contrainte with
   | RangeConstraint(e1, e2) -> 
       "RangeConstraint("^(exp_to_string e1)
       ^", "^(exp_to_string e2)^")"
-  |  IntegerRangeConstraint(v1, v2, bounds) ->
-       "IntegerRangeConstraint("^(string_of_int v1)
-      ^", "^(string_of_int v2)
-       ^", "^(Newspeak.string_of_bounds bounds)^")"
-  |  FloatRangeConstraint(v1, v2) ->
-       "FloatRangeConstraint("^(string_of_float v1)
-      ^", "^(string_of_float v2)^")"
+  |  IntegerRangeConstraint(v1,v2) ->
+       "IntegerRangeConstraint("^(Newspeak.string_of_bounds (v1,v2))^")"
+  |  FloatRangeConstraint((_,s1),(_,s2)) ->
+       "FloatRangeConstraint("^s1^", "^s2^")"
   | NullRange -> "NullRange"
 
 and value_to_string v = match v with
-  | IntVal(i) -> "IntVal("^(string_of_int i)^")"
-  | FloatVal(f) -> "FloatVal("^(string_of_float f)^")"
+  | IntVal(i) -> "IntVal("^(nat_to_string i)^")"
+  | FloatVal(_,s) -> "FloatVal("^s^")"
   | EnumVal(i) -> "IntVal("^(string_of_int i)^")"
   | BoolVal(b) -> "BoolVal("^(string_of_bool b)^")"
 

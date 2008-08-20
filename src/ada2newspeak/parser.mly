@@ -363,7 +363,7 @@ factor :
 
 primary :
 | NULL {NullExpr}
-| CONST_INT {CInt(int_of_string $1)}
+| CONST_INT {CInt(Newspeak.Nat.of_string $1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR {CChar($1)}
 | TRUE {CBool(true)}

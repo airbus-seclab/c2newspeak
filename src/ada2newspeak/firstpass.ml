@@ -164,7 +164,7 @@ let translate compil_unit =
 	  "internal error : no bounds provided for IntegerRange"
   and translate_subtyp subtyp = translate_typ (base_typ subtyp)
 
-  and translate_int i = C.Const(C.CInt(Nat.of_int i))
+  and translate_int i = C.Const(C.CInt(i))
   in
 
   (* fonctions de traduction des noms*)
@@ -285,7 +285,7 @@ let translate compil_unit =
 	   (find_all_symb name));
       Hashtbl.add symbtbl 
 	name
-	(EnumSymb(translate_int value, typ, 
+	(EnumSymb(translate_int (Nat.of_int value), typ, 
 		  global), translate_typ typ, loc)
       
   and add_global loc typ tr_typ tr_init ro x = 
@@ -503,9 +503,9 @@ let translate compil_unit =
       | IntVal(i) ->
 	  let t = check_typ expected_typ IntegerConst
 	  in (translate_int i, t)
-      | FloatVal(f) -> 
+      | FloatVal(f,s) -> 
           let t = check_typ expected_typ Float 
-	  in (C.Const(C.CFloat(f,string_of_float f)), t) 
+	  in (C.Const(C.CFloat(f,s)), t) 
       | EnumVal _ | BoolVal _ ->
 	  Npkcontext.error
 	    "Firstpass.translate_number"
@@ -708,14 +708,14 @@ let translate compil_unit =
 		   translate_binop Moins 
 		     (CFloat(0.,"0")) exp expected_typ
 	       | t when (integer_class t) -> 
-		   translate_binop Moins (CInt(0)) exp 
+		   translate_binop Moins (CInt(Nat.zero)) exp 
 		     expected_typ
 	       | _ -> Npkcontext.error "Firstpass.translate_unop" 
 		   "Unexpected unary operator and argument")
 	      
 	      
       | (UMoins, Some(t)) when (integer_class t) -> 
-	  translate_binop Moins (CInt(0)) exp expected_typ
+	  translate_binop Moins (CInt(Nat.zero)) exp expected_typ
 	    
       | (UMoins, Some(Float)) -> 
 	  translate_binop Moins (CFloat(0.,"0")) exp expected_typ
@@ -1068,11 +1068,11 @@ let translate compil_unit =
 	   
     | CChar(c) -> 
 	let t = check_typ expected_typ Character
-	in (translate_int c, t)
+	in (translate_int (Nat.of_int c), t)
 
     | CBool(b) -> 
 	let t = check_typ expected_typ Boolean
-	in (translate_int (Ada_utils.int_of_bool b), t)
+	in (translate_int (Ada_utils.nat_of_bool b), t)
 	   
     | CString _ -> Npkcontext.error "Firstpass.translate_exp" 
 	"string not implemented"
@@ -1102,7 +1102,7 @@ let translate compil_unit =
 	  Npkcontext.error
 	    "Firstpass.make_check_constraint"
 	    "constraint error : value not in range"
-      | IntegerRangeConstraint(_, _, _) -> exp
+      | IntegerRangeConstraint _ -> exp
 	  (* TODO : vérification d'une contrainte entière *)
 	  (* C.Unop(C.Belongs(C.IntRange(bounds)), exp) *)
       | FloatRangeConstraint(_, _) -> exp

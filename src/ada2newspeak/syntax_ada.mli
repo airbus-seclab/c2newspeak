@@ -24,13 +24,17 @@
 
 (*définition des types*)
 type location = Newspeak.location
+type nat = Newspeak.Nat.t
+type flottant = float*string
 
 type identifier = string
 type name = identifier list*identifier
 
 type param_mode = In | Out | InOut
 
-type value = IntVal of int | FloatVal of float | EnumVal of int
+type value = | IntVal of nat 
+	     | FloatVal of flottant
+	     | EnumVal of int
 	     | BoolVal of bool
 
 
@@ -64,8 +68,8 @@ and subtyp =
 and expression = 
 
   | NullExpr 
-  | CInt of int
-  | CFloat of float*string
+  | CInt of nat
+  | CFloat of flottant
   | CBool of bool
   | CChar of int
   | CString of string
@@ -77,8 +81,8 @@ and expression =
 
 and contrainte = 
   | RangeConstraint of expression*expression
-  | IntegerRangeConstraint of int*int*Newspeak.bounds
-  | FloatRangeConstraint of float*float
+  | IntegerRangeConstraint of Newspeak.bounds
+  | FloatRangeConstraint of flottant*flottant
   | NullRange
 
 and subtyp_indication = subtyp*contrainte option*subtyp option

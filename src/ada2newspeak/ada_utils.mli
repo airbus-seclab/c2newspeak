@@ -25,12 +25,12 @@
 
 exception NonStaticExpression
 
-val log2_sup : int -> int
-val puiss : int -> int -> int
-val mod_ada : int -> int -> int
-val rem_ada : int -> int -> int
+val log2_sup : Big_int.big_int -> int
+val puiss : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
+val mod_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
+val rem_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
 val xor : bool -> bool -> bool
-val int_of_bool : bool -> int
+val nat_of_bool : bool -> Newspeak.Nat.t
 
 val inf_val : Syntax_ada.value -> Syntax_ada.value -> bool
 val eq_val : Syntax_ada.value -> Syntax_ada.value -> bool
@@ -38,7 +38,6 @@ val eq_val : Syntax_ada.value -> Syntax_ada.value -> bool
 val make_enum :
   Syntax_ada.identifier ->
   Syntax_ada.identifier list -> Syntax_ada.typ_declaration
-
 
 val between : 'a -> 'a -> 'a -> bool
 val constraint_is_constraint_compatible : Syntax_ada.contrainte ->
@@ -50,7 +49,7 @@ val check_static_subtyp:
   Syntax_ada.subtyp -> Syntax_ada.value -> unit
 val constraint_is_static: Syntax_ada.contrainte -> bool
 
-val ikind_of_range : int -> int -> Newspeak.ikind
+val ikind_of_range : Syntax_ada.nat -> Syntax_ada.nat -> Newspeak.ikind
 val make_range :
   Syntax_ada.identifier ->
   Syntax_ada.expression ->
