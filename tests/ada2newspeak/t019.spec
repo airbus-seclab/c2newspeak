@@ -9,8 +9,8 @@ Function definitions
 t019() {
   do {
     int7 x;
-    0- =(int7) 5;
-    0- =(int7) 3;
+    0- =(int7) belongs[-32,33-1] 5;
+    0- =(int7) belongs[-32,33-1] 3;
   } with lbl0: {
   }
 }

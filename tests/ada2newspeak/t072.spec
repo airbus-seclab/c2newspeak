@@ -10,9 +10,9 @@ main() {
   do {
     int32 x;
     int32 y;
-    0- =(int32) 18;
+    0- =(int32) belongs[0,101-1] 18;
     1- =(int32) 0-_int32;
-    0- =(int32) (1-_int32 * 2);
+    0- =(int32) belongs[0,101-1] (1-_int32 * 2);
   } with lbl0: {
   }
 }
@@ -27,7 +27,7 @@ main() {
   (t072.adb:5#56)^int32 y;
   (t072.adb:5#56)^0- =(int32) 18;
   (t072.adb:7#83)^1- =(int32) 0-_int32;
-  (t072.adb:8#94)^0- =(int32) (1-_int32 * 2);
+  (t072.adb:8#94)^0- =(int32) belongs[0,100] (1-_int32 * 2);
 }
 
 

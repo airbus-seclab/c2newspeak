@@ -12,12 +12,12 @@ t088() {
     uint3 x2;
     uint3 c1;
     uint3 y;
-    3- =(uint3) 3;
-    2- =(uint3) 4;
-    1- =(uint3) 5;
-    0- =(uint3) 4;
-    3- =(uint3) 2;
-    2- =(uint3) 3;
+    3- =(uint3) belongs[1,7-1] 3;
+    2- =(uint3) belongs[2,6-1] 4;
+    1- =(uint3) belongs[1,7-1] 5;
+    0- =(uint3) belongs[3,6-1] 4;
+    3- =(uint3) belongs[1,7-1] belongs[2,6-1] 2;
+    2- =(uint3) belongs[2,6-1] 3;
   } with lbl0: {
   }
 }

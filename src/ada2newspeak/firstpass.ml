@@ -1102,9 +1102,9 @@ let translate compil_unit =
 	  Npkcontext.error
 	    "Firstpass.make_check_constraint"
 	    "constraint error : value not in range"
-      | IntegerRangeConstraint _ -> exp
-	  (* TODO : vérification d'une contrainte entière *)
-	  (* C.Unop(C.Belongs(C.IntRange(bounds)), exp) *)
+      | IntegerRangeConstraint (v1,v2) -> 
+	  (* vérification d'une contrainte entière *)
+	  C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp)
       | FloatRangeConstraint(_, _) -> exp
 	  (* TODO : vérification d'une contrainte flottante *)
 	  (*C.Unop(

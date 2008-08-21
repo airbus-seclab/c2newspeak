@@ -13,13 +13,13 @@ t087() {
     int32 a;
     int32 y;
     uint8 z;
-    4- =(int32) 12;
-    3- =(int32) 17;
-    2- =(int32) 32;
-    1- =(int32) 25;
-    0- =(uint8) 25;
-    4- =(int32) 15;
-    3- =(int32) 20;
+    4- =(int32) belongs[10,51-1] 12;
+    3- =(int32) belongs[15,21-1] 17;
+    2- =(int32) belongs[10,51-1] 32;
+    1- =(int32) belongs[22,31-1] 25;
+    0- =(uint8) belongs[22,201-1] 25;
+    4- =(int32) belongs[10,51-1] belongs[10,46-1] 15;
+    3- =(int32) belongs[15,21-1] 20;
   } with lbl0: {
   }
 }

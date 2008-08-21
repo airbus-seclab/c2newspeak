@@ -8,7 +8,7 @@ Global variables
 Function definitions
 t089.jourdusoleil() {
   do {
-    0- =(uint3) 5;
+    0- =(uint3) belongs[4,7-1] 5;
     goto lbl0;
   } with lbl0: {
   }
@@ -17,7 +17,7 @@ t089.jourdusoleil() {
 
 t089.a() {
   do {
-    0- =(int32) 12;
+    0- =(int32) belongs[10,16-1] 12;
     goto lbl0;
   } with lbl0: {
   }
@@ -26,7 +26,7 @@ t089.a() {
 
 t089.b() {
   do {
-    0- =(int32) 2;
+    0- =(int32) belongs[0,6-1] 2;
     goto lbl0;
   } with lbl0: {
   }
@@ -44,11 +44,15 @@ t089.main() {
       t089.b();
       4- =(int32) 0-_int32;
     }
-    2- =(uint3) 5;
+    2- =(uint3) belongs[5,7-1] 5;
     {
-      int32 value_of_t089.a;
-      t089.a();
-      2- =(int32) 0-_int32;
+      int32 !tmp-1073741816;
+      {
+        int32 value_of_t089.a;
+        t089.a();
+        1- =(int32) 0-_int32;
+      }
+      2- =(int32) belongs[10,16-1] 0-_int32;
     }
     {
       uint3 value_of_t089.jourdusoleil;
@@ -88,9 +92,13 @@ t089.main() {
   }
   (t089.adb:36#650)^2- =(uint3) 5;
   (t089.adb:37#669)^{
-    int32 value_of_t089.a;
-    (t089.adb:37#669)^t089.a();
-    (t089.adb:37#669)^2- =(int32) 0-_int32;
+    int32 !tmp-1073741816;
+    (t089.adb:37#669)^{
+      int32 value_of_t089.a;
+      (t089.adb:37#669)^t089.a();
+      (t089.adb:37#669)^1- =(int32) 0-_int32;
+    }
+    (t089.adb:37#669)^2- =(int32) belongs[10,15] 0-_int32;
   }
   (t089.adb:38#683)^{
     uint3 value_of_t089.jourdusoleil;
