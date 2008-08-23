@@ -33,6 +33,7 @@ NPKBUGFIND=../../bin/npkbugfind
 NPKCHECK=../../bin/npkcheck
 NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 NPKDIFF=../../bin/npkdiff
+NPKPOINTER=../../bin/npkpointer
 
 ifeq ($(strip $(DIFF)),)
 DIFF=diff $*.spec $*.bak

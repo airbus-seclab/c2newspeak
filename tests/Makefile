@@ -25,7 +25,7 @@
 #
 
 DIR=c2newspeak mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck \
-    npkbugfind npkdiff newspeak npkstrip ada2newspeak
+    npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer
 
 .PHONY: $(DIR)
 

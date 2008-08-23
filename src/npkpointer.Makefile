@@ -24,52 +24,10 @@
 # email: charles.hymans@penjili.org
 #
 
-#utils
-CP=cp
-RM=rm -rf
-OCAMLC=ocamlc -w Ael -warn-error Ael
-OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
-OCAMLDEP=ocamldep
-OCAMLDOC=ocamldoc
-OCAMLLEX=ocamllex
-OCAMLYACC=ocamlyacc
+TARGET=npkpointer
+DIRS=newspeak/ npkpointer/
+FILES=version newspeak/newspeak \
+      npkpointer/list_utils npkpointer/smallspeak npkpointer/npkpointer
+LIBX=nums.cmxa
 
-CILDIR=../cil/obj
-CIL=$(CILDIR)/cil.cmxa
-INCLUDE=$(addprefix -I ,$(DIRS))
-
-CMX=$(addsuffix .cmx,$(FILES))
-ML=$(addsuffix .ml,$(FILES))
-MLI=$(addsuffix .mli,$(FILES))
-
-CLEANFILES+=\
-	$(TARGET).depend $(addsuffix *~,$(DIRS)) \
-	$(addsuffix .cmi,$(FILES)) \
-	$(addsuffix .cmx,$(FILES)) $(addsuffix .o,$(FILES))
-
-../bin/$(TARGET): $(CIL) $(CMX)
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(CMX) -o $@
-
-$(TARGET).depend: $(ML)
-	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $@
-
-clean:
-	$(RM) $(CLEANFILES)
-
-#automatic rules
-%.cmi: %.mli
-	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
-
-%.cmo: %.ml
-	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
-
-%.cmx: %.ml
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
-
-%.mli %.ml: %.mly
-	$(OCAMLYACC) -v $<
-
-%.ml: %.mll
-	$(OCAMLLEX) $<
-
-include $(TARGET).depend
+include common.Makefile
