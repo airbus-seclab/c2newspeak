@@ -48,28 +48,36 @@ CLEANFILES+=\
 	$(addsuffix .cmx,$(FILES)) $(addsuffix .o,$(FILES))
 
 ../bin/$(TARGET): $(CIL) $(CMX)
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) $(CMX) -o $@
+	@echo "Linking                     "$(TARGET)
+	@$(OCAMLOPT) $(INCLUDE) $(LIBX) $(CMX) -o $@
 
 $(TARGET).depend: $(ML)
-	$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $@
+	@echo "Computing dependencies for  "$(TARGET)
+	@$(OCAMLDEP) $(INCLUDE) $(MLI) $(ML) > $@
 
 clean:
-	$(RM) $(CLEANFILES)
+	@echo "Cleaning files for          "$(TARGET)
+	@$(RM) $(CLEANFILES)
 
 #automatic rules
 %.cmi: %.mli
-	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
+	@echo "Compiling interface         "$<
+	@$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmo: %.ml
-	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
+	@echo "Compiling source            "$<
+	@$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmx: %.ml
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
+	@echo "Compiling source            "$<
+	@$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
 
 %.mli %.ml: %.mly
-	$(OCAMLYACC) -v $<
+	@echo "Compiling parser            "$<
+	@$(OCAMLYACC) -q -v $< &> /dev/null
 
 %.ml: %.mll
-	$(OCAMLLEX) $<
+	@echo "Compiling lexer             "$<
+	@$(OCAMLLEX) -q $<
 
-include $(TARGET).depend
+-include $(TARGET).depend

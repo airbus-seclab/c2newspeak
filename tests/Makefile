@@ -34,5 +34,6 @@ all: $(DIR)
 clean: $(DIR)
 
 $(DIR):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
+	@echo "Cleaning tests for          "$@
+	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
 

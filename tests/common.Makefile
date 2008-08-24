@@ -71,4 +71,4 @@ $(TESTS.SPEC): %.spec: $(PREREQ)
 	cat $*.spec
 
 clean:
-	$(RM) $(CLEANFILES)
+	@$(RM) $(CLEANFILES)

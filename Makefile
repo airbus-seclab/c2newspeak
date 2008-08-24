@@ -38,7 +38,8 @@ hg parents --template 'let revision = "{node|short}"\n' >> $(VERSION.FILE)
 
 #Version number generation
 $(VERSION.FILE):
-	$(genversion)
+	@echo "Creating version file       "$(VERSION.FILE)
+	@$(genversion)
 
 distrib: $(DISTDIR)
 
@@ -62,4 +63,4 @@ check-all: check $(DISTDIR)
 clean: check.clean
 
 check.clean: 
-	$(MAKE) -C tests clean
+	@$(MAKE) -s -C tests clean

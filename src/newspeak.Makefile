@@ -35,10 +35,12 @@ FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
 newspeak.cma: $(FILES.CMO)
-	$(OCAMLC) nums.cma -a $(FILES.CMO) -o newspeak.cma
+	@echo "Building library            "newspeak.cma
+	@$(OCAMLC) nums.cma -a $(FILES.CMO) -o newspeak.cma
 
 newspeak.a newspeak.cmxa: $(FILES.CMX)
-	$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
+	@echo "Building library            "newspeak.cmx
+	@$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
 
 CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo
 

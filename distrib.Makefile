@@ -44,13 +44,14 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 .PHONY: clean doc
 
 all: bin $(CIL) $(COMPONENTS) doc
-	$(CP) -r lib/* bin
+	@echo "Installing libraries in     "bin/
+	@$(CP) -r lib/* bin
 
 bin:
 	mkdir bin
 
 $(COMPONENTS): $(CILDIR) src/version.ml
-	$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
+	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
 
 $(CIL): $(CILDIR)
 	cd cil; tar xzf cil-1.3.5.tar.gz
@@ -66,10 +67,12 @@ $(CILDIR):
 doc: doc/index.html
 
 doc/index.html:
-	$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
+	@echo "Generating documentation in "doc/
+	@$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 clean: $(COMPONENTS)
-	$(RM) $(CLEANFILES)
+	@echo "Cleaning files installed in "bin/, doc/
+	@$(RM) $(CLEANFILES)
 
 clean-all:
 	$(MAKE) clean
