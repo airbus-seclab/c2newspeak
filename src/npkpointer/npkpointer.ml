@@ -25,7 +25,7 @@
 
 open Newspeak
 
-module S = Smallspeak
+module S = Ptrspeak
 
 let debug = ref false
 
@@ -44,23 +44,42 @@ let anon_fun file =
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 let translate (globdecs, fundecs, _) = 
-  let vars = ref [] in
+  let vars = Hashtbl.create 100 in
   let prog = ref [] in
+
+  let vcnt = ref 0 in
+  let stack = ref [] in
+  let current_fun = ref "" in
+
+  let push_local x =
+    let v = !current_fun^"."^(string_of_int !vcnt) in
+      Hashtbl.add vars v (!current_fun^"."^x);
+      stack := v::!stack;
+      incr vcnt
+  in
+
+  let pop_local () =
+    match !stack with
+	_::tl -> stack := tl
+      | _ -> 
+	  invalid_arg ("Npkpointer.translate.pop_local: "
+		       ^"unexpected empty variable stack")
+  in
+    
+  let get_local x = List.nth !stack x in
 
   let rec translate_lval lv =
     match lv with
 	Global x -> S.Var x
+      | Local x -> S.Var (get_local x)
       | Deref (e, _) -> S.Deref (translate_exp e)
       | Shift (lv, _) -> translate_lval lv
-      | _ -> 
-	  invalid_arg ("Npkpointer.translate_lval: "
-		       ^"left value not implemented yet")
 	    
   and translate_exp e =
     match e with
 	Const _ -> S.Const
       | Lval (lv, _) -> S.Deref (translate_lval lv)
-      | AddrOf (lv, _) -> S.var_of_exp (translate_lval lv)
+      | AddrOf (lv, _) -> translate_lval lv
       | _ -> 
 	  invalid_arg "Npkpointer.translate_exp: expression not implemented yet"
   in
@@ -71,6 +90,10 @@ let translate (globdecs, fundecs, _) =
 	  let lv = translate_lval lv in
 	  let e = translate_exp e in
 	    prog := (lv, e)::!prog
+      | Decl (x, _, body) ->
+	  push_local x;
+	  translate_blk body;
+	  pop_local ()
       | ChooseAssert choices -> List.iter translate_choice choices
       | InfLoop body -> translate_blk body
       | DoWith (body, _, action) -> 
@@ -97,23 +120,26 @@ let translate (globdecs, fundecs, _) =
   in
 
   let translate_global x (_, init) =
-    vars := x::!vars;
+    Hashtbl.add vars x x;
     match init with
 	Zero -> ()
       | Init init_list -> translate_init_list x init_list
   in
 
-  let translate_fundec _ (ftyp, body) =
+  let translate_fundec fid (ftyp, body) =
     if ftyp <> ([], None) then begin
       invalid_arg ("Npkpointer.translat_fundec: "
 		   ^"only void -> void functions supported right now")
     end;
+    current_fun := fid;
+    vcnt := 0;
+    stack := [];
     translate_blk body
   in
 
     Hashtbl.iter translate_global globdecs;
     Hashtbl.iter translate_fundec fundecs;
-    (!vars, !prog)
+    (vars, !prog)
       
 let join p1 p2 = List.merge compare p1 p2
 let singleton x = x::[]
@@ -124,14 +150,16 @@ let rec is_subset x y =
     | (_::x, _::y) -> is_subset x y
     | _ -> x = []
 
-let analyse (vars, prog) = 
+let analyse prog = 
   let g = Hashtbl.create 100 in
   let changed = ref false in
-  let init x = Hashtbl.add g x [] in
-  let deref p = Hashtbl.find g p in
+  let deref p = 
+    try Hashtbl.find g p 
+    with Not_found -> []
+  in
   (* TODO: could be slightly optimized by using a update function *)
   let add_pointsto x y = 
-    let p = Hashtbl.find g x in
+    let p = deref x in
       if not (is_subset y p) then begin
 	Hashtbl.replace g x (join p y);
 	changed := true
@@ -157,7 +185,6 @@ let analyse (vars, prog) =
       List.iter (fun x -> add_pointsto x p) a
   in
 
-    List.iter init vars;
     changed := true;
     while !changed do
       changed := false;
@@ -165,12 +192,11 @@ let analyse (vars, prog) =
     done;
     g
 
-let dump g =
+let dump vars g =
   let dump_rel x l =
-    if l <> [] then begin
-      let l = List_utils.to_string (fun x -> x) ", " l in
-	print_endline (x^" -> { "^l^" }")
-    end
+    let x = Hashtbl.find vars x in
+    let l = List_utils.to_string (fun x -> Hashtbl.find vars x) ", " l in
+      print_endline (x^" -> { "^l^" }")
   in
     print_endline "Points-to relations:";
     Hashtbl.iter dump_rel g
@@ -183,10 +209,10 @@ let _ =
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
     let (_, prog, _) = Newspeak.read !input in
-    let prog = translate prog in
-      if !debug then S.print prog;
+    let (vars, prog) = translate prog in
+      if !debug then S.print (vars, prog);
     let graph = analyse prog in
-      dump graph
+      dump vars graph
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0
