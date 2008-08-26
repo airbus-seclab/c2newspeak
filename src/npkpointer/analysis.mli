@@ -23,21 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-let to_string string_of_elt sep l =
-  let rec to_string str l =
-    match l with
-	hd::[] -> str^(string_of_elt hd)
-      | hd::tl -> to_string (str^(string_of_elt hd)^sep) tl
-      | [] -> ""
-  in
-    to_string "" l
-
-let merge compare l1 l2 =
-  let rec merge l1 l2 =
-    match (l1, l2) with
-	(x::l1, y::_) when compare x y < 0 -> x::(merge l1 l2)
-      | (x::_, y::l2) when compare x y > 0 -> y::(merge l1 l2)
-      | (x::l1, _::l2) -> x::(merge l1 l2)
-      | ([], l) | (l, []) -> l
-  in
-    merge l1 l2
+val run: Ptrspeak.t -> Results.t
