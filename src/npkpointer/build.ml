@@ -100,9 +100,13 @@ let translate (globdecs, fundecs, _) =
   let rec translate_stmt (x, _) =
     match x with
 	Set (lv, e, _) ->
-	  let lv = translate_lval lv in
-	  let e = translate_exp e in
-	    prog := (S.Set (lv, e))::!prog
+	  let e1 = translate_lval lv in
+	  let e2 = translate_exp e in
+	    prog := (S.Set (e1, e2))::!prog
+      | Copy (lv1, lv2, _) -> 
+	  let e1 = translate_lval lv1 in
+	  let e2 = S.Deref (translate_lval lv2) in
+	    prog := (S.Set (e1, e2))::!prog
       | Decl (x, _, body) ->
 	  push_local x;
 	  translate_blk body;
@@ -117,8 +121,6 @@ let translate (globdecs, fundecs, _) =
 	  let (e, ftyp) = translate_fn fn in
 	  let params = translate_args ftyp in
 	    prog := (S.Call (e, params))::!prog
-      | _ -> 
-	  invalid_arg "Npkpointer.translate_stmt: statement not implemented yet"
 
   and translate_choice (_, body) = translate_blk body
 
