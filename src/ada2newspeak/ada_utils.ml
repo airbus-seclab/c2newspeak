@@ -167,11 +167,11 @@ let value_is_static_constraint_compatible contrainte value =
   match (value,contrainte) with
     | (_, NullRange) -> false
     | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
-	between inf sup (Newspeak.Nat.of_int n)
+	between_nat inf sup (Newspeak.Nat.of_int n)
     | (IntVal(n), IntegerRangeConstraint(inf,sup)) ->
-	between inf sup n
+	between_nat inf sup n
     | (BoolVal(b), IntegerRangeConstraint(inf,sup)) ->
-	between inf sup (nat_of_bool b)
+	between_nat inf sup (nat_of_bool b)
     | (FloatVal(n), FloatRangeConstraint(inf,sup)) ->
 	between inf sup n
     | ((BoolVal _|IntVal _| EnumVal _), FloatRangeConstraint _) 
