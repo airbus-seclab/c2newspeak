@@ -117,6 +117,8 @@ let translate (globdecs, fundecs, _) =
 	  translate_blk body;
 	  translate_blk action
       | Goto _ -> ()
+      | Call (FunId f) when not (Hashtbl.mem fundecs f) -> 
+	  prerr_endline ("Unknown function "^f^". Assuming empty body.")
       | Call fn ->
 	  let (e, ftyp) = translate_fn fn in
 	  let params = translate_args ftyp in

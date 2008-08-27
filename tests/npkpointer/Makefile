@@ -24,7 +24,7 @@
 COMMAND=$(C2NEWSPEAK) --keep-unused-vars $*.c -o $*.npk &> /dev/null; \
         $(NPKPOINTER) `[ -e $*.in ] && cat $*.in` $*.npk
 PREREQ=%.c
-TESTS=000 001 002 003 004
+TESTS=000 001 002 003 004 005
 CLEANFILES=*.npk
 
 include ../common.Makefile
