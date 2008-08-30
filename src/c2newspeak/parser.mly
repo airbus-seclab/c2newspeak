@@ -131,6 +131,16 @@ let build_funparams params types =
   let add_param_type x = List.find (has_name x) types in
   List.map add_param_type params
 
+let report_asm tokens =
+  let loc = "Parser.report_asm" in
+  let tokens = List_utils.to_string (fun x -> x) "' '" tokens in
+  let message = "asm directive '"^tokens^"'" in
+    if !Npkcontext.ignores_asm then Npkcontext.print_warning loc message
+    else begin
+      let advice = ", remove asm from your code or try option --ignore-asm" in
+	Npkcontext.error loc (message^advice)
+    end
+
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -755,20 +765,8 @@ field_declaration:
 attribute:
   ATTRIBUTE LPAREN LPAREN attribute_name
   RPAREN RPAREN                            { }
-| ASM LPAREN STRING RPAREN                 { 
-    let report = 
-      if !Npkcontext.ignores_asm then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report "Parser.attribute" ("ignoring asm directive '"^$3^"'")
-  }
-| ASM LPAREN STRING STRING RPAREN          { 
-    let report = 
-      if !Npkcontext.ignores_asm then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report "Parser.attribute" ("ignoring asm directive '"^$3^"' '"^$4^"'")
-  }
+| ASM LPAREN STRING RPAREN                 { report_asm ($3::[]) }
+| ASM LPAREN STRING STRING RPAREN          { report_asm ($3::$4::[]) }
 | INLINE                                   { }
 | CDECL                                    { }
 | RESTRICT                                 { }
