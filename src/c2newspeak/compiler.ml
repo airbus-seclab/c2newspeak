@@ -39,8 +39,13 @@ let parse fname =
 	(cprog, spec)
     with Parsing.Parse_error -> 
       let lexeme = Lexing.lexeme lexbuf in
+      let advise = 
+	if (Hashtbl.mem Lexer.gnuc_tok_tbl lexeme) && (not !Npkcontext.gnuc) 
+	then ", stick to standard ANSI C or try option --gnuc"
+	else ""
+      in 
 	Npkcontext.error "Parser.parse_error" 
-	  ("syntax error: unexpected token: "^lexeme)
+	  ("syntax error: unexpected token: "^lexeme^advise)
 
 
 let compile fname =
