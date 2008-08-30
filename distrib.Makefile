@@ -75,5 +75,6 @@ clean: $(COMPONENTS)
 	@$(RM) $(CLEANFILES)
 
 clean-all:
-	$(MAKE) clean
-	$(RM) -r cil/cil $(CILDIR)
+	@$(MAKE) -s clean
+	@echo "Cleaning files for          "cil
+	@$(RM) -r cil/cil $(CILDIR)
