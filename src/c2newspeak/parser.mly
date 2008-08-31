@@ -156,6 +156,7 @@ let report_asm tokens =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT NOTHROW PURE
+%token NONNULL
 %token EOF
 
 %token <string> IDENTIFIER
@@ -779,13 +780,19 @@ attribute_name:
   }
 | CDECL_ATTR                               { }
 | NORETURN                                 { }
+| ALWAYS_INLINE                            { }
+| NOTHROW                                  { }
+| PURE                                     { }
 | FORMAT LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
   RPAREN                                   { }
 | FORMAT_ARG LPAREN INTEGER RPAREN         { }
-| ALWAYS_INLINE                            { }
-| NOTHROW                                  { }
-| PURE                                     { }
+| NONNULL LPAREN integer_list RPAREN       { }
+;;
+
+integer_list:
+  INTEGER                                  { }
+| INTEGER COMMA INTEGER                    { }
 ;;
 
 format_fun:

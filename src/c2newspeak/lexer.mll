@@ -49,7 +49,8 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__asm__" ASM;
   Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL;
   Hashtbl.add gnuc_tok_tbl "__nothrow__" NOTHROW;
-  Hashtbl.add gnuc_tok_tbl "__pure__" PURE
+  Hashtbl.add gnuc_tok_tbl "__pure__" PURE;
+  Hashtbl.add gnuc_tok_tbl "__nonnull__" NONNULL
 
 
 let set_loc lexbuf pos = 
