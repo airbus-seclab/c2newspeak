@@ -792,6 +792,7 @@ attribute_name:
   RPAREN                                   { }
 | FORMAT_ARG LPAREN INTEGER RPAREN         { }
 | NONNULL LPAREN integer_list RPAREN       { }
+| CONST                                    { }
 ;;
 
 integer_list:
