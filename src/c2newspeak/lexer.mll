@@ -50,7 +50,8 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL;
   Hashtbl.add gnuc_tok_tbl "__nothrow__" NOTHROW;
   Hashtbl.add gnuc_tok_tbl "__pure__" PURE;
-  Hashtbl.add gnuc_tok_tbl "__nonnull__" NONNULL
+  Hashtbl.add gnuc_tok_tbl "__nonnull__" NONNULL;
+  Hashtbl.add gnuc_tok_tbl "__deprecated__" DEPRECATED
 
 
 let set_loc lexbuf pos = 
