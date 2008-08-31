@@ -155,7 +155,7 @@ let report_asm tokens =
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
-%token INLINE ALWAYS_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT NOTHROW
+%token INLINE ALWAYS_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT NOTHROW PURE
 %token EOF
 
 %token <string> IDENTIFIER
@@ -785,6 +785,7 @@ attribute_name:
 | FORMAT_ARG LPAREN INTEGER RPAREN         { }
 | ALWAYS_INLINE                            { }
 | NOTHROW                                  { }
+| PURE                                     { }
 ;;
 
 format_fun:

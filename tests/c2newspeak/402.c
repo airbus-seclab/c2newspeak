@@ -23,5 +23,5 @@
   email: charles.hymans@penjili.org
 */
 
-extern void f (void) __attribute__ ((__pure__));
+extern void f (void) __attribute__ ((__noreturn__));
 
