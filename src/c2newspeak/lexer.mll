@@ -46,7 +46,9 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "noreturn" NORETURN;
   Hashtbl.add gnuc_tok_tbl "dllimport" DLLIMPORT;
   Hashtbl.add gnuc_tok_tbl "__asm__" ASM;
-  Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL
+  Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL;
+  Hashtbl.add gnuc_tok_tbl "__nothrow__" NOTHROW
+
 
 let set_loc lexbuf pos = 
   lexbuf.lex_curr_p <- pos;
