@@ -44,6 +44,7 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__inline__" INLINE;
   Hashtbl.add gnuc_tok_tbl "__always_inline__" ALWAYS_INLINE;
   Hashtbl.add gnuc_tok_tbl "noreturn" NORETURN;
+  Hashtbl.add gnuc_tok_tbl "__noreturn__" NORETURN;
   Hashtbl.add gnuc_tok_tbl "dllimport" DLLIMPORT;
   Hashtbl.add gnuc_tok_tbl "__asm__" ASM;
   Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL;
