@@ -57,6 +57,7 @@ let _ =
      return value which depends on the arguments and globals *)
 
   Hashtbl.add gnuc_tok_tbl "__const" CONST;
+  Hashtbl.add gnuc_tok_tbl "__const__" CONST;
   (* for function slightly more strict than pure, since const functions
      are assumed not to read global variables *)
 
