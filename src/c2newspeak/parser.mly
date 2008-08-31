@@ -792,7 +792,7 @@ attribute_name:
 
 integer_list:
   INTEGER                                  { }
-| INTEGER COMMA INTEGER                    { }
+| INTEGER COMMA integer_list               { }
 ;;
 
 format_fun:
