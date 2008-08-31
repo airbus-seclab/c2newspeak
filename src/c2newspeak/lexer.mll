@@ -43,6 +43,7 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__builtin_va_list" VA_LIST;
   Hashtbl.add gnuc_tok_tbl "__cdecl__" CDECL_ATTR;
   Hashtbl.add gnuc_tok_tbl "__inline__" INLINE;
+  Hashtbl.add gnuc_tok_tbl "__inline" INLINE;
   Hashtbl.add gnuc_tok_tbl "__always_inline__" ALWAYS_INLINE;
   Hashtbl.add gnuc_tok_tbl "noreturn" NORETURN;
   Hashtbl.add gnuc_tok_tbl "__noreturn__" NORETURN;
