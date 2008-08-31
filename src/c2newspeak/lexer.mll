@@ -34,8 +34,7 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__extension__" EXTENSION;
   (* prevent warnings when compiling in -pedantic *)
 
-  Hashtbl.add gnuc_tok_tbl "__attribute__" ATTRIBUTE;
-  Hashtbl.add gnuc_tok_tbl "__const" CONST;
+  Hashtbl.add gnuc_tok_tbl "__attribute__" ATTRIBUTE;  
   Hashtbl.add gnuc_tok_tbl "__format__" FORMAT;
   Hashtbl.add gnuc_tok_tbl "__restrict" RESTRICT;
   Hashtbl.add gnuc_tok_tbl "__format_arg__" FORMAT_ARG;
@@ -51,17 +50,21 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__asm__" ASM;
   Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL;
   Hashtbl.add gnuc_tok_tbl "__nothrow__" NOTHROW;
-    (* tells the compiler the function does not throw an exception *)
+  (* tells the compiler the function does not throw an exception *)
 
   Hashtbl.add gnuc_tok_tbl "__pure__" PURE;
-    (* tells the compiler the function has no side-effects other than the 
-       return value which depends on the arguments and globals *)
+  (* tells the compiler the function has no side-effects other than the 
+     return value which depends on the arguments and globals *)
+
+  Hashtbl.add gnuc_tok_tbl "__const" CONST;
+  (* for function slightly more strict than pure, since const functions
+     are assumed not to read global variables *)
 
   Hashtbl.add gnuc_tok_tbl "__nonnull__" NONNULL;
-    (* tells the compiler the argument should always be a non-null pointer *)
+  (* tells the compiler the argument should always be a non-null pointer *)
 
   Hashtbl.add gnuc_tok_tbl "__deprecated__" DEPRECATED;
-    (* generates warnings when the function is used *)
+  (* generates warnings when the function is used *)
 
   Hashtbl.add gnuc_tok_tbl "__malloc__" MALLOC
 

@@ -733,6 +733,8 @@ external_declaration:
 | declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
 | EXTERN declaration attribute_list 
   SEMICOLON                                { build_glbdecl (false, true) $2 }
+| EXTENSION EXTERN declaration attribute_list 
+  SEMICOLON                                { build_glbdecl (false, true) $3 }
 ;;
 
 attribute_list:
