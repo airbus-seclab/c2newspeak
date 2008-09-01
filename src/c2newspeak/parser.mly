@@ -722,24 +722,29 @@ external_declaration:
   STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
-| EXTERN function_definition               { 
+// GNU C extension
+| optional_extension 
+  EXTERN function_definition               { 
     Npkcontext.report_dirty_warning "Parser.external_declaration" 
       "defined functions should not be extern";
-    build_fundef false $2 
+    build_fundef false $3
 }
-| TYPEDEF declaration SEMICOLON            { build_glbtypedef $2 }
-// GNU C extension
-| EXTENSION TYPEDEF declaration SEMICOLON  { build_glbtypedef $3 }
+| optional_extension 
+  TYPEDEF declaration SEMICOLON            { build_glbtypedef $3 }
 | declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
-| EXTERN declaration attribute_list 
-  SEMICOLON                                { build_glbdecl (false, true) $2 }
-| EXTENSION EXTERN declaration attribute_list 
+| optional_extension
+  EXTERN declaration attribute_list 
   SEMICOLON                                { build_glbdecl (false, true) $3 }
 ;;
 
+optional_extension:
+  EXTENSION                                { }
+|                                          { }
+;;
+
 attribute_list:
-  attribute attribute_list                { }
-|                                         { }
+  attribute attribute_list                 { }
+|                                          { }
 ;;
 
 type_qualifier:
