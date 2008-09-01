@@ -144,7 +144,7 @@ let report_asm tokens =
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF RETURN SIZEOF 
+%token EXTERN FOR IF REGISTER RETURN SIZEOF 
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
@@ -295,9 +295,11 @@ statement_list:
 |                                          { [] }
 ;;
 
+// TODO: factor declarations??
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false $1 }
+| REGISTER declaration SEMICOLON           { build_stmtdecl false $2 }
 | STATIC declaration SEMICOLON             { build_stmtdecl true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
@@ -753,17 +755,11 @@ type_qualifier:
 ;;
 
 field_declaration:
-  declaration_specifiers 
-  struct_declarator_list                   { flatten_field_decl ($1, $2) }
-| declaration_specifiers                   { 
-    Npkcontext.report_dirty_warning "Parser.field_declaration"
-      "anonymous field declaration in structure";
-    flatten_field_decl ($1, (Abstract, None)::[]) 
-  }
 // GNU C extension
-| EXTENSION declaration_specifiers
+  optional_extension declaration_specifiers
   struct_declarator_list                   { flatten_field_decl ($2, $3) }
-| EXTENSION declaration_specifiers         { 
+| optional_extension 
+  declaration_specifiers                   { 
     Npkcontext.report_dirty_warning "Parser.field_declaration"
       "anonymous field declaration in structure";
     flatten_field_decl ($2, (Abstract, None)::[]) 

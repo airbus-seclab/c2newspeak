@@ -198,6 +198,7 @@ rule token spec_buf = parse
   | "extern"            { EXTERN }
   | "goto"              { GOTO }
   | "if"                { IF }
+  | "register"          { REGISTER }
   | "return"            { RETURN }
   | "sizeof"            { SIZEOF }
   | "static"            { STATIC }
