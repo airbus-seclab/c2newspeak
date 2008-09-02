@@ -538,6 +538,7 @@ assignment_expression:
 | unary_expression EQ expression           { Set ($1, $3) }
 | unary_expression assignment_operator
   expression                               { SetOp ($1, $2, $3) }
+| EXTENSION LPAREN expression RPAREN       { $3 }
 ;;
 
 assignment_operator:
