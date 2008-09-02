@@ -1171,7 +1171,7 @@ let translate (globals, spec) =
 	FunctionDef (f, Fun ft, static, body) ->
 	  current_fun := f;
 	  let (ft, args) = normalize_ftyp ft in
-	  let ft'= translate_ftyp ft in
+	  let ft' = translate_ftyp ft in
 	    (* TODO: not nice the signature of this function is not good *)
 	  let f' = update_funtyp f static ft ft' loc in
 	  let formalids = add_formals loc ft in
@@ -1251,7 +1251,18 @@ let translate (globals, spec) =
       | _ -> ()
   in
 
+  let add_gnuc_symbols () =
+    let loc = Newspeak.dummy_loc "__gnuc_symbol" in
+    let f = "__builtin_strchr" in
+    let t = ((Ptr char_typ, "str")::(char_typ, "char")::[], Ptr char_typ) in
+    let ct = translate_proto_ftyp f t in
+      (* TODO: this signature is really not nice for update_funtyp!!! *)
+    let _ = update_funtyp f false t ct loc in
+      ()
+  in
+
 (* TODO: a tad inefficient *)
+    if !Npkcontext.gnuc then add_gnuc_symbols ();
     List.iter collect_glb_structdefs globals;
     List.iter translate_global globals;
     let spec = List.map (List.map translate_token) spec in
