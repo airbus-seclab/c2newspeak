@@ -141,6 +141,10 @@ let report_asm tokens =
 	Npkcontext.error loc (message^advice)
     end
 
+let apply_attr new_sz (t, m) =
+  match t with
+      Integer (sign, _) -> (Integer (sign, new_sz), m)
+    | _ -> Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -753,7 +757,9 @@ external_declaration:
 | optional_extension TYPEDEF 
   declaration SEMICOLON                    { build_glbtypedef $3 }
 | optional_extension TYPEDEF 
-  declaration type_attribute SEMICOLON     { build_glbtypedef ($4, snd $3) }
+  declaration type_attribute SEMICOLON     { 
+    build_glbtypedef (apply_attr $4 $3) 
+  }
 | declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
 | optional_extension
   EXTERN declaration attribute_list 
@@ -839,7 +845,5 @@ format_fun:
 
 type_attribute:
   ATTRIBUTE LPAREN LPAREN 
-  MODE LPAREN QI RPAREN RPAREN RPAREN      { 
-    Integer (Newspeak.Signed, Config.size_of_byte) 
-  }
+  MODE LPAREN QI RPAREN RPAREN RPAREN      { Config.size_of_byte }
 ;;
