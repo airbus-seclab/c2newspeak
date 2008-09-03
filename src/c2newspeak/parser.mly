@@ -161,7 +161,8 @@ let apply_attr new_sz (t, m) =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
-%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE QI
+%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
+%token QI HI SI DI
 %token EOF
 
 %token <string> IDENTIFIER
@@ -845,5 +846,12 @@ format_fun:
 
 type_attribute:
   ATTRIBUTE LPAREN LPAREN 
-  MODE LPAREN QI RPAREN RPAREN RPAREN      { Config.size_of_byte }
+  MODE LPAREN imode RPAREN RPAREN RPAREN   { $6 }
+;;
+
+imode:
+  QI                                       { Config.size_of_byte }
+| HI                                       { Config.size_of_byte*2 }
+| SI                                       { Config.size_of_byte*4 }
+| DI                                       { Config.size_of_byte*8 }
 ;;

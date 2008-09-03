@@ -72,7 +72,10 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__malloc__" MALLOC;
   Hashtbl.add gnuc_tok_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
   Hashtbl.add gnuc_tok_tbl "__mode__" MODE;
-  Hashtbl.add gnuc_tok_tbl "__QI__" QI
+  Hashtbl.add gnuc_tok_tbl "__QI__" QI;
+  Hashtbl.add gnuc_tok_tbl "__HI__" HI;
+  Hashtbl.add gnuc_tok_tbl "__SI__" SI;
+  Hashtbl.add gnuc_tok_tbl "__DI__" DI
 
 
 let set_loc lexbuf pos = 
