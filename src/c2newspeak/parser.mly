@@ -325,6 +325,8 @@ statement:
 | SEMICOLON                                { [] }
 ;;
 
+// TODO: this could be simplified a lot by following the official grammar
+// but then it wouldn't be possible to issue warnings
 iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
@@ -362,7 +364,7 @@ expression_statement:
       "halting condition should be explicit";
     exp_of_int 1
   }
-| expression SEMICOLON                     { $1 }
+| assignment_expression SEMICOLON           { $1 }
 ;;
 
 switch_stmt:
@@ -537,14 +539,21 @@ conditional_expression:
 // if (x = 0) instead of if (x == 0)
 expression:
   assignment_expression                   { $1 }
+| expression COMMA assignment_expression  { 
+    Npkcontext.report_dirty_warning "Parser.expression"
+      "ugly comma operator in expression";
+    Seq ($1, $3) 
+  }
 ;;
 
 assignment_expression:
   conditional_expression                   { $1 }
-| unary_expression EQ expression           { Set ($1, $3) }
+| unary_expression 
+  EQ assignment_expression                 { Set ($1, $3) }
 | unary_expression assignment_operator
-  expression                               { SetOp ($1, $2, $3) }
-| EXTENSION LPAREN expression RPAREN       { $3 }
+  assignment_expression                    { SetOp ($1, $2, $3) }
+| EXTENSION 
+  LPAREN assignment_expression RPAREN      { $3 }
 ;;
 
 assignment_operator:
@@ -564,7 +573,7 @@ argument_expression_list:
 ;;
 
 init:
-  expression                               { Data $1 }
+  assignment_expression                    { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
 | LBRACE named_init_list RBRACE            { Sequence $2 }
 ;;
@@ -575,7 +584,8 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
+  DOT IDENTIFIER EQ 
+  assignment_expression                    { (Some $2, Data $4) }
 ;;
 
 init_list:
@@ -670,7 +680,7 @@ enum_list:
 
 enum:
   IDENTIFIER                             { ($1, None) }
-| IDENTIFIER EQ expression               { ($1, Some $3) }
+| IDENTIFIER EQ assignment_expression    { ($1, Some $3) }
 ;;
 
 field_blk:

@@ -598,7 +598,13 @@ let translate (globals, spec) =
 	    end;
 	    let e = Binop (op, lv, e) in
 	      translate_exp (Set (lv, e))
- 
+
+      | Seq (e1, e2) ->
+	  let loc = Npkcontext.get_loc () in
+	  let blk = translate_void_exp loc e1 in
+	  let (e, t) = translate_exp e2 in
+	    (C.Pref (blk, e), t)
+
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "avoid assignments within expressions"
@@ -891,14 +897,13 @@ let translate (globals, spec) =
     in
       stitch (translate x)
 
-  and translate_stmt (x, loc) = 
-    Npkcontext.set_loc loc;
-    match x with
-      | Exp (Set set) -> 
+  and translate_void_exp loc e =
+    match e with
+	Set set -> 
 	  let (set, _) = translate_set set in
 	    (C.Set set, loc)::[]
-
-      | Exp (SetOp (lv, op, e)) ->
+	  
+      | SetOp (lv, op, e) ->
 	  let (lv', _) = translate_lv lv in
 	  let (pref, _, post) = C.normalize_lv lv' in
 	    (* TODO: should factor this code *)
@@ -909,14 +914,19 @@ let translate (globals, spec) =
 	    let e = Binop (op, lv, e) in
 	      translate_stmt (Exp (Set (lv, e)), loc)
 
-      | Exp (Cast (e, Void)) -> 
+      | Cast (e, Void) -> 
 	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
 	    "cast to void should be avoided";
 	  translate_stmt (Exp e, loc)
 
-      | Exp e -> 
+      | _ -> 
 	  let (e, _) = translate_exp e in
 	    (C.Exp e, loc)::[]
+
+  and translate_stmt (x, loc) = 
+    Npkcontext.set_loc loc;
+    match x with
+	Exp e -> translate_void_exp loc e
 
       | Break -> (C.Goto brk_lbl, loc)::[]
 
