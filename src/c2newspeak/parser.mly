@@ -144,7 +144,7 @@ let report_asm tokens =
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF REGISTER RETURN SIZEOF 
+%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
@@ -771,6 +771,15 @@ attribute_list:
 type_qualifier:
   CONST                                    { }
 | attribute                                { }
+| VOLATILE                                 { 
+    if not !Npkcontext.ignores_volatile then begin
+      Npkcontext.error "Parser.type_qualifier" 
+	("type qualifier 'volatile' not supported yet, "
+	 ^"try option --ignore-volatile")
+    end;
+    Npkcontext.print_warning "Parser.type_qualifier" 
+      "type qualifier 'volatile' ignored";
+    }
 ;;
 
 field_declaration:

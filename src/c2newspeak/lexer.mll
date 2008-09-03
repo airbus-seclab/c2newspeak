@@ -219,6 +219,7 @@ rule token spec_buf = parse
   | "signed"            { SIGNED }
   | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
+  | "volatile"          { VOLATILE }
 
 (* values *)
   | oct_integer         { INTEGER (Some "0", value, sign, length) }

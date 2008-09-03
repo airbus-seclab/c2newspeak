@@ -43,6 +43,7 @@ open Cil
 
 (* Translation options *)
 let ignores_asm = ref false
+let ignores_volatile = ref false
 let gnuc = ref false
 
 let forward_goto = ref false
@@ -130,6 +131,9 @@ let argslist = [
 
   ("--ignore-asm", Arg.Set ignores_asm,
    "ignores any asm directive");
+
+  ("--ignore-volatile", Arg.Set ignores_volatile,
+   "ignores 'volatile' type qualifier");
 
   ("--keep-unused-vars", Arg.Clear remove_temp,
    "does not remove unused variables");
