@@ -162,7 +162,7 @@ let apply_attr new_sz (t, m) =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token QI HI SI DI
+%token WARN_UNUSED_RESULT QI HI SI DI
 %token EOF
 
 %token <string> IDENTIFIER
@@ -832,6 +832,7 @@ attribute_name:
 | NONNULL LPAREN integer_list RPAREN       { }
 | CONST                                    { }
 | GNU_INLINE                               { }
+| WARN_UNUSED_RESULT                       { }
 ;;
 
 integer_list:
