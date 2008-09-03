@@ -255,6 +255,7 @@ rule token spec_buf = parse
   | "=="                { EQEQ }
   | "!="                { NOTEQ }
   | "="                 { EQ }
+  | "&="                { AMPERSANDEQ }
   | "|="                { OREQ }
   | "-="                { MINUSEQ }
   | "+="                { PLUSEQ }
