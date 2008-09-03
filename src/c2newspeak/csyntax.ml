@@ -141,13 +141,7 @@ let int_typ = Int (Signed, Config.size_of_int)
 
 let uint_typ = Int (Unsigned, Config.size_of_int)
 
-(*
-let va_arg = (, "__builtin_newspeak_va_arg")
-  Ptr char_typ *)
-
-let exp_of_int i = 
-  let t = Int (Signed, Config.size_of_int) in
-    Cst (Cir.CInt (Nat.of_int i), t)
+let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 
 let nat_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in

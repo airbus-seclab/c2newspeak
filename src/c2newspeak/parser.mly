@@ -156,7 +156,7 @@ let report_asm tokens =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
-%token NONNULL DEPRECATED MALLOC NOTHROW PURE
+%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P
 %token EOF
 
 %token <string> IDENTIFIER
@@ -418,6 +418,12 @@ postfix_expression:
 | postfix_expression ARROW IDENTIFIER      { Field (Deref $1, $3) }
 | postfix_expression PLUSPLUS              { OpExp (Plus, $1, true) }
 | postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
+| BUILTIN_CONSTANT_P 
+  LPAREN expression RPAREN                 { 
+     Npkcontext.print_warning "Parser.assignment_expression"
+       "__builtin_constant_p ignored, assuming value 0";
+    exp_of_int 0
+  }
 ;;
 
 unary_expression:

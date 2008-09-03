@@ -69,7 +69,8 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__deprecated__" DEPRECATED;
   (* generates warnings when the function is used *)
 
-  Hashtbl.add gnuc_tok_tbl "__malloc__" MALLOC
+  Hashtbl.add gnuc_tok_tbl "__malloc__" MALLOC;
+  Hashtbl.add gnuc_tok_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P
 
 
 let set_loc lexbuf pos = 
