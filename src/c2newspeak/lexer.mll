@@ -70,7 +70,9 @@ let _ =
   (* generates warnings when the function is used *)
 
   Hashtbl.add gnuc_tok_tbl "__malloc__" MALLOC;
-  Hashtbl.add gnuc_tok_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P
+  Hashtbl.add gnuc_tok_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
+  Hashtbl.add gnuc_tok_tbl "__mode__" MODE;
+  Hashtbl.add gnuc_tok_tbl "__QI__" QI
 
 
 let set_loc lexbuf pos = 

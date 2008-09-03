@@ -157,7 +157,7 @@ let report_asm tokens =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
-%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P
+%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE QI
 %token EOF
 
 %token <string> IDENTIFIER
@@ -750,8 +750,10 @@ external_declaration:
       "defined functions should not be extern";
     build_fundef false $3
 }
-| optional_extension 
-  TYPEDEF declaration SEMICOLON            { build_glbtypedef $3 }
+| optional_extension TYPEDEF 
+  declaration SEMICOLON                    { build_glbtypedef $3 }
+| optional_extension TYPEDEF 
+  declaration type_attribute SEMICOLON     { build_glbtypedef ($4, snd $3) }
 | declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
 | optional_extension
   EXTERN declaration attribute_list 
@@ -833,4 +835,11 @@ integer_list:
 format_fun:
   PRINTF                                   { }
 | SCANF                                    { }
+;;
+
+type_attribute:
+  ATTRIBUTE LPAREN LPAREN 
+  MODE LPAREN QI RPAREN RPAREN RPAREN      { 
+    Integer (Newspeak.Signed, Config.size_of_byte) 
+  }
 ;;
