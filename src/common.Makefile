@@ -61,16 +61,16 @@ clean:
 
 #automatic rules
 %.cmi: %.mli
-	@echo "Compiling interface         "$<
+	@echo "Compiling interface    u     "$<
 	@$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmo: %.ml
-	@echo "Compiling source            "$<
-	@$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
+	@echo "Compiling source  f          "$<
+	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmx: %.ml
-	@echo "Compiling source            "$<
-	@$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
+	@echo "Compiling source   t         "$<
+	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
 
 %.mli %.ml: %.mly
 	@echo "Compiling parser            "$<

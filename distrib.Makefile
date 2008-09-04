@@ -51,7 +51,7 @@ bin:
 	mkdir bin
 
 $(COMPONENTS): $(CILDIR) src/version.ml
-	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
+	@$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
 
 $(CIL): $(CILDIR)
 	cd cil; tar xzf cil-1.3.5.tar.gz

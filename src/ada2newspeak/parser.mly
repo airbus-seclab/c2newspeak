@@ -24,12 +24,12 @@
 
 %{ open Syntax_ada
 
-   let low_ident = String.lowercase
+   (*let low_ident = String.lowercase*)
 
    let compare_ident i1 i2 = 
-     let low_i1 = String.lowercase i1
+     (*let low_i1 = String.lowercase i1
      and low_i2 = String.lowercase i2
-     in String.compare low_i1 low_i2
+     in *)String.compare i1 i2
 
    let check_ident i1 i2 = 
      if (compare_ident i1 i2) <> 0
@@ -400,7 +400,7 @@ param_assoc :
 | expression VIR param_assoc {$1::$3}
 
 ident :
-| IDENT {low_ident $1}
+| IDENT {$1}
 
 ident_list :
 | ident {[$1]}

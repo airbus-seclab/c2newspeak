@@ -22,10 +22,26 @@
   
 *)
 
+let lowercaseline inchannel buffer =
+  let l = input_line inchannel
+  in Buffer.add_string buffer ((String.lowercase l)^"\n")
+
+let rec lowercasechannel inchannel buffer =
+  try
+    begin
+      lowercaseline inchannel buffer;
+      lowercasechannel inchannel buffer
+    end
+  with
+    | End_of_file -> ()
+
 
 let parse (fname:string) :Syntax_ada.compilation_unit =
   let cin = open_in fname in
-  let lexbuf = Lexing.from_channel cin in
+  let buffer = Buffer.create 1000 in
+  let lexbuf = 
+    lowercasechannel cin buffer;
+    Lexing.from_string (Buffer.contents buffer) in    
     Lexer.init fname lexbuf;
     try
       let prog = Parser.s Lexer.token lexbuf 
