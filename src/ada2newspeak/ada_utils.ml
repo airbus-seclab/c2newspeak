@@ -347,7 +347,10 @@ let check_operand_typ op typ = match op with
       Npkcontext.error 
 	"Firstpass.translate_binop" 
 	"concat not implemented"
-	
+
+let size_of_enum nb_litteral = 
+  log2_sup (Big_int.big_int_of_int nb_litteral)
+
 let make_enum nom list_val = 
   let rec make_id list_val list_val_id next_id = 
     match list_val with
@@ -355,27 +358,28 @@ let make_enum nom list_val =
        | v::r -> make_id r ((v,next_id)::list_val_id) (next_id +1)
   in 
   let (list_assoc,taille) = make_id list_val [] 0
-  in Enum(nom, list_assoc, log2_sup (Big_int.big_int_of_int taille))
+  in Enum(nom, list_assoc, size_of_enum taille)
  
-
-let ikind_of_range inf sup = 
+let size_of_range inf sup = 
   let (b_inf, b_sup) = 
     if (Nat.compare inf sup)<=0 then (inf, sup)
     else (sup, inf)
   in
-    begin
-      let (bit_signe,signe) = 
-	if (Nat.compare b_inf Nat.zero)<0 then (1,Newspeak.Signed)
-	else (0,Newspeak.Unsigned)
-      in
-      let max = Big_int.max_big_int
-	(Big_int.abs_big_int (Nat.to_big_int b_inf))
-	(Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int b_sup)))
-      in
-      let nb_bit = (log2_sup max) + bit_signe
-      in 
-	(signe, nb_bit)
-    end
+  let max = Big_int.max_big_int
+    (Big_int.abs_big_int (Nat.to_big_int b_inf))
+    (Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int b_sup)))
+  in
+  let min_bit = (log2_sup max) + 1
+  in 
+    if min_bit <=8 then 8
+    else if min_bit<=16 then 16
+    else if min_bit<=32 then 32
+    else if min_bit<=64 then 64
+    else Npkcontext.error
+      "Ada_utils.size_of_range"
+      "type representation is too big"
+	  
+let ikind_of_range inf sup = (Newspeak.Signed, size_of_range inf sup)
 	
 let make_range nom exp_b_inf exp_b_sup = 
   IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)
