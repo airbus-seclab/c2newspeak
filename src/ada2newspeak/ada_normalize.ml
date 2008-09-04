@@ -502,6 +502,8 @@ let eval_static exp expected_typ csttbl context with_package
 	  | StaticConst(v, typ, _)::_ ->
 	      let typ = check_typ expected_typ typ
 	      in (v, typ)
+
+	  | VarSymb _::_ -> raise NonStaticExpression
 		   
 	  | [] -> Npkcontext.error 
 	      "Ada_normalize.eval_static_cst" 
