@@ -741,7 +741,6 @@ and normalization compil_unit extern =
 
   (* ajout d'un nombre ou d'une constante *)
   let add_cst (nom:name) cst global =
-    Npkcontext.print_debug ("AJOUT : "^(string_of_name nom));
     (if Hashtbl.mem csttbl nom
      then
        match Hashtbl.find csttbl nom with
