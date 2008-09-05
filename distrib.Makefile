@@ -51,7 +51,7 @@ bin:
 	mkdir bin
 
 $(COMPONENTS): $(CILDIR) src/version.ml
-	@$(MAKE) -C src -f $@.Makefile $(MAKECMDGOALS)
+	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
 
 $(CIL): $(CILDIR)
 	cd cil; tar xzf cil-1.3.5.tar.gz
@@ -68,7 +68,7 @@ doc: doc/index.html
 
 doc/index.html:
 	@echo "Generating documentation in "doc/
-	@$(OCAMLDOC) -s -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
+	@$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 clean: $(COMPONENTS)
 	@echo "Cleaning files installed in "bin/, doc/
