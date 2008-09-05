@@ -27,21 +27,8 @@ open Syntax_ada
 module Nat = Newspeak.Nat
 
 exception NonStaticExpression
+
 (* arithmétique*)
-let log2_sup n = 
-  let zero = Big_int.zero_big_int
-  and one = Big_int.unit_big_int in
-  let two = Big_int.succ_big_int one
-  and eq_big_int a b = (Big_int.compare_big_int a b)=0 
-  in
-  let rec aux n p = 
-    if eq_big_int n zero then one
-    else
-      if eq_big_int n one then p
-      else aux (Big_int.add_big_int 
-		  (Big_int.div_big_int n two) (Big_int.mod_big_int n two)) 
-	(Big_int.succ_big_int p)
-  in Big_int.int_of_big_int (aux n zero)
 	
 (* fonction propre à Ada *)
 let puiss a b = 
@@ -348,8 +335,6 @@ let check_operand_typ op typ = match op with
 	"Firstpass.translate_binop" 
 	"concat not implemented"
 
-let size_of_enum nb_litteral = 
-  log2_sup (Big_int.big_int_of_int nb_litteral)
 
 let make_enum nom list_val = 
   let rec make_id list_val list_val_id next_id = 
@@ -358,28 +343,10 @@ let make_enum nom list_val =
        | v::r -> make_id r ((v,next_id)::list_val_id) (next_id +1)
   in 
   let (list_assoc,taille) = make_id list_val [] 0
-  in Enum(nom, list_assoc, size_of_enum taille)
- 
-let size_of_range inf sup = 
-  let (b_inf, b_sup) = 
-    if (Nat.compare inf sup)<=0 then (inf, sup)
-    else (sup, inf)
-  in
-  let max = Big_int.max_big_int
-    (Big_int.abs_big_int (Nat.to_big_int b_inf))
-    (Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int b_sup)))
-  in
-  let min_bit = (log2_sup max) + 1
-  in 
-    if min_bit <=8 then 8
-    else if min_bit<=16 then 16
-    else if min_bit<=32 then 32
-    else if min_bit<=64 then 64
-    else Npkcontext.error
-      "Ada_utils.size_of_range"
-      "type representation is too big"
-	  
-let ikind_of_range inf sup = (Newspeak.Signed, size_of_range inf sup)
+  in Enum(nom, list_assoc, Ada_config.size_of_enum taille)
+ 	  
+let ikind_of_range inf sup = (Newspeak.Signed, 
+			      Ada_config.size_of_range inf sup)
 	
 let make_range nom exp_b_inf exp_b_sup = 
   IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)

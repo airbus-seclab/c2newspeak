@@ -68,7 +68,7 @@ doc: doc/index.html
 
 doc/index.html:
 	@echo "Generating documentation in "doc/
-	@$(OCAMLDOC) -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
+	@$(OCAMLDOC) -s -I src -I src/newspeak src/newspeak/newspeak.mli src/newspeak/newspeak.ml -html -d doc -css-style newspeak.css -t "Newspeak - doubleplussimple minilang for static analysis (v. $(VERSION))" -intro doc/npkintro.mldoc -colorize-code
 
 clean: $(COMPONENTS)
 	@echo "Cleaning files installed in "bin/, doc/

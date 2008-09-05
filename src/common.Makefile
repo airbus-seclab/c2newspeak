@@ -66,11 +66,11 @@ clean:
 
 %.cmo: %.ml
 	@echo "Compiling source  f          "$<
-	$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
+	@$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmx: %.ml
 	@echo "Compiling source   t         "$<
-	$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
+	@$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
 
 %.mli %.ml: %.mly
 	@echo "Compiling parser            "$<

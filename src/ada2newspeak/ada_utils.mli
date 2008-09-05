@@ -25,7 +25,6 @@
 
 exception NonStaticExpression
 
-val log2_sup : Big_int.big_int -> int
 val puiss : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
 val mod_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
 val rem_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
