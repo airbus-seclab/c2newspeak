@@ -2,10 +2,10 @@ with t100;
 procedure T058 is
    Y : Integer;
 begin
-   if (T058a(10)> 15)
+   if (T100(10)> 15)
    then
-      Y := T058a(2);
+      Y := T100(2);
    else
-      Y := T058a(-2);
+      Y := T100(-2);
    end if;
 end T058;

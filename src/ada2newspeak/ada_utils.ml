@@ -384,5 +384,19 @@ let ikind_of_range inf sup = (Newspeak.Signed, size_of_range inf sup)
 let make_range nom exp_b_inf exp_b_sup = 
   IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)
 
-      
-    
+let check_compil_unit_name compil_unit file_name = 
+  let expected_name = Filename.chop_extension file_name in
+  let subprog_name spec = match spec with
+    | Function(name,_,_) -> name
+    | Procedure(name,_) -> name in
+  let (_,lib_item,_) = compil_unit in
+  let name = 
+    match lib_item with
+      | Spec(SubProgramSpec(spec)) -> subprog_name spec
+      | Spec(PackageSpec(name,_)) -> name
+      | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
+      | Body(PackageBody(name,_,_,_)) -> name
+  in
+    match name with 
+      | ([],ident) -> ident=expected_name
+      | _ -> false

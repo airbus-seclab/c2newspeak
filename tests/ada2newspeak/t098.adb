@@ -3,10 +3,10 @@ use T097;
 with T096;
 with T099;
 package body T098 is
-   function A return Integer is
+   function t096 return Integer is
    begin
       return 5;
-   end A;
+   end t096;
 
    function G return T097.Enum is
    begin
@@ -18,8 +18,8 @@ package body T098 is
       use T097;
       X : Integer;
    begin
-      X := A;
-      P(0);
+      X := t096;
+      t099(0);
    end Main;
 
    procedure Proc (Z : Integer) is

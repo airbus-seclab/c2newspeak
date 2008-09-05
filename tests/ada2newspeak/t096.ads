@@ -1,1 +1,1 @@
-function A return Integer;
+function t096 return Integer;

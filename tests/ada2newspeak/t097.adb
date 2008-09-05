@@ -18,7 +18,7 @@ package body T097 is
       then
          X := 2;
       end if;
-      P(0);
+      t099(0);
       X:= T098.A;
    end proc;
 

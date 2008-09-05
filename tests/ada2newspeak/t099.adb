@@ -1,4 +1,4 @@
-procedure P (X:Integer) is
+procedure t099 (X:Integer) is
 begin
    null;
-end P;
+end t099;

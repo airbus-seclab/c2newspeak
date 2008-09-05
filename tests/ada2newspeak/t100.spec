@@ -6,7 +6,7 @@ Global used
 Global variables
 
 Function definitions
-t058a() {
+t100() {
   do {
     1- =(int32) (2 * 0-_int32);
     goto lbl0;
@@ -19,8 +19,8 @@ t058a() {
 Newspeak output
 ---------------
 t100.adb
-t058a() {
-  (t100.adb:3#51)^1- =(int32) (2 * 0-_int32);
+t100() {
+  (t100.adb:3#50)^1- =(int32) (2 * 0-_int32);
 }
 
 

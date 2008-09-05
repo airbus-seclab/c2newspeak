@@ -6,7 +6,7 @@ Global used
 Global variables
 
 Function definitions
-main() {
+t072() {
   do {
     int32 x;
     int32 y;
@@ -22,7 +22,7 @@ main() {
 Newspeak output
 ---------------
 t072.adb
-main() {
+t072() {
   (t072.adb:4#41)^int32 x;
   (t072.adb:5#56)^int32 y;
   (t072.adb:5#56)^0- =(int32) 18;
