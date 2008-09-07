@@ -52,6 +52,7 @@ val strict_syntax : bool ref
 val ignores_pragmas : bool ref
 val ignores_volatile : bool ref
 val ignores_asm: bool ref
+val ignores_pack: bool ref
 
 (** When remove_temp is set, only used variables are kept in newspeak
     code *)

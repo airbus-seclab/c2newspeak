@@ -43,6 +43,7 @@ open Cil
 
 (* Translation options *)
 let ignores_asm = ref false
+let ignores_pack = ref false
 let ignores_volatile = ref false
 let gnuc = ref false
 
@@ -131,6 +132,9 @@ let argslist = [
 
   ("--ignore-asm", Arg.Set ignores_asm,
    "ignores any asm directive");
+
+  ("--ignore-pack", Arg.Set ignores_pack,
+   "ignores any packed attribute");
 
   ("--ignore-volatile", Arg.Set ignores_volatile,
    "ignores 'volatile' type qualifier");

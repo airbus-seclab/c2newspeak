@@ -77,7 +77,8 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__SI__" SI;
   Hashtbl.add gnuc_tok_tbl "__word__" SI;
   Hashtbl.add gnuc_tok_tbl "__DI__" DI;
-  Hashtbl.add gnuc_tok_tbl "__warn_unused_result__" WARN_UNUSED_RESULT
+  Hashtbl.add gnuc_tok_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
+  Hashtbl.add gnuc_tok_tbl "__packed__" PACKED
 
 
 let set_loc lexbuf pos = 

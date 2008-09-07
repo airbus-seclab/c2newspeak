@@ -135,11 +135,11 @@ let report_asm tokens =
   let loc = "Parser.report_asm" in
   let tokens = List_utils.to_string (fun x -> x) "' '" tokens in
   let message = "asm directive '"^tokens^"'" in
-    if !Npkcontext.ignores_asm then Npkcontext.print_warning loc message
-    else begin
+    if not !Npkcontext.ignores_asm then begin
       let advice = ", remove asm from your code or try option --ignore-asm" in
 	Npkcontext.error loc (message^advice)
-    end
+    end;
+    Npkcontext.print_warning loc message
 
 let apply_attr new_sz (t, m) =
   match t with
@@ -162,7 +162,7 @@ let apply_attr new_sz (t, m) =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED
 %token EOF
 
 %token <string> IDENTIFIER
@@ -833,6 +833,14 @@ attribute_name:
 | CONST                                    { }
 | GNU_INLINE                               { }
 | WARN_UNUSED_RESULT                       { }
+| PACKED                                   { 
+    let loc = "Parser.attribute_name" in
+    let message = "packed attribute not supported yet" in 
+      if not !Npkcontext.ignores_pack
+      then Npkcontext.error loc (message^", try option --ignore-pack");
+      Npkcontext.print_warning loc message
+
+  }
 ;;
 
 integer_list:
