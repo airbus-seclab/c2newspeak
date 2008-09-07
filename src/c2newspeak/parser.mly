@@ -224,7 +224,7 @@ init_declarator:
 declarator:
 | pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
-| IDENTIFIER                               { Variable ($1, get_loc ()) }
+| ident_or_tname                           { Variable ($1, get_loc ()) }
 | declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
 | declarator LBRACKET 
              type_qualifier_list RBRACKET  { Array ($1, None) }
