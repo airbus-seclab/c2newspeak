@@ -457,7 +457,7 @@ let translate (globals, spec) =
 
   and translate_exp e = 
     match e with
-      | Cst (c, t) -> (C.Const c, t)
+	Cst (c, t) -> (C.Const c, t)
 
       | Var x -> 
 	  let (v, t, _) = find_symb x in
@@ -918,6 +918,11 @@ let translate (globals, spec) =
 	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
 	    "cast to void should be avoided";
 	  translate_stmt (Exp e, loc)
+
+      | IfExp (c, e1, e2) ->
+	  let blk1 = (Exp e1, loc)::[] in
+	  let blk2 = (Exp e2, loc)::[] in
+	    translate_stmt (If (c, blk1, blk2), loc)
 
       | _ -> 
 	  let (e, _) = translate_exp e in
