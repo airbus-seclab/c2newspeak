@@ -109,8 +109,39 @@ let int_of_hex_character str =
 let int_of_oct_character str =
   let str = "0o"^str in
     int_of_string str
+
+let code_of_special_char c =
+  match c with
+      't' -> 9
+    | 'n' -> 10
+    | 'v' -> 11
+    | 'f' -> 12
+    | 'r' -> 13
+    | '"' -> 34
+    | '\\' -> 92
+    | _ -> 
+	Npkcontext.error "Lexer.code_of_special_char" 
+	  ("unknown special character: \\"^(String.make 1 c))
       
-let int_of_character str = int_of_char (str.[1])
+let int_of_character str =
+  if str.[0] = '\\' then code_of_special_char str.[1]
+  else int_of_char (str.[0])
+
+let normalize_string str =
+  let res = ref "" in
+  let i = ref 0 in
+    while !i < String.length str do
+      let c = str.[!i] in
+      let c =
+	if c = '\\' then begin
+	  incr i;
+	  Char.chr (code_of_special_char str.[!i])
+	end else c
+      in
+	res := !res^(String.make 1 c);
+	incr i
+    done;
+    !res
 
 let standard_token str =
   if Synthack.is_type str then TYPEDEF_NAME str 
@@ -167,9 +198,6 @@ let oct_digit = ['0'-'7']
 let hex_digit = digit | ['A'-'F'] 
 let lower_case_hex_digit = digit | ['a'-'f']
 
-let string = '"' ([^'"']* as value) '"'
-let wide_string = 'L''"' [^'"']* '"'
-
 let sign = ("U"|"u") as sign
 let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
@@ -183,7 +211,12 @@ let float =
   ((digit+ | digit+ '.' digit+ | '.' digit+) (('e'|'E') '-'? digit+)? as value)
   ("F" as suffix)?
 let identifier = letter (letter|digit)*
-let character = '\'' _ '\''
+let character = 
+    [^'"'''']  
+  | '\\' ('t'|'n'|'v'|'f'|'r'|'\"'|'\\') 
+let string = '"' (character* as str) '"'
+let wide_string = 'L''"' character* '"'
+
 let hex_character = '\'' "\\x" (hex_digit hex_digit as value) '\''
 let oct_character = 
   ("\'\\" (oct_digit as value) "\'")
@@ -233,19 +266,15 @@ rule token spec_buf = parse
   | oct_integer         { INTEGER (Some "0", value, sign, length) }
   | integer             { INTEGER (None, value, sign, length) }
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
-  | character           { CHARACTER (int_of_character (Lexing.lexeme lexbuf)) }
   | oct_character       { CHARACTER (int_of_oct_character value) }
   | hex_character       { CHARACTER (int_of_hex_character value) }
-  | "\'\\t\'"           { CHARACTER 9 }
-  | "\'\\n\'"           { CHARACTER 10 }
-  | "\'\\v\'"           { CHARACTER 11 }
-  | "\'\\f\'"           { CHARACTER 12 }
-  | "\'\\r\'"           { CHARACTER 13 }
-  | "\'\\\\\'"          { CHARACTER 92 }
+  | '\'' 
+      (character as value)
+    '\''                { CHARACTER (int_of_character value) }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }
-  | string              { STRING value }
+  | string              { STRING (normalize_string str) }
   | wide_string         { Npkcontext.error "Lexer.token" 
 			    "wide string literals not supported" }
 (* punctuation *)

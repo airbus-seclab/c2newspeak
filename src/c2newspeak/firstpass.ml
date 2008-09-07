@@ -377,7 +377,7 @@ let translate (globals, spec) =
 
   and add_glb_cstr str =
     let fname = Npkcontext.get_fname () in
-    let name = "!"^fname^".const_str_"^str in
+    let name = "!"^fname^".const_str_"^(String.escaped str) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
     let loc = Npkcontext.get_loc () in
     let (t, init) = translate_glb_init t (Some (Data (Str str))) in
