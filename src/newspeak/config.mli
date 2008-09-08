@@ -26,7 +26,6 @@
 val size_of_byte: int
 val max_sizeof: int
 val max_array_length: int
-val size_of_boolean: int
 val size_of_char: int
 val size_of_short: int
 val size_of_int: int

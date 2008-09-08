@@ -26,7 +26,6 @@
 let max_sizeof = 1073741823
 
 (* sizes in number of bits!!!*)
-let size_of_boolean = 1
 let size_of_byte = 8
 let size_of_char = 1*size_of_byte
 let size_of_short = 2*size_of_byte

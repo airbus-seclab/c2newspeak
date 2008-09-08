@@ -146,12 +146,12 @@ let translate compil_unit =
     
   (* fonction de traduction des types *)  
   let rec translate_typ typ = match typ with
-    | Integer -> C.Scalar(Npk.Int(Npk.Signed, Config.size_of_int))
-    | Float -> C.Scalar(Npk.Float(Config.size_of_float))
-    | Boolean -> C.Scalar(Npk.Int(Npk.Unsigned, Config.size_of_boolean))
-    | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Config.size_of_char))
+    | Integer -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
+    | Float -> C.Scalar(Npk.Float(Ada_config.size_of_float))
+    | Boolean -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
+    | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
     | Declared(typ_decl, _) -> translate_declared typ_decl
-    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Config.size_of_int))
+    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
     | String -> Npkcontext.error "Firstpass.translate_typ"
 	"String not implemented"
   and translate_declared typ_decl = match typ_decl with

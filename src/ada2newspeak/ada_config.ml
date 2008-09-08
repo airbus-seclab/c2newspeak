@@ -61,3 +61,9 @@ let size_of_range inf sup =
     else Npkcontext.error
       "Ada_utils.size_of_range"
       "type representation is too big"
+
+let size_of_boolean = 1
+let size_of_byte = 8
+let size_of_char = 1*size_of_byte
+let size_of_int = 4*size_of_byte
+let size_of_float = 4*size_of_byte
