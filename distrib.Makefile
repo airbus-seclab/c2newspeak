@@ -24,7 +24,7 @@
 # email: charles.hymans@penjili.org
 #
 
-VERSION=1.3
+VERSION=1.4
 
 #utils
 CP=cp
