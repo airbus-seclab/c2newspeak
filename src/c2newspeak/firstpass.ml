@@ -599,11 +599,10 @@ let translate (globals, spec) =
 	    let e = Binop (op, lv, e) in
 	      translate_exp (Set (lv, e))
 
-      | Seq (e1, e2) ->
-	  let loc = Npkcontext.get_loc () in
-	  let blk = translate_void_exp loc e1 in
-	  let (e, t) = translate_exp e2 in
-	    (C.Pref (blk, e), t)
+      | BlkExp blk ->
+	  let (blk, t) = ttranslate_blk blk in
+	  let e = C.exp_of_blk blk in
+	    (e, t)
 
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
@@ -838,55 +837,65 @@ let translate (globals, spec) =
       end;
       push_enum (x, v) loc
 
-  and translate_blk x = 
+  and translate_blk x =
+    let (body, _) = ttranslate_blk x in
+      body
+
+      (* type and translate blk *)
+  and ttranslate_blk x = 
     let rec translate x =
-    match x with
-      | (EDecl (x, v), loc)::body -> 
-	  translate_enum (x, v) loc;
-	  let body = translate_blk body in
-	    remove_symb x;
-	    (body, [])
-	      
-      (* TODO: not good, simplify code *)
-      | (VDecl (None, t, _, _), loc)::body -> 
-	  Npkcontext.set_loc loc;
-	  let _ = translate_typ t in
-	    (translate_blk body, [])
-	      
-      | (VDecl (Some x, t, static, init), loc)::body when static -> 
-	  Npkcontext.set_loc loc;
-	  let (t, init) = translate_glb_init t init in
-	  let t' = translate_typ t in
-          (* TODO: code not nice: the signature of this function is not good *)
-	    add_static x loc (t, Some init, t');
-	    let body = translate_blk body in
+      match x with
+	| (EDecl (x, v), loc)::body -> 
+	    translate_enum (x, v) loc;
+	    let (body, t) = ttranslate_blk body in
 	      remove_symb x;
-	      (body, [])
+	      ((body, []), t)
+		
+	(* TODO: not good, simplify code *)
+	| (VDecl (None, t, _, _), loc)::body -> 
+	    Npkcontext.set_loc loc;
+	    let _ = translate_typ t in
+	    let (body, t) = ttranslate_blk body in
+	      ((body, []), t)
+		
+	| (VDecl (Some x, t, static, init), loc)::body when static -> 
+	    Npkcontext.set_loc loc;
+	    let (t, init) = translate_glb_init t init in
+	    let t' = translate_typ t in
+           (* TODO: code not nice: the signature of this function is not good *)
+	      add_static x loc (t, Some init, t');
+	      let (body, t) = ttranslate_blk body in
+		remove_symb x;
+		((body, []), t)
 	  
-      | (VDecl (Some x, t, _, init), loc)::body -> 
-	  let init = translate_local_decl (x, t, init) loc in
-	  let body = translate_blk body in
-	    remove_symb x;
-	    (init@body, [])
+	| (VDecl (Some x, t, _, init), loc)::body -> 
+	    let init = translate_local_decl (x, t, init) loc in
+	    let (body, t) = ttranslate_blk body in
+	      remove_symb x;
+	      ((init@body, []), t)
 	      
-      (* TODO: do the case where suffix is <> [] *)
-      (* TODO: remove body, suffix from For, use goto and labels
-	 remove break. Use goto... *)
-      | ((Label _, _) as stmt)::(For ([], e, body, []), loc)::tl ->
-	  let blk = ((For ([], e, body@(stmt::[]), []), loc)::tl) in
-	    translate blk
+	(* TODO: do the case where suffix is <> [] *)
+	(* TODO: remove body, suffix from For, use goto and labels
+	   remove break. Use goto... *)
+	| ((Label _, _) as stmt)::(For ([], e, body, []), loc)::tl ->
+	    let blk = ((For ([], e, body@(stmt::[]), []), loc)::tl) in
+	      translate blk
+		
+	| (Label lbl, loc)::tl -> 
+	    let lbl = translate_lbl lbl in
+	    let ((x, tl), t) = translate tl in
+	      (([], (lbl, loc, x)::tl), t)
 
-      | (Label lbl, loc)::tl -> 
-	  let lbl = translate_lbl lbl in
-	  let (x, tl) = translate tl in
-	    ([], (lbl, loc, x)::tl)
+	| hd::[] -> 
+	    let (hd, t) = ttranslate_stmt hd in
+	      ((hd, []), t)
 
-      | hd::tl -> 
-	  let hd = translate_stmt hd in
-	  let (x, tl) = translate tl in
-	    (hd@x, tl)
-	      
-      | [] -> ([], [])      
+	| hd::tl -> 
+	    let hd = translate_stmt hd in
+	    let ((x, tl), t) = translate tl in
+	      ((hd@x, tl), t)
+		
+	| [] -> (([], []), Void)
     in
     let rec stitch (x, tl) =
       match tl with
@@ -895,16 +904,17 @@ let translate (globals, spec) =
 	    let blk = (C.Block (x, Some (lbl, [])), loc)::blk in
 	      stitch (blk, tl)
     in
-      stitch (translate x)
+    let (blk, t) = translate x in
+      (stitch blk, t)
 
-  and translate_void_exp loc e =
+  and translate_stmt_exp loc e =
     match e with
 	Set set -> 
-	  let (set, _) = translate_set set in
-	    (C.Set set, loc)::[]
+	  let (set, t) = translate_set set in
+	    ((C.Set set, loc)::[], t)
 	  
       | SetOp (lv, op, e) ->
-	  let (lv', _) = translate_lv lv in
+	  let (lv', t) = translate_lv lv in
 	  let (pref, _, post) = C.normalize_lv lv' in
 	    (* TODO: should factor this code *)
 	    if (pref <> []) || (post <> []) then begin
@@ -912,48 +922,53 @@ let translate (globals, spec) =
 		"expression without side-effects expected"
 	    end;
 	    let e = Binop (op, lv, e) in
-	      translate_stmt (Exp (Set (lv, e)), loc)
+	      (translate_stmt (Exp (Set (lv, e)), loc), t)
 
       | Cast (e, Void) -> 
 	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
 	    "cast to void should be avoided";
-	  translate_stmt (Exp e, loc)
+	  (translate_stmt (Exp e, loc), Void)
 
       | IfExp (c, e1, e2) ->
 	  let blk1 = (Exp e1, loc)::[] in
 	  let blk2 = (Exp e2, loc)::[] in
-	    translate_stmt (If (c, blk1, blk2), loc)
+	    (translate_stmt (If (c, blk1, blk2), loc), Void)
 
       | _ -> 
-	  let (e, _) = translate_exp e in
-	    (C.Exp e, loc)::[]
+	  let (e, t) = translate_exp e in
+	    ((C.Exp e, loc)::[], t)
 
-  and translate_stmt (x, loc) = 
+  and translate_stmt x =
+    let (stmt, _) = ttranslate_stmt x in
+      stmt
+	
+	(* type and translate_stmt *)
+  and ttranslate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
     match x with
-	Exp e -> translate_void_exp loc e
+	Exp e -> translate_stmt_exp loc e
 
-      | Break -> (C.Goto brk_lbl, loc)::[]
+      | Break -> ((C.Goto brk_lbl, loc)::[], Void)
 
-      | Continue -> (C.Goto cnt_lbl, loc)::[]
+      | Continue -> ((C.Goto cnt_lbl, loc)::[], Void)
 
-      | Return None -> (C.Goto ret_lbl, loc)::[]
+      | Return None -> ((C.Goto ret_lbl, loc)::[], Void)
 
       | Return (Some e) ->
 	  let set = (Exp (Set (Var ret_name, e)), loc) in
 	  let return = (Return None, loc) in
-	    translate_blk (set::return::[])
+	    ttranslate_blk (set::return::[])
 
       | Goto lbl -> 
 	  let lbl = translate_lbl lbl in
-	    (C.Goto lbl, loc)::[]
+	    ((C.Goto lbl, loc)::[], Void)
 
       | If (e, blk1, blk2) ->
 	  let blk1 = translate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
-	    translate_if loc (e, blk1, blk2)
+	    (translate_if loc (e, blk1, blk2), Void)
 
-      | Block body -> (C.Block (translate_blk body, None), loc)::[]
+      | Block body -> ((C.Block (translate_blk body, None), loc)::[], Void)
 
       | For (init, e, body, suffix) ->
 	  let init = (C.Block (translate_blk init, Some (cnt_lbl, [])), loc) in
@@ -962,7 +977,7 @@ let translate (globals, spec) =
 	  let body = (C.Block (guard@body, Some (cnt_lbl, [])), loc) in
 	  let suffix = translate_blk suffix in
 	  let loop = (C.Loop (body::suffix), loc) in
-	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
+	    ((C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[], Void)
 
       | CSwitch (e, choices, default) -> 
 	  let (e, _) = translate_exp e in
@@ -972,7 +987,7 @@ let translate (globals, spec) =
 	  let body = translate_cases (last_lbl, switch) choices in
 	  let default = translate_blk default in
 	  let body = (C.Block (body, Some (default_lbl, [])), loc)::default in
-	    (C.Block (body, Some (brk_lbl, [])), loc)::[]
+	    ((C.Block (body, Some (brk_lbl, [])), loc)::[], Void)
 
       | Label _ | VDecl _ | EDecl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt"

@@ -144,3 +144,5 @@ val is_large_blk: blk -> bool
 val string_of_blk: blk -> string
 
 val length_of_array: Npkil.tmp_size_t -> lv -> Npkil.tmp_nat
+
+val exp_of_blk: blk -> exp

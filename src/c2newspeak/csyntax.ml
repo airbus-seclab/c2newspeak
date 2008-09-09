@@ -114,7 +114,7 @@ and exp =
 (* boolean is true if the operation is appled after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
-    | Seq of (exp * exp)
+    | BlkExp of blk
 
 and cst = (Cir.cst * typ)
 

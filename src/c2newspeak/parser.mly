@@ -548,7 +548,8 @@ expression:
 | expression COMMA assignment_expression  { 
     Npkcontext.report_dirty_warning "Parser.expression"
       "ugly comma operator in expression";
-    Seq ($1, $3) 
+    let loc = get_loc () in
+      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
   }
 ;;
 
@@ -560,6 +561,8 @@ assignment_expression:
   assignment_expression                    { SetOp ($1, $2, $3) }
 | EXTENSION 
   LPAREN assignment_expression RPAREN      { $3 }
+| EXTENSION 
+  LPAREN compound_statement RPAREN         { BlkExp $3 }
 ;;
 
 assignment_operator:
