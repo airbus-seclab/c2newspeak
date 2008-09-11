@@ -119,6 +119,13 @@ let translate (globals, spec) =
   let lbl_tbl = Hashtbl.create 10 in
   let lbl_cnt = ref default_lbl in
 
+  let find_compdef name =
+    try
+      let (f, sz, _) = Hashtbl.find compdefs name in
+	Some (f, sz)
+    with Not_found -> None
+  in
+
   let new_lbl () =
     incr lbl_cnt;
     !lbl_cnt
@@ -147,7 +154,7 @@ let translate (globals, spec) =
     try Hashtbl.find symbtbl x
     with Not_found -> 
       Npkcontext.error "Firstpass.translate.typ_of_var" 
-	("Unknown identifier "^x)
+	("unknown identifier "^x)
   in
 
   let update_global x name loc (ct, init, t) =
@@ -261,10 +268,10 @@ let translate (globals, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Struct (n, f)) ->
-	    let (f, _) = process_struct (n, f) in
+	| (Sequence seq, Struct s) ->
+	    let (f, _) = find_struct s in
 	      translate_field_sequence o f seq;
-	      Struct (n, None)
+	      Struct (fst s, None)
 
 	| (Sequence _, _) -> 
 	    Npkcontext.error "Firstpass.translate_init"
@@ -357,7 +364,7 @@ let translate (globals, spec) =
 	      done
 		
 	| Struct s -> 
-	    let (f, _) = process_struct s in
+	    let (f, _) = find_struct s in
 	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
 	      List.iter fill_field f
 
@@ -671,88 +678,7 @@ let translate (globals, spec) =
 
   and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
-  and translate_scalar_typ t =
-    match t with
-      | Int k -> N.Int k
-      | Float n -> N.Float n	
-      | Ptr (Fun _) -> N.FunPtr
-      | Ptr _ -> N.Ptr
-      | Va_arg -> N.Ptr
-      | _ -> 
-	  Npkcontext.error "Firstpass.translate_scalar_typ" 
-	    "scalar type expected"
-
-  and translate_typ t =
-    match t with
-	Void -> C.Void
-      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
-	  C.Scalar (translate_scalar_typ t)
-      | Fun ft -> 
-	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
-	  let (ft, _) = normalize_ftyp ft in
-	    C.Fun (translate_ftyp ft)
-      | Array (t, len) -> 
-	  let t = translate_typ t in
-	  let len = translate_array_len len in
-	    C.Array (t, len)
-(* TODO: do the same coding for Union *)
-      | Struct (n, f) ->
-	  let (f, sz) = process_struct (n, f) in
-	  let f = List.map translate_field f in
-	    C.Struct (f, sz)
-      | Union (n, _) when Hashtbl.mem compdefs n -> 
-	  let (f, sz, _) = Hashtbl.find compdefs n in
-	  let f = List.map translate_field f in
-	    C.Union (f, sz)
-      | Union (n, Some f) -> 
-	  let (f, sz) = process_union_fields n f in
-	  let f = List.map translate_field f in
-	    C.Union (f, sz)
-      | Union (n, _) -> 
-	  Npkcontext.error "Firstpass.translate_typ" ("unknown union "^n)
-
-      | Bitfield _ -> 
-	  Npkcontext.error "Firstpass.translate_typ" 
-	    "bitfields not allowed outside of structures"
-
-  and translate_array_len x =
-    match x with
-	None -> None
-      | Some e -> 
-	  let (e, _) = translate_exp e in
-	  let i = 
-	    try C.int_of_exp e 
-	    with Invalid_argument _ -> 
-(* TODO: should print the expression e?? *)
-	      Npkcontext.error "Firstpass.translate_typ" 
-		"invalid size for array"
-	  in
-	    if (i < 0) || (i > Config.max_array_length) then begin
-(* TODO: should print the expression e?? *)
-	      Npkcontext.error "Firstpass.translate_typ" 
-		"invalid size for array"
-	    end;
-	    if (i = 0) then begin
-	      Npkcontext.error "Firstpass.translate_typ" 
-		"array should have at least 1 element"
-	    end;
-	    Some i
-
-  and process_struct (name, f) =
-    try
-      let (f, sz, _) = Hashtbl.find compdefs name in
-	(f, sz)
-    with Not_found ->
-      match f with
-	  Some f -> 
-	    let (f, sz, a) = process_struct_fields f in
-	      Hashtbl.add compdefs name (f, sz, a);
-	      (f, sz)
-	| None -> 
-	    Npkcontext.error "Firstpass.process_struct" 
-	      ("unknown structure "^name)
-
-  and process_struct_fields f =
+  and process_struct_fields name f =
     let o = ref 0 in
     let last_align = ref 1 in
     let rec translate (t, x, loc) =
@@ -787,7 +713,8 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-      (f, sz, !last_align)
+      Hashtbl.add compdefs name (f, sz, !last_align);
+      (f, sz)
 
   and process_union_fields name f =
     let n = ref 0 in
@@ -803,6 +730,85 @@ let translate (globals, spec) =
     let f = List.map translate f in
       Hashtbl.add compdefs name (f, !n, !align);
       (f, !n)
+
+  and translate_scalar_typ t =
+    match t with
+      | Int k -> N.Int k
+      | Float n -> N.Float n	
+      | Ptr (Fun _) -> N.FunPtr
+      | Ptr _ -> N.Ptr
+      | Va_arg -> N.Ptr
+      | _ -> 
+	  Npkcontext.error "Firstpass.translate_scalar_typ" 
+	    "scalar type expected"
+
+  and translate_typ t =
+    match t with
+	Void -> C.Void
+      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
+	  C.Scalar (translate_scalar_typ t)
+      | Fun ft -> 
+	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
+	  let (ft, _) = normalize_ftyp ft in
+	    C.Fun (translate_ftyp ft)
+      | Array (t, len) -> 
+	  let t = translate_typ t in
+	  let len = translate_array_len len in
+	    C.Array (t, len)
+      | Struct s ->
+	  let (f, sz) = find_struct s in
+	  let f = List.map translate_field f in
+	    C.Struct (f, sz)
+      | Union u -> 
+	  let (f, sz) = find_union u in
+	  let f = List.map translate_field f in
+	    C.Union (f, sz)
+      | Bitfield _ -> 
+	  Npkcontext.error "Firstpass.translate_typ" 
+	    "bitfields not allowed outside of structures"
+
+  and find_struct (n, f) =
+    match find_compdef n with
+	Some v -> v
+      | None -> 
+	  match f with
+	      Some f -> process_struct_fields n f 
+	    | None -> 
+		Npkcontext.error "Firstpass.find_compdef" 
+		  ("unknown structure "^n)
+	  
+  and find_union (n, f) = 
+    match find_compdef n with
+	Some v -> v
+      | None -> 
+	  match f with
+	      Some f -> process_union_fields n f 
+	    | None -> 
+		Npkcontext.error "Firstpass.find_compdef" 
+		  ("unknown union "^n)
+
+  and translate_array_len x =
+    match x with
+	None -> None
+      | Some e -> 
+	  let (e, _) = translate_exp e in
+	  let i = 
+	    try C.int_of_exp e 
+	    with Invalid_argument _ -> 
+(* TODO: should print the expression e?? *)
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"invalid size for array"
+	  in
+	    if (i < 0) || (i > Config.max_array_length) then begin
+(* TODO: should print the expression e?? *)
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"invalid size for array"
+	    end;
+	    if (i = 0) then begin
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"array should have at least 1 element"
+	    end;
+	    Some i
 
   and translate_ftyp (args, ret) =
     let args = List.map (fun (t, _) -> translate_typ t) args in
@@ -1217,12 +1223,10 @@ let translate (globals, spec) =
 	  Npkcontext.error "Firstpass.translate_global" 
 	    "function type expected"
 
-      | GlbEDecl d -> translate_enum d loc
+      | GlbEDecl _ -> ()
 
       (* TODO: not good, simplify this code *)
-      | GlbVDecl ((None, t, _, _), _) -> 
-	  let _ = translate_typ t in
-	    ()
+      | GlbVDecl ((None, _, _, _), _) -> ()
 
 (* TODO: put this check in parser ?? *)
       | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 
@@ -1269,15 +1273,31 @@ let translate (globals, spec) =
       | CstToken (C.CFloat f, _) -> Newspeak.CstToken (Newspeak.CFloat f)
   in
 
+  let rec collect_structs t =
+    match t with
+	Fun (args, ret) ->
+	  List.iter collect_structs_arg args;
+	  collect_structs ret
+      | Array (t, _) -> collect_structs t
+      | Struct (name, Some f) ->
+	  let (f, _) = process_struct_fields name f in
+	    List.iter collect_structs_field f
+      | Union (name, Some f) -> 
+	  let (f, _) = process_union_fields name f in
+	    List.iter collect_structs_field f
+      | _ -> ()
+
+  and collect_structs_arg (t, _) = collect_structs t
+
+  and collect_structs_field (_, (_, t)) = collect_structs t
+  in
+
 (* TODO: a tad hacky!! Think about it *)
-  let collect_glb_structdefs (x, _) =
+(* TODO: could be done in the parser *)
+  let collect_glb_structdefs (x, loc) =
     match x with
-	GlbVDecl ((_, t, _, _), _) -> 
-	  begin try 
-	    let _ = translate_typ t in
-	      ()
-	  with _ -> ()
-	  end
+	GlbVDecl ((_, t, _, _), _) -> collect_structs t
+      | GlbEDecl d -> translate_enum d loc
       | _ -> ()
   in
 

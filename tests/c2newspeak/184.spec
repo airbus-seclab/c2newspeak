@@ -1,1 +1,1 @@
-Fatal error: Unknown identifier x in 184.c line 34
+Fatal error: unknown identifier x in 184.c line 34
