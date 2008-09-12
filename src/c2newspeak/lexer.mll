@@ -118,6 +118,7 @@ let code_of_special_char c =
     | 'f' -> 12
     | 'r' -> 13
     | '"' -> 34
+    | '\'' -> 39
     | '\\' -> 92
     | _ -> 
 	Npkcontext.error "Lexer.code_of_special_char" 
@@ -213,7 +214,7 @@ let float =
 let identifier = letter (letter|digit)*
 let character = 
     [^'"'''']  
-  | '\\' ('t'|'n'|'v'|'f'|'r'|'\"'|'\\') 
+  | '\\' ('t'|'n'|'v'|'f'|'r'|'\''|'\"'|'\\') 
 let string = '"' (character* as str) '"'
 let wide_string = 'L''"' character* '"'
 
