@@ -21,14 +21,15 @@ and decl = (base_typ * var_modifier)
 
 and field = (base_typ * var_modifier * Csyntax.exp option)
 
-type vdecl = (Csyntax.typ * string option * location)
-type edecl = (Csyntax.enumdecl * Newspeak.location)
+type vdecl = (Csyntax.typ * string option * Newspeak.location)
+(* TODO: do not group these together *)
+type sdecls = (Csyntax.enumdecl list * Csyntax.compdecl list)
 
-val normalize_base_typ: base_typ -> (edecl list * Csyntax.typ)
+val normalize_base_typ: base_typ -> (sdecls * Csyntax.typ)
 
 val normalize_var_modifier: Csyntax.typ -> var_modifier -> vdecl
 
-val normalize_decl: decl -> (edecl list * vdecl)
+val normalize_decl: decl -> (sdecls * vdecl)
 
 val define_type: string -> Csyntax.typ -> unit
 

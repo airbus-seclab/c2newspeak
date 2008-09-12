@@ -30,65 +30,69 @@ type prog = (global * location) list
 and spec = spec_token list list
 
 and spec_token = 
-    | SymbolToken of char
-    | IdentToken of string
-    | CstToken of cst
-
+  | SymbolToken of char
+  | IdentToken of string
+  | CstToken of cst
+      
 and global = 
-(* true if static *)
-    | FunctionDef of (string * typ * bool * blk)
-(* enum declaration *)
-    | GlbEDecl of enumdecl
-(* true for extern *)
-    | GlbVDecl of (vardecl * extern)
+    (* true if static *)
+  | FunctionDef of (string * typ * bool * blk)
+      (* true for extern *)
+  | GlbVDecl of (vardecl * extern)
+      (* enum declaration *)
+  | GlbEDecl of enumdecl
+(* struct or union: composite *)
+  | GlbCDecl of compdecl
+  
+and enumdecl = string * exp * Newspeak.location
+
+and compdecl = string * bool * declaration list
 
 and extern = bool
 
 and vardecl = string option * typ * static * init option
-
-and enumdecl = string * exp
 
 and declaration = (typ * string * location)
 
 and ftyp = (typ * string) list * typ
 
 and typ =
-    | Void
-    | Int of ikind
-    | Bitfield of (ikind * exp)
-    | Float of int
-    | Ptr of typ
-    | Array of (typ * exp option)
-    | Struct of (string * declaration list option)
-    | Union of (string * declaration list option)
-    | Fun of ftyp
-    | Va_arg
-
+  | Void
+  | Int of ikind
+  | Bitfield of (ikind * exp)
+  | Float of int
+  | Ptr of typ
+  | Array of (typ * exp option)
+  | Comp of string
+  | Fun of ftyp
+  | Va_arg
+      
 and init = 
-    | Data of exp
-    | Sequence of (string option * init) list
+  | Data of exp
+  | Sequence of (string option * init) list
 
 and stmt = (stmtkind * location)
 
 and blk = stmt list
 
 and stmtkind =
-    | EDecl of enumdecl
-    | VDecl of vardecl
-    | If of (exp * blk * blk)
-    | CSwitch of (exp * (exp * blk * location) list * blk)
-(* init, while exp is true do blk and then blk, 
-   continue jumps before the second blk 
-   init may cotain break or continue stmt!
-*)
-    | For of (blk * exp * blk * blk)
-    | Exp of exp
-    | Break
-    | Continue
-    | Return of exp option
-    | Block of blk
-    | Goto of lbl
-    | Label of lbl
+    EDecl of enumdecl
+  | CDecl of compdecl
+  | VDecl of vardecl
+  | If of (exp * blk * blk)
+  | CSwitch of (exp * (exp * blk * location) list * blk)
+      (* init, while exp is true do blk and then blk, 
+	 continue jumps before the second blk 
+	 init may cotain break or continue stmt!
+      *)
+  | For of (blk * exp * blk * blk)
+  | Exp of exp
+  | Break
+  | Continue
+  | Return of exp option
+  | Block of blk
+  | Goto of lbl
+  | Label of lbl
 
 and lbl = string
 
@@ -206,10 +210,9 @@ let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
 
 let comp_of_typ t =
   match t with
-      Struct (n, _) | Union (n, _) -> n
+      Comp n -> n
     | _ -> 
-	Npkcontext.error "Csyntax.fields_of_typ" 
-	  "Struct or union type expected"
+	Npkcontext.error "Csyntax.comp_of_typ" "struct or union type expected"
 
 let normalize_ftyp (args, ret_t) =
   let normalize_arg (t, x) =

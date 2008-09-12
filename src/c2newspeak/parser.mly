@@ -42,22 +42,70 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let process_decls build (b, m) =
-  let (enumdecls, b) = Synthack.normalize_base_typ b in
-  let process (v, init) =
+let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
+  let ((edecls, cdecls), b) = Synthack.normalize_base_typ b in
+  let build_vdecl (v, init) =
     let d = Synthack.normalize_var_modifier b v in
-      build d init
+      build_vdecl d init
   in
-    (enumdecls, List.map process m)
+  let edecls = List.map build_edecl edecls in
+  let cdecls = List.map build_cdecl cdecls in
+  let vdecls = List.map build_vdecl m in
+    edecls@cdecls@vdecls
 
 let build_glbdecl (static, extern) d =
   let build_vdecl (t, x, loc) init = 
     (GlbVDecl ((x, t, static, init), extern), loc) 
   in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let build_edecl (d, loc) = (GlbEDecl d, loc) in
-  let edecls = List.map build_edecl edecls in
-    (edecls@vdecls)
+  let loc = get_loc () in
+  let build_edecl x = (GlbEDecl x, loc) in
+  let build_cdecl x = (GlbCDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
+
+(* TODO: clean this code and find a way to factor with previous function *)
+let build_glbtypedef d =
+  let build_vdecl (t, x, loc) init =
+    let x =
+      match x with
+	  Some x -> x
+	| None -> 
+	    (* TODO: code cleanup remove these things !!! *)
+	    Npkcontext.error "Firstpass.translate_global" "type name"
+    in
+      Synthack.define_type x t;
+      (GlbVDecl ((None, t, false, init), false), loc) 
+  in
+  let loc = get_loc () in
+  let build_edecl x = (GlbEDecl x, loc) in
+  let build_cdecl x = (GlbCDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
+
+let build_stmtdecl static d =
+(* TODO: think about cleaning this location thing up!!! *)
+(* for enum decls it seems the location is in double *)
+  let build_vdecl (t, x, loc) init = (VDecl (x, t, static, init), loc) in
+  let loc = get_loc () in
+  let build_edecl x = (EDecl x, loc) in
+  let build_cdecl x = (CDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
+
+(* TODO: clean this code and find a way to factor with previous function *)
+let build_typedef d =
+  let build_vdecl (t, x, loc) init = 
+    let x =
+      match x with
+	  Some x -> x
+	| None -> 
+	    (* TODO: code cleanup remove these things !!! *)
+	    Npkcontext.error "Firstpass.translate_global" "type name"
+    in
+      Synthack.define_type x t;
+      (VDecl (None, t, false, init), loc)
+  in
+  let loc = get_loc () in
+  let build_edecl x = (EDecl x, loc) in
+  let build_cdecl x = (CDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
 
 let build_fundef static (b, m, body) = 
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
@@ -70,51 +118,9 @@ let build_fundef static (b, m, body) =
   in
     (FunctionDef (x, t, static, body), loc)::[]
       
-let build_glbtypedef d =
-  let build_edecl (d, loc) = (GlbEDecl d, loc) in
-  let build_vdecl (t, x, loc) init = 
-    let x =
-      match x with
-	  Some x -> x
-	| None -> 
-	    (* TODO: code cleanup remove these things !!! *)
-	    Npkcontext.error "Firstpass.translate_global" "type name"
-    in
-      Synthack.define_type x t;
-      (* TODO: clean this up *)
-      (GlbVDecl ((None, t, false, init), false), loc) 
-  in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let edecls = List.map build_edecl edecls in
-    edecls@vdecls
-
-let build_typedef d =
-  let build_edecl (d, loc) = (EDecl d, loc) in
-  let build_vdecl (t, x, loc) init = 
-    let x =
-      match x with
-	  Some x -> x
-	| None -> 
-	    (* TODO: code cleanup remove these things !!! *)
-	    Npkcontext.error "Firstpass.translate_global" "type name"
-    in
-      Synthack.define_type x t;
-      (VDecl (None, t, false, init), loc)
-  in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let edecls = List.map build_edecl edecls in
-    edecls@vdecls
-
-let build_stmtdecl static d =
-  let build_edecl (d, loc) = (EDecl d, loc) in
-  let build_vdecl (t, x, loc) init = (VDecl (x, t, static, init), loc) in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let edecls = List.map build_edecl edecls in
-    edecls@vdecls
-
 let build_type_decl d =
-  let (edecls, (t, _, _)) = Synthack.normalize_decl d in
-    if (edecls <> []) then begin 
+  let (symbdecls, (t, _, _)) = Synthack.normalize_decl d in
+    if (symbdecls <> ([], [])) then begin 
       Npkcontext.error "Parser.build_type_decl" "unexpected enum declaration"
     end;
     t
