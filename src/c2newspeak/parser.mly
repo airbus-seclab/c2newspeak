@@ -429,7 +429,7 @@ postfix_expression:
 | postfix_expression 
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
 | postfix_expression DOT ident_or_tname    { Field ($1, $3) }
-| postfix_expression ARROW IDENTIFIER      { Field (Deref $1, $3) }
+| postfix_expression ARROW ident_or_tname  { Field (Deref $1, $3) }
 | postfix_expression PLUSPLUS              { OpExp (Plus, $1, true) }
 | postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
 | BUILTIN_CONSTANT_P 
