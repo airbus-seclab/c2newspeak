@@ -213,10 +213,10 @@ let float =
   ("F" as suffix)?
 let identifier = letter (letter|digit)*
 let character = 
-    [^'"'''']  
-  | '\\' ('t'|'n'|'v'|'f'|'r'|'\''|'\"'|'\\') 
-let string = '"' (character* as str) '"'
-let wide_string = 'L''"' character* '"'
+    [^''']  
+  | '\\' ('t'|'n'|'v'|'f'|'r'|'\''|'"'|'\\') 
+let string = '"' (([^'"']|"\\\"")* as str) '"'
+let wide_string = 'L''"' [^'"']* '"'
 
 let hex_character = '\'' "\\x" (hex_digit hex_digit as value) '\''
 let oct_character = 
