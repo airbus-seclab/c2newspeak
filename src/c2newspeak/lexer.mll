@@ -109,7 +109,7 @@ let int_of_hex_character str =
 let int_of_oct_character str =
   let str = "0o"^str in
     int_of_string str
-      
+ 
 let standard_token str =
   if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
@@ -231,12 +231,12 @@ rule token spec_buf = parse
   | oct_integer         { INTEGER (Some "0", value, sign, length) }
   | integer             { INTEGER (None, value, sign, length) }
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
-  | "'" (([^'\'']|'\\'_)+ as c)
+  | "'" ((('\\'_)|[^'\\''\''])+ as c)
     "'"                 { CHARACTER (character (Lexing.from_string c)) }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }
-  | '"' (([^'\"']|'\\'_)* as str)
+  | '"' ((('\\'_)|[^'\\''"'])* as str)
     '"'                 { 
       let lexbuf = Lexing.from_string str in
       let res = ref "" in begin
@@ -338,7 +338,7 @@ and character = parse
   | "\\f"               { 12 }
   | "\\r"               { 13 }
   | "\\\""              { 34 }
-  | "\\'"               { 39 }
+  | "\\\'"              { 39 }
   | "\\\\"              { 92 }
   | _ as c              { int_of_char c }
   | eof                 { raise Exit }
