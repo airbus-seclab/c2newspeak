@@ -1099,10 +1099,6 @@ let translate compil_unit =
 
   and make_check_constraint contrainte exp = 
     match contrainte with
-      | NullRange ->
-	  Npkcontext.error
-	    "Firstpass.make_check_constraint"
-	    "constraint error : value not in range"
       | IntegerRangeConstraint (v1,v2) -> 
 	  (* vérification d'une contrainte entière *)
 	  C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp)

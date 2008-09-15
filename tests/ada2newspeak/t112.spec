@@ -1,1 +1,1 @@
-Fatal error: constraint error : uncompatible constraint in t112.adb line 3
+Fatal error: null range not accepted in t112.adb line 2

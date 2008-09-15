@@ -1,1 +1,1 @@
-Fatal error: constraint error : value not in range in t111.adb line 5
+Fatal error: null range not accepted in t111.adb line 2

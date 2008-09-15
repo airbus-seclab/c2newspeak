@@ -167,7 +167,6 @@ and contrainte_to_string contrainte = match contrainte with
        "IntegerRangeConstraint("^(Newspeak.string_of_bounds (v1,v2))^")"
   |  FloatRangeConstraint((_,s1),(_,s2)) ->
        "FloatRangeConstraint("^s1^", "^s2^")"
-  | NullRange -> "NullRange"
 
 and value_to_string v = match v with
   | IntVal(i) -> "IntVal("^(nat_to_string i)^")"

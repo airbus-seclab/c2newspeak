@@ -133,11 +133,6 @@ let constraint_is_constraint_compatible cref courante =
     | (RangeConstraint _, RangeConstraint _)
     | (RangeConstraint _, 
        (FloatRangeConstraint _| IntegerRangeConstraint _)) -> true
-    | (NullRange, RangeConstraint _) -> true 
-	(* non connu à la compilation *)
-    | (NullRange, IntegerRangeConstraint(v1, v2)) -> (Nat.compare v2 v1) < 0
-    | (NullRange, FloatRangeConstraint(v1, v2)) -> v2 < v1
-    | (_, NullRange) -> true
     | (IntegerRangeConstraint _, FloatRangeConstraint _) 
     | (FloatRangeConstraint _, IntegerRangeConstraint _) -> 
 	Npkcontext.error
@@ -152,7 +147,6 @@ let constraint_is_constraint_compatible cref courante =
    - soit on a pas de valeur *)
 let value_is_static_constraint_compatible contrainte value = 
   match (value,contrainte) with
-    | (_, NullRange) -> false
     | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
 	between_nat inf sup (Newspeak.Nat.of_int n)
     | (IntVal(n), IntegerRangeConstraint(inf,sup)) ->
@@ -193,7 +187,6 @@ let constraint_is_static contrainte = match contrainte with
   | FloatRangeConstraint _ -> true
   | IntegerRangeConstraint _ -> true
   | RangeConstraint _ -> false
-  | NullRange -> true
 
 (* fonctions pour la gestion des types *)
   
