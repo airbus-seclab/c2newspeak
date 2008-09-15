@@ -22,7 +22,7 @@ t034.appelfonction() {
 
 t034.f() {
   do {
-    Global(t034.x) =(int32) (Global(t034.x)_int32 + 1);
+    Global(t034.x) =(int32) coerce[-2147483648,2147483647] (Global(t034.x)_int32 + 1);
     0- =(int32) Global(t034.x)_int32;
     goto lbl0;
   } with lbl0: {
@@ -42,7 +42,7 @@ t034.appelfonction() {
 }
 
 t034.f() {
-  (t034.adb:6#85)^t034.x =(int32) (t034.x_int32 + 1);
+  (t034.adb:6#85)^t034.x =(int32) coerce[-2147483648,2147483647] (t034.x_int32 + 1);
   (t034.adb:7#101)^0- =(int32) t034.x_int32;
 }
 

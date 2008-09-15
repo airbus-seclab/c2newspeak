@@ -632,28 +632,29 @@ let translate compil_unit =
 			"ambiguous operands"
 	in 
 	  Ada_utils.check_operand_typ op typ;
-	  let tr_typ = translate_typ typ
+	  let tr_typ = translate_typ typ in
+	  let coerce n exp =  C.Unop (Npkil.Coerce (Npk.domain_of_typ n), exp)
 	  in   
 	    match (op,tr_typ) with	  
 		(* opérations sur entiers ou flottants *)
-	      | (Plus,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.PlusI, tr_e1, tr_e2), typ)
+	      | (Plus,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.PlusI, tr_e1, tr_e2)), typ)
 	      | (Plus,C.Scalar(Npk.Float(n))) -> 
 		  (C.Binop (Npk.PlusF (n), tr_e1, tr_e2), typ) 
-	      | (Moins,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.MinusI, tr_e1, tr_e2), typ)
+	      | (Moins,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.MinusI, tr_e1, tr_e2)), typ)
 	      | (Moins,C.Scalar(Npk.Float(n))) -> 
 		  (C.Binop (Npk.MinusF(n), tr_e1, tr_e2), typ)
-	      | (Fois,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.MultI, tr_e1, tr_e2), typ)
+	      | (Fois,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.MultI, tr_e1, tr_e2)), typ)
 	      | (Fois,C.Scalar(Npk.Float(n))) -> 
 		  (C.Binop (Npk.MultF (n), tr_e1, tr_e2), typ)
-	      | (Div,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.DivI, tr_e1, tr_e2), typ)
+	      | (Div,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.DivI, tr_e1, tr_e2)), typ)
 	      | (Div,C.Scalar(Npk.Float(n))) -> 
-		  (C.Binop (Npk.DivF (n), tr_e1, tr_e2), typ)		  
-	      | (Rem, C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.Mod, tr_e1, tr_e2), typ)    
+		  (C.Binop (Npk.DivF (n), tr_e1, tr_e2), typ)
+	      | (Rem, C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.Mod, tr_e1, tr_e2)), typ)
 		    
 	      (* comparaisons *)
 	      | (Eq, C.Scalar(t)) -> 
