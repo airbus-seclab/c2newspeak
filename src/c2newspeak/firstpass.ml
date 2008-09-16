@@ -526,18 +526,25 @@ let translate (globals, spec) =
 	  let e2 = translate_exp_wo_array e2 in
 	    translate_binop op e1 e2
 
-      | IfExp (c, e1, e2) ->
-	  let loc = Npkcontext.get_loc () in
-	    (* TODO: this is a bit inefficient, e1 gets translated twice!! *)
-	  let (_, t) = translate_exp_wo_array e1 in
-	  let (x, decl, v) = gen_tmp loc t in
-	  let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
-	  let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
-	  let set = (If (c, blk1, blk2), loc) in
-	  let set = translate_stmt set in
-	    remove_symb x;
-	    (C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
-
+      | IfExp (c, e1, e2) -> begin
+	  try 
+	    let (c, _) = translate_exp c in
+	    let v = C.eval_exp c in
+	    let e = if Nat.compare v Nat.zero <> 0 then e1 else e2 in
+	      translate_exp e
+	  with Invalid_argument _ -> 
+	    let loc = Npkcontext.get_loc () in
+	      (* TODO: this is a bit inefficient, e1 gets translated twice!! *)
+	    let (_, t) = translate_exp_wo_array e1 in
+	    let (x, decl, v) = gen_tmp loc t in
+	    let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
+	    let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
+	    let set = (If (c, blk1, blk2), loc) in
+	    let set = translate_stmt set in
+	      remove_symb x;
+	      (C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
+	  end
+	    
       | SizeofE e ->
 	  let (_, t) = translate_exp e in
 	  let sz = (size_of t) / 8 in
@@ -690,13 +697,7 @@ let translate (globals, spec) =
       match t with
 	  Bitfield ((s, n), sz) ->
 	    let (sz, _) = translate_exp sz in
-	      (* TODO: factor this code *)
-	    let (pref, sz, post) = C.normalize_exp sz in
-	    let sz = C.int_of_exp sz in
-	      if (pref <> []) || (post <> []) then begin
-		Npkcontext.error "Firstpass.push_enum" 
-		  "expression without side-effects expected"
-	      end;
+	    let sz = Nat.to_int (C.eval_exp sz) in
 	      if sz > n then begin
 		Npkcontext.error "Firstpass.process_struct_fields"
 		  "width of bitfield exceeds its type"
@@ -773,7 +774,7 @@ let translate (globals, spec) =
       | Some e -> 
 	  let (e, _) = translate_exp e in
 	  let i = 
-	    try C.int_of_exp e 
+	    try Nat.to_int (C.eval_exp e) 
 	    with Invalid_argument _ -> 
 (* TODO: should print the expression e?? *)
 	      Npkcontext.error "Firstpass.translate_typ" 

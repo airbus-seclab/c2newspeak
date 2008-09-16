@@ -127,7 +127,7 @@ val normalize_lv: lv -> (blk * lv * blk)
 
 val normalize: blk -> blk
 
-val int_of_exp: exp -> int
+val eval_exp: exp -> Newspeak.Nat.t
 
 val cast: (exp * typ) -> typ -> exp
 

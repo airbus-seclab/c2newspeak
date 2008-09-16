@@ -41,6 +41,10 @@ let output = ref "a"
 
 let add_counted_call f = fun_to_count := f::!fun_to_count
 
+let fun_typ = ref false
+let array_sz = ref false
+let glob_typ = ref false
+
 let speclist = 
   [("--count-call", Arg.String add_counted_call, 
     "count the number of function calls");
@@ -54,7 +58,11 @@ let speclist =
 
    ("-o", Arg.Set_string output, "changes name of output, default is 'a'");
 
-   ("--debug", Arg.Set debug, "debugging mode")
+   ("--debug", Arg.Set debug, "debugging mode");
+   
+   ("--funtyp", Arg.Set fun_typ, "counts the number of void -> void functions");
+   ("--arraysz", Arg.Set array_sz, "counts the number of arrays of each size");
+   ("--globtyp", Arg.Set glob_typ, "counts the number of globals of each type");
   ]
 
 type counters = 
@@ -264,11 +272,14 @@ object (this)
 	("Number of global variables: "^(string_of_int globals)^"\n"
 	 ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
 	 ^"Number of functions: "
-	 ^(string_of_int (Hashtbl.length funstats))^"\n"
-	 ^"Number of functions with (void -> void) prototype: " 
-	 ^(string_of_int void_fun)^"\n"
-	 ^(string_of_arrays arrays)
-	 ^(string_of_globals globstats));
+	 ^(string_of_int (Hashtbl.length funstats))^"\n");
+      if !fun_typ then begin
+	Buffer.add_string res 
+	  ("Number of functions with (void -> void) prototype: " 
+	   ^(string_of_int void_fun))
+      end;
+      if !array_sz then Buffer.add_string res ("\n"^(string_of_arrays arrays));
+      if !glob_typ then Buffer.add_string res (string_of_globals globstats);
       Buffer.add_string res (string_of_counters counters);
       Hashtbl.iter string_of_call callstats;
       if verbose then Hashtbl.iter string_of_fun funstats;

@@ -183,43 +183,6 @@ let rec size_of t =
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
     | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
 
-let int_of_exp e =
-  let rec int_of_exp e =
-    match e with
-	Const (CInt i) -> i
-      | Binop (PlusI, e1, e2) ->
-	  let i1 = int_of_exp e1 in
-	  let i2 = int_of_exp e2 in
-	    Nat.add i1 i2
-      | Binop (MinusI, e1, e2) ->
-	  let i1 = int_of_exp e1 in
-	  let i2 = int_of_exp e2 in
-	    Nat.sub i1 i2
-      | Binop (MultI, e1, e2) ->
-	  let i1 = int_of_exp e1 in
-	  let i2 = int_of_exp e2 in
-	    Nat.mul i1 i2
-      | Binop (DivI, e1, e2) ->
-	  let i1 = int_of_exp e1 in
-	  let i2 = int_of_exp e2 in
-	    if (Nat.compare i2 Nat.zero = 0) 
-	    then Npkcontext.error "Cir.int_of_exp" "division by zero";
-	    Nat.div i1 i2
-      | Binop (Shiftlt, e1, e2) -> 
-	  let i1 = int_of_exp e1 in
-	  let i2 = int_of_exp e2 in
-	  let i2 = Nat.to_int i2 in
-	    Nat.shift_left i1 i2
-      | Unop (Coerce b, e) -> 
-	  let i = int_of_exp e in
-	    if Newspeak.belongs i b then i 
-	    else Npkcontext.error "Cir.int_of_exp" "integer overflow"
-      | _ -> 
-	  Npkcontext.error "Cir.int_of_exp" 
-	    "static expression expected"
-  in
-    Nat.to_int (int_of_exp e)
-
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
@@ -420,6 +383,42 @@ and normalize_blk x =
       hd::tl -> (normalize_stmt hd)@(normalize_blk tl)
     | [] -> []
 	
+let eval_exp e =
+  let apply_bop op v1 v2 =
+    match op with
+	PlusI -> Big_int.add_big_int v1 v2
+      | MinusI -> Big_int.sub_big_int v1 v2
+      | MultI -> Big_int.mult_big_int v1 v2
+      | DivI -> 
+	  if (Big_int.compare_big_int v2 Big_int.zero_big_int = 0) 
+	  then Npkcontext.error "Cir.eval_exp" "division by zero";
+	  Big_int.div_big_int v1 v2
+      | Shiftlt -> 
+	  let p = Big_int.power_int_positive_big_int 2 v2 in
+	    Big_int.mult_big_int v1 p
+      | _ -> 
+	  Npkcontext.error "Cir.eval_exp" 
+	    "static expression expected"
+  in
+  let rec eval_exp e =
+    match e with
+	Const (CInt i) -> Nat.to_big_int i
+      | Binop (op, e1, e2) -> apply_bop op (eval_exp e1) (eval_exp e2)
+      | Unop (Coerce b, e) -> 
+	  let i = eval_exp e in
+	    if Newspeak.belongs (Nat.of_big_int i) b then i 
+	    else Npkcontext.error "Cir.eval_exp" "integer overflow"
+      | _ -> 
+	  Npkcontext.error "Cir.eval_exp" 
+	    "static expression expected"
+  in
+  let (pref, e, post) = normalize_exp e in
+    if (pref <> []) || (post <> []) then begin
+      Npkcontext.error "Cir.eval_exp" 
+	"expression without side-effects expected"
+    end;
+    Nat.of_big_int (eval_exp e)
+
 module Int =
 struct
   type t = int
