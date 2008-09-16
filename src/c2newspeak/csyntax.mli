@@ -34,17 +34,22 @@ and spec_token =
     | CstToken of cst
 
 and global =
-(* true if static *)
-    | FunctionDef of (string * typ * bool * blk)
-    | GlbEDecl of enumdecl
-(* true for extern *)
-    | GlbVDecl of (vardecl * extern)
+    (* true if static *)
+  | FunctionDef of (string * typ * bool * blk)
+      (* true for extern *)
+  | GlbVDecl of (vardecl * extern)
+  | GlbEDecl of enumdecl
+(* struct or union: composite *)
+  | GlbCDecl of compdecl
+
+and enumdecl = string * exp * Newspeak.location
+
+(* true for structure, false for union *)
+and compdecl = string * bool * declaration list
 
 and extern = bool
 
 and vardecl = string option * typ * static * init option
-
-and enumdecl = string * exp
 
 and declaration = (typ * string * location)
 
@@ -57,8 +62,7 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
-    | Struct of (string * declaration list option)
-    | Union of (string * declaration list option)
+    | Comp of string
     | Fun of ftyp
     | Va_arg
 
@@ -71,18 +75,19 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    | EDecl of enumdecl
-    | VDecl of vardecl
-    | If of (exp * blk * blk)
-    | CSwitch of (exp * (exp * blk * location) list * blk)
-    | For of (blk * exp * blk * blk)
-    | Exp of exp
-    | Break
-    | Continue
-    | Return of exp option
-    | Block of blk
-    | Goto of lbl
-    | Label of lbl
+    EDecl of enumdecl
+  | CDecl of compdecl
+  | VDecl of vardecl
+  | If of (exp * blk * blk)
+  | CSwitch of (exp * (exp * blk * location) list * blk)
+  | For of (blk * exp * blk * blk)
+  | Exp of exp
+  | Break
+  | Continue
+  | Return of exp option
+  | Block of blk
+  | Goto of lbl
+  | Label of lbl
 
 and lbl = string
 
@@ -108,6 +113,7 @@ and exp =
 (* boolean is true if the operation is appled after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
+    | BlkExp of blk
 
 and cst = (Cir.cst * typ)
 

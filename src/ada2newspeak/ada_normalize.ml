@@ -502,6 +502,8 @@ let eval_static exp expected_typ csttbl context with_package
 	  | StaticConst(v, typ, _)::_ ->
 	      let typ = check_typ expected_typ typ
 	      in (v, typ)
+
+	  | VarSymb _::_ -> raise NonStaticExpression
 		   
 	  | [] -> Npkcontext.error 
 	      "Ada_normalize.eval_static_cst" 
@@ -739,7 +741,6 @@ and normalization compil_unit extern =
 
   (* ajout d'un nombre ou d'une constante *)
   let add_cst (nom:name) cst global =
-    Npkcontext.print_debug ("AJOUT : "^(string_of_name nom));
     (if Hashtbl.mem csttbl nom
      then
        match Hashtbl.find csttbl nom with
@@ -1002,18 +1003,29 @@ and normalization compil_unit extern =
 	     | (FloatVal(f1),FloatVal(f2)) -> 
 		 if f1<=f2
 		 then FloatRangeConstraint(f1, f2)
-		 else NullRange
+		 else 
+		   Npkcontext.error 
+		     "Ada_normalize.normalize_contrainte"
+		     "null range not accepted"
+
 	     | (IntVal(i1), IntVal(i2)) -> 
-		 if static || (Nat.compare i1 i2)<=0
+		 if (Nat.compare i1 i2)<=0
 		 then IntegerRangeConstraint(i1, i2)
-		 else NullRange
+		 else 
+		   Npkcontext.error 
+		     "Ada_normalize.normalize_contrainte"
+		     "null range not accepted"
+
 	     | (EnumVal(i1), EnumVal(i2)) -> 
 		 if i1<=i2
 		 then 
 		   let bounds = (Newspeak.Nat.of_int i1, 
 				 Newspeak.Nat.of_int i2) 
 		   in IntegerRangeConstraint(bounds)
-		 else NullRange
+		 else 
+		   Npkcontext.error 
+		     "Ada_normalize.normalize_contrainte"
+		     "null range not accepted"
 		   
 	     | (BoolVal(b1), BoolVal(b2)) -> 
 		 let i1 = Ada_utils.nat_of_bool b1
@@ -1021,14 +1033,17 @@ and normalization compil_unit extern =
 		 in
 		   if b1 <= b2
 		   then IntegerRangeConstraint(i1, i2)
-		   else NullRange
+		   else 
+		     Npkcontext.error 
+		       "Ada_normalize.normalize_contrainte"
+		       "null range not accepted"
 		     
 	     | (_, _) -> 
 		 (* ce cas n'est pas censé se produire :
 		    on a vérifié que les deux bornes sont de même
 		    type.*)
 		 Npkcontext.error 
-		   "Ada_normalize.eval_contrainte"
+		   "Ada_normalize.normalize_contrainte"
 		   ("internal error : range error : expected static "
 		    ^"float or integer constant")
 	   in contrainte
@@ -1041,7 +1056,7 @@ and normalization compil_unit extern =
 
 	   | AmbiguousTypeException ->
 	       Npkcontext.error 
-		 "Ada_normalize.eval_contrainte"
+		 "Ada_normalize.normalize_contrainte"
 		 "internal error : uncaught ambiguous type exception")
     in
       match contrainte with
@@ -1049,11 +1064,10 @@ and normalization compil_unit extern =
 	    eval_range exp1 exp2
 	    
 	| IntegerRangeConstraint _ 
-	| FloatRangeConstraint _
-	| NullRange ->
+	| FloatRangeConstraint _ ->
 	    Npkcontext.error
 	      "Ada_normalize.eval_contrainte"
-	      "internal error : unexpected Numeric or Null Range"
+	      "internal error : unexpected Numeric Range"
 	    
 
 
@@ -1160,12 +1174,7 @@ and normalization compil_unit extern =
 	      in match norm_contrainte with
 		| IntegerRangeConstraint(min, max) ->
 		    let ikind = Ada_utils.ikind_of_range min max 
-		    in 
-		      if (Nat.compare min max) <= 0
-		      then IntegerRange(ident, norm_contrainte, 
-					Some(ikind))
-		      else IntegerRange(ident, NullRange, 
-					Some(ikind))
+		    in IntegerRange(ident, norm_contrainte, Some(ikind))
 			
 		| _ -> 
 		    Npkcontext.error

@@ -42,22 +42,70 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
-let process_decls build (b, m) =
-  let (enumdecls, b) = Synthack.normalize_base_typ b in
-  let process (v, init) =
+let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
+  let ((edecls, cdecls), b) = Synthack.normalize_base_typ b in
+  let build_vdecl (v, init) =
     let d = Synthack.normalize_var_modifier b v in
-      build d init
+      build_vdecl d init
   in
-    (enumdecls, List.map process m)
+  let edecls = List.map build_edecl edecls in
+  let cdecls = List.map build_cdecl cdecls in
+  let vdecls = List.map build_vdecl m in
+    edecls@cdecls@vdecls
 
 let build_glbdecl (static, extern) d =
   let build_vdecl (t, x, loc) init = 
     (GlbVDecl ((x, t, static, init), extern), loc) 
   in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let build_edecl (d, loc) = (GlbEDecl d, loc) in
-  let edecls = List.map build_edecl edecls in
-    (edecls@vdecls)
+  let loc = get_loc () in
+  let build_edecl x = (GlbEDecl x, loc) in
+  let build_cdecl x = (GlbCDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
+
+(* TODO: clean this code and find a way to factor with previous function *)
+let build_glbtypedef d =
+  let build_vdecl (t, x, loc) init =
+    let x =
+      match x with
+	  Some x -> x
+	| None -> 
+	    (* TODO: code cleanup remove these things !!! *)
+	    Npkcontext.error "Firstpass.translate_global" "type name"
+    in
+      Synthack.define_type x t;
+      (GlbVDecl ((None, t, false, init), false), loc) 
+  in
+  let loc = get_loc () in
+  let build_edecl x = (GlbEDecl x, loc) in
+  let build_cdecl x = (GlbCDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
+
+let build_stmtdecl static d =
+(* TODO: think about cleaning this location thing up!!! *)
+(* for enum decls it seems the location is in double *)
+  let build_vdecl (t, x, loc) init = (VDecl (x, t, static, init), loc) in
+  let loc = get_loc () in
+  let build_edecl x = (EDecl x, loc) in
+  let build_cdecl x = (CDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
+
+(* TODO: clean this code and find a way to factor with previous function *)
+let build_typedef d =
+  let build_vdecl (t, x, loc) init = 
+    let x =
+      match x with
+	  Some x -> x
+	| None -> 
+	    (* TODO: code cleanup remove these things !!! *)
+	    Npkcontext.error "Firstpass.translate_global" "type name"
+    in
+      Synthack.define_type x t;
+      (VDecl (None, t, false, init), loc)
+  in
+  let loc = get_loc () in
+  let build_edecl x = (EDecl x, loc) in
+  let build_cdecl x = (CDecl x, loc) in
+    process_decls (build_edecl, build_cdecl, build_vdecl) d
 
 let build_fundef static (b, m, body) = 
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
@@ -70,51 +118,9 @@ let build_fundef static (b, m, body) =
   in
     (FunctionDef (x, t, static, body), loc)::[]
       
-let build_glbtypedef d =
-  let build_edecl (d, loc) = (GlbEDecl d, loc) in
-  let build_vdecl (t, x, loc) init = 
-    let x =
-      match x with
-	  Some x -> x
-	| None -> 
-	    (* TODO: code cleanup remove these things !!! *)
-	    Npkcontext.error "Firstpass.translate_global" "type name"
-    in
-      Synthack.define_type x t;
-      (* TODO: clean this up *)
-      (GlbVDecl ((None, t, false, init), false), loc) 
-  in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let edecls = List.map build_edecl edecls in
-    edecls@vdecls
-
-let build_typedef d =
-  let build_edecl (d, loc) = (EDecl d, loc) in
-  let build_vdecl (t, x, loc) init = 
-    let x =
-      match x with
-	  Some x -> x
-	| None -> 
-	    (* TODO: code cleanup remove these things !!! *)
-	    Npkcontext.error "Firstpass.translate_global" "type name"
-    in
-      Synthack.define_type x t;
-      (VDecl (None, t, false, init), loc)
-  in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let edecls = List.map build_edecl edecls in
-    edecls@vdecls
-
-let build_stmtdecl static d =
-  let build_edecl (d, loc) = (EDecl d, loc) in
-  let build_vdecl (t, x, loc) init = (VDecl (x, t, static, init), loc) in
-  let (edecls, vdecls) = process_decls build_vdecl d in
-  let edecls = List.map build_edecl edecls in
-    edecls@vdecls
-
 let build_type_decl d =
-  let (edecls, (t, _, _)) = Synthack.normalize_decl d in
-    if (edecls <> []) then begin 
+  let (symbdecls, (t, _, _)) = Synthack.normalize_decl d in
+    if (symbdecls <> ([], [])) then begin 
       Npkcontext.error "Parser.build_type_decl" "unexpected enum declaration"
     end;
     t
@@ -131,21 +137,38 @@ let build_funparams params types =
   let add_param_type x = List.find (has_name x) types in
   List.map add_param_type params
 
+let report_asm tokens =
+  let loc = "Parser.report_asm" in
+  let tokens = List_utils.to_string (fun x -> x) "' '" tokens in
+  let message = "asm directive '"^tokens^"'" in
+    if not !Npkcontext.ignores_asm then begin
+      let advice = ", remove asm from your code or try option --ignore-asm" in
+	Npkcontext.error loc (message^advice)
+    end;
+    Npkcontext.print_warning loc message
+
+let apply_attr new_sz (t, m) =
+  match t with
+      Integer (sign, _) -> (Integer (sign, new_sz), m)
+    | _ -> Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF RETURN SIZEOF 
+%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
-%token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ DIVEQ
+%token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ DIVEQ 
+%token AMPERSANDEQ
 %token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
-%token INLINE ALWAYS_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT
+%token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
+%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED
 %token EOF
 
 %token <string> IDENTIFIER
@@ -207,7 +230,7 @@ init_declarator:
 declarator:
 | pointer declarator                       { Pointer $2 }
 | LPAREN declarator RPAREN                 { $2 }
-| IDENTIFIER                               { Variable ($1, get_loc ()) }
+| ident_or_tname                           { Variable ($1, get_loc ()) }
 | declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
 | declarator LBRACKET 
              type_qualifier_list RBRACKET  { Array ($1, None) }
@@ -284,9 +307,11 @@ statement_list:
 |                                          { [] }
 ;;
 
+// TODO: factor declarations??
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false $1 }
+| REGISTER declaration SEMICOLON           { build_stmtdecl false $2 }
 | STATIC declaration SEMICOLON             { build_stmtdecl true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
@@ -312,6 +337,8 @@ statement:
 | SEMICOLON                                { [] }
 ;;
 
+// TODO: this could be simplified a lot by following the official grammar
+// but then it wouldn't be possible to issue warnings
 iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
@@ -349,7 +376,7 @@ expression_statement:
       "halting condition should be explicit";
     exp_of_int 1
   }
-| expression SEMICOLON                     { $1 }
+| assignment_expression SEMICOLON           { $1 }
 ;;
 
 switch_stmt:
@@ -401,10 +428,16 @@ postfix_expression:
 | postfix_expression LPAREN RPAREN         { Call ($1, []) }
 | postfix_expression 
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
-| postfix_expression DOT IDENTIFIER        { Field ($1, $3) }
-| postfix_expression ARROW IDENTIFIER      { Field (Deref $1, $3) }
+| postfix_expression DOT ident_or_tname    { Field ($1, $3) }
+| postfix_expression ARROW ident_or_tname  { Field (Deref $1, $3) }
 | postfix_expression PLUSPLUS              { OpExp (Plus, $1, true) }
 | postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
+| BUILTIN_CONSTANT_P 
+  LPAREN expression RPAREN                 { 
+     Npkcontext.print_warning "Parser.assignment_expression"
+       "__builtin_constant_p ignored, assuming value 0";
+    exp_of_int 0
+  }
 ;;
 
 unary_expression:
@@ -518,13 +551,24 @@ conditional_expression:
 // if (x = 0) instead of if (x == 0)
 expression:
   assignment_expression                   { $1 }
+| expression COMMA assignment_expression  { 
+    Npkcontext.report_dirty_warning "Parser.expression"
+      "ugly comma operator in expression";
+    let loc = get_loc () in
+      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
+  }
 ;;
 
 assignment_expression:
   conditional_expression                   { $1 }
-| unary_expression EQ expression           { Set ($1, $3) }
+| unary_expression 
+  EQ assignment_expression                 { Set ($1, $3) }
 | unary_expression assignment_operator
-  expression                               { SetOp ($1, $2, $3) }
+  assignment_expression                    { SetOp ($1, $2, $3) }
+| EXTENSION 
+  LPAREN assignment_expression RPAREN      { $3 }
+| EXTENSION 
+  LPAREN compound_statement RPAREN         { BlkExp $3 }
 ;;
 
 assignment_operator:
@@ -533,6 +577,7 @@ assignment_operator:
 | STAREQ                                   { Mult }
 | DIVEQ                                    { Div }
 | OREQ                                     { BOr }
+| AMPERSANDEQ                              { BAnd }
 | SHIFTLEQ                                 { Shiftl }
 | SHIFTREQ                                 { Shiftr }
 ;;
@@ -544,7 +589,7 @@ argument_expression_list:
 ;;
 
 init:
-  expression                               { Data $1 }
+  assignment_expression                    { Data $1 }
 | LBRACE init_list RBRACE                  { Sequence $2 }
 | LBRACE named_init_list RBRACE            { Sequence $2 }
 ;;
@@ -555,7 +600,8 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
+  DOT IDENTIFIER EQ 
+  assignment_expression                    { (Some $2, Data $4) }
 ;;
 
 init_list:
@@ -646,11 +692,16 @@ ident_or_tname:
 enum_list:
   enum                                   { $1::[] }
 | enum COMMA enum_list                   { $1::$3 }
+| enum COMMA                             { 
+        Npkcontext.report_dirty_warning "Parser.enum_list" 
+	  "unnecessary comma";
+    $1::[] 
+  }
 ;;
 
 enum:
   IDENTIFIER                             { ($1, None) }
-| IDENTIFIER EQ expression               { ($1, Some $3) }
+| IDENTIFIER EQ assignment_expression    { ($1, Some $3) }
 ;;
 
 field_blk:
@@ -711,41 +762,55 @@ external_declaration:
   STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
-| EXTERN function_definition               { 
+// GNU C extension
+| optional_extension 
+  EXTERN function_definition               { 
     Npkcontext.report_dirty_warning "Parser.external_declaration" 
       "defined functions should not be extern";
-    build_fundef false $2 
+    build_fundef false $3
 }
-| TYPEDEF declaration SEMICOLON            { build_glbtypedef $2 }
-// GNU C extension
-| EXTENSION TYPEDEF declaration SEMICOLON  { build_glbtypedef $3 }
+| optional_extension TYPEDEF 
+  declaration SEMICOLON                    { build_glbtypedef $3 }
+| optional_extension TYPEDEF 
+  declaration type_attribute SEMICOLON     { 
+    build_glbtypedef (apply_attr $4 $3) 
+  }
 | declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
-| EXTERN declaration attribute_list 
-  SEMICOLON                                { build_glbdecl (false, true) $2 }
+| optional_extension
+  EXTERN declaration attribute_list 
+  SEMICOLON                                { build_glbdecl (false, true) $3 }
+;;
+
+optional_extension:
+  EXTENSION                                { }
+|                                          { }
 ;;
 
 attribute_list:
-  attribute attribute_list                { }
-|                                         { }
+  attribute attribute_list                 { }
+|                                          { }
 ;;
 
 type_qualifier:
   CONST                                    { }
 | attribute                                { }
+| VOLATILE                                 { 
+    if not !Npkcontext.ignores_volatile then begin
+      Npkcontext.error "Parser.type_qualifier" 
+	("type qualifier 'volatile' not supported yet, "
+	 ^"try option --ignore-volatile")
+    end;
+    Npkcontext.print_warning "Parser.type_qualifier" 
+      "type qualifier 'volatile' ignored";
+    }
 ;;
 
 field_declaration:
-  declaration_specifiers 
-  struct_declarator_list                   { flatten_field_decl ($1, $2) }
-| declaration_specifiers                   { 
-    Npkcontext.report_dirty_warning "Parser.field_declaration"
-      "anonymous field declaration in structure";
-    flatten_field_decl ($1, (Abstract, None)::[]) 
-  }
 // GNU C extension
-| EXTENSION declaration_specifiers
+  optional_extension declaration_specifiers
   struct_declarator_list                   { flatten_field_decl ($2, $3) }
-| EXTENSION declaration_specifiers         { 
+| optional_extension 
+  declaration_specifiers                   { 
     Npkcontext.report_dirty_warning "Parser.field_declaration"
       "anonymous field declaration in structure";
     flatten_field_decl ($2, (Abstract, None)::[]) 
@@ -753,22 +818,10 @@ field_declaration:
 ;;
 
 attribute:
-  ATTRIBUTE LPAREN LPAREN attribute_name
+  ATTRIBUTE LPAREN LPAREN attribute_name 
   RPAREN RPAREN                            { }
-| ASM LPAREN STRING RPAREN                 { 
-    let report = 
-      if !Npkcontext.ignores_asm then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report "Parser.attribute" ("ignoring asm directive '"^$3^"'")
-  }
-| ASM LPAREN STRING STRING RPAREN          { 
-    let report = 
-      if !Npkcontext.ignores_asm then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report "Parser.attribute" ("ignoring asm directive '"^$3^"' '"^$4^"'")
-  }
+| ASM LPAREN STRING RPAREN                 { report_asm ($3::[]) }
+| ASM LPAREN STRING STRING RPAREN          { report_asm ($3::$4::[]) }
 | INLINE                                   { }
 | CDECL                                    { }
 | RESTRICT                                 { }
@@ -781,14 +834,47 @@ attribute_name:
   }
 | CDECL_ATTR                               { }
 | NORETURN                                 { }
+| ALWAYS_INLINE                            { }
+| NOTHROW                                  { }
+| PURE                                     { }
+| DEPRECATED                               { }
+| MALLOC                                   { }
 | FORMAT LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
   RPAREN                                   { }
 | FORMAT_ARG LPAREN INTEGER RPAREN         { }
-| ALWAYS_INLINE                            { }
+| NONNULL LPAREN integer_list RPAREN       { }
+| CONST                                    { }
+| GNU_INLINE                               { }
+| WARN_UNUSED_RESULT                       { }
+| PACKED                                   { 
+    let loc = "Parser.attribute_name" in
+    let message = "packed attribute not supported yet" in 
+      if not !Npkcontext.ignores_pack
+      then Npkcontext.error loc (message^", try option --ignore-pack");
+      Npkcontext.print_warning loc message
+
+  }
+;;
+
+integer_list:
+  INTEGER                                  { }
+| INTEGER COMMA integer_list               { }
 ;;
 
 format_fun:
   PRINTF                                   { }
 | SCANF                                    { }
+;;
+
+type_attribute:
+  ATTRIBUTE LPAREN LPAREN 
+  MODE LPAREN imode RPAREN RPAREN RPAREN   { $6 }
+;;
+
+imode:
+  QI                                       { Config.size_of_byte }
+| HI                                       { Config.size_of_byte*2 }
+| SI                                       { Config.size_of_byte*4 }
+| DI                                       { Config.size_of_byte*8 }
 ;;

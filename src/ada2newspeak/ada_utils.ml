@@ -27,21 +27,8 @@ open Syntax_ada
 module Nat = Newspeak.Nat
 
 exception NonStaticExpression
+
 (* arithmétique*)
-let log2_sup n = 
-  let zero = Big_int.zero_big_int
-  and one = Big_int.unit_big_int in
-  let two = Big_int.succ_big_int one
-  and eq_big_int a b = (Big_int.compare_big_int a b)=0 
-  in
-  let rec aux n p = 
-    if eq_big_int n zero then one
-    else
-      if eq_big_int n one then p
-      else aux (Big_int.add_big_int 
-		  (Big_int.div_big_int n two) (Big_int.mod_big_int n two)) 
-	(Big_int.succ_big_int p)
-  in Big_int.int_of_big_int (aux n zero)
 	
 (* fonction propre à Ada *)
 let puiss a b = 
@@ -146,11 +133,6 @@ let constraint_is_constraint_compatible cref courante =
     | (RangeConstraint _, RangeConstraint _)
     | (RangeConstraint _, 
        (FloatRangeConstraint _| IntegerRangeConstraint _)) -> true
-    | (NullRange, RangeConstraint _) -> true 
-	(* non connu à la compilation *)
-    | (NullRange, IntegerRangeConstraint(v1, v2)) -> (Nat.compare v2 v1) < 0
-    | (NullRange, FloatRangeConstraint(v1, v2)) -> v2 < v1
-    | (_, NullRange) -> true
     | (IntegerRangeConstraint _, FloatRangeConstraint _) 
     | (FloatRangeConstraint _, IntegerRangeConstraint _) -> 
 	Npkcontext.error
@@ -165,13 +147,12 @@ let constraint_is_constraint_compatible cref courante =
    - soit on a pas de valeur *)
 let value_is_static_constraint_compatible contrainte value = 
   match (value,contrainte) with
-    | (_, NullRange) -> false
     | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
-	between inf sup (Newspeak.Nat.of_int n)
+	between_nat inf sup (Newspeak.Nat.of_int n)
     | (IntVal(n), IntegerRangeConstraint(inf,sup)) ->
-	between inf sup n
+	between_nat inf sup n
     | (BoolVal(b), IntegerRangeConstraint(inf,sup)) ->
-	between inf sup (nat_of_bool b)
+	between_nat inf sup (nat_of_bool b)
     | (FloatVal(n), FloatRangeConstraint(inf,sup)) ->
 	between inf sup n
     | ((BoolVal _|IntVal _| EnumVal _), FloatRangeConstraint _) 
@@ -206,7 +187,6 @@ let constraint_is_static contrainte = match contrainte with
   | FloatRangeConstraint _ -> true
   | IntegerRangeConstraint _ -> true
   | RangeConstraint _ -> false
-  | NullRange -> true
 
 (* fonctions pour la gestion des types *)
   
@@ -347,7 +327,8 @@ let check_operand_typ op typ = match op with
       Npkcontext.error 
 	"Firstpass.translate_binop" 
 	"concat not implemented"
-	
+
+
 let make_enum nom list_val = 
   let rec make_id list_val list_val_id next_id = 
     match list_val with
@@ -355,30 +336,27 @@ let make_enum nom list_val =
        | v::r -> make_id r ((v,next_id)::list_val_id) (next_id +1)
   in 
   let (list_assoc,taille) = make_id list_val [] 0
-  in Enum(nom, list_assoc, log2_sup (Big_int.big_int_of_int taille))
- 
-
-let ikind_of_range inf sup = 
-  let (b_inf, b_sup) = 
-    if (Nat.compare inf sup)<=0 then (inf, sup)
-    else (sup, inf)
-  in
-    begin
-      let (bit_signe,signe) = 
-	if (Nat.compare b_inf Nat.zero)<0 then (1,Newspeak.Signed)
-	else (0,Newspeak.Unsigned)
-      in
-      let max = Big_int.max_big_int
-	(Big_int.abs_big_int (Nat.to_big_int b_inf))
-	(Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int b_sup)))
-      in
-      let nb_bit = (log2_sup max) + bit_signe
-      in 
-	(signe, nb_bit)
-    end
+  in Enum(nom, list_assoc, Ada_config.size_of_enum taille)
+ 	  
+let ikind_of_range inf sup = (Newspeak.Signed, 
+			      Ada_config.size_of_range inf sup)
 	
 let make_range nom exp_b_inf exp_b_sup = 
   IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)
 
-      
-    
+let check_compil_unit_name compil_unit file_name = 
+  let expected_name = Filename.chop_extension file_name in
+  let subprog_name spec = match spec with
+    | Function(name,_,_) -> name
+    | Procedure(name,_) -> name in
+  let (_,lib_item,_) = compil_unit in
+  let name = 
+    match lib_item with
+      | Spec(SubProgramSpec(spec)) -> subprog_name spec
+      | Spec(PackageSpec(name,_)) -> name
+      | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
+      | Body(PackageBody(name,_,_,_)) -> name
+  in
+    match name with 
+      | ([],ident) -> ident=expected_name
+      | _ -> false

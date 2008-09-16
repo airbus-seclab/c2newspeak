@@ -495,26 +495,28 @@ let string_of_cast t1 t2 =
     | (Ptr, Int _) -> "from pointer to integer"
     | _ -> (string_of_scalar t1)^" -> "^(string_of_scalar t2)
 
+let print_castor_err t t' =
+  let msg = "Probable invalid cast "^(string_of_cast t t') in
+    if !Npkcontext.castor_allowed 
+    then Npkcontext.print_warning "Npkil.print_castor_err" msg
+    else begin
+      Npkcontext.error "Npkil.print_castor_err" 
+	(msg^", rewrite your code or try option --castor")
+  end
+
 (* TODO: code cleanup: this could be also used by cilcompiler ? *)
 let cast t e t' =
     match (t, t') with
       _ when t = t' -> e
     | (Int _, (Ptr|FunPtr)) when e = zero -> Const Nil
-    | (Ptr, Int ((_, n) as k)) 
-	when (!Npkcontext.castor_allowed 
-	       && (n = Config.size_of_ptr)) -> 
-	Npkcontext.print_warning "Npkil.cast"
-	  ("Probable invalid cast "^(string_of_cast t t'));
-	  UnOp (PtrToInt k, e)
-    | (Int ((_, n) as k), Ptr) 
-	when (!Npkcontext.castor_allowed 
-	       && (n = Config.size_of_ptr)) -> 
-	Npkcontext.print_warning "Npkil.cast"
-	  ("Probable invalid cast "^(string_of_cast t t'));
-	  UnOp (IntToPtr k, e)
-    | (FunPtr, Ptr) when !Npkcontext.castor_allowed ->
-	Npkcontext.print_warning "Npkil.cast"
-	  ("Probable invalid cast "^(string_of_cast t t'));
+    | (Ptr, Int ((_, n) as k)) when (n = Config.size_of_ptr) -> 
+	print_castor_err t t';
+	UnOp (PtrToInt k, e)
+    | (Int ((_, n) as k), Ptr) when (n = Config.size_of_ptr) -> 
+	print_castor_err t t';
+	UnOp (IntToPtr k, e)
+    | (FunPtr, Ptr) ->
+	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | (Float _, Int (sign, _)) -> 

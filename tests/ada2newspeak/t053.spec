@@ -7,11 +7,11 @@ Global variables
 extern uint1 t097.a;
 
 Function definitions
-main() {
+t053() {
   do {
-    int32 t098.proc.arg1;
+    int32 t097.proc.arg1;
     0- =(int32) 12;
-    t098.proc();
+    t097.proc();
   } with lbl0: {
   }
 }
@@ -21,10 +21,10 @@ main() {
 Newspeak output
 ---------------
 t053.adb
-main() {
-  (t053.adb:9#100)^int32 t098.proc.arg1;
+t053() {
+  (t053.adb:9#100)^int32 t097.proc.arg1;
   (t053.adb:9#100)^0- =(int32) 12;
-  (t053.adb:9#100)^t098.proc();
+  (t053.adb:9#100)^t097.proc();
 }
 
 

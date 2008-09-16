@@ -23,12 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-let to_string string_of_elt sep l =
-  let rec to_string str l =
-    match l with
-	hd::[] -> str^(string_of_elt hd)
-      | hd::tl -> to_string (str^(string_of_elt hd)^sep) tl
-      | [] -> ""
-  in
-    to_string "" l
+val to_string: ('a -> string) -> string -> 'a list -> string
 
+(** Contrarily to ocaml List.merge ignores duplicates *)
+val merge: ('a -> 'a -> int) -> 'a list -> 'a list -> 'a list

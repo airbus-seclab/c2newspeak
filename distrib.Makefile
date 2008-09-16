@@ -24,7 +24,7 @@
 # email: charles.hymans@penjili.org
 #
 
-VERSION=1.3
+VERSION=1.4
 
 #utils
 CP=cp
@@ -75,5 +75,6 @@ clean: $(COMPONENTS)
 	@$(RM) $(CLEANFILES)
 
 clean-all:
-	$(MAKE) clean
-	$(RM) -r cil/cil $(CILDIR)
+	@$(MAKE) -s clean
+	@echo "Cleaning files for          "cil
+	@$(RM) -r cil/cil $(CILDIR)

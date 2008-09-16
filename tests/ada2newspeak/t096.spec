@@ -6,7 +6,7 @@ Global used
 Global variables
 
 Function definitions
-a() {
+t096() {
   do {
     0- =(int32) 10;
     goto lbl0;
@@ -19,8 +19,8 @@ a() {
 Newspeak output
 ---------------
 t096.adb
-a() {
-  (t096.adb:3#35)^0- =(int32) 10;
+t096() {
+  (t096.adb:3#38)^0- =(int32) 10;
 }
 
 

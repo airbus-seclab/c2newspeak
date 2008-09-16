@@ -23,13 +23,21 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = ((string, string) Hashtbl.t * stmt list)
+type prog = (vars * t)
 
-and stmt = (exp * exp)
+and t = (fundecs * stmt list)
+
+and vars = (string, string) Hashtbl.t
+
+and fundecs = (Newspeak.fid, string list) Hashtbl.t
+
+and stmt = 
+    Set of (exp * exp)
+  | Call of (exp * string list)
 
 and exp =
     Const
   | Var of string
   | Deref of exp
 
-val print: t -> unit
+val print: prog -> unit

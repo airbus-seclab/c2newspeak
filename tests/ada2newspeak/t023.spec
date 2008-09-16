@@ -6,7 +6,7 @@ Global used
 Global variables
 
 Function definitions
-t021() {
+t023() {
   do {
     uint1 b1;
     uint1 b2;
@@ -32,7 +32,7 @@ t021() {
 Newspeak output
 ---------------
 t023.adb
-t021() {
+t023() {
   (t023.adb:3#33)^uint1 b1;
   (t023.adb:3#33)^uint1 b2;
   (t023.adb:4#62)^uint1 b3;

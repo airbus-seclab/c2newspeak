@@ -25,9 +25,10 @@
 #
 
 TARGET=npkpointer
-DIRS=newspeak/ npkpointer/
+DIRS=utils/ newspeak/ npkpointer/
 FILES=version newspeak/newspeak \
-      npkpointer/list_utils npkpointer/ptrspeak npkpointer/npkpointer
+      utils/list_utils npkpointer/ptrspeak npkpointer/build \
+      npkpointer/results npkpointer/analysis npkpointer/npkpointer
 LIBX=nums.cmxa
 
 include common.Makefile

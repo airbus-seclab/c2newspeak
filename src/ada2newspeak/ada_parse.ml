@@ -22,16 +22,34 @@
   
 *)
 
+let lowercaseline inchannel buffer =
+  let l = input_line inchannel
+  in Buffer.add_string buffer ((String.lowercase l)^"\n")
+
+let rec lowercasechannel inchannel buffer =
+  try
+    begin
+      lowercaseline inchannel buffer;
+      lowercasechannel inchannel buffer
+    end
+  with
+    | End_of_file -> ()
 
 let parse (fname:string) :Syntax_ada.compilation_unit =
   let cin = open_in fname in
-  let lexbuf = Lexing.from_channel cin in
+  let buffer = Buffer.create 1000 in
+  let lexbuf = 
+    lowercasechannel cin buffer;
+    Lexing.from_string (Buffer.contents buffer) in    
     Lexer.init fname lexbuf;
     try
       let prog = Parser.s Lexer.token lexbuf 
       in
 	close_in cin;
-	prog
+	if Ada_utils.check_compil_unit_name prog fname
+	then prog
+	else Npkcontext.error "Ada_parse.parse"
+	  "file name does not match unit name"	  
     with Parsing.Parse_error -> 
       let start_pos = Lexing.lexeme_start_p lexbuf 
       and end_pos = Lexing.lexeme_end_p lexbuf 

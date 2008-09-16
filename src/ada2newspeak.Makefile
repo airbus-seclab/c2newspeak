@@ -32,7 +32,9 @@ newspeak.FILES=\
 	cir2npkil link
 ada2newspeak.FILES=\
 	params \
-	syntax_ada print_syntax_ada ada_utils \
+	syntax_ada print_syntax_ada \
+	ada_config \
+	ada_utils \
 	parser lexer ada_parse \
 	ada_normalize firstpass compiler \
 	ada2newspeak

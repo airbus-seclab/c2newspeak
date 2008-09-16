@@ -83,7 +83,6 @@ and contrainte =
   | RangeConstraint of expression*expression
   | IntegerRangeConstraint of Newspeak.bounds
   | FloatRangeConstraint of flottant*flottant
-  | NullRange
 
 and subtyp_indication = subtyp*contrainte option*subtyp option
 

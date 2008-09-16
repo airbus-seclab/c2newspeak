@@ -119,6 +119,18 @@ let translate (globals, spec) =
   let lbl_tbl = Hashtbl.create 10 in
   let lbl_cnt = ref default_lbl in
 
+  let find_compdef name =
+    try Hashtbl.find compdefs name
+    with Not_found -> 
+      Npkcontext.error "Firstpass.find_compdef" 
+	("unknown structure or union "^name)
+  in
+
+  let fields_of_comp name =
+    let (_, f, _, _) = find_compdef name in
+      f
+  in
+
   let new_lbl () =
     incr lbl_cnt;
     !lbl_cnt
@@ -147,7 +159,7 @@ let translate (globals, spec) =
     try Hashtbl.find symbtbl x
     with Not_found -> 
       Npkcontext.error "Firstpass.translate.typ_of_var" 
-	("Unknown identifier "^x)
+	("unknown identifier "^x)
   in
 
   let update_global x name loc (ct, init, t) =
@@ -261,10 +273,10 @@ let translate (globals, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Struct (n, f)) ->
-	    let (f, _) = process_struct (n, f) in
+	| (Sequence seq, Comp s) ->
+	    let f = fields_of_comp s in
 	      translate_field_sequence o f seq;
-	      Struct (n, None)
+	      t
 
 	| (Sequence _, _) -> 
 	    Npkcontext.error "Firstpass.translate_init"
@@ -356,8 +368,8 @@ let translate (globals, spec) =
 		o := !o + sz
 	      done
 		
-	| Struct s -> 
-	    let (f, _) = process_struct s in
+	| Comp s -> 
+	    let f = fields_of_comp s in
 	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
 	      List.iter fill_field f
 
@@ -377,7 +389,7 @@ let translate (globals, spec) =
 
   and add_glb_cstr str =
     let fname = Npkcontext.get_fname () in
-    let name = "!"^fname^".const_str_"^str in
+    let name = "!"^fname^".const_str_"^(String.escaped str) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
     let loc = Npkcontext.get_loc () in
     let (t, init) = translate_glb_init t (Some (Data (Str str))) in
@@ -401,8 +413,7 @@ let translate (globals, spec) =
 
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
-	  let n = comp_of_typ t in
-	  let (r, _, _) = Hashtbl.find compdefs n in
+	  let r = fields_of_comp (comp_of_typ t) in
 	  let (o, t) = List.assoc f r in
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
@@ -457,7 +468,7 @@ let translate (globals, spec) =
 
   and translate_exp e = 
     match e with
-      | Cst (c, t) -> (C.Const c, t)
+	Cst (c, t) -> (C.Const c, t)
 
       | Var x -> 
 	  let (v, t, _) = find_symb x in
@@ -598,7 +609,12 @@ let translate (globals, spec) =
 	    end;
 	    let e = Binop (op, lv, e) in
 	      translate_exp (Set (lv, e))
- 
+
+      | BlkExp blk ->
+	  let (blk, t) = ttranslate_blk blk in
+	  let e = C.exp_of_blk blk in
+	    (e, t)
+
       | Set _ | SetOp _ -> 
 	  Npkcontext.error "Firstpass.translate_exp" 
 	    "avoid assignments within expressions"
@@ -666,88 +682,7 @@ let translate (globals, spec) =
 
   and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
-  and translate_scalar_typ t =
-    match t with
-      | Int k -> N.Int k
-      | Float n -> N.Float n	
-      | Ptr (Fun _) -> N.FunPtr
-      | Ptr _ -> N.Ptr
-      | Va_arg -> N.Ptr
-      | _ -> 
-	  Npkcontext.error "Firstpass.translate_scalar_typ" 
-	    "scalar type expected"
-
-  and translate_typ t =
-    match t with
-	Void -> C.Void
-      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
-	  C.Scalar (translate_scalar_typ t)
-      | Fun ft -> 
-	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
-	  let (ft, _) = normalize_ftyp ft in
-	    C.Fun (translate_ftyp ft)
-      | Array (t, len) -> 
-	  let t = translate_typ t in
-	  let len = translate_array_len len in
-	    C.Array (t, len)
-(* TODO: do the same coding for Union *)
-      | Struct (n, f) ->
-	  let (f, sz) = process_struct (n, f) in
-	  let f = List.map translate_field f in
-	    C.Struct (f, sz)
-      | Union (n, _) when Hashtbl.mem compdefs n -> 
-	  let (f, sz, _) = Hashtbl.find compdefs n in
-	  let f = List.map translate_field f in
-	    C.Union (f, sz)
-      | Union (n, Some f) -> 
-	  let (f, sz) = process_union_fields n f in
-	  let f = List.map translate_field f in
-	    C.Union (f, sz)
-      | Union (n, _) -> 
-	  Npkcontext.error "Firstpass.translate_typ" ("unknown union "^n)
-
-      | Bitfield _ -> 
-	  Npkcontext.error "Firstpass.translate_typ" 
-	    "bitfields not allowed outside of structures"
-
-  and translate_array_len x =
-    match x with
-	None -> None
-      | Some e -> 
-	  let (e, _) = translate_exp e in
-	  let i = 
-	    try C.int_of_exp e 
-	    with Invalid_argument _ -> 
-(* TODO: should print the expression e?? *)
-	      Npkcontext.error "Firstpass.translate_typ" 
-		"invalid size for array"
-	  in
-	    if (i < 0) || (i > Config.max_array_length) then begin
-(* TODO: should print the expression e?? *)
-	      Npkcontext.error "Firstpass.translate_typ" 
-		"invalid size for array"
-	    end;
-	    if (i = 0) then begin
-	      Npkcontext.error "Firstpass.translate_typ" 
-		"array should have at least 1 element"
-	    end;
-	    Some i
-
-  and process_struct (name, f) =
-    try
-      let (f, sz, _) = Hashtbl.find compdefs name in
-	(f, sz)
-    with Not_found ->
-      match f with
-	  Some f -> 
-	    let (f, sz, a) = process_struct_fields f in
-	      Hashtbl.add compdefs name (f, sz, a);
-	      (f, sz)
-	| None -> 
-	    Npkcontext.error "Firstpass.process_struct" 
-	      ("unknown structure "^name)
-
-  and process_struct_fields f =
+  and process_struct_fields name f =
     let o = ref 0 in
     let last_align = ref 1 in
     let rec translate (t, x, loc) =
@@ -782,7 +717,8 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-      (f, sz, !last_align)
+      Hashtbl.add compdefs name (true, f, sz, !last_align);
+      f
 
   and process_union_fields name f =
     let n = ref 0 in
@@ -796,8 +732,63 @@ let translate (globals, spec) =
 	(x, (0, t))
     in
     let f = List.map translate f in
-      Hashtbl.add compdefs name (f, !n, !align);
-      (f, !n)
+      Hashtbl.add compdefs name (false, f, !n, !align);
+      f
+
+  and translate_scalar_typ t =
+    match t with
+      | Int k -> N.Int k
+      | Float n -> N.Float n	
+      | Ptr (Fun _) -> N.FunPtr
+      | Ptr _ -> N.Ptr
+      | Va_arg -> N.Ptr
+      | _ -> 
+	  Npkcontext.error "Firstpass.translate_scalar_typ" 
+	    "scalar type expected"
+
+  and translate_typ t =
+    match t with
+	Void -> C.Void
+      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
+	  C.Scalar (translate_scalar_typ t)
+      | Fun ft -> 
+	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
+	  let (ft, _) = normalize_ftyp ft in
+	    C.Fun (translate_ftyp ft)
+      | Array (t, len) -> 
+	  let t = translate_typ t in
+	  let len = translate_array_len len in
+	    C.Array (t, len)
+      | Comp s ->
+	  let (is_struct, f, sz, _) = find_compdef s in
+	  let f = List.map translate_field f in
+	    if is_struct then C.Struct (f, sz) else C.Union (f, sz)
+      | Bitfield _ -> 
+	  Npkcontext.error "Firstpass.translate_typ" 
+	    "bitfields not allowed outside of structures"
+
+  and translate_array_len x =
+    match x with
+	None -> None
+      | Some e -> 
+	  let (e, _) = translate_exp e in
+	  let i = 
+	    try C.int_of_exp e 
+	    with Invalid_argument _ -> 
+(* TODO: should print the expression e?? *)
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"invalid size for array"
+	  in
+	    if (i < 0) || (i > Config.max_array_length) then begin
+(* TODO: should print the expression e?? *)
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"invalid size for array"
+	    end;
+	    if (i = 0) then begin
+	      Npkcontext.error "Firstpass.translate_typ" 
+		"array should have at least 1 element"
+	    end;
+	    Some i
 
   and translate_ftyp (args, ret) =
     let args = List.map (fun (t, _) -> translate_typ t) args in
@@ -821,7 +812,7 @@ let translate (globals, spec) =
     let decl = (C.Decl (translate_typ t, x, id), loc) in
       decl::init
 
-  and translate_enum (x, v) loc =
+  and add_enum (x, v, loc) =
     let v = translate_exp v in
     let v = cast v int_typ in
       (* TODO: factor this code *)
@@ -832,55 +823,81 @@ let translate (globals, spec) =
       end;
       push_enum (x, v) loc
 
-  and translate_blk x = 
+  and add_compdecl (x, is_struct, f) =
+    let _ = 
+      if is_struct then process_struct_fields x f
+      else process_union_fields x f
+    in
+      ()
+
+  and translate_blk x =
+    let (body, _) = ttranslate_blk x in
+      body
+
+      (* type and translate blk *)
+  and ttranslate_blk x = 
     let rec translate x =
-    match x with
-      | (EDecl (x, v), loc)::body -> 
-	  translate_enum (x, v) loc;
-	  let body = translate_blk body in
-	    remove_symb x;
-	    (body, [])
-	      
-      (* TODO: not good, simplify code *)
-      | (VDecl (None, t, _, _), loc)::body -> 
-	  Npkcontext.set_loc loc;
-	  let _ = translate_typ t in
-	    (translate_blk body, [])
-	      
-      | (VDecl (Some x, t, static, init), loc)::body when static -> 
-	  Npkcontext.set_loc loc;
-	  let (t, init) = translate_glb_init t init in
-	  let t' = translate_typ t in
-          (* TODO: code not nice: the signature of this function is not good *)
-	    add_static x loc (t, Some init, t');
-	    let body = translate_blk body in
+      match x with
+(* TODO: maybe this loc is unnecessary *)
+	| (EDecl d, _)::body -> 
+	    add_enum d;
+	    let (body, t) = ttranslate_blk body in
+	    let (x, _, _) = d in
 	      remove_symb x;
-	      (body, [])
+	      ((body, []), t)
+
+	| (CDecl d, _)::body ->
+	    add_compdecl d;
+	    let (body, t) = ttranslate_blk body in
+	    let (x, _, _) = d in
+	      Hashtbl.remove compdefs x;
+	      ((body, []), t)
+
+	(* TODO: not good, simplify code *)
+	| (VDecl (None, t, _, _), loc)::body -> 
+	    Npkcontext.set_loc loc;
+	    let _ = translate_typ t in
+	    let (body, t) = ttranslate_blk body in
+	      ((body, []), t)
+		
+	| (VDecl (Some x, t, static, init), loc)::body when static -> 
+	    Npkcontext.set_loc loc;
+	    let (t, init) = translate_glb_init t init in
+	    let t' = translate_typ t in
+           (* TODO: code not nice: the signature of this function is not good *)
+	      add_static x loc (t, Some init, t');
+	      let (body, t) = ttranslate_blk body in
+		remove_symb x;
+		((body, []), t)
 	  
-      | (VDecl (Some x, t, _, init), loc)::body -> 
-	  let init = translate_local_decl (x, t, init) loc in
-	  let body = translate_blk body in
-	    remove_symb x;
-	    (init@body, [])
+	| (VDecl (Some x, t, _, init), loc)::body -> 
+	    let init = translate_local_decl (x, t, init) loc in
+	    let (body, t) = ttranslate_blk body in
+	      remove_symb x;
+	      ((init@body, []), t)
 	      
-      (* TODO: do the case where suffix is <> [] *)
-      (* TODO: remove body, suffix from For, use goto and labels
-	 remove break. Use goto... *)
-      | ((Label _, _) as stmt)::(For ([], e, body, []), loc)::tl ->
-	  let blk = ((For ([], e, body@(stmt::[]), []), loc)::tl) in
-	    translate blk
+	(* TODO: do the case where suffix is <> [] *)
+	(* TODO: remove body, suffix from For, use goto and labels
+	   remove break. Use goto... *)
+	| ((Label _, _) as stmt)::(For ([], e, body, []), loc)::tl ->
+	    let blk = ((For ([], e, body@(stmt::[]), []), loc)::tl) in
+	      translate blk
+		
+	| (Label lbl, loc)::tl -> 
+	    let lbl = translate_lbl lbl in
+	    let ((x, tl), t) = translate tl in
+	      (([], (lbl, loc, x)::tl), t)
 
-      | (Label lbl, loc)::tl -> 
-	  let lbl = translate_lbl lbl in
-	  let (x, tl) = translate tl in
-	    ([], (lbl, loc, x)::tl)
+	| hd::[] -> 
+	    let (hd, t) = ttranslate_stmt hd in
+	      ((hd, []), t)
 
-      | hd::tl -> 
-	  let hd = translate_stmt hd in
-	  let (x, tl) = translate tl in
-	    (hd@x, tl)
-	      
-      | [] -> ([], [])      
+	| hd::tl -> 
+	    let hd = translate_stmt hd in
+	    let ((x, tl), t) = translate tl in
+	      ((hd@x, tl), t)
+		
+	| [] -> (([], []), Void)
     in
     let rec stitch (x, tl) =
       match tl with
@@ -889,17 +906,17 @@ let translate (globals, spec) =
 	    let blk = (C.Block (x, Some (lbl, [])), loc)::blk in
 	      stitch (blk, tl)
     in
-      stitch (translate x)
+    let (blk, t) = translate x in
+      (stitch blk, t)
 
-  and translate_stmt (x, loc) = 
-    Npkcontext.set_loc loc;
-    match x with
-      | Exp (Set set) -> 
-	  let (set, _) = translate_set set in
-	    (C.Set set, loc)::[]
-
-      | Exp (SetOp (lv, op, e)) ->
-	  let (lv', _) = translate_lv lv in
+  and translate_stmt_exp loc e =
+    match e with
+	Set set -> 
+	  let (set, t) = translate_set set in
+	    ((C.Set set, loc)::[], t)
+	  
+      | SetOp (lv, op, e) ->
+	  let (lv', t) = translate_lv lv in
 	  let (pref, _, post) = C.normalize_lv lv' in
 	    (* TODO: should factor this code *)
 	    if (pref <> []) || (post <> []) then begin
@@ -907,38 +924,53 @@ let translate (globals, spec) =
 		"expression without side-effects expected"
 	    end;
 	    let e = Binop (op, lv, e) in
-	      translate_stmt (Exp (Set (lv, e)), loc)
+	      (translate_stmt (Exp (Set (lv, e)), loc), t)
 
-      | Exp (Cast (e, Void)) -> 
+      | Cast (e, Void) -> 
 	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
 	    "cast to void should be avoided";
-	  translate_stmt (Exp e, loc)
+	  (translate_stmt (Exp e, loc), Void)
 
-      | Exp e -> 
-	  let (e, _) = translate_exp e in
-	    (C.Exp e, loc)::[]
+      | IfExp (c, e1, e2) ->
+	  let blk1 = (Exp e1, loc)::[] in
+	  let blk2 = (Exp e2, loc)::[] in
+	    (translate_stmt (If (c, blk1, blk2), loc), Void)
 
-      | Break -> (C.Goto brk_lbl, loc)::[]
+      | _ -> 
+	  let (e, t) = translate_exp e in
+	    ((C.Exp e, loc)::[], t)
 
-      | Continue -> (C.Goto cnt_lbl, loc)::[]
+  and translate_stmt x =
+    let (stmt, _) = ttranslate_stmt x in
+      stmt
+	
+	(* type and translate_stmt *)
+  and ttranslate_stmt (x, loc) = 
+    Npkcontext.set_loc loc;
+    match x with
+	Exp e -> translate_stmt_exp loc e
 
-      | Return None -> (C.Goto ret_lbl, loc)::[]
+      | Break -> ((C.Goto brk_lbl, loc)::[], Void)
+
+      | Continue -> ((C.Goto cnt_lbl, loc)::[], Void)
+
+      | Return None -> ((C.Goto ret_lbl, loc)::[], Void)
 
       | Return (Some e) ->
 	  let set = (Exp (Set (Var ret_name, e)), loc) in
 	  let return = (Return None, loc) in
-	    translate_blk (set::return::[])
+	    ttranslate_blk (set::return::[])
 
       | Goto lbl -> 
 	  let lbl = translate_lbl lbl in
-	    (C.Goto lbl, loc)::[]
+	    ((C.Goto lbl, loc)::[], Void)
 
       | If (e, blk1, blk2) ->
 	  let blk1 = translate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
-	    translate_if loc (e, blk1, blk2)
+	    (translate_if loc (e, blk1, blk2), Void)
 
-      | Block body -> (C.Block (translate_blk body, None), loc)::[]
+      | Block body -> ((C.Block (translate_blk body, None), loc)::[], Void)
 
       | For (init, e, body, suffix) ->
 	  let init = (C.Block (translate_blk init, Some (cnt_lbl, [])), loc) in
@@ -947,7 +979,7 @@ let translate (globals, spec) =
 	  let body = (C.Block (guard@body, Some (cnt_lbl, [])), loc) in
 	  let suffix = translate_blk suffix in
 	  let loop = (C.Loop (body::suffix), loc) in
-	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
+	    ((C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[], Void)
 
       | CSwitch (e, choices, default) -> 
 	  let (e, _) = translate_exp e in
@@ -957,11 +989,10 @@ let translate (globals, spec) =
 	  let body = translate_cases (last_lbl, switch) choices in
 	  let default = translate_blk default in
 	  let body = (C.Block (body, Some (default_lbl, [])), loc)::default in
-	    (C.Block (body, Some (brk_lbl, [])), loc)::[]
+	    ((C.Block (body, Some (brk_lbl, [])), loc)::[], Void)
 
-      | Label _ | VDecl _ | EDecl _ -> 
-	  Npkcontext.error "Firstpass.translate_stmt"
-	    "unreachable code"
+      | Label _ | VDecl _ | EDecl _ | CDecl _ -> 
+	  Npkcontext.error "Firstpass.translate_stmt" "unreachable code"
 
   and translate_if loc (e, blk1, blk2) =
     let (t, duplicate_blk1, duplicate_blk2) = build_tree e in
@@ -1144,8 +1175,8 @@ let translate (globals, spec) =
 
   and align_of t =
     match t with
-	Struct (n, _) | Union (n, _) ->
-	  let (_, _, a) = 
+	Comp n ->
+	  let (_, _, _, a) = 
 	    try Hashtbl.find compdefs n
 	    with Not_found -> 
 	      Npkcontext.error "Firstpass.size_of_struct" 
@@ -1171,7 +1202,7 @@ let translate (globals, spec) =
 	FunctionDef (f, Fun ft, static, body) ->
 	  current_fun := f;
 	  let (ft, args) = normalize_ftyp ft in
-	  let ft'= translate_ftyp ft in
+	  let ft' = translate_ftyp ft in
 	    (* TODO: not nice the signature of this function is not good *)
 	  let f' = update_funtyp f static ft ft' loc in
 	  let formalids = add_formals loc ft in
@@ -1187,12 +1218,8 @@ let translate (globals, spec) =
 	  Npkcontext.error "Firstpass.translate_global" 
 	    "function type expected"
 
-      | GlbEDecl d -> translate_enum d loc
-
       (* TODO: not good, simplify this code *)
-      | GlbVDecl ((None, t, _, _), _) -> 
-	  let _ = translate_typ t in
-	    ()
+      | GlbVDecl ((None, _, _, _), _) -> ()
 
 (* TODO: put this check in parser ?? *)
       | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 
@@ -1218,6 +1245,8 @@ let translate (globals, spec) =
 		  if static then add_static x loc (t, init, t')
 		  else add_global x loc (t, init, t')
 	  end
+
+      | GlbEDecl _ | GlbCDecl _ -> ()
   in
     
   let translate_token x =
@@ -1240,18 +1269,26 @@ let translate (globals, spec) =
   in
 
 (* TODO: a tad hacky!! Think about it *)
+(* TODO: could be done in the parser *)
   let collect_glb_structdefs (x, _) =
     match x with
-	GlbVDecl ((_, t, _, _), _) -> 
-	  begin try 
-	    let _ = translate_typ t in
-	      ()
-	  with _ -> ()
-	  end
+	GlbCDecl d -> add_compdecl d
+      | GlbEDecl d -> add_enum d
       | _ -> ()
   in
 
+  let add_gnuc_symbols () =
+    let loc = Newspeak.dummy_loc "__gnuc_symbol" in
+    let f = "__builtin_strchr" in
+    let t = ((Ptr char_typ, "str")::(char_typ, "char")::[], Ptr char_typ) in
+    let ct = translate_proto_ftyp f t in
+      (* TODO: this signature is really not nice for update_funtyp!!! *)
+    let _ = update_funtyp f false t ct loc in
+      ()
+  in
+
 (* TODO: a tad inefficient *)
+    if !Npkcontext.gnuc then add_gnuc_symbols ();
     List.iter collect_glb_structdefs globals;
     List.iter translate_global globals;
     let spec = List.map (List.map translate_token) spec in

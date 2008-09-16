@@ -1,1 +1,1 @@
-Fatal error: Invalid cast from pointer to integer in 006.c line 34
+Fatal error: Probable invalid cast from pointer to integer, rewrite your code or try option --castor in 006.c line 34

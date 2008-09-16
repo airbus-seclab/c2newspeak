@@ -32,8 +32,9 @@ let gnuc_tok_tbl = Hashtbl.create 50
 
 let _ = 
   Hashtbl.add gnuc_tok_tbl "__extension__" EXTENSION;
-  Hashtbl.add gnuc_tok_tbl "__attribute__" ATTRIBUTE;
-  Hashtbl.add gnuc_tok_tbl "__const" CONST;
+  (* prevent warnings when compiling in -pedantic *)
+
+  Hashtbl.add gnuc_tok_tbl "__attribute__" ATTRIBUTE;  
   Hashtbl.add gnuc_tok_tbl "__format__" FORMAT;
   Hashtbl.add gnuc_tok_tbl "__restrict" RESTRICT;
   Hashtbl.add gnuc_tok_tbl "__format_arg__" FORMAT_ARG;
@@ -41,12 +42,44 @@ let _ =
   Hashtbl.add gnuc_tok_tbl "__scanf__" SCANF;
   Hashtbl.add gnuc_tok_tbl "__builtin_va_list" VA_LIST;
   Hashtbl.add gnuc_tok_tbl "__cdecl__" CDECL_ATTR;
+  Hashtbl.add gnuc_tok_tbl "__gnu_inline__" GNU_INLINE;
   Hashtbl.add gnuc_tok_tbl "__inline__" INLINE;
+  Hashtbl.add gnuc_tok_tbl "__inline" INLINE;
   Hashtbl.add gnuc_tok_tbl "__always_inline__" ALWAYS_INLINE;
   Hashtbl.add gnuc_tok_tbl "noreturn" NORETURN;
+  Hashtbl.add gnuc_tok_tbl "__noreturn__" NORETURN;
   Hashtbl.add gnuc_tok_tbl "dllimport" DLLIMPORT;
   Hashtbl.add gnuc_tok_tbl "__asm__" ASM;
-  Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL
+  Hashtbl.add gnuc_tok_tbl "__cdecl" CDECL;
+  Hashtbl.add gnuc_tok_tbl "__nothrow__" NOTHROW;
+  (* tells the compiler the function does not throw an exception *)
+
+  Hashtbl.add gnuc_tok_tbl "__pure__" PURE;
+  (* tells the compiler the function has no side-effects other than the 
+     return value which depends on the arguments and globals *)
+
+  Hashtbl.add gnuc_tok_tbl "__const" CONST;
+  Hashtbl.add gnuc_tok_tbl "__const__" CONST;
+  (* for function slightly more strict than pure, since const functions
+     are assumed not to read global variables *)
+
+  Hashtbl.add gnuc_tok_tbl "__nonnull__" NONNULL;
+  (* tells the compiler the argument should always be a non-null pointer *)
+
+  Hashtbl.add gnuc_tok_tbl "__deprecated__" DEPRECATED;
+  (* generates warnings when the function is used *)
+
+  Hashtbl.add gnuc_tok_tbl "__malloc__" MALLOC;
+  Hashtbl.add gnuc_tok_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
+  Hashtbl.add gnuc_tok_tbl "__mode__" MODE;
+  Hashtbl.add gnuc_tok_tbl "__QI__" QI;
+  Hashtbl.add gnuc_tok_tbl "__HI__" HI;
+  Hashtbl.add gnuc_tok_tbl "__SI__" SI;
+  Hashtbl.add gnuc_tok_tbl "__word__" SI;
+  Hashtbl.add gnuc_tok_tbl "__DI__" DI;
+  Hashtbl.add gnuc_tok_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
+  Hashtbl.add gnuc_tok_tbl "__packed__" PACKED
+
 
 let set_loc lexbuf pos = 
   lexbuf.lex_curr_p <- pos;
@@ -76,9 +109,7 @@ let int_of_hex_character str =
 let int_of_oct_character str =
   let str = "0o"^str in
     int_of_string str
-      
-let int_of_character str = int_of_char (str.[1])
-
+ 
 let standard_token str =
   if Synthack.is_type str then TYPEDEF_NAME str 
   else IDENTIFIER str
@@ -134,9 +165,6 @@ let oct_digit = ['0'-'7']
 let hex_digit = digit | ['A'-'F'] 
 let lower_case_hex_digit = digit | ['a'-'f']
 
-let string = '"' ([^'"']* as value) '"'
-let wide_string = 'L''"' [^'"']* '"'
-
 let sign = ("U"|"u") as sign
 let length = ("L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
@@ -150,12 +178,15 @@ let float =
   ((digit+ | digit+ '.' digit+ | '.' digit+) (('e'|'E') '-'? digit+)? as value)
   ("F" as suffix)?
 let identifier = letter (letter|digit)*
-let character = '\'' _ '\''
-let hex_character = '\'' "\\x" (hex_digit hex_digit as value) '\''
+let wide_string = 'L''"' [^'"']* '"'
+
+let hex_character = 
+    "\\x" (hex_digit as value)
+  | "\\x" (hex_digit hex_digit as value)
 let oct_character = 
-  ("\'\\" (oct_digit as value) "\'")
-  | ("\'\\" (oct_digit oct_digit as value) "\'")
-  | ("\'\\" (oct_digit oct_digit oct_digit as value) "\'")
+    ("\\" (oct_digit as value))
+  | ("\\" (oct_digit oct_digit as value))
+  | ("\\" (oct_digit oct_digit oct_digit as value))
 let wide_character = 'L''\'' _ '\''
 
 (* TODO: remove argument spec_buf, it's a pain, put it in synthack ? *)
@@ -174,6 +205,7 @@ rule token spec_buf = parse
   | "extern"            { EXTERN }
   | "goto"              { GOTO }
   | "if"                { IF }
+  | "register"          { REGISTER }
   | "return"            { RETURN }
   | "sizeof"            { SIZEOF }
   | "static"            { STATIC }
@@ -193,24 +225,29 @@ rule token spec_buf = parse
   | "signed"            { SIGNED }
   | "unsigned"          { UNSIGNED }
   | "void"              { VOID }
+  | "volatile"          { VOLATILE }
 
 (* values *)
   | oct_integer         { INTEGER (Some "0", value, sign, length) }
   | integer             { INTEGER (None, value, sign, length) }
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
-  | character           { CHARACTER (int_of_character (Lexing.lexeme lexbuf)) }
-  | oct_character       { CHARACTER (int_of_oct_character value) }
-  | hex_character       { CHARACTER (int_of_hex_character value) }
-  | "\'\\t\'"           { CHARACTER 9 }
-  | "\'\\n\'"           { CHARACTER 10 }
-  | "\'\\v\'"           { CHARACTER 11 }
-  | "\'\\f\'"           { CHARACTER 12 }
-  | "\'\\r\'"           { CHARACTER 13 }
-  | "\'\\\\\'"          { CHARACTER 92 }
+  | "'" ((('\\'_)|[^'\\''\''])+ as c)
+    "'"                 { CHARACTER (character (Lexing.from_string c)) }
   | wide_character      { Npkcontext.error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }
-  | string              { STRING value }
+  | '"' ((('\\'_)|[^'\\''"'])* as str)
+    '"'                 { 
+      let lexbuf = Lexing.from_string str in
+      let res = ref "" in begin
+	  try
+	    while (true) do
+	      res := !res^(String.make 1 (Char.chr (character lexbuf)))
+	    done
+	  with Exit -> ()
+	end;
+	STRING (!res) 
+    }
   | wide_string         { Npkcontext.error "Lexer.token" 
 			    "wide string literals not supported" }
 (* punctuation *)
@@ -229,6 +266,7 @@ rule token spec_buf = parse
   | "=="                { EQEQ }
   | "!="                { NOTEQ }
   | "="                 { EQ }
+  | "&="                { AMPERSANDEQ }
   | "|="                { OREQ }
   | "-="                { MINUSEQ }
   | "+="                { PLUSEQ }
@@ -290,3 +328,17 @@ and spec spec_buf = parse
 			  cnt_line lexbuf; token spec_buf lexbuf }
   | _ as c              { Buffer.add_char spec_buf c; 
 			  spec spec_buf lexbuf }
+
+and character = parse
+  | oct_character       { int_of_oct_character value }
+  | hex_character       { int_of_hex_character value }
+  | "\\t"               { 9 }
+  | "\\n"               { 10 }
+  | "\\v"               { 11 }
+  | "\\f"               { 12 }
+  | "\\r"               { 13 }
+  | "\\\""              { 34 }
+  | "\\\'"              { 39 }
+  | "\\\\"              { 92 }
+  | _ as c              { int_of_char c }
+  | eof                 { raise Exit }

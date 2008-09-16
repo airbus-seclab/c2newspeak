@@ -6,7 +6,7 @@ Global used
 Global variables
 
 Function definitions
-proc() {
+t071() {
   do {
     uint1 x;
     uint1 y;
@@ -27,7 +27,7 @@ proc() {
 Newspeak output
 ---------------
 t071.adb
-proc() {
+t071() {
   (t071.adb:4#53)^uint1 x;
   (t071.adb:5#86)^uint1 y;
   (t071.adb:6#118)^uint1 z;

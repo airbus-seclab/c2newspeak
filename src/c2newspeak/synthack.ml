@@ -52,7 +52,7 @@ and decl = (base_typ * var_modifier)
 and field = (base_typ * var_modifier * B.exp option)
 
 type vdecl = (B.typ * string option * location)
-type edecl = (B.enumdecl * location)
+type sdecls = (B.enumdecl list * B.compdecl list)
 
 (** TODO: remove these globals, by putting them as argument of the lexer ??
     and then passing them through the tokens *)
@@ -90,46 +90,46 @@ let define_enum e loc =
 	      | Some n -> n
 	  in
 	  let n' = B.Binop (B.Plus, n, B.exp_of_int 1) in
-	    ((x, n), loc)::(define_enum tl n')
+	    (x, n, loc)::(define_enum tl n')
       | [] -> []
   in
     define_enum e (B.exp_of_int 0)
 
 let rec normalize_base_typ t =
-  match t with
-      Integer k -> ([], B.Int k)
-    | Float n -> ([], B.Float n)
-    | Struct (n, f) -> 
-	let (enumdecls, f) = normalize_compdef f in
-	  (enumdecls, B.Struct (n, f))
-    | Union (n, f) -> 
-	let (enumdecls, f) = normalize_compdef f in
-	  (enumdecls, B.Union (n, f))
-    | Void -> ([], B.Void)
-    | Enum f ->
-	let enumdecls = 
-	  match f with
-	      None -> []
-	    | Some (f, loc) -> define_enum f loc
-	in
-	  (enumdecls, B.Int C.int_kind)
-    | Va_arg -> ([], B.Va_arg)
-    | Name x -> 
-	try ([], Hashtbl.find typedefs x)
-	with Not_found ->
-	  Npkcontext.error "Synthack.normalize_base_typ" ("unknown type "^x)
+  let sdecls =
+    match t with
+	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None -> ([], [])
+      | Struct (n, f) -> normalize_compdef (n, true, f)
+      | Union (n, f) -> normalize_compdef (n, false, f)
+      | Enum Some (f, loc) -> (define_enum f loc, [])
+  in
+  let t = 
+    match t with
+	Integer k -> B.Int k
+      | Float n -> B.Float n
+      | Void -> B.Void
+      | Va_arg -> B.Va_arg
+      | Name x -> begin
+	  try Hashtbl.find typedefs x
+	  with Not_found -> 
+	    Npkcontext.error "Synthack.normalize_base_typ" ("unknown type "^x)
+	end
+      | Struct (n, _) | Union (n, _) -> B.Comp n
+      | Enum _ -> B.Int C.int_kind
+  in
+    (sdecls, t)
 
-and normalize_compdef f =
+and normalize_compdef (n, is_struct, f) =
   match f with
-      None -> ([], None)
+      None -> ([], [])
     | Some f -> 
-	let (enumdecls, f) = normalize_fields f in
-	  (enumdecls, Some f)
+	let ((edecls, sdecls), f) = normalize_fields f in
+	  (edecls, sdecls@(n, is_struct, f)::[])
 
 and normalize_fields f =
   match f with
       (b, v, bits)::tl ->
-	let (enumdecls, (t, x, loc)) = normalize_decl (b, v) in
+	let ((edecls, sdecls), (t, x, loc)) = normalize_decl (b, v) in
 	let t =
 	  match (bits, t) with
 	      (None, _) -> t
@@ -143,9 +143,9 @@ and normalize_fields f =
 	      Some x -> x
 	    | None -> "!anonymous_field"
 	in
-	let (enumdecls', f) = normalize_fields tl in
-	  (enumdecls@enumdecls', (t, x, loc)::f)
-    | [] -> ([], [])
+	let ((edecls', sdecls'), f) = normalize_fields tl in
+	  ((edecls@edecls', sdecls@sdecls'), (t, x, loc)::f)
+    | [] -> (([], []), [])
 
 and normalize_var_modifier b v =
   match v with
@@ -163,19 +163,19 @@ and normalize_var_modifier b v =
 	  "case not implemented yet"
 	  
 and normalize_arg a = 
-  let (enumdecls, (t, x, _)) = normalize_decl a in
+  let (symbdecls, (t, x, _)) = normalize_decl a in
   let x = 
     match x with
 	Some x -> x
       | None -> "silent argument"
   in
-    if (enumdecls <> []) then begin
+    if (symbdecls <> ([], [])) then begin
       Npkcontext.error "Synthack.normalize_arg" 
-	"enum definition not allowed in argument"
+	"symbol definition not allowed in argument"
     end;
     (t, x)
 
 and normalize_decl (b, v) =
-  let (enumdecls, t) = normalize_base_typ b in
+  let (symbdecls, t) = normalize_base_typ b in
   let d = normalize_var_modifier t v in
-    (enumdecls, d)
+    (symbdecls, d)

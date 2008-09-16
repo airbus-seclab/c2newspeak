@@ -146,12 +146,12 @@ let translate compil_unit =
     
   (* fonction de traduction des types *)  
   let rec translate_typ typ = match typ with
-    | Integer -> C.Scalar(Npk.Int(Npk.Signed, Config.size_of_int))
-    | Float -> C.Scalar(Npk.Float(Config.size_of_float))
-    | Boolean -> C.Scalar(Npk.Int(Npk.Unsigned, Config.size_of_boolean))
-    | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Config.size_of_char))
+    | Integer -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
+    | Float -> C.Scalar(Npk.Float(Ada_config.size_of_float))
+    | Boolean -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
+    | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
     | Declared(typ_decl, _) -> translate_declared typ_decl
-    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Config.size_of_int))
+    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
     | String -> Npkcontext.error "Firstpass.translate_typ"
 	"String not implemented"
   and translate_declared typ_decl = match typ_decl with
@@ -632,28 +632,29 @@ let translate compil_unit =
 			"ambiguous operands"
 	in 
 	  Ada_utils.check_operand_typ op typ;
-	  let tr_typ = translate_typ typ
+	  let tr_typ = translate_typ typ in
+	  let coerce n exp =  C.Unop (Npkil.Coerce (Npk.domain_of_typ n), exp)
 	  in   
 	    match (op,tr_typ) with	  
 		(* opérations sur entiers ou flottants *)
-	      | (Plus,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.PlusI, tr_e1, tr_e2), typ)
+	      | (Plus,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.PlusI, tr_e1, tr_e2)), typ)
 	      | (Plus,C.Scalar(Npk.Float(n))) -> 
 		  (C.Binop (Npk.PlusF (n), tr_e1, tr_e2), typ) 
-	      | (Moins,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.MinusI, tr_e1, tr_e2), typ)
+	      | (Moins,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.MinusI, tr_e1, tr_e2)), typ)
 	      | (Moins,C.Scalar(Npk.Float(n))) -> 
 		  (C.Binop (Npk.MinusF(n), tr_e1, tr_e2), typ)
-	      | (Fois,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.MultI, tr_e1, tr_e2), typ)
+	      | (Fois,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.MultI, tr_e1, tr_e2)), typ)
 	      | (Fois,C.Scalar(Npk.Float(n))) -> 
 		  (C.Binop (Npk.MultF (n), tr_e1, tr_e2), typ)
-	      | (Div,C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.DivI, tr_e1, tr_e2), typ)
+	      | (Div,C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.DivI, tr_e1, tr_e2)), typ)
 	      | (Div,C.Scalar(Npk.Float(n))) -> 
-		  (C.Binop (Npk.DivF (n), tr_e1, tr_e2), typ)		  
-	      | (Rem, C.Scalar(Npk.Int _)) -> 
-		  (C.Binop (Npk.Mod, tr_e1, tr_e2), typ)    
+		  (C.Binop (Npk.DivF (n), tr_e1, tr_e2), typ)
+	      | (Rem, C.Scalar(Npk.Int n)) -> 
+		  (coerce n (C.Binop (Npk.Mod, tr_e1, tr_e2)), typ)
 		    
 	      (* comparaisons *)
 	      | (Eq, C.Scalar(t)) -> 
@@ -1098,10 +1099,6 @@ let translate compil_unit =
 
   and make_check_constraint contrainte exp = 
     match contrainte with
-      | NullRange ->
-	  Npkcontext.error
-	    "Firstpass.make_check_constraint"
-	    "constraint error : value not in range"
       | IntegerRangeConstraint (v1,v2) -> 
 	  (* vérification d'une contrainte entière *)
 	  C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp)

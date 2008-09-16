@@ -1,1 +1,1 @@
-procedure P (X:Integer);
+procedure t099 (X:Integer);

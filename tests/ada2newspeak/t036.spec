@@ -19,7 +19,7 @@ t036.set() {
 
 t036.inc() {
   do {
-    Global(t036.x) =(int32) (Global(t036.x)_int32 + 1);
+    Global(t036.x) =(int32) coerce[-2147483648,2147483647] (Global(t036.x)_int32 + 1);
   } with lbl0: {
   }
 }
@@ -52,7 +52,7 @@ t036.appelprocedure() {
 }
 
 t036.inc() {
-  (t036.adb:7#74)^t036.x =(int32) (t036.x_int32 + 1);
+  (t036.adb:7#74)^t036.x =(int32) coerce[-2147483648,2147483647] (t036.x_int32 + 1);
 }
 
 t036.set() {

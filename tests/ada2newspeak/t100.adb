@@ -1,4 +1,4 @@
-function T058a (X:Integer) return Integer is
+function T100 (X:Integer) return Integer is
 begin
    return 2*X;
-end t058a;
+end t100;

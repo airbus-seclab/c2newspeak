@@ -25,7 +25,7 @@
 #
 
 TARGET=c2newspeak
-DIRS=$(CILDIR) newspeak/ c2newspeak/
+DIRS=$(CILDIR) utils/ newspeak/ c2newspeak/
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
 newspeak.FILES=\
@@ -42,7 +42,7 @@ c2newspeak.FILES=\
 	params \
         c2newspeak
 
-FILES=version \
+FILES=version utils/list_utils \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix c2newspeak/, $(c2newspeak.FILES))
 

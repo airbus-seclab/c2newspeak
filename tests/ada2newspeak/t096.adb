@@ -1,4 +1,4 @@
-function A return Integer is
+function t096 return Integer is
 begin
    return 10;
-end A;
+end t096;

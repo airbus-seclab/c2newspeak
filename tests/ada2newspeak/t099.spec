@@ -6,7 +6,7 @@ Global used
 Global variables
 
 Function definitions
-p() {
+t099() {
   do {
   } with lbl0: {
   }
@@ -17,7 +17,7 @@ p() {
 Newspeak output
 ---------------
 t099.adb
-p() {
+t099() {
 }
 
 
