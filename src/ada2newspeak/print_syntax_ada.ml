@@ -219,6 +219,22 @@ let object_state_to_string status = match status with
   | StaticVal(value) -> "StaticVal("^(value_to_string value)^")"
 
 
+let array_aggregate_to_string agregat = match agregat with
+  | NamedArrayAggregate(assoc_list) ->
+      let assoc_element_to_string (ident, exp) =
+	"("^ident^", "^(exp_to_string exp)^")" 
+      in 
+	list_to_string assoc_list 
+	  assoc_element_to_string
+	  ";\n" true
+
+
+let representation_clause_to_string clause = match clause with
+  | EnumerationRepresentation(ident, agregat) -> 
+      "EnumerationRepresentation("^ident^", "
+      ^(array_aggregate_to_string agregat)^")"
+
+
 let rec context_clause_to_string context_clause = 
   match context_clause with
     | With(name, loc, spec) -> "With("
@@ -253,7 +269,10 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | SubtypDecl(ident, subtyp_ind) ->
       "SubtypDecl("^ident^", "
       ^(subtyp_indication_to_string subtyp_ind)^")"
-     
+  | RepresentClause(clause) -> 
+      "RepresentClause("
+      ^(representation_clause_to_string clause)^")"
+
 
 and declarative_item_to_string decl_item = match decl_item with
   | BasicDecl(basic_declaration) -> "BasicDecl("

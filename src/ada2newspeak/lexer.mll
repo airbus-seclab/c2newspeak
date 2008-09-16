@@ -218,6 +218,8 @@ rule token = parse
   | ".." {DEUX_POINTS_H}
   | ',' {VIR}
   | "'" {QUOTE}
+  | "=>" {FLECHE}
+
 
   | '\n' {newline lexbuf; token lexbuf}
 

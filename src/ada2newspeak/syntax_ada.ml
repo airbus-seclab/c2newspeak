@@ -116,6 +116,12 @@ type object_state =
   | StaticVal of value (*constante statique*)
 
 
+(* the identifier is the one that choose the element : 
+   there are other possibilities for this choice, not yet implemented *)
+type array_aggregate = NamedArrayAggregate of (identifier * expression) list
+
+type representation_clause = EnumerationRepresentation of identifier*array_aggregate
+
 type context_clause = 
   | With of name*location*(spec*location) option
   | UseContext of use_clause
@@ -144,6 +150,7 @@ and basic_declaration =
   | SpecDecl of spec
   | NumberDecl of identifier list*expression*value option
   | SubtypDecl of identifier*subtyp_indication
+  | RepresentClause of representation_clause
 
 and declarative_item = 
   | BasicDecl of basic_declaration

@@ -1354,7 +1354,7 @@ and normalization compil_unit extern =
 	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
 	  add_subtyp (normalize_ident ident) subtyp loc global;
 	  SubtypDecl(ident, norm_subtyp_ind)
-	        
+    | RepresentClause _ -> item	        
   
   and normalize_decl_part decl_part global = 
     let rec normalize_decl_items items = 
@@ -1398,6 +1398,8 @@ and normalization compil_unit extern =
 	  List.iter 
 	    (fun x -> remove_cst (normalize_ident x)) 
 	    idents
+
+      | BasicDecl(RepresentClause _) -> ()
 
     in List.iter remove_decl_item decl_part
 
@@ -1525,6 +1527,7 @@ and normalization compil_unit extern =
 	      loc true	 
 	| SpecDecl _ -> ()
 	| UseDecl _ -> ()
+	| RepresentClause _ -> ()
 
     in match spec with
       | SubProgramSpec(Function(name, [], return_typ)) ->

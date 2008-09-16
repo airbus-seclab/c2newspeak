@@ -1491,10 +1491,15 @@ let translate compil_unit =
 	  (add_number loc v false)
 	  idents;
 	([],[])
-    | NumberDecl(_) -> 
+    | NumberDecl _ -> 
 	Npkcontext.error 
 	  "Firstpass.translate_basic_declaration" 
 	  "internal error : number declaration whitout value"
+    | RepresentClause _ ->
+	Npkcontext.error 
+	  "Firstpass.translate_basic_declaration" 
+	  "internal error : unexpected representation clause"
+
 
   in
   let translate_declarative_item (item,loc) = 
@@ -1542,6 +1547,10 @@ let translate compil_unit =
 	List.iter 
 	  (fun x -> ignore (remove_symb x)) 
 	  idents
+    | RepresentClause _ -> 
+	Npkcontext.error 
+	  "Firstpass.remove_basic_declaration" 
+	  "internal error : unexpected representation clause"
 
   in
 	  
@@ -1632,9 +1641,13 @@ let translate compil_unit =
 	    idents
       | NumberDecl(_) -> 
 	  Npkcontext.error 
-	    "Firstpass.translate_basic_declaration" 
+	    "Firstpass.translate_global_basic_declaration" 
 	    "internal error : number declaration whitout value"
-	  
+      | RepresentClause _ ->
+	  Npkcontext.error 
+	    "Firstpass.translate_global_basic_declaration" 
+	    "internal error : unexpected representation clause"
+
 
   (* quand cette fonction est appelée, on est dans le corps d'un
      package *)

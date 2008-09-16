@@ -70,7 +70,7 @@
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
 %token INTEGER FLOAT BOOLEAN CHARACTER
 %token NULL TRUE FALSE
-%token PAR_G PAR_D
+%token PAR_G PAR_D FLECHE
 %token VIR POINT_VIR POINT DEUX_POINTS DEUX_POINTS_H QUOTE
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -220,6 +220,7 @@ basic_declaration :
 | decl 
       {let (spec, loc) = $1
        in (SpecDecl(spec), loc)}
+| representation_clause POINT_VIR {(RepresentClause($1), loc ())}
 ;
 
 contrainte :
@@ -234,6 +235,19 @@ type_definition :
 | TYPE ident IS RANGE simpl_expr DEUX_POINTS_H simpl_expr POINT_VIR
 	    {TypeDecl(Ada_utils.make_range $2 $5 $7)}
 ;
+
+array_component_association :
+| ident FLECHE expression {($1, $3)} 
+
+named_array_aggregate :
+| array_component_association {[$1]}
+| array_component_association VIR named_array_aggregate {$1::$3}
+
+array_aggregate :
+| PAR_G named_array_aggregate PAR_D {NamedArrayAggregate($2)}
+
+representation_clause :
+| FOR ident USE array_aggregate {EnumerationRepresentation($2, $4)}
 
 
 instr_list :

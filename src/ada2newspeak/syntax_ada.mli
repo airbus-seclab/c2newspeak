@@ -106,7 +106,11 @@ type sub_program_spec =
   | Function of name*param list*subtyp
   | Procedure of name*(param list)
 
+(* the identifier is the one that choose the element : 
+   there are other possibilities for this choice, not yet implemented *)
+type array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
+type representation_clause = EnumerationRepresentation of identifier*array_aggregate
 
 type use_clause = name list
 
@@ -114,7 +118,6 @@ type object_state =
   | Variable
   | Constant (*constante dynamique, ou non encore évaluée*)
   | StaticVal of value (*constante statique*)
-
 
 type context_clause = 
   | With of name*location*(spec*location) option
@@ -144,6 +147,7 @@ and basic_declaration =
   | SpecDecl of spec
   | NumberDecl of identifier list*expression*value option
   | SubtypDecl of identifier*subtyp_indication
+  | RepresentClause of representation_clause
 
 and declarative_item = 
   | BasicDecl of basic_declaration
