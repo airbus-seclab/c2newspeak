@@ -111,11 +111,14 @@ object (this)
     
   val mutable globals = 0
   val mutable bytes = 0
+  val mutable void_fun = 0
+  val mutable arrays = []
   val counters = init_counters ()
   val funstats = Hashtbl.create 10
+  val globstats = Hashtbl.create 10
   val mutable current_counters = init_counters ()
   val callstats = Hashtbl.create 10
-  
+ 
   method count_call f =
     try
       let nb_of_calls = Hashtbl.find callstats f in
@@ -161,12 +164,20 @@ object (this)
       match x with
 	  InfLoop _ -> 
 	    current_counters.loop <- current_counters.loop + 1
+	| Decl (_, Array (t, sz), _) -> 
+	    arrays <- (t, sz)::arrays
+	    
 	| _ -> ()
     in
       true
 
-  method process_fun f _ =
+  method process_fun f fdec =
     Hashtbl.add funstats f current_counters;
+    begin
+      match (fst fdec) with
+	  [], None -> void_fun <- void_fun + 1
+	| _, _ -> ()
+    end;
     true
 
   method process_fun_after () =
@@ -175,6 +186,13 @@ object (this)
 
   method process_gdecl _ (t, _) =
     globals <- globals + 1;
+    begin
+      try 
+	let n = Hashtbl.find globstats t in
+	  Hashtbl.replace globstats t (n+1)
+      with
+	  Not_found -> Hashtbl.add globstats t 1
+    end;
     this#incr_bytes ((size_of ptr_sz t) / 8);
     true
 
@@ -225,17 +243,32 @@ object (this)
       Buffer.add_string res 
 	("\n"^"Number of calls to "^f^": "^(string_of_int x))
     in
+    let string_of_arrays arrays =
+      let s = "List of pairs (type, size) of each array: \n" in
+      List.fold_left (fun s (t, sz) -> 
+			  s^(string_of_typ t)^"\t"^(string_of_int sz)^"\n") s arrays
+    in
     let string_of_fun f counters =
       let f = if !obfuscate then string_of_int !fun_counter else f in
 	incr fun_counter;
 	Buffer.add_string res 
 	  ("\n"^"Function: "^f^"\n"^(string_of_counters counters))
     in
+    let string_of_globals globstats =
+      let s = "Number of globals with a given type: \n" in
+	Hashtbl.fold (fun typ nb s -> 
+			s^(string_of_typ typ)^": "
+			^(string_of_int nb)^"\n") globstats s
+    in
       Buffer.add_string res 
 	("Number of global variables: "^(string_of_int globals)^"\n"
 	 ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
 	 ^"Number of functions: "
-	 ^(string_of_int (Hashtbl.length funstats))^"\n");
+	 ^(string_of_int (Hashtbl.length funstats))^"\n"
+	 ^"Number of functions with (void -> void) prototype: " 
+	 ^(string_of_int void_fun)^"\n"
+	 ^(string_of_arrays arrays)
+	 ^(string_of_globals globstats));
       Buffer.add_string res (string_of_counters counters);
       Hashtbl.iter string_of_call callstats;
       if verbose then Hashtbl.iter string_of_fun funstats;
