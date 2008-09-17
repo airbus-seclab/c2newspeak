@@ -41,9 +41,7 @@ let output = ref "a"
 
 let add_counted_call f = fun_to_count := f::!fun_to_count
 
-let fun_typ = ref false
-let array_sz = ref false
-let glob_typ = ref false
+let more_verb = ref false
 
 let speclist = 
   [("--count-call", Arg.String add_counted_call, 
@@ -60,9 +58,7 @@ let speclist =
 
    ("--debug", Arg.Set debug, "debugging mode");
    
-   ("--funtyp", Arg.Set fun_typ, "counts the number of void -> void functions");
-   ("--arraysz", Arg.Set array_sz, "counts the number of arrays of each size");
-   ("--globtyp", Arg.Set glob_typ, "counts the number of globals of each type");
+   ("--more-verb", Arg.Set more_verb, "more statistics");
   ]
 
 type counters = 
@@ -173,7 +169,7 @@ object (this)
 	  InfLoop _ -> 
 	    current_counters.loop <- current_counters.loop + 1
 	| Decl (_, Array (t, sz), _) -> 
-	    if !array_sz then arrays <- (t, sz)::arrays else ()
+	    if !more_verb then arrays <- (t, sz)::arrays else ()
 	    
 	| _ -> ()
     in
@@ -181,7 +177,7 @@ object (this)
 
   method process_fun f fdec =
     Hashtbl.add funstats f current_counters;
-    if !fun_typ then 
+    if !more_verb then 
       match (fst fdec) with
 	  [], None -> void_fun <- void_fun + 1
 	| _, _ -> ()
@@ -194,7 +190,7 @@ object (this)
 
   method process_gdecl _ (t, _) =
     globals <- globals + 1;
-    if !glob_typ then 
+    if !more_verb then 
       try 
 	let n = Hashtbl.find globstats t in
 	  Hashtbl.replace globstats t (n+1)
@@ -273,13 +269,14 @@ object (this)
 	 ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
 	 ^"Number of functions: "
 	 ^(string_of_int (Hashtbl.length funstats))^"\n");
-      if !fun_typ then begin
-	Buffer.add_string res 
+      if !more_verb then 
+	begin
+	  Buffer.add_string res ((string_of_arrays arrays)^"\n");
+	  Buffer.add_string res ((string_of_globals globstats)^"\n");
+	  Buffer.add_string res 
 	  ("Number of functions with (void -> void) prototype: " 
-	   ^(string_of_int void_fun))
-      end;
-      if !array_sz then Buffer.add_string res ("\n"^(string_of_arrays arrays));
-      if !glob_typ then Buffer.add_string res (string_of_globals globstats);
+	   ^(string_of_int void_fun)^"\n")
+	end;
       Buffer.add_string res (string_of_counters counters);
       Hashtbl.iter string_of_call callstats;
       if verbose then Hashtbl.iter string_of_fun funstats;
