@@ -257,12 +257,12 @@ object (this)
     let string_of_arrays arraystats =
       let l = Hashtbl.fold (fun t n l -> 
 			  (t, n)::l) arraystats [] in
-      let l = List.sort (fun v1 v2 -> (snd v2) - (snd v1)) l in
+      let l = List.sort (fun v1 v2 -> (snd (fst v2)) - (snd (fst v1))) l in
       let s = "Number of occurrences of a given pair (array, size): \n" in
 	List.fold_left (fun s (t, n) -> 
 			  s ^ (string_of_typ (fst t))
 			  ^", "^(string_of_int (snd t))
-			  ^": "^(string_of_int n)) s l
+			  ^": "^(string_of_int n)^"\n") s l
       
     in
     let string_of_fun f counters =
