@@ -173,7 +173,7 @@ object (this)
 	  InfLoop _ -> 
 	    current_counters.loop <- current_counters.loop + 1
 	| Decl (_, Array (t, sz), _) -> 
-	    arrays <- (t, sz)::arrays
+	    if !array_sz then arrays <- (t, sz)::arrays else ()
 	    
 	| _ -> ()
     in
@@ -181,11 +181,11 @@ object (this)
 
   method process_fun f fdec =
     Hashtbl.add funstats f current_counters;
-    begin
+    if !fun_typ then 
       match (fst fdec) with
 	  [], None -> void_fun <- void_fun + 1
 	| _, _ -> ()
-    end;
+    else ();
     true
 
   method process_fun_after () =
@@ -194,13 +194,13 @@ object (this)
 
   method process_gdecl _ (t, _) =
     globals <- globals + 1;
-    begin
+    if !glob_typ then 
       try 
 	let n = Hashtbl.find globstats t in
 	  Hashtbl.replace globstats t (n+1)
       with
 	  Not_found -> Hashtbl.add globstats t 1
-    end;
+    else ();
     this#incr_bytes ((size_of ptr_sz t) / 8);
     true
 
