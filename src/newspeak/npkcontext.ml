@@ -84,8 +84,8 @@ let verbose boolean () =
 
 (* Preprocessing options *)
 
-let incl_files = ref ""
-let include_dir x = incl_files:=" -I "^x^(!incl_files)
+(*let incl_files = ref ""
+  let include_dir x = incl_files:=" -I "^x^(!incl_files) *)
 
 (* removed should be done by the tool user
 let preprocess fname =
@@ -180,10 +180,6 @@ let argslist = [
   ("-q", Arg.Unit (verbose false),
    "quiet mode: turn display off");
     
-  ("-I", Arg.String include_dir, 
-   "includes a pre-processing directory\n "
-   ^"                    (must be repeated for each directory)\n");
-
   ("-c", Arg.Set compile_only,
   "compiles only into a .no file");
   
