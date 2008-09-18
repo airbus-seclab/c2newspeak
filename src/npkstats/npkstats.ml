@@ -120,7 +120,6 @@ object (this)
   val counters = init_counters ()
   val funstats = Hashtbl.create 10
   val globstats = Hashtbl.create 10
-  val arraystats = Hashtbl.create 10
   val mutable current_counters = init_counters ()
   val callstats = Hashtbl.create 10
  
@@ -169,15 +168,6 @@ object (this)
       match x with
 	  InfLoop _ -> 
 	    current_counters.loop <- current_counters.loop + 1
-	| Decl (_, Array t, _) -> 
-	    if !more_verb then 
-	      begin
-		try
-		  let n = Hashtbl.find arraystats t in
-		    Hashtbl.replace arraystats t (n+1)
-		with 
-		    Not_found -> Hashtbl.replace arraystats t 1
-	      end
 	| _ -> ()
     in
       true
@@ -254,17 +244,7 @@ object (this)
       Buffer.add_string res 
 	("\n"^"Number of calls to "^f^": "^(string_of_int x))
     in
-    let string_of_arrays arraystats =
-      let l = Hashtbl.fold (fun t n l -> 
-			  (t, n)::l) arraystats [] in
-      let l = List.sort (fun v1 v2 -> (snd (fst v2)) - (snd (fst v1))) l in
-      let s = "Number of occurrences of a given pair (array, size): \n" in
-	List.fold_left (fun s (t, n) -> 
-			  s ^ (string_of_typ (fst t))
-			  ^", "^(string_of_int (snd t))
-			  ^": "^(string_of_int n)^"\n") s l
-      
-    in
+    
     let string_of_fun f counters =
       let f = if !obfuscate then string_of_int !fun_counter else f in
 	incr fun_counter;
@@ -272,13 +252,31 @@ object (this)
 	  ("\n"^"Function: "^f^"\n"^(string_of_counters counters))
     in
     let string_of_globals globstats =
-      let l = Hashtbl.fold(fun t n l -> 
-			     (t, n)::l) globstats [] in
+      let to_string s (typ, nb) = 
+	  s^(string_of_typ typ)^": "
+	  ^(string_of_int nb)^"\n"
+      in
+      let array_to_string s ((typ, sz), nb) = 
+	s^(string_of_typ typ)^", "
+	^(string_of_int sz)^": "
+	^(string_of_int nb)^"\n"
+      in
+      let add_array l typ nb =
+	match typ with 
+	    Array t -> (t, nb)::l 
+	  | _ -> l
+      in
+      let build_lists t n (l, ltab) =
+	let ltab = add_array ltab t n in
+	  (t, n)::l, ltab
+      in
+      let l, ltab = Hashtbl.fold build_lists globstats ([], []) in
       let l = List.sort (fun v1 v2 -> (snd v2) - (snd v1)) l in
+      let ltab = List.sort (fun v1 v2 -> (snd(fst(v2)) - snd(fst(v1)))) ltab in
       let s = "Number of globals with a given type: \n" in
-	List.fold_left (fun s (typ, nb) -> 
-			s^(string_of_typ typ)^": "
-			^(string_of_int nb)^"\n") s l
+      let s = List.fold_left to_string s l in
+      let s = s ^ "Number of occurences of a given pair (array type, size):\n" in
+	List.fold_left array_to_string s ltab
     in
       Buffer.add_string res 
 	("Number of global variables: "^(string_of_int globals)^"\n"
@@ -287,7 +285,6 @@ object (this)
 	 ^(string_of_int (Hashtbl.length funstats))^"\n");
       if !more_verb then 
 	begin
-	  Buffer.add_string res ((string_of_arrays arraystats)^"\n");
 	  Buffer.add_string res ((string_of_globals globstats)^"\n");
 	  Buffer.add_string res 
 	  ("Number of functions with (void -> void) prototype: " 
