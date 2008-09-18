@@ -136,17 +136,17 @@ let translate (globals, spec) =
     !lbl_cnt
   in
 
-  let add_var loc (t, x) =
+  let add_var (t, x) =
     let id = C.fresh_id () in
-      Hashtbl.add symbtbl x (VarSymb (C.Var id), t, loc);
+      Hashtbl.add symbtbl x (VarSymb (C.Var id), t);
       id
   in
 
   let remove_symb x = Hashtbl.remove symbtbl x in
 
-  let add_formals loc (args_t, ret_t) =
-    let ret_id = add_var loc (ret_t, ret_name) in
-    let args_id = List.map (add_var loc) args_t in
+  let add_formals (args_t, ret_t) =
+    let ret_id = add_var (ret_t, ret_name) in
+    let args_id = List.map add_var args_t in
       (ret_id, args_id)
   in
     
@@ -160,6 +160,31 @@ let translate (globals, spec) =
     with Not_found -> 
       Npkcontext.error "Firstpass.translate.typ_of_var" 
 	("unknown identifier "^x)
+  in
+
+  let is_enum x =
+    let (v, _) = find_symb x in
+    match v with
+	Enum _ -> true
+      | _ -> false
+  in
+
+  let find_enum x =
+    let (v, t) = find_symb x in
+    match v with
+	Enum i -> (i, t)
+      | _ -> 
+	  Npkcontext.error "Firstpass.translate.typ_of_var" 
+	  ("enum identifier expected: "^x)
+  in
+
+  let find_var x =
+    let (v, t) = find_symb x in
+    match v with
+	VarSymb v -> (v, t)
+      | _ -> 
+	  Npkcontext.error "Firstpass.translate.typ_of_var" 
+	    ("variable identifier expected: "^x)
   in
 
   let update_global x name loc (ct, init, t) =
@@ -179,10 +204,10 @@ let translate (globals, spec) =
 		  Npkcontext.error "Firstpass.update_global"
 		    ("global variable "^x^" initialized twice")
 	  in
-	    Hashtbl.replace symbtbl x (v, ct, loc);
+	    Hashtbl.replace symbtbl x (v, ct);
 	    Hashtbl.replace glbdecls name (t, loc, init)
       with Not_found -> 
-	Hashtbl.add symbtbl x (v, ct, loc);
+	Hashtbl.add symbtbl x (v, ct);
 	Hashtbl.add glbdecls name (t, loc, init)
   in
 
@@ -200,7 +225,7 @@ let translate (globals, spec) =
       update_global x name loc d
   in
 
-  let push_enum (x, i) loc = Hashtbl.add symbtbl x (Enum i, int_typ, loc) in
+  let push_enum (x, i) = Hashtbl.add symbtbl x (Enum i, int_typ) in
 
   let update_funbody f body =
     try
@@ -223,9 +248,6 @@ let translate (globals, spec) =
   in
 
   let rec cast (e, t) t' = 
-    (* TODO: code cleanup and factor??? 
-       let e = translate_exp_wo_array e in
-    *)
     let t = translate_typ t in
     let t' = translate_typ t' in
       C.cast (e, t) t'
@@ -240,7 +262,7 @@ let translate (globals, spec) =
 	      translate o t (Sequence seq)
 
 	| (Data e, _) -> 
-	    let e = cast (translate_exp_wo_array e) t in
+	    let e = cast (translate_exp e) t in
 	      res := (o, translate_scalar_typ t, e)::!res;
 	      t
 	      
@@ -380,16 +402,7 @@ let translate (globals, spec) =
   
   and translate_lv x =
     match x with
-	Var x ->
-	  let (v, t, _) = find_symb x in
-	  let lv = 
-	    match v with
-		VarSymb lv -> lv
-	      | Enum _ -> 
-		  Npkcontext.error "Firstpass.translate_lv"
-		    "Invalid left value: unexpected enum"
-	  in
-	    (lv, t)
+	Var x -> find_var x
 
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
@@ -399,9 +412,9 @@ let translate (globals, spec) =
 	    (C.Shift (lv, o), t)
 
       | Index (e, idx) -> 
-	  let (e', t) = translate_exp e in begin
-	    match (e', t) with
-		(C.Lval (lv, _), Array (t, len)) ->
+	  let (lv, t) = translate_lv e in begin
+	    match t with
+		Array (t, len) ->
 		  let (i, _) = translate_exp idx in
 		  let n = translate_array_len len in
 		  let len = C.length_of_array n lv in
@@ -410,7 +423,7 @@ let translate (globals, spec) =
 		  let o = C.Binop (N.MultI, o, sz) in
 		    (C.Shift (lv, o), t)
 
-	      | (_, Ptr _) -> translate_lv (Deref (Binop (Plus, e, idx)))
+	      | Ptr _ -> translate_lv (Deref (Binop (Plus, e, idx)))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
 		    "Array or pointer type expected"
@@ -427,188 +440,186 @@ let translate (globals, spec) =
 
       | Str str -> add_glb_cstr str
 
+      | Cast (lv, t) -> 
+	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
+	    "cast of left values should be avoided";
+	  let (lv, _) = translate_lv lv in
+	    (lv, t)
+
       | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
 
-  and translate_exp_wo_array e =
-    let (e, t) = translate_exp e in
-      match (e, t) with
-	| (C.Lval (lv, _), Array (t', _)) -> 
+  and translate_exp e =
+    let rec translate e =
+      match e with
+	  Cst (c, t) -> (C.Const c, t)
+	    
+	| Var x when is_enum x -> find_enum x
+	    
+	| Var _ | Field _ | Index _ | Deref _ | OpExp _ | Str _ -> 
+	    let (lv, t) = translate_lv e in
+	      (C.Lval (lv, translate_typ t), t)
+		
+	| AddrOf (Deref e) when !Npkcontext.dirty_syntax ->
+	    Npkcontext.print_warning "Firstpass.translate_exp" 
+	      ("unnecessary creation of a pointer from a dereference:"
+	       ^" rewrite the code");
+	    addr_of (deref e)
+	      
+	| AddrOf (Deref _) -> 
+	    Npkcontext.error "Firstpass.translate_exp" 
+	      ("unnecessary creation of a pointer from a dereference:"
+	       ^" rewrite the code")
+	      
+	| AddrOf (Index (lv, Cst (C.CInt i, _)))
+	    when Nat.compare i Nat.zero = 0 ->
+	    let (lv', t) = translate_lv lv in begin
+		match t with
+		    Array (elt_t, _) -> 
+		      let (e, _) = addr_of (lv', t) in
+			(e, Ptr elt_t)
+		  | Ptr _ -> translate (AddrOf (Deref lv))
+		  | _ -> 
+		      Npkcontext.error "Firstpass.translate_lv" 
+			"Array type expected"
+	      end
+						
+	| AddrOf (Index (lv, e)) -> 
+	    let base = AddrOf (Index (lv, exp_of_int 0)) in
+	      translate (Binop (Plus, base, e))
+		
+	| AddrOf lv -> addr_of (translate_lv lv)
+	    
+	(* Here c is necessarily positive *)
+	| Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
+	    (C.Const (C.CInt (Nat.neg c)), Int (N.Signed, sz))
+	      
+	| Unop (op, e) -> 
+	    let e = translate_exp e in
+	      translate_unop op e
+		
+	| Binop (op, e1, e2) -> 
+	    let e1 = translate_exp e1 in
+	    let e2 = translate_exp e2 in
+	      translate_binop op e1 e2
+		
+	| IfExp (c, e1, e2) -> begin
+	    try 
+	      let (c, _) = translate c in
+	      let v = C.eval_exp c in
+	      let e = if Nat.compare v Nat.zero <> 0 then e1 else e2 in
+		translate e
+	    with Invalid_argument _ -> 
+	      let loc = Npkcontext.get_loc () in
+		(* TODO: this is a bit inefficient, 
+		   e1 gets translated twice!! *)
+	      let (_, t) = translate_exp e1 in
+	      let (x, decl, v) = gen_tmp loc t in
+	      let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
+	      let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
+	      let set = (If (c, blk1, blk2), loc) in
+	      let set = translate_stmt set in
+		remove_symb x;
+		(C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
+	  end
+	    
+	| SizeofE e ->
+	    let (_, t) = translate e in
+	    let sz = (size_of t) / 8 in
+	      (C.exp_of_int sz, uint_typ)
+		
+	| Sizeof t -> 
+	    let sz = (size_of t) / 8 in
+	      (C.exp_of_int sz, uint_typ)
+		
+	| Cast (e, t) -> 
+	    let e = translate_exp e in
+	    let e = cast e t in
+	      (e, t)
+		
+	| Call (f, args) -> 
+	    let (lv, t) = translate_lv f in
+	      (* TODO: code not nice: improve!!! *)
+	      (* TODO: not nice, think about it *)
+	    let (f, ft, ft') = 
+	      match (lv, t) with
+		  (_, Ptr (Fun ft)) -> 
+		    let t = translate_typ t in
+		      (* TODO: code simplification, not good that 
+			 translate_ftyp does not give just a ftyp *)
+		      (* TODO: this normalization shouldn't be necessary, it 
+			 should be redundant. problem...*)
+		    let (ft, _) = normalize_ftyp ft in
+		    let ft' = translate_ftyp ft in
+		      (C.FunDeref (C.Lval (lv, t), ft'), ft, ft')
+		| (C.Global f, Fun ft) -> 
+		    (* TODO: this normalization shouldn't be necessary, it 
+		       should be redundant. problem...*)
+		    let (ft, _) = normalize_ftyp ft in
+		    let ft' = translate_ftyp ft in
+		      (C.Fname f, ft, ft')
+		| (C.Deref (e, _), Fun ft) -> 
+		    (* TODO: this normalization shouldn't be necessary, it 
+		       should be redundant. problem...*)
+		    let (ft, _) = normalize_ftyp ft in
+		    let ft' = translate_ftyp ft in
+		      (C.FunDeref (e, ft'), ft, ft')
+		| _ -> 
+		    Npkcontext.error "Firstpass.translate_exp" 
+		      "Function type expected"
+	    in
+	    let (args_t, ret_t) = ft in
+	    let args = translate_args args args_t in
+	      (C.Call (ft', f, args), ret_t)
+		
+	(* TODO: should find a way to put this and SetOp together!! *)
+	| Set set when !Npkcontext.dirty_syntax ->
+	    let loc = Npkcontext.get_loc () in
+	    let (set, t) = translate_set set in
+	    let (lv, t', _) = set in
+	    let e = C.Lval (lv, t') in
+	      Npkcontext.print_warning "Firstpass.translate_exp" 
+		"avoid assignments within expressions";
+	      (C.Pref ((C.Set set, loc)::[], e), t)
+		
+	| SetOp (lv, op, e) when !Npkcontext.dirty_syntax ->
+	    (* TODO: is this check really necessary!!! *)
+	    let (lv', _) = translate_lv lv in
+	    let (pref, _, post) = C.normalize_lv lv' in
+	      (* TODO: should factor this code *)
+	      if (pref <> []) || (post <> []) then begin
+		Npkcontext.error "Firstpass.translate_stmt" 
+		  "expression without side-effects expected"
+	      end;
+	      let e = Binop (op, lv, e) in
+		translate (Set (lv, e))
+		  
+	| BlkExp blk ->
+	    let (blk, t) = ttranslate_blk blk in
+	    let e = C.exp_of_blk blk in
+	      (e, t)
+		
+	| Set _ | SetOp _ -> 
+	    Npkcontext.error "Firstpass.translate_exp" 
+	      "avoid assignments within expressions"
+    in
+      match translate e with
+	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t')
-	| _ -> (e, t)
+	| v -> v
 
   and deref e =
-    let (e, t) = translate_exp_wo_array e in
+    let (e, t) = translate_exp e in
       match t with
 	  Ptr t -> (C.Deref (e, translate_typ t), t)
 	| _ -> Npkcontext.error "Firstpass.deref_typ" "pointer type expected"
 	    
   and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
 
-  and translate_exp e = 
-    match e with
-	Cst (c, t) -> (C.Const c, t)
-
-      | Var x -> 
-	  let (v, t, _) = find_symb x in
-	  let e = 
-	    match v with
-		Enum i -> i
-	      | VarSymb lv -> C.Lval (lv, translate_typ t)
-	  in
-	    (e, t)
-	      
-      | Field _ | Index _ | Deref _ | OpExp _ | Str _ -> 
-	  let (lv, t) = translate_lv e in
-	    (C.Lval (lv, translate_typ t), t)
-	    
-      | AddrOf (Deref e) when !Npkcontext.dirty_syntax ->
-	  Npkcontext.print_warning "Firstpass.translate_exp" 
-	    ("unnecessary creation of a pointer from a dereference:"
-	     ^" rewrite the code");
-	    addr_of (deref e)
-
-      | AddrOf (Deref _) -> 
-	  Npkcontext.error "Firstpass.translate_exp" 
-	    ("unnecessary creation of a pointer from a dereference:"
-	      ^" rewrite the code")
-
-      | AddrOf (Index (lv, Cst (C.CInt i, _)))
-	  when Nat.compare i Nat.zero = 0 ->
-	  let (lv', t) = translate_lv lv in begin
-	    match t with
-		Array (elt_t, _) -> 
-		  let (e, _) = addr_of (lv', t) in
-		    (e, Ptr elt_t)
-	      | Ptr _ -> translate_exp (AddrOf (Deref lv))
-	      | _ -> 
-		  Npkcontext.error "Firstpass.translate_lv" 
-		    "Array type expected"
-	  end
-
-      | AddrOf (Index (lv, e)) -> 
-	  let base = AddrOf (Index (lv, exp_of_int 0)) in
-	    translate_exp (Binop (Plus, base, e))
-	    
-      | AddrOf lv -> addr_of (translate_lv lv)
-	      
-(* Here c is necessarily positive *)
-      | Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
-	  (C.Const (C.CInt (Nat.neg c)), Int (N.Signed, sz))
-
-      | Unop (op, e) -> 
-	  let e = translate_exp_wo_array e in
-	    translate_unop op e
-
-      | Binop (op, e1, e2) -> 
-	  let e1 = translate_exp_wo_array e1 in
-	  let e2 = translate_exp_wo_array e2 in
-	    translate_binop op e1 e2
-
-      | IfExp (c, e1, e2) -> begin
-	  try 
-	    let (c, _) = translate_exp c in
-	    let v = C.eval_exp c in
-	    let e = if Nat.compare v Nat.zero <> 0 then e1 else e2 in
-	      translate_exp e
-	  with Invalid_argument _ -> 
-	    let loc = Npkcontext.get_loc () in
-	      (* TODO: this is a bit inefficient, e1 gets translated twice!! *)
-	    let (_, t) = translate_exp_wo_array e1 in
-	    let (x, decl, v) = gen_tmp loc t in
-	    let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
-	    let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
-	    let set = (If (c, blk1, blk2), loc) in
-	    let set = translate_stmt set in
-	      remove_symb x;
-	      (C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
-	  end
-	    
-      | SizeofE e ->
-	  let (_, t) = translate_exp e in
-	  let sz = (size_of t) / 8 in
-	    (C.exp_of_int sz, uint_typ)
-
-      | Sizeof t -> 
-	  let sz = (size_of t) / 8 in
-	    (C.exp_of_int sz, uint_typ)
-
-      | Cast (e, t) -> 
-(* TODO: is this ok?? *)
-	  let e = translate_exp_wo_array e in
-	  let e = cast e t in
-	    (e, t)
-
-      | Call (f, args) -> 
-	  let (lv, t) = translate_lv f in
-	    (* TODO: code not nice: improve!!! *)
-	    (* TODO: not nice, think about it *)
-	  let (f, ft, ft') = 
-	    match (lv, t) with
-		(_, Ptr (Fun ft)) -> 
-		  let t = translate_typ t in
-		    (* TODO: code simplification, not good that translate_ftyp
-		       does not give just a ftyp *)
-	    (* TODO: this normalization shouldn't be necessary, it should
-	       be redundant. problem...*)
-		  let (ft, _) = normalize_ftyp ft in
-		  let ft' = translate_ftyp ft in
-		    (C.FunDeref (C.Lval (lv, t), ft'), ft, ft')
-	      | (C.Global f, Fun ft) -> 
-	    (* TODO: this normalization shouldn't be necessary, it should
-	       be redundant. problem...*)
-		  let (ft, _) = normalize_ftyp ft in
-		  let ft' = translate_ftyp ft in
-		    (C.Fname f, ft, ft')
-	      | (C.Deref (e, _), Fun ft) -> 
-	    (* TODO: this normalization shouldn't be necessary, it should
-	       be redundant. problem...*)
-		  let (ft, _) = normalize_ftyp ft in
-		  let ft' = translate_ftyp ft in
-		    (C.FunDeref (e, ft'), ft, ft')
-	      | _ -> 
-		  Npkcontext.error "Firstpass.translate_exp" 
-		    "Function type expected"
-	  in
-	  let (args_t, ret_t) = ft in
-	  let args = translate_args args args_t in
-	    (C.Call (ft', f, args), ret_t)
-
-(* TODO: should find a way to put this and SetOp together!! *)
-      | Set set when !Npkcontext.dirty_syntax ->
-	  let loc = Npkcontext.get_loc () in
-	  let (set, t) = translate_set set in
-	  let (lv, t', _) = set in
-	  let e = C.Lval (lv, t') in
-	    Npkcontext.print_warning "Firstpass.translate_exp" 
-	      "avoid assignments within expressions";
-	    (C.Pref ((C.Set set, loc)::[], e), t)
-
-      | SetOp (lv, op, e) when !Npkcontext.dirty_syntax ->
-(* TODO: is this check really necessary!!! *)
-	  let (lv', _) = translate_lv lv in
-	  let (pref, _, post) = C.normalize_lv lv' in
-	    (* TODO: should factor this code *)
-	    if (pref <> []) || (post <> []) then begin
-	      Npkcontext.error "Firstpass.translate_stmt" 
-		"expression without side-effects expected"
-	    end;
-	    let e = Binop (op, lv, e) in
-	      translate_exp (Set (lv, e))
-
-      | BlkExp blk ->
-	  let (blk, t) = ttranslate_blk blk in
-	  let e = C.exp_of_blk blk in
-	    (e, t)
-
-      | Set _ | SetOp _ -> 
-	  Npkcontext.error "Firstpass.translate_exp" 
-	    "avoid assignments within expressions"
-
   and translate_set (lv, e) =
     let (lv, t) = translate_lv lv in
-    let e = cast (translate_exp_wo_array e) t in
+    let e = cast (translate_exp e) t in
       ((lv, translate_typ t, e), t)
 
   and init_va_args loc lv x =
@@ -629,7 +640,7 @@ let translate (globals, spec) =
     match x with
 	e::tl -> 
 	  let (args, sz) = translate_va_args tl in
-	  let (e, t) = translate_exp_wo_array e in
+	  let (e, t) = translate_exp e in
 	    ((e, t)::args, size_of t + sz)
       | [] -> ([], 0)
 
@@ -650,7 +661,7 @@ let translate (globals, spec) =
 	      (C.Pref (decl::init, e))::[]
 
 	| (e::args, (t, _)::args_t) ->
-	    let e = cast (translate_exp_wo_array e) t in
+	    let e = cast (translate_exp e) t in
 	      e::(translate_args args args_t)
 	| ([], []) -> []
 	| _ -> 
@@ -661,7 +672,7 @@ let translate (globals, spec) =
 
   and gen_tmp loc t =
     let x = "tmp"^(string_of_int !tmp_cnt) in
-    let id = add_var loc (t, x) in
+    let id = add_var (t, x) in
     let t = translate_typ t in
     let decl = (C.Decl (t, x, id), loc) in
       incr tmp_cnt;
@@ -783,7 +794,7 @@ let translate (globals, spec) =
 	  None -> ([], t)
 	| Some init -> translate_init t init
     in
-    let id = add_var loc (t, x) in
+    let id = add_var (t, x) in
     let v = C.Var id in
     let build_set (o, t, e) =
       let lv = C.Shift (v, C.exp_of_int o) in
@@ -793,7 +804,7 @@ let translate (globals, spec) =
     let decl = (C.Decl (translate_typ t, x, id), loc) in
       decl::init
 
-  and add_enum (x, v, loc) =
+  and add_enum (x, v) =
     let v = translate_exp v in
     let v = cast v int_typ in
       (* TODO: factor this code *)
@@ -802,7 +813,7 @@ let translate (globals, spec) =
 	Npkcontext.error "Firstpass.push_enum" 
 	  "expression without side-effects expected"
       end;
-      push_enum (x, v) loc
+      push_enum (x, v)
 
   and add_compdecl (x, is_struct, f) =
     let _ = 
@@ -823,7 +834,7 @@ let translate (globals, spec) =
 	| (EDecl d, _)::body -> 
 	    add_enum d;
 	    let (body, t) = ttranslate_blk body in
-	    let (x, _, _) = d in
+	    let (x, _) = d in
 	      remove_symb x;
 	      ((body, []), t)
 
@@ -1184,7 +1195,7 @@ let translate (globals, spec) =
 	  Npkcontext.error "Firstpass.update_fundef"
 	    ("previous definition of "^f^" does not match")
       end else begin
-	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct, loc);
+	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct);
 	Hashtbl.add fundefs f' (t, loc, None)
       end;
       (f', ct, args)
@@ -1205,7 +1216,7 @@ let translate (globals, spec) =
 	FunctionDef (f, Fun ft, static, body) ->
 	  current_fun := f;
 	  let (f', ft, args) = update_funtyp f static ft loc in
-	  let formalids = add_formals loc ft in
+	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
 	    update_funbody f' (formalids, body);
@@ -1249,10 +1260,10 @@ let translate (globals, spec) =
     match x with
 	SymbolToken x -> Newspeak.SymbolToken x
       | IdentToken x when Hashtbl.mem symbtbl x -> 
-	  let (v, _, _) = find_symb x in
+	  let (v, _) = find_var x in
 	  let x = 
 	    match v with
-		VarSymb (C.Global x) -> x
+		C.Global x -> x
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_token"
 		    "unexpected variable in specification"

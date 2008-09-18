@@ -1,3 +1,4 @@
+Warning: cast of left values should be avoided in 299.c line 28
 Newspeak output
 ---------------
 299.c

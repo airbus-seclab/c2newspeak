@@ -736,10 +736,10 @@ type_specifier:
 | UNION ident_or_tname                   { Union ($2, None) }
 | UNION ident_or_tname field_blk         { Union ($2, Some $3) }
 | TYPEDEF_NAME                           { Name $1 }
-| ENUM LBRACE enum_list RBRACE           { Enum (Some ($3, get_loc ())) }
+| ENUM LBRACE enum_list RBRACE           { Enum (Some $3) }
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
-  LBRACE enum_list RBRACE                { Enum (Some ($4, get_loc ())) }
+  LBRACE enum_list RBRACE                { Enum (Some $4) }
 | SHORT UNSIGNED INT                     { 
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "

@@ -37,7 +37,7 @@ type base_typ =
     | Struct of (string * field list option)
     | Union of (string * field list option)
     | Name of string
-    | Enum of ((string * B.exp option) list * location) option
+    | Enum of ((string * B.exp option) list) option
     | Va_arg
 
 and var_modifier = 
@@ -80,7 +80,7 @@ let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
 
-let define_enum e loc =
+let define_enum e =
   let rec define_enum e n =
     match e with
 	(x, v)::tl ->
@@ -90,7 +90,7 @@ let define_enum e loc =
 	      | Some n -> n
 	  in
 	  let n' = B.Binop (B.Plus, n, B.exp_of_int 1) in
-	    (x, n, loc)::(define_enum tl n')
+	    (x, n)::(define_enum tl n')
       | [] -> []
   in
     define_enum e (B.exp_of_int 0)
@@ -101,7 +101,7 @@ let rec normalize_base_typ t =
 	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None -> ([], [])
       | Struct (n, f) -> normalize_compdef (n, true, f)
       | Union (n, f) -> normalize_compdef (n, false, f)
-      | Enum Some (f, loc) -> (define_enum f loc, [])
+      | Enum Some f -> (define_enum f, [])
   in
   let t = 
     match t with

@@ -7,7 +7,7 @@ type base_typ =
     | Struct of (string * field list option)
     | Union of (string * field list option)
     | Name of string
-    | Enum of ((string * Csyntax.exp option) list * Newspeak.location) option
+    | Enum of ((string * Csyntax.exp option) list) option
     | Va_arg
 
 and var_modifier = 

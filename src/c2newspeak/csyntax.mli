@@ -42,7 +42,7 @@ and global =
 (* struct or union: composite *)
   | GlbCDecl of compdecl
 
-and enumdecl = string * exp * Newspeak.location
+and enumdecl = string * exp
 
 (* true for structure, false for union *)
 and compdecl = string * bool * declaration list
