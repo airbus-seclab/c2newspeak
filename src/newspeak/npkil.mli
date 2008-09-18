@@ -138,6 +138,8 @@ val string_of_unop: unop -> string
 
 val string_of_typ : typ -> string
 
+val string_of_tmp_size: tmp_size_t -> string
+
 val string_of_lval: lval -> string
 
 (* TODO: remove this function*)

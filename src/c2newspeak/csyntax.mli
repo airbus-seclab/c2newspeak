@@ -151,3 +151,5 @@ val float_cst_of_lexeme: (string * char option) -> cst
 val comp_of_typ: typ -> string
 
 val normalize_ftyp: ftyp -> (ftyp * string list)
+
+val string_of_exp: exp -> string

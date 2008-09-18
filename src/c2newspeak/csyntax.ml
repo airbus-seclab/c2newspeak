@@ -253,3 +253,24 @@ let float_cst_of_lexeme (value, suffix) =
 	    "unknown suffix for float"
   in
     (Cir.CFloat (f, lexeme), Float sz)
+
+let rec string_of_exp e =
+  match e with
+      Cst _ -> "Cst"
+    | Var _ -> "Var"
+    | Field _ -> "Field"
+    | Index _ -> "Index"
+    | Deref _ -> "Deref"
+    | AddrOf _ -> "AddrOf"
+    | Unop _ -> "Unop"
+    | IfExp _ -> "IfExp"
+    | Binop _ -> "Binop"
+    | Call _ -> "Call"
+    | Sizeof _ -> "Sizeof"
+    | SizeofE _ -> "SizeofE"
+    | Str _ -> "Str"
+    | Cast _ -> "Cast"
+    | Set _ -> "Set"
+    | SetOp _ -> "SetOp"
+    | OpExp _ -> "OpExp"
+    | BlkExp _ -> "BlkExp"

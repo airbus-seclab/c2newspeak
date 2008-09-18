@@ -81,7 +81,7 @@ let next_aligned o x =
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | SetOp _ -> 
+    | Set _ | SetOp _ | Str _ -> 
 	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e

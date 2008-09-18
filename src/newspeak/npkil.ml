@@ -138,11 +138,15 @@ let string_of_scalar s =
     | Ptr -> "ptr"
     | FunPtr -> "fptr"
 
+let string_of_tmp_size sz =
+  match sz with
+      Some sz -> string_of_size_t sz
+    | None -> "?"
+
 let rec string_of_typ t =
   match t with
       Scalar s -> string_of_scalar s
-    | Array (t, Some sz) -> (string_of_typ t)^"["^(string_of_size_t sz)^"]"
-    | Array (t, None) -> (string_of_typ t)^"[]"
+    | Array (t, sz) -> (string_of_typ t)^"["^(string_of_tmp_size sz)^"]"
     | Region (lst, sz) ->
 	let string_of_elt (off, t) = 
 	  (string_of_typ t)^" "^(string_of_size_t off) 

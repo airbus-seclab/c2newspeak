@@ -39,7 +39,7 @@ let translate_scalar t =
 	"value void not ignored as it ought to be"
     | _ -> 
 	Npkcontext.error "Compiler.translate_scalar" 
-	  "unexpected non scalar type"
+	  ("unexpected non scalar type: "^(string_of_typ t))
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
 

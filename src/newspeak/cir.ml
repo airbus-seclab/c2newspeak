@@ -542,11 +542,11 @@ let cast (e, t) t' =
 	  "value void not ignored as it ought to be"
     | _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
 
-let string_of_typ t =
+let rec string_of_typ t =
   match t with
     | Void -> "void"
     | Scalar t -> Newspeak.string_of_scalar t
-    | Array _ -> "a[i]"
+    | Array (t, sz) -> (string_of_typ t^"["^(Npkil.string_of_tmp_size sz)^"]")
     | Struct _ -> "{}"
     | Union _ -> "{}"
     | Fun _ -> "fun"
