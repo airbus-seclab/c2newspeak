@@ -495,6 +495,8 @@ relational_expression:
   shift_expression                         { Binop (Gt, $3, $1) }
 | relational_expression LTEQ 
   shift_expression                         { Unop (Not, Binop (Gt, $1, $3)) }
+| EXTENSION 
+  LPAREN compound_statement RPAREN         { BlkExp $3 }
 ;;
 
 equality_expression:
@@ -567,8 +569,6 @@ assignment_expression:
   assignment_expression                    { SetOp ($1, $2, $3) }
 | EXTENSION 
   LPAREN assignment_expression RPAREN      { $3 }
-| EXTENSION 
-  LPAREN compound_statement RPAREN         { BlkExp $3 }
 ;;
 
 assignment_operator:
