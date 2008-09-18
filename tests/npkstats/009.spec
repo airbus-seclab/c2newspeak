@@ -1,13 +1,13 @@
 Number of global variables: 4
 Total size of global variables (bytes): 138
 Number of functions: 3
-Number of occurrences of a given pair (array, size): 
-int8, 10: 1
-
 Number of globals with a given type: 
 int32: 2
 int8[10]: 1
 int32[30]: 1
+Number of occurences of a given pair (array type, size):
+int32, 30: 1
+int8, 10: 1
 
 Number of functions with (void -> void) prototype: 1
 Number of instructions: 17
