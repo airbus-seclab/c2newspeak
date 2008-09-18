@@ -496,7 +496,17 @@ relational_expression:
 | relational_expression LTEQ 
   shift_expression                         { Unop (Not, Binop (Gt, $1, $3)) }
 | EXTENSION 
-  LPAREN compound_statement RPAREN         { BlkExp $3 }
+  LPAREN relational_expression RPAREN      { $3 }
+| compound_statement                       { 
+    if not !Npkcontext.gnuc then begin
+      Npkcontext.error "Parser.relational_expression" 
+	"unexpected block, try option --gnuc"
+    end;
+    Npkcontext.report_dirty_warning "Parser.relational_expression"
+      ("blocks within expression are dangerous because of potential"
+       ^" side-effects");
+    BlkExp $1
+  }
 ;;
 
 equality_expression:

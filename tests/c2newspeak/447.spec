@@ -1,3 +1,4 @@
+Warning: blocks within expression are dangerous because of potential side-effects in 447.c line 30
 Newspeak output
 ---------------
 447.c

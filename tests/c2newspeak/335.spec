@@ -2,11 +2,11 @@ Warning: identifier s is defined as a type, avoid using it for another purpose i
 Warning: 'short' is not normalized: use 'short int' instead in 335.c line 32
 Warning: 'long' is not normalized: use 'long int' instead in 335.c line 33
 Warning: 'long long' is not standard: use 'long long int' instead in 335.c line 34
-Warning: init statement expected in 335.c line 39
-Warning: increment statement expected in 335.c line 41
-Warning: init statement expected in 335.c line 43
+Warning: init statement expected in 335.c line 40
+Warning: increment statement expected in 335.c line 42
+Warning: init statement expected in 335.c line 44
 Warning: halting condition should be explicit in 335.c line 44
-Warning: init statement expected in 335.c line 45
+Warning: init statement expected in 335.c line 46
 Newspeak output
 ---------------
 335.c
