@@ -202,26 +202,6 @@ let translate (globals, spec) =
 
   let push_enum (x, i) loc = Hashtbl.add symbtbl x (Enum i, int_typ, loc) in
 
-  let update_funtyp f static ct t loc =
-    let (fname, _, _) = loc in
-    let f' = if static then "!"^fname^"."^f else f in
-      if Hashtbl.mem symbtbl f then begin
-	try
-	  let (prev_t, _, _) = Hashtbl.find fundefs f' in
-	    if (t <> prev_t) then begin
-	      Npkcontext.error "Firstpass.update_fundef"
-		("different types for function "^f)
-	    end
-	with Not_found ->
-	  Npkcontext.error "Firstpass.update_fundef"
-	    ("previous definition of "^f^" does not match")
-      end else begin
-	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct, loc);
-	Hashtbl.add fundefs f' (t, loc, None)
-      end;
-      f'
-  in
-
   let update_funbody f body =
     try
       let (t, loc, prev_body) = Hashtbl.find fundefs f in
@@ -1188,13 +1168,35 @@ let translate (globals, spec) =
       | _ -> size_of t
   in
 
-  let translate_proto_ftyp f (args, ret) = 
-    if args = [] then begin
-      Npkcontext.print_warning "Firstpass.translate_proto_ftyp" 
+  let update_funtyp f static ct loc =
+    let (ct, args) = normalize_ftyp ct in
+    let t = translate_ftyp ct in
+    let (fname, _, _) = loc in
+    let f' = if static then "!"^fname^"."^f else f in
+      if Hashtbl.mem symbtbl f then begin
+	try
+	  let (prev_t, _, _) = Hashtbl.find fundefs f' in
+	    if (t <> prev_t) then begin
+	      Npkcontext.error "Firstpass.update_fundef"
+		("different types for function "^f)
+	    end
+	with Not_found ->
+	  Npkcontext.error "Firstpass.update_fundef"
+	    ("previous definition of "^f^" does not match")
+      end else begin
+	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct, loc);
+	Hashtbl.add fundefs f' (t, loc, None)
+      end;
+      (f', ct, args)
+  in
+
+  let translate_proto_ftyp f static ft loc =
+    if (fst ft) = [] then begin
+      Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
 	("Incomplete prototype for function "^f);
     end;
-    let (ft, _) = normalize_ftyp (args, ret) in
-      translate_ftyp ft
+    let _ = update_funtyp f static ft loc in
+      ()
   in
 
   let translate_global (x, loc) =
@@ -1202,10 +1204,7 @@ let translate (globals, spec) =
     match x with
 	FunctionDef (f, Fun ft, static, body) ->
 	  current_fun := f;
-	  let (ft, args) = normalize_ftyp ft in
-	  let ft' = translate_ftyp ft in
-	    (* TODO: not nice the signature of this function is not good *)
-	  let f' = update_funtyp f static ft ft' loc in
+	  let (f', ft, args) = update_funtyp f static ft loc in
 	  let formalids = add_formals loc ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
@@ -1229,11 +1228,7 @@ let translate (globals, spec) =
  
       | GlbVDecl ((Some x, t, static, init), is_extern) ->
 	  begin match (t, init) with
-	      (Fun ft, None) -> 
-		let ft' = translate_proto_ftyp x ft in
-		  (* TODO not nice, this function signature is not good *)
-		let _ = update_funtyp x static ft ft' loc in
-		  ()
+	      (Fun ft, None) -> translate_proto_ftyp x static ft loc
 
 	    | (Fun _, Some _) -> 
 		Npkcontext.error "Firstpass.translate_global"
@@ -1282,10 +1277,12 @@ let translate (globals, spec) =
     let loc = Newspeak.dummy_loc "__gnuc_symbol" in
     let f = "__builtin_strchr" in
     let t = ((Ptr char_typ, "str")::(char_typ, "char")::[], Ptr char_typ) in
-    let ct = translate_proto_ftyp f t in
-      (* TODO: this signature is really not nice for update_funtyp!!! *)
-    let _ = update_funtyp f false t ct loc in
-      ()
+      translate_proto_ftyp f false t loc;
+
+    let f = "__builtin_strcmp" in
+    let args = (Ptr char_typ, "str1")::(Ptr char_typ, "str2")::[] in
+    let t = (args, Ptr char_typ) in
+      translate_proto_ftyp f false t loc
   in
 
 (* TODO: a tad inefficient *)
