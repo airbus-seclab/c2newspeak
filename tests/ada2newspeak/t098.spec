@@ -9,7 +9,7 @@ extern uint1 t097.a;
 Function definitions
 t098.t096() {
   do {
-    0- =(int32) 5;
+    0- =(int32) belongs[-2147483648,2147483648-1] 5;
     goto lbl0;
   } with lbl0: {
   }
@@ -29,9 +29,13 @@ t098.main() {
   do {
     int32 x;
     {
-      int32 value_of_t098.t096;
-      t098.t096();
-      1- =(int32) 0-_int32;
+      int32 !tmp-1073741817;
+      {
+        int32 value_of_t098.t096;
+        t098.t096();
+        1- =(int32) 0-_int32;
+      }
+      1- =(int32) belongs[-2147483648,2147483648-1] 0-_int32;
     }
     {
       int32 t099.arg1;
@@ -64,8 +68,12 @@ t098.g() {
 t098.main() {
   (t098.adb:19#272)^int32 x;
   (t098.adb:21#300)^{
-    int32 value_of_t098.t096;
-    (t098.adb:21#300)^t098.t096();
+    int32 !tmp-1073741817;
+    (t098.adb:21#300)^{
+      int32 value_of_t098.t096;
+      (t098.adb:21#300)^t098.t096();
+      (t098.adb:21#300)^1- =(int32) 0-_int32;
+    }
     (t098.adb:21#300)^1- =(int32) 0-_int32;
   }
   (t098.adb:22#317)^{

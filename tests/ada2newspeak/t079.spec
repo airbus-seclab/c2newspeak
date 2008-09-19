@@ -10,7 +10,7 @@ Function definitions
 t079.main() {
   do {
     int32 y;
-    0- =(int32) 10;
+    0- =(int32) belongs[-2147483648,2147483648-1] 10;
   } with lbl0: {
   }
 }

@@ -9,7 +9,7 @@ Function definitions
 t085.m() {
   do {
     int32 x;
-    0- =(int32) 3;
+    0- =(int32) belongs[-2147483648,2147483648-1] 3;
   } with lbl0: {
   }
 }

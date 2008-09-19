@@ -9,7 +9,7 @@ Function definitions
 t062() {
   do {
     int32 a;
-    0- =(int32) 3;
+    0- =(int32) belongs[-2147483648,2147483648-1] 3;
   } with lbl0: {
   }
 }

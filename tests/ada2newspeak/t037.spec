@@ -13,7 +13,7 @@ t037.appelfonction() {
       uint1 value_of_t037.f;
       {
         int32 t037.f.arg1;
-        0- =(int32) 10;
+        0- =(int32) belongs[-2147483648,2147483648-1] 10;
         t037.f();
       }
       1- =(uint1) 0-_uint1;

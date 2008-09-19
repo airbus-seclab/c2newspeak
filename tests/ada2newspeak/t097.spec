@@ -22,7 +22,7 @@ t097.proc() {
     int32 x;
     choose {
     --> assert(Global(t097.a)_uint1);
-        0- =(int32) 2;
+        0- =(int32) belongs[-2147483648,2147483648-1] 2;
     --> assert(! Global(t097.a)_uint1);
     }
     {
@@ -31,9 +31,13 @@ t097.proc() {
       t099();
     }
     {
-      int32 value_of_t098.a;
-      t098.a();
-      1- =(int32) 0-_int32;
+      int32 !tmp-1073741818;
+      {
+        int32 value_of_t098.a;
+        t098.a();
+        1- =(int32) 0-_int32;
+      }
+      1- =(int32) belongs[-2147483648,2147483648-1] 0-_int32;
     }
   } with lbl0: {
   }
@@ -62,8 +66,12 @@ t097.proc() {
     (t097.adb:21#268)^t099();
   }
   (t097.adb:22#283)^{
-    int32 value_of_t098.a;
-    (t097.adb:22#283)^t098.a();
+    int32 !tmp-1073741818;
+    (t097.adb:22#283)^{
+      int32 value_of_t098.a;
+      (t097.adb:22#283)^t098.a();
+      (t097.adb:22#283)^1- =(int32) 0-_int32;
+    }
     (t097.adb:22#283)^1- =(int32) 0-_int32;
   }
 }

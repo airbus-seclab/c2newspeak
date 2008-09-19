@@ -40,9 +40,13 @@ t089.main() {
     int32 z;
     uint3 w;
     {
-      int32 value_of_t089.b;
-      t089.b();
-      4- =(int32) 0-_int32;
+      int32 !tmp-1073741815;
+      {
+        int32 value_of_t089.b;
+        t089.b();
+        1- =(int32) 0-_int32;
+      }
+      4- =(int32) belongs[-2147483648,2147483648-1] 0-_int32;
     }
     2- =(uint3) belongs[5,7-1] 5;
     {
@@ -86,8 +90,12 @@ t089.main() {
   (t089.adb:32#597)^int32 z;
   (t089.adb:33#611)^uint3 w;
   (t089.adb:35#636)^{
-    int32 value_of_t089.b;
-    (t089.adb:35#636)^t089.b();
+    int32 !tmp-1073741815;
+    (t089.adb:35#636)^{
+      int32 value_of_t089.b;
+      (t089.adb:35#636)^t089.b();
+      (t089.adb:35#636)^1- =(int32) 0-_int32;
+    }
     (t089.adb:35#636)^4- =(int32) 0-_int32;
   }
   (t089.adb:36#650)^2- =(uint3) 5;

@@ -386,10 +386,10 @@ primary :
 ;
 
 typ :
-| INTEGER {Integer}
-| FLOAT {Float}
-| BOOLEAN {Boolean}
-| CHARACTER {Character}
+| INTEGER {Constrained(Integer, Ada_config.integer_constraint, true)}
+| FLOAT {Unconstrained(Float)}
+| BOOLEAN {Unconstrained(Boolean)}
+| CHARACTER {Unconstrained(Character)}
 ;
 
 
@@ -398,7 +398,7 @@ subtyp_indication :
 | subtyp {($1, None, None)}
 
 subtyp :
-| typ {Unconstrained($1)}
+| typ {$1}
 | name {SubtypName($1)}
 
 procedure_call : 

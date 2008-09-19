@@ -10,7 +10,7 @@ Function definitions
 t080.main() {
   do {
     int32 y;
-    0- =(int32) 0;
+    0- =(int32) belongs[-2147483648,2147483648-1] 0;
   } with lbl0: {
   }
 }
@@ -18,7 +18,7 @@ t080.main() {
 
 t080.a() {
   do {
-    0- =(int32) 5;
+    0- =(int32) belongs[-2147483648,2147483648-1] 5;
     goto lbl0;
   } with lbl0: {
   }
