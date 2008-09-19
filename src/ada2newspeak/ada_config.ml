@@ -67,3 +67,8 @@ let size_of_byte = 8
 let size_of_char = 1*size_of_byte
 let size_of_int = 4*size_of_byte
 let size_of_float = 4*size_of_byte
+
+let integer_constraint = 
+  Syntax_ada.IntegerRangeConstraint(
+    Newspeak.Nat.of_string("-2147483648"),
+    Newspeak.Nat.of_string("2147483647"))

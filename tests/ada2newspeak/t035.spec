@@ -20,12 +20,12 @@ t035.chose() {
   do {
     choose {
     --> assert((0-_uint2 ==_uint2 3));
-        Global(t035.z) =(int32) 3;
-        2- =(int32) 0;
+        Global(t035.z) =(int32) belongs[-2147483648,2147483648-1] 3;
+        2- =(int32) belongs[-2147483648,2147483648-1] 0;
         goto lbl0;
     --> assert((3 ==_uint2 0-_uint2));
-        Global(t035.z) =(int32) 2;
-        2- =(int32) 1;
+        Global(t035.z) =(int32) belongs[-2147483648,2147483648-1] 2;
+        2- =(int32) belongs[-2147483648,2147483648-1] 1;
         goto lbl0;
     }
   } with lbl0: {
@@ -35,7 +35,7 @@ t035.chose() {
 
 t035.proc() {
   do {
-    Global(t035.x) =(int32) 2;
+    Global(t035.x) =(int32) belongs[-2147483648,2147483648-1] 2;
   } with lbl0: {
   }
 }

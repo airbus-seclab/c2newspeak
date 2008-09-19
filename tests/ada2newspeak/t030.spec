@@ -9,7 +9,7 @@ Function definitions
 t030.proc() {
   do {
     int32 x;
-    0- =(int32) 2;
+    0- =(int32) belongs[-2147483648,2147483648-1] 2;
   } with lbl0: {
   }
 }
