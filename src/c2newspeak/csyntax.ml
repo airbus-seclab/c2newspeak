@@ -50,7 +50,7 @@ and compdecl = string * bool * declaration list
 
 and extern = bool
 
-and vardecl = string option * typ * static * init option
+and vardecl = string * typ * static * init option
 
 and declaration = (typ * string * location)
 

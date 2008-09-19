@@ -42,20 +42,23 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
 
+(* TODO: code not so nice: simplify? *)
 let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
   let ((edecls, cdecls), b) = Synthack.normalize_base_typ b in
-  let build_vdecl (v, init) =
-    let d = Synthack.normalize_var_modifier b v in
-      build_vdecl d init
-  in
   let edecls = List.map build_edecl edecls in
   let cdecls = List.map build_cdecl cdecls in
-  let vdecls = List.map build_vdecl m in
+  let build_vdecl (v, init) res =
+    let (t, x, loc) = Synthack.normalize_var_modifier b v in
+      match x with
+	| None -> res
+	| Some x -> build_vdecl res (t, x, loc, init)
+  in
+  let vdecls = List.fold_right build_vdecl m [] in
     edecls@cdecls@vdecls
-
+      
 let build_glbdecl (static, extern) d =
-  let build_vdecl (t, x, loc) init = 
-    (GlbVDecl ((x, t, static, init), extern), loc) 
+  let build_vdecl l (t, x, loc, init) = 
+    (GlbVDecl ((x, t, static, init), extern), loc)::l
   in
   let loc = get_loc () in
   let build_edecl x = (GlbEDecl x, loc) in
@@ -64,16 +67,9 @@ let build_glbdecl (static, extern) d =
 
 (* TODO: clean this code and find a way to factor with previous function *)
 let build_glbtypedef d =
-  let build_vdecl (t, x, loc) init =
-    let x =
-      match x with
-	  Some x -> x
-	| None -> 
-	    (* TODO: code cleanup remove these things !!! *)
-	    Npkcontext.error "Firstpass.translate_global" "type name"
-    in
-      Synthack.define_type x t;
-      (GlbVDecl ((None, t, false, init), false), loc) 
+  let build_vdecl l (t, x, _, _) = 
+    Synthack.define_type x t;
+    l
   in
   let loc = get_loc () in
   let build_edecl x = (GlbEDecl x, loc) in
@@ -83,7 +79,7 @@ let build_glbtypedef d =
 let build_stmtdecl static d =
 (* TODO: think about cleaning this location thing up!!! *)
 (* for enum decls it seems the location is in double *)
-  let build_vdecl (t, x, loc) init = (VDecl (x, t, static, init), loc) in
+  let build_vdecl l (t, x, loc, init) = (VDecl (x, t, static, init), loc)::l in
   let loc = get_loc () in
   let build_edecl x = (EDecl x, loc) in
   let build_cdecl x = (CDecl x, loc) in
@@ -91,16 +87,9 @@ let build_stmtdecl static d =
 
 (* TODO: clean this code and find a way to factor with previous function *)
 let build_typedef d =
-  let build_vdecl (t, x, loc) init = 
-    let x =
-      match x with
-	  Some x -> x
-	| None -> 
-	    (* TODO: code cleanup remove these things !!! *)
-	    Npkcontext.error "Firstpass.translate_global" "type name"
-    in
-      Synthack.define_type x t;
-      (VDecl (None, t, false, init), loc)
+  let build_vdecl l (t, x, _, _) = 
+    Synthack.define_type x t;
+    l
   in
   let loc = get_loc () in
   let build_edecl x = (EDecl x, loc) in

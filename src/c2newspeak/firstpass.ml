@@ -845,21 +845,13 @@ let translate (globals, spec) =
 	      Hashtbl.remove compdefs x;
 	      ((body, []), t)
 
-	(* TODO: not good, simplify code *)
-	(* TODO: is this really necessary?? *)
-	| (VDecl (None, t, _, _), loc)::body -> 
-	    Npkcontext.set_loc loc;
-	    let _ = translate_typ t in
-	    let (body, t) = ttranslate_blk body in
-	      ((body, []), t)
-		
-	| (VDecl (Some x, Fun ft, static, _), loc)::body -> 
+	| (VDecl (x, Fun ft, static, _), loc)::body -> 
 	    Npkcontext.report_dirty_warning "Firstpass.translate" 
 	      "avoid function declarations within blocks";
 	    translate_proto_ftyp x static ft loc;
 	    translate body
 
-	| (VDecl (Some x, t, static, init), loc)::body when static -> 
+	| (VDecl (x, t, static, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    let (t, init) = translate_glb_init t init in
 	    let t' = translate_typ t in
@@ -869,7 +861,7 @@ let translate (globals, spec) =
 		remove_symb x;
 		((body, []), t)
 	  
-	| (VDecl (Some x, t, _, init), loc)::body -> 
+	| (VDecl (x, t, _, init), loc)::body -> 
 	    let init = translate_local_decl (x, t, init) loc in
 	    let (body, t) = ttranslate_blk body in
 	      remove_symb x;
@@ -1234,15 +1226,12 @@ let translate (globals, spec) =
 	  Npkcontext.error "Firstpass.translate_global" 
 	    "function type expected"
 
-      (* TODO: not good, simplify this code *)
-      | GlbVDecl ((None, _, _, _), _) -> ()
-
 (* TODO: put this check in parser ?? *)
       | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "Extern globals can not be initizalized"
  
-      | GlbVDecl ((Some x, t, static, init), is_extern) ->
+      | GlbVDecl ((x, t, static, init), is_extern) ->
 	  begin match (t, init) with
 	      (Fun ft, None) -> translate_proto_ftyp x static ft loc
 
