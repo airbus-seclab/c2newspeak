@@ -566,7 +566,7 @@ let translate (globals, spec) =
 		      (C.FunDeref (e, ft'), ft, ft')
 		| _ -> 
 		    Npkcontext.error "Firstpass.translate_exp" 
-		      "Function type expected"
+		      "function type expected"
 	    in
 	    let (args_t, ret_t) = ft in
 	    let args = translate_args args args_t in
@@ -846,12 +846,19 @@ let translate (globals, spec) =
 	      ((body, []), t)
 
 	(* TODO: not good, simplify code *)
+	(* TODO: is this really necessary?? *)
 	| (VDecl (None, t, _, _), loc)::body -> 
 	    Npkcontext.set_loc loc;
 	    let _ = translate_typ t in
 	    let (body, t) = ttranslate_blk body in
 	      ((body, []), t)
 		
+	| (VDecl (Some x, Fun ft, static, _), loc)::body -> 
+	    Npkcontext.report_dirty_warning "Firstpass.translate" 
+	      "avoid function declarations within blocks";
+	    translate_proto_ftyp x static ft loc;
+	    translate body
+
 	| (VDecl (Some x, t, static, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    let (t, init) = translate_glb_init t init in
@@ -1014,7 +1021,6 @@ let translate (globals, spec) =
     in
       x
 
-
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
@@ -1033,6 +1039,36 @@ let translate (globals, spec) =
 	  let body = (C.Block (body, Some (lbl, [])), loc)::case in
 	    translate_cases (lbl-1, body) tl
       | [] -> body
+
+
+  and update_funtyp f static ct loc =
+    let (ct, args) = normalize_ftyp ct in
+    let t = translate_ftyp ct in
+    let (fname, _, _) = loc in
+    let f' = if static then "!"^fname^"."^f else f in
+      if Hashtbl.mem symbtbl f then begin
+	try
+	  let (prev_t, _, _) = Hashtbl.find fundefs f' in
+	    if (t <> prev_t) then begin
+	      Npkcontext.error "Firstpass.update_fundef"
+		("different types for function "^f)
+	    end
+	with Not_found ->
+	  Npkcontext.error "Firstpass.update_fundef"
+	    ("previous definition of "^f^" does not match")
+      end else begin
+	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct);
+	Hashtbl.add fundefs f' (t, loc, None)
+      end;
+      (f', ct, args)
+
+  and translate_proto_ftyp f static ft loc =
+    if (fst ft) = [] then begin
+      Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
+	("Incomplete prototype for function "^f);
+    end;
+    let _ = update_funtyp f static ft loc in
+      ()
 
   and normalize_binop op (e1, t1) (e2, t2) =
     match (op, t1, t2) with
@@ -1177,37 +1213,6 @@ let translate (globals, spec) =
 	    a
       | Array (t, _) -> align_of t
       | _ -> size_of t
-  in
-
-  let update_funtyp f static ct loc =
-    let (ct, args) = normalize_ftyp ct in
-    let t = translate_ftyp ct in
-    let (fname, _, _) = loc in
-    let f' = if static then "!"^fname^"."^f else f in
-      if Hashtbl.mem symbtbl f then begin
-	try
-	  let (prev_t, _, _) = Hashtbl.find fundefs f' in
-	    if (t <> prev_t) then begin
-	      Npkcontext.error "Firstpass.update_fundef"
-		("different types for function "^f)
-	    end
-	with Not_found ->
-	  Npkcontext.error "Firstpass.update_fundef"
-	    ("previous definition of "^f^" does not match")
-      end else begin
-	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct);
-	Hashtbl.add fundefs f' (t, loc, None)
-      end;
-      (f', ct, args)
-  in
-
-  let translate_proto_ftyp f static ft loc =
-    if (fst ft) = [] then begin
-      Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
-	("Incomplete prototype for function "^f);
-    end;
-    let _ = update_funtyp f static ft loc in
-      ()
   in
 
   let translate_global (x, loc) =
