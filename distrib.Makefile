@@ -43,12 +43,15 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 #rules
 .PHONY: clean doc
 
-all: bin $(CIL) $(COMPONENTS) doc
-	@echo "Installing libraries in     "bin/
-	@$(CP) -r lib/* bin
+all: bin bin/lib $(CIL) $(COMPONENTS) doc
+	@echo "Installing libraries in     "bin/lib
+	@$(CP) -r lib/* bin/lib
 
 bin:
 	mkdir bin
+
+bin/lib: bin
+	mkdir bin/lib
 
 $(COMPONENTS): $(CILDIR) src/version.ml
 	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
