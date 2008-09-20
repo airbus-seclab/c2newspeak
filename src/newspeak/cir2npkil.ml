@@ -82,7 +82,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 		K.Region (List.map translate_field fields, sz)
 	  | Fun _ -> 
 	      Npkcontext.error "Compiler.translate_typ" 
-		"Function not allowed here"
+		"function not allowed here"
       in
 	Hashtbl.add translated_typ t t';
 	t'

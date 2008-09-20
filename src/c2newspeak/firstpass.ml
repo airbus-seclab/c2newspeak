@@ -39,9 +39,12 @@ let brk_lbl = 2
 let default_lbl = 3
 
 (* types *)
+(* TODO: not minimal, think about it *)
 type symb =
-    | VarSymb of C.lv 
-    | Enum of C.exp
+    | GlobalSymb of string 
+    | FunSymb of C.lv 
+    | LocalSymb of C.lv 
+    | EnumSymb of C.exp
 
 
 type btree =
@@ -107,6 +110,7 @@ let translate (globals, spec) =
   let fundefs = Hashtbl.create 100 in
     
   let symbtbl = Hashtbl.create 100 in
+  let used_globals = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
   (* Counter of static variables, necessary to distinguish 2 statics in 
@@ -131,6 +135,12 @@ let translate (globals, spec) =
       f
   in
 
+  let use_global name =
+    let (t, loc, init, used) = Hashtbl.find used_globals name in
+      if not used 
+      then Hashtbl.replace used_globals name (t, loc, init, true)
+  in
+
   let new_lbl () =
     incr lbl_cnt;
     !lbl_cnt
@@ -138,7 +148,7 @@ let translate (globals, spec) =
 
   let add_var (t, x) =
     let id = C.fresh_id () in
-      Hashtbl.add symbtbl x (VarSymb (C.Var id), t);
+      Hashtbl.add symbtbl x (LocalSymb (C.Var id), t);
       id
   in
 
@@ -165,14 +175,14 @@ let translate (globals, spec) =
   let is_enum x =
     let (v, _) = find_symb x in
     match v with
-	Enum _ -> true
+	EnumSymb _ -> true
       | _ -> false
   in
 
   let find_enum x =
     let (v, t) = find_symb x in
     match v with
-	Enum i -> (i, t)
+	EnumSymb i -> (i, t)
       | _ -> 
 	  Npkcontext.error "Firstpass.translate.typ_of_var" 
 	  ("enum identifier expected: "^x)
@@ -181,34 +191,35 @@ let translate (globals, spec) =
   let find_var x =
     let (v, t) = find_symb x in
     match v with
-	VarSymb v -> (v, t)
+	LocalSymb v | FunSymb v -> (v, t)
+      | GlobalSymb v -> 
+	  use_global v;
+	  (C.Global v, t)
       | _ -> 
 	  Npkcontext.error "Firstpass.translate.typ_of_var" 
 	    ("variable identifier expected: "^x)
   in
 
-  let update_global x name loc (ct, init, t) =
-    let v = VarSymb (C.Global name) in
+  let update_global x name loc (t, init) =
+    let v = GlobalSymb name in
+    let init =
       try 
-	let (prev_t, _, prev_init) = Hashtbl.find glbdecls name in
-	  if not (Cir.is_subtyp t prev_t) then begin
-	    Npkcontext.error "Firstpass.update_global" 
-	      ("global variable "^x^" declared with different types")
-	  end;
-	  let init = 
-	    match (prev_init, init) with
-		(None, Some _) | (Some None, Some _) -> init
-	      | (Some _, None) | (Some _, Some None) -> prev_init
-	      | (None, None) -> None
-	      | (Some Some _, Some Some _) -> 
-		  Npkcontext.error "Firstpass.update_global"
-		    ("global variable "^x^" initialized twice")
-	  in
-	    Hashtbl.replace symbtbl x (v, ct);
-	    Hashtbl.replace glbdecls name (t, loc, init)
+	let (_, _, prev_init, _) = Hashtbl.find used_globals name in
+	  Hashtbl.replace symbtbl x (v, t);
+	  match (prev_init, init) with
+	      (None, Some _) | (Some None, Some _) -> init
+	    | (Some _, None) | (Some _, Some None) -> prev_init
+	    | (None, None) -> None
+	    | (Some Some _, Some Some _) -> 
+		Npkcontext.error "Firstpass.update_global"
+		  ("global variable "^x^" initialized twice")
       with Not_found -> 
-	Hashtbl.add symbtbl x (v, ct);
-	Hashtbl.add glbdecls name (t, loc, init)
+	Hashtbl.add symbtbl x (v, t);
+	init
+    in
+      if (init = None) 
+      then Hashtbl.replace used_globals name (t, loc, init, false)
+      else Hashtbl.replace used_globals name (t, loc, init, true)
   in
 
   let add_global x loc d = update_global x x loc d in
@@ -225,7 +236,9 @@ let translate (globals, spec) =
       update_global x name loc d
   in
 
-  let push_enum (x, i) = Hashtbl.add symbtbl x (Enum i, int_typ) in
+  let push_enum (x, i) = 
+    Hashtbl.add symbtbl x (EnumSymb i, int_typ)
+  in
 
   let update_funbody f body =
     try
@@ -396,8 +409,8 @@ let translate (globals, spec) =
     let loc = Npkcontext.get_loc () in
     let (t, init) = translate_glb_init t (Some (Data (Str str))) in
 (* TODO: is it necessary to have translate_typ t ??? *)
-      if not (Hashtbl.mem glbdecls name) 
-      then add_global name loc (t, Some init, translate_typ t);
+      if not (Hashtbl.mem used_globals name) 
+      then add_global name loc (t, Some init);
       (C.Global name, t)
   
   and translate_lv x =
@@ -858,9 +871,7 @@ let translate (globals, spec) =
 	| (VDecl (x, t, static, _, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    let (t, init) = translate_glb_init t init in
-	    let t' = translate_typ t in
-           (* TODO: code not nice: the signature of this function is not good *)
-	      add_static x loc (t, Some init, t');
+	      add_static x loc (t, Some init);
 	      let (body, t) = ttranslate_blk body in
 		remove_symb x;
 		((body, []), t)
@@ -1053,7 +1064,7 @@ let translate (globals, spec) =
 	  Npkcontext.error "Firstpass.update_fundef"
 	    ("previous definition of "^f^" does not match")
       end else begin
-	Hashtbl.add symbtbl f (VarSymb (C.Global f'), Fun ct);
+	Hashtbl.add symbtbl f (FunSymb (C.Global f'), Fun ct);
 	Hashtbl.add fundefs f' (t, loc, None)
       end;
       (f', ct, args)
@@ -1204,7 +1215,7 @@ let translate (globals, spec) =
 	    try Hashtbl.find compdefs n
 	    with Not_found -> 
 	      Npkcontext.error "Firstpass.size_of_struct" 
-		("unknown structure or union"^n) 
+		("unknown structure or union "^n) 
 	  in
 	    a
       | Array (t, _) -> align_of t
@@ -1245,10 +1256,8 @@ let translate (globals, spec) =
 	    | _ -> 
 		let (t, init) = translate_glb_init t init in
 		let init = if extern then None else Some init in
-		let t' = translate_typ t in
-		  (* TODO not nice, this function signature is not good *)
-		  if static then add_static x loc (t, init, t')
-		  else add_global x loc (t, init, t')
+		  if static then add_static x loc (t, init)
+		  else add_global x loc (t, init)
 	  end
 
       | GlbEDecl _ | GlbCDecl _ -> ()
@@ -1261,7 +1270,7 @@ let translate (globals, spec) =
 	  let (v, _) = find_var x in
 	  let x = 
 	    match v with
-		C.Global x -> x
+		C.Global name -> name
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_token"
 		    "unexpected variable in specification"
@@ -1294,9 +1303,18 @@ let translate (globals, spec) =
       translate_proto_ftyp f false t loc
   in
 
+  let add_glbdecl name (t, loc, init, used) =
+    if used || (not !Npkcontext.remove_temp) then begin
+      Npkcontext.set_loc loc;
+      let t = translate_typ t in
+	Hashtbl.add glbdecls name (t, loc, init)
+    end
+  in
+
 (* TODO: a tad inefficient *)
     if !Npkcontext.gnuc then add_gnuc_symbols ();
     List.iter collect_glb_structdefs globals;
     List.iter translate_global globals;
+    Hashtbl.iter add_glbdecl used_globals;
     let spec = List.map (List.map translate_token) spec in
       (glbdecls, fundefs, spec)
