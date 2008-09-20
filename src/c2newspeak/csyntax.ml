@@ -38,7 +38,7 @@ and global =
     (* true if static *)
   | FunctionDef of (string * typ * bool * blk)
       (* true for extern *)
-  | GlbVDecl of (vardecl * extern)
+  | GlbVDecl of vardecl
       (* enum declaration *)
   | GlbEDecl of enumdecl
 (* struct or union: composite *)
@@ -50,7 +50,7 @@ and compdecl = string * bool * declaration list
 
 and extern = bool
 
-and vardecl = string * typ * static * init option
+and vardecl = string * typ * static * extern * init option
 
 and declaration = (typ * string * location)
 

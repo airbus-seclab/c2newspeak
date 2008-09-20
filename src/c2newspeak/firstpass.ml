@@ -845,13 +845,17 @@ let translate (globals, spec) =
 	      Hashtbl.remove compdefs x;
 	      ((body, []), t)
 
-	| (VDecl (x, Fun ft, static, _), loc)::body -> 
+	| (VDecl (x, Fun ft, static, _, _), loc)::body -> 
 	    Npkcontext.report_dirty_warning "Firstpass.translate" 
 	      "avoid function declarations within blocks";
 	    translate_proto_ftyp x static ft loc;
 	    translate body
 
-	| (VDecl (x, t, static, init), loc)::body when static -> 
+	| (VDecl (_, _, _, extern, _), _)::_ when extern ->
+	    Npkcontext.error "Firstpass.translate" 
+	      "local variable declared extern"
+
+	| (VDecl (x, t, static, _, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    let (t, init) = translate_glb_init t init in
 	    let t' = translate_typ t in
@@ -861,7 +865,7 @@ let translate (globals, spec) =
 		remove_symb x;
 		((body, []), t)
 	  
-	| (VDecl (x, t, _, init), loc)::body -> 
+	| (VDecl (x, t, _, _, init), loc)::body -> 
 	    let init = translate_local_decl (x, t, init) loc in
 	    let (body, t) = ttranslate_blk body in
 	      remove_symb x;
@@ -1227,20 +1231,20 @@ let translate (globals, spec) =
 	    "function type expected"
 
 (* TODO: put this check in parser ?? *)
-      | GlbVDecl ((_, _, _, Some _), is_extern) when is_extern -> 
+      | GlbVDecl (_, _, _, extern, Some _) when extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
-	    "Extern globals can not be initizalized"
+	    "extern globals can not be initizalized"
  
-      | GlbVDecl ((x, t, static, init), is_extern) ->
+      | GlbVDecl (x, t, static, extern, init) ->
 	  begin match (t, init) with
 	      (Fun ft, None) -> translate_proto_ftyp x static ft loc
 
 	    | (Fun _, Some _) -> 
 		Npkcontext.error "Firstpass.translate_global"
-		  ("Unexpected initialization of function "^x)
+		  ("unexpected initialization of function "^x)
 	    | _ -> 
 		let (t, init) = translate_glb_init t init in
-		let init = if is_extern then None else Some init in
+		let init = if extern then None else Some init in
 		let t' = translate_typ t in
 		  (* TODO not nice, this function signature is not good *)
 		  if static then add_static x loc (t, init, t')

@@ -36,8 +36,7 @@ and spec_token =
 and global =
     (* true if static *)
   | FunctionDef of (string * typ * bool * blk)
-      (* true for extern *)
-  | GlbVDecl of (vardecl * extern)
+  | GlbVDecl of vardecl
   | GlbEDecl of enumdecl
 (* struct or union: composite *)
   | GlbCDecl of compdecl
@@ -49,7 +48,8 @@ and compdecl = string * bool * declaration list
 
 and extern = bool
 
-and vardecl = string * typ * static * init option
+(* true for extern *)
+and vardecl = string * typ * static * extern * init option
 
 and declaration = (typ * string * location)
 

@@ -58,7 +58,7 @@ let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
       
 let build_glbdecl (static, extern) d =
   let build_vdecl l (t, x, loc, init) = 
-    (GlbVDecl ((x, t, static, init), extern), loc)::l
+    (GlbVDecl (x, t, static, extern, init), loc)::l
   in
   let loc = get_loc () in
   let build_edecl x = (GlbEDecl x, loc) in
@@ -76,10 +76,12 @@ let build_glbtypedef d =
   let build_cdecl x = (GlbCDecl x, loc) in
     process_decls (build_edecl, build_cdecl, build_vdecl) d
 
-let build_stmtdecl static d =
+let build_stmtdecl static extern d =
 (* TODO: think about cleaning this location thing up!!! *)
 (* for enum decls it seems the location is in double *)
-  let build_vdecl l (t, x, loc, init) = (VDecl (x, t, static, init), loc)::l in
+  let build_vdecl l (t, x, loc, init) = 
+    (VDecl (x, t, static, extern, init), loc)::l 
+  in
   let loc = get_loc () in
   let build_edecl x = (EDecl x, loc) in
   let build_cdecl x = (CDecl x, loc) in
@@ -299,9 +301,10 @@ statement_list:
 // TODO: factor declarations??
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
-| declaration SEMICOLON                    { build_stmtdecl false $1 }
-| REGISTER declaration SEMICOLON           { build_stmtdecl false $2 }
-| STATIC declaration SEMICOLON             { build_stmtdecl true $2 }
+| declaration SEMICOLON                    { build_stmtdecl false false $1 }
+| REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
+| STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
+| EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 | IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
 | IF LPAREN expression RPAREN statement
