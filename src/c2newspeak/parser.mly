@@ -327,6 +327,26 @@ statement:
   }
 | compound_statement                       { [Block $1, get_loc ()] }
 | SEMICOLON                                { [] }
+| ASM LPAREN asm_statement_list RPAREN 
+  SEMICOLON                                {
+    let loc = "Parser.statement" in
+    let msg = "assembly statement" in
+      if not !Npkcontext.ignores_asm then begin
+	Npkcontext.error loc 
+	  (msg^", remove asm from your code or try option --ignore-asm")
+      end else Npkcontext.print_warning loc msg;
+      []
+  }
+;;
+
+asm_statement_list:
+  asm_statement                            { }
+| asm_statement COLON asm_statement_list   { }
+;;
+
+asm_statement:
+  STRING                                   { }
+| STRING LPAREN IDENTIFIER RPAREN          { }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
