@@ -1,11 +1,11 @@
-Warning: Probable invalid cast from integer to pointer in 240.c line 97
-Warning: Probable invalid cast from integer to pointer in 240.c line 109
-Warning: Probable invalid cast from integer to pointer in 240.c line 121
-Warning: Probable invalid cast from integer to pointer in 240.c line 133
-Warning: Probable invalid cast from integer to pointer in 240.c line 141
-Warning: Probable invalid cast from integer to pointer in 240.c line 142
-Warning: Probable invalid cast from integer to pointer in 240.c line 143
-Warning: Probable invalid cast from integer to pointer in 240.c line 144
+Warning: probable invalid cast from integer to pointer in 240.c line 97
+Warning: probable invalid cast from integer to pointer in 240.c line 109
+Warning: probable invalid cast from integer to pointer in 240.c line 121
+Warning: probable invalid cast from integer to pointer in 240.c line 133
+Warning: probable invalid cast from integer to pointer in 240.c line 141
+Warning: probable invalid cast from integer to pointer in 240.c line 142
+Warning: probable invalid cast from integer to pointer in 240.c line 143
+Warning: probable invalid cast from integer to pointer in 240.c line 144
 Newspeak output
 ---------------
 240.c

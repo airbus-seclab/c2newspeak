@@ -1,1 +1,1 @@
-Fatal error: Invalid cast fptr -> ptr in 102.c line 31
+Fatal error: invalid cast fptr -> ptr in 102.c line 31

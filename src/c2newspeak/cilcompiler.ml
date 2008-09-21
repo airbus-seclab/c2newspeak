@@ -154,23 +154,23 @@ and translate_scalar_cast (e, t2) t1 =
     | (Newspeak.Int (sign, sz), Newspeak.Ptr)
 	when sz = Config.size_of_ptr && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
+	  ("probable invalid cast "^(K.string_of_cast t2 t1));
 	  K.UnOp (K.PtrToInt (sign, sz), e)
 	    
     | (Newspeak.Ptr, Newspeak.Int (sign, sz))
 	when sz = Config.size_of_ptr && !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
+	  ("probable invalid cast "^(K.string_of_cast t2 t1));
 	  K.UnOp (K.IntToPtr (sign, sz), e)
 	    
     | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) when !castor_allowed ->
 	print_warning "Npkcompile.translate_scalar_cast"
-	  ("Probable invalid cast "^(K.string_of_cast t2 t1));
+	  ("probable invalid cast "^(K.string_of_cast t2 t1));
 	K.UnOp (K.Cast (kt, kt'), e)
 
     | _ -> 
 	Npkcontext.error "Cilcompiler.translate_scalar_cast"
-	  ("Invalid cast "^(K.string_of_cast t2 t1))
+	  ("invalid cast "^(K.string_of_cast t2 t1))
      
 and translate_lval lv =
   match lv with

@@ -500,7 +500,7 @@ let string_of_cast t1 t2 =
     | _ -> (string_of_scalar t1)^" -> "^(string_of_scalar t2)
 
 let print_castor_err t t' =
-  let msg = "Probable invalid cast "^(string_of_cast t t') in
+  let msg = "probable invalid cast "^(string_of_cast t t') in
     if !Npkcontext.castor_allowed 
     then Npkcontext.print_warning "Npkil.print_castor_err" msg
     else begin
@@ -516,7 +516,7 @@ let cast t e t' =
     | (Ptr, Int ((_, n) as k)) when (n = Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (PtrToInt k, e)
-    | (Int ((_, n) as k), Ptr) when (n = Config.size_of_ptr) -> 
+    | (Int ((_, n) as k), (Ptr|FunPtr)) when (n = Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (IntToPtr k, e)
     | (FunPtr, Ptr) ->
@@ -526,13 +526,13 @@ let cast t e t' =
     | (Float _, Int (sign, _)) -> 
 	if (sign = Unsigned) then begin
 	  Npkcontext.print_warning "Npkil.cast"
-	    ("Cast from float to unsigned integer: "
+	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(string_of_cast t t'))
 	end;
 	UnOp (Cast (t, t'), e)
     | _ -> 
 	Npkcontext.error "Compiler.cast"
-	  ("Invalid cast "^(string_of_cast t t'))
+	  ("invalid cast "^(string_of_cast t t'))
 
 let rec append_decls d body =
   match d with
