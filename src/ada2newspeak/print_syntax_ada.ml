@@ -125,6 +125,18 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^", "^(contrainte_to_string contrainte)
       ^", "^(option_to_string taille ikind_to_string)^")"
 	  
+  | Array(ident,array_def) ->
+      "Array("^ident	
+      ^", "^(array_definition_to_string array_def)^")"
+
+and array_definition_to_string array = match array with 
+  | ConstrainedArray(range, subtyp, taille) ->
+      "ConstrainedArray("
+      ^(subtyp_indication_to_string range)
+      ^", "^(subtyp_indication_to_string subtyp)
+      ^", "^(option_to_string taille string_of_int)^")"
+
+
 and exp_to_string exp = match exp with
   | NullExpr -> "NullExpr"
   | CInt(i) -> "CInt("^(nat_to_string i)^")"

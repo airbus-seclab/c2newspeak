@@ -65,7 +65,7 @@
 %token PACKAGE IS
 %token BODY
 %token PROCEDURE FUNCTION PACKAGE BODY
-%token NEW TYPE RANGE CONSTANT SUBTYPE
+%token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY OF
 %token IN OUT RETURN
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
 %token INTEGER FLOAT BOOLEAN CHARACTER
@@ -234,7 +234,12 @@ type_definition :
 	{TypeDecl(DerivedType($2, $5))}
 | TYPE ident IS RANGE simpl_expr DEUX_POINTS_H simpl_expr POINT_VIR
 	    {TypeDecl(Ada_utils.make_range $2 $5 $7)}
+| TYPE ident IS constrained_array_definition 
+		{TypeDecl(Array($2,$4))}
 ;
+
+constrained_array_definition : 
+| ARRAY subtyp_indication OF subtyp_indication {ConstrainedArray($2,$4,None)}
 
 array_component_association :
 | ident FLECHE expression {($1, $3)} 

@@ -159,6 +159,10 @@ let translate compil_unit =
     | DerivedType(_, subtyp_ind) -> translate_typ 
 	(Ada_utils.extract_typ subtyp_ind)
     | IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
+    | Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
+	C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), 
+		taille)	      
+
     | IntegerRange(_,_,None) -> Npkcontext.error 
 	"Firstpass.translate_declared"
 	  "internal error : no bounds provided for IntegerRange"
@@ -1445,6 +1449,7 @@ let translate compil_unit =
       | DerivedType(_, (ref_subtyp_ind:Syntax_ada.subtyp_indication)) -> 
 	  translate_derived_typ_decl typ_decl ref_subtyp_ind loc global 
       | IntegerRange _ -> ()
+      | Array _ -> ()
   in
  
   (* déclarations basiques locales *)

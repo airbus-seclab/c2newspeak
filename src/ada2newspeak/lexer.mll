@@ -126,6 +126,8 @@ let id_package = "package"
 let id_body = "body"
 let id_constant = "constant"
 let id_subtype = "subtype"
+let id_array = "array"
+let id_of = "of"
 
 let id_integer = "integer"
 let id_float = "float"
@@ -179,6 +181,8 @@ rule token = parse
   | id_body {BODY}
   | id_constant {CONSTANT}
   | id_subtype {SUBTYPE}
+  | id_array {ARRAY}
+  | id_of {OF}
 
   (* identifiants non réservés mais considérés comme tels*)
   | id_integer {INTEGER}

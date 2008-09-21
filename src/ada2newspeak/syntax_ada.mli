@@ -58,6 +58,11 @@ and typ_declaration =
   | Enum of identifier*((identifier*int) list)*int
   | DerivedType of identifier*subtyp_indication
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
+  | Array of identifier*array_type_definition
+
+and array_type_definition = 
+    (* intervalle discret du tableau * type des éléments *)
+  | ConstrainedArray of subtyp_indication*subtyp_indication*int option
 
 and subtyp =
   | Unconstrained of typ
