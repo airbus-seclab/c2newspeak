@@ -937,10 +937,11 @@ let translate (globals, spec) =
 	    "cast to void should be avoided";
 	  (translate_stmt (Exp e, loc), Void)
 
+
       | IfExp (c, e1, e2) ->
 	  let blk1 = (Exp e1, loc)::[] in
 	  let blk2 = (Exp e2, loc)::[] in
-	    (translate_stmt (If (c, blk1, blk2), loc), Void)
+	    ttranslate_stmt (If (c, blk1, blk2), loc)
 
       | _ -> 
 	  let (e, t) = translate_exp e in
@@ -972,9 +973,9 @@ let translate (globals, spec) =
 	    ((C.Goto lbl, loc)::[], Void)
 
       | If (e, blk1, blk2) ->
-	  let blk1 = translate_blk blk1 in
+	  let (blk1, t) = ttranslate_blk blk1 in
 	  let blk2 = translate_blk blk2 in
-	    (translate_if loc (e, blk1, blk2), Void)
+	    (translate_if loc (e, blk1, blk2), t)
 
       | Block body -> ((C.Block (translate_blk body, None), loc)::[], Void)
 
@@ -1300,6 +1301,11 @@ let translate (globals, spec) =
     let f = "__builtin_strcmp" in
     let args = (Ptr char_typ, "str1")::(Ptr char_typ, "str2")::[] in
     let t = (args, Ptr char_typ) in
+      translate_proto_ftyp f false t loc;
+
+    let f = "__builtin_expect" in
+    let args = (long_typ, "exp")::(long_typ, "val")::[] in
+    let t = (args, long_typ) in
       translate_proto_ftyp f false t loc
   in
 

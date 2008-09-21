@@ -41,17 +41,19 @@ COMPONENTS=newspeak c2newspeak npkstrip npkstats npksimplify npk2bytesz \
 CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 
 #rules
-.PHONY: clean doc
+.PHONY: clean doc lib
 
-all: bin bin/lib $(CIL) $(COMPONENTS) doc
+all: bin $(CIL) $(COMPONENTS) doc lib
+
+lib: bin bin/lib/assert.h
+
+bin/lib/assert.h: 
+	@-mkdir bin/lib
 	@echo "Installing libraries in     "bin/lib
 	@$(CP) -r lib/* bin/lib
 
 bin:
-	mkdir bin
-
-bin/lib: bin
-	mkdir bin/lib
+	@mkdir bin
 
 $(COMPONENTS): $(CILDIR) src/version.ml
 	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)

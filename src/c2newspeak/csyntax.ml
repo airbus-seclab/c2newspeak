@@ -144,6 +144,8 @@ let char_typ = Int char_kind
 
 let int_typ = Int (Signed, Config.size_of_int)
 
+let long_typ = Int (Signed, Config.size_of_long)
+
 let uint_typ = Int (Unsigned, Config.size_of_int)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
