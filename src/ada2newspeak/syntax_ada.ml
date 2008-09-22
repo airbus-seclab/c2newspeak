@@ -72,7 +72,6 @@ and subtyp =
   | SubtypName of name
 
 and expression = 
-
   | NullExpr 
   | CInt of nat
   | CFloat of flottant
@@ -126,7 +125,8 @@ type object_state =
    there are other possibilities for this choice, not yet implemented *)
 type array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
-type representation_clause = EnumerationRepresentation of identifier*array_aggregate
+type representation_clause = 
+  | EnumerationRepresentation of identifier*array_aggregate
 
 type context_clause = 
   | With of name*location*(spec*location) option

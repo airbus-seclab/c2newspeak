@@ -53,6 +53,9 @@ type constant_symb =
   | VarSymb of bool
   | FunSymb of typ option*bool
 
+type repres_symb =
+  | Represent of representation_clause*location
+
 let string_of_name = Print_syntax_ada.name_to_string
 
 let normalize_extern_ident ident package = (package, ident)
@@ -577,7 +580,7 @@ let eval_static exp expected_typ csttbl context with_package
 
  
 let eval_static_integer_exp exp csttbl context with_package
-    current_package extern = 
+    current_package extern : nat = 
   try
     let (v,_) = 
       eval_static 
@@ -608,7 +611,7 @@ let eval_static_number exp csttbl context with_package
 	context with_package current_package extern in
       match v with
 	| EnumVal _ | BoolVal _ ->
-	    Npkcontext.error 
+	    Npkcontext.error
 	      "Ada_normalize.eval_static_integer_exp"
 	      "expected static float or integer constant"
 	| FloatVal(f) -> FloatVal(f)
@@ -1190,6 +1193,29 @@ and normalization compil_unit extern =
 	    "Ada_normalize.normalize_integer_range"
 	    "internal error : size or constraint already provided"
 	
+  in
+
+  let interpret_enumeration_clause agregate assoc :(Syntax_ada.identifier * int) list = 
+    match agregate with 
+      |	NamedArrayAggregate(assoc_list:(identifier * expression) list) ->
+	  let new_assoc : (Syntax_ada.identifier * int) list= 
+	    List.map
+	      (fun (ident, exp) -> 
+		 let v = eval_static_integer_exp exp csttbl (val_use ()) 
+		   !with_package !current_package false
+		 in (ident, Nat.to_int v)) 
+	      assoc_list in
+	  let find_val (ident:identifier) : int =
+	    try 
+	      List.assoc ident new_assoc
+	    with
+	      | Not_found -> 
+		  Npkcontext.error
+		    "Ada_normalize.interpret_enumeration_clause"
+		    ("missing representation for "^ident)
+	  in List.map
+	       (fun (ident,_) -> (ident,find_val ident))
+	       assoc
 
   in
   let add_extern_typdecl typ_decl loc = match typ_decl with
@@ -1205,14 +1231,28 @@ and normalization compil_unit extern =
     | IntegerRange(ident,_,_) ->
 	add_typ (normalize_extern_ident ident) typ_decl loc true
 
-  and normalize_typ_decl typ_decl loc global = match typ_decl with
-    | Enum(ident, symbs, _) -> 
-	add_typ (normalize_ident ident) typ_decl loc global;
-	List.iter
-	  (fun (ident,v) -> add_enum (normalize_ident ident)
-	     (Declared(typ_decl,loc)) global v)
-	  symbs;
-	typ_decl
+  and normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
+    | Enum(ident, symbs, size) -> 
+	(* this should be modified if we want to accept several
+	   kind of representation clause. *)
+	let (symbs, size) =
+	  if Hashtbl.mem represtbl ident
+	  then
+	    begin
+	      let clause = Hashtbl.find represtbl ident 
+	      in match clause with 
+		| Represent(EnumerationRepresentation(_, agregat), _) ->
+		    (interpret_enumeration_clause agregat symbs, size)
+	    end
+	  else
+	    (symbs, size) in 
+	let typ_decl =  Enum(ident, symbs, size) in
+	  add_typ (normalize_ident ident) typ_decl loc global;
+	  List.iter
+	    (fun (ident,v) -> add_enum (normalize_ident ident)
+	       (Declared(typ_decl,loc)) global v)
+	    symbs;
+	  typ_decl
     | DerivedType(ident, subtyp_ind) -> 
 	let norm_subtyp_ind = 
 	  normalize_subtyp_indication subtyp_ind in
@@ -1314,7 +1354,7 @@ and normalization compil_unit extern =
 	      Procedure(norm_name, 
 			normalize_params param_list false)
   in
-  let rec normalize_basic_decl item loc global = match item with
+  let rec normalize_basic_decl item loc global reptbl = match item with
     | UseDecl(use_clause) -> List.iter add_context use_clause;
 	item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
@@ -1367,7 +1407,7 @@ and normalization compil_unit extern =
 	   ^"or already evaluated")
 	  
     | TypeDecl(typ_decl) -> 
-	let norm_typ_decl = normalize_typ_decl typ_decl loc global
+	let norm_typ_decl = normalize_typ_decl typ_decl loc global reptbl
 	in TypeDecl(norm_typ_decl)
 	  
     | SpecDecl(spec) -> SpecDecl(normalize_spec spec)
@@ -1393,14 +1433,25 @@ and normalization compil_unit extern =
 	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
 	  add_subtyp (normalize_ident ident) subtyp loc global;
 	  SubtypDecl(ident, norm_subtyp_ind)
+
     | RepresentClause _ -> item	        
   
-  and normalize_decl_part decl_part global = 
+  and normalize_decl_part decl_part global =
+    let represtbl = Hashtbl.create 50 in
+    let rec extract_representation_clause decls = match decls with
+      | (BasicDecl(RepresentClause(rep)), loc)::r -> 
+	  Hashtbl.add represtbl 
+	    (Ada_utils.extract_representation_clause_name rep)
+	    (Represent(rep, loc));
+	  extract_representation_clause r
+      | decl::r -> decl::(extract_representation_clause r)
+      | [] -> [] in
+    let decl_part = extract_representation_clause decl_part in 
     let rec normalize_decl_items items = 
       match items with
 	| (BasicDecl(basic),loc)::r -> 
 	    Npkcontext.set_loc loc;
-	    let decl = normalize_basic_decl basic loc global 
+	    let decl = normalize_basic_decl basic loc global represtbl
 	    in (BasicDecl(decl),loc)::(normalize_decl_items r)
 	    
 	| (BodyDecl(body),loc)::r -> 
@@ -1456,10 +1507,20 @@ and normalization compil_unit extern =
 	 
   and normalize_package_spec (nom, list_decl) = 
     set_current_package nom;
+    let represtbl = Hashtbl.create 50 in
+    let rec extract_representation_clause decls = match decls with
+      | (RepresentClause(rep), loc)::r -> 
+	  Hashtbl.add represtbl 
+	    (Ada_utils.extract_representation_clause_name rep)
+	    (Represent(rep, loc));
+	  extract_representation_clause r
+      | decl::r -> decl::(extract_representation_clause r)
+      | [] -> [] in
+    let list_decl = extract_representation_clause list_decl in
     let rec normalize_decls decls = match decls with
       |	(decl, loc)::r -> 
 	  Npkcontext.set_loc loc;
-	  let decl = normalize_basic_decl decl loc true
+	  let decl = normalize_basic_decl decl loc true represtbl
 	  in (decl,loc)::(normalize_decls r)
       | [] -> [] in
     let norm_spec = normalize_decls list_decl in

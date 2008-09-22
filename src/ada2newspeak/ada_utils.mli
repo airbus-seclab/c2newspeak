@@ -81,3 +81,5 @@ val check_operand_typ :
 
 val check_compil_unit_name : 
   Syntax_ada.compilation_unit -> string -> bool
+
+val extract_representation_clause_name : Syntax_ada.representation_clause -> Syntax_ada.identifier
