@@ -34,7 +34,6 @@ type param_mode = In | Out | InOut
 
 type value = | IntVal of nat 
 	     | FloatVal of flottant
-	     | EnumVal of int
 	     | BoolVal of bool
 
 
@@ -55,7 +54,7 @@ type typ =
   | String
 
 and typ_declaration =
-  | Enum of identifier*((identifier*int) list)*int
+  | Enum of identifier*((identifier*nat) list)*Newspeak.ikind
   | DerivedType of identifier*subtyp_indication
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
   | Array of identifier*array_type_definition

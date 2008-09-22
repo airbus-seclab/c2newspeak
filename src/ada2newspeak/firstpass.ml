@@ -155,7 +155,7 @@ let translate compil_unit =
     | String -> Npkcontext.error "Firstpass.translate_typ"
 	"String not implemented"
   and translate_declared typ_decl = match typ_decl with
-    | Enum(_, _, nb_bits) -> C.Scalar(Npk.Int(Npk.Unsigned, nb_bits))
+    | Enum(_, _, bits) -> C.Scalar(Npk.Int(bits))
     | DerivedType(_, subtyp_ind) -> translate_typ 
 	(Ada_utils.extract_typ subtyp_ind)
     | IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
@@ -243,7 +243,7 @@ let translate compil_unit =
       let typ_cir = match value with
 	| IntVal _ -> translate_typ IntegerConst
 	| FloatVal _ -> translate_typ Float
-	| EnumVal _ | BoolVal _ -> 
+	| BoolVal _ -> 
 	    Npkcontext.error
 	      "Firstpass.add_number"
 	      "internal error : number cannot have Enum val"
@@ -289,7 +289,7 @@ let translate compil_unit =
 	   (find_all_symb name));
       Hashtbl.add symbtbl 
 	name
-	(EnumSymb(translate_int (Nat.of_int value), typ, 
+	(EnumSymb(translate_int value, typ, 
 		  global), translate_typ typ, loc)
       
   and add_global loc typ tr_typ tr_init ro x = 
@@ -510,7 +510,7 @@ let translate compil_unit =
       | FloatVal(f,s) -> 
           let t = check_typ expected_typ Float 
 	  in (C.Const(C.CFloat(f,s)), t) 
-      | EnumVal _ | BoolVal _ ->
+      | BoolVal _ ->
 	  Npkcontext.error
 	    "Firstpass.translate_number"
 	    "internal error : number cannot have enum val"

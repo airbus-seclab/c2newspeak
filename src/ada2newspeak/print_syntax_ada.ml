@@ -112,9 +112,9 @@ and typ_declaration_to_string typ_decl = match typ_decl with
   | Enum(ident, val_list, taille) ->
       "Enum("^ident^", "
       ^(list_to_string val_list 
-	  (fun (nom,id) -> "("^nom^","^(string_of_int id)^")")
+	  (fun (nom,id) -> "("^nom^","^id^")")
 	  "; " true)
-      ^", "^(string_of_int taille)^")"
+      ^", "^(ikind_to_string taille)^")"
 
   | DerivedType(ident, subtyp) ->
       "DerivedType("^ident^", "
@@ -183,7 +183,7 @@ and contrainte_to_string contrainte = match contrainte with
 and value_to_string v = match v with
   | IntVal(i) -> "IntVal("^(nat_to_string i)^")"
   | FloatVal(_,s) -> "FloatVal("^s^")"
-  | EnumVal(i) -> "EnumVal("^(string_of_int i)^")"
+(*  | EnumVal(i) -> "EnumVal("^(string_of_int i)^")"*)
   | BoolVal(b) -> "BoolVal("^(string_of_bool b)^")"
 
 let iteration_scheme_to_string scheme = match scheme with

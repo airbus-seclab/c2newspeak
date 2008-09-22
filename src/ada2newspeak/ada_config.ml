@@ -39,9 +39,18 @@ let log2_sup n =
 	(Big_int.succ_big_int p)
   in Big_int.int_of_big_int (aux n zero)
 
-let size_of_enum nb_litteral = 
-  log2_sup (Big_int.big_int_of_int nb_litteral)
 
+(* on suppose inf<sup *)
+let size_of_enum inf sup = 
+  let (signe, bit_signe) = 
+    if (Nat.compare inf Nat.zero)<0 then (Newspeak.Signed, 1)
+    else (Newspeak.Unsigned, 0) in
+  let max = Big_int.max_big_int
+    (Big_int.abs_big_int (Nat.to_big_int inf))
+    (Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int sup)))
+  in
+  let nbbit = (log2_sup max) + bit_signe
+  in (signe, nbbit)
 
 let size_of_range inf sup = 
   let (b_inf, b_sup) = 
@@ -62,7 +71,10 @@ let size_of_range inf sup =
       "Ada_utils.size_of_range"
       "type representation is too big"
 
+
+(* from the specification : 13.3.(49) *)
 let size_of_boolean = 1
+
 let size_of_byte = 8
 let size_of_char = 1*size_of_byte
 let size_of_int = 4*size_of_byte

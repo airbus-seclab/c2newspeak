@@ -74,7 +74,7 @@ let eq_val v1 v2 =
       | (IntVal(v1), IntVal(v2)) -> eq v1 v2
       | (BoolVal(v1), BoolVal(v2)) -> eq v1 v2
       | (FloatVal(v1), FloatVal(v2)) -> eq v1 v2
-      | (EnumVal(v1), EnumVal(v2)) -> eq v1 v2
+(*      | (EnumVal(v1), EnumVal(v2)) -> eq v1 v2*)
       | _ ->
 	  Npkcontext.error
 	    "Ada_utils.eq_val"
@@ -86,7 +86,7 @@ let inf_val v1 v2 =
       | (IntVal(v1), IntVal(v2)) -> (Nat.compare v1 v2) < 0
       | (BoolVal(v1), BoolVal(v2)) -> inf v1 v2
       | (FloatVal(v1), FloatVal(v2)) -> inf v1 v2
-      | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2
+ (*     | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2*)
       | _ ->
 	  Npkcontext.error
 	    "Ada_utils.inf_val"
@@ -147,15 +147,15 @@ let constraint_is_constraint_compatible cref courante =
    - soit on a pas de valeur *)
 let value_is_static_constraint_compatible contrainte value = 
   match (value,contrainte) with
-    | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
-	between_nat inf sup (Newspeak.Nat.of_int n)
+(*    | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
+	between_nat inf sup (Newspeak.Nat.of_int n)*)
     | (IntVal(n), IntegerRangeConstraint(inf,sup)) ->
 	between_nat inf sup n
     | (BoolVal(b), IntegerRangeConstraint(inf,sup)) ->
 	between_nat inf sup (nat_of_bool b)
     | (FloatVal(n), FloatRangeConstraint(inf,sup)) ->
 	between inf sup n
-    | ((BoolVal _|IntVal _| EnumVal _), FloatRangeConstraint _) 
+    | ((BoolVal _|IntVal _), FloatRangeConstraint _) 
     | (FloatVal _, IntegerRangeConstraint _) -> 
 	Npkcontext.error
 	  "Ada_utils.check_static_constraint"
@@ -331,13 +331,14 @@ let check_operand_typ op typ = match op with
 
 
 let make_enum nom list_val = 
-  let rec make_id list_val list_val_id next_id = 
+  let rec make_id list_val next_id = 
     match list_val with
-       | [] -> (list_val_id, next_id)
-       | v::r -> make_id r ((v,next_id)::list_val_id) (next_id +1)
+      | v::r -> (v,Nat.of_int next_id)::(make_id r (next_id +1))
+      | [] -> []
   in 
-  let (list_assoc,taille) = make_id list_val [] 0
-  in Enum(nom, list_assoc, Ada_config.size_of_enum taille)
+  let list_assoc = make_id list_val 0 in
+  let max = Nat.of_int ((List.length list_assoc) - 1)
+  in Enum(nom, list_assoc, Ada_config.size_of_enum Nat.zero max)
  	  
 let ikind_of_range inf sup = (Newspeak.Signed, 
 			      Ada_config.size_of_range inf sup)

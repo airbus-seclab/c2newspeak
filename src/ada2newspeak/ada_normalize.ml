@@ -49,7 +49,7 @@ let known_compatible_typ = Ada_utils.known_compatible_typ
 type constant_symb = 
   | Number of value*bool
   | StaticConst of value*typ*bool
-  | EnumLitteral of typ*int*bool
+  | EnumLitteral of typ*nat*bool
   | VarSymb of bool
   | FunSymb of typ option*bool
 
@@ -100,7 +100,7 @@ let eval_static exp expected_typ csttbl context with_package
 	  in (FloatVal(f,s), typ)
 	       
       | CChar(c) -> 	  
-	  (EnumVal(c), Ada_utils.check_typ expected_typ Character)
+	  (IntVal(Nat.of_int c), Ada_utils.check_typ expected_typ Character)
       | CBool(b) -> 
 	  (BoolVal(b), Ada_utils.check_typ expected_typ Boolean)
 
@@ -287,14 +287,8 @@ let eval_static exp expected_typ csttbl context with_package
 	      
 	| (Not, Some(Boolean))| (Not, None) ->
 	    (match (eval_static_exp exp expected_typ) with
-	       | (EnumVal(b), Boolean) -> 
-		   (match b with
-		      | 0 -> (EnumVal(1), Boolean)
-		      | 1 -> (EnumVal(0), Boolean)
-		      | _ -> 
-			  Npkcontext.error 
-			    "Ada_normalize.eval_static_unop" 
-			    "internal error : unvalid boolean value")
+	       | (BoolVal(b), Boolean) -> 
+		   (BoolVal(not b), Boolean)
 	       | _ -> Npkcontext.error 
 		   "Ada_normalize.eval_static_unop" 
 		     "Unexpected unary operator and argument")
@@ -373,7 +367,7 @@ let eval_static exp expected_typ csttbl context with_package
 		      "Ada_normalize.eval_static_cst"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
-	      else (EnumVal(v), typ)
+	      else (IntVal(v), typ)
 
 	  | FunSymb(Some(typ),_)::r
 	      when known_compatible_typ expected_typ typ ->
@@ -390,7 +384,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      if (mem_other_cst r (fun _ -> true) 
 		    None var_masque)
 	      then raise AmbiguousTypeException 
-	      else (EnumVal(v), typ)
+	      else (IntVal(v), typ)
 
 	  | FunSymb(Some(_),_)::r when expected_typ = None ->
 	      if (mem_other_cst r (fun _ -> true) 
@@ -430,7 +424,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      
 	  | EnumLitteral(typ, v, _)::_  when 
 	      Ada_utils.known_compatible_typ expected_typ typ ->
-	      (EnumVal(v), typ)
+	      (IntVal(v), typ)
 		
 	  | FunSymb(Some(typ),_)::_  when 
 	      Ada_utils.known_compatible_typ expected_typ typ ->
@@ -440,7 +434,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      if (mem_other_cst r (fun _ -> true) 
 		    (Some(ident)) true)
 	      then raise AmbiguousTypeException
-	      else (EnumVal(v), typ)
+	      else (IntVal(v), typ)
 		
 	  | FunSymb(Some(_),_)::r when expected_typ=None ->
 	      if (mem_other_cst r (fun _ -> true) 
@@ -469,7 +463,7 @@ let eval_static exp expected_typ csttbl context with_package
 
 	| EnumLitteral(typ,v,_)::_ when 
 	    known_compatible_typ expected_typ typ ->
-	    (EnumVal(v), typ)
+	    (IntVal(v), typ)
 
 	| FunSymb(Some(typ), _)::_ 
 	    when known_compatible_typ expected_typ typ -> 
@@ -478,7 +472,7 @@ let eval_static exp expected_typ csttbl context with_package
 	| EnumLitteral(typ,v,_)::r when expected_typ=None ->
 	    if mem_other_cst r (fun _ -> true) None true
 	    then raise AmbiguousTypeException
-	    else (EnumVal(v), typ)
+	    else (IntVal(v), typ)
 
 	| FunSymb(Some(_), _)::r when expected_typ=None ->
 	    if mem_other_cst r (fun _ -> true) None true
@@ -527,7 +521,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      let typ = check_typ expected_typ Float
 	      in (FloatVal(f), typ)
 
-	  | Number((EnumVal _|BoolVal _),_)::_ ->
+	  | Number(BoolVal _, _)::_ ->
 	      Npkcontext.error
 		"Ada_normalize.eval_static_cst"
 		"internal error : number cannot have EnumVal"
@@ -539,7 +533,7 @@ let eval_static exp expected_typ csttbl context with_package
 
 	  | EnumLitteral(typ,v,true)::_
 	      when known_compatible_typ expected_typ typ ->
-	      (EnumVal(v), typ)
+	      (IntVal(v), typ)
 
 	  | FunSymb(Some(typ), false)::_ 
 	      when known_compatible_typ expected_typ typ ->
@@ -548,7 +542,7 @@ let eval_static exp expected_typ csttbl context with_package
 	  | EnumLitteral(typ, v, true)::r when expected_typ=None ->
 	      if mem_other_cst r (fun _ -> true) None false
 	      then raise AmbiguousTypeException
-	      else (EnumVal(v), typ)
+	      else (IntVal(v), typ)
 
 	  | FunSymb(Some(_), false)::r when expected_typ=None ->
 	      if mem_other_cst r (fun _ -> true) None false
@@ -580,14 +574,14 @@ let eval_static exp expected_typ csttbl context with_package
 
  
 let eval_static_integer_exp exp csttbl context with_package
-    current_package extern : nat = 
+    current_package extern = 
   try
     let (v,_) = 
       eval_static 
 	exp (Some(IntegerConst)) csttbl
 	context with_package current_package extern in
       match v with
-	| FloatVal _ | EnumVal _ | BoolVal _->
+	| FloatVal _ | BoolVal _->
 	    Npkcontext.error 
 	      "Ada_normalize.eval_static_integer_exp"
 	      "expected static integer constant"
@@ -610,7 +604,7 @@ let eval_static_number exp csttbl context with_package
 	exp None csttbl
 	context with_package current_package extern in
       match v with
-	| EnumVal _ | BoolVal _ ->
+	| BoolVal _ ->
 	    Npkcontext.error
 	      "Ada_normalize.eval_static_integer_exp"
 	      "expected static float or integer constant"
@@ -1017,17 +1011,6 @@ and normalization compil_unit extern =
 		   Npkcontext.error 
 		     "Ada_normalize.normalize_contrainte"
 		     "null range not accepted"
-
-	     | (EnumVal(i1), EnumVal(i2)) -> 
-		 if i1<=i2
-		 then 
-		   let bounds = (Newspeak.Nat.of_int i1, 
-				 Newspeak.Nat.of_int i2) 
-		   in IntegerRangeConstraint(bounds)
-		 else 
-		   Npkcontext.error 
-		     "Ada_normalize.normalize_contrainte"
-		     "null range not accepted"
 		   
 	     | (BoolVal(b1), BoolVal(b2)) -> 
 		 let i1 = Ada_utils.nat_of_bool b1
@@ -1195,17 +1178,17 @@ and normalization compil_unit extern =
 	
   in
 
-  let interpret_enumeration_clause agregate assoc :(Syntax_ada.identifier * int) list = 
+  let interpret_enumeration_clause agregate assoc = 
     match agregate with 
-      |	NamedArrayAggregate(assoc_list:(identifier * expression) list) ->
-	  let new_assoc : (Syntax_ada.identifier * int) list= 
+      |	NamedArrayAggregate(assoc_list) ->
+	  let new_assoc = 
 	    List.map
 	      (fun (ident, exp) -> 
 		 let v = eval_static_integer_exp exp csttbl (val_use ()) 
 		   !with_package !current_package false
-		 in (ident, Nat.to_int v)) 
+		 in (ident, v)) 
 	      assoc_list in
-	  let find_val (ident:identifier) : int =
+	  let find_val ident =
 	    try 
 	      List.assoc ident new_assoc
 	    with

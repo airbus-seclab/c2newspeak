@@ -22,7 +22,7 @@
   
 *)
 
-val size_of_enum : int -> int
+val size_of_enum : Newspeak.Nat.t -> Newspeak.Nat.t -> Newspeak.ikind
 val size_of_range : Newspeak.Nat.t -> Newspeak.Nat.t -> int
 val size_of_boolean: int
 val size_of_char: int
