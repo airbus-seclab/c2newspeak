@@ -1240,8 +1240,10 @@ and normalization compil_unit extern =
 	    begin
 	      let clause = Hashtbl.find represtbl ident 
 	      in match clause with 
-		| Represent(EnumerationRepresentation(_, agregat), _) ->
-		    interpret_enumeration_clause agregat symbs
+		| Represent(EnumerationRepresentation(_, agregat), rloc) ->
+		    Npkcontext.set_loc rloc;	    
+		    let new_e = interpret_enumeration_clause agregat symbs 
+		    in Npkcontext.set_loc loc; new_e
 	    end
 	  else
 	    (symbs, size) in 
