@@ -109,7 +109,6 @@ let translate (globals, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
-  let funtyps = Hashtbl.create 100 in
   let symbtbl = Hashtbl.create 100 in
   let used_globals = Hashtbl.create 100 in
   (* Used to generate static variables names *)
@@ -1052,31 +1051,32 @@ let translate (globals, spec) =
     let ct =
       try
 	let (args_t, ret_t) = ct in
-	let (args_t', ret_t') = Hashtbl.find funtyps f in
+	let (_, ct') = Hashtbl.find symbtbl f in
+	let (args_t', ret_t') = 
+	  match ct' with
+	      Fun t -> t
+	    | _ -> 
+		Npkcontext.error "Firstpass.update_funtyp" 
+		  ("previous definition of "^f^" does not match")
+	in
 	  if (ret_t <> ret_t') then begin
 	    Npkcontext.error "Firstpass.update_fundef"
 	      ("different return types for function "^f)
 	  end;
 	  let args_t =
-	  match (args_t, args_t') with
-	      (None, args_t) | (args_t, None) -> args_t
-	    | (Some args_t, Some args_t') -> 
-		if (List.map fst args_t) <> (List.map fst args_t') then begin
-		  Npkcontext.error "Firstpass.update_fundef"
-		    ("different argument types for function "^f)
-		end;
-		Some args_t
+	    match (args_t, args_t') with
+		(None, args_t) | (args_t, None) -> args_t
+	      | (Some args_t, Some args_t') -> 
+		  if (List.map fst args_t) <> (List.map fst args_t') then begin
+		    Npkcontext.error "Firstpass.update_fundef"
+		      ("different argument types for function "^f)
+		  end;
+		  Some args_t
 	  in
 	    (args_t, ret_t)
-      with Not_found -> 
-	if (Hashtbl.mem symbtbl f) then begin
-	  Npkcontext.error "Firstpass.update_funtyp" 
-	    ("previous definition of "^f^" does not match")
-	end;
-	ct
+      with Not_found -> ct
     in
       Hashtbl.replace symbtbl f (FunSymb (C.Global f'), Fun ct);
-      Hashtbl.replace funtyps f ct;
       f'
 
   and translate_proto_ftyp f static (args, ret) loc =
