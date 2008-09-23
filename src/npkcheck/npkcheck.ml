@@ -52,7 +52,10 @@ let speclist =
 
 let subtyp t1 t2 =
   match (t1, t2) with
-      (Int (sgn1, sz1), Int (sgn2, sz2)) -> (sgn1 = sgn2) && (sz1 <= sz2)
+      (Int ik1, Int ik2) -> 
+	let d1 = Newspeak.domain_of_typ ik1 in
+	let d2 = Newspeak.domain_of_typ ik2 in
+	  Newspeak.contains d2 d1
     | _ -> t1 = t2
 
 let rec hastype t e =
@@ -76,6 +79,7 @@ let rec hastype t e =
     | (BinOp (PlusPI, _, _), Ptr) -> true
     | (BinOp (MinusPP, _, _), Int _) -> true
     | (BinOp ((Gt _|Eq _), _, _), Int _) -> true
+    | (BinOp (Mod, _, _), Int _) -> true
     | _ -> false
 
 class checker =
