@@ -236,6 +236,22 @@ let float_cst_of_lexeme (value, suffix) =
   in
     (Cir.CFloat (f, lexeme), Float sz)
 
+let rec string_of_typ t =
+  match t with
+      Void -> "void"
+    | Int _ -> "int??"
+    | Ptr t -> "*"^(string_of_typ t)
+    | _ -> "TODO: other_t"
+
+let string_of_ftyp (args_t, _) =
+  let string_of_arg (t, _) = string_of_typ t in
+  let args =
+    match args_t with
+	None -> "? -> ret_t"
+      | Some args_t -> List_utils.to_string string_of_arg ", " args_t
+  in
+    "("^args^") -> ret_t"
+
 let rec string_of_exp e =
   match e with
       Cst _ -> "Cst"

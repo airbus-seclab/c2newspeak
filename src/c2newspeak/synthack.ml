@@ -163,11 +163,12 @@ and normalize_var_modifier b v =
 	  "case not implemented yet"
 	  
 and normalize_ftyp (args, ret) =
+  let args = List.map normalize_arg args in
   let args =
     match args with
 	[] -> None
-      | (Void, _)::[] -> Some []
-      | _ -> Some (List.map normalize_arg args)
+      | (B.Void, _)::[] -> Some []
+      | args -> Some args
   in
     B.Fun (args, ret)
 
@@ -176,9 +177,6 @@ and normalize_arg a =
   let t =
     match t with
 	B.Array (elt_t, _) -> B.Ptr elt_t
-      | B.Void -> 
-	  Npkcontext.error "Synthack.normalize_arg" 
-	    "argument type void not allowed"
       | _ -> t
   in
   let x = 
