@@ -31,7 +31,7 @@
      (process_length)
    - check that all shifts are necessarily of the form + int or + (e * int) 
      (process_lval)
-   - check that for each assignment lv =_t e, e is of type t
+   - check that for each assignment lv =_t e, e is of type larger or equal to t
 TODO:
    - check that for all belongs, coerce l, u l <= u
    - check that all goto are enclosed within a DoWith
@@ -50,12 +50,17 @@ let usage_msg = "npkcheck [options] [-help|--help] file.npk"
 let speclist = 
   [  ]
 
+let subtyp t1 t2 =
+  match (t1, t2) with
+      (Int (sgn1, sz1), Int (sgn2, sz2)) -> (sgn1 = sgn2) && (sz1 <= sz2)
+    | _ -> t1 = t2
+
 let rec hastype t e =
   match (e, t) with
       (Const (CInt i), Int k) -> belongs i (domain_of_typ k)
     | (Const (CFloat _), Float _) -> true
     | (Const Nil, (Ptr|FunPtr)) -> true
-    | (Lval (_, t'), _) -> t = t'
+    | (Lval (_, t'), _) -> subtyp t' t
     | (AddrOf _, Ptr) -> true
     | (AddrOfFun _, FunPtr) -> true
     | (UnOp ((Belongs b| Coerce b | BNot b), _), Int k) -> 
