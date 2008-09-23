@@ -53,7 +53,7 @@ and vardecl = string * typ * static * extern * init option
 
 and declaration = (typ * string * location)
 
-and ftyp = (typ * string) list * typ
+and ftyp = (typ * string) list option * typ
 
 and typ =
     | Void
@@ -151,7 +151,5 @@ val char_cst_of_lexeme: int -> cst
 val float_cst_of_lexeme: (string * char option) -> cst
 
 val comp_of_typ: typ -> string
-
-val normalize_ftyp: ftyp -> (ftyp * string list)
 
 val string_of_exp: exp -> string

@@ -152,18 +152,35 @@ and normalize_var_modifier b v =
       Abstract -> (b, None, Newspeak.unknown_loc)
     | Variable (x, loc) -> (b, Some x, loc)
     | Function (Variable (f, loc), args) -> 
-	(B.Fun (List.map normalize_arg args, b), Some f, loc)
+	(normalize_ftyp (args, b), Some f, loc)
     | Function (Pointer v, args) -> 
-	let args = List.map normalize_arg args in
-	  normalize_var_modifier (B.Ptr (B.Fun (args, b))) v
+	let ft = normalize_ftyp (args, b) in
+	  normalize_var_modifier (B.Ptr ft) v
     | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
     | Pointer v -> normalize_var_modifier (B.Ptr b) v
     | Function _ -> 
 	Npkcontext.error "Synthack.normalize_var_modifier" 
 	  "case not implemented yet"
 	  
+and normalize_ftyp (args, ret) =
+  let args =
+    match args with
+	[] -> None
+      | (Void, _)::[] -> Some []
+      | _ -> Some (List.map normalize_arg args)
+  in
+    B.Fun (args, ret)
+
 and normalize_arg a = 
   let (symbdecls, (t, x, _)) = normalize_decl a in
+  let t =
+    match t with
+	B.Array (elt_t, _) -> B.Ptr elt_t
+      | B.Void -> 
+	  Npkcontext.error "Synthack.normalize_arg" 
+	    "argument type void not allowed"
+      | _ -> t
+  in
   let x = 
     match x with
 	Some x -> x

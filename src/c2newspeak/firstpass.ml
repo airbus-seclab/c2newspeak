@@ -109,6 +109,7 @@ let translate (globals, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
+  let funtyps = Hashtbl.create 100 in
   let symbtbl = Hashtbl.create 100 in
   let used_globals = Hashtbl.create 100 in
   (* Used to generate static variables names *)
@@ -156,13 +157,19 @@ let translate (globals, spec) =
 
   let add_formals (args_t, ret_t) =
     let ret_id = add_var (ret_t, ret_name) in
-    let args_id = List.map add_var args_t in
+    let args_id = 
+      match args_t with
+	  None -> []
+	| Some args_t -> List.map add_var args_t 
+    in
       (ret_id, args_id)
   in
     
-  let remove_formals args_name =
+  let remove_formals (args_t, _) =
     remove_symb ret_name;
-    List.iter remove_symb args_name
+    match args_t with
+	None -> ()
+      | Some args_t -> List.iter (fun (_, x) -> remove_symb x) args_t
   in
 
   let find_symb x = 
@@ -240,16 +247,10 @@ let translate (globals, spec) =
     Hashtbl.add symbtbl x (EnumSymb i, int_typ)
   in
 
-  let update_funbody f body =
-    try
-      let (t, loc, prev_body) = Hashtbl.find fundefs f in
-	match prev_body with
-	    None -> Hashtbl.replace fundefs f (t, loc, Some body)
-	  | Some _ -> 
-	      Npkcontext.error "Firstpass.update_fundef"
-		("Multiple definitions of function "^f^" body")
+  let update_funbody f body t loc =
+    try Hashtbl.add fundefs f (t, loc, Some body)
     with Not_found ->
-      Npkcontext.error "Firstpass.update_funbody" "Unreachable statement"
+      Npkcontext.error "Firstpass.update_funbody" "unreachable statement"
   in
 
   let translate_lbl lbl =
@@ -558,23 +559,12 @@ let translate (globals, spec) =
 	      match (lv, t) with
 		  (_, Ptr (Fun ft)) -> 
 		    let t = translate_typ t in
-		      (* TODO: code simplification, not good that 
-			 translate_ftyp does not give just a ftyp *)
-		      (* TODO: this normalization shouldn't be necessary, it 
-			 should be redundant. problem...*)
-		    let (ft, _) = normalize_ftyp ft in
 		    let ft' = translate_ftyp ft in
 		      (C.FunDeref (C.Lval (lv, t), ft'), ft, ft')
 		| (C.Global f, Fun ft) -> 
-		    (* TODO: this normalization shouldn't be necessary, it 
-		       should be redundant. problem...*)
-		    let (ft, _) = normalize_ftyp ft in
 		    let ft' = translate_ftyp ft in
 		      (C.Fname f, ft, ft')
 		| (C.Deref (e, _), Fun ft) -> 
-		    (* TODO: this normalization shouldn't be necessary, it 
-		       should be redundant. problem...*)
-		    let (ft, _) = normalize_ftyp ft in
 		    let ft' = translate_ftyp ft in
 		      (C.FunDeref (e, ft'), ft, ft')
 		| _ -> 
@@ -681,6 +671,11 @@ let translate (globals, spec) =
 	    Npkcontext.error "Firstpass.translate_exp" 
 	      "different types at function call"
     in
+    let args_t =
+      match args_t with
+	  None -> []
+	| Some args_t -> args_t
+    in
       translate_args args args_t
 
   and gen_tmp loc t =
@@ -756,10 +751,7 @@ let translate (globals, spec) =
 	Void -> C.Void
       | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
 	  C.Scalar (translate_scalar_typ t)
-      | Fun ft -> 
-	  (* TODO: merge normalize_ftyp and translate_ftyp together!!! *)
-	  let (ft, _) = normalize_ftyp ft in
-	    C.Fun (translate_ftyp ft)
+      | Fun ft -> C.Fun (translate_ftyp ft)
       | Array (t, len) -> 
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
@@ -796,7 +788,12 @@ let translate (globals, spec) =
 	    Some i
 
   and translate_ftyp (args, ret) =
-    let args = List.map (fun (t, _) -> translate_typ t) args in
+    let translate_arg (t, _) = translate_typ t in
+    let args =
+      match args with
+	  None -> []
+	| Some args -> List.map translate_arg args
+    in
     let ret = translate_typ ret in
       (args, ret)
 
@@ -1050,32 +1047,44 @@ let translate (globals, spec) =
 
 
   and update_funtyp f static ct loc =
-    let (ct, args) = normalize_ftyp ct in
-    let t = translate_ftyp ct in
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
-      if Hashtbl.mem symbtbl f then begin
-	try
-	  let (prev_t, _, _) = Hashtbl.find fundefs f' in
-	    if (t <> prev_t) then begin
-	      Npkcontext.error "Firstpass.update_fundef"
-		("different types for function "^f)
-	    end
-	with Not_found ->
-	  Npkcontext.error "Firstpass.update_fundef"
+    let ct =
+      try
+	let (args_t, ret_t) = ct in
+	let (args_t', ret_t') = Hashtbl.find funtyps f in
+	  if (ret_t <> ret_t') then begin
+	    Npkcontext.error "Firstpass.update_fundef"
+	      ("different return types for function "^f)
+	  end;
+	  let args_t =
+	  match (args_t, args_t') with
+	      (None, args_t) | (args_t, None) -> args_t
+	    | (Some args_t, Some args_t') -> 
+		if (List.map fst args_t) <> (List.map fst args_t') then begin
+		  Npkcontext.error "Firstpass.update_fundef"
+		    ("different argument types for function "^f)
+		end;
+		Some args_t
+	  in
+	    (args_t, ret_t)
+      with Not_found -> 
+	if (Hashtbl.mem symbtbl f) then begin
+	  Npkcontext.error "Firstpass.update_funtyp" 
 	    ("previous definition of "^f^" does not match")
-      end else begin
-	Hashtbl.add symbtbl f (FunSymb (C.Global f'), Fun ct);
-	Hashtbl.add fundefs f' (t, loc, None)
-      end;
-      (f', ct, args)
+	end;
+	ct
+    in
+      Hashtbl.replace symbtbl f (FunSymb (C.Global f'), Fun ct);
+      Hashtbl.replace funtyps f ct;
+      f'
 
-  and translate_proto_ftyp f static ft loc =
-    if (fst ft) = [] then begin
+  and translate_proto_ftyp f static (args, ret) loc =
+    if args = None then begin
       Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
-	("Incomplete prototype for function "^f);
+	("incomplete prototype for function "^f);
     end;
-    let _ = update_funtyp f static ft loc in
+    let _ = update_funtyp f static (args, ret) loc in
       ()
 
   and normalize_binop op (e1, t1) (e2, t2) =
@@ -1228,12 +1237,12 @@ let translate (globals, spec) =
     match x with
 	FunctionDef (f, Fun ft, static, body) ->
 	  current_fun := f;
-	  let (f', ft, args) = update_funtyp f static ft loc in
+	  let f' = update_funtyp f static ft loc in
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	    update_funbody f' (formalids, body);
-	    remove_formals args;
+	    update_funbody f' (formalids, body) (translate_ftyp ft) loc;
+	    remove_formals ft;
 	    current_fun := "";
 	    Hashtbl.clear lbl_tbl;
 	    lbl_cnt := default_lbl
@@ -1295,17 +1304,18 @@ let translate (globals, spec) =
   let add_gnuc_symbols () =
     let loc = Newspeak.dummy_loc "__gnuc_symbol" in
     let f = "__builtin_strchr" in
-    let t = ((Ptr char_typ, "str")::(char_typ, "char")::[], Ptr char_typ) in
+    let args = (Ptr char_typ, "str")::(char_typ, "char")::[] in
+    let t = (Some args, Ptr char_typ) in
       translate_proto_ftyp f false t loc;
 
     let f = "__builtin_strcmp" in
     let args = (Ptr char_typ, "str1")::(Ptr char_typ, "str2")::[] in
-    let t = (args, Ptr char_typ) in
+    let t = (Some args, Ptr char_typ) in
       translate_proto_ftyp f false t loc;
 
     let f = "__builtin_expect" in
     let args = (long_typ, "exp")::(long_typ, "val")::[] in
-    let t = (args, long_typ) in
+    let t = (Some args, long_typ) in
       translate_proto_ftyp f false t loc
   in
 

@@ -54,7 +54,7 @@ and vardecl = string * typ * static * extern * init option
 
 and declaration = (typ * string * location)
 
-and ftyp = (typ * string) list * typ
+and ftyp = (typ * string) list option * typ
 
 and typ =
   | Void
@@ -215,26 +215,6 @@ let comp_of_typ t =
       Comp n -> n
     | _ -> 
 	Npkcontext.error "Csyntax.comp_of_typ" "struct or union type expected"
-
-let normalize_ftyp (args, ret_t) =
-  let normalize_arg (t, x) =
-    let t =
-      match t with
-	  Array (elt_t, _) -> Ptr elt_t
-	| Void -> 
-	    Npkcontext.error "Firstpass.translate_atyp"
-	      "Argument type void not allowed"
-	| _ -> t
-    in
-      (t, x)
-  in
-  let args_t =
-    match args with
-	(Void, _)::[] -> []
-      | _ -> List.map normalize_arg args
-  in
-  let (_, args_name) = List.split args_t in
-    ((args_t, ret_t), args_name)
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
