@@ -74,7 +74,8 @@ clean:
 
 %.mli %.ml: %.mly
 	@echo "Compiling parser            "$<
-	@$(OCAMLYACC) -q -v $< &> /dev/null
+	@$(OCAMLYACC) -q -v $< &> $*.error
+	@rm $*.error
 
 %.ml: %.mll
 	@echo "Compiling lexer             "$<

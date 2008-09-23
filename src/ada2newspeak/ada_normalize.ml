@@ -1181,7 +1181,7 @@ and normalization compil_unit extern =
   let interpret_enumeration_clause agregate assoc = 
     match agregate with 
       |	NamedArrayAggregate(assoc_list) ->
-	  let new_assoc = 
+	  let rep_assoc = 
 	    List.map
 	      (fun (ident, exp) -> 
 		 let v = eval_static_integer_exp exp csttbl (val_use ()) 
@@ -1190,15 +1190,31 @@ and normalization compil_unit extern =
 	      assoc_list in
 	  let find_val ident =
 	    try 
-	      List.assoc ident new_assoc
+	      List.assoc ident rep_assoc
 	    with
 	      | Not_found -> 
 		  Npkcontext.error
 		    "Ada_normalize.interpret_enumeration_clause"
-		    ("missing representation for "^ident)
-	  in List.map
-	       (fun (ident,_) -> (ident,find_val ident))
-	       assoc
+		    ("missing representation for "^ident) in
+	  let make_new_assoc (l, last) (ident,_) =
+	    let v = find_val ident in
+	    let new_l = l@[(ident, v)]
+	    in match last with
+		| None -> (new_l, Some(v))
+		| Some(v0) when (Nat.compare v0 v) < 0 -> (new_l, Some(v))
+		| Some _ -> 
+		    Npkcontext.error
+		      "Ada_normalize.interpret_enumeration_clause"
+		      "enumeration value not ordered" in 
+	  let (new_assoc, max) =
+	    List.fold_left make_new_assoc ([], None) assoc in 
+	  let max = match max with
+	    | None -> Npkcontext.error
+		      "Ada_normalize.interpret_enumeration_clause"
+		      "internal error : empty enumeration"
+	    | Some(max) -> max in
+	  let size = Ada_config.size_of_enum (snd (List.hd new_assoc)) max
+	  in (new_assoc, size)
 
   in
   let add_extern_typdecl typ_decl loc = match typ_decl with
@@ -1224,8 +1240,10 @@ and normalization compil_unit extern =
 	    begin
 	      let clause = Hashtbl.find represtbl ident 
 	      in match clause with 
-		| Represent(EnumerationRepresentation(_, agregat), _) ->
-		    (interpret_enumeration_clause agregat symbs, size)
+		| Represent(EnumerationRepresentation(_, agregat), rloc) ->
+		    Npkcontext.set_loc rloc;	    
+		    let new_e = interpret_enumeration_clause agregat symbs 
+		    in Npkcontext.set_loc loc; new_e
 	    end
 	  else
 	    (symbs, size) in 
