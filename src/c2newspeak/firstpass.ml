@@ -550,29 +550,7 @@ let translate (globals, spec) =
 	    let e = cast e t in
 	      (e, t)
 		
-	| Call (f, args) -> 
-	    let (lv, t) = translate_lv f in
-	      (* TODO: code not nice: improve!!! *)
-	      (* TODO: not nice, think about it *)
-	    let (f, ft, ft') = 
-	      match (lv, t) with
-		  (_, Ptr (Fun ft)) -> 
-		    let t = translate_typ t in
-		    let ft' = translate_ftyp ft in
-		      (C.FunDeref (C.Lval (lv, t), ft'), ft, ft')
-		| (C.Global f, Fun ft) -> 
-		    let ft' = translate_ftyp ft in
-		      (C.Fname f, ft, ft')
-		| (C.Deref (e, _), Fun ft) -> 
-		    let ft' = translate_ftyp ft in
-		      (C.FunDeref (e, ft'), ft, ft')
-		| _ -> 
-		    Npkcontext.error "Firstpass.translate_exp" 
-		      "function type expected"
-	    in
-	    let (args_t, ret_t) = ft in
-	    let args = translate_args args args_t in
-	      (C.Call (ft', f, args), ret_t)
+	| Call f -> translate_call f
 		
 	(* TODO: should find a way to put this and SetOp together!! *)
 	| Set set when !Npkcontext.dirty_syntax ->
@@ -610,6 +588,51 @@ let translate (globals, spec) =
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t')
 	| v -> v
+	    
+  and translate_call (f, args) =
+    let (lv, t) = translate_lv f in
+    let (lv, (args_t, ret_t)) = 
+      match t with
+	  Ptr (Fun ft) ->
+	    let t = translate_typ t in
+	      (C.Deref (C.Lval (lv, t), t), ft)
+	| Fun ft -> (lv, ft)
+	| _ ->
+	    Npkcontext.error "Firstpass.translate_exp" 
+	      "function type expected"
+    in
+    let (args_t, check) =
+      match args_t with
+	  None -> 
+	    let loc = "Firstpass.translate_args" in
+	    let msg = "unknown function arguments type at call site" in
+	      if (!Npkcontext.missing_ftyp) 
+	      then Npkcontext.print_warning loc msg
+	      else begin
+		Npkcontext.error loc 
+		  (msg^", clean up your code, or try option --missing-funtyp")
+	      end;
+	      let infer_typ i e =
+		let (_, t) = translate_exp e in
+		  (t, "arg"^(string_of_int i))
+	      in
+		(List_utils.mapi infer_typ args, true)
+	| Some args_t -> (args_t, false)
+    in
+    let ft = (Some args_t, ret_t) in
+    let ft' = translate_ftyp ft in
+    let f = 
+      match lv with
+	  C.Global f -> 
+	    if check then update_funtyp f ft;
+	      C.Fname f
+	| C.Deref (e, _) -> C.FunDeref (e, ft')
+	| _ -> 
+	    Npkcontext.error "Firstpass.translate_exp" 
+	      "functional expression expected"
+    in
+    let args = translate_args args args_t in
+      (C.Call (ft', f, args), ret_t)
 
   and deref e =
     let (e, t) = translate_exp e in
@@ -669,24 +692,6 @@ let translate (globals, spec) =
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_exp" 
 	      "different types at function call"
-    in
-    let args_t =
-      match args_t with
-	  None -> 
-	    let loc = "Firstpass.translate_args" in
-	    let msg = "unknown function arguments type at call site" in
-	      if (!Npkcontext.missing_ftyp) 
-	      then Npkcontext.print_warning loc msg
-	      else begin
-		Npkcontext.error loc 
-		  (msg^", clean up your code, or try option --missing-funtyp")
-	      end;
-	      let infer_typ i e =
-		let (_, t) = translate_exp e in
-		  (t, "arg"^(string_of_int i))
-	      in
-		List_utils.mapi infer_typ args
-	| Some args_t -> args_t
     in
       translate_args args args_t
 
@@ -1058,38 +1063,40 @@ let translate (globals, spec) =
       | [] -> body
 
 
-  and update_funtyp f static ct loc =
+  and update_funtyp f ct =
+    let (args_t, ret_t) = ct in
+    let (symb, ct') = Hashtbl.find symbtbl f in
+    let (args_t', ret_t') = 
+      match ct' with
+	  Fun t -> t
+	| _ -> 
+	    Npkcontext.error "Firstpass.update_funtyp" 
+	      ("previous definition of "^f^" does not match")
+    in
+      if (ret_t <> ret_t') then begin
+	Npkcontext.error "Firstpass.update_funtyp"
+	  ("different return types for function "^f)
+      end;
+      let args_t =
+	match (args_t, args_t') with
+	    (None, args_t) | (args_t, None) -> args_t
+	  | (Some args_t, Some args_t') -> 
+	      if (List.map fst args_t) <> (List.map fst args_t') then begin
+		Npkcontext.error "Firstpass.update_funtyp"
+		  ("different argument types for function "^f)
+	      end;
+	      Some args_t
+      in
+	Hashtbl.replace symbtbl f (symb, Fun (args_t, ret_t))
+
+
+  and update_funsymb f static ct loc =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
-    let ct =
-      try
-	let (args_t, ret_t) = ct in
-	let (_, ct') = Hashtbl.find symbtbl f in
-	let (args_t', ret_t') = 
-	  match ct' with
-	      Fun t -> t
-	    | _ -> 
-		Npkcontext.error "Firstpass.update_funtyp" 
-		  ("previous definition of "^f^" does not match")
-	in
-	  if (ret_t <> ret_t') then begin
-	    Npkcontext.error "Firstpass.update_fundef"
-	      ("different return types for function "^f)
-	  end;
-	  let args_t =
-	    match (args_t, args_t') with
-		(None, args_t) | (args_t, None) -> args_t
-	      | (Some args_t, Some args_t') -> 
-		  if (List.map fst args_t) <> (List.map fst args_t') then begin
-		    Npkcontext.error "Firstpass.update_fundef"
-		      ("different argument types for function "^f)
-		  end;
-		  Some args_t
-	  in
-	    (args_t, ret_t)
-      with Not_found -> ct
+    let _ =
+      try update_funtyp f ct 
+      with Not_found -> Hashtbl.add symbtbl f (FunSymb (C.Global f'), Fun ct)
     in
-      Hashtbl.replace symbtbl f (FunSymb (C.Global f'), Fun ct);
       f'
 
   and translate_proto_ftyp f static (args, ret) loc =
@@ -1097,7 +1104,7 @@ let translate (globals, spec) =
       Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
 	("incomplete prototype for function "^f);
     end;
-    let _ = update_funtyp f static (args, ret) loc in
+    let _ = update_funsymb f static (args, ret) loc in
       ()
 
   and normalize_binop op (e1, t1) (e2, t2) =
@@ -1255,7 +1262,7 @@ let translate (globals, spec) =
 		None -> (Some [], ret_t)
 	      | _ -> (args_t, ret_t)
 	  in
-	  let f' = update_funtyp f static ft loc in
+	  let f' = update_funsymb f static ft loc in
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
