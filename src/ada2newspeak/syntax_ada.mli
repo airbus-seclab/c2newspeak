@@ -60,7 +60,7 @@ and typ_declaration =
   | Array of identifier*array_type_definition
 
 and array_type_definition = 
-    (* intervalle discret du tableau * type des éléments *)
+    (* intervalle discret du tableau * type des éléments * taille du tableau*)
   | ConstrainedArray of subtyp_indication*subtyp_indication*int option
 
 and subtyp =

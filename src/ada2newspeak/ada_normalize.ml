@@ -1313,7 +1313,7 @@ and normalization compil_unit extern =
     | Array(ident, ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
 	let norm_inter =  normalize_subtyp_indication intervalle_discret
 	and norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
+	let subtyp = Ada_utils.extract_subtyp norm_inter in
 	let contrainte = match subtyp with
 	  | Constrained(_,contrainte,_) -> contrainte
 	  | Unconstrained _ -> 

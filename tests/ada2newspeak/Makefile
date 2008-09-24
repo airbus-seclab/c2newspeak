@@ -42,7 +42,7 @@ TESTS=t001 t002 t003 t004 t005 t006 t007 t008 t009 t010 \
       t101 t102 t103 t104 t105 t106 t107 t108 t109 t110 \
       t111 t112 t113 t114 t115 t116 t117 t118 t119 t120 \
       t121 t122 t123 t124 t125 t126 t127 t128 t129 t130 \
-      t131 t132 t133 t134
+      t131 t132 t133 t134 t135
 
 include ../common.Makefile
 

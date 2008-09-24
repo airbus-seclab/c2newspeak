@@ -234,12 +234,13 @@ type_definition :
 	{TypeDecl(DerivedType($2, $5))}
 | TYPE ident IS RANGE simpl_expr DEUX_POINTS_H simpl_expr POINT_VIR
 	    {TypeDecl(Ada_utils.make_range $2 $5 $7)}
-| TYPE ident IS constrained_array_definition 
+| TYPE ident IS constrained_array_definition POINT_VIR 
 		{TypeDecl(Array($2,$4))}
 ;
 
 constrained_array_definition : 
-| ARRAY subtyp_indication OF subtyp_indication {ConstrainedArray($2,$4,None)}
+| ARRAY PAR_G subtyp_indication PAR_D OF subtyp_indication 
+    {ConstrainedArray($3,$6,None)}
 
 array_component_association :
 | ident FLECHE expression {($1, $3)} 
