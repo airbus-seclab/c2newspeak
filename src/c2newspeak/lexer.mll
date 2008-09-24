@@ -200,11 +200,12 @@ rule token spec_buf = parse
   | "default"           { DEFAULT }
   | "do"                { DO }
   | "else"              { ELSE }
-  | "for"               { FOR }
   | "enum"              { ENUM }
   | "extern"            { EXTERN }
+  | "for"               { FOR }
   | "goto"              { GOTO }
   | "if"                { IF }
+  | "inline"            { INLINE }
   | "register"          { REGISTER }
   | "return"            { RETURN }
   | "sizeof"            { SIZEOF }
