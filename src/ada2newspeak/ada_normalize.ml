@@ -53,8 +53,6 @@ type constant_symb =
   | VarSymb of bool
   | FunSymb of typ option*bool
 
-type repres_symb =
-  | Represent of representation_clause*location
 
 let string_of_name = Print_syntax_ada.name_to_string
 
@@ -1168,8 +1166,9 @@ and normalization compil_unit extern =
 	
   in
 
-  let interpret_enumeration_clause agregate assoc = 
-    match agregate with 
+  let interpret_enumeration_clause agregate assoc cloc loc = 
+    Npkcontext.set_loc cloc;
+    let new_rep = match agregate with 
       |	NamedArrayAggregate(assoc_list) ->
 	  let rep_assoc = 
 	    List.map
@@ -1205,6 +1204,42 @@ and normalization compil_unit extern =
 	    | Some(max) -> max in
 	  let size = Ada_config.size_of_enum (snd (List.hd new_assoc)) max
 	  in (new_assoc, size)
+    in
+      Npkcontext.set_loc loc;
+      new_rep
+  in
+    
+  (* this check is specific to Ada2Newspeak *)
+  let check_represent_clause_order ident represtbl (_,decl_line,_) =
+    let clauses = Hashtbl.find_all represtbl ident 
+    in
+      List.iter
+	(fun (_, (_,cl_line,_)) ->
+	   if cl_line>=decl_line
+	   then
+	     Npkcontext.error
+	       "Ada_normalize.check_represent_clause_order"
+	       ("a representation clause has been found for "
+		^ident^" after its first use"))
+	clauses
+	     
+  in
+  let enumeration_representation ident symbs size represtbl loc =
+    let (symbs, size) =
+      (* this should be modified if we want to accept several
+	 kind of representation clause. *)
+      if Hashtbl.mem represtbl ident
+      then
+	begin
+	  let clause = Hashtbl.find represtbl ident 
+	  in match clause with 
+	    | (EnumerationRepresentation(_, agregat), rloc) ->
+		interpret_enumeration_clause agregat symbs rloc loc
+	end
+      else
+	(symbs, size) 
+    in Enum(ident, symbs, size)
+
 
   in
   let add_extern_typdecl typ_decl loc = match typ_decl with
@@ -1222,22 +1257,8 @@ and normalization compil_unit extern =
 
   and normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
     | Enum(ident, symbs, size) -> 
-	(* this should be modified if we want to accept several
-	   kind of representation clause. *)
-	let (symbs, size) =
-	  if Hashtbl.mem represtbl ident
-	  then
-	    begin
-	      let clause = Hashtbl.find represtbl ident 
-	      in match clause with 
-		| Represent(EnumerationRepresentation(_, agregat), rloc) ->
-		    Npkcontext.set_loc rloc;	    
-		    let new_e = interpret_enumeration_clause agregat symbs 
-		    in Npkcontext.set_loc loc; new_e
-	    end
-	  else
-	    (symbs, size) in 
-	let typ_decl =  Enum(ident, symbs, size) in
+	let typ_decl = enumeration_representation ident symbs size represtbl loc
+	in
 	  add_typ (normalize_ident ident) typ_decl loc global;
 	  List.iter
 	    (fun (ident,v) -> add_enum (normalize_ident ident)
@@ -1255,14 +1276,18 @@ and normalization compil_unit extern =
 		"Ada_normalize.normalize_typ_decl"
 		"internal error : incorrect type"
 	  (* declared types : simplification *)
-	  | Declared(Enum(_, symbs, size),_) ->
-	      Enum(ident, symbs, size)
+	  | Declared(Enum(parent, symbs, size),_) ->
+	      check_represent_clause_order parent represtbl loc;
+	      enumeration_representation ident symbs size represtbl loc
 	  | Declared(IntegerRange(_,contrainte,taille),_) ->
 	      IntegerRange(ident, contrainte, taille)
 	  | Declared(Array(_, def),_) ->
 	      Array(ident, def)
 	  | Declared(DerivedType(_, subtyp_ind),_) ->
 	      DerivedType(ident, subtyp_ind) in
+	
+	  
+	(*constitution of the subtype representing the current declaration *)
 	let norm_subtyp = match Ada_utils.extract_subtyp norm_subtyp_ind with
 	  | Unconstrained(_) -> 
 	      Unconstrained(Declared(typ_decl, loc))
@@ -1462,7 +1487,7 @@ and normalization compil_unit extern =
       | (BasicDecl(RepresentClause(rep)), loc)::r -> 
 	  Hashtbl.add represtbl 
 	    (Ada_utils.extract_representation_clause_name rep)
-	    (Represent(rep, loc));
+	    (rep, loc);
 	  extract_representation_clause r
       | decl::r -> decl::(extract_representation_clause r)
       | [] -> [] in
@@ -1532,7 +1557,7 @@ and normalization compil_unit extern =
       | (RepresentClause(rep), loc)::r -> 
 	  Hashtbl.add represtbl 
 	    (Ada_utils.extract_representation_clause_name rep)
-	    (Represent(rep, loc));
+	    (rep, loc);
 	  extract_representation_clause r
       | decl::r -> decl::(extract_representation_clause r)
       | [] -> [] in
