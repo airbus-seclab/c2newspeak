@@ -1386,31 +1386,31 @@ let translate compil_unit =
   let add_fundecl subprogspec loc = 
     let check_ident name =
      if Hashtbl.mem symbtbl name
-      then 
-	let list_ident = Hashtbl.find_all symbtbl name in
-	  List.iter
-	    (fun symb -> match symb with
-	       | (FunSymb(_,_,extern'),_,_) 
-		   when extern'= !extern -> 
-		   Npkcontext.error "Firstpass.add_fundecl"
-		     ("conflict : "^(string_of_name name)
-		      ^" already declared")
-	       | (FunSymb(_),_,_) -> ()
-	       | ((VarSymb(_)|NumberSymb(_)),_,_) -> 
-		   Npkcontext.error "Firstpass.add_fundecl"
-		     ("conflict : "^(string_of_name name)
-		      ^" already declared")
-	       | (EnumSymb(_,etyp,_),_,_) ->
-		   begin
-		     match subprogspec with
-		       | Function(_, [], rtyp)
-			   when etyp = (base_typ rtyp) ->
-			   Npkcontext.error "Firstpass.add_fundecl"
-			     ("conflict : "^(string_of_name name)
- 			      ^" already declared")
-		       | _ -> ()
-		   end)
-	    list_ident
+     then 
+       let list_ident = Hashtbl.find_all symbtbl name in
+	 List.iter
+	   (fun symb -> match symb with
+	      | (FunSymb(_,_,extern'),_,_) 
+		  when extern'= !extern -> 
+		  Npkcontext.error "Firstpass.add_fundecl"
+		    ("conflict : "^(string_of_name name)
+		     ^" already declared")
+	      | (FunSymb(_),_,_) -> ()
+	      | ((VarSymb(_)|NumberSymb(_)),_,_) -> 
+		  Npkcontext.error "Firstpass.add_fundecl"
+		    ("conflict : "^(string_of_name name)
+		     ^" already declared")
+	      | (EnumSymb(_,etyp,_),_,_) ->
+		  begin
+		    match subprogspec with
+		      | Function(_, [], rtyp)
+			  when etyp = (base_typ rtyp) ->
+			  Npkcontext.error "Firstpass.add_fundecl"
+			    ("conflict : "^(string_of_name name)
+ 			     ^" already declared")
+		      | _ -> ()
+		  end)
+	   list_ident
     in 
     let (name, ftyp) = translate_sub_program_spec subprogspec
     in
@@ -1430,24 +1430,18 @@ let translate compil_unit =
 	 (Declared(typ_decl, loc)) global) 
       list_val_id in 
 
-  let translate_derived_typ_decl typ_decl (subtyp_ind:Syntax_ada.subtyp_indication) loc global = 
-    let rec translate_parent_typ_decl subtyp_ind = 
-      match (Ada_utils.extract_typ subtyp_ind) with
-	| Declared(Enum(_, list_val_id, _),_) -> 
-	    translate_enum_declaration typ_decl list_val_id loc 
-	      global
-	| Declared(DerivedType(_, subtyp_ind),_) -> 
-	    translate_parent_typ_decl subtyp_ind 
-	| _ -> () in
-      translate_parent_typ_decl subtyp_ind
+  let translate_derived_typ_decl subtyp_ind loc global = 
+    match Ada_utils.extract_typ subtyp_ind with
+      | Declared(Enum(_, list_val_id, _) as typ_decl,_) -> 
+	  translate_enum_declaration typ_decl list_val_id loc global
+      | _ -> () 
   in   
   let translate_typ_declaration typ_decl loc global = 
     match typ_decl with
       | Enum(_, list_val_id, _) -> 
-	  translate_enum_declaration 
-	    typ_decl list_val_id loc global
-      | DerivedType(_, (ref_subtyp_ind:Syntax_ada.subtyp_indication)) -> 
-	  translate_derived_typ_decl typ_decl ref_subtyp_ind loc global 
+	  translate_enum_declaration typ_decl list_val_id loc global
+      | DerivedType(_, ref_subtyp_ind) -> 
+	  translate_derived_typ_decl ref_subtyp_ind loc global 
       | IntegerRange _ -> ()
       | Array _ -> ()
   in

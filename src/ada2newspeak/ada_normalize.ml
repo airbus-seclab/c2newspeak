@@ -847,18 +847,8 @@ and normalization compil_unit extern =
       | IntegerRange(_, contrainte, _) -> 
 	  Constrained(Declared(typdecl, location), contrainte,
 		      true)
-      | DerivedType(_, subtyp_ind) -> 
-	  let subtyp = Ada_utils.extract_subtyp subtyp_ind
-	  in match subtyp with
-	    | Unconstrained(_) -> 
-		Unconstrained(Declared(typdecl, location))
-	    | Constrained(_, contrainte, static) ->
-		Constrained(Declared(typdecl, location),
-			    contrainte, static)
-	    | SubtypName _ ->
-		Npkcontext.error
-		  "Ada_normalize.add_typ"
-		  "internal error : unexpected subtyp name"		
+      | DerivedType(_, subtyp_ind) -> Ada_utils.extract_subtyp subtyp_ind
+	  		
     in
       add_subtyp nom subtyp location global
       
@@ -1062,7 +1052,7 @@ and normalization compil_unit extern =
        le reste du code, à partir du type de base du sous-type
        de référence, de la contrainte normalisée, et d'un
        booléen qui indique si le sous-type de référence est 
-       statique*)
+       statique *)
     let subtyp_of_constraint contrainte typ static_ref =
       let static_constraint = Ada_utils.constraint_is_static 
 	contrainte in
@@ -1255,12 +1245,41 @@ and normalization compil_unit extern =
 	    symbs;
 	  typ_decl
     | DerivedType(ident, subtyp_ind) -> 
-	let norm_subtyp_ind = 
-	  normalize_subtyp_indication subtyp_ind in
-	let normtyp = DerivedType(ident, norm_subtyp_ind)
+	let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
+	let typ_decl = match (Ada_utils.extract_typ norm_subtyp_ind) with
+	    (* base type cases : we still have a derived type *)
+	  | Integer | Float | Boolean 
+	  | Character -> DerivedType(ident, norm_subtyp_ind)
+	  | (String|IntegerConst) ->
+	      Npkcontext.error
+		"Ada_normalize.normalize_typ_decl"
+		"internal error : incorrect type"
+	  (* declared types : simplification *)
+	  | Declared(Enum(_, symbs, size),_) ->
+	      Enum(ident, symbs, size)
+	  | Declared(IntegerRange(_,contrainte,taille),_) ->
+	      IntegerRange(ident, contrainte, taille)
+	  | Declared(Array(_, def),_) ->
+	      Array(ident, def)
+	  | Declared(DerivedType(_, subtyp_ind),_) ->
+	      DerivedType(ident, subtyp_ind) in
+	let norm_subtyp = match Ada_utils.extract_subtyp norm_subtyp_ind with
+	  | Unconstrained(_) -> 
+	      Unconstrained(Declared(typ_decl, loc))
+	  | Constrained(_, contrainte, static) ->
+	      Constrained(Declared(typ_decl, loc),
+			  contrainte, static)
+	  | SubtypName _ ->
+	      Npkcontext.error
+		"Ada_normalize.normalize_typ_decl"
+		"internal error : unexpected subtyp name" in
+	let new_subtyp_ind =
+	  let (subtyp, contrainte, _) = norm_subtyp_ind 
+	  in (subtyp, contrainte, Some(norm_subtyp)) in
+	let norm_typ_decl = DerivedType(ident, new_subtyp_ind) 
 	in 
-	  add_typ (normalize_ident ident) normtyp loc global;
-	  normtyp
+	  add_typ (normalize_ident ident) norm_typ_decl loc global;
+	  norm_typ_decl
     | IntegerRange(ident,contrainte,taille) ->
 	let decl = normalize_integer_range ident taille contrainte
 	in
