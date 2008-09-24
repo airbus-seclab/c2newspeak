@@ -82,20 +82,6 @@ let verbose boolean () =
   verb_morewarns := boolean;
   verb_newspeak := boolean
 
-(* Preprocessing options *)
-
-(*let incl_files = ref ""
-  let include_dir x = incl_files:=" -I "^x^(!incl_files) *)
-
-(* removed should be done by the tool user
-let preprocess fname =
-  if not (Filename.check_suffix fname c_suffix)
-  then invalid_arg (fname^"is not a .c file");
-  let ppd_file = (Filename.chop_extension fname)^"-E.c" in
-    ignore (Unix.system ("gcc"^(!incl_files)^" -E  "^fname^" > "^ppd_file));
-    ppd_file, fname
-*)
-
 (* File options *)
 
 let input_files = ref []

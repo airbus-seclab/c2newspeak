@@ -29,9 +29,6 @@
 open Npkcontext
 
 let compile fname =
-  if not (Filename.check_suffix fname Params.c_suffix)
-  then error "C2newspeak.compile" (fname^" is not a .c file");
-
   let prog =
     if !Npkcontext.use_cil then Cilcompiler.compile fname
     else Compiler.compile fname
