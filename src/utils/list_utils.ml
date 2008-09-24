@@ -41,3 +41,11 @@ let merge compare l1 l2 =
       | ([], l) | (l, []) -> l
   in
     merge l1 l2
+
+let mapi f l =
+  let rec mapi i l =
+    match l with
+	hd::tl -> (f i hd)::(mapi (i+1) tl)
+      | [] -> []
+  in
+    mapi 0 l

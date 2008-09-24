@@ -672,7 +672,20 @@ let translate (globals, spec) =
     in
     let args_t =
       match args_t with
-	  None -> []
+	  None -> 
+	    let loc = "Firstpass.translate_args" in
+	    let msg = "unknown function arguments type at call site" in
+	      if (!Npkcontext.missing_ftyp) 
+	      then Npkcontext.print_warning loc msg
+	      else begin
+		Npkcontext.error loc 
+		  (msg^", clean up your code, or try option --missing-funtyp")
+	      end;
+	      let infer_typ i e =
+		let (_, t) = translate_exp e in
+		  (t, "arg"^(string_of_int i))
+	      in
+		List_utils.mapi infer_typ args
 	| Some args_t -> args_t
     in
       translate_args args args_t
@@ -1235,8 +1248,13 @@ let translate (globals, spec) =
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (f, Fun ft, static, body) ->
+	FunctionDef (f, Fun (args_t, ret_t), static, body) ->
 	  current_fun := f;
+	  let ft = 
+	    match args_t with
+		None -> (Some [], ret_t)
+	      | _ -> (args_t, ret_t)
+	  in
 	  let f' = update_funtyp f static ft loc in
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in

@@ -102,6 +102,7 @@ let input_files = ref []
 let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
 let output_file = ref ""
+let missing_ftyp = ref false
 
 
 let use_cil = ref false
@@ -120,6 +121,9 @@ let argslist = [
 
   ("--dirty", Arg.Set dirty_syntax,
    "allows dirty syntax");
+
+  ("--missing-funtyp", Arg.Set missing_ftyp,
+   "allows call to function whose argument type is unknown");
 
   ("--accept-forward-goto", Arg.Set forward_goto,
    "accepts forward goto statements");
