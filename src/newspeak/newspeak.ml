@@ -1489,7 +1489,7 @@ and visit_stmt visitor (x, loc) =
 	    visit_typ visitor t;
 	    visit_blk visitor body
 	| Call fn -> visit_fn visitor fn
-	| ChooseAssert choices -> List.iter (visit_choice visitor) choices
+	| ChooseAssert choices -> List.iter (visit_choice visitor loc) choices
 	| InfLoop x -> visit_blk visitor x
 	| DoWith (body, _, action) -> 
 	    visit_blk visitor body;
@@ -1497,7 +1497,8 @@ and visit_stmt visitor (x, loc) =
 	| Goto _ -> ()
     end else ()
 
-and visit_choice visitor (cond, body) =
+and visit_choice visitor loc (cond, body) =
+  visitor#set_loc loc;
   List.iter (visit_exp visitor) cond;
   visit_blk visitor body
 
