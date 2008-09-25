@@ -13,8 +13,8 @@ t065() {
     uint1 ab;
     uint1 bb;
     uint1 cb;
-    4- =(uint2) 1;
-    3- =(uint2) 4-_uint2;
+    4- =(uint2) belongs[0,3-1] 1;
+    3- =(uint2) belongs[0,3-1] 4-_uint2;
     2- =(uint1) (4-_uint2 ==_uint2 2);
     1- =(uint1) (3-_uint2 ==_uint2 4-_uint2);
     {
@@ -50,7 +50,7 @@ t065() {
   (t065.adb:29#707)^uint1 bb;
   (t065.adb:30#745)^uint1 cb;
   (t065.adb:25#611)^4- =(uint2) 1;
-  (t065.adb:26#640)^3- =(uint2) 4-_uint2;
+  (t065.adb:26#640)^3- =(uint2) belongs[0,2] 4-_uint2;
   (t065.adb:28#670)^2- =(uint1) (4-_uint2 ==_uint2 2);
   (t065.adb:29#707)^1- =(uint1) ! (4-_uint2 ==_uint2 3-_uint2);
   (t065.adb:30#745)^{

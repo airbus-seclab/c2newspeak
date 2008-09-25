@@ -9,8 +9,8 @@ Function definitions
 t128() {
   do {
     uint2 x;
-    0- =(uint2) 2;
-    0- =(uint2) 3;
+    0- =(uint2) belongs[1,4-1] 2;
+    0- =(uint2) belongs[1,4-1] 3;
   } with lbl0: {
   }
 }

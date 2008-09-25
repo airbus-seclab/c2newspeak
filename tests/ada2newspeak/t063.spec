@@ -12,7 +12,7 @@ t063() {
     uint2 c;
     int32 d;
     2- =(float32) 3.5;
-    1- =(uint2) 1;
+    1- =(uint2) belongs[0,3-1] 1;
     0- =(int32) belongs[-2147483648,2147483648-1] 5;
   } with lbl0: {
   }

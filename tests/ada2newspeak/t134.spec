@@ -10,8 +10,8 @@ t134() {
   do {
     uint5 x;
     uint2 y;
-    1- =(uint5) 15;
-    0- =(uint2) 2;
+    1- =(uint5) belongs[10,26-1] 15;
+    0- =(uint2) belongs[0,3-1] 2;
   } with lbl0: {
   }
 }

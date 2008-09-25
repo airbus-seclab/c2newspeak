@@ -9,7 +9,7 @@ Function definitions
 t110() {
   do {
     uint0 val;
-    0- =(uint0) 0;
+    0- =(uint0) belongs[0,1-1] 0;
   } with lbl0: {
   }
 }

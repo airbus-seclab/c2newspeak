@@ -12,7 +12,7 @@ t057.main() {
   do {
     uint1 x;
     uint1 y;
-    1- =(uint1) 0;
+    1- =(uint1) belongs[0,2-1] 0;
     0- =(uint1) Global(t057.a)_uint1;
   } with lbl0: {
   }

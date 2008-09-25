@@ -11,7 +11,7 @@ Function definitions
 t052.a() {
   do {
     uint2 y;
-    0- =(uint2) 0;
+    0- =(uint2) belongs[0,4-1] 0;
   } with lbl0: {
   }
 }

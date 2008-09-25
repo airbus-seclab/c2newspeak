@@ -11,17 +11,17 @@ t017() {
     uint2 a;
     uint2 b;
     uint3 c;
-    2- =(uint2) 0;
-    1- =(uint2) 1;
-    0- =(uint3) 3;
+    2- =(uint2) belongs[0,3-1] 0;
+    1- =(uint2) belongs[0,4-1] 1;
+    0- =(uint3) belongs[0,5-1] 3;
     choose {
     --> assert((1 > 0));
-        2- =(uint2) 0;
+        2- =(uint2) belongs[0,3-1] 0;
     --> assert((0 > 1));
         choose {
         --> assert((1 ==_uint2 1-_uint2));
-            1- =(uint2) 3;
-            0- =(uint3) 4;
+            1- =(uint2) belongs[0,4-1] 3;
+            0- =(uint3) belongs[0,5-1] 4;
         --> assert((1-_uint2 ==_uint2 1));
         }
     }

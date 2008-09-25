@@ -14,9 +14,9 @@ t082.main() {
     uint2 x;
     uint2 y;
     uint2 b;
-    2- =(uint2) Global(t082.c)_uint2;
-    0- =(uint2) 2;
-    1- =(uint2) 0;
+    2- =(uint2) belongs[0,3-1] Global(t082.c)_uint2;
+    0- =(uint2) belongs[0,3-1] 2;
+    1- =(uint2) belongs[0,3-1] 0;
   } with lbl0: {
   }
 }
@@ -30,7 +30,7 @@ t082.main() {
   (t082.adb:8#133)^uint2 x;
   (t082.adb:9#163)^uint2 y;
   (t082.adb:10#179)^uint2 b;
-  (t082.adb:8#133)^2- =(uint2) t082.c_uint2;
+  (t082.adb:8#133)^2- =(uint2) belongs[0,2] t082.c_uint2;
   (t082.adb:10#179)^0- =(uint2) 2;
   (t082.adb:13#225)^1- =(uint2) 0;
 }

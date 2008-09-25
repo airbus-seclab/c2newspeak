@@ -692,6 +692,13 @@ and normalization compil_unit extern =
   and with_package = ref []
   and context = ref [] in
 
+
+  let normalize_extern_ident ident =
+    normalize_extern_ident ident (!current_package) 
+  and normalize_ident ident :name = 
+    normalize_ident ident (!current_package) extern
+
+  in
   (* gestion du contexte *)
   let add_with_package (par,ident) = 
     with_package := (par@[ident])::(!with_package)
@@ -839,14 +846,39 @@ and normalization compil_unit extern =
       
   and remove_subtyp x = Hashtbl.remove typtbl x in
     
-  let add_typ nom (typdecl:Syntax_ada.typ_declaration) location global =
+  let add_enum_litt symbs typ global extern =
+    let normalize_ident = match extern with
+      | true -> normalize_extern_ident
+      | false -> normalize_ident
+    in List.iter
+	 (fun (ident,v) -> add_enum (normalize_ident ident) typ global v)
+	 symbs
+  in
+  let add_typ nom (typdecl:Syntax_ada.typ_declaration) location global extern =
     let subtyp = match typdecl with
-      | Enum _ | Array _ -> Unconstrained(Declared(typdecl, location))
+      | Array _ -> Unconstrained(Declared(typdecl, location))
+
+      | Enum(_,symbs,_) ->
+	  let min = snd (List.hd symbs)
+	  and max = snd (List.nth symbs ((List.length symbs) -1)) in
+	  let contrainte = IntegerRangeConstraint(min, max)
+	  and typ = Declared(typdecl, location)
+	  in
+	    add_enum_litt symbs typ global extern;
+	    Constrained(typ, contrainte, true)
+
       | IntegerRange(_, contrainte, _) -> 
-	  Constrained(Declared(typdecl, location), contrainte,
-		      true)
-      | DerivedType(_, subtyp_ind) -> Ada_utils.extract_subtyp subtyp_ind
-	  		
+	  Constrained(Declared(typdecl, location), contrainte, true)
+      | DerivedType(_, subtyp_ind) -> 
+	  let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+	  let typ = Ada_utils.base_typ subtyp in
+	    begin
+	      match typ with
+		| Declared(Enum(_,symbs,_),_) ->
+		    add_enum_litt symbs typ global extern
+		| _ -> ()
+	    end;
+	    subtyp	  		
     in
       add_subtyp nom subtyp location global
       
@@ -929,12 +961,6 @@ and normalization compil_unit extern =
 	| false -> name (*suppr_package name (!current_package)*)
 	| true -> add_package name (!current_package)
 	    (* pas de gestion de with dans package inclus *)
-
-  and normalize_extern_ident ident =
-    normalize_extern_ident ident (!current_package) in
-  let normalize_ident ident :name = 
-    normalize_ident ident (!current_package) extern
-
   in  
   (*let normalize_typ typ = match typ with
     | Integer | IntegerConst | Float | Boolean | Character 
@@ -971,7 +997,7 @@ and normalization compil_unit extern =
      (autrement dit, on attend une contrainte statique non nulle
      en retour. uniquement utilisé dans le cas entier)
   *)
-  let normalize_contrainte contrainte typ static = 
+  let normalize_contrainte contrainte typ = 
     let eval_range exp1 exp2 = 
       let norm_exp1 = normalize_exp exp1
       and norm_exp2 = normalize_exp exp2 in
@@ -1022,10 +1048,9 @@ and normalization compil_unit extern =
 	   in contrainte
 	 with
 	   | NonStaticExpression -> 
-	       if static
-	       then raise NonStaticExpression
-	       else 
-		 RangeConstraint(norm_exp1,norm_exp2)
+	       Npkcontext.error 
+		 "Ada_normalize.normalize_contrainte"
+		 "non-static constraint are not yet supported"
 
 	   | AmbiguousTypeException ->
 	       Npkcontext.error 
@@ -1089,12 +1114,12 @@ and normalization compil_unit extern =
 	      (Constrained(typ, const, static), None)
 	  | (Some(const), Unconstrained(typ)) ->
 	      let norm_contrainte = 
-		normalize_contrainte const typ false
+		normalize_contrainte const typ
 	      in (subtyp_of_constraint norm_contrainte typ true, 
 		  Some(norm_contrainte))
 	  | (Some(const), Constrained(typ, const_ref, stat_ref)) ->
 	      let norm_contrainte = 
-		normalize_contrainte const typ false
+		normalize_contrainte const typ
 	      in
 		if not 
 		  (Ada_utils.constraint_is_constraint_compatible
@@ -1143,7 +1168,7 @@ and normalization compil_unit extern =
 	  begin
 	    try
 	      let norm_contrainte = 
-		normalize_contrainte contrainte IntegerConst true 
+		normalize_contrainte contrainte IntegerConst
 	      in match norm_contrainte with
 		| IntegerRangeConstraint(min, max) ->
 		    let ikind = Ada_utils.ikind_of_range min max 
@@ -1242,32 +1267,41 @@ and normalization compil_unit extern =
 
 
   in
-  let add_extern_typdecl typ_decl loc = match typ_decl with
-    | Enum(ident, symbs, _) -> 
-	add_typ (normalize_extern_ident ident) typ_decl loc true;
-	List.iter
-	  (fun (ident,v) -> add_enum (normalize_extern_ident ident)
-	     (Declared(typ_decl,loc)) true v)
-	  symbs
 
+
+  let add_extern_typdecl typ_decl loc = match typ_decl with
+    | Enum(ident, _, _) -> 
+	add_typ (normalize_extern_ident ident) typ_decl loc true true
     | DerivedType(ident, _) 
     | Array(ident, _)
     | IntegerRange(ident,_,_) ->
-	add_typ (normalize_extern_ident ident) typ_decl loc true
+	add_typ (normalize_extern_ident ident) typ_decl loc true true
 
   and normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
     | Enum(ident, symbs, size) -> 
 	let typ_decl = enumeration_representation ident symbs size represtbl loc
 	in
-	  add_typ (normalize_ident ident) typ_decl loc global;
-	  List.iter
-	    (fun (ident,v) -> add_enum (normalize_ident ident)
-	       (Declared(typ_decl,loc)) global v)
-	    symbs;
+	  add_typ (normalize_ident ident) typ_decl loc global extern;
 	  typ_decl
     | DerivedType(ident, subtyp_ind) -> 
-	let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-	let typ_decl = match (Ada_utils.extract_typ norm_subtyp_ind) with
+	let update_contrainte contrainte symbs new_assoc = 
+	  let find_ident v =  
+	    List.find (fun (_, v') -> v'=v) symbs
+	  and find_new_val (ident,_) = 
+	    List.assoc ident new_assoc
+	  in let change_val v =
+	      find_new_val (find_ident v)
+	  in match contrainte with 
+	    | IntegerRangeConstraint(v1, v2) ->
+		IntegerRangeConstraint(change_val v1, change_val v2)
+	    | _ -> Npkcontext.error
+		"Ada_normalize.normalize_typ_decl"
+		  ("internal error :"
+		   ^" constraint isnt integer range for enumeration type")
+	in
+	let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in 
+	let parent_type = Ada_utils.extract_typ norm_subtyp_ind in
+	let typ_decl = match parent_type with
 	    (* base type cases : we still have a derived type *)
 	  | Integer | Float | Boolean 
 	  | Character -> DerivedType(ident, norm_subtyp_ind)
@@ -1292,8 +1326,12 @@ and normalization compil_unit extern =
 	  | Unconstrained(_) -> 
 	      Unconstrained(Declared(typ_decl, loc))
 	  | Constrained(_, contrainte, static) ->
-	      Constrained(Declared(typ_decl, loc),
-			  contrainte, static)
+	      (* for enumeration types, we update the value of the constraint *)
+	      let contrainte = match (typ_decl, parent_type) with
+		| (Enum(_, new_assoc,_), Declared(Enum(_, symbs, _),_)) ->
+		    update_contrainte contrainte symbs new_assoc
+		| _ -> contrainte 
+	      in Constrained(Declared(typ_decl, loc), contrainte, static)
 	  | SubtypName _ ->
 	      Npkcontext.error
 		"Ada_normalize.normalize_typ_decl"
@@ -1303,12 +1341,12 @@ and normalization compil_unit extern =
 	  in (subtyp, contrainte, Some(norm_subtyp)) in
 	let norm_typ_decl = DerivedType(ident, new_subtyp_ind) 
 	in 
-	  add_typ (normalize_ident ident) norm_typ_decl loc global;
+	  add_typ (normalize_ident ident) norm_typ_decl loc global extern;
 	  norm_typ_decl
     | IntegerRange(ident,contrainte,taille) ->
 	let decl = normalize_integer_range ident taille contrainte
 	in
-	  add_typ (normalize_ident ident) decl loc global;
+	  add_typ (normalize_ident ident) decl loc global extern;
 	  decl
     | Array(ident, ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
 	let norm_inter =  normalize_subtyp_indication intervalle_discret
@@ -1338,7 +1376,7 @@ and normalization compil_unit extern =
 	let norm_typ = Array(ident, 
 			     ConstrainedArray(norm_inter, norm_subtyp_ind,taille))
 	in
-	  add_typ (normalize_ident ident) norm_typ loc global;
+	  add_typ (normalize_ident ident) norm_typ loc global extern;
 	  norm_typ
 
     | Array(_, ConstrainedArray(_, _, Some _)) ->

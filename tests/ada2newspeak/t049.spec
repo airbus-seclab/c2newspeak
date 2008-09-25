@@ -12,7 +12,7 @@ uint2 t049.x;
 Function definitions
 t049.main() {
   do {
-    Global(t049.x) =(uint2) 0;
+    Global(t049.x) =(uint2) belongs[0,3-1] 0;
   } with lbl0: {
   }
 }

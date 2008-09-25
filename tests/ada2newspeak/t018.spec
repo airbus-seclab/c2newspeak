@@ -11,9 +11,9 @@ t018() {
     uint3 x1;
     uint3 x2;
     uint3 x3;
-    2- =(uint3) 1;
-    1- =(uint3) 6;
-    0- =(uint3) 3;
+    2- =(uint3) belongs[0,8-1] 1;
+    1- =(uint3) belongs[0,8-1] 6;
+    0- =(uint3) belongs[0,8-1] 3;
     choose {
     --> assert((0 ==_uint3 2-_uint3));
     --> assert((2-_uint3 ==_uint3 0));

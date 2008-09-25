@@ -9,9 +9,9 @@ Function definitions
 t130() {
   do {
     uint7 x;
-    0- =(uint7) 127;
-    0- =(uint7) 1;
-    0- =(uint7) 0;
+    0- =(uint7) belongs[0,128-1] 127;
+    0- =(uint7) belongs[0,128-1] 1;
+    0- =(uint7) belongs[0,128-1] 0;
   } with lbl0: {
   }
 }

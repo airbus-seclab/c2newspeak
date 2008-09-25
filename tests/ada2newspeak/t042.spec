@@ -11,8 +11,8 @@ Function definitions
 t042() {
   do {
     uint1 a;
-    Global(t042a.z) =(uint1) 0;
-    0- =(uint1) 1;
+    Global(t042a.z) =(uint1) belongs[0,2-1] 0;
+    0- =(uint1) belongs[0,2-1] 1;
   } with lbl0: {
   }
 }

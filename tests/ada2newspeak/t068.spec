@@ -11,10 +11,10 @@ t068() {
     uint2 x;
     uint2 y;
     uint2 z;
-    2- =(uint2) 1;
+    2- =(uint2) belongs[0,4-1] 1;
     1- =(uint2) belongs[0,3-1] 2-_uint2;
     1- =(uint2) belongs[0,3-1] 0;
-    2- =(uint2) 1-_uint2;
+    2- =(uint2) belongs[0,4-1] 1-_uint2;
     0- =(uint2) belongs[0,3-1] 2;
   } with lbl0: {
   }

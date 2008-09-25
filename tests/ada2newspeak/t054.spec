@@ -9,7 +9,7 @@ Function definitions
 t054() {
   do {
     uint2 x;
-    0- =(uint2) 0;
+    0- =(uint2) belongs[0,3-1] 0;
   } with lbl0: {
   }
 }

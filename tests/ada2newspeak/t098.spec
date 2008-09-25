@@ -18,7 +18,7 @@ t098.t096() {
 
 t098.g() {
   do {
-    0- =(uint3) 1;
+    0- =(uint3) belongs[0,5-1] 1;
     goto lbl0;
   } with lbl0: {
   }

@@ -11,7 +11,7 @@ Function definitions
 t097.piou() {
   do {
     uint3 var;
-    0- =(uint3) 1;
+    0- =(uint3) belongs[0,5-1] 1;
   } with lbl0: {
   }
 }

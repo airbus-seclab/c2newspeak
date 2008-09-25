@@ -10,7 +10,7 @@ extern uint1 t041a.z;
 Function definitions
 t041() {
   do {
-    Global(t041a.z) =(uint1) 0;
+    Global(t041a.z) =(uint1) belongs[0,2-1] 0;
   } with lbl0: {
   }
 }
