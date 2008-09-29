@@ -804,6 +804,14 @@ object
       | UnOp (Belongs r, (Lval (_, Int k) as lv))
 	  when contains r (domain_of_typ k) -> lv
 
+(* TODO: could do this after a sanity checks that checks the largest and 
+   smallest integer ever computed in expressions!! *)
+      | UnOp (Coerce r, 
+	     (BinOp (MultI, UnOp (Belongs (l, u), _), Const CInt x) as e')) -> 
+	  let l = Nat.mul l x in
+	  let u = Nat.mul u x in
+	    if contains r (l, u) then e' else e
+
       | _ -> e
 end
 
@@ -852,14 +860,6 @@ object (self)
       | BinOp (DivI, Const CInt i1, Const CInt i2) 
 	  when Nat.compare i2 Nat.zero <> 0 ->
 	  Const (CInt (Nat.div i1 i2))
-
-(* TODO: could do this after a sanity checks that checks the largest and 
-   smallest integer ever computed in expressions!! *)
-      | UnOp (Coerce r, 
-	     (BinOp (MultI, UnOp (Belongs (l, u), _), Const CInt x) as e')) -> 
-	  let l = Nat.mul l x in
-	  let u = Nat.mul u x in
-	    if contains r (l, u) then e' else e
 
       | _ -> e
 end
