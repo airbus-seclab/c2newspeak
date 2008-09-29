@@ -78,6 +78,8 @@ val verb_ast : bool ref
 val verb_npko : bool ref
 val verb_newspeak : bool ref
 
+val opt_checks: bool ref
+
 (** when the pretty_print boolean is set, locals and globals are
     displayed in a prettier way if possible (with their names) *)
 val pretty_print : bool ref

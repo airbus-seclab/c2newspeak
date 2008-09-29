@@ -242,8 +242,10 @@ val simplify_gotos : blk -> blk
 val normalize_loops : blk -> blk
 
 (* Run all simplifications. *)
-val simplify : blk -> blk
-val simplify_exp: exp -> exp
+(* true to remove checks when possible *)
+val simplify : bool -> blk -> blk
+(* true to remove checks when possible *)
+val simplify_exp: bool -> exp -> exp
 
 
 

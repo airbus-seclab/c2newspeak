@@ -1039,12 +1039,20 @@ and simplify_blk actions blk =
 (* TODO: once simplify choose is applied, there are opportunities for 
    simplify_gotos
    Fixpoint ??? *)
-let simplify b = 
-  simplify_gotos (simplify_blk [new simplify_choose; new simplify_ptr;
-				new simplify_arith; new simplify_coerce] b)
+let simplify opt_checks b = 
+  let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
+  let simplifications = 
+    (new simplify_choose)::(new simplify_ptr)
+    ::(new simplify_arith)::simplifications
+  in
+  simplify_gotos (simplify_blk simplifications b)
 
-let simplify_exp e =
-  simplify_exp [new simplify_ptr; new simplify_arith; new simplify_coerce] e
+let simplify_exp opt_checks e =
+  let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
+  let simplifications = 
+    (new simplify_ptr)::(new simplify_arith)::simplifications
+  in
+  simplify_exp simplifications e
 
 
 let build_call f (args_t, ret_t) args =
@@ -1104,7 +1112,7 @@ let build_main_call ptr_sz ft params =
 	  let call = ref (init@call) in
 	  let bind_global (x, t) = call := [bind_var x t !call, loc] in
 	    List.iter bind_global globals;
-	    simplify !call
+	    simplify false !call
       | [] -> build_call fname ft []
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
 

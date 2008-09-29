@@ -159,7 +159,10 @@ and replace_init init =
 
 and replace_init_field (sz, sca, e) = 
   let e = replace_exp e in
-  let e = if !Npkcontext.no_opt then e else Newspeak.simplify_exp e in
+  let e = 
+    if !Npkcontext.no_opt then e 
+    else Newspeak.simplify_exp !Npkcontext.opt_checks e 
+  in
     (sz, sca, e)
 
 and replace_typ t =
@@ -263,7 +266,7 @@ let generate_funspecs cout npkos =
 	    let body = replace_body b in
 	    let body = 
 	      if !Npkcontext.no_opt then body
-	      else Newspeak.simplify body
+	      else Newspeak.simplify !Npkcontext.opt_checks body
 	    in
 	    let body =
 	      if !Npkcontext.no_opt then body

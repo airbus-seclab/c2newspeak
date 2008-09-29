@@ -46,6 +46,7 @@ let ignores_asm = ref false
 let ignores_pack = ref false
 let ignores_volatile = ref false
 let gnuc = ref false
+let opt_checks = ref true
 
 let forward_goto = ref false
 
@@ -163,6 +164,9 @@ let argslist = [
 
   ("--pretty", Arg.Set pretty_print,
    "verbose options: uses var names for Newspeak display");
+
+  ("--no-checks-opt", Arg.Clear opt_checks,
+   "prevent optimization that removes checks obviously correct");
 
   ("-v", Arg.Unit (verbose true),
    "verbose mode: turn all verbose options on");
