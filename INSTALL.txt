@@ -25,3 +25,8 @@ Newspeak is designed for the purpose of static analysis.
 If you find a bug, have a comment or a question, don't hesitate to visit
 http://www.penjili.org/ and submit a ticket, or directly send an email to
 charles.hymans(@)penjili.org.
+
+- Requirements:
+  - make
+  - Objective Caml
+  - patch

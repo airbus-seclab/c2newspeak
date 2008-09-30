@@ -26,6 +26,8 @@
 
 VERSION=1.4
 
+PREFIX=/usr
+
 #utils
 CP=cp
 RM=rm -rf
@@ -35,8 +37,9 @@ CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
 #FILES
-COMPONENTS=newspeak c2newspeak npkstrip npkstats npksimplify npk2bytesz \
-           npkcheck npkbugfind npkdiff ada2newspeak npkpointer
+EXE=c2newspeak npkstrip npkstats npksimplify npk2bytesz \
+    npkcheck npkbugfind npkdiff ada2newspeak npkpointer
+COMPONENTS=newspeak $(EXE)
 
 CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 
@@ -45,11 +48,19 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 
 all: bin $(CIL) $(COMPONENTS) doc lib
 
+install:
+	@echo "Installing programs in      "$(PREFIX)/bin
+	@cd bin; install $(EXE) $(PREFIX)/bin
+
+uninstall:
+	@echo "Removing programs from      "$(PREFIX)/bin
+	@$(RM) $(addsuffix *,$(addprefix $(PREFIX)/bin/,$(EXE)))
+
 lib: bin bin/lib/assert.h
 
 bin/lib/assert.h: 
 	@-mkdir bin/lib
-	@echo "Installing libraries in     "bin/lib
+	@echo "Copying libraries in        "bin/lib
 	@$(CP) -r lib/* bin/lib
 
 bin:
