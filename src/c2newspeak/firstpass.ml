@@ -93,10 +93,9 @@ let rec simplify_bexp e =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [(None, Data (exp_of_int 0))] in
+  let res = ref [(None, Data (exp_of_char '\x00'))] in
     for i = len - 1 downto 0 do
-      let c = Char.code str.[i] in
-	res := (None, Data (exp_of_int c))::!res
+      res := (None, Data (exp_of_char str.[i]))::!res
     done;
     !res
 
@@ -834,12 +833,10 @@ let translate (globals, spec) =
   and add_enum (x, v) =
     let v = translate_exp v in
     let v = cast v int_typ in
-      (* TODO: factor this code *)
-    let (pref, v, post) = C.normalize_exp v in
-      if (pref <> []) || (post <> []) then begin
-	Npkcontext.error "Firstpass.push_enum" 
-	  "expression without side-effects expected"
-      end;
+    let v = 
+      try C.Const (C.CInt (C.eval_exp v)) 
+      with Invalid_argument _ -> v
+    in
       push_enum (x, v)
 
   and add_compdecl (x, is_struct, f) =

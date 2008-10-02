@@ -533,21 +533,6 @@ let normalize x =
   let (body, _) = set_scope_blk x in
     body
 
-(* TODO: this should be probably put in firstpass *)
-let cast (e, t) t' =
-  match (t, e, t') with
-    | _ when t = t' -> e
-	(* TODO: this should be probably put in firstpass *)
-    | (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
-	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
-    | (Scalar (Int _), _, Scalar (Int k)) -> 
-	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
-    | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
-    | (Void, _, _) -> 
-	Npkcontext.error "Cir.cast" 
-	  "value void not ignored as it ought to be"
-    | _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
-
 let rec string_of_typ t =
   match t with
     | Void -> "void"
@@ -556,6 +541,24 @@ let rec string_of_typ t =
     | Struct _ -> "{}"
     | Union _ -> "{}"
     | Fun _ -> "fun"
+
+(* TODO: this should be probably put in firstpass *)
+let cast (e, t) t' =
+  match (t, e, t') with
+    | _ when t = t' -> e
+	(* TODO: this should be probably put in firstpass *)
+    | (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
+	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
+    | (Scalar Int k, _, Scalar Int k') 
+	when Newspeak.contains 
+	  (Newspeak.domain_of_typ k') (Newspeak.domain_of_typ k) -> e
+    | (Scalar (Int _), _, Scalar (Int k)) -> 
+	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
+    | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
+    | (Void, _, _) -> 
+	Npkcontext.error "Cir.cast" 
+	  "value void not ignored as it ought to be"
+    | _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
 
 let rec is_subtyp t1 t2 =
   match (t1, t2) with

@@ -150,6 +150,8 @@ let uint_typ = Int (Unsigned, Config.size_of_int)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 
+let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
+
 let nat_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in
   let read_hex_digit c =
