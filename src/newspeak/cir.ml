@@ -549,6 +549,8 @@ let cast (e, t) t' =
 	(* TODO: this should be probably put in firstpass *)
     | (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
 	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
+    | (_, Const (CInt i), Scalar (Int k))
+	when Newspeak.belongs i (Newspeak.domain_of_typ k) -> e
     | (Scalar Int k, _, Scalar Int k') 
 	when Newspeak.contains 
 	  (Newspeak.domain_of_typ k') (Newspeak.domain_of_typ k) -> e
