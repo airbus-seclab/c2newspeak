@@ -724,6 +724,10 @@ enum:
 
 field_blk:
   LBRACE field_list RBRACE               { $2 }
+| LBRACE RBRACE                          { 
+    Npkcontext.report_dirty_warning "Parser.field_blk" "empty struct or union";
+    [] 
+  }
 ;;
 
 ftyp:
