@@ -740,7 +740,7 @@ type_specifier:
   VOID                                   { Void }
 | ityp                                   { Integer (Newspeak.Signed, $1) }
 | SIGNED ityp                            {
-    Npkcontext.report_dirty_warning "Parser.type_specifier" 
+    Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
     Integer (Newspeak.Signed, $2)
   }

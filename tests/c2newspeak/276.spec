@@ -1,4 +1,3 @@
-Warning: signed specifier not necessary in 276.c line 27
 Newspeak output
 ---------------
 276.c
