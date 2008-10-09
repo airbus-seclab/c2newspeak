@@ -261,7 +261,7 @@ val string_of_bounds : bounds -> string
 
 (** [string_of_cte c] returns the string representation of constant [c]. *)
 val string_of_cte : cte -> string
-
+val string_of_sign_t: sign_t -> string
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
