@@ -802,6 +802,8 @@ external_declaration:
   declaration type_attribute SEMICOLON     { 
     build_glbtypedef (apply_attr $4 $3) 
   }
+| EXTENSION
+  declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $2 }
 | declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
 | optional_extension
   EXTERN declaration attribute_list 
