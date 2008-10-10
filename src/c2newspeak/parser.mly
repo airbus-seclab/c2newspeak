@@ -654,8 +654,9 @@ pointer:
 ;;
 
 field_list:
-  field_declaration SEMICOLON field_list   { $1@$3 } 
-| field_declaration SEMICOLON              { $1 }
+  gnuc_field_declaration SEMICOLON 
+  field_list                               { $1@$3 } 
+| gnuc_field_declaration SEMICOLON         { $1 }
 ;;
 
 parameter_list:
@@ -831,15 +832,19 @@ type_qualifier:
     }
 ;;
 
-field_declaration:
+gnuc_field_declaration:
 // GNU C extension
-  optional_extension declaration_specifiers
-  struct_declarator_list                   { flatten_field_decl ($2, $3) }
-| optional_extension 
-  declaration_specifiers                   { 
+  optional_extension field_declaration 
+  attribute_list                           { $2 }
+;;
+
+field_declaration:
+  declaration_specifiers
+  struct_declarator_list                   { flatten_field_decl ($1, $2) }
+| declaration_specifiers                   { 
     Npkcontext.report_dirty_warning "Parser.field_declaration"
       "anonymous field declaration in structure";
-    flatten_field_decl ($2, (Abstract, None)::[]) 
+    flatten_field_decl ($1, (Abstract, None)::[]) 
   }
 ;;
 
