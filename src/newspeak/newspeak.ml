@@ -972,6 +972,10 @@ let rec simplify_stmt actions (x, loc) =
     match x with
       | Set (lv, e, sca) -> 
 	  Set (simplify_lval actions lv, simplify_exp actions e, sca)
+      | Copy (lv1, lv2, sz) ->
+	  let lv1 = simplify_lval actions lv1 in
+	  let lv2 = simplify_lval actions lv2 in
+	    Copy (lv1, lv2, sz)
       | Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp actions e, t))
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
       | ChooseAssert elts ->
