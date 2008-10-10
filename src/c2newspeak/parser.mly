@@ -714,7 +714,11 @@ ident_or_tname:
 enum_list:
   enum                                   { $1::[] }
 | enum COMMA enum_list                   { $1::$3 }
-| enum COMMA                             { $1::[] }
+| enum COMMA                             { 
+    Npkcontext.report_strict_warning "Parser.enum_list"   
+      "unnecessary comma";  
+    $1::[] 
+  }
 ;;
 
 enum:
