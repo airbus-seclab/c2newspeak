@@ -138,10 +138,15 @@ let report_asm tokens =
     end;
     Npkcontext.print_warning loc message
 
-let apply_attr new_sz (t, m) =
-  match t with
-      Integer (sign, _) -> (Integer (sign, new_sz), m)
-    | _ -> Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
+let apply_attrs attrs t =
+  match (attrs, t) with
+      ([], _) -> t
+    | (new_sz::[], Integer (sign, _)) -> Integer (sign, new_sz)
+    | (_::[], _) -> 
+	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
+    | _ -> 
+	Npkcontext.error "Parser.apply_attr" 
+	  "more than one attribute not handled yet"
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -208,9 +213,22 @@ parameter_declaration_list:
 ;;
 
 declaration:
-  declaration_specifiers                   { ($1, (Abstract, None)::[]) }
-| declaration_specifiers 
-  init_declarator_list                     { ($1, $2) }
+  declaration_specifiers 
+  init_declarator_list 
+  extended_attribute_list                  { 
+    (apply_attrs $3 $1, $2) 
+  }
+;;
+
+init_declarator_list:
+                                           { (Abstract, None)::[] }
+| non_empty_init_declarator_list           { $1 }
+;;
+
+non_empty_init_declarator_list:
+  init_declarator COMMA 
+  non_empty_init_declarator_list           { $1::$3 }
+| init_declarator                          { $1::[] }
 ;;
 
 init_declarator:
@@ -283,12 +301,6 @@ type_qualifier_list:
 |                                          { }
 ;;
 
-init_declarator_list:
-  init_declarator COMMA 
-  init_declarator_list                     { $1::$3 }
-| init_declarator                          { $1::[] }
-;;
-
 compound_statement:
   LBRACE statement_list RBRACE             { $2 }
 ;;
@@ -327,26 +339,21 @@ statement:
   }
 | compound_statement                       { [Block $1, get_loc ()] }
 | SEMICOLON                                { [] }
-| ASM LPAREN asm_statement_list RPAREN 
-  SEMICOLON                                {
-    let loc = "Parser.statement" in
-    let msg = "assembly statement" in
-      if not !Npkcontext.ignores_asm then begin
-	Npkcontext.error loc 
-	  (msg^", remove asm from your code or try option --ignore-asm")
-      end else Npkcontext.print_warning loc msg;
-      []
-  }
+| asm SEMICOLON                            { [] }
+;;
+
+asm:
+  ASM LPAREN asm_statement_list RPAREN     { report_asm $3 }
 ;;
 
 asm_statement_list:
-  asm_statement                            { }
-| asm_statement COLON asm_statement_list   { }
+  asm_statement                            { $1::[] }
+| asm_statement COLON asm_statement_list   { $1::$3 }
 ;;
 
 asm_statement:
-  STRING                                   { }
-| STRING LPAREN IDENTIFIER RPAREN          { }
+  string_literal                           { $1 }
+| string_literal LPAREN IDENTIFIER RPAREN  { $1 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
@@ -798,16 +805,12 @@ external_declaration:
 }
 | optional_extension TYPEDEF 
   declaration SEMICOLON                    { build_glbtypedef $3 }
-| optional_extension TYPEDEF 
-  declaration type_attribute SEMICOLON     { 
-    build_glbtypedef (apply_attr $4 $3) 
-  }
-| EXTENSION
-  declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $2 }
-| declaration attribute_list SEMICOLON     { build_glbdecl (false, false) $1 }
+| EXTENSION declaration SEMICOLON          { build_glbdecl (false, false) $2 }
+| declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
 | optional_extension
-  EXTERN declaration attribute_list 
-  SEMICOLON                                { build_glbdecl (false, true) $3 }
+  EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
+| optional_extension
+  EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
 ;;
 
 optional_extension:
@@ -816,8 +819,14 @@ optional_extension:
 ;;
 
 attribute_list:
-  attribute attribute_list                 { }
-|                                          { }
+  attribute attribute_list                 { $1@$2 }
+|                                          { [] }
+;;
+
+extended_attribute_list:
+  attribute extended_attribute_list        { $1@$2 }
+| asm extended_attribute_list              { $2 }
+|                                          { [] }
 ;;
 
 type_qualifier:
@@ -852,42 +861,42 @@ field_declaration:
 
 attribute:
   ATTRIBUTE LPAREN LPAREN attribute_name 
-  RPAREN RPAREN                            { }
-| ASM LPAREN STRING RPAREN                 { report_asm ($3::[]) }
-| ASM LPAREN STRING STRING RPAREN          { report_asm ($3::$4::[]) }
-| INLINE                                   { }
-| CDECL                                    { }
-| RESTRICT                                 { }
+  RPAREN RPAREN                            { $4 }
+| INLINE                                   { [] }
+| CDECL                                    { [] }
+| RESTRICT                                 { [] }
 ;;
 
 attribute_name:
   DLLIMPORT                                {
     Npkcontext.print_warning "Parser.attribute" 
-      "ignoring attribute dllimport"
+      "ignoring attribute dllimport";
+    []
   }
-| CDECL_ATTR                               { }
-| NORETURN                                 { }
-| ALWAYS_INLINE                            { }
-| NOTHROW                                  { }
-| PURE                                     { }
-| DEPRECATED                               { }
-| MALLOC                                   { }
+| CDECL_ATTR                               { [] }
+| NORETURN                                 { [] }
+| ALWAYS_INLINE                            { [] }
+| NOTHROW                                  { [] }
+| PURE                                     { [] }
+| DEPRECATED                               { [] }
+| MALLOC                                   { [] }
 | FORMAT LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
-  RPAREN                                   { }
-| FORMAT_ARG LPAREN INTEGER RPAREN         { }
-| NONNULL LPAREN integer_list RPAREN       { }
-| CONST                                    { }
-| GNU_INLINE                               { }
-| WARN_UNUSED_RESULT                       { }
+  RPAREN                                   { [] }
+| FORMAT_ARG LPAREN INTEGER RPAREN         { [] }
+| NONNULL LPAREN integer_list RPAREN       { [] }
+| CONST                                    { [] }
+| GNU_INLINE                               { [] }
+| WARN_UNUSED_RESULT                       { [] }
 | PACKED                                   { 
     let loc = "Parser.attribute_name" in
     let message = "packed attribute not supported yet" in 
       if not !Npkcontext.ignores_pack
       then Npkcontext.error loc (message^", try option --ignore-pack");
-      Npkcontext.print_warning loc message
-
+      Npkcontext.print_warning loc message;
+      []
   }
+| MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 
 integer_list:
@@ -898,11 +907,6 @@ integer_list:
 format_fun:
   PRINTF                                   { }
 | SCANF                                    { }
-;;
-
-type_attribute:
-  ATTRIBUTE LPAREN LPAREN 
-  MODE LPAREN imode RPAREN RPAREN RPAREN   { $6 }
 ;;
 
 imode:

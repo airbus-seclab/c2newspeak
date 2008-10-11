@@ -193,7 +193,8 @@ let wide_character = 'L''\'' _ '\''
 rule token spec_buf = parse
 
 (* keywords *)
-    "break"             { BREAK }
+    "asm"               { ASM }
+  | "break"             { BREAK }
   | "case"              { CASE }
   | "const"             { CONST }
   | "continue"          { CONTINUE }
