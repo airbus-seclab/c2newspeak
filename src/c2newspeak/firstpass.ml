@@ -418,8 +418,13 @@ let translate (globals, spec) =
 
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
-	  let r = fields_of_comp (comp_of_typ t) in
-	  let (o, t) = List.assoc f r in
+	  let r = fields_of_comp (Csyntax.comp_of_typ t) in
+	  let (o, t) = 
+	    try List.assoc f r 
+	    with Not_found -> 
+	      Npkcontext.error "Firstpass.translate_lv" 
+		("unknown field '"^f^"' in union or structure")
+	  in
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
