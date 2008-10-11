@@ -177,6 +177,7 @@ and normalize_arg a =
   let t =
     match t with
 	B.Array (elt_t, _) -> B.Ptr elt_t
+      | B.Fun _ -> B.Ptr t
       | _ -> t
   in
   let x = 
