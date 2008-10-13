@@ -1,4 +1,4 @@
-Warning: unknown function arguments type at call site in 096.c line 28
+Warning: unknown arguments type at function call in 096.c line 28
 Newspeak output
 ---------------
 096.c

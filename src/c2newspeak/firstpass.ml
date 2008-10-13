@@ -613,7 +613,7 @@ let translate (globals, spec) =
       match args_t with
 	  None -> 
 	    let loc = "Firstpass.translate_args" in
-	    let msg = "unknown function arguments type at call site" in
+	    let msg = "unknown arguments type at function call" in
 	      if (!Npkcontext.missing_ftyp) 
 	      then Npkcontext.print_warning loc msg
 	      else begin
