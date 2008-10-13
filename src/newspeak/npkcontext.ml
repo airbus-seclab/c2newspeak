@@ -100,9 +100,6 @@ let cil_printer = ref "default"
 let version = ref false
 
 let argslist = [
-  ("--no-init", Arg.Clear (global_zero_init),
-   "disables zero initialisation of the globals");
-
   ("--castor", Arg.Set castor_allowed,
    "allows horrible casts to be translated");
 
@@ -165,9 +162,6 @@ let argslist = [
   ("--pretty", Arg.Set pretty_print,
    "verbose options: uses var names for Newspeak display");
 
-  ("--no-checks-opt", Arg.Clear opt_checks,
-   "prevent optimization that removes checks obviously correct");
-
   ("-v", Arg.Unit (verbose true),
    "verbose mode: turn all verbose options on");
     
@@ -183,9 +177,15 @@ let argslist = [
   ("--version", Arg.Set version,
    "prints the version of the software");
 
-  ("--no-opt", Arg.Set no_opt, "Disables all code simplifications");
+  ("--disable-init", Arg.Clear (global_zero_init),
+   "turn initialisation of globals to zero off");
 
-  ("--one-loop", Arg.Set normalize_loops, "Normalizes loops");
+  ("--disable-opt", Arg.Set no_opt, "turn all code simplifications off");
+
+  ("--disable-checks-opt", Arg.Clear opt_checks,
+   "turn code simplifications that remove checks off");
+
+  ("--one-loop", Arg.Set normalize_loops, "normalize loops");
 ]
 
 
