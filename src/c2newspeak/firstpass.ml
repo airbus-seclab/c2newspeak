@@ -481,17 +481,8 @@ let translate (globals, spec) =
 	    let (lv, t) = translate_lv e in
 	      (C.Lval (lv, translate_typ t), t)
 		
-	| AddrOf (Deref e) when !Npkcontext.dirty_syntax ->
-	    Npkcontext.print_warning "Firstpass.translate_exp" 
-	      ("unnecessary creation of a pointer from a dereference:"
-	       ^" rewrite the code");
-	    addr_of (deref e)
-	      
-	| AddrOf (Deref _) -> 
-	    Npkcontext.error "Firstpass.translate_exp" 
-	      ("unnecessary creation of a pointer from a dereference:"
-	       ^" rewrite the code")
-	      
+	| AddrOf (Deref e) -> translate_exp e
+	      	      
 	| AddrOf (Index (lv, Cst (C.CInt i, _)))
 	    when Nat.compare i Nat.zero = 0 ->
 	    let (lv', t) = translate_lv lv in begin

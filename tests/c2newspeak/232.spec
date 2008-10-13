@@ -1,1 +1,12 @@
-Fatal error: unnecessary creation of a pointer from a dereference: rewrite the code in 232.c line 30
+Newspeak output
+---------------
+232.c
+main() {
+  (232.c:27#1113)^ptr ptr;
+  (232.c:28#1124)^int32 i;
+  (232.c:29#1134)^ptr ptr2;
+  (232.c:30#1142)^0- =(ptr) (2-_ptr + (1-_int32 * 32));
+  (232.c:31#1162)^0- =(ptr) (2-_ptr + (1-_int32 * 32));
+}
+
+
