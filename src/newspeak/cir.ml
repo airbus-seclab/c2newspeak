@@ -653,3 +653,7 @@ let exp_of_blk blk =
   in
     Pref (exp_of_blk blk)
 	    
+let scalar_of_typ t =
+  match t with
+      Scalar t -> t
+    | _ -> Npkcontext.error "Cir.scalar_of_typ" "scalar type expected"

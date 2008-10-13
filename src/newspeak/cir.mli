@@ -146,3 +146,5 @@ val string_of_blk: blk -> string
 val length_of_array: Npkil.tmp_size_t -> lv -> Npkil.tmp_nat
 
 val exp_of_blk: blk -> exp
+
+val scalar_of_typ: typ -> scalar_t

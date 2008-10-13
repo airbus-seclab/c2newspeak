@@ -274,8 +274,9 @@ let translate (globals, spec) =
 	      translate o t (Sequence seq)
 
 	| (Data e, _) -> 
+	    (* TODO: should I be using translate_set here too??? *)
 	    let e = cast (translate_exp e) t in
-	      res := (o, translate_scalar_typ t, e)::!res;
+	      res := (o, translate_typ t, e)::!res;
 	      t
 	      
 	| (Sequence seq, Array (t, len)) -> 
@@ -360,13 +361,13 @@ let translate (globals, spec) =
 	    
     and fill_with_zeros o t =
       match t with
-	  Int _ -> res := (o, translate_scalar_typ t, C.exp_of_int 0)::!res
+	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
 	    (* TODO: inefficient: t is translated twice *)
 	    let e = cast (translate_exp (exp_of_int 0)) t in
-	      res := (o, translate_scalar_typ t, e)::!res
+	      res := (o, translate_typ t, e)::!res
 	| Float _ -> 
-	    res := (o, translate_scalar_typ t, C.exp_of_float 0.)::!res
+	    res := (o, translate_typ t, C.exp_of_float 0.)::!res
 	| Array (t, n) ->
 	    let n = 
 	      match translate_array_len n with
@@ -392,6 +393,7 @@ let translate (globals, spec) =
 	      "this type of zero initialization not implemented yet"
     in
     let t = translate 0 t x in
+      (* TODO: find a way to remove this List.rev, optimize *)
       (List.rev !res, t)
   
   and translate_glb_init t x =
@@ -399,6 +401,8 @@ let translate (globals, spec) =
 	None -> (t, None)
       | Some init -> 
 	  let (init, t) = translate_init t init in
+	  let get_scalar (o, t, e) = (o, C.scalar_of_typ t, e) in
+	  let init = List.map get_scalar init in
 	    (t, Some init)
 
   and add_glb_cstr str =
@@ -829,7 +833,7 @@ let translate (globals, spec) =
     let v = C.Var id in
     let build_set (o, t, e) =
       let lv = C.Shift (v, C.exp_of_int o) in
-	(C.Set (lv, C.Scalar t, e), loc)
+	(C.Set (lv, t, e), loc)
     in
     let init = List.map build_set init in
     let decl = (C.Decl (translate_typ t, x, id), loc) in
