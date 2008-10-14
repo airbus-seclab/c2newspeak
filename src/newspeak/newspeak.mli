@@ -1,4 +1,3 @@
-
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
@@ -266,6 +265,7 @@ val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
+val string_of_fn: fn -> string
 val string_of_lval : lval -> string
 
 val string_of_stmt: stmt -> string

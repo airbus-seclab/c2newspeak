@@ -24,5 +24,6 @@
 COMMAND=$(C2NEWSPEAK) -c $*.c &> /dev/null; $(WC) $*.no
 PREREQ=%.c
 TESTS=000
+DIFF=diff -w $*.spec $*.bak
 
 include ../common.Makefile
