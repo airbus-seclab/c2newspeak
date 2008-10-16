@@ -436,13 +436,9 @@ let translate (globals, spec) =
 	  let (lv, t) = translate_lv e in begin
 	    match t with
 		Array (t, len) ->
-		  let (i, _) = translate_exp idx in
+		  let i = translate_exp idx in
 		  let n = translate_array_len len in
-		  let len = C.length_of_array n lv in
-		  let sz = C.exp_of_int (size_of t) in
-		  let o = C.Unop (K.Belongs_tmp (Nat.zero, len), i) in
-		  let o = C.Binop (N.MultI, o, sz) in
-		    (C.Shift (lv, o), t)
+		    translate_array_access (lv, t, n) i
 
 	      | Ptr _ -> translate_lv (Deref (Binop (Plus, e, idx)))
 	      | _ -> 
@@ -450,7 +446,7 @@ let translate (globals, spec) =
 		    "Array or pointer type expected"
 	  end
 
-      | Deref e -> deref e
+      | Deref e -> deref (translate_exp e)
 
       | OpExp (op, lv, is_after) ->
 	  let loc = Npkcontext.get_loc () in
@@ -469,6 +465,22 @@ let translate (globals, spec) =
 
       | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
+  and translate_array_access (lv, t, n) i =
+    try
+      let (i, _) = i in
+      let len = 
+	try C.length_of_array n lv 
+	with Invalid_argument _ when !Npkcontext.accept_flex_array -> 
+	  raise Exit
+      in
+      let sz = C.exp_of_int (size_of t) in
+      let o = C.Unop (K.Belongs_tmp (Nat.zero, len), i) in
+      let o = C.Binop (N.MultI, o, sz) in
+	(C.Shift (lv, o), t)
+    with Exit -> 
+      let e = C.remove_fst_deref lv in
+      let e = translate_binop Plus (e, Ptr t) i in
+	deref e
 
   and translate_exp e =
     let rec translate e =
@@ -633,12 +645,13 @@ let translate (globals, spec) =
     let args = translate_args args args_t in
       (C.Call (ft', f, args), ret_t)
 
-  and deref e =
-    let (e, t) = translate_exp e in
-      match t with
-	  Ptr t -> (C.Deref (e, translate_typ t), t)
-	| _ -> Npkcontext.error "Firstpass.deref_typ" "pointer type expected"
+  and deref (e, t) =
+    match t with
+	Ptr t -> (C.Deref (e, translate_typ t), t)
+      | _ -> Npkcontext.error "Firstpass.deref_typ" "pointer type expected"
 	    
+(* TODO: code cleanup: get rid of call to length_of_array in cir2npkil 
+   with AddrOf and put it in here *)
   and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
 
   and translate_set (lv, e) =
@@ -723,6 +736,16 @@ let translate (globals, spec) =
 		last_align := max !last_align cur_align;
 		o := !o + sz;
 		(x, (o', Int (s, sz)))
+	| Array (_, None) -> 
+	    let loc = "Firstpass.process_struct_fields" in
+	    let msg = "flexible array member, " in
+	      if not !Npkcontext.accept_flex_array then begin
+		Npkcontext.error loc 
+		  (msg
+		   ^"rewrite your code or try option --accept-flexible-array")
+	      end;
+	      Npkcontext.print_warning loc (msg^"assuming size 0");
+	      (x, (!o, t))
 	| _ ->
 	    let sz = size_of t in
 	    let cur_align = align_of t in

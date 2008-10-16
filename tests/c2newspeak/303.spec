@@ -1,1 +1,1 @@
-Fatal error: unknown size of array in 303.c line 27
+Fatal error: flexible array member, rewrite your code or try option --accept-flexible-array in 303.c line 27

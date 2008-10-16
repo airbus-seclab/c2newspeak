@@ -62,6 +62,7 @@ val remove_temp : bool ref
 (** With accept_extern set, we can have global variables declared and
     not defined *)
 val accept_extern : bool ref
+val accept_flex_array: bool ref
 
 val accept_mult_def : bool ref
 

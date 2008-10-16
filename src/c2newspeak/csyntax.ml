@@ -243,6 +243,7 @@ let rec string_of_typ t =
       Void -> "void"
     | Int _ -> "int??"
     | Ptr t -> "*"^(string_of_typ t)
+    | Array (t, None) -> (string_of_typ t)^"[?]"
     | _ -> "TODO: other_t"
 
 let string_of_ftyp (args_t, _) =
@@ -257,10 +258,10 @@ let string_of_ftyp (args_t, _) =
 let rec string_of_exp e =
   match e with
       Cst _ -> "Cst"
-    | Var _ -> "Var"
-    | Field _ -> "Field"
-    | Index _ -> "Index"
-    | Deref _ -> "Deref"
+    | Var x -> x
+    | Field (e, f) -> (string_of_exp e)^"."^f
+    | Index (e1, e2) -> "("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
+    | Deref e -> "*("^(string_of_exp e)^")"
     | AddrOf _ -> "AddrOf"
     | Unop _ -> "Unop"
     | IfExp _ -> "IfExp"

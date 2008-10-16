@@ -58,6 +58,7 @@ let castor_allowed = ref false
 let ignores_pragmas = ref false
 let remove_temp = ref true
 let accept_extern = ref false
+let accept_flex_array = ref false
 
 let no_opt = ref false
 let normalize_loops = ref false
@@ -131,10 +132,13 @@ let argslist = [
    "does not remove unused variables");
 
   ("--accept-extern", Arg.Set accept_extern,
-   "does not raise an error on variables declared but not defined\n");
+   "do not raise an error on variables declared but not defined\n");
+
+  ("--accept-flexible-array", Arg.Set accept_flex_array,
+   "accept flexible array members");
 
   ("--accept-mult-def", Arg.Set accept_mult_def,
-   "does not raise an error multiple definitions of the same variables\n");
+   "do not raise an error multiple definitions of the same variables\n");
 
   ("--cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");

@@ -382,8 +382,9 @@ let is_mp_typ t1 t2 =
 	(Scalar sc1, Scalar sc2) when sc1 = sc2 -> true
 
       | (Array (t1, None), Array (t2, Some _)) -> 
-	  ignore (is_mp_typs_aux t1 t2);
-	  false
+	  let _ = is_mp_typs_aux t1 t2 in
+	    false
+
       | (Array (t1, _), Array (t2, None)) ->
 	  is_mp_typs_aux t1 t2
 

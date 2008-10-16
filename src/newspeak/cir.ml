@@ -113,13 +113,21 @@ and cst =
     | CInt of Nat.t
     | CFloat of (float * string)
 
+let rec string_of_typ t =
+  match t with
+    | Void -> "void"
+    | Scalar t -> Newspeak.string_of_scalar t
+    | Array (t, sz) -> (string_of_typ t^"["^(Npkil.string_of_tmp_size sz)^"]")
+    | Struct _ -> "{}"
+    | Union _ -> "{}"
+    | Fun _ -> "fun"
 
 let rec string_of_exp margin e =
   match e with
       Const (CInt i) -> Big_int.string_of_big_int (Nat.to_big_int i)
     | Const _ -> "cst"
-    | Lval _ -> "lv"
-    | AddrOf _ -> "&lv"
+    | Lval (lv, _) -> string_of_lv margin lv
+    | AddrOf (lv, t) -> "&("^(string_of_lv margin lv)^")_"^(string_of_typ t)
     | Unop (op, e) -> (Npkil.string_of_unop op)^"("^(string_of_exp margin e)^")"
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1)
@@ -128,6 +136,15 @@ let rec string_of_exp margin e =
     | Call _ -> "f()"
     | Pref (blk, e) -> 
 	"("^(string_of_blk margin blk)^(string_of_exp margin e)^")"
+
+and string_of_lv margin x =
+  match x with
+    | Var x -> "v"^(string_of_int x)
+    | Global x -> x
+    | Shift (lv, e) -> (string_of_lv margin lv)^" + "^(string_of_exp margin e)
+    | Deref (e, t) -> "*("^(string_of_exp margin e)^")_"^(string_of_typ t)
+    | Stmt_lv (stmt, lv, _) -> 
+	"("^(string_of_stmt margin stmt)^(string_of_lv margin lv)^")"
 
 and string_of_blk margin x =
   match x with
@@ -158,6 +175,8 @@ and string_of_stmt margin (x, _) =
     | _ -> "not implemented yet"
 
 let string_of_exp = string_of_exp ""
+
+let string_of_lv = string_of_lv ""
 
 let string_of_blk = string_of_blk ""
 
@@ -533,15 +552,6 @@ let normalize x =
   let (body, _) = set_scope_blk x in
     body
 
-let rec string_of_typ t =
-  match t with
-    | Void -> "void"
-    | Scalar t -> Newspeak.string_of_scalar t
-    | Array (t, sz) -> (string_of_typ t^"["^(Npkil.string_of_tmp_size sz)^"]")
-    | Struct _ -> "{}"
-    | Union _ -> "{}"
-    | Fun _ -> "fun"
-
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =
   match (t, e, t') with
@@ -657,3 +667,11 @@ let scalar_of_typ t =
   match t with
       Scalar t -> t
     | _ -> Npkcontext.error "Cir.scalar_of_typ" "scalar type expected"
+
+let rec remove_fst_deref lv =
+  match lv with
+      Shift (lv, i) ->
+	let e = remove_fst_deref lv in
+	  Binop (PlusPI, e, i) 
+    | Deref (e, _) -> e
+    | _ -> Npkcontext.error "Cir.remove_fst_deref" "pointer deref expected"
