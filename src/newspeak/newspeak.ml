@@ -857,6 +857,11 @@ object (self)
 
       | BinOp (PlusPI, e, Const CInt x) when (Nat.compare x Nat.zero = 0) -> e
 
+      | BinOp (PlusPI, BinOp (PlusPI, e, Const CInt y), Const CInt x) 
+	  when (Nat.compare x Nat.zero >= 0) 
+	    && (Nat.compare y Nat.zero >= 0) -> 
+	  BinOp (PlusPI, e, Const (CInt (Nat.add x y)))
+
       | BinOp (DivI, Const CInt i1, Const CInt i2) 
 	  when Nat.compare i2 Nat.zero <> 0 ->
 	  Const (CInt (Nat.div i1 i2))
