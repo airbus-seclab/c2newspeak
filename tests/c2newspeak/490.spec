@@ -1,4 +1,4 @@
-Warning: asm directive ' lda [%1]1, %0 ' '=r' 'r' in 490.c line 36
+Warning: asm directive ' lda [%1]1, %0 ' '=r' 'r' ignored in 490.c line 36
 Newspeak output
 ---------------
 490.c

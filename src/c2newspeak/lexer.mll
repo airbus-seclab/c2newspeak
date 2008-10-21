@@ -144,12 +144,9 @@ let preprocess lexbuf =
 	      pos_fname = fname; pos_lnum = line_nb; pos_cnum = 0; 
 	  } in
  	    set_loc lexbuf pos
-      | Pragma when !Npkcontext.ignores_pragmas -> 
-	  Npkcontext.print_warning "Preprocessor.parse" 
-	    ("Directive ignored: "^line)
       | Pragma -> 
-	  Npkcontext.error "Preprocessor.parse"
-	    ("Directive not supported: "^line)
+	  Npkcontext.report_ignore_warning "Preprocessor.parse"
+	    ("directive "^line) Npkcontext.Pragma
       | _ -> ()
 }
 

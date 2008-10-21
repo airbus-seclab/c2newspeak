@@ -291,10 +291,10 @@ let first_pass f =
 	  | [GCompTagDecl (c, _)] -> 
 	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
 		("skipping composite declaration "^c.cname)
-	  | [GPragma (a, _)] when !Npkcontext.ignores_pragmas -> 
-	      Npkcontext.print_warning "Npkfirstpass.first_pass.explore"
-		("ignoring directive: unknown #pragma "^(string_of_attribute a))
-		      
+	  | [GPragma (a, _)] -> 
+	      Npkcontext.report_ignore_warning "Preprocessor.parse"
+		("directive #pragma "^(string_of_attribute a))
+		Npkcontext.Pragma
 	  | [GVarDecl ({vname = name; vtype = TFun (ret, args, _, _)}, _)] ->
 	      let ftyp = Npkutils.translate_ftyp (args, ret) in
 		Cilenv.update_fun_proto name ftyp

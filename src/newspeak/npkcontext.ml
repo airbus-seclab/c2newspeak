@@ -320,9 +320,9 @@ let report_dirty_warning msg err =
 let report_ignore_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
-      error loc (msg^advice)
+      error loc (msg^" not supported yet"^advice)
   end;
-  print_warning loc msg 
-
+  print_warning loc (msg^" ignored")
+    
 let report_strict_warning msg err =
   if !strict_syntax then print_warning msg err

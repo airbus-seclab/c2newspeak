@@ -1,4 +1,4 @@
-Warning: packed attribute not supported yet in 428.c line 29
+Warning: packed attribute ignored in 428.c line 29
 Newspeak output
 ---------------
 428.c

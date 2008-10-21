@@ -830,7 +830,7 @@ type_qualifier:
 | attribute                                { }
 | VOLATILE                                 { 
     Npkcontext.report_ignore_warning "Parser.type_qualifier" 
-      "type qualifier 'volatile' not supported yet" Npkcontext.Volatile;
+      "type qualifier 'volatile'" Npkcontext.Volatile;
     }
 ;;
 
@@ -881,7 +881,7 @@ attribute_name:
 | WARN_UNUSED_RESULT                       { [] }
 | PACKED                                   { 
     let loc = "Parser.attribute_name" in
-    let msg = "packed attribute not supported yet" in 
+    let msg = "packed attribute" in 
       Npkcontext.report_ignore_warning loc msg Npkcontext.Pack;
       []
   }
