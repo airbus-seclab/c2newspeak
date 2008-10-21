@@ -40,7 +40,6 @@ open Cil
 (* Command line options *)
 (*----------------------*)
 
-
 (* Translation options *)
 let ignores_asm = ref false
 let ignores_pack = ref false
@@ -96,6 +95,26 @@ let missing_ftyp = ref false
 let use_cil = ref false
 let cil_printer = ref "default"
 
+type error =
+    Asm
+  | Pragma
+  | Pack
+  | Volatile
+
+let flag_of_error err =
+  match err with
+      Asm -> ignores_asm
+    | Pragma -> ignores_pragmas
+    | Pack -> ignores_pack
+    | Volatile -> ignores_volatile
+
+let opt_of_error err =
+  match err with
+      Asm -> "--ignore-asm"
+    | Pragma -> "--ignore-pragma"
+    | Pack -> "--ignore-pack"
+    | Volatile -> "--ignore-volatile"
+
 (* Version *)
 
 let version = ref false
@@ -116,16 +135,16 @@ let argslist = [
   ("--strict", Arg.Set strict_syntax,
    "sets strict syntax");
   
-  ("--ignore-pragma", Arg.Set ignores_pragmas,
+  (opt_of_error Pragma, Arg.Set (flag_of_error Pragma),
    "ignores any #pragma directive");
 
-  ("--ignore-asm", Arg.Set ignores_asm,
+  (opt_of_error Asm, Arg.Set (flag_of_error Asm),
    "ignores any asm directive");
 
-  ("--ignore-pack", Arg.Set ignores_pack,
+  (opt_of_error Pack, Arg.Set (flag_of_error Pack),
    "ignores any packed attribute");
 
-  ("--ignore-volatile", Arg.Set ignores_volatile,
+  (opt_of_error Volatile, Arg.Set (flag_of_error Volatile),
    "ignores 'volatile' type qualifier");
 
   ("--keep-unused-vars", Arg.Clear remove_temp,
@@ -256,6 +275,7 @@ let string_of_error where msg =
 
 let error where msg = invalid_arg (string_of_error where msg)
 
+(* TODO: remove this function *)
 let print_error msg =
   prerr_endline ("Fatal error: "^msg);
   exit 1
@@ -295,6 +315,14 @@ let report_dirty_warning msg err =
     let msg = string_of_error msg err in
       invalid_arg (msg^". Clean up your code or try option --dirty.")
   end
+
+(* TODO: do a report_accept_warning *)
+let report_ignore_warning loc msg err_typ =
+  if not !(flag_of_error err_typ) then begin
+    let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
+      error loc (msg^advice)
+  end;
+  print_warning loc msg 
 
 let report_strict_warning msg err =
   if !strict_syntax then print_warning msg err

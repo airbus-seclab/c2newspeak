@@ -32,7 +32,11 @@
     to the user. It also regroups every command line option of
     cil2newspeak *)
 
-
+type error = 
+    Asm
+  | Pragma
+  | Pack
+  | Volatile
 
 (** {1 Comand line options } *)
 
@@ -121,8 +125,12 @@ val get_fname : unit -> string
 (* TODO: unify these functions!!! into one, with a level!!! *)
 val print_warning : string -> string -> unit
 val print_morewarn : string -> string -> unit
+(* TODO: remove this function *)
 val report_dirty_warning: string -> string -> unit
+(* TODO: remove this function *)
+(* TODO: implify npkcontext interface *)
 val report_strict_warning: string -> string -> unit
+val report_ignore_warning: string -> string -> error -> unit
 
 (** Displays a message to the user *)
 val print_debug : string -> unit

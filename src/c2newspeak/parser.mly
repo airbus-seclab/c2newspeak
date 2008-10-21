@@ -131,12 +131,8 @@ let build_funparams params types =
 let report_asm tokens =
   let loc = "Parser.report_asm" in
   let tokens = List_utils.to_string (fun x -> x) "' '" tokens in
-  let message = "asm directive '"^tokens^"'" in
-    if not !Npkcontext.ignores_asm then begin
-      let advice = ", remove asm from your code or try option --ignore-asm" in
-	Npkcontext.error loc (message^advice)
-    end;
-    Npkcontext.print_warning loc message
+  let msg = "asm directive '"^tokens^"'" in
+    Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
 
 let apply_attrs attrs t =
   match (attrs, t) with
@@ -833,13 +829,8 @@ type_qualifier:
   CONST                                    { }
 | attribute                                { }
 | VOLATILE                                 { 
-    if not !Npkcontext.ignores_volatile then begin
-      Npkcontext.error "Parser.type_qualifier" 
-	("type qualifier 'volatile' not supported yet, "
-	 ^"try option --ignore-volatile")
-    end;
-    Npkcontext.print_warning "Parser.type_qualifier" 
-      "type qualifier 'volatile' ignored";
+    Npkcontext.report_ignore_warning "Parser.type_qualifier" 
+      "type qualifier 'volatile' not supported yet" Npkcontext.Volatile;
     }
 ;;
 
@@ -890,10 +881,8 @@ attribute_name:
 | WARN_UNUSED_RESULT                       { [] }
 | PACKED                                   { 
     let loc = "Parser.attribute_name" in
-    let message = "packed attribute not supported yet" in 
-      if not !Npkcontext.ignores_pack
-      then Npkcontext.error loc (message^", try option --ignore-pack");
-      Npkcontext.print_warning loc message;
+    let msg = "packed attribute not supported yet" in 
+      Npkcontext.report_ignore_warning loc msg Npkcontext.Pack;
       []
   }
 | MODE LPAREN imode RPAREN                 { $3::[] }
