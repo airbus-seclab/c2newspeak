@@ -69,9 +69,6 @@ val no_opt : bool ref
 
 val normalize_loops : bool ref
 
-(* val assumptions : string list ref *)
-
-val verb_morewarns : bool ref
 val verb_debug : bool ref
 val verb_ast : bool ref
 val verb_npko : bool ref
@@ -118,7 +115,6 @@ val get_fname : unit -> string
 
 (* TODO: unify these functions!!! into one, with a level!!! *)
 val print_warning : string -> string -> unit
-val print_morewarn : string -> string -> unit
 (* TODO: remove this function *)
 val report_dirty_warning: string -> string -> unit
 (* TODO: remove this function *)
@@ -130,10 +126,11 @@ val report_ignore_warning: string -> string -> error -> unit
 val print_debug : string -> unit
 
 (** Throws an Invalid_argument exception with a message *)
+(* TODO: rename this function into report_error *)
 val error : string -> string -> 'a
 
 (** Displays a message as a fatal error and exits the program *)
-val print_error : string -> 'a
+val exit_on_error : string -> 'a
 
 (** Whether to use CIL lexer and parser *)
 val use_cil: bool ref

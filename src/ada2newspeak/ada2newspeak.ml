@@ -68,5 +68,5 @@ let _ =
 		Link.link nos !Npkcontext.output_file
 	      end
 		
-  with Invalid_argument msg -> Npkcontext.print_error msg
+  with Invalid_argument msg -> Npkcontext.exit_on_error msg
     

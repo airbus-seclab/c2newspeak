@@ -70,7 +70,6 @@ let accept_mult_def = ref false
 
 (* Verbose options *)
 
-let verb_morewarns = ref false
 let verb_debug = ref false
 let verb_ast = ref false
 let verb_npko = ref false
@@ -80,7 +79,6 @@ let pretty_print = ref false
 let verbose boolean () =
   verb_ast := boolean;
   verb_debug := boolean;
-  verb_morewarns := boolean;
   verb_newspeak := boolean
 
 (* File options *)
@@ -166,9 +164,6 @@ let argslist = [
   
   ("--cil-printer", Arg.Set_string cil_printer,
    "verbose options: uses \"default\" or \"plain\" Cil output");
-
-  ("--more-warnings", Arg.Set verb_morewarns,
-   "verbose options: displays more warnings");
   
   ("--debug", Arg.Set verb_debug,
    "verbose options: displays more debugging info");
@@ -261,9 +256,6 @@ let print_warning where msg =
       old_warnings := String_set.add disp !old_warnings
     end
 
-let print_morewarn where msg =
-  if !verb_morewarns then print_warning where msg
-
 let print_debug msg =
   if !verb_debug then 
     prerr_endline ("Debug: "^msg^(string_of_loc !cur_loc))
@@ -275,8 +267,7 @@ let string_of_error where msg =
 
 let error where msg = invalid_arg (string_of_error where msg)
 
-(* TODO: remove this function *)
-let print_error msg =
+let exit_on_error msg =
   prerr_endline ("Fatal error: "^msg);
   exit 1
 

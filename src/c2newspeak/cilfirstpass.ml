@@ -167,16 +167,13 @@ end
 
 (* TODO: Is it necessary ? Should I remove or rewrite this code ? *)
 let check_main_signature t =
-  let (ret, args) = 
+  let args = 
     match unrollType t with
-	TFun (ret, Some args, _, []) -> (ret, args)
+	TFun (_, Some args, _, []) -> args
       | _ ->
 	  Npkcontext.error "Npkfirstpass.check_main_signature"
 	    "main, should have a function type"
   in
-    if (!Npkcontext.verb_morewarns) && (unrollType ret <> TInt (IInt, [])) 
-    then Npkcontext.print_warning "Npkfirstpass.check_main_signature"
-      "return type of 'main' is not 'int'";
     match args with
 	[] -> ()
       | (_, arg1, [])::(_, arg2, [])::[] 
@@ -279,18 +276,10 @@ let first_pass f =
       set_loc loc;
       if loc.file <> "<compiler builtins>" then
 	match new_g with
-	  | [GType (t, _)] ->
-	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
-		("skipping typedef "^t.tname)
-	  | [GEnumTag (info, _)] -> 
-	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
-		("skipping enum "^info.ename)
-	  | [GCompTag (c, _)] -> 
-	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
-		("skipping composite typedef "^c.cname)
-	  | [GCompTagDecl (c, _)] -> 
-	      Npkcontext.print_morewarn "Npkfirstpass.first_pass.explore"
-		("skipping composite declaration "^c.cname)
+	  | [GType _] -> ()
+	  | [GEnumTag _] -> ()
+	  | [GCompTag _] -> ()
+	  | [GCompTagDecl _] -> ()
 	  | [GPragma (a, _)] -> 
 	      Npkcontext.report_ignore_warning "Preprocessor.parse"
 		("directive #pragma "^(string_of_attribute a))
