@@ -37,6 +37,18 @@ type error =
   | Pragma
   | Pack
   | Volatile
+  | DirtyCast
+  | DirtySyntax
+  | PartialFunTyp
+  | ForwardGoto
+  | StrictSyntax
+  | ExternGlobal
+  | FlexArray
+  | MultipleDef
+  | GnuC
+  | DisableInit
+  | DisableOpt
+  | DisableCheckOpt
 
 (** {1 Comand line options } *)
 

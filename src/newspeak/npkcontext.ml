@@ -98,6 +98,18 @@ type error =
   | Pragma
   | Pack
   | Volatile
+  | DirtyCast
+  | DirtySyntax
+  | PartialFunTyp
+  | ForwardGoto
+  | StrictSyntax
+  | ExternGlobal
+  | FlexArray
+  | MultipleDef
+  | GnuC
+  | DisableInit
+  | DisableOpt
+  | DisableCheckOpt
 
 let flag_of_error err =
   match err with
@@ -105,32 +117,56 @@ let flag_of_error err =
     | Pragma -> ignores_pragmas
     | Pack -> ignores_pack
     | Volatile -> ignores_volatile
-
+    | DirtyCast -> castor_allowed
+    | DirtySyntax -> dirty_syntax
+    | PartialFunTyp -> missing_ftyp
+    | ForwardGoto -> forward_goto
+    | StrictSyntax -> strict_syntax
+    | ExternGlobal -> accept_extern
+    | FlexArray -> accept_flex_array
+    | MultipleDef -> accept_mult_def
+    | GnuC -> gnuc
+    | DisableInit -> global_zero_init
+    | DisableOpt -> no_opt
+    | DisableCheckOpt -> opt_checks
+ 
 let opt_of_error err =
   match err with
       Asm -> "--ignore-asm"
     | Pragma -> "--ignore-pragma"
     | Pack -> "--ignore-pack"
     | Volatile -> "--ignore-volatile"
+    | DirtyCast -> "--castor"
+    | DirtySyntax -> "--dirty"
+    | PartialFunTyp -> "--missing-funtyp"
+    | ForwardGoto -> "--accept-forward-goto"
+    | StrictSyntax -> "--strict"
+    | ExternGlobal -> "--accept-extern"
+    | FlexArray -> "--accept-flexible-array"
+    | MultipleDef -> "--accept-mult-def"
+    | GnuC -> "--gnuc"
+    | DisableInit -> "--disable-init"
+    | DisableOpt -> "--disable-opt"
+    | DisableCheckOpt -> "--disable-checks-opt"
 
 (* Version *)
 
 let version = ref false
 
 let argslist = [
-  ("--castor", Arg.Set castor_allowed,
+  (opt_of_error DirtyCast, Arg.Set (flag_of_error DirtyCast),
    "allows horrible casts to be translated");
 
-  ("--dirty", Arg.Set dirty_syntax,
+  (opt_of_error DirtySyntax, Arg.Set (flag_of_error DirtySyntax),
    "allows dirty syntax");
 
-  ("--missing-funtyp", Arg.Set missing_ftyp,
+  (opt_of_error PartialFunTyp, Arg.Set (flag_of_error PartialFunTyp),
    "allows call to function whose argument type is unknown");
 
-  ("--accept-forward-goto", Arg.Set forward_goto,
+  (opt_of_error ForwardGoto, Arg.Set (flag_of_error ForwardGoto),
    "accepts forward goto statements");
 
-  ("--strict", Arg.Set strict_syntax,
+  (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
    "sets strict syntax");
   
   (opt_of_error Pragma, Arg.Set (flag_of_error Pragma),
@@ -148,19 +184,19 @@ let argslist = [
   ("--keep-unused-vars", Arg.Clear remove_temp,
    "does not remove unused variables");
 
-  ("--accept-extern", Arg.Set accept_extern,
+  (opt_of_error ExternGlobal, Arg.Set (flag_of_error ExternGlobal),
    "do not raise an error on variables declared but not defined\n");
 
-  ("--accept-flexible-array", Arg.Set accept_flex_array,
+  (opt_of_error FlexArray, Arg.Set (flag_of_error FlexArray),
    "accept flexible array members");
 
-  ("--accept-mult-def", Arg.Set accept_mult_def,
+  (opt_of_error MultipleDef, Arg.Set (flag_of_error MultipleDef),
    "do not raise an error multiple definitions of the same variables\n");
 
   ("--cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");
 
-  ("--gnuc", Arg.Set gnuc, "allow GNU C extensions");
+  (opt_of_error GnuC, Arg.Set (flag_of_error GnuC), "allow GNU C extensions");
   
   ("--cil-printer", Arg.Set_string cil_printer,
    "verbose options: uses \"default\" or \"plain\" Cil output");
@@ -195,12 +231,13 @@ let argslist = [
   ("--version", Arg.Set version,
    "prints the version of the software");
 
-  ("--disable-init", Arg.Clear (global_zero_init),
+  (opt_of_error DisableInit, Arg.Clear (flag_of_error DisableInit),
    "turn initialisation of globals to zero off");
 
-  ("--disable-opt", Arg.Set no_opt, "turn all code simplifications off");
+  (opt_of_error DisableOpt, Arg.Set (flag_of_error DisableOpt), 
+   "turn all code simplifications off");
 
-  ("--disable-checks-opt", Arg.Clear opt_checks,
+  (opt_of_error DisableCheckOpt, Arg.Clear (flag_of_error DisableCheckOpt),
    "turn code simplifications that remove checks off");
 
   ("--one-loop", Arg.Set normalize_loops, "normalize loops");
