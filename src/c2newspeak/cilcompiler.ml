@@ -150,22 +150,19 @@ and translate_scalar_cast (e, t2) t1 =
 
     | (Newspeak.FunPtr, Newspeak.FunPtr) -> e
 		      
-    | (Newspeak.Int (sign, sz), Newspeak.Ptr)
-	when sz = Config.size_of_ptr && !Npkcontext.castor_allowed ->
-	Npkcontext.print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(K.string_of_cast t2 t1));
+    | (Newspeak.Int (sign, sz), Newspeak.Ptr) when sz = Config.size_of_ptr ->
+	Npkcontext.report_accept_warning "Npkcompile.translate_scalar_cast"
+	  ("dirty cast "^(K.string_of_cast t2 t1)) Npkcontext.DirtyCast;
 	  K.UnOp (K.PtrToInt (sign, sz), e)
 	    
-    | (Newspeak.Ptr, Newspeak.Int (sign, sz))
-	when sz = Config.size_of_ptr && !Npkcontext.castor_allowed ->
-	Npkcontext.print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(K.string_of_cast t2 t1));
+    | (Newspeak.Ptr, Newspeak.Int (sign, sz)) when sz = Config.size_of_ptr ->
+	Npkcontext.report_accept_warning "Npkcompile.translate_scalar_cast"
+	  ("dirty cast "^(K.string_of_cast t2 t1)) Npkcontext.DirtyCast;
 	  K.UnOp (K.IntToPtr (sign, sz), e)
 	    
-    | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) 
-	when !Npkcontext.castor_allowed ->
-	Npkcontext.print_warning "Npkcompile.translate_scalar_cast"
-	  ("probable invalid cast "^(K.string_of_cast t2 t1));
+    | (Newspeak.Ptr as kt'), (Newspeak.FunPtr as kt) ->
+	Npkcontext.report_accept_warning "Npkcompile.translate_scalar_cast"
+	  ("dirty cast "^(K.string_of_cast t2 t1)) Npkcontext.DirtyCast;
 	K.UnOp (K.Cast (kt, kt'), e)
 
     | _ -> 

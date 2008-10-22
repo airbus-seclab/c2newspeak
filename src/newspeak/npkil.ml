@@ -501,13 +501,8 @@ let string_of_cast t1 t2 =
     | _ -> (string_of_scalar t1)^" -> "^(string_of_scalar t2)
 
 let print_castor_err t t' =
-  let msg = "probable invalid cast "^(string_of_cast t t') in
-    if !Npkcontext.castor_allowed 
-    then Npkcontext.print_warning "Npkil.print_castor_err" msg
-    else begin
-      Npkcontext.error "Npkil.print_castor_err" 
-	(msg^", rewrite your code or try option --castor")
-  end
+  Npkcontext.report_accept_warning "Npkil.print_castor_err" 
+    ("dirty cast "^(string_of_cast t t')) Npkcontext.DirtyCast
 
 (* TODO: code cleanup: this could be also used by cilcompiler ? *)
 let cast t e t' =

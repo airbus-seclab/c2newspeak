@@ -352,5 +352,12 @@ let report_ignore_warning loc msg err_typ =
   end;
   print_warning loc (msg^" ignored")
     
+let report_accept_warning loc msg err_typ =
+  if not !(flag_of_error err_typ) then begin
+    let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
+      error loc (msg^advice)
+  end;
+  print_warning loc (msg^" accepted")
+
 let report_strict_warning msg err =
   if !strict_syntax then print_warning msg err

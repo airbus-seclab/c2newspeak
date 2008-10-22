@@ -1,4 +1,4 @@
-Warning: probable invalid cast int32 -> fptr in 464.c line 33
+Warning: dirty cast int32 -> fptr accepted in 464.c line 33
 Newspeak output
 ---------------
 464.c

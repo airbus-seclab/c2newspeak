@@ -52,12 +52,10 @@ type error =
 
 (** {1 Comand line options } *)
 
+(* TODO: remove as many bool refs as possible *)
 (** When global_zero_init is set, cil2newspeak adds init code for all
     globals *)
 val global_zero_init : bool ref
-
-(** This option allows horrible casts (int <-> ptr) to be translated *)
-val castor_allowed : bool ref
 
 val gnuc : bool ref
 val forward_goto : bool ref
@@ -125,6 +123,7 @@ val get_fname : unit -> string
 
 (** {1 Warnings/errors generation and display } *)
 
+(* rename to report_warning *)
 (* TODO: unify these functions!!! into one, with a level!!! *)
 val print_warning : string -> string -> unit
 (* TODO: remove this function *)
@@ -133,6 +132,7 @@ val report_dirty_warning: string -> string -> unit
 (* TODO: implify npkcontext interface *)
 val report_strict_warning: string -> string -> unit
 val report_ignore_warning: string -> string -> error -> unit
+val report_accept_warning: string -> string -> error -> unit
 
 (** Displays a message to the user *)
 val print_debug : string -> unit

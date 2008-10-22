@@ -1,4 +1,4 @@
-Warning: probable invalid cast from integer to pointer in 140.c line 32
+Warning: dirty cast from integer to pointer accepted in 140.c line 32
 Newspeak output
 ---------------
 140.c
