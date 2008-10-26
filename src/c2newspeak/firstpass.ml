@@ -46,34 +46,6 @@ type symb =
     | LocalSymb of C.lv 
     | EnumSymb of C.exp
 
-
-type btree =
-    TLeft
-  | TRight
-  | TExp of (exp * btree * btree)
-
-let build_tree e =
-  let rec build_tree e t1 t2 =
-    match e with
-	IfExp (c, e1, e2) ->
-	  let t1' = build_tree e1 t1 t2 in
-	  let t2' = build_tree e2 t1 t2 in
-	    build_tree c t1' t2'
-	      
-      | Unop (Not, (IfExp _ as e)) -> build_tree e t2 t1
-	  
-      | Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> t1
-	  
-      | Cst (C.CInt _, _) -> t2
-	  
-      | _ -> 
-	  let (t1, l1, r1) = t1 in
-	  let (t2, l2, r2) = t2 in
-	    (TExp (e, t1, t2), l1 + l2, r1 + r2)
-  in
-  let (t, l, r) = build_tree e (TLeft, 1, 0) (TRight, 0, 1) in
-    (t, l > 1, r > 1)
-
 (* functions *)
 (* [align o x] returns the smallest integer greater or equal than o,
    which is equal to 0 modulo x *)
@@ -1035,33 +1007,49 @@ let translate (globals, spec) =
       | Label _ | VDecl _ | EDecl _ | CDecl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt" "unreachable code"
 
+  (* TODO: 
+     - should take advantage of obviously side-effect free expression 
+     - add option to translate if using tmp variables!
+*)
   and translate_if loc (e, blk1, blk2) =
-    let (t, duplicate_blk1, duplicate_blk2) = build_tree e in
-    let duplicate_blk1 = duplicate_blk1 && C.is_large_blk blk1 in
-    let duplicate_blk2 = duplicate_blk2 && C.is_large_blk blk2 in
-    let lbl1 = if duplicate_blk1 then new_lbl () else -1 in
-    let lbl2 = if duplicate_blk2 then new_lbl () else -1 in
-    let branch1 = if duplicate_blk1 then (C.Goto lbl1, loc)::[] else blk1 in
-    let branch2 = if duplicate_blk2 then (C.Goto lbl2, loc)::[] else blk2 in
-    let rec translate_tree t =
-      match t with
-	  TLeft -> branch1
-	| TRight -> branch2
-	| TExp (e, t1, t2) ->
+    let duplicate branch blk e1 e2 =
+      let b =
+	match (e1, e2) with
+	    (Cst (C.CInt c, _), _) | (_, Cst (C.CInt c, _)) -> 
+	      (Nat.compare c Nat.zero <> 0) = branch
+	  | _ -> true
+      in
+	b && (C.is_large_blk blk)
+    in
+    let build_branch branch blk e1 e2 =
+      if duplicate branch blk e1 e2 then begin
+	let lbl = new_lbl () in
+	let goto = (C.Goto lbl, loc)::[] in
+	  (Some (lbl, blk), goto)
+      end else (None, blk)
+    in
+    let rec translate e blk1 blk2 =
+      match e with
+	  IfExp (c, e1, e2) -> 
+	    let (lbl1, goto1) = build_branch true blk1 e1 e2 in
+	    let (lbl2, goto2) = build_branch false blk2 e1 e2 in
+
+	    let br1 = translate e1 goto1 goto2 in
+	    let br2 = translate e2 goto1 goto2 in
+
+	    let x = translate c br1 br2 in
+	    let x = (C.Block (x, lbl1), loc)::[] in
+	    let x = (C.Block (x, lbl2), loc)::[] in
+	      x
+	| Unop (Not, (IfExp _ as e)) -> translate e blk2 blk1
+	| Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> blk1
+	| Cst (C.CInt _, _) -> blk2
+	| _ -> 
 	    let e = simplify_bexp e in
 	    let (e, _) = translate_exp e in
-	    let blk1 = translate_tree t1 in
-	    let blk2 = translate_tree t2 in
 	      (C.If (e, blk1, blk2), loc)::[]
     in
-    let x = translate_tree t in
-    let x = 
-      if duplicate_blk1 then (C.Block (x, Some (lbl1, blk1)), loc)::[] else x 
-    in
-    let x = 
-      if duplicate_blk2 then (C.Block (x, Some (lbl2, blk2)), loc)::[] else x 
-    in
-      x
+      translate e blk1 blk2
 
   and translate_switch x =
     match x with

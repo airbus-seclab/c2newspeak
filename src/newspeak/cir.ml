@@ -598,13 +598,20 @@ and is_subftyp (args1, ret1) (args2, ret2) =
   with Invalid_argument _ -> false
 
 (* a large block has at least 3 instructions or has a call *)
+(* according to test 505, this number should be:
+   2 < large_blk_sz < 13
+*)
+(* according to test 508, this number should be:
+   large_blk_sz < 5
+*)
+let large_blk_sz = 4
 let is_large_blk x =
   let cnt = ref 0 in
   let rec check_blk x =
     match x with
 	(hd, _)::tl -> 
 	  incr cnt;
-	  if !cnt > 2 then raise Exit;
+	  if !cnt > large_blk_sz then raise Exit;
 	  check_stmt hd;
 	  check_blk tl
       | [] -> ()
