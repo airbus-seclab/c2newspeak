@@ -337,13 +337,6 @@ let handle_cmdline_options version_string comment_string =
     
     if (not !compile_only) && (!output_file = "") then output_file := "a.npk"
       
-let report_dirty_warning msg err =
-  if !dirty_syntax then print_warning msg err 
-  else begin
-    let msg = string_of_error msg err in
-      invalid_arg (msg^". Clean up your code or try option --dirty.")
-  end
-
 (* TODO: do a report_accept_warning *)
 let report_ignore_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
