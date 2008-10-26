@@ -1,4 +1,4 @@
-Warning: avoid function declarations within blocks in 453.c line 29
+Warning: function declaration within block accepted in 453.c line 29
 Newspeak output
 ---------------
 453.c

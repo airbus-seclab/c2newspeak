@@ -190,8 +190,8 @@ parse:
 translation_unit:
   external_declaration translation_unit    { $1@$2 }
 | SEMICOLON translation_unit               { 
-    Npkcontext.report_dirty_warning "Parser.translation_unit" 
-      "unnecessary semicolon";
+    Npkcontext.report_accept_warning "Parser.translation_unit" 
+      "unnecessary semicolon" Npkcontext.DirtySyntax;
     $2 
   }
 |                                          { [] }
@@ -244,8 +244,8 @@ declarator:
 | declarator LPAREN RPAREN                 { Function ($1, []) }
 | declarator LPAREN identifier_list RPAREN
   parameter_declaration_list               { 
-    Npkcontext.report_dirty_warning "Parser.function definition"
-      "deprecated style of function definition";
+    Npkcontext.report_accept_warning "Parser.declarator"
+      "deprecated style of function definition" Npkcontext.DirtySyntax;
     Function ($1, build_funparams $3 $5) 
   }
 ;;
@@ -265,8 +265,8 @@ struct_declarator:
   declarator                               { ($1, None) }
 | declarator COLON conditional_expression  { ($1, Some $3) }
 | COLON conditional_expression             { 
-    Npkcontext.report_dirty_warning "Parser.struct_declarator"
-      "anonymous field declaration in structure";
+    Npkcontext.report_accept_warning "Parser.struct_declarator"
+      "anonymous field declaration in structure" Npkcontext.DirtySyntax;
     (Abstract, Some $2) 
   }
 ;;
@@ -513,13 +513,8 @@ relational_expression:
 | EXTENSION 
   LPAREN relational_expression RPAREN      { $3 }
 | compound_statement                       { 
-    if not !Npkcontext.gnuc then begin
-      Npkcontext.error "Parser.relational_expression" 
-	"unexpected block, try option --gnuc"
-    end;
-    Npkcontext.report_dirty_warning "Parser.relational_expression"
-      ("blocks within expression are dangerous because of potential"
-       ^" side-effects");
+    Npkcontext.report_accept_warning "Parser.relational_expression"
+      "block within expression" Npkcontext.DirtySyntax;
     BlkExp $1
   }
 ;;
@@ -566,8 +561,9 @@ conditional_expression:
   logical_or_expression                    { $1 }
 | logical_or_expression QMARK 
   expression COLON conditional_expression  {
-    Npkcontext.report_dirty_warning "Parser.type_specifier" 
-      "conditional expression are ugly: use if else instead";
+    Npkcontext.report_accept_warning "Parser.conditional_expression"
+      "conditional expression"
+      Npkcontext.DirtySyntax;
     IfExp ($1, $3, $5)
   }
 ;;
@@ -579,8 +575,8 @@ conditional_expression:
 expression:
   assignment_expression                   { $1 }
 | expression COMMA assignment_expression  { 
-    Npkcontext.report_dirty_warning "Parser.expression"
-      "ugly comma operator in expression";
+    Npkcontext.report_accept_warning "Parser.expression"
+      "comma in expression" Npkcontext.DirtySyntax;
     let loc = get_loc () in
       BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
   }
@@ -633,8 +629,8 @@ init_list:
   init COMMA init_list                     { (None, $1)::$3 }
 | init                                     { (None, $1)::[] }
 |                                          {
-  Npkcontext.report_dirty_warning "Parser.type_specifier" 
-    "ugly initializer syntax";
+    Npkcontext.report_accept_warning "Parser.init_list"
+      "comma terminated initializer" Npkcontext.DirtySyntax;
   []
   }
 ;;
@@ -733,7 +729,8 @@ enum:
 field_blk:
   LBRACE field_list RBRACE               { $2 }
 | LBRACE RBRACE                          { 
-    Npkcontext.report_dirty_warning "Parser.field_blk" "empty struct or union";
+    Npkcontext.report_accept_warning "Parser.field_blk"
+      "empty struct or union" Npkcontext.DirtySyntax;
     [] 
   }
 ;;
@@ -754,8 +751,8 @@ type_specifier:
   }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
-    Npkcontext.report_dirty_warning "Parser.type_specifier" 
-      "Integer kind should be specified";
+    Npkcontext.report_accept_warning "Parser.type_specifier"
+      "unspecified integer kind" Npkcontext.DirtySyntax;
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 | ftyp                                   { Float $1 }
@@ -795,8 +792,8 @@ external_declaration:
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
-    Npkcontext.report_dirty_warning "Parser.external_declaration" 
-      "defined functions should not be extern";
+    Npkcontext.report_accept_warning "Parser.external_declaration" 
+      "extern function definition" Npkcontext.DirtySyntax;
     build_fundef false $3
 }
 | optional_extension TYPEDEF 
@@ -844,8 +841,8 @@ field_declaration:
   declaration_specifiers
   struct_declarator_list                   { flatten_field_decl ($1, $2) }
 | declaration_specifiers                   { 
-    Npkcontext.report_dirty_warning "Parser.field_declaration"
-      "anonymous field declaration in structure";
+    Npkcontext.report_accept_warning "Parser.field_declaration"
+      "anonymous field declaration in structure" Npkcontext.DirtySyntax;
     flatten_field_decl ($1, (Abstract, None)::[]) 
   }
 ;;

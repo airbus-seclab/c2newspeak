@@ -1,4 +1,4 @@
-Warning: ugly comma operator in expression in 419.c line 28
+Warning: comma in expression accepted in 419.c line 28
 Newspeak output
 ---------------
 419.c

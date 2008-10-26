@@ -1,1 +1,1 @@
-Fatal error: avoid assignments within expressions in 269.c line 28
+Fatal error: assignment within expression, rewrite your code or try option --dirty in 269.c line 28

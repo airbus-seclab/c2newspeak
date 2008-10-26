@@ -1,4 +1,4 @@
-Warning: Integer kind should be specified in 173.c line 27
+Warning: unspecified integer kind accepted in 173.c line 27
 Newspeak output
 ---------------
 173.c

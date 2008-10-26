@@ -1,7 +1,7 @@
-Warning: too many initializers for array in 050.c line 30
+Warning: extra initializer for array accepted in 050.c line 30
 Warning: not enough initializers for array in 050.c line 32
-Warning: too many initializers for array in 050.c line 35
-Warning: too many initializers for array in 050.c line 36
+Warning: extra initializer for array accepted in 050.c line 35
+Warning: extra initializer for array accepted in 050.c line 36
 Warning: not enough initializers for array in 050.c line 38
 Newspeak output
 ---------------

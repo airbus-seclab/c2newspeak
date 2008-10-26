@@ -1,4 +1,4 @@
-Warning: defined functions should not be extern in 411.c line 28
+Warning: extern function definition accepted in 411.c line 28
 Newspeak output
 ---------------
 411.c

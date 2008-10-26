@@ -1,4 +1,4 @@
-Warning: blocks within expression are dangerous because of potential side-effects in 434.c line 32
+Warning: block within expression accepted in 434.c line 32
 Newspeak output
 ---------------
 434.c

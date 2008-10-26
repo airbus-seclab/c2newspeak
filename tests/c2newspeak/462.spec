@@ -1,5 +1,5 @@
-Warning: conditional expression are ugly: use if else instead in 462.c line 31
-Warning: blocks within expression are dangerous because of potential side-effects in 462.c line 31
+Warning: conditional expression accepted in 462.c line 31
+Warning: block within expression accepted in 462.c line 31
 Newspeak output
 ---------------
 462.c

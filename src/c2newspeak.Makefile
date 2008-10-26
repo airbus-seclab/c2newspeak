@@ -35,7 +35,7 @@ newspeak.FILES=\
 
 c2newspeak.FILES=\
         pp_syntax pp_lexer pp_parser \
-        csyntax synthack lexer parser \
+        csyntax synthack gnuc lexer parser \
         spec_lexer spec_parser \
         cilutils npkutils cilenv cilfirstpass cilcompiler \
         firstpass compiler \

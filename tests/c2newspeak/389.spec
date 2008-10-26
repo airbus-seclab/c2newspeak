@@ -1,4 +1,4 @@
-Warning: cast to void should be avoided in 389.c line 29
+Warning: cast to void accepted in 389.c line 29
 Newspeak output
 ---------------
 389.c

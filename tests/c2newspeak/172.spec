@@ -1,1 +1,1 @@
-Fatal error: Integer kind should be specified in 172.c line 27. Clean up your code or try option --dirty.
+Fatal error: unspecified integer kind, rewrite your code or try option --dirty in 172.c line 27

@@ -1,5 +1,5 @@
-Warning: conditional expression are ugly: use if else instead in 433.c line 28
-Warning: cast to void should be avoided in 433.c line 28
+Warning: conditional expression accepted in 433.c line 28
+Warning: cast to void accepted in 433.c line 28
 Newspeak output
 ---------------
 433.c

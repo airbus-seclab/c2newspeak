@@ -1,4 +1,4 @@
-Warning: conditional expression are ugly: use if else instead in 503.c line 29
+Warning: conditional expression accepted in 503.c line 29
 Newspeak output
 ---------------
 503.c

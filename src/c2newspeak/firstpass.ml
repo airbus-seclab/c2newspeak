@@ -145,6 +145,10 @@ let translate (globals, spec) =
   let find_symb x = 
     try Hashtbl.find symbtbl x
     with Not_found -> 
+      if Gnuc.is_gnuc_token x && not !Npkcontext.gnuc then begin
+	Npkcontext.report_accept_warning "Firstpass.translate.typ_of_var" 
+	  ("unknown identifier "^x^", probably a GNU C token") Npkcontext.GnuC
+      end;
       Npkcontext.error "Firstpass.translate.typ_of_var" 
 	("unknown identifier "^x)
   in
@@ -289,16 +293,16 @@ let translate (globals, spec) =
 	    let f_o = o + f_o in
 	    let _ = fill_with_zeros f_o t in
 	      if (fields = []) then begin
-		Npkcontext.report_dirty_warning 
+		Npkcontext.report_accept_warning 
 		  "Firstpass.translate_init.translate_field_sequence" 
-		  "not enough initializers for structure"
+		  "missing initializers for structure" Npkcontext.DirtySyntax
 	      end;
 	      translate_field_sequence o fields []
 
 	| ([], _) -> 
-	    Npkcontext.report_dirty_warning 
+	    Npkcontext.report_accept_warning 
 	      "Firstpass.translate_init.translate_field_sequence" 
-	      "too many initializers for structure"
+	      "extra initializer for structure" Npkcontext.DirtySyntax
 	  
     and translate_sequence o t n seq =
       match seq with
@@ -311,9 +315,9 @@ let translate (globals, spec) =
 	      "anonymous initializer expected for array"
 	    
 	| _::_ -> 
-	    Npkcontext.report_dirty_warning 
+	    Npkcontext.report_accept_warning 
 	      "Firstpass.translate_init.translate_sequence" 
-	      "too many initializers for array"
+	      "extra initializer for array" Npkcontext.DirtySyntax
 	      
 	(* TODO: code cleanup: We fill with zeros, because CIL does too. 
 	   But it shouldn't be done like that:
@@ -430,8 +434,8 @@ let translate (globals, spec) =
       | Str str -> add_glb_cstr str
 
       | Cast (lv, t) -> 
-	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
-	    "cast of left values should be avoided";
+	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
+	    "cast of left value" Npkcontext.DirtySyntax;
 	  let (lv, _) = translate_lv lv in
 	    (lv, t)
 
@@ -536,16 +540,18 @@ let translate (globals, spec) =
 	| Call f -> translate_call f
 		
 	(* TODO: should find a way to put this and SetOp together!! *)
-	| Set set when !Npkcontext.dirty_syntax ->
+	| Set set ->
+	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
+	      "assignment within expression" Npkcontext.DirtySyntax;
 	    let loc = Npkcontext.get_loc () in
 	    let (set, t) = translate_set set in
 	    let (lv, t', _) = set in
 	    let e = C.Lval (lv, t') in
-	      Npkcontext.print_warning "Firstpass.translate_exp" 
-		"avoid assignments within expressions";
 	      (C.Pref ((C.Set set, loc)::[], e), t)
 		
-	| SetOp (lv, op, e) when !Npkcontext.dirty_syntax ->
+	| SetOp (lv, op, e) ->
+	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
+	      "assignment within expression" Npkcontext.DirtySyntax;
 	    (* TODO: is this check really necessary!!! *)
 	    let (lv', _) = translate_lv lv in
 	    let (pref, _, post) = C.normalize_lv lv' in
@@ -561,10 +567,6 @@ let translate (globals, spec) =
 	    let (blk, t) = ttranslate_blk blk in
 	    let e = C.exp_of_blk blk in
 	      (e, t)
-		
-	| Set _ | SetOp _ -> 
-	    Npkcontext.error "Firstpass.translate_exp" 
-	      "avoid assignments within expressions"
     in
       match translate e with
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
@@ -865,8 +867,8 @@ let translate (globals, spec) =
 	      ((body, []), t)
 
 	| (VDecl (x, Fun ft, static, _, _), loc)::body -> 
-	    Npkcontext.report_dirty_warning "Firstpass.translate" 
-	      "avoid function declarations within blocks";
+	    Npkcontext.report_accept_warning "Firstpass.translate" 
+	      "function declaration within block" Npkcontext.DirtySyntax;
 	    translate_proto_ftyp x static ft loc;
 	    translate body
 
@@ -939,8 +941,8 @@ let translate (globals, spec) =
 	      (translate_stmt (Exp (Set (lv, e)), loc), t)
 
       | Cast (e, Void) -> 
-	  Npkcontext.report_dirty_warning "Firstpass.translate_stmt" 
-	    "cast to void should be avoided";
+	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
+	    "cast to void" Npkcontext.DirtySyntax;
 	  (translate_stmt (Exp e, loc), Void)
 
 
@@ -1153,10 +1155,8 @@ let translate (globals, spec) =
 	    (op, (e1, t), (e2, t))
 
       | (Plus, Int _, Ptr _) -> 
-	  Npkcontext.report_dirty_warning 
-	    "Firstpass.normalize_binop"
-	    ("addition of a pointer to an integer,"
-	      ^" please swap the arguments of operator '+'");
+	  Npkcontext.report_accept_warning "Firstpass.normalize_binop"
+	    "addition of a pointer to an integer" Npkcontext.DirtySyntax;
 	  (Plus, (e2, t2), (e1, t1))
 	      
       | _ -> (op, (e1, t1), (e2, t2))
