@@ -1,4 +1,3 @@
-Warning: comma terminated initializer accepted in 251.c line 26
 Newspeak output
 ---------------
 251.c

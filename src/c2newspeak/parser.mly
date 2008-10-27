@@ -629,8 +629,8 @@ init_list:
   init COMMA init_list                     { (None, $1)::$3 }
 | init                                     { (None, $1)::[] }
 |                                          {
-    Npkcontext.report_accept_warning "Parser.init_list"
-      "comma terminated initializer" Npkcontext.DirtySyntax;
+    Npkcontext.report_strict_warning "Parser.init_list"
+      "comma terminated initializer";
   []
   }
 ;;
