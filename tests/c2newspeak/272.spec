@@ -1,4 +1,3 @@
-Warning: conditional expression accepted in 272.c line 29
 Newspeak output
 ---------------
 272.c

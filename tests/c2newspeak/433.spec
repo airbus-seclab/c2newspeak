@@ -1,4 +1,3 @@
-Warning: conditional expression accepted in 433.c line 28
 Warning: cast to void accepted in 433.c line 28
 Newspeak output
 ---------------

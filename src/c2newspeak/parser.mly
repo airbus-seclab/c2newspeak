@@ -561,9 +561,8 @@ conditional_expression:
   logical_or_expression                    { $1 }
 | logical_or_expression QMARK 
   expression COLON conditional_expression  {
-    Npkcontext.report_accept_warning "Parser.conditional_expression"
-      "conditional expression"
-      Npkcontext.DirtySyntax;
+    Npkcontext.report_strict_warning "Parser.conditional_expression"
+      "conditional expression";
     IfExp ($1, $3, $5)
   }
 ;;

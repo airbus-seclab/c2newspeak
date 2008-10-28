@@ -1,4 +1,3 @@
-Warning: conditional expression accepted in 462.c line 31
 Warning: block within expression accepted in 462.c line 31
 Newspeak output
 ---------------

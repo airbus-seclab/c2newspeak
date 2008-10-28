@@ -1,5 +1,4 @@
 Warning: block within expression accepted in 452.c line 31
-Warning: conditional expression accepted in 452.c line 31
 Newspeak output
 ---------------
 452.c
