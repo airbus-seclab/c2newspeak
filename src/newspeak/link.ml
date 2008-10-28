@@ -182,6 +182,7 @@ and replace_field (offs, t) = (offs, replace_typ t)
 *)
 
 let update_glob_link name (t, loc, init, used) =
+  Npkcontext.set_loc loc;
   try
     let (prev_t, prev_loc, prev_init, prev_used) = 
       Hashtbl.find glb_decls name 
@@ -211,7 +212,10 @@ let update_glob_link name (t, loc, init, used) =
 	      ("multiple declaration of "^name)
 	| _ ->
 	    Npkcontext.report_accept_warning "Npklink.update_glob_link"
-	      ("multiple definition of "^name) Npkcontext.MultipleDef;	      
+	      ("multiple definitions of global variable "
+	       ^name^" (previous definition"
+	       ^(Npkcontext.string_of_loc prev_loc)^")") 
+	      Npkcontext.MultipleDef;	      
 	    prev_init
     in
       Hashtbl.replace glb_decls name (t, loc, init, used)

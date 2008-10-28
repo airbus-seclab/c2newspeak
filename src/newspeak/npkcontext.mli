@@ -145,3 +145,5 @@ val use_cil: bool ref
 
 (** Name of the printer to use to output CIL syntactic elements *)
 val cil_printer: string ref
+
+val string_of_loc: Newspeak.location -> string
