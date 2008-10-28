@@ -209,13 +209,10 @@ let update_glob_link name (t, loc, init, used) =
 	| (Some (Some _), Some (Some _)) -> 
 	    Npkcontext.error "Npklink.update_glob_link" 
 	      ("multiple declaration of "^name)
-	| _ when !Npkcontext.accept_mult_def -> 
-	    Npkcontext.print_warning "Npklink.update_glob_link" 
-	      ("multiple definition of "^name);
+	| _ ->
+	    Npkcontext.report_accept_warning "Npklink.update_glob_link"
+	      ("multiple definition of "^name) Npkcontext.MultipleDef;	      
 	    prev_init
-	| _ -> 
-	    Npkcontext.error "Npklink.update_glob_link" 
-	      ("multiple definition of "^name)
     in
       Hashtbl.replace glb_decls name (t, loc, init, used)
       

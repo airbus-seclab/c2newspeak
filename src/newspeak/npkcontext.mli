@@ -71,8 +71,6 @@ val remove_temp : bool ref
 val accept_extern : bool ref
 val accept_flex_array: bool ref
 
-val accept_mult_def : bool ref
-
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
 

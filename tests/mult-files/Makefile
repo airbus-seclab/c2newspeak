@@ -23,7 +23,7 @@
 
 COMMAND=$(C2NEWSPEAK) --newspeak $*-a.c $*-b.c
 PREREQ=%-a.c %-b.c
-TESTS=000 001 002 003 004
+TESTS=000 001 002 003 004 005
 
 include ../common.Makefile
 

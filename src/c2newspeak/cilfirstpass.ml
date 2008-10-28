@@ -250,9 +250,8 @@ let first_pass f =
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
 	  if x.gdefd then begin
-	    if not !Npkcontext.accept_mult_def 
-	    then Npkcontext.error "Firstpass.first_pass.glb_declare" 
-	      ("multiple definition for "^name);
+	    Npkcontext.report_accept_warning "Firstpass.first_pass.glb_declare" 
+	      ("multiple definition for "^name) Npkcontext.MultipleDef;
 	    if (x.ginit <> None) && (i <> None) 
 	    then Npkcontext.error "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name);
