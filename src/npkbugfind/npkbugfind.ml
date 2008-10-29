@@ -90,7 +90,7 @@ let scan_unop env op e =
 
 let scan_binop env op e1 e2 =
   match op with
-    | Gt (Int _) when (List.mem e1 env) || (List.mem e2 env) ->
+      Gt (Int _) when (List.mem e1 env) || (List.mem e2 env) ->
 	print_warning !cur_loc 
 	  ("expression checked after being used for array access: "
 	   ^"make sure array access is really protected");
@@ -140,11 +140,92 @@ let scan_fundef _ (_, body) = scan_blk [] body
 let scan_prog (_, fundefs, _) = 
   Hashtbl.iter scan_fundef fundefs
 
+let find_bound e env =
+  let rec find env =
+    match env with
+	BinOp (_, Const CInt c, e')::_
+      | BinOp (_, e', Const CInt c)::_ when e = e' -> c
+      | _::tl -> find tl
+      | [] -> raise Not_found
+  in
+    find env
+
+let rec scan2_exp env x =
+  match x with
+      Lval (lv, _) | AddrOf (lv, _) -> scan2_lval env lv
+    | UnOp (Belongs (_, u), e) -> begin
+	try
+	  let c = find_bound e env in
+	    if Nat.compare (Nat.sub c Nat.one) u > 0 
+	    then print_warning !cur_loc "potential array out of bounds"
+	with Not_found -> ()
+      end;
+	scan2_exp env e
+    | UnOp (_, e) -> scan2_exp env e
+    | BinOp (_, e1, e2) -> 
+	scan2_exp env e1;
+	scan2_exp env e2
+    | Const _ | AddrOfFun _ -> ()
+
+and scan2_lval env x =
+  match x with
+      Local _ | Global _ -> ()
+    | Deref (e, _) -> scan2_exp env e
+    | Shift (lv, e) -> 
+	scan2_lval env lv;
+	scan2_exp env e
+
+let rec scan2_blk env x = 
+  match x with
+      hd::tl ->
+	let env = scan2_stmt env hd in
+	  scan2_blk env tl
+    | [] -> env
+
+and scan2_stmt env (x, loc) =
+  cur_loc := loc;
+  match x with
+      ChooseAssert choices -> scan2_choices env choices
+    | Decl (_, _, body) -> scan2_blk env body
+    | InfLoop body ->
+	let _ = scan2_blk env body in 
+	  env
+    | DoWith (body, _, action) ->
+	let _ = scan2_blk env body in
+	let _ = scan2_blk env action in
+	  env
+    | Goto _ -> []
+    | Set (lv, e, _) -> 
+	scan2_lval env lv;
+	scan2_exp env e;
+	env
+    | Call _ | Copy _ -> env
+
+and scan2_choices env x =
+  let res = ref env in
+  let scan2_choice (conds, body) =
+    let env = conds@env in
+    let env' = scan2_blk env body in
+      res := env'@(!res)
+  in
+    List.iter scan2_choice x;
+    !res
+
+(* propagates the list of conditions that are verified in each block *)
+let scan2_fundef _ (_, body) = 
+  let _ = scan2_blk [] body in
+    ()
+
+let scan2_prog (_, fundefs, _) = 
+  Hashtbl.iter scan2_fundef fundefs
+
 let scan f =
   let (_, prog, _) = Newspeak.read f in
   let scanner = (new scanner :> Newspeak.visitor) in
+(* TODO: try to merge together all 3 scanners *)
     Newspeak.visit scanner prog;
-    scan_prog prog
+    scan_prog prog;
+    scan2_prog prog
 
 let _ = 
   try
