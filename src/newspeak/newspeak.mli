@@ -297,6 +297,8 @@ object
   method process_stmt: stmt -> bool
   method process_fn: fn -> bool
   method process_exp: exp -> bool
+(* called on expressions that are used as guards of choices *)
+  method process_bexp: exp -> unit
   method process_lval: lval -> bool
   method process_unop: unop -> unit
   method process_binop: binop -> unit

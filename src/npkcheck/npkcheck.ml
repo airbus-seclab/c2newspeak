@@ -36,7 +36,6 @@ TODO:
    - check that for all belongs, coerce l, u l <= u
    - check that all goto are enclosed within a DoWith
    - check that the size of all types is less than max_int (the sum of all??)
-   - check conditions are normalized??
 *)
 
 open Newspeak
@@ -99,6 +98,14 @@ object (self)
 	| _ -> ()
     in
       true
+
+  method process_bexp x =
+    let rec check x =
+      match x with
+	| UnOp (Not, BinOp ((Gt _|Eq _), _, _)) -> ()
+	| _ -> self#raise_error "unexpected expression as guard"
+    in
+      check x
 
   method process_stmt (x, _) =
     let _ = 

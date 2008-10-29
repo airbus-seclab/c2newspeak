@@ -1391,6 +1391,7 @@ object
   method process_stmt (_: stmt) = true
   method process_fn (_: fn) = true
   method process_exp (_: exp) = true
+  method process_bexp (_: exp) = ()
   method process_lval (_: lval) = true
   method process_unop (_: unop) = ()
   method process_binop (_: binop) = ()
@@ -1516,8 +1517,12 @@ and visit_stmt visitor (x, loc) =
 
 and visit_choice visitor loc (cond, body) =
   visitor#set_loc loc;
-  List.iter (visit_exp visitor) cond;
-  visit_blk visitor body
+  let visit_cond x = 
+    visitor#process_bexp x;
+    visit_exp visitor x
+  in
+    List.iter visit_cond cond;
+    visit_blk visitor body
 
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in
