@@ -102,6 +102,7 @@ object (self)
   method process_bexp x =
     let rec check x =
       match x with
+	  BinOp ((Gt _|Eq _), _, _) 
 	| UnOp (Not, BinOp ((Gt _|Eq _), _, _)) -> ()
 	| _ -> self#raise_error "unexpected expression as guard"
     in
