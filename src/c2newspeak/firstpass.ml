@@ -1210,8 +1210,7 @@ let translate (globals, spec) =
 	    Npkcontext.error "Firstpass.translate_binop"
 	      "pointer arithmetic forbidden on function pointers"
 	| (N.PlusPI, Ptr t) -> 
-	    let t = translate_typ t in
-	    let step = C.exp_of_int (C.size_of t) in
+	    let step = C.exp_of_int (size_of t) in
 	      C.Binop (N.MultI, e2, step)
 	| _ -> e2
     in
@@ -1222,8 +1221,7 @@ let translate (globals, spec) =
 	  ((N.PlusI|N.MinusI|N.MultI|N.DivI|N.Shiftlt|N.Shiftrt), _, Int k) -> 
 	    C.Unop (K.Coerce (Newspeak.domain_of_typ k), e)
 	| (N.MinusPP, Ptr t, _) -> 
-	    let t = translate_typ t in
-	    let step = C.size_of t in
+	    let step = size_of t in
 	    let e = C.Binop (N.DivI, e, C.exp_of_int step) in
 	      C.Unop (K.Coerce (Newspeak.domain_of_typ C.int_kind), e)
 	| _ -> e
