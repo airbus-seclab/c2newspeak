@@ -1,4 +1,4 @@
-Warning: flexible array member, assuming size 0 in 498.c line 31
+Warning: flexible array member accepted in 498.c line 31
 Newspeak output
 ---------------
 498.c

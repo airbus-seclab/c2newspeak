@@ -196,7 +196,11 @@ let exp_of_float x = Const (CFloat (x, string_of_float x))
 let rec size_of t =
   match t with
       Scalar t -> Newspeak.size_of_scalar Config.size_of_ptr t
-    | Array (t, Some n) -> (size_of t) * n
+    | Array (t, Some n) -> 
+	let sz = (size_of t) in
+	  if n > max_int / sz 
+	  then Npkcontext.error "Cir.size_of" "invalid size for array";
+	  sz * n
     | Struct (_, n) | Union (_, n) -> n
     | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"

@@ -47,11 +47,11 @@ type symb =
     | EnumSymb of C.exp
 
 (* functions *)
-(* [align o x] returns the smallest integer greater or equal than o,
+(* [next_aligned o x] returns the smallest integer greater or equal than o,
    which is equal to 0 modulo x *)
 let next_aligned o x =
   let m = o mod x in
-    if m = 0 then o else o + x - m
+    if m = 0 then o else o + (x - m)
 
 let rec simplify_bexp e =
   match e with
@@ -694,39 +694,35 @@ let translate (globals, spec) =
   and process_struct_fields name f =
     let o = ref 0 in
     let last_align = ref 1 in
-    let rec translate (t, x, loc) =
+    let translate (t, x, loc) =
       Npkcontext.set_loc loc;
-      match t with
-	  Bitfield ((s, n), sz) ->
-	    let (sz, _) = translate_exp sz in
-	    let sz = Nat.to_int (C.eval_exp sz) in
-	      if sz > n then begin
-		Npkcontext.error "Firstpass.process_struct_fields"
-		  "width of bitfield exceeds its type"
-	      end;
-	      let cur_align = align_of (Int (s, n)) in
-	      let o' = next_aligned !o cur_align in
-	      let o' = if !o + sz <= o' then !o else o' in
-		last_align := max !last_align cur_align;
-		o := !o + sz;
-		(x, (o', Int (s, sz)))
-	| Array (_, None) -> 
-	    let loc = "Firstpass.process_struct_fields" in
-	    let msg = "flexible array member, " in
-	      if not !Npkcontext.accept_flex_array then begin
-		Npkcontext.error loc 
-		  (msg
-		   ^"rewrite your code or try option --accept-flexible-array")
-	      end;
-	      Npkcontext.print_warning loc (msg^"assuming size 0");
-	      (x, (!o, t))
-	| _ ->
-	    let sz = size_of t in
-	    let cur_align = align_of t in
-	    let o' = next_aligned !o cur_align in
-	      last_align := max !last_align cur_align;
-	      o := o'+sz;
-	      (x, (o', t))
+      let cur_align = align_of t in
+      let o' = next_aligned !o cur_align in
+      let (o', t, sz) =
+	match t with
+	    Bitfield ((s, n), sz) ->
+	      let (sz, _) = translate_exp sz in
+	      let sz = Nat.to_int (C.eval_exp sz) in
+		if sz > n then begin
+		  Npkcontext.error "Firstpass.process_struct_fields"
+		    "width of bitfield exceeds its type"
+		end;
+		let o' = if !o+sz <= o' then !o else o' in
+		  (o', Int (s, sz), sz)
+	  | Array (_, None) -> 
+	      Npkcontext.report_accept_warning 
+		"Firstpass.process_struct_fields" "flexible array member"
+		Npkcontext.FlexArray;
+	      (!o, t, 0)
+	  | _ -> (o', t, size_of t)
+      in
+	if o' > max_int-sz then begin
+	  Npkcontext.error "Firstpass.process_struct_fields" 
+	    "invalid size for structure"
+	end;
+	o := o'+sz;
+	last_align := max !last_align cur_align;
+	(x, (o', t))
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
@@ -1255,6 +1251,7 @@ let translate (globals, spec) =
 	  in
 	    a
       | Array (t, _) -> align_of t
+      | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
   in
 
