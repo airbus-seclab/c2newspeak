@@ -81,7 +81,7 @@ let rec hastype t e =
     | (BinOp (Mod, _, _), Int _) -> true
     | _ -> false
 
-class checker =
+class checker ptr_sz =
 object (self)
   inherit Newspeak.visitor
 
@@ -118,11 +118,28 @@ object (self)
 	| _ -> ()
     in
       true
+
+  method process_typ t =
+    let rec check_size t =
+      match t with
+	  Scalar t -> Newspeak.size_of_scalar ptr_sz t
+	| Array (t, len) -> 
+	    let n = check_size t in
+	      if n > max_int/len then begin
+		self#raise_error ("size of type not representable as an int")
+	      end;
+	      n * len
+	| Region (fields, n) -> 
+	    List.iter (fun (_, t) -> ignore (check_size t)) fields;
+	    n
+    in
+    let _ = check_size t in
+      ()
 end
 
 let check_file fname =
-    let (_, prog, _) = Newspeak.read fname in
-    let checker = new checker in
+    let (_, prog, ptr_sz) = Newspeak.read fname in
+    let checker = new checker ptr_sz in
       Newspeak.visit (checker :> Newspeak.visitor) prog
 
 let _ = 

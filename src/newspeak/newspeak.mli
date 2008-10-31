@@ -304,6 +304,7 @@ object
   method process_binop: binop -> unit
   method process_size_t: size_t -> unit
   method process_length: length -> unit
+  method process_typ: typ -> unit
 
   (* Sets current location *)
   method set_loc: location -> unit

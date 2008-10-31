@@ -1397,6 +1397,7 @@ object
   method process_binop (_: binop) = ()
   method process_size_t (_: size_t) = ()
   method process_length (_: length) = ()
+  method process_typ (_: typ) = ()
 
   method raise_error msg = 
     let (file, line, _) = cur_loc in
@@ -1428,17 +1429,19 @@ let visit_scalar_t visitor t =
     | Ptr -> ()
     | FunPtr -> ()
 
-let rec visit_typ visitor t =
-  match t with
-      Scalar t -> visit_scalar_t visitor t
-    | Array (t, n) -> 
-	visit_typ visitor t;
-	visit_length visitor n
-    | Region (fields, sz) ->
-	List.iter (visit_field visitor) fields;
-	visit_size_t visitor sz
-
-and visit_field visitor (_, t) = visit_typ visitor t
+let visit_typ visitor t = 
+  visitor#process_typ t;
+  let rec visit_typ t =
+    match t with
+	Scalar t -> visit_scalar_t visitor t
+      | Array (t, n) -> 
+	  visit_typ t;
+	  visit_length visitor n
+      | Region (fields, sz) ->
+	  List.iter (fun (_, t) -> visit_typ t) fields;
+	  visit_size_t visitor sz
+  in
+    visit_typ t
 
 let visit_ftyp visitor (args, ret) =
   List.iter (visit_typ visitor) args;
