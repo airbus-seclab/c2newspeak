@@ -200,7 +200,6 @@ let update_glob_link name (t, loc, init, used) =
 	    ^(Npkil.string_of_typ prev_t)^"' and '"
 	    ^(Npkil.string_of_typ t)^"'")
     in
-    let loc = prev_loc in
     let used = used || prev_used in
     let init = 
       match init, prev_init with
@@ -211,13 +210,22 @@ let update_glob_link name (t, loc, init, used) =
 	    Npkcontext.error "Npklink.update_glob_link" 
 	      ("multiple declaration of "^name)
 	| _ ->
+	    let info = 
+	      if prev_loc = loc then begin
+		let (file, _, _) = loc in
+		  ", in file "^file^" variable "
+		  ^name^" should probably be extern"
+	      end else begin
+		" (previous definition"^(Npkcontext.string_of_loc prev_loc)^")"
+	      end
+	    in
 	    Npkcontext.report_accept_warning "Npklink.update_glob_link"
-	      ("multiple definitions of global variable "
-	       ^name^" (previous definition"
-	       ^(Npkcontext.string_of_loc prev_loc)^")") 
+	      ("multiple definitions of global variable "^name
+	       ^info) 
 	      Npkcontext.MultipleDef;	      
 	    prev_init
     in
+    let loc = prev_loc in
       Hashtbl.replace glb_decls name (t, loc, init, used)
       
   with Not_found -> Hashtbl.add glb_decls name (t, loc, init, used)
