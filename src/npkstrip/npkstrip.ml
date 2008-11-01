@@ -68,9 +68,9 @@ object (this)
 	  Newspeak.visit_fun (this :> Newspeak.visitor) f fundec
       end
     with Not_found -> 
-      print_endline ("unknown function "^f^" called:"
-		     ^" assuming it does not call any function,"
-		     ^" strip may be incorrect")
+      this#print_warning ("unknown function "^f^" called:"
+			  ^" assuming it does not call any function,"
+			  ^" strip may be incorrect")
 
   method process_fn x =
     begin match x with
