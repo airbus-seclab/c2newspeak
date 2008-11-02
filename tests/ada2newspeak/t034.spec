@@ -13,11 +13,7 @@ t034.appelfonction() {
   do {
     int32 y;
     int32 !tmp-1073741821;
-    {
-      int32 value_of_t034.f;
-      t034.f();
-      1- =(int32) 0-_int32;
-    }
+    t034.f();
     1- =(int32) belongs[-2147483648,2147483648-1] 0-_int32;
   } with lbl0: {
   }
@@ -41,11 +37,7 @@ t034.adb
 t034.appelfonction() {
   (t034.adb:11#158)^int32 y;
   (t034.adb:13#186)^int32 !tmp-1073741821;
-  (t034.adb:13#186)^{
-    int32 value_of_t034.f;
-    (t034.adb:13#186)^t034.f();
-    (t034.adb:13#186)^1- =(int32) 0-_int32;
-  }
+  (t034.adb:13#186)^t034.f();
   (t034.adb:13#186)^1- =(int32) 0-_int32;
 }
 

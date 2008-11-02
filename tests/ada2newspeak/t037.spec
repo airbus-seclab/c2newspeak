@@ -12,13 +12,9 @@ t037.appelfonction() {
     {
       uint1 !tmp-1073741820;
       {
-        uint1 value_of_t037.f;
-        {
-          int32 t037.f.arg1;
-          0- =(int32) belongs[-2147483648,2147483648-1] 10;
-          t037.f();
-        }
-        1- =(uint1) 0-_uint1;
+        int32 t037.f.arg1;
+        0- =(int32) belongs[-2147483648,2147483648-1] 10;
+        t037.f();
       }
       1- =(uint1) belongs[0,2-1] 0-_uint1;
     }
@@ -46,13 +42,9 @@ t037.appelfonction() {
   (t037.adb:12#155)^{
     uint1 !tmp-1073741820;
     (t037.adb:12#155)^{
-      uint1 value_of_t037.f;
-      (t037.adb:12#155)^{
-        int32 t037.f.arg1;
-        (t037.adb:12#155)^0- =(int32) 10;
-        (t037.adb:12#155)^t037.f();
-      }
-      (t037.adb:12#155)^1- =(uint1) 0-_uint1;
+      int32 t037.f.arg1;
+      (t037.adb:12#155)^0- =(int32) 10;
+      (t037.adb:12#155)^t037.f();
     }
     (t037.adb:12#155)^1- =(uint1) 0-_uint1;
   }

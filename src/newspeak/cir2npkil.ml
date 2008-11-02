@@ -282,8 +282,10 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	| _ -> "fptr_call"
     in
     let args = (args, args_t) in
-      match ret_t with
-	  Void -> append_args loc args fid f
+      match (ret_t, ret) with
+	  (Void, _) -> append_args loc args fid f
+	| (_, Some (Var id)) when Hashtbl.find env id = !stack_height ->
+	    append_args loc args fid f	    
 	| _ ->
 	    let t = translate_typ ret_t in
 	    let id = fresh_id () in

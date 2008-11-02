@@ -13,11 +13,7 @@ t038.appel_fonction() {
     1- =(uint1) belongs[0,2-1] 0;
     {
       uint1 !tmp-1073741820;
-      {
-        uint1 value_of_t038.a;
-        t038.a();
-        1- =(uint1) 0-_uint1;
-      }
+      t038.a();
       1- =(uint1) belongs[0,2-1] 0-_uint1;
     }
   } with lbl0: {
@@ -48,11 +44,7 @@ t038.appel_fonction() {
   (t038.adb:12#160)^1- =(uint1) 0;
   (t038.adb:13#174)^{
     uint1 !tmp-1073741820;
-    (t038.adb:13#174)^{
-      uint1 value_of_t038.a;
-      (t038.adb:13#174)^t038.a();
-      (t038.adb:13#174)^1- =(uint1) 0-_uint1;
-    }
+    (t038.adb:13#174)^t038.a();
     (t038.adb:13#174)^1- =(uint1) 0-_uint1;
   }
 }
