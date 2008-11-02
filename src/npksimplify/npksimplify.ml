@@ -29,6 +29,7 @@ let output = ref "a.npk"
 let print = ref false
 let inline = ref false
 let hoist = ref false
+let propag_exp = ref false
 
 let anon_fun fname =
   if !input = "" then input := fname
@@ -37,16 +38,19 @@ let anon_fun fname =
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 let speclist = 
-  [ ("--newspeak", Arg.Set print, "Print output");
+  [ ("--newspeak", Arg.Set print, "prints output");
    
     ("-o", Arg.Set_string output, 
-    "Choose name of output files, default is a.npk");
+    "chooses name of output files, default is a.npk");
 
     ("--inline", Arg.Set inline, 
-    "Applies function inlining of depth 1");
+    "applies function inlining of depth 1");
 
     ("--hoist", Arg.Set hoist, 
-    "Applies hoist variables transformation");
+    "applies hoist variables transformation");
+
+    ("--propag-exp", Arg.Set propag_exp, 
+    "applies copy propagation of expression");
   ]
 
 let _ =
@@ -57,7 +61,7 @@ let _ =
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
     let (files, prog, ptr_sz) = Newspeak.read !input in
-    let prog = Copy_propagation.process prog in
+    let prog = if !propag_exp then Copy_propagation.process prog else prog in
     let prog = if !inline then Inline.process prog else prog in
     let prog = if !hoist then Var_hoist.process prog else prog in
     let npk = (files, prog, ptr_sz) in

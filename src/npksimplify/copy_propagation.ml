@@ -24,7 +24,17 @@
 *)
 
 
-(* implementation of copy propagation for newspeak *)
+(* implementation of copy propagation for newspeak:
+   int x, y;
+   y = x+4;
+   x = y;
+   ====>
+   int x, y;
+   y = x+4;
+   x = x+4;
+
+   TODO: seems not to work when x and y are global!
+ *)
 (* should do constant propagation *)
 (* should do expression propagation *)
 
