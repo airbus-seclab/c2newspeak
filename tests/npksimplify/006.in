@@ -1,1 +1,1 @@
---inline --propag-exp
+--inline-depth 1 --propag-exp

@@ -27,7 +27,7 @@
 let input = ref ""
 let output = ref "a.npk"
 let print = ref false
-let inline = ref false
+let inline_depth = ref (-1)
 let hoist = ref false
 let propag_exp = ref false
 
@@ -43,8 +43,8 @@ let speclist =
     ("-o", Arg.Set_string output, 
     "chooses name of output files, default is a.npk");
 
-    ("--inline", Arg.Set inline, 
-    "applies function inlining of depth 1");
+    ("--inline-depth", Arg.Set_int inline_depth, 
+     "sets the depth of function inlining");
 
     ("--hoist", Arg.Set hoist, 
     "applies hoist variables transformation");
@@ -61,12 +61,15 @@ let _ =
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
     let (files, prog, ptr_sz) = Newspeak.read !input in
-    let prog = if !propag_exp then Copy_propagation.process prog else prog in
-    let prog = if !inline then Inline.process prog else prog in
-    let prog = if !hoist then Var_hoist.process prog else prog in
-    let npk = (files, prog, ptr_sz) in
-      if !print then Newspeak.dump npk;
-      Newspeak.write !output npk
+    let prog = ref prog in
+      if !propag_exp then prog := Copy_propagation.process !prog;
+      for i = 1 to !inline_depth do
+	prog := Inline.process !prog
+      done;
+      if !hoist then prog := Var_hoist.process !prog;
+      let npk = (files, !prog, ptr_sz) in
+	if !print then Newspeak.dump npk;
+	Newspeak.write !output npk
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0
