@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 392.c
 main() {
-  (392.c:30#1098)^i =(int32) x_int32;
+  (392.c:30#2)^i =(int32) x_int32;
 }
 
 int32 i = 0;

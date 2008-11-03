@@ -3,7 +3,7 @@ Newspeak output
 ---------------
 513.c
 main() {
-  (513.c:29#1076)^choose {
+  (513.c:29#2)^choose {
     | ! (x_int32 ==_int32 0) -->
     | (x_int32 ==_int32 0) -->
   }

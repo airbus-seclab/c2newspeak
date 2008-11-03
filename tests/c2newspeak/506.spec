@@ -2,9 +2,9 @@ Newspeak output
 ---------------
 506.c
 main() {
-  (506.c:32#1142)^choose {
+  (506.c:32#2)^choose {
     | ! (a_int32 ==_int32 0) -->
-      (506.c:32#1142)^choose {
+      (506.c:32#2)^choose {
         | ! (b_int32 ==_int32 0) -->
         | (b_int32 ==_int32 0) -->
       }

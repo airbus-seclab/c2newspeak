@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 450.c
 main() {
-  (450.c:27#1068)^choose {
+  (450.c:27#2)^choose {
     | ! (&_16(!450.c.const_str_-) ==_ptr nil) -->
     | (&_16(!450.c.const_str_-) ==_ptr nil) -->
   }

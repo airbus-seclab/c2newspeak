@@ -40,7 +40,7 @@ let gen_struct_id () =
 
 let get_loc () =
   let pos = symbol_start_pos () in
-    (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
+    (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
 (* TODO: code not so nice: simplify? *)
 let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =

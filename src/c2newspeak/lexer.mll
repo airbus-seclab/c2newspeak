@@ -38,7 +38,11 @@ let init fname lexbuf =
   
 let cnt_line lexbuf =
   let pos = 
-    { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 }
+    { 
+      lexbuf.lex_curr_p with 
+	pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1;
+	pos_bol = lexbuf.lex_curr_p.pos_cnum;
+    }
   in
     set_loc lexbuf pos
 
@@ -87,8 +91,7 @@ let preprocess lexbuf =
 	  let line_nb = line_nb - 1 in (* Because we are then 
 					  going to count a new line *)
 	  let pos = { 
-	    lexbuf.lex_curr_p with 
-	      pos_fname = fname; pos_lnum = line_nb; pos_cnum = 0; 
+	    lexbuf.lex_curr_p with pos_fname = fname; pos_lnum = line_nb;
 	  } in
  	    set_loc lexbuf pos
       | Pragma -> 
