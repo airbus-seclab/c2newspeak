@@ -93,6 +93,7 @@ struct
   let of_string x = x
 end
 
+(* TODO: should have a record instead of a tuple, easier to extend!! *)
 type t = (file list * prog * size_t)
 
 and prog = globals * (fid, fundec) Hashtbl.t * specs
@@ -1379,6 +1380,9 @@ and build_binop builder op =
     | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt | PlusPI -> op
 
 (* Visitor *)
+(* TODO: simplify visitor by not needing the boolean to continue exploration
+   possible ?
+*)
 class visitor =
 object 
   val mutable cur_loc = unknown_loc

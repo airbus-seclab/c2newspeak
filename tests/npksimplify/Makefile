@@ -23,7 +23,7 @@
 
 COMMAND=$(C2NEWSPEAK) $*.c &> /dev/null; \
         $(NPKSIMPLIFY) `[ -e $*.in ] && cat $*.in` a.npk
-TESTS=000 001 002 003 004 005 006 007 008
+TESTS=000 001 002 003 004 005 006 007 008 009
 PREREQ=%.c
 
 include ../common.Makefile

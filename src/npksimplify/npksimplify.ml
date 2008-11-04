@@ -46,6 +46,9 @@ let speclist =
     ("--inline-depth", Arg.Set_int inline_depth, 
      "sets the depth of function inlining");
 
+    ("--inline", Arg.Unit (fun () -> inline_depth := 0), 
+     "inlines functions which are called only once");
+
     ("--hoist", Arg.Set hoist, 
     "applies hoist variables transformation");
 
@@ -63,6 +66,10 @@ let _ =
     let (files, prog, ptr_sz) = Newspeak.read !input in
     let prog = ref prog in
       if !propag_exp then prog := Copy_propagation.process !prog;
+(* TODO: these options are not well chosen, since inline_depth 0
+   may sometimes be stronger than inline_depth 1 
+   think about it!! *)
+      if !inline_depth = 0 then prog := Inline.process_one !prog;
       for i = 1 to !inline_depth do
 	prog := Inline.process !prog
       done;

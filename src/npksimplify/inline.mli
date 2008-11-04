@@ -26,3 +26,5 @@
 open Newspeak
 
 val process: prog -> prog
+
+val process_one: prog -> prog
