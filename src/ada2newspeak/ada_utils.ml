@@ -366,3 +366,5 @@ let check_compil_unit_name compil_unit file_name =
 
 let extract_representation_clause_name rep_clause = match rep_clause with 
   | EnumerationRepresentation(ident, _) -> ident
+
+

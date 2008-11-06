@@ -69,6 +69,9 @@ let extract_scalar_typ cir_typ = match cir_typ with
 	"Firstpass.extract_scalar_typ"
 	"type isn't a scalar type"
 
+
+
+
 let make_check_constraint contrainte exp = 
   match contrainte with
     | IntegerRangeConstraint (v1,v2) ->
@@ -89,6 +92,28 @@ let make_check_subtyp subtyp exp =
 	Npkcontext.error
 	  "Firstpass.make_check_subtyp"
 	  "internal error : unexpected subtyp name"
+	  
+let make_offset styp exp size = 
+  match styp with 
+      Constrained( _, x , _ ) ->
+	begin match x with
+	    IntegerRangeConstraint(nat1, _) -> 
+	      let borne_inf =   C.Const(C.CInt(nat1)) in 
+	      
+	      let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
+		
+		C.Binop (Newspeak.MultI, decal,  size)
+	 
+	  |  _ -> Npkcontext.error "Firstpass.make_offset"
+	       "contrainte (not IntegerRangeConstraint) not coded yet "
+		
+	end
+	  
+    | Unconstrained _ -> exp 
+	
+    | SubtypName _ -> Npkcontext.error "Firstpass.make_offset"
+	"SubtypName not implemented yet (especially for Enum)"
+	  
 	  
 let translate compil_unit =
   
@@ -402,13 +427,15 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_use r var_masque
 
-	  | (FunSymb( _(*fname*), _(*spec*), true), C.Fun(_ (*tr_typ*) ), _)::r -> 
+	  | (FunSymb( _(*fn*), _(*sp*), true), C.Fun(_(*trt*)), _)::r -> 
 	      if (mem_other_symb r var_masque)
 	      then (Npkcontext.error
 		      "Firstpass.find_fun_symb"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
-	      else (*fname, spec, tr_typ*)
+	      else (*fn, sp, trt*)
+	(*	print_endline ("found --------------"^(match fn with C.Fname f -> f | _ -> "unkno"));
+	*)
 		List.hd list_symb
 		
 
@@ -606,30 +633,26 @@ let translate compil_unit =
 		| EnumSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
 		    "Invalid left value: unexpected enum" 
 	      end
-		 
+
+	(*Affectation dans un tableau*)
 	| ArrayAccess (lval, expr) -> 
 	    let (v, subtyp_lv) = translate_lv lval write trans_exp in 
 	      match subtyp_lv with 
-		  Unconstrained(
-		    Declared(
-		      Array(_, 
-			    ConstrainedArray(
+		  Unconstrained(Declared( Array(_, 
+			ConstrainedArray(
 			      ( stypindex ,_,_ ),
-			      ( stypelt,_,_),_)
-			   ), _ )
-		  ) 
+			      ( stypelt,_,_),  _)), _)) ->
+		    let size_base =  C.exp_of_int (C.size_of (
+			(translate_typ (base_typ stypelt)))) in
 
-(* Constrained( Declared(Array(_, ConstrainedArray((styp,_,_),_,_)),), _, _ ) WG contrainte et static *)
-			     
+		    let (exp,_)=trans_exp expr (
+		      Some(base_typ(stypindex))) in
 
-		  -> let (tr_exp, _) = trans_exp expr
-		    (Some(base_typ (stypindex))) 
-		  in
-		  let chk_exp = make_check_subtyp stypindex tr_exp in 
-		    
-		    (C.Shift (v, chk_exp), stypelt)
+		    let chk_exp = make_check_subtyp stypindex exp in 
+		    let offset = make_offset stypindex chk_exp size_base in
+
+		      (C.Shift (v, offset), stypelt)
 		     
-		    
 		| _ ->        (*Constrained*)
 		    invalid_arg  ("Firstpass, ArrayAccess subtyp_lv "^
 				       "has not expected typ")
@@ -1156,11 +1179,11 @@ let translate compil_unit =
 	  (make_check_subtyp subtyp tr_exp, typ)
 	     
     | FunctionCall(name, exp_list) -> 
-		(*let (fname, spec, tr_typ) = find_fun_symb name in *)
+	(* let (fname, spec, tr_typ) = find_fun_symb name in *)
 	let array_or_fun = find_fun_symb name in
 	  begin
 	    match array_or_fun with 
-		(FunSymb(fname, spec, true), C.Fun(tr_typ),  _) -> 
+		(FunSymb(fname, spec, _), C.Fun(tr_typ),  _) -> 
 		  translate_function_call 
 		    fname tr_typ spec exp_list expected_typ
 		    
@@ -1178,7 +1201,7 @@ let translate compil_unit =
 		      | _ -> []
 		  in
 
-
+		  (*TO DO base_typ already exist use it if possible*)
 		  let subtyp_to_typ sub = match sub with 
 		      Constrained (z, _, _) ->  z
 		    | _ -> invalid_arg ("firstpass.ml:no constrained"^
@@ -1194,10 +1217,14 @@ let translate compil_unit =
 		    
 		    let chk_exp = make_check_subtyp subt_range last_exp 
 		    in
+		    let sz =  C.exp_of_int (
+		      C.size_of ((translate_typ (base_typ tpelt)))) in 
+		    
+		    let offset = make_offset subt_range chk_exp sz in
 		      
 		      if (compare lgth 1 = 0) then
 			let adatyp = subtyp_to_typ tpelt in 
-			  ( C.Lval (C.Shift (lv, chk_exp),
+			  ( C.Lval (C.Shift (lv, offset),
 				    (  translate_typ adatyp )
 				   ), 
 			    adatyp
@@ -1438,7 +1465,7 @@ let translate compil_unit =
 	   | ProcedureCall(name, args) -> begin
 	       let array_or_fun  = find_fun_symb name in 
 		   match array_or_fun with 
-		       (FunSymb(fname, spec, true), C.Fun(tr_typ),  _) ->   
+		       (FunSymb(fname, spec, _), C.Fun(tr_typ),  _) ->   
 			 let params = 
 			   match spec with 
 			     | Function(_) -> Npkcontext.error 
