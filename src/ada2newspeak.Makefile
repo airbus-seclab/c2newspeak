@@ -26,10 +26,13 @@
 
 TARGET=ada2newspeak
 DIRS=$(CILDIR) newspeak/ ada2newspeak/
+LIBX=unix.cmxa str.cmxa nums.cmxa 
+
 newspeak.FILES=\
 	config newspeak npkcontext \
 	npkil cir \
 	cir2npkil link
+
 ada2newspeak.FILES=\
 	params \
 	syntax_ada print_syntax_ada \
@@ -38,11 +41,15 @@ ada2newspeak.FILES=\
 	parser lexer ada_parse \
 	ada_normalize firstpass compiler \
 	ada2newspeak
+
 FILES=version \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix ada2newspeak/, $(ada2newspeak.FILES))
+
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
+
 CLEANFILES:=parser lexer
+
 CLEANFILES:=$(addsuffix .ml, $(CLEANFILES)) \
 	    $(addsuffix .mli, $(CLEANFILES)) \
 	    parser.output

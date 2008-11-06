@@ -53,7 +53,13 @@ let rec ident_list_to_string l =
 let rec name_to_string (packages, ident) = 
   ident_list_to_string (packages@[ident])
 
-   
+let rec lval_to_string lv = 
+  match lv with 
+      Lval name -> name_to_string name
+    | ArrayAccess (lval, _) ->
+	(lval_to_string lval )^"[ TO ?]"
+	  
+	  
 let line_of_loc (_,line,_) = "line "^(string_of_int line)
 
 let mode_to_string mode = match mode with
@@ -154,9 +160,12 @@ and exp_to_string exp = match exp with
       ^(subtyp_to_string subtyp)
       ^", "^(exp_to_string exp)^")"
   
-  | FunctionCall(nom, params) -> "FunctionCall("
+  | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
-      ^(list_to_string params exp_to_string ", " true)^")"
+      ^(list_to_string params exp_to_string "," true)^")"
+  (*WG*)
+  | Last (styp) -> "Last ("^(subtyp_to_string styp)^")"
+
 
 and subtyp_to_string subtyp = match subtyp with
   | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"
@@ -200,8 +209,9 @@ and instr_to_string instr = match instr with
   | NullInstr -> "NullInstr"
   | ReturnSimple -> "ReturnSimple"
   | Return(exp) -> "Return("^(exp_to_string exp)^")"
-  | Affect(var,exp) -> "Affect("^(name_to_string var)
+  | Affect(lval,exp) -> "Affect("^(lval_to_string lval)
       ^", "^(exp_to_string exp)^")"
+
   | If(exp, instr_then, instr_else) -> 
       "If("^(exp_to_string exp)^",\n"
       ^(instr_list_to_string instr_then)^",\n"

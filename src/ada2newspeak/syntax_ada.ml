@@ -30,14 +30,16 @@ type flottant = float*string
 type identifier = string
 type name = identifier list*identifier
 
+(*WG*)
 type param_mode = In | Out | InOut
-
+    
 type value = | IntVal of nat
 	     | FloatVal of flottant
 	     | BoolVal of bool
 
 
 type unary_op = UPlus | UMoins | Abs | Not
+
 type binary_op = 
   | Plus | Moins | Fois | Div | Puissance 
   | Concat | Mod | Rem
@@ -63,7 +65,6 @@ and array_type_definition =
     (* intervalle discret du tableau * type des éléments *)
   | ConstrainedArray of subtyp_indication*subtyp_indication*int option
 
-
 and subtyp =
   | Unconstrained of typ
   (* le paramêtre booléen indique si le sous-type est static *)
@@ -82,6 +83,8 @@ and expression =
   | Unary of unary_op*expression
   | Binary of binary_op*expression*expression
   | Qualified of subtyp*expression
+ (*WG*)
+  | Last of subtyp
 
 and contrainte = 
   | RangeConstraint of expression*expression
@@ -90,13 +93,15 @@ and contrainte =
 
 and subtyp_indication = subtyp*contrainte option*subtyp option
 
+type lval = Lval of name | ArrayAccess of lval*expression
+  
 type param = {pnom:identifier list;mode:param_mode;ptype:subtyp;pdef:expression option}
 
-type iteration_scheme = NoScheme | While of expression
-
+type iteration_scheme = NoScheme| While of expression
+			    
 type instruction_atom = 
   | NullInstr
-  | Affect of name*expression
+  | Affect of lval*expression
   | Return of expression
   | ReturnSimple
   | If of expression*instruction list*instruction list
@@ -109,8 +114,6 @@ and instruction = instruction_atom*location
 type sub_program_spec = 
   | Function of name*param list*subtyp
   | Procedure of name*(param list)
-
-
 
 type use_clause = name list
 

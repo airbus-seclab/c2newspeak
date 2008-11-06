@@ -47,6 +47,22 @@
 	 	   
    let loc = Npkcontext.get_loc
 
+   let build_access name list   = 
+     let rec build_aux  list  =
+       match list with [] -> (Lval name)
+	 | hd::tl -> 
+	     let built = build_aux tl in
+	       ArrayAccess (built, hd)
+     in
+       match list with 
+	   [] -> Lval name
+	 | _  -> 
+	     let rev_list = List.rev list in 
+	       build_aux rev_list
+		 
+
+
+
 %}
 /*declaration ocamlyacc*/
 %token EOF
@@ -68,24 +84,26 @@
 %token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY OF
 %token IN OUT RETURN
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
-%token INTEGER FLOAT BOOLEAN CHARACTER
+%token INTEGER FLOAT BOOLEAN CHARACTER 
 %token NULL TRUE FALSE
-%token PAR_G PAR_D FLECHE
-%token VIR POINT_VIR POINT DEUX_POINTS DEUX_POINTS_H QUOTE
+%token PAR_G PAR_D FLECHE H_DEUX_POINTS
+%token VIR POINT_VIR POINT DEUX_POINTS QUOTE
+%token LAST 
 %start s
 %type <Syntax_ada.compilation_unit> s
 
 /*priorite*/
 
-
 %%
 /*grammaire*/
 s: context library_item EOF
-   {let (body,loc) = $2 in ($1, body, loc)}
-
+  {let (body,loc) = $2 in ($1, body, loc)}
+;
+  
 context :
-{[]}
+  {[]}
 | context_item context {$1@$2}
+;
 
 context_item :
 | WITH name_list POINT_VIR 
@@ -94,9 +112,11 @@ context_item :
 	  (fun name -> With(name, loc, None))
 	  $2}
 | use_clause {[UseContext($1)]}
+;
 
 use_clause :
 | USE name_list POINT_VIR {$2}
+;
 
 library_item :
 | decl {let (spec, loc) = $1 in (Spec(spec), loc)}
@@ -106,10 +126,12 @@ library_item :
 body : 
 | subprogram_body {$1}
 | package_body {$1}
+;
 
 decl :
 | subprogram_decl {$1}
 | package_decl {$1}
+;
 
 subprogram_decl :
 | subprogram_spec POINT_VIR
@@ -201,60 +223,62 @@ basic_declarative_part :
 ;
 
 basic_declaration :
-| ident_list DEUX_POINTS subtyp_indication POINT_VIR 
-    {(ObjectDecl($1,$3,None, Variable), loc ())}
-| ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR 
+| ident_list DEUX_POINTS subtyp_indication POINT_VIR
+        {(ObjectDecl($1,$3,None, Variable), loc ())}
+| ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR
 	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
-
-| ident_list DEUX_POINTS CONSTANT subtyp_indication AFFECT expression POINT_VIR 
+| ident_list DEUX_POINTS CONSTANT subtyp_indication AFFECT expression POINT_VIR
 	{(ObjectDecl($1,$4,Some($6), Constant), loc ())}
-
 | ident_list DEUX_POINTS CONSTANT AFFECT expression POINT_VIR 
-    {(NumberDecl($1, $5, None), loc())}
-
-| type_definition {($1, loc ())}
+	{(NumberDecl($1, $5, None), loc())}
+| type_definition 
+	{($1, loc ())}
 | SUBTYPE ident IS subtyp_indication POINT_VIR
-      {(SubtypDecl($2,$4), loc ())}
-
+	{(SubtypDecl($2,$4), loc ())}
 | use_clause {(UseDecl($1), loc ())}
-| decl 
-      {let (spec, loc) = $1
-       in (SpecDecl(spec), loc)}
+| decl  {let (spec, loc) = $1 in 
+	   (SpecDecl(spec), loc)}
 | representation_clause POINT_VIR {(RepresentClause($1), loc ())}
 ;
 
 contrainte :
-| RANGE simpl_expr DEUX_POINTS_H simpl_expr 
-      {RangeConstraint($2, $4)}
+| simpl_expr H_DEUX_POINTS simpl_expr 
+    {RangeConstraint($1, $3)}
+;
 
 type_definition :
+| TYPE ident IS ARRAY constrained_array_definition POINT_VIR 
+		{ TypeDecl(Array($2,$5))}
 | TYPE ident IS PAR_G ident_list PAR_D POINT_VIR
-    {TypeDecl(Ada_utils.make_enum ($2) $5)}
+    { TypeDecl(Ada_utils.make_enum ($2) $5)}
 | TYPE ident IS NEW subtyp_indication POINT_VIR
 	{TypeDecl(DerivedType($2, $5))}
-| TYPE ident IS RANGE simpl_expr DEUX_POINTS_H simpl_expr POINT_VIR
-	    {TypeDecl(Ada_utils.make_range $2 $5 $7)}
-| TYPE ident IS constrained_array_definition POINT_VIR 
-		{TypeDecl(Array($2,$4))}
+| TYPE ident IS RANGE simpl_expr H_DEUX_POINTS simpl_expr POINT_VIR
+	    { TypeDecl(Ada_utils.make_range $2 $5 $7)}
+
 ;
 
 constrained_array_definition : 
-| ARRAY PAR_G subtyp_indication PAR_D OF subtyp_indication 
-    {ConstrainedArray($3,$6,None)}
+  PAR_G subtyp_indication PAR_D OF subtyp_indication 
+  {ConstrainedArray($2,$5,None)}
+;
 
 array_component_association :
 | ident FLECHE expression {($1, $3)} 
+;
 
 named_array_aggregate :
 | array_component_association {[$1]}
 | array_component_association VIR named_array_aggregate {$1::$3}
+;
 
 array_aggregate :
 | PAR_G named_array_aggregate PAR_D {NamedArrayAggregate($2)}
+;
 
 representation_clause :
 | FOR ident USE array_aggregate {EnumerationRepresentation($2, $4)}
-
+;
 
 instr_list :
 | instr POINT_VIR instr_list {$1::$3}
@@ -265,21 +289,43 @@ instr :
 | NULL {(NullInstr, loc ())}
 | RETURN expression {(Return($2), loc ())}
 | RETURN {(ReturnSimple, loc ())}
-| name AFFECT expression {(Affect($1,$3), loc ())}
+
+| procedure_array { let (n,p)= $1 in 
+		      (ProcedureCall(n,p), loc())
+		  }
+
+| procedure_array AFFECT expression 
+    { let (nm, ind) = $1 in
+      let arr_or_lv = build_access nm ind in 
+	(Affect ( arr_or_lv  , $3), loc())
+    }
+
 | EXIT {(Exit(None), loc() )}
 | EXIT WHEN expression {(Exit(Some($3)), loc ())}
 | instruction_if {$1}
 | iteration_scheme LOOP instr_list END LOOP 
       { let (scheme,loc) = $1
 	in (Loop(scheme, $3), loc)}
-| procedure_call {($1, loc ())}
-	  
 ;
+
+procedure_array :
+| name     {($1, [])} 
+| name args {($1, $2)} 
+
+
+args: 
+| PAR_G param_assoc PAR_D { $2 }     
+| args PAR_G param_assoc PAR_D { $1@$3 } /*TO DO checkin
+					  this case length 3 = 1*/  
+param_assoc:
+| expression {[$1]}
+| expression VIR param_assoc {$1::$3}
+      
 
 iteration_scheme :
 | {(NoScheme, loc ())}
 | WHILE expression {(While($2), loc ())}
-
+;
 
 debut_if : 
 | IF {loc()}
@@ -333,6 +379,7 @@ expr_orelse :
 expr_xor :
 | relation {$1}
 | expr_xor XOR relation {Binary(Xor, $1, $3)}
+;
 
 rel_op :
 | EQ {Eq}
@@ -352,12 +399,15 @@ add_op :
 | PLUS {Plus}
 | MOINS {Moins}
 | CONCAT {Concat}
+;
 
 simpl_expr :
 | term {$1}
 | PLUS term {Unary(UPlus,$2)}
 | MOINS term {Unary(UMoins,$2)}
 | simpl_expr add_op term {Binary($2,$1,$3)}
+/*WG added for type'LAST ... */
+| subtyp QUOTE LAST {Last($1)}
 ;
 
 mult_op :
@@ -365,11 +415,12 @@ mult_op :
 | DIV {Div}
 | MOD {Mod}
 | REM {Rem}
+;
 
 term :
 | factor {$1}
 | term mult_op factor {Binary($2,$1,$3)}
-
+      
 factor :
 | primary {$1}
 | primary PUISS primary {Binary(Puissance,$1,$3)}
@@ -388,7 +439,9 @@ primary :
 | name {Var($1)}
 | PAR_G expression PAR_D {$2}
 | subtyp QUOTE PAR_G expression PAR_D {Qualified($1,$4)}
-| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)}
+| name args {FunctionCall($1, $2)}
+
+/*| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)}*/
 ;
 
 typ :
@@ -398,33 +451,48 @@ typ :
 | CHARACTER {Unconstrained(Character)}
 ;
 
-
-subtyp_indication :
-| subtyp contrainte {($1, Some($2), None)}
+subtyp_indication : 
+| subtyp RANGE contrainte {($1, Some($3), None)}
 | subtyp {($1, None, None)}
+/*| simpl_expr H_DEUX_POINTS simpl_expr */
+| CONST_INT H_DEUX_POINTS CONST_INT 
+    {(Constrained(Integer, Ada_config.integer_constraint, true),
+      Some (RangeConstraint(CInt(Newspeak.Nat.of_string $1), 
+			    CInt(Newspeak.Nat.of_string $3))
+			),
+      None)}
+
 
 subtyp :
 | typ {$1}
 | name {SubtypName($1)}
+;
 
+/*
 procedure_call : 
 | name {ProcedureCall($1, [])}
 | name PAR_G param_assoc PAR_D {ProcedureCall($1, $3)}
-
+;
 param_assoc :
 | expression {[$1]}
 | expression VIR param_assoc {$1::$3}
+;
+*/
+
 
 ident :
 | IDENT {$1}
+;
 
 ident_list :
 | ident {[$1]}
 | ident VIR ident_list {$1::$3}
+;
 
 name_list :
 | name {[$1]}
 | name VIR name_list {$1::$3}
+;
 
 name : 
 | ident {([],$1)}
@@ -432,7 +500,12 @@ name :
       {
     let (par, ident) = $1
     in (par@[ident], $3)}
+    
+    /* pour les tableaux */
+/*| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)} */
+;      
 
 
 %%
- 
+  
+  

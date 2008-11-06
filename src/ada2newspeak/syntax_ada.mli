@@ -70,7 +70,6 @@ and subtyp =
   | SubtypName of name
 
 and expression = 
-
   | NullExpr 
   | CInt of nat
   | CFloat of flottant
@@ -82,6 +81,8 @@ and expression =
   | Unary of unary_op*expression
   | Binary of binary_op*expression*expression
   | Qualified of subtyp*expression
+ (*WG*)
+  | Last of subtyp
 
 and contrainte = 
   | RangeConstraint of expression*expression
@@ -90,13 +91,15 @@ and contrainte =
 
 and subtyp_indication = subtyp*contrainte option*subtyp option
 
+type lval = Lval of name | ArrayAccess of lval*expression
+  
 type param = {pnom:identifier list;mode:param_mode;ptype:subtyp;pdef:expression option}
 
 type iteration_scheme = NoScheme | While of expression
 
 type instruction_atom = 
   | NullInstr
-  | Affect of name*expression
+  | Affect of lval*expression
   | Return of expression
   | ReturnSimple
   | If of expression*instruction list*instruction list

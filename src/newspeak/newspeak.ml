@@ -606,7 +606,7 @@ let dump_prog (gdecls, fundecs, spec) =
   (* TODO: Clean this mess... String_map *)
   let funs = ref (String_map.empty) in
     Hashtbl.iter 
-      (fun name (_, body) -> funs := (String_map.add name body !funs))
+      (fun name (_, body) ->  funs := (String_map.add name body !funs))
       fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals gdecls;

@@ -36,7 +36,7 @@ exception AmbiguousTypeException
    d'énumération.
    le paramètre booléen indique :
    - si la variable est global ou
-     local (true = global) dans le cas var et enum,
+    local (true = global) dans le cas var et enum,
    - si la fonction/procedure est interne ou externe dans le cas 
      fun (extern=true)
    dans le cas des variables : le dernier param booléen
@@ -69,7 +69,27 @@ let extract_scalar_typ cir_typ = match cir_typ with
 	"Firstpass.extract_scalar_typ"
 	"type isn't a scalar type"
 
-
+let make_check_constraint contrainte exp = 
+  match contrainte with
+    | IntegerRangeConstraint (v1,v2) ->
+	C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp)
+    | FloatRangeConstraint(_, _) -> exp
+	
+    | RangeConstraint _ ->
+	Npkcontext.error
+	  "Firstpass.make_check_constraint"
+	  "internal error : unexpected range constraint (non-static)"
+	  
+let make_check_subtyp subtyp exp = 
+  match subtyp with
+    | Unconstrained _ -> exp
+    | Constrained(_, contrainte, _) ->
+	make_check_constraint contrainte exp
+    | SubtypName _ ->
+	Npkcontext.error
+	  "Firstpass.make_check_subtyp"
+	  "internal error : unexpected subtyp name"
+	  
 let translate compil_unit =
   
   (* Références globales *)
@@ -193,7 +213,7 @@ let translate compil_unit =
 	     
 	   (* si la déclaration précédente est global, on peut
 	      redéfinir x*)
-	   | (VarSymb(_, _, global,_),_,_) 
+	   | (VarSymb(_, _, global,_),_,_)   
 	   | (NumberSymb(_, global),_,_) 
 	   | (EnumSymb(_,_, global),_,_) when global -> ()
 	   | (FunSymb(_),_,_) -> ()
@@ -358,10 +378,10 @@ let translate compil_unit =
 	| ((VarSymb(_)|NumberSymb(_)),_,_)::r when var_masque -> 
 	    mem_other_symb r var_masque
 	| ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
-	     Npkcontext.error 
-	       "Firstpass.find_fun_symb" 
-	       ((Print_syntax_ada.name_to_string name)
-		^" is not a funtion")
+	    Npkcontext.error 
+	      "Firstpass.find_fun_symb" 
+	      ((Print_syntax_ada.name_to_string name)
+	       ^" is not a funtion")
 	| (EnumSymb(_),_,_)::r -> mem_other_symb r var_masque
 	| (FunSymb(_),_,_)::_ -> true
 	| [] -> false
@@ -373,22 +393,24 @@ let translate compil_unit =
 	match list_symb with
 	  | ((VarSymb(_)|NumberSymb(_)),_,_)::r when var_masque -> 
 	      find_use r var_masque
-
-	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
+		
+	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> (*WG TO DO *)
 	      Npkcontext.error 
 		"Firstpass.find_fun_symb" 
-		(ident ^" is not a funtion")
+		(ident ^" is not a funtion 1 ")
 		
 	  | (EnumSymb(_),_,_)::r ->
 	      find_use r var_masque
 
-	  | (FunSymb(fname, spec, true), C.Fun(tr_typ), _)::r -> 
+	  | (FunSymb( _(*fname*), _(*spec*), true), C.Fun(_ (*tr_typ*) ), _)::r -> 
 	      if (mem_other_symb r var_masque)
 	      then (Npkcontext.error
 		      "Firstpass.find_fun_symb"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
-	      else (fname, spec, tr_typ)
+	      else (*fname, spec, tr_typ*)
+		List.hd list_symb
+		
 
 	  | (FunSymb(_, _, false), C.Fun(_), _)::_ -> Npkcontext.error
 	      "Firstpass.find_fun_symb" 
@@ -410,17 +432,21 @@ let translate compil_unit =
 	     _,_)::r when var_masque -> 
 	      find_interne r var_masque
 
-	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
+	  | (VarSymb(_),_,_)::_ -> 
+	      (*WG*)
+	      List.hd list_symb
+		
+	  | (NumberSymb(_),_,_)::_ -> 
 	      Npkcontext.error 
-	       "Firstpass.find_fun_symb" 
+		"Firstpass.find_fun_symb" 
 		((Print_syntax_ada.name_to_string name)
-		 ^" is not a funtion")
-
+		 ^" is not a funtion (NumberSymb)")
+	      
 	  | (EnumSymb(_),_,_)::r ->
 	      find_interne r true
 
-	  | (FunSymb(fname, spec, _), C.Fun(tr_typ), _)::_ -> 
-	      (fname, spec, tr_typ)
+	  | (FunSymb(_, _, _), C.Fun(_), _)::_ -> 
+	      List.hd list_symb
 
 	  | (FunSymb(_), _,_)::_ -> Npkcontext.error 
 	      "Firstpass.find_fun_symb" 
@@ -435,7 +461,7 @@ let translate compil_unit =
       let list_symb = find_all_symb name in
       let rec find_fun list_symb = 
 	match list_symb with
-	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
+	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ ->  (*WG TO DO *)
 	      Npkcontext.error 
 	       "Firstpass.find_fun_symb" 
 		((Print_syntax_ada.name_to_string name)
@@ -444,8 +470,8 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_fun r
 
-	  | (FunSymb(fname, spec, true), C.Fun(tr_typ), _)::_ -> 
-	     (fname, spec, tr_typ)
+	  | (FunSymb(_, _, true), C.Fun(_), _)::_ -> 
+	      List.hd list_symb
 
 	  | (FunSymb(_), _, _)::_ -> Npkcontext.error 
 	      "Firstpass.find_fun_symb" 
@@ -463,7 +489,8 @@ let translate compil_unit =
 	match list_symb with
 	  | ((VarSymb(_,_,false,_)|NumberSymb(_,false)),_,_)::r ->
 	      find_global r
-	  | ((VarSymb(_,_,true,_)|NumberSymb( _,true)),_,_)::_ ->
+
+	  | ((VarSymb(_,_,true,_)|NumberSymb( _,true)),_,_)::_ ->(*WG TO DO *)
 	      Npkcontext.error 
 	       "Firstpass.find_fun_symb" 
 		((Print_syntax_ada.name_to_string name)
@@ -472,8 +499,8 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_global r
 
-	  | (FunSymb(fname, spec, false), C.Fun(tr_typ), _)::_ -> 
-	      (fname, spec, tr_typ)
+	  | (FunSymb(_, _, false), C.Fun(_), _)::_ -> 
+	      List.hd list_symb
 
 	  | (FunSymb(_,_, true), _, _)::_ -> (* fonction externe *)
 	      Npkcontext.error 
@@ -492,8 +519,6 @@ let translate compil_unit =
 
     in find_name name sans_selecteur 
 	 avec_selecteur avec_selecteur_courant
-
-
 
   in
 
@@ -516,70 +541,103 @@ let translate compil_unit =
 	    "internal error : number cannot have enum val"
   in
     
-  let translate_lv lv write = 
-    let (symb, _, _) = find_name lv
-
-      (*cas d'un symbol sans sélecteur *)
-      (fun ident name -> 
-	 if mem_symb name then find_symb name
-	 else 
-	   begin
-	     let all_symbs = find_all_use ident in 
-	       match all_symbs with
-		 | [a] -> a
-		 | [] -> Npkcontext.error 
-		     "Firstpass.translate_lv"
-		       ("cannot find symbol "^ident)
-		       
-		 | _ -> 
-		     Npkcontext.error 
-		       "Firstpass.translate_lv"
-		       ("multiple use clause :"
-			^ident^"is not visible")
-	   end)
-	     
-      (* cas d'un symbol avec sélecteur connu *)
-      (fun name -> 
-	 if mem_symb name then find_symb name
-	 else Npkcontext.error 
-	   "Firstpass.translate_lv"
-	   ("cannot find symbol "^(string_of_name name)))
-
-      (*cas d'un symbol avec sélecteur qui est le package courant*)
+  let rec translate_lv lv write trans_exp = 
+    (*cas d'un symbol sans sélecteur *)
+    let fun_sans_sel ident name = 
+      if mem_symb name then find_symb name
+      else begin
+	let all_symbs = find_all_use ident in 
+	  match all_symbs with
+	    | [a] -> a
+	    | [] -> Npkcontext.error 
+		"Firstpass.translate_lv"
+		  ("cannot find symbol "^ident)  
+	    | _ -> Npkcontext.error 
+		"Firstpass.translate_lv"
+		  ("multiple use clause :"
+		   ^ident^"is not visible") 
+            end
+    in
+  
+    (* cas d'un symbol avec sélecteur connu *)
+    let fun_sel_connu name = 
+      if mem_symb name then find_symb name
+      else Npkcontext.error "Firstpass.translate_lv"
+	("cannot find symbol "^(string_of_name name))
+    in
       
-      (fun ident name ->
-	 if mem_symb ident 
-	 then 
-	   try 
-	     List.find
-	       (fun (symb, _, _) -> match symb with
-		  | VarSymb(_,_,true,false) -> true
-		  | _ -> false)
-	       (find_all_symb ident)
-	   with
-	     | Not_found -> Npkcontext.error 
-		 "Firstpass.translate_lv"
-		   ("cannot find symbol "^(string_of_name name))
-	 else  
-	   Npkcontext.error 
-	     "Firstpass.translate_lv"
-	     ("cannot find symbol "^(string_of_name name)))
-	   
-    in match symb with
-      | VarSymb(_,_,_, true) when write ->
-	  Npkcontext.error "Firstpass.translate_lv"
-	    ("Invalid left value : "^(translate_name lv)
-	     ^" is read only")
+    (*cas d'un symbol avec sélecteur qui est le package courant*)
+    let fun_ident_name ident name = 
+      if mem_symb ident then 
+	try 
+	  List.find
+	    (fun (symb, _, _) -> match symb with
+	       | VarSymb(_,_,true,false) -> true
+	       | _ -> false)
+	    (find_all_symb ident)
+	with
+	  | Not_found -> Npkcontext.error "Firstpass.translate_lv"
+	      ("cannot find symbol "^(string_of_name name))
+      else  
+	Npkcontext.error "Firstpass.translate_lv"
+	  ("cannot find symbol "^(string_of_name name))
+    in
+      
+      match lv with 
+	  Lval lv -> 
+	    let (symb, _, _) = find_name lv
+	      fun_sans_sel   (*sans sélecteur *)
+	      fun_sel_connu  (*avec sélecteur connu *)
+	      fun_ident_name (*avec sélecteur =  pkg courant*)
+	      
+	    in begin
+	      match symb with
+		| VarSymb(_,_,_, true) when write ->
+		    Npkcontext.error "Firstpass.translate_lv"
+		      ("Invalid left value : "^(translate_name lv)
+		       ^" is read only")
+		      
+		| VarSymb(v, typ, _, _) -> (v, typ)
+		| NumberSymb(_) ->
+		    Npkcontext.error "Firstpass.translate_lv"
+		      "Invalid left value: unexpected number symbol"
+		| FunSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
+		    "Invalid left value: unexpected function symbol"
+		| EnumSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
+		    "Invalid left value: unexpected enum" 
+	      end
+		 
+	| ArrayAccess (lval, expr) -> 
+	    let (v, subtyp_lv) = translate_lv lval write trans_exp in 
+	      match subtyp_lv with 
+		  Unconstrained(
+		    Declared(
+		      Array(_, 
+			    ConstrainedArray(
+			      ( stypindex ,_,_ ),
+			      ( stypelt,_,_),_)
+			   ), _ )
+		  ) 
 
-      | VarSymb(v, typ, _, _) -> (v, typ)
-      | NumberSymb(_) ->
-	  Npkcontext.error "Firstpass.translate_lv"
-	    "Invalid left value: unexpected number symbol"
-      | FunSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
-	  "Invalid left value: unexpected function symbol"
-      | EnumSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
-	  "Invalid left value: unexpected enum" in
-	    
+(* Constrained( Declared(Array(_, ConstrainedArray((styp,_,_),_,_)),), _, _ ) WG contrainte et static *)
+			     
+
+		  -> let (tr_exp, _) = trans_exp expr
+		    (Some(base_typ (stypindex))) 
+		  in
+		  let chk_exp = make_check_subtyp stypindex tr_exp in 
+		    
+		    (C.Shift (v, chk_exp), stypelt)
+		     
+		    
+		| _ ->        (*Constrained*)
+		    invalid_arg  ("Firstpass, ArrayAccess subtyp_lv "^
+				       "has not expected typ")
+		    
+  in
+    
+    
+    
   let rec translate_if_exp cond exp_then exp_else expected_typ = 
     match expected_typ with
       | None | Some(Boolean) ->
@@ -587,8 +645,9 @@ let translate compil_unit =
 	  let (tmp, decl, vid) = gen_tmp loc Boolean in
 	  let name = ident_to_name tmp in
 	  let instr_if = If (cond, 
-			     [(Affect(name, exp_then),loc)],
-			     [(Affect(name, exp_else),loc)])
+			     [(Affect(Lval name, exp_then),loc)],
+			     (*WG Lval (Array)*)
+			     [(Affect(Lval name, exp_else),loc)])
 	  in let tr_instr_if = 
 	      translate_instr_list [(instr_if,loc)]
 	  in
@@ -832,12 +891,12 @@ let translate compil_unit =
 	  | ((VarSymb(_)|NumberSymb(_)),_,_)::r when var_masque ->
 	      find_use r var_masque var_possible
 		
-	  (*var visible, symbol unique*)
+	  (* var visible, symbol unique*)
 	  | [(VarSymb(v,typ,_,_),tr_typ,_)] when var_possible -> 
 	      let t = check_typ expected_typ (base_typ typ) in 
 		(C.Lval (v, tr_typ), t)
 
-	  (*nombre visible, symbole unique*)
+	  (* nombre visible, symbole unique*)
 	  | [(NumberSymb(v,_),_,_)] when var_possible -> 
 	      translate_number v expected_typ
 
@@ -1097,51 +1156,139 @@ let translate compil_unit =
 	  (make_check_subtyp subtyp tr_exp, typ)
 	     
     | FunctionCall(name, exp_list) -> 
-	let (fname, spec, tr_typ) = find_fun_symb name in 
-	  translate_function_call 
-	  fname tr_typ spec exp_list expected_typ
+		(*let (fname, spec, tr_typ) = find_fun_symb name in *)
+	let array_or_fun = find_fun_symb name in
+	  begin
+	    match array_or_fun with 
+		(FunSymb(fname, spec, true), C.Fun(tr_typ),  _) -> 
+		  translate_function_call 
+		    fname tr_typ spec exp_list expected_typ
+		    
+	      | (VarSymb(lv, subtyp, _, _),_,_) ->  begin  
+		  let rec destroy subt = (*du plus gros vers plus petit*)
+		    let typ_fom_ind ind = let (a,_,_) = ind in a in	      
+		    match subt with 
+			Unconstrained(Declared (Array( _, ConstrainedArray(
+			sbtyp_ind, sbtypelt_ind, _)),_)) ->
+			  let sbtyp = typ_fom_ind sbtyp_ind in 
+			  let sbtypelt = typ_fom_ind sbtypelt_ind in 
+			  let deb = (sbtyp, sbtypelt) in
+			  let fin = destroy sbtypelt in
+			    [deb]@fin
+		      | _ -> []
+		  in
 
-  and make_check_constraint contrainte exp = 
-    match contrainte with
-      | IntegerRangeConstraint (v1,v2) -> 
-	  (* vérification d'une contrainte entière *)
-	  C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp)
-      | FloatRangeConstraint(_, _) -> exp
-	  (* TODO : vérification d'une contrainte flottante *)
-	  (*C.Unop(
-	    C.Belongs(
-	    C.FloatRange((inf, string_of_float inf),
-	    (sup, string_of_float sup))),
-	    exp)*)
-      
-      | RangeConstraint _ ->
-	  Npkcontext.error
-	    "Firstpass.make_check_constraint"
-	    "internal error : unexpected range constraint (non-static)"
 
-      (* TODO newspeak needs to be extended to support this case *)
-      (* an exception should have been thrown before
-	 when a constraint is none static *)
+		  let subtyp_to_typ sub = match sub with 
+		      Constrained (z, _, _) ->  z
+		    | _ -> invalid_arg ("firstpass.ml:no constrained"^
+					  " for array range TO DO ")
+		  in
+
+		  (* TODO WG  ! ajouter le belongs ! *)		
+		  let rec rebuild lv subt exp_list  = 
+		    let lgth  = List.length exp_list in 
+		    let  last_exp = List.hd exp_list in 
+		    let (subt_range, tpelt) = List.nth subt (lgth - 1) in
+		      (* ! ajouter le belongs ! *)	
+		    
+		    let chk_exp = make_check_subtyp subt_range last_exp 
+		    in
+		      
+		      if (compare lgth 1 = 0) then
+			let adatyp = subtyp_to_typ tpelt in 
+			  ( C.Lval (C.Shift (lv, chk_exp),
+				    (  translate_typ adatyp )
+				   ), 
+			    adatyp
+			  )
+		      else 
+			let sh_lv = C.Shift (lv, chk_exp) in 
+			  rebuild sh_lv subt (List.tl exp_list)
+		  in	    
+		    
+		  let bk_typ = destroy subtyp in
+		    
+		  let dim = List.length exp_list in 		    
+		    
+		    if (compare (List.length bk_typ) dim < 0) 
+		    then invalid_arg "more elts than dimensions";
+		    
+		    if (compare 0 dim = 0) 
+		    then invalid_arg "no element for shifting";
+		    
+		    let types = List.map (
+		      fun x -> Some (subtyp_to_typ (fst x))
+		    ) bk_typ in
+		      
+		    let dim_types = Array.to_list (
+		      Array.sub  (Array.of_list types) 0 dim) in
+		      
+		    let tr_exp_list = List.map2 (fun x y ->
+			fst (translate_exp x y)) exp_list dim_types in
+			
+(*		     translate_exp exp expected_typ*)
+		      match (rebuild lv bk_typ tr_exp_list) 
+		      with
+			  (C.Lval (a, tpelt), adatyp) ->
+			    (C.Lval (a, tpelt),  adatyp)
+			| _ ->  invalid_arg ("firstpass unexepted form in "^
+					       "translate_exp")
+		end
+	      | _ -> Npkcontext.error "Firstpass.translate_exp" 
+		  "FunctionCall case but unexpected result"
+	  end
+	    
+	    
+    (*WG  TO DO *)
+    | Last _ -> 
+	Npkcontext.error
+	  "Firstpass.translate_exp"
+	  "Last still in firstpass, non static "
 	  
-      (* if the solution of a belongs who uses temporary is choosed, 
-	 here is what to do :*)
-      (* | RangeConstraint(Var(v1), Var(v2)) ->
-	 let (tr_v1,_) = translate_lv v1 false
-	 and (tr_v2,_) = translate_lv v2 false in
-	 C.Unop(
-	 C.Belongs(
-	 C.LvalRange(tr_v1,tr_v2)),exp) *)
+	  
+(*   and make_check_constraint contrainte exp =  *)
+(*     match contrainte with *)
+(*       | IntegerRangeConstraint (v1,v2) ->  *)
+(* 	  (\* vérification d'une contrainte entière *\) *)
+(* 	  C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp) *)
+(*       | FloatRangeConstraint(_, _) -> exp *)
+(* 	  (\* TODO : vérification d'une contrainte flottante *\) *)
+(* 	  (\*C.Unop( *)
+(* 	    C.Belongs( *)
+(* 	    C.FloatRange((inf, string_of_float inf), *)
+(* 	    (sup, string_of_float sup))), *)
+(* 	    exp)*\) *)
+      
+(*       | RangeConstraint _ -> *)
+(* 	  Npkcontext.error *)
+(* 	    "Firstpass.make_check_constraint" *)
+(* 	    "internal error : unexpected range constraint (non-static)" *)
+
+(*       (\* TODO newspeak needs to be extended to support this case *\) *)
+(*       (\* an exception should have been thrown before *)
+(* 	 when a constraint is none static *\) *)
+	  
+(*       (\* if the solution of a belongs who uses temporary is choosed,  *)
+(* 	 here is what to do :*\) *)
+(*       (\* | RangeConstraint(Var(v1), Var(v2)) -> *)
+(* 	 let (tr_v1,_) = translate_lv v1 false *)
+(* 	 and (tr_v2,_) = translate_lv v2 false in *)
+(* 	 C.Unop( *)
+(* 	 C.Belongs( *)
+(* 	 C.LvalRange(tr_v1,tr_v2)),exp) *\) *)
 
 
-  and make_check_subtyp subtyp exp = 
-    match subtyp with
-      | Unconstrained _ -> exp
-      | Constrained(_, contrainte, _) ->
-	  make_check_constraint contrainte exp
-      | SubtypName _ ->
-	  Npkcontext.error
-	    "Firstpass.make_check_subtyp"
-	    "internal error : unexpected subtyp name"
+(*   and make_check_subtyp subtyp exp =  *)
+(*     match subtyp with *)
+(*       | Unconstrained _ -> exp *)
+(*       | Constrained(_, contrainte, _) -> *)
+(* 	  make_check_constraint contrainte exp *)
+(*       | SubtypName _ -> *)
+(* 	  Npkcontext.error *)
+(* 	    "Firstpass.make_check_subtyp" *)
+(* 	    "internal error : unexpected subtyp name" *)
+
 	   
   (* test de correction des indications de sous-types, pour les cas
      non static *)
@@ -1224,7 +1371,8 @@ let translate compil_unit =
 	 
 	 
   and translate_affect lv exp loc = 
-    let (tr_lv,subtyp_lv) = translate_lv lv true in
+    let (tr_lv,subtyp_lv) = translate_lv lv true translate_exp
+      (*WG*) in
     let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp_lv))
     in make_affect tr_lv tr_exp subtyp_lv loc
 	 
@@ -1237,8 +1385,8 @@ let translate compil_unit =
 	       let tr_affect = translate_affect lv exp loc
 	       in  tr_affect::(translate_instr_list r)
 	   | Return(exp) -> 
-	       translate_instr_list 
-		 ((Affect(ident_to_name ret_ident,exp),loc)
+	       translate_instr_list (* WG Lval for Array diff*)
+		 ((Affect(Lval (ident_to_name ret_ident),exp),loc)
 		  ::(ReturnSimple,loc)::r)
 	   | ReturnSimple ->
 	       let tr_reste = 
@@ -1287,42 +1435,49 @@ let translate compil_unit =
 		 (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)
 		 ::(translate_instr_list r)
 		   
-	   | ProcedureCall(name, args) -> 
-	       let (fname, spec, tr_typ) = find_fun_symb name in 
-	       let params = 
-		 match spec with 
-		   | Function(_) -> Npkcontext.error 
-		       "Firstpass.translate_instr" 
-		       ((Print_syntax_ada.name_to_string name)
-			^" is a function, procedure expected")
-		   | Procedure(_, params) -> params in 
-	       let tr_param param exp = match param.mode with
-		 | In -> fst (translate_exp exp 
-				(Some(base_typ param.ptype)))
-		 | Out | InOut -> 
-		     match exp with
-		       | Var(v) -> 
-			   let (vid, typ) = translate_lv v true in
-			   let t = check_typ 
-			     (Some(base_typ param.ptype)) 
-			     (base_typ typ) in
-			     C.AddrOf(vid, translate_typ t) 
-		       | _ ->  Npkcontext.error 
-			   "Firstpass.translate_instr"
-			     ("actual for out parameter"
-			      ^"must be a variable")
-	       in
-	       let tr_params = 
-		 if (List.length params <> List.length args) 
-		 then Npkcontext.error "Firstpass.translate_instr"
-		   "wrong number of arguments"
-		 else 
-		   List.map2
-		     tr_param
-		     params args
-	       in (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
-		  ::(translate_instr_list r)
+	   | ProcedureCall(name, args) -> begin
+	       let array_or_fun  = find_fun_symb name in 
+		   match array_or_fun with 
+		       (FunSymb(fname, spec, true), C.Fun(tr_typ),  _) ->   
+			 let params = 
+			   match spec with 
+			     | Function(_) -> Npkcontext.error 
+				 "Firstpass.translate_instr" 
+				   ((Print_syntax_ada.name_to_string name)
+				    ^" is a function, procedure expected")
+			     | Procedure(_, params) -> params in 
+			 let tr_param param exp = match param.mode with
+			   | In -> fst (translate_exp exp 
+					  (Some(base_typ param.ptype)))
+			   | Out | InOut -> 
+			       match exp with
+				 | Var(v) -> 
+				     let (vid, typ) = translate_lv (Lval v) true translate_exp in
+				     let t = check_typ 
+				       (Some(base_typ param.ptype)) 
+				       (base_typ typ) in
+				       C.AddrOf(vid, translate_typ t) 
+				 | _ ->  Npkcontext.error 
+				     "Firstpass.translate_instr"
+				       ("actual for out parameter"
+					^"must be a variable")
+			 in
+			 let tr_params = 
+			   if (List.length params <> List.length args) 
+			   then Npkcontext.error "Firstpass.translate_instr"
+			     "wrong number of arguments"
+			   else 
+			     List.map2
+			       tr_param
+			       params args
+			 in (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
+			    ::(translate_instr_list r)
+		     | _ -> 
+			 Npkcontext.error "Firstpass.translate_instr"
+			     "find_fun_symb did not expect this (maybe array) as an instr! " 
 		  
+		
+	     end	  
       )
 	  
     | [] -> []

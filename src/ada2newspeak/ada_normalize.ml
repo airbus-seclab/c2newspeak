@@ -76,6 +76,7 @@ let normalize_name name with_package current_package extern =
       | true -> add_package name current_package
 
 
+
 let eval_static exp expected_typ csttbl context with_package
     current_package extern = 
   
@@ -126,8 +127,43 @@ let eval_static exp expected_typ csttbl context with_package
 	  let (value,typ) = eval_static_exp exp (Some(typ)) in
 	    Ada_utils.check_static_subtyp subtyp value;
 	    (value, typ)
- 
-	
+	      
+      (*WG*)
+      | Last (subtype) -> 
+	  let value_ret =  eval_static_last subtype in
+	  let typ = Ada_utils.check_typ expected_typ 
+	    (Ada_utils.base_typ subtype) 
+	  in 
+	    (value_ret, typ)
+	      
+	      
+  
+  and eval_static_last  subtype = 
+    match subtype with	        
+      | Unconstrained _ ->  Npkcontext.error
+	  " Ada_normalize: last value of unconstrained type"
+	    "TODO:clean version of last based on ada_config"
+      | Constrained ( typ, contrainte, true) -> begin
+	  match contrainte with 
+	      RangeConstraint (_, exp2) ->
+		fst (eval_static_exp exp2 (Some(typ)))
+		  (*WG : TO DO check Some-typ*)
+		  
+	    | IntegerRangeConstraint (_, nat2) -> 
+		IntVal nat2
+		  
+	    | FloatRangeConstraint (_, fl2) -> 
+		FloatVal fl2
+		  
+	end
+      | Constrained(_, _, false) ->
+	  raise NonStaticExpression
+	    
+      | SubtypName _ ->  Npkcontext.error
+	  " Ada_normalize: eval static_last (Last)"
+	    " internal error : unexpected subtyp name"
+	    
+
   (* expected_typ : type du résultat de l'opération, pas
      des opérandes *)
   and eval_static_binop op e1 e2 expected_typ =
@@ -986,9 +1022,42 @@ and normalization compil_unit extern =
 				    normalize_exp e2)
     | FunctionCall(nom, params) ->
 	FunctionCall(nom, List.map normalize_exp params)
-
+	  (*WG*)
+    | Last (subtype) -> 	  (*Last(normalize_subtyp subtyp)*)
+	let rec fun_aux subtyp =
+	match subtyp with	        
+	  | Unconstrained _ ->  Npkcontext.error
+	      " Ada_normalize: last value of unconstrained type"
+		"TODO:clean version of last based on ada_config"
+	  | Constrained( _, contrainte, true) -> begin
+	      match contrainte with 
+		  RangeConstraint (_, exp2) ->  begin
+		    match exp2
+		    with
+			CInt _  | CFloat _ | CBool _ ->  exp2
+		      | NullExpr | CChar _ | CString _
+		      | Var _ | FunctionCall _ | Unary _
+		      | Binary _ | Qualified _ | Last _ ->
+			  Npkcontext.error
+			  " Ada_normalize: last value of unconstrained type"
+			  " TODO:clean version of last based on ada_config "
+		  end
+		| IntegerRangeConstraint (_, nat2) -> 
+		    CInt nat2
+		      
+		| FloatRangeConstraint (_, fl2) -> 
+		    CFloat fl2      
+	    end
+	  | Constrained(_, _, false) ->
+	      raise NonStaticExpression
+		
+	  | SubtypName _ ->  
+	      fun_aux (normalize_subtyp subtyp)
+	in
+	 fun_aux subtype	
   in
-
+    
+    
   (* normalize la contrainte contrainte
      le type des bornes est typ
      static indique si 
@@ -1161,7 +1230,7 @@ and normalization compil_unit extern =
   and normalize_instr_list instr_list = 
     List.map normalize_instr instr_list
   in
-
+    
   let normalize_integer_range ident taille contrainte = 
     match (taille, contrainte) with
       | (None, RangeConstraint(_)) ->
@@ -1510,7 +1579,7 @@ and normalization compil_unit extern =
 	(* cas jamais emprunté *)
 	NumberDecl(ident, normalize_exp exp, Some(v))
 	  
-    | SubtypDecl(ident, subtyp_ind) ->
+    | SubtypDecl(ident, subtyp_ind) -> 
 	let norm_subtyp_ind = 
 	  normalize_subtyp_indication subtyp_ind in 
 	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in

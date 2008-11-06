@@ -135,7 +135,8 @@ let id_boolean = "boolean"
 let id_character = "character"
 let id_true = "true"
 let id_false = "false"
-
+(*WG*)
+let id_last = "last"
 
 rule token = parse
     
@@ -192,6 +193,8 @@ rule token = parse
   | id_true {TRUE}
   | id_false {FALSE}
 
+(*WG*)
+  | id_last {LAST}
 
   | '(' {PAR_G}
   | ')' {PAR_D}
@@ -219,7 +222,7 @@ rule token = parse
   | ';' {POINT_VIR}
   | '.' {POINT}
   | ':' {DEUX_POINTS}
-  | ".." {DEUX_POINTS_H}
+  | ".." {H_DEUX_POINTS}
   | ',' {VIR}
   | "'" {QUOTE}
   | "=>" {FLECHE}
