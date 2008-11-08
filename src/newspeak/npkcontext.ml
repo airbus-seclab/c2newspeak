@@ -310,7 +310,6 @@ let exit_on_error msg =
 
 
 let handle_cmdline_options version_string comment_string = 
-
   let usage_msg =
     version_string ^ "\nUsage: "^
       Sys.argv.(0)^" [options] [-help|--help] [file...]\n" in

@@ -774,8 +774,46 @@ object
   method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
+  method enter_stmtkind (_: stmtkind) = ()
+  method process_stmtkind (x: stmtkind) = x
   method process_size_t (x: size_t) = x
   method process_offset (x: offset) = x
+end
+
+class simplify_labels =
+object (self)
+  inherit builder
+    
+  val mutable stack = []
+
+  method private bind lbl lbl' = stack <- (lbl, lbl')::stack
+
+  method private pop () =
+    match stack with
+	_::tl -> stack <- tl
+      | _ -> invalid_arg "Newspeak.simplify_labels.pop: unexpected empty stack"
+
+  method private find lbl = List.assoc lbl stack
+
+  method enter_stmtkind x =
+    match x with
+	DoWith ((DoWith (_, lbl1, []), _)::[], lbl2, []) ->
+	  self#bind lbl1 lbl1;
+	  self#bind lbl2 lbl1
+      | DoWith (_, lbl, _) -> self#bind lbl lbl
+      | _ -> ()
+
+  method process_stmtkind x =
+    match x with
+      | Goto lbl -> Goto (self#find lbl)
+      | DoWith ((DoWith (body, lbl1, []), _)::[], _, []) ->
+	  self#pop ();
+	  self#pop ();
+	  DoWith (body, lbl1, [])
+      | DoWith _ -> 
+	  self#pop ();
+	  x
+      | _ -> x
 end
 
 class simplify_coerce =
@@ -912,6 +950,7 @@ end
 
 module LblSet = Set.Make(Lbl)
 
+(* TODO: implement this as a builder?? *)
 let simplify_gotos blk =
   let rec simplify_blk x =
     match x with
@@ -974,6 +1013,7 @@ let simplify_gotos blk =
     blk
 
 let rec simplify_stmt actions (x, loc) =
+  List.iter (fun a -> a#enter_stmtkind x) actions;
   let x =
     match x with
       | Set (lv, e, sca) -> 
@@ -996,7 +1036,9 @@ let rec simplify_stmt actions (x, loc) =
 	    DoWith (body, l, action)
       | _ -> x
   in
-    (x, loc)
+  let stmt = ref x in
+    List.iter (fun x -> stmt := x#process_stmtkind !stmt) actions;
+    (!stmt, loc)
       
 and simplify_choose_elt actions (cond, body) = 
   let cond = List.map (simplify_exp actions) cond in
@@ -1052,10 +1094,10 @@ and simplify_blk actions blk =
 let simplify opt_checks b = 
   let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
   let simplifications = 
-    (new simplify_choose)::(new simplify_ptr)
+    (new simplify_choose)::(new simplify_labels)::(new simplify_ptr)
     ::(new simplify_arith)::simplifications
   in
-  simplify_gotos (simplify_blk simplifications b)
+    simplify_gotos (simplify_blk simplifications b)
 
 let simplify_exp opt_checks e =
   let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
@@ -1262,42 +1304,46 @@ and build_stmt builder (x, loc) =
     (x, loc)
 
 and build_stmtkind builder x =
-  match x with
-      Set (lv, e, t) ->
-	let lv = build_lval builder lv in
-	let e = build_exp builder e in
-	let t = build_scalar_t builder t in
-	  Set (lv, e, t)
-
-    | Copy (lv1, lv2, n) ->
-	let lv1 = build_lval builder lv1 in
-	let lv2 = build_lval builder lv2 in
-	let n = build_size_t builder n in
-	  Copy (lv1, lv2, n)
-
-    | Decl (x, t, body) ->
-	let t = build_typ builder t in
-	let body = build_blk builder body in
-	  Decl (x, t, body)
-
-    | ChooseAssert choices -> 
-	let choices = List.map (build_choice builder) choices in
-	  ChooseAssert choices
-
-    | InfLoop body ->
-	let body = build_blk builder body in
-	  InfLoop body
-
-    | DoWith (body, lbl, action) ->
-	let body = build_blk builder body in
-	let action = build_blk builder action in
-	  DoWith (body, lbl, action)
-
-    | Goto lbl -> Goto lbl
-
-    | Call fn -> 
-	let fn = build_fn builder fn in
-	  Call fn
+  builder#enter_stmtkind x; 
+  let x = 
+    match x with
+	Set (lv, e, t) ->
+	  let lv = build_lval builder lv in
+	  let e = build_exp builder e in
+	  let t = build_scalar_t builder t in
+	    Set (lv, e, t)
+	      
+      | Copy (lv1, lv2, n) ->
+	  let lv1 = build_lval builder lv1 in
+	  let lv2 = build_lval builder lv2 in
+	  let n = build_size_t builder n in
+	    Copy (lv1, lv2, n)
+	      
+      | Decl (x, t, body) ->
+	  let t = build_typ builder t in
+	  let body = build_blk builder body in
+	    Decl (x, t, body)
+	      
+      | ChooseAssert choices -> 
+	  let choices = List.map (build_choice builder) choices in
+	    ChooseAssert choices
+	      
+      | InfLoop body ->
+	  let body = build_blk builder body in
+	    InfLoop body
+	      
+      | DoWith (body, lbl, action) ->
+	  let body = build_blk builder body in
+	  let action = build_blk builder action in
+	    DoWith (body, lbl, action)
+	      
+      | Goto lbl -> Goto lbl
+	  
+      | Call fn -> 
+	  let fn = build_fn builder fn in
+	    Call fn
+  in
+    builder#process_stmtkind x
 
 and build_choice builder (cond, body) =
   let cond = List.map (build_exp builder) cond in

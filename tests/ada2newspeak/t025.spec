@@ -28,7 +28,7 @@ Newspeak output
 ---------------
 t025.adb
 t025() {
-  (t025.adb:4#51)^do {
+  (t025.adb:2#27)^do {
     (t025.adb:4#51)^while (1) {
       (t025.adb:4#51)^choose {
         | ! 1 -->

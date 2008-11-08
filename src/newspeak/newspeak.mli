@@ -328,6 +328,8 @@ object
   method process_lval: lval -> lval
   method process_exp: exp -> exp
   method process_blk: blk -> blk
+  method enter_stmtkind: stmtkind -> unit
+  method process_stmtkind: stmtkind -> stmtkind
   method process_size_t: size_t -> size_t
   method process_offset: offset -> offset
 end
