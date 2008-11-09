@@ -7,16 +7,16 @@ main() {
     (020.c:34#2)^do {
       (020.c:32#2)^choose {
         | (0-_int32 ==_int32 1) -->
-          (020.c:33#2)^goto lbl4;
+          (020.c:33#2)^goto lbl2;
         | (0-_int32 ==_int32 2) -->
-          (020.c:34#2)^goto lbl4;
+          (020.c:34#2)^goto lbl2;
         | ! (0-_int32 ==_int32 2) & ! (0-_int32 ==_int32 1) -->
-          (020.c:32#2)^goto lbl3;
+          (020.c:32#2)^goto lbl1;
       }
-    } with lbl4: {
+    } with lbl2: {
     }
     (020.c:35#4)^0- =(int32) 1;
-  } with lbl3: {
+  } with lbl1: {
   }
 }
 

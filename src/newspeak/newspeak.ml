@@ -276,38 +276,15 @@ let rec negate exp =
 
 let exp_of_int x = Const (CInt (Nat.of_int x))
 
-type alt_stmtkind =
-    (* the condition is a list of expression separated by && 
-       Careful! It behaves like the C operator: 
-       if the first expression evaluates to false, evaluation stops. *)
-    | While of (exp list * blk)
-    | Npk of stmtkind
-
-type alt_blk = (alt_stmtkind * location) list
-
-let extract_cond_body lbl x =
-  let rec extract x =
-    match x with
-	(ChooseAssert [(cond1::[], body); (cond2::[], [Goto lbl2, _])], _)::[] 
-	  when lbl = lbl2 && cond1 = negate cond2 ->
-	    cond1::(extract body)
-      | [] -> []
-      | _ -> raise Exit
-  in
-    try match x with
-	hd::body -> (extract [hd], body)
-      | [] -> ([], [])
-    with Exit -> ([], x)
-
 let rec convert_loops _ = invalid_arg "Not implemented yet"
-(*
-  match blk with
-      (InfLoop body, loc)::(Label lbl, _)::tl ->
-	let (cond, body) = extract_cond_body lbl body in
-	  (While (cond, body), loc)::(convert_loops tl)
-    | (x, loc)::tl -> (Npk x, loc)::(convert_loops tl)
-    | [] -> []
-*)
+(* TODO:
+   [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
+   If it fails, then it returns None.
+   Else, it returns the while condition in a exp list. It is a list of 
+   booleans which 
+   are evaluated until some of them is false (further booleans are not 
+   evaluated).
+   It also returns two blk, the blk in the loop and the blk after the loop. *)
 
 (*---------*)
 (* Display *)
@@ -919,29 +896,6 @@ object
       | _ -> x
 end
 
-let remove_final_goto l blk =
-  let rec remove blk = 
-    match blk with
-      	(Goto l', _)::[] when l = l' -> []
-      | hd::tl -> hd::(remove tl)
-      | [] -> []
-  in
-    remove blk
-
-let extract_cond_body lbl x =
-  let rec extract x =
-    match x with
-	(ChooseAssert [(cond1::[], body); (cond2::[], [Goto lbl2, _])], _)::[] 
-	  when lbl = lbl2 && cond1 = negate cond2 ->
-	    cond1::(extract body)
-      | [] -> []
-      | _ -> raise Exit
-  in
-    try match x with
-	hd::body -> (extract [hd], body)
-      | [] -> ([], [])
-    with Exit -> ([], x)
-
 module Lbl = 
 struct
   type t = lbl
@@ -949,66 +903,102 @@ struct
 end
 
 module LblSet = Set.Make(Lbl)
-
-(* TODO: implement this as a builder?? *)
+(* TODO: try to implement it with a builder
+   or propose a different kind of builder? *)
 let simplify_gotos blk =
+  let current_lbl = ref (-1) in
+  let stack = ref [] in
+  let used_lbls = ref LblSet.empty in
+  let new_lbl () = incr current_lbl; !current_lbl in
+  let find lbl = 
+    let lbl' = List.assoc lbl !stack in
+      used_lbls := LblSet.add lbl' !used_lbls;
+      lbl'
+  in
+  let push lbl1 lbl2 = stack := (lbl1, lbl2)::(!stack) in
+  let pop () = 
+    match !stack with
+	(_, lbl)::tl -> 
+	  used_lbls := LblSet.remove lbl !used_lbls;
+	  stack := tl
+      | [] -> invalid_arg "Newspeak.simplify_gotos: unexpected empty stack"
+  in
+
   let rec simplify_blk x =
     match x with
-      | [] -> ([], LblSet.empty)
-      | hd::tl -> 
-	  let (hd, hd_lbls) = simplify_stmt hd in
-	  let (tl, tl_lbls) = simplify_blk tl in
-	    (hd@tl, LblSet.union hd_lbls tl_lbls)
+	hd::tl -> 
+	  let hd = simplify_stmt hd in
+	  let tl = simplify_blk tl in
+	    hd@tl
+      | [] -> []
     
   and simplify_stmt (x, loc) =
     match x with
-	Goto l -> ([x, loc], LblSet.singleton l)
+	DoWith (body, lbl, action) -> 
+	  let lbl' = new_lbl () in
+	    push lbl lbl';
+	    simplify_dowith_goto loc (body, lbl', action)
+
+      | _ -> (simplify_stmtkind x, loc)::[]
+
+  and simplify_stmtkind x =
+    match x with
+      | Goto lbl -> Goto (find lbl)
       | Decl (name, t, body) -> 
-	  let (body, lbls) = simplify_blk body in
-	    if not (LblSet.is_empty lbls) 
-	    then invalid_arg "Newspeak.simplify_gotos";
-	    ([Decl (name, t, body), loc], lbls)
-
-      | DoWith ((Goto l1, _)::[], l2, []) when l1 = l2 -> ([], LblSet.empty)
-      | DoWith ([], _, []) -> ([], LblSet.empty)
-
-      | DoWith (hd::tl, l, action) ->
-	  let (hd, hd_lbls) = simplify_stmt hd in
-	  let tl = remove_final_goto l tl in
-	    if LblSet.mem l hd_lbls then begin
-	      let (tl, tl_lbls) = simplify_blk tl in
-	      let (action, act_lbls) = simplify_blk action in
-	      let lbls = LblSet.union hd_lbls tl_lbls in
-	      let lbls = LblSet.remove l lbls in
-	      let lbls = LblSet.union lbls act_lbls in
-		((DoWith (hd@tl, l, action), loc)::[], lbls)
-	    end else begin
-	      let (tl, tl_lbls) = 
-		simplify_stmt (DoWith (tl, l, action), loc) 
-	      in
-	      let lbls = LblSet.union hd_lbls tl_lbls in
-		(hd@tl, lbls)
-	    end
+	  let body = simplify_blk body in
+	    Decl (name, t, body)
 
       | ChooseAssert elts ->
-	  let lbls = ref LblSet.empty in
 	  let simplify_choice (cond, body) = 
-	    let (body, choice_lbls) = simplify_blk body in
-	      lbls := LblSet.union !lbls choice_lbls;
+	    let body = simplify_blk body in
 	      (cond, body)
 	  in
 	  let choices = List.map simplify_choice elts in
-	    ([ChooseAssert choices, loc], !lbls)
+	    ChooseAssert choices
 
       | InfLoop body -> 
-	  let (body, lbls) = simplify_blk body in
-	    ([InfLoop body, loc], lbls)
+	  let body = simplify_blk body in
+	    InfLoop body
 
-      | _ -> ([x, loc], LblSet.empty)
+      | _ -> x
+
+  and remove_final_goto lbl blk =
+    let rec remove blk =
+      match blk with
+	  (Goto lbl', _)::[] when List.assoc lbl' !stack = lbl -> []
+	| hd::tl -> hd::(remove tl)
+	| [] -> []
+    in
+      try remove blk
+      with Not_found -> blk
+
+  and simplify_dowith loc (body, lbl, action) =
+    match body with
+	(DoWith (body, lbl', []), _)::[] ->
+	  push lbl' lbl;
+	  let x = simplify_dowith_goto loc (body, lbl, []) in
+	    pop ();
+	    x
+      | hd::tl -> 
+	  let hd = simplify_stmt hd in
+	    if LblSet.mem lbl !used_lbls then begin
+	      let tl = simplify_blk tl in
+	      let body = hd@tl in
+		pop ();
+		let action = simplify_blk action in
+		  (DoWith (body, lbl, action), loc)::[]	
+	    end else hd@(simplify_dowith loc (tl, lbl, action))
+      | [] -> 
+	  pop ();
+	  []
+	    
+  and simplify_dowith_goto loc (body, lbl, action) =
+    let body = remove_final_goto lbl body in
+      simplify_dowith loc (body, lbl, action)
   in
     
-  let (blk, lbls) = simplify_blk blk in
-    if not (LblSet.is_empty lbls) 
+  let blk = simplify_blk blk in
+    if not (LblSet.is_empty !used_lbls) 
     then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";
     blk
 
@@ -1094,7 +1084,7 @@ and simplify_blk actions blk =
 let simplify opt_checks b = 
   let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
   let simplifications = 
-    (new simplify_choose)::(new simplify_labels)::(new simplify_ptr)
+    (new simplify_choose)::(new simplify_ptr)
     ::(new simplify_arith)::simplifications
   in
     simplify_gotos (simplify_blk simplifications b)

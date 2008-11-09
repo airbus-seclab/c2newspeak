@@ -8,17 +8,17 @@ main() {
         | ! (a_int32 ==_int32 0) -->
           (504.c:30#2)^choose {
             | ! (b_int32 ==_int32 0) -->
-              (504.c:30#2)^goto lbl4;
+              (504.c:30#2)^goto lbl1;
             | (b_int32 ==_int32 0) -->
-              (504.c:30#2)^goto lbl5;
+              (504.c:30#2)^goto lbl2;
           }
         | (a_int32 ==_int32 0) -->
-          (504.c:30#2)^goto lbl5;
+          (504.c:30#2)^goto lbl2;
       }
-    } with lbl5: {
+    } with lbl2: {
       (504.c:30#2)^choose {
         | ! (c_int32 ==_int32 0) -->
-          (504.c:30#2)^goto lbl4;
+          (504.c:30#2)^goto lbl1;
         | (c_int32 ==_int32 0) -->
           (504.c:37#4)^x =(int32) 0;
           (504.c:38#4)^x =(int32) 1;
@@ -28,7 +28,7 @@ main() {
           (504.c:42#4)^x =(int32) 5;
       }
     }
-  } with lbl4: {
+  } with lbl1: {
     (504.c:31#4)^x =(int32) 0;
     (504.c:32#4)^x =(int32) 1;
     (504.c:33#4)^x =(int32) 2;

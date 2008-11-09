@@ -10,12 +10,12 @@ main() {
           | ! (z_int32 ==_int32 0) -->
             (374.c:29#1)^0- =(int32) 1;
           | (z_int32 ==_int32 0) -->
-            (374.c:29#1)^goto lbl4;
+            (374.c:29#1)^goto lbl1;
         }
       | (y_int32 ==_int32 0) -->
-        (374.c:29#1)^goto lbl4;
+        (374.c:29#1)^goto lbl1;
     }
-  } with lbl4: {
+  } with lbl1: {
     (374.c:29#1)^int32 tmp2;
     (374.c:29#1)^choose {
       | ! (t_int32 ==_int32 0) -->

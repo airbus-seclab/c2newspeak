@@ -11,12 +11,12 @@ main() {
             (507.c:31#4)^x =(int32) 0;
             (507.c:32#4)^x =(int32) 3;
           | (b_int32 ==_int32 0) -->
-            (507.c:29#2)^goto lbl4;
+            (507.c:29#2)^goto lbl1;
         }
       | (a_int32 ==_int32 0) -->
-        (507.c:29#2)^goto lbl4;
+        (507.c:29#2)^goto lbl1;
     }
-  } with lbl4: {
+  } with lbl1: {
     (507.c:29#2)^choose {
       | ! (c_int32 ==_int32 0) -->
         (507.c:29#2)^choose {

@@ -27,6 +27,7 @@ extern int f(void);
 
 void main() {
   int x;
+  int y;
   if (x) return;
-  if (f()) return;
+  y = f();
 }

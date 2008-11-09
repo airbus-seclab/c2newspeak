@@ -17,10 +17,10 @@ getIndex() {
           (006.c:34#2)^choose {
             | (0 ==_int32 0-_int32) -->
             | ! (0 ==_int32 0-_int32) -->
-              (006.c:34#2)^goto lbl2;
+              (006.c:34#2)^goto lbl1;
           }
         | ! (10 > 1-_int32) -->
-          (006.c:34#2)^goto lbl2;
+          (006.c:34#2)^goto lbl1;
       }
       (006.c:35#4)^choose {
         | ! (0 ==_int32 t + (belongs[0,9] 1-_int32 * 8)_int8) -->
@@ -29,7 +29,7 @@ getIndex() {
         | (0 ==_int32 t + (belongs[0,9] 1-_int32 * 8)_int8) -->
       }
     }
-  } with lbl2: {
+  } with lbl1: {
   }
   (006.c:28#4)^do {
     (006.c:41#2)^choose {
@@ -68,10 +68,10 @@ main() {
               (006.c:34#2)^choose {
                 | (0 ==_int32 0-_int32) -->
                 | ! (0 ==_int32 0-_int32) -->
-                  (006.c:34#2)^goto lbl2;
+                  (006.c:34#2)^goto lbl1;
               }
             | ! (10 > 1-_int32) -->
-              (006.c:34#2)^goto lbl2;
+              (006.c:34#2)^goto lbl1;
           }
           (006.c:35#4)^choose {
             | ! (0 ==_int32 t + (belongs[0,9] 1-_int32 * 8)_int8) -->
@@ -80,7 +80,7 @@ main() {
             | (0 ==_int32 t + (belongs[0,9] 1-_int32 * 8)_int8) -->
           }
         }
-      } with lbl2: {
+      } with lbl1: {
       }
       (006.c:28#4)^do {
         (006.c:41#2)^choose {

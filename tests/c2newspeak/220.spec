@@ -17,7 +17,7 @@ main() {
     }
     (220.c:31#2)^choose {
       | ! (1-_int32 ==_int32 0) -->
-        (220.c:32#4)^goto lbl0;
+        (220.c:31#11)^goto lbl0;
       | (1-_int32 ==_int32 0) -->
     }
   } with lbl0: {

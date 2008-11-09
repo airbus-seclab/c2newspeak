@@ -32,11 +32,11 @@ t025() {
     (t025.adb:4#51)^while (1) {
       (t025.adb:4#51)^choose {
         | ! 1 -->
-          (t025.adb:4#51)^goto lbl2;
+          (t025.adb:4#51)^goto lbl0;
         | 1 -->
       }
     }
-  } with lbl2: {
+  } with lbl0: {
   }
 }
 
