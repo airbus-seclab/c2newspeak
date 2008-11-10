@@ -921,7 +921,14 @@ let translate (globals, spec) =
 
   and translate_stmt_exp loc e =
     match e with
-	Set set -> 
+      | Set (lv, IfExp (c, e1, e2)) -> 
+	  translate_stmt_exp loc (IfExp (c, Set (lv, e1), Set (lv, e2)))
+
+      | SetOp (lv, op, IfExp (c, e1, e2)) ->
+	  let e = IfExp (c, SetOp (lv, op, e1), SetOp (lv, op, e2)) in
+	  translate_stmt_exp loc e
+
+      | Set set -> 
 	  let (set, t) = translate_set set in
 	    ((C.Set set, loc)::[], t)
 	  
@@ -940,7 +947,6 @@ let translate (globals, spec) =
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast to void" Npkcontext.DirtySyntax;
 	  (translate_stmt (Exp e, loc), Void)
-
 
       | IfExp (c, e1, e2) ->
 	  let blk1 = (Exp e1, loc)::[] in
