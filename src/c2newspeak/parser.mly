@@ -143,6 +143,13 @@ let apply_attrs attrs t =
     | _ -> 
 	Npkcontext.error "Parser.apply_attr" 
 	  "more than one attribute not handled yet"
+
+let rec normalize_bexp e =
+  match e with
+      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
+    | Set _ | SetOp _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Unop (Not, e) -> Unop (Not, normalize_bexp e)
+    | _ -> e
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -314,9 +321,13 @@ statement:
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
-| IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
+| IF LPAREN expression RPAREN statement    { 
+    [If (normalize_bexp $3, $5, []), get_loc ()] 
+  }
 | IF LPAREN expression RPAREN statement
-  ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
+  ELSE statement                           { 
+    [If (normalize_bexp $3, $5, $7), get_loc ()] 
+  }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [For $1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
@@ -548,13 +559,17 @@ inclusive_or_expression:
 logical_and_expression:
   inclusive_or_expression                  { $1 }
 | logical_and_expression AND 
-  inclusive_or_expression                  { IfExp ($1, $3, exp_of_int 0) }
+  inclusive_or_expression                  { 
+    IfExp (normalize_bexp $1, normalize_bexp $3, exp_of_int 0) 
+}
 ;;
 
 logical_or_expression:
   logical_and_expression                   { $1 }
 | logical_or_expression OR
-  logical_and_expression                   { IfExp ($1, exp_of_int 1, $3) }
+  logical_and_expression                   { 
+    IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
+  }
 ;;
 
 conditional_expression:
@@ -563,7 +578,7 @@ conditional_expression:
   expression COLON conditional_expression  {
     Npkcontext.report_strict_warning "Parser.conditional_expression"
       "conditional expression";
-    IfExp ($1, $3, $5)
+    IfExp (normalize_bexp $1, $3, $5)
   }
 ;;
 
