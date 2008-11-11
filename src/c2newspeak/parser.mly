@@ -30,6 +30,7 @@ open Lexing
 open Synthack
 
 let struct_cnt = ref 0
+let cur_fun = ref ""
 
 let gen_struct_id () = 
   incr struct_cnt;
@@ -98,6 +99,22 @@ let build_typedef d =
   let build_cdecl x = (CDecl x, loc) in
     process_decls (build_edecl, build_cdecl, build_vdecl) d
 
+let normalize_fun_prologue b m =
+  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let x =
+    match x with
+      | Some x -> x
+      | None -> 
+	  (* TODO: code cleanup remove these things !!! *)
+	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+  in
+    cur_fun := x;
+    (t, x, loc)
+
+let build_fundef static ((t, x, loc), body) =
+  (FunctionDef (x, t, static, body), loc)::[]
+
+(*
 let build_fundef static (b, m, body) = 
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
   let x =
@@ -108,7 +125,7 @@ let build_fundef static (b, m, body) =
 	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
   in
     (FunctionDef (x, t, static, body), loc)::[]
-      
+*)    
 let build_type_decl d =
   let (symbdecls, (t, _, _)) = Synthack.normalize_decl d in
     if (symbdecls <> ([], [])) then begin 
@@ -167,7 +184,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME
 %token EOF
 
 %token <string> IDENTIFIER
@@ -204,9 +221,12 @@ translation_unit:
 |                                          { [] }
 ;;
 
+function_prologue:
+  declaration_specifiers declarator        { normalize_fun_prologue $1 $2 }
+;;
+
 function_definition:
-  declaration_specifiers declarator 
-  compound_statement                       { ($1, $2, $3) }
+  function_prologue compound_statement      { ($1, $2) }
 ;;
 
 parameter_declaration_list:
@@ -439,6 +459,7 @@ primary_expression:
     Cst (Csyntax.float_cst_of_lexeme $1) 
   }
 | string_literal                           { Str $1 }
+| FUNNAME                                  { Str !cur_fun }
 | LPAREN expression RPAREN                 { $2 }
 ;;
 
