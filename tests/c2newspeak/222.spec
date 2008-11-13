@@ -8,10 +8,10 @@ main() {
       (222.c:28#2)^choose {
         | ! (0 > 0-_int32) -->
         | (0 > 0-_int32) -->
-          (222.c:28#2)^goto lbl2;
+          (222.c:28#2)^goto lbl1;
       }
     }
-  } with lbl2: {
+  } with lbl1: {
   }
 }
 

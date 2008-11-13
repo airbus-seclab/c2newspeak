@@ -10,13 +10,13 @@ main() {
           (095.c:28#2)^choose {
             | (10 > 0-_int32) -->
             | ! (10 > 0-_int32) -->
-              (095.c:28#2)^goto lbl2;
+              (095.c:28#2)^goto lbl1;
           }
         | (0 > 0-_int32) -->
-          (095.c:28#2)^goto lbl2;
+          (095.c:28#2)^goto lbl1;
       }
     }
-  } with lbl2: {
+  } with lbl1: {
   }
 }
 

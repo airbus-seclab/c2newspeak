@@ -28,7 +28,5 @@ extern int f(void);
 void main() {
   int x;
   if (x) return;
-  if (f()) {
-    return;
-  }
+  if (f()) return;
 }

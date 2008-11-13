@@ -75,7 +75,9 @@ let _ =
   Hashtbl.add token_tbl "__word__" SI;
   Hashtbl.add token_tbl "__DI__" DI;
   Hashtbl.add token_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
-  Hashtbl.add token_tbl "__packed__" PACKED
+  Hashtbl.add token_tbl "__packed__" PACKED;
+  Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME
+
 
 let find_token str =
   Hashtbl.find token_tbl str

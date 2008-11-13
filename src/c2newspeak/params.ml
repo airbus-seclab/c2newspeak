@@ -44,7 +44,7 @@ let authors = "Charles Hymans and Olivier Levillain"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
 let comment_string = 
-  "   The Newspeak language and C2Newspeak have initially been developped in \n"
+  "   The Newspeak language and C2Newspeak have initially been developped at \n"
   ^" EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles\n"
   ^" Hymans.\n"
   ^"\n"
@@ -56,4 +56,6 @@ let version_string =
   software^" version "^Version.version
   ^" build "^Version.revision^" ("^Version.date^").\n"
   ^"Software under "^licence^". Copyright "^copyright^".\n"
-  ^"Authors "^authors^".\n"
+  ^"Architect: Charles Hymans\n"
+  ^"Authors: "^authors^".\n"
+  ^"This software is distributed without any warranty.\n"

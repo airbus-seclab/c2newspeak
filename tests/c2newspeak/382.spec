@@ -8,15 +8,15 @@ main() {
     (382.c:33#2)^do {
       (382.c:32#2)^choose {
         | (0 ==_int32 0) -->
-          (382.c:33#2)^goto lbl4;
+          (382.c:33#2)^goto lbl2;
         | ! (0 ==_int32 0) -->
-          (382.c:32#2)^goto lbl3;
+          (382.c:32#2)^goto lbl1;
       }
-    } with lbl4: {
+    } with lbl2: {
     }
     (382.c:34#4)^0- =(int32) 1;
     (382.c:35#4)^0- =(int32) 2;
-  } with lbl3: {
+  } with lbl1: {
   }
 }
 

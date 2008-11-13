@@ -30,6 +30,7 @@ open Lexing
 open Synthack
 
 let struct_cnt = ref 0
+let cur_fun = ref ""
 
 let gen_struct_id () = 
   incr struct_cnt;
@@ -98,6 +99,22 @@ let build_typedef d =
   let build_cdecl x = (CDecl x, loc) in
     process_decls (build_edecl, build_cdecl, build_vdecl) d
 
+let normalize_fun_prologue b m =
+  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let x =
+    match x with
+      | Some x -> x
+      | None -> 
+	  (* TODO: code cleanup remove these things !!! *)
+	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+  in
+    cur_fun := x;
+    (t, x, loc)
+
+let build_fundef static ((t, x, loc), body) =
+  (FunctionDef (x, t, static, body), loc)::[]
+
+(*
 let build_fundef static (b, m, body) = 
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
   let x =
@@ -108,7 +125,7 @@ let build_fundef static (b, m, body) =
 	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
   in
     (FunctionDef (x, t, static, body), loc)::[]
-      
+*)    
 let build_type_decl d =
   let (symbdecls, (t, _, _)) = Synthack.normalize_decl d in
     if (symbdecls <> ([], [])) then begin 
@@ -143,6 +160,13 @@ let apply_attrs attrs t =
     | _ -> 
 	Npkcontext.error "Parser.apply_attr" 
 	  "more than one attribute not handled yet"
+
+let rec normalize_bexp e =
+  match e with
+      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
+    | Set _ | SetOp _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Unop (Not, e) -> Unop (Not, normalize_bexp e)
+    | _ -> e
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -160,7 +184,7 @@ let apply_attrs attrs t =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME
 %token EOF
 
 %token <string> IDENTIFIER
@@ -197,9 +221,12 @@ translation_unit:
 |                                          { [] }
 ;;
 
+function_prologue:
+  declaration_specifiers declarator        { normalize_fun_prologue $1 $2 }
+;;
+
 function_definition:
-  declaration_specifiers declarator 
-  compound_statement                       { ($1, $2, $3) }
+  function_prologue compound_statement      { ($1, $2) }
 ;;
 
 parameter_declaration_list:
@@ -314,9 +341,13 @@ statement:
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
-| IF LPAREN expression RPAREN statement    { [If ($3, $5, []), get_loc ()] }
+| IF LPAREN expression RPAREN statement    { 
+    [If (normalize_bexp $3, $5, []), get_loc ()] 
+  }
 | IF LPAREN expression RPAREN statement
-  ELSE statement                           { [If ($3, $5, $7), get_loc ()] }
+  ELSE statement                           { 
+    [If (normalize_bexp $3, $5, $7), get_loc ()] 
+  }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [For $1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
@@ -428,6 +459,7 @@ primary_expression:
     Cst (Csyntax.float_cst_of_lexeme $1) 
   }
 | string_literal                           { Str $1 }
+| FUNNAME                                  { Str !cur_fun }
 | LPAREN expression RPAREN                 { $2 }
 ;;
 
@@ -548,13 +580,17 @@ inclusive_or_expression:
 logical_and_expression:
   inclusive_or_expression                  { $1 }
 | logical_and_expression AND 
-  inclusive_or_expression                  { IfExp ($1, $3, exp_of_int 0) }
+  inclusive_or_expression                  { 
+    IfExp (normalize_bexp $1, normalize_bexp $3, exp_of_int 0) 
+}
 ;;
 
 logical_or_expression:
   logical_and_expression                   { $1 }
 | logical_or_expression OR
-  logical_and_expression                   { IfExp ($1, exp_of_int 1, $3) }
+  logical_and_expression                   { 
+    IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
+  }
 ;;
 
 conditional_expression:
@@ -563,7 +599,7 @@ conditional_expression:
   expression COLON conditional_expression  {
     Npkcontext.report_strict_warning "Parser.conditional_expression"
       "conditional expression";
-    IfExp ($1, $3, $5)
+    IfExp (normalize_bexp $1, $3, $5)
   }
 ;;
 

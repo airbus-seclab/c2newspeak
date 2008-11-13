@@ -328,6 +328,8 @@ object
   method process_lval: lval -> lval
   method process_exp: exp -> exp
   method process_blk: blk -> blk
+  method enter_stmtkind: stmtkind -> unit
+  method process_stmtkind: stmtkind -> stmtkind
   method process_size_t: size_t -> size_t
   method process_offset: offset -> offset
 end
@@ -395,24 +397,6 @@ val build_call: fid -> ftyp -> exp list -> blk
 val build_main_call: size_t -> ftyp -> string list -> blk
 
 val create_cstr: string -> string -> string * gdecl
-
-(* [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
-If it fails, then it returns None.
-Else, it returns the while condition in a exp list. It is a list of booleans which 
-are evaluated until some of them is false (further booleans are not evaluated).
-It also returns two blk, the blk in the loop and the blk after the loop.   *)
-
-type alt_stmtkind =
-    (* the condition is a list of expression separated by && 
-       Careful! It behaves like the C operator: 
-       if the first expression evaluates to false, evaluation stops. *)
-    | While of (exp list * blk)
-    | Npk of stmtkind
-
-type alt_blk = (alt_stmtkind * location) list
-
-(* Tries to convert all infinite loops in the blk to while loops *)
-val convert_loops: blk -> alt_blk
 
 val max_ikind: ikind -> ikind -> ikind
 
