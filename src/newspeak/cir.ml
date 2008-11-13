@@ -661,18 +661,6 @@ let length_of_array len lv =
       (Some len, _) -> Known (Nat.of_int len)
     | (None, Global v) -> Length v
     | _ -> Npkcontext.error "Npkil.length_of_array" "unknown length of array"
-
-let exp_of_blk blk =
-  let rec exp_of_blk blk =
-    match blk with
-      | (Exp e, _)::[] -> ([], e)
-      | _::[] -> Npkcontext.error "Cir.exp_of_blk" "expression expected"
-      | hd::tl -> 
-	  let (blk, e) = exp_of_blk tl in
-	    (hd::blk, e)
-      | [] -> Npkcontext.error "Cir.exp_of_blk" "non-empty block expected"
-  in
-    Pref (exp_of_blk blk)
 	    
 let scalar_of_typ t =
   match t with
