@@ -69,6 +69,9 @@ let extract_scalar_typ cir_typ = match cir_typ with
 	"Firstpass.extract_scalar_typ"
 	"type isn't a scalar type"
 
+
+
+
 let make_check_constraint contrainte exp = 
   match contrainte with
     | IntegerRangeConstraint (v1,v2) ->
@@ -89,6 +92,28 @@ let make_check_subtyp subtyp exp =
 	Npkcontext.error
 	  "Firstpass.make_check_subtyp"
 	  "internal error : unexpected subtyp name"
+	  
+let make_offset styp exp size = 
+  match styp with 
+      Constrained( _, x , _ ) ->
+	begin match x with
+	    IntegerRangeConstraint(nat1, _) -> 
+	      let borne_inf =   C.Const(C.CInt(nat1)) in 
+	      
+	      let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
+		
+		C.Binop (Newspeak.MultI, decal,  size)
+	 
+	  |  _ -> Npkcontext.error "Firstpass.make_offset"
+	       "contrainte (not IntegerRangeConstraint) not coded yet "
+		
+	end
+	  
+    | Unconstrained _ -> exp 
+	
+    | SubtypName _ -> Npkcontext.error "Firstpass.make_offset"
+	"SubtypName not implemented yet (especially for Enum)"
+	  
 	  
 let translate compil_unit =
   
@@ -180,9 +205,7 @@ let translate compil_unit =
 	(Ada_utils.extract_typ subtyp_ind)
     | IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
     | Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
-	C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), 
-		taille)	      
-
+	C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)    
     | IntegerRange(_,_,None) -> Npkcontext.error 
 	"Firstpass.translate_declared"
 	  "internal error : no bounds provided for IntegerRange"
@@ -402,13 +425,15 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_use r var_masque
 
-	  | (FunSymb( _(*fname*), _(*spec*), true), C.Fun(_ (*tr_typ*) ), _)::r -> 
+	  | (FunSymb( _(*fn*), _(*sp*), true), C.Fun(_(*trt*)), _)::r -> 
 	      if (mem_other_symb r var_masque)
 	      then (Npkcontext.error
 		      "Firstpass.find_fun_symb"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
-	      else (*fname, spec, tr_typ*)
+	      else (*fn, sp, trt*)
+	(*	print_endline ("found --------------"^(match fn with C.Fname f -> f | _ -> "unkno"));
+	*)
 		List.hd list_symb
 		
 
@@ -606,33 +631,30 @@ let translate compil_unit =
 		| EnumSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
 		    "Invalid left value: unexpected enum" 
 	      end
-		 
+
+	(*Affectation dans un tableau*)
 	| ArrayAccess (lval, expr) -> 
+	
 	    let (v, subtyp_lv) = translate_lv lval write trans_exp in 
 	      match subtyp_lv with 
-		  Unconstrained(
-		    Declared(
-		      Array(_, 
-			    ConstrainedArray(
+		  Unconstrained(Declared( Array(_, 
+			ConstrainedArray(
 			      ( stypindex ,_,_ ),
-			      ( stypelt,_,_),_)
-			   ), _ )
-		  ) 
+			      ( stypelt,_,_),  _)), _)) ->
+		    let size_base =  C.exp_of_int (C.size_of (
+			(translate_typ (base_typ stypelt)))) in
 
-(* Constrained( Declared(Array(_, ConstrainedArray((styp,_,_),_,_)),), _, _ ) WG contrainte et static *)
-			     
+		    let (exp,_)=trans_exp expr (
+		      Some(base_typ(stypindex))) in
 
-		  -> let (tr_exp, _) = trans_exp expr
-		    (Some(base_typ (stypindex))) 
-		  in
-		  let chk_exp = make_check_subtyp stypindex tr_exp in 
-		    
-		    (C.Shift (v, chk_exp), stypelt)
+		    let chk_exp = make_check_subtyp stypindex exp in 
+		    let offset = make_offset stypindex chk_exp size_base in
+
+		      (C.Shift (v, offset), stypelt)
 		     
-		    
 		| _ ->        (*Constrained*)
-		    invalid_arg  ("Firstpass, ArrayAccess subtyp_lv "^
-				       "has not expected typ")
+		    Npkcontext.error "firstpass: ArrayAcces" 
+			" subtyp_lv has not expected typ"
 		    
   in
     
@@ -1155,34 +1177,35 @@ let translate compil_unit =
 	let (tr_exp, typ) = translate_exp exp (Some(qtyp)) in
 	  (make_check_subtyp subtyp tr_exp, typ)
 	     
-    | FunctionCall(name, exp_list) -> 
-		(*let (fname, spec, tr_typ) = find_fun_symb name in *)
+    | FunctionCall(name, exp_list) -> (*fonction ou lecture d'un element de tableau/matrice*)
+	(* let (fname, spec, tr_typ) = find_fun_symb name in *)
 	let array_or_fun = find_fun_symb name in
 	  begin
 	    match array_or_fun with 
-		(FunSymb(fname, spec, true), C.Fun(tr_typ),  _) -> 
+		(FunSymb(fname, spec, _), C.Fun(tr_typ),  _) -> 
 		  translate_function_call 
 		    fname tr_typ spec exp_list expected_typ
 		    
 	      | (VarSymb(lv, subtyp, _, _),_,_) ->  begin  
+		  
 		  let rec destroy subt = (*du plus gros vers plus petit*)
-		    let typ_fom_ind ind = let (a,_,_) = ind in a in	      
+		    let styp_fom_ind ind = let (a,_,_) = ind in a in	      
 		    match subt with 
 			Unconstrained(Declared (Array( _, ConstrainedArray(
 			sbtyp_ind, sbtypelt_ind, _)),_)) ->
-			  let sbtyp = typ_fom_ind sbtyp_ind in 
-			  let sbtypelt = typ_fom_ind sbtypelt_ind in 
+			  let sbtyp = styp_fom_ind sbtyp_ind in 
+			  let sbtypelt = styp_fom_ind sbtypelt_ind in 
 			  let deb = (sbtyp, sbtypelt) in
 			  let fin = destroy sbtypelt in
 			    [deb]@fin
 		      | _ -> []
 		  in
 
-
+		  (*TO DO base_typ already exist use it if possible*)
 		  let subtyp_to_typ sub = match sub with 
 		      Constrained (z, _, _) ->  z
-		    | _ -> invalid_arg ("firstpass.ml:no constrained"^
-					  " for array range TO DO ")
+		    | _ -> Npkcontext.error "firstpass.ml:Function Call" 
+					  " for array range TO DO "
 		  in
 
 		  (* TODO WG  ! ajouter le belongs ! *)		
@@ -1194,10 +1217,16 @@ let translate compil_unit =
 		    
 		    let chk_exp = make_check_subtyp subt_range last_exp 
 		    in
+		    let sz =  C.exp_of_int (
+		      C.size_of ((translate_typ (base_typ tpelt)))) in 
+		    
+		    let offset = make_offset subt_range chk_exp sz in
 		      
 		      if (compare lgth 1 = 0) then
+			
 			let adatyp = subtyp_to_typ tpelt in 
-			  ( C.Lval (C.Shift (lv, chk_exp),
+			 
+			  ( C.Lval (C.Shift (lv, offset),
 				    (  translate_typ adatyp )
 				   ), 
 			    adatyp
@@ -1212,10 +1241,12 @@ let translate compil_unit =
 		  let dim = List.length exp_list in 		    
 		    
 		    if (compare (List.length bk_typ) dim < 0) 
-		    then invalid_arg "more elts than dimensions";
+		    then Npkcontext.error "firstpass.ml:Function Call"
+		      "more elts than dimensions";
 		    
 		    if (compare 0 dim = 0) 
-		    then invalid_arg "no element for shifting";
+		    then Npkcontext.error "firstpass.ml:Function Call" 
+		      "no element for shifting";
 		    
 		    let types = List.map (
 		      fun x -> Some (subtyp_to_typ (fst x))
@@ -1232,8 +1263,8 @@ let translate compil_unit =
 		      with
 			  (C.Lval (a, tpelt), adatyp) ->
 			    (C.Lval (a, tpelt),  adatyp)
-			| _ ->  invalid_arg ("firstpass unexepted form in "^
-					       "translate_exp")
+			| _ ->  Npkcontext.error "firstpass.ml:Function Call"
+			    ("firstpass unexepted form in translate_exp")
 		end
 	      | _ -> Npkcontext.error "Firstpass.translate_exp" 
 		  "FunctionCall case but unexpected result"
@@ -1438,7 +1469,7 @@ let translate compil_unit =
 	   | ProcedureCall(name, args) -> begin
 	       let array_or_fun  = find_fun_symb name in 
 		   match array_or_fun with 
-		       (FunSymb(fname, spec, true), C.Fun(tr_typ),  _) ->   
+		       (FunSymb(fname, spec, _), C.Fun(tr_typ),  _) ->   
 			 let params = 
 			   match spec with 
 			     | Function(_) -> Npkcontext.error 
@@ -1603,8 +1634,11 @@ let translate compil_unit =
  
   (* déclarations basiques locales *)
   let translate_basic_declaration basic loc = match basic with
-    | ObjectDecl(idents, subtyp_ind, def, const) ->
-	let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+    | ObjectDecl(idents, subtyp_ind, def, const) -> 
+(*	let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+*)
+	let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
+	
 	let read_only = match const with
 	  | Variable -> false
 	  | Constant | StaticVal(_) -> true in
@@ -1764,7 +1798,10 @@ let translate compil_unit =
   let rec translate_global_basic_declaration (basic, loc) = 
     match basic with
       | ObjectDecl(idents, subtyp_ind, init, const) ->
-	  let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+	  (*let subtyp = Ada_utils.extract_subtyp subtyp_ind in*)
+	let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+
+
 	  let read_only = match const with
 	    | Variable -> false
 	    | Constant | StaticVal(_) -> true in

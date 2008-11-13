@@ -198,14 +198,16 @@ let base_typ subtyp = match subtyp with
 	"Ada_utils.base_type"
 	"internal error : unexpected subtyp name"
 
-let extract_subtyp (_,_,subtyp) = match subtyp with
+let extract_subtyp (_,_,subtyp) = 
+  match subtyp with
   | None -> Npkcontext.error
       "Ada_utils.extract_subtyp"
 	"internal error : no subtyp provided"
   | Some(st) -> st
 
-let extract_typ subtyp_ind = base_typ (extract_subtyp subtyp_ind)
-
+let extract_typ subtyp_ind =
+  base_typ (extract_subtyp subtyp_ind)
+    
 let eq_base_typ subtyp1 subtyp2 =
   (base_typ subtyp1) = (base_typ subtyp2)
 
@@ -366,3 +368,5 @@ let check_compil_unit_name compil_unit file_name =
 
 let extract_representation_clause_name rep_clause = match rep_clause with 
   | EnumerationRepresentation(ident, _) -> ident
+
+

@@ -60,8 +60,30 @@
 	     let rev_list = List.rev list in 
 	       build_aux rev_list
 		 
-
-
+   let build_matrix list typ_ind = 
+     (*crafted buids the subtype_indication*)
+     let rec crafted list_ind typ_elt = 
+       match list_ind with 
+	   [] -> typ_elt
+	 | hd::tl -> 
+	     let recu =  crafted tl typ_elt in
+	     let new_ind = Unconstrained (Declared (Array ( 
+		"no_name", ConstrainedArray(hd, recu, None)), loc()))
+	     in
+	       ( new_ind, None, None (*Some (new_ind)*) )
+     in
+       match list with 
+           [] -> Npkcontext.error "Parser.parse_error" 
+	     ("in build matrix, no subtyp given ")
+	 | hd::[] -> ConstrainedArray(hd, typ_ind, None)
+	 | hd::tl ->
+	     ConstrainedArray(hd, 
+			      (crafted tl typ_ind), 
+			      None)
+	       
+	       
+	       
+	  
 
 %}
 /*declaration ocamlyacc*/
@@ -259,9 +281,20 @@ type_definition :
 ;
 
 constrained_array_definition : 
-  PAR_G subtyp_indication PAR_D OF subtyp_indication 
-  {ConstrainedArray($2,$5,None)}
+  PAR_G matrix_indication PAR_D OF subtyp_indication 
+/*  PAR_G subtyp_indication PAR_D OF subtyp_indication  
+  {ConstrainedArray($2,$5,None)} 
+*/
+  {  
+    let list_rg = $2 in
+    let rev_list = List.rev list_rg in 
+      build_matrix rev_list $5
+  }
 ;
+
+matrix_indication : 
+| subtyp_indication {[$1]}
+| matrix_indication VIR subtyp_indication {$1@[$3]}
 
 array_component_association :
 | ident FLECHE expression {($1, $3)} 
