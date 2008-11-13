@@ -548,20 +548,16 @@ let translate (globals, spec) =
 	    let e = C.Lval (lv, t') in
 	      (C.Pref ((C.Set set, loc)::[], e), t)
 		
-	| SetOp (lv, op, e) ->
+	| SetOp set ->
+	    (* TODO: should factor this code with Set!! *)
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
 	      "assignment within expression" Npkcontext.DirtySyntax;
-	    (* TODO: is this check really necessary!!! *)
-	    let (lv', _) = translate_lv lv in
-	    let (pref, _, post) = C.normalize_lv lv' in
-	      (* TODO: should factor this code *)
-	      if (pref <> []) || (post <> []) then begin
-		Npkcontext.error "Firstpass.translate_stmt" 
-		  "expression without side-effects expected"
-	      end;
-	      let e = Binop (op, lv, e) in
-		translate (Set (lv, e))
-		  
+	    let loc = Npkcontext.get_loc () in
+	    let (set, t) = translate_set_op set in
+	    let (lv', t', _) = set in
+	    let e = C.Lval (lv', t') in
+	      (C.Pref ((C.Set set, loc)::[], e), t)
+	      		  
 	| BlkExp blk -> translate_blk_exp blk
     in
       match translate e with
@@ -629,6 +625,15 @@ let translate (globals, spec) =
     let e = cast (translate_exp e) t in
       ((lv, translate_typ t, e), t)
 
+  and translate_set_op (lv, op, e) = 
+    let (lv', t) = translate_lv lv in
+    let (_, lv', _) = C.normalize_lv lv' in
+    let e = Binop (op, lv, e) in
+    let e = cast (translate_exp e) t in
+    let t' = translate_typ t in
+    let set = (lv', t', e) in
+      (set, t)
+	
   and init_va_args loc lv x =
     let rec init_va_args lv x =
       match x with
@@ -938,20 +943,14 @@ let translate (globals, spec) =
 	  let e = IfExp (c, SetOp (lv, op, e1), SetOp (lv, op, e2)) in
 	  translate_stmt_exp loc e
 
+(* TODO: should factor this case with SetOp!! *)
       | Set set -> 
 	  let (set, _) = translate_set set in
 	    (C.Set set, loc)::[]
 	  
-      | SetOp (lv, op, e) ->
-	  let (lv', _) = translate_lv lv in
-	  let (pref, _, post) = C.normalize_lv lv' in
-	    (* TODO: should factor this code *)
-	    if (pref <> []) || (post <> []) then begin
-	      Npkcontext.error "Firstpass.translate_stmt" 
-		"expression without side-effects expected"
-	    end;
-	    let e = Binop (op, lv, e) in
-	      translate_stmt (Exp (Set (lv, e)), loc)
+      | SetOp set ->
+	  let (set, _) = translate_set_op set in
+	    (C.Set set, loc)::[]
 
       | Cast (e, Void) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 

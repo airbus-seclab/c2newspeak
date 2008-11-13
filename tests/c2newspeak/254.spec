@@ -1,1 +1,10 @@
-Fatal error: expression without side-effects expected in 254.c line 28
+Newspeak output
+---------------
+254.c
+main() {
+  (254.c:27#6)^int32 x;
+  (254.c:28#2)^0- =(int32) coerce[-2147483648,2147483647] (0-_int32 + 1);
+  (254.c:28#2)^0- =(int32) coerce[-2147483648,2147483647] (0-_int32 + 1);
+}
+
+
