@@ -906,7 +906,9 @@ and normalization compil_unit extern =
       | IntegerRange(_, contrainte, _) -> 
 	  Constrained(Declared(typdecl, location), contrainte, true)
       | DerivedType(_, subtyp_ind) -> 
+	  
 	  let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+	    
 	  let typ = Ada_utils.base_typ subtyp in
 	    begin
 	      match typ with
@@ -998,33 +1000,142 @@ and normalization compil_unit extern =
 	| true -> add_package name (!current_package)
 	    (* pas de gestion de with dans package inclus *)
   in  
+
+
+
+let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
+  (* on établit le sous-type tel qu'il sera utilisé dans 
+     le reste du code, à partir du type de base du sous-type
+     de référence, de la contrainte normalisée, et d'un
+     booléen qui indique si le sous-type de référence est 
+     statique *)
+  let subtyp_of_constraint contrainte typ static_ref =
+    let static_constraint = Ada_utils.constraint_is_static 
+      contrainte in
+      
+    (* Dans le cas de contrainte statique, la contrainte
+       du sous-type résultat reste la même.
+       Dans le cas d'un RangeCosntraint contenant des expressions
+       on génère deux temporaires, qui permettront de se
+       référer aux valeurs des bornes à l'instant de la 
+       déclaration du sous-type.
+       Ces temporaires sont déclarés et initialisés dans
+       firstpass.
+    *)
+    let contrainte_subtyp_result = match contrainte with 
+      | RangeConstraint(_, _) ->
+	  let min = normalize_ident (gen_tmp ())
+	  and max = normalize_ident (gen_tmp ()) in
+	    RangeConstraint(Var(min), Var(max))
+      | _ -> contrainte
+    in
+      (Constrained(typ, contrainte_subtyp_result,
+		   static_ref && static_constraint))
+  in (match subtyp with
+	| None -> ()
+	| Some(_) -> 
+	    Npkcontext.error
+	      "Ada_normalize.normalize_subtyp_indication"
+	      "internal error : subtyp already provided");
+    
+    let norm_subtyp_ref = normalize_subtyp subtyp_ref in 
+    let (norm_subtyp, norm_contrainte) = 
+      match (contrainte, norm_subtyp_ref) with
+	| (None, Unconstrained(typ)) -> 
+	    (Unconstrained(typ), None)
+	| (None, Constrained(typ, const, static)) -> 
+	    (Constrained(typ, const, static), None)
+	| (Some(const), Unconstrained(typ)) -> let norm_contrainte = 
+	    normalize_contrainte const typ
+	  in (subtyp_of_constraint norm_contrainte typ true, 
+	      Some(norm_contrainte))
+	| (Some(const), Constrained(typ, const_ref, stat_ref)) ->
+	    let norm_contrainte = 
+	      normalize_contrainte const typ
+	    in
+	      if not 
+		(Ada_utils.constraint_is_constraint_compatible
+		   const_ref norm_contrainte)
+	      then 
+		Npkcontext.error
+		  "Ada_normalize.normalize_subtyp_indication"
+	          "constraint error : uncompatible constraint";
+	      (subtyp_of_constraint norm_contrainte typ stat_ref,
+	       Some(norm_contrainte))
+	| (_, SubtypName _ ) ->
+	    Npkcontext.error
+	      "Ada_normalize.normalize_subtyp_indication"
+	      "internal error : unexpected subtyp name"
+    in
+      (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp))
+  
+ 
+    
   (*let normalize_typ typ = match typ with
     | Integer | IntegerConst | Float | Boolean | Character 
     | Declared(_) | String -> typ
     | TypName(name) -> 
 	let (decl, loc ) = find_typ (normalize_name name) in
 	  Declared(decl, loc)*)
-  let normalize_subtyp subtyp = match subtyp with
-      | Unconstrained(typ) -> Unconstrained(typ) 
-      | Constrained(typ,const,static) -> Constrained(typ,const,
-						     static)
-      | SubtypName(name) -> fst (find_subtyp (normalize_name name))
+	
+and normalize_subtyp subtyp = 
+  let  norm_typ typp =
+    match typp with 
+	Declared (Array(id,ConstrainedArray(st1_ind, st2_ind, _)),x) ->
+	  let n_st1 =  normalize_subtyp_indication st1_ind in
+	  let n_st2 =  normalize_subtyp_indication st2_ind in
+
+	let subtyp = Ada_utils.extract_subtyp n_st1 in
+	 
+	let contrainte = match subtyp with
+	  | Constrained(_,contrainte,_) -> contrainte
+	  | Unconstrained _ -> 
+	      Npkcontext.error
+		"Ada_normalize.normalize_typ_decl"
+		"array error : no range provided" 
+	  | SubtypName _ -> 
+	      Npkcontext.error
+		"Ada_normalize.normalize_typ_decl" 
+		"internal error : unexpected subtyp name" 
+	in
+	  
+	let taille = match contrainte with
+	  | IntegerRangeConstraint(inf, sup) ->
+	      
+	      Some(Nat.to_int (Nat.sub sup inf))
+	  | FloatRangeConstraint _ ->
+	      Npkcontext.error
+		"Ada_normalize.normalize_typ_decl"
+		"array error : range isn't discret"
+	  | RangeConstraint _ ->
+	      Npkcontext.error
+		"Ada_normalize.normalize_typ_decl"
+		"array error : range isn't static" in
+	  Declared (Array(id,ConstrainedArray(n_st1, n_st2, taille ) ),x
+		   )
+      |  _ -> typp 
+  in 
+    match subtyp with
+      | Unconstrained(typ) -> Unconstrained(norm_typ typ) 
+      | Constrained(typ,const,static) -> 
+	  Constrained(norm_typ typ,const,static)
+      | SubtypName(name) ->
+	  fst (find_subtyp (normalize_name name))      
 	    
-      
-  in
-  let rec normalize_exp exp = match exp with
-    | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp, 
-					  normalize_exp exp)
-    | NullExpr | CInt _ | CFloat _ | CBool _ | CChar _
-    | CString _ | Var _  -> exp
-    | Unary (uop, exp) -> Unary(uop, normalize_exp exp)
-    | Binary(bop, e1, e2) -> Binary(bop, normalize_exp e1,
-				    normalize_exp e2)
-    | FunctionCall(nom, params) ->
-	FunctionCall(nom, List.map normalize_exp params)
-	  (*WG*)
-    | Last (subtype) -> 	  (*Last(normalize_subtyp subtyp)*)
-	let rec fun_aux subtyp =
+	    
+and normalize_exp exp = match exp with
+  | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp, 
+					normalize_exp exp)
+  | NullExpr | CInt _ | CFloat _ | CBool _ | CChar _
+  | CString _ | Var _  -> exp
+  | Unary (uop, exp) -> Unary(uop, normalize_exp exp)
+  | Binary(bop, e1, e2) -> Binary(bop, normalize_exp e1,
+				  normalize_exp e2)
+  | FunctionCall(nom, params) ->
+      FunctionCall(nom, List.map normalize_exp params)
+	(*WG*)
+  | Last (subtype) -> 	  (*Last(normalize_subtyp subtyp)*)
+      let rec fun_aux subtyp =
 	match subtyp with	        
 	  | Unconstrained _ ->  Npkcontext.error
 	      " Ada_normalize: last value of unconstrained type"
@@ -1053,161 +1164,93 @@ and normalization compil_unit extern =
 		
 	  | SubtypName _ ->  
 	      fun_aux (normalize_subtyp subtyp)
-	in
-	 fun_aux subtype	
-  in
-    
-    
-  (* normalize la contrainte contrainte
-     le type des bornes est typ
-     static indique si 
-     on lance une erreur en cas de borne non-static
-     et si on vérifie l'ordre des bornes 
-     (autrement dit, on attend une contrainte statique non nulle
-     en retour. uniquement utilisé dans le cas entier)
-  *)
-  let normalize_contrainte contrainte typ = 
-    let eval_range exp1 exp2 = 
-      let norm_exp1 = normalize_exp exp1
-      and norm_exp2 = normalize_exp exp2 in
-	(* on essaye d'évaluer les bornes *)
-	(try
-	   let (val1,_) = eval_static 
-	     norm_exp1 (Some(typ)) csttbl (val_use ()) 
-	     !with_package !current_package extern 
-	   and (val2,_) = eval_static 
-	     norm_exp2 (Some(typ)) csttbl (val_use ()) 
-	     !with_package !current_package extern in
-	   let contrainte =  match (val1, val2) with
-	     | (FloatVal(f1),FloatVal(f2)) -> 
-		 if f1<=f2
-		 then FloatRangeConstraint(f1, f2)
-		 else 
-		   Npkcontext.error 
-		     "Ada_normalize.normalize_contrainte"
-		     "null range not accepted"
-
-	     | (IntVal(i1), IntVal(i2)) -> 
-		 if (Nat.compare i1 i2)<=0
+      in
+	fun_aux subtype	
+	  
+	  
+(* normalize la contrainte contrainte
+   le type des bornes est typ
+   static indique si 
+   on lance une erreur en cas de borne non-static
+   et si on vérifie l'ordre des bornes 
+   (autrement dit, on attend une contrainte statique non nulle
+   en retour. uniquement utilisé dans le cas entier)
+*)
+and normalize_contrainte contrainte typ = 
+  let eval_range exp1 exp2 = 
+    let norm_exp1 = normalize_exp exp1
+    and norm_exp2 = normalize_exp exp2 in
+      (* on essaye d'évaluer les bornes *)
+      (try
+	 let (val1,_) = eval_static 
+	   norm_exp1 (Some(typ)) csttbl (val_use ()) 
+	   !with_package !current_package extern 
+	 and (val2,_) = eval_static 
+	   norm_exp2 (Some(typ)) csttbl (val_use ()) 
+	   !with_package !current_package extern in
+	 let contrainte =  match (val1, val2) with
+	   | (FloatVal(f1),FloatVal(f2)) -> 
+	       if f1<=f2
+	       then FloatRangeConstraint(f1, f2)
+	       else 
+		 Npkcontext.error 
+		   "Ada_normalize.normalize_contrainte"
+		   "null range not accepted"
+		   
+	   | (IntVal(i1), IntVal(i2)) -> 
+	       if (Nat.compare i1 i2)<=0
+	       then IntegerRangeConstraint(i1, i2)
+	       else 
+		 Npkcontext.error 
+		   "Ada_normalize.normalize_contrainte"
+		   "null range not accepted"
+		   
+	   | (BoolVal(b1), BoolVal(b2)) -> 
+	       let i1 = Ada_utils.nat_of_bool b1
+	       and i2 = Ada_utils.nat_of_bool b2
+	       in
+		 if b1 <= b2
 		 then IntegerRangeConstraint(i1, i2)
 		 else 
 		   Npkcontext.error 
 		     "Ada_normalize.normalize_contrainte"
 		     "null range not accepted"
-		   
-	     | (BoolVal(b1), BoolVal(b2)) -> 
-		 let i1 = Ada_utils.nat_of_bool b1
-		 and i2 = Ada_utils.nat_of_bool b2
-		 in
-		   if b1 <= b2
-		   then IntegerRangeConstraint(i1, i2)
-		   else 
-		     Npkcontext.error 
-		       "Ada_normalize.normalize_contrainte"
-		       "null range not accepted"
 		     
-	     | (_, _) -> 
-		 (* ce cas n'est pas censé se produire :
-		    on a vérifié que les deux bornes sont de même
-		    type.*)
-		 Npkcontext.error 
-		   "Ada_normalize.normalize_contrainte"
-		   ("internal error : range error : expected static "
-		    ^"float or integer constant")
-	   in contrainte
-	 with
-	   | NonStaticExpression -> 
+	   | (_, _) -> 
+	       (* ce cas n'est pas censé se produire :
+		  on a vérifié que les deux bornes sont de même
+		  type.*)
 	       Npkcontext.error 
 		 "Ada_normalize.normalize_contrainte"
+		 ("internal error : range error : expected static "
+		  ^"float or integer constant")
+	 in contrainte
+       with
+	 | NonStaticExpression -> 
+	     Npkcontext.error 
+	       "Ada_normalize.normalize_contrainte"
 		 "non-static constraint are not yet supported"
-
-	   | AmbiguousTypeException ->
-	       Npkcontext.error 
-		 "Ada_normalize.normalize_contrainte"
-		 "internal error : uncaught ambiguous type exception")
-    in
-      match contrainte with
-	| RangeConstraint(exp1, exp2) -> 
-	    eval_range exp1 exp2
-	    
-	| IntegerRangeConstraint _ 
-	| FloatRangeConstraint _ ->
-	    Npkcontext.error
-	      "Ada_normalize.eval_contrainte"
-	      "internal error : unexpected Numeric Range"
-	    
-
-
+	       
+	 | AmbiguousTypeException ->
+	     Npkcontext.error 
+	       "Ada_normalize.normalize_contrainte"
+	       "internal error : uncaught ambiguous type exception")
   in
-  let normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
-    (* on établit le sous-type tel qu'il sera utilisé dans 
-       le reste du code, à partir du type de base du sous-type
-       de référence, de la contrainte normalisée, et d'un
-       booléen qui indique si le sous-type de référence est 
-       statique *)
-    let subtyp_of_constraint contrainte typ static_ref =
-      let static_constraint = Ada_utils.constraint_is_static 
-	contrainte in
-	
-      (* Dans le cas de contrainte statique, la contrainte
-	 du sous-type résultat reste la même.
-	 Dans le cas d'un RangeCosntraint contenant des expressions
-	 on génère deux temporaires, qui permettront de se
-	 référer aux valeurs des bornes à l'instant de la 
-	 déclaration du sous-type.
-	 Ces temporaires sont déclarés et initialisés dans
-	 firstpass.
-      *)
-      let contrainte_subtyp_result = match contrainte with 
-	| RangeConstraint(_, _) ->
-	    let min = normalize_ident (gen_tmp ())
-	    and max = normalize_ident (gen_tmp ()) in
-	    RangeConstraint(Var(min), Var(max))
-	| _ -> contrainte
-      in
-	(Constrained(typ, contrainte_subtyp_result,
-		     static_ref && static_constraint))
-    in (match subtyp with
-	  | None -> ()
-	  | Some(_) -> 
-	      Npkcontext.error
-		"Ada_normalize.normalize_subtyp_indication"
-		"internal error : subtyp already provided");
-      
-      let norm_subtyp_ref = normalize_subtyp subtyp_ref in 
-      let (norm_subtyp, norm_contrainte) = 
-	match (contrainte, norm_subtyp_ref) with
-	  | (None, Unconstrained(typ)) -> 
-	      (Unconstrained(typ), None)
-	  | (None, Constrained(typ, const, static)) -> 
-	      (Constrained(typ, const, static), None)
-	  | (Some(const), Unconstrained(typ)) ->
-	      let norm_contrainte = 
-		normalize_contrainte const typ
-	      in (subtyp_of_constraint norm_contrainte typ true, 
-		  Some(norm_contrainte))
-	  | (Some(const), Constrained(typ, const_ref, stat_ref)) ->
-	      let norm_contrainte = 
-		normalize_contrainte const typ
-	      in
-		if not 
-		  (Ada_utils.constraint_is_constraint_compatible
-		     const_ref norm_contrainte)
-		then 
-		  Npkcontext.error
-		    "Ada_normalize.normalize_subtyp_indication"
-	            "constraint error : uncompatible constraint";
-		(subtyp_of_constraint norm_contrainte typ stat_ref,
-		 Some(norm_contrainte))
-	| (_, SubtypName _ ) ->
-	    Npkcontext.error
-	      "Ada_normalize.normalize_subtyp_indication"
-	      "internal error : unexpected subtyp name"
-    in
-      (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp))
-
-  in
-  let rec normalize_instr (instr,loc) = 
+    match contrainte with
+      | RangeConstraint(exp1, exp2) -> 
+	  eval_range exp1 exp2
+	    
+      | IntegerRangeConstraint _ 
+      | FloatRangeConstraint _ ->
+	  Npkcontext.error
+	    "Ada_normalize.eval_contrainte"
+	    "internal error : unexpected Numeric Range"
+	    
+	    
+	    
+in
+  
+let rec normalize_instr (instr,loc) = 
     Npkcontext.set_loc loc;
     match instr with
       | NullInstr | ReturnSimple -> (instr, loc)
@@ -1391,20 +1434,24 @@ and normalization compil_unit extern =
 	
 	  
 	(*constitution of the subtype representing the current declaration *)
-	let norm_subtyp = match Ada_utils.extract_subtyp norm_subtyp_ind with
-	  | Unconstrained(_) -> 
-	      Unconstrained(Declared(typ_decl, loc))
-	  | Constrained(_, contrainte, static) ->
-	      (* for enumeration types, we update the value of the constraint *)
-	      let contrainte = match (typ_decl, parent_type) with
-		| (Enum(_, new_assoc,_), Declared(Enum(_, symbs, _),_)) ->
-		    update_contrainte contrainte symbs new_assoc
-		| _ -> contrainte 
-	      in Constrained(Declared(typ_decl, loc), contrainte, static)
-	  | SubtypName _ ->
-	      Npkcontext.error
-		"Ada_normalize.normalize_typ_decl"
-		"internal error : unexpected subtyp name" in
+	let norm_subtyp =  
+	    match (Ada_utils.extract_subtyp norm_subtyp_ind ) with
+		(*match Ada_utils.extract_subtyp norm_subtyp_ind with
+		*)
+	      | Unconstrained(_) -> 
+		  Unconstrained(Declared(typ_decl, loc))
+	      | Constrained(_, contrainte, static) ->
+		  (* for enumeration types, we update the value of the constraint *)
+		  let contrainte = match (typ_decl, parent_type) with
+		    | (Enum(_, new_assoc,_), Declared(Enum(_, symbs, _),_)) ->
+			update_contrainte contrainte symbs new_assoc
+		    | _ -> contrainte 
+		  in Constrained(Declared(typ_decl, loc), contrainte, static)
+	      | SubtypName _ ->
+		  Npkcontext.error
+		    "Ada_normalize.normalize_typ_decl"
+		    "internal error : unexpected subtyp name" in
+	  
 	let new_subtyp_ind =
 	  let (subtyp, contrainte, _) = norm_subtyp_ind 
 	  in (subtyp, contrainte, Some(norm_subtyp)) in
@@ -1420,7 +1467,8 @@ and normalization compil_unit extern =
     | Array(ident, ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
 	let norm_inter =  normalize_subtyp_indication intervalle_discret
 	and norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-	let subtyp = Ada_utils.extract_subtyp norm_inter in
+	let subtyp =Ada_utils.extract_subtyp norm_inter in
+	 
 	let contrainte = match subtyp with
 	  | Constrained(_,contrainte,_) -> contrainte
 	  | Unconstrained _ -> 
@@ -1522,7 +1570,8 @@ and normalization compil_unit extern =
 	(* constantes *)
 	let norm_subtyp_ind = 
 	  normalize_subtyp_indication subtyp_ind in
-	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
+
+	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in 
 	let typ = base_typ subtyp in
 	let add_ident v x = add_cst (normalize_ident x)
 	  (StaticConst(v, typ, global)) global in
@@ -1581,8 +1630,8 @@ and normalization compil_unit extern =
 	  
     | SubtypDecl(ident, subtyp_ind) -> 
 	let norm_subtyp_ind = 
-	  normalize_subtyp_indication subtyp_ind in 
-	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
+	  normalize_subtyp_indication subtyp_ind  in 
+	let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in 
 	  add_subtyp (normalize_ident ident) subtyp loc global;
 	  SubtypDecl(ident, norm_subtyp_ind)
 
@@ -1748,8 +1797,10 @@ and normalization compil_unit extern =
 	      
 	| ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) -> 
 	    (* constante statique *)
-	    let typ = base_typ 
-	      (Ada_utils.extract_subtyp subtyp_ind) in
+
+	    let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+	    let typ = base_typ subtyp
+	      (*Ada_utils.extract_subtyp subtyp_ind*) in
 	      List.iter
 		(fun x -> add_cst (normalize_extern_ident x)
 		   (StaticConst(v, typ, true)) true)
@@ -1774,9 +1825,10 @@ and normalization compil_unit extern =
 				      Procedure(name, _))) ->
 	    add_function name None true
 	| SubtypDecl(ident, subtyp_ind) -> 
-	    add_subtyp (normalize_extern_ident ident) 
-	      (Ada_utils.extract_subtyp subtyp_ind)
-	      loc true	 
+	    let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+	      add_subtyp (normalize_extern_ident ident) 
+		(*Ada_utils.extract_subtyp subtyp_ind*) subtyp
+		loc true	 
 	| SpecDecl _ -> ()
 	| UseDecl _ -> ()
 	| RepresentClause _ -> ()
