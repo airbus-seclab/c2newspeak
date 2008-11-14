@@ -27,6 +27,23 @@ open Parser
 
 let token_tbl = Hashtbl.create 50
 
+let builtin_names = 
+  ["__builtin_strchr"; 
+   "__builtin_strcmp";
+   "__builtin_strncpy";
+   "__builtin_strncat";
+   "__builtin_expect"
+  ]
+
+let builtins = 
+  List.fold_left ( ^ ) "" 
+    ["extern char *__builtin_strchr(char *str, char c);";
+     "extern int __builtin_strcmp(char *str1, char *str2);";
+     "extern char *__builtin_strncpy(char *dst, char *src, unsigned int sz);";
+     "extern char *__builtin_strncat(char *dst, char *src, unsigned int sz);";
+     "extern long __builtin_expect(long exp, long val);";
+    ]
+
 let _ = 
   Hashtbl.add token_tbl "__extension__" EXTENSION;
   (* prevent warnings when compiling in -pedantic *)
@@ -76,18 +93,12 @@ let _ =
   Hashtbl.add token_tbl "__DI__" DI;
   Hashtbl.add token_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
   Hashtbl.add token_tbl "__packed__" PACKED;
-  Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME
+  Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
+
+  List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 
 let find_token str =
   Hashtbl.find token_tbl str
 
 let is_gnuc_token str = Hashtbl.mem token_tbl str
-
-let builtins = 
-  List.fold_left ( ^ ) "" 
-    ["extern char *__builtin_strchr(char *str, char c);";
-     "extern int __builtin_strcmp(char *str1, char *str2);";
-     "extern char *__builtin_strncat(char *dst, char *src, unsigned int sz);";
-     "extern long __builtin_expect(long exp, long val);";
-    ]
