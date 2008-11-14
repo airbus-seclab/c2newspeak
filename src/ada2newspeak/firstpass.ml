@@ -75,7 +75,7 @@ let extract_scalar_typ cir_typ = match cir_typ with
 let make_check_constraint contrainte exp = 
   match contrainte with
     | IntegerRangeConstraint (v1,v2) ->
-	C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp)
+	C.Unop(K.Belongs_tmp(v1, K.Known (Nat.add v2 Nat.one)), exp)
     | FloatRangeConstraint(_, _) -> exp
 	
     | RangeConstraint _ ->

@@ -1101,8 +1101,8 @@ and normalize_subtyp subtyp =
 	  
 	let taille = match contrainte with
 	  | IntegerRangeConstraint(inf, sup) ->
-	      
-	      Some(Nat.to_int (Nat.sub sup inf))
+	      Some(Nat.to_int (Nat.add Nat.one (Nat.sub sup inf)))
+
 	  | FloatRangeConstraint _ ->
 	      Npkcontext.error
 		"Ada_normalize.normalize_typ_decl"
@@ -1110,9 +1110,10 @@ and normalize_subtyp subtyp =
 	  | RangeConstraint _ ->
 	      Npkcontext.error
 		"Ada_normalize.normalize_typ_decl"
-		"array error : range isn't static" in
-	  Declared (Array(id,ConstrainedArray(n_st1, n_st2, taille ) ),x
-		   )
+		"array error : range isn't static" 
+	in
+	  Declared (Array(id,ConstrainedArray(n_st1, n_st2, taille)),
+		    x )
       |  _ -> typp 
   in 
     match subtyp with
@@ -1481,7 +1482,7 @@ let rec normalize_instr (instr,loc) =
 		"internal error : unexpected subtyp name" in
 	let taille = match contrainte with
 	  | IntegerRangeConstraint(inf, sup) ->
-	      Some(Nat.to_int (Nat.sub sup inf))
+	      Some(Nat.to_int (Nat.add Nat.one (Nat.sub sup inf)))
 	  | FloatRangeConstraint _ ->
 	      Npkcontext.error
 		"Ada_normalize.normalize_typ_decl"
@@ -1491,7 +1492,9 @@ let rec normalize_instr (instr,loc) =
 		"Ada_normalize.normalize_typ_decl"
 		"array error : range isn't static" in
 	let norm_typ = Array(ident, 
-			     ConstrainedArray(norm_inter, norm_subtyp_ind,taille))
+			     ConstrainedArray(norm_inter, 
+					      norm_subtyp_ind, 
+					      taille))
 	in
 	  add_typ (normalize_ident ident) norm_typ loc global extern;
 	  norm_typ
