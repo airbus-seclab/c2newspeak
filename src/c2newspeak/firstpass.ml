@@ -122,6 +122,10 @@ let translate (globals, spec) =
       id
   in
 
+  let update_var_typ x id t =
+    Hashtbl.replace symbtbl x (LocalSymb (C.Var id), t)
+  in
+
   let remove_symb x = Hashtbl.remove symbtbl x in
 
   let add_formals (args_t, ret_t) =
@@ -386,7 +390,6 @@ let translate (globals, spec) =
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
     let loc = Npkcontext.get_loc () in
     let (t, init) = translate_glb_init t (Some (Data (Str str))) in
-(* TODO: is it necessary to have translate_typ t ??? *)
       if not (Hashtbl.mem used_globals name) 
       then add_global name loc (t, Some init);
       (C.Global name, t)
@@ -809,20 +812,21 @@ let translate (globals, spec) =
 
   and translate_local_decl (x, t, init) loc =
     Npkcontext.set_loc loc;
+    let id = add_var (t, x) in
     let (init, t) = 
       match init with
 	  None -> ([], t)
 	| Some init -> translate_init t init
     in
-    let id = add_var (t, x) in
-    let v = C.Var id in
-    let build_set (o, t, e) =
-      let lv = C.Shift (v, C.exp_of_int o) in
-	(C.Set (lv, t, e), loc)
-    in
-    let init = List.map build_set init in
-    let decl = (C.Decl (translate_typ t, x, id), loc) in
-      decl::init
+      update_var_typ x id t;
+      let v = C.Var id in
+      let build_set (o, t, e) =
+	let lv = C.Shift (v, C.exp_of_int o) in
+	  (C.Set (lv, t, e), loc)
+      in
+      let init = List.map build_set init in
+      let decl = (C.Decl (translate_typ t, x, id), loc) in
+	decl::init
 
   and add_enum (x, v) =
     let v = translate_exp v in
