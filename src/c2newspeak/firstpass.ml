@@ -1352,6 +1352,13 @@ let translate (globals, spec) =
     let t = (Some args, Ptr char_typ) in
       translate_proto_ftyp f false t loc;
 
+    let f = "__builtin_strncat" in
+    let args = 
+      (Ptr char_typ, "dst")::(Ptr char_typ, "src")::(uint_typ, "sz")::[] 
+    in
+    let t = (Some args, Ptr char_typ) in
+      translate_proto_ftyp f false t loc;
+
     let f = "__builtin_expect" in
     let args = (long_typ, "exp")::(long_typ, "val")::[] in
     let t = (Some args, long_typ) in
