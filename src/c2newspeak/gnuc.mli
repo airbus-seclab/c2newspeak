@@ -26,3 +26,5 @@
 val find_token: string -> Parser.token
 
 val is_gnuc_token: string -> bool
+
+val builtins: string

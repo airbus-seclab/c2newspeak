@@ -1340,31 +1340,6 @@ let translate (globals, spec) =
       | _ -> ()
   in
 
-  let add_gnuc_symbols () =
-    let loc = Newspeak.dummy_loc "__gnuc_symbol" in
-    let f = "__builtin_strchr" in
-    let args = (Ptr char_typ, "str")::(char_typ, "char")::[] in
-    let t = (Some args, Ptr char_typ) in
-      translate_proto_ftyp f false t loc;
-
-    let f = "__builtin_strcmp" in
-    let args = (Ptr char_typ, "str1")::(Ptr char_typ, "str2")::[] in
-    let t = (Some args, Ptr char_typ) in
-      translate_proto_ftyp f false t loc;
-
-    let f = "__builtin_strncat" in
-    let args = 
-      (Ptr char_typ, "dst")::(Ptr char_typ, "src")::(uint_typ, "sz")::[] 
-    in
-    let t = (Some args, Ptr char_typ) in
-      translate_proto_ftyp f false t loc;
-
-    let f = "__builtin_expect" in
-    let args = (long_typ, "exp")::(long_typ, "val")::[] in
-    let t = (Some args, long_typ) in
-      translate_proto_ftyp f false t loc
-  in
-
   let add_glbdecl name (t, loc, init, used) =
     if used || (not !Npkcontext.remove_temp) then begin
       Npkcontext.set_loc loc;
@@ -1374,7 +1349,6 @@ let translate (globals, spec) =
   in
 
 (* TODO: a tad inefficient *)
-    if !Npkcontext.gnuc then add_gnuc_symbols ();
     List.iter collect_glb_structdefs globals;
     List.iter translate_global globals;
     Hashtbl.iter add_glbdecl used_globals;

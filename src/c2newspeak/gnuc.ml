@@ -83,3 +83,11 @@ let find_token str =
   Hashtbl.find token_tbl str
 
 let is_gnuc_token str = Hashtbl.mem token_tbl str
+
+let builtins = 
+  List.fold_left ( ^ ) "" 
+    ["extern char *__builtin_strchr(char *str, char c);";
+     "extern int __builtin_strcmp(char *str1, char *str2);";
+     "extern char *__builtin_strncat(char *dst, char *src, unsigned int sz);";
+     "extern long __builtin_expect(long exp, long val);";
+    ]
