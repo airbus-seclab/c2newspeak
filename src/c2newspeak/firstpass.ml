@@ -567,6 +567,9 @@ let translate (globals, spec) =
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t')
+	| (C.Lval (lv, _), (Fun _ as t)) -> 
+	    let (e, _) = addr_of (lv, t) in
+	      (e, Ptr t)
 	| v -> v
 	    
   and translate_call (f, args) =
@@ -801,7 +804,9 @@ let translate (globals, spec) =
     let translate_arg (t, _) = translate_typ t in
     let args =
       match args with
-	  None -> []
+(* TODO: this translation is not correct!!!!!! it's unknown rather than
+   no arguments!!!!! *)
+	  None -> []   (* TODO: this translation is not correct!!!!! *)
 	| Some args -> List.map translate_arg args
     in
     let ret = translate_typ ret in

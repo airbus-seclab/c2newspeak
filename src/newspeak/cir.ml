@@ -120,7 +120,10 @@ let rec string_of_typ t =
     | Array (t, sz) -> (string_of_typ t^"["^(Npkil.string_of_tmp_size sz)^"]")
     | Struct _ -> "{}"
     | Union _ -> "{}"
-    | Fun _ -> "fun"
+    | Fun (args, ret) -> 
+	let args = List_utils.to_string string_of_typ ", " args in
+	let ret = string_of_typ ret in
+	  args^" -> "^ret
 
 let rec string_of_exp margin e =
   match e with

@@ -35,10 +35,10 @@ module Set = Set.Make(String)
 let translate_scalar t =
   match t with
       Scalar t -> t
-    | Void -> Npkcontext.error "Compiler.translate_scalar" 
+    | Void -> Npkcontext.error "Cir2npkil.translate_scalar" 
 	"value void not ignored as it ought to be"
     | _ -> 
-	Npkcontext.error "Compiler.translate_scalar" 
+	Npkcontext.error "Cir2npkil.translate_scalar" 
 	  ("unexpected non scalar type: "^(string_of_typ t))
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
@@ -104,6 +104,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	Var id -> 
 	  let x = Hashtbl.find env id in
 	    K.Local (!stack_height - x)
+
       | Global x -> 
 	  used_glbs := Set.add x !used_glbs;
 	  K.Global x

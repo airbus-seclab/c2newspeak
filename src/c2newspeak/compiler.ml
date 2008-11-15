@@ -78,6 +78,7 @@ let compile fname =
       Npkcontext.print_debug "First pass done.";
       Npkcontext.print_debug ("Translating "^fname^"...");
       let tr_prog = Cir2npkil.translate prog fnames in
+      Npkcontext.print_debug ("Translation done.");
 	Npkcontext.forget_loc ();
 	tr_prog
   

@@ -25,7 +25,7 @@
 #
 
 TARGET=ada2newspeak
-DIRS=$(CILDIR) newspeak/ ada2newspeak/
+DIRS=$(CILDIR) utils newspeak ada2newspeak
 LIBX=unix.cmxa str.cmxa nums.cmxa 
 
 newspeak.FILES=\
@@ -42,7 +42,7 @@ ada2newspeak.FILES=\
 	ada_normalize firstpass compiler \
 	ada2newspeak
 
-FILES=version \
+FILES=version utils/list_utils \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix ada2newspeak/, $(ada2newspeak.FILES))
 
