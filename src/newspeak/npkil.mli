@@ -42,7 +42,7 @@ and ginfo = (typ * location * init_t option * used)
 and used = bool
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and funinfo = (ftyp * blk option)
+and funinfo = (ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)

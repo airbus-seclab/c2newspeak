@@ -263,26 +263,18 @@ let write_fun cout f spec =
   Newspeak.write_fun cout f spec
 
 let generate_funspecs cout npkos =
-(* TODO: Use a String_set here, clean up sets *)
-  let waiting = Hashtbl.create 100 in
   let encountered = Hashtbl.create 100 in  
 
   let handle_funspec name (ftyp, body) =
+    let body = replace_body body in
+    let body = 
+      if !Npkcontext.no_opt then body
+      else Newspeak.simplify !Npkcontext.opt_checks body
+    in
     let body =
-      match body with
-	| None -> None
-	| Some b -> 
-	    let body = replace_body b in
-	    let body = 
-	      if !Npkcontext.no_opt then body
-	      else Newspeak.simplify !Npkcontext.opt_checks body
-	    in
-	    let body =
-	      if !Npkcontext.no_opt then body
-	      else if not !Npkcontext.normalize_loops then body
-	      else Newspeak.normalize_loops body
-	    in
-	      Some body
+      if !Npkcontext.no_opt then body
+      else if not !Npkcontext.normalize_loops then body
+      else Newspeak.normalize_loops body
     in
     let ftyp = replace_ftyp ftyp in
       
@@ -291,20 +283,12 @@ let generate_funspecs cout npkos =
 	  if (ftyp <> prev_ftyp) 
 	  then Npkcontext.error "Npklink.generate_funspecs" 
 	    ("function "^name^" type does not match");
-	  match body with
-	      None -> ()
-	    | Some body when Hashtbl.mem waiting name -> 
-		Hashtbl.remove waiting name;
-		write_fun cout name (ftyp, body)
-	    | Some _ -> 
-		Npkcontext.error "Npklink.generate_funspecs" 
-		  ("Function "^name^" declared twice")
+	  Npkcontext.error "Npklink.generate_funspecs" 
+	    ("Function "^name^" declared twice")
 		  
       with Not_found -> 
 	Hashtbl.add encountered name ftyp;
-	match body with
-	    None -> Hashtbl.add waiting name (ftyp, None)
-	  | Some body -> write_fun cout name (ftyp, body)
+	write_fun cout name (ftyp, body)
   in
     
   let read_all_funspec npko =

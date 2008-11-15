@@ -345,26 +345,19 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   in
 
   let translate_fundef f ((args, t), _, body) =
-    let body =
-      match body with
-	  None -> 
-(* TODO: remove this case, do not translate the function?
-   body should be a block, not a block option?
-*)
-	    None
-	| Some ((ret_id, args_id), body) -> 
-	    (* push return value *)
-	    push ret_id;
-	    (* push arguments *)
-	    List.iter push args_id;
-	    let body = Cir.normalize body in
-	    let body = translate_blk body in
-	      List.iter pop args_id;
-	      pop ret_id;
-	      Some body
-    in
-    let ft = translate_ftyp (args, t) in
-      Hashtbl.add fundefs f (ft, body)
+    match body with
+	None -> ()
+      | Some ((ret_id, args_id), body) -> 
+	  (* push return value *)
+	  push ret_id;
+	  (* push arguments *)
+	  List.iter push args_id;
+	  let body = Cir.normalize body in
+	  let body = translate_blk body in
+	    List.iter pop args_id;
+	    pop ret_id;
+	    let ft = translate_ftyp (args, t) in
+	      Hashtbl.add fundefs f (ft, body)
   in
 
   let flag_glb x =

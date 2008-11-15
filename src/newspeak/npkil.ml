@@ -43,7 +43,7 @@ and ginfo = (typ * location * init_t option * used)
 
 and used = bool
 
-and funinfo = (ftyp * blk option)
+and funinfo = (ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -330,15 +330,12 @@ let dump_npko (fnames, globs, funs, _) =
   in
   
   let dump_fundec name body =
-    match body with
-	None -> ()
-      | Some body ->
-	  cur_fun := name;
-	  lbl_index := 0;
-	  print_endline (name^"() {");
-	  dump_blk "  " [] body;
-	  print_endline "}";
-	  print_newline ()
+    cur_fun := name;
+    lbl_index := 0;
+    print_endline (name^"() {");
+    dump_blk "  " [] body;
+    print_endline "}";
+    print_newline ()
   in
 
   let print_usedglbs title globs =
@@ -360,7 +357,7 @@ let dump_npko (fnames, globs, funs, _) =
 
   let print_fundef n (_, pbody) =
     dump_fundec n pbody;
-    if pbody <> None then print_newline ()
+    print_newline ()
   in
     List.iter (fun x -> print_endline x) fnames;
 
