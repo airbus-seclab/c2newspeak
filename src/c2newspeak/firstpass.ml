@@ -224,10 +224,10 @@ let translate (globals, spec) =
     Hashtbl.add symbtbl x (EnumSymb i, int_typ)
   in
 
-  let update_funbody f body t loc =
-    try Hashtbl.add fundefs f (t, loc, Some body)
-    with Not_found ->
-      Npkcontext.error "Firstpass.update_funbody" "unreachable statement"
+  let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, Some body) in
+
+  let update_fundef f ft loc =
+    if not (Hashtbl.mem fundefs f) then Hashtbl.add fundefs f (ft, loc, None)
   in
 
   let translate_lbl lbl =
@@ -1120,6 +1120,7 @@ let translate (globals, spec) =
       try update_funtyp f ct 
       with Not_found -> Hashtbl.add symbtbl f (FunSymb (C.Global f'), Fun ct)
     in
+      update_fundef f (translate_ftyp ct) loc;
       f'
 
   and translate_proto_ftyp f static (args, ret) loc =
@@ -1286,7 +1287,7 @@ let translate (globals, spec) =
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	    update_funbody f' (formalids, body) (translate_ftyp ft) loc;
+	    add_fundef f' (formalids, body) (translate_ftyp ft) loc;
 	    remove_formals ft;
 	    current_fun := "";
 	    Hashtbl.clear lbl_tbl;

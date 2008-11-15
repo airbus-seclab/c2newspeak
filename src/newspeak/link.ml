@@ -290,7 +290,7 @@ let generate_funspecs cout npkos =
 	let prev_ftyp = Hashtbl.find encountered name in
 	  if (ftyp <> prev_ftyp) 
 	  then Npkcontext.error "Npklink.generate_funspecs" 
-	    ("Function "^name^" type does not match");
+	    ("function "^name^" type does not match");
 	  match body with
 	      None -> ()
 	    | Some body when Hashtbl.mem waiting name -> 

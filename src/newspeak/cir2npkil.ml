@@ -130,7 +130,9 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
-      | AddrOf (Global f, Fun ft) -> K.AddrOfFun (f, translate_ftyp ft)
+      | AddrOf (Global f, Fun _) -> 
+	  let (ft, _, _) = Hashtbl.find cfundefs f in
+	    K.AddrOfFun (f, translate_ftyp ft)
 
       | AddrOf (lv, Array (elt_t, len)) ->
 (* TODO: put use of length_of_array in firstpass!!! *)
@@ -345,7 +347,11 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   let translate_fundef f ((args, t), _, body) =
     let body =
       match body with
-	  None -> None
+	  None -> 
+(* TODO: remove this case, do not translate the function?
+   body should be a block, not a block option?
+*)
+	    None
 	| Some ((ret_id, args_id), body) -> 
 	    (* push return value *)
 	    push ret_id;
