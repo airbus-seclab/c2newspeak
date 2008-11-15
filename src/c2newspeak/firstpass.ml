@@ -421,7 +421,7 @@ let translate (globals, spec) =
 	      | Ptr _ -> translate_lv (Deref (Binop (Plus, e, idx)))
 	      | _ -> 
 		  Npkcontext.error "Firstpass.translate_lv" 
-		    "Array or pointer type expected"
+		    "array or pointer type expected"
 	  end
 
       | Deref e -> deref (translate_exp e)
@@ -581,31 +581,28 @@ let translate (globals, spec) =
 	    Npkcontext.error "Firstpass.translate_exp" 
 	      "function type expected"
     in
-    let (args_t, check) =
+    let args_t =
       match args_t with
 	  None -> 
-	    let loc = "Firstpass.translate_args" in
-	    let msg = "unknown arguments type at function call" in
-	      if (!Npkcontext.missing_ftyp) 
-	      then Npkcontext.print_warning loc msg
-	      else begin
-		Npkcontext.error loc 
-		  (msg^", clean up your code, or try option --missing-funtyp")
+	    Npkcontext.report_accept_warning "Firstpass.translate_args"
+	      "unknown arguments type at function call" 
+	      Npkcontext.PartialFunTyp;
+	    let infer_typ i e =
+	      let (_, t) = translate_exp e in
+		(t, "arg"^(string_of_int i))
+	    in
+	    let args_t = List_utils.mapi infer_typ args in
+	      begin match f with
+		  Var f -> update_funtyp f (Some args_t, ret_t)
+		| _ -> ()
 	      end;
-	      let infer_typ i e =
-		let (_, t) = translate_exp e in
-		  (t, "arg"^(string_of_int i))
-	      in
-		(List_utils.mapi infer_typ args, true)
-	| Some args_t -> (args_t, false)
+	      args_t
+	| Some args_t -> args_t
     in
-    let ft = (Some args_t, ret_t) in
-    let ft' = translate_ftyp ft in
+    let ft' = translate_ftyp (Some args_t, ret_t) in
     let f = 
       match lv with
-	  C.Global f -> 
-	    if check then update_funtyp f ft;
-	      C.Fname f
+	  C.Global f -> C.Fname f
 	| C.Deref (e, _) -> C.FunDeref (e, ft')
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_exp" 
