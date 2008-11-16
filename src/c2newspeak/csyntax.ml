@@ -244,18 +244,14 @@ let rec string_of_typ t =
     | Int _ -> "int??"
     | Ptr t -> "*"^(string_of_typ t)
     | Array (t, None) -> (string_of_typ t)^"[?]"
-    | _ -> "TODO: other_t"
+    | Array (t, Some x) -> (string_of_typ t)^"["^(string_of_exp x)^"]"
+    | Bitfield _ -> "Bitfield"
+    | Float _ -> "Float"
+    | Comp _ -> "Comp"
+    | Fun _ -> "Fun"
+    | Va_arg -> "..."
 
-let string_of_ftyp (args_t, _) =
-  let string_of_arg (t, _) = string_of_typ t in
-  let args =
-    match args_t with
-	None -> "? -> ret_t"
-      | Some args_t -> List_utils.to_string string_of_arg ", " args_t
-  in
-    "("^args^") -> ret_t"
-
-let rec string_of_exp e =
+and string_of_exp e =
   match e with
       Cst _ -> "Cst"
     | Var x -> x
@@ -275,3 +271,13 @@ let rec string_of_exp e =
     | SetOp _ -> "SetOp"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
+
+let string_of_ftyp (args_t, _) =
+  let string_of_arg (t, _) = string_of_typ t in
+  let args =
+    match args_t with
+	None -> "? -> ret_t"
+      | Some args_t -> List_utils.to_string string_of_arg ", " args_t
+  in
+    "("^args^") -> ret_t"
+

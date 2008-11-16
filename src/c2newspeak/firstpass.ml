@@ -41,10 +41,10 @@ let default_lbl = 3
 (* types *)
 (* TODO: not minimal, think about it *)
 type symb =
-    | GlobalSymb of string 
-    | FunSymb of C.lv 
-    | LocalSymb of C.lv 
-    | EnumSymb of C.exp
+  | GlobalSymb of string 
+  | FunSymb of string
+  | LocalSymb of C.lv 
+  | EnumSymb of C.exp
 
 (* functions *)
 (* [next_aligned o x] returns the smallest integer greater or equal than o,
@@ -175,13 +175,28 @@ let translate (globals, spec) =
   let find_var x =
     let (v, t) = find_symb x in
     match v with
-	LocalSymb v | FunSymb v -> (v, t)
+	LocalSymb v -> (v, t)
+      | FunSymb v -> (C.Global v, t)
       | GlobalSymb v -> 
 	  use_global v;
 	  (C.Global v, t)
       | _ -> 
-	  Npkcontext.error "Firstpass.translate.typ_of_var" 
+	  Npkcontext.error "Firstpass.find_var" 
 	    ("variable identifier expected: "^x)
+  in
+
+  let is_fname x =
+    let (v, _) = find_symb x in
+    match v with
+	FunSymb _ -> true
+      | _ -> false
+  in
+
+  let find_fname x =
+    let (v, t) = find_symb x in
+      match (v, t) with
+	  (FunSymb f, Fun t) -> (f, t)
+	| _ -> raise Not_found
   in
 
   let update_global x name loc (t, init) =
@@ -572,8 +587,48 @@ let translate (globals, spec) =
 	      (e, Ptr t)
 	| v -> v
 	    
+  and refine_args_t args_t args =
+    match args_t with
+	None -> 
+	  Npkcontext.report_accept_warning "Firstpass.refine_args_t"
+	    "unknown arguments type at function call" 
+	    Npkcontext.PartialFunTyp;
+	  let infer_typ i e =
+	    let (_, t) = translate_exp e in
+	      (t, "arg"^(string_of_int i))
+	  in
+	    List_utils.mapi infer_typ args
+      | Some args_t -> args_t
+
   and translate_call (f, args) =
-    let (lv, t) = translate_lv f in
+(* TODO: find a way to clean this up?? factor some code?? *)      
+    match f with
+	Var x when is_fname x -> 
+	  let (f, (tmp_args_t, ret_t)) = find_fname x in
+	  let args_t = refine_args_t tmp_args_t args in
+	    (* TODO: translate_funtyp should not take a Some args_t?? *)
+	  let args = translate_args args args_t in
+	  let ft' = translate_ftyp (Some args_t, ret_t) in
+	    (* TODO: update_funtyp should not take a Some args_t?? *)
+	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t);
+	    (C.Call (ft', C.Fname f, args), ret_t)
+	      
+      | Deref e | e -> 
+	  let (e, t) = translate_exp e in
+	  let (args_t, ret_t) =
+	    match t with
+		Ptr (Fun t) -> t
+	      | _ -> 
+		  Npkcontext.error "Firstpass.translate_call"
+		    "function pointer expected"
+	  in
+	  let args_t = refine_args_t args_t args in
+	  let args = translate_args args args_t in
+	  let ft' = translate_ftyp (Some args_t, ret_t) in
+	    (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
+	      
+
+(* TODO:
     let (lv, (args_t, ret_t)) = 
       match t with
 	  Ptr (Fun ft) ->
@@ -587,22 +642,11 @@ let translate (globals, spec) =
     let args_t =
       match args_t with
 	  None -> 
-	    Npkcontext.report_accept_warning "Firstpass.translate_args"
-	      "unknown arguments type at function call" 
-	      Npkcontext.PartialFunTyp;
-	    let infer_typ i e =
-	      let (_, t) = translate_exp e in
-		(t, "arg"^(string_of_int i))
-	    in
-	    let args_t = List_utils.mapi infer_typ args in
-	      begin match f with
-		  Var f -> update_funtyp f (Some args_t, ret_t)
-		| _ -> ()
-	      end;
-	      args_t
 	| Some args_t -> args_t
     in
     let ft' = translate_ftyp (Some args_t, ret_t) in
+*)
+(* TODO:
     let f = 
       match lv with
 	  C.Global f -> C.Fname f
@@ -611,9 +655,8 @@ let translate (globals, spec) =
 	    Npkcontext.error "Firstpass.translate_exp" 
 	      "functional expression expected"
     in
-    let args = translate_args args args_t in
-      (C.Call (ft', f, args), ret_t)
-
+*)
+      
   and deref (e, t) =
     match t with
 	Ptr t -> (C.Deref (e, translate_typ t), t)
@@ -800,13 +843,17 @@ let translate (globals, spec) =
 	    end;
 	    Some i
 
+(* TODO: here args, should not be an option *)
   and translate_ftyp (args, ret) =
     let translate_arg (t, _) = translate_typ t in
     let args =
       match args with
-(* TODO: this translation is not correct!!!!!! it's unknown rather than
-   no arguments!!!!! *)
-	  None -> []   (* TODO: this translation is not correct!!!!! *)
+	  None ->
+(* TODO: use this instead, otherwise, translation incorrect *) 
+(* TODO: TODO: TODO: TODO: *)
+(*	    Npkcontext.error "Firstpass.translate_ftyp" 
+	      "incomplete function type"*)
+	      []
 	| Some args -> List.map translate_arg args
     in
     let ret = translate_typ ret in
@@ -1118,7 +1165,7 @@ let translate (globals, spec) =
     let f' = if static then "!"^fname^"."^f else f in
     let _ =
       try update_funtyp f ct 
-      with Not_found -> Hashtbl.add symbtbl f (FunSymb (C.Global f'), Fun ct)
+      with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun ct)
     in
       update_fundef f (translate_ftyp ct) loc;
       f'
