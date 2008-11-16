@@ -515,6 +515,9 @@ let cast t e t' =
     | (FunPtr, Ptr) ->
 	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
+    | (Ptr, FunPtr) ->
+	print_castor_err t t';
+	UnOp (Cast (t, t'), e)
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | (Float _, Int (sign, _)) -> 
 	if (sign = Unsigned) then begin
@@ -524,7 +527,7 @@ let cast t e t' =
 	end;
 	UnOp (Cast (t, t'), e)
     | _ -> 
-	Npkcontext.error "Compiler.cast"
+	Npkcontext.error "Npkil.cast"
 	  ("invalid cast "^(string_of_cast t t'))
 
 let rec append_decls d body =
