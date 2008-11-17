@@ -46,7 +46,7 @@ and typ =
     | Array of (typ * Npkil.tmp_size_t)
     | Struct of (field list * int)
     | Union of (field list * int)
-    | Fun of ftyp
+    | Fun
 
 and ftyp = typ list * typ
 

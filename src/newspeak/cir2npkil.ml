@@ -80,7 +80,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  | Struct (fields, sz) | Union (fields, sz) -> 
 	      let translate_field (_, (o, t)) = (o, translate_typ t) in
 		K.Region (List.map translate_field fields, sz)
-	  | Fun _ -> 
+	  | Fun -> 
 	      Npkcontext.error "Compiler.translate_typ" 
 		"function not allowed here"
       in
@@ -130,8 +130,13 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
-      | AddrOf (Global f, Fun _) -> 
-	  let (ft, _, _) = Hashtbl.find cfundefs f in
+      | AddrOf (Global f, Fun) -> 
+	  let (ft, _, _) = 
+	    try Hashtbl.find cfundefs f 
+	    with Not_found -> 
+	      Npkcontext.error "Cir2npkil.translate_exp" 
+		("incomplete type for function "^f)
+	  in
 	    K.AddrOfFun (f, translate_ftyp ft)
 
       | AddrOf (lv, Array (elt_t, len)) ->

@@ -19,6 +19,11 @@
 
   Jasmine Duchon
   email: jasmine . duchon AT free . fr
+
+  Charles Hymans
+  EADS Innovation Works - SE/CS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: charles.hymans@penjili.org
 *)
 
 open Syntax_ada
@@ -45,7 +50,7 @@ exception AmbiguousTypeException
 type symb =
   | VarSymb of C.lv*Syntax_ada.subtyp*bool*bool
   | EnumSymb of C.exp*Syntax_ada.typ*bool
-  | FunSymb of C.funexp*Syntax_ada.sub_program_spec*bool
+  | FunSymb of C.funexp*Syntax_ada.sub_program_spec*bool*C.ftyp
   | NumberSymb of value*bool
 
 (* Constants *)
@@ -239,7 +244,7 @@ let translate compil_unit =
 	   | (VarSymb(_, _, global,_),_,_)   
 	   | (NumberSymb(_, global),_,_) 
 	   | (EnumSymb(_,_, global),_,_) when global -> ()
-	   | (FunSymb(_),_,_) -> ()
+	   | (FunSymb _,_,_) -> ()
 	       
 	   (* sinon la déclaration est local, 
 	      cela cause une erreur *)
@@ -274,14 +279,14 @@ let translate compil_unit =
 	       Npkcontext.error "Firstpass.add_number"
 		 ("conflict : "^(string_of_name x)
 		  ^" already declared")
-	   | (FunSymb(_),_,_) when lvl -> 
+	   | (FunSymb _,_,_) when lvl -> 
 	       Npkcontext.error "Firstpass.add_number"
 		 ("conflict : "^(string_of_name x)
 		  ^" already declared")
 		 
 	   (* les déclarations ne sont pas de même niveau *)
 	   | ((VarSymb(_) | EnumSymb(_) 
-	      | NumberSymb(_) | FunSymb(_)),_,_) -> ()
+	      | NumberSymb(_) | FunSymb _),_,_) -> ()
       );
       let typ_cir = match value with
 	| IntVal _ -> translate_typ IntegerConst
@@ -322,13 +327,13 @@ let translate compil_unit =
 	      (* il existe une fonction interne sans argument 
 		 ayant le même type de retour que le symbole 
 		 d'énumération, qui est global *)
-	      | (FunSymb(_, Function(_, [], st), false), _, _) 
+	      | (FunSymb (_, Function(_, [], st), false, _), _, _) 
 		  when global && (base_typ st)=typ ->
 		  Npkcontext.error "Firstpass.add_enum"
 		    ("conflict : "^ident^" already declared")
 		 
 	      | ((EnumSymb(_)|VarSymb(_)
-		 |FunSymb(_)|NumberSymb(_)),_,_) -> ())
+		 |FunSymb _ |NumberSymb(_)),_,_) -> ())
 	   (find_all_symb name));
       Hashtbl.add symbtbl 
 	name
@@ -357,12 +362,12 @@ let translate compil_unit =
 		     ("conflict : "^x^" already declared")
 		    
 	       (* fonction interne *)
-	       | (FunSymb(_, Function(_, _, _), false), _, _) ->
+	       | (FunSymb (_, Function(_, _, _), false, _), _, _) ->
 		   Npkcontext.error "Firstpass.add_enum"
 		     ("conflict : "^x^" already declared")
 		     
-	       | ((EnumSymb(_)|VarSymb(_)
-		  |FunSymb(_)|NumberSymb(_)),_,_) -> ())
+	       | ((EnumSymb _ |VarSymb(_)
+		  | FunSymb _ |NumberSymb(_)),_,_) -> ())
 	    (find_all_symb name)));
       
       Hashtbl.add globals tr_name (tr_typ, loc, tr_init);
@@ -406,7 +411,7 @@ let translate compil_unit =
 	      ((Print_syntax_ada.name_to_string name)
 	       ^" is not a funtion")
 	| (EnumSymb(_),_,_)::r -> mem_other_symb r var_masque
-	| (FunSymb(_),_,_)::_ -> true
+	| (FunSymb _,_,_)::_ -> true
 	| [] -> false
     in
     let sans_selecteur ident name =
@@ -425,7 +430,7 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_use r var_masque
 
-	  | (FunSymb( _(*fn*), _(*sp*), true), C.Fun(_(*trt*)), _)::r -> 
+	  | (FunSymb (_(*fn*), _(*sp*), true, _), C.Fun, _)::r -> 
 	      if (mem_other_symb r var_masque)
 	      then (Npkcontext.error
 		      "Firstpass.find_fun_symb"
@@ -437,12 +442,12 @@ let translate compil_unit =
 		List.hd list_symb
 		
 
-	  | (FunSymb(_, _, false), C.Fun(_), _)::_ -> Npkcontext.error
+	  | (FunSymb (_, _, false, _), C.Fun, _)::_ -> Npkcontext.error
 	      "Firstpass.find_fun_symb" 
 		("internal error : imported function not "
 		 ^"tagged as extern")
 
-	  | (FunSymb(_), _, _)::_ -> Npkcontext.error 
+	  | (FunSymb _, _, _)::_ -> Npkcontext.error 
 	      "Firstpass.find_fun_symb" 
 		("internal error : translate type isn't "
 		 ^"a fun type")
@@ -470,13 +475,12 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_interne r true
 
-	  | (FunSymb(_, _, _), C.Fun(_), _)::_ -> 
+	  | (FunSymb _, C.Fun, _)::_ -> 
 	      List.hd list_symb
 
-	  | (FunSymb(_), _,_)::_ -> Npkcontext.error 
-	      "Firstpass.find_fun_symb" 
-		("internal error : translate type isn't "
-		 ^"a fun type")
+	  | (FunSymb _, _,_)::_ -> 
+	      Npkcontext.error "Firstpass.find_fun_symb" 
+		("internal error : translate type isn't a fun type")
 
 	  | [] -> find_use (find_all_use ident) var_masque
 
@@ -495,10 +499,10 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_fun r
 
-	  | (FunSymb(_, _, true), C.Fun(_), _)::_ -> 
+	  | (FunSymb (_, _, true, _), C.Fun, _)::_ -> 
 	      List.hd list_symb
 
-	  | (FunSymb(_), _, _)::_ -> Npkcontext.error 
+	  | (FunSymb _, _, _)::_ -> Npkcontext.error 
 	      "Firstpass.find_fun_symb" 
 		("internal error : translate type isn't "
 		 ^"a fun type")
@@ -524,18 +528,17 @@ let translate compil_unit =
 	  | (EnumSymb(_),_,_)::r ->
 	      find_global r
 
-	  | (FunSymb(_, _, false), C.Fun(_), _)::_ -> 
+	  | (FunSymb (_, _, false, _), C.Fun, _)::_ -> 
 	      List.hd list_symb
 
-	  | (FunSymb(_,_, true), _, _)::_ -> (* fonction externe *)
+	  | (FunSymb (_,_, true, _), _, _)::_ -> (* fonction externe *)
 	      Npkcontext.error 
 		"Firstpass.find_fun_symb"
 		("cannot find symbol "^(string_of_name name))
 
-	  | (FunSymb(_), _, _)::_ -> Npkcontext.error 
-	      "Firstpass.find_fun_symb" 
-		("internal error : translate type isn't "
-		 ^"a fun type")
+	  | (FunSymb _, _, _)::_ -> 
+	      Npkcontext.error "Firstpass.find_fun_symb" 
+		("internal error : translate type isn't a fun type")
 
 	  | [] -> Npkcontext.error 
 	      "Firstpass.find_fun_symb"
@@ -626,7 +629,7 @@ let translate compil_unit =
 		| NumberSymb(_) ->
 		    Npkcontext.error "Firstpass.translate_lv"
 		      "Invalid left value: unexpected number symbol"
-		| FunSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
+		| FunSymb _ -> Npkcontext.error "Firstpass.translate_lv"
 		    "Invalid left value: unexpected function symbol"
 		| EnumSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
 		    "Invalid left value: unexpected enum" 
@@ -816,19 +819,18 @@ let translate compil_unit =
       | _ -> 
 	  Npkcontext.error "Firstpass.translate_unop" 
 	    "Unexpected unary operator and argument"
-	    
-  and translate_function_call fname tr_typ spec exp_list 
-      expected_typ =
+	
+  and translate_function_call fname tr_typ spec exp_list expected_typ =
     let (params, ret_t) = 
       match spec with
 	| Function(_,params,subtyp) -> 
-	    (params, 
-	     check_typ expected_typ (base_typ subtyp))
-	    
+	    (params, check_typ expected_typ (base_typ subtyp))
+	      
 	| Procedure(name, _) -> Npkcontext.error 
 	    "Firstpass.translate_exp" 
 	      ((Print_syntax_ada.name_to_string name)
-	       ^" is a procedure, function expected") in
+	       ^" is a procedure, function expected") 
+    in
     let translate_paramater param exp = 
       let subtyp = param.ptype in
       let (tr_exp, _) = translate_exp exp (Some(base_typ subtyp)) in
@@ -839,17 +841,13 @@ let translate compil_unit =
 	"wrong number of arguments"
       else 
 	List.map2 translate_paramater params exp_list
-    in (C.Call(tr_typ, fname, tr_params), ret_t)
-	 
+    in 
+      (C.Call(tr_typ, fname, tr_params), ret_t)
+       
   and translate_var name expected_typ = 
-    let trans_fun_typ tr_typ fname spec = match tr_typ with 
-      | C.Fun(tr_typ) ->
-	  translate_function_call
-	    fname tr_typ spec [] expected_typ
-      | _ -> Npkcontext.error 
-	  "Firstpass.translate_var" 
-	    ("internal error : translate type isn't "
-	     ^"a fun type") in    
+    let trans_fun_typ tr_typ fname spec = 
+      translate_function_call fname tr_typ spec [] expected_typ
+    in    
 
     (* recherche d'autres symboles respectant éventuellement
        une condition (filter).
@@ -885,12 +883,12 @@ let translate compil_unit =
 	      
 	(* un autre symbole existe ayant le bon type *)
 	| (EnumSymb(_,typ,_),_,_)::_ when (filter typ) -> true
-	| (FunSymb(_, (Function(_,[],typ)),_),_,_)::_ 
+	| (FunSymb (_, (Function(_,[],typ)), _, _),_,_)::_ 
 	    when (filter (base_typ typ)) -> true
 	    
 	(* symbole d'énumération ou de fonctions n'ayant
 	   pas le bon type *)
-	| (EnumSymb(_),_,_)::r | (FunSymb(_),_,_)::r ->  
+	| (EnumSymb(_),_,_)::r | (FunSymb _,_,_)::r ->  
 	    mem_other_symb r filter use var_masque
 	      
     in
@@ -937,8 +935,8 @@ let translate compil_unit =
 	      then raise AmbiguousTypeException 
 	      else (exp, typ)
 		
-	  | (FunSymb(fname, (Function(_,[],_) as spec), _), 
-	     tr_typ, _)::r when expected_typ=None ->
+	  | (FunSymb (fname, (Function(_,[],_) as spec), _, tr_typ), 
+	     _, _)::r when expected_typ=None ->
 	      if (mem_other_symb r (fun _ -> true) 
 		    None var_masque)
 	      then raise AmbiguousTypeException
@@ -956,8 +954,8 @@ let translate compil_unit =
 		       ^"multiple use clauses cause hiding"))
 	      else (exp, typ)
 		
-	  | (FunSymb(fname, (Function(_,[],subtyp) as spec), _), 
-	     tr_typ, _)::r 
+	  | (FunSymb (fname, (Function(_,[],subtyp) as spec), _, tr_typ), 
+	     _, _)::r 
 	      when (known_compatible_typ expected_typ
 		      (base_typ subtyp)) -> 
 	      if (mem_other_symb r 
@@ -971,7 +969,7 @@ let translate compil_unit =
 		trans_fun_typ tr_typ fname spec
 		  
 	  (* autres cas : une variable n'est plus valide *)
-	  | (EnumSymb(_),_,_)::r | (FunSymb(_),_,_)::r ->  
+	  | (EnumSymb(_),_,_)::r | (FunSymb _,_,_)::r ->  
 	      find_use r var_masque false 
 
 		
@@ -992,8 +990,8 @@ let translate compil_unit =
 	    when known_compatible_typ expected_typ typ ->
 	    (exp, typ)
 	      
-	| (FunSymb(fname, (Function(_,[],subtyp) as spec), _), 
-	    tr_typ, _)::_ 
+	| (FunSymb (fname, (Function(_,[],subtyp) as spec), _, tr_typ), 
+	    _, _)::_ 
 	    when (known_compatible_typ expected_typ 
 		    (base_typ subtyp)) -> 
 	    trans_fun_typ tr_typ fname spec
@@ -1007,8 +1005,8 @@ let translate compil_unit =
 	    then raise AmbiguousTypeException
 	    else (exp, typ)
 
-	| (FunSymb(fname, (Function(_,[],_) as spec), _), 
-	   tr_typ, _)::r when expected_typ=None ->
+	| (FunSymb (fname, (Function(_,[],_) as spec), _, tr_typ), 
+	   _, _)::r when expected_typ=None ->
 	    if (mem_other_symb r (fun _ -> true) 
 		  (Some(ident)) true)
 	    then raise AmbiguousTypeException
@@ -1016,7 +1014,7 @@ let translate compil_unit =
 		 
 	(* autres cas : type incompatible, fonction
 	   à plusieurs arguments, procedure *)
-	| (EnumSymb(_), _,_)::r | (FunSymb(_), _, _)::r -> 
+	| (EnumSymb(_), _,_)::r | (FunSymb _, _, _)::r -> 
 	    find_enum_fun r
 	       
 	| [] -> find_use (find_all_use ident) true false
@@ -1048,8 +1046,8 @@ let translate compil_unit =
 	    when known_compatible_typ expected_typ typ ->
 	    (exp, typ)
 	            
-	| (FunSymb(fname, (Function(_,[],subtyp) as spec),_), 
-	   tr_typ, _)::_ 
+	| (FunSymb (fname, (Function(_,[],subtyp) as spec), _, tr_typ), 
+	   _, _)::_ 
 	    when (known_compatible_typ expected_typ 
 		    (base_typ subtyp)) -> 
 	    trans_fun_typ tr_typ fname spec
@@ -1061,13 +1059,13 @@ let translate compil_unit =
 	    then raise AmbiguousTypeException
 	    else (exp, typ)
 	      
-	| (FunSymb(fname, (Function(_,[],_) as spec), _), 
-	   tr_typ, _)::r when expected_typ=None ->
+	| (FunSymb (fname, (Function(_,[],_) as spec), _, tr_typ), 
+	   _, _)::r when expected_typ=None ->
 	    if mem_other_symb r (fun _ -> true) None true
 	    then raise AmbiguousTypeException
 	    else trans_fun_typ tr_typ fname spec
 	      
-	| (EnumSymb(_), _,_)::r | (FunSymb(_), _, _)::r -> 
+	| (EnumSymb(_), _,_)::r | (FunSymb _, _, _)::r -> 
 	    find_enum_fun r
 	      
 	| [] -> Npkcontext.error 
@@ -1111,9 +1109,9 @@ let translate compil_unit =
 	      (exp, typ)
 	      	      
 	  (* fonction interne *)
-	  | (FunSymb(fname, 
-		     (Function(_,[],subtyp) as spec), false), 
-	     tr_typ, _)::_ 
+	  | (FunSymb (fname, 
+		     (Function(_,[],subtyp) as spec), false, tr_typ), 
+	     _, _)::_ 
 	      when (known_compatible_typ expected_typ 
 		      (base_typ subtyp)) -> 
 	      trans_fun_typ tr_typ fname spec
@@ -1127,8 +1125,8 @@ let translate compil_unit =
 	      else (exp, typ)
 
 	  (* fonction interne *)
-	  | (FunSymb(fname, (Function(_,[],_) as spec), false), 
-	      tr_typ, _)::r when expected_typ=None ->
+	  | (FunSymb (fname, (Function(_,[],_) as spec), false, tr_typ), 
+	      _, _)::r when expected_typ=None ->
 	     if mem_other_symb r (fun _ -> true) None false
 	     then raise AmbiguousTypeException
 	     else trans_fun_typ tr_typ fname spec
@@ -1182,10 +1180,9 @@ let translate compil_unit =
 	let array_or_fun = find_fun_symb name in
 	  begin
 	    match array_or_fun with 
-		(FunSymb(fname, spec, _), C.Fun(tr_typ),  _) -> 
+		(FunSymb (fname, spec, _, tr_typ), C.Fun,  _) -> 
 		  translate_function_call 
 		    fname tr_typ spec exp_list expected_typ
-		    
 	      | (VarSymb(lv, subtyp, _, _),_,_) ->  begin  
 		  
 		  let rec destroy subt = (*du plus gros vers plus petit*)
@@ -1255,12 +1252,13 @@ let translate compil_unit =
 		    let dim_types = Array.to_list (
 		      Array.sub  (Array.of_list types) 0 dim) in
 		      
-		    let tr_exp_list = List.map2 (fun x y ->
-			fst (translate_exp x y)) exp_list dim_types in
+		    let tr_exp_list = 
+		      List.map2 (fun x y ->
+				   fst (translate_exp x y)) exp_list dim_types 
+		    in
 			
-(*		     translate_exp exp expected_typ*)
-		      match (rebuild lv bk_typ tr_exp_list) 
-		      with
+		      (*		     translate_exp exp expected_typ*)
+		      match (rebuild lv bk_typ tr_exp_list) with
 			  (C.Lval (a, tpelt), adatyp) ->
 			    (C.Lval (a, tpelt),  adatyp)
 			| _ ->  Npkcontext.error "firstpass.ml:Function Call"
@@ -1466,18 +1464,20 @@ let translate compil_unit =
 		 (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)
 		 ::(translate_instr_list r)
 		   
-	   | ProcedureCall(name, args) -> begin
+	   | ProcedureCall (name, args) -> begin
 	       let array_or_fun  = find_fun_symb name in 
-		   match array_or_fun with 
-		       (FunSymb(fname, spec, _), C.Fun(tr_typ),  _) ->   
-			 let params = 
-			   match spec with 
-			     | Function(_) -> Npkcontext.error 
-				 "Firstpass.translate_instr" 
-				   ((Print_syntax_ada.name_to_string name)
-				    ^" is a function, procedure expected")
-			     | Procedure(_, params) -> params in 
-			 let tr_param param exp = match param.mode with
+		 match array_or_fun with 
+		     (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->   
+		       let params = 
+			 match spec with 
+			   | Function(_) -> Npkcontext.error 
+			       "Firstpass.translate_instr" 
+				 ((Print_syntax_ada.name_to_string name)
+				  ^" is a function, procedure expected")
+			   | Procedure(_, params) -> params 
+		       in
+		       let tr_param param exp = 
+			 match param.mode with
 			   | In -> fst (translate_exp exp 
 					  (Some(base_typ param.ptype)))
 			   | Out | InOut -> 
@@ -1492,20 +1492,21 @@ let translate compil_unit =
 				     "Firstpass.translate_instr"
 				       ("actual for out parameter"
 					^"must be a variable")
-			 in
-			 let tr_params = 
-			   if (List.length params <> List.length args) 
-			   then Npkcontext.error "Firstpass.translate_instr"
-			     "wrong number of arguments"
-			   else 
-			     List.map2
-			       tr_param
-			       params args
-			 in (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
-			    ::(translate_instr_list r)
-		     | _ -> 
-			 Npkcontext.error "Firstpass.translate_instr"
-			     "find_fun_symb did not expect this (maybe array) as an instr! " 
+		       in
+		       let tr_params = 
+			 if (List.length params <> List.length args) 
+			 then Npkcontext.error "Firstpass.translate_instr"
+			   "wrong number of arguments"
+			 else 
+			   List.map2
+			     tr_param
+			     params args
+		       in
+			 (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
+			  ::(translate_instr_list r)
+		   | _ -> 
+		       Npkcontext.error "Firstpass.translate_instr"
+			 "find_fun_symb did not expect this (maybe array) as an instr! " 
 		  
 		
 	     end	  
@@ -1576,12 +1577,12 @@ let translate compil_unit =
        let list_ident = Hashtbl.find_all symbtbl name in
 	 List.iter
 	   (fun symb -> match symb with
-	      | (FunSymb(_,_,extern'),_,_) 
+	      | (FunSymb (_,_,extern', _),_,_) 
 		  when extern'= !extern -> 
 		  Npkcontext.error "Firstpass.add_fundecl"
 		    ("conflict : "^(string_of_name name)
 		     ^" already declared")
-	      | (FunSymb(_),_,_) -> ()
+	      | (FunSymb _, _, _) -> ()
 	      | ((VarSymb(_)|NumberSymb(_)),_,_) -> 
 		  Npkcontext.error "Firstpass.add_fundecl"
 		    ("conflict : "^(string_of_name name)
@@ -1604,9 +1605,8 @@ let translate compil_unit =
       Hashtbl.add fun_decls (translate_name name)
 	(ftyp, loc, None);
       Hashtbl.add symbtbl name 
-	(FunSymb(C.Fname(translate_name name), subprogspec, 
-		 !extern),
-	 C.Fun(ftyp), loc);
+	(FunSymb (C.Fname(translate_name name), subprogspec, 
+		  !extern, ftyp), C.Fun, loc);
       ftyp
   in
 
@@ -1752,26 +1752,25 @@ let translate compil_unit =
       
 
   let add_funbody subprogspec decl_part instr_list loc =
-    
     let search_spec name = 
       let list_ident = Hashtbl.find_all symbtbl name in
 	try
 	  let symb = 
 	    (List.find
-	       (fun symb -> match symb with
-		  | (FunSymb(_,spec, false),_,_) -> 
-		      spec = subprogspec
-		  | ((FunSymb(_)|VarSymb(_)
-		     |EnumSymb(_)|NumberSymb(_)),_,_) -> false)
+	       (fun symb -> 
+		  match symb with
+		    | (FunSymb (_, spec, false, _),_,_) -> 
+			spec = subprogspec
+		    | ((FunSymb _ | VarSymb _
+		    | EnumSymb _ | NumberSymb _),_,_) -> false)
 	       list_ident)
-	  in match symb with
-	    | (FunSymb(_),C.Fun(ftyp),_) -> ftyp
-	    | _ -> Npkcontext.error 
-		"Firstpass.add_funbody.seach_spec" 
-		  "internal error : typ is not a fun typ"
-	with
-	    Not_found -> add_fundecl subprogspec loc
-	      
+	  in 
+	    match symb with
+	      | (FunSymb (_, _, _, ftyp), C.Fun, _) -> ftyp
+	      | _ -> 
+		  Npkcontext.error "Firstpass.add_funbody.seach_spec" 
+		    "internal error : typ is not a fun typ"
+	with Not_found -> add_fundecl subprogspec loc
     in
     let name = match subprogspec with
       | Function(name, _, _) -> name

@@ -130,19 +130,13 @@ let translate (globals, spec) =
 
   let add_formals (args_t, ret_t) =
     let ret_id = add_var (ret_t, ret_name) in
-    let args_id = 
-      match args_t with
-	  None -> []
-	| Some args_t -> List.map add_var args_t 
-    in
+    let args_id = List.map add_var args_t in
       (ret_id, args_id)
   in
     
   let remove_formals (args_t, _) =
     remove_symb ret_name;
-    match args_t with
-	None -> ()
-      | Some args_t -> List.iter (fun (_, x) -> remove_symb x) args_t
+    List.iter (fun (_, x) -> remove_symb x) args_t
   in
 
   let find_symb x = 
@@ -240,10 +234,6 @@ let translate (globals, spec) =
   in
 
   let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, Some body) in
-
-  let update_fundef f ft loc =
-    if not (Hashtbl.mem fundefs f) then Hashtbl.add fundefs f (ft, loc, None)
-  in
 
   let translate_lbl lbl =
     try Hashtbl.find lbl_tbl lbl
@@ -608,7 +598,7 @@ let translate (globals, spec) =
 	  let args_t = refine_args_t tmp_args_t args in
 	    (* TODO: translate_funtyp should not take a Some args_t?? *)
 	  let args = translate_args args args_t in
-	  let ft' = translate_ftyp (Some args_t, ret_t) in
+	  let ft' = translate_ftyp (args_t, ret_t) in
 	    (* TODO: update_funtyp should not take a Some args_t?? *)
 	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t);
 	    (C.Call (ft', C.Fname f, args), ret_t)
@@ -624,38 +614,9 @@ let translate (globals, spec) =
 	  in
 	  let args_t = refine_args_t args_t args in
 	  let args = translate_args args args_t in
-	  let ft' = translate_ftyp (Some args_t, ret_t) in
+	  let ft' = translate_ftyp (args_t, ret_t) in
 	    (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
 	      
-
-(* TODO:
-    let (lv, (args_t, ret_t)) = 
-      match t with
-	  Ptr (Fun ft) ->
-	    let t = translate_typ t in
-	      (C.Deref (C.Lval (lv, t), t), ft)
-	| Fun ft -> (lv, ft)
-	| _ ->
-	    Npkcontext.error "Firstpass.translate_exp" 
-	      "function type expected"
-    in
-    let args_t =
-      match args_t with
-	  None -> 
-	| Some args_t -> args_t
-    in
-    let ft' = translate_ftyp (Some args_t, ret_t) in
-*)
-(* TODO:
-    let f = 
-      match lv with
-	  C.Global f -> C.Fname f
-	| C.Deref (e, _) -> C.FunDeref (e, ft')
-	| _ -> 
-	    Npkcontext.error "Firstpass.translate_exp" 
-	      "functional expression expected"
-    in
-*)
       
   and deref (e, t) =
     match t with
@@ -807,7 +768,9 @@ let translate (globals, spec) =
 	Void -> C.Void
       | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
 	  C.Scalar (translate_scalar_typ t)
-      | Fun ft -> C.Fun (translate_ftyp ft)
+(* TODO: maybe just the compilation of Fun Ptr is enough? try it out *)
+      | Fun _ -> C.Fun
+(*(translate_ftyp ft)*)
       | Array (t, len) -> 
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
@@ -846,16 +809,7 @@ let translate (globals, spec) =
 (* TODO: here args, should not be an option *)
   and translate_ftyp (args, ret) =
     let translate_arg (t, _) = translate_typ t in
-    let args =
-      match args with
-	  None ->
-(* TODO: use this instead, otherwise, translation incorrect *) 
-(* TODO: TODO: TODO: TODO: *)
-(*	    Npkcontext.error "Firstpass.translate_ftyp" 
-	      "incomplete function type"*)
-	      []
-	| Some args -> List.map translate_arg args
-    in
+    let args = List.map translate_arg args in
     let ret = translate_typ ret in
       (args, ret)
 
@@ -1159,21 +1113,27 @@ let translate (globals, spec) =
       in
 	Hashtbl.replace symbtbl f (symb, Fun (args_t, ret_t))
 
-
   and update_funsymb f static ct loc =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
     let _ =
-      try update_funtyp f ct 
+(* TODO: maybe ct here too, may be simplified so that args_t is not an option!*)
+      try update_funtyp f ct
       with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun ct)
     in
-      update_fundef f (translate_ftyp ct) loc;
-      f'
+      match ct with
+	  (Some args_t, ret_t) -> 
+	    if not (Hashtbl.mem fundefs f) then begin
+	      let ft = translate_ftyp (args_t, ret_t) in
+		Hashtbl.add fundefs f (ft, loc, None);
+	    end;
+	    f'
+	| _ -> f'
 
   and translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
       Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
-	("incomplete prototype for function "^f);
+	("incomplete prototype for function "^f)
     end;
     let _ = update_funsymb f static (args, ret) loc in
       ()
@@ -1325,12 +1285,13 @@ let translate (globals, spec) =
     match x with
 	FunctionDef (f, Fun (args_t, ret_t), static, body) ->
 	  current_fun := f;
-	  let ft = 
+	  let args_t = 
 	    match args_t with
-		None -> (Some [], ret_t)
-	      | _ -> (args_t, ret_t)
+		None -> []
+	      | Some args_t -> args_t
 	  in
-	  let f' = update_funsymb f static ft loc in
+	  let f' = update_funsymb f static (Some args_t, ret_t) loc in
+	  let ft = (args_t, ret_t) in
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in

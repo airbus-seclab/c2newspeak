@@ -58,7 +58,7 @@ and typ =
    merge them as a Region *)
     | Struct of (field list * int)
     | Union of (field list * int)
-    | Fun of ftyp
+    | Fun
 
 and ftyp = typ list * typ
 
@@ -120,10 +120,7 @@ let rec string_of_typ t =
     | Array (t, sz) -> (string_of_typ t^"["^(Npkil.string_of_tmp_size sz)^"]")
     | Struct _ -> "{}"
     | Union _ -> "{}"
-    | Fun (args, ret) -> 
-	let args = List_utils.to_string string_of_typ ", " args in
-	let ret = string_of_typ ret in
-	  args^" -> "^ret
+    | Fun -> "fun"
 
 let rec string_of_exp margin e =
   match e with
@@ -205,7 +202,7 @@ let rec size_of t =
 	  then Npkcontext.error "Cir.size_of" "invalid size for array";
 	  sz * n
     | Struct (_, n) | Union (_, n) -> n
-    | Fun _ -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
+    | Fun -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
     | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
     | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
 
@@ -564,7 +561,7 @@ let cast (e, t) t' =
   match (t, e, t') with
     | _ when t = t' -> e
 	(* TODO: this should be probably put in firstpass *)
-    | (Fun _, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
+    | (Fun, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
 	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
     | (_, Const (CInt i), Scalar (Int k))
 	when Newspeak.belongs i (Newspeak.domain_of_typ k) -> e
@@ -588,7 +585,6 @@ let rec is_subtyp t1 t2 =
 	try (n1 = n2) && (List.for_all2 is_subfield f1 f2)
 	with Invalid_argument _ -> false
       end
-    | (Fun f1, Fun f2) -> is_subftyp f1 f2
     | _ -> t1 = t2
 
 and is_sublen l1 l2 =
