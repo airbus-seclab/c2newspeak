@@ -166,6 +166,8 @@ let rec normalize_bexp e =
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
     | Set _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, normalize_bexp e)
+    | IfExp (c, e1, e2) -> 
+	IfExp (normalize_bexp c, normalize_bexp e1, normalize_bexp e2)
     | _ -> e
 %}
 
@@ -384,36 +386,36 @@ asm_statement:
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
-// but then it wouldn't be possible to issue warnings
+// but there should be another way to issue warnings
 iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
-      statement                            { ($3, $5, $8, $6) }
+      statement                            { ($3, normalize_bexp $5, $8, $6) }
 | FOR LPAREN SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	([], $4, $7, $5) 
+	([], normalize_bexp $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	($3, $5, [], $7) 
+	($3, normalize_bexp $5, [], $7) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	([], $4, $6, []) 
+	([], normalize_bexp $4, $6, []) 
       }
-| WHILE LPAREN expression RPAREN statement { ([], $3, $5, []) }
+| WHILE LPAREN expression RPAREN statement { ([], normalize_bexp $3, $5, []) }
 | DO statement
-  WHILE LPAREN expression RPAREN SEMICOLON { ($2, $5, $2, []) }
+  WHILE LPAREN expression RPAREN SEMICOLON { ($2, normalize_bexp $5, $2, []) }
 ;;
 
 expression_statement:

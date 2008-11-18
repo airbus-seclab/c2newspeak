@@ -53,13 +53,6 @@ let next_aligned o x =
   let m = o mod x in
     if m = 0 then o else o + (x - m)
 
-let rec simplify_bexp e =
-  match e with
-      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
-    | Unop (Not, e) -> Unop (Not, simplify_bexp e)
-    | _ -> e
-
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
 let seq_of_string str =
@@ -1043,8 +1036,6 @@ let translate (globals, spec) =
 	| Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> blk1
 	| Cst (C.CInt _, _) -> blk2
 	| _ -> 
-(* TODO: remove function simplify_bexp, already in parser.mly? *)
-	    let e = simplify_bexp e in
 	    let (e, _) = translate_exp e in
 	      (C.If (e, blk1, blk2), loc)::[]
     in
