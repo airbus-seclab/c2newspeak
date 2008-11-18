@@ -1,1 +1,1 @@
-Fatal error: previous definition of A does not match in 182.c line 33
+Fatal error: function type expected in 182.c line 33

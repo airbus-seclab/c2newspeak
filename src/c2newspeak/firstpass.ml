@@ -23,6 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: get in a first pass the type of all functions 
+   no type inference at function call
+   no refinment of function argument types other than None, Some args -> args
+*)
+
 (* TODO: should rename firstpass to semantic ??? see compiler Appel book *)
 open Csyntax
 module C = Cir
@@ -572,15 +577,12 @@ let translate (globals, spec) =
       | Some args_t -> args_t
 
   and translate_call (f, args) =
-(* TODO: find a way to clean this up?? factor some code?? *)      
     match f with
 	Var x when is_fname x -> 
 	  let (f, (tmp_args_t, ret_t)) = find_fname x in
 	  let args_t = refine_args_t tmp_args_t args in
-	    (* TODO: translate_funtyp should not take a Some args_t?? *)
 	  let args = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
-	    (* TODO: update_funtyp should not take a Some args_t?? *)
 	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t);
 	    (C.Call (ft', C.Fname f, args), ret_t)
 	      
@@ -750,9 +752,7 @@ let translate (globals, spec) =
 	Void -> C.Void
       | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
 	  C.Scalar (translate_scalar_typ t)
-(* TODO: maybe just the compilation of Fun Ptr is enough? try it out *)
       | Fun _ -> C.Fun
-(*(translate_ftyp ft)*)
       | Array (t, len) -> 
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
@@ -788,7 +788,6 @@ let translate (globals, spec) =
 	    end;
 	    Some i
 
-(* TODO: here args, should not be an option *)
   and translate_ftyp (args, ret) =
     let translate_arg (t, _) = translate_typ t in
     let args = List.map translate_arg args in
@@ -1060,46 +1059,26 @@ let translate (globals, spec) =
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
-
-  and update_funtyp f ct =
-    let (args_t, ret_t) = ct in
-    let (symb, ct') = Hashtbl.find symbtbl f in
-    let (args_t', ret_t') = 
-      match ct' with
-	  Fun t -> t
-	| _ -> 
-	    Npkcontext.error "Firstpass.update_funtyp" 
-	      ("previous definition of "^f^" does not match")
-    in
-      if (ret_t <> ret_t') then begin
-	Npkcontext.error "Firstpass.update_funtyp"
-	  ("different return types for function "^f)
-      end;
-      let args_t =
-	match (args_t, args_t') with
-	    (None, args_t) | (args_t, None) -> args_t
-	  | (Some args_t, Some args_t') -> 
-	      if (List.map fst args_t) <> (List.map fst args_t') then begin
-		Npkcontext.error "Firstpass.update_funtyp"
-		  ("different argument types for function "^f)
-	      end;
-	      Some args_t
-      in
-	Hashtbl.replace symbtbl f (symb, Fun (args_t, ret_t))
+(* TODO: all this is not good, think about it
+   min_ftp should be done in Cir?? *)
+  and update_funtyp f ft1 =
+    let (symb, t) = Hashtbl.find symbtbl f in
+    let ft2 = Csyntax.ftyp_of_typ t in
+    let ft = Csyntax.min_ftyp ft1 ft2 in
+      Hashtbl.replace symbtbl f (symb, Fun ft)
 
   and update_funsymb f static ct loc =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
     let _ =
-(* TODO: maybe ct here too, may be simplified so that args_t is not an option!*)
       try update_funtyp f ct
       with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun ct)
     in
       match ct with
 	  (Some args_t, ret_t) -> 
-	    if not (Hashtbl.mem fundefs f) then begin
+	    if not (Hashtbl.mem fundefs f') then begin
 	      let ft = translate_ftyp (args_t, ret_t) in
-		Hashtbl.add fundefs f (ft, loc, None);
+		Hashtbl.add fundefs f' (ft, loc, None);
 	    end;
 	    f'
 	| _ -> f'
