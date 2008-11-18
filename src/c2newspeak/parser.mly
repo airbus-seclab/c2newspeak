@@ -164,7 +164,7 @@ let apply_attrs attrs t =
 let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | SetOp _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Set _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, normalize_bexp e)
     | _ -> e
 %}
@@ -620,9 +620,9 @@ expression:
 assignment_expression:
   conditional_expression                   { $1 }
 | unary_expression 
-  EQ assignment_expression                 { Set ($1, $3) }
+  EQ assignment_expression                 { Set ($1, None, $3) }
 | unary_expression assignment_operator
-  assignment_expression                    { SetOp ($1, $2, $3) }
+  assignment_expression                    { Set ($1, Some $2, $3) }
 | EXTENSION 
   LPAREN assignment_expression RPAREN      { $3 }
 ;;

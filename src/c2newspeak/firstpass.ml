@@ -56,7 +56,7 @@ let next_aligned o x =
 let rec simplify_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | SetOp _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Set _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, simplify_bexp e)
     | _ -> e
 
@@ -377,7 +377,6 @@ let translate (globals, spec) =
 	      "this type of zero initialization not implemented yet"
     in
     let t = translate 0 t x in
-      (* TODO: find a way to remove this List.rev, optimize *)
       (List.rev !res, t)
   
   and translate_glb_init t x =
@@ -433,8 +432,8 @@ let translate (globals, spec) =
 
       | OpExp (op, lv, is_after) ->
 	  let loc = Npkcontext.get_loc () in
-	  let e = Binop (op, lv, Cst (C.CInt (Nat.of_int 1), int_typ)) in
-	  let (incr, t) = translate_set (lv, e) in
+	  let e = Cst (C.CInt (Nat.of_int 1), int_typ) in
+	  let (incr, t) = translate_set (lv, Some op, e) in
 	  let (lv, _, _) = incr in
 	    (C.Stmt_lv ((C.Set incr, loc), lv, is_after), t)
 
@@ -522,8 +521,8 @@ let translate (globals, spec) =
 		   e1 gets translated twice!! *)
 	      let (_, t) = translate_exp e1 in
 	      let (x, decl, v) = gen_tmp loc t in
-	      let blk1 = (Exp (Set (Var x, e1)), loc)::[] in
-	      let blk2 = (Exp (Set (Var x, e2)), loc)::[] in
+	      let blk1 = (Exp (Set (Var x, None, e1)), loc)::[] in
+	      let blk2 = (Exp (Set (Var x, None, e2)), loc)::[] in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
 		remove_symb x;
@@ -545,23 +544,12 @@ let translate (globals, spec) =
 	      (e, t)
 		
 	| Call f -> translate_call f
-		
-	(* TODO: should find a way to put this and SetOp together!! *)
+				
 	| Set set ->
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
 	      "assignment within expression" Npkcontext.DirtySyntax;
 	    let loc = Npkcontext.get_loc () in
 	    let (set, t) = translate_set set in
-	    let (lv, t', _) = set in
-	    let e = C.Lval (lv, t') in
-	      (C.Pref ((C.Set set, loc)::[], e), t)
-		
-	| SetOp set ->
-	    (* TODO: should factor this code with Set!! *)
-	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
-	      "assignment within expression" Npkcontext.DirtySyntax;
-	    let loc = Npkcontext.get_loc () in
-	    let (set, t) = translate_set_op set in
 	    let (lv', t', _) = set in
 	    let e = C.Lval (lv', t') in
 	      (C.Pref ((C.Set set, loc)::[], e), t)
@@ -627,15 +615,16 @@ let translate (globals, spec) =
    with AddrOf and put it in here *)
   and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
 
-  and translate_set (lv, e) =
-    let (lv, t) = translate_lv lv in
-    let e = cast (translate_exp e) t in
-      ((lv, translate_typ t, e), t)
-
-  and translate_set_op (lv, op, e) = 
+  and translate_set (lv, op, e) =
     let (lv', t) = translate_lv lv in
-    let (_, lv', _) = C.normalize_lv lv' in
-    let e = Binop (op, lv, e) in
+    let (lv', e) =
+      match op with
+	  None -> (lv', e)
+	| Some op -> 
+	    let (_, lv', _) = C.normalize_lv lv' in
+	    let e = Binop (op, lv, e) in
+	      (lv', e)
+    in
     let e = cast (translate_exp e) t in
     let t' = translate_typ t in
     let set = (lv', t', e) in
@@ -943,20 +932,12 @@ let translate (globals, spec) =
 
   and translate_stmt_exp loc e =
     match e with
-      | Set (lv, IfExp (c, e1, e2)) -> 
-	  translate_stmt_exp loc (IfExp (c, Set (lv, e1), Set (lv, e2)))
+	Set (lv, op, IfExp (c, e1, e2)) ->
+	  let e = IfExp (c, Set (lv, op, e1), Set (lv, op, e2)) in
+	    translate_stmt_exp loc e
 
-      | SetOp (lv, op, IfExp (c, e1, e2)) ->
-	  let e = IfExp (c, SetOp (lv, op, e1), SetOp (lv, op, e2)) in
-	  translate_stmt_exp loc e
-
-(* TODO: should factor this case with SetOp!! *)
       | Set set -> 
 	  let (set, _) = translate_set set in
-	    (C.Set set, loc)::[]
-	  
-      | SetOp set ->
-	  let (set, _) = translate_set_op set in
 	    (C.Set set, loc)::[]
 
       | Cast (e, Void) -> 
@@ -986,7 +967,8 @@ let translate (globals, spec) =
       | Return None -> (C.Goto ret_lbl, loc)::[]
 
       | Return (Some e) ->
-	  let set = (Exp (Set (Var ret_name, e)), loc) in
+(* TODO: put this in parser already?? *)
+	  let set = (Exp (Set (Var ret_name, None, e)), loc) in
 	  let return = (Return None, loc) in
 	    translate_blk (set::return::[])
 
@@ -1061,6 +1043,7 @@ let translate (globals, spec) =
 	| Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> blk1
 	| Cst (C.CInt _, _) -> blk2
 	| _ -> 
+(* TODO: remove function simplify_bexp, already in parser.mly? *)
 	    let e = simplify_bexp e in
 	    let (e, _) = translate_exp e in
 	      (C.If (e, blk1, blk2), loc)::[]

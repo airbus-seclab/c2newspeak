@@ -113,8 +113,8 @@ and exp =
     | SizeofE of exp
     | Str of string
     | Cast of (exp * typ)
-    | Set of (exp * exp)
-    | SetOp of (exp * binop * exp)
+(* None is a regular assignment *)
+    | Set of (exp * binop option * exp)
 (* boolean is true if the operation is appled after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
@@ -268,7 +268,6 @@ and string_of_exp e =
     | Str _ -> "Str"
     | Cast _ -> "Cast"
     | Set _ -> "Set"
-    | SetOp _ -> "SetOp"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
 
