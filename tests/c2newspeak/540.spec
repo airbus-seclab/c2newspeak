@@ -1,5 +1,4 @@
 Warning: incomplete prototype for function f in 540.c line 26
-Warning: unknown arguments type at function call accepted in 540.c line 30
 Newspeak output
 ---------------
 540.c

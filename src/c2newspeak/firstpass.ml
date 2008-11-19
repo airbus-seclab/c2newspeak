@@ -187,7 +187,10 @@ let translate (globals, spec) =
   let find_fname x =
     let (v, t) = find_symb x in
       match (v, t) with
-	  (FunSymb f, Fun t) -> (f, t)
+	  (FunSymb f, Fun (Some args_t, ret_t)) -> (f, (args_t, ret_t))
+	| (FunSymb _, Fun _) -> 
+	    Npkcontext.error "Firstpass.find_fname"
+	      "unknown arguments type at function call"
 	| _ -> raise Not_found
   in
 
@@ -562,7 +565,8 @@ let translate (globals, spec) =
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t)
 	| v -> v
-	    
+
+(* TODO: remove this function *)	    
   and refine_args_t args_t args =
     match args_t with
 	None -> 
@@ -579,11 +583,9 @@ let translate (globals, spec) =
   and translate_call (f, args) =
     match f with
 	Var x when is_fname x -> 
-	  let (f, (tmp_args_t, ret_t)) = find_fname x in
-	  let args_t = refine_args_t tmp_args_t args in
+	  let (f, (args_t, ret_t)) = find_fname x in
 	  let args = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
-	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t);
 	    (C.Call (ft', C.Fname f, args), ret_t)
 	      
       | Deref e | e -> 
@@ -1236,15 +1238,9 @@ let translate (globals, spec) =
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (f, Fun (args_t, ret_t), static, body) ->
+	FunctionDef (f, _, _, body) ->
 	  current_fun := f;
-	  let args_t = 
-	    match args_t with
-		None -> []
-	      | Some args_t -> args_t
-	  in
-	  let f' = update_funsymb f static (Some args_t, ret_t) loc in
-	  let ft = (args_t, ret_t) in
+	  let (f', ft) = find_fname f in
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
@@ -1253,29 +1249,19 @@ let translate (globals, spec) =
 	    current_fun := "";
 	    Hashtbl.clear lbl_tbl;
 	    lbl_cnt := default_lbl
-
-      | FunctionDef _ -> 
-	  Npkcontext.error "Firstpass.translate_global" 
-	    "function type expected"
-
+	      
 (* TODO: put this check in parser ?? *)
       | GlbVDecl (_, _, _, extern, Some _) when extern -> 
 	  Npkcontext.error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
  
-      | GlbVDecl (x, t, static, extern, init) ->
-	  begin match (t, init) with
-	      (Fun ft, None) -> translate_proto_ftyp x static ft loc
+      | GlbVDecl (_, Fun _, _, _, _) -> ()
 
-	    | (Fun _, Some _) -> 
-		Npkcontext.error "Firstpass.translate_global"
-		  ("unexpected initialization of function "^x)
-	    | _ -> 
-		let (t, init) = translate_glb_init t init in
-		let init = if extern then None else Some init in
-		  if static then add_static x loc (t, init)
-		  else add_global x loc (t, init)
-	  end
+      | GlbVDecl (x, t, static, extern, init) ->
+	  let (t, init) = translate_glb_init t init in
+	  let init = if extern then None else Some init in
+	    if static then add_static x loc (t, init)
+	    else add_global x loc (t, init)
 
       | GlbEDecl _ | GlbCDecl _ -> ()
   in
@@ -1316,8 +1302,41 @@ let translate (globals, spec) =
     end
   in
 
+  let collect_funtyps (x, loc) =
+    Npkcontext.set_loc loc;
+    match x with
+	FunctionDef (f, Fun (args_t, ret_t), static, _) ->
+	  let args_t = 
+	    match args_t with
+		None -> []
+	      | Some args_t -> args_t
+	  in
+(* TODO: maybe update_funsymb should not return anything
+   TODO: update of a function type should be easy (None, Some)
+   TODO: there shouldn't be any type inference at all
+   TODO: print a warning for forwar declaractions with dirty_syntax, they are
+   not nice!
+*)
+	  let _ = update_funsymb f static (Some args_t, ret_t) loc in
+	    ()
+
+      | FunctionDef _ -> 
+	  Npkcontext.error "Firstpass.translate_global" 
+	    "function type expected"
+
+      | GlbVDecl (f, Fun ft, static, _, None) -> 
+	  translate_proto_ftyp f static ft loc
+
+      | GlbVDecl (f, Fun _, _, _, Some _) -> 
+	  Npkcontext.error "Firstpass.translate_global"
+	    ("unexpected initialization of function "^f)
+
+      | _ -> ()
+  in
+
 (* TODO: a tad inefficient *)
     List.iter collect_glb_structdefs globals;
+    List.iter collect_funtyps globals;
     List.iter translate_global globals;
     Hashtbl.iter add_glbdecl used_globals;
     let spec = List.map (List.map translate_token) spec in
