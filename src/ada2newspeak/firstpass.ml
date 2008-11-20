@@ -1602,8 +1602,6 @@ let translate compil_unit =
     let (name, ftyp) = translate_sub_program_spec subprogspec
     in
       check_ident name;
-      Hashtbl.add fun_decls (translate_name name)
-	(ftyp, loc, None);
       Hashtbl.add symbtbl name 
 	(FunSymb (C.Fname(translate_name name), subprogspec, 
 		  !extern, ftyp), C.Fun, loc);
@@ -1780,9 +1778,9 @@ let translate compil_unit =
     and (params, vids) = add_params subprogspec loc
     and body_decl = translate_declarative_part decl_part
     and body = translate_instr_list instr_list in 
-    let body_lbl = Some (vids, (C.Block (body_decl@body, 
-					 Some (ret_lbl,[])), 
-				loc)::[]) 
+    let body_lbl = (vids, (C.Block (body_decl@body, 
+				    Some (ret_lbl,[])), 
+			   loc)::[]) 
     in
       remove_formals params;
       remove_declarative_part decl_part;

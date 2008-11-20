@@ -23,11 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: get in a first pass the type of all functions 
-   no type inference at function call
-   no refinment of function argument types other than None, Some args -> args
-*)
-
 (* TODO: should rename firstpass to semantic ??? see compiler Appel book *)
 open Csyntax
 module C = Cir
@@ -234,7 +229,7 @@ let translate (globals, spec) =
     Hashtbl.add symbtbl x (EnumSymb i, int_typ)
   in
 
-  let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, Some body) in
+  let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, body) in
 
   let translate_lbl lbl =
     try Hashtbl.find lbl_tbl lbl
@@ -1304,9 +1299,6 @@ let translate (globals, spec) =
 		None -> []
 	      | Some args_t -> args_t
 	  in
-(* 
-   TODO: do not put the None functions in cir!!!!!!!!!!!!!!!!
-*)
 	    update_funsymb f static (Some args_t, ret_t) loc
 
       | FunctionDef _ -> 

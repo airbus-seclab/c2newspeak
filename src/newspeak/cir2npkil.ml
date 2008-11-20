@@ -342,20 +342,17 @@ let translate (cglbdecls, cfundefs, specs) fnames =
       Hashtbl.add glbdecls x (t, loc, init, false)
   in
 
-  let translate_fundef f ((args, t), _, body) =
-    match body with
-	None -> ()
-      | Some ((ret_id, args_id), body) -> 
-	  (* push return value *)
-	  push ret_id;
-	  (* push arguments *)
-	  List.iter push args_id;
-	  let body = Cir.normalize body in
-	  let body = translate_blk body in
-	    List.iter pop args_id;
-	    pop ret_id;
-	    let ft = translate_ftyp (args, t) in
-	      Hashtbl.add fundefs f (ft, body)
+  let translate_fundef f ((args, t), _, ((ret_id, args_id), body)) =
+    (* push return value *)
+    push ret_id;
+    (* push arguments *)
+    List.iter push args_id;
+    let body = Cir.normalize body in
+    let body = translate_blk body in
+      List.iter pop args_id;
+      pop ret_id;
+      let ft = translate_ftyp (args, t) in
+	Hashtbl.add fundefs f (ft, body)
   in
 
   let flag_glb x =

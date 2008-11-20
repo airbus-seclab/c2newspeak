@@ -34,7 +34,7 @@ and init = (int * scalar_t * exp) list option
 (** field's name, offset and typ *)
 and field = (string * (int * typ))
 
-and fundefs = (string, (ftyp * Newspeak.location * funbody option)) Hashtbl.t
+and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
 
 and funbody = ((vid * vid list) * blk)
 

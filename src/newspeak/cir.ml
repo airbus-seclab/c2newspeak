@@ -44,7 +44,7 @@ and init = (int * scalar_t * exp) list option
 and field = (string * (int * typ))
 
 (* TODO: remove location, unused! *)
-and fundefs = (string, (ftyp * Newspeak.location * funbody option)) Hashtbl.t
+and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
 
 and funbody = ((vid * vid list) * blk)
 
