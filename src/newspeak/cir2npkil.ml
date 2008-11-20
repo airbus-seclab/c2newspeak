@@ -130,14 +130,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  let lv = translate_lv lv in
 	    K.Lval (lv, translate_scalar t)
 
-      | AddrOf (Global f, Fun) -> 
-	  let (ft, _, _) = 
-	    try Hashtbl.find cfundefs f 
-	    with Not_found -> 
-	      Npkcontext.error "Cir2npkil.translate_exp" 
-		("incomplete type for function "^f)
-	  in
-	    K.AddrOfFun (f, translate_ftyp ft)
+      | AddrOfFun (f, ft) -> K.AddrOfFun (f, translate_ftyp ft)
 
       | AddrOf (lv, Array (elt_t, len)) ->
 (* TODO: put use of length_of_array in firstpass!!! *)

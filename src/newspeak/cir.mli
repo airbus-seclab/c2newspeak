@@ -87,6 +87,7 @@ and exp =
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
+    | AddrOfFun of (string * ftyp)
     | Unop of (Npkil.unop * exp)
     | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)

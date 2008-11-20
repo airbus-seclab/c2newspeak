@@ -100,6 +100,7 @@ and exp =
     | Const of cst
     | Lval of typ_lv
     | AddrOf of typ_lv
+    | AddrOfFun of (string * ftyp)
     | Unop of (Npkil.unop * exp)
     | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
@@ -122,12 +123,18 @@ let rec string_of_typ t =
     | Union _ -> "{}"
     | Fun -> "fun"
 
+let string_of_ftyp (args_t, ret_t) =
+  let args_t = List_utils.to_string string_of_typ ", " args_t in
+  let ret_t = string_of_typ ret_t in
+    "("^args_t^") -> "^ret_t
+
 let rec string_of_exp margin e =
   match e with
       Const (CInt i) -> Big_int.string_of_big_int (Nat.to_big_int i)
     | Const _ -> "cst"
     | Lval (lv, _) -> string_of_lv margin lv
     | AddrOf (lv, t) -> "&("^(string_of_lv margin lv)^")_"^(string_of_typ t)
+    | AddrOfFun (f, ft) -> "&("^f^")_"^(string_of_ftyp ft)
     | Unop (op, e) -> (Npkil.string_of_unop op)^"("^(string_of_exp margin e)^")"
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1)
@@ -244,6 +251,7 @@ let rec normalize_exp x =
     | AddrOf (lv, t) -> 
 	let (pref, lv, post) = normalize_lv lv in
 	  (pref, AddrOf (lv, t), post)
+    | AddrOfFun (f, ft) -> ([], AddrOfFun (f, ft), [])
     | Unop (op, e) ->
 	let (pref, e, post) = normalize_exp e in
 	  (pref, Unop (op, e), post)

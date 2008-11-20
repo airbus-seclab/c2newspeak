@@ -566,20 +566,6 @@ let translate (globals, spec) =
 	      (e, Ptr t)
 	| v -> v
 
-(* TODO: remove this function *)	    
-  and refine_args_t args_t args =
-    match args_t with
-	None -> 
-	  Npkcontext.report_accept_warning "Firstpass.refine_args_t"
-	    "unknown arguments type at function call" 
-	    Npkcontext.PartialFunTyp;
-	  let infer_typ i e =
-	    let (_, t) = translate_exp e in
-	      (t, "arg"^(string_of_int i))
-	  in
-	    List_utils.mapi infer_typ args
-      | Some args_t -> args_t
-
   and translate_call (f, args) =
     match f with
 	Var x when is_fname x -> 
@@ -594,10 +580,19 @@ let translate (globals, spec) =
 	    match t with
 		Ptr (Fun t) -> t
 	      | _ -> 
+(* TODO: change function error to report_error in Npkcontext!! *)
 		  Npkcontext.error "Firstpass.translate_call"
 		    "function pointer expected"
 	  in
-	  let args_t = refine_args_t args_t args in
+	  let args_t = 
+	    match args_t with
+		None -> 
+		  Npkcontext.report_accept_warning "Firstpass.refine_args_t"
+		    ("unknown arguments type at function call"
+		     ^", did you mean void?") Npkcontext.PartialFunTyp;
+		  []
+	      | Some args_t -> args_t
+	  in
 	  let args = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
 	    (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
@@ -610,7 +605,16 @@ let translate (globals, spec) =
 	    
 (* TODO: code cleanup: get rid of call to length_of_array in cir2npkil 
    with AddrOf and put it in here *)
-  and addr_of (e, t) = (C.AddrOf (e, translate_typ t), Ptr t)
+  and addr_of (e, t) = 
+    let e =
+      match (e, t) with
+	  (C.Global f, Fun (Some args_t, ret_t)) -> 
+	    C.AddrOfFun (f, translate_ftyp (args_t, ret_t))
+	| (_, Fun (None, _)) -> 
+	    Npkcontext.error "Firstpass.addr_of" "incomplete type for function"
+	| _ -> C.AddrOf (e, translate_typ t)
+    in
+      (e, Ptr t)
 
   and translate_set (lv, op, e) =
     let (lv', t) = translate_lv lv in
@@ -1061,37 +1065,26 @@ let translate (globals, spec) =
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
-(* TODO: all this is not good, think about it
-   min_ftp should be done in Cir?? *)
-  and update_funtyp f ft1 =
-    let (symb, t) = Hashtbl.find symbtbl f in
-    let ft2 = Csyntax.ftyp_of_typ t in
-    let ft = Csyntax.min_ftyp ft1 ft2 in
-      Hashtbl.replace symbtbl f (symb, Fun ft)
-
-  and update_funsymb f static ct loc =
+  and update_funsymb f static (args_t, ret_t) loc =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
-    let _ =
-      try update_funtyp f ct
-      with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun ct)
-    in
-      match ct with
-	  (Some args_t, ret_t) -> 
-	    if not (Hashtbl.mem fundefs f') then begin
-	      let ft = translate_ftyp (args_t, ret_t) in
-		Hashtbl.add fundefs f' (ft, loc, None);
-	    end;
-	    f'
-	| _ -> f'
+      try 
+	let (symb, t) = Hashtbl.find symbtbl f in
+	let (args_t', _) = Csyntax.ftyp_of_typ t in
+	let args_t = 
+	  match (args_t, args_t') with
+	      (None, _) -> args_t'
+	    | _ -> args_t
+	in
+	  Hashtbl.replace symbtbl f (symb, Fun (args_t, ret_t))
+      with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun (args_t, ret_t))
 
   and translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
       Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
-    let _ = update_funsymb f static (args, ret) loc in
-      ()
+    update_funsymb f static (args, ret) loc
 
   and normalize_binop op (e1, t1) (e2, t2) =
     match (op, t1, t2) with
@@ -1311,14 +1304,10 @@ let translate (globals, spec) =
 		None -> []
 	      | Some args_t -> args_t
 	  in
-(* TODO: maybe update_funsymb should not return anything
-   TODO: update of a function type should be easy (None, Some)
-   TODO: there shouldn't be any type inference at all
-   TODO: print a warning for forwar declaractions with dirty_syntax, they are
-   not nice!
+(* 
+   TODO: do not put the None functions in cir!!!!!!!!!!!!!!!!
 *)
-	  let _ = update_funsymb f static (Some args_t, ret_t) loc in
-	    ()
+	    update_funsymb f static (Some args_t, ret_t) loc
 
       | FunctionDef _ -> 
 	  Npkcontext.error "Firstpass.translate_global" 

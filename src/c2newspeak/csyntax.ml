@@ -280,31 +280,6 @@ let string_of_ftyp (args_t, _) =
   in
     "("^args^") -> ret_t"
 
-
-let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
-  let equals (t1, _) (t2, _) =
-    match (t1, t2) with
-      | (Ptr Fun _, Ptr Fun _) -> true
-      | (Ptr _, Ptr _) -> true
-      | _ -> t1 = t2
-  in
-  let args_t =
-    match (args_t1, args_t2) with
-	(None, args_t) | (args_t, None) -> args_t
-      | (Some args_t1, Some args_t2) ->
-	  if not (List.for_all2 equals args_t1 args_t2) then begin
-	    Npkcontext.error "Csyntax.min_ftyp" 
-	      "different argument types for function"
-	  end;
-	  Some args_t1
-  in
-  if (ret_t1 <> ret_t2) then begin
-    Npkcontext.error "Csyntax.min_ftyp" "different return types for function"
-  end;
-    (args_t, ret_t1)
-
-  
-
 let ftyp_of_typ t =
   match t with
       Fun t -> t
