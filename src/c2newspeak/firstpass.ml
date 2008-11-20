@@ -182,11 +182,8 @@ let translate (globals, spec) =
   let find_fname x =
     let (v, t) = find_symb x in
       match (v, t) with
-	  (FunSymb f, Fun (Some args_t, ret_t)) -> (f, (args_t, ret_t))
-	| (FunSymb _, Fun _) -> 
-	    Npkcontext.error "Firstpass.find_fname"
-	      "unknown arguments type at function call"
-	| _ -> raise Not_found
+	  (FunSymb f, Fun ft) -> (f, ft)
+	| _ -> Npkcontext.error "Firstpass.find_fname" ("unknown function: "^x)
   in
 
   let update_global x name loc (t, init) =
@@ -561,12 +558,28 @@ let translate (globals, spec) =
 	      (e, Ptr t)
 	| v -> v
 
+  and refine_args_t args_t args =  
+    match args_t with  
+        None ->   
+          Npkcontext.report_accept_warning "Firstpass.refine_args_t"  
+            "unknown arguments type at function call"   
+            Npkcontext.PartialFunTyp;  
+          let infer_typ i e =  
+	    let (_, t) = translate_exp e in  
+	      (t, "arg"^(string_of_int i))  
+	  in
+	    List_utils.mapi infer_typ args  
+      | Some args_t -> args_t  
+	  
+
   and translate_call (f, args) =
     match f with
 	Var x when is_fname x -> 
-	  let (f, (args_t, ret_t)) = find_fname x in
+	  let (f, (tmp_args_t, ret_t)) = find_fname x in
+	  let args_t = refine_args_t tmp_args_t args in
 	  let args = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
+	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
 	    (C.Call (ft', C.Fname f, args), ret_t)
 	      
       | Deref e | e -> 
@@ -579,15 +592,7 @@ let translate (globals, spec) =
 		  Npkcontext.error "Firstpass.translate_call"
 		    "function pointer expected"
 	  in
-	  let args_t = 
-	    match args_t with
-		None -> 
-		  Npkcontext.report_accept_warning "Firstpass.refine_args_t"
-		    ("unknown arguments type at function call"
-		     ^", did you mean void?") Npkcontext.PartialFunTyp;
-		  []
-	      | Some args_t -> args_t
-	  in
+	  let args_t = refine_args_t args_t args in
 	  let args = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
 	    (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
@@ -1060,19 +1065,17 @@ let translate (globals, spec) =
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
-  and update_funsymb f static (args_t, ret_t) loc =
+  and update_funtyp f ft1 =
+    let (symb, t) = Hashtbl.find symbtbl f in
+    let ft2 = Csyntax.ftyp_of_typ t in
+    let ft = Csyntax.min_ftyp ft1 ft2 in
+      Hashtbl.replace symbtbl f (symb, Fun ft)
+
+  and update_funsymb f static ft loc =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
-      try 
-	let (symb, t) = Hashtbl.find symbtbl f in
-	let (args_t', _) = Csyntax.ftyp_of_typ t in
-	let args_t = 
-	  match (args_t, args_t') with
-	      (None, _) -> args_t'
-	    | _ -> args_t
-	in
-	  Hashtbl.replace symbtbl f (symb, Fun (args_t, ret_t))
-      with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun (args_t, ret_t))
+      try update_funtyp f ft
+      with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun ft)
 
   and translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
@@ -1229,6 +1232,13 @@ let translate (globals, spec) =
 	FunctionDef (f, _, _, body) ->
 	  current_fun := f;
 	  let (f', ft) = find_fname f in
+	  let ft = 
+	    match ft with
+		(Some args_t, ret_t) -> (args_t, ret_t)
+	      | (None, _) -> 
+		  Npkcontext.error "Firstpass.translate_global" 
+		    "unreachable code"
+	  in
 	  let formalids = add_formals ft in
 	  let body = translate_blk body in
 	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in

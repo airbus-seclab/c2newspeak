@@ -161,3 +161,5 @@ val string_of_typ: typ -> string
 val string_of_ftyp: ftyp -> string
 
 val ftyp_of_typ: typ -> ftyp
+
+val min_ftyp: ftyp -> ftyp -> ftyp
