@@ -67,14 +67,14 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-    | Block of (blk * (lbl * blk) option)   (* DoWith construct *)
-    | Goto of lbl
-    | Decl of (typ * string * int)
-    | Set of (lv * typ * exp)
-    | Loop of blk
-    | If of (exp * blk * blk)
-    | Switch of (exp * (typ_exp * blk) list * blk)
-    | Exp of exp
+  | Block of (blk * (lbl * blk) option)   (* DoWith construct *)
+  | Goto of lbl
+  | Decl of (typ * string * int)
+  | Set of (lv * typ * exp)
+  | Loop of blk
+  | If of (exp * blk * blk)
+  | Switch of (exp * (typ_exp * blk) list * blk)
+  | Exp of exp
 
 and lbl = int
 
@@ -179,7 +179,15 @@ and string_of_stmt margin (x, _) =
 	^(string_of_blk (margin^"  ") br2)
 	^margin^"}"
     | Exp e -> string_of_exp margin e
-    | _ -> "not implemented yet"
+    | Block (body, None) -> 
+	"{\n"
+	^(string_of_blk (margin^"  ") body)
+	^margin^"}"
+    | Loop body -> 
+	"forever {\n"
+	^(string_of_blk (margin^"  ") body)
+	^margin^"}"	
+    | Switch _ -> "switch"
 
 let string_of_exp = string_of_exp ""
 

@@ -405,7 +405,7 @@ iteration_statement:
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	($3, normalize_bexp $5, [], $7) 
+	($3, normalize_bexp $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
