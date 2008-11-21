@@ -135,7 +135,12 @@ let translate (globals, spec) =
   let find_symb x = 
     try Hashtbl.find symbtbl x
     with Not_found -> 
-      if Gnuc.is_gnuc_token x && not !Npkcontext.gnuc then begin
+(* TODO: put in gnuc? and think about architecture:
+   npkcontext should call some init function of gnuc which fills all the 
+   necessary tables when option gnuc is set
+   so that boolean accept_gnuc does not appear in the interface of npkcontext 
+*)
+      if Gnuc.is_gnuc_token x && not !Npkcontext.accept_gnuc then begin
 	Npkcontext.report_accept_warning "Firstpass.translate.typ_of_var" 
 	  ("unknown identifier "^x^", probably a GNU C token") Npkcontext.GnuC
       end;

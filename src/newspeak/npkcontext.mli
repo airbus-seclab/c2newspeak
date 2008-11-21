@@ -56,8 +56,7 @@ type error =
 (** When global_zero_init is set, cil2newspeak adds init code for all
     globals *)
 val global_zero_init : bool ref
-
-val gnuc : bool ref
+val accept_gnuc : bool ref
 val forward_goto : bool ref
 val missing_ftyp : bool ref
 val strict_syntax : bool ref

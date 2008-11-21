@@ -64,7 +64,8 @@ let init_tbls () =
   fnames := String_set.empty;
 (* initialize table of predefined types *)
 (* GNU C predefined types *)
-  if !Npkcontext.gnuc then begin
+(* TODO: clean up put in gnuc.ml and think about architecture *)
+  if !Npkcontext.accept_gnuc then begin
     Hashtbl.add typedefs "_Bool" (B.Int (Newspeak.Unsigned, 1))
   end
 

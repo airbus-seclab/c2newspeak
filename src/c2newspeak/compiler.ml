@@ -40,12 +40,13 @@ let parse fname =
     with Parsing.Parse_error -> 
       let lexeme = Lexing.lexeme lexbuf in
       let advice = 
-	if (Gnuc.is_gnuc_token lexeme) && (not !Npkcontext.gnuc) 
+(* TODO: think about architecture, put in npkcontext??? *)
+	if (Gnuc.is_gnuc_token lexeme) && (not !Npkcontext.accept_gnuc) 
 	then ", stick to standard ANSI C or try option --gnuc"
 	else ", check that your code compiles with a standard compiler";
       in
       let advice =
-	if !Npkcontext.gnuc || (Gnuc.is_gnuc_token lexeme) then advice
+	if !Npkcontext.accept_gnuc || (Gnuc.is_gnuc_token lexeme) then advice
 	else advice^", if you use GNU C extensions try option --gnuc"
       in
 	Npkcontext.error "Compiler.parse" 
@@ -67,7 +68,7 @@ let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
   let (fnames, globals, spec) = parse fname in
   let globals = 
-    if !Npkcontext.gnuc then append_gnu_symbols globals else globals
+    if !Npkcontext.accept_gnuc then append_gnu_symbols globals else globals
   in
   let fnames = if fnames = [] then fname::[] else fnames in
     Npkcontext.forget_loc ();

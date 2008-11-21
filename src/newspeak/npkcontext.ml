@@ -44,7 +44,7 @@ open Cil
 let ignores_asm = ref false
 let ignores_pack = ref false
 let ignores_volatile = ref false
-let gnuc = ref false
+let accept_gnuc = ref false
 let opt_checks = ref true
 
 let forward_goto = ref false
@@ -125,7 +125,7 @@ let flag_of_error err =
     | ExternGlobal -> accept_extern
     | FlexArray -> accept_flex_array
     | MultipleDef -> accept_mult_def
-    | GnuC -> gnuc
+    | GnuC -> accept_gnuc
     | DisableInit -> global_zero_init
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
@@ -144,7 +144,7 @@ let opt_of_error err =
     | ExternGlobal -> "--accept-extern"
     | FlexArray -> "--accept-flexible-array"
     | MultipleDef -> "--accept-mult-def"
-    | GnuC -> "--gnuc"
+    | GnuC -> "--accept-gnuc"
     | DisableInit -> "--disable-init"
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"

@@ -1,1 +1,1 @@
---ignore-asm --gnuc
+--ignore-asm --accept-gnuc
