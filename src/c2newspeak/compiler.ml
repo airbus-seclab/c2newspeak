@@ -38,19 +38,14 @@ let parse fname =
 	close_in cin;
 	(fnames, globals, spec)
     with Parsing.Parse_error -> 
+      let loc = "Compiler.parse" in
       let lexeme = Lexing.lexeme lexbuf in
-      let advice = 
-(* TODO: think about architecture, put in npkcontext??? *)
-	if (Gnuc.is_gnuc_token lexeme) && (not !Npkcontext.accept_gnuc) 
-	then ", stick to standard ANSI C or try option --gnuc"
-	else ", check that your code compiles with a standard compiler";
-      in
-      let advice =
-	if !Npkcontext.accept_gnuc || (Gnuc.is_gnuc_token lexeme) then advice
-	else advice^", if you use GNU C extensions try option --gnuc"
-      in
-	Npkcontext.error "Compiler.parse" 
-	  ("syntax error: unexpected token: "^lexeme^advice)
+      let msg = "syntax error: unexpected token: "^lexeme in
+      let advice = ", rewrite your code" in
+	if (not !Npkcontext.accept_gnuc)
+	then Npkcontext.report_accept_warning loc msg Npkcontext.GnuC;
+	if (not !Npkcontext.accept_gnuc)
+	Npkcontext.error loc (msg^advice)
 
 let append_gnu_symbols globals =
   let lexbuf = Lexing.from_string Gnuc.builtins in
