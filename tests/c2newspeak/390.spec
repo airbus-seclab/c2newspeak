@@ -1,1 +1,1 @@
-Fatal error: unnecessary semicolon, rewrite your code or try option --dirty in 390.c line 31
+Fatal error: unnecessary semicolon, rewrite your code or try option --accept-dirty-syntax in 390.c line 31

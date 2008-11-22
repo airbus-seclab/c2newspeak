@@ -1,1 +1,1 @@
---dirty --keep-unused-vars
+--accept-dirty-syntax --keep-unused-vars

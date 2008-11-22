@@ -49,7 +49,7 @@ let opt_checks = ref true
 
 let forward_goto = ref false
 
-let dirty_syntax = ref false
+let accept_dirty_syntax = ref false
 let strict_syntax = ref false
 
 let global_zero_init = ref true
@@ -120,7 +120,7 @@ let flag_of_error err =
     | Pack -> ignores_pack
     | Volatile -> ignores_volatile
     | DirtyCast -> castor_allowed
-    | DirtySyntax -> dirty_syntax
+    | DirtySyntax -> accept_dirty_syntax
     | PartialFunTyp -> missing_ftyp
     | ForwardGoto -> forward_goto
     | StrictSyntax -> strict_syntax
@@ -140,7 +140,7 @@ let opt_of_error err =
     | Pack -> "--ignore-pack"
     | Volatile -> "--ignore-volatile"
     | DirtyCast -> "--castor"
-    | DirtySyntax -> "--dirty"
+    | DirtySyntax -> "--accept-dirty-syntax"
     | PartialFunTyp -> "--missing-funtyp"
     | ForwardGoto -> "--accept-forward-goto"
     | StrictSyntax -> "--strict"
