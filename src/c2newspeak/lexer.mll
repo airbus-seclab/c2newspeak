@@ -222,6 +222,7 @@ rule token spec_buf = parse
   | "+="                { PLUSEQ }
   | "*="                { STAREQ }
   | "/="                { DIVEQ }
+  | "%="                 { MODEQ }
   | "<<="               { SHIFTLEQ }
   | ">>="               { SHIFTREQ }
   | ";"                 { SEMICOLON }

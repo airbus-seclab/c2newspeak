@@ -177,7 +177,7 @@ let rec normalize_bexp e =
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
-%token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ DIVEQ 
+%token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ DIVEQ MODEQ 
 %token AMPERSANDEQ
 %token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
@@ -634,6 +634,7 @@ assignment_operator:
 | MINUSEQ                                  { Minus }
 | STAREQ                                   { Mult }
 | DIVEQ                                    { Div }
+| MODEQ                                    { Mod }
 | OREQ                                     { BOr }
 | AMPERSANDEQ                              { BAnd }
 | SHIFTLEQ                                 { Shiftl }
