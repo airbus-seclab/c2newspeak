@@ -44,7 +44,6 @@ let parse fname =
       let advice = ", rewrite your code" in
 	if (not !Npkcontext.accept_gnuc)
 	then Npkcontext.report_accept_warning loc msg Npkcontext.GnuC;
-	if (not !Npkcontext.accept_gnuc)
 	Npkcontext.error loc (msg^advice)
 
 let append_gnu_symbols globals =
