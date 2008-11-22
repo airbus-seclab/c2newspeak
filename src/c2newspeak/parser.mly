@@ -186,7 +186,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION
 %token EOF
 
 %token <string> IDENTIFIER
@@ -914,10 +914,14 @@ attribute_name:
 | GNU_INLINE                               { [] }
 | WARN_UNUSED_RESULT                       { [] }
 | PACKED                                   { 
-    let loc = "Parser.attribute_name" in
-    let msg = "packed attribute" in 
-      Npkcontext.report_ignore_warning loc msg Npkcontext.Pack;
-      []
+    Npkcontext.report_ignore_warning "Parser.attribute_name" 
+      "packed attribute" Npkcontext.Pack;
+    []
+  }
+| TRANSPARENT_UNION                        { 
+    Npkcontext.report_ignore_warning "Parser.attribute_name" 
+      "transparent union" Npkcontext.TransparentUnion;
+    [];
   }
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;

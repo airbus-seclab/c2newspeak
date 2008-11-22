@@ -49,6 +49,7 @@ type error =
   | DisableInit
   | DisableOpt
   | DisableCheckOpt
+  | TransparentUnion
 
 (** {1 Comand line options } *)
 
