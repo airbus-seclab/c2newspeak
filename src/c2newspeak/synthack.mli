@@ -9,6 +9,7 @@ type base_typ =
     | Name of string
     | Enum of ((string * Csyntax.exp option) list) option
     | Va_arg
+    | Typeof of string
 
 and var_modifier = 
     | Abstract

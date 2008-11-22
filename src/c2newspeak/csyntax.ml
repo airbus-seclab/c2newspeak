@@ -66,6 +66,7 @@ and typ =
   | Comp of string
   | Fun of ftyp
   | Va_arg
+  | Typeof of string
       
 and init = 
   | Data of exp
@@ -250,6 +251,7 @@ let rec string_of_typ t =
     | Comp _ -> "Comp"
     | Fun _ -> "Fun"
     | Va_arg -> "..."
+    | Typeof _ -> "typeof"
 
 and string_of_exp e =
   match e with

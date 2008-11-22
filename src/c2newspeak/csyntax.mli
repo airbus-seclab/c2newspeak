@@ -65,6 +65,7 @@ and typ =
     | Comp of string
     | Fun of ftyp
     | Va_arg
+    | Typeof of string
 
 and init = 
     | Data of exp

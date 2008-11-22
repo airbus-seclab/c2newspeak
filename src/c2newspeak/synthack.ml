@@ -39,6 +39,7 @@ type base_typ =
     | Name of string
     | Enum of ((string * B.exp option) list) option
     | Va_arg
+    | Typeof of string
 
 and var_modifier = 
     | Abstract
@@ -99,7 +100,8 @@ let define_enum e =
 let rec normalize_base_typ t =
   let sdecls =
     match t with
-	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None -> ([], [])
+	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None 
+      | Typeof _ -> ([], [])
       | Struct (n, f) -> normalize_compdef (n, true, f)
       | Union (n, f) -> normalize_compdef (n, false, f)
       | Enum Some f -> (define_enum f, [])
@@ -116,6 +118,7 @@ let rec normalize_base_typ t =
 	    Npkcontext.error "Synthack.normalize_base_typ" ("unknown type "^x)
 	end
       | Struct (n, _) | Union (n, _) -> B.Comp n
+      | Typeof v -> B.Typeof v
       | Enum _ -> B.Int C.int_kind
   in
     (sdecls, t)

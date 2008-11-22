@@ -754,6 +754,9 @@ let translate (globals, spec) =
       | Ptr (Fun _) -> N.FunPtr
       | Ptr _ -> N.Ptr
       | Va_arg -> N.Ptr
+      | Typeof v -> 
+	  let (_, t) = find_var v in
+	    translate_scalar_typ t
       | _ -> 
 	  Npkcontext.error "Firstpass.translate_scalar_typ" 
 	    "scalar type expected"
@@ -772,6 +775,9 @@ let translate (globals, spec) =
 	  let (is_struct, f, sz, _) = find_compdef s in
 	  let f = List.map translate_field f in
 	    if is_struct then C.Struct (f, sz) else C.Union (f, sz)
+      | Typeof v -> 
+	  let (_, t) = find_var v in
+	    translate_typ t
       | Bitfield _ -> 
 	  Npkcontext.error "Firstpass.translate_typ" 
 	    "bitfields not allowed outside of structures"

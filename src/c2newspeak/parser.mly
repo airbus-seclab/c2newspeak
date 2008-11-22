@@ -186,7 +186,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION TYPEOF
 %token EOF
 
 %token <string> IDENTIFIER
@@ -816,6 +816,7 @@ type_specifier:
 	^"use 'usigned long int' instead");
     Integer (Newspeak.Unsigned, Config.size_of_long) 
   }
+| TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
 | VA_LIST                                { Va_arg }
 ;;
 
