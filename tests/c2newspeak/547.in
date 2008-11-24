@@ -1,1 +1,1 @@
---accept-gnuc
+--accept-gnuc --accept-dirty-syntax

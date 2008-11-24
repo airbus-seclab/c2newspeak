@@ -512,6 +512,8 @@ cast_expression:
     let t = build_type_decl $2 in
     let decl = (VDecl ("tmp", t, false, false, Some (Sequence $4)), loc) in
     let e = (Exp (Var "tmp"), loc) in
+      Npkcontext.report_accept_warning "Parser.cast_expression" 
+	"local composite ceation" Npkcontext.DirtySyntax;
       BlkExp (decl::e::[])
   }
 ;;

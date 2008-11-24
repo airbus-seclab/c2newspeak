@@ -1,3 +1,4 @@
+Warning: local composite ceation accepted in 547.c line 33
 Newspeak output
 ---------------
 547.c
