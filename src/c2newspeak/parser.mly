@@ -506,6 +506,14 @@ cast_expression:
   unary_expression                         { $1 }
 | LPAREN type_name RPAREN 
   cast_expression                          { Cast ($4, build_type_decl $2) }
+| LPAREN type_name RPAREN
+  composite                                { 
+    let loc = get_loc () in
+    let t = build_type_decl $2 in
+    let decl = (VDecl ("tmp", t, false, false, Some (Sequence $4)), loc) in
+    let e = (Exp (Var "tmp"), loc) in
+      BlkExp (decl::e::[])
+  }
 ;;
 
 multiplicative_expression:
@@ -649,8 +657,12 @@ argument_expression_list:
 
 init:
   assignment_expression                    { Data $1 }
-| LBRACE init_list RBRACE                  { Sequence $2 }
-| LBRACE named_init_list RBRACE            { Sequence $2 }
+| composite                                { Sequence $1 }
+;;
+
+composite:
+  LBRACE init_list RBRACE                  { $2 }
+| LBRACE named_init_list RBRACE            { $2 }
 ;;
 
 named_init_list:
