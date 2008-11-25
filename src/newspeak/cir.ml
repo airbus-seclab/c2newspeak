@@ -94,7 +94,7 @@ and lv =
 (* TODO: remove the boolean, by adding temporary variables and then
    having some optimization get
    rid of unnecessary temporary variable??? If better *)
-    | Stmt_lv of (stmt *  lv * bool)
+    | BlkLv of (blk *  lv * bool)
 
 and exp =
     | Const of cst
@@ -150,8 +150,8 @@ and string_of_lv margin x =
     | Global x -> x
     | Shift (lv, e) -> (string_of_lv margin lv)^" + "^(string_of_exp margin e)
     | Deref (e, t) -> "*("^(string_of_exp margin e)^")_"^(string_of_typ t)
-    | Stmt_lv (stmt, lv, _) -> 
-	"("^(string_of_stmt margin stmt)^(string_of_lv margin lv)^")"
+    | BlkLv (body, lv, _) -> 
+	"("^(string_of_blk margin body)^(string_of_lv margin lv)^")"
 
 and string_of_blk margin x =
   match x with
@@ -296,12 +296,12 @@ and normalize_lv x =
     | Deref (e, t) ->
 	let (pref, e, post) = normalize_exp e in
 	  (pref, Deref (e, t), post)
-    | Stmt_lv (stmt, lv, is_after) -> 
+    | BlkLv (body, lv, is_after) -> 
 	let (pref, lv, post) = normalize_lv lv in
-	let stmt = normalize_stmt stmt in
+	let body = normalize_blk body in
 	let (pref, post) = 
-	  if is_after then (pref, concat_effects post stmt)
-	  else (concat_effects stmt pref, post)
+	  if is_after then (pref, concat_effects post body)
+	  else (concat_effects body pref, post)
 	in
 	  (pref, lv, post)
 	    
@@ -654,7 +654,7 @@ let is_large_blk x =
     match x with
       | Shift (lv, e) -> check_lval lv; check_exp e
       | Deref (e, _) -> check_exp e
-      | Stmt_lv ((stmt, _), lv, _) -> check_stmt stmt; check_lval lv
+      | BlkLv (blk, lv, _) -> check_blk blk; check_lval lv
       | _ -> ()
 
   and check_exp e =

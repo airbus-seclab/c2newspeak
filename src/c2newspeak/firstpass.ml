@@ -433,7 +433,7 @@ let translate (globals, spec) =
 	  let e = Cst (C.CInt (Nat.of_int 1), int_typ) in
 	  let (incr, t) = translate_set (lv, Some op, e) in
 	  let (lv, _, _) = incr in
-	    (C.Stmt_lv ((C.Set incr, loc), lv, is_after), t)
+	    (C.BlkLv ((C.Set incr, loc)::[], lv, is_after), t)
 
       | Str str -> add_glb_cstr str
 
@@ -442,6 +442,17 @@ let translate (globals, spec) =
 	    "cast of left value" Npkcontext.DirtySyntax;
 	  let (lv, _) = translate_lv lv in
 	    (lv, t)
+
+      | BlkExp blk -> 
+	  let (body, (e, t)) = translate_blk_exp blk in
+	  let lv =
+	    match e with
+		C.Lval (lv, _) -> lv
+	      | _ -> 
+		  Npkcontext.error "Firstpass.translate_lv" 
+		    "left value expected"
+	  in
+	    (C.BlkLv (body, lv, false), t)
 
       | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
 
@@ -552,7 +563,9 @@ let translate (globals, spec) =
 	    let e = C.Lval (lv', t') in
 	      (C.Pref ((C.Set set, loc)::[], e), t)
 	      		  
-	| BlkExp blk -> translate_blk_exp blk
+	| BlkExp blk -> 
+	    let (body, (e, t)) = translate_blk_exp blk in
+	      (C.Pref (body, e), t)
     in
       match translate e with
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
@@ -852,7 +865,7 @@ let translate (globals, spec) =
   and translate_blk_exp x =
     let (body, e) = translate_blk_aux true x in
       match e with
-	  Some (e, t) -> (C.Pref (body, e), t)
+	  Some e -> (body, e)
 	| None -> 
 	    Npkcontext.error "Firstpass.translate_blk_exp" "expression expected"
 

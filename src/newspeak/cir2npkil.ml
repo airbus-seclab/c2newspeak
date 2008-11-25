@@ -119,7 +119,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  let sz = size_of t in
 	    K.Deref (e, sz)
 
-      | Stmt_lv _ ->
+      | BlkLv _ ->
 	  Npkcontext.error "Compiler.translate_lval"
 	    "unexpected side-effect in left value"
 

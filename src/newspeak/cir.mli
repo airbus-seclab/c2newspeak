@@ -81,7 +81,7 @@ and lv =
 (* TODO: remove the boolean, by adding temporary variables and then
    having some optimization get
    rid of unnecessary temporary variable??? If better *)
-    | Stmt_lv of (stmt * lv * bool)
+    | BlkLv of (blk * lv * bool)
 
 and exp =
     | Const of cst
