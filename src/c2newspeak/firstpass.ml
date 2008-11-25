@@ -63,16 +63,18 @@ let seq_of_string str =
     done;
     !res
 
+(* TODO: merge compdefs and symbtbl tbls??? *)
+
 (*
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
 let translate (globals, spec) =
-  let compdefs = Hashtbl.create 100 in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
-  let symbtbl = Hashtbl.create 100 in
+  let compdefs = Symbtbl.create () in
+  let symbtbl = Symbtbl.create () in
   let used_globals = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
@@ -87,8 +89,8 @@ let translate (globals, spec) =
   let lbl_cnt = ref default_lbl in
 
   let find_compdef name =
-    try Hashtbl.find compdefs name
-    with Not_found -> 
+    try Symbtbl.find compdefs name
+    with Not_found ->
       Npkcontext.error "Firstpass.find_compdef" 
 	("unknown structure or union "^name)
   in
@@ -111,15 +113,13 @@ let translate (globals, spec) =
 
   let add_var (t, x) =
     let id = C.fresh_id () in
-      Hashtbl.add symbtbl x (LocalSymb (C.Var id), t);
+      Symbtbl.bind symbtbl x (LocalSymb (C.Var id), t);
       id
   in
 
   let update_var_typ x id t =
-    Hashtbl.replace symbtbl x (LocalSymb (C.Var id), t)
+    Symbtbl.update symbtbl x (LocalSymb (C.Var id), t)
   in
-
-  let remove_symb x = Hashtbl.remove symbtbl x in
 
   let add_formals (args_t, ret_t) =
     let ret_id = add_var (ret_t, ret_name) in
@@ -127,13 +127,8 @@ let translate (globals, spec) =
       (ret_id, args_id)
   in
     
-  let remove_formals (args_t, _) =
-    remove_symb ret_name;
-    List.iter (fun (_, x) -> remove_symb x) args_t
-  in
-
   let find_symb x = 
-    try Hashtbl.find symbtbl x
+    try Symbtbl.find symbtbl x
     with Not_found -> 
 (* TODO: put in gnuc? and think about architecture:
    npkcontext should call some init function of gnuc which fills all the 
@@ -196,7 +191,7 @@ let translate (globals, spec) =
     let init =
       try 
 	let (_, _, prev_init, _) = Hashtbl.find used_globals name in
-	  Hashtbl.replace symbtbl x (v, t);
+	  Symbtbl.update symbtbl x (v, t);
 	  match (prev_init, init) with
 	      (None, Some _) | (Some None, Some _) -> init
 	    | (Some _, None) | (Some _, Some None) -> prev_init
@@ -205,7 +200,7 @@ let translate (globals, spec) =
 		Npkcontext.error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
       with Not_found -> 
-	Hashtbl.add symbtbl x (v, t);
+	Symbtbl.bind symbtbl x (v, t);
 	init
     in
       if (init = None) 
@@ -227,9 +222,7 @@ let translate (globals, spec) =
       update_global x name loc d
   in
 
-  let push_enum (x, i) = 
-    Hashtbl.add symbtbl x (EnumSymb i, int_typ)
-  in
+  let push_enum (x, i) = Symbtbl.bind symbtbl x (EnumSymb i, int_typ) in
 
   let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, body) in
 
@@ -534,7 +527,6 @@ let translate (globals, spec) =
 	      let blk2 = (Exp (Set (Var x, None, e2)), loc)::[] in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
-		remove_symb x;
 		(C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
 	  end
 	    
@@ -742,7 +734,7 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-      Hashtbl.add compdefs name (true, f, sz, !last_align);
+      Symbtbl.bind compdefs name (true, f, sz, !last_align);
       f
 
   and process_union_fields name f =
@@ -757,7 +749,7 @@ let translate (globals, spec) =
 	(x, (0, t))
     in
     let f = List.map translate f in
-      Hashtbl.add compdefs name (false, f, !n, !align);
+      Symbtbl.bind compdefs name (false, f, !n, !align);
       f
 
   and translate_scalar_typ t =
@@ -859,7 +851,11 @@ let translate (globals, spec) =
       ()
 
   and translate_blk x =
+    Symbtbl.save symbtbl;
+    Symbtbl.save compdefs;
     let (body, _) = translate_blk_aux false x in
+      Symbtbl.restore symbtbl;
+      Symbtbl.restore compdefs;
       body
 
   and translate_blk_exp x =
@@ -885,16 +881,12 @@ let translate (globals, spec) =
 	    add_enum d;
 (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
-	    let (x, _) = d in
-	      remove_symb x;
 	      ((body, []), e)
 
 	| (CDecl d, _)::body ->
 	    add_compdecl d;
 (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
-	    let (x, _, _) = d in
-	      Hashtbl.remove compdefs x;
 	      ((body, []), e)
 
 	| (VDecl (x, Fun ft, static, _, _), loc)::body -> 
@@ -913,14 +905,12 @@ let translate (globals, spec) =
 	      add_static x loc (t, Some init);
 	      (* TODO: try translate body *)
 	      let (body, e) = translate_blk_aux ends_with_exp body in
-		remove_symb x;
 		((body, []), e)
 	  
 	| (VDecl (x, t, _, _, init), loc)::body -> 
 	    let init = translate_local_decl (x, t, init) loc in
 	      (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      remove_symb x;
 	      ((init@body, []), e)
 	      
 	(* TODO: do the case where suffix is <> [] *)
@@ -1090,16 +1080,16 @@ let translate (globals, spec) =
       | [] -> body
 
   and update_funtyp f ft1 =
-    let (symb, t) = Hashtbl.find symbtbl f in
+    let (symb, t) = Symbtbl.find symbtbl f in
     let ft2 = Csyntax.ftyp_of_typ t in
     let ft = Csyntax.min_ftyp ft1 ft2 in
-      Hashtbl.replace symbtbl f (symb, Fun ft)
+      Symbtbl.update symbtbl f (symb, Fun ft)
 
   and update_funsymb f static ft loc =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
-      with Not_found -> Hashtbl.add symbtbl f (FunSymb f', Fun ft)
+      with Not_found -> Symbtbl.bind symbtbl f (FunSymb f', Fun ft)
 
   and translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
@@ -1239,7 +1229,7 @@ let translate (globals, spec) =
     match t with
 	Comp n ->
 	  let (_, _, _, a) = 
-	    try Hashtbl.find compdefs n
+	    try Symbtbl.find compdefs n
 	    with Not_found -> 
 	      Npkcontext.error "Firstpass.size_of_struct" 
 		("unknown structure or union "^n) 
@@ -1263,14 +1253,15 @@ let translate (globals, spec) =
 		  Npkcontext.error "Firstpass.translate_global" 
 		    "unreachable code"
 	  in
-	  let formalids = add_formals ft in
-	  let body = translate_blk body in
-	  let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	    add_fundef f' (formalids, body) (translate_ftyp ft) loc;
-	    remove_formals ft;
-	    current_fun := "";
-	    Hashtbl.clear lbl_tbl;
-	    lbl_cnt := default_lbl
+	    Symbtbl.save symbtbl;
+	    let formalids = add_formals ft in
+	    let body = translate_blk body in
+	    let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
+	      add_fundef f' (formalids, body) (translate_ftyp ft) loc;
+	      Symbtbl.restore symbtbl;
+	      current_fun := "";
+	      Hashtbl.clear lbl_tbl;
+	      lbl_cnt := default_lbl
 	      
 (* TODO: put this check in parser ?? *)
       | GlbVDecl (_, _, _, extern, Some _) when extern -> 
@@ -1291,7 +1282,7 @@ let translate (globals, spec) =
   let translate_token x =
     match x with
 	SymbolToken x -> Newspeak.SymbolToken x
-      | IdentToken x when Hashtbl.mem symbtbl x -> 
+      | IdentToken x when Symbtbl.mem symbtbl x -> 
 	  let (v, _) = find_var x in
 	  let x = 
 	    match v with

@@ -42,7 +42,7 @@ c2newspeak.FILES=\
 	params \
         c2newspeak
 
-FILES=version utils/list_utils \
+FILES=version utils/list_utils utils/symbtbl \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix c2newspeak/, $(c2newspeak.FILES))
 

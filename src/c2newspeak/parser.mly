@@ -46,14 +46,14 @@ let get_loc () =
 (* TODO: code not so nice: simplify? *)
 let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
   let ((edecls, cdecls), b) = Synthack.normalize_base_typ b in
-  let edecls = List.map build_edecl edecls in
-  let cdecls = List.map build_cdecl cdecls in
   let build_vdecl (v, init) res =
     let (t, x, loc) = Synthack.normalize_var_modifier b v in
       match x with
 	| None -> res
 	| Some x -> build_vdecl res (t, x, loc, init)
   in
+  let edecls = List.map build_edecl edecls in
+  let cdecls = List.map build_cdecl cdecls in
   let vdecls = List.fold_right build_vdecl m [] in
     edecls@cdecls@vdecls
       
@@ -114,24 +114,22 @@ let normalize_fun_prologue b m =
 let build_fundef static ((t, x, loc), body) =
   (FunctionDef (x, t, static, body), loc)::[]
 
-(*
-let build_fundef static (b, m, body) = 
-  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
-  let x =
-    match x with
-      | Some x -> x
-      | None -> 
-	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
-  in
-    (FunctionDef (x, t, static, body), loc)::[]
-*)    
 let build_type_decl d =
-  let (symbdecls, (t, _, _)) = Synthack.normalize_decl d in
-    if (symbdecls <> ([], [])) then begin 
+  let ((edecls, cdecls), (t, _, _)) = Synthack.normalize_decl d in
+    if (edecls <> []) then begin 
       Npkcontext.error "Parser.build_type_decl" "unexpected enum declaration"
     end;
+    if (cdecls <> []) then begin 
+      Npkcontext.error "Parser.build_type_decl" 
+	"unexpected composite declaration"
+    end;
     t
+
+let build_type_blk loc d =
+  let ((edecls, cdecls), (t, _, _)) = Synthack.normalize_decl d in
+  let edecls = List.map (fun x -> (EDecl x, loc)) edecls in
+  let cdecls = List.map (fun x -> (CDecl x, loc)) cdecls in
+    (edecls@cdecls, t)
 
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
@@ -509,12 +507,12 @@ cast_expression:
 | LPAREN type_name RPAREN
   composite                                { 
     let loc = get_loc () in
-    let t = build_type_decl $2 in
+    let (blk, t) = build_type_blk loc $2 in
     let decl = (VDecl ("tmp", t, false, false, Some (Sequence $4)), loc) in
     let e = (Exp (Var "tmp"), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite ceation" Npkcontext.DirtySyntax;
-      BlkExp (decl::e::[])
+      BlkExp (blk@decl::e::[])
   }
 ;;
 
