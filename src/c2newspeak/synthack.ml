@@ -117,7 +117,8 @@ let rec normalize_base_typ t =
 	  with Not_found -> 
 	    Npkcontext.error "Synthack.normalize_base_typ" ("unknown type "^x)
 	end
-      | Struct (n, _) | Union (n, _) -> B.Comp n
+      | Struct (n, _) -> B.Comp (n, true)
+      | Union (n, _) -> B.Comp (n, false)
       | Typeof v -> B.Typeof v
       | Enum _ -> B.Int C.int_kind
   in

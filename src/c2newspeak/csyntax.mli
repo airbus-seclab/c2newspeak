@@ -62,7 +62,7 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
-    | Comp of string
+    | Comp of (string * bool)
     | Fun of ftyp
     | Va_arg
     | Typeof of string

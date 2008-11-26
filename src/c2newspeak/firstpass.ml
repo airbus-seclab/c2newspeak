@@ -47,6 +47,12 @@ type symb =
   | EnumSymb of C.exp
 
 (* functions *)
+let get_field f r =
+  try List.assoc f r 
+  with Not_found -> 
+    Npkcontext.error "Firstpass.translate_lv" 
+      ("unknown field '"^f^"' in union or structure")
+
 (* [next_aligned o x] returns the smallest integer greater or equal than o,
    which is equal to 0 modulo x *)
 let next_aligned o x =
@@ -94,9 +100,10 @@ let translate (globals, spec) =
       Npkcontext.error "Firstpass.find_compdef" 
 	("unknown structure or union "^name)
   in
-
+    (* TODO: remove this function, put a record, instead of a tuple in compdef
+    *)
   let fields_of_comp name =
-    let (_, f, _, _) = find_compdef name in
+    let (f, _, _) = find_compdef name in
       f
   in
 
@@ -263,15 +270,21 @@ let translate (globals, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Comp s) ->
+	| (Sequence seq, Comp (s, true)) ->
 	    let f = fields_of_comp s in
 	      translate_field_sequence o f seq;
 	      t
 
+	| (Sequence ((Some f, v)::[]), Comp (s, false)) ->
+	    let r = fields_of_comp s in
+	    let (f_o, f_t) = get_field f r in
+	    let _ = translate (o + f_o) f_t v in
+	      t
+		
 	| (Sequence _, _) -> 
 	    Npkcontext.error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
-
+	  
     and translate_field_sequence o fields seq =
       match (fields, seq) with
 	  ((fname, (f_o, t))::fields, (expected_f, hd)::seq) ->
@@ -358,7 +371,7 @@ let translate (globals, spec) =
 		o := !o + sz
 	      done
 		
-	| Comp s -> 
+	| Comp (s, _) -> 
 	    let f = fields_of_comp s in
 	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
 	      List.iter fill_field f
@@ -396,12 +409,7 @@ let translate (globals, spec) =
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
 	  let r = fields_of_comp (Csyntax.comp_of_typ t) in
-	  let (o, t) = 
-	    try List.assoc f r 
-	    with Not_found -> 
-	      Npkcontext.error "Firstpass.translate_lv" 
-		("unknown field '"^f^"' in union or structure")
-	  in
+	  let (o, t) = get_field f r in
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
@@ -734,8 +742,7 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-      Symbtbl.bind compdefs name (true, f, sz, !last_align);
-      f
+      Symbtbl.bind compdefs name (f, sz, !last_align)
 
   and process_union_fields name f =
     let n = ref 0 in
@@ -749,8 +756,7 @@ let translate (globals, spec) =
 	(x, (0, t))
     in
     let f = List.map translate f in
-      Symbtbl.bind compdefs name (false, f, !n, !align);
-      f
+      Symbtbl.bind compdefs name (f, !n, !align)
 
   and translate_scalar_typ t =
     match t with
@@ -776,8 +782,8 @@ let translate (globals, spec) =
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
-      | Comp s ->
-	  let (is_struct, f, sz, _) = find_compdef s in
+      | Comp (s, is_struct) ->
+	  let (f, sz, _) = find_compdef s in
 	  let f = List.map translate_field f in
 	    if is_struct then C.Struct (f, sz) else C.Union (f, sz)
       | Typeof v -> 
@@ -844,11 +850,8 @@ let translate (globals, spec) =
       push_enum (x, v)
 
   and add_compdecl (x, is_struct, f) =
-    let _ = 
-      if is_struct then process_struct_fields x f
-      else process_union_fields x f
-    in
-      ()
+    if is_struct then process_struct_fields x f
+    else process_union_fields x f
 
   and translate_blk x =
     Symbtbl.save symbtbl;
@@ -1227,8 +1230,8 @@ let translate (globals, spec) =
 
   and align_of t =
     match t with
-	Comp n ->
-	  let (_, _, _, a) = 
+	Comp (n, _) ->
+	  let (_, _, a) = 
 	    try Symbtbl.find compdefs n
 	    with Not_found -> 
 	      Npkcontext.error "Firstpass.size_of_struct" 

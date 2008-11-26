@@ -63,7 +63,8 @@ and typ =
   | Float of int
   | Ptr of typ
   | Array of (typ * exp option)
-  | Comp of string
+(* true for structure *)
+  | Comp of (string * bool)
   | Fun of ftyp
   | Va_arg
   | Typeof of string
@@ -215,7 +216,7 @@ let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
 
 let comp_of_typ t =
   match t with
-      Comp n -> n
+      Comp (n, _)-> n
     | _ -> 
 	Npkcontext.error "Csyntax.comp_of_typ" "struct or union type expected"
 
