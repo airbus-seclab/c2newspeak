@@ -75,7 +75,7 @@ let verb_ast = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
 let pretty_print = ref false
-let ignore_transparent_union = ref false
+let accept_transparent_union = ref false
 
 let verbose boolean () =
   verb_ast := boolean;
@@ -131,7 +131,7 @@ let flag_of_error err =
     | DisableInit -> global_zero_init
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
-    | TransparentUnion -> ignore_transparent_union
+    | TransparentUnion -> accept_transparent_union
  
 let opt_of_error err =
   match err with
@@ -151,7 +151,7 @@ let opt_of_error err =
     | DisableInit -> "--disable-init"
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"
-    | TransparentUnion -> "--ignore-transparent-union"
+    | TransparentUnion -> "--accept-transparent-union"
 
 (* Version *)
 

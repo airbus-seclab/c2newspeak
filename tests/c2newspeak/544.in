@@ -1,1 +1,1 @@
---accept-gnuc --ignore-transparent-union
+--accept-gnuc --accept-transparent-union

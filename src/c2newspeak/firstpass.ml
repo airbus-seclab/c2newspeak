@@ -47,7 +47,7 @@ type symb =
   | EnumSymb of C.exp
 
 (* functions *)
-let get_field f r =
+let find_field f r =
   try List.assoc f r 
   with Not_found -> 
     Npkcontext.error "Firstpass.translate_lv" 
@@ -241,10 +241,17 @@ let translate (globals, spec) =
 	lbl'
   in
 
-  let rec cast (e, t) t' = 
-    let t = translate_typ t in
-    let t' = translate_typ t' in
-      C.cast (e, t) t'
+  let rec cast (e, t1) t2 = 
+    match t2 with
+	Comp (name, false) when t1 <> t2 -> 
+	  let f = fields_of_comp name in
+	    if not (List.exists (fun (_, (_, f_t)) -> f_t = t1) f) 
+	    then Npkcontext.error "Firstpass.cast" "incompatible type";
+	    (e, t1)
+      | _ -> 
+	  let t1' = translate_typ t1 in
+	  let t2' = translate_typ t2 in
+	    (C.cast (e, t1') t2', t2)
 
   and translate_init t x =
     let res = ref [] in
@@ -257,7 +264,7 @@ let translate (globals, spec) =
 
 	| (Data e, _) -> 
 	    (* TODO: should I be using translate_set here too??? *)
-	    let e = cast (translate_exp e) t in
+	    let (e, t) = cast (translate_exp e) t in
 	      res := (o, translate_typ t, e)::!res;
 	      t
 	      
@@ -277,7 +284,7 @@ let translate (globals, spec) =
 
 	| (Sequence ((Some f, v)::[]), Comp (s, false)) ->
 	    let r = fields_of_comp s in
-	    let (f_o, f_t) = get_field f r in
+	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
 	      t
 		
@@ -352,7 +359,7 @@ let translate (globals, spec) =
 	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
 	    (* TODO: inefficient: t is translated twice *)
-	    let e = cast (translate_exp (exp_of_int 0)) t in
+	    let (e, t) = cast (translate_exp (exp_of_int 0)) t in
 	      res := (o, translate_typ t, e)::!res
 	| Float _ -> 
 	    res := (o, translate_typ t, C.exp_of_float 0.)::!res
@@ -409,7 +416,7 @@ let translate (globals, spec) =
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
 	  let r = fields_of_comp (Csyntax.comp_of_typ t) in
-	  let (o, t) = get_field f r in
+	  let (o, t) = find_field f r in
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
@@ -549,8 +556,7 @@ let translate (globals, spec) =
 		
 	| Cast (e, t) -> 
 	    let e = translate_exp e in
-	    let e = cast e t in
-	      (e, t)
+	      cast e t
 		
 	| Call f -> translate_call f
 				
@@ -595,7 +601,7 @@ let translate (globals, spec) =
 	Var x when is_fname x -> 
 	  let (f, (tmp_args_t, ret_t)) = find_fname x in
 	  let args_t = refine_args_t tmp_args_t args in
-	  let args = translate_args args args_t in
+	  let (args, args_t) = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
 	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
 	    (C.Call (ft', C.Fname f, args), ret_t)
@@ -611,7 +617,7 @@ let translate (globals, spec) =
 		    "function pointer expected"
 	  in
 	  let args_t = refine_args_t args_t args in
-	  let args = translate_args args args_t in
+	  let (args, args_t) = translate_args args args_t in
 	  let ft' = translate_ftyp (args_t, ret_t) in
 	    (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
 	      
@@ -644,7 +650,7 @@ let translate (globals, spec) =
 	    let e = Binop (op, lv, e) in
 	      (lv', e)
     in
-    let e = cast (translate_exp e) t in
+    let (e, t) = cast (translate_exp e) t in
     let t' = translate_typ t in
     let set = (lv', t', e) in
       (set, t)
@@ -674,10 +680,10 @@ let translate (globals, spec) =
   and translate_args args args_t =
     let rec translate_args args args_t =
       match (args, args_t) with
-	  ([], (Va_arg, _)::[]) ->
-	    let e = cast (translate_exp (exp_of_int 0)) (Ptr char_typ) in
-	      e::[]
-	| (_, (Va_arg, _)::[]) -> 
+	  ([], (Va_arg, id)::[]) ->
+	    let (e, _) = cast (translate_exp (exp_of_int 0)) (Ptr char_typ) in
+	      (e::[], (Va_arg, id)::[])
+	| (_, (Va_arg, id)::[]) -> 
 	    let (args, sz) = translate_va_args args in
 	    let loc = Npkcontext.get_loc () in
 	    let sz = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
@@ -685,12 +691,13 @@ let translate (globals, spec) =
 	    let (_, decl, v) = gen_tmp loc t in
 	    let (e, _) = addr_of (v, t) in
 	    let init = init_va_args loc v args in
-	      (C.Pref (decl::init, e))::[]
+	      ((C.Pref (decl::init, e))::[], (Va_arg, id)::[])
 
-	| (e::args, (t, _)::args_t) ->
-	    let e = cast (translate_exp e) t in
-	      e::(translate_args args args_t)
-	| ([], []) -> []
+	| (e::args, (t, id)::args_t) ->
+	    let (e, t) = cast (translate_exp e) t in
+	    let (args, args_t) = translate_args args args_t in
+	      (e::args, (t, id)::args_t)
+	| ([], []) -> ([], [])
 	| _ -> 
 	    Npkcontext.error "Firstpass.translate_exp" 
 	      "different types at function call"
@@ -842,7 +849,7 @@ let translate (globals, spec) =
 
   and add_enum (x, v) =
     let v = translate_exp v in
-    let v = cast v int_typ in
+    let (v, _) = cast v int_typ in
     let v = 
       try C.Const (C.CInt (C.eval_exp v)) 
       with Invalid_argument _ -> v
@@ -1102,6 +1109,7 @@ let translate (globals, spec) =
     update_funsymb f static (args, ret) loc
 
   and normalize_binop op (e1, t1) (e2, t2) =
+    let cast e t = fst (cast e t) in
     match (op, t1, t2) with
       | (Minus, Ptr _, Int _) -> 
 	  let e2 = translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) in
@@ -1221,7 +1229,8 @@ let translate (globals, spec) =
       | (BNot, Int k, _) -> 
 	  let k' = C.promote k in
 	  let t' = Int k' in
-	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), cast (e, t) t'), t')
+	  let (e, t') = cast (e, t) t' in
+	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), e), t')
       | _ -> 
 	  Npkcontext.error "Csyntax.translate_unop" 
 	    "Unexpected unary operator and argument"

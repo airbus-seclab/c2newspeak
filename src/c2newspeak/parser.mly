@@ -933,7 +933,7 @@ attribute_name:
     []
   }
 | TRANSPARENT_UNION                        { 
-    Npkcontext.report_ignore_warning "Parser.attribute_name" 
+    Npkcontext.report_accept_warning "Parser.attribute_name" 
       "transparent union" Npkcontext.TransparentUnion;
     [];
   }
