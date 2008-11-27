@@ -1,1 +1,1 @@
-Fatal error: file name does not match unit name in t123.adb line 5
+Fatal error: t123.adb:5: file name does not match unit name

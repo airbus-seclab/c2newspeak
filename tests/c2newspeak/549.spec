@@ -1,4 +1,4 @@
-Warning: local composite ceation accepted in 549.c line 32
+Warning: 549.c:32: local composite ceation accepted
 Newspeak output
 ---------------
 549.c

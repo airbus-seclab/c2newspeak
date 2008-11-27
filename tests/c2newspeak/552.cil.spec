@@ -1,1 +1,1 @@
-Fatal error: Different types for function f in 552.c line 29
+Fatal error: 552.c:29: Different types for function f

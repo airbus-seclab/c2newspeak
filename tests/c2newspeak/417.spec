@@ -1,4 +1,4 @@
-Warning: __builtin_constant_p ignored, assuming value 0 in 417.c line 28
+Warning: 417.c:28: __builtin_constant_p ignored, assuming value 0
 Newspeak output
 ---------------
 417.c

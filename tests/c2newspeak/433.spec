@@ -1,4 +1,4 @@
-Warning: cast to void accepted in 433.c line 28
+Warning: 433.c:28: cast to void accepted
 Newspeak output
 ---------------
 433.c

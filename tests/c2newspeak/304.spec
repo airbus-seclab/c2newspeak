@@ -1,4 +1,4 @@
-Warning: unnecessary semicolon accepted in 304.c line 27
+Warning: 304.c:27: unnecessary semicolon accepted
 Newspeak output
 ---------------
 304.c

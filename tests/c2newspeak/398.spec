@@ -1,1 +1,1 @@
-Fatal error: syntax error: unexpected token: __extension__, rewrite your code in 398.c line 28
+Fatal error: 398.c:28: syntax error: unexpected token: __extension__, rewrite your code

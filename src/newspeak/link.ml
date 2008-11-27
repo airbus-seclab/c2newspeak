@@ -216,7 +216,8 @@ let update_glob_link name (t, loc, init, used) =
 		  ", in file "^file^" variable "
 		  ^name^" should probably be extern"
 	      end else begin
-		" (previous definition"^(Npkcontext.string_of_loc prev_loc)^")"
+		" (previous definition: "
+		^(Newspeak.string_of_loc prev_loc)^")"
 	      end
 	    in
 	    Npkcontext.report_accept_warning "Npklink.update_glob_link"

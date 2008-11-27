@@ -1,1 +1,1 @@
-Fatal error: unexpected goto in 543.c line 30
+Fatal error: 543.c:30: unexpected goto

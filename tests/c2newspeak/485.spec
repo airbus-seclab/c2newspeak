@@ -1,4 +1,4 @@
-Warning: unnecessary comma in 485.c line 31
+Warning: 485.c:31: unnecessary comma
 Newspeak output
 ---------------
 485.c

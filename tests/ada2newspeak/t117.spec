@@ -1,1 +1,1 @@
-Fatal error: uncompatible types in t117.adb line 8
+Fatal error: t117.adb:8: uncompatible types

@@ -1,1 +1,1 @@
-Fatal error: ambiguous operands in t122.adb line 6
+Fatal error: t122.adb:6: ambiguous operands

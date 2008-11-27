@@ -1,2 +1,2 @@
-Warning: extern not accepted: t in 234.c line 26
-Fatal error: Unknown array length in 234.c line 26
+Warning: 234.c:26: extern not accepted: t
+Fatal error: 234.c:26: Unknown array length

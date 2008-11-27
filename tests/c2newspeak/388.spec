@@ -1,4 +1,4 @@
-Warning: deprecated style of function definition accepted in 388.c line 29
+Warning: 388.c:29: deprecated style of function definition accepted
 Newspeak output
 ---------------
 388.c

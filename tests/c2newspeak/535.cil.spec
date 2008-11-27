@@ -1,2 +1,2 @@
-Warning: missing or incomplete prototype for h in 535.c line 26
-Fatal error: case not handled yet in 535.c line 31
+Warning: 535.c:26: missing or incomplete prototype for h
+Fatal error: 535.c:31: case not handled yet

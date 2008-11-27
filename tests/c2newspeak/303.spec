@@ -1,1 +1,1 @@
-Fatal error: flexible array member, rewrite your code or try option --accept-flexible-array in 303.c line 27
+Fatal error: 303.c:27: flexible array member, rewrite your code or try option --accept-flexible-array

@@ -1,4 +1,4 @@
-Warning: missing or incomplete prototype for f in 468.c line 29
+Warning: 468.c:29: missing or incomplete prototype for f
 Newspeak output
 ---------------
 468.c

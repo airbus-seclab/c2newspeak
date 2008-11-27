@@ -267,7 +267,7 @@ let forget_loc () = cur_loc := Newspeak.unknown_loc
 let string_of_loc loc = 
   let (file, line, _) = loc in
     if loc = Newspeak.unknown_loc then ""
-    else " in "^file^" line "^(string_of_int line)
+    else file^":"^(string_of_int line)^": "
 
 let get_fname () =
   let (file, _, _) = !cur_loc in 
@@ -288,26 +288,24 @@ module String_set =
 
 let old_warnings = ref (String_set.empty)
 
+let string_of_err kind where msg =
+  let warn = kind^(string_of_loc !cur_loc)^msg in
+    if (!verb_debug && where <> "") then warn^" ("^where^")" else warn
+
 let print_warning where msg =
-  let disp = 
-    if (!verb_debug && where <> "")
-    then "Warning ("^where^"): "^msg^(string_of_loc !cur_loc)
-    else "Warning: "^msg^(string_of_loc !cur_loc)
-  in
+  let disp = string_of_err "Warning: " where msg in
+(* TODO: optimize this away?? *)
     if not (String_set.mem disp !old_warnings)
-    then  begin
+    then begin
       prerr_endline disp;
       old_warnings := String_set.add disp !old_warnings
     end
 
+let string_of_error = string_of_err ""
+
 let print_debug msg =
   if !verb_debug then 
-    prerr_endline ("Debug: "^msg^(string_of_loc !cur_loc))
-
-let string_of_error where msg =
-  if (!verb_debug && where <> "")
-  then "("^where^") "^msg^(string_of_loc !cur_loc)
-  else msg^(string_of_loc !cur_loc)
+    prerr_endline ("Debug: "^(string_of_loc !cur_loc)^msg)
 
 let error where msg = invalid_arg (string_of_error where msg)
 

@@ -1,4 +1,4 @@
-Warning: block within expression accepted in 452.c line 31
+Warning: 452.c:31: block within expression accepted
 Newspeak output
 ---------------
 452.c

@@ -1,4 +1,4 @@
-Warning: extern function definition accepted in 283.c line 27
+Warning: 283.c:27: extern function definition accepted
 Newspeak output
 ---------------
 283.c

@@ -1,4 +1,4 @@
-Warning: incomplete prototype for function f in 540.c line 26
+Warning: 540.c:26: incomplete prototype for function f
 Newspeak output
 ---------------
 540.c

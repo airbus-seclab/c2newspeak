@@ -1,4 +1,4 @@
-Warning: anonymous field declaration in structure accepted in 358.c line 27
+Warning: 358.c:27: anonymous field declaration in structure accepted
 Newspeak output
 ---------------
 358.c

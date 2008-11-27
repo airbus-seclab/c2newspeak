@@ -1,4 +1,4 @@
-Warning: comma terminated initializer in 511.c line 30
+Warning: 511.c:30: comma terminated initializer
 Newspeak output
 ---------------
 511.c

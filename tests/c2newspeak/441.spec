@@ -1,5 +1,5 @@
-Warning: identifier a is defined as a type, avoid using it for another purpose in 441.c line 29
-Warning: identifier a is defined as a type, avoid using it for another purpose in 441.c line 34
+Warning: 441.c:29: identifier a is defined as a type, avoid using it for another purpose
+Warning: 441.c:34: identifier a is defined as a type, avoid using it for another purpose
 Newspeak output
 ---------------
 441.c

@@ -1,1 +1,1 @@
-Fatal error: Different types for function f in 305.c line 30
+Fatal error: 305.c:30: Different types for function f

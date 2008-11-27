@@ -1,8 +1,8 @@
-Warning: extra initializer for array accepted in 052.c line 33
-Warning: not enough initializers for array in 052.c line 35
-Warning: extra initializer for array accepted in 052.c line 38
-Warning: extra initializer for array accepted in 052.c line 39
-Warning: not enough initializers for array in 052.c line 41
+Warning: 052.c:33: extra initializer for array accepted
+Warning: 052.c:35: not enough initializers for array
+Warning: 052.c:38: extra initializer for array accepted
+Warning: 052.c:39: extra initializer for array accepted
+Warning: 052.c:41: not enough initializers for array
 Newspeak output
 ---------------
 052.c

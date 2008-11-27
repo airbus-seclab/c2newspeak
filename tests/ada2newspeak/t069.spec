@@ -1,1 +1,1 @@
-Fatal error: non-static constraint are not yet supported in t069.adb line 6
+Fatal error: t069.adb:6: non-static constraint are not yet supported

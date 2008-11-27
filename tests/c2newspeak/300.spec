@@ -1,4 +1,4 @@
-Warning: assignment within expression accepted in 300.c line 29
+Warning: 300.c:29: assignment within expression accepted
 Newspeak output
 ---------------
 300.c

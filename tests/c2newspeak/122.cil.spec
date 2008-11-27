@@ -1,1 +1,1 @@
-Fatal error: function f has return type void in 122.c line 30
+Fatal error: 122.c:30: function f has return type void

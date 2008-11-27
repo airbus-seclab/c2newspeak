@@ -1,1 +1,1 @@
-Fatal error: null range not accepted in t111.adb line 2
+Fatal error: t111.adb:2: null range not accepted

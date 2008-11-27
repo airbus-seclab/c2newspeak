@@ -1,4 +1,4 @@
-Warning: dirty cast fptr -> ptr accepted in 151.c line 30
+Warning: 151.c:30: dirty cast fptr -> ptr accepted
 Newspeak output
 ---------------
 151.c

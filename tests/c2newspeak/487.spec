@@ -1,1 +1,1 @@
-Fatal error: packed attribute not supported yet, rewrite your code or try option --ignore-pack in 487.c line 30
+Fatal error: 487.c:30: packed attribute not supported yet, rewrite your code or try option --ignore-pack

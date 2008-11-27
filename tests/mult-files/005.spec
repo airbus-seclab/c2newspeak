@@ -1,1 +1,1 @@
-Fatal error: multiple definitions of global variable x (previous definition in 005-b.c line 26), rewrite your code or try option --accept-mult-def in 005-a.c line 26
+Fatal error: 005-a.c:26: multiple definitions of global variable x (previous definition: 005-b.c:26#4), rewrite your code or try option --accept-mult-def

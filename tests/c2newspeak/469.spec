@@ -1,3 +1,3 @@
-Warning: incomplete prototype for function f in 469.c line 29
-Warning: unknown arguments type at function call accepted in 469.c line 32
-Fatal error: different types at function call in 469.c line 33
+Warning: 469.c:29: incomplete prototype for function f
+Warning: 469.c:32: unknown arguments type at function call accepted
+Fatal error: 469.c:33: different types at function call

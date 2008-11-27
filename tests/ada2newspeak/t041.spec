@@ -17,7 +17,7 @@ t041() {
 
 
 
-Warning: extern not accepted: t041a.z in t041a.ads line 3
+Warning: t041a.ads:3: extern not accepted: t041a.z
 Newspeak output
 ---------------
 t041.adb

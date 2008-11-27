@@ -1,1 +1,1 @@
-Fatal error: uncompatible types in t116.adb line 11
+Fatal error: t116.adb:11: uncompatible types

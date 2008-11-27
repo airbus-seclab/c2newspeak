@@ -1,1 +1,1 @@
-Fatal error: const 'L"wide string literal"' not handled in 309.c line 29
+Fatal error: 309.c:29: const 'L"wide string literal"' not handled

@@ -1,1 +1,1 @@
-Fatal error: uncompatible types in t114.adb line 7
+Fatal error: t114.adb:7: uncompatible types

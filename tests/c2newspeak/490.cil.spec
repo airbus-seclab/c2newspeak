@@ -1,1 +1,1 @@
-Fatal error: Asm block not supported in 490.c line 33
+Fatal error: 490.c:33: Asm block not supported

@@ -1,1 +1,1 @@
-Fatal error: unknown identifier f in 119.c line 27
+Fatal error: 119.c:27: unknown identifier f

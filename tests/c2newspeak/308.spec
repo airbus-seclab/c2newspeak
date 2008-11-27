@@ -1,1 +1,1 @@
-Fatal error: wide characters not supported in 308.c line 29
+Fatal error: 308.c:29: wide characters not supported

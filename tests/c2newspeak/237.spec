@@ -1,1 +1,1 @@
-Fatal error: invalid cast from integer to pointer in 237.c line 32
+Fatal error: 237.c:32: invalid cast from integer to pointer

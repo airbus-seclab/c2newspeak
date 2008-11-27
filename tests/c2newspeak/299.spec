@@ -1,4 +1,4 @@
-Warning: cast of left value accepted in 299.c line 28
+Warning: 299.c:28: cast of left value accepted
 Newspeak output
 ---------------
 299.c

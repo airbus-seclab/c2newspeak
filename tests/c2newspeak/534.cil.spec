@@ -1,3 +1,3 @@
-Warning: missing or incomplete prototype for h in 534.c line 26
-Warning: missing or incomplete prototype for sort in 534.c line 29
-Fatal error: case not handled yet in 534.c line 32
+Warning: 534.c:26: missing or incomplete prototype for h
+Warning: 534.c:29: missing or incomplete prototype for sort
+Fatal error: 534.c:32: case not handled yet

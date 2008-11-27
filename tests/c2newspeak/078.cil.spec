@@ -1,1 +1,1 @@
-Fatal error: stmtkind not handled in 078.c line 33
+Fatal error: 078.c:33: stmtkind not handled

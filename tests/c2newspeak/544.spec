@@ -1,4 +1,4 @@
-Warning: transparent union accepted in 544.c line 29
+Warning: 544.c:29: transparent union accepted
 Newspeak output
 ---------------
 544.c
