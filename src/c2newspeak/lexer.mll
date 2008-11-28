@@ -156,6 +156,7 @@ rule token spec_buf = parse
   | "if"                { IF }
   | "inline"            { INLINE }
   | "register"          { REGISTER }
+  | "auto"              { AUTO }
   | "return"            { RETURN }
   | "sizeof"            { SIZEOF }
   | "static"            { STATIC }
