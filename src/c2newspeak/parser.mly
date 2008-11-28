@@ -171,7 +171,7 @@ let rec normalize_bexp e =
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE REGISTER
+%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE AUTO
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
@@ -340,6 +340,7 @@ statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
 | REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
+| AUTO declaration SEMICOLON               { build_stmtdecl false false $2 }
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
@@ -882,10 +883,8 @@ type_qualifier:
     Npkcontext.report_ignore_warning "Parser.type_qualifier" 
       "type qualifier 'volatile'" Npkcontext.Volatile;
     }
-| REGISTER                                 {
-    Npkcontext.report_ignore_warning "Parser.type_qualifier"
-      "type qualifier 'register'" Npkcontext.Register;
-  }
+| AUTO                                     { }
+| REGISTER                                 { }
 ;;
 
 gnuc_field_declaration:
@@ -944,11 +943,7 @@ attribute_name:
     []
   }
 
-| UNUSED                        { 
-    Npkcontext.report_ignore_warning "Parser.attribute_name" 
-      "unused labels option" Npkcontext.Unused;
-    []
-  }
+| UNUSED                        {[]}
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 

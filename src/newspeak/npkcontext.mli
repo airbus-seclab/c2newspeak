@@ -37,7 +37,6 @@ type error =
   | Pragma
   | Pack
   | Volatile
-  | Register
   | DirtyCast
   | DirtySyntax
   | PartialFunTyp
@@ -51,7 +50,7 @@ type error =
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
-  | Unused
+ 
 
 (** {1 Comand line options } *)
 
