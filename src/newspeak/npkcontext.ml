@@ -65,6 +65,8 @@ let normalize_loops = ref false
 let accept_mult_def = ref false
 
 let ignores_unused = ref false
+let ignores_register = ref false
+
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
 
@@ -100,6 +102,7 @@ type error =
   | Pragma
   | Pack
   | Volatile
+  | Register
   | DirtyCast
   | DirtySyntax
   | PartialFunTyp
@@ -121,6 +124,7 @@ let flag_of_error err =
     | Pragma -> ignores_pragmas
     | Pack -> ignores_pack
     | Volatile -> ignores_volatile
+    | Register -> ignores_register
     | DirtyCast -> castor_allowed
     | DirtySyntax -> accept_dirty_syntax
     | PartialFunTyp -> missing_ftyp
@@ -142,6 +146,7 @@ let opt_of_error err =
     | Pragma -> "--ignore-pragma"
     | Pack -> "--ignore-pack"
     | Volatile -> "--ignore-volatile"
+    | Register -> "--ignore-register"
     | DirtyCast -> "--castor"
     | DirtySyntax -> "--accept-dirty-syntax"
     | PartialFunTyp -> "--missing-funtyp"

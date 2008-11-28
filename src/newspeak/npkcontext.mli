@@ -37,6 +37,7 @@ type error =
   | Pragma
   | Pack
   | Volatile
+  | Register
   | DirtyCast
   | DirtySyntax
   | PartialFunTyp

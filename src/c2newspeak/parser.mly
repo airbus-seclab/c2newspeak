@@ -170,7 +170,7 @@ let rec normalize_bexp e =
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE
+%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE REGISTER
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
@@ -880,6 +880,10 @@ type_qualifier:
     Npkcontext.report_ignore_warning "Parser.type_qualifier" 
       "type qualifier 'volatile'" Npkcontext.Volatile;
     }
+| REGISTER                                 {
+    Npkcontext.report_ignore_warning "Parser.type_qualifier"
+      "type qualifier 'register'" Npkcontext.Register;
+  }
 ;;
 
 gnuc_field_declaration:
