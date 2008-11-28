@@ -1,1 +1,1 @@
-Fatal error: wide string literals not supported in 309.c line 29
+Fatal error: 309.c:29: wide string literals not supported

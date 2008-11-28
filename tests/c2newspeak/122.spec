@@ -1,1 +1,1 @@
-Fatal error: value void not ignored as it ought to be in 122.c line 30
+Fatal error: 122.c:30: value void not ignored as it ought to be

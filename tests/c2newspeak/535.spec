@@ -1,2 +1,2 @@
-Warning: incomplete prototype for function h in 535.c line 26
-Fatal error: incomplete type for function in 535.c line 31
+Warning: 535.c:26: incomplete prototype for function h
+Fatal error: 535.c:31: incomplete type for function

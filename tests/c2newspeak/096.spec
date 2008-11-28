@@ -1,4 +1,4 @@
-Warning: unknown arguments type at function call accepted in 096.c line 28
+Warning: 096.c:28: unknown arguments type at function call accepted
 Newspeak output
 ---------------
 096.c

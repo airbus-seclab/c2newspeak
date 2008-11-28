@@ -1,4 +1,4 @@
-Warning: incomplete prototype for function h in 536.c line 26
+Warning: 536.c:26: incomplete prototype for function h
 Newspeak output
 ---------------
 536.c

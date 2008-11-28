@@ -1,1 +1,1 @@
-Fatal error: invalid cast int32 -> fptr in 464.c line 33
+Fatal error: 464.c:33: invalid cast int32 -> fptr

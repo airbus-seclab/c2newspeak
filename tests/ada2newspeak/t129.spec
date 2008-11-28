@@ -1,1 +1,1 @@
-Fatal error: enumeration value not ordered in t129.adb line 3
+Fatal error: t129.adb:3: enumeration value not ordered

@@ -1,4 +1,4 @@
-Warning: missing initializers for structure accepted in 293.c line 32
+Warning: 293.c:32: missing initializers for structure accepted
 Newspeak output
 ---------------
 293.c

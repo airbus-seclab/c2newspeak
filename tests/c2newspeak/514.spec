@@ -1,1 +1,1 @@
-Fatal error: invalid size for array in 514.c line 27
+Fatal error: 514.c:27: invalid size for array

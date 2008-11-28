@@ -1,1 +1,1 @@
-Fatal error: dirty cast from pointer to integer, rewrite your code or try option --castor in 236.c line 30
+Fatal error: 236.c:30: dirty cast from pointer to integer, rewrite your code or try option --castor

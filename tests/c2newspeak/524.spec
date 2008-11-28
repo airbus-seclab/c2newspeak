@@ -1,6 +1,6 @@
-Warning: comma in expression accepted in 524.c line 29
-Warning: block within expression accepted in 524.c line 29
-Warning: the order of execution of side-effects in expressions not specified, picking a random one, be careful in 524.c line 29
+Warning: 524.c:29: comma in expression accepted
+Warning: 524.c:29: block within expression accepted
+Warning: 524.c:29: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
 524.c

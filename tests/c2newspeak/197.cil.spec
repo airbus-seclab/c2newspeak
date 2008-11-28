@@ -1,1 +1,1 @@
-Fatal error: unexpected goto in 197.c line 31
+Fatal error: 197.c:31: unexpected goto

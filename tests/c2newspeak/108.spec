@@ -1,4 +1,4 @@
-Warning: incomplete prototype for function f in 108.c line 26
+Warning: 108.c:26: incomplete prototype for function f
 Newspeak output
 ---------------
 108.c

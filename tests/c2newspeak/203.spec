@@ -1,1 +1,1 @@
-Fatal error: syntax error: unexpected token: default, rewrite your code or try option --accept-gnuc in 203.c line 31
+Fatal error: 203.c:31: syntax error: unexpected token: default, rewrite your code or try option --accept-gnuc

@@ -1,1 +1,1 @@
-Fatal error: unstructed use of switch statement in 023.c line 32
+Fatal error: 023.c:32: unstructed use of switch statement

@@ -1,4 +1,4 @@
-Warning: ignoring attribute dllimport in 362.c line 26
+Warning: 362.c:26: ignoring attribute dllimport
 Newspeak output
 ---------------
 362.c

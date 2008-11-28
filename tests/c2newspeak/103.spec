@@ -1,1 +1,1 @@
-Fatal error: pointer arithmetic forbidden on function pointers in 103.c line 28
+Fatal error: 103.c:28: pointer arithmetic forbidden on function pointers

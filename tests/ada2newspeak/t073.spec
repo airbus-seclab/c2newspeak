@@ -1,1 +1,1 @@
-Fatal error: null range not accepted in t073.adb line 3
+Fatal error: t073.adb:3: null range not accepted

@@ -1,1 +1,1 @@
-Fatal error: invalid size for array in 395.c line 31
+Fatal error: 395.c:31: invalid size for array

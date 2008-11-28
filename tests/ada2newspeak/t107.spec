@@ -1,1 +1,1 @@
-Fatal error: uncompatible types in t107.adb line 5
+Fatal error: t107.adb:5: uncompatible types

@@ -1,4 +1,4 @@
-Warning: asm directive '_libintl_gettext' ignored in 376.c line 26
+Warning: 376.c:26: asm directive '_libintl_gettext' ignored
 Newspeak output
 ---------------
 376.c

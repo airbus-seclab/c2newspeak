@@ -1,4 +1,4 @@
-Warning: block within expression accepted in 523.c line 28
+Warning: 523.c:28: block within expression accepted
 Newspeak output
 ---------------
 523.c

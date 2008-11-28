@@ -1,5 +1,5 @@
-Warning: not enough initializers for array in 117.c line 27
-Warning: not enough initializers for array in 117.c line 28
+Warning: 117.c:27: not enough initializers for array
+Warning: 117.c:28: not enough initializers for array
 Newspeak output
 ---------------
 117.c

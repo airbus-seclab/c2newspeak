@@ -1,1 +1,1 @@
-Fatal error: Asm block not supported in 463.c line 31
+Fatal error: 463.c:31: Asm block not supported

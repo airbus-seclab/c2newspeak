@@ -1,1 +1,1 @@
-Fatal error: unexpected goto in 077.c line 32
+Fatal error: 077.c:32: unexpected goto

@@ -1,5 +1,5 @@
-Warning: incomplete prototype for function f in 542.c line 26
-Warning: unknown arguments type at function call accepted in 542.c line 29
+Warning: 542.c:26: incomplete prototype for function f
+Warning: 542.c:29: unknown arguments type at function call accepted
 Newspeak output
 ---------------
 542.c

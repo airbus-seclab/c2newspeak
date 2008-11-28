@@ -1,11 +1,11 @@
-Warning: dirty cast from integer to pointer accepted in 240.c line 97
-Warning: dirty cast from integer to pointer accepted in 240.c line 109
-Warning: dirty cast from integer to pointer accepted in 240.c line 121
-Warning: dirty cast from integer to pointer accepted in 240.c line 133
-Warning: dirty cast from integer to pointer accepted in 240.c line 141
-Warning: dirty cast from integer to pointer accepted in 240.c line 142
-Warning: dirty cast from integer to pointer accepted in 240.c line 143
-Warning: dirty cast from integer to pointer accepted in 240.c line 144
+Warning: 240.c:97: dirty cast from integer to pointer accepted
+Warning: 240.c:109: dirty cast from integer to pointer accepted
+Warning: 240.c:121: dirty cast from integer to pointer accepted
+Warning: 240.c:133: dirty cast from integer to pointer accepted
+Warning: 240.c:141: dirty cast from integer to pointer accepted
+Warning: 240.c:142: dirty cast from integer to pointer accepted
+Warning: 240.c:143: dirty cast from integer to pointer accepted
+Warning: 240.c:144: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
 240.c

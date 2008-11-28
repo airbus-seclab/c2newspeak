@@ -1,4 +1,4 @@
-Warning: anonymous field declaration in structure accepted in 360.c line 27
+Warning: 360.c:27: anonymous field declaration in structure accepted
 Newspeak output
 ---------------
 360.c

@@ -1,1 +1,1 @@
-Fatal error: variable list of arguments not handled yet in 350.c line 26
+Fatal error: 350.c:26: variable list of arguments not handled yet

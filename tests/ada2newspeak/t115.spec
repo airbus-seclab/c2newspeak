@@ -1,1 +1,1 @@
-Fatal error: uncompatible types in t115.adb line 10
+Fatal error: t115.adb:10: uncompatible types

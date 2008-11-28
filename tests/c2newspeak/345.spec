@@ -1,1 +1,1 @@
-Fatal error: syntax error: unexpected token: void, rewrite your code or try option --accept-gnuc in 345.c line 26
+Fatal error: 345.c:26: syntax error: unexpected token: void, rewrite your code or try option --accept-gnuc

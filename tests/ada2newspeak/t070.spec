@@ -1,1 +1,1 @@
-Fatal error: non-static constraint are not yet supported in t070.adb line 7
+Fatal error: t070.adb:7: non-static constraint are not yet supported

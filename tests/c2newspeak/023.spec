@@ -1,1 +1,1 @@
-Fatal error: syntax error: unexpected token: do, rewrite your code or try option --accept-gnuc in 023.c line 32
+Fatal error: 023.c:32: syntax error: unexpected token: do, rewrite your code or try option --accept-gnuc

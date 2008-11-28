@@ -1,4 +1,4 @@
-Warning: not enough initializers for array in 320.c line 29
+Warning: 320.c:29: not enough initializers for array
 Newspeak output
 ---------------
 320.c

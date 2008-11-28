@@ -1,1 +1,1 @@
-Fatal error: unexpected goto in 332.c line 29
+Fatal error: 332.c:29: unexpected goto

@@ -1,4 +1,4 @@
-Warning: incomplete prototype for function f in 533.c line 26
+Warning: 533.c:26: incomplete prototype for function f
 Newspeak output
 ---------------
 533.c

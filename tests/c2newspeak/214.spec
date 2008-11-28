@@ -1,4 +1,4 @@
-Warning: the order of execution of side-effects in expressions not specified, picking a random one, be careful in 214.c line 32
+Warning: 214.c:32: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
 214.c

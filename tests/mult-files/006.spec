@@ -1,4 +1,4 @@
-Warning: multiple definitions of global variable x (previous definition in 006-b.c line 26) accepted in 006-a.c line 26
+Warning: 006-a.c:26: multiple definitions of global variable x (previous definition: 006-b.c:26#4) accepted
 Newspeak output
 ---------------
 006-a.c

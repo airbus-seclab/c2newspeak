@@ -1,2 +1,2 @@
-Warning: flexible array member accepted in 497.c line 31
-Fatal error: pointer deref expected in 497.c line 36
+Warning: 497.c:31: flexible array member accepted
+Fatal error: 497.c:36: pointer deref expected

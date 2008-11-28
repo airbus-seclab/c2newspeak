@@ -1,1 +1,1 @@
-Fatal error: unknown length of array in 498.c line 36
+Fatal error: 498.c:36: unknown length of array

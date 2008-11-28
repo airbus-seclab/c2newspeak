@@ -1,4 +1,4 @@
-Warning: assignment within expression accepted in 301.c line 28
+Warning: 301.c:28: assignment within expression accepted
 Newspeak output
 ---------------
 301.c
