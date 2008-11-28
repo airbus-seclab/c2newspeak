@@ -1,4 +1,4 @@
-Warning: 467.c:33: dirty cast from integer to pointer accepted
+Warning: 467.c:33#1160: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
 467.c

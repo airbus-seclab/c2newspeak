@@ -1,4 +1,4 @@
-Warning: t008.adb:5: Unreachable code
+Warning: t008.adb:5#88: Unreachable code
 Newspeak Object output
 ----------------------
 t008.adb

@@ -1,4 +1,4 @@
-Warning: 434.c:32: block within expression accepted
+Warning: 434.c:32#1135: block within expression accepted
 Newspeak output
 ---------------
 434.c

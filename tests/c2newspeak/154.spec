@@ -1,1 +1,1 @@
-Fatal error: 154.c:25: Unknown array length
+Fatal error: 154.c:25#4: Unknown array length

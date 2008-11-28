@@ -1,1 +1,1 @@
-Fatal error: 170.c:31: invalid implicit cast
+Fatal error: 170.c:31#1113: invalid implicit cast

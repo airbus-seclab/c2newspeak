@@ -1,1 +1,1 @@
-Fatal error: t118.adb:11: expected static expression
+Fatal error: t118.adb:11#177: expected static expression

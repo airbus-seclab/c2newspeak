@@ -18,7 +18,7 @@ t109() {
 
 
 
-Warning: t109a.ads:2: extern not accepted: t109a.x
+Warning: t109a.ads:2#17: extern not accepted: t109a.x
 Newspeak output
 ---------------
 t109.adb

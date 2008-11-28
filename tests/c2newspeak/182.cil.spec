@@ -6,6 +6,6 @@ error in collectFunction A: Errormsg.Error
 Error: It seems that we would need to rename global A (to A___1) because of previous occurrence at 182.c:29
   Context : 2cil: main
 error in doExp (Errormsg.Error)
-Fatal error: 182.c:33: global #line 33 "182.c"
+Fatal error: 182.c:33#1143: global #line 33 "182.c"
 __asm__("error in function A");
  not supported

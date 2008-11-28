@@ -265,9 +265,7 @@ let set_loc loc = cur_loc := loc
 let forget_loc () = cur_loc := Newspeak.unknown_loc
 
 let string_of_loc loc = 
-  let (file, line, _) = loc in
-    if loc = Newspeak.unknown_loc then ""
-    else file^":"^(string_of_int line)^": "
+  if loc = Newspeak.unknown_loc then "" else (Newspeak.string_of_loc loc)^": "
 
 let get_fname () =
   let (file, _, _) = !cur_loc in 
@@ -281,25 +279,12 @@ let get_loc () = !cur_loc
 (* Warnings/errors generation and display *)
 (*----------------------------------------*)
 
-
-(* TODO: Watch this ! *)
-module String_set = 
-  Set.Make (struct type t = string let compare = Pervasives.compare end)
-
-let old_warnings = ref (String_set.empty)
-
 let string_of_err kind where msg =
   let warn = kind^(string_of_loc !cur_loc)^msg in
     if (!verb_debug && where <> "") then warn^" ("^where^")" else warn
 
 let print_warning where msg =
-  let disp = string_of_err "Warning: " where msg in
-(* TODO: optimize this away?? *)
-    if not (String_set.mem disp !old_warnings)
-    then begin
-      prerr_endline disp;
-      old_warnings := String_set.add disp !old_warnings
-    end
+  prerr_endline (string_of_err "Warning: " where msg)
 
 let string_of_error = string_of_err ""
 

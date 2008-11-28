@@ -1,4 +1,4 @@
-Warning: 235.c:31: dirty cast from integer to pointer accepted
+Warning: 235.c:31#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
 235.c

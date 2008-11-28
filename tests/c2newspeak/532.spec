@@ -1,1 +1,1 @@
-Fatal error: 532.c:27: unknown size of array
+Fatal error: 532.c:27#6: unknown size of array
