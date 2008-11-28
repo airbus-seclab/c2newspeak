@@ -194,6 +194,9 @@ let argslist = [
   (opt_of_error Volatile, Arg.Set (flag_of_error Volatile),
    "ignores 'volatile' type qualifier");
 
+  (opt_of_error Register, Arg.Set (flag_of_error Register),
+   "ignores 'register' type qualifier");
+
   (opt_of_error TransparentUnion, Arg.Set (flag_of_error TransparentUnion),
    "ignores any transparent union");
 
