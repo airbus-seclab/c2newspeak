@@ -43,10 +43,21 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
+let apply_attrs attrs t =
+  match (attrs, t) with
+      ([], _) -> t
+    | (new_sz::[], Int (sign, _)) -> Int (sign, new_sz)
+    | (_::[], _) -> 
+	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
+    | _ -> 
+	Npkcontext.error "Parser.apply_attr" 
+	  "more than one attribute not handled yet"
+
 (* TODO: code not so nice: simplify? *)
 let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
   let ((edecls, cdecls), b) = Synthack.normalize_base_typ b in
-  let build_vdecl (v, init) res =
+  let build_vdecl ((v, attrs), init) res =
+    let b = apply_attrs attrs b in
     let (t, x, loc) = Synthack.normalize_var_modifier b v in
       match x with
 	| None -> res
@@ -149,16 +160,6 @@ let report_asm tokens =
   let msg = "asm directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
 
-let apply_attrs attrs t =
-  match (attrs, t) with
-      ([], _) -> t
-    | (new_sz::[], Integer (sign, _)) -> Integer (sign, new_sz)
-    | (_::[], _) -> 
-	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
-    | _ -> 
-	Npkcontext.error "Parser.apply_attr" 
-	  "more than one attribute not handled yet"
-
 let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
@@ -208,21 +209,21 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit                         { (Synthack.get_fnames (), $1) }
+  translation_unit                          { (Synthack.get_fnames (), $1) }
 ;;
 
 translation_unit:
-  external_declaration translation_unit    { $1@$2 }
-| SEMICOLON translation_unit               { 
+  external_declaration translation_unit     { $1@$2 }
+| SEMICOLON translation_unit                { 
     Npkcontext.report_accept_warning "Parser.translation_unit" 
       "unnecessary semicolon" Npkcontext.DirtySyntax;
     $2 
   }
-|                                          { [] }
+|                                           { [] }
 ;;
 
 function_prologue:
-  declaration_specifiers declarator        { normalize_fun_prologue $1 $2 }
+  declaration_specifiers declarator         { normalize_fun_prologue $1 $2 }
 ;;
 
 function_definition:
@@ -237,26 +238,27 @@ parameter_declaration_list:
 
 declaration:
   declaration_specifiers 
-  init_declarator_list 
-  extended_attribute_list              { 
-    (apply_attrs $3 $1, $2) 
-  }
+  init_declarator_list                      { ($1, $2) }
 ;;
 
 init_declarator_list:
-                                           { (Abstract, None)::[] }
-| non_empty_init_declarator_list           { $1 }
+                                            { ((Abstract, []), None)::[] }
+| non_empty_init_declarator_list            { $1 }
 ;;
 
 non_empty_init_declarator_list:
   init_declarator COMMA 
-  non_empty_init_declarator_list           { $1::$3 }
-| init_declarator                          { $1::[] }
+  non_empty_init_declarator_list            { $1::$3 }
+| init_declarator                           { $1::[] }
 ;;
 
 init_declarator:
-  declarator                               { ($1, None) }
-| declarator EQ init                       { ($1, Some $3) }
+  attr_declarator                           { ($1, None) }
+| attr_declarator EQ init                   { ($1, Some $3) }
+;;
+
+attr_declarator:
+  declarator extended_attribute_list        { ($1, $2) }
 ;;
 
 declarator:
@@ -966,3 +968,4 @@ imode:
 | SI                                       { Config.size_of_byte*4 }
 | DI                                       { Config.size_of_byte*8 }
 ;;
+
