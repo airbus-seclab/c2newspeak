@@ -64,6 +64,7 @@ let normalize_loops = ref false
 
 let accept_mult_def = ref false
 
+let ignores_unused = ref false
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
 
@@ -112,6 +113,7 @@ type error =
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
+  | Unused
 
 let flag_of_error err =
   match err with
@@ -132,6 +134,7 @@ let flag_of_error err =
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
     | TransparentUnion -> accept_transparent_union
+    | Unused -> ignores_unused
  
 let opt_of_error err =
   match err with
@@ -152,6 +155,7 @@ let opt_of_error err =
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"
     | TransparentUnion -> "--accept-transparent-union"
+    | Unused  -> "--ignore-unused"
 
 (* Version *)
 
@@ -248,6 +252,9 @@ let argslist = [
    "turn code simplifications that remove checks off");
 
   ("--one-loop", Arg.Set normalize_loops, "normalize loops");
+
+  (opt_of_error Unused, Arg.Set (flag_of_error Unused),
+   "ignores any unused attribute");
 ]
 
 

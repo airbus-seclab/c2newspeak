@@ -184,7 +184,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION TYPEOF
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION UNUSED TYPEOF
 %token EOF
 
 %token <string> IDENTIFIER
@@ -238,7 +238,7 @@ parameter_declaration_list:
 declaration:
   declaration_specifiers 
   init_declarator_list 
-  extended_attribute_list                  { 
+  extended_attribute_list              { 
     (apply_attrs $3 $1, $2) 
   }
 ;;
@@ -935,7 +935,13 @@ attribute_name:
 | TRANSPARENT_UNION                        { 
     Npkcontext.report_accept_warning "Parser.attribute_name" 
       "transparent union" Npkcontext.TransparentUnion;
-    [];
+    []
+  }
+
+| UNUSED                        { 
+    Npkcontext.report_ignore_warning "Parser.attribute_name" 
+      "unused labels option" Npkcontext.Unused;
+    []
   }
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
