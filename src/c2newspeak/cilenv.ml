@@ -181,7 +181,7 @@ let compare_formals name l1 l2 =
       | _ ->
 	  (* TODO: add the respective locations *)
 	error "Npkenv.compare_formals"
-	  ("Different types for function "^name)
+	  ("different types for function "^name)
   in
     compare_aux l1 l2;
     !res
