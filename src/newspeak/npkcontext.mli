@@ -60,7 +60,6 @@ type error =
 val global_zero_init : bool ref
 val accept_gnuc : bool ref
 val forward_goto : bool ref
-val missing_ftyp : bool ref
 val strict_syntax : bool ref
 
 (** When remove_temp is set, only used variables are kept in newspeak

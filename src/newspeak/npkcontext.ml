@@ -142,7 +142,7 @@ let opt_of_error err =
     | Volatile -> "--ignore-volatile"
     | DirtyCast -> "--castor"
     | DirtySyntax -> "--accept-dirty-syntax"
-    | PartialFunTyp -> "--missing-funtyp"
+    | PartialFunTyp -> "--accept-missing-funtyp"
     | ForwardGoto -> "--accept-forward-goto"
     | StrictSyntax -> "--strict"
     | ExternGlobal -> "--accept-extern"
