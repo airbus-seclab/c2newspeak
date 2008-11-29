@@ -132,6 +132,7 @@ let flag_of_error err =
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
     | TransparentUnion -> accept_transparent_union
+
  
 let opt_of_error err =
   match err with

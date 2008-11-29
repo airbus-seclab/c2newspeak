@@ -43,10 +43,21 @@ let get_loc () =
   let pos = symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
+let apply_attrs attrs t =
+  match (attrs, t) with
+      ([], _) -> t
+    | (new_sz::[], Int (sign, _)) -> Int (sign, new_sz)
+    | (_::[], _) -> 
+	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
+    | _ -> 
+	Npkcontext.error "Parser.apply_attr" 
+	  "more than one attribute not handled yet"
+
 (* TODO: code not so nice: simplify? *)
 let process_decls (build_edecl, build_cdecl, build_vdecl) (b, m) =
   let ((edecls, cdecls), b) = Synthack.normalize_base_typ b in
-  let build_vdecl (v, init) res =
+  let build_vdecl ((v, attrs), init) res =
+    let b = apply_attrs attrs b in
     let (t, x, loc) = Synthack.normalize_var_modifier b v in
       match x with
 	| None -> res
@@ -149,16 +160,6 @@ let report_asm tokens =
   let msg = "asm directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
 
-let apply_attrs attrs t =
-  match (attrs, t) with
-      ([], _) -> t
-    | (new_sz::[], Integer (sign, _)) -> Integer (sign, new_sz)
-    | (_::[], _) -> 
-	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
-    | _ -> 
-	Npkcontext.error "Parser.apply_attr" 
-	  "more than one attribute not handled yet"
-
 let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
@@ -170,7 +171,7 @@ let rec normalize_bexp e =
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF REGISTER RETURN SIZEOF VOLATILE
+%token EXTERN FOR IF REGISTER AUTO RETURN SIZEOF VOLATILE 
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
@@ -184,7 +185,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION TYPEOF
+%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION UNUSED TYPEOF
 %token EOF
 
 %token <string> IDENTIFIER
@@ -208,21 +209,21 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit                         { (Synthack.get_fnames (), $1) }
+  translation_unit                          { (Synthack.get_fnames (), $1) }
 ;;
 
 translation_unit:
-  external_declaration translation_unit    { $1@$2 }
-| SEMICOLON translation_unit               { 
+  external_declaration translation_unit     { $1@$2 }
+| SEMICOLON translation_unit                { 
     Npkcontext.report_accept_warning "Parser.translation_unit" 
       "unnecessary semicolon" Npkcontext.DirtySyntax;
     $2 
   }
-|                                          { [] }
+|                                           { [] }
 ;;
 
 function_prologue:
-  declaration_specifiers declarator        { normalize_fun_prologue $1 $2 }
+  declaration_specifiers declarator         { normalize_fun_prologue $1 $2 }
 ;;
 
 function_definition:
@@ -237,26 +238,27 @@ parameter_declaration_list:
 
 declaration:
   declaration_specifiers 
-  init_declarator_list 
-  extended_attribute_list                  { 
-    (apply_attrs $3 $1, $2) 
-  }
+  init_declarator_list                      { ($1, $2) }
 ;;
 
 init_declarator_list:
-                                           { (Abstract, None)::[] }
-| non_empty_init_declarator_list           { $1 }
+                                            { ((Abstract, []), None)::[] }
+| non_empty_init_declarator_list            { $1 }
 ;;
 
 non_empty_init_declarator_list:
   init_declarator COMMA 
-  non_empty_init_declarator_list           { $1::$3 }
-| init_declarator                          { $1::[] }
+  non_empty_init_declarator_list            { $1::$3 }
+| init_declarator                           { $1::[] }
 ;;
 
 init_declarator:
-  declarator                               { ($1, None) }
-| declarator EQ init                       { ($1, Some $3) }
+  attr_declarator                           { ($1, None) }
+| attr_declarator EQ init                   { ($1, Some $3) }
+;;
+
+attr_declarator:
+  declarator extended_attribute_list        { ($1, $2) }
 ;;
 
 declarator:
@@ -338,6 +340,7 @@ statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
 | REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
+| AUTO declaration SEMICOLON               { build_stmtdecl false false $2 }
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
@@ -880,6 +883,8 @@ type_qualifier:
     Npkcontext.report_ignore_warning "Parser.type_qualifier" 
       "type qualifier 'volatile'" Npkcontext.Volatile;
     }
+| AUTO                                     { }
+| REGISTER                                 { }
 ;;
 
 gnuc_field_declaration:
@@ -935,8 +940,10 @@ attribute_name:
 | TRANSPARENT_UNION                        { 
     Npkcontext.report_accept_warning "Parser.attribute_name" 
       "transparent union" Npkcontext.TransparentUnion;
-    [];
+    []
   }
+
+| UNUSED                        {[]}
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 
@@ -956,3 +963,4 @@ imode:
 | SI                                       { Config.size_of_byte*4 }
 | DI                                       { Config.size_of_byte*8 }
 ;;
+

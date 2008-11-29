@@ -78,6 +78,7 @@ let _ =
      are assumed not to read global variables *)
 
   Hashtbl.add token_tbl "__nonnull__" NONNULL;
+  Hashtbl.add token_tbl "__nonnull" NONNULL;
   (* tells the compiler the argument should always be a non-null pointer *)
 
   Hashtbl.add token_tbl "__deprecated__" DEPRECATED;
@@ -96,7 +97,8 @@ let _ =
   Hashtbl.add token_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
   Hashtbl.add token_tbl "__packed__" PACKED;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
-
+  
+  Hashtbl.add token_tbl "__unused__" UNUSED;
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 
