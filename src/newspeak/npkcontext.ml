@@ -53,7 +53,7 @@ let accept_dirty_syntax = ref false
 let strict_syntax = ref false
 
 let global_zero_init = ref true
-let castor_allowed = ref false
+let accept_dirty_cast = ref false
 let ignores_pragmas = ref false
 let remove_temp = ref true
 let accept_extern = ref false
@@ -88,7 +88,7 @@ let input_files = ref []
 let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
 let output_file = ref ""
-let missing_ftyp = ref false
+let accept_missing_ftyp = ref false
 
 
 let use_cil = ref false
@@ -119,9 +119,9 @@ let flag_of_error err =
     | Pragma -> ignores_pragmas
     | Pack -> ignores_pack
     | Volatile -> ignores_volatile
-    | DirtyCast -> castor_allowed
+    | DirtyCast -> accept_dirty_cast
     | DirtySyntax -> accept_dirty_syntax
-    | PartialFunTyp -> missing_ftyp
+    | PartialFunTyp -> accept_missing_ftyp
     | ForwardGoto -> forward_goto
     | StrictSyntax -> strict_syntax
     | ExternGlobal -> accept_extern
@@ -140,7 +140,7 @@ let opt_of_error err =
     | Pragma -> "--ignore-pragma"
     | Pack -> "--ignore-pack"
     | Volatile -> "--ignore-volatile"
-    | DirtyCast -> "--castor"
+    | DirtyCast -> "--accept-dirty-cast"
     | DirtySyntax -> "--accept-dirty-syntax"
     | PartialFunTyp -> "--accept-missing-funtyp"
     | ForwardGoto -> "--accept-forward-goto"
