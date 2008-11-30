@@ -66,9 +66,6 @@ val strict_syntax : bool ref
     code *)
 val remove_temp : bool ref
 
-(** With accept_extern set, we can have global variables declared and
-    not defined *)
-val accept_extern : bool ref
 val accept_flex_array: bool ref
 
 (** If no_opt is set, then no code simplification is performed *)

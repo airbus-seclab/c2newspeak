@@ -177,10 +177,6 @@ and replace_typ t =
 and replace_field (offs, t) = (offs, replace_typ t)
 
 
-(*
-  TODO: implement --accept-extern
-*)
-
 let update_glob_link name (t, loc, init, used) =
   Npkcontext.set_loc loc;
   try
@@ -247,13 +243,10 @@ let generate_global name (t, loc, init, used) =
     let i =
       match init with
 	| Some i -> i
-	| None when !Npkcontext.accept_extern -> 
-	    Npkcontext.print_warning "Npklink.handle_real_glob:" 
-	      ("extern not accepted: "^name);
-	    None
 	| None -> 
-	    Npkcontext.error "Npklink.handle_real_glob:" 
-	      ("extern not accepted: "^name)
+	    Npkcontext.report_accept_warning "Link.generate_global" 
+	      ("extern global variable "^name) Npkcontext.ExternGlobal;
+	    None
     in
     let t = replace_typ t in
       Hashtbl.add globals name (t, replace_init i)

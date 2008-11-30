@@ -4,7 +4,7 @@ t080.adb
 Global used
 
 Global variables
-extern int32 t080a.a;
+int32 t080a.a;
 
 Function definitions
 t080.main() {

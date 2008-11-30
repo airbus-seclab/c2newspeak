@@ -4,7 +4,7 @@ t079.adb
 Global used
 
 Global variables
-extern int32 t079a.a;
+int32 t079a.a;
 
 Function definitions
 t079.main() {
