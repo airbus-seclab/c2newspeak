@@ -50,7 +50,7 @@ let opt_checks = ref true
 let forward_goto = ref false
 
 let accept_dirty_syntax = ref false
-let strict_syntax = ref false
+let use_strict_syntax = ref false
 
 let global_zero_init = ref true
 let accept_dirty_cast = ref false
@@ -60,7 +60,6 @@ let accept_extern = ref false
 let accept_flex_array = ref false
 
 let no_opt = ref false
-let normalize_loops = ref false
 
 let accept_mult_def = ref false
 
@@ -123,7 +122,7 @@ let flag_of_error err =
     | DirtySyntax -> accept_dirty_syntax
     | PartialFunTyp -> accept_missing_ftyp
     | ForwardGoto -> forward_goto
-    | StrictSyntax -> strict_syntax
+    | StrictSyntax -> use_strict_syntax
     | ExternGlobal -> accept_extern
     | FlexArray -> accept_flex_array
     | MultipleDef -> accept_mult_def
@@ -144,7 +143,7 @@ let opt_of_error err =
     | DirtySyntax -> "--accept-dirty-syntax"
     | PartialFunTyp -> "--accept-missing-funtyp"
     | ForwardGoto -> "--accept-forward-goto"
-    | StrictSyntax -> "--strict"
+    | StrictSyntax -> "--use-strict-syntax"
     | ExternGlobal -> "--accept-extern"
     | FlexArray -> "--accept-flexible-array"
     | MultipleDef -> "--accept-mult-def"
@@ -159,21 +158,51 @@ let opt_of_error err =
 let version = ref false
 
 let argslist = [
+  ("-c", Arg.Set compile_only,
+   "compiles only into a .no file");
+  
+  ("-o", Arg.Set_string output_file, 
+   "gives the name of Newspeak output\n");
+
   (opt_of_error DirtyCast, Arg.Set (flag_of_error DirtyCast),
-   "allows horrible casts to be translated");
+   "accepts horrible casts to be translated");
 
   (opt_of_error DirtySyntax, Arg.Set (flag_of_error DirtySyntax),
-   "allows dirty syntax");
+   "accepts dirty syntax");
 
   (opt_of_error PartialFunTyp, Arg.Set (flag_of_error PartialFunTyp),
-   "allows call to function whose argument type is unknown");
+   "accepts call to function whose argument type is unknown");
 
   (opt_of_error ForwardGoto, Arg.Set (flag_of_error ForwardGoto),
    "accepts forward goto statements");
 
-  (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
-   "sets strict syntax");
+  (opt_of_error TransparentUnion, Arg.Set (flag_of_error TransparentUnion),
+   "accepts transparent unions");
+
+  (opt_of_error ExternGlobal, Arg.Set (flag_of_error ExternGlobal),
+   "accepts variables that are only declared as extern but still used");
+
+  (opt_of_error FlexArray, Arg.Set (flag_of_error FlexArray),
+   "accept flexible array members");
+
+  (opt_of_error MultipleDef, Arg.Set (flag_of_error MultipleDef),
+   "accepts multiple definitions of the same variables");
+
+  (opt_of_error GnuC, Arg.Set (flag_of_error GnuC), 
+   "accepts GNU C extensions\n");
   
+  (opt_of_error DisableInit, Arg.Clear (flag_of_error DisableInit),
+   "turn initialisation of globals to zero off");
+
+  (opt_of_error DisableOpt, Arg.Set (flag_of_error DisableOpt), 
+   "turn all code simplifications off");
+
+  (opt_of_error DisableCheckOpt, Arg.Clear (flag_of_error DisableCheckOpt),
+   "turn code simplifications that remove checks off");
+
+  ("--disable-vars-elimination", Arg.Clear remove_temp,
+   "does not remove unused variables\n");
+
   (opt_of_error Pragma, Arg.Set (flag_of_error Pragma),
    "ignores any #pragma directive");
 
@@ -184,71 +213,37 @@ let argslist = [
    "ignores any packed attribute");
 
   (opt_of_error Volatile, Arg.Set (flag_of_error Volatile),
-   "ignores 'volatile' type qualifier");
-
-  (opt_of_error TransparentUnion, Arg.Set (flag_of_error TransparentUnion),
-   "ignores any transparent union");
-
-  ("--keep-unused-vars", Arg.Clear remove_temp,
-   "does not remove unused variables");
-
-  (opt_of_error ExternGlobal, Arg.Set (flag_of_error ExternGlobal),
-   "do not raise an error on variables declared but not defined\n");
-
-  (opt_of_error FlexArray, Arg.Set (flag_of_error FlexArray),
-   "accept flexible array members");
-
-  (opt_of_error MultipleDef, Arg.Set (flag_of_error MultipleDef),
-   "do not raise an error multiple definitions of the same variables\n");
-
-  ("--cil", Arg.Set use_cil, 
+   "ignores 'volatile' type qualifier\n");
+  
+  (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
+   "sets strict syntax");
+  
+  ("--use-cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");
 
-  (opt_of_error GnuC, Arg.Set (flag_of_error GnuC), "allow GNU C extensions");
-  
-  ("--cil-printer", Arg.Set_string cil_printer,
-   "verbose options: uses \"default\" or \"plain\" Cil output");
-  
-  ("--debug", Arg.Set verb_debug,
-   "verbose options: displays more debugging info");
-  
-  ("--ast", Arg.Set verb_ast,
-   "verbose option: displays Abstract Syntax Tree output");
-
-  ("--npko", Arg.Set verb_npko,
-   "verbose option: displays NewsPeak Object intermediate output");
-
-  ("--newspeak", Arg.Set verb_newspeak,
-   "verbose option: displays Newspeak output");
-
-  ("--pretty", Arg.Set pretty_print,
+  ("--use-pretty-names", Arg.Set pretty_print,
    "verbose options: uses var names for Newspeak display");
+
+  ("--use-cil-printer", Arg.Set_string cil_printer,
+   "verbose options: uses \"default\" or \"plain\" Cil output\n");
+  
+  ("--version", Arg.Set version,
+   "prints the version of the software");
 
   ("-v", Arg.Unit (verbose true),
    "verbose mode: turn all verbose options on");
     
-  ("-q", Arg.Unit (verbose false),
-   "quiet mode: turn display off");
-    
-  ("-c", Arg.Set compile_only,
-  "compiles only into a .no file");
-  
-  ("-o", Arg.Set_string output_file, 
-   "gives the name of Newspeak output\n");
+  ("--debug", Arg.Set verb_debug,
+   "verbose options: displays more debugging info");
 
-  ("--version", Arg.Set version,
-   "prints the version of the software");
+  ("--print-ast", Arg.Set verb_ast,
+   "verbose option: displays Abstract Syntax Tree output");
 
-  (opt_of_error DisableInit, Arg.Clear (flag_of_error DisableInit),
-   "turn initialisation of globals to zero off");
+  ("--print-npko", Arg.Set verb_npko,
+   "verbose option: displays NewsPeak Object intermediate output");
 
-  (opt_of_error DisableOpt, Arg.Set (flag_of_error DisableOpt), 
-   "turn all code simplifications off");
-
-  (opt_of_error DisableCheckOpt, Arg.Clear (flag_of_error DisableCheckOpt),
-   "turn code simplifications that remove checks off");
-
-  ("--one-loop", Arg.Set normalize_loops, "normalize loops");
+  ("--print-newspeak", Arg.Set verb_newspeak,
+   "verbose option: displays Newspeak output");
 ]
 
 
@@ -343,4 +338,4 @@ let report_accept_warning loc msg err_typ =
   print_warning loc (msg^" accepted")
 
 let report_strict_warning msg err =
-  if !strict_syntax then print_warning msg err
+  if !use_strict_syntax then print_warning msg err

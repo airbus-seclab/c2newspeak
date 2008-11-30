@@ -24,9 +24,9 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=$(C2NEWSPEAK) --newspeak --cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
+COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
         dos2unix $*.cil.bak &> /dev/null; \
-        $(C2NEWSPEAK) --newspeak `[ -e $*.in ] && cat $*.in` $*.c
+        $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
 
 DIFF=diff $*.spec $*.bak > result && \
      if [ -e $*.cil.spec ]; then \
@@ -150,6 +150,6 @@ TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
 .PHONY: $(TESTS.CIL.SPEC)
 
 $(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
-	$(C2NEWSPEAK) --newspeak --cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
+	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
 	dos2unix $@
 	cat $@
