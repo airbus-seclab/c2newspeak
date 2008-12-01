@@ -23,7 +23,10 @@
   email: charles.hymans@penjili.org
 */
 
+#undef __P
+#ifndef __P
 #define __P(x) x
+#endif
 
 /* for old non ansi compilers the macro would be
 #define __P(x) ()
