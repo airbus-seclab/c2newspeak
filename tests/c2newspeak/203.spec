@@ -1,1 +1,8 @@
-Fatal error: 203.c:31#1102: syntax error: unexpected token: default, rewrite your code or try option --accept-gnuc
+Newspeak output
+---------------
+203.c
+main() {
+  (203.c:27#6)^int32 x;
+}
+
+

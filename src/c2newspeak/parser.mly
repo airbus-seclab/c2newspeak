@@ -431,17 +431,28 @@ expression_statement:
 switch_stmt:
   SWITCH LPAREN expression RPAREN LBRACE
     case_list
-  RBRACE                                   { ($3, $6, []) }
-| SWITCH LPAREN expression RPAREN LBRACE
-    case_list
-    DEFAULT COLON statement_list
-  RBRACE                                   { ($3, $6, $9) }
+  RBRACE                                   { 
+    let (cases, default) = $6 in
+      ($3, cases, default) 
+  }
 ;;
 
 case_list:
   CASE expression COLON statement_list 
-  case_list                                { ($2, $4, get_loc ())::$5 }
-|                                          { [] }
+  case_list                                { 
+    let (cases, default) = $5 in
+      (($2, $4, get_loc ())::cases, default)
+  }
+| DEFAULT COLON statement_list case_list   { 
+    let (cases, _) = $4 in
+      if cases <> [] then begin
+	Npkcontext.report_accept_warning "Parser.case_list" 
+	  "switch with default case in intermediary position" 
+	  Npkcontext.DirtySyntax
+      end;
+      (cases, $3)
+  }
+|                                          { ([], []) }
 ;;
 
 assignment_expression_list:
