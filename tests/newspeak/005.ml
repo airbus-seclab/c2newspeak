@@ -24,6 +24,6 @@
 *)
 
 let _ =
-  let (_, prog, _) = Newspeak.read Sys.argv.(1) in
+  let prog = Newspeak.read Sys.argv.(1) in
   let fid_list = Newspeak.collect_fid_addrof prog in
     List.iter print_endline fid_list

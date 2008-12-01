@@ -78,15 +78,15 @@ let diff postfix x1 x2 =
 let _ = 
   try 
     Arg.parse speclist anon_fun usage_msg;
-    let (_, (glbs1, fundecs1, _), _) = Newspeak.read !input1 in
-    let (_, (glbs2, fundecs2, _), _) = Newspeak.read !input2 in
-    let glbs1 = hashtbl_to_list glbs1 in
+    let prog1 = Newspeak.read !input1 in
+    let prog2 = Newspeak.read !input2 in
+    let glbs1 = hashtbl_to_list prog1.globals in
     let glbs1 = List.sort compare_key glbs1 in
-    let glbs2 = hashtbl_to_list glbs2 in
+    let glbs2 = hashtbl_to_list prog2.globals in
     let glbs2 = List.sort compare_key glbs2 in
-    let fundecs1 = hashtbl_to_list fundecs1 in
+    let fundecs1 = hashtbl_to_list prog1.fundecs in
     let fundecs1 = List.sort compare_key fundecs1 in
-    let fundecs2 = hashtbl_to_list fundecs2 in
+    let fundecs2 = hashtbl_to_list prog2.fundecs in
     let fundecs2 = List.sort compare_key fundecs2 in
       diff "" glbs1 glbs2;
       diff "()" fundecs1 fundecs2

@@ -314,9 +314,9 @@ let _ =
     if !input = "" 
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
-    let (_, prog, ptr_sz) = Newspeak.read !input in
-    let collector = new collector ptr_sz !fun_to_count in
-    let max_stats = Maxcount.count !debug ptr_sz prog in
+    let prog = Newspeak.read !input in
+    let collector = new collector prog.ptr_sz !fun_to_count in
+    let max_stats = Maxcount.count !debug prog in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
       print_endline (collector#to_string !verbose);
       Maxcount.print max_stats;

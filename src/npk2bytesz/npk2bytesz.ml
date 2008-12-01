@@ -85,12 +85,11 @@ let _ =
     if !input = "" 
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
-    let (files, prog, ptr_sz) = Newspeak.read !input in
+    let prog = Newspeak.read !input in
     let builder = new to_byte_sz in
     let prog = Newspeak.build builder prog in
-    let npk = (files, prog, ptr_sz) in
-      if !print then Newspeak.dump npk;
-      Newspeak.write !output npk
+      if !print then Newspeak.dump prog;
+      Newspeak.write !output prog
 
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);

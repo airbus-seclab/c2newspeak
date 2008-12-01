@@ -137,7 +137,7 @@ and scan_choice env (conds, body) =
 
 let scan_fundef _ (_, body) = scan_blk [] body
 
-let scan_prog (_, fundefs, _) = 
+let scan_prog fundefs = 
   Hashtbl.iter scan_fundef fundefs
 
 let find_bound e env =
@@ -216,16 +216,16 @@ let scan2_fundef _ (_, body) =
   let _ = scan2_blk [] body in
     ()
 
-let scan2_prog (_, fundefs, _) = 
+let scan2_prog fundefs = 
   Hashtbl.iter scan2_fundef fundefs
 
 let scan f =
-  let (_, prog, _) = Newspeak.read f in
+  let prog = Newspeak.read f in
   let scanner = (new scanner :> Newspeak.visitor) in
 (* TODO: try to merge together all 3 scanners *)
     Newspeak.visit scanner prog;
-    scan_prog prog;
-    scan2_prog prog
+    scan_prog prog.fundecs;
+    scan2_prog prog.fundecs
 
 let _ = 
   try

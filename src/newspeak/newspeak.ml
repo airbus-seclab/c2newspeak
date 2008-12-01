@@ -94,9 +94,13 @@ struct
 end
 
 (* TODO: should have a record instead of a tuple, easier to extend!! *)
-type t = (file list * prog * size_t)
-
-and prog = globals * (fid, fundec) Hashtbl.t * specs
+type t = {
+  fnames: file list;
+  globals: globals;
+  fundecs: (fid, fundec) Hashtbl.t;
+  specs: specs;
+  ptr_sz: size_t
+}
 
 and globals = (string, gdecl) Hashtbl.t
 
@@ -579,19 +583,17 @@ let dump_assertion x =
   print_newline ()
 
 (* Exported print functions *)
-let dump_prog (gdecls, fundecs, spec) =
+let dump prog =
+  List.iter (fun x -> print_endline x) prog.fnames;
   (* TODO: Clean this mess... String_map *)
   let funs = ref (String_map.empty) in
-    Hashtbl.iter 
-      (fun name (_, body) ->  funs := (String_map.add name body !funs))
-      fundecs;
+  let collect_funbody name (_, body) =
+    funs := String_map.add name body !funs
+  in
+    Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
-    dump_globals gdecls;
-    List.iter dump_assertion spec
-
-let dump (fnames, prog, _) =
-  List.iter (fun x -> print_endline x) fnames;
-  dump_prog prog
+    dump_globals prog.globals;
+    List.iter dump_assertion prog.specs
 
 let dump_fundec name (_, body) = dump_fundec name body
 
@@ -614,10 +616,10 @@ let write_hdr cout (filenames, decls, specs, ptr_sz) =
   
 let write_fun cout f spec = Marshal.to_channel cout (f, spec) []
 
-let write name (filenames, (decls, funs, specs), ptr_sz) =
+let write name prog =
   let cout = open_out_bin name in
-    write_hdr cout (filenames, decls, specs, ptr_sz);
-    Hashtbl.iter (write_fun cout) funs;
+    write_hdr cout (prog.fnames, prog.globals, prog.specs, prog.ptr_sz);
+    Hashtbl.iter (write_fun cout) prog.fundecs;
     close_out cout
 
 let read name = 
@@ -649,7 +651,10 @@ let read name =
 	  with End_of_file -> ()
 	  end;
 	  close_in cin;
-	  (filenames, (decls, funs, specs), ptr_sz)
+	  { 
+	    fnames = filenames; globals = decls; fundecs = funs;
+	    specs = specs; ptr_sz = ptr_sz;
+	  }
   with Failure "input_value: bad object" -> 
     invalid_arg ("Newspeak.read: "^name^" is not an .npk file")
 
@@ -1201,7 +1206,7 @@ end
 
 let normalize_loops b = simplify_blk [new simplify_loops] b
 
-let rec build builder (globals, fundecs, spec) = 
+let rec build builder prog = 
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
@@ -1215,9 +1220,9 @@ let rec build builder (globals, fundecs, spec) =
     let fundec = build_fundec builder fundec in
       Hashtbl.add fundecs' f fundec
   in
-    Hashtbl.iter build_global globals;
-    Hashtbl.iter build_fundec fundecs;
-    (globals', fundecs', spec)
+    Hashtbl.iter build_global prog.globals;
+    Hashtbl.iter build_fundec prog.fundecs;
+    { prog with globals = globals'; fundecs = fundecs' }
 
 and build_gdecl builder (t, init) =
   let t = build_typ builder t in
@@ -1584,9 +1589,9 @@ let visit_glb visitor id (t, init) =
 	Init x when continue -> List.iter (visit_init visitor) x 
       | _ -> ()
 
-let visit visitor (globals, fundecs, _) =
-  Hashtbl.iter (visit_glb visitor) globals;
-  Hashtbl.iter (visit_fun visitor) fundecs
+let visit visitor prog =
+  Hashtbl.iter (visit_glb visitor) prog.globals;
+  Hashtbl.iter (visit_fun visitor) prog.fundecs
 
 let max_ikind = max
 

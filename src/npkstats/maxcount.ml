@@ -59,8 +59,7 @@ let count_decl ptr_sz t st =
 
 let count_loop st = { st with loop_depth = st.loop_depth + 1 }
 
-let count debug ptr_sz prog =
-  let (_, fundecs, _) = prog in
+let count debug prog =
   let fid_addrof = Newspeak.collect_fid_addrof prog in
   let unknown_funs = ref [] in
   let exact = ref true in
@@ -73,7 +72,7 @@ let count debug ptr_sz prog =
       if debug then print_endline ("counting stack height of "^f);
       let height = 
 	try 
-	  let (_, body) = Hashtbl.find fundecs f in
+	  let (_, body) = Hashtbl.find prog.fundecs f in
 	    count_blk body init_stats
 	with Not_found -> 
 	  if not (List.mem f !unknown_funs) then begin
@@ -97,7 +96,7 @@ let count debug ptr_sz prog =
   and count_stmt x info =
     match x with
       | Decl (_, t, body) -> 
-	  let info = count_decl ptr_sz t info in
+	  let info = count_decl prog.ptr_sz t info in
 	    count_blk body info
       | DoWith (body, _, action) -> 
 	  let body_info = count_blk body info in

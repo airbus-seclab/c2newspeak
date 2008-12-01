@@ -32,14 +32,14 @@ open Newspeak
 
 module FunSet = Set.Make(struct type t = string let compare = compare end)
 
-let process (gdecls, fundecs, specs) =
+let process prog =
   let res = Hashtbl.create 100 in
     
-  let has_body f = Hashtbl.mem fundecs f in
+  let has_body f = Hashtbl.mem prog.fundecs f in
     
   let get_body f =
     try
-      let (_, body) = Hashtbl.find fundecs f in
+      let (_, body) = Hashtbl.find prog.fundecs f in
 	body
     with Not_found ->
       invalid_arg ("Inline.process.get_body: function "^f
@@ -71,8 +71,8 @@ let process (gdecls, fundecs, specs) =
       Hashtbl.add res fid (t, body)
   in
 
-    Hashtbl.iter process_fun fundecs;
-    (gdecls, res, specs)
+    Hashtbl.iter process_fun prog.fundecs;
+    { prog with fundecs = res }
 
 class count_visitor fundecs unprocessed counters =
 object (self)
@@ -96,13 +96,13 @@ object (self)
     true
 end
 
-let process_one (gdecls, fundecs, specs) =
+let process_one prog =
   let res = Hashtbl.create 100 in
   let counters = Hashtbl.create 100 in
   let unprocessed = ref FunSet.empty in
 
   let should_inline f = 
-    (Hashtbl.mem fundecs f) && (Hashtbl.find counters f = 1)
+    (Hashtbl.mem prog.fundecs f) && (Hashtbl.find counters f = 1)
   in
     
   let rec get_body f =
@@ -132,18 +132,18 @@ let process_one (gdecls, fundecs, specs) =
   and process_choice (cond, body) =  (cond, process_blk body)
 
   and process_fun fid =
-    let (t, body) = Hashtbl.find fundecs fid in
+    let (t, body) = Hashtbl.find prog.fundecs fid in
     let body = process_blk body in
       Hashtbl.add res fid (t, body);
       unprocessed := FunSet.remove fid !unprocessed
   in
 
-  let count_call = new count_visitor fundecs unprocessed counters in
+  let count_call = new count_visitor prog.fundecs unprocessed counters in
   let count_call = (count_call :> Newspeak.visitor) in
-    Hashtbl.iter (Newspeak.visit_fun count_call) fundecs;
+    Hashtbl.iter (Newspeak.visit_fun count_call) prog.fundecs;
     
     while not (FunSet.is_empty !unprocessed) do
       let f = FunSet.choose !unprocessed in
 	process_fun f
     done;
-    (gdecls, res, specs)
+    { prog with fundecs = res }

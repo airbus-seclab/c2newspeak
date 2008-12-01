@@ -23,6 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
-
-val process: prog -> prog
+val process: Newspeak.t -> Newspeak.t
