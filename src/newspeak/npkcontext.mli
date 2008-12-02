@@ -60,22 +60,15 @@ type error =
 val global_zero_init : bool ref
 val accept_gnuc : bool ref
 val forward_goto : bool ref
-val missing_ftyp : bool ref
-val strict_syntax : bool ref
 
 (** When remove_temp is set, only used variables are kept in newspeak
     code *)
 val remove_temp : bool ref
 
-(** With accept_extern set, we can have global variables declared and
-    not defined *)
-val accept_extern : bool ref
 val accept_flex_array: bool ref
 
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
-
-val normalize_loops : bool ref
 
 val verb_debug : bool ref
 val verb_ast : bool ref

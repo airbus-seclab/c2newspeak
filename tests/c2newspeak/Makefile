@@ -24,9 +24,9 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=$(C2NEWSPEAK) --newspeak --cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
+COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
         dos2unix $*.cil.bak &> /dev/null; \
-        $(C2NEWSPEAK) --newspeak `[ -e $*.in ] && cat $*.in` $*.c
+        $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
 
 DIFF=diff $*.spec $*.bak > result && \
      if [ -e $*.cil.spec ]; then \
@@ -90,7 +90,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	520 521 522 523 524 525 526 527 528 529 \
 	530 531 532 533 534 535 536 537 538 539 \
 	540 541 542 543 544 545 546 547 548 549 \
-	550 551 552 553
+	550 551 552 553 554 555
 
 PREREQ=%.c
 CLEANFILES=$(addsuffix .cil.bak, $(TESTS))
@@ -150,6 +150,6 @@ TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
 .PHONY: $(TESTS.CIL.SPEC)
 
 $(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
-	$(C2NEWSPEAK) --newspeak --cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
+	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
 	dos2unix $@
 	cat $@

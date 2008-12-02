@@ -934,7 +934,7 @@ and normalization compil_unit extern =
 	    | [(typ_decl, loc, _)] -> (typ_decl, loc)
 	    | [] -> Npkcontext.error 
 		"Ada_normalize.typ_normalization.find_subtyp" 
-		  ("Unknown identifier "^ident)
+		  ("unknown identifier "^ident)
 	    | _::_ -> Npkcontext.error
 		"Firstpass.find_subtyp"
 		  (ident^" is not visible : "
@@ -948,7 +948,7 @@ and normalization compil_unit extern =
       with Not_found -> 
 	Npkcontext.error 
 	  "Ada_normalize.normalization.find_typ.avec_selecteur" 
-	  ("Unknown identifier "^(string_of_name x))
+	  ("unknown identifier "^(string_of_name x))
     
     and selecteur_courant ident = 
       let rec find_global list_ident = match list_ident with
@@ -956,7 +956,7 @@ and normalization compil_unit extern =
 	| (_, _, false)::r -> find_global r 
 	| [] -> Npkcontext.error 
 	    "Ada_normalize.normalization.find_typ.selecteur_courant" 
-	      ("Unknown identifier "^(string_of_name x)) in
+	      ("unknown identifier "^(string_of_name x)) in
 	find_global (find_all_typ ident)
     in
 

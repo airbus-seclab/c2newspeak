@@ -1,4 +1,4 @@
-Warning: 334.c:30: goto statements are error-prone, they should be avoided at all costs
+Warning: 334.c:30#1095: goto statements are error-prone, they should be avoided at all costs
 Newspeak output
 ---------------
 334.c

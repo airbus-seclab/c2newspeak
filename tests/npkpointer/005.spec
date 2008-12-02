@@ -1,2 +1,2 @@
-Unknown function f. Assuming empty body.
+unknown function f. Assuming empty body.
 Points-to relations:

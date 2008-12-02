@@ -170,16 +170,12 @@ and replace_typ t =
       Npkil.Scalar x -> Newspeak.Scalar x
     | Npkil.Array (t, Some l) -> Newspeak.Array (replace_typ t, l)
     | Npkil.Array (_, None) -> 
-	Npkcontext.error "Link.replace_typ" "Unknown array length"
+	Npkcontext.error "Link.replace_typ" "unknown array length"
     | Npkil.Region (fields, sz) -> 
 	Newspeak.Region (List.map replace_field fields, sz)
 
 and replace_field (offs, t) = (offs, replace_typ t)
 
-
-(*
-  TODO: implement --accept-extern
-*)
 
 let update_glob_link name (t, loc, init, used) =
   Npkcontext.set_loc loc;
@@ -247,13 +243,10 @@ let generate_global name (t, loc, init, used) =
     let i =
       match init with
 	| Some i -> i
-	| None when !Npkcontext.accept_extern -> 
-	    Npkcontext.print_warning "Npklink.handle_real_glob:" 
-	      ("extern not accepted: "^name);
-	    None
 	| None -> 
-	    Npkcontext.error "Npklink.handle_real_glob:" 
-	      ("extern not accepted: "^name)
+	    Npkcontext.report_accept_warning "Link.generate_global" 
+	      ("extern global variable "^name) Npkcontext.ExternGlobal;
+	    None
     in
     let t = replace_typ t in
       Hashtbl.add globals name (t, replace_init i)
@@ -271,11 +264,6 @@ let generate_funspecs cout npkos =
     let body = 
       if !Npkcontext.no_opt then body
       else Newspeak.simplify !Npkcontext.opt_checks body
-    in
-    let body =
-      if !Npkcontext.no_opt then body
-      else if not !Npkcontext.normalize_loops then body
-      else Newspeak.normalize_loops body
     in
     let ftyp = replace_ftyp ftyp in
       

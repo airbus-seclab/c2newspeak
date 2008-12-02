@@ -1,5 +1,5 @@
-Warning: 387.c:29: deprecated style of function definition accepted
-Warning: 387.c:36: deprecated style of function definition accepted
+Warning: 387.c:29#1089: deprecated style of function definition accepted
+Warning: 387.c:36#1145: deprecated style of function definition accepted
 Newspeak output
 ---------------
 387.c

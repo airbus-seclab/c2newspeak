@@ -21,8 +21,8 @@
 #  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 #  email: charles.hymans@penjili.org
 
-COMMAND=$(C2NEWSPEAK) --keep-unused-vars $*-a.c -o a.npk &> /dev/null; \
-	$(C2NEWSPEAK) --keep-unused-vars $*-b.c -o b.npk &> /dev/null; \
+COMMAND=$(C2NEWSPEAK) --disable-vars-elimination $*-a.c -o a.npk &> /dev/null; \
+	$(C2NEWSPEAK) --disable-vars-elimination $*-b.c -o b.npk &> /dev/null; \
         $(NPKDIFF) a.npk b.npk
 PREREQ=%-a.c %-b.c
 TESTS=000

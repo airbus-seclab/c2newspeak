@@ -91,9 +91,13 @@ end
 
 (* The type of a program: file names, global variable declarations,
     function definitions and the size of pointers. *)
-type t = (file list * prog * size_t)
-
-and prog = globals * (fid, fundec) Hashtbl.t * specs
+type t = {
+  fnames: file list;
+  globals: globals;
+  fundecs: (fid, fundec) Hashtbl.t;
+  specs: specs;
+  ptr_sz: size_t
+}
 
 and globals = (string, gdecl) Hashtbl.t
 
@@ -275,10 +279,6 @@ val string_of_blk: blk -> string
 
 val dump : t -> unit
 
-(* [dump (fundecs, body)] prints the program (fundecs, body) 
-    to standard output. *)
-val dump_prog : prog -> unit
-
 (** [dump_globals glbdecls] prints the global definitions [glbdecls] to
     standard output. *)
 val dump_globals: globals -> unit
@@ -318,7 +318,7 @@ end
 
 val visit_fun : visitor -> fid -> fundec -> unit
 val visit_glb : visitor -> string -> gdecl -> unit
-val visit : visitor -> prog -> unit
+val visit : visitor -> t -> unit
 
 class builder:
 object
@@ -334,7 +334,7 @@ object
   method process_offset: offset -> offset
 end
 
-val build : builder -> prog -> prog
+val build : builder -> t -> t
 
 val build_gdecl: builder -> gdecl -> gdecl
 
@@ -402,4 +402,4 @@ val max_ikind: ikind -> ikind -> ikind
 
 (** returns the list of all function identifiers that are stored as function
     pointers in the program. *)
-val collect_fid_addrof: prog -> fid list
+val collect_fid_addrof: t -> fid list

@@ -1,1 +1,1 @@
-Fatal error: 184.c:34: unknown identifier x
+Fatal error: 184.c:34#2: unknown identifier x

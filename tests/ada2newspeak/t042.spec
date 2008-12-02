@@ -5,7 +5,7 @@ Global used
 t042a.z
 
 Global variables
-extern uint1 t042a.z;
+uint1 t042a.z;
 
 Function definitions
 t042() {
@@ -19,7 +19,6 @@ t042() {
 
 
 
-Warning: t042a.ads:3: extern not accepted: t042a.z
 Newspeak output
 ---------------
 t042.adb

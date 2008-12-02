@@ -1,4 +1,4 @@
-Warning: 464.c:33: dirty cast int32 -> fptr accepted
+Warning: 464.c:33#2: dirty cast int32 -> fptr accepted
 Newspeak output
 ---------------
 464.c

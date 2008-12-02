@@ -4,7 +4,7 @@ t098.adb
 Global used
 
 Global variables
-extern uint1 t097.a;
+uint1 t097.a;
 
 Function definitions
 t098.t096() {

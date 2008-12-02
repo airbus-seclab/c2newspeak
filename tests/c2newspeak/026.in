@@ -1,1 +1,1 @@
---keep-unused-vars
+--disable-vars-elimination

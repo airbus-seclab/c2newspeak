@@ -70,7 +70,7 @@ and shift_vars_stmtkind i x =
 and shift_vars_choice i (cond, body) = 
   (List.map (shift_vars_exp i) cond, shift_vars_blk i body)
 
-let process (gdecls, fundecs, specs) =
+let process prog =
   let rec process_blk x = 
     match x with
 	(Decl (v, t, body), loc)::tl ->
@@ -106,5 +106,5 @@ let process (gdecls, fundecs, specs) =
       Hashtbl.add res fid (t, body)
   in
 
-    Hashtbl.iter process_fun fundecs;
-    (gdecls, res, specs)
+    Hashtbl.iter process_fun prog.fundecs;
+    { prog with fundecs = res }

@@ -63,7 +63,7 @@ let _ =
     if !input = ""
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
-    let (files, prog, ptr_sz) = Newspeak.read !input in
+    let prog = Newspeak.read !input in
     let prog = ref prog in
       if !propag_exp then prog := Copy_propagation.process !prog;
 (* TODO: these options are not well chosen, since inline_depth 0
@@ -74,9 +74,8 @@ let _ =
 	prog := Inline.process !prog
       done;
       if !hoist then prog := Var_hoist.process !prog;
-      let npk = (files, !prog, ptr_sz) in
-	if !print then Newspeak.dump npk;
-	Newspeak.write !output npk
+	if !print then Newspeak.dump !prog;
+	Newspeak.write !output !prog
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0

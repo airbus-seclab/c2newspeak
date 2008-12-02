@@ -28,5 +28,5 @@
 
 type t
 
-val count: bool -> Newspeak.size_t -> Newspeak.prog -> t
+val count: bool -> Newspeak.t -> t
 val print: t -> unit

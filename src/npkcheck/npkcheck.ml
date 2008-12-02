@@ -138,8 +138,8 @@ object (self)
 end
 
 let check_file fname =
-    let (_, prog, ptr_sz) = Newspeak.read fname in
-    let checker = new checker ptr_sz in
+    let prog = Newspeak.read fname in
+    let checker = new checker prog.ptr_sz in
       Newspeak.visit (checker :> Newspeak.visitor) prog
 
 let _ = 

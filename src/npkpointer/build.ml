@@ -26,7 +26,7 @@
 open Newspeak
 module S = Ptrspeak
 
-let translate (globdecs, fundecs, _) = 
+let translate npk = 
   let vars = Hashtbl.create 100 in
   let funs = Hashtbl.create 100 in
   let prog = ref [] in
@@ -92,7 +92,7 @@ let translate (globdecs, fundecs, _) =
   let translate_fn fn =
     match fn with
 	FunId fid -> 
-	  let (ftyp, _) = Hashtbl.find fundecs fid in
+	  let (ftyp, _) = Hashtbl.find npk.fundecs fid in
 	    (S.Var fid, ftyp)
       | FunDeref (e, ftyp) -> (translate_exp e, ftyp)
   in
@@ -117,8 +117,8 @@ let translate (globdecs, fundecs, _) =
 	  translate_blk body;
 	  translate_blk action
       | Goto _ -> ()
-      | Call (FunId f) when not (Hashtbl.mem fundecs f) -> 
-	  prerr_endline ("Unknown function "^f^". Assuming empty body.")
+      | Call (FunId f) when not (Hashtbl.mem npk.fundecs f) -> 
+	  prerr_endline ("unknown function "^f^". Assuming empty body.")
       | Call fn ->
 	  let (e, ftyp) = translate_fn fn in
 	  let params = translate_args ftyp in
@@ -161,6 +161,6 @@ let translate (globdecs, fundecs, _) =
       List.iter (fun _ -> pop_local ()) formals
   in
 
-    Hashtbl.iter translate_global globdecs;
-    Hashtbl.iter translate_fundec fundecs;
+    Hashtbl.iter translate_global npk.globals;
+    Hashtbl.iter translate_fundec npk.fundecs;
     (vars, (funs, !prog))

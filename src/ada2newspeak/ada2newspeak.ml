@@ -45,7 +45,6 @@ let _ =
   try
     Npkcontext.handle_cmdline_options 
       Params.version_string Params.comment_string;
-    Npkcontext.accept_extern := true;
     let extract_no fname =
       if Filename.check_suffix fname Params.npko_suffix then fname
       else begin

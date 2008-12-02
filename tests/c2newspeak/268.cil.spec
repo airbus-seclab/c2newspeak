@@ -1,1 +1,1 @@
-Fatal error: 268.c:31: Different types for function f
+Fatal error: 268.c:31#1146: different types for function f

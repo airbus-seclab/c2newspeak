@@ -1805,7 +1805,7 @@ let translate compil_unit =
 	  let tr_typ = translate_subtyp subtyp in
 	  let tr_init : C.init option = 
 	    match (init,!extern) with
-	      | (_,true) -> None
+	      | (_,true) -> Some None
 	      | (None,_) -> Some(None)
 	      | (Some(exp),false) -> 
 		  let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp)) 

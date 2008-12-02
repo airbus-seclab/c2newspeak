@@ -1,4 +1,4 @@
-Warning: 209.c:29: the order of execution of side-effects in expressions not specified, picking a random one, be careful
+Warning: 209.c:29#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
 209.c

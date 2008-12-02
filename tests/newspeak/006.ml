@@ -9,6 +9,6 @@ end
 
 let _ =
   try
-    let (_, prog, _) = Newspeak.read Sys.argv.(1) in
+    let prog = Newspeak.read Sys.argv.(1) in
       Newspeak.visit (new visitor_006 :> Newspeak.visitor) prog
   with Invalid_argument str -> print_endline str

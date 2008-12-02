@@ -24,4 +24,4 @@
 *)
 
 
-val translate: Newspeak.prog -> Ptrspeak.prog
+val translate: Newspeak.t -> Ptrspeak.prog

@@ -1,4 +1,4 @@
-Warning: 065.c:32: the order of execution of side-effects in expressions not specified, picking a random one, be careful
+Warning: 065.c:32#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
 065.c

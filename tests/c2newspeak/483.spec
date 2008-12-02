@@ -1,4 +1,4 @@
-Warning: 483.c:30: empty struct or union accepted
+Warning: 483.c:30#1123: empty struct or union accepted
 Newspeak output
 ---------------
 483.c

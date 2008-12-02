@@ -89,16 +89,15 @@ object (this)
 end
 
 let collect_used prog =
-  let (globals, fundecs, specs) = prog in
   let used_gvars = Hashtbl.create 100 in
   let used_funs = Hashtbl.create 100 in
   let fid_addrof = Newspeak.collect_fid_addrof prog in
   let collector = 
-    new collector (globals, fundecs) used_gvars used_funs fid_addrof
+    new collector (prog.globals, prog.fundecs) used_gvars used_funs fid_addrof
   in
     collector#visit_fun !main;
-    (used_gvars, used_funs, specs)
-        
+    { prog with globals = used_gvars; fundecs = used_funs }
+ 
 let filter_globals used_gvars globals = 
   let is_used (x, _, _) = StringSet.mem x used_gvars in
     List.filter is_used globals
@@ -106,9 +105,8 @@ let filter_globals used_gvars globals =
 let _ = 
   try 
     Arg.parse speclist anon_fun usage_msg;
-    let (files, prog, ptr_sz) = Newspeak.read !input in
-    let prog = collect_used prog in
-    let npk = (files, prog, ptr_sz) in
+    let prog = Newspeak.read !input in
+    let npk = collect_used prog in
       if !print then Newspeak.dump npk;
       Newspeak.write !output npk
   with Invalid_argument s ->

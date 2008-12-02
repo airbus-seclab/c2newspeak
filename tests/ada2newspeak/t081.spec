@@ -6,7 +6,7 @@ t081.c
 
 Global variables
 int32 t081.c;
-extern int32 t081a.a;
+int32 t081a.a;
 
 Function definitions
 t081.a() {

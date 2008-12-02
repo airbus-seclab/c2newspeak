@@ -1,4 +1,4 @@
-Warning: 363.c:28: addition of a pointer to an integer accepted
+Warning: 363.c:28#2: addition of a pointer to an integer accepted
 Newspeak output
 ---------------
 363.c

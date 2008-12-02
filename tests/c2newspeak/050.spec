@@ -1,8 +1,8 @@
-Warning: 050.c:30: extra initializer for array accepted
-Warning: 050.c:32: not enough initializers for array
-Warning: 050.c:35: extra initializer for array accepted
-Warning: 050.c:36: extra initializer for array accepted
-Warning: 050.c:38: not enough initializers for array
+Warning: 050.c:30#5: extra initializer for array accepted
+Warning: 050.c:32#5: not enough initializers for array
+Warning: 050.c:35#5: extra initializer for array accepted
+Warning: 050.c:36#5: extra initializer for array accepted
+Warning: 050.c:38#5: not enough initializers for array
 Newspeak output
 ---------------
 050.c

@@ -523,7 +523,7 @@ and translate_instr i =
 	  ("call '"^(Cilutils.string_of_instr i)^"' not handled")
 
     | Asm (_, _, _, _, _, _) ->
-	Npkcontext.error "Npkcompile.translate_instr" "Asm block not supported"
+	Npkcontext.error "Npkcompile.translate_instr" "asm block not supported"
 	  
 
 	  

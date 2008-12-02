@@ -5,7 +5,7 @@ Global used
 t109a.x
 
 Global variables
-extern int32 t109a.x;
+int32 t109a.x;
 
 Function definitions
 t109() {
@@ -18,7 +18,6 @@ t109() {
 
 
 
-Warning: t109a.ads:2: extern not accepted: t109a.x
 Newspeak output
 ---------------
 t109.adb

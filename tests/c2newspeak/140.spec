@@ -1,4 +1,4 @@
-Warning: 140.c:32: dirty cast from integer to pointer accepted
+Warning: 140.c:32#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
 140.c
