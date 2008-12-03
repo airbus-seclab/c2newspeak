@@ -16,4 +16,5 @@ Number of pointer arithmetic (+): 0
 Number of function pointer call: 0
 Maximum number of variables on the stack: 3
 Maximum height of the stack (bytes): 18
+Maximum depth of function calls: 2
 Maximum depth of imbricated loops: 0

@@ -31,6 +31,7 @@ open Newspeak
 type stats = {
   nb_vars: int;
   sz_vars: int;
+  call_depth: int;
   loop_depth: int;
 }
 
@@ -40,6 +41,7 @@ let add_stats st1 st2 =
   { 
     nb_vars = st1.nb_vars + st2.nb_vars;
     sz_vars = st1.sz_vars + st2.sz_vars;
+    call_depth = st1.call_depth + st2.call_depth;
     loop_depth = st1.loop_depth + st2.loop_depth;
   }
 
@@ -47,10 +49,11 @@ let max_stats st1 st2 =
   { 
     nb_vars = max st1.nb_vars st2.nb_vars;
     sz_vars = max st1.sz_vars st2.sz_vars;
+    call_depth = max st1.call_depth st2.call_depth;
     loop_depth = max st1.loop_depth st2.loop_depth;
   }
 
-let init_stats = { nb_vars = 0; sz_vars = 0; loop_depth = 0; }
+let init_stats = { nb_vars = 0; sz_vars = 0; call_depth = 0; loop_depth = 0; }
 
 let count_decl ptr_sz t st =
   let nb = st.nb_vars + 1 in
@@ -59,6 +62,8 @@ let count_decl ptr_sz t st =
 
 let count_loop st = { st with loop_depth = st.loop_depth + 1 }
 
+let count_call st = { st with call_depth = st.call_depth + 1 }
+
 let count debug prog =
   let fid_addrof = Newspeak.collect_fid_addrof prog in
   let unknown_funs = ref [] in
@@ -66,14 +71,14 @@ let count debug prog =
   let fun_tbl = Hashtbl.create 100 in
   let current_loc = ref Newspeak.unknown_loc in
     
-  let rec count_call f =
+  let rec process_call f =
     try Hashtbl.find fun_tbl f
     with Not_found -> 
       if debug then print_endline ("counting stack height of "^f);
       let height = 
 	try 
 	  let (_, body) = Hashtbl.find prog.fundecs f in
-	    count_blk body init_stats
+	    process_blk body init_stats
 	with Not_found -> 
 	  if not (List.mem f !unknown_funs) then begin
 	    unknown_funs := f::!unknown_funs;
@@ -81,49 +86,50 @@ let count debug prog =
 	  end;
 	  init_stats
       in
+      let height = count_call height in
 	Hashtbl.add fun_tbl f height;
 	height
 	      
-  and count_blk x info =
+  and process_blk x info =
     match x with
 	(stmt, loc)::blk -> 
 	  current_loc := loc;
-	  let info1 = count_stmt stmt info in
-	  let info2 = count_blk blk info in
+	  let info1 = process_stmt stmt info in
+	  let info2 = process_blk blk info in
 	    max_stats info1 info2
       | [] -> info
 	  
-  and count_stmt x info =
+  and process_stmt x info =
     match x with
       | Decl (_, t, body) -> 
 	  let info = count_decl prog.ptr_sz t info in
-	    count_blk body info
+	    process_blk body info
       | DoWith (body, _, action) -> 
-	  let body_info = count_blk body info in
-	  let action_info = count_blk action info in
+	  let body_info = process_blk body info in
+	  let action_info = process_blk action info in
 	    max_stats body_info action_info
       | Call (FunId f) -> 
-	  let info_f = count_call f in
+	  let info_f = process_call f in
 	    add_stats info info_f
       | Call _ -> 
 	  let build_call f = (Call (FunId f), !current_loc)::[] in
 	  let alternatives = List.map build_call fid_addrof in
 	    if alternatives <> [] then exact := false;
-	    List.fold_left (count_alternatives info) init_stats alternatives
+	    List.fold_left (process_alternatives info) init_stats alternatives
       | ChooseAssert choices -> 
 	  let (_, choices) = List.split choices in
-	    List.fold_left (count_alternatives info) init_stats choices
+	    List.fold_left (process_alternatives info) init_stats choices
       | InfLoop body -> 
 	  let info = count_loop info in
-	    count_blk body info
+	    process_blk body info
       | _ -> info
 
-  and count_alternatives info max_so_far body =
-    let info' = count_blk body info in
+  and process_alternatives info max_so_far body =
+    let info' = process_blk body info in
       max_stats info' max_so_far
   in
     (* TODO: arguments of main not counted ! *)
-  let stats = count_call "main" in
+  let stats = process_call "main" in
     (!exact, stats)
       
 let print (exact, st) =
@@ -132,6 +138,8 @@ let print (exact, st) =
 		    ^symb^(string_of_int st.nb_vars));
     print_endline ("Maximum height of the stack (bytes): "
 		    ^symb^(string_of_int st.sz_vars));
+    print_endline ("Maximum depth of function calls: "
+		    ^symb^(string_of_int st.call_depth));
     print_endline ("Maximum depth of imbricated loops: "
 		    ^symb^(string_of_int st.loop_depth))
 
