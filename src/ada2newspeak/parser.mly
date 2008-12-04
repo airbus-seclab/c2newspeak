@@ -103,7 +103,7 @@
 %token PACKAGE IS
 %token BODY
 %token PROCEDURE FUNCTION PACKAGE BODY
-%token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY OF
+%token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY RECORD OF
 %token IN OUT RETURN
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
 %token INTEGER FLOAT BOOLEAN CHARACTER 
@@ -277,8 +277,29 @@ type_definition :
 	{TypeDecl(DerivedType($2, $5))}
 | TYPE ident IS RANGE simpl_expr H_DEUX_POINTS simpl_expr POINT_VIR
 	    { TypeDecl(Ada_utils.make_range $2 $5 $7)}
+/*| TYPE ident is RECORD record_definition END RECORD POINT_VIR
+		{ TypeDecl() } 	
 
 ;
+
+
+record_definition :
+  {[]} 
+| ident_list DEUX_POINTS subtyp_indication POINT_VIR record_definition {$1::$2}
+      {(ObjectDecl($1,$3,None, Variable), loc ())}
+;
+*/
+
+
+/* 
+TO DO : check if initialization is allowed in records
+| ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR
+	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
+| ident_list DEUX_POINTS CONSTANT subtyp_indication AFFECT expression POINT_VIR
+	{(ObjectDecl($1,$4,Some($6), Constant), loc ())}
+| ident_list DEUX_POINTS CONSTANT AFFECT expression POINT_VIR 
+	{(NumberDecl($1, $5, None), loc())}
+*/
 
 constrained_array_definition : 
   PAR_G matrix_indication PAR_D OF subtyp_indication 

@@ -127,8 +127,8 @@ let id_body = "body"
 let id_constant = "constant"
 let id_subtype = "subtype"
 let id_array = "array"
+let id_record = "record"
 let id_of = "of"
-
 let id_integer = "integer"
 let id_float = "float"
 let id_boolean = "boolean"
@@ -185,8 +185,8 @@ rule token = parse
   | id_constant {CONSTANT}
   | id_subtype {SUBTYPE}
   | id_array {ARRAY}
+  | id_record {RECORD}
   | id_of {OF}
-
   (* identifiants non réservés mais considérés comme tels*)
   | id_integer {INTEGER}
   | id_float {FLOAT}
