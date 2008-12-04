@@ -85,6 +85,8 @@ and expression =
   | Qualified of subtyp*expression
  (*WG*)
   | Last of subtyp
+  | First of subtyp
+  | Length of subtyp
 
 and contrainte = 
   | RangeConstraint of expression*expression

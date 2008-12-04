@@ -572,7 +572,7 @@ let translate compil_unit =
   let rec translate_lv lv write trans_exp = 
     (*cas d'un symbol sans sélecteur *)
     let fun_sans_sel ident name = 
-      if mem_symb name then find_symb name
+      if mem_symb name then find_symb name 
       else begin
 	let all_symbs = find_all_use ident in 
 	  match all_symbs with
@@ -588,7 +588,7 @@ let translate compil_unit =
     in
   
     (* cas d'un symbol avec sélecteur connu *)
-    let fun_sel_connu name = 
+    let fun_sel_connu name =       
       if mem_symb name then find_symb name
       else Npkcontext.error "Firstpass.translate_lv"
 	("cannot find symbol "^(string_of_name name))
@@ -636,29 +636,73 @@ let translate compil_unit =
 	      end
 
 	(*Affectation dans un tableau*)
-	| ArrayAccess (lval, expr) -> 
-	
+	| ArrayAccess (lval, expr) ->
 	    let (v, subtyp_lv) = translate_lv lval write trans_exp in 
-	      match subtyp_lv with 
-		  Unconstrained(Declared( Array(_, 
-			ConstrainedArray(
-			      ( stypindex ,_,_ ),
-			      ( stypelt,_,_),  _)), _)) ->
+	      match  subtyp_lv 
+	      with
+		  Unconstrained(Declared( Array(_,
+		    ConstrainedArray(( stypindex, contraint,_ ),
+				     ( stypelt,_,_),  _)), _)) ->
 		    let size_base =  C.exp_of_int (C.size_of (
-			(translate_typ (base_typ stypelt)))) in
+				(translate_typ (base_typ stypelt)))
+						             ) 
+		    in
+		    let (exp,_) = trans_exp expr
+		      (Some(base_typ(stypindex))) 
+		    in
+		      
+		      
+		    let new_constr  = 
+		      match contraint with 
+			  None -> begin match stypindex with 
+			    | Constrained(_, contr, _) -> contr 
+			    | Unconstrained _ 
+			    | SubtypName _ ->
+				Npkcontext.error
+				  "Firstpass Array Access"
+				  "Unconstrained or SubtypName" 
+			  end
+			    
+			| Some(RangeConstraint(CInt(a), CInt(b))) 
+			    
+			| Some(IntegerRangeConstraint(a, b)) ->
+			    if (Nat.compare a b)<=0
+			    then
+			      IntegerRangeConstraint(a, b)
+			    else	 Npkcontext.error 
+			      "Firstpass: in Array access"
+			      "null range not accepted "
+			      
+			| Some(RangeConstraint _) ->
+			    Npkcontext.error 
+			      "Firstpass: in Array access"
+			      "constraint is RangeConstraint"
+			      
+			| _ ->  Npkcontext.error 
+			    "Firstpass: in Array access"
+			      "constraint is not IntegerRange"
+		    in
+		      (*
+			let chk_exp = match new_constr with
+			Some ctr -> make_check_constraint ctr exp
+			| _ -> exp in
+		      *)
 
-		    let (exp,_)=trans_exp expr (
-		      Some(base_typ(stypindex))) in
-
-		    let chk_exp = make_check_subtyp stypindex exp in 
-		    let offset = make_offset stypindex chk_exp size_base in
-
+		    let chk_exp = make_check_constraint new_constr exp in
+   		      
+		    let offset =  match new_constr  
+		    with IntegerRangeConstraint(nat1, _) -> 
+		      let borne_inf =   C.Const(C.CInt(nat1)) in 
+		      let decal =  C.Binop (Npk.MinusI,chk_exp, borne_inf) in
+			C.Binop (Newspeak.MultI, decal,  size_base)
+		      |  _ -> Npkcontext.error "Firstpass.make_offset"
+			   "contrainte (not IntegerRangeConstraint) not coded yet "
+		    in
 		      (C.Shift (v, offset), stypelt)
-		     
-		| _ ->        (*Constrained*)
-		    Npkcontext.error "firstpass: ArrayAcces" 
-			" subtyp_lv has not expected typ"
-		    
+			
+		  | _ ->        (*Constrained*)
+		      Npkcontext.error "firstpass: ArrayAcces" 
+			" subtyp_lv has not expected typ"  
   in
     
     
@@ -1175,7 +1219,8 @@ let translate compil_unit =
 	let (tr_exp, typ) = translate_exp exp (Some(qtyp)) in
 	  (make_check_subtyp subtyp tr_exp, typ)
 	     
-    | FunctionCall(name, exp_list) -> (*fonction ou lecture d'un element de tableau/matrice*)
+    | FunctionCall(name, exp_list) -> 
+	(*fonction ou lecture d'un element de tableau/matrice*)
 	(* let (fname, spec, tr_typ) = find_fun_symb name in *)
 	let array_or_fun = find_fun_symb name in
 	  begin
@@ -1270,10 +1315,10 @@ let translate compil_unit =
 	    
 	    
     (*WG  TO DO *)
-    | Last _ -> 
+    | First _ | Last _  | Length _-> 
 	Npkcontext.error
 	  "Firstpass.translate_exp"
-	  "Last still in firstpass, non static "
+	  "Last, first or Length remaining in firstpass, non static "
 	  
 	  
 (*   and make_check_constraint contrainte exp =  *)

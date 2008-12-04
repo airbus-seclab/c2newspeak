@@ -110,7 +110,7 @@
 %token NULL TRUE FALSE
 %token PAR_G PAR_D FLECHE H_DEUX_POINTS
 %token VIR POINT_VIR POINT DEUX_POINTS QUOTE
-%token LAST 
+%token LAST FIRST LENGTH
 %start s
 %type <Syntax_ada.compilation_unit> s
 
@@ -439,8 +439,10 @@ simpl_expr :
 | PLUS term {Unary(UPlus,$2)}
 | MOINS term {Unary(UMoins,$2)}
 | simpl_expr add_op term {Binary($2,$1,$3)}
-/*WG added for type'LAST ... */
+/*WG added for type'LAST,FIRST 
 | subtyp QUOTE LAST {Last($1)}
+| subtyp QUOTE FIRST {First($1)} 
+*/
 ;
 
 mult_op :
@@ -473,6 +475,11 @@ primary :
 | PAR_G expression PAR_D {$2}
 | subtyp QUOTE PAR_G expression PAR_D {Qualified($1,$4)}
 | name args {FunctionCall($1, $2)}
+/*from simpl_exp to */
+
+| subtyp QUOTE LAST {Last($1)}
+| subtyp QUOTE FIRST {First($1)} 
+| subtyp QUOTE LENGTH {Length($1)}
 
 /*| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)}*/
 ;

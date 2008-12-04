@@ -62,6 +62,35 @@ let normalize_ident ident package extern = match extern with
   | false -> ([], ident)
   | true -> normalize_extern_ident ident package
 
+
+      
+let rec arraytyp_to_contrainte typ norm_sb = 
+  match typ with
+      Unconstrained(Declared(Array(_, ConstrainedArray (
+				     ( stypindex, contraint,_ ), _, _)), _)) -> 
+	begin
+	  match contraint with 
+	      None -> begin 
+		match stypindex with 
+		    Constrained(_, contr, _) ->
+		      Some contr 
+		  | SubtypName _ ->  
+		      arraytyp_to_contrainte (norm_sb typ) norm_sb
+		  |  _ -> None
+	      end
+	    | Some  cont -> Some cont
+	end
+    | SubtypName _ -> arraytyp_to_contrainte (norm_sb typ) norm_sb
+    | Constrained ( _, contr, true) -> Some contr
+    | (*Constrained(_, _, false)*) _  -> 
+	Npkcontext.error
+	  "Ada_normalize Length contraint"
+	  "Length not implemented for type /= array" 
+	  
+	  
+   
+   
+
 let normalize_name name with_package current_package extern = 
   let add_package (parents, ident) pack = match parents with
     | [] -> (pack, ident)
@@ -128,7 +157,6 @@ let eval_static exp expected_typ csttbl context with_package
 	    Ada_utils.check_static_subtyp subtyp value;
 	    (value, typ)
 	      
-      (*WG*)
       | Last (subtype) -> 
 	  let value_ret =  eval_static_last subtype in
 	  let typ = Ada_utils.check_typ expected_typ 
@@ -136,9 +164,49 @@ let eval_static exp expected_typ csttbl context with_package
 	  in 
 	    (value_ret, typ)
 	      
+      | First (subtype) -> 
+	  let value_ret = eval_static_first subtype in
+	  let typ = Ada_utils.check_typ expected_typ 
+	    (Ada_utils.base_typ subtype) 
+	  in 
+	    (value_ret, typ)
 	      
-  
-  and eval_static_last  subtype = 
+      | Length (subtype) -> 
+	  let value_ret =  eval_static_length subtype in
+	  let typ = Ada_utils.check_typ expected_typ 
+	    (Ada_utils.base_typ subtype) 
+	  in 
+	    (value_ret, typ)
+	      
+  and eval_static_length subtype = 
+    match subtype with	        
+      | Unconstrained _ ->  Npkcontext.error
+	  " Ada_normalize: length of unconstrained type"
+	    "TODO:clean version of length based on ada_config"
+      | Constrained ( _(*typ*), contrainte, true) -> begin
+	  match contrainte with 
+	      RangeConstraint _ ->  Npkcontext.error
+		" Ada_normalize: length value of constrained type"
+		"TODO:clean version of length based on ada_config"
+		
+	    | IntegerRangeConstraint (nat1, nat2) -> 
+		IntVal ( Nat.sub nat2 nat1)
+	    
+	    | FloatRangeConstraint _ ->  Npkcontext.error
+		" Ada_normalize: length value of constrained type " 
+		" TODO: Float Range Integer not handled"
+		
+	end
+      
+      | Constrained(_, _, false) ->
+	  raise NonStaticExpression
+     
+      | SubtypName _ ->  Npkcontext.error
+	  " Ada_normalize: eval static_last (Last)"
+	    " internal error : unexpected subtyp name"
+    
+
+    and eval_static_last subtype = 
     match subtype with	        
       | Unconstrained _ ->  Npkcontext.error
 	  " Ada_normalize: last value of unconstrained type"
@@ -146,23 +214,39 @@ let eval_static exp expected_typ csttbl context with_package
       | Constrained ( typ, contrainte, true) -> begin
 	  match contrainte with 
 	      RangeConstraint (_, exp2) ->
-		fst (eval_static_exp exp2 (Some(typ)))
-		  (*WG : TO DO check Some-typ*)
-		  
+		fst (eval_static_exp exp2 (Some(typ)))       
+		  (*Chck Some typ*)
 	    | IntegerRangeConstraint (_, nat2) -> 
 		IntVal nat2
-		  
 	    | FloatRangeConstraint (_, fl2) -> 
 		FloatVal fl2
-		  
 	end
       | Constrained(_, _, false) ->
 	  raise NonStaticExpression
-	    
       | SubtypName _ ->  Npkcontext.error
 	  " Ada_normalize: eval static_last (Last)"
 	    " internal error : unexpected subtyp name"
 	    
+    and eval_static_first subtype = 
+    match subtype with	        
+      | Unconstrained _ ->  Npkcontext.error
+	  " Ada_normalize: first value of unconstrained type"
+	    "TODO:clean version of first based on ada_config"
+      | Constrained ( typ, contrainte, true) -> begin
+	  match contrainte with 
+	      RangeConstraint (exp1, _) ->
+		fst (eval_static_exp exp1 (Some(typ)))		  
+	    | IntegerRangeConstraint (nat1, _) -> 
+		IntVal nat1
+	    | FloatRangeConstraint (fl1, _) -> 
+		FloatVal fl1
+	end
+      | Constrained(_, _, false) ->
+	  raise NonStaticExpression 
+      | SubtypName _ ->  Npkcontext.error
+	  " Ada_normalize: eval static_last (Last)"
+	    " internal error : unexpected subtyp name"
+	   
 
   (* expected_typ : type du résultat de l'opération, pas
      des opérandes *)
@@ -1011,7 +1095,8 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
      statique *)
   let subtyp_of_constraint contrainte typ static_ref =
     let static_constraint = Ada_utils.constraint_is_static 
-      contrainte in
+      contrainte 
+    in
       
     (* Dans le cas de contrainte statique, la contrainte
        du sous-type résultat reste la même.
@@ -1039,17 +1124,20 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
 	      "internal error : subtyp already provided");
     
     let norm_subtyp_ref = normalize_subtyp subtyp_ref in 
+
     let (norm_subtyp, norm_contrainte) = 
       match (contrainte, norm_subtyp_ref) with
 	| (None, Unconstrained(typ)) -> 
 	    (Unconstrained(typ), None)
 	| (None, Constrained(typ, const, static)) -> 
 	    (Constrained(typ, const, static), None)
-	| (Some(const), Unconstrained(typ)) -> let norm_contrainte = 
-	    normalize_contrainte const typ
-	  in (subtyp_of_constraint norm_contrainte typ true, 
-	      Some(norm_contrainte))
-	| (Some(const), Constrained(typ, const_ref, stat_ref)) ->
+	| (Some(const), Unconstrained(typ)) -> 
+	    let norm_contrainte = 
+	      normalize_contrainte const typ
+	    in 
+	      (subtyp_of_constraint norm_contrainte typ true, 
+	       Some(norm_contrainte))
+	| (Some(const), Constrained(typ,const_ref,stat_ref)) ->
 	    let norm_contrainte = 
 	      normalize_contrainte const typ
 	    in
@@ -1079,7 +1167,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
 	  Declared(decl, loc)*)
 	
 and normalize_subtyp subtyp = 
-  let  norm_typ typp =
+  let norm_typ typp =
     match typp with 
 	Declared (Array(id,ConstrainedArray(st1_ind, st2_ind, _)),x) ->
 	  let n_st1 =  normalize_subtyp_indication st1_ind in
@@ -1116,7 +1204,7 @@ and normalize_subtyp subtyp =
 		    x )
       |  _ -> typp 
   in 
-    match subtyp with
+    match subtyp with (* For array norm_typ is used here*) 
       | Unconstrained(typ) -> Unconstrained(norm_typ typ) 
       | Constrained(typ,const,static) -> 
 	  Constrained(norm_typ typ,const,static)
@@ -1134,41 +1222,164 @@ and normalize_exp exp = match exp with
 				  normalize_exp e2)
   | FunctionCall(nom, params) ->
       FunctionCall(nom, List.map normalize_exp params)
-	(*WG*)
-  | Last (subtype) -> 	  (*Last(normalize_subtyp subtyp)*)
-      let rec fun_aux subtyp =
-	match subtyp with	        
+	(*WG
+	  | Last (subtype) -> 
+	  let rec fun_aux subtyp =
+	  match subtyp with	        
 	  | Unconstrained _ ->  Npkcontext.error
-	      " Ada_normalize: last value of unconstrained type"
-		"TODO:clean version of last based on ada_config"
+	  " Ada_normalize: last value of unconstrained type"
+	  "TODO:clean version of last based on ada_config"
 	  | Constrained( _, contrainte, true) -> begin
-	      match contrainte with 
-		  RangeConstraint (_, exp2) ->  begin
-		    match exp2
-		    with
-			CInt _  | CFloat _ | CBool _ ->  exp2
-		      | NullExpr | CChar _ | CString _
-		      | Var _ | FunctionCall _ | Unary _
-		      | Binary _ | Qualified _ | Last _ ->
-			  Npkcontext.error
-			  " Ada_normalize: last value of unconstrained type"
-			  " TODO:clean version of last based on ada_config "
-		  end
-		| IntegerRangeConstraint (_, nat2) -> 
-		    CInt nat2
-		      
-		| FloatRangeConstraint (_, fl2) -> 
-		    CFloat fl2      
-	    end
+	  match contrainte with 
+	  RangeConstraint (_, exp2) ->  begin
+	  match exp2
+	  with
+	  CInt _  | CFloat _ | CBool _ ->  exp2
+	  | NullExpr | CChar _ | CString _
+	  | Var _ | FunctionCall _ | Unary _
+	  | Binary _ | Qualified _ | Last _  | First _ ->
+	  Npkcontext.error
+	  " Ada_normalize: last value of unconstrained type"
+	  " TODO:clean version of last based on ada_config "
+	  end
+	  | IntegerRangeConstraint (_, nat2) -> 
+	  CInt nat2
+	  
+	  | FloatRangeConstraint (_, fl2) -> 
+	  CFloat fl2      
+	  end
 	  | Constrained(_, _, false) ->
-	      raise NonStaticExpression
-		
+	  raise NonStaticExpression
 	  | SubtypName _ ->  
-	      fun_aux (normalize_subtyp subtyp)
-      in
-	fun_aux subtype	
-	  
-	  
+	  fun_aux (normalize_subtyp subtyp)
+	  in
+	  fun_aux subtype	
+	*)
+  | Last subtype | First subtype -> begin
+      
+      let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
+	match new_contr with 
+	   None -> Npkcontext.error
+	     "Ada_normalize Last contraint"
+	     "constraint is not IntegerRange" 
+	     
+	 | Some(IntegerRangeConstraint(a, b)) ->
+	     if (Nat.compare a b <=0)
+	     then  
+	       match exp with 
+		   Last _ ->  CInt b 
+		 | First _ ->  CInt a
+		 | _ ->  Npkcontext.error  
+		     " Ada_normalize" "Should never happen" 
+	     else 
+	       Npkcontext.error  
+		 "Ada_normalize Length contraint"
+		 "Zero length" 
+		 
+	 (*
+	   | Some(RangeConstraint _ CInt(a), CInt(b)) ->
+	   if (Nat.compare a b <=0)
+	   then  
+	   CInt (Nat.add (Nat.sub b a) Nat.one)
+	   else	 Npkcontext.error  
+	   Npkcontext.error  
+	   "Ada_normalize Length contraint"
+	   "Zero length" 
+	   
+	   | Some(RangeConstraint _) ->
+	   Npkcontext.error 
+	   "Ada_normalize Length contraint"
+	   "Range Constraint fo Length"
+	 *)
+		 
+	 | _ ->  Npkcontext.error 
+	     "Firstpass: in Array access"
+	       "constraint is not IntegerRange"
+    end	       
+	       
+	     (*
+	       let rec fun_aux subtyp last_or_first =    
+	       match subtyp with	        
+	       | Unconstrained (Declared(Array(_, ConstrainedArray (
+	       ( stypindex, contraint,_ ), _, _)), _)) ->     
+	       Npkcontext.error
+	       " Ada_normalize: last value of unconstrained type"
+	       "TODO: clean version of last/first based on ada_config" 
+	       
+	       | Constrained( _, contrainte, true) -> begin
+	       match contrainte with
+	       RangeConstraint (exp1, exp2) ->  begin
+	       let exp = if last_or_first then exp2 else exp1 in
+	       match exp with
+	       CInt _  | CFloat _ | CBool _ ->  exp
+	       | NullExpr | CChar _ | CString _
+	       | Var _ | FunctionCall _ | Unary _
+	       | Binary _ | Qualified _ | Last _ 
+	       | First _ | Length _  ->
+	       Npkcontext.error
+	       " Ada_normalize: last/first value of unconstrained type"
+	       " TODO:clean version of last based on ada_config "
+	       end
+	       | IntegerRangeConstraint (nat1, nat2) -> 
+	       if last_or_first then CInt nat2 else CInt nat1
+	       | FloatRangeConstraint (fl1, fl2) -> 
+	       if last_or_first then CFloat fl2 else CFloat fl1		      
+	       end
+	       | Constrained(_, _, false) ->
+	       raise NonStaticExpression 
+	       | SubtypName _ ->  
+	       fun_aux (normalize_subtyp subtyp) last_or_first
+	       in
+	       match exp with 
+	       Last (subtype)  -> fun_aux subtype true	
+	       | First (subtype) -> fun_aux subtype false	
+	       | _ -> Npkcontext.error " Ada_normalize: last/first" "Impossible case"
+	       end	
+	     *)     
+		   
+      
+  | Length subtype -> 
+      (*     let rec fun_aux subtyp  =*)
+     (*       Array or Range type only for attributes Length *)
+       let new_contr = arraytyp_to_contrainte subtype 
+	 normalize_subtyp 
+       in
+	 match new_contr with 
+	     None -> Npkcontext.error
+	       " Ada_normalize Length contraint"
+	       "constraint is not IntegerRange" 
+	       
+	   | Some(IntegerRangeConstraint(a, b)) ->
+	       if (Nat.compare a b <=0)
+	       then  
+		 CInt (Nat.add (Nat.sub b a) Nat.one)
+	       else	 Npkcontext.error  
+		 "Ada_normalize Length contraint"
+		 "Zero length" 
+		 
+	   (*
+	     | Some(RangeConstraint _ CInt(a), CInt(b)) ->
+	     if (Nat.compare a b <=0)
+	     then  
+	     CInt (Nat.add (Nat.sub b a) Nat.one)
+	     else	 Npkcontext.error  
+	     Npkcontext.error  
+	     "Ada_normalize Length contraint"
+	     "Zero length" 
+	   *)
+		 
+	   | Some(RangeConstraint _) ->
+	       Npkcontext.error 
+		 "Ada_normalize Length contraint"
+		 "Range Constraint fo Length"
+		 
+	   | _ ->  Npkcontext.error 
+	       "Firstpass: in Array access"
+		 "constraint is not IntegerRange"
+
+		 (*in fun_aux subtype  *)
+    
+	 
 (* normalize la contrainte contrainte
    le type des bornes est typ
    static indique si 
@@ -1200,7 +1411,8 @@ and normalize_contrainte contrainte typ =
 		   
 	   | (IntVal(i1), IntVal(i2)) -> 
 	       if (Nat.compare i1 i2)<=0
-	       then IntegerRangeConstraint(i1, i2)
+	       then
+		 IntegerRangeConstraint(i1, i2) 
 	       else 
 		 Npkcontext.error 
 		   "Ada_normalize.normalize_contrainte"
@@ -1250,7 +1462,8 @@ and normalize_contrainte contrainte typ =
 	    
 	    
 in
-  
+
+ 
 let rec normalize_instr (instr,loc) = 
     Npkcontext.set_loc loc;
     match instr with

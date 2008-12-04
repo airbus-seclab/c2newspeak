@@ -22,6 +22,10 @@
   
 *)
 
+(*val normalize_subtyp_indication: 
+  Syntax_ada.subtyp_indication ->  Syntax_ada.subtyp_indication
+*)
+
 val normalize_ident : 
   Syntax_ada.identifier -> Syntax_ada.identifier list ->
   bool -> Syntax_ada.name

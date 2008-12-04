@@ -137,6 +137,8 @@ let id_true = "true"
 let id_false = "false"
 (*WG*)
 let id_last = "last"
+let id_first = "first"
+let id_length = "length"
 
 rule token = parse
     
@@ -195,7 +197,8 @@ rule token = parse
 
 (*WG*)
   | id_last {LAST}
-
+  | id_first {FIRST}
+  | id_length {LENGTH}
   | '(' {PAR_G}
   | ')' {PAR_D}
 

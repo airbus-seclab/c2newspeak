@@ -53,12 +53,6 @@ let rec ident_list_to_string l =
 let rec name_to_string (packages, ident) = 
   ident_list_to_string (packages@[ident])
 
-let rec lval_to_string lv = 
-  match lv with 
-      Lval name -> name_to_string name
-    | ArrayAccess (lval, _) ->
-	(lval_to_string lval )^"[ TO ?]"
-	  
 	  
 let line_of_loc (_,line,_) = "line "^(string_of_int line)
 
@@ -165,7 +159,8 @@ and exp_to_string exp = match exp with
       ^(list_to_string params exp_to_string "," true)^")"
   (*WG*)
   | Last (styp) -> "Last ("^(subtyp_to_string styp)^")"
-
+  | First (styp) -> "First ("^(subtyp_to_string styp)^")"
+  | Length (styp) -> "Length ("^(subtyp_to_string styp)^")"
 
 and subtyp_to_string subtyp = match subtyp with
   | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"
@@ -199,6 +194,14 @@ let iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
 
+
+let rec lval_to_string lv = 
+  match lv with 
+      Lval name -> name_to_string name
+    | ArrayAccess (lval, e) ->
+	(lval_to_string lval )^"["^(exp_to_string e)^"]"
+
+
 let rec instr_list_to_string instr_list = 
   list_to_string instr_list
     (fun (instr,loc) -> "("^
@@ -224,6 +227,9 @@ and instr_to_string instr = match instr with
   | ProcedureCall(nom, params) -> "ProcedureCall("
       ^(name_to_string nom)^", "
       ^(list_to_string params exp_to_string ", " true)^")"
+
+
+	  
 
 
 let param_to_string param = 
