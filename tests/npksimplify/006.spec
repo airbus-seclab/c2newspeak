@@ -1,5 +1,5 @@
 006.c
-getIndex() {
+int32 getIndex(ptr) {
   (006.c:30#6)^int32 x;
   (006.c:29#6)^int32 found;
   (006.c:32#2)^0- =(int32) 0;
@@ -44,7 +44,7 @@ getIndex() {
   }
 }
 
-main() {
+void main(void) {
   (006.c:49#6)^int32 i;
   (006.c:50#6)^int32 c;
   (006.c:52#2)^{

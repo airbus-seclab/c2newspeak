@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 078.c
-main() {
+void main(void) {
   (078.c:27#6)^int32 i;
   (078.c:28#6)^int32 x;
   (078.c:28#6)^0- =(int32) 0;

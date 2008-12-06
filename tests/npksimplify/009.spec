@@ -1,12 +1,12 @@
 009.c
-f() {
+void f(void) {
   (009.c:30#2)^g();
 }
 
-g() {
+void g(void) {
 }
 
-main() {
+void main(void) {
   (009.c:30#2)^g();
   (009.c:35#2)^g();
 }

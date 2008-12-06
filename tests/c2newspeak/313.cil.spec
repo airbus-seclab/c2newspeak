@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 313.c
-main() {
+void main(void) {
   (313.c:27#1076)^int32 i;
   (313.c:28#1081)^0- =(int32) 0;
   (313.c:26#1052)^do {

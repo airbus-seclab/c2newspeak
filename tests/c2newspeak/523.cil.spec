@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 523.c
-main() {
+void main(void) {
   (523.c:27#1072)^int32 x;
   int32 tmp;
   (523.c:28#1099)^choose {

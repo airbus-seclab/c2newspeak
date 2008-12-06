@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 223.c
-main() {
+void main(void) {
   (223.c:27#6)^int32 x;
   (223.c:28#2)^choose {
     | (10 > 0-_int32) -->

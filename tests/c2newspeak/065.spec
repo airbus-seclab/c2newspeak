@@ -2,11 +2,11 @@ Warning: 065.c:32#2: the order of execution of side-effects in expressions not s
 Newspeak output
 ---------------
 065.c
-f() {
+int32 f(int32) {
   (065.c:27#2)^1- =(int32) 0-_int32;
 }
 
-main() {
+void main(void) {
   (065.c:31#6)^int32 x;
   (065.c:32#2)^int32 !tmp-1073741820;
   (065.c:32#2)^{

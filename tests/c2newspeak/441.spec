@@ -3,7 +3,7 @@ Warning: 441.c:34#1122: identifier a is defined as a type, avoid using it for an
 Newspeak output
 ---------------
 441.c
-main() {
+void main(void) {
   (441.c:33#5)^ptr x;
   (441.c:34#2)^[0-_ptr]32 =(int32) 1;
 }

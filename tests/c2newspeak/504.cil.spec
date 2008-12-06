@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 504.c
-main() {
+void main(void) {
   (504.c:30#1089)^choose {
     | ! (a_int32 ==_int32 0) -->
       (504.c:30#1089)^choose {

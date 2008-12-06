@@ -25,7 +25,7 @@ t013() {
 Newspeak output
 ---------------
 t013.adb
-t013() {
+void t013(void) {
   (t013.adb:3#35)^uint8 a;
   (t013.adb:4#59)^uint8 b;
   (t013.adb:4#59)^uint8 c;

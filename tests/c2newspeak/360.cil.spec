@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 360.c
-main() {
+void main(void) {
 }
 
 

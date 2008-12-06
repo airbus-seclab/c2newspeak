@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 528.c
-main() {
+void main(void) {
   (528.c:27#1073)^ptr y;
   (528.c:28#1084)^ptr dst;
   (528.c:29#1097)^ptr src;

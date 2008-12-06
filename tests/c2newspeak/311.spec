@@ -2,7 +2,7 @@ Warning: 311.c:31#1113: init statement expected
 Newspeak output
 ---------------
 311.c
-main() {
+void main(void) {
   (311.c:27#6)^int32 i;
   (311.c:28#2)^0- =(int32) 0;
   (311.c:29#2)^do {

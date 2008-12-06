@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 214.c
-f() {
+void f((int32, int32)) {
 }
 
-main() {
+void main(void) {
   (214.c:31#1126)^int32 x;
   int32 tmp;
   int32 tmp___0;

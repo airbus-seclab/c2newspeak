@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 351.c
-main() {
+void main(void) {
   (351.c:36#1127)^x =(int32) 1;
 }
 

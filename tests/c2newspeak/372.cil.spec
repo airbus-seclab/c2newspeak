@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 372.c
-f() {
+void f(void) {
 }
 
-main() {
+void main(void) {
   (372.c:31#1124)^int32 a;
   (372.c:31#1127)^int32 b;
   (372.c:32#1132)^choose {

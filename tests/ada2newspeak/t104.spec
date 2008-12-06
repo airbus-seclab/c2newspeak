@@ -30,11 +30,11 @@ t104.a() {
 Newspeak output
 ---------------
 t104.adb
-t104.a() {
+int32 t104.a(void) {
   (t104.adb:5#63)^0- =(int32) 12;
 }
 
-t104.main() {
+void t104.main(void) {
   (t104.adb:10#113)^int32 z;
   (t104.adb:12#153)^int32 !tmp-1073741821;
   (t104.adb:12#153)^t104.a();

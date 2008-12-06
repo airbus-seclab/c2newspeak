@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 526.c
-main() {
+void main(void) {
   (526.c:27#1072)^ptr ptr;
   (526.c:28#1084)^int32 i;
   int32 tmp;

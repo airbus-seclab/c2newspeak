@@ -64,19 +64,19 @@ t089.main() {
 Newspeak output
 ---------------
 t089.adb
-t089.a() {
+int32 t089.a(void) {
   (t089.adb:25#509)^0- =(int32) 12;
 }
 
-t089.b() {
+int32 t089.b(void) {
   (t089.adb:20#446)^0- =(int32) 2;
 }
 
-t089.jourdusoleil() {
+uint3 t089.jourdusoleil(void) {
   (t089.adb:15#367)^0- =(uint3) 5;
 }
 
-t089.main() {
+void t089.main(void) {
   (t089.adb:30#559)^int32 x;
   (t089.adb:31#578)^uint3 y;
   (t089.adb:32#597)^int32 z;

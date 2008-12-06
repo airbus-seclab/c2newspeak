@@ -2,7 +2,7 @@ Warning: 209.c:29#2: the order of execution of side-effects in expressions not s
 Newspeak output
 ---------------
 209.c
-main() {
+void main(void) {
   (209.c:27#6)^int32 x;
   (209.c:27#9)^int32 y;
   (209.c:27#12)^int32 z;

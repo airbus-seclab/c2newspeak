@@ -42,7 +42,7 @@ t058() {
 Newspeak output
 ---------------
 t058.adb
-t058() {
+void t058(void) {
   (t058.adb:3#29)^int32 y;
   (t058.adb:5#51)^int32 !tmp-1073741822;
   (t058.adb:5#51)^{

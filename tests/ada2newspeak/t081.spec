@@ -37,11 +37,11 @@ t081.main() {
 Newspeak output
 ---------------
 t081.adb
-t081.a() {
+int32 t081.a(void) {
   (t081.adb:8#178)^0- =(int32) 5;
 }
 
-t081.main() {
+void t081.main(void) {
   (t081.adb:14#243)^int32 x;
   (t081.adb:15#276)^int32 y;
   (t081.adb:14#243)^{

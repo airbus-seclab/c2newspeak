@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 284.c
-main() {
+void main(void) {
   (284.c:31#1130)^x =(float64) y_float64;
 }
 

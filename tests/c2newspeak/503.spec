@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 503.c
-main() {
+void main(void) {
   (503.c:29#2)^do {
     (503.c:29#2)^do {
       (503.c:29#2)^choose {

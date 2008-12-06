@@ -19,7 +19,7 @@ t055.z() {
 Newspeak output
 ---------------
 t055.adb
-t055.z() {
+void t055.z(int32) {
 }
 
 

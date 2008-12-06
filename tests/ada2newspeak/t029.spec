@@ -17,7 +17,7 @@ t029.proc() {
 Newspeak output
 ---------------
 t029.adb
-t029.proc() {
+void t029.proc(void) {
 }
 
 

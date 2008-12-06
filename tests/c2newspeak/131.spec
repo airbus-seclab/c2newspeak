@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 131.c
-f() {
+void f(ptr) {
 }
 
-main() {
+void main(void) {
 }
 
 

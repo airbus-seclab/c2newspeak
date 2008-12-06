@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 059.c
-main() {
+void main(void) {
   (059.c:30#6)^int32 x;
   (059.c:32#8)^{
     int32 x;

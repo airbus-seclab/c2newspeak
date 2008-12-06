@@ -25,7 +25,7 @@ t059() {
 Newspeak output
 ---------------
 t059.adb
-t059() {
+void t059(void) {
   (t059.adb:3#38)^int32 x;
   (t059.adb:4#52)^uint1 y;
   (t059.adb:6#69)^{

@@ -19,7 +19,7 @@ t103.f() {
 Newspeak output
 ---------------
 t103.adb
-t103.f() {
+uint1 t103.f(void) {
   (t103.adb:5#60)^0- =(uint1) 0;
 }
 

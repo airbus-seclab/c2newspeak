@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 199.c
-main() {
+void main(void) {
   (199.c:27#1073)^int32 x;
   (199.c:26#1052)^do {
     (199.c:28#1078)^while (1) {

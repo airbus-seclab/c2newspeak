@@ -2,7 +2,7 @@ Warning: 332.c:29#1086: goto statements are error-prone, they should be avoided 
 Newspeak output
 ---------------
 332.c
-main() {
+void main(void) {
   (332.c:27#6)^int32 x;
   (332.c:32#1)^do {
     (332.c:28#2)^choose {

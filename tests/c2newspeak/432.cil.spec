@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 432.c
-main() {
+void main(void) {
 }
 
 int8[4] !432.c.const_str_%d

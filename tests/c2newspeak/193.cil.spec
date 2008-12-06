@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 193.c
-main() {
+void main(void) {
   (193.c:29#1107)^x =(ptr) y_ptr;
 }
 

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 473.c
-main() {
+void main(void) {
   (473.c:32#2)^a + (belongs[0,2] 0 * 8) =(int8) 0;
 }
 

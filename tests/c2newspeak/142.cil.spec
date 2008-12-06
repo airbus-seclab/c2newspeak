@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 142.c
-main() {
+void main(void) {
   (142.c:30#1134)^float32 x;
   (142.c:31#1146)^float64 y;
   (142.c:32#1155)^int32 z;

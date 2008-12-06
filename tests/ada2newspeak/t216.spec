@@ -27,7 +27,7 @@ t216.donull() {
 Newspeak output
 ---------------
 t216.adb
-t216.donull() {
+void t216.donull(void) {
   (t216.adb:20#374)^t216.a =(int32) 1;
   (t216.adb:21#389)^t216.a + 32 =(int32) 2;
   (t216.adb:22#405)^t216.a + 192 =(int32) 7;

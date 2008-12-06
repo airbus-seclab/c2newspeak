@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 339.c
-main() {
+void main(void) {
   (339.c:27#1087)^uint16 x;
   (339.c:28#1111)^uint16 y;
   (339.c:29#1116)^1- =(uint16) 0;

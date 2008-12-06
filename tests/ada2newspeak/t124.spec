@@ -19,7 +19,7 @@ t124() {
 Newspeak output
 ---------------
 t124.adb
-t124() {
+void t124(int8) {
   (t124.adb:5#52)^int8 x;
   (t124.adb:7#73)^0- =(int8) belongs[-120,120] coerce[-128,127] (12 * 1-_int8);
 }

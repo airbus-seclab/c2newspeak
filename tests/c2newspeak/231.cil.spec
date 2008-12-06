@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 231.c
-main() {
+void main(void) {
   (231.c:29#1092)^int32[10] t;
   (231.c:30#1104)^ptr ptr;
   (231.c:31#1114)^ptr ptr2;

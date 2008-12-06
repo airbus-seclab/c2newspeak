@@ -29,7 +29,7 @@ t087() {
 Newspeak output
 ---------------
 t087.adb
-t087() {
+void t087(void) {
   (t087.adb:7#137)^int32 x;
   (t087.adb:8#154)^int32 x2;
   (t087.adb:10#186)^int32 a;

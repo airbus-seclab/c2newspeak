@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 392.c
-main() {
+void main(void) {
   (392.c:30#1098)^i =(int32) x_int32;
 }
 

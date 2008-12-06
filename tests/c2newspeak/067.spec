@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 067.c
-f() {
+void f(int32) {
 }
 
-main() {
+void main(void) {
   (067.c:30#6)^int32 a;
   (067.c:31#2)^{
     int32 f.arg1;

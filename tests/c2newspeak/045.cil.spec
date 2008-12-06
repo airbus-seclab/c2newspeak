@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 045.c
-main() {
+void main(void) {
   (045.c:30#1132)^int32 x;
   (045.c:32#1140)^choose {
     | (0-_int32 > 0) -->

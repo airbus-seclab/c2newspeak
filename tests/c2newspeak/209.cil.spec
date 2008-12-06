@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 209.c
-main() {
+void main(void) {
   (209.c:27#1072)^int32 x;
   (209.c:27#1075)^int32 y;
   (209.c:27#1078)^int32 z;

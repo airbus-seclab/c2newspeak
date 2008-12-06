@@ -57,11 +57,11 @@ t098.proc() {
 Newspeak output
 ---------------
 t098.adb
-t098.g() {
+uint3 t098.g(void) {
   (t098.adb:13#181)^0- =(uint3) 1;
 }
 
-t098.main() {
+void t098.main(uint2) {
   (t098.adb:19#272)^int32 x;
   (t098.adb:21#300)^{
     int32 !tmp-1073741817;
@@ -75,13 +75,13 @@ t098.main() {
   }
 }
 
-t098.proc() {
+void t098.proc(int32) {
   (t098.adb:27#390)^uint2 t098.main.arg1;
   (t098.adb:27#390)^0- =(uint2) 3;
   (t098.adb:27#390)^t098.main();
 }
 
-t098.t096() {
+int32 t098.t096(void) {
   (t098.adb:8#108)^0- =(int32) 5;
 }
 

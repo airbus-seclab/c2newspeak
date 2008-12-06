@@ -2,7 +2,7 @@ Warning: 334.c:30#1095: goto statements are error-prone, they should be avoided 
 Newspeak output
 ---------------
 334.c
-main() {
+void main(void) {
   (334.c:27#6)^int32 x;
   (334.c:29#2)^do {
     (334.c:29#2)^while (1) {

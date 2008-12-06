@@ -22,7 +22,7 @@ t049.main() {
 Newspeak output
 ---------------
 t049.adb
-t049.main() {
+void t049.main(void) {
   (t049.adb:11#225)^t049.x =(uint2) 0;
 }
 

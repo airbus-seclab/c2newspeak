@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 245.c
-main() {
+void main(void) {
   (245.c:35#1130)^y =(int32) 0;
 }
 

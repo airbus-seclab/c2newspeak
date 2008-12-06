@@ -4,7 +4,7 @@ file.h
 file2.h
 file3.h
 file4.h
-main() {
+void main(void) {
 }
 
 

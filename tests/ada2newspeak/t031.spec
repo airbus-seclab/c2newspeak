@@ -20,7 +20,7 @@ t031.proc() {
 Newspeak output
 ---------------
 t031.adb
-t031.proc() {
+void t031.proc(void) {
   (t031.adb:6#97)^t031.x =(int32) belongs[-2147483648,2147483647] coerce[-2147483648,2147483647] (t031.x_int32 + 2);
 }
 

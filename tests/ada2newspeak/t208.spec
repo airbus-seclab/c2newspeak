@@ -21,7 +21,7 @@ t208() {
 Newspeak output
 ---------------
 t208.adb
-t208() {
+void t208(void) {
   (t208.adb:7#98)^int32[5] tt;
   (t208.adb:8#109)^int32 z;
   (t208.adb:11#133)^1- + 32 =(int32) 4;

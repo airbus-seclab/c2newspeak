@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 125.c
-main() {
+void main(void) {
   (125.c:29#6)^int32 x;
   (125.c:29#6)^int32 value_of_f;
   (125.c:29#6)^f();

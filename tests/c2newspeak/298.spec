@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 298.c
-main() {
+void main(void) {
 }
 
 my own random . assertion ( 'x' ) 

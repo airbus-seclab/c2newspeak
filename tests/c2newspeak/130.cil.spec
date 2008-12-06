@@ -1,11 +1,11 @@
 Newspeak output
 ---------------
 130.c
-f() {
+void f(void) {
   (130.c:30#1129)^f();
 }
 
-main() {
+void main(void) {
   (130.c:34#1157)^f();
 }
 

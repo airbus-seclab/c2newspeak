@@ -19,7 +19,7 @@ t095.a() {
 Newspeak output
 ---------------
 t095.adb
-t095.a() {
+uint1 t095.a(void) {
   (t095.adb:5#63)^0- =(uint1) 1;
 }
 

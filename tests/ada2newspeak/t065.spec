@@ -43,7 +43,7 @@ t065() {
 Newspeak output
 ---------------
 t065.adb
-t065() {
+void t065(void) {
   (t065.adb:25#611)^uint2 ae;
   (t065.adb:26#640)^uint2 be;
   (t065.adb:28#670)^uint1 ab;

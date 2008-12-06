@@ -10,7 +10,7 @@ Warning: 335.c:46#1251: init statement expected
 Newspeak output
 ---------------
 335.c
-main() {
+void main(void) {
   (335.c:37#6)^int32 i;
   (335.c:38#2)^do {
     (335.c:38#2)^while (1) {

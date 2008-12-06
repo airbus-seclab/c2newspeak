@@ -1,11 +1,11 @@
 Newspeak output
 ---------------
 219.c
-f() {
+int32 f(void) {
   (219.c:27#2)^0- =(int32) 0;
 }
 
-main() {
+void main(void) {
   (219.c:31#6)^int32 x;
   (219.c:32#2)^{
     int32 !tmp-1073741821;

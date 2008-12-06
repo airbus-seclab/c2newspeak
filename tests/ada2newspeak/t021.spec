@@ -32,7 +32,7 @@ t021() {
 Newspeak output
 ---------------
 t021.adb
-t021() {
+void t021(void) {
   (t021.adb:3#33)^uint1 b1;
   (t021.adb:3#33)^uint1 b2;
   (t021.adb:4#62)^uint1 b3;

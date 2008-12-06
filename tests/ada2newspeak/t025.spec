@@ -27,7 +27,7 @@ t025() {
 Newspeak output
 ---------------
 t025.adb
-t025() {
+void t025(void) {
   (t025.adb:2#27)^do {
     (t025.adb:4#51)^while (1) {
       (t025.adb:4#51)^choose {

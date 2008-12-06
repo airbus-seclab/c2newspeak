@@ -19,7 +19,7 @@ t008() {
 Newspeak output
 ---------------
 t008.adb
-t008() {
+void t008(void) {
 }
 
 

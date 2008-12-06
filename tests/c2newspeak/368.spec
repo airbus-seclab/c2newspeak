@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 368.c
-main() {
+void main(void) {
   (368.c:31#2)^int8[1] tmp0;
   (368.c:31#2)^0- =(uint1) x_uint1;
   (368.c:31#2)^{

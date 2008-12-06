@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 322.c
-main() {
+void main(void) {
   (322.c:27#8)^ptr ptr;
   (322.c:28#2)^0- =(ptr) &_48(!322.c.const_str_Hello);
 }

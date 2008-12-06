@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 038.c
-main() {
+void main(void) {
   (038.c:30#1132)^int32 a;
   (038.c:30#1135)^int32 b;
   (038.c:31#1140)^choose {

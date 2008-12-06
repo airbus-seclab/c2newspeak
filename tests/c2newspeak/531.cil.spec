@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 531.c
-main() {
+void main(void) {
   (531.c:29#1081)^int32 x___0;
   (531.c:29#1077)^0- =(int32) 4;
 }

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 090.c
-main() {
+void main(void) {
   (090.c:30#9)^int32 j;
   (090.c:31#2)^0- =(int32) 0;
 }

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 003.c
-main() {
+void main(void) {
   (003.c:35#4)^{ int32 0; int32 32; }64 x;
   (003.c:36#6)^int32[10] t;
   (003.c:37#6)^int32 i;

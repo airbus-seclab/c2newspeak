@@ -44,12 +44,12 @@ t097.proc() {
 Newspeak output
 ---------------
 t097.adb
-t097.piou() {
+void t097.piou(int32) {
   (t097.adb:8#94)^uint3 var;
   (t097.adb:10#121)^0- =(uint3) 1;
 }
 
-t097.proc() {
+void t097.proc(int32) {
   (t097.adb:14#185)^int32 x;
   (t097.adb:17#213)^choose {
     | t097.a_uint1 -->

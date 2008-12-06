@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 018.c
-f1() {
+int32 f1(int32) {
   (018.c:32#2)^int32 value_of_f2;
   (018.c:32#2)^{
     int32 f2.arg1;
@@ -11,7 +11,7 @@ f1() {
   (018.c:32#2)^2- =(int32) 0-_int32;
 }
 
-f2() {
+int32 f2(int32) {
   (018.c:36#2)^int32 value_of_f1;
   (018.c:36#2)^{
     int32 f1.arg1;

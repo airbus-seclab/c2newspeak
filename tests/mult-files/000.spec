@@ -2,11 +2,11 @@ Newspeak output
 ---------------
 000-a.c
 000-b.c
-f() {
+void f(void) {
   (000-b.c:28#2)^[y_ptr]8 =(int8) 1;
 }
 
-main() {
+void main(void) {
   (000-a.c:28#2)^[x_ptr]8 =(int8) 0;
 }
 

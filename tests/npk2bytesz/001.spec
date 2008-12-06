@@ -1,5 +1,5 @@
 001.c
-main() {
+void main(void) {
   (001.c:30#7)^int1 a;
   (001.c:31#16)^uint1 b;
   (001.c:32#8)^int2 c;

@@ -23,7 +23,7 @@ t063() {
 Newspeak output
 ---------------
 t063.adb
-t063() {
+void t063(void) {
   (t063.adb:5#114)^float32 a;
   (t063.adb:7#168)^uint2 c;
   (t063.adb:8#196)^int32 d;

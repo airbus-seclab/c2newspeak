@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 461.c
-main() {
+void main(void) {
   (461.c:30#1132)^int32 x;
   (461.c:31#1137)^int32 value_of___builtin_expect;
   (461.c:31#1137)^{

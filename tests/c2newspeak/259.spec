@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 259.c
-main() {
+void main(void) {
   (259.c:30#2)^t11 =(ptr) nil;
 }
 

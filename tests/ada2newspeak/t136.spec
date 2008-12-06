@@ -25,7 +25,7 @@ t136() {
 Newspeak output
 ---------------
 t136.adb
-t136() {
+void t136(void) {
   (t136.adb:3#40)^uint2 z;
   (t136.adb:6#129)^uint2 z2;
   (t136.adb:7#154)^uint5 z3;

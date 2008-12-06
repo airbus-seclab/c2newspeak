@@ -45,7 +45,7 @@ t035.proc() {
 Newspeak output
 ---------------
 t035.adb
-t035.chose() {
+int32 t035.chose((int32, uint2)) {
   (t035.adb:9#132)^do {
     (t035.adb:12#227)^choose {
       | (0-_uint2 ==_uint2 3) -->
@@ -61,7 +61,7 @@ t035.chose() {
   }
 }
 
-t035.proc() {
+void t035.proc(void) {
   (t035.adb:6#104)^t035.x =(int32) 2;
 }
 

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 395.c
-main() {
+void main(void) {
   (395.c:31#1094)^b =(ptr) (&_1073741823(t) + 80);
 }
 

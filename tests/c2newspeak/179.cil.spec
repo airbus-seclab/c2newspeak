@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 179.c
-main() {
+void main(void) {
 }
 
 { uint32 0; uint32 3; uint32 4; uint32 32; uint32 64; uint32 96; }128 s0 = 0;

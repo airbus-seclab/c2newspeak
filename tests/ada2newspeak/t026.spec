@@ -33,7 +33,7 @@ t026() {
 Newspeak output
 ---------------
 t026.adb
-t026() {
+void t026(void) {
   (t026.adb:3#61)^int32 x;
   (t026.adb:4#83)^int32 y;
   (t026.adb:3#61)^1- =(int32) 10;

@@ -20,7 +20,7 @@ t041() {
 Newspeak output
 ---------------
 t041.adb
-t041() {
+void t041(void) {
   (t041.adb:7#100)^t041a.z =(uint1) 0;
 }
 

@@ -19,7 +19,7 @@ t092.z() {
 Newspeak output
 ---------------
 t092.adb
-t092.z() {
+uint1 t092.z(int32) {
   (t092.adb:5#74)^1- =(uint1) (0-_int32 > 0);
 }
 

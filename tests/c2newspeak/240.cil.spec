@@ -11,7 +11,7 @@ Warning: 240.c:145#2805: dirty cast from pointer to integer accepted
 Newspeak output
 ---------------
 240.c
-main() {
+void main(void) {
   (240.c:27#1073)^int8 a;
   (240.c:28#1092)^uint8 b;
   (240.c:29#1103)^int16 c;

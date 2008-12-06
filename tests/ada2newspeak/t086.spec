@@ -25,7 +25,7 @@ t086() {
 Newspeak output
 ---------------
 t086.adb
-t086() {
+void t086(void) {
   (t086.adb:7#158)^float32 x;
   (t086.adb:8#181)^float32 x2;
   (t086.adb:10#223)^float32 a;

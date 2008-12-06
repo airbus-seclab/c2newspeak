@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 329.c
-main() {
+void main(void) {
   int32 tmp;
   (329.c:29#1089)^{
     int32 value_of_f;

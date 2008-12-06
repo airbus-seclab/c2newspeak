@@ -30,7 +30,7 @@ t028() {
 Newspeak output
 ---------------
 t028.adb
-t028() {
+void t028(void) {
   (t028.adb:2#18)^int32 x;
   (t028.adb:2#18)^0- =(int32) 0;
   (t028.adb:4#45)^while (1) {

@@ -2,7 +2,7 @@ Warning: 549.c:32#1147: local composite ceation accepted
 Newspeak output
 ---------------
 549.c
-main() {
+void main(void) {
   (549.c:28#6)^int32 x;
   (549.c:29#15)^uint32 y;
   (549.c:31#7)^{ uint32 0; int32 0; }32 tmp;

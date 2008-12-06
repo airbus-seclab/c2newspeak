@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 114.c
-main() {
+void main(void) {
   (114.c:31#1096)^int32 x;
   (114.c:32#1110)^ptr ptr;
   ptr tmp;

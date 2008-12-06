@@ -27,7 +27,7 @@ t047() {
 Newspeak output
 ---------------
 t047.adb
-t047() {
+void t047(void) {
   (t047.adb:7#140)^uint1 !tmp-1073741823;
   (t047.adb:7#140)^{
     int32 t094.z.arg1;

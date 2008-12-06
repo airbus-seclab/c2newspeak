@@ -18,7 +18,7 @@ t135() {
 Newspeak output
 ---------------
 t135.adb
-t135() {
+void t135(void) {
   (t135.adb:10#208)^int8[101] x;
 }
 

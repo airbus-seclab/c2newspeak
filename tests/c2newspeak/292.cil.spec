@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 292.c
-main() {
+void main(void) {
   (292.c:34#1122)^x + 32 =(int32) 2;
 }
 

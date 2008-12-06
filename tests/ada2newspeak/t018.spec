@@ -35,7 +35,7 @@ t018() {
 Newspeak output
 ---------------
 t018.adb
-t018() {
+void t018(void) {
   (t018.adb:6#163)^uint3 x1;
   (t018.adb:7#184)^uint3 x2;
   (t018.adb:8#210)^uint3 x3;

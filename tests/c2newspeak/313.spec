@@ -2,7 +2,7 @@ Warning: 313.c:31#1124: increment statement expected
 Newspeak output
 ---------------
 313.c
-main() {
+void main(void) {
   (313.c:27#6)^int32 i;
   (313.c:28#6)^0- =(int32) 0;
   (313.c:28#2)^do {

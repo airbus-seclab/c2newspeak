@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 248.c
-main() {
+void main(void) {
   (248.c:27#6)^int32[22] x;
   (248.c:28#6)^int32 y;
   (248.c:29#2)^choose {

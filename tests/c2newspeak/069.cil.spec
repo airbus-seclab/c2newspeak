@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 069.c
-main() {
+void main(void) {
   (069.c:27#1073)^fptr x;
   (069.c:28#1092)^int8 arg0;
   (069.c:28#1092)^int32 arg1;

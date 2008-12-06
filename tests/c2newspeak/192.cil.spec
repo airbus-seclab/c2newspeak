@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 192.c
-main() {
+void main(void) {
   (test53-a.c:3#1256)^int8 x;
   (test53-a.c:4#1261)^0- =(int8) [ptr_ptr]8_int8;
 }

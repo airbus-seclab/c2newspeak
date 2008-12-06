@@ -19,7 +19,7 @@ t105() {
 Newspeak output
 ---------------
 t105.adb
-t105() {
+void t105(void) {
   (t105.adb:3#56)^int32 c;
   (t105.adb:3#56)^0- =(int32) 5;
 }

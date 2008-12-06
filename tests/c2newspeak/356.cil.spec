@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 356.c
-f__extinline() {
+void f__extinline(void) {
 }
 
-main() {
+void main(void) {
 }
 
 

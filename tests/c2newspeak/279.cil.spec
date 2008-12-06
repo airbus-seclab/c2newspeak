@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 279.c
-g() {
+int32 g(void) {
   (279.c:28#1081)^int32 x;
   int32 tmp;
   (279.c:30#1087)^do {

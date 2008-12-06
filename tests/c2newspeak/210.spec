@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 210.c
-f() {
+void f(int32) {
 }
 
-main() {
+void main(void) {
   (210.c:30#6)^int32 x;
   (210.c:32#2)^int32 !tmp-1073741820;
   (210.c:32#2)^0- =(int32) 1-_int32;

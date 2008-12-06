@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 394.c
-main() {
+void main(void) {
   (394.c:29#2)^t =(int8) 97;
 }
 

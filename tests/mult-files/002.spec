@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 002-a.c
 002-b.c
-main() {
+void main(void) {
   (002-a.c:29#6)^int32 x;
   (002-a.c:30#6)^int32 i;
   (002-a.c:31#7)^ptr ptr;

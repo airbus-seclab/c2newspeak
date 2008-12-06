@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 533.c
-f() {
+void f(void) {
 }
 
-main() {
+void main(void) {
   (533.c:29#1086)^f();
 }
 

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 479.c
-main() {
+void main(void) {
   (479.c:27#1073)^int8 v1;
   (479.c:28#1093)^uint8 v2;
   (479.c:29#1105)^int16 v3;

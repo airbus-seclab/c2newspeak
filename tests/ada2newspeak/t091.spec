@@ -17,7 +17,7 @@ t091.z() {
 Newspeak output
 ---------------
 t091.adb
-t091.z() {
+void t091.z(int32) {
 }
 
 

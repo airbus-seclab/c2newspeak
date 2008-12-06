@@ -25,7 +25,7 @@ t064() {
 Newspeak output
 ---------------
 t064.adb
-t064() {
+void t064(void) {
   (t064.adb:5#116)^float32 a;
   (t064.adb:7#168)^uint2 c;
   (t064.adb:8#196)^int32 d;

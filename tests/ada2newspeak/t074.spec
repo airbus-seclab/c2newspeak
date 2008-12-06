@@ -23,7 +23,7 @@ t074() {
 Newspeak output
 ---------------
 t074.adb
-t074() {
+void t074(void) {
   (t074.adb:2#18)^int32 x;
   (t074.adb:2#18)^int32 y;
   (t074.adb:6#139)^int32 a;

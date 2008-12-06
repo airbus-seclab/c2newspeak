@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 289.c
-f() {
+void f(void) {
 }
 
 

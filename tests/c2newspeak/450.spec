@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 450.c
-main() {
+void main(void) {
   (450.c:27#2)^choose {
     | ! (&_16(!450.c.const_str_-) ==_ptr nil) -->
     | (&_16(!450.c.const_str_-) ==_ptr nil) -->

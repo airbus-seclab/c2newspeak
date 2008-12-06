@@ -1,5 +1,5 @@
 004.c
-main() {
+void main(void) {
   (004.c:27#6)^int32 stop;
   (004.c:28#6)^int32 i;
   (004.c:30#2)^0- =(int32) 0;

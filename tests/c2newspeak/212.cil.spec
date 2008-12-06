@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 212.c
-main() {
+void main(void) {
   (212.c:28#1073)^int32 x;
   (212.c:29#1086)^int32[2] t;
   int32 tmp;

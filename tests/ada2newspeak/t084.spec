@@ -25,7 +25,7 @@ t084() {
 Newspeak output
 ---------------
 t084.adb
-t084() {
+void t084(void) {
   (t084.adb:2#18)^int32 a;
   (t084.adb:6#93)^uint1 i;
   (t084.adb:7#126)^uint1 j;

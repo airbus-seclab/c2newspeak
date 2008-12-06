@@ -34,11 +34,11 @@ t038.a() {
 Newspeak output
 ---------------
 t038.adb
-t038.a() {
+uint1 t038.a(void) {
   (t038.adb:5#61)^0- =(uint1) 0;
 }
 
-t038.appel_fonction() {
+void t038.appel_fonction(void) {
   (t038.adb:9#119)^uint1 x;
   (t038.adb:10#135)^uint1 y;
   (t038.adb:12#160)^1- =(uint1) 0;

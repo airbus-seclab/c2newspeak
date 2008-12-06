@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 250.c
-f() {
+void f(void) {
   (250.c:27#1069)^int32[50] x;
   (250.c:28#1082)^int32 y;
   (250.c:29#1087)^choose {

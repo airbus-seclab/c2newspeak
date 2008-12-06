@@ -41,7 +41,7 @@ t012() {
 Newspeak output
 ---------------
 t012.adb
-t012() {
+void t012(void) {
   (t012.adb:3#28)^int32 x;
   (t012.adb:3#28)^0- =(int32) 3;
   (t012.adb:2#10)^do {

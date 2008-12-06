@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 040.c
-main() {
+void main(void) {
   (040.c:30#6)^int32 e;
   (040.c:31#15)^uint32 f;
   (040.c:33#2)^0- =(uint32) coerce[0,4294967295] (coerce[0,4294967295] 1-_int32 + 0-_uint32);

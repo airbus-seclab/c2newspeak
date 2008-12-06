@@ -4,7 +4,7 @@ Warning: 524.c:29#24: the order of execution of side-effects in expressions not 
 Newspeak output
 ---------------
 524.c
-main() {
+void main(void) {
   (524.c:27#6)^int32 x;
   (524.c:28#6)^int32 y;
   (524.c:29#24)^0- =(int32) 1;

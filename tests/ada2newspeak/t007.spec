@@ -29,7 +29,7 @@ t007() {
 Newspeak output
 ---------------
 t007.adb
-t007() {
+void t007(int32) {
   (t007.adb:3#59)^int32 x;
   (t007.adb:3#59)^int32 y;
   (t007.adb:4#82)^int32 d;

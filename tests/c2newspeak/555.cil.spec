@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 555.c
-main() {
+void main(void) {
   (555.c:27#1074)^int32 i;
   (555.c:26#1052)^do {
     (555.c:28#1078)^choose {

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 391.c
-main() {
+void main(void) {
   (391.c:29#2)^x =(int32) -1;
   (391.c:30#2)^choose {
     | (4 > coerce[0,4294967295] x_int32) -->

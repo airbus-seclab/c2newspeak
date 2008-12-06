@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 524.c
-main() {
+void main(void) {
   (524.c:27#1072)^int32 x;
   (524.c:28#1081)^int32 y;
   int32 tmp;

@@ -27,7 +27,7 @@ t006() {
 Newspeak output
 ---------------
 t006.adb
-t006() {
+void t006(int32) {
   (t006.adb:2#31)^int32 x;
   (t006.adb:2#31)^int32 y;
   (t006.adb:3#49)^int32 d;

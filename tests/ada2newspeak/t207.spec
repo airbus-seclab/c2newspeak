@@ -21,7 +21,7 @@ t207() {
 Newspeak output
 ---------------
 t207.adb
-t207() {
+void t207(void) {
   (t207.adb:7#98)^int32[5] tt;
   (t207.adb:8#109)^int32 z;
   (t207.adb:11#133)^1- + 32 =(int32) 4;

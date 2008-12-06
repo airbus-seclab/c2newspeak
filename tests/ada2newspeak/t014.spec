@@ -17,7 +17,7 @@ t014() {
 Newspeak output
 ---------------
 t014.adb
-t014() {
+void t014(void) {
 }
 
 

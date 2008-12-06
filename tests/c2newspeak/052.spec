@@ -6,7 +6,7 @@ Warning: 052.c:41#7: not enough initializers for array
 Newspeak output
 ---------------
 052.c
-main() {
+void main(void) {
   (052.c:31#8)^ptr x;
   (052.c:31#8)^0- =(ptr) &_48(!052.c.const_str_Hello);
   (052.c:32#7)^{

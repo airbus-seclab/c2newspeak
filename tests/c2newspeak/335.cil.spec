@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 335.c
-main() {
+void main(void) {
   (335.c:37#1153)^int32 i;
   (335.c:38#1158)^do {
     (335.c:38#1158)^while (1) {

@@ -17,7 +17,7 @@ t137.p() {
 Newspeak output
 ---------------
 t137.adb
-t137.p() {
+void t137.p(void) {
 }
 
 

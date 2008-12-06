@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 415.c
-main() {
+void main(void) {
   (415.c:27#8)^ptr x;
   (415.c:28#7)^int8 y;
   (415.c:29#2)^ptr value_of___builtin_strchr;

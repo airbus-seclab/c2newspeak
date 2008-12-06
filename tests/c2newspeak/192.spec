@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 test53-a.c
 test53-b.c
-main() {
+void main(void) {
   (test53-a.c:3#7)^int8 x;
   (test53-a.c:4#2)^0- =(int8) [ptr_ptr]8_int8;
 }

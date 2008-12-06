@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 226.c
-main() {
+void main(void) {
   (226.c:27#6)^int32 x;
   (226.c:28#9)^fptr[10] fptr;
   (226.c:29#2)^fptr !tmp-1073741821;

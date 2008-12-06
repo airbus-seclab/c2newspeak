@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 174.c
-main() {
+void main(void) {
   (174.c:36#1186)^{ uint32 0; uint32 3; int32 4; uint32 32; int32 64; int32 96; }128 x;
   (174.c:37#1191)^0- =(uint32) 1;
   (174.c:38#1202)^0- + 3 =(uint32) 2;

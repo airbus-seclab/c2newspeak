@@ -17,7 +17,7 @@ t061() {
 Newspeak output
 ---------------
 t061.adb
-t061() {
+void t061(void) {
 }
 
 

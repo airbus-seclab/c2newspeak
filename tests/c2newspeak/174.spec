@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 174.c
-main() {
+void main(void) {
   (174.c:36#4)^{ uint3 0; uint1 3; int8 4; uint32 32; int32 64; int32 96; }128 x;
   (174.c:37#2)^0- =(uint3) 1;
   (174.c:38#2)^0- + 3 =(uint1) coerce[0,1] 2;

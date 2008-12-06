@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 495.c
-f() {
+void f(void) {
   (495.c:32#2)^choose {
     | ! (a_int32 ==_int32 0) -->
       (495.c:32#2)^choose {
@@ -15,7 +15,7 @@ f() {
   }
 }
 
-g() {
+void g(void) {
   (495.c:39#2)^a =(int32) ! (c_int32 ==_int32 0);
 }
 

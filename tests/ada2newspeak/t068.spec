@@ -25,7 +25,7 @@ t068() {
 Newspeak output
 ---------------
 t068.adb
-t068() {
+void t068(void) {
   (t068.adb:5#112)^uint2 x;
   (t068.adb:6#125)^uint2 y;
   (t068.adb:7#140)^uint2 z;

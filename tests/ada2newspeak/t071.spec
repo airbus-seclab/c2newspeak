@@ -27,7 +27,7 @@ t071() {
 Newspeak output
 ---------------
 t071.adb
-t071() {
+void t071(void) {
   (t071.adb:4#53)^uint1 x;
   (t071.adb:5#86)^uint1 y;
   (t071.adb:6#118)^uint1 z;

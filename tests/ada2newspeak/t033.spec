@@ -34,7 +34,7 @@ t033.f() {
 Newspeak output
 ---------------
 t033.adb
-t033.appelfonction() {
+void t033.appelfonction(void) {
   (t033.adb:11#184)^int32 x;
   (t033.adb:14#212)^int32 !tmp-1073741820;
   (t033.adb:14#212)^{
@@ -45,7 +45,7 @@ t033.appelfonction() {
   (t033.adb:14#212)^1- =(int32) 0-_int32;
 }
 
-t033.f() {
+int32 t033.f(int32) {
   (t033.adb:6#122)^1- =(int32) belongs[-2147483648,2147483647] coerce[-2147483648,2147483647] (0-_int32 + 1);
 }
 

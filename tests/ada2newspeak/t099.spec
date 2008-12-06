@@ -17,7 +17,7 @@ t099() {
 Newspeak output
 ---------------
 t099.adb
-t099() {
+void t099(int32) {
 }
 
 

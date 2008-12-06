@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 373.c
-main() {
+void main(void) {
   (373.c:28#6)^int32 x;
   (373.c:28#9)^int32 y;
   (373.c:29#2)^int32 !tmp-1073741821;

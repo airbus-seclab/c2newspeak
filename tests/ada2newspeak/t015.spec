@@ -25,7 +25,7 @@ t015() {
 Newspeak output
 ---------------
 t015.adb
-t015() {
+void t015(void) {
   (t015.adb:2#18)^int32 x;
   (t015.adb:4#38)^0- =(int32) 10;
   (t015.adb:5#48)^choose {

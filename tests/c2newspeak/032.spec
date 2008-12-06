@@ -1,15 +1,15 @@
 Newspeak output
 ---------------
 032.c
-f() {
+ptr f(void) {
   (032.c:34#2)^0- =(ptr) nil;
 }
 
-g() {
+int32 g(void) {
   (032.c:30#2)^0- =(int32) 0;
 }
 
-main() {
+void main(void) {
 }
 
 

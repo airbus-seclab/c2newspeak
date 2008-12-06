@@ -26,7 +26,7 @@ t082.main() {
 Newspeak output
 ---------------
 t082.adb
-t082.main() {
+void t082.main(void) {
   (t082.adb:8#133)^uint2 x;
   (t082.adb:9#163)^uint2 y;
   (t082.adb:10#179)^uint2 b;

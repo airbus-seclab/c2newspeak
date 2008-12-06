@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 183.c
-main() {
+void main(void) {
   (183.c:30#6)^int32 A;
   (183.c:31#6)^int32 x;
   (183.c:32#2)^1- =(int32) 1;

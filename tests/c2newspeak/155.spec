@@ -19,7 +19,7 @@ main() {
 Newspeak output
 ---------------
 155.c
-main() {
+void main(void) {
   (155.c:27#6)^int32 x;
   (155.c:28#2)^0- =(int32) 3;
 }

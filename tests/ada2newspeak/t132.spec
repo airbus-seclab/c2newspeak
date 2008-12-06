@@ -21,7 +21,7 @@ t132() {
 Newspeak output
 ---------------
 t132.adb
-t132() {
+void t132(void) {
   (t132.adb:6#95)^uint5 x;
   (t132.adb:7#105)^uint5 y;
   (t132.adb:9#121)^1- =(uint5) 15;

@@ -337,21 +337,26 @@ let rec string_of_typ t =
 	  List.iter string_of_elt lst;
 	  !res^"}"^(string_of_size_t sz)
 
+let string_of_args_t args =
+  match args with
+      hd::[] -> string_of_typ hd
+    | hd::tl -> 
+	let res = ref ("("^(string_of_typ hd)) in
+	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
+	  res := !res^")";
+	  !res
+    | [] -> "void"
+
+let string_of_ret_t ret =
+  match ret with
+      None -> "void"
+    | Some t -> string_of_typ t
+
 let string_of_ftyp (args, ret) = 
   let res = ref "" in 
-    begin match args with
-	hd::[] -> res := string_of_typ hd
-      | hd::tl -> 
-	  res := "("^(string_of_typ hd);
-	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
-	  res := !res^")"
-      | [] -> res := "void"
-    end;
+    res := string_of_args_t args;
     res := !res^" -> ";
-    begin match ret with
-	None -> res := !res^"void"
-      | Some t -> res := !res^(string_of_typ t)
-    end;
+    res := !res^(string_of_ret_t ret);
     !res
 
 
@@ -553,11 +558,13 @@ let string_of_blk offset x =
     dump_blk x;
     Buffer.contents buf
   
-let dump_fundec name body =
-  print_endline (name^"() {");
-  print_string (string_of_blk 2 body);
-  print_endline "}";
-  print_newline ()
+let dump_fundec name ((args_t, ret_t), body) =
+  let args_t = string_of_args_t args_t in
+  let ret_t = string_of_ret_t ret_t in
+    print_endline (ret_t^" "^name^"("^args_t^") {");
+    print_string (string_of_blk 2 body);
+    print_endline "}";
+    print_newline ()
 
 
 let dump_globals gdecls = 
@@ -587,15 +594,13 @@ let dump prog =
   List.iter (fun x -> print_endline x) prog.fnames;
   (* TODO: Clean this mess... String_map *)
   let funs = ref (String_map.empty) in
-  let collect_funbody name (_, body) =
+  let collect_funbody name body =
     funs := String_map.add name body !funs
   in
     Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals prog.globals;
     List.iter dump_assertion prog.specs
-
-let dump_fundec name (_, body) = dump_fundec name body
 
 let string_of_blk x = string_of_blk 0 x
 

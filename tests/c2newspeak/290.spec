@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
 290.c
-!290.c.f() {
+void !290.c.f(void) {
 }
 
-main() {
+void main(void) {
   (290.c:30#2)^!290.c.f();
 }
 

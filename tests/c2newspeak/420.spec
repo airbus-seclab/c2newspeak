@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 420.c
-main() {
+void main(void) {
   (420.c:30#7)^i =(int32) 0;
   (420.c:30#14)^j =(int32) 0;
   (420.c:29#5)^do {

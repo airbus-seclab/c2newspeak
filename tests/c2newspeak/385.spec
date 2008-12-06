@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 385.c
-main() {
+void main(void) {
   (385.c:27#6)^int32 i;
   (385.c:28#6)^int32[2] t;
   (385.c:29#7)^ptr ptr;

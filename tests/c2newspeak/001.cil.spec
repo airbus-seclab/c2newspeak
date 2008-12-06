@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 001.c
-main() {
+void main(void) {
   (001.c:36#1435)^int32 i1;
   (001.c:37#1454)^uint32 i2;
   (001.c:38#1465)^int8 i3;

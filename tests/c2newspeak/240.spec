@@ -9,7 +9,7 @@ Warning: 240.c:144#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
 240.c
-main() {
+void main(void) {
   (240.c:27#7)^int8 a;
   (240.c:28#16)^uint8 b;
   (240.c:29#8)^int16 c;

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 178.c
-main() {
+void main(void) {
   (178.c:37#1221)^x =(uint32) 1;
   (178.c:38#1232)^x + 7 =(uint32) 2;
   (178.c:39#1243)^x + 8 =(uint32) 3;

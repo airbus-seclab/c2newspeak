@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 386.c
-main() {
+void main(void) {
   (386.c:27#8)^ptr t;
   (386.c:27#8)^0- =(ptr) &_96(!386.c.const_str_Hello world);
   (386.c:28#8)^{

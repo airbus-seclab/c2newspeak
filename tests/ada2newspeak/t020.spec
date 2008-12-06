@@ -34,7 +34,7 @@ t020() {
 Newspeak output
 ---------------
 t020.adb
-t020() {
+void t020(void) {
   (t020.adb:5#114)^uint2 a;
   (t020.adb:6#134)^uint2 b;
   (t020.adb:7#154)^uint3 c;

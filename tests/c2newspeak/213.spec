@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 213.c
-main() {
+void main(void) {
   (213.c:29#2)^int32 !tmp-1073741823;
   (213.c:29#2)^f();
   (213.c:28#5)^do {

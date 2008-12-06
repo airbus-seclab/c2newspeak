@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 110.c
-main() {
+void main(void) {
   (110.c:29#2)^int32 !tmp-1073741823;
   (110.c:29#2)^f();
   (110.c:29#2)^choose {

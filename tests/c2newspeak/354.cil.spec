@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 354.c
-main() {
+void main(void) {
 }
 
 

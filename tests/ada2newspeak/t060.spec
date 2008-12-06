@@ -29,7 +29,7 @@ t060() {
 Newspeak output
 ---------------
 t060.adb
-t060() {
+void t060(void) {
   (t060.adb:3#38)^int32 x;
   (t060.adb:4#52)^uint1 y;
   (t060.adb:6#69)^{

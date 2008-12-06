@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 552.c
-main() {
+void main(void) {
   (552.c:29#2)^int8[4] tmp0;
   (552.c:29#2)^0- =(int32) 2;
   (552.c:29#2)^{

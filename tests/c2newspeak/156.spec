@@ -18,7 +18,7 @@ Debug: File linked.
 Newspeak output
 ---------------
 156.c
-main() {
+void main(void) {
   (156.c:27#6)^int32 x;
   (156.c:28#2)^0- =(int32) 3;
 }

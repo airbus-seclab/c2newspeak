@@ -3,7 +3,7 @@ Warning: 359.c:27#1089: asm directive '__timezone' ignored
 Newspeak output
 ---------------
 359.c
-main() {
+void main(void) {
 }
 
 

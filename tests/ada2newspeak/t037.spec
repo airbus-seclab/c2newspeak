@@ -37,7 +37,7 @@ t037.f() {
 Newspeak output
 ---------------
 t037.adb
-t037.appelfonction() {
+void t037.appelfonction(void) {
   (t037.adb:9#129)^uint1 x;
   (t037.adb:12#155)^{
     uint1 !tmp-1073741820;
@@ -51,7 +51,7 @@ t037.appelfonction() {
   (t037.adb:13#173)^0- =(uint1) 1;
 }
 
-t037.f() {
+uint1 t037.f(int32) {
   (t037.adb:5#72)^1- =(uint1) 0;
 }
 

@@ -3,7 +3,7 @@ Warning: 295.c:33#1103: identifier s is defined as a type, avoid using it for an
 Newspeak output
 ---------------
 295.c
-f() {
+void f({ int32 0; int32 32; }64) {
 }
 
 

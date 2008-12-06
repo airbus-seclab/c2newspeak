@@ -21,7 +21,7 @@ t130() {
 Newspeak output
 ---------------
 t130.adb
-t130() {
+void t130(void) {
   (t130.adb:5#90)^uint7 x;
   (t130.adb:5#90)^0- =(uint7) 127;
   (t130.adb:7#114)^0- =(uint7) 1;

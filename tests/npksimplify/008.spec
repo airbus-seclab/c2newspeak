@@ -1,10 +1,10 @@
 008.c
-f() {
+void f(int32) {
   (008.c:27#6)^int32 b;
   (008.c:28#2)^1- =(int32) 0-_int32;
 }
 
-main() {
+void main(void) {
   (008.c:32#6)^int32 x;
   (008.c:33#2)^int32 f.arg1;
   (008.c:27#6)^int32 b;

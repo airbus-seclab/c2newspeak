@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 448.c
-main() {
+void main(void) {
   (448.c:30#1133)^ptr ptr;
   (448.c:31#1141)^int32 value_of___builtin_strcmp;
   (448.c:31#1141)^ptr arg0;

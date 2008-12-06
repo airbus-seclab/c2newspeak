@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 333.c
-main() {
+void main(void) {
   (333.c:33#1128)^int32 y;
   (333.c:34#1133)^0- =(int32) x + 64_int32;
 }

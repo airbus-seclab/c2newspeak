@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 502.c
-main() {
+void main(void) {
   (502.c:33#1129)^choose {
     | ! (a_int32 ==_int32 0) -->
       (502.c:33#1129)^choose {

@@ -2,7 +2,7 @@ Warning: 296.c:28#1075: halting condition should be explicit
 Newspeak output
 ---------------
 296.c
-main() {
+void main(void) {
   (296.c:27#6)^int32 i;
   (296.c:28#7)^0- =(int32) 0;
   (296.c:28#2)^while (1) {

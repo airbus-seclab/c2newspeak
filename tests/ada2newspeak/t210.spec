@@ -34,11 +34,11 @@ t210.main() {
 Newspeak output
 ---------------
 t210.adb
-t210.f() {
+int32 t210.f(int32) {
   (t210.adb:5#74)^1- =(int32) 1;
 }
 
-t210.main() {
+void t210.main(void) {
   (t210.adb:9#122)^int32 x;
   (t210.adb:11#150)^int32 !tmp-1073741820;
   (t210.adb:11#150)^{

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 510.c
-main() {
+void main(void) {
 }
 
 

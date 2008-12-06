@@ -2,10 +2,10 @@ Warning: 214.c:32#2: the order of execution of side-effects in expressions not s
 Newspeak output
 ---------------
 214.c
-f() {
+void f((int32, int32)) {
 }
 
-main() {
+void main(void) {
   (214.c:31#6)^int32 x;
   (214.c:31#6)^0- =(int32) 0;
   (214.c:32#2)^{

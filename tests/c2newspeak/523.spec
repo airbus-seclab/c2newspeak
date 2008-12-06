@@ -2,7 +2,7 @@ Warning: 523.c:28#1075: block within expression accepted
 Newspeak output
 ---------------
 523.c
-main() {
+void main(void) {
   (523.c:27#6)^int32 x;
   (523.c:28#2)^int32 tmp0;
   (523.c:28#2)^choose {

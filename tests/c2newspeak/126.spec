@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 126.c
-main() {
+void main(void) {
   (126.c:31#7)^int8[4] b1;
   (126.c:31#7)^0- =(int8) 97;
   (126.c:31#7)^0- + 8 =(int8) 98;

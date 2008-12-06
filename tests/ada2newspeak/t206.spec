@@ -45,11 +45,11 @@ t206.main() {
 Newspeak output
 ---------------
 t206.adb
-t206.id() {
+int32 t206.id(int32) {
   (t206.adb:6#77)^1- =(int32) 0-_int32;
 }
 
-t206.main() {
+void t206.main(void) {
   (t206.adb:10#118)^int32 xn;
   (t206.adb:12#141)^{
     int32 !tmp-1073741819;

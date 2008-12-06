@@ -2,7 +2,7 @@ Warning: 235.c:31#1100: dirty cast from pointer to integer accepted
 Newspeak output
 ---------------
 235.c
-main() {
+void main(void) {
   (235.c:27#1072)^int32 x;
   (235.c:28#1081)^ptr ptr;
   (235.c:29#1093)^int32 y;

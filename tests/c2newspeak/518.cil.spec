@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 518.c
-main() {
+void main(void) {
   (518.c:30#1132)^int32 x;
   (518.c:29#1112)^do {
     (518.c:31#1137)^while (1) {

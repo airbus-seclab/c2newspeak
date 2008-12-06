@@ -4,7 +4,7 @@ Warning: 525.c:29#28: the order of execution of side-effects in expressions not 
 Newspeak output
 ---------------
 525.c
-main() {
+void main(void) {
   (525.c:27#6)^int32 x;
   (525.c:28#6)^int32 y;
   (525.c:29#2)^choose {

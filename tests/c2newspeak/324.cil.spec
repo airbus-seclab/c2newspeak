@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 324.c
-main() {
+void main(void) {
   (324.c:30#1096)^t =(int32) 1;
 }
 

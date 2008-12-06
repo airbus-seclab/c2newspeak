@@ -19,7 +19,7 @@ t106.main() {
 Newspeak output
 ---------------
 t106.adb
-t106.main() {
+void t106.main(void) {
   (t106.adb:5#86)^uint0 val;
   (t106.adb:5#86)^0- =(uint0) 0;
 }
