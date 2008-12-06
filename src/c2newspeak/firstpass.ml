@@ -210,9 +210,7 @@ let translate (globals, spec) =
 	Symbtbl.bind symbtbl x (v, t);
 	init
     in
-      if (init = None) 
-      then Hashtbl.replace used_globals name (t, loc, init, false)
-      else Hashtbl.replace used_globals name (t, loc, init, true)
+      Hashtbl.replace used_globals name (t, loc, init, init <> None)
   in
 
   let add_global x loc d = update_global x x loc d in
@@ -905,9 +903,11 @@ let translate (globals, spec) =
 	    translate_proto_ftyp x static ft loc;
 	    translate body
 
-	| (VDecl (_, _, _, extern, _), _)::_ when extern ->
-	    Npkcontext.error "Firstpass.translate" 
-	      "local variable declared extern"
+	| (VDecl (x, t, static, extern, _), loc)::body when extern ->
+	    if static then add_static x loc (t, None)
+	    else add_global x loc (t, None);
+	    let (body, e) = translate_blk_aux ends_with_exp body in
+	      ((body, []), e)
 
 	| (VDecl (x, t, static, _, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
