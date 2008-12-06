@@ -152,7 +152,7 @@ let build_funparams params types =
       | _ -> false
   in
   let add_param_type x = List.find (has_name x) types in
-  List.map add_param_type params
+    List.map add_param_type params
 
 let report_asm tokens =
   let loc = "Parser.report_asm" in
@@ -230,12 +230,6 @@ function_definition:
   function_prologue compound_statement      { ($1, $2) }
 ;;
 
-parameter_declaration_list:
-  parameter_declaration SEMICOLON 
-  parameter_declaration_list                { $1::$3 }
-| parameter_declaration SEMICOLON           { $1::[] }
-;;
-
 declaration:
   declaration_specifiers 
   init_declarator_list                      { ($1, $2) }
@@ -272,7 +266,7 @@ declarator:
   LPAREN parameter_list RPAREN             { Function ($1, $3) }
 | declarator LPAREN RPAREN                 { Function ($1, []) }
 | declarator LPAREN identifier_list RPAREN
-  parameter_declaration_list               { 
+  old_parameter_declaration_list           { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
     Function ($1, build_funparams $3 $5) 
@@ -297,6 +291,26 @@ struct_declarator:
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
     (Abstract, Some $2) 
+  }
+;;
+
+old_parameter_declaration_list:
+  old_parameter_declaration 
+  old_parameter_declaration_list            { $1@$2 }
+| old_parameter_declaration                 { $1 }
+;;
+
+old_parameter_declaration:
+  declaration SEMICOLON                     { 
+    let (b, m) = $1 in
+    let normalize_param ((m, attr), init) =
+      match init with
+	  None when attr = [] -> (b, m)
+	| _ -> 
+	    Npkcontext.error "Parser.old_parameter_declaration"
+	      "parameter can not be initialized"
+    in
+      List.map normalize_param m
   }
 ;;
 
