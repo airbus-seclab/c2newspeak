@@ -67,7 +67,11 @@ let _ =
 	| files ->
 	    let nos = List.map extract_no files in
 	      if not !Npkcontext.compile_only then begin
-		Link.link nos !Npkcontext.output_file
+		let mem_zones = 
+		  if !Npkcontext.config_file = "" then []
+		  else Compiler.compile_config !Npkcontext.config_file
+		in
+		  Link.link nos mem_zones !Npkcontext.output_file
 	      end
 		
   with Invalid_argument msg -> Npkcontext.exit_on_error msg

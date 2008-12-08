@@ -30,8 +30,7 @@ LIBX=unix.cmxa str.cmxa nums.cmxa
 
 newspeak.FILES=\
 	config newspeak npkcontext \
-	npkil cir \
-	cir2npkil link
+	npkil cir cir2npkil link
 
 ada2newspeak.FILES=\
 	params \
@@ -39,8 +38,7 @@ ada2newspeak.FILES=\
 	ada_config \
 	ada_utils \
 	parser lexer ada_parse \
-	ada_normalize firstpass compiler \
-	ada2newspeak
+	ada_normalize firstpass compiler ada2newspeak
 
 FILES=version utils/list_utils \
       $(addprefix newspeak/, $(newspeak.FILES)) \

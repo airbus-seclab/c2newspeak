@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
+open Newspeak
 open Csyntax
 
 let parse fname =
@@ -76,4 +77,34 @@ let compile fname =
       Npkcontext.print_debug ("Translation done.");
 	Npkcontext.forget_loc ();
 	tr_prog
+
+let eval_exp x =
+  match x with
+      Cst (Cir.CInt n, _) -> n
+    | _ -> 
+	Npkcontext.error "Compiler.compile_config" "constant address expected"
   
+
+let compile_config fname =
+  let cin = open_in fname in
+  let specbuf = Buffer.create 800 in
+  let lexbuf = Lexing.from_channel cin in    
+    Lexer.init fname lexbuf;
+    try 
+      let mem_zones = Parser.config (Lexer.token specbuf) lexbuf in
+      let translate (addr, sz) =
+	let addr = eval_exp addr in
+	let sz = Nat.mul (eval_exp sz) (Nat.of_int 8) in
+	let sz = 
+	  try Nat.to_int sz
+	  with _ -> 
+	    Npkcontext.error "Compiler.config" 
+	      "size of memory zone too large"
+	in
+	  (addr, sz)
+      in
+	List.map translate mem_zones
+    with Parsing.Parse_error -> 
+      let loc = "Compiler.compile_config" in
+      let lexeme = Lexing.lexeme lexbuf in
+	Npkcontext.error loc ("syntax error: unexpected token: "^lexeme)

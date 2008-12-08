@@ -288,7 +288,7 @@ let generate_funspecs cout npkos =
       
 
 (* TODO: clean up *)
-let link npkos output_file =
+let link npkos mem_zones output_file =
   let cout = open_out_bin output_file in
     Npkcontext.forget_loc ();
     
@@ -300,8 +300,9 @@ let link npkos output_file =
     Npkcontext.forget_loc ();
     
     let filenames = Str_set.elements !filenames in
+    let hdr = (filenames, globals, !specs, Config.size_of_ptr, mem_zones) in
 
-      Newspeak.write_hdr cout (filenames, globals, !specs, Config.size_of_ptr);
+      Newspeak.write_hdr cout hdr;
       
       Npkcontext.print_debug "Functions...";
       generate_funspecs cout npkos;

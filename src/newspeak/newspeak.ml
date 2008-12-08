@@ -99,7 +99,8 @@ type t = {
   globals: globals;
   fundecs: (fid, fundec) Hashtbl.t;
   specs: specs;
-  ptr_sz: size_t
+  ptr_sz: size_t;
+  mem_zones: mem_zones
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -109,6 +110,8 @@ and gdecl = typ * init_t
 and fundec = ftyp * blk
 
 and specs = assertion list
+
+and mem_zones = (Nat.t * size_t) list
 
 and assertion = spec_token list
 
@@ -589,6 +592,15 @@ let dump_assertion x =
   List.iter dump_token x;
   print_newline ()
 
+let string_of_mem_zone (addr, sz) = 
+  (Nat.to_string addr)^": "^(string_of_int (sz/8))
+
+let dump_mem_zones zones =
+  if zones <> [] then begin
+    print_endline "memory zones:";
+    List.iter (fun x -> print_endline (string_of_mem_zone x)) zones
+  end
+
 (* Exported print functions *)
 let dump prog =
   List.iter (fun x -> print_endline x) prog.fnames;
@@ -600,7 +612,8 @@ let dump prog =
     Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals prog.globals;
-    List.iter dump_assertion prog.specs
+    List.iter dump_assertion prog.specs;
+    dump_mem_zones prog.mem_zones
 
 let string_of_blk x = string_of_blk 0 x
 
@@ -610,20 +623,24 @@ let string_of_stmt x = string_of_blk (x::[])
    implement the pretty one in a separate utility: npkpretty *)
 
 (* Input/output functions *)
-let write_hdr cout (filenames, decls, specs, ptr_sz) =
+let write_hdr cout (filenames, decls, specs, ptr_sz, mem_zones) =
   Marshal.to_channel cout "NPK!" [];
   Marshal.to_channel cout Version.version [];
   Marshal.to_channel cout Version.revision [];
   Marshal.to_channel cout filenames [];
   Marshal.to_channel cout ptr_sz [];
   Marshal.to_channel cout decls [];
-  Marshal.to_channel cout specs []
-  
+  Marshal.to_channel cout specs [];
+  Marshal.to_channel cout mem_zones []
+ 
 let write_fun cout f spec = Marshal.to_channel cout (f, spec) []
 
 let write name prog =
   let cout = open_out_bin name in
-    write_hdr cout (prog.fnames, prog.globals, prog.specs, prog.ptr_sz);
+  let hdr = 
+    (prog.fnames, prog.globals, prog.specs, prog.ptr_sz, prog.mem_zones) 
+  in
+    write_hdr cout hdr;
     Hashtbl.iter (write_fun cout) prog.fundecs;
     close_out cout
 
@@ -647,6 +664,7 @@ let read name =
 	let ptr_sz = Marshal.from_channel cin in
 	let decls = Marshal.from_channel cin in
 	let specs = Marshal.from_channel cin in
+	let mem_zones = Marshal.from_channel cin in
 	let funs = Hashtbl.create 100 in
 	  begin try 
 	    while true do
@@ -658,7 +676,7 @@ let read name =
 	  close_in cin;
 	  { 
 	    fnames = filenames; globals = decls; fundecs = funs;
-	    specs = specs; ptr_sz = ptr_sz;
+	    specs = specs; ptr_sz = ptr_sz; mem_zones = mem_zones;
 	  }
   with Failure "input_value: bad object" -> 
     invalid_arg ("Newspeak.read: "^name^" is not an .npk file")

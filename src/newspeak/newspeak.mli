@@ -96,7 +96,8 @@ type t = {
   globals: globals;
   fundecs: (fid, fundec) Hashtbl.t;
   specs: specs;
-  ptr_sz: size_t
+  ptr_sz: size_t;
+  mem_zones: mem_zones;
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -106,6 +107,8 @@ and gdecl = typ * init_t
 and fundec = ftyp * blk
 
 and specs = assertion list
+
+and mem_zones = (Nat.t * size_t) list
 
 and assertion = spec_token list
 
@@ -357,7 +360,8 @@ val read : string -> t
 *)
 val write_hdr : 
   out_channel -> 
-  (string list * (string, gdecl) Hashtbl.t * specs * size_t) -> unit
+  (string list * (string, gdecl) Hashtbl.t * specs * size_t * mem_zones) 
+  -> unit
 
 (* [write_hdr cout fid spec] writes the function fid with its specification
     spec to channel cout.

@@ -197,8 +197,9 @@ let rec normalize_bexp e =
 
 %type <string list * Csyntax.prog> parse
 %start parse
-%type <Csyntax.prog> translation_unit
-%start translation_unit
+
+%type <(Csyntax.exp * Csyntax.exp) list> config
+%start config
 
 %%
 /* TODO: simplify code by generalizing!!! 
@@ -989,3 +990,16 @@ imode:
 | DI                                       { Config.size_of_byte*8 }
 ;;
 
+// config file
+config:
+  memory_region_list                       { $1 }
+;;
+
+memory_region_list:
+  memory_region config                     { $1::$2 }
+|                                          { [] }
+;;
+
+memory_region:
+  expression COLON expression              { ($1, $3) }
+;;

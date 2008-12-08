@@ -88,6 +88,7 @@ let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
 let output_file = ref ""
 let accept_missing_ftyp = ref false
+let config_file = ref ""
 
 
 let use_cil = ref false
@@ -218,6 +219,9 @@ let argslist = [
   (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
    "sets strict syntax");
   
+  ("--use-config-file", Arg.Set_string config_file, 
+   "use configuration file");
+
   ("--use-cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");
 

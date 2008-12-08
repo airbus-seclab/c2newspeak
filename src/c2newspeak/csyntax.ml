@@ -204,7 +204,7 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       | _ -> 
 	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
   in
-  let is_kind (sign, sz)  =
+  let is_kind (sign, sz) =
     ((sz >= min_sz)
       && (List.mem sign possible_signs)
       && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))

@@ -94,6 +94,8 @@ val compile_only : bool ref
 (** Name of the result file of the process *)
 val output_file : string ref
 
+val config_file: string ref
+
 
 (** TODO: document that *)
 val handle_cmdline_options : string -> string -> unit
