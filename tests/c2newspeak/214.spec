@@ -2,7 +2,7 @@ Warning: 214.c:32#2: the order of execution of side-effects in expressions not s
 Newspeak output
 ---------------
 214.c
-void f((int32, int32)) {
+void f(int32, int32) {
 }
 
 void main(void) {

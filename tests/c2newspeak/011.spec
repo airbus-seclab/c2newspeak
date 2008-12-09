@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 011.c
-int32 f((int32, int32)) {
+int32 f(int32, int32) {
   (011.c:33#2)^2- =(int32) coerce[-2147483648,2147483647] (1-_int32 + 0-_int32);
 }
 

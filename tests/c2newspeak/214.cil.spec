@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 214.c
-void f((int32, int32)) {
+void f(int32, int32) {
 }
 
 void main(void) {

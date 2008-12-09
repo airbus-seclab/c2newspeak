@@ -344,9 +344,8 @@ let string_of_args_t args =
   match args with
       hd::[] -> string_of_typ hd
     | hd::tl -> 
-	let res = ref ("("^(string_of_typ hd)) in
+	let res = ref (string_of_typ hd) in
 	  List.iter (fun x -> res := !res^", "^(string_of_typ x)) tl;
-	  res := !res^")";
 	  !res
     | [] -> "void"
 
