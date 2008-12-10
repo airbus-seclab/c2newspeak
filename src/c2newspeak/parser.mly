@@ -177,6 +177,7 @@ let rec normalize_bexp e =
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
 %token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ DIVEQ MODEQ 
+%token BXOREQ
 %token AMPERSANDEQ
 %token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
@@ -676,6 +677,7 @@ assignment_operator:
 | AMPERSANDEQ                              { BAnd }
 | SHIFTLEQ                                 { Shiftl }
 | SHIFTREQ                                 { Shiftr }
+| BXOREQ                                   { BXor }
 ;;
 
 argument_expression_list:
