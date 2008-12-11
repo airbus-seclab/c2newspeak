@@ -42,7 +42,6 @@ let default_lbl = 3
 (* TODO: not minimal, think about it *)
 type symb =
   | GlobalSymb of string 
-  | FunSymb of string
   | LocalSymb of C.lv 
   | EnumSymb of C.exp
 
@@ -81,6 +80,9 @@ let translate (globals, spec) =
     
   let compdefs = Symbtbl.create () in
   let symbtbl = Symbtbl.create () in
+(* TODO: used_globals and one pass could be removed, if cir had a structure
+   type with only the name and a hashtbl of structure names to type!!!, 
+   should be done!*)
   let used_globals = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
@@ -105,12 +107,6 @@ let translate (globals, spec) =
   let fields_of_comp name =
     let (f, _, _) = find_compdef name in
       f
-  in
-
-  let use_global name =
-    let (t, loc, init, used) = Hashtbl.find used_globals name in
-      if not used 
-      then Hashtbl.replace used_globals name (t, loc, init, true)
   in
 
   let new_lbl () =
@@ -170,26 +166,23 @@ let translate (globals, spec) =
     let (v, t) = find_symb x in
     match v with
 	LocalSymb v -> (v, t)
-      | FunSymb v -> (C.Global v, t)
-      | GlobalSymb v -> 
-	  use_global v;
-	  (C.Global v, t)
+      | GlobalSymb v -> (C.Global v, t)
       | _ -> 
 	  Npkcontext.error "Firstpass.find_var" 
 	    ("variable identifier expected: "^x)
   in
 
   let is_fname x =
-    let (v, _) = find_symb x in
-    match v with
-	FunSymb _ -> true
-      | _ -> false
+    let (_, t) = find_symb x in
+      match t with
+	  Fun _ -> true
+	| _ -> false
   in
 
   let find_fname x =
     let (v, t) = find_symb x in
       match (v, t) with
-	  (FunSymb f, Fun ft) -> (f, ft)
+	  (GlobalSymb f, Fun ft) -> (f, ft)
 	| _ -> Npkcontext.error "Firstpass.find_fname" ("unknown function: "^x)
   in
 
@@ -197,7 +190,7 @@ let translate (globals, spec) =
     let v = GlobalSymb name in
     let init =
       try 
-	let (_, _, prev_init, _) = Hashtbl.find used_globals name in
+	let (_, _, prev_init) = Hashtbl.find used_globals name in
 	  Symbtbl.update symbtbl x (v, t);
 	  match (prev_init, init) with
 	      (None, Some _) | (Some None, Some _) -> init
@@ -210,7 +203,8 @@ let translate (globals, spec) =
 	Symbtbl.bind symbtbl x (v, t);
 	init
     in
-      Hashtbl.replace used_globals name (t, loc, init, init <> None)
+(* TODO:TODO: remove used_globals in firstpass, done in cir2npkil?? *)
+      Hashtbl.replace used_globals name (t, loc, init)
   in
 
   let add_global x loc d = update_global x x loc d in
@@ -903,12 +897,6 @@ let translate (globals, spec) =
 	    translate_proto_ftyp x static ft loc;
 	    translate body
 
-	| (VDecl (x, t, static, extern, _), loc)::body when extern ->
-	    if static then add_static x loc (t, None)
-	    else add_global x loc (t, None);
-	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((body, []), e)
-
 	| (VDecl (x, t, static, _, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    let (t, init) = translate_glb_init t init in
@@ -917,6 +905,11 @@ let translate (globals, spec) =
 	      let (body, e) = translate_blk_aux ends_with_exp body in
 		((body, []), e)
 	  
+	| (VDecl (x, t, _, extern, _), loc)::body when extern ->
+	    add_global x loc (t, None);
+	    let (body, e) = translate_blk_aux ends_with_exp body in
+	      ((body, []), e)
+
 	| (VDecl (x, t, _, _, init), loc)::body -> 
 	    let init = translate_local_decl (x, t, init) loc in
 	      (* TODO: try translate body *)
@@ -1099,7 +1092,7 @@ let translate (globals, spec) =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (FunSymb f', Fun ft)
+      with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
 
   and translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
@@ -1240,12 +1233,7 @@ let translate (globals, spec) =
   and align_of t =
     match t with
 	Comp (n, _) ->
-	  let (_, _, a) = 
-	    try Symbtbl.find compdefs n
-	    with Not_found -> 
-	      Npkcontext.error "Firstpass.size_of_struct" 
-		("unknown structure or union "^n) 
-	  in
+	  let (_, _, a) = Symbtbl.find compdefs n in
 	    a
       | Array (t, _) -> align_of t
       | Bitfield (k, _) -> align_of (Int k)
@@ -1319,12 +1307,14 @@ let translate (globals, spec) =
       | _ -> ()
   in
 
-  let add_glbdecl name (t, loc, init, used) =
-    if used || (not !Npkcontext.remove_temp) then begin
-      Npkcontext.set_loc loc;
+  let add_glbdecl name (t, loc, init) =
+    Npkcontext.set_loc loc;
+    try
       let t = translate_typ t in
 	Hashtbl.add glbdecls name (t, loc, init)
-    end
+    with _ -> 
+      (* TODO: could at least print a warning here *)
+      ()
   in
 
   let collect_funtyps (x, loc) =
@@ -1356,6 +1346,9 @@ let translate (globals, spec) =
     List.iter collect_glb_structdefs globals;
     List.iter collect_funtyps globals;
     List.iter translate_global globals;
+(* TODO: optimization: could remove this phase if cir had a type 
+   structure of name 
+   and all the structures' type were in a hashtbl *)
     Hashtbl.iter add_glbdecl used_globals;
     let spec = List.map (List.map translate_token) spec in
       (glbdecls, fundefs, spec)
