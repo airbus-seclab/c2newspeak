@@ -114,7 +114,7 @@ let hex_digit = digit | ['A'-'F']
 let lower_case_hex_digit = digit | ['a'-'f']
 
 let sign = ("U"|"u") as sign
-let length = ("L"|"LL") as length
+let length = ("l"|"L"|"LL") as length
 let oct_integer = "0" (oct_digit+ as value) sign? length?
 let hex_prefix = "0x" | "0X"
 let hex_integer = 
