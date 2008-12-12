@@ -163,7 +163,7 @@ object (this)
       true
 
   method process_stmt (x, _) =
-    current_counters.instrs <- current_counters.instrs + 1;
+   current_counters.instrs <- current_counters.instrs + 1;
     let _ = 
       match x with
 	  InfLoop _ -> 

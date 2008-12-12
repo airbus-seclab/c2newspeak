@@ -1638,3 +1638,5 @@ let collect_fid_addrof prog =
   let collector = new fid_addrof_visitor in
     visit collector prog;
     collector#get_fid_list ()
+
+
