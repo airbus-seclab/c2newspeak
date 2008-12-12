@@ -375,12 +375,8 @@ statement:
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | GOTO IDENTIFIER SEMICOLON                { 
-    let report =
-      if !Npkcontext.forward_goto then Npkcontext.print_warning
-      else Npkcontext.error
-    in
-      report "Parser.statement"
-	"goto statements are error-prone, they should be avoided at all costs";
+    Npkcontext.report_accept_warning "Parser.statement" "goto statement"
+      Npkcontext.ForwardGoto;
     [Goto $2, get_loc ()] 
   }
 | compound_statement                       { [Block $1, get_loc ()] }

@@ -47,7 +47,7 @@ let ignores_volatile = ref false
 let accept_gnuc = ref false
 let opt_checks = ref true
 
-let forward_goto = ref false
+let accept_forward_goto = ref false
 
 let accept_dirty_syntax = ref false
 let use_strict_syntax = ref false
@@ -122,7 +122,7 @@ let flag_of_error err =
     | DirtyCast -> accept_dirty_cast
     | DirtySyntax -> accept_dirty_syntax
     | PartialFunTyp -> accept_missing_ftyp
-    | ForwardGoto -> forward_goto
+    | ForwardGoto -> accept_forward_goto
     | StrictSyntax -> use_strict_syntax
     | ExternGlobal -> accept_extern
     | FlexArray -> accept_flex_array
