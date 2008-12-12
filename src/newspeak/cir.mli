@@ -25,7 +25,7 @@
 
 open Newspeak
 
-type prog = (glbdecls * fundefs * Newspeak.specs)
+type t = (glbdecls * fundefs * Newspeak.specs)
 
 and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
 
@@ -151,3 +151,5 @@ val length_of_array: Npkil.tmp_size_t -> lv -> Npkil.tmp_nat
 val scalar_of_typ: typ -> scalar_t
 
 val remove_fst_deref: lv -> exp
+
+val print: t -> unit

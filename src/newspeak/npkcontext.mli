@@ -71,6 +71,7 @@ val no_opt : bool ref
 
 val verb_debug : bool ref
 val verb_ast : bool ref
+val verb_cir : bool ref
 val verb_npko : bool ref
 val verb_newspeak : bool ref
 

@@ -1,4 +1,4 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -21,6 +21,11 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-val translate : Cir.t -> string list -> Npkil.t
+void main() {
+  goto lbl;
+ lbl:
+  while (1) {
+  }
+}

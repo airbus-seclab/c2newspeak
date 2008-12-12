@@ -35,7 +35,7 @@ let fresh_id () =
     incr vcnt;
     id
   
-type prog = (glbdecls * fundefs * Newspeak.specs)
+type t = (glbdecls * fundefs * Newspeak.specs)
 
 and glbdecls = (string, typ * location * init option) Hashtbl.t
 
@@ -194,6 +194,13 @@ let string_of_exp = string_of_exp ""
 let string_of_lv = string_of_lv ""
 
 let string_of_blk = string_of_blk ""
+
+let print_fundef f (_, _, (_, body)) =
+  print_endline (f^" {");
+  print_endline (string_of_blk body);
+  print_endline "}"
+
+let print (_, fundefs, _) = Hashtbl.iter print_fundef fundefs
 
 let create_tmp loc t = 
   let id = fresh_id () in

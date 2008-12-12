@@ -919,12 +919,14 @@ let translate (globals, spec) =
 	(* TODO: do the case where suffix is <> [] *)
 	(* TODO: remove body, suffix from For, use goto and labels
 	   remove break. Use goto... *)
-	| ((Label _, _) as stmt)::(For ([], e, body, []), loc)::tl ->
-	    let blk = ((For ([], e, body@(stmt::[]), []), loc)::tl) in
-	      translate blk
-		
-	| (Label lbl, loc)::tl -> 
+	| ((Label lbl, loc) as stmt)::tl -> 
 	    let lbl = translate_lbl lbl in
+	    let tl = 
+	      match tl with
+		  (For ([], e, body, []), loc)::tl ->
+		    (For ([], e, body@(stmt::[]), []), loc)::tl
+		| _ -> tl
+	    in
 	    let ((x, tl), e) = translate tl in
 	      (([], (lbl, loc, x)::tl), e)
 

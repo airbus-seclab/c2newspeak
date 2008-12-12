@@ -71,6 +71,7 @@ let accept_mult_def = ref false
 
 let verb_debug = ref false
 let verb_ast = ref false
+let verb_cir = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
 let pretty_print = ref false
@@ -243,8 +244,11 @@ let argslist = [
   ("--print-ast", Arg.Set verb_ast,
    "verbose option: displays Abstract Syntax Tree output");
 
+  ("--print-cir", Arg.Set verb_cir,
+   "verbose option: displays C Intermediate Representation output");
+
   ("--print-npko", Arg.Set verb_npko,
-   "verbose option: displays NewsPeak Object intermediate output");
+   "verbose option: displays NewsPeak Object output");
 
   ("--print-newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");

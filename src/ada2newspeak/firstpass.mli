@@ -26,4 +26,4 @@
   email: jasmine . duchon AT free . fr
 *)
 
-val translate: Syntax_ada.compilation_unit -> Cir.prog
+val translate: Syntax_ada.compilation_unit -> Cir.t

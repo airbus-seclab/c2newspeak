@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val translate: Csyntax.prog * Csyntax.spec -> Cir.prog
+val translate: Csyntax.prog * Csyntax.spec -> Cir.t
