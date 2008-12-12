@@ -24,7 +24,7 @@
 # email: charles.hymans@penjili.org
 #
 
-VERSION=1.4
+VERSION=1.5
 
 PREFIX=/usr
 
