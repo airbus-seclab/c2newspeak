@@ -48,7 +48,8 @@ let _ =
   Hashtbl.add token_tbl "__extension__" EXTENSION;
   (* prevent warnings when compiling in -pedantic *)
 
-  Hashtbl.add token_tbl "__attribute__" ATTRIBUTE;  
+  Hashtbl.add token_tbl "__attribute__" ATTRIBUTE;
+  Hashtbl.add token_tbl "__attribute" ATTRIBUTE;   
   Hashtbl.add token_tbl "__format__" FORMAT;
   Hashtbl.add token_tbl "__restrict" RESTRICT;
   Hashtbl.add token_tbl "__format_arg__" FORMAT_ARG;
