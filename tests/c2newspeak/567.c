@@ -23,8 +23,10 @@
   email: charles.hymans@penjili.org
 */
 
-void main(void){
-    int i;
-    typeof(i) tmp;
-    tmp = 0;
+typedef struct s {
+  short i;
+  int j;
+}__attribute__((packed(8))) s_t;
+
+void main() {
 }

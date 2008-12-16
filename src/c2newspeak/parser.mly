@@ -961,6 +961,11 @@ attribute_name:
       "packed attribute" Npkcontext.Pack;
     []
   }
+| PACKED LPAREN INTEGER RPAREN             { 
+    Npkcontext.report_ignore_warning "Parser.attribute_name" 
+      "packed attribute" Npkcontext.Pack;
+    []
+  }
 | TRANSPARENT_UNION                        { 
     Npkcontext.report_accept_warning "Parser.attribute_name" 
       "transparent union" Npkcontext.TransparentUnion;
