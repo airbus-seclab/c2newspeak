@@ -400,7 +400,16 @@ let translate (globals, spec) =
       if not (Hashtbl.mem used_globals name) 
       then add_global name loc (t, Some init);
       (C.Global name, t)
-  
+ 
+  and is_array e =
+    match e with
+	Call _ -> false
+      | _ -> 
+	  let (_, t) = translate_lv e in
+	    match t with
+		Array _ -> true
+	      | _ -> false
+
   and translate_lv x =
     match x with
 	Var x -> find_var x
@@ -412,20 +421,15 @@ let translate (globals, spec) =
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
-      | Index (e, idx) -> 
-	  let (lv, t) = translate_lv e in begin
-	    match t with
-		Array (t, len) ->
-		  let i = translate_exp idx in
-		  let n = translate_array_len len in
-		    translate_array_access (lv, t, n) i
+      | Index (e, idx) when is_array e ->
+	  let (lv, t) = translate_lv e in
+	  let (t, len) = Csyntax.array_of_typ t in
+	  let i = translate_exp idx in
+	  let n = translate_array_len len in
+	    translate_array_access (lv, t, n) i
 
-	      | Ptr _ -> translate_lv (Deref (Binop (Plus, e, idx)))
-	      | _ -> 
-		  Npkcontext.error "Firstpass.translate_lv" 
-		    "array or pointer type expected"
-	  end
-
+      | Index (e, idx) -> translate_lv (Deref (Binop (Plus, e, idx)))
+	  
       | Deref e -> deref (translate_exp e)
 
       | OpExp (op, lv, is_after) ->

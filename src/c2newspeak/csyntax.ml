@@ -288,6 +288,11 @@ let ftyp_of_typ t =
       Fun t -> t
     | _ -> Npkcontext.error "Csyntax.ftyp_of_typ" "function type expected"
 
+let array_of_typ t =
+  match t with
+      Array a -> a
+    | _ -> Npkcontext.error "Csyntax.array_of_typ" "array type expected"
+
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
   let equals (t1, _) (t2, _) = t1 = t2 in
 (* TODO???
