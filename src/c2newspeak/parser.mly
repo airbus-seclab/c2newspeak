@@ -186,7 +186,8 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION UNUSED TYPEOF
+%token ALIGNED WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
+%token TRANSPARENT_UNION UNUSED TYPEOF
 %token EOF
 
 %token <string> IDENTIFIER
@@ -928,15 +929,21 @@ field_declaration:
 ;;
 
 attribute:
-  ATTRIBUTE LPAREN LPAREN attribute_name 
+  ATTRIBUTE LPAREN LPAREN attribute_name_list 
   RPAREN RPAREN                            { $4 }
 | INLINE                                   { [] }
 | CDECL                                    { [] }
 | RESTRICT                                 { [] }
 ;;
 
+attribute_name_list:
+  attribute_name COMMA attribute_name_list { $1@$3 }
+| attribute_name                           { $1 }
+;;
+
 attribute_name:
-  DLLIMPORT                                {
+  ALIGNED                                  { [] }
+| DLLIMPORT                                {
     Npkcontext.print_warning "Parser.attribute" 
       "ignoring attribute dllimport";
     []
@@ -972,7 +979,7 @@ attribute_name:
     []
   }
 
-| UNUSED                        {[]}
+| UNUSED                                   { [] }
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 
