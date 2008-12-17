@@ -637,6 +637,28 @@ let translate (globals, spec) =
       (e, Ptr t)
 
   and translate_set (lv, op, e) =
+    let (lv, t) = translate_lv lv in
+    let e = translate_exp e in
+    let t' = translate_typ t in
+    let (lv, e) =
+      match op with
+	  None -> (lv, e)
+	| Some op -> 
+	    let (pref, lv', post) = C.normalize_lv lv in
+	    let e' = (C.Lval (lv', t'), t) in
+	    let e = translate_binop op e' e in
+	    let lv = C.BlkLv (post, C.BlkLv (pref, lv', false), true) in
+	      if (post <> []) then begin
+		Npkcontext.print_warning "Firstpass.translate_set" 
+		  "expression without post effects expected"
+	      end;
+	      (lv, e)
+    in
+    let (e, t) = cast e t in
+    let set = (lv, t', e) in
+      (set, t)
+
+(*
     let (lv', t) = translate_lv lv in
     let (lv', e) =
       match op with
@@ -650,7 +672,8 @@ let translate (globals, spec) =
     let t' = translate_typ t in
     let set = (lv', t', e) in
       (set, t)
-	
+*)
+
   and init_va_args loc lv x =
     let rec init_va_args lv x =
       match x with

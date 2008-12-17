@@ -171,7 +171,8 @@ and string_of_stmt margin (x, _) =
 	^margin^"}"
     | Goto lbl -> "goto lbl"^(string_of_int lbl)^";"
     | Decl (_, x, _) -> "typ "^x^";"
-    | Set (_, _, e) -> "lv = "^(string_of_exp margin e)^";"
+    | Set (lv, _, e) -> 
+	(string_of_lv margin lv)^" = "^(string_of_exp margin e)^";"
     | If (e, br1, br2) -> 
 	"if "^(string_of_exp margin e)^" {\n"
 	^(string_of_blk (margin^"  ") br1)
