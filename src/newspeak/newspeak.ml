@@ -1313,7 +1313,16 @@ and build_offset builder o = builder#process_offset o
 
 and build_size_t builder sz = builder#process_size_t sz
 
-and build_blk builder blk = List.map (build_stmt builder) blk
+and build_blk builder blk = 
+  let blk =
+    match blk with
+	hd::tl -> 
+	  let hd = build_stmt builder hd in
+	  let tl = build_blk builder tl in
+	    hd::tl
+      | [] -> []
+  in
+    builder#process_blk blk
 
 and build_stmt builder (x, loc) =
   builder#set_curloc loc;

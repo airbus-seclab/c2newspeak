@@ -325,6 +325,7 @@ val visit : visitor -> t -> unit
 
 class builder:
 object
+(* TODO: should have the same name as in the visitor!!! *)
   method set_curloc: location -> unit
   method curloc: location
   method process_global: string -> gdecl -> gdecl
