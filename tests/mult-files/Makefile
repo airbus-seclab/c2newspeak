@@ -23,7 +23,7 @@
 
 COMMAND=$(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*-a.c $*-b.c
 PREREQ=%-a.c %-b.c
-TESTS=000 001 002 003 004 005 006 007 008
+TESTS=000 001 002 003 004 005 006 007 008 009 010
 
 include ../common.Makefile
 

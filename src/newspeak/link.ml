@@ -273,7 +273,7 @@ let generate_funspecs cout npkos =
 	  then Npkcontext.error "Npklink.generate_funspecs" 
 	    ("function "^name^" type does not match");
 	  Npkcontext.error "Npklink.generate_funspecs" 
-	    ("Function "^name^" declared twice")
+	    ("function "^name^" declared twice")
 		  
       with Not_found -> 
 	Hashtbl.add encountered name ftyp;
