@@ -56,10 +56,9 @@ let get_glob_typ name =
   try
     let (t, _) = Hashtbl.find globals name in
       t
-  with
-      Not_found ->
-	Npkcontext.error "Npklink.get_glob_typ" 
-	  ("type for global variable "^name^" not found")
+  with Not_found ->
+    Npkcontext.error "Npklink.get_glob_typ" 
+      ("type for global variable "^name^" not found")
 
 let rec replace_stmt (sk, l) =
   let new_sk = 
@@ -268,15 +267,17 @@ let generate_funspecs cout npkos =
     let ftyp = replace_ftyp ftyp in
       
       try 
-	let prev_ftyp = Hashtbl.find encountered name in
-	  if (ftyp <> prev_ftyp) 
-	  then Npkcontext.error "Npklink.generate_funspecs" 
-	    ("function "^name^" type does not match");
-	  Npkcontext.error "Npklink.generate_funspecs" 
-	    ("function "^name^" declared twice")
-		  
+	let (prev_ftyp, prev_body) = Hashtbl.find encountered name in
+	  if (ftyp <> prev_ftyp) then begin
+	    Npkcontext.error "Npklink.generate_funspecs"
+	    ("function "^name^" type does not match")
+	  end;
+	  if not (Newspeak.equal_blk body prev_body) then begin
+	    Npkcontext.error "Npklink.generate_funspecs" 
+	      ("function "^name^" declared twice with different body")
+	  end
       with Not_found -> 
-	Hashtbl.add encountered name ftyp;
+	Hashtbl.add encountered name (ftyp, body);
 	write_fun cout name (ftyp, body)
   in
     

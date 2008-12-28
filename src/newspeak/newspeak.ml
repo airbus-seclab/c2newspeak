@@ -1648,4 +1648,18 @@ let collect_fid_addrof prog =
     visit collector prog;
     collector#get_fid_list ()
 
-
+let rec equal_stmt (x1, _) (x2, _) =
+  match (x1, x2) with
+      (Decl (_, t1, body1), Decl (_, t2, body2)) -> 
+	t1 = t2 && equal_blk body1 body2
+    | (ChooseAssert choices1, ChooseAssert choices2) ->
+	List.for_all2 equal_choice choices1 choices2
+    | (InfLoop body1, InfLoop body2) -> equal_blk body1 body2
+    | (DoWith (body1, lbl1, action1), DoWith (body2, lbl2, action2)) ->
+	equal_blk body1 body2 && lbl1 = lbl2 && equal_blk action1 action2
+    | _ -> x1 = x2
+  
+and equal_choice (cond1, body1) (cond2, body2) =
+  cond1 = cond2 && equal_blk body1 body2
+  
+and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2

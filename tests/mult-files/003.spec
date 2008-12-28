@@ -1,1 +1,1 @@
-Fatal error: function f declared twice
+Fatal error: function f declared twice with different body
