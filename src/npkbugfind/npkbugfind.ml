@@ -28,9 +28,11 @@
 
 open Newspeak
 
+let debug = ref false
+
 let input = ref []
 
-let speclist = []
+let speclist = [("--debug", Arg.Set debug, "prints debug information");]
 
 let anon_fun file = input := file::!input
 
@@ -79,6 +81,9 @@ object (this)
     in
       true
 
+  method process_fun f _ =
+    if !debug then print_endline ("Scanning function: "^f);
+    true
 end
 
 let cur_loc = ref Newspeak.unknown_loc
@@ -135,12 +140,23 @@ and scan_choice env (conds, body) =
     List.iter scan_exp conds;
     scan_blk !env body
 
-let scan_fundef _ (_, body) = scan_blk [] body
+let scan_fundef f (_, body) = 
+  if !debug then print_endline ("Scanning function: "^f);
+  scan_blk [] body
 
 let scan_prog fundefs = 
   Hashtbl.iter scan_fundef fundefs
 
+module Exp = 
+struct
+  type t = Newspeak.exp
+  let compare = compare
+end
+
+module Env = Set.Make(Exp)
+
 let find_bound e env =
+  let env = Env.elements env in
   let rec find env =
     match env with
 	BinOp (_, Const CInt c, e')::_
@@ -194,7 +210,7 @@ and scan2_stmt env (x, loc) =
 	let _ = scan2_blk env body in
 	let _ = scan2_blk env action in
 	  env
-    | Goto _ -> []
+    | Goto _ -> Env.empty
     | Set (lv, e, _) -> 
 	scan2_lval env lv;
 	scan2_exp env e;
@@ -204,16 +220,18 @@ and scan2_stmt env (x, loc) =
 and scan2_choices env x =
   let res = ref env in
   let scan2_choice (conds, body) =
-    let env = conds@env in
+    let conds = List.fold_left (fun x y -> Env.add y x) Env.empty conds in 
+    let env = Env.union conds env in
     let env' = scan2_blk env body in
-      res := env'@(!res)
+      res := Env.union env' !res
   in
     List.iter scan2_choice x;
     !res
 
 (* propagates the list of conditions that are verified in each block *)
-let scan2_fundef _ (_, body) = 
-  let _ = scan2_blk [] body in
+let scan2_fundef f (_, body) = 
+  if !debug then print_endline ("Scanning function: "^f);
+  let _ = scan2_blk Env.empty body in
     ()
 
 let scan2_prog fundefs = 
@@ -223,8 +241,11 @@ let scan f =
   let prog = Newspeak.read f in
   let scanner = (new scanner :> Newspeak.visitor) in
 (* TODO: try to merge together all 3 scanners *)
+    if !debug then print_endline "First scanner";
     Newspeak.visit scanner prog;
+    if !debug then print_endline "Second scanner";
     scan_prog prog.fundecs;
+    if !debug then print_endline "Third scanner";
     scan2_prog prog.fundecs
 
 let _ = 
