@@ -50,7 +50,7 @@ type error =
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
- 
+  | ExternFunDef
 
 (** {1 Comand line options } *)
 

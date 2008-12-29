@@ -441,6 +441,8 @@ let translate (globals, spec) =
 
       | Str str -> add_glb_cstr str
 
+      | FunName -> add_glb_cstr !current_fun
+
       | Cast (lv, t) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast of left value" Npkcontext.DirtySyntax;
@@ -484,7 +486,7 @@ let translate (globals, spec) =
 	    
 	| Var x when is_enum x -> find_enum x
 	    
-	| Var _ | Field _ | Index _ | Deref _ | OpExp _ | Str _ -> 
+	| Var _ | Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let (lv, t) = translate_lv e in
 	      (C.Lval (lv, translate_typ t), t)
 		

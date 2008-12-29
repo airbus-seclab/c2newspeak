@@ -30,7 +30,6 @@ open Lexing
 open Synthack
 
 let struct_cnt = ref 0
-let cur_fun = ref ""
 
 let gen_struct_id () = 
   incr struct_cnt;
@@ -110,6 +109,7 @@ let build_typedef d =
   let build_cdecl x = (CDecl x, loc) in
     process_decls (build_edecl, build_cdecl, build_vdecl) d
 
+(* TODO: remove code?? *)
 let normalize_fun_prologue b m =
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
   let x =
@@ -119,11 +119,18 @@ let normalize_fun_prologue b m =
 	  (* TODO: code cleanup remove these things !!! *)
 	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
   in
-    cur_fun := x;
     (t, x, loc)
 
-let build_fundef static ((t, x, loc), body) =
-  (FunctionDef (x, t, static, body), loc)::[]
+let build_fundef static ((b, m), body) =
+  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let x =
+    match x with
+      | Some x -> x
+      | None -> 
+	  (* TODO: code cleanup remove these things !!! *)
+	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+  in
+    (FunctionDef (x, t, static, body), loc)::[]
 
 let build_type_decl d =
   let ((edecls, cdecls), (t, _, _)) = Synthack.normalize_decl d in
@@ -226,7 +233,7 @@ translation_unit:
 ;;
 
 function_prologue:
-  declaration_specifiers declarator         { normalize_fun_prologue $1 $2 }
+  declaration_specifiers declarator         { ($1, $2) }
 ;;
 
 function_definition:
@@ -486,7 +493,7 @@ primary_expression:
     Cst (Csyntax.float_cst_of_lexeme $1) 
   }
 | string_literal                           { Str $1 }
-| FUNNAME                                  { Str !cur_fun }
+| FUNNAME                                  { FunName }
 | LPAREN expression RPAREN                 { $2 }
 ;;
 
@@ -871,9 +878,10 @@ external_declaration:
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
-    Npkcontext.report_accept_warning "Parser.external_declaration" 
-      "extern function definition" Npkcontext.DirtySyntax;
-    build_fundef false $3
+    Npkcontext.report_ignore_warning "Parser.external_declaration" 
+      "extern function definition" Npkcontext.ExternFunDef;
+    let ((b, m), _) = $3 in
+      build_glbdecl (false, false) (b, ((m, []), None)::[])
 }
 | optional_extension TYPEDEF 
   declaration SEMICOLON                    { build_glbtypedef $3 }

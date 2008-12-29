@@ -31,6 +31,6 @@
 # 1 "toto.h"
 extern int x;
 
-extern inline void f() {
+extern inline void f(void) {
   x = 2;
 }

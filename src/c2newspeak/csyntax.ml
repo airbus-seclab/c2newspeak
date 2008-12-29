@@ -114,6 +114,7 @@ and exp =
     | Sizeof of typ
     | SizeofE of exp
     | Str of string
+    | FunName
     | Cast of (exp * typ)
 (* None is a regular assignment *)
     | Set of (exp * binop option * exp)
@@ -269,6 +270,7 @@ and string_of_exp e =
     | Sizeof _ -> "Sizeof"
     | SizeofE _ -> "SizeofE"
     | Str _ -> "Str"
+    | FunName -> "FunName"
     | Cast _ -> "Cast"
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"

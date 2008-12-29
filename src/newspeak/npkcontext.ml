@@ -42,6 +42,7 @@ open Cil
 
 (* Translation options *)
 let ignores_asm = ref false
+let ignores_extern_fundef = ref false
 let ignores_pack = ref false
 let ignores_volatile = ref false
 let accept_gnuc = ref false
@@ -113,6 +114,7 @@ type error =
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
+  | ExternFunDef
 
 let flag_of_error err =
   match err with
@@ -133,7 +135,7 @@ let flag_of_error err =
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
     | TransparentUnion -> accept_transparent_union
-
+    | ExternFunDef -> ignores_extern_fundef
  
 let opt_of_error err =
   match err with
@@ -154,6 +156,7 @@ let opt_of_error err =
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"
     | TransparentUnion -> "--accept-transparent-union"
+    | ExternFunDef -> "--ignore-extern-definition"
 
 (* Version *)
 
@@ -213,6 +216,9 @@ let argslist = [
 
   (opt_of_error Pack, Arg.Set (flag_of_error Pack),
    "ignores any packed attribute");
+
+  (opt_of_error ExternFunDef, Arg.Set (flag_of_error ExternFunDef),
+   "ignores the body of extern function definitions");
 
   (opt_of_error Volatile, Arg.Set (flag_of_error Volatile),
    "ignores 'volatile' type qualifier\n");

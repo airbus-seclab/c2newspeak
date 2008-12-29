@@ -23,6 +23,6 @@
   email: charles.hymans@penjili.org
 */
 
-extern __inline __attribute__ ((__gnu_inline__)) int f () {
+extern __inline __attribute__ ((__gnu_inline__)) int f(void) {
   return 1;
 }

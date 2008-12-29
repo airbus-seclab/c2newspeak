@@ -1,4 +1,4 @@
-Warning: toto.h:5#1114: extern function definition accepted
+Warning: toto.h:5#1118: extern function definition ignored
 Newspeak output
 ---------------
 toto.c
