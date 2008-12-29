@@ -267,17 +267,11 @@ let generate_funspecs cout npkos =
     let ftyp = replace_ftyp ftyp in
       
       try 
-	let (prev_ftyp, prev_body) = Hashtbl.find encountered name in
-	  if (ftyp <> prev_ftyp) then begin
-	    Npkcontext.error "Npklink.generate_funspecs"
-	    ("function "^name^" type does not match")
-	  end;
-	  if not (Newspeak.equal_blk body prev_body) then begin
-	    Npkcontext.error "Npklink.generate_funspecs" 
-	      ("function "^name^" declared twice with different body")
-	  end
+	let _ = Hashtbl.find encountered name in
+	  Npkcontext.error "Npklink.generate_funspecs" 
+	    ("function "^name^" declared twice")
       with Not_found -> 
-	Hashtbl.add encountered name (ftyp, body);
+	Hashtbl.add encountered name ();
 	write_fun cout name (ftyp, body)
   in
     
