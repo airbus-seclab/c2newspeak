@@ -170,7 +170,9 @@ let report_asm tokens =
 let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Set _ | Str _ 
+    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) -> 
+	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, normalize_bexp e)
     | IfExp (c, e1, e2) -> 
 	IfExp (normalize_bexp c, normalize_bexp e1, normalize_bexp e2)
