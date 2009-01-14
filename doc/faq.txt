@@ -1,0 +1,64 @@
+Frequently asked questions?
+Q: Why is the loop construct in Newspeak a while (1) loop instead of a 
+while (random()) for instance ?
+
+A: Let's consider the following C loop:
+  while (c) {
+    body
+  }
+Here are two possible compilations scheme of this loop into Newspeak:
+With while (1):
+  do {
+    while (1) {
+      {
+        | not c -> goto exit_lbl
+        | c -> 
+      }
+      body
+    }
+  } with exit_lbl:
+
+With while (random()):
+  while (random()) {
+    {
+      | c ->
+    }
+    body
+  }
+  {
+    | not c -> 
+  }
+
+At first glance, while (random()) seems simpler because there is no need for 
+the goto and label instructions, which requires some thoughts when implementing
+the iteration algorithm of a static analysis.
+
+However, if one tries to unroll the loop, the first case may be more precise.
+Indeed, the invariant after the loop will be the result of:
+  guard(not c)(I_1) \cup guard(not c)(I_2) \cup \hdots \cup guard(not c)(I_n)
+where the I_i are the invariants computed at each loop iteration.
+Whereas in the second case, the result will be:
+  guard(not c)(I_1 \cup I_2 \cup \hdots \cup I_n)
+
+It may be less precise to join states and then do the guard rather than do
+the guard on each state before joining them.
+
+Here is an example which illustrates the previous point:
+
+x = 1; 
+y = 4;
+while (x < y) {
+  x = x + 2;
+  y = y + 1;
+}
+
+Analysed with the intervals:
+I_1 = ([1; 1], [4; 6])
+I_2 = ([3; 3], [5; 5])
+I_3 = ([5; 5], [6; 6])
+I_4 = ([7; 7], [7; 7])
+
+guard(x >= y)(I_1) \cup guard(x >= y)(I_2) \cup guard(x >= y)(I_3) 
+\cup guard(x >= y)(I_4) = ([7; 7], [7; 7])
+
+guard(x >= y)(I_1 \cup I_2 \cup I_3 \cup I_4) = ([4; 7], [4; 7])
