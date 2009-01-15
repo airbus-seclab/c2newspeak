@@ -102,9 +102,16 @@ and process_stmt env (x, loc) =
 	let (env, body) = process_blk env body in
 	let env = Store.pop env in
 	  (env, (Decl (v, t, body), loc))
-    | ChooseAssert choices ->
-	let choices = List.map (process_choice env) choices in
-	  (Store.forget env, (ChooseAssert choices, loc))
+    | Guard b -> 
+	let b = List.map (process_exp env) b in
+	  (env, (Guard b, loc))
+    | Select choices -> 
+	let process_choice x = 
+	  let (_, x) = process_blk env x in
+	    x
+	in
+	let choices = List.map process_choice choices in
+	  (Store.forget env, (Select choices, loc))
     | InfLoop body ->
 	let env = Store.forget env in
 	let (_, body) = process_blk env body in

@@ -122,8 +122,9 @@ and spec_token =
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
+  | Guard of bexp
   | Decl of (string * typ * blk)
-  | ChooseAssert of (exp list * blk) list
+  | Select of blk list
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
@@ -146,6 +147,9 @@ and exp =
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
+
+(* a conjonction of expression *)
+and bexp = exp list
 
 and cte = 
     CInt of Nat.t

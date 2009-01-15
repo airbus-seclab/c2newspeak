@@ -60,14 +60,15 @@ let get_glob_typ name =
     Npkcontext.error "Npklink.get_glob_typ" 
       ("type for global variable "^name^" not found")
 
-let rec replace_stmt (sk, l) =
+let rec replace_stmt (sk, loc) =
   let new_sk = 
     match sk with
       | Npkil.Set (lv, e, sca) -> Newspeak.Set (replace_lv lv, replace_exp e, sca)
       | Npkil.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
       | Npkil.Decl (name, t, b) -> 
 	  Newspeak.Decl (name, replace_typ t, List.map replace_stmt b)
-      | Npkil.ChooseAssert l -> Newspeak.ChooseAssert (List.map replace_chooseitem l)
+      | Npkil.ChooseAssert choices -> 
+	  Newspeak.Select (List.map (replace_choice loc) choices)
       | Npkil.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
       | Npkil.Call fn -> Newspeak.Call (replace_fn fn)
       | Npkil.Goto lbl -> Newspeak.Goto lbl
@@ -76,10 +77,11 @@ let rec replace_stmt (sk, l) =
 	  let action = List.map replace_stmt action in
 	    Newspeak.DoWith (body, lbl, action)
   in 
-    (new_sk, l)
+    (new_sk, loc)
        
-and replace_chooseitem (exps, b) =
-  (List.map replace_exp exps, List.map replace_stmt b)
+and replace_choice loc (cond, body) =
+  let cond = List.map replace_exp cond in
+    (Newspeak.Guard cond, loc)::(List.map replace_stmt body)
     
 and replace_lv lv =
   match lv with

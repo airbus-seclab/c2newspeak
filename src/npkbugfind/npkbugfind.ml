@@ -122,23 +122,25 @@ and scan_lval env x =
 	let env = scan_lval env lv in
 	  scan_exp env e
 
-let rec scan_blk env x = List.iter (scan_stmt env) x
+let rec scan_blk env x = 
+  match x with
+      (Guard b, _)::tl ->
+	let env = ref env in
+	let scan_exp x = env := scan_exp !env x in
+	  List.iter scan_exp b;
+	  scan_blk !env tl
+    | hd::tl -> scan_stmt env hd; scan_blk env tl
+    | [] -> ()
 
 and scan_stmt env (x, loc) =
   cur_loc := loc;
   match x with
-      ChooseAssert choices -> List.iter (scan_choice env) choices
+      Select choices -> List.iter (scan_blk env) choices
     | InfLoop body | Decl (_, _, body) -> scan_blk [] body
     | DoWith (body, _, action) ->
 	scan_blk env body;
 	scan_blk env action
-    | Goto _ | Call _ | Set _ | Copy _ -> ()
-
-and scan_choice env (conds, body) =
-  let env = ref env in
-  let scan_exp x = env := scan_exp !env x in
-    List.iter scan_exp conds;
-    scan_blk !env body
+    | Goto _ | Call _ | Set _ | Copy _ | Guard _ -> ()
 
 let scan_fundef f (_, body) = 
   if !debug then print_endline ("Scanning function: "^f);
@@ -193,7 +195,12 @@ and scan2_lval env x =
 
 let rec scan2_blk env x = 
   match x with
-      hd::tl ->
+    | (Guard b, loc)::tl -> 
+	cur_loc := loc;
+	let conds = List.fold_left (fun x y -> Env.add y x) Env.empty b in
+	let env = Env.union conds env in
+	  scan2_blk env tl
+    | hd::tl ->
 	let env = scan2_stmt env hd in
 	  scan2_blk env tl
     | [] -> env
@@ -201,7 +208,11 @@ let rec scan2_blk env x =
 and scan2_stmt env (x, loc) =
   cur_loc := loc;
   match x with
-      ChooseAssert choices -> scan2_choices env choices
+    | Select choices -> 
+	let res = ref env in
+	let scan2_choice x = res := Env.union !res (scan2_blk !res x) in
+	  List.iter scan2_choice choices;
+	  !res
     | Decl (_, _, body) -> scan2_blk env body
     | InfLoop body ->
 	let _ = scan2_blk env body in 
@@ -215,18 +226,7 @@ and scan2_stmt env (x, loc) =
 	scan2_lval env lv;
 	scan2_exp env e;
 	env
-    | Call _ | Copy _ -> env
-
-and scan2_choices env x =
-  let res = ref env in
-  let scan2_choice (conds, body) =
-    let conds = List.fold_left (fun x y -> Env.add y x) Env.empty conds in 
-    let env = Env.union conds env in
-    let env' = scan2_blk env body in
-      res := Env.union env' !res
-  in
-    List.iter scan2_choice x;
-    !res
+    | Call _ | Copy _ | Guard _ -> env
 
 (* propagates the list of conditions that are verified in each block *)
 let scan2_fundef f (_, body) = 

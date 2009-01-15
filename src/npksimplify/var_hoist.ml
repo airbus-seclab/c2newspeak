@@ -58,17 +58,14 @@ and shift_vars_stmtkind i x =
       Set (lv, e, t) -> Set (shift_vars_lval i lv, shift_vars_exp i e, t)
     | Copy (lv1, lv2, n) -> 
 	Copy (shift_vars_lval i lv1, shift_vars_lval i lv2, n)
+    | Guard b -> Guard (List.map (shift_vars_exp i) b)
     | Decl (v, t, body) -> Decl (v, t, shift_vars_blk (i + 1) body)
     | Goto _ -> x
     | Call fn -> Call (shift_vars_fn i fn)
-    | ChooseAssert choices -> 
-	ChooseAssert (List.map (shift_vars_choice i) choices)
+    | Select choices -> Select (List.map (shift_vars_blk i) choices)
     | InfLoop body -> InfLoop (shift_vars_blk i body)
     | DoWith (body, lbl, action) ->
 	DoWith (shift_vars_blk i body, lbl, shift_vars_blk i action)
-
-and shift_vars_choice i (cond, body) = 
-  (List.map (shift_vars_exp i) cond, shift_vars_blk i body)
 
 let process prog =
   let rec process_blk x = 
@@ -86,19 +83,15 @@ let process prog =
  
   and process_stmtkind x =
     match x with
-      | ChooseAssert choices -> 
-	  let choices = List.map process_choice choices in
-	    ChooseAssert choices
+      | Select choices -> Select (List.map process_blk choices)
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
-      | Set _ | Copy _ | Goto _ | Call _ -> x
+      | Set _ | Copy _ | Goto _ | Call _ | Guard _ -> x
       | Decl _ -> 
 	  invalid_arg ("Variable_hoist.process.process_stmtkind: "
 			^"Unexpected declaration")
-
-  and process_choice (cond, body) =  (cond, process_blk body) in
-
+  in
 
   let res = Hashtbl.create 100 in
   let process_fun fid (t, body) =

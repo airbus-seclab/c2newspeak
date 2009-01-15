@@ -124,8 +124,9 @@ and spec_token =
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
+  | Guard of bexp
   | Decl of (string * typ * blk)
-  | ChooseAssert of (exp list * blk) list
+  | Select of blk list
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
@@ -149,6 +150,9 @@ and exp =
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
+
+(* a conjonction of expression *)
+and bexp = exp list
 
 and cte = 
     CInt of Nat.t
@@ -445,11 +449,11 @@ let string_of_fn f =
     | FunDeref (exp, (args_t, None)) ->
 	"["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
 
-let rec string_of_cond b =
+let rec string_of_bexp b =
   match b with
       [] -> "1"
     | e::[] -> string_of_exp e
-    | e::b -> (string_of_exp e)^" & "^(string_of_cond b)
+    | e::b -> (string_of_exp e)^" & "^(string_of_bexp b)
 
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
@@ -496,6 +500,7 @@ let string_of_blk offset x =
 	Set (lv, e, sc) ->
 	  dump_line_at loc ((string_of_lval lv)^" =("^(string_of_scalar sc)^
 			") "^(string_of_exp e)^";")
+      | Guard b -> dump_line_at loc ("guard("^(string_of_bexp b)^");")
       | Copy (lv1, lv2, sz) ->
 	  dump_line_at loc ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			" "^(string_of_lval lv2)^";")
@@ -523,16 +528,31 @@ let string_of_blk offset x =
 	  dump_blk action;
 	  decr_margin ();
 	  dump_line "}"
+
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
 	  
       | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
-      | ChooseAssert elts ->
-	  dump_line_at loc "choose {";
-	  incr_margin ();
-	  List.iter dump_assertblk elts;
-	  decr_margin ();
-	  dump_line "}"
+      | Select elts ->
+	  (* TODO:remove this, to check *)
+	  let dump_choice x =
+	    match x with
+		(Guard b, _)::tl -> 
+		  incr_margin ();
+		  dump_line ("| "^(string_of_bexp b)^" -->");
+		  incr_margin ();
+		  dump_blk tl;
+		  decr_margin ();
+		  decr_margin ()
+	      | _ -> 
+		  dump_line " -->";
+		  incr_margin ();
+		  dump_blk x;
+		  decr_margin ()
+	  in
+	    dump_line_at loc "choose {";
+	    List.iter dump_choice elts;
+	    dump_line "}"
 
       | InfLoop body -> 
 	  dump_line_at loc "while (1) {";
@@ -540,13 +560,6 @@ let string_of_blk offset x =
 	  dump_blk body;
 	  decr_margin ();
 	  dump_line "}"
-
-(* TODO: Should change this output!! *)
-  and dump_assertblk (exps, body) =
-    dump_line ("| "^(string_of_cond exps)^" -->");
-    incr_margin ();
-    dump_blk body;
-    decr_margin ()
 
   and dump_blk b =
     match b with
@@ -738,6 +751,7 @@ let bind_var x t body =
 	  let lv = bind_in_lval n lv in
 	  let e = bind_in_exp n e in
 	    Set (lv, e, t)
+      | Guard b -> Guard (List.map (bind_in_exp n) b)
       | Copy (lv1, lv2, sz) ->
 	  let lv1 = bind_in_lval n lv1 in
 	  let lv2 = bind_in_lval n lv2 in
@@ -745,9 +759,7 @@ let bind_var x t body =
       | Decl (x, t, body) -> 
 	  let body = bind_in_blk (n+1) body in
 	    Decl (x, t, body)
-      | ChooseAssert choices -> 
-	  let choices = List.map (bind_in_choice n) choices in
-	    ChooseAssert choices
+      | Select choices -> Select (List.map (bind_in_blk n) choices)
       | InfLoop body -> 
 	  let body = bind_in_blk n body in
 	    InfLoop body
@@ -759,13 +771,8 @@ let bind_var x t body =
 	  let e = bind_in_exp n e in
 	    Call (FunDeref (e, t))
       | _ -> x
-
-  and bind_in_choice n (b, body) =
-    let b = List.map (bind_in_exp n) b in
-    let body = bind_in_blk n body in
-      (b, body)
   in
-    
+
   let body = bind_in_blk 0 body in
     Decl (x, t, body)    
   
@@ -912,14 +919,20 @@ object (self)
       | _ -> e
 end
 
+let rec bexp_is_true b = 
+  match b with
+      [] -> true
+    | (Const CInt i)::tl when compare i Nat.one = 0 -> bexp_is_true tl
+    | _ -> false
+
 class simplify_choose =
-object 
+object (self)
   inherit builder
 
   method process_blk x =
     match x with
-	(ChooseAssert [([], body)], _)::tl -> body@tl
-      | (ChooseAssert _, _)::_ -> x
+	(Select [body], _)::tl -> (self#process_blk body)@tl
+      | (Guard b, _)::tl when bexp_is_true b -> tl
       | _ -> x
 end
 
@@ -975,13 +988,7 @@ let simplify_gotos blk =
 	  let body = simplify_blk body in
 	    Decl (name, t, body)
 
-      | ChooseAssert elts ->
-	  let simplify_choice (cond, body) = 
-	    let body = simplify_blk body in
-	      (cond, body)
-	  in
-	  let choices = List.map simplify_choice elts in
-	    ChooseAssert choices
+      | Select choices -> Select (List.map simplify_blk choices)
 
       | InfLoop body -> 
 	  let body = simplify_blk body in
@@ -1039,11 +1046,10 @@ let rec simplify_stmt actions (x, loc) =
 	  let lv1 = simplify_lval actions lv1 in
 	  let lv2 = simplify_lval actions lv2 in
 	    Copy (lv1, lv2, sz)
+      | Guard b -> Guard (List.map (simplify_exp actions) b)
       | Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp actions e, t))
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
-      | ChooseAssert elts ->
-          let elts = List.map (simplify_choose_elt actions) elts in
-	    ChooseAssert elts
+      | Select choices -> Select (List.map (simplify_blk actions) choices)
       | InfLoop body ->
           let body = simplify_blk actions body in
 	    InfLoop body
@@ -1192,8 +1198,7 @@ let has_goto lbl x =
   and has_goto (x, _) =
   match x with
       Decl (_, _, body) | InfLoop body -> blk_has_goto body
-    | ChooseAssert choices -> 
-	List.exists (fun (_, x) -> blk_has_goto x) choices
+    | Select choices -> List.exists blk_has_goto choices
     | DoWith (body, _, action) -> (blk_has_goto body) && (blk_has_goto action)
     | Goto lbl' -> lbl = lbl'
     | _ -> false
@@ -1345,14 +1350,14 @@ and build_stmtkind builder x =
 	  let n = build_size_t builder n in
 	    Copy (lv1, lv2, n)
 	      
+      | Guard b -> Guard (List.map (build_exp builder) b)
+
       | Decl (x, t, body) ->
 	  let t = build_typ builder t in
 	  let body = build_blk builder body in
 	    Decl (x, t, body)
 	      
-      | ChooseAssert choices -> 
-	  let choices = List.map (build_choice builder) choices in
-	    ChooseAssert choices
+      | Select choice -> Select (List.map (build_blk builder) choice)
 	      
       | InfLoop body ->
 	  let body = build_blk builder body in
@@ -1582,26 +1587,28 @@ and visit_stmt visitor (x, loc) =
 	    visit_lval visitor lv1;
 	    visit_lval visitor lv2;
 	    visit_size_t visitor sz
+	| Guard b -> 
+	    let visit_bexp e =
+	      visitor#process_bexp e;
+	      visit_exp visitor e
+	    in
+	      List.iter visit_bexp b
 	| Decl (_, t, body) -> 
 	    visit_typ visitor t;
 	    visit_blk visitor body
 	| Call fn -> visit_fn visitor fn
-	| ChooseAssert choices -> List.iter (visit_choice visitor loc) choices
+	| Select choices -> 
+	    let visit_choice x =
+	      visitor#set_loc loc;
+	      visit_blk visitor x
+	    in
+	      List.iter visit_choice choices
 	| InfLoop x -> visit_blk visitor x
 	| DoWith (body, _, action) -> 
 	    visit_blk visitor body;
 	    visit_blk visitor action
 	| Goto _ -> ()
     end else ()
-
-and visit_choice visitor loc (cond, body) =
-  visitor#set_loc loc;
-  let visit_cond x = 
-    visitor#process_bexp x;
-    visit_exp visitor x
-  in
-    List.iter visit_cond cond;
-    visit_blk visitor body
 
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in
@@ -1652,14 +1659,11 @@ let rec equal_stmt (x1, _) (x2, _) =
   match (x1, x2) with
       (Decl (_, t1, body1), Decl (_, t2, body2)) -> 
 	t1 = t2 && equal_blk body1 body2
-    | (ChooseAssert choices1, ChooseAssert choices2) ->
-	List.for_all2 equal_choice choices1 choices2
+    | (Select choices1, Select choices2) ->
+	List.for_all2 equal_blk choices1 choices2
     | (InfLoop body1, InfLoop body2) -> equal_blk body1 body2
     | (DoWith (body1, lbl1, action1), DoWith (body2, lbl2, action2)) ->
 	equal_blk body1 body2 && lbl1 = lbl2 && equal_blk action1 action2
     | _ -> x1 = x2
-  
-and equal_choice (cond1, body1) (cond2, body2) =
-  cond1 = cond2 && equal_blk body1 body2
   
 and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2

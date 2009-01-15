@@ -33,7 +33,7 @@ void t025(void) {
       (t025.adb:4#51)^choose {
         | ! 1 -->
           (t025.adb:4#51)^goto lbl0;
-        | 1 -->
+       -->
       }
     }
   } with lbl0: {

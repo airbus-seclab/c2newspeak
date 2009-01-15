@@ -116,9 +116,8 @@ let count debug prog =
 	  let alternatives = List.map build_call fid_addrof in
 	    if alternatives <> [] then exact := false;
 	    List.fold_left (process_alternatives info) init_stats alternatives
-      | ChooseAssert choices -> 
-	  let (_, choices) = List.split choices in
-	    List.fold_left (process_alternatives info) init_stats choices
+      | Select choices -> 
+	  List.fold_left (process_alternatives info) init_stats choices
       | InfLoop body -> 
 	  let info = count_loop info in
 	    process_blk body info
