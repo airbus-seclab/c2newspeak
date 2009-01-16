@@ -41,10 +41,12 @@ void t021(void) {
   (t021.adb:6#85)^{
     uint1 tmp0;
     (t021.adb:6#85)^choose {
-      | 3-_uint1 -->
-        (t021.adb:6#85)^0- =(uint1) 2-_uint1;
-      | ! 3-_uint1 -->
-        (t021.adb:6#85)^0- =(uint1) 0;
+     -->
+      (t021.adb:6#85)^guard(3-_uint1);
+      (t021.adb:6#85)^0- =(uint1) 2-_uint1;
+     -->
+      (t021.adb:6#85)^guard(! 3-_uint1);
+      (t021.adb:6#85)^0- =(uint1) 0;
     }
     (t021.adb:6#85)^1- =(uint1) 0-_uint1;
   }

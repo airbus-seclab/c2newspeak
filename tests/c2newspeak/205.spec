@@ -7,10 +7,12 @@ void main(void) {
     (205.c:29#2)^do {
       (205.c:30#2)^do {
         (205.c:29#2)^choose {
-          | (0-_int32 ==_int32 1) -->
-            (205.c:30#2)^goto lbl3;
-          | ! (0-_int32 ==_int32 1) -->
-            (205.c:29#2)^goto lbl2;
+         -->
+          (205.c:29#2)^guard((0-_int32 ==_int32 1));
+          (205.c:30#2)^goto lbl3;
+         -->
+          (205.c:29#2)^guard(! (0-_int32 ==_int32 1));
+          (205.c:29#2)^goto lbl2;
         }
       } with lbl3: {
       }

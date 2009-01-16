@@ -534,21 +534,11 @@ let string_of_blk offset x =
       | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
       | Select elts ->
-	  (* TODO:remove this, to check *)
 	  let dump_choice x =
-	    match x with
-		(Guard b, _)::tl -> 
-		  incr_margin ();
-		  dump_line ("| "^(string_of_bexp b)^" -->");
-		  incr_margin ();
-		  dump_blk tl;
-		  decr_margin ();
-		  decr_margin ()
-	      | _ -> 
-		  dump_line " -->";
-		  incr_margin ();
-		  dump_blk x;
-		  decr_margin ()
+	    dump_line " -->";
+	    incr_margin ();
+	    dump_blk x;
+	    decr_margin ()
 	  in
 	    dump_line_at loc "choose {";
 	    List.iter dump_choice elts;

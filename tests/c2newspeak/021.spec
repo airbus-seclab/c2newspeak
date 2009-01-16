@@ -7,10 +7,12 @@ void main(void) {
   (021.c:32#2)^do {
     (021.c:33#2)^do {
       (021.c:32#2)^choose {
-        | (1-_int32 ==_int32 1) -->
-          (021.c:33#2)^goto lbl2;
-        | ! (1-_int32 ==_int32 1) -->
-          (021.c:32#2)^goto lbl1;
+       -->
+        (021.c:32#2)^guard((1-_int32 ==_int32 1));
+        (021.c:33#2)^goto lbl2;
+       -->
+        (021.c:32#2)^guard(! (1-_int32 ==_int32 1));
+        (021.c:32#2)^goto lbl1;
       }
     } with lbl2: {
     }
@@ -19,12 +21,15 @@ void main(void) {
         (021.c:39#4)^do {
           (021.c:35#4)^do {
             (021.c:34#4)^choose {
-              | (0-_int32 ==_int32 2) -->
-                (021.c:35#4)^goto lbl6;
-              | (0-_int32 ==_int32 3) -->
-                (021.c:39#4)^goto lbl5;
-              | ! (0-_int32 ==_int32 3) & ! (0-_int32 ==_int32 2) -->
-                (021.c:34#4)^goto lbl4;
+             -->
+              (021.c:34#4)^guard((0-_int32 ==_int32 2));
+              (021.c:35#4)^goto lbl6;
+             -->
+              (021.c:34#4)^guard((0-_int32 ==_int32 3));
+              (021.c:39#4)^goto lbl5;
+             -->
+              (021.c:34#4)^guard(! (0-_int32 ==_int32 3) & ! (0-_int32 ==_int32 2));
+              (021.c:34#4)^goto lbl4;
             }
           } with lbl6: {
           }

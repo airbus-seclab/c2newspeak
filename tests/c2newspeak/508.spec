@@ -5,28 +5,36 @@ void main(void) {
   (508.c:29#2)^do {
     (508.c:29#2)^do {
       (508.c:29#2)^choose {
-        | ! (a_int32 ==_int32 0) -->
-          (508.c:29#2)^choose {
-            | ! (b_int32 ==_int32 0) -->
-              (508.c:29#2)^goto lbl1;
-            | (b_int32 ==_int32 0) -->
-              (508.c:29#2)^goto lbl2;
-          }
-        | (a_int32 ==_int32 0) -->
+       -->
+        (508.c:29#2)^guard(! (a_int32 ==_int32 0));
+        (508.c:29#2)^choose {
+         -->
+          (508.c:29#2)^guard(! (b_int32 ==_int32 0));
+          (508.c:29#2)^goto lbl1;
+         -->
+          (508.c:29#2)^guard((b_int32 ==_int32 0));
           (508.c:29#2)^goto lbl2;
+        }
+       -->
+        (508.c:29#2)^guard((a_int32 ==_int32 0));
+        (508.c:29#2)^goto lbl2;
       }
     } with lbl2: {
       (508.c:29#2)^do {
         (508.c:29#2)^choose {
-          | ! (c_int32 ==_int32 0) -->
-            (508.c:29#2)^choose {
-              | ! (d_int32 ==_int32 0) -->
-                (508.c:29#2)^goto lbl1;
-              | (d_int32 ==_int32 0) -->
-                (508.c:29#2)^goto lbl3;
-            }
-          | (c_int32 ==_int32 0) -->
+         -->
+          (508.c:29#2)^guard(! (c_int32 ==_int32 0));
+          (508.c:29#2)^choose {
+           -->
+            (508.c:29#2)^guard(! (d_int32 ==_int32 0));
+            (508.c:29#2)^goto lbl1;
+           -->
+            (508.c:29#2)^guard((d_int32 ==_int32 0));
             (508.c:29#2)^goto lbl3;
+          }
+         -->
+          (508.c:29#2)^guard((c_int32 ==_int32 0));
+          (508.c:29#2)^goto lbl3;
         }
       } with lbl3: {
         (508.c:35#4)^x =(int32) -2;

@@ -35,8 +35,10 @@ void t045(void) {
     (t045.adb:6#61)^t092.z();
   }
   (t045.adb:6#61)^choose {
-    | 0-_uint1 -->
-    | ! 0-_uint1 -->
+   -->
+    (t045.adb:6#61)^guard(0-_uint1);
+   -->
+    (t045.adb:6#61)^guard(! 0-_uint1);
   }
 }
 
