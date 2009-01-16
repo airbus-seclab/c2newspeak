@@ -227,15 +227,16 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	      | K.Const N.CInt _ -> body2
 	      | _ -> 
 		  let cond2 = K.negate cond1 in
-		    (K.ChooseAssert [([cond1], body1); 
-				     ([cond2], body2)], loc)::[]
+		  let body1 = (K.Guard [cond1], loc)::body1 in
+		  let body2 = (K.Guard [cond2], loc)::body2 in
+		    (K.Select (body1::body2::[]), loc)::[]
 	  end
 
       | Loop body -> (K.InfLoop (translate_blk body), loc)::[]
 
       | Switch switch ->
-	  let switch = translate_switch switch in
-	    (switch, loc)::[]
+	  let choices = translate_switch loc switch in
+	    (K.Select choices, loc)::[]
 
       | Exp (Call c) -> 
 	  let call = translate_call loc None c in
@@ -303,7 +304,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 		pop id;
 		(K.Decl ("value_of_"^fid, t, call::post), loc)
 		
-  and translate_switch (e, cases, default) =
+  and translate_switch loc (e, cases, default) =
     let e = translate_exp e in
     let default = translate_blk default in
     let rec translate_cases default_cond x =
@@ -313,12 +314,14 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    let cond = K.BinOp (Newspeak.Eq t, e, v) in
 	    let body = translate_blk body in
 	    let default_cond = (K.negate cond)::default_cond in
+	    let body = (K.Guard [cond], loc)::body in
 	    let choices = translate_cases default_cond tl in
-	      (cond::[], body)::choices
-	| [] -> (default_cond, default)::[]
+	      body::choices
+	| [] -> 
+	    let body = (K.Guard default_cond, loc)::default in
+	      body::[]
     in
-    let choices = translate_cases [] cases in
-      K.ChooseAssert (choices)
+    translate_cases [] cases
   in
 	  
   let translate_init (o, t, e) =

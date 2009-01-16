@@ -16,10 +16,12 @@ t027() {
       while (1) {
         0- =(int32) belongs[-2147483648,2147483648-1] coerce[-2147483648,2147483647] (0-_int32 + 1-_int32);
         1- =(int32) belongs[-2147483648,2147483648-1] coerce[-2147483648,2147483647] (1-_int32 - 1);
-        choose {
-        --> assert((0 > 1-_int32));
-            goto lbl2;
-        --> assert((1-_int32 > 0));
+                choose {
+         -->
+          guard((0 > 1-_int32));
+          goto lbl2;
+         -->
+          guard((1-_int32 > 0));
         }
       }
     } with lbl2: {

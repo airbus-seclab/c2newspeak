@@ -19,18 +19,24 @@ t065() {
     1- =(uint1) (3-_uint2 ==_uint2 4-_uint2);
     {
       uint1 tmp0;
-      choose {
-      --> assert((6 > 4));
-          0- =(uint1) 1;
-      --> assert((4 > 6));
+            choose {
+       -->
+        guard((6 > 4));
+        0- =(uint1) 1;
+       -->
+        guard((4 > 6));
+        {
           uint1 tmp1;
-          choose {
-          --> assert((4. > 4.));
-              0- =(uint1) (-57.51168 > 57.51168);
-          --> assert((4. > 4.));
-              0- =(uint1) 0;
+                    choose {
+           -->
+            guard((4. > 4.));
+            0- =(uint1) (-57.51168 > 57.51168);
+           -->
+            guard((4. > 4.));
+            0- =(uint1) 0;
           }
           1- =(uint1) 0-_uint1;
+        }
       }
       1- =(uint1) 0-_uint1;
     }

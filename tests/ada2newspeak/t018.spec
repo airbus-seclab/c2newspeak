@@ -14,17 +14,23 @@ t018() {
     2- =(uint3) belongs[0,8-1] 1;
     1- =(uint3) belongs[0,8-1] 6;
     0- =(uint3) belongs[0,8-1] 3;
-    choose {
-    --> assert((0 ==_uint3 2-_uint3));
-    --> assert((2-_uint3 ==_uint3 0));
         choose {
-        --> assert((2 ==_uint3 1-_uint3));
-        --> assert((1-_uint3 ==_uint3 2));
+     -->
+      guard((0 ==_uint3 2-_uint3));
+     -->
+      guard((2-_uint3 ==_uint3 0));
             choose {
-            --> assert((4 ==_uint3 0-_uint3));
-            --> assert((0-_uint3 ==_uint3 4));
-            }
+       -->
+        guard((2 ==_uint3 1-_uint3));
+       -->
+        guard((1-_uint3 ==_uint3 2));
+                choose {
+         -->
+          guard((4 ==_uint3 0-_uint3));
+         -->
+          guard((0-_uint3 ==_uint3 4));
         }
+      }
     }
   } with lbl0: {
   }

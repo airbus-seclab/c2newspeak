@@ -20,10 +20,12 @@ t097.piou() {
 t097.proc() {
   do {
     int32 x;
-    choose {
-    --> assert(Global(t097.a)_uint1);
-        0- =(int32) belongs[-2147483648,2147483648-1] 2;
-    --> assert(! Global(t097.a)_uint1);
+        choose {
+     -->
+      guard(Global(t097.a)_uint1);
+      0- =(int32) belongs[-2147483648,2147483648-1] 2;
+     -->
+      guard(! Global(t097.a)_uint1);
     }
     {
       int32 t099.arg1;

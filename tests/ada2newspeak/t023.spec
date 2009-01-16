@@ -15,11 +15,13 @@ t023() {
     1- =(uint1) 1;
     {
       uint1 tmp0;
-      choose {
-      --> assert(3-_uint1);
-          0- =(uint1) ! 2-_uint1;
-      --> assert(! 3-_uint1);
-          0- =(uint1) 2-_uint1;
+            choose {
+       -->
+        guard(3-_uint1);
+        0- =(uint1) ! 2-_uint1;
+       -->
+        guard(! 3-_uint1);
+        0- =(uint1) 2-_uint1;
       }
       1- =(uint1) 0-_uint1;
     }

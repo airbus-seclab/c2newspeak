@@ -18,15 +18,17 @@ int32 t035.z = {0: int32 0}
 Function definitions
 t035.chose() {
   do {
-    choose {
-    --> assert((0-_uint2 ==_uint2 3));
-        Global(t035.z) =(int32) belongs[-2147483648,2147483648-1] 3;
-        2- =(int32) belongs[-2147483648,2147483648-1] 0;
-        goto lbl0;
-    --> assert((3 ==_uint2 0-_uint2));
-        Global(t035.z) =(int32) belongs[-2147483648,2147483648-1] 2;
-        2- =(int32) belongs[-2147483648,2147483648-1] 1;
-        goto lbl0;
+        choose {
+     -->
+      guard((0-_uint2 ==_uint2 3));
+      Global(t035.z) =(int32) belongs[-2147483648,2147483648-1] 3;
+      2- =(int32) belongs[-2147483648,2147483648-1] 0;
+      goto lbl0;
+     -->
+      guard((3 ==_uint2 0-_uint2));
+      Global(t035.z) =(int32) belongs[-2147483648,2147483648-1] 2;
+      2- =(int32) belongs[-2147483648,2147483648-1] 1;
+      goto lbl0;
     }
   } with lbl0: {
   }

@@ -14,16 +14,20 @@ t017() {
     2- =(uint2) belongs[0,3-1] 0;
     1- =(uint2) belongs[0,4-1] 1;
     0- =(uint3) belongs[0,5-1] 3;
-    choose {
-    --> assert((1 > 0));
-        2- =(uint2) belongs[0,3-1] 0;
-    --> assert((0 > 1));
         choose {
-        --> assert((1 ==_uint2 1-_uint2));
-            1- =(uint2) belongs[0,4-1] 3;
-            0- =(uint3) belongs[0,5-1] 4;
-        --> assert((1-_uint2 ==_uint2 1));
-        }
+     -->
+      guard((1 > 0));
+      2- =(uint2) belongs[0,3-1] 0;
+     -->
+      guard((0 > 1));
+            choose {
+       -->
+        guard((1 ==_uint2 1-_uint2));
+        1- =(uint2) belongs[0,4-1] 3;
+        0- =(uint3) belongs[0,5-1] 4;
+       -->
+        guard((1-_uint2 ==_uint2 1));
+      }
     }
   } with lbl0: {
   }

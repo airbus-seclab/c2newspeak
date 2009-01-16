@@ -49,7 +49,8 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | ChooseAssert of (exp list * blk) list
+  | Guard of exp list
+  | Select of blk list
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
@@ -214,6 +215,13 @@ and string_of_fn f =
 	"["^(string_of_exp exp)^"]("^
 	  (seq ", " string_of_typ args_t)^")"
 
+let rec string_of_bexp b =
+  match b with
+      [] -> "1"
+    | e::[] -> string_of_exp e
+    | e::b -> (string_of_exp e)^" & "^(string_of_bexp b)
+
+
 (* TODO: remove pretty option here and Npkcontext *)
 let dump_npko (fnames, globs, funs, _) = 
   let cur_fun = ref "" in
@@ -241,7 +249,7 @@ let dump_npko (fnames, globs, funs, _) =
 	  dump_stmt align decls false hd;
 	  List.iter (dump_stmt align decls false) r
       | [] -> ()
-  
+
   and dump_stmt align decls only (sk, _) =
     print_string align;
     match sk with
@@ -279,32 +287,21 @@ let dump_npko (fnames, globs, funs, _) =
       | Call f ->
 	  print_endline ((string_of_fn f)^";")
 	    
-      | ChooseAssert elts ->
-	  print_endline "choose {";
-	  List.iter (dump_assertblk (align^"--> ") (align^"    ") decls) elts;
-	  print_endline (align^"}")
-	    
+      | Guard b -> print_endline ("guard("^(string_of_bexp b)^");")
+
+      | Select elts ->
+	  let dump_choice x =
+	    print_endline (align^" -->");
+	    dump_blk (align^"  ") decls x
+	  in
+	    print_endline (align^"choose {");
+	    List.iter dump_choice elts;
+	    print_endline (align^"}")
+
       | InfLoop body -> 
 	  print_endline "while (1) {";
 	  dump_blk (align^"  ") decls body;
 	  print_endline (align^"}")
-	    
-  and dump_assert align e =
-    print_endline (align^"assert("^(string_of_exp e)^");")
-      
-  and dump_assertblk align1 align2 decls (exps, b) =
-    match exps, b with
-      | [], [] -> Npkcontext.error "Newspeak.dump_assertblk" "Error in output"
-      | [], hd::[] ->
-	  dump_stmt align1 decls true hd
-      | [], hd::r ->
-	  dump_stmt align1 decls false hd;
-	  List.iter (dump_stmt align2 decls false) r
-	    
-      | first::others, _ ->
-	  dump_assert align1 first;
-	  List.iter (dump_assert align2) others;
-	  dump_blk align2 decls b
   in
 
   let dump_init i =

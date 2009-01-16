@@ -10,10 +10,12 @@ t025() {
   do {
     do {
       while (1) {
-        choose {
-        --> assert(! 1);
-            goto lbl2;
-        --> assert(1);
+                choose {
+         -->
+          guard(! 1);
+          goto lbl2;
+         -->
+          guard(1);
         }
       }
     } with lbl2: {
