@@ -126,7 +126,7 @@ and stmtkind =
   | Copy of (lval * lval * size_t)
   | Guard of exp
   | Decl of (string * typ * blk)
-  | Select of blk list
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
@@ -524,16 +524,17 @@ let string_of_blk offset x =
 	  
       | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
-      | Select elts ->
-	  let dump_choice x =
-	    dump_line " -->";
-	    incr_margin ();
-	    dump_blk x;
-	    decr_margin ()
-	  in
-	    dump_line_at loc "choose {";
-	    List.iter dump_choice elts;
-	    dump_line "}"
+      | Select (body1, body2) ->
+	  dump_line_at loc "choose {";
+	  dump_line " -->";
+	  incr_margin ();
+	  dump_blk body1;
+	  decr_margin ();
+	  dump_line " -->";
+	  incr_margin ();
+	  dump_blk body2;
+	  decr_margin ();
+	  dump_line "}"
 
       | InfLoop body -> 
 	  dump_line_at loc "while (1) {";
@@ -740,7 +741,8 @@ let bind_var x t body =
       | Decl (x, t, body) -> 
 	  let body = bind_in_blk (n+1) body in
 	    Decl (x, t, body)
-      | Select choices -> Select (List.map (bind_in_blk n) choices)
+      | Select (body1, body2) -> 
+	  Select (bind_in_blk n body1, bind_in_blk n body2)
       | InfLoop body -> 
 	  let body = bind_in_blk n body in
 	    InfLoop body
@@ -906,7 +908,8 @@ object (self)
 
   method process_blk x =
     match x with
-	(Select [body], _)::tl -> (self#process_blk body)@tl
+	(Select (body, []), _)::tl | (Select ([], body), _)::tl -> 
+	  (self#process_blk body)@tl
       | (Guard Const CInt i, _)::tl when compare i Nat.one = 0 -> tl
       | _ -> x
 end
@@ -963,7 +966,7 @@ let simplify_gotos blk =
 	  let body = simplify_blk body in
 	    Decl (name, t, body)
 
-      | Select choices -> Select (List.map simplify_blk choices)
+      | Select (body1, body2) -> Select (simplify_blk body1, simplify_blk body2)
 
       | InfLoop body -> 
 	  let body = simplify_blk body in
@@ -1024,7 +1027,8 @@ let rec simplify_stmt actions (x, loc) =
       | Guard b -> Guard (simplify_exp actions b)
       | Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp actions e, t))
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
-      | Select choices -> Select (List.map (simplify_blk actions) choices)
+      | Select (body1, body2) -> 
+	  Select (simplify_blk actions body1, simplify_blk actions body2)
       | InfLoop body ->
           let body = simplify_blk actions body in
 	    InfLoop body
@@ -1173,7 +1177,7 @@ let has_goto lbl x =
   and has_goto (x, _) =
   match x with
       Decl (_, _, body) | InfLoop body -> blk_has_goto body
-    | Select choices -> List.exists blk_has_goto choices
+    | Select (body1, body2) -> (blk_has_goto body1) || (blk_has_goto body2)
     | DoWith (body, _, action) -> (blk_has_goto body) && (blk_has_goto action)
     | Goto lbl' -> lbl = lbl'
     | _ -> false
@@ -1332,7 +1336,8 @@ and build_stmtkind builder x =
 	  let body = build_blk builder body in
 	    Decl (x, t, body)
 	      
-      | Select choice -> Select (List.map (build_blk builder) choice)
+      | Select (body1, body2) -> 
+	  Select (build_blk builder body1, build_blk builder body2)
 	      
       | InfLoop body ->
 	  let body = build_blk builder body in
@@ -1569,12 +1574,11 @@ and visit_stmt visitor (x, loc) =
 	    visit_typ visitor t;
 	    visit_blk visitor body
 	| Call fn -> visit_fn visitor fn
-	| Select choices -> 
-	    let visit_choice x =
-	      visitor#set_loc loc;
-	      visit_blk visitor x
-	    in
-	      List.iter visit_choice choices
+	| Select (body1, body2) -> 
+	    visitor#set_loc loc;
+	    visit_blk visitor body1;
+	    visitor#set_loc loc;
+	    visit_blk visitor body2
 	| InfLoop x -> visit_blk visitor x
 	| DoWith (body, _, action) -> 
 	    visit_blk visitor body;
@@ -1631,8 +1635,8 @@ let rec equal_stmt (x1, _) (x2, _) =
   match (x1, x2) with
       (Decl (_, t1, body1), Decl (_, t2, body2)) -> 
 	t1 = t2 && equal_blk body1 body2
-    | (Select choices1, Select choices2) ->
-	List.for_all2 equal_blk choices1 choices2
+    | (Select (bl1, br1), Select (bl2, br2)) ->
+	 (equal_blk bl1 bl2) && (equal_blk br1 br2)
     | (InfLoop body1, InfLoop body2) -> equal_blk body1 body2
     | (DoWith (body1, lbl1, action1), DoWith (body2, lbl2, action2)) ->
 	equal_blk body1 body2 && lbl1 = lbl2 && equal_blk action1 action2

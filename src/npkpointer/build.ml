@@ -111,7 +111,9 @@ let translate npk =
 	  push_local x;
 	  translate_blk body;
 	  pop_local ()
-      | Select choices -> List.iter translate_blk choices
+      | Select (blk1, blk2) -> 
+	  translate_blk blk1;
+	  translate_blk blk2
       | InfLoop body -> translate_blk body
       | DoWith (body, _, action) -> 
 	  translate_blk body;

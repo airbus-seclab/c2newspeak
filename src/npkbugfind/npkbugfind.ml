@@ -133,7 +133,9 @@ let rec scan_blk env x =
 and scan_stmt env (x, loc) =
   cur_loc := loc;
   match x with
-      Select choices -> List.iter (scan_blk env) choices
+      Select (blk1, blk2) -> 
+	scan_blk env blk1; 
+	scan_blk env blk2
     | InfLoop body | Decl (_, _, body) -> scan_blk [] body
     | DoWith (body, _, action) ->
 	scan_blk env body;
@@ -206,11 +208,9 @@ let rec scan2_blk env x =
 and scan2_stmt env (x, loc) =
   cur_loc := loc;
   match x with
-    | Select choices -> 
-	let res = ref env in
-	let scan2_choice x = res := Env.union !res (scan2_blk !res x) in
-	  List.iter scan2_choice choices;
-	  !res
+    | Select (blk1, blk2) -> 
+	let env = Env.union env (scan2_blk env blk1) in
+	  Env.union env (scan2_blk env blk2)
     | Decl (_, _, body) -> scan2_blk env body
     | InfLoop body ->
 	let _ = scan2_blk env body in 

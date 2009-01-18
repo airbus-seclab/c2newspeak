@@ -49,7 +49,7 @@ and stmtkind =
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
   | Guard of exp
-  | Select of blk list
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl

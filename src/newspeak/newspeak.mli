@@ -124,7 +124,7 @@ and stmtkind =
   | Copy of (lval * lval * size_t)
   | Guard of exp
   | Decl of (string * typ * blk)
-  | Select of blk list
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl

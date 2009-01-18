@@ -68,7 +68,8 @@ let rec replace_stmt (sk, loc) =
       | Npkil.Decl (name, t, b) -> 
 	  Newspeak.Decl (name, replace_typ t, List.map replace_stmt b)
       | Npkil.Guard cond -> Newspeak.Guard (replace_exp cond)
-      | Npkil.Select choices -> Newspeak.Select (List.map replace_blk choices)
+      | Npkil.Select (body1, body2) ->
+	  Newspeak.Select (replace_blk body1, replace_blk body2)
       | Npkil.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
       | Npkil.Call fn -> Newspeak.Call (replace_fn fn)
       | Npkil.Goto lbl -> Newspeak.Goto lbl

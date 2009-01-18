@@ -50,7 +50,7 @@ and stmtkind =
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
   | Guard of exp
-  | Select of blk list
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
@@ -282,14 +282,13 @@ let dump_npko (fnames, globs, funs, _) =
 	    
       | Guard b -> print_endline ("guard("^(string_of_exp b)^");")
 
-      | Select elts ->
-	  let dump_choice x =
-	    print_endline (align^" -->");
-	    dump_blk (align^"  ") decls x
-	  in
-	    print_endline (align^"choose {");
-	    List.iter dump_choice elts;
-	    print_endline (align^"}")
+      | Select (body1, body2) ->
+	  print_endline (align^"choose {");
+	  print_endline (align^" -->");
+	  dump_blk (align^"  ") decls body1;
+	  print_endline (align^" -->");
+	  dump_blk (align^"  ") decls body2;
+	  print_endline (align^"}")
 
       | InfLoop body -> 
 	  print_endline "while (1) {";

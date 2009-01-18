@@ -56,9 +56,7 @@ let process prog =
   and process_stmtkind x =
     match x with
 	Decl (v, t, body) -> Decl (v, t, process_blk body)
-      | Select choices -> 
-	  let choices = List.map process_blk choices in
-	    Select choices
+      | Select (blk1, blk2) -> Select (process_blk blk1, process_blk blk2)
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
@@ -120,9 +118,7 @@ let process_one prog =
   and process_stmtkind x =
     match x with
 	Decl (v, t, body) -> Decl (v, t, process_blk body)
-      | Select choices -> 
-	  let choices = List.map process_blk choices in
-	    Select choices
+      | Select (blk1, blk2) -> Select (process_blk blk1, process_blk blk2)
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)

@@ -585,7 +585,7 @@ and translate_if status e stmts1 stmts2 =
   let cond2 = K.negate cond1 in
   let body1 = (K.Guard cond1, loc)::(translate_stmts status stmts1) in
   let body2 = (K.Guard cond2, loc)::(translate_stmts status stmts2) in
-    (K.Select (body1::body2::[]), loc)::[]
+    (K.Select (body1, body2), loc)::[]
 
 
 (** Returns a set of blocks, each representing a choice of the case 
@@ -621,11 +621,12 @@ and translate_switch switch_loc status e stmt_list body =
 	    let cond = K.BinOp (Newspeak.Eq t, switch_exp, translate_exp v) in
 	      status := Cilenv.add_switch_lbl !status loc lbl;
 	      translate_aux tl;
-	      cases := 
-		((K.Guard cond, switch_loc)
-		 ::(build_stmt (K.Goto lbl))::[])::!cases;
-	      default_cond := 
-		(K.Guard (K.negate cond), switch_loc)::!default_cond
+	      let body = 
+		(K.Guard cond, switch_loc)::(build_stmt (K.Goto lbl))::[]
+	      in
+		cases := (K.Select (body, !cases), switch_loc)::[];
+		default_cond := 
+		  (K.Guard (K.negate cond), switch_loc)::!default_cond
 		
 	| (Default loc)::tl -> 
 	    (* TODO: have a get_default_lbl instead, with a default number 
@@ -644,7 +645,7 @@ and translate_switch switch_loc status e stmt_list body =
     Cilenv.reset_lbl_gen ();
     List.iter translate_case (List.rev stmt_list);
     let default_choice = !default_cond@(!default_goto) in
-    let choices = [build_stmt (K.Select (default_choice::!cases))] in
+    let choices = [build_stmt (K.Select (default_choice, !cases))] in
 
       translate_switch_body (Npkcontext.get_loc ()) !status choices body.bstmts
 

@@ -229,14 +229,12 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 		  let cond2 = K.negate cond1 in
 		  let body1 = (K.Guard cond1, loc)::body1 in
 		  let body2 = (K.Guard cond2, loc)::body2 in
-		    (K.Select (body1::body2::[]), loc)::[]
+		    (K.Select (body1, body2), loc)::[]
 	  end
 
       | Loop body -> (K.InfLoop (translate_blk body), loc)::[]
 
-      | Switch switch ->
-	  let choices = translate_switch loc switch in
-	    (K.Select choices, loc)::[]
+      | Switch switch -> translate_switch loc switch
 
       | Exp (Call c) -> 
 	  let call = translate_call loc None c in
@@ -316,12 +314,12 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    let default_guard = (K.Guard (K.negate cond), loc)::default_guard in
 	    let body = (K.Guard cond, loc)::body in
 	    let choices = translate_cases default_guard tl in
-	      body::choices
+	      (K.Select (body, choices), loc)::[]
 	| [] -> 
 	    let body = default_guard@default in
-	      body::[]
+	      body
     in
-    translate_cases [] cases
+      translate_cases [] cases
   in
 	  
   let translate_init (o, t, e) =

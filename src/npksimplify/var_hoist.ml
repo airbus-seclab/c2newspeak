@@ -62,7 +62,8 @@ and shift_vars_stmtkind i x =
     | Decl (v, t, body) -> Decl (v, t, shift_vars_blk (i + 1) body)
     | Goto _ -> x
     | Call fn -> Call (shift_vars_fn i fn)
-    | Select choices -> Select (List.map (shift_vars_blk i) choices)
+    | Select (blk1, blk2) -> 
+	Select (shift_vars_blk i blk1, shift_vars_blk i blk2)
     | InfLoop body -> InfLoop (shift_vars_blk i body)
     | DoWith (body, lbl, action) ->
 	DoWith (shift_vars_blk i body, lbl, shift_vars_blk i action)
@@ -83,7 +84,7 @@ let process prog =
  
   and process_stmtkind x =
     match x with
-      | Select choices -> Select (List.map process_blk choices)
+      | Select (blk1, blk2) -> Select (process_blk blk1, process_blk blk2)
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
