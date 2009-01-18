@@ -28,7 +28,8 @@ void main(void) {
               (021.c:34#4)^guard((0-_int32 ==_int32 3));
               (021.c:39#4)^goto lbl5;
              -->
-              (021.c:34#4)^guard(! (0-_int32 ==_int32 3) & ! (0-_int32 ==_int32 2));
+              (021.c:34#4)^guard(! (0-_int32 ==_int32 3));
+              (021.c:34#4)^guard(! (0-_int32 ==_int32 2));
               (021.c:34#4)^goto lbl4;
             }
           } with lbl6: {

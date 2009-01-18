@@ -13,7 +13,8 @@ void main(void) {
         (020.c:32#2)^guard((0-_int32 ==_int32 2));
         (020.c:34#2)^goto lbl2;
        -->
-        (020.c:32#2)^guard(! (0-_int32 ==_int32 2) & ! (0-_int32 ==_int32 1));
+        (020.c:32#2)^guard(! (0-_int32 ==_int32 2));
+        (020.c:32#2)^guard(! (0-_int32 ==_int32 1));
         (020.c:32#2)^goto lbl1;
       }
     } with lbl2: {

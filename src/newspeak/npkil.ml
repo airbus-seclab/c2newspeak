@@ -49,7 +49,7 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | Guard of exp list
+  | Guard of exp
   | Select of blk list
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
@@ -215,13 +215,6 @@ and string_of_fn f =
 	"["^(string_of_exp exp)^"]("^
 	  (seq ", " string_of_typ args_t)^")"
 
-let rec string_of_bexp b =
-  match b with
-      [] -> "1"
-    | e::[] -> string_of_exp e
-    | e::b -> (string_of_exp e)^" & "^(string_of_bexp b)
-
-
 (* TODO: remove pretty option here and Npkcontext *)
 let dump_npko (fnames, globs, funs, _) = 
   let cur_fun = ref "" in
@@ -287,7 +280,7 @@ let dump_npko (fnames, globs, funs, _) =
       | Call f ->
 	  print_endline ((string_of_fn f)^";")
 	    
-      | Guard b -> print_endline ("guard("^(string_of_bexp b)^");")
+      | Guard b -> print_endline ("guard("^(string_of_exp b)^");")
 
       | Select elts ->
 	  let dump_choice x =

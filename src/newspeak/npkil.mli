@@ -48,7 +48,7 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | Guard of exp list
+  | Guard of exp
   | Select of blk list
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)

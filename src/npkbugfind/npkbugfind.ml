@@ -125,10 +125,8 @@ and scan_lval env x =
 let rec scan_blk env x = 
   match x with
       (Guard b, _)::tl ->
-	let env = ref env in
-	let scan_exp x = env := scan_exp !env x in
-	  List.iter scan_exp b;
-	  scan_blk !env tl
+	let env = scan_exp env b in
+	  scan_blk env tl
     | hd::tl -> scan_stmt env hd; scan_blk env tl
     | [] -> ()
 
@@ -197,7 +195,7 @@ let rec scan2_blk env x =
   match x with
     | (Guard b, loc)::tl -> 
 	cur_loc := loc;
-	let conds = List.fold_left (fun x y -> Env.add y x) Env.empty b in
+	let conds = Env.add b Env.empty in
 	let env = Env.union conds env in
 	  scan2_blk env tl
     | hd::tl ->

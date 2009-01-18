@@ -227,8 +227,8 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	      | K.Const N.CInt _ -> body2
 	      | _ -> 
 		  let cond2 = K.negate cond1 in
-		  let body1 = (K.Guard [cond1], loc)::body1 in
-		  let body2 = (K.Guard [cond2], loc)::body2 in
+		  let body1 = (K.Guard cond1, loc)::body1 in
+		  let body2 = (K.Guard cond2, loc)::body2 in
 		    (K.Select (body1::body2::[]), loc)::[]
 	  end
 
@@ -307,18 +307,18 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   and translate_switch loc (e, cases, default) =
     let e = translate_exp e in
     let default = translate_blk default in
-    let rec translate_cases default_cond x =
+    let rec translate_cases default_guard x =
       match x with
 	  ((v, t), body)::tl ->
 	    let v = translate_exp v in
 	    let cond = K.BinOp (Newspeak.Eq t, e, v) in
 	    let body = translate_blk body in
-	    let default_cond = (K.negate cond)::default_cond in
-	    let body = (K.Guard [cond], loc)::body in
-	    let choices = translate_cases default_cond tl in
+	    let default_guard = (K.Guard (K.negate cond), loc)::default_guard in
+	    let body = (K.Guard cond, loc)::body in
+	    let choices = translate_cases default_guard tl in
 	      body::choices
 	| [] -> 
-	    let body = (K.Guard default_cond, loc)::default in
+	    let body = default_guard@default in
 	      body::[]
     in
     translate_cases [] cases

@@ -58,7 +58,7 @@ and shift_vars_stmtkind i x =
       Set (lv, e, t) -> Set (shift_vars_lval i lv, shift_vars_exp i e, t)
     | Copy (lv1, lv2, n) -> 
 	Copy (shift_vars_lval i lv1, shift_vars_lval i lv2, n)
-    | Guard b -> Guard (List.map (shift_vars_exp i) b)
+    | Guard b -> Guard (shift_vars_exp i b)
     | Decl (v, t, body) -> Decl (v, t, shift_vars_blk (i + 1) body)
     | Goto _ -> x
     | Call fn -> Call (shift_vars_fn i fn)

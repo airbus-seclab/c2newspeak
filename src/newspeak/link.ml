@@ -67,7 +67,7 @@ let rec replace_stmt (sk, loc) =
       | Npkil.Copy (lv1, lv2, sz) -> Newspeak.Copy (replace_lv lv1, replace_lv lv2, sz)
       | Npkil.Decl (name, t, b) -> 
 	  Newspeak.Decl (name, replace_typ t, List.map replace_stmt b)
-      | Npkil.Guard cond -> Newspeak.Guard (List.map replace_exp cond)
+      | Npkil.Guard cond -> Newspeak.Guard (replace_exp cond)
       | Npkil.Select choices -> Newspeak.Select (List.map replace_blk choices)
       | Npkil.InfLoop b -> Newspeak.InfLoop (List.map replace_stmt b)
       | Npkil.Call fn -> Newspeak.Call (replace_fn fn)

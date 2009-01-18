@@ -124,7 +124,7 @@ and spec_token =
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Guard of bexp
+  | Guard of exp
   | Decl of (string * typ * blk)
   | Select of blk list
   | InfLoop of blk
@@ -150,9 +150,6 @@ and exp =
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
-
-(* a conjonction of expression *)
-and bexp = exp list
 
 and cte = 
     CInt of Nat.t
@@ -449,12 +446,6 @@ let string_of_fn f =
     | FunDeref (exp, (args_t, None)) ->
 	"["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
 
-let rec string_of_bexp b =
-  match b with
-      [] -> "1"
-    | e::[] -> string_of_exp e
-    | e::b -> (string_of_exp e)^" & "^(string_of_bexp b)
-
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
@@ -500,7 +491,7 @@ let string_of_blk offset x =
 	Set (lv, e, sc) ->
 	  dump_line_at loc ((string_of_lval lv)^" =("^(string_of_scalar sc)^
 			") "^(string_of_exp e)^";")
-      | Guard b -> dump_line_at loc ("guard("^(string_of_bexp b)^");")
+      | Guard b -> dump_line_at loc ("guard("^(string_of_exp b)^");")
       | Copy (lv1, lv2, sz) ->
 	  dump_line_at loc ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			" "^(string_of_lval lv2)^";")
@@ -741,7 +732,7 @@ let bind_var x t body =
 	  let lv = bind_in_lval n lv in
 	  let e = bind_in_exp n e in
 	    Set (lv, e, t)
-      | Guard b -> Guard (List.map (bind_in_exp n) b)
+      | Guard b -> Guard (bind_in_exp n b)
       | Copy (lv1, lv2, sz) ->
 	  let lv1 = bind_in_lval n lv1 in
 	  let lv2 = bind_in_lval n lv2 in
@@ -909,12 +900,6 @@ object (self)
       | _ -> e
 end
 
-let rec bexp_is_true b = 
-  match b with
-      [] -> true
-    | (Const CInt i)::tl when compare i Nat.one = 0 -> bexp_is_true tl
-    | _ -> false
-
 class simplify_choose =
 object (self)
   inherit builder
@@ -922,7 +907,7 @@ object (self)
   method process_blk x =
     match x with
 	(Select [body], _)::tl -> (self#process_blk body)@tl
-      | (Guard b, _)::tl when bexp_is_true b -> tl
+      | (Guard Const CInt i, _)::tl when compare i Nat.one = 0 -> tl
       | _ -> x
 end
 
@@ -1036,7 +1021,7 @@ let rec simplify_stmt actions (x, loc) =
 	  let lv1 = simplify_lval actions lv1 in
 	  let lv2 = simplify_lval actions lv2 in
 	    Copy (lv1, lv2, sz)
-      | Guard b -> Guard (List.map (simplify_exp actions) b)
+      | Guard b -> Guard (simplify_exp actions b)
       | Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp actions e, t))
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
       | Select choices -> Select (List.map (simplify_blk actions) choices)
@@ -1340,7 +1325,7 @@ and build_stmtkind builder x =
 	  let n = build_size_t builder n in
 	    Copy (lv1, lv2, n)
 	      
-      | Guard b -> Guard (List.map (build_exp builder) b)
+      | Guard b -> Guard (build_exp builder b)
 
       | Decl (x, t, body) ->
 	  let t = build_typ builder t in
@@ -1578,11 +1563,8 @@ and visit_stmt visitor (x, loc) =
 	    visit_lval visitor lv2;
 	    visit_size_t visitor sz
 	| Guard b -> 
-	    let visit_bexp e =
-	      visitor#process_bexp e;
-	      visit_exp visitor e
-	    in
-	      List.iter visit_bexp b
+	    visitor#process_bexp b;
+	    visit_exp visitor b
 	| Decl (_, t, body) -> 
 	    visit_typ visitor t;
 	    visit_blk visitor body
