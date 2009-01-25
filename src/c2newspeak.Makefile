@@ -33,8 +33,8 @@ newspeak.FILES=\
 	npkil cir cir2npkil link
 
 c2newspeak.FILES=\
-        pp_syntax pp_lexer pp_parser \
-        csyntax synthack gnuc spec_parser lexer parser \
+        pp_syntax pp_parser pp_lexer \
+        csyntax synthack gnuc parser lexer \
         cilutils npkutils cilenv cilfirstpass cilcompiler \
         firstpass compiler \
 	params c2newspeak

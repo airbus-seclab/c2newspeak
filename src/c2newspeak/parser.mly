@@ -200,6 +200,7 @@ let rec normalize_bexp e =
 %token EOF
 
 %token <string> IDENTIFIER
+%token <char> SYMBOL
 %token <string> TYPEDEF_NAME
 %token <string> STRING
 %token <string option * string * char option * string option> INTEGER
@@ -211,6 +212,9 @@ let rec normalize_bexp e =
 
 %type <(Csyntax.exp * Csyntax.exp) list> config
 %start config
+
+%type <Csyntax.assertion> assertion
+%start assertion
 
 %%
 /* TODO: simplify code by generalizing!!! 
@@ -485,18 +489,16 @@ assignment_expression_list:
 
 primary_expression:
   IDENTIFIER                               { Var $1 }
-| CHARACTER                                { 
-    Cst (Csyntax.char_cst_of_lexeme $1) 
-  }
-| INTEGER                                  { 
-    Cst (Csyntax.int_cst_of_lexeme $1) 
-  }
-| FLOATCST                                 { 
-    Cst (Csyntax.float_cst_of_lexeme $1) 
-  }
+| constant                                 { Cst $1 }
 | string_literal                           { Str $1 }
 | FUNNAME                                  { FunName }
 | LPAREN expression RPAREN                 { $2 }
+;;
+
+constant:
+  CHARACTER                                { Csyntax.char_cst_of_lexeme $1 }
+| INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
+| FLOATCST                                 { Csyntax.float_cst_of_lexeme $1 }
 ;;
 
 string_literal:
@@ -1022,4 +1024,12 @@ memory_region_list:
 
 memory_region:
   expression COLON expression              { ($1, $3) }
+;;
+
+/* Newspeak assertion language */
+assertion:
+  SYMBOL assertion                         { (SymbolToken $1)::$2 }
+| IDENTIFIER assertion                     { (IdentToken $1)::$2 }
+| constant assertion                       { (CstToken $1)::$2 }
+|                                          { [] }
 ;;

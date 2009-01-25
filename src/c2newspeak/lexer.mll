@@ -255,7 +255,7 @@ rule token spec = parse
   | "#" line            { preprocess lexbuf; cnt_line lexbuf; 
 			  token spec lexbuf }
 
-  | "/*!npk"            { let assertion = Spec_parser.parse npk_spec lexbuf in
+  | "/*!npk"            { let assertion = Parser.assertion npk_spec lexbuf in
 			    spec := assertion::!spec;
 			    token spec lexbuf }
   | "/*"                { comment spec lexbuf }
@@ -276,17 +276,17 @@ and comment spec = parse
 
 and npk_spec = parse
 (* TODO: try to factor code more *)
-  | oct_integer         { Spec_parser.INTEGER (Some "0", value, sign, length) }
-  | integer             { Spec_parser.INTEGER (None, value, sign, length) }
-  | hex_integer         { Spec_parser.INTEGER (Some "0x", value, sign, length) }
-  | float               { Spec_parser.FLOATCST (value, suffix) }
-  | identifier          { Spec_parser.IDENTIFIER (Lexing.lexeme lexbuf) }
+  | oct_integer         { INTEGER (Some "0", value, sign, length) }
+  | integer             { INTEGER (None, value, sign, length) }
+  | hex_integer         { INTEGER (Some "0x", value, sign, length) }
+  | float               { FLOATCST (value, suffix) }
+  | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 
-  | "*/"                { Spec_parser.EOF }
+  | "*/"                { EOF }
   | white_space         { npk_spec lexbuf }
   | new_line            { cnt_line lexbuf; npk_spec lexbuf }
 
-  | _ as c              { Spec_parser.SYMBOL c }
+  | _ as c              { SYMBOL c }
 
 and character = parse
   | oct_character       { int_of_oct_character value }
