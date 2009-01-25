@@ -137,8 +137,7 @@ let oct_character =
   | ("\\" (oct_digit oct_digit oct_digit as value))
 let wide_character = 'L''\'' _ '\''
 
-(* TODO: remove argument spec_buf, it's a pain, put it in synthack ? *)
-rule token spec_buf = parse
+rule token spec = parse
 
 (* keywords *)
     "asm"               { ASM }
@@ -254,33 +253,40 @@ rule token spec_buf = parse
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
   | "#" line            { preprocess lexbuf; cnt_line lexbuf; 
-			  token spec_buf lexbuf }
+			  token spec lexbuf }
 
-  | "/*!npk"            { Buffer.add_string spec_buf "/*!npk"; 
-			  spec spec_buf lexbuf }
-  | "/*"                { comment spec_buf lexbuf }
-  | line_comment        { cnt_line lexbuf; token spec_buf lexbuf }
-  | new_line            { cnt_line lexbuf; token spec_buf lexbuf }
-  | white_space         { token spec_buf lexbuf }
+  | "/*!npk"            { let assertion = Spec_parser.parse npk_spec lexbuf in
+			    spec := assertion::!spec;
+			    token spec lexbuf }
+  | "/*"                { comment spec lexbuf }
+  | line_comment        { cnt_line lexbuf; token spec lexbuf }
+  | new_line            { cnt_line lexbuf; token spec lexbuf }
+  | white_space         { token spec lexbuf }
 
   | eof                 { EOF }
 (* error fallback *)
   | _                   { unknown_lexeme lexbuf }
 
 
-and comment spec_buf = parse
+and comment spec = parse
 
-  | "*/"                { token spec_buf lexbuf }
-  | new_line            { cnt_line lexbuf; comment spec_buf lexbuf }
-  | _                   { comment spec_buf lexbuf }
+  | "*/"                { token spec lexbuf }
+  | new_line            { cnt_line lexbuf; comment spec lexbuf }
+  | _                   { comment spec lexbuf }
 
-and spec spec_buf = parse
-  | "*/"                { Buffer.add_string spec_buf "*/";
-			  token spec_buf lexbuf }
-  | new_line            { Buffer.add_string spec_buf (Lexing.lexeme lexbuf);
-			  cnt_line lexbuf; token spec_buf lexbuf }
-  | _ as c              { Buffer.add_char spec_buf c; 
-			  spec spec_buf lexbuf }
+and npk_spec = parse
+(* TODO: try to factor code more *)
+  | oct_integer         { Spec_parser.INTEGER (Some "0", value, sign, length) }
+  | integer             { Spec_parser.INTEGER (None, value, sign, length) }
+  | hex_integer         { Spec_parser.INTEGER (Some "0x", value, sign, length) }
+  | float               { Spec_parser.FLOATCST (value, suffix) }
+  | identifier          { Spec_parser.IDENTIFIER (Lexing.lexeme lexbuf) }
+
+  | "*/"                { Spec_parser.EOF }
+  | white_space         { npk_spec lexbuf }
+  | new_line            { cnt_line lexbuf; npk_spec lexbuf }
+
+  | _ as c              { Spec_parser.SYMBOL c }
 
 and character = parse
   | oct_character       { int_of_oct_character value }

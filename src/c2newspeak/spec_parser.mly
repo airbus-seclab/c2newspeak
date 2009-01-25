@@ -27,21 +27,20 @@
 open Csyntax
 %}
 
-%token MINUS EOF START END
+%token MINUS EOF
 
 %token <string> IDENTIFIER
 %token <char> SYMBOL
 %token <string option * string * char option * string option> INTEGER
 %token <string * char option> FLOATCST
 
-%type <Csyntax.spec> parse
+%type <Csyntax.assertion> parse
 %start parse
 
 %%
 
 parse:
-  START assertion END parse                { $2::$4 }
-|                                          { [] }
+  assertion                                { $1 }
 ;;
 
 assertion:

@@ -27,7 +27,9 @@ open Newspeak
 
 type prog = (global * location) list
 
-and spec = spec_token list list
+and spec = assertion list
+
+and assertion = spec_token list
 
 and spec_token = 
   | SymbolToken of char
