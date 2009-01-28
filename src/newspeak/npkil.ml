@@ -63,7 +63,7 @@ and token =
     SymbolToken of char
   | IdentToken of string
   | LvalToken of lval
-  | CstToken of Newspeak.cte
+  | CstToken of Newspeak.cst
 
 and stmt = stmtkind * location
 
@@ -76,7 +76,7 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
@@ -196,7 +196,7 @@ let rec string_of_lval lv =
 
 and string_of_exp e =
   match e with
-      Const c -> Newspeak.string_of_cte c
+      Const c -> Newspeak.string_of_cst c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_tmp_nat sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)

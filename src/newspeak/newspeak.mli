@@ -116,7 +116,7 @@ and spec_token =
     | SymbolToken of char
     | IdentToken of string
     | LvalToken of lval
-    | CstToken of cte
+    | CstToken of cst
 
 (* The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
 and stmtkind =
@@ -142,14 +142,14 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * size_t)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
-and cte = 
+and cst = 
     CInt of Nat.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
   | CFloat of (float * string)
@@ -267,8 +267,8 @@ val string_of_loc : location -> string
 (** [string_of_bounds r] returns the string representation of range [r]. *)
 val string_of_bounds : bounds -> string
 
-(** [string_of_cte c] returns the string representation of constant [c]. *)
-val string_of_cte : cte -> string
+(** [string_of_cst c] returns the string representation of constant [c]. *)
+val string_of_cst : cst -> string
 val string_of_sign_t: sign_t -> string
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string

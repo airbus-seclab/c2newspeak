@@ -119,7 +119,7 @@ and spec_token =
     | SymbolToken of char
     | IdentToken of string
     | LvalToken of lval
-    | CstToken of cte
+    | CstToken of cst
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -145,14 +145,14 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * size_t)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
-and cte = 
+and cst = 
     CInt of Nat.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
   | CFloat of (float * string)
@@ -378,7 +378,7 @@ let unknown_loc = ("", -1, -1)
 
 
 (* Expressions *)
-let string_of_cte c =
+let string_of_cst c =
   match c with
       CInt c -> Nat.to_string c
     | CFloat (_, s) -> s
@@ -427,7 +427,7 @@ let rec string_of_lval lv =
 
 and string_of_exp e =
   match e with
-      Const c -> string_of_cte c
+      Const c -> string_of_cst c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp ft)^"}("^fid^")"
@@ -478,7 +478,7 @@ let string_of_token x =
       SymbolToken x -> String.make 1 x
     | IdentToken x -> x
     | LvalToken x -> "'"^(string_of_lval x)^"'"
-    | CstToken c -> string_of_cte c
+    | CstToken c -> string_of_cst c
 
 let string_of_assertion x =
   let res = ref "" in

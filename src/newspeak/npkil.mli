@@ -64,7 +64,7 @@ and token =
     SymbolToken of char
   | IdentToken of string
   | LvalToken of lval
-  | CstToken of Newspeak.cte
+  | CstToken of Newspeak.cst
 
 and stmt = stmtkind * location
 
@@ -77,7 +77,7 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
