@@ -115,7 +115,7 @@ and assertion = spec_token list
 and spec_token =
     | SymbolToken of char
     | IdentToken of string
-    | VarToken of string
+    | LvalToken of lval
     | CstToken of cte
 
 (* The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
@@ -129,6 +129,7 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
 
 and stmt = stmtkind * location
 

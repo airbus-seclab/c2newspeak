@@ -118,7 +118,7 @@ and assertion = spec_token list
 and spec_token =
     | SymbolToken of char
     | IdentToken of string
-    | VarToken of string
+    | LvalToken of lval
     | CstToken of cte
 
 and stmtkind =
@@ -131,6 +131,7 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
 
 and stmt = stmtkind * location
 
@@ -451,7 +452,8 @@ let string_of_lbl l = "lbl"^(string_of_int l)
 
 let dump_gdecl name (t, i) =
   let dump_elt (o, s, e) =
-    print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp e));
+    print_string ((string_of_size_t o)^": "^(string_of_scalar s)
+		  ^" "^(string_of_exp e));
   in
   let rec dump_init l =
     match l with
@@ -470,6 +472,24 @@ let dump_gdecl name (t, i) =
 	  print_string " = {";
 	  dump_init i;
 	  print_endline "};"
+
+let string_of_token x =
+  match x with
+      SymbolToken x -> String.make 1 x
+    | IdentToken x -> x
+    | LvalToken x -> "'"^(string_of_lval x)^"'"
+    | CstToken c -> string_of_cte c
+
+let string_of_assertion x =
+  let res = ref "" in
+  let append_token x = res := !res^(string_of_token x)^" " in
+    List.iter append_token x;
+    !res
+
+let dump_assertion x = 
+  let dump_token x = print_string ((string_of_token x)^" ") in
+    List.iter dump_token x;
+    print_newline ()
 
 let string_of_blk offset x =
   let buf = Buffer.create 80 in
@@ -543,6 +563,8 @@ let string_of_blk offset x =
 	  decr_margin ();
 	  dump_line "}"
 
+      | UserSpec x -> dump_line_at loc (string_of_assertion x)
+
   and dump_blk b =
     match b with
       | hd::[] -> dump_stmt true hd
@@ -572,20 +594,6 @@ let dump_globals gdecls =
       gdecls;
     String_map.iter dump_gdecl !glbs
       
-let dump_token x = 
-  let t =
-    match x with
-	SymbolToken x -> String.make 1 x
-      | IdentToken x -> x
-      | VarToken x -> "'"^x^"'"
-      | CstToken c -> string_of_cte c
-  in
-    print_string (t^" ")
-
-let dump_assertion x = 
-  List.iter dump_token x;
-  print_newline ()
-
 let string_of_mem_zone (addr, sz) = 
   (Nat.to_string addr)^": "^(string_of_int (sz/8))
 
@@ -1353,8 +1361,17 @@ and build_stmtkind builder x =
       | Call fn -> 
 	  let fn = build_fn builder fn in
 	    Call fn
+
+      | UserSpec assertion -> 
+	  let assertion = List.map (build_token builder) assertion in
+	    UserSpec assertion
   in
     builder#process_stmtkind x
+
+and build_token builder x =
+  match x with
+      LvalToken lv -> LvalToken (build_lval builder lv)
+    | _ -> x
 
 and build_choice builder (cond, body) =
   let cond = List.map (build_exp builder) cond in
@@ -1584,7 +1601,13 @@ and visit_stmt visitor (x, loc) =
 	    visit_blk visitor body;
 	    visit_blk visitor action
 	| Goto _ -> ()
+	| UserSpec assertion -> List.iter (visit_token visitor) assertion
     end else ()
+
+and visit_token builder x =
+  match x with
+      LvalToken lv -> visit_lval builder lv
+    | _ -> ()
 
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in

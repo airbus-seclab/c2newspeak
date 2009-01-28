@@ -60,7 +60,7 @@ let process prog =
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
-      | Set _ | Copy _ | Goto _ | Call _ | Guard _ -> x
+      | Set _ | Copy _ | Goto _ | Call _ | Guard _ | UserSpec _ -> x
   in
 
   let process_fun fid (t, body) =
@@ -122,7 +122,7 @@ let process_one prog =
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
-      | Set _ | Copy _ | Goto _ | Call _ | Guard _ -> x
+      | Set _ | Copy _ | Goto _ | Call _ | Guard _ | UserSpec _ -> x
 
   and process_fun fid =
     let (t, body) = Hashtbl.find prog.fundecs fid in

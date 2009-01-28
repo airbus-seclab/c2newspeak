@@ -34,7 +34,7 @@ open Newspeak
 type t = (filenames 
 	   * (string, ginfo) Hashtbl.t 
 	   * (fid, funinfo) Hashtbl.t 
-	   * specs)
+	   * assertion list)
 
 and filenames = string list
 
@@ -55,6 +55,15 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
+
+and assertion = token list
+
+and token = 
+    SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lval
+  | CstToken of Newspeak.cte
 
 and stmt = stmtkind * location
 
@@ -294,6 +303,8 @@ let dump_npko (fnames, globs, funs, _) =
 	  print_endline "while (1) {";
 	  dump_blk (align^"  ") decls body;
 	  print_endline (align^"}")
+
+      | UserSpec _ -> print_endline (align^"UserSpec;")
   in
 
   let dump_init i =

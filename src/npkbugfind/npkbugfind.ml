@@ -140,7 +140,7 @@ and scan_stmt env (x, loc) =
     | DoWith (body, _, action) ->
 	scan_blk env body;
 	scan_blk env action
-    | Goto _ | Call _ | Set _ | Copy _ | Guard _ -> ()
+    | Goto _ | Call _ | Set _ | Copy _ | Guard _ | UserSpec _ -> ()
 
 let scan_fundef f (_, body) = 
   if !debug then print_endline ("Scanning function: "^f);
@@ -224,7 +224,7 @@ and scan2_stmt env (x, loc) =
 	scan2_lval env lv;
 	scan2_exp env e;
 	env
-    | Call _ | Copy _ | Guard _ -> env
+    | Call _ | Copy _ | Guard _ | UserSpec _ -> env
 
 (* propagates the list of conditions that are verified in each block *)
 let scan2_fundef f (_, body) = 

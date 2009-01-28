@@ -137,7 +137,7 @@ let oct_character =
   | ("\\" (oct_digit oct_digit oct_digit as value))
 let wide_character = 'L''\'' _ '\''
 
-rule token spec = parse
+rule token = parse
 
 (* keywords *)
     "asm"               { ASM }
@@ -253,26 +253,24 @@ rule token spec = parse
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
   | "#" line            { preprocess lexbuf; cnt_line lexbuf; 
-			  token spec lexbuf }
+			  token lexbuf }
 
-  | "/*!npk"            { let assertion = Parser.assertion npk_spec lexbuf in
-			    spec := assertion::!spec;
-			    token spec lexbuf }
-  | "/*"                { comment spec lexbuf }
-  | line_comment        { cnt_line lexbuf; token spec lexbuf }
-  | new_line            { cnt_line lexbuf; token spec lexbuf }
-  | white_space         { token spec lexbuf }
+  | "/*!npk"            { NPK (Parser.assertion npk_spec lexbuf) }
+  | "/*"                { comment lexbuf }
+  | line_comment        { cnt_line lexbuf; token lexbuf }
+  | new_line            { cnt_line lexbuf; token lexbuf }
+  | white_space         { token lexbuf }
 
   | eof                 { EOF }
 (* error fallback *)
   | _                   { unknown_lexeme lexbuf }
 
 
-and comment spec = parse
+and comment = parse
 
-  | "*/"                { token spec lexbuf }
-  | new_line            { cnt_line lexbuf; comment spec lexbuf }
-  | _                   { comment spec lexbuf }
+  | "*/"                { token lexbuf }
+  | new_line            { cnt_line lexbuf; comment lexbuf }
+  | _                   { comment lexbuf }
 
 and npk_spec = parse
 (* TODO: try to factor code more *)
@@ -281,6 +279,10 @@ and npk_spec = parse
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | float               { FLOATCST (value, suffix) }
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
+
+  | '$' ([^'$']* as content) 
+    '$'                 { let lexbuf = Lexing.from_string content in
+			    EXP (Parser.expression token lexbuf) }
 
   | "*/"                { EOF }
   | white_space         { npk_spec lexbuf }

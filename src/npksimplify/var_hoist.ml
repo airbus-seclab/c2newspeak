@@ -67,6 +67,12 @@ and shift_vars_stmtkind i x =
     | InfLoop body -> InfLoop (shift_vars_blk i body)
     | DoWith (body, lbl, action) ->
 	DoWith (shift_vars_blk i body, lbl, shift_vars_blk i action)
+    | UserSpec x -> UserSpec (List.map (shift_vars_token i) x)
+
+and shift_vars_token i x =
+  match x with
+      LvalToken lv -> LvalToken (shift_vars_lval i lv)
+    | _ -> x
 
 let process prog =
   let rec process_blk x = 
@@ -88,10 +94,10 @@ let process prog =
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
-      | Set _ | Copy _ | Goto _ | Call _ | Guard _ -> x
+      | Set _ | Copy _ | Goto _ | Call _ | Guard _ | UserSpec _ -> x
       | Decl _ -> 
 	  invalid_arg ("Variable_hoist.process.process_stmtkind: "
-			^"Unexpected declaration")
+			^"unexpected declaration")
   in
 
   let res = Hashtbl.create 100 in

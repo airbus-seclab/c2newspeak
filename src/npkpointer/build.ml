@@ -118,7 +118,7 @@ let translate npk =
       | DoWith (body, _, action) -> 
 	  translate_blk body;
 	  translate_blk action
-      | Goto _ | Guard _ -> ()
+      | Goto _ | Guard _ | UserSpec _ -> ()
       | Call (FunId f) when not (Hashtbl.mem npk.fundecs f) -> 
 	  prerr_endline ("unknown function "^f^". Assuming empty body.")
       | Call fn ->

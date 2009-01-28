@@ -25,15 +25,14 @@
 
 open Newspeak
 
-type prog = (global * location) list
-
-and spec = assertion list
+type prog = (global * location) list * assertion list
 
 and assertion = spec_token list
 
 and spec_token = 
   | SymbolToken of char
   | IdentToken of string
+  | LvalToken of exp
   | CstToken of cst
       
 and global = 
@@ -97,6 +96,7 @@ and stmtkind =
   | Block of blk
   | Goto of lbl
   | Label of lbl
+  | UserSpec of assertion
 
 and lbl = string
 

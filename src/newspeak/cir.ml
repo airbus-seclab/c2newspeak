@@ -35,7 +35,15 @@ let fresh_id () =
     incr vcnt;
     id
   
-type t = (glbdecls * fundefs * Newspeak.specs)
+type t = (glbdecls * fundefs * assertion list)
+
+and assertion = token list
+
+and token =
+  | SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lv
+  | CstToken of cst
 
 and glbdecls = (string, typ * location * init option) Hashtbl.t
 
@@ -75,6 +83,7 @@ and stmtkind =
   | If of (exp * blk * blk)
   | Switch of (exp * (typ_exp * blk) list * blk)
   | Exp of exp
+  | UserSpec of assertion
 
 and lbl = int
 
@@ -110,6 +119,7 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
+(* TODO: change cst to Newspeak.cst??? *)
 and cst =
     | CInt of Nat.t
     | CFloat of (float * string)
@@ -189,6 +199,7 @@ and string_of_stmt margin (x, _) =
 	^(string_of_blk (margin^"  ") body)
 	^margin^"}"	
     | Switch _ -> "switch"
+    | UserSpec _ -> "userspec"
 
 let string_of_exp = string_of_exp ""
 
@@ -366,7 +377,20 @@ and normalize_stmt (x, loc) =
     | Exp e ->
 	let (pref, _, post) = normalize_exp e in
 	  (Block (concat_effects pref post, None), loc)::[]
-	    
+
+    | UserSpec tok -> (UserSpec (List.map normalize_token tok), loc)::[]
+	   
+and normalize_token tok =
+  match tok with
+    | LvalToken lv -> 
+	let (pref, lv, post) = normalize_lv lv in
+	  if (pref <> []) || (post <> []) then begin
+	    Npkcontext.error "Cir.normalize_token" 
+	      "left value without side-effects expected"
+	  end;
+	  LvalToken lv
+    | _ -> tok
+
 and normalize_call loc (ft, f, args) =
   let (pref1, f) = normalize_funexp loc f in
   let (args_t, _) = ft in
@@ -546,6 +570,7 @@ let normalize x =
 	  let (x, used_lbls1) = set_scope_stmtkind x in
 	  let (tl, used_lbls2) = set_scope_blk tl in
 	    ((x, loc)::tl, Set.union used_lbls1 used_lbls2)
+
       | [] -> ([], Set.empty)
 
   and set_scope_stmtkind x =
@@ -554,7 +579,7 @@ let normalize x =
 	  let (body, used_lbls) = set_scope_blk body in
 	    (Block (body, lbl), used_lbls)
       | Goto lbl -> (x, Set.singleton lbl)
-      | Decl _ | Set _ | Exp _ -> (x, Set.empty)
+      | Decl _ | Set _ | Exp _ | UserSpec _ -> (x, Set.empty)
       | Loop body -> 
 	  let (body, used_lbls) = set_scope_blk body in
 	    (Loop body, used_lbls)

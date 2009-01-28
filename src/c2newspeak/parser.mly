@@ -24,7 +24,6 @@
 */
 
 %{
-open Cir
 open Csyntax
 open Lexing
 open Synthack
@@ -199,8 +198,11 @@ let rec normalize_bexp e =
 %token TRANSPARENT_UNION UNUSED TYPEOF
 %token EOF
 
-%token <string> IDENTIFIER
+%token <Csyntax.assertion> NPK
+%token <Csyntax.exp> EXP
 %token <char> SYMBOL
+
+%token <string> IDENTIFIER
 %token <string> TYPEDEF_NAME
 %token <string> STRING
 %token <string option * string * char option * string option> INTEGER
@@ -216,6 +218,9 @@ let rec normalize_bexp e =
 %type <Csyntax.assertion> assertion
 %start assertion
 
+%type <Csyntax.exp> expression
+%start expression
+
 %%
 /* TODO: simplify code by generalizing!!! 
 try to remove multiple occurence of same pattern: factor as much as possible
@@ -229,13 +234,20 @@ parse:
 ;;
 
 translation_unit:
-  external_declaration translation_unit     { $1@$2 }
+  NPK translation_unit                      { 
+    let (globals, spec) = $2 in
+      (globals, $1::spec)
+  }
+| external_declaration translation_unit     { 
+    let (globals, spec) = $2 in
+      ($1@globals, spec)
+  }
 | SEMICOLON translation_unit                { 
     Npkcontext.report_accept_warning "Parser.translation_unit" 
       "unnecessary semicolon" Npkcontext.DirtySyntax;
     $2 
   }
-|                                           { [] }
+|                                           { ([], []) }
 ;;
 
 function_prologue:
@@ -365,8 +377,13 @@ statement_list:
 |                                          { [] }
 ;;
 
-// TODO: factor declarations??
 statement:
+  NPK statement                            { (UserSpec $1, get_loc ())::$2 }
+| statement_kind                           { $1 }
+;;
+
+// TODO: factor declarations??
+statement_kind:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
 | REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
@@ -1030,6 +1047,7 @@ memory_region:
 assertion:
   SYMBOL assertion                         { (SymbolToken $1)::$2 }
 | IDENTIFIER assertion                     { (IdentToken $1)::$2 }
+| EXP assertion                            { (LvalToken $1)::$2 }
 | constant assertion                       { (CstToken $1)::$2 }
 |                                          { [] }
 ;;

@@ -1048,8 +1048,22 @@ let translate (globals, spec) =
 	  let body = (C.Block (body, Some (default_lbl, [])), loc)::default in
 	    (C.Block (body, Some (brk_lbl, [])), loc)::[]
 
+      | UserSpec x -> (C.UserSpec (translate_assertion x), loc)::[]
+
       | Label _ | VDecl _ | EDecl _ | CDecl _ -> 
 	  Npkcontext.error "Firstpass.translate_stmt" "unreachable code"
+
+  and translate_assertion x = List.map translate_token x
+
+  and translate_token x =
+    match x with
+	SymbolToken x -> C.SymbolToken x
+      | LvalToken lv -> 
+	  let (lv, _) = translate_lv lv in
+	    C.LvalToken lv
+      | IdentToken x -> C.IdentToken x
+(* TODO: not good, do this in compile phase *)
+      | CstToken (c, _) -> C.CstToken c
 
   (* TODO: 
      - should take advantage of obviously side-effect free expression 
@@ -1310,25 +1324,6 @@ let translate (globals, spec) =
       | GlbEDecl _ | GlbCDecl _ -> ()
   in
     
-  let translate_token x =
-    match x with
-	SymbolToken x -> Newspeak.SymbolToken x
-      | IdentToken x when Symbtbl.mem symbtbl x -> 
-	  let (v, _) = find_var x in
-	  let x = 
-	    match v with
-		C.Global name -> name
-	      | _ -> 
-		  Npkcontext.error "Firstpass.translate_token"
-		    "unexpected variable in specification"
-	  in
-	    Newspeak.VarToken x
-      | IdentToken x -> Newspeak.IdentToken x
-(* TODO: not good, do this in compile phase *)
-      | CstToken (C.CInt i, _) -> Newspeak.CstToken (Newspeak.CInt i)
-      | CstToken (C.CFloat f, _) -> Newspeak.CstToken (Newspeak.CFloat f)
-  in
-
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
   let collect_glb_structdefs (x, _) =
@@ -1381,5 +1376,5 @@ let translate (globals, spec) =
    structure of name 
    and all the structures' type were in a hashtbl *)
     Hashtbl.iter add_glbdecl used_globals;
-    let spec = List.map (List.map translate_token) spec in
+    let spec = List.map translate_assertion spec in
       (glbdecls, fundefs, spec)

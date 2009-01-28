@@ -240,6 +240,8 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  let call = translate_call loc None c in
 	    call::[]
 
+      | UserSpec x -> (K.UserSpec (translate_assertion x), loc)::[]
+
       | Exp _ -> 
 	  Npkcontext.error "Compiler.translate_stmt" 
 	    "unexpected expression as statement"
@@ -320,7 +322,15 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	      body
     in
       translate_cases [] cases
-  in
+  
+  and translate_token x =
+    match x with
+	SymbolToken c -> K.SymbolToken c
+      | IdentToken x -> K.IdentToken x
+      | LvalToken lv -> K.LvalToken (translate_lv lv)
+      | CstToken c -> K.CstToken (translate_cst c)
+
+  and translate_assertion x = List.map translate_token x in
 	  
   let translate_init (o, t, e) =
     let e = translate_exp e in
@@ -364,4 +374,5 @@ let translate (cglbdecls, cfundefs, specs) fnames =
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
     Set.iter flag_glb !used_glbs;
-    (fnames, glbdecls, fundefs, specs)
+    let specs = List.map translate_assertion specs in
+      (fnames, glbdecls, fundefs, specs)

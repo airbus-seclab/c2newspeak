@@ -31,8 +31,10 @@ open Newspeak
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
-type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t
-	   * assertion list)
+type t = (filenames 
+	  * (string, ginfo) Hashtbl.t 
+	  * (fid, funinfo) Hashtbl.t
+	  * assertion list)
 
 and filenames = string list
 
@@ -54,6 +56,15 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
+
+and assertion = token list
+
+and token = 
+    SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lval
+  | CstToken of Newspeak.cte
 
 and stmt = stmtkind * location
 
@@ -80,13 +91,13 @@ and fn =
 and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
-      Belongs_tmp of (Nat.t * tmp_nat)
-    | Coerce of Newspeak.bounds
-    | Not
-    | BNot of Newspeak.bounds
-    | PtrToInt of ikind
-    | IntToPtr of ikind
-    | Cast of (scalar_t * scalar_t)
+    Belongs_tmp of (Nat.t * tmp_nat)
+  | Coerce of Newspeak.bounds
+  | Not
+  | BNot of Newspeak.bounds
+  | PtrToInt of ikind
+  | IntToPtr of ikind
+  | Cast of (scalar_t * scalar_t)
 
 and typ = 
     Scalar of scalar_t

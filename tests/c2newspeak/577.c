@@ -23,10 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
-double x, y;
-/*!npk $x$ = [-10, 10] */
-/*!npk $y$ = [-10, 10] */
-
 void main() {
-  x = y;
+  int x;
+  /*!npk assume($x$ == 0); */
+  x = 1;
 }

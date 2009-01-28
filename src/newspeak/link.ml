@@ -77,8 +77,16 @@ let rec replace_stmt (sk, loc) =
 	  let body = List.map replace_stmt body in
 	  let action = List.map replace_stmt action in
 	    Newspeak.DoWith (body, lbl, action)
+      | Npkil.UserSpec x -> Newspeak.UserSpec (List.map replace_token x)
   in 
     (new_sk, loc)
+
+and replace_token x =
+  match x with
+      Npkil.SymbolToken c -> Newspeak.SymbolToken c
+    | Npkil.IdentToken x -> Newspeak.IdentToken x
+    | Npkil.LvalToken lv -> Newspeak.LvalToken (replace_lv lv)
+    | Npkil.CstToken c -> Newspeak.CstToken c
 
 and replace_blk x = List.map replace_stmt x
     

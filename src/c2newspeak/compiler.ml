@@ -29,13 +29,12 @@ open Csyntax
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-  let specs = ref [] in
     Lexer.init fname lexbuf;
     Synthack.init_tbls ();
     try
-      let (fnames, globals) = Parser.parse (Lexer.token specs) lexbuf in
+      let (fnames, globals) = Parser.parse Lexer.token lexbuf in
 	close_in cin;
-	(fnames, globals, List.rev !specs)
+	(fnames, globals)
     with Parsing.Parse_error -> 
       let loc = "Compiler.parse" in
       let lexeme = Lexing.lexeme lexbuf in
@@ -52,7 +51,7 @@ let append_gnu_symbols globals =
     Lexer.init "__gnuc_builtin_symbols" lexbuf;
     Synthack.init_tbls ();
     try 
-      let (_, gnuc_symbols) = Parser.parse (Lexer.token (ref [])) lexbuf in
+      let (_, (gnuc_symbols, _)) = Parser.parse Lexer.token lexbuf in
 	gnuc_symbols@globals
     with Parsing.Parse_error -> 
       Npkcontext.error "Compiler.append_gnu_symbols" 
@@ -60,7 +59,7 @@ let append_gnu_symbols globals =
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (fnames, globals, spec) = parse fname in
+  let (fnames, (globals, spec)) = parse fname in
   let globals = 
     if !Npkcontext.accept_gnuc then append_gnu_symbols globals else globals
   in
@@ -91,7 +90,7 @@ let compile_config fname =
     try 
 (* TODO: use another function than Lexer.token here, the ref [] is not useful
 *)
-      let mem_zones = Parser.config (Lexer.token (ref [])) lexbuf in
+      let mem_zones = Parser.config Lexer.token lexbuf in
       let translate (addr, sz) =
 	let addr = eval_exp addr in
 	let sz = Nat.mul (eval_exp sz) (Nat.of_int 8) in

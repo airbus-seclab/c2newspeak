@@ -25,7 +25,15 @@
 
 open Newspeak
 
-type t = (glbdecls * fundefs * Newspeak.specs)
+type t = (glbdecls * fundefs * assertion list)
+
+and assertion = token list
+
+and token =
+  | SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lv
+  | CstToken of cst
 
 and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
 
@@ -63,6 +71,7 @@ and stmtkind =
     | If of (exp * blk * blk)
     | Switch of (exp * (typ_exp * blk) list * blk)
     | Exp of exp
+    | UserSpec of assertion
 
 and lbl = int
 
