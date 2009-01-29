@@ -289,7 +289,7 @@ let string_of_err kind where msg =
   let warn = kind^(string_of_loc !cur_loc)^msg in
     if (!verb_debug && where <> "") then warn^" ("^where^")" else warn
 
-let print_warning where msg =
+let report_warning where msg =
   prerr_endline (string_of_err "Warning: " where msg)
 
 let string_of_error = string_of_err ""
@@ -338,14 +338,14 @@ let report_ignore_warning loc msg err_typ =
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
       error loc (msg^" not supported yet"^advice)
   end;
-  print_warning loc (msg^" ignored")
+  report_warning loc (msg^" ignored")
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
       error loc (msg^advice)
   end;
-  print_warning loc (msg^" accepted")
+  report_warning loc (msg^" accepted")
 
 let report_strict_warning msg err =
-  if !use_strict_syntax then print_warning msg err
+  if !use_strict_syntax then report_warning msg err

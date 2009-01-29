@@ -139,7 +139,7 @@ and translate_scalar_cast (e, t2) t1 =
 	  
     | (Newspeak.Int (sign, _) as kt', (Newspeak.Float _ as kt)) ->
 	if sign = Newspeak.Unsigned then begin 
-	  Npkcontext.print_warning "Npkcompile.translate_scalar_cast"
+	  Npkcontext.report_warning "Npkcompile.translate_scalar_cast"
 	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(K.string_of_cast t2 t1))
 	end;

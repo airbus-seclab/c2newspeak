@@ -440,20 +440,20 @@ iteration_statement:
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
-	Npkcontext.print_warning "Parser.iteration_statement" 
+	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
 	([], normalize_bexp $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
-	Npkcontext.print_warning "Parser.iteration_statement" 
+	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "increment statement expected";
 	($3, normalize_bexp $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
-	Npkcontext.print_warning "Parser.iteration_statement" 
+	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
 	([], normalize_bexp $4, $6, []) 
       }
@@ -464,7 +464,7 @@ iteration_statement:
 
 expression_statement:
   SEMICOLON                                { 
-    Npkcontext.print_warning "Parser.expression_statement" 
+    Npkcontext.report_warning "Parser.expression_statement" 
       "halting condition should be explicit";
     exp_of_int 1
   }
@@ -536,7 +536,7 @@ postfix_expression:
 | postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
 | BUILTIN_CONSTANT_P 
   LPAREN expression RPAREN                 { 
-     Npkcontext.print_warning "Parser.assignment_expression"
+     Npkcontext.report_warning "Parser.assignment_expression"
        "__builtin_constant_p ignored, assuming value 0";
     exp_of_int 0
   }
@@ -810,7 +810,7 @@ ityp:
 ident_or_tname:
   IDENTIFIER                             { $1 }
 | TYPEDEF_NAME                           {
-    Npkcontext.print_warning "Parser.ident_or_tname" 
+    Npkcontext.report_warning "Parser.ident_or_tname" 
       ("identifier "^$1^" is defined as a type, avoid using it for "
 	^"another purpose");
     $1 
@@ -973,7 +973,7 @@ attribute_name_list:
 attribute_name:
   ALIGNED                                  { [] }
 | DLLIMPORT                                {
-    Npkcontext.print_warning "Parser.attribute" 
+    Npkcontext.report_warning "Parser.attribute" 
       "ignoring attribute dllimport";
     []
   }

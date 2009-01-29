@@ -494,7 +494,7 @@ let cast t e t' =
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | (Float _, Int (sign, _)) -> 
 	if (sign = Unsigned) then begin
-	  Npkcontext.print_warning "Npkil.cast"
+	  Npkcontext.report_warning "Npkil.cast"
 	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(string_of_cast t t'))
 	end;

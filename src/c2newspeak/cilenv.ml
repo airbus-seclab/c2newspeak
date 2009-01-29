@@ -188,7 +188,7 @@ let compare_formals name l1 l2 =
 
 let update_fun_proto name (args, ret) =
   if (args = None) then begin
-    print_warning "Npkenv.translate_formals"
+    report_warning "Npkenv.translate_formals"
       ("missing or incomplete prototype for "^name)
   end;
 (* TODO: code cleanup necessary for cilcompiler, because much 

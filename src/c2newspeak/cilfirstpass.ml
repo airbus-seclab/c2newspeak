@@ -255,7 +255,7 @@ let first_pass f =
 	    if (x.ginit <> None) && (i <> None) 
 	    then Npkcontext.error "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name);
-	    Npkcontext.print_warning "Firstpass.first_pass.glb_declare" 
+	    Npkcontext.report_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name)
 	  end;
 	  x.gtype <- v.vtype;

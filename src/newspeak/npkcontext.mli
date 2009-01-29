@@ -114,7 +114,7 @@ val get_fname : unit -> string
 (* rename to report_warning *)
 (* TODO: unify these functions!!! into one, with a level!!! *)
 (* TODO: remove this function?? or rename? *)
-val print_warning : string -> string -> unit
+val report_warning : string -> string -> unit
 (* TODO: remove this function *)
 (* TODO: clean up/simplify npkcontext interface *)
 val report_strict_warning: string -> string -> unit

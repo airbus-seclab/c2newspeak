@@ -339,7 +339,7 @@ let translate (globals, spec) =
 	    let o = o + size_of t in
 	    let n = n - 1 in
 	      if (n = 0) then begin
-		Npkcontext.print_warning 
+		Npkcontext.report_warning 
 		  "Firstpass.translate_init.translate_sequence" 
 		  "not enough initializers for array"
 	      end;
@@ -651,7 +651,7 @@ let translate (globals, spec) =
 	    let e = translate_binop op e' e in
 	    let lv = C.BlkLv (post, C.BlkLv (pref, lv', false), true) in
 	      if (post <> []) then begin
-		Npkcontext.print_warning "Firstpass.translate_set" 
+		Npkcontext.report_warning "Firstpass.translate_set" 
 		  "expression without post effects expected"
 	      end;
 	      (lv, e)
@@ -1141,7 +1141,7 @@ let translate (globals, spec) =
 
   and translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
-      Npkcontext.print_warning "Firstpass.check_proto_ftyp" 
+      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
     update_funsymb f static (args, ret) loc

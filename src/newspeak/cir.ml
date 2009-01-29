@@ -255,7 +255,7 @@ let promote k =
 
 let concat_effects blk1 blk2 =
   if (blk1 <> []) && (blk2 <> []) then begin
-    Npkcontext.print_warning "Cir.concat_effect" 
+    Npkcontext.report_warning "Cir.concat_effect" 
       ("the order of execution of side-effects in expressions not specified, "
 	^"picking a random one, be careful")
   end;

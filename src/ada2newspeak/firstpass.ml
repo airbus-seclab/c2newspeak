@@ -1468,7 +1468,7 @@ let translate compil_unit =
 		   | [] -> []
 		   | (_,next_loc)::_ -> 
 		       Npkcontext.set_loc next_loc;
-		       Npkcontext.print_warning 
+		       Npkcontext.report_warning 
 			 "Firstpass.translate_instr_list" 
  			 "Unreachable code";
 		       Npkcontext.set_loc loc;
