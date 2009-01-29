@@ -201,9 +201,7 @@ and string_of_exp e =
     | AddrOf (lv, sz) -> "&_"^(string_of_tmp_nat sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)
 
-    (* TODO: Check this ! *)
-    (* Pretty printing for >= and != *)
-    | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
+    | UnOp (Not, BinOp (op, e1, e2)) ->
 	"("^(string_of_exp e2)^" "^(string_of_binop op)^
 	  " "^(string_of_exp e1)^")"
 
@@ -228,31 +226,19 @@ and string_of_fn f =
 let dump_npko (fnames, globs, funs, _) = 
   let cur_fun = ref "" in
 
-  let lbls = ref (Int_map.empty) in
   let lbl_index = ref 0 in
 
-  let string_of_lbl l =
-    if not !Npkcontext.pretty_print
-    then "lbl"^(string_of_int l)
-    else
-      let pretty_l = try
-	  Int_map.find l !lbls
-	with Not_found ->
-	  lbl_index := !lbl_index + 1;
-	  lbls := Int_map.add l !lbl_index !lbls;
-	  !lbl_index
-      in !cur_fun^"_"^(string_of_int pretty_l)
-  in
+  let string_of_lbl l = "lbl"^(string_of_int l) in
 
-  let rec dump_blk align decls b =
+  let rec dump_blk align b =
     match b with
-      | hd::[] -> dump_stmt align decls true hd
+      | hd::[] -> dump_stmt align true hd
       | hd::r ->
-	  dump_stmt align decls false hd;
-	  List.iter (dump_stmt align decls false) r
+	  dump_stmt align false hd;
+	  List.iter (dump_stmt align false) r
       | [] -> ()
 
-  and dump_stmt align decls only (sk, _) =
+  and dump_stmt align only (sk, _) =
     print_string align;
     match sk with
 	Set (lv, e, sc) ->
@@ -263,24 +249,23 @@ let dump_npko (fnames, globs, funs, _) =
 			    " "^(string_of_lval lv2)^";")
 	    
       | Decl (name, t, body) ->
-	  let new_decls = if !Npkcontext.pretty_print then (name::decls) else [] in
-	    if only then begin
-	      print_endline ((string_of_typ t)^" "^name^";");
-	      dump_blk align new_decls body
-	    end else begin
-	      print_endline "{";
-	      let new_align = align^"  " in
-		print_string new_align;
+	  if only then begin
+	    print_endline ((string_of_typ t)^" "^name^";");
+	    dump_blk align body
+	  end else begin
+	    print_endline "{";
+	    let new_align = align^"  " in
+	      print_string new_align;
 		print_endline ((string_of_typ t)^" "^name^";");
-		dump_blk new_align new_decls body;
+		dump_blk new_align body;
 		print_endline (align^"}")
 	    end
 	     
       | DoWith  (body, lbl, action) ->
 	  print_endline "do {";
-	  dump_blk (align^"  ") decls body;
+	  dump_blk (align^"  ") body;
 	  print_endline (align^"} with lbl"^(string_of_int lbl)^": {");
-	  dump_blk (align^"  ") decls action;
+	  dump_blk (align^"  ") action;
 	  print_endline (align^"}")
 
       | Goto l ->
@@ -294,14 +279,14 @@ let dump_npko (fnames, globs, funs, _) =
       | Select (body1, body2) ->
 	  print_endline (align^"choose {");
 	  print_endline (align^" -->");
-	  dump_blk (align^"  ") decls body1;
+	  dump_blk (align^"  ") body1;
 	  print_endline (align^" -->");
-	  dump_blk (align^"  ") decls body2;
+	  dump_blk (align^"  ") body2;
 	  print_endline (align^"}")
 
       | InfLoop body -> 
 	  print_endline "while (1) {";
-	  dump_blk (align^"  ") decls body;
+	  dump_blk (align^"  ") body;
 	  print_endline (align^"}")
 
       | UserSpec _ -> print_endline (align^"UserSpec;")
@@ -333,7 +318,7 @@ let dump_npko (fnames, globs, funs, _) =
     cur_fun := name;
     lbl_index := 0;
     print_endline (name^"() {");
-    dump_blk "  " [] body;
+    dump_blk "  " body;
     print_endline "}";
     print_newline ()
   in

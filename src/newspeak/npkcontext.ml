@@ -75,7 +75,6 @@ let verb_ast = ref false
 let verb_cir = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
-let pretty_print = ref false
 let accept_transparent_union = ref false
 
 let verbose boolean () =
@@ -231,9 +230,6 @@ let argslist = [
 
   ("--use-cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");
-
-  ("--use-pretty-names", Arg.Set pretty_print,
-   "verbose options: uses var names for Newspeak display");
 
   ("--use-cil-printer", Arg.Set_string cil_printer,
    "verbose options: uses \"default\" or \"plain\" Cil output\n");
