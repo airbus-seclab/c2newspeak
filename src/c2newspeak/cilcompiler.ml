@@ -99,10 +99,9 @@ let rec translate_const c =
     | CReal (f, _, Some s) -> K.Const (Newspeak.CFloat (f, s))
     | CReal (f, _, None) ->
 	let s = string_of_float f in
-	  if !Npkcontext.verb_debug then begin
-	    Npkcontext.print_warning "Npkcompile.translate_const"
-	      ("No string representation available for const "^s)
-	  end;
+	  Npkcontext.print_debug
+	    ("Npkcompile.translate_const:"
+	     ^" No string representation available for const "^s);
 	  K.Const (Newspeak.CFloat (f, s))
 	    
     | CWStr _ | CEnum _	-> 

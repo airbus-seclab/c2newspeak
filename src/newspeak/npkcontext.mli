@@ -54,10 +54,10 @@ type error =
 
 (** {1 Comand line options } *)
 
-(* TODO: remove as many bool refs as possible *)
 (** When global_zero_init is set, cil2newspeak adds init code for all
     globals *)
 val global_zero_init : bool ref
+
 val accept_gnuc : bool ref
 
 (** When remove_temp is set, only used variables are kept in newspeak
@@ -69,7 +69,6 @@ val accept_flex_array: bool ref
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
 
-val verb_debug : bool ref
 val verb_ast : bool ref
 val verb_cir : bool ref
 val verb_npko : bool ref
