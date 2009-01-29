@@ -486,11 +486,6 @@ let string_of_assertion x =
     List.iter append_token x;
     !res
 
-let dump_assertion x = 
-  let dump_token x = print_string ((string_of_token x)^" ") in
-    List.iter dump_token x;
-    print_newline ()
-
 let string_of_blk offset x =
   let buf = Buffer.create 80 in
   let offset = ref offset in
@@ -611,10 +606,12 @@ let dump prog =
   let collect_funbody name body =
     funs := String_map.add name body !funs
   in
+  let specs = List.map string_of_assertion prog.specs in
+  let specs = List.sort compare specs in
     Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals prog.globals;
-    List.iter dump_assertion prog.specs;
+    List.iter print_endline specs;
     dump_mem_zones prog.mem_zones
 
 let string_of_blk x = string_of_blk 0 x

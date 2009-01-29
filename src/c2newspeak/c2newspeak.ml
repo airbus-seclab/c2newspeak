@@ -71,7 +71,7 @@ let _ =
 		  if !Npkcontext.config_file = "" then []
 		  else Compiler.compile_config !Npkcontext.config_file
 		in
-		  Link.link nos mem_zones !Npkcontext.output_file
+		  Linker.link nos mem_zones !Npkcontext.output_file
 	      end
 		
   with Invalid_argument msg -> Npkcontext.exit_on_error msg

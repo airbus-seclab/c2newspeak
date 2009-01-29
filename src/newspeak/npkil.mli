@@ -165,9 +165,7 @@ val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
 
-val read_header: string -> (filenames* (string, ginfo) Hashtbl.t * specs)
-
-val read_fundefs: string -> (fid, funinfo) Hashtbl.t
+val read: string -> t
 
 val create_cstr: string -> (string * ginfo)
 

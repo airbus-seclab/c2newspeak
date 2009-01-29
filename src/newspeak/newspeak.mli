@@ -356,24 +356,6 @@ val write : string -> t -> unit
 *)
 val read : string -> t
 
-(* [write_hdr cout (files, decls, ptr_sz] writes the list of file names,
-    global variable declarations and size of pointer to channel cout.
-    This is useful when incremental dump of Newspeak is needed because of
-    memory constraints.
-*)
-val write_hdr : 
-  out_channel -> 
-  (string list * (string, gdecl) Hashtbl.t * specs * size_t * mem_zones) 
-  -> unit
-
-(* [write_hdr cout fid spec] writes the function fid with its specification
-    spec to channel cout.
-    This is useful when incremental dump of Newspeak is needed because of
-    memory constraints. This function must be called after write_hdr in order
-    to have a correctly formated Newspeak file.
-*)
-val write_fun : out_channel -> fid -> fundec -> unit
-
 val size_of_scalar : size_t -> scalar_t -> size_t
 
 (* 

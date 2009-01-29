@@ -30,7 +30,7 @@ LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
 newspeak.FILES=\
 	config newspeak npkcontext \
-	npkil cir cir2npkil link
+	npkil cir cir2npkil linker
 
 c2newspeak.FILES=\
         pp_syntax pp_parser pp_lexer \

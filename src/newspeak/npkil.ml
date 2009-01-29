@@ -382,14 +382,13 @@ let is_mp_typ t1 t2 =
 	  let _ = is_mp_typs_aux t1 t2 in
 	    false
 
-      | (Array (t1, _), Array (t2, None)) ->
-	  is_mp_typs_aux t1 t2
+      | (Array (t1, _), Array (t2, None)) -> is_mp_typs_aux t1 t2
 
       | (Array (t1, Some l1), Array (t2, Some l2)) when l1 = l2 ->
-	  (is_mp_typs_aux t1 t2)
+	  is_mp_typs_aux t1 t2
     
       | (Region (f1, n1), Region (f2, n2)) when n1 = n2 ->
-	  (is_mp_fields f1 f2)
+	  is_mp_fields f1 f2
 	    
       | _ -> raise Uncomparable
 
@@ -400,7 +399,6 @@ let is_mp_typ t1 t2 =
 	  (is_mp_fields f1 f2) && (is_mp_typs_aux t1 t2)
       | _ -> raise Uncomparable
   in
-    
     is_mp_typs_aux t1 t2
 
 let compare_typs t1 t2 =
@@ -439,8 +437,7 @@ let write out_name prog =
     close_out ch_out;
     Npkcontext.print_debug ("Writing done.")
     
-
-let read_header fname =
+let read fname =
   let cin = open_in_bin fname in
     Npkcontext.print_debug ("Importing "^fname^"...");
     let str = Marshal.from_channel cin in
@@ -449,20 +446,11 @@ let read_header fname =
 	Npkcontext.error 
 	  "Npkil.read_header" (fname^" is an invalid .npko file")
       end;
-      let (srcname, globs, _, specs) = Marshal.from_channel cin in
+      let prog = Marshal.from_channel cin in
 	Npkcontext.print_debug ("Importing done.");
 	close_in cin;
-	(srcname, globs, specs)
-
-let read_fundefs fname =
-  let cin = open_in_bin fname in
-    Npkcontext.print_debug ("Importing funs from "^fname^"...");
-    let _ = Marshal.from_channel cin in
-    let (_, _, funs, _x) = Marshal.from_channel cin in
-      Npkcontext.print_debug ("Funs import done.");
-      close_in cin;
-      funs
-
+	prog
+  
 (* TODO: architecture dependent ?? *)
 (* TODO: probably the best way to deal with this and all size problems
    is to set all these global constants, when a npk file is read ?? 
