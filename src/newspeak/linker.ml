@@ -42,7 +42,7 @@ let funspecs = Hashtbl.create 100
 
 let get_glob_typ name =
   try
-    let (t, _) = Hashtbl.find globals name in
+    let (t, _, _) = Hashtbl.find globals name in
       t
   with Not_found ->
     Npkcontext.report_error "Npklink.get_glob_typ" 
@@ -147,7 +147,7 @@ let generate_global name (t, loc, init, used) =
 	    None
     in
     let t = generate_typ t in
-      Hashtbl.add globals name (t, generate_init i);
+      Hashtbl.add globals name (t, generate_init i, loc);
       Npkcontext.print_debug ("Global linked: "^name)
   end
 

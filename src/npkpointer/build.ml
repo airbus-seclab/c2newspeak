@@ -140,7 +140,7 @@ let translate npk =
       translate init
   in
 
-  let translate_global x (_, init) =
+  let translate_global x (_, init, _) =
     Hashtbl.add vars x x;
     match init with
 	Zero -> ()

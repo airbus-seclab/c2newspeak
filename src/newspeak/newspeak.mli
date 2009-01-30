@@ -102,7 +102,7 @@ type t = {
 
 and globals = (string, gdecl) Hashtbl.t
 
-and gdecl = typ * init_t
+and gdecl = typ * init_t * location
 
 and fundec = ftyp * blk
 
@@ -384,8 +384,6 @@ val build_call: fid -> ftyp -> exp list -> blk
    @param the parameters with which [main] is called
 *)
 val build_main_call: size_t -> ftyp -> string list -> blk
-
-val create_cstr: string -> string -> string * gdecl
 
 val max_ikind: ikind -> ikind -> ikind
 

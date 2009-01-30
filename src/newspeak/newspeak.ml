@@ -105,7 +105,7 @@ type t = {
 
 and globals = (string, gdecl) Hashtbl.t
 
-and gdecl = typ * init_t
+and gdecl = typ * init_t * location
 
 and fundec = ftyp * blk
 
@@ -450,7 +450,8 @@ let string_of_fn f =
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-let dump_gdecl name (t, i) =
+(* TODO: print location too *)
+let dump_gdecl name (t, i, _) =
   let dump_elt (o, s, e) =
     print_string ((string_of_size_t o)^": "^(string_of_scalar s)
 		  ^" "^(string_of_exp e));
@@ -686,29 +687,6 @@ let read name =
     - Coerce/belongs \[a;b\] (const c) becomes const c if c in \[a;b\]
 
     Precondition: all Coerce (l,u) verify l <= u *)
-
-(* TODO: architecture dependent ?? *)
-(* TODO: probably the best way to deal with this and all size problems
-   is to set all these global constants, when a npk file is read ?? 
-Some kind of data structure with all the sizes,
-then function read returns this data structure too
-and there is an init function *)
-let char_sz = 8
-let char_typ = Int (Signed, char_sz)
-
-let init_of_string str =
-  let len = String.length str in
-  let res = ref [(len*char_sz, char_typ, exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
-	res := (i*char_sz, char_typ, exp_of_int c)::!res
-    done;
-    (len + 1, !res)
-
-let create_cstr name str =
-  let (len, init) = init_of_string str in
-  let t = Array (Scalar char_typ, len) in
-    (name, (t, Init init))
 
 let bind_var x t body =
   let rec bind_in_lval n lv =
@@ -1139,6 +1117,24 @@ let set_of_init loc name init =
   in
     List.map set_of_init init
 
+(* TODO: architecture dependent ?? *)
+(* TODO: probably the best way to deal with this and all size problems
+   is to set all these global constants, when a npk file is read ?? 
+   Some kind of data structure with all the sizes,
+   then function read returns this data structure too
+   and there is an init function *)
+let char_sz = 8
+let char_typ = Int (Signed, char_sz)
+  
+let init_of_string str =
+  let len = String.length str in
+  let res = ref [(len*char_sz, char_typ, exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code (String.get str i) in
+	res := (i*char_sz, char_typ, exp_of_int c)::!res
+    done;
+    (len + 1, !res)
+      
 let build_main_args ptr_sz loc params =
   let argv_name = "!ptr_array" in
   let process_param (n, globals, init) p =
@@ -1221,7 +1217,6 @@ let rec build builder prog =
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
-    builder#set_curloc unknown_loc;
     let gdecl = build_gdecl builder gdecl in
     let gdecl = builder#process_global x gdecl in
       Hashtbl.add globals' x gdecl
@@ -1235,10 +1230,11 @@ let rec build builder prog =
     Hashtbl.iter build_fundec prog.fundecs;
     { prog with globals = globals'; fundecs = fundecs' }
 
-and build_gdecl builder (t, init) =
+and build_gdecl builder (t, init, loc) =
+  builder#set_curloc loc;
   let t = build_typ builder t in
   let init = build_init_t builder init in
-    (t, init)
+    (t, init, loc)
 
 and build_fundec builder (ft, body) = 
   let ft = build_ftyp builder ft in
@@ -1616,8 +1612,9 @@ let visit_fun visitor fid (t, body) =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, init) =
-  let continue = visitor#process_gdecl id (t, init) in
+let visit_glb visitor id (t, init, loc) =
+  visitor#set_loc loc;
+  let continue = visitor#process_gdecl id (t, init, loc) in
     if continue then visit_typ visitor t;
     match init with
 	Init x when continue -> List.iter (visit_init visitor) x 
