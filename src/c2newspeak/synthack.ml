@@ -115,7 +115,8 @@ let rec normalize_base_typ t =
       | Name x -> begin
 	  try Hashtbl.find typedefs x
 	  with Not_found -> 
-	    Npkcontext.error "Synthack.normalize_base_typ" ("unknown type "^x)
+	    Npkcontext.report_error "Synthack.normalize_base_typ" 
+	      ("unknown type "^x)
 	end
       | Struct (n, _) -> B.Comp (n, true)
       | Union (n, _) -> B.Comp (n, false)
@@ -140,7 +141,7 @@ and normalize_fields f =
 	      (None, _) -> t
 	    | (Some n, B.Int k) -> B.Bitfield (k, n)
 	    | _ -> 
-		Npkcontext.error "Synthack.normalize_field" 
+		Npkcontext.report_error "Synthack.normalize_field" 
 		  "bit-fields allowed only with integer types"
 	in
 	let x = 
@@ -164,7 +165,7 @@ and normalize_var_modifier b v =
     | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
     | Pointer v -> normalize_var_modifier (B.Ptr b) v
     | Function _ -> 
-	Npkcontext.error "Synthack.normalize_var_modifier" 
+	Npkcontext.report_error "Synthack.normalize_var_modifier" 
 	  "case not implemented yet"
 	  
 and normalize_ftyp (args, ret) =
@@ -191,7 +192,7 @@ and normalize_arg a =
       | None -> "silent argument"
   in
     if (symbdecls <> ([], [])) then begin
-      Npkcontext.error "Synthack.normalize_arg" 
+      Npkcontext.report_error "Synthack.normalize_arg" 
 	"symbol definition not allowed in argument"
     end;
     (t, x)

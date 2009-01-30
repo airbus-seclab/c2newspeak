@@ -83,7 +83,7 @@ let rec arraytyp_to_contrainte typ norm_sb =
     | SubtypName _ -> arraytyp_to_contrainte (norm_sb typ) norm_sb
     | Constrained ( _, contr, true) -> Some contr
     | (*Constrained(_, _, false)*) _  -> 
-	Npkcontext.error
+	Npkcontext.report_error
 	  "Ada_normalize Length contraint"
 	  "Length not implemented for type /= array" 
 	  
@@ -96,7 +96,7 @@ let normalize_name name with_package current_package extern =
     | [] -> (pack, ident)
     | a when a=pack -> (pack, ident)
     | a when (List.mem a with_package) -> (a, ident)
-    | _ -> Npkcontext.error 
+    | _ -> Npkcontext.report_error 
 	"ada_normalize.normalize_name.add_package"
 	  ("unknown package "
 	   ^(Print_syntax_ada.ident_list_to_string parents)) in
@@ -140,7 +140,7 @@ let eval_static exp expected_typ csttbl context with_package
 	    
       | FunctionCall(_) -> raise NonStaticExpression
 	  
-      | NullExpr | CString (_) -> Npkcontext.error 
+      | NullExpr | CString (_) -> Npkcontext.report_error 
 	  "Ada_normalize.eval_static_exp"
 	    "not implemented"
 	    
@@ -180,19 +180,19 @@ let eval_static exp expected_typ csttbl context with_package
 	      
   and eval_static_length subtype = 
     match subtype with	        
-      | Unconstrained _ ->  Npkcontext.error
+      | Unconstrained _ ->  Npkcontext.report_error
 	  " Ada_normalize: length of unconstrained type"
 	    "TODO:clean version of length based on ada_config"
       | Constrained ( _(*typ*), contrainte, true) -> begin
 	  match contrainte with 
-	      RangeConstraint _ ->  Npkcontext.error
+	      RangeConstraint _ ->  Npkcontext.report_error
 		" Ada_normalize: length value of constrained type"
 		"TODO:clean version of length based on ada_config"
 		
 	    | IntegerRangeConstraint (nat1, nat2) -> 
 		IntVal ( Nat.sub nat2 nat1)
 	    
-	    | FloatRangeConstraint _ ->  Npkcontext.error
+	    | FloatRangeConstraint _ ->  Npkcontext.report_error
 		" Ada_normalize: length value of constrained type " 
 		" TODO: Float Range Integer not handled"
 		
@@ -201,14 +201,14 @@ let eval_static exp expected_typ csttbl context with_package
       | Constrained(_, _, false) ->
 	  raise NonStaticExpression
      
-      | SubtypName _ ->  Npkcontext.error
+      | SubtypName _ ->  Npkcontext.report_error
 	  " Ada_normalize: eval static_last (Last)"
 	    " internal error : unexpected subtyp name"
     
 
     and eval_static_last subtype = 
     match subtype with	        
-      | Unconstrained _ ->  Npkcontext.error
+      | Unconstrained _ ->  Npkcontext.report_error
 	  " Ada_normalize: last value of unconstrained type"
 	    "TODO:clean version of last based on ada_config"
       | Constrained ( typ, contrainte, true) -> begin
@@ -223,13 +223,13 @@ let eval_static exp expected_typ csttbl context with_package
 	end
       | Constrained(_, _, false) ->
 	  raise NonStaticExpression
-      | SubtypName _ ->  Npkcontext.error
+      | SubtypName _ ->  Npkcontext.report_error
 	  " Ada_normalize: eval static_last (Last)"
 	    " internal error : unexpected subtyp name"
 	    
     and eval_static_first subtype = 
     match subtype with	        
-      | Unconstrained _ ->  Npkcontext.error
+      | Unconstrained _ ->  Npkcontext.report_error
 	  " Ada_normalize: first value of unconstrained type"
 	    "TODO:clean version of first based on ada_config"
       | Constrained ( typ, contrainte, true) -> begin
@@ -243,7 +243,7 @@ let eval_static exp expected_typ csttbl context with_package
 	end
       | Constrained(_, _, false) ->
 	  raise NonStaticExpression 
-      | SubtypName _ ->  Npkcontext.error
+      | SubtypName _ ->  Npkcontext.report_error
 	  " Ada_normalize: eval static_last (Last)"
 	    " internal error : unexpected subtyp name"
 	   
@@ -272,7 +272,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      in (val1, val2, typ1)
 	    with
 		AmbiguousTypeException -> 
-		  Npkcontext.error "Ada_normalize.eval_static_exp" 
+		  Npkcontext.report_error "Ada_normalize.eval_static_exp" 
 		    "ambiguous operands"
     in 
       Ada_utils.check_operand_typ op typ;
@@ -344,11 +344,11 @@ let eval_static exp expected_typ csttbl context with_package
 	      
 	(* opérations sur les string *)
 	| (Concat,_,_) -> 
-	    Npkcontext.error 
+	    Npkcontext.report_error 
 	      "Ada_normalize.eval_static_binop"
 	      "string error : not implemented "
 	    
-	| _ -> Npkcontext.error "Ada_normalize.eval_static_binop"
+	| _ -> Npkcontext.report_error "Ada_normalize.eval_static_binop"
 	    "invalid operator and argument"
 	      
   and eval_static_unop op exp expected_typ = 
@@ -359,7 +359,7 @@ let eval_static exp expected_typ csttbl context with_package
 	    (IntVal(Nat.neg i), t)
 	| (FloatVal(f,_), Float) -> 
 	    (FloatVal(float_to_flottant (-.f)), Float)
-	| _ -> Npkcontext.error 
+	| _ -> Npkcontext.report_error 
 	    "Ada_normalize.eval_static_exp"
 	      "invalid operator and argument"
 	      
@@ -372,7 +372,7 @@ let eval_static exp expected_typ csttbl context with_package
 	    in (IntVal(abs), t)
 	| (FloatVal(f,_), Float) -> 
 	    (FloatVal(float_to_flottant (abs_float f)), Float)
-	| _ -> Npkcontext.error 
+	| _ -> Npkcontext.report_error 
 	    "Ada_normalize.eval_static_exp"
 	      "invalid operator and argument"
     in
@@ -389,7 +389,7 @@ let eval_static exp expected_typ csttbl context with_package
 		 | Float -> (tr_exp, typ)
 		 | t when (Ada_utils.integer_class t) -> 
 		     (tr_exp, typ)
-		 | _ -> Npkcontext.error 
+		 | _ -> Npkcontext.report_error 
 		     "Ada_normalize.eval_static_unop" 
 		       "Unexpected unary operator and argument")
 		
@@ -407,11 +407,11 @@ let eval_static exp expected_typ csttbl context with_package
 	    (match (eval_static_exp exp expected_typ) with
 	       | (BoolVal(b), Boolean) -> 
 		   (BoolVal(not b), Boolean)
-	       | _ -> Npkcontext.error 
+	       | _ -> Npkcontext.report_error 
 		   "Ada_normalize.eval_static_unop" 
 		     "Unexpected unary operator and argument")
 
-	| _ ->  Npkcontext.error 
+	| _ ->  Npkcontext.report_error 
 	    "Ada_normalize.eval_static_unop" 
 	      "Unexpected unary operator and argument"
 	      
@@ -428,7 +428,7 @@ let eval_static exp expected_typ csttbl context with_package
 	    when var_masque -> 
 	    mem_other_cst r filter use var_masque 
 	| (Number(_)|StaticConst(_)|VarSymb(_))::_ -> 
-	    Npkcontext.error 
+	    Npkcontext.report_error 
 	      "Firstpass.translate_var"
 	      ((string_of_name name)^" is not visible : "
 	       ^"multiple use clauses cause hiding") 
@@ -471,7 +471,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      raise NonStaticExpression
 
 	  | (Number(_)|StaticConst(_)|VarSymb(_))::_ ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.eval_static_cst"
 		(ident^" is not visible : "
 		 ^"multiple use clauses cause hiding")
@@ -481,7 +481,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      if (mem_other_cst r 
 		    (known_compatible_typ expected_typ)
 		    None var_masque)
-	      then (Npkcontext.error
+	      then (Npkcontext.report_error
 		      "Ada_normalize.eval_static_cst"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
@@ -492,7 +492,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      if (mem_other_cst r 
 		    (known_compatible_typ expected_typ)
 		    None var_masque)
-	      then (Npkcontext.error
+	      then (Npkcontext.report_error
 		      "Ada_normalize.eval_static_cst"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
@@ -515,11 +515,11 @@ let eval_static exp expected_typ csttbl context with_package
 
 	  | []  when var_masque -> (* variable masqué : au moins
 				     un symbol mais mauvais type *)
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.eval_static_cst" 
 		"uncompatible types"
 
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Ada_normalize.eval_static_cst" 
 		("cannot find symbol "^ident)
 
@@ -600,7 +600,7 @@ let eval_static exp expected_typ csttbl context with_package
 	| (EnumLitteral(_)|FunSymb(_))::r -> find_enum r
 
 	| [] ->  
-	    Npkcontext.error
+	    Npkcontext.report_error
 	      "Ada_normalize.eval_static_cst" 
 	      "uncompatible types" in
 
@@ -620,7 +620,7 @@ let eval_static exp expected_typ csttbl context with_package
 
 	  | VarSymb _::_ -> raise NonStaticExpression
 		   
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Ada_normalize.eval_static_cst" 
 		("cannot find symbol "^(string_of_name name))
 	  | _ -> find_enum list_symb
@@ -628,7 +628,7 @@ let eval_static exp expected_typ csttbl context with_package
     and avec_selecteur_courant ident name = 
       let rec find_global list_symb = 
 	match list_symb with
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Ada_normalize.eval_static_cst" 
 		("cannot find symbol "^(string_of_name name))
 	  
@@ -640,7 +640,7 @@ let eval_static exp expected_typ csttbl context with_package
 	      in (FloatVal(f), typ)
 
 	  | Number(BoolVal _, _)::_ ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.eval_static_cst"
 		"internal error : number cannot have EnumVal"
 	      
@@ -681,7 +681,7 @@ let eval_static exp expected_typ csttbl context with_package
 	    avec_selecteur (pack,ident)
 	| (pack, ident) when pack = current_package ->
 	    avec_selecteur_courant ([],ident) name
-	| (pack, _) -> Npkcontext.error 
+	| (pack, _) -> Npkcontext.report_error 
 	    "Ada_normalize.eval_static_cst" 
 	      ("unknown package "
 	       ^(Print_syntax_ada.ident_list_to_string pack))
@@ -700,17 +700,17 @@ let eval_static_integer_exp exp csttbl context with_package
 	context with_package current_package extern in
       match v with
 	| FloatVal _ | BoolVal _->
-	    Npkcontext.error 
+	    Npkcontext.report_error 
 	      "Ada_normalize.eval_static_integer_exp"
 	      "expected static integer constant"
 	| IntVal(i) -> i
   with
     | NonStaticExpression -> 
-	 Npkcontext.error 
+	 Npkcontext.report_error 
 	   "Ada_normalize.eval_static_integer_exp"
 	   "expected static expression"
     | AmbiguousTypeException ->
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Ada_normalize.eval_static_integer_exp"
 	  "uncaught ambiguous type exception"
     
@@ -723,18 +723,18 @@ let eval_static_number exp csttbl context with_package
 	context with_package current_package extern in
       match v with
 	| BoolVal _ ->
-	    Npkcontext.error
+	    Npkcontext.report_error
 	      "Ada_normalize.eval_static_integer_exp"
 	      "expected static float or integer constant"
 	| FloatVal(f) -> FloatVal(f)
 	| IntVal(i) -> IntVal(i)
   with
     | NonStaticExpression -> 
-	 Npkcontext.error 
+	 Npkcontext.report_error 
 	   "Ada_normalize.eval_static_integer_exp"
 	   "expected static expression"
     | AmbiguousTypeException ->
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Ada_normalize.eval_static_integer_exp"
 	  "uncaught ambiguous type exception"
     
@@ -744,10 +744,10 @@ let extract_subprog_spec ast = match ast with
   | (context, Body(SubProgramBody(spec,_,_)), loc) -> 
       (context, Spec(SubProgramSpec(spec)), loc)
       
-  | (_, Spec(_), _) -> Npkcontext.error 
+  | (_, Spec(_), _) -> Npkcontext.report_error 
       "Ada_normalize.extract_subprog_spec" 
 	"body expected, specification found"
-  | (_, Body(PackageBody(_)), _) -> Npkcontext.error 
+  | (_, Body(PackageBody(_)), _) -> Npkcontext.report_error 
       "Ada_normalize.parse_specification" 
 	"subprogram body expected, package body found"
 	
@@ -769,7 +769,7 @@ let rec parse_specification name =
   in
     match spec_ast with
       | (_, Spec(_), _) -> spec_ast
-      | (_, Body(_), _) -> Npkcontext.error 
+      | (_, Body(_), _) -> Npkcontext.report_error 
 	  "Ada_utils.parse_specification" 
 	    "specification expected, body found"
    
@@ -780,7 +780,7 @@ and parse_extern_specification name =
   in
     match (normalization spec_ast true) with
       | (_, Spec(spec), loc) -> (spec, loc)
-      | (_, Body(_), _) -> Npkcontext.error 
+      | (_, Body(_), _) -> Npkcontext.report_error 
 	  "Ada_utils.parse_extern_specification" 
 	    "internal error : specification expected, body found"
 
@@ -790,11 +790,11 @@ and parse_package_specification name =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
     | (_, Spec(SubProgramSpec(_)),_) -> 
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Ada_normalize.parse_package_specification" 
 	  ("package specification expected, "
 	   ^"subprogram specification found")
-    | (_, Body _, _) -> Npkcontext.error 
+    | (_, Body _, _) -> Npkcontext.report_error 
 	   "Ada_utils.parse_package_specification" 
 	  "internal error : specification expected, body found"
 
@@ -843,7 +843,7 @@ and normalization compil_unit extern =
 	  then 
 	    context := incr_occurence [] !context name
 	  else 
-	    Npkcontext.error "Ada_normalize.add_context"
+	    Npkcontext.report_error "Ada_normalize.add_context"
 	      ((string_of_name (select,ident))^" is undefined")
 	end
 	      
@@ -869,12 +869,12 @@ and normalization compil_unit extern =
 	 | Number(_, glob) | StaticConst(_, _, glob) 
 	 | VarSymb(glob)
 	 | EnumLitteral(_, _, glob) when global = glob -> 
-	     Npkcontext.error
+	     Npkcontext.report_error
 	       "Ada_normalize.add_cst"
 	       ("conflict : "^(string_of_name nom)
 		^" already declared")
 	 | FunSymb(_,ext) when global && ext=extern ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 	       "Ada_normalize.add_cst"
 	       ("conflict : "^(string_of_name nom)
 		^" already declared")
@@ -890,19 +890,19 @@ and normalization compil_unit extern =
 	   (fun x -> match x with
 	      | Number(_, glob) | VarSymb(glob)
 	      | StaticConst(_, _, glob) when global = glob -> 
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.add_enum"
 		    ("conflict : "^(string_of_name nom)
 		     ^" already declared")
 	      | EnumLitteral(t, _, glob) 
 		  when typ=t && global = glob ->
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.add_enum"
 		    ("conflict : "^(string_of_name nom)
 		     ^" already declared")
 	      | FunSymb(Some(t),ext) when typ=t && global 
 		  && ext=extern ->
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.add_enum"
 		    ("conflict : "^(string_of_name nom)
 		     ^" already declared")
@@ -920,13 +920,13 @@ and normalization compil_unit extern =
 	   (fun x -> match x with
 	      | Number(_, true) | VarSymb(true)
 	      | StaticConst(_, _, true) -> 
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.add_function"
 		    ("conflict : "^(string_of_name nom)
 		     ^" already declared")
 	      | EnumLitteral(t, _, true) 
 		  when typ=Some(t) ->
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.add_function"
 		    ("conflict : "^(string_of_name nom)
 		     ^" already declared")
@@ -957,7 +957,7 @@ and normalization compil_unit extern =
      then
        match Hashtbl.find typtbl nom with
 	 | (_, _, glob) when global = glob -> 
-	     Npkcontext.error
+	     Npkcontext.report_error
 	       "Ada_utils.typ_normalization.add_subtyp"
 	       ("conflict : "^(string_of_name nom)
 		^" already declared")
@@ -1016,10 +1016,10 @@ and normalization compil_unit extern =
 	begin
 	  match find_all_use ident with
 	    | [(typ_decl, loc, _)] -> (typ_decl, loc)
-	    | [] -> Npkcontext.error 
+	    | [] -> Npkcontext.report_error 
 		"Ada_normalize.typ_normalization.find_subtyp" 
 		  ("unknown identifier "^ident)
-	    | _::_ -> Npkcontext.error
+	    | _::_ -> Npkcontext.report_error
 		"Firstpass.find_subtyp"
 		  (ident^" is not visible : "
 		   ^"multiple use clauses cause hiding")
@@ -1030,7 +1030,7 @@ and normalization compil_unit extern =
 	let (decl, loc, _) = Hashtbl.find typtbl x in
 	  (decl,loc)
       with Not_found -> 
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Ada_normalize.normalization.find_typ.avec_selecteur" 
 	  ("unknown identifier "^(string_of_name x))
     
@@ -1038,7 +1038,7 @@ and normalization compil_unit extern =
       let rec find_global list_ident = match list_ident with
 	| (typ_decl, loc, true)::_ -> (typ_decl,loc)
 	| (_, _, false)::r -> find_global r 
-	| [] -> Npkcontext.error 
+	| [] -> Npkcontext.report_error 
 	    "Ada_normalize.normalization.find_typ.selecteur_courant" 
 	      ("unknown identifier "^(string_of_name x)) in
 	find_global (find_all_typ ident)
@@ -1051,7 +1051,7 @@ and normalization compil_unit extern =
 	      avec_selecteur x
 	  | (pack, ident) when pack = !current_package ->
 	      selecteur_courant ([],ident)
-	  | (pack, _) -> Npkcontext.error 
+	  | (pack, _) -> Npkcontext.report_error 
 	      "Ada_normalize.find_typ"
 		("unknown package "
 		 ^(Print_syntax_ada.ident_list_to_string 
@@ -1073,7 +1073,7 @@ and normalization compil_unit extern =
       | [] -> (pack, ident)
       | a when a=pack -> (pack, ident)
       | a when (List.mem a (!with_package)) -> (a, ident)
-      | _ -> Npkcontext.error 
+      | _ -> Npkcontext.report_error 
 	  "ada_normalize.normalize_name.add_package"
 	    ("unknown package "
 	     ^(Print_syntax_ada.ident_list_to_string parents))
@@ -1119,7 +1119,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
   in (match subtyp with
 	| None -> ()
 	| Some(_) -> 
-	    Npkcontext.error
+	    Npkcontext.report_error
 	      "Ada_normalize.normalize_subtyp_indication"
 	      "internal error : subtyp already provided");
     
@@ -1145,13 +1145,13 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
 		(Ada_utils.constraint_is_constraint_compatible
 		   const_ref norm_contrainte)
 	      then 
-		Npkcontext.error
+		Npkcontext.report_error
 		  "Ada_normalize.normalize_subtyp_indication"
 	          "constraint error : uncompatible constraint";
 	      (subtyp_of_constraint norm_contrainte typ stat_ref,
 	       Some(norm_contrainte))
 	| (_, SubtypName _ ) ->
-	    Npkcontext.error
+	    Npkcontext.report_error
 	      "Ada_normalize.normalize_subtyp_indication"
 	      "internal error : unexpected subtyp name"
     in
@@ -1178,11 +1178,11 @@ and normalize_subtyp subtyp =
 	let contrainte = match subtyp with
 	  | Constrained(_,contrainte,_) -> contrainte
 	  | Unconstrained _ -> 
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"array error : no range provided" 
 	  | SubtypName _ -> 
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl" 
 		"internal error : unexpected subtyp name" 
 	in
@@ -1192,11 +1192,11 @@ and normalize_subtyp subtyp =
 	      Some(Nat.to_int (Nat.add Nat.one (Nat.sub sup inf)))
 
 	  | FloatRangeConstraint _ ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"array error : range isn't discret"
 	  | RangeConstraint _ ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"array error : range isn't static" 
 	in
@@ -1259,7 +1259,7 @@ and normalize_exp exp = match exp with
       
       let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
 	match new_contr with 
-	   None -> Npkcontext.error
+	   None -> Npkcontext.report_error
 	     "Ada_normalize Last contraint"
 	     "constraint is not IntegerRange" 
 	     
@@ -1269,10 +1269,10 @@ and normalize_exp exp = match exp with
 	       match exp with 
 		   Last _ ->  CInt b 
 		 | First _ ->  CInt a
-		 | _ ->  Npkcontext.error  
+		 | _ ->  Npkcontext.report_error  
 		     " Ada_normalize" "Should never happen" 
 	     else 
-	       Npkcontext.error  
+	       Npkcontext.report_error  
 		 "Ada_normalize Length contraint"
 		 "Zero length" 
 		 
@@ -1292,7 +1292,7 @@ and normalize_exp exp = match exp with
 	   "Range Constraint fo Length"
 	 *)
 		 
-	 | _ ->  Npkcontext.error 
+	 | _ ->  Npkcontext.report_error 
 	     "Firstpass: in Array access"
 	       "constraint is not IntegerRange"
     end	       
@@ -1345,7 +1345,7 @@ and normalize_exp exp = match exp with
 	 normalize_subtyp 
        in
 	 match new_contr with 
-	     None -> Npkcontext.error
+	     None -> Npkcontext.report_error
 	       " Ada_normalize Length contraint"
 	       "constraint is not IntegerRange" 
 	       
@@ -1353,7 +1353,7 @@ and normalize_exp exp = match exp with
 	       if (Nat.compare a b <=0)
 	       then  
 		 CInt (Nat.add (Nat.sub b a) Nat.one)
-	       else	 Npkcontext.error  
+	       else	 Npkcontext.report_error  
 		 "Ada_normalize Length contraint"
 		 "Zero length" 
 		 
@@ -1369,11 +1369,11 @@ and normalize_exp exp = match exp with
 	   *)
 		 
 	   | Some(RangeConstraint _) ->
-	       Npkcontext.error 
+	       Npkcontext.report_error 
 		 "Ada_normalize Length contraint"
 		 "Range Constraint fo Length"
 		 
-	   | _ ->  Npkcontext.error 
+	   | _ ->  Npkcontext.report_error 
 	       "Firstpass: in Array access"
 		 "constraint is not IntegerRange"
 
@@ -1405,7 +1405,7 @@ and normalize_contrainte contrainte typ =
 	       if f1<=f2
 	       then FloatRangeConstraint(f1, f2)
 	       else 
-		 Npkcontext.error 
+		 Npkcontext.report_error 
 		   "Ada_normalize.normalize_contrainte"
 		   "null range not accepted"
 		   
@@ -1414,7 +1414,7 @@ and normalize_contrainte contrainte typ =
 	       then
 		 IntegerRangeConstraint(i1, i2) 
 	       else 
-		 Npkcontext.error 
+		 Npkcontext.report_error 
 		   "Ada_normalize.normalize_contrainte"
 		   "null range not accepted"
 		   
@@ -1425,7 +1425,7 @@ and normalize_contrainte contrainte typ =
 		 if b1 <= b2
 		 then IntegerRangeConstraint(i1, i2)
 		 else 
-		   Npkcontext.error 
+		   Npkcontext.report_error 
 		     "Ada_normalize.normalize_contrainte"
 		     "null range not accepted"
 		     
@@ -1433,19 +1433,19 @@ and normalize_contrainte contrainte typ =
 	       (* ce cas n'est pas censé se produire :
 		  on a vérifié que les deux bornes sont de même
 		  type.*)
-	       Npkcontext.error 
+	       Npkcontext.report_error 
 		 "Ada_normalize.normalize_contrainte"
 		 ("internal error : range error : expected static "
 		  ^"float or integer constant")
 	 in contrainte
        with
 	 | NonStaticExpression -> 
-	     Npkcontext.error 
+	     Npkcontext.report_error 
 	       "Ada_normalize.normalize_contrainte"
 		 "non-static constraint are not yet supported"
 	       
 	 | AmbiguousTypeException ->
-	     Npkcontext.error 
+	     Npkcontext.report_error 
 	       "Ada_normalize.normalize_contrainte"
 	       "internal error : uncaught ambiguous type exception")
   in
@@ -1455,7 +1455,7 @@ and normalize_contrainte contrainte typ =
 	    
       | IntegerRangeConstraint _ 
       | FloatRangeConstraint _ ->
-	  Npkcontext.error
+	  Npkcontext.report_error
 	    "Ada_normalize.eval_contrainte"
 	    "internal error : unexpected Numeric Range"
 	    
@@ -1501,17 +1501,17 @@ let rec normalize_instr (instr,loc) =
 		    in IntegerRange(ident, norm_contrainte, Some(ikind))
 			
 		| _ -> 
-		    Npkcontext.error
+		    Npkcontext.report_error
 		      "Ada_normalize.normalize_integer_range"
 		      "internal error : uncompatible constraint type"
 	    with
 		NonStaticExpression ->
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.normalize_integer_range"
 		    "expected static expression"
 	  end
       | _ -> 
-	  Npkcontext.error
+	  Npkcontext.report_error
 	    "Ada_normalize.normalize_integer_range"
 	    "internal error : size or constraint already provided"
 	
@@ -1533,7 +1533,7 @@ let rec normalize_instr (instr,loc) =
 	      List.assoc ident rep_assoc
 	    with
 	      | Not_found -> 
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.interpret_enumeration_clause"
 		    ("missing representation for "^ident) in
 	  let make_new_assoc (l, last) (ident,_) =
@@ -1543,13 +1543,13 @@ let rec normalize_instr (instr,loc) =
 		| None -> (new_l, Some(v))
 		| Some(v0) when (Nat.compare v0 v) < 0 -> (new_l, Some(v))
 		| Some _ -> 
-		    Npkcontext.error
+		    Npkcontext.report_error
 		      "Ada_normalize.interpret_enumeration_clause"
 		      "enumeration value not ordered" in 
 	  let (new_assoc, max) =
 	    List.fold_left make_new_assoc ([], None) assoc in 
 	  let max = match max with
-	    | None -> Npkcontext.error
+	    | None -> Npkcontext.report_error
 		      "Ada_normalize.interpret_enumeration_clause"
 		      "internal error : empty enumeration"
 	    | Some(max) -> max in
@@ -1568,7 +1568,7 @@ let rec normalize_instr (instr,loc) =
 	(fun (_, (_,cl_line,_)) ->
 	   if cl_line>=decl_line
 	   then
-	     Npkcontext.error
+	     Npkcontext.report_error
 	       "Ada_normalize.check_represent_clause_order"
 	       ("a representation clause has been found for "
 		^ident^" after its first use"))
@@ -1620,7 +1620,7 @@ let rec normalize_instr (instr,loc) =
 	  in match contrainte with 
 	    | IntegerRangeConstraint(v1, v2) ->
 		IntegerRangeConstraint(change_val v1, change_val v2)
-	    | _ -> Npkcontext.error
+	    | _ -> Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		  ("internal error :"
 		   ^" constraint isnt integer range for enumeration type")
@@ -1632,7 +1632,7 @@ let rec normalize_instr (instr,loc) =
 	  | Integer | Float | Boolean 
 	  | Character -> DerivedType(ident, norm_subtyp_ind)
 	  | (String|IntegerConst) ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"internal error : incorrect type"
 	  (* declared types : simplification *)
@@ -1662,7 +1662,7 @@ let rec normalize_instr (instr,loc) =
 		    | _ -> contrainte 
 		  in Constrained(Declared(typ_decl, loc), contrainte, static)
 	      | SubtypName _ ->
-		  Npkcontext.error
+		  Npkcontext.report_error
 		    "Ada_normalize.normalize_typ_decl"
 		    "internal error : unexpected subtyp name" in
 	  
@@ -1686,22 +1686,22 @@ let rec normalize_instr (instr,loc) =
 	let contrainte = match subtyp with
 	  | Constrained(_,contrainte,_) -> contrainte
 	  | Unconstrained _ -> 
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"array error : no range provided" 
 	  | SubtypName _ -> 
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl" 
 		"internal error : unexpected subtyp name" in
 	let taille = match contrainte with
 	  | IntegerRangeConstraint(inf, sup) ->
 	      Some(Nat.to_int (Nat.add Nat.one (Nat.sub sup inf)))
 	  | FloatRangeConstraint _ ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"array error : range isn't discret"
 	  | RangeConstraint _ ->
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Ada_normalize.normalize_typ_decl"
 		"array error : range isn't static" in
 	let norm_typ = Array(ident, 
@@ -1713,9 +1713,9 @@ let rec normalize_instr (instr,loc) =
 	  norm_typ
 
     | Array(_, ConstrainedArray(_, _, Some _)) ->
-	Npkcontext.error
-	    "Ada_normalize.normalize_typ_decl"
-	    "internal error : size of array already provided"
+	Npkcontext.report_error
+	  "Ada_normalize.normalize_typ_decl"
+	  "internal error : size of array already provided"
 
 
 
@@ -1734,7 +1734,7 @@ let rec normalize_instr (instr,loc) =
       List.map 
 	(fun param -> 
 	   if func && (param.mode <> In)
-	   then (Npkcontext.error 
+	   then (Npkcontext.report_error 
 	     "Ada_normalize.normalize_sub_program_spec"
 	     ("unvalid parameter mode : functions can only have"
 	      ^" \"in\" parameters"))
@@ -1803,7 +1803,7 @@ let rec normalize_instr (instr,loc) =
 	      StaticVal(v)
 	  with
 	    | AmbiguousTypeException ->
-		Npkcontext.error 
+		Npkcontext.report_error 
 		  "Ada_normalize.normalize_basic_decl"
 		  "uncaught ambiguous type exception"
 	    | NonStaticExpression -> 
@@ -1818,7 +1818,7 @@ let rec normalize_instr (instr,loc) =
 	  ObjectDecl(ident_list, norm_subtyp_ind, Some(exp),status)
 	    
     | ObjectDecl(_) ->
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Ada_normalize.normalize_basic_decl"
 	  ("internal error : constant without default value"
 	   ^"or already evaluated")
@@ -2031,7 +2031,7 @@ let rec normalize_instr (instr,loc) =
 	      ident_list;
 	    
 	| NumberDecl(_, _, None) ->
-	    Npkcontext.error
+	    Npkcontext.report_error
 	      "Ada_normalize.add_extern_spec.add_extern_basic_decl"
 	      "internal error : external number declaration without value"	
 	| SpecDecl(SubProgramSpec
@@ -2073,7 +2073,7 @@ let rec normalize_instr (instr,loc) =
 	  
 	  let (norm_spec, loc) = match spec with
 	    | None -> parse_extern_specification nom
-	    | Some(_) -> Npkcontext.error 
+	    | Some(_) -> Npkcontext.report_error 
 		"Ada_normalize.normalize_context" 
 		  "internal error : spec provided"
 	  in

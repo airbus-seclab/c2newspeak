@@ -170,7 +170,7 @@ let nat_of_lexeme base x =
 	None -> (read_digit, 10)
       | Some "0" -> (read_digit, 8)
       | Some "0x" -> (read_hex_digit, 16)
-      | _ -> Npkcontext.error "Csyntax.nat_of_lexeme" "invalid base"
+      | _ -> Npkcontext.report_error "Csyntax.nat_of_lexeme" "invalid base"
   in
   let v = ref Nat.zero in
   let add_digit c =
@@ -197,7 +197,8 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       | (Some _, None) -> [Signed; Unsigned]
       | (_, Some ('u'|'U')) -> Unsigned::[]
       | _ -> 
-	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
+	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
+	    "unreachable statement"
   in
   let min_sz =
     match min_sz with
@@ -205,7 +206,8 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       | Some ("L"|"l") -> Config.size_of_long
       | Some "LL" -> Config.size_of_longlong
       | _ -> 
-	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
+	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
+	    "unreachable statement"
   in
   let is_kind (sign, sz) =
     ((sz >= min_sz)
@@ -221,14 +223,16 @@ let comp_of_typ t =
   match t with
       Comp (n, _)-> n
     | _ -> 
-	Npkcontext.error "Csyntax.comp_of_typ" "struct or union type expected"
+	Npkcontext.report_error "Csyntax.comp_of_typ" 
+	  "struct or union type expected"
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
   let f = 
     try float_of_string value 
     with Failure "float_of_string" -> 
-      Npkcontext.error "Csyntax.float_cst_of_lexeme" "float not representable"
+      Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
+	"float not representable"
   in
 (* TODO: should really think about floating points, I don't know whether it
    is really necessary to keep the suffix on the bare string representation of
@@ -238,7 +242,7 @@ let float_cst_of_lexeme (value, suffix) =
 	None -> (value, Config.size_of_double)
       | Some 'F' -> (value^"F", Config.size_of_float)
       | _ -> 
-	  Npkcontext.error "Csyntax.float_cst_of_lexeme" 
+	  Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
 	    "unknown suffix for float"
   in
     (Cir.CFloat (f, lexeme), Float sz)
@@ -290,12 +294,13 @@ let string_of_ftyp (args_t, _) =
 let ftyp_of_typ t =
   match t with
       Fun t -> t
-    | _ -> Npkcontext.error "Csyntax.ftyp_of_typ" "function type expected"
+    | _ -> 
+	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
 
 let array_of_typ t =
   match t with
       Array a -> a
-    | _ -> Npkcontext.error "Csyntax.array_of_typ" "array type expected"
+    | _ -> Npkcontext.report_error "Csyntax.array_of_typ" "array type expected"
 
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
   let equals (t1, _) (t2, _) = t1 = t2 in
@@ -312,13 +317,14 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
         (None, args_t) | (args_t, None) -> args_t  
       | (Some args_t1, Some args_t2) ->
           if not (List.for_all2 equals args_t1 args_t2) then begin
-            Npkcontext.error "Csyntax.min_ftyp"
+            Npkcontext.report_error "Csyntax.min_ftyp"
               "different argument types for function"
           end;
           Some args_t1
   in
     if (ret_t1 <> ret_t2) then begin
-      Npkcontext.error "Csyntax.min_ftyp" "different return types for function"
+      Npkcontext.report_error "Csyntax.min_ftyp" 
+	"different return types for function"
     end;
     (args_t, ret_t1)  
      

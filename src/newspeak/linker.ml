@@ -45,7 +45,7 @@ let get_glob_typ name =
     let (t, _) = Hashtbl.find globals name in
       t
   with Not_found ->
-    Npkcontext.error "Npklink.get_glob_typ" 
+    Npkcontext.report_error "Npklink.get_glob_typ" 
       ("type for global variable "^name^" not found")
 
 let rec generate_typ t =
@@ -53,7 +53,7 @@ let rec generate_typ t =
       Npkil.Scalar x -> Newspeak.Scalar x
     | Npkil.Array (t, Some l) -> Newspeak.Array (generate_typ t, l)
     | Npkil.Array (_, None) -> 
-	Npkcontext.error "Link.generate_typ" "unknown array length"
+	Npkcontext.report_error "Link.generate_typ" "unknown array length"
     | Npkil.Region (fields, sz) -> 
 	Newspeak.Region (List.map generate_field fields, sz)
 
@@ -99,10 +99,11 @@ and generate_exp e =
 	  try Nat.to_int (generate_tmp_nat sz) 
 	  with Invalid_argument "Newspeak.Nat.to_int" -> Config.max_sizeof
 	in
-	  if (sz > Config.max_sizeof) 
-	  then Npkcontext.error "Link.generate_exp" 
-	    ("size too large: maximum allowed is "
-	     ^(string_of_int Config.max_sizeof)^" bits");
+	  if (sz > Config.max_sizeof) then begin
+	    Npkcontext.report_error "Link.generate_exp" 
+	      ("size too large: maximum allowed is "
+	       ^(string_of_int Config.max_sizeof)^" bits")
+	  end;
 	  Newspeak.AddrOf (generate_lv lv, sz)
     | Npkil.UnOp (o, e) -> Newspeak.UnOp (generate_unop o, generate_exp e)
     | Npkil.BinOp (o, e1, e2) -> 
@@ -127,7 +128,7 @@ and generate_tmp_nat x =
 	match get_glob_typ name with
 	    Newspeak.Array (_, len) -> Nat.of_int len
 	  | _ -> 
-	      Npkcontext.error "Npklink.generate_tmp_nat" 
+	      Npkcontext.report_error "Npklink.generate_tmp_nat" 
 		"array type expected"
       end
     | Npkil.Mult (v, n) -> 
@@ -201,7 +202,7 @@ let generate_fundecs fundecs =
     let ftyp = generate_ftyp ftyp in
       
       if Hashtbl.mem funspecs name then begin
-	Npkcontext.error "Npklink.generate_funspecs" 
+	Npkcontext.report_error "Npklink.generate_funspecs" 
 	  ("function "^name^" declared twice")
       end;
       Hashtbl.add funspecs name (ftyp, body);
@@ -235,7 +236,7 @@ let merge npkos =
 	  else prev_t
 	with Npkil.Uncomparable -> 
 	  (* TODO: add the respective locations *)
-	  Npkcontext.error "Npklink.update_glob_link"
+	  Npkcontext.report_error "Npklink.update_glob_link"
 	    ("different types for "^name^": '"
 	     ^(Npkil.string_of_typ prev_t)^"' and '"
 	     ^(Npkil.string_of_typ t)^"'")
@@ -247,7 +248,7 @@ let merge npkos =
 	  | (Some _, None) -> init
 	  | (None, None) -> prev_init
 	  | (Some (Some _), Some (Some _)) -> 
-	      Npkcontext.error "Npklink.update_glob_link" 
+	      Npkcontext.report_error "Npklink.update_glob_link" 
 		("multiple declaration of "^name)
 	  | _ ->
 	      let info = 

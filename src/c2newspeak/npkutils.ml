@@ -29,7 +29,6 @@
 
 open Cil
 open Cilutils
-open Npkcontext
 
 module Int_set = 
   Set.Make (struct type t = int let compare = Pervasives.compare end)
@@ -41,7 +40,8 @@ module Int_set =
 
 (* Counter are always incremented by incr*)
 let incr cnt = 
-  if !cnt = max_int then Npkcontext.error "Npkutils.incr" "too many objects";
+  if !cnt = max_int 
+  then Npkcontext.report_error "Npkutils.incr" "too many objects";
   incr cnt;
   !cnt
 
@@ -52,7 +52,9 @@ let translate_arith_binop o =
     | Mult -> Newspeak.MultI
     | Div -> Newspeak.DivI
     | Mod -> Newspeak.Mod
-    | _ -> error "Npkutils.translate_arith_binop" "unexpected operator"
+    | _ -> 
+	Npkcontext.report_error "Npkutils.translate_arith_binop" 
+	  "unexpected operator"
 
 let translate_float_binop sz o =
   match o with
@@ -60,7 +62,9 @@ let translate_float_binop sz o =
     | MinusA -> Newspeak.MinusF sz
     | Mult -> Newspeak.MultF sz
     | Div -> Newspeak.DivF sz
-    | _ -> error "Npkutils.translate_float_binop" "unexpected operator"
+    | _ -> 
+	Npkcontext.report_error "Npkutils.translate_float_binop" 
+	  "unexpected operator"
 
 let translate_logical_binop t o =
   match o with
@@ -69,7 +73,9 @@ let translate_logical_binop t o =
     | BXor -> Newspeak.BXor (Newspeak.domain_of_typ t)
     | Shiftlt -> Newspeak.Shiftlt
     | Shiftrt -> Newspeak.Shiftrt
-    | _ -> error "Npkutils.translate_arith_binop" "unexpected operator"
+    | _ -> 
+	Npkcontext.report_error "Npkutils.translate_arith_binop" 
+	  "unexpected operator"
 
 
 let cache = Hashtbl.create 100
@@ -121,7 +127,7 @@ let rec translate_typ t =
               Npkil.Region (descr, sz)
 		
 	| TBuiltin_va_list _ ->
-	    error "Npkutils.translate_typ" 
+	    Npkcontext.report_error "Npkutils.translate_typ" 
               "variable list of arguments not handled yet"
 	      
 	| TFloat (FFloat, _) -> 
@@ -134,7 +140,7 @@ let rec translate_typ t =
 	    Npkil.Scalar (Newspeak.Float Config.size_of_longdouble)
 	    
 	| TVoid _ | TFun _ ->
-            error "Npkutils.translate_typ"
+            Npkcontext.report_error "Npkutils.translate_typ"
 	      ("the type "^(string_of_type t)^" is not handled yet")
     in
       Hashtbl.add cache t t';
@@ -150,14 +156,14 @@ let translate_rel_binop t1 t2 o =
     match (translate_typ t1, translate_typ t2) with
 	(Npkil.Scalar t1, Npkil.Scalar t2) when t1 = t2 -> t1
       | _ -> 
-	  error "Npkutils.translate_rel_binop"
+	  Npkcontext.report_error "Npkutils.translate_rel_binop"
 	    "incompatible types for comparison"
   in
     match o with
       | Gt -> Newspeak.Gt t
       | Eq -> Newspeak.Eq t
       | _ ->
-	  error "Npkutils.translate_rel_binop"
+	  Npkcontext.report_error "Npkutils.translate_rel_binop"
 	    "unexpected operator"
 
 let isPtr e =
@@ -180,17 +186,11 @@ let translate_ftyp (args, ret) =
   in
     (args, translate_ret ret)
 
-(*
-    match x with
-	TFun (ret, args, _, _) -> 
-      | _ -> 
-	  error "Npkutils.translate_ftyp" 
-	    ("invalid type '"^(Cilutils.string_of_type x)^"'") 
-*)
 let translate_loc loc = (loc.file, loc.line, loc.byte) 
 
 let rec ftyp_of_typ t = 
   match t with
       TFun (ret, args, _, _) -> (args, ret)
     | TNamed (info, _) -> ftyp_of_typ info.ttype
-    | _ -> Npkcontext.error "Npkutils.ftyp_of_typ" "function type expected"
+    | _ -> 
+	Npkcontext.report_error "Npkutils.ftyp_of_typ" "function type expected"

@@ -49,7 +49,7 @@ type symb =
 let find_field f r =
   try List.assoc f r 
   with Not_found -> 
-    Npkcontext.error "Firstpass.translate_lv" 
+    Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
 (* [next_aligned o x] returns the smallest integer greater or equal than o,
@@ -99,7 +99,7 @@ let translate (globals, spec) =
   let find_compdef name =
     try Symbtbl.find compdefs name
     with Not_found ->
-      Npkcontext.error "Firstpass.find_compdef" 
+      Npkcontext.report_error "Firstpass.find_compdef" 
 	("unknown structure or union "^name)
   in
     (* TODO: remove this function, put a record, instead of a tuple in compdef
@@ -142,7 +142,7 @@ let translate (globals, spec) =
 	Npkcontext.report_accept_warning "Firstpass.translate.typ_of_var" 
 	  ("unknown identifier "^x^", probably a GNU C token") Npkcontext.GnuC
       end;
-      Npkcontext.error "Firstpass.translate.typ_of_var" 
+      Npkcontext.report_error "Firstpass.translate.typ_of_var" 
 	("unknown identifier "^x)
   in
 
@@ -158,7 +158,7 @@ let translate (globals, spec) =
     match v with
 	EnumSymb i -> (i, t)
       | _ -> 
-	  Npkcontext.error "Firstpass.translate.typ_of_var" 
+	  Npkcontext.report_error "Firstpass.translate.typ_of_var" 
 	  ("enum identifier expected: "^x)
   in
 
@@ -168,7 +168,7 @@ let translate (globals, spec) =
 	LocalSymb v -> (v, t)
       | GlobalSymb v -> (C.Global v, t)
       | _ -> 
-	  Npkcontext.error "Firstpass.find_var" 
+	  Npkcontext.report_error "Firstpass.find_var" 
 	    ("variable identifier expected: "^x)
   in
 
@@ -183,7 +183,9 @@ let translate (globals, spec) =
     let (v, t) = find_symb x in
       match (v, t) with
 	  (GlobalSymb f, Fun ft) -> (f, ft)
-	| _ -> Npkcontext.error "Firstpass.find_fname" ("unknown function: "^x)
+	| _ -> 
+	    Npkcontext.report_error "Firstpass.find_fname" 
+	      ("unknown function: "^x)
   in
 
   let update_global x name loc (t, init) =
@@ -197,7 +199,7 @@ let translate (globals, spec) =
 	    | (Some _, None) | (Some _, Some None) -> prev_init
 	    | (None, None) -> None
 	    | (Some Some _, Some Some _) -> 
-		Npkcontext.error "Firstpass.update_global"
+		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
       with Not_found -> 
 	Symbtbl.bind symbtbl x (v, t);
@@ -238,7 +240,7 @@ let translate (globals, spec) =
 	Comp (name, false) when t1 <> t2 -> 
 	  let f = fields_of_comp name in
 	    if not (List.exists (fun (_, (_, f_t)) -> f_t = t1) f) 
-	    then Npkcontext.error "Firstpass.cast" "incompatible type";
+	    then Npkcontext.report_error "Firstpass.cast" "incompatible type";
 	    (e, t1)
       | _ -> 
 	  let t1' = translate_typ t1 in
@@ -281,7 +283,7 @@ let translate (globals, spec) =
 	      t
 		
 	| (Sequence _, _) -> 
-	    Npkcontext.error "Firstpass.translate_init"
+	    Npkcontext.report_error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
 	  
     and translate_field_sequence o fields seq =
@@ -291,7 +293,8 @@ let translate (globals, spec) =
 	    let _ = 
 	      match expected_f with
 		  Some f when fname <> f ->
-		    Npkcontext.error "Firstpass.translate_field_sequence" 
+		    Npkcontext.report_error 
+		      "Firstpass.translate_field_sequence" 
 		      ("initialization of field "^fname^" expected")
 		| _ -> ()
 	    in
@@ -322,7 +325,8 @@ let translate (globals, spec) =
 	    let o = o + size_of t in
 	      translate_sequence o t (n-1) tl
 	| (Some _, _)::_ ->
-	    Npkcontext.error "Firstpass.translate_init.translate_sequence" 
+	    Npkcontext.report_error 
+	      "Firstpass.translate_init.translate_sequence" 
 	      "anonymous initializer expected for array"
 	    
 	| _::_ -> 
@@ -360,7 +364,8 @@ let translate (globals, spec) =
 	      match translate_array_len n with
 		  Some n -> n
 		| None -> 
-		    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
+		    Npkcontext.report_error 
+		      "Firstpass.translate_init.fill_with_zeros"
 		      "unreachable statement"
 	    in
 	    let sz = size_of t in
@@ -376,7 +381,7 @@ let translate (globals, spec) =
 	      List.iter fill_field f
 
 	| _ -> 
-	    Npkcontext.error "Firstpass.translate_init.fill_with_zeros"
+	    Npkcontext.report_error "Firstpass.translate_init.fill_with_zeros"
 	      "this type of zero initialization not implemented yet"
     in
     let t = translate 0 t x in
@@ -455,12 +460,13 @@ let translate (globals, spec) =
 	    match e with
 		C.Lval (lv, _) -> lv
 	      | _ -> 
-		  Npkcontext.error "Firstpass.translate_lv" 
+		  Npkcontext.report_error "Firstpass.translate_lv" 
 		    "left value expected"
 	  in
 	    (C.BlkLv (body, lv, false), t)
 
-      | _ -> Npkcontext.error "Firstpass.translate_lv" "left value expected"
+      | _ -> 
+	  Npkcontext.report_error "Firstpass.translate_lv" "left value expected"
 
   and translate_array_access (lv, t, n) i =
     try
@@ -501,7 +507,7 @@ let translate (globals, spec) =
 			(e, Ptr elt_t)
 		  | Ptr _ -> translate (AddrOf (Deref lv))
 		  | _ -> 
-		      Npkcontext.error "Firstpass.translate_lv" 
+		      Npkcontext.report_error "Firstpass.translate_lv" 
 			"Array type expected"
 	      end
 						
@@ -610,8 +616,7 @@ let translate (globals, spec) =
 	    match t with
 		Ptr (Fun t) -> t
 	      | _ -> 
-(* TODO: change function error to report_error in Npkcontext!! *)
-		  Npkcontext.error "Firstpass.translate_call"
+		  Npkcontext.report_error "Firstpass.translate_call"
 		    "function pointer expected"
 	  in
 	  let args_t = refine_args_t args_t args in
@@ -623,7 +628,8 @@ let translate (globals, spec) =
   and deref (e, t) =
     match t with
 	Ptr t -> (C.Deref (e, translate_typ t), t)
-      | _ -> Npkcontext.error "Firstpass.deref_typ" "pointer type expected"
+      | _ -> 
+	  Npkcontext.report_error "Firstpass.deref_typ" "pointer type expected"
 	    
 (* TODO: code cleanup: get rid of call to length_of_array in cir2npkil 
    with AddrOf and put it in here *)
@@ -633,7 +639,8 @@ let translate (globals, spec) =
 	  (C.Global f, Fun (Some args_t, ret_t)) -> 
 	    C.AddrOfFun (f, translate_ftyp (args_t, ret_t))
 	| (_, Fun (None, _)) -> 
-	    Npkcontext.error "Firstpass.addr_of" "incomplete type for function"
+	    Npkcontext.report_error "Firstpass.addr_of" 
+	      "incomplete type for function"
 	| _ -> C.AddrOf (e, translate_typ t)
     in
       (e, Ptr t)
@@ -720,7 +727,7 @@ let translate (globals, spec) =
 	      (e::args, (t, id)::args_t)
 	| ([], []) -> ([], [])
 	| _ -> 
-	    Npkcontext.error "Firstpass.translate_exp" 
+	    Npkcontext.report_error "Firstpass.translate_exp" 
 	      "different types at function call"
     in
       translate_args args args_t
@@ -748,7 +755,7 @@ let translate (globals, spec) =
 	      let (sz, _) = translate_exp sz in
 	      let sz = Nat.to_int (C.eval_exp sz) in
 		if sz > n then begin
-		  Npkcontext.error "Firstpass.process_struct_fields"
+		  Npkcontext.report_error "Firstpass.process_struct_fields"
 		    "width of bitfield exceeds its type"
 		end;
 		let o' = if !o+sz <= o' then !o else o' in
@@ -761,7 +768,7 @@ let translate (globals, spec) =
 	  | _ -> (o', t, size_of t)
       in
 	if o' > max_int-sz then begin
-	  Npkcontext.error "Firstpass.process_struct_fields" 
+	  Npkcontext.report_error "Firstpass.process_struct_fields" 
 	    "invalid size for structure"
 	end;
 	o := o'+sz;
@@ -797,7 +804,7 @@ let translate (globals, spec) =
 	  let (_, t) = find_var v in
 	    translate_scalar_typ t
       | _ -> 
-	  Npkcontext.error "Firstpass.translate_scalar_typ" 
+	  Npkcontext.report_error "Firstpass.translate_scalar_typ" 
 	    "scalar type expected"
 
   and translate_typ t =
@@ -818,7 +825,7 @@ let translate (globals, spec) =
 	  let (_, t) = find_var v in
 	    translate_typ t
       | Bitfield _ -> 
-	  Npkcontext.error "Firstpass.translate_typ" 
+	  Npkcontext.report_error "Firstpass.translate_typ" 
 	    "bitfields not allowed outside of structures"
 
   and translate_array_len x =
@@ -830,16 +837,16 @@ let translate (globals, spec) =
 	    try Nat.to_int (C.eval_exp e) 
 	    with Invalid_argument _ -> 
 (* TODO: should print the expression e?? *)
-	      Npkcontext.error "Firstpass.translate_typ" 
+	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	  in
 	    if (i < 0) || (i > Config.max_array_length) then begin
 (* TODO: should print the expression e?? *)
-	      Npkcontext.error "Firstpass.translate_typ" 
+	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	    end;
 	    if (i = 0) then begin
-	      Npkcontext.error "Firstpass.translate_typ" 
+	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"array should have at least 1 element"
 	    end;
 	    Some i
@@ -894,7 +901,8 @@ let translate (globals, spec) =
       match e with
 	  Some e -> (body, e)
 	| None -> 
-	    Npkcontext.error "Firstpass.translate_blk_exp" "expression expected"
+	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
+	      "expression expected"
 
       (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
@@ -1051,7 +1059,7 @@ let translate (globals, spec) =
       | UserSpec x -> (C.UserSpec (translate_assertion x), loc)::[]
 
       | Label _ | VDecl _ | EDecl _ | CDecl _ -> 
-	  Npkcontext.error "Firstpass.translate_stmt" "unreachable code"
+	  Npkcontext.report_error "Firstpass.translate_stmt" "unreachable code"
 
   and translate_assertion x = List.map translate_token x
 
@@ -1231,13 +1239,13 @@ let translate (globals, spec) =
 	| (Eq, _, _) -> (N.Eq (translate_scalar_typ t1), int_typ)
 	    	    
 	| _ ->
-	    Npkcontext.error "Csyntax.translate_binop" 
+	    Npkcontext.report_error "Csyntax.translate_binop" 
 	      "unexpected binary operator and arguments"
     in
     let e2 = 
       match (op, t) with
 	  (N.PlusPI, Ptr (Fun _)) ->
-	    Npkcontext.error "Firstpass.translate_binop"
+	    Npkcontext.report_error "Firstpass.translate_binop"
 	      "pointer arithmetic forbidden on function pointers"
 	| (N.PlusPI, Ptr t) -> 
 	    let step = C.exp_of_int (size_of t) in
@@ -1270,7 +1278,7 @@ let translate (globals, spec) =
 	  let (e, t') = cast (e, t) t' in
 	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), e), t')
       | _ -> 
-	  Npkcontext.error "Csyntax.translate_unop" 
+	  Npkcontext.report_error "Csyntax.translate_unop" 
 	    "Unexpected unary operator and argument"
 
   and size_of t = C.size_of (translate_typ t)
@@ -1295,7 +1303,7 @@ let translate (globals, spec) =
 	    match ft with
 		(Some args_t, ret_t) -> (args_t, ret_t)
 	      | (None, _) -> 
-		  Npkcontext.error "Firstpass.translate_global" 
+		  Npkcontext.report_error "Firstpass.translate_global" 
 		    "unreachable code"
 	  in
 	    Symbtbl.save symbtbl;
@@ -1310,7 +1318,7 @@ let translate (globals, spec) =
 	      
 (* TODO: put this check in parser ?? *)
       | GlbVDecl (_, _, _, extern, Some _) when extern -> 
-	  Npkcontext.error "Firstpass.translate_global"
+	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
  
       | GlbVDecl (_, Fun _, _, _, _) -> ()
@@ -1355,14 +1363,14 @@ let translate (globals, spec) =
 	    update_funsymb f static (Some args_t, ret_t) loc
 
       | FunctionDef _ -> 
-	  Npkcontext.error "Firstpass.translate_global" 
+	  Npkcontext.report_error "Firstpass.translate_global" 
 	    "function type expected"
 
       | GlbVDecl (f, Fun ft, static, _, None) -> 
 	  translate_proto_ftyp f static ft loc
 
       | GlbVDecl (f, Fun _, _, _, Some _) -> 
-	  Npkcontext.error "Firstpass.translate_global"
+	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^f)
 
       | _ -> ()

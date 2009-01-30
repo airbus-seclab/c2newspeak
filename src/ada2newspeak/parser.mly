@@ -20,6 +20,10 @@
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
   
+  Charles Hymans
+  EADS Innovation Works - SE/CS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: charles.hymans@penjili.org
 */
 
 %{ open Syntax_ada
@@ -30,7 +34,7 @@
    let check_ident i1 i2 = 
      if (compare_ident i1 i2) <> 0
      then 
-       Npkcontext.error "Parser.parse_error" 
+       Npkcontext.report_error "Parser.parse_error" 
 	 ("syntax error : \"end "^i1^";\" expected")
      else ()
 
@@ -73,7 +77,7 @@
 	       ( new_ind, None, None (*Some (new_ind)*) )
      in
        match list with 
-           [] -> Npkcontext.error "Parser.parse_error" 
+           [] -> Npkcontext.report_error "Parser.parse_error" 
 	     ("in build matrix, no subtyp given ")
 	 | hd::[] -> ConstrainedArray(hd, typ_ind, None)
 	 | hd::tl ->

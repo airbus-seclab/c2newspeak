@@ -61,7 +61,7 @@ rule token = parse
   | ","                   { PUNCTUATOR }
 
 (* error fallback *)
-  | _                     { Npkcontext.error "Preprocess_lexer" 
+  | _                     { Npkcontext.report_error "Preprocess_lexer" 
 			      ("unknown keyword: "
-				^(Lexing.lexeme lexbuf)
+			       ^(Lexing.lexeme lexbuf)
 				^" in preprocessing directive") }

@@ -35,12 +35,10 @@ let puiss a b =
   let a = Nat.to_big_int a
   and b = Nat.to_big_int b in
     if (Big_int.sign_big_int b)<0
-    then
-      Npkcontext.error
-	"Ada_utils.puiss"
+    then begin
+      Npkcontext.report_error "Ada_utils.puiss"
 	"integer exponent negative"
-    else
-      Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
+    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
       
 let mod_ada a b = 
   let a = Nat.to_big_int a
@@ -71,13 +69,11 @@ let xor a b = (a && (not b)) || ((not a) && b)
 let eq_val v1 v2 = 
   let eq a b = a=b in
     match (v1, v2) with
-      | (IntVal(v1), IntVal(v2)) -> eq v1 v2
-      | (BoolVal(v1), BoolVal(v2)) -> eq v1 v2
-      | (FloatVal(v1), FloatVal(v2)) -> eq v1 v2
-(*      | (EnumVal(v1), EnumVal(v2)) -> eq v1 v2*)
+      | (IntVal v1, IntVal v2) -> eq v1 v2
+      | (BoolVal v1, BoolVal v2) -> eq v1 v2
+      | (FloatVal v1, FloatVal v2) -> eq v1 v2
       | _ ->
-	  Npkcontext.error
-	    "Ada_utils.eq_val"
+	  Npkcontext.report_error "Ada_utils.eq_val"
 	    "internal error : uncompatible value"
 	  
 let inf_val v1 v2 =
@@ -88,8 +84,7 @@ let inf_val v1 v2 =
       | (FloatVal(v1), FloatVal(v2)) -> inf v1 v2
  (*     | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2*)
       | _ ->
-	  Npkcontext.error
-	    "Ada_utils.inf_val"
+	  Npkcontext.report_error "Ada_utils.inf_val"
 	    "internal error : uncompatible value"
 
 (* contraintes *)
@@ -135,8 +130,7 @@ let constraint_is_constraint_compatible cref courante =
        (FloatRangeConstraint _| IntegerRangeConstraint _)) -> true
     | (IntegerRangeConstraint _, FloatRangeConstraint _) 
     | (FloatRangeConstraint _, IntegerRangeConstraint _) -> 
-	Npkcontext.error
-	  "Ada_utils.check_constraint"
+	Npkcontext.report_error "Ada_utils.check_constraint"
 	  "internal error : uncompatible constraints"
 
 (* vérifie que la valeur value respecte bien la contrainte.
@@ -157,12 +151,10 @@ let value_is_static_constraint_compatible contrainte value =
 	between inf sup n
     | ((BoolVal _|IntVal _), FloatRangeConstraint _) 
     | (FloatVal _, IntegerRangeConstraint _) -> 
-	Npkcontext.error
-	  "Ada_utils.check_static_constraint"
+	Npkcontext.report_error "Ada_utils.check_static_constraint"
 	  "internal error : uncompatible value and constraint types"
     | (_,RangeConstraint _) -> 
-	Npkcontext.error
-	  "Ada_utils.check_static_constraint"
+	Npkcontext.report_error "Ada_utils.check_static_constraint"
 	  "internal error : value with non static constraint"
 	  
 let check_static_subtyp subtyp value = 
@@ -172,15 +164,14 @@ let check_static_subtyp subtyp value =
 	if not 
 	  (value_is_static_constraint_compatible
 	     contrainte value)
-	then
-	  Npkcontext.error
-	    "Ada_utils.check_static_subtyp"
+	then begin
+	  Npkcontext.report_error "Ada_utils.check_static_subtyp"
 	    "constraint error : value not in range"
+	end
     | Constrained(_, _, false) ->
 	raise NonStaticExpression
     | SubtypName _ ->
-	Npkcontext.error
-	  "Ada_utils.check_static_subtyp"
+	Npkcontext.report_error "Ada_utils.check_static_subtyp"
 	  "internal error : unexpected subtype name"
 	  
 let constraint_is_static contrainte = match contrainte with
@@ -191,19 +182,19 @@ let constraint_is_static contrainte = match contrainte with
 (* fonctions pour la gestion des types *)
   
 let base_typ subtyp = match subtyp with
-  | Unconstrained(typ) -> typ
-  | Constrained(typ,_,_) -> typ
-  | SubtypName(_) ->
-      Npkcontext.error
-	"Ada_utils.base_type"
+  | Unconstrained typ -> typ
+  | Constrained (typ, _, _) -> typ
+  | SubtypName _ ->
+      Npkcontext.report_error "Ada_utils.base_type"
 	"internal error : unexpected subtyp name"
 
-let extract_subtyp (_,_,subtyp) = 
+let extract_subtyp (_, _, subtyp) = 
   match subtyp with
-  | None -> Npkcontext.error
-      "Ada_utils.extract_subtyp"
+  | None -> 
+      Npkcontext.report_error
+	"Ada_utils.extract_subtyp"
 	"internal error : no subtyp provided"
-  | Some(st) -> st
+  | Some st -> st
 
 let extract_typ subtyp_ind =
   base_typ (extract_subtyp subtyp_ind)
@@ -222,7 +213,7 @@ let rec integer_class typ = match typ with
 	     (base_typ subtyp)
 	 | Array _ -> false
 	 | DerivedType(_,(_,_,None)) ->
-	     Npkcontext.error
+	     Npkcontext.report_error
 	       "Ada_utils.integer_class"
 	       "internal error : no subtype provided")
   | Float -> false
@@ -237,8 +228,9 @@ let check_typ expected found =
     | (Some(t1), t2) when t1=t2 -> t1
     | (Some(IntegerConst), t) when (integer_class t) -> t
     | (Some(t), IntegerConst) when (integer_class t) -> t
-    | _ -> Npkcontext.error "Ada_utils.check_typ"
-	"uncompatible types"
+    | _ -> 
+	Npkcontext.report_error "Ada_utils.check_typ"
+	  "uncompatible types"
 	  
 and known_compatible_typ expected found = 
   match (expected, found) with
@@ -260,17 +252,19 @@ let typ_operand op expected_typ = match op with
 	 | None -> None
 	 | Some(t) when (integer_class t) -> Some(t)
 	 | Some(Float) -> Some(Float)
-	 | Some(_) -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | Some(_) -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | Rem | Mod -> 
       (* type entier uniquement *)
       (match expected_typ with
 	 | None -> None
-	 | Some(t) when (integer_class t) -> Some(t)
-	 | Some(_) -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | Some t when integer_class t -> Some(t)
+	 | Some _ -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | Lt | Gt | Le | Ge | Eq | Neq -> 
@@ -279,8 +273,9 @@ let typ_operand op expected_typ = match op with
       (match expected_typ with
 	 | None -> None
 	 | Some(Boolean) -> None
-	 | Some(_) -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | Some(_) -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | And | Or | Xor | OrElse | AndThen -> 
@@ -289,12 +284,13 @@ let typ_operand op expected_typ = match op with
       (match expected_typ with
 	 | None -> Some(Boolean)
 	 | Some(Boolean) -> Some(Boolean)
-	 | Some(_) -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | Some(_) -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | Concat -> 
-      Npkcontext.error 
+      Npkcontext.report_error 
 	"Firstpass.translate_binop" 
 	"concat not implemented"
 	
@@ -304,16 +300,18 @@ let check_operand_typ op typ = match op with
       (match typ with
 	 | t when (integer_class t) -> ()
 	 | Float -> ()
-	 | _ -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | _ -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | Rem | Mod -> 
       (* type entier uniquement *)
       (match typ with
 	 | t when (integer_class t) -> ()
-	 | _ -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | _ -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | Lt | Gt | Le | Ge | Eq | Neq -> ()
@@ -322,12 +320,13 @@ let check_operand_typ op typ = match op with
       (* type booléen *)
       (match typ with
 	 | Boolean -> ()
-	 | _ -> Npkcontext.error 
-	     "Firstpass.translate_binop" 
+	 | _ -> 
+	     Npkcontext.report_error 
+	       "Firstpass.translate_binop" 
 	       "invalid operator and argument")
 	
   | Concat -> 
-      Npkcontext.error 
+      Npkcontext.report_error 
 	"Firstpass.translate_binop" 
 	"concat not implemented"
 

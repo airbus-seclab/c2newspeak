@@ -51,7 +51,7 @@ let unknown_lexeme lexbuf =
   let line = string_of_int pos.pos_lnum in
   let lexeme = Lexing.lexeme lexbuf in
   let err_msg = "line: "^line^", unknown keyword: "^lexeme in
-    Npkcontext.error "Lexer.unknown_lexeme" err_msg
+    Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
 
 let int_of_hex_character str =
   let str = "0x"^str in
@@ -78,7 +78,7 @@ let trim_newline str =
     with Not_found -> 
       try String.index str '\n' 
       with Not_found -> 
-	Npkcontext.error "Preprocess.trim_newline" "end of line expected"
+	Npkcontext.report_error "Preprocess.trim_newline" "end of line expected"
   in
     String.sub str 0 i
 
@@ -183,7 +183,7 @@ rule token = parse
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | "'" ((('\\'_)|[^'\\''\''])+ as c)
     "'"                 { CHARACTER (character (Lexing.from_string c)) }
-  | wide_character      { Npkcontext.error "Lexer.token" 
+  | wide_character      { Npkcontext.report_error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }
   | '"' ((('\\'_)|[^'\\''"'])* as str)
@@ -198,7 +198,7 @@ rule token = parse
 	end;
 	STRING (!res) 
     }
-  | wide_string         { Npkcontext.error "Lexer.token" 
+  | wide_string         { Npkcontext.report_error "Lexer.token" 
 			    "wide string literals not supported" }
 (* punctuation *)
   | "..."               { ELLIPSIS }

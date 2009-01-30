@@ -35,10 +35,10 @@ module Set = Set.Make(String)
 let translate_scalar t =
   match t with
       Scalar t -> t
-    | Void -> Npkcontext.error "Cir2npkil.translate_scalar" 
+    | Void -> Npkcontext.report_error "Cir2npkil.translate_scalar" 
 	"value void not ignored as it ought to be"
     | _ -> 
-	Npkcontext.error "Cir2npkil.translate_scalar" 
+	Npkcontext.report_error "Cir2npkil.translate_scalar" 
 	  ("unexpected non scalar type: "^(string_of_typ t))
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
@@ -73,7 +73,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
       let t' =
 	match t with
 	    Void -> 
-	      Npkcontext.error "Compiler.translate_typ" 
+	      Npkcontext.report_error "Compiler.translate_typ" 
 		"type void not allowed here"
 	  | Scalar t -> K.Scalar t
 	  | Array (t, sz) -> K.Array (translate_typ t, sz)
@@ -81,7 +81,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	      let translate_field (_, (o, t)) = (o, translate_typ t) in
 		K.Region (List.map translate_field fields, sz)
 	  | Fun -> 
-	      Npkcontext.error "Compiler.translate_typ" 
+	      Npkcontext.report_error "Compiler.translate_typ" 
 		"function not allowed here"
       in
 	Hashtbl.add translated_typ t t';
@@ -120,7 +120,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    K.Deref (e, sz)
 
       | BlkLv _ ->
-	  Npkcontext.error "Compiler.translate_lval"
+	  Npkcontext.report_error "Compiler.translate_lval"
 	    "unexpected side-effect in left value"
 
   and translate_exp e =
@@ -159,11 +159,11 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    K.BinOp (op, e1, e2)
 
       | Pref _ -> 
-	  Npkcontext.error "Compiler.translate_exp"
+	  Npkcontext.report_error "Compiler.translate_exp"
 	    "unexpected side-effect in expression"
 
       | Call _ -> 
-	  Npkcontext.error "Compiler.translate_exp"
+	  Npkcontext.report_error "Compiler.translate_exp"
 	    "unexpected call in expression"	  
   in
 
@@ -243,11 +243,11 @@ let translate (cglbdecls, cfundefs, specs) fnames =
       | UserSpec x -> (K.UserSpec (translate_assertion x), loc)::[]
 
       | Exp _ -> 
-	  Npkcontext.error "Compiler.translate_stmt" 
+	  Npkcontext.report_error "Compiler.translate_stmt" 
 	    "unexpected expression as statement"
 
       | Decl _ -> 
-	  Npkcontext.error "Compiler.translate_stmt" "unreachable code"
+	  Npkcontext.report_error "Compiler.translate_stmt" "unreachable code"
 
   and append_args loc args fid f =
     let rec append x args =

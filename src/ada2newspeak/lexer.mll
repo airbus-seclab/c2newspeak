@@ -64,8 +64,8 @@
 	then ""
 	else ("-"^(string_of_int end_col)))
     in
-    let err_msg = pos^", unknown keyword: '"^lexeme^"'"
-    in Npkcontext.error "Lexer.unknown_lexeme" err_msg
+    let err_msg = pos^", unknown keyword: '"^lexeme^"'" in 
+      Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
 
 }
 (*à élargir : accent *)

@@ -428,7 +428,7 @@ let read fname =
     let str = Marshal.from_channel cin in
       if str <> "NPKO" then begin 
 	close_in cin;
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Npkil.read_header" (fname^" is an invalid .npko file")
       end;
       let prog = Marshal.from_channel cin in
@@ -500,7 +500,7 @@ let cast t e t' =
 	end;
 	UnOp (Cast (t, t'), e)
     | _ -> 
-	Npkcontext.error "Npkil.cast"
+	Npkcontext.report_error "Npkil.cast"
 	  ("invalid cast "^(string_of_cast t t'))
 
 let rec append_decls d body =

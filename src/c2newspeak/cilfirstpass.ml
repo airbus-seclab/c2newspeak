@@ -171,7 +171,7 @@ let check_main_signature t =
     match unrollType t with
 	TFun (_, Some args, _, []) -> args
       | _ ->
-	  Npkcontext.error "Npkfirstpass.check_main_signature"
+	  Npkcontext.report_error "Npkfirstpass.check_main_signature"
 	    "main, should have a function type"
   in
     match args with
@@ -182,7 +182,7 @@ let check_main_signature t =
 		TPtr (TPtr (TInt (IChar, []), []), []))
 	    -> ()
       | _ ->
-	  Npkcontext.error "Npkfirstpass.check_main_signature: "
+	  Npkcontext.report_error "Npkfirstpass.check_main_signature: "
 	    ("invalid argument types for main, "
 	     ^"authorized forms are main() and"
 	     ^" main(int, char**)")
@@ -200,14 +200,14 @@ let first_pass f =
     let ftyp =
       match f.svar.vtype with
 	  TFun (ret, args, _, _) -> (args, ret)
-	| _ -> Npkcontext.error "Cilfirstpass.first_pass" "TODO"
+	| _ -> Npkcontext.report_error "Cilfirstpass.first_pass" "TODO"
     in
     let ftyp = Npkutils.translate_ftyp ftyp in
       
       Cilenv.update_fun_proto name ftyp;
 
       if (Hashtbl.mem fun_specs name) 
-      then Npkcontext.error "Firstpass.first_pass.update_fun_def" 
+      then Npkcontext.report_error "Firstpass.first_pass.update_fun_def" 
 	("multiple definition for "^name);
       
       let translate_vinfo v = 
@@ -227,7 +227,7 @@ let first_pass f =
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
-	  then Npkcontext.error "Firstpass.first_pass.update_glob_decl"
+	  then Npkcontext.report_error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
@@ -245,7 +245,7 @@ let first_pass f =
 		     (translate_typ x.gtype) 
 		     (translate_typ v.vtype))
 	    (* TODO: add the respective locations *)
-	  then Npkcontext.error "Firstpass.first_pass.update_glob_decl"
+	  then Npkcontext.report_error "Firstpass.first_pass.update_glob_decl"
 	    ("different types for "^name^": '"
 	      ^(string_of_type x.gtype)^"' and '"
 	      ^(string_of_type v.vtype)^"'");
@@ -253,7 +253,7 @@ let first_pass f =
 	    Npkcontext.report_accept_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple definition for "^name) Npkcontext.MultipleDef;
 	    if (x.ginit <> None) && (i <> None) 
-	    then Npkcontext.error "Firstpass.first_pass.glb_declare" 
+	    then Npkcontext.report_error "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name);
 	    Npkcontext.report_warning "Firstpass.first_pass.glb_declare" 
 	      ("multiple declarations for "^name)
@@ -294,7 +294,7 @@ let first_pass f =
 	  | [GVar (v, {init = i}, _)] -> update_glob_def v i
 		
 	  | _ ->
-	      Npkcontext.error "Firstpass.first_pass.explore"
+	      Npkcontext.report_error "Firstpass.first_pass.explore"
 		("global "^(string_of_global g)^" not supported")
   in
 

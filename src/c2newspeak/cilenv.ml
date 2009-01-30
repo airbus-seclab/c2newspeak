@@ -29,7 +29,6 @@
 
 open Cil
 open Cilutils
-open Npkcontext
 open Npkutils
 open Npkil
 
@@ -106,7 +105,8 @@ let create_npkil name =
       | (_, None) -> ()
      (* if the functions arguments are undetermined, then the function
 	is necessarily a prototype *)
-      | (None, _) -> error "Env.create_npkil" "Code unreachable"
+      | (None, _) -> 
+	  Npkcontext.report_error "Env.create_npkil" "Code unreachable"
   in
     Hashtbl.iter add_funinfo fun_specs;
     (name::[], Hashtbl.copy glb_decls, fundefs, [])
@@ -115,8 +115,9 @@ let create_npkil name =
 (* Globals *)
 (*---------*)
 let glb_uniquename v =
-  if not v.vglob
-  then error "Npkenv.glb_uniquename" "global variable expected";
+  if not v.vglob then begin
+    Npkcontext.report_error "Npkenv.glb_uniquename" "global variable expected"
+  end;
   try
     if v.vstorage = Static
     then Hashtbl.find static_glb_names v
@@ -180,7 +181,7 @@ let compare_formals name l1 l2 =
 
       | _ ->
 	  (* TODO: add the respective locations *)
-	error "Npkenv.compare_formals"
+	Npkcontext.report_error "Npkenv.compare_formals"
 	  ("different types for function "^name)
   in
     compare_aux l1 l2;
@@ -188,7 +189,7 @@ let compare_formals name l1 l2 =
 
 let update_fun_proto name (args, ret) =
   if (args = None) then begin
-    report_warning "Npkenv.translate_formals"
+    Npkcontext.report_warning "Npkenv.translate_formals"
       ("missing or incomplete prototype for "^name)
   end;
 (* TODO: code cleanup necessary for cilcompiler, because much 
@@ -202,7 +203,7 @@ let update_fun_proto name (args, ret) =
 	| Some t1, Some t2 when t1 = t2 -> ()
 	| _ ->
 	    (* TODO: add the respective types and locations ? *)
-	    error "Npkenv.update_fun_proto"
+	    Npkcontext.report_error "Npkenv.update_fun_proto"
 	      ("different types for return type of prototype "^name)
     in
       
@@ -250,8 +251,9 @@ let get_var cil_var =
       let n = !loc_cnt - vid in
 	Npkil.Local n
     with Not_found -> 
-      error "Npkenv.get_var"
-	("unexpected variable "^(Cilutils.string_of_lval (Var cil_var, NoOffset)))
+      Npkcontext.report_error "Npkenv.get_var"
+	("unexpected variable "
+	 ^(Cilutils.string_of_lval (Var cil_var, NoOffset)))
   end
 
 let get_cstr str =

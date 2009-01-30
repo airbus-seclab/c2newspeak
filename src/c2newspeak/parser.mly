@@ -46,9 +46,10 @@ let apply_attrs attrs t =
       ([], _) -> t
     | (new_sz::[], Int (sign, _)) -> Int (sign, new_sz)
     | (_::[], _) -> 
-	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
+	Npkcontext.report_error "Parser.apply_attr" 
+	  "wrong type, integer expected"
     | _ -> 
-	Npkcontext.error "Parser.apply_attr" 
+	Npkcontext.report_error "Parser.apply_attr" 
 	  "more than one attribute not handled yet"
 
 (* TODO: code not so nice: simplify? *)
@@ -116,7 +117,8 @@ let normalize_fun_prologue b m =
       | Some x -> x
       | None -> 
 	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+	  Npkcontext.report_error "Firstpass.translate_global" 
+	    "unknown function name"
   in
     (t, x, loc)
 
@@ -127,17 +129,19 @@ let build_fundef static ((b, m), body) =
       | Some x -> x
       | None -> 
 	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+	  Npkcontext.report_error "Firstpass.translate_global" 
+	    "unknown function name"
   in
     (FunctionDef (x, t, static, body), loc)::[]
 
 let build_type_decl d =
   let ((edecls, cdecls), (t, _, _)) = Synthack.normalize_decl d in
     if (edecls <> []) then begin 
-      Npkcontext.error "Parser.build_type_decl" "unexpected enum declaration"
+      Npkcontext.report_error "Parser.build_type_decl" 
+	"unexpected enum declaration"
     end;
     if (cdecls <> []) then begin 
-      Npkcontext.error "Parser.build_type_decl" 
+      Npkcontext.report_error "Parser.build_type_decl" 
 	"unexpected composite declaration"
     end;
     t
@@ -335,7 +339,7 @@ old_parameter_declaration:
       match init with
 	  None when attr = [] -> (b, m)
 	| _ -> 
-	    Npkcontext.error "Parser.old_parameter_declaration"
+	    Npkcontext.report_error "Parser.old_parameter_declaration"
 	      "parameter can not be initialized"
     in
       List.map normalize_param m

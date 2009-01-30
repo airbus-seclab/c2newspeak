@@ -22,11 +22,12 @@
   
 *)
 
-open Npkcontext
 
 let compile fname =
-  if not (Filename.check_suffix fname Params.ada_suffix)
-  then error "Ada2newspeak.compile" (fname^" is not a .adb file");
+  if not (Filename.check_suffix fname Params.ada_suffix) then begin
+    Npkcontext.report_error "Ada2newspeak.compile" 
+      (fname^" is not a .adb file")
+  end;
 
   let prog = Compiler.compile fname
   in

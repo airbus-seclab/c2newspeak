@@ -123,8 +123,8 @@ val report_ignore_warning: string -> string -> error -> unit
   (** [report_accept_warning file_function message error_type] *)
 val report_accept_warning: string -> string -> error -> unit
 (** Throws an Invalid_argument exception with a message *)
-(* TODO: rename this function into report_error *)
-val error : string -> string -> 'a
+
+val report_error : string -> string -> 'a
 
 (** Displays a message to the user *)
 val print_debug : string -> unit

@@ -298,7 +298,7 @@ let print_debug msg =
   if !verb_debug then 
     prerr_endline ("Debug: "^(string_of_loc !cur_loc)^msg)
 
-let error where msg = invalid_arg (string_of_error where msg)
+let report_error where msg = invalid_arg (string_of_error where msg)
 
 let exit_on_error msg =
   prerr_endline ("Fatal error: "^msg);
@@ -319,13 +319,13 @@ let handle_cmdline_options version_string comment_string =
     end;
     
     if !input_files = [] then begin
-      error "C2Newspeak.handle_cmdline_options"
+      report_error "C2Newspeak.handle_cmdline_options"
 	("no file specified. Try "^Sys.argv.(0)^" --help")
     end;
     
     if (List.length !input_files > 1) && !compile_only 
       && (!output_file <> "") then begin
-	error "C2Newspeak.handle_cmdline_options" 
+	report_error "C2Newspeak.handle_cmdline_options" 
 	  ("You cannot specify the output filename (-o) for multiple "
 	   ^"files when only compiling (-c)")
       end;
@@ -336,14 +336,14 @@ let handle_cmdline_options version_string comment_string =
 let report_ignore_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
-      error loc (msg^" not supported yet"^advice)
+      report_error loc (msg^" not supported yet"^advice)
   end;
   report_warning loc (msg^" ignored")
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
-      error loc (msg^advice)
+      report_error loc (msg^advice)
   end;
   report_warning loc (msg^" accepted")
 

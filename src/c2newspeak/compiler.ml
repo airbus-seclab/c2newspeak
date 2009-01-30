@@ -42,7 +42,7 @@ let parse fname =
       let advice = ", rewrite your code" in
 	if (not !Npkcontext.accept_gnuc)
 	then Npkcontext.report_accept_warning loc msg Npkcontext.GnuC;
-	Npkcontext.error loc (msg^advice)
+	Npkcontext.report_error loc (msg^advice)
 
 (* TODO: try to do this using function parse ? factor code with previous 
    function *)
@@ -54,7 +54,7 @@ let append_gnu_symbols globals =
       let (_, (gnuc_symbols, _)) = Parser.parse Lexer.token lexbuf in
 	gnuc_symbols@globals
     with Parsing.Parse_error -> 
-      Npkcontext.error "Compiler.append_gnu_symbols" 
+      Npkcontext.report_error "Compiler.append_gnu_symbols" 
 	"unexpected error while parsing GNU C symbols"
 
 let compile fname =
@@ -81,7 +81,8 @@ let eval_exp x =
   match x with
       Cst (Cir.CInt n, _) -> n
     | _ -> 
-	Npkcontext.error "Compiler.compile_config" "constant address expected"
+	Npkcontext.report_error "Compiler.compile_config" 
+	  "constant address expected"
   
 let compile_config fname =
   let cin = open_in fname in
@@ -97,7 +98,7 @@ let compile_config fname =
 	let sz = 
 	  try Nat.to_int sz
 	  with _ -> 
-	    Npkcontext.error "Compiler.config" 
+	    Npkcontext.report_error "Compiler.config" 
 	      "size of memory zone too large"
 	in
 	  (addr, sz)
@@ -106,4 +107,4 @@ let compile_config fname =
     with Parsing.Parse_error -> 
       let loc = "Compiler.compile_config" in
       let lexeme = Lexing.lexeme lexbuf in
-	Npkcontext.error loc ("syntax error: unexpected token: "^lexeme)
+	Npkcontext.report_error loc ("syntax error: unexpected token: "^lexeme)
