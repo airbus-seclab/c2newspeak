@@ -373,7 +373,6 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
-    (* TODO: remove used_glbs, do it directly on glbdecls *)
     Set.iter flag_glb !used_glbs;
     let specs = List.map translate_assertion specs in
       (fnames, glbdecls, fundefs, specs)
