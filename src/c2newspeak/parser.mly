@@ -368,7 +368,7 @@ statement:
     [If (normalize_bexp $3, $5, $7), get_loc ()] 
   }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
-| iteration_statement                      { [For $1, get_loc ()] }
+| iteration_statement                      { [$1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
 | assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
@@ -404,31 +404,31 @@ iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
-      statement                            { ($3, normalize_bexp $5, $8, $6) }
+      statement                            { For($3, normalize_bexp $5, $8, $6) }
 | FOR LPAREN SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	([], normalize_bexp $4, $7, $5) 
+	For([], normalize_bexp $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	($3, normalize_bexp $5, $7, []) 
+	For($3, normalize_bexp $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
 	Npkcontext.print_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	([], normalize_bexp $4, $6, []) 
+	For([], normalize_bexp $4, $6, []) 
       }
-| WHILE LPAREN expression RPAREN statement { ([], normalize_bexp $3, $5, []) }
+| WHILE LPAREN expression RPAREN statement { For([], normalize_bexp $3, $5, []) }
 | DO statement
-  WHILE LPAREN expression RPAREN SEMICOLON { ($2, normalize_bexp $5, $2, []) }
+  WHILE LPAREN expression RPAREN SEMICOLON { DoWhile($2, normalize_bexp $5) }
 ;;
 
 expression_statement:

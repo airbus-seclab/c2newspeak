@@ -48,6 +48,7 @@ let accept_gnuc = ref false
 let opt_checks = ref true
 
 let accept_forward_goto = ref false
+let accept_backward_goto = ref false
 
 let accept_dirty_syntax = ref false
 let use_strict_syntax = ref false
@@ -104,6 +105,7 @@ type error =
   | DirtySyntax
   | PartialFunTyp
   | ForwardGoto
+  | BackwardGoto
   | StrictSyntax
   | ExternGlobal
   | FlexArray
@@ -124,6 +126,7 @@ let flag_of_error err =
     | DirtySyntax -> accept_dirty_syntax
     | PartialFunTyp -> accept_missing_ftyp
     | ForwardGoto -> accept_forward_goto
+    | BackwardGoto -> accept_backward_goto
     | StrictSyntax -> use_strict_syntax
     | ExternGlobal -> accept_extern
     | FlexArray -> accept_flex_array
@@ -145,6 +148,7 @@ let opt_of_error err =
     | DirtySyntax -> "--accept-dirty-syntax"
     | PartialFunTyp -> "--accept-missing-funtyp"
     | ForwardGoto -> "--accept-forward-goto"
+    | BackwardGoto -> "--accept-backward-goto"
     | StrictSyntax -> "--use-strict-syntax"
     | ExternGlobal -> "--accept-extern"
     | FlexArray -> "--accept-flexible-array"
@@ -177,6 +181,10 @@ let argslist = [
 
   (opt_of_error ForwardGoto, Arg.Set (flag_of_error ForwardGoto),
    "accepts forward goto statements");
+
+  (opt_of_error BackwardGoto, Arg.Set (flag_of_error BackwardGoto),
+   "accepts backward goto statements (replaces them by forward ones. "
+   ^"Should be combined with --accept-forward-goto)");
 
   (opt_of_error TransparentUnion, Arg.Set (flag_of_error TransparentUnion),
    "accepts transparent unions");

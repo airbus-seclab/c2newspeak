@@ -41,6 +41,7 @@ type error =
   | DirtySyntax
   | PartialFunTyp
   | ForwardGoto
+  | BackwardGoto
   | StrictSyntax
   | ExternGlobal
   | FlexArray
@@ -76,6 +77,9 @@ val verb_npko : bool ref
 val verb_newspeak : bool ref
 
 val opt_checks: bool ref
+
+(** If true, then the goto elimination transformation of backward gotos is performed *)
+val accept_backward_goto: bool ref
 
 (** when the pretty_print boolean is set, locals and globals are
     displayed in a prettier way if possible (with their names) *)
