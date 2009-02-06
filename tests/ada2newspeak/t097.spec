@@ -20,10 +20,12 @@ t097.piou() {
 t097.proc() {
   do {
     int32 x;
-    choose {
-    --> assert(Global(t097.a)_uint1);
-        0- =(int32) belongs[-2147483648,2147483648-1] 2;
-    --> assert(! Global(t097.a)_uint1);
+        choose {
+     -->
+      guard(Global(t097.a)_uint1);
+      0- =(int32) belongs[-2147483648,2147483648-1] 2;
+     -->
+      guard(! Global(t097.a)_uint1);
     }
     {
       int32 t099.arg1;
@@ -52,9 +54,11 @@ void t097.piou(int32) {
 void t097.proc(int32) {
   (t097.adb:14#185)^int32 x;
   (t097.adb:17#213)^choose {
-    | t097.a_uint1 -->
-      (t097.adb:19#237)^0- =(int32) 2;
-    | ! t097.a_uint1 -->
+   -->
+    (t097.adb:17#213)^guard(t097.a_uint1);
+    (t097.adb:19#237)^0- =(int32) 2;
+   -->
+    (t097.adb:17#213)^guard(! t097.a_uint1);
   }
   (t097.adb:21#268)^{
     int32 t099.arg1;

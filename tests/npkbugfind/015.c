@@ -23,35 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
-%{
-open Csyntax
-%}
+void f() {
+}
 
-%token MINUS EOF START END
-
-%token <string> IDENTIFIER
-%token <char> SYMBOL
-%token <string option * string * char option * string option> INTEGER
-%token <string * char option> FLOATCST
-
-%type <Csyntax.spec> parse
-%start parse
-
-%%
-
-parse:
-  START assertion END parse                { $2::$4 }
-|                                          { [] }
-;;
-
-assertion:
-  SYMBOL assertion                         { (SymbolToken $1)::$2 }
-| IDENTIFIER assertion                     { (IdentToken $1)::$2 }
-| constant assertion                       { (CstToken $1)::$2 }
-|                                          { [] }
-;;
-
-constant:
-| INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
-| FLOATCST                                 { Csyntax.float_cst_of_lexeme $1 }
-;;
+void main() {
+}

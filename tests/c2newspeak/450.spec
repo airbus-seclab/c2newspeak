@@ -3,8 +3,10 @@ Newspeak output
 450.c
 void main(void) {
   (450.c:27#2)^choose {
-    | ! (&_16(!450.c.const_str_-) ==_ptr nil) -->
-    | (&_16(!450.c.const_str_-) ==_ptr nil) -->
+   -->
+    (450.c:27#2)^guard(! (&_16(!450.c.const_str_-) ==_ptr nil));
+   -->
+    (450.c:27#2)^guard((&_16(!450.c.const_str_-) ==_ptr nil));
   }
 }
 

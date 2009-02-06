@@ -42,6 +42,7 @@ open Cil
 
 (* Translation options *)
 let ignores_asm = ref false
+let ignores_extern_fundef = ref false
 let ignores_pack = ref false
 let ignores_volatile = ref false
 let accept_gnuc = ref false
@@ -75,7 +76,6 @@ let verb_ast = ref false
 let verb_cir = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
-let pretty_print = ref false
 let accept_transparent_union = ref false
 
 let verbose boolean () =
@@ -115,6 +115,7 @@ type error =
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
+  | ExternFunDef
 
 let flag_of_error err =
   match err with
@@ -136,7 +137,7 @@ let flag_of_error err =
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
     | TransparentUnion -> accept_transparent_union
-
+    | ExternFunDef -> ignores_extern_fundef
  
 let opt_of_error err =
   match err with
@@ -158,6 +159,7 @@ let opt_of_error err =
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"
     | TransparentUnion -> "--accept-transparent-union"
+    | ExternFunDef -> "--ignore-extern-definition"
 
 (* Version *)
 
@@ -222,6 +224,9 @@ let argslist = [
   (opt_of_error Pack, Arg.Set (flag_of_error Pack),
    "ignores any packed attribute");
 
+  (opt_of_error ExternFunDef, Arg.Set (flag_of_error ExternFunDef),
+   "ignores the body of extern function definitions");
+
   (opt_of_error Volatile, Arg.Set (flag_of_error Volatile),
    "ignores 'volatile' type qualifier\n");
   
@@ -233,9 +238,6 @@ let argslist = [
 
   ("--use-cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");
-
-  ("--use-pretty-names", Arg.Set pretty_print,
-   "verbose options: uses var names for Newspeak display");
 
   ("--use-cil-printer", Arg.Set_string cil_printer,
    "verbose options: uses \"default\" or \"plain\" Cil output\n");
@@ -295,7 +297,7 @@ let string_of_err kind where msg =
   let warn = kind^(string_of_loc !cur_loc)^msg in
     if (!verb_debug && where <> "") then warn^" ("^where^")" else warn
 
-let print_warning where msg =
+let report_warning where msg =
   prerr_endline (string_of_err "Warning: " where msg)
 
 let string_of_error = string_of_err ""
@@ -304,7 +306,7 @@ let print_debug msg =
   if !verb_debug then 
     prerr_endline ("Debug: "^(string_of_loc !cur_loc)^msg)
 
-let error where msg = invalid_arg (string_of_error where msg)
+let report_error where msg = invalid_arg (string_of_error where msg)
 
 let exit_on_error msg =
   prerr_endline ("Fatal error: "^msg);
@@ -325,13 +327,13 @@ let handle_cmdline_options version_string comment_string =
     end;
     
     if !input_files = [] then begin
-      error "C2Newspeak.handle_cmdline_options"
+      report_error "C2Newspeak.handle_cmdline_options"
 	("no file specified. Try "^Sys.argv.(0)^" --help")
     end;
     
     if (List.length !input_files > 1) && !compile_only 
       && (!output_file <> "") then begin
-	error "C2Newspeak.handle_cmdline_options" 
+	report_error "C2Newspeak.handle_cmdline_options" 
 	  ("You cannot specify the output filename (-o) for multiple "
 	   ^"files when only compiling (-c)")
       end;
@@ -342,16 +344,16 @@ let handle_cmdline_options version_string comment_string =
 let report_ignore_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
-      error loc (msg^" not supported yet"^advice)
+      report_error loc (msg^" not supported yet"^advice)
   end;
-  print_warning loc (msg^" ignored")
+  report_warning loc (msg^" ignored")
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
-      error loc (msg^advice)
+      report_error loc (msg^advice)
   end;
-  print_warning loc (msg^" accepted")
+  report_warning loc (msg^" accepted")
 
 let report_strict_warning msg err =
-  if !use_strict_syntax then print_warning msg err
+  if !use_strict_syntax then report_warning msg err

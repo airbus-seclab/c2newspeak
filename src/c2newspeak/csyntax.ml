@@ -25,13 +25,14 @@
 
 open Newspeak
 
-type prog = (global * location) list
+type prog = (global * location) list * assertion list
 
-and spec = spec_token list list
+and assertion = spec_token list
 
 and spec_token = 
   | SymbolToken of char
   | IdentToken of string
+  | LvalToken of exp
   | CstToken of cst
       
 and global = 
@@ -96,6 +97,7 @@ and stmtkind =
   | Block of blk
   | Goto of lbl
   | Label of lbl
+  | UserSpec of assertion
 
 and lbl = string
 
@@ -115,6 +117,7 @@ and exp =
     | Sizeof of typ
     | SizeofE of exp
     | Str of string
+    | FunName
     | Cast of (exp * typ)
 (* None is a regular assignment *)
     | Set of (exp * binop option * exp)
@@ -168,7 +171,7 @@ let nat_of_lexeme base x =
 	None -> (read_digit, 10)
       | Some "0" -> (read_digit, 8)
       | Some "0x" -> (read_hex_digit, 16)
-      | _ -> Npkcontext.error "Csyntax.nat_of_lexeme" "invalid base"
+      | _ -> Npkcontext.report_error "Csyntax.nat_of_lexeme" "invalid base"
   in
   let v = ref Nat.zero in
   let add_digit c =
@@ -195,7 +198,8 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       | (Some _, None) -> [Signed; Unsigned]
       | (_, Some ('u'|'U')) -> Unsigned::[]
       | _ -> 
-	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
+	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
+	    "unreachable statement"
   in
   let min_sz =
     match min_sz with
@@ -203,7 +207,8 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       | Some ("L"|"l") -> Config.size_of_long
       | Some "LL" -> Config.size_of_longlong
       | _ -> 
-	  Npkcontext.error "Csyntax.int_cst_of_lexeme" "unreachable statement"
+	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
+	    "unreachable statement"
   in
   let is_kind (sign, sz) =
     ((sz >= min_sz)
@@ -219,14 +224,16 @@ let comp_of_typ t =
   match t with
       Comp (n, _)-> n
     | _ -> 
-	Npkcontext.error "Csyntax.comp_of_typ" "struct or union type expected"
+	Npkcontext.report_error "Csyntax.comp_of_typ" 
+	  "struct or union type expected"
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
   let f = 
     try float_of_string value 
     with Failure "float_of_string" -> 
-      Npkcontext.error "Csyntax.float_cst_of_lexeme" "float not representable"
+      Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
+	"float not representable"
   in
 (* TODO: should really think about floating points, I don't know whether it
    is really necessary to keep the suffix on the bare string representation of
@@ -236,7 +243,7 @@ let float_cst_of_lexeme (value, suffix) =
 	None -> (value, Config.size_of_double)
       | Some 'F' -> (value^"F", Config.size_of_float)
       | _ -> 
-	  Npkcontext.error "Csyntax.float_cst_of_lexeme" 
+	  Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
 	    "unknown suffix for float"
   in
     (Cir.CFloat (f, lexeme), Float sz)
@@ -289,6 +296,7 @@ and string_of_exp margin e =
     | Sizeof _ -> "Sizeof"
     | SizeofE _ -> "SizeofE"
     | Str _ -> "Str"
+    | FunName -> "FunName"
     | Cast _ -> "Cast"
     | Set (lv, None, e) -> (string_of_exp margin lv)^" = "^(string_of_exp margin e)^";"
     | Set _ -> "Set"
@@ -340,6 +348,8 @@ and string_of_stmt margin (x, _) =
 
     | Continue -> "continue;"
 
+    | UserSpec _ -> "UserSpec"
+
 and string_of_blk margin x =
   match x with
       [] -> ""
@@ -360,7 +370,10 @@ let string_of_ftyp margin (args_t, _) =
 let ftyp_of_typ t =
   match t with
       Fun t -> t
-    | _ -> Npkcontext.error "Csyntax.ftyp_of_typ" "function type expected"
+    | _ -> 
+	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
+
+
 
 let print prog =
   let s = ref "" in
@@ -375,6 +388,7 @@ let print prog =
       | GlbEDecl (x, _) -> s:= !s ^("etyp " ^x^";\n")
       | GlbCDecl (x, _, _) -> s:= !s ^("ctyp "^x^";\n")
   in
+  let (prog, _) = prog in
     List.iter print prog;
     print_endline !s
 
@@ -382,6 +396,12 @@ let string_of_typ = string_of_typ ""
 let string_of_ftyp = string_of_ftyp ""
 let string_of_exp = string_of_exp ""
 let string_of_blk = string_of_blk ""
+
+
+let array_of_typ t =
+  match t with
+      Array a -> a
+    | _ -> Npkcontext.report_error "Csyntax.array_of_typ" "array type expected"
 
 
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
@@ -399,13 +419,14 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
         (None, args_t) | (args_t, None) -> args_t  
       | (Some args_t1, Some args_t2) ->
           if not (List.for_all2 equals args_t1 args_t2) then begin
-            Npkcontext.error "Csyntax.min_ftyp"
+            Npkcontext.report_error "Csyntax.min_ftyp"
               "different argument types for function"
           end;
           Some args_t1
   in
     if (ret_t1 <> ret_t2) then begin
-      Npkcontext.error "Csyntax.min_ftyp" "different return types for function"
+      Npkcontext.report_error "Csyntax.min_ftyp" 
+	"different return types for function"
     end;
     (args_t, ret_t1)  
      

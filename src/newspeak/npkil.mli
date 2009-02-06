@@ -31,8 +31,10 @@ open Newspeak
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
-type t = (filenames * (string, ginfo) Hashtbl.t * (fid, funinfo) Hashtbl.t
-	   * assertion list)
+type t = (filenames 
+	  * (string, ginfo) Hashtbl.t 
+	  * (fid, funinfo) Hashtbl.t
+	  * assertion list)
 
 and filenames = string list
 
@@ -48,11 +50,21 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | ChooseAssert of (exp list * blk) list
+  | Guard of exp
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
+
+and assertion = token list
+
+and token = 
+    SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lval
+  | CstToken of Newspeak.cst
 
 and stmt = stmtkind * location
 
@@ -65,7 +77,7 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
@@ -79,13 +91,13 @@ and fn =
 and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
-      Belongs_tmp of (Nat.t * tmp_nat)
-    | Coerce of Newspeak.bounds
-    | Not
-    | BNot of Newspeak.bounds
-    | PtrToInt of ikind
-    | IntToPtr of ikind
-    | Cast of (scalar_t * scalar_t)
+    Belongs_tmp of (Nat.t * tmp_nat)
+  | Coerce of Newspeak.bounds
+  | Not
+  | BNot of Newspeak.bounds
+  | PtrToInt of ikind
+  | IntToPtr of ikind
+  | Cast of (scalar_t * scalar_t)
 
 and typ = 
     Scalar of scalar_t
@@ -153,9 +165,7 @@ val is_mp_typ : typ -> typ -> bool
 
 val write: string -> t -> unit
 
-val read_header: string -> (filenames* (string, ginfo) Hashtbl.t * specs)
-
-val read_fundefs: string -> (fid, funinfo) Hashtbl.t
+val read: string -> t
 
 val create_cstr: string -> (string * ginfo)
 

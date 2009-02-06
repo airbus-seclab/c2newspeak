@@ -51,7 +51,7 @@ let unknown_lexeme lexbuf =
   let line = string_of_int pos.pos_lnum in
   let lexeme = Lexing.lexeme lexbuf in
   let err_msg = "line: "^line^", unknown keyword: "^lexeme in
-    Npkcontext.error "Lexer.unknown_lexeme" err_msg
+    Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
 
 let int_of_hex_character str =
   let str = "0x"^str in
@@ -78,7 +78,7 @@ let trim_newline str =
     with Not_found -> 
       try String.index str '\n' 
       with Not_found -> 
-	Npkcontext.error "Preprocess.trim_newline" "end of line expected"
+	Npkcontext.report_error "Preprocess.trim_newline" "end of line expected"
   in
     String.sub str 0 i
 
@@ -137,8 +137,7 @@ let oct_character =
   | ("\\" (oct_digit oct_digit oct_digit as value))
 let wide_character = 'L''\'' _ '\''
 
-(* TODO: remove argument spec_buf, it's a pain, put it in synthack ? *)
-rule token spec_buf = parse
+rule token = parse
 
 (* keywords *)
     "asm"               { ASM }
@@ -184,7 +183,7 @@ rule token spec_buf = parse
   | hex_integer         { INTEGER (Some "0x", value, sign, length) }
   | "'" ((('\\'_)|[^'\\''\''])+ as c)
     "'"                 { CHARACTER (character (Lexing.from_string c)) }
-  | wide_character      { Npkcontext.error "Lexer.token" 
+  | wide_character      { Npkcontext.report_error "Lexer.token" 
 			    "wide characters not supported" }
   | float               { FLOATCST (value, suffix) }
   | '"' ((('\\'_)|[^'\\''"'])* as str)
@@ -199,7 +198,7 @@ rule token spec_buf = parse
 	end;
 	STRING (!res) 
     }
-  | wide_string         { Npkcontext.error "Lexer.token" 
+  | wide_string         { Npkcontext.report_error "Lexer.token" 
 			    "wide string literals not supported" }
 (* punctuation *)
   | "..."               { ELLIPSIS }
@@ -254,33 +253,42 @@ rule token spec_buf = parse
   | identifier          { token_of_ident (Lexing.lexeme lexbuf) }
 
   | "#" line            { preprocess lexbuf; cnt_line lexbuf; 
-			  token spec_buf lexbuf }
+			  token lexbuf }
 
-  | "/*!npk"            { Buffer.add_string spec_buf "/*!npk"; 
-			  spec spec_buf lexbuf }
-  | "/*"                { comment spec_buf lexbuf }
-  | line_comment        { cnt_line lexbuf; token spec_buf lexbuf }
-  | new_line            { cnt_line lexbuf; token spec_buf lexbuf }
-  | white_space         { token spec_buf lexbuf }
+  | "/*!npk"            { NPK (Parser.assertion npk_spec lexbuf) }
+  | "/*"                { comment lexbuf }
+  | line_comment        { cnt_line lexbuf; token lexbuf }
+  | new_line            { cnt_line lexbuf; token lexbuf }
+  | white_space         { token lexbuf }
 
   | eof                 { EOF }
 (* error fallback *)
   | _                   { unknown_lexeme lexbuf }
 
 
-and comment spec_buf = parse
+and comment = parse
 
-  | "*/"                { token spec_buf lexbuf }
-  | new_line            { cnt_line lexbuf; comment spec_buf lexbuf }
-  | _                   { comment spec_buf lexbuf }
+  | "*/"                { token lexbuf }
+  | new_line            { cnt_line lexbuf; comment lexbuf }
+  | _                   { comment lexbuf }
 
-and spec spec_buf = parse
-  | "*/"                { Buffer.add_string spec_buf "*/";
-			  token spec_buf lexbuf }
-  | new_line            { Buffer.add_string spec_buf (Lexing.lexeme lexbuf);
-			  cnt_line lexbuf; token spec_buf lexbuf }
-  | _ as c              { Buffer.add_char spec_buf c; 
-			  spec spec_buf lexbuf }
+and npk_spec = parse
+(* TODO: try to factor code more *)
+  | oct_integer         { INTEGER (Some "0", value, sign, length) }
+  | integer             { INTEGER (None, value, sign, length) }
+  | hex_integer         { INTEGER (Some "0x", value, sign, length) }
+  | float               { FLOATCST (value, suffix) }
+  | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
+
+  | '$' ([^'$']* as content) 
+    '$'                 { let lexbuf = Lexing.from_string content in
+			    EXP (Parser.expression token lexbuf) }
+
+  | "*/"                { EOF }
+  | white_space         { npk_spec lexbuf }
+  | new_line            { cnt_line lexbuf; npk_spec lexbuf }
+
+  | _ as c              { SYMBOL c }
 
 and character = parse
   | oct_character       { int_of_oct_character value }

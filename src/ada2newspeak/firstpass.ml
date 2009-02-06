@@ -70,7 +70,7 @@ let base_typ = Ada_utils.base_typ
 let extract_scalar_typ cir_typ = match cir_typ with
   | C.Scalar(t) -> t
   | _ -> 
-      Npkcontext.error
+      Npkcontext.report_error
 	"Firstpass.extract_scalar_typ"
 	"type isn't a scalar type"
 
@@ -84,7 +84,7 @@ let make_check_constraint contrainte exp =
     | FloatRangeConstraint(_, _) -> exp
 	
     | RangeConstraint _ ->
-	Npkcontext.error
+	Npkcontext.report_error
 	  "Firstpass.make_check_constraint"
 	  "internal error : unexpected range constraint (non-static)"
 	  
@@ -94,7 +94,7 @@ let make_check_subtyp subtyp exp =
     | Constrained(_, contrainte, _) ->
 	make_check_constraint contrainte exp
     | SubtypName _ ->
-	Npkcontext.error
+	Npkcontext.report_error
 	  "Firstpass.make_check_subtyp"
 	  "internal error : unexpected subtyp name"
 	  
@@ -109,14 +109,14 @@ let make_offset styp exp size =
 		
 		C.Binop (Newspeak.MultI, decal,  size)
 	 
-	  |  _ -> Npkcontext.error "Firstpass.make_offset"
+	  |  _ -> Npkcontext.report_error "Firstpass.make_offset"
 	       "contrainte (not IntegerRangeConstraint) not coded yet "
 		
 	end
 	  
     | Unconstrained _ -> exp 
 	
-    | SubtypName _ -> Npkcontext.error "Firstpass.make_offset"
+    | SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
 	"SubtypName not implemented yet (especially for Enum)"
 	  
 	  
@@ -187,7 +187,7 @@ let translate compil_unit =
 	  f_with (pack,ident)
       | (pack, ident) when pack = !current_package ->
 	  f_current ([],ident) name
-      | (pack, _) -> Npkcontext.error 
+      | (pack, _) -> Npkcontext.report_error 
 	  "Firstpass.find_name"
 	    ("unknown package "
 	     ^(Print_syntax_ada.ident_list_to_string 
@@ -202,7 +202,7 @@ let translate compil_unit =
     | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
     | Declared(typ_decl, _) -> translate_declared typ_decl
     | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
-    | String -> Npkcontext.error "Firstpass.translate_typ"
+    | String -> Npkcontext.report_error "Firstpass.translate_typ"
 	"String not implemented"
   and translate_declared typ_decl = match typ_decl with
     | Enum(_, _, bits) -> C.Scalar(Npk.Int(bits))
@@ -211,7 +211,7 @@ let translate compil_unit =
     | IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
     | Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
 	C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)    
-    | IntegerRange(_,_,None) -> Npkcontext.error 
+    | IntegerRange(_,_,None) -> Npkcontext.report_error 
 	"Firstpass.translate_declared"
 	  "internal error : no bounds provided for IntegerRange"
   and translate_subtyp subtyp = translate_typ (base_typ subtyp)
@@ -249,7 +249,7 @@ let translate compil_unit =
 	   (* sinon la déclaration est local, 
 	      cela cause une erreur *)
 	   | ((VarSymb(_)|EnumSymb(_)|NumberSymb (_)),_,_)-> 
-	       Npkcontext.error "Firstpass.add_var"
+	       Npkcontext.report_error "Firstpass.add_var"
 		 ("conflict : "^(string_of_name x)
 		  ^" already declared")
       );
@@ -276,11 +276,11 @@ let translate compil_unit =
 	   | (VarSymb(_, _, global,_),_,_) 
 	   | (EnumSymb(_,_, global),_,_)
 	   | (NumberSymb(_,global),_,_) when global=lvl -> 
-	       Npkcontext.error "Firstpass.add_number"
+	       Npkcontext.report_error "Firstpass.add_number"
 		 ("conflict : "^(string_of_name x)
 		  ^" already declared")
 	   | (FunSymb _,_,_) when lvl -> 
-	       Npkcontext.error "Firstpass.add_number"
+	       Npkcontext.report_error "Firstpass.add_number"
 		 ("conflict : "^(string_of_name x)
 		  ^" already declared")
 		 
@@ -292,7 +292,7 @@ let translate compil_unit =
 	| IntVal _ -> translate_typ IntegerConst
 	| FloatVal _ -> translate_typ Float
 	| BoolVal _ -> 
-	    Npkcontext.error
+	    Npkcontext.report_error
 	      "Firstpass.add_number"
 	      "internal error : number cannot have Enum val"
       in
@@ -314,14 +314,14 @@ let translate compil_unit =
 		   courante *)
 	      | ((VarSymb(_, _, global',_) | NumberSymb(_,global')),
 		 _,_) when global=global' -> 
-		  Npkcontext.error "Firstpass.add_enum"
+		  Npkcontext.report_error "Firstpass.add_enum"
 		    ("conflict : "^ident^" already declared")
 		 
 	      (* erreur : déclaration d'un symbol d'énumération
 		 de même type et de même niveau *)
 	      | (EnumSymb(_, t, global'),_,_) 
 		  when t=typ && global=global' ->
-		  Npkcontext.error "Firstpass.add_enum"
+		  Npkcontext.report_error "Firstpass.add_enum"
 		    ("conflict : "^ident^" already declared")
 		    
 	      (* il existe une fonction interne sans argument 
@@ -329,7 +329,7 @@ let translate compil_unit =
 		 d'énumération, qui est global *)
 	      | (FunSymb (_, Function(_, [], st), false, _), _, _) 
 		  when global && (base_typ st)=typ ->
-		  Npkcontext.error "Firstpass.add_enum"
+		  Npkcontext.report_error "Firstpass.add_enum"
 		    ("conflict : "^ident^" already declared")
 		 
 	      | ((EnumSymb(_)|VarSymb(_)
@@ -353,17 +353,17 @@ let translate compil_unit =
 		    ou de nombre globale *)
 	       | (NumberSymb(_, true),_,_) 
 	       | (VarSymb(_, _, true,_),_,_) -> 
-		   Npkcontext.error "Firstpass.add_global"
+		   Npkcontext.report_error "Firstpass.add_global"
 		     ("conflict : "^x^" already declared")
 		    
 	       (* déclaration d'un symbol d'énumération global *)
 	       | (EnumSymb(_, _, true),_,_) -> 
-		   Npkcontext.error "Firstpass.add_global"
+		   Npkcontext.report_error "Firstpass.add_global"
 		     ("conflict : "^x^" already declared")
 		    
 	       (* fonction interne *)
 	       | (FunSymb (_, Function(_, _, _), false, _), _, _) ->
-		   Npkcontext.error "Firstpass.add_enum"
+		   Npkcontext.report_error "Firstpass.add_enum"
 		     ("conflict : "^x^" already declared")
 		     
 	       | ((EnumSymb _ |VarSymb(_)
@@ -406,7 +406,7 @@ let translate compil_unit =
 	| ((VarSymb(_)|NumberSymb(_)),_,_)::r when var_masque -> 
 	    mem_other_symb r var_masque
 	| ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
-	    Npkcontext.error 
+	    Npkcontext.report_error 
 	      "Firstpass.find_fun_symb" 
 	      ((Print_syntax_ada.name_to_string name)
 	       ^" is not a funtion")
@@ -423,7 +423,7 @@ let translate compil_unit =
 	      find_use r var_masque
 		
 	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> (*WG TO DO *)
-	      Npkcontext.error 
+	      Npkcontext.report_error 
 		"Firstpass.find_fun_symb" 
 		(ident ^" is not a funtion 1 ")
 		
@@ -432,7 +432,7 @@ let translate compil_unit =
 
 	  | (FunSymb (_(*fn*), _(*sp*), true, _), C.Fun, _)::r -> 
 	      if (mem_other_symb r var_masque)
-	      then (Npkcontext.error
+	      then (Npkcontext.report_error
 		      "Firstpass.find_fun_symb"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
@@ -442,17 +442,17 @@ let translate compil_unit =
 		List.hd list_symb
 		
 
-	  | (FunSymb (_, _, false, _), C.Fun, _)::_ -> Npkcontext.error
+	  | (FunSymb (_, _, false, _), C.Fun, _)::_ -> Npkcontext.report_error
 	      "Firstpass.find_fun_symb" 
 		("internal error : imported function not "
 		 ^"tagged as extern")
 
-	  | (FunSymb _, _, _)::_ -> Npkcontext.error 
+	  | (FunSymb _, _, _)::_ -> Npkcontext.report_error 
 	      "Firstpass.find_fun_symb" 
 		("internal error : translate type isn't "
 		 ^"a fun type")
 
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Firstpass.find_fun_symb"
 		("cannot find symbol "^ident)
       in
@@ -467,7 +467,7 @@ let translate compil_unit =
 	      List.hd list_symb
 		
 	  | (NumberSymb(_),_,_)::_ -> 
-	      Npkcontext.error 
+	      Npkcontext.report_error 
 		"Firstpass.find_fun_symb" 
 		((Print_syntax_ada.name_to_string name)
 		 ^" is not a funtion (NumberSymb)")
@@ -479,7 +479,7 @@ let translate compil_unit =
 	      List.hd list_symb
 
 	  | (FunSymb _, _,_)::_ -> 
-	      Npkcontext.error "Firstpass.find_fun_symb" 
+	      Npkcontext.report_error "Firstpass.find_fun_symb" 
 		("internal error : translate type isn't a fun type")
 
 	  | [] -> find_use (find_all_use ident) var_masque
@@ -491,7 +491,7 @@ let translate compil_unit =
       let rec find_fun list_symb = 
 	match list_symb with
 	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ ->  (*WG TO DO *)
-	      Npkcontext.error 
+	      Npkcontext.report_error 
 	       "Firstpass.find_fun_symb" 
 		((Print_syntax_ada.name_to_string name)
 		 ^" is not a funtion")
@@ -502,12 +502,12 @@ let translate compil_unit =
 	  | (FunSymb (_, _, true, _), C.Fun, _)::_ -> 
 	      List.hd list_symb
 
-	  | (FunSymb _, _, _)::_ -> Npkcontext.error 
+	  | (FunSymb _, _, _)::_ -> Npkcontext.report_error 
 	      "Firstpass.find_fun_symb" 
 		("internal error : translate type isn't "
 		 ^"a fun type")
 
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Firstpass.find_fun_symb"
 		("cannot find symbol "^(string_of_name name))
       in find_fun list_symb
@@ -520,7 +520,7 @@ let translate compil_unit =
 	      find_global r
 
 	  | ((VarSymb(_,_,true,_)|NumberSymb( _,true)),_,_)::_ ->(*WG TO DO *)
-	      Npkcontext.error 
+	      Npkcontext.report_error 
 	       "Firstpass.find_fun_symb" 
 		((Print_syntax_ada.name_to_string name)
 		 ^" is not a funtion")
@@ -532,15 +532,15 @@ let translate compil_unit =
 	      List.hd list_symb
 
 	  | (FunSymb (_,_, true, _), _, _)::_ -> (* fonction externe *)
-	      Npkcontext.error 
+	      Npkcontext.report_error 
 		"Firstpass.find_fun_symb"
 		("cannot find symbol "^(string_of_name name))
 
 	  | (FunSymb _, _, _)::_ -> 
-	      Npkcontext.error "Firstpass.find_fun_symb" 
+	      Npkcontext.report_error "Firstpass.find_fun_symb" 
 		("internal error : translate type isn't a fun type")
 
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Firstpass.find_fun_symb"
 		("cannot find symbol "^(string_of_name name))
       in find_global list_symb
@@ -564,7 +564,7 @@ let translate compil_unit =
           let t = check_typ expected_typ Float 
 	  in (C.Const(C.CFloat(f,s)), t) 
       | BoolVal _ ->
-	  Npkcontext.error
+	  Npkcontext.report_error
 	    "Firstpass.translate_number"
 	    "internal error : number cannot have enum val"
   in
@@ -577,10 +577,10 @@ let translate compil_unit =
 	let all_symbs = find_all_use ident in 
 	  match all_symbs with
 	    | [a] -> a
-	    | [] -> Npkcontext.error 
+	    | [] -> Npkcontext.report_error 
 		"Firstpass.translate_lv"
 		  ("cannot find symbol "^ident)  
-	    | _ -> Npkcontext.error 
+	    | _ -> Npkcontext.report_error 
 		"Firstpass.translate_lv"
 		  ("multiple use clause :"
 		   ^ident^"is not visible") 
@@ -590,7 +590,7 @@ let translate compil_unit =
     (* cas d'un symbol avec sélecteur connu *)
     let fun_sel_connu name =       
       if mem_symb name then find_symb name
-      else Npkcontext.error "Firstpass.translate_lv"
+      else Npkcontext.report_error "Firstpass.translate_lv"
 	("cannot find symbol "^(string_of_name name))
     in
       
@@ -604,10 +604,10 @@ let translate compil_unit =
 	       | _ -> false)
 	    (find_all_symb ident)
 	with
-	  | Not_found -> Npkcontext.error "Firstpass.translate_lv"
+	  | Not_found -> Npkcontext.report_error "Firstpass.translate_lv"
 	      ("cannot find symbol "^(string_of_name name))
       else  
-	Npkcontext.error "Firstpass.translate_lv"
+	Npkcontext.report_error "Firstpass.translate_lv"
 	  ("cannot find symbol "^(string_of_name name))
     in
       
@@ -621,18 +621,19 @@ let translate compil_unit =
 	    in begin
 	      match symb with
 		| VarSymb(_,_,_, true) when write ->
-		    Npkcontext.error "Firstpass.translate_lv"
+		    Npkcontext.report_error "Firstpass.translate_lv"
 		      ("Invalid left value : "^(translate_name lv)
 		       ^" is read only")
 		      
 		| VarSymb(v, typ, _, _) -> (v, typ)
 		| NumberSymb(_) ->
-		    Npkcontext.error "Firstpass.translate_lv"
+		    Npkcontext.report_error "Firstpass.translate_lv"
 		      "Invalid left value: unexpected number symbol"
-		| FunSymb _ -> Npkcontext.error "Firstpass.translate_lv"
+		| FunSymb _ -> Npkcontext.report_error "Firstpass.translate_lv"
 		    "Invalid left value: unexpected function symbol"
-		| EnumSymb(_) -> Npkcontext.error "Firstpass.translate_lv"
-		    "Invalid left value: unexpected enum" 
+		| EnumSymb(_) -> 
+		    Npkcontext.report_error "Firstpass.translate_lv"
+		      "Invalid left value: unexpected enum" 
 	      end
 
 	(*Affectation dans un tableau*)
@@ -658,7 +659,7 @@ let translate compil_unit =
 			    | Constrained(_, contr, _) -> contr 
 			    | Unconstrained _ 
 			    | SubtypName _ ->
-				Npkcontext.error
+				Npkcontext.report_error
 				  "Firstpass Array Access"
 				  "Unconstrained or SubtypName" 
 			  end
@@ -669,16 +670,16 @@ let translate compil_unit =
 			    if (Nat.compare a b)<=0
 			    then
 			      IntegerRangeConstraint(a, b)
-			    else	 Npkcontext.error 
+			    else	 Npkcontext.report_error 
 			      "Firstpass: in Array access"
 			      "null range not accepted "
 			      
 			| Some(RangeConstraint _) ->
-			    Npkcontext.error 
+			    Npkcontext.report_error 
 			      "Firstpass: in Array access"
 			      "constraint is RangeConstraint"
 			      
-			| _ ->  Npkcontext.error 
+			| _ ->  Npkcontext.report_error 
 			    "Firstpass: in Array access"
 			      "constraint is not IntegerRange"
 		    in
@@ -695,13 +696,13 @@ let translate compil_unit =
 		      let borne_inf =   C.Const(C.CInt(nat1)) in 
 		      let decal =  C.Binop (Npk.MinusI,chk_exp, borne_inf) in
 			C.Binop (Newspeak.MultI, decal,  size_base)
-		      |  _ -> Npkcontext.error "Firstpass.make_offset"
+		      |  _ -> Npkcontext.report_error "Firstpass.make_offset"
 			   "contrainte (not IntegerRangeConstraint) not coded yet "
 		    in
 		      (C.Shift (v, offset), stypelt)
 			
 		  | _ ->        (*Constrained*)
-		      Npkcontext.error "firstpass: ArrayAcces" 
+		      Npkcontext.report_error "firstpass: ArrayAcces" 
 			" subtyp_lv has not expected typ"  
   in
     
@@ -724,7 +725,7 @@ let translate compil_unit =
 	    (C.Pref (decl::tr_instr_if, 
 		     C.Lval (vid, translate_typ Boolean)), 
 	     Boolean)
-      | Some(_) -> Npkcontext.error 
+      | Some(_) -> Npkcontext.report_error 
 	  "Firstpass.translate_if_exp" 
 	    "invalid operator and argument"
 	    
@@ -760,7 +761,7 @@ let translate compil_unit =
 		  in (tr_e1, tr_e2, typ1)
 		with
 		    AmbiguousTypeException -> 
-		      Npkcontext.error "Firstpass.translate_binop" 
+		      Npkcontext.report_error "Firstpass.translate_binop" 
 			"ambiguous operands"
 	in 
 	  Ada_utils.check_operand_typ op typ;
@@ -797,22 +798,22 @@ let translate compil_unit =
 		  (C.Binop (Npk.Gt t, tr_e2, tr_e1), Boolean)
 		  
 	      (*traités avec Not plus haut *)
-	      | (Neq, _) | (Ge, _) | (Le, _) -> Npkcontext.error 
+	      | (Neq, _) | (Ge, _) | (Le, _) -> Npkcontext.report_error 
 		  "Firstpass.translate_binop" 
 		    "internal error : unexpected operator !"
 		    
 	      (* reste puissance, mod, concat, and, or.. *)
 		    
 	      (* opérations sur les booléens *)
-	      | ((AndThen | Xor | OrElse), _) -> Npkcontext.error 
+	      | ((AndThen | Xor | OrElse), _) -> Npkcontext.report_error 
 		  "Firstpass.translate_binop" 
 		  "internal error : unexpected operator !"
 		    
 	      | ((Puissance | Mod | Concat | And | Or),_) -> 
-		  Npkcontext.error "Firstpass.translate_binop" 
+		  Npkcontext.report_error "Firstpass.translate_binop" 
 		    "not implemented"
 		    
-	      | _ -> Npkcontext.error "Firstpass.translate_binop" 
+	      | _ -> Npkcontext.report_error "Firstpass.translate_binop" 
 		  "invalid operator and argument"
 		    
 		    
@@ -830,7 +831,7 @@ let translate compil_unit =
 	    (match typ with 
 	      | Float -> (tr_exp, typ)
 	      | t when (integer_class t) -> (tr_exp, typ)
-	      | _ -> Npkcontext.error "Firstpass.translate_unop" 
+	      | _ -> Npkcontext.report_error "Firstpass.translate_unop" 
 		  "Unexpected unary operator and argument")
  
       | (UMoins, None) ->
@@ -843,7 +844,7 @@ let translate compil_unit =
 	       | t when (integer_class t) -> 
 		   translate_binop Moins (CInt(Nat.zero)) exp 
 		     expected_typ
-	       | _ -> Npkcontext.error "Firstpass.translate_unop" 
+	       | _ -> Npkcontext.report_error "Firstpass.translate_unop" 
 		   "Unexpected unary operator and argument")
 	      
 	      
@@ -857,11 +858,11 @@ let translate compil_unit =
 	  let (exp, _) = translate_exp exp (Some(Boolean))
 	  in (C.Unop (K.Not, exp), Boolean)
 	       
-      | (Abs, _) -> Npkcontext.error "Firstpass.translate_unop" 
+      | (Abs, _) -> Npkcontext.report_error "Firstpass.translate_unop" 
 	  "abs not implemented" (* on ignore abs *) 
 	    
       | _ -> 
-	  Npkcontext.error "Firstpass.translate_unop" 
+	  Npkcontext.report_error "Firstpass.translate_unop" 
 	    "Unexpected unary operator and argument"
 	
   and translate_function_call fname tr_typ spec exp_list expected_typ =
@@ -870,7 +871,7 @@ let translate compil_unit =
 	| Function(_,params,subtyp) -> 
 	    (params, check_typ expected_typ (base_typ subtyp))
 	      
-	| Procedure(name, _) -> Npkcontext.error 
+	| Procedure(name, _) -> Npkcontext.report_error 
 	    "Firstpass.translate_exp" 
 	      ((Print_syntax_ada.name_to_string name)
 	       ^" is a procedure, function expected") 
@@ -881,7 +882,7 @@ let translate compil_unit =
 	make_check_subtyp subtyp tr_exp in
     let tr_params = 
       if (List.length params <> List.length exp_list) 
-      then Npkcontext.error "Firstpass.translate_function_call"
+      then Npkcontext.report_error "Firstpass.translate_function_call"
 	"wrong number of arguments"
       else 
 	List.map2 translate_paramater params exp_list
@@ -920,7 +921,7 @@ let translate compil_unit =
 	    mem_other_symb r filter use var_masque
 	      
 	| ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
-	    Npkcontext.error 
+	    Npkcontext.report_error 
 	      "Firstpass.translate_var"
 	      ((string_of_name name)^" is not visible : "
 	       ^"multiple use clauses cause hiding")
@@ -943,11 +944,11 @@ let translate compil_unit =
 	  | [] when var_masque -> 
 	      (* variable masqué : au moins
 		 un symbol mais mauvais type *)
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Firstpass.translate_var.find_enum_fun" 
 		"uncompatible types"
 
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Firstpass.translate_var"
 		("cannot find symbol "^ident)
 	      
@@ -966,7 +967,7 @@ let translate compil_unit =
 
 	  (* d'autres symboles existent, conflit ! *)
 	  | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> 
-	      Npkcontext.error
+	      Npkcontext.report_error
 		"Firstpass.translate_var"
 		(ident^" is not visible : "
 		 ^"multiple use clauses cause hiding")
@@ -992,7 +993,7 @@ let translate compil_unit =
 	      if (mem_other_symb r 
 		    (known_compatible_typ expected_typ)
 		    None var_masque)
-	      then (Npkcontext.error
+	      then (Npkcontext.report_error
 		      "Firstpass.translate_var"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
@@ -1005,7 +1006,7 @@ let translate compil_unit =
 	      if (mem_other_symb r 
 		    (known_compatible_typ expected_typ)
 		    None var_masque)
-	      then (Npkcontext.error
+	      then (Npkcontext.report_error
 		      "Firstpass.translate_var"
 		      (ident^" is not visible : "
 		       ^"multiple use clauses cause hiding"))
@@ -1112,7 +1113,7 @@ let translate compil_unit =
 	| (EnumSymb(_), _,_)::r | (FunSymb _, _, _)::r -> 
 	    find_enum_fun r
 	      
-	| [] -> Npkcontext.error 
+	| [] -> Npkcontext.report_error 
 	    "Firstpass.translate_var"
 	      "uncompatible types" in
 	
@@ -1123,7 +1124,7 @@ let translate compil_unit =
 		(C.Lval (v, tr_typ), t)
 	  | (NumberSymb(v,_),_,_)::_ -> 
 	      translate_number v expected_typ
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Firstpass.translate_var"
 		("cannot find symbol "^(string_of_name name))
 	  | _ -> find_enum_fun list_symb
@@ -1133,7 +1134,7 @@ let translate compil_unit =
       let list_symb = find_all_symb ident in
       let rec find_global list_symb = 
 	match list_symb with
-	  | [] -> Npkcontext.error 
+	  | [] -> Npkcontext.report_error 
 	      "Firstpass.translate_var"
 		("cannot find symbol "^(string_of_name name))
 
@@ -1202,7 +1203,7 @@ let translate compil_unit =
 	let t = check_typ expected_typ Boolean
 	in (translate_int (Ada_utils.nat_of_bool b), t)
 	   
-    | CString _ -> Npkcontext.error "Firstpass.translate_exp" 
+    | CString _ -> Npkcontext.report_error "Firstpass.translate_exp" 
 	"string not implemented"
 	  
     | Var(name) -> 
@@ -1246,7 +1247,7 @@ let translate compil_unit =
 		  (*TO DO base_typ already exist use it if possible*)
 		  let subtyp_to_typ sub = match sub with 
 		      Constrained (z, _, _) ->  z
-		    | _ -> Npkcontext.error "firstpass.ml:Function Call" 
+		    | _ -> Npkcontext.report_error "firstpass.ml:Function Call" 
 					  " for array range TO DO "
 		  in
 
@@ -1283,11 +1284,11 @@ let translate compil_unit =
 		  let dim = List.length exp_list in 		    
 		    
 		    if (compare (List.length bk_typ) dim < 0) 
-		    then Npkcontext.error "firstpass.ml:Function Call"
+		    then Npkcontext.report_error "firstpass.ml:Function Call"
 		      "more elts than dimensions";
 		    
 		    if (compare 0 dim = 0) 
-		    then Npkcontext.error "firstpass.ml:Function Call" 
+		    then Npkcontext.report_error "firstpass.ml:Function Call" 
 		      "no element for shifting";
 		    
 		    let types = List.map (
@@ -1306,17 +1307,17 @@ let translate compil_unit =
 		      match (rebuild lv bk_typ tr_exp_list) with
 			  (C.Lval (a, tpelt), adatyp) ->
 			    (C.Lval (a, tpelt),  adatyp)
-			| _ ->  Npkcontext.error "firstpass.ml:Function Call"
+			| _ ->  Npkcontext.report_error "firstpass.ml:Function Call"
 			    ("firstpass unexepted form in translate_exp")
 		end
-	      | _ -> Npkcontext.error "Firstpass.translate_exp" 
+	      | _ -> Npkcontext.report_error "Firstpass.translate_exp" 
 		  "FunctionCall case but unexpected result"
 	  end
 	    
 	    
     (*WG  TO DO *)
     | First _ | Last _  | Length _-> 
-	Npkcontext.error
+	Npkcontext.report_error
 	  "Firstpass.translate_exp"
 	  "Last, first or Length remaining in firstpass, non static "
 	  
@@ -1335,7 +1336,7 @@ let translate compil_unit =
 (* 	    exp)*\) *)
       
 (*       | RangeConstraint _ -> *)
-(* 	  Npkcontext.error *)
+(* 	  Npkcontext.report_error *)
 (* 	    "Firstpass.make_check_constraint" *)
 (* 	    "internal error : unexpected range constraint (non-static)" *)
 
@@ -1359,7 +1360,7 @@ let translate compil_unit =
 (*       | Constrained(_, contrainte, _) -> *)
 (* 	  make_check_constraint contrainte exp *)
 (*       | SubtypName _ -> *)
-(* 	  Npkcontext.error *)
+(* 	  Npkcontext.report_error *)
 (* 	    "Firstpass.make_check_subtyp" *)
 (* 	    "internal error : unexpected subtyp name" *)
 
@@ -1406,11 +1407,11 @@ let translate compil_unit =
 		
     in match (subtyp_ref, contrainte,subtyp_res) with
       | (_, _, None) ->
-	  Npkcontext.error
+	  Npkcontext.report_error
 	    "Firstpass.make_check_subtyp_indication"
 	    "internal error : no subtyp provided"
       | (SubtypName _, _, _) | (_, _, Some(SubtypName _)) ->
-	  Npkcontext.error
+	  Npkcontext.report_error
 	    "Firstpass.make_check_subtyp_indication"
 	    "internal error : unexpected subtyp name"
 
@@ -1468,7 +1469,7 @@ let translate compil_unit =
 		   | [] -> []
 		   | (_,next_loc)::_ -> 
 		       Npkcontext.set_loc next_loc;
-		       Npkcontext.print_warning 
+		       Npkcontext.report_warning 
 			 "Firstpass.translate_instr_list" 
  			 "Unreachable code";
 		       Npkcontext.set_loc loc;
@@ -1487,7 +1488,7 @@ let translate compil_unit =
 			  translate_instr_list instr_else
 			in (C.If(tr_exp,tr_then,tr_else),loc)
 			   ::(translate_instr_list r)
-		    | _ -> Npkcontext.error 
+		    | _ -> Npkcontext.report_error 
 			"Firstpass.translate_instr_list" 
 			  "expected a boolean type for condition")
 		   
@@ -1515,7 +1516,7 @@ let translate compil_unit =
 		     (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->   
 		       let params = 
 			 match spec with 
-			   | Function(_) -> Npkcontext.error 
+			   | Function(_) -> Npkcontext.report_error 
 			       "Firstpass.translate_instr" 
 				 ((Print_syntax_ada.name_to_string name)
 				  ^" is a function, procedure expected")
@@ -1533,14 +1534,14 @@ let translate compil_unit =
 				       (Some(base_typ param.ptype)) 
 				       (base_typ typ) in
 				       C.AddrOf(vid, translate_typ t) 
-				 | _ ->  Npkcontext.error 
+				 | _ ->  Npkcontext.report_error 
 				     "Firstpass.translate_instr"
 				       ("actual for out parameter"
 					^"must be a variable")
 		       in
 		       let tr_params = 
 			 if (List.length params <> List.length args) 
-			 then Npkcontext.error "Firstpass.translate_instr"
+			 then Npkcontext.report_error "Firstpass.translate_instr"
 			   "wrong number of arguments"
 			 else 
 			   List.map2
@@ -1550,7 +1551,7 @@ let translate compil_unit =
 			 (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
 			  ::(translate_instr_list r)
 		   | _ -> 
-		       Npkcontext.error "Firstpass.translate_instr"
+		       Npkcontext.report_error "Firstpass.translate_instr"
 			 "find_fun_symb did not expect this (maybe array) as an instr! " 
 		  
 		
@@ -1624,12 +1625,12 @@ let translate compil_unit =
 	   (fun symb -> match symb with
 	      | (FunSymb (_,_,extern', _),_,_) 
 		  when extern'= !extern -> 
-		  Npkcontext.error "Firstpass.add_fundecl"
+		  Npkcontext.report_error "Firstpass.add_fundecl"
 		    ("conflict : "^(string_of_name name)
 		     ^" already declared")
 	      | (FunSymb _, _, _) -> ()
 	      | ((VarSymb(_)|NumberSymb(_)),_,_) -> 
-		  Npkcontext.error "Firstpass.add_fundecl"
+		  Npkcontext.report_error "Firstpass.add_fundecl"
 		    ("conflict : "^(string_of_name name)
 		     ^" already declared")
 	      | (EnumSymb(_,etyp,_),_,_) ->
@@ -1637,7 +1638,7 @@ let translate compil_unit =
 		    match subprogspec with
 		      | Function(_, [], rtyp)
 			  when etyp = (base_typ rtyp) ->
-			  Npkcontext.error "Firstpass.add_fundecl"
+			  Npkcontext.report_error "Firstpass.add_fundecl"
 			    ("conflict : "^(string_of_name name)
  			     ^" already declared")
 		      | _ -> ()
@@ -1709,7 +1710,7 @@ let translate compil_unit =
     | SubtypDecl _ ->
 	([],[])
 	  
-    | SpecDecl(_) -> Npkcontext.error 
+    | SpecDecl(_) -> Npkcontext.report_error 
 	"Firstpass.translate_basic_declaration" 
 	  ("déclaration de sous-fonction, sous-procedure ou "
 	   ^"sous package non implémenté")
@@ -1723,11 +1724,11 @@ let translate compil_unit =
 	  idents;
 	([],[])
     | NumberDecl _ -> 
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Firstpass.translate_basic_declaration" 
 	  "internal error : number declaration whitout value"
     | RepresentClause _ ->
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Firstpass.translate_basic_declaration" 
 	  "internal error : unexpected representation clause"
 
@@ -1738,7 +1739,7 @@ let translate compil_unit =
     match item with
       | BasicDecl(basic) -> translate_basic_declaration basic loc
 	  
-      | BodyDecl(_) -> Npkcontext.error 
+      | BodyDecl(_) -> Npkcontext.report_error 
 	  "Firstpass.translate_instr_list" 
 	    "sous-fonction, sous-procedure ou sous package non implémenté"
 	    
@@ -1769,7 +1770,7 @@ let translate compil_unit =
 	  idents
     | TypeDecl(_) -> ()
     | SubtypDecl(_) -> ()
-    | SpecDecl(_) -> Npkcontext.error 
+    | SpecDecl(_) -> Npkcontext.report_error 
 	"Firstpass.remove_basic_declaration" 
 	  ("déclaration de sous-fonction, sous-procedure ou "
 	   ^"sous package non implémenté")
@@ -1779,7 +1780,7 @@ let translate compil_unit =
 	  (fun x -> ignore (remove_symb x)) 
 	  idents
     | RepresentClause _ -> 
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Firstpass.remove_basic_declaration" 
 	  "internal error : unexpected representation clause"
 
@@ -1811,7 +1812,7 @@ let translate compil_unit =
 	    match symb with
 	      | (FunSymb (_, _, _, ftyp), C.Fun, _) -> ftyp
 	      | _ -> 
-		  Npkcontext.error "Firstpass.add_funbody.seach_spec" 
+		  Npkcontext.report_error "Firstpass.add_funbody.seach_spec" 
 		    "internal error : typ is not a fun typ"
 	with Not_found -> add_fundecl subprogspec loc
     in
@@ -1873,11 +1874,11 @@ let translate compil_unit =
 	    (add_number loc v true)
 	    idents
       | NumberDecl(_) -> 
-	  Npkcontext.error 
+	  Npkcontext.report_error 
 	    "Firstpass.translate_global_basic_declaration" 
 	    "internal error : number declaration whitout value"
       | RepresentClause _ ->
-	  Npkcontext.error 
+	  Npkcontext.report_error 
 	    "Firstpass.translate_global_basic_declaration" 
 	    "internal error : unexpected representation clause"
 
@@ -1899,7 +1900,7 @@ let translate compil_unit =
 	
     | PackageSpec(nom, basic_decl_list) -> 
 	match glob with
-	  | false -> Npkcontext.error 
+	  | false -> Npkcontext.report_error 
 	    "Firstpass.translate_spec" 
 		"déclaration de sous package non implémenté"
 	  | true -> 
@@ -1940,7 +1941,7 @@ let translate compil_unit =
 	  ignore (List.map translate_global_decl_item
 		    decl_part)
 	    
-      | (PackageBody(_), false) -> Npkcontext.error 
+      | (PackageBody(_), false) -> Npkcontext.report_error 
 	  "Firstpass.translate_body" 
 	    "déclaration de sous package non implémenté"
 	    
@@ -1951,7 +1952,7 @@ let translate compil_unit =
     match lib_item with
       | Body(body) -> translate_body body true loc
 	  
-      | Spec(_) -> Npkcontext.error 
+      | Spec(_) -> Npkcontext.report_error 
 	  "Firstpass.translate_library_item" 
 	    "Rien à faire pour les spécifications"
 	    
@@ -1966,7 +1967,7 @@ let translate compil_unit =
 		translate_spec spec loc true;
 		add_with_package nom;
 		translate_context r
-	    | None -> Npkcontext.error 
+	    | None -> Npkcontext.report_error 
 		"Firstpass.translate_context" 
 		  "internal error : no specification provided")
       | UseContext(use_clause)::r -> 
@@ -1993,7 +1994,7 @@ let translate compil_unit =
       Npkcontext.forget_loc ();
       (globals, fun_decls, [])
     with
-	AmbiguousTypeException -> Npkcontext.error 
+	AmbiguousTypeException -> Npkcontext.report_error 
 	  "Firstpass.translate" 
 	  "uncaught ambiguous type exception"
 	  

@@ -22,11 +22,12 @@
   
 *)
 
-open Npkcontext
 
 let compile fname =
-  if not (Filename.check_suffix fname Params.ada_suffix)
-  then error "Ada2newspeak.compile" (fname^" is not a .adb file");
+  if not (Filename.check_suffix fname Params.ada_suffix) then begin
+    Npkcontext.report_error "Ada2newspeak.compile" 
+      (fname^" is not a .adb file")
+  end;
 
   let prog = Compiler.compile fname
   in
@@ -64,7 +65,7 @@ let _ =
 	| files ->
 	    let nos = List.map extract_no files in
 	      if not !Npkcontext.compile_only then begin
-		Link.link nos [] !Npkcontext.output_file
+		Linker.link nos [] !Npkcontext.output_file
 	      end
 		
   with Invalid_argument msg -> Npkcontext.exit_on_error msg

@@ -793,4 +793,5 @@ let run prog =
 		  Hashtbl.clear lbls;
 		  (g', l)::(run prog)
 	    | _ -> (g, l)::(run prog)
-  in run prog
+  in 
+    run prog

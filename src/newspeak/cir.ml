@@ -31,11 +31,20 @@ let vcnt = ref min_int
 
 let fresh_id () =
   let id = !vcnt in
-    if (!vcnt = max_int) then Npkcontext.error "Cir.fresh_id" "no more ids";
+    if (!vcnt = max_int) 
+    then Npkcontext.report_error "Cir.fresh_id" "no more ids";
     incr vcnt;
     id
   
-type t = (glbdecls * fundefs * Newspeak.specs)
+type t = (glbdecls * fundefs * assertion list)
+
+and assertion = token list
+
+and token =
+  | SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lv
+  | CstToken of cst
 
 and glbdecls = (string, typ * location * init option) Hashtbl.t
 
@@ -75,6 +84,7 @@ and stmtkind =
   | If of (exp * blk * blk)
   | Switch of (exp * (typ_exp * blk) list * blk)
   | Exp of exp
+  | UserSpec of assertion
 
 and lbl = int
 
@@ -110,6 +120,7 @@ and funexp =
     | Fname of string
     | FunDeref of (exp * ftyp)
 
+(* TODO: change cst to Newspeak.cst??? *)
 and cst =
     | CInt of Nat.t
     | CFloat of (float * string)
@@ -171,7 +182,8 @@ and string_of_stmt margin (x, _) =
 	^margin^"}"
     | Goto lbl -> "goto lbl"^(string_of_int lbl)^";"
     | Decl (_, x, _) -> "typ "^x^";"
-    | Set (_, _, e) -> "lv = "^(string_of_exp margin e)^";"
+    | Set (lv, _, e) -> 
+	(string_of_lv margin lv)^" = "^(string_of_exp margin e)^";"
     | If (e, br1, br2) -> 
 	"if "^(string_of_exp margin e)^" {\n"
 	^(string_of_blk (margin^"  ") br1)
@@ -188,6 +200,7 @@ and string_of_stmt margin (x, _) =
 	^(string_of_blk (margin^"  ") body)
 	^margin^"}"	
     | Switch _ -> "switch"
+    | UserSpec _ -> "userspec"
 
 let string_of_exp = string_of_exp ""
 
@@ -221,12 +234,14 @@ let rec size_of t =
     | Array (t, Some n) -> 
 	let sz = (size_of t) in
 	  if n > max_int / sz 
-	  then Npkcontext.error "Cir.size_of" "invalid size for array";
+	  then Npkcontext.report_error "Cir.size_of" "invalid size for array";
 	  sz * n
     | Struct (_, n) | Union (_, n) -> n
-    | Fun -> Npkcontext.error "Csyntax.size_of" "unknown size of function"
-    | Array _ -> Npkcontext.error "Csyntax.size_of" "unknown size of array"
-    | Void -> Npkcontext.error "Csyntax.size_of" "unknown size of void"
+    | Fun -> 
+	Npkcontext.report_error "Csyntax.size_of" "unknown size of function"
+    | Array _ -> 
+	Npkcontext.report_error "Csyntax.size_of" "unknown size of array"
+    | Void -> Npkcontext.report_error "Csyntax.size_of" "unknown size of void"
 
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
@@ -243,7 +258,7 @@ let promote k =
 
 let concat_effects blk1 blk2 =
   if (blk1 <> []) && (blk2 <> []) then begin
-    Npkcontext.print_warning "Cir.concat_effect" 
+    Npkcontext.report_warning "Cir.concat_effect" 
       ("the order of execution of side-effects in expressions not specified, "
 	^"picking a random one, be careful")
   end;
@@ -365,7 +380,20 @@ and normalize_stmt (x, loc) =
     | Exp e ->
 	let (pref, _, post) = normalize_exp e in
 	  (Block (concat_effects pref post, None), loc)::[]
-	    
+
+    | UserSpec tok -> (UserSpec (List.map normalize_token tok), loc)::[]
+	   
+and normalize_token tok =
+  match tok with
+    | LvalToken lv -> 
+	let (pref, lv, post) = normalize_lv lv in
+	  if (pref <> []) || (post <> []) then begin
+	    Npkcontext.report_error "Cir.normalize_token" 
+	      "left value without side-effects expected"
+	  end;
+	  LvalToken lv
+    | _ -> tok
+
 and normalize_call loc (ft, f, args) =
   let (pref1, f) = normalize_funexp loc f in
   let (args_t, _) = ft in
@@ -400,7 +428,7 @@ and normalize_rets loc rets t =
 	let (pref, lv) = normalize_lv_post loc lv t in
 	  (pref, lv::[])
     | [] -> ([], [])
-    | _ -> Npkcontext.error "Cir.normalize_rets" "unreachable statement"
+    | _ -> Npkcontext.report_error "Cir.normalize_rets" "unreachable statement"
 	
 and normalize_args loc args args_t =
   match (args, args_t) with
@@ -410,13 +438,13 @@ and normalize_args loc args args_t =
 	let pref = concat_effects pref1 pref2 in
 	  (pref, e::args)
     | ([], []) -> ([], [])
-    | _ -> Npkcontext.error "Cir.normalize_rets" "unreachable statement"
+    | _ -> Npkcontext.report_error "Cir.normalize_rets" "unreachable statement"
 	
 and normalize_choice pref ((e, t), body) =
   let (empty_pref, e, empty_post) = normalize_exp e in
   let body = normalize_blk body in
     if (empty_pref <> []) || (empty_post <> []) then begin
-      Npkcontext.error "Firstpass.normalize_choice"
+      Npkcontext.report_error "Firstpass.normalize_choice"
 	"integer constant expression expected"
     end;
     (* TODO: not good, code duplication!!! 
@@ -437,7 +465,7 @@ let eval_exp e =
       | MultI -> Big_int.mult_big_int v1 v2
       | DivI -> 
 	  if (Big_int.compare_big_int v2 Big_int.zero_big_int = 0) 
-	  then Npkcontext.error "Cir.eval_exp" "division by zero";
+	  then Npkcontext.report_error "Cir.eval_exp" "division by zero";
 	  Big_int.div_big_int v1 v2
       | Shiftlt -> 
 	  let p = Big_int.power_int_positive_big_int 2 v2 in
@@ -449,8 +477,7 @@ let eval_exp e =
 	  if Big_int.compare_big_int v1 v2 > 0 then Big_int.unit_big_int
 	  else Big_int.zero_big_int
       | _ -> 
-	  Npkcontext.error "Cir.eval_exp" 
-	    "static expression expected"
+	  Npkcontext.report_error "Cir.eval_exp" "static expression expected"
   in
   let rec eval_exp e =
     match e with
@@ -459,14 +486,13 @@ let eval_exp e =
       | Unop (Coerce b, e) -> 
 	  let i = eval_exp e in
 	    if Newspeak.belongs (Nat.of_big_int i) b then i 
-	    else Npkcontext.error "Cir.eval_exp" "integer overflow"
+	    else Npkcontext.report_error "Cir.eval_exp" "integer overflow"
       | _ -> 
-	  Npkcontext.error "Cir.eval_exp" 
-	    "static expression expected"
+	  Npkcontext.report_error "Cir.eval_exp" "static expression expected"
   in
   let (pref, e, post) = normalize_exp e in
     if (pref <> []) || (post <> []) then begin
-      Npkcontext.error "Cir.eval_exp" 
+      Npkcontext.report_error "Cir.eval_exp" 
 	"expression without side-effects expected"
     end;
     Nat.of_big_int (eval_exp e)
@@ -500,7 +526,7 @@ let normalize x =
     let decls = 
       try Hashtbl.find lbl_tbl lbl 
       with Not_found -> 
-	Npkcontext.error "Cir.normalize.register_decl" 
+	Npkcontext.report_error "Cir.normalize.register_decl" 
 	  ("unexpected label lbl"^(string_of_int lbl))
     in
       Hashtbl.replace lbl_tbl lbl (x::decls)
@@ -545,6 +571,7 @@ let normalize x =
 	  let (x, used_lbls1) = set_scope_stmtkind x in
 	  let (tl, used_lbls2) = set_scope_blk tl in
 	    ((x, loc)::tl, Set.union used_lbls1 used_lbls2)
+
       | [] -> ([], Set.empty)
 
   and set_scope_stmtkind x =
@@ -553,7 +580,7 @@ let normalize x =
 	  let (body, used_lbls) = set_scope_blk body in
 	    (Block (body, lbl), used_lbls)
       | Goto lbl -> (x, Set.singleton lbl)
-      | Decl _ | Set _ | Exp _ -> (x, Set.empty)
+      | Decl _ | Set _ | Exp _ | UserSpec _ -> (x, Set.empty)
       | Loop body -> 
 	  let (body, used_lbls) = set_scope_blk body in
 	    (Loop body, used_lbls)
@@ -595,9 +622,9 @@ let cast (e, t) t' =
 	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
     | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
     | (Void, _, _) -> 
-	Npkcontext.error "Cir.cast" 
+	Npkcontext.report_error "Cir.cast" 
 	  "value void not ignored as it ought to be"
-    | _ -> Npkcontext.error "Cir.cast" "scalar type expected for cast"
+    | _ -> Npkcontext.report_error "Cir.cast" "scalar type expected for cast"
 
 let rec is_subtyp t1 t2 =
   match (t1, t2) with
@@ -682,12 +709,14 @@ let length_of_array len lv =
   match (len, lv) with
       (Some len, _) -> Known (Nat.of_int len)
     | (None, Global v) -> Length v
-    | _ -> Npkcontext.error "Npkil.length_of_array" "unknown length of array"
+    | _ -> 
+	Npkcontext.report_error "Npkil.length_of_array" 
+	  "unknown length of array"
 	    
 let scalar_of_typ t =
   match t with
       Scalar t -> t
-    | _ -> Npkcontext.error "Cir.scalar_of_typ" "scalar type expected"
+    | _ -> Npkcontext.report_error "Cir.scalar_of_typ" "scalar type expected"
 
 let rec remove_fst_deref lv =
   match lv with
@@ -695,4 +724,5 @@ let rec remove_fst_deref lv =
 	let e = remove_fst_deref lv in
 	  Binop (PlusPI, e, i) 
     | Deref (e, _) -> e
-    | _ -> Npkcontext.error "Cir.remove_fst_deref" "pointer deref expected"
+    | _ -> 
+	Npkcontext.report_error "Cir.remove_fst_deref" "pointer deref expected"

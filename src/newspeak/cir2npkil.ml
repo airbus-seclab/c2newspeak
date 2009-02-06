@@ -35,10 +35,10 @@ module Set = Set.Make(String)
 let translate_scalar t =
   match t with
       Scalar t -> t
-    | Void -> Npkcontext.error "Cir2npkil.translate_scalar" 
+    | Void -> Npkcontext.report_error "Cir2npkil.translate_scalar" 
 	"value void not ignored as it ought to be"
     | _ -> 
-	Npkcontext.error "Cir2npkil.translate_scalar" 
+	Npkcontext.report_error "Cir2npkil.translate_scalar" 
 	  ("unexpected non scalar type: "^(string_of_typ t))
 
 let translate_arithmop op e1 e2 k = K.make_int_coerce k (K.BinOp (op, e1, e2))
@@ -73,7 +73,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
       let t' =
 	match t with
 	    Void -> 
-	      Npkcontext.error "Compiler.translate_typ" 
+	      Npkcontext.report_error "Compiler.translate_typ" 
 		"type void not allowed here"
 	  | Scalar t -> K.Scalar t
 	  | Array (t, sz) -> K.Array (translate_typ t, sz)
@@ -81,7 +81,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	      let translate_field (_, (o, t)) = (o, translate_typ t) in
 		K.Region (List.map translate_field fields, sz)
 	  | Fun -> 
-	      Npkcontext.error "Compiler.translate_typ" 
+	      Npkcontext.report_error "Compiler.translate_typ" 
 		"function not allowed here"
       in
 	Hashtbl.add translated_typ t t';
@@ -120,7 +120,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    K.Deref (e, sz)
 
       | BlkLv _ ->
-	  Npkcontext.error "Compiler.translate_lval"
+	  Npkcontext.report_error "Compiler.translate_lval"
 	    "unexpected side-effect in left value"
 
   and translate_exp e =
@@ -159,11 +159,11 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    K.BinOp (op, e1, e2)
 
       | Pref _ -> 
-	  Npkcontext.error "Compiler.translate_exp"
+	  Npkcontext.report_error "Compiler.translate_exp"
 	    "unexpected side-effect in expression"
 
       | Call _ -> 
-	  Npkcontext.error "Compiler.translate_exp"
+	  Npkcontext.report_error "Compiler.translate_exp"
 	    "unexpected call in expression"	  
   in
 
@@ -227,26 +227,27 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	      | K.Const N.CInt _ -> body2
 	      | _ -> 
 		  let cond2 = K.negate cond1 in
-		    (K.ChooseAssert [([cond1], body1); 
-				     ([cond2], body2)], loc)::[]
+		  let body1 = (K.Guard cond1, loc)::body1 in
+		  let body2 = (K.Guard cond2, loc)::body2 in
+		    (K.Select (body1, body2), loc)::[]
 	  end
 
       | Loop body -> (K.InfLoop (translate_blk body), loc)::[]
 
-      | Switch switch ->
-	  let switch = translate_switch switch in
-	    (switch, loc)::[]
+      | Switch switch -> translate_switch loc switch
 
       | Exp (Call c) -> 
 	  let call = translate_call loc None c in
 	    call::[]
 
+      | UserSpec x -> (K.UserSpec (translate_assertion x), loc)::[]
+
       | Exp _ -> 
-	  Npkcontext.error "Compiler.translate_stmt" 
+	  Npkcontext.report_error "Compiler.translate_stmt" 
 	    "unexpected expression as statement"
 
       | Decl _ -> 
-	  Npkcontext.error "Compiler.translate_stmt" "unreachable code"
+	  Npkcontext.report_error "Compiler.translate_stmt" "unreachable code"
 
   and append_args loc args fid f =
     let rec append x args =
@@ -303,23 +304,33 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 		pop id;
 		(K.Decl ("value_of_"^fid, t, call::post), loc)
 		
-  and translate_switch (e, cases, default) =
+  and translate_switch loc (e, cases, default) =
     let e = translate_exp e in
     let default = translate_blk default in
-    let rec translate_cases default_cond x =
+    let rec translate_cases default_guard x =
       match x with
 	  ((v, t), body)::tl ->
 	    let v = translate_exp v in
 	    let cond = K.BinOp (Newspeak.Eq t, e, v) in
 	    let body = translate_blk body in
-	    let default_cond = (K.negate cond)::default_cond in
-	    let choices = translate_cases default_cond tl in
-	      (cond::[], body)::choices
-	| [] -> (default_cond, default)::[]
+	    let default_guard = (K.Guard (K.negate cond), loc)::default_guard in
+	    let body = (K.Guard cond, loc)::body in
+	    let choices = translate_cases default_guard tl in
+	      (K.Select (body, choices), loc)::[]
+	| [] -> 
+	    let body = default_guard@default in
+	      body
     in
-    let choices = translate_cases [] cases in
-      K.ChooseAssert (choices)
-  in
+      translate_cases [] cases
+  
+  and translate_token x =
+    match x with
+	SymbolToken c -> K.SymbolToken c
+      | IdentToken x -> K.IdentToken x
+      | LvalToken lv -> K.LvalToken (translate_lv lv)
+      | CstToken c -> K.CstToken (translate_cst c)
+
+  and translate_assertion x = List.map translate_token x in
 	  
   let translate_init (o, t, e) =
     let e = translate_exp e in
@@ -363,4 +374,5 @@ let translate (cglbdecls, cfundefs, specs) fnames =
     Hashtbl.iter translate_glbdecl cglbdecls;
     Hashtbl.iter translate_fundef cfundefs;
     Set.iter flag_glb !used_glbs;
-    (fnames, glbdecls, fundefs, specs)
+    let specs = List.map translate_assertion specs in
+      (fnames, glbdecls, fundefs, specs)

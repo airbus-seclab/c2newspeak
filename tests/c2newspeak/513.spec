@@ -4,8 +4,10 @@ Newspeak output
 513.c
 void main(void) {
   (513.c:29#2)^choose {
-    | ! (x_int32 ==_int32 0) -->
-    | (x_int32 ==_int32 0) -->
+   -->
+    (513.c:29#2)^guard(! (x_int32 ==_int32 0));
+   -->
+    (513.c:29#2)^guard((x_int32 ==_int32 0));
   }
 }
 

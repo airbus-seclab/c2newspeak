@@ -56,15 +56,12 @@ let process prog =
   and process_stmtkind x =
     match x with
 	Decl (v, t, body) -> Decl (v, t, process_blk body)
-      | ChooseAssert choices -> 
-	  let choices = List.map process_choice choices in
-	    ChooseAssert choices
+      | Select (blk1, blk2) -> Select (process_blk blk1, process_blk blk2)
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
-      | Set _ | Copy _ | Goto _ | Call _ -> x
-
-  and process_choice (cond, body) =  (cond, process_blk body) in
+      | Set _ | Copy _ | Goto _ | Call _ | Guard _ | UserSpec _ -> x
+  in
 
   let process_fun fid (t, body) =
     let body = process_blk body in
@@ -121,15 +118,11 @@ let process_one prog =
   and process_stmtkind x =
     match x with
 	Decl (v, t, body) -> Decl (v, t, process_blk body)
-      | ChooseAssert choices -> 
-	  let choices = List.map process_choice choices in
-	    ChooseAssert choices
+      | Select (blk1, blk2) -> Select (process_blk blk1, process_blk blk2)
       | InfLoop body -> InfLoop (process_blk body)
       | DoWith (body, lbl, action) ->
 	  DoWith (process_blk body, lbl, process_blk action)
-      | Set _ | Copy _ | Goto _ | Call _ -> x
-
-  and process_choice (cond, body) =  (cond, process_blk body)
+      | Set _ | Copy _ | Goto _ | Call _ | Guard _ | UserSpec _ -> x
 
   and process_fun fid =
     let (t, body) = Hashtbl.find prog.fundecs fid in

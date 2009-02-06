@@ -28,9 +28,11 @@
 
 open Newspeak
 
+let debug = ref false
+
 let input = ref []
 
-let speclist = []
+let speclist = [("--debug", Arg.Set debug, "prints debug information");]
 
 let anon_fun file = input := file::!input
 
@@ -79,6 +81,9 @@ object (this)
     in
       true
 
+  method process_fun f _ =
+    if !debug then print_endline ("Scanning function: "^f);
+    true
 end
 
 let cur_loc = ref Newspeak.unknown_loc
@@ -117,30 +122,43 @@ and scan_lval env x =
 	let env = scan_lval env lv in
 	  scan_exp env e
 
-let rec scan_blk env x = List.iter (scan_stmt env) x
+let rec scan_blk env x = 
+  match x with
+      (Guard b, _)::tl ->
+	let env = scan_exp env b in
+	  scan_blk env tl
+    | hd::tl -> scan_stmt env hd; scan_blk env tl
+    | [] -> ()
 
 and scan_stmt env (x, loc) =
   cur_loc := loc;
   match x with
-      ChooseAssert choices -> List.iter (scan_choice env) choices
+      Select (blk1, blk2) -> 
+	scan_blk env blk1; 
+	scan_blk env blk2
     | InfLoop body | Decl (_, _, body) -> scan_blk [] body
     | DoWith (body, _, action) ->
 	scan_blk env body;
 	scan_blk env action
-    | Goto _ | Call _ | Set _ | Copy _ -> ()
+    | Goto _ | Call _ | Set _ | Copy _ | Guard _ | UserSpec _ -> ()
 
-and scan_choice env (conds, body) =
-  let env = ref env in
-  let scan_exp x = env := scan_exp !env x in
-    List.iter scan_exp conds;
-    scan_blk !env body
-
-let scan_fundef _ (_, body) = scan_blk [] body
+let scan_fundef f (_, body) = 
+  if !debug then print_endline ("Scanning function: "^f);
+  scan_blk [] body
 
 let scan_prog fundefs = 
   Hashtbl.iter scan_fundef fundefs
 
+module Exp = 
+struct
+  type t = Newspeak.exp
+  let compare = compare
+end
+
+module Env = Set.Make(Exp)
+
 let find_bound e env =
+  let env = Env.elements env in
   let rec find env =
     match env with
 	BinOp (_, Const CInt c, e')::_
@@ -177,7 +195,12 @@ and scan2_lval env x =
 
 let rec scan2_blk env x = 
   match x with
-      hd::tl ->
+    | (Guard b, loc)::tl -> 
+	cur_loc := loc;
+	let conds = Env.add b Env.empty in
+	let env = Env.union conds env in
+	  scan2_blk env tl
+    | hd::tl ->
 	let env = scan2_stmt env hd in
 	  scan2_blk env tl
     | [] -> env
@@ -185,7 +208,9 @@ let rec scan2_blk env x =
 and scan2_stmt env (x, loc) =
   cur_loc := loc;
   match x with
-      ChooseAssert choices -> scan2_choices env choices
+    | Select (blk1, blk2) -> 
+	let env = Env.union env (scan2_blk env blk1) in
+	  Env.union env (scan2_blk env blk2)
     | Decl (_, _, body) -> scan2_blk env body
     | InfLoop body ->
 	let _ = scan2_blk env body in 
@@ -194,26 +219,17 @@ and scan2_stmt env (x, loc) =
 	let _ = scan2_blk env body in
 	let _ = scan2_blk env action in
 	  env
-    | Goto _ -> []
+    | Goto _ -> Env.empty
     | Set (lv, e, _) -> 
 	scan2_lval env lv;
 	scan2_exp env e;
 	env
-    | Call _ | Copy _ -> env
-
-and scan2_choices env x =
-  let res = ref env in
-  let scan2_choice (conds, body) =
-    let env = conds@env in
-    let env' = scan2_blk env body in
-      res := env'@(!res)
-  in
-    List.iter scan2_choice x;
-    !res
+    | Call _ | Copy _ | Guard _ | UserSpec _ -> env
 
 (* propagates the list of conditions that are verified in each block *)
-let scan2_fundef _ (_, body) = 
-  let _ = scan2_blk [] body in
+let scan2_fundef f (_, body) = 
+  if !debug then print_endline ("Scanning function: "^f);
+  let _ = scan2_blk Env.empty body in
     ()
 
 let scan2_prog fundefs = 
@@ -223,8 +239,11 @@ let scan f =
   let prog = Newspeak.read f in
   let scanner = (new scanner :> Newspeak.visitor) in
 (* TODO: try to merge together all 3 scanners *)
+    if !debug then print_endline "First scanner";
     Newspeak.visit scanner prog;
+    if !debug then print_endline "Second scanner";
     scan_prog prog.fundecs;
+    if !debug then print_endline "Third scanner";
     scan2_prog prog.fundecs
 
 let _ = 

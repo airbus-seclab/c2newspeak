@@ -1,1 +1,1 @@
---accept-backward-goto --accept-forward-goto
+--accept-gnuc --ignore-pack

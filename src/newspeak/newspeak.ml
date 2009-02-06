@@ -105,7 +105,7 @@ type t = {
 
 and globals = (string, gdecl) Hashtbl.t
 
-and gdecl = typ * init_t
+and gdecl = typ * init_t * location
 
 and fundec = ftyp * blk
 
@@ -118,18 +118,20 @@ and assertion = spec_token list
 and spec_token =
     | SymbolToken of char
     | IdentToken of string
-    | VarToken of string
-    | CstToken of cte
+    | LvalToken of lval
+    | CstToken of cst
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
+  | Guard of exp
   | Decl of (string * typ * blk)
-  | ChooseAssert of (exp list * blk) list
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
 
 and stmt = stmtkind * location
 
@@ -143,14 +145,14 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * size_t)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
-and cte = 
+and cst = 
     CInt of Nat.t
   (* TODO: warning floats with more than 64 bits can not be represented *)
   | CFloat of (float * string)
@@ -376,7 +378,7 @@ let unknown_loc = ("", -1, -1)
 
 
 (* Expressions *)
-let string_of_cte c =
+let string_of_cst c =
   match c with
       CInt c -> Nat.to_string c
     | CFloat (_, s) -> s
@@ -425,7 +427,7 @@ let rec string_of_lval lv =
 
 and string_of_exp e =
   match e with
-      Const c -> string_of_cte c
+      Const c -> string_of_cst c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp ft)^"}("^fid^")"
@@ -445,18 +447,14 @@ let string_of_fn f =
     | FunDeref (exp, (args_t, None)) ->
 	"["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
 
-let rec string_of_cond b =
-  match b with
-      [] -> "1"
-    | e::[] -> string_of_exp e
-    | e::b -> (string_of_exp e)^" & "^(string_of_cond b)
-
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-let dump_gdecl name (t, i) =
+(* TODO: print location too *)
+let dump_gdecl name (t, i, _) =
   let dump_elt (o, s, e) =
-    print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "^(string_of_exp e));
+    print_string ((string_of_size_t o)^": "^(string_of_scalar s)
+		  ^" "^(string_of_exp e));
   in
   let rec dump_init l =
     match l with
@@ -475,6 +473,19 @@ let dump_gdecl name (t, i) =
 	  print_string " = {";
 	  dump_init i;
 	  print_endline "};"
+
+let string_of_token x =
+  match x with
+      SymbolToken x -> String.make 1 x
+    | IdentToken x -> x
+    | LvalToken x -> "'"^(string_of_lval x)^"'"
+    | CstToken c -> string_of_cst c
+
+let string_of_assertion x =
+  let res = ref "" in
+  let append_token x = res := !res^(string_of_token x)^" " in
+    List.iter append_token x;
+    !res
 
 let string_of_blk offset x =
   let buf = Buffer.create 80 in
@@ -496,6 +507,7 @@ let string_of_blk offset x =
 	Set (lv, e, sc) ->
 	  dump_line_at loc ((string_of_lval lv)^" =("^(string_of_scalar sc)^
 			") "^(string_of_exp e)^";")
+      | Guard b -> dump_line_at loc ("guard("^(string_of_exp b)^");")
       | Copy (lv1, lv2, sz) ->
 	  dump_line_at loc ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			" "^(string_of_lval lv2)^";")
@@ -523,14 +535,20 @@ let string_of_blk offset x =
 	  dump_blk action;
 	  decr_margin ();
 	  dump_line "}"
+
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
 	  
       | Call f -> dump_line_at loc ((string_of_fn f)^";")
 	  
-      | ChooseAssert elts ->
+      | Select (body1, body2) ->
 	  dump_line_at loc "choose {";
+	  dump_line " -->";
 	  incr_margin ();
-	  List.iter dump_assertblk elts;
+	  dump_blk body1;
+	  decr_margin ();
+	  dump_line " -->";
+	  incr_margin ();
+	  dump_blk body2;
 	  decr_margin ();
 	  dump_line "}"
 
@@ -541,12 +559,7 @@ let string_of_blk offset x =
 	  decr_margin ();
 	  dump_line "}"
 
-(* TODO: Should change this output!! *)
-  and dump_assertblk (exps, body) =
-    dump_line ("| "^(string_of_cond exps)^" -->");
-    incr_margin ();
-    dump_blk body;
-    decr_margin ()
+      | UserSpec x -> dump_line_at loc (string_of_assertion x)
 
   and dump_blk b =
     match b with
@@ -577,20 +590,6 @@ let dump_globals gdecls =
       gdecls;
     String_map.iter dump_gdecl !glbs
       
-let dump_token x = 
-  let t =
-    match x with
-	SymbolToken x -> String.make 1 x
-      | IdentToken x -> x
-      | VarToken x -> "'"^x^"'"
-      | CstToken c -> string_of_cte c
-  in
-    print_string (t^" ")
-
-let dump_assertion x = 
-  List.iter dump_token x;
-  print_newline ()
-
 let string_of_mem_zone (addr, sz) = 
   (Nat.to_string addr)^": "^(string_of_int (sz/8))
 
@@ -608,10 +607,12 @@ let dump prog =
   let collect_funbody name body =
     funs := String_map.add name body !funs
   in
+  let specs = List.map string_of_assertion prog.specs in
+  let specs = List.sort compare specs in
     Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals prog.globals;
-    List.iter dump_assertion prog.specs;
+    List.iter print_endline specs;
     dump_mem_zones prog.mem_zones
 
 let string_of_blk x = string_of_blk 0 x
@@ -687,29 +688,6 @@ let read name =
 
     Precondition: all Coerce (l,u) verify l <= u *)
 
-(* TODO: architecture dependent ?? *)
-(* TODO: probably the best way to deal with this and all size problems
-   is to set all these global constants, when a npk file is read ?? 
-Some kind of data structure with all the sizes,
-then function read returns this data structure too
-and there is an init function *)
-let char_sz = 8
-let char_typ = Int (Signed, char_sz)
-
-let init_of_string str =
-  let len = String.length str in
-  let res = ref [(len*char_sz, char_typ, exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
-	res := (i*char_sz, char_typ, exp_of_int c)::!res
-    done;
-    (len + 1, !res)
-
-let create_cstr name str =
-  let (len, init) = init_of_string str in
-  let t = Array (Scalar char_typ, len) in
-    (name, (t, Init init))
-
 let bind_var x t body =
   let rec bind_in_lval n lv =
     match lv with
@@ -738,6 +716,7 @@ let bind_var x t body =
 	  let lv = bind_in_lval n lv in
 	  let e = bind_in_exp n e in
 	    Set (lv, e, t)
+      | Guard b -> Guard (bind_in_exp n b)
       | Copy (lv1, lv2, sz) ->
 	  let lv1 = bind_in_lval n lv1 in
 	  let lv2 = bind_in_lval n lv2 in
@@ -745,9 +724,8 @@ let bind_var x t body =
       | Decl (x, t, body) -> 
 	  let body = bind_in_blk (n+1) body in
 	    Decl (x, t, body)
-      | ChooseAssert choices -> 
-	  let choices = List.map (bind_in_choice n) choices in
-	    ChooseAssert choices
+      | Select (body1, body2) -> 
+	  Select (bind_in_blk n body1, bind_in_blk n body2)
       | InfLoop body -> 
 	  let body = bind_in_blk n body in
 	    InfLoop body
@@ -759,13 +737,8 @@ let bind_var x t body =
 	  let e = bind_in_exp n e in
 	    Call (FunDeref (e, t))
       | _ -> x
-
-  and bind_in_choice n (b, body) =
-    let b = List.map (bind_in_exp n) b in
-    let body = bind_in_blk n body in
-      (b, body)
   in
-    
+
   let body = bind_in_blk 0 body in
     Decl (x, t, body)    
   
@@ -913,13 +886,14 @@ object (self)
 end
 
 class simplify_choose =
-object 
+object (self)
   inherit builder
 
   method process_blk x =
     match x with
-	(ChooseAssert [([], body)], _)::tl -> body@tl
-      | (ChooseAssert _, _)::_ -> x
+	(Select (body, []), _)::tl | (Select ([], body), _)::tl -> 
+	  (self#process_blk body)@tl
+      | (Guard Const CInt i, _)::tl when compare i Nat.one = 0 -> tl
       | _ -> x
 end
 
@@ -975,13 +949,7 @@ let simplify_gotos blk =
 	  let body = simplify_blk body in
 	    Decl (name, t, body)
 
-      | ChooseAssert elts ->
-	  let simplify_choice (cond, body) = 
-	    let body = simplify_blk body in
-	      (cond, body)
-	  in
-	  let choices = List.map simplify_choice elts in
-	    ChooseAssert choices
+      | Select (body1, body2) -> Select (simplify_blk body1, simplify_blk body2)
 
       | InfLoop body -> 
 	  let body = simplify_blk body in
@@ -1039,11 +1007,11 @@ let rec simplify_stmt actions (x, loc) =
 	  let lv1 = simplify_lval actions lv1 in
 	  let lv2 = simplify_lval actions lv2 in
 	    Copy (lv1, lv2, sz)
+      | Guard b -> Guard (simplify_exp actions b)
       | Call (FunDeref (e, t)) -> Call (FunDeref (simplify_exp actions e, t))
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
-      | ChooseAssert elts ->
-          let elts = List.map (simplify_choose_elt actions) elts in
-	    ChooseAssert elts
+      | Select (body1, body2) -> 
+	  Select (simplify_blk actions body1, simplify_blk actions body2)
       | InfLoop body ->
           let body = simplify_blk actions body in
 	    InfLoop body
@@ -1149,6 +1117,24 @@ let set_of_init loc name init =
   in
     List.map set_of_init init
 
+(* TODO: architecture dependent ?? *)
+(* TODO: probably the best way to deal with this and all size problems
+   is to set all these global constants, when a npk file is read ?? 
+   Some kind of data structure with all the sizes,
+   then function read returns this data structure too
+   and there is an init function *)
+let char_sz = 8
+let char_typ = Int (Signed, char_sz)
+  
+let init_of_string str =
+  let len = String.length str in
+  let res = ref [(len*char_sz, char_typ, exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code (String.get str i) in
+	res := (i*char_sz, char_typ, exp_of_int c)::!res
+    done;
+    (len + 1, !res)
+      
 let build_main_args ptr_sz loc params =
   let argv_name = "!ptr_array" in
   let process_param (n, globals, init) p =
@@ -1192,8 +1178,7 @@ let has_goto lbl x =
   and has_goto (x, _) =
   match x with
       Decl (_, _, body) | InfLoop body -> blk_has_goto body
-    | ChooseAssert choices -> 
-	List.exists (fun (_, x) -> blk_has_goto x) choices
+    | Select (body1, body2) -> (blk_has_goto body1) || (blk_has_goto body2)
     | DoWith (body, _, action) -> (blk_has_goto body) && (blk_has_goto action)
     | Goto lbl' -> lbl = lbl'
     | _ -> false
@@ -1232,7 +1217,6 @@ let rec build builder prog =
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
-    builder#set_curloc unknown_loc;
     let gdecl = build_gdecl builder gdecl in
     let gdecl = builder#process_global x gdecl in
       Hashtbl.add globals' x gdecl
@@ -1246,10 +1230,11 @@ let rec build builder prog =
     Hashtbl.iter build_fundec prog.fundecs;
     { prog with globals = globals'; fundecs = fundecs' }
 
-and build_gdecl builder (t, init) =
+and build_gdecl builder (t, init, loc) =
+  builder#set_curloc loc;
   let t = build_typ builder t in
   let init = build_init_t builder init in
-    (t, init)
+    (t, init, loc)
 
 and build_fundec builder (ft, body) = 
   let ft = build_ftyp builder ft in
@@ -1313,7 +1298,16 @@ and build_offset builder o = builder#process_offset o
 
 and build_size_t builder sz = builder#process_size_t sz
 
-and build_blk builder blk = List.map (build_stmt builder) blk
+and build_blk builder blk = 
+  let blk =
+    match blk with
+	hd::tl -> 
+	  let hd = build_stmt builder hd in
+	  let tl = build_blk builder tl in
+	    hd::tl
+      | [] -> []
+  in
+    builder#process_blk blk
 
 and build_stmt builder (x, loc) =
   builder#set_curloc loc;
@@ -1336,14 +1330,15 @@ and build_stmtkind builder x =
 	  let n = build_size_t builder n in
 	    Copy (lv1, lv2, n)
 	      
+      | Guard b -> Guard (build_exp builder b)
+
       | Decl (x, t, body) ->
 	  let t = build_typ builder t in
 	  let body = build_blk builder body in
 	    Decl (x, t, body)
 	      
-      | ChooseAssert choices -> 
-	  let choices = List.map (build_choice builder) choices in
-	    ChooseAssert choices
+      | Select (body1, body2) -> 
+	  Select (build_blk builder body1, build_blk builder body2)
 	      
       | InfLoop body ->
 	  let body = build_blk builder body in
@@ -1359,8 +1354,17 @@ and build_stmtkind builder x =
       | Call fn -> 
 	  let fn = build_fn builder fn in
 	    Call fn
+
+      | UserSpec assertion -> 
+	  let assertion = List.map (build_token builder) assertion in
+	    UserSpec assertion
   in
     builder#process_stmtkind x
+
+and build_token builder x =
+  match x with
+      LvalToken lv -> LvalToken (build_lval builder lv)
+    | _ -> x
 
 and build_choice builder (cond, body) =
   let cond = List.map (build_exp builder) cond in
@@ -1573,26 +1577,30 @@ and visit_stmt visitor (x, loc) =
 	    visit_lval visitor lv1;
 	    visit_lval visitor lv2;
 	    visit_size_t visitor sz
+	| Guard b -> 
+	    visitor#process_bexp b;
+	    visit_exp visitor b
 	| Decl (_, t, body) -> 
 	    visit_typ visitor t;
 	    visit_blk visitor body
 	| Call fn -> visit_fn visitor fn
-	| ChooseAssert choices -> List.iter (visit_choice visitor loc) choices
+	| Select (body1, body2) -> 
+	    visitor#set_loc loc;
+	    visit_blk visitor body1;
+	    visitor#set_loc loc;
+	    visit_blk visitor body2
 	| InfLoop x -> visit_blk visitor x
 	| DoWith (body, _, action) -> 
 	    visit_blk visitor body;
 	    visit_blk visitor action
 	| Goto _ -> ()
+	| UserSpec assertion -> List.iter (visit_token visitor) assertion
     end else ()
 
-and visit_choice visitor loc (cond, body) =
-  visitor#set_loc loc;
-  let visit_cond x = 
-    visitor#process_bexp x;
-    visit_exp visitor x
-  in
-    List.iter visit_cond cond;
-    visit_blk visitor body
+and visit_token builder x =
+  match x with
+      LvalToken lv -> visit_lval builder lv
+    | _ -> ()
 
 let visit_fun visitor fid (t, body) =
   let continue = visitor#process_fun fid (t, body) in
@@ -1604,8 +1612,9 @@ let visit_fun visitor fid (t, body) =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, init) =
-  let continue = visitor#process_gdecl id (t, init) in
+let visit_glb visitor id (t, init, loc) =
+  visitor#set_loc loc;
+  let continue = visitor#process_gdecl id (t, init, loc) in
     if continue then visit_typ visitor t;
     match init with
 	Init x when continue -> List.iter (visit_init visitor) x 
@@ -1639,4 +1648,15 @@ let collect_fid_addrof prog =
     visit collector prog;
     collector#get_fid_list ()
 
-
+let rec equal_stmt (x1, _) (x2, _) =
+  match (x1, x2) with
+      (Decl (_, t1, body1), Decl (_, t2, body2)) -> 
+	t1 = t2 && equal_blk body1 body2
+    | (Select (bl1, br1), Select (bl2, br2)) ->
+	 (equal_blk bl1 bl2) && (equal_blk br1 br2)
+    | (InfLoop body1, InfLoop body2) -> equal_blk body1 body2
+    | (DoWith (body1, lbl1, action1), DoWith (body2, lbl2, action2)) ->
+	equal_blk body1 body2 && lbl1 = lbl2 && equal_blk action1 action2
+    | _ -> x1 = x2
+  
+and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2

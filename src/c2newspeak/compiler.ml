@@ -29,15 +29,12 @@ open Csyntax
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-  let specbuf = Buffer.create 800 in
     Lexer.init fname lexbuf;
     Synthack.init_tbls ();
     try
-      let (fnames, globals) = Parser.parse (Lexer.token specbuf) lexbuf in
-      let specbuf = Lexing.from_string (Buffer.contents specbuf) in
-      let spec = Spec_parser.parse Spec_lexer.token specbuf in
+      let (fnames, globals) = Parser.parse Lexer.token lexbuf in
 	close_in cin;
-	(fnames, globals, spec)
+	(fnames, globals)
     with Parsing.Parse_error -> 
       let loc = "Compiler.parse" in
       let lexeme = Lexing.lexeme lexbuf in
@@ -45,23 +42,24 @@ let parse fname =
       let advice = ", rewrite your code" in
 	if (not !Npkcontext.accept_gnuc)
 	then Npkcontext.report_accept_warning loc msg Npkcontext.GnuC;
-	Npkcontext.error loc (msg^advice)
+	Npkcontext.report_error loc (msg^advice)
 
+(* TODO: try to do this using function parse ? factor code with previous 
+   function *)
 let append_gnu_symbols globals =
   let lexbuf = Lexing.from_string Gnuc.builtins in
-  let specbuf = Buffer.create 800 in
     Lexer.init "__gnuc_builtin_symbols" lexbuf;
     Synthack.init_tbls ();
     try 
-      let (_, gnuc_symbols) = Parser.parse (Lexer.token specbuf) lexbuf in
+      let (_, (gnuc_symbols, _)) = Parser.parse Lexer.token lexbuf in
 	gnuc_symbols@globals
     with Parsing.Parse_error -> 
-      Npkcontext.error "Compiler.append_gnu_symbols" 
+      Npkcontext.report_error "Compiler.append_gnu_symbols" 
 	"unexpected error while parsing GNU C symbols"
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (fnames, globals, spec) = parse fname in
+  let (fnames, (globals, spec)) = parse fname in
   let globals = 
     if !Npkcontext.accept_gnuc then append_gnu_symbols globals else globals
   in
@@ -76,7 +74,7 @@ let compile fname =
     else
       globals
   in
-    if !Npkcontext.verb_ast then Csyntax.print globals;
+    if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
     let fnames = if fnames = [] then fname::[] else fnames in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
@@ -95,23 +93,24 @@ let eval_exp x =
   match x with
       Cst (Cir.CInt n, _) -> n
     | _ -> 
-	Npkcontext.error "Compiler.compile_config" "constant address expected"
+	Npkcontext.report_error "Compiler.compile_config" 
+	  "constant address expected"
   
-
 let compile_config fname =
   let cin = open_in fname in
-  let specbuf = Buffer.create 800 in
   let lexbuf = Lexing.from_channel cin in    
     Lexer.init fname lexbuf;
     try 
-      let mem_zones = Parser.config (Lexer.token specbuf) lexbuf in
+(* TODO: use another function than Lexer.token here, the ref [] is not useful
+*)
+      let mem_zones = Parser.config Lexer.token lexbuf in
       let translate (addr, sz) =
 	let addr = eval_exp addr in
 	let sz = Nat.mul (eval_exp sz) (Nat.of_int 8) in
 	let sz = 
 	  try Nat.to_int sz
 	  with _ -> 
-	    Npkcontext.error "Compiler.config" 
+	    Npkcontext.report_error "Compiler.config" 
 	      "size of memory zone too large"
 	in
 	  (addr, sz)
@@ -120,4 +119,4 @@ let compile_config fname =
     with Parsing.Parse_error -> 
       let loc = "Compiler.compile_config" in
       let lexeme = Lexing.lexeme lexbuf in
-	Npkcontext.error loc ("syntax error: unexpected token: "^lexeme)
+	Npkcontext.report_error loc ("syntax error: unexpected token: "^lexeme)

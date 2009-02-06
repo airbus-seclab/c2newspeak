@@ -111,20 +111,20 @@ let translate npk =
 	  push_local x;
 	  translate_blk body;
 	  pop_local ()
-      | ChooseAssert choices -> List.iter translate_choice choices
+      | Select (blk1, blk2) -> 
+	  translate_blk blk1;
+	  translate_blk blk2
       | InfLoop body -> translate_blk body
       | DoWith (body, _, action) -> 
 	  translate_blk body;
 	  translate_blk action
-      | Goto _ -> ()
+      | Goto _ | Guard _ | UserSpec _ -> ()
       | Call (FunId f) when not (Hashtbl.mem npk.fundecs f) -> 
 	  prerr_endline ("unknown function "^f^". Assuming empty body.")
       | Call fn ->
 	  let (e, ftyp) = translate_fn fn in
 	  let params = translate_args ftyp in
 	    prog := (S.Call (e, params))::!prog
-
-  and translate_choice (_, body) = translate_blk body
 
   and translate_blk x = List.iter translate_stmt x in
 
@@ -140,7 +140,7 @@ let translate npk =
       translate init
   in
 
-  let translate_global x (_, init) =
+  let translate_global x (_, init, _) =
     Hashtbl.add vars x x;
     match init with
 	Zero -> ()

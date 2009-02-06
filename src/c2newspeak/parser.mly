@@ -24,13 +24,11 @@
 */
 
 %{
-open Cir
 open Csyntax
 open Lexing
 open Synthack
 
 let struct_cnt = ref 0
-let cur_fun = ref ""
 
 let gen_struct_id () = 
   incr struct_cnt;
@@ -48,9 +46,10 @@ let apply_attrs attrs t =
       ([], _) -> t
     | (new_sz::[], Int (sign, _)) -> Int (sign, new_sz)
     | (_::[], _) -> 
-	Npkcontext.error "Parser.apply_attr" "wrong type, integer expected"
+	Npkcontext.report_error "Parser.apply_attr" 
+	  "wrong type, integer expected"
     | _ -> 
-	Npkcontext.error "Parser.apply_attr" 
+	Npkcontext.report_error "Parser.apply_attr" 
 	  "more than one attribute not handled yet"
 
 (* TODO: code not so nice: simplify? *)
@@ -110,6 +109,7 @@ let build_typedef d =
   let build_cdecl x = (CDecl x, loc) in
     process_decls (build_edecl, build_cdecl, build_vdecl) d
 
+(* TODO: remove code?? *)
 let normalize_fun_prologue b m =
   let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
   let x =
@@ -117,21 +117,31 @@ let normalize_fun_prologue b m =
       | Some x -> x
       | None -> 
 	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.error "Firstpass.translate_global" "unknown function name"
+	  Npkcontext.report_error "Firstpass.translate_global" 
+	    "unknown function name"
   in
-    cur_fun := x;
     (t, x, loc)
 
-let build_fundef static ((t, x, loc), body) =
-  (FunctionDef (x, t, static, body), loc)::[]
+let build_fundef static ((b, m), body) =
+  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let x =
+    match x with
+      | Some x -> x
+      | None -> 
+	  (* TODO: code cleanup remove these things !!! *)
+	  Npkcontext.report_error "Firstpass.translate_global" 
+	    "unknown function name"
+  in
+    (FunctionDef (x, t, static, body), loc)::[]
 
 let build_type_decl d =
   let ((edecls, cdecls), (t, _, _)) = Synthack.normalize_decl d in
     if (edecls <> []) then begin 
-      Npkcontext.error "Parser.build_type_decl" "unexpected enum declaration"
+      Npkcontext.report_error "Parser.build_type_decl" 
+	"unexpected enum declaration"
     end;
     if (cdecls <> []) then begin 
-      Npkcontext.error "Parser.build_type_decl" 
+      Npkcontext.report_error "Parser.build_type_decl" 
 	"unexpected composite declaration"
     end;
     t
@@ -163,7 +173,9 @@ let report_asm tokens =
 let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | Str _ -> Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Set _ | Str _ 
+    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) -> 
+	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, normalize_bexp e)
     | IfExp (c, e1, e2) -> 
 	IfExp (normalize_bexp c, normalize_bexp e1, normalize_bexp e2)
@@ -186,8 +198,13 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME TRANSPARENT_UNION UNUSED TYPEOF
+%token ALIGNED WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
+%token TRANSPARENT_UNION UNUSED TYPEOF
 %token EOF
+
+%token <Csyntax.assertion> NPK
+%token <Csyntax.exp> EXP
+%token <char> SYMBOL
 
 %token <string> IDENTIFIER
 %token <string> TYPEDEF_NAME
@@ -202,6 +219,12 @@ let rec normalize_bexp e =
 %type <(Csyntax.exp * Csyntax.exp) list> config
 %start config
 
+%type <Csyntax.assertion> assertion
+%start assertion
+
+%type <Csyntax.exp> expression
+%start expression
+
 %%
 /* TODO: simplify code by generalizing!!! 
 try to remove multiple occurence of same pattern: factor as much as possible
@@ -215,17 +238,24 @@ parse:
 ;;
 
 translation_unit:
-  external_declaration translation_unit     { $1@$2 }
+  NPK translation_unit                      { 
+    let (globals, spec) = $2 in
+      (globals, $1::spec)
+  }
+| external_declaration translation_unit     { 
+    let (globals, spec) = $2 in
+      ($1@globals, spec)
+  }
 | SEMICOLON translation_unit                { 
     Npkcontext.report_accept_warning "Parser.translation_unit" 
       "unnecessary semicolon" Npkcontext.DirtySyntax;
     $2 
   }
-|                                           { [] }
+|                                           { ([], []) }
 ;;
 
 function_prologue:
-  declaration_specifiers declarator         { normalize_fun_prologue $1 $2 }
+  declaration_specifiers declarator         { ($1, $2) }
 ;;
 
 function_definition:
@@ -309,7 +339,7 @@ old_parameter_declaration:
       match init with
 	  None when attr = [] -> (b, m)
 	| _ -> 
-	    Npkcontext.error "Parser.old_parameter_declaration"
+	    Npkcontext.report_error "Parser.old_parameter_declaration"
 	      "parameter can not be initialized"
     in
       List.map normalize_param m
@@ -351,8 +381,13 @@ statement_list:
 |                                          { [] }
 ;;
 
-// TODO: factor declarations??
 statement:
+  NPK statement                            { (UserSpec $1, get_loc ())::$2 }
+| statement_kind                           { $1 }
+;;
+
+// TODO: factor declarations??
+statement_kind:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
 | REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
@@ -409,20 +444,20 @@ iteration_statement:
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
-	Npkcontext.print_warning "Parser.iteration_statement" 
+	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
 	For([], normalize_bexp $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
-	Npkcontext.print_warning "Parser.iteration_statement" 
+	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "increment statement expected";
 	For($3, normalize_bexp $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
-	Npkcontext.print_warning "Parser.iteration_statement" 
+	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
 	For([], normalize_bexp $4, $6, []) 
       }
@@ -433,7 +468,7 @@ iteration_statement:
 
 expression_statement:
   SEMICOLON                                { 
-    Npkcontext.print_warning "Parser.expression_statement" 
+    Npkcontext.report_warning "Parser.expression_statement" 
       "halting condition should be explicit";
     exp_of_int 1
   }
@@ -475,18 +510,16 @@ assignment_expression_list:
 
 primary_expression:
   IDENTIFIER                               { Var $1 }
-| CHARACTER                                { 
-    Cst (Csyntax.char_cst_of_lexeme $1) 
-  }
-| INTEGER                                  { 
-    Cst (Csyntax.int_cst_of_lexeme $1) 
-  }
-| FLOATCST                                 { 
-    Cst (Csyntax.float_cst_of_lexeme $1) 
-  }
+| constant                                 { Cst $1 }
 | string_literal                           { Str $1 }
-| FUNNAME                                  { Str !cur_fun }
+| FUNNAME                                  { FunName }
 | LPAREN expression RPAREN                 { $2 }
+;;
+
+constant:
+  CHARACTER                                { Csyntax.char_cst_of_lexeme $1 }
+| INTEGER                                  { Csyntax.int_cst_of_lexeme $1 }
+| FLOATCST                                 { Csyntax.float_cst_of_lexeme $1 }
 ;;
 
 string_literal:
@@ -507,7 +540,7 @@ postfix_expression:
 | postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
 | BUILTIN_CONSTANT_P 
   LPAREN expression RPAREN                 { 
-     Npkcontext.print_warning "Parser.assignment_expression"
+     Npkcontext.report_warning "Parser.assignment_expression"
        "__builtin_constant_p ignored, assuming value 0";
     exp_of_int 0
   }
@@ -781,7 +814,7 @@ ityp:
 ident_or_tname:
   IDENTIFIER                             { $1 }
 | TYPEDEF_NAME                           {
-    Npkcontext.print_warning "Parser.ident_or_tname" 
+    Npkcontext.report_warning "Parser.ident_or_tname" 
       ("identifier "^$1^" is defined as a type, avoid using it for "
 	^"another purpose");
     $1 
@@ -870,9 +903,10 @@ external_declaration:
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
-    Npkcontext.report_accept_warning "Parser.external_declaration" 
-      "extern function definition" Npkcontext.DirtySyntax;
-    build_fundef false $3
+    Npkcontext.report_ignore_warning "Parser.external_declaration" 
+      "extern function definition" Npkcontext.ExternFunDef;
+    let ((b, m), _) = $3 in
+      build_glbdecl (false, false) (b, ((m, []), None)::[])
 }
 | optional_extension TYPEDEF 
   declaration SEMICOLON                    { build_glbtypedef $3 }
@@ -928,16 +962,22 @@ field_declaration:
 ;;
 
 attribute:
-  ATTRIBUTE LPAREN LPAREN attribute_name 
+  ATTRIBUTE LPAREN LPAREN attribute_name_list 
   RPAREN RPAREN                            { $4 }
 | INLINE                                   { [] }
 | CDECL                                    { [] }
 | RESTRICT                                 { [] }
 ;;
 
+attribute_name_list:
+  attribute_name COMMA attribute_name_list { $1@$3 }
+| attribute_name                           { $1 }
+;;
+
 attribute_name:
-  DLLIMPORT                                {
-    Npkcontext.print_warning "Parser.attribute" 
+  ALIGNED                                  { [] }
+| DLLIMPORT                                {
+    Npkcontext.report_warning "Parser.attribute" 
       "ignoring attribute dllimport";
     []
   }
@@ -961,13 +1001,18 @@ attribute_name:
       "packed attribute" Npkcontext.Pack;
     []
   }
+| PACKED LPAREN INTEGER RPAREN             { 
+    Npkcontext.report_ignore_warning "Parser.attribute_name" 
+      "packed attribute" Npkcontext.Pack;
+    []
+  }
 | TRANSPARENT_UNION                        { 
     Npkcontext.report_accept_warning "Parser.attribute_name" 
       "transparent union" Npkcontext.TransparentUnion;
     []
   }
 
-| UNUSED                        {[]}
+| UNUSED                                   { [] }
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 
@@ -1000,4 +1045,13 @@ memory_region_list:
 
 memory_region:
   expression COLON expression              { ($1, $3) }
+;;
+
+/* Newspeak assertion language */
+assertion:
+  SYMBOL assertion                         { (SymbolToken $1)::$2 }
+| IDENTIFIER assertion                     { (IdentToken $1)::$2 }
+| EXP assertion                            { (LvalToken $1)::$2 }
+| constant assertion                       { (CstToken $1)::$2 }
+|                                          { [] }
 ;;

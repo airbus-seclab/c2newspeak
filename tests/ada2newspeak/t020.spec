@@ -14,16 +14,20 @@ t020() {
     2- =(uint2) belongs[0,3-1] 0;
     1- =(uint2) belongs[0,4-1] 1;
     0- =(uint3) belongs[0,5-1] 3;
-    choose {
-    --> assert((belongs[0,4-1] 1 > 1));
-        2- =(uint2) belongs[0,3-1] 0;
-    --> assert((1 > belongs[0,4-1] 1));
         choose {
-        --> assert((1 ==_uint2 1-_uint2));
-            1- =(uint2) belongs[0,4-1] 3;
-            0- =(uint3) belongs[0,5-1] 4;
-        --> assert((1-_uint2 ==_uint2 1));
-        }
+     -->
+      guard((belongs[0,4-1] 1 > 1));
+      2- =(uint2) belongs[0,3-1] 0;
+     -->
+      guard((1 > belongs[0,4-1] 1));
+            choose {
+       -->
+        guard((1 ==_uint2 1-_uint2));
+        1- =(uint2) belongs[0,4-1] 3;
+        0- =(uint3) belongs[0,5-1] 4;
+       -->
+        guard((1-_uint2 ==_uint2 1));
+      }
     }
   } with lbl0: {
   }
@@ -42,15 +46,19 @@ void t020(void) {
   (t020.adb:6#134)^1- =(uint2) 1;
   (t020.adb:7#154)^0- =(uint3) 3;
   (t020.adb:9#180)^choose {
-    | ! (1 > 1) -->
-      (t020.adb:10#208)^2- =(uint2) 0;
-    | (1 > 1) -->
-      (t020.adb:11#223)^choose {
-        | (1 ==_uint2 1-_uint2) -->
-          (t020.adb:12#244)^1- =(uint2) 3;
-          (t020.adb:13#259)^0- =(uint3) 4;
-        | ! (1 ==_uint2 1-_uint2) -->
-      }
+   -->
+    (t020.adb:9#180)^guard(! (1 > 1));
+    (t020.adb:10#208)^2- =(uint2) 0;
+   -->
+    (t020.adb:9#180)^guard((1 > 1));
+    (t020.adb:11#223)^choose {
+     -->
+      (t020.adb:11#223)^guard((1 ==_uint2 1-_uint2));
+      (t020.adb:12#244)^1- =(uint2) 3;
+      (t020.adb:13#259)^0- =(uint3) 4;
+     -->
+      (t020.adb:11#223)^guard(! (1 ==_uint2 1-_uint2));
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 /*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2009  Sarah Zennou
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -17,14 +17,16 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-  Sarah Zennou
-  EADS Innovation Works - SE/IA
+  Charles Hymans
+  EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: sarah (dot) zennou (at) eads (dot) net
+  email: charles.hymans@penjili.org
 */
 
-void main(void){
-  int i;
- lbl: i = 0;
-  goto lbl;
+typedef struct s {
+  short i;
+  int j;
+}__attribute__((packed(8))) s_t;
+
+void main() {
 }

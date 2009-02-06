@@ -51,14 +51,14 @@ type error =
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
- 
+  | ExternFunDef
 
 (** {1 Comand line options } *)
 
-(* TODO: remove as many bool refs as possible *)
 (** When global_zero_init is set, cil2newspeak adds init code for all
     globals *)
 val global_zero_init : bool ref
+
 val accept_gnuc : bool ref
 
 (** When remove_temp is set, only used variables are kept in newspeak
@@ -70,7 +70,6 @@ val accept_flex_array: bool ref
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
 
-val verb_debug : bool ref
 val verb_ast : bool ref
 val verb_cir : bool ref
 val verb_npko : bool ref
@@ -80,11 +79,6 @@ val opt_checks: bool ref
 
 (** If true, then the goto elimination transformation of backward gotos is performed *)
 val accept_backward_goto: bool ref
-
-(** when the pretty_print boolean is set, locals and globals are
-    displayed in a prettier way if possible (with their names) *)
-val pretty_print : bool ref
-
 
 (** Names of the files that are to be compiled / link. The first
     string is the name of the file that need to be read, the second is the
@@ -123,7 +117,7 @@ val get_fname : unit -> string
 (* rename to report_warning *)
 (* TODO: unify these functions!!! into one, with a level!!! *)
 (* TODO: remove this function?? or rename? *)
-val print_warning : string -> string -> unit
+val report_warning : string -> string -> unit
 (* TODO: remove this function *)
 (* TODO: clean up/simplify npkcontext interface *)
 val report_strict_warning: string -> string -> unit
@@ -132,8 +126,8 @@ val report_ignore_warning: string -> string -> error -> unit
   (** [report_accept_warning file_function message error_type] *)
 val report_accept_warning: string -> string -> error -> unit
 (** Throws an Invalid_argument exception with a message *)
-(* TODO: rename this function into report_error *)
-val error : string -> string -> 'a
+
+val report_error : string -> string -> 'a
 
 (** Displays a message to the user *)
 val print_debug : string -> unit

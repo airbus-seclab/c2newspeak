@@ -30,12 +30,11 @@ LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
 newspeak.FILES=\
 	config newspeak npkcontext \
-	npkil cir cir2npkil link
+	npkil cir cir2npkil linker
 
 c2newspeak.FILES=\
-        pp_syntax pp_lexer pp_parser \
-        csyntax synthack gnuc lexer parser \
-        spec_lexer spec_parser \
+        pp_syntax pp_parser pp_lexer \
+        csyntax synthack gnuc parser lexer \
         cilutils npkutils goto_elimination cilenv cilfirstpass cilcompiler \
         firstpass compiler \
 	params c2newspeak
@@ -45,7 +44,7 @@ FILES=version utils/list_utils utils/symbtbl \
       $(addprefix c2newspeak/, $(c2newspeak.FILES))
 
 c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer \
-                       spec_parser spec_lexer
+                       spec_parser
 c2newspeak.CLEANFILES:=$(addsuffix .ml, $(c2newspeak.CLEANFILES)) \
                        $(addsuffix .mli, $(c2newspeak.CLEANFILES)) \
                        parser.output pp_parser.output spec_parser.output

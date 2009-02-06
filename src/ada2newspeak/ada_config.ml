@@ -67,10 +67,10 @@ let size_of_range inf sup =
     else if min_bit<=16 then 16
     else if min_bit<=32 then 32
     else if min_bit<=64 then 64
-    else Npkcontext.error
-      "Ada_utils.size_of_range"
-      "type representation is too big"
-
+    else begin
+      Npkcontext.report_error "Ada_utils.size_of_range"
+	"type representation is too big"
+    end
 
 (* from the specification : 13.3.(49) *)
 let size_of_boolean = 1

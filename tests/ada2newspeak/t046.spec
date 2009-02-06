@@ -14,9 +14,11 @@ t046() {
       0- =(int32) belongs[-2147483648,2147483648-1] 42;
       t093.z();
     }
-    choose {
-    --> assert(0-_uint1);
-    --> assert(! 0-_uint1);
+        choose {
+     -->
+      guard(0-_uint1);
+     -->
+      guard(! 0-_uint1);
     }
   } with lbl0: {
   }
@@ -35,8 +37,10 @@ void t046(void) {
     (t046.adb:6#88)^t093.z();
   }
   (t046.adb:6#88)^choose {
-    | 0-_uint1 -->
-    | ! 0-_uint1 -->
+   -->
+    (t046.adb:6#88)^guard(0-_uint1);
+   -->
+    (t046.adb:6#88)^guard(! 0-_uint1);
   }
 }
 

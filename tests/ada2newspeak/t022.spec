@@ -15,11 +15,13 @@ t022() {
     1- =(uint1) 1;
     {
       uint1 tmp0;
-      choose {
-      --> assert(3-_uint1);
-          0- =(uint1) 1;
-      --> assert(! 3-_uint1);
-          0- =(uint1) 2-_uint1;
+            choose {
+       -->
+        guard(3-_uint1);
+        0- =(uint1) 1;
+       -->
+        guard(! 3-_uint1);
+        0- =(uint1) 2-_uint1;
       }
       1- =(uint1) 0-_uint1;
     }
@@ -41,10 +43,12 @@ void t022(void) {
   (t022.adb:6#84)^{
     uint1 tmp0;
     (t022.adb:6#84)^choose {
-      | 3-_uint1 -->
-        (t022.adb:6#84)^0- =(uint1) 1;
-      | ! 3-_uint1 -->
-        (t022.adb:6#84)^0- =(uint1) 2-_uint1;
+     -->
+      (t022.adb:6#84)^guard(3-_uint1);
+      (t022.adb:6#84)^0- =(uint1) 1;
+     -->
+      (t022.adb:6#84)^guard(! 3-_uint1);
+      (t022.adb:6#84)^0- =(uint1) 2-_uint1;
     }
     (t022.adb:6#84)^1- =(uint1) 0-_uint1;
   }

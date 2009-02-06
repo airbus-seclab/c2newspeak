@@ -1,3 +1,4 @@
+Warning: 254.c:28#2: expression without post effects expected
 Newspeak output
 ---------------
 254.c

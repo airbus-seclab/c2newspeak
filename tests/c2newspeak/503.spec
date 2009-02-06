@@ -5,40 +5,54 @@ void main(void) {
   (503.c:29#2)^do {
     (503.c:29#2)^do {
       (503.c:29#2)^choose {
-        | ! (a_int32 ==_int32 0) -->
+       -->
+        (503.c:29#2)^guard(! (a_int32 ==_int32 0));
+        (503.c:29#2)^choose {
+         -->
+          (503.c:29#2)^guard(! (b_int32 ==_int32 0));
           (503.c:29#2)^choose {
-            | ! (b_int32 ==_int32 0) -->
-              (503.c:29#2)^choose {
-                | ! (d_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl2;
-                | (d_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl1;
-              }
-            | (b_int32 ==_int32 0) -->
-              (503.c:29#2)^choose {
-                | ! (e_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl2;
-                | (e_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl1;
-              }
+           -->
+            (503.c:29#2)^guard(! (d_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl2;
+           -->
+            (503.c:29#2)^guard((d_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl1;
           }
-        | (a_int32 ==_int32 0) -->
+         -->
+          (503.c:29#2)^guard((b_int32 ==_int32 0));
           (503.c:29#2)^choose {
-            | ! (c_int32 ==_int32 0) -->
-              (503.c:29#2)^choose {
-                | ! (d_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl2;
-                | (d_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl1;
-              }
-            | (c_int32 ==_int32 0) -->
-              (503.c:29#2)^choose {
-                | ! (e_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl2;
-                | (e_int32 ==_int32 0) -->
-                  (503.c:29#2)^goto lbl1;
-              }
+           -->
+            (503.c:29#2)^guard(! (e_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl2;
+           -->
+            (503.c:29#2)^guard((e_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl1;
           }
+        }
+       -->
+        (503.c:29#2)^guard((a_int32 ==_int32 0));
+        (503.c:29#2)^choose {
+         -->
+          (503.c:29#2)^guard(! (c_int32 ==_int32 0));
+          (503.c:29#2)^choose {
+           -->
+            (503.c:29#2)^guard(! (d_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl2;
+           -->
+            (503.c:29#2)^guard((d_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl1;
+          }
+         -->
+          (503.c:29#2)^guard((c_int32 ==_int32 0));
+          (503.c:29#2)^choose {
+           -->
+            (503.c:29#2)^guard(! (e_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl2;
+           -->
+            (503.c:29#2)^guard((e_int32 ==_int32 0));
+            (503.c:29#2)^goto lbl1;
+          }
+        }
       }
     } with lbl2: {
       (503.c:30#4)^x =(int32) 0;

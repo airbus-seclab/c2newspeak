@@ -34,7 +34,7 @@ open Newspeak
 type t = (filenames 
 	   * (string, ginfo) Hashtbl.t 
 	   * (fid, funinfo) Hashtbl.t 
-	   * specs)
+	   * assertion list)
 
 and filenames = string list
 
@@ -49,11 +49,21 @@ and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
   | Decl of (string * typ * blk)
-  | ChooseAssert of (exp list * blk) list
+  | Guard of exp
+  | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
   | Call of fn
+  | UserSpec of assertion
+
+and assertion = token list
+
+and token = 
+    SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lval
+  | CstToken of Newspeak.cst
 
 and stmt = stmtkind * location
 
@@ -66,7 +76,7 @@ and lval =
   | Shift of (lval * exp)
 
 and exp =
-    Const of cte
+    Const of cst
   | Lval of (lval * scalar_t)
   | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
@@ -186,14 +196,12 @@ let rec string_of_lval lv =
 
 and string_of_exp e =
   match e with
-      Const c -> Newspeak.string_of_cte c
+      Const c -> Newspeak.string_of_cst c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf (lv, sz) -> "&_"^(string_of_tmp_nat sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)
 
-    (* TODO: Check this ! *)
-    (* Pretty printing for >= and != *)
-    | UnOp (Not, BinOp (op, e1, e2)) (* when !pretty_print *) ->
+    | UnOp (Not, BinOp (op, e1, e2)) ->
 	"("^(string_of_exp e2)^" "^(string_of_binop op)^
 	  " "^(string_of_exp e1)^")"
 
@@ -218,31 +226,19 @@ and string_of_fn f =
 let dump_npko (fnames, globs, funs, _) = 
   let cur_fun = ref "" in
 
-  let lbls = ref (Int_map.empty) in
   let lbl_index = ref 0 in
 
-  let string_of_lbl l =
-    if not !Npkcontext.pretty_print
-    then "lbl"^(string_of_int l)
-    else
-      let pretty_l = try
-	  Int_map.find l !lbls
-	with Not_found ->
-	  lbl_index := !lbl_index + 1;
-	  lbls := Int_map.add l !lbl_index !lbls;
-	  !lbl_index
-      in !cur_fun^"_"^(string_of_int pretty_l)
-  in
+  let string_of_lbl l = "lbl"^(string_of_int l) in
 
-  let rec dump_blk align decls b =
+  let rec dump_blk align b =
     match b with
-      | hd::[] -> dump_stmt align decls true hd
+      | hd::[] -> dump_stmt align true hd
       | hd::r ->
-	  dump_stmt align decls false hd;
-	  List.iter (dump_stmt align decls false) r
+	  dump_stmt align false hd;
+	  List.iter (dump_stmt align false) r
       | [] -> ()
-  
-  and dump_stmt align decls only (sk, _) =
+
+  and dump_stmt align only (sk, _) =
     print_string align;
     match sk with
 	Set (lv, e, sc) ->
@@ -253,24 +249,23 @@ let dump_npko (fnames, globs, funs, _) =
 			    " "^(string_of_lval lv2)^";")
 	    
       | Decl (name, t, body) ->
-	  let new_decls = if !Npkcontext.pretty_print then (name::decls) else [] in
-	    if only then begin
-	      print_endline ((string_of_typ t)^" "^name^";");
-	      dump_blk align new_decls body
-	    end else begin
-	      print_endline "{";
-	      let new_align = align^"  " in
-		print_string new_align;
+	  if only then begin
+	    print_endline ((string_of_typ t)^" "^name^";");
+	    dump_blk align body
+	  end else begin
+	    print_endline "{";
+	    let new_align = align^"  " in
+	      print_string new_align;
 		print_endline ((string_of_typ t)^" "^name^";");
-		dump_blk new_align new_decls body;
+		dump_blk new_align body;
 		print_endline (align^"}")
 	    end
 	     
       | DoWith  (body, lbl, action) ->
 	  print_endline "do {";
-	  dump_blk (align^"  ") decls body;
+	  dump_blk (align^"  ") body;
 	  print_endline (align^"} with lbl"^(string_of_int lbl)^": {");
-	  dump_blk (align^"  ") decls action;
+	  dump_blk (align^"  ") action;
 	  print_endline (align^"}")
 
       | Goto l ->
@@ -279,32 +274,22 @@ let dump_npko (fnames, globs, funs, _) =
       | Call f ->
 	  print_endline ((string_of_fn f)^";")
 	    
-      | ChooseAssert elts ->
-	  print_endline "choose {";
-	  List.iter (dump_assertblk (align^"--> ") (align^"    ") decls) elts;
+      | Guard b -> print_endline ("guard("^(string_of_exp b)^");")
+
+      | Select (body1, body2) ->
+	  print_endline (align^"choose {");
+	  print_endline (align^" -->");
+	  dump_blk (align^"  ") body1;
+	  print_endline (align^" -->");
+	  dump_blk (align^"  ") body2;
 	  print_endline (align^"}")
-	    
+
       | InfLoop body -> 
 	  print_endline "while (1) {";
-	  dump_blk (align^"  ") decls body;
+	  dump_blk (align^"  ") body;
 	  print_endline (align^"}")
-	    
-  and dump_assert align e =
-    print_endline (align^"assert("^(string_of_exp e)^");")
-      
-  and dump_assertblk align1 align2 decls (exps, b) =
-    match exps, b with
-      | [], [] -> Npkcontext.error "Newspeak.dump_assertblk" "Error in output"
-      | [], hd::[] ->
-	  dump_stmt align1 decls true hd
-      | [], hd::r ->
-	  dump_stmt align1 decls false hd;
-	  List.iter (dump_stmt align2 decls false) r
-	    
-      | first::others, _ ->
-	  dump_assert align1 first;
-	  List.iter (dump_assert align2) others;
-	  dump_blk align2 decls b
+
+      | UserSpec _ -> print_endline (align^"UserSpec;")
   in
 
   let dump_init i =
@@ -333,7 +318,7 @@ let dump_npko (fnames, globs, funs, _) =
     cur_fun := name;
     lbl_index := 0;
     print_endline (name^"() {");
-    dump_blk "  " [] body;
+    dump_blk "  " body;
     print_endline "}";
     print_newline ()
   in
@@ -382,14 +367,13 @@ let is_mp_typ t1 t2 =
 	  let _ = is_mp_typs_aux t1 t2 in
 	    false
 
-      | (Array (t1, _), Array (t2, None)) ->
-	  is_mp_typs_aux t1 t2
+      | (Array (t1, _), Array (t2, None)) -> is_mp_typs_aux t1 t2
 
       | (Array (t1, Some l1), Array (t2, Some l2)) when l1 = l2 ->
-	  (is_mp_typs_aux t1 t2)
+	  is_mp_typs_aux t1 t2
     
       | (Region (f1, n1), Region (f2, n2)) when n1 = n2 ->
-	  (is_mp_fields f1 f2)
+	  is_mp_fields f1 f2
 	    
       | _ -> raise Uncomparable
 
@@ -400,7 +384,6 @@ let is_mp_typ t1 t2 =
 	  (is_mp_fields f1 f2) && (is_mp_typs_aux t1 t2)
       | _ -> raise Uncomparable
   in
-    
     is_mp_typs_aux t1 t2
 
 let compare_typs t1 t2 =
@@ -439,30 +422,20 @@ let write out_name prog =
     close_out ch_out;
     Npkcontext.print_debug ("Writing done.")
     
-
-let read_header fname =
+let read fname =
   let cin = open_in_bin fname in
     Npkcontext.print_debug ("Importing "^fname^"...");
     let str = Marshal.from_channel cin in
       if str <> "NPKO" then begin 
 	close_in cin;
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Npkil.read_header" (fname^" is an invalid .npko file")
       end;
-      let (srcname, globs, _, specs) = Marshal.from_channel cin in
+      let prog = Marshal.from_channel cin in
 	Npkcontext.print_debug ("Importing done.");
 	close_in cin;
-	(srcname, globs, specs)
-
-let read_fundefs fname =
-  let cin = open_in_bin fname in
-    Npkcontext.print_debug ("Importing funs from "^fname^"...");
-    let _ = Marshal.from_channel cin in
-    let (_, _, funs, _x) = Marshal.from_channel cin in
-      Npkcontext.print_debug ("Funs import done.");
-      close_in cin;
-      funs
-
+	prog
+  
 (* TODO: architecture dependent ?? *)
 (* TODO: probably the best way to deal with this and all size problems
    is to set all these global constants, when a npk file is read ?? 
@@ -521,13 +494,13 @@ let cast t e t' =
     | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
     | (Float _, Int (sign, _)) -> 
 	if (sign = Unsigned) then begin
-	  Npkcontext.print_warning "Npkil.cast"
+	  Npkcontext.report_warning "Npkil.cast"
 	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(string_of_cast t t'))
 	end;
 	UnOp (Cast (t, t'), e)
     | _ -> 
-	Npkcontext.error "Npkil.cast"
+	Npkcontext.report_error "Npkil.cast"
 	  ("invalid cast "^(string_of_cast t t'))
 
 let rec append_decls d body =
