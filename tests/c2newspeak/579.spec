@@ -1,4 +1,22 @@
 Warning: 579.c:31#1099: goto statement accepted
+typ goto.lbl;
+typ i;
+goto.lbl = 0;
+do {
+ goto.lbl = goto.lbl;
+ if Unop {
+ } else {
+ }
+ For (;IfExp; ) {
+  {
+    goto.lbl = 0;
+    lbl: 
+    i = 0;
+}
+ }
+ goto.lbl = 1;
+} (goto.lbl)
+
 Newspeak output
 ---------------
 579.c

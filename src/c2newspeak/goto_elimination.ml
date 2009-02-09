@@ -46,7 +46,7 @@ let rec var_and_stmt_addition stmts =
 	      let vdecl = VDecl (lbl', uint_typ, false, false, Some init) in
 	      let s' = Exp (Set (Var lbl', None, zero)) in
 	      let vdecls', stmts' = var_and_stmt_addition stmts in
-		vdecl::vdecls', (s, l)::(s', l')::stmts'
+		vdecl::vdecls', (s', l')::(s, l)::stmts'
 		  
 	  | If (exp, if_stmts, else_stmts) ->
 	      let if_vdecls', if_stmts' = var_and_stmt_addition if_stmts in
@@ -409,7 +409,7 @@ let outward stmts lbl level offset =
 	  let stmts', b, n = search stmt l in
 	    (* stops as soon as the block containing the expected goto
 	       is found and transformed *)
-	    if b then 
+	    if not b then 
 	      let stmts', b, n = move stmts in 
 		(stmt, l)::stmts', b, n
 	    else 
@@ -691,6 +691,7 @@ let lifting_and_inward stmts lbl l_level g_level g_offset =
     fst (lifting_and_inward stmts)
       
 let sibling_elimination stmts lbl g_offset =
+  print_endline (string_of_blk stmts);
   let rec add_loop_delete_goto stmts =
     match stmts with
 	[] -> 
@@ -736,7 +737,7 @@ let elimination stmts lbl (gotos, lo) =
       (* force goto and label to be siblings *)
       if directly_related !stmts lbl !g_offset then
 	if !g_level > l_level then
-	  stmts := outward !stmts lbl g_level g_offset
+	    stmts := outward !stmts lbl g_level g_offset
 	else
 	  begin
 	    let l_level = ref l_level in
