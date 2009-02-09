@@ -127,16 +127,16 @@ let level_and_offset_processing lbls stmts =
 	[] -> ()
       | (s, loc)::stmts ->
 	  match s with
-	      If (_, if_stmts, else_stmts) -> 
-		processing (n+1) if_stmts;
-		processing (n+1) else_stmts;
-		processing n stmts
-		  
-	    | CSwitch (_, c_stmts, d_stmts) ->
+	      CSwitch (_, c_stmts, d_stmts) ->
 		List.iter (fun (_, stmts, _) -> processing (n+1) stmts) c_stmts;
 		processing (n+1) d_stmts;
 		processing n stmts
-		  
+	
+	    | If (_, if_stmts, else_stmts) -> 
+		processing (n+1) if_stmts;
+		processing (n+1) else_stmts;
+		processing n stmts	  
+
 	    | For (_, _, stmts2, _) ->
 		processing (n+1) stmts2;
 		processing n stmts;
@@ -183,7 +183,7 @@ let has_label stmts lbl =
 	[] -> false
       | (stmt, _)::stmts -> 
 	  match stmt with
-	      Label lbl' -> if lbl' = lbl then true else has stmts
+	      Label lbl' when lbl' = lbl -> has stmts
 	    | _ -> has stmts
   in
     has stmts
@@ -259,13 +259,13 @@ let indirectly_related stmts lbl g_offset =
      relation (see Def 5) *)
   related false stmts lbl g_offset
     
-let if_else_out stmts lbl level offset =
+let out_if_else stmts lbl level offset =
   (* returns the stmt list whose 'goto lbl' stmt has been deleted and
      the condition if (fresh_lbl lbl) goto this fresh lbl has been
      added at the right position (see fig 5) *)
   let rec out stmts =
     match stmts with
-	[] -> [], [], 0
+	[] -> [], []
 	  
       | (stmt, l)::stmts ->
 	  match stmt with
@@ -278,18 +278,17 @@ let if_else_out stmts lbl level offset =
 		  let if_goto = If(cond, [Goto lbl', l], []) in
 		    level := !level-1; 
 		    offset := l;
-		    (stmt, l)::((If(n_cond, stmts, []), l)::stmts), [if_goto, l], 2
+		    (stmt, l)::((If(n_cond, stmts, []), l)::stmts), [if_goto, l]
 		end
 		else
-		  let stmts', cond, n = out stmts in
-		    (stmt, l)::stmts', cond, n
+		  let stmts', cond = out stmts in
+		    (stmt, l)::stmts', cond
 		      
-	    | Label lbl' -> 
-		let n = if lbl' = lbl then 1 else 0 in
-		let stmts', cond, n' = out stmts in
-		  (stmt, l)::stmts', cond, (n+n')
+	    | Label lbl' when lbl' = lbl -> 
+		let stmts', cond = out stmts in
+		  (stmt, l)::stmts', cond
 		    
-	    | _ -> let stmts', cond, n = out stmts in (stmt, l)::stmts', cond, n
+	    | _ -> let stmts', cond = out stmts in (stmt, l)::stmts', cond
   in
     out stmts
       
@@ -322,102 +321,115 @@ let rec out_switch_loop stmts lbl level offset =
 	    | _ -> let stmts', cond = out stmts in (stmt, l)::stmts', cond
   in 
       out stmts
-	
-	
-let outward stmts lbl level offset =
-  (* moves the goto stmt with label lbl at location o: 
-     - either until it becomes undireclty related, if goto and label stmts are in
-     different branches of the same if stmt 
-     - or until the goto becomes
-     directly related to an if or switch containing label lbl otherwise*)
-  let achieved n_if n_else =
-    (n_if = 2 && n_else = 1) or (n_if = 1 && n_else = 2)
-  in
-  let rec search stmt l =
-    match stmt with
-	
-	If (_, [Goto lbl', _], []) -> 
-	  let n = if lbl = lbl' && !offset = l then 2 else 0 in
-	    [stmt, l], false, n
-	      
-      | Label lbl' -> 
-	  let n = if lbl = lbl' then 1 else 0 in
-	    [stmt, l], false, n
-	      
-      | If (e, if_stmts, else_stmts) ->
-	  let if_stmts', b, n_if = move if_stmts in
-	    if b then 
-	      (* movement is achieved *)
-	      let _, _, n_else = move else_stmts in
-		[If (e, if_stmts', else_stmts), l], true, (n_if+n_else)
-	    else
-	      let else_stmts', b, n_else = move stmts in
-		if b then 
-		  (* movement is achieved *)
-		  let _, _, n_if = move if_stmts in
-		    [If (e, if_stmts, else_stmts'), l], true, (n_if+n_else)
-		else
-		  let b = achieved n_if n_else in
-		  let n = n_if+n_else in
-		    if n_if >= 2 then
-		      let if_stmts', cond', _ = if_else_out if_stmts' lbl level offset in
-			(If(e, if_stmts', else_stmts'), l)::cond', b, n
-		    else
-		      let else_stmts', cond', _ = if_else_out else_stmts' lbl level offset in
-			(If(e, if_stmts', else_stmts'), l)::cond', b, n
-			  
-      | Block stmts ->
-	  let stmts', b, n = move stmts in [Block stmts', l], b, n
-	      
-      | CSwitch (e, cases, d_case) -> 
-	  let rec iter cases =
-	    match cases with
-		[] -> [], [], true, 0
-		  
-	      | (e, stmts, l')::cases ->
-		  let stmts1, b1, n1 = move stmts in
-		  let stmts', cond1 = out_switch_loop stmts1 lbl level offset in
-		  let t = (e, stmts', l') in
-		  let cases', cond2, b2, n2 = iter cases in
-		    t::cases', cond1@cond2, (b1 or b2), (n1+n2)
-	  in
-	  let cases', cond', b, c_n = iter cases in
-	    if c_n >= 2 then
-	      (* goto label is in one of the cases *)
-	      let _, _, d_n = move d_case in
-	      let switch' = CSwitch (e, cases', d_case), l in
-		switch'::cond', b, (c_n+d_n)
-	    else
-	      (* is goto stmt in the default case ? *)
-	      let d_case', b', d_n = move d_case in
-	      let d_case', cond = out_switch_loop d_case' lbl level offset in
-	      let switch' = CSwitch(e, cases, d_case'), l in
-		switch'::(cond@cond'), b', (c_n+d_n)
-		  
-      | For(stmts1, e, stmts2, stmts3) ->
-	  let stmts2', b, n = move stmts2 in
-	  let stmts2', cond = out_switch_loop stmts2' lbl level offset in
-	  let for' = For(stmts1, e, stmts2', stmts3) in
-	    (for', l)::cond, b, n
-	      
-      | _ -> [stmt, l], false, 0
 
-  and move stmts =
+let rec outward stmts lbl g_level g_offset =
+  (* moves the goto stmt with label lbl at location o: 
+     - either until the goto becomes direclty related to athe label, 
+     if they are in different stmts
+     - or until the goto becomes directly related to an if or switch
+     containing label lbl otherwise*)
+  let rec outward stmts =
     match stmts with
-	[] -> [], true, 0
+	[] -> [], 0 
       | (stmt, l)::stmts ->
-	  let stmts', b, n = search stmt l in
-	    (* stops as soon as the block containing the expected goto
-	       is found and transformed *)
-	    if not b then 
-	      let stmts', b, n = move stmts in 
-		(stmt, l)::stmts', b, n
-	    else 
-	      (stmt, l)::stmts', b, n
-  in 
-  let stmts', _, _ = move stmts in stmts'
-				     
-				     
+	  match stmt with
+	      For (blk1, e, blk2, blk3) ->
+		if has_goto blk2 lbl g_offset then 
+		  let blk2', after = out_switch_loop blk2 lbl g_level g_offset in
+		    For(blk1, e, blk2', blk3)::(after @ stmts), 1
+		else
+		  let blk2', r = outward blk2 in
+		    if r = 1 then 
+		      let blk2', after = out_switch_loop blk2' lbl g_level g_offset in
+			For(blk1, e, blk2', blk3)::(after @ stmts), r
+		    else
+		      if r = 2 then
+			For(blk1, e, blk2', blk3)::stmts, r
+		      else
+			let stmts', r = outward stmts in
+			  (stmt, l)::stmts', r
+	    
+	    | If (e, if_blk, else_blk) ->
+		if has_goto if_blk lbl g_offset then
+		  let if_blk', after = out_if_else if_blk lbl g_level g_offset in
+		    (* are goto and label stmts in different branches of this If ? *)
+		  let r = if search_lbl else_blk lbl then 2 else 1 in 
+		      If(e, if_blk', else_blk)::(after @ stmts), r
+		else
+		  (* same process for the else branch *)
+		  if has_goto else_blk lbl g_offset then
+		    let else_blk', after = out_if_else else_blk lbl g_level g_offset in
+		    let r = if search_lbl if_blk lbl then 2 else 1 in 
+		      If(e, if_blk, else_blk')::(after @ stmts), r
+		  else
+		    (* neither if_blk nor else_blk branches contain
+		       the goto stmt ; calls recursively outward on the
+		       branches. If either of the two branches returns a
+		       modified stmt list (ret code = 1) then the
+		       if_else_out is performed on this branch *)
+		    let if_blk', r = outward if_blk in
+		      if r = 1 then
+			let if_blk', after = out_if_else if_blk' lbl g_level g_offset in
+			  If(e, if_blk', else_blk)::(after @ stmts), r
+		      else
+			if r = 2 then
+			  If(e, if_blk', else_blk)::stmts, r
+			else
+			  let else_blk', r = outward else_blk in
+			    if r = 1 then
+			      let else_blk', after = out_if_else else_blk' lbl g_level g_offset in
+				If(e, if_blk, else_blk')::(after stmts), r
+			    else
+			      if r = 2 then
+				If(e, if_blk, else_blk')::stmts, r
+			      else
+				(* goto is neither in the if-branch
+				   nor in the else-branch. outward is
+				   applied on the rest of the stmt
+				   list *)
+				let stmts', r = outward stmts in
+				  (stmt, l)::stmts', r
+
+	    			    
+	    | CSwitch (e, cases, default) ->
+		let rec iter cases =
+		  match cases with
+		      [] -> [], [], 0
+		    | (e, blk, l)::cases ->
+			if has_goto blk lbl g_offset then
+			  let blk', after = out_switch_loop blk lbl g_level g_offset in
+			    (e, blk', l)::cases, after, 1
+			else
+			  let blk', r = outward blk in
+			    if r = 0 then
+			      let cases', after, r = iter cases in
+				(e, blk, l)::cases', after, r
+			    else
+			      (e, blk', l)::cases, after, r
+		in
+		let cases', after, r = iter cases in
+		  if r = 0 then
+		    if has_goto default lbl g_offset then
+		      let default', after = out_switch_loop default lbl g_level g_offset in
+			CSwitch(e, cases, default')::(after @ stmts), 1
+		    else
+		      let default', r = outward default in
+			if r = 0 then
+			  let stmts', r = outward stmts in
+			    (stmt, l)::stmts', r
+			else
+			  CSwitch(e, cases, default')::stmts, r
+		  else
+		    CSwitch(e, cases', default)::(after @ stmts), 1	  	
+	    | Block blk ->
+		let blk', r = outward blk in 
+		let stmts', r = if r = 0 then outward stmts else stmts, r in
+		  (Block blk', l)::stmts', r
+
+	    | _ -> let stmts', r = outward stmts in (stmt, l)::stmts', r	
+
+ in fst (outward stmts)
+      
 let avoid_break_capture stmts lwhile l = 
   let break_var = "break."^(Newspeak.string_of_loc l) in
   let rec search_break stmts =
@@ -691,7 +703,6 @@ let lifting_and_inward stmts lbl l_level g_level g_offset =
     fst (lifting_and_inward stmts)
       
 let sibling_elimination stmts lbl g_offset =
-  print_endline (string_of_blk stmts);
   let rec add_loop_delete_goto stmts =
     match stmts with
 	[] -> 
@@ -727,9 +738,9 @@ let elimination stmts lbl (gotos, lo) =
   let stmts = ref stmts in	
   let move goto =
     let l, o = goto in
-    let g_offset = ref o in
     let g_level = ref l in
-      
+    let g_offset = ref o in
+        
       (* force goto and label to be directly related *)
       if indirectly_related !stmts lbl !g_offset then
 	  stmts := outward !stmts lbl g_level g_offset;
@@ -744,6 +755,8 @@ let elimination stmts lbl (gotos, lo) =
 	      if !g_offset > l_offset then
 		stmts := lifting_and_inward !stmts lbl l_level g_level g_offset
 	  end;
+      print_endline (string_of_blk !stmts);
+      print_endline "======";
       (* goto and label are sibling; eliminate goto and label *)
       stmts := sibling_elimination !stmts lbl !g_offset;
   in
