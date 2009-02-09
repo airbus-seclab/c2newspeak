@@ -334,33 +334,38 @@ let rec outward stmts lbl g_level g_offset =
       | (stmt, l)::stmts ->
 	  match stmt with
 	      For (blk1, e, blk2, blk3) ->
-		if has_goto blk2 lbl g_offset then 
+		if has_goto blk2 lbl !g_offset then 
 		  let blk2', after = out_switch_loop blk2 lbl g_level g_offset in
-		    For(blk1, e, blk2', blk3)::(after @ stmts), 1
+		  let for' = For(blk1, e, blk2', blk3), l in
+		    for'::(after @ stmts), 1
 		else
 		  let blk2', r = outward blk2 in
 		    if r = 1 then 
 		      let blk2', after = out_switch_loop blk2' lbl g_level g_offset in
-			For(blk1, e, blk2', blk3)::(after @ stmts), r
+		      let for' = For(blk1, e, blk2', blk3), l in
+			for'::(after @ stmts), r
 		    else
 		      if r = 2 then
-			For(blk1, e, blk2', blk3)::stmts, r
+			let for' = For(blk1, e, blk2', blk3), l in
+			  for'::stmts, r
 		      else
 			let stmts', r = outward stmts in
 			  (stmt, l)::stmts', r
 	    
 	    | If (e, if_blk, else_blk) ->
-		if has_goto if_blk lbl g_offset then
+		if has_goto if_blk lbl !g_offset then
 		  let if_blk', after = out_if_else if_blk lbl g_level g_offset in
 		    (* are goto and label stmts in different branches of this If ? *)
-		  let r = if search_lbl else_blk lbl then 2 else 1 in 
-		      If(e, if_blk', else_blk)::(after @ stmts), r
+		  let r = if search_lbl else_blk lbl then 2 else 1 in
+		  let if' = If(e, if_blk', else_blk), l in
+		    if'::(after @ stmts), r
 		else
 		  (* same process for the else branch *)
-		  if has_goto else_blk lbl g_offset then
+		  if has_goto else_blk lbl !g_offset then
 		    let else_blk', after = out_if_else else_blk lbl g_level g_offset in
 		    let r = if search_lbl if_blk lbl then 2 else 1 in 
-		      If(e, if_blk, else_blk')::(after @ stmts), r
+		    let if' = If(e, if_blk, else_blk'), l in 
+		      if'::(after @ stmts), r
 		  else
 		    (* neither if_blk nor else_blk branches contain
 		       the goto stmt ; calls recursively outward on the
@@ -370,18 +375,22 @@ let rec outward stmts lbl g_level g_offset =
 		    let if_blk', r = outward if_blk in
 		      if r = 1 then
 			let if_blk', after = out_if_else if_blk' lbl g_level g_offset in
-			  If(e, if_blk', else_blk)::(after @ stmts), r
+			let if' = If(e, if_blk', else_blk), l in
+			  if'::(after @ stmts), r
 		      else
 			if r = 2 then
-			  If(e, if_blk', else_blk)::stmts, r
+			  let if' = If(e, if_blk', else_blk), l in 
+			    if'::stmts, r
 			else
 			  let else_blk', r = outward else_blk in
 			    if r = 1 then
 			      let else_blk', after = out_if_else else_blk' lbl g_level g_offset in
-				If(e, if_blk, else_blk')::(after stmts), r
+			      let else' = If(e, if_blk, else_blk'), l in
+				else'::(after @ stmts), r
 			    else
 			      if r = 2 then
-				If(e, if_blk, else_blk')::stmts, r
+				let if' = If(e, if_blk, else_blk'), l in
+				  if'::stmts, r
 			      else
 				(* goto is neither in the if-branch
 				   nor in the else-branch. outward is
@@ -396,7 +405,7 @@ let rec outward stmts lbl g_level g_offset =
 		  match cases with
 		      [] -> [], [], 0
 		    | (e, blk, l)::cases ->
-			if has_goto blk lbl g_offset then
+			if has_goto blk lbl !g_offset then
 			  let blk', after = out_switch_loop blk lbl g_level g_offset in
 			    (e, blk', l)::cases, after, 1
 			else
@@ -405,22 +414,26 @@ let rec outward stmts lbl g_level g_offset =
 			      let cases', after, r = iter cases in
 				(e, blk, l)::cases', after, r
 			    else
+			      let blk', after = out_switch_loop blk' lbl g_level g_offset in
 			      (e, blk', l)::cases, after, r
 		in
 		let cases', after, r = iter cases in
 		  if r = 0 then
-		    if has_goto default lbl g_offset then
+		    if has_goto default lbl !g_offset then
 		      let default', after = out_switch_loop default lbl g_level g_offset in
-			CSwitch(e, cases, default')::(after @ stmts), 1
+		      let cs = CSwitch(e, cases, default'), l in
+			cs::(after @ stmts), 1
 		    else
 		      let default', r = outward default in
 			if r = 0 then
 			  let stmts', r = outward stmts in
 			    (stmt, l)::stmts', r
 			else
-			  CSwitch(e, cases, default')::stmts, r
+			  let cs = CSwitch(e, cases, default'), l in
+			    cs::stmts, r
 		  else
-		    CSwitch(e, cases', default)::(after @ stmts), 1	  	
+		    let cs = CSwitch(e, cases', default), l in 
+		      cs::(after @ stmts), 1	  	
 	    | Block blk ->
 		let blk', r = outward blk in 
 		let stmts', r = if r = 0 then outward stmts else stmts, r in

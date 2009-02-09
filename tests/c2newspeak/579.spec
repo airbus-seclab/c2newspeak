@@ -17,6 +17,7 @@ do {
  goto.lbl = 1;
 } (goto.lbl)
 
+======
 Newspeak output
 ---------------
 579.c
