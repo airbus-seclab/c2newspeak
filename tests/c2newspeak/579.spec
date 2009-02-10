@@ -1,23 +1,4 @@
 Warning: 579.c:31#1099: goto statement accepted
-typ goto.lbl;
-typ i;
-goto.lbl = 0;
-do {
- goto.lbl = goto.lbl;
- if Unop {
- } else {
- }
- For (;IfExp; ) {
-  {
-    goto.lbl = 0;
-    lbl: 
-    i = 0;
-}
- }
- goto.lbl = 1;
-} (goto.lbl)
-
-======
 Newspeak output
 ---------------
 579.c
@@ -28,12 +9,6 @@ void main(void) {
     int32 i;
     (579.c:27#6)^1- =(uint32) 0;
     (579.c:28#2)^1- =(uint32) 1-_uint32;
-    (579.c:28#2)^choose {
-     -->
-      (579.c:28#2)^guard(! 1-_uint32);
-     -->
-      (579.c:28#2)^guard(1-_uint32);
-    }
     (579.c:28#2)^do {
       (579.c:28#2)^while (1) {
         (579.c:28#2)^choose {
@@ -65,12 +40,6 @@ void main(void) {
           (579.c:31#2)^goto lbl1;
         }
         (579.c:28#2)^1- =(uint32) 1-_uint32;
-        (579.c:28#2)^choose {
-         -->
-          (579.c:28#2)^guard(! 1-_uint32);
-         -->
-          (579.c:28#2)^guard(1-_uint32);
-        }
         (579.c:28#2)^do {
           (579.c:28#2)^while (1) {
             (579.c:28#2)^choose {
