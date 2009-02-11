@@ -836,10 +836,7 @@ let elimination stmts lbl (gotos, lo) =
       end
       else
 	(* goto and label are sibling; eliminate goto and label *) 
-	begin
-	  print_endline "sibling elimination";
 	stmts := sibling_elimination !stmts lbl id
-	end
   in
     List.iter move gotos;
     !stmts
