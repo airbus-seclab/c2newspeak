@@ -24,6 +24,7 @@
 
 *)
 
+(* TODO: remove the need for Newspeak/redefine types *)
 open Newspeak
 
 type t = {
@@ -49,7 +50,10 @@ and stmtkind =
 (* TODO: in highspeak merge Set and Copy together!!!! *)
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
+(* TODO: think about the fact that exp may be a float here, maybe another
+   type for boolean exp??? *)
   | Guard of exp
+(* TODO: remove vid *)
   | Decl of (string * typ * vid * blk)
   | Select of (blk * blk)
   | InfLoop of blk
@@ -75,6 +79,7 @@ and blk = stmt list
 
 and lval =
 (* TODO: maybe should put local and global together by name??? *)
+(* TODO: merge Local, Global into Var of string *)
     Local of vid
   | Global of string
   | Deref of (exp * size_t)
