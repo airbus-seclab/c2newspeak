@@ -226,7 +226,7 @@ val unknown_loc: location
 val dummy_loc: string -> location
 
 
-(* {1 Manipualtion and Simplifications} *)
+(* {1 Manipulation and Simplifications} *)
 
 
 (* Given the characteristics of an integer type, [domain_of_typ]

@@ -81,8 +81,10 @@ and stmtkind =
   | CDecl of compdecl
   | VDecl of vardecl
   | If of (exp * blk * blk)
+      (* third parameter is the default case *)
   | CSwitch of (exp * (exp * blk * location) list * blk)
   | For of (blk * exp * blk * blk)
+  | DoWhile of (blk * exp)
   | Exp of exp
   | Break
   | Continue
@@ -114,7 +116,7 @@ and exp =
     | Cast of (exp * typ)
 (* None is a regular assignment *)
     | Set of (exp * binop option * exp)
-(* boolean is true if the operation is appled after the evaluation of the 
+(* boolean is true if the operation is applied after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
     | BlkExp of blk
@@ -164,8 +166,13 @@ val string_of_typ: typ -> string
 
 val string_of_ftyp: ftyp -> string
 
+val string_of_blk: blk -> string
+
 val ftyp_of_typ: typ -> ftyp
 
 val min_ftyp: ftyp -> ftyp -> ftyp
 
+val print: prog -> unit
+
 val array_of_typ: typ -> (typ * exp option)
+

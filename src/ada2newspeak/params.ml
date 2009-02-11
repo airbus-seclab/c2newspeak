@@ -43,7 +43,7 @@ let npko_suffix = ".no"
 (*------------------------*)
 
 let software = "Ada2Newspeak, part of C2Newspeak"
-let authors = "Charles Hymans and Olivier Levillain"
+let authors = "Jasmine Duchon and Wenceslas Godard and Charles Hymans"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
 let comment_string = 

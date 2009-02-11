@@ -89,6 +89,7 @@ and stmtkind =
 	 init may cotain break or continue stmt!
       *)
   | For of (blk * exp * blk * blk)
+  | DoWhile of (blk * exp)
   | Exp of exp
   | Break
   | Continue
@@ -247,43 +248,116 @@ let float_cst_of_lexeme (value, suffix) =
   in
     (Cir.CFloat (f, lexeme), Float sz)
 
-let rec string_of_typ t =
+let string_of_binop op =
+  match op with
+      Plus -> ""
+    | Minus -> "-"
+    | Mult -> "*"
+    | Div -> "/"
+    | Mod -> "%"
+    | Gt -> ">"
+    | Eq -> "=="
+    | BAnd -> "&"
+    | BXor -> "bxor"
+    | BOr -> "|"
+    | Shiftl -> "<<"
+    | Shiftr -> ">>"
+
+let rec string_of_typ margin t =
   match t with
       Void -> "void"
     | Int _ -> "int??"
-    | Ptr t -> "*"^(string_of_typ t)
-    | Array (t, None) -> (string_of_typ t)^"[?]"
-    | Array (t, Some x) -> (string_of_typ t)^"["^(string_of_exp x)^"]"
+    | Ptr t -> "*"^(string_of_typ margin t)
+    | Array (t, None) -> (string_of_typ margin t)^"[?]"
+    | Array (t, Some x) -> (string_of_typ margin t)^"["^(string_of_exp margin x)^"]"
     | Bitfield _ -> "Bitfield"
     | Float _ -> "Float"
     | Comp _ -> "Comp"
     | Fun _ -> "Fun"
     | Va_arg -> "..."
     | Typeof _ -> "typeof"
-
-and string_of_exp e =
+	
+and string_of_exp margin e =
   match e with
-      Cst _ -> "Cst"
+      Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
+    | Cst _ -> "Cst"
     | Var x -> x
-    | Field (e, f) -> (string_of_exp e)^"."^f
-    | Index (e1, e2) -> "("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
-    | Deref e -> "*("^(string_of_exp e)^")"
+    | Field (e, f) -> (string_of_exp margin e)^"."^f
+    | Index (e1, e2) -> 
+	"("^(string_of_exp margin e1)^")["^(string_of_exp margin e2)^"]"
+    | Deref e -> "*("^(string_of_exp margin e)^")"
     | AddrOf _ -> "AddrOf"
     | Unop _ -> "Unop"
     | IfExp _ -> "IfExp"
-    | Binop _ -> "Binop"
+    | Binop (op, e1, e2) -> 
+	(string_of_exp margin e1) ^" "^(string_of_binop op)^" "
+	^(string_of_exp margin e2)
     | Call _ -> "Call"
     | Sizeof _ -> "Sizeof"
     | SizeofE _ -> "SizeofE"
     | Str _ -> "Str"
     | FunName -> "FunName"
     | Cast _ -> "Cast"
+    | Set (lv, None, e) -> (string_of_exp margin lv)^" = "^(string_of_exp margin e)^";"
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
+	
 
-let string_of_ftyp (args_t, _) =
-  let string_of_arg (t, _) = string_of_typ t in
+and string_of_stmt margin (x, _) =
+  match x with
+      Block blk ->
+	"{\n"^(string_of_blk (margin^"  ") blk)^"}"
+	  
+    | Goto lbl -> "goto "^lbl^";"
+	
+    | Label lbl -> lbl^": "
+
+    | VDecl (x, _, _, _, _) -> "typ "^x^";"	
+	
+    | CDecl (x, _, _) -> "ctyp "^x^";"
+	
+    | EDecl (x, _) -> "etyp "^x^";"
+	
+    | If (e, blk1, blk2) -> 
+	"if "^(string_of_exp margin e)^" {\n"
+	^(string_of_blk (margin^"  ") blk1)
+	^margin^"} else {\n"
+	^(string_of_blk (margin^"  ") blk2)
+	^margin^"}"
+	  
+    | For (blk1, e, blk2, blk3) -> 
+	(string_of_blk margin blk1)
+	^"For (;" ^ (string_of_exp margin e) ^"; ) {\n"
+	^(string_of_blk (margin^" ") blk3)
+	^(string_of_blk (margin^" ") blk2)
+	^margin^"}"
+
+    | DoWhile (blk, e) ->
+	"do {\n"
+	^(string_of_blk (margin^" ") blk)
+	^"} ("^(string_of_exp margin e)^")"
+
+    | CSwitch _ -> "CSwitch"
+
+    | Exp e -> string_of_exp margin e 
+
+    | Return _ -> "Return"
+
+    | Break -> "break;"
+
+    | Continue -> "continue;"
+
+    | UserSpec _ -> "UserSpec"
+
+and string_of_blk margin x =
+  match x with
+      [] -> ""
+    | hd::tl -> 
+	margin^(string_of_stmt margin hd)^"\n"^(string_of_blk margin tl)
+	  
+let string_of_ftyp margin (args_t, _) =
+  let string_of_arg (t, _) = string_of_typ margin t in
   let args =
     match args_t with
 	None -> "? -> ret_t"
@@ -291,16 +365,44 @@ let string_of_ftyp (args_t, _) =
   in
     "("^args^") -> ret_t"
 
+
+
 let ftyp_of_typ t =
   match t with
       Fun t -> t
     | _ -> 
 	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
 
+
+
+let print prog =
+  let s = ref "" in
+  let print (g, _) =
+    match g with 
+	FunctionDef (name, _, b, blk) ->
+	  let b = if b then "static" else "" in
+	  let blk = string_of_blk "" blk in
+	  s := !s ^ b ^ name ^ "{\n" ^ blk ^"\n}"
+
+      | GlbVDecl (x, _, _, _, _) -> s:= !s ^ ("typ "^x^";\n")
+      | GlbEDecl (x, _) -> s:= !s ^("etyp " ^x^";\n")
+      | GlbCDecl (x, _, _) -> s:= !s ^("ctyp "^x^";\n")
+  in
+  let (prog, _) = prog in
+    List.iter print prog;
+    print_endline !s
+
+let string_of_typ = string_of_typ ""
+let string_of_ftyp = string_of_ftyp ""
+let string_of_exp = string_of_exp ""
+let string_of_blk = string_of_blk ""
+
+
 let array_of_typ t =
   match t with
       Array a -> a
     | _ -> Npkcontext.report_error "Csyntax.array_of_typ" "array type expected"
+
 
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
   let equals (t1, _) (t2, _) = t1 = t2 in

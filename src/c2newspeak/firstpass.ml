@@ -1031,6 +1031,9 @@ let translate (globals, spec) =
 
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
+      | DoWhile (body, e) ->
+	  let for' = For(body, e, body, []) in translate_stmt (for', loc)
+
       | For (init, e, body, suffix) ->
 	  let init = (C.Block (translate_blk init, Some (cnt_lbl, [])), loc) in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in

@@ -63,19 +63,31 @@ let compile fname =
   let globals = 
     if !Npkcontext.accept_gnuc then append_gnu_symbols globals else globals
   in
-  let fnames = if fnames = [] then fname::[] else fnames in
-    Npkcontext.forget_loc ();
-    Npkcontext.print_debug "Parsing done.";
-    Npkcontext.print_debug "Running first pass...";
-    let prog = Firstpass.translate (globals, spec) in
+  let globals = 
+    if !Npkcontext.accept_backward_goto then
+      begin
+	Npkcontext.print_debug "Running goto_elimination...";
+	let g = Goto_elimination.run globals in
+	  Npkcontext.print_debug "Goto elimination done.";
+	  g
+      end
+    else
+      globals
+  in
+    if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
+    let fnames = if fnames = [] then fname::[] else fnames in
       Npkcontext.forget_loc ();
-      Npkcontext.print_debug "First pass done.";
-      if !Npkcontext.verb_cir then Cir.print prog;
-      Npkcontext.print_debug ("Translating "^fname^"...");
-      let tr_prog = Cir2npkil.translate prog fnames in
-      Npkcontext.print_debug ("Translation done.");
+      Npkcontext.print_debug "Parsing done.";
+      Npkcontext.print_debug "Running first pass...";
+      let prog = Firstpass.translate (globals, spec) in
 	Npkcontext.forget_loc ();
-	tr_prog
+	Npkcontext.print_debug "First pass done.";
+	if !Npkcontext.verb_cir then Cir.print prog;
+	Npkcontext.print_debug ("Translating "^fname^"...");
+	let tr_prog = Cir2npkil.translate prog fnames in
+	  Npkcontext.print_debug ("Translation done.");
+	  Npkcontext.forget_loc ();
+	  tr_prog
 
 let eval_exp x =
   match x with
