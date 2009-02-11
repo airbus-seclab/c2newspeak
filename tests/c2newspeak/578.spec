@@ -1,5 +1,4 @@
 Warning: 578.c:29#1080: goto statement accepted
-sibling elimination
 Newspeak output
 ---------------
 578.c
