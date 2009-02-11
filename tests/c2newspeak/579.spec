@@ -5,6 +5,7 @@ Newspeak output
 void main(void) {
   (579.c:27#6)^uint32 goto.lbl;
   (579.c:27#6)^0- =(uint32) 0;
+  (579.c:27#6)^0- =(uint32) 0;
   (579.c:27#6)^{
     int32 i;
     (579.c:27#6)^1- =(uint32) 0;
