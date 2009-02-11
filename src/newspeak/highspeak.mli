@@ -47,9 +47,7 @@ and init_t =
   | Init of (size_t * scalar_t * exp) list
 
 and stmtkind =
-(* TODO: in highspeak merge Set and Copy together!!!! *)
-    Set of (lval * exp * scalar_t)
-  | Copy of (lval * lval * size_t)
+    Set of (lval * exp * typ)
 (* TODO: think about the fact that exp may be a float here, maybe another
    type for boolean exp??? *)
   | Guard of exp

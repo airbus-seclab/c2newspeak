@@ -527,24 +527,7 @@ and translate_instr i =
 
 	  
 	  
-and translate_set lval typ e =
-  match typ with
-    | K.Scalar sca ->
-	let exp = translate_exp e in
-	  K.Set (lval,exp,sca)
-	    
-    | K.Region (_, sz) -> begin
-	match e with
-	  | Lval lv_src ->
-	      let src = translate_lval lv_src in
-		K.Copy (lval, src, sz)
-	  | _ ->
-	      Npkcontext.report_error "Npkcompile.translate_set"
-		("left value expected instead of '"
-		  ^(Cilutils.string_of_exp e)^"'")
-      end
-	
-    | _ -> Npkcontext.report_error "Npkcompile.translate_set" "invalid type"
+and translate_set lval typ e = K.Set (lval, translate_exp e, typ)
 	
 
 and translate_if status e stmts1 stmts2 =

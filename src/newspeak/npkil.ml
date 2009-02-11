@@ -46,8 +46,7 @@ and used = bool
 and funinfo = (vid list * vid list * ftyp * blk)
 
 and stmtkind =
-    Set of (lval * exp * scalar_t)
-  | Copy of (lval * lval * size_t)
+    Set of (lval * exp * typ)
   | Decl of (string * typ * vid * blk)
   | Guard of exp
   | Select of (blk * blk)
@@ -243,13 +242,10 @@ let dump_npko (fnames, globs, funs, _) =
   and dump_stmt align only (sk, _) =
     print_string align;
     match sk with
-	Set (lv, e, sc) ->
-	  print_endline ((string_of_lval lv)^" =("^(string_of_scalar sc)^
+	Set (lv, e, t) ->
+	  print_endline ((string_of_lval lv)^" =("^(string_of_typ t)^
 			    ") "^(string_of_exp e)^";")
-      | Copy (lv1, lv2, sz) ->
-	  print_endline ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
-			    " "^(string_of_lval lv2)^";")
-	    
+
       | Decl (name, t, _, body) ->
 	  if only then begin
 	    print_endline ((string_of_typ t)^" "^name^";");

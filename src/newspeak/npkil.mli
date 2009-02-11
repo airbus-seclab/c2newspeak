@@ -47,8 +47,7 @@ and used = bool
 and funinfo = (vid list * vid list * ftyp * blk)
 
 and stmtkind =
-    Set of (lval * exp * scalar_t)
-  | Copy of (lval * lval * size_t)
+    Set of (lval * exp * typ)
   | Decl of (string * typ * vid * blk)
   | Guard of exp
   | Select of (blk * blk)
