@@ -374,14 +374,7 @@ and translate_exp e =
 	      Npkcontext.report_error "Npkcompile.translate_exp" "data pointer type expected"
       end
 	
-    | Lval lv -> begin
-	match (translate_typ (typeOfLval lv)) with
-	    K.Scalar s -> K.Lval (translate_lval lv, s)
-	  | _ -> 
-	      Npkcontext.report_error "Npkcompile.translate_exp"
-		("scalar type expected for left value "
-		 ^(Cilutils.string_of_lval lv))
-      end
+    | Lval lv -> K.Lval (translate_lval lv, translate_typ (typeOfLval lv))
 	
     | AddrOf lv -> begin
 	match lv, translate_typ (typeOf e) with
@@ -519,7 +512,9 @@ and translate_instr i =
 	  let assignment = translate_set lval typ e in
 	    (build_stmt assignment)::[]
 
-    | Call (x, Lval lv, args, _) -> translate_call x lv args
+    | Call (x, Lval lv, args, _) -> 
+	let call = translate_call x lv args in
+	  (build_stmt call)::[]
 
     | Call _ ->
 	Npkcontext.report_error "Npkcompile.translate_instr"
@@ -676,140 +671,71 @@ and translate_switch_body loc status body stmts =
 	let hd = translate_stmtkind status hd.skind in
 	  translate_switch_body loc status (body@hd) tl
 
-	  
-and translate_call x lv args_exps =
-  let loc = Npkcontext.get_loc () in
-
-  let handle_retval fname ret_type =
-    match ret_type, x  with
-	(* No return value *)
-	None, None -> [], []
-
-      (* Return value ignored *)
-      | Some t, None ->
-	  Cilenv.push_local ();
-	  [("value_of_"^fname, t, loc)], []
-	    
-      (* Return value put into Lval cil_lv *)
-      | Some t_given, Some cil_lv ->
-	  let t_expected = translate_typ (typeOfLval cil_lv) in
-	    Cilenv.push_local ();
-	    let lval = translate_lval cil_lv in
-	    let ret_decl = ["value_of_"^fname, t_given, loc] in
-	    let ret_epilog = match t_given, t_expected with
-	      | K.Scalar s_giv, K.Scalar s_exp when s_giv = s_exp ->
-		  let set = K.Set (lval, K.Lval (K.Local 0, s_giv), s_exp) in
-		  [build_stmt set]
-		    
-	      | K.Scalar (Newspeak.Int _ as s_giv), 
-		  K.Scalar (Newspeak.Int int_t as s_exp) ->
-		  let exp = K.make_int_coerce int_t (K.Lval (K.Local 0, s_giv)) in
-		    [build_stmt (K.Set (lval, exp, s_exp))]
-		      
-	      | K.Region (desc1, sz1), K.Region (desc2, sz2)
-		  when sz1 = sz2 && desc1 = desc2 ->
-		  [build_stmt (K.Copy (lval, K.Local 0, sz1))]
-		    
-	      | _ -> Npkcontext.report_error "Npkcompile.translate_call" "invalid implicit cast"
-	    in
-	      (ret_decl, ret_epilog)
-		
-      | _ ->
-	  Npkcontext.report_error "Npkcompile.translate_call"
-	    ("function "^fname^" has return type void")
-  in
-
-  let handle_args_decls fname exps =
-    let build_unknown_args exps =
-      let i = ref (-1) in
-      let build_arg _ =
-	i := !i + 1;
-	"arg"^(string_of_int !i)
-      in
-	List.map build_arg exps
-    in
-    let rec handle_args e str =
-      Cilenv.push_local ();
-      let t = translate_typ (typeOf e) in
-	(str, t, loc)
-    in
-    let args = 
-      try Cilenv.get_args fname 
-      with Not_found -> build_unknown_args exps 
-    in
-      try List.map2 handle_args exps args
-      with Invalid_argument _ -> 
-	Npkcontext.report_error "Npkcompile.translate_call.handle_args_decls.handle_args" 
-	  "This code should be unreachable"
-  in
-
-  let rec handle_args_prolog accu n i args_exps =
-    match args_exps with
-	[] -> accu
-      | e::r_e ->
-	  let t = translate_typ (typeOf e) in
-	  let lval = K.Local ((n-i) - 1) in
-	  let set = translate_set lval t e in
-	    handle_args_prolog ((build_stmt set)::accu) n (i+1) r_e
-  in
-
-    Cilenv.save_loc_cnt ();
-    let (name, ret_type) = 
-      match lv with
-	| Var f, NoOffset ->
-	    let name = f.vname in
-	      (* TODO: code cleanup remove these ? *)
-	    let arg_from_exp e = ("", typeOf e, []) in 
-	    let args = Some (List.map arg_from_exp args_exps) in
-	    let ret = match f.vtype with
+and translate_call ret f args =
+  let args_t = Some (List.map (fun e -> ("", typeOf e, [])) args) in
+  let ret_t =
+    match f with
+      | (Var f, NoOffset) ->
+	  let ret_t = 
+	    match f.vtype with
 		TFun (ret, _, _, _) -> ret
 	      | _ -> 		    
 		  Npkcontext.report_error "Npkcompile.translate_call"
 		    ("invalid type '"^(Cilutils.string_of_type f.vtype)^"'")
-	    in
-	    let (args, ret) = Npkutils.translate_ftyp (args, ret) in
-	      Cilenv.update_fun_proto name (args, ret);
-	      (name, ret)
+	  in
+	    ret_t
 
-	| Mem (Lval fptr), NoOffset ->
-	    let typ = translate_typ (typeOfLval fptr) in
-	      if typ <> K.Scalar Newspeak.FunPtr
-	      then Npkcontext.report_error "Npkcompile.translate_call" "FunPtr expected";
-	      
-	      let ret = 
-		match x with
-		  | None -> None
-		  | Some cil_lv -> Some (translate_typ (typeOfLval cil_lv))
-	      in
-	      let (_, line, _) = loc in
-		("fptr_called_line_" ^ (string_of_int line), ret)
-		  
-	| _ -> Npkcontext.report_error "Npkcompile.translate_call" "Left value not supported"
-    in
-      
-    let ret_decl, ret_epilog = handle_retval name ret_type in
-    let args_decls = handle_args_decls name args_exps in
-    let args_prolog = handle_args_prolog [] (List.length args_exps) 0 args_exps in
-
-    let fexp = 
-      match lv with
-	| (Var f, NoOffset) -> K.FunId f.vname
-	| (Mem (Lval fptr), NoOffset) ->
-	    let args_t = List.map (fun (_, t, _) -> t) args_decls in
-	    let fptr_exp = K.Lval (translate_lval fptr, Newspeak.FunPtr) in
-	      K.FunDeref (fptr_exp, (args_t, ret_type))
-	| _ -> Npkcontext.report_error "Npkcompile.translate_call" "Left value not supported"
-    in
-    let call_w_prolog = (List.rev args_prolog)@((K.Call fexp, loc)::[]) in
-    let call_wo_ret = K.append_decls args_decls call_w_prolog in
-    let res = K.append_decls ret_decl (call_wo_ret@ret_epilog) in
-      Cilenv.restore_loc_cnt ();
-      res
+      | (Mem (Lval fptr), NoOffset) ->
+	  let typ = translate_typ (typeOfLval fptr) in
+	    if typ <> K.Scalar Newspeak.FunPtr then begin
+	      Npkcontext.report_error "Npkcompile.translate_call" 
+		"FunPtr expected"
+	    end;
+	    begin
+	      match ret with
+		| None -> TVoid []
+		| Some cil_lv -> typeOfLval cil_lv
+	    end
+      | _ -> 
+	  Npkcontext.report_error "Npkcompile.translate_call" 
+	    "left value not supported"
+  in
+  let ft = Npkutils.translate_ftyp (args_t, ret_t) in
+  let ft' =
+    match ft with
+	(Some args, ret) -> (List.map snd args, ret)
+      | _ -> 
+	  Npkcontext.report_error "Cilcompiler.translate_exp" 
+	    "case not handled yet"
+  in
+  let args = List.map translate_exp args in
+  let ret =
+    match ret with
+	None -> []
+      | Some lv -> (translate_lval lv)::[]
+  in
+  let fn = 
+    match f with
+      | (Var f, NoOffset) -> K.FunId f.vname
+      | (Mem (Lval fptr), NoOffset) ->
+	  let fptr_exp = 
+	    K.Lval (translate_lval fptr, K.Scalar Newspeak.FunPtr) 
+	  in
+	    K.FunDeref (fptr_exp, ft')
+      | _ -> 
+	  Npkcontext.report_error "Npkcompile.translate_call" 
+	    "left value not supported"
+  in begin
+    match f with
+	(Var f, NoOffset) -> Cilenv.update_fun_proto f.vname ft
+      | _ -> ()
+    end;
+    K.Call (args, ft', fn, ret)
 
 let translate_local d =
-  Cilenv.loc_declare d;
+  let vid = Cilenv.loc_declare d in
   let (_, n, t, loc) = d in
-    (n, t, loc)
+    (n, t, vid, loc)
 
 let translate_fun name (locals, formals, body) =
   let (floc, ret_t) = Cilenv.get_funspec name in
@@ -819,7 +745,8 @@ let translate_fun name (locals, formals, body) =
     let status = Cilenv.empty_status () in
       
       if ret_t <> None then Cilenv.push_local ();
-      List.iter Cilenv.loc_declare formals;
+      let ret_ids = if ret_t <> None then 0::[] else [] in
+      let arg_ids = List.map Cilenv.loc_declare formals in
       let locals = List.map translate_local locals in
 
       let body = translate_stmts status body.bstmts in
@@ -827,7 +754,7 @@ let translate_fun name (locals, formals, body) =
       let blk = [K.DoWith (body, lbl, []), floc] in
       let body = K.append_decls locals blk in
 
-	Cilenv.update_funspec name (args, body)
+	Cilenv.update_funspec name (ret_ids, arg_ids, args, body)
 
 
 let translate_init x t =

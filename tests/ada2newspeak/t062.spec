@@ -1,21 +1,3 @@
-Newspeak Object output
-----------------------
-t062.adb
-Global used
-
-Global variables
-
-Function definitions
-t062() {
-  do {
-    int32 a;
-    0- =(int32) belongs[-2147483648,2147483648-1] 3;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t062.adb

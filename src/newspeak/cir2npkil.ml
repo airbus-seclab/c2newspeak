@@ -53,16 +53,6 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   let fundefs = Hashtbl.create 100 in
 
   let used_glbs = ref Set.empty in
-  let stack_height = ref 0 in
-  let env = Hashtbl.create 50 in
-  let push id = 
-    incr stack_height;
-    Hashtbl.add env id !stack_height
-  in
-  let pop id = 
-    decr stack_height;
-    Hashtbl.remove env id
-  in
 
   (* Hashtbl of already translated types, to as to have some sharing *)
   let translated_typ = Hashtbl.create 100 in
@@ -101,9 +91,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
   let rec translate_lv lv =
     match lv with
-	Var id -> 
-	  let x = Hashtbl.find env id in
-	    K.Local (!stack_height - x)
+	Var id -> K.Local id
 
       | Global x -> 
 	  used_glbs := Set.add x !used_glbs;
@@ -128,7 +116,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	Const i -> K.Const (translate_cst i)
       | Lval (lv, t) -> 
 	  let lv = translate_lv lv in
-	    K.Lval (lv, translate_scalar t)
+	    K.Lval (lv, translate_typ t)
 
       | AddrOfFun (f, ft) -> K.AddrOfFun (f, translate_ftyp ft)
 
@@ -169,13 +157,12 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
   let rec translate_blk x = 
     match x with
-	(Decl (t, x, id), loc)::body ->
+(* TODO: pass id up to npkil!! *)
+	(Decl (t, x, vid), loc)::body ->
 	  Npkcontext.set_loc loc;
 	  let t = translate_typ t in
-	    push id;
-	    let body = translate_blk body in
-	      pop id;
-	      (K.Decl (x, t, body), loc)::[]
+	  let body = translate_blk body in
+	    (K.Decl (x, t, vid, body), loc)::[]
 
       | hd::tl -> 
 	  let hd = translate_stmt hd in
@@ -205,8 +192,8 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	    (K.DoWith (body, lbl, action), loc)::[]
 
       | Set (lv, _, Call c) ->
-	  let call = translate_call loc (Some lv) c in
-	    call::[]
+	  let call = translate_call (lv::[]) c in
+	    (call, loc)::[]
 
       | Set x -> 
 	  let set = translate_set x in
@@ -237,8 +224,8 @@ let translate (cglbdecls, cfundefs, specs) fnames =
       | Switch switch -> translate_switch loc switch
 
       | Exp (Call c) -> 
-	  let call = translate_call loc None c in
-	    call::[]
+	  let call = translate_call [] c in
+	    (call, loc)::[]
 
       | UserSpec x -> (K.UserSpec (translate_assertion x), loc)::[]
 
@@ -249,26 +236,6 @@ let translate (cglbdecls, cfundefs, specs) fnames =
       | Decl _ -> 
 	  Npkcontext.report_error "Compiler.translate_stmt" "unreachable code"
 
-  and append_args loc args fid f =
-    let rec append x args =
-      match args with
-	  (e::args, t::args_t) ->
-	    let id = fresh_id () in
-	      push id;
-	      let lv = Var id in
-	      let set = translate_set (lv, t, e) in
-	      let t = translate_typ t in
-	      let call = append (x+1) (args, args_t) in
-	      let arg = fid^".arg"^(string_of_int x) in
-		pop id;
-		(K.Decl (arg, t, (set, loc)::call::[]), loc)
-		  
-	| _ -> 
-	    let fn = translate_fn f in
-	      (K.Call fn, loc)
-    in
-      append 1 args
-      
   and translate_fn fn =
     match fn with
 	Fname f -> K.FunId f
@@ -276,34 +243,14 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 	  let e = translate_exp e in
 	  let ft = translate_ftyp ft in
 	    K.FunDeref (e, ft)
+      
+  and translate_call ret (ft, fn, args) =
+    let args = List.map translate_exp args in
+    let ft = translate_ftyp ft in
+    let fn = translate_fn fn in
+    let ret = List.map translate_lv ret in
+      K.Call (args, ft, fn, ret)
 
-  and translate_call loc ret ((args_t, ret_t), f, args) =
-    let fid =
-      match f with
-	  Fname f -> f
-	| _ -> "fptr_call"
-    in
-    let args = (args, args_t) in
-      match (ret_t, ret) with
-	  (Void, _) -> append_args loc args fid f
-	| (_, Some (Var id)) when Hashtbl.find env id = !stack_height ->
-	    append_args loc args fid f	    
-	| _ ->
-	    let t = translate_typ ret_t in
-	    let id = fresh_id () in
-	      push id;
-	      let post = 
-		match ret with
-		    Some lv -> 
-		      let e = Lval (Var id, ret_t) in
-		      let set = translate_set (lv, ret_t, e) in
-			(set, loc)::[]
-		  | None -> []
-	      in
-	      let call = append_args loc args fid f in
-		pop id;
-		(K.Decl ("value_of_"^fid, t, call::post), loc)
-		
   and translate_switch loc (e, cases, default) =
     let e = translate_exp e in
     let default = translate_blk default in
@@ -354,16 +301,10 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   in
 
   let translate_fundef f ((args, t), _, ((ret_id, args_id), body)) =
-    (* push return value *)
-    push ret_id;
-    (* push arguments *)
-    List.iter push args_id;
     let body = Cir.normalize body in
     let body = translate_blk body in
-      List.iter pop args_id;
-      pop ret_id;
-      let ft = translate_ftyp (args, t) in
-	Hashtbl.add fundefs f (ft, body)
+    let ft = translate_ftyp (args, t) in
+      Hashtbl.add fundefs f (ret_id::[], args_id, ft, body)
   in
 
   let flag_glb x =

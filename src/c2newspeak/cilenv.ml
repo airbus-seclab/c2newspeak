@@ -39,6 +39,8 @@ type funinfo = {
   mutable fargs : (string * typ) list option;
   frett : typ option;
   mutable pbody : blk option;
+  mutable arg_ids: int list;
+  mutable ret_ids: int list;
 }
 
 (*-----------*)
@@ -75,11 +77,13 @@ let get_funspec name =
   let info = Hashtbl.find fun_specs name in
     (info.ploc, info.frett)
 
-let update_funspec name (args, body) =
+let update_funspec name (ret_ids, arg_ids, args, body) =
   assert (Hashtbl.mem fun_specs name);
   let info = Hashtbl.find fun_specs name in
     info.fargs <- args;
-    info.pbody <- Some body
+    info.pbody <- Some body;
+    info.ret_ids <- ret_ids;
+    info.arg_ids <- arg_ids
 
 (* This table to avoid 
    recomputing a different string here to improve sharing *)
@@ -98,7 +102,7 @@ let create_npkil name =
     match (x.fargs, x.pbody) with
 	(Some args, Some body) -> 
 	  let args = List.map filter_arg args in
-	    Hashtbl.add fundefs f ((args, x.frett), body)
+	    Hashtbl.add fundefs f (x.ret_ids, x.arg_ids, (args, x.frett), body)
 
      (* In this case, the function is a prototype which is never called: 
 	ignore *)
@@ -152,7 +156,8 @@ let push_local () = ignore (incr loc_cnt)
 
 let loc_declare (cil_vid, _, _, _) =
   let vid = incr loc_cnt in
-    Hashtbl.add loc_tabl cil_vid vid
+    Hashtbl.add loc_tabl cil_vid vid;
+    vid
 
 (* Functions used in translate_call *)
 (*----------------------------------*)
@@ -222,6 +227,8 @@ let update_fun_proto name (args, ret) =
 	fargs = args;
 	ploc = Npkcontext.get_loc ();
 	pbody = None;
+	arg_ids = [];
+	ret_ids = []
       }
 
 let get_args f = 
@@ -248,8 +255,7 @@ let get_var cil_var =
     (* local variables *)
     try
       let vid = Hashtbl.find loc_tabl cil_var.vid in
-      let n = !loc_cnt - vid in
-	Npkil.Local n
+	Npkil.Local vid
     with Not_found -> 
       Npkcontext.report_error "Npkenv.get_var"
 	("unexpected variable "
@@ -264,7 +270,7 @@ let get_cstr str =
     let sz = Nat.of_int (((String.length str) + 1) * Config.size_of_char) in
       Npkil.AddrOf (Npkil.Global name, Npkil.Known sz)
 
-let get_ret_var () = Npkil.Local (!loc_cnt - 1)
+let get_ret_var () = Npkil.Local 0
 
 let get_ret_lbl () = return_lbl
 

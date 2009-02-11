@@ -57,8 +57,6 @@ and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
 
 and funbody = ((vid * vid list) * blk)
 
-and vid = int
-
 and typ =
     | Void
     | Scalar of Newspeak.scalar_t
@@ -373,7 +371,7 @@ and normalize_stmt (x, loc) =
 	let default = normalize_blk default in
 	  pref@(Switch (e, choices, default), loc)::[]
 
-    | Exp (Call call) -> 
+    | Exp (Call (((_, Void), _, _) as call)) -> 
 	let (pref, call) = normalize_call loc call in
 	  pref@(Exp call, loc)::[]
 

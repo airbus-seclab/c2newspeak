@@ -1,25 +1,3 @@
-Newspeak Object output
-----------------------
-t074.adb
-Global used
-
-Global variables
-
-Function definitions
-t074() {
-  do {
-    int32 x;
-    int32 y;
-    int32 a;
-    0- =(int32) belongs[3,8-1] 4;
-    2- =(int32) belongs[-2147483648,2147483648-1] 0-_int32;
-    1- =(int32) belongs[-2147483648,2147483648-1] coerce[-2147483648,2147483647] (10 + 8);
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t074.adb

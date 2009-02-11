@@ -1,21 +1,3 @@
-Newspeak Object output
-----------------------
-t075.adb
-Global used
-
-Global variables
-
-Function definitions
-t075() {
-  do {
-    float32 x;
-    0- =(float32) 28.5;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t075.adb

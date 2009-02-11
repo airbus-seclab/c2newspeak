@@ -1,21 +1,3 @@
-Newspeak Object output
-----------------------
-t048.adb
-Global used
-
-Global variables
-
-Function definitions
-t048() {
-  do {
-    uint2 x;
-    0- =(uint2) belongs[0,3-1] 1;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t048.adb

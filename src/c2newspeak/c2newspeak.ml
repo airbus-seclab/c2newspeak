@@ -71,7 +71,11 @@ let _ =
 		  if !Npkcontext.config_file = "" then []
 		  else Compiler.compile_config !Npkcontext.config_file
 		in
-		  Linker.link nos mem_zones !Npkcontext.output_file
+		  (* TODO: do not rewrite this part in ada2newspeak! 
+		     factor code!! Npkcontext.link?
+		     then rename linker: npkil2hpk
+		  *)
+		Linker.link nos mem_zones
 	      end
 		
   with Invalid_argument msg -> Npkcontext.exit_on_error msg

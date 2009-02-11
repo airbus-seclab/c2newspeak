@@ -1,29 +1,3 @@
-Newspeak Object output
-----------------------
-t015.adb
-Global used
-
-Global variables
-
-Function definitions
-t015() {
-  do {
-    int32 x;
-    0- =(int32) belongs[-2147483648,2147483648-1] 10;
-        choose {
-     -->
-      guard((2 > 0-_int32));
-      0- =(int32) belongs[-2147483648,2147483648-1] coerce[-2147483648,2147483647] (0-_int32 + 1);
-     -->
-      guard((0-_int32 > 2));
-      0- =(int32) belongs[-2147483648,2147483648-1] coerce[-2147483648,2147483647] (0-_int32 - 1);
-    }
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t015.adb

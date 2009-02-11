@@ -1,21 +1,3 @@
-Newspeak Object output
-----------------------
-t004.adb
-Global used
-
-Global variables
-
-Function definitions
-t004() {
-  do {
-    [1-_int32]32 =(int32) belongs[-2147483648,2147483648-1] coerce[-2147483648,2147483647] (4 + 3);
-    [0-_float32]32 =(float32) (4.5 +. 5.3);
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t004.adb

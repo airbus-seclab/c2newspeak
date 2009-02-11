@@ -1,23 +1,3 @@
-Newspeak Object output
-----------------------
-t053.adb
-Global used
-
-Global variables
-uint1 t097.a;
-
-Function definitions
-t053() {
-  do {
-    int32 t097.proc.arg1;
-    0- =(int32) 12;
-    t097.proc();
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t053.adb

@@ -1,27 +1,3 @@
-Newspeak Object output
-----------------------
-t068.adb
-Global used
-
-Global variables
-
-Function definitions
-t068() {
-  do {
-    uint2 x;
-    uint2 y;
-    uint2 z;
-    2- =(uint2) belongs[0,4-1] 1;
-    1- =(uint2) belongs[0,3-1] 2-_uint2;
-    1- =(uint2) belongs[0,3-1] 0;
-    2- =(uint2) belongs[0,4-1] 1-_uint2;
-    0- =(uint2) belongs[0,3-1] 2;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t068.adb

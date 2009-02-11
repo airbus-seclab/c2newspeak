@@ -1,25 +1,3 @@
-Newspeak Object output
-----------------------
-t063.adb
-Global used
-
-Global variables
-
-Function definitions
-t063() {
-  do {
-    float32 a;
-    uint2 c;
-    int32 d;
-    2- =(float32) 3.5;
-    1- =(uint2) belongs[0,3-1] 1;
-    0- =(int32) belongs[-2147483648,2147483648-1] 5;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t063.adb
