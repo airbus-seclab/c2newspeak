@@ -8,13 +8,17 @@ void main(void) {
   (528.c:30#1118)^uint32 n;
   (528.c:32#1124)^ptr value_of___builtin_strncpy;
   (528.c:32#1124)^{
-    ptr arg0;
-    (528.c:32#1124)^ptr arg1;
-    (528.c:32#1124)^uint32 arg2;
-    (528.c:32#1124)^2- =(ptr) 6-_ptr;
-    (528.c:32#1124)^1- =(ptr) 5-_ptr;
-    (528.c:32#1124)^0- =(uint32) 4-_uint32;
-    (528.c:32#1124)^__builtin_strncpy();
+    ptr __builtin_strncpy.arg1;
+    (528.c:32#1124)^0- =(ptr) 4-_ptr;
+    (528.c:32#1124)^{
+      ptr __builtin_strncpy.arg2;
+      (528.c:32#1124)^0- =(ptr) 4-_ptr;
+      (528.c:32#1124)^{
+        uint32 __builtin_strncpy.arg3;
+        (528.c:32#1124)^0- =(uint32) 4-_uint32;
+        (528.c:32#1124)^__builtin_strncpy();
+      }
+    }
   }
   (528.c:32#1124)^4- =(ptr) 0-_ptr;
 }

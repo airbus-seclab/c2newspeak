@@ -6,7 +6,6 @@ int32 f(void) {
 }
 
 void main(void) {
-  (056.c:34#1154)^int32 value_of_f;
   (056.c:34#1154)^f();
 }
 

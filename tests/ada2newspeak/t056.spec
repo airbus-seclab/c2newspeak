@@ -1,22 +1,3 @@
-Newspeak Object output
-----------------------
-t056.adb
-Global used
-
-Global variables
-
-Function definitions
-t056.main() {
-  do {
-    int32 a;
-    uint1 x;
-    0- =(uint1) belongs[0,2-1] 0;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t056.adb

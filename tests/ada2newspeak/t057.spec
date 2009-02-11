@@ -1,25 +1,3 @@
-Newspeak Object output
-----------------------
-t057.adb
-Global used
-t057.a
-
-Global variables
-uint1 t057.a;
-
-Function definitions
-t057.main() {
-  do {
-    uint1 x;
-    uint1 y;
-    1- =(uint1) belongs[0,2-1] 0;
-    0- =(uint1) Global(t057.a)_uint1;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t057.adb

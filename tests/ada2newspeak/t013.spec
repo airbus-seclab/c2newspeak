@@ -1,27 +1,3 @@
-Newspeak Object output
-----------------------
-t013.adb
-Global used
-
-Global variables
-
-Function definitions
-t013() {
-  do {
-    uint8 a;
-    uint8 b;
-    uint8 c;
-    uint8 d;
-    3- =(uint8) 97;
-    2- =(uint8) 98;
-    1- =(uint8) 99;
-    0- =(uint8) 100;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t013.adb

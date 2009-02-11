@@ -1,23 +1,3 @@
-Newspeak Object output
-----------------------
-t132.adb
-Global used
-
-Global variables
-
-Function definitions
-t132() {
-  do {
-    uint5 x;
-    uint5 y;
-    1- =(uint5) belongs[10,26-1] 15;
-    0- =(uint5) belongs[10,26-1] 25;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t132.adb

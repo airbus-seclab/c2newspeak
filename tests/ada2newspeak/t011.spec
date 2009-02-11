@@ -1,28 +1,3 @@
-Newspeak Object output
-----------------------
-t011.adb
-Global used
-
-Global variables
-
-Function definitions
-t011() {
-  do {
-    uint2 a;
-    uint2 b;
-    uint3 c;
-    2- =(uint2) belongs[0,3-1] 0;
-    1- =(uint2) belongs[0,4-1] 2;
-    0- =(uint3) belongs[0,5-1] 3;
-    2- =(uint2) belongs[0,3-1] 2;
-    1- =(uint2) belongs[0,4-1] 3;
-    0- =(uint3) belongs[0,5-1] 4;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t011.adb

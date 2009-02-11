@@ -1,27 +1,3 @@
-Newspeak Object output
-----------------------
-t059.adb
-Global used
-
-Global variables
-
-Function definitions
-t059() {
-  do {
-    int32 x;
-    uint1 y;
-    {
-      int32 !tmp-1073741821;
-      t101.b();
-      2- =(int32) belongs[-2147483648,2147483648-1] 0-_int32;
-    }
-    0- =(uint1) belongs[0,2-1] 1;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t059.adb

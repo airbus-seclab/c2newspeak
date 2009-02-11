@@ -1,28 +1,3 @@
-Newspeak Object output
-----------------------
-t082.adb
-Global used
-t082.c
-
-Global variables
-uint2 t082.c = {0: uint2 1}
-;
-
-Function definitions
-t082.main() {
-  do {
-    uint2 x;
-    uint2 y;
-    uint2 b;
-    2- =(uint2) belongs[0,3-1] Global(t082.c)_uint2;
-    0- =(uint2) belongs[0,3-1] 2;
-    1- =(uint2) belongs[0,3-1] 0;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t082.adb

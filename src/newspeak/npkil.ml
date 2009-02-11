@@ -43,18 +43,18 @@ and ginfo = (typ * location * init_t option * used)
 
 and used = bool
 
-and funinfo = (ftyp * blk)
+and funinfo = (vid list * vid list * ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (string * typ * blk)
+  | Decl of (string * typ * vid * blk)
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
-  | Call of fn
+  | Call of (exp list * ftyp * fn * lval list)
   | UserSpec of assertion
 
 and assertion = token list
@@ -69,6 +69,8 @@ and stmt = stmtkind * location
 
 and blk = stmt list
 
+and vid = int
+
 and lval =
     Local of vid
   | Global of string
@@ -77,7 +79,7 @@ and lval =
 
 and exp =
     Const of cst
-  | Lval of (lval * scalar_t)
+  | Lval of (lval * typ)
   | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
@@ -197,7 +199,7 @@ let rec string_of_lval lv =
 and string_of_exp e =
   match e with
       Const c -> Newspeak.string_of_cst c
-    | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
+    | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_typ t)
     | AddrOf (lv, sz) -> "&_"^(string_of_tmp_nat sz)^"("^(string_of_lval lv)^")"
     | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)
 
@@ -248,7 +250,7 @@ let dump_npko (fnames, globs, funs, _) =
 	  print_endline ((string_of_lval lv1)^" ="^(string_of_size_t sz)^
 			    " "^(string_of_lval lv2)^";")
 	    
-      | Decl (name, t, body) ->
+      | Decl (name, t, _, body) ->
 	  if only then begin
 	    print_endline ((string_of_typ t)^" "^name^";");
 	    dump_blk align body
@@ -268,11 +270,9 @@ let dump_npko (fnames, globs, funs, _) =
 	  dump_blk (align^"  ") action;
 	  print_endline (align^"}")
 
-      | Goto l ->
-	  print_endline ("goto "^(string_of_lbl l)^";")
+      | Goto l -> print_endline ("goto "^(string_of_lbl l)^";")
 	    
-      | Call f ->
-	  print_endline ((string_of_fn f)^";")
+      | Call (_, _, f, _) -> print_endline ((string_of_fn f)^";")
 	    
       | Guard b -> print_endline ("guard("^(string_of_exp b)^");")
 
@@ -340,7 +340,7 @@ let dump_npko (fnames, globs, funs, _) =
 	    print_endline ";"
   in
 
-  let print_fundef n (_, pbody) =
+  let print_fundef n (_, _, _, pbody) =
     dump_fundec n pbody;
     print_newline ()
   in
@@ -505,7 +505,7 @@ let cast t e t' =
 
 let rec append_decls d body =
   match d with
-      (x, t, loc)::tl -> (Decl (x, t, append_decls tl body), loc)::[]
+      (x, t, id, loc)::tl -> (Decl (x, t, id, append_decls tl body), loc)::[]
     | [] -> body
 
 let rec negate e =

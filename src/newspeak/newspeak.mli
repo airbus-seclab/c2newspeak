@@ -194,6 +194,7 @@ and scalar_t =
   | Ptr
   | FunPtr
 
+(* TODO: remove init, use normal initialization code *)
 and init_t = 
   | Zero
   | Init of (offset * scalar_t * exp) list
@@ -251,9 +252,11 @@ val normalize_loops : blk -> blk
 
 (* Run all simplifications. *)
 (* true to remove checks when possible *)
-val simplify : bool -> blk -> blk
+val simplify_blk: bool -> blk -> blk
 (* true to remove checks when possible *)
 val simplify_exp: bool -> exp -> exp
+
+val simplify: bool -> t -> t
 
 
 

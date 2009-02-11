@@ -40,13 +40,6 @@ open Npkil
     the current return and switch infos *)
 type status
 
-type funinfo = {
-  ploc  : Newspeak.location;
-  mutable fargs : (string * typ) list option;
-  frett : typ option;
-  mutable pbody : blk option;
-}
-
 (** {1 Compilation variables} *)
 
 val glb_decls : (string, Npkil.ginfo) Hashtbl.t
@@ -54,8 +47,7 @@ val glb_decls : (string, Npkil.ginfo) Hashtbl.t
 val get_funspec : string -> (Newspeak.location * Npkil.typ option)
 
 val update_funspec : 
-  string -> ((string * typ) list option * blk) -> unit
-(*val fun_specs : (Newspeak.fid, Npkil.funinfo) Hashtbl.t*)
+  string -> (int list * int list * (string * typ) list option * blk) -> unit
 
 val glb_uniquename : Cil.varinfo -> string
 
@@ -73,7 +65,7 @@ val create_npkil : string -> Npkil.t
 val get_args : string -> string list
 
 (** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : (int * string * Npkil.typ * Newspeak.location) -> unit
+val loc_declare : (int * string * Npkil.typ * Newspeak.location) -> int
 
 (** {2 Functions used in translate_call} *)
 

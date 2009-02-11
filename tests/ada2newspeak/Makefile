@@ -24,7 +24,7 @@
 # email: charles.hymans@penjili.org
 #
 
-OPTION=--print-npko --print-newspeak
+OPTION=--print-newspeak
 COMMAND=$(ADA2NEWSPEAK) $(OPTION) $*.adb
 PREREQ=%.adb $(ADA2NEWSPEAK)
 CLEANFILES=*.bak

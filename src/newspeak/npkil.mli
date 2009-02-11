@@ -44,18 +44,19 @@ and ginfo = (typ * location * init_t option * used)
 and used = bool
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and funinfo = (ftyp * blk)
+and funinfo = (vid list * vid list * ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
-  | Decl of (string * typ * blk)
+  | Decl of (string * typ * vid * blk)
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
-  | Call of fn
+      (* (in, type, function, out) *)
+  | Call of (exp list * ftyp * fn * lval list)
   | UserSpec of assertion
 
 and assertion = token list
@@ -70,15 +71,17 @@ and stmt = stmtkind * location
 
 and blk = stmt list
 
+and vid = int
+
 and lval =
-    Local of vid
+    Local of Newspeak.vid
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
 and exp =
     Const of cst
-  | Lval of (lval * scalar_t)
+  | Lval of (lval * typ)
   | AddrOf of (lval * tmp_nat)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
@@ -177,4 +180,4 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
    declarations decls. The order of the declaration must be carefully
    checked because in Newspeak, the variables are identified by their
    positions in the declaration stacks, not by their names *)
-val append_decls: (string * typ * location) list -> blk -> blk
+val append_decls: (string * typ * vid * location) list -> blk -> blk

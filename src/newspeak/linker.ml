@@ -32,6 +32,8 @@ module Nat = Newspeak.Nat
 
 module StrSet = Set.Make(String)
 
+module H = Highspeak
+
 (*--------------*)
 (* Linking time *)
 (*--------------*)
@@ -50,11 +52,11 @@ let get_glob_typ name =
 
 let rec generate_typ t =
   match t with
-      Npkil.Scalar x -> Newspeak.Scalar x
-    | Npkil.Array (t, Some l) -> Newspeak.Array (generate_typ t, l)
-    | Npkil.Array (_, None) -> 
+      Scalar x -> Newspeak.Scalar x
+    | Array (t, Some l) -> Newspeak.Array (generate_typ t, l)
+    | Array (_, None) -> 
 	Npkcontext.report_error "Link.generate_typ" "unknown array length"
-    | Npkil.Region (fields, sz) -> 
+    | Region (fields, sz) -> 
 	Newspeak.Region (List.map generate_field fields, sz)
 
 and generate_field (offs, t) = (offs, generate_typ t)
@@ -69,32 +71,27 @@ and generate_ftyp (args, ret) =
 
 let rec generate_init init =
   match init with
-    | None -> 
-	if !Npkcontext.global_zero_init then Newspeak.Zero 
-	else Newspeak.Init []
-    | Some l -> Newspeak.Init (List.map generate_init_field l)
+      Some l -> H.Init (List.map generate_init_field l)
+    | None when !Npkcontext.global_zero_init -> H.Zero
+    | None -> H.Init []
 
 and generate_init_field (sz, sca, e) = 
   let e = generate_exp e in
-  let e = 
-    if !Npkcontext.no_opt then e 
-    else Newspeak.simplify_exp !Npkcontext.opt_checks e 
-  in
     (sz, sca, e)
 
 and generate_lv lv =
   match lv with
-    | Npkil.Global name -> Newspeak.Global name
-    | Npkil.Deref (e, sz) -> Newspeak.Deref (generate_exp e, sz)
-    | Npkil.Shift (lv', e) -> Newspeak.Shift (generate_lv lv', generate_exp e)
-    | Npkil.Local v -> Newspeak.Local v
+    | Global name -> H.Global name
+    | Deref (e, sz) -> H.Deref (generate_exp e, sz)
+    | Shift (lv', e) -> H.Shift (generate_lv lv', generate_exp e)
+    | Local v -> H.Local v
 	
 and generate_exp e =
   match e with
-    | Npkil.Lval (lv, sca) -> Newspeak.Lval (generate_lv lv, sca)
-    | Npkil.Const c -> Newspeak.Const c 
-    | Npkil.AddrOfFun (fid, ft) -> Newspeak.AddrOfFun (fid, generate_ftyp ft)
-    | Npkil.AddrOf (lv, sz) -> 
+    | Lval (lv, t) -> H.Lval (generate_lv lv, generate_typ t)
+    | Const c -> H.Const c 
+    | AddrOfFun (fid, ft) -> H.AddrOfFun (fid, generate_ftyp ft)
+    | AddrOf (lv, sz) -> 
 	let sz = 
 	  try Nat.to_int (generate_tmp_nat sz) 
 	  with Invalid_argument "Newspeak.Nat.to_int" -> Config.max_sizeof
@@ -104,34 +101,36 @@ and generate_exp e =
 	      ("size too large: maximum allowed is "
 	       ^(string_of_int Config.max_sizeof)^" bits")
 	  end;
-	  Newspeak.AddrOf (generate_lv lv, sz)
-    | Npkil.UnOp (o, e) -> Newspeak.UnOp (generate_unop o, generate_exp e)
-    | Npkil.BinOp (o, e1, e2) -> 
-	Newspeak.BinOp (o, generate_exp e1, generate_exp e2)
+	  H.AddrOf (generate_lv lv, sz)
+    | UnOp (o, e) -> H.UnOp (generate_unop o, generate_exp e)
+    | BinOp (o, e1, e2) -> H.BinOp (o, generate_exp e1, generate_exp e2)
 
+(* TODO:
+   Avoid redefinition of unop and binop. Use the same for npkil and newspeak
+   just add a belongs_tmp to npkil !!! *)
 and generate_unop o =
   match o with
-      Npkil.Belongs_tmp (l, u) -> 
+      Belongs_tmp (l, u) -> 
 	let u = Nat.sub (generate_tmp_nat u) Nat.one in
 	  Newspeak.Belongs (l, u)
-    | Npkil.Coerce r -> Newspeak.Coerce r
-    | Npkil.Not -> Newspeak.Not
-    | Npkil.BNot r -> Newspeak.BNot r
-    | Npkil.PtrToInt k -> Newspeak.PtrToInt k
-    | Npkil.IntToPtr k -> Newspeak.IntToPtr k
-    | Npkil.Cast (t1, t2) -> Newspeak.Cast (t1, t2)
+    | Coerce r -> Newspeak.Coerce r
+    | Not -> Newspeak.Not
+    | BNot r -> Newspeak.BNot r
+    | PtrToInt k -> Newspeak.PtrToInt k
+    | IntToPtr k -> Newspeak.IntToPtr k
+    | Cast (t1, t2) -> Newspeak.Cast (t1, t2)
 
 and generate_tmp_nat x =
   match x with
-      Npkil.Known i -> i
-    | Npkil.Length name -> begin
+      Known i -> i
+    | Length name -> begin
 	match get_glob_typ name with
 	    Newspeak.Array (_, len) -> Nat.of_int len
 	  | _ -> 
 	      Npkcontext.report_error "Npklink.generate_tmp_nat" 
 		"array type expected"
       end
-    | Npkil.Mult (v, n) -> 
+    | Mult (v, n) -> 
 	let i = generate_tmp_nat v in
 	  Nat.mul_int n i
 
@@ -154,58 +153,57 @@ let generate_global name (t, loc, init, used) =
 let rec generate_stmt (sk, loc) =
   let new_sk = 
     match sk with
-      | Npkil.Set (lv, e, sca) -> 
-	  Newspeak.Set (generate_lv lv, generate_exp e, sca)
-      | Npkil.Copy (lv1, lv2, sz) -> 
-	  Newspeak.Copy (generate_lv lv1, generate_lv lv2, sz)
-      | Npkil.Decl (name, t, b) -> 
-	  Newspeak.Decl (name, generate_typ t, List.map generate_stmt b)
-      | Npkil.Guard cond -> Newspeak.Guard (generate_exp cond)
-      | Npkil.Select (body1, body2) ->
-	  Newspeak.Select (generate_blk body1, generate_blk body2)
-      | Npkil.InfLoop b -> Newspeak.InfLoop (List.map generate_stmt b)
-      | Npkil.Call fn -> Newspeak.Call (generate_fn fn)
-      | Npkil.Goto lbl -> Newspeak.Goto lbl
-      | Npkil.DoWith (body, lbl, action) ->
+      | Set (lv, e, sca) -> H.Set (generate_lv lv, generate_exp e, sca)
+      | Copy (lv1, lv2, sz) -> 
+	  H.Copy (generate_lv lv1, generate_lv lv2, sz)
+      | Decl (name, t, vid, b) -> 
+	  H.Decl (name, generate_typ t, vid, List.map generate_stmt b)
+      | Guard cond -> H.Guard (generate_exp cond)
+      | Select (body1, body2) ->
+	  H.Select (generate_blk body1, generate_blk body2)
+      | InfLoop b -> H.InfLoop (List.map generate_stmt b)
+      | Call (args, ft, fn, rets) ->
+	  let args = List.map generate_exp args in
+	  let ft = generate_ftyp ft in
+	  let fn = generate_fn fn in
+	  let rets = List.map generate_lv rets in
+	  H.Call (args, ft, fn, rets)
+      | Goto lbl -> H.Goto lbl
+      | DoWith (body, lbl, action) ->
 	  let body = List.map generate_stmt body in
 	  let action = List.map generate_stmt action in
-	    Newspeak.DoWith (body, lbl, action)
-      | Npkil.UserSpec x -> Newspeak.UserSpec (List.map generate_token x)
+	    H.DoWith (body, lbl, action)
+      | UserSpec x -> H.UserSpec (List.map generate_token x)
   in 
     (new_sk, loc)
 
 and generate_token x =
   match x with
-      Npkil.SymbolToken c -> Newspeak.SymbolToken c
-    | Npkil.IdentToken x -> Newspeak.IdentToken x
-    | Npkil.LvalToken lv -> Newspeak.LvalToken (generate_lv lv)
-    | Npkil.CstToken c -> Newspeak.CstToken c
+      SymbolToken c -> H.SymbolToken c
+    | IdentToken x -> H.IdentToken x
+    | LvalToken lv -> H.LvalToken (generate_lv lv)
+    | CstToken c -> H.CstToken c
 
 and generate_blk x = List.map generate_stmt x
     
 and generate_fn fn =
   match fn with
-    | Npkil.FunId f -> Newspeak.FunId f
-    | Npkil.FunDeref (e, t) -> 
-	Newspeak.FunDeref (generate_exp e, generate_ftyp t)
+    | FunId f -> H.FunId f
+    | FunDeref (e, t) -> H.FunDeref (generate_exp e, generate_ftyp t)
 
 and generate_body body = List.map generate_stmt body
 
 let generate_fundecs fundecs =
   let funspecs = Hashtbl.create 100 in
-  let add_fundec (name, (ftyp, body)) =
+  let add_fundec (name, (rets, args, ftyp, body)) =
     let body = generate_body body in
-    let body = 
-      if !Npkcontext.no_opt then body
-      else Newspeak.simplify !Npkcontext.opt_checks body
-    in
     let ftyp = generate_ftyp ftyp in
       
       if Hashtbl.mem funspecs name then begin
 	Npkcontext.report_error "Npklink.generate_funspecs" 
 	  ("function "^name^" declared twice")
       end;
-      Hashtbl.add funspecs name (ftyp, body);
+      Hashtbl.add funspecs name (rets, args, ftyp, body);
       Npkcontext.print_debug ("Function linked: "^name)
   in
     List.iter add_fundec fundecs;
@@ -284,7 +282,7 @@ let merge npkos =
     List.iter merge npkos;
     (StrSet.elements !fnames, glb_decls, !fundefs, !specs)
 
-let link npkos mem_zones output_file =
+let link npkos mem_zones =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
@@ -297,22 +295,27 @@ let link npkos mem_zones output_file =
     Npkcontext.print_debug "Functions...";
     let fundecs = generate_fundecs fun_decls in
 	
-    let npk = { 
-      Newspeak.fnames = filenames;
-      Newspeak.globals = globals;
-      Newspeak.fundecs = fundecs;
-      Newspeak.specs = specs;
-      Newspeak.ptr_sz = Config.size_of_ptr;
-      Newspeak.mem_zones = mem_zones
+    let prog = { 
+      H.fnames = filenames;
+      H.globals = globals;
+      H.fundecs = fundecs;
+      H.specs = specs;
+      H.ptr_sz = Config.size_of_ptr;
+      H.mem_zones = mem_zones
     } in
-      Newspeak.write output_file npk;
-	
-      Npkcontext.print_debug "File linked.";
       
-      if !Npkcontext.verb_newspeak then begin
-	print_endline "Newspeak output";
-	print_endline "---------------";
-	let npk = Newspeak.read output_file in
-	  Newspeak.dump npk;
+      Npkcontext.print_debug "File linked.";
+      let prog = Hpk2npk.translate prog in
+      let prog = 
+	if !Npkcontext.no_opt then prog
+	else Newspeak.simplify !Npkcontext.opt_checks prog
+      in
+	
+	Newspeak.write !Npkcontext.output_file prog;
+	if !Npkcontext.verb_newspeak then begin
+	  print_endline "Newspeak output";
+	  print_endline "---------------";
+	  Newspeak.dump prog;
 	  print_newline ()
-      end
+	end
+

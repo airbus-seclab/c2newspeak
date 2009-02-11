@@ -56,6 +56,7 @@ let _ =
       end
     in
       
+      (* TODO: this code should be factored with c2newspeak!!! *)
       match !Npkcontext.input_files with
 	  file::[] 
 	    when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
@@ -64,9 +65,7 @@ let _ =
 		  
 	| files ->
 	    let nos = List.map extract_no files in
-	      if not !Npkcontext.compile_only then begin
-		Linker.link nos [] !Npkcontext.output_file
-	      end
+	      if not !Npkcontext.compile_only then Linker.link nos []
 		
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
     

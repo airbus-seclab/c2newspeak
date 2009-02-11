@@ -46,8 +46,6 @@ and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
 
 and funbody = ((vid * vid list) * blk)
 
-and vid = int
-
 and typ =
     | Void
     | Scalar of Newspeak.scalar_t

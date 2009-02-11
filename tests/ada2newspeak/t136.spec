@@ -1,27 +1,3 @@
-Newspeak Object output
-----------------------
-t136.adb
-Global used
-
-Global variables
-
-Function definitions
-t136() {
-  do {
-    uint2 z;
-    uint2 z2;
-    uint5 z3;
-    uint5 x;
-    3- =(uint2) belongs[0,3-1] 0;
-    2- =(uint2) belongs[0,3-1] 2;
-    1- =(uint5) belongs[10,21-1] 20;
-    0- =(uint5) belongs[10,21-1] 10;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t136.adb

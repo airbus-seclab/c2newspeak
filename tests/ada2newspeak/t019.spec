@@ -1,22 +1,3 @@
-Newspeak Object output
-----------------------
-t019.adb
-Global used
-
-Global variables
-
-Function definitions
-t019() {
-  do {
-    int8 x;
-    0- =(int8) belongs[-32,33-1] 5;
-    0- =(int8) belongs[-32,33-1] 3;
-  } with lbl0: {
-  }
-}
-
-
-
 Newspeak output
 ---------------
 t019.adb

@@ -562,8 +562,28 @@ let translate (globals, spec) =
 	    let e = translate_exp e in
 	      cast e t
 		
-	| Call f -> translate_call f
-				
+	| Call (Var x, args) when is_fname x -> 
+	    let (f, (tmp_args_t, ret_t)) = find_fname x in
+	    let args_t = refine_args_t tmp_args_t args in
+	    let (args, args_t) = translate_args args args_t in
+	    let ft' = translate_ftyp (args_t, ret_t) in
+	      if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
+	      (C.Call (ft', C.Fname f, args), ret_t)
+	      
+	| Call ((Deref e | e), args) -> 
+	    let (e, t) = translate_exp e in
+	    let (args_t, ret_t) =
+	      match t with
+		  Ptr (Fun t) -> t
+		| _ -> 
+		    Npkcontext.report_error "Firstpass.translate_call"
+		      "function pointer expected"
+	    in
+	    let args_t = refine_args_t args_t args in
+	    let (args, args_t) = translate_args args args_t in
+	    let ft' = translate_ftyp (args_t, ret_t) in
+	      (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
+		
 	| Set set ->
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
 	      "assignment within expression" Npkcontext.DirtySyntax;
@@ -597,33 +617,7 @@ let translate (globals, spec) =
 	      (t, "arg"^(string_of_int i))  
 	  in
 	    List_utils.mapi infer_typ args  
-      | Some args_t -> args_t  
-	  
-
-  and translate_call (f, args) =
-    match f with
-	Var x when is_fname x -> 
-	  let (f, (tmp_args_t, ret_t)) = find_fname x in
-	  let args_t = refine_args_t tmp_args_t args in
-	  let (args, args_t) = translate_args args args_t in
-	  let ft' = translate_ftyp (args_t, ret_t) in
-	    if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
-	    (C.Call (ft', C.Fname f, args), ret_t)
-	      
-      | Deref e | e -> 
-	  let (e, t) = translate_exp e in
-	  let (args_t, ret_t) =
-	    match t with
-		Ptr (Fun t) -> t
-	      | _ -> 
-		  Npkcontext.report_error "Firstpass.translate_call"
-		    "function pointer expected"
-	  in
-	  let args_t = refine_args_t args_t args in
-	  let (args, args_t) = translate_args args args_t in
-	  let ft' = translate_ftyp (args_t, ret_t) in
-	    (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
-	      
+      | Some args_t -> args_t  	      
       
   and deref (e, t) =
     match t with

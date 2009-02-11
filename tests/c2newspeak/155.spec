@@ -9,7 +9,7 @@ Function definitions
 main() {
   do {
     int32 x;
-    0- =(int32) 3;
+    -1073741823- =(int32) 3;
   } with lbl0: {
   }
 }

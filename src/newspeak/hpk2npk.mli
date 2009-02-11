@@ -1,7 +1,7 @@
-/*
+(*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2008  Charles Hymans
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -22,19 +22,6 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 
-  Olivier Levillain
-  email: olivier.levillain@penjili.org
-*/
+*)
 
-// Function calls have no arguments and look like assembly calls. 
-// Newspeak takes advantage of its stack to transmit parameters.
-
-int f() {
-  return 1;
-}
-
-void main() {
-  int x;
-  x = f();
-}
-
+val translate: Highspeak.t -> Newspeak.t

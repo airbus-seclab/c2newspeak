@@ -116,10 +116,10 @@ and mem_zones = (Nat.t * size_t) list
 and assertion = spec_token list
 
 and spec_token =
-    | SymbolToken of char
-    | IdentToken of string
-    | LvalToken of lval
-    | CstToken of cst
+  | SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lval
+  | CstToken of cst
 
 and stmtkind =
     Set of (lval * exp * scalar_t)
@@ -1070,28 +1070,6 @@ and simplify_blk actions blk =
       | [] -> []
 
 
-(* TODO: do this in one tree traversal, instead of 2 *)
-(* TODO: code optimization, this could be optimized, 
-   maybe using inheritance ?? *)
-(* TODO: once simplify choose is applied, there are opportunities for 
-   simplify_gotos
-   Fixpoint ??? *)
-let simplify opt_checks b = 
-  let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
-  let simplifications = 
-    (new simplify_choose)::(new simplify_ptr)
-    ::(new simplify_arith)::simplifications
-  in
-    simplify_gotos (simplify_blk simplifications b)
-
-let simplify_exp opt_checks e =
-  let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
-  let simplifications = 
-    (new simplify_ptr)::(new simplify_arith)::simplifications
-  in
-  simplify_exp simplifications e
-
-
 let build_call f (args_t, ret_t) args =
   let loc = dummy_loc ("!Newspeak.build_call_"^f) in
   let call = ref [Call (FunId f), loc] in
@@ -1135,41 +1113,6 @@ let init_of_string str =
     done;
     (len + 1, !res)
       
-let build_main_args ptr_sz loc params =
-  let argv_name = "!ptr_array" in
-  let process_param (n, globals, init) p =
-    let name = "!param_str"^(string_of_int n) in
-    let (len, param_init) = init_of_string p in
-    let param_init = List.rev (set_of_init loc name param_init) in
-    let lv = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
-    let e = AddrOf (Global name, len*char_sz) in
-    let init_argv = (Set (lv, e, Ptr), loc) in
-    let globals = (name, Array (Scalar char_typ, len))::globals in
-    let init = init_argv::param_init@init in
-      (n+1, globals, init)
-  in
-  let (n, globals, init) = List.fold_left process_param (0, [], []) params in
-  let init = List.rev init in
-  let argv_glob = (argv_name, Array (Scalar Ptr, n)) in
-  let argc = exp_of_int n in
-  let argv = AddrOf (Global argv_name, n*ptr_sz) in
-    (argv_glob::globals, init, argc::argv::[])
-
-
-let build_main_call ptr_sz ft params =
-  let fname = "main" in
-  let loc = dummy_loc "!Newspeak.build_call_main" in
-  let (args_t, _) = ft in
-    match args_t with
-	[Scalar Int _; Scalar Ptr] ->
-	  let (globals, init, args) = build_main_args ptr_sz loc params in
-	  let call = build_call fname ft args in
-	  let call = ref (init@call) in
-	  let bind_global (x, t) = call := [bind_var x t !call, loc] in
-	    List.iter bind_global globals;
-	    simplify false !call
-      | [] -> build_call fname ft []
-      | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
 
 
 let has_goto lbl x =
@@ -1660,3 +1603,83 @@ let rec equal_stmt (x1, _) (x2, _) =
     | _ -> x1 = x2
   
 and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2
+
+(* TODO: do this in one tree traversal, instead of 2 *)
+(* TODO: code optimization, this could be optimized, 
+   maybe using inheritance ?? *)
+(* TODO: once simplify choose is applied, there are opportunities for 
+   simplify_gotos
+   Fixpoint ??? *)
+let simplify_blk opt_checks b = 
+  let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
+  let simplifications = 
+    (new simplify_choose)::(new simplify_ptr)
+    ::(new simplify_arith)::simplifications
+  in
+    simplify_gotos (simplify_blk simplifications b)
+
+let simplify_exp opt_checks e =
+  let simplifications = if opt_checks then (new simplify_coerce)::[] else [] in
+  let simplifications = 
+    (new simplify_ptr)::(new simplify_arith)::simplifications
+  in
+  simplify_exp simplifications e
+
+let simplify opt_checks prog =
+  let fundecs = Hashtbl.create 100 in
+  let globals = Hashtbl.create 100 in
+  let simplify_init_cell (o, t, e) =
+    let e = simplify_exp opt_checks e in
+      (o, t, e)
+  in
+  let simplify_global x (t, init, loc) =
+    let init = 
+      match init with
+	  Zero -> Zero
+	| Init cells -> Init (List.map simplify_init_cell cells)
+    in
+      Hashtbl.add globals x (t, init, loc)
+  in
+  let simplify_fundec f (ft, body) =
+    let body = simplify_blk opt_checks body in
+      Hashtbl.add fundecs f (ft, body)
+  in
+    Hashtbl.iter simplify_global prog.globals;
+    Hashtbl.iter simplify_fundec prog.fundecs;
+    { prog with globals = globals; fundecs = fundecs }
+
+let build_main_args ptr_sz loc params =
+  let argv_name = "!ptr_array" in
+  let process_param (n, globals, init) p =
+    let name = "!param_str"^(string_of_int n) in
+    let (len, param_init) = init_of_string p in
+    let param_init = List.rev (set_of_init loc name param_init) in
+    let lv = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
+    let e = AddrOf (Global name, len*char_sz) in
+    let init_argv = (Set (lv, e, Ptr), loc) in
+    let globals = (name, Array (Scalar char_typ, len))::globals in
+    let init = init_argv::param_init@init in
+      (n+1, globals, init)
+  in
+  let (n, globals, init) = List.fold_left process_param (0, [], []) params in
+  let init = List.rev init in
+  let argv_glob = (argv_name, Array (Scalar Ptr, n)) in
+  let argc = exp_of_int n in
+  let argv = AddrOf (Global argv_name, n*ptr_sz) in
+    (argv_glob::globals, init, argc::argv::[])
+
+
+let build_main_call ptr_sz ft params =
+  let fname = "main" in
+  let loc = dummy_loc "!Newspeak.build_call_main" in
+  let (args_t, _) = ft in
+    match args_t with
+	[Scalar Int _; Scalar Ptr] ->
+	  let (globals, init, args) = build_main_args ptr_sz loc params in
+	  let call = build_call fname ft args in
+	  let call = ref (init@call) in
+	  let bind_global (x, t) = call := [bind_var x t !call, loc] in
+	    List.iter bind_global globals;
+	    simplify_blk false !call
+      | [] -> build_call fname ft []
+      | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
