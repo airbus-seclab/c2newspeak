@@ -554,11 +554,6 @@ let rec outward stmts lbl g_level g_offset =
  in 
   let stmts' = fst (outward stmts) in sibling_elimination stmts' lbl g_offset
       
-
-	  
-      
-
-      
       
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
@@ -831,16 +826,20 @@ let elimination stmts lbl (gotos, lo) =
 	  stmts := outward !stmts lbl l id;
 
       (* force goto and label to be siblings *)
-      if directly_related !stmts lbl id then
+      if directly_related !stmts lbl id then begin
 	if !l > l_level then
 	    stmts := outward !stmts lbl l id
 	else
 	    let l_level = ref l_level in
 	      if o > l_offset then
 		stmts := lifting_and_inward !stmts lbl l_level l id o
+      end
       else
 	(* goto and label are sibling; eliminate goto and label *) 
+	begin
+	  print_endline "sibling elimination";
 	stmts := sibling_elimination !stmts lbl id
+	end
   in
     List.iter move gotos;
     !stmts

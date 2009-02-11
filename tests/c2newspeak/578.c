@@ -19,4 +19,12 @@
 
   Sarah Zennou
   EADS Innovation Works - SE/IA
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah (dot) zennou (at) eads (dot) net
 */
+
+void main(void){
+  int i;
+ lbl: i = 0;
+  goto lbl;
+}
