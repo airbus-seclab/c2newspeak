@@ -57,10 +57,17 @@ let nested_gotos stmt =
   in nested_gotos stmt
 	
 let preprocessing lbls stmts =
-  (* - adds conditional goto statement 
+  (* For every forward goto stmt:
+     - adds conditional goto statement
      - adds the additional boolean variables 
      - fills the level/offset table. Goto label are slightly
-     modified to make them unique *)
+     modified to make them unique 
+
+A goto is forward if there exists a statement sequence
+stmt_1...stmt_i ... stmt_j stmt_n s.t. 
+- i < j 
+- stmt_i contains a nested stmt 'goto lbl'
+- stmt_j is the label stmt 'Label lbl'*)
   let nth = ref 0 in
   let marking stmt lbls =
     let rec fold blk =
@@ -257,7 +264,9 @@ let search_lbl stmts lbl =
 	      (search if_blk) or (search else_blk) or (search stmts)
 		
 	  | For(_,_,blk,_) -> (search blk) or (search stmts)
-		
+	
+	  | DoWhile(blk, _) -> (search blk) or (search stmts)
+	
 	  | Block blk -> (search blk) or (search stmts)
 	      
 	  | CSwitch (_, cases, default) ->
@@ -660,8 +669,10 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	let if' = If(e, if_blk, else_blk') in
 	  [(set, lb); (before', lb); (if', l')]     
       end
-	
-and loop_in lbl l e before cond blk1 blk2 blk3 g_offset g_loc=
+
+and loop_in lbl l e before cond blk g_offset g_loc b =
+  (* b is boolean param true when the expression to generate is for a
+     While loop and false for a DoWhile loop *)
   let lbl' = Var (fresh_lbl lbl) in
   let rec search_and_add stmts =
     match stmts with
@@ -681,21 +692,31 @@ and loop_in lbl l e before cond blk1 blk2 blk3 g_offset g_loc=
   in
   let set = Exp (Set (lbl', None, e)) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
-  let e = IfExp(lbl', one, cond) in
+  let e = 
+    if b then (* expression for While *) IfExp(lbl', one, cond) 
+    else (* expression for DoWhile *)  cond 
+  in
   let g_lbl = goto_lbl lbl g_offset in
   let if' = If(lbl', [Goto g_lbl, g_loc], []) in
-  let blk2' = search_and_add blk2 in
-  let l' = try snd (List.hd blk2') with Failure "hd" -> l in
-  let blk2' = (if', l')::blk2' in 
-  let blk2' = inward lbl g_offset g_loc blk2' in
-  let for'= For(blk1, e, blk2', blk3) in
+  let blk' = search_and_add blk in
+  let l' = try snd (List.hd blk') with Failure "hd" -> l in
+  let blk' = (if', l')::blk' in 
+  let blk' = inward lbl g_offset g_loc blk' in
     if before = [] then 
-      (* optimisation when there are no stmts before the while loop *)
-	[(set, lb) ; (for', l)]
-      else
-	let before' = If(Unop(Not, lbl'), before, []) in
-	  [(set, lb) ; (before', lb) ; (for', l)]
-	
+      (* optimisation when there are no stmts before the loop *)
+      [(set, lb)], blk', e
+    else
+      let before' = If(Unop(Not, lbl'), before, []) in
+	  [(set, lb) ; (before', lb)], blk', e
+
+and while_in lbl l e before cond blk1 blk2 blk3 g_offset g_loc=
+  let stmts', blk2', e = loop_in lbl l e before cond blk2 g_offset g_loc true in
+    stmts'@[For(blk1, e, blk2', blk3), l]
+
+and dowhile_in lbl l e before cond blk g_offset g_loc =
+  let stmts', blk', e = loop_in lbl l e before cond blk g_offset g_loc false in
+    stmts'@[DoWhile(blk', e), l]
+
 and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let tswitch = "switch."^(Newspeak.string_of_loc l) in
@@ -727,8 +748,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
     with Not_found ->
       invalid_arg "Goto_elimination.cswitch_in: label is in the default case"
 
-and dowhile_in _ _ _ _ _ _ _ _ =
-  invalid_arg "Goto_elimination.dowhile_in: to implement"
+
 	
 and inward lbl g_offset g_loc stmts =
   let rec search_goto_cond stmts =
@@ -755,7 +775,7 @@ and inward lbl g_offset g_loc stmts =
 		      if_else_in lbl l e before' ie if_blk else_blk g_offset g_loc
 			
 		  | For (blk1, cond, blk2, blk3) -> 
-		      loop_in lbl l e before' cond blk1 blk2 blk3 g_offset g_loc
+		      while_in lbl l e before' cond blk1 blk2 blk3 g_offset g_loc
 			
 		  | DoWhile(blk, cond) ->
 		      dowhile_in lbl l e before' cond blk g_offset g_loc
@@ -789,7 +809,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
        stmt just before the desired goto; 
        -before is the chunk from the beginning to the stmt just
        before the label;
-       -after is the chunk from the goto to the end*)
+       -after is the chunk from the goto to the end *)
     match stmts with
 	[] -> [], [], []
       | (stmt, l)::stmts ->
@@ -811,7 +831,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 	g_level := !g_level + 1;
 	l_level := !l_level + 1;
 	(* looking for the block between the label and the goto (label
-	   is the first as it is a backward one) *)
+	   is the first as it is backward one *)
 	let before, blk, after = search stmts in
 	  (* building additional stmts *)
 	  (* assign the goto_lbl to false and add it to the beginning of
@@ -879,14 +899,13 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 		    [CSwitch (e, cases', blk'), l], (b or b')
 		      
 	      | For(blk1, e, blk2, blk3) ->
-		  (* if the goto is in blk1 then it has been managed
-		     in the if branch of this function *)
 		  let blk2', b' = lifting_and_inward blk2 in
-		  let l' = try snd (List.hd (List.rev blk2')) with Failure "hd" -> l in
-		  let before, blk2', after = avoid_break_capture blk2' l l' in
-		  let stmts' = before @ ((For(blk1, e, blk2', blk3), l)::after) in
-		    stmts', b'   
+		    [For(blk1, e, blk2', blk3), l], b' 
 		      
+	      | DoWhile(blk, e) -> 
+		  let blk', b' = lifting_and_inward blk in
+		    [DoWhile(blk', e), l], b'
+
 	      | _ -> let stmts', b = lifting_and_inward stmts in (stmt, l)::stmts', b
   in
     fst (lifting_and_inward stmts)
