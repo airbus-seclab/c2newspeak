@@ -38,109 +38,182 @@ let one = Cst (Cir.CInt (Newspeak.Nat.of_int 1), uint_typ)
   
 let dummy_cond = one
  
+let nested_gotos stmt = 
+  (* returns the label list of all nested gotos in the stmtkind stmt *)
+  let rec concat blk =
+    let blk' = List.map (fun (stmt, _) -> nested_gotos stmt) blk in
+    List.concat blk'
+  and nested_gotos stmt =
+    match stmt with 
+	Goto lbl -> [lbl]
+      | For(_, _, blk2, _) -> concat blk2
+      | DoWhile(blk, _) -> concat blk
+      | If(_, if_blk, else_blk) -> concat (if_blk @ else_blk)
+      | Block blk -> concat blk
+      | CSwitch(_, cases, default) ->
+	let cases = List.concat (List.map (fun (_, blk, _) -> blk) cases) in
+	  concat (cases @ default)
+    | _ -> []
+  in nested_gotos stmt
+	
 let preprocessing lbls stmts =
   (* - adds conditional goto statement 
      - adds the additional boolean variables 
      - fills the level/offset table. Goto label are slightly
      modified to make them unique *)
-  let nth = ref 0 in 
-  let rec preprocessing level stmts =
-    match stmts with 
-	[] -> [], []
-      | (s, l)::stmts -> 
-	  match s with 
-	      Label lbl -> begin
-		try 
+  let nth = ref 0 in
+  let marking stmt lbls =
+    let rec fold blk =
+      let f blk (stmt, l) =
+	let stmt' = mark stmt in (stmt', l)::blk
+      in
+	List.rev (List.fold_left f [] blk)
+	  
+    and mark stmt = 
+      match stmt with
+	  Goto lbl ->
+	    if List.exists (fun lbl' -> lbl = lbl') lbls then
+	      let lbl' = goto_lbl lbl "forward" in Goto lbl' 
+	    else stmt
+
+	| DoWhile(blk, e) ->
+	    let blk' = fold blk in DoWhile(blk', e)
+				     
+	| For(blk1, e, blk2, blk3) ->
+	    let blk2' = fold blk2 in For(blk1, e, blk2', blk3)
+				      			       
+	| CSwitch(e, cases, default) ->
+	    let add cases (e, blk, l) =
+	      let blk' = fold blk in (e, blk', l)::cases
+	    in 
+	    let cases' = List.rev (List.fold_left add [] cases) in
+	    let default' = fold default in 
+	      CSwitch(e, cases', default')
+		
+	| If(e, if_blk, else_blk) ->
+	    let if_blk' = fold if_blk in
+	    let else_blk' = fold else_blk in
+	      If(e, if_blk', else_blk')
+ 
+	| Block blk -> let blk' = fold blk in Block blk'
+	| _ -> stmt
+
+    in mark stmt
+  in
+  let rec forward_marking stmts =
+    match stmts with
+	[] -> []
+      | (stmt, l)::stmts ->
+	  let n_lbls = nested_gotos stmt in
+	  let rec add stmts =
+	    match stmts with
+		[] -> []
+	      | (stmt, _)::stmts ->
+		  match stmt with 
+		      Label lbl ->
+			if List.exists (fun n_lbl -> lbl = n_lbl) n_lbls then 
+			    lbl::(add stmts)
+			else add stmts
+		    | Block blk -> 
+			(add blk)@(add stmts)
+		    | _ -> add stmts
+	  in
+	  let lbls = add stmts in
+	  let stmts' = forward_marking stmts in
+	  let stmt' = if lbls = [] then stmt else marking stmt lbls in
+	    (stmt', l)::stmts'
+  in
+  let cond_addition stmts =
+    let rec add level stmts =
+    match stmts with
+	[] -> []
+      | (stmt, l)::stmts ->
+	  match stmt with
+	      Goto lbl -> begin
+		try
+		  let len = String.index lbl '.' in
+		    (* goto is forward. Its label is set back to its
+		       original value *)
+		  let lbl = String.sub lbl 0 len in
+		    (Goto lbl, l)::(add level stmts)
+		with
+		    Not_found ->
+		      let o = string_of_int !nth in
+		      let lbl' = goto_lbl lbl o in
+			begin
+			  try 
+			    let (gotos, (l', o')) = Hashtbl.find lbls lbl in
+			      Hashtbl.replace lbls lbl ((level, o, l)::gotos, (l', o'));
+			  with Not_found ->
+			    Hashtbl.add lbls lbl ([level, o, l], (0, Newspeak.unknown_loc))
+			end;
+			nth := !nth + 1;
+			let if' = If(dummy_cond, [Goto lbl', l], []) in
+			  (if', l)::(add level stmts)
+	      end
+
+	    | Label lbl -> begin
+		try
 		  let (gotos, _) = Hashtbl.find lbls lbl in
 		    Hashtbl.replace lbls lbl (gotos, (level, l))
 		with
-		    Not_found ->
-		      Hashtbl.add lbls lbl ([], (level, l))
+		    Not_found -> Hashtbl.add lbls lbl ([], (level, l))
 	      end;
-		let lbl' = fresh_lbl lbl in
-		let init = Data zero in
-		let vdecl = VDecl (lbl', uint_typ, false, false, Some init) in
-		let s' = Exp (Set (Var lbl', None, zero)) in
-		let vdecls', stmts' = preprocessing level stmts in
-		  vdecl::(s'::vdecls'), (s, l)::stmts'
+		(stmt, l)::(add level stmts)
+
+	    | If(e, if_blk, else_blk) ->
+		let level' = level+1 in
+		let if_blk' = add level' if_blk in
+		let else_blk' = add level' else_blk in
+		let stmts' = add level stmts in
+		  (If(e, if_blk', else_blk'), l)::stmts'
 		    
-	    | If (exp, if_stmts, else_stmts) ->
-		let if_vdecls', if_stmts' = preprocessing (level+1) if_stmts in
-		let else_vdecls', else_stmts' = preprocessing (level+1) else_stmts in
-		let vdecls', stmts' = preprocessing level stmts in
-		let s' = If (exp, if_stmts', else_stmts') in
-		  if_vdecls'@else_vdecls'@vdecls', (s', l)::stmts'
-		    
-	    | CSwitch (e, c_stmts, d_stmts) ->
-		let c_vdecls' = ref [] in
-		let c_stmts' = ref [] in
-		let add_cases (e, stmts, l) =
-		  let vdecls', stmts' = preprocessing (level+1) stmts in
-		    c_vdecls' := !c_vdecls'@vdecls';
-		    c_stmts' := (e, stmts', l)::!c_stmts'
-		in
-		  List.iter add_cases (List.rev c_stmts);
-		  let d_vdecls', d_stmts' = preprocessing (level+1) d_stmts in
-		  let switch = CSwitch (e, !c_stmts', d_stmts') in
-		  let vdecls', stmts' = preprocessing level stmts in
-		    !c_vdecls'@d_vdecls'@vdecls', (switch, l)::stmts'
-		      
-	    | For (stmts1, e, stmts2, stmts3) ->
-		(* !! we suppose that only stmts2 can contain goto and
-		   label stmts !! *)
-		let vdecls2', stmts2' = preprocessing (level+1) stmts2 in
-		let vdecls', stmts' = preprocessing level stmts in
-		let new_for = For (stmts1, e, stmts2', stmts3) in
-		let vdecls' = vdecls2'@vdecls' in
-		  vdecls', (new_for, l)::stmts'
-	
 	    | DoWhile(blk, e) ->
-		let vdecl, blk' = preprocessing (level+1) blk in
-		let vdecl', stmts' = preprocessing level stmts in
-		let dowhile' = DoWhile(blk', e) in
-		  vdecl@vdecl', (dowhile', l)::stmts' 
-	    | Block b_stmts ->
-		let b_vdecls', b_stmts' = preprocessing level b_stmts in
-		let vdecls', stmts' = preprocessing level stmts in
-		let block = Block b_stmts' in
-		  b_vdecls'@vdecls', (block, l)::stmts'
+		let blk' = add (level+1) blk in
+		  (DoWhile(blk', e), l)::(add level stmts)
 		    
-	    | Goto lbl  -> 
-		let n = !nth in
-		  begin
-		    try 
-		      let (gotos, (l', o')) = Hashtbl.find lbls lbl in
-			(* only backward goto (ie whose loc is less
-			   than the one of the label are added. If the ast
-			   is explored in the order of the CFG then this
-			   check is useless: goto can only be backward *)
-		      if o' = Newspeak.unknown_loc or l > o' then begin
-			let o = string_of_int !nth in
-			  Hashtbl.replace lbls lbl ((level, o, l)::gotos, (l', o'));
-			  nth := !nth + 1
-		      end
-		      else ()
-		  with
-		      Not_found -> 
-			let o = string_of_int !nth in
-			Hashtbl.add lbls lbl ([level, o, l], (0, Newspeak.unknown_loc));
-			nth := !nth + 1;
-		end;
-		  let stmt' = 
-		    if n = !nth then s
-		    else 
-		      let e = dummy_cond in 
-		      let lbl'= goto_lbl lbl (string_of_int n) in
-			If (e, [Goto lbl', l], [])
-		  in
-		  let vdecls', stmts' = preprocessing level stmts in
-		    vdecls', (stmt', l)::stmts'
-		      
-	    | _ -> 
-		let vdecls', stmts' = preprocessing level stmts in
-		  vdecls', (s, l)::stmts'
+	    | Block blk -> 
+		let blk' = add level blk in
+		  (Block blk', l)::(add level stmts)
+		    
+	    | For(blk1, e, blk2, blk3) ->
+		(* we suppose that only blk2 may contain goto stmts *)
+		let blk2' = add (level+1) blk2 in
+		  (For (blk1, e, blk2', blk3), l)::(add level stmts)
+		    
+	    | CSwitch(e, cases, default) ->
+		let level' = level+1 in
+		let add_cases cases (e, blk, l) =
+		  let blk' = add level' blk in
+		    (e, blk', l)::cases
+		in
+		let cases' = List.rev (List.fold_left add_cases [] cases) in
+		let default' = add level' default in
+		  (CSwitch(e, cases', default'), l)::(add level stmts)
+		    
+	    | _ -> (stmt, l)::(add level stmts)
+    in
+      add 0 stmts
   in
-    preprocessing 0 stmts
+    if stmts = [] then [], []
+    else
+      let (_, l) = List.hd stmts in
+      let decl lbl =
+	let lbl' = fresh_lbl lbl in
+	let init = Data zero in
+	let vdecl = VDecl (lbl', uint_typ, false, false, Some init) in
+	  vdecl, l
+      in   
+      let stmts' = forward_marking stmts in
+      let stmts' = cond_addition stmts' in
+      let lbl' = ref [] in
+	Hashtbl.iter (fun lbl (gotos, _) -> 
+			if gotos = [] then Hashtbl.remove lbls lbl 
+			else lbl' := lbl::!lbl') lbls;
+	let lbl' = List.rev !lbl' in
+	let vdecls = List.map decl lbl' in
+	  vdecls, stmts'
+      
 		         
 let goto_equal lbl lbl' g_offset = compare lbl' (lbl^"."^ g_offset) = 0
     
@@ -152,7 +225,7 @@ let has_label stmts lbl =
       | (stmt, _)::stmts -> 
 	  match stmt with
 	      Label lbl' when lbl' = lbl -> true
-	    | Block blk -> has blk
+	    | Block blk -> (has blk) or (has stmts)
 	    | _ -> has stmts
   in
     has stmts
@@ -183,8 +256,7 @@ let search_lbl stmts lbl =
 	  | If(_, if_blk, else_blk) -> 
 	      (search if_blk) or (search else_blk) or (search stmts)
 		
-	  | For(_,_,blk,_) ->
-	      (search blk) or (search stmts)
+	  | For(_,_,blk,_) -> (search blk) or (search stmts)
 		
 	  | Block blk -> (search blk) or (search stmts)
 	      
@@ -235,7 +307,14 @@ let rec related stmts lbl g_offset =
 					    
 	    | Block blk -> 
 		let p = related previous blk in related p stmts
-						  
+	
+	    | If(_, if_blk, else_blk) ->
+		let p = related previous if_blk in
+		let p = if p = In then Nested else p in
+		let p = related p else_blk in
+		let p = if p = In then Nested else p in
+		  related p stmts
+					  
 	    | CSwitch (_, cases, default) ->
 		let rec rel previous cases =
 		  match cases with
@@ -901,10 +980,8 @@ let run prog =
 	(* no backward goto found *)
 	stmts' 
       else 
-	let (_, loc) = List.hd stmts' in 
-	let vdecls' = List.map (fun vdecl -> (vdecl, loc)) vdecls' in
+	(* processing goto elimination *)
 	let stmts' = vdecls'@stmts' in
-	  (* processing goto elimination *)
 	  elimination lbls stmts'
   in
   let lbls = Hashtbl.create 30 in
