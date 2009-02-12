@@ -172,15 +172,9 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   
   and translate_set (lv, t, e) =
     let lv = translate_lv lv in
-      match (t, e) with
-	  ((Struct _| Union _), Lval (lv', _)) -> 
-	    let lv' = translate_lv lv' in
-	    let sz = size_of t in
-	      K.Copy (lv, lv', sz)
-      | _ ->
-	  let e = translate_exp e in
-	  let t = translate_scalar t in
-	    K.Set (lv, e, t)
+    let e = translate_exp e in
+    let t = translate_typ t in
+      K.Set (lv, e, t)
 
   and translate_stmt (x, loc) =
     Npkcontext.set_loc loc;

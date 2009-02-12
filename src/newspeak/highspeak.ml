@@ -47,16 +47,7 @@ and init_t =
 and fundec = (vid list * vid list * ftyp * blk)
 
 and stmtkind =
-    (* TODO: Set and Copy should be together
-either this solution:
-       rval should be 
-       ScalarExp of (exp * scalar_t)
-       | RegionExp of lv * size_t
-or maybe better and simpler:
-       Lval (lv, t) (instead of scalar_t) should be an exp
-    *)
-    Set of (lval * exp * scalar_t)
-  | Copy of (lval * lval * size_t)
+    Set of (lval * exp * typ)
   | Guard of exp
 (* TODO: maybe simplify, use only variable name, no need for vid
    simplifies also the left value, put Local and Global into just Var *)
@@ -106,7 +97,6 @@ and fn =
 let string_of_stmtkind x =
   match x with
       Set _ -> "Set"
-    | Copy _ -> "Copy"
     | Guard _ -> "Guard"
     | Decl _ -> "Decl"
     | Select _ -> "Select"

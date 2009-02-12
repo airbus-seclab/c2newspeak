@@ -77,7 +77,6 @@ let translate prog =
       | _ -> 
 	  Npkcontext.report_error "Hpk2npk.translate_set" 
 	    "translate_set not implemented yet"
-	    (*  N.Set, N.Copy*)
   in
 
   let translate_fn x =
@@ -169,8 +168,7 @@ let translate prog =
 	  let body = translate_blk body in
 	    pop vid;
 	    N.Decl (x, t, body)
-      | Set (lv, e, t) -> translate_set (lv, e, N.Scalar t)
-      | Copy (lv1, lv2, n) -> N.Copy (translate_lval lv1, translate_lval lv2, n)
+      | Set (lv, e, t) -> translate_set (lv, e, t)
       | Select (body1, body2) -> 
 	  let body1 = translate_blk body1 in
 	  let body2 = translate_blk body2 in
