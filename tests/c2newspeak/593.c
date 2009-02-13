@@ -25,13 +25,18 @@
 
 void main(void){
   int i;
+ lbl: i = 1;
   switch (i) {
   case 1:
-  lbl: i = 0;
-    break;
-  default: 
     i = 2;
     break;
+
+  case 2:
+    i = 1;
+    break;
+
+  default:
+    goto lbl;
+    break;
   }
-  goto lbl;
 }

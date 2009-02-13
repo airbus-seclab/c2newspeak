@@ -323,17 +323,16 @@ let rec related stmts lbl g_offset =
 		else loops previous p stmts 
 		  
 	    | CSwitch (_, cases, default) ->
-		let rec rel previous cases =
+		let rec rel cases =
 		  match cases with
 		      [] -> 
-			let p = related previous default in 
-			let p = if p = In then Nested else p in 
-			  related p stmts
+			let p = related No default in loops previous p stmts
+
 		    | (_, blk, _)::cases -> 
-			let p = related previous blk in 
-			let p = if p = In then Nested else p in 
-			  rel p cases
-		in rel previous cases
+			let p = related No blk in 
+			if p = No then rel cases else loops previous p stmts
+		in rel cases
+
 	    | _ -> related previous stmts
   in related No stmts 
        
@@ -459,7 +458,7 @@ let out_if_else stmts lbl level g_offset =
      added at the right position (see fig 5) *)
   let rec out stmts =
     match stmts with
-	[] -> print_endline "goto not found !"; [], []	  
+	[] -> [], []	  
       | (stmt, l)::stmts ->
 	  match stmt with
 	      If (e, [Goto lbl', l'], []) when goto_equal lbl lbl' g_offset ->
