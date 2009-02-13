@@ -263,6 +263,12 @@ let string_of_binop op =
     | Shiftl -> "<<"
     | Shiftr -> ">>"
 
+let string_of_unop op =
+  match op with
+      Not -> "Not"
+    | Neg -> "Neg"
+    | BNot -> "BNot"
+
 let rec string_of_typ margin t =
   match t with
       Void -> "void"
@@ -287,8 +293,10 @@ and string_of_exp margin e =
 	"("^(string_of_exp margin e1)^")["^(string_of_exp margin e2)^"]"
     | Deref e -> "*("^(string_of_exp margin e)^")"
     | AddrOf _ -> "AddrOf"
-    | Unop _ -> "Unop"
-    | IfExp _ -> "IfExp"
+    | Unop (op, e) -> "("^(string_of_unop op)^" "^(string_of_exp margin e)^")"
+    | IfExp (e1, e2, e3) -> 
+	"IfExp("^(string_of_exp margin e1)^","
+	^(string_of_exp margin e2)^","^(string_of_exp margin e3)^")"
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1) ^" "^(string_of_binop op)^" "
 	^(string_of_exp margin e2)
@@ -338,7 +346,19 @@ and string_of_stmt margin (x, _) =
 	^(string_of_blk (margin^" ") blk)
 	^"} ("^(string_of_exp margin e)^")"
 
-    | CSwitch _ -> "CSwitch"
+    | CSwitch (e, cases, default) ->
+	let margin' = margin^" " in
+	let print_case (e, blk, _) s =
+	  (margin^"case "^(string_of_exp margin e)^":\n"
+	   ^(string_of_blk margin' blk))::s
+	in
+	let s = List.fold_right print_case cases [] in
+	let s = String.concat "\n" s in
+	  "switch ("^(string_of_exp margin e)^"){\n"
+	  ^s^"\n"
+	  ^margin^"default:\n"^
+	    (string_of_blk margin' default)
+	  ^margin^"}"
 
     | Exp e -> string_of_exp margin e 
 
