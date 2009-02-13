@@ -649,29 +649,37 @@ and outward stmts =
       
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
-  let before' = If(Unop(Not, lbl'), before, []) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let set = Exp (Set (lbl', None, e)) in
     if has_label if_blk lbl then 
       begin
+	let cond = IfExp (lbl', cond, zero) in
 	let l' = try snd (List.hd if_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
 	let if' = If(lbl', [Goto g_lbl, g_loc], []) in
 	let if_blk' = (if', l')::if_blk in
 	let if_blk' = inward lbl g_offset g_loc if_blk' in
 	let if' = If(cond, if_blk', else_blk) in
-	  [(set, lb); (before', lb); (if', l')]
+	  if before = [] then 
+	    [(set, lb); (if', l')]
+	  else
+	    let before' = If(Unop(Not, lbl'), before, []) in
+	      [(set, lb); (before', lb); (if', l')]
       end
     else 
       begin
-	let e = IfExp (Unop(Not, lbl'), e, zero) in
+	let cond = IfExp (Unop(Not, lbl'), cond, zero) in
 	let l' = try snd (List.hd else_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
 	let if' = If(lbl', [Goto g_lbl, g_loc], []) in
 	let else_blk' = (if', l')::else_blk in
 	let else_blk' = inward lbl g_offset g_loc else_blk' in
-	let if' = If(e, if_blk, else_blk') in
-	  [(set, lb); (before', lb); (if', l')]     
+	let if' = If(cond, if_blk, else_blk') in
+	  if before = [] then 
+	    [(set, lb); (if', l')]
+	  else
+	    let before' = If(Unop(Not, lbl'), before, []) in
+	      [(set, lb); (before', lb); (if', l')]     
       end
 
 and loop_in lbl l e before cond blk g_offset g_loc b =
@@ -838,16 +846,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 	(* looking for the block between the label and the goto (label
 	   is the first as it is backward one *)
 	let before, blk, after = search stmts in
-	  (* building additional stmts *)
-	  (* assign the goto_lbl to false and add it to the beginning of
-	     before *)
 	let lbl' = Var (fresh_lbl lbl) in
-	let stmt = Exp (Set (lbl', None, zero)) in
-	let _, l_init = 
-	  try List.hd before
-	  with Failure "hd" -> List.hd blk
-	in
-	let before' = before@[stmt, l_init] in
 	  
 	(* add if (goto_lbl) goto lbl; at the beginning of blk *)
 	let e = first_if_cond after in
@@ -874,7 +873,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 	    
 	  (* do-while loop *)
 	  let blk' = [DoWhile(blk', lbl'), l_set] in
-	    (before'@blk'@after'), true
+	    (before@blk'@after'), true
       end
     else
       match stmts with
