@@ -318,12 +318,10 @@ let rec related stmts lbl g_offset =
 		let p = related previous blk in related p stmts
 	
 	    | If(_, if_blk, else_blk) ->
-		let p = related previous if_blk in
-		let p = if p = In then Nested else p in
-		let p = related p else_blk in
-		let p = if p = In then Nested else p in
-		  related p stmts
-					  
+		let p = related No if_blk in 
+		if p = No then let p = related No else_blk in loops previous p stmts
+		else loops previous p stmts 
+		  
 	    | CSwitch (_, cases, default) ->
 		let rec rel previous cases =
 		  match cases with
@@ -461,25 +459,28 @@ let out_if_else stmts lbl level g_offset =
      added at the right position (see fig 5) *)
   let rec out stmts =
     match stmts with
-	[] -> [], []	  
+	[] -> print_endline "goto not found !"; [], []	  
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If (e, [Goto lbl', l'], []) ->
-		if goto_equal lbl lbl' g_offset then begin
+	      If (e, [Goto lbl', l'], []) when goto_equal lbl lbl' g_offset ->
 		  let lbl = fresh_lbl lbl in 
 		  let cond = Var lbl in
 		  let n_cond = Unop(Neg, cond) in
 		  let stmt = Exp (Set (cond, None, e)) in
 		  let if_goto = If(cond, [Goto lbl', l'], []) in
 		    level := !level-1; 
-		    (stmt, l)::((If(n_cond, stmts, []), l)::stmts), [if_goto, l]
-		end
+		    if stmts = [] then
+		      [stmt, l], [if_goto, l]
+		    else
+		      [(stmt, l) ; (If(n_cond, stmts, []), l)], [if_goto, l]
+
+	    | Block blk -> let blk', cond = out blk in 
+		if cond = [] then 
+		  let stmts', cond = out stmts in
+		    (Block blk, l)::stmts', cond
 		else
-		  let stmts', cond = out stmts in (stmt, l)::stmts', cond
-		      
-	    | Label lbl' when lbl' = lbl -> 
-		let stmts', cond = out stmts in (stmt, l)::stmts', cond
-		    
+		  (Block blk', l)::stmts, cond
+
 	    | _ -> let stmts', cond = out stmts in (stmt, l)::stmts', cond
   in out stmts
       
