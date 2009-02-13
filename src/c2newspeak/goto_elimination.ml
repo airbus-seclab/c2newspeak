@@ -736,13 +736,16 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let tswitch = Var tswitch in
   let set = Exp (Set (lbl', None, e)) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
+  let set_if = Exp (Set(tswitch, None, cond)) in
+  let last = try (snd (List.hd (List.rev before))) with Failure "hd" -> l in
+  let before' = before @ [set_if, last] in
+  let g_lbl = goto_lbl lbl g_offset in
+  let if' = If(lbl', [Goto g_lbl, g_loc], []) in
   let rec search_lbl cases =
     match cases with 
 	[] -> raise Not_found
       | (e, stmts, l)::cases -> 
 	  if has_label stmts lbl then 
-	      let g_lbl = goto_lbl lbl g_offset in
-	      let if' = If(lbl', [Goto g_lbl, g_loc], []) in
 	      let stmts' = (if', l)::stmts in
 	      let stmts' = inward lbl g_offset g_loc stmts' in
 		e, (e, stmts', l)::cases
@@ -750,15 +753,24 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
   in
     try 
       let e_case, cases' = search_lbl cases in
-      let last = try (snd (List.hd (List.rev before))) with Failure "hd" -> l in
-      let set_if = Exp (Set(tswitch, None, cond)) in
+      
       let set_else = Exp (Set(tswitch, None, e_case)) in
-      let before' = before @ [set_if, last] in
+      
       let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
       let switch' = CSwitch(tswitch, cases', default) in
 	[(set, lb) ; (declr, lb) ; (if', lb) ; (switch', l)]
     with Not_found ->
-      invalid_arg "Goto_elimination.cswitch_in: label is in the default case"
+      let conds = List.map (fun (e, _, _) -> e) cases in
+      let build e e' = IfExp(e, one, e') in
+      let e_default = List.fold_left build zero conds in
+      let e_default = Unop(Not, e_default) in
+      let set_else = Exp (Set(tswitch, None, e_default)) in
+      let default' = (if', l)::default in
+      let default' = inward lbl g_offset g_loc default' in
+      let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
+      let switch' = CSwitch(tswitch, cases, default') in
+	[(set, lb) ; (declr, lb) ; (if', lb) ; (switch', l)]
+
 
 
 	
