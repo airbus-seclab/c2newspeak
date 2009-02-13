@@ -376,8 +376,7 @@ let avoid_break_capture stmts lwhile l =
 		  (If(e, if_blk', else_blk'), l')::stmts, (b_if or b_else)
 		    
 	    | _ -> 
-		let stmts', b = search_break stmts in 
-		  (stmt, l)::stmts', b
+		let stmts', b = search_break stmts in (stmt, l)::stmts', b
   in
   let stmts', b = search_break stmts in
     if not b then [], stmts', []
@@ -517,37 +516,42 @@ let rec out_switch_loop stmts lbl level g_offset =
 	    | _ -> let stmts', cond = out stmts in (stmt, l)::stmts', cond
   in out stmts
 
-let rec outward stmts lbl g_level g_offset =
+
+
+let outward stmts lbl g_level g_offset =
   (* moves the goto stmt with label lbl at location o: 
      - either until the goto becomes direclty related to athe label, 
      if they are in different stmts
      - or until the goto becomes directly related to an if or switch
      containing label lbl otherwise*)
-  let rec outward stmts =
+let rec loop_out builder e blk stmts l =
+  if has_goto blk lbl g_offset then 
+    let blk', after = out_switch_loop blk lbl g_level g_offset in
+    let stmt' = builder e blk' in
+		    (stmt', l)::(after @ stmts), 1
+  else
+    let blk', r = outward blk in
+      if r = 1 then 
+	let blk', after = out_switch_loop blk' lbl g_level g_offset in
+	let stmt' = builder e blk' in 
+	  (stmt', l)::(after @ stmts), r
+      else
+	if r = 2 then
+	  let stmt' = builder e blk' in (stmt', l)::stmts, r
+	else
+	  let stmt = builder e blk in
+	  let stmts', r = outward stmts in (stmt, l)::stmts', r
+
+and outward stmts =
     match stmts with
 	[] -> [], 0 
       | (stmt, l)::stmts ->
 	  match stmt with
 	      For (blk1, e, blk2, blk3) ->
-		if has_goto blk2 lbl g_offset then 
-		  let blk2', after = out_switch_loop blk2 lbl g_level g_offset in
-		  let for' = For(blk1, e, blk2', blk3), l in
-		    for'::(after @ stmts), 1
-		else
-		  let blk2', r = outward blk2 in
-		    if r = 1 then 
-		      let blk2', after = out_switch_loop blk2' lbl g_level g_offset in
-		      let for' = For(blk1, e, blk2', blk3), l in
-			for'::(after @ stmts), r
-		    else
-		      if r = 2 then
-			let for' = For(blk1, e, blk2', blk3), l in
-			  for'::stmts, r
-		      else
-			let stmts', r = outward stmts in
-			  (stmt, l)::stmts', r
+		let builder e blk = For(blk1, e, blk, blk3) in loop_out builder e blk2 stmts l 
 
-	    | DoWhile _ -> invalid_arg "Goto_elimination.outward, case DoWhile: to implement" 
+	    | DoWhile (blk, e) -> 
+		let builder e blk = DoWhile(blk, e) in loop_out builder e blk stmts l 
 
 	    | If (e, if_blk, else_blk) ->
 		if has_goto if_blk lbl g_offset then
@@ -779,6 +783,7 @@ and inward lbl g_offset g_loc stmts =
 			
 		  | DoWhile(blk, cond) ->
 		      dowhile_in lbl l e before' cond blk g_offset g_loc
+
 		  | CSwitch (ce, cases, default) -> 
 		      cswitch_in lbl l e before' ce cases default g_offset g_loc
 			
@@ -905,6 +910,14 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 	      | DoWhile(blk, e) -> 
 		  let blk', b' = lifting_and_inward blk in
 		    [DoWhile(blk', e), l], b'
+
+	      | Block blk ->
+		  let blk', b = lifting_and_inward blk in
+		  let stmt' = Block blk' in
+		    if b then (stmt', l)::stmts, b
+		    else
+		      let stmts', b' = lifting_and_inward stmts in
+			(stmt', l)::stmts', b'
 
 	      | _ -> let stmts', b = lifting_and_inward stmts in (stmt, l)::stmts', b
   in
