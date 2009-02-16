@@ -309,7 +309,8 @@ let rec related stmts lbl g_offset =
 		let p = goto_or_label previous in related p stmts
 						    
 	    | For(_, _, blk, _) -> 
-		let p = related No blk in loops previous p stmts
+		let p = related No blk in 
+		  loops previous p stmts
 					    
 	    | DoWhile(blk, _) ->
 		let p = related No blk in loops previous p stmts
@@ -644,7 +645,8 @@ and outward stmts =
 	    | _ -> let stmts', r = outward stmts in (stmt, l)::stmts', r	
 
  in 
-  let stmts' = fst (outward stmts) in sibling_elimination stmts' lbl g_offset
+  (*let stmts' = fst (outward stmts) in sibling_elimination stmts' lbl g_offset*)
+  fst (outward stmts)
       
       
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
@@ -949,12 +951,15 @@ let elimination stmts lbl (gotos, lo) =
 
       (* force goto and label to be siblings *)
       if directly_related !stmts lbl id then begin
-	if !l > l_level then
-	    stmts := outward !stmts lbl l id
-	else
-	    let l_level = ref l_level in
-	      if o > l_offset then
-		stmts := lifting_and_inward !stmts lbl l_level l id o
+	if !l > l_level then begin
+	  stmts := outward !stmts lbl l id;
+	  stmts := sibling_elimination !stmts lbl id
+	end
+	else begin
+	  let l_level = ref l_level in
+	    if o > l_offset then
+	      stmts := lifting_and_inward !stmts lbl l_level l id o
+	end
       end
       else
 	(* goto and label are sibling; eliminate goto and label *) 
