@@ -319,9 +319,11 @@ let rec related stmts lbl g_offset =
 		let p = related previous blk in related p stmts
 	
 	    | If(_, if_blk, else_blk) ->
-		let p = related No if_blk in 
-		if p = No then let p = related No else_blk in loops previous p stmts
-		else loops previous p stmts 
+		let p = related No if_blk in
+		let p' = related No else_blk in
+		if p = No then loops previous p' stmts
+		else 
+		  if p' = No then loops previous p stmts else raise Indirect
 		  
 	    | CSwitch (_, cases, default) ->
 		let rec rel cases =
