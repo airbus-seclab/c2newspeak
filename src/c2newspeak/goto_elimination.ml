@@ -245,7 +245,7 @@ let has_goto stmts lbl g_offset =
       | (stmt, _)::stmts ->
 	  match stmt with
 	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> true
-	    | Block blk -> has blk
+	    | Block blk -> (has blk) or (has stmts)
 	    | _ -> has stmts
   in has stmts
       
@@ -449,21 +449,70 @@ let sibling_elimination stmts lbl g_offset =
 		      (if', l)::blk
 	    | _ -> (stmt, l)::(forward stmts)
   in
-  let rec choose before stmts =
+  let rec choose stmts =
     match stmts with
-	[] -> invalid_arg ("Goto_elimination.sibling_elimination: " 
-			   ^"goto and label have to be in that list")
+	[] -> [], false
       | (stmt, l)::stmts ->
-	  if has_goto [stmt, l] lbl g_offset then
-	    let stmts' = (List.rev before)@((stmt, l)::stmts) in forward stmts'
-	  else
-	    if has_label [stmt, l] lbl then
-	      let stmts' = (List.rev before)@((stmt, l)::stmts) in backward stmts'
-	    else
-	      let before' = (stmt, l)::before in choose before' stmts
-  in
-    choose [] stmts
+	  match stmt with
+	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+		let stmts' = (stmt, l)::stmts in forward stmts', true
 
+	    | Label lbl' when lbl' = lbl -> 
+	      let stmts' = (stmt, l)::stmts in backward stmts', true
+
+	    | Block blk -> 
+		let blk', b = choose blk in 
+		if b then 
+		  (Block blk', l)::stmts, true
+		else 
+		  let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+
+	    | If(e, if_blk, else_blk) -> 
+		let if_blk', b = choose if_blk in 
+		  if b then
+		    (If(e, if_blk', else_blk), l)::stmts, true
+		  else
+		    let else_blk', b' = choose else_blk in
+		      if b' then 
+			(If(e, if_blk, else_blk'), l)::stmts, true
+		      else
+			let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+
+	    | For(blk1, e, blk2, blk3) ->
+		let blk2', b = choose blk2 in 
+		  if b then 
+		    (For(blk1, e, blk2', blk3), l)::stmts, true
+		  else 
+		    let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+
+	    | DoWhile(blk, e) ->
+		let blk', b = choose blk in 
+		  if b then 
+		    (DoWhile(blk', e), l)::stmts, true
+		  else 
+		    let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+
+	    | CSwitch(e, cases, default) ->
+		let rec iter cases =
+		  match cases with
+		      [] -> [], false
+		    | (e, stmts, l)::cases -> 
+			let stmts', b = choose stmts in 
+			  if b then (e, stmts', l)::cases, true
+			  else
+			    let cases', b' = iter cases in (e, stmts', l)::cases', b'
+		in
+		let cases', b' = iter cases in
+		  if b' then (CSwitch(e, cases', default), l)::stmts, b'
+		  else
+		    let default', b' = choose default in 
+		      if b' then (CSwitch(e, cases, default'), l)::stmts, b' 
+		      else 
+			let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+
+	    | _ -> let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+  in
+    fst (choose stmts)
 
 let out_if_else stmts lbl level g_offset =
   (* returns the stmt list whose 'goto lbl' stmt has been deleted and
