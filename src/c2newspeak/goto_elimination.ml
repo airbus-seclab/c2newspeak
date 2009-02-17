@@ -852,9 +852,8 @@ and inward lbl g_offset g_loc stmts =
     match stmts with
 	[] -> invalid_arg "Goto_elimination.inward: label has to be in that stmt list"
       | (stmt, l)::stmts ->
-	  if has_label [stmt, l] lbl then 
-	    (* goto and label are sibling *) 
-	    sibling_elimination (before@((stmt, l)::stmts)) lbl g_offset
+	  if has_label [stmt, l] lbl then
+	    before@((stmt, l)::stmts)
 	  else
 	    if search_lbl [stmt, l] lbl then
 	      let e, before' = search_goto_cond before in
@@ -1023,7 +1022,8 @@ let elimination stmts lbl (gotos, lo) =
 	end
 	else begin
 	  let l_level = ref l_level in
-	      stmts := lifting_and_inward !stmts lbl l_level l id o
+	      stmts := lifting_and_inward !stmts lbl l_level l id o;
+	    stmts := sibling_elimination !stmts lbl id
 	end
       end
       else
