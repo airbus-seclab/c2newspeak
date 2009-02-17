@@ -386,6 +386,14 @@ let avoid_break_capture stmts lwhile l =
       let if' = If(Var break_var, if_blk, []) in
 	[vdecl, lwhile], stmts', [if', lwhile]
 
+let optimizable before blk lbl =
+  if before = [] then
+    let (stmt, _) = List.hd blk in
+      match stmt with
+	  Label lbl' when lbl' = lbl -> true
+	| _ -> false
+  else false
+
 let sibling_elimination stmts lbl g_offset =
   let rec add_loop_delete_goto stmts =
     match stmts with
@@ -428,11 +436,13 @@ let sibling_elimination stmts lbl g_offset =
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
 		let before, blk = split_lbl stmts in
-		  if before = [] then 
+		  if optimizable before blk lbl then 
 		    (*optimization: nothing between the goto and the
 		      label. It is simply deleted *) 
 		    stmts 
 		  else 
+		    if before = [] then blk
+		    else
 		    let if' = If (Unop(Not, e), before, []) in
 		      (if', l)::blk
 	    | _ -> (stmt, l)::(forward stmts)
@@ -644,9 +654,7 @@ and outward stmts =
 
 	    | _ -> let stmts', r = outward stmts in (stmt, l)::stmts', r	
 
- in 
-  (*let stmts' = fst (outward stmts) in sibling_elimination stmts' lbl g_offset*)
-  fst (outward stmts)
+ in fst (outward stmts)
       
       
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
@@ -714,14 +722,15 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
   let if' = If(lbl', [Goto g_lbl, g_loc], []) in
   let blk' = search_and_add blk in
   let l' = try snd (List.hd blk') with Failure "hd" -> l in
-  let blk' = (if', l')::blk' in 
+  let blk' = (if', l')::blk' in
   let blk' = inward lbl g_offset g_loc blk' in
     if before = [] then 
       (* optimisation when there are no stmts before the loop *)
-      [(set, lb)], blk', e
-    else
+	[(set, lb)], blk', e
+    else 
       let before' = If(Unop(Not, lbl'), before, []) in
 	  [(set, lb) ; (before', lb)], blk', e
+  
 
 and while_in lbl l e before cond blk1 blk2 blk3 g_offset g_loc=
   let stmts', blk2', e = loop_in lbl l e before cond blk2 g_offset g_loc true in
@@ -790,7 +799,7 @@ and inward lbl g_offset g_loc stmts =
 	[] -> invalid_arg "Goto_elimination.inward: label has to be in that stmt list"
       | (stmt, l)::stmts ->
 	  if has_label [stmt, l] lbl then 
-	    (* goto and label are sibling *)
+	    (* goto and label are sibling *) 
 	    sibling_elimination (before@((stmt, l)::stmts)) lbl g_offset
 	  else
 	    if search_lbl [stmt, l] lbl then
@@ -808,7 +817,10 @@ and inward lbl g_offset g_loc stmts =
 
 		  | CSwitch (ce, cases, default) -> 
 		      cswitch_in lbl l e before' ce cases default g_offset g_loc
-			
+
+		  | Block blk -> 
+		      let blk' = inward before blk in  [Block blk', l]
+
 		  | _ -> (stmt, l)::stmts 
 	      in
 		before'@stmts'@stmts
