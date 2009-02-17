@@ -328,13 +328,16 @@ let rec related stmts lbl g_offset =
 	    | CSwitch (_, cases, default) ->
 		let rec rel cases =
 		  match cases with
-		      [] -> 
-			let p = related No default in loops previous p stmts
-
+		      [] -> No
 		    | (_, blk, _)::cases -> 
 			let p = related No blk in 
-			if p = No then rel cases else loops previous p stmts
-		in rel cases
+			  if p = No then rel cases else p
+		in
+		let p = rel cases in
+		let p' = related No default in
+		  if p = No then loops previous p' stmts
+		  else 
+		    if p' = No then loops previous p stmts else raise Indirect
 
 	    | _ -> related previous stmts
   in related No stmts 
@@ -1003,7 +1006,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 let elimination stmts lbl (gotos, lo) =
   (* moves all gotos of the given label lbl. lo is the pair
      (level, offset) of the label statement *)
-  let l_level, l_offset = lo in
+  let l_level, _ = lo in
   let stmts = ref stmts in	
   let move goto =
     let l, id, o = goto in
@@ -1020,7 +1023,6 @@ let elimination stmts lbl (gotos, lo) =
 	end
 	else begin
 	  let l_level = ref l_level in
-	    if o > l_offset then
 	      stmts := lifting_and_inward !stmts lbl l_level l id o
 	end
       end

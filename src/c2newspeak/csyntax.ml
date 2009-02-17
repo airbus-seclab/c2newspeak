@@ -344,7 +344,7 @@ and string_of_stmt margin (x, _) =
     | DoWhile (blk, e) ->
 	"do {\n"
 	^(string_of_blk (margin^" ") blk)
-	^"} ("^(string_of_exp margin e)^")"
+	^"} while("^(string_of_exp margin e)^")"
 
     | CSwitch (e, cases, default) ->
 	let margin' = margin^" " in
