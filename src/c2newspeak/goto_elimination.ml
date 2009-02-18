@@ -875,13 +875,13 @@ and block_in lbl l e before blk g_offset g_loc =
 	[(if', lb) ; (Block blk', l)] 
 
 and inward lbl g_offset g_loc stmts =
-  let rec search_goto_cond stmts =
+  let rec search_goto_cond before stmts =
     match stmts with
 	[] -> invalid_arg "Goto_elimination.search_goto_cond: goto has to be in that stmt list"
-      | (stmt, _)::stmts ->
+      | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, stmts
-	    | _ -> search_goto_cond stmts
+	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> (List.rev before), e, stmts
+	    | _ -> let before' = (stmt, l)::before in search_goto_cond before' stmts
   in
   let rec inward before stmts = 
     match stmts with
@@ -891,27 +891,27 @@ and inward lbl g_offset g_loc stmts =
 	    before@((stmt, l)::stmts)
 	  else
 	    if search_lbl [stmt, l] lbl then
-	      let e, before' = search_goto_cond before in
+	      let before', e, after' = search_goto_cond [] before in
 	      let stmts' =
 		match stmt with
 		    If (ie, if_blk, else_blk) -> 
-		      if_else_in lbl l e before' ie if_blk else_blk g_offset g_loc
+		      if_else_in lbl l e after' ie if_blk else_blk g_offset g_loc
 			
 		  | For (blk1, cond, blk2, blk3) -> 
-		      while_in lbl l e before' cond blk1 blk2 blk3 g_offset g_loc
+		      while_in lbl l e after' cond blk1 blk2 blk3 g_offset g_loc
 			
 		  | DoWhile(blk, cond) ->
-		      dowhile_in lbl l e before' cond blk g_offset g_loc
+		      dowhile_in lbl l e after' cond blk g_offset g_loc
 
 		  | CSwitch (ce, cases, default) -> 
-		      cswitch_in lbl l e before' ce cases default g_offset g_loc
+		      cswitch_in lbl l e after' ce cases default g_offset g_loc
 
 		  | Block blk -> 
-		      block_in lbl l e before' blk g_offset g_loc 
+		      block_in lbl l e after' blk g_offset g_loc 
 		 
 		  | _ -> (stmt, l)::stmts 
 	      in
-		stmts'@stmts
+		before'@stmts'@stmts
 	    else 
 	      let before' = before@[stmt, l] in inward before' stmts
   in inward [] stmts
@@ -950,19 +950,20 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
   let first_if_cond stmts =
     match stmts with
 	(If(e, _, _), _)::_ -> e
-      | _ -> invalid_arg "Goto_elimination.first_if_cond: stmt list could not be of that form"
+      | _ -> raise Not_found
   in
   let rec lifting_and_inward  stmts = 
     if has_goto stmts lbl g_offset then
       begin
-	g_level := !g_level + 1;
-	l_level := !l_level + 1;
-	(* looking for the block between the label and the goto (label
-	   is the first as it is backward one *)
-	let before, blk, after = search stmts in
-	let lbl' = Var (fresh_lbl lbl) in
-	  
-	(* add if (goto_lbl) goto lbl; at the beginning of blk *)
+	try 
+	  (* looking for the block between the label and the goto. If
+	     the goto is forward then Not_found is raised and lifting is
+	     skiped *)
+	  let before, blk, after = search stmts in
+	  let lbl' = Var (fresh_lbl lbl) in
+	    g_level := !g_level + 1;
+	    l_level := !l_level + 1;
+	  (* add if (goto_lbl) goto lbl; at the beginning of blk *)
 	let e = first_if_cond after in
 	let _, l_if = List.hd blk (*never raises Failure as we
 				    know the label is in the current stmts *) in
@@ -988,6 +989,9 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 	  (* do-while loop *)
 	  let blk' = [DoWhile(blk', lbl'), l_set] in
 	    (before@blk'@after'), true
+	with 
+	    (* goto is forward. Call to inward only*)
+	    Not_found -> inward lbl g_offset g_loc stmts, true
       end
     else
       match stmts with
@@ -1125,8 +1129,8 @@ let run prog =
     (* making all goto stmt conditional *)
     let vdecls', stmts' = preprocessing lbls stmts in
       if vdecls' = [] then 
-	(* no backward goto found *)
-	stmts' 
+	(* no backward goto found *) 
+	stmts'
       else 
 	(* processing goto elimination *)
 	let stmts' = vdecls'@stmts' in
