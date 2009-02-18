@@ -55,7 +55,70 @@ let nested_gotos stmt =
 	  concat (cases @ default)
     | _ -> []
   in nested_gotos stmt
+
+let goto_equal lbl lbl' g_offset = compare lbl' (lbl^"."^ g_offset) = 0
+    
+let has_label stmts lbl =
+  (* returns true if one of the statements is Label lbl *)
+  let rec has stmts =
+    match stmts with
+	[] -> false
+      | (stmt, _)::stmts -> 
+	  match stmt with
+	      Label lbl' when lbl' = lbl -> true
+	    | Block blk -> (has blk) or (has stmts)
+	    | _ -> has stmts
+  in
+    has stmts
+
+let has_goto stmts lbl g_offset =
+  (* returns true if one of the statement is the desired goto *)
+  let rec has stmts = 
+    match stmts with
+	[] -> false 
+      | (stmt, _)::stmts ->
+	  match stmt with
+	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> true
+	    | Block blk -> (has blk) or (has stmts)
+	    | _ -> has stmts
+  in has stmts
+      
+type lblPos = No | In | Nested
+
+let search_lbl stmts lbl =
+ (* returns true if one of the statement is the label lbl or
+     contains a stmt where the label is nested *)
+  let rec search stmts =
+  match stmts with
+      [] -> false
+    | (stmt, _)::stmts -> 
+	match stmt with 
+	    Label lbl' when lbl = lbl' -> true
+	  | If(_, if_blk, else_blk) -> 
+	      (search if_blk) or (search else_blk) or (search stmts)
+		
+	  | For(_,_,blk,_) -> (search blk) or (search stmts)
 	
+	  | DoWhile(blk, _) -> (search blk) or (search stmts)
+	
+	  | Block blk -> (search blk) or (search stmts)
+	      
+	  | CSwitch (_, cases, default) ->
+	      (List.exists (fun (_, blk, _) -> search blk) cases) 
+	      or (search default) or (search stmts)
+		
+	  | _ -> search stmts
+  in search stmts
+
+let rec with_label stmts =
+  match stmts with
+      [] -> false
+    | (stmt, _)::stmts ->
+	match stmt with 
+	    Label _ -> true
+	  | Block blk -> (with_label blk) or (with_label stmts)
+	  | _ -> with_label stmts
+
 let preprocessing lbls stmts =
   (* For every forward goto stmt:
      - adds conditional goto statement
@@ -79,8 +142,9 @@ stmt_1...stmt_i ... stmt_j stmt_n s.t.
     and mark stmt = 
       match stmt with
 	  Goto lbl ->
-	    if List.exists (fun lbl' -> lbl = lbl') lbls then
+	    if List.exists (fun lbl' -> lbl = lbl') lbls then begin
 	      let lbl' = goto_lbl lbl "forward" in Goto lbl' 
+	    end
 	    else stmt
 
 	| DoWhile(blk, e) ->
@@ -111,24 +175,54 @@ stmt_1...stmt_i ... stmt_j stmt_n s.t.
     match stmts with
 	[] -> []
       | (stmt, l)::stmts ->
-	  let n_lbls = nested_gotos stmt in
-	  let rec add stmts =
-	    match stmts with
-		[] -> []
-	      | (stmt, _)::stmts ->
-		  match stmt with 
-		      Label lbl ->
-			if List.exists (fun n_lbl -> lbl = n_lbl) n_lbls then 
-			    lbl::(add stmts)
-			else add stmts
-		    | Block blk -> 
-			(add blk)@(add stmts)
-		    | _ -> add stmts
-	  in
-	  let lbls = add stmts in
 	  let stmts' = forward_marking stmts in
-	  let stmt' = if lbls = [] then stmt else marking stmt lbls in
-	    (stmt', l)::stmts'
+	    if with_label ((stmt, l)::stmts) then 
+	      let n_lbls = nested_gotos stmt in
+	      let rec add stmts =
+		match stmts with
+		    [] -> []
+		  | (stmt, _)::stmts ->
+		      match stmt with 
+			  Label lbl ->
+			    if List.exists (fun n_lbl -> lbl = n_lbl) n_lbls then 
+			      lbl::(add stmts)
+			    else add stmts
+			| Block blk -> 
+			    (add blk)@(add stmts)
+			| _ -> add stmts
+	      in
+		if n_lbls = [] then (stmt, l)::stmts' 
+		else 
+		  let lbls = add stmts' in
+		  let stmt' = marking stmt lbls in
+		    (stmt', l)::stmts'
+	    else 
+	    let stmt' = 
+	      match stmt with
+		  DoWhile(blk, e) -> 
+		    let blk' = forward_marking blk in DoWhile(blk', e)
+
+		| Block blk -> 
+		    let blk' = forward_marking blk in Block blk'
+
+		| CSwitch(e, cases, default) ->
+		    let cases' = List.map (fun (e, blk, l) -> (e, (forward_marking blk), l)) cases in
+		    let default' = forward_marking default in
+		      CSwitch(e, cases', default')
+
+		| If(e, if_blk, else_blk) ->
+		    let if_blk' = forward_marking if_blk in
+		    let else_blk' = forward_marking else_blk in
+		      If(e, if_blk', else_blk')
+
+		| For(blk1, e, blk2, blk3) ->
+		    let blk2' = forward_marking blk2 in
+		      For(blk1, e, blk2', blk3)
+		| _ -> stmt
+	    in
+	      (stmt', l)::stmts'
+
+
   in
   let cond_addition stmts =
     let rec add level stmts =
@@ -222,59 +316,7 @@ stmt_1...stmt_i ... stmt_j stmt_n s.t.
 	  vdecls, stmts'
       
 		         
-let goto_equal lbl lbl' g_offset = compare lbl' (lbl^"."^ g_offset) = 0
-    
-let has_label stmts lbl =
-  (* returns true if one of the statements is Label lbl *)
-  let rec has stmts =
-    match stmts with
-	[] -> false
-      | (stmt, _)::stmts -> 
-	  match stmt with
-	      Label lbl' when lbl' = lbl -> true
-	    | Block blk -> (has blk) or (has stmts)
-	    | _ -> has stmts
-  in
-    has stmts
 
-let has_goto stmts lbl g_offset =
-  (* returns true if one of the statement is the desired goto *)
-  let rec has stmts = 
-    match stmts with
-	[] -> false 
-      | (stmt, _)::stmts ->
-	  match stmt with
-	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> true
-	    | Block blk -> (has blk) or (has stmts)
-	    | _ -> has stmts
-  in has stmts
-      
-type lblPos = No | In | Nested
-
-let search_lbl stmts lbl =
- (* returns true if one of the statement is the label lbl or
-     contains a stmt where the label is nested *)
-  let rec search stmts =
-  match stmts with
-      [] -> false
-    | (stmt, _)::stmts -> 
-	match stmt with 
-	    Label lbl' when lbl = lbl' -> true
-	  | If(_, if_blk, else_blk) -> 
-	      (search if_blk) or (search else_blk) or (search stmts)
-		
-	  | For(_,_,blk,_) -> (search blk) or (search stmts)
-	
-	  | DoWhile(blk, _) -> (search blk) or (search stmts)
-	
-	  | Block blk -> (search blk) or (search stmts)
-	      
-	  | CSwitch (_, cases, default) ->
-	      (List.exists (fun (_, blk, _) -> search blk) cases) 
-	      or (search default) or (search stmts)
-		
-	  | _ -> search stmts
-  in search stmts
 		
 exception Indirect
 exception Direct
@@ -391,14 +433,6 @@ let avoid_break_capture stmts lwhile l =
       let if' = If(Var break_var, if_blk, []) in
 	[vdecl, lwhile], stmts', [if', lwhile]
 
-let optimizable before blk lbl =
-  if before = [] then
-    let (stmt, _) = List.hd blk in
-      match stmt with
-	  Label lbl' when lbl' = lbl -> true
-	| _ -> false
-  else false
-
 let sibling_elimination stmts lbl g_offset =
   let rec add_loop_delete_goto stmts =
     match stmts with
@@ -425,31 +459,34 @@ let sibling_elimination stmts lbl g_offset =
 		    
 	    | _ -> (stmt, l)::(backward stmts)
   in
-  let rec split_lbl stmts =
-    match stmts with
-	[] -> [], []
-      | (stmt, l)::stmts ->
-	  if has_label [stmt, l] lbl then [], (stmt, l)::stmts
-	  else
-	    let before, blk = split_lbl stmts in
-	      (stmt, l)::before, blk
-  in
+
+  let split_lbl stmts e =
+    let rec split before stmts =
+      match stmts with
+	  [] -> before
+	| (stmt, l)::stmts' ->
+	    match stmt with
+		Label lbl' when lbl = lbl' -> 
+		  if before = [] then stmts
+		  else 
+		    let if' = If(Unop(Not, e), before, []) in
+		      (if', l)::stmts
+	      | Block blk ->
+		  let blk' = split [] blk in
+		  let before' = before@[Block blk', l] in
+		    split before' stmts'
+
+	      | _ -> let before' = (stmt, l)::before in split before' stmts'
+    in split [] stmts
+in
+ 
   let rec forward stmts =
     match stmts with
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		let before, blk = split_lbl stmts in
-		  if optimizable before blk lbl then 
-		    (*optimization: nothing between the goto and the
-		      label. It is simply deleted *) 
-		    stmts 
-		  else 
-		    if before = [] then blk
-		    else
-		    let if' = If (Unop(Not, e), before, []) in
-		      (if', l)::blk
+		split_lbl stmts e 
 	    | _ -> (stmt, l)::(forward stmts)
   in
   let rec choose stmts =
