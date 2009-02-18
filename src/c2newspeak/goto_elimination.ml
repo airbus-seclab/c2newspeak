@@ -460,7 +460,7 @@ let sibling_elimination stmts lbl g_offset =
 	    | _ -> (stmt, l)::(backward stmts)
   in
 
-  let split_lbl stmts e =
+  let forward stmts e =
     let rec split before stmts =
       match stmts with
 	  [] -> before
@@ -473,29 +473,21 @@ let sibling_elimination stmts lbl g_offset =
 		      (if', l)::stmts
 	      | Block blk ->
 		  let blk' = split [] blk in
-		  let before' = before@[Block blk', l] in
-		    split before' stmts'
+		  (*let before' = before@[Block blk', l] in
+		    split before' stmts'*)
+		    before@[Block blk', l]
 
 	      | _ -> let before' = (stmt, l)::before in split before' stmts'
     in split [] stmts
-in
- 
-  let rec forward stmts =
-    match stmts with
-	[] -> []
-      | (stmt, l)::stmts ->
-	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		split_lbl stmts e 
-	    | _ -> (stmt, l)::(forward stmts)
+  
   in
   let rec choose stmts =
     match stmts with
 	[] -> [], false
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		let stmts' = (stmt, l)::stmts in forward stmts', true
+	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+		forward stmts e, true
 
 	    | Label lbl' when lbl' = lbl -> 
 	      let stmts' = (stmt, l)::stmts in backward stmts', true
@@ -855,9 +847,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
   in
     try 
       let e_case, cases' = search_lbl cases in
-      
       let set_else = Exp (Set(tswitch, None, e_case)) in
-      
       let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
       let switch' = CSwitch(tswitch, cases', default) in
 	[(set, lb) ; (declr, lb) ; (if', lb) ; (switch', l)]
@@ -874,8 +864,16 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
 	[(set, lb) ; (declr, lb) ; (if', lb) ; (switch', l)]
 
 
+and block_in lbl l e before blk g_offset g_loc =
+  let lb = try snd (List.hd before) with Failure "hd" -> l in
+  let blk' = (If(e, [Goto (goto_lbl lbl g_offset), g_loc], []), lb)::blk in
+  let blk' = inward lbl g_offset g_loc blk' in
+  let lbl' =  Var (fresh_lbl lbl) in
+    if before = [] then [Block blk', l]
+    else 
+      let if' = If(Unop(Not, lbl'), before, []) in
+	[(if', lb) ; (Block blk', l)] 
 
-	
 and inward lbl g_offset g_loc stmts =
   let rec search_goto_cond stmts =
     match stmts with
@@ -909,13 +907,13 @@ and inward lbl g_offset g_loc stmts =
 		      cswitch_in lbl l e before' ce cases default g_offset g_loc
 
 		  | Block blk -> 
-		      let blk' = inward before blk in  [Block blk', l]
-
+		      block_in lbl l e before' blk g_offset g_loc 
+		 
 		  | _ -> (stmt, l)::stmts 
 	      in
-		before'@stmts'@stmts
+		stmts'@stmts
 	    else 
-	      let before' = (stmt, l)::before in inward before' stmts
+	      let before' = before@[stmt, l] in inward before' stmts
   in inward [] stmts
        
        
@@ -1059,7 +1057,7 @@ let elimination stmts lbl (gotos, lo) =
 	end
 	else begin
 	  let l_level = ref l_level in
-	      stmts := lifting_and_inward !stmts lbl l_level l id o;
+	    stmts := lifting_and_inward !stmts lbl l_level l id o;
 	    stmts := sibling_elimination !stmts lbl id
 	end
       end
