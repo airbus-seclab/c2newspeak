@@ -211,7 +211,8 @@ let rec integer_class typ = match typ with
 	 | IntegerRange(_) -> true
 	 | DerivedType(_,(_,_,Some(subtyp))) -> integer_class 
 	     (base_typ subtyp)
-	 | Array _ -> false
+	 | Array _ 
+	 | Record _ -> false
 	 | DerivedType(_,(_,_,None)) ->
 	     Npkcontext.report_error
 	       "Ada_utils.integer_class"

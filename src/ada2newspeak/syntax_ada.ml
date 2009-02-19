@@ -60,7 +60,14 @@ and typ_declaration =
   | DerivedType of identifier*subtyp_indication
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
   | Array of identifier*array_type_definition
-      
+  | Record of identifier*record_type_definition
+
+and record_type_definition = field list
+
+and field = identifier list*subtyp_indication*expression option 
+      (*object_state  TO DO check need for object_st 
+      *)
+
 and array_type_definition = 
     (* intervalle discret du tableau * type des éléments *)
   | ConstrainedArray of subtyp_indication*subtyp_indication*int option
