@@ -403,35 +403,48 @@ let indirectly_related stmts lbl g_offset =
       Indirect -> true
     | Direct | Sibling -> false
 
-let avoid_break_capture stmts lwhile l = 
-  let break_var = "break."^(Newspeak.string_of_loc l) in
-  let rec search_break stmts =
+let avoid_break_continue_capture stmts lwhile l = 
+  let rec add stmts l var skind =
+    let stmts', vars = search stmts in
+    let set = Exp (Set( (Var var), None, one)) in
+      (set, l)::((skind, l)::stmts'), (skind, var)::vars
+  and search stmts =
     match stmts with 
-	[] -> [], false
+	[] -> [], []
       | (stmt, l')::stmts ->
 	  match stmt with
 	      Break -> 
-		let stmts', _ = search_break stmts in
-		let set = Exp (Set( (Var break_var), None, one)) in
-		  (set, l')::((stmt, l')::stmts'), true
-		    
+		let var = "break."^(Newspeak.string_of_loc l') in
+		add stmts l' var Break
+	
+	    | Continue ->
+		let var = "continue."^(Newspeak.string_of_loc l') in
+		  add stmts l' var Continue
+
 	    | If (e, if_blk, else_blk) ->
-		let if_blk', b_if = search_break if_blk in
-		let else_blk', b_else = search_break else_blk in
-		  (If(e, if_blk', else_blk'), l')::stmts, (b_if or b_else)
+		let if_blk', if_vars = search if_blk in
+		let else_blk', else_vars = search else_blk in
+		  (If(e, if_blk', else_blk'), l')::stmts, (if_vars@else_vars)
 		    
 	    | _ -> 
-		let stmts', b = search_break stmts in (stmt, l)::stmts', b
+		let stmts', vars = search stmts in (stmt, l)::stmts', vars
   in
-  let stmts', b = search_break stmts in
-    if not b then [], stmts', []
+  let stmts', vars = search stmts in
+    if vars = [] then [], stmts', []
     else 
       let init = Data zero in
-      let vdecl = VDecl (break_var, uint_typ, false, false, Some init) in
-      let set = Exp (Set (Var break_var, None, zero)) in
-      let if_blk = (set, lwhile)::[Break, lwhile] in
-      let if' = If(Var break_var, if_blk, []) in
-	[vdecl, lwhile], stmts', [if', lwhile]
+      let before = ref [] in 
+      let after = ref [] in 
+      let add (skind, var) =
+	let vdecl = VDecl (var, uint_typ, false, false, Some init) in
+	let set = Exp (Set (Var var, None, zero)) in
+	let if_blk = (set, lwhile)::[skind, lwhile] in
+	let if' = If(Var var, if_blk, []) in
+	  before := (vdecl, lwhile)::!before;
+	  after := (if', lwhile)::!after
+      in
+	List.iter add vars;
+	(List.rev !before), stmts', (List.rev !after)
 
 let sibling_elimination stmts lbl g_offset =
   let rec add_loop_delete_goto stmts =
@@ -454,7 +467,7 @@ let sibling_elimination stmts lbl g_offset =
 	      Label lbl' when lbl' = lbl ->
 		let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
 		let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-		let before, blk', after' = avoid_break_capture blk' l l' in
+		let before, blk', after' = avoid_break_continue_capture blk' l l' in
 		  before @ ( (DoWhile (blk', e), l)::(after'@after))
 		    
 	    | _ -> (stmt, l)::(backward stmts)
@@ -488,10 +501,8 @@ let sibling_elimination stmts lbl g_offset =
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
 		forward stmts e, true
-
 	    | Label lbl' when lbl' = lbl -> 
 	      let stmts' = (stmt, l)::stmts in backward stmts', true
-
 	    | Block blk -> 
 		let blk', b = choose blk in 
 		if b then 
@@ -501,8 +512,7 @@ let sibling_elimination stmts lbl g_offset =
 
 	    | If(e, if_blk, else_blk) -> 
 		let if_blk', b = choose if_blk in 
-		  if b then
-		    (If(e, if_blk', else_blk), l)::stmts, true
+		  if b then (If(e, if_blk', else_blk), l)::stmts, true
 		  else
 		    let else_blk', b' = choose else_blk in
 		      if b' then 
@@ -569,10 +579,8 @@ let out_if_else stmts lbl level g_offset =
 
 	    | Block blk -> let blk', cond = out blk in 
 		if cond = [] then 
-		  let stmts', cond = out stmts in
-		    (Block blk, l)::stmts', cond
-		else
-		  (Block blk', l)::stmts, cond
+		  let stmts', cond = out stmts in (Block blk, l)::stmts', cond
+		else (Block blk', l)::stmts, cond
 
 	    | _ -> let stmts', cond = out stmts in (stmt, l)::stmts', cond
   in out stmts
@@ -603,10 +611,8 @@ let rec out_switch_loop stmts lbl level g_offset =
 	    | Block blk ->
 		let blk', cond = out blk in
 		  if cond = [] then 
-		    let stmts', cond = out stmts in
-		      (Block blk, l)::stmts', cond
-		  else
-		    (Block blk', l)::stmts, cond    		      
+		    let stmts', cond = out stmts in (Block blk, l)::stmts', cond
+		  else (Block blk', l)::stmts, cond    		      
 	    | _ -> let stmts', cond = out stmts in (stmt, l)::stmts', cond
   in out stmts
 
@@ -614,128 +620,81 @@ let rec out_switch_loop stmts lbl level g_offset =
 
 let outward stmts lbl g_level g_offset =
   (* moves the goto stmt with label lbl at location o: 
-     - either until the goto becomes direclty related to athe label, 
+     - either until the goto becomes direclty related to the label, 
      if they are in different stmts
      - or until the goto becomes directly related to an if or switch
      containing label lbl otherwise*)
-let rec loop_out builder e blk stmts l =
-  if has_goto blk lbl g_offset then 
-    let blk', after = out_switch_loop blk lbl g_level g_offset in
-    let stmt' = builder e blk' in
-		    (stmt', l)::(after @ stmts), 1
-  else
-    let blk', r = outward blk in
-      if r = 1 then 
-	let blk', after = out_switch_loop blk' lbl g_level g_offset in
-	let stmt' = builder e blk' in 
-	  (stmt', l)::(after @ stmts), r
+  let rec out blk stmts f p =
+    if has_goto blk lbl g_offset then
+      if p blk lbl then blk, stmts, false
       else
-	if r = 2 then
-	  let stmt' = builder e blk' in (stmt', l)::stmts, r
-	else
-	  let stmt = builder e blk in
-	  let stmts', r = outward stmts in (stmt, l)::stmts', r
+	let blk', after = f blk lbl g_level g_offset in blk', (after @ stmts), true
+    else 
+      let blk', b = outward blk in blk', stmts, b
 
-and outward stmts =
+  and fold blk stmts f p =
+    let blk', stmts', b = out blk stmts f p in
+      if not b then 
+	let stmts', b' = outward stmts in blk', stmts', b' 
+      else 
+	let blk', stmts', _ = fold blk' stmts' f p in blk', stmts', true
+  
+  and outward stmts =
     match stmts with
-	[] -> [], 0 
+	[] -> [], false
       | (stmt, l)::stmts ->
 	  match stmt with
-	      For (blk1, e, blk2, blk3) ->
-		let builder e blk = For(blk1, e, blk, blk3) in loop_out builder e blk2 stmts l 
-
+	      For (blk1, e, blk2, blk3) ->  
+		let blk2', stmts', b' = fold blk2 stmts out_switch_loop has_label in
+		  (For(blk1, e, blk2', blk3), l)::stmts', b'
+		    
 	    | DoWhile (blk, e) -> 
-		let builder e blk = DoWhile(blk, e) in loop_out builder e blk stmts l 
-
+		let blk', stmts', b' = fold blk stmts out_switch_loop has_label in
+		  (DoWhile (blk', e), l)::stmts', b'
+		    
 	    | If (e, if_blk, else_blk) ->
-		if has_goto if_blk lbl g_offset then
-		  let if_blk', after = out_if_else if_blk lbl g_level g_offset in
-		    (* are goto and label stmts in different branches of this If ? *)
-		  let r = if search_lbl else_blk lbl then 2 else 1 in
-		  let if' = If(e, if_blk', else_blk), l in
-		    if'::(after @ stmts), r
-		else
-		  (* same process for the else branch *)
-		  if has_goto else_blk lbl g_offset then
-		    let else_blk', after = out_if_else else_blk lbl g_level g_offset in
-		    let r = if search_lbl if_blk lbl then 2 else 1 in 
-		    let if' = If(e, if_blk, else_blk'), l in 
-		      if'::(after @ stmts), r
-		  else
-		    (* neither if_blk nor else_blk branches contains
-		       the goto stmt ; calls recursively outward on the
-		       branches. If either of the two branches returns a
-		       modified stmt list (ret code = 1) then the
-		       if_else_out is performed on this branch *)
-		    let if_blk', r = outward if_blk in
-		      if r = 1 then
-			let if_blk', after = out_if_else if_blk' lbl g_level g_offset in
-			let if' = If(e, if_blk', else_blk), l in
-			  if'::(after @ stmts), r
-		      else
-			if r = 2 then
-			  let if' = If(e, if_blk', else_blk), l in 
-			    if'::stmts, r
-			else
-			  let else_blk', r = outward else_blk in
-			    if r = 1 then
-			      let else_blk', after = out_if_else else_blk' lbl g_level g_offset in
-			      let else' = If(e, if_blk, else_blk'), l in
-				else'::(after @ stmts), r
-			    else
-			      if r = 2 then
-				let if' = If(e, if_blk, else_blk'), l in
-				  if'::stmts, r
-			      else
-				(* goto is neither in the if-branch
-				   nor in the else-branch. outward is
-				   applied on the rest of the stmt
-				   list *)
-				let stmts', r = outward stmts in
-				  (stmt, l)::stmts', r
-
-	    			    
-	    | CSwitch (e, cases, default) ->
-		let rec iter cases =
-		  match cases with
-		      [] -> [], [], 0
-		    | (e, blk, l)::cases ->
-			if has_goto blk lbl g_offset then
-			  let blk', after = out_switch_loop blk lbl g_level g_offset in
-			    (e, blk', l)::cases, after, 1
-			else
-			  let blk', r = outward blk in
-			    if r = 0 then
-			      let cases', after, r = iter cases in
-				(e, blk, l)::cases', after, r
-			    else
-			      let blk', after = out_switch_loop blk' lbl g_level g_offset in
-			      (e, blk', l)::cases, after, r
+		let rec if_fold if_blk stmts = 
+		  let if_blk', stmts', b' = out if_blk stmts out_if_else has_label in
+		    if not b' then 
+		      let else_blk', stmts', b' = fold else_blk stmts out_if_else has_label in
+		      if_blk', else_blk', stmts', b'
+		    else 
+		      let if_blk', else_blk', stmts', _ = if_fold if_blk' stmts' in
+			if_blk', else_blk', stmts', true
 		in
-		let cases', after, r = iter cases in
-		  if r = 0 then
-		    if has_goto default lbl g_offset then
-		      let default', after = out_switch_loop default lbl g_level g_offset in
-		      let cs = CSwitch(e, cases, default'), l in
-			cs::(after @ stmts), 1
-		    else
-		      let default', r = outward default in
-			if r = 0 then
-			  let stmts', r = outward stmts in
-			    (stmt, l)::stmts', r
-			else
-			  let cs = CSwitch(e, cases, default'), l in
-			    cs::stmts, r
+		let if_blk', else_blk', stmts', b' = if_fold if_blk stmts in
+		    (If(e, if_blk', else_blk'), l)::stmts', b'
+		  
+	    | CSwitch(e, cases, default) ->
+		let rec case_fold cases =
+		  match cases with 
+		      [] -> [], [], false
+		    | (e, blk, l')::cases ->
+			let blk', stmts, b' = out blk stmts out_switch_loop has_label in
+			  if not b' then 
+			    let cases', stmts', b' = case_fold cases in
+			      (e, blk, l')::cases', stmts', b'
+			  else 
+			    let cases' = (e, blk', l')::cases in
+			    let cases', stmts', _ = case_fold cases' in
+			      cases', stmts'@stmts, true
+		in
+		let cases', stmts', b' = case_fold cases in
+		  if not b' then 
+		    let default', stmts', b' = fold default stmts out_switch_loop has_label in
+			  (CSwitch(e, cases, default'), l)::stmts', b'
 		  else
-		    let cs = CSwitch(e, cases', default), l in 
-		      cs::(after @ stmts), 1
-	  	
-	    | Block blk ->
-		let blk', r = outward blk in 
-		let stmts', r = if r = 0 then outward stmts else stmts, r in
-		  (Block blk', l)::stmts', r
+		    (CSwitch(e, cases', default), l)::stmts', true
 
-	    | _ -> let stmts', r = outward stmts in (stmt, l)::stmts', r	
+	    | Block blk -> 
+		let blk', b' = outward blk in 
+		  if not b' then 
+		    let stmts', b' = outward stmts in
+		      (stmt, l)::stmts', b'
+		  else
+		    (Block blk', l)::stmts, b'
+
+	    | _ -> let stmts', b' = outward stmts in (stmt, l)::stmts', b'	
 
  in fst (outward stmts)
       
