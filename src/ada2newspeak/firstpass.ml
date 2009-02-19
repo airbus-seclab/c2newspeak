@@ -136,16 +136,16 @@ let extract_rough_record symb =
   match symb with  VarSymb  (_, subt, _, _) -> begin
     match subt with  
 	Unconstrained (Declared(Record (_,flds),_)) -> flds
-      | _ -> 	Npkcontext.error 
+      | _ -> 	Npkcontext.report_error 
 	  "Firstpass.record"
 	    "extract_rough_record, not unconstr"
   end 
     | FunSymb  _  ->  
-	Npkcontext.error 
+	Npkcontext.report_error 
 	  "Firstpass.record"
 	  "extract_rough_record, FunSymb no subtyp impl YET !!! "
     |  _  ->  	
-	 Npkcontext.error 
+	 Npkcontext.report_error 
 	   "Firstpass.record"
 	   "extract_rough_record, neither FunSymb nor Varsymb"
 
@@ -157,20 +157,20 @@ let extract_record symb trans_typ =
 	    (Declared(Record (x,y),loc)) in begin
 	      match cstruct  with 
 		  C.Struct (flds, _) -> flds
-		| _ ->  Npkcontext.error 
+		| _ ->  Npkcontext.report_error 
 		    "Firstpass.record"
 		      "Unexpected case in extract record" end
-      | _ ->  Npkcontext.error 
+      | _ ->  Npkcontext.report_error 
 	  "Firstpass.record"
 	    "Unexpected case in extract record"
     end
   | FunSymb  (_,_,_,ftyp) ->  begin
       match (snd ftyp) with  
 	  C.Struct (flds, _) -> flds
-	| _ ->  Npkcontext.error "Firstpass.record"
+	| _ ->  Npkcontext.report_error "Firstpass.record"
 	    "Unexpected case in extract record"
     end   
-  | _ -> Npkcontext.error "Firstpass.record"
+  | _ -> Npkcontext.report_error "Firstpass.record"
       "Unexpected case in extract record"		  
 
 let verify field record_f =
@@ -208,7 +208,7 @@ let rec addfield  fields var typ loc =
 		  let new_var = VarSymb(new_lv, new_st, b1, b2) in
 		    addfield tl new_var new_typ loc
 	      |  _ -> 
-		   Npkcontext.error "Firstpass try_find_field"
+		   Npkcontext.report_error "Firstpass try_find_field"
 			   "Var is not VarSymb (maybe fun Symb to check)"
 	else 
 	  None
@@ -257,11 +257,11 @@ let rec try_find_fieldsaccess opt (sels, varname, fields)
 				      
 			  end
 		      | FunSymb _ -> 
-			  Npkcontext.error 
+			  Npkcontext.report_error 
 			    "Firstpass try_find_field"
 			    " Not implemented yet to do !!!! WG"
 		      | NumberSymb _ | EnumSymb _ ->  
-			  Npkcontext.error 
+			  Npkcontext.report_error 
 			    "Firstpass try_find_field"
 			    "Unexpected NumberSymb  | EnumSymb "
 		  end
@@ -353,7 +353,8 @@ let translate compil_unit =
 	     ^(Print_syntax_ada.ident_list_to_string 
 		 pack))
   in
-      match name with
+  let find_name_record  name f_ident f_with f_current =
+    match name with
       | ([], ident) -> f_ident ident name
       | (pack, ident) when (pack <> !current_package) &&
 	  (not (List.mem pack (!with_package))) &&
@@ -364,7 +365,7 @@ let translate compil_unit =
 	  f_with (pack,ident)
       | (pack, ident) when pack = !current_package ->
 	  f_current ([],ident) name
-      | (pack, _) -> Npkcontext.error 
+      | (pack, _) -> Npkcontext.report_error 
 	  "Firstpass.find_name"
 	    ("unknown package "
 	     ^(Print_syntax_ada.ident_list_to_string 
@@ -803,7 +804,7 @@ let translate compil_unit =
 	match structure_field_try with 
 	    None -> 
 	      if mem_symb name then find_symb name
-	      else Npkcontext.error "Firstpass.translate_lv"
+	      else Npkcontext.report_error "Firstpass.translate_lv"
 		("cannot find symbol "^(string_of_name name))	
 	  | Some w -> w
     in

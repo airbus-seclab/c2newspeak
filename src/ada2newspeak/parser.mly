@@ -295,7 +295,7 @@ record_definition :
 
 
 
-/* TO DO : if record initialization exists (?)*/
+/* TO DO : if record initialization exists (?)
 | ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR
 	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
 | ident_list DEUX_POINTS CONSTANT subtyp_indication AFFECT expression POINT_VIR
