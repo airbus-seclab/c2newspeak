@@ -976,7 +976,8 @@ and normalization compil_unit extern =
   in
   let add_typ nom (typdecl:Syntax_ada.typ_declaration) location global extern =
     let subtyp = match typdecl with
-      | Array _ -> Unconstrained(Declared(typdecl, location))
+      | Array _ 
+      | Record _ -> Unconstrained(Declared(typdecl, location))
 
       | Enum(_,symbs,_) ->
 	  let min = snd (List.hd symbs)
@@ -1222,39 +1223,7 @@ and normalize_exp exp = match exp with
 				  normalize_exp e2)
   | FunctionCall(nom, params) ->
       FunctionCall(nom, List.map normalize_exp params)
-	(*WG
-	  | Last (subtype) -> 
-	  let rec fun_aux subtyp =
-	  match subtyp with	        
-	  | Unconstrained _ ->  Npkcontext.error
-	  " Ada_normalize: last value of unconstrained type"
-	  "TODO:clean version of last based on ada_config"
-	  | Constrained( _, contrainte, true) -> begin
-	  match contrainte with 
-	  RangeConstraint (_, exp2) ->  begin
-	  match exp2
-	  with
-	  CInt _  | CFloat _ | CBool _ ->  exp2
-	  | NullExpr | CChar _ | CString _
-	  | Var _ | FunctionCall _ | Unary _
-	  | Binary _ | Qualified _ | Last _  | First _ ->
-	  Npkcontext.error
-	  " Ada_normalize: last value of unconstrained type"
-	  " TODO:clean version of last based on ada_config "
-	  end
-	  | IntegerRangeConstraint (_, nat2) -> 
-	  CInt nat2
-	  
-	  | FloatRangeConstraint (_, fl2) -> 
-	  CFloat fl2      
-	  end
-	  | Constrained(_, _, false) ->
-	  raise NonStaticExpression
-	  | SubtypName _ ->  
-	  fun_aux (normalize_subtyp subtyp)
-	  in
-	  fun_aux subtype	
-	*)
+
   | Last subtype | First subtype -> begin
       
       let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
@@ -1276,71 +1245,15 @@ and normalize_exp exp = match exp with
 		 "Ada_normalize Length contraint"
 		 "Zero length" 
 		 
-	 (*
-	   | Some(RangeConstraint _ CInt(a), CInt(b)) ->
-	   if (Nat.compare a b <=0)
-	   then  
-	   CInt (Nat.add (Nat.sub b a) Nat.one)
-	   else	 Npkcontext.error  
-	   Npkcontext.error  
-	   "Ada_normalize Length contraint"
-	   "Zero length" 
-	   
-	   | Some(RangeConstraint _) ->
-	   Npkcontext.error 
-	   "Ada_normalize Length contraint"
-	   "Range Constraint fo Length"
-	 *)
 		 
 	 | _ ->  Npkcontext.report_error 
 	     "Firstpass: in Array access"
 	       "constraint is not IntegerRange"
     end	       
-	       
-	     (*
-	       let rec fun_aux subtyp last_or_first =    
-	       match subtyp with	        
-	       | Unconstrained (Declared(Array(_, ConstrainedArray (
-	       ( stypindex, contraint,_ ), _, _)), _)) ->     
-	       Npkcontext.error
-	       " Ada_normalize: last value of unconstrained type"
-	       "TODO: clean version of last/first based on ada_config" 
-	       
-	       | Constrained( _, contrainte, true) -> begin
-	       match contrainte with
-	       RangeConstraint (exp1, exp2) ->  begin
-	       let exp = if last_or_first then exp2 else exp1 in
-	       match exp with
-	       CInt _  | CFloat _ | CBool _ ->  exp
-	       | NullExpr | CChar _ | CString _
-	       | Var _ | FunctionCall _ | Unary _
-	       | Binary _ | Qualified _ | Last _ 
-	       | First _ | Length _  ->
-	       Npkcontext.error
-	       " Ada_normalize: last/first value of unconstrained type"
-	       " TODO:clean version of last based on ada_config "
-	       end
-	       | IntegerRangeConstraint (nat1, nat2) -> 
-	       if last_or_first then CInt nat2 else CInt nat1
-	       | FloatRangeConstraint (fl1, fl2) -> 
-	       if last_or_first then CFloat fl2 else CFloat fl1		      
-	       end
-	       | Constrained(_, _, false) ->
-	       raise NonStaticExpression 
-	       | SubtypName _ ->  
-	       fun_aux (normalize_subtyp subtyp) last_or_first
-	       in
-	       match exp with 
-	       Last (subtype)  -> fun_aux subtype true	
-	       | First (subtype) -> fun_aux subtype false	
-	       | _ -> Npkcontext.error " Ada_normalize: last/first" "Impossible case"
-	       end	
-	     *)     
-		   
+	      	   
       
   | Length subtype -> 
-      (*     let rec fun_aux subtyp  =*)
-     (*       Array or Range type only for attributes Length *)
+     (*    Array or Range type only for attributes Length *)
        let new_contr = arraytyp_to_contrainte subtype 
 	 normalize_subtyp 
        in
@@ -1356,18 +1269,7 @@ and normalize_exp exp = match exp with
 	       else	 Npkcontext.report_error  
 		 "Ada_normalize Length contraint"
 		 "Zero length" 
-		 
-	   (*
-	     | Some(RangeConstraint _ CInt(a), CInt(b)) ->
-	     if (Nat.compare a b <=0)
-	     then  
-	     CInt (Nat.add (Nat.sub b a) Nat.one)
-	     else	 Npkcontext.error  
-	     Npkcontext.error  
-	     "Ada_normalize Length contraint"
-	     "Zero length" 
-	   *)
-		 
+	
 	   | Some(RangeConstraint _) ->
 	       Npkcontext.report_error 
 		 "Ada_normalize Length contraint"
@@ -1599,7 +1501,8 @@ let rec normalize_instr (instr,loc) =
     | Enum(ident, _, _) -> 
 	add_typ (normalize_extern_ident ident) typ_decl loc true true
     | DerivedType(ident, _) 
-    | Array(ident, _)
+    | Array(ident, _) 
+    | Record (ident, _)
     | IntegerRange(ident,_,_) ->
 	add_typ (normalize_extern_ident ident) typ_decl loc true true
 
@@ -1643,6 +1546,8 @@ let rec normalize_instr (instr,loc) =
 	      IntegerRange(ident, contrainte, taille)
 	  | Declared(Array(_, def),_) ->
 	      Array(ident, def)
+	  | Declared(Record(_, def),_) ->
+	      Record(ident, def)
 	  | Declared(DerivedType(_, subtyp_ind),_) ->
 	      DerivedType(ident, subtyp_ind) in
 	
@@ -1717,6 +1622,15 @@ let rec normalize_instr (instr,loc) =
 	  "Ada_normalize.normalize_typ_decl"
 	  "internal error : size of array already provided"
 
+    | Record (ident, fls) -> 
+	let norm_field (ids, sbtyp_ind, e_opt) =
+	  (ids, normalize_subtyp_indication sbtyp_ind, e_opt)
+	in
+	let  norm_typ = 
+	  Record (ident, List.map norm_field fls)
+	in
+	  add_typ (normalize_ident ident) norm_typ loc global extern;
+	  norm_typ
 
 
   and remove_typ_decl typ_decl = match typ_decl with
@@ -1726,7 +1640,8 @@ let rec normalize_instr (instr,loc) =
 	  symbs
     | DerivedType(nom,_) 
     | IntegerRange(nom,_,_) 
-    | Array(nom, _) -> remove_subtyp (normalize_ident nom)
+    | Array(nom, _) 
+    | Record (nom, _) ->  remove_subtyp (normalize_ident nom) 
   in
 
   let normalize_sub_program_spec subprog_spec addparam =

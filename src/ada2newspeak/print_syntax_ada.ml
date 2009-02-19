@@ -128,6 +128,12 @@ and typ_declaration_to_string typ_decl = match typ_decl with
   | Array(ident,array_def) ->
       "Array("^ident	
       ^", "^(array_definition_to_string array_def)^")"
+  
+  | Record (ident, _) -> (*record_type_def) -> *)
+      "Record("^ident	
+      ^", "^(" --- TO DO --------")^")"
+	
+
 
 and array_definition_to_string array = match array with 
   | ConstrainedArray(range, subtyp, taille) ->

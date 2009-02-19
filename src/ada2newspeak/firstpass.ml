@@ -118,7 +118,167 @@ let make_offset styp exp size =
 	
     | SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
 	"SubtypName not implemented yet (especially for Enum)"
-	  
+let is_record symb = 
+  match symb with  VarSymb  (_, subt, _, _) -> begin
+    match subt with  
+	Unconstrained (Declared(Record _,_)) -> true 
+      | _ -> false 
+  end 
+    | FunSymb  (_,_,_,ftyp) ->       
+	( compare (List.length (fst ftyp))  0 = 0) && 
+	  ( match (snd ftyp) with 
+		C.Struct _ -> true 
+	      | _ -> false )
+    |  _  -> false 
+
+
+let extract_rough_record symb = 
+  match symb with  VarSymb  (_, subt, _, _) -> begin
+    match subt with  
+	Unconstrained (Declared(Record (_,flds),_)) -> flds
+      | _ -> 	Npkcontext.report_error 
+	  "Firstpass.record"
+	    "extract_rough_record, not unconstr"
+  end 
+    | FunSymb  _  ->  
+	Npkcontext.report_error 
+	  "Firstpass.record"
+	  "extract_rough_record, FunSymb no subtyp impl YET !!! "
+    |  _  ->  	
+	 Npkcontext.report_error 
+	   "Firstpass.record"
+	   "extract_rough_record, neither FunSymb nor Varsymb"
+
+let extract_record symb trans_typ =
+  match symb with 
+    VarSymb  (_, subt, _, _) -> begin match subt with 
+	Unconstrained (Declared(Record (x,y), loc)) ->
+	  let cstruct = trans_typ
+	    (Declared(Record (x,y),loc)) in begin
+	      match cstruct  with 
+		  C.Struct (flds, _) -> flds
+		| _ ->  Npkcontext.report_error 
+		    "Firstpass.record"
+		      "Unexpected case in extract record" end
+      | _ ->  Npkcontext.report_error 
+	  "Firstpass.record"
+	    "Unexpected case in extract record"
+    end
+  | FunSymb  (_,_,_,ftyp) ->  begin
+      match (snd ftyp) with  
+	  C.Struct (flds, _) -> flds
+	| _ ->  Npkcontext.report_error "Firstpass.record"
+	    "Unexpected case in extract record"
+    end   
+  | _ -> Npkcontext.report_error "Firstpass.record"
+      "Unexpected case in extract record"		  
+
+let verify field record_f =
+  let names = List.map fst record_f in
+    List.mem field names
+ 
+let offset field record_f =
+  fst (List.assoc field  record_f)
+ 
+  
+let field_typ field record_f =
+  snd (List.assoc  field  record_f) 
+    
+let rec addfield  fields var typ loc =
+  match typ with C.Struct (flds,_) -> begin  
+    match fields  with 
+	[] -> Some (var, typ, loc) 
+      | h::tl -> if (List.mem h (List.map fst flds)) then
+	  let (offset, new_typ) = List.assoc h flds in
+	  let rough_rec = extract_rough_record var in
+	  let dec = C.Const (C.CInt (Nat.of_int offset)) in
+	    match var with  
+		VarSymb (lv, _, b1, b2) ->
+		  let new_lv = C.Shift (lv, dec) in
+		  let rough_f =  List.find (fun x -> 
+					      let (a,_,_) = x in 
+						List.mem h a
+					   )
+		    rough_rec 
+		  in
+		  let new_st_ind = let (_,b,_) = rough_f in b in 
+		  let new_st =  Ada_utils.extract_subtyp 
+		    new_st_ind 
+		  in
+		  let new_var = VarSymb(new_lv, new_st, b1, b2) in
+		    addfield tl new_var new_typ loc
+	      |  _ -> 
+		   Npkcontext.report_error "Firstpass try_find_field"
+			   "Var is not VarSymb (maybe fun Symb to check)"
+	else 
+	  None
+  end
+    |  _ -> None
+	 
+
+(*On tente de trouver un acces a un record *)
+let rec try_find_fieldsaccess opt (sels, varname, fields) 
+    memb findb trans_typ =
+  match fields with [] -> begin 
+    match opt with
+	None -> None 
+      | _ -> opt end
+    | f::tl -> if (memb (sels, varname)) then 
+	let (sym, _ , lll) = findb (sels, varname) in
+	  if (is_record sym) then
+	    let rough_rec = extract_rough_record sym in
+	    let record_f = extract_record sym trans_typ in
+	      if (verify f record_f) then
+	        let offset = offset f record_f in 
+		let f_typ  = field_typ f record_f in
+		  match opt with None -> begin 
+		    match sym with VarSymb (lv,_,b1,b2)-> begin
+		      (*TO CHECK *)
+		      let dec = C.Const(
+			C.CInt(Nat.of_int offset)) 
+		      in
+		      let new_lv =  C.Shift (lv, dec) in
+		      let rough_f = 
+			List.find (fun x -> let (a,_,_) = x in 
+				     List.mem f a) rough_rec	in
+		      let new_st_ind = let (_,b,_) =rough_f in b in
+		      let new_st = Ada_utils.extract_subtyp 
+			new_st_ind 
+		      in
+		      let new_var = VarSymb(
+			new_lv, new_st, b1, b2 ) in
+			
+			match tl with 
+			    [] -> Some( new_var, f_typ, lll) 
+			      
+			  | h::t -> try_find_fieldsaccess 
+			      ( Some (new_var, f_typ, lll)) 
+				( sels@[varname], h, t) memb findb trans_typ
+				      
+			  end
+		      | FunSymb _ -> 
+			  Npkcontext.report_error 
+			    "Firstpass try_find_field"
+			    " Not implemented yet to do !!!! WG"
+		      | NumberSymb _ | EnumSymb _ ->  
+			  Npkcontext.report_error 
+			    "Firstpass try_find_field"
+			    "Unexpected NumberSymb  | EnumSymb "
+		  end
+		    
+		    | Some (var, typ, _) ->
+			(*we have already found a field *)
+			match fields with 
+			    [] -> Some (var, typ, lll)   
+			      (* --  Return  -- *)
+  			  | _  -> 
+			      addfield  fields var typ lll	
+				
+	      else			      
+		try_find_fieldsaccess None (sels@[varname], f, tl)
+		                      memb findb trans_typ
+	  else None
+      else None	  
 	  
 let translate compil_unit =
   
@@ -193,7 +353,25 @@ let translate compil_unit =
 	     ^(Print_syntax_ada.ident_list_to_string 
 		 pack))
   in
-    
+  let find_name_record  name f_ident f_with f_current =
+    match name with
+      | ([], ident) -> f_ident ident name
+      | (pack, ident) when (pack <> !current_package) &&
+	  (not (List.mem pack (!with_package))) &&
+	  (not !extern) ->
+	  f_with (pack, ident)         
+      | (pack, ident)
+	  when !extern||List.mem pack (!with_package) ->   
+	  f_with (pack,ident)
+      | (pack, ident) when pack = !current_package ->
+	  f_current ([],ident) name
+      | (pack, _) -> Npkcontext.report_error 
+	  "Firstpass.find_name"
+	    ("unknown package "
+	     ^(Print_syntax_ada.ident_list_to_string 
+		 pack))	    
+  in
+
   (* fonction de traduction des types *)  
   let rec translate_typ typ = match typ with
     | Integer -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
@@ -211,6 +389,32 @@ let translate compil_unit =
     | IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
     | Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
 	C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)    
+    | Record (_, flds) -> begin
+	let ind_to_typ st = translate_subtyp (Ada_utils.extract_subtyp st) in 
+	let size_of st = C.size_of (ind_to_typ st) in 
+	let next_aligned o x =
+	  let m = o mod x in
+	    if m = 0 then o else o + (x - m)
+	in  
+	let res = ref [] in
+	let o = ref 0 in
+	let last_align = ref 1 in
+	  
+	let update_offset id typ = 
+	  res := !res@[(id,( !o,ind_to_typ typ ))];
+	  let cur_align = size_of typ in 
+	  let o' = next_aligned !o cur_align in
+	    o := o'+ (size_of typ);
+	    last_align := max !last_align cur_align    
+	in
+	    
+	let eval_offsets (ids, sp_ind, _) =
+	  List.iter (fun x -> update_offset x sp_ind ) ids
+	in
+	  List.iter eval_offsets flds;
+	  C.Struct (!res, next_aligned !o !last_align)
+      end
+
     | IntegerRange(_,_,None) -> Npkcontext.report_error 
 	"Firstpass.translate_declared"
 	  "internal error : no bounds provided for IntegerRange"
@@ -589,10 +793,23 @@ let translate compil_unit =
   
     (* cas d'un symbol avec sélecteur connu *)
     let fun_sel_connu name =       
-      if mem_symb name then find_symb name
-      else Npkcontext.report_error "Firstpass.translate_lv"
+      (*if mem_symb name then find_symb name
+	else Npkcontext.report_error "Firstpass.translate_lv"
 	("cannot find symbol "^(string_of_name name))
+	in*) 
+      let structure_field_try = try_find_fieldsaccess None 
+	([], List.hd (fst name), (List.tl (fst name))@[snd name])
+	mem_symb find_symb translate_typ
+      in
+	match structure_field_try with 
+	    None -> 
+	      if mem_symb name then find_symb name
+	      else Npkcontext.report_error "Firstpass.translate_lv"
+		("cannot find symbol "^(string_of_name name))	
+	  | Some w -> w
     in
+
+
       
     (*cas d'un symbol avec sélecteur qui est le package courant*)
     let fun_ident_name ident name = 
@@ -613,7 +830,7 @@ let translate compil_unit =
       
       match lv with 
 	  Lval lv -> 
-	    let (symb, _, _) = find_name lv
+	    let (symb, _, _) = find_name_record lv
 	      fun_sans_sel   (*sans sélecteur *)
 	      fun_sel_connu  (*avec sélecteur connu *)
 	      fun_ident_name (*avec sélecteur =  pkg courant*)
@@ -1673,14 +1890,57 @@ let translate compil_unit =
       | DerivedType(_, ref_subtyp_ind) -> 
 	  translate_derived_typ_decl ref_subtyp_ind loc global 
       | IntegerRange _ -> ()
-      | Array _ -> ()
+      | Array _ -> () 
+      | Record _ -> ()
   in
  
   (* déclarations basiques locales *)
   let translate_basic_declaration basic loc = match basic with
     | ObjectDecl(idents, subtyp_ind, def, const) -> 
-(*	let subtyp = Ada_utils.extract_subtyp subtyp_ind in
-*)
+	let defaults_record_inits subtyp id =
+
+	  let res = ref [] in (*by default affectations*)
+	  let o = ref 0 in
+	  let last_align = ref 1 in
+	  let size_of st = C.size_of (translate_subtyp (
+			Ada_utils.extract_subtyp st)) 
+	  in
+	  let next_aligned o x =
+	    let m = o mod x in
+	      if m = 0 then o else o + (x - m)
+	  in
+	  let update_offset typ = 
+	    let cur_align = size_of typ in 
+	    let o' = next_aligned !o cur_align in
+	      o := o'+ (size_of typ);
+	      last_align := max !last_align cur_align
+	  in
+	  let fields_to_aff  (ids, sp_ind, exp_opt) loc = 
+	    List.iter (fun _ -> match exp_opt with 
+			   None -> update_offset sp_ind
+			 | Some e ->
+			     res:= 
+			       (make_affect 
+				  (C.Shift (C.Var(id), 
+					    C.Const(C.CInt (Nat.of_int !o))))
+				  (fst (translate_exp e (Some (base_typ( 
+				    Ada_utils.extract_subtyp subtyp_ind)))))  
+				  subtyp 
+				  loc
+			       )::!res;
+				 
+			     update_offset sp_ind;
+		      ) ids;
+	  in	    
+	    match (Ada_utils.extract_subtyp subtyp_ind) with
+		Unconstrained(Declared(Record (_, fs), loc)) -> 
+		  begin
+		    List.iter (fun x-> fields_to_aff x loc) fs;
+		    !res
+		  end
+	      | _ -> [] 
+		  (*by default value*)
+	in  
 	let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
 	
 	let read_only = match const with
@@ -1692,13 +1952,15 @@ let translate compil_unit =
 	       let decl = (C.Decl(translate_subtyp subtyp, 
 				  ident, id),loc)::list_decl
 	       and aff =  
+		 let default_affs = defaults_record_inits subtyp id  in
+
 		 match def with
 		   | None -> list_aff
 		   | Some(exp) -> 
 		       let (tr_exp,_) = translate_exp exp 
 			 (Some(base_typ subtyp)) in 
-			 (make_affect (C.Var(id)) 
-			    tr_exp subtyp loc)::list_aff
+			 default_affs@((make_affect (C.Var(id)) 
+			    tr_exp subtyp loc)::list_aff)
 	       in (decl,aff))
 	    idents
 	    ([],[])
@@ -1841,9 +2103,8 @@ let translate compil_unit =
   let rec translate_global_basic_declaration (basic, loc) = 
     match basic with
       | ObjectDecl(idents, subtyp_ind, init, const) ->
-	  (*let subtyp = Ada_utils.extract_subtyp subtyp_ind in*)
-	let subtyp = Ada_utils.extract_subtyp subtyp_ind in
 
+	let subtyp = Ada_utils.extract_subtyp subtyp_ind in
 
 	  let read_only = match const with
 	    | Variable -> false
