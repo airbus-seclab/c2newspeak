@@ -114,20 +114,17 @@ let translate (globals, spec) =
     !lbl_cnt
   in
 
-  let add_var (t, x) =
-    let id = C.fresh_id () in
-      Symbtbl.bind symbtbl x (LocalSymb (C.Var id), t);
-      id
-  in
+  let add_var (t, x) = Symbtbl.bind symbtbl x (LocalSymb (C.Local x), t) in
 
-  let update_var_typ x id t =
-    Symbtbl.update symbtbl x (LocalSymb (C.Var id), t)
+  let update_var_typ x t =
+    Symbtbl.update symbtbl x (LocalSymb (C.Local x), t)
   in
 
   let add_formals (args_t, ret_t) =
-    let ret_id = add_var (ret_t, ret_name) in
-    let args_id = List.map add_var args_t in
-      (ret_id, args_id)
+    add_var (ret_t, ret_name);
+    List.iter add_var args_t;
+    let args_id = List.map snd args_t in
+      (ret_name, args_id)
   in
     
   let find_symb x = 
@@ -728,11 +725,11 @@ let translate (globals, spec) =
 
   and gen_tmp loc t =
     let x = "tmp"^(string_of_int !tmp_cnt) in
-    let id = add_var (t, x) in
-    let t = translate_typ t in
-    let decl = (C.Decl (t, x, id), loc) in
-      incr tmp_cnt;
-      (x, decl, C.Var id)
+      add_var (t, x);
+      let t = translate_typ t in
+      let decl = (C.Decl (t, x), loc) in
+	incr tmp_cnt;
+	(x, decl, C.Local x)
 
   and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
@@ -853,20 +850,20 @@ let translate (globals, spec) =
 
   and translate_local_decl (x, t, init) loc =
     Npkcontext.set_loc loc;
-    let id = add_var (t, x) in
+    add_var (t, x);
     let (init, t) = 
       match init with
 	  None -> ([], t)
 	| Some init -> translate_init t init
     in
-      update_var_typ x id t;
-      let v = C.Var id in
+      update_var_typ x t;
+      let v = C.Local x in
       let build_set (o, t, e) =
 	let lv = C.Shift (v, C.exp_of_int o) in
 	  (C.Set (lv, t, e), loc)
       in
       let init = List.map build_set init in
-      let decl = (C.Decl (translate_typ t, x, id), loc) in
+      let decl = (C.Decl (translate_typ t, x), loc) in
 	decl::init
 
   and add_enum (x, v) =

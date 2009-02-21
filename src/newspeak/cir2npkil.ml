@@ -91,7 +91,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
   let rec translate_lv lv =
     match lv with
-	Var id -> K.Local id
+	Local id -> K.Local id
 
       | Global x -> 
 	  used_glbs := Set.add x !used_glbs;
@@ -158,11 +158,11 @@ let translate (cglbdecls, cfundefs, specs) fnames =
   let rec translate_blk x = 
     match x with
 (* TODO: pass id up to npkil!! *)
-	(Decl (t, x, vid), loc)::body ->
+	(Decl (t, x), loc)::body ->
 	  Npkcontext.set_loc loc;
 	  let t = translate_typ t in
 	  let body = translate_blk body in
-	    (K.Decl (x, t, vid, body), loc)::[]
+	    (K.Decl (x, t, body), loc)::[]
 
       | hd::tl -> 
 	  let hd = translate_stmt hd in

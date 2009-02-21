@@ -47,7 +47,8 @@ val glb_decls : (string, Npkil.ginfo) Hashtbl.t
 val get_funspec : string -> (Newspeak.location * Npkil.typ option)
 
 val update_funspec : 
-  string -> (int list * int list * (string * typ) list option * blk) -> unit
+  string -> (string list * string list * (string * typ) list option * blk) 
+  -> unit
 
 val glb_uniquename : Cil.varinfo -> string
 
@@ -63,9 +64,6 @@ val create_npkil : string -> Npkil.t
    None when unknown 
 *)
 val get_args : string -> string list
-
-(** [loc_declare v] adds the declaration of v in the local list *)
-val loc_declare : (int * string * Npkil.typ * Newspeak.location) -> int
 
 (** {2 Functions used in translate_call} *)
 

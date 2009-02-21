@@ -44,7 +44,7 @@ and field = (string * (int * typ))
 
 and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
 
-and funbody = ((vid * vid list) * blk)
+and funbody = ((string * string list) * blk)
 
 and typ =
     | Void
@@ -63,7 +63,7 @@ and stmt = (stmtkind * Newspeak.location)
 and stmtkind =
     | Block of (blk * (lbl * blk) option)
     | Goto of lbl
-    | Decl of (typ * string * int)
+    | Decl of (typ * string)
     | Set of (lv * typ * exp)
     | Loop of blk
     | If of (exp * blk * blk)
@@ -80,7 +80,7 @@ and typ_exp = (exp * scalar_t)
 and lv =
 (* variable identified by its unique id. Use fresh_id () to generate
    a new variable *)
-    | Var of vid
+    | Local of string
     | Global of string
     | Shift of (lv * exp)
     | Deref of (exp * typ)

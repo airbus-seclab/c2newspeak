@@ -27,7 +27,7 @@ open Highspeak
 
 module N = Newspeak
 
-let tmp_var = -1
+let tmp_var = "!tmp"
 
 let scalar_of_typ t =
   match t with
@@ -163,10 +163,10 @@ let translate prog =
 	  let action = translate_blk action in
 	    N.DoWith (body, lbl, action)
       | Goto lbl -> N.Goto lbl
-      | Decl (x, t, vid, body) -> 
-	  push vid;
+      | Decl (x, t, body) -> 
+	  push x;
 	  let body = translate_blk body in
-	    pop vid;
+	    pop x;
 	    N.Decl (x, t, body)
       | Set (lv, e, t) -> translate_set (lv, e, t)
       | Select (body1, body2) -> 
@@ -213,74 +213,3 @@ let translate prog =
       N.mem_zones = prog.mem_zones;
     }
 
-(* TODO: push back to linker and then to High2New
-  and append_args loc args fid f =
-    let rec append x args =
-      match args with
-	  (e::args, t::args_t) ->
-	    let id = fresh_id () in
-	      push id;
-	      let lv = Var id in
-	      let set = translate_set (lv, t, e) in
-	      let t = translate_typ t in
-	      let call = append (x+1) (args, args_t) in
-	      let arg = fid^".arg"^(string_of_int x) in
-		pop id;
-		(K.Decl (arg, t, (set, loc)::call::[]), loc)
-		  
-	| _ -> 
-	    let fn = translate_fn f in
-	      (K.Call fn, loc)
-    in
-      append 1 args
-*)
-(*
-  and translate_call loc ret ((args_t, ret_t), f, args) =
-    let fid =
-      match f with
-	  Fname f -> f
-	| _ -> "fptr_call"
-    in
-    let args = (args, args_t) in
-      match (ret_t, ret) with
-	  (Void, _) -> append_args loc args fid f
-	| (_, Some (Var id)) when Hashtbl.find env id = !stack_height ->
-	    append_args loc args fid f
-	| _ ->
-	    let t = translate_typ ret_t in
-	    let id = fresh_id () in
-	      push id;
-	      let post = 
-		match ret with
-		    Some lv -> 
-		      let e = Lval (Var id, ret_t) in
-		      let set = translate_set (lv, ret_t, e) in
-			(set, loc)::[]
-		  | None -> []
-	      in
-	      let call = append_args loc args fid f in
-		pop id;
-		(K.Decl ("value_of_"^fid, t, call::post), loc)
-
-		*)
-
-(* TODO: then, dump to disk and if necessary: print 
-      Newspeak.write output_file npk;
-	
-      Npkcontext.print_debug "File linked.";
-      
-      if !Npkcontext.verb_newspeak then begin
-	print_endline "Newspeak output";
-	print_endline "---------------";
-	let npk = Newspeak.read output_file in
-	  Newspeak.dump npk;
-	  print_newline ()
-      end
-*)
-
-(* TODO???
-  let e = 
-    if !Npkcontext.no_opt then e 
-    else Newspeak.simplify_exp !Npkcontext.opt_checks e 
-  in
-*)

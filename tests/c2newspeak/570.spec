@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 570.c
 void main(void) {
-  (570.c:29#2)^ptr !tmp-1073741823;
+  (570.c:29#2)^ptr !tmp0;
   (570.c:29#2)^f();
   (570.c:29#2)^choose {
    -->

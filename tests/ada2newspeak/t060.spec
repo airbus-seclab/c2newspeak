@@ -5,7 +5,7 @@ void t060(void) {
   (t060.adb:3#38)^int32 x;
   (t060.adb:4#52)^uint1 y;
   (t060.adb:6#69)^{
-    int32 !tmp-1073741821;
+    int32 !tmp0;
     (t060.adb:6#69)^{
       int32 t102.b.arg1;
       (t060.adb:6#69)^0- =(int32) 2;

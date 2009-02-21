@@ -16,7 +16,7 @@ void main(void) {
     } with lbl1: {
     }
     (277.c:32#4)^{
-      int32 !tmp-1073741822;
+      int32 !tmp0;
       (277.c:32#4)^g();
       (277.c:32#4)^choose {
        -->

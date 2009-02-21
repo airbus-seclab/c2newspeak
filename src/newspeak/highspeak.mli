@@ -36,7 +36,7 @@ type t = {
   mem_zones: mem_zones
 }
 
-and fundec = (vid list * vid list * ftyp * blk)
+and fundec = (string list * string list * ftyp * blk)
 
 and globals = (string, gdecl) Hashtbl.t
 
@@ -52,7 +52,7 @@ and stmtkind =
    type for boolean exp??? *)
   | Guard of exp
 (* TODO: remove vid *)
-  | Decl of (string * typ * vid * blk)
+  | Decl of (string * typ * blk)
   | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
@@ -78,7 +78,7 @@ and blk = stmt list
 and lval =
 (* TODO: maybe should put local and global together by name??? *)
 (* TODO: merge Local, Global into Var of string *)
-    Local of vid
+    Local of string
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
