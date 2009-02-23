@@ -976,6 +976,7 @@ attribute_name_list:
 
 attribute_name:
   ALIGNED                                  { [] }
+| ALIGNED LPAREN INTEGER RPAREN            { [] }
 | DLLIMPORT                                {
     Npkcontext.report_warning "Parser.attribute" 
       "ignoring attribute dllimport";
