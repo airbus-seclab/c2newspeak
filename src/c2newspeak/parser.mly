@@ -198,8 +198,8 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token ALIGNED WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
-%token TRANSPARENT_UNION UNUSED TYPEOF
+%token ALIAS ALIGNED WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
+%token TRANSPARENT_UNION UNUSED WEAK TYPEOF
 %token EOF
 
 %token <Csyntax.assertion> NPK
@@ -975,7 +975,12 @@ attribute_name_list:
 ;;
 
 attribute_name:
-  ALIGNED                                  { [] }
+  ALIAS LPAREN STRING RPAREN               {
+    Npkcontext.report_warning "Parser.attribute" 
+      "ignoring attribute alias";
+    []
+  }
+| ALIGNED                                  { [] }
 | ALIGNED LPAREN INTEGER RPAREN            { [] }
 | DLLIMPORT                                {
     Npkcontext.report_warning "Parser.attribute" 
@@ -1014,6 +1019,11 @@ attribute_name:
   }
 
 | UNUSED                                   { [] }
+| WEAK                                     {
+    Npkcontext.report_warning "Parser.attribute" 
+      "ignoring attribute weak";
+    []
+  }
 | MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 
