@@ -67,6 +67,15 @@
     let err_msg = pos^", unknown keyword: '"^lexeme^"'" in 
       Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
 
+    let rec power_ten x = match x with
+        | y when y<0 -> failwith ("Internal error : power_ten should be called"
+                                ^ " only with nonnegative integers");
+        | 0 -> 1
+        | _ -> 10 * power_ten (x-1)
+        
+    let strip_underscores s =
+        Str.global_replace (Str.regexp_string "_") "" s
+
 }
 (*à élargir : accent *)
  
@@ -83,58 +92,57 @@ let chaine = '"' ([^ '"']|"""")* '"'
 let entier = chiffre ('_'? chiffre)*
 let reel = entier '.' entier
     
-let litteral_entier = entier
 let litteral_reel = reel
       
 (*commentaires*)
 let commentaire = "--" [^ '\n']*
 
 (*identificateurs prédifinis*)
-let id_is = "is"
-let id_with = "with"
-let id_package = "package"
-let id_body = "body"
+let id_is        = "is"
+let id_with      = "with"
+let id_package   = "package"
+let id_body      = "body"
 let id_procedure = "procedure"
-let id_begin = "begin"
-let id_end = "end"
-let id_new = "new"
-let id_type = "type"
-let id_range = "range"
-let id_function = "function"
-let id_in = "in"
-let id_out = "out"
-let id_return = "return"
-let id_if = "if"
-let id_then = "then"
-let id_else = "else"
-let id_elsif = "elsif"
-let id_loop = "loop"
-let id_and = "and"
-let id_or = "or"
-let id_xor = "xor"
-let id_use = "use"
-let id_null = "null"
-let id_not = "not"
-let id_mod = "mod"
-let id_rem = "rem"
-let id_abs = "abs"
-let id_while = "while"
-let id_for = "for"
-let id_exit = "exit"
-let id_when = "when"
-let id_package = "package"
-let id_body = "body"
-let id_constant = "constant"
-let id_subtype = "subtype"
-let id_array = "array"
-let id_record = "record"
-let id_of = "of"
-let id_integer = "integer"
-let id_float = "float"
-let id_boolean = "boolean"
+let id_begin     = "begin"
+let id_end       = "end"
+let id_new       = "new"
+let id_type      = "type"
+let id_range     = "range"
+let id_function  = "function"
+let id_in        = "in"
+let id_out       = "out"
+let id_return    = "return"
+let id_if        = "if"
+let id_then      = "then"
+let id_else      = "else"
+let id_elsif     = "elsif"
+let id_loop      = "loop"
+let id_and       = "and"
+let id_or        = "or"
+let id_xor       = "xor"
+let id_use       = "use"
+let id_null      = "null"
+let id_not       = "not"
+let id_mod       = "mod"
+let id_rem       = "rem"
+let id_abs       = "abs"
+let id_while     = "while"
+let id_for       = "for"
+let id_exit      = "exit"
+let id_when      = "when"
+let id_package   = "package"
+let id_body      = "body"
+let id_constant  = "constant"
+let id_subtype   = "subtype"
+let id_array     = "array"
+let id_record    = "record"
+let id_of        = "of"
+let id_integer   = "integer"
+let id_float     = "float"
+let id_boolean   = "boolean"
 let id_character = "character"
-let id_true = "true"
-let id_false = "false"
+let id_true      = "true"
+let id_false     = "false"
 (*WG*)
 let id_last = "last"
 let id_first = "first"
@@ -148,52 +156,52 @@ rule token = parse
 
   
   (*reconnaissance des identifiants réservés*)
-  | id_is {IS}
-  | id_with {WITH}
-  | id_package {PACKAGE}
-  | id_body {BODY}
-  | id_procedure {PROCEDURE}
-  | id_begin {BEGIN}
-  | id_end {END}
-  | id_new {NEW}
-  | id_type {TYPE}
-  | id_range {RANGE}
-  | id_function {FUNCTION}
-  | id_in {IN}
-  | id_out {OUT}
-  | id_return {RETURN}
-  | id_if {IF}
-  | id_then {THEN}
-  | id_else {ELSE}
-  | id_elsif {ELSIF}
-  | id_loop {LOOP}
-  | id_and {AND}
-  | id_or {OR}
-  | id_xor {XOR}
-  | id_use {USE}
-  | id_null {NULL}
-  | id_not {NOT}
-  | id_mod {MOD}
-  | id_rem {REM}
-  | id_abs {ABS}
-  | id_while {WHILE}
-  | id_for {FOR}
-  | id_exit {EXIT}
-  | id_when {WHEN}
-  | id_package {PACKAGE}
-  | id_body {BODY}
-  | id_constant {CONSTANT}
-  | id_subtype {SUBTYPE}
-  | id_array {ARRAY}
-  | id_record {RECORD}
-  | id_of {OF}
+  | id_is          {IS}
+  | id_with        {WITH}
+  | id_package     {PACKAGE}
+  | id_body        {BODY}
+  | id_procedure   {PROCEDURE}
+  | id_begin       {BEGIN}
+  | id_end         {END}
+  | id_new         {NEW}
+  | id_type        {TYPE}
+  | id_range       {RANGE}
+  | id_function    {FUNCTION}
+  | id_in          {IN}
+  | id_out         {OUT}
+  | id_return      {RETURN}
+  | id_if          {IF}
+  | id_then        {THEN}
+  | id_else        {ELSE}
+  | id_elsif       {ELSIF}
+  | id_loop        {LOOP}
+  | id_and         {AND}
+  | id_or          {OR}
+  | id_xor         {XOR}
+  | id_use         {USE}
+  | id_null        {NULL}
+  | id_not         {NOT}
+  | id_mod         {MOD}
+  | id_rem         {REM}
+  | id_abs         {ABS}
+  | id_while       {WHILE}
+  | id_for         {FOR}
+  | id_exit        {EXIT}
+  | id_when        {WHEN}
+  | id_package     {PACKAGE}
+  | id_body        {BODY}
+  | id_constant    {CONSTANT}
+  | id_subtype     {SUBTYPE}
+  | id_array       {ARRAY}
+  | id_record      {RECORD}
+  | id_of          {OF}
   (* identifiants non réservés mais considérés comme tels*)
-  | id_integer {INTEGER}
-  | id_float {FLOAT}
-  | id_boolean {BOOLEAN}
-  | id_character {CHARACTER}
-  | id_true {TRUE}
-  | id_false {FALSE}
+  | id_integer     {INTEGER}
+  | id_float       {FLOAT}
+  | id_boolean     {BOOLEAN}
+  | id_character   {CHARACTER}
+  | id_true        {TRUE}
+  | id_false       {FALSE}
 
 (*WG*)
   | id_last {LAST}
@@ -222,13 +230,13 @@ rule token = parse
   | ":=" {AFFECT}
 
   (* ponctuation *)
-  | ';' {POINT_VIR}
-  | '.' {POINT}
-  | ':' {DEUX_POINTS}
-  | ".." {H_DEUX_POINTS}
-  | ',' {VIR}
-  | "'" {QUOTE}
-  | "=>" {FLECHE}
+  | ';'  {SEMICOLON}
+  | '.'  {DOT}
+  | ':'  {COLON}
+  | ".." {DOUBLE_DOT}
+  | ','  {COMMA}
+  | "'"  {QUOTE}
+  | "=>" {ARROW}
 
 
   | '\n' {newline lexbuf; token lexbuf}
@@ -243,7 +251,12 @@ rule token = parse
 
   (* constantes numériques *)
   | litteral_reel {CONST_FLOAT (Lexing.lexeme lexbuf)}
-  | litteral_entier {CONST_INT (Lexing.lexeme lexbuf)}
+  | entier {CONST_INT ( Newspeak.Nat.of_string(strip_underscores (Lexing.lexeme lexbuf)))}
+  | entier as main_part ['e' 'E'] '+'? (entier as expo) {CONST_INT (
+            Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
+                    * (power_ten (int_of_string (strip_underscores expo)))
+            )
+            )}
 
   (*identifiant*)
   | ident {IDENT (Lexing.lexeme lexbuf)}

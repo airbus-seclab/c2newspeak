@@ -1,4 +1,4 @@
-/*
+/* (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -24,7 +24,7 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*/
+*) */
 
 %{ open Syntax_ada
 
@@ -93,7 +93,7 @@
 /*declaration ocamlyacc*/
 %token EOF
 %token PLUS MOINS FOIS DIV PUISS CONCAT
-%token <string> CONST_INT
+%token <Syntax_ada.nat> CONST_INT
 %token <string> CONST_FLOAT
 %token <string> IDENT
 %token <string> STRING
@@ -112,9 +112,10 @@
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
 %token INTEGER FLOAT BOOLEAN CHARACTER 
 %token NULL TRUE FALSE
-%token PAR_G PAR_D FLECHE H_DEUX_POINTS
-%token VIR POINT_VIR POINT DEUX_POINTS QUOTE
+%token PAR_G PAR_D ARROW DOUBLE_DOT
+%token COMMA SEMICOLON DOT COLON QUOTE
 %token LAST FIRST LENGTH
+
 %start s
 %type <Syntax_ada.compilation_unit> s
 
@@ -132,7 +133,7 @@ context :
 ;
 
 context_item :
-| WITH name_list POINT_VIR 
+| WITH name_list SEMICOLON 
     { let loc = loc () in
 	List.map
 	  (fun name -> With(name, loc, None))
@@ -141,7 +142,7 @@ context_item :
 ;
 
 use_clause :
-| USE name_list POINT_VIR {$2}
+| USE name_list SEMICOLON {$2}
 ;
 
 library_item :
@@ -160,18 +161,18 @@ decl :
 ;
 
 subprogram_decl :
-| subprogram_spec POINT_VIR
+| subprogram_spec SEMICOLON
     {let (spec, loc) = $1 in ((SubProgramSpec(spec)),loc)}
 ;
 
 subprogram_body:
-| subprogram_spec IS declarative_part BEGIN instr_list END name POINT_VIR
+| subprogram_spec IS declarative_part BEGIN instr_list END name SEMICOLON
     {let (spec, loc) = $1
      in 
        (check_end spec $7);
        (SubProgramBody(spec,$3,$5), loc)}
 
-| subprogram_spec IS declarative_part BEGIN instr_list END POINT_VIR
+| subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
      in (SubProgramBody(spec,$3,$5), loc)}
 ;
@@ -186,17 +187,17 @@ package_instr :
 
 
 package_decl :
-| package_loc name IS basic_declarative_part END POINT_VIR
+| package_loc name IS basic_declarative_part END SEMICOLON
     {(PackageSpec($2, $4), $1)}
-| package_loc name IS basic_declarative_part END name POINT_VIR
+| package_loc name IS basic_declarative_part END name SEMICOLON
 	{ (check_name $2 $6);
 	  (PackageSpec($2, $4), $1)}
 
 package_body:
-| package_loc BODY name IS declarative_part package_instr END POINT_VIR
+| package_loc BODY name IS declarative_part package_instr END SEMICOLON
     {(PackageBody($3, None, $5, $6), $1)}
 
-| package_loc BODY name IS declarative_part package_instr END name POINT_VIR 
+| package_loc BODY name IS declarative_part package_instr END name SEMICOLON 
     { (check_name $3 $8);
       (PackageBody($3, None, $5, $6), $1) 
     }
@@ -213,7 +214,7 @@ subprogram_spec :
 
 formal_part : 
 | parameter_specification {[$1]}
-| parameter_specification POINT_VIR formal_part {$1::$3}
+| parameter_specification SEMICOLON formal_part {$1::$3}
 ;
 
 mode :
@@ -224,9 +225,9 @@ mode :
 ;
 
 parameter_specification : 
-| ident_list DEUX_POINTS mode subtyp 
+| ident_list COLON mode subtyp 
     {{pnom=$1;mode=$3;ptype=$4;pdef=None}}
-| ident_list DEUX_POINTS mode subtyp AFFECT expression 
+| ident_list COLON mode subtyp AFFECT expression 
       {{pnom=$1;mode=$3;ptype=$4;pdef=Some($6)}}
 ;
 
@@ -249,58 +250,58 @@ basic_declarative_part :
 ;
 
 basic_declaration :
-| ident_list DEUX_POINTS subtyp_indication POINT_VIR
+| ident_list COLON subtyp_indication SEMICOLON
         {(ObjectDecl($1,$3,None, Variable), loc ())}
-| ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR
+| ident_list COLON subtyp_indication AFFECT expression SEMICOLON
 	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
-| ident_list DEUX_POINTS CONSTANT subtyp_indication AFFECT expression POINT_VIR
+| ident_list COLON CONSTANT subtyp_indication AFFECT expression SEMICOLON
 	{(ObjectDecl($1,$4,Some($6), Constant), loc ())}
-| ident_list DEUX_POINTS CONSTANT AFFECT expression POINT_VIR 
+| ident_list COLON CONSTANT AFFECT expression SEMICOLON 
 	{(NumberDecl($1, $5, None), loc())}
 | type_definition 
 	{($1, loc ())}
-| SUBTYPE ident IS subtyp_indication POINT_VIR
+| SUBTYPE ident IS subtyp_indication SEMICOLON
 	{(SubtypDecl($2,$4), loc ())}
 | use_clause {(UseDecl($1), loc ())}
 | decl  {let (spec, loc) = $1 in 
 	   (SpecDecl(spec), loc)}
-| representation_clause POINT_VIR {(RepresentClause($1), loc ())}
+| representation_clause SEMICOLON {(RepresentClause($1), loc ())}
 ;
 
 contrainte :
-| simpl_expr H_DEUX_POINTS simpl_expr 
+| simpl_expr DOUBLE_DOT simpl_expr 
     {RangeConstraint($1, $3)}
 ;
 
 type_definition :
-| TYPE ident IS ARRAY constrained_array_definition POINT_VIR 
+| TYPE ident IS ARRAY constrained_array_definition SEMICOLON 
 		{ TypeDecl(Array($2,$5))}
-| TYPE ident IS PAR_G ident_list PAR_D POINT_VIR
+| TYPE ident IS PAR_G ident_list PAR_D SEMICOLON
     { TypeDecl(Ada_utils.make_enum ($2) $5)}
-| TYPE ident IS NEW subtyp_indication POINT_VIR
+| TYPE ident IS NEW subtyp_indication SEMICOLON
 	{TypeDecl(DerivedType($2, $5))}
-| TYPE ident IS RANGE simpl_expr H_DEUX_POINTS simpl_expr POINT_VIR
+| TYPE ident IS RANGE simpl_expr DOUBLE_DOT simpl_expr SEMICOLON
 	    { TypeDecl(Ada_utils.make_range $2 $5 $7)}
-| TYPE ident IS RECORD record_definition END RECORD POINT_VIR
+| TYPE ident IS RECORD record_definition END RECORD SEMICOLON
 		{ TypeDecl(Record($2, $5)) } 	
 ;
 
 
 record_definition :
   {[]} 
-| ident_list DEUX_POINTS subtyp_indication POINT_VIR record_definition
+| ident_list COLON subtyp_indication SEMICOLON record_definition
       { ($1,$3,None)::$5 }
-| ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR 	record_definition
+| ident_list COLON subtyp_indication AFFECT expression SEMICOLON 	record_definition
       {($1,$3,Some($5))::$7};
 
 
 
 /* TO DO : if record initialization exists (?)
-| ident_list DEUX_POINTS subtyp_indication AFFECT expression POINT_VIR
+| ident_list COLON subtyp_indication AFFECT expression SEMICOLON
 	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
-| ident_list DEUX_POINTS CONSTANT subtyp_indication AFFECT expression POINT_VIR
+| ident_list COLON CONSTANT subtyp_indication AFFECT expression SEMICOLON
 	{(ObjectDecl($1,$4,Some($6), Constant), loc ())}
-| ident_list DEUX_POINTS CONSTANT AFFECT expression POINT_VIR 
+| ident_list COLON CONSTANT AFFECT expression SEMICOLON 
 	{(NumberDecl($1, $5, None), loc())}
 */
 
@@ -319,15 +320,15 @@ constrained_array_definition :
 
 matrix_indication : 
 | subtyp_indication {[$1]}
-| matrix_indication VIR subtyp_indication {$1@[$3]}
+| matrix_indication COMMA subtyp_indication {$1@[$3]}
 
 array_component_association :
-| ident FLECHE expression {($1, $3)} 
+| ident ARROW expression {($1, $3)} 
 ;
 
 named_array_aggregate :
 | array_component_association {[$1]}
-| array_component_association VIR named_array_aggregate {$1::$3}
+| array_component_association COMMA named_array_aggregate {$1::$3}
 ;
 
 array_aggregate :
@@ -339,8 +340,8 @@ representation_clause :
 ;
 
 instr_list :
-| instr POINT_VIR instr_list {$1::$3}
-| instr POINT_VIR {[$1]}
+| instr SEMICOLON instr_list {$1::$3}
+| instr SEMICOLON {[$1]}
 ;
 
 instr :
@@ -377,7 +378,7 @@ args:
 					  this case length 3 = 1*/  
 param_assoc:
 | expression {[$1]}
-| expression VIR param_assoc {$1::$3}
+| expression COMMA param_assoc {$1::$3}
       
 
 iteration_scheme :
@@ -490,7 +491,7 @@ factor :
 
 primary :
 | NULL {NullExpr}
-| CONST_INT {CInt(Newspeak.Nat.of_string $1)}
+| integer_literal {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR {CChar($1)}
 | TRUE {CBool(true)}
@@ -509,6 +510,9 @@ primary :
 /*| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)}*/
 ;
 
+integer_literal :
+| CONST_INT {$1}
+
 typ :
 | INTEGER {Constrained(Integer, Ada_config.integer_constraint, true)}
 | FLOAT {Unconstrained(Float)}
@@ -519,12 +523,10 @@ typ :
 subtyp_indication : 
 | subtyp RANGE contrainte {($1, Some($3), None)}
 | subtyp {($1, None, None)}
-/*| simpl_expr H_DEUX_POINTS simpl_expr */
-| CONST_INT H_DEUX_POINTS CONST_INT 
+/*| simpl_expr DOUBLE_DOT simpl_expr */
+| CONST_INT DOUBLE_DOT CONST_INT 
     {(Constrained(Integer, Ada_config.integer_constraint, true),
-      Some (RangeConstraint(CInt(Newspeak.Nat.of_string $1), 
-			    CInt(Newspeak.Nat.of_string $3))
-			),
+      Some (RangeConstraint(CInt($1), CInt($3))),
       None)}
 
 
@@ -540,7 +542,7 @@ procedure_call :
 ;
 param_assoc :
 | expression {[$1]}
-| expression VIR param_assoc {$1::$3}
+| expression COMMA param_assoc {$1::$3}
 ;
 */
 
@@ -551,17 +553,17 @@ ident :
 
 ident_list :
 | ident {[$1]}
-| ident VIR ident_list {$1::$3}
+| ident COMMA ident_list {$1::$3}
 ;
 
 name_list :
 | name {[$1]}
-| name VIR name_list {$1::$3}
+| name COMMA name_list {$1::$3}
 ;
 
 name : 
 | ident {([],$1)}
-| name POINT ident /* TODO : trouver une meilleur solution */
+| name DOT ident /* TODO : trouver une meilleur solution */
       {
     let (par, ident) = $1
     in (par@[ident], $3)}
