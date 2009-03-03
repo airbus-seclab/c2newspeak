@@ -646,18 +646,18 @@ let outward stmts lbl g_level g_offset =
       | (stmt, l)::stmts ->
 	  match stmt with
 	      For (blk1, e, blk2, blk3) ->  
-		let blk2', stmts', b' = fold blk2 stmts out_switch_loop has_label in
+		let blk2', stmts', b' = fold blk2 stmts out_switch_loop search_lbl in
 		  (For(blk1, e, blk2', blk3), l)::stmts', b'
 		    
 	    | DoWhile (blk, e) -> 
-		let blk', stmts', b' = fold blk stmts out_switch_loop has_label in
+		let blk', stmts', b' = fold blk stmts out_switch_loop search_lbl in
 		  (DoWhile (blk', e), l)::stmts', b'
 		    
 	    | If (e, if_blk, else_blk) ->
 		let rec if_fold if_blk stmts = 
-		  let if_blk', stmts', b' = out if_blk stmts out_if_else has_label in
+		  let if_blk', stmts', b' = out if_blk stmts out_if_else search_lbl in
 		    if not b' then 
-		      let else_blk', stmts', b' = fold else_blk stmts out_if_else has_label in
+		      let else_blk', stmts', b' = fold else_blk stmts out_if_else search_lbl in
 		      if_blk', else_blk', stmts', b'
 		    else 
 		      let if_blk', else_blk', stmts', _ = if_fold if_blk' stmts' in
@@ -997,7 +997,7 @@ let elimination stmts lbl (gotos, lo) =
     let l, id, o = goto in
     let l = ref l in
       (* force goto and label to be directly related *)
-      if indirectly_related !stmts lbl id then
+      if indirectly_related !stmts lbl id then 
 	  stmts := outward !stmts lbl l id;
 
       (* force goto and label to be siblings *)
