@@ -48,16 +48,16 @@ void main(void) {
         }
       } with lbl3: {
       }
-      (603.c:30#4)^2- =(uint32) 2-_uint32;
+      (603.c:28#2)^2- =(uint32) 2-_uint32;
     }
-    (603.c:30#4)^do {
-      (603.c:30#4)^while (1) {
-        (603.c:30#4)^choose {
+    (603.c:28#2)^do {
+      (603.c:28#2)^while (1) {
+        (603.c:28#2)^choose {
          -->
-          (603.c:30#4)^guard(1-_uint32);
+          (603.c:28#2)^guard(1-_uint32);
          -->
-          (603.c:30#4)^guard(! 1-_uint32);
-          (603.c:30#4)^goto lbl1;
+          (603.c:28#2)^guard(! 1-_uint32);
+          (603.c:28#2)^goto lbl1;
         }
         (603.c:28#2)^1- =(uint32) 1-_uint32;
         (603.c:28#2)^{
@@ -100,7 +100,7 @@ void main(void) {
             }
           } with lbl12: {
           }
-          (603.c:30#4)^2- =(uint32) 2-_uint32;
+          (603.c:28#2)^2- =(uint32) 2-_uint32;
         }
       }
     } with lbl1: {
