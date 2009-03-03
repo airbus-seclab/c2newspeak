@@ -7,7 +7,7 @@ int32 t210.f(int32) {
 
 void t210.main(void) {
   (t210.adb:9#122)^int32 x;
-  (t210.adb:11#150)^int32 !tmp-1073741820;
+  (t210.adb:11#150)^int32 !tmp0;
   (t210.adb:11#150)^{
     int32 t210.f.arg1;
     (t210.adb:11#150)^0- =(int32) 2;

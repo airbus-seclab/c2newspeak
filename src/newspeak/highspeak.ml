@@ -44,14 +44,14 @@ and init_t =
     Zero
   | Init of (size_t * scalar_t * exp) list
 
-and fundec = (vid list * vid list * ftyp * blk)
+and fundec = (string list * string list * ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * typ)
   | Guard of exp
 (* TODO: maybe simplify, use only variable name, no need for vid
    simplifies also the left value, put Local and Global into just Var *)
-  | Decl of (string * typ * vid * blk)
+  | Decl of (string * typ * blk)
   | Select of (blk * blk)
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
@@ -77,7 +77,7 @@ and blk = stmt list
 
 and lval =
 (* TODO: maybe should put local and global together by name??? *)
-    Local of vid
+    Local of string
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)

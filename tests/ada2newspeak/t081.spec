@@ -9,7 +9,7 @@ void t081.main(void) {
   (t081.adb:14#243)^int32 x;
   (t081.adb:15#276)^int32 y;
   (t081.adb:14#243)^{
-    int32 !tmp-1073741820;
+    int32 !tmp0;
     (t081.adb:14#243)^t081.a();
     (t081.adb:14#243)^2- =(int32) 0-_int32;
   }

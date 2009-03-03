@@ -19,18 +19,18 @@ void t089.main(void) {
   (t089.adb:32#597)^int32 z;
   (t089.adb:33#611)^uint3 w;
   (t089.adb:35#636)^{
-    int32 !tmp-1073741814;
+    int32 !tmp2;
     (t089.adb:35#636)^t089.b();
     (t089.adb:35#636)^4- =(int32) 0-_int32;
   }
   (t089.adb:36#650)^2- =(uint3) 5;
   (t089.adb:37#669)^{
-    int32 !tmp-1073741815;
+    int32 !tmp1;
     (t089.adb:37#669)^t089.a();
     (t089.adb:37#669)^2- =(int32) belongs[10,15] 0-_int32;
   }
   (t089.adb:38#683)^{
-    uint3 !tmp-1073741816;
+    uint3 !tmp0;
     (t089.adb:38#683)^t089.jourdusoleil();
     (t089.adb:38#683)^1- =(uint3) belongs[0,6] 0-_uint3;
   }

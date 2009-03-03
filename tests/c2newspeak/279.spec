@@ -4,7 +4,7 @@ Newspeak output
 int32 g(void) {
   (279.c:28#6)^int32 x;
   (279.c:30#2)^{
-    int32 !tmp-1073741822;
+    int32 !tmp0;
     (279.c:30#2)^do {
       (279.c:30#2)^while (1) {
         (279.c:30#2)^f();

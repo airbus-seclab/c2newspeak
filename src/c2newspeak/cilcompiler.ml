@@ -715,10 +715,7 @@ and translate_call ret f args =
     end;
     K.Call (args, ft', fn, ret)
 
-let translate_local d =
-  let vid = Cilenv.loc_declare d in
-  let (_, n, t, loc) = d in
-    (n, t, vid, loc)
+let translate_local (_, n, t, loc) = (n, t, loc)
 
 let translate_fun name (locals, formals, body) =
   let (floc, ret_t) = Cilenv.get_funspec name in
@@ -728,8 +725,8 @@ let translate_fun name (locals, formals, body) =
     let status = Cilenv.empty_status () in
       
       if ret_t <> None then Cilenv.push_local ();
-      let ret_ids = if ret_t <> None then 0::[] else [] in
-      let arg_ids = List.map Cilenv.loc_declare formals in
+      let ret_ids = if ret_t <> None then "!ret"::[] else [] in
+      let arg_ids = List.map (fun (_, n, _, _) -> n) formals in
       let locals = List.map translate_local locals in
 
       let body = translate_stmts status body.bstmts in

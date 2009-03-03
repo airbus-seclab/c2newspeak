@@ -4,7 +4,7 @@ t037.adb
 void t037.appelfonction(void) {
   (t037.adb:9#129)^uint1 x;
   (t037.adb:12#155)^{
-    uint1 !tmp-1073741820;
+    uint1 !tmp0;
     (t037.adb:12#155)^{
       int32 t037.f.arg1;
       (t037.adb:12#155)^0- =(int32) 10;

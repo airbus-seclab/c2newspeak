@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 t046.adb
 void t046(void) {
-  (t046.adb:6#88)^uint1 !tmp-1073741823;
+  (t046.adb:6#88)^uint1 !tmp0;
   (t046.adb:6#88)^{
     int32 t093.z.arg1;
     (t046.adb:6#88)^0- =(int32) 42;

@@ -8,7 +8,7 @@ int32 f(int32) {
 void main(void) {
   (063.c:31#6)^int32 x;
   (063.c:32#2)^{
-    int32 !tmp-1073741819;
+    int32 !tmp0;
     (063.c:32#2)^{
       int32 f.arg1;
       (063.c:32#2)^0- =(int32) 1;

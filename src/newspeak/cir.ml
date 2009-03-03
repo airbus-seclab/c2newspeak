@@ -27,7 +27,7 @@
 open Newspeak
 open Npkil
 
-let vcnt = ref min_int
+let vcnt = ref 0
 
 let fresh_id () =
   let id = !vcnt in
@@ -55,7 +55,7 @@ and field = (string * (int * typ))
 (* TODO: remove location, unused! *)
 and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
 
-and funbody = ((vid * vid list) * blk)
+and funbody = ((string * string list) * blk)
 
 and typ =
     | Void
@@ -76,7 +76,7 @@ and stmt = (stmtkind * location)
 and stmtkind =
   | Block of (blk * (lbl * blk) option)   (* DoWith construct *)
   | Goto of lbl
-  | Decl of (typ * string * int)
+  | Decl of (typ * string)
   | Set of (lv * typ * exp)
   | Loop of blk
   | If of (exp * blk * blk)
@@ -94,7 +94,7 @@ and typ_exp = (exp * scalar_t)
 and lv =
 (* variable identified by its unique id. Use fresh_id () to generate
    a new variable *)
-    | Var of vid
+    | Local of string
     | Global of string
     | Shift of (lv * exp)
     | Deref of (exp * typ)
@@ -155,7 +155,7 @@ let rec string_of_exp margin e =
 
 and string_of_lv margin x =
   match x with
-    | Var x -> "v"^(string_of_int x)
+      Local x -> x
     | Global x -> x
     | Shift (lv, e) -> (string_of_lv margin lv)^" + "^(string_of_exp margin e)
     | Deref (e, t) -> "*("^(string_of_exp margin e)^")_"^(string_of_typ t)
@@ -179,7 +179,7 @@ and string_of_stmt margin (x, _) =
 	^(string_of_blk (margin^"  ") action)
 	^margin^"}"
     | Goto lbl -> "goto lbl"^(string_of_int lbl)^";"
-    | Decl (_, x, _) -> "typ "^x^";"
+    | Decl (_, x) -> "typ "^x^";"
     | Set (lv, _, e) -> 
 	(string_of_lv margin lv)^" = "^(string_of_exp margin e)^";"
     | If (e, br1, br2) -> 
@@ -216,8 +216,8 @@ let print (_, fundefs, _) = Hashtbl.iter print_fundef fundefs
 let create_tmp loc t = 
   let id = fresh_id () in
   let x = "!tmp"^(string_of_int id) in
-  let decl = (Decl (t, x, id), loc) in
-  let v = Var id in
+  let decl = (Decl (t, x), loc) in
+  let v = Local x in
     (decl, v)
 	
 let exp_of_int i = Const (CInt (Nat.of_int i))
@@ -306,7 +306,7 @@ let rec normalize_exp x =
 	    
 and normalize_lv x =
   match x with
-      Var _ | Global _ -> ([], x, [])
+      Local _ | Global _ -> ([], x, [])
     | Shift (lv, e) ->
 	let (pref1, lv, post1) = normalize_lv lv in
 	let (pref2, e, post2) = normalize_exp e in

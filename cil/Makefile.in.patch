@@ -1,4 +1,16 @@
+215c215
+< cillib: $(OBJDIR)/cil.$(CMXA) $(OBJDIR)/libcil.a
+---
+> cillib: $(OBJDIR)/cil.$(CMXA) $(OBJDIR)/libcil.o
 246c246
 < 	echo -ne \
 ---
 > 	echo \
+281c281
+< $(OBJDIR)/libcil.a: $(OCAML_CIL_LIB_CMODULES:%=$(OBJDIR)/lib%.a) \
+---
+> $(OBJDIR)/libcil.o: $(OCAML_CIL_LIB_CMODULES:%=$(OBJDIR)/lib%.a) \
+285c285
+< $(OBJDIR)/libcil.a:
+---
+> $(OBJDIR)/libcil.o:

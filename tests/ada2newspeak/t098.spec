@@ -8,7 +8,7 @@ uint3 t098.g(void) {
 void t098.main(uint2) {
   (t098.adb:19#272)^int32 x;
   (t098.adb:21#300)^{
-    int32 !tmp-1073741817;
+    int32 !tmp0;
     (t098.adb:21#300)^t098.t096();
     (t098.adb:21#300)^1- =(int32) 0-_int32;
   }

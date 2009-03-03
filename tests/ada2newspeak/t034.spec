@@ -3,7 +3,7 @@ Newspeak output
 t034.adb
 void t034.appelfonction(void) {
   (t034.adb:11#158)^int32 y;
-  (t034.adb:13#186)^int32 !tmp-1073741821;
+  (t034.adb:13#186)^int32 !tmp0;
   (t034.adb:13#186)^t034.f();
   (t034.adb:13#186)^1- =(int32) 0-_int32;
 }

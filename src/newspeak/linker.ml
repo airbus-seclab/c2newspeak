@@ -154,8 +154,8 @@ let rec generate_stmt (sk, loc) =
   let new_sk = 
     match sk with
 	Set (lv, e, t) -> H.Set (generate_lv lv, generate_exp e, generate_typ t)
-      | Decl (name, t, vid, b) -> 
-	  H.Decl (name, generate_typ t, vid, List.map generate_stmt b)
+      | Decl (name, t, b) -> 
+	  H.Decl (name, generate_typ t, List.map generate_stmt b)
       | Guard cond -> H.Guard (generate_exp cond)
       | Select (body1, body2) ->
 	  H.Select (generate_blk body1, generate_blk body2)

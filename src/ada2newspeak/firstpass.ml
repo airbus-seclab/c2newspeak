@@ -457,16 +457,14 @@ let translate compil_unit =
 		 ("conflict : "^(string_of_name x)
 		  ^" already declared")
       );
-      let id = C.fresh_id () in
       let tr_typ = translate_typ (base_typ st) in
-      let (lv,typ_cir) = 
+      let (lv, typ_cir) = 
 	if deref
-	then (C.Deref(C.Lval(C.Var(id), tr_typ), tr_typ), C.Scalar(Npk.Ptr))
-	else (C.Var(id), tr_typ)
+	then (C.Deref(C.Lval(C.Local ident, tr_typ), tr_typ), C.Scalar Npk.Ptr)
+	else (C.Local ident, tr_typ)
       in
 	Hashtbl.add symbtbl x (VarSymb (lv, st, false, ro), 
-			       typ_cir, loc);
-	id
+			       typ_cir, loc)
 	  
   (* déclaration d'un nombre local *)
   and add_number loc value lvl ident =
@@ -570,7 +568,7 @@ let translate compil_unit =
 		   Npkcontext.report_error "Firstpass.add_enum"
 		     ("conflict : "^x^" already declared")
 		     
-	       | ((EnumSymb _ |VarSymb(_)
+	       | ((EnumSymb _ |VarSymb _
 		  | FunSymb _ |NumberSymb(_)),_,_) -> ())
 	    (find_all_symb name)));
       
@@ -589,11 +587,11 @@ let translate compil_unit =
   (* génération de temp *)
   let gen_tmp loc t =
     let x = "tmp"^(string_of_int !tmp_cnt) in
-    let id = add_var loc (Unconstrained(t)) x false false in
-    let t = translate_typ t in
-    let decl = (C.Decl (t, x, id), loc) in
-      incr tmp_cnt;
-      (x, decl, C.Var id)
+      add_var loc (Unconstrained(t)) x false false;
+      let t = translate_typ t in
+      let decl = (C.Decl (t, x), loc) in
+	incr tmp_cnt;
+	(x, decl, C.Local x)
   in
 
   (* fonctions pour la gestion des types *)
@@ -1794,7 +1792,7 @@ let translate compil_unit =
       | Out | InOut -> (true, false)
     in
       List.map 
-	(fun name -> (name, add_var loc param.ptype name deref ro))
+	(fun name -> add_var loc param.ptype name deref ro; (name, name))
       param.pnom
   in
 
@@ -1804,18 +1802,19 @@ let translate compil_unit =
     (List.flatten
        (List.map translate_param param_list))
   and add_params subprog_spec loc = 
-    let (param_list, ret_id) =
+    let param_list =
       match subprog_spec with
 	| Function(_, param_list, return_type) ->
-	    (param_list, add_var loc return_type ret_ident false false)
-	| Procedure(_,param_list) -> 
-	    (param_list, C.fresh_id ())
+	    add_var loc return_type ret_ident false false;
+	    param_list
+	| Procedure(_, param_list) -> 
+	    param_list
     in
     let (param_names, vids) =
       (List.split (List.flatten
 		     (List.map (add_param loc) param_list)))
     in
-      (param_names, (ret_id,vids))
+      (param_names, (ret_ident, vids))
 	
       
   in
@@ -1826,9 +1825,7 @@ let translate compil_unit =
 	    (name, param_list, Some(return_type))
 	| Procedure(name,param_list) -> 
 	    (name, param_list, None)
-    in let params_typ : C.typ list = 
-	translate_param_list param_list
-    in 
+    in let params_typ : C.typ list = translate_param_list param_list in 
       (name, (params_typ, translate_subtyp_option return_type))
 	
   in
@@ -1862,8 +1859,7 @@ let translate compil_unit =
 		  end)
 	   list_ident
     in 
-    let (name, ftyp) = translate_sub_program_spec subprogspec
-    in
+    let (name, ftyp) = translate_sub_program_spec subprogspec in
       check_ident name;
       Hashtbl.add symbtbl name 
 	(FunSymb (C.Fname(translate_name name), subprogspec, 
@@ -1915,13 +1911,13 @@ let translate compil_unit =
 	      o := o'+ (size_of typ);
 	      last_align := max !last_align cur_align
 	  in
-	  let fields_to_aff  (ids, sp_ind, exp_opt) loc = 
+	  let fields_to_aff (ids, sp_ind, exp_opt) loc = 
 	    List.iter (fun _ -> match exp_opt with 
 			   None -> update_offset sp_ind
 			 | Some e ->
 			     res:= 
 			       (make_affect 
-				  (C.Shift (C.Var(id), 
+				  (C.Shift (C.Local id, 
 					    C.Const(C.CInt (Nat.of_int !o))))
 				  (fst (translate_exp e (Some (base_typ( 
 				    Ada_utils.extract_subtyp subtyp_ind)))))  
@@ -1948,18 +1944,18 @@ let translate compil_unit =
 	  | Constant | StaticVal(_) -> true in
 	  List.fold_right
 	    (fun ident (list_decl, list_aff) -> 
-	       let id = add_var loc subtyp ident false read_only in
+	       add_var loc subtyp ident false read_only;
 	       let decl = (C.Decl(translate_subtyp subtyp, 
-				  ident, id),loc)::list_decl
+				  ident),loc)::list_decl
 	       and aff =  
-		 let default_affs = defaults_record_inits subtyp id  in
+		 let default_affs = defaults_record_inits subtyp ident in
 
 		 match def with
 		   | None -> list_aff
 		   | Some(exp) -> 
 		       let (tr_exp,_) = translate_exp exp 
 			 (Some(base_typ subtyp)) in 
-			 default_affs@((make_affect (C.Var(id)) 
+			 default_affs@((make_affect (C.Local ident) 
 			    tr_exp subtyp loc)::list_aff)
 	       in (decl,aff))
 	    idents

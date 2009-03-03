@@ -44,11 +44,11 @@ and ginfo = (typ * location * init_t option * used)
 and used = bool
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and funinfo = (vid list * vid list * ftyp * blk)
+and funinfo = (string list * string list * ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * typ)
-  | Decl of (string * typ * vid * blk)
+  | Decl of (string * typ * blk)
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
@@ -73,7 +73,7 @@ and blk = stmt list
 and vid = int
 
 and lval =
-    Local of Newspeak.vid
+    Local of string
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
@@ -179,4 +179,4 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
    declarations decls. The order of the declaration must be carefully
    checked because in Newspeak, the variables are identified by their
    positions in the declaration stacks, not by their names *)
-val append_decls: (string * typ * vid * location) list -> blk -> blk
+val append_decls: (string * typ * location) list -> blk -> blk

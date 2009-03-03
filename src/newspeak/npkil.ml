@@ -43,11 +43,11 @@ and ginfo = (typ * location * init_t option * used)
 
 and used = bool
 
-and funinfo = (vid list * vid list * ftyp * blk)
+and funinfo = (string list * string list * ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * typ)
-  | Decl of (string * typ * vid * blk)
+  | Decl of (string * typ * blk)
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
@@ -71,7 +71,7 @@ and blk = stmt list
 and vid = int
 
 and lval =
-    Local of vid
+    Local of string
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
@@ -184,13 +184,9 @@ let string_of_unop op =
     | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
     | IntToPtr _ -> "(ptr)"
 	  
-let string_of_vid = string_of_int
-
-let string_of_local vid = (string_of_vid vid) ^ "-"
-
 let rec string_of_lval lv =
   match lv with
-      Local vid -> string_of_local vid
+      Local vid -> vid
     | Global name -> "Global("^name^")"
     | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
@@ -246,7 +242,7 @@ let dump_npko (fnames, globs, funs, _) =
 	  print_endline ((string_of_lval lv)^" =("^(string_of_typ t)^
 			    ") "^(string_of_exp e)^";")
 
-      | Decl (name, t, _, body) ->
+      | Decl (name, t, body) ->
 	  if only then begin
 	    print_endline ((string_of_typ t)^" "^name^";");
 	    dump_blk align body
@@ -501,7 +497,7 @@ let cast t e t' =
 
 let rec append_decls d body =
   match d with
-      (x, t, id, loc)::tl -> (Decl (x, t, id, append_decls tl body), loc)::[]
+      (x, t, loc)::tl -> (Decl (x, t, append_decls tl body), loc)::[]
     | [] -> body
 
 let rec negate e =

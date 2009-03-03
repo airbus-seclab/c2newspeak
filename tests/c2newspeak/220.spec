@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 220.c
 void main(void) {
-  (220.c:31#2)^int32 !tmp-1073741822;
+  (220.c:31#2)^int32 !tmp0;
   (220.c:29#6)^int32 x;
   (220.c:28#5)^do {
     (220.c:30#2)^choose {

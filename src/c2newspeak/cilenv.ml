@@ -39,8 +39,8 @@ type funinfo = {
   mutable fargs : (string * typ) list option;
   frett : typ option;
   mutable pbody : blk option;
-  mutable arg_ids: int list;
-  mutable ret_ids: int list;
+  mutable arg_ids: string list;
+  mutable ret_ids: string list;
 }
 
 (*-----------*)
@@ -141,9 +141,6 @@ let glb_uniquename v =
 (* Counter *)
 let loc_cnt = ref 0
 
-(* Association table Cil.vid -> Newspeak.vid *)
-let loc_tabl = Hashtbl.create 100
-
 (* This reference keeps the old counter when translating a call. The
    programmer must check that only one save can be made at a time*)
 let loc_cnt_sav = ref 0
@@ -153,11 +150,6 @@ let push_local () = ignore (incr loc_cnt)
 
 (* Functions used in translate_fun *)
 (*---------------------------------*)
-
-let loc_declare (cil_vid, _, _, _) =
-  let vid = incr loc_cnt in
-    Hashtbl.add loc_tabl cil_vid vid;
-    vid
 
 (* Functions used in translate_call *)
 (*----------------------------------*)
@@ -251,16 +243,7 @@ let get_var cil_var =
   if cil_var.vglob then begin
     let norm_name = glb_uniquename cil_var in
       Npkil.Global norm_name
-  end else begin
-    (* local variables *)
-    try
-      let vid = Hashtbl.find loc_tabl cil_var.vid in
-	Npkil.Local vid
-    with Not_found -> 
-      Npkcontext.report_error "Npkenv.get_var"
-	("unexpected variable "
-	 ^(Cilutils.string_of_lval (Var cil_var, NoOffset)))
-  end
+  end else Npkil.Local cil_var.vname
 
 let get_cstr str =
   let (name, glb) = Npkil.create_cstr str in
@@ -270,7 +253,7 @@ let get_cstr str =
     let sz = Nat.of_int (((String.length str) + 1) * Config.size_of_char) in
       Npkil.AddrOf (Npkil.Global name, Npkil.Known sz)
 
-let get_ret_var () = Npkil.Local 0
+let get_ret_var () = Npkil.Local "!ret"
 
 let get_ret_lbl () = return_lbl
 
@@ -289,7 +272,6 @@ let reset_lbl_gen () = lbl_cnt := brk_lbl
 
 let empty_status () = 
   loc_cnt := 0;
-  Hashtbl.clear loc_tabl;
   []
 
 let new_lbl () = incr lbl_cnt
