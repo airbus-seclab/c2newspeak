@@ -450,9 +450,7 @@ let avoid_break_continue_capture stmts lwhile l g_offset =
 let sibling_elimination stmts lbl g_offset =
   let rec add_loop_delete_goto stmts =
     match stmts with
-	[] ->
-	  invalid_arg ("Goto_elimination.sibling_elimination: implementation bug. " ^
-			 "Goto has to be in this stmts list")
+	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], stmts
@@ -465,12 +463,16 @@ let sibling_elimination stmts lbl g_offset =
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
-	      Label lbl' when lbl' = lbl ->
-		let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
-		let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-		let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
-		  before @ ( (DoWhile (blk', e), l)::(after'@after))
-		    
+	      Label lbl' when lbl' = lbl -> begin
+		try
+		  let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
+		  let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
+		  let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
+		    before @ ( (DoWhile (blk', e), l)::(after'@after))
+		with
+		    (* goto may have disappeared because of optimizations *)
+		    Not_found -> (stmt, l)::stmts
+	      end
 	    | _ -> (stmt, l)::(backward stmts)
   in
 
@@ -704,7 +706,7 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let set = Exp (Set (lbl', None, e)) in
-    if has_label if_blk lbl then 
+    if search_lbl if_blk lbl then 
       begin
 	let cond = IfExp (lbl', cond, zero) in
 	let l' = try snd (List.hd if_blk) with Failure "hd" -> l in
@@ -845,7 +847,7 @@ and inward lbl g_offset g_loc stmts =
   in
   let rec inward before stmts = 
     match stmts with
-	[] -> invalid_arg "Goto_elimination.inward: label has to be in that stmt list"
+	[] -> []
       | (stmt, l)::stmts ->
 	  if has_label [stmt, l] lbl then
 	    before@((stmt, l)::stmts)
