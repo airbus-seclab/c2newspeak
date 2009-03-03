@@ -9,7 +9,7 @@ void main(void) {
     int32 i;
     (586.c:28#2)^1- =(uint32) 1-_uint32;
     (586.c:28#2)^{
-      uint32 switch.586.c:28#2;
+      uint32 switch.586.c:28#2.0;
       (586.c:28#2)^choose {
        -->
         (586.c:28#2)^guard(! 2-_uint32);
@@ -51,7 +51,7 @@ void main(void) {
         }
         (586.c:28#2)^1- =(uint32) 1-_uint32;
         (586.c:28#2)^{
-          uint32 switch.586.c:28#2;
+          uint32 switch.586.c:28#2.0;
           (586.c:28#2)^choose {
            -->
             (586.c:28#2)^guard(! 2-_uint32);

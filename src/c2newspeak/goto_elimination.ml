@@ -368,14 +368,15 @@ let rec related stmts lbl g_offset =
 		  if p' = No then loops previous p stmts else raise Indirect
 		  
 	    | CSwitch (_, cases, default) ->
-		let rec rel cases =
+		let rec rel previous cases =
 		  match cases with
-		      [] -> No
+		      [] -> previous
 		    | (_, blk, _)::cases -> 
 			let p = related No blk in 
-			  if p = No then rel cases else p
+			if p = No then rel previous cases 
+			else let p' = loops previous p [] in rel p' cases
 		in
-		let p = rel cases in
+		let p = rel No cases in
 		let p' = related No default in
 		  if p = No then loops previous p' stmts
 		  else 
@@ -403,7 +404,7 @@ let indirectly_related stmts lbl g_offset =
       Indirect -> true
     | Direct | Sibling -> false
 
-let avoid_break_continue_capture stmts lwhile l = 
+let avoid_break_continue_capture stmts lwhile l g_offset = 
   let rec add stmts l var skind =
     let stmts', vars = search stmts in
     let set = Exp (Set( (Var var), None, one)) in
@@ -414,11 +415,11 @@ let avoid_break_continue_capture stmts lwhile l =
       | (stmt, l')::stmts ->
 	  match stmt with
 	      Break -> 
-		let var = "break."^(Newspeak.string_of_loc l') in
+		let var = "break."^(Newspeak.string_of_loc l')^"."^g_offset in
 		add stmts l' var Break
 	
 	    | Continue ->
-		let var = "continue."^(Newspeak.string_of_loc l') in
+		let var = "continue."^(Newspeak.string_of_loc l')^"."^g_offset in
 		  add stmts l' var Continue
 
 	    | If (e, if_blk, else_blk) ->
@@ -467,7 +468,7 @@ let sibling_elimination stmts lbl g_offset =
 	      Label lbl' when lbl' = lbl ->
 		let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
 		let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-		let before, blk', after' = avoid_break_continue_capture blk' l l' in
+		let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
 		  before @ ( (DoWhile (blk', e), l)::(after'@after))
 		    
 	    | _ -> (stmt, l)::(backward stmts)
@@ -784,7 +785,7 @@ and dowhile_in lbl l e before cond blk g_offset g_loc =
 
 and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
-  let tswitch = "switch."^(Newspeak.string_of_loc l) in
+  let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
   let declr = VDecl (tswitch, uint_typ, false, false, None) in
   let tswitch = Var tswitch in
   let set = Exp (Set (lbl', None, e)) in
@@ -909,7 +910,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 		    let if' = If(lbl', [Goto g_lbl, g_loc], []) in
 		    let set = Exp (Set (lbl', None, e)) in
 		    let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
-		    let before', blk', after' = avoid_break_continue_capture blk l l_set in
+		    let before', blk', after' = avoid_break_continue_capture blk l l_set g_offset in
 		    let blk' = [(if', l) ; (stmt, l)] @ blk' @ [(set, l_set)] in
 		      (* inward transformations on the blk chunk. We know that the
 			 first stmt is the goto stmt and the second one contains
