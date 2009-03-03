@@ -101,7 +101,6 @@ let _ =
   Hashtbl.add token_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
   Hashtbl.add token_tbl "__packed__" PACKED;
   Hashtbl.add token_tbl "packed" PACKED;
-  Hashtbl.add token_tbl "aligned" ALIGNED;
   Hashtbl.add token_tbl "weak" WEAK;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   
