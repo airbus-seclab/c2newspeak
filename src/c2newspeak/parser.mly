@@ -198,7 +198,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
-%token ALIAS ALIGNED WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
+%token ALIGNED WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
 %token EOF
 
@@ -975,7 +975,8 @@ attribute_name_list:
 ;;
 
 attribute_name:
-  ALIAS LPAREN STRING RPAREN               {
+  IDENTIFIER LPAREN STRING RPAREN               {
+    if $1 <> "alias" then raise Parsing.Parse_error;
     Npkcontext.report_warning "Parser.attribute" 
       "ignoring attribute alias";
     []

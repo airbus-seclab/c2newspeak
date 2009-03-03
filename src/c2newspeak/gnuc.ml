@@ -43,7 +43,9 @@ let builtins =
      "extern char *__builtin_strncat(char *dst, char *src, unsigned int sz);";
      "extern long __builtin_expect(long exp, long val);";
     ]
-
+(* TODO: check that all these tokens can not be function names!!!!
+   otherwise do it somehow differently!!
+*)
 let _ = 
   Hashtbl.add token_tbl "__extension__" EXTENSION;
   (* prevent warnings when compiling in -pedantic *)
@@ -100,7 +102,6 @@ let _ =
   Hashtbl.add token_tbl "__packed__" PACKED;
   Hashtbl.add token_tbl "packed" PACKED;
   Hashtbl.add token_tbl "aligned" ALIGNED;
-  Hashtbl.add token_tbl "alias" ALIAS;
   Hashtbl.add token_tbl "weak" WEAK;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   
