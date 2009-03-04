@@ -28,10 +28,10 @@
   open Lexing
  
    
-  (* supprime les guillemets qui entourent une chaîne *)
+  (* supprime les guillemets qui entourent une chaine *)
   let extrait_chaine s = String.sub s 1 (String.length s - 2)
   
-  (* renvoie le code ascii du caractère en position 1*)
+  (* renvoie le code ascii du caractere en position 1*)
   let extrait_char s = 
     int_of_char (String.get s 1)
 
@@ -77,10 +77,11 @@
     let strip_underscores s =
         Str.global_replace (Str.regexp_string "_") "" s
 
-    (* computes the value of a based numeral *)
+    (* Computes the value of a based numeral *)
     let int_of_based_string base str =
-        if (base < 2 || base > 16) then Npkcontext.report_error "Based litteral"
-                            "a base should be between 2 and 16, inclusive"
+        if (base < 2 || base > 16) then
+            Npkcontext.report_error "Lexer.int_of_based_string"
+                                    "A base b should be 2 <= b <= 16"
         else begin
             let value_of_char c = match c with
                     | '0' ->  0 | '1' ->  1 | '2' ->  2 | '3' ->  3
@@ -89,27 +90,30 @@
                     | 'c' -> 12 | 'd' -> 13 | 'e' -> 14 | 'f' -> 15
                     | 'A' -> 10 | 'B' -> 11 | 'C' -> 12 | 'D' -> 13
                     | 'E' -> 14 | 'F' -> 15
-                    | _ -> failwith ("Internal error : input '"^(String.make 1 c)^"' in value_of_char"
-                                   ^" (based litterals)") in
+                    | _ -> invalid_arg ("Internal error : input '"
+                                        ^(String.make 1 c)^"' in value_of_char"
+                                        ^" (based litterals)")
+            in
             let rec aux start acc =
                 if start = (String.length str) then acc
                 else begin
                     let value = value_of_char str.[start] in
                         if value >= base then
-                            Npkcontext.report_error "Based litteral"
-                                        "in base X, digits are strictly less than X" 
-                        else aux (start+1) (base*acc+value)
+                            Npkcontext.report_error "Lexer.int_of_based_string"
+                                "In base X, digits should be < X" 
+                        else aux (start+1) (base * acc + value)
                 end
             in
             aux 0 0
         end
     
+    (* Provides a default value for a 'a option *)
     let defaults_to def_value opt = match opt with 
-        | None -> def_value
+        | None   -> def_value
         | Some x -> x
 
 }
-(*à élargir : accent *)
+(*a elargir : accent *)
  
 let lettre = ['a'-'z' 'A'-'Z']
 let chiffre = ['0'-'9']
@@ -131,105 +135,113 @@ let litteral_reel = reel
 (*commentaires*)
 let commentaire = "--" [^ '\n']*
 
-(*identificateurs prédifinis*)
-let id_is        = "is"
-let id_with      = "with"
-let id_package   = "package"
-let id_body      = "body"
-let id_procedure = "procedure"
-let id_begin     = "begin"
-let id_end       = "end"
-let id_new       = "new"
-let id_type      = "type"
-let id_range     = "range"
-let id_function  = "function"
-let id_in        = "in"
-let id_out       = "out"
-let id_return    = "return"
-let id_if        = "if"
-let id_then      = "then"
-let id_else      = "else"
-let id_elsif     = "elsif"
-let id_loop      = "loop"
-let id_and       = "and"
-let id_or        = "or"
-let id_xor       = "xor"
-let id_use       = "use"
-let id_null      = "null"
-let id_not       = "not"
-let id_mod       = "mod"
-let id_rem       = "rem"
-let id_abs       = "abs"
-let id_while     = "while"
-let id_for       = "for"
-let id_exit      = "exit"
-let id_when      = "when"
-let id_package   = "package"
-let id_body      = "body"
-let id_constant  = "constant"
-let id_subtype   = "subtype"
-let id_array     = "array"
-let id_record    = "record"
-let id_of        = "of"
+(*identificateurs predefinis*)
 let id_integer   = "integer"
 let id_float     = "float"
 let id_boolean   = "boolean"
 let id_character = "character"
 let id_true      = "true"
 let id_false     = "false"
+
 (*WG*)
-let id_last = "last"
-let id_first = "first"
-let id_length = "length"
+let id_last      = "last"
+let id_first     = "first"
+let id_length    = "length"
 
 rule token = parse
     
-  (* identifiants composés *) 
-  | id_and blanc* id_then {ANDTHEN}
-  | id_or blanc* id_else {ORELSE}
+  (*reconnaissance des identifiants reserves*)
 
-  
-  (*reconnaissance des identifiants réservés*)
-  | id_is          {IS}
-  | id_with        {WITH}
-  | id_package     {PACKAGE}
-  | id_body        {BODY}
-  | id_procedure   {PROCEDURE}
-  | id_begin       {BEGIN}
-  | id_end         {END}
-  | id_new         {NEW}
-  | id_type        {TYPE}
-  | id_range       {RANGE}
-  | id_function    {FUNCTION}
-  | id_in          {IN}
-  | id_out         {OUT}
-  | id_return      {RETURN}
-  | id_if          {IF}
-  | id_then        {THEN}
-  | id_else        {ELSE}
-  | id_elsif       {ELSIF}
-  | id_loop        {LOOP}
-  | id_and         {AND}
-  | id_or          {OR}
-  | id_xor         {XOR}
-  | id_use         {USE}
-  | id_null        {NULL}
-  | id_not         {NOT}
-  | id_mod         {MOD}
-  | id_rem         {REM}
-  | id_abs         {ABS}
-  | id_while       {WHILE}
-  | id_for         {FOR}
-  | id_exit        {EXIT}
-  | id_when        {WHEN}
-  | id_package     {PACKAGE}
-  | id_body        {BODY}
-  | id_constant    {CONSTANT}
-  | id_subtype     {SUBTYPE}
-  | id_array       {ARRAY}
-  | id_record      {RECORD}
-  | id_of          {OF}
-  (* identifiants non réservés mais considérés comme tels*)
+  | "abs"        {ABS}
+  | "and"        {AND}
+  | "array"      {ARRAY}
+  | "begin"      {BEGIN}
+  | "body"       {BODY}
+  | "constant"   {CONSTANT}
+  | "elsif"      {ELSIF}
+  | "else"       {ELSE}
+  | "end"        {END}
+  | "exit"       {EXIT}
+  | "for"        {FOR}
+  | "function"   {FUNCTION}
+  | "if"         {IF}
+  | "in"         {IN}
+  | "is"         {IS}
+  | "loop"       {LOOP}
+  | "mod"        {MOD}
+  | "new"        {NEW}
+  | "not"        {NOT}
+  | "null"       {NULL}
+  | "of"         {OF}
+  | "or"         {OR}
+  | "out"        {OUT}
+  | "package"    {PACKAGE}
+  | "procedure"  {PROCEDURE}
+  | "range"      {RANGE}
+  | "record"     {RECORD}
+  | "rem"        {REM}
+  | "return"     {RETURN}
+  | "subtype"    {SUBTYPE}
+  | "then"       {THEN}
+  | "type"       {TYPE}
+  | "use"        {USE}
+  | "when"       {WHEN}
+  | "while"      {WHILE}
+  | "with"       {WITH}
+  | "xor"        {XOR}
+
+(* Unrecognized tokens *)
+
+    (* Task-related *)
+        (* abort        *)
+        (* accept       *)
+        (* delay        *)
+        (* entry        *)
+        (* requeue      *)
+        (* select       *)
+        (* task         *)
+        (* terminate    *)
+
+    (* Compilation-related  *)
+        (* abstract     *)
+        (* generic      *)
+        (* renames      *)
+        (* separate     *)
+
+    (* Type-related  *)
+        (* at           *)
+        (* tagged       *)
+        (* delta        *)
+        (* digits       *)
+        (* limited      *)
+
+    (* Pointer-related  *)
+        (* access       *)
+        (* aliased      *)
+        (* all          *)
+
+    (* Execution flow-related  *)
+        (* case         *)
+        (* declare      *)
+        (* do           *)
+        (* until        *)
+        (* raise        *)
+        (* exception    *)
+        (* goto         *)
+        (* reverse      *)
+
+    (* Misc *)
+        (* others       *)
+        (* pragma       *)
+        (* private      *)
+        (* protected    *)
+
+
+  | "or"  blanc+ "else" {ORELSE}
+  | "and" blanc+ "then" {ANDTHEN}
+
+
+  (* identifiants non reserves mais consideres comme tels*)
   | id_integer     {INTEGER}
   | id_float       {FLOAT}
   | id_boolean     {BOOLEAN}
@@ -241,10 +253,10 @@ rule token = parse
   | id_last {LAST}
   | id_first {FIRST}
   | id_length {LENGTH}
-  | '(' {PAR_G}
-  | ')' {PAR_D}
+  | '(' {LPAR}
+  | ')' {RPAR}
 
-  (* opérateurs arithmétiques *)
+  (* operateurs arithmetiques *)
   | '+' {PLUS}
   | '-' {MOINS}
   | '*' {FOIS}
@@ -252,7 +264,7 @@ rule token = parse
   | "**" {PUISS}
   | '&' {CONCAT}
 
-  (* opérateurs relationnels *)
+  (* operateurs relationnels *)
   | "<=" {LE}
   | '<' {LT}
   | ">=" {GE}
@@ -275,15 +287,15 @@ rule token = parse
 
   | '\n' {newline lexbuf; token lexbuf}
 
-  (* caractères ignorés*)
+  (* caracteres ignores*)
   | blanc {token lexbuf}
   | commentaire {token lexbuf}
 
-  (* caractères, chaines de caractères *)
+  (* caracteres, chaines de caracteres *)
   | chaine {STRING (extrait_chaine (Lexing.lexeme lexbuf)) }
   | char {CONST_CHAR (extrait_char (Lexing.lexeme lexbuf)) }
 
-  (* constantes numériques *)
+  (* constantes numeriques *)
   | litteral_reel {CONST_FLOAT (Lexing.lexeme lexbuf)}
   | entier {CONST_INT (Newspeak.Nat.of_string(
 				strip_underscores (Lexing.lexeme lexbuf)))}
