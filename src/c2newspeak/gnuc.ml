@@ -65,7 +65,6 @@ let _ =
   Hashtbl.add token_tbl "__always_inline__" ALWAYS_INLINE;
   Hashtbl.add token_tbl "noreturn" NORETURN;
   Hashtbl.add token_tbl "__noreturn__" NORETURN;
-  Hashtbl.add token_tbl "dllimport" DLLIMPORT;
   Hashtbl.add token_tbl "__asm__" ASM;
   Hashtbl.add token_tbl "__cdecl" CDECL;
   Hashtbl.add token_tbl "__nothrow__" NOTHROW;

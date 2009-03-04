@@ -195,7 +195,7 @@ let rec normalize_bexp e =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN DLLIMPORT
+%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM CDECL_ATTR FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
@@ -975,23 +975,25 @@ attribute_name_list:
 ;;
 
 attribute_name:
-  IDENTIFIER LPAREN STRING RPAREN               {
+  IDENTIFIER                               { 
+(* TODO: think of a way of doing this in a nice way *)
+    if ($1 <> "aligned") && ($1 <> "dllimport") 
+    then raise Parsing.Parse_error;
+
+    if $1 = "dllimport" then begin
+      Npkcontext.report_warning "Parser.attribute" 
+	"ignoring attribute dllimport"
+    end;
+    [] 
+  }
+| IDENTIFIER LPAREN STRING RPAREN               {
     if $1 <> "alias" then raise Parsing.Parse_error;
     Npkcontext.report_warning "Parser.attribute" 
       "ignoring attribute alias";
     []
   }
-| IDENTIFIER                               { 
-    if $1 <> "aligned" then raise Parsing.Parse_error;
-    [] 
-  }
 | IDENTIFIER LPAREN INTEGER RPAREN         { 
     if $1 <> "aligned" then raise Parsing.Parse_error;
-    []
-  }
-| DLLIMPORT                                {
-    Npkcontext.report_warning "Parser.attribute" 
-      "ignoring attribute dllimport";
     []
   }
 | CDECL_ATTR                               { [] }
