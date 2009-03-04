@@ -1,25 +1,25 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
-  
+
 *)
 
 
@@ -28,10 +28,10 @@ module Nat = Newspeak.Nat
 
 exception NonStaticExpression
 
-(* arithmétique*)
-	
-(* fonction propre à Ada *)
-let puiss a b = 
+(* arithmetique*)
+
+(* fonction propre a Ada *)
+let puiss a b =
   let a = Nat.to_big_int a
   and b = Nat.to_big_int b in
     if (Big_int.sign_big_int b)<0
@@ -39,25 +39,25 @@ let puiss a b =
       Npkcontext.report_error "Ada_utils.puiss"
 	"integer exponent negative"
     end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
-      
-let mod_ada a b = 
+
+let mod_ada a b =
   let a = Nat.to_big_int a
   and b = Nat.to_big_int b in
   let r = Big_int.mod_big_int a b in
   let r_mod =
     if (Big_int.sign_big_int b) < 0
-    then Big_int.sub_big_int r b 
+    then Big_int.sub_big_int r b
     else r
   in
     Nat.of_big_int r_mod
 
-let rem_ada na nb = 
+let rem_ada na nb =
   let a = Nat.to_big_int na
   and b = Nat.to_big_int nb in
   let r = Big_int.mod_big_int a b in
   let r_mod =
     if (Big_int.sign_big_int a) < 0
-    then Big_int.sub_big_int r b 
+    then Big_int.sub_big_int r b
     else r
   in
     Nat.of_big_int r_mod
@@ -66,7 +66,7 @@ let xor a b = (a && (not b)) || ((not a) && b)
 
 (* calcul sur les value *)
 
-let eq_val v1 v2 = 
+let eq_val v1 v2 =
   let eq a b = a=b in
     match (v1, v2) with
       | (IntVal v1, IntVal v2) -> eq v1 v2
@@ -75,7 +75,7 @@ let eq_val v1 v2 =
       | _ ->
 	  Npkcontext.report_error "Ada_utils.eq_val"
 	    "internal error : uncompatible value"
-	  
+
 let inf_val v1 v2 =
   let inf a b = a<b in
     match (v1, v2) with
@@ -94,28 +94,28 @@ let nat_of_bool b = match b with
   | false -> Newspeak.Nat.zero
 
 
-(* vérifie que a <= n <= b *)
-let between a b n  = 
+(* verifie que a <= n <= b *)
+let between a b n  =
   a <= n && n <= b
 
 let between_nat a b n =
   (Nat.compare n a)>=0 && (Nat.compare b n)>=0
 
-let numeric_constraint_compatibility ref1 ref2 fils1 fils2 = 
+let numeric_constraint_compatibility ref1 ref2 fils1 fils2 =
   if ref2<ref1
   then fils2<fils1
-  else 
+  else
     (between ref1 ref2 fils1) && (between ref1 ref2 fils2)
 
-let nat_constraint_compatibility ref1 ref2 fils1 fils2 = 
+let nat_constraint_compatibility ref1 ref2 fils1 fils2 =
   if (Nat.compare ref2 ref1) < 0
   then (Nat.compare fils2 fils1) < 0
-  else 
+  else
     (between_nat ref1 ref2 fils1) && (between_nat ref1 ref2 fils2)
 
 
-(* vérifie que la contrainte courante est compatible avec cref *)
-let constraint_is_constraint_compatible cref courante = 
+(* verifie que la contrainte courante est compatible avec cref *)
+let constraint_is_constraint_compatible cref courante =
   match (cref, courante) with
     | (IntegerRangeConstraint(ref1, ref2),
        IntegerRangeConstraint(cour1, cour2)) ->
@@ -123,23 +123,23 @@ let constraint_is_constraint_compatible cref courante =
     | (FloatRangeConstraint(ref1, ref2),
        FloatRangeConstraint(cour1, cour2)) ->
 	numeric_constraint_compatibility ref1 ref2 cour1 cour2
-    | ((FloatRangeConstraint _| IntegerRangeConstraint _), 
+    | ((FloatRangeConstraint _| IntegerRangeConstraint _),
        RangeConstraint _)
     | (RangeConstraint _, RangeConstraint _)
-    | (RangeConstraint _, 
+    | (RangeConstraint _,
        (FloatRangeConstraint _| IntegerRangeConstraint _)) -> true
-    | (IntegerRangeConstraint _, FloatRangeConstraint _) 
-    | (FloatRangeConstraint _, IntegerRangeConstraint _) -> 
+    | (IntegerRangeConstraint _, FloatRangeConstraint _)
+    | (FloatRangeConstraint _, IntegerRangeConstraint _) ->
 	Npkcontext.report_error "Ada_utils.check_constraint"
 	  "internal error : uncompatible constraints"
 
-(* vérifie que la valeur value respecte bien la contrainte.
-   la contrainte est supposé statique, et le type de value
+(* verifie que la valeur value respecte bien la contrainte.
+   la contrainte est supposee statique, et le type de value
    compatible avec cette contrainte. Ce qui implique :
-   - soit on a une valeur, et la contrainte est numérique
+   - soit on a une valeur, et la contrainte est numerique
      et de meme type
    - soit on a pas de valeur *)
-let value_is_static_constraint_compatible contrainte value = 
+let value_is_static_constraint_compatible contrainte value =
   match (value,contrainte) with
 (*    | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
 	between_nat inf sup (Newspeak.Nat.of_int n)*)
@@ -149,19 +149,19 @@ let value_is_static_constraint_compatible contrainte value =
 	between_nat inf sup (nat_of_bool b)
     | (FloatVal(n), FloatRangeConstraint(inf,sup)) ->
 	between inf sup n
-    | ((BoolVal _|IntVal _), FloatRangeConstraint _) 
-    | (FloatVal _, IntegerRangeConstraint _) -> 
+    | ((BoolVal _|IntVal _), FloatRangeConstraint _)
+    | (FloatVal _, IntegerRangeConstraint _) ->
 	Npkcontext.report_error "Ada_utils.check_static_constraint"
 	  "internal error : uncompatible value and constraint types"
-    | (_,RangeConstraint _) -> 
+    | (_,RangeConstraint _) ->
 	Npkcontext.report_error "Ada_utils.check_static_constraint"
 	  "internal error : value with non static constraint"
-	  
-let check_static_subtyp subtyp value = 
+
+let check_static_subtyp subtyp value =
   match subtyp with
     | Unconstrained(_) -> ()
     | Constrained(_, contrainte, true) ->
-	if not 
+	if not
 	  (value_is_static_constraint_compatible
 	     contrainte value)
 	then begin
@@ -173,14 +173,14 @@ let check_static_subtyp subtyp value =
     | SubtypName _ ->
 	Npkcontext.report_error "Ada_utils.check_static_subtyp"
 	  "internal error : unexpected subtype name"
-	  
+
 let constraint_is_static contrainte = match contrainte with
   | FloatRangeConstraint _ -> true
   | IntegerRangeConstraint _ -> true
   | RangeConstraint _ -> false
 
 (* fonctions pour la gestion des types *)
-  
+
 let base_typ subtyp = match subtyp with
   | Unconstrained typ -> typ
   | Constrained (typ, _, _) -> typ
@@ -188,9 +188,9 @@ let base_typ subtyp = match subtyp with
       Npkcontext.report_error "Ada_utils.base_type"
 	"internal error : unexpected subtyp name"
 
-let extract_subtyp (_, _, subtyp) = 
+let extract_subtyp (_, _, subtyp) =
   match subtyp with
-  | None -> 
+  | None ->
       Npkcontext.report_error
 	"Ada_utils.extract_subtyp"
 	"internal error : no subtyp provided"
@@ -198,7 +198,7 @@ let extract_subtyp (_, _, subtyp) =
 
 let extract_typ subtyp_ind =
   base_typ (extract_subtyp subtyp_ind)
-    
+
 let eq_base_typ subtyp1 subtyp2 =
   (base_typ subtyp1) = (base_typ subtyp2)
 
@@ -209,9 +209,9 @@ let rec integer_class typ = match typ with
       (match typdef with
 	 | Enum(_) -> false
 	 | IntegerRange(_) -> true
-	 | DerivedType(_,(_,_,Some(subtyp))) -> integer_class 
+	 | DerivedType(_,(_,_,Some(subtyp))) -> integer_class
 	     (base_typ subtyp)
-	 | Array _ 
+	 | Array _
 	 | Record _ -> false
 	 | DerivedType(_,(_,_,None)) ->
 	     Npkcontext.report_error
@@ -219,21 +219,21 @@ let rec integer_class typ = match typ with
 	       "internal error : no subtype provided")
   | Float -> false
   | Boolean -> false
-  | Character -> false 
+  | Character -> false
   | String -> false
 
-  
-let check_typ expected found = 
+
+let check_typ expected found =
   match (expected, found) with
     | (None, t ) -> t
     | (Some(t1), t2) when t1=t2 -> t1
     | (Some(IntegerConst), t) when (integer_class t) -> t
     | (Some(t), IntegerConst) when (integer_class t) -> t
-    | _ -> 
+    | _ ->
 	Npkcontext.report_error "Ada_utils.check_typ"
 	  "uncompatible types"
-	  
-and known_compatible_typ expected found = 
+
+and known_compatible_typ expected found =
   match (expected, found) with
     | (Some(t1), t2) when t1=t2 ->true
     | (Some(IntegerConst), t) when (integer_class t) -> true
@@ -241,132 +241,132 @@ and known_compatible_typ expected found =
     | (Some(_), _) -> false
     | (None,_) -> false
 
- 
-(* détermine, si possible, le type des opérandes d'une
-   opérations binaire, en fonction du type attendu pour
-   le résultat et de l'opérateur.*)
+
+(* determine, si possible, le type des operandes d'une
+   operations binaire, en fonction du type attendu pour
+   le resultat et de l'operateur.*)
 let typ_operand op expected_typ = match op with
   | Plus | Moins | Fois | Div | Puissance ->
-      (* si il y a un type attendu, on vérifie qu'il est
+      (* si il y a un type attendu, on verifie qu'il est
 	 entier ou flottant *)
       (match expected_typ with
 	 | None -> None
 	 | Some(t) when (integer_class t) -> Some(t)
 	 | Some(Float) -> Some(Float)
-	 | Some(_) -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | Some(_) ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
-  | Rem | Mod -> 
+
+  | Rem | Mod ->
       (* type entier uniquement *)
       (match expected_typ with
 	 | None -> None
 	 | Some t when integer_class t -> Some(t)
-	 | Some _ -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | Some _ ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
-  | Lt | Gt | Le | Ge | Eq | Neq -> 
-      (* type attendu booléen, 
-	 on ne sait rien sur les opérandes *)
+
+  | Lt | Gt | Le | Ge | Eq | Neq ->
+      (* type attendu booleen,
+	 on ne sait rien sur les operandes *)
       (match expected_typ with
 	 | None -> None
 	 | Some(Boolean) -> None
-	 | Some(_) -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | Some(_) ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
-  | And | Or | Xor | OrElse | AndThen -> 
-      (* type attendu : booléen
-	 type de l'opérande : booléen *)
+
+  | And | Or | Xor | OrElse | AndThen ->
+      (* type attendu : booleen
+	 type de l'operande : booleen *)
       (match expected_typ with
 	 | None -> Some(Boolean)
 	 | Some(Boolean) -> Some(Boolean)
-	 | Some(_) -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | Some(_) ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
-  | Concat -> 
-      Npkcontext.report_error 
-	"Firstpass.translate_binop" 
+
+  | Concat ->
+      Npkcontext.report_error
+	"Firstpass.translate_binop"
 	"concat not implemented"
-	
+
 let check_operand_typ op typ = match op with
   | Plus | Moins | Fois | Div | Puissance ->
       (* type entier ou flottant *)
       (match typ with
 	 | t when (integer_class t) -> ()
 	 | Float -> ()
-	 | _ -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | _ ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
-  | Rem | Mod -> 
+
+  | Rem | Mod ->
       (* type entier uniquement *)
       (match typ with
 	 | t when (integer_class t) -> ()
-	 | _ -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | _ ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
+
   | Lt | Gt | Le | Ge | Eq | Neq -> ()
-      
-  | And | Or | Xor | OrElse | AndThen -> 
-      (* type booléen *)
+
+  | And | Or | Xor | OrElse | AndThen ->
+      (* type booleen *)
       (match typ with
 	 | Boolean -> ()
-	 | _ -> 
-	     Npkcontext.report_error 
-	       "Firstpass.translate_binop" 
+	 | _ ->
+	     Npkcontext.report_error
+	       "Firstpass.translate_binop"
 	       "invalid operator and argument")
-	
-  | Concat -> 
-      Npkcontext.report_error 
-	"Firstpass.translate_binop" 
+
+  | Concat ->
+      Npkcontext.report_error
+	"Firstpass.translate_binop"
 	"concat not implemented"
 
 
-let make_enum nom list_val = 
-  let rec make_id list_val next_id = 
+let make_enum nom list_val =
+  let rec make_id list_val next_id =
     match list_val with
       | v::r -> (v,Nat.of_int next_id)::(make_id r (next_id +1))
       | [] -> []
-  in 
+  in
   let list_assoc = make_id list_val 0 in
   let max = Nat.of_int ((List.length list_assoc) - 1)
   in Enum(nom, list_assoc, Ada_config.size_of_enum Nat.zero max)
- 	  
-let ikind_of_range inf sup = (Newspeak.Signed, 
+
+let ikind_of_range inf sup = (Newspeak.Signed,
 			      Ada_config.size_of_range inf sup)
-	
-let make_range nom exp_b_inf exp_b_sup = 
+
+let make_range nom exp_b_inf exp_b_sup =
   IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)
 
-let check_compil_unit_name compil_unit file_name = 
+let check_compil_unit_name compil_unit file_name =
   let expected_name = Filename.chop_extension file_name in
   let subprog_name spec = match spec with
     | Function(name,_,_) -> name
     | Procedure(name,_) -> name in
   let (_,lib_item,_) = compil_unit in
-  let name = 
+  let name =
     match lib_item with
       | Spec(SubProgramSpec(spec)) -> subprog_name spec
       | Spec(PackageSpec(name,_)) -> name
       | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
       | Body(PackageBody(name,_,_,_)) -> name
   in
-    match name with 
+    match name with
       | ([],ident) -> ident=expected_name
       | _ -> false
 
 
-let extract_representation_clause_name rep_clause = match rep_clause with 
+let extract_representation_clause_name rep_clause = match rep_clause with
   | EnumerationRepresentation(ident, _) -> ident
 
 

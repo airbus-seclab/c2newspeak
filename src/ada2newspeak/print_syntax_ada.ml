@@ -1,59 +1,59 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
-  
+
 *)
 
 open Syntax_ada
 
 (* Fonction transformant une liste [e1 e2 ... en ]
-   en string de la forme 
+   en string de la forme
    [ (to_string e1) sep (to_string e2) sep ... sep (to_string en)]
    si crochet = true, sans [ ] sinon
  *)
 
 let nat_to_string = Newspeak.Nat.to_string
 
-let list_to_string list to_string sep crochet = 
+let list_to_string list to_string sep crochet =
   match list with
-    | a::r -> 
+    | a::r ->
 	(if crochet then "[" else "")
 	^(to_string a)
-	^(List.fold_left (fun debut x -> debut^sep^(to_string x)) 
-	  "" r) 
+	^(List.fold_left (fun debut x -> debut^sep^(to_string x))
+	  "" r)
 	^(if crochet then "]" else "")
-    | [] -> 
+    | [] ->
 	if crochet then "[]" else ""
-  
+
 let option_to_string a to_string = match a with
   | None -> "None"
   | Some(a') -> "Some("^(to_string a')^")"
 
-let rec ident_list_to_string l = 
+let rec ident_list_to_string l =
   list_to_string l (fun x -> x) "." false
 
-let rec name_to_string (packages, ident) = 
+let rec name_to_string (packages, ident) =
   ident_list_to_string (packages@[ident])
 
-	  
+
 let line_of_loc (_,line,_) = "line "^(string_of_int line)
 
 let mode_to_string mode = match mode with
@@ -61,7 +61,7 @@ let mode_to_string mode = match mode with
   | Out -> "out"
   | InOut -> "in out"
 
-let ikind_to_string (s,taille) = 
+let ikind_to_string (s,taille) =
   let string_signe = match s with
     | Newspeak.Signed -> "Signed"
     | Newspeak.Unsigned -> "Unsigned"
@@ -78,8 +78,8 @@ let uop_to_string op = match op with
 
 let bop_to_string op = match op with
   | Plus -> "Plus"
-  | Moins -> "Moins" 
-  | Fois -> "Fois" 
+  | Moins -> "Moins"
+  | Fois -> "Fois"
   | Div -> "Div"
   | Puissance -> "Puissance"
   | Concat -> "Concat"
@@ -111,7 +111,7 @@ let rec typ_to_string typ = match typ with
 and typ_declaration_to_string typ_decl = match typ_decl with
   | Enum(ident, val_list, taille) ->
       "Enum("^ident^", "
-      ^(list_to_string val_list 
+      ^(list_to_string val_list
 	  (fun (nom,id) -> "("^nom^","^id^")")
 	  "; " true)
       ^", "^(ikind_to_string taille)^")"
@@ -124,18 +124,18 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       "IntegerRange("^ident
       ^", "^(contrainte_to_string contrainte)
       ^", "^(option_to_string taille ikind_to_string)^")"
-	  
+
   | Array(ident,array_def) ->
-      "Array("^ident	
+      "Array("^ident
       ^", "^(array_definition_to_string array_def)^")"
-  
+
   | Record (ident, _) -> (*record_type_def) -> *)
-      "Record("^ident	
+      "Record("^ident
       ^", "^(" --- TO DO --------")^")"
-	
 
 
-and array_definition_to_string array = match array with 
+
+and array_definition_to_string array = match array with
   | ConstrainedArray(range, subtyp, taille) ->
       "ConstrainedArray("
       ^(subtyp_indication_to_string range)
@@ -159,7 +159,7 @@ and exp_to_string exp = match exp with
   | Qualified(subtyp, exp) -> "Qualified("
       ^(subtyp_to_string subtyp)
       ^", "^(exp_to_string exp)^")"
-  
+
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
       ^(list_to_string params exp_to_string "," true)^")"
@@ -182,7 +182,7 @@ and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp) =
   ^(option_to_string subtyp subtyp_to_string)^")"
 
 and contrainte_to_string contrainte = match contrainte with
-  | RangeConstraint(e1, e2) -> 
+  | RangeConstraint(e1, e2) ->
       "RangeConstraint("^(exp_to_string e1)
       ^", "^(exp_to_string e2)^")"
   |  IntegerRangeConstraint(v1,v2) ->
@@ -199,16 +199,19 @@ and value_to_string v = match v with
 let iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
+  | For(iter, exp1, exp2, false) -> "For "^(name_to_string iter)^" in "
+                            ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
+  | For(iter, exp1, exp2, true) -> "For "^(name_to_string iter)^" in reverse"
+                            ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
 
-
-let rec lval_to_string lv = 
-  match lv with 
+let rec lval_to_string lv =
+  match lv with
       Lval name -> name_to_string name
     | ArrayAccess (lval, e) ->
 	(lval_to_string lval )^"["^(exp_to_string e)^"]"
 
 
-let rec instr_list_to_string instr_list = 
+let rec instr_list_to_string instr_list =
   list_to_string instr_list
     (fun (instr,loc) -> "("^
        (instr_to_string instr)^", "
@@ -221,11 +224,11 @@ and instr_to_string instr = match instr with
   | Affect(lval,exp) -> "Affect("^(lval_to_string lval)
       ^", "^(exp_to_string exp)^")"
 
-  | If(exp, instr_then, instr_else) -> 
+  | If(exp, instr_then, instr_else) ->
       "If("^(exp_to_string exp)^",\n"
       ^(instr_list_to_string instr_then)^",\n"
       ^(instr_list_to_string instr_else)^")"
-	
+
   | Exit(exp) -> "Exit("^(option_to_string exp exp_to_string)^")"
   | Loop(scheme, instr_list) ->
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
@@ -235,16 +238,16 @@ and instr_to_string instr = match instr with
       ^(list_to_string params exp_to_string ", " true)^")"
 
 
-	  
 
 
-let param_to_string param = 
+
+let param_to_string param =
   "{pnom="^(list_to_string param.pnom (fun x -> x) "," true)
   ^"; mode="^(mode_to_string param.mode)
   ^"; ptype="^(subtyp_to_string param.ptype)
   ^"; pdef="^(option_to_string param.pdef exp_to_string)^"}"
 
-let param_list_to_string list = 
+let param_list_to_string list =
   list_to_string list param_to_string ";\n" true
 
 let object_state_to_string status = match status with
@@ -256,25 +259,25 @@ let object_state_to_string status = match status with
 let array_aggregate_to_string agregat = match agregat with
   | NamedArrayAggregate(assoc_list) ->
       let assoc_element_to_string (ident, exp) =
-	"("^ident^", "^(exp_to_string exp)^")" 
-      in 
-	list_to_string assoc_list 
+	"("^ident^", "^(exp_to_string exp)^")"
+      in
+	list_to_string assoc_list
 	  assoc_element_to_string
 	  ";\n" true
 
 
 let representation_clause_to_string clause = match clause with
-  | EnumerationRepresentation(ident, agregat) -> 
+  | EnumerationRepresentation(ident, agregat) ->
       "EnumerationRepresentation("^ident^", "
       ^(array_aggregate_to_string agregat)^")"
 
 
-let rec context_clause_to_string context_clause = 
+let rec context_clause_to_string context_clause =
   match context_clause with
     | With(name, loc, spec) -> "With("
 	^(name_to_string name)
 	^", "^(line_of_loc loc)^",\n"
-	^(option_to_string 
+	^(option_to_string
 	    spec
 	    (fun (spec, loc) -> "("^(spec_to_string spec)
 	       ^", "^(line_of_loc loc)^")"))
@@ -282,7 +285,8 @@ let rec context_clause_to_string context_clause =
     | UseContext(names) -> "UseContext("
 	^(list_to_string names name_to_string "," false)^")"
 
-and context_to_string context = list_to_string context context_clause_to_string ";\n" true
+and context_to_string context = list_to_string context
+                                    context_clause_to_string ";\n" true
 
 and basic_declaration_to_string basic_decl = match basic_decl with
   | ObjectDecl(idents,subtyp_ind,def,status) -> "ObjectDecl("
@@ -290,7 +294,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(subtyp_indication_to_string subtyp_ind)
       ^", "^(option_to_string def exp_to_string)
       ^", "^(object_state_to_string status)^")"
-  | TypeDecl(typdecl) -> 
+  | TypeDecl(typdecl) ->
       "TypeDecl("^(typ_declaration_to_string typdecl)^")"
   | UseDecl(use_clause) -> "UseDecl("
       ^(list_to_string use_clause name_to_string "," false)^")"
@@ -303,7 +307,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | SubtypDecl(ident, subtyp_ind) ->
       "SubtypDecl("^ident^", "
       ^(subtyp_indication_to_string subtyp_ind)^")"
-  | RepresentClause(clause) -> 
+  | RepresentClause(clause) ->
       "RepresentClause("
       ^(representation_clause_to_string clause)^")"
 
@@ -312,9 +316,9 @@ and declarative_item_to_string decl_item = match decl_item with
   | BasicDecl(basic_declaration) -> "BasicDecl("
       ^(basic_declaration_to_string basic_declaration)^")"
 
-  | BodyDecl(body) -> 
+  | BodyDecl(body) ->
       "BodyDecl("^(body_to_string body)^")"
- 
+
 and subprog_spec_to_string spec = match spec with
   | Function(name,param_list,return_type) ->
       "Function("^(name_to_string name)^", "
@@ -324,8 +328,8 @@ and subprog_spec_to_string spec = match spec with
       "Procedure("^(name_to_string name)^", "
       ^(param_list_to_string param_list)^")"
 
-and sub_program_body_to_string 
-    (subprog_decl, declarative_part, instr_list) = 
+and sub_program_body_to_string
+    (subprog_decl, declarative_part, instr_list) =
   "("^(subprog_spec_to_string subprog_decl)
   ^",\n\n"
   ^(list_to_string declarative_part
@@ -341,13 +345,13 @@ and package_spec_to_string (name, decls) =
   "("^(name_to_string name)
   ^(list_to_string
       decls
-      (fun (decl, loc) -> 
+      (fun (decl, loc) ->
 	 "("^(basic_declaration_to_string decl)^", "
 	 ^(line_of_loc loc)^")")
-      ";\n" 
+      ";\n"
       true)^")"
 
-and package_body_to_string 
+and package_body_to_string
     (name, package_spec, declarative_part, instr_list) =
   "("^(name_to_string name)^",\n\n"
   ^(option_to_string package_spec package_spec_to_string)^",\n"
@@ -378,12 +382,12 @@ let library_item_to_string lib_item = match lib_item with
   | Spec(spec) -> "Spec("^(spec_to_string spec)^")"
   | Body(body) -> "Body("^(body_to_string body)^")"
 
-let compil_unit_to_string (context,lib_item,loc) = 
+let compil_unit_to_string (context,lib_item,loc) =
   "("^(context_to_string context)
   ^",\n\n"^(library_item_to_string lib_item)
   ^",\n\n"^(line_of_loc loc)^")\n"
 
-      
+
 
 
 (* changer avec print_list *)

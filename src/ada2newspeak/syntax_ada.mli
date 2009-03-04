@@ -1,28 +1,28 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
-  
+
 *)
 
-(*définition des types*)
+(*definition des types*)
 type location = Newspeak.location
 type nat = Newspeak.Nat.t
 type flottant = float*string
@@ -32,23 +32,23 @@ type name = identifier list*identifier
 
 type param_mode = In | Out | InOut
 
-type value = | IntVal of nat 
+type value = | IntVal of nat
 	     | FloatVal of flottant
 	     | BoolVal of bool
 
 
 type unary_op = UPlus | UMoins | Abs | Not
-type binary_op = 
-  | Plus | Moins | Fois | Div | Puissance 
+type binary_op =
+  | Plus | Moins | Fois | Div | Puissance
   | Concat | Mod | Rem
   | Eq | Neq | Le | Lt | Ge | Gt
   | And | Or | Xor | AndThen | OrElse
 
-type typ = 
+type typ =
   | Integer
-  | IntegerConst 
+  | IntegerConst
   | Float
-  | Boolean 
+  | Boolean
   | Character
   | Declared of typ_declaration*location
   | String
@@ -62,21 +62,21 @@ and typ_declaration =
 
 and record_type_definition = field list
 
-and field = identifier list*subtyp_indication*expression option 
+and field = identifier list*subtyp_indication*expression option
  (* | FielDecl of identifier list*subtyp_indication*expression option *)
 
-and array_type_definition = 
-    (* intervalle discret du tableau * type des éléments * taille du tableau*)
+and array_type_definition =
+    (* intervalle discret du tableau * type des elements * taille du tableau*)
   | ConstrainedArray of subtyp_indication*subtyp_indication*int option
 
 and subtyp =
   | Unconstrained of typ
-  (* le paramêtre booléen indique si le sous-type est static *)
+  (* le parametre booleen indique si le sous-type est static *)
   | Constrained of typ*contrainte*bool
   | SubtypName of name
 
-and expression = 
-  | NullExpr 
+and expression =
+  | NullExpr
   | CInt of nat
   | CFloat of flottant
   | CBool of bool
@@ -92,7 +92,7 @@ and expression =
   | First of subtyp
   | Length of subtyp
 
-and contrainte = 
+and contrainte =
   | RangeConstraint of expression*expression
   | IntegerRangeConstraint of Newspeak.bounds
   | FloatRangeConstraint of flottant*flottant
@@ -100,12 +100,26 @@ and contrainte =
 and subtyp_indication = subtyp*contrainte option*subtyp option
 
 type lval = Lval of name | ArrayAccess of lval*expression
-  
-type param = {pnom:identifier list;mode:param_mode;ptype:subtyp;pdef:expression option}
 
-type iteration_scheme = NoScheme | While of expression
+type param = {
+        pnom:identifier list;
+        mode:param_mode;
+        ptype:subtyp;
+        pdef:expression option
+}
 
-type instruction_atom = 
+type iteration_scheme =
+  | NoScheme
+  | While of expression
+  | For of name * expression * expression * bool
+(* loop                        ->  NoScheme        *)
+(* for I in reverse 1..5 loop  ->  For I,1,5,true  *)
+(* for I in 15..10             ->  While false     *)
+(* for I in reverse 15..10     ->  While false     *)
+(* while exp                   ->  While exp       *)
+(* for I in 4..8               ->  For I,5,8,false *)
+
+type instruction_atom =
   | NullInstr
   | Affect of lval*expression
   | Return of expression
@@ -117,24 +131,25 @@ type instruction_atom =
 
 and instruction = instruction_atom*location
 
-type sub_program_spec = 
+type sub_program_spec =
   | Function of name*param list*subtyp
   | Procedure of name*(param list)
 
-(* the identifier is the one that choose the element : 
+(* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)
 type array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
-type representation_clause = EnumerationRepresentation of identifier*array_aggregate
+type representation_clause =
+  | EnumerationRepresentation of identifier*array_aggregate
 
 type use_clause = name list
 
-type object_state = 
+type object_state =
   | Variable
-  | Constant (*constante dynamique, ou non encore évaluée*)
+  | Constant (*constante dynamique, ou non encore evaluee*)
   | StaticVal of value (*constante statique*)
 
-type context_clause = 
+type context_clause =
   | With of name*location*(spec*location) option
   | UseContext of use_clause
 
@@ -146,15 +161,15 @@ and package_spec = name*(basic_declaration*location) list
 
 and package_body = name*package_spec option*declarative_part*instruction list
 
-and spec = 
+and spec =
   | SubProgramSpec of sub_program_spec
   | PackageSpec of package_spec
 
-and body = 
+and body =
   | SubProgramBody of sub_program_body
   | PackageBody of package_body
 
-and basic_declaration = 
+and basic_declaration =
   | ObjectDecl of identifier list*subtyp_indication
       *expression option*object_state
   | TypeDecl of typ_declaration
@@ -164,7 +179,7 @@ and basic_declaration =
   | SubtypDecl of identifier*subtyp_indication
   | RepresentClause of representation_clause
 
-and declarative_item = 
+and declarative_item =
   | BasicDecl of basic_declaration
   | BodyDecl of body
 

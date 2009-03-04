@@ -1,31 +1,31 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
-  
+
 *)
 
 
 let compile fname =
   if not (Filename.check_suffix fname Params.ada_suffix) then begin
-    Npkcontext.report_error "Ada2newspeak.compile" 
+    Npkcontext.report_error "Ada2newspeak.compile"
       (fname^" is not a .adb file")
   end;
 
@@ -44,7 +44,7 @@ let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
 let _ =
   try
-    Npkcontext.handle_cmdline_options 
+    Npkcontext.handle_cmdline_options
       Params.version_string Params.comment_string;
     let extract_no fname =
       if Filename.check_suffix fname Params.npko_suffix then fname
@@ -55,17 +55,17 @@ let _ =
 	  no
       end
     in
-      
+
       (* TODO: this code should be factored with c2newspeak!!! *)
       match !Npkcontext.input_files with
-	  file::[] 
+	  file::[]
 	    when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
 	      let prog = compile file in
 		Npkil.write !Npkcontext.output_file prog
-		  
+
 	| files ->
 	    let nos = List.map extract_no files in
 	      if not !Npkcontext.compile_only then Linker.link nos []
-		
+
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
-    
+

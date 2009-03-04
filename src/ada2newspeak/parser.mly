@@ -114,6 +114,7 @@
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
+%token REVERSE
 %token LAST FIRST LENGTH
 
 %start s
@@ -269,7 +270,7 @@ basic_declaration :
 ;
 
 contrainte :
-| simpl_expr DOUBLE_DOT simpl_expr 
+| simple_expr DOUBLE_DOT simple_expr 
     {RangeConstraint($1, $3)}
 ;
 
@@ -280,7 +281,7 @@ type_definition :
     { TypeDecl(Ada_utils.make_enum ($2) $5)}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
 	{TypeDecl(DerivedType($2, $5))}
-| TYPE ident IS RANGE simpl_expr DOUBLE_DOT simpl_expr SEMICOLON
+| TYPE ident IS RANGE simple_expr DOUBLE_DOT simple_expr SEMICOLON
 	    { TypeDecl(Ada_utils.make_range $2 $5 $7)}
 | TYPE ident IS RECORD record_definition END RECORD SEMICOLON
 		{ TypeDecl(Record($2, $5)) } 	
@@ -368,7 +369,7 @@ instr :
 ;
 
 procedure_array :
-| name     {($1, [])} 
+| name      {($1, [])} 
 | name args {($1, $2)} 
 
 
@@ -384,7 +385,8 @@ param_assoc:
 iteration_scheme :
 | {(NoScheme, loc ())}
 | WHILE expression {(While($2), loc ())}
-;
+| FOR name IN         simple_expr DOUBLE_DOT simple_expr {(For($2,$4,$6,false), loc ())}
+| FOR name IN REVERSE simple_expr DOUBLE_DOT simple_expr {(For($2,$5,$7, true), loc ())}
 
 debut_if : 
 | IF {loc()}
@@ -450,8 +452,8 @@ rel_op :
 ;
 
 relation :
-| simpl_expr {$1}
-| simpl_expr rel_op simpl_expr {Binary($2,$1,$3)}
+| simple_expr {$1}
+| simple_expr rel_op simple_expr {Binary($2,$1,$3)}
 ;
 
 add_op :
@@ -460,11 +462,11 @@ add_op :
 | CONCAT {Concat}
 ;
 
-simpl_expr :
+simple_expr :
 | term {$1}
 | PLUS term {Unary(UPlus,$2)}
 | MOINS term {Unary(UMoins,$2)}
-| simpl_expr add_op term {Binary($2,$1,$3)}
+| simple_expr add_op term {Binary($2,$1,$3)}
 /*WG added for type'LAST,FIRST 
 | subtyp QUOTE LAST {Last($1)}
 | subtyp QUOTE FIRST {First($1)} 
@@ -523,7 +525,7 @@ typ :
 subtyp_indication : 
 | subtyp RANGE contrainte {($1, Some($3), None)}
 | subtyp {($1, None, None)}
-/*| simpl_expr DOUBLE_DOT simpl_expr */
+/*| simple_expr DOUBLE_DOT simple_expr */
 | CONST_INT DOUBLE_DOT CONST_INT 
     {(Constrained(Integer, Ada_config.integer_constraint, true),
       Some (RangeConstraint(CInt($1), CInt($3))),

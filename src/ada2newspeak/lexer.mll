@@ -1,61 +1,61 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
-  
+
 *)
 
 
 {
   open Parser
   open Lexing
- 
-   
+
+
   (* supprime les guillemets qui entourent une chaine *)
   let extrait_chaine s = String.sub s 1 (String.length s - 2)
-  
+
   (* renvoie le code ascii du caractere en position 1*)
-  let extrait_char s = 
+  let extrait_char s =
     int_of_char (String.get s 1)
 
-  let set_loc lexbuf pos = 
+  let set_loc lexbuf pos =
     lexbuf.lex_curr_p <- pos;
     Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
-  
+
   let newline lexbuf =
-    let pos = lexbuf.lex_curr_p 
+    let pos = lexbuf.lex_curr_p
     in
-    let new_pos = { pos with pos_lnum = pos.pos_lnum + 1; 
+    let new_pos = { pos with pos_lnum = pos.pos_lnum + 1;
 	  pos_bol = pos.pos_cnum };
     in set_loc lexbuf new_pos
 
-  let init fname lexbuf = 
+  let init fname lexbuf =
     let pos = { lexbuf.lex_curr_p with pos_fname = fname } in
       set_loc lexbuf pos
 
   let unknown_lexeme lexbuf =
-    let start_pos = Lexing.lexeme_start_p lexbuf 
-    and end_pos = Lexing.lexeme_end_p lexbuf 
+    let start_pos = Lexing.lexeme_start_p lexbuf
+    and end_pos = Lexing.lexeme_end_p lexbuf
     in
-    let line = string_of_int start_pos.pos_lnum 
-    and lexeme = Lexing.lexeme lexbuf 
+    let line = string_of_int start_pos.pos_lnum
+    and lexeme = Lexing.lexeme lexbuf
     and start_col = start_pos.pos_cnum - start_pos.pos_bol
     and end_col = end_pos.pos_cnum - end_pos.pos_bol
     in
@@ -64,7 +64,7 @@
 	then ""
 	else ("-"^(string_of_int end_col)))
     in
-    let err_msg = pos^", unknown keyword: '"^lexeme^"'" in 
+    let err_msg = pos^", unknown keyword: '"^lexeme^"'" in
       Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
 
     let rec expt_int pow x = match x with
@@ -72,7 +72,7 @@
                                 ^ " only with nonnegative integers");
         | 0 -> 1
         | _ -> pow * expt_int pow (x-1)
-        
+
     (* Removes underscores from a string. *)
     let strip_underscores s =
         Str.global_replace (Str.regexp_string "_") "" s
@@ -100,21 +100,21 @@
                     let value = value_of_char str.[start] in
                         if value >= base then
                             Npkcontext.report_error "Lexer.int_of_based_string"
-                                "In base X, digits should be < X" 
+                                "In base X, digits should be < X"
                         else aux (start+1) (base * acc + value)
                 end
             in
             aux 0 0
         end
-    
+
     (* Provides a default value for a 'a option *)
-    let defaults_to def_value opt = match opt with 
+    let defaults_to def_value opt = match opt with
         | None   -> def_value
         | Some x -> x
 
 }
 (*a elargir : accent *)
- 
+
 let lettre = ['a'-'z' 'A'-'Z']
 let chiffre = ['0'-'9']
 let alphanum = lettre | chiffre
@@ -129,9 +129,9 @@ let reel = entier '.' entier
 
 let extended_digit = ['0'-'9' 'a'-'f' 'A'-'F']
 let based_numeral = extended_digit ('_'? extended_digit)*
-    
+
 let litteral_reel = reel
-      
+
 (*commentaires*)
 let commentaire = "--" [^ '\n']*
 
@@ -149,7 +149,7 @@ let id_first     = "first"
 let id_length    = "length"
 
 rule token = parse
-    
+
   (*reconnaissance des identifiants reserves*)
 
   | "abs"        {ABS}
@@ -181,6 +181,7 @@ rule token = parse
   | "record"     {RECORD}
   | "rem"        {REM}
   | "return"     {RETURN}
+  | "reverse"    {REVERSE}
   | "subtype"    {SUBTYPE}
   | "then"       {THEN}
   | "type"       {TYPE}
@@ -201,6 +202,8 @@ rule token = parse
         (* select       *)
         (* task         *)
         (* terminate    *)
+        (* do           *)
+        (* until        *)
 
     (* Compilation-related  *)
         (* abstract     *)
@@ -223,12 +226,9 @@ rule token = parse
     (* Execution flow-related  *)
         (* case         *)
         (* declare      *)
-        (* do           *)
-        (* until        *)
+        (* goto         *)
         (* raise        *)
         (* exception    *)
-        (* goto         *)
-        (* reverse      *)
 
     (* Misc *)
         (* others       *)
@@ -305,17 +305,17 @@ rule token = parse
             ))}
   | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
 		CONST_INT (Newspeak.Nat.of_int ( (int_of_based_string
-                                            (int_of_string (strip_underscores base))
+                                        (int_of_string (strip_underscores base))
                                             (strip_underscores main_part))
-                                       * expt_int (int_of_string (strip_underscores base))
+                           * expt_int (int_of_string (strip_underscores base))
                                             (int_of_string (strip_underscores
-                                                                    (defaults_to "0" exponent)))))}
+                                                (defaults_to "0" exponent)))))}
 
   (*identifiant*)
   | ident {IDENT (Lexing.lexeme lexbuf)}
   | eof { EOF }
 
   | _ {unknown_lexeme lexbuf}
-      
 
-  
+
+
