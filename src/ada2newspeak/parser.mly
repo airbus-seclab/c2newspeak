@@ -112,7 +112,7 @@
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
 %token INTEGER FLOAT BOOLEAN CHARACTER 
 %token NULL TRUE FALSE
-%token PAR_G PAR_D ARROW DOUBLE_DOT
+%token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
 %token LAST FIRST LENGTH
 
@@ -204,9 +204,9 @@ package_body:
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
-| PROCEDURE name PAR_G formal_part PAR_D 
+| PROCEDURE name LPAR formal_part RPAR 
     {(Procedure($2,$4), loc ())}
-| FUNCTION name PAR_G formal_part PAR_D RETURN subtyp
+| FUNCTION name LPAR formal_part RPAR RETURN subtyp
 	{(Function($2,$4,$7), loc ())}
 | PROCEDURE name {(Procedure($2,[]), loc ())}
 | FUNCTION name RETURN subtyp {(Function($2,[],$4), loc ())}
@@ -276,7 +276,7 @@ contrainte :
 type_definition :
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON 
 		{ TypeDecl(Array($2,$5))}
-| TYPE ident IS PAR_G ident_list PAR_D SEMICOLON
+| TYPE ident IS LPAR ident_list RPAR SEMICOLON
     { TypeDecl(Ada_utils.make_enum ($2) $5)}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
 	{TypeDecl(DerivedType($2, $5))}
@@ -307,8 +307,8 @@ record_definition :
 
 
 constrained_array_definition : 
-  PAR_G matrix_indication PAR_D OF subtyp_indication 
-/*  PAR_G subtyp_indication PAR_D OF subtyp_indication  
+  LPAR matrix_indication RPAR OF subtyp_indication 
+/*  LPAR subtyp_indication RPAR OF subtyp_indication  
   {ConstrainedArray($2,$5,None)} 
 */
   {  
@@ -332,7 +332,7 @@ named_array_aggregate :
 ;
 
 array_aggregate :
-| PAR_G named_array_aggregate PAR_D {NamedArrayAggregate($2)}
+| LPAR named_array_aggregate RPAR {NamedArrayAggregate($2)}
 ;
 
 representation_clause :
@@ -373,8 +373,8 @@ procedure_array :
 
 
 args: 
-| PAR_G param_assoc PAR_D { $2 }     
-| args PAR_G param_assoc PAR_D { $1@$3 } /*TO DO checkin
+| LPAR param_assoc RPAR { $2 }     
+| args LPAR param_assoc RPAR { $1@$3 } /*TO DO checkin
 					  this case length 3 = 1*/  
 param_assoc:
 | expression {[$1]}
@@ -409,10 +409,10 @@ instruction_else :
 expression : 
 | relation {$1}
 | expr_andthen ANDTHEN relation {Binary(AndThen, $1, $3)}
-| expr_orelse ORELSE relation {Binary(OrElse, $1, $3)}
-| expr_and AND relation {Binary(And, $1, $3)}
-| expr_or OR relation {Binary(Or, $1, $3)}
-| expr_xor XOR relation {Binary(Xor, $1, $3)}
+| expr_orelse  ORELSE  relation {Binary(OrElse,  $1, $3)}
+| expr_and     AND     relation {Binary(And,     $1, $3)}
+| expr_or      OR      relation {Binary(Or,      $1, $3)}
+| expr_xor     XOR     relation {Binary(Xor,     $1, $3)}
 ;
 
 expr_and :
@@ -498,8 +498,8 @@ primary :
 | FALSE {CBool(false)}
 | STRING {CString($1)}
 | name {Var($1)}
-| PAR_G expression PAR_D {$2}
-| subtyp QUOTE PAR_G expression PAR_D {Qualified($1,$4)}
+| LPAR expression RPAR {$2}
+| subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
 | name args {FunctionCall($1, $2)}
 /*from simpl_exp to */
 
@@ -507,7 +507,7 @@ primary :
 | subtyp QUOTE FIRST {First($1)} 
 | subtyp QUOTE LENGTH {Length($1)}
 
-/*| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)}*/
+/*| name LPAR param_assoc RPAR {FunctionCall($1, $3)}*/
 ;
 
 integer_literal :
@@ -538,7 +538,7 @@ subtyp :
 /*
 procedure_call : 
 | name {ProcedureCall($1, [])}
-| name PAR_G param_assoc PAR_D {ProcedureCall($1, $3)}
+| name LPAR param_assoc RPAR {ProcedureCall($1, $3)}
 ;
 param_assoc :
 | expression {[$1]}
@@ -569,7 +569,7 @@ name :
     in (par@[ident], $3)}
     
     /* pour les tableaux */
-/*| name PAR_G param_assoc PAR_D {FunctionCall($1, $3)} */
+/*| name LPAR param_assoc RPAR {FunctionCall($1, $3)} */
 ;      
 
 

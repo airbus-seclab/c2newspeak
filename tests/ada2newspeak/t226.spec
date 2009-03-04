@@ -1,1 +1,1 @@
-Fatal error: t226.adb:12#329: a base should be between 2 and 16, inclusive
+Fatal error: t226.adb:12#329: A base b should be 2 <= b <= 16
