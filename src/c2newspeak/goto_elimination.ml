@@ -426,7 +426,11 @@ let avoid_break_continue_capture stmts lwhile l g_offset =
 		let if_blk', if_vars = search if_blk in
 		let else_blk', else_vars = search else_blk in
 		  (If(e, if_blk', else_blk'), l')::stmts, (if_vars@else_vars)
-		    
+		 
+	    | Block blk ->
+		let blk', blk_vars' = search blk in
+		let stmts', vars' = search stmts in
+		  (Block blk', l)::stmts', blk_vars'@vars'   
 	    | _ -> 
 		let stmts', vars = search stmts in (stmt, l)::stmts', vars
   in
@@ -447,54 +451,113 @@ let avoid_break_continue_capture stmts lwhile l g_offset =
 	List.iter add vars;
 	(List.rev !before), stmts', (List.rev !after)
 
+
+exception Lbl
+exception Gto 
+
+let rec split_lbl stmts lbl = 
+  match stmts with 
+      [] -> [], []
+    | (stmt, l)::stmts' ->
+	match stmt with
+	    Label lbl' when lbl = lbl' -> [], stmts
+	  | Block blk -> 
+	      if search_lbl blk lbl then 
+		let before, blk' = split_lbl blk lbl in
+		let before = if before = [] then [] else [Block before, l] in
+		let blk' = if blk' = [] then [] else [Block blk', l] in 
+		  before,  blk'@stmts'
+	      else 
+		let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
+
+	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
+
 let sibling_elimination stmts lbl g_offset =
-  let rec add_loop_delete_goto stmts =
+
+let rec direction stmts =
+  match stmts with
+      [] -> raise Not_found
+    | (stmt, _)::stmts ->
+	match stmt with
+	    Label lbl' when lbl = lbl' -> raise Lbl
+	  | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> raise Gto 
+	  | Block blk -> begin
+	      try direction blk with Not_found -> direction stmts
+	    end
+	  | _ -> direction stmts
+in
+  let rec b_delete_goto stmts =
     match stmts with
 	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], stmts
+	    | Block blk -> begin
+		try
+		  let e, blk', after = b_delete_goto blk in
+		  let blk' = blk' @ after in
+		    if blk' = [] then e, [], stmts
+		    else
+		      e, [Block blk', l], stmts
+		with
+		    Not_found -> 
+		      let e, blk, after = b_delete_goto stmts in
+			e, (stmt, l)::blk, after
+	      end
 	    | _ ->
-		let e, blk, after = add_loop_delete_goto stmts in
+		let e, blk, after = b_delete_goto stmts in
 		  e, (stmt, l)::blk, after
   in
+  let backward_wrap stmt l stmts =
+    try
+      let e, blk', after = b_delete_goto ((stmt,l)::stmts) in
+      let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
+      let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
+	before @ ( (DoWhile (blk', e), l)::(after'@after))
+    with
+	(* goto may have disappeared because of optimizations *)
+	Not_found -> (stmt, l)::stmts
+  in
+
   let rec backward stmts =
     match stmts with
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
-	      Label lbl' when lbl' = lbl -> begin
-		try
-		  let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
-		  let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-		  let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
-		    before @ ( (DoWhile (blk', e), l)::(after'@after))
-		with
-		    (* goto may have disappeared because of optimizations *)
-		    Not_found -> (stmt, l)::stmts
-	      end
+	      Label lbl' when lbl' = lbl -> backward_wrap stmt l stmts 
+	    | Block blk when search_lbl blk lbl -> backward_wrap stmt l stmts
 	    | _ -> (stmt, l)::(backward stmts)
   in
+  
+  let rec b_delete_goto stmts =
+    match stmts with
+	[] -> raise Not_found
+      | (stmt, l)::stmts -> 
+	  match stmt with
+	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+		stmts, (stmt, l)
+	    | _ -> let stmts', e = b_delete_goto stmts in (stmt, l)::stmts', e
+  in
 
-  let forward stmts e =
-    let rec split before stmts =
-      match stmts with
-	  [] -> before
-	| (stmt, l)::stmts' ->
-	    match stmt with
-		Label lbl' when lbl = lbl' -> 
+  let rec forward stmts = 
+    match stmts with
+	[] -> []
+      | (stmt, l)::stmts ->
+	  match stmt with
+	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+		let before, after = split_lbl stmts lbl in
 		  if before = [] then stmts
-		  else 
-		    let if' = If(Unop(Not, e), before, []) in
-		      (if', l)::stmts
-	      | Block blk ->
-		  let blk' = split [] blk in
-		  (*let before' = before@[Block blk', l] in
-		    split before' stmts'*)
-		    before@[Block blk', l]
-
-	      | _ -> let before' = (stmt, l)::before in split before' stmts'
-    in split [] stmts
+		  else
+		    let if' = If(Unop(Not, e), before, []) in (if', l)::after
+	    | Block blk -> begin
+		try
+		  let blk', stmt = b_delete_goto blk in
+		  let stmts' = if blk' = [] then [] else [Block blk', l] in
+		  let stmts' = (stmt::stmts') @ stmts in
+		    forward stmts' 
+		with Not_found -> (stmt, l)::(forward stmts)
+	      end
+	    | _ -> (stmt, l)::(forward stmts)
   
   in
   let rec choose stmts =
@@ -502,17 +565,19 @@ let sibling_elimination stmts lbl g_offset =
 	[] -> [], false
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		forward stmts e, true
+	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+		forward ((stmt, l)::stmts), true
 	    | Label lbl' when lbl' = lbl -> 
 	      let stmts' = (stmt, l)::stmts in backward stmts', true
-	    | Block blk -> 
-		let blk', b = choose blk in 
-		if b then 
-		  (Block blk', l)::stmts, true
-		else 
-		  let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-
+	    | Block blk -> begin
+		  try direction blk with 
+		      Gto  -> forward ((stmt, l)::stmts), true
+		    | Lbl -> backward ((stmt, l)::stmts), true
+		    | Not_found -> 
+			let blk', b' = choose blk in 
+			  if not b' then let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+			  else (Block blk', l)::stmts, true
+	      end
 	    | If(e, if_blk, else_blk) -> 
 		let if_blk', b = choose if_blk in 
 		  if b then (If(e, if_blk', else_blk), l)::stmts, true
