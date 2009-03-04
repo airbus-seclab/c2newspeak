@@ -67,14 +67,46 @@
     let err_msg = pos^", unknown keyword: '"^lexeme^"'" in 
       Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
 
-    let rec power_ten x = match x with
-        | y when y<0 -> failwith ("Internal error : power_ten should be called"
+    let rec expt_int pow x = match x with
+        | y when y<0 -> failwith ("Internal error : expt_int should be called"
                                 ^ " only with nonnegative integers");
         | 0 -> 1
-        | _ -> 10 * power_ten (x-1)
+        | _ -> pow * expt_int pow (x-1)
         
+    (* Removes underscores from a string. *)
     let strip_underscores s =
         Str.global_replace (Str.regexp_string "_") "" s
+
+    (* computes the value of a based numeral *)
+    let int_of_based_string base str =
+        if (base < 2 || base > 16) then Npkcontext.report_error "Based litteral"
+                            "a base should be between 2 and 16, inclusive"
+        else begin
+            let value_of_char c = match c with
+                    | '0' ->  0 | '1' ->  1 | '2' ->  2 | '3' ->  3
+                    | '4' ->  4 | '5' ->  5 | '6' ->  6 | '7' ->  7
+                    | '8' ->  8 | '9' ->  9 | 'a' -> 10 | 'b' -> 11
+                    | 'c' -> 12 | 'd' -> 13 | 'e' -> 14 | 'f' -> 15
+                    | 'A' -> 10 | 'B' -> 11 | 'C' -> 12 | 'D' -> 13
+                    | 'E' -> 14 | 'F' -> 15
+                    | _ -> failwith ("Internal error : input '"^(String.make 1 c)^"' in value_of_char"
+                                   ^" (based litterals)") in
+            let rec aux start acc =
+                if start = (String.length str) then acc
+                else begin
+                    let value = value_of_char str.[start] in
+                        if value >= base then
+                            Npkcontext.report_error "Based litteral"
+                                        "in base X, digits are strictly less than X" 
+                        else aux (start+1) (base*acc+value)
+                end
+            in
+            aux 0 0
+        end
+    
+    let defaults_to def_value opt = match opt with 
+        | None -> def_value
+        | Some x -> x
 
 }
 (*à élargir : accent *)
@@ -88,9 +120,11 @@ let char = "'"_"'"
 let chaine = '"' ([^ '"']|"""")* '"'
 
 (*Nombres*)
-(* à revoir : intégrer puissance et base *)
 let entier = chiffre ('_'? chiffre)*
 let reel = entier '.' entier
+
+let extended_digit = ['0'-'9' 'a'-'f' 'A'-'F']
+let based_numeral = extended_digit ('_'? extended_digit)*
     
 let litteral_reel = reel
       
@@ -251,12 +285,19 @@ rule token = parse
 
   (* constantes numériques *)
   | litteral_reel {CONST_FLOAT (Lexing.lexeme lexbuf)}
-  | entier {CONST_INT ( Newspeak.Nat.of_string(strip_underscores (Lexing.lexeme lexbuf)))}
+  | entier {CONST_INT (Newspeak.Nat.of_string(
+				strip_underscores (Lexing.lexeme lexbuf)))}
   | entier as main_part ['e' 'E'] '+'? (entier as expo) {CONST_INT (
             Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
-                    * (power_ten (int_of_string (strip_underscores expo)))
-            )
-            )}
+                    * (expt_int 10 (int_of_string (strip_underscores expo)))
+            ))}
+  | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
+		CONST_INT (Newspeak.Nat.of_int ( (int_of_based_string
+                                            (int_of_string (strip_underscores base))
+                                            (strip_underscores main_part))
+                                       * expt_int (int_of_string (strip_underscores base))
+                                            (int_of_string (strip_underscores
+                                                                    (defaults_to "0" exponent)))))}
 
   (*identifiant*)
   | ident {IDENT (Lexing.lexeme lexbuf)}
