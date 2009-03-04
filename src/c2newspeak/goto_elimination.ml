@@ -368,14 +368,15 @@ let rec related stmts lbl g_offset =
 		  if p' = No then loops previous p stmts else raise Indirect
 		  
 	    | CSwitch (_, cases, default) ->
-		let rec rel cases =
+		let rec rel previous cases =
 		  match cases with
-		      [] -> No
+		      [] -> previous
 		    | (_, blk, _)::cases -> 
 			let p = related No blk in 
-			  if p = No then rel cases else p
+			if p = No then rel previous cases 
+			else let p' = loops previous p [] in rel p' cases
 		in
-		let p = rel cases in
+		let p = rel No cases in
 		let p' = related No default in
 		  if p = No then loops previous p' stmts
 		  else 
@@ -403,7 +404,7 @@ let indirectly_related stmts lbl g_offset =
       Indirect -> true
     | Direct | Sibling -> false
 
-let avoid_break_continue_capture stmts lwhile l = 
+let avoid_break_continue_capture stmts lwhile l g_offset = 
   let rec add stmts l var skind =
     let stmts', vars = search stmts in
     let set = Exp (Set( (Var var), None, one)) in
@@ -414,11 +415,11 @@ let avoid_break_continue_capture stmts lwhile l =
       | (stmt, l')::stmts ->
 	  match stmt with
 	      Break -> 
-		let var = "break."^(Newspeak.string_of_loc l') in
+		let var = "break."^(Newspeak.string_of_loc l')^"."^g_offset in
 		add stmts l' var Break
 	
 	    | Continue ->
-		let var = "continue."^(Newspeak.string_of_loc l') in
+		let var = "continue."^(Newspeak.string_of_loc l')^"."^g_offset in
 		  add stmts l' var Continue
 
 	    | If (e, if_blk, else_blk) ->
@@ -449,9 +450,7 @@ let avoid_break_continue_capture stmts lwhile l =
 let sibling_elimination stmts lbl g_offset =
   let rec add_loop_delete_goto stmts =
     match stmts with
-	[] ->
-	  invalid_arg ("Goto_elimination.sibling_elimination: implementation bug. " ^
-			 "Goto has to be in this stmts list")
+	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], stmts
@@ -464,12 +463,16 @@ let sibling_elimination stmts lbl g_offset =
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
-	      Label lbl' when lbl' = lbl ->
-		let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
-		let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-		let before, blk', after' = avoid_break_continue_capture blk' l l' in
-		  before @ ( (DoWhile (blk', e), l)::(after'@after))
-		    
+	      Label lbl' when lbl' = lbl -> begin
+		try
+		  let e, blk', after = add_loop_delete_goto ((stmt,l)::stmts) in
+		  let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
+		  let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
+		    before @ ( (DoWhile (blk', e), l)::(after'@after))
+		with
+		    (* goto may have disappeared because of optimizations *)
+		    Not_found -> (stmt, l)::stmts
+	      end
 	    | _ -> (stmt, l)::(backward stmts)
   in
 
@@ -645,18 +648,18 @@ let outward stmts lbl g_level g_offset =
       | (stmt, l)::stmts ->
 	  match stmt with
 	      For (blk1, e, blk2, blk3) ->  
-		let blk2', stmts', b' = fold blk2 stmts out_switch_loop has_label in
+		let blk2', stmts', b' = fold blk2 stmts out_switch_loop search_lbl in
 		  (For(blk1, e, blk2', blk3), l)::stmts', b'
 		    
 	    | DoWhile (blk, e) -> 
-		let blk', stmts', b' = fold blk stmts out_switch_loop has_label in
+		let blk', stmts', b' = fold blk stmts out_switch_loop search_lbl in
 		  (DoWhile (blk', e), l)::stmts', b'
 		    
 	    | If (e, if_blk, else_blk) ->
 		let rec if_fold if_blk stmts = 
-		  let if_blk', stmts', b' = out if_blk stmts out_if_else has_label in
+		  let if_blk', stmts', b' = out if_blk stmts out_if_else search_lbl in
 		    if not b' then 
-		      let else_blk', stmts', b' = fold else_blk stmts out_if_else has_label in
+		      let else_blk', stmts', b' = fold else_blk stmts out_if_else search_lbl in
 		      if_blk', else_blk', stmts', b'
 		    else 
 		      let if_blk', else_blk', stmts', _ = if_fold if_blk' stmts' in
@@ -703,7 +706,7 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let set = Exp (Set (lbl', None, e)) in
-    if has_label if_blk lbl then 
+    if search_lbl if_blk lbl then 
       begin
 	let cond = IfExp (lbl', cond, zero) in
 	let l' = try snd (List.hd if_blk) with Failure "hd" -> l in
@@ -784,7 +787,7 @@ and dowhile_in lbl l e before cond blk g_offset g_loc =
 
 and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
-  let tswitch = "switch."^(Newspeak.string_of_loc l) in
+  let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
   let declr = VDecl (tswitch, uint_typ, false, false, None) in
   let tswitch = Var tswitch in
   let set = Exp (Set (lbl', None, e)) in
@@ -844,7 +847,7 @@ and inward lbl g_offset g_loc stmts =
   in
   let rec inward before stmts = 
     match stmts with
-	[] -> invalid_arg "Goto_elimination.inward: label has to be in that stmt list"
+	[] -> []
       | (stmt, l)::stmts ->
 	  if has_label [stmt, l] lbl then
 	    before@((stmt, l)::stmts)
@@ -875,79 +878,66 @@ and inward lbl g_offset g_loc stmts =
 	      let before' = before@[stmt, l] in inward before' stmts
   in inward [] stmts
        
+
        
 let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
   let rec split_goto stmts =
     match stmts with
-	[] -> [], []
+	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(_, [Goto lbl', _], _) when goto_equal lbl lbl' g_offset ->
-		[], (stmt, l)::stmts
+	      If(e, [Goto lbl', _], _) when goto_equal lbl lbl' g_offset ->
+		[], stmts, e
 	    | _ ->
-		  let blk, after = split_goto stmts in
-		    (stmt, l)::blk, after
-
+		let blk, after, e = split_goto stmts in
+		  (stmt, l)::blk, after, e
+		    
   in
-  let rec search stmts =
-    (* returns the triple of stmts (before, blk, after) where 
-       -blk is the chunk of statements in stmts from the label to the
-       stmt just before the desired goto; 
-       -before is the chunk from the beginning to the stmt just
-       before the label;
-       -after is the chunk from the goto to the end *)
-    match stmts with
-	[] -> [], [], []
-      | (stmt, l)::stmts ->
-	  if search_lbl [stmt, l] lbl then
-	    let blk, after = split_goto stmts in
-	      [], (stmt, l)::blk, after
-	  else 
-	    let before, blk, after = search stmts in
- 	      (stmt, l)::before, blk, after
+  let lifting stmts =
+    let rec lift stmts =
+      match stmts with
+	  [] -> [], false
+	| (stmt, l)::stmts ->
+	    match stmt with
+		Block blk ->
+		  let blk', b = lift blk in 
+		 if b then (Block blk', l)::stmts, true
+		 else 
+		   let stmts', b = lift stmts in (stmt, l)::stmts', b
+	      | _ -> 
+		  if search_lbl [stmt, l] lbl then
+		    let blk, after, e = split_goto stmts in
+		    let g_lbl = goto_lbl lbl g_offset in
+		    let lbl' = Var (fresh_lbl lbl) in
+		    let if' = If(lbl', [Goto g_lbl, g_loc], []) in
+		    let set = Exp (Set (lbl', None, e)) in
+		    let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
+		    let before', blk', after' = avoid_break_continue_capture blk l l_set g_offset in
+		    let blk' = [(if', l) ; (stmt, l)] @ blk' @ [(set, l_set)] in
+		      (* inward transformations on the blk chunk. We know that the
+			 first stmt is the goto stmt and the second one contains
+			 the label stmt *)
+		    let blk' = inward lbl g_offset g_loc blk' in	   
+		      (* do-while loop *)
+		    let blk' = [DoWhile(blk', lbl'), l_set] in
+		      before' @ blk' @ after @ after', true
+		  else 
+		    let stmts', b = lift stmts in
+		    (stmt, l)::stmts', b
+    in
+      fst (lift stmts)
   in
-  let first_if_cond stmts =
-    match stmts with
-	(If(e, _, _), _)::_ -> e
-      | _ -> raise Not_found
-  in
-  let rec lifting_and_inward  stmts = 
+  let rec lifting_and_inward stmts = 
     if has_goto stmts lbl g_offset then
       begin
 	try 
 	  (* looking for the block between the label and the goto. If
 	     the goto is forward then Not_found is raised and lifting is
 	     skiped *)
-	  let before, blk, after = search stmts in
-	  let lbl' = Var (fresh_lbl lbl) in
+	  let stmts' = lifting stmts in
 	    g_level := !g_level + 1;
 	    l_level := !l_level + 1;
-	  (* add if (goto_lbl) goto lbl; at the beginning of blk *)
-	let e = first_if_cond after in
-	let _, l_if = List.hd blk (*never raises Failure as we
-				    know the label is in the current stmts *) in
-	let g_lbl = goto_lbl lbl g_offset in
-	let if' = If(lbl', [Goto g_lbl, g_loc], []) in
-	let blk' = (if', l_if)::blk in
-	  (* add goto_lbl = cond to the end of blk and wrap blk with a loop *)
-	  let set = Exp (Set (lbl', None, e)) in
-	  let _, l_set = 
-	    try List.hd after
-	    with Failure "hd" -> List.hd (List.rev blk)
-	  in
-	  let blk' = blk'@[set, l_set] in
-	  
-	  (* the goto stmt is removed from the stmts in the chunk after *)
-	  let after' = List.tl after in
-	    
-	  (* inward transformations on the blk chunk. We know that the
-	     first stmt is the goto stmt and the second one contains
-	     the label stmt *)
-	  let blk' = inward lbl g_offset g_loc blk' in
-	    
-	  (* do-while loop *)
-	  let blk' = [DoWhile(blk', lbl'), l_set] in
-	    (before@blk'@after'), true
+	    stmts', true
 	with 
 	    (* goto is forward. Call to inward only*)
 	    Not_found -> inward lbl g_offset g_loc stmts, true
@@ -1009,7 +999,7 @@ let elimination stmts lbl (gotos, lo) =
     let l, id, o = goto in
     let l = ref l in
       (* force goto and label to be directly related *)
-      if indirectly_related !stmts lbl id then
+      if indirectly_related !stmts lbl id then 
 	  stmts := outward !stmts lbl l id;
 
       (* force goto and label to be siblings *)

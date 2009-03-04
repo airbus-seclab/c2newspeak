@@ -9,7 +9,7 @@ void main(void) {
     int32 i;
     (601.c:28#2)^1- =(uint32) 1-_uint32;
     (601.c:28#2)^{
-      uint32 switch.601.c:28#2;
+      uint32 switch.601.c:28#2.0;
       (601.c:28#2)^choose {
        -->
         (601.c:28#2)^guard(! 2-_uint32);
@@ -53,20 +53,20 @@ void main(void) {
         }
       } with lbl3: {
       }
-      (601.c:30#4)^2- =(uint32) 2-_uint32;
+      (601.c:28#2)^2- =(uint32) 2-_uint32;
     }
-    (601.c:30#4)^do {
-      (601.c:30#4)^while (1) {
-        (601.c:30#4)^choose {
+    (601.c:28#2)^do {
+      (601.c:28#2)^while (1) {
+        (601.c:28#2)^choose {
          -->
-          (601.c:30#4)^guard(1-_uint32);
+          (601.c:28#2)^guard(1-_uint32);
          -->
-          (601.c:30#4)^guard(! 1-_uint32);
-          (601.c:30#4)^goto lbl1;
+          (601.c:28#2)^guard(! 1-_uint32);
+          (601.c:28#2)^goto lbl1;
         }
         (601.c:28#2)^1- =(uint32) 1-_uint32;
         (601.c:28#2)^{
-          uint32 switch.601.c:28#2;
+          uint32 switch.601.c:28#2.0;
           (601.c:28#2)^choose {
            -->
             (601.c:28#2)^guard(! 2-_uint32);
@@ -110,7 +110,7 @@ void main(void) {
             }
           } with lbl11: {
           }
-          (601.c:30#4)^2- =(uint32) 2-_uint32;
+          (601.c:28#2)^2- =(uint32) 2-_uint32;
         }
       }
     } with lbl1: {

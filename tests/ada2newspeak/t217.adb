@@ -15,7 +15,6 @@ procedure t217 is
     N280   : Integer := 28E+1;    -- positive exponent with explicit plus
     N27    : Integer := 27E+0;    -- zero exponent with explicit plus
 --    N58    : Integer := 58E-0;  -- zero exponent with explicit minus : skipped
--- multiple underscores -> fail TODO
 begin
     null;
 end t217;

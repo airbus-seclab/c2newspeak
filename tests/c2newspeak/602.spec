@@ -9,7 +9,7 @@ void main(void) {
     int32 i;
     (602.c:28#2)^1- =(uint32) 1-_uint32;
     (602.c:28#2)^{
-      uint32 switch.602.c:28#2;
+      uint32 switch.602.c:28#2.0;
       (602.c:28#2)^choose {
        -->
         (602.c:28#2)^guard(! 2-_uint32);
@@ -48,20 +48,20 @@ void main(void) {
         }
       } with lbl3: {
       }
-      (602.c:30#4)^2- =(uint32) 2-_uint32;
+      (602.c:28#2)^2- =(uint32) 2-_uint32;
     }
-    (602.c:30#4)^do {
-      (602.c:30#4)^while (1) {
-        (602.c:30#4)^choose {
+    (602.c:28#2)^do {
+      (602.c:28#2)^while (1) {
+        (602.c:28#2)^choose {
          -->
-          (602.c:30#4)^guard(1-_uint32);
+          (602.c:28#2)^guard(1-_uint32);
          -->
-          (602.c:30#4)^guard(! 1-_uint32);
-          (602.c:30#4)^goto lbl1;
+          (602.c:28#2)^guard(! 1-_uint32);
+          (602.c:28#2)^goto lbl1;
         }
         (602.c:28#2)^1- =(uint32) 1-_uint32;
         (602.c:28#2)^{
-          uint32 switch.602.c:28#2;
+          uint32 switch.602.c:28#2.0;
           (602.c:28#2)^choose {
            -->
             (602.c:28#2)^guard(! 2-_uint32);
@@ -100,7 +100,7 @@ void main(void) {
             }
           } with lbl12: {
           }
-          (602.c:30#4)^2- =(uint32) 2-_uint32;
+          (602.c:28#2)^2- =(uint32) 2-_uint32;
         }
       }
     } with lbl1: {
