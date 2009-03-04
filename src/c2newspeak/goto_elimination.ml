@@ -1013,12 +1013,11 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 	| (stmt, l)::stmts -> 
 	    match stmt with
 		If(e, if_blk, else_blk) -> 
-		  let if_blk', b = lifting_and_inward if_blk in
-		  let else_blk', b' = 
-		    if b then else_blk, b else lifting_and_inward else_blk 
-		  in
+		  let if_blk', b' = lifting_and_inward if_blk in
+		  let else_blk', b' =  if b' then else_blk, b' else lifting_and_inward else_blk in
+		  let stmts', b' = if b' then stmts, b' else lifting_and_inward stmts in
 		  let if' = If(e, if_blk', else_blk') in
-		    (if', l)::stmts, (b or b')
+		    (if', l)::stmts', b'
 		      
 	      | CSwitch (e, cases, blk) ->
 		  let rec iter cases =
@@ -1032,15 +1031,18 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 		  in 
 		  let cases', b = iter cases in
 		  let blk', b' = if b then blk, b else lifting_and_inward blk in
-		    [CSwitch (e, cases', blk'), l], (b or b')
+		  let stmts', b' = if b' then stmts, b' else lifting_and_inward stmts in
+		    (CSwitch (e, cases', blk'), l)::stmts', b'
 		      
 	      | For(blk1, e, blk2, blk3) ->
 		  let blk2', b' = lifting_and_inward blk2 in
-		    [For(blk1, e, blk2', blk3), l], b' 
+		  let stmts', b' = if b' then stmts, b' else lifting_and_inward stmts in
+		    (For(blk1, e, blk2', blk3), l)::stmts', b' 
 		      
 	      | DoWhile(blk, e) -> 
 		  let blk', b' = lifting_and_inward blk in
-		    [DoWhile(blk', e), l], b'
+		  let stmts', b' = if b' then stmts, b' else lifting_and_inward stmts in
+		    (DoWhile(blk', e), l)::stmts', b'
 
 	      | Block blk ->
 		  let blk', b = lifting_and_inward blk in
