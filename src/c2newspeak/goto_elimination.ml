@@ -404,7 +404,7 @@ let indirectly_related stmts lbl g_offset =
       Indirect -> true
     | Direct | Sibling -> false
 
-let avoid_break_continue_capture stmts lwhile l g_offset = 
+let avoid_break_continue_capture stmts lwhile l g_offset vdecls = 
   let rec add stmts l var skind =
     let stmts', vars = search stmts in
     let set = Exp (Set( (Var var), None, one)) in
@@ -445,7 +445,8 @@ let avoid_break_continue_capture stmts lwhile l g_offset =
 	let set = Exp (Set (Var var, None, zero)) in
 	let if_blk = (set, lwhile)::[skind, lwhile] in
 	let if' = If(Var var, if_blk, []) in
-	  before := (vdecl, lwhile)::!before;
+	  (*before := (vdecl, lwhile)::!before;*)
+	  vdecls := vdecl::!vdecls;
 	  after := (if', lwhile)::!after
       in
 	List.iter add vars;
@@ -472,7 +473,7 @@ let rec split_lbl stmts lbl =
 
 	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
 
-let sibling_elimination stmts lbl g_offset =
+let sibling_elimination stmts lbl g_offset vdecls =
 
 let rec direction stmts =
   match stmts with
@@ -512,8 +513,8 @@ in
     try
       let e, blk', after = b_delete_goto ((stmt,l)::stmts) in
       let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-      let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset in
-	before @ ( (DoWhile (blk', e), l)::(after'@after))
+      let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset vdecls in
+	before @ ((DoWhile (blk', e), l)::(after'@after))
     with
 	(* goto may have disappeared because of optimizations *)
 	Not_found -> (stmt, l)::stmts
@@ -945,7 +946,7 @@ and inward lbl g_offset g_loc stmts =
        
 
        
-let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
+let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
   let rec split_goto stmts =
     match stmts with
 	[] -> raise Not_found
@@ -977,7 +978,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
 		    let if' = If(lbl', [Goto g_lbl, g_loc], []) in
 		    let set = Exp (Set (lbl', None, e)) in
 		    let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
-		    let before', blk', after' = avoid_break_continue_capture blk l l_set g_offset in
+		    let before', blk', after' = avoid_break_continue_capture blk l l_set g_offset vdecls in
 		    let blk' = [(if', l) ; (stmt, l)] @ blk' @ [(set, l_set)] in
 		      (* inward transformations on the blk chunk. We know that the
 			 first stmt is the goto stmt and the second one contains
@@ -1057,7 +1058,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc =
     fst (lifting_and_inward stmts)
 
   
-let elimination stmts lbl (gotos, lo) =
+let elimination stmts lbl (gotos, lo) vdecls =
   (* moves all gotos of the given label lbl. lo is the pair
      (level, offset) of the label statement *)
   let l_level, _ = lo in
@@ -1073,17 +1074,17 @@ let elimination stmts lbl (gotos, lo) =
       if directly_related !stmts lbl id then begin
 	if !l > l_level then begin
 	  stmts := outward !stmts lbl l id;
-	  stmts := sibling_elimination !stmts lbl id
+	  stmts := sibling_elimination !stmts lbl id vdecls
 	end
 	else begin
 	  let l_level = ref l_level in
-	    stmts := lifting_and_inward !stmts lbl l_level l id o;
-	    stmts := sibling_elimination !stmts lbl id
+	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls;
+	    stmts := sibling_elimination !stmts lbl id vdecls
 	end
       end
       else
 	(* goto and label are sibling; eliminate goto and label *) 
-	stmts := sibling_elimination !stmts lbl id
+	stmts := sibling_elimination !stmts lbl id vdecls
   in
     List.iter move gotos;
     !stmts
@@ -1129,11 +1130,11 @@ let rec deleting_goto_ids stmts =
 	  | _ -> (stmt, l)::(deleting_goto_ids stmts)
 
 let run prog =
-  let elimination lbls stmts =
+  let elimination lbls stmts vars =
     (* goto elimination *)
     let stmts = ref stmts in
     let move lbl g = 
-      stmts := elimination !stmts lbl g
+      stmts := elimination !stmts lbl g vars
     in
       Hashtbl.iter move lbls;
       deleting_goto_ids !stmts
@@ -1149,8 +1150,12 @@ let run prog =
 	stmts'
       else 
 	(* processing goto elimination *)
+	let vars = ref [] in
 	let stmts' = vdecls'@stmts' in
-	  elimination lbls stmts'
+	let stmts' = elimination lbls stmts' vars in
+	let _, l = List.hd vdecls' in
+	let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
+	  vars'@stmts'
   in
   let lbls = Hashtbl.create 30 in
   let rec run prog = 
