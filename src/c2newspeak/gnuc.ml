@@ -63,7 +63,6 @@ let _ =
   Hashtbl.add token_tbl "__inline" INLINE;
   Hashtbl.add token_tbl "__asm__" ASM;
   Hashtbl.add token_tbl "__cdecl" CDECL;
-  Hashtbl.add token_tbl "__nothrow__" NOTHROW;
   (* tells the compiler the function does not throw an exception *)
 
   Hashtbl.add token_tbl "__pure__" PURE;

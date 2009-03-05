@@ -197,7 +197,7 @@ let rec normalize_bexp e =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL
 %token INLINE GNU_INLINE ASM FORMAT_ARG RESTRICT 
-%token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
+%token NONNULL DEPRECATED MALLOC PURE BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
 %token EOF
@@ -976,10 +976,12 @@ attribute_name_list:
 
 attribute_name:
   IDENTIFIER                               { 
-(* TODO: think of a way of doing this in a nice way *)
+(* TODO: think of a way of doing this in a nice way, using Gnuc.is_gnu_token
+   + fix internal hashtbl of gnuc.ml once all gnuc symbols are eliminated.
+ *)
     if ($1 <> "aligned") && ($1 <> "dllimport") && ($1 <> "__cdecl__")
       && ($1 <> "noreturn") && ($1 <> "__noreturn__") 
-      && ($1 <> "__always_inline__")
+      && ($1 <> "__always_inline__") && ($1 <> "__nothrow__")
     then raise Parsing.Parse_error;
 
     if $1 = "dllimport" then begin
@@ -998,7 +1000,6 @@ attribute_name:
     if $1 <> "aligned" then raise Parsing.Parse_error;
     []
   }
-| NOTHROW                                  { [] }
 | PURE                                     { [] }
 | DEPRECATED                               { [] }
 | MALLOC                                   { [] }
