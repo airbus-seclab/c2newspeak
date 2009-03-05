@@ -195,7 +195,7 @@ let rec normalize_bexp e =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL NORETURN
+%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL
 %token INLINE ALWAYS_INLINE GNU_INLINE ASM FORMAT_ARG RESTRICT 
 %token NONNULL DEPRECATED MALLOC NOTHROW PURE BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
@@ -978,6 +978,7 @@ attribute_name:
   IDENTIFIER                               { 
 (* TODO: think of a way of doing this in a nice way *)
     if ($1 <> "aligned") && ($1 <> "dllimport") && ($1 <> "__cdecl__")
+      && ($1 <> "noreturn") && ($1 <> "__noreturn__")
     then raise Parsing.Parse_error;
 
     if $1 = "dllimport" then begin
@@ -996,7 +997,6 @@ attribute_name:
     if $1 <> "aligned" then raise Parsing.Parse_error;
     []
   }
-| NORETURN                                 { [] }
 | ALWAYS_INLINE                            { [] }
 | NOTHROW                                  { [] }
 | PURE                                     { [] }
