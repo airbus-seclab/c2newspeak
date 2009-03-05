@@ -143,11 +143,6 @@ let id_character = "character"
 let id_true      = "true"
 let id_false     = "false"
 
-(*WG*)
-let id_last      = "last"
-let id_first     = "first"
-let id_length    = "length"
-
 rule token = parse
 
   (*reconnaissance des identifiants reserves*)
@@ -249,10 +244,6 @@ rule token = parse
   | id_true        {TRUE}
   | id_false       {FALSE}
 
-(*WG*)
-  | id_last {LAST}
-  | id_first {FIRST}
-  | id_length {LENGTH}
   | '(' {LPAR}
   | ')' {RPAR}
 

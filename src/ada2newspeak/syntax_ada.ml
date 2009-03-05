@@ -22,78 +22,141 @@
 
 *)
 
-(*definition des types*)
+(** This module defines types for the abstract syntax tree. *)
+
+(** Location in the source code. *)
 type location = Newspeak.location
+
+
 type nat = Newspeak.Nat.t
+
+(** TODO rename *)
 type flottant = float*string
 
 type identifier = string
+
+(** TODO doc : overload ? *)
 type name = identifier list*identifier
 
-(*WG*)
-type param_mode = In | Out | InOut
+(** Modes for subprogram parameters. *)
+type param_mode =
+| In    (** Read-only  *)
+| Out   (** Write-only *)
+| InOut (** Read-write *)
 
-type value = | IntVal of nat
-	     | FloatVal of flottant
-	     | BoolVal of bool
 
+type value =
+| IntVal   of nat       (** Integer value        *)
+| FloatVal of flottant  (** Floating-point value *)
+| BoolVal  of bool      (** Boolean value        *)
 
-type unary_op = UPlus | UMoins | Abs | Not
+(** Unary operators. *)
+type unary_op =
+| UPlus     (** Unary "+"        *)
+| UMoins    (** Unary "-"        *)
+| Abs       (** Absolute value   *)
+| Not       (** Logical negation *)
 
+(** Binary operators. TODO rename *)
 type binary_op =
-  | Plus | Moins | Fois | Div | Puissance
-  | Concat | Mod | Rem
-  | Eq | Neq | Le | Lt | Ge | Gt
-  | And | Or | Xor | AndThen | OrElse
+| Plus          (** "+",        addition                                 *)
+| Moins         (** "-",        difference                               *)
+| Fois          (** "*",        multiplication                           *)
+| Div           (** "/",        division                                 *)
+| Puissance     (** "**",       exponentiation                           *)
+| Concat        (** "&",        concatenation                            *)
+| Mod           (** "mod",      modulus                                  *)
+| Rem           (** "rem",      division reminder                        *)
+| Eq            (** "=",        equality test                            *)
+| Neq           (** "/=",       difference test                          *)
+| Le            (** "<=",       less or equal                            *)
+| Lt            (** "<",        less than                                *)
+| Ge            (** ">=",       greater or equal                         *)
+| Gt            (** ">",        greater than                             *)
+| And           (** "and",      logical conjunction                      *)
+| Or            (** "or",       logical disjunction                      *)
+| Xor           (** "xor",      logical exclusive disjunction            *)
+| AndThen       (** "and then", logical conjunction with lazy evaluation *)
+| OrElse        (** "or else",  logical disjunction with lazy evaluation *)
 
+(** Builtin types. *)
 type typ =
-  | Integer
-  | IntegerConst
-  | Float
-  | Boolean
-  | Character
-  | Declared of typ_declaration*location
-  | String
+  | Integer                              (** Integer               *)
+  | IntegerConst                         (** Integer constant      *)
+  | Float                                (** Floating-point number *)
+  | Boolean                              (** Boolean               *)
+  | Character                            (** Character             *)
+  | String                               (** String                *)
+  | Declared of typ_declaration*location (** User-defined type     *)
 
+(** Type declaration. *)
 and typ_declaration =
-  | Enum of identifier*((identifier*nat) list)*Newspeak.ikind
-  | DerivedType of identifier*subtyp_indication
+  | Enum          of   identifier
+                      *((identifier*nat) list)
+                      *Newspeak.ikind             (** Enumerated type, eg
+                                                [type Day is (Mon,...,Sun)] *)
+  | DerivedType  of identifier
+                   *subtyp_indication  (** Derived type, eg
+                                [type WeekEndDay is Day range Sat..Sun] *)
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
-  | Array of identifier*array_type_definition
-  | Record of identifier*record_type_definition
+    (** Integer range, eg [type Byte is range 0..255] *) (*TODO ikind ? *)
+  | Array of identifier*array_type_definition   (** TODO *)
+  | Record of identifier*record_type_definition (** TODO *)
 
+(** Record type definition, as in {[.
+type Date is
+    record
+        Day   : Integer range 1 .. 31;
+        Month : Month_Name;
+        Year  : Integer;
+    end record;
+]} *)
 and record_type_definition = field list
 
+(** A record field. *)
 and field = identifier list*subtyp_indication*expression option
-      (*object_state  TO DO check need for object_st
-      *)
+ (* | FielDecl of identifier list*subtyp_indication*expression option *)
+    (*object_state  TO DO check need for object_st *)
+(* TODO +mutable *)
 
+(** Array type definition *)
 and array_type_definition =
-    (* intervalle discret du tableau * type des elements *)
   | ConstrainedArray of subtyp_indication*subtyp_indication*int option
+    (** Constrained array : discrete interval, type of elements, array size *)
 
+(** Subtype definition. *)
 and subtyp =
-  | Unconstrained of typ
-  (* le parametre booleen indique si le sous-type est static *)
-  | Constrained of typ*contrainte*bool
-  | SubtypName of name
+  | Unconstrained of typ               (** Unconstrained. *)
+  | Constrained of typ*contrainte*bool (** Constrained. The boolean parameters
+                                           means if the subtype is static *)
+  | SubtypName of name                 (** Subtype *)
 
+(** Attribute, eg Day'First *)
+and attribute_reference = subtyp * attribute_designator
+
+(** Attribute designators like "First", "Range" or "Digits" *)
+and attribute_designator =
+ | AttributeDesignator of identifier * expression option
+   (** The option is for the optional parameter. It shall be static. *)
+
+(** Expressions. *)
 and expression =
-  | NullExpr
-  | CInt of nat
-  | CFloat of flottant
-  | CBool of bool
-  | CChar of int
-  | CString of string
-  | Var of name
-  | FunctionCall of name*expression list
-  | Unary of unary_op*expression
-  | Binary of binary_op*expression*expression
-  | Qualified of subtyp*expression
- (*WG*)
-  | Last of subtyp
-  | First of subtyp
-  | Length of subtyp
+  | NullExpr                             (** The [null] expression    *)
+  | CInt of nat                          (** Integer constant         *)
+  | CFloat of flottant                   (** Floating-point constant  *)
+  | CBool of bool                        (** Boolean constant
+                                             ([True] or [False])      *)
+  | CChar of int                         (** Character constant       *)
+  | CString of string                    (** String constant          *)
+  | Var of name                          (** Variable name            *)
+  | FunctionCall of name*expression list (** Function call            *)
+  | Unary of unary_op*expression         (** A unary operator applied
+                                             to another expression    *)
+  | Binary of binary_op*expression*expression (** A binary operator
+                                           applied to two expressions *)
+  | Qualified of subtyp*expression       (** Qualified expression     *)
+  | Attribute of attribute_reference     (** Attribute reference      *)
+
 
 and contrainte =
   | RangeConstraint of expression*expression
@@ -138,20 +201,18 @@ type sub_program_spec =
   | Function of name*param list*subtyp
   | Procedure of name*(param list)
 
-type use_clause = name list
-
-type object_state =
-  | Variable
-  | Constant (*constante dynamique, ou non encore evaluee*)
-  | StaticVal of value (*constante statique*)
-
-
 (* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)
 type array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
 type representation_clause =
   | EnumerationRepresentation of identifier*array_aggregate
+type use_clause = name list
+
+type object_state =
+  | Variable
+  | Constant (*constante dynamique, ou non encore evaluee*)
+  | StaticVal of value (*constante statique*)
 
 type context_clause =
   | With of name*location*(spec*location) option

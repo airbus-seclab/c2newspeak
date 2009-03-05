@@ -74,7 +74,7 @@ $(CIL): $(CILDIR)
 	cd cil/cil; patch Makefile.in ../Makefile.in.patch
 	cd cil/cil; ./configure
 	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
-	cd cil/cil; make
+	cd cil/cil; $(MAKE)
 	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
 
 $(CILDIR):

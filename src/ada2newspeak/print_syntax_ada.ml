@@ -163,10 +163,15 @@ and exp_to_string exp = match exp with
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
       ^(list_to_string params exp_to_string "," true)^")"
-  (*WG*)
-  | Last (styp) -> "Last ("^(subtyp_to_string styp)^")"
-  | First (styp) -> "First ("^(subtyp_to_string styp)^")"
-  | Length (styp) -> "Length ("^(subtyp_to_string styp)^")"
+  | Attribute (styp,des) ->
+              (subtyp_to_string styp)
+            ^ "'"
+            ^ (designator_to_string des)
+
+and designator_to_string des = match des with
+| AttributeDesignator (id, None)       -> id
+| AttributeDesignator (id, Some param) -> id ^ "(" ^ (exp_to_string param) ^ ")"
+
 
 and subtyp_to_string subtyp = match subtyp with
   | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"

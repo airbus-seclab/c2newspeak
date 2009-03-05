@@ -1530,9 +1530,7 @@ let translate compil_unit =
 		  "FunctionCall case but unexpected result"
 	  end
 
-
-    (*WG  TO DO *)
-    | First _ | Last _  | Length _->
+    | Attribute _->
 	Npkcontext.report_error
 	  "Firstpass.translate_exp"
 	  "Last, first or Length remaining in firstpass, non static "

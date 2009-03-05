@@ -157,27 +157,15 @@ let eval_static exp expected_typ csttbl context with_package
 	    Ada_utils.check_static_subtyp subtyp value;
 	    (value, typ)
 
-      | Last (subtype) ->
-	  let value_ret =  eval_static_last subtype in
-	  let typ = Ada_utils.check_typ expected_typ
-	    (Ada_utils.base_typ subtype)
-	  in
-	    (value_ret, typ)
-
-      | First (subtype) ->
-	  let value_ret = eval_static_first subtype in
-	  let typ = Ada_utils.check_typ expected_typ
-	    (Ada_utils.base_typ subtype)
-	  in
-	    (value_ret, typ)
-
-      | Length (subtype) ->
-	  let value_ret =  eval_static_length subtype in
-	  let typ = Ada_utils.check_typ expected_typ
-	    (Ada_utils.base_typ subtype)
-	  in
-	    (value_ret, typ)
-
+      | Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
+            match id with
+            | "First" | "Last" | "Length" ->
+                        Npkcontext.report_error "Ada_normalize:attributes"
+                                            "First, last, length not implemented"
+            | _ ->      Npkcontext.report_error "Ada_normalize:attributes"
+                                            ("unknown attribute " ^ id)
+            
+(*
   and eval_static_length subtype =
     match subtype with
       | Unconstrained _ ->  Npkcontext.report_error
@@ -246,6 +234,7 @@ let eval_static exp expected_typ csttbl context with_package
       | SubtypName _ ->  Npkcontext.report_error
 	  " Ada_normalize: eval static_last (Last)"
 	    " internal error : unexpected subtyp name"
+*)
 
 
   (* expected_typ : type du resultat de l'operation, pas
@@ -1224,62 +1213,86 @@ and normalize_exp exp = match exp with
   | FunctionCall(nom, params) ->
       FunctionCall(nom, List.map normalize_exp params)
 
-  | Last subtype | First subtype -> begin
+  | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
+     | "First" | "first" -> begin
 
-      let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
-	match new_contr with
-	   None -> Npkcontext.report_error
-	     "Ada_normalize Last contraint"
-	     "constraint is not IntegerRange"
+              let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
+                    match new_contr with
+                       None -> Npkcontext.report_error
+                         "Ada_normalize Last contraint"
+                         "constraint is not IntegerRange"
 
-	 | Some(IntegerRangeConstraint(a, b)) ->
-	     if (Nat.compare a b <=0)
-	     then
-	       match exp with
-		   Last _ ->  CInt b
-		 | First _ ->  CInt a
-		 | _ ->  Npkcontext.report_error
-		     " Ada_normalize" "Should never happen"
-	     else
-	       Npkcontext.report_error
-		 "Ada_normalize Length contraint"
-		 "Zero length"
+                     | Some(IntegerRangeConstraint(a, b)) ->
+                         if (Nat.compare a b <=0)
+                         then
+                           CInt a
+                         else
+                           Npkcontext.report_error
+                         "Ada_normalize Length contraint"
+                         "Zero length"
 
 
-	 | _ ->  Npkcontext.report_error
-	     "Firstpass: in Array access"
-	       "constraint is not IntegerRange"
-    end
+                     | _ ->  Npkcontext.report_error
+                         "Firstpass: in Array access"
+                           "constraint is not IntegerRange"
+                    end
 
 
-  | Length subtype ->
-     (*    Array or Range type only for attributes Length *)
-       let new_contr = arraytyp_to_contrainte subtype
-	 normalize_subtyp
-       in
-	 match new_contr with
-	     None -> Npkcontext.report_error
-	       " Ada_normalize Length contraint"
-	       "constraint is not IntegerRange"
+     | "Last" | "last" -> begin
 
-	   | Some(IntegerRangeConstraint(a, b)) ->
-	       if (Nat.compare a b <=0)
-	       then
-		 CInt (Nat.add (Nat.sub b a) Nat.one)
-	       else	 Npkcontext.report_error
-		 "Ada_normalize Length contraint"
-		 "Zero length"
+              let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
+                    match new_contr with
+                       None -> Npkcontext.report_error
+                         "Ada_normalize Last contraint"
+                         "constraint is not IntegerRange"
 
-	   | Some(RangeConstraint _) ->
-	       Npkcontext.report_error
-		 "Ada_normalize Length contraint"
-		 "Range Constraint fo Length"
+                     | Some(IntegerRangeConstraint(a, b)) ->
+                         if (Nat.compare a b <=0)
+                         then
+                              CInt b
+                         else
+                           Npkcontext.report_error
+                         "Ada_normalize Length contraint"
+                         "Zero length"
 
-	   | _ ->  Npkcontext.report_error
-	       "Firstpass: in Array access"
-		 "constraint is not IntegerRange"
 
-		 (*in fun_aux subtype  *)
+                     | _ ->  Npkcontext.report_error
+                         "Firstpass: in Array access"
+                           "constraint is not IntegerRange"
+                    end
+
+
+  | "Length" | "length" -> (* TODO ignore case at parser step *)
+         (*    Array or Range type only for attributes Length *)
+           let new_contr = arraytyp_to_contrainte subtype
+         normalize_subtyp
+          in
+        begin
+         match new_contr with
+             None -> Npkcontext.report_error
+               " Ada_normalize Length contraint"
+               "constraint is not IntegerRange"
+
+           | Some(IntegerRangeConstraint(a, b)) ->
+               if (Nat.compare a b <=0)
+               then
+             CInt (Nat.add (Nat.sub b a) Nat.one)
+               else	 Npkcontext.report_error
+             "Ada_normalize Length contraint"
+             "Zero length"
+
+           | Some(RangeConstraint _) ->
+               Npkcontext.report_error
+             "Ada_normalize Length contraint"
+             "Range Constraint fo Length"
+
+           | _ ->  Npkcontext.report_error
+               "Firstpass: in Array access"
+             "constraint is not IntegerRange"
+        end
+  | _ -> Npkcontext.report_error "normalize:attr"
+                ("No such attribute : '" ^ attr ^ "'")
+
 
 
 (* normalize la contrainte contrainte

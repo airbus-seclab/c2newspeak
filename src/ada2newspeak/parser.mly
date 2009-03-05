@@ -115,7 +115,6 @@
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
 %token REVERSE
-%token LAST FIRST LENGTH
 
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -205,12 +204,10 @@ package_body:
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
-| PROCEDURE name LPAR formal_part RPAR 
-    {(Procedure($2,$4), loc ())}
-| FUNCTION name LPAR formal_part RPAR RETURN subtyp
-	{(Function($2,$4,$7), loc ())}
-| PROCEDURE name {(Procedure($2,[]), loc ())}
-| FUNCTION name RETURN subtyp {(Function($2,[],$4), loc ())}
+| PROCEDURE name LPAR formal_part RPAR              {(Procedure($2,$4),  loc())}
+| PROCEDURE name                                    {(Procedure($2,[]),  loc())}
+| FUNCTION name LPAR formal_part RPAR RETURN subtyp {(Function($2,$4,$7),loc())}
+| FUNCTION name                       RETURN subtyp {(Function($2,[],$4),loc())}
 ;
 
 formal_part : 
@@ -505,9 +502,7 @@ primary :
 | name args {FunctionCall($1, $2)}
 /*from simpl_exp to */
 
-| subtyp QUOTE LAST {Last($1)}
-| subtyp QUOTE FIRST {First($1)} 
-| subtyp QUOTE LENGTH {Length($1)}
+| subtyp QUOTE ident  {Attribute ($1, AttributeDesignator($3,None))}
 
 /*| name LPAR param_assoc RPAR {FunctionCall($1, $3)}*/
 ;
