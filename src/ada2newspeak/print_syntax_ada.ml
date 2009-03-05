@@ -72,16 +72,16 @@ let ikind_to_string (s,taille) =
 
 let uop_to_string op = match op with
   | UPlus -> "UPlus"
-  | UMoins -> "UMoins"
+  | UMinus -> "UMinus"
   | Abs -> "Abs"
   | Not -> "Not"
 
 let bop_to_string op = match op with
   | Plus -> "Plus"
-  | Moins -> "Moins"
-  | Fois -> "Fois"
+  | Minus -> "Minus"
+  | Mult -> "Mult"
   | Div -> "Div"
-  | Puissance -> "Puissance"
+  | Power -> "Power"
   | Concat -> "Concat"
   | Mod -> "Mod"
   | Rem -> "Rem"
@@ -226,7 +226,7 @@ and instr_to_string instr = match instr with
   | NullInstr -> "NullInstr"
   | ReturnSimple -> "ReturnSimple"
   | Return(exp) -> "Return("^(exp_to_string exp)^")"
-  | Affect(lval,exp) -> "Affect("^(lval_to_string lval)
+  | Assign(lval,exp) -> "Assign("^(lval_to_string lval)
       ^", "^(exp_to_string exp)^")"
 
   | If(exp, instr_then, instr_else) ->
@@ -247,10 +247,10 @@ and instr_to_string instr = match instr with
 
 
 let param_to_string param =
-  "{pnom="^(list_to_string param.pnom (fun x -> x) "," true)
-  ^"; mode="^(mode_to_string param.mode)
-  ^"; ptype="^(subtyp_to_string param.ptype)
-  ^"; pdef="^(option_to_string param.pdef exp_to_string)^"}"
+  "{formal_name = "    ^(list_to_string param.formal_name (fun x -> x) "," true)
+  ^"; mode = "         ^(mode_to_string param.mode)
+  ^"; param_type = "   ^(subtyp_to_string param.param_type)
+  ^"; default_value = "^(option_to_string param.default_value exp_to_string)^"}"
 
 let param_list_to_string list =
   list_to_string list param_to_string ";\n" true

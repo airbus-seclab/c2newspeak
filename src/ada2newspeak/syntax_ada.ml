@@ -30,12 +30,12 @@ type location = Newspeak.location
 
 type nat = Newspeak.Nat.t
 
-(** TODO rename *)
-type flottant = float*string
+(** A floating-point number *)
+type float_number = float*string
 
 type identifier = string
 
-(** TODO doc : overload ? *)
+(* TODO doc : overload ? *)
 type name = identifier list*identifier
 
 (** Modes for subprogram parameters. *)
@@ -46,24 +46,24 @@ type param_mode =
 
 
 type value =
-| IntVal   of nat       (** Integer value        *)
-| FloatVal of flottant  (** Floating-point value *)
-| BoolVal  of bool      (** Boolean value        *)
+| IntVal   of nat           (** Integer value        *)
+| FloatVal of float_number  (** Floating-point value *)
+| BoolVal  of bool          (** Boolean value        *)
 
 (** Unary operators. *)
 type unary_op =
 | UPlus     (** Unary "+"        *)
-| UMoins    (** Unary "-"        *)
+| UMinus    (** Unary "-"        *)
 | Abs       (** Absolute value   *)
 | Not       (** Logical negation *)
 
-(** Binary operators. TODO rename *)
+(** Binary operators. *)
 type binary_op =
 | Plus          (** "+",        addition                                 *)
-| Moins         (** "-",        difference                               *)
-| Fois          (** "*",        multiplication                           *)
+| Minus         (** "-",        difference                               *)
+| Mult          (** "*",        multiplication                           *)
 | Div           (** "/",        division                                 *)
-| Puissance     (** "**",       exponentiation                           *)
+| Power         (** "**",       exponentiation                           *)
 | Concat        (** "&",        concatenation                            *)
 | Mod           (** "mod",      modulus                                  *)
 | Rem           (** "rem",      division reminder                        *)
@@ -99,11 +99,11 @@ and typ_declaration =
                    *subtyp_indication  (** Derived type, eg
                                 [type WeekEndDay is Day range Sat..Sun] *)
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
-    (** Integer range, eg [type Byte is range 0..255] *) (*TODO ikind ? *)
-  | Array of identifier*array_type_definition   (** TODO *)
-  | Record of identifier*record_type_definition (** TODO *)
+    (** Integer range, eg [type Byte is range 0..255] *)
+  | Array  of identifier*array_type_definition   (* TODO *)
+  | Record of identifier*record_type_definition (* TODO *)
 
-(** Record type definition, as in {[.
+(** Record type definition, as in {[
 type Date is
     record
         Day   : Integer range 1 .. 31;
@@ -143,7 +143,7 @@ and attribute_designator =
 and expression =
   | NullExpr                             (** The [null] expression    *)
   | CInt of nat                          (** Integer constant         *)
-  | CFloat of flottant                   (** Floating-point constant  *)
+  | CFloat of float_number               (** Floating-point constant  *)
   | CBool of bool                        (** Boolean constant
                                              ([True] or [False])      *)
   | CChar of int                         (** Character constant       *)
@@ -157,49 +157,58 @@ and expression =
   | Qualified of subtyp*expression       (** Qualified expression     *)
   | Attribute of attribute_reference     (** Attribute reference      *)
 
-
+(** Constraint *)
 and contrainte =
   | RangeConstraint of expression*expression
   | IntegerRangeConstraint of Newspeak.bounds
-  | FloatRangeConstraint of flottant*flottant
+  | FloatRangeConstraint of float_number*float_number
 
 and subtyp_indication = subtyp*contrainte option*subtyp option
 
-type lval = Lval of name | ArrayAccess of lval*expression
+(** Left-value *)
+type lval =
+| Lval of name                   (** Named lvalue *)
+| ArrayAccess of lval*expression (** Array access *)
 
+(** Subprogram parameter *)
 type param = {
-        pnom:identifier list;
-        mode:param_mode;
-        ptype:subtyp;
-        pdef:expression option
+        formal_name   : identifier list;   (** Formal name *)
+        mode          : param_mode;        (** Mode (In, Out, or InOut) *)
+        param_type    : subtyp;            (** Type *)
+        default_value : expression option; (** Default value (optional) *)
 }
 
+(** The way a loop iterates over values:            *)
+(** loop                        ->  NoScheme        *)
+(** for I in reverse 1..5 loop  ->  For I,1,5,true  *)
+(** for I in 15..10             ->  While false     *)
+(** for I in reverse 15..10     ->  While false     *)
+(** while exp                   ->  While exp       *)
+(** for I in 4..8               ->  For I,5,8,false *)
 type iteration_scheme =
-  | NoScheme
-  | While of expression
-  | For of name * expression * expression * bool
-(* loop                        ->  NoScheme        *)
-(* for I in reverse 1..5 loop  ->  For I,1,5,true  *)
-(* for I in 15..10             ->  While false     *)
-(* for I in reverse 15..10     ->  While false     *)
-(* while exp                   ->  While exp       *)
-(* for I in 4..8               ->  For I,5,8,false *)
+  | NoScheme                       (* Forever *)
+  | While of expression            (* While [expression] evaluates to [true] *)
+  | For of name * expression * expression * bool           (* In an interval *)
 
+(** An instruction *)
 type instruction_atom =
-  | NullInstr
-  | Affect of lval*expression
-  | Return of expression
-  | ReturnSimple
-  | If of expression*instruction list*instruction list
-  | Loop of iteration_scheme*(instruction list)
-  | Exit of expression option
-  | ProcedureCall of name*expression list
+  | NullInstr                 (** The null instruction (do nothing)    *)
+  | Assign of lval*expression (** Assignment TODO rename               *)
+  | Return of expression      (** Return from function                 *)
+  | ReturnSimple              (** Return from procedure                *)
+  | If of expression*instruction list*instruction list (** Conditional *)
+  | Loop of iteration_scheme*(instruction list) (** Loops              *)
+  | Exit of expression option                   (** Loop exit          *)
+  | ProcedureCall of name*expression list       (** Procedure call     *)
+(* TODO : change ProcedureCall to be able to evaluate any expression *)
 
+(** An instruction with its location *)
 and instruction = instruction_atom*location
 
+(** Subprogram declaration *)
 type sub_program_spec =
-  | Function of name*param list*subtyp
-  | Procedure of name*(param list)
+  | Function of name*param list*subtyp (** A Function returns a value *)
+  | Procedure of name*(param list)     (** A Procedure does not       *)
 
 (* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)

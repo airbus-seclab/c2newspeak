@@ -244,36 +244,36 @@ rule token = parse
   | id_true        {TRUE}
   | id_false       {FALSE}
 
-  | '(' {LPAR}
-  | ')' {RPAR}
+  | '('            {LPAR}
+  | ')'            {RPAR}
 
   (* operateurs arithmetiques *)
-  | '+' {PLUS}
-  | '-' {MOINS}
-  | '*' {FOIS}
-  | '/' {DIV}
-  | "**" {PUISS}
-  | '&' {CONCAT}
+  | '+'            {PLUS}
+  | '-'            {MINUS}
+  | '*'            {MULT}
+  | '/'            {DIV}
+  | "**"           {POW}
+  | '&'            {CONCAT}
 
   (* operateurs relationnels *)
-  | "<=" {LE}
-  | '<' {LT}
-  | ">=" {GE}
-  | '>' {GT}
-  | "=" {EQ}
-  | "/=" {NE}
-  | "=" {EQ}
+  | "<="           {LE}
+  | '<'            {LT}
+  | ">="           {GE}
+  | '>'            {GT}
+  | "="            {EQ}
+  | "/="           {NE}
+  | "="            {EQ}
 
-  | ":=" {AFFECT}
+  | ":="           {ASSIGN}
 
   (* ponctuation *)
-  | ';'  {SEMICOLON}
-  | '.'  {DOT}
-  | ':'  {COLON}
-  | ".." {DOUBLE_DOT}
-  | ','  {COMMA}
-  | "'"  {QUOTE}
-  | "=>" {ARROW}
+  | ';'            {SEMICOLON}
+  | '.'            {DOT}
+  | ':'            {COLON}
+  | ".."           {DOUBLE_DOT}
+  | ','            {COMMA}
+  | "'"            {QUOTE}
+  | "=>"           {ARROW}
 
 
   | '\n' {newline lexbuf; token lexbuf}

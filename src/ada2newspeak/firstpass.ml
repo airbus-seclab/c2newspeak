@@ -32,6 +32,7 @@ module C = Cir
 module K = Npkil
 module Nat = Newspeak.Nat
 module Npk = Newspeak
+module A = Syntax_ada
 
 exception AmbiguousTypeException
 
@@ -45,26 +46,38 @@ exception AmbiguousTypeException
    - si la fonction/procedure est interne ou externe dans le cas
      fun (extern=true)
    dans le cas des variables : le dernier param booleen
-   indique si la variable est en lecture seule
-*)
-type symb =
-  | VarSymb of C.lv*Syntax_ada.subtyp*bool*bool
-  | EnumSymb of C.exp*Syntax_ada.typ*bool
-  | FunSymb of C.funexp*Syntax_ada.sub_program_spec*bool*C.ftyp
-  | NumberSymb of value*bool
+   indique si la variable est en lecture seule*)
 
-(* Constants *)
+(** Symbol *)
+type symb =
+  | VarSymb  of C.lv    * A.subtyp * bool * bool (** name, type, global?, ro? *)
+  | EnumSymb of C.exp   * A.typ * bool (** TODO, typename, ro? *)
+  | FunSymb  of C.funexp * A.sub_program_spec * bool * C.ftyp (** XXX *)
+  | NumberSymb of value*bool (** XXX *)
+
+(** Identifier for the return value *)
 let ret_ident = "!return"
 
+(** TODO *)
 let ret_lbl = 0
+
+(** TODO *)
 let cnt_lbl = 1
+
+(** TODO *)
 let brk_lbl = 2
+
+(** TODO *)
 let default_lbl = 3
 
+(** Promotes an identifier to a name *)
 let ident_to_name ident = ([], ident)
+
+(** Builds a string from a name *)
 let string_of_name = Print_syntax_ada.name_to_string
 
 let eq_base_typ = Ada_utils.eq_base_typ
+
 let base_typ = Ada_utils.base_typ
 
 let extract_scalar_typ cir_typ = match cir_typ with
@@ -852,7 +865,7 @@ let translate compil_unit =
 		      "Invalid left value: unexpected enum"
 	      end
 
-	(*Affectation dans un tableau*)
+	(*Assignation dans un tableau*)
 	| ArrayAccess (lval, expr) ->
 	    let (v, subtyp_lv) = translate_lv lval write trans_exp in
 	      match  subtyp_lv
@@ -931,9 +944,9 @@ let translate compil_unit =
 	  let (tmp, decl, vid) = gen_tmp loc Boolean in
 	  let name = ident_to_name tmp in
 	  let instr_if = If (cond,
-			     [(Affect(Lval name, exp_then),loc)],
+			     [(Assign(Lval name, exp_then),loc)],
 			     (*WG Lval (Array)*)
-			     [(Affect(Lval name, exp_else),loc)])
+			     [(Assign(Lval name, exp_else),loc)])
 	  in let tr_instr_if =
 	      translate_instr_list [(instr_if,loc)]
 	  in
@@ -990,13 +1003,13 @@ let translate compil_unit =
 		  (coerce n (C.Binop (Npk.PlusI, tr_e1, tr_e2)), typ)
 	      | (Plus,C.Scalar(Npk.Float(n))) ->
 		  (C.Binop (Npk.PlusF (n), tr_e1, tr_e2), typ)
-	      | (Moins,C.Scalar(Npk.Int n)) ->
+	      | (Minus,C.Scalar(Npk.Int n)) ->
 		  (coerce n (C.Binop (Npk.MinusI, tr_e1, tr_e2)), typ)
-	      | (Moins,C.Scalar(Npk.Float(n))) ->
+	      | (Minus,C.Scalar(Npk.Float(n))) ->
 		  (C.Binop (Npk.MinusF(n), tr_e1, tr_e2), typ)
-	      | (Fois,C.Scalar(Npk.Int n)) ->
+	      | (Mult,C.Scalar(Npk.Int n)) ->
 		  (coerce n (C.Binop (Npk.MultI, tr_e1, tr_e2)), typ)
-	      | (Fois,C.Scalar(Npk.Float(n))) ->
+	      | (Mult,C.Scalar(Npk.Float(n))) ->
 		  (C.Binop (Npk.MultF (n), tr_e1, tr_e2), typ)
 	      | (Div,C.Scalar(Npk.Int n)) ->
 		  (coerce n (C.Binop (Npk.DivI, tr_e1, tr_e2)), typ)
@@ -1025,7 +1038,7 @@ let translate compil_unit =
 		  "Firstpass.translate_binop"
 		  "internal error : unexpected operator !"
 
-	      | ((Puissance | Mod | Concat | And | Or),_) ->
+	      | ((Power | Mod | Concat | And | Or),_) ->
 		  Npkcontext.report_error "Firstpass.translate_binop"
 		    "not implemented"
 
@@ -1050,25 +1063,25 @@ let translate compil_unit =
 	      | _ -> Npkcontext.report_error "Firstpass.translate_unop"
 		  "Unexpected unary operator and argument")
 
-      | (UMoins, None) ->
+      | (UMinus, None) ->
 	  (* on doit determiner le type de l'operande *)
 	  let (_, typ) = translate_exp exp expected_typ in
 	    (match typ with
 	       | Float ->
-		   translate_binop Moins
+		   translate_binop Minus
 		     (CFloat(0.,"0")) exp expected_typ
 	       | t when (integer_class t) ->
-		   translate_binop Moins (CInt(Nat.zero)) exp
+		   translate_binop Minus (CInt(Nat.zero)) exp
 		     expected_typ
 	       | _ -> Npkcontext.report_error "Firstpass.translate_unop"
 		   "Unexpected unary operator and argument")
 
 
-      | (UMoins, Some(t)) when (integer_class t) ->
-	  translate_binop Moins (CInt(Nat.zero)) exp expected_typ
+      | (UMinus, Some(t)) when (integer_class t) ->
+	  translate_binop Minus (CInt(Nat.zero)) exp expected_typ
 
-      | (UMoins, Some(Float)) ->
-	  translate_binop Moins (CFloat(0.,"0")) exp expected_typ
+      | (UMinus, Some(Float)) ->
+	  translate_binop Minus (CFloat(0.,"0")) exp expected_typ
 
       | (Not, None) | (Not, Some(Boolean)) ->
 	  let (exp, _) = translate_exp exp (Some(Boolean))
@@ -1081,6 +1094,13 @@ let translate compil_unit =
 	  Npkcontext.report_error "Firstpass.translate_unop"
 	    "Unexpected unary operator and argument"
 
+  (** Translates a function call.
+      @param fname        fname
+      @param tr_typ       tr_typ  
+      @param spec         spec
+      @param exp_list     exp_list
+      @param expected_typ expect
+        *)
   and translate_function_call fname tr_typ spec exp_list expected_typ =
     let (params, ret_t) =
       match spec with
@@ -1093,7 +1113,7 @@ let translate compil_unit =
 	       ^" is a procedure, function expected")
     in
     let translate_paramater param exp =
-      let subtyp = param.ptype in
+      let subtyp = param.param_type in
       let (tr_exp, _) = translate_exp exp (Some(base_typ subtyp)) in
 	make_check_subtyp subtyp tr_exp in
     let tr_params =
@@ -1670,12 +1690,12 @@ let translate compil_unit =
 	(Npkcontext.set_loc loc;
 	 match instr with
 	   | NullInstr -> (translate_instr_list r)
-	   | Affect(lv,exp) ->
+	   | Assign(lv,exp) ->
 	       let tr_affect = translate_affect lv exp loc
 	       in  tr_affect::(translate_instr_list r)
 	   | Return(exp) ->
 	       translate_instr_list (* WG Lval for Array diff*)
-		 ((Affect(Lval (ident_to_name ret_ident),exp),loc)
+		 ((Assign(Lval (ident_to_name ret_ident),exp),loc)
 		  ::(ReturnSimple,loc)::r)
 	   | ReturnSimple ->
 	       let tr_reste =
@@ -1745,13 +1765,13 @@ let translate compil_unit =
 		       let tr_param param exp =
 			 match param.mode with
 			   | In -> fst (translate_exp exp
-					  (Some(base_typ param.ptype)))
+					  (Some(base_typ param.param_type)))
 			   | Out | InOut ->
 			       match exp with
 				 | Var(v) ->
 				     let (vid, typ) = translate_lv (Lval v) true translate_exp in
 				     let t = check_typ
-				       (Some(base_typ param.ptype))
+				       (Some(base_typ param.param_type))
 				       (base_typ typ) in
 				       C.AddrOf(vid, translate_typ t)
 				 | _ ->  Npkcontext.report_error
@@ -1784,12 +1804,12 @@ let translate compil_unit =
   in
   let translate_param param =
     let typ_cir = match param.mode with
-      | In -> translate_typ (base_typ param.ptype)
+      | In -> translate_typ (base_typ param.param_type)
       | Out -> C.Scalar(Npk.Ptr)
       | InOut -> C.Scalar(Npk.Ptr)
     in
       List.map
-	(fun _ -> typ_cir) param.pnom
+	(fun _ -> typ_cir) param.formal_name
 
   and add_param loc param =
     let (deref,ro) = match param.mode with
@@ -1797,8 +1817,8 @@ let translate compil_unit =
       | Out | InOut -> (true, false)
     in
       List.map
-	(fun name -> add_var loc param.ptype name deref ro; (name, name))
-      param.pnom
+	(fun name -> add_var loc param.param_type name deref ro; (name, name))
+      param.formal_name
   in
 
     (* prend une liste de parametres en argument

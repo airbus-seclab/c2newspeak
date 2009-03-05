@@ -161,10 +161,10 @@ let eval_static exp expected_typ csttbl context with_package
             match id with
             | "First" | "Last" | "Length" ->
                         Npkcontext.report_error "Ada_normalize:attributes"
-                                            "First, last, length not implemented"
+                                        "First, last, length not implemented"
             | _ ->      Npkcontext.report_error "Ada_normalize:attributes"
                                             ("unknown attribute " ^ id)
-            
+
 (*
   and eval_static_length subtype =
     match subtype with
@@ -245,7 +245,7 @@ let eval_static exp expected_typ csttbl context with_package
       try
 	let (val1, typ1) = eval_static_exp e1 expected_typ1 in
 	  match op with
-	    | Puissance ->
+	    | Power ->
 		let (val2, _) = eval_static_exp e2 (Some(Integer))
 		in (val1, val2, typ1)
 	    | _ ->
@@ -272,14 +272,14 @@ let eval_static exp expected_typ csttbl context with_package
 	| (Plus, FloatVal(v1,_), FloatVal(v2,_)) ->
 	    (FloatVal(float_to_flottant (v1 +. v2)), typ)
 
-	| (Moins, IntVal(v1), IntVal(v2)) ->
+	| (Minus, IntVal(v1), IntVal(v2)) ->
 	    (IntVal(Nat.sub v1 v2), typ)
-	| (Moins, FloatVal(v1,_), FloatVal(v2,_)) ->
+	| (Minus, FloatVal(v1,_), FloatVal(v2,_)) ->
 	    (FloatVal(float_to_flottant(v1 -. v2)), typ)
 
-	| (Fois, IntVal(v1), IntVal(v2)) ->
+	| (Mult, IntVal(v1), IntVal(v2)) ->
 	    (IntVal(Nat.mul v1 v2), typ)
-	| (Fois, FloatVal(v1,_), FloatVal(v2,_)) ->
+	| (Mult, FloatVal(v1,_), FloatVal(v2,_)) ->
 	    (FloatVal(float_to_flottant(v1 *. v2)), typ)
 
 	| (Div, IntVal(v1), IntVal(v2)) ->
@@ -287,9 +287,9 @@ let eval_static exp expected_typ csttbl context with_package
 	| (Div, FloatVal(v1,_), FloatVal(v2,_)) ->
 	    (FloatVal(float_to_flottant (v1 /. v2)), typ)
 
-	| (Puissance, IntVal(v1), IntVal(v2)) ->
+	| (Power, IntVal(v1), IntVal(v2)) ->
 	    (IntVal(Ada_utils.puiss v1 v2), typ)
-	| (Puissance, FloatVal(v1,_), IntVal(v2)) ->
+	| (Power, FloatVal(v1,_), IntVal(v2)) ->
 	    (FloatVal(float_to_flottant (v1 ** (float_of_int (Nat.to_int v2)))),
 		      typ)
 
@@ -382,9 +382,9 @@ let eval_static exp expected_typ csttbl context with_package
 		     "Ada_normalize.eval_static_unop"
 		       "Unexpected unary operator and argument")
 
-	| (UMoins, None) | (UMoins, Some(Float)) -> oppose exp
+	| (UMinus, None) | (UMinus, Some(Float)) -> oppose exp
 
-	| (UMoins, Some(t)) when (Ada_utils.integer_class t) ->
+	| (UMinus, Some(t)) when (Ada_utils.integer_class t) ->
 	    oppose exp
 
 	| (Abs, None) | (Abs, Some(Float)) -> abs exp
@@ -1219,16 +1219,16 @@ and normalize_exp exp = match exp with
               let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
                     match new_contr with
                        None -> Npkcontext.report_error
-                         "Ada_normalize Last contraint"
+                         "Ada_normalize First contraint"
                          "constraint is not IntegerRange"
 
                      | Some(IntegerRangeConstraint(a, b)) ->
                          if (Nat.compare a b <=0)
                          then
-                           CInt a
+                             CInt a
                          else
                            Npkcontext.report_error
-                         "Ada_normalize Length contraint"
+                         "Ada_normalize First contraint"
                          "Zero length"
 
 
@@ -1383,7 +1383,7 @@ let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
       | NullInstr | ReturnSimple -> (instr, loc)
-      | Affect(nom, exp) -> (Affect(nom, normalize_exp exp), loc)
+      | Assign(nom, exp) -> (Assign(nom, normalize_exp exp), loc)
       | Return(exp) -> (Return(normalize_exp exp), loc)
       | If(exp, instr_then, instr_else) ->
 	  (If(normalize_exp exp, normalize_instr_list instr_then,
@@ -1673,8 +1673,8 @@ let rec normalize_instr (instr,loc) =
 		List.iter
 		  (fun x -> add_cst (normalize_ident x)
 		     (VarSymb(false)) false)
-		  param.pnom;
-	      {param with ptype = normalize_subtyp param.ptype}))
+		  param.formal_name;
+	      {param with param_type = normalize_subtyp param.param_type}))
 	param_list
     in
       match subprog_spec with
@@ -1847,7 +1847,7 @@ let rec normalize_instr (instr,loc) =
 	(fun param ->
 	   List.iter
 	     (fun x -> remove_cst (normalize_ident x))
-	     param.pnom)
+	     param.formal_name)
 	params
 
 

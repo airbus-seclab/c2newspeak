@@ -62,7 +62,7 @@ let rem_ada na nb =
   in
     Nat.of_big_int r_mod
 
-let xor a b = (a && (not b)) || ((not a) && b)
+let xor a b = if a then not b else b
 
 (* calcul sur les value *)
 
@@ -246,7 +246,7 @@ and known_compatible_typ expected found =
    operations binaire, en fonction du type attendu pour
    le resultat et de l'operateur.*)
 let typ_operand op expected_typ = match op with
-  | Plus | Moins | Fois | Div | Puissance ->
+  | Plus | Minus | Mult | Div | Power ->
       (* si il y a un type attendu, on verifie qu'il est
 	 entier ou flottant *)
       (match expected_typ with
@@ -296,7 +296,7 @@ let typ_operand op expected_typ = match op with
 	"concat not implemented"
 
 let check_operand_typ op typ = match op with
-  | Plus | Moins | Fois | Div | Puissance ->
+  | Plus | Minus | Mult | Div | Power ->
       (* type entier ou flottant *)
       (match typ with
 	 | t when (integer_class t) -> ()
