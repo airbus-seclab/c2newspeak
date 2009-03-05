@@ -63,11 +63,10 @@ let _ =
   Hashtbl.add token_tbl "__inline" INLINE;
   Hashtbl.add token_tbl "__asm__" ASM;
   Hashtbl.add token_tbl "__cdecl" CDECL;
-  (* tells the compiler the function does not throw an exception *)
+  (* __nothrow__: tells the compiler the function does not throw an exception *)
 
-  Hashtbl.add token_tbl "__pure__" PURE;
-  (* tells the compiler the function has no side-effects other than the 
-     return value which depends on the arguments and globals *)
+  (* __pure__: tells the compiler the function has no side-effects other than 
+     the return value which depends on the arguments and globals *)
 
   Hashtbl.add token_tbl "__const" CONST;
   Hashtbl.add token_tbl "__const__" CONST;
