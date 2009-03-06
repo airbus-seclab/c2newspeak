@@ -942,10 +942,17 @@ and block_in lbl l e before blk g_offset g_loc =
 and inward lbl g_offset g_loc stmts =
   let rec search_goto_cond before stmts =
     match stmts with
-	[] -> invalid_arg "Goto_elimination.search_goto_cond: goto has to be in that stmt list"
+	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> (List.rev before), e, stmts
+	    | Block blk -> begin
+		try
+		  let before', e, blk' = search_goto_cond before blk in
+		    before', e, (Block blk', l)::stmts
+		with 
+		    Not_found -> let before' = (stmt, l)::before in search_goto_cond before' stmts
+	      end
 	    | _ -> let before' = (stmt, l)::before in search_goto_cond before' stmts
   in
   let rec inward before stmts = 
@@ -955,28 +962,35 @@ and inward lbl g_offset g_loc stmts =
 	  if has_label [stmt, l] lbl then
 	    before@((stmt, l)::stmts)
 	  else
-	    if search_lbl [stmt, l] lbl then
-	      let before', e, after' = search_goto_cond [] before in
-	      let stmts' =
-		match stmt with
-		    If (ie, if_blk, else_blk) -> 
-		      if_else_in lbl l e after' ie if_blk else_blk g_offset g_loc
-			
-		  | For (blk1, cond, blk2, blk3) -> 
-		      while_in lbl l e after' cond blk1 blk2 blk3 g_offset g_loc
-			
-		  | DoWhile(blk, cond) ->
-		      dowhile_in lbl l e after' cond blk g_offset g_loc
-
-		  | CSwitch (ce, cases, default) -> 
-		      cswitch_in lbl l e after' ce cases default g_offset g_loc
-
-		  | Block blk -> 
-		      block_in lbl l e after' blk g_offset g_loc 
-		 
-		  | _ -> (stmt, l)::stmts 
-	      in
-		before'@stmts'@stmts
+	    if search_lbl [stmt, l] lbl then 
+	      try
+		let before', e, after' = search_goto_cond [] before in
+		let stmts' =
+		  match stmt with
+		      If (ie, if_blk, else_blk) -> 
+			if_else_in lbl l e after' ie if_blk else_blk g_offset g_loc
+			  
+		    | For (blk1, cond, blk2, blk3) -> 
+			while_in lbl l e after' cond blk1 blk2 blk3 g_offset g_loc
+			  
+		    | DoWhile(blk, cond) ->
+			dowhile_in lbl l e after' cond blk g_offset g_loc
+			  
+		    | CSwitch (ce, cases, default) -> 
+			cswitch_in lbl l e after' ce cases default g_offset g_loc
+			  
+		    | Block blk -> 
+			block_in lbl l e after' blk g_offset g_loc 
+			  
+		    | _ -> (stmt, l)::stmts 
+		in
+		  before'@stmts'@stmts
+	      with
+		  Not_found ->
+		    match stmt with
+			Block blk -> 
+			  let blk' = inward [] blk in before@((Block blk', l)::stmts)
+		      | _ -> invalid_arg ("Goto_elimination.inward: goto has to be in that stmt list")
 	    else 
 	      let before' = before@[stmt, l] in inward before' stmts
   in inward [] stmts
