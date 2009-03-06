@@ -58,21 +58,15 @@ let _ =
   Hashtbl.add token_tbl "__printf__" PRINTF;
   Hashtbl.add token_tbl "__scanf__" SCANF;
   Hashtbl.add token_tbl "__builtin_va_list" VA_LIST;
-  Hashtbl.add token_tbl "__cdecl__" CDECL_ATTR;
   Hashtbl.add token_tbl "__gnu_inline__" GNU_INLINE;
   Hashtbl.add token_tbl "__inline__" INLINE;
   Hashtbl.add token_tbl "__inline" INLINE;
-  Hashtbl.add token_tbl "__always_inline__" ALWAYS_INLINE;
-  Hashtbl.add token_tbl "noreturn" NORETURN;
-  Hashtbl.add token_tbl "__noreturn__" NORETURN;
   Hashtbl.add token_tbl "__asm__" ASM;
   Hashtbl.add token_tbl "__cdecl" CDECL;
-  Hashtbl.add token_tbl "__nothrow__" NOTHROW;
-  (* tells the compiler the function does not throw an exception *)
+  (* __nothrow__: tells the compiler the function does not throw an exception *)
 
-  Hashtbl.add token_tbl "__pure__" PURE;
-  (* tells the compiler the function has no side-effects other than the 
-     return value which depends on the arguments and globals *)
+  (* __pure__: tells the compiler the function has no side-effects other than 
+     the return value which depends on the arguments and globals *)
 
   Hashtbl.add token_tbl "__const" CONST;
   Hashtbl.add token_tbl "__const__" CONST;

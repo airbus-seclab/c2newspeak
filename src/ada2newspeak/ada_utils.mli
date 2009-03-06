@@ -1,25 +1,25 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
-  
+
 *)
 
 
@@ -41,10 +41,10 @@ val make_enum :
 val between : 'a -> 'a -> 'a -> bool
 val constraint_is_constraint_compatible : Syntax_ada.contrainte ->
   Syntax_ada.contrainte -> bool
-val value_is_static_constraint_compatible : 
+val value_is_static_constraint_compatible :
   Syntax_ada.contrainte -> Syntax_ada.value -> bool
 
-val check_static_subtyp: 
+val check_static_subtyp:
   Syntax_ada.subtyp -> Syntax_ada.value -> unit
 val constraint_is_static: Syntax_ada.contrainte -> bool
 
@@ -53,12 +53,12 @@ val make_range :
   Syntax_ada.identifier ->
   Syntax_ada.expression ->
   Syntax_ada.expression -> Syntax_ada.typ_declaration
-val check_typ : 
+val check_typ :
   Syntax_ada.typ option -> Syntax_ada.typ -> Syntax_ada.typ
 
 val base_typ : Syntax_ada.subtyp -> Syntax_ada.typ
 
-val extract_subtyp : 
+val extract_subtyp :
   Syntax_ada.subtyp_indication -> Syntax_ada.subtyp
 
 val extract_typ : Syntax_ada.subtyp_indication -> Syntax_ada.typ
@@ -71,15 +71,16 @@ val known_compatible_typ :
 
 val integer_class : Syntax_ada.typ -> bool
 
-val typ_operand : 
-  Syntax_ada.binary_op -> 
+val typ_operand :
+  Syntax_ada.binary_op ->
   Syntax_ada.typ option -> Syntax_ada.typ option
 
 val check_operand_typ :
-  Syntax_ada.binary_op -> 
+  Syntax_ada.binary_op ->
   Syntax_ada.typ -> unit
 
-val check_compil_unit_name : 
+val check_compil_unit_name :
   Syntax_ada.compilation_unit -> string -> bool
 
-val extract_representation_clause_name : Syntax_ada.representation_clause -> Syntax_ada.identifier
+val extract_representation_clause_name :
+                    Syntax_ada.representation_clause -> Syntax_ada.identifier
