@@ -77,8 +77,7 @@ let _ =
   Hashtbl.add token_tbl "__nonnull" NONNULL;
   (* tells the compiler the argument should always be a non-null pointer *)
 
-  Hashtbl.add token_tbl "__deprecated__" DEPRECATED;
-  (* generates warnings when the function is used *)
+  (* __deprecated__: generates warnings when the function is used *)
 
   Hashtbl.add token_tbl "__malloc__" MALLOC;
   Hashtbl.add token_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
