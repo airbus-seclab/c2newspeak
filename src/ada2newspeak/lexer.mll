@@ -107,11 +107,6 @@
             aux 0 0
         end
 
-    (* Provides a default value for a 'a option *)
-    let defaults_to def_value opt = match opt with
-        | None   -> def_value
-        | Some x -> x
-
 }
 (*a elargir : accent *)
 
@@ -300,7 +295,8 @@ rule token = parse
                                             (strip_underscores main_part))
                            * expt_int (int_of_string (strip_underscores base))
                                             (int_of_string (strip_underscores
-                                                (defaults_to "0" exponent)))))}
+                                                (Ada_utils.with_default
+                                                            exponent "0")))))}
 
   (*identifiant*)
   | ident {IDENT (Lexing.lexeme lexbuf)}
