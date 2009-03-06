@@ -351,8 +351,7 @@ let rec related stmts lbl g_offset =
 		let p = goto_or_label previous in related p stmts
 						    
 	    | For(_, _, blk, _) -> 
-		let p = related No blk in 
-		  loops previous p stmts
+		let p = related No blk in loops previous p stmts
 					    
 	    | DoWhile(blk, _) ->
 		let p = related No blk in loops previous p stmts
@@ -435,22 +434,20 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
 		let stmts', vars = search stmts in (stmt, l)::stmts', vars
   in
   let stmts', vars = search stmts in
-    if vars = [] then [], stmts', []
+    if vars = [] then stmts', []
     else 
       let init = Data zero in
-      let before = ref [] in 
       let after = ref [] in 
       let add (skind, var) =
 	let vdecl = VDecl (var, uint_typ, false, false, Some init) in
 	let set = Exp (Set (Var var, None, zero)) in
 	let if_blk = (set, lwhile)::[skind, lwhile] in
 	let if' = If(Var var, if_blk, []) in
-	  (*before := (vdecl, lwhile)::!before;*)
 	  vdecls := vdecl::!vdecls;
 	  after := (if', lwhile)::!after
       in
 	List.iter add vars;
-	(List.rev !before), stmts', (List.rev !after)
+	stmts', (List.rev !after)
 
 
 exception Lbl
@@ -513,8 +510,8 @@ in
     try
       let e, blk', after = b_delete_goto ((stmt,l)::stmts) in
       let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-      let before, blk', after' = avoid_break_continue_capture blk' l l' g_offset vdecls in
-	before @ ((DoWhile (blk', e), l)::(after'@after))
+      let blk', after' = avoid_break_continue_capture blk' l l' g_offset vdecls in
+	(DoWhile (blk', e), l)::(after'@after)
     with
 	(* goto may have disappeared because of optimizations *)
 	Not_found -> (stmt, l)::stmts
@@ -768,6 +765,44 @@ let outward stmts lbl g_level g_offset =
  in fst (outward stmts)
       
       
+let rec extract_decls stmts =
+  match stmts with
+      [] -> [], []
+    | (stmt, l)::stmts ->
+	let s_decls, stmts' = extract_decls stmts in
+	match stmt with
+	    VDecl _ | CDecl _ | EDecl _ -> 
+	      let decls, stmts' = extract_decls stmts in (stmt, l)::decls, stmts'
+	  | Block blk -> 
+	      let b_decls, blk' = extract_decls blk in 
+		b_decls@s_decls, (Block blk', l)::stmts'
+	  | For(blk1, e, blk2, blk3) ->
+	      let b1_decls, blk1' = extract_decls blk1 in
+	      let b2_decls, blk2' = extract_decls blk2 in
+	      let b3_decls, blk3' = extract_decls blk3 in
+		b1_decls@b2_decls@b3_decls@s_decls, (For(blk1', e, blk2', blk3'), l)::stmts'
+
+	  | DoWhile (blk, e) ->
+	      let b_decls, blk' = extract_decls blk in 
+		b_decls@s_decls, (DoWhile(blk', e), l)::stmts'
+
+	  | CSwitch (e, cases, default) ->
+	      let add (decls, cases) (e, blk, l) =
+		let b_decls, blk' = extract_decls blk in
+		  b_decls@decls, (e, blk', l)::cases
+	      in
+	      let c_decls, cases' = List.fold_left add ([], []) cases in
+	      let cases' = List.rev cases' in
+	      let d_decls, default' = extract_decls default in
+		c_decls@d_decls@s_decls, (CSwitch(e, cases', default'), l)::stmts'
+
+	  | If(e, if_blk, else_blk) -> 
+	      let i_decls, if_blk' = extract_decls if_blk in
+	      let e_decls, else_blk' = extract_decls else_blk in
+		i_decls@e_decls@s_decls, (If(e, if_blk', else_blk'), l)::stmts'
+
+	  | _ -> s_decls, (stmt, l)::stmts'
+	      
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
@@ -781,11 +816,12 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	let if_blk' = (if', l')::if_blk in
 	let if_blk' = inward lbl g_offset g_loc if_blk' in
 	let if' = If(cond, if_blk', else_blk) in
+	let decls, before = extract_decls before in
 	  if before = [] then 
-	    [(set, lb); (if', l')]
+	    (set, lb)::(decls @ [if', l'])
 	  else
 	    let before' = If(Unop(Not, lbl'), before, []) in
-	      [(set, lb); (before', lb); (if', l')]
+	      (set, lb)::(decls @ [(before', lb); (if', l')])
       end
     else 
       begin
@@ -796,11 +832,12 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	let else_blk' = (if', l')::else_blk in
 	let else_blk' = inward lbl g_offset g_loc else_blk' in
 	let if' = If(cond, if_blk, else_blk') in
+	let decls, before = extract_decls before in
 	  if before = [] then 
-	    [(set, lb); (if', l')]
+	    (set, lb)::(decls @ [if', l'])
 	  else
 	    let before' = If(Unop(Not, lbl'), before, []) in
-	      [(set, lb); (before', lb); (if', l')]     
+	      (set, lb)::(decls @ [(before', lb); (if', l')])
       end
 
 and loop_in lbl l e before cond blk g_offset g_loc b =
@@ -978,7 +1015,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    let if' = If(lbl', [Goto g_lbl, g_loc], []) in
 		    let set = Exp (Set (lbl', None, e)) in
 		    let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
-		    let before', blk', after' = avoid_break_continue_capture blk l l_set g_offset vdecls in
+		    let blk', after' = avoid_break_continue_capture blk l l_set g_offset vdecls in
 		    let blk' = [(if', l) ; (stmt, l)] @ blk' @ [(set, l_set)] in
 		      (* inward transformations on the blk chunk. We know that the
 			 first stmt is the goto stmt and the second one contains
@@ -986,7 +1023,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    let blk' = inward lbl g_offset g_loc blk' in	   
 		      (* do-while loop *)
 		    let blk' = [DoWhile(blk', lbl'), l_set] in
-		      before' @ blk' @ after @ after', true
+		      blk' @ after @ after', true
 		  else 
 		    let stmts', b = lift stmts in
 		    (stmt, l)::stmts', b
