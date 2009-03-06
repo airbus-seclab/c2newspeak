@@ -65,19 +65,6 @@ let normalize_ident ident package extern = match extern with
   | false -> ([], ident)
   | true -> normalize_extern_ident ident package
 
-let rec arraytyp_to_contrainte (typ:subtyp) (norm_sb:subtyp->subtyp) =
-    match typ with
-      | Unconstrained(Declared(Array(_,ConstrainedArray(
-            (Constrained(_, contr, _), None,_),_,_)),_)) -> Some contr
-      | Unconstrained(Declared(Array(_,ConstrainedArray((SubtypName _, None,_)
-            ,_,_)),_)) -> arraytyp_to_contrainte (norm_sb typ) norm_sb
-      | Unconstrained(Declared(Array(_,ConstrainedArray((_, c,_),_,_)),_)) -> c
-      | SubtypName _ -> arraytyp_to_contrainte (norm_sb typ) norm_sb
-      | Constrained ( _, contr, true) -> Some contr
-      | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
-                                      "Length not implemented for type /= array"
-(* TODO clean this mess : integrate so that norm_sb is not passed as argument *)
-
 let normalize_name name with_package current_package extern =
   let add_package (parents, ident) pack = match parents with
     | [] -> (pack, ident)
@@ -514,7 +501,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
                   "uncompatible types" in
       let list_symb = find_all_cst name in
       match list_symb with
-	    | Number(IntVal i,_)::_ -> IntVal i, check_typ expected_typ IntegerConst
+	    | Number(IntVal i,_)::_    -> IntVal i, check_typ expected_typ IntegerConst
 	    | Number(FloatVal(f),_)::_ -> FloatVal f, check_typ expected_typ Float
 	    | StaticConst(v, typ, _)::_ -> v, check_typ expected_typ typ
 	    | VarSymb _::_ -> raise NonStaticExpression
@@ -572,73 +559,75 @@ let eval_static (exp:expression) (expected_typ:typ option)
   in
       eval_static_exp exp expected_typ
 
-let eval_static_integer_exp exp csttbl context with_package
-    current_package extern =
-  try
-    let (v,_) =
-      eval_static
-	exp (Some(IntegerConst)) csttbl
-	context with_package current_package extern in
-      match v with
-	| FloatVal _ | BoolVal _->
-	    Npkcontext.report_error
-	      "Ada_normalize.eval_static_integer_exp"
-	      "expected static integer constant"
-	| IntVal(i) -> i
-  with
-    | NonStaticExpression ->
-	 Npkcontext.report_error
-	   "Ada_normalize.eval_static_integer_exp"
-	   "expected static expression"
-    | AmbiguousTypeException ->
-	Npkcontext.report_error
-	  "Ada_normalize.eval_static_integer_exp"
-	  "uncaught ambiguous type exception"
+let eval_static_integer_exp (exp:expression)
+    (csttbl:(name, constant_symb) Hashtbl.t)
+    (context:identifier list list) (with_package:identifier list list)
+                       (current_package:identifier list) (extern:bool)
+    :nat =
+    try
+        let (v,_) =
+          eval_static
+              exp (Some(IntegerConst))
+              csttbl context
+              with_package current_package
+              extern in
+            match v with
+              | FloatVal _
+              | BoolVal  _ -> Npkcontext.report_error
+                          "Ada_normalize.eval_static_integer_exp"
+                          "expected static integer constant"
+              | IntVal i -> i
+    with
+      | NonStaticExpression -> Npkcontext.report_error
+                          "Ada_normalize.eval_static_integer_exp"
+                          "expected static expression"
+      | AmbiguousTypeException -> Npkcontext.report_error
+                          "Ada_normalize.eval_static_integer_exp"
+                          "uncaught ambiguous type exception"
 
-let eval_static_number exp csttbl context with_package
-    current_package extern =
-  try
-    let (v,_) =
-      eval_static
-	exp None csttbl
-	context with_package current_package extern in
-      match v with
-	| BoolVal _ ->
-	    Npkcontext.report_error
-	      "Ada_normalize.eval_static_integer_exp"
-	      "expected static float or integer constant"
-	| FloatVal(f) -> FloatVal(f)
-	| IntVal(i) -> IntVal(i)
-  with
-    | NonStaticExpression ->
-	 Npkcontext.report_error
-	   "Ada_normalize.eval_static_integer_exp"
-	   "expected static expression"
-    | AmbiguousTypeException ->
-	Npkcontext.report_error
-	  "Ada_normalize.eval_static_integer_exp"
-	  "uncaught ambiguous type exception"
+let eval_static_number (exp:expression) (csttbl:(name, constant_symb) Hashtbl.t)
+              (context:identifier list list) (with_package:identifier list list)
+              (current_package:identifier list) (extern:bool)
+    :value =
+     try
+         let (v,_) = eval_static
+                         exp None
+                         csttbl context
+                         with_package current_package
+                         extern in
+         match v with
+           | BoolVal _ ->
+               Npkcontext.report_error
+                 "Ada_normalize.eval_static_integer_exp"
+                 "expected static float or integer constant"
+           | FloatVal _ | IntVal _ -> v
+     with
+       | NonStaticExpression ->
+        Npkcontext.report_error
+          "Ada_normalize.eval_static_integer_exp"
+          "expected static expression"
+       | AmbiguousTypeException ->
+       Npkcontext.report_error
+         "Ada_normalize.eval_static_integer_exp"
+         "uncaught ambiguous type exception"
 
-
-
-let extract_subprog_spec ast = match ast with
-  | (context, Body(SubProgramBody(spec,_,_)), loc) ->
-      (context, Spec(SubProgramSpec(spec)), loc)
-
-  | (_, Spec(_), _) -> Npkcontext.report_error
-      "Ada_normalize.extract_subprog_spec"
-	"body expected, specification found"
-  | (_, Body(PackageBody(_)), _) -> Npkcontext.report_error
-      "Ada_normalize.parse_specification"
-	"subprogram body expected, package body found"
+let extract_subprog_spec (ast:compilation_unit):compilation_unit =
+    match ast with
+      | (context, Body(SubProgramBody(spec,_,_)), loc) ->
+        (context, Spec(SubProgramSpec(spec)),     loc)
+      | (_, Spec _, _) -> Npkcontext.report_error
+          "Ada_normalize.extract_subprog_spec"
+        "body expected, specification found"
+      | (_, Body(PackageBody _), _) -> Npkcontext.report_error
+          "Ada_normalize.parse_specification"
+        "subprogram body expected, package body found"
 
 (* renvoie la specification correspondant a name,
    extrait eventuellement cette specification d'un corps
    de sous-programme, dans le cas ou aucun fichier de specification
    n'est fourni.*)
-let rec parse_specification name =
-
-  (* tricherie : probleme avec sous-package *)
+let rec parse_specification (name:name) :compilation_unit =
+  (* tricherie : probleme avec sous-package *) (* FIXME *)
   let spec_name = (string_of_name name)^".ads" in
   let spec_ast =
     if Sys.file_exists spec_name
@@ -656,7 +645,7 @@ let rec parse_specification name =
 
 (* renvoie la specification normalisee du package correspondant
    a name, les noms etant traites comme extern a la normalisation*)
-and parse_extern_specification name =
+and parse_extern_specification (name:name):spec*location =
   let spec_ast = parse_specification name
   in
     match (normalization spec_ast true) with
@@ -667,14 +656,14 @@ and parse_extern_specification name =
 
 (* renvoie la specification du package correspondant a name.
    cette specification est normalisee *)
-and parse_package_specification name =
+and parse_package_specification (name:name):package_spec =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
-    | (_, Spec(SubProgramSpec(_)),_) ->
-	Npkcontext.report_error
-	  "Ada_normalize.parse_package_specification"
-	  ("package specification expected, "
-	   ^"subprogram specification found")
+    | (_, Spec(SubProgramSpec _),_) ->
+                Npkcontext.report_error
+                   "Ada_normalize.parse_package_specification"
+                  ("package specification expected, "
+                  ^"subprogram specification found")
     | (_, Body _, _) -> Npkcontext.report_error
 	   "Ada_utils.parse_package_specification"
 	  "internal error : specification expected, body found"
@@ -686,13 +675,13 @@ and parse_package_specification name =
    sous la forme
    package.ident (au niveau des declarations)
 *)
-and normalization compil_unit extern =
+and normalization (compil_unit:compilation_unit) (extern:bool)
+    :compilation_unit =
   let typtbl = Hashtbl.create 100
   and csttbl = Hashtbl.create 100
   and current_package = ref []
   and with_package = ref []
   and context = ref [] in
-
 
   let normalize_extern_ident ident =
     normalize_extern_ident ident (!current_package)
@@ -1093,6 +1082,17 @@ and normalize_subtyp subtyp =
       | SubtypName(name) ->
 	  fst (find_subtyp (normalize_name name))
 
+and arraytyp_to_contrainte (typ:subtyp) (* TODO ::type*) =
+    match typ with
+      | Unconstrained(Declared(Array(_,ConstrainedArray(
+            (Constrained(_, contr, _), None,_),_,_)),_)) -> Some contr
+      | Unconstrained(Declared(Array(_,ConstrainedArray((SubtypName _, None,_)
+            ,_,_)),_)) -> arraytyp_to_contrainte (normalize_subtyp typ) 
+      | Unconstrained(Declared(Array(_,ConstrainedArray((_, c,_),_,_)),_)) -> c
+      | SubtypName _ -> arraytyp_to_contrainte (normalize_subtyp typ)
+      | Constrained ( _, contr, true) -> Some contr
+      | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
+                                      "Length not implemented for type /= array"
 
 and normalize_exp exp = match exp with
   | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp,
@@ -1108,8 +1108,7 @@ and normalize_exp exp = match exp with
   | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
      | "First" | "first" -> begin
 
-              let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
-                    match new_contr with
+                    match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
                          "Ada_normalize First contraint"
                          "constraint is not IntegerRange"
@@ -1132,8 +1131,7 @@ and normalize_exp exp = match exp with
 
      | "Last" | "last" -> begin
 
-              let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
-                    match new_contr with
+                    match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
                          "Ada_normalize Last contraint"
                          "constraint is not IntegerRange"
@@ -1156,11 +1154,8 @@ and normalize_exp exp = match exp with
 
   | "Length" | "length" -> (* TODO ignore case at parser step *)
          (*    Array or Range type only for attributes Length *)
-           let new_contr = arraytyp_to_contrainte subtype
-         normalize_subtyp
-          in
         begin
-         match new_contr with
+         match arraytyp_to_contrainte subtype with
              None -> Npkcontext.report_error
                " Ada_normalize Length contraint"
                "constraint is not IntegerRange"
