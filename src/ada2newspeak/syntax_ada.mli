@@ -101,7 +101,7 @@ and typ_declaration =
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
     (** Integer range, eg [type Byte is range 0..255] *)
   | Array  of identifier*array_type_definition   (* TODO *)
-  | Record of identifier*record_type_definition (* TODO *)
+  | Record of identifier*record_type_definition  (* TODO *)
 
 (** Record type definition, as in {[
 type Date is
@@ -207,8 +207,8 @@ and instruction = instruction_atom*location
 
 (** Subprogram declaration *)
 type sub_program_spec =
-  | Function of name*param list*subtyp (** A Function returns a value *)
-  | Procedure of name*(param list)     (** A Procedure does not       *)
+  | Function  of name*param list*subtyp (** A Function returns a value *)
+  | Procedure of name*(param list)      (** A Procedure does not       *)
 
 (* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)

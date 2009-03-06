@@ -171,6 +171,7 @@ rule token = parse
   | "or"         {OR}
   | "out"        {OUT}
   | "package"    {PACKAGE}
+  | "pragma"     {PRAGMA}
   | "procedure"  {PROCEDURE}
   | "range"      {RANGE}
   | "record"     {RECORD}
@@ -227,7 +228,6 @@ rule token = parse
 
     (* Misc *)
         (* others       *)
-        (* pragma       *)
         (* private      *)
         (* protected    *)
 

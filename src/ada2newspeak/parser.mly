@@ -139,7 +139,7 @@
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
-%token REVERSE
+%token REVERSE PRAGMA
 
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -267,7 +267,27 @@ parameter_specification :
 declarative_part :
   {[]}
 | declarative_item declarative_part {$1::$2}
+| pragma declarative_part {Npkcontext.report_warning "parser"
+                           ("pragma '" ^ $1 ^ "' is ignored");
+                           $2
+                          }
 ;
+
+pragma :
+| PRAGMA ident SEMICOLON {$2}
+| PRAGMA ident LPAR pragma_argument_association_list RPAR SEMICOLON {$2}
+;
+
+pragma_argument_association_list :
+| pragma_argument_association {}
+| pragma_argument_association COMMA pragma_argument_association_list {}
+;
+
+pragma_argument_association :
+| expression {}
+| ident ARROW expression {}
+;
+
 
 declarative_item :
 | basic_declaration
@@ -275,7 +295,7 @@ declarative_item :
      in (BasicDecl(basic), loc)}
 | body {let (body, loc) = $1
 	in (BodyDecl(body),loc)}
- ;
+;
 
 basic_declarative_part :
   {[]}
@@ -586,7 +606,7 @@ ident :
 ;
 
 ident_list :
-| ident {[$1]}
+| ident                  {$1::[]}
 | ident COMMA ident_list {$1::$3}
 ;
 
