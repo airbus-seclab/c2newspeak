@@ -872,12 +872,13 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
   let l' = try snd (List.hd blk') with Failure "hd" -> l in
   let blk' = (if', l')::blk' in
   let blk' = inward lbl g_offset g_loc blk' in
+  let decls, before = extract_decls before in
     if before = [] then 
       (* optimisation when there are no stmts before the loop *)
-	[(set, lb)], blk', e
+	(set, lb)::decls, blk', e
     else 
       let before' = If(Unop(Not, lbl'), before, []) in
-	  [(set, lb) ; (before', lb)], blk', e
+	  ((set, lb)::decls) @ [before', lb], blk', e
   
 
 and while_in lbl l e before cond blk1 blk2 blk3 g_offset g_loc=
@@ -898,6 +899,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let set_if = Exp (Set(tswitch, None, cond)) in
   let last = try (snd (List.hd (List.rev before))) with Failure "hd" -> l in
   let before' = before @ [set_if, last] in
+  let decls, before' = extract_decls before' in
   let g_lbl = goto_lbl lbl g_offset in
   let if' = If(lbl', [Goto g_lbl, g_loc], []) in
   let rec search_lbl cases =
@@ -913,9 +915,12 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
     try 
       let e_case, cases' = search_lbl cases in
       let set_else = Exp (Set(tswitch, None, e_case)) in
-      let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
       let switch' = CSwitch(tswitch, cases', default) in
-	[(set, lb) ; (declr, lb) ; (if', lb) ; (switch', l)]
+	if before' = [] then
+	  ((set, lb)::decls) @[switch' ,l]
+	else
+	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
+	    ((set, lb)::decls) @ [(declr, lb) ; (if', lb) ; (switch', l)]
     with Not_found ->
       let conds = List.map (fun (e, _, _) -> e) cases in
       let build e e' = IfExp(e, one, e') in
@@ -924,20 +929,23 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
       let set_else = Exp (Set(tswitch, None, e_default)) in
       let default' = (if', l)::default in
       let default' = inward lbl g_offset g_loc default' in
-      let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
       let switch' = CSwitch(tswitch, cases, default') in
-	[(set, lb) ; (declr, lb) ; (if', lb) ; (switch', l)]
-
+	if before' = [] then
+	  ((set, lb)::decls) @[switch' ,l]
+	else
+	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
+	    ((set, lb)::decls) @ [(declr, lb) ; (if', lb) ; (switch', l)]
 
 and block_in lbl l e before blk g_offset g_loc =
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let blk' = (If(e, [Goto (goto_lbl lbl g_offset), g_loc], []), lb)::blk in
   let blk' = inward lbl g_offset g_loc blk' in
   let lbl' =  Var (fresh_lbl lbl) in
-    if before = [] then [Block blk', l]
+  let decls, before = extract_decls before in
+    if before = [] then decls @ [Block blk', l]
     else 
       let if' = If(Unop(Not, lbl'), before, []) in
-	[(if', lb) ; (Block blk', l)] 
+	decls @ [(if', lb) ; (Block blk', l)] 
 
 and inward lbl g_offset g_loc stmts =
   let rec search_goto_cond before stmts =
