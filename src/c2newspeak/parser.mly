@@ -197,7 +197,7 @@ let rec normalize_bexp e =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
 %token INLINE GNU_INLINE ASM RESTRICT 
-%token NONNULL BUILTIN_CONSTANT_P MODE 
+%token BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
 %token EOF
@@ -993,6 +993,11 @@ attribute_name:
       "ignoring attribute alias";
     []
   }
+| IDENTIFIER LPAREN integer_list RPAREN    { 
+    match $1 with
+	"__nonnull__" | "__nonnull" -> []
+      | _ -> raise Parsing.Parse_error
+  }
 | IDENTIFIER LPAREN INTEGER RPAREN         { 
     match $1 with
 	"__format_arg__" | "aligned" -> []
@@ -1004,7 +1009,6 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| NONNULL LPAREN integer_list RPAREN       { [] }
 | CONST                                    { [] }
 | GNU_INLINE                               { [] }
 | WARN_UNUSED_RESULT                       { [] }

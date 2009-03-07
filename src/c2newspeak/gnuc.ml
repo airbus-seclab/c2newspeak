@@ -71,9 +71,8 @@ let _ =
   (* for function slightly more strict than pure, since const functions
      are assumed not to read global variables *)
 
-  Hashtbl.add token_tbl "__nonnull__" NONNULL;
-  Hashtbl.add token_tbl "__nonnull" NONNULL;
-  (* tells the compiler the argument should always be a non-null pointer *)
+  (* __nonnull__, __nonnull: tells the compiler the argument should always 
+     be a non-null pointer *)
 
   (* __deprecated__: generates warnings when the function is used *)
 
