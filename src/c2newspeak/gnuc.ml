@@ -53,7 +53,6 @@ let _ =
   Hashtbl.add token_tbl "__attribute__" ATTRIBUTE;
   Hashtbl.add token_tbl "__attribute" ATTRIBUTE;   
   Hashtbl.add token_tbl "__restrict" RESTRICT;
-  Hashtbl.add token_tbl "__format_arg__" FORMAT_ARG;
   Hashtbl.add token_tbl "__printf__" PRINTF;
   Hashtbl.add token_tbl "__scanf__" SCANF;
   Hashtbl.add token_tbl "__builtin_va_list" VA_LIST;

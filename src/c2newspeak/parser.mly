@@ -196,7 +196,7 @@ let rec normalize_bexp e =
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
-%token INLINE GNU_INLINE ASM FORMAT_ARG RESTRICT 
+%token INLINE GNU_INLINE ASM RESTRICT 
 %token NONNULL BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
@@ -976,19 +976,14 @@ attribute_name_list:
 
 attribute_name:
   IDENTIFIER                               { 
-(* TODO: think of a way of doing this in a nice way, using Gnuc.is_gnu_token
-   + fix internal hashtbl of gnuc.ml once all gnuc symbols are eliminated.
- *)
-    if ($1 <> "aligned") && ($1 <> "dllimport") && ($1 <> "__cdecl__")
-      && ($1 <> "noreturn") && ($1 <> "__noreturn__") 
-      && ($1 <> "__always_inline__") && ($1 <> "__nothrow__")
-      && ($1 <> "__pure__") && ($1 <> "__deprecated__")
-      && ($1 <> "__malloc__")
-    then raise Parsing.Parse_error;
-
-    if $1 = "dllimport" then begin
-      Npkcontext.report_warning "Parser.attribute" 
-	"ignoring attribute dllimport"
+    begin match $1 with
+	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
+      | "__always_inline__" | "__nothrow__" | "__pure__"
+      | "__deprecated__" | "__malloc__" -> ()
+      | "dllimport" -> 
+	  Npkcontext.report_warning "Parser.attribute" 
+	    "ignoring attribute dllimport"
+      | _ -> raise Parsing.Parse_error
     end;
     [] 
   }
@@ -999,8 +994,9 @@ attribute_name:
     []
   }
 | IDENTIFIER LPAREN INTEGER RPAREN         { 
-    if $1 <> "aligned" then raise Parsing.Parse_error;
-    []
+    match $1 with
+	"__format_arg__" | "aligned" -> []
+      | _ -> raise Parsing.Parse_error
   }
 | IDENTIFIER LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
@@ -1008,7 +1004,6 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| FORMAT_ARG LPAREN INTEGER RPAREN         { [] }
 | NONNULL LPAREN integer_list RPAREN       { [] }
 | CONST                                    { [] }
 | GNU_INLINE                               { [] }
