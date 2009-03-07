@@ -76,7 +76,6 @@ let _ =
   (* __deprecated__: generates warnings when the function is used *)
 
   Hashtbl.add token_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
-  Hashtbl.add token_tbl "__transparent_union__" TRANSPARENT_UNION;
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
   Hashtbl.add token_tbl "__mode__" MODE;

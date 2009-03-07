@@ -199,7 +199,7 @@ let rec normalize_bexp e =
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P MODE 
 %token QI HI SI DI FUNNAME 
-%token TRANSPARENT_UNION UNUSED WEAK TYPEOF
+%token UNUSED WEAK TYPEOF
 %token EOF
 
 %token <Csyntax.assertion> NPK
@@ -985,7 +985,10 @@ attribute_name:
 	    "ignoring attribute dllimport"
       | "packed" | "__packed__" -> 
 	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
-	    "packed attribute" Npkcontext.Pack;
+	    "packed attribute" Npkcontext.Pack
+      | "__transparent_union__" -> 
+	  Npkcontext.report_accept_warning "Parser.attribute_name" 
+	    "transparent union" Npkcontext.TransparentUnion
       | _ -> raise Parsing.Parse_error
     end;
     [] 
@@ -1017,12 +1020,6 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| TRANSPARENT_UNION                        { 
-    Npkcontext.report_accept_warning "Parser.attribute_name" 
-      "transparent union" Npkcontext.TransparentUnion;
-    []
-  }
-
 | UNUSED                                   { [] }
 | WEAK                                     {
     Npkcontext.report_warning "Parser.attribute" 
