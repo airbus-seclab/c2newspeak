@@ -195,7 +195,7 @@ let rec normalize_bexp e =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL
+%token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
 %token INLINE GNU_INLINE ASM FORMAT_ARG RESTRICT 
 %token NONNULL BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
@@ -1002,9 +1002,12 @@ attribute_name:
     if $1 <> "aligned" then raise Parsing.Parse_error;
     []
   }
-| FORMAT LPAREN 
+| IDENTIFIER LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
-  RPAREN                                   { [] }
+  RPAREN                                   { 
+    if $1 <> "__format__" then raise Parsing.Parse_error;
+    [] 
+  }
 | FORMAT_ARG LPAREN INTEGER RPAREN         { [] }
 | NONNULL LPAREN integer_list RPAREN       { [] }
 | CONST                                    { [] }
