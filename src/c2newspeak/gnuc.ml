@@ -84,7 +84,6 @@ let _ =
   Hashtbl.add token_tbl "__SI__" SI;
   Hashtbl.add token_tbl "__word__" SI;
   Hashtbl.add token_tbl "__DI__" DI;
-  Hashtbl.add token_tbl "weak" WEAK;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names

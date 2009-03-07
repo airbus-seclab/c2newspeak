@@ -199,7 +199,7 @@ let rec normalize_bexp e =
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P MODE 
 %token QI HI SI DI FUNNAME 
-%token WEAK TYPEOF
+%token TYPEOF
 %token EOF
 
 %token <Csyntax.assertion> NPK
@@ -990,6 +990,9 @@ attribute_name:
       | "__transparent_union__" -> 
 	  Npkcontext.report_accept_warning "Parser.attribute_name" 
 	    "transparent union" Npkcontext.TransparentUnion
+      | "weak" ->
+	  Npkcontext.report_warning "Parser.attribute" 
+	    "ignoring attribute weak"
       | _ -> raise Parsing.Parse_error
     end;
     [] 
@@ -1020,11 +1023,6 @@ attribute_name:
   RPAREN                                   { 
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
-  }
-| WEAK                                     {
-    Npkcontext.report_warning "Parser.attribute" 
-      "ignoring attribute weak";
-    []
   }
 | MODE LPAREN imode RPAREN                 { $3::[] }
 | CONST                                    { [] }
