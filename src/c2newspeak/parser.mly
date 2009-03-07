@@ -198,7 +198,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
+%token QI HI SI DI PACKED FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
 %token EOF
 
@@ -979,7 +979,7 @@ attribute_name:
     begin match $1 with
 	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
-      | "__deprecated__" | "__malloc__" -> ()
+      | "__deprecated__" | "__malloc__" | "__warn_unused_result__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -1009,7 +1009,6 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| WARN_UNUSED_RESULT                       { [] }
 | PACKED                                   { 
     Npkcontext.report_ignore_warning "Parser.attribute_name" 
       "packed attribute" Npkcontext.Pack;
