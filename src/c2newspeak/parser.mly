@@ -198,7 +198,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P MODE 
-%token QI HI SI DI PACKED FUNNAME 
+%token QI HI SI DI FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
 %token EOF
 
@@ -983,6 +983,9 @@ attribute_name:
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
+      | "packed" | "__packed__" -> 
+	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
+	    "packed attribute" Npkcontext.Pack;
       | _ -> raise Parsing.Parse_error
     end;
     [] 
@@ -999,25 +1002,20 @@ attribute_name:
       | _ -> raise Parsing.Parse_error
   }
 | IDENTIFIER LPAREN INTEGER RPAREN         { 
-    match $1 with
-	"__format_arg__" | "aligned" -> []
+    begin match $1 with
+	"__format_arg__" | "aligned" -> ()
+      | "packed" | "__packed__" -> 
+	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
+	    "packed attribute" Npkcontext.Pack;
       | _ -> raise Parsing.Parse_error
-  }
+    end;
+    []
+    }
 | IDENTIFIER LPAREN 
     format_fun COMMA INTEGER COMMA INTEGER 
   RPAREN                                   { 
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
-  }
-| PACKED                                   { 
-    Npkcontext.report_ignore_warning "Parser.attribute_name" 
-      "packed attribute" Npkcontext.Pack;
-    []
-  }
-| PACKED LPAREN INTEGER RPAREN             { 
-    Npkcontext.report_ignore_warning "Parser.attribute_name" 
-      "packed attribute" Npkcontext.Pack;
-    []
   }
 | TRANSPARENT_UNION                        { 
     Npkcontext.report_accept_warning "Parser.attribute_name" 
