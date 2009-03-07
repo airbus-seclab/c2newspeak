@@ -50,7 +50,6 @@ check: $(TESTS)
 
 $(TESTS): %: $(PREREQ)
 	$(COMMAND) &> $*.bak; true
-	dos2unix $*.bak &> /dev/null
 	if [ -e $*.spec ]; \
 	then \
 	  if $(DIFF) > result; \
@@ -67,7 +66,6 @@ $(TESTS): %: $(PREREQ)
 
 $(TESTS.SPEC): %.spec: $(PREREQ)
 	$(COMMAND) &> $*.spec; true
-	dos2unix $*.spec
 	cat $*.spec
 
 clean:

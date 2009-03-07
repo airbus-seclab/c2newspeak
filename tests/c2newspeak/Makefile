@@ -25,7 +25,6 @@
 #
 
 COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
-        dos2unix $*.cil.bak &> /dev/null; \
         $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
 
 DIFF=diff $*.spec $*.bak > result && \
@@ -162,5 +161,4 @@ TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
 
 $(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
 	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
-	dos2unix $@
 	cat $@
