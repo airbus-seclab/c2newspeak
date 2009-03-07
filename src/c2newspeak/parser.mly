@@ -196,7 +196,7 @@ let rec normalize_bexp e =
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
-%token INLINE GNU_INLINE ASM RESTRICT 
+%token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P MODE 
 %token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
 %token TRANSPARENT_UNION UNUSED WEAK TYPEOF
@@ -978,7 +978,7 @@ attribute_name:
   IDENTIFIER                               { 
     begin match $1 with
 	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
-      | "__always_inline__" | "__nothrow__" | "__pure__"
+      | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
       | "__deprecated__" | "__malloc__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
@@ -1009,8 +1009,6 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| CONST                                    { [] }
-| GNU_INLINE                               { [] }
 | WARN_UNUSED_RESULT                       { [] }
 | PACKED                                   { 
     Npkcontext.report_ignore_warning "Parser.attribute_name" 
@@ -1035,6 +1033,7 @@ attribute_name:
     []
   }
 | MODE LPAREN imode RPAREN                 { $3::[] }
+| CONST                                    { [] }
 ;;
 
 integer_list:
