@@ -199,7 +199,7 @@ let rec normalize_bexp e =
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P MODE 
 %token QI HI SI DI FUNNAME 
-%token UNUSED WEAK TYPEOF
+%token WEAK TYPEOF
 %token EOF
 
 %token <Csyntax.assertion> NPK
@@ -979,7 +979,8 @@ attribute_name:
     begin match $1 with
 	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
-      | "__deprecated__" | "__malloc__" | "__warn_unused_result__" -> ()
+      | "__deprecated__" | "__malloc__" | "__warn_unused_result__" 
+      | "__unused__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -1020,7 +1021,6 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| UNUSED                                   { [] }
 | WEAK                                     {
     Npkcontext.report_warning "Parser.attribute" 
       "ignoring attribute weak";

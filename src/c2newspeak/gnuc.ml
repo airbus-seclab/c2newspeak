@@ -87,7 +87,6 @@ let _ =
   Hashtbl.add token_tbl "weak" WEAK;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   
-  Hashtbl.add token_tbl "__unused__" UNUSED;
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 
