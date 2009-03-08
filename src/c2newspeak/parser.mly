@@ -198,7 +198,7 @@ let rec normalize_bexp e =
 %token ATTRIBUTE EXTENSION VA_LIST CDECL
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P
-%token QI HI SI DI FUNNAME 
+%token FUNNAME 
 %token TYPEOF
 %token EOF
 
@@ -1028,9 +1028,17 @@ attribute_name:
     end;
     [] 
   }
-| IDENTIFIER LPAREN imode RPAREN           { 
+| IDENTIFIER LPAREN IDENTIFIER RPAREN           { 
     if $1 <> "__mode__" then raise Parsing.Parse_error;
-    $3::[] 
+    let imode =
+      match $3 with
+	  "__QI__" -> Config.size_of_byte
+	| "__HI__" -> Config.size_of_byte*2
+	| "__SI__" | "__word__" -> Config.size_of_byte*4
+	| "__DI__" -> Config.size_of_byte*8
+	| _ -> raise Parsing.Parse_error
+    in
+      imode::[]
   }
 | CONST                                    { [] }
 ;;
@@ -1038,13 +1046,6 @@ attribute_name:
 integer_list:
   INTEGER                                  { }
 | INTEGER COMMA integer_list               { }
-;;
-
-imode:
-  QI                                       { Config.size_of_byte }
-| HI                                       { Config.size_of_byte*2 }
-| SI                                       { Config.size_of_byte*4 }
-| DI                                       { Config.size_of_byte*8 }
 ;;
 
 // config file
