@@ -195,7 +195,7 @@ let rec normalize_bexp e =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
+%token ATTRIBUTE EXTENSION VA_LIST CDECL
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P
 %token QI HI SI DI FUNNAME 
@@ -1019,23 +1019,25 @@ attribute_name:
     []
     }
 | IDENTIFIER LPAREN 
-    format_fun COMMA INTEGER COMMA INTEGER 
+    IDENTIFIER COMMA INTEGER COMMA INTEGER 
   RPAREN                                   { 
     if $1 <> "__format__" then raise Parsing.Parse_error;
+    begin match $3 with
+	"__printf__" | "__scanf__" -> ()
+      | _ -> raise Parsing.Parse_error
+    end;
     [] 
   }
-| IDENTIFIER LPAREN imode RPAREN           { $3::[] }
+| IDENTIFIER LPAREN imode RPAREN           { 
+    if $1 <> "__mode__" then raise Parsing.Parse_error;
+    $3::[] 
+  }
 | CONST                                    { [] }
 ;;
 
 integer_list:
   INTEGER                                  { }
 | INTEGER COMMA integer_list               { }
-;;
-
-format_fun:
-  PRINTF                                   { }
-| SCANF                                    { }
 ;;
 
 imode:
