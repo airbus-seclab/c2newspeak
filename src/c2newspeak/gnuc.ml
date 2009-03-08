@@ -74,6 +74,10 @@ let _ =
   (* __deprecated__: generates warnings when the function is used *)
 
   Hashtbl.add token_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
+  (* __builtin_constant_p(e): 
+     returns 1 if expression e is a statically known constant,
+     0 otherwise 
+  *)
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
