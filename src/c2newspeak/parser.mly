@@ -197,7 +197,7 @@ let rec normalize_bexp e =
 %token SHIFTL SHIFTR BXOR BOR BNOT
 %token ATTRIBUTE EXTENSION VA_LIST PRINTF SCANF CDECL
 %token INLINE ASM RESTRICT 
-%token BUILTIN_CONSTANT_P MODE 
+%token BUILTIN_CONSTANT_P
 %token QI HI SI DI FUNNAME 
 %token TYPEOF
 %token EOF
@@ -1024,7 +1024,7 @@ attribute_name:
     if $1 <> "__format__" then raise Parsing.Parse_error;
     [] 
   }
-| MODE LPAREN imode RPAREN                 { $3::[] }
+| IDENTIFIER LPAREN imode RPAREN           { $3::[] }
 | CONST                                    { [] }
 ;;
 
