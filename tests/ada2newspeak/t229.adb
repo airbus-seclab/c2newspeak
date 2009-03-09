@@ -6,12 +6,13 @@
 -- Date   : Mon Mar  9 2009
 --
 procedure t229 is
-    X : Integer := 0;
+    X : Integer range 3..6 := 3;
+    Y : Integer;
 begin
-    case 3 is
-        when 32 => X := 3; X := 2;
-        when 45 => X := 4; X := 5;
-        when 58 => X := 5; X := 8;
-        when 78 => X := 7; X := 8;
+    case X is
+        when 3 => Y := 3; Y := 2;
+        when 4 => Y := 4; Y := 5;
+        when 5 => Y := 5; Y := 8;
+        when 6 => Y := 7; Y := 8;
     end case;
 end t229;
