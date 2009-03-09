@@ -111,6 +111,17 @@
         | _     -> Npkcontext.report_error "Parser.make_operator_name"
                 ("Cannot overload '"^opname^"' : it is not an operator")
 
+    (** Prepares a list of exp*block for the Case constructor. It takes
+      * a list of expression list * block and flattens it into a list of
+      * expression*block.
+      *)
+    let rec build_case_ch (choices:(expression list*instruction list)list)
+        :(expression*instruction list) list =
+        match choices with
+          | []                     -> []
+          | (exp_list,block)::tail -> (List.map (function exp -> exp,block)
+                                                exp_list)
+                                     @ (build_case_ch tail)
 
 
 
@@ -139,7 +150,7 @@
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
-%token REVERSE PRAGMA
+%token REVERSE PRAGMA CASE VBAR OTHERS
 
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -402,23 +413,44 @@ instr :
 | NULL {(NullInstr, loc ())}
 | RETURN expression {(Return($2), loc ())}
 | RETURN {(ReturnSimple, loc ())}
-
 | procedure_array { let (n,p)= $1 in
 		      (ProcedureCall(n,p), loc())
 		  }
-
 | procedure_array ASSIGN expression
     { let (nm, ind) = $1 in
       let arr_or_lv = build_access nm ind in
 	(Assign ( arr_or_lv  , $3), loc())
     }
-
 | EXIT {(Exit(None), loc() )}
 | EXIT WHEN expression {(Exit(Some($3)), loc ())}
 | instruction_if {$1}
 | iteration_scheme LOOP instr_list END LOOP
       { let (scheme,loc) = $1
 	in (Loop(scheme, $3), loc)}
+| CASE expression IS case_stmt_alternative_list END CASE {Case($2,
+                                                               build_case_ch $4,
+                                                               None),
+                                                          loc()}
+;
+
+case_stmt_alternative_list:
+| case_stmt_alternative                             {$1::[]}
+| case_stmt_alternative case_stmt_alternative_list  {$1::$2}
+;
+
+case_stmt_alternative:
+| WHEN discrete_choice_list ARROW instr_list {$2,$4}
+;
+
+discrete_choice_list:
+| discrete_choice                           {$1::[]}
+| discrete_choice VBAR discrete_choice_list {$1::$3}
+;
+
+discrete_choice:
+| expression {$1}
+/*| discrete_range TODO */
+/*| OTHERS TODO */
 ;
 
 procedure_array :

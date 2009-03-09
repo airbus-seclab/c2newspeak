@@ -241,10 +241,15 @@ and instr_to_string instr = match instr with
   | ProcedureCall(nom, params) -> "ProcedureCall("
       ^(name_to_string nom)^", "
       ^(list_to_string params exp_to_string ", " true)^")"
-
-
-
-
+  | Case(e,choices,default) -> "Case(("^(exp_to_string e)^"), ["
+    ^ (String.concat ", "
+     (List.map (function e,block ->
+                    "when "^(exp_to_string e)^" => "^(instr_list_to_string block))
+                    choices))
+    ^"]"^(match default with
+            | None -> ""
+            | Some block -> "when others => "^(instr_list_to_string block)
+         )
 
 let param_to_string param =
   "{formal_name = "    ^(list_to_string param.formal_name (fun x -> x) "," true)

@@ -147,6 +147,7 @@ rule token = parse
   | "array"      {ARRAY}
   | "begin"      {BEGIN}
   | "body"       {BODY}
+  | "case"       {CASE}
   | "constant"   {CONSTANT}
   | "elsif"      {ELSIF}
   | "else"       {ELSE}
@@ -164,6 +165,7 @@ rule token = parse
   | "null"       {NULL}
   | "of"         {OF}
   | "or"         {OR}
+  | "others"     {OTHERS}
   | "out"        {OUT}
   | "package"    {PACKAGE}
   | "pragma"     {PRAGMA}
@@ -215,7 +217,6 @@ rule token = parse
         (* all          *)
 
     (* Execution flow-related  *)
-        (* case         *)
         (* declare      *)
         (* goto         *)
         (* raise        *)
@@ -269,6 +270,7 @@ rule token = parse
   | ','            {COMMA}
   | "'"            {QUOTE}
   | "=>"           {ARROW}
+  | "|"            {VBAR}
 
 
   | '\n' {newline lexbuf; token lexbuf}

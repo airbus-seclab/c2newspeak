@@ -1761,9 +1761,17 @@ let translate compil_unit =
 		   | _ ->
 		       Npkcontext.report_error "Firstpass.translate_instr"
 			 "find_fun_symb did not expect this (maybe array) as an instr! "
-
-
 	     end
+
+       | Case (e, choices, _) -> (C.Switch(fst(translate_exp e None),
+                                          (List.map (function exp,block ->
+                                              let (e1,e2) = translate_exp exp None
+                                              in (e1, C.scalar_of_typ
+                                                        (translate_typ e2)),
+                                                  translate_instr_list block)
+                                              choices
+                                              ),
+                                            []),loc)::(translate_instr_list r)
       )
 
     | [] -> []
