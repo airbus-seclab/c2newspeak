@@ -455,7 +455,7 @@ let translate compil_unit =
 
   (* declaration d'un nombre local *)
   and add_number loc value lvl ident =
-    let x =  Ada_normalize.normalize_ident
+    let x =  Normalize.normalize_ident
       ident !current_package !extern in
       (if Hashtbl.mem symbtbl x
        then
@@ -492,7 +492,7 @@ let translate compil_unit =
 
   (* declaration d'un symbole d'enumeration *)
   and add_enum loc ident value typ global =
-    let name = Ada_normalize.normalize_ident
+    let name = Normalize.normalize_ident
       ident !current_package !extern in
       (if mem_symb name
        then
@@ -530,7 +530,7 @@ let translate compil_unit =
 		  global), translate_typ typ, loc)
 
   and add_global loc typ tr_typ tr_init ro x =
-    let name = Ada_normalize.normalize_ident
+    let name = Normalize.normalize_ident
       x !current_package !extern in
 
     let tr_name = translate_name name in
@@ -1068,36 +1068,30 @@ let translate compil_unit =
 	  Npkcontext.report_error "Firstpass.translate_unop"
 	    "Unexpected unary operator and argument"
 
-  (** Translates a function call.
-      @param fname        fname
-      @param tr_typ       tr_typ  
-      @param spec         spec
-      @param exp_list     exp_list
-      @param expected_typ expect
-        *)
-  and translate_function_call fname tr_typ spec exp_list expected_typ =
-    let (params, ret_t) =
-      match spec with
-	| Function(_,params,subtyp) ->
-	    (params, check_typ expected_typ (base_typ subtyp))
+  (** Translates a function call.  *)
+  and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
+                              (spec:sub_program_spec) (exp_list:expression list)
+                              (expected_typ:typ option) :C.exp*A.typ =
+      let (params, ret_t) =
+          match spec with
+            | Function(_,params,subtyp) ->
+                (params, check_typ expected_typ (base_typ subtyp))
 
-	| Procedure(name, _) -> Npkcontext.report_error
-	    "Firstpass.translate_exp"
-	      ((Print_syntax_ada.name_to_string name)
-	       ^" is a procedure, function expected")
+            | Procedure(name, _) -> Npkcontext.report_error
+                "Firstpass.translate_exp"
+                  ((Print_syntax_ada.name_to_string name)
+                   ^" is a procedure, function expected")
     in
-    let translate_paramater param exp =
-      let subtyp = param.param_type in
-      let (tr_exp, _) = translate_exp exp (Some(base_typ subtyp)) in
-	make_check_subtyp subtyp tr_exp in
-    let tr_params =
-      if (List.length params <> List.length exp_list)
-      then Npkcontext.report_error "Firstpass.translate_function_call"
-	"wrong number of arguments"
-      else
-	List.map2 translate_paramater params exp_list
+    let translate_paramater (param:A.param) (exp:A.expression) :C.exp =
+        let (tr_exp, _) = translate_exp exp (Some(base_typ param.param_type)) in
+            make_check_subtyp param.param_type tr_exp in
+    let tr_params = List.map2 translate_paramater params exp_list
     in
-      (C.Call(tr_typ, fname, tr_params), ret_t)
+        try (C.Call(tr_typ, fname, tr_params), ret_t)
+        with
+          | Invalid_argument _ -> Npkcontext.report_error
+                                "Firstpass.translate_function_call"
+                                "wrong number of arguments"
 
   and translate_var name expected_typ =
     let trans_fun_typ tr_typ fname spec =
@@ -2235,7 +2229,7 @@ let translate compil_unit =
   in
     (* corps de la fonction translate *)
 
-  let normalized_compil_unit =  Ada_normalize.normalization compil_unit false
+  let normalized_compil_unit =  Normalize.normalization compil_unit false
   in
     Npkcontext.print_debug
       (Print_syntax_ada.ast_to_string [normalized_compil_unit]);

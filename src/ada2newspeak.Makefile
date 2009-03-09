@@ -38,7 +38,7 @@ ada2newspeak.FILES=\
 	ada_config \
 	ada_utils \
 	parser lexer ada_parse \
-	ada_normalize firstpass compiler ada2newspeak
+	normalize firstpass compiler ada2newspeak
 
 FILES=version utils/list_utils \
       $(addprefix newspeak/, $(newspeak.FILES)) \

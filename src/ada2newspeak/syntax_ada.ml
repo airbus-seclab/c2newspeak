@@ -96,11 +96,10 @@ and typ_declaration =
                       *Newspeak.ikind             (** Enumerated type, eg
                                                 [type Day is (Mon,...,Sun)] *)
   | DerivedType  of identifier
-                   *subtyp_indication  (** Derived type, eg
-                                [type WeekEndDay is Day range Sat..Sun] *)
+                   *subtyp_indication             (** Derived type *)
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
     (** Integer range, eg [type Byte is range 0..255] *)
-  | Array  of identifier*array_type_definition   (* TODO *)
+  | Array  of identifier*array_type_definition  (* TODO *)
   | Record of identifier*record_type_definition (* TODO *)
 
 (** Record type definition, as in {[

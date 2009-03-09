@@ -559,7 +559,7 @@ primary :
 | name args {FunctionCall($1, $2)}
 /*from simpl_exp to */
 
-| subtyp QUOTE ident  {Attribute ($1, AttributeDesignator($3,None))}
+| subtyp QUOTE ident  {Attribute ($1, AttributeDesignator(String.lowercase $3,None))}
 
 /*| name LPAR param_assoc RPAR {FunctionCall($1, $3)}*/
 ;
