@@ -468,12 +468,11 @@ in
 		stmts, (stmt, l)
 	    | Block blk -> begin
 		try
-		  let blk', e = f_delete_goto blk in
-		    (Block blk', l)::stmts, e
+		  let blk', stmt' = f_delete_goto blk in (Block blk', l)::stmts, stmt'
 		with
-		    Not_found -> let stmts', e = f_delete_goto stmts in (stmt, l)::stmts', e
+		    Not_found -> let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
 	      end
-	    | _ -> let stmts', e = f_delete_goto stmts in (stmt, l)::stmts', e
+	    | _ -> let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
   in
 
   let rec forward stmts = 
@@ -561,7 +560,7 @@ in
 
 	    | _ -> let stmts', b' = choose stmts in (stmt, l)::stmts', b'
   in
-  fst (choose stmts)
+    fst (choose stmts) 
 
 let out_if_else stmts lbl level g_offset =
   (* returns the stmt list whose 'goto lbl' stmt has been deleted and
@@ -683,8 +682,7 @@ let outward stmts lbl g_level g_offset =
 			      (e, blk, l')::cases', stmts', b'
 			  else 
 			    let cases' = (e, blk', l')::cases in
-			    let cases', stmts', _ = case_fold cases' in
-			      cases', stmts'@stmts, true
+			      cases', stmts, true
 		in
 		let cases', stmts', b' = case_fold cases in
 		  if not b' then 
@@ -1107,7 +1105,7 @@ let run prog =
     (* goto elimination *)
     let stmts = ref stmts in
     let move lbl g = 
-      stmts := elimination !stmts lbl g vars
+      stmts := elimination !stmts lbl g vars;
     in
       Hashtbl.iter move lbls;
       deleting_goto_ids !stmts
