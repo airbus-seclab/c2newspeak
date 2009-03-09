@@ -123,8 +123,6 @@
                                                 exp_list)
                                      @ (build_case_ch tail)
 
-
-
 %}
 /*declaration ocamlyacc*/
 %token EOF
@@ -428,14 +426,20 @@ instr :
       { let (scheme,loc) = $1
 	in (Loop(scheme, $3), loc)}
 | CASE expression IS case_stmt_alternative_list END CASE {Case($2,
-                                                               build_case_ch $4,
-                                                               None),
+                                                              build_case_ch
+                                                                  (fst $4),
+                                                              (snd $4)),
                                                           loc()}
 ;
 
 case_stmt_alternative_list:
-| case_stmt_alternative                             {$1::[]}
-| case_stmt_alternative case_stmt_alternative_list  {$1::$2}
+| when_others                                       {[]           , Some $1}
+| case_stmt_alternative                             {$1::[]       , None}
+| case_stmt_alternative case_stmt_alternative_list  {$1::(fst $2) , snd $2}
+;
+
+when_others:
+| WHEN OTHERS ARROW instr_list {$4}
 ;
 
 case_stmt_alternative:
@@ -450,7 +454,6 @@ discrete_choice_list:
 discrete_choice:
 | expression {$1}
 /*| discrete_range TODO */
-/*| OTHERS TODO */
 ;
 
 procedure_array :

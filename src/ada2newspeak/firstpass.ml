@@ -1763,15 +1763,21 @@ let translate compil_unit =
 			 "find_fun_symb did not expect this (maybe array) as an instr! "
 	     end
 
-       | Case (e, choices, _) -> (C.Switch(fst(translate_exp e None),
-                                          (List.map (function exp,block ->
-                                              let (e1,e2) = translate_exp exp None
-                                              in (e1, C.scalar_of_typ
-                                                        (translate_typ e2)),
+       | Case (e, choices, default) -> (C.Switch(fst(translate_exp e None),
+                            (* Choices *) (List.map (function exp,block ->
+                                              let (value,typ) =
+                                                  translate_exp exp None
+                                              in (value, C.scalar_of_typ
+                                                        (translate_typ typ)),
                                                   translate_instr_list block)
                                               choices
                                               ),
-                                            []),loc)::(translate_instr_list r)
+                     (* "default" block *)  translate_instr_list (
+                                                Ada_utils.with_default 
+                                                                    default
+                                                                    [])
+                                            )
+                                            ,loc)::(translate_instr_list r)
       )
 
     | [] -> []
