@@ -26,7 +26,7 @@
   email : jasmine . duchon AT free . fr
 *)
 
-let compile fname =
+let compile(fname:string):Npkil.t =
   let base_name = Filename.basename fname
   and dir_name = Filename.dirname fname
   and current_dir = Sys.getcwd () in

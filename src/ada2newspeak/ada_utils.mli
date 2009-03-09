@@ -84,3 +84,7 @@ val check_compil_unit_name :
 
 val extract_representation_clause_name :
                     Syntax_ada.representation_clause -> Syntax_ada.identifier
+
+(** Provides a default value for a 'a option *)
+val with_default : 'a option -> 'a -> 'a
+

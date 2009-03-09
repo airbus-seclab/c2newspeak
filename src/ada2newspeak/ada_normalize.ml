@@ -23,35 +23,38 @@
 *)
 
 open Syntax_ada
+open Ada_utils
+
 module Nat = Newspeak.Nat
 
 exception AmbiguousTypeException
 exception NonStaticExpression = Ada_utils.NonStaticExpression
 
-let float_to_flottant f = (f, string_of_float f)
+let float_to_flottant(f:float):float_number = (f, string_of_float f)
 
-let tmp_cnt = ref 0
+let tmp_cnt:int ref = ref 0
 
-let gen_tmp _ =
+let gen_tmp(():unit):string  =
   let x = "tmp_range"^(string_of_int !tmp_cnt)
   in
     incr tmp_cnt;
     x
 
 
-let base_typ = Ada_utils.base_typ
-let check_typ = Ada_utils.check_typ
+let base_typ             = Ada_utils.base_typ
+let check_typ            = Ada_utils.check_typ
 let known_compatible_typ = Ada_utils.known_compatible_typ
 
 (* variable booleenne :
    cas fonction : extern
    autres : global *)
+(** Constant symbols *)
 type constant_symb =
-  | Number of value*bool
-  | StaticConst of value*typ*bool
-  | EnumLitteral of typ*nat*bool
-  | VarSymb of bool
-  | FunSymb of typ option*bool
+  | Number       of value*bool      (** bool = global? *)
+  | StaticConst  of value*typ*bool  (** bool = global? *)
+  | EnumLitteral of typ*nat*bool    (** bool = global? *)
+  | VarSymb      of bool            (** bool = global? *)
+  | FunSymb      of typ option*bool (** bool = extern? *)
 
 
 let string_of_name = Print_syntax_ada.name_to_string
@@ -61,35 +64,6 @@ let normalize_extern_ident ident package = (package, ident)
 let normalize_ident ident package extern = match extern with
   | false -> ([], ident)
   | true -> normalize_extern_ident ident package
-
-
-
-let rec arraytyp_to_contrainte typ norm_sb =
-  match typ with
-      Unconstrained(Declared(Array(_, ConstrainedArray (
-				     ( stypindex, contraint,_ ), _, _)), _)) ->
-	begin
-	  match contraint with
-	      None -> begin
-		match stypindex with
-		    Constrained(_, contr, _) ->
-		      Some contr
-		  | SubtypName _ ->
-		      arraytyp_to_contrainte (norm_sb typ) norm_sb
-		  |  _ -> None
-	      end
-	    | Some  cont -> Some cont
-	end
-    | SubtypName _ -> arraytyp_to_contrainte (norm_sb typ) norm_sb
-    | Constrained ( _, contr, true) -> Some contr
-    | (*Constrained(_, _, false)*) _  ->
-	Npkcontext.report_error
-	  "Ada_normalize Length contraint"
-	  "Length not implemented for type /= array"
-
-
-
-
 
 let normalize_name name with_package current_package extern =
   let add_package (parents, ident) pack = match parents with
@@ -105,9 +79,12 @@ let normalize_name name with_package current_package extern =
       | true -> add_package name current_package
 
 
-
-let eval_static exp expected_typ csttbl context with_package
-    current_package extern =
+(** Evaluate (at compile-time) an expression. *)
+let eval_static (exp:expression) (expected_typ:typ option)
+                (csttbl:(name,constant_symb) Hashtbl.t) (context:'c list)
+                (with_package:identifier list list)
+                (current_package : identifier list) (extern:bool)
+   :(value*typ) =
 
   let find_all_cst nom = Hashtbl.find_all csttbl nom in
 
@@ -117,38 +94,25 @@ let eval_static exp expected_typ csttbl context with_package
 	 (fun pack -> find_all_cst (pack, ident))
 	 context) in
 
-  let rec eval_static_exp exp expected_typ :(Syntax_ada.value*Syntax_ada.typ) =
+  let rec eval_static_exp (exp:expression) (expected_typ:typ option)
+          :(Syntax_ada.value*Syntax_ada.typ) =
     match exp with
-      | CInt(i) ->
-	  let typ = Ada_utils.check_typ expected_typ IntegerConst
-	  in (IntVal(i), typ)
-
-      | CFloat(f,s) ->
-	  let typ = Ada_utils.check_typ expected_typ Float
-	  in (FloatVal(f,s), typ)
-
-      | CChar(c) ->
-	  (IntVal(Nat.of_int c), Ada_utils.check_typ expected_typ Character)
-      | CBool(b) ->
-	  (BoolVal(b), Ada_utils.check_typ expected_typ Boolean)
-
-
-      | Var(v) ->
-	  eval_static_const (normalize_name v with_package
-			     current_package extern)
-	    expected_typ
-
-      | FunctionCall(_) -> raise NonStaticExpression
+      | CInt   (i)   -> IntVal(i),           check_typ expected_typ IntegerConst
+      | CFloat (f,s) -> FloatVal(f,s),       check_typ expected_typ Float
+      | CChar  (c)   -> IntVal(Nat.of_int c),check_typ expected_typ Character
+      | CBool  (b)   -> BoolVal(b),          check_typ expected_typ Boolean
+      | Var(v) -> eval_static_const (normalize_name v
+                                                    with_package
+                                                    current_package
+                                                    extern) expected_typ
+      | FunctionCall _  -> raise NonStaticExpression
 
       | NullExpr | CString (_) -> Npkcontext.report_error
-	  "Ada_normalize.eval_static_exp"
-	    "not implemented"
+                                 "Ada_normalize.eval_static_exp"
+                                       "not implemented"
 
-      | Unary(op,exp) ->
-	  eval_static_unop op exp expected_typ
-
-      | Binary(op,e1,e2) ->
-	  eval_static_binop op e1 e2 expected_typ
+      | Unary(op,exp)    -> eval_static_unop  op exp   expected_typ
+      | Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
 
       | Qualified(subtyp, exp) ->
 	  let typ = Ada_utils.check_typ expected_typ
@@ -239,7 +203,9 @@ let eval_static exp expected_typ csttbl context with_package
 
   (* expected_typ : type du resultat de l'operation, pas
      des operandes *)
-  and eval_static_binop op e1 e2 expected_typ =
+  and eval_static_binop (op:binary_op) (e1:expression) (e2:expression)
+                                (expected_typ:typ option)
+        :value*typ =
     let expected_typ1 = Ada_utils.typ_operand op expected_typ in
     let (val1, val2, typ) =
       try
@@ -264,174 +230,139 @@ let eval_static exp expected_typ csttbl context with_package
 		  Npkcontext.report_error "Ada_normalize.eval_static_exp"
 		    "ambiguous operands"
     in
-      Ada_utils.check_operand_typ op typ;
+      check_operand_typ op typ;
       match (op,val1,val2) with
 	  (* operations sur entiers ou flottants *)
-	| (Plus, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Nat.add v1 v2), typ)
-	| (Plus, FloatVal(v1,_), FloatVal(v2,_)) ->
-	    (FloatVal(float_to_flottant (v1 +. v2)), typ)
-
-	| (Minus, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Nat.sub v1 v2), typ)
-	| (Minus, FloatVal(v1,_), FloatVal(v2,_)) ->
-	    (FloatVal(float_to_flottant(v1 -. v2)), typ)
-
-	| (Mult, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Nat.mul v1 v2), typ)
-	| (Mult, FloatVal(v1,_), FloatVal(v2,_)) ->
-	    (FloatVal(float_to_flottant(v1 *. v2)), typ)
-
-	| (Div, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Nat.div v1 v2), typ)
-	| (Div, FloatVal(v1,_), FloatVal(v2,_)) ->
-	    (FloatVal(float_to_flottant (v1 /. v2)), typ)
-
-	| (Power, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Ada_utils.puiss v1 v2), typ)
-	| (Power, FloatVal(v1,_), IntVal(v2)) ->
-	    (FloatVal(float_to_flottant (v1 ** (float_of_int (Nat.to_int v2)))),
-		      typ)
+	| Plus,  IntVal v1, IntVal v2 -> IntVal(Nat.add v1 v2), typ
+	| Minus, IntVal v1, IntVal v2 -> IntVal(Nat.sub v1 v2), typ
+	| Mult,  IntVal v1, IntVal v2 -> IntVal(Nat.mul v1 v2), typ
+	| Div,   IntVal v1, IntVal v2 -> IntVal(Nat.div v1 v2), typ
+	| Power, IntVal v1, IntVal v2 -> IntVal(puiss   v1 v2), typ
+	| Plus, FloatVal(v1,_), FloatVal(v2,_) ->
+	    FloatVal(float_to_flottant (v1 +. v2)), typ
+	| Minus, FloatVal(v1,_), FloatVal(v2,_) ->
+	    FloatVal(float_to_flottant(v1 -. v2)), typ
+	| Mult, FloatVal(v1,_), FloatVal(v2,_) ->
+	    FloatVal(float_to_flottant(v1 *. v2)), typ
+	| Div, FloatVal(v1,_), FloatVal(v2,_) ->
+	    FloatVal(float_to_flottant (v1 /. v2)), typ
+	| Power, FloatVal(v1,_), IntVal(v2) ->
+	    FloatVal(float_to_flottant (v1 ** (float_of_int (Nat.to_int v2)))),
+		      typ
 
 	(*operations sur les entiers*)
 	| (Rem, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Ada_utils.rem_ada v1 v2), typ)
+	    (IntVal(rem_ada v1 v2), typ)
 
 	| (Mod, IntVal(v1), IntVal(v2)) ->
-	    (IntVal(Ada_utils.mod_ada v1 v2), typ)
+	    (IntVal(mod_ada v1 v2), typ)
 
 	(* comparaisons *)
-	| (Eq, v1, v2) ->
-	    (BoolVal(Ada_utils.eq_val v1 v2), Boolean)
-
-	| (Neq, v1, v2) ->
-	    (BoolVal(not (Ada_utils.eq_val v1 v2)), Boolean)
-
-	| (Lt, v1, v2) ->
-	    (BoolVal(Ada_utils.inf_val v1 v2), Boolean)
-
-	| (Le, v1, v2) ->
-	    (BoolVal(not (Ada_utils.inf_val v2 v1)), Boolean)
-
-
-	| (Ge, v1, v2) ->
-	    (BoolVal(not (Ada_utils.inf_val v1 v2)), Boolean)
-
-	| (Gt, v1, v2) ->
-	    (BoolVal(Ada_utils.inf_val v2 v1), Boolean)
+	| Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2),  Boolean)
+	| Neq, v1, v2 -> (BoolVal(not  (eq_val v1 v2)), Boolean)
+	| Lt,  v1, v2 -> (BoolVal(     inf_val v1 v2),  Boolean)
+	| Le,  v1, v2 -> (BoolVal(not (inf_val v2 v1)), Boolean)
+	| Ge,  v1, v2 -> (BoolVal(not (inf_val v1 v2)), Boolean)
+	| Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1), Boolean)
 
 	(* operations sur les booleens *)
-	| ((AndThen|And), BoolVal(b1), BoolVal(b2)) ->
-	    (BoolVal(b1 && b2), Boolean)
-
-	| ((OrElse|Or), BoolVal(b1), BoolVal(b2)) ->
-	    (BoolVal(b1 || b2), Boolean)
-
-	| (Xor, BoolVal(b1), BoolVal(b2)) ->
-	    (BoolVal(Ada_utils.xor b1 b2), Boolean)
-
+	| ((AndThen|And), BoolVal(b1), BoolVal(b2)) -> (BoolVal(b1  && b2), Boolean)
+	| ((OrElse|Or),   BoolVal(b1), BoolVal(b2)) -> (BoolVal(b1  || b2), Boolean)
+	| (Xor,           BoolVal(b1), BoolVal(b2)) -> (BoolVal(xor b1 b2), Boolean)
 
 	(* operations sur les string *)
-	| (Concat,_,_) ->
-	    Npkcontext.report_error
-	      "Ada_normalize.eval_static_binop"
-	      "string error : not implemented "
-
+	| (Concat,_,_) -> Npkcontext.report_error "Ada_normalize.eval_static_binop"
+                                              "string error : not implemented"
 	| _ -> Npkcontext.report_error "Ada_normalize.eval_static_binop"
-	    "invalid operator and argument"
+                                    "invalid operator and argument"
 
-  and eval_static_unop op exp expected_typ =
-    let oppose exp =
+  and eval_static_neg (exp:expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
-	| (IntVal(i), t)
-	    when (Ada_utils.integer_class t) ->
-	    (IntVal(Nat.neg i), t)
-	| (FloatVal(f,_), Float) ->
-	    (FloatVal(float_to_flottant (-.f)), Float)
-	| _ -> Npkcontext.report_error
-	    "Ada_normalize.eval_static_exp"
-	      "invalid operator and argument"
+	| (IntVal(i), t) when (Ada_utils.integer_class t) -> (IntVal(Nat.neg i), t)
+	| (FloatVal(f,_), Float) -> (FloatVal(float_to_flottant (-.f)), Float)
+	| _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
+                                   "invalid operator and argument"
 
-    and abs exp =
+    and eval_static_abs (exp:expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
-	| (IntVal(i), t)
-	    when (Ada_utils.integer_class t) ->
-	    let abs = if (Nat.compare i Nat.zero)<0 then Nat.neg i
-	    else i
-	    in (IntVal(abs), t)
-	| (FloatVal(f,_), Float) ->
-	    (FloatVal(float_to_flottant (abs_float f)), Float)
-	| _ -> Npkcontext.report_error
-	    "Ada_normalize.eval_static_exp"
-	      "invalid operator and argument"
-    in
+        | (IntVal(i), t)
+            when (integer_class t) ->
+            let abs = if (Nat.compare i Nat.zero)<0 then Nat.neg i else i
+            in (IntVal(abs), t)
+	| (FloatVal(f,_), Float) -> (FloatVal(float_to_flottant (abs_float f)), Float)
+	| _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
+                                   "invalid operator and argument"
+
+  and eval_static_unop (op:unary_op) (exp:expression) (expected_typ:typ option)
+      :value*typ =
       match (op, expected_typ) with
 
-	| (UPlus, Some(Float)) ->
-	    eval_static_exp exp expected_typ
-	| (UPlus, Some(t)) when (Ada_utils.integer_class t) ->
-	    eval_static_exp exp expected_typ
-	| (UPlus, None) ->
-	    let (tr_exp, typ) =
-	      eval_static_exp exp expected_typ in
-	      (match typ with
-		 | Float -> (tr_exp, typ)
-		 | t when (Ada_utils.integer_class t) ->
-		     (tr_exp, typ)
-		 | _ -> Npkcontext.report_error
-		     "Ada_normalize.eval_static_unop"
-		       "Unexpected unary operator and argument")
+	| UPlus, Some(t) when (integer_class t) -> eval_static_exp exp expected_typ
+	| UPlus, Some Float                     -> eval_static_exp exp expected_typ
+	| UPlus, None ->
+                        let (tr_exp, typ) = eval_static_exp exp expected_typ in
+                        (match typ with
+                           | Float                  -> tr_exp, typ
+                           | t when integer_class t -> tr_exp, typ
+                           | _ -> Npkcontext.report_error
+                                 "Ada_normalize.eval_static_unop"
+                                 "Unexpected unary operator and argument"
+                        )
 
-	| (UMinus, None) | (UMinus, Some(Float)) -> oppose exp
+	| UMinus, None
+    | UMinus, Some Float -> eval_static_neg exp
+	| UMinus, Some t when integer_class t -> eval_static_neg exp
+	| Abs, None
+    | Abs, Some Float                       -> eval_static_abs exp
+	| Abs, Some t when integer_class t ->
+	    eval_static_abs exp
 
-	| (UMinus, Some(t)) when (Ada_utils.integer_class t) ->
-	    oppose exp
-
-	| (Abs, None) | (Abs, Some(Float)) -> abs exp
-
-	| (Abs, Some(t)) when (Ada_utils.integer_class t) ->
-	    abs exp
-
-	| (Not, Some(Boolean))| (Not, None) ->
+    | Not, None
+	| Not, Some Boolean ->
 	    (match (eval_static_exp exp expected_typ) with
-	       | (BoolVal(b), Boolean) ->
-		   (BoolVal(not b), Boolean)
-	       | _ -> Npkcontext.report_error
-		   "Ada_normalize.eval_static_unop"
-		     "Unexpected unary operator and argument")
-
+	       | BoolVal(b), Boolean -> BoolVal(not b), Boolean
+	       | _ -> Npkcontext.report_error "Ada_normalize.eval_static_unop"
+                                        "Unexpected unary operator and argument"
+        )
 	| _ ->  Npkcontext.report_error
 	    "Ada_normalize.eval_static_unop"
 	      "Unexpected unary operator and argument"
 
-  and eval_static_const name expected_typ =
-    let rec mem_other_cst list_cst filter use var_masque =
-      match list_cst with
-	| [] -> (match use with
-		   | None -> false
-		   | Some(ident) ->
-		       (* on regarde les imports *)
-		       mem_other_cst (find_all_use ident) filter
-			 None var_masque)
-	| (Number(_)|StaticConst(_)|VarSymb(_))::r
-	    when var_masque ->
-	    mem_other_cst r filter use var_masque
-	| (Number(_)|StaticConst(_)|VarSymb(_))::_ ->
-	    Npkcontext.report_error
-	      "Firstpass.translate_var"
-	      ((string_of_name name)^" is not visible : "
-	       ^"multiple use clauses cause hiding")
 
-	(* un autre symbole existe ayant le bon type *)
-	| (EnumLitteral(typ,_,_)|FunSymb(Some(typ),_))::_
-	    when (filter typ) -> true
 
-	(* symbole d'enumeration ou de fonctions n'ayant
-	   pas le bon type *)
-	| (EnumLitteral(_)|FunSymb(_))::r ->
-	    mem_other_cst r filter use var_masque
+  and eval_static_const (name:name) (expected_typ:typ option) :value*typ =
+
+    (********** mem_other_cst **********)
+    let rec mem_other_cst (list_cst:constant_symb list) (filter: typ->bool)
+                           (use:identifier option) (var_masque:bool)
+            :bool =
+         match list_cst with
+           | [] -> (match use with
+                      | None -> false
+                      | Some(ident) -> (* on regarde les imports *)
+                                       mem_other_cst (find_all_use ident) filter
+                                                     None var_masque
+                   )
+           | (Number _|StaticConst _|VarSymb _)::r when var_masque ->
+                           mem_other_cst r filter use var_masque
+           | (Number _|StaticConst _|VarSymb _)::_ ->
+                   Npkcontext.report_error "Firstpass.translate_var"
+                      ((string_of_name name)^" is not visible : "
+                       ^"multiple use clauses cause hiding")
+
+           (* un autre symbole existe ayant le bon type *)
+           | (EnumLitteral(typ,_,_)|FunSymb(Some(typ),_))::_
+               when (filter typ) -> true
+
+           (* symbole d'enumeration ou de fonctions n'ayant
+               pas le bon type *)
+           | (EnumLitteral(_)|FunSymb(_))::r ->
+                mem_other_cst r filter use var_masque
     in
-    let sans_selecteur ident name =
+
+    (********** sans_selecteur **********)
+
+    let sans_selecteur (ident:identifier) (name:name) :value*typ =
       (* les variables masquees le sont par un symbole de fonction
 	 ou enum interne.
 	 var_possible indique si on peut avoir une variable :
@@ -439,314 +370,264 @@ let eval_static exp expected_typ csttbl context with_package
 	 (qui ne convenait pas, sinon, on a appele mem_other symb)
 	 on declenche une erreur si on rencontre une variable *)
 
-      let rec find_use list_cst var_masque var_possible =
-	match list_cst with
+                (******* --> find_use *******)
+      let rec find_use (list_cst:constant_symb list) (var_masque:bool)
+                        (var_possible:bool) :value*typ =
+            match list_cst with
+              | (Number _|StaticConst _|VarSymb _)::r when var_masque ->
+                                            find_use r var_masque var_possible
+              | Number(IntVal(i),_)::[] when var_possible ->
+                      IntVal i, check_typ expected_typ IntegerConst
+              | Number(FloatVal(f),_)::[] when var_possible ->
+                      FloatVal f, check_typ expected_typ Float
+              | StaticConst(v, typ,_)::[] when var_possible ->
+                  v, check_typ expected_typ typ
+              | VarSymb _::[] when var_possible -> raise NonStaticExpression
+              | (Number(_)|StaticConst(_)|VarSymb(_))::_ ->
+                  Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                            (ident^" is not visible : " ^
+                                        "multiple use clauses cause hiding")
+              | EnumLitteral(typ,v,_)::r
+                        when known_compatible_typ expected_typ typ ->
+                  if (mem_other_cst r
+                                    (known_compatible_typ expected_typ)
+                                    None
+                                    var_masque
+                                    )
+                  then (Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                      (ident^" is not visible : "
+                       ^"multiple use clauses cause hiding"))
+                  else (IntVal v, typ)
 
-	  | (Number(_)|StaticConst(_)|VarSymb(_))::r
-	      when var_masque -> find_use r var_masque var_possible
+              | FunSymb(Some typ,_)::r
+                  when known_compatible_typ expected_typ typ ->
+                  if (mem_other_cst r
+                                    (known_compatible_typ expected_typ)
+                                    None
+                                    var_masque)
+                  then (Npkcontext.report_error
+                      "Ada_normalize.eval_static_cst"
+                      (ident^" is not visible : "
+                       ^"multiple use clauses cause hiding"))
+                  else raise NonStaticExpression
 
-	  | [Number(IntVal(i),_)] when var_possible ->
-	      let typ = check_typ expected_typ IntegerConst
-	      in (IntVal(i), typ)
-	  | [Number(FloatVal(f),_)] when var_possible ->
-	      let typ = check_typ expected_typ Float
-	      in (FloatVal(f), typ)
+              | EnumLitteral(typ,v,_)::r when expected_typ = None ->
+                  if (mem_other_cst r (fun _ -> true) None var_masque)
+                  then raise AmbiguousTypeException
+                  else (IntVal v, typ)
 
-	  | [StaticConst(v, typ,_)] when var_possible ->
-	      let typ = check_typ expected_typ typ
-	      in (v, typ)
+              | FunSymb(Some _,_)::r when expected_typ = None ->
+                  if (mem_other_cst r (fun _ -> true)
+                    None var_masque)
+                  then raise AmbiguousTypeException
+                  else raise NonStaticExpression
 
-	  | [VarSymb(_)] when var_possible ->
-	      raise NonStaticExpression
+              | (EnumLitteral(_)|FunSymb(_))::r ->
+                  find_use r var_masque false
 
-	  | (Number(_)|StaticConst(_)|VarSymb(_))::_ ->
-	      Npkcontext.report_error
-		"Ada_normalize.eval_static_cst"
-		(ident^" is not visible : "
-		 ^"multiple use clauses cause hiding")
+              | [] when var_masque -> (* variable masque : au moins
+                             un symbol mais mauvais type *)
+                  Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                            "uncompatible types"
 
-	  | EnumLitteral(typ,v,_)::r when
-	      known_compatible_typ expected_typ typ ->
-	      if (mem_other_cst r
-		    (known_compatible_typ expected_typ)
-		    None var_masque)
-	      then (Npkcontext.report_error
-		      "Ada_normalize.eval_static_cst"
-		      (ident^" is not visible : "
-		       ^"multiple use clauses cause hiding"))
-	      else (IntVal(v), typ)
-
-	  | FunSymb(Some(typ),_)::r
-	      when known_compatible_typ expected_typ typ ->
-	      if (mem_other_cst r
-		    (known_compatible_typ expected_typ)
-		    None var_masque)
-	      then (Npkcontext.report_error
-		      "Ada_normalize.eval_static_cst"
-		      (ident^" is not visible : "
-		       ^"multiple use clauses cause hiding"))
-	      else raise NonStaticExpression
-
-	  | EnumLitteral(typ,v,_)::r when expected_typ = None ->
-	      if (mem_other_cst r (fun _ -> true)
-		    None var_masque)
-	      then raise AmbiguousTypeException
-	      else (IntVal(v), typ)
-
-	  | FunSymb(Some(_),_)::r when expected_typ = None ->
-	      if (mem_other_cst r (fun _ -> true)
-		    None var_masque)
-	      then raise AmbiguousTypeException
-	      else raise NonStaticExpression
-
-	  | (EnumLitteral(_)|FunSymb(_))::r ->
-	      find_use r var_masque false
-
-	  | []  when var_masque -> (* variable masque : au moins
-				     un symbol mais mauvais type *)
-	      Npkcontext.report_error
-		"Ada_normalize.eval_static_cst"
-		"uncompatible types"
-
-	  | [] -> Npkcontext.report_error
-	      "Ada_normalize.eval_static_cst"
-		("cannot find symbol "^ident)
+              | [] -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                                ("cannot find symbol "^ident)
 
 
-      and find_interne list_cst var_masque =
-	match list_cst with
-	  | Number(IntVal(i),_)::_ when not var_masque->
-	      let typ = check_typ expected_typ IntegerConst
-	      in (IntVal(i), typ)
-	  | Number(FloatVal(f),_)::_ when not var_masque ->
-	      let typ = check_typ expected_typ Float
-	      in (FloatVal(f), typ)
-
-	  | StaticConst(v, typ, _)::_ when not var_masque ->
-	      let typ = check_typ expected_typ typ
-	      in (v, typ)
-
-	  | VarSymb(_)::_ when not var_masque ->
-	      raise NonStaticExpression
-
-	  | EnumLitteral(typ, v, _)::_  when
-	      Ada_utils.known_compatible_typ expected_typ typ ->
-	      (IntVal(v), typ)
-
-	  | FunSymb(Some(typ),_)::_  when
-	      Ada_utils.known_compatible_typ expected_typ typ ->
-	      raise NonStaticExpression
-
-	  | EnumLitteral(typ, v, _)::r when expected_typ=None ->
-	      if (mem_other_cst r (fun _ -> true)
-		    (Some(ident)) true)
-	      then raise AmbiguousTypeException
-	      else (IntVal(v), typ)
-
-	  | FunSymb(Some(_),_)::r when expected_typ=None ->
-	      if (mem_other_cst r (fun _ -> true)
-		    (Some(ident)) true)
-	      then raise AmbiguousTypeException
-	      else raise NonStaticExpression
-
-	  | (EnumLitteral(_)|FunSymb(_))::r ->
-	      find_interne r true
-
-	  | (Number(_)|StaticConst(_)|VarSymb(_))::r ->
-	      find_interne r var_masque
-
-	  | [] -> find_use (find_all_use ident) var_masque true
-
-      in
-	find_interne (find_all_cst name) false
+                    (****** --> find_interne *****)
+      and find_interne (list_cst:constant_symb list) (var_masque:bool)
+            :value*typ =
+          match list_cst with
+		    | Number(IntVal i,_)::_ when not var_masque->
+		        IntVal(i), check_typ expected_typ IntegerConst
+		    | Number(FloatVal(f),_)::_ when not var_masque ->
+		        FloatVal(f), check_typ expected_typ Float
+		    | StaticConst(v, typ, _)::_ when not var_masque ->
+		        v, check_typ expected_typ typ
+		    | VarSymb(_)::_ when not var_masque ->
+		        raise NonStaticExpression
+		    | EnumLitteral(typ, v, _)::_  when
+		        known_compatible_typ expected_typ typ -> IntVal v, typ
+		    | FunSymb(Some typ,_)::_  when
+		        known_compatible_typ expected_typ typ ->
+                                            raise NonStaticExpression
+		    | EnumLitteral(typ, v, _)::r when expected_typ=None ->
+		        if (mem_other_cst r (fun _ -> true) (Some ident) true)
+		        then raise AmbiguousTypeException
+		        else (IntVal(v), typ)
+    
+		    | FunSymb(Some _,_)::r when expected_typ=None ->
+		        if (mem_other_cst r (fun _ -> true)
+		  	    (Some ident) true)
+		        then raise AmbiguousTypeException
+		        else raise NonStaticExpression
+    
+		    | (EnumLitteral _|FunSymb _)::r -> find_interne r true
+    
+		    | (Number _|StaticConst _|VarSymb _)::r ->
+		        find_interne r var_masque
+    
+		    | [] -> find_use (find_all_use ident) var_masque true
+    
+      in find_interne (find_all_cst name) false
 
 
-    and avec_selecteur name =
+        (********* avec_selecteur *********)
+  and avec_selecteur (name:name):value*typ =
 
+        (********* --> find_enum *********)
       (* les variables sont masquees *)
-      let rec find_enum list_cst = match list_cst with
-
-	| (Number(_)|StaticConst(_)|VarSymb(_))::r -> find_enum r
-
-	| EnumLitteral(typ,v,_)::_ when
-	    known_compatible_typ expected_typ typ ->
-	    (IntVal(v), typ)
-
-	| FunSymb(Some(typ), _)::_
-	    when known_compatible_typ expected_typ typ ->
-	    raise NonStaticExpression
-
-	| EnumLitteral(typ,v,_)::r when expected_typ=None ->
-	    if mem_other_cst r (fun _ -> true) None true
-	    then raise AmbiguousTypeException
-	    else (IntVal(v), typ)
-
-	| FunSymb(Some(_), _)::r when expected_typ=None ->
-	    if mem_other_cst r (fun _ -> true) None true
-	    then raise AmbiguousTypeException
-	    else raise NonStaticExpression
-
-	| (EnumLitteral(_)|FunSymb(_))::r -> find_enum r
-
-	| [] ->
-	    Npkcontext.report_error
-	      "Ada_normalize.eval_static_cst"
-	      "uncompatible types" in
-
+      let rec find_enum (list_cst:constant_symb list) :value*typ =
+          match list_cst with
+            | (Number _|StaticConst _|VarSymb _)::r -> find_enum r
+            | EnumLitteral(typ,v,_)::_ when
+                known_compatible_typ expected_typ typ ->
+                IntVal v, typ
+            | FunSymb(Some(typ), _)::_
+                when known_compatible_typ expected_typ typ ->
+                raise NonStaticExpression
+            | EnumLitteral(typ,v,_)::r when expected_typ=None ->
+                if mem_other_cst r (fun _ -> true) None true
+                then raise AmbiguousTypeException
+                else IntVal v, typ
+            | FunSymb(Some(_), _)::r when expected_typ=None ->
+                if mem_other_cst r (fun _ -> true) None true
+                then raise AmbiguousTypeException
+                else raise NonStaticExpression
+            | (EnumLitteral _|FunSymb _)::r -> find_enum r
+            | [] ->
+                Npkcontext.report_error
+                  "Ada_normalize.eval_static_cst"
+                  "uncompatible types" in
       let list_symb = find_all_cst name in
-	match list_symb with
+      match list_symb with
+	    | Number(IntVal i,_)::_    -> IntVal i, check_typ expected_typ IntegerConst
+	    | Number(FloatVal(f),_)::_ -> FloatVal f, check_typ expected_typ Float
+	    | StaticConst(v, typ, _)::_ -> v, check_typ expected_typ typ
+	    | VarSymb _::_ -> raise NonStaticExpression
+	    | [] -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                  ("cannot find symbol "^(string_of_name name))
+	    | _ -> find_enum list_symb
 
-	  | Number(IntVal(i),_)::_ ->
-	      let typ = check_typ expected_typ IntegerConst
-	      in (IntVal(i), typ)
-	  | Number(FloatVal(f),_)::_ ->
-	      let typ = check_typ expected_typ Float
-	      in (FloatVal(f), typ)
+        (********* avec_selecteur_courant) *********)
+  and avec_selecteur_courant (ident:name) (name:name) :value*typ =
 
-	  | StaticConst(v, typ, _)::_ ->
-	      let typ = check_typ expected_typ typ
-	      in (v, typ)
-
-	  | VarSymb _::_ -> raise NonStaticExpression
-
-	  | [] -> Npkcontext.report_error
-	      "Ada_normalize.eval_static_cst"
-		("cannot find symbol "^(string_of_name name))
-	  | _ -> find_enum list_symb
-
-    and avec_selecteur_courant ident name =
-      let rec find_global list_symb =
-	match list_symb with
-	  | [] -> Npkcontext.report_error
-	      "Ada_normalize.eval_static_cst"
-		("cannot find symbol "^(string_of_name name))
-
-	  | Number(IntVal(i),true)::_ ->
-	      let typ = check_typ expected_typ IntegerConst
-	      in (IntVal(i), typ)
-	  | Number(FloatVal(f),true)::_ ->
-	      let typ = check_typ expected_typ Float
-	      in (FloatVal(f), typ)
-
-	  | Number(BoolVal _, _)::_ ->
-	      Npkcontext.report_error
-		"Ada_normalize.eval_static_cst"
-		"internal error : number cannot have EnumVal"
-
-
-	  | StaticConst(v, typ, true)::_ ->
-	      let typ = check_typ expected_typ typ
-	      in (v, typ)
-
-	  | EnumLitteral(typ,v,true)::_
-	      when known_compatible_typ expected_typ typ ->
-	      (IntVal(v), typ)
-
-	  | FunSymb(Some(typ), false)::_
-	      when known_compatible_typ expected_typ typ ->
-	      raise NonStaticExpression
-
-	  | EnumLitteral(typ, v, true)::r when expected_typ=None ->
-	      if mem_other_cst r (fun _ -> true) None false
-	      then raise AmbiguousTypeException
-	      else (IntVal(v), typ)
-
-	  | FunSymb(Some(_), false)::r when expected_typ=None ->
-	      if mem_other_cst r (fun _ -> true) None false
-	      then raise AmbiguousTypeException
-	      else raise NonStaticExpression
-
-	  | VarSymb(true)::_ -> raise NonStaticExpression
-
-	  | (Number(_, false)|StaticConst(_,_,false)
-	    |EnumLitteral(_)|VarSymb(false)|FunSymb(_))::r ->
-	      find_global r
+        (*********  --> find_global ) *********)
+      let rec find_global (list_symb:constant_symb list) :value*typ =
+          match list_symb with
+            | [] -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                   ("cannot find symbol "^(string_of_name name))
+            | Number(IntVal i,true)::_ ->
+                  IntVal i, check_typ expected_typ IntegerConst
+            | Number(FloatVal(f),true)::_ ->
+                  FloatVal f, check_typ expected_typ Float
+            | Number(BoolVal _, _)::_ -> Npkcontext.report_error
+                                      "Ada_normalize.eval_static_cst"
+                                    "internal error : number cannot have EnumVal"
+            | StaticConst(v, typ, true)::_ -> v, check_typ expected_typ typ
+            | EnumLitteral(typ,v,true)::_
+                when known_compatible_typ expected_typ typ ->
+                IntVal v, typ
+            | FunSymb(Some typ, false)::_
+                when known_compatible_typ expected_typ typ ->
+                raise NonStaticExpression
+            | EnumLitteral(typ, v, true)::r when expected_typ=None ->
+                if mem_other_cst r (fun _ -> true) None false
+                then raise AmbiguousTypeException
+                else (IntVal(v), typ)
+            | FunSymb(Some(_), false)::r when expected_typ=None ->
+                if mem_other_cst r (fun _ -> true) None false
+                then raise AmbiguousTypeException
+                else raise NonStaticExpression
+            | VarSymb(true)::_ -> raise NonStaticExpression
+            | (Number(_, false)
+                | StaticConst(_,_,false)
+                | EnumLitteral _
+                | VarSymb false
+                | FunSymb _)::r -> find_global r
       in find_global (find_all_cst ident)
-    in
-      match name with
-	| ([], ident) -> sans_selecteur ident name
-	| (pack, ident)
-	    when extern||List.mem pack with_package ->
-	    avec_selecteur (pack,ident)
-	| (pack, ident) when pack = current_package ->
-	    avec_selecteur_courant ([],ident) name
-	| (pack, _) -> Npkcontext.report_error
-	    "Ada_normalize.eval_static_cst"
-	      ("unknown package "
-	       ^(Print_syntax_ada.ident_list_to_string pack))
 
+  in
+      match name with
+        | [], ident -> sans_selecteur ident name
+        | pack, ident when extern || List.mem pack with_package ->
+                                                    avec_selecteur (pack,ident)
+        | (pack, ident) when pack = current_package ->
+                                        avec_selecteur_courant ([],ident) name
+        | (pack, _) -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+              ("unknown package " ^(Print_syntax_ada.ident_list_to_string pack))
   in
       eval_static_exp exp expected_typ
 
+let eval_static_integer_exp (exp:expression)
+    (csttbl:(name, constant_symb) Hashtbl.t)
+    (context:identifier list list) (with_package:identifier list list)
+                       (current_package:identifier list) (extern:bool)
+    :nat =
+    try
+        let (v,_) =
+          eval_static
+              exp (Some(IntegerConst))
+              csttbl context
+              with_package current_package
+              extern in
+            match v with
+              | FloatVal _
+              | BoolVal  _ -> Npkcontext.report_error
+                          "Ada_normalize.eval_static_integer_exp"
+                          "expected static integer constant"
+              | IntVal i -> i
+    with
+      | NonStaticExpression -> Npkcontext.report_error
+                          "Ada_normalize.eval_static_integer_exp"
+                          "expected static expression"
+      | AmbiguousTypeException -> Npkcontext.report_error
+                          "Ada_normalize.eval_static_integer_exp"
+                          "uncaught ambiguous type exception"
 
+let eval_static_number (exp:expression) (csttbl:(name, constant_symb) Hashtbl.t)
+              (context:identifier list list) (with_package:identifier list list)
+              (current_package:identifier list) (extern:bool)
+    :value =
+     try
+         let (v,_) = eval_static
+                         exp None
+                         csttbl context
+                         with_package current_package
+                         extern in
+         match v with
+           | BoolVal _ ->
+               Npkcontext.report_error
+                 "Ada_normalize.eval_static_integer_exp"
+                 "expected static float or integer constant"
+           | FloatVal _ | IntVal _ -> v
+     with
+       | NonStaticExpression ->
+        Npkcontext.report_error
+          "Ada_normalize.eval_static_integer_exp"
+          "expected static expression"
+       | AmbiguousTypeException ->
+       Npkcontext.report_error
+         "Ada_normalize.eval_static_integer_exp"
+         "uncaught ambiguous type exception"
 
-let eval_static_integer_exp exp csttbl context with_package
-    current_package extern =
-  try
-    let (v,_) =
-      eval_static
-	exp (Some(IntegerConst)) csttbl
-	context with_package current_package extern in
-      match v with
-	| FloatVal _ | BoolVal _->
-	    Npkcontext.report_error
-	      "Ada_normalize.eval_static_integer_exp"
-	      "expected static integer constant"
-	| IntVal(i) -> i
-  with
-    | NonStaticExpression ->
-	 Npkcontext.report_error
-	   "Ada_normalize.eval_static_integer_exp"
-	   "expected static expression"
-    | AmbiguousTypeException ->
-	Npkcontext.report_error
-	  "Ada_normalize.eval_static_integer_exp"
-	  "uncaught ambiguous type exception"
-
-let eval_static_number exp csttbl context with_package
-    current_package extern =
-  try
-    let (v,_) =
-      eval_static
-	exp None csttbl
-	context with_package current_package extern in
-      match v with
-	| BoolVal _ ->
-	    Npkcontext.report_error
-	      "Ada_normalize.eval_static_integer_exp"
-	      "expected static float or integer constant"
-	| FloatVal(f) -> FloatVal(f)
-	| IntVal(i) -> IntVal(i)
-  with
-    | NonStaticExpression ->
-	 Npkcontext.report_error
-	   "Ada_normalize.eval_static_integer_exp"
-	   "expected static expression"
-    | AmbiguousTypeException ->
-	Npkcontext.report_error
-	  "Ada_normalize.eval_static_integer_exp"
-	  "uncaught ambiguous type exception"
-
-
-
-let extract_subprog_spec ast = match ast with
-  | (context, Body(SubProgramBody(spec,_,_)), loc) ->
-      (context, Spec(SubProgramSpec(spec)), loc)
-
-  | (_, Spec(_), _) -> Npkcontext.report_error
-      "Ada_normalize.extract_subprog_spec"
-	"body expected, specification found"
-  | (_, Body(PackageBody(_)), _) -> Npkcontext.report_error
-      "Ada_normalize.parse_specification"
-	"subprogram body expected, package body found"
+let extract_subprog_spec (ast:compilation_unit):compilation_unit =
+    match ast with
+      | (context, Body(SubProgramBody(spec,_,_)), loc) ->
+        (context, Spec(SubProgramSpec(spec)),     loc)
+      | (_, Spec _, _) -> Npkcontext.report_error
+          "Ada_normalize.extract_subprog_spec"
+        "body expected, specification found"
+      | (_, Body(PackageBody _), _) -> Npkcontext.report_error
+          "Ada_normalize.parse_specification"
+        "subprogram body expected, package body found"
 
 (* renvoie la specification correspondant a name,
    extrait eventuellement cette specification d'un corps
    de sous-programme, dans le cas ou aucun fichier de specification
    n'est fourni.*)
-let rec parse_specification name =
-
-  (* tricherie : probleme avec sous-package *)
+let rec parse_specification (name:name) :compilation_unit =
+  (* tricherie : probleme avec sous-package *) (* FIXME *)
   let spec_name = (string_of_name name)^".ads" in
   let spec_ast =
     if Sys.file_exists spec_name
@@ -764,7 +645,7 @@ let rec parse_specification name =
 
 (* renvoie la specification normalisee du package correspondant
    a name, les noms etant traites comme extern a la normalisation*)
-and parse_extern_specification name =
+and parse_extern_specification (name:name):spec*location =
   let spec_ast = parse_specification name
   in
     match (normalization spec_ast true) with
@@ -775,14 +656,14 @@ and parse_extern_specification name =
 
 (* renvoie la specification du package correspondant a name.
    cette specification est normalisee *)
-and parse_package_specification name =
+and parse_package_specification (name:name):package_spec =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
-    | (_, Spec(SubProgramSpec(_)),_) ->
-	Npkcontext.report_error
-	  "Ada_normalize.parse_package_specification"
-	  ("package specification expected, "
-	   ^"subprogram specification found")
+    | (_, Spec(SubProgramSpec _),_) ->
+                Npkcontext.report_error
+                   "Ada_normalize.parse_package_specification"
+                  ("package specification expected, "
+                  ^"subprogram specification found")
     | (_, Body _, _) -> Npkcontext.report_error
 	   "Ada_utils.parse_package_specification"
 	  "internal error : specification expected, body found"
@@ -794,13 +675,13 @@ and parse_package_specification name =
    sous la forme
    package.ident (au niveau des declarations)
 *)
-and normalization compil_unit extern =
+and normalization (compil_unit:compilation_unit) (extern:bool)
+    :compilation_unit =
   let typtbl = Hashtbl.create 100
   and csttbl = Hashtbl.create 100
   and current_package = ref []
   and with_package = ref []
   and context = ref [] in
-
 
   let normalize_extern_ident ident =
     normalize_extern_ident ident (!current_package)
@@ -1201,6 +1082,17 @@ and normalize_subtyp subtyp =
       | SubtypName(name) ->
 	  fst (find_subtyp (normalize_name name))
 
+and arraytyp_to_contrainte (typ:subtyp) (* TODO ::type*) =
+    match typ with
+      | Unconstrained(Declared(Array(_,ConstrainedArray(
+            (Constrained(_, contr, _), None,_),_,_)),_)) -> Some contr
+      | Unconstrained(Declared(Array(_,ConstrainedArray((SubtypName _, None,_)
+            ,_,_)),_)) -> arraytyp_to_contrainte (normalize_subtyp typ) 
+      | Unconstrained(Declared(Array(_,ConstrainedArray((_, c,_),_,_)),_)) -> c
+      | SubtypName _ -> arraytyp_to_contrainte (normalize_subtyp typ)
+      | Constrained ( _, contr, true) -> Some contr
+      | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
+                                      "Length not implemented for type /= array"
 
 and normalize_exp exp = match exp with
   | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp,
@@ -1216,8 +1108,7 @@ and normalize_exp exp = match exp with
   | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
      | "First" | "first" -> begin
 
-              let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
-                    match new_contr with
+                    match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
                          "Ada_normalize First contraint"
                          "constraint is not IntegerRange"
@@ -1240,8 +1131,7 @@ and normalize_exp exp = match exp with
 
      | "Last" | "last" -> begin
 
-              let new_contr = arraytyp_to_contrainte subtype normalize_subtyp in
-                    match new_contr with
+                    match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
                          "Ada_normalize Last contraint"
                          "constraint is not IntegerRange"
@@ -1264,11 +1154,8 @@ and normalize_exp exp = match exp with
 
   | "Length" | "length" -> (* TODO ignore case at parser step *)
          (*    Array or Range type only for attributes Length *)
-           let new_contr = arraytyp_to_contrainte subtype
-         normalize_subtyp
-          in
         begin
-         match new_contr with
+         match arraytyp_to_contrainte subtype with
              None -> Npkcontext.report_error
                " Ada_normalize Length contraint"
                "constraint is not IntegerRange"

@@ -48,7 +48,7 @@ exception AmbiguousTypeException
    dans le cas des variables : le dernier param booleen
    indique si la variable est en lecture seule*)
 
-(** Symbol *)
+(** Symbols *)
 type symb =
   | VarSymb  of C.lv    * A.subtyp * bool * bool (** name, type, global?, ro? *)
   | EnumSymb of C.exp   * A.typ * bool (** TODO, typename, ro? *)
@@ -80,28 +80,21 @@ let eq_base_typ = Ada_utils.eq_base_typ
 
 let base_typ = Ada_utils.base_typ
 
-let extract_scalar_typ cir_typ = match cir_typ with
+let extract_scalar_typ (cir_typ:C.typ) :Npk.scalar_t = match cir_typ with
   | C.Scalar(t) -> t
-  | _ ->
-      Npkcontext.report_error
-	"Firstpass.extract_scalar_typ"
-	"type isn't a scalar type"
+  | _ -> Npkcontext.report_error "Firstpass.extract_scalar_typ"
+                                 "type isn't a scalar type"
 
-
-
-
-let make_check_constraint contrainte exp =
+let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
   match contrainte with
     | IntegerRangeConstraint (v1,v2) ->
 	C.Unop(K.Belongs_tmp(v1, K.Known (Nat.add v2 Nat.one)), exp)
     | FloatRangeConstraint(_, _) -> exp
+    | RangeConstraint _ -> Npkcontext.report_error
+                          "Firstpass.make_check_constraint"
+                     "internal error : unexpected range constraint (non-static)"
 
-    | RangeConstraint _ ->
-	Npkcontext.report_error
-	  "Firstpass.make_check_constraint"
-	  "internal error : unexpected range constraint (non-static)"
-
-let make_check_subtyp subtyp exp =
+let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
   match subtyp with
     | Unconstrained _ -> exp
     | Constrained(_, contrainte, _) ->
@@ -111,71 +104,52 @@ let make_check_subtyp subtyp exp =
 	  "Firstpass.make_check_subtyp"
 	  "internal error : unexpected subtyp name"
 
-let make_offset styp exp size =
+let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
   match styp with
-      Constrained( _, x , _ ) ->
-	begin match x with
-	    IntegerRangeConstraint(nat1, _) ->
-	      let borne_inf =   C.Const(C.CInt(nat1)) in
-
-	      let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
-
-		C.Binop (Newspeak.MultI, decal,  size)
-
-	  |  _ -> Npkcontext.report_error "Firstpass.make_offset"
-	       "contrainte (not IntegerRangeConstraint) not coded yet "
-
-	end
-
+    | Constrained( _, IntegerRangeConstraint(nat1, _) , _ ) ->
+                let borne_inf = C.Const(C.CInt(nat1)) in
+                let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
+                    C.Binop (Newspeak.MultI, decal,  size)
+    | Constrained  _ -> Npkcontext.report_error "Firstpass.make_offset"
+                 "contrainte (not IntegerRangeConstraint) not coded yet "
     | Unconstrained _ -> exp
-
     | SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
-	"SubtypName not implemented yet (especially for Enum)"
-let is_record symb =
-  match symb with  VarSymb  (_, subt, _, _) -> begin
-    match subt with
-	Unconstrained (Declared(Record _,_)) -> true
-      | _ -> false
-  end
-    | FunSymb  (_,_,_,ftyp) ->
-	( compare (List.length (fst ftyp))  0 = 0) &&
-	  ( match (snd ftyp) with
-		C.Struct _ -> true
-	      | _ -> false )
-    |  _  -> false
+                    "SubtypName not implemented yet (especially for Enum)"
 
-
-let extract_rough_record symb =
-  match symb with  VarSymb  (_, subt, _, _) -> begin
-    match subt with
-	Unconstrained (Declared(Record (_,flds),_)) -> flds
-      | _ -> 	Npkcontext.report_error
-	  "Firstpass.record"
-	    "extract_rough_record, not unconstr"
-  end
-    | FunSymb  _  ->
-	Npkcontext.report_error
-	  "Firstpass.record"
-	  "extract_rough_record, FunSymb no subtyp impl YET !!! "
-    |  _  ->
-	 Npkcontext.report_error
-	   "Firstpass.record"
-	   "extract_rough_record, neither FunSymb nor Varsymb"
-
-let extract_record symb trans_typ =
+let is_record (symb:symb) :bool =
   match symb with
-    VarSymb  (_, subt, _, _) -> begin match subt with
-	Unconstrained (Declared(Record (x,y), loc)) ->
-	  let cstruct = trans_typ
-	    (Declared(Record (x,y),loc)) in begin
-	      match cstruct  with
-		  C.Struct (flds, _) -> flds
-		| _ ->  Npkcontext.report_error
-		    "Firstpass.record"
-		      "Unexpected case in extract record" end
-      | _ ->  Npkcontext.report_error
-	  "Firstpass.record"
-	    "Unexpected case in extract record"
+    | VarSymb  (_, Unconstrained (Declared(Record _,_)), _, _) -> true
+    | VarSymb  _ -> false
+    | FunSymb  (_,_,_,(arg_typ,ret_typ)) ->    (compare (List.length (arg_typ)) 0 = 0)
+                                            && (match ret_typ with
+                                                  | C.Struct _ -> true
+                                                  | _          -> false)
+    | _  -> false
+
+let extract_rough_record (symb:symb) :A.record_type_definition =
+  match symb with
+    | VarSymb  (_, Unconstrained (Declared(Record (_,flds),_)) , _, _) -> flds
+    | VarSymb _ -> Npkcontext.report_error "Firstpass.record"
+                                    "extract_rough_record, not unconstr"
+    | FunSymb _ -> Npkcontext.report_error "Firstpass.record"
+          "extract_rough_record, FunSymb no subtyp impl YET !!! "
+    | _ -> Npkcontext.report_error "Firstpass.record"
+           "extract_rough_record, neither FunSymb nor Varsymb"
+
+let extract_record (symb:symb) (trans_typ:A.typ -> C.typ) : C.field list =
+  match symb with
+    VarSymb  (_, subt, _, _) ->
+    begin match subt with
+            | Unconstrained (Declared(Record (x,y), loc)) -> let cstruct =
+                    trans_typ (Declared(Record (x,y),loc)) in
+                        begin
+                              match cstruct with
+                                | C.Struct (flds, _) -> flds
+                                | _ ->  Npkcontext.report_error "Firstpass.record"
+                                      "Unexpected case in extract record"
+                        end
+            | _ ->  Npkcontext.report_error "Firstpass.record"
+                                      "Unexpected case in extract record"
     end
   | FunSymb  (_,_,_,ftyp) ->  begin
       match (snd ftyp) with
@@ -186,18 +160,18 @@ let extract_record symb trans_typ =
   | _ -> Npkcontext.report_error "Firstpass.record"
       "Unexpected case in extract record"
 
-let verify field record_f =
+let verify (field:string) (record_f:C.field list) :bool =
   let names = List.map fst record_f in
     List.mem field names
 
-let offset field record_f =
+let offset (field:string) (record_f:C.field list) :int=
   fst (List.assoc field  record_f)
 
-
-let field_typ field record_f =
+let field_typ (field:string) (record_f:C.field list) :C.typ=
   snd (List.assoc  field  record_f)
 
-let rec addfield  fields var typ loc =
+let rec addfield (fields:A.identifier list) (var:symb)
+                 (typ:C.typ) (loc:Newspeak.location) :(symb*C.typ*Npk.location) option =
   match typ with C.Struct (flds,_) -> begin
     match fields  with
 	[] -> Some (var, typ, loc)

@@ -52,13 +52,8 @@ let _ =
 
   Hashtbl.add token_tbl "__attribute__" ATTRIBUTE;
   Hashtbl.add token_tbl "__attribute" ATTRIBUTE;   
-  Hashtbl.add token_tbl "__format__" FORMAT;
   Hashtbl.add token_tbl "__restrict" RESTRICT;
-  Hashtbl.add token_tbl "__format_arg__" FORMAT_ARG;
-  Hashtbl.add token_tbl "__printf__" PRINTF;
-  Hashtbl.add token_tbl "__scanf__" SCANF;
   Hashtbl.add token_tbl "__builtin_va_list" VA_LIST;
-  Hashtbl.add token_tbl "__gnu_inline__" GNU_INLINE;
   Hashtbl.add token_tbl "__inline__" INLINE;
   Hashtbl.add token_tbl "__inline" INLINE;
   Hashtbl.add token_tbl "__asm__" ASM;
@@ -73,31 +68,20 @@ let _ =
   (* for function slightly more strict than pure, since const functions
      are assumed not to read global variables *)
 
-  Hashtbl.add token_tbl "__nonnull__" NONNULL;
-  Hashtbl.add token_tbl "__nonnull" NONNULL;
-  (* tells the compiler the argument should always be a non-null pointer *)
+  (* __nonnull__, __nonnull: tells the compiler the argument should always 
+     be a non-null pointer *)
 
-  Hashtbl.add token_tbl "__deprecated__" DEPRECATED;
-  (* generates warnings when the function is used *)
+  (* __deprecated__: generates warnings when the function is used *)
 
-  Hashtbl.add token_tbl "__malloc__" MALLOC;
   Hashtbl.add token_tbl "__builtin_constant_p" BUILTIN_CONSTANT_P;
-  Hashtbl.add token_tbl "__transparent_union__" TRANSPARENT_UNION;
+  (* __builtin_constant_p(e): 
+     returns 1 if expression e is a statically known constant,
+     0 otherwise 
+  *)
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
-  Hashtbl.add token_tbl "__mode__" MODE;
-  Hashtbl.add token_tbl "__QI__" QI;
-  Hashtbl.add token_tbl "__HI__" HI;
-  Hashtbl.add token_tbl "__SI__" SI;
-  Hashtbl.add token_tbl "__word__" SI;
-  Hashtbl.add token_tbl "__DI__" DI;
-  Hashtbl.add token_tbl "__warn_unused_result__" WARN_UNUSED_RESULT;
-  Hashtbl.add token_tbl "__packed__" PACKED;
-  Hashtbl.add token_tbl "packed" PACKED;
-  Hashtbl.add token_tbl "weak" WEAK;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   
-  Hashtbl.add token_tbl "__unused__" UNUSED;
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 

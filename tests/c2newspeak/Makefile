@@ -25,7 +25,6 @@
 #
 
 COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
-        dos2unix $*.cil.bak &> /dev/null; \
         $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
 
 DIFF=diff $*.spec $*.bak > result && \
@@ -98,7 +97,10 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	600 601 602 603 604 605 606 607 608 609 \
 	610 611 612 613 614 615 616 617 618 619 \
 	620 621 622 623 624 625 626 627 628 629 \
-	630 631 632 633 634 635 636 637	652	
+	630 631 632 633 634 635 636 637 638 639 \
+	640 641 642 643 644 645 646 647 648 649 \
+	650 651 652
+
 
 PREREQ=%.c
 CLEANFILES=$(addsuffix .cil.bak, $(TESTS))
@@ -161,5 +163,4 @@ TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
 
 $(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
 	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
-	dos2unix $@
 	cat $@

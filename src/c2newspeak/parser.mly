@@ -195,11 +195,11 @@ let rec normalize_bexp e =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST FORMAT PRINTF SCANF CDECL
-%token INLINE GNU_INLINE ASM FORMAT_ARG RESTRICT 
-%token NONNULL DEPRECATED MALLOC BUILTIN_CONSTANT_P MODE 
-%token WARN_UNUSED_RESULT QI HI SI DI PACKED FUNNAME 
-%token TRANSPARENT_UNION UNUSED WEAK TYPEOF
+%token ATTRIBUTE EXTENSION VA_LIST CDECL
+%token INLINE ASM RESTRICT 
+%token BUILTIN_CONSTANT_P
+%token FUNNAME 
+%token TYPEOF
 %token EOF
 
 %token <Csyntax.assertion> NPK
@@ -976,18 +976,24 @@ attribute_name_list:
 
 attribute_name:
   IDENTIFIER                               { 
-(* TODO: think of a way of doing this in a nice way, using Gnuc.is_gnu_token
-   + fix internal hashtbl of gnuc.ml once all gnuc symbols are eliminated.
- *)
-    if ($1 <> "aligned") && ($1 <> "dllimport") && ($1 <> "__cdecl__")
-      && ($1 <> "noreturn") && ($1 <> "__noreturn__") 
-      && ($1 <> "__always_inline__") && ($1 <> "__nothrow__")
-      && ($1 <> "__pure__")
-    then raise Parsing.Parse_error;
-
-    if $1 = "dllimport" then begin
-      Npkcontext.report_warning "Parser.attribute" 
-	"ignoring attribute dllimport"
+    begin match $1 with
+	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
+      | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
+      | "__deprecated__" | "__malloc__" | "__warn_unused_result__" 
+      | "__unused__" -> ()
+      | "dllimport" -> 
+	  Npkcontext.report_warning "Parser.attribute" 
+	    "ignoring attribute dllimport"
+      | "packed" | "__packed__" -> 
+	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
+	    "packed attribute" Npkcontext.Pack
+      | "__transparent_union__" -> 
+	  Npkcontext.report_accept_warning "Parser.attribute_name" 
+	    "transparent union" Npkcontext.TransparentUnion
+      | "weak" ->
+	  Npkcontext.report_warning "Parser.attribute" 
+	    "ignoring attribute weak"
+      | _ -> raise Parsing.Parse_error
     end;
     [] 
   }
@@ -997,60 +1003,49 @@ attribute_name:
       "ignoring attribute alias";
     []
   }
+| IDENTIFIER LPAREN integer_list RPAREN    { 
+    match $1 with
+	"__nonnull__" | "__nonnull" -> []
+      | _ -> raise Parsing.Parse_error
+  }
 | IDENTIFIER LPAREN INTEGER RPAREN         { 
-    if $1 <> "aligned" then raise Parsing.Parse_error;
+    begin match $1 with
+	"__format_arg__" | "aligned" -> ()
+      | "packed" | "__packed__" -> 
+	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
+	    "packed attribute" Npkcontext.Pack;
+      | _ -> raise Parsing.Parse_error
+    end;
     []
+    }
+| IDENTIFIER LPAREN 
+    IDENTIFIER COMMA INTEGER COMMA INTEGER 
+  RPAREN                                   { 
+    if $1 <> "__format__" then raise Parsing.Parse_error;
+    begin match $3 with
+	"__printf__" | "__scanf__" -> ()
+      | _ -> raise Parsing.Parse_error
+    end;
+    [] 
   }
-| DEPRECATED                               { [] }
-| MALLOC                                   { [] }
-| FORMAT LPAREN 
-    format_fun COMMA INTEGER COMMA INTEGER 
-  RPAREN                                   { [] }
-| FORMAT_ARG LPAREN INTEGER RPAREN         { [] }
-| NONNULL LPAREN integer_list RPAREN       { [] }
+| IDENTIFIER LPAREN IDENTIFIER RPAREN           { 
+    if $1 <> "__mode__" then raise Parsing.Parse_error;
+    let imode =
+      match $3 with
+	  "__QI__" -> Config.size_of_byte
+	| "__HI__" -> Config.size_of_byte*2
+	| "__SI__" | "__word__" -> Config.size_of_byte*4
+	| "__DI__" -> Config.size_of_byte*8
+	| _ -> raise Parsing.Parse_error
+    in
+      imode::[]
+  }
 | CONST                                    { [] }
-| GNU_INLINE                               { [] }
-| WARN_UNUSED_RESULT                       { [] }
-| PACKED                                   { 
-    Npkcontext.report_ignore_warning "Parser.attribute_name" 
-      "packed attribute" Npkcontext.Pack;
-    []
-  }
-| PACKED LPAREN INTEGER RPAREN             { 
-    Npkcontext.report_ignore_warning "Parser.attribute_name" 
-      "packed attribute" Npkcontext.Pack;
-    []
-  }
-| TRANSPARENT_UNION                        { 
-    Npkcontext.report_accept_warning "Parser.attribute_name" 
-      "transparent union" Npkcontext.TransparentUnion;
-    []
-  }
-
-| UNUSED                                   { [] }
-| WEAK                                     {
-    Npkcontext.report_warning "Parser.attribute" 
-      "ignoring attribute weak";
-    []
-  }
-| MODE LPAREN imode RPAREN                 { $3::[] }
 ;;
 
 integer_list:
   INTEGER                                  { }
 | INTEGER COMMA integer_list               { }
-;;
-
-format_fun:
-  PRINTF                                   { }
-| SCANF                                    { }
-;;
-
-imode:
-  QI                                       { Config.size_of_byte }
-| HI                                       { Config.size_of_byte*2 }
-| SI                                       { Config.size_of_byte*4 }
-| DI                                       { Config.size_of_byte*8 }
 ;;
 
 // config file
