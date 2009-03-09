@@ -450,6 +450,44 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
 	stmts', (List.rev !after)
 
 
+let rec extract_decls stmts =
+  match stmts with
+      [] -> [], []
+    | (stmt, l)::stmts ->
+	let s_decls, stmts' = extract_decls stmts in
+	match stmt with
+	    VDecl _ | CDecl _ | EDecl _ -> 
+	      let decls, stmts' = extract_decls stmts in (stmt, l)::decls, stmts'
+	  | Block blk -> 
+	      let b_decls, blk' = extract_decls blk in 
+		b_decls@s_decls, (Block blk', l)::stmts'
+	  | For(blk1, e, blk2, blk3) ->
+	      let b1_decls, blk1' = extract_decls blk1 in
+	      let b2_decls, blk2' = extract_decls blk2 in
+	      let b3_decls, blk3' = extract_decls blk3 in
+		b1_decls@b2_decls@b3_decls@s_decls, (For(blk1', e, blk2', blk3'), l)::stmts'
+
+	  | DoWhile (blk, e) ->
+	      let b_decls, blk' = extract_decls blk in 
+		b_decls@s_decls, (DoWhile(blk', e), l)::stmts'
+
+	  | CSwitch (e, cases, default) ->
+	      let add (decls, cases) (e, blk, l) =
+		let b_decls, blk' = extract_decls blk in
+		  b_decls@decls, (e, blk', l)::cases
+	      in
+	      let c_decls, cases' = List.fold_left add ([], []) cases in
+	      let cases' = List.rev cases' in
+	      let d_decls, default' = extract_decls default in
+		c_decls@d_decls@s_decls, (CSwitch(e, cases', default'), l)::stmts'
+
+	  | If(e, if_blk, else_blk) -> 
+	      let i_decls, if_blk' = extract_decls if_blk in
+	      let e_decls, else_blk' = extract_decls else_blk in
+		i_decls@e_decls@s_decls, (If(e, if_blk', else_blk'), l)::stmts'
+
+	  | _ -> s_decls, (stmt, l)::stmts'
+
 exception Lbl
 exception Gto 
 
@@ -471,7 +509,6 @@ let rec split_lbl stmts lbl =
 	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
 
 let sibling_elimination stmts lbl g_offset vdecls =
-
 let rec direction stmts =
   match stmts with
       [] -> raise Not_found
@@ -493,10 +530,11 @@ in
 	    | Block blk -> begin
 		try
 		  let e, blk', after = b_delete_goto blk in
+		  let decls, blk' = extract_decls blk' in
 		  let blk' = blk' @ after in
-		    if blk' = [] then e, [], stmts
+		    if blk' = [] then e, decls, stmts
 		    else
-		      e, [Block blk', l], stmts
+		      e, decls @ [Block blk', l], stmts
 		with
 		    Not_found -> 
 		      let e, blk, after = b_delete_goto stmts in
@@ -527,14 +565,14 @@ in
 	    | _ -> (stmt, l)::(backward stmts)
   in
   
-  let rec b_delete_goto stmts =
+  let rec f_delete_goto stmts =
     match stmts with
 	[] -> raise Not_found
       | (stmt, l)::stmts -> 
 	  match stmt with
 	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
 		stmts, (stmt, l)
-	    | _ -> let stmts', e = b_delete_goto stmts in (stmt, l)::stmts', e
+	    | _ -> let stmts', e = f_delete_goto stmts in (stmt, l)::stmts', e
   in
 
   let rec forward stmts = 
@@ -544,15 +582,17 @@ in
 	  match stmt with
 	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
 		let before, after = split_lbl stmts lbl in
-		  if before = [] then stmts
+		let decls, before = extract_decls before in
+		  if before = [] then decls@after
 		  else
-		    let if' = If(Unop(Not, e), before, []) in (if', l)::after
+		    let if' = If(Unop(Not, e), before, []) in decls @ ((if', l)::after)
 	    | Block blk -> begin
 		try
-		  let blk', stmt = b_delete_goto blk in
+		  let blk', stmt = f_delete_goto blk in
+		  let decls, blk' = extract_decls blk' in
 		  let stmts' = if blk' = [] then [] else [Block blk', l] in
-		  let stmts' = (stmt::stmts') @ stmts in
-		    forward stmts' 
+		  let stmts' = stmt::(decls @ stmts' @ stmts) in
+		    forward stmts'
 		with Not_found -> (stmt, l)::(forward stmts)
 	      end
 	    | _ -> (stmt, l)::(forward stmts)
@@ -765,43 +805,7 @@ let outward stmts lbl g_level g_offset =
  in fst (outward stmts)
       
       
-let rec extract_decls stmts =
-  match stmts with
-      [] -> [], []
-    | (stmt, l)::stmts ->
-	let s_decls, stmts' = extract_decls stmts in
-	match stmt with
-	    VDecl _ | CDecl _ | EDecl _ -> 
-	      let decls, stmts' = extract_decls stmts in (stmt, l)::decls, stmts'
-	  | Block blk -> 
-	      let b_decls, blk' = extract_decls blk in 
-		b_decls@s_decls, (Block blk', l)::stmts'
-	  | For(blk1, e, blk2, blk3) ->
-	      let b1_decls, blk1' = extract_decls blk1 in
-	      let b2_decls, blk2' = extract_decls blk2 in
-	      let b3_decls, blk3' = extract_decls blk3 in
-		b1_decls@b2_decls@b3_decls@s_decls, (For(blk1', e, blk2', blk3'), l)::stmts'
 
-	  | DoWhile (blk, e) ->
-	      let b_decls, blk' = extract_decls blk in 
-		b_decls@s_decls, (DoWhile(blk', e), l)::stmts'
-
-	  | CSwitch (e, cases, default) ->
-	      let add (decls, cases) (e, blk, l) =
-		let b_decls, blk' = extract_decls blk in
-		  b_decls@decls, (e, blk', l)::cases
-	      in
-	      let c_decls, cases' = List.fold_left add ([], []) cases in
-	      let cases' = List.rev cases' in
-	      let d_decls, default' = extract_decls default in
-		c_decls@d_decls@s_decls, (CSwitch(e, cases', default'), l)::stmts'
-
-	  | If(e, if_blk, else_blk) -> 
-	      let i_decls, if_blk' = extract_decls if_blk in
-	      let e_decls, else_blk' = extract_decls else_blk in
-		i_decls@e_decls@s_decls, (If(e, if_blk', else_blk'), l)::stmts'
-
-	  | _ -> s_decls, (stmt, l)::stmts'
 	      
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
@@ -931,7 +935,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
       let default' = inward lbl g_offset g_loc default' in
       let switch' = CSwitch(tswitch, cases, default') in
 	if before' = [] then
-	  ((set, lb)::decls) @[switch' ,l]
+	  ((set, lb)::decls) @[switch', l]
 	else
 	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
 	    ((set, lb)::decls) @ [(declr, lb) ; (if', lb) ; (switch', l)]
