@@ -111,6 +111,17 @@
         | _     -> Npkcontext.report_error "Parser.make_operator_name"
                 ("Cannot overload '"^opname^"' : it is not an operator")
 
+    (** Prepares a list of exp*block for the Case constructor. It takes
+      * a list of expression list * block and flattens it into a list of
+      * expression*block.
+      *)
+    let rec build_case_ch (choices:(expression list*instruction list)list)
+        :(expression*instruction list) list =
+        match choices with
+          | []                     -> []
+          | (exp_list,block)::tail -> (List.map (function exp -> exp,block)
+                                                exp_list)
+                                     @ (build_case_ch tail)
 
 
 
@@ -417,7 +428,7 @@ instr :
       { let (scheme,loc) = $1
 	in (Loop(scheme, $3), loc)}
 | CASE expression IS case_stmt_alternative_list END CASE {Case($2,
-                                                               $4,
+                                                               build_case_ch $4,
                                                                None),
                                                           loc()}
 ;
@@ -432,8 +443,8 @@ case_stmt_alternative:
 ;
 
 discrete_choice_list:
-| discrete_choice                           {$1}
-/*| discrete_choice VBAR discrete_choice_list {$1::$3} TODO */
+| discrete_choice                           {$1::[]}
+| discrete_choice VBAR discrete_choice_list {$1::$3}
 ;
 
 discrete_choice:
