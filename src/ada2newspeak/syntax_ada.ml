@@ -96,11 +96,12 @@ and typ_declaration =
                       *Newspeak.ikind             (** Enumerated type, eg
                                                 [type Day is (Mon,...,Sun)] *)
   | DerivedType  of identifier
-                   *subtyp_indication             (** Derived type *)
+                   *subtyp_indication  (** Derived type, eg
+                                [type WeekEndDay is Day range Sat..Sun] *)
   | IntegerRange of identifier*contrainte*Newspeak.ikind option
     (** Integer range, eg [type Byte is range 0..255] *)
-  | Array  of identifier*array_type_definition  (* TODO *)
-  | Record of identifier*record_type_definition (* TODO *)
+  | Array  of identifier*array_type_definition   (* TODO *)
+  | Record of identifier*record_type_definition  (* TODO *)
 
 (** Record type definition, as in {[
 type Date is
@@ -192,7 +193,7 @@ type iteration_scheme =
 (** An instruction *)
 type instruction_atom =
   | NullInstr                 (** The null instruction (do nothing)    *)
-  | Assign of lval*expression (** Assignment TODO rename               *)
+  | Assign of lval*expression (** Assignment                           *)
   | Return of expression      (** Return from function                 *)
   | ReturnSimple              (** Return from procedure                *)
   | If of expression*instruction list*instruction list (** Conditional *)
@@ -200,14 +201,16 @@ type instruction_atom =
   | Exit of expression option                   (** Loop exit          *)
   | ProcedureCall of name*expression list       (** Procedure call     *)
 (* TODO : change ProcedureCall to be able to evaluate any expression *)
+  | Case of expression*(expression*instruction list) list*instruction list option
+    (** Case .. When statement *)
 
 (** An instruction with its location *)
 and instruction = instruction_atom*location
 
 (** Subprogram declaration *)
 type sub_program_spec =
-  | Function of name*param list*subtyp (** A Function returns a value *)
-  | Procedure of name*(param list)     (** A Procedure does not       *)
+  | Function  of name*param list*subtyp (** A Function returns a value *)
+  | Procedure of name*(param list)      (** A Procedure does not       *)
 
 (* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)

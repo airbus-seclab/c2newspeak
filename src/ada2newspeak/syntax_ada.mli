@@ -201,6 +201,8 @@ type instruction_atom =
   | Exit of expression option                   (** Loop exit          *)
   | ProcedureCall of name*expression list       (** Procedure call     *)
 (* TODO : change ProcedureCall to be able to evaluate any expression *)
+  | Case of expression*(expression*instruction list) list*instruction list option
+    (** Case .. When statement *)
 
 (** An instruction with its location *)
 and instruction = instruction_atom*location

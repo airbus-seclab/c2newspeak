@@ -1280,12 +1280,22 @@ let rec normalize_instr (instr,loc) =
       | Loop(While(exp), instrs) -> (Loop(While(normalize_exp exp),
                        normalize_instr_list instrs), loc)
       | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-       (Loop(For(iter, exp1, exp2, is_rev),
-                       normalize_instr_list instrs), loc)
+                   (Loop(For(iter, exp1, exp2, is_rev),
+                                   normalize_instr_list instrs), loc)
       | Exit(None) -> (Exit(None), loc)
       | Exit(Some(cond)) -> (Exit(Some(normalize_exp cond)), loc)
       | ProcedureCall(nom, params) ->
-	  (ProcedureCall(nom, List.map normalize_exp params), loc)
+         (ProcedureCall(nom, List.map normalize_exp params), loc)
+      | Case (e, choices, default) ->
+                Case (normalize_exp e,
+                      List.map (function e,block->
+                              normalize_exp e,
+                              normalize_instr_list block)
+                          choices,
+                      (match default with
+                         | None -> None
+                         | Some block -> Some(normalize_instr_list block)
+                      )),loc
 
   and normalize_instr_list instr_list =
     List.map normalize_instr instr_list
