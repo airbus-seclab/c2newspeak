@@ -1004,20 +1004,15 @@ attribute_name:
     []
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
-    match $1 with
-	"__nonnull__" | "__nonnull" -> []
-      | _ -> raise Parsing.Parse_error
-  }
-| IDENTIFIER LPAREN INTEGER RPAREN         { 
-    begin match $1 with
-	"__format_arg__" | "aligned" -> ()
-      | "packed" | "__packed__" -> 
+    match ($1, $3) with
+	(("__format_arg__" | "aligned"), _::[]) -> []
+      | (("packed" | "__packed__"), _::[]) -> 
 	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
 	    "packed attribute" Npkcontext.Pack;
+	  []
+      | (("__nonnull__" | "__nonnull"), _) -> []
       | _ -> raise Parsing.Parse_error
-    end;
-    []
-    }
+  }
 | IDENTIFIER LPAREN 
     IDENTIFIER COMMA INTEGER COMMA INTEGER 
   RPAREN                                   { 
@@ -1044,8 +1039,8 @@ attribute_name:
 ;;
 
 integer_list:
-  INTEGER                                  { }
-| INTEGER COMMA integer_list               { }
+  INTEGER                                  { $1::[] }
+| INTEGER COMMA integer_list               { $1::$3 }
 ;;
 
 // config file
