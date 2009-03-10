@@ -22,15 +22,11 @@
 
 *)
 
-let lowercaseline inchannel buffer =
-  let l = input_line inchannel
-  in Buffer.add_string buffer ((String.lowercase l)^"\n")
-
-let rec lowercasechannel inchannel buffer =
+let rec read_from_channel inchannel buffer =
   try
     begin
-      lowercaseline inchannel buffer;
-      lowercasechannel inchannel buffer
+      Buffer.add_string buffer ((input_line inchannel)^"\n");
+      read_from_channel inchannel buffer
     end
   with
     | End_of_file -> ()
@@ -39,7 +35,7 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
   let cin = open_in fname in
   let buffer = Buffer.create 1000 in
   let lexbuf =
-    lowercasechannel cin buffer;
+    read_from_channel cin buffer;
     Lexing.from_string (Buffer.contents buffer) in
     Lexer.init fname lexbuf;
     try

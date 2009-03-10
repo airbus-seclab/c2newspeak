@@ -31,10 +31,6 @@
   (* supprime les guillemets qui entourent une chaine *)
   let extrait_chaine s = String.sub s 1 (String.length s - 2)
 
-  (* renvoie le code ascii du caractere en position 1*)
-  let extrait_char s =
-    int_of_char (String.get s 1)
-
   let set_loc lexbuf pos =
     lexbuf.lex_curr_p <- pos;
     Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
@@ -131,58 +127,74 @@ let litteral_reel = reel
 let commentaire = "--" [^ '\n']*
 
 (*identificateurs predefinis*)
-let id_integer   = "integer"
-let id_float     = "float"
-let id_boolean   = "boolean"
-let id_character = "character"
-let id_true      = "true"
-let id_false     = "false"
+let id_integer   = ['i''I']['n''N']['t''T']['e''E']['g''G']['e''E']['r''R']
+let id_float     = ['f''F']['l''L']['o''O']['a''A']['t''T']
+let id_boolean   = ['b''B']['o''O']['o''O']['l''L']['e''E']['a''A']['n''N']
+let id_character = ['c''C']['h''H']['a''A']['r''R']['a''A']['c''C']['t''T']['e''E']['r''R']
+let id_true      = ['t''T']['r''R']['u''U']['e''E']
+let id_false     = ['f''F']['a''A']['l''L']['s''S']['e''E']
 
 rule token = parse
 
-  (*reconnaissance des identifiants reserves*)
+    (* Reserved words. As there is no way to specify ocamllex to make a single
+       rule case-insensitive, the alternative should be made explicit.
+       Rationale : RM95, 2.9.(2) *)
 
-  | "abs"        {ABS}
-  | "and"        {AND}
-  | "array"      {ARRAY}
-  | "begin"      {BEGIN}
-  | "body"       {BODY}
-  | "case"       {CASE}
-  | "constant"   {CONSTANT}
-  | "elsif"      {ELSIF}
-  | "else"       {ELSE}
-  | "end"        {END}
-  | "exit"       {EXIT}
-  | "for"        {FOR}
-  | "function"   {FUNCTION}
-  | "if"         {IF}
-  | "in"         {IN}
-  | "is"         {IS}
-  | "loop"       {LOOP}
-  | "mod"        {MOD}
-  | "new"        {NEW}
-  | "not"        {NOT}
-  | "null"       {NULL}
-  | "of"         {OF}
-  | "or"         {OR}
-  | "others"     {OTHERS}
-  | "out"        {OUT}
-  | "package"    {PACKAGE}
-  | "pragma"     {PRAGMA}
-  | "procedure"  {PROCEDURE}
-  | "range"      {RANGE}
-  | "record"     {RECORD}
-  | "rem"        {REM}
-  | "return"     {RETURN}
-  | "reverse"    {REVERSE}
-  | "subtype"    {SUBTYPE}
-  | "then"       {THEN}
-  | "type"       {TYPE}
-  | "use"        {USE}
-  | "when"       {WHEN}
-  | "while"      {WHILE}
-  | "with"       {WITH}
-  | "xor"        {XOR}
+    (* Perl generator : filter through s/([a-z])/"['$1''".uc $1."']"/eg;
+                        and remove quotes. *)
+
+
+  | ['a''A']['b''B']['s''S']                      {ABS}
+  | ['a''A']['n''N']['d''D']                      {AND}
+  | ['a''A']['r''R']['r''R']['a''A']['y''Y']      {ARRAY}
+  | ['b''B']['e''E']['g''G']['i''I']['n''N']      {BEGIN}
+  | ['b''B']['o''O']['d''D']['y''Y']              {BODY}
+  | ['c''C']['a''A']['s''S']['e''E']              {CASE}
+  | ['c''C']['o''O']['n''N']['s''S']
+            ['t''T']['a''A']['n''N']['t''T']      {CONSTANT}
+  | ['e''E']['l''L']['s''S']['i''I']['f''F']      {ELSIF}
+  | ['e''E']['l''L']['s''S']['e''E']              {ELSE}
+  | ['e''E']['n''N']['d''D']                      {END}
+  | ['e''E']['x''X']['i''I']['t''T']              {EXIT}
+  | ['f''F']['o''O']['r''R']                      {FOR}
+  | ['f''F']['u''U']['n''N']['c''C']['t''T']
+            ['i''I']['o''O']['n''N']              {FUNCTION}
+  | ['i''I']['f''F']                              {IF}
+  | ['i''I']['n''N']                              {IN}
+  | ['i''I']['s''S']                              {IS}
+  | ['l''L']['o''O']['o''O']['p''P']              {LOOP}
+  | ['m''M']['o''O']['d''D']                      {MOD}
+  | ['n''N']['e''E']['w''W']                      {NEW}
+  | ['n''N']['o''O']['t''T']                      {NOT}
+  | ['n''N']['u''U']['l''L']['l''L']              {NULL}
+  | ['o''O']['f''F']                              {OF}
+  | ['o''O']['r''R']                              {OR}
+  | ['o''O']['t''T']['h''H']['e''E']['r''R']
+            ['s''S']                              {OTHERS}
+  | ['o''O']['u''U']['t''T']                      {OUT}
+  | ['p''P']['a''A']['c''C']['k''K']['a''A']
+            ['g''G']['e''E']                      {PACKAGE}
+  | ['p''P']['r''R']['a''A']['g''G']['m''M']
+            ['a''A']                              {PRAGMA}
+  | ['p''P']['r''R']['o''O']['c''C']['e''E']
+            ['d''D']['u''U']['r''R']['e''E']      {PROCEDURE}
+  | ['r''R']['a''A']['n''N']['g''G']['e''E']      {RANGE}
+  | ['r''R']['e''E']['c''C']['o''O']['r''R']
+            ['d''D']                              {RECORD}
+  | ['r''R']['e''E']['m''M']                      {REM}
+  | ['r''R']['e''E']['t''T']['u''U']['r''R']
+            ['n''N']                              {RETURN}
+  | ['r''R']['e''E']['v''V']['e''E']['r''R']
+            ['s''S']['e''E']                      {REVERSE}
+  | ['s''S']['u''U']['b''B']['t''T']['y''Y']
+            ['p''P']['e''E']                      {SUBTYPE}
+  | ['t''T']['h''H']['e''E']['n''N']              {THEN}
+  | ['t''T']['y''Y']['p''P']['e''E']              {TYPE}
+  | ['u''U']['s''S']['e''E']                      {USE}
+  | ['w''W']['h''H']['e''E']['n''N']              {WHEN}
+  | ['w''W']['h''H']['i''I']['l''L']['e''E']      {WHILE}
+  | ['w''W']['i''I']['t''T']['h''H']              {WITH}
+  | ['x''X']['o''O']['r''R']                      {XOR}
 
 (* Unrecognized tokens *)
 
@@ -281,7 +293,7 @@ rule token = parse
 
   (* caracteres, chaines de caracteres *)
   | chaine {STRING (extrait_chaine (Lexing.lexeme lexbuf)) }
-  | char {CONST_CHAR (extrait_char (Lexing.lexeme lexbuf)) }
+  | char {CONST_CHAR (int_of_char (Lexing.lexeme lexbuf).[1]) }
 
   (* constantes numeriques *)
   | litteral_reel {CONST_FLOAT (Lexing.lexeme lexbuf)}
@@ -301,7 +313,7 @@ rule token = parse
                                                             exponent "0")))))}
 
   (*identifiant*)
-  | ident {IDENT (Lexing.lexeme lexbuf)}
+  | ident {IDENT (String.lowercase (Lexing.lexeme lexbuf))}
   | eof { EOF }
 
   | _ {unknown_lexeme lexbuf}
