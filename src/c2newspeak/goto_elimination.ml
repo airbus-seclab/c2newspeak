@@ -344,43 +344,20 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
 	stmts', (List.rev !after)
 
 
-let rec extract_decls stmts =
-  match stmts with
-      [] -> [], []
-    | (stmt, l)::stmts ->
-	let s_decls, stmts' = extract_decls stmts in
-	match stmt with
-	    VDecl _ | CDecl _ | EDecl _ -> 
-	      let decls, stmts' = extract_decls stmts in (stmt, l)::decls, stmts'
-	  | Block blk -> 
-	      let b_decls, blk' = extract_decls blk in 
-		b_decls@s_decls, (Block blk', l)::stmts'
-	  | For(blk1, e, blk2, blk3) ->
-	      let b1_decls, blk1' = extract_decls blk1 in
-	      let b2_decls, blk2' = extract_decls blk2 in
-	      let b3_decls, blk3' = extract_decls blk3 in
-		b1_decls@b2_decls@b3_decls@s_decls, (For(blk1', e, blk2', blk3'), l)::stmts'
 
-	  | DoWhile (blk, e) ->
-	      let b_decls, blk' = extract_decls blk in 
-		b_decls@s_decls, (DoWhile(blk', e), l)::stmts'
-
-	  | CSwitch (e, cases, default) ->
-	      let add (decls, cases) (e, blk, l) =
-		let b_decls, blk' = extract_decls blk in
-		  b_decls@decls, (e, blk', l)::cases
-	      in
-	      let c_decls, cases' = List.fold_left add ([], []) cases in
-	      let cases' = List.rev cases' in
-	      let d_decls, default' = extract_decls default in
-		c_decls@d_decls@s_decls, (CSwitch(e, cases', default'), l)::stmts'
-
-	  | If(e, if_blk, else_blk) -> 
-	      let i_decls, if_blk' = extract_decls if_blk in
-	      let e_decls, else_blk' = extract_decls else_blk in
-		i_decls@e_decls@s_decls, (If(e, if_blk', else_blk'), l)::stmts'
-
-	  | _ -> s_decls, (stmt, l)::stmts'
+  let rec extract_decls stmts =
+    match stmts with
+	[] -> [], []
+      | (stmt, l)::stmts ->
+	  let s_decls, stmts' = extract_decls stmts in
+	    match stmt with
+		VDecl _ | CDecl _ | EDecl _ -> 
+		  let decls, stmts' = extract_decls stmts in (stmt, l)::decls, stmts'
+	      | Block blk -> 
+		  let b_decls, blk' = extract_decls blk in 
+		    b_decls@s_decls, (Block blk', l)::stmts'
+	      | _ -> s_decls, (stmt, l)::stmts'
+  
 
 exception Lbl
 exception Gto 
@@ -1060,6 +1037,133 @@ let elimination stmts lbl (gotos, lo) vdecls =
     List.iter move gotos;
     !stmts
 
+let nth_lv = ref 0
+  
+let renaming_block_variables stmts =
+  let rec search v stack =
+    match stack with
+	[] -> raise Not_found
+      | s::stack ->
+	  let n = String.length v in
+	    try
+	      let s' = String.sub s 0 n in
+		if String.compare v s' = 0 then s else search v stack
+	    with
+		Invalid_argument _ -> search v stack
+  in
+  let rename stmt =
+    match stmt with
+	VDecl (n, t, s, e, i) -> 
+	  let n' = n ^ (string_of_int !nth_lv) in
+	    nth_lv := !nth_lv + 1;
+	    VDecl(n', t, s, e, i), n'
+	      
+      | EDecl (s, e) ->
+	  let s' = s  ^ (string_of_int !nth_lv) in
+	    nth_lv := !nth_lv + 1;
+	    EDecl(s', e), s'
+	      
+      | CDecl(s, b, d) ->
+	  let s' = s  ^ (string_of_int !nth_lv) in
+	    nth_lv := !nth_lv + 1;
+	    CDecl(s', b, d), s'
+	      
+      | _ -> invalid_arg "Goto_elimination.extract_decls: stmt is not a declaration"
+  in
+  let rec replace stack e =
+    let rec replace e = 
+      try
+	match e with
+	    Var v ->  let v' = search v stack in Var v'
+	  | Field (e, s) ->
+	      let s' = search s stack in 
+	      let e' = replace e in
+		Field(e', s')
+	  | Index(e1, e2) ->
+	      let e1' = replace e1 in
+	      let e2' = replace e2 in
+		Index(e1', e2')
+	  | Deref e ->
+	      let e' = replace e in Deref e'
+	  | AddrOf e -> 
+	      let e' = replace e in AddrOf e'
+	  | Unop (op, e) ->
+	      let e' = replace e in Unop (op, e')
+	  | Binop (op, e1, e2) ->
+	      let e1' = replace e1 in
+	      let e2' = replace e2 in
+		Binop(op, e1', e2')
+	  | Call(e, l) ->
+	      let e' = replace e in
+	      let l' = List.map replace l in
+		Call(e', l')
+	  | SizeofE e ->
+	      let e' = replace e in SizeofE e'
+	  | Cast (e, t) ->
+	      let e' = replace e in Cast (e', t)
+	  | Set (e1, op, e2) ->
+	      let e1' = replace e1 in
+	      let e2' = replace e2 in
+		Set(e1', op, e2')
+	  | OpExp(op, e, b) ->
+	      let e' = replace e in
+		OpExp(op, e', b)
+	  | BlkExp blk ->
+	      let blk' = explore stack blk in BlkExp blk'
+	  | _ -> e
+      with
+	  Not_found -> e
+    in replace e
+  and explore stack stmts =
+    match stmts with 
+	[] -> []
+      | (stmt, l)::stmts ->
+	  match stmt with
+	      VDecl(s, _, _, _, _) | EDecl(s, _) | CDecl(s, _, _) -> begin
+		try 
+		  let _ = search s stack in
+		  let stmt', s' = rename stmt in
+		  let stack' = s'::stack in
+		    (stmt', l)::(explore stack' stmts)
+		with Not_found ->
+		  let stack' = s::stack in
+		  (stmt, l)::(explore stack' stmts)
+	      end
+	    | Block blk ->
+		let blk' = explore stack blk in
+		  (Block blk', l)::(explore stack stmts)
+	    | Exp e -> 
+		let e' = replace stack e in
+		  (Exp e', l)::(explore stack stmts)
+	    | If(e, if_blk, else_blk) ->
+		let if_blk' = explore stack if_blk in
+		let else_blk' = explore stack else_blk in
+		(If(e, if_blk', else_blk'), l)::(explore stack stmts)
+	    | CSwitch (e, cases, default) ->
+		let apply (e, blk, l) = 
+		  let blk' = explore stack blk in (e, blk', l)
+		in
+		let cases' = List.map apply cases in
+		let default' = explore stack default in
+		  (CSwitch(e, cases', default'), l)::(explore stack stmts)
+	    | For(blk1, e, blk2, blk3) ->
+		let blk1' = explore stack blk1 in
+		let blk2' = explore stack blk2 in
+		let blk3' = explore stack blk3 in
+		  (For(blk1', e, blk2', blk3'), l)::(explore stack stmts)
+	    | DoWhile(blk, e) ->
+		let blk' = explore stack blk in
+		  (DoWhile(blk', e), l)::(explore stack stmts)
+	    | Return (Some e) ->
+		let e' = replace stack e in
+		  (Return (Some e'), l)::(explore stack stmts)
+	    | _ ->
+		(stmt, l)::(explore stack stmts)
+  in explore [] stmts
+
+
+  
+
 let rec deleting_goto_ids stmts =
   match stmts with
       [] -> []
@@ -1123,6 +1227,8 @@ let run prog =
 	(* processing goto elimination *)
 	let vars = ref [] in
 	let stmts' = vdecls'@stmts' in
+	  (* replacing vars with the same name *)
+	let stmts' = renaming_block_variables stmts' in
 	let stmts' = elimination lbls stmts' vars in
 	let _, l = List.hd vdecls' in
 	let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
