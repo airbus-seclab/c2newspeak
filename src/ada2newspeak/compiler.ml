@@ -33,34 +33,34 @@ let compile(fname:string):Npkil.t =
     if dir_name <> "."
     then
       begin
-	Npkcontext.print_debug ("Changing directory : "^dir_name);
-	Sys.chdir dir_name
+        Npkcontext.print_debug ("Changing directory : "^dir_name);
+        Sys.chdir dir_name
       end;
     Npkcontext.print_debug ("Parsing "^fname^"...");
     let (ast:Syntax_ada.compilation_unit) =
       Ada_parse.parse base_name in
       if (!Npkcontext.verb_ast) then begin
-	print_endline "Abstract Syntax Tree";
-	print_endline "----------------------";
-	Print_syntax_ada.print_ast [ast];
-	print_newline ();
+        print_endline "Abstract Syntax Tree";
+        print_endline "----------------------";
+        Print_syntax_ada.print_ast [ast];
+        print_newline ();
       end;
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       Npkcontext.print_debug "Running first pass...";
       let prog = Firstpass.translate ast
       in
-	Npkcontext.forget_loc ();
-	Npkcontext.print_debug "First pass done.";
-	Npkcontext.print_debug ("Translating "^fname^"...");
-	let tr_prog = Cir2npkil.translate prog [fname]
-	in
-	  Npkcontext.forget_loc ();
-	  if dir_name <> "."
-	  then
-	    begin
-	      Npkcontext.print_debug ("Changing directory : "^current_dir);
-	      Sys.chdir current_dir
-	    end;
-	  tr_prog
+        Npkcontext.forget_loc ();
+        Npkcontext.print_debug "First pass done.";
+        Npkcontext.print_debug ("Translating "^fname^"...");
+        let tr_prog = Cir2npkil.translate prog [fname]
+        in
+          Npkcontext.forget_loc ();
+          if dir_name <> "."
+          then
+            begin
+              Npkcontext.print_debug ("Changing directory : "^current_dir);
+              Sys.chdir current_dir
+            end;
+          tr_prog
 

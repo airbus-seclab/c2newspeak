@@ -49,23 +49,23 @@ let _ =
     let extract_no fname =
       if Filename.check_suffix fname Params.npko_suffix then fname
       else begin
-	let no = create_no fname in
-	let prog = compile fname in
-	  Npkil.write no prog;
-	  no
+        let no = create_no fname in
+        let prog = compile fname in
+          Npkil.write no prog;
+          no
       end
     in
 
       (* TODO: this code should be factored with c2newspeak!!! *)
       match !Npkcontext.input_files with
-	  file::[]
-	    when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	      let prog = compile file in
-		Npkil.write !Npkcontext.output_file prog
+          file::[]
+            when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
+              let prog = compile file in
+                Npkil.write !Npkcontext.output_file prog
 
-	| files ->
-	    let nos = List.map extract_no files in
-	      if not !Npkcontext.compile_only then Linker.link nos []
+        | files ->
+            let nos = List.map extract_no files in
+              if not !Npkcontext.compile_only then Linker.link nos []
 
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
 

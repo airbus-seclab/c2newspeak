@@ -35,8 +35,8 @@ let log2_sup n =
     else
       if eq_big_int n one then p
       else aux (Big_int.add_big_int
-		  (Big_int.div_big_int n two) (Big_int.mod_big_int n two))
-	(Big_int.succ_big_int p)
+                  (Big_int.div_big_int n two) (Big_int.mod_big_int n two))
+        (Big_int.succ_big_int p)
   in Big_int.int_of_big_int (aux n zero)
 
 
@@ -69,7 +69,7 @@ let size_of_range inf sup =
     else if min_bit<=64 then 64
     else begin
       Npkcontext.report_error "Ada_utils.size_of_range"
-	"type representation is too big"
+        "type representation is too big"
     end
 
 (* from the specification : 13.3.(49) *)

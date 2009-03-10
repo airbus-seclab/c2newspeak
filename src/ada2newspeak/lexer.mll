@@ -43,7 +43,7 @@
     let pos = lexbuf.lex_curr_p
     in
     let new_pos = { pos with pos_lnum = pos.pos_lnum + 1;
-	  pos_bol = pos.pos_cnum };
+          pos_bol = pos.pos_cnum };
     in set_loc lexbuf new_pos
 
   let init fname lexbuf =
@@ -61,8 +61,8 @@
     in
     let pos = "line "^line^", col "^(string_of_int start_col)
       ^(if start_col = end_col
-	then ""
-	else ("-"^(string_of_int end_col)))
+        then ""
+        else ("-"^(string_of_int end_col)))
     in
     let err_msg = pos^", unknown keyword: '"^lexeme^"'" in
       Npkcontext.report_error "Lexer.unknown_lexeme" err_msg
@@ -286,13 +286,13 @@ rule token = parse
   (* constantes numeriques *)
   | litteral_reel {CONST_FLOAT (Lexing.lexeme lexbuf)}
   | entier {CONST_INT (Newspeak.Nat.of_string(
-				strip_underscores (Lexing.lexeme lexbuf)))}
+                                strip_underscores (Lexing.lexeme lexbuf)))}
   | entier as main_part ['e' 'E'] '+'? (entier as expo) {CONST_INT (
             Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
                     * (expt_int 10 (int_of_string (strip_underscores expo)))
             ))}
   | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
-		CONST_INT (Newspeak.Nat.of_int ( (int_of_based_string
+                CONST_INT (Newspeak.Nat.of_int ( (int_of_based_string
                                         (int_of_string (strip_underscores base))
                                             (strip_underscores main_part))
                            * expt_int (int_of_string (strip_underscores base))

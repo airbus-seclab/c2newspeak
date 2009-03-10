@@ -35,7 +35,7 @@
      if (compare_ident i1 i2) <> 0
      then
        Npkcontext.report_error "Parser.parse_error"
-	 ("syntax error : \"end "^i1^";\" expected")
+         ("syntax error : \"end "^i1^";\" expected")
      else ()
 
    let check_name (p1,i1) (p2,i2) =
@@ -54,36 +54,36 @@
    let build_access name list   =
      let rec build_aux  list  =
        match list with [] -> (Lval name)
-	 | hd::tl ->
-	     let built = build_aux tl in
-	       ArrayAccess (built, hd)
+         | hd::tl ->
+             let built = build_aux tl in
+               ArrayAccess (built, hd)
      in
        match list with
-	   [] -> Lval name
-	 | _  ->
-	     let rev_list = List.rev list in
-	       build_aux rev_list
+           [] -> Lval name
+         | _  ->
+             let rev_list = List.rev list in
+               build_aux rev_list
 
    let build_matrix list typ_ind =
      (*crafted buids the subtype_indication*)
      let rec crafted list_ind typ_elt =
        match list_ind with
-	   [] -> typ_elt
-	 | hd::tl ->
-	     let recu =  crafted tl typ_elt in
-	     let new_ind = Unconstrained (Declared (Array (
-		"no_name", ConstrainedArray(hd, recu, None)), loc()))
-	     in
-	       ( new_ind, None, None (*Some (new_ind)*) )
+           [] -> typ_elt
+         | hd::tl ->
+             let recu =  crafted tl typ_elt in
+             let new_ind = Unconstrained (Declared (Array (
+                "no_name", ConstrainedArray(hd, recu, None)), loc()))
+             in
+               ( new_ind, None, None (*Some (new_ind)*) )
      in
        match list with
            [] -> Npkcontext.report_error "Parser.parse_error"
-	     ("in build matrix, no subtyp given ")
-	 | hd::[] -> ConstrainedArray(hd, typ_ind, None)
-	 | hd::tl ->
-	     ConstrainedArray(hd,
-			      (crafted tl typ_ind),
-			      None)
+             ("in build matrix, no subtyp given ")
+         | hd::[] -> ConstrainedArray(hd, typ_ind, None)
+         | hd::tl ->
+             ConstrainedArray(hd,
+                              (crafted tl typ_ind),
+                              None)
 
     (** Create a function name for an overloaded operator *)
     let make_operator_name opname =
@@ -115,15 +115,13 @@
       * a list of expression list * block and flattens it into a list of
       * expression*block.
       *)
-    let rec build_case_ch (choices:(expression list*instruction list)list)
-        :(expression*instruction list) list =
+    let rec build_case_ch (choices:(expression list*block)list)
+        :(expression*block) list =
         match choices with
           | []                     -> []
           | (exp_list,block)::tail -> (List.map (function exp -> exp,block)
                                                 exp_list)
                                      @ (build_case_ch tail)
-
-
 
 %}
 /*declaration ocamlyacc*/
@@ -171,9 +169,9 @@ context :
 context_item :
 | WITH name_list SEMICOLON
     { let loc = loc () in
-	List.map
-	  (fun name -> With(name, loc, None))
-	  $2}
+        List.map
+          (fun name -> With(name, loc, None))
+          $2}
 | use_clause {[UseContext($1)]}
 ;
 
@@ -226,8 +224,8 @@ package_decl :
 | package_loc name IS basic_declarative_part END SEMICOLON
     {(PackageSpec($2, $4), $1)}
 | package_loc name IS basic_declarative_part END name SEMICOLON
-	{ (check_name $2 $6);
-	  (PackageSpec($2, $4), $1)}
+        { (check_name $2 $6);
+          (PackageSpec($2, $4), $1)}
 
 package_body:
 | package_loc BODY name IS declarative_part package_instr END SEMICOLON
@@ -305,7 +303,7 @@ declarative_item :
     {let (basic, loc) = $1
      in (BasicDecl(basic), loc)}
 | body {let (body, loc) = $1
-	in (BodyDecl(body),loc)}
+        in (BodyDecl(body),loc)}
 ;
 
 basic_declarative_part :
@@ -317,18 +315,18 @@ basic_declaration :
 | ident_list COLON subtyp_indication SEMICOLON
         {(ObjectDecl($1,$3,None, Variable), loc ())}
 | ident_list COLON subtyp_indication ASSIGN expression SEMICOLON
-	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
+        {(ObjectDecl($1,$3,Some($5), Variable), loc ())}
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
-	{(ObjectDecl($1,$4,Some($6), Constant), loc ())}
+        {(ObjectDecl($1,$4,Some($6), Constant), loc ())}
 | ident_list COLON CONSTANT ASSIGN expression SEMICOLON
-	{(NumberDecl($1, $5, None), loc())}
+        {(NumberDecl($1, $5, None), loc())}
 | type_definition
-	{($1, loc ())}
+        {($1, loc ())}
 | SUBTYPE ident IS subtyp_indication SEMICOLON
-	{(SubtypDecl($2,$4), loc ())}
+        {(SubtypDecl($2,$4), loc ())}
 | use_clause {(UseDecl($1), loc ())}
 | decl  {let (spec, loc) = $1 in
-	   (SpecDecl(spec), loc)}
+           (SpecDecl(spec), loc)}
 | representation_clause SEMICOLON {(RepresentClause($1), loc ())}
 ;
 
@@ -339,15 +337,15 @@ contrainte :
 
 type_definition :
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
-		{ TypeDecl(Array($2,$5))}
+                { TypeDecl(Array($2,$5))}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
     { TypeDecl(Ada_utils.make_enum ($2) $5)}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
-	{TypeDecl(DerivedType($2, $5))}
+        {TypeDecl(DerivedType($2, $5))}
 | TYPE ident IS RANGE simple_expr DOUBLE_DOT simple_expr SEMICOLON
-	    { TypeDecl(Ada_utils.make_range $2 $5 $7)}
+            { TypeDecl(Ada_utils.make_range $2 $5 $7)}
 | TYPE ident IS RECORD record_definition END RECORD SEMICOLON
-		{ TypeDecl(Record($2, $5)) }
+                { TypeDecl(Record($2, $5)) }
 ;
 
 
@@ -363,11 +361,11 @@ record_definition :
 
 /* TO DO : if record initialization exists (?)
 | ident_list COLON subtyp_indication ASSIGN expression SEMICOLON
-	{(ObjectDecl($1,$3,Some($5), Variable), loc ())}
+        {(ObjectDecl($1,$3,Some($5), Variable), loc ())}
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
-	{(ObjectDecl($1,$4,Some($6), Constant), loc ())}
+        {(ObjectDecl($1,$4,Some($6), Constant), loc ())}
 | ident_list COLON CONSTANT ASSIGN expression SEMICOLON
-	{(NumberDecl($1, $5, None), loc())}
+        {(NumberDecl($1, $5, None), loc())}
 */
 
 
@@ -414,28 +412,34 @@ instr :
 | RETURN expression {(Return($2), loc ())}
 | RETURN {(ReturnSimple, loc ())}
 | procedure_array { let (n,p)= $1 in
-		      (ProcedureCall(n,p), loc())
-		  }
+                      (ProcedureCall(n,p), loc())
+                  }
 | procedure_array ASSIGN expression
     { let (nm, ind) = $1 in
       let arr_or_lv = build_access nm ind in
-	(Assign ( arr_or_lv  , $3), loc())
+        (Assign ( arr_or_lv  , $3), loc())
     }
 | EXIT {(Exit(None), loc() )}
 | EXIT WHEN expression {(Exit(Some($3)), loc ())}
 | instruction_if {$1}
 | iteration_scheme LOOP instr_list END LOOP
       { let (scheme,loc) = $1
-	in (Loop(scheme, $3), loc)}
+        in (Loop(scheme, $3), loc)}
 | CASE expression IS case_stmt_alternative_list END CASE {Case($2,
-                                                               build_case_ch $4,
-                                                               None),
+                                                              build_case_ch
+                                                                  (fst $4),
+                                                              (snd $4)),
                                                           loc()}
 ;
 
 case_stmt_alternative_list:
-| case_stmt_alternative                             {$1::[]}
-| case_stmt_alternative case_stmt_alternative_list  {$1::$2}
+| when_others                                       {[]           , Some $1}
+| case_stmt_alternative                             {$1::[]       , None}
+| case_stmt_alternative case_stmt_alternative_list  {$1::(fst $2) , snd $2}
+;
+
+when_others:
+| WHEN OTHERS ARROW instr_list {$4}
 ;
 
 case_stmt_alternative:
@@ -450,7 +454,6 @@ discrete_choice_list:
 discrete_choice:
 | expression {$1}
 /*| discrete_range TODO */
-/*| OTHERS TODO */
 ;
 
 procedure_array :
@@ -460,7 +463,7 @@ procedure_array :
 args:
 | LPAR param_assoc RPAR { $2 }
 | args LPAR param_assoc RPAR { $1@$3 } /*TO DO checkin
-					  this case length 3 = 1*/
+                                          this case length 3 = 1*/
 param_assoc:
 | expression {[$1]}
 | expression COMMA param_assoc {$1::$3}
@@ -591,7 +594,8 @@ primary :
 | name args {FunctionCall($1, $2)}
 /*from simpl_exp to */
 
-| subtyp QUOTE ident  {Attribute ($1, AttributeDesignator(String.lowercase $3,None))}
+| subtyp QUOTE ident  {Attribute ($1, AttributeDesignator(String.lowercase $3,
+                                                          None))}
 
 /*| name LPAR param_assoc RPAR {FunctionCall($1, $3)}*/
 ;
