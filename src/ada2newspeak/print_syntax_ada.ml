@@ -35,13 +35,13 @@ let nat_to_string = Newspeak.Nat.to_string
 let list_to_string list to_string sep crochet =
   match list with
     | a::r ->
-	(if crochet then "[" else "")
-	^(to_string a)
-	^(List.fold_left (fun debut x -> debut^sep^(to_string x))
-	  "" r)
-	^(if crochet then "]" else "")
+        (if crochet then "[" else "")
+        ^(to_string a)
+        ^(List.fold_left (fun debut x -> debut^sep^(to_string x))
+          "" r)
+        ^(if crochet then "]" else "")
     | [] ->
-	if crochet then "[]" else ""
+        if crochet then "[]" else ""
 
 let option_to_string a to_string = match a with
   | None -> "None"
@@ -112,8 +112,8 @@ and typ_declaration_to_string typ_decl = match typ_decl with
   | Enum(ident, val_list, taille) ->
       "Enum("^ident^", "
       ^(list_to_string val_list
-	  (fun (nom,id) -> "("^nom^","^id^")")
-	  "; " true)
+          (fun (nom,id) -> "("^nom^","^id^")")
+          "; " true)
       ^", "^(ikind_to_string taille)^")"
 
   | DerivedType(ident, subtyp) ->
@@ -213,11 +213,11 @@ let rec lval_to_string lv =
   match lv with
       Lval name -> name_to_string name
     | ArrayAccess (lval, e) ->
-	(lval_to_string lval )^"["^(exp_to_string e)^"]"
+        (lval_to_string lval )^"["^(exp_to_string e)^"]"
 
 
-let rec instr_list_to_string instr_list =
-  list_to_string instr_list
+let rec block_to_string block =
+  list_to_string block
     (fun (instr,loc) -> "("^
        (instr_to_string instr)^", "
        ^(line_of_loc loc)^")")
@@ -231,24 +231,24 @@ and instr_to_string instr = match instr with
 
   | If(exp, instr_then, instr_else) ->
       "If("^(exp_to_string exp)^",\n"
-      ^(instr_list_to_string instr_then)^",\n"
-      ^(instr_list_to_string instr_else)^")"
+      ^(block_to_string instr_then)^",\n"
+      ^(block_to_string instr_else)^")"
 
   | Exit(exp) -> "Exit("^(option_to_string exp exp_to_string)^")"
-  | Loop(scheme, instr_list) ->
+  | Loop(scheme, block) ->
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
-      ^(instr_list_to_string instr_list)^")"
+      ^(block_to_string block)^")"
   | ProcedureCall(nom, params) -> "ProcedureCall("
       ^(name_to_string nom)^", "
       ^(list_to_string params exp_to_string ", " true)^")"
   | Case(e,choices,default) -> "Case(("^(exp_to_string e)^"), ["
     ^ (String.concat ", "
      (List.map (function e,block ->
-                    "when "^(exp_to_string e)^" => "^(instr_list_to_string block))
-                    choices))
+                "when "^(exp_to_string e)^" => "^(block_to_string block))
+                choices))
     ^"]"^(match default with
             | None -> ""
-            | Some block -> "when others => "^(instr_list_to_string block)
+            | Some block -> "when others => "^(block_to_string block)
          )
 
 let param_to_string param =
@@ -269,11 +269,11 @@ let object_state_to_string status = match status with
 let array_aggregate_to_string agregat = match agregat with
   | NamedArrayAggregate(assoc_list) ->
       let assoc_element_to_string (ident, exp) =
-	"("^ident^", "^(exp_to_string exp)^")"
+        "("^ident^", "^(exp_to_string exp)^")"
       in
-	list_to_string assoc_list
-	  assoc_element_to_string
-	  ";\n" true
+        list_to_string assoc_list
+          assoc_element_to_string
+          ";\n" true
 
 
 let representation_clause_to_string clause = match clause with
@@ -285,15 +285,15 @@ let representation_clause_to_string clause = match clause with
 let rec context_clause_to_string context_clause =
   match context_clause with
     | With(name, loc, spec) -> "With("
-	^(name_to_string name)
-	^", "^(line_of_loc loc)^",\n"
-	^(option_to_string
-	    spec
-	    (fun (spec, loc) -> "("^(spec_to_string spec)
-	       ^", "^(line_of_loc loc)^")"))
-	^")"
+        ^(name_to_string name)
+        ^", "^(line_of_loc loc)^",\n"
+        ^(option_to_string
+            spec
+            (fun (spec, loc) -> "("^(spec_to_string spec)
+               ^", "^(line_of_loc loc)^")"))
+        ^")"
     | UseContext(names) -> "UseContext("
-	^(list_to_string names name_to_string "," false)^")"
+        ^(list_to_string names name_to_string "," false)^")"
 
 and context_to_string context = list_to_string context
                                     context_clause_to_string ";\n" true
@@ -332,23 +332,23 @@ and declarative_item_to_string decl_item = match decl_item with
 and subprog_spec_to_string spec = match spec with
   | Function(name,param_list,return_type) ->
       "Function("^(name_to_string name)^", "
-	^(param_list_to_string param_list)^", "
-	^(subtyp_to_string return_type)^")"
+        ^(param_list_to_string param_list)^", "
+        ^(subtyp_to_string return_type)^")"
   | Procedure(name,param_list) ->
       "Procedure("^(name_to_string name)^", "
       ^(param_list_to_string param_list)^")"
 
 and sub_program_body_to_string
-    (subprog_decl, declarative_part, instr_list) =
+    (subprog_decl, declarative_part, block) =
   "("^(subprog_spec_to_string subprog_decl)
   ^",\n\n"
   ^(list_to_string declarative_part
       (fun (item,loc) -> "("^
-	 (declarative_item_to_string item)^", "
-	 ^(line_of_loc loc)^")")
-	  ";\n" true)
+         (declarative_item_to_string item)^", "
+         ^(line_of_loc loc)^")")
+          ";\n" true)
   ^",\n\n"
-  ^instr_list_to_string instr_list
+  ^block_to_string block
   ^")"
 
 and package_spec_to_string (name, decls) =
@@ -356,22 +356,22 @@ and package_spec_to_string (name, decls) =
   ^(list_to_string
       decls
       (fun (decl, loc) ->
-	 "("^(basic_declaration_to_string decl)^", "
-	 ^(line_of_loc loc)^")")
+         "("^(basic_declaration_to_string decl)^", "
+         ^(line_of_loc loc)^")")
       ";\n"
       true)^")"
 
 and package_body_to_string
-    (name, package_spec, declarative_part, instr_list) =
+    (name, package_spec, declarative_part, block) =
   "("^(name_to_string name)^",\n\n"
   ^(option_to_string package_spec package_spec_to_string)^",\n"
   ^(list_to_string declarative_part
       (fun (item,loc) -> "("^
-	 (declarative_item_to_string item)^", "
-	 ^(line_of_loc loc)^")")
+         (declarative_item_to_string item)^", "
+         ^(line_of_loc loc)^")")
       ";\n" true)
   ^",\n\n"
-  ^instr_list_to_string instr_list
+  ^block_to_string block
   ^")"
 
 and spec_to_string spec = match spec with

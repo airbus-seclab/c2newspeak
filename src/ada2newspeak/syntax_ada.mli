@@ -190,18 +190,20 @@ type iteration_scheme =
   | While of expression            (* While [expression] evaluates to [true] *)
   | For of name * expression * expression * bool           (* In an interval *)
 
+type block = instruction list
+
 (** An instruction *)
-type instruction_atom =
+and instruction_atom =
   | NullInstr                 (** The null instruction (do nothing)    *)
   | Assign of lval*expression (** Assignment                           *)
   | Return of expression      (** Return from function                 *)
   | ReturnSimple              (** Return from procedure                *)
-  | If of expression*instruction list*instruction list (** Conditional *)
-  | Loop of iteration_scheme*(instruction list) (** Loops              *)
+  | If of expression*block*block                       (** Conditional *)
+  | Loop of iteration_scheme*block              (** Loops              *)
   | Exit of expression option                   (** Loop exit          *)
   | ProcedureCall of name*expression list       (** Procedure call     *)
 (* TODO : change ProcedureCall to be able to evaluate any expression *)
-  | Case of expression*(expression*instruction list) list*instruction list option
+  | Case of expression*(expression*block) list*block option
     (** Case .. When statement *)
 
 (** An instruction with its location *)
@@ -231,11 +233,11 @@ type context_clause =
 
 and context = context_clause list
 
-and sub_program_body = sub_program_spec*declarative_part*instruction list
+and sub_program_body = sub_program_spec*declarative_part*block
 
 and package_spec = name*(basic_declaration*location) list
 
-and package_body = name*package_spec option*declarative_part*instruction list
+and package_body = name*package_spec option*declarative_part*block
 
 and spec =
   | SubProgramSpec of sub_program_spec
