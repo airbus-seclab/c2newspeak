@@ -592,16 +592,14 @@ primary :
 | LPAR expression RPAR {$2}
 | subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
 | name args {FunctionCall($1, $2)}
-/*from simpl_exp to */
-
 | subtyp QUOTE ident  {Attribute ($1, AttributeDesignator(String.lowercase $3,
                                                           None))}
-
-/*| name LPAR param_assoc RPAR {FunctionCall($1, $3)}*/
+| name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)}
 ;
 
 integer_literal :
 | CONST_INT {$1}
+;
 
 typ :
 | INTEGER {Constrained(Integer, Ada_config.integer_constraint, true)}
@@ -625,16 +623,19 @@ subtyp :
 | name {SubtypName($1)}
 ;
 
-/*
 procedure_call :
 | name {ProcedureCall($1, [])}
-| name LPAR param_assoc RPAR {ProcedureCall($1, $3)}
+| name LPAR actual_parameter_part RPAR {ProcedureCall($1, $3)}
 ;
-param_assoc :
-| expression {[$1]}
-| expression COMMA param_assoc {$1::$3}
+
+actual_parameter_part :
+| parameter_association {[$1]}
+| parameter_association COMMA actual_parameter_part {$1::$3}
 ;
-*/
+
+parameter_association:
+| expression {$1}
+;
 
 
 ident :
@@ -659,7 +660,7 @@ name :
     in (par@[ident], $3)}
 
     /* pour les tableaux */
-/*| name LPAR param_assoc RPAR {FunctionCall($1, $3)} */
+/*| name LPAR parameter_association RPAR {FunctionCall($1, $3)} */
 ;
 
 
