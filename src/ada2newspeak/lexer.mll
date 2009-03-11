@@ -130,7 +130,8 @@ let commentaire = "--" [^ '\n']*
 let id_integer   = ['i''I']['n''N']['t''T']['e''E']['g''G']['e''E']['r''R']
 let id_float     = ['f''F']['l''L']['o''O']['a''A']['t''T']
 let id_boolean   = ['b''B']['o''O']['o''O']['l''L']['e''E']['a''A']['n''N']
-let id_character = ['c''C']['h''H']['a''A']['r''R']['a''A']['c''C']['t''T']['e''E']['r''R']
+let id_character = ['c''C']['h''H']['a''A']['r''R']
+                           ['a''A']['c''C']['t''T']['e''E']['r''R']
 let id_true      = ['t''T']['r''R']['u''U']['e''E']
 let id_false     = ['f''F']['a''A']['l''L']['s''S']['e''E']
 

@@ -317,8 +317,8 @@ let eval_static (exp:expression) (expected_typ:typ option)
             | Not, Some Boolean ->
                 (match (eval_static_exp exp expected_typ) with
                    | BoolVal(b), Boolean -> BoolVal(not b), Boolean
-                   | _ -> Npkcontext.report_error "Ada_normalize.eval_static_unop"
-                                            "Unexpected unary operator and argument"
+                   | _ -> Npkcontext.report_error "eval_static_unop"
+                                        "Unexpected unary operator and argument"
                 )
         | _ ->  Npkcontext.report_error
             "Ada_normalize.eval_static_unop"

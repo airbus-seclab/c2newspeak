@@ -472,9 +472,9 @@ param_assoc:
 iteration_scheme :
 | {(NoScheme, loc ())}
 | WHILE expression {(While($2), loc ())}
-| FOR name IN         simple_expr DOUBLE_DOT simple_expr
+| FOR ident IN         simple_expr DOUBLE_DOT simple_expr
                                                 {(For($2,$4,$6,false), loc ())}
-| FOR name IN REVERSE simple_expr DOUBLE_DOT simple_expr
+| FOR ident IN REVERSE simple_expr DOUBLE_DOT simple_expr
                                                 {(For($2,$5,$7, true), loc ())}
 
 debut_if :

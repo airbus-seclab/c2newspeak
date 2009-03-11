@@ -188,7 +188,7 @@ type param = {
 type iteration_scheme =
   | NoScheme                       (* Forever *)
   | While of expression            (* While [expression] evaluates to [true] *)
-  | For of name * expression * expression * bool           (* In an interval *)
+  | For of identifier * expression * expression * bool     (* In an interval *)
 
 type block = instruction list
 

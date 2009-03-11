@@ -204,9 +204,9 @@ and value_to_string v = match v with
 let iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
-  | For(iter, exp1, exp2, false) -> "For "^(name_to_string iter)^" in "
+  | For(iter, exp1, exp2, false) -> "For "^iter^" in "
                             ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
-  | For(iter, exp1, exp2, true) -> "For "^(name_to_string iter)^" in reverse"
+  | For(iter, exp1, exp2, true) -> "For "^(iter)^" in reverse"
                             ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
 
 let rec lval_to_string lv =

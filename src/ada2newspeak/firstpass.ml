@@ -55,6 +55,8 @@ type symb =
   | FunSymb  of C.funexp * A.sub_program_spec * bool * C.ftyp (** XXX *)
   | NumberSymb of value*bool (** XXX *)
 
+type qualified_symbol = symb*C.typ*Npk.location
+
 (** Identifier for the return value *)
 let ret_ident = "!return"
 
@@ -173,7 +175,7 @@ let field_typ (field:string) (record_f:C.field list) :C.typ=
 
 let rec addfield (fields:A.identifier list) (var:symb)
                  (typ:C.typ) (loc:Newspeak.location)
-        :(symb*C.typ*Npk.location) option =
+        :(qualified_symbol option) =
   match typ with C.Struct (flds,_) -> begin
     match fields  with
         [] -> Some (var, typ, loc)
@@ -272,10 +274,10 @@ let rec try_find_fieldsaccess opt (sels, varname, fields)
 let translate compil_unit =
 
   (* References globales *)
-  let symbtbl = Hashtbl.create 100
-  and tmp_cnt = ref 0
+  let symbtbl   = Hashtbl.create 100
   and fun_decls = Hashtbl.create 100
-  and globals = Hashtbl.create 100
+  and globals   = Hashtbl.create 100
+  and tmp_cnt   = ref 0
 
   and context = ref []
   and current_package = ref []
@@ -314,11 +316,11 @@ let translate compil_unit =
   in
 
 
-  let find_symb x = Hashtbl.find symbtbl x
+  let find_symb (x:name) :qualified_symbol = Hashtbl.find symbtbl x
 
-  and find_all_symb x = Hashtbl.find_all symbtbl x
+  and find_all_symb (x:name) :qualified_symbol list = Hashtbl.find_all symbtbl x
 
-  and mem_symb x = Hashtbl.mem symbtbl x in
+  and mem_symb (x:name) :bool = Hashtbl.mem symbtbl x in
 
   let find_all_use ident =
     List.flatten
@@ -426,10 +428,11 @@ let translate compil_unit =
   (* gestion de la table de symboles *)
 
   (* declaration d'une variable locale *)
-  let add_var loc (st:Syntax_ada.subtyp) ident deref ro =
+  let add_var (loc:Newspeak.location) (st:Syntax_ada.subtyp)
+               (ident:identifier) (deref:bool) (ro:bool)
+      :unit=
     let x = ident_to_name ident in
-      (if Hashtbl.mem symbtbl x
-       then
+      (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
 
            (* si la declaration precedente est globale, on peut
@@ -566,7 +569,8 @@ let translate compil_unit =
         (VarSymb (C.Global(tr_name), typ, true, ro),
          tr_typ, loc)
 
-  and remove_symb x = Hashtbl.remove symbtbl (ident_to_name x) in
+  and remove_symb (x:identifier) :unit =
+        Hashtbl.remove symbtbl (ident_to_name x) in
 
   let remove_formals args =
     remove_symb ret_ident;
@@ -1673,8 +1677,7 @@ let translate compil_unit =
          match instr with
            | NullInstr -> (translate_block r)
            | Assign(lv,exp) ->
-               let tr_affect = translate_affect lv exp loc
-               in  tr_affect::(translate_block r)
+               (translate_affect lv exp loc)::(translate_block r)
            | Return(exp) ->
                translate_block (* WG Lval for Array diff*)
                  ((Assign(Lval (ident_to_name ret_ident),exp),loc)
@@ -1726,11 +1729,25 @@ let translate compil_unit =
                  (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)
                  ::(translate_block r)
 
-        | Loop(For(_,_,_,_), body) ->
-                Npkcontext.report_warning
-                    "Firstpass.translate_block"
-                    "For loops not yet supported, ignoring block" ;
-                translate_block body
+           | Loop(For(iterator,a,b,_), body) ->
+                Npkcontext.report_warning "Firstpass.translate_block"
+                                "For loops are WIP";
+                add_var loc (Constrained(Integer,
+                                         Ada_config.integer_constraint,
+                                         true))
+                            iterator
+                            false
+                            false; (* should be RO *)
+                let it = ident_to_name iterator in
+                let res=
+ (* i = a;            *) (translate_affect (Lval it) a loc)
+ (* while(1) {        *) ::(translate_block [Loop (NoScheme,
+ (*   if (i>b) break; *)      (((Exit(Some(Binary (Gt,(Var it),b))),loc)
+ (*   ...             *)     ::(body))
+ (*   i++             *)      @[Assign(Lval it, Binary (Plus, Var it,
+ (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
+ (* }                 *)   )),loc])
+                in remove_symb iterator;res
 
            | ProcedureCall (name, args) -> begin
                let array_or_fun  = find_fun_symb name in
