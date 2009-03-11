@@ -111,7 +111,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
                                  "Ada_normalize.eval_static_exp"
                                        "not implemented"
 
-      | Unary(op,exp)    -> eval_static_unop  op exp   expected_typ
+      | Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
       | Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
 
       | Qualified(subtyp, exp) ->
@@ -295,7 +295,6 @@ let eval_static (exp:expression) (expected_typ:typ option)
   and eval_static_unop (op:unary_op) (exp:expression) (expected_typ:typ option)
       :value*typ =
       match (op, expected_typ) with
-
         | UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
         | UPlus, Some Float                  -> eval_static_exp exp expected_typ
         | UPlus, None ->
@@ -309,20 +308,18 @@ let eval_static (exp:expression) (expected_typ:typ option)
                         )
 
         | UMinus, None
-    | UMinus, Some Float -> eval_static_neg exp
+        | UMinus, Some Float -> eval_static_neg exp
         | UMinus, Some t when integer_class t -> eval_static_neg exp
-        | Abs, None
-    | Abs, Some Float                       -> eval_static_abs exp
-        | Abs, Some t when integer_class t ->
-            eval_static_abs exp
-
-    | Not, None
-        | Not, Some Boolean ->
-            (match (eval_static_exp exp expected_typ) with
-               | BoolVal(b), Boolean -> BoolVal(not b), Boolean
-               | _ -> Npkcontext.report_error "Ada_normalize.eval_static_unop"
-                                        "Unexpected unary operator and argument"
-        )
+        | Abs,    None
+        | Abs,    Some Float                  -> eval_static_abs exp
+        | Abs,    Some t when integer_class t -> eval_static_abs exp
+        | Not, None
+            | Not, Some Boolean ->
+                (match (eval_static_exp exp expected_typ) with
+                   | BoolVal(b), Boolean -> BoolVal(not b), Boolean
+                   | _ -> Npkcontext.report_error "Ada_normalize.eval_static_unop"
+                                            "Unexpected unary operator and argument"
+                )
         | _ ->  Npkcontext.report_error
             "Ada_normalize.eval_static_unop"
               "Unexpected unary operator and argument"
@@ -1096,7 +1093,7 @@ and normalize_exp exp = match exp with
                                         normalize_exp exp)
   | NullExpr | CInt _ | CFloat _ | CBool _ | CChar _
   | CString _ | Var _  -> exp
-  | Unary (uop, exp) -> Unary(uop, normalize_exp exp)
+  | Unary (uop, exp)    -> Unary(uop, normalize_exp exp)
   | Binary(bop, e1, e2) -> Binary(bop, normalize_exp e1,
                                   normalize_exp e2)
   | FunctionCall(nom, params) ->
@@ -1126,7 +1123,7 @@ and normalize_exp exp = match exp with
                     end
 
 
-     | "Last" | "last" -> begin
+     | "Last" -> begin
 
                     match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
@@ -1149,7 +1146,7 @@ and normalize_exp exp = match exp with
                     end
 
 
-  | "Length" | "length" -> (* TODO ignore case at parser step *)
+  | "length" | "Length" -> (* TODO make this at parser time *)
          (*    Array or Range type only for attributes Length *)
         begin
          match arraytyp_to_contrainte subtype with

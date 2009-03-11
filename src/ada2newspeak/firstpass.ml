@@ -1007,16 +1007,28 @@ let translate compil_unit =
                   "Firstpass.translate_binop"
                     "internal error : unexpected operator !"
 
-              (* reste puissance, mod, concat, and, or.. *)
-
-              (* operations sur les booleens *)
-              | ((AndThen | Xor | OrElse), _) -> Npkcontext.report_error
+              | ((AndThen | OrElse), _) -> Npkcontext.report_error
                   "Firstpass.translate_binop"
                   "internal error : unexpected operator !"
 
-              | ((Power | Mod | Concat | And | Or),_) ->
+              | Power,_ ->
                   Npkcontext.report_error "Firstpass.translate_binop"
-                    "not implemented"
+                    "run-time \"**\" is not implemented"
+              | Mod,_ ->
+                  Npkcontext.report_error "Firstpass.translate_binop"
+                    "run-time \"mod\" is not implemented"
+              | Concat,_ ->
+                  Npkcontext.report_error "Firstpass.translate_binop"
+                    "run-time \"&\" is not implemented"
+              | And,_ ->
+                  Npkcontext.report_error "Firstpass.translate_binop"
+                    "run-time \"and\" is not implemented"
+              | Or,_ ->
+                  Npkcontext.report_error "Firstpass.translate_binop"
+                    "run-time \"or\" is not implemented"
+              | Xor,_ ->
+                  Npkcontext.report_error "Firstpass.translate_binop"
+                    "run-time \"or\" is not implemented"
 
               | _ -> Npkcontext.report_error "Firstpass.translate_binop"
                   "invalid operator and argument"
@@ -1064,7 +1076,7 @@ let translate compil_unit =
           in (C.Unop (K.Not, exp), Boolean)
 
       | (Abs, _) -> Npkcontext.report_error "Firstpass.translate_unop"
-          "abs not implemented" (* on ignore abs *)
+          "run-time abs is not implemented" (* on ignore abs *)
 
       | _ ->
           Npkcontext.report_error "Firstpass.translate_unop"

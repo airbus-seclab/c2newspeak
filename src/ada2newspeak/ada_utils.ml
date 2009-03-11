@@ -203,24 +203,19 @@ let eq_base_typ subtyp1 subtyp2 =
   (base_typ subtyp1) = (base_typ subtyp2)
 
 let rec integer_class typ = match typ with
-  | Integer -> true
-  | IntegerConst -> true
+  | Float     | Boolean
+  | Character | String       -> false
+  | Integer   | IntegerConst -> true
   | Declared(typdef, _) ->
       (match typdef with
-         | Enum(_) -> false
+         | Enum _ | Array _ | Record _ -> false
          | IntegerRange(_) -> true
          | DerivedType(_,(_,_,Some(subtyp))) -> integer_class
              (base_typ subtyp)
-         | Array _
-         | Record _ -> false
          | DerivedType(_,(_,_,None)) ->
              Npkcontext.report_error
                "Ada_utils.integer_class"
                "internal error : no subtype provided")
-  | Float -> false
-  | Boolean -> false
-  | Character -> false
-  | String -> false
 
 
 let check_typ expected found =
