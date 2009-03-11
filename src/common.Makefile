@@ -24,11 +24,20 @@
 # email: charles.hymans@penjili.org
 #
 
+ifdef WITH_BISECT
+INSTRUMENT_CMA=$(shell ocamlc -where)/bisect/instrument.cma
+LIBX+=-I +bisect -pp 'camlp4o $(INSTRUMENT_CMA)'
+OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert
+EXTRALINKFLAGS=-I +bisect bisect.cmxa
+else
+OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert -unsafe
+endif
+
 #utils
 CP=cp
 RM=rm -rf
 OCAMLC=ocamlc -w Ael -warn-error Ael
-OCAMLOPT=ocamlopt -w Ael -warn-error Ael -inline 100 -noassert -unsafe
+OCAMLOPT=ocamlopt $(OCAMLOPTFLAGS)
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 OCAMLLEX=ocamllex
@@ -45,11 +54,13 @@ MLI=$(addsuffix .mli,$(FILES))
 CLEANFILES+=\
 	$(TARGET).depend $(addsuffix *~,$(DIRS)) \
 	$(addsuffix .cmi,$(FILES)) \
-	$(addsuffix .cmx,$(FILES)) $(addsuffix .o,$(FILES))
+	$(addsuffix .cmx,$(FILES)) \
+	$(addsuffix .o,$(FILES))   \
+	$(addsuffix .cmp,$(FILES))
 
 ../bin/$(TARGET): $(CIL) $(CMX)
 	@echo "Linking                     "$(TARGET)
-	@$(OCAMLOPT) $(INCLUDE) $(LIBX) $(CMX) -o $@
+	@$(OCAMLOPT) $(EXTRALINKFLAGS) $(INCLUDE) $(LIBX) $(CMX) -o $@
 
 $(TARGET).depend: $(ML)
 	@echo "Computing dependencies for  "$(TARGET)

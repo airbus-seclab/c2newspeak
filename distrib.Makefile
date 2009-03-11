@@ -48,6 +48,15 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 
 all: bin $(CIL) $(COMPONENTS) doc lib
 
+coverage:
+	$(MAKE) WITH_BISECT=1 src/version.ml
+	$(MAKE) -C src -f ada2newspeak.Makefile ada2newspeak.depend
+	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak.depend
+	$(MAKE) -C src -f ada2newspeak.Makefile ada2newspeak/parser.cmx
+	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak/pp_parser.cmx
+	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak/parser.cmx
+	$(MAKE) WITH_BISECT=1
+
 install:
 	@echo "Installing programs in      "$(PREFIX)/bin
 	@cd bin; install $(EXE) $(PREFIX)/bin

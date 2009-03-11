@@ -47,7 +47,9 @@ c2newspeak.CLEANFILES:=parser lexer pp_parser pp_lexer \
                        spec_parser
 c2newspeak.CLEANFILES:=$(addsuffix .ml, $(c2newspeak.CLEANFILES)) \
                        $(addsuffix .mli, $(c2newspeak.CLEANFILES)) \
-                       parser.output pp_parser.output spec_parser.output
+                       parser.output pp_parser.output spec_parser.output \
+                       lexer.mll.cmp parser.mly.cmp \
+                       pp_lexer.mll.cmp pp_parser.mly.cmp
 c2newspeak.CLEANFILES:=$(addprefix c2newspeak/,$(c2newspeak.CLEANFILES))
 CLEANFILES=$(c2newspeak.CLEANFILES)
 

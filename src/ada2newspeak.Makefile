@@ -50,7 +50,8 @@ CLEANFILES:=parser lexer
 
 CLEANFILES:=$(addsuffix .ml, $(CLEANFILES)) \
 	    $(addsuffix .mli, $(CLEANFILES)) \
-	    parser.output
+	    parser.output \
+        lexer.mll.cmp parser.mly.cmp
 CLEANFILES:=$(addprefix ada2newspeak/,$(CLEANFILES))
 
 include common.Makefile

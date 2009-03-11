@@ -41,7 +41,7 @@ endif
 
 TESTS.SPEC=$(addsuffix .spec, $(TESTS))
 CLEANFILES+=$(TESTS) $(addsuffix .bak, $(TESTS)) *.no \
-            result *~ a.npk b.npk *.cmi *.cmo
+            result *~ a.npk b.npk *.cmi *.cmo bisect*.out
 
 .SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)
