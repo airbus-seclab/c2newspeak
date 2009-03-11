@@ -17,7 +17,7 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Sarah Zennou
-  EADS Innovation Works - SE/IA
+  EADS Innovation Works - SE/IS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: sarah (dot) zennou (at) eads (dot) net
 *)
@@ -1047,24 +1047,25 @@ let renaming_block_variables stmts =
 	  let n = String.length v in
 	    try
 	      let s' = String.sub s 0 n in
-		if String.compare v s' = 0 then s else search v stack
+		if String.compare v s' = 0 && (s.[n] = '.' || n = String.length s) then s 
+		else search v stack
 	    with
 		Invalid_argument _ -> search v stack
   in
   let rename stmt =
     match stmt with
 	VDecl (n, t, s, e, i) -> 
-	  let n' = n ^ (string_of_int !nth_lv) in
+	  let n' = n ^ "." ^ (string_of_int !nth_lv) in
 	    nth_lv := !nth_lv + 1;
 	    VDecl(n', t, s, e, i), n'
 	      
       | EDecl (s, e) ->
-	  let s' = s  ^ (string_of_int !nth_lv) in
+	  let s' = s  ^ "." ^ (string_of_int !nth_lv) in
 	    nth_lv := !nth_lv + 1;
 	    EDecl(s', e), s'
 	      
       | CDecl(s, b, d) ->
-	  let s' = s  ^ (string_of_int !nth_lv) in
+	  let s' = s  ^ "." ^ (string_of_int !nth_lv) in
 	    nth_lv := !nth_lv + 1;
 	    CDecl(s', b, d), s'
 	      
