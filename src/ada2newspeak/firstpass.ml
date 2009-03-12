@@ -578,7 +578,7 @@ let translate compil_unit =
   in
 
   (* generation de temp *)
-  let gen_tmp loc t =
+  let gen_tmp (loc:Newspeak.location) (t:A.typ) =
     let x = "tmp"^(string_of_int !tmp_cnt) in
       add_var loc (Unconstrained(t)) x false false;
       let t = translate_typ t in
@@ -1730,8 +1730,6 @@ let translate compil_unit =
                  ::(translate_block r)
 
            | Loop(For(iterator,a,b,_), body) ->
-                Npkcontext.report_warning "Firstpass.translate_block"
-                                "For loops are WIP";
                 add_var loc (Constrained(Integer,
                                          Ada_config.integer_constraint,
                                          true))
@@ -1739,15 +1737,16 @@ let translate compil_unit =
                             false
                             false; (* should be RO *)
                 let it = ident_to_name iterator in
-                let res=
- (* i = a;            *) (translate_affect (Lval it) a loc)
+                let res= 
+ (* int i = a;        *) (translate_affect (Lval it) a loc)
  (* while(1) {        *) ::(translate_block [Loop (NoScheme,
  (*   if (i>b) break; *)      (((Exit(Some(Binary (Gt,(Var it),b))),loc)
  (*   ...             *)     ::(body))
  (*   i++             *)      @[Assign(Lval it, Binary (Plus, Var it,
  (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
  (* }                 *)   )),loc])
-                in remove_symb iterator;res
+                in remove_symb iterator;
+                (C.Decl (C.int_typ,iterator),loc)::res
 
            | ProcedureCall (name, args) -> begin
                let array_or_fun  = find_fun_symb name in
