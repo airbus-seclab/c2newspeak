@@ -1729,15 +1729,15 @@ let translate compil_unit =
                  (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)
                  ::(translate_block r)
 
-           | Loop(For(iterator,a,b,_), body) ->
+           | Loop(For(iterator,a,b,is_reverse), body) ->
                 add_var loc (Constrained(Integer,
                                          Ada_config.integer_constraint,
                                          true))
                             iterator
                             false
-                            false; (* should be RO *)
+                            false; (* should be RO, actually *)
                 let it = ident_to_name iterator in
-                let res= 
+                let res = if (not is_reverse) then begin
  (* int i = a;        *) (translate_affect (Lval it) a loc)
  (* while(1) {        *) ::(translate_block [Loop (NoScheme,
  (*   if (i>b) break; *)      (((Exit(Some(Binary (Gt,(Var it),b))),loc)
@@ -1745,6 +1745,15 @@ let translate compil_unit =
  (*   i++             *)      @[Assign(Lval it, Binary (Plus, Var it,
  (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
  (* }                 *)   )),loc])
+                    end else begin
+ (* int i = b;        *) (translate_affect (Lval it) b loc)
+ (* while(1) {        *) ::(translate_block [Loop (NoScheme,
+ (*   if (a>i) break; *)      (((Exit(Some(Binary (Gt,a,(Var it)))),loc)
+ (*   ...             *)     ::(body))
+ (*   i--             *)      @[Assign(Lval it, Binary (Minus, Var it,
+ (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
+ (* }                 *)   )),loc])
+                    end
                 in remove_symb iterator;
                 (C.Decl (C.int_typ,iterator),loc)::res
 
