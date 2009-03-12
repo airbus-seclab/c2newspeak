@@ -201,7 +201,7 @@ and value_to_string v = match v with
 (*  | EnumVal(i) -> "EnumVal("^(string_of_int i)^")"*)
   | BoolVal(b) -> "BoolVal("^(string_of_bool b)^")"
 
-let iteration_scheme_to_string scheme = match scheme with
+and iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
   | For(iter, exp1, exp2, false) -> "For "^iter^" in "
@@ -209,19 +209,20 @@ let iteration_scheme_to_string scheme = match scheme with
   | For(iter, exp1, exp2, true) -> "For "^(iter)^" in reverse"
                             ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
 
-let rec lval_to_string lv =
+and lval_to_string lv =
   match lv with
       Lval name -> name_to_string name
     | ArrayAccess (lval, e) ->
         (lval_to_string lval )^"["^(exp_to_string e)^"]"
 
 
-let rec block_to_string block =
+and block_to_string block =
   list_to_string block
     (fun (instr,loc) -> "("^
        (instr_to_string instr)^", "
        ^(line_of_loc loc)^")")
     ";\n" true
+
 and instr_to_string instr = match instr with
   | NullInstr -> "NullInstr"
   | ReturnSimple -> "ReturnSimple"
@@ -249,24 +250,25 @@ and instr_to_string instr = match instr with
     ^"]"^(match default with
             | None -> ""
             | Some block -> "when others => "^(block_to_string block)
-         )
+         ) 
+  | Block (decl_part,blk) -> "Declare ("^declarative_part_to_string decl_part
+                          ^") {"^(block_to_string blk)^"}"
 
-let param_to_string param =
+and param_to_string param =
   "{formal_name = "    ^(list_to_string param.formal_name (fun x -> x) "," true)
   ^"; mode = "         ^(mode_to_string param.mode)
   ^"; param_type = "   ^(subtyp_to_string param.param_type)
   ^"; default_value = "^(option_to_string param.default_value exp_to_string)^"}"
 
-let param_list_to_string list =
+and param_list_to_string list =
   list_to_string list param_to_string ";\n" true
 
-let object_state_to_string status = match status with
+and object_state_to_string status = match status with
   | Variable -> "Variable"
   | Constant -> "Constant"
   | StaticVal(value) -> "StaticVal("^(value_to_string value)^")"
 
-
-let array_aggregate_to_string agregat = match agregat with
+and array_aggregate_to_string agregat = match agregat with
   | NamedArrayAggregate(assoc_list) ->
       let assoc_element_to_string (ident, exp) =
         "("^ident^", "^(exp_to_string exp)^")"
@@ -275,14 +277,12 @@ let array_aggregate_to_string agregat = match agregat with
           assoc_element_to_string
           ";\n" true
 
-
-let representation_clause_to_string clause = match clause with
+and representation_clause_to_string clause = match clause with
   | EnumerationRepresentation(ident, agregat) ->
       "EnumerationRepresentation("^ident^", "
       ^(array_aggregate_to_string agregat)^")"
 
-
-let rec context_clause_to_string context_clause =
+and context_clause_to_string context_clause =
   match context_clause with
     | With(name, loc, spec) -> "With("
         ^(name_to_string name)
@@ -342,11 +342,7 @@ and sub_program_body_to_string
     (subprog_decl, declarative_part, block) =
   "("^(subprog_spec_to_string subprog_decl)
   ^",\n\n"
-  ^(list_to_string declarative_part
-      (fun (item,loc) -> "("^
-         (declarative_item_to_string item)^", "
-         ^(line_of_loc loc)^")")
-          ";\n" true)
+  ^declarative_part_to_string declarative_part
   ^",\n\n"
   ^block_to_string block
   ^")"
@@ -361,15 +357,18 @@ and package_spec_to_string (name, decls) =
       ";\n"
       true)^")"
 
+and declarative_part_to_string (dp:declarative_part) :string =
+    (list_to_string dp
+          (fun (item,loc) -> "("^
+             (declarative_item_to_string item)^", "
+             ^(line_of_loc loc)^")")
+          ";\n" true)
+
 and package_body_to_string
     (name, package_spec, declarative_part, block) =
   "("^(name_to_string name)^",\n\n"
   ^(option_to_string package_spec package_spec_to_string)^",\n"
-  ^(list_to_string declarative_part
-      (fun (item,loc) -> "("^
-         (declarative_item_to_string item)^", "
-         ^(line_of_loc loc)^")")
-      ";\n" true)
+  ^declarative_part_to_string declarative_part
   ^",\n\n"
   ^block_to_string block
   ^")"

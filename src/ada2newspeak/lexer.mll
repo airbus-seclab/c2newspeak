@@ -153,6 +153,9 @@ rule token = parse
   | ['c''C']['a''A']['s''S']['e''E']              {CASE}
   | ['c''C']['o''O']['n''N']['s''S']
             ['t''T']['a''A']['n''N']['t''T']      {CONSTANT}
+
+  | ['d''D']['e''E']['c''C']['l''L']['a''A']
+            ['r''R']['e''E']                      {DECLARE}
   | ['e''E']['l''L']['s''S']['i''I']['f''F']      {ELSIF}
   | ['e''E']['l''L']['s''S']['e''E']              {ELSE}
   | ['e''E']['n''N']['d''D']                      {END}

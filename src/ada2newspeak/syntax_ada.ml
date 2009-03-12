@@ -202,32 +202,33 @@ and instruction_atom =
   | Loop of iteration_scheme*block              (** Loops              *)
   | Exit of expression option                   (** Loop exit          *)
   | ProcedureCall of name*expression list       (** Procedure call     *)
-(* TODO : change ProcedureCall to be able to evaluate any expression *)
+  (* TODO instruction: expression *)
   | Case of expression*(expression*block) list*block option
     (** Case .. When statement *)
+  | Block of declarative_part*block                (** "declare" block *)
 
 (** An instruction with its location *)
 and instruction = instruction_atom*location
 
 (** Subprogram declaration *)
-type sub_program_spec =
+and sub_program_spec =
   | Function  of name*param list*subtyp (** A Function returns a value *)
   | Procedure of name*(param list)      (** A Procedure does not       *)
 
 (* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)
-type array_aggregate = NamedArrayAggregate of (identifier * expression) list
+and array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
-type representation_clause =
+and representation_clause =
   | EnumerationRepresentation of identifier*array_aggregate
-type use_clause = name list
+and use_clause = name list
 
-type object_state =
+and object_state =
   | Variable
   | Constant (*constante dynamique, ou non encore evaluee*)
   | StaticVal of value (*constante statique*)
 
-type context_clause =
+and context_clause =
   | With of name*location*(spec*location) option
   | UseContext of use_clause
 

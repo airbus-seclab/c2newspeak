@@ -1756,7 +1756,6 @@ let translate compil_unit =
                     end
                 in remove_symb iterator;
                 (C.Decl (C.int_typ,iterator),loc)::res
-
            | ProcedureCall (name, args) -> begin
                let array_or_fun  = find_fun_symb name in
                  match array_or_fun with
@@ -1820,13 +1819,15 @@ let translate compil_unit =
                                                                     [])
                                             )
                                             ,loc)::(translate_block r)
+        | Block (dp, blk) ->  (C.Block ((translate_declarative_part dp
+                                      @(translate_block blk)
+                        ),None),loc)::(translate_block r)
       )
 
     | [] -> []
 
 
-  in
-  let translate_param param =
+  and translate_param param =
     let typ_cir = match param.mode with
       | In -> translate_typ (base_typ param.param_type)
       | Out -> C.Scalar(Npk.Ptr)
@@ -1843,11 +1844,11 @@ let translate compil_unit =
       List.map
         (fun name -> add_var loc param.param_type name deref ro; (name, name))
       param.formal_name
-  in
+
 
     (* prend une liste de parametres en argument
        et renvoie liste de typ *)
-  let translate_param_list param_list =
+  and translate_param_list param_list =
     (List.flatten
        (List.map translate_param param_list))
   and add_params subprog_spec loc =
@@ -1866,8 +1867,7 @@ let translate compil_unit =
       (param_names, (ret_ident, vids))
 
 
-  in
-  let translate_sub_program_spec subprog_spec =
+  and translate_sub_program_spec subprog_spec =
     let (name, param_list, return_type) =
       match subprog_spec with
         | Function(name,param_list,return_type) ->
@@ -1877,9 +1877,7 @@ let translate compil_unit =
     in let params_typ : C.typ list = translate_param_list param_list in
       (name, (params_typ, translate_subtyp_option return_type))
 
-  in
-
-  let add_fundecl subprogspec loc =
+  and add_fundecl subprogspec loc =
     let check_ident name =
      if Hashtbl.mem symbtbl name
      then
@@ -1914,21 +1912,20 @@ let translate compil_unit =
         (FunSymb (C.Fname(translate_name name), subprogspec,
                   !extern, ftyp), C.Fun, loc);
       ftyp
-  in
 
-  let translate_enum_declaration typ_decl list_val_id loc global =
+  and translate_enum_declaration typ_decl list_val_id loc global =
     List.iter
       (fun (x,id) -> add_enum loc x id
          (Declared(typ_decl, loc)) global)
-      list_val_id in
+      list_val_id
 
-  let translate_derived_typ_decl subtyp_ind loc global =
+  and translate_derived_typ_decl subtyp_ind loc global =
     match Ada_utils.extract_typ subtyp_ind with
       | Declared(Enum(_, list_val_id, _) as typ_decl,_) ->
           translate_enum_declaration typ_decl list_val_id loc global
       | _ -> ()
-  in
-  let translate_typ_declaration typ_decl loc global =
+
+  and translate_typ_declaration typ_decl loc global =
     match typ_decl with
       | Enum(_, list_val_id, _) ->
           translate_enum_declaration typ_decl list_val_id loc global
@@ -1937,10 +1934,9 @@ let translate compil_unit =
       | IntegerRange _ -> ()
       | Array _ -> ()
       | Record _ -> ()
-  in
 
   (* declarations basiques locales *)
-  let translate_basic_declaration basic loc = match basic with
+  and translate_basic_declaration basic loc = match basic with
     | ObjectDecl(idents, subtyp_ind, def, const) ->
         let defaults_record_inits subtyp id =
 
@@ -2040,8 +2036,7 @@ let translate compil_unit =
           "internal error : unexpected representation clause"
 
 
-  in
-  let translate_declarative_item (item,loc) =
+  and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
     match item with
       | BasicDecl(basic) -> translate_basic_declaration basic loc
@@ -2050,12 +2045,10 @@ let translate compil_unit =
           "Firstpass.translate_block"
             "sous-fonction, sous-procedure ou sous package non implemente"
 
-  in
-
   (* renvoie liste d'instructions (affectations par defaut)
      fonction appelee pour la partie declarative d'une fonction
      ou procedure *)
-  let translate_declarative_part decl_part =
+  and translate_declarative_part decl_part =
     let (decl, aff) =
       List.split (List.map translate_declarative_item decl_part)
     in

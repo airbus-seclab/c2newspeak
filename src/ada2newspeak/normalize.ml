@@ -1290,6 +1290,7 @@ let rec normalize_instr (instr,loc) =
                          | None -> None
                          | Some block -> Some(normalize_block block)
                       )),loc
+      | Block (dp,blk) -> Block (dp, normalize_block blk),loc
 
   and normalize_block block =
     List.map normalize_instr block

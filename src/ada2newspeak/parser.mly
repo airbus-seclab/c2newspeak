@@ -148,7 +148,7 @@
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
-%token REVERSE PRAGMA CASE VBAR OTHERS
+%token REVERSE PRAGMA CASE VBAR OTHERS DECLARE
 
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -403,8 +403,8 @@ representation_clause :
 ;
 
 instr_list :
+| instr SEMICOLON            {$1::[]}
 | instr SEMICOLON instr_list {$1::$3}
-| instr SEMICOLON {[$1]}
 ;
 
 instr :
@@ -430,6 +430,7 @@ instr :
                                                                   (fst $4),
                                                               (snd $4)),
                                                           loc()}
+| DECLARE declarative_part BEGIN instr_list END     {Block ($2,$4),loc()}
 ;
 
 case_stmt_alternative_list:
