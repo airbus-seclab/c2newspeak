@@ -250,7 +250,7 @@ and instr_to_string instr = match instr with
     ^"]"^(match default with
             | None -> ""
             | Some block -> "when others => "^(block_to_string block)
-         ) 
+         )
   | Block (decl_part,blk) -> "Declare ("^declarative_part_to_string decl_part
                           ^") {"^(block_to_string blk)^"}"
 

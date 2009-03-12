@@ -11,7 +11,7 @@ void t036.appelprocedure(void) {
 }
 
 void t036.inc(void) {
-  (t036.adb:7#74)^t036.x =(int32) belongs[-2147483648,2147483647] coerce[-2147483648,2147483647] (t036.x_int32 + 1);
+  (t036.adb:7#74)^t036.x =(int32) belongs[-2147483648,2147483647] (t036.x_int32 + 1);
 }
 
 void t036.set(int32) {
