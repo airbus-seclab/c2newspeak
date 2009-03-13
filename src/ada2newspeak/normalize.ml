@@ -1088,6 +1088,10 @@ and arraytyp_to_contrainte (typ:subtyp) (* TODO ::type*) =
       | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
                                       "Length not implemented for type /= array"
 
+and normalize_arg (a:argument) :argument =
+    match a with
+      | id,e -> id,normalize_exp e
+
 and normalize_exp exp = match exp with
   | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp,
                                         normalize_exp exp)
@@ -1097,7 +1101,7 @@ and normalize_exp exp = match exp with
   | Binary(bop, e1, e2) -> Binary(bop, normalize_exp e1,
                                   normalize_exp e2)
   | FunctionCall(nom, params) ->
-      FunctionCall(nom, List.map normalize_exp params)
+      FunctionCall(nom, List.map normalize_arg params)
 
   | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
      | "First" | "first" -> begin
@@ -1279,7 +1283,7 @@ let rec normalize_instr (instr,loc) =
       | Exit(None) -> (Exit(None), loc)
       | Exit(Some(cond)) -> (Exit(Some(normalize_exp cond)), loc)
       | ProcedureCall(nom, params) ->
-         (ProcedureCall(nom, List.map normalize_exp params), loc)
+         (ProcedureCall(nom, List.map normalize_arg params), loc)
       | Case (e, choices, default) ->
                 Case (normalize_exp e,
                       List.map (function e,block->
@@ -1290,13 +1294,13 @@ let rec normalize_instr (instr,loc) =
                          | None -> None
                          | Some block -> Some(normalize_block block)
                       )),loc
-      | Block (dp,blk) -> Block (dp, normalize_block blk),loc
+      | Block (dp,blk) -> Block (normalize_decl_part dp false,
+                                 normalize_block blk), loc
 
   and normalize_block block =
     List.map normalize_instr block
-  in
 
-  let normalize_integer_range ident taille contrainte =
+  and normalize_integer_range ident taille contrainte =
     match (taille, contrainte) with
       | (None, RangeConstraint(_)) ->
           begin
@@ -1323,9 +1327,7 @@ let rec normalize_instr (instr,loc) =
             "Ada_normalize.normalize_integer_range"
             "internal error : size or constraint already provided"
 
-  in
-
-  let interpret_enumeration_clause agregate assoc cloc loc =
+  and interpret_enumeration_clause agregate assoc cloc loc =
     Npkcontext.set_loc cloc;
     let new_rep = match agregate with
       |        NamedArrayAggregate(assoc_list) ->
@@ -1366,10 +1368,9 @@ let rec normalize_instr (instr,loc) =
     in
       Npkcontext.set_loc loc;
       new_rep
-  in
 
   (* this check is specific to Ada2Newspeak *)
-  let check_represent_clause_order ident represtbl (_,decl_line,_) =
+  and check_represent_clause_order ident represtbl (_,decl_line,_) =
     let clauses = Hashtbl.find_all represtbl ident
     in
       List.iter
@@ -1382,8 +1383,7 @@ let rec normalize_instr (instr,loc) =
                 ^ident^" after its first use"))
         clauses
 
-  in
-  let enumeration_representation ident symbs size represtbl loc =
+  and enumeration_representation ident symbs size represtbl loc =
     let (symbs, size) =
       (* this should be modified if we want to accept several
          kind of representation clause. *)
@@ -1399,11 +1399,7 @@ let rec normalize_instr (instr,loc) =
         (symbs, size)
     in Enum(ident, symbs, size)
 
-
-  in
-
-
-  let add_extern_typdecl typ_decl loc = match typ_decl with
+  and add_extern_typdecl typ_decl loc = match typ_decl with
     | Enum(ident, _, _) ->
         add_typ (normalize_extern_ident ident) typ_decl loc true true
     | DerivedType(ident, _)
@@ -1548,9 +1544,8 @@ let rec normalize_instr (instr,loc) =
     | IntegerRange(nom,_,_)
     | Array(nom, _)
     | Record (nom, _) ->  remove_subtyp (normalize_ident nom)
-  in
 
-  let normalize_sub_program_spec subprog_spec addparam =
+  and normalize_sub_program_spec subprog_spec addparam =
     let normalize_params param_list func =
       List.map
         (fun param ->
@@ -1590,8 +1585,8 @@ let rec normalize_instr (instr,loc) =
               add_function norm_name None false;
               Procedure(norm_name,
                         normalize_params param_list false)
-  in
-  let rec normalize_basic_decl item loc global reptbl = match item with
+
+  and normalize_basic_decl item loc global reptbl = match item with
     | UseDecl(use_clause) -> List.iter add_context use_clause;
         item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->

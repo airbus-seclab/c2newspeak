@@ -46,7 +46,7 @@ TESTS=t001 t002 t003 t004 t005 t006 t007 t008 t009 t010 \
       t201 t202 t203      t205 t206 t207 t208 t209 t210 \
       t211           t214      t216 t217 t218 t219 t220 \
       t221 t222 t223 t224 t225 t226 t227 t228 t229 t230 \
-      t231 t232      t234 t235 t236 t237
+      t231 t232      t234 t235 t236 t237 t238
 
 include ../common.Makefile
 

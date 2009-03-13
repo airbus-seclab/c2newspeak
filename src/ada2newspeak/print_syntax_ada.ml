@@ -32,8 +32,8 @@ open Syntax_ada
 
 let nat_to_string = Newspeak.Nat.to_string
 
-let list_to_string list to_string sep crochet =
-  match list with
+let list_to_string l to_string sep crochet =
+  match l with
     | a::r ->
         (if crochet then "[" else "")
         ^(to_string a)
@@ -162,7 +162,7 @@ and exp_to_string exp = match exp with
 
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
-      ^(list_to_string params exp_to_string "," true)^")"
+      ^(String.concat "," (List.map arg_to_string params))^")"
   | Attribute (styp,des) ->
               (subtyp_to_string styp)
             ^ "'"
@@ -241,7 +241,7 @@ and instr_to_string instr = match instr with
       ^(block_to_string block)^")"
   | ProcedureCall(nom, params) -> "ProcedureCall("
       ^(name_to_string nom)^", "
-      ^(list_to_string params exp_to_string ", " true)^")"
+      ^(String.concat "," (List.map arg_to_string params))^")"
   | Case(e,choices,default) -> "Case(("^(exp_to_string e)^"), ["
     ^ (String.concat ", "
      (List.map (function e,block ->
@@ -253,6 +253,11 @@ and instr_to_string instr = match instr with
          )
   | Block (decl_part,blk) -> "Declare ("^declarative_part_to_string decl_part
                           ^") {"^(block_to_string blk)^"}"
+
+and arg_to_string (arg:argument) :string =
+    match arg with
+      | None   , e -> exp_to_string e
+      | Some id, e -> id^" => "^(exp_to_string e)
 
 and param_to_string param =
   "{formal_name = "    ^(list_to_string param.formal_name (fun x -> x) "," true)

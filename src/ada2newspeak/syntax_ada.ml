@@ -20,6 +20,9 @@
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
 
+  Etienne Millon
+  email : etienne.millon AT gmail.com
+
 *)
 
 (** This module defines types for the abstract syntax tree. *)
@@ -149,7 +152,7 @@ and expression =
   | CChar of int                         (** Character constant       *)
   | CString of string                    (** String constant          *)
   | Var of name                          (** Variable name            *)
-  | FunctionCall of name*expression list (** Function call            *)
+  | FunctionCall of name*argument list   (** Function call            *)
   | Unary of unary_op*expression         (** A unary operator applied
                                              to another expression    *)
   | Binary of binary_op*expression*expression (** A binary operator
@@ -166,12 +169,12 @@ and contrainte =
 and subtyp_indication = subtyp*contrainte option*subtyp option
 
 (** Left-value *)
-type lval =
+and lval =
 | Lval of name                   (** Named lvalue *)
 | ArrayAccess of lval*expression (** Array access *)
 
 (** Subprogram parameter *)
-type param = {
+and param = {
         formal_name   : identifier list;   (** Formal name *)
         mode          : param_mode;        (** Mode (In, Out, or InOut) *)
         param_type    : subtyp;            (** Type *)
@@ -185,12 +188,17 @@ type param = {
 (** for I in reverse 15..10     ->  While false     *)
 (** while exp                   ->  While exp       *)
 (** for I in 4..8               ->  For I,5,8,false *)
-type iteration_scheme =
+and iteration_scheme =
   | NoScheme                       (* Forever *)
   | While of expression            (* While [expression] evaluates to [true] *)
   | For of identifier * expression * expression * bool     (* In an interval *)
 
-type block = instruction list
+and block = instruction list
+
+(** Effective argument for a function or procedure call.
+    The optional identifier is the formal name in case of
+    a named argument ("name => value") *)
+and argument = identifier option*expression
 
 (** An instruction *)
 and instruction_atom =
@@ -201,7 +209,7 @@ and instruction_atom =
   | If of expression*block*block                       (** Conditional *)
   | Loop of iteration_scheme*block              (** Loops              *)
   | Exit of expression option                   (** Loop exit          *)
-  | ProcedureCall of name*expression list       (** Procedure call     *)
+  | ProcedureCall of name*argument list         (** Procedure call     *)
   (* TODO instruction: expression *)
   | Case of expression*(expression*block) list*block option
     (** Case .. When statement *)

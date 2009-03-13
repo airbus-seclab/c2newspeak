@@ -416,8 +416,8 @@ instr :
                   }
 | procedure_array ASSIGN expression
     { let (nm, ind) = $1 in
-      let arr_or_lv = build_access nm ind in
-        (Assign ( arr_or_lv  , $3), loc())
+                    (* FIXME snd removes optional names *)
+        (Assign ( (build_access nm (List.map snd ind)) , $3), loc())
     }
 | EXIT {(Exit(None), loc() )}
 | EXIT WHEN expression {(Exit(Some($3)), loc ())}
@@ -462,13 +462,9 @@ procedure_array :
 | name args {($1, $2)}
 
 args:
-| LPAR param_assoc RPAR { $2 }
-| args LPAR param_assoc RPAR { $1@$3 } /*TO DO checkin
+| LPAR actual_parameter_part RPAR { $2 }
+| args LPAR actual_parameter_part RPAR { $1@$3 } /*TO DO checkin
                                           this case length 3 = 1*/
-param_assoc:
-| expression {[$1]}
-| expression COMMA param_assoc {$1::$3}
-
 
 iteration_scheme :
 | {(NoScheme, loc ())}
@@ -630,14 +626,14 @@ procedure_call :
 ;
 
 actual_parameter_part :
-| parameter_association {[$1]}
+| parameter_association                             {$1::[]}
 | parameter_association COMMA actual_parameter_part {$1::$3}
 ;
 
 parameter_association:
-| expression {$1}
+| expression             {None   , $1}
+| ident ARROW expression {Some $1, $3}
 ;
-
 
 ident :
 | IDENT {$1}
@@ -661,7 +657,7 @@ name :
     in (par@[ident], $3)}
 
     /* pour les tableaux */
-/*| name LPAR parameter_association RPAR {FunctionCall($1, $3)} */
+/*| name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)} */
 ;
 
 

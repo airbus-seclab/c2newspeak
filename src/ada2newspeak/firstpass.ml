@@ -364,16 +364,17 @@ let translate compil_unit =
   in
 
   (* fonction de traduction des types *)
-  let rec translate_typ typ = match typ with
-    | Integer -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
-    | Float -> C.Scalar(Npk.Float(Ada_config.size_of_float))
-    | Boolean -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
+  let rec translate_typ (typ:A.typ) :C.typ = match typ with
+    | Float      -> C.Scalar(Npk.Float(Ada_config.size_of_float))
+    | Integer    -> C.Scalar(Npk.Int(  Npk.Signed, Ada_config.size_of_int))
+    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
+    | Boolean   -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
     | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
     | Declared(typ_decl, _) -> translate_declared typ_decl
-    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
     | String -> Npkcontext.report_error "Firstpass.translate_typ"
         "String not implemented"
-  and translate_declared typ_decl = match typ_decl with
+
+  and translate_declared (typ_decl:typ_declaration) :C.typ = match typ_decl with
     | Enum(_, _, bits) -> C.Scalar(Npk.Int(bits))
     | DerivedType(_, subtyp_ind) -> translate_typ
         (Ada_utils.extract_typ subtyp_ind)
@@ -409,16 +410,17 @@ let translate compil_unit =
     | IntegerRange(_,_,None) -> Npkcontext.report_error
         "Firstpass.translate_declared"
           "internal error : no bounds provided for IntegerRange"
-  and translate_subtyp subtyp = translate_typ (base_typ subtyp)
 
-  and translate_int i = C.Const(C.CInt(i))
+  and translate_subtyp (styp:A.subtyp) :C.typ = translate_typ (base_typ styp)
+
+  and translate_int (i:Nat.t) :C.exp = C.Const(C.CInt i)
   in
 
   (* fonctions de traduction des noms*)
   (* on ajoute le nom du package courant dans le cas ou on
      etudie les declarations internes *)
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
-  let translate_name name =
+  let translate_name (name:A.name) :string =
     let tr_name = match (!extern, name) with
       | (true,_) -> name
       | (false,(_,ident)) -> (!current_package,ident)
@@ -437,10 +439,10 @@ let translate compil_unit =
 
            (* si la declaration precedente est globale, on peut
               redefinir x*)
-           | (VarSymb(_, _, global,_),_,_)
-           | (NumberSymb(_, global),_,_)
-           | (EnumSymb(_,_, global),_,_) when global -> ()
-           | (FunSymb _,_,_) -> ()
+           | (VarSymb   (_,_, true,_),_,_)
+           | (NumberSymb(_,true),_,_)
+           | (EnumSymb  (_,_,true),_,_)
+           | (FunSymb    _,_,_)              -> ()
 
            (* sinon la declaration est locale,
               cela cause une erreur *)
@@ -1086,8 +1088,10 @@ let translate compil_unit =
 
   (** Translates a function call.  *)
   and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
-                              (spec:sub_program_spec) (exp_list:expression list)
+                              (spec:sub_program_spec) (arg_list:argument list)
                               (expected_typ:typ option) :C.exp*A.typ =
+      (* FIXME : strip argument name *)
+      let arg_list = List.map snd arg_list in
       let (params, ret_t) =
           match spec with
             | Function(_,params,subtyp) ->
@@ -1098,10 +1102,10 @@ let translate compil_unit =
                   ((Print_syntax_ada.name_to_string name)
                    ^" is a procedure, function expected")
     in
-    let translate_paramater (param:A.param) (exp:A.expression) :C.exp =
+    let translate_parameter (param:A.param) (exp:A.expression) :C.exp =
         let (tr_exp, _) = translate_exp exp (Some(base_typ param.param_type)) in
             make_check_subtyp param.param_type tr_exp in
-    let tr_params = List.map2 translate_paramater params exp_list
+    let tr_params = List.map2 translate_parameter params arg_list
     in
         try (C.Call(tr_typ, fname, tr_params), ret_t)
         with
@@ -1440,7 +1444,7 @@ let translate compil_unit =
         let (tr_exp, typ) = translate_exp exp (Some(qtyp)) in
           (make_check_subtyp subtyp tr_exp, typ)
 
-    | FunctionCall(name, exp_list) ->
+    | FunctionCall(name, arg_list) ->
         (*fonction ou lecture d'un element de tableau/matrice*)
         (* let (fname, spec, tr_typ) = find_fun_symb name in *)
         let array_or_fun = find_fun_symb name in
@@ -1448,8 +1452,11 @@ let translate compil_unit =
             match array_or_fun with
                 (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->
                   translate_function_call
-                    fname tr_typ spec exp_list expected_typ
+                    fname tr_typ spec arg_list expected_typ
               | (VarSymb(lv, subtyp, _, _),_,_) ->  begin
+
+                  (* strip ids *)
+                  let arg_list = List.map snd arg_list in
 
                   let rec destroy subt = (*du plus gros vers plus petit*)
                     let styp_fom_ind ind = let (a,_,_) = ind in a in
@@ -1460,7 +1467,7 @@ let translate compil_unit =
                           let sbtypelt = styp_fom_ind sbtypelt_ind in
                           let deb = (sbtyp, sbtypelt) in
                           let fin = destroy sbtypelt in
-                            [deb]@fin
+                            deb::fin
                       | _ -> []
                   in
 
@@ -1472,9 +1479,9 @@ let translate compil_unit =
                   in
 
                   (* TODO WG  ! ajouter le belongs ! *)
-                  let rec rebuild lv subt exp_list  =
-                    let lgth  = List.length exp_list in
-                    let  last_exp = List.hd exp_list in
+                  let rec rebuild lv subt arg_list  =
+                    let lgth  = List.length arg_list in
+                    let  last_exp = List.hd arg_list in
                     let (subt_range, tpelt) = List.nth subt (lgth - 1) in
                       (* ! ajouter le belongs ! *)
 
@@ -1496,12 +1503,12 @@ let translate compil_unit =
                           )
                       else
                         let sh_lv = C.Shift (lv, chk_exp) in
-                          rebuild sh_lv subt (List.tl exp_list)
+                          rebuild sh_lv subt (List.tl arg_list)
                   in
 
                   let bk_typ = destroy subtyp in
 
-                  let dim = List.length exp_list in
+                  let dim = List.length arg_list in
 
                     if (compare (List.length bk_typ) dim < 0)
                     then Npkcontext.report_error "firstpass.ml:Function Call"
@@ -1518,13 +1525,13 @@ let translate compil_unit =
                     let dim_types = Array.to_list (
                       Array.sub  (Array.of_list types) 0 dim) in
 
-                    let tr_exp_list =
+                    let tr_arg_list =
                       List.map2 (fun x y ->
-                                   fst (translate_exp x y)) exp_list dim_types
+                                   fst (translate_exp x y)) arg_list dim_types
                     in
 
                       (*                     translate_exp exp expected_typ*)
-                      match (rebuild lv bk_typ tr_exp_list) with
+                      match (rebuild lv bk_typ tr_arg_list) with
                           (C.Lval (a, tpelt), adatyp) ->
                             (C.Lval (a, tpelt),  adatyp)
                         | _ ->  Npkcontext.report_error "firstpass:FCall"
@@ -1755,6 +1762,7 @@ let translate compil_unit =
                 in remove_symb iterator;
                 (C.Decl (C.int_typ,iterator),loc)::res
            | ProcedureCall (name, args) -> begin
+               let args = List.map snd args in (* FIXME : removed id list *)
                let array_or_fun  = find_fun_symb name in
                  match array_or_fun with
                      (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->
@@ -1817,13 +1825,14 @@ let translate compil_unit =
                                                                     [])
                                             )
                                             ,loc)::(translate_block r)
-        | Block (dp, blk) ->  (C.Block ((translate_declarative_part dp
-                                      @(translate_block blk)
-                        ),None),loc)::(translate_block r)
+        | Block (dp, blk) ->
+                          (* t_dp has side effects : must be done first *)
+                         let t_dp = translate_declarative_part dp in
+                          (C.Block ((t_dp@(translate_block blk)),
+                            None),loc)::(translate_block r)
       )
 
     | [] -> []
-
 
   and translate_param param =
     let typ_cir = match param.mode with
