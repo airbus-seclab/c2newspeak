@@ -1826,10 +1826,12 @@ let translate compil_unit =
                                             )
                                             ,loc)::(translate_block r)
         | Block (dp, blk) ->
-                          (* t_dp has side effects : must be done first *)
+                          (* xlt and remove_dp has side effects :
+                             they must be done in this order *)
                          let t_dp = translate_declarative_part dp in
-                          (C.Block ((t_dp@(translate_block blk)),
-                            None),loc)::(translate_block r)
+                         let res = (C.Block ((t_dp@(translate_block blk)),
+                                        None),loc)
+                         in remove_declarative_part dp; res::(translate_block r)
       )
 
     | [] -> []
@@ -2062,11 +2064,8 @@ let translate compil_unit =
     let list_decl = List.flatten decl
     and list_aff = List.flatten aff
     in list_decl@list_aff
-  in
 
-
-
-  let remove_basic_declaration basic = match basic with
+  and remove_basic_declaration basic = match basic with
     | ObjectDecl(idents, _, _, _) ->
         List.iter
           (fun x -> ignore (remove_symb x))
@@ -2091,18 +2090,16 @@ let translate compil_unit =
           "Firstpass.remove_basic_declaration"
           "internal error : unexpected representation clause"
 
-  in
-
-  let remove_declarative_item (item,_) = match item with
+  and remove_declarative_item (item,_) = match item with
     | BasicDecl(basic) -> remove_basic_declaration basic
-    | BodyDecl(_) -> () in
+    | BodyDecl(_) -> ()
 
 
-  let remove_declarative_part decl_part =
-    List.iter remove_declarative_item decl_part in
+  and remove_declarative_part decl_part =
+    List.iter remove_declarative_item decl_part
 
 
-  let add_funbody subprogspec decl_part block loc =
+  and add_funbody subprogspec decl_part block loc =
     let search_spec name =
       let list_ident = Hashtbl.find_all symbtbl name in
         try
