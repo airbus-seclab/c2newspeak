@@ -141,7 +141,7 @@ val cast: (exp * typ) -> typ -> exp
 
 val string_of_typ: typ -> string
 
-val size_of: typ -> int
+val size_of_typ: typ -> int
 
 val is_subtyp: typ -> typ -> bool
 
@@ -160,3 +160,5 @@ val scalar_of_typ: typ -> scalar_t
 val remove_fst_deref: lv -> exp
 
 val print: t -> unit
+
+val size_of: t -> int

@@ -383,7 +383,7 @@ let translate compil_unit =
         C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
     | Record (_, flds) -> begin
         let ind_to_typ st = translate_subtyp (Ada_utils.extract_subtyp st) in
-        let size_of st = C.size_of (ind_to_typ st) in
+        let size_of st = C.size_of_typ (ind_to_typ st) in
         let next_aligned o x =
           let m = o mod x in
             if m = 0 then o else o + (x - m)
@@ -855,7 +855,7 @@ let translate compil_unit =
                   Unconstrained(Declared( Array(_,
                     ConstrainedArray(( stypindex, contraint,_ ),
                                      ( stypelt,_,_),  _)), _)) ->
-                    let size_base =  C.exp_of_int (C.size_of (
+                    let size_base =  C.exp_of_int (C.size_of_typ (
                                 (translate_typ (base_typ stypelt)))
                                                              )
                     in
@@ -1488,7 +1488,7 @@ let translate compil_unit =
                     let chk_exp = make_check_subtyp subt_range last_exp
                     in
                     let sz =  C.exp_of_int (
-                      C.size_of ((translate_typ (base_typ tpelt)))) in
+                      C.size_of_typ ((translate_typ (base_typ tpelt)))) in
 
                     let offset = make_offset subt_range chk_exp sz in
 
@@ -1936,9 +1936,9 @@ let translate compil_unit =
 
   and translate_typ_declaration typ_decl loc global =
     match typ_decl with
-      | Enum(_, list_val_id, _) ->
+      | Enum (_, list_val_id, _) ->
           translate_enum_declaration typ_decl list_val_id loc global
-      | DerivedType(_, ref_subtyp_ind) ->
+      | DerivedType (_, ref_subtyp_ind) ->
           translate_derived_typ_decl ref_subtyp_ind loc global
       | IntegerRange _ -> ()
       | Array _ -> ()
@@ -1952,8 +1952,8 @@ let translate compil_unit =
           let res = ref [] in (*by default affectations*)
           let o = ref 0 in
           let last_align = ref 1 in
-          let size_of st = C.size_of (translate_subtyp (
-                        Ada_utils.extract_subtyp st))
+          let size_of st = 
+	    C.size_of_typ (translate_subtyp (Ada_utils.extract_subtyp st))
           in
           let next_aligned o x =
             let m = o mod x in

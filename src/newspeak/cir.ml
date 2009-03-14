@@ -226,20 +226,23 @@ let exp_of_float x = Const (CFloat (x, string_of_float x))
 
 (* TODO: this is a temporary hack, remove this function and align_of 
    put in csyntax *)
-let rec size_of t =
+let rec size_of_typ t =
   match t with
       Scalar t -> Newspeak.size_of_scalar Config.size_of_ptr t
     | Array (t, Some n) -> 
-	let sz = (size_of t) in
-	  if n > max_int / sz 
-	  then Npkcontext.report_error "Cir.size_of" "invalid size for array";
+	let sz = (size_of_typ t) in
+	  if n > max_int / sz then begin
+	    Npkcontext.report_error "Cir.size_of_typ" 
+	      "invalid size for array"
+	  end;
 	  sz * n
     | Struct (_, n) | Union (_, n) -> n
     | Fun -> 
-	Npkcontext.report_error "Csyntax.size_of" "unknown size of function"
+	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of function"
     | Array _ -> 
-	Npkcontext.report_error "Csyntax.size_of" "unknown size of array"
-    | Void -> Npkcontext.report_error "Csyntax.size_of" "unknown size of void"
+	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of array"
+    | Void -> 
+	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of void"
 
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
@@ -724,3 +727,30 @@ let rec remove_fst_deref lv =
     | Deref (e, _) -> e
     | _ -> 
 	Npkcontext.report_error "Cir.remove_fst_deref" "pointer deref expected"
+
+
+let rec size_of_blk x = List_utils.size_of size_of_stmt x
+
+and size_of_stmt (x, _) = 
+  match x with
+      Block (body, None) -> 1 + (size_of_blk body)
+    | Block (body, Some (_, action)) -> 
+	1 + (size_of_blk body) + (size_of_blk action)
+    | Loop body -> 1 + (size_of_blk body)
+    | If (_, br1, br2) -> 1 + (size_of_blk br1) + (size_of_blk br2)
+    | Switch (_, cases, default) -> 
+	1 + (List_utils.size_of size_of_case cases) + size_of_blk default
+    | _ -> 1
+
+and size_of_case (_, body) = size_of_blk body
+
+let size_of_fundef (_, _, (_, body)) = size_of_blk body
+
+let size_of (globals, fundefs, specs) =
+  let res = ref 0 in
+  let add x = res := !res + x in
+    Hashtbl.iter (fun _ _ -> add 1) globals;
+    Hashtbl.iter (fun _ x -> add (size_of_fundef x)) fundefs;
+    add (List.length specs);
+    !res
+

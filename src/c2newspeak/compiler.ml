@@ -60,6 +60,7 @@ let append_gnu_symbols globals =
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
   let (fnames, (globals, spec)) = parse fname in
+    Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of (globals, spec));
     let globals = 
       if !Npkcontext.accept_gnuc then append_gnu_symbols globals else globals
@@ -81,9 +82,11 @@ let compile fname =
 	let prog = Firstpass.translate (globals, spec) in
 	  Npkcontext.forget_loc ();
 	  Npkcontext.print_debug "First pass done.";
+	  Npkcontext.print_size (Cir.size_of prog);
 	  if !Npkcontext.verb_cir then Cir.print prog;
 	  Npkcontext.print_debug ("Translating "^fname^"...");
 	  let tr_prog = Cir2npkil.translate prog fnames in
+	    Npkcontext.forget_loc ();
 	    Npkcontext.print_debug ("Translation done.");
 	    Npkcontext.forget_loc ();
 	    tr_prog

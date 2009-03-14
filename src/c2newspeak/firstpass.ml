@@ -1275,7 +1275,7 @@ let translate (globals, spec) =
 	  Npkcontext.report_error "Csyntax.translate_unop" 
 	    "Unexpected unary operator and argument"
 
-  and size_of t = C.size_of (translate_typ t)
+  and size_of t = C.size_of_typ (translate_typ t)
 
   and align_of t =
     match t with

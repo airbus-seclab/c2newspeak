@@ -104,7 +104,7 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
       | Deref (e, t) ->
 	  let e = translate_exp e in
-	  let sz = size_of t in
+	  let sz = size_of_typ t in
 	    K.Deref (e, sz)
 
       | BlkLv _ ->
@@ -122,13 +122,13 @@ let translate (cglbdecls, cfundefs, specs) fnames =
 
       | AddrOf (lv, Array (elt_t, len)) ->
 (* TODO: put use of length_of_array in firstpass!!! *)
-	  let sz = K.Mult (length_of_array len lv, size_of elt_t) in
+	  let sz = K.Mult (length_of_array len lv, size_of_typ elt_t) in
 	  let lv = translate_lv lv in
 	    K.AddrOf (lv, sz)
 
       | AddrOf (lv, t) ->
 	  let lv = translate_lv lv in
-	  let sz = Nat.of_int (size_of t) in
+	  let sz = Nat.of_int (size_of_typ t) in
 	    K.AddrOf (lv, K.Known sz)
 
       | Unop (K.Not, e) -> K.negate (translate_exp e)
