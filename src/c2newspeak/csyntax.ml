@@ -25,7 +25,7 @@
 
 open Newspeak
 
-type prog = (global * location) list * assertion list
+type t = (global * location) list * assertion list
 
 and assertion = spec_token list
 
@@ -449,4 +449,30 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
 	"different return types for function"
     end;
     (args_t, ret_t1)  
-     
+
+
+let rec size_of (globals, specs) = 
+  let globals = List_utils.size_of size_of_global globals in
+  let specs = List.length specs in
+    globals + specs
+
+and size_of_global (x, _) =
+  match x with
+      FunctionDef (_, _, _, body) -> (size_of_blk body) + 1
+    | _ -> 1
+
+and size_of_blk x = List_utils.size_of size_of_stmt x
+
+and size_of_stmt (x, _) =
+  match x with
+      If (_, br1, br2) -> (size_of_blk br1) + (size_of_blk br2) + 1
+    | CSwitch (_, cases, default) -> 
+	1 + (List_utils.size_of size_of_case cases) + (size_of_blk default)
+    | For (init, _, body, final) -> 
+	1 + (size_of_blk init) + (size_of_blk body) + (size_of_blk final)
+    | DoWhile (body, _) -> 1 + (size_of_blk body)
+    | Block body -> 1 + (size_of_blk body)
+    | _ -> 1
+
+and size_of_case (_, body, _) = size_of_blk body
+

@@ -24,7 +24,7 @@
 *)
 open Newspeak
 
-type prog = ((global * location) list * assertion list)
+type t = ((global * location) list * assertion list)
 
 and assertion = spec_token list
 
@@ -172,7 +172,10 @@ val ftyp_of_typ: typ -> ftyp
 
 val min_ftyp: ftyp -> ftyp -> ftyp
 
-val print: prog -> unit
+val print: t -> unit
 
 val array_of_typ: typ -> (typ * exp option)
 
+(** [size_of prog] counts the number of global definitions and the number
+    of instructions in program prog. *)
+val size_of: t -> int

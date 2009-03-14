@@ -140,3 +140,7 @@ val use_cil: bool ref
 
 (** Name of the printer to use to output CIL syntactic elements *)
 val cil_printer: string ref
+
+(** [print_size sz] displays [sz] as the current size of the representation 
+    in debug mode. *)
+val print_size: int -> unit

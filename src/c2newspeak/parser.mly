@@ -213,7 +213,7 @@ let rec normalize_bexp e =
 %token <int> CHARACTER
 %token <string * char option> FLOATCST
 
-%type <string list * Csyntax.prog> parse
+%type <string list * Csyntax.t> parse
 %start parse
 
 %type <(Csyntax.exp * Csyntax.exp) list> config

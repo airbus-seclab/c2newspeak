@@ -49,3 +49,11 @@ let mapi f l =
       | [] -> []
   in
     mapi 0 l
+
+let size_of size_of_elem l =
+  let rec size_of l =
+    match l with
+	hd::tl -> (size_of_elem hd) + (size_of tl)
+      | [] -> 0
+  in
+    size_of l

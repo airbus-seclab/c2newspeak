@@ -29,3 +29,5 @@ val to_string: ('a -> string) -> string -> 'a list -> string
 val merge: ('a -> 'a -> int) -> 'a list -> 'a list -> 'a list
 
 val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
+
+val size_of: ('a -> int) -> 'a list -> int

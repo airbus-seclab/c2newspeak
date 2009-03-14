@@ -306,6 +306,8 @@ let print_debug msg =
   if !verb_debug then 
     prerr_endline ("Debug: "^(string_of_loc !cur_loc)^msg)
 
+let print_size sz = print_debug ("Current size: "^(string_of_int sz))
+
 let report_error where msg = invalid_arg (string_of_error where msg)
 
 let exit_on_error msg =
