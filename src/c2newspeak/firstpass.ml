@@ -1028,8 +1028,17 @@ let translate (globals, spec) =
 
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
-      | DoWhile (body, e) ->
-	  let for' = For(body, e, body, []) in translate_stmt (for', loc)
+      | DoWhile (body, e) when !Npkcontext.remove_do_loops ->
+	  (* carefull: this transformation duplicates code and has an 
+	     exponential behavior in the imbrication depths of do loops *)
+	  let loop = For (body, e, body, []) in 
+	    translate_stmt (loop, loc)
+
+      | DoWhile (body, e) -> 
+	  let body = translate_blk body in
+	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
+	  let body = (C.Block (body@guard, Some (cnt_lbl, [])), loc)::[] in
+	    (C.Block ((C.Loop body, loc)::[], Some (brk_lbl, [])), loc)::[]
 
       | For (init, e, body, suffix) ->
 	  let init = (C.Block (translate_blk init, Some (cnt_lbl, [])), loc) in

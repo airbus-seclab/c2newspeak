@@ -58,6 +58,7 @@ let global_zero_init = ref true
 let accept_dirty_cast = ref false
 let ignores_pragmas = ref false
 let remove_temp = ref true
+let remove_do_loops = ref false
 let accept_extern = ref false
 let accept_flex_array = ref false
 
@@ -214,6 +215,11 @@ let argslist = [
 
   ("--disable-vars-elimination", Arg.Clear remove_temp,
    "does not remove unused variables\n");
+
+  ("--remove-do-loops", Arg.Set remove_do_loops,
+   "transforms do loops into while loops, by unrolling their body once. "
+   ^"Carefull: this transformation is exponential in the imbrication "
+   ^"depth of do loops\n");
 
   (opt_of_error Pragma, Arg.Set (flag_of_error Pragma),
    "ignores any #pragma directive");
