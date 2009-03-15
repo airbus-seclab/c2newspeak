@@ -272,7 +272,14 @@ let string_of_unop op =
 let rec string_of_typ margin t =
   match t with
       Void -> "void"
-    | Int _ -> "int??"
+    | Int (sgn, sz) -> 
+	let sgn = 
+	  match sgn with
+	      Unsigned -> "unsigned "
+	    | Signed -> ""
+	in
+	let sz = string_of_int sz in
+	  sgn^"int"^sz
     | Ptr t -> "*"^(string_of_typ margin t)
     | Array (t, None) -> (string_of_typ margin t)^"[?]"
     | Array (t, Some x) -> (string_of_typ margin t)^"["^(string_of_exp margin x)^"]"
@@ -321,7 +328,7 @@ and string_of_stmt margin (x, _) =
 	
     | Label lbl -> lbl^": "
 
-    | VDecl (x, _, _, _, _) -> "typ "^x^";"	
+    | VDecl (x, t, _, _, _) -> (string_of_typ margin t)^" "^x^";"	
 	
     | CDecl (x, _, _) -> "ctyp "^x^";"
 	
@@ -394,9 +401,6 @@ let ftyp_of_typ t =
 	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
 
 let string_of_typ = string_of_typ ""
-let string_of_ftyp = string_of_ftyp ""
-let string_of_exp = string_of_exp ""
-let string_of_blk = string_of_blk ""
 
 let string_of_fname (args_t, ret_t) name = 
   let string_of_arg_t (t,  _) = string_of_typ t in
@@ -414,7 +418,7 @@ let print prog =
     match g with 
 	FunctionDef (name, t, b, blk) ->
 	  let b = if b then "static" else "" in
-	  let blk = string_of_blk blk in
+	  let blk = string_of_blk "  " blk in
 	  let name = string_of_fname t name in
 	    s := !s ^ b ^ name ^ " {\n" ^ blk ^"}"
 
@@ -425,6 +429,10 @@ let print prog =
   let (prog, _) = prog in
     List.iter print prog;
     print_endline !s
+
+let string_of_ftyp = string_of_ftyp ""
+let string_of_exp = string_of_exp ""
+let string_of_blk = string_of_blk ""
 
 let array_of_typ t =
   match t with
