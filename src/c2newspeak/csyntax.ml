@@ -250,7 +250,7 @@ let float_cst_of_lexeme (value, suffix) =
 
 let string_of_binop op =
   match op with
-      Plus -> ""
+      Plus -> "+"
     | Minus -> "-"
     | Mult -> "*"
     | Div -> "/"
@@ -265,8 +265,8 @@ let string_of_binop op =
 
 let string_of_unop op =
   match op with
-      Not -> "Not"
-    | Neg -> "Neg"
+      Not -> "!"
+    | Neg -> "-"
     | BNot -> "BNot"
 
 let rec string_of_typ margin t =
@@ -300,10 +300,12 @@ and string_of_exp margin e =
 	"("^(string_of_exp margin e1)^")["^(string_of_exp margin e2)^"]"
     | Deref e -> "*("^(string_of_exp margin e)^")"
     | AddrOf _ -> "AddrOf"
-    | Unop (op, e) -> "("^(string_of_unop op)^" "^(string_of_exp margin e)^")"
+    | Unop (op, e) -> (string_of_unop op)^"("^(string_of_exp margin e)^")"
     | IfExp (e1, e2, e3) -> 
-	"IfExp("^(string_of_exp margin e1)^","
-	^(string_of_exp margin e2)^","^(string_of_exp margin e3)^")"
+	let e1 = string_of_exp margin e1 in
+	let e2 = string_of_exp margin e2 in
+	let e3 = string_of_exp margin e3 in
+	  "("^e1^") ? ("^e2^") : ("^e3^")"
     | Binop (op, e1, e2) -> 
 	(string_of_exp margin e1) ^" "^(string_of_binop op)^" "
 	^(string_of_exp margin e2)
