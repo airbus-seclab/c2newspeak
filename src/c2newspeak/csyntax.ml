@@ -324,7 +324,7 @@ and string_of_exp margin e =
 and string_of_stmt margin (x, _) =
   match x with
       Block blk ->
-	"{\n"^(string_of_blk (margin^"  ") blk)^"}"
+	"{\n"^(string_of_blk (margin^"  ") blk)^margin^"}"
 	  
     | Goto lbl -> "goto "^lbl^";"
 	
@@ -337,7 +337,7 @@ and string_of_stmt margin (x, _) =
     | EDecl (x, _) -> "etyp "^x^";"
 	
     | If (e, blk1, blk2) -> 
-	"if "^(string_of_exp margin e)^" {\n"
+	"if ("^(string_of_exp margin e)^") {\n"
 	^(string_of_blk (margin^"  ") blk1)
 	^margin^"} else {\n"
 	^(string_of_blk (margin^"  ") blk2)
