@@ -1348,17 +1348,13 @@ let translate (globals, spec) =
   let collect_funtyps (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (f, Fun (args_t, ret_t), static, _) ->
+	FunctionDef (f, (args_t, ret_t), static, _) ->
 	  let args_t = 
 	    match args_t with
 		None -> []
 	      | Some args_t -> args_t
 	  in
 	    update_funsymb f static (Some args_t, ret_t) loc
-
-      | FunctionDef _ -> 
-	  Npkcontext.report_error "Firstpass.translate_global" 
-	    "function type expected"
 
       | GlbVDecl (f, Fun ft, static, _, None) -> 
 	  translate_proto_ftyp f static ft loc

@@ -132,6 +132,7 @@ let build_fundef static ((b, m), body) =
 	  Npkcontext.report_error "Firstpass.translate_global" 
 	    "unknown function name"
   in
+  let t = Csyntax.ftyp_of_typ t in
     (FunctionDef (x, t, static, body), loc)::[]
 
 let build_type_decl d =

@@ -37,7 +37,7 @@ and spec_token =
       
 and global = 
     (* true if static *)
-  | FunctionDef of (string * typ * bool * blk)
+  | FunctionDef of (string * ftyp * bool * blk)
       (* true for extern *)
   | GlbVDecl of vardecl
       (* enum declaration *)
@@ -393,16 +393,30 @@ let ftyp_of_typ t =
     | _ -> 
 	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
 
+let string_of_typ = string_of_typ ""
+let string_of_ftyp = string_of_ftyp ""
+let string_of_exp = string_of_exp ""
+let string_of_blk = string_of_blk ""
 
+let string_of_fname (args_t, ret_t) name = 
+  let string_of_arg_t (t,  _) = string_of_typ t in
+  let args_t = 
+    match args_t with
+	None -> ""
+      | Some args_t -> List_utils.to_string string_of_arg_t ", " args_t
+  in
+  let ret_t = string_of_typ ret_t in
+    ret_t^" "^name^"("^args_t^")"
 
 let print prog =
   let s = ref "" in
   let print (g, _) =
     match g with 
-	FunctionDef (name, _, b, blk) ->
+	FunctionDef (name, t, b, blk) ->
 	  let b = if b then "static" else "" in
-	  let blk = string_of_blk "" blk in
-	  s := !s ^ b ^ name ^ "{\n" ^ blk ^"\n}"
+	  let blk = string_of_blk blk in
+	  let name = string_of_fname t name in
+	    s := !s ^ b ^ name ^ " {\n" ^ blk ^"}"
 
       | GlbVDecl (x, _, _, _, _) -> s:= !s ^ ("typ "^x^";\n")
       | GlbEDecl (x, _) -> s:= !s ^("etyp " ^x^";\n")
@@ -411,12 +425,6 @@ let print prog =
   let (prog, _) = prog in
     List.iter print prog;
     print_endline !s
-
-let string_of_typ = string_of_typ ""
-let string_of_ftyp = string_of_ftyp ""
-let string_of_exp = string_of_exp ""
-let string_of_blk = string_of_blk ""
-
 
 let array_of_typ t =
   match t with

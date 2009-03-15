@@ -36,7 +36,7 @@ and spec_token =
 
 and global =
     (* true if static *)
-  | FunctionDef of (string * typ * bool * blk)
+  | FunctionDef of (string * ftyp * bool * blk)
   | GlbVDecl of vardecl
   | GlbEDecl of enumdecl
 (* struct or union: composite *)
