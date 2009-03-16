@@ -1677,12 +1677,11 @@ let translate compil_unit =
     in make_affect tr_lv tr_exp subtyp_lv loc
 
   and translate_block block = match block with
+    | [] -> []
     | (instr,loc)::r ->
         (Npkcontext.set_loc loc;
          match instr with
            | NullInstr -> (translate_block r)
-           | Assign(lv,exp) ->
-               (translate_affect lv exp loc)::(translate_block r)
            | Return(exp) ->
                translate_block (* WG Lval for Array diff*)
                  ((Assign(Lval (ident_to_name ret_ident),exp),loc)
@@ -1700,6 +1699,20 @@ let translate compil_unit =
                        translate_block r
              in
                  (C.Goto ret_lbl, loc)::tr_reste
+           | Exit(Some(cond)) ->
+               translate_block
+                 ((If(cond, [(Exit(None), loc)], []), loc)::r)
+
+           | Exit(None) ->
+               (C.Goto brk_lbl, loc)
+               ::(translate_block r)
+
+           | Loop(While(cond), body) ->
+               translate_block
+                 ((Loop(NoScheme,(Exit(Some(Unary(Not,cond))),loc)::body),
+                   loc)::r)
+           | Assign(lv,exp) ->
+               (translate_affect lv exp loc)::(translate_block r)
            | If(condition,instr_then,instr_else) ->
                let (tr_exp,typ) =
                  translate_exp condition (Some(Boolean))
@@ -1716,18 +1729,6 @@ let translate compil_unit =
                         "Firstpass.translate_block"
                           "expected a boolean type for condition")
 
-           | Exit(Some(cond)) ->
-               translate_block
-                 ((If(cond, [(Exit(None), loc)], []), loc)::r)
-
-           | Exit(None) ->
-               (C.Goto brk_lbl, loc)
-               ::(translate_block r)
-
-           | Loop(While(cond), body) ->
-               translate_block
-                 ((Loop(NoScheme,(Exit(Some(Unary(Not,cond))),loc)::body),
-                   loc)::r)
 
            | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
@@ -1760,7 +1761,7 @@ let translate compil_unit =
  (* }                 *)   )),loc])
                     end
                 in remove_symb iterator;
-                (C.Decl (C.int_typ,iterator),loc)::res
+                (C.Decl (C.int_typ,iterator),loc)::res@(translate_block r)
            | ProcedureCall (name, args) -> begin
                let args = List.map snd args in (* FIXME : removed id list *)
                let array_or_fun  = find_fun_symb name in
@@ -1810,7 +1811,7 @@ let translate compil_unit =
                  "find_fun_symb did not expect this (maybe array) as an instr! "
              end
 
-       | Case (e, choices, default) -> (C.Switch(fst(translate_exp e None),
+           | Case (e, choices, default) -> (C.Switch(fst(translate_exp e None),
                             (* Choices *) (List.map (function exp,block ->
                                               let (value,typ) =
                                                   translate_exp exp None
@@ -1825,16 +1826,14 @@ let translate compil_unit =
                                                                     [])
                                             )
                                             ,loc)::(translate_block r)
-        | Block (dp, blk) ->
+            | Block (dp, blk) ->
                           (* xlt and remove_dp has side effects :
                              they must be done in this order *)
                          let t_dp = translate_declarative_part dp in
                          let res = (C.Block ((t_dp@(translate_block blk)),
                                         None),loc)
                          in remove_declarative_part dp; res::(translate_block r)
-      )
-
-    | [] -> []
+            )
 
   and translate_param param =
     let typ_cir = match param.mode with
