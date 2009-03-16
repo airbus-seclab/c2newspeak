@@ -280,10 +280,6 @@ and npk_spec = parse
   | float               { FLOATCST (value, suffix) }
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 
-  | '$' ([^'$']* as content) 
-    '$'                 { let lexbuf = Lexing.from_string content in
-			    EXP (Parser.expression token lexbuf) }
-
   | "*/"                { EOF }
   | white_space         { npk_spec lexbuf }
   | new_line            { cnt_line lexbuf; npk_spec lexbuf }

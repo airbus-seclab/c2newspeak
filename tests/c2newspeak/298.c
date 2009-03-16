@@ -25,7 +25,7 @@
 
 int x;
 
-/*!npk my own random.assertion($x$) */
+/*!npk my own random.assertion(x) */
 
 void main() {
 }

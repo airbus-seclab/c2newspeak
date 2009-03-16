@@ -1069,10 +1069,12 @@ let translate (globals, spec) =
   and translate_token x =
     match x with
 	SymbolToken x -> C.SymbolToken x
-      | LvalToken lv -> 
-	  let (lv, _) = translate_lv lv in
-	    C.LvalToken lv
-      | IdentToken x -> C.IdentToken x
+      | IdentToken x -> begin
+	  try 
+	    let (lv, _) = find_var x in
+	      C.LvalToken lv
+	  with _ -> C.IdentToken x
+	end
 (* TODO: not good, do this in compile phase *)
       | CstToken (c, _) -> C.CstToken c
 

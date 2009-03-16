@@ -204,7 +204,6 @@ let rec normalize_bexp e =
 %token EOF
 
 %token <Csyntax.assertion> NPK
-%token <Csyntax.exp> EXP
 %token <char> SYMBOL
 
 %token <string> IDENTIFIER
@@ -1062,7 +1061,6 @@ memory_region:
 assertion:
   SYMBOL assertion                         { (SymbolToken $1)::$2 }
 | IDENTIFIER assertion                     { (IdentToken $1)::$2 }
-| EXP assertion                            { (LvalToken $1)::$2 }
 | constant assertion                       { (CstToken $1)::$2 }
 |                                          { [] }
 ;;

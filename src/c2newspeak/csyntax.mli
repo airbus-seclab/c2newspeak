@@ -31,7 +31,6 @@ and assertion = spec_token list
 and spec_token = 
     | SymbolToken of char
     | IdentToken of string
-    | LvalToken of exp
     | CstToken of cst
 
 and global =

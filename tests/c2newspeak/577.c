@@ -25,6 +25,6 @@
 
 void main() {
   int x;
-  /*!npk assume($x$ == 0); */
+  /*!npk assume(x == 0); */
   x = 1;
 }
