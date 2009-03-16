@@ -1125,10 +1125,9 @@ let translate compil_unit =
      * FIXME design : can remove pos as a parameter ?
      *)
     let rec extract_positional_parameters (ar :argument list)
-                                          (pos:A.expression list)
         :A.expression list = 
         (match ar with
-          |             []   -> pos
+          |             []   -> []
           | (Some id, e)::tl ->(* don't stop at first named argument :
                                 * populate argtbl *)
                                 if (Hashtbl.mem argtbl id) then
@@ -1136,9 +1135,9 @@ let translate compil_unit =
                                     ("Parameter "^id^" specified twice")
                                 else begin
                                     Hashtbl.add argtbl id e;
-                                    extract_positional_parameters tl pos
+                                    extract_positional_parameters tl
                                 end
-          | (None   , e)::tl -> extract_positional_parameters tl (e::pos)
+          | (None   , e)::tl -> e::(extract_positional_parameters tl)
         )
 
     (**
@@ -1178,7 +1177,7 @@ let translate compil_unit =
 
     in  
         (* Step 1... *)
-        let pos      = extract_positional_parameters args [] in
+        let pos      = extract_positional_parameters args in
         (* Step 2... *)
         let eff_args = merge_with_specification pos spec in
         (* We don't need the ids anymore *)
@@ -1188,8 +1187,6 @@ let translate compil_unit =
   and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
                               (spec:sub_program_spec) (arg_list:argument list)
                               (expected_typ:typ option) :C.exp*A.typ =
-      ignore (make_arg_list [] []); (* FIXME : strip argument name *)
-      let arg_list = List.map snd arg_list in
       let (params, ret_t) =
           match spec with
             | Function(_,params,subtyp) ->
@@ -1200,6 +1197,7 @@ let translate compil_unit =
                   ((Print_syntax_ada.name_to_string name)
                    ^" is a procedure, function expected")
     in
+    let arg_list = make_arg_list arg_list params in
     let translate_parameter (param:A.param) (exp:A.expression) :C.exp =
         let (tr_exp, _) = translate_exp exp (Some(base_typ param.param_type)) in
             make_check_subtyp param.param_type tr_exp in
@@ -1553,7 +1551,7 @@ let translate compil_unit =
                     fname tr_typ spec arg_list expected_typ
               | (VarSymb(lv, subtyp, _, _),_,_) ->  begin
 
-                  (* strip ids *)
+                  (* array : strip ids *)
                   let arg_list = List.map snd arg_list in
 
                   let rec destroy subt = (*du plus gros vers plus petit*)
@@ -1576,7 +1574,7 @@ let translate compil_unit =
                                           " for array range TO DO "
                   in
 
-                  (* TODO WG  ! ajouter le belongs ! *)
+                  (* TODO WG ! ajouter le belongs ! *)
                   let rec rebuild lv subt arg_list  =
                     let lgth  = List.length arg_list in
                     let  last_exp = List.hd arg_list in
@@ -1861,7 +1859,6 @@ let translate compil_unit =
                 in remove_symb iterator;
                 (C.Decl (C.int_typ,iterator),loc)::res@(translate_block r)
            | ProcedureCall (name, args) -> begin
-               let args = List.map snd args in (* FIXME : removed id list *)
                let array_or_fun  = find_fun_symb name in
                  match array_or_fun with
                      (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->
@@ -1893,14 +1890,8 @@ let translate compil_unit =
                                        ("actual for out parameter"
                                         ^"must be a variable")
                        in
-                       let tr_params =
-                         if (List.length params <> List.length args)
-                         then Npkcontext.report_error "Firstpass.instr"
-                                               "wrong number of arguments"
-                         else
-                           List.map2
-                             tr_param
-                             params args
+                       let arg_list = make_arg_list args params in
+                       let tr_params = List.map2 tr_param params arg_list
                        in
                          (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
                           ::(translate_block r)
