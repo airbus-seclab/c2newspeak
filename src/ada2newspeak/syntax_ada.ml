@@ -170,14 +170,14 @@ and subtyp_indication = subtyp*contrainte option*subtyp option
 
 (** Left-value *)
 and lval =
-| Lval of name                   (** Named lvalue *)
-| ArrayAccess of lval*expression (** Array access *)
+  | Lval of name                   (** Named lvalue *)
+  | ArrayAccess of lval*expression (** Array access *)
 
 (** Subprogram parameter *)
 and param = {
-        formal_name   : identifier;        (** Formal name *)
+        formal_name   : identifier;        (** Formal name              *)
         mode          : param_mode;        (** Mode (In, Out, or InOut) *)
-        param_type    : subtyp;            (** Type *)
+        param_type    : subtyp;            (** Type                     *)
         default_value : expression option; (** Default value (optional) *)
 }
 

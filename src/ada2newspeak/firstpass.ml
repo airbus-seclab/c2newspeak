@@ -1109,32 +1109,80 @@ let translate compil_unit =
      *
      * @param args the name => value association list
      * @param spec the function specification (holding default values, etc)
-     * @return a list of C expressions which are the actual parameters.
+     * @return a list of expressions which are the actual parameters.
      *)
-  and make_arg_list (args:argument list) (spec:param list) :C.exp list =
+  and make_arg_list (args:argument list) (spec:param list) :A.expression list =
+    let argtbl:(identifier,A.expression) Hashtbl.t = Hashtbl.create 5 in
 
     (**
-     * Split the list between named and positional parameters. Non-leading
-     * positional parameters, if any, remain in the "positional" list and
-     * will lead to errors.
+     * Step 1 : extract positional parameters. Named parameters go into the
+     * argtbl hashtable.
      *
-     * The returned lists are in the following order : positional, named.
+     * TODO Non-leading positional parameters, if any, remain in the "positional"
+     * list and will lead to errors.
+     *
+     * /!\ Side-effects : this function references the argtbl variable.
+     * FIXME design : can remove pos as a parameter ?
      *)
     let rec extract_positional_parameters (ar :argument list)
                                           (pos:A.expression list)
-        :(A.expression list) = 
+        :A.expression list = 
         (match ar with
-          |     []          -> pos
-          | (Some _, _)::_  -> pos (* stop at first named argument *)
-          | (None  , e)::tl -> extract_positional_parameters tl (e::pos)
+          |             []   -> pos
+          | (Some id, e)::tl ->(* don't stop at first named argument :
+                                * populate argtbl *)
+                                if (Hashtbl.mem argtbl id) then
+                                    Npkcontext.report_error "firstpass.fcall"
+                                    ("Parameter "^id^" specified twice")
+                                else begin
+                                    Hashtbl.add argtbl id e;
+                                    extract_positional_parameters tl pos
+                                end
+          | (None   , e)::tl -> extract_positional_parameters tl (e::pos)
         )
-    (** Effective arguments to be passed.  *)
- (*   and eff_args:A.expression list = List.map (function x -> x.) spec*)
 
-    in  ignore args;
-        ignore spec;
-        ignore (extract_positional_parameters [] []);
-        []
+    (**
+     * Step 2 : merge this list with the function specification, in order to
+     * name the (formerly) positional parameters.
+     * For the remaining parameters :
+     *   - try to fetch them from the argtbl hashtable
+     *   - try to assign their default value
+     *
+     * /!\ Side-effects : this function references the argtbl variable.
+     *)
+    and merge_with_specification (pos_list:A.expression list)
+                                 (spec:A.param list)
+        :(A.identifier*A.expression) list =
+            match pos_list, spec with
+              |  [],_       -> (* end of positional parameters *)
+                              List.map (function x -> (x.formal_name,(
+                                           if (Hashtbl.mem argtbl x.formal_name) then
+                                               Hashtbl.find argtbl x.formal_name
+                                           else begin
+                                               match x.default_value with
+                                                 | Some value -> value
+                                                 | None ->
+                                                Npkcontext.report_error
+                                                "firstpass.fcall"
+                                                ("No value provided for "
+                                                ^"parameter "^x.formal_name
+                                                ^", which has no default one.")
+                                           end
+                                       )))
+                                       spec
+
+              | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
+                              "Too many actual arguments in function call"
+              | e::pt,s::st -> (s.formal_name, e)::
+                               (merge_with_specification pt st)
+
+    in  
+        (* Step 1... *)
+        let pos      = extract_positional_parameters args [] in
+        (* Step 2... *)
+        let eff_args = merge_with_specification pos spec in
+        (* We don't need the ids anymore *)
+        List.map snd eff_args
 
   (** Translates a function call.  *)
   and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
