@@ -175,7 +175,7 @@ and lval =
 
 (** Subprogram parameter *)
 and param = {
-        formal_name   : identifier list;   (** Formal name *)
+        formal_name   : identifier;        (** Formal name *)
         mode          : param_mode;        (** Mode (In, Out, or InOut) *)
         param_type    : subtyp;            (** Type *)
         default_value : expression option; (** Default value (optional) *)

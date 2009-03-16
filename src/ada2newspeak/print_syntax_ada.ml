@@ -71,42 +71,42 @@ let ikind_to_string (s,taille) =
 
 
 let uop_to_string op = match op with
-  | UPlus -> "UPlus"
-  | UMinus -> "UMinus"
-  | Abs -> "Abs"
-  | Not -> "Not"
+  | UPlus  -> "U+"
+  | UMinus -> "U-"
+  | Abs    -> "abs"
+  | Not    -> "not"
 
 let bop_to_string op = match op with
-  | Plus -> "Plus"
-  | Minus -> "Minus"
-  | Mult -> "Mult"
-  | Div -> "Div"
-  | Power -> "Power"
-  | Concat -> "Concat"
-  | Mod -> "Mod"
-  | Rem -> "Rem"
-  | Eq -> "Eq"
-  | Neq -> "Neq"
-  | Le -> "Le"
-  | Lt -> "Lt"
-  | Ge -> "Ge"
-  | Gt -> "Gt"
-  | And -> "And"
-  | Or -> "Or"
-  | Xor -> "Xor"
-  | AndThen -> "AndThen"
-  | OrElse -> "OrElse"
+  | Plus    -> "+"
+  | Minus   -> "-"
+  | Mult    -> "*"
+  | Div     -> "/"
+  | Power   -> "**"
+  | Concat  -> "&"
+  | Mod     -> "mod"
+  | Rem     -> "rem"
+  | Eq      -> "="
+  | Neq     -> "/="
+  | Le      -> "<="
+  | Lt      -> "<"
+  | Ge      -> ">="
+  | Gt      -> ">"
+  | And     -> "and"
+  | Or      -> "or"
+  | Xor     -> "xor"
+  | AndThen -> "and then"
+  | OrElse  -> "or else"
 
 let rec typ_to_string typ = match typ with
-  | Integer -> "Integer"
+  | Integer      -> "Integer"
   | IntegerConst -> "IntegerConst"
-  | Float -> "Float"
-  | Boolean -> "Boolean"
-  | Character -> "Character"
+  | Float        -> "Float"
+  | Boolean      -> "Boolean"
+  | Character    -> "Character"
+  | String       -> "String"
   | Declared(typ_decl,loc) -> "Declared("
       ^(typ_declaration_to_string typ_decl)^","
       ^(line_of_loc loc)^")"
-  | String -> "String"
 
 and typ_declaration_to_string typ_decl = match typ_decl with
   | Enum(ident, val_list, taille) ->
@@ -144,22 +144,18 @@ and array_definition_to_string array = match array with
 
 
 and exp_to_string exp = match exp with
-  | NullExpr -> "NullExpr"
-  | CInt(i) -> "CInt("^(nat_to_string i)^")"
-  | CFloat(_,s) -> "CFloat("^s^")"
-  | CBool(b) -> "CBool("^(string_of_bool b)^")"
-  | CChar(c) -> "CChar("^(string_of_int c)^")"
-  | CString(s) -> "CString("^s^")"
-  | Var(s) -> "Var("^(name_to_string s)^")"
-  | Unary(op,exp) -> "Unary("^(uop_to_string op)^", "
-      ^(exp_to_string exp)^")"
-  | Binary(op,e1,e2) -> "Binary("^(bop_to_string op)^", "
-      ^(exp_to_string e1)
-      ^", "^(exp_to_string e2)^")"
+  | NullExpr         -> "(null)"
+  | CInt(i)          -> "CInt("^(nat_to_string i)^")"
+  | CFloat(_,s)      -> "CFloat("^s^")"
+  | CBool(b)         -> "CBool("^(string_of_bool b)^")"
+  | CChar(c)         -> "CChar("^(string_of_int c)^")"
+  | CString(s)       -> "CString("^s^")"
+  | Var(s)           -> "Var("^(name_to_string s)^")"
+  | Unary(op,exp)    -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
+  | Binary(op,e1,e2) -> "("^(exp_to_string e1)^" " ^ (bop_to_string op)^" "^(exp_to_string e2)^")"
   | Qualified(subtyp, exp) -> "Qualified("
       ^(subtyp_to_string subtyp)
       ^", "^(exp_to_string exp)^")"
-
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
       ^(String.concat "," (List.map arg_to_string params))^")"
@@ -204,17 +200,15 @@ and value_to_string v = match v with
 and iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
-  | For(iter, exp1, exp2, false) -> "For "^iter^" in "
-                            ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
-  | For(iter, exp1, exp2, true) -> "For "^(iter)^" in reverse"
-                            ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
+  | For(iter, exp1, exp2, isrev) -> "For "^iter^" in "
+                    ^(if isrev then "reverse " else "")
+                    ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
 
 and lval_to_string lv =
   match lv with
-      Lval name -> name_to_string name
+    | Lval name -> name_to_string name
     | ArrayAccess (lval, e) ->
         (lval_to_string lval )^"["^(exp_to_string e)^"]"
-
 
 and block_to_string block =
   list_to_string block
@@ -224,12 +218,10 @@ and block_to_string block =
     ";\n" true
 
 and instr_to_string instr = match instr with
-  | NullInstr -> "NullInstr"
-  | ReturnSimple -> "ReturnSimple"
-  | Return(exp) -> "Return("^(exp_to_string exp)^")"
-  | Assign(lval,exp) -> "Assign("^(lval_to_string lval)
-      ^", "^(exp_to_string exp)^")"
-
+  | NullInstr    -> "(null)"
+  | ReturnSimple -> "Return"
+  | Return(exp)  -> "Return("^(exp_to_string exp)^")"
+  | Assign(lval,exp) -> "("^(lval_to_string lval) ^" <- "^(exp_to_string exp)^")"
   | If(exp, instr_then, instr_else) ->
       "If("^(exp_to_string exp)^",\n"
       ^(block_to_string instr_then)^",\n"
@@ -260,7 +252,7 @@ and arg_to_string (arg:argument) :string =
       | Some id, e -> id^" => "^(exp_to_string e)
 
 and param_to_string param =
-  "{formal_name = "    ^(list_to_string param.formal_name (fun x -> x) "," true)
+   "{formal_name = "    ^(param.formal_name)
   ^"; mode = "         ^(mode_to_string param.mode)
   ^"; param_type = "   ^(subtyp_to_string param.param_type)
   ^"; default_value = "^(option_to_string param.default_value exp_to_string)^"}"

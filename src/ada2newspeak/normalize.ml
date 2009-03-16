@@ -1127,7 +1127,7 @@ and normalize_exp exp = match exp with
                     end
 
 
-     | "Last" -> begin
+     | "Last"|"last" -> begin
 
                     match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
@@ -1551,17 +1551,17 @@ let rec normalize_instr (instr,loc) =
         (fun param ->
            if func && (param.mode <> In)
            then (Npkcontext.report_error
-             "Ada_normalize.normalize_sub_program_spec"
-             ("unvalid parameter mode : functions can only have"
+              "Ada_normalize.normalize_sub_program_spec"
+             ("invalid parameter mode : functions can only have"
               ^" \"in\" parameters"))
            else
              (if addparam
               then
-                List.iter
-                  (fun x -> add_cst (normalize_ident x)
-                     (VarSymb(false)) false)
-                  param.formal_name;
-              {param with param_type = normalize_subtyp param.param_type}))
+                  add_cst (normalize_ident param.formal_name) (VarSymb(false)) false
+                  ;
+                  {param with param_type = normalize_subtyp param.param_type}
+             )
+        )
         param_list
     in
       match subprog_spec with
@@ -1730,13 +1730,9 @@ let rec normalize_instr (instr,loc) =
     let params = match subprogram_decl with
       | Function(_,param_list,_) -> param_list
       | Procedure(_,param_list) -> param_list in
-      List.iter
-        (fun param ->
-           List.iter
-             (fun x -> remove_cst (normalize_ident x))
-             param.formal_name)
-        params
-
+          List.iter
+            (fun param -> remove_cst (normalize_ident param.formal_name))
+            params
 
   and normalize_package_spec (nom, list_decl) =
     set_current_package nom;

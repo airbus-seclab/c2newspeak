@@ -111,9 +111,10 @@
         | _     -> Npkcontext.report_error "Parser.make_operator_name"
                 ("Cannot overload '"^opname^"' : it is not an operator")
 
-    (** Prepares a list of exp*block for the Case constructor. It takes
-      * a list of expression list * block and flattens it into a list of
-      * expression*block.
+    (**
+      * Prepare a list of exp*block for the Case constructor.
+      * It takes a list of expression list * block and flattens it into
+      * a list of expression*block.
       *)
     let rec build_case_ch (choices:(expression list*block)list)
         :(expression*block) list =
@@ -122,6 +123,28 @@
           | (exp_list,block)::tail -> (List.map (function exp -> exp,block)
                                                 exp_list)
                                      @ (build_case_ch tail)
+
+    (**
+     * Build a parameter specification list from a "factored" one.
+     * That is to say, expand "X, Y : Integer" to "X : Integer ; Y : Integer".
+     *
+     * Rationale : RM95, 3.3.1.(7) 
+     *   "    Any declaration that includes a defining_identifier_list with more
+     *    than one defining_identifier is equivalent to a series of declarations
+     *    each containing one defining_identifier from the list, with the rest
+     *    of the text of the declaration copied for each declaration in the
+     *    series, in the same order as the list."
+     *)
+    let make_parameter_specification (idents:identifier list)
+                                     (common_mode:param_mode)
+                                     (common_type:subtyp)
+                                     (common_default_value:expression option)
+        :param list =
+        List.map (function x -> {formal_name=x;
+                                        mode=common_mode;
+                                  param_type=common_type;
+                               default_value=common_default_value;})
+                 idents
 
 %}
 /*declaration ocamlyacc*/
@@ -152,6 +175,54 @@
 
 %start s
 %type <Syntax_ada.compilation_unit> s
+
+%type <Syntax_ada.identifier> pragma
+%type <Syntax_ada.param_mode> mode
+%type <Syntax_ada.name> name
+%type <Syntax_ada.name list> name_list use_clause
+%type <Syntax_ada.identifier> ident
+%type <Syntax_ada.identifier list> ident_list
+%type <Syntax_ada.argument> parameter_association
+%type <Syntax_ada.argument list> actual_parameter_part args
+%type <Syntax_ada.subtyp> subtyp typ
+%type <Syntax_ada.subtyp_indication> subtyp_indication
+%type <Syntax_ada.nat> integer_literal
+%type <Syntax_ada.expression> primary factor term simple_expr relation expr_xor
+%type <Syntax_ada.expression> expr_orelse expr_or expr_andthen expr_and
+%type <Syntax_ada.expression> expression discrete_choice
+%type <Syntax_ada.binary_op> mult_op add_op rel_op
+%type <Syntax_ada.location> debut_if debut_elsif
+%type <Syntax_ada.instruction> instr instruction_if
+%type <Syntax_ada.instruction_atom> procedure_call
+%type <Syntax_ada.block> instr_list instruction_else when_others
+%type <Syntax_ada.name*Syntax_ada.argument list> procedure_array
+%type <Syntax_ada.iteration_scheme*Syntax_ada.location> iteration_scheme
+%type <Syntax_ada.expression list> discrete_choice_list
+%type <Syntax_ada.expression list*Syntax_ada.block> case_stmt_alternative
+%type <(Syntax_ada.expression list*Syntax_ada.block) list* Syntax_ada.block option> case_stmt_alternative_list
+%type <Syntax_ada.representation_clause> representation_clause
+%type <Syntax_ada.array_aggregate> array_aggregate
+%type <(Syntax_ada.identifier * Syntax_ada.expression) list> named_array_aggregate
+%type <Syntax_ada.identifier * Syntax_ada.expression> array_component_association
+%type <Syntax_ada.subtyp_indication list> matrix_indication
+%type <Syntax_ada.array_type_definition> constrained_array_definition
+%type <Syntax_ada.record_type_definition> record_definition
+%type <Syntax_ada.contrainte> contrainte
+%type <Syntax_ada.basic_declaration> type_definition
+%type <Syntax_ada.basic_declaration*Syntax_ada.location> basic_declaration
+%type <(Syntax_ada.basic_declaration*Syntax_ada.location) list> basic_declarative_part
+%type <Syntax_ada.declarative_item*Syntax_ada.location> declarative_item
+%type <Syntax_ada.declarative_part> declarative_part
+%type <unit> pragma_argument_association pragma_argument_association_list
+%type <Syntax_ada.param list> parameter_specification formal_part
+%type <Syntax_ada.sub_program_spec*Syntax_ada.location> subprogram_spec
+%type <Syntax_ada.spec*Syntax_ada.location> package_decl subprogram_decl decl
+%type <Syntax_ada.body*Syntax_ada.location> package_body subprogram_body body
+%type <Syntax_ada.location> package_loc
+%type <Syntax_ada.block> package_instr
+%type <Syntax_ada.library_item*Syntax_ada.location> library_item
+%type <Syntax_ada.context_clause list> context_item
+%type <Syntax_ada.context> context
 
 /*priorite*/
 
@@ -251,35 +322,31 @@ subprogram_spec :
 ;
 
 formal_part :
-| parameter_specification {[$1]}
-| parameter_specification SEMICOLON formal_part {$1::$3}
+| parameter_specification                       {$1}
+| parameter_specification SEMICOLON formal_part {$1@$3}
 ;
 
 mode :
-  {In}
-| IN {In}
-| OUT {Out}
+|        {In}
+| IN     {In}
+|    OUT {Out}
 | IN OUT {InOut}
 ;
 
 parameter_specification :
-| ident_list COLON mode subtyp                   {{formal_name=$1;
-                                                          mode=$3;
-                                                    param_type=$4;
-                                                 default_value=None}}
-| ident_list COLON mode subtyp ASSIGN expression {{formal_name=$1;
-                                                          mode=$3;
-                                                    param_type=$4;
-                                                 default_value=Some $6}}
+| ident_list COLON mode subtyp                   { make_parameter_specification
+                                                            $1 $3 $4 None}
+| ident_list COLON mode subtyp ASSIGN expression { make_parameter_specification
+                                                            $1 $3 $4 (Some $6)}
 ;
 
 declarative_part :
-  {[]}
+| {[]}
 | declarative_item declarative_part {$1::$2}
-| pragma declarative_part {Npkcontext.report_warning "parser"
-                           ("pragma '" ^ $1 ^ "' is ignored");
-                           $2
-                          }
+| pragma           declarative_part {Npkcontext.report_warning "parser"
+                                     ("pragma '" ^ $1 ^ "' is ignored");
+                                     $2
+                                    }
 ;
 
 pragma :
@@ -293,7 +360,7 @@ pragma_argument_association_list :
 ;
 
 pragma_argument_association :
-| expression {}
+| expression             {}
 | ident ARROW expression {}
 ;
 
@@ -370,15 +437,7 @@ record_definition :
 
 
 constrained_array_definition :
-  LPAR matrix_indication RPAR OF subtyp_indication
-/*  LPAR subtyp_indication RPAR OF subtyp_indication
-  {ConstrainedArray($2,$5,None)}
-*/
-  {
-    let list_rg = $2 in
-    let rev_list = List.rev list_rg in
-      build_matrix rev_list $5
-  }
+| LPAR matrix_indication RPAR OF subtyp_indication {build_matrix (List.rev $2) $5}
 ;
 
 matrix_indication :
@@ -390,7 +449,7 @@ array_component_association :
 ;
 
 named_array_aggregate :
-| array_component_association {[$1]}
+| array_component_association                             {$1::[]}
 | array_component_association COMMA named_array_aggregate {$1::$3}
 ;
 
@@ -454,7 +513,6 @@ discrete_choice_list:
 
 discrete_choice:
 | expression {$1}
-/*| discrete_range TODO */
 ;
 
 procedure_array :
@@ -462,9 +520,8 @@ procedure_array :
 | name args {($1, $2)}
 
 args:
-| LPAR actual_parameter_part RPAR { $2 }
-| args LPAR actual_parameter_part RPAR { $1@$3 } /*TO DO checkin
-                                          this case length 3 = 1*/
+|      LPAR actual_parameter_part RPAR {    $2 }
+| args LPAR actual_parameter_part RPAR { $1@$3 }
 
 iteration_scheme :
 | {(NoScheme, loc ())}
@@ -488,7 +545,7 @@ instruction_if :
 ;
 
 instruction_else :
-  {[]}
+| {[]}
 | debut_elsif expression THEN instr_list instruction_else
       {[(If($2, $4, $5), $1)]}
 | ELSE instr_list {$2}

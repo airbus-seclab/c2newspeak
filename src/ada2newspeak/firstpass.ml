@@ -17,6 +17,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
   Jasmine Duchon
   email: jasmine . duchon AT free . fr
 
@@ -1086,11 +1089,58 @@ let translate compil_unit =
           Npkcontext.report_error "Firstpass.translate_unop"
             "Unexpected unary operator and argument"
 
+    (**
+     * Compute the actual argument list for a subprogram call.
+     * Given an (optionnaly named)-argument list and a function specification
+     * (describing formal parameters' name, default values, etc.)
+     *
+     * Algorithm :
+     *   - first, the positional arguments are extracted and put in the
+     *     beginning of the to-be-translated parameter list.
+     *   - then, the remaining (named) arguments are put in their right place,
+     *     according to the specification of the subprogram.
+     *   - finally, the missing named parameters are replaced with their
+     *     default values, if provided.
+     *
+     * An error may occur in one of the following cases :
+     *   - A positional parameter follows a named parameter.
+     *   - A parameter without default value is not given an actual value.
+     *   - A named parameter is specified more than once.
+     *
+     * @param args the name => value association list
+     * @param spec the function specification (holding default values, etc)
+     * @return a list of C expressions which are the actual parameters.
+     *)
+  and make_arg_list (args:argument list) (spec:param list) :C.exp list =
+
+    (**
+     * Split the list between named and positional parameters. Non-leading
+     * positional parameters, if any, remain in the "positional" list and
+     * will lead to errors.
+     *
+     * The returned lists are in the following order : positional, named.
+     *)
+    let rec extract_positional_parameters (ar :argument list)
+                                          (pos:A.expression list)
+        :(A.expression list) = 
+        (match ar with
+          |     []          -> pos
+          | (Some _, _)::_  -> pos (* stop at first named argument *)
+          | (None  , e)::tl -> extract_positional_parameters tl (e::pos)
+        )
+    (** Effective arguments to be passed.  *)
+ (*   and eff_args:A.expression list = List.map (function x -> x.) spec*)
+
+    in  ignore args;
+        ignore spec;
+        ignore (extract_positional_parameters [] []);
+        []
+
   (** Translates a function call.  *)
   and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
                               (spec:sub_program_spec) (arg_list:argument list)
                               (expected_typ:typ option) :C.exp*A.typ =
-      (* FIXME : strip argument name *)
+      ignore (make_arg_list [] []); (* FIXME : strip argument name *)
       let arg_list = List.map snd arg_list in
       let (params, ret_t) =
           match spec with
@@ -1105,7 +1155,7 @@ let translate compil_unit =
     let translate_parameter (param:A.param) (exp:A.expression) :C.exp =
         let (tr_exp, _) = translate_exp exp (Some(base_typ param.param_type)) in
             make_check_subtyp param.param_type tr_exp in
-    let tr_params = List.map2 translate_parameter params arg_list
+    let (tr_params:C.exp list) = List.map2 translate_parameter params arg_list
     in
         try (C.Call(tr_typ, fname, tr_params), ret_t)
         with
@@ -1837,28 +1887,30 @@ let translate compil_unit =
 
   and translate_param param =
     let typ_cir = match param.mode with
-      | In -> translate_typ (base_typ param.param_type)
-      | Out -> C.Scalar(Npk.Ptr)
+      | In    -> translate_typ (base_typ param.param_type)
+      |   Out
       | InOut -> C.Scalar(Npk.Ptr)
     in
-      List.map
         (fun _ -> typ_cir) param.formal_name
 
   and add_param loc param =
     let (deref,ro) = match param.mode with
-      | In -> (false, true)
-      | Out | InOut -> (true, false)
+      | In    -> (false, true)
+      |   Out
+      | InOut -> (true, false)
     in
-      List.map
-        (fun name -> add_var loc param.param_type name deref ro; (name, name))
-      param.formal_name
-
+        add_var loc
+                param.param_type
+                param.formal_name
+                deref
+                ro;
+        (param.formal_name,
+         param.formal_name)
 
     (* prend une liste de parametres en argument
        et renvoie liste de typ *)
   and translate_param_list param_list =
-    (List.flatten
-       (List.map translate_param param_list))
+    (List.map translate_param param_list)
   and add_params subprog_spec loc =
     let param_list =
       match subprog_spec with
@@ -1869,8 +1921,7 @@ let translate compil_unit =
             param_list
     in
     let (param_names, vids) =
-      (List.split (List.flatten
-                     (List.map (add_param loc) param_list)))
+      (List.split (List.map (add_param loc) param_list))
     in
       (param_names, (ret_ident, vids))
 
