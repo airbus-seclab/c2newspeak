@@ -57,8 +57,10 @@ coverage:
 	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak/pp_parser.cmx
 	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak/parser.cmx
 	$(MAKE) WITH_BISECT=1
-	$(MAKE) -C tests/ada2newspeak/
-	cd src/ ; bisect-report ../tests/ada2newspeak/bisect* -html ../../cov/$(shell date +%Y%m%d%H%M)
+	touch tests/c2newspeak/656
+	$(MAKE) check
+	cd src/ ; bisect-report `find ../tests/ -name bisect*` \
+                    -html ../../cov/$(shell date +%Y%m%d%H%M)
     
 
 install:
