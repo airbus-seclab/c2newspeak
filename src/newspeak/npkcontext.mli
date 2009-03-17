@@ -81,8 +81,8 @@ val verb_newspeak : bool ref
 
 val opt_checks: bool ref
 
-(** If true, then the goto elimination transformation of backward gotos is performed *)
-val accept_backward_goto: bool ref
+(** If true, then the goto elimination transformation of gotos is performed *)
+val accept_goto: bool ref
 
 (** Names of the files that are to be compiled / link. The first
     string is the name of the file that need to be read, the second is the

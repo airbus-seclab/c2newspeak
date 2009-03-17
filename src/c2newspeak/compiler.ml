@@ -70,7 +70,7 @@ let compile fname =
       if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
       Npkcontext.print_debug "Parsing done.";
       let globals = 
-	if !Npkcontext.accept_backward_goto then begin
+	if !Npkcontext.accept_goto then begin
 	  Npkcontext.print_debug "Running goto_elimination...";
 	  let g = Goto_elimination.run globals in
 	    if !Npkcontext.verb_ast then Csyntax.print (g, spec);
