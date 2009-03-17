@@ -166,6 +166,10 @@ let opt_of_error err =
 
 let version = ref false
 
+let set_gotos () =
+  accept_forward_goto := true;
+  accept_goto := true
+
 let argslist = [
   ("-c", Arg.Set compile_only,
    "compiles only into a .no file");
@@ -185,9 +189,7 @@ let argslist = [
   (opt_of_error ForwardGoto, Arg.Set (flag_of_error ForwardGoto),
    "accepts forward goto statements");
 
-  (opt_of_error BackwardGoto, Arg.Set (flag_of_error BackwardGoto),
-   "accepts backward goto statements (replaces them by forward ones. "
-   ^"Should be combined with --accept-forward-goto)");
+  (opt_of_error BackwardGoto, Arg.Unit set_gotos, "accepts goto statements ");
 
   (opt_of_error TransparentUnion, Arg.Set (flag_of_error TransparentUnion),
    "accepts transparent unions");
