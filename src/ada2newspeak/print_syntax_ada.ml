@@ -152,7 +152,9 @@ and exp_to_string exp = match exp with
   | CString(s)       -> "CString("^s^")"
   | Var(s)           -> "Var("^(name_to_string s)^")"
   | Unary(op,exp)    -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
-  | Binary(op,e1,e2) -> "("^(exp_to_string e1)^" " ^ (bop_to_string op)^" "^(exp_to_string e2)^")"
+  | Binary(op,e1,e2) -> "("^(exp_to_string e1)^" "
+                           ^(bop_to_string op)^" "
+                           ^(exp_to_string e2)^")"
   | Qualified(subtyp, exp) -> "Qualified("
       ^(subtyp_to_string subtyp)
       ^", "^(exp_to_string exp)^")"
@@ -221,7 +223,7 @@ and instr_to_string instr = match instr with
   | NullInstr    -> "(null)"
   | ReturnSimple -> "Return"
   | Return(exp)  -> "Return("^(exp_to_string exp)^")"
-  | Assign(lval,exp) -> "("^(lval_to_string lval) ^" <- "^(exp_to_string exp)^")"
+  | Assign(lval,exp) -> "("^(lval_to_string lval)^" <- "^(exp_to_string exp)^")"
   | If(exp, instr_then, instr_else) ->
       "If("^(exp_to_string exp)^",\n"
       ^(block_to_string instr_then)^",\n"
