@@ -128,7 +128,7 @@
      * Build a parameter specification list from a "factored" one.
      * That is to say, expand "X, Y : Integer" to "X : Integer ; Y : Integer".
      *
-     * Rationale : RM95, 3.3.1.(7) 
+     * Rationale : RM95, 3.3.1.(7)
      *   "    Any declaration that includes a defining_identifier_list with more
      *    than one defining_identifier is equivalent to a series of declarations
      *    each containing one defining_identifier from the list, with the rest
@@ -176,53 +176,53 @@
 %start s
 %type <Syntax_ada.compilation_unit> s
 
-%type <Syntax_ada.identifier> pragma
-%type <Syntax_ada.param_mode> mode
-%type <Syntax_ada.name> name
-%type <Syntax_ada.name list> name_list use_clause
-%type <Syntax_ada.identifier> ident
-%type <Syntax_ada.identifier list> ident_list
-%type <Syntax_ada.argument> parameter_association
-%type <Syntax_ada.argument list> actual_parameter_part args
-%type <Syntax_ada.subtyp> subtyp typ
-%type <Syntax_ada.subtyp_indication> subtyp_indication
-%type <Syntax_ada.nat> integer_literal
-%type <Syntax_ada.expression> primary factor term simple_expr relation expr_xor
-%type <Syntax_ada.expression> expr_orelse expr_or expr_andthen expr_and
-%type <Syntax_ada.expression> expression discrete_choice
-%type <Syntax_ada.binary_op> mult_op add_op rel_op
-%type <Syntax_ada.location> debut_if debut_elsif
-%type <Syntax_ada.instruction> instr instruction_if
-%type <Syntax_ada.instruction_atom> procedure_call
-%type <Syntax_ada.block> instr_list instruction_else when_others
-%type <Syntax_ada.name*Syntax_ada.argument list> procedure_array
-%type <Syntax_ada.iteration_scheme*Syntax_ada.location> iteration_scheme
-%type <Syntax_ada.expression list> discrete_choice_list
-%type <Syntax_ada.expression list*Syntax_ada.block> case_stmt_alternative
-%type <(Syntax_ada.expression list*Syntax_ada.block) list* Syntax_ada.block option> case_stmt_alternative_list
-%type <Syntax_ada.representation_clause> representation_clause
-%type <Syntax_ada.array_aggregate> array_aggregate
-%type <(Syntax_ada.identifier * Syntax_ada.expression) list> named_array_aggregate
-%type <Syntax_ada.identifier * Syntax_ada.expression> array_component_association
-%type <Syntax_ada.subtyp_indication list> matrix_indication
-%type <Syntax_ada.array_type_definition> constrained_array_definition
-%type <Syntax_ada.record_type_definition> record_definition
-%type <Syntax_ada.contrainte> contrainte
-%type <Syntax_ada.basic_declaration> type_definition
-%type <Syntax_ada.basic_declaration*Syntax_ada.location> basic_declaration
-%type <(Syntax_ada.basic_declaration*Syntax_ada.location) list> basic_declarative_part
-%type <Syntax_ada.declarative_item*Syntax_ada.location> declarative_item
-%type <Syntax_ada.declarative_part> declarative_part
+%type <identifier> pragma
+%type <param_mode> mode
+%type <name> name
+%type <name list> name_list use_clause
+%type <identifier> ident
+%type <identifier list> ident_list
+%type <argument> parameter_association
+%type <argument list> actual_parameter_part args
+%type <subtyp> subtyp typ
+%type <subtyp_indication> subtyp_indication
+%type <nat> integer_literal
+%type <expression> primary factor term simple_expr relation expr_xor
+%type <expression> expr_orelse expr_or expr_andthen expr_and
+%type <expression> expression discrete_choice
+%type <binary_op> mult_op add_op rel_op
+%type <location> debut_if debut_elsif
+%type <instruction> instr instruction_if
+%type <instruction_atom> procedure_call
+%type <block> instr_list instruction_else when_others
+%type <name*argument list> procedure_array
+%type <iteration_scheme*location> iteration_scheme
+%type <expression list> discrete_choice_list
+%type <expression list*block> case_stmt_alternative
+%type <(expression list*block) list* block option> case_stmt_alternative_list
+%type <representation_clause> representation_clause
+%type <array_aggregate> array_aggregate
+%type <(identifier * expression) list> named_array_aggregate
+%type <identifier * expression> array_component_association
+%type <subtyp_indication list> matrix_indication
+%type <array_type_definition> constrained_array_definition
+%type <record_type_definition> record_definition
+%type <contrainte> contrainte
+%type <basic_declaration> type_definition
+%type <basic_declaration*location> basic_declaration
+%type <(basic_declaration*location) list> basic_declarative_part
+%type <declarative_item*location> declarative_item
+%type <declarative_part> declarative_part
 %type <unit> pragma_argument_association pragma_argument_association_list
-%type <Syntax_ada.param list> parameter_specification formal_part
-%type <Syntax_ada.sub_program_spec*Syntax_ada.location> subprogram_spec
-%type <Syntax_ada.spec*Syntax_ada.location> package_decl subprogram_decl decl
-%type <Syntax_ada.body*Syntax_ada.location> package_body subprogram_body body
-%type <Syntax_ada.location> package_loc
-%type <Syntax_ada.block> package_instr
-%type <Syntax_ada.library_item*Syntax_ada.location> library_item
-%type <Syntax_ada.context_clause list> context_item
-%type <Syntax_ada.context> context
+%type <param list> parameter_specification formal_part
+%type <sub_program_spec*location> subprogram_spec
+%type <spec*location> package_decl subprogram_decl decl
+%type <body*location> package_body subprogram_body body
+%type <location> package_loc
+%type <block> package_instr
+%type <library_item*location> library_item
+%type <context_clause list> context_item
+%type <context> context
 
 /*priorite*/
 
@@ -437,7 +437,8 @@ record_definition :
 
 
 constrained_array_definition :
-| LPAR matrix_indication RPAR OF subtyp_indication {build_matrix (List.rev $2) $5}
+| LPAR matrix_indication RPAR OF subtyp_indication
+                                                {build_matrix (List.rev $2) $5}
 ;
 
 matrix_indication :

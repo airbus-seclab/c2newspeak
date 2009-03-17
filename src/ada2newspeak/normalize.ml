@@ -17,6 +17,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
 
@@ -1557,7 +1560,9 @@ let rec normalize_instr (instr,loc) =
            else
              (if addparam
               then
-                  add_cst (normalize_ident param.formal_name) (VarSymb(false)) false
+                  add_cst (normalize_ident param.formal_name)
+                          (VarSymb(false))
+                          false
                   ;
                   {param with param_type = normalize_subtyp param.param_type}
              )

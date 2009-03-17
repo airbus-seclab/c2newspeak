@@ -1118,25 +1118,30 @@ let translate compil_unit =
      * Step 1 : extract positional parameters. Named parameters go into the
      * argtbl hashtable.
      *
-     * TODO Non-leading positional parameters, if any, remain in the "positional"
+     * Non-leading positional parameters, if any, remain in the "positional"
      * list and will lead to errors.
      *
      * /!\ Side-effects : this function references the argtbl variable.
-     * FIXME design : can remove pos as a parameter ?
      *)
     let rec extract_positional_parameters (ar :argument list)
-        :A.expression list = 
+        :A.expression list =
         (match ar with
           |             []   -> []
-          | (Some id, e)::tl ->(* don't stop at first named argument :
-                                * populate argtbl *)
-                                if (Hashtbl.mem argtbl id) then
-                                    Npkcontext.report_error "firstpass.fcall"
-                                    ("Parameter "^id^" specified twice")
-                                else begin
-                                    Hashtbl.add argtbl id e;
-                                    extract_positional_parameters tl
-                                end
+          | (Some  _, _)::_  ->
+            (* don't stop at first named argument : populate argtbl *)
+                List.iter
+                    (function
+                       | None   ,_  -> Npkcontext.report_error "firstpass.fcall"
+                                 "Named parameters shall follow positional ones"
+                       | Some id, e ->
+                            if (Hashtbl.mem argtbl id) then
+                                Npkcontext.report_error "firstpass.fcall"
+                                ("Parameter "^id^" appears twice")
+                            else
+                                Hashtbl.add argtbl id e;
+                    )
+                    ar;
+                []
           | (None   , e)::tl -> e::(extract_positional_parameters tl)
         )
 
@@ -1153,29 +1158,28 @@ let translate compil_unit =
                                  (spec:A.param list)
         :(A.identifier*A.expression) list =
             match pos_list, spec with
-              |  [],_       -> (* end of positional parameters *)
-                              List.map (function x -> (x.formal_name,(
-                                           if (Hashtbl.mem argtbl x.formal_name) then
-                                               Hashtbl.find argtbl x.formal_name
-                                           else begin
-                                               match x.default_value with
-                                                 | Some value -> value
-                                                 | None ->
-                                                Npkcontext.report_error
-                                                "firstpass.fcall"
-                                                ("No value provided for "
-                                                ^"parameter "^x.formal_name
-                                                ^", which has no default one.")
-                                           end
-                                       )))
-                                       spec
-
-              | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
-                              "Too many actual arguments in function call"
+              |  [],_  -> (* end of positional parameters *)
+                          List.map (function x -> (x.formal_name,(
+                                   if (Hashtbl.mem argtbl x.formal_name) then
+                                       Hashtbl.find argtbl x.formal_name
+                                   else begin
+                                       match x.default_value with
+                                         | Some value -> value
+                                         | None ->
+                                        Npkcontext.report_error
+                                        "firstpass.fcall"
+                                        ("No value provided for "
+                                        ^"parameter "^x.formal_name
+                                        ^", which has no default one.")
+                                   end
+                               )))
+                               spec
               | e::pt,s::st -> (s.formal_name, e)::
                                (merge_with_specification pt st)
+              | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
+                              "Too many actual arguments in function call"
 
-    in  
+    in
         (* Step 1... *)
         let pos      = extract_positional_parameters args in
         (* Step 2... *)
@@ -2041,8 +2045,8 @@ let translate compil_unit =
           let res = ref [] in (*by default affectations*)
           let o = ref 0 in
           let last_align = ref 1 in
-          let size_of st = 
-	    C.size_of_typ (translate_subtyp (Ada_utils.extract_subtyp st))
+          let size_of st =
+            C.size_of_typ (translate_subtyp (Ada_utils.extract_subtyp st))
           in
           let next_aligned o x =
             let m = o mod x in
