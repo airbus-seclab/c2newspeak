@@ -38,24 +38,6 @@ let one = Cst (Cir.CInt (Newspeak.Nat.of_int 1), uint_typ)
   
 let dummy_cond = one
  
-let nested_gotos stmt = 
-  (* returns the label list of all nested gotos in the stmtkind stmt *)
-  let rec concat blk =
-    let blk' = List.map (fun (stmt, _) -> nested_gotos stmt) blk in
-    List.concat blk'
-  and nested_gotos stmt =
-    match stmt with 
-	Goto lbl -> [lbl]
-      | For(_, _, blk2, _) -> concat blk2
-      | DoWhile(blk, _) -> concat blk
-      | If(_, if_blk, else_blk) -> concat (if_blk @ else_blk)
-      | Block blk -> concat blk
-      | CSwitch(_, cases, default) ->
-	let cases = List.concat (List.map (fun (_, blk, _) -> blk) cases) in
-	  concat (cases @ default)
-    | _ -> []
-  in nested_gotos stmt
-
 let goto_equal lbl lbl' g_offset = compare lbl' (lbl^"."^ g_offset) = 0
     
 let has_label stmts lbl =
@@ -109,15 +91,6 @@ let search_lbl stmts lbl =
 		
 	  | _ -> search stmts
   in search stmts
-
-let rec with_label stmts =
-  match stmts with
-      [] -> false
-    | (stmt, _)::stmts ->
-	match stmt with 
-	    Label _ -> true
-	  | Block blk -> (with_label blk) or (with_label stmts)
-	  | _ -> with_label stmts
 
 let preprocessing lbls stmts =
   (* For every goto stmt:
