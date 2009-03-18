@@ -31,11 +31,11 @@
 
 open Syntax_ada
 
-module C = Cir
-module K = Npkil
+module C   = Cir
+module K   = Npkil
 module Nat = Newspeak.Nat
 module Npk = Newspeak
-module A = Syntax_ada
+module A   = Syntax_ada
 
 exception AmbiguousTypeException
 
@@ -297,39 +297,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and extern = ref false
 
-  (**
-   * Wraps what the "current package" is and which packages are
-   * marked using the "with" construct.
-   *)
-  and package =
-    object (self)
-        val mutable current_pkg:identifier list      = []
-        val mutable    with_pkg:identifier list list = []
-
-        (** Convert a name to a list of identifiers. *)
-        method private name_as_list (n:name) :identifier list =
-            (fst n)@[snd n]
-
-        (** Set the current package. *)
-        method set_current (n:name) :unit =
-            current_pkg <- self#name_as_list n 
-
-        (** Reset the current package. *)
-        method reset_current :unit =
-            current_pkg <- []
-
-        (** Get the current package. *)
-        method current :identifier list =
-            current_pkg
-
-        (** Add a package to the "with" list. *)
-        method add_with (n:name) :unit =
-            with_pkg <- self#name_as_list n::with_pkg
-
-        (** Is a package in the "with" list ? *)
-        method is_with (pkg:identifier list) :bool =
-            List.mem pkg with_pkg
-    end
+  and package = new Ada_utils.package_manager
   in
 
   let add_context (select,ident) =
@@ -487,9 +455,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
            (* sinon la declaration est locale,
               cela cause une erreur *)
            | ((VarSymb(_)|EnumSymb(_)|NumberSymb (_)),_,_)->
-               Npkcontext.report_error "Firstpass.add_var"
-                 ("conflict : "^(string_of_name x)
-                  ^" already declared")
+               Npkcontext.report_warning "Firstpass.add_var"
+                (* FIXME wip was : error *)
+                 ("Variable "^(string_of_name x)
+                  ^" hides former definition.")
       );
       let tr_typ = translate_typ (base_typ st) in
       let (lv, typ_cir) =
@@ -621,24 +590,43 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   (** Used to generate temporary variables. *)
   let temp =
-    object
+    object (s)
         val mutable count :int = 0
 
+        (**
+         * Build a fresh identifier.
+         * Several calls will yield "tmp0", "tmp1", and so on.
+         *)
+        method private new_id :identifier =
+            let res = count in
+            count<-count+1;
+            "tmp"^(string_of_int res)
+
+        (**
+         * Create a new temporary variable.
+         * It will have the specified location and type.
+         * The return value is a triplet of :
+         *   - an identifier
+         *   - a declaration ([C.Decl])
+         *   - a CIR lvalue
+         *
+         * /!\ Side-effects : this method
+         *   - alters the internal state of the [temp] object
+         *   - calls [add_var] to register this variable
+         *)
         method create (loc:Newspeak.location) (t:A.typ)
           :string * (C.stmtkind * Newspeak.location) * C.lv =
-            let x = "tmp"^(string_of_int count) in
-              add_var loc (Unconstrained(t)) x false false;
-              let t = translate_typ t in
-              let decl = (C.Decl (t, x), loc) in
-                count <- count + 1;
-                (x, decl, C.Local x)
+            let id = s#new_id in
+              add_var loc (Unconstrained(t)) id false false;
+              let decl = (C.Decl (translate_typ t, id), loc) in
+                (id, decl, C.Local id)
     end
   in
 
   (* fonctions pour la gestion des types *)
 
-  let integer_class = Ada_utils.integer_class
-  and  check_typ = Ada_utils.check_typ
+  let            check_typ = Ada_utils.check_typ
+  and        integer_class = Ada_utils.integer_class
   and known_compatible_typ = Ada_utils.known_compatible_typ in
 
   (* recherche d'un symbol de fonction : a revoir *)
@@ -652,7 +640,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             Npkcontext.report_error
               "Firstpass.find_fun_symb"
               ((Print_syntax_ada.name_to_string name)
-               ^" is not a funtion")
+               ^" is not a function")
         | (EnumSymb(_),_,_)::r -> mem_other_symb r var_masque
         | (FunSymb _,_,_)::_ -> true
         | [] -> false

@@ -68,25 +68,25 @@ let normalize_ident ident package extern = match extern with
   | false -> ([], ident)
   | true -> normalize_extern_ident ident package
 
-let normalize_name name with_package current_package extern =
+let normalize_name name (package:Ada_utils.package_manager) extern =
   let add_package (parents, ident) pack = match parents with
     | [] -> (pack, ident)
     | a when a=pack -> (pack, ident)
-    | a when (List.mem a with_package) -> (a, ident)
+    | a when (package#is_with a) -> (a, ident)
     | _ -> Npkcontext.report_error
         "ada_normalize.normalize_name.add_package"
           ("unknown package "
            ^(Print_syntax_ada.ident_list_to_string parents)) in
     match extern with
-      | false -> name (*suppr_package name (!current_package)*)
-      | true -> add_package name current_package
+      | false -> name (*suppr_package name (package#current)*)
+      | true -> add_package name package#current
 
 
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t) (context:'c list)
-                (with_package:identifier list list)
-                (current_package : identifier list) (extern:bool)
+                (package:Ada_utils.package_manager)
+                (extern:bool)
    :(value*typ) =
 
   let find_all_cst nom = Hashtbl.find_all csttbl nom in
@@ -105,8 +105,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
       | CChar  (c)   -> IntVal(Nat.of_int c),check_typ expected_typ Character
       | CBool  (b)   -> BoolVal(b),          check_typ expected_typ Boolean
       | Var(v) -> eval_static_const (normalize_name v
-                                                    with_package
-                                                    current_package
+                                                    package
                                                     extern) expected_typ
       | FunctionCall _  -> raise NonStaticExpression
 
@@ -547,9 +546,9 @@ let eval_static (exp:expression) (expected_typ:typ option)
   in
       match name with
         | [], ident -> sans_selecteur ident name
-        | pack, ident when extern || List.mem pack with_package ->
+        | pack, ident when extern || package#is_with pack ->
                                                     avec_selecteur (pack,ident)
-        | (pack, ident) when pack = current_package ->
+        | (pack, ident) when pack = package#current->
                                         avec_selecteur_courant ([],ident) name
         | (pack, _) -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
               ("unknown package " ^(Print_syntax_ada.ident_list_to_string pack))
@@ -557,16 +556,17 @@ let eval_static (exp:expression) (expected_typ:typ option)
       eval_static_exp exp expected_typ
 
 let eval_static_integer_exp (exp:expression)
-    (csttbl:(name, constant_symb) Hashtbl.t)
-    (context:identifier list list) (with_package:identifier list list)
-                       (current_package:identifier list) (extern:bool)
+                            (csttbl:(name, constant_symb) Hashtbl.t)
+                            (context:identifier list list)
+                            (package:Ada_utils.package_manager)
+                            (extern:bool)
     :nat =
     try
         let (v,_) =
           eval_static
               exp (Some(IntegerConst))
               csttbl context
-              with_package current_package
+              package
               extern in
             match v with
               | FloatVal _
@@ -582,15 +582,17 @@ let eval_static_integer_exp (exp:expression)
                           "Ada_normalize.eval_static_integer_exp"
                           "uncaught ambiguous type exception"
 
-let eval_static_number (exp:expression) (csttbl:(name, constant_symb) Hashtbl.t)
-              (context:identifier list list) (with_package:identifier list list)
-              (current_package:identifier list) (extern:bool)
+let eval_static_number (exp:expression)
+                       (csttbl:(name, constant_symb) Hashtbl.t)
+                       (context:identifier list list)
+                       (package:Ada_utils.package_manager)
+                       (extern:bool)
     :value =
      try
          let (v,_) = eval_static
                          exp None
                          csttbl context
-                         with_package current_package
+                         package
                          extern in
          match v with
            | BoolVal _ ->
@@ -665,34 +667,40 @@ and parse_package_specification (name:name):package_spec =
            "Ada_utils.parse_package_specification"
           "internal error : specification expected, body found"
 
-(* associe tous les identifiants de type a leur declaration, si
-   elle existe, sinon lance une erreur.
-   Recherche les specifications.
-   Transforme egalement tous les noms de fonctions et de types
-   sous la forme
-   package.ident (au niveau des declarations)
-*)
+(**
+ * Iterates through the abstract syntax tree, performing miscellaneous tasks.
+ *   - match type identifiers to their declaration (or raise en error)
+ *   - look for specs (.ads files)
+ *   - transforms functions and type names to "package.ident" in their
+ *     declarations.
+ *
+ * FIXME document extern
+ *)
 and normalization (compil_unit:compilation_unit) (extern:bool)
     :compilation_unit =
   let typtbl = Hashtbl.create 100
   and csttbl = Hashtbl.create 100
-  and current_package = ref []
-  and with_package = ref []
+
+  and package=new Ada_utils.package_manager
+
   and context = ref [] in
 
   let normalize_extern_ident ident =
-    normalize_extern_ident ident (!current_package)
+    normalize_extern_ident ident (package#current)
   and normalize_ident ident :name =
-    normalize_ident ident (!current_package) extern
+    normalize_ident ident (package#current) extern
 
   in
+
   (* gestion du contexte *)
-  let add_with_package (par,ident) =
-    with_package := (par@[ident])::(!with_package)
-  and set_current_package (par,ident) =
-    current_package := par@[ident]
+  let add_with_package n = (* FIXME wip *)
+    package#add_with n
+
+  and set_current_package n =
+    package#set_current n
+
   and raz_current_package _ =
-    current_package := []
+    package#reset_current
 
   and add_context (select,ident) =
     (* inverse partiellement la liste, mais tail-rec ?*)
@@ -702,11 +710,11 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       | [] -> (use,1)::res
     in
     let name = select@[ident] in
-      if name = !current_package
+      if name = package#current
       then ()
       else
         begin
-          if (List.mem name !with_package)
+          if (package#is_with name)
           then
             context := incr_occurence [] !context name
           else
@@ -729,12 +737,15 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   (* gestion de la table des constantes *)
 
   (* ajout d'un nombre ou d'une constante *)
-  let add_cst (nom:name) cst global =
+  (* FIXME : variables also get there... *)
+  (* FIXME erroneous pattern matching ? *)
+  let add_cst (nom:name) (cst:constant_symb) (global:bool) :unit =
     (if Hashtbl.mem csttbl nom
      then
        match Hashtbl.find csttbl nom with
-         | Number(_, glob) | StaticConst(_, _, glob)
-         | VarSymb(glob)
+         | Number      (_,    glob)
+         | StaticConst (_, _, glob)
+         | VarSymb     (      glob)
          | EnumLitteral(_, _, glob) when global = glob ->
              Npkcontext.report_error
                "Ada_normalize.add_cst"
@@ -915,9 +926,9 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
         match x with
           | ([], ident) -> sans_selecteur ident
           | (pack, _)
-              when extern||List.mem pack (!with_package) ->
+              when extern||package#is_with pack ->
               avec_selecteur x
-          | (pack, ident) when pack = !current_package ->
+          | (pack, ident) when pack = package#current ->
               selecteur_courant ([],ident)
           | (pack, _) -> Npkcontext.report_error
               "Ada_normalize.find_typ"
@@ -930,7 +941,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     (*let suppr_package (parents, ident) pack = match parents with
       | [] -> ([], ident)
       | a when a=pack -> ([], ident)
-      | a when (List.mem a (!with_package)) -> (a, ident)
+      | a when (package#is_with a ) -> (a, ident)
       | _ -> Npkcontext.error
           "ada_normalize.normalize_name.suppr_package"
             ("unknown package "
@@ -940,7 +951,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     let add_package (parents, ident) pack = match parents with
       | [] -> (pack, ident)
       | a when a=pack -> (pack, ident)
-      | a when (List.mem a (!with_package)) -> (a, ident)
+      | a when (package#is_with a) -> (a, ident)
       | _ -> Npkcontext.report_error
           "ada_normalize.normalize_name.add_package"
             ("unknown package "
@@ -948,8 +959,8 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
     in
       match extern with
-        | false -> name (*suppr_package name (!current_package)*)
-        | true -> add_package name (!current_package)
+        | false -> name (*suppr_package name (package#current)*)
+        | true -> add_package name (package#current)
             (* pas de gestion de with dans package inclus *)
   in
 
@@ -1199,10 +1210,10 @@ and normalize_contrainte contrainte typ =
       (try
          let (val1,_) = eval_static
            norm_exp1 (Some(typ)) csttbl (val_use ())
-           !with_package !current_package extern
+           package extern
          and (val2,_) = eval_static
            norm_exp2 (Some(typ)) csttbl (val_use ())
-           !with_package !current_package extern in
+           package extern in
          let contrainte =  match (val1, val2) with
            | (FloatVal(f1),FloatVal(f2)) ->
                if f1<=f2
@@ -1338,7 +1349,7 @@ let rec normalize_instr (instr,loc) =
             List.map
               (fun (ident, exp) ->
                  let v = eval_static_integer_exp exp csttbl (val_use ())
-                   !with_package !current_package false
+                   package false
                  in (ident, v))
               assoc_list in
           let find_val ident =
@@ -1615,7 +1626,7 @@ let rec normalize_instr (instr,loc) =
         let status =
           try
             let (v,_) = eval_static exp (Some(typ)) csttbl
-              (val_use ()) !with_package !current_package extern in
+              (val_use ()) package extern in
 
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
@@ -1653,7 +1664,7 @@ let rec normalize_instr (instr,loc) =
     | NumberDecl(ident_list, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl (val_use ())
-          !with_package !current_package extern in
+          package extern in
           (*ajouts dans la table*)
           List.iter
             (fun ident -> add_cst (normalize_ident ident)

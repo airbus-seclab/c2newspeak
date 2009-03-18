@@ -368,3 +368,28 @@ let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | None   -> def_value
     | Some x -> x
 
+class package_manager =
+    object (self)
+        val mutable current_pkg:identifier list      = []
+        val mutable    with_pkg:identifier list list = []
+
+        (** Convert a name to a list of identifiers. *)
+        method private name_as_list (n:Syntax_ada.name) :identifier list =
+            (fst n)@[snd n]
+
+        method set_current n :unit =
+            current_pkg <- self#name_as_list n 
+
+        method reset_current =
+            current_pkg <- []
+
+        method current =
+            current_pkg
+
+        method add_with n =
+            with_pkg <- self#name_as_list n::with_pkg
+
+        method is_with pkg =
+            List.mem pkg with_pkg
+    end
+
