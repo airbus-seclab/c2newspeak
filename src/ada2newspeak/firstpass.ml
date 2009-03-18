@@ -1891,8 +1891,8 @@ let translate compil_unit =
                                        C.AddrOf(vid, translate_typ t)
                                  | _ ->  Npkcontext.report_error
                                      "Firstpass.translate_instr"
-                                       ("actual for out parameter"
-                                        ^"must be a variable")
+                                       ("Actual parameter with \"out\" or \"in "
+                                        ^"out\" mode must be a variable")
                        in
                        let arg_list = make_arg_list args params in
                        let tr_params = List.map2 tr_param params arg_list
