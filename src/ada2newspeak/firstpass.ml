@@ -125,11 +125,10 @@ let is_record (symb:symb) :bool =
   match symb with
     | VarSymb  (_, Unconstrained (Declared(Record _,_)), _, _) -> true
     | VarSymb  _ -> false
-    | FunSymb  (_,_,_,(arg_typ,ret_typ)) ->
-            (compare (List.length (arg_typ)) 0 = 0)
-         && (match ret_typ with
-               | C.Struct _ -> true
-               | _          -> false)
+    | FunSymb  (_,_,_,(arg_typ,ret_typ)) ->     (List.length arg_typ = 0)
+                                             && (match ret_typ with
+                                                   | C.Struct _ -> true
+                                                   | _          -> false)
     | _  -> false
 
 let extract_rough_record (symb:symb) :A.record_type_definition =
@@ -274,28 +273,66 @@ let rec try_find_fieldsaccess opt (sels, varname, fields)
           else None
       else None
 
-let translate compil_unit =
+(**
+ * Main translating function.
+ * Takes an Ada program as and returns a CIR tree.
+ *)
+let translate (compil_unit:A.compilation_unit) :Cir.t =
 
-  (* References globales *)
+  (*
+   * Global hashtables and references.
+   * /!\ Side-effects !
+   *)
+  
+  (** Symbol table for lexically-scoped variables. *)
   let symbtbl   = Hashtbl.create 100
+
+  (* Function declarations. *)
   and fun_decls = Hashtbl.create 100
+
+  (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
-  and tmp_cnt   = ref 0
 
   and context = ref []
-  and current_package = ref []
+
   and extern = ref false
-  and with_package = ref []
+
+  (**
+   * Wraps what the "current package" is and which packages are
+   * marked using the "with" construct.
+   *)
+  and package =
+    object (self)
+        val mutable current_pkg:identifier list      = []
+        val mutable    with_pkg:identifier list list = []
+
+        (** Convert a name to a list of identifiers. *)
+        method private name_as_list (n:name) :identifier list =
+            (fst n)@[snd n]
+
+        (** Set the current package. *)
+        method set_current (n:name) :unit =
+            current_pkg <- self#name_as_list n 
+
+        (** Reset the current package. *)
+        method reset_current :unit =
+            current_pkg <- []
+
+        (** Get the current package. *)
+        method current :identifier list =
+            current_pkg
+
+        (** Add a package to the "with" list. *)
+        method add_with (n:name) :unit =
+            with_pkg <- self#name_as_list n::with_pkg
+
+        (** Is a package in the "with" list ? *)
+        method is_with (pkg:identifier list) :bool =
+            List.mem pkg with_pkg
+    end
   in
 
-  let set_current_package (par, ident) =
-    current_package := par@[ident]
-  and raz_current_package _ =
-    current_package := []
-  and add_with_package (par, ident) =
-    with_package := (par@[ident])::(!with_package)
-
-  and add_context (select,ident) =
+  let add_context (select,ident) =
 
     (* inverse partiellement la liste, mais tail-rec ?*)
     let rec incr_occurence res l use = match l with
@@ -337,9 +374,9 @@ let translate compil_unit =
     match name with
       | ([], ident) -> f_ident ident name
       | (pack, ident)
-          when !extern||List.mem pack (!with_package) ->
+          when !extern||package#is_with pack ->
           f_with (pack,ident)
-      | (pack, ident) when pack = !current_package ->
+      | (pack, ident) when pack = package#current ->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
@@ -350,14 +387,14 @@ let translate compil_unit =
   let find_name_record  name f_ident f_with f_current =
     match name with
       | ([], ident) -> f_ident ident name
-      | (pack, ident) when (pack <> !current_package) &&
-          (not (List.mem pack (!with_package))) &&
+      | (pack, ident) when (pack <> package#current) &&
+          (not (package#is_with pack)) &&
           (not !extern) ->
           f_with (pack, ident)
       | (pack, ident)
-          when !extern||List.mem pack (!with_package) ->
+          when !extern||package#is_with pack ->
           f_with (pack,ident)
-      | (pack, ident) when pack = !current_package ->
+      | (pack, ident) when pack = package#current->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
@@ -426,7 +463,7 @@ let translate compil_unit =
   let translate_name (name:A.name) :string =
     let tr_name = match (!extern, name) with
       | (true,_) -> name
-      | (false,(_,ident)) -> (!current_package,ident)
+      | (false,(_,ident)) -> (package#current,ident)
     in
       Print_syntax_ada.name_to_string tr_name in
 
@@ -466,7 +503,7 @@ let translate compil_unit =
   (* declaration d'un nombre local *)
   and add_number loc value lvl ident =
     let x =  Normalize.normalize_ident
-      ident !current_package !extern in
+      ident package#current !extern in
       (if Hashtbl.mem symbtbl x
        then
          match Hashtbl.find symbtbl x with
@@ -503,7 +540,7 @@ let translate compil_unit =
   (* declaration d'un symbole d'enumeration *)
   and add_enum loc ident value typ global =
     let name = Normalize.normalize_ident
-      ident !current_package !extern in
+      ident package#current !extern in
       (if mem_symb name
        then
          List.iter
@@ -541,7 +578,7 @@ let translate compil_unit =
 
   and add_global loc typ tr_typ tr_init ro x =
     let name = Normalize.normalize_ident
-      x !current_package !extern in
+      x package#current !extern in
 
     let tr_name = translate_name name in
       (if mem_symb name
@@ -582,14 +619,20 @@ let translate compil_unit =
     List.iter remove_symb args
   in
 
-  (* generation de temp *)
-  let gen_tmp (loc:Newspeak.location) (t:A.typ) =
-    let x = "tmp"^(string_of_int !tmp_cnt) in
-      add_var loc (Unconstrained(t)) x false false;
-      let t = translate_typ t in
-      let decl = (C.Decl (t, x), loc) in
-        incr tmp_cnt;
-        (x, decl, C.Local x)
+  (** Used to generate temporary variables. *)
+  let temp =
+    object
+        val mutable count :int = 0
+
+        method create (loc:Newspeak.location) (t:A.typ)
+          :string * (C.stmtkind * Newspeak.location) * C.lv =
+            let x = "tmp"^(string_of_int count) in
+              add_var loc (Unconstrained(t)) x false false;
+              let t = translate_typ t in
+              let decl = (C.Decl (t, x), loc) in
+                count <- count + 1;
+                (x, decl, C.Local x)
+    end
   in
 
   (* fonctions pour la gestion des types *)
@@ -926,7 +969,7 @@ let translate compil_unit =
     match expected_typ with
       | None | Some(Boolean) ->
           let loc = Npkcontext.get_loc () in
-          let (tmp, decl, vid) = gen_tmp loc Boolean in
+          let (tmp, decl, vid) = temp#create loc Boolean in
           let name = ident_to_name tmp in
           let instr_if = If (cond,
                              [(Assign(Lval name, exp_then),loc)],
@@ -2300,14 +2343,14 @@ let translate compil_unit =
             "Firstpass.translate_spec"
                 "declaration de sous package non implemente"
           | true ->
-              set_current_package nom;
+              package#set_current nom;
               let _ = List.map
                 (* probleme : variables *)
                 (translate_global_basic_declaration)
                 basic_decl_list
               in
-                raz_current_package ();
-                if !extern then add_with_package nom
+                package#reset_current;
+                if !extern then package#add_with nom
 
 
 
@@ -2324,20 +2367,16 @@ let translate compil_unit =
          superieur,
          donc on accepte la declaration d'un package. Sinon, il
          s'agit d'un sous-package, ce qui n'est pas gere *)
-      | (PackageBody(name, package_spec, decl_part, _),
-         true) ->
-          set_current_package name;
+      | PackageBody(name, package_spec, decl_part, _), true ->
+          package#set_current name;
           (match package_spec with
              | None -> ()
              | Some(_, basic_decls) ->
-                 ignore
-                 (List.map
-                   translate_global_basic_declaration
-                   basic_decls));
-          ignore (List.map translate_global_decl_item
-                    decl_part)
+                 List.iter translate_global_basic_declaration basic_decls
+          );
+          List.iter translate_global_decl_item decl_part
 
-      | (PackageBody(_), false) -> Npkcontext.report_error
+      | PackageBody _, false -> Npkcontext.report_error
           "Firstpass.translate_body"
             "declaration de sous package non implemente"
 
@@ -2354,14 +2393,14 @@ let translate compil_unit =
 
   in
 
-  let rec translate_context context =
-    match context with
+  let rec translate_context ctx =
+    match ctx with
       | With(nom, loc, spec)::r ->
           Npkcontext.set_loc loc;
           (match spec with
             | Some(spec, loc) ->
                 translate_spec spec loc true;
-                add_with_package nom;
+                package#add_with nom;
                 translate_context r
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
@@ -2379,12 +2418,12 @@ let translate compil_unit =
   in
     Npkcontext.print_debug
       (Print_syntax_ada.ast_to_string [normalized_compil_unit]);
-  let (context,lib_item,loc) = normalized_compil_unit
+  let (ctx,lib_item,loc) = normalized_compil_unit
   in
     try
       Npkcontext.set_loc loc;
       extern := true;
-      translate_context context;
+      translate_context ctx;
       extern := false;
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
