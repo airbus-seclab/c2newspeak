@@ -8,7 +8,6 @@ void main(void) {
   (623.c:27#2)^while (1) {
     (623.c:27#2)^do {
       (623.c:33#4)^while (1) {
-        (623.c:28#4)^0- =(uint32) 0-_uint32;
         (623.c:28#11)^do {
           (623.c:28#11)^choose {
            -->
@@ -18,7 +17,6 @@ void main(void) {
             (623.c:28#11)^guard(! 0-_uint32);
           }
         } with lbl4: {
-          (623.c:29#6)^0- =(uint32) 0-_uint32;
           (623.c:29#12)^choose {
            -->
             (623.c:29#12)^guard(0-_uint32);
@@ -27,7 +25,6 @@ void main(void) {
           }
         }
         (623.c:33#4)^0- =(uint32) 1;
-        (623.c:33#4)^0- =(uint32) 0-_uint32;
         (623.c:33#4)^choose {
          -->
           (623.c:33#4)^guard(0-_uint32);

@@ -11,7 +11,6 @@ void main(void) {
     (620.c:28#2)^uint32 switch.620.c:28#2.1;
     (620.c:28#2)^do {
       (620.c:28#2)^while (1) {
-        (620.c:28#2)^2- =(uint32) 2-_uint32;
         (620.c:28#2)^choose {
          -->
           (620.c:28#2)^guard(! 2-_uint32);
@@ -24,7 +23,6 @@ void main(void) {
           uint32 switch.620.c:28#2.0;
           (620.c:28#2)^do {
             (620.c:28#2)^while (1) {
-              (620.c:28#2)^3- =(uint32) 3-_uint32;
               (620.c:28#2)^choose {
                -->
                 (620.c:28#2)^guard(! 3-_uint32);
@@ -84,7 +82,6 @@ void main(void) {
                 }
               } with lbl5: {
               }
-              (620.c:28#2)^3- =(uint32) 3-_uint32;
               (620.c:28#2)^choose {
                -->
                 (620.c:28#2)^guard(3-_uint32);
@@ -96,7 +93,6 @@ void main(void) {
           } with lbl3: {
           }
         }
-        (620.c:28#2)^2- =(uint32) 2-_uint32;
         (620.c:28#2)^choose {
          -->
           (620.c:28#2)^guard(2-_uint32);

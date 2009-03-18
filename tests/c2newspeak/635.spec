@@ -7,7 +7,6 @@ void main(void) {
   (635.c:27#2)^0- =(uint32) 0;
   (635.c:37#2)^do {
     (635.c:37#2)^while (1) {
-      (635.c:27#2)^0- =(uint32) 0-_uint32;
       (635.c:27#2)^while (1) {
         (635.c:27#2)^choose {
          -->
@@ -15,7 +14,6 @@ void main(void) {
          -->
           (635.c:27#2)^guard(! 0-_uint32);
         }
-        (635.c:29#10)^0- =(uint32) 0-_uint32;
         (635.c:29#10)^{
           int32 m;
           (635.c:33#10)^choose {
@@ -40,7 +38,6 @@ void main(void) {
         }
       } with lbl7: {
       }
-      (635.c:37#2)^0- =(uint32) 0-_uint32;
       (635.c:37#2)^choose {
        -->
         (635.c:37#2)^guard(0-_uint32);

@@ -67,17 +67,17 @@ let compile fname =
     in
     let fnames = if fnames = [] then fname::[] else fnames in
       Npkcontext.forget_loc ();
-      if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
       Npkcontext.print_debug "Parsing done.";
+      if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
       let globals = 
 	if !Npkcontext.accept_goto then begin
 	  Npkcontext.print_debug "Running goto_elimination...";
 	  let g = Goto_elimination.run globals in
-	    if !Npkcontext.verb_ast then Csyntax.print (g, spec);
 	    Npkcontext.print_debug "Goto elimination done.";
 	    Npkcontext.print_size (Csyntax.size_of (g, spec));
 	    g
-	end else globals
+	end 
+	else globals
       in
 	Npkcontext.print_debug "Running first pass...";
 	let prog = Firstpass.translate (globals, spec) in

@@ -10,7 +10,6 @@ void main(void) {
     (602.c:28#2)^uint32 switch.602.c:28#2.0;
     (602.c:28#2)^do {
       (602.c:28#2)^while (1) {
-        (602.c:28#2)^2- =(uint32) 2-_uint32;
         (602.c:28#2)^choose {
          -->
           (602.c:28#2)^guard(! 2-_uint32);
@@ -42,13 +41,11 @@ void main(void) {
             }
           } with lbl4: {
           }
-          (602.c:32#4)^2- =(uint32) 2-_uint32;
           (602.c:32#4)^while (1) {
             (602.c:33#4)^2- =(uint32) 0;
           }
         } with lbl3: {
         }
-        (602.c:28#2)^2- =(uint32) 2-_uint32;
         (602.c:28#2)^choose {
          -->
           (602.c:28#2)^guard(2-_uint32);

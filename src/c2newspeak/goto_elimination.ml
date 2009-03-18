@@ -539,6 +539,11 @@ in
   in
     fst (choose stmts) 
 
+let cond_equal cond e =
+  match cond, e with
+      Var v, Var v' when v = v' -> true
+    | _, _ -> false
+
 let out_if_else stmts lbl level g_offset =
   (* returns the stmt list whose 'goto lbl' stmt has been deleted and
      the condition if (fresh_lbl lbl) goto this fresh lbl has been
@@ -551,14 +556,16 @@ let out_if_else stmts lbl level g_offset =
 	      If (e, [Goto lbl', l'], []) when goto_equal lbl lbl' g_offset ->
 		  let lbl = fresh_lbl lbl in 
 		  let cond = Var lbl in
-		  let n_cond = Unop(Neg, cond) in
-		  let stmt = Exp (Set (cond, None, e)) in
+		  let n_cond = Unop(Not, cond) in
+		  let stmt = 
+		    if cond_equal cond e then [] else [Exp (Set (cond, None, e)), l] 
+		  in
 		  let if_goto = If(cond, [Goto lbl', l'], []) in
 		    level := !level-1; 
 		    if stmts = [] then
-		      [stmt, l], [if_goto, l]
+		      stmt, [if_goto, l]
 		    else
-		      [(stmt, l) ; (If(n_cond, stmts, []), l)], [if_goto, l]
+		      stmt @ [(If(n_cond, stmts, []), l)], [if_goto, l]
 
 	    | Block blk -> let blk', cond = out blk in 
 		if cond = [] then 
@@ -582,12 +589,15 @@ let rec out_switch_loop stmts lbl level g_offset =
 		if goto_equal lbl lbl' g_offset then begin
 		  let f_lbl = fresh_lbl lbl in 
 		  let f_lbl = Var f_lbl in
-		  let stmt = Exp (Set (f_lbl, None, e)) in
+		  let stmt = 
+		    if cond_equal f_lbl e then []
+		    else [Exp (Set (f_lbl, None, e)), l] 
+		  in
 		  let if_goto_in = If(f_lbl, [Break, l'], []) in
 		  let if_goto_out = If(f_lbl, [Goto lbl', l'], []) in
 		  let stmts', cond = out stmts in
 		    level := !level-1;
-		    (stmt, l)::((if_goto_in, l)::stmts'), (if_goto_out, l)::cond
+		    stmt @ ((if_goto_in, l)::stmts'), (if_goto_out, l)::cond
 		end
 		else
 		  let stmts', cond = out stmts in (stmt, l)::stmts', cond
@@ -686,7 +696,7 @@ let outward stmts lbl g_level g_offset =
 let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
-  let set = Exp (Set (lbl', None, e)) in
+  let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
     if search_lbl if_blk lbl then 
       begin
 	let cond = IfExp (lbl', cond, zero) in
@@ -698,10 +708,10 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	let if' = If(cond, if_blk', else_blk) in
 	let decls, before = extract_decls before in
 	  if before = [] then 
-	    (set, lb)::(decls @ [if', l'])
+	    set @ decls @ [if', l']
 	  else
 	    let before' = If(Unop(Not, lbl'), before, []) in
-	      (set, lb)::(decls @ [(before', lb); (if', l')])
+	      set @ decls @ [(before', lb); (if', l')]
       end
     else 
       begin
@@ -714,10 +724,10 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	let if' = If(cond, if_blk, else_blk') in
 	let decls, before = extract_decls before in
 	  if before = [] then 
-	    (set, lb)::(decls @ [if', l'])
+	    set @ decls @ [if', l']
 	  else
 	    let before' = If(Unop(Not, lbl'), before, []) in
-	      (set, lb)::(decls @ [(before', lb); (if', l')])
+	      set @ decls @ [(before', lb); (if', l')]
       end
 
 and loop_in lbl l e before cond blk g_offset g_loc b =
@@ -740,8 +750,10 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
 
 	    | _ -> (stmt, l)::(search_and_add stmts)
   in
-  let set = Exp (Set (lbl', None, e)) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
+  let set = 
+    if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] 
+  in
   let e = 
     if b then (* expression for While *) IfExp(lbl', one, cond) 
     else (* expression for DoWhile *)  cond 
@@ -755,10 +767,10 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
   let decls, before = extract_decls before in
     if before = [] then 
       (* optimisation when there are no stmts before the loop *)
-	(set, lb)::decls, blk', e
+	set @ decls, blk', e
     else 
       let before' = If(Unop(Not, lbl'), before, []) in
-	  ((set, lb)::decls) @ [before', lb], blk', e
+	  set @ decls @ [before', lb], blk', e
   
 
 and while_in lbl l e before cond blk1 blk2 blk3 g_offset g_loc=
@@ -774,8 +786,8 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
   let declr = VDecl (tswitch, uint_typ, false, false, None) in
   let tswitch = Var tswitch in
-  let set = Exp (Set (lbl', None, e)) in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
+  let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
   let set_if = Exp (Set(tswitch, None, cond)) in
   let last = try (snd (List.hd (List.rev before))) with Failure "hd" -> l in
   let before' = before @ [set_if, last] in
@@ -797,10 +809,10 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
       let set_else = Exp (Set(tswitch, None, e_case)) in
       let switch' = CSwitch(tswitch, cases', default) in
 	if before' = [] then
-	  ((set, lb)::decls) @[switch' ,l]
+	  set @ decls @[switch' ,l]
 	else
 	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
-	    ((set, lb)::decls) @ [(declr, lb) ; (if', lb) ; (switch', l)]
+	    set @ decls @ [(declr, lb) ; (if', lb) ; (switch', l)]
     with Not_found ->
       let conds = List.map (fun (e, _, _) -> e) cases in
       let build e e' = IfExp(e, one, e') in
@@ -811,10 +823,10 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
       let default' = inward lbl g_offset g_loc default' in
       let switch' = CSwitch(tswitch, cases, default') in
 	if before' = [] then
-	  ((set, lb)::decls) @[switch', l]
+	  set @ decls @[switch', l]
 	else
 	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
-	    ((set, lb)::decls) @ [(declr, lb) ; (if', lb) ; (switch', l)]
+	    set @ decls @ [(declr, lb) ; (if', lb) ; (switch', l)]
 
 and block_in lbl l e before blk g_offset g_loc =
   let lb = try snd (List.hd before) with Failure "hd" -> l in
@@ -924,10 +936,10 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    let g_lbl = goto_lbl lbl g_offset in
 		    let lbl' = Var (fresh_lbl lbl) in
 		    let if' = If(lbl', [Goto g_lbl, g_loc], []) in
-		    let set = Exp (Set (lbl', None, e)) in
 		    let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
+		    let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), l_set] in
 		    let blk', after' = avoid_break_continue_capture blk l l_set g_offset vdecls in
-		    let blk' = [(if', l) ; (stmt, l)] @ blk' @ [(set, l_set)] in
+		    let blk' = [(if', l) ; (stmt, l)] @ blk' @ set in
 		      (* inward transformations on the blk chunk. We know that the
 			 first stmt is the goto stmt and the second one contains
 			 the label stmt *)

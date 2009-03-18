@@ -9,7 +9,6 @@ void main(void) {
     int32 i;
     (579.c:28#2)^do {
       (579.c:28#2)^while (1) {
-        (579.c:28#2)^1- =(uint32) 1-_uint32;
         (579.c:28#2)^do {
           (579.c:28#2)^while (1) {
             (579.c:28#2)^choose {
