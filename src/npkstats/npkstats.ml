@@ -310,7 +310,6 @@ let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 let _ = 
   try
     Arg.parse speclist anon_fun usage_msg;
-
     if !input = "" 
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 

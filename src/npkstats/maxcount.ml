@@ -37,6 +37,8 @@ type stats = {
 
 type t = bool * stats
 
+module FunSet = Set.Make(String)
+
 let add_stats st1 st2 =
   { 
     nb_vars = st1.nb_vars + st2.nb_vars;
@@ -70,7 +72,8 @@ let count debug prog =
   let exact = ref true in
   let fun_tbl = Hashtbl.create 100 in
   let current_loc = ref Newspeak.unknown_loc in
-    
+  let fset = ref FunSet.empty in
+
   let rec process_call f =
     try Hashtbl.find fun_tbl f
     with Not_found -> 
@@ -109,8 +112,13 @@ let count debug prog =
 	  let action_info = process_blk action info in
 	    max_stats body_info action_info
       | Call (FunId f) -> 
-	  let info_f = process_call f in
-	    add_stats info info_f
+	  if FunSet.mem f !fset then info
+	  else 
+	    begin
+	      fset := FunSet.add f !fset;
+	      let info_f = process_call f in
+		add_stats info info_f
+	    end
       | Call _ -> 
 	  let build_call f = (Call (FunId f), !current_loc)::[] in
 	  let alternatives = List.map build_call fid_addrof in
