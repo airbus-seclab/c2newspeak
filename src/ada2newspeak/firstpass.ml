@@ -455,8 +455,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
            (* sinon la declaration est locale,
               cela cause une erreur *)
            | ((VarSymb(_)|EnumSymb(_)|NumberSymb (_)),_,_)->
-               Npkcontext.report_warning "Firstpass.add_var"
-                (* FIXME wip was : error *)
+               Npkcontext.report_error "Firstpass.add_var"
+                (* FIXME should be warning *)
                  ("Variable "^(string_of_name x)
                   ^" hides former definition.")
       );

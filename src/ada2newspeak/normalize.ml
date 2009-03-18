@@ -31,22 +31,24 @@ open Ada_utils
 module Nat = Newspeak.Nat
 
 exception AmbiguousTypeException
-exception NonStaticExpression = Ada_utils.NonStaticExpression
 
 let mk_float(f:float):float_number = (f, string_of_float f)
 
-let tmp_cnt:int ref = ref 0
+let temp =
+    object
+        val mutable count = 0
 
-let gen_tmp(():unit):string  =
-  let x = "tmp_range"^(string_of_int !tmp_cnt)
-  in
-    incr tmp_cnt;
-    x
-
-
-let base_typ             = Ada_utils.base_typ
-let check_typ            = Ada_utils.check_typ
-let known_compatible_typ = Ada_utils.known_compatible_typ
+        (**
+         * Create a new temporary variable identifier.
+         * Multiple calls will yield "tmp_range0", "tmp_range1", and so on.
+         *
+         * /!\ Side-effects : calls will alter the state of [temp].
+         *)
+        method create :string =
+            let res = "tmp_range"^(string_of_int count) in
+            count <- count + 1;
+            res
+    end
 
 (* variable booleenne :
    cas fonction : extern
@@ -59,7 +61,6 @@ type constant_symb =
   | VarSymb      of bool            (** bool = global? *)
   | FunSymb      of typ option*bool (** bool = extern? *)
 
-
 let string_of_name = Print_syntax_ada.name_to_string
 
 let normalize_extern_ident ident package = (package, ident)
@@ -68,7 +69,7 @@ let normalize_ident ident package extern = match extern with
   | false -> ([], ident)
   | true -> normalize_extern_ident ident package
 
-let normalize_name name (package:Ada_utils.package_manager) extern =
+let normalize_name name (package:package_manager) extern =
   let add_package (parents, ident) pack = match parents with
     | [] -> (pack, ident)
     | a when a=pack -> (pack, ident)
@@ -85,7 +86,7 @@ let normalize_name name (package:Ada_utils.package_manager) extern =
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t) (context:'c list)
-                (package:Ada_utils.package_manager)
+                (package:package_manager)
                 (extern:bool)
    :(value*typ) =
 
@@ -117,10 +118,10 @@ let eval_static (exp:expression) (expected_typ:typ option)
       | Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
 
       | Qualified(subtyp, exp) ->
-          let typ = Ada_utils.check_typ expected_typ
-            (Ada_utils.base_typ subtyp) in
+          let typ = check_typ expected_typ
+            (base_typ subtyp) in
           let (value,typ) = eval_static_exp exp (Some(typ)) in
-            Ada_utils.check_static_subtyp subtyp value;
+            check_static_subtyp subtyp value;
             (value, typ)
 
       | Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
@@ -208,7 +209,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
   and eval_static_binop (op:binary_op) (e1:expression) (e2:expression)
                                 (expected_typ:typ option)
         :value*typ =
-    let expected_typ1 = Ada_utils.typ_operand op expected_typ in
+    let expected_typ1 = typ_operand op expected_typ in
     let (val1, val2, typ) =
       try
         let (val1, typ1) = eval_static_exp e1 expected_typ1 in
@@ -280,7 +281,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
 
   and eval_static_neg (exp:expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
-        | IntVal i, t when (Ada_utils.integer_class t) -> (IntVal(Nat.neg i), t)
+        | IntVal i, t when (integer_class t) -> (IntVal(Nat.neg i), t)
         | (FloatVal(f,_), Float) -> (FloatVal(mk_float (-.f)), Float)
         | _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
                                    "invalid operator and argument"
@@ -558,7 +559,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
 let eval_static_integer_exp (exp:expression)
                             (csttbl:(name, constant_symb) Hashtbl.t)
                             (context:identifier list list)
-                            (package:Ada_utils.package_manager)
+                            (package:package_manager)
                             (extern:bool)
     :nat =
     try
@@ -585,7 +586,7 @@ let eval_static_integer_exp (exp:expression)
 let eval_static_number (exp:expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
                        (context:identifier list list)
-                       (package:Ada_utils.package_manager)
+                       (package:package_manager)
                        (extern:bool)
     :value =
      try
@@ -639,7 +640,7 @@ let rec parse_specification (name:name) :compilation_unit =
     match spec_ast with
       | (_, Spec(_), _) -> spec_ast
       | (_, Body(_), _) -> Npkcontext.report_error
-          "Ada_utils.parse_specification"
+          "normalize.parse_specification"
             "specification expected, body found"
 
 (* renvoie la specification normalisee du package correspondant
@@ -650,7 +651,7 @@ and parse_extern_specification (name:name):spec*location =
     match (normalization spec_ast true) with
       | (_, Spec(spec), loc) -> (spec, loc)
       | (_, Body(_), _) -> Npkcontext.report_error
-          "Ada_utils.parse_extern_specification"
+          "normalize.parse_extern_specification"
             "internal error : specification expected, body found"
 
 (* renvoie la specification du package correspondant a name.
@@ -664,7 +665,7 @@ and parse_package_specification (name:name):package_spec =
                   ("package specification expected, "
                   ^"subprogram specification found")
     | (_, Body _, _) -> Npkcontext.report_error
-           "Ada_utils.parse_package_specification"
+           "normalize.parse_package_specification"
           "internal error : specification expected, body found"
 
 (**
@@ -674,14 +675,14 @@ and parse_package_specification (name:name):package_spec =
  *   - transforms functions and type names to "package.ident" in their
  *     declarations.
  *
- * FIXME document extern
+ * TODO document extern
  *)
 and normalization (compil_unit:compilation_unit) (extern:bool)
     :compilation_unit =
   let typtbl = Hashtbl.create 100
   and csttbl = Hashtbl.create 100
 
-  and package=new Ada_utils.package_manager
+  and package=new package_manager
 
   and context = ref [] in
 
@@ -692,17 +693,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   in
 
-  (* gestion du contexte *)
-  let add_with_package n = (* FIXME wip *)
-    package#add_with n
-
-  and set_current_package n =
-    package#set_current n
-
-  and raz_current_package _ =
-    package#reset_current
-
-  and add_context (select,ident) =
+  let add_context (select,ident) =
     (* inverse partiellement la liste, mais tail-rec ?*)
     let rec incr_occurence res l use = match l with
       | (a,n)::r when a=use -> (a, n+1)::res@r
@@ -836,7 +827,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
        match Hashtbl.find typtbl nom with
          | (_, _, glob) when global = glob ->
              Npkcontext.report_error
-               "Ada_utils.typ_normalization.add_subtyp"
+               "normalize.typ_normalization.add_subtyp"
                ("conflict : "^(string_of_name nom)
                 ^" already declared")
          | _ -> ());
@@ -870,9 +861,9 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           Constrained(Declared(typdecl, location), contrainte, true)
       | DerivedType(_, subtyp_ind) ->
 
-          let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+          let subtyp = extract_subtyp subtyp_ind in
 
-          let typ = Ada_utils.base_typ subtyp in
+          let typ = base_typ subtyp in
             begin
               match typ with
                 | Declared(Enum(_,symbs,_),_) ->
@@ -973,7 +964,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
      booleen qui indique si le sous-type de reference est
      statique *)
   let subtyp_of_constraint contrainte typ static_ref =
-    let static_constraint = Ada_utils.constraint_is_static
+    let static_constraint = constraint_is_static
       contrainte
     in
 
@@ -988,9 +979,9 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
     *)
     let contrainte_subtyp_result = match contrainte with
       | RangeConstraint(_, _) ->
-          let min = normalize_ident (gen_tmp ())
-          and max = normalize_ident (gen_tmp ()) in
-            RangeConstraint(Var(min), Var(max))
+          let min = normalize_ident (temp#create)
+          and max = normalize_ident (temp#create) in
+            RangeConstraint(Var min, Var max)
       | _ -> contrainte
     in
       (Constrained(typ, contrainte_subtyp_result,
@@ -1021,7 +1012,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
               normalize_contrainte const typ
             in
               if not
-                (Ada_utils.constraint_is_constraint_compatible
+                (constraint_is_constraint_compatible
                    const_ref norm_contrainte)
               then
                 Npkcontext.report_error
@@ -1052,7 +1043,7 @@ and normalize_subtyp subtyp =
           let n_st1 =  normalize_subtyp_indication st1_ind in
           let n_st2 =  normalize_subtyp_indication st2_ind in
 
-        let subtyp = Ada_utils.extract_subtyp n_st1 in
+        let subtyp = extract_subtyp n_st1 in
 
         let contrainte = match subtyp with
           | Constrained(_,contrainte,_) -> contrainte
@@ -1233,8 +1224,8 @@ and normalize_contrainte contrainte typ =
                    "null range not accepted"
 
            | (BoolVal(b1), BoolVal(b2)) ->
-               let i1 = Ada_utils.nat_of_bool b1
-               and i2 = Ada_utils.nat_of_bool b2
+               let i1 = nat_of_bool b1
+               and i2 = nat_of_bool b2
                in
                  if b1 <= b2
                  then IntegerRangeConstraint(i1, i2)
@@ -1323,7 +1314,7 @@ let rec normalize_instr (instr,loc) =
                 normalize_contrainte contrainte IntegerConst
               in match norm_contrainte with
                 | IntegerRangeConstraint(min, max) ->
-                    let ikind = Ada_utils.ikind_of_range min max
+                    let ikind = ikind_of_range min max
                     in IntegerRange(ident, norm_contrainte, Some(ikind))
 
                 | _ ->
@@ -1445,7 +1436,7 @@ let rec normalize_instr (instr,loc) =
                    ^" constraint isnt integer range for enumeration type")
         in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-        let parent_type = Ada_utils.extract_typ norm_subtyp_ind in
+        let parent_type = extract_typ norm_subtyp_ind in
         let typ_decl = match parent_type with
             (* base type cases : we still have a derived type *)
           | Integer | Float | Boolean
@@ -1470,8 +1461,8 @@ let rec normalize_instr (instr,loc) =
 
         (*constitution of the subtype representing the current declaration *)
         let norm_subtyp =
-            match (Ada_utils.extract_subtyp norm_subtyp_ind ) with
-                (*match Ada_utils.extract_subtyp norm_subtyp_ind with
+            match (extract_subtyp norm_subtyp_ind ) with
+                (*match extract_subtyp norm_subtyp_ind with
                 *)
               | Unconstrained(_) ->
                   Unconstrained(Declared(typ_decl, loc))
@@ -1502,7 +1493,7 @@ let rec normalize_instr (instr,loc) =
     | Array(ident, ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
         let norm_inter =  normalize_subtyp_indication intervalle_discret
         and norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-        let subtyp =Ada_utils.extract_subtyp norm_inter in
+        let subtyp = extract_subtyp norm_inter in
 
         let contrainte = match subtyp with
           | Constrained(_,contrainte,_) -> contrainte
@@ -1619,7 +1610,7 @@ let rec normalize_instr (instr,loc) =
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind in
 
-        let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
+        let subtyp = extract_subtyp norm_subtyp_ind in
         let typ = base_typ subtyp in
         let add_ident v x = add_cst (normalize_ident x)
           (StaticConst(v, typ, global)) global in
@@ -1630,7 +1621,7 @@ let rec normalize_instr (instr,loc) =
 
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
-              Ada_utils.check_static_subtyp subtyp v;
+              check_static_subtyp subtyp v;
               List.iter (add_ident v) ident_list;
               StaticVal(v)
           with
@@ -1679,7 +1670,7 @@ let rec normalize_instr (instr,loc) =
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind  in
-        let subtyp = Ada_utils.extract_subtyp norm_subtyp_ind in
+        let subtyp = extract_subtyp norm_subtyp_ind in
           add_subtyp (normalize_ident ident) subtyp loc global;
           SubtypDecl(ident, norm_subtyp_ind)
 
@@ -1690,7 +1681,7 @@ let rec normalize_instr (instr,loc) =
     let rec extract_representation_clause decls = match decls with
       | (BasicDecl(RepresentClause(rep)), loc)::r ->
           Hashtbl.add represtbl
-            (Ada_utils.extract_representation_clause_name rep)
+            (extract_representation_clause_name rep)
             (rep, loc);
           extract_representation_clause r
       | decl::r -> decl::(extract_representation_clause r)
@@ -1751,12 +1742,12 @@ let rec normalize_instr (instr,loc) =
             params
 
   and normalize_package_spec (nom, list_decl) =
-    set_current_package nom;
+    package#set_current nom;
     let represtbl = Hashtbl.create 50 in
     let rec extract_representation_clause decls = match decls with
       | (RepresentClause(rep), loc)::r ->
           Hashtbl.add represtbl
-            (Ada_utils.extract_representation_clause_name rep)
+            (extract_representation_clause_name rep)
             (rep, loc);
           extract_representation_clause r
       | decl::r -> decl::(extract_representation_clause r)
@@ -1769,7 +1760,7 @@ let rec normalize_instr (instr,loc) =
           in (decl,loc)::(normalize_decls r)
       | [] -> [] in
     let norm_spec = normalize_decls list_decl in
-      raz_current_package ();
+      package#reset_current;
       (nom,norm_spec)
 
 
@@ -1802,12 +1793,12 @@ let rec normalize_instr (instr,loc) =
                 Some(normalize_package_spec package_spec)
           | Some(spec) -> Some(normalize_package_spec spec)
         in
-          set_current_package name;
+          package#set_current name;
           let norm_decl_part = normalize_decl_part decl_part true in
           let norm_block = normalize_block block
           in
             remove_decl_part decl_part;
-            raz_current_package ();
+            package#reset_current;
             PackageBody(name, norm_decl, norm_decl_part,
                         norm_block)
 
@@ -1842,9 +1833,9 @@ let rec normalize_instr (instr,loc) =
         | ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) ->
             (* constante statique *)
 
-            let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+            let subtyp = extract_subtyp subtyp_ind in
             let typ = base_typ subtyp
-              (*Ada_utils.extract_subtyp subtyp_ind*) in
+              (*extract_subtyp subtyp_ind*) in
               List.iter
                 (fun x -> add_cst (normalize_extern_ident x)
                    (StaticConst(v, typ, true)) true)
@@ -1869,9 +1860,9 @@ let rec normalize_instr (instr,loc) =
                                       Procedure(name, _))) ->
             add_function name None true
         | SubtypDecl(ident, subtyp_ind) ->
-            let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+            let subtyp = extract_subtyp subtyp_ind in
               add_subtyp (normalize_extern_ident ident)
-                (*Ada_utils.extract_subtyp subtyp_ind*) subtyp
+                (*extract_subtyp subtyp_ind*) subtyp
                 loc true
         | SpecDecl _ -> ()
         | UseDecl _ -> ()
@@ -1884,10 +1875,10 @@ let rec normalize_instr (instr,loc) =
           add_function name None true
 
       | PackageSpec(nom, basic_decls) ->
-          set_current_package nom;
+          package#set_current nom;
           List.iter add_extern_basic_decl basic_decls;
-          raz_current_package ();
-          add_with_package nom
+          package#reset_current;
+          package#add_with nom
 
   in
 
