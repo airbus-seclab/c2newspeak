@@ -287,14 +287,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (** Symbol table for lexically-scoped variables. *)
   let symbtbl   = Hashtbl.create 100
 
-  (* FIXME : little used, and only as replace and return value *)
+  (* Function declarations. *)
   and fun_decls = Hashtbl.create 100
 
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
-
-  (* FIXME Used by gen_tmp. Side-effects. Make an object instead ? *)
-  and tmp_cnt   = ref 0
 
   and context = ref []
 
@@ -329,9 +326,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         method add_with (n:name) :unit =
             with_pkg <- self#name_as_list n::with_pkg
 
-        (** Get the "with" list. TODO: encapsulate "mem" calls *)
-        method in_with :identifier list list =
-            with_pkg
+        (** Is a package in the "with" list ? *)
+        method is_with (pkg:identifier list) :bool =
+            List.mem pkg with_pkg
     end
   in
 
@@ -377,7 +374,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     match name with
       | ([], ident) -> f_ident ident name
       | (pack, ident)
-          when !extern||List.mem pack (package#in_with) ->
+          when !extern||package#is_with pack ->
           f_with (pack,ident)
       | (pack, ident) when pack = package#current ->
           f_current ([],ident) name
@@ -391,11 +388,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     match name with
       | ([], ident) -> f_ident ident name
       | (pack, ident) when (pack <> package#current) &&
-          (not (List.mem pack (package#in_with))) &&
+          (not (package#is_with pack)) &&
           (not !extern) ->
           f_with (pack, ident)
       | (pack, ident)
-          when !extern||List.mem pack (package#in_with) ->
+          when !extern||package#is_with pack ->
           f_with (pack,ident)
       | (pack, ident) when pack = package#current->
           f_current ([],ident) name
@@ -622,14 +619,20 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     List.iter remove_symb args
   in
 
-  (* generation de temp *)
-  let gen_tmp (loc:Newspeak.location) (t:A.typ) =
-    let x = "tmp"^(string_of_int !tmp_cnt) in
-      add_var loc (Unconstrained(t)) x false false;
-      let t = translate_typ t in
-      let decl = (C.Decl (t, x), loc) in
-        incr tmp_cnt;
-        (x, decl, C.Local x)
+  (** Used to generate temporary variables. *)
+  let temp =
+    object
+        val mutable count :int = 0
+
+        method create (loc:Newspeak.location) (t:A.typ)
+          :string * (C.stmtkind * Newspeak.location) * C.lv =
+            let x = "tmp"^(string_of_int count) in
+              add_var loc (Unconstrained(t)) x false false;
+              let t = translate_typ t in
+              let decl = (C.Decl (t, x), loc) in
+                count <- count + 1;
+                (x, decl, C.Local x)
+    end
   in
 
   (* fonctions pour la gestion des types *)
@@ -966,7 +969,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     match expected_typ with
       | None | Some(Boolean) ->
           let loc = Npkcontext.get_loc () in
-          let (tmp, decl, vid) = gen_tmp loc Boolean in
+          let (tmp, decl, vid) = temp#create loc Boolean in
           let name = ident_to_name tmp in
           let instr_if = If (cond,
                              [(Assign(Lval name, exp_then),loc)],
@@ -2364,20 +2367,16 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          superieur,
          donc on accepte la declaration d'un package. Sinon, il
          s'agit d'un sous-package, ce qui n'est pas gere *)
-      | (PackageBody(name, package_spec, decl_part, _),
-         true) ->
+      | PackageBody(name, package_spec, decl_part, _), true ->
           package#set_current name;
           (match package_spec with
              | None -> ()
              | Some(_, basic_decls) ->
-                 ignore
-                 (List.map
-                   translate_global_basic_declaration
-                   basic_decls));
-          ignore (List.map translate_global_decl_item
-                    decl_part)
+                 List.iter translate_global_basic_declaration basic_decls
+          );
+          List.iter translate_global_decl_item decl_part
 
-      | (PackageBody(_), false) -> Npkcontext.report_error
+      | PackageBody _, false -> Npkcontext.report_error
           "Firstpass.translate_body"
             "declaration de sous package non implemente"
 
