@@ -859,6 +859,12 @@ type_specifier:
       "signed specifier not necessary";
     Integer (Newspeak.Signed, $2)
   }
+| LONG LONG UNSIGNED INT                 {
+    Npkcontext.report_strict_warning "Parser.type_specifier"
+      ("'long long unsigned int' is not normalized : "
+      ^"use 'unsigned long long int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_longlong)
+  }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
     Npkcontext.report_accept_warning "Parser.type_specifier"
@@ -886,7 +892,7 @@ type_specifier:
 | LONG UNSIGNED INT                     { 
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned int' is not normalized: "
-	^"use 'usigned long int' instead");
+	^"use 'unsigned long int' instead");
     Integer (Newspeak.Unsigned, Config.size_of_long) 
   }
 | TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
