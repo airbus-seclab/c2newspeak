@@ -57,6 +57,7 @@ let _ =
   Hashtbl.add token_tbl "__inline__" INLINE;
   Hashtbl.add token_tbl "__inline" INLINE;
   Hashtbl.add token_tbl "__asm__" ASM;
+  Hashtbl.add token_tbl "__asm" ASM;
   Hashtbl.add token_tbl "__cdecl" CDECL;
   (* __nothrow__: tells the compiler the function does not throw an exception *)
 
@@ -81,7 +82,8 @@ let _ =
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
-  
+  Hashtbl.add token_tbl "__func__" FUNNAME;
+
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 
