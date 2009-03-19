@@ -243,7 +243,7 @@ context_item :
         List.map
           (fun name -> With(name, loc, None))
           $2}
-| use_clause {[UseContext($1)]}
+| use_clause {[UseContext $1]}
 ;
 
 use_clause :

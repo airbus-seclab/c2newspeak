@@ -88,3 +88,34 @@ val extract_representation_clause_name :
 (** Provides a default value for a 'a option *)
 val with_default : 'a option -> 'a -> 'a
 
+(**
+ * Wraps what the "current package" is and which packages are
+ * marked using the "with" and "use" constructs.
+ *)
+class package_manager :
+object
+    (** Set the current package. *)
+    method set_current :Syntax_ada.name -> unit
+
+    (** Reset the current package. *)
+    method reset_current :unit
+
+    (** Get the current package. *)
+    method current :Syntax_ada.identifier list
+
+    (** Add a package to the "with" list. *)
+    method add_with :Syntax_ada.name -> unit
+
+    (** Is a package in the "with" list ? *)
+    method is_with :Syntax_ada.identifier list -> bool
+
+    (** Add a "use" clause to the context. *)
+    method add_use    :Syntax_ada.name -> unit
+
+    (** Remove a "use" clause from the context. *)
+    method remove_use :Syntax_ada.name -> unit
+
+    (** Get the current context. *)
+    method get_use    :Syntax_ada.identifier list list
+
+end

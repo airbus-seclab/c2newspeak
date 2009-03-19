@@ -229,7 +229,6 @@ and array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
 and representation_clause =
   | EnumerationRepresentation of identifier*array_aggregate
-and use_clause = name list
 
 and object_state =
   | Variable
@@ -238,7 +237,7 @@ and object_state =
 
 and context_clause =
   | With of name*location*(spec*location) option
-  | UseContext of use_clause
+  | UseContext of name list
 
 and context = context_clause list
 
@@ -260,7 +259,7 @@ and basic_declaration =
   | ObjectDecl of identifier list*subtyp_indication
       *expression option*object_state
   | TypeDecl of typ_declaration
-  | UseDecl of use_clause
+  | UseDecl of name list
   | SpecDecl of spec
   | NumberDecl of identifier list*expression*value option
   | SubtypDecl of identifier*subtyp_indication
