@@ -363,6 +363,9 @@ let check_compil_unit_name compil_unit file_name =
 
 let extract_representation_clause_name rep_clause = match rep_clause with
   | EnumerationRepresentation(ident, _) -> ident
+  | AttributeDefinitionClause _ -> Npkcontext.report_error
+                "extract_representation_clause_name"
+        "not yet implemented for AttributeDefinitionClause" (* FIXME *)
 
 let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | None   -> def_value
@@ -370,8 +373,8 @@ let with_default (opt:'a option) (def_value:'a):'a = match opt with
 
 class package_manager =
     object (self)
-        val mutable current_pkg:identifier list      = []
-        val mutable    with_pkg:identifier list list = []
+        val mutable current_pkg:identifier list            = []
+        val mutable    with_pkg:identifier list list       = []
         val mutable     context:(identifier list*int) list = []
 
         (** Convert a name to a list of identifiers. *)
@@ -379,7 +382,7 @@ class package_manager =
             (fst n)@[snd n]
 
         method set_current n :unit =
-            current_pkg <- self#name_as_list n 
+            current_pkg <- self#name_as_list n
 
         method reset_current =
             current_pkg <- []
@@ -393,8 +396,6 @@ class package_manager =
         method is_with pkg =
             List.mem pkg with_pkg
 
-
-        
         method add_use (select,ident) =
             (* inverse partiellement la liste, mais tail-rec ?*)
             let rec incr_occurence res l use = match l with
@@ -412,7 +413,8 @@ class package_manager =
                     context <- incr_occurence [] context name
                   else
                     Npkcontext.report_error "Ada_normalize.add_context"
-                      ((Print_syntax_ada.name_to_string (select,ident))^" is undefined")
+                      ((Print_syntax_ada.name_to_string (select,ident))
+                        ^" is undefined")
                 end
 
         method remove_use (select,ident) =

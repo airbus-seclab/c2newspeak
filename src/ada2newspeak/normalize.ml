@@ -65,11 +65,12 @@ let string_of_name = Print_syntax_ada.name_to_string
 
 let normalize_extern_ident ident package = (package, ident)
 
-let normalize_ident ident package extern = match extern with
-  | false -> ([], ident)
-  | true -> normalize_extern_ident ident package
+let normalize_ident ident package extern =
+  if extern then
+    normalize_extern_ident ident package
+  else ([], ident)
 
-let normalize_name name (package:package_manager) extern =
+let normalize_name (name:name) (package:package_manager) extern =
   let add_package (parents, ident) pack = match parents with
     | [] -> (pack, ident)
     | a when a=pack -> (pack, ident)
@@ -255,11 +256,8 @@ let eval_static (exp:expression) (expected_typ:typ option)
                       typ
 
         (*operations sur les entiers*)
-        | (Rem, IntVal(v1), IntVal(v2)) ->
-            (IntVal(rem_ada v1 v2), typ)
-
-        | (Mod, IntVal(v1), IntVal(v2)) ->
-            (IntVal(mod_ada v1 v2), typ)
+        | (Rem, IntVal(v1), IntVal(v2)) -> (IntVal(rem_ada v1 v2), typ)
+        | (Mod, IntVal(v1), IntVal(v2)) -> (IntVal(mod_ada v1 v2), typ)
 
         (* comparaisons *)
         | Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2),  Boolean)
@@ -817,7 +815,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   and remove_cst (ident:name) :unit = Hashtbl.remove csttbl ident in
 
-
   let normalize_extern_ident ident =
     normalize_extern_ident ident (package#current)
   and normalize_ident ident :name =
@@ -939,7 +936,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
              ^(Print_syntax_ada.ident_list_to_string pack))*)
     let add_package (parents, ident) pack = match parents with
       | [] -> (pack, ident)
-      | a when a=pack -> (pack, ident)
+      | a when pack = a -> (pack, ident)
       | a when (package#is_with a) -> (a, ident)
       | _ -> Npkcontext.report_error
           "ada_normalize.normalize_name.add_package"
@@ -1025,8 +1022,6 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
     in
       (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp))
 
-
-
   (*let normalize_typ typ = match typ with
     | Integer | IntegerConst | Float | Boolean | Character
     | Declared(_) | String -> typ
@@ -1079,7 +1074,7 @@ and normalize_subtyp subtyp =
       | SubtypName(name) ->
           fst (find_subtyp (normalize_name name))
 
-and arraytyp_to_contrainte (typ:subtyp) (* TODO ::type*) =
+and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
     match typ with
       | Unconstrained(Declared(Array(_,ConstrainedArray(
             (Constrained(_, contr, _), None,_),_,_)),_)) -> Some contr
@@ -1091,11 +1086,19 @@ and arraytyp_to_contrainte (typ:subtyp) (* TODO ::type*) =
       | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
                                       "Length not implemented for type /= array"
 
+(**
+ * Normalize an actual argument.
+ * The identifier does not have to be normalized (it is just a plain string),
+ * but normalize the expression.
+ *)
 and normalize_arg (a:argument) :argument =
     match a with
       | id,e -> id,normalize_exp e
 
-and normalize_exp exp = match exp with
+(**
+ * Normalize an expression. 
+ *)
+and normalize_exp (exp:expression) :expression = match exp with
   | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp,
                                         normalize_exp exp)
   | NullExpr | CInt _ | CFloat _ | CBool _ | CChar _
@@ -1191,7 +1194,12 @@ and normalize_exp exp = match exp with
    (autrement dit, on attend une contrainte statique non nulle
    en retour. uniquement utilise dans le cas entier)
 *)
-and normalize_contrainte contrainte typ =
+
+
+(**
+ * Normalize a constraint.
+ *)
+and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
   let eval_range exp1 exp2 =
     let norm_exp1 = normalize_exp exp1
     and norm_exp2 = normalize_exp exp2 in
@@ -1262,10 +1270,7 @@ and normalize_contrainte contrainte typ =
             "Ada_normalize.eval_contrainte"
             "internal error : unexpected Numeric Range"
 
-
-
 in
-
 
 let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
@@ -1397,6 +1402,9 @@ let rec normalize_instr (instr,loc) =
           in match clause with
             | (EnumerationRepresentation(_, agregat), rloc) ->
                 interpret_enumeration_clause agregat symbs rloc loc
+            | AttributeDefinitionClause _,_ -> Npkcontext.report_error "normalize"
+                    "AttributeDefinitionClause is not yet implemented" (* FIXME *)
+                
         end
       else
         (symbs, size)

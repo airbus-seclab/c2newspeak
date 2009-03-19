@@ -280,6 +280,8 @@ and representation_clause_to_string clause = match clause with
   | EnumerationRepresentation(ident, agregat) ->
       "EnumerationRepresentation("^ident^", "
       ^(array_aggregate_to_string agregat)^")"
+  | AttributeDefinitionClause(st, id, exp) ->
+      "For "^(subtyp_to_string st)^"'"^id^" use "^(exp_to_string exp)
 
 and context_clause_to_string context_clause =
   match context_clause with

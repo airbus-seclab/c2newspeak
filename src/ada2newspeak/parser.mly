@@ -459,7 +459,8 @@ array_aggregate :
 ;
 
 representation_clause :
-| FOR ident USE array_aggregate {EnumerationRepresentation($2, $4)}
+| FOR ident USE array_aggregate         {EnumerationRepresentation($2,$4)}
+| FOR subtyp QUOTE ident USE expression {AttributeDefinitionClause($2,$4,$6)}
 ;
 
 instr_list :
@@ -611,10 +612,6 @@ simple_expr :
 | PLUS term {Unary(UPlus,$2)}
 | MINUS term {Unary(UMinus,$2)}
 | simple_expr add_op term {Binary($2,$1,$3)}
-/*WG added for type'LAST,FIRST
-| subtyp QUOTE LAST {Last($1)}
-| subtyp QUOTE FIRST {First($1)}
-*/
 ;
 
 mult_op :

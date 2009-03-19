@@ -229,6 +229,7 @@ and array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
 and representation_clause =
   | EnumerationRepresentation of identifier*array_aggregate
+  | AttributeDefinitionClause of subtyp*identifier*expression
 
 and object_state =
   | Variable
