@@ -372,6 +372,7 @@ class package_manager =
     object (self)
         val mutable current_pkg:identifier list      = []
         val mutable    with_pkg:identifier list list = []
+        val mutable     context:(identifier list*int) list = []
 
         (** Convert a name to a list of identifiers. *)
         method private name_as_list (n:Syntax_ada.name) :identifier list =
@@ -391,5 +392,40 @@ class package_manager =
 
         method is_with pkg =
             List.mem pkg with_pkg
+
+
+        
+        method add_use (select,ident) =
+            (* inverse partiellement la liste, mais tail-rec ?*)
+            let rec incr_occurence res l use = match l with
+              | (a,n)::r when a=use -> (a, n+1)::res@r
+              | c::r -> incr_occurence (c::res) r use
+              | [] -> (use,1)::res
+            in
+            let name = select@[ident] in
+              if name = self#current
+              then ()
+              else
+                begin
+                  if (self#is_with name)
+                  then
+                    context <- incr_occurence [] context name
+                  else
+                    Npkcontext.report_error "Ada_normalize.add_context"
+                      ((Print_syntax_ada.name_to_string (select,ident))^" is undefined")
+                end
+
+        method remove_use (select,ident) =
+            let rec decr_occurence res l use = match l with
+              | (a,1)::r when a=use -> res@r
+              | (a,n)::r when a=use -> (a,n-1)::res@r
+              | c::r -> decr_occurence (c::res) r use
+              | [] -> res
+            in
+              context <- decr_occurence [] context (select@[ident])
+
+        method get_use =
+            List.map fst context
+
     end
 

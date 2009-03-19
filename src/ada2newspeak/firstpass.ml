@@ -283,7 +283,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
    * Global hashtables and references.
    * /!\ Side-effects !
    *)
-  
+
   (** Symbol table for lexically-scoped variables. *)
   let symbtbl   = Hashtbl.create 100
 
@@ -293,36 +293,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
 
-  and context = ref []
-
   and extern = ref false
 
   and package = new Ada_utils.package_manager
   in
-
-  let add_context (select,ident) =
-
-    (* inverse partiellement la liste, mais tail-rec ?*)
-    let rec incr_occurence res l use = match l with
-      | (a,n)::r when a=use -> (a, n+1)::res@r
-      | c::r -> incr_occurence (c::res) r use
-      | [] -> (use,1)::res
-    in
-      context := incr_occurence [] !context (select@[ident])
-
-  and remove_context (select,ident) =
-
-    let rec decr_occurence res l use = match l with
-      | (a,1)::r when a=use -> res@r
-      | (a,n)::r when a=use -> (a,n-1)::res@r
-      | c::r -> decr_occurence (c::res) r use
-      | [] -> res
-    in
-      context := decr_occurence [] !context (select@[ident])
-
-  and val_use _ = List.map fst !context
-  in
-
 
   let find_symb (x:name) :qualified_symbol = Hashtbl.find symbtbl x
 
@@ -334,7 +308,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     List.flatten
       (List.map
          (fun pack -> find_all_symb (pack, ident))
-         (val_use ()))
+         package#get_use)
 
 
   in
@@ -2151,7 +2125,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> List.iter add_context use_clause;
+    | UseDecl(use_clause) -> List.iter package#add_use use_clause;
         ([],[])
 
     | NumberDecl(idents, _, Some(v)) ->
@@ -2204,7 +2178,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl(use_clause) -> List.iter remove_context use_clause
+    | UseDecl(use_clause) -> List.iter package#remove_use use_clause
     | NumberDecl(idents, _, _) ->
         List.iter
           (fun x -> ignore (remove_symb x))
@@ -2293,7 +2267,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       | SubtypDecl _ -> ()
 
-      | UseDecl(use_clause) -> List.iter add_context use_clause
+      | UseDecl(use_clause) -> List.iter package#add_use use_clause
 
       | SpecDecl(spec) -> translate_spec spec loc false
       | NumberDecl(idents, _, Some(v)) ->
@@ -2394,7 +2368,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
       | UseContext(use_clause)::r ->
-          List.iter add_context use_clause;
+          List.iter package#add_use use_clause;
           translate_context r
       | [] -> ()
 
