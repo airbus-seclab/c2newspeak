@@ -82,7 +82,8 @@ let _ =
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
-  
+  Hashtbl.add token_tbl "__func__" FUNNAME;
+
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 
