@@ -421,6 +421,8 @@ statement_kind:
 
 asm:
   ASM LPAREN asm_statement_list RPAREN     { report_asm $3 }
+| ASM VOLATILE 
+  LPAREN asm_statement_list RPAREN         { report_asm $4 }
 ;;
 
 asm_statement_list:
