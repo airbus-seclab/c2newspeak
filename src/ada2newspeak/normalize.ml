@@ -1417,7 +1417,7 @@ let rec normalize_instr (instr,loc) =
           in match clause with
             | (EnumerationRepresentation(_, agregat), rloc) ->
                 interpret_enumeration_clause agregat symbs rloc loc
-            | AttributeDefinitionClause _,_ -
+            | AttributeDefinitionClause _,_ ->
                      Npkcontext.report_error "normalize"
                   "AttributeDefinitionClause is not yet implemented" (* FIXME *)
 
