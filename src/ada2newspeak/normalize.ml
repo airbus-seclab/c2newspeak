@@ -205,9 +205,10 @@ let eval_static (exp:expression) (expected_typ:typ option)
             " internal error : unexpected subtyp name"
 *)
 
-
-  (* expected_typ : type du resultat de l'operation, pas
-     des operandes *)
+  (**
+   * Evaluate statically a binary expression.
+   * expected_typ is the expected type of the result, not the operands.
+   *)
   and eval_static_binop (op:binary_op) (e1:expression) (e2:expression)
                                 (expected_typ:typ option)
         :value*typ =
@@ -252,12 +253,11 @@ let eval_static (exp:expression) (expected_typ:typ option)
         | Div, FloatVal(v1,_), FloatVal(v2,_) ->
             FloatVal(mk_float (v1 /. v2)), typ
         | Power, FloatVal(v1,_), IntVal(v2) ->
-            FloatVal(mk_float (v1 ** (float_of_int (Nat.to_int v2)))),
-                      typ
+            FloatVal(mk_float (v1 ** (float_of_int (Nat.to_int v2)))), typ
 
         (*operations sur les entiers*)
-        | (Rem, IntVal(v1), IntVal(v2)) -> (IntVal(rem_ada v1 v2), typ)
-        | (Mod, IntVal(v1), IntVal(v2)) -> (IntVal(mod_ada v1 v2), typ)
+        | (Rem, IntVal v1, IntVal v2) -> (IntVal(rem_ada v1 v2), typ)
+        | (Mod, IntVal v1, IntVal v2) -> (IntVal(mod_ada v1 v2), typ)
 
         (* comparaisons *)
         | Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2),  Boolean)
@@ -278,13 +278,20 @@ let eval_static (exp:expression) (expected_typ:typ option)
         | _ -> Npkcontext.report_error "Ada_normalize.eval_static_binop"
                                     "invalid operator and argument"
 
-  and eval_static_neg (exp:expression) :value*typ =
+
+  (**
+   * Evaluate statically the "- E" expression.
+   *)
+  and eval_static_uminus (exp:expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
         | IntVal i, t when (integer_class t) -> (IntVal(Nat.neg i), t)
         | (FloatVal(f,_), Float) -> (FloatVal(mk_float (-.f)), Float)
         | _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
                                    "invalid operator and argument"
 
+  (**
+   * Evaluate statically the "abs E" expression.
+   *)
   and eval_static_abs (exp:expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
         | IntVal i, t when (integer_class t) ->
@@ -294,6 +301,9 @@ let eval_static (exp:expression) (expected_typ:typ option)
         | _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
                                    "invalid operator and argument"
 
+  (**
+   * Evaluate statically the "op E" expressions.
+   *)
   and eval_static_unop (op:unary_op) (exp:expression) (expected_typ:typ option)
       :value*typ =
       match (op, expected_typ) with
@@ -310,8 +320,8 @@ let eval_static (exp:expression) (expected_typ:typ option)
                         )
 
         | UMinus, None
-        | UMinus, Some Float                  -> eval_static_neg exp
-        | UMinus, Some t when integer_class t -> eval_static_neg exp
+        | UMinus, Some Float                  -> eval_static_uminus exp
+        | UMinus, Some t when integer_class t -> eval_static_uminus exp
         | Abs,    None
         | Abs,    Some Float                  -> eval_static_abs exp
         | Abs,    Some t when integer_class t -> eval_static_abs exp
@@ -555,6 +565,9 @@ let eval_static (exp:expression) (expected_typ:typ option)
   in
       eval_static_exp exp expected_typ
 
+(**
+ * Evaluate statically an integer expression. FIXME
+ *)
 let eval_static_integer_exp (exp:expression)
                             (csttbl:(name, constant_symb) Hashtbl.t)
                             (context:identifier list list)
@@ -582,6 +595,9 @@ let eval_static_integer_exp (exp:expression)
                           "Ada_normalize.eval_static_integer_exp"
                           "uncaught ambiguous type exception"
 
+(**
+ * Evaluate statically an constant number.
+ *)
 let eval_static_number (exp:expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
                        (context:identifier list list)
@@ -589,17 +605,16 @@ let eval_static_number (exp:expression)
                        (extern:bool)
     :value =
      try
-         let (v,_) = eval_static
-                         exp None
-                         csttbl context
-                         package
-                         extern in
-         match v with
-           | BoolVal _ ->
-               Npkcontext.report_error
-                 "Ada_normalize.eval_static_integer_exp"
-                 "expected static float or integer constant"
-           | FloatVal _ | IntVal _ -> v
+         let (v,_) = eval_static exp None
+                                     csttbl context
+                                     package
+                                     extern in
+             match v with
+               | BoolVal _ ->
+                   Npkcontext.report_error
+                     "Ada_normalize.eval_static_integer_exp"
+                     "expected static float or integer constant"
+               | FloatVal _ | IntVal _ -> v
      with
        | NonStaticExpression ->
         Npkcontext.report_error
@@ -1096,7 +1111,7 @@ and normalize_arg (a:argument) :argument =
       | id,e -> id,normalize_exp e
 
 (**
- * Normalize an expression. 
+ * Normalize an expression.
  *)
 and normalize_exp (exp:expression) :expression = match exp with
   | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp,
@@ -1402,9 +1417,10 @@ let rec normalize_instr (instr,loc) =
           in match clause with
             | (EnumerationRepresentation(_, agregat), rloc) ->
                 interpret_enumeration_clause agregat symbs rloc loc
-            | AttributeDefinitionClause _,_ -> Npkcontext.report_error "normalize"
-                    "AttributeDefinitionClause is not yet implemented" (* FIXME *)
-                
+            | AttributeDefinitionClause _,_ -
+                     Npkcontext.report_error "normalize"
+                  "AttributeDefinitionClause is not yet implemented" (* FIXME *)
+
         end
       else
         (symbs, size)

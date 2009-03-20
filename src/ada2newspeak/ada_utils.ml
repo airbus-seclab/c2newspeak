@@ -79,9 +79,9 @@ let eq_val v1 v2 =
 let inf_val v1 v2 =
   let inf a b = a<b in
     match (v1, v2) with
-      | (IntVal(v1), IntVal(v2)) -> (Nat.compare v1 v2) < 0
-      | (BoolVal(v1), BoolVal(v2)) -> inf v1 v2
-      | (FloatVal(v1), FloatVal(v2)) -> inf v1 v2
+      |   IntVal v1,   IntVal v2 -> (Nat.compare v1 v2) < 0
+      |  BoolVal v1,  BoolVal v2 -> inf v1 v2
+      | FloatVal v1, FloatVal v2 -> inf v1 v2
  (*     | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2*)
       | _ ->
           Npkcontext.report_error "Ada_utils.inf_val"
@@ -124,7 +124,7 @@ let constraint_is_constraint_compatible cref courante =
        FloatRangeConstraint(cour1, cour2)) ->
         numeric_constraint_compatibility ref1 ref2 cour1 cour2
     | ((FloatRangeConstraint _| IntegerRangeConstraint _),
-       RangeConstraint _)
+           RangeConstraint _)
     | (RangeConstraint _, RangeConstraint _)
     | (RangeConstraint _,
        (FloatRangeConstraint _| IntegerRangeConstraint _)) -> true
@@ -175,9 +175,9 @@ let check_static_subtyp subtyp value =
           "internal error : unexpected subtype name"
 
 let constraint_is_static contrainte = match contrainte with
-  | FloatRangeConstraint _ -> true
+  | FloatRangeConstraint   _ -> true
   | IntegerRangeConstraint _ -> true
-  | RangeConstraint _ -> false
+  | RangeConstraint        _ -> false
 
 (* fonctions pour la gestion des types *)
 
@@ -203,19 +203,23 @@ let eq_base_typ subtyp1 subtyp2 =
   (base_typ subtyp1) = (base_typ subtyp2)
 
 let rec integer_class typ = match typ with
-  | Float     | Boolean
-  | Character | String       -> false
-  | Integer   | IntegerConst -> true
+  | Float
+  | Boolean
+  | Character
+  | String       -> false
+  | Integer
+  | IntegerConst -> true
   | Declared(typdef, _) ->
       (match typdef with
-         | Enum _ | Array _ | Record _ -> false
-         | IntegerRange(_) -> true
-         | DerivedType(_,(_,_,Some(subtyp))) -> integer_class
-             (base_typ subtyp)
-         | DerivedType(_,(_,_,None)) ->
-             Npkcontext.report_error
-               "Ada_utils.integer_class"
-               "internal error : no subtype provided")
+         | Enum _
+         | Array _
+         | Record _ -> false
+         | IntegerRange _ -> true
+         | DerivedType(_,(_,_,Some(subtyp))) -> integer_class (base_typ subtyp)
+         | DerivedType(_,(_,_,None)) -> Npkcontext.report_error
+                               "Ada_utils.integer_class"
+                               "internal error : no subtype provided"
+      )
 
 
 let check_typ expected found =
@@ -230,11 +234,10 @@ let check_typ expected found =
 
 and known_compatible_typ expected found =
   match (expected, found) with
-    | (Some(t1), t2) when t1=t2 ->true
+    | (Some(t1), t2) when t1=t2                      -> true
     | (Some(IntegerConst), t) when (integer_class t) -> true
     | (Some(t), IntegerConst) when (integer_class t) -> true
-    | (Some(_), _) -> false
-    | (None,_) -> false
+    | _                                              -> false
 
 
 (* determine, si possible, le type des operandes d'une
@@ -310,7 +313,7 @@ let check_operand_typ op typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Lt | Gt | Le | Ge | Eq | Neq -> ()
+  | Lt  | Gt | Le  | Ge  | Eq | Neq -> ()
 
   | And | Or | Xor | OrElse | AndThen ->
       (* type booleen *)
@@ -320,7 +323,6 @@ let check_operand_typ op typ = match op with
              Npkcontext.report_error
                "Firstpass.translate_binop"
                "invalid operator and argument")
-
   | Concat ->
       Npkcontext.report_error
         "Firstpass.translate_binop"

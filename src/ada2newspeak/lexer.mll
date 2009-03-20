@@ -226,6 +226,7 @@ rule token = parse
         (* delta        *)
         (* digits       *)
         (* limited      *)
+        (* private      *)
 
     (* Pointer-related  *)
         (* access       *)
@@ -233,14 +234,11 @@ rule token = parse
         (* all          *)
 
     (* Execution flow-related  *)
-        (* declare      *)
         (* goto         *)
         (* raise        *)
         (* exception    *)
 
     (* Misc *)
-        (* others       *)
-        (* private      *)
         (* protected    *)
 
 
