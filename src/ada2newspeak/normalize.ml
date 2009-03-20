@@ -646,10 +646,10 @@ let rec parse_specification (name:name) :compilation_unit =
   let spec_ast =
     if Sys.file_exists spec_name
     then
-      Ada_parse.parse spec_name
+      File_parse.parse spec_name
     else
       let body_name = (string_of_name name)^".adb" in
-        extract_subprog_spec (Ada_parse.parse body_name)
+        extract_subprog_spec (File_parse.parse body_name)
   in
     match spec_ast with
       | (_, Spec(_), _) -> spec_ast

@@ -17,6 +17,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
 
@@ -64,3 +67,6 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
       in
       let err_msg = "syntax error: "^pos^", unexpected token: "^lexeme in
         Npkcontext.report_error "Ada_parse.parse" err_msg
+
+
+

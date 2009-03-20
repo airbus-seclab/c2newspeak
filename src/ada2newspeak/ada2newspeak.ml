@@ -17,28 +17,63 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+  Etienne Millon
+  email : etienne.millon AT gmail . com
+
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
 
 *)
 
-
-let compile fname =
+(**
+ * Parse a file, compile it and translate it into a Npkil representation.
+ *)
+let compile(fname:string):Npkil.t =
   if not (Filename.check_suffix fname Params.ada_suffix) then begin
     Npkcontext.report_error "Ada2newspeak.compile"
       (fname^" is not a .adb file")
   end;
-
-  let prog = Compiler.compile fname
-  in
-    if (!Npkcontext.verb_npko) then begin
-      print_endline "Newspeak Object output";
-      print_endline "----------------------";
-      Npkil.dump_npko prog;
-      print_newline ();
-    end;
-    prog
-
+  let base_name = Filename.basename fname
+  and dir_name = Filename.dirname fname
+  and current_dir = Sys.getcwd () in
+    if dir_name <> "."
+    then
+      begin
+        Npkcontext.print_debug ("Changing directory : "^dir_name);
+        Sys.chdir dir_name
+      end;
+    Npkcontext.print_debug ("Parsing "^fname^"...");
+    let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
+      if (!Npkcontext.verb_ast) then begin
+        print_endline "Abstract Syntax Tree";
+        print_endline "----------------------";
+        Print_syntax_ada.print_ast [ast];
+        print_newline ();
+      end;
+      Npkcontext.forget_loc ();
+      Npkcontext.print_debug "Parsing done.";
+      Npkcontext.print_debug "Running first pass...";
+      let prog = Firstpass.translate ast
+      in
+        Npkcontext.forget_loc ();
+        Npkcontext.print_debug "First pass done.";
+        Npkcontext.print_debug ("Translating "^fname^"...");
+        let tr_prog = Cir2npkil.translate prog [fname]
+        in
+          Npkcontext.forget_loc ();
+          if dir_name <> "."
+          then
+            begin
+              Npkcontext.print_debug ("Changing directory : "^current_dir);
+              Sys.chdir current_dir
+            end;
+            if (!Npkcontext.verb_npko) then begin
+              print_endline "Newspeak Object output";
+              print_endline "----------------------";
+              Npkil.dump_npko tr_prog;
+              print_newline ();
+            end;
+          tr_prog
 
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 

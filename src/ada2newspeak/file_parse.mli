@@ -15,11 +15,26 @@
 
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+
+  Etienne Millon
+  email : etienne.millon AT gmail . com
 
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
 
 *)
 
+(**
+ * Wrapper for the Ada2Newspeak parser.
+ * Called by the front-end as well as the normalize step.
+ * @author Jasmine Duchon
+ * @author Etienne Millon
+ *)
+
+(**
+ * Call the parser on a file.
+ * The only parameter is a string, which is the name of the file to parse.
+ *)
 val parse: string -> Syntax_ada.compilation_unit
+
