@@ -100,10 +100,13 @@ type t = {
   fundecs: (fid, fundec) Hashtbl.t;
   specs: specs;
   ptr_sz: size_t;
+  src_lang: src_lang;
   mem_zones: mem_zones
 }
 
 and globals = (string, gdecl) Hashtbl.t
+
+and src_lang = C | ADA
 
 and gdecl = typ * init_t * location
 
@@ -623,25 +626,11 @@ let string_of_stmt x = string_of_blk (x::[])
    implement the pretty one in a separate utility: npkpretty *)
 
 (* Input/output functions *)
-let write_hdr cout (filenames, decls, specs, ptr_sz, mem_zones) =
-  Marshal.to_channel cout "NPK!" [];
-  Marshal.to_channel cout Version.version [];
-  Marshal.to_channel cout Version.revision [];
-  Marshal.to_channel cout filenames [];
-  Marshal.to_channel cout ptr_sz [];
-  Marshal.to_channel cout decls [];
-  Marshal.to_channel cout specs [];
-  Marshal.to_channel cout mem_zones []
- 
-let write_fun cout f spec = Marshal.to_channel cout (f, spec) []
-
 let write name prog =
   let cout = open_out_bin name in
-  let hdr = 
-    (prog.fnames, prog.globals, prog.specs, prog.ptr_sz, prog.mem_zones) 
-  in
-    write_hdr cout hdr;
-    Hashtbl.iter (write_fun cout) prog.fundecs;
+    Marshal.to_channel cout "NPK!" [];
+    Marshal.to_channel cout (Version.version, Version.revision) [];
+    Marshal.to_channel cout prog [];
     close_out cout
 
 let read name = 
@@ -651,33 +640,14 @@ let read name =
       if str <> "NPK!" 
       then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
       let version = Marshal.from_channel cin in
-      let revision = Marshal.from_channel cin in
-	if (version <> Version.version) 
-	  || (revision <> Version.revision) then begin
-	    invalid_arg ("Newspeak.read: this file was generated with a "
-			 ^"different version of c2newspeak. "
-			 ^"Please regenerate your file or install the latest "
-			 ^"version of newspeak."^
-			 " Operation aborted.");
-	  end;
-	let filenames = Marshal.from_channel cin in
-	let ptr_sz = Marshal.from_channel cin in
-	let decls = Marshal.from_channel cin in
-	let specs = Marshal.from_channel cin in
-	let mem_zones = Marshal.from_channel cin in
-	let funs = Hashtbl.create 100 in
-	  begin try 
-	    while true do
-	      let (f, spec) = Marshal.from_channel cin in
-		Hashtbl.add funs f spec
-	    done
-	  with End_of_file -> ()
-	  end;
-	  close_in cin;
-	  { 
-	    fnames = filenames; globals = decls; fundecs = funs;
-	    specs = specs; ptr_sz = ptr_sz; mem_zones = mem_zones;
-	  }
+	if (version <> (Version.version, Version.revision)) then begin
+	  invalid_arg ("Newspeak.read: this file was generated with a "
+		       ^"different version of c2newspeak. "
+		       ^"Please regenerate your file or install the latest "
+		       ^"version of newspeak."^
+		       " Operation aborted.")
+	end;
+	Marshal.from_channel cin
   with Failure "input_value: bad object" -> 
     invalid_arg ("Newspeak.read: "^name^" is not an .npk file")
 

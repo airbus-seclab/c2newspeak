@@ -31,12 +31,13 @@
 open Cilutils
 open Newspeak
 
-type t = (filenames 
-	   * (string, ginfo) Hashtbl.t 
-	   * (fid, funinfo) Hashtbl.t 
-	   * assertion list)
-
-and filenames = string list
+type t = {
+  fnames: string list;
+  globals: (string, ginfo) Hashtbl.t;
+  fundecs: (fid, funinfo) Hashtbl.t;
+  specs: assertion list;
+  src_lang: src_lang
+}
 
 (* None is for extern *)
 and ginfo = (typ * location * init_t option * used)
@@ -220,7 +221,7 @@ and string_of_fn f =
 	  (seq ", " string_of_typ args_t)^")"
 
 (* TODO: remove pretty option here and Npkcontext *)
-let dump_npko (fnames, globs, funs, _) = 
+let dump_npko prog = 
   let cur_fun = ref "" in
 
   let lbl_index = ref 0 in
@@ -336,16 +337,16 @@ let dump_npko (fnames, globs, funs, _) =
     dump_fundec n pbody;
     print_newline ()
   in
-    List.iter (fun x -> print_endline x) fnames;
+    List.iter (fun x -> print_endline x) prog.fnames;
 
-    print_usedglbs "Global used" globs;
+    print_usedglbs "Global used" prog.globals;
 
     print_endline "Global variables";
-    Hashtbl.iter print_glob globs;
+    Hashtbl.iter print_glob prog.globals;
     print_newline ();
 
     print_endline "Function definitions";
-    Hashtbl.iter print_fundef funs
+    Hashtbl.iter print_fundef prog.fundecs
 
 exception Uncomparable
 

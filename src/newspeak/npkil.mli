@@ -31,12 +31,13 @@ open Newspeak
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
-type t = (filenames 
-	  * (string, ginfo) Hashtbl.t 
-	  * (fid, funinfo) Hashtbl.t
-	  * assertion list)
-
-and filenames = string list
+type t = {
+  fnames: string list;
+  globals: (string, ginfo) Hashtbl.t;
+  fundecs: (fid, funinfo) Hashtbl.t;
+  specs: assertion list;
+  src_lang: src_lang
+}
 
 (* None is for extern *)
 and ginfo = (typ * location * init_t option * used)

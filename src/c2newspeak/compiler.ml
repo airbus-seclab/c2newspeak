@@ -86,7 +86,7 @@ let compile fname =
 	  Npkcontext.print_size (Cir.size_of prog);
 	  if !Npkcontext.verb_cir then Cir.print prog;
 	  Npkcontext.print_debug ("Translating "^fname^"...");
-	  let tr_prog = Cir2npkil.translate prog fnames in
+	  let tr_prog = Cir2npkil.translate Newspeak.C prog fnames in
 	    Npkcontext.forget_loc ();
 	    Npkcontext.print_debug ("Translation done.");
 	    Npkcontext.forget_loc ();

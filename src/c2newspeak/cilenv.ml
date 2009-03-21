@@ -113,7 +113,13 @@ let create_npkil name =
 	  Npkcontext.report_error "Env.create_npkil" "Code unreachable"
   in
     Hashtbl.iter add_funinfo fun_specs;
-    (name::[], Hashtbl.copy glb_decls, fundefs, [])
+    {
+      fnames = name::[];
+      globals = Hashtbl.copy glb_decls;
+      fundecs = fundefs;
+      specs = [];
+      src_lang = Newspeak.C
+    }
 
 (*---------*)
 (* Globals *)

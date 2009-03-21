@@ -24,7 +24,6 @@
 
 *)
 
-(* TODO: remove the need for Newspeak/redefine types *)
 open Newspeak
 
 type t = {
@@ -33,6 +32,7 @@ type t = {
   fundecs: (fid, fundec) Hashtbl.t;
   specs: specs;
   ptr_sz: size_t;
+  src_lang: src_lang;
   mem_zones: mem_zones
 }
 

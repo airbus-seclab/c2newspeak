@@ -210,6 +210,7 @@ let translate prog =
       N.fundecs = fundecs;
       N.specs = specs;
       N.ptr_sz = prog.ptr_sz;
-      N.mem_zones = prog.mem_zones;
+      N.src_lang = prog.src_lang;
+      N.mem_zones = prog.mem_zones
     }
 

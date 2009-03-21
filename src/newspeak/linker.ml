@@ -271,20 +271,29 @@ let merge npkos =
 
   let merge npko =
     (* TODO: merge these two operations into one *)
-    let (fnames, globals, fundefs, specs) = Npkil.read npko in
-      List.iter add_fname fnames;
-      Hashtbl.iter add_global globals;
-      List.iter add_spec specs;
-      Hashtbl.iter add_fundef fundefs
+    let prog = Npkil.read npko in
+      List.iter add_fname prog.fnames;
+      Hashtbl.iter add_global prog.globals;
+      List.iter add_spec prog.specs;
+      Hashtbl.iter add_fundef prog.fundecs;
+      prog.src_lang
   in
-    List.iter merge npkos;
-    (StrSet.elements !fnames, glb_decls, !fundefs, !specs)
+    match npkos with
+	[] -> Npkcontext.report_error "Linker.merge" "empty file list"
+      | hd::tl -> 
+	  let src_lang = merge hd in
+	  let check_merge x = 
+	    let _ = merge x in
+	      ()
+	  in
+	    List.iter check_merge tl;
+	    (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !specs)
 
 let link npkos mem_zones =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
-  let (filenames, glb_decls, fun_decls, specs) = merge npkos in
+  let (filenames, glb_decls, fun_decls, src_lang, specs) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
     Hashtbl.iter generate_global glb_decls;
@@ -299,8 +308,10 @@ let link npkos mem_zones =
       H.fundecs = fundecs;
       H.specs = specs;
       H.ptr_sz = Config.size_of_ptr;
+      H.src_lang = src_lang;
       H.mem_zones = mem_zones
-    } in
+    } 
+    in
       
       Npkcontext.print_debug "File linked.";
       let prog = Hpk2npk.translate prog in
