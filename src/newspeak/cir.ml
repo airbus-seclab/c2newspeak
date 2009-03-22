@@ -36,7 +36,11 @@ let fresh_id () =
     incr vcnt;
     id
   
-type t = (glbdecls * fundefs * assertion list)
+type t = {
+  globals: (string, ginfo) Hashtbl.t;
+  fundecs: (string, funinfo) Hashtbl.t;
+  specs: assertion list
+}
 
 and assertion = token list
 
@@ -46,14 +50,14 @@ and token =
   | LvalToken of lv
   | CstToken of cst
 
-and glbdecls = (string, typ * location * init option) Hashtbl.t
+and ginfo = typ * location * init option
 
 and init = (int * scalar_t * exp) list option
 
 and field = (string * (int * typ))
 
 (* TODO: remove location, unused! *)
-and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
+and funinfo = (ftyp * Newspeak.location * funbody)
 
 and funbody = ((string * string list) * blk)
 
@@ -206,12 +210,12 @@ let string_of_lv = string_of_lv ""
 
 let string_of_blk = string_of_blk ""
 
-let print_fundef f (_, _, (_, body)) =
+let print_fundec f (_, _, (_, body)) =
   print_endline (f^" {");
   print_endline (string_of_blk body);
   print_endline "}"
 
-let print (_, fundefs, _) = Hashtbl.iter print_fundef fundefs
+let print prog = Hashtbl.iter print_fundec prog.fundecs
 
 let create_tmp loc t = 
   let id = fresh_id () in
@@ -746,11 +750,11 @@ and size_of_case (_, body) = size_of_blk body
 
 let size_of_fundef (_, _, (_, body)) = size_of_blk body
 
-let size_of (globals, fundefs, specs) =
+let size_of prog =
   let res = ref 0 in
   let add x = res := !res + x in
-    Hashtbl.iter (fun _ _ -> add 1) globals;
-    Hashtbl.iter (fun _ x -> add (size_of_fundef x)) fundefs;
-    add (List.length specs);
+    Hashtbl.iter (fun _ _ -> add 1) prog.globals;
+    Hashtbl.iter (fun _ x -> add (size_of_fundef x)) prog.fundecs;
+    add (List.length prog.specs);
     !res
 

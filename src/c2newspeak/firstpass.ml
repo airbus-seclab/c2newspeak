@@ -1386,4 +1386,4 @@ let translate (globals, spec) =
    and all the structures' type were in a hashtbl *)
     Hashtbl.iter add_glbdecl used_globals;
     let spec = List.map translate_assertion spec in
-      (glbdecls, fundefs, spec)
+      { C.globals = glbdecls; C.fundecs = fundefs; C.specs = spec }

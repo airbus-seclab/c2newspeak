@@ -2389,9 +2389,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       extern := false;
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
-      (globals, fun_decls, [])
-    with
-        AmbiguousTypeException -> Npkcontext.report_error
-          "Firstpass.translate"
-          "uncaught ambiguous type exception"
+      { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }
+    with AmbiguousTypeException -> 
+      Npkcontext.report_error "Firstpass.translate"
+	"uncaught ambiguous type exception"
 

@@ -25,8 +25,11 @@
 
 open Newspeak
 
-type t = (glbdecls * fundefs * assertion list)
-
+type t = {
+  globals: (string, ginfo) Hashtbl.t;
+  fundecs: (string, funinfo) Hashtbl.t;
+  specs: assertion list
+}
 and assertion = token list
 
 and token =
@@ -35,14 +38,15 @@ and token =
   | LvalToken of lv
   | CstToken of cst
 
-and glbdecls = (string, typ * Newspeak.location * init option) Hashtbl.t
+and ginfo = typ * location * init option
 
 and init = (int * scalar_t * exp) list option
 
 (** field's name, offset and typ *)
 and field = (string * (int * typ))
 
-and fundefs = (string, (ftyp * Newspeak.location * funbody)) Hashtbl.t
+(* TODO: remove location, unused! *)
+and funinfo = (ftyp * Newspeak.location * funbody)
 
 and funbody = ((string * string list) * blk)
 
