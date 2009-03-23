@@ -32,3 +32,5 @@
    *(((t*)v)++)
    but this is deprecated and not standard C
  */
+
+#define __builtin_offsetof(type, field) ((unsigned int)(&((type *)0)->field))
