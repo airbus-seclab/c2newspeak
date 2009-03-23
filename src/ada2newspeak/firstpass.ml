@@ -731,16 +731,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 ((Print_syntax_ada.name_to_string name)
                  ^" is not a funtion")
 
-          | (EnumSymb(_),_,_)::r ->
-              find_global r
+          | (EnumSymb(_),_,_)::r                    -> find_global r
 
-          | (FunSymb (_, _, false, _), C.Fun, _)::_ ->
-              List.hd list_symb
-
-          | (FunSymb (_,_, true, _), _, _)::_ -> (* fonction externe *)
-              Npkcontext.report_error
-                "Firstpass.find_fun_symb"
-                ("cannot find symbol "^(string_of_name name))
+          | (FunSymb (_,_, false, _), C.Fun, _)::_ -> List.hd list_symb
+          | (FunSymb (_,_, true , _),     _, _)::_ -> (* fonction externe *)
+                              Npkcontext.report_error
+                                "Firstpass.find_fun_symb"
+                                ("cannot find symbol "^(string_of_name name))
 
           | (FunSymb _, _, _)::_ ->
               Npkcontext.report_error "Firstpass.find_fun_symb"
