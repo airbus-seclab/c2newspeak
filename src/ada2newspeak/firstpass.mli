@@ -26,4 +26,8 @@
   email: jasmine . duchon AT free . fr
 *)
 
+(**
+ * This module is used to translate an Ada compilation unit into a CIR tree.
+ *)
+
 val translate: Syntax_ada.compilation_unit -> Cir.t

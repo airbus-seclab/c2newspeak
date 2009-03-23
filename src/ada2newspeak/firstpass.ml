@@ -29,6 +29,7 @@
   email: charles.hymans@penjili.org
 *)
 
+
 open Syntax_ada
 
 module C   = Cir
@@ -39,19 +40,16 @@ module A   = Syntax_ada
 
 exception AmbiguousTypeException
 
-(* types *)
-
-(* un symbol peut representer une variable ou un litteral
-   d'enumeration.
-   le parametre booleen indique :
-   - si la variable est global ou
-    local (true = global) dans le cas var et enum,
-   - si la fonction/procedure est interne ou externe dans le cas
-     fun (extern=true)
-   dans le cas des variables : le dernier param booleen
-   indique si la variable est en lecture seule*)
-
-(** Symbols *)
+(**
+ * Symbols.
+ * A symbol may represent a variable or an enumeration litteral.
+ * The boolean parameter indicates whether :
+ *   - the variable is global or local (true means global) in the cases
+ *     variable and enum.
+ *   - if the subprogram is internal or external (external : true)
+ *   - for the variables : the last boolean parameter indicates whether a
+ *     variable is read-only.
+ *)
 type symb =
   | VarSymb  of C.lv    * A.subtyp * bool * bool (** name, type, global?, ro? *)
   | EnumSymb of C.exp   * A.typ * bool (** TODO, typename, ro? *)
@@ -60,19 +58,19 @@ type symb =
 
 type qualified_symbol = symb*C.typ*Npk.location
 
-(** Identifier for the return value *)
+(** Identifier for the return value. *)
 let ret_ident = "!return"
 
-(** TODO *)
+(* TODO *)
 let ret_lbl = 0
 
-(** TODO *)
+(* TODO *)
 let cnt_lbl = 1
 
-(** TODO *)
+(* TODO *)
 let brk_lbl = 2
 
-(** TODO *)
+(* TODO *)
 let default_lbl = 3
 
 (** Promotes an identifier to a name *)
@@ -81,15 +79,20 @@ let ident_to_name ident = ([], ident)
 (** Builds a string from a name *)
 let string_of_name = Print_syntax_ada.name_to_string
 
-let eq_base_typ = Ada_utils.eq_base_typ
-
 let base_typ = Ada_utils.base_typ
 
+(**
+ * Extract a scalar type.
+ * Basically, is [function (C.Scalar t) -> t].
+ *)
 let extract_scalar_typ (cir_typ:C.typ) :Npk.scalar_t = match cir_typ with
   | C.Scalar(t) -> t
   | _ -> Npkcontext.report_error "Firstpass.extract_scalar_typ"
                                  "type isn't a scalar type"
 
+(**
+ * Add a "belongs" operator to an expression, according to a constraint.
+ *)
 let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
   match contrainte with
     | IntegerRangeConstraint (v1,v2) ->
@@ -99,6 +102,9 @@ let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
                           "Firstpass.make_check_constraint"
                      "internal error : unexpected range constraint (non-static)"
 
+(**
+ * Add a "belongs" operator to an expression, according to a subtype.
+ *)
 let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
   match subtyp with
     | Unconstrained _ -> exp
@@ -121,157 +127,51 @@ let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
     | SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
                     "SubtypName not implemented yet (especially for Enum)"
 
-let is_record (symb:symb) :bool =
-  match symb with
-    | VarSymb  (_, Unconstrained (Declared(Record _,_)), _, _) -> true
-    | VarSymb  _ -> false
-    | FunSymb  (_,_,_,(arg_typ,ret_typ)) ->     (List.length arg_typ = 0)
-                                             && (match ret_typ with
-                                                   | C.Struct _ -> true
-                                                   | _          -> false)
-    | _  -> false
-
-let extract_rough_record (symb:symb) :A.record_type_definition =
-  match symb with
-    | VarSymb  (_, Unconstrained (Declared(Record (_,flds),_)) , _, _) -> flds
-    | VarSymb _ -> Npkcontext.report_error "Firstpass.record"
-                                    "extract_rough_record, not unconstr"
-    | FunSymb _ -> Npkcontext.report_error "Firstpass.record"
-          "extract_rough_record, FunSymb no subtyp impl YET !!! "
-    | _ -> Npkcontext.report_error "Firstpass.record"
-           "extract_rough_record, neither FunSymb nor Varsymb"
-
-let extract_record (symb:symb) (trans_typ:A.typ -> C.typ) : C.field list =
-  match symb with
-    VarSymb  (_, subt, _, _) ->
-    begin match subt with
-            | Unconstrained (Declared(Record (x,y), loc)) -> let cstruct =
-                    trans_typ (Declared(Record (x,y),loc)) in
-                        begin
-                           match cstruct with
-                             | C.Struct (flds, _) -> flds
-                             | _ ->  Npkcontext.report_error "Firstpass.record"
-                                   "Unexpected case in extract record"
-                        end
-            | _ ->  Npkcontext.report_error "Firstpass.record"
-                                      "Unexpected case in extract record"
-    end
-  | FunSymb  (_,_,_,ftyp) ->  begin
-      match (snd ftyp) with
-          C.Struct (flds, _) -> flds
-        | _ ->  Npkcontext.report_error "Firstpass.record"
-            "Unexpected case in extract record"
-    end
-  | _ -> Npkcontext.report_error "Firstpass.record"
-      "Unexpected case in extract record"
-
-let verify (field:string) (record_f:C.field list) :bool =
-  let names = List.map fst record_f in
-    List.mem field names
-
-let offset (field:string) (record_f:C.field list) :int=
-  fst (List.assoc field  record_f)
-
-let field_typ (field:string) (record_f:C.field list) :C.typ=
-  snd (List.assoc  field  record_f)
-
-let rec addfield (fields:A.identifier list) (var:symb)
-                 (typ:C.typ) (loc:Newspeak.location)
-        :(qualified_symbol option) =
-  match typ with C.Struct (flds,_) -> begin
-    match fields  with
-        [] -> Some (var, typ, loc)
-      | h::tl -> if (List.mem h (List.map fst flds)) then
-          let (offset, new_typ) = List.assoc h flds in
-          let rough_rec = extract_rough_record var in
-          let dec = C.Const (C.CInt (Nat.of_int offset)) in
-            match var with
-                VarSymb (lv, _, b1, b2) ->
-                  let new_lv = C.Shift (lv, dec) in
-                  let rough_f =  List.find (fun x ->
-                                              let (a,_,_) = x in
-                                                List.mem h a
-                                           )
-                    rough_rec
-                  in
-                  let new_st_ind = let (_,b,_) = rough_f in b in
-                  let new_st =  Ada_utils.extract_subtyp
-                    new_st_ind
-                  in
-                  let new_var = VarSymb(new_lv, new_st, b1, b2) in
-                    addfield tl new_var new_typ loc
-              |  _ ->
-                   Npkcontext.report_error "Firstpass try_find_field"
-                           "Var is not VarSymb (maybe fun Symb to check)"
-        else
-          None
-  end
-    |  _ -> None
-
-
 (*On tente de trouver un acces a un record *)
-let rec try_find_fieldsaccess opt (sels, varname, fields)
-    memb findb trans_typ =
-  match fields with [] -> begin
-    match opt with
-        None -> None
-      | _ -> opt end
-    | f::tl -> if (memb (sels, varname)) then
-        let (sym, _ , lll) = findb (sels, varname) in
-          if (is_record sym) then
-            let rough_rec = extract_rough_record sym in
-            let record_f = extract_record sym trans_typ in
-              if (verify f record_f) then
-                let offset = offset f record_f in
-                let f_typ  = field_typ f record_f in
-                  match opt with None -> begin
-                    match sym with VarSymb (lv,_,b1,b2)-> begin
-                      (*TO CHECK *)
-                      let dec = C.Const(
-                        C.CInt(Nat.of_int offset))
-                      in
-                      let new_lv =  C.Shift (lv, dec) in
-                      let rough_f =
-                        List.find (fun x -> let (a,_,_) = x in
-                                     List.mem f a) rough_rec        in
-                      let new_st_ind = let (_,b,_) =rough_f in b in
-                      let new_st = Ada_utils.extract_subtyp
-                        new_st_ind
-                      in
-                      let new_var = VarSymb(
-                        new_lv, new_st, b1, b2 ) in
+let rec try_find_fieldsaccess opt (sels, varname, fields) memb findb trans_typ =
+    ignore trans_typ;
+    ignore findb;
+    ignore memb;
+    ignore fields;
+    ignore varname;
+    ignore sels;
+    ignore opt;
+    None
 
-                        match tl with
-                            [] -> Some( new_var, f_typ, lll)
+(**
+ * Translate a [Syntax_ada.typ].
+ *)
+let rec translate_typ (typ:A.typ) :C.typ = match typ with
+| Float        -> C.Scalar(Npk.Float            (Ada_config.size_of_float))
+| Integer      -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
+| IntegerConst -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
+| Boolean      -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
+| Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
+| String -> Npkcontext.report_error "Firstpass.translate_typ"
+    "String not implemented"
+| Declared(typ_decl, _) -> translate_declared typ_decl
 
-                          | h::t -> try_find_fieldsaccess
-                              ( Some (new_var, f_typ, lll))
-                                ( sels@[varname], h, t) memb findb trans_typ
+(**
+ * Translate a [Syntax_ada.typ_declaration].
+ *)
+and translate_declared (typ_decl:typ_declaration) :C.typ = match typ_decl with
+| Enum(_, _, bits) -> C.Scalar(Npk.Int(bits))
+| DerivedType(_, subtyp_ind) -> translate_typ
+    (Ada_utils.extract_typ subtyp_ind)
+| IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
+| IntegerRange(_,_,None) -> Npkcontext.report_error
+    "Firstpass.translate_declared"
+      "internal error : no bounds provided for IntegerRange"
+| Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
+    C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
+| Record _ -> Npkcontext.report_error "firstpass.translate_declared"
+                "Record types are not implemented yet"
 
-                          end
-                      | FunSymb _ ->
-                          Npkcontext.report_error
-                            "Firstpass try_find_field"
-                            " Not implemented yet to do !!!! WG"
-                      | NumberSymb _ | EnumSymb _ ->
-                          Npkcontext.report_error
-                            "Firstpass try_find_field"
-                            "Unexpected NumberSymb  | EnumSymb "
-                  end
+(**
+ * Translate a [Syntax_ada.subtyp].
+ *)
+and translate_subtyp (styp:A.subtyp) :C.typ = translate_typ (base_typ styp)
 
-                    | Some (var, typ, _) ->
-                        (*we have already found a field *)
-                        match fields with
-                            [] -> Some (var, typ, lll)
-                              (* --  Return  -- *)
-                            | _  ->
-                              addfield  fields var typ lll
-
-              else
-                try_find_fieldsaccess None (sels@[varname], f, tl)
-                                      memb findb trans_typ
-          else None
-      else None
 
 (**
  * Main translating function.
@@ -345,57 +245,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  pack))
   in
 
-  (* fonction de traduction des types *)
-  let rec translate_typ (typ:A.typ) :C.typ = match typ with
-    | Float      -> C.Scalar(Npk.Float(Ada_config.size_of_float))
-    | Integer    -> C.Scalar(Npk.Int(  Npk.Signed, Ada_config.size_of_int))
-    | IntegerConst -> C.Scalar(Npk.Int(Npk.Signed, Ada_config.size_of_int))
-    | Boolean   -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
-    | Character -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
-    | Declared(typ_decl, _) -> translate_declared typ_decl
-    | String -> Npkcontext.report_error "Firstpass.translate_typ"
-        "String not implemented"
 
-  and translate_declared (typ_decl:typ_declaration) :C.typ = match typ_decl with
-    | Enum(_, _, bits) -> C.Scalar(Npk.Int(bits))
-    | DerivedType(_, subtyp_ind) -> translate_typ
-        (Ada_utils.extract_typ subtyp_ind)
-    | IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
-    | Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
-        C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
-    | Record (_, flds) -> begin
-        let ind_to_typ st = translate_subtyp (Ada_utils.extract_subtyp st) in
-        let size_of st = C.size_of_typ (ind_to_typ st) in
-        let next_aligned o x =
-          let m = o mod x in
-            if m = 0 then o else o + (x - m)
-        in
-        let res = ref [] in
-        let o = ref 0 in
-        let last_align = ref 1 in
-
-        let update_offset id typ =
-          res := !res@[(id,( !o,ind_to_typ typ ))];
-          let cur_align = size_of typ in
-          let o' = next_aligned !o cur_align in
-            o := o'+ (size_of typ);
-            last_align := max !last_align cur_align
-        in
-
-        let eval_offsets (ids, sp_ind, _) =
-          List.iter (fun x -> update_offset x sp_ind ) ids
-        in
-          List.iter eval_offsets flds;
-          C.Struct (!res, next_aligned !o !last_align)
-      end
-
-    | IntegerRange(_,_,None) -> Npkcontext.report_error
-        "Firstpass.translate_declared"
-          "internal error : no bounds provided for IntegerRange"
-
-  and translate_subtyp (styp:A.subtyp) :C.typ = translate_typ (base_typ styp)
-
-  and translate_int (i:Nat.t) :C.exp = C.Const(C.CInt i)
+  let translate_int (i:Nat.t) :C.exp = C.Const(C.CInt i)
   in
 
   (* fonctions de traduction des noms*)
@@ -1513,33 +1364,20 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         (* type access uniquement : faire une verif sur expected
            typ*)
 
-    | CFloat(f,s) ->
-      let t = check_typ expected_typ Float
-      in (C.Const(C.CFloat(f,s)), t)
+    | CFloat (f,s) -> C.Const(C.CFloat(f,s)),
+                      check_typ expected_typ Float
+    | CInt i       -> translate_int i,
+                      check_typ expected_typ IntegerConst
+    | CChar c      -> translate_int (Nat.of_int c),
+                      check_typ expected_typ Character
+    | CBool b      -> translate_int (Ada_utils.nat_of_bool b),
+                      check_typ expected_typ Boolean
+    | CString _    -> Npkcontext.report_error "Firstpass.translate_exp"
+                        "string not implemented"
 
-    | CInt(i) ->
-      let t = check_typ expected_typ IntegerConst
-      in (translate_int i, t)
-
-    | CChar(c) ->
-        let t = check_typ expected_typ Character
-        in (translate_int (Nat.of_int c), t)
-
-    | CBool(b) ->
-        let t = check_typ expected_typ Boolean
-        in (translate_int (Ada_utils.nat_of_bool b), t)
-
-    | CString _ -> Npkcontext.report_error "Firstpass.translate_exp"
-        "string not implemented"
-
-    | Var(name) ->
-        translate_var name expected_typ
-
-    | Unary(unop,exp) ->
-        translate_unop unop exp expected_typ
-
-    | Binary(binop,exp1,exp2) ->
-        translate_binop binop exp1 exp2 expected_typ
+    | Var     name            -> translate_var   name            expected_typ
+    | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
+    | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
 
     | Qualified(subtyp, exp) ->
         let qtyp = check_typ expected_typ (base_typ subtyp) in
@@ -1647,123 +1485,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         Npkcontext.report_error
           "Firstpass.translate_exp"
           "Last, first or Length remaining in firstpass, non static "
-
-
-(*   and make_check_constraint contrainte exp =  *)
-(*     match contrainte with *)
-(*       | IntegerRangeConstraint (v1,v2) ->  *)
-(*           (\* verification d'une contrainte entiere *\) *)
-(*           C.Unop(K.Belongs_tmp(v1,K.Known (Nat.add v2 Nat.one)), exp) *)
-(*       | FloatRangeConstraint(_, _) -> exp *)
-(*           (\* TODO : verification d'une contrainte flottante *\) *)
-(*           (\*C.Unop( *)
-(*             C.Belongs( *)
-(*             C.FloatRange((inf, string_of_float inf), *)
-(*             (sup, string_of_float sup))), *)
-(*             exp)*\) *)
-
-(*       | RangeConstraint _ -> *)
-(*           Npkcontext.report_error *)
-(*             "Firstpass.make_check_constraint" *)
-(*             "internal error : unexpected range constraint (non-static)" *)
-
-(*       (\* TODO newspeak needs to be extended to support this case *\) *)
-(*       (\* an exception should have been thrown before *)
-(*          when a constraint is none static *\) *)
-
-(*       (\* if the solution of a belongs who uses temporary is choosed,  *)
-(*          here is what to do :*\) *)
-(*       (\* | RangeConstraint(Var(v1), Var(v2)) -> *)
-(*          let (tr_v1,_) = translate_lv v1 false *)
-(*          and (tr_v2,_) = translate_lv v2 false in *)
-(*          C.Unop( *)
-(*          C.Belongs( *)
-(*          C.LvalRange(tr_v1,tr_v2)),exp) *\) *)
-
-
-(*   and make_check_subtyp subtyp exp =  *)
-(*     match subtyp with *)
-(*       | Unconstrained _ -> exp *)
-(*       | Constrained(_, contrainte, _) -> *)
-(*           make_check_constraint contrainte exp *)
-(*       | SubtypName _ -> *)
-(*           Npkcontext.report_error *)
-(*             "Firstpass.make_check_subtyp" *)
-(*             "internal error : unexpected subtyp name" *)
-
-
-  (* test de correction des indications de sous-types, pour les cas
-     non static *)
-
- (* and make_check_subtyp_indication (subtyp_ref, contrainte, subtyp_res)
-    loc =
-
-    let add_bounds tmp1 tmp2 typ =
-      let subtyp = Unconstrained(typ) in
-      let v1 = add_var loc subtyp tmp1 false false
-      and v2 = add_var loc subtyp tmp2 false false in
-      let trans_typ = translate_subtyp subtyp in
-      let decl1 = C.Decl(trans_typ, tmp1, v1)
-      and decl2 = C.Decl(trans_typ, tmp2, v2)
-      in (v1, v2, decl1, decl2) in
-
-
-    let decl_unconstrained_init typ exp1 exp2 tmp1 tmp2 =
-      let name_to_ident (_,ident) = ident in
-      let (v1, v2, decl1, decl2) = add_bounds
-              (name_to_ident tmp1) (name_to_ident tmp2) typ in
-      let (tr_exp1,_) = translate_exp exp1 (Some(typ))
-      and (tr_exp2,_) = translate_exp exp2 (Some(typ)) in
-      let aff1 = make_affect (C.Var v1) tr_exp1
-        (Unconstrained(typ)) loc
-      and aff2 = make_affect (C.Var v2) tr_exp2
-        (Unconstrained(typ)) loc
-      in ((v1,v2),(tr_exp1,tr_exp2),[(decl1,loc);(decl2,loc)],[aff1;aff2])
-
-    let tested_decl_init typ exp1 exp2 tmp1 tmp2 =
-      let ((v1, v2), (tr_exp1, tr_exp2),decl, unconstrained_init) =
-        decl_unconstrained_init typ exp1 exp2 tmp1 tmp2
-      and tr_typ = translate_typ typ in
-      let test = C.Binop(Npk.Gt(tr_typ), tr_exp1, tr_exp2)
-      and aff1_constrained = make_affect (C.Var v1) tr_exp1
-        subtyp_ref loc
-      and aff2_constrained = make_affect (C.Var v2) tr_exp2
-        subtyp_ref loc
-      in (decl,[(C.If(test,unconstrained_init,
-                      [aff1_constrained;aff2_constrained]), loc)])
-
-    in match (subtyp_ref, contrainte,subtyp_res) with
-      | (_, _, None) ->
-          Npkcontext.report_error
-            "Firstpass.make_check_subtyp_indication"
-            "internal error : no subtyp provided"
-      | (SubtypName _, _, _) | (_, _, Some(SubtypName _)) ->
-          Npkcontext.report_error
-            "Firstpass.make_check_subtyp_indication"
-            "internal error : unexpected subtyp name"
-
-      (* rien a verifier, mais on declare les temps necessaire au sous-type *)
-      | (Unconstrained _, Some(RangeConstraint(exp1, exp2)),
-         Some(Constrained(typ, RangeConstraint(Var tmp1, Var tmp2), _))) ->
-          let (_,_,decl, aff) = decl_unconstrained_init
-            typ exp1 exp2 tmp1 tmp2
-          in (decl,aff)
-
-      (* rien a verifier pour les cas suivants *)
-      | (Unconstrained _, _, _) -> ([],[])
-      | (_, None, _) -> ([],[])
-      | (_, Some(NullRange),_) -> ([],[])
-
-
-      (* correction d'une contrainte non statique *)
-      | (Constrained _, Some(RangeConstraint(exp1,exp2)),
-         Some(Constrained(typ, RangeConstraint(Var tmp1, Var tmp2), _))) ->
-          tested_decl_init typ exp1 exp2 tmp1 tmp2
-
-
-      (* autres cas : on ne fait rien pour l'instant *)
-      | (Constrained _, Some _, Some _) -> ([],[])*)
-
 
   and make_affect id exp subtyp_lv loc =
     let typ_lv = base_typ subtyp_lv in
@@ -2043,48 +1764,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl(idents, subtyp_ind, def, const) ->
         let defaults_record_inits subtyp id =
-
-          let res = ref [] in (*by default affectations*)
-          let o = ref 0 in
-          let last_align = ref 1 in
-          let size_of st =
-            C.size_of_typ (translate_subtyp (Ada_utils.extract_subtyp st))
-          in
-          let next_aligned o x =
-            let m = o mod x in
-              if m = 0 then o else o + (x - m)
-          in
-          let update_offset typ =
-            let cur_align = size_of typ in
-            let o' = next_aligned !o cur_align in
-              o := o'+ (size_of typ);
-              last_align := max !last_align cur_align
-          in
-          let fields_to_aff (ids, sp_ind, exp_opt) loc =
-            List.iter (fun _ -> match exp_opt with
-                           None -> update_offset sp_ind
-                         | Some e ->
-                             res:=
-                               (make_affect
-                                  (C.Shift (C.Local id,
-                                            C.Const(C.CInt (Nat.of_int !o))))
-                                  (fst (translate_exp e (Some (base_typ(
-                                    Ada_utils.extract_subtyp subtyp_ind)))))
-                                  subtyp
-                                  loc
-                               )::!res;
-
-                             update_offset sp_ind;
-                      ) ids;
-          in
-            match (Ada_utils.extract_subtyp subtyp_ind) with
-                Unconstrained(Declared(Record (_, fs), loc)) ->
-                  begin
-                    List.iter (fun x-> fields_to_aff x loc) fs;
-                    !res
-                  end
-              | _ -> []
-                  (*by default value*)
+          ignore subtyp;
+          ignore id;
+          []
         in
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
 
