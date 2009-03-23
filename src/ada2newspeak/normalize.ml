@@ -128,82 +128,11 @@ let eval_static (exp:expression) (expected_typ:typ option)
 
       | Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
             match id with
-            | "First" | "Last" | "Length" ->
+            | "first" | "last" | "length" ->
                         Npkcontext.report_error "Ada_normalize:attributes"
                                         "First, last, length not implemented"
             | _ ->      Npkcontext.report_error "Ada_normalize:attributes"
                                             ("unknown attribute " ^ id)
-
-(*
-  and eval_static_length subtype =
-    match subtype with
-      | Unconstrained _ ->  Npkcontext.report_error
-          " Ada_normalize: length of unconstrained type"
-            "TODO:clean version of length based on ada_config"
-      | Constrained ( _(*typ*), contrainte, true) -> begin
-          match contrainte with
-              RangeConstraint _ ->  Npkcontext.report_error
-                " Ada_normalize: length value of constrained type"
-                "TODO:clean version of length based on ada_config"
-
-            | IntegerRangeConstraint (nat1, nat2) ->
-                IntVal ( Nat.sub nat2 nat1)
-
-            | FloatRangeConstraint _ ->  Npkcontext.report_error
-                " Ada_normalize: length value of constrained type "
-                " TODO: Float Range Integer not handled"
-
-        end
-
-      | Constrained(_, _, false) ->
-          raise NonStaticExpression
-
-      | SubtypName _ ->  Npkcontext.report_error
-          " Ada_normalize: eval static_last (Last)"
-            " internal error : unexpected subtyp name"
-
-
-    and eval_static_last subtype =
-    match subtype with
-      | Unconstrained _ ->  Npkcontext.report_error
-          " Ada_normalize: last value of unconstrained type"
-            "TODO:clean version of last based on ada_config"
-      | Constrained ( typ, contrainte, true) -> begin
-          match contrainte with
-              RangeConstraint (_, exp2) ->
-                fst (eval_static_exp exp2 (Some(typ)))
-                  (*Chck Some typ*)
-            | IntegerRangeConstraint (_, nat2) ->
-                IntVal nat2
-            | FloatRangeConstraint (_, fl2) ->
-                FloatVal fl2
-        end
-      | Constrained(_, _, false) ->
-          raise NonStaticExpression
-      | SubtypName _ ->  Npkcontext.report_error
-          " Ada_normalize: eval static_last (Last)"
-            " internal error : unexpected subtyp name"
-
-    and eval_static_first subtype =
-    match subtype with
-      | Unconstrained _ ->  Npkcontext.report_error
-          " Ada_normalize: first value of unconstrained type"
-            "TODO:clean version of first based on ada_config"
-      | Constrained ( typ, contrainte, true) -> begin
-          match contrainte with
-              RangeConstraint (exp1, _) ->
-                fst (eval_static_exp exp1 (Some(typ)))
-            | IntegerRangeConstraint (nat1, _) ->
-                IntVal nat1
-            | FloatRangeConstraint (fl1, _) ->
-                FloatVal fl1
-        end
-      | Constrained(_, _, false) ->
-          raise NonStaticExpression
-      | SubtypName _ ->  Npkcontext.report_error
-          " Ada_normalize: eval static_last (Last)"
-            " internal error : unexpected subtyp name"
-*)
 
   (**
    * Evaluate statically a binary expression.
@@ -1125,7 +1054,7 @@ and normalize_exp (exp:expression) :expression = match exp with
       FunctionCall(nom, List.map normalize_arg params)
 
   | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
-     | "First" | "first" -> begin
+     | "first" -> begin
 
                     match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
@@ -1148,8 +1077,7 @@ and normalize_exp (exp:expression) :expression = match exp with
                     end
 
 
-     | "Last"|"last" -> begin
-
+     | "last" -> begin
                     match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
                          "Ada_normalize Last contraint"
@@ -1170,8 +1098,7 @@ and normalize_exp (exp:expression) :expression = match exp with
                            "constraint is not IntegerRange"
                     end
 
-
-  | "length" | "Length" -> (* TODO make this at parser time *)
+  | "length" ->
          (*    Array or Range type only for attributes Length *)
         begin
          match arraytyp_to_contrainte subtype with

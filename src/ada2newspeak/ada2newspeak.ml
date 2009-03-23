@@ -70,7 +70,7 @@ let compile(fname:string):Npkil.t =
             print_newline ();
           end;
           tr_prog
-	    
+
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
 let _ =

@@ -50,14 +50,7 @@ all: bin $(CIL) $(COMPONENTS) doc lib
 
 coverage:
 	@echo "Generating coverage report"
-	$(MAKE) WITH_BISECT=1 src/version.ml
-	$(MAKE) -C src -f ada2newspeak.Makefile ada2newspeak.depend
-	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak.depend
-	$(MAKE) -C src -f ada2newspeak.Makefile ada2newspeak/parser.cmx
-	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak/pp_parser.cmx
-	$(MAKE) -C src -f   c2newspeak.Makefile   c2newspeak/parser.cmx
 	$(MAKE) WITH_BISECT=1
-	touch tests/c2newspeak/656
 	$(MAKE) check
 	cd src/ ; bisect-report `find ../tests/ -name bisect*` \
                     -html ../../cov/$(shell date +%Y%m%d%H%M)
