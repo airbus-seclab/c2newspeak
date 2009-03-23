@@ -212,7 +212,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
 
   in
-  let find_name name f_ident f_with f_current =
+
+  let find_name (name:name)
+                f_ident
+                f_with
+                f_current
+    =
     match name with
       | ([], ident) -> f_ident ident name
       | (pack, ident)
@@ -253,12 +258,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* on ajoute le nom du package courant dans le cas ou on
      etudie les declarations internes *)
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
-  let translate_name (name:A.name) :string =
-    let tr_name = match (!extern, name) with
-      | (true,_) -> name
-      | (false,(_,ident)) -> (package#current,ident)
+  let translate_name (pack,id:A.name) :string =
+    let tr_name =
+        if !extern then pack,            id
+                   else package#current, id
     in
-      Print_syntax_ada.name_to_string tr_name in
+      Print_syntax_ada.name_to_string tr_name
+    in
 
   (* gestion de la table de symboles *)
 
@@ -298,8 +304,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and add_number loc value lvl ident =
     let x =  Normalize.normalize_ident
       ident package#current !extern in
-      (if Hashtbl.mem symbtbl x
-       then
+      (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
 
            (* erreur : declaration de meme niveau deja existante *)
@@ -370,7 +375,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         (EnumSymb(translate_int value, typ,
                   global), translate_typ typ, loc)
 
-  and add_global loc typ tr_typ tr_init ro x =
+  and add_global (loc:Npk.location) (typ:A.subtyp)
+                 (tr_typ:C.typ)     (tr_init:C.init option)
+                 (ro:bool)          (x:A.identifier)
+       :unit =
     let name = Normalize.normalize_ident
       x package#current !extern in
 
@@ -470,7 +478,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         | (FunSymb _,_,_)::_ -> true
         | [] -> false
     in
-    let sans_selecteur ident name =
+    let sans_selecteur (ident:identifier) (name:name) :qualified_symbol =
       let list_symb = find_all_symb name in
 
       let rec find_use list_symb var_masque =
@@ -543,7 +551,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       in find_interne list_symb false
 
-    and avec_selecteur name =
+    and avec_selecteur (name:name) :qualified_symbol =
       let list_symb = find_all_symb name in
       let rec find_fun list_symb =
         match list_symb with
@@ -569,7 +577,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 ("cannot find symbol "^(string_of_name name))
       in find_fun list_symb
 
-    and avec_selecteur_courant ident name =
+    and avec_selecteur_courant (ident:name) (name:name) :qualified_symbol =
       let list_symb = find_all_symb ident in
         let rec find_global list_symb =
         match list_symb with
@@ -1114,7 +1122,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             mem_other_symb r filter use var_masque
 
     in
-    let sans_selecteur ident name =
+    let sans_selecteur (ident:identifier) (name:name) :C.exp*A.typ =
 
       let rec find_use list_symb var_masque var_possible =
         match list_symb with
@@ -1258,7 +1266,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | _ -> find_enum_fun list_symb
 
     (* recherche d'un symbole externe, avec selecteur *)
-    and avec_selecteur name =
+    and avec_selecteur (name:name) :C.exp*A.typ =
       let rec find_enum_fun list_symb = match list_symb with
         | ((VarSymb(_)|NumberSymb(_)), _, _)::r ->
             find_enum_fun r
@@ -1307,7 +1315,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | _ -> find_enum_fun list_symb
 
     (* recherche interne uniquement *)
-    and avec_selecteur_courant ident name =
+    and avec_selecteur_courant (ident:name) (name:name) :C.exp*A.typ =
       let list_symb = find_all_symb ident in
       let rec find_global list_symb =
         match list_symb with
@@ -1375,7 +1383,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | CString _    -> Npkcontext.report_error "Firstpass.translate_exp"
                         "string not implemented"
 
-    | Var     name            -> translate_var   name            expected_typ
+    | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
 
@@ -1486,20 +1494,30 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           "Firstpass.translate_exp"
           "Last, first or Length remaining in firstpass, non static "
 
-  and make_affect id exp subtyp_lv loc =
+  (**
+   * Make a C assignment.
+   *)
+  and make_affect (id:C.lv)            (exp:C.exp)
+                  (subtyp_lv:A.subtyp) (loc:Npk.location)
+     :C.stmt =
     let typ_lv = base_typ subtyp_lv in
     let typ = translate_typ typ_lv in
     let checked_exp = make_check_subtyp subtyp_lv exp
     in (C.Set(id,typ,checked_exp),loc)
 
-
-  and translate_affect lv exp loc =
+  (**
+   * Translate a [Syntax_ada.Assign].
+   *)
+  and translate_affect (lv:A.lval) (exp:A.expression) (loc:Npk.location) =
     let (tr_lv,subtyp_lv) = translate_lv lv true translate_exp
       (*WG*) in
     let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp_lv))
     in make_affect tr_lv tr_exp subtyp_lv loc
 
-  and translate_block block = match block with
+  (**
+   * Translate a [Syntax_ada.block].
+   *)
+  and translate_block (block:A.block) :C.blk = match block with
     | [] -> []
     | (instr,loc)::r ->
         (Npkcontext.set_loc loc;
@@ -1930,9 +1948,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | Constant | StaticVal(_) -> true in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init option =
-            match (init,!extern) with
-              | (_,true) -> Some None
-              | (None,_) -> Some(None)
+            match (init, !extern) with
+              | (_,true)
+              | (None,_) -> Some None
               | (Some(exp),false) ->
                   let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp))
                   in Some((Some [(0, extract_scalar_typ tr_typ, tr_exp)]))
@@ -2069,7 +2087,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
       { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }
-    with AmbiguousTypeException -> 
+    with AmbiguousTypeException ->
       Npkcontext.report_error "Firstpass.translate"
-	"uncaught ambiguous type exception"
+                "uncaught ambiguous type exception"
 
