@@ -11,3 +11,4 @@ Maximum number of variables on the stack: 0
 Maximum height of the stack (bytes): 0
 Maximum depth of function calls: 3
 Maximum depth of imbricated loops: 0
+At least one recursive function: f

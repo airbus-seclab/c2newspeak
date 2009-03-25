@@ -37,8 +37,6 @@ type stats = {
 
 type t = bool * stats
 
-module FunSet = Set.Make(String)
-
 let add_stats st1 st2 =
   { 
     nb_vars = st1.nb_vars + st2.nb_vars;
@@ -66,13 +64,15 @@ let count_loop st = { st with loop_depth = st.loop_depth + 1 }
 
 let count_call st = { st with call_depth = st.call_depth + 1 }
 
+let rec_fun = ref ""
+
 let count debug prog =
   let fid_addrof = Newspeak.collect_fid_addrof prog in
   let unknown_funs = ref [] in
   let exact = ref true in
   let fun_tbl = Hashtbl.create 100 in
   let current_loc = ref Newspeak.unknown_loc in
-  let fset = ref FunSet.empty in
+  let fset = ref [] in
 
   let rec process_call f =
     try Hashtbl.find fun_tbl f
@@ -112,11 +112,16 @@ let count debug prog =
 	  let action_info = process_blk action info in
 	    max_stats body_info action_info
       | Call (FunId f) -> 
-	  if FunSet.mem f !fset then info
+	  if List.mem f !fset then 
+	    begin
+	      rec_fun := f; 
+	      info
+	    end
 	  else 
 	    begin
-	      fset := FunSet.add f !fset;
+	      fset := f::!fset;
 	      let info_f = process_call f in
+		fset := List.tl !fset;
 		add_stats info info_f
 	    end
       | Call _ -> 
@@ -149,5 +154,7 @@ let print (exact, st) =
     print_endline ("Maximum depth of function calls: "
 		    ^symb^(string_of_int st.call_depth));
     print_endline ("Maximum depth of imbricated loops: "
-		    ^symb^(string_of_int st.loop_depth))
+		    ^symb^(string_of_int st.loop_depth));
+    if !rec_fun <> "" then 
+      print_endline ("At least one recursive function: "^ !rec_fun)
 
