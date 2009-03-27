@@ -1,4 +1,26 @@
-(* FIXME + license *)
+(*
+  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language
+  well-suited for static analysis.
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
+*)
 
 (**
  * The Ada95 type system.
@@ -25,10 +47,17 @@ val from_int : t -> int -> value
  *)
 val to_int : value -> int option
 
-(** Checked equality on values.   (hard comparison) *)
+(**
+ * Checked equality on values.
+ * [a @= b] if [a] and [b] denote the same typed value.
+ *)
 val (@=) : value -> value -> bool
 
-(** Unchecked equality on values. (soft comparison) *)
+(**
+ * Unchecked equality on values.
+ * This comparison is without checking the type compatibility.
+ * If [a @= b], it is guaranteed that [a @=? b].
+ *)
 val (@=?) : value -> value -> bool
 
 (*****************
@@ -51,10 +80,16 @@ val add_type      : table -> string -> t     -> unit
 (** Add a variable symbol to a table. *)
 val add_variable  : table -> string -> value -> unit
 
-(** Get a type from a symbol table. *)
+(**
+ * Get a type from a symbol table.
+ * @raise Not_found if no type could be found.
+ *)
 val find_type     : table -> string -> t
 
-(** Get a variable from a symbol table. *)
+(**
+ * Get a variable from a symbol table.
+ * @raise Not_found if no type could be found.
+ *)
 val find_variable : table -> string -> value
 
 (** Pretty-print a symbol table to the standard output. *)
@@ -68,34 +103,49 @@ val print_table   : table -> unit
 (** The abstract type for ranges.  *)
 type range
 
-(** Write a range from its bounds.  *)
+(** The null range, (holding no elements).  *)
+val null_range : range
+
+(**
+ * Write a range from its bounds.
+ * If [a <= b], [a @.. b] is the range of values between [a] and [b] ;
+ * else it is the [null_range].
+ *)
 val (@..) : int -> int -> range
 
-(** The number of elements in a range.  *)
+(** The number of elements in a range. [0] for the [null_range]. *)
 val sizeof : range -> int
-
-(** The null range, that is to say, an empty range.  *)
-val null_range : range
 
 (*********
  * Types *
  *********)
-(** {3 Types} *)
 
-(** Enumerated type. *)
-val new_enumerated : ?symboltable:table -> ?name:string -> string list -> t
+(**
+ * {3 Types}
+ * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
+ * Type constructors have two optional arguments, which should be given
+ * together. [~symboltable] is the name of a [table] to which the type is to be
+ * add with the given [~name].
+ *)
 
 (** Derived type. (structural copy) *)
 val new_derived    : ?symboltable:table -> ?name:string -> t -> t
 
-(** Unconstrained subtype.  *)
+(** Unconstrained subtype. *)
 val new_unconstr   : ?symboltable:table -> ?name:string -> t -> t
 
-(** Constrained subtype.  *)
+(** Constrained subtype. *)
 val new_constr     : ?symboltable:table -> ?name:string -> t -> range -> t
 
 (** Modular type. Parameter is modulus. *)
 val new_modular    : ?symboltable:table -> ?name:string -> int -> t
+
+(**
+ * Enumerated type.
+ * [~symboltable] and [~name] have an additional meaning : if provided, the set
+ * of litterals for the constructed type will be added to the symbol table.
+ *)
+val new_enumerated : ?symboltable:table -> ?name:string -> string list -> t
 
 (** Floating-point type. Parameter is number of digits. *)
 val new_float      : ?symboltable:table -> ?name:string -> int -> t

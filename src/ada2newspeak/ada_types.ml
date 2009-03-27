@@ -1,8 +1,47 @@
-(* FIXME insert license *)
+(*
+  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language
+  well-suited for static analysis.
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
 
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
+*)
+
+(**
+ * A universal type.
+ *
+ * It is used to make an heterogeneous container by wrapping polymorphism into
+ * itself, much like enum+union structures or Object containers in Java (before
+ * generics).
+ *
+ * Each call to [embed ()] yields a couple of functions [inject,project] :
+ *   - [inject x] creates a [Univ.t] wrapped value from data [x], which may
+ *   have any type.
+ *   - [project u] is used to unwrap the value back. It returns an option type ;
+ *   more precisely, [None] is used to indicate that a bad unwrapper has been
+ *   used to retrive the wrapped value.
+ *
+ * The current implementation is not thread-safe and may create memory leaks.
+ *)
 module Univ :
 sig
   type t
+
   val embed: unit -> ('a -> t) * (t -> 'a option)
 end = struct
   type t = {
@@ -25,49 +64,54 @@ end = struct
         (put, get)
 end
 
+(********************
+ * Type definitions *
+ ********************)
+
+(* effective type + wrapped data *)
 type value = t*Univ.t
 
-(* Type and type table definition *)
 and t = {
-  parent  : t option;
+  parent  : t option; (* None indicates a root type *)
   trait   : trait_t;
-  uid     : int;
-  limited : bool
+  uid     : int;      (* Used to make derived types look different *)
+  limited : bool;
 }
 
 and range =
   | NullRange
   | Range of int*int (* min <= max *)
 
-(** type for "traits" (type of types...) *)
+(* type for "traits" (type of types...) *)
 and trait_t =
-  | Signed of range option
-  | Modular of int
-  | Enumeration of (string*int) list
-  | Float of int (* digits *)
-  | Array of t*(t list)
-
-(*********************************
- * Value injector and projectors *
- *********************************)
-
-(* TODO merge globals together *)
-let (inject_int ,project_int)  = Univ.embed ()
-let (inject_char,project_char) = Univ.embed ()
-let (inject_bool,project_bool) = Univ.embed ()
-
-let from_int typ ival = typ,(inject_int ival)
-and to_int v          = project_int (snd v)
-
-(***********
- * Symbols *
- ***********)
+  | Signed of range option            (* Range constraint *)
+  | Modular of int                    (* Modulus *)
+  | Enumeration of (string*int) list  (* Name-index *)
+  | Float of int                      (* Digits *)
+  | Array of t*(t list)               (* Component-indexes list *)
 
 type symbol =
   | Variable of value
   | Type     of t
 
 type table = (string, symbol) Hashtbl.t
+
+(*********************************
+ * Value injector and projectors *
+ *********************************)
+
+let (inject_int ,project_int )  = Univ.embed ()
+let (inject_bool,project_bool)  = Univ.embed ()
+
+let from_int typ ival = typ,(inject_int ival)
+and to_int v          = project_int (snd v)
+
+let from_bool typ ival = typ,(inject_bool ival)
+and to_bool v          = project_bool (snd v)
+
+(*****************
+ * Symbol tables *
+ *****************)
 
 let print_table tbl =
   let symb_str x = match x with
@@ -76,8 +120,8 @@ let print_table tbl =
   in
   let pad width str =
     let x = String.length str in
-    let b = (width - x) / 2 in
-    let a = width-x-b in
+    let b = (width - x) / 2   in
+    let a =  width - x - b    in
     (String.make a ' ')^str^(String.make b ' ')
   in
   print_endline "+----------------------+";
@@ -86,31 +130,34 @@ let print_table tbl =
   print_endline "| type |      name     |";
   print_endline "+------+---------------+";
   Hashtbl.iter (fun n s ->
-                  print_char '|';
-                  print_string (pad 6 (symb_str s));
-                  print_char '|';
-                  print_string (pad 15 n);
-                  print_char '|';
+                  List.iter print_string [
+                  "|";
+                  (pad 6 (symb_str s));
+                  "|";
+                  (pad 15 n);
+                  "|"];
                   print_newline ();
-  ) tbl;
+               )
+      tbl;
   print_endline "+------+---------------+";
   print_newline()
 
-let create_table size =
-  Hashtbl.create size
+let create_table size = Hashtbl.create size
 
+(*
+ * Add a symbol to a table, or raise an exception in case
+ * of conflict. This could be enhanced in order to support
+ * overloading.
+ *)
 let try_to_add_symbol tbl name s =
   if Hashtbl.mem tbl name then
     raise (Invalid_argument ("Name '"^name^"' already exists"))
   else
     Hashtbl.add tbl name s
 
+let add_variable tbl id v   = try_to_add_symbol tbl id (Variable v)
 
-let add_variable tbl id v =
-  try_to_add_symbol tbl id (Variable v)
-
-let add_type     tbl id typ =
-  try_to_add_symbol tbl id (Type typ)
+let add_type     tbl id typ = try_to_add_symbol tbl id (Type typ)
 
 let find_type tbl id = match (Hashtbl.find tbl id) with
 | Variable _ -> raise Not_found
@@ -120,6 +167,10 @@ let find_variable tbl id = match (Hashtbl.find tbl id) with
 | Type _     -> raise Not_found
 | Variable v -> v
 
+(*
+ * Create a new type uid.
+ * /!\ Side-effects.
+ *)
 let uid = object
   val mutable count = 0;
   method gen =
@@ -127,6 +178,11 @@ let uid = object
     count
 end
 
+(*
+ * The minimal data for a type.
+ * For declaring a new type (inside constructors...), one should write
+ * [{type_stub with ..}]
+ *)
 let type_stub = {
   parent  = None;
   uid     = 0;
@@ -144,6 +200,9 @@ let sizeof = function
   | NullRange       -> 0
   | Range (min,max) -> (max - min + 1)
 
+(*
+ * Add (or not) a type to a symbol table.
+ *)
 let maybe_add ?symboltable ?name typ =
   begin match symboltable,name with
   | None    ,None   -> ()
@@ -153,11 +212,6 @@ let maybe_add ?symboltable ?name typ =
   end;
   typ
 
-(**
- * An enumerated type is like a discrete range type flagged as incompatible
- * with other ones.
- * Litterals may be added as variables in a symbol table.
- *)
 let new_enumerated ?symboltable ?name values =
     let rec with_indices vals offset = match vals with
     |   []  -> []
@@ -182,6 +236,7 @@ let new_enumerated ?symboltable ?name values =
 let new_derived ?symboltable ?name old =
     maybe_add ?symboltable ?name { old with uid = uid#gen }
 
+(* Parent of parent of parent.  *)
 let rec root_parent typ =
     match typ.parent with
         | None -> typ
@@ -420,7 +475,7 @@ let some_eq o1 o2 =
 
 let typeof(t,_) = t
 
-(* TODO : implement it in Univ *)
+(* TODO : implement it in Univ ? *)
 let (@=?) (_,v1) (_,v2) =
        some_eq (project_int  v1) (project_int  v2)
     || some_eq (project_bool v1) (project_bool v2)
