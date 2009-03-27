@@ -735,7 +735,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
      then
        begin
          List.iter
-           (fun x -> match x with
+           (function
               | Number(_, true) | VarSymb(true)
               | StaticConst(_, _, true) ->
                   Npkcontext.report_error
@@ -743,7 +743,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                     ("conflict : "^(string_of_name nom)
                      ^" already declared")
               | EnumLitteral(t, _, true)
-                  when typ=Some(t) ->
+                  when typ=Some t ->
                   Npkcontext.report_error
                     "Ada_normalize.add_function"
                     ("conflict : "^(string_of_name nom)
@@ -755,7 +755,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
            (Hashtbl.find_all csttbl nom)
        end);
     Hashtbl.add csttbl nom (FunSymb(typ,ext))
-
 
   and remove_cst (ident:name) :unit = Hashtbl.remove csttbl ident in
 
@@ -799,9 +798,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       | IntegerRange(_, contrainte, _) ->
           Constrained(Declared(typdecl, location), contrainte, true)
       | DerivedType(_, subtyp_ind) ->
-
           let subtyp = extract_subtyp subtyp_ind in
-
           let typ = base_typ subtyp in
             begin
               match typ with
@@ -1075,8 +1072,6 @@ and normalize_exp (exp:expression) :expression = match exp with
                          "Firstpass: in Array access"
                            "constraint is not IntegerRange"
                     end
-
-
      | "last" -> begin
                     match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
@@ -1182,7 +1177,7 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
                      "Ada_normalize.normalize_contrainte"
                      "null range not accepted"
 
-           | (_, _) ->
+           | _ ->
                (* ce cas n'est pas cense se produire :
                   on a verifie que les deux bornes sont de meme
                   type.*)

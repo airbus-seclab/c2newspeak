@@ -48,6 +48,8 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
 
 all: bin $(CIL) $(COMPONENTS) doc lib
 
+# for bisect support you may need the latest version
+#   darcs get http://bisect.x9c.fr
 coverage:
 	@echo "Generating coverage report"
 	$(MAKE) WITH_BISECT=1
