@@ -217,13 +217,6 @@ let translate (globals, spec) =
       name
   in
 
-(* TODO: remove this: let add_global x loc d = update_global x x loc d in*)
-(* TODO: remove function add_static!! *)
-  let add_static x loc d =
-    let name = get_static_name x loc in
-      update_global x name loc d
-  in
-
   let push_enum (x, i) = Symbtbl.bind symbtbl x (EnumSymb i, int_typ) in
 
   let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, body) in
@@ -931,11 +924,10 @@ let translate (globals, spec) =
 
 	| (VDecl (x, t, static, _, init), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
-	    let (t, init) = translate_glb_init t init in
-	      add_static x loc (t, Some init);
-	      (* TODO: try translate body *)
-	      let (body, e) = translate_blk_aux ends_with_exp body in
-		((body, []), e)
+	    declare_global true false x loc t init;
+	    (* TODO: try translate body *)
+	    let (body, e) = translate_blk_aux ends_with_exp body in
+	      ((body, []), e)
 	  
 	| (VDecl (x, t, _, extern, _), loc)::body when extern ->
 	    declare_global false true x loc t None;
