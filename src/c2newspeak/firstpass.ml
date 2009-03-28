@@ -206,17 +206,21 @@ let translate (globals, spec) =
       Hashtbl.replace used_globals name (t, loc, init)
   in
 
-  let add_global x loc d = update_global x x loc d in
-
-  let add_static x loc d =
+  let get_static_name x loc =
     let (fname, _, _) = loc in
     let prefix = "!"^fname^"." in
-    let prefix =
-      if !current_fun = "" then prefix
-      else prefix^(!current_fun)^"."
+    let prefix = 
+      if !current_fun = "" then prefix else prefix^(!current_fun)^"."
     in
     let name = prefix^(string_of_int !static_cnt)^"."^x in
       incr static_cnt;
+      name
+  in
+
+  let add_global x loc d = update_global x x loc d in
+
+  let add_static x loc d =
+    let name = get_static_name x loc in
       update_global x name loc d
   in
 
@@ -1296,6 +1300,15 @@ let translate (globals, spec) =
       | Array (t, _) -> align_of t
       | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
+
+(* TODO: use this function at all points where translate_glb_init is called
+   + simplify code of global declaration!!! *)
+  and declare_global static extern x loc t init =
+    let name = if static then get_static_name x loc else x in
+      update_global x name loc (t, None);
+      let (t, init) = translate_glb_init t init in
+      let init = if extern then None else Some init in
+	update_global x name loc (t, init)
   in
 
   let translate_global (x, loc) =
@@ -1329,10 +1342,7 @@ let translate (globals, spec) =
       | GlbVDecl (_, Fun _, _, _, _) -> ()
 
       | GlbVDecl (x, t, static, extern, init) ->
-	  let (t, init) = translate_glb_init t init in
-	  let init = if extern then None else Some init in
-	    if static then add_static x loc (t, init)
-	    else add_global x loc (t, init)
+	  declare_global static extern x loc t init
 
       | GlbEDecl _ | GlbCDecl _ -> ()
   in
