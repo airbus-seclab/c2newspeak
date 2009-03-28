@@ -45,26 +45,28 @@ and init_t = (size_t * scalar_t * exp) list option
 (* TODO: remove location, unused! *)
 and funinfo = (string * string list * ftyp * blk)
 
-(** field's name, offset and typ *)
-and field = (string * (int * typ))
-
 and typ =
     | Void
     | Scalar of Newspeak.scalar_t
     | Array of (typ * Npkil.tmp_size_t)
-    | Struct of (field list * int)
-    | Union of (field list * int)
+    | Struct of (field list * size_t)
+    | Union of (field list * size_t)
     | Fun
 
 and ftyp = typ list * typ
+
+(** field's name, offset and typ 
+    TODO: seems redundant? could remove the name??
+*)
+and field = (string * (Newspeak.offset * typ))
 
 and blk = stmt list
 
 and stmt = (stmtkind * Newspeak.location)
 
 and stmtkind =
-    | Block of (blk * (lbl * blk) option)
-    | Goto of lbl
+    | Block of (blk * (Newspeak.lbl * blk) option)
+    | Goto of Newspeak.lbl
     | Decl of (typ * string)
     | Set of (lv * typ * exp)
     | Loop of blk
@@ -72,8 +74,6 @@ and stmtkind =
     | Switch of (exp * (typ_exp * blk) list * blk)
     | Exp of exp
     | UserSpec of assertion
-
-and lbl = int
 
 and typ_lv = (lv * typ) (* TODO: could this be switched to scalar_t too? *)
 

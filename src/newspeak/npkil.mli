@@ -57,21 +57,30 @@ and used = bool
 (* TODO: code cleanup, remove everything unecessary for link *)
 and funinfo = (string list * string list * ftyp * blk)
 
+and typ = 
+    Scalar of Newspeak.scalar_t
+  | Array of (typ * tmp_size_t)
+  | Region of (field list * size_t)
+
+and ftyp = typ list * typ option
+
+and field = Newspeak.offset * typ
+
+and blk = stmt list
+
+and stmt = stmtkind * Newspeak.location
+
 and stmtkind =
     Set of (lval * exp * typ)
   | Decl of (string * typ * blk)
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * lbl * blk)
-  | Goto of lbl
+  | DoWith of (blk * Newspeak.lbl * blk)
+  | Goto of Newspeak.lbl
       (* (in, type, function, out) *)
   | Call of (exp list * ftyp * fn * lval list)
   | UserSpec of assertion
-
-and stmt = stmtkind * location
-
-and blk = stmt list
 
 and vid = int
 
@@ -101,15 +110,6 @@ and unop =
   | PtrToInt of ikind
   | IntToPtr of ikind
   | Cast of (scalar_t * scalar_t)
-
-and typ = 
-    Scalar of scalar_t
-  | Array of (typ * tmp_size_t)
-  | Region of (field list * size_t)
-
-and ftyp = typ list * typ option
-
-and field = offset * typ
 
 (* TODO: code cleanup: think about this! *)
 and tmp_nat =

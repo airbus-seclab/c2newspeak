@@ -76,8 +76,8 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-  | Block of (blk * (lbl * blk) option)   (* DoWith construct *)
-  | Goto of lbl
+  | Block of (blk * (Newspeak.lbl * blk) option)   (* DoWith construct *)
+  | Goto of Newspeak.lbl
   | Decl of (typ * string)
   | Set of (lv * typ * exp)
   | Loop of blk
@@ -85,8 +85,6 @@ and stmtkind =
   | Switch of (exp * (typ_exp * blk) list * blk)
   | Exp of exp
   | UserSpec of assertion
-
-and lbl = int
 
 and typ_lv = (lv * typ)
 
