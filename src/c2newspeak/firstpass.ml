@@ -217,8 +217,8 @@ let translate (globals, spec) =
       name
   in
 
-  let add_global x loc d = update_global x x loc d in
-
+(* TODO: remove this: let add_global x loc d = update_global x x loc d in*)
+(* TODO: remove function add_static!! *)
   let add_static x loc d =
     let name = get_static_name x loc in
       update_global x name loc d
@@ -938,7 +938,7 @@ let translate (globals, spec) =
 		((body, []), e)
 	  
 	| (VDecl (x, t, _, extern, _), loc)::body when extern ->
-	    add_global x loc (t, None);
+	    declare_global false true x loc t None;
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 
