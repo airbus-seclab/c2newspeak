@@ -401,10 +401,10 @@ let translate (globals, spec) =
     let fname = Npkcontext.get_fname () in
     let name = "!"^fname^".const_str_"^(String.escaped str) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
-    let loc = Npkcontext.get_loc () in
-    let (t, init) = translate_glb_init t (Some (Data (Str str))) in
-      if not (Hashtbl.mem used_globals name) 
-      then add_global name loc (t, Some init);
+      if not (Hashtbl.mem used_globals name) then begin
+	let loc = Npkcontext.get_loc () in
+	  declare_global false false name loc t (Some (Data (Str str)))
+      end;
       (C.Global name, t)
  
   and is_array e =
