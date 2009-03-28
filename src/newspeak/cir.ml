@@ -50,16 +50,14 @@ and token =
   | LvalToken of lv
   | CstToken of cst
 
-and ginfo = typ * location * init option
+and ginfo = typ * location * init_t option
 
-and init = (int * scalar_t * exp) list option
+and init_t = (size_t * scalar_t * exp) list option
 
 and field = (string * (int * typ))
 
 (* TODO: remove location, unused! *)
-and funinfo = (ftyp * Newspeak.location * funbody)
-
-and funbody = ((string * string list) * blk)
+and funinfo = (string * string list * ftyp * blk)
 
 and typ =
     | Void
@@ -210,7 +208,7 @@ let string_of_lv = string_of_lv ""
 
 let string_of_blk = string_of_blk ""
 
-let print_fundec f (_, _, (_, body)) =
+let print_fundec f (_, _, _, body) =
   print_endline (f^" {");
   print_endline (string_of_blk body);
   print_endline "}"
@@ -748,7 +746,7 @@ and size_of_stmt (x, _) =
 
 and size_of_case (_, body) = size_of_blk body
 
-let size_of_fundef (_, _, (_, body)) = size_of_blk body
+let size_of_fundef (_, _, _, body) = size_of_blk body
 
 let size_of prog =
   let res = ref 0 in

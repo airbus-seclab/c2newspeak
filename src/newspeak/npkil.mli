@@ -39,8 +39,18 @@ type t = {
   src_lang: src_lang
 }
 
+and assertion = token list
+
+and token = 
+    SymbolToken of char
+  | IdentToken of string
+  | LvalToken of lval
+  | CstToken of Newspeak.cst
+
 (* None is for extern *)
-and ginfo = (typ * location * init_t option * used)
+and ginfo = typ * location * init_t option * used
+
+and init_t = (size_t * scalar_t * exp) list option
 
 and used = bool
 
@@ -58,14 +68,6 @@ and stmtkind =
       (* (in, type, function, out) *)
   | Call of (exp list * ftyp * fn * lval list)
   | UserSpec of assertion
-
-and assertion = token list
-
-and token = 
-    SymbolToken of char
-  | IdentToken of string
-  | LvalToken of lval
-  | CstToken of Newspeak.cst
 
 and stmt = stmtkind * location
 
@@ -90,8 +92,6 @@ and exp =
 and fn =
     FunId of fid
   | FunDeref of (exp * ftyp)
-
-and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
     Belongs_tmp of (Nat.t * tmp_nat)

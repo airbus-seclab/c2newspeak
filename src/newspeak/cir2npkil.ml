@@ -294,7 +294,7 @@ let translate src_lang prog fnames =
       Hashtbl.add glbdecls x (t, loc, init, false)
   in
 
-  let translate_fundef f ((args, t), _, ((ret_id, args_id), body)) =
+  let translate_fundef f (ret_id, args_id, (args, t), body) =
     let body = Cir.normalize body in
     let body = translate_blk body in
     let ft = translate_ftyp (args, t) in

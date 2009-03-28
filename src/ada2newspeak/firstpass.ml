@@ -376,7 +376,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   global), translate_typ typ, loc)
 
   and add_global (loc:Npk.location) (typ:A.subtyp)
-                 (tr_typ:C.typ)     (tr_init:C.init option)
+                 (tr_typ:C.typ)     (tr_init:C.init_t option)
                  (ro:bool)          (x:A.identifier)
        :unit =
     let name = Normalize.normalize_ident
@@ -1920,18 +1920,15 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | Procedure(name, _) -> name in
 
     let ftyp = search_spec name
-    and (params, vids) = add_params subprogspec loc
+    and (params, (ret_id, args_ids)) = add_params subprogspec loc
     and body_decl = translate_declarative_part decl_part
     and body = translate_block block in
-    let body_lbl = (vids, (C.Block (body_decl@body,
-                                    Some (ret_lbl,[])),
-                           loc)::[])
-    in
+    let body = (C.Block (body_decl@body, Some (ret_lbl,[])), loc)::[] in
       remove_formals params;
       remove_declarative_part decl_part;
 
       Hashtbl.replace fun_decls (translate_name name)
-        (ftyp, loc, body_lbl)
+        (ret_id, args_ids, ftyp, body)
 
 
 
@@ -1947,7 +1944,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | Variable -> false
             | Constant | StaticVal(_) -> true in
           let tr_typ = translate_subtyp subtyp in
-          let tr_init : C.init option =
+          let tr_init : C.init_t option =
             match (init, !extern) with
               | (_,true)
               | (None,_) -> Some None

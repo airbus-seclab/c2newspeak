@@ -38,17 +38,15 @@ and token =
   | LvalToken of lv
   | CstToken of cst
 
-and ginfo = typ * location * init option
+and ginfo = typ * location * init_t option
 
-and init = (int * scalar_t * exp) list option
+and init_t = (size_t * scalar_t * exp) list option
+
+(* TODO: remove location, unused! *)
+and funinfo = (string * string list * ftyp * blk)
 
 (** field's name, offset and typ *)
 and field = (string * (int * typ))
-
-(* TODO: remove location, unused! *)
-and funinfo = (ftyp * Newspeak.location * funbody)
-
-and funbody = ((string * string list) * blk)
 
 and typ =
     | Void

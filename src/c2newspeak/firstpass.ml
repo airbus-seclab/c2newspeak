@@ -219,7 +219,9 @@ let translate (globals, spec) =
 
   let push_enum (x, i) = Symbtbl.bind symbtbl x (EnumSymb i, int_typ) in
 
-  let add_fundef f body t loc = Hashtbl.replace fundefs f (t, loc, body) in
+  let add_fundef f (ret, args) body t = 
+    Hashtbl.replace fundefs f (ret, args, t, body) 
+  in
 
   let translate_lbl lbl =
     try Hashtbl.find lbl_tbl lbl
@@ -1320,7 +1322,7 @@ let translate (globals, spec) =
 	    let formalids = add_formals ft in
 	    let body = translate_blk body in
 	    let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	      add_fundef f' (formalids, body) (translate_ftyp ft) loc;
+	      add_fundef f' formalids body (translate_ftyp ft);
 	      Symbtbl.restore symbtbl;
 	      current_fun := "";
 	      Hashtbl.clear lbl_tbl;
