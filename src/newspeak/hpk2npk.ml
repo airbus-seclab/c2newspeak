@@ -35,6 +35,13 @@ let scalar_of_typ t =
     | _ -> 
 	Npkcontext.report_error "Hpk2npk.scalar_of_typ" "scalar type expected"
 
+let default_args_ids fid n = 
+  let rec create_args i =
+    if i > n then []
+    else (fid^".arg"^(string_of_int i))::(create_args (i+1))
+  in
+    create_args 1
+
 let translate prog = 
   let fundecs = Hashtbl.create 100 in
   let globals = Hashtbl.create 100 in
@@ -94,24 +101,24 @@ let translate prog =
   in
 
   let translate_assertion x = List.map translate_token x in
+
   (* TOOD: find a way to factor prefix_args and suffix_rets!! *)
-  let prefix_args fid loc f ft args =
-    let rec add i args =
+  let prefix_args loc f ft args args_ids =
+    let rec add args =
       match args with
-	  (e::args, t::args_t) -> 
+	  (e::args, t::args_t, x::args_ids) -> 
 	    push tmp_var;
 	    let set = translate_set (Local tmp_var, e, t) in
-	    let call = add (i+1) (args, args_t) in
-	    let x = fid^".arg"^(string_of_int i) in
+	    let call = add (args, args_t, args_ids) in
 	      pop tmp_var;
 	      N.Decl (x, t, (set, loc)::(call, loc)::[])
 	| _ -> N.Call (translate_fn ft f)
     in
     let (args_t, _) = ft in
-      add 1 (args, args_t)
+      add (args, args_t, args_ids)
   in
 
-  let suffix_rets fid loc f ft (args, rets) =
+  let suffix_rets fid loc f ft (args, rets) args_ids =
     let rec add rets =
       match rets with
 	  (* TODO: should have one list instead of two here!!! *)
@@ -123,7 +130,7 @@ let translate prog =
 	    let x = "value_of_"^fid in
 	      pop tmp_var;
 	      N.Decl (x, t, (call, loc)::(set, loc)::[])
-	| _ -> prefix_args fid loc f ft args
+	| _ -> prefix_args loc f ft args args_ids
     in
     let rec add_fst rets =
       match rets with
@@ -155,12 +162,21 @@ let translate prog =
 	(* TODO: instead of having a ftyp, have the list of typed and named args
 	   and the list of typed and named rets?? *)
 	Call (args, ft, f, rets) -> 
-	  let fid = 
+	  let (fid, args_ids) = 
 	    match f with
-		FunId fid -> fid
-	      | FunDeref _ -> "fptr_call"
+		FunId fid -> 
+		  let args_ids = 
+		    try
+		      let (_, args_ids, _, _) = Hashtbl.find prog.fundecs fid in
+			args_ids
+		    with Not_found -> default_args_ids fid (List.length args)
+		  in
+		    (fid, args_ids)
+	      | FunDeref _ -> 
+		  let fid = "fptr_call" in
+		    (fid, default_args_ids fid (List.length args))
 	  in
-	    suffix_rets fid loc f ft (args, rets)
+	    suffix_rets fid loc f ft (args, rets) args_ids
       | DoWith (body, lbl, action) -> 
 	  let body = translate_blk body in
 	  let action = translate_blk action in

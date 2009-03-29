@@ -5,7 +5,7 @@ void t033.appelfonction(void) {
   (t033.adb:11#184)^int32 x;
   (t033.adb:14#212)^int32 !tmp0;
   (t033.adb:14#212)^{
-    int32 t033.f.arg1;
+    int32 y;
     (t033.adb:14#212)^0- =(int32) 2;
     (t033.adb:14#212)^t033.f();
   }

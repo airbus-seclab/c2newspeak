@@ -20,7 +20,7 @@ void t098.main(uint2) {
 }
 
 void t098.proc(int32) {
-  (t098.adb:27#390)^uint2 t098.main.arg1;
+  (t098.adb:27#390)^uint2 z;
   (t098.adb:27#390)^0- =(uint2) 3;
   (t098.adb:27#390)^t098.main();
 }

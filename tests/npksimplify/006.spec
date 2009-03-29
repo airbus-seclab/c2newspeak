@@ -50,7 +50,7 @@ void main(void) {
   (006.c:49#6)^int32 i;
   (006.c:50#6)^int32 c;
   (006.c:52#2)^{
-    ptr getIndex.arg1;
+    ptr ptr;
     (006.c:52#2)^0- =(ptr) &_32(2-);
     (006.c:30#6)^{
       int32 x;

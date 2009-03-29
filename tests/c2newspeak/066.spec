@@ -6,7 +6,7 @@ void f(int32) {
 
 void main(void) {
   (066.c:30#2)^{
-    int32 f.arg1;
+    int32 a;
     (066.c:30#2)^0- =(int32) 1;
     (066.c:30#2)^f();
   }

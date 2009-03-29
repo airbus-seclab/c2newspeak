@@ -13,7 +13,7 @@ void main(void) {
   (211.c:35#2)^{
     int32 value_of_f;
     (211.c:35#2)^{
-      int32 f.arg1;
+      int32 z;
       (211.c:35#2)^0- =(int32) 2-_int32;
       (211.c:35#2)^f();
     }

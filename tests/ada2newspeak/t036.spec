@@ -4,7 +4,7 @@ t036.adb
 void t036.appelprocedure(void) {
   (t036.adb:17#212)^t036.inc();
   (t036.adb:18#223)^{
-    int32 t036.set.arg1;
+    int32 y;
     (t036.adb:18#223)^0- =(int32) 10;
     (t036.adb:18#223)^t036.set();
   }
