@@ -233,10 +233,7 @@ let translate src_lang prog fnames =
   and translate_fn fn =
     match fn with
 	Fname f -> K.FunId f
-      | FunDeref (e, ft) -> 
-	  let e = translate_exp e in
-	  let ft = translate_ftyp ft in
-	    K.FunDeref (e, ft)
+      | FunDeref e -> K.FunDeref (translate_exp e)
       
   and translate_call ret (ft, fn, args) =
     let args = List.map translate_exp args in

@@ -93,6 +93,6 @@ and exp =
 
 and fn =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 val string_of_stmtkind: stmtkind -> string

@@ -87,7 +87,7 @@ and exp =
 
 and fn =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 and init_t = (size_t * scalar_t * exp) list option
 
@@ -213,12 +213,7 @@ and string_of_exp e =
 and string_of_fn f =
   match f with
       FunId fid -> (string_of_fid fid)^"()"
-    | FunDeref (exp, (args_t, Some ret_t)) ->
-	"["^(string_of_exp exp)^"]("^
-	  (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
-    | FunDeref (exp, (args_t, None)) ->
-	"["^(string_of_exp exp)^"]("^
-	  (seq ", " string_of_typ args_t)^")"
+    | FunDeref exp -> "["^(string_of_exp exp)^"]"
 
 (* TODO: remove pretty option here and Npkcontext *)
 let dump_npko prog = 

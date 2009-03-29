@@ -116,7 +116,7 @@ and exp =
 
 and funexp =
     | Fname of string
-    | FunDeref of (exp * ftyp)
+    | FunDeref of exp
 
 (* TODO: change cst to Newspeak.cst??? *)
 and cst =
@@ -405,9 +405,9 @@ and normalize_call loc (ft, f, args) =
 and normalize_funexp loc f =
   match f with
       Fname _ -> ([], f)
-    | FunDeref (e, ft) ->
+    | FunDeref e ->
 	let (pref, e) = normalize_exp_post loc e (Scalar Newspeak.FunPtr) in
-	  (pref, FunDeref (e, ft))
+	  (pref, FunDeref e)
 	      
 and normalize_lv_post loc lv t =
   let (pref, lv, post) = normalize_lv lv in

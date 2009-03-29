@@ -100,7 +100,7 @@ and exp =
 
 and fn =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 and unop =
     Belongs_tmp of (Nat.t * tmp_nat)

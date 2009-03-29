@@ -104,7 +104,7 @@ and exp =
 
 and funexp =
     | Fname of string
-    | FunDeref of (exp * ftyp)
+    | FunDeref of exp
 
 (* TODO: try to have the same constants as newspeak Nil ??*)
 and cst =

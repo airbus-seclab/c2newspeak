@@ -578,7 +578,7 @@ let translate (globals, spec) =
 	    let args_t = refine_args_t args_t args in
 	    let (args, args_t) = translate_args args args_t in
 	    let ft' = translate_ftyp (args_t, ret_t) in
-	      (C.Call (ft', C.FunDeref (e, ft'), args), ret_t)
+	      (C.Call (ft', C.FunDeref e, args), ret_t)
 		
 	| Set set ->
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 

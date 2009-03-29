@@ -93,7 +93,7 @@ and exp =
 
 and fn =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 let string_of_stmtkind x =
   match x with

@@ -704,7 +704,7 @@ and translate_call ret f args =
 	  let fptr_exp = 
 	    K.Lval (translate_lval fptr, K.Scalar Newspeak.FunPtr) 
 	  in
-	    K.FunDeref (fptr_exp, ft')
+	    K.FunDeref fptr_exp
       | _ -> 
 	  Npkcontext.report_error "Npkcompile.translate_call" 
 	    "left value not supported"

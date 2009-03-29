@@ -79,10 +79,10 @@ let translate prog =
 	    "translate_set not implemented yet"
   in
 
-  let translate_fn x =
+  let translate_fn ft x =
     match x with
 	FunId f -> N.FunId f
-      | FunDeref (e, ft) -> N.FunDeref (translate_exp e, ft)
+      | FunDeref e -> N.FunDeref (translate_exp e, ft)
   in
     
   let translate_token x =
@@ -95,7 +95,7 @@ let translate prog =
 
   let translate_assertion x = List.map translate_token x in
   (* TOOD: find a way to factor prefix_args and suffix_rets!! *)
-  let prefix_args fid loc f args =
+  let prefix_args fid loc f ft args =
     let rec add i args =
       match args with
 	  (e::args, t::args_t) -> 
@@ -105,12 +105,13 @@ let translate prog =
 	    let x = fid^".arg"^(string_of_int i) in
 	      pop tmp_var;
 	      N.Decl (x, t, (set, loc)::(call, loc)::[])
-	| _ -> N.Call (translate_fn f)
+	| _ -> N.Call (translate_fn ft f)
     in
-      add 1 args
+    let (args_t, _) = ft in
+      add 1 (args, args_t)
   in
 
-  let suffix_rets fid loc f args rets =
+  let suffix_rets fid loc f ft (args, rets) =
     let rec add rets =
       match rets with
 	  (* TODO: should have one list instead of two here!!! *)
@@ -122,7 +123,7 @@ let translate prog =
 	    let x = "value_of_"^fid in
 	      pop tmp_var;
 	      N.Decl (x, t, (call, loc)::(set, loc)::[])
-	| _ -> prefix_args fid loc f args
+	| _ -> prefix_args fid loc f ft args
     in
     let rec add_fst rets =
       match rets with
@@ -131,6 +132,14 @@ let translate prog =
 	      add_fst (rets, rets_t)
 	| _ -> add rets
     in
+    let (_, rets_t) = ft in
+    (* TODO: change ret_typ in ftyp so that it is a list *)
+    let rets_t =
+      match rets_t with
+	  None -> []
+	| Some t -> t::[]
+    in
+    let rets = (rets, rets_t) in
       add_fst rets
   in
 
@@ -145,19 +154,13 @@ let translate prog =
 	*)
 	(* TODO: instead of having a ftyp, have the list of typed and named args
 	   and the list of typed and named rets?? *)
-	Call (args, (args_t, rets_t), f, rets) -> 
+	Call (args, ft, f, rets) -> 
 	  let fid = 
 	    match f with
 		FunId fid -> fid
 	      | FunDeref _ -> "fptr_call"
 	  in
-	    (* TODO: change ret_typ in ftyp so that it is a list *)
-	  let rets_t =
-	    match rets_t with
-		None -> []
-	      | Some t -> t::[]
-	  in
-	    suffix_rets fid loc f (args, args_t) (rets, rets_t)
+	    suffix_rets fid loc f ft (args, rets)
       | DoWith (body, lbl, action) -> 
 	  let body = translate_blk body in
 	  let action = translate_blk action in

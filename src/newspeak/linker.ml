@@ -187,7 +187,7 @@ and generate_blk x = List.map generate_stmt x
 and generate_fn fn =
   match fn with
     | FunId f -> H.FunId f
-    | FunDeref (e, t) -> H.FunDeref (generate_exp e, generate_ftyp t)
+    | FunDeref e -> H.FunDeref (generate_exp e)
 
 and generate_body body = List.map generate_stmt body
 
