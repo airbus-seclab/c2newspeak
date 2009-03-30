@@ -808,8 +808,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
             end;
             subtyp
     in
-      types#add nom subtyp location global
-
+      types#add nom subtyp location global;
 
   and find_subtyp x =
 

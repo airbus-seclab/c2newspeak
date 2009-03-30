@@ -22,6 +22,9 @@
 
 *)
 
+let (%+) = Newspeak.Nat.add
+let (%-) = Newspeak.Nat.sub
+
 (**
  * A universal type.
  *
@@ -80,7 +83,7 @@ and t = {
 
 and range =
   | NullRange
-  | Range of int*int (* min <= max *)
+  | Range of Newspeak.Nat.t*Newspeak.Nat.t (* min <= max *)
 
 (* type for "traits" (type of types...) *)
 and trait_t =
@@ -102,12 +105,33 @@ type table = (string, symbol) Hashtbl.t
 
 let (inject_int ,project_int )  = Univ.embed ()
 let (inject_bool,project_bool)  = Univ.embed ()
+let (inject_nat ,project_nat )  = Univ.embed ()
 
-let from_int typ ival = typ,(inject_int ival)
-and to_int v          = project_int (snd v)
+let from_int  typ ival = typ,(inject_int  ival)
+and to_int  v          = project_int  (snd v)
 
 let from_bool typ ival = typ,(inject_bool ival)
 and to_bool v          = project_bool (snd v)
+
+let from_nat  typ ival = typ,(inject_nat  ival)
+and to_nat  v          = project_nat  (snd v)
+
+(**********
+ * Ranges *
+ **********)
+
+let null_range = NullRange
+
+let (@...) min max =
+  if min>max then NullRange
+  else Range (min,max)
+
+let (@..) min max =
+  (Newspeak.Nat.of_int min) @... (Newspeak.Nat.of_int max)
+
+let sizeof = function
+  | NullRange       -> Newspeak.Nat.zero
+  | Range (min,max) -> (max %- min %+ Newspeak.Nat.one)
 
 (*****************
  * Symbol tables *
@@ -190,15 +214,7 @@ let type_stub = {
   limited = false;
 }
 
-let null_range = NullRange
-
-let (@..) min max =
-  if min>max then NullRange
-  else Range (min,max)
-
-let sizeof = function
-  | NullRange       -> 0
-  | Range (min,max) -> (max - min + 1)
+let __universal_integer = { type_stub with trait = Signed None; }
 
 (*
  * Add (or not) a type to a symbol table.
@@ -260,6 +276,9 @@ let new_constr ?symboltable ?name parent r =
       uid = parent.uid;
     }
 
+let new_range ?symboltable ?name r =
+  new_constr ?symboltable ?name __universal_integer r
+
 let new_modular ?symboltable ?name size =
     maybe_add ?symboltable ?name
     {
@@ -286,15 +305,18 @@ let is_compatible one another =
       | Some p1, Some p2 -> (p1 = p2 && one.uid = another.uid)
       | _                -> false
 
-(* Builtin types *)
+(*****************
+ * Builtin types *
+ *****************)
 
+(* Private global symbol table. It is made available to the rest of the world by
+ * builtin_type and builtin_variable. *)
 let builtin_table :table = create_table 10
 
 let builtin_type     = find_type     builtin_table
 let builtin_variable = find_variable builtin_table
 
-let __universal_integer = { type_stub with trait = Signed None; }
-
+(* TODO hook it with Ada_config *)
 let integer_first = min_int
 and integer_last  = max_int
 
@@ -302,6 +324,7 @@ let integer  = new_constr ~symboltable:builtin_table
                           ~name:"integer"
                           __universal_integer
                           (integer_first @.. integer_last)
+
 let natural  = new_constr ~symboltable:builtin_table
                           ~name:"natural"
                           integer
@@ -320,7 +343,12 @@ let _float = new_float ~symboltable:builtin_table
                        ~name:"float"
                        6
 
-(* don't add __char_x litterals *)
+(*
+ * This declaration is special because we don't want to make the character
+ * litterals (named __char_nnn) public.
+ * TODO : make them public with a reserved name like __ada2npk_char_nnn and at
+ * parse time change 'x' to the correct variable lookup.
+ *)
 let character =
   let rec all_bytes_from x =
     if x<0 then []
@@ -334,20 +362,19 @@ let character =
 (* Number of values in a type *)
 let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
-| Enumeration vals -> List.length vals
-| Modular m -> m
+| Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
+| Modular m -> Newspeak.Nat.of_int m
 | Array _
 | Float _
 | Signed None -> raise (Invalid_argument "Type with no size")
 
 let rec attr_get typ attr args =
   match typ.trait, attr with
-    | Signed (Some Range(a,_)),"first"  -> from_int typ a
-    | Signed (Some Range(_,b)),"last"   -> from_int typ b
-    | Enumeration values, "first"       -> from_int typ (snd (List.hd values))
+    | Signed (Some Range(a,_)),"first"  -> from_nat typ a
+    | Signed (Some Range(_,b)),"last"   -> from_nat typ b
+    | Enumeration values, "first"       -> from_int typ (snd (List.hd  values))
     | Enumeration values, "last"        -> from_int typ (snd (List.nth values
-                                                        ((List.length values)-1)
-                                                          ))
+                                                      ((List.length values)-1)))
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
         match args with
@@ -355,7 +382,7 @@ let rec attr_get typ attr args =
         | [nv] -> begin match (to_int nv) with
                         | None -> failwith "Unreachable code"
                         | Some n -> if attr="length" then
-                            from_int __universal_integer
+                            from_nat __universal_integer
                              (length_of (List.nth ind (n-1)))
                           else
                             attr_get (List.nth ind (n-1)) attr []
@@ -385,6 +412,14 @@ let (@.) typ attr = attr_get typ attr []
 let is_limited typ =
   typ.limited
 
+let is_integer typ =
+  match typ.trait with
+  | Array       _
+  | Float       _
+  | Enumeration _ -> false
+  | Modular     _
+  | Signed      _ -> true
+
 let is_modular typ =
   match typ.trait with
   | Modular     _ -> true
@@ -393,21 +428,31 @@ let is_modular typ =
   | Float       _
   | Signed      _ -> false
 
+let is_boolean typ =
+  root_parent typ == boolean
+
+let is_discrete typ =
+  match typ.trait with
+  | Signed      _
+  | Enumeration _
+  | Modular     _ -> true
+  | Array       _
+  | Float       _ -> false
+
 (* OneDimenSionnalArrayWhoseComponentIsOfABooleanType *)
 let is_odawcioa_boolean_t typ =
   match typ.trait with
-  | Array       _ (* FIXME *)
+  | Array       (comp,[_]) -> is_boolean comp
+  | Array       _
   | Modular     _
   | Float       _
   | Enumeration _
   | Signed      _ -> false
 
-let is_boolean typ =
-  root_parent typ == boolean
-
 let is_odawcioa_discrete_t typ =
   match typ.trait with
-  | Array       _ (* FIXME *)
+  | Array       (comp,[_]) -> is_discrete comp
+  | Array       _
   | Modular     _
   | Float       _
   | Enumeration _
@@ -428,14 +473,6 @@ let is_one_dim_array typ =
   | Float       _
   | Modular     _
   | Signed      _ -> false
-
-let is_integer typ =
-  match typ.trait with
-  | Array       _
-  | Float       _
-  | Enumeration _ -> false
-  | Modular     _
-  | Signed      _ -> true
 
 let is_scalar typ =
   match typ.trait with
@@ -479,6 +516,7 @@ let typeof(t,_) = t
 let (@=?) (_,v1) (_,v2) =
        some_eq (project_int  v1) (project_int  v2)
     || some_eq (project_bool v1) (project_bool v2)
+    || some_eq (project_nat  v1) (project_nat  v2)
 
 let (@=) v1 v2 =
      (typeof v1  =  typeof v2)

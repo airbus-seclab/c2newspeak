@@ -47,6 +47,15 @@ val from_int : t -> int -> value
  *)
 val to_int : value -> int option
 
+(** Create typed data from a Newspeak value.  *)
+val from_nat : t -> Newspeak.Nat.t -> value
+
+(**
+ * Gather [Newspeak.Nat] data from a given type.
+ * May return [None] if the wrong type is provided.
+ *)
+val to_nat : value -> Newspeak.Nat.t option
+
 (**
  * Checked equality on values.
  * [a @= b] if [a] and [b] denote the same typed value.
@@ -111,10 +120,15 @@ val null_range : range
  * If [a <= b], [a @.. b] is the range of values between [a] and [b] ;
  * else it is the [null_range].
  *)
-val (@..) : int -> int -> range
+val (@..)  : int -> int -> range
+
+(**
+ * Write a range from its bounds ([Newspeak.Nat.t] version).
+ *)
+val (@...) : Newspeak.Nat.t -> Newspeak.Nat.t -> range
 
 (** The number of elements in a range. [0] for the [null_range]. *)
-val sizeof : range -> int
+val sizeof : range -> Newspeak.Nat.t
 
 (*********
  * Types *
@@ -139,6 +153,15 @@ val new_constr     : ?symboltable:table -> ?name:string -> t -> range -> t
 
 (** Modular type. Parameter is modulus. *)
 val new_modular    : ?symboltable:table -> ?name:string -> int -> t
+
+(**
+ * Plain integer range.
+ * This differs from new_constr integer, because :
+ *   - it is a different type
+ *   - it does not rely on integer
+ *   - it does not need an explicit "universal_integer" type
+ *)
+val new_range      : ?symboltable:table -> ?name:string -> range -> t
 
 (**
  * Enumerated type.
