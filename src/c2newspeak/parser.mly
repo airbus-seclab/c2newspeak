@@ -869,8 +869,8 @@ type_specifier:
   }
 | UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
-    Npkcontext.report_accept_warning "Parser.type_specifier"
-      "unspecified integer kind" Npkcontext.DirtySyntax;
+    Npkcontext.report_strict_warning "Parser.type_specifier"
+      "unspecified integer kind";
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 | ftyp                                   { Float $1 }

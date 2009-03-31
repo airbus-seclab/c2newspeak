@@ -1,4 +1,3 @@
-Warning: 173.c:27#1066: unspecified integer kind accepted
 Newspeak output
 ---------------
 173.c
