@@ -47,7 +47,6 @@ type param_mode =
 | Out   (** Write-only *)
 | InOut (** Read-write *)
 
-
 type value =
 | IntVal   of nat           (** Integer value        *)
 | FloatVal of float_number  (** Floating-point value *)
@@ -131,7 +130,7 @@ and array_type_definition =
 and subtyp =
   | Unconstrained of typ               (** Unconstrained. *)
   | Constrained of typ*contrainte*bool (** Constrained. The boolean parameters
-                                           means if the subtype is static *)
+                                           means the subtype is static *)
   | SubtypName of name                 (** Subtype *)
 
 (** Attribute, eg Day'First *)

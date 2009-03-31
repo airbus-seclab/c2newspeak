@@ -23,7 +23,7 @@
 *)
 
 (**
- * The Ada95 type system.
+ * The Ada95 strong typing system.
  * @author Etienne Millon
  *)
 
@@ -79,7 +79,7 @@ type table
 
 (**
  * Create a new symbol table.
- * The parameter is a size hint.
+ * Parameter is a size hint.
  *)
 val create_table  : int -> table
 
@@ -88,6 +88,9 @@ val add_type      : table -> string -> t     -> unit
 
 (** Add a variable symbol to a table. *)
 val add_variable  : table -> string -> value -> unit
+
+(** Remove a type, given its name. *)
+val remove_type     : table -> string -> unit
 
 (**
  * Get a type from a symbol table.
@@ -201,3 +204,6 @@ val operator_exists : t -> string -> bool
 
 (** Extract a type from a value. *)
 val typeof : value -> t
+
+(* FIXME Temporary tweak. *)
+val get_legacy_definition : string -> Syntax_ada.subtyp

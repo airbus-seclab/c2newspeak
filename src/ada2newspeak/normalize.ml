@@ -627,6 +627,41 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and package=new package_manager
     in
 
+  (** Wrapper between [types] (legacy, see below) and Ada_types.  *)
+  let atypes =
+    object(s)
+      val tbl :Ada_types.table = Ada_types.create_table 100
+
+      method private subtyp_to_atype (s:subtyp) :Ada_types.t =
+        match s with
+        | Constrained   _ -> failwith "Constr is not impl"
+        | Unconstrained _ -> failwith "Unconstr not impl"
+        | SubtypName    _ -> failwith "SubtypeName not impl"
+
+      method add (n:name) (st:subtyp) :unit =
+        Ada_types.add_type tbl (snd n) (s#subtyp_to_atype st);
+        Ada_types.print_table tbl
+
+      method remove (n:name) :unit =
+        Ada_types.remove_type tbl (snd n)
+
+      method mem (n:name) :bool =
+        try
+          ignore (Ada_types.find_type tbl (snd n));
+          true
+        with Not_found ->
+          begin try
+            ignore (Ada_types.builtin_type (snd n));
+            true;
+          with Not_found -> false
+          end
+
+      method find (n:name) :(subtyp*location*bool) =
+        Ada_types.get_legacy_definition (snd n),Newspeak.unknown_loc,true
+
+    end
+  in
+
   (**
    * This object encapsulates the table of types. It is basically a Hashtbl.t
    * mapping a [name] to a triplet of :
@@ -639,38 +674,43 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
    *)
   let types =
     object (s)
-        val tbl = Hashtbl.create 100
+      val tbl = Hashtbl.create 100
 
-        (** Add a new subtype, or raise an error in case of conflict. *)
-        method add (n:Syntax_ada.name) (subtyp:subtyp)
-                   (location:location)   (global:bool)
-        :unit =
-            (if s#mem n then
-                   match s#find n with
-                     | (_, _, glob) when global = glob ->
-                         Npkcontext.report_error
-                           "normalize.typ_normalization.types#add"
-                           ("conflict : "^(string_of_name n)
-                            ^" already declared")
-                     | _ -> ());
-                Hashtbl.add tbl n (subtyp,location,global)
+      (** Add a new subtype, or raise an error in case of conflict. *)
+      method add (n:Syntax_ada.name) (subtyp:subtyp)
+      (location:location)   (global:bool)
+      :unit =
+ (*       atypes#add n subtyp; *)
+        if s#mem n then begin
+          match s#find n with
+          | (_, _, glob) when global = glob ->
+              Npkcontext.report_error
+              "normalize.typ_normalization.types#add"
+              ("conflict : "^(string_of_name n)
+              ^" already declared")
+          | _ -> ()
+    end;
+    Hashtbl.add tbl n (subtyp,location,global);
 
-        (** Is this type known ? *)
-        method mem (n:name) :bool =
-            Hashtbl.mem tbl n
+    (** Is this type known ? *)
+      method mem (n:name) :bool =
+        Hashtbl.mem tbl n
+          || atypes#mem n
 
         (** Find the type definition. *)
-        method find (n:name) :(subtyp*location*bool) =
-            Hashtbl.find tbl n
+      method find (n:name) :(subtyp*location*bool) =
+        try Hashtbl.find tbl n
+        with Not_found -> atypes#find n
 
         (** Find all the types matching. *)
-        method find_all (n:name)
-            :(subtyp*location*bool) list =
-            Hashtbl.find_all tbl n
+      method find_all (n:name)
+      :(subtyp*location*bool) list =
+        Hashtbl.find_all tbl n
 
         (** Remove a subtype definition. *)
-        method remove (x:name) :unit =
-            Hashtbl.remove tbl x
+      method remove (x:name) :unit =
+        atypes#remove x;
+        Hashtbl.remove tbl x
     end
   in
 

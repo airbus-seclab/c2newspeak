@@ -22,8 +22,32 @@
 
 *)
 
+(*********************************
+ * Module definitions/inclusions *
+ *********************************)
+
 let (%+) = Newspeak.Nat.add
 let (%-) = Newspeak.Nat.sub
+
+(**
+ * The [string] type with primitives to
+ * handle it in a case-insensitive way.
+ *)
+module CaseInsensitiveString =
+  struct
+    type t = string
+    
+    let equal s1 s2 =
+      String.compare (String.lowercase s1) (String.lowercase s2) = 0
+
+    let hash s =
+      Hashtbl.hash (String.lowercase s)
+
+    let to_string x = x
+  end
+
+(** A hash table insensitive to keys' case.  *)
+module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 
 (**
  * A universal type.
@@ -97,7 +121,7 @@ type symbol =
   | Variable of value
   | Type     of t
 
-type table = (string, symbol) Hashtbl.t
+type table = symbol IHashtbl.t
 
 (*********************************
  * Value injector and projectors *
@@ -153,7 +177,7 @@ let print_table tbl =
   print_endline "+------+---------------+";
   print_endline "| type |      name     |";
   print_endline "+------+---------------+";
-  Hashtbl.iter (fun n s ->
+  IHashtbl.iter (fun n s ->
                   List.iter print_string [
                   "|";
                   (pad 6 (symb_str s));
@@ -164,9 +188,13 @@ let print_table tbl =
                )
       tbl;
   print_endline "+------+---------------+";
-  print_newline()
+  print_newline ()
 
-let create_table size = Hashtbl.create size
+let create_table size = IHashtbl.create size
+
+(* Private global symbol table. It is made available to the rest of the world by
+ * builtin_type and builtin_variable. *)
+let builtin_table :table = create_table 10
 
 (*
  * Add a symbol to a table, or raise an exception in case
@@ -174,20 +202,19 @@ let create_table size = Hashtbl.create size
  * overloading.
  *)
 let try_to_add_symbol tbl name s =
-  if Hashtbl.mem tbl name then
-    raise (Invalid_argument ("Name '"^name^"' already exists"))
-  else
-    Hashtbl.add tbl name s
+  IHashtbl.add tbl name s
 
 let add_variable tbl id v   = try_to_add_symbol tbl id (Variable v)
 
 let add_type     tbl id typ = try_to_add_symbol tbl id (Type typ)
 
-let find_type tbl id = match (Hashtbl.find tbl id) with
+let remove_type tbl id = IHashtbl.remove tbl id
+
+let rec find_type tbl id = match (IHashtbl.find tbl id) with
 | Variable _ -> raise Not_found
 | Type typ   -> typ
 
-let find_variable tbl id = match (Hashtbl.find tbl id) with
+let find_variable tbl id = match (IHashtbl.find tbl id) with
 | Type _     -> raise Not_found
 | Variable v -> v
 
@@ -308,10 +335,6 @@ let is_compatible one another =
 (*****************
  * Builtin types *
  *****************)
-
-(* Private global symbol table. It is made available to the rest of the world by
- * builtin_type and builtin_variable. *)
-let builtin_table :table = create_table 10
 
 let builtin_type     = find_type     builtin_table
 let builtin_variable = find_variable builtin_table
@@ -522,6 +545,16 @@ let (@=) v1 v2 =
      (typeof v1  =  typeof v2)
   && (       v1 @=?        v2)
 
+(* FIXME Temporary tweak. *)
+let get_legacy_definition id = match String.lowercase id with
+| "integer"   -> Syntax_ada.Constrained(Syntax_ada.Integer
+                                       ,Ada_config.integer_constraint
+                                       ,true
+                                       )
+| "float"     -> Syntax_ada.Unconstrained Syntax_ada.Float
+| "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
+| "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
+| _ ->  failwith "legacy definition available only for int float bool or char"
 
 let _ =
   add_type builtin_table "character" character

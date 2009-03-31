@@ -167,7 +167,6 @@
 %token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY RECORD OF
 %token IN OUT RETURN
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
-%token INTEGER FLOAT BOOLEAN CHARACTER
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
@@ -184,7 +183,7 @@
 %type <identifier list> ident_list
 %type <argument> parameter_association
 %type <argument list> actual_parameter_part args
-%type <subtyp> subtyp typ
+%type <subtyp> subtyp
 %type <subtyp_indication> subtyp_indication
 %type <nat> integer_literal
 %type <expression> primary factor term simple_expr relation expr_xor
@@ -637,7 +636,7 @@ primary :
 | integer_literal {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR {CChar($1)}
-| TRUE {CBool(true)}
+| TRUE  {CBool(true)}
 | FALSE {CBool(false)}
 | STRING {CString($1)}
 | name {Var($1)}
@@ -653,25 +652,25 @@ integer_literal :
 | CONST_INT {$1}
 ;
 
-typ :
-| INTEGER {Constrained(Integer, Ada_config.integer_constraint, true)}
-| FLOAT {Unconstrained(Float)}
-| BOOLEAN {Unconstrained(Boolean)}
-| CHARACTER {Unconstrained(Character)}
-;
-
 subtyp_indication :
 | subtyp RANGE contrainte {($1, Some($3), None)}
 | subtyp {($1, None, None)}
 /*| simple_expr DOUBLE_DOT simple_expr */
 | CONST_INT DOUBLE_DOT CONST_INT
-    {(Constrained(Integer, Ada_config.integer_constraint, true),
-      Some (RangeConstraint(CInt($1), CInt($3))),
-      None)}
+    {(Constrained(Integer
+                 ,Ada_config.integer_constraint
+                 ,true
+                 )
+     ,Some(RangeConstraint(CInt($1)
+                          ,CInt($3)
+                          )
+          )
+     ,None
+     )
+    }
 
 
 subtyp :
-| typ {$1}
 | name {SubtypName($1)}
 ;
 

@@ -130,7 +130,7 @@ and array_type_definition =
 and subtyp =
   | Unconstrained of typ               (** Unconstrained. *)
   | Constrained of typ*contrainte*bool (** Constrained. The boolean parameters
-                                           means if the subtype is static *)
+                                           means the subtype is static *)
   | SubtypName of name                 (** Subtype *)
 
 (** Attribute, eg Day'First *)
@@ -165,7 +165,9 @@ and contrainte =
   | IntegerRangeConstraint of Newspeak.bounds
   | FloatRangeConstraint of float_number*float_number
 
-and subtyp_indication = subtyp*contrainte option*subtyp option
+and subtyp_indication = subtyp
+                       *contrainte option
+                       *subtyp option
 
 (** Left-value *)
 and lval =
