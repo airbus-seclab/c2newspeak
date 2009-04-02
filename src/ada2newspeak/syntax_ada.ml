@@ -139,7 +139,7 @@ and attribute_designator =
 
 (** Expressions. *)
 and expression =
-  | NullExpr                            
+  | NullExpr
   | CInt         of nat
   | CFloat       of float_number
   | CBool        of bool
@@ -171,9 +171,9 @@ and subtyp_indication = subtyp
 
 (** Left-value *)
 and lval =
-| Lval        of name                   
+| Lval        of name
 | ArrayAccess of lval
-               * expression 
+               * expression
 
 (** Subprogram parameter *)
 and param = {
@@ -185,11 +185,11 @@ and param = {
 
 (**
  * The way a loop iterates over values :
- *  loop                        ->  NoScheme      
+ *  loop                        ->  NoScheme
  *  for I in reverse 1..5 loop  ->  For I,1,5,true
- *  for I in 15..10             ->  While false   
- *  for I in reverse 15..10     ->  While false   
- *  while exp                   ->  While exp     
+ *  for I in 15..10             ->  While false
+ *  for I in reverse 15..10     ->  While false
+ *  while exp                   ->  While exp
  *  for I in 4..8               ->  For I,5,8,false
  *)
 and iteration_scheme =
@@ -211,17 +211,17 @@ and argument = identifier option*expression
 and instruction =
   | NullInstr                    (** The null instruction (do nothing)    *)
   | Assign        of lval
-                   * expression 
+                   * expression
   | Return        of expression  (** Return from function                 *)
   | ReturnSimple                 (** Return from procedure                *)
   | If            of expression
                    * block
-                   * block                       
+                   * block
   | Loop          of iteration_scheme
-                   * block              
+                   * block
   | Exit          of expression option
   | ProcedureCall of name
-                   * argument list         
+                   * argument list
   | Case          of expression
                    * (expression*block) list
                    * block option
@@ -291,7 +291,8 @@ and declarative_item =
   | BasicDecl of basic_declaration
   |  BodyDecl of body
 
-and declarative_part = (declarative_item*location) list
+and declarative_part = Ada_types.table
+                     * (declarative_item*location) list
 
 type library_item =
   | Spec of spec

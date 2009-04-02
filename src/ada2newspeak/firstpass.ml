@@ -1852,7 +1852,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* renvoie liste d'instructions (affectations par defaut)
      fonction appelee pour la partie declarative d'une fonction
      ou procedure *)
-  and translate_declarative_part decl_part =
+  and translate_declarative_part (_,decl_part) =
     let (decl, aff) =
       List.split (List.map translate_declarative_item decl_part)
     in
@@ -1890,7 +1890,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | BodyDecl(_) -> ()
 
 
-  and remove_declarative_part decl_part =
+  and remove_declarative_part (_,decl_part) =
     List.iter remove_declarative_item decl_part
 
 
@@ -2030,7 +2030,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
              | Some(_, basic_decls) ->
                  List.iter translate_global_basic_declaration basic_decls
           );
-          List.iter translate_global_decl_item decl_part
+          List.iter translate_global_decl_item (snd decl_part)
 
       | PackageBody _, false -> Npkcontext.report_error
           "Firstpass.translate_body"
@@ -2069,7 +2069,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   in
     (* corps de la fonction translate *)
-  
+
   let compil_unit = Decorate.decorate compil_unit in
   let normalized_compil_unit =  Normalize.normalization compil_unit false
   in
