@@ -112,7 +112,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
                                                     extern) expected_typ
       | FunctionCall _  -> raise NonStaticExpression
 
-      | NullExpr | CString (_) -> Npkcontext.report_error
+      | NullExpr | CString _ -> Npkcontext.report_error
                                  "Ada_normalize.eval_static_exp"
                                        "not implemented"
 

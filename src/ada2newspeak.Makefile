@@ -38,6 +38,7 @@ ada2newspeak.FILES=\
 	ada_config \
 	ada_utils \
 	ada_types \
+	decorate \
 	parser lexer file_parse \
 	normalize firstpass ada2newspeak
 

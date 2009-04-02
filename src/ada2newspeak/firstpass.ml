@@ -2069,7 +2069,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   in
     (* corps de la fonction translate *)
-
+  
+  let compil_unit = Decorate.decorate compil_unit in
   let normalized_compil_unit =  Normalize.normalization compil_unit false
   in
     Npkcontext.print_debug

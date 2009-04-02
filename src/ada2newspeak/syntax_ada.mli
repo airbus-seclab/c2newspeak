@@ -1,5 +1,5 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
+  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
 
@@ -30,7 +30,6 @@
 (** Location in the source code. *)
 type location = Newspeak.location
 
-
 type nat = Newspeak.Nat.t
 
 (** A floating-point number *)
@@ -38,13 +37,18 @@ type float_number = float*string
 
 type identifier = string
 
-(* TODO doc : overload ? *)
-type name = identifier list*identifier
+(**
+ * A qualified identifier.
+ * For example, "Ada.Text_IO.Put_line" maps to
+ * [ ["Ada","Text_IO"],"Put_Line"].
+ *)
+(* FIXME : for speed's sake, the list should be reverted. *)
+type name = identifier list * identifier
 
 (** Modes for subprogram parameters. *)
 type param_mode =
 | In    (** Read-only  *)
-| Out   (** Write-only *)
+|   Out (** Write-only *)
 | InOut (** Read-write *)
 
 type value =
@@ -61,25 +65,25 @@ type unary_op =
 
 (** Binary operators. *)
 type binary_op =
-| Plus          (** "+",        addition                                 *)
-| Minus         (** "-",        difference                               *)
-| Mult          (** "*",        multiplication                           *)
-| Div           (** "/",        division                                 *)
-| Power         (** "**",       exponentiation                           *)
-| Concat        (** "&",        concatenation                            *)
-| Mod           (** "mod",      modulus                                  *)
-| Rem           (** "rem",      division reminder                        *)
-| Eq            (** "=",        equality test                            *)
-| Neq           (** "/=",       difference test                          *)
-| Le            (** "<=",       less or equal                            *)
-| Lt            (** "<",        less than                                *)
-| Ge            (** ">=",       greater or equal                         *)
-| Gt            (** ">",        greater than                             *)
-| And           (** "and",      logical conjunction                      *)
-| Or            (** "or",       logical disjunction                      *)
-| Xor           (** "xor",      logical exclusive disjunction            *)
-| AndThen       (** "and then", logical conjunction with lazy evaluation *)
-| OrElse        (** "or else",  logical disjunction with lazy evaluation *)
+| Plus          (** "+",        addition                              *)
+| Minus         (** "-",        difference                            *)
+| Mult          (** "*",        multiplication                        *)
+| Div           (** "/",        division                              *)
+| Power         (** "**",       exponentiation                        *)
+| Concat        (** "&",        concatenation                         *)
+| Mod           (** "mod",      modulus                               *)
+| Rem           (** "rem",      division reminder                     *)
+| Eq            (** "=",        equality test                         *)
+| Neq           (** "/=",       difference test                       *)
+| Le            (** "<=",       less or equal                         *)
+| Lt            (** "<",        less than                             *)
+| Ge            (** ">=",       greater or equal                      *)
+| Gt            (** ">",        greater than                          *)
+| And           (** "and",      logical conjunction                   *)
+| Or            (** "or",       logical disjunction                   *)
+| Xor           (** "xor",      logical exclusive disjunction         *)
+| AndThen       (** "and then", logical conjunction (w/short-circuit) *)
+| OrElse        (** "or else",  logical disjunction (w/short-circuit) *)
 
 (** Builtin types. *)
 type typ =
@@ -98,28 +102,19 @@ and typ_declaration =
                       *Newspeak.ikind             (** Enumerated type, eg
                                                 [type Day is (Mon,...,Sun)] *)
   | DerivedType  of identifier
-                   *subtyp_indication  (** Derived type, eg
-                                [type WeekEndDay is Day range Sat..Sun] *)
-  | IntegerRange of identifier*contrainte*Newspeak.ikind option
-    (** Integer range, eg [type Byte is range 0..255] *)
-  | Array  of identifier*array_type_definition   (* TODO *)
-  | Record of identifier*record_type_definition  (* TODO *)
+                   *subtyp_indication
+  | IntegerRange of identifier
+                   *contrainte
+                   *Newspeak.ikind option
+  | Array  of identifier*array_type_definition
+  | Record of identifier*record_type_definition
 
-(** Record type definition, as in {[
-type Date is
-    record
-        Day   : Integer range 1 .. 31;
-        Month : Month_Name;
-        Year  : Integer;
-    end record;
-]} *)
 and record_type_definition = field list
 
 (** A record field. *)
 and field = identifier list*subtyp_indication*expression option
  (* | FielDecl of identifier list*subtyp_indication*expression option *)
     (*object_state  TO DO check need for object_st *)
-(* TODO +mutable *)
 
 (** Array type definition *)
 and array_type_definition =
@@ -143,54 +138,66 @@ and attribute_designator =
 
 (** Expressions. *)
 and expression =
-  | NullExpr                             (** The [null] expression    *)
-  | CInt of nat                          (** Integer constant         *)
-  | CFloat of float_number               (** Floating-point constant  *)
-  | CBool of bool                        (** Boolean constant
-                                             ([True] or [False])      *)
-  | CChar of int                         (** Character constant       *)
-  | CString of string                    (** String constant          *)
-  | Var of name                          (** Variable name            *)
-  | FunctionCall of name*argument list   (** Function call            *)
-  | Unary of unary_op*expression         (** A unary operator applied
-                                             to another expression    *)
-  | Binary of binary_op*expression*expression (** A binary operator
-                                           applied to two expressions *)
-  | Qualified of subtyp*expression       (** Qualified expression     *)
-  | Attribute of attribute_reference     (** Attribute reference      *)
+  | NullExpr                            
+  | CInt         of nat
+  | CFloat       of float_number
+  | CBool        of bool
+  | CChar        of int
+  | CString      of string
+  | Var          of name
+  | FunctionCall of name
+                  * argument list
+  | Unary        of unary_op
+                  * expression
+  | Binary       of binary_op
+                  * expression
+                  * expression
+  | Qualified    of subtyp
+                  * expression
+  | Attribute    of attribute_reference
 
 (** Constraint *)
 and contrainte =
-  | RangeConstraint of expression*expression
+  |        RangeConstraint of expression
+                            * expression
   | IntegerRangeConstraint of Newspeak.bounds
-  | FloatRangeConstraint of float_number*float_number
+  |   FloatRangeConstraint of float_number
+                            * float_number
 
-and subtyp_indication = subtyp*contrainte option*subtyp option
+and subtyp_indication = subtyp
+                      * contrainte option
+                      * subtyp     option
 
 (** Left-value *)
 and lval =
-| Lval of name                   (** Named lvalue *)
-| ArrayAccess of lval*expression (** Array access *)
+| Lval        of name                   
+| ArrayAccess of lval
+               * expression 
 
 (** Subprogram parameter *)
 and param = {
-        formal_name   : identifier;        (** Formal name *)
+        formal_name   : identifier;        (** Formal name              *)
         mode          : param_mode;        (** Mode (In, Out, or InOut) *)
-        param_type    : subtyp;            (** Type *)
+        param_type    : subtyp;            (** Type                     *)
         default_value : expression option; (** Default value (optional) *)
 }
 
-(** The way a loop iterates over values:            *)
-(** loop                        ->  NoScheme        *)
-(** for I in reverse 1..5 loop  ->  For I,1,5,true  *)
-(** for I in 15..10             ->  While false     *)
-(** for I in reverse 15..10     ->  While false     *)
-(** while exp                   ->  While exp       *)
-(** for I in 4..8               ->  For I,5,8,false *)
+(**
+ * The way a loop iterates over values :
+ *  loop                        ->  NoScheme      
+ *  for I in reverse 1..5 loop  ->  For I,1,5,true
+ *  for I in 15..10             ->  While false   
+ *  for I in reverse 15..10     ->  While false   
+ *  while exp                   ->  While exp     
+ *  for I in 4..8               ->  For I,5,8,false
+ *)
 and iteration_scheme =
   | NoScheme                       (* Forever *)
   | While of expression            (* While [expression] evaluates to [true] *)
-  | For of identifier * expression * expression * bool     (* In an interval *)
+  | For   of identifier
+           * expression
+           * expression
+           * bool
 
 and block = instruction list
 
@@ -201,18 +208,24 @@ and argument = identifier option*expression
 
 (** An instruction *)
 and instruction_atom =
-  | NullInstr                 (** The null instruction (do nothing)    *)
-  | Assign of lval*expression (** Assignment                           *)
-  | Return of expression      (** Return from function                 *)
-  | ReturnSimple              (** Return from procedure                *)
-  | If of expression*block*block                       (** Conditional *)
-  | Loop of iteration_scheme*block              (** Loops              *)
-  | Exit of expression option                   (** Loop exit          *)
-  | ProcedureCall of name*argument list         (** Procedure call     *)
-  (* TODO instruction: expression *)
-  | Case of expression*(expression*block) list*block option
-    (** Case .. When statement *)
-  | Block of declarative_part*block                (** "declare" block *)
+  | NullInstr                    (** The null instruction (do nothing)    *)
+  | Assign        of lval
+                   * expression 
+  | Return        of expression  (** Return from function                 *)
+  | ReturnSimple                 (** Return from procedure                *)
+  | If            of expression
+                   * block
+                   * block                       
+  | Loop          of iteration_scheme
+                   * block              
+  | Exit          of expression option
+  | ProcedureCall of name
+                   * argument list         
+  | Case          of expression
+                   * (expression*block) list
+                   * block option
+  | Block         of declarative_part
+                   * block                (** "declare" block *)
 
 (** An instruction with its location *)
 and instruction = instruction_atom*location
@@ -227,8 +240,11 @@ and sub_program_spec =
 and array_aggregate = NamedArrayAggregate of (identifier * expression) list
 
 and representation_clause =
-  | EnumerationRepresentation of identifier*array_aggregate
-  | AttributeDefinitionClause of subtyp*identifier*expression
+  | EnumerationRepresentation of identifier
+                               * array_aggregate
+  | AttributeDefinitionClause of subtyp
+                               * identifier
+                               * expression
 
 and object_state =
   | Variable
@@ -236,38 +252,51 @@ and object_state =
   | StaticVal of value (*constante statique*)
 
 and context_clause =
-  | With of name*location*(spec*location) option
+  | With       of name
+                * location
+                * (spec*location) option
   | UseContext of name list
 
 and context = context_clause list
 
-and sub_program_body = sub_program_spec*declarative_part*block
+and sub_program_body = sub_program_spec
+                     * declarative_part
+                     * block
 
-and package_spec = name*(basic_declaration*location) list
+and package_spec = name
+                 * (basic_declaration*location) list
 
-and package_body = name*package_spec option*declarative_part*block
+and package_body = name
+                 * package_spec option
+                 * declarative_part
+                 * block
 
 and spec =
   | SubProgramSpec of sub_program_spec
-  | PackageSpec of package_spec
+  |    PackageSpec of package_spec
 
 and body =
   | SubProgramBody of sub_program_body
-  | PackageBody of package_body
+  |    PackageBody of package_body
 
 and basic_declaration =
-  | ObjectDecl of identifier list*subtyp_indication
-      *expression option*object_state
-  | TypeDecl of typ_declaration
-  | UseDecl of name list
-  | SpecDecl of spec
-  | NumberDecl of identifier list*expression*value option
-  | SubtypDecl of identifier*subtyp_indication
+  | ObjectDecl      of identifier list
+                     * subtyp_indication
+                     * expression option
+                     * object_state
+  | TypeDecl        of typ_declaration
+  | UseDecl         of name list
+  | SpecDecl        of spec
+  | NumberDecl      of identifier list
+                     * expression
+                     * value option
+  | SubtypDecl      of identifier
+                     * subtyp_indication
   | RepresentClause of representation_clause
 
 and declarative_item =
   | BasicDecl of basic_declaration
-  | BodyDecl of body
+  |  BodyDecl of body
 
 and declarative_part = (declarative_item*location) list
 
@@ -275,6 +304,8 @@ type library_item =
   | Spec of spec
   | Body of body
 
-type compilation_unit = context*library_item*location
+type compilation_unit = context
+                      * library_item
+                      * location
 
 type programme = compilation_unit list

@@ -615,9 +615,9 @@ simple_expr :
 
 mult_op :
 | MULT {Mult}
-| DIV {Div}
-| MOD {Mod}
-| REM {Rem}
+| DIV  {Div}
+| MOD  {Mod}
+| REM  {Rem}
 ;
 
 term :
