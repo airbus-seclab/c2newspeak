@@ -48,8 +48,10 @@ let d_library =
   function
   | Spec SubProgramSpec ss -> Spec (SubProgramSpec (d_subprogram_spec ss))
   | Spec    PackageSpec ps -> Spec (PackageSpec    (d_package_spec    ps))
-  | Body SubProgramBody sb -> Body (SubProgramBody (d_subprogram_body sb))
-  | Body    PackageBody pb -> Body (PackageBody    (d_package_body    pb))
+  | Body  SubProgramBody (ss,dp,blk) ->
+    Body (SubProgramBody (ss,dp,blk)) (* FIXME *)
+  | Body     PackageBody (n,pso,dp,blk) ->
+    Body    (PackageBody (n,pso,dp,blk))(* FIXME *)
 
 let decorate (ctx,library,loc) =
   ctx,d_library library,loc

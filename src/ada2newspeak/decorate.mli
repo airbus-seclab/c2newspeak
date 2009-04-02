@@ -35,14 +35,8 @@ val d_basic_decl : Syntax_ada.basic_declaration
 val d_package_spec : Syntax_ada.package_spec
                   -> Syntax_ada.package_spec
 
-val d_package_body : Syntax_ada.package_body
-                  -> Syntax_ada.package_body
-
 val d_subprogram_spec : Syntax_ada.sub_program_spec
                      -> Syntax_ada.sub_program_spec
-
-val d_subprogram_body : Syntax_ada.sub_program_body
-                     -> Syntax_ada.sub_program_body
 
 val d_library : Syntax_ada.library_item
              -> Syntax_ada.library_item

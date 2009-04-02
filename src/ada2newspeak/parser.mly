@@ -191,8 +191,8 @@
 %type <expression> expression discrete_choice
 %type <binary_op> mult_op add_op rel_op
 %type <location> debut_if debut_elsif
-%type <instruction> instr instruction_if
-%type <instruction_atom> procedure_call
+%type <instruction*location> instr instruction_if
+%type <instruction> procedure_call
 %type <block> instr_list instruction_else when_others
 %type <name*argument list> procedure_array
 %type <iteration_scheme*location> iteration_scheme
@@ -205,7 +205,7 @@
 %type <identifier * expression> array_component_association
 %type <subtyp_indication list> matrix_indication
 %type <array_type_definition> constrained_array_definition
-%type <record_type_definition> record_definition
+%type <field list> record_definition
 %type <contrainte> contrainte
 %type <basic_declaration> type_definition
 %type <basic_declaration*location> basic_declaration
@@ -220,8 +220,7 @@
 %type <location> package_loc
 %type <block> package_instr
 %type <library_item*location> library_item
-%type <context_clause list> context_item
-%type <context> context
+%type <context_clause list> context_item context
 
 /*priorite*/
 

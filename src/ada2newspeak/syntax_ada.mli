@@ -98,23 +98,24 @@ type typ =
 (** Type declaration. *)
 and typ_declaration =
   | Enum          of   identifier
-                      *((identifier*nat) list)
-                      *Newspeak.ikind             (** Enumerated type, eg
+                   * ((identifier*nat) list)
+                   * Newspeak.ikind             (** Enumerated type, eg
                                                 [type Day is (Mon,...,Sun)] *)
   | DerivedType  of identifier
-                   *subtyp_indication
+                  * subtyp_indication
   | IntegerRange of identifier
-                   *contrainte
-                   *Newspeak.ikind option
-  | Array  of identifier*array_type_definition
-  | Record of identifier*record_type_definition
-
-and record_type_definition = field list
+                  * contrainte
+                  * Newspeak.ikind option
+  | Array  of identifier
+            * array_type_definition
+  | Record of identifier
+            * field list
 
 (** A record field. *)
-and field = identifier list*subtyp_indication*expression option
- (* | FielDecl of identifier list*subtyp_indication*expression option *)
-    (*object_state  TO DO check need for object_st *)
+and field = identifier list
+          * subtyp_indication
+          * expression option
+    (* TODO + object_state ? *)
 
 (** Array type definition *)
 and array_type_definition =
@@ -199,7 +200,7 @@ and iteration_scheme =
            * expression
            * bool
 
-and block = instruction list
+and block = (instruction * location) list
 
 (** Effective argument for a function or procedure call.
     The optional identifier is the formal name in case of
@@ -207,7 +208,7 @@ and block = instruction list
 and argument = identifier option*expression
 
 (** An instruction *)
-and instruction_atom =
+and instruction =
   | NullInstr                    (** The null instruction (do nothing)    *)
   | Assign        of lval
                    * expression 
@@ -226,9 +227,6 @@ and instruction_atom =
                    * block option
   | Block         of declarative_part
                    * block                (** "declare" block *)
-
-(** An instruction with its location *)
-and instruction = instruction_atom*location
 
 (** Subprogram declaration *)
 and sub_program_spec =
@@ -257,27 +255,22 @@ and context_clause =
                 * (spec*location) option
   | UseContext of name list
 
-and context = context_clause list
-
-and sub_program_body = sub_program_spec
-                     * declarative_part
-                     * block
-
 and package_spec = name
                  * (basic_declaration*location) list
-
-and package_body = name
-                 * package_spec option
-                 * declarative_part
-                 * block
 
 and spec =
   | SubProgramSpec of sub_program_spec
   |    PackageSpec of package_spec
 
 and body =
-  | SubProgramBody of sub_program_body
-  |    PackageBody of package_body
+  | SubProgramBody of sub_program_spec
+                    * declarative_part
+                    * block
+  |    PackageBody of name
+                    * package_spec option
+                    * declarative_part
+                    * block
+
 
 and basic_declaration =
   | ObjectDecl      of identifier list
@@ -304,7 +297,7 @@ type library_item =
   | Spec of spec
   | Body of body
 
-type compilation_unit = context
+type compilation_unit = context_clause list
                       * library_item
                       * location
 
