@@ -29,6 +29,9 @@
  * about semantic analysis.
  *)
 
+val d_exp : Syntax_ada.expression
+         -> Syntax_ada.expression
+
 val d_basic_decl : Syntax_ada.basic_declaration
                 -> Syntax_ada.basic_declaration
 

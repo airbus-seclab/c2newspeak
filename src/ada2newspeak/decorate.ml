@@ -23,6 +23,11 @@
 *)
 open Syntax_ada
 
+let eventually (f:'a->'a) (opt:'a option) :'a option =
+  match opt with
+  | None   -> None
+  | Some v -> Some (f v)
+
 (* FIXME *)
 let d_package_body    b = b
 
@@ -32,10 +37,10 @@ let d_subprogram_body b = b
 (* FIXME *)
 let d_subprogram_spec s = s
 
-(* FIXME *)
-let d_basic_decl x = x
+(* FIXME typecheck *)
+let d_exp e = e 
 
-let d_package_spec    (n,l) =
+let rec d_package_spec    (n,l) =
   let d_l = List.map
               (fun (bd,loc) ->
                 d_basic_decl bd,loc
@@ -43,6 +48,20 @@ let d_package_spec    (n,l) =
               l
   in
   n,d_l
+
+and d_basic_decl = function
+  | ObjectDecl (idl,sty,expo,sta) -> ObjectDecl(idl
+                                               ,sty
+                                               ,eventually d_exp expo
+                                               ,sta
+                                               )
+  | SpecDecl SubProgramSpec ss -> SpecDecl (SubProgramSpec (d_subprogram_spec ss))
+  | SpecDecl    PackageSpec ps -> SpecDecl (PackageSpec    (d_package_spec    ps))
+  | NumberDecl (idl,exp,valop) -> NumberDecl (idl, d_exp exp,valop)
+  | TypeDecl x -> TypeDecl x
+  |  UseDecl x ->  UseDecl x
+  | SubtypDecl (x,y)  -> SubtypDecl (x,y)
+  | RepresentClause x -> RepresentClause x
 
 let d_library =
   function

@@ -83,6 +83,14 @@ type table
  *)
 val create_table  : int -> table
 
+(**
+ * Link to parent.
+ * When a symbol table has a parent table, it will act as a "fallback" table for
+ * lookup, reflecting the nesting of scoped blocks.
+ * @raise Invalid_argument "Already linked" when it already has a parent.
+ *)
+val link_to_parent : table -> parent:table -> unit
+
 (** Add a type symbol to a table. *)
 val add_type      : table -> string -> t     -> unit
 
@@ -90,7 +98,7 @@ val add_type      : table -> string -> t     -> unit
 val add_variable  : table -> string -> value -> unit
 
 (** Remove a type, given its name. *)
-val remove_type     : table -> string -> unit
+val remove_type   : table -> string -> unit
 
 (**
  * Get a type from a symbol table.

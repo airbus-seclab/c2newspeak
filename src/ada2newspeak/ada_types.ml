@@ -121,7 +121,16 @@ type symbol =
   | Variable of value
   | Type     of t
 
-type table = symbol IHashtbl.t
+(*
+ * A symbol table.
+ * Side effects are everywhere (mutable option + [IHashtbl] which comes from the
+ * functorial interface of [Hashtbl].
+ * The [parent_table] can be changed only once by calling [link_to_parent].
+ *)
+type table = {
+  mutable parent_table : table  option;
+          self         : symbol IHashtbl.t;
+}
 
 (*********************************
  * Value injector and projectors *
@@ -178,45 +187,70 @@ let print_table tbl =
   print_endline "| type |      name     |";
   print_endline "+------+---------------+";
   IHashtbl.iter (fun n s ->
-                  List.iter print_string [
-                  "|";
-                  (pad 6 (symb_str s));
-                  "|";
-                  (pad 15 n);
-                  "|"];
-                  print_newline ();
+                  List.iter print_string
+                  ["|"
+                  ;pad 6 (symb_str s)
+                  ;"|"
+                  ;pad 15 n
+                  ;"|"
+                  ];
+                  print_newline ()
                )
-      tbl;
+      tbl.self;
   print_endline "+------+---------------+";
   print_newline ()
 
-let create_table size = IHashtbl.create size
+let create_table size = {parent_table=None; self=IHashtbl.create size}
 
-(* Private global symbol table. It is made available to the rest of the world by
+let link_to_parent tbl ~parent =
+  match tbl.parent_table with
+  | Some _ -> raise (Invalid_argument "Already linked")
+  | None -> tbl.parent_table <- Some parent
+
+(*
+ * Private global symbol table.
+ * It is made available to the rest of the world by
  * builtin_type and builtin_variable. *)
 let builtin_table :table = create_table 10
 
 (*
- * Add a symbol to a table, or raise an exception in case
- * of conflict. This could be enhanced in order to support
- * overloading.
+ * Add a symbol to a table, or raise an exception in case of conflict.
+ * This could be enhanced in order to support overloading.
  *)
 let try_to_add_symbol tbl name s =
-  IHashtbl.add tbl name s
+  IHashtbl.add tbl.self name s
 
 let add_variable tbl id v   = try_to_add_symbol tbl id (Variable v)
 
 let add_type     tbl id typ = try_to_add_symbol tbl id (Type typ)
 
-let remove_type tbl id = IHashtbl.remove tbl id
+let remove_type tbl id = IHashtbl.remove tbl.self id
 
-let rec find_type tbl id = match (IHashtbl.find tbl id) with
-| Variable _ -> raise Not_found
-| Type typ   -> typ
+let rec find_type tbl id =
+  let res = begin
+    try IHashtbl.find tbl.self id
+    with Not_found -> begin
+                        match tbl.parent_table with
+                        | None      -> raise Not_found
+                        | Some ptbl -> Type (find_type ptbl id)
+                      end
+  end in
+    match res with
+    | Variable _ -> raise Not_found
+    | Type typ   -> typ
 
-let find_variable tbl id = match (IHashtbl.find tbl id) with
-| Type _     -> raise Not_found
-| Variable v -> v
+let rec find_variable tbl id =
+  let res = begin
+    try IHashtbl.find tbl.self id
+    with Not_found -> begin
+                        match tbl.parent_table with
+                        | None      -> raise Not_found
+                        | Some ptbl -> Variable (find_variable ptbl id)
+                      end
+  end in
+    match res with
+    | Type _       -> raise Not_found
+    | Variable var -> var
 
 (*
  * Create a new type uid.
