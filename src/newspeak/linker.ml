@@ -134,9 +134,9 @@ and generate_tmp_nat x =
 	let i = generate_tmp_nat v in
 	  Nat.mul_int n i
 
-let generate_global name (t, loc, init, used) =
-  Npkcontext.set_loc loc;
-  if used || (not !Npkcontext.remove_temp) then begin
+let generate_global_init name (_, _, init, _) =
+  try
+    let (t, _, loc) = Hashtbl.find globals name in 
     let i =
       match init with
 	| Some i -> i
@@ -145,8 +145,15 @@ let generate_global name (t, loc, init, used) =
 	      ("extern global variable "^name) Npkcontext.ExternGlobal;
 	    None
     in
+      Hashtbl.replace globals name (t, generate_init i, loc)
+  with 
+      Not_found -> ()
+
+let generate_global name (t, loc, _, used) =
+  Npkcontext.set_loc loc;
+  if used || (not !Npkcontext.remove_temp) then begin
     let t = generate_typ t in
-      Hashtbl.add globals name (t, generate_init i, loc);
+      Hashtbl.add globals name (t, H.Init [], loc);
       Npkcontext.print_debug ("Global linked: "^name)
   end
 
@@ -297,6 +304,7 @@ let link npkos mem_zones =
     
     Npkcontext.print_debug "Globals...";
     Hashtbl.iter generate_global glb_decls;
+    Hashtbl.iter generate_global_init glb_decls;
     Npkcontext.forget_loc ();
     
     Npkcontext.print_debug "Functions...";
