@@ -36,7 +36,7 @@ let (%-) = Newspeak.Nat.sub
 module CaseInsensitiveString =
   struct
     type t = string
-    
+
     let equal s1 s2 =
       String.compare (String.lowercase s1) (String.lowercase s2) = 0
 
@@ -544,17 +544,6 @@ let (@=?) (_,v1) (_,v2) =
 let (@=) v1 v2 =
      (typeof v1  =  typeof v2)
   && (       v1 @=?        v2)
-
-(* FIXME Temporary tweak. *)
-let get_legacy_definition id = match String.lowercase id with
-| "integer"   -> Syntax_ada.Constrained(Syntax_ada.Integer
-                                       ,Ada_config.integer_constraint
-                                       ,true
-                                       )
-| "float"     -> Syntax_ada.Unconstrained Syntax_ada.Float
-| "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
-| "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
-| _ ->  failwith "legacy definition available only for int float bool or char"
 
 let _ =
   add_type builtin_table "character" character

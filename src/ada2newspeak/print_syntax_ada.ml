@@ -339,15 +339,6 @@ and subprog_spec_to_string spec = match spec with
       "Procedure("^(name_to_string name)^", "
       ^(param_list_to_string param_list)^")"
 
-and sub_program_body_to_string
-    (subprog_decl, declarative_part, block) =
-  "("^(subprog_spec_to_string subprog_decl)
-  ^",\n\n"
-  ^declarative_part_to_string declarative_part
-  ^",\n\n"
-  ^block_to_string block
-  ^")"
-
 and package_spec_to_string (name, decls) =
   "("^(name_to_string name)
   ^(list_to_string
@@ -358,21 +349,12 @@ and package_spec_to_string (name, decls) =
       ";\n"
       true)^")"
 
-and declarative_part_to_string (dp:declarative_part) :string =
+and declarative_part_to_string (_,dp) :string =
     (list_to_string dp
           (fun (item,loc) -> "("^
              (declarative_item_to_string item)^", "
              ^(line_of_loc loc)^")")
           ";\n" true)
-
-and package_body_to_string
-    (name, package_spec, declarative_part, block) =
-  "("^(name_to_string name)^",\n\n"
-  ^(option_to_string package_spec package_spec_to_string)^",\n"
-  ^declarative_part_to_string declarative_part
-  ^",\n\n"
-  ^block_to_string block
-  ^")"
 
 and spec_to_string spec = match spec with
   | SubProgramSpec(subprogspec) -> "SubProgramSpec("
@@ -381,11 +363,16 @@ and spec_to_string spec = match spec with
       ^(package_spec_to_string packagespec)^")"
 
 and body_to_string body = match body with
-  | SubProgramBody(subprog_body) ->
-      "SubProgramBody("^(sub_program_body_to_string subprog_body)
-      ^")"
-  | PackageBody(package_body) ->
-      "PackageBody("^(package_body_to_string package_body)
+  | SubProgramBody (subprog_decl, declarative_part, block) ->
+      "SubProgramBody("^(subprog_spec_to_string subprog_decl)       ^",\n\n"
+                       ^declarative_part_to_string declarative_part ^",\n\n"
+                       ^block_to_string block
+                  ^")"
+  | PackageBody (name, package_spec, declarative_part, block) ->
+      "PackageBody("^(name_to_string name)^",\n\n"
+                   ^(option_to_string package_spec package_spec_to_string)^",\n"
+                   ^declarative_part_to_string declarative_part ^",\n\n"
+                   ^block_to_string block
       ^")"
 
 let library_item_to_string lib_item = match lib_item with

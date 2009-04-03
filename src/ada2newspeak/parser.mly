@@ -17,6 +17,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
   Jasmine Duchon
   email : jasmine . duchon AT free . fr
 
@@ -28,11 +31,8 @@
 
 %{ open Syntax_ada
 
-   let compare_ident i1 i2 =
-     String.compare i1 i2
-
    let check_ident i1 i2 =
-     if (compare_ident i1 i2) <> 0
+     if (String.compare i1 i2) <> 0
      then
        Npkcontext.report_error "Parser.parse_error"
          ("syntax error : \"end "^i1^";\" expected")
@@ -40,7 +40,6 @@
 
    let check_name (p1,i1) (p2,i2) =
      List.iter2 check_ident (p1@[i1]) (p2@[i2])
-
 
    let check_end decl end_name =
      let begin_name = match decl with
@@ -146,6 +145,14 @@
                                default_value=common_default_value;})
                  idents
 
+    (**
+     * Prepend a symbol table to a declarative part.
+     * Input : a list of declarative items
+     *)
+    let make_declarative_part (l:(declarative_item*location) list)
+            :declarative_part =
+      (Ada_types.create_table (List.length l)),l
+
 %}
 /*declaration ocamlyacc*/
 %token EOF
@@ -191,8 +198,8 @@
 %type <expression> expression discrete_choice
 %type <binary_op> mult_op add_op rel_op
 %type <location> debut_if debut_elsif
-%type <instruction> instr instruction_if
-%type <instruction_atom> procedure_call
+%type <instruction*location> instr instruction_if
+%type <instruction> procedure_call
 %type <block> instr_list instruction_else when_others
 %type <name*argument list> procedure_array
 %type <iteration_scheme*location> iteration_scheme
@@ -205,13 +212,13 @@
 %type <identifier * expression> array_component_association
 %type <subtyp_indication list> matrix_indication
 %type <array_type_definition> constrained_array_definition
-%type <record_type_definition> record_definition
+%type <field list> record_definition
 %type <contrainte> contrainte
 %type <basic_declaration> type_definition
 %type <basic_declaration*location> basic_declaration
 %type <(basic_declaration*location) list> basic_declarative_part
 %type <declarative_item*location> declarative_item
-%type <declarative_part> declarative_part
+%type <(declarative_item*location) list> declarative_part
 %type <unit> pragma_argument_association pragma_argument_association_list
 %type <param list> parameter_specification formal_part
 %type <sub_program_spec*location> subprogram_spec
@@ -220,8 +227,7 @@
 %type <location> package_loc
 %type <block> package_instr
 %type <library_item*location> library_item
-%type <context_clause list> context_item
-%type <context> context
+%type <context_clause list> context_item context
 
 /*priorite*/
 
@@ -274,11 +280,11 @@ subprogram_body:
     {let (spec, loc) = $1
      in
        (check_end spec $7);
-       (SubProgramBody(spec,$3,$5), loc)}
+       (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
 
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
-     in (SubProgramBody(spec,$3,$5), loc)}
+     in (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
 ;
 
 package_loc :
@@ -299,11 +305,11 @@ package_decl :
 
 package_body:
 | package_loc BODY name IS declarative_part package_instr END SEMICOLON
-    {(PackageBody($3, None, $5, $6), $1)}
+    {(PackageBody($3, None, make_declarative_part $5, $6), $1)}
 
 | package_loc BODY name IS declarative_part package_instr END name SEMICOLON
     { (check_name $3 $8);
-      (PackageBody($3, None, $5, $6), $1)
+      (PackageBody($3, None, make_declarative_part $5, $6), $1)
     }
 
 /* on renvoie aussi la position de la spec */
@@ -490,7 +496,8 @@ instr :
                                                                   (fst $4),
                                                               (snd $4)),
                                                           loc()}
-| DECLARE declarative_part BEGIN instr_list END     {Block ($2,$4),loc()}
+| DECLARE declarative_part BEGIN instr_list END
+                                {Block (make_declarative_part $2,$4),loc()}
 ;
 
 case_stmt_alternative_list:
@@ -615,9 +622,9 @@ simple_expr :
 
 mult_op :
 | MULT {Mult}
-| DIV {Div}
-| MOD {Mod}
-| REM {Rem}
+| DIV  {Div}
+| MOD  {Mod}
+| REM  {Rem}
 ;
 
 term :

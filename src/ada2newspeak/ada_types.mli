@@ -204,6 +204,3 @@ val operator_exists : t -> string -> bool
 
 (** Extract a type from a value. *)
 val typeof : value -> t
-
-(* FIXME Temporary tweak. *)
-val get_legacy_definition : string -> Syntax_ada.subtyp

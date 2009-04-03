@@ -32,6 +32,17 @@ module Nat = Newspeak.Nat
 
 exception AmbiguousTypeException
 
+(* FIXME Temporary tweak. *)
+let get_legacy_definition id = match String.lowercase id with
+| "integer"   -> Syntax_ada.Constrained(Syntax_ada.Integer
+                                       ,Ada_config.integer_constraint
+                                       ,true
+                                       )
+| "float"     -> Syntax_ada.Unconstrained Syntax_ada.Float
+| "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
+| "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
+| _ ->  failwith "legacy definition available only for int float bool or char"
+
 let mk_float(f:float):float_number = (f, string_of_float f)
 
 let temp =
@@ -112,7 +123,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
                                                     extern) expected_typ
       | FunctionCall _  -> raise NonStaticExpression
 
-      | NullExpr | CString (_) -> Npkcontext.report_error
+      | NullExpr | CString _ -> Npkcontext.report_error
                                  "Ada_normalize.eval_static_exp"
                                        "not implemented"
 
@@ -657,7 +668,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           end
 
       method find (n:name) :(subtyp*location*bool) =
-        Ada_types.get_legacy_definition (snd n),Newspeak.unknown_loc,true
+        get_legacy_definition (snd n),Newspeak.unknown_loc,true
 
     end
   in
@@ -1659,7 +1670,7 @@ let rec normalize_instr (instr,loc) =
 
     | RepresentClause _ -> item
 
-  and normalize_decl_part decl_part global =
+  and normalize_decl_part (tbl,decl_part) global =
     let represtbl = Hashtbl.create 50 in
     let rec extract_representation_clause decls = match decls with
       | (BasicDecl(RepresentClause(rep)), loc)::r ->
@@ -1683,9 +1694,9 @@ let rec normalize_instr (instr,loc) =
             in norm_item::(normalize_decl_items r)
 
         | [] -> []
-    in normalize_decl_items decl_part
+    in tbl,normalize_decl_items decl_part
 
-  and remove_decl_part decl_part =
+  and remove_decl_part (_,decl_part) =
 
     (* incomplet *)
     let remove_decl_item (item,_) = match item with
