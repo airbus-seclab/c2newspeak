@@ -23,9 +23,11 @@
   email: charles.hymans@penjili.org
 */
 
-#define __builtin_va_start(v,p)   v = __builtin_newspeak_va_arg;
-#define __builtin_va_arg(v,t)     *((*((t**)(&v)))++)
-#define __builtin_va_end(v)       
+#define __builtin_va_list             char*
+#define __builtin_va_start(v,p)       v = __builtin_newspeak_va_arg;
+#define __builtin_va_arg(v,t)         *((*((t**)(&v)))++)
+#define __builtin_va_end(v)           
+#define __builtin_va_copy(dest, src)  dest = src
 
 /* note:
    __builtin_va_arg(v,t) could be alternatively defined as 

@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: should not fill initializations with 0 by default!!!! 
+   should push array length evaluation till newspeak
+*)
+
 (* TODO: should rename firstpass to semantic ??? see compiler Appel book *)
 open Csyntax
 module C = Cir
