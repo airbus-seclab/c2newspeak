@@ -406,7 +406,7 @@ statement_kind:
 | iteration_statement                      { [$1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
-| assignment_expression SEMICOLON          { [Exp $1, get_loc ()] }
+| expression SEMICOLON                     { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | GOTO IDENTIFIER SEMICOLON                { 
@@ -613,13 +613,7 @@ relational_expression:
   shift_expression                         { Binop (Gt, $3, $1) }
 | relational_expression LTEQ 
   shift_expression                         { Unop (Not, Binop (Gt, $1, $3)) }
-| EXTENSION 
-  LPAREN relational_expression RPAREN      { $3 }
-| compound_statement                       { 
-    Npkcontext.report_accept_warning "Parser.relational_expression"
-      "block within expression" Npkcontext.DirtySyntax;
-    BlkExp $1
-  }
+| EXTENSION expression                     { $2 }
 ;;
 
 equality_expression:
@@ -674,28 +668,12 @@ conditional_expression:
   }
 ;;
 
-// I do not want to have expression be assignment_expression
-// this would allow assignments within expressions 
-// it is error-prone, for instance typos may make you write
-// if (x = 0) instead of if (x == 0)
-expression:
-  assignment_expression                   { $1 }
-| expression COMMA assignment_expression  { 
-    Npkcontext.report_accept_warning "Parser.expression"
-      "comma in expression" Npkcontext.DirtySyntax;
-    let loc = get_loc () in
-      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
-  }
-;;
-
 assignment_expression:
   conditional_expression                   { $1 }
 | unary_expression 
   EQ assignment_expression                 { Set ($1, None, $3) }
 | unary_expression assignment_operator
   assignment_expression                    { Set ($1, Some $2, $3) }
-| EXTENSION 
-  LPAREN assignment_expression RPAREN      { $3 }
 ;;
 
 assignment_operator:
@@ -709,6 +687,21 @@ assignment_operator:
 | SHIFTLEQ                                 { Shiftl }
 | SHIFTREQ                                 { Shiftr }
 | BXOREQ                                   { BXor }
+;;
+
+expression:
+  assignment_expression                   { $1 }
+| expression COMMA assignment_expression  { 
+    Npkcontext.report_accept_warning "Parser.expression"
+      "comma in expression" Npkcontext.DirtySyntax;
+    let loc = get_loc () in
+      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
+  }
+| compound_statement                      { 
+    Npkcontext.report_accept_warning "Parser.relational_expression"
+      "block within expression" Npkcontext.DirtySyntax;
+    BlkExp $1
+  }
 ;;
 
 argument_expression_list:
