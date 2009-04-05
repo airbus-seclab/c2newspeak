@@ -115,6 +115,7 @@ and exp =
     | Call of (exp * exp list)
     | Sizeof of typ
     | SizeofE of exp
+    | Offsetof of (typ * string)
     | Str of string
     | FunName
     | Cast of (exp * typ)
@@ -309,6 +310,7 @@ and string_of_exp margin e =
 	(string_of_exp margin e1) ^" "^(string_of_binop op)^" "
 	^(string_of_exp margin e2)
     | Call _ -> "Call"
+    | Offsetof _ -> "Offsetof"
     | Sizeof _ -> "Sizeof"
     | SizeofE _ -> "SizeofE"
     | Str _ -> "Str"

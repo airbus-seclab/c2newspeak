@@ -184,7 +184,7 @@ let rec normalize_bexp e =
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
-%token EXTERN FOR IF REGISTER AUTO RETURN SIZEOF VOLATILE 
+%token EXTERN FOR IF REGISTER AUTO RETURN VOLATILE 
 %token SWITCH TYPEDEF WHILE GOTO
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
@@ -200,7 +200,7 @@ let rec normalize_bexp e =
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P
 %token FUNNAME 
-%token TYPEOF
+%token OFFSETOF SIZEOF TYPEOF
 %token EOF
 
 %token <Csyntax.assertion> NPK
@@ -540,12 +540,15 @@ postfix_expression:
 | postfix_expression ARROW ident_or_tname  { Field (Deref $1, $3) }
 | postfix_expression PLUSPLUS              { OpExp (Plus, $1, true) }
 | postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
+// GNU C
 | BUILTIN_CONSTANT_P 
   LPAREN expression RPAREN                 { 
      Npkcontext.report_warning "Parser.assignment_expression"
        "__builtin_constant_p ignored, assuming value 0";
     exp_of_int 0
   }
+| OFFSETOF 
+  LPAREN type_name COMMA IDENTIFIER RPAREN { Offsetof (build_type_decl $3, $5) }
 ;;
 
 unary_expression:

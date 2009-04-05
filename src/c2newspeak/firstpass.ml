@@ -552,11 +552,11 @@ let translate (globals, spec) =
 	| SizeofE e ->
 	    let (_, t) = translate e in
 	    let sz = (size_of t) / 8 in
-	      (C.exp_of_int sz, uint_typ)
+	      (C.exp_of_int sz, Csyntax.uint_typ)
 		
 	| Sizeof t -> 
 	    let sz = (size_of t) / 8 in
-	      (C.exp_of_int sz, uint_typ)
+	      (C.exp_of_int sz, Csyntax.uint_typ)
 		
 	| Cast (e, t) -> 
 	    let e = translate_exp e in
@@ -596,6 +596,12 @@ let translate (globals, spec) =
 	| BlkExp blk -> 
 	    let (body, (e, t)) = translate_blk_exp blk in
 	      (C.Pref (body, e), t)
+
+	| Offsetof (t, f) -> 
+	    let r = fields_of_comp (Csyntax.comp_of_typ t) in
+	    let (o, _) = find_field f r in
+	    let o = C.exp_of_int (o / Config.size_of_byte) in
+	      (o, Csyntax.uint_typ)
     in
       match translate e with
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 

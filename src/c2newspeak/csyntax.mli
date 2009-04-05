@@ -110,6 +110,7 @@ and exp =
     | Call of (exp * exp list)
     | Sizeof of typ
     | SizeofE of exp
+    | Offsetof of (typ * string)
     | Str of string
     | FunName
     | Cast of (exp * typ)

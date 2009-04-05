@@ -81,6 +81,7 @@ let _ =
   *)
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
+  Hashtbl.add token_tbl "__builtin_offsetof" OFFSETOF;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   Hashtbl.add token_tbl "__func__" FUNNAME;
 
