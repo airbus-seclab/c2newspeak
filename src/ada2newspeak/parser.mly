@@ -181,7 +181,7 @@
 
 %left AND ANDTHEN OR ORELSE XOR
 %left EQ NE LT LE GT GE
-%left PLUS MINUS 
+%left PLUS MINUS CONCAT
 %nonassoc UPLUS UMINUS
 %left MULT DIV MOD REM
 %left POW ABS NOT
@@ -204,7 +204,7 @@
 %type <instruction*location> instr instruction_if
 %type <instruction> procedure_call
 %type <block> instr_list instruction_else when_others
-%type <name*argument list> procedure_array
+%type <name*argument list> lvalue
 %type <iteration_scheme*location> iteration_scheme
 %type <expression list> discrete_choice_list
 %type <expression list*block> case_stmt_alternative
@@ -480,12 +480,9 @@ instr :
 | NULL {(NullInstr, loc ())}
 | RETURN expression {(Return($2), loc ())}
 | RETURN {(ReturnSimple, loc ())}
-| procedure_array { let (n,p)= $1 in
-                      (ProcedureCall(n,p), loc())
-                  }
-| procedure_array ASSIGN expression
+| procedure_call {$1, loc()}
+| lvalue ASSIGN expression
     { let (nm, ind) = $1 in
-                    (* FIXME snd removes optional names *)
         (Assign ( (build_access nm (List.map snd ind)) , $3), loc())
     }
 | EXIT {(Exit(None), loc() )}
@@ -526,7 +523,7 @@ discrete_choice:
 | expression {$1}
 ;
 
-procedure_array :
+lvalue :
 | name      {($1, [])}
 | name args {($1, $2)}
 
@@ -581,28 +578,27 @@ expression :
 | expression GE      expression {Binary(Ge     , $1, $3)}
 | expression LT      expression {Binary(Lt     , $1, $3)}
 | expression GT      expression {Binary(Gt     , $1, $3)}
-| expression POW     expression {Binary(Power,$1,$3)}
-| PLUS  expression %prec UPLUS  {Unary(UPlus,$2)}
-| MINUS expression %prec UMINUS {Unary(UMinus,$2)}
-| NOT expression {Unary(Not,$2)}
-| ABS expression {Unary(Abs,$2)}
+| expression POW     expression {Binary(Power  , $1, $3)}
+| PLUS  expression %prec UPLUS  {Unary (UPlus  , $2    )}
+| MINUS expression %prec UMINUS {Unary (UMinus , $2    )}
+| NOT   expression              {Unary (Not    , $2    )}
+| ABS   expression              {Unary (Abs    , $2    )}
 | NULL {NullExpr}
-| CONST_INT {CInt($1)}
+| CONST_INT   {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
-| CONST_CHAR {CChar($1)}
-| TRUE  {CBool(true)}
-| FALSE {CBool(false)}
-| STRING {CString($1)}
-| name {Var($1)}
+| CONST_CHAR  {CChar($1)}
+| TRUE        {CBool(true)}
+| FALSE       {CBool(false)}
+| STRING      {CString($1)}
 | LPAR expression RPAR {$2}
 | subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
-| name args {FunctionCall($1, $2)}
 | subtyp QUOTE ident  {Attribute ($1
                                  ,AttributeDesignator(String.lowercase $3
                                                      ,None
                                                      )
                                  )
                       }
+| name {Var($1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)}
 ;
 
