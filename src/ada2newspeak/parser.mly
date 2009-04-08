@@ -157,27 +157,80 @@
 /*declaration ocamlyacc*/
 %token EOF
 
-%token PLUS MINUS MULT DIV POW CONCAT
-%token <Syntax_ada.nat> CONST_INT
-%token <string> CONST_FLOAT
-%token <string> IDENT
-%token <string> STRING
-%token <int> CONST_CHAR
-%token LT GT LE GE EQ NE
-%token AND OR XOR NOT ANDTHEN ORELSE
-%token MOD REM ABS
-%token ASSIGN
-%token USE
-%token BEGIN END
-%token PROCEDURE FUNCTION BODY IS
-%token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY RECORD OF
-%token IN OUT RETURN
-%token<Newspeak.location> IF ELSIF PACKAGE WITH 
-%token THEN ELSE LOOP WHILE FOR EXIT WHEN
-%token NULL TRUE FALSE
-%token LPAR RPAR ARROW DOUBLE_DOT
-%token COMMA SEMICOLON DOT COLON QUOTE
-%token REVERSE PRAGMA CASE VBAR OTHERS DECLARE
+%token                     ABS
+%token                     AND
+%token                     ANDTHEN
+%token                     ARRAY
+%token                     ARROW
+%token <Newspeak.location> ASSIGN
+%token                     BEGIN
+%token                     BODY
+%token <Newspeak.location> CASE
+%token                     COLON
+%token                     COMMA
+%token                     CONCAT
+%token                     CONSTANT
+%token <Syntax_ada.nat>    CONST_INT
+%token <int>               CONST_CHAR
+%token <string>            CONST_FLOAT
+%token <Newspeak.location> DECLARE
+%token                     DIV
+%token                     DOT
+%token                     DOUBLE_DOT
+%token                     ELSE
+%token <Newspeak.location> ELSIF
+%token                     END
+%token                     EQ
+%token <Newspeak.location> EXIT
+%token                     FALSE
+%token                     FOR
+%token                     FUNCTION
+%token                     GE
+%token                     GT
+%token <string>            IDENT
+%token                     IN
+%token <Newspeak.location> IF
+%token                     IS
+%token                     LE
+%token                     LOOP
+%token                     LPAR
+%token                     LT
+%token                     MINUS
+%token                     MOD
+%token                     MULT
+%token                     NE
+%token                     NEW
+%token                     NOT
+%token <Newspeak.location> NULL
+%token                     OF
+%token                     OR
+%token                     ORELSE
+%token                     OTHERS
+%token                     OUT
+%token <Newspeak.location> PACKAGE
+%token                     PLUS
+%token                     POW
+%token                     PRAGMA
+%token                     PROCEDURE
+%token                     QUOTE
+%token                     RANGE
+%token                     RECORD
+%token                     REM
+%token <Newspeak.location> RETURN
+%token                     REVERSE
+%token                     RPAR
+%token                     SEMICOLON
+%token                     SUBTYPE
+%token <string>            STRING
+%token                     THEN
+%token                     TRUE
+%token                     TYPE
+%token                     USE
+%token                     VBAR
+%token                     WHEN
+%token                     WHILE
+%token <Newspeak.location> WITH 
+%token                     XOR
 
 %left AND ANDTHEN OR ORELSE XOR
 %left EQ NE LT LE GT GE
@@ -200,7 +253,7 @@
 %type <subtyp> subtyp
 %type <subtyp_indication> subtyp_indication
 %type <expression> expression discrete_choice
-%type <instruction*location> instr instruction_if
+%type <instruction*location> instr
 %type <instruction> procedure_call
 %type <block> instr_list instruction_else when_others
 %type <name*argument list> lvalue
@@ -234,12 +287,11 @@
 
 %%
 /*grammaire*/
-s: context library_item EOF
-  {let (body,loc) = $2 in ($1, body, loc)}
+s: context library_item EOF {($1, fst $2, snd $2)}
 ;
 
 context :
-  {[]}
+| {[]}
 | context_item context {$1@$2}
 ;
 
@@ -450,17 +502,18 @@ instr_list :
 ;
 
 instr :
-| NULL {(NullInstr, loc ())}
-| RETURN expression {(Return($2), loc ())}
-| RETURN {(ReturnSimple, loc ())}
+| NULL {(NullInstr, $1)}
+| RETURN expression {(Return($2), $1)}
+| RETURN {ReturnSimple, $1}
 | procedure_call {$1, loc()}
 | lvalue ASSIGN expression
     { let (nm, ind) = $1 in
-        (Assign ( (build_access nm (List.map snd ind)) , $3), loc())
+        (Assign ( (build_access nm (List.map snd ind)) , $3), $2)
     }
-| EXIT {(Exit(None), loc() )}
-| EXIT WHEN expression {(Exit(Some($3)), loc ())}
-| instruction_if {$1}
+| EXIT {Exit(None), $1}
+| EXIT WHEN expression {Exit(Some($3)), $1}
+| IF expression THEN instr_list instruction_else END IF
+    {(If($2, $4, $5), $1)}
 | iteration_scheme LOOP instr_list END LOOP
       { let (scheme,loc) = $1
         in (Loop(scheme, $3), loc)}
@@ -468,9 +521,9 @@ instr :
                                                               build_case_ch
                                                                   (fst $4),
                                                               (snd $4)),
-                                                          loc()}
+                                                          $1}
 | DECLARE declarative_part BEGIN instr_list END
-                                {Block (make_declarative_part $2,$4),loc()}
+                                {Block (make_declarative_part $2,$4),$1}
 ;
 
 case_stmt_alternative_list:
@@ -511,11 +564,6 @@ iteration_scheme :
                                                 {(For($2,$4,$6,false), loc ())}
 | FOR ident IN REVERSE expression DOUBLE_DOT expression
                                                 {(For($2,$5,$7, true), loc ())}
-
-instruction_if :
-| IF expression THEN instr_list instruction_else END IF
-    {(If($2, $4, $5), $1)}
-;
 
 instruction_else :
 | {[]}

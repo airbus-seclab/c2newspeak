@@ -145,16 +145,16 @@ rule token = parse
   | ['a''A']['r''R']['r''R']['a''A']['y''Y']      {ARRAY}
   | ['b''B']['e''E']['g''G']['i''I']['n''N']      {BEGIN}
   | ['b''B']['o''O']['d''D']['y''Y']              {BODY}
-  | ['c''C']['a''A']['s''S']['e''E']              {CASE}
+  | ['c''C']['a''A']['s''S']['e''E']              {CASE(Npkcontext.get_loc())}
   | ['c''C']['o''O']['n''N']['s''S']
             ['t''T']['a''A']['n''N']['t''T']      {CONSTANT}
 
   | ['d''D']['e''E']['c''C']['l''L']['a''A']
-            ['r''R']['e''E']                      {DECLARE}
+            ['r''R']['e''E']                      {DECLARE(Npkcontext.get_loc())}
   | ['e''E']['l''L']['s''S']['i''I']['f''F']      {ELSIF(Npkcontext.get_loc())}
   | ['e''E']['l''L']['s''S']['e''E']              {ELSE}
   | ['e''E']['n''N']['d''D']                      {END}
-  | ['e''E']['x''X']['i''I']['t''T']              {EXIT}
+  | ['e''E']['x''X']['i''I']['t''T']              {EXIT(Npkcontext.get_loc())}
   | ['f''F']['o''O']['r''R']                      {FOR}
   | ['f''F']['u''U']['n''N']['c''C']['t''T']
             ['i''I']['o''O']['n''N']              {FUNCTION}
@@ -165,7 +165,7 @@ rule token = parse
   | ['m''M']['o''O']['d''D']                      {MOD}
   | ['n''N']['e''E']['w''W']                      {NEW}
   | ['n''N']['o''O']['t''T']                      {NOT}
-  | ['n''N']['u''U']['l''L']['l''L']              {NULL}
+  | ['n''N']['u''U']['l''L']['l''L']              {NULL(Npkcontext.get_loc())}
   | ['o''O']['f''F']                              {OF}
   | ['o''O']['r''R']                              {OR}
   | ['o''O']['t''T']['h''H']['e''E']['r''R']
@@ -182,7 +182,7 @@ rule token = parse
             ['d''D']                              {RECORD}
   | ['r''R']['e''E']['m''M']                      {REM}
   | ['r''R']['e''E']['t''T']['u''U']['r''R']
-            ['n''N']                              {RETURN}
+            ['n''N']                              {RETURN(Npkcontext.get_loc())}
   | ['r''R']['e''E']['v''V']['e''E']['r''R']
             ['s''S']['e''E']                      {REVERSE}
   | ['s''S']['u''U']['b''B']['t''T']['y''Y']
@@ -265,7 +265,7 @@ rule token = parse
   | "/="           {NE}
   | "="            {EQ}
 
-  | ":="           {ASSIGN}
+  | ":="           {ASSIGN(Npkcontext.get_loc())}
 
   (* ponctuation *)
   | ';'            {SEMICOLON}
