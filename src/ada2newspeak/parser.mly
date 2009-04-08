@@ -48,8 +48,6 @@
      in
        check_name begin_name end_name
 
-   let loc = Npkcontext.get_loc
-
    let build_access name list   =
      let rec build_aux  list  =
        match list with [] -> (Lval name)
@@ -63,26 +61,34 @@
              let rev_list = List.rev list in
                build_aux rev_list
 
-   let build_matrix list typ_ind =
+   let build_matrix l typ_ind loc =
      (*crafted buids the subtype_indication*)
      let rec crafted list_ind typ_elt =
        match list_ind with
            [] -> typ_elt
          | hd::tl ->
              let recu =  crafted tl typ_elt in
-             let new_ind = Unconstrained (Declared (Array (
-                "no_name", ConstrainedArray(hd, recu, None)), loc()))
+             let new_ind = Unconstrained(Declared(Array("no_name"
+                                                       ,ConstrainedArray(hd
+                                                                        ,recu
+                                                                        ,None
+                                                                        )
+                                                       )
+                                                 ,loc
+                                                 )
+                                        )
              in
                ( new_ind, None, None (*Some (new_ind)*) )
      in
-       match list with
+       match l with
            [] -> Npkcontext.report_error "Parser.parse_error"
              ("in build matrix, no subtyp given ")
          | hd::[] -> ConstrainedArray(hd, typ_ind, None)
          | hd::tl ->
-             ConstrainedArray(hd,
-                              (crafted tl typ_ind),
-                              None)
+             ConstrainedArray(hd
+                             ,crafted tl typ_ind
+                             ,None
+                             )
 
     (** Create a function name for an overloaded operator *)
     let make_operator_name opname =
@@ -157,80 +163,80 @@
 /*declaration ocamlyacc*/
 %token EOF
 
-%token                     ABS
-%token                     AND
-%token                     ANDTHEN
-%token                     ARRAY
-%token                     ARROW
-%token <Newspeak.location> ASSIGN
-%token                     BEGIN
-%token                     BODY
-%token <Newspeak.location> CASE
-%token <Newspeak.location> COLON
-%token                     COMMA
-%token                     CONCAT
-%token                     CONSTANT
-%token <Syntax_ada.nat>    CONST_INT
-%token <int>               CONST_CHAR
-%token <string>            CONST_FLOAT
-%token <Newspeak.location> DECLARE
-%token                     DIV
-%token                     DOT
-%token                     DOUBLE_DOT
-%token                     ELSE
-%token <Newspeak.location> ELSIF
-%token                     END
-%token                     EQ
-%token <Newspeak.location> EXIT
-%token                     FALSE
-%token                     FOR
-%token                     FUNCTION
-%token                     GE
-%token                     GT
-%token <string>            IDENT
-%token                     IN
-%token <Newspeak.location> IF
-%token                     IS
-%token                     LE
-%token                     LOOP
-%token                     LPAR
-%token                     LT
-%token                     MINUS
-%token                     MOD
-%token                     MULT
-%token                     NE
-%token                     NEW
-%token                     NOT
-%token <Newspeak.location> NULL
-%token                     OF
-%token                     OR
-%token                     ORELSE
-%token                     OTHERS
-%token                     OUT
-%token <Newspeak.location> PACKAGE
-%token                     PLUS
-%token                     POW
-%token                     PRAGMA
-%token                     PROCEDURE
-%token                     QUOTE
-%token                     RANGE
-%token                     RECORD
-%token                     REM
-%token <Newspeak.location> RETURN
-%token                     REVERSE
-%token                     RPAR
-%token                     SEMICOLON
-%token <Newspeak.location> SUBTYPE
-%token <string>            STRING
-%token                     THEN
-%token                     TRUE
-%token <Newspeak.location> TYPE
-%token <Newspeak.location> USE
-%token                     VBAR
-%token                     WHEN
-%token                     WHILE
-%token <Newspeak.location> WITH 
-%token                     XOR
+%token                            ABS
+%token                            AND
+%token                            ANDTHEN
+%token                            ARRAY
+%token                            ARROW
+%token <Newspeak.location>        ASSIGN
+%token                            BEGIN
+%token                            BODY
+%token <Newspeak.location>        CASE
+%token <Newspeak.location>        COLON
+%token                            COMMA
+%token                            CONCAT
+%token                            CONSTANT
+%token <Syntax_ada.nat>           CONST_INT
+%token <int>                      CONST_CHAR
+%token <string>                   CONST_FLOAT
+%token <Newspeak.location>        DECLARE
+%token                            DIV
+%token                            DOT
+%token                            DOUBLE_DOT
+%token                            ELSE
+%token <Newspeak.location>        ELSIF
+%token                            END
+%token                            EQ
+%token <Newspeak.location>        EXIT
+%token                            FALSE
+%token <Newspeak.location>        FOR
+%token <Newspeak.location>        FUNCTION
+%token                            GE
+%token                            GT
+%token <string*Newspeak.location> IDENT
+%token                            IN
+%token <Newspeak.location>        IF
+%token                            IS
+%token                            LE
+%token <Newspeak.location>        LOOP
+%token <Newspeak.location>        LPAR
+%token                            LT
+%token                            MINUS
+%token                            MOD
+%token                            MULT
+%token                            NE
+%token                            NEW
+%token                            NOT
+%token <Newspeak.location>        NULL
+%token                            OF
+%token                            OR
+%token                            ORELSE
+%token                            OTHERS
+%token                            OUT
+%token <Newspeak.location>        PACKAGE
+%token                            PLUS
+%token                            POW
+%token                            PRAGMA
+%token <Newspeak.location>        PROCEDURE
+%token                            QUOTE
+%token                            RANGE
+%token                            RECORD
+%token                            REM
+%token <Newspeak.location>        RETURN
+%token                            REVERSE
+%token                            RPAR
+%token                            SEMICOLON
+%token <Newspeak.location>        SUBTYPE
+%token <string>                   STRING
+%token                            THEN
+%token                            TRUE
+%token <Newspeak.location>        TYPE
+%token <Newspeak.location>        USE
+%token                            VBAR
+%token                            WHEN
+%token <Newspeak.location>        WHILE
+%token <Newspeak.location>        WITH 
+%token                            XOR
 
 %left AND ANDTHEN OR ORELSE XOR
 %left EQ NE LT LE GT GE
@@ -244,7 +250,7 @@
 
 %type <identifier> pragma
 %type <param_mode> mode
-%type <name> name
+%type <name*location> name
 %type <name list> name_list
 %type <name list*location> use_clause
 %type <identifier> ident
@@ -255,14 +261,13 @@
 %type <subtyp_indication> subtyp_indication
 %type <expression> expression discrete_choice
 %type <instruction*location> instr
-%type <instruction> procedure_call
 %type <block> instr_list instruction_else when_others
 %type <name*argument list> lvalue
 %type <iteration_scheme*location> iteration_scheme
 %type <expression list> discrete_choice_list
 %type <expression list*block> case_stmt_alternative
 %type <(expression list*block) list* block option> case_stmt_alternative_list
-%type <representation_clause> representation_clause
+%type <representation_clause*location> representation_clause
 %type <array_aggregate> array_aggregate
 %type <(identifier * expression) list> named_array_aggregate
 %type <identifier * expression> array_component_association
@@ -313,18 +318,18 @@ body :
 | subprogram_spec IS declarative_part BEGIN instr_list END name SEMICOLON
     {let (spec, loc) = $1
      in
-       (check_end spec $7);
+       (check_end spec (fst $7));
        (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
 
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
      in (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
 | PACKAGE BODY name IS declarative_part package_instr END SEMICOLON
-    {(PackageBody($3, None, make_declarative_part $5, $6), $1)}
+    {(PackageBody((fst $3), None, make_declarative_part $5, $6), $1)}
 
 | PACKAGE BODY name IS declarative_part package_instr END name SEMICOLON
-    { (check_name $3 $8);
-      (PackageBody($3, None, make_declarative_part $5, $6), $1)
+    { (check_name (fst $3) (fst $8));
+      (PackageBody((fst $3), None, make_declarative_part $5, $6), $1)
     }
 ;
 
@@ -332,10 +337,10 @@ decl :
 | subprogram_spec SEMICOLON
     {let (spec, loc) = $1 in ((SubProgramSpec(spec)),loc)}
 | PACKAGE name IS basic_declarative_part END SEMICOLON
-    {(PackageSpec($2, $4), $1)}
+    {(PackageSpec((fst $2), $4), $1)}
 | PACKAGE name IS basic_declarative_part END name SEMICOLON
-        { (check_name $2 $6);
-          (PackageSpec($2, $4), $1)}
+        { (check_name (fst $2) (fst $6));
+          (PackageSpec((fst $2), $4), $1)}
 ;
 
 package_instr :
@@ -344,16 +349,16 @@ package_instr :
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
-| PROCEDURE  name  LPAR formal_part RPAR           {(Procedure($2,$4),  loc())}
-| PROCEDURE  name                                  {(Procedure($2,[]),  loc())}
+| PROCEDURE  name  LPAR formal_part RPAR           {Procedure((fst $2),$4), $1}
+| PROCEDURE  name                                  {Procedure((fst $2),[]), $1}
 | FUNCTION   name  LPAR formal_part RPAR RETURN subtyp
-                                                   {(Function ($2,$4,$7),loc())}
+                                                  {Function ((fst $2),$4,$7),$1}
 | FUNCTION   name                        RETURN subtyp
-                                                   {(Function ($2,[],$4),loc())}
+                                                  {Function ((fst $2),[],$4),$1}
 | FUNCTION  STRING LPAR formal_part RPAR RETURN subtyp
-                          {(Function (([],make_operator_name $2), $4,$7),loc())}
+                          {Function (([],make_operator_name $2), $4,$7),$1}
 | PROCEDURE STRING LPAR formal_part RPAR
-                          {(Procedure(([],make_operator_name $2), $4),   loc())}
+                          {Procedure(([],make_operator_name $2), $4),   $1}
 ;
 
 formal_part :
@@ -435,7 +440,7 @@ basic_declaration :
         {SubtypDecl($2,$4), $1}
 | use_clause {(UseDecl(fst $1), snd $1)}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
-| representation_clause SEMICOLON {(RepresentClause($1), loc ())}
+| representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
 ;
 
 contrainte :
@@ -450,21 +455,9 @@ record_definition :
                         SEMICOLON record_definition {($1,$3,Some($5))::$7}
 ;
 
-
-
-/* TO DO : if record initialization exists (?)
-| ident_list COLON subtyp_indication ASSIGN expression SEMICOLON
-        {(ObjectDecl($1,$3,Some($5), Variable), loc ())}
-| ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
-        {(ObjectDecl($1,$4,Some($6), Constant), loc ())}
-| ident_list COLON CONSTANT ASSIGN expression SEMICOLON
-        {(NumberDecl($1, $5, None), loc())}
-*/
-
-
 constrained_array_definition :
 | LPAR matrix_indication RPAR OF subtyp_indication
-                                                {build_matrix (List.rev $2) $5}
+                                            {build_matrix (List.rev $2) $5 $1}
 ;
 
 matrix_indication :
@@ -485,8 +478,8 @@ array_aggregate :
 ;
 
 representation_clause :
-| FOR ident USE array_aggregate         {EnumerationRepresentation($2,$4)}
-| FOR subtyp QUOTE ident USE expression {AttributeDefinitionClause($2,$4,$6)}
+| FOR ident USE array_aggregate         {EnumerationRepresentation($2,$4)   ,$1}
+| FOR subtyp QUOTE ident USE expression {AttributeDefinitionClause($2,$4,$6),$1}
 ;
 
 instr_list :
@@ -498,7 +491,8 @@ instr :
 | NULL {(NullInstr, $1)}
 | RETURN expression {(Return($2), $1)}
 | RETURN {ReturnSimple, $1}
-| procedure_call {$1, loc()}
+| name {ProcedureCall(fst $1, []),snd $1}
+| name LPAR actual_parameter_part RPAR {ProcedureCall(fst $1, $3),snd $1}
 | lvalue ASSIGN expression
     { let (nm, ind) = $1 in
         (Assign ( (build_access nm (List.map snd ind)) , $3), $2)
@@ -509,8 +503,9 @@ instr :
 | IF expression THEN instr_list instruction_else END IF
     {(If($2, $4, $5), $1)}
 | iteration_scheme LOOP instr_list END LOOP
-      { let (scheme,loc) = $1
-        in (Loop(scheme, $3), loc)}
+      { let (scheme,loc) = $1 in
+          (Loop(scheme, $3), (if loc=Newspeak.unknown_loc then $2 else loc))
+      }
 | CASE expression IS case_stmt_alternative_list END CASE {Case($2,
                                                               build_case_ch
                                                                   (fst $4),
@@ -544,20 +539,20 @@ discrete_choice:
 ;
 
 lvalue :
-| name      {($1, [])}
-| name args {($1, $2)}
+| name      {((fst $1), [])}
+| name args {((fst $1), $2)}
 
 args:
 |      LPAR actual_parameter_part RPAR {    $2 }
 | args LPAR actual_parameter_part RPAR { $1@$3 }
 
 iteration_scheme :
-| {(NoScheme, loc ())}
-| WHILE expression {(While($2), loc ())}
+| {NoScheme, Newspeak.unknown_loc}
+| WHILE expression {(While($2), $1)}
 | FOR ident IN         expression DOUBLE_DOT expression
-                                                {(For($2,$4,$6,false), loc ())}
+                                                {For($2,$4,$6,false), $1}
 | FOR ident IN REVERSE expression DOUBLE_DOT expression
-                                                {(For($2,$5,$7, true), loc ())}
+                                                {For($2,$5,$7, true), $1}
 
 instruction_else :
 | {[]}
@@ -605,8 +600,8 @@ expression :
                                                      )
                                  )
                       }
-| name {Var($1)}
-| name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)}
+| name {Var(fst $1)}
+| name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
 ;
 
 subtyp_indication :
@@ -627,12 +622,7 @@ subtyp_indication :
     }
 
 subtyp :
-| name {SubtypName($1)}
-;
-
-procedure_call :
-| name {ProcedureCall($1, [])}
-| name LPAR actual_parameter_part RPAR {ProcedureCall($1, $3)}
+| name {SubtypName(fst $1)}
 ;
 
 actual_parameter_part :
@@ -646,7 +636,7 @@ parameter_association:
 ;
 
 ident :
-| IDENT {$1}
+| IDENT {fst $1}
 ;
 
 ident_list :
@@ -655,16 +645,17 @@ ident_list :
 ;
 
 name_list :
-| name                 {$1::[]}
-| name COMMA name_list {$1::$3}
+| name                 {(fst $1)::[]}
+| name COMMA name_list {(fst $1)::$3}
 ;
 
 name :
-| ident {([],$1)}
+| IDENT {([],fst $1),snd $1}
 | name DOT ident /* TODO : trouver une meilleur solution */
       {
-    let (par, ident) = $1
-    in (par@[ident], $3)}
+    let (par, ident) = fst $1
+    in (par@[ident], $3),snd $1
+      }
 ;
 
 %%

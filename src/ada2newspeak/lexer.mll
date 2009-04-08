@@ -115,25 +115,25 @@
     | "constant"   -> CONSTANT    | "declare"    -> DECLARE  l
     | "elsif"      -> ELSIF     l | "else"       -> ELSE
     | "end"        -> END         | "exit"       -> EXIT     l
-    | "for"        -> FOR         | "function"   -> FUNCTION
+    | "for"        -> FOR       l | "function"   -> FUNCTION l
     | "if"         -> IF        l | "in"         -> IN
-    | "is"         -> IS          | "loop"       -> LOOP
+    | "is"         -> IS          | "loop"       -> LOOP     l
     | "mod"        -> MOD         | "new"        -> NEW
     | "not"        -> NOT         | "null"       -> NULL     l
     | "of"         -> OF          | "or"         -> OR
     | "others"     -> OTHERS      | "out"        -> OUT
     | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA
-    | "procedure"  -> PROCEDURE   | "range"      -> RANGE
+    | "procedure"  -> PROCEDURE l | "range"      -> RANGE
     | "record"     -> RECORD      | "rem"        -> REM
     | "return"     -> RETURN    l | "reverse"    -> REVERSE
     | "subtype"    -> SUBTYPE   l | "then"       -> THEN
     | "type"       -> TYPE      l | "use"        -> USE      l
-    | "when"       -> WHEN        | "while"      -> WHILE
+    | "when"       -> WHEN        | "while"      -> WHILE    l
     | "with"       -> WITH      l | "xor"        -> XOR
 
     | "true"       -> TRUE        | "false"      -> FALSE
 
-    |_             -> IDENT (String.lowercase w)
+    |_             -> IDENT (String.lowercase w,l)
 (* Unrecognized tokens *)
 
     (* Task-related *)
@@ -200,12 +200,10 @@ let litteral_reel = reel
 let commentaire = "--" [^ '\n']*
 
 rule token = parse
-
-
   | "or"  blanc+ "else" {ORELSE}
   | "and" blanc+ "then" {ANDTHEN}
 
-  | '('            {LPAR}
+  | '('            {LPAR(Npkcontext.get_loc())}
   | ')'            {RPAR}
 
   (* operateurs arithmetiques *)
