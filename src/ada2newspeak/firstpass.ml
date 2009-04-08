@@ -1540,17 +1540,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                        translate_block r
              in
                  (C.Goto ret_lbl, loc)::tr_reste
-           | Exit(Some(cond)) ->
-               translate_block
-                 ((If(cond, [(Exit(None), loc)], []), loc)::r)
-
-           | Exit(None) ->
-               (C.Goto brk_lbl, loc)
-               ::(translate_block r)
-
+           | Exit -> (C.Goto brk_lbl, loc)::(translate_block r)
            | Loop(While(cond), body) ->
                translate_block
-                 ((Loop(NoScheme,(Exit(Some(Unary(Not,cond))),loc)::body),
+                 ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
                    loc)::r)
            | Assign(lv,exp) ->
                (translate_affect lv exp loc)::(translate_block r)
@@ -1587,7 +1580,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 let res = if (not is_reverse) then begin
  (* int i = a;        *) (translate_affect (Lval it) a loc)
  (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (i>b) break; *)      (((Exit(Some(Binary (Gt,(Var it),b))),loc)
+ (*   if (i>b) break; *)      (((If(Binary (Gt,(Var it),b),[Exit,loc],[]),loc)
  (*   ...             *)     ::(body))
  (*   i++             *)      @[Assign(Lval it, Binary (Plus, Var it,
  (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
@@ -1595,7 +1588,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     end else begin
  (* int i = b;        *) (translate_affect (Lval it) b loc)
  (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (a>i) break; *)      (((Exit(Some(Binary (Gt,a,(Var it)))),loc)
+ (*   if (a>i) break; *)      (((If(Binary (Gt,a,(Var it)),[Exit,loc],[]),loc)
  (*   ...             *)     ::(body))
  (*   i--             *)      @[Assign(Lval it, Binary (Minus, Var it,
  (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]

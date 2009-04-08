@@ -229,7 +229,7 @@ and instr_to_string instr = match instr with
       ^(block_to_string instr_then)^",\n"
       ^(block_to_string instr_else)^")"
 
-  | Exit(exp) -> "Exit("^(option_to_string exp exp_to_string)^")"
+  | Exit -> "Exit"
   | Loop(scheme, block) ->
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
       ^(block_to_string block)^")"

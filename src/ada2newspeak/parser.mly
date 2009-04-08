@@ -510,8 +510,9 @@ instr :
     { let (nm, ind) = $1 in
         (Assign ( (build_access nm (List.map snd ind)) , $3), $2)
     }
-| EXIT {Exit(None), $1}
-| EXIT WHEN expression {Exit(Some($3)), $1}
+| EXIT {Exit, $1}
+| EXIT WHEN expression { If($3,[Exit,$1],[]), $1
+  (* EXIT WHEN x --> IF x THEN EXIT END IF *) }
 | IF expression THEN instr_list instruction_else END IF
     {(If($2, $4, $5), $1)}
 | iteration_scheme LOOP instr_list END LOOP

@@ -1275,8 +1275,7 @@ let rec normalize_instr (instr,loc) =
       | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
                    (Loop(For(iter, exp1, exp2, is_rev),
                                    normalize_block instrs), loc)
-      | Exit(None) -> (Exit(None), loc)
-      | Exit(Some(cond)) -> (Exit(Some(normalize_exp cond)), loc)
+      | Exit -> (Exit, loc)
       | ProcedureCall(nom, params) ->
          (ProcedureCall(nom, List.map normalize_arg params), loc)
       | Case (e, choices, default) ->

@@ -219,7 +219,7 @@ and instruction =
                    * block
   | Loop          of iteration_scheme
                    * block
-  | Exit          of expression option
+  | Exit
   | ProcedureCall of name
                    * argument list
   | Case          of expression
