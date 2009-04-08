@@ -23,9 +23,9 @@
 
 COMMAND=./$*_check $*.npk
 PREREQ=%_check %.npk
-TESTS=000 001 002 003 004 005 006
+TESTS=t000 t001 t002 t003 t004 t005 t006
 EXEC=$(addsuffix _check, $(TESTS))
-CLEANFILES=002.npk 003.npk 005.npk *_check *.exe 006.npk
+CLEANFILES=t002.npk t003.npk t005.npk *_check *.exe t006.npk
 
 include ../common.Makefile
 
