@@ -151,14 +151,14 @@ rule token = parse
 
   | ['d''D']['e''E']['c''C']['l''L']['a''A']
             ['r''R']['e''E']                      {DECLARE}
-  | ['e''E']['l''L']['s''S']['i''I']['f''F']      {ELSIF}
+  | ['e''E']['l''L']['s''S']['i''I']['f''F']      {ELSIF(Npkcontext.get_loc())}
   | ['e''E']['l''L']['s''S']['e''E']              {ELSE}
   | ['e''E']['n''N']['d''D']                      {END}
   | ['e''E']['x''X']['i''I']['t''T']              {EXIT}
   | ['f''F']['o''O']['r''R']                      {FOR}
   | ['f''F']['u''U']['n''N']['c''C']['t''T']
             ['i''I']['o''O']['n''N']              {FUNCTION}
-  | ['i''I']['f''F']                              {IF}
+  | ['i''I']['f''F']                              {IF(Npkcontext.get_loc())}
   | ['i''I']['n''N']                              {IN}
   | ['i''I']['s''S']                              {IS}
   | ['l''L']['o''O']['o''O']['p''P']              {LOOP}
@@ -172,7 +172,7 @@ rule token = parse
             ['s''S']                              {OTHERS}
   | ['o''O']['u''U']['t''T']                      {OUT}
   | ['p''P']['a''A']['c''C']['k''K']['a''A']
-            ['g''G']['e''E']                      {PACKAGE}
+            ['g''G']['e''E']                      {PACKAGE(Npkcontext.get_loc())}
   | ['p''P']['r''R']['a''A']['g''G']['m''M']
             ['a''A']                              {PRAGMA}
   | ['p''P']['r''R']['o''O']['c''C']['e''E']
@@ -192,7 +192,7 @@ rule token = parse
   | ['u''U']['s''S']['e''E']                      {USE}
   | ['w''W']['h''H']['e''E']['n''N']              {WHEN}
   | ['w''W']['h''H']['i''I']['l''L']['e''E']      {WHILE}
-  | ['w''W']['i''I']['t''T']['h''H']              {WITH}
+  | ['w''W']['i''I']['t''T']['h''H']              {WITH(Npkcontext.get_loc())}
   | ['x''X']['o''O']['r''R']                      {XOR}
 
 (* Unrecognized tokens *)

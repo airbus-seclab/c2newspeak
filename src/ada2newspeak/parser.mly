@@ -167,13 +167,13 @@
 %token AND OR XOR NOT ANDTHEN ORELSE
 %token MOD REM ABS
 %token ASSIGN
-%token WITH USE
+%token USE
 %token BEGIN END
-%token PROCEDURE FUNCTION PACKAGE BODY IS
+%token PROCEDURE FUNCTION BODY IS
 %token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY RECORD OF
 %token IN OUT RETURN
-%token IF
-%token THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
+%token<Newspeak.location> IF ELSIF PACKAGE WITH 
+%token THEN ELSE LOOP WHILE FOR EXIT WHEN
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
@@ -200,7 +200,6 @@
 %type <subtyp> subtyp
 %type <subtyp_indication> subtyp_indication
 %type <expression> expression discrete_choice
-%type <location> debut_if debut_elsif
 %type <instruction*location> instr instruction_if
 %type <instruction> procedure_call
 %type <block> instr_list instruction_else when_others
@@ -225,9 +224,8 @@
 %type <unit> pragma_argument_association pragma_argument_association_list
 %type <param list> parameter_specification formal_part
 %type <sub_program_spec*location> subprogram_spec
-%type <spec*location> package_decl subprogram_decl decl
-%type <body*location> package_body subprogram_body body
-%type <location> package_loc
+%type <spec*location> decl
+%type <body*location> body
 %type <block> package_instr
 %type <library_item*location> library_item
 %type <context_clause list> context_item context
@@ -246,12 +244,8 @@ context :
 ;
 
 context_item :
-| WITH name_list SEMICOLON
-    { let loc = loc () in
-        List.map
-          (fun name -> With(name, loc, None))
-          $2}
-| use_clause {[UseContext $1]}
+| WITH name_list SEMICOLON { List.map (fun name -> With(name, $1, None)) $2}
+| use_clause               {[UseContext $1]}
 ;
 
 use_clause :
@@ -264,21 +258,6 @@ library_item :
 ;
 
 body :
-| subprogram_body {$1}
-| package_body {$1}
-;
-
-decl :
-| subprogram_decl {$1}
-| package_decl {$1}
-;
-
-subprogram_decl :
-| subprogram_spec SEMICOLON
-    {let (spec, loc) = $1 in ((SubProgramSpec(spec)),loc)}
-;
-
-subprogram_body:
 | subprogram_spec IS declarative_part BEGIN instr_list END name SEMICOLON
     {let (spec, loc) = $1
      in
@@ -288,32 +267,28 @@ subprogram_body:
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
      in (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
+| PACKAGE BODY name IS declarative_part package_instr END SEMICOLON
+    {(PackageBody($3, None, make_declarative_part $5, $6), $1)}
+
+| PACKAGE BODY name IS declarative_part package_instr END name SEMICOLON
+    { (check_name $3 $8);
+      (PackageBody($3, None, make_declarative_part $5, $6), $1)
+    }
 ;
 
-package_loc :
-| PACKAGE {loc ()}
+decl :
+| subprogram_spec SEMICOLON
+    {let (spec, loc) = $1 in ((SubProgramSpec(spec)),loc)}
+| PACKAGE name IS basic_declarative_part END SEMICOLON
+    {(PackageSpec($2, $4), $1)}
+| PACKAGE name IS basic_declarative_part END name SEMICOLON
+        { (check_name $2 $6);
+          (PackageSpec($2, $4), $1)}
 ;
 
 package_instr :
 | {[]}
 | BEGIN instr_list {$2}
-
-
-package_decl :
-| package_loc name IS basic_declarative_part END SEMICOLON
-    {(PackageSpec($2, $4), $1)}
-| package_loc name IS basic_declarative_part END name SEMICOLON
-        { (check_name $2 $6);
-          (PackageSpec($2, $4), $1)}
-
-package_body:
-| package_loc BODY name IS declarative_part package_instr END SEMICOLON
-    {(PackageBody($3, None, make_declarative_part $5, $6), $1)}
-
-| package_loc BODY name IS declarative_part package_instr END name SEMICOLON
-    { (check_name $3 $8);
-      (PackageBody($3, None, make_declarative_part $5, $6), $1)
-    }
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
@@ -349,7 +324,7 @@ parameter_specification :
 ;
 
 declarative_part :
-| {[]}
+|                                   {[]}
 | declarative_item declarative_part {$1::$2}
 | pragma           declarative_part {Npkcontext.report_warning "parser"
                                      ("pragma '" ^ $1 ^ "' is ignored");
@@ -372,7 +347,6 @@ pragma_argument_association :
 | ident ARROW expression {}
 ;
 
-
 declarative_item :
 | basic_declaration
     {let (basic, loc) = $1
@@ -382,7 +356,7 @@ declarative_item :
 ;
 
 basic_declarative_part :
-  {[]}
+| {[]}
 | basic_declaration basic_declarative_part {$1::$2}
 ;
 
@@ -406,8 +380,7 @@ basic_declaration :
 ;
 
 contrainte :
-| expression DOUBLE_DOT expression 
-    {RangeConstraint($1, $3)}
+| expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
 ;
 
 type_definition :
@@ -425,7 +398,7 @@ type_definition :
 
 
 record_definition :
-  {[]}
+| {[]}
 | ident_list COLON subtyp_indication SEMICOLON record_definition
                                                             { ($1,$3,None)::$5 }
 | ident_list COLON subtyp_indication ASSIGN expression
@@ -539,22 +512,14 @@ iteration_scheme :
 | FOR ident IN REVERSE expression DOUBLE_DOT expression
                                                 {(For($2,$5,$7, true), loc ())}
 
-debut_if :
-| IF {loc()}
-;
-
-debut_elsif :
-| ELSIF {loc()}
-;
-
 instruction_if :
-| debut_if expression THEN instr_list instruction_else END IF
+| IF expression THEN instr_list instruction_else END IF
     {(If($2, $4, $5), $1)}
 ;
 
 instruction_else :
 | {[]}
-| debut_elsif expression THEN instr_list instruction_else
+| ELSIF expression THEN instr_list instruction_else
       {[(If($2, $4, $5), $1)]}
 | ELSE instr_list {$2}
 ;
@@ -648,7 +613,7 @@ ident_list :
 ;
 
 name_list :
-| name {[$1]}
+| name                 {$1::[]}
 | name COMMA name_list {$1::$3}
 ;
 
@@ -658,12 +623,7 @@ name :
       {
     let (par, ident) = $1
     in (par@[ident], $3)}
-
-    /* pour les tableaux */
-/*| name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)} */
 ;
 
-
 %%
-
 
