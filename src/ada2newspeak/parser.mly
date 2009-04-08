@@ -156,6 +156,7 @@
 %}
 /*declaration ocamlyacc*/
 %token EOF
+
 %token PLUS MINUS MULT DIV POW CONCAT
 %token <Syntax_ada.nat> CONST_INT
 %token <string> CONST_FLOAT
@@ -171,11 +172,19 @@
 %token PROCEDURE FUNCTION PACKAGE BODY IS
 %token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY RECORD OF
 %token IN OUT RETURN
-%token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
+%token IF
+%token THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
 %token NULL TRUE FALSE
 %token LPAR RPAR ARROW DOUBLE_DOT
 %token COMMA SEMICOLON DOT COLON QUOTE
 %token REVERSE PRAGMA CASE VBAR OTHERS DECLARE
+
+%left AND ANDTHEN OR ORELSE XOR
+%left EQ NE LT LE GT GE
+%left PLUS MINUS 
+%nonassoc UPLUS UMINUS
+%left MULT DIV MOD REM
+%left POW ABS NOT
 
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -190,10 +199,7 @@
 %type <argument list> actual_parameter_part args
 %type <subtyp> subtyp
 %type <subtyp_indication> subtyp_indication
-%type <expression> primary factor term simple_expr relation expr_xor
-%type <expression> expr_orelse expr_or expr_andthen expr_and
 %type <expression> expression discrete_choice
-%type <binary_op> mult_op add_op rel_op
 %type <location> debut_if debut_elsif
 %type <instruction*location> instr instruction_if
 %type <instruction> procedure_call
@@ -400,7 +406,7 @@ basic_declaration :
 ;
 
 contrainte :
-| simple_expr DOUBLE_DOT simple_expr
+| expression DOUBLE_DOT expression 
     {RangeConstraint($1, $3)}
 ;
 
@@ -411,7 +417,7 @@ type_definition :
     { TypeDecl(Ada_utils.make_enum ($2) $5)}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
         {TypeDecl(DerivedType($2, $5))}
-| TYPE ident IS RANGE simple_expr DOUBLE_DOT simple_expr SEMICOLON
+| TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
             { TypeDecl(Ada_utils.make_range $2 $5 $7)}
 | TYPE ident IS RECORD record_definition END RECORD SEMICOLON
                 { TypeDecl(Record($2, $5)) }
@@ -531,9 +537,9 @@ args:
 iteration_scheme :
 | {(NoScheme, loc ())}
 | WHILE expression {(While($2), loc ())}
-| FOR ident IN         simple_expr DOUBLE_DOT simple_expr
+| FOR ident IN         expression DOUBLE_DOT expression
                                                 {(For($2,$4,$6,false), loc ())}
-| FOR ident IN REVERSE simple_expr DOUBLE_DOT simple_expr
+| FOR ident IN REVERSE expression DOUBLE_DOT expression
                                                 {(For($2,$5,$7, true), loc ())}
 
 debut_if :
@@ -557,85 +563,29 @@ instruction_else :
 ;
 
 expression :
-| relation {$1}
-| expr_andthen ANDTHEN relation {Binary(AndThen, $1, $3)}
-| expr_orelse  ORELSE  relation {Binary(OrElse,  $1, $3)}
-| expr_and     AND     relation {Binary(And,     $1, $3)}
-| expr_or      OR      relation {Binary(Or,      $1, $3)}
-| expr_xor     XOR     relation {Binary(Xor,     $1, $3)}
-;
-
-expr_and :
-| relation {$1}
-| expr_and AND relation {Binary(And, $1, $3)}
-;
-
-expr_andthen :
-| relation {$1}
-| expr_andthen ANDTHEN relation {Binary(AndThen, $1, $3)}
-;
-
-expr_or :
-| relation {$1}
-| expr_or OR relation {Binary(Or, $1, $3)}
-;
-
-expr_orelse :
-| relation {$1}
-| expr_orelse ORELSE relation {Binary(OrElse, $1, $3)}
-;
-
-expr_xor :
-| relation {$1}
-| expr_xor XOR relation {Binary(Xor, $1, $3)}
-;
-
-rel_op :
-| EQ {Eq}
-| NE {Neq}
-| LE {Le}
-| GE {Ge}
-| LT {Lt}
-| GT {Gt}
-;
-
-relation :
-| simple_expr {$1}
-| simple_expr rel_op simple_expr {Binary($2,$1,$3)}
-;
-
-add_op :
-| PLUS {Plus}
-| MINUS {Minus}
-| CONCAT {Concat}
-;
-
-simple_expr :
-| term {$1}
-| PLUS term {Unary(UPlus,$2)}
-| MINUS term {Unary(UMinus,$2)}
-| simple_expr add_op term {Binary($2,$1,$3)}
-;
-
-mult_op :
-| MULT {Mult}
-| DIV  {Div}
-| MOD  {Mod}
-| REM  {Rem}
-;
-
-term :
-| factor {$1}
-| term mult_op factor {Binary($2,$1,$3)}
-
-factor :
-| primary {$1}
-| primary POW primary {Binary(Power,$1,$3)}
-| NOT primary {Unary(Not,$2)}
-| ABS primary {Unary(Abs,$2)}
-;
-
-primary :
+| expression ANDTHEN expression {Binary(AndThen, $1, $3)}
+| expression ORELSE  expression {Binary(OrElse , $1, $3)}
+| expression AND     expression {Binary(And    , $1, $3)}
+| expression OR      expression {Binary(Or     , $1, $3)}
+| expression XOR     expression {Binary(Xor    , $1, $3)}
+| expression MULT    expression {Binary(Mult   , $1, $3)}
+| expression DIV     expression {Binary(Div    , $1, $3)}
+| expression MOD     expression {Binary(Mod    , $1, $3)}
+| expression REM     expression {Binary(Rem    , $1, $3)}
+| expression PLUS    expression {Binary(Plus   , $1, $3)}
+| expression MINUS   expression {Binary(Minus  , $1, $3)}
+| expression CONCAT  expression {Binary(Concat , $1, $3)}
+| expression EQ      expression {Binary(Eq     , $1, $3)}
+| expression NE      expression {Binary(Neq    , $1, $3)}
+| expression LE      expression {Binary(Le     , $1, $3)}
+| expression GE      expression {Binary(Ge     , $1, $3)}
+| expression LT      expression {Binary(Lt     , $1, $3)}
+| expression GT      expression {Binary(Gt     , $1, $3)}
+| expression POW     expression {Binary(Power,$1,$3)}
+| PLUS  expression %prec UPLUS  {Unary(UPlus,$2)}
+| MINUS expression %prec UMINUS {Unary(UMinus,$2)}
+| NOT expression {Unary(Not,$2)}
+| ABS expression {Unary(Abs,$2)}
 | NULL {NullExpr}
 | CONST_INT {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
@@ -647,8 +597,12 @@ primary :
 | LPAR expression RPAR {$2}
 | subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
 | name args {FunctionCall($1, $2)}
-| subtyp QUOTE ident  {Attribute ($1, AttributeDesignator(String.lowercase $3,
-                                                          None))}
+| subtyp QUOTE ident  {Attribute ($1
+                                 ,AttributeDesignator(String.lowercase $3
+                                                     ,None
+                                                     )
+                                 )
+                      }
 | name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)}
 ;
 
