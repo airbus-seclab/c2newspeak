@@ -168,9 +168,7 @@
 %token ASSIGN
 %token WITH USE
 %token BEGIN END
-%token PACKAGE IS
-%token BODY
-%token PROCEDURE FUNCTION PACKAGE BODY
+%token PROCEDURE FUNCTION PACKAGE BODY IS
 %token NEW TYPE RANGE CONSTANT SUBTYPE ARRAY RECORD OF
 %token IN OUT RETURN
 %token IF THEN ELSE ELSIF LOOP WHILE FOR EXIT WHEN
@@ -192,7 +190,6 @@
 %type <argument list> actual_parameter_part args
 %type <subtyp> subtyp
 %type <subtyp_indication> subtyp_indication
-%type <nat> integer_literal
 %type <expression> primary factor term simple_expr relation expr_xor
 %type <expression> expr_orelse expr_or expr_andthen expr_and
 %type <expression> expression discrete_choice
@@ -365,7 +362,7 @@ pragma_argument_association_list :
 ;
 
 pragma_argument_association :
-| expression             {}
+| expression {}
 | ident ARROW expression {}
 ;
 
@@ -640,7 +637,7 @@ factor :
 
 primary :
 | NULL {NullExpr}
-| integer_literal {CInt($1)}
+| CONST_INT {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR {CChar($1)}
 | TRUE  {CBool(true)}
@@ -653,10 +650,6 @@ primary :
 | subtyp QUOTE ident  {Attribute ($1, AttributeDesignator(String.lowercase $3,
                                                           None))}
 | name LPAR actual_parameter_part RPAR {FunctionCall($1, $3)}
-;
-
-integer_literal :
-| CONST_INT {$1}
 ;
 
 subtyp_indication :
@@ -675,7 +668,6 @@ subtyp_indication :
      ,None
      )
     }
-
 
 subtyp :
 | name {SubtypName($1)}

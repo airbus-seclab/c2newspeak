@@ -209,11 +209,11 @@ and argument = identifier option*expression
 
 (** An instruction *)
 and instruction =
-  | NullInstr                    (** The null instruction (do nothing)    *)
+  | NullInstr                    (** The null statement (do nothing) *)
   | Assign        of lval
                    * expression
-  | Return        of expression  (** Return from function                 *)
-  | ReturnSimple                 (** Return from procedure                *)
+  | Return        of expression  (** Return from function            *)
+  | ReturnSimple                 (** Return from procedure           *)
   | If            of expression
                    * block
                    * block
