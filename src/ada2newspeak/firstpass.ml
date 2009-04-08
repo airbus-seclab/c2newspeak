@@ -1563,7 +1563,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                         "Firstpass.translate_block"
                           "expected a boolean type for condition")
 
-
            | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
                  (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)

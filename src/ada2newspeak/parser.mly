@@ -166,7 +166,7 @@
 %token                     BEGIN
 %token                     BODY
 %token <Newspeak.location> CASE
-%token                     COLON
+%token <Newspeak.location> COLON
 %token                     COMMA
 %token                     CONCAT
 %token                     CONSTANT
@@ -220,12 +220,12 @@
 %token                     REVERSE
 %token                     RPAR
 %token                     SEMICOLON
-%token                     SUBTYPE
+%token <Newspeak.location> SUBTYPE
 %token <string>            STRING
 %token                     THEN
 %token                     TRUE
-%token                     TYPE
-%token                     USE
+%token <Newspeak.location> TYPE
+%token <Newspeak.location> USE
 %token                     VBAR
 %token                     WHEN
 %token                     WHILE
@@ -245,7 +245,8 @@
 %type <identifier> pragma
 %type <param_mode> mode
 %type <name> name
-%type <name list> name_list use_clause
+%type <name list> name_list
+%type <name list*location> use_clause
 %type <identifier> ident
 %type <identifier list> ident_list
 %type <argument> parameter_association
@@ -269,7 +270,6 @@
 %type <array_type_definition> constrained_array_definition
 %type <field list> record_definition
 %type <contrainte> contrainte
-%type <basic_declaration> type_definition
 %type <basic_declaration*location> basic_declaration
 %type <(basic_declaration*location) list> basic_declarative_part
 %type <declarative_item*location> declarative_item
@@ -297,11 +297,11 @@ context :
 
 context_item :
 | WITH name_list SEMICOLON { List.map (fun name -> With(name, $1, None)) $2}
-| use_clause               {[UseContext $1]}
+| use_clause               {[UseContext (fst $1)]}
 ;
 
 use_clause :
-| USE name_list SEMICOLON {$2}
+| USE name_list SEMICOLON {$2,$1}
 ;
 
 library_item :
@@ -414,40 +414,33 @@ basic_declarative_part :
 
 basic_declaration :
 | ident_list COLON subtyp_indication SEMICOLON
-        {(ObjectDecl($1,$3,None, Variable), loc ())}
+        {ObjectDecl($1,$3,None, Variable), $2}
 | ident_list COLON subtyp_indication ASSIGN expression SEMICOLON
-        {(ObjectDecl($1,$3,Some($5), Variable), loc ())}
+        {ObjectDecl($1,$3,Some($5), Variable), $2}
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
-        {(ObjectDecl($1,$4,Some($6), Constant), loc ())}
+        {ObjectDecl($1,$4,Some($6), Constant), $2}
 | ident_list COLON CONSTANT ASSIGN expression SEMICOLON
-        {(NumberDecl($1, $5, None), loc())}
-| type_definition
-        {($1, loc ())}
+        {NumberDecl($1, $5, None), $2}
+| TYPE ident IS ARRAY constrained_array_definition SEMICOLON
+                { TypeDecl(Array($2,$5)),$1}
+| TYPE ident IS LPAR ident_list RPAR SEMICOLON
+    { TypeDecl(Ada_utils.make_enum ($2) $5),$1}
+| TYPE ident IS NEW subtyp_indication SEMICOLON
+        {TypeDecl(DerivedType($2, $5)),$1}
+| TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
+            { TypeDecl(Ada_utils.make_range $2 $5 $7),$1}
+| TYPE ident IS RECORD record_definition END RECORD SEMICOLON
+                { TypeDecl(Record($2, $5)),$1 }
 | SUBTYPE ident IS subtyp_indication SEMICOLON
-        {(SubtypDecl($2,$4), loc ())}
-| use_clause {(UseDecl($1), loc ())}
-| decl  {let (spec, loc) = $1 in
-           (SpecDecl(spec), loc)}
+        {SubtypDecl($2,$4), $1}
+| use_clause {(UseDecl(fst $1), snd $1)}
+| decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
 | representation_clause SEMICOLON {(RepresentClause($1), loc ())}
 ;
 
 contrainte :
 | expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
 ;
-
-type_definition :
-| TYPE ident IS ARRAY constrained_array_definition SEMICOLON
-                { TypeDecl(Array($2,$5))}
-| TYPE ident IS LPAR ident_list RPAR SEMICOLON
-    { TypeDecl(Ada_utils.make_enum ($2) $5)}
-| TYPE ident IS NEW subtyp_indication SEMICOLON
-        {TypeDecl(DerivedType($2, $5))}
-| TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
-            { TypeDecl(Ada_utils.make_range $2 $5 $7)}
-| TYPE ident IS RECORD record_definition END RECORD SEMICOLON
-                { TypeDecl(Record($2, $5)) }
-;
-
 
 record_definition :
 | {[]}

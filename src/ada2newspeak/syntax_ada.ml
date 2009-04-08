@@ -215,8 +215,8 @@ and instruction =
   | Return        of expression  (** Return from function                 *)
   | ReturnSimple                 (** Return from procedure                *)
   | If            of expression
-                   * block
-                   * block
+                   * block       (* then *)
+                   * block       (* else *) 
   | Loop          of iteration_scheme
                    * block
   | Exit

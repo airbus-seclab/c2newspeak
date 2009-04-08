@@ -103,98 +103,37 @@
             aux 0 0
         end
 
-}
-(*a elargir : accent *)
+  (*
+   * Read a "word" and translate it into a keyword or, as a fallback solution, an
+   * identifier.
+   *)
+  let lex_word (w:string) (l:Newspeak.location) :token =
+    match String.lowercase w with
+    | "abs"        -> ABS         | "and"        -> AND
+    | "array"      -> ARRAY       | "begin"      -> BEGIN
+    | "body"       -> BODY        | "case"       -> CASE     l
+    | "constant"   -> CONSTANT    | "declare"    -> DECLARE  l
+    | "elsif"      -> ELSIF     l | "else"       -> ELSE
+    | "end"        -> END         | "exit"       -> EXIT     l
+    | "for"        -> FOR         | "function"   -> FUNCTION
+    | "if"         -> IF        l | "in"         -> IN
+    | "is"         -> IS          | "loop"       -> LOOP
+    | "mod"        -> MOD         | "new"        -> NEW
+    | "not"        -> NOT         | "null"       -> NULL     l
+    | "of"         -> OF          | "or"         -> OR
+    | "others"     -> OTHERS      | "out"        -> OUT
+    | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA
+    | "procedure"  -> PROCEDURE   | "range"      -> RANGE
+    | "record"     -> RECORD      | "rem"        -> REM
+    | "return"     -> RETURN    l | "reverse"    -> REVERSE
+    | "subtype"    -> SUBTYPE   l | "then"       -> THEN
+    | "type"       -> TYPE      l | "use"        -> USE      l
+    | "when"       -> WHEN        | "while"      -> WHILE
+    | "with"       -> WITH      l | "xor"        -> XOR
 
-let lettre = ['a'-'z' 'A'-'Z']
-let chiffre = ['0'-'9']
-let alphanum = lettre | chiffre
-let ident = lettre ('_'? alphanum)*
-let blanc = [' ' '\t']
-let char = "'"_"'"
-let chaine = '"' ([^ '"']|"""")* '"'
+    | "true"       -> TRUE        | "false"      -> FALSE
 
-(*Nombres*)
-let entier = chiffre ('_'? chiffre)*
-let reel = entier '.' entier
-
-let extended_digit = ['0'-'9' 'a'-'f' 'A'-'F']
-let based_numeral = extended_digit ('_'? extended_digit)*
-
-let litteral_reel = reel
-
-(*commentaires*)
-let commentaire = "--" [^ '\n']*
-
-(*identificateurs predefinis*)
-let id_true      = ['t''T']['r''R']['u''U']['e''E']
-let id_false     = ['f''F']['a''A']['l''L']['s''S']['e''E']
-
-rule token = parse
-
-    (* Reserved words. As there is no way to specify ocamllex to make a single
-       rule case-insensitive, the alternative should be made explicit.
-       Rationale : RM95, 2.9.(2) *)
-
-    (* Perl generator : filter through s/([a-z])/"['$1''".uc $1."']"/eg;
-                        and remove quotes. *)
-
-
-  | ['a''A']['b''B']['s''S']                      {ABS}
-  | ['a''A']['n''N']['d''D']                      {AND}
-  | ['a''A']['r''R']['r''R']['a''A']['y''Y']      {ARRAY}
-  | ['b''B']['e''E']['g''G']['i''I']['n''N']      {BEGIN}
-  | ['b''B']['o''O']['d''D']['y''Y']              {BODY}
-  | ['c''C']['a''A']['s''S']['e''E']              {CASE(Npkcontext.get_loc())}
-  | ['c''C']['o''O']['n''N']['s''S']
-            ['t''T']['a''A']['n''N']['t''T']      {CONSTANT}
-
-  | ['d''D']['e''E']['c''C']['l''L']['a''A']
-            ['r''R']['e''E']                      {DECLARE(Npkcontext.get_loc())}
-  | ['e''E']['l''L']['s''S']['i''I']['f''F']      {ELSIF(Npkcontext.get_loc())}
-  | ['e''E']['l''L']['s''S']['e''E']              {ELSE}
-  | ['e''E']['n''N']['d''D']                      {END}
-  | ['e''E']['x''X']['i''I']['t''T']              {EXIT(Npkcontext.get_loc())}
-  | ['f''F']['o''O']['r''R']                      {FOR}
-  | ['f''F']['u''U']['n''N']['c''C']['t''T']
-            ['i''I']['o''O']['n''N']              {FUNCTION}
-  | ['i''I']['f''F']                              {IF(Npkcontext.get_loc())}
-  | ['i''I']['n''N']                              {IN}
-  | ['i''I']['s''S']                              {IS}
-  | ['l''L']['o''O']['o''O']['p''P']              {LOOP}
-  | ['m''M']['o''O']['d''D']                      {MOD}
-  | ['n''N']['e''E']['w''W']                      {NEW}
-  | ['n''N']['o''O']['t''T']                      {NOT}
-  | ['n''N']['u''U']['l''L']['l''L']              {NULL(Npkcontext.get_loc())}
-  | ['o''O']['f''F']                              {OF}
-  | ['o''O']['r''R']                              {OR}
-  | ['o''O']['t''T']['h''H']['e''E']['r''R']
-            ['s''S']                              {OTHERS}
-  | ['o''O']['u''U']['t''T']                      {OUT}
-  | ['p''P']['a''A']['c''C']['k''K']['a''A']
-            ['g''G']['e''E']                      {PACKAGE(Npkcontext.get_loc())}
-  | ['p''P']['r''R']['a''A']['g''G']['m''M']
-            ['a''A']                              {PRAGMA}
-  | ['p''P']['r''R']['o''O']['c''C']['e''E']
-            ['d''D']['u''U']['r''R']['e''E']      {PROCEDURE}
-  | ['r''R']['a''A']['n''N']['g''G']['e''E']      {RANGE}
-  | ['r''R']['e''E']['c''C']['o''O']['r''R']
-            ['d''D']                              {RECORD}
-  | ['r''R']['e''E']['m''M']                      {REM}
-  | ['r''R']['e''E']['t''T']['u''U']['r''R']
-            ['n''N']                              {RETURN(Npkcontext.get_loc())}
-  | ['r''R']['e''E']['v''V']['e''E']['r''R']
-            ['s''S']['e''E']                      {REVERSE}
-  | ['s''S']['u''U']['b''B']['t''T']['y''Y']
-            ['p''P']['e''E']                      {SUBTYPE}
-  | ['t''T']['h''H']['e''E']['n''N']              {THEN}
-  | ['t''T']['y''Y']['p''P']['e''E']              {TYPE}
-  | ['u''U']['s''S']['e''E']                      {USE}
-  | ['w''W']['h''H']['e''E']['n''N']              {WHEN}
-  | ['w''W']['h''H']['i''I']['l''L']['e''E']      {WHILE}
-  | ['w''W']['i''I']['t''T']['h''H']              {WITH(Npkcontext.get_loc())}
-  | ['x''X']['o''O']['r''R']                      {XOR}
-
+    |_             -> IDENT (String.lowercase w)
 (* Unrecognized tokens *)
 
     (* Task-related *)
@@ -237,13 +176,34 @@ rule token = parse
         (* protected    *)
 
 
+}
+(*a elargir : accent *)
+
+let lettre = ['a'-'z' 'A'-'Z']
+let chiffre = ['0'-'9']
+let alphanum = lettre | chiffre
+let ident = lettre ('_'? alphanum)*
+let blanc = [' ' '\t']
+let char = "'"_"'"
+let chaine = '"' ([^ '"']|"""")* '"'
+
+(*Nombres*)
+let entier = chiffre ('_'? chiffre)*
+let reel = entier '.' entier
+
+let extended_digit = ['0'-'9' 'a'-'f' 'A'-'F']
+let based_numeral = extended_digit ('_'? extended_digit)*
+
+let litteral_reel = reel
+
+(*commentaires*)
+let commentaire = "--" [^ '\n']*
+
+rule token = parse
+
+
   | "or"  blanc+ "else" {ORELSE}
   | "and" blanc+ "then" {ANDTHEN}
-
-
-  (* identifiants non reserves mais consideres comme tels*)
-  | id_true        {TRUE}
-  | id_false       {FALSE}
 
   | '('            {LPAR}
   | ')'            {RPAR}
@@ -270,7 +230,7 @@ rule token = parse
   (* ponctuation *)
   | ';'            {SEMICOLON}
   | '.'            {DOT}
-  | ':'            {COLON}
+  | ':'            {COLON(Npkcontext.get_loc())}
   | ".."           {DOUBLE_DOT}
   | ','            {COMMA}
   | "'"            {QUOTE}
@@ -306,7 +266,7 @@ rule token = parse
                                                             exponent "0")))))}
 
   (*identifiant*)
-  | ident {IDENT (String.lowercase (Lexing.lexeme lexbuf))}
+  | ident {lex_word (Lexing.lexeme lexbuf) (Npkcontext.get_loc ())}
   | eof { EOF }
 
   | _ {unknown_lexeme lexbuf}
