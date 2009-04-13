@@ -195,10 +195,18 @@ let translate src_lang prog fnames =
 
       | Goto lbl -> (K.Goto lbl, loc)::[]
 
+      | Guard e -> 
+	  let e = translate_exp e in
+	    (K.Guard e, loc)::[]
+	      
+      | Select (body1, body2) -> 
+	  let body1 = translate_blk body1 in
+	  let body2 = translate_blk body2 in
+	    (K.Select (body1, body2), loc)::[]
+	  
+(*
       | If (e, body1, body2) ->
 	  let cond1 = translate_exp e in
-	  let body1 = translate_blk body1 in
-	  let body2 = translate_blk body2 in begin
 	    match cond1 with
 (* TODO: remove this code and have it as a simplification for newspeak rather 
 *) 
@@ -212,7 +220,7 @@ let translate src_lang prog fnames =
 		  let body2 = (K.Guard cond2, loc)::body2 in
 		    (K.Select (body1, body2), loc)::[]
 	  end
-
+*)
       | Loop body -> (K.InfLoop (translate_blk body), loc)::[]
 
       | Switch switch -> translate_switch loc switch

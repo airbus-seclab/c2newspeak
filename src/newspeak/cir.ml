@@ -81,7 +81,8 @@ and stmtkind =
   | Decl of (typ * string)
   | Set of (lv * typ * exp)
   | Loop of blk
-  | If of (exp * blk * blk)
+  | Guard of exp
+  | Select of (blk * blk)
   | Switch of (exp * (typ_exp * blk) list * blk)
   | Exp of exp
   | UserSpec of assertion
@@ -182,8 +183,9 @@ and string_of_stmt margin (x, _) =
     | Decl (_, x) -> "typ "^x^";"
     | Set (lv, _, e) -> 
 	(string_of_lv margin lv)^" = "^(string_of_exp margin e)^";"
-    | If (e, br1, br2) -> 
-	"if "^(string_of_exp margin e)^" {\n"
+    | Guard e -> margin^"guard("^(string_of_exp "" e)^")"
+    | Select (br1, br2) -> 
+	"select {\n"
 	^(string_of_blk (margin^"  ") br1)
 	^margin^"} else {\n"
 	^(string_of_blk (margin^"  ") br2)
@@ -357,12 +359,15 @@ and normalize_stmt (x, loc) =
 	  (Block (pref@(Set (lv, t, e), loc)::post, None), loc)::[]
 	    
     | Loop body -> (Loop (normalize_blk body), loc)::[]
-	
-    | If (e, body1, body2) ->
+
+    | Guard e -> 
 	let (pref, e, post) = normalize_exp e in
+	  pref@(Guard e, loc)::post
+
+    | Select (body1, body2) ->
 	let body1 = normalize_blk body1 in
 	let body2 = normalize_blk body2 in
-	let body = pref@(If (e, post@body1, post@body2), loc)::[] in
+	let body = (Select (body1, body2), loc)::[] in
 	  (* TODO: not good, code duplication!!! 
 	     could add a variable instead, if variable elimination later 
 	     on is good enough *)
@@ -581,14 +586,14 @@ let normalize x =
 	  let (body, used_lbls) = set_scope_blk body in
 	    (Block (body, lbl), used_lbls)
       | Goto lbl -> (x, Set.singleton lbl)
-      | Decl _ | Set _ | Exp _ | UserSpec _ -> (x, Set.empty)
+      | Decl _ | Set _ | Exp _ | UserSpec _ | Guard _ -> (x, Set.empty)
       | Loop body -> 
 	  let (body, used_lbls) = set_scope_blk body in
 	    (Loop body, used_lbls)
-      | If (e, body1, body2) ->
+      | Select (body1, body2) ->
 	  let (body1, used_lbls1) = set_scope_blk body1 in
 	  let (body2, used_lbls2) = set_scope_blk body2 in
-	    (If (e, body1, body2), Set.union used_lbls1 used_lbls2)
+	    (Select (body1, body2), Set.union used_lbls1 used_lbls2)
       | Switch (e, choices, default) ->
 	  let (choices, used_lbls1) = set_scope_choices choices in
 	  let (default, used_lbls2) = set_scope_blk default in
@@ -658,7 +663,7 @@ and is_subftyp (args1, ret1) (args2, ret2) =
 (* according to test 508, this number should be:
    large_blk_sz < 5
 *)
-let large_blk_sz = 4
+let large_blk_sz = 5
 let is_large_blk x =
   let cnt = ref 0 in
   let rec check_blk x =
@@ -674,7 +679,8 @@ let is_large_blk x =
     match x with
 	Block (x, None) | Loop x -> check_blk x
       | Block (x, Some (_, y)) -> check_blk x; check_blk y
-      | If (e, x, y) -> check_blk x; check_blk y; check_exp e
+      | Guard e -> check_exp e
+      | Select (x, y) -> check_blk x; check_blk y
       | Switch (e, choices, x) -> 
 	  check_exp e;
 	  List.iter check_choice choices;
@@ -737,7 +743,7 @@ and size_of_stmt (x, _) =
     | Block (body, Some (_, action)) -> 
 	1 + (size_of_blk body) + (size_of_blk action)
     | Loop body -> 1 + (size_of_blk body)
-    | If (_, br1, br2) -> 1 + (size_of_blk br1) + (size_of_blk br2)
+    | Select (br1, br2) -> 1 + (size_of_blk br1) + (size_of_blk br2)
     | Switch (_, cases, default) -> 
 	1 + (List_utils.size_of size_of_case cases) + size_of_blk default
     | _ -> 1
@@ -754,3 +760,8 @@ let size_of prog =
     add (List.length prog.specs);
     !res
 
+let build_if loc (e, blk1, blk2) =
+  let (pref, e, post) = normalize_exp e in
+  let blk1 = (Guard e, loc)::post@blk1 in
+  let blk2 = (Guard (Unop (Npkil.Not, e)), loc)::post@blk2 in
+    pref@(Select (blk1, blk2), loc)::[]

@@ -1125,7 +1125,7 @@ let translate (globals, spec) =
 	| Cst (C.CInt _, _) -> blk2
 	| _ -> 
 	    let (e, _) = translate_exp e in
-	      (C.If (e, blk1, blk2), loc)::[]
+	      C.build_if loc (e, blk1, blk2)
     in
       translate e blk1 blk2
 

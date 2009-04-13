@@ -70,7 +70,8 @@ and stmtkind =
     | Decl of (typ * string)
     | Set of (lv * typ * exp)
     | Loop of blk
-    | If of (exp * blk * blk)
+    | Guard of exp
+    | Select of (blk * blk)
     | Switch of (exp * (typ_exp * blk) list * blk)
     | Exp of exp
     | UserSpec of assertion
@@ -164,3 +165,5 @@ val remove_fst_deref: lv -> exp
 val print: t -> unit
 
 val size_of: t -> int
+
+val build_if: location -> (exp * blk * blk) -> blk
