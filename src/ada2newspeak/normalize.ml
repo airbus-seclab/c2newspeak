@@ -1590,9 +1590,7 @@ let rec normalize_instr (instr,loc) =
                         normalize_params param_list false)
 
   and normalize_basic_decl item loc global reptbl = match item with
-    | UseDecl(use_clause) -> List.iter
-                              (fun x -> package#add_use (make_package x))
-                              use_clause;
+    | UseDecl(use_clause) -> package#add_use (make_package use_clause);
         item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind =
@@ -1650,20 +1648,19 @@ let rec normalize_instr (instr,loc) =
 
     | SpecDecl(spec) -> SpecDecl(normalize_spec spec)
 
-    | NumberDecl(ident_list, exp, None) ->
+    | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl package#get_use
           package extern in
           (*ajouts dans la table*)
-          List.iter
-            (fun ident -> add_cst (normalize_ident ident)
-               (Number(v, global)) global)
-            ident_list;
-          NumberDecl(ident_list, norm_exp, Some(v))
+            add_cst (normalize_ident ident)
+                    (Number(v, global))
+                    global;
+          NumberDecl(ident, norm_exp, Some v)
 
     | NumberDecl(ident, exp, Some(v)) ->
         (* cas jamais emprunte *)
-        NumberDecl(ident, normalize_exp exp, Some(v))
+        NumberDecl(ident, normalize_exp exp, Some v)
 
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind =
@@ -1712,18 +1709,16 @@ let rec normalize_instr (instr,loc) =
           List.iter
             (fun ident -> remove_cst (normalize_ident ident))
             ident_list
-      | BasicDecl(UseDecl(use_clause)) ->
-          List.iter (fun x -> package#remove_use (make_package x)) use_clause
+      | BasicDecl(UseDecl(use_clause)) -> package#remove_use
+                                                (make_package use_clause)
       | BasicDecl(SpecDecl(_)) -> () (* pas de declaration de type
                                         dans spec package/fonc *)
       | BodyDecl(_) -> () (* rien a supprimer pour un corps,
                              les declarations internes sont
                              supprimees lors du traitement
                              du corps *)
-      | BasicDecl(NumberDecl(idents,_,_)) ->
-          List.iter
-            (fun x -> remove_cst (normalize_ident x))
-            idents
+      | BasicDecl(NumberDecl(ident,_,_)) ->
+            remove_cst (normalize_ident ident)
 
       | BasicDecl(RepresentClause _) -> ()
 
@@ -1840,13 +1835,11 @@ let rec normalize_instr (instr,loc) =
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
-        | NumberDecl(ident_list, _, Some(v)) ->
+        | NumberDecl(ident, _, Some v) ->
             (*ajouts dans la table*)
-            List.iter
-              (fun ident -> add_cst
-                 (normalize_extern_ident ident)
-                 (Number(v, true)) true)
-              ident_list;
+            add_cst (normalize_extern_ident ident)
+                    (Number(v, true))
+                    true
 
         | NumberDecl(_, _, None) ->
             Npkcontext.report_error
@@ -1898,9 +1891,8 @@ let rec normalize_instr (instr,loc) =
             add_extern_spec norm_spec;
             (With(nom, loc, Some(norm_spec, loc)))
             ::(normalize_context r (nom::previous_with))
-      | UseContext(name_list)::r ->
-          List.iter (fun x -> package#add_use (make_package x)) name_list;
-          (UseContext(name_list))::(normalize_context r previous_with)
+      | UseContext(n)::r -> package#add_use (make_package n);
+        (UseContext(n))::(normalize_context r previous_with)
       | [] -> []
   in
 

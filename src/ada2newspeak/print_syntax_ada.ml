@@ -278,8 +278,7 @@ and context_clause_to_string context_clause =
             (fun (spec, loc) -> "("^(spec_to_string spec)
                ^", "^(line_of_loc loc)^")"))
         ^")"
-    | UseContext(names) -> "UseContext("
-        ^(list_to_string names name_to_string "," false)^")"
+    | UseContext(names) -> "UseContext("^(name_to_string names)^")"
 
 and context_to_string context = list_to_string context
                                     context_clause_to_string ";\n" true
@@ -292,12 +291,11 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(object_state_to_string status)^")"
   | TypeDecl(typdecl) ->
       "TypeDecl("^(typ_declaration_to_string typdecl)^")"
-  | UseDecl(use_clause) -> "UseDecl("
-      ^(list_to_string use_clause name_to_string "," false)^")"
+  | UseDecl(use_clause) -> "UseDecl("^(name_to_string use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("
       ^(spec_to_string spec)^")"
   | NumberDecl(idents, exp, v) ->
-      "NumberDecl("^(list_to_string idents (fun x-> x) "," true)
+      "NumberDecl("^idents
       ^", "^(exp_to_string exp)
       ^", "^(option_to_string v value_to_string)^")"
   | SubtypDecl(ident, subtyp_ind) ->

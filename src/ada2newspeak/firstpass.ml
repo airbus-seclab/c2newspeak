@@ -1821,14 +1821,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> List.iter (fun (x,y) -> package#add_use (x@[y]))
-                                  use_clause;
+    | UseDecl(use_clause) -> package#add_use((fst use_clause)@[snd use_clause]);
         ([],[])
 
-    | NumberDecl(idents, _, Some(v)) ->
-        List.iter
-          (add_number loc v false)
-          idents;
+    | NumberDecl(ident, _, Some(v)) ->
+        add_number loc v false ident;
         ([],[])
     | NumberDecl _ ->
         Npkcontext.report_error
@@ -1875,11 +1872,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl(use_clause) -> List.iter (fun (x,y) -> package#remove_use (x@[y])) use_clause
-    | NumberDecl(idents, _, _) ->
-        List.iter
-          (fun x -> ignore (remove_symb x))
-          idents
+    | UseDecl(x,y) -> package#remove_use (x@[y])
+    | NumberDecl(ident, _, _) -> remove_symb ident
     | RepresentClause _ ->
         Npkcontext.report_error
           "Firstpass.remove_basic_declaration"
@@ -1958,16 +1952,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       | TypeDecl(typ_decl) ->
           translate_typ_declaration typ_decl loc true
-
       | SubtypDecl _ -> ()
-
-      | UseDecl(use_clause) -> List.iter (fun (x,y) -> package#add_use (x@[y])) use_clause
-
+      | UseDecl(x,y) -> package#add_use (x@[y])
       | SpecDecl(spec) -> translate_spec spec loc false
-      | NumberDecl(idents, _, Some(v)) ->
-          List.iter
-            (add_number loc v true)
-            idents
+      | NumberDecl(ident, _, Some v) ->
+           add_number loc v true ident
       | NumberDecl(_) ->
           Npkcontext.report_error
             "Firstpass.translate_global_basic_declaration"
@@ -2060,8 +2049,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext(use_clause)::r ->
-          List.iter (fun (x,y) -> package#add_use (x@[y])) use_clause;
+      | UseContext(x,y)::r -> package#add_use (x@[y]);
           translate_context r
       | [] -> ()
 

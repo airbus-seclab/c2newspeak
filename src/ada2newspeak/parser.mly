@@ -165,7 +165,6 @@
 
 %token                            ABS
 %token                            AND
-%token                            ANDTHEN
 %token                            ARRAY
 %token                            ARROW
 %token <Newspeak.location>        ASSIGN
@@ -210,7 +209,6 @@
 %token <Newspeak.location>        NULL
 %token                            OF
 %token                            OR
-%token                            ORELSE
 %token                            OTHERS
 %token                            OUT
 %token <Newspeak.location>        PACKAGE
@@ -238,7 +236,7 @@
 %token <Newspeak.location>        WITH
 %token                            XOR
 
-%left AND ANDTHEN OR ORELSE XOR
+%left AND OR XOR
 %left EQ NE LT LE GT GE
 %left PLUS MINUS CONCAT
 %nonassoc UPLUS UMINUS
@@ -252,7 +250,6 @@
 %type <param_mode> mode
 %type <name*location> name
 %type <name list> name_list
-%type <name list*location> use_clause
 %type <identifier> ident
 %type <identifier list> ident_list
 %type <argument> parameter_association
@@ -287,6 +284,7 @@
 %type <block> package_instr
 %type <library_item*location> library_item
 %type <context_clause list> context_item context
+%type <(basic_declaration*location) list> factored_decl use_decl number_decl
 
 /*priorite*/
 
@@ -301,12 +299,8 @@ context :
 ;
 
 context_item :
-| WITH name_list SEMICOLON { List.map (fun name -> With(name, $1, None)) $2}
-| use_clause               {[UseContext (fst $1)]}
-;
-
-use_clause :
-| USE name_list SEMICOLON {$2,$1}
+| WITH name_list SEMICOLON { List.map (fun n -> With(n, $1, None)) $2}
+| USE  name_list SEMICOLON { List.map (fun n -> UseContext n)      $2}
 ;
 
 library_item :
@@ -383,10 +377,25 @@ parameter_specification :
 declarative_part :
 |                                   {[]}
 | declarative_item declarative_part {$1::$2}
+| factored_decl    declarative_part {(List.map (fun (x,y) -> (BasicDecl x),y)
+                                               $1)
+                                     @$2
+                                    }
 | pragma           declarative_part {Npkcontext.report_warning "parser"
                                      ("pragma '" ^ $1 ^ "' is ignored");
                                      $2
                                     }
+;
+
+factored_decl :
+| use_decl {$1}
+| number_decl {$1}
+;
+
+basic_declarative_part :
+| {[]}
+| basic_declaration basic_declarative_part {$1::$2}
+| factored_decl     basic_declarative_part {$1@$2}
 ;
 
 pragma :
@@ -412,9 +421,18 @@ declarative_item :
         in (BodyDecl(body),loc)}
 ;
 
-basic_declarative_part :
-| {[]}
-| basic_declaration basic_declarative_part {$1::$2}
+use_decl :
+| USE name_list SEMICOLON {List.map (fun n -> (UseDecl n),$1) $2}
+;
+
+number_decl :
+| ident_list COLON CONSTANT ASSIGN expression SEMICOLON
+        { (*
+           * As the expression must be static, we can safely copy it :
+           * multiple evaluations will yield the same result.
+           *)
+          List.map (fun x ->NumberDecl(x, $5, None),$2) $1
+        }
 ;
 
 basic_declaration :
@@ -424,8 +442,6 @@ basic_declaration :
         {ObjectDecl($1,$3,Some($5), Variable), $2}
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
         {ObjectDecl($1,$4,Some($6), Constant), $2}
-| ident_list COLON CONSTANT ASSIGN expression SEMICOLON
-        {NumberDecl($1, $5, None), $2}
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
                 { TypeDecl(Array($2,$5)),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
@@ -438,7 +454,6 @@ basic_declaration :
                 { TypeDecl(Record($2, $5)),$1 }
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
-| use_clause {(UseDecl(fst $1), snd $1)}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
 | representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
 ;
@@ -562,30 +577,30 @@ instruction_else :
 ;
 
 expression :
-| expression ANDTHEN expression {Binary(AndThen, $1, $3)}
-| expression ORELSE  expression {Binary(OrElse , $1, $3)}
-| expression AND     expression {Binary(And    , $1, $3)}
-| expression OR      expression {Binary(Or     , $1, $3)}
-| expression XOR     expression {Binary(Xor    , $1, $3)}
-| expression MULT    expression {Binary(Mult   , $1, $3)}
-| expression DIV     expression {Binary(Div    , $1, $3)}
-| expression MOD     expression {Binary(Mod    , $1, $3)}
-| expression REM     expression {Binary(Rem    , $1, $3)}
-| expression PLUS    expression {Binary(Plus   , $1, $3)}
-| expression MINUS   expression {Binary(Minus  , $1, $3)}
-| expression CONCAT  expression {Binary(Concat , $1, $3)}
-| expression EQ      expression {Binary(Eq     , $1, $3)}
-| expression NE      expression {Binary(Neq    , $1, $3)}
-| expression LE      expression {Binary(Le     , $1, $3)}
-| expression GE      expression {Binary(Ge     , $1, $3)}
-| expression LT      expression {Binary(Lt     , $1, $3)}
-| expression GT      expression {Binary(Gt     , $1, $3)}
-| expression POW     expression {Binary(Power  , $1, $3)}
+| expression AND THEN expression %prec AND {Binary(AndThen, $1, $4)}
+| expression OR ELSE  expression %prec OR  {Binary(OrElse , $1, $4)}
+| expression AND      expression           {Binary(And    , $1, $3)}
+| expression OR       expression           {Binary(Or     , $1, $3)}
+| expression XOR      expression           {Binary(Xor    , $1, $3)}
+| expression MULT     expression           {Binary(Mult   , $1, $3)}
+| expression DIV      expression           {Binary(Div    , $1, $3)}
+| expression MOD      expression           {Binary(Mod    , $1, $3)}
+| expression REM      expression           {Binary(Rem    , $1, $3)}
+| expression PLUS     expression           {Binary(Plus   , $1, $3)}
+| expression MINUS    expression           {Binary(Minus  , $1, $3)}
+| expression CONCAT   expression           {Binary(Concat , $1, $3)}
+| expression EQ       expression           {Binary(Eq     , $1, $3)}
+| expression NE       expression           {Binary(Neq    , $1, $3)}
+| expression LE       expression           {Binary(Le     , $1, $3)}
+| expression GE       expression           {Binary(Ge     , $1, $3)}
+| expression LT       expression           {Binary(Lt     , $1, $3)}
+| expression GT       expression           {Binary(Gt     , $1, $3)}
+| expression POW      expression           {Binary(Power  , $1, $3)}
 | PLUS  expression %prec UPLUS  {Unary (UPlus  , $2    )}
 | MINUS expression %prec UMINUS {Unary (UMinus , $2    )}
 | NOT   expression              {Unary (Not    , $2    )}
 | ABS   expression              {Unary (Abs    , $2    )}
-| NULL {NullExpr}
+| NULL        {NullExpr}
 | CONST_INT   {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR  {CChar($1)}

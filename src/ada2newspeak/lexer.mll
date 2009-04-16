@@ -200,9 +200,6 @@ let litteral_reel = reel
 let commentaire = "--" [^ '\n']*
 
 rule token = parse
-  | "or"  blanc+ "else" {ORELSE}
-  | "and" blanc+ "then" {ANDTHEN}
-
   | '('            {LPAR(Npkcontext.get_loc())}
   | ')'            {RPAR}
 
@@ -222,7 +219,6 @@ rule token = parse
   | "="            {EQ}
   | "/="           {NE}
   | "="            {EQ}
-
   | ":="           {ASSIGN(Npkcontext.get_loc())}
 
   (* ponctuation *)

@@ -255,7 +255,7 @@ and context_clause =
   | With       of name
                 * location
                 * (spec*location) option
-  | UseContext of name list
+  | UseContext of name
 
 and package_spec = name
                  * (basic_declaration*location) list
@@ -280,9 +280,9 @@ and basic_declaration =
                      * expression option
                      * object_state
   | TypeDecl        of typ_declaration
-  | UseDecl         of name list
+  | UseDecl         of name
   | SpecDecl        of spec
-  | NumberDecl      of identifier list
+  | NumberDecl      of identifier
                      * expression
                      * value option
   | SubtypDecl      of identifier
