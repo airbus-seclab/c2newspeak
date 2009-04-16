@@ -1549,25 +1549,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                (translate_affect lv exp loc)::(translate_block r)
            | If(condition,instr_then,instr_else) ->
                let (tr_exp, typ) = translate_exp condition (Some Boolean) in
-(* NOT1 FOR Etienne: 
-   look how I rewrote the code
-   1) first get rid of the erroneous cases via the exception
-   2) then do the usual treatment
-   less imbrication than before
-*)
-		 if typ <> Boolean then begin
-		   Npkcontext.report_error
-                     "Firstpass.translate_block"
-                     "expected a boolean type for condition"
-		 end;
+                 if typ <> Boolean then begin
+                   Npkcontext.report_error "Firstpass.translate_block"
+                                         "expected a boolean type for condition"
+                 end;
                  let tr_then = translate_block instr_then in
-		 let tr_else = translate_block instr_else in
-(* NOTE2 FOR Etienne: 
-   could possibly factor all translate_block r
-*)
-		   (C.build_if loc (tr_exp, tr_then, tr_else))
-		   @(translate_block r)
-
+                 let tr_else = translate_block instr_else in
+                   (C.build_if loc (tr_exp, tr_then, tr_else))
+                   @(translate_block r)
            | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
                  (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)

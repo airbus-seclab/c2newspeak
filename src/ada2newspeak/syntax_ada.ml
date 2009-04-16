@@ -216,7 +216,7 @@ and instruction =
   | ReturnSimple                 (** Return from procedure                *)
   | If            of expression
                    * block       (* then *)
-                   * block       (* else *) 
+                   * block       (* else *)
   | Loop          of iteration_scheme
                    * block
   | Exit

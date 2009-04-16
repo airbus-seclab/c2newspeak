@@ -38,7 +38,7 @@ let d_subprogram_body b = b
 let d_subprogram_spec s = s
 
 (* FIXME typecheck *)
-let d_exp e = e 
+let d_exp e = e
 
 let rec d_package_spec    (n,l) =
   let d_l = List.map
@@ -55,8 +55,8 @@ and d_basic_decl = function
                                                ,eventually d_exp expo
                                                ,sta
                                                )
-  | SpecDecl SubProgramSpec ss -> SpecDecl (SubProgramSpec (d_subprogram_spec ss))
-  | SpecDecl    PackageSpec ps -> SpecDecl (PackageSpec    (d_package_spec    ps))
+  | SpecDecl SubProgramSpec ss -> SpecDecl(SubProgramSpec(d_subprogram_spec ss))
+  | SpecDecl    PackageSpec ps -> SpecDecl(PackageSpec   (d_package_spec    ps))
   | NumberDecl (idl,exp,valop) -> NumberDecl (idl, d_exp exp,valop)
   | TypeDecl x -> TypeDecl x
   |  UseDecl x ->  UseDecl x

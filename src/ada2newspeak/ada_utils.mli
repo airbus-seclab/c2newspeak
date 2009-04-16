@@ -55,16 +55,6 @@ val mod_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
 val rem_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
 
 (**
- * The exclusive-or binary relation. Denotes the difference of two booleans :
- *{[|  a |  b | a xor b|
-   *|  0 |  0 |    0   |
-   *|  0 |  1 |    1   |
-   *|  1 |  0 |    1   |
-   *|  1 |  1 |    0   |]}
- *)
-val xor : bool -> bool -> bool
-
-(**
  * Convert a boolean into the native type.
  *)
 val nat_of_bool : bool -> Newspeak.Nat.t

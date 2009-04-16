@@ -104,8 +104,8 @@
         end
 
   (*
-   * Read a "word" and translate it into a keyword or, as a fallback solution, an
-   * identifier.
+   * Read a "word" and translate it into a keyword or,
+   * as a fallback solution, an identifier.
    *)
   let lex_word (w:string) (l:Newspeak.location) :token =
     match String.lowercase w with

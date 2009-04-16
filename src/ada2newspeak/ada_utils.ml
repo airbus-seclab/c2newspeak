@@ -62,8 +62,6 @@ let rem_ada na nb =
   in
     Nat.of_big_int r_mod
 
-let xor a b = if a then not b else b
-
 (* calcul sur les value *)
 
 let eq_val v1 v2 =
@@ -327,7 +325,6 @@ let check_operand_typ op typ = match op with
       Npkcontext.report_error
         "Firstpass.translate_binop"
         "concat not implemented"
-
 
 let make_enum nom list_val =
   let rec make_id list_val next_id =

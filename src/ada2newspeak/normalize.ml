@@ -208,9 +208,9 @@ let eval_static (exp:expression) (expected_typ:typ option)
         | Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1), Boolean)
 
         (* operations sur les booleens *)
-        | ((AndThen|And),BoolVal(b1),BoolVal(b2))->(BoolVal(b1  && b2), Boolean)
-        | ((OrElse|Or),  BoolVal(b1),BoolVal(b2))->(BoolVal(b1  || b2), Boolean)
-        | (Xor,          BoolVal(b1),BoolVal(b2))->(BoolVal(xor b1 b2), Boolean)
+        | ((AndThen|And),BoolVal(b1),BoolVal(b2))->(BoolVal(b1 && b2), Boolean)
+        | ((OrElse|Or),  BoolVal(b1),BoolVal(b2))->(BoolVal(b1 || b2), Boolean)
+        | (Xor,          BoolVal(b1),BoolVal(b2))->(BoolVal(b1 <> b2), Boolean)
 
         (* operations sur les string *)
         | Concat,_,_ ->Npkcontext.report_error "Ada_normalize.eval_static_binop"

@@ -48,17 +48,17 @@
      in
        check_name begin_name end_name
 
-   let build_access name list   =
-     let rec build_aux  list  =
-       match list with [] -> (Lval name)
+   let build_access name lst   =
+     let rec build_aux lst  =
+       match lst with [] -> (Lval name)
          | hd::tl ->
              let built = build_aux tl in
                ArrayAccess (built, hd)
      in
-       match list with
+       match lst with
            [] -> Lval name
          | _  ->
-             let rev_list = List.rev list in
+             let rev_list = List.rev lst in
                build_aux rev_list
 
    let build_matrix l typ_ind loc =
@@ -94,27 +94,27 @@
     let make_operator_name opname =
         let ada2npk_operator_prefix = "__ada2npk_operator_" in
          match opname with
-        | "and" -> ada2npk_operator_prefix ^ "logical_and"
-        | "or"  -> ada2npk_operator_prefix ^ "logical_and"
-        | "xor" -> ada2npk_operator_prefix ^ "xor"
-        | "="   -> ada2npk_operator_prefix ^ "equals"
-        | "/="  -> ada2npk_operator_prefix ^ "not_equals"
-        | "<"   -> ada2npk_operator_prefix ^ "lt"
-        | "<="  -> ada2npk_operator_prefix ^ "le"
-        | ">"   -> ada2npk_operator_prefix ^ "gt"
-        | ">="  -> ada2npk_operator_prefix ^ "ge"
-        | "+"   -> ada2npk_operator_prefix ^ "plus"
-        | "-"   -> ada2npk_operator_prefix ^ "minus"
-        | "&"   -> ada2npk_operator_prefix ^ "binary_and"
-        | "*"   -> ada2npk_operator_prefix ^ "times"
-        | "/"   -> ada2npk_operator_prefix ^ "div"
-        | "mod" -> ada2npk_operator_prefix ^ "mod"
-        | "rem" -> ada2npk_operator_prefix ^ "rem"
-        | "**"  -> ada2npk_operator_prefix ^ "pow"
-        | "abs" -> ada2npk_operator_prefix ^ "abs"
-        | "not" -> ada2npk_operator_prefix ^ "not"
-        | _     -> Npkcontext.report_error "Parser.make_operator_name"
-                ("Cannot overload '"^opname^"' : it is not an operator")
+         | "and" -> ada2npk_operator_prefix ^ "logical_and"
+         | "or"  -> ada2npk_operator_prefix ^ "logical_and"
+         | "xor" -> ada2npk_operator_prefix ^ "xor"
+         | "="   -> ada2npk_operator_prefix ^ "equals"
+         | "/="  -> ada2npk_operator_prefix ^ "not_equals"
+         | "<"   -> ada2npk_operator_prefix ^ "lt"
+         | "<="  -> ada2npk_operator_prefix ^ "le"
+         | ">"   -> ada2npk_operator_prefix ^ "gt"
+         | ">="  -> ada2npk_operator_prefix ^ "ge"
+         | "+"   -> ada2npk_operator_prefix ^ "plus"
+         | "-"   -> ada2npk_operator_prefix ^ "minus"
+         | "&"   -> ada2npk_operator_prefix ^ "binary_and"
+         | "*"   -> ada2npk_operator_prefix ^ "times"
+         | "/"   -> ada2npk_operator_prefix ^ "div"
+         | "mod" -> ada2npk_operator_prefix ^ "mod"
+         | "rem" -> ada2npk_operator_prefix ^ "rem"
+         | "**"  -> ada2npk_operator_prefix ^ "pow"
+         | "abs" -> ada2npk_operator_prefix ^ "abs"
+         | "not" -> ada2npk_operator_prefix ^ "not"
+         | _     -> Npkcontext.report_error "Parser.make_operator_name"
+                 ("Cannot overload '"^opname^"' : it is not an operator")
 
     (**
       * Prepare a list of exp*block for the Case constructor.
@@ -235,7 +235,7 @@
 %token                            VBAR
 %token                            WHEN
 %token <Newspeak.location>        WHILE
-%token <Newspeak.location>        WITH 
+%token <Newspeak.location>        WITH
 %token                            XOR
 
 %left AND ANDTHEN OR ORELSE XOR
