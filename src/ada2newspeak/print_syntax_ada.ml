@@ -32,27 +32,12 @@ open Syntax_ada
 
 let nat_to_string = Newspeak.Nat.to_string
 
-let list_to_string l to_string sep crochet =
-  match l with
-    | a::r ->
-        (if crochet then "[" else "")
-        ^(to_string a)
-        ^(List.fold_left (fun debut x -> debut^sep^(to_string x))
-          "" r)
-        ^(if crochet then "]" else "")
-    | [] ->
-        if crochet then "[]" else ""
+let list_to_string = Ada_utils.list_to_string
+let name_to_string = Ada_utils.name_to_string
 
 let option_to_string a to_string = match a with
   | None -> "None"
   | Some(a') -> "Some("^(to_string a')^")"
-
-let rec ident_list_to_string l =
-  list_to_string l (fun x -> x) "." false
-
-let rec name_to_string (packages, ident) =
-  ident_list_to_string (packages@[ident])
-
 
 let line_of_loc (_,line,_) = "line "^(string_of_int line)
 

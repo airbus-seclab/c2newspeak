@@ -29,7 +29,6 @@
  * @author Etienne Millon
  *)
 
-
 exception NonStaticExpression
 
 (**
@@ -215,27 +214,33 @@ val with_default : 'a option -> 'a -> 'a
 class package_manager :
 object
     (** Set the current package. *)
-    method set_current :Syntax_ada.name -> unit
+    method set_current :Syntax_ada.package -> unit
 
     (** Reset the current package. *)
     method reset_current :unit
 
     (** Get the current package. *)
-    method current :Syntax_ada.identifier list
+    method current    :Syntax_ada.package
 
     (** Add a package to the "with" list. *)
-    method add_with :Syntax_ada.name -> unit
+    method add_with   :Syntax_ada.package -> unit
 
     (** Is a package in the "with" list ? *)
-    method is_with :Syntax_ada.identifier list -> bool
+    method is_with    :Syntax_ada.package -> bool
 
     (** Add a "use" clause to the context. *)
-    method add_use    :Syntax_ada.name -> unit
+    method add_use    :Syntax_ada.package -> unit
 
     (** Remove a "use" clause from the context. *)
-    method remove_use :Syntax_ada.name -> unit
+    method remove_use :Syntax_ada.package -> unit
 
     (** Get the current context. *)
     method get_use    :Syntax_ada.identifier list list
 
 end
+
+val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
+
+val name_to_string : Syntax_ada.name -> string
+
+val ident_list_to_string : Syntax_ada.identifier list -> string

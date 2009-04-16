@@ -43,6 +43,9 @@ let get_legacy_definition id = match String.lowercase id with
 | "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
 | _ ->  failwith "legacy definition available only for int float bool or char"
 
+let make_package (n:name) :package =
+  (fst n)@[snd n]
+
 let mk_float(f:float):float_number = (f, string_of_float f)
 
 let temp =
@@ -72,7 +75,7 @@ type constant_symb =
   | VarSymb      of bool            (** bool = global? *)
   | FunSymb      of typ option*bool (** bool = extern? *)
 
-let string_of_name = Print_syntax_ada.name_to_string
+let string_of_name = Ada_utils.name_to_string
 
 let normalize_extern_ident ident package = (package, ident)
 
@@ -89,7 +92,7 @@ let normalize_name (name:name) (package:package_manager) extern =
     | _ -> Npkcontext.report_error
         "ada_normalize.normalize_name.add_package"
           ("unknown package "
-           ^(Print_syntax_ada.ident_list_to_string parents)) in
+           ^(Ada_utils.ident_list_to_string parents)) in
     match extern with
       | false -> name (*suppr_package name (package#current)*)
       | true -> add_package name package#current
@@ -501,7 +504,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
         | (pack, ident) when pack = package#current->
                                         avec_selecteur_courant ([],ident) name
         | (pack, _) -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
-              ("unknown package " ^(Print_syntax_ada.ident_list_to_string pack))
+              ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
       eval_static_exp exp expected_typ
 
@@ -910,7 +913,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           | (pack, _) -> Npkcontext.report_error
               "Ada_normalize.find_typ"
                 ("unknown package "
-                 ^(Print_syntax_ada.ident_list_to_string
+                 ^(Ada_utils.ident_list_to_string
                      pack))
   in
 
@@ -932,7 +935,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       | _ -> Npkcontext.report_error
           "ada_normalize.normalize_name.add_package"
             ("unknown package "
-             ^(Print_syntax_ada.ident_list_to_string parents))
+             ^(Ada_utils.ident_list_to_string parents))
 
     in
       match extern with
@@ -1587,7 +1590,9 @@ let rec normalize_instr (instr,loc) =
                         normalize_params param_list false)
 
   and normalize_basic_decl item loc global reptbl = match item with
-    | UseDecl(use_clause) -> List.iter package#add_use use_clause;
+    | UseDecl(use_clause) -> List.iter
+                              (fun x -> package#add_use (make_package x))
+                              use_clause;
         item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind =
@@ -1707,10 +1712,8 @@ let rec normalize_instr (instr,loc) =
           List.iter
             (fun ident -> remove_cst (normalize_ident ident))
             ident_list
-
       | BasicDecl(UseDecl(use_clause)) ->
-          List.iter package#remove_use use_clause
-
+          List.iter (fun x -> package#remove_use (make_package x)) use_clause
       | BasicDecl(SpecDecl(_)) -> () (* pas de declaration de type
                                         dans spec package/fonc *)
       | BodyDecl(_) -> () (* rien a supprimer pour un corps,
@@ -1735,7 +1738,7 @@ let rec normalize_instr (instr,loc) =
             params
 
   and normalize_package_spec (nom, list_decl) =
-    package#set_current nom;
+    package#set_current ((fst nom)@[snd nom]);
     let represtbl = Hashtbl.create 50 in
     let rec extract_representation_clause decls = match decls with
       | (RepresentClause(rep), loc)::r ->
@@ -1786,7 +1789,7 @@ let rec normalize_instr (instr,loc) =
                 Some(normalize_package_spec package_spec)
           | Some(spec) -> Some(normalize_package_spec spec)
         in
-          package#set_current name;
+          package#set_current ((fst name)@[snd name]);
           let norm_decl_part = normalize_decl_part decl_part true in
           let norm_block = normalize_block block
           in
@@ -1820,8 +1823,11 @@ let rec normalize_instr (instr,loc) =
                      (Variable | Constant)) ->
             (List.iter
                (fun x -> add_cst (normalize_extern_ident x)
-                  (VarSymb(true)) true)
-               ident_list)
+                                 (VarSymb(true))
+                                 true
+               )
+               ident_list
+            )
 
         | ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) ->
             (* constante statique *)
@@ -1868,10 +1874,10 @@ let rec normalize_instr (instr,loc) =
           add_function name None true
 
       | PackageSpec(nom, basic_decls) ->
-          package#set_current nom;
+          package#set_current ((fst nom)@[snd nom]);
           List.iter add_extern_basic_decl basic_decls;
           package#reset_current;
-          package#add_with nom
+          package#add_with ((fst nom)@[snd nom])
 
   in
 
@@ -1893,7 +1899,7 @@ let rec normalize_instr (instr,loc) =
             (With(nom, loc, Some(norm_spec, loc)))
             ::(normalize_context r (nom::previous_with))
       | UseContext(name_list)::r ->
-          List.iter package#add_use name_list;
+          List.iter (fun x -> package#add_use (make_package x)) name_list;
           (UseContext(name_list))::(normalize_context r previous_with)
       | [] -> []
   in

@@ -91,7 +91,6 @@ let nat_of_bool b = match b with
   | true -> Newspeak.Nat.one
   | false -> Newspeak.Nat.zero
 
-
 (* verifie que a <= n <= b *)
 let between a b n  =
   a <= n && n <= b
@@ -218,7 +217,6 @@ let rec integer_class typ = match typ with
                                "Ada_utils.integer_class"
                                "internal error : no subtype provided"
       )
-
 
 let check_typ expected found =
   match (expected, found) with
@@ -370,18 +368,34 @@ let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | None   -> def_value
     | Some x -> x
 
+let list_to_string l to_string sep crochet =
+  let lts_inner l to_string sep =
+    begin match l with
+      | a::r ->
+          (to_string a)
+          ^(List.fold_left (fun debut x -> debut^sep^(to_string x))
+            "" r)
+      | [] -> ""
+    end
+  in
+  let res = lts_inner l to_string sep in
+  if crochet then "["^res^"]"
+             else res
+
+let ident_list_to_string l = 
+  list_to_string l (fun x -> x) "." false
+
+let name_to_string (packages, ident) =
+  ident_list_to_string (packages@[ident])
+
 class package_manager =
     object (self)
-        val mutable current_pkg:identifier list            = []
-        val mutable    with_pkg:identifier list list       = []
-        val mutable     context:(identifier list*int) list = []
+        val mutable current_pkg:package            = []
+        val mutable    with_pkg:package list       = []
+        val mutable     context:(package*int) list = []
 
-        (** Convert a name to a list of identifiers. *)
-        method private name_as_list (n:Syntax_ada.name) :identifier list =
-            (fst n)@[snd n]
-
-        method set_current n :unit =
-            current_pkg <- self#name_as_list n
+        method set_current p :unit =
+            current_pkg <- p
 
         method reset_current =
             current_pkg <- []
@@ -389,44 +403,37 @@ class package_manager =
         method current =
             current_pkg
 
-        method add_with n =
-            with_pkg <- self#name_as_list n::with_pkg
+        method add_with p =
+            with_pkg <- p::with_pkg
 
         method is_with pkg =
             List.mem pkg with_pkg
 
-        method add_use (select,ident) =
+        method add_use p =
             (* inverse partiellement la liste, mais tail-rec ?*)
             let rec incr_occurence res l use = match l with
               | (a,n)::r when a=use -> (a, n+1)::res@r
               | c::r -> incr_occurence (c::res) r use
               | [] -> (use,1)::res
             in
-            let name = select@[ident] in
-              if name = self#current
-              then ()
-              else
-                begin
-                  if (self#is_with name)
-                  then
-                    context <- incr_occurence [] context name
-                  else
-                    Npkcontext.report_error "Ada_normalize.add_context"
-                      ((Print_syntax_ada.name_to_string (select,ident))
-                        ^" is undefined")
-                end
+            if (self#current <> p) then begin
+                if (not (self#is_with p)) then begin
+                  Npkcontext.report_error "Ada_normalize.add_context"
+                    ((ident_list_to_string p)^" is undefined")
+                end;
+                context <- incr_occurence [] context p;
+            end
 
-        method remove_use (select,ident) =
+        method remove_use p =
             let rec decr_occurence res l use = match l with
               | (a,1)::r when a=use -> res@r
               | (a,n)::r when a=use -> (a,n-1)::res@r
               | c::r -> decr_occurence (c::res) r use
               | [] -> res
             in
-              context <- decr_occurence [] context (select@[ident])
+              context <- decr_occurence [] context p
 
         method get_use =
             List.map fst context
 
     end
-
