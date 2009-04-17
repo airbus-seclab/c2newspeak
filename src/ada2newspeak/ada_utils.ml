@@ -382,7 +382,7 @@ let list_to_string l to_string sep crochet =
   if crochet then "["^res^"]"
              else res
 
-let ident_list_to_string l = 
+let ident_list_to_string l =
   list_to_string l (fun x -> x) "." false
 
 let name_to_string (packages, ident) =
@@ -393,6 +393,7 @@ class package_manager =
         val mutable current_pkg:package                 = []
         val mutable    with_pkg:package list            = []
         val             context:(package,int) Hashtbl.t = Hashtbl.create 3
+        val mutable extflag :bool                       = false
 
         method set_current p :unit =
             current_pkg <- p
@@ -428,5 +429,13 @@ class package_manager =
 
         method get_use =
           Hashtbl.fold (fun pkg _ res -> pkg::res) context []
+
+        method is_extern =
+          extflag
+
+        method as_extern_do (f:unit->unit) =
+          extflag <- true;
+          f ();
+          extflag <- false
 
     end

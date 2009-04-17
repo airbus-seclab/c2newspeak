@@ -256,6 +256,12 @@ object
      *)
     method get_use    :Syntax_ada.package list
 
+    (** Returns the "extern" flag for this manager. *)
+    method is_extern :bool
+
+    (** Perform an action with the "extern" flag. *)
+    method as_extern_do :(unit->unit)->unit
+
 end
 
 val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
