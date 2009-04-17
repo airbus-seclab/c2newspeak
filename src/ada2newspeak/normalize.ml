@@ -879,7 +879,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                 "Ada_normalize.typ_normalization.find_subtyp"
                   ("unknown identifier "^ident)
             | _::_ -> Npkcontext.report_error
-                "Firstpass.find_subtyp"
+                "Normalize.find_subtyp"
                   (ident^" is not visible : "
                    ^"multiple use clauses cause hiding")
         end
