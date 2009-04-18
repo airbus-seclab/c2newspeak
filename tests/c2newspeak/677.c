@@ -23,10 +23,12 @@
   email: charles.hymans@penjili.org
 */
 
-void main() {
-  int x[22];
-  int y;
-  if (x[0] || x[1] || x[2]) {
-    y = 1;
-   }
+extern int f(void);
+
+int x;
+
+void main(void) {
+  if (f() && x) {
+    x = 1;
+  }
 }

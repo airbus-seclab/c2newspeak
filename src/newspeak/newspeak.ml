@@ -852,18 +852,26 @@ object (self)
 	  when Nat.compare i2 Nat.zero <> 0 ->
 	  Const (CInt (Nat.div i1 i2))
 
+      | UnOp (Not, Const CInt i) when Nat.compare i Nat.zero = 0 -> 
+	  exp_of_int 1
+      | UnOp (Not, Const CInt i) when Nat.compare i Nat.zero <> 0 -> 
+	  exp_of_int 0
       | _ -> e
 end
 
 class simplify_choose =
-object (self)
+object
   inherit builder
 
   method process_blk x =
     match x with
+(* This rule is incorrect when body is blocking !!!
 	(Select (body, []), _)::tl | (Select ([], body), _)::tl -> 
-	  (self#process_blk body)@tl
-      | (Guard Const CInt i, _)::tl when compare i Nat.one = 0 -> tl
+	  (self#process_blk body)@tl*)
+	(Select (body, (Guard Const CInt i, _)::_), _)::tl
+      | (Select ((Guard Const CInt i, _)::_, body), _)::tl
+	  when Nat.compare i Nat.zero = 0 -> body@tl
+      | (Guard Const CInt i, _)::tl when Nat.compare i Nat.one = 0 -> tl
       | _ -> x
 end
 
@@ -1029,15 +1037,15 @@ and simplify_lval actions lv =
     List.iter (fun x -> lv := x#process_lval !lv) actions;
     !lv
 	
-and simplify_blk actions blk =
-  let blk = ref blk in
-    List.iter (fun x -> blk := x#process_blk !blk) actions;
-    match !blk with
-	hd::tl -> 
-	  let hd = simplify_stmt actions hd in
-	  let tl = simplify_blk actions tl in
-	    hd::tl
-      | [] -> []
+and simplify_blk actions blk = 
+  match blk with
+      hd::tl -> 
+	let hd = simplify_stmt actions hd in
+	let tl = simplify_blk actions tl in
+	let blk = ref (hd::tl) in
+	  List.iter (fun x -> blk := x#process_blk !blk) actions;
+	  !blk
+    | [] -> []
 
 
 let build_call f (args_t, ret_t) args =

@@ -15,14 +15,15 @@ void main(void) {
           (628.c:29#9)^choose {
            -->
             (628.c:29#9)^guard(0-_uint32);
+            (628.c:29#9)^guard(0-_uint32);
+           -->
             (628.c:29#9)^choose {
              -->
               (628.c:29#9)^guard(0-_uint32);
+              (628.c:29#9)^guard(! 0-_uint32);
              -->
               (628.c:29#9)^guard(! 0-_uint32);
             }
-           -->
-            (628.c:29#9)^guard(! 0-_uint32);
           }
           (628.c:29#9)^0- =(uint32) 1;
           (628.c:29#9)^choose {

@@ -23,10 +23,12 @@
   email: charles.hymans@penjili.org
 */
 
+int a;
+int b;
+int c;
+int x;
 void main() {
-  int x[22];
-  int y;
-  if (x[0] || x[1] || x[2]) {
-    y = 1;
-   }
+  if ((a || b) || c) {
+    x = 1;
+  }
 }

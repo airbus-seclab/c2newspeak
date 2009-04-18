@@ -167,3 +167,5 @@ val print: t -> unit
 val size_of: t -> int
 
 val build_if: location -> (exp * blk * blk) -> blk
+
+val exp_is_false: exp -> bool

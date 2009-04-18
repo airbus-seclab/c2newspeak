@@ -1,7 +1,7 @@
 /*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007  Charles Hymans
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,12 +21,13 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
 */
 
+int a, b, c;
+
 void main() {
-  int x[22];
-  int y;
-  if (x[0] || x[1] || x[2]) {
-    y = 1;
-   }
+  if (a && b) {
+    c = 1;
+  }
 }

@@ -27,16 +27,17 @@ void main(void) {
             (606.c:30#4)^while (1) {
               (606.c:30#4)^choose {
                -->
-                (606.c:30#4)^guard(1-_uint32);
-               -->
-                (606.c:30#4)^guard(! 1-_uint32);
                 (606.c:30#4)^choose {
                  -->
-                  (606.c:30#4)^guard(! (0-_int32 ==_int32 0));
+                  (606.c:30#4)^guard(1-_uint32);
                  -->
-                  (606.c:30#4)^guard((0-_int32 ==_int32 0));
-                  (606.c:30#4)^goto lbl5;
+                  (606.c:30#4)^guard(! 1-_uint32);
+                  (606.c:30#4)^guard(! (0-_int32 ==_int32 0));
                 }
+               -->
+                (606.c:30#4)^guard(! 1-_uint32);
+                (606.c:30#4)^guard((0-_int32 ==_int32 0));
+                (606.c:30#4)^goto lbl5;
               }
               (606.c:30#14)^choose {
                -->

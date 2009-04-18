@@ -765,3 +765,9 @@ let build_if loc (e, blk1, blk2) =
   let blk1 = (Guard e, loc)::post@blk1 in
   let blk2 = (Guard (Unop (Npkil.Not, e)), loc)::post@blk2 in
     pref@(Select (blk1, blk2), loc)::[]
+
+let exp_is_false e =
+  match e with
+      Const CInt n when Nat.compare n Nat.zero = 0 -> true
+    | Unop (Npkil.Not, Const CInt n) when Nat.compare n Nat.zero <> 0 -> true
+    | _ -> false

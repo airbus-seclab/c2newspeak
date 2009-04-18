@@ -23,10 +23,7 @@
   email: charles.hymans@penjili.org
 */
 
-void main() {
-  int x[22];
-  int y;
-  if (x[0] || x[1] || x[2]) {
-    y = 1;
-   }
+void main () {
+  while (1) {
+  }
 }

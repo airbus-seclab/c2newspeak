@@ -1086,6 +1086,52 @@ let translate (globals, spec) =
 (* TODO: not good, do this in compile phase *)
       | CstToken (c, _) -> C.CstToken c
 
+(* TODO: think about this: simplify *)
+  and translate_if loc (e, blk1, blk2) =
+(* TODO: this is a bit of a hack!! *)
+    let rec select (blk1, blk2) =
+      match (blk1, blk2) with
+	  (_::(C.Guard c, _)::_, blk) when C.exp_is_false c -> blk
+	| (blk, _::(C.Guard c, _)::_) when C.exp_is_false c -> blk
+	| ((C.Guard c, _)::_, blk) when C.exp_is_false c -> blk
+	| (blk, (C.Guard c, _)::_) when C.exp_is_false c -> blk
+	| (hd1::tl1, hd2::tl2) when hd1 == hd2 -> hd1::(select (tl1, tl2))
+	| _ -> (C.Select (blk1, blk2), loc)::[]
+    in
+    let rec translate_guard e =
+      match e with
+	  IfExp (Cst (C.CInt c, _), t, _) when (Nat.compare c Nat.zero <> 0)-> 
+	    translate_guard t
+	| IfExp (Cst (C.CInt c, _), _, f) when (Nat.compare c Nat.zero = 0) -> 
+	    translate_guard f
+	| IfExp (IfExp (c, t1, f1), t2, f2) -> 
+	    translate_guard (IfExp (c, IfExp (t1, t2, f2), IfExp (f1, t2, f2)))
+	| IfExp (c, t, f) -> 
+	    let (c, _) = translate_exp c in
+	    let (pref, c, post) = C.normalize_exp c in
+	    let guard_c = (C.Guard c, loc) in
+	    let guard_not_c = (C.Guard (C.Unop (K.Not, c)), loc) in
+	    let (t1, t2) = translate_guard t in
+	    let (f1, f2) = translate_guard f in
+	    let e1 = select (guard_c::post@t1, guard_not_c::post@f1) in
+	    let e2 = select (guard_c::post@t2, guard_not_c::post@f2) in
+	      (pref@e1, pref@e2)
+	| Unop (Not, e) -> 
+	    let (e1, e2) = translate_guard e in
+	      (e2, e1)
+	| e -> 
+	    let (e, _) = translate_exp e in
+	    let (pref, e, post) = C.normalize_exp e in
+	    let guard_e = pref@(C.Guard e, loc)::post in
+	    let guard_not_e = pref@(C.Guard (C.Unop (K.Not, e)), loc)::post in
+	      (guard_e, guard_not_e)
+    in
+    let (guard1, guard2) = translate_guard e in
+    let blk1 = guard1@blk1 in
+    let blk2 = guard2@blk2 in
+      select (blk1, blk2)
+
+(* TODO: remove dead code, unused because this function will be removed!!
   (* TODO: 
      - should take advantage of obviously side-effect free expression 
      - add option to translate if using tmp variables!
@@ -1128,7 +1174,7 @@ let translate (globals, spec) =
 	      C.build_if loc (e, blk1, blk2)
     in
       translate e blk1 blk2
-
+*)
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
