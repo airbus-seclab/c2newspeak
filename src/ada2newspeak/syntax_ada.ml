@@ -37,13 +37,15 @@ type float_number = float*string
 
 type identifier = string
 
+(* FIXME : for speed's sake, the list should be reverted. *)
+type package = identifier list
+
 (**
  * A qualified identifier.
  * For example, "Ada.Text_IO.Put_line" maps to
  * [ ["Ada","Text_IO"],"Put_Line"].
  *)
-(* FIXME : for speed's sake, the list should be reverted. *)
-type name = identifier list * identifier
+type name = package * identifier
 
 (** Modes for subprogram parameters. *)
 type param_mode =
@@ -216,7 +218,7 @@ and instruction =
   | ReturnSimple                 (** Return from procedure                *)
   | If            of expression
                    * block       (* then *)
-                   * block       (* else *) 
+                   * block       (* else *)
   | Loop          of iteration_scheme
                    * block
   | Exit
@@ -253,7 +255,7 @@ and context_clause =
   | With       of name
                 * location
                 * (spec*location) option
-  | UseContext of name list
+  | UseContext of name
 
 and package_spec = name
                  * (basic_declaration*location) list
@@ -278,9 +280,9 @@ and basic_declaration =
                      * expression option
                      * object_state
   | TypeDecl        of typ_declaration
-  | UseDecl         of name list
+  | UseDecl         of name
   | SpecDecl        of spec
-  | NumberDecl      of identifier list
+  | NumberDecl      of identifier
                      * expression
                      * value option
   | SubtypDecl      of identifier

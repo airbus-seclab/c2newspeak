@@ -34,9 +34,9 @@ newspeak.FILES=\
 
 ada2newspeak.FILES=\
 	params \
-	syntax_ada print_syntax_ada \
 	ada_config \
 	ada_utils \
+	syntax_ada print_syntax_ada \
 	ada_types \
 	decorate \
 	parser lexer file_parse \

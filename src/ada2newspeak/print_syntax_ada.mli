@@ -22,10 +22,6 @@
 
 *)
 
-val ident_list_to_string : Syntax_ada.identifier list -> string
-
-val name_to_string : Syntax_ada.name -> string
-
 val exp_to_string : Syntax_ada.expression -> string
 
 val ast_to_string : Syntax_ada.programme -> string

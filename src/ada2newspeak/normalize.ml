@@ -43,6 +43,9 @@ let get_legacy_definition id = match String.lowercase id with
 | "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
 | _ ->  failwith "legacy definition available only for int float bool or char"
 
+let make_package (n:name) :package =
+  (fst n)@[snd n]
+
 let mk_float(f:float):float_number = (f, string_of_float f)
 
 let temp =
@@ -72,14 +75,11 @@ type constant_symb =
   | VarSymb      of bool            (** bool = global? *)
   | FunSymb      of typ option*bool (** bool = extern? *)
 
-let string_of_name = Print_syntax_ada.name_to_string
-
-let normalize_extern_ident ident package = (package, ident)
+let string_of_name = Ada_utils.name_to_string
 
 let normalize_ident ident package extern =
-  if extern then
-    normalize_extern_ident ident package
-  else ([], ident)
+  if extern then (package, ident)
+            else (   []  , ident)
 
 let normalize_name (name:name) (package:package_manager) extern =
   let add_package (parents, ident) pack = match parents with
@@ -89,11 +89,9 @@ let normalize_name (name:name) (package:package_manager) extern =
     | _ -> Npkcontext.report_error
         "ada_normalize.normalize_name.add_package"
           ("unknown package "
-           ^(Print_syntax_ada.ident_list_to_string parents)) in
-    match extern with
-      | false -> name (*suppr_package name (package#current)*)
-      | true -> add_package name package#current
-
+           ^(Ada_utils.ident_list_to_string parents)) in
+    if extern then add_package name package#current
+              else name
 
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:expression) (expected_typ:typ option)
@@ -179,38 +177,34 @@ let eval_static (exp:expression) (expected_typ:typ option)
       check_operand_typ op typ;
       match (op,val1,val2) with
           (* operations sur entiers ou flottants *)
-        | Plus,  IntVal v1, IntVal v2 -> IntVal(Nat.add v1 v2), typ
-        | Minus, IntVal v1, IntVal v2 -> IntVal(Nat.sub v1 v2), typ
-        | Mult,  IntVal v1, IntVal v2 -> IntVal(Nat.mul v1 v2), typ
-        | Div,   IntVal v1, IntVal v2 -> IntVal(Nat.div v1 v2), typ
-        | Power, IntVal v1, IntVal v2 -> IntVal(puiss   v1 v2), typ
-        | Plus, FloatVal(v1,_), FloatVal(v2,_) ->
-            FloatVal(mk_float (v1 +. v2)), typ
-        | Minus, FloatVal(v1,_), FloatVal(v2,_) ->
-            FloatVal(mk_float(v1 -. v2)), typ
-        | Mult, FloatVal(v1,_), FloatVal(v2,_) ->
-            FloatVal(mk_float(v1 *. v2)), typ
-        | Div, FloatVal(v1,_), FloatVal(v2,_) ->
-            FloatVal(mk_float (v1 /. v2)), typ
+        | Plus , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.add v1 v2),    typ
+        | Minus, IntVal   v1  , IntVal   v2   -> IntVal  (Nat.sub v1 v2),    typ
+        | Mult , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.mul v1 v2),    typ
+        | Div  , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.div v1 v2),    typ
+        | Power, IntVal   v1  , IntVal   v2   -> IntVal  (puiss   v1 v2),    typ
+        | Plus , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a +. b)), typ
+        | Minus, FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a -. b)), typ
+        | Mult , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a *. b)), typ
+        | Div  , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a /. b)), typ
         | Power, FloatVal(v1,_), IntVal(v2) ->
-            FloatVal(mk_float (v1 ** (float_of_int (Nat.to_int v2)))), typ
+                  FloatVal(mk_float (v1 ** (float_of_int (Nat.to_int v2)))), typ
 
         (*operations sur les entiers*)
         | (Rem, IntVal v1, IntVal v2) -> (IntVal(rem_ada v1 v2), typ)
         | (Mod, IntVal v1, IntVal v2) -> (IntVal(mod_ada v1 v2), typ)
 
         (* comparaisons *)
-        | Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2),  Boolean)
+        | Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2 ), Boolean)
         | Neq, v1, v2 -> (BoolVal(not  (eq_val v1 v2)), Boolean)
-        | Lt,  v1, v2 -> (BoolVal(     inf_val v1 v2),  Boolean)
+        | Lt,  v1, v2 -> (BoolVal(     inf_val v1 v2 ), Boolean)
         | Le,  v1, v2 -> (BoolVal(not (inf_val v2 v1)), Boolean)
         | Ge,  v1, v2 -> (BoolVal(not (inf_val v1 v2)), Boolean)
-        | Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1), Boolean)
+        | Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1 ), Boolean)
 
         (* operations sur les booleens *)
-        | ((AndThen|And),BoolVal(b1),BoolVal(b2))->(BoolVal(b1  && b2), Boolean)
-        | ((OrElse|Or),  BoolVal(b1),BoolVal(b2))->(BoolVal(b1  || b2), Boolean)
-        | (Xor,          BoolVal(b1),BoolVal(b2))->(BoolVal(xor b1 b2), Boolean)
+        | ((AndThen|And),BoolVal(b1),BoolVal(b2))->(BoolVal(b1 && b2), Boolean)
+        | ((OrElse|Or),  BoolVal(b1),BoolVal(b2))->(BoolVal(b1 || b2), Boolean)
+        | (Xor,          BoolVal(b1),BoolVal(b2))->(BoolVal(b1 <> b2), Boolean)
 
         (* operations sur les string *)
         | Concat,_,_ ->Npkcontext.report_error "Ada_normalize.eval_static_binop"
@@ -501,7 +495,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
         | (pack, ident) when pack = package#current->
                                         avec_selecteur_courant ([],ident) name
         | (pack, _) -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
-              ("unknown package " ^(Print_syntax_ada.ident_list_to_string pack))
+              ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
       eval_static_exp exp expected_typ
 
@@ -691,7 +685,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       method add (n:Syntax_ada.name) (subtyp:subtyp)
       (location:location)   (global:bool)
       :unit =
- (*       atypes#add n subtyp; *)
         if s#mem n then begin
           match s#find n with
           | (_, _, glob) when global = glob ->
@@ -703,22 +696,22 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     end;
     Hashtbl.add tbl n (subtyp,location,global);
 
-    (** Is this type known ? *)
+      (** Is this type known ? *)
       method mem (n:name) :bool =
         Hashtbl.mem tbl n
           || atypes#mem n
 
-        (** Find the type definition. *)
+      (** Find the type definition. *)
       method find (n:name) :(subtyp*location*bool) =
         try Hashtbl.find tbl n
         with Not_found -> atypes#find n
 
-        (** Find all the types matching. *)
+      (** Find all the types matching. *)
       method find_all (n:name)
       :(subtyp*location*bool) list =
         Hashtbl.find_all tbl n
 
-        (** Remove a subtype definition. *)
+      (** Remove a subtype definition. *)
       method remove (x:name) :unit =
         atypes#remove x;
         Hashtbl.remove tbl x
@@ -782,9 +775,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   (* ajout d'un symbole de fonction *)
   and add_function (nom:name) (typ:typ option) (ext:bool) =
-    (if Hashtbl.mem csttbl nom
-     then
-       begin
+    (if Hashtbl.mem csttbl nom then begin
          List.iter
            (function
               | Number(_, true) | VarSymb(true)
@@ -809,10 +800,8 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   and remove_cst (ident:name) :unit = Hashtbl.remove csttbl ident in
 
-  let normalize_extern_ident ident =
-    normalize_extern_ident ident (package#current)
-  and normalize_ident ident :name =
-    normalize_ident ident (package#current) extern
+  let normalize_ident_cur ident =
+    normalize_ident ident package#current extern
 
   in
 
@@ -825,12 +814,13 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
 
   let add_enum_litt symbs typ global extern =
-    let normalize_ident = match extern with
-      | true -> normalize_extern_ident
-      | false -> normalize_ident
-    in List.iter
-         (fun (ident,v) -> add_enum (normalize_ident ident) typ global v)
-         symbs
+    List.iter (fun (ident,v) -> add_enum (normalize_ident ident
+                                                               package#current
+                                                               extern)
+                                         typ
+                                         global
+                                         v)
+              symbs
   in
   let add_typ nom (typdecl:Syntax_ada.typ_declaration) location global extern =
     let subtyp = match typdecl with
@@ -864,22 +854,20 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and find_subtyp x =
 
     let sans_selecteur ident =
-      if types#mem x
-      then
+      if types#mem x then
         let (decl, loc, _) = types#find x in
           (decl,loc)
-      else
-        begin
-          match find_all_use ident with
-            | [(typ_decl, loc, _)] -> (typ_decl, loc)
-            | [] -> Npkcontext.report_error
-                "Ada_normalize.typ_normalization.find_subtyp"
-                  ("unknown identifier "^ident)
-            | _::_ -> Npkcontext.report_error
-                "Firstpass.find_subtyp"
-                  (ident^" is not visible : "
-                   ^"multiple use clauses cause hiding")
-        end
+      else begin
+        match find_all_use ident with
+          | [(typ_decl, loc, _)] -> (typ_decl, loc)
+          | [] -> Npkcontext.report_error
+              "Ada_normalize.typ_normalization.find_subtyp"
+                ("unknown identifier "^ident)
+          | _::_ -> Npkcontext.report_error
+              "Normalize.find_subtyp"
+                (ident^" is not visible : "
+                 ^"multiple use clauses cause hiding")
+      end
 
     and avec_selecteur _ =
       try
@@ -891,40 +879,25 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           ("unknown identifier "^(string_of_name x))
 
     and selecteur_courant ident =
-      let rec find_global list_ident = match list_ident with
-        | (typ_decl, loc, true)::_ -> (typ_decl,loc)
-        | (_, _, false)::r -> find_global r
-        | [] -> Npkcontext.report_error
-            "Ada_normalize.normalization.find_typ.selecteur_courant"
-              ("unknown identifier "^(string_of_name x)) in
-        find_global (types#find_all ident)
-    in
+      begin try let (tdecl,loc,_) = List.find (fun (_,_,x) -> x)
+                                        (types#find_all ident)
+          in (tdecl,loc)
+      with Not_found -> Npkcontext.report_error
+        "Ada_normalize.normalization.find_typ.selecteur_courant"
+          ("unknown identifier "^(string_of_name x))
+      end
 
+    in
         match x with
           | ([], ident) -> sans_selecteur ident
-          | (pack, _)
-              when extern||package#is_with pack ->
-              avec_selecteur x
+          | (pack, _) when extern||package#is_with pack -> avec_selecteur x
           | (pack, ident) when pack = package#current ->
               selecteur_courant ([],ident)
-          | (pack, _) -> Npkcontext.report_error
-              "Ada_normalize.find_typ"
-                ("unknown package "
-                 ^(Print_syntax_ada.ident_list_to_string
-                     pack))
+          | (pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
+                ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
 
   let normalize_name name =
-    (*let suppr_package (parents, ident) pack = match parents with
-      | [] -> ([], ident)
-      | a when a=pack -> ([], ident)
-      | a when (package#is_with a ) -> (a, ident)
-      | _ -> Npkcontext.error
-          "ada_normalize.normalize_name.suppr_package"
-            ("unknown package "
-             ^(Print_syntax_ada.ident_list_to_string parents)
-             ^" cur : "
-             ^(Print_syntax_ada.ident_list_to_string pack))*)
     let add_package (parents, ident) pack = match parents with
       | [] -> (pack, ident)
       | a when pack = a -> (pack, ident)
@@ -932,16 +905,14 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       | _ -> Npkcontext.report_error
           "ada_normalize.normalize_name.add_package"
             ("unknown package "
-             ^(Print_syntax_ada.ident_list_to_string parents))
+             ^(Ada_utils.ident_list_to_string parents))
 
     in
-      match extern with
-        | false -> name (*suppr_package name (package#current)*)
-        | true -> add_package name (package#current)
-            (* pas de gestion de with dans package inclus *)
+      if extern then 
+        add_package name (package#current)
+        (* pas de gestion de with dans package inclus *)
+      else name
   in
-
-
 
 let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
   (* on etablit le sous-type tel qu'il sera utilise dans
@@ -950,8 +921,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
      booleen qui indique si le sous-type de reference est
      statique *)
   let subtyp_of_constraint contrainte typ static_ref =
-    let static_constraint = constraint_is_static
-      contrainte
+    let static_constraint = constraint_is_static contrainte
     in
 
     (* Dans le cas de contrainte statique, la contrainte
@@ -965,8 +935,8 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
     *)
     let contrainte_subtyp_result = match contrainte with
       | RangeConstraint(_, _) ->
-          let min = normalize_ident (temp#create)
-          and max = normalize_ident (temp#create) in
+          let min = normalize_ident_cur (temp#create)
+          and max = normalize_ident_cur (temp#create) in
             RangeConstraint(Var min, Var max)
       | _ -> contrainte
     in
@@ -1012,13 +982,6 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
               "internal error : unexpected subtyp name"
     in
       (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp))
-
-  (*let normalize_typ typ = match typ with
-    | Integer | IntegerConst | Float | Boolean | Character
-    | Declared(_) | String -> typ
-    | TypName(name) ->
-        let (decl, loc ) = find_typ (normalize_name name) in
-          Declared(decl, loc)*)
 
 and normalize_subtyp subtyp =
   let norm_typ typp =
@@ -1082,9 +1045,7 @@ and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
  * The identifier does not have to be normalized (it is just a plain string),
  * but normalize the expression.
  *)
-and normalize_arg (a:argument) :argument =
-    match a with
-      | id,e -> id,normalize_exp e
+and normalize_arg (id,e:argument) :argument = id,normalize_exp e
 
 (**
  * Normalize an expression.
@@ -1324,7 +1285,7 @@ let rec normalize_instr (instr,loc) =
   and interpret_enumeration_clause agregate assoc cloc loc =
     Npkcontext.set_loc cloc;
     let new_rep = match agregate with
-      |        NamedArrayAggregate(assoc_list) ->
+      | NamedArrayAggregate(assoc_list) ->
           let rep_assoc =
             List.map
               (fun (ident, exp) ->
@@ -1398,27 +1359,30 @@ let rec normalize_instr (instr,loc) =
     in Enum(ident, symbs, size)
 
   and add_extern_typdecl typ_decl loc = match typ_decl with
-    | Enum(ident, _, _) ->
-        add_typ (normalize_extern_ident ident) typ_decl loc true true
     | DerivedType(ident, _)
     | Array(ident, _)
     | Record (ident, _)
-    | IntegerRange(ident,_,_) ->
-        add_typ (normalize_extern_ident ident) typ_decl loc true true
+    | IntegerRange(ident,_,_)
+    | Enum(ident, _, _) ->
+        add_typ (normalize_ident ident
+                                      package#current
+                                      true)
+        typ_decl
+        loc
+        true
+        true
 
   and normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
     | Enum(ident, symbs, size) ->
         let typ_decl = enumeration_representation ident symbs size represtbl loc
         in
-          add_typ (normalize_ident ident) typ_decl loc global extern;
+          add_typ (normalize_ident_cur ident) typ_decl loc global extern;
           typ_decl
     | DerivedType(ident, subtyp_ind) ->
         let update_contrainte contrainte symbs new_assoc =
-          let find_ident v =
-            List.find (fun (_, v') -> v'=v) symbs
-          and find_new_val (ident,_) =
-            List.assoc ident new_assoc
-          in let change_val v =
+          let find_ident v = List.find (fun (_, v') -> v'=v) symbs
+          and find_new_val (ident,_) = List.assoc ident new_assoc in
+          let change_val v =
               find_new_val (find_ident v)
           in match contrainte with
             | IntegerRangeConstraint(v1, v2) ->
@@ -1476,12 +1440,12 @@ let rec normalize_instr (instr,loc) =
           in (subtyp, contrainte, Some(norm_subtyp)) in
         let norm_typ_decl = DerivedType(ident, new_subtyp_ind)
         in
-          add_typ (normalize_ident ident) norm_typ_decl loc global extern;
+          add_typ (normalize_ident_cur ident) norm_typ_decl loc global extern;
           norm_typ_decl
     | IntegerRange(ident,contrainte,taille) ->
         let decl = normalize_integer_range ident taille contrainte
         in
-          add_typ (normalize_ident ident) decl loc global extern;
+          add_typ (normalize_ident_cur ident) decl loc global extern;
           decl
     | Array(ident, ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
         let norm_inter =  normalize_subtyp_indication intervalle_discret
@@ -1514,7 +1478,7 @@ let rec normalize_instr (instr,loc) =
                                               norm_subtyp_ind,
                                               taille))
         in
-          add_typ (normalize_ident ident) norm_typ loc global extern;
+          add_typ (normalize_ident_cur ident) norm_typ loc global extern;
           norm_typ
 
     | Array(_, ConstrainedArray(_, _, Some _)) ->
@@ -1529,19 +1493,19 @@ let rec normalize_instr (instr,loc) =
         let  norm_typ =
           Record (ident, List.map norm_field fls)
         in
-          add_typ (normalize_ident ident) norm_typ loc global extern;
+          add_typ (normalize_ident_cur ident) norm_typ loc global extern;
           norm_typ
 
 
   and remove_typ_decl typ_decl = match typ_decl with
-    | Enum(nom, symbs, _) -> types#remove (normalize_ident nom);
+    | Enum(nom, symbs, _) -> types#remove (normalize_ident_cur nom);
         List.iter
-          (fun (symb, _) -> remove_cst (normalize_ident symb))
+          (fun (symb, _) -> remove_cst (normalize_ident_cur symb))
           symbs
     | DerivedType(nom,_)
     | IntegerRange(nom,_,_)
     | Array(nom, _)
-    | Record (nom, _) ->  types#remove (normalize_ident nom)
+    | Record (nom, _) ->  types#remove (normalize_ident_cur nom)
 
   and normalize_sub_program_spec subprog_spec addparam =
     let normalize_params param_list func =
@@ -1555,7 +1519,7 @@ let rec normalize_instr (instr,loc) =
            else
              (if addparam
               then
-                  add_cst (normalize_ident param.formal_name)
+                  add_cst (normalize_ident_cur param.formal_name)
                           (VarSymb(false))
                           false
                   ;
@@ -1587,13 +1551,13 @@ let rec normalize_instr (instr,loc) =
                         normalize_params param_list false)
 
   and normalize_basic_decl item loc global reptbl = match item with
-    | UseDecl(use_clause) -> List.iter package#add_use use_clause;
+    | UseDecl(use_clause) -> package#add_use (make_package use_clause);
         item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind in
           (List.iter
-             (fun x -> add_cst (normalize_ident x)
+             (fun x -> add_cst (normalize_ident_cur x)
                 (VarSymb(global)) global)
              ident_list);
           ObjectDecl(ident_list, norm_subtyp_ind, def, Variable)
@@ -1605,7 +1569,7 @@ let rec normalize_instr (instr,loc) =
 
         let subtyp = extract_subtyp norm_subtyp_ind in
         let typ = base_typ subtyp in
-        let add_ident v x = add_cst (normalize_ident x)
+        let add_ident v x = add_cst (normalize_ident_cur x)
           (StaticConst(v, typ, global)) global in
         let status =
           try
@@ -1624,7 +1588,7 @@ let rec normalize_instr (instr,loc) =
                   "uncaught ambiguous type exception"
             | NonStaticExpression ->
                 (List.iter
-                   (fun x -> add_cst (normalize_ident x)
+                   (fun x -> add_cst (normalize_ident_cur x)
                       (VarSymb(global)) global)
                    ident_list);
                 Constant
@@ -1645,26 +1609,25 @@ let rec normalize_instr (instr,loc) =
 
     | SpecDecl(spec) -> SpecDecl(normalize_spec spec)
 
-    | NumberDecl(ident_list, exp, None) ->
+    | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl package#get_use
           package extern in
           (*ajouts dans la table*)
-          List.iter
-            (fun ident -> add_cst (normalize_ident ident)
-               (Number(v, global)) global)
-            ident_list;
-          NumberDecl(ident_list, norm_exp, Some(v))
+            add_cst (normalize_ident_cur ident)
+                    (Number(v, global))
+                    global;
+          NumberDecl(ident, norm_exp, Some v)
 
     | NumberDecl(ident, exp, Some(v)) ->
         (* cas jamais emprunte *)
-        NumberDecl(ident, normalize_exp exp, Some(v))
+        NumberDecl(ident, normalize_exp exp, Some v)
 
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind  in
         let subtyp = extract_subtyp norm_subtyp_ind in
-          types#add (normalize_ident ident) subtyp loc global;
+          types#add (normalize_ident_cur ident) subtyp loc global;
           SubtypDecl(ident, norm_subtyp_ind)
 
     | RepresentClause _ -> item
@@ -1699,30 +1662,19 @@ let rec normalize_instr (instr,loc) =
 
     (* incomplet *)
     let remove_decl_item (item,_) = match item with
-      | BasicDecl(TypeDecl(typ_decl)) ->
-          remove_typ_decl typ_decl
-      | BasicDecl (SubtypDecl (ident, _)) ->
-          types#remove (normalize_ident ident)
+      | BasicDecl(TypeDecl(typ_decl)) ->    remove_typ_decl typ_decl
+      | BasicDecl (SubtypDecl (ident, _)) -> types#remove(normalize_ident_cur ident)
       | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
           List.iter
-            (fun ident -> remove_cst (normalize_ident ident))
+            (fun ident -> remove_cst (normalize_ident_cur ident))
             ident_list
-
-      | BasicDecl(UseDecl(use_clause)) ->
-          List.iter package#remove_use use_clause
-
-      | BasicDecl(SpecDecl(_)) -> () (* pas de declaration de type
-                                        dans spec package/fonc *)
-      | BodyDecl(_) -> () (* rien a supprimer pour un corps,
-                             les declarations internes sont
-                             supprimees lors du traitement
-                             du corps *)
-      | BasicDecl(NumberDecl(idents,_,_)) ->
-          List.iter
-            (fun x -> remove_cst (normalize_ident x))
-            idents
-
-      | BasicDecl(RepresentClause _) -> ()
+      | BasicDecl(UseDecl(use_clause)) -> package#remove_use
+                                                (make_package use_clause)
+      | BasicDecl(NumberDecl(ident,_,_)) ->
+            remove_cst (normalize_ident_cur ident)
+      | BasicDecl(RepresentClause _)
+      | BasicDecl(SpecDecl _)
+      | BodyDecl _ -> ()
 
     in List.iter remove_decl_item decl_part
 
@@ -1731,11 +1683,11 @@ let rec normalize_instr (instr,loc) =
       | Function(_,param_list,_) -> param_list
       | Procedure(_,param_list) -> param_list in
           List.iter
-            (fun param -> remove_cst (normalize_ident param.formal_name))
+            (fun param -> remove_cst (normalize_ident_cur param.formal_name))
             params
 
   and normalize_package_spec (nom, list_decl) =
-    package#set_current nom;
+    package#set_current ((fst nom)@[snd nom]);
     let represtbl = Hashtbl.create 50 in
     let rec extract_representation_clause decls = match decls with
       | (RepresentClause(rep), loc)::r ->
@@ -1786,7 +1738,7 @@ let rec normalize_instr (instr,loc) =
                 Some(normalize_package_spec package_spec)
           | Some(spec) -> Some(normalize_package_spec spec)
         in
-          package#set_current name;
+          package#set_current ((fst name)@[snd name]);
           let norm_decl_part = normalize_decl_part decl_part true in
           let norm_block = normalize_block block
           in
@@ -1819,9 +1771,12 @@ let rec normalize_instr (instr,loc) =
         | ObjectDecl(ident_list, _, _,
                      (Variable | Constant)) ->
             (List.iter
-               (fun x -> add_cst (normalize_extern_ident x)
-                  (VarSymb(true)) true)
-               ident_list)
+               (fun x -> add_cst (normalize_ident x package#current true)
+                                 (VarSymb(true))
+                                 true
+               )
+               ident_list
+            )
 
         | ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) ->
             (* constante statique *)
@@ -1830,17 +1785,15 @@ let rec normalize_instr (instr,loc) =
             let typ = base_typ subtyp
               (*extract_subtyp subtyp_ind*) in
               List.iter
-                (fun x -> add_cst (normalize_extern_ident x)
+                (fun x -> add_cst (normalize_ident x package#current true)
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
-        | NumberDecl(ident_list, _, Some(v)) ->
+        | NumberDecl(ident, _, Some v) ->
             (*ajouts dans la table*)
-            List.iter
-              (fun ident -> add_cst
-                 (normalize_extern_ident ident)
-                 (Number(v, true)) true)
-              ident_list;
+            add_cst (normalize_ident ident package#current true)
+                    (Number(v, true))
+                    true
 
         | NumberDecl(_, _, None) ->
             Npkcontext.report_error
@@ -1854,7 +1807,7 @@ let rec normalize_instr (instr,loc) =
             add_function name None true
         | SubtypDecl(ident, subtyp_ind) ->
             let subtyp = extract_subtyp subtyp_ind in
-              types#add (normalize_extern_ident ident)
+              types#add (normalize_ident ident package#current true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
         | SpecDecl _ -> ()
@@ -1868,10 +1821,10 @@ let rec normalize_instr (instr,loc) =
           add_function name None true
 
       | PackageSpec(nom, basic_decls) ->
-          package#set_current nom;
+          package#set_current ((fst nom)@[snd nom]);
           List.iter add_extern_basic_decl basic_decls;
           package#reset_current;
-          package#add_with nom
+          package#add_with ((fst nom)@[snd nom])
 
   in
 
@@ -1892,9 +1845,8 @@ let rec normalize_instr (instr,loc) =
             add_extern_spec norm_spec;
             (With(nom, loc, Some(norm_spec, loc)))
             ::(normalize_context r (nom::previous_with))
-      | UseContext(name_list)::r ->
-          List.iter package#add_use name_list;
-          (UseContext(name_list))::(normalize_context r previous_with)
+      | UseContext(n)::r -> package#add_use (make_package n);
+        (UseContext(n))::(normalize_context r previous_with)
       | [] -> []
   in
 

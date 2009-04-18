@@ -29,7 +29,6 @@
   email: charles.hymans@penjili.org
 *)
 
-
 open Syntax_ada
 
 module C   = Cir
@@ -77,7 +76,7 @@ let default_lbl = 3
 let ident_to_name ident = ([], ident)
 
 (** Builds a string from a name *)
-let string_of_name = Print_syntax_ada.name_to_string
+let string_of_name = Ada_utils.name_to_string
 
 let base_typ = Ada_utils.base_typ
 
@@ -193,8 +192,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
 
-  and extern = ref false
-
   and package = new Ada_utils.package_manager
   in
 
@@ -220,33 +217,33 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     =
     match name with
       | ([], ident) -> f_ident ident name
-      | (pack, ident)
-          when !extern||package#is_with pack ->
+      | (pack, ident) when package#is_extern
+                       ||  package#is_with pack ->
           f_with (pack,ident)
       | (pack, ident) when pack = package#current ->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
             ("unknown package "
-             ^(Print_syntax_ada.ident_list_to_string
+             ^(Ada_utils.ident_list_to_string
                  pack))
   in
   let find_name_record  name f_ident f_with f_current =
     match name with
       | ([], ident) -> f_ident ident name
-      | (pack, ident) when (pack <> package#current) &&
-          (not (package#is_with pack)) &&
-          (not !extern) ->
+      | (pack, ident) when not ( (pack = package#current)
+                              || (package#is_with pack)
+                              || (package#is_extern)) ->
           f_with (pack, ident)
       | (pack, ident)
-          when !extern||package#is_with pack ->
+          when package#is_extern||package#is_with pack ->
           f_with (pack,ident)
       | (pack, ident) when pack = package#current->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
             ("unknown package "
-             ^(Print_syntax_ada.ident_list_to_string
+             ^(Ada_utils.ident_list_to_string
                  pack))
   in
 
@@ -260,11 +257,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
   let translate_name (pack,id:A.name) :string =
     let tr_name =
-        if !extern then pack,            id
-                   else package#current, id
+        if package#is_extern then pack,            id
+                             else package#current, id
     in
-      Print_syntax_ada.name_to_string tr_name
-    in
+      string_of_name tr_name
+  in
 
   (* gestion de la table de symboles *)
 
@@ -303,7 +300,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un nombre local *)
   and add_number loc value lvl ident =
     let x =  Normalize.normalize_ident
-      ident package#current !extern in
+      ident package#current package#is_extern in
       (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
 
@@ -339,7 +336,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un symbole d'enumeration *)
   and add_enum loc ident value typ global =
     let name = Normalize.normalize_ident
-      ident package#current !extern in
+      ident package#current package#is_extern in
       (if mem_symb name
        then
          List.iter
@@ -380,7 +377,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  (ro:bool)          (x:A.identifier)
        :unit =
     let name = Normalize.normalize_ident
-      x package#current !extern in
+      x package#current package#is_extern in
 
     let tr_name = translate_name name in
       (if mem_symb name
@@ -472,7 +469,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         | ((VarSymb(_)|NumberSymb(_)),_,_)::_ ->
             Npkcontext.report_error
               "Firstpass.find_fun_symb"
-              ((Print_syntax_ada.name_to_string name)
+              ((string_of_name name)
                ^" is not a function")
         | (EnumSymb(_),_,_)::r -> mem_other_symb r var_masque
         | (FunSymb _,_,_)::_ -> true
@@ -534,7 +531,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | (NumberSymb(_),_,_)::_ ->
               Npkcontext.report_error
                 "Firstpass.find_fun_symb"
-                ((Print_syntax_ada.name_to_string name)
+                ((string_of_name name)
                  ^" is not a funtion (NumberSymb)")
 
           | (EnumSymb(_),_,_)::r ->
@@ -558,7 +555,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | ((VarSymb(_)|NumberSymb(_)),_,_)::_ ->  (*WG TO DO *)
               Npkcontext.report_error
                "Firstpass.find_fun_symb"
-                ((Print_syntax_ada.name_to_string name)
+                ((string_of_name name)
                  ^" is not a funtion")
 
           | (EnumSymb(_),_,_)::r ->
@@ -587,7 +584,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | ((VarSymb(_,_,true,_)|NumberSymb( _,true)),_,_)::_ ->(*WG TO DO *)
               Npkcontext.report_error
                "Firstpass.find_fun_symb"
-                ((Print_syntax_ada.name_to_string name)
+                ((string_of_name name)
                  ^" is not a funtion")
 
           | (EnumSymb(_),_,_)::r                    -> find_global r
@@ -636,8 +633,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let fun_sans_sel ident name =
       if mem_symb name then find_symb name
       else begin
-        let all_symbs = find_all_use ident in
-          match all_symbs with
+          match find_all_use ident with
             | [a] -> a
             | [] -> Npkcontext.report_error
                 "Firstpass.translate_lv"
@@ -646,15 +642,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 "Firstpass.translate_lv"
                   ("multiple use clause :"
                    ^ident^"is not visible")
-            end
+          end
     in
 
     (* cas d'un symbol avec selecteur connu *)
     let fun_sel_connu name =
-      (*if mem_symb name then find_symb name
-        else Npkcontext.report_error "Firstpass.translate_lv"
-        ("cannot find symbol "^(string_of_name name))
-        in*)
       let structure_field_try = try_find_fieldsaccess None
         ([], List.hd (fst name), (List.tl (fst name))@[snd name])
         mem_symb find_symb translate_typ
@@ -666,8 +658,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 ("cannot find symbol "^(string_of_name name))
           | Some w -> w
     in
-
-
 
     (*cas d'un symbol avec selecteur qui est le package courant*)
     let fun_ident_name ident name =
@@ -804,104 +794,63 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           "Firstpass.translate_if_exp"
             "invalid operator and argument"
 
-  and translate_binop op e1 e2 expected_typ = match op with
-    | Neq ->
-        translate_unop Not (Binary(Eq,e1,e2)) expected_typ
-    | Le ->
-        translate_unop Not (Binary(Gt,e1,e2)) expected_typ
-    | Ge ->
-        translate_unop Not (Binary(Lt,e1,e2)) expected_typ
-    | AndThen ->
-        translate_if_exp e1 e2 (CBool(false)) expected_typ
-    | OrElse ->
-        translate_if_exp e1 (CBool(true)) e2 expected_typ
-    | Xor ->
-        translate_if_exp e1 (Unary(Not, e2)) e2 expected_typ
+  and translate_binop op e1 e2 expected_typ =
+    let expected_typ1 = Ada_utils.typ_operand op expected_typ
+    in
+    let (tr_e1, tr_e2, typ) =
+      try
+        let (tr_e1, typ1) = translate_exp e1 expected_typ1 in
+        let (tr_e2, typ2) = translate_exp e2 (Some(typ1))  in
+        (tr_e1, tr_e2, typ2)
+      with AmbiguousTypeException ->
+        try
+          let (tr_e2, typ2) = translate_exp e2 expected_typ1 in
+          let (tr_e1, typ1) = translate_exp e1 (Some(typ2))  in
+          (tr_e1, tr_e2, typ1)
+        with AmbiguousTypeException ->
+              Npkcontext.report_error "Firstpass.translate_binop"
+                "ambiguous operands"
+    in
+      Ada_utils.check_operand_typ op typ;
+      match (op,translate_typ typ) with
+      (*
+       *    Transformations :
+       *           a != b  -->  ! (a = b)
+       *           a <= b  -->  ! (a > b)
+       *           a >= b  -->  ! (a < b)
+       *          a XOR b  -->  a ?   !b  : b
+       *     a AND THEN b  -->  a ?    b  : FALSE
+       *     a  OR ELSE b  -->  a ?  TRUE : b
+       *)
+      | Neq    ,_ -> translate_unop Not (Binary(Eq, e1, e2)) expected_typ
+      | Le     ,_ -> translate_unop Not (Binary(Gt, e1, e2)) expected_typ
+      | Ge     ,_ -> translate_unop Not (Binary(Lt, e1, e2)) expected_typ
+      | Xor    ,_ -> translate_if_exp e1 (Unary(Not, e2)) e2 expected_typ
+      | AndThen,_ -> translate_if_exp e1 e2   (CBool  false) expected_typ
+      | OrElse ,_ -> translate_if_exp e1 (CBool true)     e2 expected_typ
 
-    | _ ->
-        let expected_typ1 = Ada_utils.typ_operand op expected_typ
-        in
-        let (tr_e1, tr_e2, typ) =
-          try
-            let (tr_e1, typ1) = translate_exp e1 expected_typ1
-            in let (tr_e2, typ2) = translate_exp e2 (Some(typ1))
-            in (tr_e1, tr_e2, typ2)
-          with
-              AmbiguousTypeException ->
-                try
-                  let (tr_e2, typ2) =
-                    translate_exp e2 expected_typ1
-                  in let (tr_e1, typ1) = translate_exp e1
-                      (Some(typ2))
-                  in (tr_e1, tr_e2, typ1)
-                with
-                    AmbiguousTypeException ->
-                      Npkcontext.report_error "Firstpass.translate_binop"
-                        "ambiguous operands"
-        in
-          Ada_utils.check_operand_typ op typ;
-          let tr_typ = translate_typ typ in
-            match (op,tr_typ) with
-                (* operations sur entiers ou flottants *)
-              | (Plus, C.Scalar(Npk.Int   _)) ->
-                                    C.Binop (Npk.PlusI,     tr_e1, tr_e2), typ
-              | (Plus, C.Scalar(Npk.Float n)) ->
-                                    C.Binop (Npk.PlusF n ,  tr_e1, tr_e2), typ
-              | (Minus,C.Scalar(Npk.Int   _)) ->
-                                    C.Binop (Npk.MinusI,    tr_e1, tr_e2), typ
-              | (Minus,C.Scalar(Npk.Float n)) ->
-                                    C.Binop (Npk.MinusF n,  tr_e1, tr_e2), typ
-              | (Mult, C.Scalar(Npk.Int   _)) ->
-                                    C.Binop (Npk.MultI,     tr_e1, tr_e2), typ
-              | (Mult, C.Scalar(Npk.Float n)) ->
-                                    C.Binop (Npk.MultF n,   tr_e1, tr_e2), typ
-              | (Div,  C.Scalar(Npk.Int   _)) ->
-                                    C.Binop (Npk.DivI,      tr_e1, tr_e2), typ
-              | (Div,  C.Scalar(Npk.Float n)) ->
-                                    C.Binop (Npk.DivF  n,   tr_e1, tr_e2), typ
-              | (Rem,  C.Scalar(Npk.Int   _)) ->
-                                    C.Binop (Npk.Mod,       tr_e1, tr_e2), typ
+      (* Numeric operations *)
+      | Plus, C.Scalar(Npk.Int   _)->C.Binop(Npk.PlusI   , tr_e1, tr_e2),typ
+      | Plus, C.Scalar(Npk.Float n)->C.Binop(Npk.PlusF  n, tr_e1, tr_e2),typ
+      | Minus,C.Scalar(Npk.Int   _)->C.Binop(Npk.MinusI  , tr_e1, tr_e2),typ
+      | Minus,C.Scalar(Npk.Float n)->C.Binop(Npk.MinusF n, tr_e1, tr_e2),typ
+      | Mult, C.Scalar(Npk.Int   _)->C.Binop(Npk.MultI   , tr_e1, tr_e2),typ
+      | Mult, C.Scalar(Npk.Float n)->C.Binop(Npk.MultF  n, tr_e1, tr_e2),typ
+      | Div,  C.Scalar(Npk.Int   _)->C.Binop(Npk.DivI    , tr_e1, tr_e2),typ
+      | Div,  C.Scalar(Npk.Float n)->C.Binop(Npk.DivF   n, tr_e1, tr_e2),typ
+      | Rem,  C.Scalar(Npk.Int   _)->C.Binop(Npk.Mod     , tr_e1, tr_e2),typ
 
-              (* comparaisons *)
-              | (Eq, C.Scalar(t)) ->
-                  (C.Binop (Npk.Eq t, tr_e1, tr_e2), Boolean)
-              | (Gt, C.Scalar(t)) ->
-                  (C.Binop (Npk.Gt t, tr_e1, tr_e2), Boolean)
-              | (Lt, C.Scalar(t)) ->
-                  (C.Binop (Npk.Gt t, tr_e2, tr_e1), Boolean)
+      (* Comparisons *)
+      | Eq, C.Scalar t -> C.Binop (Npk.Eq t, tr_e1, tr_e2), Boolean
+      | Gt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e1, tr_e2), Boolean
+      | Lt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e2, tr_e1), Boolean
 
-              (*traites avec Not plus haut *)
-              | (Neq, _) | (Ge, _) | (Le, _) -> Npkcontext.report_error
-                  "Firstpass.translate_binop"
-                    "internal error : unexpected operator !"
+      | (Power | Mod | Concat | And | Or ) ,_ ->
+          Npkcontext.report_error "Firstpass.translate_binop"
+            "run-time operator not implemented"
 
-              | ((AndThen | OrElse), _) -> Npkcontext.report_error
-                  "Firstpass.translate_binop"
-                  "internal error : unexpected operator !"
-
-              | Power,_ ->
-                  Npkcontext.report_error "Firstpass.translate_binop"
-                    "run-time \"**\" is not implemented"
-              | Mod,_ ->
-                  Npkcontext.report_error "Firstpass.translate_binop"
-                    "run-time \"mod\" is not implemented"
-              | Concat,_ ->
-                  Npkcontext.report_error "Firstpass.translate_binop"
-                    "run-time \"&\" is not implemented"
-              | And,_ ->
-                  Npkcontext.report_error "Firstpass.translate_binop"
-                    "run-time \"and\" is not implemented"
-              | Or,_ ->
-                  Npkcontext.report_error "Firstpass.translate_binop"
-                    "run-time \"or\" is not implemented"
-              | Xor,_ ->
-                  Npkcontext.report_error "Firstpass.translate_binop"
-                    "run-time \"or\" is not implemented"
-
-              | _ -> Npkcontext.report_error "Firstpass.translate_binop"
-                  "invalid operator and argument"
-
-
+      | _ -> Npkcontext.report_error "Firstpass.translate_binop"
+            "invalid operator and argument"
 
   and translate_unop op exp expected_typ =
     match (op, expected_typ) with
@@ -1059,7 +1008,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
             | Procedure(name, _) -> Npkcontext.report_error
                 "Firstpass.translate_exp"
-                  ((Print_syntax_ada.name_to_string name)
+                  ((string_of_name name)
                    ^" is a procedure, function expected")
     in
     let arg_list = make_arg_list arg_list params in
@@ -1520,7 +1469,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and translate_block (block:A.block) :C.blk = match block with
     | [] -> []
     | (instr,loc)::r ->
-        (Npkcontext.set_loc loc;
+        begin
+        Npkcontext.set_loc loc;
          match instr with
            | NullInstr -> (translate_block r)
            | Return(exp) ->
@@ -1541,38 +1491,26 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
              in
                  (C.Goto ret_lbl, loc)::tr_reste
            | Exit -> (C.Goto brk_lbl, loc)::(translate_block r)
-           | Loop(While(cond), body) ->
-               translate_block
-                 ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
-                   loc)::r)
            | Assign(lv,exp) ->
                (translate_affect lv exp loc)::(translate_block r)
            | If(condition,instr_then,instr_else) ->
                let (tr_exp, typ) = translate_exp condition (Some Boolean) in
-(* NOT1 FOR Etienne: 
-   look how I rewrote the code
-   1) first get rid of the erroneous cases via the exception
-   2) then do the usual treatment
-   less imbrication than before
-*)
-		 if typ <> Boolean then begin
-		   Npkcontext.report_error
-                     "Firstpass.translate_block"
-                     "expected a boolean type for condition"
-		 end;
+                 if typ <> Boolean then begin
+                   Npkcontext.report_error "Firstpass.translate_block"
+                                         "expected a boolean type for condition"
+                 end;
                  let tr_then = translate_block instr_then in
-		 let tr_else = translate_block instr_else in
-(* NOTE2 FOR Etienne: 
-   could possibly factor all translate_block r
-*)
-		   (C.build_if loc (tr_exp, tr_then, tr_else))
-		   @(translate_block r)
-
+                 let tr_else = translate_block instr_else in
+                   (C.build_if loc (tr_exp, tr_then, tr_else))
+                   @(translate_block r)
            | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
                  (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)
                  ::(translate_block r)
-
+           | Loop(While(cond), body) ->
+               translate_block
+                 ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
+                   loc)::r)
            | Loop(For(iterator,a,b,is_reverse), body) ->
                 add_var loc (Constrained(Integer,
                                          Ada_config.integer_constraint,
@@ -1608,7 +1546,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                          match spec with
                            | Function(_) -> Npkcontext.report_error
                                "Firstpass.translate_instr"
-                                 ((Print_syntax_ada.name_to_string name)
+                                 ((string_of_name name)
                                   ^" is a function, procedure expected")
                            | Procedure(_, params) -> params
                        in
@@ -1664,7 +1602,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                          let res = (C.Block ((t_dp@(translate_block blk)),
                                         None),loc)
                          in remove_declarative_part dp; res::(translate_block r)
-            )
+            end
 
   and translate_param param =
     let typ_cir = match param.mode with
@@ -1725,7 +1663,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          List.iter
            (fun symb -> match symb with
               | (FunSymb (_,_,extern', _),_,_)
-                  when extern'= !extern ->
+                  when extern'= package#is_extern ->
                   Npkcontext.report_error "Firstpass.add_fundecl"
                     ("conflict : "^(string_of_name name)
                      ^" already declared")
@@ -1750,7 +1688,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       check_ident name;
       Hashtbl.add symbtbl name
         (FunSymb (C.Fname(translate_name name), subprogspec,
-                  !extern, ftyp), C.Fun, loc);
+                  package#is_extern, ftyp), C.Fun, loc);
       ftyp
 
   and translate_enum_declaration typ_decl list_val_id loc global =
@@ -1771,8 +1709,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           translate_enum_declaration typ_decl list_val_id loc global
       | DerivedType (_, ref_subtyp_ind) ->
           translate_derived_typ_decl ref_subtyp_ind loc global
-      | IntegerRange _ -> ()
-      | Array _ -> ()
+      | IntegerRange _ 
+      | Array _
       | Record _ -> ()
 
   (* declarations basiques locales *)
@@ -1819,13 +1757,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> List.iter package#add_use use_clause;
+    | UseDecl(use_clause) -> package#add_use((fst use_clause)@[snd use_clause]);
         ([],[])
 
-    | NumberDecl(idents, _, Some(v)) ->
-        List.iter
-          (add_number loc v false)
-          idents;
+    | NumberDecl(ident, _, Some(v)) ->
+        add_number loc v false ident;
         ([],[])
     | NumberDecl _ ->
         Npkcontext.report_error
@@ -1841,9 +1777,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     Npkcontext.set_loc loc;
     match item with
       | BasicDecl(basic) -> translate_basic_declaration basic loc
-
-      | BodyDecl(_) -> Npkcontext.report_error
-          "Firstpass.translate_block"
+      | BodyDecl _ -> Npkcontext.report_error "Firstpass.translate_block"
             "sous-fonction, sous-procedure ou sous package non implemente"
 
   (* renvoie liste d'instructions (affectations par defaut)
@@ -1852,31 +1786,19 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and translate_declarative_part (_,decl_part) =
     let (decl, aff) =
       List.split (List.map translate_declarative_item decl_part)
-    in
-    let list_decl = List.flatten decl
-    and list_aff = List.flatten aff
-    in list_decl@list_aff
+    in List.flatten decl@List.flatten aff
 
   and remove_basic_declaration basic = match basic with
-    | ObjectDecl(idents, _, _, _) ->
-        List.iter
-          (fun x -> ignore (remove_symb x))
-          idents
-    | TypeDecl(Enum(_,idents,_)) ->
-        List.iter
-          (fun (x,_) -> ignore (remove_symb x))
-          idents
-    | TypeDecl(_) -> ()
-    | SubtypDecl(_) -> ()
+    | ObjectDecl(idents, _, _, _) -> List.iter remove_symb idents
+    | TypeDecl(Enum(_,idents,_))-> List.iter (fun (x,_) -> remove_symb x) idents
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl(use_clause) -> List.iter package#remove_use use_clause
-    | NumberDecl(idents, _, _) ->
-        List.iter
-          (fun x -> ignore (remove_symb x))
-          idents
+    | UseDecl(x,y) -> package#remove_use (x@[y])
+    | NumberDecl(ident, _, _) -> remove_symb ident
+    | TypeDecl _
+    | SubtypDecl _ -> ()
     | RepresentClause _ ->
         Npkcontext.report_error
           "Firstpass.remove_basic_declaration"
@@ -1942,7 +1864,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | Constant | StaticVal(_) -> true in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init_t option =
-            match (init, !extern) with
+            match (init, package#is_extern) with
               | (_,true)
               | (None,_) -> Some None
               | (Some(exp),false) ->
@@ -1955,16 +1877,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       | TypeDecl(typ_decl) ->
           translate_typ_declaration typ_decl loc true
-
       | SubtypDecl _ -> ()
-
-      | UseDecl(use_clause) -> List.iter package#add_use use_clause
-
+      | UseDecl(x,y) -> package#add_use (x@[y])
       | SpecDecl(spec) -> translate_spec spec loc false
-      | NumberDecl(idents, _, Some(v)) ->
-          List.iter
-            (add_number loc v true)
-            idents
+      | NumberDecl(ident, _, Some v) ->
+           add_number loc v true ident
       | NumberDecl(_) ->
           Npkcontext.report_error
             "Firstpass.translate_global_basic_declaration"
@@ -1991,19 +1908,18 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         ignore (add_fundecl subprog_spec loc)
 
     | PackageSpec(nom, basic_decl_list) ->
-        match glob with
-          | false -> Npkcontext.report_error
+        if (not glob) then begin Npkcontext.report_error
             "Firstpass.translate_spec"
                 "declaration de sous package non implemente"
-          | true ->
-              package#set_current nom;
-              let _ = List.map
-                (* probleme : variables *)
-                (translate_global_basic_declaration)
-                basic_decl_list
-              in
-                package#reset_current;
-                if !extern then package#add_with nom
+        end;
+        package#set_current ((fst nom)@[snd nom]);
+        let _ = List.map
+          (* probleme : variables *)
+          translate_global_basic_declaration
+          basic_decl_list
+        in
+          package#reset_current;
+          if package#is_extern then package#add_with ((fst nom)@[snd nom])
 
 
 
@@ -2021,7 +1937,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          donc on accepte la declaration d'un package. Sinon, il
          s'agit d'un sous-package, ce qui n'est pas gere *)
       | PackageBody(name, package_spec, decl_part, _), true ->
-          package#set_current name;
+          package#set_current ((fst name)@[snd name]);
           (match package_spec with
              | None -> ()
              | Some(_, basic_decls) ->
@@ -2040,8 +1956,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     match lib_item with
       | Body(body) -> translate_body body true loc
 
-      | Spec(_) -> Npkcontext.report_error
-          "Firstpass.translate_library_item"
+      | Spec _ -> Npkcontext.report_error
+            "Firstpass.translate_library_item"
             "Rien a faire pour les specifications"
 
   in
@@ -2053,16 +1969,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           (match spec with
             | Some(spec, loc) ->
                 translate_spec spec loc true;
-                package#add_with nom;
+                package#add_with ((fst nom)@[snd nom]);
                 translate_context r
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext(use_clause)::r ->
-          List.iter package#add_use use_clause;
+      | UseContext(x,y)::r -> package#add_use (x@[y]);
           translate_context r
       | [] -> ()
-
 
   in
     (* corps de la fonction translate *)
@@ -2076,9 +1990,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
     try
       Npkcontext.set_loc loc;
-      extern := true;
-      translate_context ctx;
-      extern := false;
+      package#as_extern_do (fun _ -> translate_context ctx);
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
       { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }

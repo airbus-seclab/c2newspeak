@@ -32,27 +32,12 @@ open Syntax_ada
 
 let nat_to_string = Newspeak.Nat.to_string
 
-let list_to_string l to_string sep crochet =
-  match l with
-    | a::r ->
-        (if crochet then "[" else "")
-        ^(to_string a)
-        ^(List.fold_left (fun debut x -> debut^sep^(to_string x))
-          "" r)
-        ^(if crochet then "]" else "")
-    | [] ->
-        if crochet then "[]" else ""
+let list_to_string = Ada_utils.list_to_string
+let name_to_string = Ada_utils.name_to_string
 
 let option_to_string a to_string = match a with
   | None -> "None"
   | Some(a') -> "Some("^(to_string a')^")"
-
-let rec ident_list_to_string l =
-  list_to_string l (fun x -> x) "." false
-
-let rec name_to_string (packages, ident) =
-  ident_list_to_string (packages@[ident])
-
 
 let line_of_loc (_,line,_) = "line "^(string_of_int line)
 
@@ -293,8 +278,7 @@ and context_clause_to_string context_clause =
             (fun (spec, loc) -> "("^(spec_to_string spec)
                ^", "^(line_of_loc loc)^")"))
         ^")"
-    | UseContext(names) -> "UseContext("
-        ^(list_to_string names name_to_string "," false)^")"
+    | UseContext(names) -> "UseContext("^(name_to_string names)^")"
 
 and context_to_string context = list_to_string context
                                     context_clause_to_string ";\n" true
@@ -307,12 +291,11 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(object_state_to_string status)^")"
   | TypeDecl(typdecl) ->
       "TypeDecl("^(typ_declaration_to_string typdecl)^")"
-  | UseDecl(use_clause) -> "UseDecl("
-      ^(list_to_string use_clause name_to_string "," false)^")"
+  | UseDecl(use_clause) -> "UseDecl("^(name_to_string use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("
       ^(spec_to_string spec)^")"
   | NumberDecl(idents, exp, v) ->
-      "NumberDecl("^(list_to_string idents (fun x-> x) "," true)
+      "NumberDecl("^idents
       ^", "^(exp_to_string exp)
       ^", "^(option_to_string v value_to_string)^")"
   | SubtypDecl(ident, subtyp_ind) ->

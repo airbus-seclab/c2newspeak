@@ -12,7 +12,7 @@ void t065(void) {
   (t065.adb:28#670)^2- =(uint1) (4-_uint2 ==_uint2 2);
   (t065.adb:29#707)^1- =(uint1) ! (4-_uint2 ==_uint2 3-_uint2);
   (t065.adb:30#745)^{
-    uint1 tmp0;
+    uint1 tmp1;
     (t065.adb:30#745)^choose {
      -->
       (t065.adb:30#745)^guard((6 > 4));
@@ -20,7 +20,7 @@ void t065(void) {
      -->
       (t065.adb:30#745)^guard(! (6 > 4));
       (t065.adb:30#745)^{
-        uint1 tmp1;
+        uint1 tmp2;
         (t065.adb:30#745)^choose {
          -->
           (t065.adb:30#745)^guard(! (4. > 4.));

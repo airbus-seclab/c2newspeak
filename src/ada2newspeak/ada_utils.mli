@@ -29,7 +29,6 @@
  * @author Etienne Millon
  *)
 
-
 exception NonStaticExpression
 
 (**
@@ -53,16 +52,6 @@ val mod_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
  *   - [(-a) rem   b  = -(a rem b)]
  *)
 val rem_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
-
-(**
- * The exclusive-or binary relation. Denotes the difference of two booleans :
- *{[|  a |  b | a xor b|
-   *|  0 |  0 |    0   |
-   *|  0 |  1 |    1   |
-   *|  1 |  0 |    1   |
-   *|  1 |  1 |    0   |]}
- *)
-val xor : bool -> bool -> bool
 
 (**
  * Convert a boolean into the native type.
@@ -225,27 +214,58 @@ val with_default : 'a option -> 'a -> 'a
 class package_manager :
 object
     (** Set the current package. *)
-    method set_current :Syntax_ada.name -> unit
+    method set_current :Syntax_ada.package -> unit
 
     (** Reset the current package. *)
     method reset_current :unit
 
-    (** Get the current package. *)
-    method current :Syntax_ada.identifier list
+    (**
+     * Get the current package.
+     * If [set_current] has not been called, or [reset_current] has been called
+     * after the last call to [set_current], the empty package is returned.
+     *)
+    method current    :Syntax_ada.package
 
     (** Add a package to the "with" list. *)
-    method add_with :Syntax_ada.name -> unit
+    method add_with   :Syntax_ada.package -> unit
 
     (** Is a package in the "with" list ? *)
-    method is_with :Syntax_ada.identifier list -> bool
+    method is_with    :Syntax_ada.package -> bool
 
-    (** Add a "use" clause to the context. *)
-    method add_use    :Syntax_ada.name -> unit
+    (**
+     * Add a "use" clause to the context.
+     * The added package must have been added to the "with" list.
+     * Adding a package several times is not an error.
+     *)
+    method add_use    :Syntax_ada.package -> unit
 
-    (** Remove a "use" clause from the context. *)
-    method remove_use :Syntax_ada.name -> unit
+    (**
+     * Remove a "use" clause from the context.
+     * Removing a package several times is not an error : if a package has been
+     * added n times, it is necessary to remove it n times to remove it from the
+     * context.
+     * Removing a package that is not in the current context will be silently
+     * ignored.
+     *)
+    method remove_use :Syntax_ada.package -> unit
 
-    (** Get the current context. *)
-    method get_use    :Syntax_ada.identifier list list
+    (**
+     * Get the current context.
+     * It returns a list of packages that have been added and not removed.
+     * The order is not specified.
+     *)
+    method get_use    :Syntax_ada.package list
+
+    (** Returns the "extern" flag for this manager. *)
+    method is_extern :bool
+
+    (** Perform an action with the "extern" flag. *)
+    method as_extern_do :(unit->unit)->unit
 
 end
+
+val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
+
+val name_to_string : Syntax_ada.name -> string
+
+val ident_list_to_string : Syntax_ada.identifier list -> string
