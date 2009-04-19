@@ -53,7 +53,7 @@ and decl = (base_typ * var_modifier)
 and field = (base_typ * var_modifier * B.exp option)
 
 type vdecl = (B.typ * string option * location)
-type sdecls = (B.enumdecl list * B.compdecl list)
+type sdecls = (string * B.decl) list
 
 (** TODO: remove these globals, by putting them as argument of the lexer ??
     and then passing them through the tokens *)
@@ -92,7 +92,7 @@ let define_enum e =
 	      | Some n -> n
 	  in
 	  let n' = B.Binop (B.Plus, n, B.exp_of_int 1) in
-	    (x, n)::(define_enum tl n')
+	    (x, B.EDecl n)::(define_enum tl n')
       | [] -> []
   in
     define_enum e (B.exp_of_int 0)
@@ -101,10 +101,10 @@ let rec normalize_base_typ t =
   let sdecls =
     match t with
 	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None 
-      | Typeof _ -> ([], [])
+      | Typeof _ -> []
       | Struct (n, f) -> normalize_compdef (n, true, f)
       | Union (n, f) -> normalize_compdef (n, false, f)
-      | Enum Some f -> (define_enum f, [])
+      | Enum Some f -> define_enum f
   in
   let t = 
     match t with
@@ -127,15 +127,15 @@ let rec normalize_base_typ t =
 
 and normalize_compdef (n, is_struct, f) =
   match f with
-      None -> ([], [])
+      None -> []
     | Some f -> 
-	let ((edecls, sdecls), f) = normalize_fields f in
-	  (edecls, sdecls@(n, is_struct, f)::[])
+	let (decls, f) = normalize_fields f in
+	  (decls@(n, B.CDecl (is_struct, f))::[])
 
 and normalize_fields f =
   match f with
       (b, v, bits)::tl ->
-	let ((edecls, sdecls), (t, x, loc)) = normalize_decl (b, v) in
+	let (decls, (t, x, loc)) = normalize_decl (b, v) in
 	let t =
 	  match (bits, t) with
 	      (None, _) -> t
@@ -149,9 +149,9 @@ and normalize_fields f =
 	      Some x -> x
 	    | None -> "!anonymous_field"
 	in
-	let ((edecls', sdecls'), f) = normalize_fields tl in
-	  ((edecls@edecls', sdecls@sdecls'), (t, x, loc)::f)
-    | [] -> (([], []), [])
+	let (decls', f) = normalize_fields tl in
+	  (decls@decls', (t, x, loc)::f)
+    | [] -> ([], [])
 
 and normalize_var_modifier b v =
   match v with
@@ -191,7 +191,7 @@ and normalize_arg a =
 	Some x -> x
       | None -> "silent argument"
   in
-    if (symbdecls <> ([], [])) then begin
+    if (symbdecls <> []) then begin
       Npkcontext.report_error "Synthack.normalize_arg" 
 	"symbol definition not allowed in argument"
     end;

@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2009  Sarah Zennou  
+  Copyright (C) 2009  Sarah Zennou, Charles Hymans
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -20,6 +20,11 @@
   EADS Innovation Works - SE/IS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: sarah (dot) zennou (at) eads (dot) net
+
+  Charles Hymans
+  EADS Innovation Works - SE/CS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: charles.hymans@penjili.org
 *)
 
 open Csyntax
@@ -164,15 +169,17 @@ let preprocessing lbls stmts =
     in
       add 0 stmts
   in
-    if stmts = [] then [], []
-    else
+    if stmts = [] then ([], [])
+    else begin
       let (_, l) = List.hd stmts in
       let decl lbl =
 	let lbl' = fresh_lbl lbl in
 	let init = Data zero in
-	let vdecl = VDecl (lbl', uint_typ, false, false, Some init) in
-	  vdecl, l
-      in   
+	let vdecl = 
+	  LocalDecl (lbl', VDecl (uint_typ, false, false, Some init))
+	in
+	  (vdecl, l)
+      in
       let stmts' = cond_addition stmts in
       let lbl' = ref [] in
 	Hashtbl.iter (fun lbl (gotos, _) -> 
@@ -180,8 +187,8 @@ let preprocessing lbls stmts =
 			else lbl' := lbl::!lbl') lbls;
 	let lbl' = List.rev !lbl' in
 	let vdecls = List.map decl lbl' in
-	  vdecls, stmts'
-      
+	  (vdecls, stmts')
+    end
 		         
 
 		
@@ -306,10 +313,12 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
       let init = Data zero in
       let after = ref [] in 
       let add (skind, var) =
-	let vdecl = VDecl (var, uint_typ, false, false, Some init) in
+	let vdecl = 
+	  LocalDecl (var, VDecl (uint_typ, false, false, Some init))
+	in
 	let set = Exp (Set (Var var, None, zero)) in
 	let if_blk = (set, lwhile)::[skind, lwhile] in
-	let if' = If(Var var, if_blk, []) in
+	let if' = If (Var var, if_blk, []) in
 	  vdecls := vdecl::!vdecls;
 	  after := (if', lwhile)::!after
       in
@@ -324,13 +333,14 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
       | (stmt, l)::stmts ->
 	  let s_decls, stmts' = extract_decls stmts in
 	    match stmt with
-		VDecl _ | CDecl _ | EDecl _ -> 
-		  let decls, stmts' = extract_decls stmts in (stmt, l)::decls, stmts'
+		LocalDecl _ -> 
+		  let (decls, stmts') = extract_decls stmts in 
+		    ((stmt, l)::decls, stmts')
 	      | Block blk -> 
 		  let b_decls, blk' = extract_decls blk in 
-		    b_decls@s_decls, (Block blk', l)::stmts'
-	      | _ -> s_decls, (stmt, l)::stmts'
-  
+		    (b_decls@s_decls, (Block blk', l)::stmts')
+	      | _ -> (s_decls, (stmt, l)::stmts')
+
 
 exception Lbl
 exception Gto 
@@ -757,7 +767,7 @@ and dowhile_in lbl l e before cond blk g_offset g_loc =
 and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
-  let declr = VDecl (tswitch, uint_typ, false, false, None) in
+  let declr = LocalDecl (tswitch, VDecl (uint_typ, false, false, None)) in
   let tswitch = Var tswitch in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
@@ -1039,22 +1049,13 @@ let renaming_block_variables stmts =
   in
   let rename stmt =
     match stmt with
-	VDecl (n, t, s, e, i) -> 
-	  let n' = n ^ "." ^ (string_of_int !nth_lv) in
+	LocalDecl (n, d) ->
+	  let n' = n  ^ "." ^ (string_of_int !nth_lv) in
 	    nth_lv := !nth_lv + 1;
-	    VDecl(n', t, s, e, i), n'
+	    (LocalDecl (n', d), n')
 	      
-      | EDecl (s, e) ->
-	  let s' = s  ^ "." ^ (string_of_int !nth_lv) in
-	    nth_lv := !nth_lv + 1;
-	    EDecl(s', e), s'
-	      
-      | CDecl(s, b, d) ->
-	  let s' = s  ^ "." ^ (string_of_int !nth_lv) in
-	    nth_lv := !nth_lv + 1;
-	    CDecl(s', b, d), s'
-	      
-      | _ -> invalid_arg "Goto_elimination.extract_decls: stmt is not a declaration"
+      | _ -> 
+	  invalid_arg "Goto_elimination.extract_decls: stmt is not a declaration"
   in
   let rec replace stack e =
     let rec replace e = 
@@ -1097,15 +1098,16 @@ let renaming_block_variables stmts =
 	  | BlkExp blk ->
 	      let blk' = explore stack blk in BlkExp blk'
 	  | _ -> e
-      with
-	  Not_found -> e
-    in replace e
+      with Not_found -> e
+    in 
+      replace e
+
   and explore stack stmts =
     match stmts with 
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
-	      VDecl(s, _, _, _, _) | EDecl(s, _) | CDecl(s, _, _) -> begin
+	      LocalDecl(s, _) -> begin
 		try 
 		  let _ = search s stack in
 		  let stmt', s' = rename stmt in
@@ -1113,7 +1115,7 @@ let renaming_block_variables stmts =
 		    (stmt', l)::(explore stack' stmts)
 		with Not_found ->
 		  let stack' = s::stack in
-		  (stmt, l)::(explore stack' stmts)
+		    (stmt, l)::(explore stack' stmts)
 	      end
 	    | Block blk ->
 		let blk' = explore stack blk in

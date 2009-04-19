@@ -28,7 +28,7 @@
 *)
 
 (* TODO: should rename firstpass to semantic ??? see compiler Appel book *)
-open Csyntax
+open CoreC
 module C = Cir
 module K = Npkil
 module N = Newspeak
@@ -421,14 +421,14 @@ let translate (globals, spec) =
 
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
-	  let r = fields_of_comp (Csyntax.comp_of_typ t) in
+	  let r = fields_of_comp (CoreC.comp_of_typ t) in
 	  let (o, t) = find_field f r in
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
       | Index (e, idx) when is_array e ->
 	  let (lv, t) = translate_lv e in
-	  let (t, len) = Csyntax.array_of_typ t in
+	  let (t, len) = CoreC.array_of_typ t in
 	  let i = translate_exp idx in
 	  let n = translate_array_len len in
 	    translate_array_access (lv, t, n) i
@@ -552,11 +552,11 @@ let translate (globals, spec) =
 	| SizeofE e ->
 	    let (_, t) = translate e in
 	    let sz = (size_of t) / 8 in
-	      (C.exp_of_int sz, Csyntax.uint_typ)
+	      (C.exp_of_int sz, CoreC.uint_typ)
 		
 	| Sizeof t -> 
 	    let sz = (size_of t) / 8 in
-	      (C.exp_of_int sz, Csyntax.uint_typ)
+	      (C.exp_of_int sz, CoreC.uint_typ)
 		
 	| Cast (e, t) -> 
 	    let e = translate_exp e in
@@ -598,10 +598,10 @@ let translate (globals, spec) =
 	      (C.Pref (body, e), t)
 
 	| Offsetof (t, f) -> 
-	    let r = fields_of_comp (Csyntax.comp_of_typ t) in
+	    let r = fields_of_comp (CoreC.comp_of_typ t) in
 	    let (o, _) = find_field f r in
 	    let o = C.exp_of_int (o / Config.size_of_byte) in
-	      (o, Csyntax.uint_typ)
+	      (o, CoreC.uint_typ)
     in
       match translate e with
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
@@ -884,7 +884,7 @@ let translate (globals, spec) =
     in
       push_enum (x, v)
 
-  and add_compdecl (x, is_struct, f) =
+  and add_compdecl (x, (is_struct, f)) =
     if is_struct then process_struct_fields x f
     else process_union_fields x f
 
@@ -915,38 +915,39 @@ let translate (globals, spec) =
 	    let e = translate_exp e in
 	      (([], []), Some e)
 	    
+(* TODO: factor all these LocalDecl !!! *)
 (* TODO: maybe this loc is unnecessary *)
-	| (EDecl d, _)::body -> 
-	    add_enum d;
+	| (LocalDecl (x, EDecl e), _)::body -> 
+	    add_enum (x, e);
 (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 
-	| (CDecl d, _)::body ->
-	    add_compdecl d;
+	| (LocalDecl (x, CDecl d), _)::body ->
+	    add_compdecl (x, d);
 (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 
-	| (VDecl (x, Fun ft, static, _, _), loc)::body -> 
+	| (LocalDecl (x, VDecl (Fun ft, static, _, _)), loc)::body -> 
 	    Npkcontext.report_accept_warning "Firstpass.translate" 
 	      "function declaration within block" Npkcontext.DirtySyntax;
 	    translate_proto_ftyp x static ft loc;
 	    translate body
 
-	| (VDecl (x, t, static, _, init), loc)::body when static -> 
+	| (LocalDecl (x, VDecl (t, static, _, init)), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    declare_global true false x loc t init;
 	    (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 	  
-	| (VDecl (x, t, _, extern, _), loc)::body when extern ->
+	| (LocalDecl (x, VDecl (t, _, extern, _)), loc)::body when extern ->
 	    declare_global false true x loc t None;
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 
-	| (VDecl (x, t, _, _, init), loc)::body -> 
+	| (LocalDecl (x, VDecl (t, _, _, init)), loc)::body -> 
 	    let init = translate_local_decl (x, t, init) loc in
 	      (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
@@ -1069,7 +1070,7 @@ let translate (globals, spec) =
 
       | UserSpec x -> (C.UserSpec (translate_assertion x), loc)::[]
 
-      | Label _ | VDecl _ | EDecl _ | CDecl _ -> 
+      | Label _ | LocalDecl _ -> 
 	  Npkcontext.report_error "Firstpass.translate_stmt" "unreachable code"
 
   and translate_assertion x = List.map translate_token x
@@ -1196,8 +1197,8 @@ let translate (globals, spec) =
 
   and update_funtyp f ft1 =
     let (symb, t) = Symbtbl.find symbtbl f in
-    let ft2 = Csyntax.ftyp_of_typ t in
-    let ft = Csyntax.min_ftyp ft1 ft2 in
+    let ft2 = CoreC.ftyp_of_typ t in
+    let ft = CoreC.min_ftyp ft1 ft2 in
       Symbtbl.update symbtbl f (symb, Fun ft)
 
   and update_funsymb f static ft loc =
@@ -1298,7 +1299,7 @@ let translate (globals, spec) =
 	| (Eq, _, _) -> (N.Eq (translate_scalar_typ t1), int_typ)
 	    	    
 	| _ ->
-	    Npkcontext.report_error "Csyntax.translate_binop" 
+	    Npkcontext.report_error "Firstpass.translate_binop" 
 	      "unexpected binary operator and arguments"
     in
     let e2 = 
@@ -1337,7 +1338,7 @@ let translate (globals, spec) =
 	  let (e, t') = cast (e, t) t' in
 	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), e), t')
       | _ -> 
-	  Npkcontext.report_error "Csyntax.translate_unop" 
+	  Npkcontext.report_error "Firstpass.translate_unop" 
 	    "Unexpected unary operator and argument"
 
   and size_of t = C.size_of_typ (translate_typ t)
@@ -1384,25 +1385,26 @@ let translate (globals, spec) =
 	      Hashtbl.clear lbl_tbl;
 	      lbl_cnt := default_lbl
 	      
+(* TODO: factor all these GlbDecl!! *)
 (* TODO: put this check in parser ?? *)
-      | GlbVDecl (_, _, _, extern, Some _) when extern -> 
+      | GlbDecl (_, VDecl (_, _, extern, Some _)) when extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
  
-      | GlbVDecl (_, Fun _, _, _, _) -> ()
+      | GlbDecl (_, VDecl (Fun _, _, _, _)) -> ()
 
-      | GlbVDecl (x, t, static, extern, init) ->
+      | GlbDecl (x, VDecl (t, static, extern, init)) ->
 	  declare_global static extern x loc t init
 
-      | GlbEDecl _ | GlbCDecl _ -> ()
+      | GlbDecl _ -> ()
   in
     
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
   let collect_glb_structdefs (x, _) =
     match x with
-	GlbCDecl d -> add_compdecl d
-      | GlbEDecl d -> add_enum d
+	GlbDecl (x, CDecl d) -> add_compdecl (x, d)
+      | GlbDecl (x, EDecl e) -> add_enum (x, e)
       | _ -> ()
   in
 
@@ -1427,10 +1429,10 @@ let translate (globals, spec) =
 	  in
 	    update_funsymb f static (Some args_t, ret_t) loc
 
-      | GlbVDecl (f, Fun ft, static, _, None) -> 
+      | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
 	  translate_proto_ftyp f static ft loc
 
-      | GlbVDecl (f, Fun _, _, _, Some _) -> 
+      | GlbDecl (f, VDecl (Fun _, _, _, Some _)) -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^f)
 

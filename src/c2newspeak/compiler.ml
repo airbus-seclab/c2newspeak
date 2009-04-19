@@ -80,7 +80,8 @@ let compile fname =
 	else globals
       in
 	Npkcontext.print_debug "Running first pass...";
-	let prog = Firstpass.translate (globals, spec) in
+	let prog = Csyntax2CoreC.process (globals, spec) in
+	let prog = Firstpass.translate prog in
 	  Npkcontext.forget_loc ();
 	  Npkcontext.print_debug "First pass done.";
 	  Npkcontext.print_size (Cir.size_of prog);

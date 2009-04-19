@@ -37,22 +37,22 @@ and spec_token =
 and global = 
     (* true if static *)
   | FunctionDef of (string * ftyp * bool * blk)
-      (* true for extern *)
-  | GlbVDecl of vardecl
-      (* enum declaration *)
-  | GlbEDecl of enumdecl
-(* struct or union: composite *)
-  | GlbCDecl of compdecl
+  | GlbDecl of (string * decl)
   
-and enumdecl = string * exp
+and decl = 
+    VDecl of (typ * is_static * is_extern * init option)
+  | EDecl of exp
+(* struct or union: composite *)
+  | CDecl of (is_struct * field_decl list)
+  
+(* true for structure, false for union *)
+and is_struct = bool
 
-and compdecl = string * bool * declaration list
+and is_extern = bool
 
-and extern = bool
+and is_static = bool
 
-and vardecl = string * typ * static * extern * init option
-
-and declaration = (typ * string * location)
+and field_decl = (typ * string * Newspeak.location)
 
 and ftyp = (typ * string) list option * typ
 
@@ -78,9 +78,7 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    EDecl of enumdecl
-  | CDecl of compdecl
-  | VDecl of vardecl
+    LocalDecl of (string * decl)
   | If of (exp * blk * blk)
   | CSwitch of (exp * (exp * blk * location) list * blk)
       (* init, while exp is true do blk and then blk, 
@@ -156,8 +154,6 @@ let uint_typ = Int (Unsigned, Config.size_of_int)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 
-let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
-
 let nat_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in
   let read_hex_digit c =
@@ -219,13 +215,6 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
     (Cir.CInt x, Int k)
 
 let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
-
-let comp_of_typ t =
-  match t with
-      Comp (n, _)-> n
-    | _ -> 
-	Npkcontext.report_error "Csyntax.comp_of_typ" 
-	  "struct or union type expected"
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
@@ -320,22 +309,24 @@ and string_of_exp margin e =
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
-	
+
+and string_of_decl margin d =
+  match d with
+    | VDecl (t, _, _, _) -> (string_of_typ margin t)	
+    | CDecl _ -> "ctyp"
+    | EDecl _ -> "etyp"
 
 and string_of_stmt margin (x, _) =
   match x with
-      Block blk ->
-	"{\n"^(string_of_blk (margin^"  ") blk)^margin^"}"
+      Block blk -> "{\n"^(string_of_blk (margin^"  ") blk)^margin^"}"
 	  
     | Goto lbl -> "goto "^lbl^";"
 	
     | Label lbl -> lbl^": "
 
-    | VDecl (x, t, _, _, _) -> (string_of_typ margin t)^" "^x^";"	
-	
-    | CDecl (x, _, _) -> "ctyp "^x^";"
-	
-    | EDecl (x, _) -> "etyp "^x^";"
+    | LocalDecl (x, d) -> 
+	let d = string_of_decl margin d in
+	  d^" "^x^";"
 	
     | If (e, blk1, blk2) -> 
 	"if ("^(string_of_exp margin e)^") {\n"
@@ -395,8 +386,6 @@ let string_of_ftyp margin (args_t, _) =
   in
     "("^args^") -> ret_t"
 
-
-
 let ftyp_of_typ t =
   match t with
       Fun t -> t
@@ -425,9 +414,9 @@ let print prog =
 	  let name = string_of_fname t name in
 	    s := !s ^ b ^ name ^ " {\n" ^ blk ^"}"
 
-      | GlbVDecl (x, _, _, _, _) -> s:= !s ^ ("typ "^x^";\n")
-      | GlbEDecl (x, _) -> s:= !s ^("etyp " ^x^";\n")
-      | GlbCDecl (x, _, _) -> s:= !s ^("ctyp "^x^";\n")
+      | GlbDecl (x, d) -> 
+	  let d = string_of_decl "" d in
+	    s := !s ^ (d^" "^x^";\n")
   in
   let (prog, _) = prog in
     List.iter print prog;
@@ -436,39 +425,6 @@ let print prog =
 let string_of_ftyp = string_of_ftyp ""
 let string_of_exp = string_of_exp ""
 let string_of_blk = string_of_blk ""
-
-let array_of_typ t =
-  match t with
-      Array a -> a
-    | _ -> Npkcontext.report_error "Csyntax.array_of_typ" "array type expected"
-
-
-let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
-  let equals (t1, _) (t2, _) = t1 = t2 in
-(* TODO???
-  let equals (t1, _) (t2, _) =  
-    match (t1, t2) with  
-      | (Ptr Fun _, Ptr Fun _) -> true  
-      | (Ptr _, Ptr _) -> true  
-      | _ -> t1 = t2  
-  in  
-    *)
-  let args_t =  
-    match (args_t1, args_t2) with  
-        (None, args_t) | (args_t, None) -> args_t  
-      | (Some args_t1, Some args_t2) ->
-          if not (List.for_all2 equals args_t1 args_t2) then begin
-            Npkcontext.report_error "Csyntax.min_ftyp"
-              "different argument types for function"
-          end;
-          Some args_t1
-  in
-    if (ret_t1 <> ret_t2) then begin
-      Npkcontext.report_error "Csyntax.min_ftyp" 
-	"different return types for function"
-    end;
-    (args_t, ret_t1)  
-
 
 let rec size_of (globals, specs) = 
   let globals = List_utils.size_of size_of_global globals in

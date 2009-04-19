@@ -36,22 +36,22 @@ and spec_token =
 and global =
     (* true if static *)
   | FunctionDef of (string * ftyp * bool * blk)
-  | GlbVDecl of vardecl
-  | GlbEDecl of enumdecl
+  | GlbDecl of (string * decl)
+
+and decl = 
+    VDecl of (typ * is_static * is_extern * init option)
+  | EDecl of exp
 (* struct or union: composite *)
-  | GlbCDecl of compdecl
-
-and enumdecl = string * exp
-
+  | CDecl of (is_struct * field_decl list)
+  
 (* true for structure, false for union *)
-and compdecl = string * bool * declaration list
+and is_struct = bool
 
-and extern = bool
+and is_extern = bool
 
-(* true for extern *)
-and vardecl = string * typ * static * extern * init option
+and is_static = bool
 
-and declaration = (typ * string * location)
+and field_decl = (typ * string * Newspeak.location)
 
 and ftyp = (typ * string) list option * typ
 
@@ -76,9 +76,7 @@ and stmt = (stmtkind * location)
 and blk = stmt list
 
 and stmtkind =
-    EDecl of enumdecl
-  | CDecl of compdecl
-  | VDecl of vardecl
+    LocalDecl of (string * decl)
   | If of (exp * blk * blk)
       (* third parameter is the default case *)
   | CSwitch of (exp * (exp * blk * location) list * blk)
@@ -141,12 +139,6 @@ and binop =
 
 val exp_of_int: int -> exp
 
-val exp_of_char: char -> exp
-
-val char_typ: typ
-
-val int_typ: typ
-
 val uint_typ: typ
 
 val long_typ: typ
@@ -158,8 +150,6 @@ val char_cst_of_lexeme: int -> cst
 
 val float_cst_of_lexeme: (string * char option) -> cst
 
-val comp_of_typ: typ -> string
-
 val string_of_exp: exp -> string
 
 val string_of_typ: typ -> string
@@ -170,11 +160,7 @@ val string_of_blk: blk -> string
 
 val ftyp_of_typ: typ -> ftyp
 
-val min_ftyp: ftyp -> ftyp -> ftyp
-
 val print: t -> unit
-
-val array_of_typ: typ -> (typ * exp option)
 
 (** [size_of prog] counts the number of global definitions and the number
     of instructions in program prog. *)

@@ -24,7 +24,7 @@ and field = (base_typ * var_modifier * Csyntax.exp option)
 
 type vdecl = (Csyntax.typ * string option * Newspeak.location)
 (* TODO: do not group these together *)
-type sdecls = (Csyntax.enumdecl list * Csyntax.compdecl list)
+type sdecls = (string * Csyntax.decl) list
 
 val normalize_base_typ: base_typ -> (sdecls * Csyntax.typ)
 
