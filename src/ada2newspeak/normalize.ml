@@ -275,31 +275,27 @@ let eval_static (exp:expression) (expected_typ:typ option)
   and eval_static_const (name:name) (expected_typ:typ option) :value*typ =
 
     (********** mem_other_cst **********)
-    let rec mem_other_cst (list_cst:constant_symb list) (filter: typ->bool)
+    let mem_other_cst (list_cst:constant_symb list) ?(filter=(fun _ -> true))
                            (use:identifier option) (var_masque:bool)
             :bool =
-         match list_cst with
-           | [] -> (match use with
-                      | None -> false
-                      | Some(ident) -> (* on regarde les imports *)
-                                       mem_other_cst (find_all_use ident) filter
-                                                     None var_masque
-                   )
-           | (Number _|StaticConst _|VarSymb _)::r when var_masque ->
-                           mem_other_cst r filter use var_masque
-           | (Number _|StaticConst _|VarSymb _)::_ ->
-                   Npkcontext.report_error "Firstpass.translate_var"
+         let is_it_ok cst = begin match cst with
+           | (Number _|StaticConst _|VarSymb _) -> if (var_masque) then false
+             else Npkcontext.report_error "normalize.mem_other_cst"
                       ((string_of_name name)^" is not visible : "
                        ^"multiple use clauses cause hiding")
-
            (* un autre symbole existe ayant le bon type *)
-           | (EnumLitteral(typ,_,_)|FunSymb(Some(typ),_))::_
+           | (EnumLitteral(typ,_,_)|FunSymb(Some(typ),_))
                when (filter typ) -> true
-
            (* symbole d'enumeration ou de fonctions n'ayant
                pas le bon type *)
-           | (EnumLitteral(_)|FunSymb(_))::r ->
-                mem_other_cst r filter use var_masque
+           | (EnumLitteral(_)|FunSymb(_)) -> false
+         end in
+
+         (List.exists is_it_ok list_cst)
+           || (match use with
+                 | None -> false
+                 | Some id -> List.exists is_it_ok (find_all_use id)
+           )
     in
 
     (********** sans_selecteur **********)
@@ -332,7 +328,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
               | EnumLitteral(typ,v,_)::r
                         when known_compatible_typ expected_typ typ ->
                   if (mem_other_cst r
-                                    (known_compatible_typ expected_typ)
+                                    ~filter:(known_compatible_typ expected_typ)
                                     None
                                     var_masque
                                     )
@@ -344,7 +340,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
               | FunSymb(Some typ,_)::r
                   when known_compatible_typ expected_typ typ ->
                   if (mem_other_cst r
-                                    (known_compatible_typ expected_typ)
+                                    ~filter:(known_compatible_typ expected_typ)
                                     None
                                     var_masque)
                   then (Npkcontext.report_error
@@ -354,58 +350,54 @@ let eval_static (exp:expression) (expected_typ:typ option)
                   else raise NonStaticExpression
 
               | EnumLitteral(typ,v,_)::r when expected_typ = None ->
-                  if (mem_other_cst r (fun _ -> true) None var_masque)
+                  if (mem_other_cst r None var_masque)
                   then raise AmbiguousTypeException
                   else (IntVal v, typ)
 
               | FunSymb(Some _,_)::r when expected_typ = None ->
-                  if (mem_other_cst r (fun _ -> true)
-                    None var_masque)
+                  if (mem_other_cst r None var_masque)
                   then raise AmbiguousTypeException
                   else raise NonStaticExpression
 
               | (EnumLitteral(_)|FunSymb(_))::r ->
                   find_use r var_masque false
 
-              | [] when var_masque -> (* variable masque : au moins
+              | []  -> if var_masque then (* variable masque : au moins
                              un symbol mais mauvais type *)
-                  Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                       Npkcontext.report_error "Ada_normalize.eval_static_cst"
                                             "uncompatible types"
-
-              | [] -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                      else Npkcontext.report_error "Ada_normalize.eval_static_cst"
                                                 ("cannot find symbol "^ident)
-
 
                     (****** --> find_interne *****)
       and find_interne (list_cst:constant_symb list) (var_masque:bool)
             :value*typ =
           match list_cst with
-                    | Number(IntVal i,_)::_ when not var_masque->
-                        IntVal(i), check_typ expected_typ IntegerConst
-                    | Number(FloatVal(f),_)::_ when not var_masque ->
-                        FloatVal(f), check_typ expected_typ Float
-                    | StaticConst(v, typ, _)::_ when not var_masque ->
-                        v, check_typ expected_typ typ
-                    | VarSymb(_)::_ when not var_masque ->
-                        raise NonStaticExpression
-                    | EnumLitteral(typ, v, _)::_  when
-                        known_compatible_typ expected_typ typ -> IntVal v, typ
-                    | FunSymb(Some typ,_)::_  when
-                        known_compatible_typ expected_typ typ ->
-                                            raise NonStaticExpression
-                    | EnumLitteral(typ, v, _)::r when expected_typ=None ->
-                        if (mem_other_cst r (fun _ -> true) (Some ident) true)
-                        then raise AmbiguousTypeException
-                        else (IntVal(v), typ)
-                    | FunSymb(Some _,_)::r when expected_typ=None ->
-                        if (mem_other_cst r (fun _ -> true)
-                              (Some ident) true)
-                        then raise AmbiguousTypeException
-                        else raise NonStaticExpression
-                    | (EnumLitteral _|FunSymb _)::r -> find_interne r true
-                    | (Number _|StaticConst _|VarSymb _)::r ->
-                        find_interne r var_masque
-                    | [] -> find_use (find_all_use ident) var_masque true
+            | Number(IntVal i,_)::_ when not var_masque->
+                IntVal(i), check_typ expected_typ IntegerConst
+            | Number(FloatVal(f),_)::_ when not var_masque ->
+                FloatVal(f), check_typ expected_typ Float
+            | StaticConst(v, typ, _)::_ when not var_masque ->
+                v, check_typ expected_typ typ
+            | VarSymb(_)::_ when not var_masque ->
+                raise NonStaticExpression
+            | EnumLitteral(typ, v, _)::_  when
+                known_compatible_typ expected_typ typ -> IntVal v, typ
+            | FunSymb(Some typ,_)::_  when
+                known_compatible_typ expected_typ typ ->
+                                    raise NonStaticExpression
+            | EnumLitteral(typ, v, _)::r when expected_typ=None ->
+                if (mem_other_cst r (Some ident) true)
+                then raise AmbiguousTypeException
+                else (IntVal(v), typ)
+            | FunSymb(Some _,_)::r when expected_typ=None ->
+                if (mem_other_cst r (Some ident) true)
+                then raise AmbiguousTypeException
+                else raise NonStaticExpression
+            | (EnumLitteral _|FunSymb _)::r -> find_interne r true
+            | (Number _|StaticConst _|VarSymb _)::r ->
+                find_interne r var_masque
+            | [] -> find_use (find_all_use ident) var_masque true
 
       in find_interne (find_all_cst name) false
 
@@ -425,11 +417,11 @@ let eval_static (exp:expression) (expected_typ:typ option)
                 when known_compatible_typ expected_typ typ ->
                 raise NonStaticExpression
             | EnumLitteral(typ,v,_)::r when expected_typ=None ->
-                if mem_other_cst r (fun _ -> true) None true
+                if mem_other_cst r None true
                 then raise AmbiguousTypeException
                 else IntVal v, typ
             | FunSymb(Some(_), _)::r when expected_typ=None ->
-                if mem_other_cst r (fun _ -> true) None true
+                if mem_other_cst r None true
                 then raise AmbiguousTypeException
                 else raise NonStaticExpression
             | (EnumLitteral _|FunSymb _)::r -> find_enum r
@@ -472,11 +464,11 @@ let eval_static (exp:expression) (expected_typ:typ option)
                 when known_compatible_typ expected_typ typ ->
                 raise NonStaticExpression
             | EnumLitteral(typ, v, true)::r when expected_typ=None ->
-                if mem_other_cst r (fun _ -> true) None false
+                if mem_other_cst r None false
                 then raise AmbiguousTypeException
                 else (IntVal(v), typ)
             | FunSymb(Some(_), false)::r when expected_typ=None ->
-                if mem_other_cst r (fun _ -> true) None false
+                if mem_other_cst r None false
                 then raise AmbiguousTypeException
                 else raise NonStaticExpression
             | VarSymb(true)::_ -> raise NonStaticExpression
@@ -745,11 +737,8 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   (* ajout d'un litteral d'enumeration *)
   and add_enum (nom:name) typ global value =
-    (if Hashtbl.mem csttbl nom
-     then
-       begin
-         List.iter
-           (fun x -> match x with
+    if Hashtbl.mem csttbl nom then
+         List.iter (function
               | Number(_, glob) | VarSymb(glob)
               | StaticConst(_, _, glob) when global = glob ->
                   Npkcontext.report_error
@@ -762,15 +751,16 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                     "Ada_normalize.add_enum"
                     ("conflict : "^(string_of_name nom)
                      ^" already declared")
-              | FunSymb(Some(t),ext) when typ=t && global
-                  && ext=extern ->
+              | FunSymb(Some t,ext) when typ=t
+                                      &&  global
+                                      &&  ext=extern ->
                   Npkcontext.report_error
                     "Ada_normalize.add_enum"
                     ("conflict : "^(string_of_name nom)
                      ^" already declared")
               | _ -> ())
            (Hashtbl.find_all csttbl nom)
-       end);
+       ;
     Hashtbl.add csttbl nom (EnumLitteral(typ, value, global))
 
   (* ajout d'un symbole de fonction *)
@@ -822,7 +812,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                                          v)
               symbs
   in
-  let add_typ nom (typdecl:Syntax_ada.typ_declaration) location global extern =
+  let add_typ nom (typdecl:Syntax_ada.typ_declaration) location ~global ~extern =
     let subtyp = match typdecl with
       | Array _
       | Record _ -> Unconstrained(Declared(typdecl, location))
@@ -1369,8 +1359,8 @@ let rec normalize_instr (instr,loc) =
                                       true)
         typ_decl
         loc
-        true
-        true
+        ~extern:true
+        ~global:true
 
   and normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
     | Enum(ident, symbs, size) ->
@@ -1408,10 +1398,8 @@ let rec normalize_instr (instr,loc) =
               enumeration_representation ident symbs size represtbl loc
           | Declared(IntegerRange(_,contrainte,taille),_) ->
               IntegerRange(ident, contrainte, taille)
-          | Declared(Array(_, def),_) ->
-              Array(ident, def)
-          | Declared(Record(_, def),_) ->
-              Record(ident, def)
+          | Declared(Array (_, def),_) -> Array (ident, def)
+          | Declared(Record(_, def),_) -> Record(ident, def)
           | Declared(DerivedType(_, subtyp_ind),_) ->
               DerivedType(ident, subtyp_ind) in
 
@@ -1419,8 +1407,6 @@ let rec normalize_instr (instr,loc) =
         (*constitution of the subtype representing the current declaration *)
         let norm_subtyp =
             match (extract_subtyp norm_subtyp_ind ) with
-                (*match extract_subtyp norm_subtyp_ind with
-                *)
               | Unconstrained(_) ->
                   Unconstrained(Declared(typ_decl, loc))
               | Constrained(_, contrainte, static) ->
@@ -1436,15 +1422,14 @@ let rec normalize_instr (instr,loc) =
                     "internal error : unexpected subtyp name" in
 
         let new_subtyp_ind =
-          let (subtyp, contrainte, _) = norm_subtyp_ind
-          in (subtyp, contrainte, Some(norm_subtyp)) in
-        let norm_typ_decl = DerivedType(ident, new_subtyp_ind)
+          let (subtyp, contrainte, _) = norm_subtyp_ind in
+          (subtyp, contrainte, Some(norm_subtyp))
         in
+        let norm_typ_decl = DerivedType(ident, new_subtyp_ind) in
           add_typ (normalize_ident_cur ident) norm_typ_decl loc global extern;
           norm_typ_decl
     | IntegerRange(ident,contrainte,taille) ->
-        let decl = normalize_integer_range ident taille contrainte
-        in
+        let decl = normalize_integer_range ident taille contrainte in
           add_typ (normalize_ident_cur ident) decl loc global extern;
           decl
     | Array(ident, ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
@@ -1499,13 +1484,12 @@ let rec normalize_instr (instr,loc) =
 
   and remove_typ_decl typ_decl = match typ_decl with
     | Enum(nom, symbs, _) -> types#remove (normalize_ident_cur nom);
-        List.iter
-          (fun (symb, _) -> remove_cst (normalize_ident_cur symb))
-          symbs
-    | DerivedType(nom,_)
-    | IntegerRange(nom,_,_)
-    | Array(nom, _)
-    | Record (nom, _) ->  types#remove (normalize_ident_cur nom)
+        List.iter (fun (symb, _) -> remove_cst (normalize_ident_cur symb))
+                  symbs
+    | DerivedType  (nom,_)
+    | IntegerRange (nom,_,_)
+    | Array        (nom, _)
+    | Record       (nom, _) -> types#remove (normalize_ident_cur nom)
 
   and normalize_sub_program_spec subprog_spec addparam =
     let normalize_params param_list func =
@@ -1521,8 +1505,7 @@ let rec normalize_instr (instr,loc) =
               then
                   add_cst (normalize_ident_cur param.formal_name)
                           (VarSymb(false))
-                          false
-                  ;
+                          false;
                   {param with param_type = normalize_subtyp param.param_type}
              )
         )
@@ -1582,20 +1565,18 @@ let rec normalize_instr (instr,loc) =
               List.iter (add_ident v) ident_list;
               StaticVal(v)
           with
-            | AmbiguousTypeException ->
-                Npkcontext.report_error
-                  "Ada_normalize.normalize_basic_decl"
-                  "uncaught ambiguous type exception"
-            | NonStaticExpression ->
-                (List.iter
-                   (fun x -> add_cst (normalize_ident_cur x)
-                      (VarSymb(global)) global)
-                   ident_list);
-                Constant
-                  (*la constante n'est pas statique *)
+            | AmbiguousTypeException -> Npkcontext.report_error
+                                        "Ada_normalize.normalize_basic_decl"
+                                        "uncaught ambiguous type exception"
+            | NonStaticExpression -> (List.iter
+                                       (fun x -> add_cst (normalize_ident_cur x)
+                                                         (VarSymb global)
+                                                         global
+                                       ) ident_list);
+                    (*la constante n'est pas statique *) Constant 
 
         in
-          ObjectDecl(ident_list, norm_subtyp_ind, Some(exp),status)
+          ObjectDecl(ident_list, norm_subtyp_ind, Some exp,status)
 
     | ObjectDecl(_) ->
         Npkcontext.report_error
@@ -1624,38 +1605,38 @@ let rec normalize_instr (instr,loc) =
         NumberDecl(ident, normalize_exp exp, Some v)
 
     | SubtypDecl(ident, subtyp_ind) ->
-        let norm_subtyp_ind =
-          normalize_subtyp_indication subtyp_ind  in
+        let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
         let subtyp = extract_subtyp norm_subtyp_ind in
           types#add (normalize_ident_cur ident) subtyp loc global;
           SubtypDecl(ident, norm_subtyp_ind)
 
     | RepresentClause _ -> item
 
+
   and normalize_decl_part (tbl,decl_part) global =
     let represtbl = Hashtbl.create 50 in
-    let rec extract_representation_clause decls = match decls with
-      | (BasicDecl(RepresentClause(rep)), loc)::r ->
+    let extract_representation_clause decls =
+      List.filter (function
+        | BasicDecl(RepresentClause(rep)), loc ->
           Hashtbl.add represtbl
             (extract_representation_clause_name rep)
             (rep, loc);
-          extract_representation_clause r
-      | decl::r -> decl::(extract_representation_clause r)
-      | [] -> [] in
+            false
+        | _ -> true
+      )
+      decls
+    in
     let decl_part = extract_representation_clause decl_part in
     let rec normalize_decl_items items =
-      match items with
-        | (BasicDecl(basic),loc)::r ->
+      List.map (function
+        | (BasicDecl(basic),loc) ->
             Npkcontext.set_loc loc;
             let decl = normalize_basic_decl basic loc global represtbl
-            in (BasicDecl(decl),loc)::(normalize_decl_items r)
-
-        | (BodyDecl(body),loc)::r ->
+            in (BasicDecl(decl),loc)
+        | (BodyDecl(body),loc) ->
             Npkcontext.set_loc loc;
-            let norm_item = (BodyDecl(normalize_body body), loc)
-            in norm_item::(normalize_decl_items r)
-
-        | [] -> []
+            BodyDecl(normalize_body body), loc
+      ) items
     in tbl,normalize_decl_items decl_part
 
   and remove_decl_part (_,decl_part) =
@@ -1663,7 +1644,7 @@ let rec normalize_instr (instr,loc) =
     (* incomplet *)
     let remove_decl_item (item,_) = match item with
       | BasicDecl(TypeDecl(typ_decl)) ->    remove_typ_decl typ_decl
-      | BasicDecl (SubtypDecl (ident, _)) -> types#remove(normalize_ident_cur ident)
+      | BasicDecl(SubtypDecl(ident, _)) -> types#remove(normalize_ident_cur ident)
       | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
           List.iter
             (fun ident -> remove_cst (normalize_ident_cur ident))
@@ -1689,21 +1670,22 @@ let rec normalize_instr (instr,loc) =
   and normalize_package_spec (nom, list_decl) =
     package#set_current ((fst nom)@[snd nom]);
     let represtbl = Hashtbl.create 50 in
-    let rec extract_representation_clause decls = match decls with
-      | (RepresentClause(rep), loc)::r ->
-          Hashtbl.add represtbl
-            (extract_representation_clause_name rep)
-            (rep, loc);
-          extract_representation_clause r
-      | decl::r -> decl::(extract_representation_clause r)
-      | [] -> [] in
+    let rec extract_representation_clause decls =
+      List.filter (function
+        | RepresentClause(rep), loc ->
+            Hashtbl.add represtbl
+              (extract_representation_clause_name rep)
+              (rep, loc);
+            false
+        | _ -> true
+        ) decls in
     let list_decl = extract_representation_clause list_decl in
-    let rec normalize_decls decls = match decls with
-      |        (decl, loc)::r ->
-          Npkcontext.set_loc loc;
-          let decl = normalize_basic_decl decl loc true represtbl
-          in (decl,loc)::(normalize_decls r)
-      | [] -> [] in
+    let rec normalize_decls decls =
+      List.map (fun (decl, loc) ->
+                  Npkcontext.set_loc loc;
+                  let decl = normalize_basic_decl decl loc true represtbl
+                  in (decl,loc)
+               ) decls in
     let norm_spec = normalize_decls list_decl in
       package#reset_current;
       (nom,norm_spec)
@@ -1810,9 +1792,7 @@ let rec normalize_instr (instr,loc) =
               types#add (normalize_ident ident package#current true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
-        | SpecDecl _ -> ()
-        | UseDecl _ -> ()
-        | RepresentClause _ -> ()
+        | SpecDecl _ | UseDecl  _ | RepresentClause _ -> ()
 
     in match spec with
       | SubProgramSpec(Function(name, [], return_typ)) ->
@@ -1837,24 +1817,23 @@ let rec normalize_instr (instr,loc) =
       | With(nom, _, spec)::r ->
 
           let (norm_spec, loc) = match spec with
-            | None -> parse_extern_specification nom
-            | Some(_) -> Npkcontext.report_error
+            | None   -> parse_extern_specification nom
+            | Some _ -> Npkcontext.report_error
                 "Ada_normalize.normalize_context"
                   "internal error : spec provided"
           in
             add_extern_spec norm_spec;
-            (With(nom, loc, Some(norm_spec, loc)))
-            ::(normalize_context r (nom::previous_with))
+            With(nom, loc, Some(norm_spec, loc))
+            ::normalize_context r (nom::previous_with)
       | UseContext(n)::r -> package#add_use (make_package n);
-        (UseContext(n))::(normalize_context r previous_with)
+                            UseContext n::normalize_context r previous_with
       | [] -> []
   in
 
-  let (context,lib_item,loc) = compil_unit
-  in
-  let norm_context = normalize_context context []
-  in
-  let norm_lib_item = normalize_lib_item lib_item loc
-  in
+  let (context,lib_item,loc) = compil_unit in
+  let norm_context = normalize_context context [] in
+  let norm_lib_item = normalize_lib_item lib_item loc in
     Npkcontext.forget_loc ();
-    (norm_context, norm_lib_item, loc)
+    (norm_context
+    ,norm_lib_item
+    ,loc)
