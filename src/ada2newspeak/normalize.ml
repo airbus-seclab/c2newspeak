@@ -82,16 +82,15 @@ let normalize_ident ident package extern =
             else (   []  , ident)
 
 let normalize_name (name:name) (package:package_manager) extern =
-  let add_package (parents, ident) pack = match parents with
-    | [] -> (pack, ident)
-    | a when a=pack -> (pack, ident)
-    | a when (package#is_with a) -> (a, ident)
-    | _ -> Npkcontext.report_error
-        "ada_normalize.normalize_name.add_package"
-          ("unknown package "
-           ^(Ada_utils.ident_list_to_string parents)) in
-    if extern then add_package name package#current
-              else name
+  if (not extern) then name
+    else let (parents,ident) = name in
+         let pack = package#current in
+           match parents with
+             | []                         -> (pack, ident)
+             | a when a=pack              -> (pack, ident)
+             | a when (package#is_with a) -> (  a , ident)
+             | _ -> Npkcontext.report_error "ada_normalize.normalize_name"
+                   ("unknown package "^(Ada_utils.ident_list_to_string parents))
 
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:expression) (expected_typ:typ option)
@@ -1239,8 +1238,10 @@ let rec normalize_instr (instr,loc) =
                          | None -> None
                          | Some block -> Some(normalize_block block)
                       )),loc
-      | Block (dp,blk) -> Block (normalize_decl_part dp false,
-                                 normalize_block blk), loc
+      | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
+                            remove_decl_part dp;
+                            Block (ndp, normalize_block blk), loc
+
 
   and normalize_block block =
     List.map normalize_instr block
@@ -1491,7 +1492,7 @@ let rec normalize_instr (instr,loc) =
     | Array        (nom, _)
     | Record       (nom, _) -> types#remove (normalize_ident_cur nom)
 
-  and normalize_sub_program_spec subprog_spec addparam =
+  and normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
       List.map
         (fun param ->
@@ -1613,21 +1614,16 @@ let rec normalize_instr (instr,loc) =
     | RepresentClause _ -> item
 
 
-  and normalize_decl_part (tbl,decl_part) global =
+  and normalize_decl_part (tbl,decl_part) ~global =
     let represtbl = Hashtbl.create 50 in
-    let extract_representation_clause decls =
-      List.filter (function
+    let decl_part = List.filter (function
         | BasicDecl(RepresentClause(rep)), loc ->
           Hashtbl.add represtbl
             (extract_representation_clause_name rep)
-            (rep, loc);
-            false
+            (rep, loc); false
         | _ -> true
-      )
-      decls
-    in
-    let decl_part = extract_representation_clause decl_part in
-    let rec normalize_decl_items items =
+      ) decl_part in
+    let normalize_decl_items items =
       List.map (function
         | (BasicDecl(basic),loc) ->
             Npkcontext.set_loc loc;
@@ -1640,9 +1636,9 @@ let rec normalize_instr (instr,loc) =
     in tbl,normalize_decl_items decl_part
 
   and remove_decl_part (_,decl_part) =
-
     (* incomplet *)
-    let remove_decl_item (item,_) = match item with
+    List.iter
+      (function (item,_) -> match item with
       | BasicDecl(TypeDecl(typ_decl)) ->    remove_typ_decl typ_decl
       | BasicDecl(SubtypDecl(ident, _)) -> types#remove(normalize_ident_cur ident)
       | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
@@ -1656,8 +1652,8 @@ let rec normalize_instr (instr,loc) =
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
       | BodyDecl _ -> ()
-
-    in List.iter remove_decl_item decl_part
+      )
+    decl_part
 
   and remove_params subprogram_decl =
     let params = match subprogram_decl with
@@ -1670,16 +1666,13 @@ let rec normalize_instr (instr,loc) =
   and normalize_package_spec (nom, list_decl) =
     package#set_current ((fst nom)@[snd nom]);
     let represtbl = Hashtbl.create 50 in
-    let rec extract_representation_clause decls =
-      List.filter (function
-        | RepresentClause(rep), loc ->
-            Hashtbl.add represtbl
-              (extract_representation_clause_name rep)
-              (rep, loc);
-            false
-        | _ -> true
-        ) decls in
-    let list_decl = extract_representation_clause list_decl in
+    let list_decl = List.filter (function
+                                  | RepresentClause(rep), loc ->
+                                      Hashtbl.add represtbl
+                                        (extract_representation_clause_name rep)
+                                        (rep, loc); false
+                                  | _ -> true)
+      list_decl in
     let rec normalize_decls decls =
       List.map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
@@ -1690,11 +1683,9 @@ let rec normalize_instr (instr,loc) =
       package#reset_current;
       (nom,norm_spec)
 
-
   and normalize_spec spec = match spec with
-    | SubProgramSpec(subprogr_spec) ->
-        SubProgramSpec(
-          normalize_sub_program_spec subprogr_spec false)
+    | SubProgramSpec(subprogr_spec) -> SubProgramSpec(
+          normalize_sub_program_spec subprogr_spec ~addparam:false)
     | PackageSpec(package_spec) ->
         PackageSpec(normalize_package_spec package_spec)
 
@@ -1703,8 +1694,8 @@ let rec normalize_instr (instr,loc) =
     | SubProgramBody(subprog_decl,decl_part,block) ->
 
         let norm_subprog_decl =
-          normalize_sub_program_spec subprog_decl true
-        and norm_decl_part = normalize_decl_part decl_part false in
+          normalize_sub_program_spec subprog_decl ~addparam:true
+        and norm_decl_part = normalize_decl_part decl_part ~global:false in
         let norm_block = normalize_block block
         in
           remove_decl_part decl_part;
@@ -1715,13 +1706,11 @@ let rec normalize_instr (instr,loc) =
     | PackageBody(name, package_spec, decl_part, block) ->
         let norm_decl = match package_spec with
           | None ->
-              let package_spec = parse_package_specification name
-              in
-                Some(normalize_package_spec package_spec)
-          | Some(spec) -> Some(normalize_package_spec spec)
+                Some(normalize_package_spec (parse_package_specification name))
+          | Some spec -> Some(normalize_package_spec spec)
         in
           package#set_current ((fst name)@[snd name]);
-          let norm_decl_part = normalize_decl_part decl_part true in
+          let norm_decl_part = normalize_decl_part decl_part ~global:true in
           let norm_block = normalize_block block
           in
             remove_decl_part decl_part;
