@@ -1709,7 +1709,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           translate_enum_declaration typ_decl list_val_id loc global
       | DerivedType (_, ref_subtyp_ind) ->
           translate_derived_typ_decl ref_subtyp_ind loc global
-      | IntegerRange _ 
+      | IntegerRange _
       | Array _
       | Record _ -> ()
 

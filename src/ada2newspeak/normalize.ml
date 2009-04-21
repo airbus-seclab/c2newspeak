@@ -363,10 +363,10 @@ let eval_static (exp:expression) (expected_typ:typ option)
 
               | []  -> if var_masque then (* variable masque : au moins
                              un symbol mais mauvais type *)
-                       Npkcontext.report_error "Ada_normalize.eval_static_cst"
-                                            "uncompatible types"
-                      else Npkcontext.report_error "Ada_normalize.eval_static_cst"
-                                                ("cannot find symbol "^ident)
+                     Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                          "uncompatible types"
+                    else Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                                              ("cannot find symbol "^ident)
 
                     (****** --> find_interne *****)
       and find_interne (list_cst:constant_symb list) (var_masque:bool)
@@ -811,7 +811,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                                          v)
               symbs
   in
-  let add_typ nom (typdecl:Syntax_ada.typ_declaration) location ~global ~extern =
+  let add_typ nom typdecl location ~global ~extern =
     let subtyp = match typdecl with
       | Array _
       | Record _ -> Unconstrained(Declared(typdecl, location))
@@ -897,7 +897,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
              ^(Ada_utils.ident_list_to_string parents))
 
     in
-      if extern then 
+      if extern then
         add_package name (package#current)
         (* pas de gestion de with dans package inclus *)
       else name
@@ -1208,72 +1208,21 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
             "internal error : unexpected Numeric Range"
 
 in
+  let add_extern_typdecl typ_decl loc = match typ_decl with
+    | DerivedType (ident, _)
+    | Array       (ident, _)
+    | Record      (ident, _)
+    | IntegerRange(ident,_,_)
+    | Enum        (ident, _, _) -> add_typ (normalize_ident ident
+                                                            package#current
+                                                            true)
+                                           typ_decl
+                                           loc
+                                           ~extern:true
+                                           ~global:true
+  in
 
-let rec normalize_instr (instr,loc) =
-    Npkcontext.set_loc loc;
-    match instr with
-      | NullInstr | ReturnSimple -> (instr, loc)
-      | Assign(nom, exp) -> (Assign(nom, normalize_exp exp), loc)
-      | Return(exp) -> (Return(normalize_exp exp), loc)
-      | If(exp, instr_then, instr_else) ->
-          (If(normalize_exp exp, normalize_block instr_then,
-              normalize_block instr_else), loc)
-      | Loop(NoScheme,instrs) -> (Loop(NoScheme,
-                                           normalize_block instrs), loc)
-      | Loop(While(exp), instrs) -> (Loop(While(normalize_exp exp),
-                       normalize_block instrs), loc)
-      | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-                   (Loop(For(iter, exp1, exp2, is_rev),
-                                   normalize_block instrs), loc)
-      | Exit -> (Exit, loc)
-      | ProcedureCall(nom, params) ->
-         (ProcedureCall(nom, List.map normalize_arg params), loc)
-      | Case (e, choices, default) ->
-                Case (normalize_exp e,
-                      List.map (function e,block->
-                              normalize_exp e,
-                              normalize_block block)
-                          choices,
-                      (match default with
-                         | None -> None
-                         | Some block -> Some(normalize_block block)
-                      )),loc
-      | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
-                            remove_decl_part dp;
-                            Block (ndp, normalize_block blk), loc
-
-
-  and normalize_block block =
-    List.map normalize_instr block
-
-  and normalize_integer_range ident taille contrainte =
-    match (taille, contrainte) with
-      | (None, RangeConstraint(_)) ->
-          begin
-            try
-              let norm_contrainte =
-                normalize_contrainte contrainte IntegerConst
-              in match norm_contrainte with
-                | IntegerRangeConstraint(min, max) ->
-                    let ikind = ikind_of_range min max
-                    in IntegerRange(ident, norm_contrainte, Some(ikind))
-
-                | _ ->
-                    Npkcontext.report_error
-                      "Ada_normalize.normalize_integer_range"
-                      "internal error : uncompatible constraint type"
-            with
-                NonStaticExpression ->
-                  Npkcontext.report_error
-                    "Ada_normalize.normalize_integer_range"
-                    "expected static expression"
-          end
-      | _ ->
-          Npkcontext.report_error
-            "Ada_normalize.normalize_integer_range"
-            "internal error : size or constraint already provided"
-
-  and interpret_enumeration_clause agregate assoc cloc loc =
+let interpret_enumeration_clause agregate assoc cloc loc =
     Npkcontext.set_loc cloc;
     let new_rep = match agregate with
       | NamedArrayAggregate(assoc_list) ->
@@ -1285,11 +1234,8 @@ let rec normalize_instr (instr,loc) =
                  in (ident, v))
               assoc_list in
           let find_val ident =
-            try
-              List.assoc ident rep_assoc
-            with
-              | Not_found ->
-                  Npkcontext.report_error
+            try  List.assoc ident rep_assoc
+            with Not_found -> Npkcontext.report_error
                     "Ada_normalize.interpret_enumeration_clause"
                     ("missing representation for "^ident) in
           let make_new_assoc (l, last) (ident,_) =
@@ -1315,26 +1261,12 @@ let rec normalize_instr (instr,loc) =
       Npkcontext.set_loc loc;
       new_rep
 
-  (* this check is specific to Ada2Newspeak *)
-  and check_represent_clause_order ident represtbl (_,decl_line,_) =
-    let clauses = Hashtbl.find_all represtbl ident
-    in
-      List.iter
-        (fun (_, (_,cl_line,_)) ->
-           if cl_line>=decl_line
-           then
-             Npkcontext.report_error
-               "Ada_normalize.check_represent_clause_order"
-               ("a representation clause has been found for "
-                ^ident^" after its first use"))
-        clauses
-
-  and enumeration_representation ident symbs size represtbl loc =
+in
+  let enumeration_representation ident symbs size represtbl loc =
     let (symbs, size) =
       (* this should be modified if we want to accept several
          kind of representation clause. *)
-      if Hashtbl.mem represtbl ident
-      then
+      if Hashtbl.mem represtbl ident then
         begin
           let clause = Hashtbl.find represtbl ident
           in match clause with
@@ -1349,21 +1281,52 @@ let rec normalize_instr (instr,loc) =
         (symbs, size)
     in Enum(ident, symbs, size)
 
-  and add_extern_typdecl typ_decl loc = match typ_decl with
-    | DerivedType(ident, _)
-    | Array(ident, _)
-    | Record (ident, _)
-    | IntegerRange(ident,_,_)
-    | Enum(ident, _, _) ->
-        add_typ (normalize_ident ident
-                                      package#current
-                                      true)
-        typ_decl
-        loc
-        ~extern:true
-        ~global:true
+  in
 
-  and normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
+  let normalize_integer_range ident taille contrainte =
+    match (taille, contrainte) with
+      | (None, RangeConstraint(_)) ->
+          begin
+            try
+              let norm_contrainte =
+                normalize_contrainte contrainte IntegerConst
+              in match norm_contrainte with
+                | IntegerRangeConstraint(min, max) ->
+                    let ikind = ikind_of_range min max
+                    in IntegerRange(ident, norm_contrainte, Some(ikind))
+
+                | _ ->
+                    Npkcontext.report_error
+                      "Ada_normalize.normalize_integer_range"
+                      "internal error : uncompatible constraint type"
+            with
+                NonStaticExpression ->
+                  Npkcontext.report_error
+                    "Ada_normalize.normalize_integer_range"
+                    "expected static expression"
+          end
+      | _ ->
+          Npkcontext.report_error
+            "Ada_normalize.normalize_integer_range"
+            "internal error : size or constraint already provided"
+  in
+
+  (* this check is specific to Ada2Newspeak *)
+  let check_represent_clause_order ident represtbl (_,decl_line,_) =
+    let clauses = Hashtbl.find_all represtbl ident
+    in
+      List.iter
+        (fun (_, (_,cl_line,_)) ->
+           if cl_line>=decl_line
+           then
+             Npkcontext.report_error
+               "Ada_normalize.check_represent_clause_order"
+               ("a representation clause has been found for "
+                ^ident^" after its first use"))
+        clauses
+  in
+
+  let normalize_typ_decl typ_decl loc global represtbl = match typ_decl with
     | Enum(ident, symbs, size) ->
         let typ_decl = enumeration_representation ident symbs size represtbl loc
         in
@@ -1482,8 +1445,9 @@ let rec normalize_instr (instr,loc) =
           add_typ (normalize_ident_cur ident) norm_typ loc global extern;
           norm_typ
 
+  in
 
-  and remove_typ_decl typ_decl = match typ_decl with
+  let remove_typ_decl typ_decl = match typ_decl with
     | Enum(nom, symbs, _) -> types#remove (normalize_ident_cur nom);
         List.iter (fun (symb, _) -> remove_cst (normalize_ident_cur symb))
                   symbs
@@ -1492,7 +1456,40 @@ let rec normalize_instr (instr,loc) =
     | Array        (nom, _)
     | Record       (nom, _) -> types#remove (normalize_ident_cur nom)
 
-  and normalize_sub_program_spec subprog_spec ~addparam =
+  in
+
+  let remove_decl_part (_,decl_part) =
+    (* incomplet *)
+    List.iter
+      (function (item,_) -> match item with
+      | BasicDecl(TypeDecl(typ_decl)) ->    remove_typ_decl typ_decl
+      | BasicDecl(SubtypDecl(ident, _))->types#remove(normalize_ident_cur ident)
+      | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
+          List.iter
+            (fun ident -> remove_cst (normalize_ident_cur ident))
+            ident_list
+      | BasicDecl(UseDecl(use_clause)) -> package#remove_use
+                                                (make_package use_clause)
+      | BasicDecl(NumberDecl(ident,_,_)) ->
+            remove_cst (normalize_ident_cur ident)
+      | BasicDecl(RepresentClause _)
+      | BasicDecl(SpecDecl _)
+      | BodyDecl _ -> ()
+      )
+    decl_part
+
+  in
+
+  let remove_params subprogram_decl =
+    let params = match subprogram_decl with
+      | Function(_,param_list,_) -> param_list
+      | Procedure(_,param_list) -> param_list in
+          List.iter
+            (fun param -> remove_cst (normalize_ident_cur param.formal_name))
+            params
+  in
+
+  let normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
       List.map
         (fun param ->
@@ -1511,30 +1508,27 @@ let rec normalize_instr (instr,loc) =
              )
         )
         param_list
-    in
-      match subprog_spec with
-
+    in match subprog_spec with
         | Function(name, [], return_type)  ->
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
               add_function
                 norm_name (Some(base_typ norm_subtyp)) false;
               Function(norm_name, [], norm_subtyp)
-
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
               add_function norm_name None false;
               Function(norm_name,
                        normalize_params param_list true,
                        normalize_subtyp return_type)
-
         | Procedure(name,param_list) ->
             let norm_name = normalize_name name in
               add_function norm_name None false;
               Procedure(norm_name,
                         normalize_params param_list false)
+  in
 
-  and normalize_basic_decl item loc global reptbl = match item with
+  let rec normalize_basic_decl item loc global reptbl = match item with
     | UseDecl(use_clause) -> package#add_use (make_package use_clause);
         item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
@@ -1545,7 +1539,6 @@ let rec normalize_instr (instr,loc) =
                 (VarSymb(global)) global)
              ident_list);
           ObjectDecl(ident_list, norm_subtyp_ind, def, Variable)
-
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         (* constantes *)
         let norm_subtyp_ind =
@@ -1574,23 +1567,19 @@ let rec normalize_instr (instr,loc) =
                                                          (VarSymb global)
                                                          global
                                        ) ident_list);
-                    (*la constante n'est pas statique *) Constant 
+                    (*la constante n'est pas statique *) Constant
 
         in
           ObjectDecl(ident_list, norm_subtyp_ind, Some exp,status)
-
     | ObjectDecl(_) ->
         Npkcontext.report_error
           "Ada_normalize.normalize_basic_decl"
           ("internal error : constant without default value"
            ^"or already evaluated")
-
     | TypeDecl(typ_decl) ->
         let norm_typ_decl = normalize_typ_decl typ_decl loc global reptbl
         in TypeDecl(norm_typ_decl)
-
     | SpecDecl(spec) -> SpecDecl(normalize_spec spec)
-
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl package#get_use
@@ -1600,68 +1589,15 @@ let rec normalize_instr (instr,loc) =
                     (Number(v, global))
                     global;
           NumberDecl(ident, norm_exp, Some v)
-
     | NumberDecl(ident, exp, Some(v)) ->
         (* cas jamais emprunte *)
         NumberDecl(ident, normalize_exp exp, Some v)
-
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
         let subtyp = extract_subtyp norm_subtyp_ind in
           types#add (normalize_ident_cur ident) subtyp loc global;
           SubtypDecl(ident, norm_subtyp_ind)
-
     | RepresentClause _ -> item
-
-
-  and normalize_decl_part (tbl,decl_part) ~global =
-    let represtbl = Hashtbl.create 50 in
-    let decl_part = List.filter (function
-        | BasicDecl(RepresentClause(rep)), loc ->
-          Hashtbl.add represtbl
-            (extract_representation_clause_name rep)
-            (rep, loc); false
-        | _ -> true
-      ) decl_part in
-    let normalize_decl_items items =
-      List.map (function
-        | (BasicDecl(basic),loc) ->
-            Npkcontext.set_loc loc;
-            let decl = normalize_basic_decl basic loc global represtbl
-            in (BasicDecl(decl),loc)
-        | (BodyDecl(body),loc) ->
-            Npkcontext.set_loc loc;
-            BodyDecl(normalize_body body), loc
-      ) items
-    in tbl,normalize_decl_items decl_part
-
-  and remove_decl_part (_,decl_part) =
-    (* incomplet *)
-    List.iter
-      (function (item,_) -> match item with
-      | BasicDecl(TypeDecl(typ_decl)) ->    remove_typ_decl typ_decl
-      | BasicDecl(SubtypDecl(ident, _)) -> types#remove(normalize_ident_cur ident)
-      | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
-          List.iter
-            (fun ident -> remove_cst (normalize_ident_cur ident))
-            ident_list
-      | BasicDecl(UseDecl(use_clause)) -> package#remove_use
-                                                (make_package use_clause)
-      | BasicDecl(NumberDecl(ident,_,_)) ->
-            remove_cst (normalize_ident_cur ident)
-      | BasicDecl(RepresentClause _)
-      | BasicDecl(SpecDecl _)
-      | BodyDecl _ -> ()
-      )
-    decl_part
-
-  and remove_params subprogram_decl =
-    let params = match subprogram_decl with
-      | Function(_,param_list,_) -> param_list
-      | Procedure(_,param_list) -> param_list in
-          List.iter
-            (fun param -> remove_cst (normalize_ident_cur param.formal_name))
-            params
 
   and normalize_package_spec (nom, list_decl) =
     package#set_current ((fst nom)@[snd nom]);
@@ -1689,6 +1625,66 @@ let rec normalize_instr (instr,loc) =
     | PackageSpec(package_spec) ->
         PackageSpec(normalize_package_spec package_spec)
 
+  in
+
+  let rec normalize_instr (instr,loc) =
+    Npkcontext.set_loc loc;
+    match instr with
+      | NullInstr | ReturnSimple -> (instr, loc)
+      | Assign(nom, exp) -> (Assign(nom, normalize_exp exp), loc)
+      | Return(exp) -> (Return(normalize_exp exp), loc)
+      | If(exp, instr_then, instr_else) ->
+          (If(normalize_exp exp, normalize_block instr_then,
+              normalize_block instr_else), loc)
+      | Loop(NoScheme,instrs) -> (Loop(NoScheme, normalize_block instrs), loc)
+      | Loop(While(exp), instrs) -> (Loop(While(normalize_exp exp),
+                       normalize_block instrs), loc)
+      | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
+                   (Loop(For(iter, exp1, exp2, is_rev),
+                                   normalize_block instrs), loc)
+      | Exit -> (Exit, loc)
+      | ProcedureCall(nom, params) ->
+         (ProcedureCall(nom, List.map normalize_arg params), loc)
+      | Case (e, choices, default) ->
+                Case (normalize_exp e,
+                      List.map (function e,block->
+                              normalize_exp e,
+                              normalize_block block)
+                          choices,
+                      (match default with
+                         | None -> None
+                         | Some block -> Some(normalize_block block)
+                      )),loc
+      | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
+                          remove_decl_part dp;
+                          Block (ndp, normalize_block blk), loc
+
+  and normalize_block block =
+    List.map normalize_instr block
+
+
+
+  and normalize_decl_part (tbl,decl_part) ~global =
+    let represtbl = Hashtbl.create 50 in
+    let decl_part = List.filter (function
+        | BasicDecl(RepresentClause(rep)), loc ->
+          Hashtbl.add represtbl
+            (extract_representation_clause_name rep)
+            (rep, loc); false
+        | _ -> true
+      ) decl_part in
+    let normalize_decl_items items =
+      List.map (function
+        | (BasicDecl(basic),loc) ->
+            Npkcontext.set_loc loc;
+            let decl = normalize_basic_decl basic loc global represtbl
+            in (BasicDecl(decl),loc)
+        | (BodyDecl(body),loc) ->
+            Npkcontext.set_loc loc;
+            BodyDecl(normalize_body body), loc
+      ) items
+    in tbl,normalize_decl_items decl_part
+
 
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
@@ -1710,14 +1706,10 @@ let rec normalize_instr (instr,loc) =
           | Some spec -> Some(normalize_package_spec spec)
         in
           package#set_current ((fst name)@[snd name]);
-          let norm_decl_part = normalize_decl_part decl_part ~global:true in
-          let norm_block = normalize_block block
-          in
-            remove_decl_part decl_part;
-            package#reset_current;
-            PackageBody(name, norm_decl, norm_decl_part,
-                        norm_block)
-
+          let ndp = normalize_decl_part decl_part ~global:true in
+          remove_decl_part decl_part;
+          package#reset_current;
+          PackageBody(name, norm_decl, ndp, normalize_block block)
 
   in
   let normalize_lib_item lib_item loc =
