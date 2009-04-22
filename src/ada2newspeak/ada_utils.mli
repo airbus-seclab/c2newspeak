@@ -136,8 +136,7 @@ val make_range :
  * As Ada is strongly typed, it is almost the same as testing equality, with
  * one exception : integer constants are compatible with all integer types.
  *)
-val check_typ :
-  Syntax_ada.typ option -> Syntax_ada.typ -> Syntax_ada.typ
+val check_typ : Syntax_ada.typ option -> Syntax_ada.typ -> Syntax_ada.typ
 
 (**
  * Extract the underlying type of a subtype.
@@ -179,8 +178,7 @@ val integer_class : Syntax_ada.typ -> bool
  * @param typ the expected type for the result.
  *)
 val typ_operand :
-  Syntax_ada.binary_op -> Syntax_ada.typ option ->
-  Syntax_ada.typ option
+  Syntax_ada.binary_op -> Syntax_ada.typ option -> Syntax_ada.typ option
 
 (**
  * Check if operands are compatible with a binary operation.

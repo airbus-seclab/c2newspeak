@@ -233,7 +233,7 @@ and instruction =
 (** Subprogram declaration *)
 and sub_program_spec =
   | Function  of name*param list*subtyp (** A Function returns a value *)
-  | Procedure of name*(param list)      (** A Procedure does not       *)
+  | Procedure of name*param list        (** A Procedure does not       *)
 
 (* the identifier is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)
@@ -272,7 +272,6 @@ and body =
                     * package_spec option
                     * declarative_part
                     * block
-
 
 and basic_declaration =
   | ObjectDecl      of identifier list

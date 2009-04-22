@@ -393,7 +393,7 @@ class package_manager =
         val mutable current_pkg:package                 = []
         val mutable    with_pkg:package list            = []
         val             context:(package,int) Hashtbl.t = Hashtbl.create 3
-        val mutable extflag :bool                       = false
+        val mutable    extflag :bool                    = false
 
         method set_current p :unit =
             current_pkg <- p

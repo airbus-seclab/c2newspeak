@@ -27,4 +27,9 @@ package body T098 is
       Main(X);
    end Proc;
 
+   function A return Integer is
+   begin
+     return 8;
+   end;
+
 end T098;

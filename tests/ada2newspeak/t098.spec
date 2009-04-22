@@ -1,6 +1,10 @@
 Newspeak output
 ---------------
 t098.adb
+int32 t098.a(void) {
+  (t098.adb:32#460)^0- =(int32) 8;
+}
+
 uint3 t098.g(void) {
   (t098.adb:13#181)^0- =(uint3) 1;
 }

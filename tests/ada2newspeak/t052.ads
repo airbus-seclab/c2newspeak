@@ -1,5 +1,5 @@
 package T052 is
 
-   procedure Main;
+   procedure A;
 
 end T052;

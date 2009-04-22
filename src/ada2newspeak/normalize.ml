@@ -571,7 +571,14 @@ let rec parse_specification (name:name) :compilation_unit =
   let spec_ast =
     if Sys.file_exists spec_name
     then
-      File_parse.parse spec_name
+      let res = File_parse.parse spec_name in
+      if (!Npkcontext.verb_ast) then begin
+        print_endline "Abstract Syntax Tree (extern)";
+        print_endline "-----------------------------";
+        Print_syntax_ada.print_ast [res];
+        print_newline ();
+      end;
+      res
     else
       let body_name = (string_of_name name)^".adb" in
         extract_subprog_spec (File_parse.parse body_name)
@@ -1494,18 +1501,16 @@ in
       List.map
         (fun param ->
            if func && (param.mode <> In)
-           then (Npkcontext.report_error
+           then Npkcontext.report_error
               "Ada_normalize.normalize_sub_program_spec"
              ("invalid parameter mode : functions can only have"
-              ^" \"in\" parameters"))
-           else
-             (if addparam
-              then
-                  add_cst (normalize_ident_cur param.formal_name)
-                          (VarSymb(false))
-                          false;
-                  {param with param_type = normalize_subtyp param.param_type}
-             )
+             ^" \"in\" parameters");
+           if addparam then
+                add_cst (normalize_ident_cur param.formal_name)
+                        (VarSymb(false))
+                        false;
+           
+            {param with param_type = normalize_subtyp param.param_type}
         )
         param_list
     in match subprog_spec with
@@ -1627,6 +1632,66 @@ in
 
   in
 
+let check_package_body_against_spec ~body ~spec =
+  let (pkgname,spec_and_loc) = spec in
+  let       (_,body_and_loc) = body in
+  let speclist = List.map fst spec_and_loc in
+  let bodylist = List.map fst body_and_loc in
+  (* Filter on specifications : only sp such as
+   * filterspec sp = true will be checked.      *)
+  let filterspec = function
+    | ObjectDecl _ -> false
+    | NumberDecl _ -> true
+    | SpecDecl   _ -> true
+    | TypeDecl _ | SubtypDecl _ -> false
+    | RepresentClause _ | UseDecl _ -> false
+    in
+
+  let sps_eq s1 s2 =
+    Npkcontext.print_debug  "<+> sps_eq";
+    Npkcontext.print_debug (" | s1 = "^(Print_syntax_ada.sub_program_spec_to_string s1));
+    Npkcontext.print_debug (" | s2 = "^(Print_syntax_ada.sub_program_spec_to_string s2));
+    Npkcontext.print_debug  " +----------\n";
+    s1 = s2
+  in
+
+  (* Try to match a spec and a body *)
+  let match_ok (s:basic_declaration) (b:declarative_item) = match (s,b) with
+    | SpecDecl (SubProgramSpec sps),BodyDecl (SubProgramBody (spsb,_,_)) ->
+        sps_eq sps spsb
+    | ObjectDecl _ as x,BasicDecl (ObjectDecl _ as y) -> x = y
+    | _ -> false
+  in
+  let name_of_spec = function
+    | ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
+    | TypeDecl (Enum (i,_,_))
+    | TypeDecl (DerivedType (i,_))
+    | TypeDecl (IntegerRange (i,_,_))
+    | TypeDecl (Array  (i,_))
+    | TypeDecl (Record (i,_))
+    | NumberDecl (i,_,_)
+    | SubtypDecl (i,_) -> i
+    | SpecDecl (SubProgramSpec (Function  (n,_,_))) 
+    | SpecDecl (SubProgramSpec (Procedure (n,_)))   
+    | SpecDecl (PackageSpec (n,_))                  -> name_to_string n
+    | UseDecl _ | RepresentClause _-> "<no name>"
+  in
+  List.iter (function sp ->
+    if (filterspec sp) then
+      begin
+        if not (List.exists (function bd ->
+                        match_ok sp bd
+                      )
+                      bodylist)
+        then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
+          ("Body for package " ^(name_to_string pkgname)
+          ^" does not match its specification : cannot find a body for \""
+          ^(name_of_spec sp)^"\"")
+      end
+  ) speclist
+
+in
+
   let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
@@ -1685,10 +1750,8 @@ in
       ) items
     in tbl,normalize_decl_items decl_part
 
-
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
-
         let norm_subprog_decl =
           normalize_sub_program_spec subprog_decl ~addparam:true
         and norm_decl_part = normalize_decl_part decl_part ~global:false in
@@ -1696,20 +1759,19 @@ in
         in
           remove_decl_part decl_part;
           remove_params subprog_decl;
-          SubProgramBody(norm_subprog_decl,norm_decl_part,
-                         norm_block)
-
+          SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
     | PackageBody(name, package_spec, decl_part, block) ->
-        let norm_decl = match package_spec with
-          | None ->
-                Some(normalize_package_spec (parse_package_specification name))
-          | Some spec -> Some(normalize_package_spec spec)
+        let norm_spec = normalize_package_spec
+                           (with_default package_spec
+                               (parse_package_specification name)
+                           )
         in
           package#set_current ((fst name)@[snd name]);
           let ndp = normalize_decl_part decl_part ~global:true in
           remove_decl_part decl_part;
+          check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           package#reset_current;
-          PackageBody(name, norm_decl, ndp, normalize_block block)
+          PackageBody(name, Some norm_spec, ndp, normalize_block block)
 
   in
   let normalize_lib_item lib_item loc =

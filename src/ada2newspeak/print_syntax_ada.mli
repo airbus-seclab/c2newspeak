@@ -22,6 +22,8 @@
 
 *)
 
+val sub_program_spec_to_string : Syntax_ada.sub_program_spec -> string
+
 val exp_to_string : Syntax_ada.expression -> string
 
 val ast_to_string : Syntax_ada.programme -> string
