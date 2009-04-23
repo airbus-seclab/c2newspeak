@@ -267,3 +267,9 @@ val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
 val name_to_string : Syntax_ada.name -> string
 
 val ident_list_to_string : Syntax_ada.identifier list -> string
+
+(** Create a function name for an overloaded operator *)
+val make_operator_name : string -> string
+
+(** Converts a CIR binary operation into its string representation. *)
+val operator_of_binop : Syntax_ada.binary_op -> string

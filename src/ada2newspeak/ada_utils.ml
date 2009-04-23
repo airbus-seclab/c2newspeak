@@ -439,3 +439,49 @@ class package_manager =
           extflag <- false
 
     end
+
+let make_operator_name opname =
+    let ada2npk_operator_prefix = "__ada2npk_operator_" in
+     match opname with
+     | "and" -> ada2npk_operator_prefix ^ "logical_and"
+     | "or"  -> ada2npk_operator_prefix ^ "logical_and"
+     | "xor" -> ada2npk_operator_prefix ^ "xor"
+     | "="   -> ada2npk_operator_prefix ^ "equals"
+     | "/="  -> ada2npk_operator_prefix ^ "not_equals"
+     | "<"   -> ada2npk_operator_prefix ^ "lt"
+     | "<="  -> ada2npk_operator_prefix ^ "le"
+     | ">"   -> ada2npk_operator_prefix ^ "gt"
+     | ">="  -> ada2npk_operator_prefix ^ "ge"
+     | "+"   -> ada2npk_operator_prefix ^ "plus"
+     | "-"   -> ada2npk_operator_prefix ^ "minus"
+     | "&"   -> ada2npk_operator_prefix ^ "binary_and"
+     | "*"   -> ada2npk_operator_prefix ^ "times"
+     | "/"   -> ada2npk_operator_prefix ^ "div"
+     | "mod" -> ada2npk_operator_prefix ^ "mod"
+     | "rem" -> ada2npk_operator_prefix ^ "rem"
+     | "**"  -> ada2npk_operator_prefix ^ "pow"
+     | "abs" -> ada2npk_operator_prefix ^ "abs"
+     | "not" -> ada2npk_operator_prefix ^ "not"
+     | _     -> Npkcontext.report_error "Parser.make_operator_name"
+             ("Cannot overload '"^opname^"' : it is not an operator")
+
+let operator_of_binop = function
+  | Plus          -> "+"
+  | Minus         -> "-"
+  | Mult          -> "*"
+  | Div           -> "/"
+  | Power         -> "**"
+  | Concat        -> "^"
+  | Mod           -> "mod"
+  | Rem           -> "rem"
+  | Eq            -> "="
+  | Neq           -> "/="
+  | Le            -> "<="
+  | Lt            -> "<"
+  | Ge            -> ">="
+  | Gt            -> ">"
+  | And           -> "and"
+  | Or            -> "or"
+  | Xor           -> "xor"
+  | AndThen       -> "and then"
+  | OrElse        -> "or else"

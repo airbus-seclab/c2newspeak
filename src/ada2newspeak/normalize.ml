@@ -1076,7 +1076,7 @@ and normalize_exp (exp:expression) :expression = match exp with
 
 
                      | _ ->  Npkcontext.report_error
-                         "Firstpass: in Array access"
+                         "Normalize: in Array access"
                            "constraint is not IntegerRange"
                     end
      | "last" -> begin
@@ -1096,7 +1096,7 @@ and normalize_exp (exp:expression) :expression = match exp with
 
 
                      | _ ->  Npkcontext.report_error
-                         "Firstpass: in Array access"
+                         "Normalize: in Array access"
                            "constraint is not IntegerRange"
                     end
 
@@ -1122,7 +1122,7 @@ and normalize_exp (exp:expression) :expression = match exp with
              "Range Constraint fo Length"
 
            | _ ->  Npkcontext.report_error
-               "Firstpass: in Array access"
+               "Normalize: in Array access"
              "constraint is not IntegerRange"
         end
   | _ -> Npkcontext.report_error "normalize:attr"
@@ -1509,7 +1509,6 @@ in
                 add_cst (normalize_ident_cur param.formal_name)
                         (VarSymb(false))
                         false;
-           
             {param with param_type = normalize_subtyp param.param_type}
         )
         param_list
@@ -1647,18 +1646,10 @@ let check_package_body_against_spec ~body ~spec =
     | RepresentClause _ | UseDecl _ -> false
     in
 
-  let sps_eq s1 s2 =
-    Npkcontext.print_debug  "<+> sps_eq";
-    Npkcontext.print_debug (" | s1 = "^(Print_syntax_ada.sub_program_spec_to_string s1));
-    Npkcontext.print_debug (" | s2 = "^(Print_syntax_ada.sub_program_spec_to_string s2));
-    Npkcontext.print_debug  " +----------\n";
-    s1 = s2
-  in
-
   (* Try to match a spec and a body *)
   let match_ok (s:basic_declaration) (b:declarative_item) = match (s,b) with
     | SpecDecl (SubProgramSpec sps),BodyDecl (SubProgramBody (spsb,_,_)) ->
-        sps_eq sps spsb
+        sps = spsb
     | ObjectDecl _ as x,BasicDecl (ObjectDecl _ as y) -> x = y
     | _ -> false
   in
@@ -1671,8 +1662,8 @@ let check_package_body_against_spec ~body ~spec =
     | TypeDecl (Record (i,_))
     | NumberDecl (i,_,_)
     | SubtypDecl (i,_) -> i
-    | SpecDecl (SubProgramSpec (Function  (n,_,_))) 
-    | SpecDecl (SubProgramSpec (Procedure (n,_)))   
+    | SpecDecl (SubProgramSpec (Function  (n,_,_)))
+    | SpecDecl (SubProgramSpec (Procedure (n,_)))
     | SpecDecl (PackageSpec (n,_))                  -> name_to_string n
     | UseDecl _ | RepresentClause _-> "<no name>"
   in
