@@ -47,7 +47,7 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
         close_in cin;
         if Ada_utils.check_compil_unit_name prog fname
         then prog
-        else Npkcontext.report_error "Ada_parse.parse"
+        else Npkcontext.report_error "File_parse.parse"
           "file name does not match unit name"
     with Parsing.Parse_error ->
       let start_pos = Lexing.lexeme_start_p lexbuf
@@ -66,7 +66,7 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
           else ("-"^(string_of_int end_col)))
       in
       let err_msg = "syntax error: "^pos^", unexpected token: "^lexeme in
-        Npkcontext.report_error "Ada_parse.parse" err_msg
+        Npkcontext.report_error "File_parse.parse" err_msg
 
 
 

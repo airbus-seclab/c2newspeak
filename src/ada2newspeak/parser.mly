@@ -34,7 +34,7 @@
    let check_ident i1 i2 =
      if (String.compare i1 i2) <> 0
      then
-       Npkcontext.report_error "Parser.parse_error"
+       Npkcontext.report_error "Parser.check_ident"
          ("syntax error : \"end "^i1^";\" expected")
      else ()
 
@@ -81,7 +81,7 @@
                ( new_ind, None, None (*Some (new_ind)*) )
      in
        match l with
-           [] -> Npkcontext.report_error "Parser.parse_error"
+           [] -> Npkcontext.report_error "Parser.build_matrix"
              ("in build matrix, no subtyp given ")
          | hd::[] -> ConstrainedArray(hd, typ_ind, None)
          | hd::tl ->
