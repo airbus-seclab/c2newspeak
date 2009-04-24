@@ -77,6 +77,64 @@ type constant_symb =
 
 let string_of_name = Ada_utils.name_to_string
 
+(**
+ * Try to find a body for a given specification.
+ *
+ * @param ~specification is the [basic_declaration] associated to the
+ *                       specification, as found in a [package_spec].
+ * @param ~bodylist is a list of possible bodies, as found
+ *                  in a [declarative_part].
+ * @return a boolean describing whether a body could be found.
+ *)
+let find_body_for_spec ~(specification:basic_declaration)
+                       ~(bodylist:declarative_item list) :bool =
+  (* Try to match a spec and a body *)
+  let match_ok (s:basic_declaration) (b:declarative_item) = match (s,b) with
+    | SpecDecl(SubProgramSpec sps),BodyDecl(SubProgramBody (spsb,_,_))->sps=spsb
+    | ObjectDecl _ as x,BasicDecl (ObjectDecl _ as y) -> x = y
+    | _ -> false
+  in
+  List.exists (function bd -> match_ok specification bd) bodylist
+
+(** Return the name for a specification. *)
+let name_of_spec (spec:basic_declaration) :string = match spec with
+  | ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
+  | TypeDecl (Enum (i,_,_))
+  | TypeDecl (DerivedType (i,_))
+  | TypeDecl (IntegerRange (i,_,_))
+  | TypeDecl (Array  (i,_))
+  | TypeDecl (Record (i,_))
+  | NumberDecl (i,_,_)
+  | SubtypDecl (i,_) -> i
+  | SpecDecl (SubProgramSpec (Function  (n,_,_)))
+  | SpecDecl (SubProgramSpec (Procedure (n,_)))
+  | SpecDecl (PackageSpec (n,_)) -> name_to_string n
+  | UseDecl _ | RepresentClause _-> "<no name>"
+
+let check_package_body_against_spec ~(body:declarative_part)
+                                    ~(spec:package_spec) =
+  let (pkgname,spec_and_loc) = spec in
+  let       (_,body_and_loc) = body in
+  let speclist = List.map fst spec_and_loc in
+  let bodylist = List.map fst body_and_loc in
+  (* Filter on specifications : only sp such as
+   * filterspec sp = true will be checked.      *)
+  let filterspec = function
+    | NumberDecl _ | SpecDecl   _ -> true
+    | ObjectDecl _ | TypeDecl _ | SubtypDecl _
+    | RepresentClause _ | UseDecl _ -> false
+  in
+  List.iter (function sp ->
+    if (filterspec sp) then
+      begin
+        if not (find_body_for_spec ~specification:sp ~bodylist)
+        then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
+          ("Body for package " ^(name_to_string pkgname)
+          ^" does not match its specification : cannot find a body for \""
+          ^(name_of_spec sp)^"\"")
+      end
+  ) speclist
+
 let normalize_ident ident package extern =
   if extern then (package, ident)
             else (   []  , ident)
@@ -1631,58 +1689,6 @@ in
 
   in
 
-let check_package_body_against_spec ~body ~spec =
-  let (pkgname,spec_and_loc) = spec in
-  let       (_,body_and_loc) = body in
-  let speclist = List.map fst spec_and_loc in
-  let bodylist = List.map fst body_and_loc in
-  (* Filter on specifications : only sp such as
-   * filterspec sp = true will be checked.      *)
-  let filterspec = function
-    | ObjectDecl _ -> false
-    | NumberDecl _ -> true
-    | SpecDecl   _ -> true
-    | TypeDecl _ | SubtypDecl _ -> false
-    | RepresentClause _ | UseDecl _ -> false
-    in
-
-  (* Try to match a spec and a body *)
-  let match_ok (s:basic_declaration) (b:declarative_item) = match (s,b) with
-    | SpecDecl (SubProgramSpec sps),BodyDecl (SubProgramBody (spsb,_,_)) ->
-        sps = spsb
-    | ObjectDecl _ as x,BasicDecl (ObjectDecl _ as y) -> x = y
-    | _ -> false
-  in
-  let name_of_spec = function
-    | ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
-    | TypeDecl (Enum (i,_,_))
-    | TypeDecl (DerivedType (i,_))
-    | TypeDecl (IntegerRange (i,_,_))
-    | TypeDecl (Array  (i,_))
-    | TypeDecl (Record (i,_))
-    | NumberDecl (i,_,_)
-    | SubtypDecl (i,_) -> i
-    | SpecDecl (SubProgramSpec (Function  (n,_,_)))
-    | SpecDecl (SubProgramSpec (Procedure (n,_)))
-    | SpecDecl (PackageSpec (n,_))                  -> name_to_string n
-    | UseDecl _ | RepresentClause _-> "<no name>"
-  in
-  List.iter (function sp ->
-    if (filterspec sp) then
-      begin
-        if not (List.exists (function bd ->
-                        match_ok sp bd
-                      )
-                      bodylist)
-        then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
-          ("Body for package " ^(name_to_string pkgname)
-          ^" does not match its specification : cannot find a body for \""
-          ^(name_of_spec sp)^"\"")
-      end
-  ) speclist
-
-in
-
   let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
@@ -1731,11 +1737,20 @@ in
       ) decl_part in
     let normalize_decl_items items =
       List.map (function
-        | (BasicDecl(basic),loc) ->
+        | BasicDecl(SpecDecl (SubProgramSpec _) as sp),loc ->
+            if (find_body_for_spec ~specification:sp
+                                        ~bodylist:(List.map fst items)) then
+            begin Npkcontext.set_loc loc;
+            BasicDecl(normalize_basic_decl sp     loc
+                                           global represtbl),loc
+            end
+            else Npkcontext.report_error "Normalize.normalize_decl_part"
+                 ("Declaration of "^(name_of_spec sp)^" requires completion")
+        | BasicDecl(basic),loc ->
             Npkcontext.set_loc loc;
-            let decl = normalize_basic_decl basic loc global represtbl
-            in (BasicDecl(decl),loc)
-        | (BodyDecl(body),loc) ->
+            BasicDecl(normalize_basic_decl basic  loc
+                                           global represtbl),loc
+        | BodyDecl(body),loc ->
             Npkcontext.set_loc loc;
             BodyDecl(normalize_body body), loc
       ) items
