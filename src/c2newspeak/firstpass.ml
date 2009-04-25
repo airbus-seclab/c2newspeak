@@ -134,17 +134,39 @@ let translate (globals, spec) =
   let find_symb x = 
     try Symbtbl.find symbtbl x
     with Not_found -> 
-(* TODO: put in gnuc? and think about architecture:
-   npkcontext should call some init function of gnuc which fills all the 
-   necessary tables when option gnuc is set
-   so that boolean accept_gnuc does not appear in the interface of npkcontext 
-*)
-      if Gnuc.is_gnuc_token x && not !Npkcontext.accept_gnuc then begin
-	Npkcontext.report_accept_warning "Firstpass.translate.typ_of_var" 
-	  ("unknown identifier "^x^", probably a GNU C token") Npkcontext.GnuC
+      if (Gnuc.is_gnuc_token x) && (not !Npkcontext.accept_gnuc) then begin
+	Npkcontext.report_accept_warning "Firstpass.translate.find_symb" 
+	  ("unknown identifier "^x^", maybe a GNU C symbol") Npkcontext.GnuC
       end;
-      Npkcontext.report_error "Firstpass.translate.typ_of_var" 
-	("unknown identifier "^x)
+      Npkcontext.report_accept_warning "Firstpass.translate.find_symb" 
+	("unknown identifier "^x^", maybe a function without prototype") 
+	Npkcontext.MissingFunDecl;
+      let info = (GlobalSymb x, Fun (None, CoreC.int_typ)) in
+	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
+	Symbtbl.bind symbtbl x info;
+	info
+  in
+
+  let update_funtyp f ft1 =
+    let (symb, t) = Symbtbl.find symbtbl f in
+    let ft2 = CoreC.ftyp_of_typ t in
+    let ft = CoreC.min_ftyp ft1 ft2 in
+      Symbtbl.update symbtbl f (symb, Fun ft)
+  in
+
+  let update_funsymb f static ft loc =
+    let (fname, _, _) = loc in
+    let f' = if static then "!"^fname^"."^f else f in
+      try update_funtyp f ft
+      with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
+  in
+
+  let translate_proto_ftyp f static (args, ret) loc =
+    if args = None then begin
+      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
+	("incomplete prototype for function "^f)
+    end;
+    update_funsymb f static (args, ret) loc
   in
 
   let is_enum x =
@@ -221,7 +243,7 @@ let translate (globals, spec) =
       name
   in
 
-  let push_enum (x, i) = Symbtbl.bind symbtbl x (EnumSymb i, int_typ) in
+  let push_enum (x, i) = Symbtbl.bind symbtbl x (EnumSymb i, CoreC.int_typ) in
 
   let add_fundef f (ret, args) body t = 
     Hashtbl.replace fundefs f (ret, args, t, body) 
@@ -439,7 +461,7 @@ let translate (globals, spec) =
 
       | OpExp (op, lv, is_after) ->
 	  let loc = Npkcontext.get_loc () in
-	  let e = Cst (C.CInt (Nat.of_int 1), int_typ) in
+	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ) in
 	  let (incr, t) = translate_set (lv, Some op, e) in
 	  let (lv, _, _) = incr in
 	    (C.BlkLv ((C.Set incr, loc)::[], lv, is_after), t)
@@ -617,7 +639,7 @@ let translate (globals, spec) =
         None ->   
           Npkcontext.report_accept_warning "Firstpass.refine_args_t"  
             "unknown arguments type at function call"   
-            Npkcontext.PartialFunTyp;  
+            Npkcontext.PartialFunDecl;  
           let infer_typ i e =  
 	    let (_, t) = translate_exp e in  
 	      (t, "arg"^(string_of_int i))  
@@ -877,7 +899,7 @@ let translate (globals, spec) =
 
   and add_enum (x, v) =
     let v = translate_exp v in
-    let (v, _) = cast v int_typ in
+    let (v, _) = cast v CoreC.int_typ in
     let v = 
       try C.Const (C.CInt (C.eval_exp v)) 
       with Invalid_argument _ -> v
@@ -1195,25 +1217,6 @@ let translate (globals, spec) =
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
-  and update_funtyp f ft1 =
-    let (symb, t) = Symbtbl.find symbtbl f in
-    let ft2 = CoreC.ftyp_of_typ t in
-    let ft = CoreC.min_ftyp ft1 ft2 in
-      Symbtbl.update symbtbl f (symb, Fun ft)
-
-  and update_funsymb f static ft loc =
-    let (fname, _, _) = loc in
-    let f' = if static then "!"^fname^"."^f else f in
-      try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
-
-  and translate_proto_ftyp f static (args, ret) loc =
-    if args = None then begin
-      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
-	("incomplete prototype for function "^f)
-    end;
-    update_funsymb f static (args, ret) loc
-
   and normalize_binop op (e1, t1) (e2, t2) =
     let cast e t = fst (cast e t) in
     match (op, t1, t2) with
@@ -1289,14 +1292,14 @@ let translate (globals, spec) =
 	(* Pointer operations *)
 	| (Plus, Ptr _, Int _) -> (N.PlusPI, t1)
 	    
-	| (Minus, Ptr _, Ptr _) -> (N.MinusPP, int_typ)
+	| (Minus, Ptr _, Ptr _) -> (N.MinusPP, CoreC.int_typ)
 	    
 	(* Integer comparisons *)
 	(* Thanks to normalization t1 = t2 *)
 	(* Function translate_scalar_typ will ensure they are both scalar 
 	   types *)
-	| (Gt, _, _) -> (N.Gt (translate_scalar_typ t1), int_typ)
-	| (Eq, _, _) -> (N.Eq (translate_scalar_typ t1), int_typ)
+	| (Gt, _, _) -> (N.Gt (translate_scalar_typ t1), CoreC.int_typ)
+	| (Eq, _, _) -> (N.Eq (translate_scalar_typ t1), CoreC.int_typ)
 	    	    
 	| _ ->
 	    Npkcontext.report_error "Firstpass.translate_binop" 
@@ -1331,7 +1334,7 @@ let translate (globals, spec) =
       | (Neg, Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
       | (Neg, Float _, _) -> 
 	  translate_binop Minus (C.exp_of_float 0., t) (e, t)
-      | (Not, Int _, _) -> (C.Unop (K.Not, e), int_typ)
+      | (Not, Int _, _) -> (C.Unop (K.Not, e), CoreC.int_typ)
       | (BNot, Int k, _) -> 
 	  let k' = C.promote k in
 	  let t' = Int k' in

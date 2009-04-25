@@ -66,9 +66,8 @@ let init_tbls () =
 (* initialize table of predefined types *)
 (* GNU C predefined types *)
 (* TODO: clean up put in gnuc.ml and think about architecture *)
-  if !Npkcontext.accept_gnuc then begin
-    Hashtbl.add typedefs "_Bool" (B.Int (Newspeak.Unsigned, 1))
-  end
+  if !Npkcontext.accept_gnuc 
+  then Hashtbl.add typedefs "_Bool" (B.Int (Newspeak.Unsigned, 1))
 
 let _ = 
   init_tbls ()

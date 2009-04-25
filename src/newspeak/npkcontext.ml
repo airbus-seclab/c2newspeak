@@ -90,7 +90,8 @@ let input_files = ref []
 let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
 let output_file = ref ""
-let accept_missing_ftyp = ref false
+let accept_partial_fdecl = ref false
+let accept_missing_fdecl = ref false
 let config_file = ref ""
 
 
@@ -104,7 +105,8 @@ type error =
   | Volatile
   | DirtyCast
   | DirtySyntax
-  | PartialFunTyp
+  | PartialFunDecl
+  | MissingFunDecl
   | ForwardGoto
   | BackwardGoto
   | StrictSyntax
@@ -126,7 +128,8 @@ let flag_of_error err =
     | Volatile -> ignores_volatile
     | DirtyCast -> accept_dirty_cast
     | DirtySyntax -> accept_dirty_syntax
-    | PartialFunTyp -> accept_missing_ftyp
+    | PartialFunDecl -> accept_partial_fdecl
+    | MissingFunDecl -> accept_missing_fdecl
     | ForwardGoto -> accept_forward_goto
     | BackwardGoto -> accept_goto
     | StrictSyntax -> use_strict_syntax
@@ -148,7 +151,8 @@ let opt_of_error err =
     | Volatile -> "--ignore-volatile"
     | DirtyCast -> "--accept-dirty-cast"
     | DirtySyntax -> "--accept-dirty-syntax"
-    | PartialFunTyp -> "--accept-missing-funtyp"
+    | PartialFunDecl -> "--accept-incomplete-fundecl"
+    | MissingFunDecl -> "--accept-missing-fundecl"
     | ForwardGoto -> "--accept-forward-goto"
     | BackwardGoto -> "--accept-goto"
     | StrictSyntax -> "--use-strict-syntax"
@@ -183,8 +187,11 @@ let argslist = [
   (opt_of_error DirtySyntax, Arg.Set (flag_of_error DirtySyntax),
    "accepts dirty syntax");
 
-  (opt_of_error PartialFunTyp, Arg.Set (flag_of_error PartialFunTyp),
+  (opt_of_error PartialFunDecl, Arg.Set (flag_of_error PartialFunDecl),
    "accepts call to function whose argument type is unknown");
+
+  (opt_of_error MissingFunDecl, Arg.Set (flag_of_error MissingFunDecl),
+   "accepts call to function whose prototype is not declared");
 
   (opt_of_error ForwardGoto, Arg.Set (flag_of_error ForwardGoto),
    "accepts forward goto statements");
@@ -326,10 +333,14 @@ let exit_on_error msg =
 let handle_cmdline_options version_string comment_string = 
   let usage_msg =
     version_string ^ "\nUsage: "^
-      Sys.argv.(0)^" [options] [-help|--help] [file...]\n" in
+      Sys.argv.(0)^" [options] [-help|--help] [file...]\n" 
+  in
     
     Arg.parse argslist anon_fun usage_msg;
-    
+
+    if !(flag_of_error MissingFunDecl) 
+    then (flag_of_error PartialFunDecl) := true;
+
     if !version then begin
       print_endline version_string;
       print_endline comment_string;
@@ -350,7 +361,6 @@ let handle_cmdline_options version_string comment_string =
     
     if (not !compile_only) && (!output_file = "") then output_file := "a.npk"
       
-(* TODO: do a report_accept_warning *)
 let report_ignore_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
     let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
