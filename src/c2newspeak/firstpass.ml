@@ -1368,6 +1368,27 @@ let translate (globals, spec) =
 	update_global x name loc (t, init)
   in
 
+  let collect_funtyps (x, loc) =
+    Npkcontext.set_loc loc;
+    match x with
+	FunctionDef (f, (args_t, ret_t), static, _) ->
+	  let args_t = 
+	    match args_t with
+		None -> []
+	      | Some args_t -> args_t
+	  in
+	    update_funsymb f static (Some args_t, ret_t) loc
+
+      | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
+	  translate_proto_ftyp f static ft loc
+
+      | GlbDecl (f, VDecl (Fun _, _, _, Some _)) -> 
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("unexpected initialization of function "^f)
+
+      | _ -> ()
+  in
+
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
@@ -1424,29 +1445,14 @@ let translate (globals, spec) =
       ()
   in
 
-  let collect_funtyps (x, loc) =
-    Npkcontext.set_loc loc;
-    match x with
-	FunctionDef (f, (args_t, ret_t), static, _) ->
-	  let args_t = 
-	    match args_t with
-		None -> []
-	      | Some args_t -> args_t
-	  in
-	    update_funsymb f static (Some args_t, ret_t) loc
-
-      | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
-	  translate_proto_ftyp f static ft loc
-
-      | GlbDecl (f, VDecl (Fun _, _, _, Some _)) -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    ("unexpected initialization of function "^f)
-
-      | _ -> ()
-  in
-
 (* TODO: a tad inefficient *)
     List.iter collect_glb_structdefs globals;
+(* seems necessary because of 536.c and 540.c and 679.c 
+   maybe should really think about this and be stricter
+   so as to perform everything in one pass
+   Or better: should do all typing first.
+   Then compile.
+*)
     List.iter collect_funtyps globals;
     List.iter translate_global globals;
 (* TODO: optimization: could remove this phase if cir had a type 
