@@ -113,6 +113,11 @@ let translate (globals, spec) =
       f
   in
 
+  let align_of_comp name =
+    let (_, _, a) = find_compdef name in
+      a
+  in
+
   let new_lbl () =
     incr lbl_cnt;
     !lbl_cnt
@@ -1348,9 +1353,7 @@ let translate (globals, spec) =
 
   and align_of t =
     match t with
-	Comp (n, _) ->
-	  let (_, _, a) = Symbtbl.find compdefs n in
-	    a
+	Comp (n, _) -> align_of_comp n
       | Array (t, _) -> align_of t
       | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
