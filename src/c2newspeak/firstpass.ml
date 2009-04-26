@@ -1368,27 +1368,6 @@ let translate (globals, spec) =
 	update_global x name loc (t, init)
   in
 
-  let collect_funtyps (x, loc) =
-    Npkcontext.set_loc loc;
-    match x with
-	FunctionDef (f, (args_t, ret_t), static, _) ->
-	  let args_t = 
-	    match args_t with
-		None -> []
-	      | Some args_t -> args_t
-	  in
-	    update_funsymb f static (Some args_t, ret_t) loc
-
-      | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
-	  translate_proto_ftyp f static ft loc
-
-      | GlbDecl (f, VDecl (Fun _, _, _, Some _)) -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    ("unexpected initialization of function "^f)
-
-      | _ -> ()
-  in
-
   let translate_global (x, loc) =
     Npkcontext.set_loc loc;
     match x with
@@ -1421,6 +1400,7 @@ let translate (globals, spec) =
       | GlbDecl (_, VDecl (Fun _, _, _, _)) -> ()
 
       | GlbDecl (x, VDecl (t, static, extern, init)) ->
+(* TODO: put this in collect_glbtyps phase?? *)
 	  declare_global static extern x loc t init
 
       | GlbDecl _ -> ()
@@ -1428,10 +1408,27 @@ let translate (globals, spec) =
     
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
-  let collect_glb_structdefs (x, _) =
+  let collect_glbtyps (x, loc) =
+    Npkcontext.set_loc loc;
     match x with
-	GlbDecl (x, CDecl d) -> add_compdecl (x, d)
+	FunctionDef (f, (args_t, ret_t), static, _) ->
+	  let args_t = 
+	    match args_t with
+		None -> []
+	      | Some args_t -> args_t
+	  in
+	    update_funsymb f static (Some args_t, ret_t) loc
+
+      | GlbDecl (x, CDecl d) -> add_compdecl (x, d)
       | GlbDecl (x, EDecl e) -> add_enum (x, e)
+
+      | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
+	  translate_proto_ftyp f static ft loc
+
+      | GlbDecl (f, VDecl (Fun _, _, _, Some _)) -> 
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("unexpected initialization of function "^f)
+
       | _ -> ()
   in
 
@@ -1446,14 +1443,13 @@ let translate (globals, spec) =
   in
 
 (* TODO: a tad inefficient *)
-    List.iter collect_glb_structdefs globals;
 (* seems necessary because of 536.c and 540.c and 679.c 
    maybe should really think about this and be stricter
    so as to perform everything in one pass
    Or better: should do all typing first.
    Then compile.
 *)
-    List.iter collect_funtyps globals;
+    List.iter collect_glbtyps globals;
     List.iter translate_global globals;
 (* TODO: optimization: could remove this phase if cir had a type 
    structure of name 
