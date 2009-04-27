@@ -324,21 +324,8 @@ let check_operand_typ op typ = match op with
         "Firstpass.translate_binop"
         "concat not implemented"
 
-let make_enum list_val =
-  let rec make_id list_val next_id =
-    match list_val with
-      | v::r -> (v,Nat.of_int next_id)::(make_id r (next_id +1))
-      | [] -> []
-  in
-  let list_assoc = make_id list_val 0 in
-  let max = Nat.of_int ((List.length list_assoc) - 1)
-  in Enum(list_assoc, Ada_config.size_of_enum Nat.zero max)
-
 let ikind_of_range inf sup = (Newspeak.Signed,
                               Ada_config.size_of_range inf sup)
-
-let make_range exp_b_inf exp_b_sup =
-  IntegerRange(RangeConstraint(exp_b_inf, exp_b_sup), None)
 
 let check_compil_unit_name compil_unit file_name =
   let expected_name = Filename.chop_extension file_name in

@@ -29,109 +29,125 @@
   email: charles.hymans@penjili.org
 *) */
 
-%{ open Syntax_ada
+%{
+open Syntax_ada
 
-   let check_ident i1 i2 =
-     if (String.compare i1 i2) <> 0
-     then
-       Npkcontext.report_error "Parser.check_ident"
-         ("syntax error : \"end "^i1^";\" expected")
-     else ()
+let check_ident i1 i2 =
+  if (String.compare i1 i2) <> 0
+  then
+    Npkcontext.report_error "Parser.check_ident"
+      ("syntax error : \"end "^i1^";\" expected")
+  else ()
 
-   let check_name (p1,i1) (p2,i2) =
-     List.iter2 check_ident (p1@[i1]) (p2@[i2])
+let check_name (p1,i1) (p2,i2) =
+  List.iter2 check_ident (p1@[i1]) (p2@[i2])
 
-   let check_end decl end_name =
-     let begin_name = match decl with
-       | Function(name,_,_) -> name
-       | Procedure(name,_) -> name
-     in
-       check_name begin_name end_name
+let check_end decl end_name =
+  let begin_name = match decl with
+    | Function(name,_,_) -> name
+    | Procedure(name,_) -> name
+  in
+    check_name begin_name end_name
 
-   let build_access name lst   =
-     let rec build_aux lst  =
-       match lst with [] -> (Lval name)
-         | hd::tl ->
-             let built = build_aux tl in
-               ArrayAccess (built, hd)
-     in
-       match lst with
-           [] -> Lval name
-         | _  ->
-             let rev_list = List.rev lst in
-               build_aux rev_list
+let build_access name lst   =
+  let rec build_aux lst  =
+    match lst with [] -> (Lval name)
+      | hd::tl ->
+          let built = build_aux tl in
+            ArrayAccess (built, hd)
+  in
+    match lst with
+        [] -> Lval name
+      | _  ->
+          let rev_list = List.rev lst in
+            build_aux rev_list
 
-   let build_matrix l typ_ind loc =
-     (* crafted buids the subtype_indication *)
-     let rec crafted list_ind typ_elt =
-       match list_ind with
-           [] -> typ_elt
-         | hd::tl ->
-             let recu =  crafted tl typ_elt in
-             let new_ind = Unconstrained(Declared("no_name"
-                                                 ,Array(ConstrainedArray(hd
-                                                                        ,recu
-                                                                        ,None
-                                                                        )
-                                                       )
-                                                 ,loc
-                                                 )
-                                        )
-             in
-               ( new_ind, None, None (*Some (new_ind)*) )
-     in
-       match l with
-           [] -> Npkcontext.report_error "Parser.build_matrix"
-             ("in build matrix, no subtyp given ")
-         | hd::[] -> ConstrainedArray(hd, typ_ind, None)
-         | hd::tl ->
-             ConstrainedArray(hd
-                             ,crafted tl typ_ind
-                             ,None
-                             )
+let build_matrix l typ_ind loc =
+  (* crafted buids the subtype_indication *)
+  let rec crafted list_ind typ_elt =
+    match list_ind with
+        [] -> typ_elt
+      | hd::tl ->
+          let recu =  crafted tl typ_elt in
+          let new_ind = Unconstrained(Declared("no_name"
+                                              ,Array(ConstrainedArray(hd
+                                                                     ,recu
+                                                                     ,None
+                                                                     )
+                                                    )
+                                              ,loc
+                                              )
+                                     )
+          in
+            ( new_ind, None, None (*Some (new_ind)*) )
+  in
+    match l with
+        [] -> Npkcontext.report_error "Parser.build_matrix"
+          ("in build matrix, no subtyp given ")
+      | hd::[] -> ConstrainedArray(hd, typ_ind, None)
+      | hd::tl ->
+          ConstrainedArray(hd
+                          ,crafted tl typ_ind
+                          ,None
+                          )
 
-    (**
-      * Prepare a list of exp*block for the Case constructor.
-      * It takes a list of expression list * block and flattens it into
-      * a list of expression*block.
-      *)
-    let rec build_case_ch (choices:(expression list*block)list)
-        :(expression*block) list =
-        match choices with
-          | []                     -> []
-          | (exp_list,block)::tail -> (List.map (function exp -> exp,block)
-                                                exp_list)
-                                     @ (build_case_ch tail)
+(**
+  * Prepare a list of exp*block for the Case constructor.
+  * It takes a list of expression list * block and flattens it into
+  * a list of expression*block.
+  *)
+let rec build_case_ch (choices:(expression list*block)list)
+    :(expression*block) list =
+    match choices with
+      | []                     -> []
+      | (exp_list,block)::tail -> (List.map (function exp -> exp,block)
+                                            exp_list)
+                                 @ (build_case_ch tail)
 
-    (**
-     * Build a parameter specification list from a "factored" one.
-     * That is to say, expand "X, Y : Integer" to "X : Integer ; Y : Integer".
-     *
-     * Rationale : RM95, 3.3.1.(7)
-     *   "    Any declaration that includes a defining_identifier_list with more
-     *    than one defining_identifier is equivalent to a series of declarations
-     *    each containing one defining_identifier from the list, with the rest
-     *    of the text of the declaration copied for each declaration in the
-     *    series, in the same order as the list."
-     *)
-    let make_parameter_specification (idents:identifier list)
-                                     (common_mode:param_mode)
-                                     (common_type:subtyp)
-                                     (common_default_value:expression option)
-        :param list =
-        List.map (function x -> {formal_name=x;
-                                        mode=common_mode;
-                                  param_type=common_type;
-                               default_value=common_default_value;})
-                 idents
+(**
+ * Build a parameter specification list from a "factored" one.
+ * That is to say, expand "X, Y : Integer" to "X : Integer ; Y : Integer".
+ *
+ * Rationale : RM95, 3.3.1.(7)
+ *   "    Any declaration that includes a defining_identifier_list with more
+ *    than one defining_identifier is equivalent to a series of declarations
+ *    each containing one defining_identifier from the list, with the rest
+ *    of the text of the declaration copied for each declaration in the
+ *    series, in the same order as the list."
+ *)
+let make_parameter_specification (idents:identifier list)
+                                 (common_mode:param_mode)
+                                 (common_type:subtyp)
+                                 (common_default_value:expression option)
+    :param list =
+    List.map (function x -> {formal_name=x;
+                                    mode=common_mode;
+                              param_type=common_type;
+                           default_value=common_default_value;})
+             idents
 
-    (**
-     * Prepend a symbol table to a declarative part.
-     * Input : a list of declarative items
-     *)
-    let make_declarative_part (l:(declarative_item*location) list)
-            :declarative_part =
-      (Ada_types.create_table (List.length l)),l
+(**
+ * Prepend a symbol table to a declarative part.
+ * Input : a list of declarative items
+ *)
+let make_declarative_part (l:(declarative_item*location) list)
+        :declarative_part =
+  (Ada_types.create_table (List.length l)),l
+
+
+let make_enum list_val =
+  let rec make_id list_val next_id =
+    match list_val with
+      | v::r -> (v,Newspeak.Nat.of_int next_id)::(make_id r (next_id +1))
+      | [] -> []
+  in
+  let list_assoc = make_id list_val 0 in
+  let max = Newspeak.Nat.of_int ((List.length list_assoc) - 1)
+  in Enum(list_assoc, Ada_config.size_of_enum Newspeak.Nat.zero max)
+
+let make_range exp_b_inf exp_b_sup =
+  IntegerRange(RangeConstraint(exp_b_inf, exp_b_sup), None)
+
 
 %}
 /*declaration ocamlyacc*/
@@ -419,11 +435,11 @@ basic_declaration :
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
                 { TypeDecl($2,Array $5),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
-    { TypeDecl($2,Ada_utils.make_enum $5),$1}
+    { TypeDecl($2, make_enum $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
         {TypeDecl($2,DerivedType $5),$1}
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
-            { TypeDecl($2, Ada_utils.make_range $5 $7),$1}
+            { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
 | TYPE ident IS RECORD record_definition END RECORD SEMICOLON
                 { TypeDecl($2,Record $5),$1 }
 | SUBTYPE ident IS subtyp_indication SEMICOLON

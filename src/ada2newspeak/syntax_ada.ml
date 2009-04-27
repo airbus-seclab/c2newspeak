@@ -100,7 +100,7 @@ type typ =
 (** Type declaration. *)
 and typ_declaration =
   | Enum          of ((identifier*nat) list)
-                    * Newspeak.ikind             
+                    * Newspeak.ikind
   | DerivedType  of subtyp_indication
   | IntegerRange of contrainte
                   * Newspeak.ikind option

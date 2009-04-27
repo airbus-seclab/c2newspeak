@@ -1381,7 +1381,8 @@ in
         clauses
   in
 
-  let normalize_typ_decl ident typ_decl loc global represtbl = match typ_decl with
+  let normalize_typ_decl ident typ_decl loc global represtbl =
+   match typ_decl with
     | Enum(symbs, size) ->
         let typ_decl = enumeration_representation ident symbs size represtbl loc
         in
@@ -1417,8 +1418,8 @@ in
               enumeration_representation ident symbs size represtbl loc
           | Declared(_,IntegerRange(contrainte,taille),_) ->
               IntegerRange(contrainte, taille)
-          | Declared(_,Array  def,_) -> Array  def 
-          | Declared(_,Record def,_) -> Record def 
+          | Declared(_,Array  def,_) -> Array  def
+          | Declared(_,Record def,_) -> Record def
           | Declared(_, DerivedType subtyp_ind,_) -> DerivedType subtyp_ind
         in
 
@@ -1433,7 +1434,7 @@ in
                     | (Enum(new_assoc,_), Declared(_,Enum(symbs, _),_)) ->
                         update_contrainte contrainte symbs new_assoc
                     | _ -> contrainte
-                  in Constrained(Declared(ident,typ_decl, loc), contrainte, static)
+                  in Constrained(Declared(ident,typ_decl,loc),contrainte,static)
               | SubtypName _ ->
                   Npkcontext.report_error
                     "Ada_normalize.normalize_typ_decl"
@@ -1515,16 +1516,15 @@ in
     (* incomplet *)
     List.iter
       (function (item,_) -> match item with
-      | BasicDecl(TypeDecl(id,tdecl)) ->    remove_typ_decl id tdecl
-      | BasicDecl(SubtypDecl(ident, _))-> types#remove(normalize_ident_cur ident)
+      | BasicDecl(TypeDecl(id,tdecl)) -> remove_typ_decl id tdecl
+      | BasicDecl(SubtypDecl(ident,_))-> types#remove(normalize_ident_cur ident)
       | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
           List.iter
             (fun ident -> remove_cst (normalize_ident_cur ident))
             ident_list
       | BasicDecl(UseDecl(use_clause)) -> package#remove_use
                                                 (make_package use_clause)
-      | BasicDecl(NumberDecl(ident,_,_)) ->
-            remove_cst (normalize_ident_cur ident)
+      | BasicDecl(NumberDecl(ident,_,_))->remove_cst (normalize_ident_cur ident)
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
       | BodyDecl _ -> ()
@@ -1551,10 +1551,10 @@ in
               "Ada_normalize.normalize_sub_program_spec"
              ("invalid parameter mode : functions can only have"
              ^" \"in\" parameters");
-           if addparam then
-                add_cst (normalize_ident_cur param.formal_name)
-                        (VarSymb(false))
-                        false;
+           ignore func;
+           if addparam then add_cst (normalize_ident_cur param.formal_name)
+                              (VarSymb false)
+                              false;
             {param with param_type = normalize_subtyp param.param_type}
         )
         param_list
@@ -1562,8 +1562,7 @@ in
         | Function(name, [], return_type)  ->
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
-              add_function
-                norm_name (Some(base_typ norm_subtyp)) false;
+              add_function norm_name (Some(base_typ norm_subtyp)) false;
               Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
