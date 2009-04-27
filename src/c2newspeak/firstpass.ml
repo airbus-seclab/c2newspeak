@@ -1391,18 +1391,6 @@ let translate (globals, spec) =
 	      Hashtbl.clear lbl_tbl;
 	      lbl_cnt := default_lbl
 	      
-(* TODO: factor all these GlbDecl!! *)
-(* TODO: put this check in parser ?? *)
-      | GlbDecl (_, VDecl (_, _, extern, Some _)) when extern -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    "extern globals can not be initizalized"
- 
-      | GlbDecl (_, VDecl (Fun _, _, _, _)) -> ()
-
-      | GlbDecl (x, VDecl (t, static, extern, init)) ->
-(* TODO: put this in collect_glbtyps phase?? *)
-	  declare_global static extern x loc t init
-
       | GlbDecl _ -> ()
   in
     
@@ -1422,6 +1410,10 @@ let translate (globals, spec) =
       | GlbDecl (x, CDecl d) -> add_compdecl (x, d)
       | GlbDecl (x, EDecl e) -> add_enum (x, e)
 
+      | GlbDecl (_, VDecl (_, _, extern, Some _)) when extern -> 
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    "extern globals can not be initizalized"
+ 
       | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
 	  translate_proto_ftyp f static ft loc
 
@@ -1429,7 +1421,8 @@ let translate (globals, spec) =
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^f)
 
-      | _ -> ()
+      | GlbDecl (x, VDecl (t, static, extern, init)) ->
+	  declare_global static extern x loc t init
   in
 
   let add_glbdecl name (t, loc, init) =
