@@ -148,3 +148,5 @@ val array_of_typ: typ -> (typ * exp option)
 val ftyp_of_typ: typ -> ftyp
 
 val min_ftyp: ftyp -> ftyp -> ftyp
+
+val string_of_exp: exp -> string

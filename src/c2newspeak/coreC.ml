@@ -198,3 +198,33 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
     end;
     (args_t, ret_t1)  
 
+let rec string_of_exp e =
+  match e with
+      Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
+    | Cst _ -> "Cst"
+    | Var x -> x
+    | Field (e, f) -> (string_of_exp e)^"."^f
+    | Index (e1, e2) -> 
+	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
+    | Deref e -> "*("^(string_of_exp e)^")"
+    | AddrOf _ -> "AddrOf"
+    | Unop (_, e) -> "op("^(string_of_exp e)^")"
+    | IfExp (e1, e2, e3) -> 
+	let e1 = string_of_exp e1 in
+	let e2 = string_of_exp e2 in
+	let e3 = string_of_exp e3 in
+	  "("^e1^") ? ("^e2^") : ("^e3^")"
+    | Binop (_, e1, e2) -> (string_of_exp e1) ^" op "^(string_of_exp e2)
+    | Call _ -> "Call"
+    | Offsetof _ -> "Offsetof"
+    | Sizeof _ -> "Sizeof"
+    | SizeofE _ -> "SizeofE"
+    | Str _ -> "Str"
+    | FunName -> "FunName"
+    | Cast (e, _) -> 
+	let e = string_of_exp e in
+	  "(typ) "^e
+    | Set (lv, None, e) -> (string_of_exp lv)^" = "^(string_of_exp e)^";"
+    | Set _ -> "Set"
+    | OpExp _ -> "OpExp"
+    | BlkExp _ -> "BlkExp"
