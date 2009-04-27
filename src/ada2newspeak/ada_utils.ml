@@ -206,14 +206,14 @@ let rec integer_class typ = match typ with
   | String       -> false
   | Integer
   | IntegerConst -> true
-  | Declared(typdef, _) ->
+  | Declared(_,typdef,_) ->
       (match typdef with
          | Enum _
          | Array _
          | Record _ -> false
          | IntegerRange _ -> true
-         | DerivedType(_,(_,_,Some(subtyp))) -> integer_class (base_typ subtyp)
-         | DerivedType(_,(_,_,None)) -> Npkcontext.report_error
+         | DerivedType(_,_,Some(subtyp)) -> integer_class (base_typ subtyp)
+         | DerivedType(_,_,None) -> Npkcontext.report_error
                                "Ada_utils.integer_class"
                                "internal error : no subtype provided"
       )
@@ -324,7 +324,7 @@ let check_operand_typ op typ = match op with
         "Firstpass.translate_binop"
         "concat not implemented"
 
-let make_enum nom list_val =
+let make_enum list_val =
   let rec make_id list_val next_id =
     match list_val with
       | v::r -> (v,Nat.of_int next_id)::(make_id r (next_id +1))
@@ -332,13 +332,13 @@ let make_enum nom list_val =
   in
   let list_assoc = make_id list_val 0 in
   let max = Nat.of_int ((List.length list_assoc) - 1)
-  in Enum(nom, list_assoc, Ada_config.size_of_enum Nat.zero max)
+  in Enum(list_assoc, Ada_config.size_of_enum Nat.zero max)
 
 let ikind_of_range inf sup = (Newspeak.Signed,
                               Ada_config.size_of_range inf sup)
 
-let make_range nom exp_b_inf exp_b_sup =
-  IntegerRange(nom, RangeConstraint(exp_b_inf, exp_b_sup), None)
+let make_range exp_b_inf exp_b_sup =
+  IntegerRange(RangeConstraint(exp_b_inf, exp_b_sup), None)
 
 let check_compil_unit_name compil_unit file_name =
   let expected_name = Filename.chop_extension file_name in

@@ -62,14 +62,14 @@
                build_aux rev_list
 
    let build_matrix l typ_ind loc =
-     (*crafted buids the subtype_indication*)
+     (* crafted buids the subtype_indication *)
      let rec crafted list_ind typ_elt =
        match list_ind with
            [] -> typ_elt
          | hd::tl ->
              let recu =  crafted tl typ_elt in
-             let new_ind = Unconstrained(Declared(Array("no_name"
-                                                       ,ConstrainedArray(hd
+             let new_ind = Unconstrained(Declared("no_name"
+                                                 ,Array(ConstrainedArray(hd
                                                                         ,recu
                                                                         ,None
                                                                         )
@@ -417,15 +417,15 @@ basic_declaration :
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
         {ObjectDecl($1,$4,Some($6), Constant), $2}
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
-                { TypeDecl(Array($2,$5)),$1}
+                { TypeDecl($2,Array $5),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
-    { TypeDecl(Ada_utils.make_enum ($2) $5),$1}
+    { TypeDecl($2,Ada_utils.make_enum $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
-        {TypeDecl(DerivedType($2, $5)),$1}
+        {TypeDecl($2,DerivedType $5),$1}
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
-            { TypeDecl(Ada_utils.make_range $2 $5 $7),$1}
+            { TypeDecl($2, Ada_utils.make_range $5 $7),$1}
 | TYPE ident IS RECORD record_definition END RECORD SEMICOLON
-                { TypeDecl(Record($2, $5)),$1 }
+                { TypeDecl($2,Record $5),$1 }
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}

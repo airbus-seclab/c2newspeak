@@ -70,11 +70,9 @@ val  eq_val : Syntax_ada.value -> Syntax_ada.value -> bool
 
 (**
  * Compute a type_declaration for a new enumeration type,
- * given its name and a list of ts discrete values.
+ * given a list of its discrete values.
  *)
-val make_enum :
-  Syntax_ada.identifier ->
-  Syntax_ada.identifier list -> Syntax_ada.typ_declaration
+val make_enum : Syntax_ada.identifier list -> Syntax_ada.typ_declaration
 
 (**
  * Check bounds.
@@ -121,9 +119,7 @@ val ikind_of_range : Syntax_ada.nat -> Syntax_ada.nat -> Newspeak.ikind
  * Build a type_declaration for a constrained integer range.
  *)
 val make_range :
-  Syntax_ada.identifier ->
-  Syntax_ada.expression ->
-  Syntax_ada.expression -> Syntax_ada.typ_declaration
+  Syntax_ada.expression -> Syntax_ada.expression -> Syntax_ada.typ_declaration
 
 (**
  * Check compatibility between types.

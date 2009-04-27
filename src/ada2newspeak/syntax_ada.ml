@@ -89,29 +89,23 @@ type binary_op =
 
 (** Builtin types. *)
 type typ =
-  | Integer                              (** Integer               *)
-  | IntegerConst                         (** Integer constant      *)
-  | Float                                (** Floating-point number *)
-  | Boolean                              (** Boolean               *)
-  | Character                            (** Character             *)
-  | String                               (** String                *)
-  | Declared of typ_declaration*location (** User-defined type     *)
+  | Integer                                         (** Integer               *)
+  | IntegerConst                                    (** Integer constant      *)
+  | Float                                           (** Floating-point number *)
+  | Boolean                                         (** Boolean               *)
+  | Character                                       (** Character             *)
+  | String                                          (** String                *)
+  | Declared of identifier*typ_declaration*location (** User-defined type     *)
 
 (** Type declaration. *)
 and typ_declaration =
-  | Enum          of   identifier
-                   * ((identifier*nat) list)
-                   * Newspeak.ikind             (** Enumerated type, eg
-                                                [type Day is (Mon,...,Sun)] *)
-  | DerivedType  of identifier
-                  * subtyp_indication
-  | IntegerRange of identifier
-                  * contrainte
+  | Enum          of ((identifier*nat) list)
+                    * Newspeak.ikind             
+  | DerivedType  of subtyp_indication
+  | IntegerRange of contrainte
                   * Newspeak.ikind option
-  | Array  of identifier
-            * array_type_definition
-  | Record of identifier
-            * field list
+  | Array  of array_type_definition
+  | Record of field list
 
 (** A record field. *)
 and field = identifier list
@@ -278,7 +272,7 @@ and basic_declaration =
                      * subtyp_indication
                      * expression option
                      * object_state
-  | TypeDecl        of typ_declaration
+  | TypeDecl        of identifier*typ_declaration
   | UseDecl         of name
   | SpecDecl        of spec
   | NumberDecl      of identifier

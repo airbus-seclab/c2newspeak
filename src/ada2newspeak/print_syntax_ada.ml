@@ -89,34 +89,29 @@ let rec typ_to_string typ = match typ with
   | Boolean      -> "Boolean"
   | Character    -> "Character"
   | String       -> "String"
-  | Declared(typ_decl,loc) -> "Declared("
+  | Declared(id,typ_decl,loc) -> "Declared("
+      ^id^","
       ^(typ_declaration_to_string typ_decl)^","
       ^(line_of_loc loc)^")"
 
 and typ_declaration_to_string typ_decl = match typ_decl with
-  | Enum(ident, val_list, taille) ->
-      "Enum("^ident^", "
+  | Enum(val_list, taille) ->
+      "Enum("
       ^(list_to_string val_list
           (fun (nom,id) -> "("^nom^","^id^")")
           "; " true)
       ^", "^(ikind_to_string taille)^")"
-
-  | DerivedType(ident, subtyp) ->
-      "DerivedType("^ident^", "
-      ^(subtyp_indication_to_string subtyp)^")"
-
-  | IntegerRange(ident, contrainte, taille) ->
-      "IntegerRange("^ident
-      ^", "^(contrainte_to_string contrainte)
+  | DerivedType(subtyp) ->
+      "DerivedType("^(subtyp_indication_to_string subtyp)^")"
+  | IntegerRange(contrainte, taille) ->
+      "IntegerRange("
+      ^(contrainte_to_string contrainte)
       ^", "^(option_to_string taille ikind_to_string)^")"
-
-  | Array(ident,array_def) ->
-      "Array("^ident
-      ^", "^(array_definition_to_string array_def)^")"
-
-  | Record (ident, _) -> (*record_type_def) -> *)
-      "Record("^ident
-      ^", "^(" --- TO DO --------")^")"
+  | Array(array_def) ->
+      "Array("^(array_definition_to_string array_def)^")"
+  | Record (_) -> (*record_type_def) -> *)
+      "Record("
+      ^(" --- TO DO --------")^")"
 
 
 
@@ -289,8 +284,8 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(subtyp_indication_to_string subtyp_ind)
       ^", "^(option_to_string def exp_to_string)
       ^", "^(object_state_to_string status)^")"
-  | TypeDecl(typdecl) ->
-      "TypeDecl("^(typ_declaration_to_string typdecl)^")"
+  | TypeDecl(id,typdecl) ->
+      "TypeDecl("^id^","^(typ_declaration_to_string typdecl)^")"
   | UseDecl(use_clause) -> "UseDecl("^(name_to_string use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("
       ^(spec_to_string spec)^")"

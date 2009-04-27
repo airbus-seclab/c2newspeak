@@ -148,20 +148,20 @@ let rec translate_typ (typ:A.typ) :C.typ = match typ with
 | Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
 | String -> Npkcontext.report_error "Firstpass.translate_typ"
     "String not implemented"
-| Declared(typ_decl, _) -> translate_declared typ_decl
+| Declared(_,typ_decl, _) -> translate_declared typ_decl
 
 (**
  * Translate a [Syntax_ada.typ_declaration].
  *)
 and translate_declared (typ_decl:typ_declaration) :C.typ = match typ_decl with
-| Enum(_, _, bits) -> C.Scalar(Npk.Int(bits))
-| DerivedType(_, subtyp_ind) -> translate_typ
+| Enum(_, bits) -> C.Scalar(Npk.Int(bits))
+| DerivedType(subtyp_ind) -> translate_typ
     (Ada_utils.extract_typ subtyp_ind)
-| IntegerRange(_,_,Some(bits)) -> C.Scalar(Npk.Int(bits))
-| IntegerRange(_,_,None) -> Npkcontext.report_error
+| IntegerRange(_,Some(bits)) -> C.Scalar(Npk.Int(bits))
+| IntegerRange(_,None) -> Npkcontext.report_error
     "Firstpass.translate_declared"
       "internal error : no bounds provided for IntegerRange"
-| Array(_, ConstrainedArray(_, subtyp_ind, taille)) ->
+| Array(ConstrainedArray(_, subtyp_ind, taille)) ->
     C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
 | Record _ -> Npkcontext.report_error "firstpass.translate_declared"
                 "Record types are not implemented yet"
@@ -706,7 +706,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             let (v, subtyp_lv) = translate_lv lval write trans_exp in
               match  subtyp_lv
               with
-                  Unconstrained(Declared( Array(_,
+                  Unconstrained(Declared(_, Array(
                     ConstrainedArray(( stypindex, contraint,_ ),
                                      ( stypelt,_,_),  _)), _)) ->
                     let size_base =  C.exp_of_int (C.size_of_typ (
@@ -1358,7 +1358,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   let rec destroy subt = (*du plus gros vers plus petit*)
                     let styp_fom_ind ind = let (a,_,_) = ind in a in
                     match subt with
-                        Unconstrained(Declared (Array( _, ConstrainedArray(
+                        Unconstrained(Declared (_,Array(ConstrainedArray(
                         sbtyp_ind, sbtypelt_ind, _)),_)) ->
                           let sbtyp = styp_fom_ind sbtyp_ind in
                           let sbtypelt = styp_fom_ind sbtypelt_ind in
@@ -1691,23 +1691,23 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   package#is_extern, ftyp), C.Fun, loc);
       ftyp
 
-  and translate_enum_declaration typ_decl list_val_id loc global =
+  and translate_enum_declaration idtyp typ_decl list_val_id loc global =
     List.iter
       (fun (x,id) -> add_enum loc x id
-         (Declared(typ_decl, loc)) global)
+         (Declared(idtyp, typ_decl, loc)) global)
       list_val_id
 
   and translate_derived_typ_decl subtyp_ind loc global =
     match Ada_utils.extract_typ subtyp_ind with
-      | Declared(Enum(_, list_val_id, _) as typ_decl,_) ->
-          translate_enum_declaration typ_decl list_val_id loc global
+      | Declared(idtyp, (Enum(list_val_id, _) as typ_decl) ,_) ->
+          translate_enum_declaration idtyp typ_decl list_val_id loc global
       | _ -> ()
 
-  and translate_typ_declaration typ_decl loc global =
+  and translate_typ_declaration idtyp typ_decl loc global =
     match typ_decl with
-      | Enum (_, list_val_id, _) ->
-          translate_enum_declaration typ_decl list_val_id loc global
-      | DerivedType (_, ref_subtyp_ind) ->
+      | Enum (list_val_id, _) ->
+          translate_enum_declaration idtyp typ_decl list_val_id loc global
+      | DerivedType ref_subtyp_ind ->
           translate_derived_typ_decl ref_subtyp_ind loc global
       | IntegerRange _
       | Array _
@@ -1745,8 +1745,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             idents
             ([],[])
 
-    | TypeDecl(typ_decl) ->
-        translate_typ_declaration typ_decl loc false;
+    | TypeDecl (idtyp,typ_decl) ->
+        translate_typ_declaration idtyp typ_decl loc false;
         ([],[])
 
     | SubtypDecl _ ->
@@ -1790,7 +1790,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and remove_basic_declaration basic = match basic with
     | ObjectDecl(idents, _, _, _) -> List.iter remove_symb idents
-    | TypeDecl(Enum(_,idents,_))-> List.iter (fun (x,_) -> remove_symb x) idents
+    | TypeDecl(_,Enum(idents,_))-> List.iter (fun (x,_) -> remove_symb x) idents
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
@@ -1875,8 +1875,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               (add_global loc subtyp tr_typ tr_init read_only)
               idents
 
-      | TypeDecl(typ_decl) ->
-          translate_typ_declaration typ_decl loc true
+      | TypeDecl(idtyp,typ_decl) ->
+          translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()
       | UseDecl(x,y) -> package#add_use (x@[y])
       | SpecDecl(spec) -> translate_spec spec loc false
