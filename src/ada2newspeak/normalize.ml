@@ -1535,11 +1535,12 @@ in
 
   let remove_params subprogram_decl =
     let params = match subprogram_decl with
-      | Function(_,param_list,_) -> param_list
-      | Procedure(_,param_list) -> param_list in
-          List.iter
-            (fun param -> remove_cst (normalize_ident_cur param.formal_name))
-            params
+      | Function (_,param_list,_) -> param_list
+      | Procedure(_,param_list)   -> param_list
+    in
+      List.iter
+        (fun param -> remove_cst (normalize_ident_cur param.formal_name))
+        params
   in
 
   let normalize_sub_program_spec subprog_spec ~addparam =
@@ -1548,14 +1549,16 @@ in
         (fun param ->
            if func && (param.mode <> In)
            then Npkcontext.report_error
-              "Ada_normalize.normalize_sub_program_spec"
+              "Normalize.normalize_params"
              ("invalid parameter mode : functions can only have"
              ^" \"in\" parameters");
-           ignore func;
+           if (param.default_value <> None && param.mode <> In) then
+             Npkcontext.report_error "Normalize.normalize_params"
+             "default values are only allowed for \"in\" parameters";
            if addparam then add_cst (normalize_ident_cur param.formal_name)
                               (VarSymb false)
                               false;
-            {param with param_type = normalize_subtyp param.param_type}
+           {param with param_type = normalize_subtyp param.param_type}
         )
         param_list
     in match subprog_spec with
