@@ -56,7 +56,7 @@ coverage:
 	$(MAKE) check
 	cd src/ ; bisect-report `find ../tests/ -name bisect*` \
                     -html ../../cov/$(shell date +%Y%m%d%H%M)
-	ln -sf $(shell date +%Y%m%d%H%M) ../cov/LATEST
+	ln -nsf ./$(shell date +%Y%m%d%H%M) ../cov/LATEST
     
 
 install:

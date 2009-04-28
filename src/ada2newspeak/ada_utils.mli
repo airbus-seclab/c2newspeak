@@ -209,7 +209,7 @@ object
     method current    :Syntax_ada.package
 
     (** Add a package to the "with" list. *)
-    method add_with   :Syntax_ada.package -> unit
+    method add_with   :Syntax_ada.name -> unit
 
     (** Is a package in the "with" list ? *)
     method is_with    :Syntax_ada.package -> bool
@@ -219,7 +219,7 @@ object
      * The added package must have been added to the "with" list.
      * Adding a package several times is not an error.
      *)
-    method add_use    :Syntax_ada.package -> unit
+    method add_use    :Syntax_ada.name -> unit
 
     (**
      * Remove a "use" clause from the context.
@@ -229,7 +229,7 @@ object
      * Removing a package that is not in the current context will be silently
      * ignored.
      *)
-    method remove_use :Syntax_ada.package -> unit
+    method remove_use :Syntax_ada.name -> unit
 
     (**
      * Get the current context.

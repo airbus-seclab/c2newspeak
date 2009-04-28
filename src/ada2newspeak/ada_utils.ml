@@ -381,13 +381,15 @@ class package_manager =
         method current =
             current_pkg
 
-        method add_with p =
+        method add_with (x,y) =
+          let p = x@[y] in
             with_pkg <- p::with_pkg
 
         method is_with pkg =
             List.mem pkg with_pkg
 
-        method add_use p =
+        method add_use (x,y) =
+          let p = x@[y] in
           if (self#current <> p) then begin
               if (not (self#is_with p)) then begin
                 Npkcontext.report_error "Ada_normalize.add_context"
@@ -397,7 +399,8 @@ class package_manager =
               Hashtbl.replace context p (old_count + 1)
           end
 
-        method remove_use p =
+        method remove_use (x,y) =
+          let p = x@[y] in
           try
             let old_count = Hashtbl.find context p in
             if old_count = 1 then Hashtbl.remove context p

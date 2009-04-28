@@ -43,9 +43,6 @@ let get_legacy_definition id = match String.lowercase id with
 | "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
 | _ ->  failwith "legacy definition available only for int float bool or char"
 
-let make_package (n:name) :package =
-  (fst n)@[snd n]
-
 let mk_float(f:float):float_number = (f, string_of_float f)
 
 let temp =
@@ -1522,8 +1519,7 @@ in
           List.iter
             (fun ident -> remove_cst (normalize_ident_cur ident))
             ident_list
-      | BasicDecl(UseDecl(use_clause)) -> package#remove_use
-                                                (make_package use_clause)
+      | BasicDecl(UseDecl(use_clause)) -> package#remove_use use_clause
       | BasicDecl(NumberDecl(ident,_,_))->remove_cst (normalize_ident_cur ident)
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
@@ -1581,7 +1577,7 @@ in
   in
 
   let rec normalize_basic_decl item loc global reptbl = match item with
-    | UseDecl(use_clause) -> package#add_use (make_package use_clause);
+    | UseDecl(use_clause) -> package#add_use use_clause;
         item
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind =
@@ -1646,7 +1642,10 @@ in
         NumberDecl(ident, normalize_exp exp, Some v)
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
-          types#add (normalize_ident_cur ident) (extract_subtyp norm_subtyp_ind) loc global;
+          types#add (normalize_ident_cur ident)
+                    (extract_subtyp norm_subtyp_ind)
+                    loc
+                    global;
           SubtypDecl(ident, norm_subtyp_ind)
     | RepresentClause _ -> item
 
@@ -1840,7 +1839,7 @@ in
           package#set_current ((fst nom)@[snd nom]);
           List.iter add_extern_basic_decl basic_decls;
           package#reset_current;
-          package#add_with ((fst nom)@[snd nom])
+          package#add_with nom
 
   in
 
@@ -1861,7 +1860,7 @@ in
             add_extern_spec norm_spec;
             With(nom, loc, Some(norm_spec, loc))
             ::normalize_context r (nom::previous_with)
-      | UseContext(n)::r -> package#add_use (make_package n);
+      | UseContext(n)::r -> package#add_use n;
                             UseContext n::normalize_context r previous_with
       | [] -> []
   in

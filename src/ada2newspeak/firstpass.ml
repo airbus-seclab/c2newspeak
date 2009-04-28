@@ -126,17 +126,6 @@ let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
     | SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
                     "SubtypName not implemented yet (especially for Enum)"
 
-(*On tente de trouver un acces a un record *)
-let rec try_find_fieldsaccess opt (sels, varname, fields) memb findb trans_typ =
-    ignore trans_typ;
-    ignore findb;
-    ignore memb;
-    ignore fields;
-    ignore varname;
-    ignore sels;
-    ignore opt;
-    None
-
 (**
  * Translate a [Syntax_ada.typ].
  *)
@@ -231,13 +220,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let find_name_record  name f_ident f_with f_current =
     match name with
       | ([], ident) -> f_ident ident name
-      | (pack, ident) when not ( (pack = package#current)
-                              || (package#is_with pack)
-                              || (package#is_extern)) ->
-          f_with (pack, ident)
-      | (pack, ident)
-          when package#is_extern||package#is_with pack ->
-          f_with (pack,ident)
+      | (pack, ident) when not ( (package#current = pack)
+                              || (package#is_with   pack)
+                              || (package#is_extern ))
+        -> f_with (pack,ident)
+      | (pack, ident) when     (  package#is_extern
+                              ||  package#is_with   pack)
+        -> f_with (pack,ident)
       | (pack, ident) when pack = package#current->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
@@ -647,16 +636,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
     (* cas d'un symbol avec selecteur connu *)
     let fun_sel_connu name =
-      let structure_field_try = try_find_fieldsaccess None
-        ([], List.hd (fst name), (List.tl (fst name))@[snd name])
-        mem_symb find_symb translate_typ
-      in
-        match structure_field_try with
-            None ->
-              if mem_symb name then find_symb name
-              else Npkcontext.report_error "Firstpass.translate_lv"
-                ("cannot find symbol "^(string_of_name name))
-          | Some w -> w
+        if mem_symb name then find_symb name
+        else Npkcontext.report_error "Firstpass.translate_lv"
+          ("cannot find symbol "^(string_of_name name))
     in
 
     (*cas d'un symbol avec selecteur qui est le package courant*)
@@ -1715,13 +1697,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declarations basiques locales *)
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl(idents, subtyp_ind, def, const) ->
-        let defaults_record_inits subtyp id =
-          ignore subtyp;
-          ignore id;
-          []
-        in
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
-
         let read_only = match const with
           | Variable -> false
           | Constant | StaticVal(_) -> true in
@@ -1731,14 +1707,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                let decl = (C.Decl(translate_subtyp subtyp,
                                   ident),loc)::list_decl
                and aff =
-                 let default_affs = defaults_record_inits subtyp ident in
-
                  match def with
                    | None -> list_aff
                    | Some(exp) ->
                        let (tr_exp,_) = translate_exp exp
                          (Some(base_typ subtyp)) in
-                         default_affs@((make_affect (C.Local ident)
+                         ((make_affect (C.Local ident)
                             tr_exp subtyp loc)::list_aff)
                in (decl,aff))
             idents
@@ -1756,10 +1730,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> package#add_use((fst use_clause)@[snd use_clause]);
+    | UseDecl(use_clause) -> package#add_use use_clause;
         ([],[])
 
-    | NumberDecl(ident, _, Some(v)) ->
+    | NumberDecl(ident, _, Some v) ->
         add_number loc v false ident;
         ([],[])
     | NumberDecl _ ->
@@ -1770,7 +1744,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         Npkcontext.report_error
           "Firstpass.translate_basic_declaration"
           "internal error : unexpected representation clause"
-
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1789,12 +1762,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and remove_basic_declaration basic = match basic with
     | ObjectDecl(idents, _, _, _) -> List.iter remove_symb idents
-    | TypeDecl(_,Enum(idents,_))-> List.iter (fun (x,_) -> remove_symb x) idents
+    | TypeDecl(_,Enum(idents,_))  -> List.iter (fun (x,_) -> remove_symb x)
+                                               idents
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl(x,y) -> package#remove_use (x@[y])
+    | UseDecl x -> package#remove_use x
     | NumberDecl(ident, _, _) -> remove_symb ident
     | TypeDecl _
     | SubtypDecl _ -> ()
@@ -1807,14 +1781,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | BasicDecl(basic) -> remove_basic_declaration basic
     | BodyDecl(_) -> ()
 
-
   and remove_declarative_part (_,decl_part) =
     List.iter remove_declarative_item decl_part
 
-
   and add_funbody subprogspec decl_part block loc =
     let search_spec name =
-      let list_ident = Hashtbl.find_all symbtbl name in
         try
           let symb =
             (List.find
@@ -1824,7 +1795,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                         spec = subprogspec
                     | ((FunSymb _ | VarSymb _
                     | EnumSymb _ | NumberSymb _),_,_) -> false)
-               list_ident)
+               (Hashtbl.find_all symbtbl name)
+               )
           in
             match symb with
               | (FunSymb (_, _, _, ftyp), C.Fun, _) -> ftyp
@@ -1834,8 +1806,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         with Not_found -> add_fundecl subprogspec loc
     in
     let name = match subprogspec with
-      | Function(name, _, _) -> name
-      | Procedure(name, _) -> name in
+      | Function (n,_,_) -> n
+      | Procedure(n,_)   -> n in
 
     let ftyp = search_spec name
     and (params, (ret_id, args_ids)) = add_params subprogspec loc
@@ -1847,8 +1819,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       Hashtbl.replace fun_decls (translate_name name)
         (ret_id, args_ids, ftyp, body)
-
-
 
   in
 
@@ -1877,7 +1847,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | TypeDecl(idtyp,typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()
-      | UseDecl(x,y) -> package#add_use (x@[y])
+      | UseDecl x -> package#add_use x
       | SpecDecl(spec) -> translate_spec spec loc false
       | NumberDecl(ident, _, Some v) ->
            add_number loc v true ident
@@ -1889,7 +1859,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           Npkcontext.report_error
             "Firstpass.translate_global_basic_declaration"
             "internal error : unexpected representation clause"
-
 
   (* quand cette fonction est appelee, on est dans le corps d'un
      package *)
@@ -1918,7 +1887,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           basic_decl_list
         in
           package#reset_current;
-          if package#is_extern then package#add_with ((fst nom)@[snd nom])
+          if package#is_extern then package#add_with nom
 
 
 
@@ -1953,30 +1922,25 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let translate_library_item lib_item loc =
     Npkcontext.set_loc loc;
     match lib_item with
-      | Body(body) -> translate_body body true loc
-
-      | Spec _ -> Npkcontext.report_error
+      | Body body -> translate_body body true loc
+      | Spec _    -> Npkcontext.report_error
             "Firstpass.translate_library_item"
             "Rien a faire pour les specifications"
-
   in
 
-  let rec translate_context ctx =
-    match ctx with
-      | With(nom, loc, spec)::r ->
+  let rec translate_context =
+    List.iter (function
+      | With(nom, loc, spec) ->
           Npkcontext.set_loc loc;
           (match spec with
             | Some(spec, loc) ->
                 translate_spec spec loc true;
-                package#add_with ((fst nom)@[snd nom]);
-                translate_context r
+                package#add_with nom
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext(x,y)::r -> package#add_use (x@[y]);
-          translate_context r
-      | [] -> ()
-
+      | UseContext x -> package#add_use x;
+    );
   in
     (* corps de la fonction translate *)
 
