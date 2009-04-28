@@ -267,7 +267,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   (* declaration d'une variable locale *)
   let add_var (loc:Newspeak.location) (st:Syntax_ada.subtyp)
-               (ident:identifier) (deref:bool) (ro:bool)
+               (ident:identifier) ~(deref:bool) ~(ro:bool)
       :unit=
     let x = ident_to_name ident in
       (if Hashtbl.mem symbtbl x then
@@ -941,7 +941,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             (* don't stop at first named argument : populate argtbl *)
                 List.iter
                     (function
-                       | None   ,_  -> Npkcontext.report_error "firstpass.fcall"
+                       | None   , _ -> Npkcontext.report_error "firstpass.fcall"
                                  "Named parameters shall follow positional ones"
                        | Some id, e ->
                             if (Hashtbl.mem argtbl id) then
@@ -964,15 +964,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      *
      * /!\ Side-effects : this function references the argtbl variable.
      *)
-    and merge_with_specification (pos_list:A.expression list)
-                                 (spec:A.param list)
+    and merge_with_specification (pos_list : A.expression list)
+                                 (spec     : A.param      list)
         :(A.identifier*A.expression) list =
             match pos_list, spec with
               |  [],_  -> (* end of positional parameters *)
                           List.map (function x -> (x.formal_name,(
-                                   if (Hashtbl.mem argtbl x.formal_name) then
-                                       Hashtbl.find argtbl x.formal_name
-                                   else begin
+                                   try Hashtbl.find argtbl x.formal_name
+                                   with Not_found -> begin
                                        match x.default_value with
                                          | Some value -> value
                                          | None ->
@@ -1516,8 +1515,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                          Ada_config.integer_constraint,
                                          true))
                             iterator
-                            false
-                            false; (* should be RO, actually *)
+                            ~deref:false
+                            ~ro:false; (* should be RO, actually *)
                 let it = ident_to_name iterator in
                 let res = if (not is_reverse) then begin
  (* int i = a;        *) (translate_affect (Lval it) a loc)

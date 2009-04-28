@@ -246,11 +246,19 @@ object
 
 end
 
+(**
+ * Make up a string from a list.
+ * @param some list of elements
+ * @param a printer
+ * @param a separator
+ * @param whether the function shall enclose the result between brackets.
+ *)
 val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
 
-val name_to_string : Syntax_ada.name -> string
-
 val ident_list_to_string : Syntax_ada.identifier list -> string
+
+(** Converts a qualified name into a dotted string.  *)
+val name_to_string : Syntax_ada.name -> string
 
 (** Create a function name for an overloaded operator *)
 val make_operator_name : string -> string

@@ -356,18 +356,8 @@ let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | Some x -> x
 
 let list_to_string l to_string sep crochet =
-  let lts_inner l to_string sep =
-    begin match l with
-      | a::r ->
-          (to_string a)
-          ^(List.fold_left (fun debut x -> debut^sep^(to_string x))
-            "" r)
-      | [] -> ""
-    end
-  in
-  let res = lts_inner l to_string sep in
-  if crochet then "["^res^"]"
-             else res
+  let r = String.concat sep (List.map to_string l) in
+  if crochet then "["^r^"]" else r
 
 let ident_list_to_string l =
   list_to_string l (fun x -> x) "." false

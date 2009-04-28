@@ -1103,9 +1103,9 @@ and normalize_exp (exp:expression) :expression = match exp with
                                         normalize_exp exp)
   | NullExpr | CInt _ | CFloat _ | CBool _ | CChar _
   | CString _ | Var _  -> exp
-  | Unary (uop, exp)    -> Unary(uop, normalize_exp exp)
+  | Unary (uop, exp)    -> Unary (uop, normalize_exp exp)
   | Binary(bop, e1, e2) -> Binary(bop, normalize_exp e1,
-                                  normalize_exp e2)
+                                       normalize_exp e2)
   | FunctionCall(nom, params) ->
       FunctionCall(nom, List.map normalize_arg params)
 
@@ -1556,8 +1556,8 @@ in
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
            if addparam then add_cst (normalize_ident_cur param.formal_name)
-                              (VarSymb false)
-                              false;
+                                    (VarSymb false)
+                                    false;
            {param with param_type = normalize_subtyp param.param_type}
         )
         param_list
@@ -1646,8 +1646,7 @@ in
         NumberDecl(ident, normalize_exp exp, Some v)
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
-        let subtyp = extract_subtyp norm_subtyp_ind in
-          types#add (normalize_ident_cur ident) subtyp loc global;
+          types#add (normalize_ident_cur ident) (extract_subtyp norm_subtyp_ind) loc global;
           SubtypDecl(ident, norm_subtyp_ind)
     | RepresentClause _ -> item
 
@@ -1713,8 +1712,6 @@ in
 
   and normalize_block block =
     List.map normalize_instr block
-
-
 
   and normalize_decl_part (tbl,decl_part) ~global =
     let represtbl = Hashtbl.create 50 in
