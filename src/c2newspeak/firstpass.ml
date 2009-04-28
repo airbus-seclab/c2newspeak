@@ -436,6 +436,8 @@ let translate (globals, spec) =
   and is_array e =
     match e with
 	Call _ -> false
+      | Cast (_, Array _) -> true
+      | Cast (_, _) -> false
       | _ -> 
 	  let (_, t) = translate_lv e in
 	    match t with
@@ -453,7 +455,8 @@ let translate (globals, spec) =
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
-      | Index (e, idx) when is_array e ->
+      | Index (e, idx) when is_array e ->  (* TODO: think about this is_array, 
+					      a bit hacky!! *)
 	  let (lv, t) = translate_lv e in
 	  let (t, len) = CoreC.array_of_typ t in
 	  let i = translate_exp idx in

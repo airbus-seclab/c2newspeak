@@ -304,8 +304,12 @@ and string_of_exp margin e =
     | SizeofE _ -> "SizeofE"
     | Str _ -> "Str"
     | FunName -> "FunName"
-    | Cast _ -> "Cast"
-    | Set (lv, None, e) -> (string_of_exp margin lv)^" = "^(string_of_exp margin e)^";"
+    | Cast (e, t) -> 
+	let e = string_of_exp margin e in
+	let t = string_of_typ margin t in
+	  "("^t^") "^e
+    | Set (lv, None, e) -> 
+	(string_of_exp margin lv)^" = "^(string_of_exp margin e)^";"
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
