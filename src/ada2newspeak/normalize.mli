@@ -32,4 +32,4 @@ val normalize_ident :
 
 val normalization :
   Syntax_ada.compilation_unit -> bool ->
-  Syntax_ada.compilation_unit
+         Ast.compilation_unit

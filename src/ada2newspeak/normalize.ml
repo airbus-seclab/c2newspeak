@@ -84,11 +84,12 @@ let string_of_name = Ada_utils.name_to_string
  * @return a boolean describing whether a body could be found.
  *)
 let find_body_for_spec ~(specification:basic_declaration)
-                       ~(bodylist:declarative_item list) :bool =
+                       ~(bodylist:Ast.declarative_item list) :bool =
   (* Try to match a spec and a body *)
-  let match_ok (s:basic_declaration) (b:declarative_item) = match (s,b) with
-    | SpecDecl(SubProgramSpec sps),BodyDecl(SubProgramBody (spsb,_,_))->sps=spsb
-    | ObjectDecl _ as x,BasicDecl (ObjectDecl _ as y) -> x = y
+  let match_ok (s:basic_declaration) (b:Ast.declarative_item) = match (s,b) with
+    | SpecDecl(SubProgramSpec sps),
+        Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_)) -> sps = spsb
+    | ObjectDecl _ as x,Ast.BasicDecl (ObjectDecl _ as y) -> x = y
     | _ -> false
   in
   List.exists (function bd -> match_ok specification bd) bodylist
@@ -104,11 +105,12 @@ let name_of_spec (spec:basic_declaration) :string = match spec with
   | SpecDecl (PackageSpec (n,_)) -> name_to_string n
   | UseDecl _ | RepresentClause _-> "<no name>"
 
-let check_package_body_against_spec ~(body:declarative_part)
+let check_package_body_against_spec ~(body:Ast.declarative_part)
                                     ~(spec:package_spec) =
   let (pkgname,spec_and_loc) = spec in
+  let (   _   ,body_and_loc) = body in
   let speclist = List.map fst spec_and_loc in
-  let bodylist = List.map fst body in
+  let bodylist = List.map fst body_and_loc in
   (* Filter on specifications : only sp such as
    * filterspec sp = true will be checked.      *)
   let filterspec = function
@@ -658,8 +660,8 @@ let rec parse_extern_specification (name:name):spec*location =
   let spec_ast = parse_specification name
   in
     match (normalization spec_ast true) with
-      | (_, Spec(spec), loc) -> (spec, loc)
-      | (_, Body(_), _) -> Npkcontext.report_error
+      | (_, Ast.Spec(spec), loc) -> (spec, loc)
+      | (_, Ast.Body(_), _) -> Npkcontext.report_error
           "normalize.parse_extern_specification"
             "internal error : specification expected, body found"
 
@@ -673,7 +675,7 @@ let rec parse_extern_specification (name:name):spec*location =
  * TODO document extern
  *)
 and normalization (compil_unit:compilation_unit) (extern:bool)
-    :compilation_unit =
+    :Ast.compilation_unit =
   let csttbl = Hashtbl.create 100
 
   and package=new package_manager
@@ -1679,23 +1681,24 @@ in
   let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
-      | NullInstr | ReturnSimple -> (instr, loc)
-      | Assign(nom, exp) -> (Assign(nom, normalize_exp exp), loc)
-      | Return(exp) -> (Return(normalize_exp exp), loc)
+      | NullInstr    -> Ast.NullInstr   , loc
+      | ReturnSimple -> Ast.ReturnSimple, loc
+      | Assign(nom, exp) -> Ast.Assign(nom, normalize_exp exp), loc
+      | Return(exp) -> Ast.Return(normalize_exp exp), loc
       | If(exp, instr_then, instr_else) ->
-          (If(normalize_exp exp, normalize_block instr_then,
+          (Ast.If(normalize_exp exp, normalize_block instr_then,
               normalize_block instr_else), loc)
-      | Loop(NoScheme,instrs) -> (Loop(NoScheme, normalize_block instrs), loc)
-      | Loop(While(exp), instrs) -> (Loop(While(normalize_exp exp),
+      | Loop(NoScheme,instrs) -> Ast.Loop(NoScheme,normalize_block instrs), loc
+      | Loop(While(exp), instrs) -> (Ast.Loop(While(normalize_exp exp),
                        normalize_block instrs), loc)
       | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-                   (Loop(For(iter, exp1, exp2, is_rev),
+                   (Ast.Loop(For(iter, exp1, exp2, is_rev),
                                    normalize_block instrs), loc)
-      | Exit -> (Exit, loc)
+      | Exit -> (Ast.Exit, loc)
       | ProcedureCall(nom, params) ->
-         (ProcedureCall(nom, List.map normalize_arg params), loc)
+         (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
       | Case (e, choices, default) ->
-                Case (normalize_exp e,
+                Ast.Case (normalize_exp e,
                       List.map (function e,block->
                               normalize_exp e,
                               normalize_block block)
@@ -1706,14 +1709,15 @@ in
                       )),loc
       | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
                           remove_decl_part dp;
-                          Block (ndp, normalize_block blk), loc
+                          Ast.Block (ndp, normalize_block blk), loc
 
   and normalize_block block =
     List.map normalize_instr block
 
   and normalize_decl_part decl_part ~global =
+    let tbl=Ada_types.create_table (List.length decl_part) in
     let represtbl = Hashtbl.create 50 in
-    let decl_part = List.filter (function
+    let decl_part :(declarative_item*location) list = List.filter (function
         | BasicDecl(RepresentClause(rep)), loc ->
           Hashtbl.add represtbl
             (extract_representation_clause_name rep)
@@ -1722,24 +1726,26 @@ in
       ) decl_part in
     let normalize_decl_items items =
       List.map (function
-        | BasicDecl(SpecDecl (SubProgramSpec _) as sp),loc ->
-            if (find_body_for_spec ~specification:sp
-                                        ~bodylist:(List.map fst items)) then
-            begin Npkcontext.set_loc loc;
-            BasicDecl(normalize_basic_decl sp     loc
-                                           global represtbl),loc
-            end
-            else Npkcontext.report_error "Normalize.normalize_decl_part"
-                 ("Declaration of "^(name_of_spec sp)^" requires completion")
         | BasicDecl(basic),loc ->
             Npkcontext.set_loc loc;
-            BasicDecl(normalize_basic_decl basic  loc
+            Ast.BasicDecl(normalize_basic_decl basic  loc
                                            global represtbl),loc
         | BodyDecl(body),loc ->
             Npkcontext.set_loc loc;
-            BodyDecl(normalize_body body), loc
-      ) items
-    in normalize_decl_items decl_part
+            Ast.BodyDecl(normalize_body body), loc
+      ) items in
+    let ndp = normalize_decl_items decl_part in
+    List.iter (function
+      | Ast.BasicDecl(SpecDecl (SubProgramSpec _) as sp),loc ->
+            begin Npkcontext.set_loc loc;
+              if not (find_body_for_spec ~specification:sp
+                                          ~bodylist:(List.map fst ndp)) then
+                   Npkcontext.report_error "normalize_decl_part"
+                   ("Declaration of "^(name_of_spec sp)^" requires completion")
+              end
+      | _ -> ()
+    ) ndp;
+    tbl,ndp
 
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
@@ -1750,7 +1756,7 @@ in
         in
           remove_decl_part decl_part;
           remove_params subprog_decl;
-          SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
+          Ast.SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
     | PackageBody(name, package_spec, decl_part, block) ->
         let norm_spec = normalize_package_spec
                            (with_default package_spec
@@ -1762,14 +1768,14 @@ in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           package#reset_current;
-          PackageBody(name, Some norm_spec, ndp, normalize_block block)
+          Ast.PackageBody(name, Some norm_spec, ndp, normalize_block block)
 
   in
   let normalize_lib_item lib_item loc =
     Npkcontext.set_loc loc;
     match lib_item with
-      | Spec(spec) -> Spec(normalize_spec spec)
-      | Body(body) -> Body(normalize_body body)
+      | Spec(spec) -> Ast.Spec(normalize_spec spec)
+      | Body(body) -> Ast.Body(normalize_body body)
 
   in
 

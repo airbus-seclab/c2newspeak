@@ -28,11 +28,11 @@
 type block = (instruction * Newspeak.location) list
 
 and  instruction =
-  | NullInstr                    (** The null instruction (do nothing)    *)
+  | NullInstr
   | Assign        of Syntax_ada.lval
                    * Syntax_ada.expression
-  | Return        of Syntax_ada.expression  (** Return from function                 *)
-  | ReturnSimple                 (** Return from procedure                *)
+  | Return        of Syntax_ada.expression
+  | ReturnSimple
   | If            of Syntax_ada.expression
                    * block       (* then *)
                    * block       (* else *)
@@ -45,8 +45,7 @@ and  instruction =
                    * (Syntax_ada.expression*block) list
                    * block option
   | Block         of declarative_part
-                   * block                (** "declare" block *)
-
+                   * block
 
 and  declarative_part = Ada_types.table
                      * (declarative_item*Newspeak.location) list
@@ -68,3 +67,8 @@ and  library_item =
   | Spec of Syntax_ada.spec
   | Body of body
 
+type compilation_unit = Syntax_ada.context_clause list
+                      * library_item
+                      * Newspeak.location
+
+type programme = compilation_unit list
