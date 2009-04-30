@@ -196,7 +196,7 @@ val with_default : 'a option -> 'a -> 'a
 class package_manager :
 object
     (** Set the current package. *)
-    method set_current :Syntax_ada.package -> unit
+    method set_current :Syntax_ada.name -> unit
 
     (** Reset the current package. *)
     method reset_current :unit

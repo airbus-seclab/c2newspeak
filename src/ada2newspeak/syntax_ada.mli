@@ -286,8 +286,7 @@ and declarative_item =
   | BasicDecl of basic_declaration
   |  BodyDecl of body
 
-and declarative_part = Ada_types.table
-                     * (declarative_item*location) list
+and declarative_part = (declarative_item*location) list
 
 type library_item =
   | Spec of spec

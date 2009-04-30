@@ -327,7 +327,7 @@ and package_spec_to_string (name, decls) =
       ";\n"
       true)^")"
 
-and declarative_part_to_string (_,dp) :string =
+and declarative_part_to_string dp :string =
     (list_to_string dp
           (fun (item,loc) -> "("^
              (declarative_item_to_string item)^", "

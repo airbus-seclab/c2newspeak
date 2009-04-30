@@ -1755,7 +1755,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* renvoie liste d'instructions (affectations par defaut)
      fonction appelee pour la partie declarative d'une fonction
      ou procedure *)
-  and translate_declarative_part (_,decl_part) =
+  and translate_declarative_part decl_part =
     let (decl, aff) =
       List.split (List.map translate_declarative_item decl_part)
     in List.flatten decl@List.flatten aff
@@ -1781,7 +1781,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | BasicDecl(basic) -> remove_basic_declaration basic
     | BodyDecl(_) -> ()
 
-  and remove_declarative_part (_,decl_part) =
+  and remove_declarative_part decl_part =
     List.iter remove_declarative_item decl_part
 
   and add_funbody subprogspec decl_part block loc =
@@ -1880,7 +1880,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             "Firstpass.translate_spec"
                 "declaration de sous package non implemente"
         end;
-        package#set_current ((fst nom)@[snd nom]);
+        package#set_current nom;
         let _ = List.map
           (* probleme : variables *)
           translate_global_basic_declaration
@@ -1889,8 +1889,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           package#reset_current;
           if package#is_extern then package#add_with nom
 
-
-
   and translate_body body glob loc :unit =
 
     Npkcontext.set_loc loc;
@@ -1898,20 +1896,18 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | (SubProgramBody(subprog_decl,decl_part, block), _) ->
           add_funbody subprog_decl decl_part block loc
 
-
-
       (* si globals est fournie (Some) alors on est au niveau
          superieur,
          donc on accepte la declaration d'un package. Sinon, il
          s'agit d'un sous-package, ce qui n'est pas gere *)
       | PackageBody(name, package_spec, decl_part, _), true ->
-          package#set_current ((fst name)@[snd name]);
+          package#set_current name;
           (match package_spec with
              | None -> ()
              | Some(_, basic_decls) ->
                  List.iter translate_global_basic_declaration basic_decls
           );
-          List.iter translate_global_decl_item (snd decl_part)
+          List.iter translate_global_decl_item decl_part
 
       | PackageBody _, false -> Npkcontext.report_error
           "Firstpass.translate_body"

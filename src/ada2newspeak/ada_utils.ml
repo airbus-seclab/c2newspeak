@@ -372,7 +372,8 @@ class package_manager =
         val             context:(package,int) Hashtbl.t = Hashtbl.create 3
         val mutable    extflag :bool                    = false
 
-        method set_current p :unit =
+        method set_current (x,y) :unit =
+          let p = x@[y] in
             current_pkg <- p
 
         method reset_current =

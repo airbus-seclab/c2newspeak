@@ -107,9 +107,8 @@ let name_of_spec (spec:basic_declaration) :string = match spec with
 let check_package_body_against_spec ~(body:declarative_part)
                                     ~(spec:package_spec) =
   let (pkgname,spec_and_loc) = spec in
-  let       (_,body_and_loc) = body in
   let speclist = List.map fst spec_and_loc in
-  let bodylist = List.map fst body_and_loc in
+  let bodylist = List.map fst body in
   (* Filter on specifications : only sp such as
    * filterspec sp = true will be checked.      *)
   let filterspec = function
@@ -1509,7 +1508,7 @@ in
 
   in
 
-  let remove_decl_part (_,decl_part) =
+  let remove_decl_part decl_part =
     (* incomplet *)
     List.iter
       (function (item,_) -> match item with
@@ -1650,7 +1649,7 @@ in
     | RepresentClause _ -> item
 
   and normalize_package_spec (nom, list_decl) =
-    package#set_current ((fst nom)@[snd nom]);
+    package#set_current nom;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
                                   | RepresentClause(rep), loc ->
@@ -1712,7 +1711,7 @@ in
   and normalize_block block =
     List.map normalize_instr block
 
-  and normalize_decl_part (tbl,decl_part) ~global =
+  and normalize_decl_part decl_part ~global =
     let represtbl = Hashtbl.create 50 in
     let decl_part = List.filter (function
         | BasicDecl(RepresentClause(rep)), loc ->
@@ -1740,7 +1739,7 @@ in
             Npkcontext.set_loc loc;
             BodyDecl(normalize_body body), loc
       ) items
-    in tbl,normalize_decl_items decl_part
+    in normalize_decl_items decl_part
 
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
@@ -1758,7 +1757,7 @@ in
                                (parse_package_specification name)
                            )
         in
-          package#set_current ((fst name)@[snd name]);
+          package#set_current name;
           let ndp = normalize_decl_part decl_part ~global:true in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
@@ -1836,7 +1835,7 @@ in
           add_function name None true
 
       | PackageSpec(nom, basic_decls) ->
-          package#set_current ((fst nom)@[snd nom]);
+          package#set_current nom;
           List.iter add_extern_basic_decl basic_decls;
           package#reset_current;
           package#add_with nom

@@ -126,15 +126,6 @@ let make_parameter_specification (idents:identifier list)
                            default_value=common_default_value;})
              idents
 
-(**
- * Prepend a symbol table to a declarative part.
- * Input : a list of declarative items
- *)
-let make_declarative_part (l:(declarative_item*location) list)
-        :declarative_part =
-  (Ada_types.create_table (List.length l)),l
-
-
 let make_enum list_val =
   let rec make_id list_val next_id =
     match list_val with
@@ -303,17 +294,17 @@ body :
     {let (spec, loc) = $1
      in
        (check_end spec (fst $7));
-       (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
+       (SubProgramBody(spec,$3,$5), loc)}
 
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
-     in (SubProgramBody(spec,make_declarative_part $3,$5), loc)}
+     in (SubProgramBody(spec,$3,$5), loc)}
 | PACKAGE BODY name IS declarative_part package_instr END SEMICOLON
-    {(PackageBody((fst $3), None, make_declarative_part $5, $6), $1)}
+    {(PackageBody((fst $3), None, $5, $6), $1)}
 
 | PACKAGE BODY name IS declarative_part package_instr END name SEMICOLON
     { (check_name (fst $3) (fst $8));
-      (PackageBody((fst $3), None, make_declarative_part $5, $6), $1)
+      (PackageBody((fst $3), None, $5, $6), $1)
     }
 ;
 
@@ -517,7 +508,7 @@ instr :
                                                               (snd $4)),
                                                           $1}
 | DECLARE declarative_part BEGIN instr_list END
-                                {Block (make_declarative_part $2,$4),$1}
+                                {Block ($2,$4),$1}
 ;
 
 case_stmt_alternative_list:
