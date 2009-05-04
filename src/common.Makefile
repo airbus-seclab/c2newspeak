@@ -46,7 +46,6 @@ OCAMLYACC=ocamlyacc
 CILDIR=../cil/obj
 CIL=$(CILDIR)/cil.cmxa
 INCLUDE=$(addprefix -I ,$(DIRS))
-#Work around for compilation in Wence system to fix
 
 CMX=$(addsuffix .cmx,$(FILES))
 ML=$(addsuffix .ml,$(FILES))
