@@ -42,7 +42,8 @@ let build prog =
     
   let rec translate_exp x = 
     match x with
-	Lval (lv, _) -> (translate_lval lv)::[]
+	Const _ -> []
+      | Lval (lv, _) -> (translate_lval lv)::[]
       | UnOp (_, e) -> translate_exp e
       | _ -> 
 	  invalid_arg ("Factory.translate_exp: not implemented yet: "
