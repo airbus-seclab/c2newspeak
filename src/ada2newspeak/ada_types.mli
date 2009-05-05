@@ -201,6 +201,12 @@ val builtin_type : string -> t
 (** Get an attribute for a given type.  *)
 val attr_get : t -> string -> value list -> value
 
+(** The type for integer constants. *)
+val universal_integer : t
+
+(** The boolean type. *)
+val boolean : t
+
 (**
  * Shortcut for [attr_get] with no arguments.
  * st @. "ident" is like st'ident in Ada.

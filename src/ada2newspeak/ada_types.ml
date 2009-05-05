@@ -275,7 +275,7 @@ let type_stub = {
   limited = false;
 }
 
-let __universal_integer = { type_stub with trait = Signed None; }
+let universal_integer = { type_stub with trait = Signed None; }
 
 (*
  * Add (or not) a type to a symbol table.
@@ -338,7 +338,7 @@ let new_constr ?symboltable ?name parent r =
     }
 
 let new_range ?symboltable ?name r =
-  new_constr ?symboltable ?name __universal_integer r
+  new_constr ?symboltable ?name universal_integer r
 
 let new_modular ?symboltable ?name size =
     maybe_add ?symboltable ?name
@@ -379,7 +379,7 @@ and integer_last  = max_int
 
 let integer  = new_constr ~symboltable:builtin_table
                           ~name:"integer"
-                          __universal_integer
+                          universal_integer
                           (integer_first @.. integer_last)
 
 let natural  = new_constr ~symboltable:builtin_table
@@ -439,7 +439,7 @@ let rec attr_get typ attr args =
         | [nv] -> begin match (to_int nv) with
                         | None -> failwith "Unreachable code"
                         | Some n -> if attr="length" then
-                            from_nat __universal_integer
+                            from_nat universal_integer
                              (length_of (List.nth ind (n-1)))
                           else
                             attr_get (List.nth ind (n-1)) attr []
@@ -450,7 +450,7 @@ let rec attr_get typ attr args =
     | Modular _,      "first" -> from_int typ 0
     | Modular size,    "last" -> from_int typ (size-1)
     | Modular size, "modulus" -> from_int typ size
-    | Float digits , "digits" -> from_int __universal_integer digits
+    | Float digits , "digits" -> from_int universal_integer digits
     | Array _, _
     | Modular _, _
     | Float _ , _

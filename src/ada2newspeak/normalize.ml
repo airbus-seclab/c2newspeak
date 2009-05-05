@@ -29,6 +29,7 @@ open Syntax_ada
 open Ada_utils
 
 module Nat = Newspeak.Nat
+module  T  = Ada_types
 
 exception AmbiguousTypeException
 
@@ -83,30 +84,30 @@ let string_of_name = Ada_utils.name_to_string
  *                  in a [declarative_part].
  * @return a boolean describing whether a body could be found.
  *)
-let find_body_for_spec ~(specification:basic_declaration)
+let find_body_for_spec ~(specification:Ast.basic_declaration)
                        ~(bodylist:Ast.declarative_item list) :bool =
   (* Try to match a spec and a body *)
-  let match_ok (s:basic_declaration) (b:Ast.declarative_item) = match (s,b) with
-    | SpecDecl(SubProgramSpec sps),
+  let match_ok (s:Ast.basic_declaration) (b:Ast.declarative_item) = match (s,b) with
+    | Ast.SpecDecl(Ast.SubProgramSpec sps),
         Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_)) -> sps = spsb
-    | ObjectDecl _ as x,Ast.BasicDecl (ObjectDecl _ as y) -> x = y
+    | Ast.ObjectDecl _ as x,Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
     | _ -> false
   in
   List.exists (function bd -> match_ok specification bd) bodylist
 
 (** Return the name for a specification. *)
-let name_of_spec (spec:basic_declaration) :string = match spec with
-  | ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
-  | TypeDecl (i,_)
-  | NumberDecl (i,_,_)
-  | SubtypDecl (i,_) -> i
-  | SpecDecl (SubProgramSpec (Function  (n,_,_)))
-  | SpecDecl (SubProgramSpec (Procedure (n,_)))
-  | SpecDecl (PackageSpec (n,_)) -> name_to_string n
-  | UseDecl _ | RepresentClause _-> "<no name>"
+let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
+  | Ast.ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
+  | Ast.TypeDecl (i,_)
+  | Ast.NumberDecl (i,_,_)
+  | Ast.SubtypDecl (i,_) -> i
+  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
+  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_)))
+  | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> name_to_string n
+  | Ast.UseDecl _ | Ast.RepresentClause _-> "<no name>"
 
 let check_package_body_against_spec ~(body:Ast.declarative_part)
-                                    ~(spec:package_spec) =
+                                    ~(spec:Ast.package_spec) =
   let (pkgname,spec_and_loc) = spec in
   let (   _   ,body_and_loc) = body in
   let speclist = List.map fst spec_and_loc in
@@ -114,9 +115,9 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
   (* Filter on specifications : only sp such as
    * filterspec sp = true will be checked.      *)
   let filterspec = function
-    | NumberDecl _ | SpecDecl   _ -> true
-    | ObjectDecl _ | TypeDecl _ | SubtypDecl _
-    | RepresentClause _ | UseDecl _ -> false
+    | Ast.NumberDecl _ | Ast.SpecDecl   _ -> true
+    | Ast.ObjectDecl _ | Ast.TypeDecl _ | Ast.SubtypDecl _
+    | Ast.RepresentClause _ | Ast.UseDecl _ -> false
   in
   List.iter (function sp ->
     if (filterspec sp) then
@@ -145,7 +146,7 @@ let normalize_name (name:name) (package:package_manager) extern =
                    ("unknown package "^(Ada_utils.ident_list_to_string parents))
 
 (** Evaluate (at compile-time) an expression. *)
-let eval_static (exp:expression) (expected_typ:typ option)
+let eval_static (exp:Ast.expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t)
                 (context:identifier list list)
                 (package:package_manager)
@@ -160,33 +161,33 @@ let eval_static (exp:expression) (expected_typ:typ option)
          (fun pack -> find_all_cst (pack, ident))
          context) in
 
-  let rec eval_static_exp (exp:expression) (expected_typ:typ option)
+  let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
           :(Syntax_ada.value*Syntax_ada.typ) =
     match exp with
-      | CInt   (i)   -> IntVal(i),           check_typ expected_typ IntegerConst
-      | CFloat (f,s) -> FloatVal(f,s),       check_typ expected_typ Float
-      | CChar  (c)   -> IntVal(Nat.of_int c),check_typ expected_typ Character
-      | CBool  (b)   -> BoolVal(b),          check_typ expected_typ Boolean
-      | Var(v) -> eval_static_const (normalize_name v
+      | Ast.CInt   (i)   -> IntVal(i),           check_typ expected_typ IntegerConst
+      | Ast.CFloat (f,s) -> FloatVal(f,s),       check_typ expected_typ Float
+      | Ast.CChar  (c)   -> IntVal(Nat.of_int c),check_typ expected_typ Character
+      | Ast.CBool  (b)   -> BoolVal(b),          check_typ expected_typ Boolean
+      | Ast.Var(v) -> eval_static_const (normalize_name v
                                                     package
                                                     extern) expected_typ
-      | FunctionCall _  -> raise NonStaticExpression
+      | Ast.FunctionCall _  -> raise NonStaticExpression
 
-      | NullExpr | CString _ -> Npkcontext.report_error
+      | Ast.NullExpr | Ast.CString _ -> Npkcontext.report_error
                                  "Ada_normalize.eval_static_exp"
                                        "not implemented"
 
-      | Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
-      | Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
+      | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
+      | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
 
-      | Qualified(subtyp, exp) ->
+      | Ast.Qualified(subtyp, exp) ->
           let typ = check_typ expected_typ
             (base_typ subtyp) in
           let (value,typ) = eval_static_exp exp (Some(typ)) in
             check_static_subtyp subtyp value;
             (value, typ)
 
-      | Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
+      | Ast.Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
             match id with
             | "first" | "last" | "length" ->
                         Npkcontext.report_error "Ada_normalize:attributes"
@@ -198,7 +199,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
    * Evaluate statically a binary expression.
    * expected_typ is the expected type of the result, not the operands.
    *)
-  and eval_static_binop (op:binary_op) (e1:expression) (e2:expression)
+  and eval_static_binop (op:binary_op) (e1:Ast.expression) (e2:Ast.expression)
                                 (expected_typ:typ option)
         :value*typ =
     let expected_typ1 = typ_operand op expected_typ in
@@ -267,7 +268,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
   (**
    * Evaluate statically the "- E" expression.
    *)
-  and eval_static_uminus (exp:expression) :value*typ =
+  and eval_static_uminus (exp:Ast.expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
         | IntVal i, t when (integer_class t) -> (IntVal(Nat.neg i), t)
         | (FloatVal(f,_), Float) -> (FloatVal(mk_float (-.f)), Float)
@@ -277,7 +278,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
   (**
    * Evaluate statically the "abs E" expression.
    *)
-  and eval_static_abs (exp:expression) :value*typ =
+  and eval_static_abs (exp:Ast.expression) :value*typ =
       match (eval_static_exp exp expected_typ) with
         | IntVal i, t when (integer_class t) ->
             let abs = if (Nat.compare i Nat.zero)<0 then Nat.neg i else i
@@ -289,7 +290,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
   (**
    * Evaluate statically the "op E" expressions.
    *)
-  and eval_static_unop (op:unary_op) (exp:expression) (expected_typ:typ option)
+  and eval_static_unop (op:unary_op) (exp:Ast.expression) (expected_typ:typ option)
       :value*typ =
       match (op, expected_typ) with
         | UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
@@ -545,7 +546,7 @@ let eval_static (exp:expression) (expected_typ:typ option)
 (**
  * Evaluate statically an integer expression. FIXME
  *)
-let eval_static_integer_exp (exp:expression)
+let eval_static_integer_exp (exp:Ast.expression)
                             (csttbl:(name, constant_symb) Hashtbl.t)
                             (context:identifier list list)
                             (package:package_manager)
@@ -575,7 +576,7 @@ let eval_static_integer_exp (exp:expression)
 (**
  * Evaluate statically an constant number.
  *)
-let eval_static_number (exp:expression)
+let eval_static_number (exp:Ast.expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
                        (context:identifier list list)
                        (package:package_manager)
@@ -656,7 +657,7 @@ let parse_package_specification (name:name):package_spec =
  * renvoie la specification normalisee du package correspondant
  * a name, les noms etant traites comme extern a la normalisation
  *)
-let rec parse_extern_specification (name:name):spec*location =
+let rec parse_extern_specification (name:name):Ast.spec*location =
   let spec_ast = parse_specification name
   in
     match (normalization spec_ast true) with
@@ -1091,21 +1092,26 @@ and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
  * The identifier does not have to be normalized (it is just a plain string),
  * but normalize the expression.
  *)
-and normalize_arg (id,e:argument) :argument = id,normalize_exp e
+and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
 
 (**
  * Normalize an expression.
  *)
-and normalize_exp (exp:expression) :expression = match exp with
-  | Qualified(subtyp, exp) -> Qualified(normalize_subtyp subtyp,
-                                        normalize_exp exp)
-  | NullExpr | CInt _ | CFloat _ | CBool _ | CChar _
-  | CString _ | Var _  -> exp
-  | Unary (uop, exp)    -> Unary (uop, normalize_exp exp)
-  | Binary(bop, e1, e2) -> Binary(bop, normalize_exp e1,
+and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
+  | NullExpr -> Ast.NullExpr
+  | CInt x   -> Ast.CInt x
+  | CFloat x -> Ast.CFloat x
+  | CBool x  -> Ast.CBool x
+  | CChar x  -> Ast.CChar x
+  | CString x-> Ast.CString x
+  | Var x  -> Ast.Var x
+  | Unary (uop, exp)    -> Ast.Unary (uop, normalize_exp exp)
+  | Binary(bop, e1, e2) -> Ast.Binary(bop, normalize_exp e1,
                                        normalize_exp e2)
+  | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
+                                        normalize_exp exp)
   | FunctionCall(nom, params) ->
-      FunctionCall(nom, List.map normalize_arg params)
+      Ast.FunctionCall(nom, List.map normalize_arg params)
 
   | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
      | "first" -> begin
@@ -1118,7 +1124,7 @@ and normalize_exp (exp:expression) :expression = match exp with
                      | Some(IntegerRangeConstraint(a, b)) ->
                          if (Nat.compare a b <=0)
                          then
-                             CInt a
+                             Ast.CInt a
                          else
                            Npkcontext.report_error
                          "Ada_normalize First contraint"
@@ -1138,7 +1144,7 @@ and normalize_exp (exp:expression) :expression = match exp with
                      | Some(IntegerRangeConstraint(a, b)) ->
                          if (Nat.compare a b <=0)
                          then
-                              CInt b
+                              Ast.CInt b
                          else
                            Npkcontext.report_error
                          "Ada_normalize Length contraint"
@@ -1161,7 +1167,7 @@ and normalize_exp (exp:expression) :expression = match exp with
            | Some(IntegerRangeConstraint(a, b)) ->
                if (Nat.compare a b <=0)
                then
-             CInt (Nat.add (Nat.sub b a) Nat.one)
+             Ast.CInt (Nat.add (Nat.sub b a) Nat.one)
                else         Npkcontext.report_error
              "Ada_normalize Length contraint"
              "Zero length"
@@ -1177,6 +1183,7 @@ and normalize_exp (exp:expression) :expression = match exp with
         end
   | _ -> Npkcontext.report_error "normalize:attr"
                 ("No such attribute : '" ^ attr ^ "'")
+  in value,T.universal_integer
 
 
 
@@ -1282,7 +1289,8 @@ let interpret_enumeration_clause agregate assoc cloc loc =
           let rep_assoc =
             List.map
               (fun (ident, exp) ->
-                 let v = eval_static_integer_exp exp csttbl package#get_use
+                 let exp' = normalize_exp exp in
+                 let v = eval_static_integer_exp exp' csttbl package#get_use
                    package false
                  in (ident, v))
               assoc_list in
@@ -1555,7 +1563,10 @@ in
            if addparam then add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
                                     false;
-           {param with param_type = normalize_subtyp param.param_type}
+          {Ast.param_type    = normalize_subtyp param.param_type;
+           Ast.formal_name   = param.formal_name;
+           Ast.mode          = param.mode;
+           Ast.default_value = may normalize_exp param.default_value;}
         )
         param_list
     in match subprog_spec with
@@ -1563,32 +1574,33 @@ in
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
               add_function norm_name (Some(base_typ norm_subtyp)) false;
-              Function(norm_name, [], norm_subtyp)
+              Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
               add_function norm_name None false;
-              Function(norm_name,
+              Ast.Function(norm_name,
                        normalize_params param_list true,
                        normalize_subtyp return_type)
         | Procedure(name,param_list) ->
             let norm_name = normalize_name name in
               add_function norm_name None false;
-              Procedure(norm_name,
+              Ast.Procedure(norm_name,
                         normalize_params param_list false)
   in
 
   let rec normalize_basic_decl item loc global reptbl = match item with
     | UseDecl(use_clause) -> package#add_use use_clause;
-        item
+        Ast.UseDecl use_clause
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
-        let norm_subtyp_ind =
-          normalize_subtyp_indication subtyp_ind in
+        let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
+        let norm_def = may normalize_exp def in
           (List.iter
              (fun x -> add_cst (normalize_ident_cur x)
                 (VarSymb(global)) global)
              ident_list);
-          ObjectDecl(ident_list, norm_subtyp_ind, def, Variable)
+          Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable)
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
+        let normexp = normalize_exp exp in
         (* constantes *)
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind in
@@ -1599,7 +1611,7 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let (v,_) = eval_static exp (Some(typ)) csttbl
+            let (v,_) = eval_static normexp (Some(typ)) csttbl
               package#get_use package extern in
 
               (* on verifie que la valeur obtenue est conforme
@@ -1619,7 +1631,7 @@ in
                     (*la constante n'est pas statique *) Constant
 
         in
-          ObjectDecl(ident_list, norm_subtyp_ind, Some exp,status)
+          Ast.ObjectDecl(ident_list, norm_subtyp_ind, Some normexp,status)
     | ObjectDecl(_) ->
         Npkcontext.report_error
           "Ada_normalize.normalize_basic_decl"
@@ -1627,8 +1639,8 @@ in
            ^"or already evaluated")
     | TypeDecl(id,typ_decl) ->
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
-        in TypeDecl(id,norm_typ_decl)
-    | SpecDecl(spec) -> SpecDecl(normalize_spec spec)
+        in Ast.TypeDecl(id,norm_typ_decl)
+    | SpecDecl(spec) -> Ast.SpecDecl(normalize_spec spec)
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl package#get_use
@@ -1637,20 +1649,18 @@ in
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
-          NumberDecl(ident, norm_exp, Some v)
-    | NumberDecl(ident, exp, Some(v)) ->
-        (* cas jamais emprunte *)
-        NumberDecl(ident, normalize_exp exp, Some v)
+          Ast.NumberDecl(ident, norm_exp, Some v)
+    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
                     loc
                     global;
-          SubtypDecl(ident, norm_subtyp_ind)
-    | RepresentClause _ -> item
+          Ast.SubtypDecl(ident, norm_subtyp_ind)
+    | RepresentClause x -> Ast.RepresentClause x 
 
-  and normalize_package_spec (nom, list_decl) =
+  and normalize_package_spec (nom, list_decl) :Ast.package_spec =
     package#set_current nom;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
@@ -1671,11 +1681,17 @@ in
       (nom,norm_spec)
 
   and normalize_spec spec = match spec with
-    | SubProgramSpec(subprogr_spec) -> SubProgramSpec(
+    | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
           normalize_sub_program_spec subprogr_spec ~addparam:false)
     | PackageSpec(package_spec) ->
-        PackageSpec(normalize_package_spec package_spec)
+        Ast.PackageSpec(normalize_package_spec package_spec)
 
+  in
+
+  let rec normalize_lval = function
+    | Lval n -> Ast.Lval n
+    | ArrayAccess (lv,e) -> Ast.ArrayAccess(normalize_lval lv,
+                                            normalize_exp  e)
   in
 
   let rec normalize_instr (instr,loc) =
@@ -1683,16 +1699,16 @@ in
     match instr with
       | NullInstr    -> Ast.NullInstr   , loc
       | ReturnSimple -> Ast.ReturnSimple, loc
-      | Assign(nom, exp) -> Ast.Assign(nom, normalize_exp exp), loc
+      | Assign(lv, exp) -> Ast.Assign(normalize_lval lv, normalize_exp exp), loc
       | Return(exp) -> Ast.Return(normalize_exp exp), loc
       | If(exp, instr_then, instr_else) ->
           (Ast.If(normalize_exp exp, normalize_block instr_then,
               normalize_block instr_else), loc)
-      | Loop(NoScheme,instrs) -> Ast.Loop(NoScheme,normalize_block instrs), loc
-      | Loop(While(exp), instrs) -> (Ast.Loop(While(normalize_exp exp),
+      | Loop(NoScheme,instrs) -> Ast.Loop(Ast.NoScheme,normalize_block instrs), loc
+      | Loop(While(exp), instrs) -> (Ast.Loop(Ast.While(normalize_exp exp),
                        normalize_block instrs), loc)
       | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-                   (Ast.Loop(For(iter, exp1, exp2, is_rev),
+                   (Ast.Loop(Ast.For(iter, normalize_exp exp1, normalize_exp exp2, is_rev),
                                    normalize_block instrs), loc)
       | Exit -> (Ast.Exit, loc)
       | ProcedureCall(nom, params) ->
@@ -1736,7 +1752,7 @@ in
       ) items in
     let ndp = normalize_decl_items decl_part in
     List.iter (function
-      | Ast.BasicDecl(SpecDecl (SubProgramSpec _) as sp),loc ->
+      | Ast.BasicDecl(Ast.SpecDecl (Ast.SubProgramSpec _) as sp),loc ->
             begin Npkcontext.set_loc loc;
               if not (find_body_for_spec ~specification:sp
                                           ~bodylist:(List.map fst ndp)) then
@@ -1784,13 +1800,13 @@ in
      Ajoute egalement le nom du package
      a la liste de package accessible. *)
 (* TODO *)
-  let add_extern_spec spec =
+  let add_extern_spec (spec:Ast.spec) =
     let add_extern_basic_decl (basic_decl, loc) =
       Npkcontext.set_loc loc;
       match basic_decl with
-        | TypeDecl(id,typ_decl) ->
+        | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
-        | ObjectDecl(ident_list, _, _,
+        | Ast.ObjectDecl(ident_list, _, _,
                      (Variable | Constant)) ->
             (List.iter
                (fun x -> add_cst (normalize_ident x package#current true)
@@ -1800,7 +1816,7 @@ in
                ident_list
             )
 
-        | ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) ->
+        | Ast.ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) ->
             (* constante statique *)
 
             let subtyp = extract_subtyp subtyp_ind in
@@ -1811,36 +1827,36 @@ in
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
-        | NumberDecl(ident, _, Some v) ->
+        | Ast.NumberDecl(ident, _, Some v) ->
             (*ajouts dans la table*)
             add_cst (normalize_ident ident package#current true)
                     (Number(v, true))
                     true
 
-        | NumberDecl(_, _, None) ->
+        | Ast.NumberDecl(_, _, None) ->
             Npkcontext.report_error
               "Ada_normalize.add_extern_spec.add_extern_basic_decl"
               "internal error : external number declaration without value"
-        | SpecDecl(SubProgramSpec
-                     (Function(name, [], return_typ))) ->
+        | Ast.SpecDecl(Ast.SubProgramSpec
+                     (Ast.Function(name, [], return_typ))) ->
             add_function name (Some(base_typ return_typ)) true
-        | SpecDecl(SubProgramSpec(Function(name, _, _) |
-                                      Procedure(name, _))) ->
+        | Ast.SpecDecl(Ast.SubProgramSpec(Ast.Function(name, _, _) |
+                                      Ast.Procedure(name, _))) ->
             add_function name None true
-        | SubtypDecl(ident, subtyp_ind) ->
+        | Ast.SubtypDecl(ident, subtyp_ind) ->
             let subtyp = extract_subtyp subtyp_ind in
               types#add (normalize_ident ident package#current true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
-        | SpecDecl _ | UseDecl  _ | RepresentClause _ -> ()
+        | Ast.SpecDecl _ | Ast.UseDecl  _ | Ast.RepresentClause _ -> ()
 
     in match spec with
-      | SubProgramSpec(Function(name, [], return_typ)) ->
+      | Ast.SubProgramSpec(Ast.Function(name, [], return_typ)) ->
           add_function name (Some(base_typ return_typ)) true
-      | SubProgramSpec(Function(name, _, _)|Procedure(name, _)) ->
+      | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
 
-      | PackageSpec(nom, basic_decls) ->
+      | Ast.PackageSpec(nom, basic_decls) ->
           package#set_current nom;
           List.iter add_extern_basic_decl basic_decls;
           package#reset_current;
@@ -1863,10 +1879,10 @@ in
                   "internal error : spec provided"
           in
             add_extern_spec norm_spec;
-            With(nom, loc, Some(norm_spec, loc))
+            Ast.With(nom, loc, Some(norm_spec, loc))
             ::normalize_context r (nom::previous_with)
       | UseContext(n)::r -> package#add_use n;
-                            UseContext n::normalize_context r previous_with
+                            Ast.UseContext n::normalize_context r previous_with
       | [] -> []
   in
 
