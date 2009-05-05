@@ -173,7 +173,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                                     extern) expected_typ
       | Ast.FunctionCall _  -> raise NonStaticExpression
 
-      | Ast.NullExpr | Ast.CString _ -> Npkcontext.report_error
+      | Ast.CString _ -> Npkcontext.report_error
                                  "Ada_normalize.eval_static_exp"
                                        "not implemented"
 
@@ -1098,7 +1098,6 @@ and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
  * Normalize an expression.
  *)
 and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
-  | NullExpr -> Ast.NullExpr
   | CInt x   -> Ast.CInt x
   | CFloat x -> Ast.CFloat x
   | CBool x  -> Ast.CBool x

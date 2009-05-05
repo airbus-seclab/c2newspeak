@@ -1293,10 +1293,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         avec_selecteur_courant
 
   and translate_exp (exp,_:Ast.expression) expected_typ = match exp with
-    | NullExpr -> (C.Const(C.CInt(Nat.zero)), Integer)
-        (* type access uniquement : faire une verif sur expected
-           typ*)
-
     | CFloat (f,s) -> C.Const(C.CFloat(f,s)),
                       check_typ expected_typ Float
     | CInt i       -> translate_int i,

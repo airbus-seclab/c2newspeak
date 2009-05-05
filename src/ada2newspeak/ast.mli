@@ -65,7 +65,6 @@ and argument = Syntax_ada.identifier option*expression
 and expression = exp_value * Ada_types.t
 
 and exp_value =
-  | NullExpr
   | CInt         of Newspeak.Nat.t
   | CFloat       of Syntax_ada.float_number
   | CBool        of bool

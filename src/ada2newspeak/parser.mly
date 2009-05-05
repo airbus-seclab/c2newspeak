@@ -581,7 +581,6 @@ expression :
 | MINUS expression %prec UMINUS {Unary (UMinus , $2    )}
 | NOT   expression              {Unary (Not    , $2    )}
 | ABS   expression              {Unary (Abs    , $2    )}
-| NULL        {NullExpr}
 | CONST_INT   {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR  {CChar($1)}

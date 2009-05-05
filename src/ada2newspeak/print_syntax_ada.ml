@@ -124,7 +124,6 @@ and array_definition_to_string array = match array with
 
 
 and exp_to_string exp = match exp with
-  | NullExpr         -> "(null)"
   | CInt(i)          -> "CInt("^(nat_to_string i)^")"
   | CFloat(_,s)      -> "CFloat("^s^")"
   | CBool(b)         -> "CBool("^(string_of_bool b)^")"
