@@ -23,22 +23,14 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = string list * (string, blk) Hashtbl.t * blk
+type t
 
-and blk = stmt list
+val create: unit -> t
 
-and stmt = stmtkind * Newspeak.location
+val remove_var: string -> t -> t
 
-and stmtkind =
-    Set of (exp * exp)
-  | Taint of exp
-  | Decl of blk
-  | Select of (blk * blk)
-  | Call of string
+val join: t -> t -> t
 
-and exp =
-    Const
-  | Local of int
-  | Global of string
-  | BinOp of (exp * exp)
-  | Deref of exp
+val taint: string list -> t -> t
+
+val is_tainted: t -> string list -> bool

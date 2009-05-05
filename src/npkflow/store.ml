@@ -25,51 +25,47 @@
 
 open Equations
 
-module Set = Set.Make(String)
-
 type t = {
   last_local: int;
-  tainted: Set.t
+  tainted: TaintDom.t
 }
 
-let create () = { last_local = 0; tainted = Set.empty }
+let create () = { last_local = 0; tainted = TaintDom.create () }
 
 let add_global _ s = s
 
 let add_local s = { s with last_local = s.last_local + 1 }
 
 let remove_local s = 
-  let tainted = Set.remove (string_of_int s.last_local) s.tainted in
+  let tainted = TaintDom.remove_var (string_of_int s.last_local) s.tainted in
     { last_local = s.last_local - 1; tainted = tainted }
 
-let join s1 s2 = { s1 with tainted = Set.union s1.tainted s2.tainted }
+let join s1 s2 = { s1 with tainted = TaintDom.join s1.tainted s2.tainted }
 
-let eval_lval s lv =
-  match lv with
-      Local x -> string_of_int (s.last_local - x)
-    | Global x -> x
-
-let eval_exp s e =  
-  let rec eval e =
+let eval_exp s e =
+  let rec eval_exp e =
     match e with
-	lv::tl -> 
-	  let x = eval_lval s lv in
-	    if (Set.mem x s.tainted) then true
-	    else eval tl
-      | [] -> false
+	Const -> []
+      | Local x -> (string_of_int (s.last_local - x))::[]
+      | Global x -> x::[]
+      | BinOp (e1, e2) -> 
+	  let x1 = eval_exp e1 in
+	  let x2 = eval_exp e2 in
+	    x1@x2
+      | Deref _ -> invalid_arg "Store.eval_exp: not implemented yet"
   in
-    eval e
+    eval_exp e
 
-let taint lv s = 
-  let x = eval_lval s lv in
-    { s with tainted = Set.add x s.tainted }
+let taint e s = 
+  let x = eval_exp s e in
+    { s with tainted = TaintDom.taint x s.tainted }
 
-let is_tainted lv s =
-  let x = eval_lval s lv in
-    Set.mem x s.tainted
+let is_tainted s e =
+  let t = eval_exp s e in
+    TaintDom.is_tainted s.tainted t
 
 let assign (lv, e) s = 
-  let x = eval_lval s lv in
-  let t = eval_exp s e in
-    if t then { s with tainted = Set.add x s.tainted }
+  let x = eval_exp s lv in
+  let t = is_tainted s e in
+    if t then { s with tainted = TaintDom.taint x s.tainted }
     else s

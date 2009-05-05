@@ -37,8 +37,8 @@ val remove_local: t -> t
 
 val join: t -> t -> t
 
-val taint: lval -> t -> t
+val taint: exp -> t -> t
 
-val assign: (lval * exp) -> t -> t
+val assign: (exp * exp) -> t -> t
 
-val is_tainted: lval -> t -> bool
+val is_tainted: t -> exp -> bool

@@ -23,22 +23,20 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = string list * (string, blk) Hashtbl.t * blk
+module Set = Set.Make(String)
 
-and blk = stmt list
+type t = Set.t
 
-and stmt = stmtkind * Newspeak.location
+let create () = Set.empty
 
-and stmtkind =
-    Set of (exp * exp)
-  | Taint of exp
-  | Decl of blk
-  | Select of (blk * blk)
-  | Call of string
+let remove_var x s = Set.remove x s
 
-and exp =
-    Const
-  | Local of int
-  | Global of string
-  | BinOp of (exp * exp)
-  | Deref of exp
+let join s1 s2 = Set.union s1 s2
+
+let taint x s = 
+  let res = ref s in
+  let add x = res := Set.add x !res in
+    List.iter add x;
+    !res
+
+let is_tainted s t = List.exists (fun x -> Set.mem x s) t

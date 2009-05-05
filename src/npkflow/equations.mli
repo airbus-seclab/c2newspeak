@@ -30,14 +30,15 @@ and blk = stmt list
 and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
-    Set of (lval * exp)
-  | Taint of lval
+    Set of (exp * exp)
+  | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
   | Call of string
 
-and exp = lval list
-
-and lval =
-    Local of int
+and exp =
+    Const
+  | Local of int
   | Global of string
+  | BinOp of (exp * exp)
+  | Deref of exp

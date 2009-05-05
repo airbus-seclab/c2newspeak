@@ -47,7 +47,7 @@ let run (globals, fundecs, init) =
 	  let s2 = process_blk br2 s in
 	    Store.join s1 s2
       | Call "malloc" -> 
-	  if (Store.is_tainted (Local 0) s) then begin
+	  if (Store.is_tainted s (Local 0)) then begin
 	    let loc = Newspeak.string_of_loc loc in
 	      print_endline (loc^": malloc with external argument")
 	  end;

@@ -36,15 +36,15 @@ let build prog =
     match x with
 	Local x -> F.Local x
       | Global x -> F.Global x
+      | Deref (e, _) -> F.Deref (translate_exp e)
       | _ -> 
 	  invalid_arg ("Factory.translate_lval: not implemented yet: "
 		       ^(Newspeak.string_of_lval x))
-  in
-    
-  let rec translate_exp x = 
+  
+  and translate_exp x = 
     match x with
-	Const _ -> []
-      | Lval (lv, _) -> (translate_lval lv)::[]
+	Const _ -> F.Const
+      | Lval (lv, _) -> translate_lval lv
       | UnOp (_, e) -> translate_exp e
       | _ -> 
 	  invalid_arg ("Factory.translate_exp: not implemented yet: "

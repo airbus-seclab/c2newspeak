@@ -1,8 +1,8 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2009  Charles Hymans
- 
+  
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -21,24 +21,10 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-type t = string list * (string, blk) Hashtbl.t * blk
-
-and blk = stmt list
-
-and stmt = stmtkind * Newspeak.location
-
-and stmtkind =
-    Set of (exp * exp)
-  | Taint of exp
-  | Decl of blk
-  | Select of (blk * blk)
-  | Call of string
-
-and exp =
-    Const
-  | Local of int
-  | Global of string
-  | BinOp of (exp * exp)
-  | Deref of exp
+void main() {
+  int *ptr;
+  int x;
+  x = *ptr;
+}
