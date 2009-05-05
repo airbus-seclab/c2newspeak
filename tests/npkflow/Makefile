@@ -24,7 +24,7 @@
 COMMAND=$(C2NEWSPEAK) $*.c -o $*.npk &> /dev/null; \
         $(NPKFLOW) `[ -e $*.in ] && cat $*.in` $*.npk
 PREREQ=%.c
-TESTS=000 001
+TESTS=000 001 002
 CLEANFILES=$(addsuffix .npk, $(TESTS))
 
 include ../common.Makefile

@@ -35,6 +35,7 @@ let build prog =
   let rec translate_lval x =
     match x with
 	Local x -> F.Local x
+      | Global x -> F.Global x
       | _ -> 
 	  invalid_arg ("Factory.translate_lval: not implemented yet: "
 		       ^(Newspeak.string_of_lval x))
