@@ -87,7 +87,7 @@ let string_of_name = Ada_utils.name_to_string
 let find_body_for_spec ~(specification:Ast.basic_declaration)
                        ~(bodylist:Ast.declarative_item list) :bool =
   (* Try to match a spec and a body *)
-  let match_ok (s:Ast.basic_declaration) (b:Ast.declarative_item) = match (s,b) with
+  let match_ok s b = match (s,b) with
     | Ast.SpecDecl(Ast.SubProgramSpec sps),
         Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_)) -> sps = spsb
     | Ast.ObjectDecl _ as x,Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
@@ -164,31 +164,31 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
           :(Syntax_ada.value*Syntax_ada.typ) =
     match exp with
-      | Ast.CInt   (i)   -> IntVal(i),           check_typ expected_typ IntegerConst
-      | Ast.CFloat (f,s) -> FloatVal(f,s),       check_typ expected_typ Float
-      | Ast.CChar  (c)   -> IntVal(Nat.of_int c),check_typ expected_typ Character
-      | Ast.CBool  (b)   -> BoolVal(b),          check_typ expected_typ Boolean
-      | Ast.Var(v) -> eval_static_const (normalize_name v
-                                                    package
-                                                    extern) expected_typ
-      | Ast.FunctionCall _  -> raise NonStaticExpression
-      | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
-      | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
+    | Ast.CInt   (i)  ->IntVal(i),           check_typ expected_typ IntegerConst
+    | Ast.CFloat (f,s)->FloatVal(f,s),       check_typ expected_typ Float
+    | Ast.CChar  (c)  ->IntVal(Nat.of_int c),check_typ expected_typ Character
+    | Ast.CBool  (b)  ->BoolVal(b),          check_typ expected_typ Boolean
+    | Ast.Var(v) -> eval_static_const (normalize_name v
+                                                  package
+                                                  extern) expected_typ
+    | Ast.FunctionCall _  -> raise NonStaticExpression
+    | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
+    | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
 
-      | Ast.Qualified(subtyp, exp) ->
-          let typ = check_typ expected_typ
-            (base_typ subtyp) in
-          let (value,typ) = eval_static_exp exp (Some(typ)) in
-            check_static_subtyp subtyp value;
-            (value, typ)
+    | Ast.Qualified(subtyp, exp) ->
+        let typ = check_typ expected_typ
+          (base_typ subtyp) in
+        let (value,typ) = eval_static_exp exp (Some(typ)) in
+          check_static_subtyp subtyp value;
+          (value, typ)
 
-      | Ast.Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
-            match id with
-            | "first" | "last" | "length" ->
-                        Npkcontext.report_error "Ada_normalize:attributes"
-                                        "First, last, length not implemented"
-            | _ ->      Npkcontext.report_error "Ada_normalize:attributes"
-                                            ("unknown attribute " ^ id)
+    | Ast.Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
+          match id with
+          | "first" | "last" | "length" ->
+                      Npkcontext.report_error "Ada_normalize:attributes"
+                                      "First, last, length not implemented"
+          | _ ->      Npkcontext.report_error "Ada_normalize:attributes"
+                                          ("unknown attribute " ^ id)
 
   (**
    * Evaluate statically a binary expression.
@@ -285,8 +285,8 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   (**
    * Evaluate statically the "op E" expressions.
    *)
-  and eval_static_unop (op:unary_op) (exp:Ast.expression) (expected_typ:typ option)
-      :value*typ =
+  and eval_static_unop (op:unary_op) (exp:Ast.expression)
+      (expected_typ:typ option) :value*typ =
       match (op, expected_typ) with
         | UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
         | UPlus, Some Float                  -> eval_static_exp exp expected_typ
@@ -1651,7 +1651,7 @@ in
                     loc
                     global;
           Ast.SubtypDecl(ident, norm_subtyp_ind)
-    | RepresentClause x -> Ast.RepresentClause x 
+    | RepresentClause x -> Ast.RepresentClause x
 
   and normalize_package_spec (nom, list_decl) :Ast.package_spec =
     package#set_current nom;
@@ -1690,35 +1690,34 @@ in
   let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
-      | NullInstr    -> Ast.NullInstr   , loc
-      | ReturnSimple -> Ast.ReturnSimple, loc
-      | Assign(lv, exp) -> Ast.Assign(normalize_lval lv, normalize_exp exp), loc
-      | Return(exp) -> Ast.Return(normalize_exp exp), loc
-      | If(exp, instr_then, instr_else) ->
-          (Ast.If(normalize_exp exp, normalize_block instr_then,
-              normalize_block instr_else), loc)
-      | Loop(NoScheme,instrs) -> Ast.Loop(Ast.NoScheme,normalize_block instrs), loc
-      | Loop(While(exp), instrs) -> (Ast.Loop(Ast.While(normalize_exp exp),
-                       normalize_block instrs), loc)
-      | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-                   (Ast.Loop(Ast.For(iter, normalize_exp exp1, normalize_exp exp2, is_rev),
-                                   normalize_block instrs), loc)
-      | Exit -> (Ast.Exit, loc)
-      | ProcedureCall(nom, params) ->
-         (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
-      | Case (e, choices, default) ->
-                Ast.Case (normalize_exp e,
-                      List.map (function e,block->
-                              normalize_exp e,
-                              normalize_block block)
-                          choices,
-                      (match default with
-                         | None -> None
-                         | Some block -> Some(normalize_block block)
-                      )),loc
-      | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
-                          remove_decl_part dp;
-                          Ast.Block (ndp, normalize_block blk), loc
+    | NullInstr    -> Ast.NullInstr   , loc
+    | ReturnSimple -> Ast.ReturnSimple, loc
+    | Assign(lv, exp) -> Ast.Assign(normalize_lval lv, normalize_exp exp), loc
+    | Return(exp) -> Ast.Return(normalize_exp exp), loc
+    | If(exp, instr_then, instr_else) ->
+        (Ast.If(normalize_exp exp, normalize_block instr_then,
+            normalize_block instr_else), loc)
+    | Loop(NoScheme,instrs) -> Ast.Loop(Ast.NoScheme,normalize_block instrs),loc
+    | Loop(While(exp), instrs) -> (Ast.Loop(Ast.While(normalize_exp exp),
+                     normalize_block instrs), loc)
+    | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
+                 (Ast.Loop(Ast.For(iter, normalize_exp exp1,
+                                 normalize_exp exp2, is_rev),
+                                 normalize_block instrs), loc)
+    | Exit -> (Ast.Exit, loc)
+    | ProcedureCall(nom, params) ->
+       (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
+    | Case (e, choices, default) ->
+              Ast.Case (normalize_exp e,
+                    List.map (function e,block->
+                            normalize_exp e,
+                            normalize_block block)
+                        choices,
+                    Ada_utils.may normalize_block default
+                    ),loc
+    | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
+                        remove_decl_part dp;
+                        Ast.Block (ndp, normalize_block blk), loc
 
   and normalize_block block =
     List.map normalize_instr block
