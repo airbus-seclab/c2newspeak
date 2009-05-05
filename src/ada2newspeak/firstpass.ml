@@ -34,6 +34,7 @@ module K   = Npkil
 module Nat = Newspeak.Nat
 module Npk = Newspeak
 module A   = Syntax_ada
+module T   = Ada_types
 
 open Syntax_ada
 open Ast (* AST overrides Syntax_ada *)
@@ -54,7 +55,7 @@ exception AmbiguousTypeException
 type symb =
   | VarSymb  of C.lv    * A.subtyp * bool * bool (** name, type, global?, ro? *)
   | EnumSymb of C.exp   * A.typ * bool (** TODO, typename, ro? *)
-  | FunSymb  of C.funexp * A.sub_program_spec * bool * C.ftyp (** XXX *)
+  | FunSymb  of C.funexp * Ast.sub_program_spec * bool * C.ftyp (** XXX *)
   | NumberSymb of value*bool (** XXX *)
 
 type qualified_symbol = symb*C.typ*Npk.location
@@ -619,7 +620,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             "internal error : number cannot have enum val"
   in
 
-  let rec translate_lv lv write trans_exp =
+  let rec translate_lv (lv:Ast.lval) (write:bool) (trans_exp:Ast.expression
+                                          ->A.typ option->C.exp*A.typ) =
     (*cas d'un symbol sans selecteur *)
     let fun_sans_sel ident name =
       if mem_symb name then find_symb name
@@ -661,7 +663,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     in
 
       match lv with
-          Lval lv ->
+          Ast.Lval lv ->
             let (symb, _, _) = find_name_record lv
               fun_sans_sel   (*sans selecteur *)
               fun_sel_connu  (*avec selecteur connu *)
@@ -686,7 +688,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               end
 
         (*Assignation dans un tableau*)
-        | ArrayAccess (lval, expr) ->
+        | Ast.ArrayAccess (lval, expr) ->
             let (v, subtyp_lv) = translate_lv lval write trans_exp in
               match  subtyp_lv
               with
@@ -694,14 +696,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     ConstrainedArray(( stypindex, contraint,_ ),
                                      ( stypelt,_,_),  _)), _)) ->
                     let size_base =  C.exp_of_int (C.size_of_typ (
-                                (translate_typ (base_typ stypelt)))
-                                                             )
-                    in
-                    let (exp,_) = trans_exp expr
-                      (Some(base_typ(stypindex)))
-                    in
-
-
+                                (translate_typ (base_typ stypelt)))) in
+                    let (exp,_) = trans_exp expr (Some(base_typ stypindex)) in
                     let new_constr  =
                       match contraint with
                           None -> begin match stypindex with
@@ -713,7 +709,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                   "Unconstrained or SubtypName"
                           end
 
-                        | Some(RangeConstraint(CInt(a), CInt(b)))
+                        | Some(RangeConstraint(A.CInt(a), A.CInt(b)))
 
                         | Some(IntegerRangeConstraint(a, b)) ->
                             if (Nat.compare a b)<=0
@@ -757,7 +753,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
 
 
-  let rec translate_if_exp cond exp_then exp_else expected_typ =
+  let rec translate_if_exp (cond:Ast.expression) (exp_then:Ast.expression)
+                           (exp_else:Ast.expression) expected_typ =
     match expected_typ with
       | None | Some(Boolean) ->
           let loc = Npkcontext.get_loc () in
@@ -778,9 +775,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           "Firstpass.translate_if_exp"
             "invalid operator and argument"
 
-  and translate_binop op e1 e2 expected_typ =
-    let expected_typ1 = Ada_utils.typ_operand op expected_typ
-    in
+  and translate_binop op (e1:Ast.expression) (e2:Ast.expression) expected_typ =
+    let expected_typ1 = Ada_utils.typ_operand op expected_typ in
     let (tr_e1, tr_e2, typ) =
       try
         let (tr_e1, typ1) = translate_exp e1 expected_typ1 in
@@ -806,12 +802,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
        *     a AND THEN b  -->  a ?    b  : FALSE
        *     a  OR ELSE b  -->  a ?  TRUE : b
        *)
-      | Neq    ,_ -> translate_unop Not (Binary(Eq, e1, e2)) expected_typ
-      | Le     ,_ -> translate_unop Not (Binary(Gt, e1, e2)) expected_typ
-      | Ge     ,_ -> translate_unop Not (Binary(Lt, e1, e2)) expected_typ
-      | Xor    ,_ -> translate_if_exp e1 (Unary(Not, e2)) e2 expected_typ
-      | AndThen,_ -> translate_if_exp e1 e2   (CBool  false) expected_typ
-      | OrElse ,_ -> translate_if_exp e1 (CBool true)     e2 expected_typ
+      | Neq    ,_-> translate_unop Not (Binary(Eq,e1,e2),T.boolean) expected_typ
+      | Le     ,_-> translate_unop Not (Binary(Gt,e1,e2),T.boolean) expected_typ
+      | Ge     ,_-> translate_unop Not (Binary(Lt,e1,e2),T.boolean) expected_typ
+      | Xor  ,_-> translate_if_exp e1 (Unary(Not, e2),T.boolean) e2 expected_typ
+      | AndThen,_-> translate_if_exp e1 e2  (CBool false,T.boolean) expected_typ
+      | OrElse ,_-> translate_if_exp e1 (CBool true,T.boolean)   e2 expected_typ
 
       (* Numeric operations *)
       | Plus, C.Scalar(Npk.Int   _)->C.Binop(Npk.PlusI   , tr_e1, tr_e2),typ
@@ -836,13 +832,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | _ -> Npkcontext.report_error "Firstpass.translate_binop"
             "invalid operator and argument"
 
-  and translate_unop op exp expected_typ =
+  and translate_unop op (exp:Ast.expression) expected_typ =
     match (op, expected_typ) with
-
-      | (UPlus, Some(Float)) ->
-          translate_exp exp expected_typ
-      | (UPlus, Some(t)) when (integer_class t) ->
-          translate_exp exp expected_typ
+      | (UPlus, Some(Float)) -> translate_exp exp expected_typ
+      | (UPlus, Some t) when (integer_class t) -> translate_exp exp expected_typ
 
       | (UPlus, None) ->
           let (tr_exp, typ) = translate_exp exp expected_typ in
@@ -858,19 +851,21 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             (match typ with
                | Float ->
                    translate_binop Minus
-                     (CFloat(0.,"0")) exp expected_typ
+                     (CFloat(0.,"0"),T.builtin_type "float") exp expected_typ
                | t when (integer_class t) ->
-                   translate_binop Minus (CInt(Nat.zero)) exp
+                   translate_binop Minus (CInt Nat.zero,T.universal_integer) exp
                      expected_typ
                | _ -> Npkcontext.report_error "Firstpass.translate_unop"
                    "Unexpected unary operator and argument")
 
 
       | (UMinus, Some(t)) when (integer_class t) ->
-          translate_binop Minus (CInt(Nat.zero)) exp expected_typ
+          translate_binop Minus (CInt(Nat.zero),T.universal_integer)
+                          exp expected_typ
 
       | (UMinus, Some(Float)) ->
-          translate_binop Minus (CFloat(0.,"0")) exp expected_typ
+          translate_binop Minus (CFloat(0.,"0"),T.builtin_type "float")
+                          exp expected_typ
 
       | (Not, None) | (Not, Some(Boolean)) ->
           let (exp, _) = translate_exp exp (Some(Boolean))
@@ -905,8 +900,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      * @param spec the function specification (holding default values, etc)
      * @return a list of expressions which are the actual parameters.
      *)
-  and make_arg_list (args:argument list) (spec:param list) :A.expression list =
-    let argtbl:(identifier,A.expression) Hashtbl.t = Hashtbl.create 5 in
+  and make_arg_list (args:argument list) (spec:Ast.param list)
+      :Ast.expression list =
+    let argtbl:(identifier,Ast.expression) Hashtbl.t = Hashtbl.create 5 in
 
     (**
      * Step 1 : extract positional parameters. Named parameters go into the
@@ -917,8 +913,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      *
      * /!\ Side-effects : this function references the argtbl variable.
      *)
-    let rec extract_positional_parameters (ar :argument list)
-        :A.expression list =
+    let rec extract_positional_parameters (ar :Ast.argument list)
+        :Ast.expression list =
         (match ar with
           |             []   -> []
           | (Some  _, _)::_  ->
@@ -948,9 +944,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      *
      * /!\ Side-effects : this function references the argtbl variable.
      *)
-    and merge_with_specification (pos_list : A.expression list)
-                                 (spec     : A.param      list)
-        :(A.identifier*A.expression) list =
+    and merge_with_specification (pos_list : Ast.expression list)
+                                 (spec     : Ast.param      list)
+        :(A.identifier*Ast.expression) list =
             match pos_list, spec with
               |  [],_  -> (* end of positional parameters *)
                           List.map (function x -> (x.formal_name,(
@@ -995,7 +991,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                    ^" is a procedure, function expected")
     in
     let arg_list = make_arg_list arg_list params in
-    let translate_parameter (param:A.param) (exp:A.expression) :C.exp =
+    let translate_parameter (param:Ast.param) (exp:Ast.expression) :C.exp =
         let (tr_exp, _) = translate_exp exp (Some(base_typ param.param_type)) in
             make_check_subtyp param.param_type tr_exp in
     let (tr_params:C.exp list) = List.map2 translate_parameter params arg_list
@@ -1299,11 +1295,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       find_name name sans_selecteur avec_selecteur
         avec_selecteur_courant
 
-  and translate_exp exp expected_typ = match exp with
-    | NullExpr -> (C.Const(C.CInt(Nat.zero)), Integer)
-        (* type access uniquement : faire une verif sur expected
-           typ*)
-
+  and translate_exp (exp,_:Ast.expression) expected_typ = match exp with
     | CFloat (f,s) -> C.Const(C.CFloat(f,s)),
                       check_typ expected_typ Float
     | CInt i       -> translate_int i,
@@ -1312,9 +1304,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                       check_typ expected_typ Character
     | CBool b      -> translate_int (Ada_utils.nat_of_bool b),
                       check_typ expected_typ Boolean
-    | CString _    -> Npkcontext.report_error "Firstpass.translate_exp"
-                        "string not implemented"
-
     | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
@@ -1440,7 +1429,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (**
    * Translate a [Syntax_ada.Assign].
    *)
-  and translate_affect (lv:A.lval) (exp:A.expression) (loc:Npk.location) =
+  and translate_affect (lv:Ast.lval) (exp:Ast.expression) (loc:Npk.location) =
     let (tr_lv,subtyp_lv) = translate_lv lv true translate_exp
       (*WG*) in
     let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp_lv))
@@ -1468,7 +1457,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                        Npkcontext.set_loc next_loc;
                        Npkcontext.report_warning
                          "Firstpass.translate_block"
-                          "Unreachable code";
+                          "Code after return statement can't be reached";
                        Npkcontext.set_loc loc;
                        translate_block r
              in
@@ -1502,21 +1491,25 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                             ~deref:false
                             ~ro:false; (* should be RO, actually *)
                 let it = ident_to_name iterator in
+                let _bool = T.boolean in
+                let _uint = T.universal_integer in
+                let _it   = (Var it,_uint) in
+                let _one  = (CInt (Newspeak.Nat.of_int 1),_uint) in
                 let res = if (not is_reverse) then begin
  (* int i = a;        *) (translate_affect (Lval it) a loc)
  (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (i>b) break; *)    (((Ast.If(Binary (Gt,(Var it),b),[Exit,loc],[]),loc)
+ (*   if (i>b) break; *)    (((If((Binary(Gt,_it,b),_bool),[Exit,loc],[]),loc)
  (*   ...             *)     ::(body))
- (*   i++             *)      @[Ast.Assign(Lval it, Binary (Plus, Var it,
- (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
+ (*   i++             *)      @[Assign(Lval it, (Binary (Plus,_it,
+ (*                   *)                _one),_uint)),loc]
  (* }                 *)   )),loc])
                     end else begin
  (* int i = b;        *) (translate_affect (Lval it) b loc)
- (* while(1) {        *) ::(translate_block [Ast.Loop (NoScheme,
- (*   if (a>i) break; *)    (((Ast.If(Binary (Gt,a,(Var it)),[Exit,loc],[]),loc)
+ (* while(1) {        *) ::(translate_block [Loop (NoScheme,
+ (*   if (a>i) break; *)    (((If((Binary(Gt,a,_it),_bool),[Exit,loc],[]),loc)
  (*   ...             *)     ::(body))
- (*   i--             *)      @[Ast.Assign(Lval it, Binary (Minus, Var it,
- (*                   *)                CInt (Newspeak.Nat.of_int 1))),loc]
+ (*   i--             *)      @[Assign(Lval it, (Binary (Minus, _it,
+ (*                   *)                _one),_uint)),loc]
  (* }                 *)   )),loc])
                     end
                 in remove_symb iterator;
@@ -1533,9 +1526,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                   ^" is a function, procedure expected")
                            | Procedure(_, params) -> params
                        in
-                       let tr_param param exp =
+                       let tr_param (param:Ast.param) ((exp,tp):Ast.expression)=
                          match param.mode with
-                           | In -> fst (translate_exp exp
+                           | In -> fst (translate_exp (exp,tp)
                                           (Some(base_typ param.param_type)))
                            | Out | InOut ->
                                match exp with

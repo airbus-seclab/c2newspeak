@@ -180,7 +180,7 @@ val check_compil_unit_name :
  * Extract the identifier for a representation clause.
  *)
 val extract_representation_clause_name :
-                    Syntax_ada.representation_clause -> Syntax_ada.identifier
+             Syntax_ada.representation_clause -> Syntax_ada.identifier
 
 (**
  * Provides a default value.
@@ -265,3 +265,10 @@ val make_operator_name : string -> string
 
 (** Converts a CIR binary operation into its string representation. *)
 val operator_of_binop : Syntax_ada.binary_op -> string
+
+(**
+ * Maybe apply some function to an option value :
+ * may f (None) = None
+ * may f (Some v) = Some (f v)
+ *)
+val may : ('a -> 'b) -> 'a option -> 'b option

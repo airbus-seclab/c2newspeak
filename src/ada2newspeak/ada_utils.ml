@@ -466,3 +466,8 @@ let operator_of_binop = function
   | Xor           -> "xor"
   | AndThen       -> "and then"
   | OrElse        -> "or else"
+
+let may f = function
+  | None -> None
+  | Some v -> Some (f v)
+

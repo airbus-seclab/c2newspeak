@@ -29,45 +29,118 @@ type block = (instruction * Newspeak.location) list
 
 and  instruction =
   | NullInstr
-  | Assign        of Syntax_ada.lval
-                   * Syntax_ada.expression
-  | Return        of Syntax_ada.expression
+  | Assign        of lval
+                   * expression
+  | Return        of expression
   | ReturnSimple
-  | If            of Syntax_ada.expression
+  | If            of expression
                    * block       (* then *)
                    * block       (* else *)
-  | Loop          of Syntax_ada.iteration_scheme
+  | Loop          of iteration_scheme
                    * block
   | Exit
   | ProcedureCall of Syntax_ada.name
-                   * Syntax_ada.argument list
-  | Case          of Syntax_ada.expression
-                   * (Syntax_ada.expression*block) list
+                   * argument list
+  | Case          of expression
+                   * (expression*block) list
                    * block option
   | Block         of declarative_part
                    * block
 
+and lval =
+| Lval        of Syntax_ada.name
+| ArrayAccess of lval
+               * expression
+
+and iteration_scheme =
+  | NoScheme
+  | While of expression
+  | For   of Syntax_ada.identifier
+           * expression
+           * expression
+           * bool
+
+and argument = Syntax_ada.identifier option*expression
+
+and expression = exp_value * Ada_types.t
+
+and exp_value =
+  | CInt         of Newspeak.Nat.t
+  | CFloat       of Syntax_ada.float_number
+  | CBool        of bool
+  | CChar        of int
+  | Var          of Syntax_ada.name
+  | FunctionCall of Syntax_ada.name
+                  * argument list
+  | Unary        of Syntax_ada.unary_op
+                  * expression
+  | Binary       of Syntax_ada.binary_op
+                  * expression
+                  * expression
+  | Qualified    of Syntax_ada.subtyp
+                  * expression
+  | Attribute    of Syntax_ada.attribute_reference
+
 and  declarative_part = Ada_types.table
                      * (declarative_item*Newspeak.location) list
 
+and param = {
+        formal_name   : Syntax_ada.identifier;
+        mode          : Syntax_ada.param_mode;
+        param_type    : Syntax_ada.subtyp;
+        default_value : expression option;
+}
+
 and  body =
-  | SubProgramBody of Syntax_ada.sub_program_spec
+  | SubProgramBody of sub_program_spec
                     * declarative_part
                     * block
   |    PackageBody of Syntax_ada.name
-                    * Syntax_ada.package_spec option
+                    * package_spec option
                     * declarative_part
                     * block
 
 and  declarative_item =
-  | BasicDecl of Syntax_ada.basic_declaration
+  | BasicDecl of basic_declaration
   |  BodyDecl of body
 
+and basic_declaration =
+  | ObjectDecl      of Syntax_ada.identifier list
+                     * Syntax_ada.subtyp_indication
+                     * expression option
+                     * Syntax_ada.object_state
+  | TypeDecl        of Syntax_ada.identifier*Syntax_ada.typ_declaration
+  | UseDecl         of Syntax_ada.name
+  | SpecDecl        of spec
+  | NumberDecl      of Syntax_ada.identifier
+                     * expression
+                     * Syntax_ada.value option
+  | SubtypDecl      of Syntax_ada.identifier
+                     * Syntax_ada.subtyp_indication
+  | RepresentClause of Syntax_ada.representation_clause
+
 and  library_item =
-  | Spec of Syntax_ada.spec
+  | Spec of spec
   | Body of body
 
-type compilation_unit = Syntax_ada.context_clause list
+and spec =
+  | SubProgramSpec of sub_program_spec
+  |    PackageSpec of package_spec
+
+and context_clause =
+  | With       of Syntax_ada.name
+                * Newspeak.location
+                * (spec*Newspeak.location) option
+  | UseContext of Syntax_ada.name
+
+and sub_program_spec =
+  | Function  of Syntax_ada.name*param list*Syntax_ada.subtyp
+  | Procedure of Syntax_ada.name*param list
+
+and package_spec = Syntax_ada.name
+                 * (basic_declaration*Newspeak.location) list
+
+type compilation_unit = context_clause list
                       * library_item
                       * Newspeak.location
 

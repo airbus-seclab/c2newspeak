@@ -135,12 +135,10 @@ and attribute_designator =
 
 (** Expressions. *)
 and expression =
-  | NullExpr
   | CInt         of nat
   | CFloat       of float_number
   | CBool        of bool
   | CChar        of int
-  | CString      of string
   | Var          of name
   | FunctionCall of name
                   * argument list

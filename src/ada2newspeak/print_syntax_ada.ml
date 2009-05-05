@@ -124,12 +124,10 @@ and array_definition_to_string array = match array with
 
 
 and exp_to_string exp = match exp with
-  | NullExpr         -> "(null)"
   | CInt(i)          -> "CInt("^(nat_to_string i)^")"
   | CFloat(_,s)      -> "CFloat("^s^")"
   | CBool(b)         -> "CBool("^(string_of_bool b)^")"
   | CChar(c)         -> "CChar("^(string_of_int c)^")"
-  | CString(s)       -> "CString("^s^")"
   | Var(s)           -> "Var("^(name_to_string s)^")"
   | Unary(op,exp)    -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
   | Binary(op,e1,e2) -> "("^(exp_to_string e1)^" "

@@ -581,13 +581,11 @@ expression :
 | MINUS expression %prec UMINUS {Unary (UMinus , $2    )}
 | NOT   expression              {Unary (Not    , $2    )}
 | ABS   expression              {Unary (Abs    , $2    )}
-| NULL        {NullExpr}
 | CONST_INT   {CInt($1)}
 | CONST_FLOAT {CFloat(float_of_string $1,$1)}
 | CONST_CHAR  {CChar($1)}
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}
-| STRING      {CString($1)}
 | LPAR expression RPAR {$2}
 | subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
 | subtyp QUOTE ident  {Attribute ($1
