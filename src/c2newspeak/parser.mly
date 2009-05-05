@@ -162,11 +162,12 @@ let report_asm tokens =
   let msg = "asm directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
 
+(* TODO: think about this simplification, this is a bit hacky?? *)
 let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | Str _ 
-    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) -> 
+    | Set _ | Str _ | Cast _ 
+    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) ->
 	Unop (Not, Binop (Eq, e, exp_of_int 0))
     | Unop (Not, e) -> Unop (Not, normalize_bexp e)
     | IfExp (c, e1, e2) -> 
