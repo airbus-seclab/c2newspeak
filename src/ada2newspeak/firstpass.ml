@@ -1301,9 +1301,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                       check_typ expected_typ Character
     | CBool b      -> translate_int (Ada_utils.nat_of_bool b),
                       check_typ expected_typ Boolean
-    | CString _    -> Npkcontext.report_error "Firstpass.translate_exp"
-                        "string not implemented"
-
     | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ

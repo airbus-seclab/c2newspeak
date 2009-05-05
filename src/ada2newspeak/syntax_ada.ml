@@ -139,7 +139,6 @@ and expression =
   | CFloat       of float_number
   | CBool        of bool
   | CChar        of int
-  | CString      of string
   | Var          of name
   | FunctionCall of name
                   * argument list

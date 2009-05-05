@@ -586,7 +586,6 @@ expression :
 | CONST_CHAR  {CChar($1)}
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}
-| STRING      {CString($1)}
 | LPAR expression RPAR {$2}
 | subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
 | subtyp QUOTE ident  {Attribute ($1

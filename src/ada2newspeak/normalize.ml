@@ -172,11 +172,6 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                                     package
                                                     extern) expected_typ
       | Ast.FunctionCall _  -> raise NonStaticExpression
-
-      | Ast.CString _ -> Npkcontext.report_error
-                                 "Ada_normalize.eval_static_exp"
-                                       "not implemented"
-
       | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
       | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
 
@@ -1102,7 +1097,6 @@ and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
   | CFloat x -> Ast.CFloat x
   | CBool x  -> Ast.CBool x
   | CChar x  -> Ast.CChar x
-  | CString x-> Ast.CString x
   | Var x  -> Ast.Var x
   | Unary (uop, exp)    -> Ast.Unary (uop, normalize_exp exp)
   | Binary(bop, e1, e2) -> Ast.Binary(bop, normalize_exp e1,

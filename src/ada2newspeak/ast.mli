@@ -69,7 +69,6 @@ and exp_value =
   | CFloat       of Syntax_ada.float_number
   | CBool        of bool
   | CChar        of int
-  | CString      of string
   | Var          of Syntax_ada.name
   | FunctionCall of Syntax_ada.name
                   * argument list
