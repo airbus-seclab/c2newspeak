@@ -802,10 +802,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
        *     a AND THEN b  -->  a ?    b  : FALSE
        *     a  OR ELSE b  -->  a ?  TRUE : b
        *)
-      | Neq    ,_-> translate_unop Not (Binary(Eq,e1,e2),T.boolean) expected_typ
-      | Le     ,_-> translate_unop Not (Binary(Gt,e1,e2),T.boolean) expected_typ
-      | Ge     ,_-> translate_unop Not (Binary(Lt,e1,e2),T.boolean) expected_typ
-      | Xor  ,_-> translate_if_exp e1 (Unary(Not, e2),T.boolean) e2 expected_typ
+      | Ast.Xor  ,_-> translate_if_exp e1 (Unary(Not, e2),T.boolean) e2 expected_typ
       | AndThen,_-> translate_if_exp e1 e2  (CBool false,T.boolean) expected_typ
       | OrElse ,_-> translate_if_exp e1 (CBool true,T.boolean)   e2 expected_typ
 
@@ -823,9 +820,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       (* Comparisons *)
       | Eq, C.Scalar t -> C.Binop (Npk.Eq t, tr_e1, tr_e2), Boolean
       | Gt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e1, tr_e2), Boolean
-      | Lt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e2, tr_e1), Boolean
 
-      | (Power | Mod | Concat | And | Or ) ,_ ->
+      | (Power | Mod | And | Or ) ,_ ->
           Npkcontext.report_error "Firstpass.translate_binop"
             "run-time operator not implemented"
 

@@ -92,7 +92,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
    * Evaluate statically a binary expression.
    * expected_typ is the expected type of the result, not the operands.
    *)
-  and eval_static_binop (op:binary_op) (e1:Ast.expression) (e2:Ast.expression)
+  and eval_static_binop (op:Ast.binary_op) (e1:Ast.expression) (e2:Ast.expression)
                                 (expected_typ:typ option)
         :value*typ =
     let expected_typ1 = typ_operand op expected_typ in
@@ -100,7 +100,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
       try
         let (val1, typ1) = eval_static_exp e1 expected_typ1 in
           match op with
-            | Power ->
+            | Ast.Power ->
                 let (val2, _) = eval_static_exp e2 (Some(Integer))
                 in (val1, val2, typ1)
             | _ ->
@@ -122,38 +122,30 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
       check_operand_typ op typ;
       match (op,val1,val2) with
           (* operations sur entiers ou flottants *)
-        | Plus , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.add v1 v2),    typ
-        | Minus, IntVal   v1  , IntVal   v2   -> IntVal  (Nat.sub v1 v2),    typ
-        | Mult , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.mul v1 v2),    typ
-        | Div  , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.div v1 v2),    typ
-        | Power, IntVal   v1  , IntVal   v2   -> IntVal  (puiss   v1 v2),    typ
-        | Plus , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a +. b)), typ
-        | Minus, FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a -. b)), typ
-        | Mult , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a *. b)), typ
-        | Div  , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a /. b)), typ
-        | Power, FloatVal(v1,_), IntVal(v2) ->
+        | Ast.Plus , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.add v1 v2),    typ
+        | Ast.Minus, IntVal   v1  , IntVal   v2   -> IntVal  (Nat.sub v1 v2),    typ
+        | Ast.Mult , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.mul v1 v2),    typ
+        | Ast.Div  , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.div v1 v2),    typ
+        | Ast.Power, IntVal   v1  , IntVal   v2   -> IntVal  (puiss   v1 v2),    typ
+        | Ast.Plus , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a +. b)), typ
+        | Ast.Minus, FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a -. b)), typ
+        | Ast.Mult , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a *. b)), typ
+        | Ast.Div  , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a /. b)), typ
+        | Ast.Power, FloatVal(v1,_), IntVal(v2) ->
                   FloatVal(mk_float (v1 ** (float_of_int (Nat.to_int v2)))), typ
 
         (*operations sur les entiers*)
-        | (Rem, IntVal v1, IntVal v2) -> (IntVal(rem_ada v1 v2), typ)
-        | (Mod, IntVal v1, IntVal v2) -> (IntVal(mod_ada v1 v2), typ)
+        | (Ast.Rem, IntVal v1, IntVal v2) -> (IntVal(rem_ada v1 v2), typ)
+        | (Ast.Mod, IntVal v1, IntVal v2) -> (IntVal(mod_ada v1 v2), typ)
 
         (* comparaisons *)
-        | Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2 ), Boolean)
-        | Neq, v1, v2 -> (BoolVal(not  (eq_val v1 v2)), Boolean)
-        | Lt,  v1, v2 -> (BoolVal(     inf_val v1 v2 ), Boolean)
-        | Le,  v1, v2 -> (BoolVal(not (inf_val v2 v1)), Boolean)
-        | Ge,  v1, v2 -> (BoolVal(not (inf_val v1 v2)), Boolean)
-        | Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1 ), Boolean)
+        | Ast.Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2 ), Boolean)
+        | Ast.Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1 ), Boolean)
 
         (* operations sur les booleens *)
-        | ((AndThen|And),BoolVal(b1),BoolVal(b2))->(BoolVal(b1 && b2), Boolean)
-        | ((OrElse|Or),  BoolVal(b1),BoolVal(b2))->(BoolVal(b1 || b2), Boolean)
-        | (Xor,          BoolVal(b1),BoolVal(b2))->(BoolVal(b1 <> b2), Boolean)
-
-        (* operations sur les string *)
-        | Concat,_,_ ->Npkcontext.report_error "Ada_normalize.eval_static_binop"
-                                              "string error : not implemented"
+        | ((Ast.AndThen|Ast.And),BoolVal(b1),BoolVal(b2))->(BoolVal(b1 && b2), Boolean)
+        | ((Ast.OrElse|Ast.Or),  BoolVal(b1),BoolVal(b2))->(BoolVal(b1 || b2), Boolean)
+        | (Ast.Xor,          BoolVal(b1),BoolVal(b2))->(BoolVal(b1 <> b2), Boolean)
         | _ -> Npkcontext.report_error "Ada_normalize.eval_static_binop"
                                     "invalid operator and argument"
 
@@ -183,12 +175,12 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   (**
    * Evaluate statically the "op E" expressions.
    *)
-  and eval_static_unop (op:unary_op) (exp:Ast.expression)
+  and eval_static_unop (op:Ast.unary_op) (exp:Ast.expression)
       (expected_typ:typ option) :value*typ =
       match (op, expected_typ) with
-        | UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
-        | UPlus, Some Float                  -> eval_static_exp exp expected_typ
-        | UPlus, None ->
+        | Ast.UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
+        | Ast.UPlus, Some Float                  -> eval_static_exp exp expected_typ
+        | Ast.UPlus, None ->
                         let (tr_exp, typ) = eval_static_exp exp expected_typ in
                         (match typ with
                            | Float                  -> tr_exp, typ
@@ -198,14 +190,14 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                  "Unexpected unary operator and argument"
                         )
 
-        | UMinus, None
-        | UMinus, Some Float                  -> eval_static_uminus exp
-        | UMinus, Some t when integer_class t -> eval_static_uminus exp
-        | Abs,    None
-        | Abs,    Some Float                  -> eval_static_abs exp
-        | Abs,    Some t when integer_class t -> eval_static_abs exp
-        | Not,    None
-        | Not,    Some Boolean ->
+        | Ast.UMinus, None
+        | Ast.UMinus, Some Float                  -> eval_static_uminus exp
+        | Ast.UMinus, Some t when integer_class t -> eval_static_uminus exp
+        | Ast.Abs,    None
+        | Ast.Abs,    Some Float                  -> eval_static_abs exp
+        | Ast.Abs,    Some t when integer_class t -> eval_static_abs exp
+        | Ast.Not,    None
+        | Ast.Not,    Some Boolean ->
                 (match (eval_static_exp exp expected_typ) with
                    | BoolVal(b), Boolean -> BoolVal(not b), Boolean
                    | _ -> Npkcontext.report_error "eval_static_unop"

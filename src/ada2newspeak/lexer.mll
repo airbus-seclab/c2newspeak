@@ -209,7 +209,6 @@ rule token = parse
   | '*'            {MULT}
   | '/'            {DIV}
   | "**"           {POW}
-  | '&'            {CONCAT}
 
   (* operateurs relationnels *)
   | "<="           {LE}

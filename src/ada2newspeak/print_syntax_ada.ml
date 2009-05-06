@@ -67,7 +67,6 @@ let bop_to_string op = match op with
   | Mult    -> "*"
   | Div     -> "/"
   | Power   -> "**"
-  | Concat  -> "&"
   | Mod     -> "mod"
   | Rem     -> "rem"
   | Eq      -> "="

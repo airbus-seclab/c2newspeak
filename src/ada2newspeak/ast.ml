@@ -25,9 +25,31 @@
 
 *)
 
+type unary_op =
+| UPlus
+| UMinus
+| Abs       
+| Not       
+
+type binary_op =
+| Plus
+| Minus
+| Mult
+| Div
+| Mod
+| Rem
+| Eq
+| Gt    
+| And   
+| Or    
+| Xor   
+| AndThen
+| OrElse
+| Power
+
 type block = (instruction * Newspeak.location) list
 
-and  instruction =
+and instruction =
   | NullInstr
   | Assign        of lval
                    * expression
@@ -48,9 +70,9 @@ and  instruction =
                    * block
 
 and lval =
-| Lval        of Syntax_ada.name
-| ArrayAccess of lval
-               * expression
+  | Lval        of Syntax_ada.name
+  | ArrayAccess of lval
+                 * expression
 
 and iteration_scheme =
   | NoScheme
@@ -72,9 +94,9 @@ and exp_value =
   | Var          of Syntax_ada.name
   | FunctionCall of Syntax_ada.name
                   * argument list
-  | Unary        of Syntax_ada.unary_op
+  | Unary        of unary_op
                   * expression
-  | Binary       of Syntax_ada.binary_op
+  | Binary       of binary_op
                   * expression
                   * expression
   | Qualified    of Syntax_ada.subtyp

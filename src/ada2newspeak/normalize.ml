@@ -619,6 +619,33 @@ and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
  *)
 and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
 
+and normalize_binop (bop:binary_op) (e1:expression) (e2:expression) :Ast.exp_value=
+  match bop with
+  | Plus  -> Ast.Binary (Ast.Plus , normalize_exp e1, normalize_exp e2)
+  | Minus -> Ast.Binary (Ast.Minus, normalize_exp e1, normalize_exp e2)
+  | Div   -> Ast.Binary (Ast.Div  , normalize_exp e1, normalize_exp e2)
+  | Mult  -> Ast.Binary (Ast.Mult , normalize_exp e1, normalize_exp e2)
+  | Or    -> Ast.Binary (Ast.Or   , normalize_exp e1, normalize_exp e2)
+  | And   -> Ast.Binary (Ast.And  , normalize_exp e1, normalize_exp e2)
+  | Gt    -> Ast.Binary (Ast.Gt   , normalize_exp e1, normalize_exp e2)
+  | Eq    -> Ast.Binary (Ast.Eq   , normalize_exp e1, normalize_exp e2)
+  | Lt    -> fst (normalize_exp (Binary(Gt, e2, e1)))
+  | Le    -> fst (normalize_exp (Unary(Not,Binary(Gt, e1, e2))))
+  | Ge    -> fst (normalize_exp (Unary(Not,Binary(Gt, e2, e1))))
+  | Neq   -> fst (normalize_exp (Unary(Not,Binary(Eq, e1, e2))))
+  | Rem   -> Ast.Binary (Ast.Rem  , normalize_exp e1, normalize_exp e2)
+  | Mod   -> Ast.Binary (Ast.Mod  , normalize_exp e1, normalize_exp e2)
+  | Power -> Ast.Binary (Ast.Power, normalize_exp e1, normalize_exp e2)
+  | OrElse -> Ast.Binary (Ast.OrElse , normalize_exp e1, normalize_exp e2)
+  | Xor    -> Ast.Binary (Ast.Xor    , normalize_exp e1, normalize_exp e2)
+  | AndThen-> Ast.Binary (Ast.AndThen, normalize_exp e1, normalize_exp e2)
+
+and normalize_uop (uop:unary_op) (exp:expression) :Ast.exp_value = match uop with
+  | UPlus  -> Ast.Unary(Ast.UPlus , normalize_exp exp)
+  | UMinus -> Ast.Unary(Ast.UMinus, normalize_exp exp)
+  | Abs    -> Ast.Unary(Ast.Abs,    normalize_exp exp)
+  | Not    -> Ast.Unary(Ast.Not,    normalize_exp exp)
+
 (**
  * Normalize an expression.
  *)
@@ -628,9 +655,8 @@ and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
   | CBool x  -> Ast.CBool x
   | CChar x  -> Ast.CChar x
   | Var x  -> Ast.Var x
-  | Unary (uop, exp)    -> Ast.Unary (uop, normalize_exp exp)
-  | Binary(bop, e1, e2) -> Ast.Binary(bop, normalize_exp e1,
-                                       normalize_exp e2)
+  | Unary (uop, exp) -> normalize_uop uop exp
+  | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
                                         normalize_exp exp)
   | FunctionCall(nom, params) ->

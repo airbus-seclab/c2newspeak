@@ -241,7 +241,7 @@ and known_compatible_typ expected found =
    operations binaire, en fonction du type attendu pour
    le resultat et de l'operateur.*)
 let typ_operand op expected_typ = match op with
-  | Plus | Minus | Mult | Div | Power ->
+  | Ast.Plus | Ast.Minus | Ast.Mult | Ast.Div | Ast.Power ->
       (* si il y a un type attendu, on verifie qu'il est
          entier ou flottant *)
       (match expected_typ with
@@ -253,7 +253,7 @@ let typ_operand op expected_typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Rem | Mod ->
+  | Ast.Rem | Ast.Mod ->
       (* type entier uniquement *)
       (match expected_typ with
          | None -> None
@@ -263,7 +263,7 @@ let typ_operand op expected_typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Lt | Gt | Le | Ge | Eq | Neq ->
+  | Ast.Gt | Ast.Eq ->
       (* type attendu booleen,
          on ne sait rien sur les operandes *)
       (match expected_typ with
@@ -274,7 +274,7 @@ let typ_operand op expected_typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | And | Or | Xor | OrElse | AndThen ->
+  | Ast.And | Ast.Or | Ast.Xor | Ast.OrElse | Ast.AndThen ->
       (* type attendu : booleen
          type de l'operande : booleen *)
       (match expected_typ with
@@ -285,13 +285,8 @@ let typ_operand op expected_typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Concat ->
-      Npkcontext.report_error
-        "Firstpass.translate_binop"
-        "concat not implemented"
-
 let check_operand_typ op typ = match op with
-  | Plus | Minus | Mult | Div | Power ->
+  | Ast.Plus | Ast.Minus | Ast.Mult | Ast.Div | Ast.Power ->
       (* type entier ou flottant *)
       (match typ with
          | t when (integer_class t) -> ()
@@ -301,7 +296,7 @@ let check_operand_typ op typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Rem | Mod ->
+  | Ast.Rem | Ast.Mod ->
       (* type entier uniquement *)
       (match typ with
          | t when (integer_class t) -> ()
@@ -310,20 +305,13 @@ let check_operand_typ op typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Lt  | Gt | Le  | Ge  | Eq | Neq -> ()
+  | Ast.Gt | Ast.Eq -> ()
 
-  | And | Or | Xor | OrElse | AndThen ->
+  | Ast.And | Ast.Or | Ast.Xor | Ast.OrElse | Ast.AndThen ->
       (* type booleen *)
-      (match typ with
-         | Boolean -> ()
-         | _ ->
-             Npkcontext.report_error
-               "Firstpass.translate_binop"
-               "invalid operator and argument")
-  | Concat ->
-      Npkcontext.report_error
-        "Firstpass.translate_binop"
-        "concat not implemented"
+      if typ <> Boolean then Npkcontext.report_error
+                             "Firstpass.translate_binop"
+                             "invalid operator and argument"
 
 let ikind_of_range inf sup = (Newspeak.Signed,
                               Ada_config.size_of_range inf sup)
@@ -463,7 +451,6 @@ let operator_of_binop = function
   | Mult          -> "*"
   | Div           -> "/"
   | Power         -> "**"
-  | Concat        -> "^"
   | Mod           -> "mod"
   | Rem           -> "rem"
   | Eq            -> "="

@@ -154,7 +154,6 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location>        CASE
 %token <Newspeak.location>        COLON
 %token                            COMMA
-%token                            CONCAT
 %token                            CONSTANT
 %token <Syntax_ada.nat>           CONST_INT
 %token <int>                      CONST_CHAR
@@ -569,7 +568,6 @@ expression :
 | expression REM      expression           {Binary(Rem    , $1, $3)}
 | expression PLUS     expression           {Binary(Plus   , $1, $3)}
 | expression MINUS    expression           {Binary(Minus  , $1, $3)}
-| expression CONCAT   expression           {Binary(Concat , $1, $3)}
 | expression EQ       expression           {Binary(Eq     , $1, $3)}
 | expression NE       expression           {Binary(Neq    , $1, $3)}
 | expression LE       expression           {Binary(Le     , $1, $3)}

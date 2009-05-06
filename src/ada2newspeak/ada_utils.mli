@@ -163,13 +163,13 @@ val integer_class : Syntax_ada.typ -> bool
  * @param typ the expected type for the result.
  *)
 val typ_operand :
-  Syntax_ada.binary_op -> Syntax_ada.typ option -> Syntax_ada.typ option
+  Ast.binary_op -> Syntax_ada.typ option -> Syntax_ada.typ option
 
 (**
  * Check if operands are compatible with a binary operation.
  *)
 val check_operand_typ :
-  Syntax_ada.binary_op -> Syntax_ada.typ -> unit
+  Ast.binary_op -> Syntax_ada.typ -> unit
 
 (**
  * Check a compilation unit against the name of the file around it.

@@ -72,7 +72,6 @@ type binary_op =
 | Mult          (** "*",        multiplication                        *)
 | Div           (** "/",        division                              *)
 | Power         (** "**",       exponentiation                        *)
-| Concat        (** "&",        concatenation                         *)
 | Mod           (** "mod",      modulus                               *)
 | Rem           (** "rem",      division reminder                     *)
 | Eq            (** "=",        equality test                         *)
