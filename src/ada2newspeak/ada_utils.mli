@@ -30,6 +30,7 @@
  *)
 
 exception NonStaticExpression
+exception AmbiguousTypeException
 
 (**
  * [nat] exponentiation.
@@ -243,6 +244,9 @@ object
 
     (** Perform an action with the "extern" flag. *)
     method as_extern_do :(unit->unit)->unit
+
+    (** FIXME document *)
+    method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
 
 end
 

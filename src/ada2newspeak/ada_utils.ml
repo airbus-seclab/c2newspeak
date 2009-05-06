@@ -27,6 +27,7 @@ open Syntax_ada
 module Nat = Newspeak.Nat
 
 exception NonStaticExpression
+exception AmbiguousTypeException
 
 (* arithmetique*)
 
@@ -418,6 +419,16 @@ class package_manager =
           extflag <- true;
           f ();
           extflag <- false
+
+        method normalize_name (name:Syntax_ada.name) extern =
+          if (not extern) then name
+          else let (parents,ident) = name in
+               let pack = self#current in
+                 match parents with
+                   | []                              -> (pack, ident)
+                   | a when a=pack || self#is_with a -> (  a , ident)
+                   | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
+                   ("unknown package "^(ident_list_to_string parents))
 
     end
 
