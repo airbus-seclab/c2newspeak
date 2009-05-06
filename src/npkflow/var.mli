@@ -25,12 +25,25 @@
 
 type t
 
-val create: unit -> t
+val compare: t -> t -> int
 
-val remove_var: Var.t -> t -> t
+val of_global: string -> t
 
-val join: t -> t -> t
+val of_local: int -> t
 
-val taint: Var.Set.t -> t -> t
+val to_string: t -> string
 
-val is_tainted: t -> Var.Set.t -> bool
+type var = t
+
+module Set:
+sig
+  type t
+
+  val empty: t 
+  val singleton: var -> t
+  val is_empty: t -> bool
+  val remove: var -> t -> t
+  val union: t -> t -> t
+  val inter: t -> t -> t
+  val iter: (var -> unit) -> t -> unit
+end

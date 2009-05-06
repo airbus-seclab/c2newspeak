@@ -27,7 +27,8 @@
 TARGET=npkflow
 DIRS=newspeak/ npkflow/
 FILES=version newspeak/newspeak \
-      npkflow/equations npkflow/factory npkflow/taintDom \
+      npkflow/equations npkflow/factory npkflow/var \
+      npkflow/ptrDom npkflow/taintDom \
       npkflow/store npkflow/solver \
       npkflow/npkflow
 LIBX=nums.cmxa

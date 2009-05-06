@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-module Set = Set.Make(String)
+module Set = Var.Set
 
 type t = Set.t
 
@@ -33,10 +33,6 @@ let remove_var x s = Set.remove x s
 
 let join s1 s2 = Set.union s1 s2
 
-let taint x s = 
-  let res = ref s in
-  let add x = res := Set.add x !res in
-    List.iter add x;
-    !res
+let taint x s = Set.union x s
 
-let is_tainted s t = List.exists (fun x -> Set.mem x s) t
+let is_tainted s t = not (Set.is_empty (Set.inter s t))

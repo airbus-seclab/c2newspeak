@@ -23,14 +23,16 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
+type t = string
 
-val create: unit -> t
+let compare = compare
 
-val remove_var: Var.t -> t -> t
+let of_global x = x
 
-val join: t -> t -> t
+let of_local = string_of_int
 
-val taint: Var.Set.t -> t -> t
+let to_string x = "v."^x
 
-val is_tainted: t -> Var.Set.t -> bool
+type var = t
+
+module Set = Set.Make(String)

@@ -27,10 +27,13 @@ type t
 
 val create: unit -> t
 
+val add_var: Var.t -> t -> t
+
 val remove_var: Var.t -> t -> t
 
 val join: t -> t -> t
 
-val taint: Var.Set.t -> t -> t
+val deref: t -> Var.Set.t -> Var.Set.t
 
-val is_tainted: t -> Var.Set.t -> bool
+val assign: Var.Set.t -> Var.Set.t -> t -> t
+

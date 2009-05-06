@@ -25,34 +25,55 @@
 
 open Equations
 
+module Set = Var.Set
+
 type t = {
   last_local: int;
+  ptrs: PtrDom.t;
   tainted: TaintDom.t
 }
 
-let create () = { last_local = 0; tainted = TaintDom.create () }
+let create () = { 
+  last_local = 0; 
+  ptrs = PtrDom.create (); 
+  tainted = TaintDom.create () 
+}
 
-let add_global _ s = s
+let add_global x s = 
+  let v = Var.of_global x in
+    { s with ptrs = PtrDom.add_var v s.ptrs }
 
-let add_local s = { s with last_local = s.last_local + 1 }
+let add_local s = 
+  let last_local = s.last_local + 1 in
+  let v = Var.of_local last_local in
+    { s with ptrs = PtrDom.add_var v s.ptrs; last_local = last_local }
 
 let remove_local s = 
-  let tainted = TaintDom.remove_var (string_of_int s.last_local) s.tainted in
-    { last_local = s.last_local - 1; tainted = tainted }
+  let v = Var.of_local s.last_local in
+  let ptrs = PtrDom.remove_var v s.ptrs in
+  let tainted = TaintDom.remove_var v s.tainted in
+    { last_local = s.last_local - 1; ptrs = ptrs; tainted = tainted }
 
-let join s1 s2 = { s1 with tainted = TaintDom.join s1.tainted s2.tainted }
+let join s1 s2 = 
+  { 
+    s1 with 
+      ptrs = PtrDom.join s1.ptrs s2.ptrs; 
+      tainted = TaintDom.join s1.tainted s2.tainted 
+  }
 
 let eval_exp s e =
   let rec eval_exp e =
     match e with
-	Const -> []
-      | Local x -> (string_of_int (s.last_local - x))::[]
-      | Global x -> x::[]
+	Const -> Set.empty
+      | Local x -> Set.singleton (Var.of_local (s.last_local - x))
+      | Global x -> Set.singleton (Var.of_global x)
       | BinOp (e1, e2) -> 
 	  let x1 = eval_exp e1 in
 	  let x2 = eval_exp e2 in
-	    x1@x2
-      | Deref _ -> invalid_arg "Store.eval_exp: not implemented yet"
+	    Set.union x1 x2
+      | Deref e -> 
+	  let x = eval_exp e in
+	    PtrDom.deref s.ptrs x
   in
     eval_exp e
 
@@ -66,6 +87,10 @@ let is_tainted s e =
 
 let assign (lv, e) s = 
   let x = eval_exp s lv in
-  let t = is_tainted s e in
-    if t then { s with tainted = TaintDom.taint x s.tainted }
-    else s
+  let y = eval_exp s e in
+  let ptrs = PtrDom.assign x y s.ptrs in
+  let tainted = 
+    if TaintDom.is_tainted s.tainted y then TaintDom.taint x s.tainted
+    else s.tainted
+  in
+    { s with ptrs = ptrs; tainted = tainted }

@@ -23,14 +23,35 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
+module Map = Map.Make(Var)
+module Set = Var.Set
 
-val create: unit -> t
+type t = Set.t Map.t
 
-val remove_var: Var.t -> t -> t
+let create () = Map.empty
 
-val join: t -> t -> t
+let add_var x s = Map.add x Set.empty s
 
-val taint: Var.Set.t -> t -> t
+let remove_var = Map.remove
 
-val is_tainted: t -> Var.Set.t -> bool
+let join _ _ = invalid_arg "PtrDom.join: not implemented yet"
+
+let pointsto s x =
+  try Map.find x s
+  with Not_found -> invalid_arg "PtrDom.pointsto: unreachable code"
+
+let deref s v = 
+  let res = ref Set.empty in
+  let deref x = res := Set.union (pointsto s x) !res in
+    Set.iter deref v;
+    !res
+
+let assign x y s = 
+  let v = deref s y in
+  let res = ref s in
+  let assign x =
+    let v' = pointsto s x in
+      res := Map.add x (Set.union v' v) !res
+  in
+    Set.iter assign x;
+    !res
