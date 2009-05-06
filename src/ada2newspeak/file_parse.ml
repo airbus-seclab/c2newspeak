@@ -35,7 +35,11 @@ let rec read_from_channel inchannel buffer =
     | End_of_file -> ()
 
 let parse (fname:string) :Syntax_ada.compilation_unit =
-  let cin = open_in fname in
+  let cin =
+    try open_in fname
+    with Sys_error _ -> Npkcontext.report_error "File_parse.parse"
+         ("Cannot open file \""^fname^"\" for input")
+  in
   let buffer = Buffer.create 1000 in
   let lexbuf =
     read_from_channel cin buffer;
@@ -45,10 +49,10 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
       let prog = Parser.s Lexer.token lexbuf
       in
         close_in cin;
-        if Ada_utils.check_compil_unit_name prog fname
-        then prog
-        else Npkcontext.report_error "File_parse.parse"
-          "file name does not match unit name"
+        if not (Ada_utils.check_compil_unit_name prog fname)
+        then Npkcontext.report_warning "File_parse.parse"
+                    "file name does not match unit name";
+        prog
     with Parsing.Parse_error ->
       let start_pos = Lexing.lexeme_start_p lexbuf
       and end_pos = Lexing.lexeme_end_p lexbuf
