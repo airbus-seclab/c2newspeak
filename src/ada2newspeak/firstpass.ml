@@ -793,10 +793,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     in
       Ada_utils.check_operand_typ op typ;
       match (op,translate_typ typ) with
-      | Ast.Xor,_-> translate_if_exp e1(Unary(Not,e2),T.boolean) e2 expected_typ
-      | AndThen,_-> translate_if_exp e1 e2 (CBool false,T.boolean)  expected_typ
-      | OrElse ,_-> translate_if_exp e1 (CBool true,T.boolean)   e2 expected_typ
-
       (* Numeric operations *)
       | Plus, C.Scalar(Npk.Int   _)->C.Binop(Npk.PlusI   , tr_e1, tr_e2),typ
       | Plus, C.Scalar(Npk.Float n)->C.Binop(Npk.PlusF  n, tr_e1, tr_e2),typ
@@ -1294,7 +1290,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
-
+    | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3       expected_typ
     | Qualified(subtyp, exp) ->
         let qtyp = check_typ expected_typ (base_typ subtyp) in
         let (tr_exp, typ) = translate_exp exp (Some(qtyp)) in

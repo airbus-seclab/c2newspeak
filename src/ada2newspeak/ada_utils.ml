@@ -274,7 +274,7 @@ let typ_operand op expected_typ = match op with
                "Firstpass.translate_binop"
                "invalid operator and argument")
 
-  | Ast.And | Ast.Or | Ast.Xor | Ast.OrElse | Ast.AndThen ->
+  | Ast.And | Ast.Or ->
       (* type attendu : booleen
          type de l'operande : booleen *)
       (match expected_typ with
@@ -307,7 +307,7 @@ let check_operand_typ op typ = match op with
 
   | Ast.Gt | Ast.Eq -> ()
 
-  | Ast.And | Ast.Or | Ast.Xor | Ast.OrElse | Ast.AndThen ->
+  | Ast.And | Ast.Or ->
       (* type booleen *)
       if typ <> Boolean then Npkcontext.report_error
                              "Firstpass.translate_binop"

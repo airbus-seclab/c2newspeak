@@ -42,9 +42,6 @@ type binary_op =
 | Gt
 | And
 | Or
-| Xor
-| AndThen
-| OrElse
 | Power
 
 type block = (instruction * Newspeak.location) list
@@ -97,6 +94,9 @@ and exp_value =
   | Unary        of unary_op
                   * expression
   | Binary       of binary_op
+                  * expression
+                  * expression
+  | CondExp      of expression (** a ? b : c *)
                   * expression
                   * expression
   | Qualified    of Syntax_ada.subtyp

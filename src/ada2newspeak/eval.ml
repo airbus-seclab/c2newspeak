@@ -72,6 +72,14 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
     | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
+    | Ast.CondExp(cond,iftrue,iffalse) ->
+        begin
+            match eval_static_exp cond (Some Boolean) with
+            | BoolVal true , Boolean -> eval_static_exp iftrue  expected_typ
+            | BoolVal false, Boolean -> eval_static_exp iffalse expected_typ
+            | _ -> Npkcontext.report_error "eval_static.exp"
+                   "unexpected type for conditional expression"
+        end
 
     | Ast.Qualified(subtyp, exp) ->
         let typ = check_typ expected_typ
@@ -83,9 +91,9 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
           match id with
           | "first" | "last" | "length" ->
-                      Npkcontext.report_error "Ada_normalize:attributes"
+                      Npkcontext.report_error "eval_static.exp"
                                       "First, last, length not implemented"
-          | _ ->      Npkcontext.report_error "Ada_normalize:attributes"
+          | _ ->      Npkcontext.report_error "eval_static.exp"
                                           ("unknown attribute " ^ id)
 
   (**
@@ -116,7 +124,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
               in (val1, val2, typ1)
             with
                 AmbiguousTypeException ->
-                  Npkcontext.report_error "Ada_normalize.eval_static_exp"
+                  Npkcontext.report_error "eval_static.binop"
                     "ambiguous operands"
     in
     check_operand_typ op typ;
@@ -143,10 +151,9 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1 ), Boolean)
 
     (* operations sur les booleens *)
-    | (Ast.AndThen|Ast.And),BoolVal b1,BoolVal b2 -> BoolVal(b1 && b2), Boolean
-    | (Ast.OrElse |Ast.Or ),BoolVal b1,BoolVal b2 -> BoolVal(b1 || b2), Boolean
-    |  Ast.Xor,             BoolVal b1,BoolVal b2 -> BoolVal(b1 <> b2), Boolean
-    | _ -> Npkcontext.report_error "Ada_normalize.eval_static_binop"
+    | Ast.And,BoolVal b1,BoolVal b2 -> BoolVal(b1 && b2), Boolean
+    | Ast.Or ,BoolVal b1,BoolVal b2 -> BoolVal(b1 || b2), Boolean
+    | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"
 
 
@@ -157,7 +164,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
       match (eval_static_exp exp expected_typ) with
         | IntVal i, t when (integer_class t) -> (IntVal(Nat.neg i), t)
         | (FloatVal(f,_), Float) -> (FloatVal(mk_float (-.f)), Float)
-        | _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
+        | _ -> Npkcontext.report_error "eval_static.uminus"
                                    "invalid operator and argument"
 
   (**
@@ -169,7 +176,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
             let abs = if (Nat.compare i Nat.zero)<0 then Nat.neg i else i
             in (IntVal(abs), t)
         | (FloatVal(f,_), Float) -> (FloatVal(mk_float (abs_float f)), Float)
-        | _ -> Npkcontext.report_error "Ada_normalize.eval_static_exp"
+        | _ -> Npkcontext.report_error "eval_static.abs"
                                    "invalid operator and argument"
 
   (**
@@ -185,8 +192,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                     (match typ with
                        | Float                  -> tr_exp, typ
                        | t when integer_class t -> tr_exp, typ
-                       | _ -> Npkcontext.report_error
-                             "Ada_normalize.eval_static_unop"
+                       | _ -> Npkcontext.report_error "eval_static.unop"
                              "Unexpected unary operator and argument"
                     )
 
@@ -204,7 +210,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                     "Unexpected unary operator and argument"
             )
     | _ ->  Npkcontext.report_error
-        "Ada_normalize.eval_static_unop"
+        "eval_static.unop"
           "Unexpected unary operator and argument"
 
   and eval_static_const (name:name) (expected_typ:typ option) :value*typ =
@@ -215,7 +221,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
             :bool =
          let is_it_ok cst = begin match cst with
            | (Number _|StaticConst _|VarSymb _) -> if (var_masque) then false
-             else Npkcontext.report_error "normalize.mem_other_cst"
+             else Npkcontext.report_error "eval_static.mem_other_cst"
                       ((name_to_string name)^" is not visible : "
                        ^"multiple use clauses cause hiding")
            (* un autre symbole existe ayant le bon type *)
@@ -257,7 +263,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                   v, check_typ expected_typ typ
               | VarSymb _::[] when var_possible -> raise NonStaticExpression
               | (Number(_)|StaticConst(_)|VarSymb(_))::_ ->
-                  Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                  Npkcontext.report_error "eval_static.find_use"
                                             (ident^" is not visible : " ^
                                         "multiple use clauses cause hiding")
               | EnumLitteral(typ,v,_)::r
@@ -267,7 +273,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                     None
                                     var_masque
                                     )
-                  then (Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                  then (Npkcontext.report_error "eval_static.find_use"
                       (ident^" is not visible : "
                        ^"multiple use clauses cause hiding"))
                   else (IntVal v, typ)
@@ -279,7 +285,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                     None
                                     var_masque)
                   then (Npkcontext.report_error
-                      "Ada_normalize.eval_static_cst"
+                      "eval_static.find_use"
                       (ident^" is not visible : "
                        ^"multiple use clauses cause hiding"))
                   else raise NonStaticExpression
@@ -299,9 +305,9 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
 
               | []  -> if var_masque then (* variable masque : au moins
                              un symbol mais mauvais type *)
-                     Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                     Npkcontext.report_error "eval_static.find_use"
                                           "uncompatible types"
-                    else Npkcontext.report_error "Ada_normalize.eval_static_cst"
+                    else Npkcontext.report_error "eval_static.find_use"
                                               ("cannot find symbol "^ident)
 
                     (****** --> find_interne *****)
@@ -362,7 +368,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
             | (EnumLitteral _|FunSymb _)::r -> find_enum r
             | [] ->
                 Npkcontext.report_error
-                  "Ada_normalize.eval_static_cst"
+                  "eval_static.avec_selecteur"
                   "uncompatible types" in
       let list_symb = find_all_cst name in
       match list_symb with
@@ -372,7 +378,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                         FloatVal f, check_typ expected_typ Float
             | StaticConst(v, typ, _)::_ -> v, check_typ expected_typ typ
             | VarSymb _::_ -> raise NonStaticExpression
-            | [] -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+            | [] -> Npkcontext.report_error "eval_static.avec_selecteur"
                                   ("cannot find symbol "^(name_to_string name))
             | _ -> find_enum list_symb
 
@@ -382,14 +388,14 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
         (*********  --> find_global ) *********)
       let rec find_global (list_symb:constant_symb list) :value*typ =
           match list_symb with
-            | [] -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+            | [] -> Npkcontext.report_error "eval_static.find_global"
                                    ("cannot find symbol "^(name_to_string name))
             | Number(IntVal i,true)::_ ->
                   IntVal i, check_typ expected_typ IntegerConst
             | Number(FloatVal(f),true)::_ ->
                   FloatVal f, check_typ expected_typ Float
             | Number(BoolVal _, _)::_ -> Npkcontext.report_error
-                                      "Ada_normalize.eval_static_cst"
+                                      "eval_static.find_global"
                                    "internal error : number cannot have EnumVal"
             | StaticConst(v, typ, true)::_ -> v, check_typ expected_typ typ
             | EnumLitteral(typ,v,true)::_
@@ -421,7 +427,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                                     avec_selecteur (pack,ident)
         | (pack, ident) when pack = package#current->
                                         avec_selecteur_courant ([],ident) name
-        | (pack, _) -> Npkcontext.report_error "Ada_normalize.eval_static_cst"
+        | (pack, _) -> Npkcontext.report_error "eval_static.const"
               ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
       eval_static_exp exp expected_typ
@@ -445,15 +451,15 @@ let eval_static_integer_exp (exp:Ast.expression)
             match v with
               | FloatVal _
               | BoolVal  _ -> Npkcontext.report_error
-                          "Ada_normalize.eval_static_integer_exp"
+                          "eval_static.integer_exp"
                           "expected static integer constant"
               | IntVal i -> i
     with
       | NonStaticExpression -> Npkcontext.report_error
-                          "Ada_normalize.eval_static_integer_exp"
+                          "eval_static.integer_exp"
                           "expected static expression"
       | AmbiguousTypeException -> Npkcontext.report_error
-                          "Ada_normalize.eval_static_integer_exp"
+                          "eval_static.integer_exp"
                           "uncaught ambiguous type exception"
 
 (**
@@ -472,14 +478,14 @@ let eval_static_number (exp:Ast.expression)
                                      extern in
              match v with
                | BoolVal _ -> Npkcontext.report_error
-                     "Ada_normalize.eval_static_integer_exp"
+                     "eval_static.integer_exp"
                      "expected static float or integer constant"
                | FloatVal _ | IntVal _ -> v
      with
        | NonStaticExpression -> Npkcontext.report_error
-          "Ada_normalize.eval_static_integer_exp"
+          "eval_static.integer_exp"
           "expected static expression"
        | AmbiguousTypeException -> Npkcontext.report_error
-         "Ada_normalize.eval_static_integer_exp"
+         "eval_static.integer_exp"
          "uncaught ambiguous type exception"
 

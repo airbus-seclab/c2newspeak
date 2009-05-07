@@ -632,9 +632,10 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   | Rem   -> Ast.Binary (Ast.Rem  , normalize_exp e1, normalize_exp e2)
   | Mod   -> Ast.Binary (Ast.Mod  , normalize_exp e1, normalize_exp e2)
   | Power -> Ast.Binary (Ast.Power, normalize_exp e1, normalize_exp e2)
-  | OrElse -> Ast.Binary (Ast.OrElse , normalize_exp e1, normalize_exp e2)
-  | Xor    -> Ast.Binary (Ast.Xor    , normalize_exp e1, normalize_exp e2)
-  | AndThen-> Ast.Binary (Ast.AndThen, normalize_exp e1, normalize_exp e2)
+  | Xor    -> let (e2',t2) = normalize_exp e2 in
+      Ast.CondExp (normalize_exp e1,(Ast.Unary(Ast.Not,(e2',t2)),t2),(e2',t2))
+  | OrElse -> Ast.CondExp (normalize_exp e1,(Ast.CBool true,T.boolean), normalize_exp e2)
+  | AndThen-> Ast.CondExp (normalize_exp e1, normalize_exp e2,(Ast.CBool false,T.boolean))
 
 and normalize_uop (uop:unary_op) (exp:expression) :Ast.exp_value =
   match uop with
