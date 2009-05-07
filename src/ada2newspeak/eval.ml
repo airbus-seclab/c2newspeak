@@ -114,18 +114,14 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
             | _ ->
                 let (val2, typ2) = eval_static_exp e2 (Some(typ1))
                 in (val1, val2, typ2)
-      with
-          AmbiguousTypeException ->
+      with AmbiguousTypeException ->
             try
-              let (val2, typ2) =
-                eval_static_exp e2 expected_typ1
-              in let (val1, typ1) =
-                  eval_static_exp e1 (Some(typ2))
-              in (val1, val2, typ1)
-            with
-                AmbiguousTypeException ->
+              let (val2, typ2) = eval_static_exp e2 expected_typ1 in
+              let (val1, typ1) = eval_static_exp e1 (Some(typ2))  in
+              (val1, val2, typ1)
+            with AmbiguousTypeException ->
                   Npkcontext.report_error "eval_static.binop"
-                    "ambiguous operands"
+                                          "ambiguous operands"
     in
     check_operand_typ op typ;
     match (op,val1,val2) with
@@ -147,15 +143,14 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | (Ast.Mod, IntVal v1, IntVal v2) -> (IntVal(mod_ada v1 v2), typ)
 
     (* comparaisons *)
-    | Ast.Eq,  v1, v2 -> (BoolVal(      eq_val v1 v2 ), Boolean)
-    | Ast.Gt,  v1, v2 -> (BoolVal(     inf_val v2 v1 ), Boolean)
+    | Ast.Eq,  v1, v2 -> (BoolVal( eq_val v1 v2), Boolean)
+    | Ast.Gt,  v1, v2 -> (BoolVal(inf_val v2 v1), Boolean)
 
     (* operations sur les booleens *)
     | Ast.And,BoolVal b1,BoolVal b2 -> BoolVal(b1 && b2), Boolean
     | Ast.Or ,BoolVal b1,BoolVal b2 -> BoolVal(b1 || b2), Boolean
     | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"
-
 
   (**
    * Evaluate statically the "- E" expression.
