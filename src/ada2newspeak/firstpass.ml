@@ -793,17 +793,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     in
       Ada_utils.check_operand_typ op typ;
       match (op,translate_typ typ) with
-      (*
-       *    Transformations :
-       *           a != b  -->  ! (a = b)
-       *           a <= b  -->  ! (a > b)
-       *           a >= b  -->  ! (a < b)
-       *          a XOR b  -->  a ?   !b  : b
-       *     a AND THEN b  -->  a ?    b  : FALSE
-       *     a  OR ELSE b  -->  a ?  TRUE : b
-       *)
-      | Ast.Xor  ,_-> translate_if_exp e1 (Unary(Not, e2),T.boolean) e2 expected_typ
-      | AndThen,_-> translate_if_exp e1 e2  (CBool false,T.boolean) expected_typ
+      | Ast.Xor,_-> translate_if_exp e1(Unary(Not,e2),T.boolean) e2 expected_typ
+      | AndThen,_-> translate_if_exp e1 e2 (CBool false,T.boolean)  expected_typ
       | OrElse ,_-> translate_if_exp e1 (CBool true,T.boolean)   e2 expected_typ
 
       (* Numeric operations *)

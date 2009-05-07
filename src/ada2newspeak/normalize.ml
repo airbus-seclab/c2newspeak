@@ -236,8 +236,8 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           with Not_found -> false
           end
 
-      method find (n:name) :(subtyp*location*bool) =
-        get_legacy_definition (snd n),Newspeak.unknown_loc,true
+      method find (n:name) :(subtyp*location) =
+        get_legacy_definition (snd n),Newspeak.unknown_loc
 
     end
   in
@@ -247,7 +247,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
    * mapping a [name] to a triplet of :
    *   - a [subtyp]
    *   - a [location]
-   *   - a [bool] which indicates whether the type is global or not
    *
    * /!\ Side-effects : all methods call the underlying ones in Hashtbl.t,
    *                    and thus can modify the state of the object.
@@ -261,7 +260,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       (location:location)   (global:bool)
       :unit =
         if s#mem n then begin
-          match s#find n with
+          match Hashtbl.find tbl n with
           | (_, _, glob) when global = glob ->
               Npkcontext.report_error
               "normalize.typ_normalization.types#add"
@@ -277,8 +276,8 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           || atypes#mem n
 
       (** Find the type definition. *)
-      method find (n:name) :(subtyp*location*bool) =
-        try Hashtbl.find tbl n
+      method find (n:name) :(subtyp*location) =
+        try let (x,y,_) = Hashtbl.find tbl n in (x,y)
         with Not_found -> atypes#find n
 
       (** Find all the types matching. *)
@@ -401,7 +400,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       | Record _ -> Unconstrained(Declared(snd nom, typdecl, location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
-          and max = snd (List.nth symbs ((List.length symbs) -1)) in
+          and max = snd (List_utils.last symbs) in
           let contrainte = IntegerRangeConstraint(min, max)
           and typ = Declared(snd nom,typdecl, location)
           in
@@ -426,9 +425,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and find_subtyp x =
 
     let sans_selecteur ident =
-      if types#mem x then
-        let (decl, loc, _) = types#find x in
-          (decl,loc)
+      if types#mem x then types#find x
       else begin
         match find_all_use ident with
           | [(typ_decl, loc, _)] -> (typ_decl, loc)
@@ -442,9 +439,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       end
 
     and avec_selecteur _ =
-      try
-        let (decl, loc, _) = types#find x in
-          (decl,loc)
+      try types#find x
       with Not_found ->
         Npkcontext.report_error
           "Ada_normalize.normalization.find_typ.avec_selecteur"
@@ -619,7 +614,8 @@ and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
  *)
 and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
 
-and normalize_binop (bop:binary_op) (e1:expression) (e2:expression) :Ast.exp_value=
+and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
+  :Ast.exp_value =
   match bop with
   | Plus  -> Ast.Binary (Ast.Plus , normalize_exp e1, normalize_exp e2)
   | Minus -> Ast.Binary (Ast.Minus, normalize_exp e1, normalize_exp e2)
@@ -640,11 +636,12 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression) :Ast.exp_val
   | Xor    -> Ast.Binary (Ast.Xor    , normalize_exp e1, normalize_exp e2)
   | AndThen-> Ast.Binary (Ast.AndThen, normalize_exp e1, normalize_exp e2)
 
-and normalize_uop (uop:unary_op) (exp:expression) :Ast.exp_value = match uop with
-  | UPlus  -> Ast.Unary(Ast.UPlus , normalize_exp exp)
-  | UMinus -> Ast.Unary(Ast.UMinus, normalize_exp exp)
-  | Abs    -> Ast.Unary(Ast.Abs,    normalize_exp exp)
-  | Not    -> Ast.Unary(Ast.Not,    normalize_exp exp)
+and normalize_uop (uop:unary_op) (exp:expression) :Ast.exp_value =
+  match uop with
+    | UPlus  -> Ast.Unary(Ast.UPlus , normalize_exp exp)
+    | UMinus -> Ast.Unary(Ast.UMinus, normalize_exp exp)
+    | Abs    -> Ast.Unary(Ast.Abs,    normalize_exp exp)
+    | Not    -> Ast.Unary(Ast.Not,    normalize_exp exp)
 
 (**
  * Normalize an expression.

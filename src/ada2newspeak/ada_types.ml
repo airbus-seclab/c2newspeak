@@ -427,11 +427,11 @@ let length_of typ = match typ.trait with
 
 let rec attr_get typ attr args =
   match typ.trait, attr with
-    | Signed (Some Range(a,_)),"first"  -> from_nat typ a
-    | Signed (Some Range(_,b)),"last"   -> from_nat typ b
-    | Enumeration values, "first"       -> from_int typ (snd (List.hd  values))
-    | Enumeration values, "last"        -> from_int typ (snd (List.nth values
-                                                      ((List.length values)-1)))
+    | Signed (Some Range(a,_)),"first" -> from_nat typ a
+    | Signed (Some Range(_,b)),"last"  -> from_nat typ b
+    | Enumeration values, "first"      -> from_int typ (snd (List.hd  values))
+    | Enumeration values, "last"       -> from_int typ (snd (List_utils.last
+                                                                      values))
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
         match args with

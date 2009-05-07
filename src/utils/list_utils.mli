@@ -31,3 +31,11 @@ val merge: ('a -> 'a -> int) -> 'a list -> 'a list -> 'a list
 val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
 
 val size_of: ('a -> int) -> 'a list -> int
+
+(**
+ * Return the last element in a list in O(length) operarations.
+ * Twice as fast as List.nth l ((List.length l) - 1)
+ * @raise Invalid_argument "last" if its argument is []
+ *)
+val last : 'a list -> 'a
+

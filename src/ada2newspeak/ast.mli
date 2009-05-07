@@ -28,8 +28,8 @@
 type unary_op =
 | UPlus
 | UMinus
-| Abs       
-| Not       
+| Abs
+| Not
 
 type binary_op =
 | Plus
@@ -39,10 +39,10 @@ type binary_op =
 | Mod
 | Rem
 | Eq
-| Gt    
-| And   
-| Or    
-| Xor   
+| Gt
+| And
+| Or
+| Xor
 | AndThen
 | OrElse
 | Power

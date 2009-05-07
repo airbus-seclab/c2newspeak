@@ -52,3 +52,8 @@ let mapi f l =
 
 let size_of size_of_elem l =
   List.fold_left (+) 0 (List.rev_map size_of_elem l)
+
+let rec last = function
+  | [] -> raise (Invalid_argument "last")
+  | [x] -> x
+  | _::tl -> last tl
