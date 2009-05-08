@@ -42,3 +42,39 @@ and exp =
   | Global of string
   | BinOp of (exp * exp)
   | Deref of exp
+
+let string_of_exp x =
+  match x with
+      Const -> "cst"
+    | Local _ -> "local"
+    | Global _ -> "global"
+    | BinOp _ -> "bop"
+    | Deref _ -> "*"
+
+let rec string_of_stmt (x, _) =
+  match x with
+      Set (lv, e) -> (string_of_exp lv)^" = "^(string_of_exp e)
+    | Taint _ -> "Taint"
+    | Decl body -> "push;\n"^(string_of_blk body)^"pop;"
+    | Select _ -> "Select"
+    | Call _ -> "Call"
+
+and string_of_blk x = 
+  match x with
+      hd::tl -> 
+	let hd = string_of_stmt hd in
+	let tl = string_of_blk tl in
+	  hd^"\n"^tl
+    | [] -> ""
+
+let string_of_fundec f body = f^" =\n"^(string_of_blk body)
+
+let to_string (globals, fundecs, init) = 
+  let res = ref "globals:\n" in
+    List.iter (fun x -> res := !res^x^"\n") globals;
+    res := !res^"function declarations\n";
+    Hashtbl.iter (fun f x -> res := !res^(string_of_fundec f x)^"\n") fundecs;
+    res := !res^"init\n";
+    res := !res^(string_of_blk init);
+    !res
+

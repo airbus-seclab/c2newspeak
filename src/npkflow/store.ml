@@ -85,7 +85,7 @@ let is_tainted s e =
   let t = eval_exp s e in
     TaintDom.is_tainted s.tainted t
 
-let assign (lv, e) s = 
+let assign (lv, e) s =
   let x = eval_exp s lv in
   let y = eval_exp s e in
   let ptrs = PtrDom.assign x y s.ptrs in

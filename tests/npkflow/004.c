@@ -1,8 +1,8 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2009  Charles Hymans
- 
+  
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -21,36 +21,10 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-module Map = Map.Make(Var)
-module Set = Var.Set
+extern void *malloc(unsigned int);
 
-type t = Set.t Map.t
-
-let create () = Map.empty
-
-let add_var x s = Map.add x Set.empty s
-
-let remove_var = Map.remove
-
-let join _ _ = invalid_arg "PtrDom.join: not implemented yet"
-
-let pointsto s x =
-  try Map.find x s
-  with Not_found -> invalid_arg "PtrDom.pointsto: unreachable code"
-
-let deref s v = 
-  let res = ref Set.empty in
-  let deref x = res := Set.union (pointsto s x) !res in
-    Set.iter deref v;
-    !res
-
-let assign x y s = 
-  let res = ref s in
-  let assign x =
-    let v = pointsto s x in
-      res := Map.add x (Set.union y v) !res
-  in
-    Set.iter assign x;
-    !res
+void main(int *ptr) {
+  malloc(*ptr);
+}

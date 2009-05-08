@@ -69,7 +69,7 @@ let build prog =
     match x with
 	Set (lv, e, _) ->
 	  let lv = translate_lval lv in
-	  let e = translate_exp e in
+	  let e = F.Deref (translate_exp e) in
 	    (F.Set (lv, e), loc)::[]
 (*
       | Copy (lv1, lv2, _) -> 
@@ -97,19 +97,26 @@ let build prog =
   in
 
   let build_entry () =
+    let main_tainted = "!main_tainted!" in
+    let tainted_exp = F.Global main_tainted in
+    let loc = Newspeak.unknown_loc in
     let ((args, ret), _) = Hashtbl.find prog.fundecs "main" in
     let call = ref ((F.Call "main", Newspeak.unknown_loc)::[]) in
     let rec append_args args =
       match args with
 	  _::tl -> 
-	    let taint = (F.Taint (F.Local 0), Newspeak.unknown_loc) in
-	      call := (F.Decl (taint::(!call)), Newspeak.unknown_loc)::[];
+	    let taint = (F.Taint (F.Local 0), loc) in
+	    let set = (F.Set (F.Local 0, tainted_exp), loc) in
+	      call := (F.Decl (taint::set::(!call)), loc)::[];
 	      append_args tl
 	| [] -> ()
     in
+      globals := main_tainted::!globals;
       append_args args;
+      call := (F.Set (tainted_exp, tainted_exp), loc)::!call;
+      call := (F.Taint tainted_exp, loc)::!call;
       match ret with
-	  Some _ -> (F.Decl (!call), Newspeak.unknown_loc)::[]
+	  Some _ -> (F.Decl (!call), loc)::[]
 	| None -> !call
   in
 

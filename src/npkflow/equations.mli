@@ -42,3 +42,7 @@ and exp =
   | Global of string
   | BinOp of (exp * exp)
   | Deref of exp
+
+val to_string: t -> string
+
+val string_of_exp: exp -> string
