@@ -60,6 +60,10 @@ let build prog =
 	Const _ -> F.Const
       | Lval (lv, _) -> translate_lval lv
       | UnOp (_, e) -> translate_exp e
+      | BinOp (PlusI, e1, e2) -> 
+	  let e1 = translate_exp e1 in
+	  let e2 = translate_exp e2 in
+	    F.BinOp (e1, e2)
       | _ -> 
 	  invalid_arg ("Factory.translate_exp: not implemented yet: "
 		       ^(Newspeak.string_of_exp x))
