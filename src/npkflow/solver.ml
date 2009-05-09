@@ -120,8 +120,13 @@ let run (globals, fundecs, init) =
 	  end;
 	  s
       | Call f -> 
-	  let body = Hashtbl.find fundecs f in
-	    process_blk body [] s
+	  try
+	    let body = Hashtbl.find fundecs f in
+	      process_blk body [] s
+	  with Not_found -> 
+	    prerr_endline ("Warning: unknown function '"^f
+			   ^"', no flow assumed, maybe unsound");
+	    s
   in
 
   let s = ref (Store.create ()) in
