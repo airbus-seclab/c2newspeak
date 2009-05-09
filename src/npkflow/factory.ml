@@ -58,7 +58,8 @@ let build prog =
   and translate_exp x = 
     match x with
 	Const _ -> F.Const
-      | Lval (lv, _) -> translate_lval lv
+      | Lval (lv, _) -> F.Deref (translate_lval lv)
+      | AddrOf (lv, _) -> translate_lval lv
       | UnOp (_, e) -> translate_exp e
       | BinOp (PlusI, e1, e2) -> 
 	  let e1 = translate_exp e1 in
@@ -88,7 +89,7 @@ let build prog =
     match x with
 	Set (lv, e, _) ->
 	  let lv = translate_lval lv in
-	  let e = F.Deref (translate_exp e) in
+	  let e = translate_exp e in
 	    (F.Set (lv, e), loc)::[]
 (*
       | Copy (lv1, lv2, _) -> 
