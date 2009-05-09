@@ -64,6 +64,7 @@ let build prog =
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
 	    F.BinOp (e1, e2)
+      | BinOp (PlusPI, e, _) -> translate_exp e
       | _ -> 
 	  invalid_arg ("Factory.translate_exp: not implemented yet: "
 		       ^(Newspeak.string_of_exp x))
