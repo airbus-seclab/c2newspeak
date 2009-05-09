@@ -35,6 +35,8 @@ and stmtkind =
   | Decl of blk
   | Select of (blk * blk)
   | InfLoop of blk
+  | BlkLbl of blk
+  | Goto of int
   | Call of string
 
 and exp =
@@ -59,6 +61,8 @@ let rec string_of_stmt (x, _) =
     | Decl body -> "push;\n"^(string_of_blk body)^"pop;"
     | Select _ -> "Select"
     | InfLoop _ -> "while (1)"
+    | BlkLbl _ -> "BlkLbl"
+    | Goto _ -> "Goto"
     | Call _ -> "Call"
 
 and string_of_blk x = 

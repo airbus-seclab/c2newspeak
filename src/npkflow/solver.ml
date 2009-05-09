@@ -28,6 +28,8 @@ open Equations
 (* TODO: could be implemented as a functor Lift *)
 module Store =
 struct
+  type t = Store.t option
+
   let create () = Some (Store.create ())
     
   let emptyset () = None
@@ -63,7 +65,7 @@ struct
 	Some s -> Store.is_tainted s e
       | None -> false
 end
-
+  
 let fixpoint f s =
   let rec fixpoint s =
     let s' = f s in
@@ -72,30 +74,45 @@ let fixpoint f s =
   in
     fixpoint s
 
-let run (globals, fundecs, init) = 
+let jump n j s =
+  let rec jump n j =
+    match j with
+	x::_ when n = 0 -> x := Store.join !x s
+      | _::tl -> jump (n-1) tl
+      | [] -> invalid_arg "Solver.jump: unreachable code"
+  in
+    jump n j
 
-  let rec process_blk x s =
+let run (globals, fundecs, init) = 
+  let rec process_blk x j s =
     match x with
 	hd::tl -> 
-	  let s = process_stmt hd s in
-	    process_blk tl s
+	  let s = process_stmt hd j s in
+	    process_blk tl j s
       | [] -> s
 
-  and process_stmt (x, loc) s =
+  and process_stmt (x, loc) j s =
     match x with
 	Set set -> Store.assign set s
       | Taint lv -> Store.taint lv s
       | Decl body -> 
 	  let s = Store.add_local s in
-	  let s = process_blk body s in
+	  let s = process_blk body j s in
 	    Store.remove_local s
       | Select (br1, br2) -> 
-	  let s1 = process_blk br1 s in
-	  let s2 = process_blk br2 s in
+	  let s1 = process_blk br1 j s in
+	  let s2 = process_blk br2 j s in
 	    Store.join s1 s2
       | InfLoop body -> 
-	  let _ = fixpoint (process_blk body) s in
+	  let _ = fixpoint (process_blk body j) s in
 	    Store.emptyset ()
+      | BlkLbl body -> 
+	  let s_lbl = ref (Store.emptyset ()) in
+	  let s = process_blk body (s_lbl::j) s in
+	    Store.join s !s_lbl
+      | Goto n -> 
+	  jump n j s;
+	  Store.emptyset ()
       | Call "malloc" -> 
 	  if (Store.is_tainted s (Local 0)) then begin
 	    let loc = Newspeak.string_of_loc loc in
@@ -104,11 +121,11 @@ let run (globals, fundecs, init) =
 	  s
       | Call f -> 
 	  let body = Hashtbl.find fundecs f in
-	    process_blk body s
+	    process_blk body [] s
   in
 
   let s = ref (Store.create ()) in
   let declare_global x = s := Store.add_global x !s in
     List.iter declare_global globals;
-    let _ = process_blk init !s in
+    let _ = process_blk init [] !s in
       ()

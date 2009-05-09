@@ -23,8 +23,22 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: maybe simplify DoWith in Newspeak:
+   1) no action
+   2) no lbl (Goto n where n is the number of labeled blocks to cross before
+   getting there)
+*)
 open Newspeak
 module F = Equations
+
+let pos_of_lbl j lbl = 
+  let rec pos_of_lbl n j =
+    match j with
+	lbl'::_ when lbl = lbl' -> n
+      | _::tl -> pos_of_lbl (n+1) tl
+      | [] -> invalid_arg "Factory.pos_of_lbl: unreachable code"
+  in
+    pos_of_lbl 0 j
 
 let build prog =
   let globals = ref [] in
@@ -57,15 +71,15 @@ let build prog =
       | _ -> invalid_arg "Factory.translate_fn: not implemented yet"
   in
 
-  let rec translate_blk x =
+  let rec translate_blk j x =
     match x with
 	hd::tl -> 
-	  let hd = translate_stmt hd in
-	  let tl = translate_blk tl in
+	  let hd = translate_stmt j hd in
+	  let tl = translate_blk j tl in
 	    hd@tl
       | [] -> []
 
-  and translate_stmt (x, loc) = 
+  and translate_stmt j (x, loc) = 
     match x with
 	Set (lv, e, _) ->
 	  let lv = translate_lval lv in
@@ -75,16 +89,16 @@ let build prog =
       | Copy (lv1, lv2, _) -> 
 *)
       | Guard _ -> []
-      | Decl (_, _, body) -> (F.Decl (translate_blk body), loc)::[]
+      | Decl (_, _, body) -> (F.Decl (translate_blk j body), loc)::[]
       | Select (br1, br2) -> 
-	  let br1 = translate_blk br1 in
-	  let br2 = translate_blk br2 in
+	  let br1 = translate_blk j br1 in
+	  let br2 = translate_blk j br2 in
 	    (F.Select (br1, br2), loc)::[]
-      | InfLoop body -> (F.InfLoop (translate_blk body), loc)::[]
-(*
-      | DoWith _
-      | Goto _
-*)
+      | InfLoop body -> (F.InfLoop (translate_blk j body), loc)::[]
+      | DoWith (body, lbl, []) -> 
+	  let body = translate_blk (lbl::j) body in
+	    (F.BlkLbl body, loc)::[]
+      | Goto lbl -> (F.Goto (pos_of_lbl j lbl), loc)::[]
       | Call f -> (F.Call (translate_fn f), loc)::[]
       | _ -> 
 	  invalid_arg ("Factory.translate_stmt: statement not handled yet: "
@@ -92,7 +106,7 @@ let build prog =
   in
 
   let translate_fundec f (_, body) =
-    let body = translate_blk body in
+    let body = translate_blk [] body in
       Hashtbl.add fundecs f body
   in
 

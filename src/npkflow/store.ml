@@ -25,6 +25,8 @@
 
 open Equations
 
+(* TODO: maybe could perform the pointer analysis beforehand!*)
+
 module Set = Var.Set
 
 type t = {
