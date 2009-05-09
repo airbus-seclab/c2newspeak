@@ -80,8 +80,8 @@ let build prog =
 	  let br1 = translate_blk br1 in
 	  let br2 = translate_blk br2 in
 	    (F.Select (br1, br2), loc)::[]
+      | InfLoop body -> (F.InfLoop (translate_blk body), loc)::[]
 (*
-      | InfLoop _
       | DoWith _
       | Goto _
 *)

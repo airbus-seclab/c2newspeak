@@ -35,6 +35,8 @@ val add_local: t -> t
 
 val remove_local: t -> t
 
+val is_subset: t -> t -> bool
+
 val join: t -> t -> t
 
 val taint: exp -> t -> t

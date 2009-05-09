@@ -34,6 +34,7 @@ and stmtkind =
   | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
+  | InfLoop of blk
   | Call of string
 
 and exp =

@@ -29,10 +29,12 @@ type t = Set.t
 
 let create () = Set.empty
 
-let remove_var x s = Set.remove x s
+let remove_var x = Set.remove x
 
-let join s1 s2 = Set.union s1 s2
+let is_subset = Set.subset
 
-let taint x s = Set.union x s
+let join = Set.union
+
+let taint = Set.union
 
 let is_tainted s t = not (Set.is_empty (Set.inter s t))

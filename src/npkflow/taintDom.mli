@@ -29,6 +29,8 @@ val create: unit -> t
 
 val remove_var: Var.t -> t -> t
 
+val is_subset: t -> t -> bool
+
 val join: t -> t -> t
 
 val taint: Var.Set.t -> t -> t

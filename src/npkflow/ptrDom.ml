@@ -23,7 +23,21 @@
   email: charles.hymans@penjili.org
 *)
 
-module Map = Map.Make(Var)
+module Map = 
+struct
+  include Map.Make(Var)
+
+  let for_all2 p m1 m2 =
+    let check k v1 =
+      let v2 = find k m2 in
+	if not (p v1 v2) then raise Exit
+    in
+      try 
+	iter check m1;
+	true
+      with Exit -> false
+end
+
 module Set = Var.Set
 
 type t = Set.t Map.t
@@ -33,6 +47,8 @@ let create () = Map.empty
 let add_var x s = Map.add x Set.empty s
 
 let remove_var = Map.remove
+
+let is_subset = Map.for_all2 Set.subset
 
 let join _ _ = invalid_arg "PtrDom.join: not implemented yet"
 

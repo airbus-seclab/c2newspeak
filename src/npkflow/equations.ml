@@ -34,6 +34,7 @@ and stmtkind =
   | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
+  | InfLoop of blk
   | Call of string
 
 and exp =
@@ -57,6 +58,7 @@ let rec string_of_stmt (x, _) =
     | Taint _ -> "Taint"
     | Decl body -> "push;\n"^(string_of_blk body)^"pop;"
     | Select _ -> "Select"
+    | InfLoop _ -> "while (1)"
     | Call _ -> "Call"
 
 and string_of_blk x = 

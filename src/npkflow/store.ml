@@ -54,6 +54,10 @@ let remove_local s =
   let tainted = TaintDom.remove_var v s.tainted in
     { last_local = s.last_local - 1; ptrs = ptrs; tainted = tainted }
 
+let is_subset s1 s2 =
+  (PtrDom.is_subset s1.ptrs s2.ptrs) 
+  && (TaintDom.is_subset s1.tainted s2.tainted)
+
 let join s1 s2 = 
   { 
     s1 with 

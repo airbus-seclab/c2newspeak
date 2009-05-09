@@ -25,6 +25,53 @@
 
 open Equations
 
+(* TODO: could be implemented as a functor Lift *)
+module Store =
+struct
+  let create () = Some (Store.create ())
+    
+  let emptyset () = None
+
+  let apply f s =
+    match s with
+	Some s -> Some (f s)
+      | None -> None
+
+  let add_global x = apply (Store.add_global x)
+
+  let add_local = apply Store.add_local
+
+  let remove_local = apply Store.remove_local
+
+  let is_subset s1 s2 =
+    match (s1, s2) with
+	(Some s1, Some s2) -> Store.is_subset s1 s2
+      | (None, _) -> true
+      | (_, None) -> false
+
+  let join s1 s2 =
+    match (s1, s2) with
+	(Some s1, Some s2) -> Some (Store.join s1 s2)
+      | (None, s) | (s, None) -> s
+
+  let taint e = apply (Store.taint e)
+
+  let assign args = apply (Store.assign args)
+
+  let is_tainted s e =
+    match s with
+	Some s -> Store.is_tainted s e
+      | None -> false
+end
+
+let fixpoint f s =
+  let rec fixpoint s =
+    let s' = f s in
+      if Store.is_subset s' s then s
+      else fixpoint (Store.join s s')
+  in
+    fixpoint s
+
 let run (globals, fundecs, init) = 
 
   let rec process_blk x s =
@@ -46,6 +93,9 @@ let run (globals, fundecs, init) =
 	  let s1 = process_blk br1 s in
 	  let s2 = process_blk br2 s in
 	    Store.join s1 s2
+      | InfLoop body -> 
+	  let _ = fixpoint (process_blk body) s in
+	    Store.emptyset ()
       | Call "malloc" -> 
 	  if (Store.is_tainted s (Local 0)) then begin
 	    let loc = Newspeak.string_of_loc loc in
