@@ -46,6 +46,14 @@ let build prog =
     
   let translate_global x _ = globals := x::!globals in
 
+  let translate_binop op e1 e2 =
+    match op with
+	PlusI | BAnd _ -> F.BinOp (e1, e2)
+      | PlusPI -> e1
+      | _ -> invalid_arg ("Factory.translate_binop: not implemented yet: "
+			  ^(Newspeak.string_of_binop op))
+  in
+
   let rec translate_lval x =
     match x with
 	Local x -> F.Local x
@@ -61,11 +69,10 @@ let build prog =
       | Lval (lv, _) -> F.Deref (translate_lval lv)
       | AddrOf (lv, _) -> translate_lval lv
       | UnOp (_, e) -> translate_exp e
-      | BinOp (PlusI, e1, e2) -> 
+      | BinOp (op, e1, e2) -> 
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
-	    F.BinOp (e1, e2)
-      | BinOp (PlusPI, e, _) -> translate_exp e
+	    translate_binop op e1 e2
       | _ -> 
 	  invalid_arg ("Factory.translate_exp: not implemented yet: "
 		       ^(Newspeak.string_of_exp x))
