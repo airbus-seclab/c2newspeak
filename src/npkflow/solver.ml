@@ -84,6 +84,8 @@ let jump n j s =
     jump n j
 
 let run (globals, fundecs, init) = 
+  let unknown_funs = ref [] in
+
   let rec process_blk x j s =
     match x with
 	hd::tl -> 
@@ -124,8 +126,11 @@ let run (globals, fundecs, init) =
 	    let body = Hashtbl.find fundecs f in
 	      process_blk body [] s
 	  with Not_found -> 
-	    prerr_endline ("Warning: unknown function '"^f
-			   ^"', no flow assumed, maybe unsound");
+	    if not (List.mem f !unknown_funs) then begin
+	      unknown_funs := f::!unknown_funs;
+	      prerr_endline ("Warning: unknown function '"^f
+			     ^"', no flow assumed, maybe unsound")
+	    end;
 	    s
   in
 
