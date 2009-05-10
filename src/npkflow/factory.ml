@@ -66,14 +66,12 @@ let build prog =
 	Const _ -> F.Const
       | Lval (lv, _) -> F.Deref (translate_lval lv)
       | AddrOf (lv, _) -> translate_lval lv
+      | AddrOfFun (f, _) -> F.Global f
       | UnOp (_, e) -> translate_exp e
       | BinOp (op, e1, e2) -> 
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
 	    translate_binop op e1 e2
-      | _ -> 
-	  invalid_arg ("Factory.translate_exp: not implemented yet: "
-		       ^(Newspeak.string_of_exp x))
   in
 
   let translate_fn x =
