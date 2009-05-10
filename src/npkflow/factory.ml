@@ -59,9 +59,7 @@ let build prog =
 	Local x -> F.Local x
       | Global x -> F.Global x
       | Deref (e, _) -> F.Deref (translate_exp e)
-      | _ -> 
-	  invalid_arg ("Factory.translate_lval: not implemented yet: "
-		       ^(Newspeak.string_of_lval x))
+      | Shift (lv, _) -> translate_lval lv
   
   and translate_exp x = 
     match x with
