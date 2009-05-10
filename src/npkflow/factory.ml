@@ -48,7 +48,7 @@ let build prog =
 
   let translate_binop op e1 e2 =
     match op with
-	PlusI | MultI | BAnd _ -> F.BinOp (e1, e2)
+	PlusI | MinusI | MultI | BAnd _ -> F.BinOp (e1, e2)
       | PlusPI -> e1
       | _ -> invalid_arg ("Factory.translate_binop: not implemented yet: "
 			  ^(Newspeak.string_of_binop op))
