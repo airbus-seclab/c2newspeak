@@ -277,6 +277,8 @@ let type_stub = {
 
 let universal_integer = { type_stub with trait = Signed None; }
 
+let universal_real = { type_stub with trait = Float 100; }
+
 (*
  * Add (or not) a type to a symbol table.
  *)
@@ -496,24 +498,9 @@ let is_discrete typ =
   | Array       _
   | Float       _ -> false
 
-(* OneDimenSionnalArrayWhoseComponentIsOfABooleanType *)
-let is_odawcioa_boolean_t typ =
-  match typ.trait with
-  | Array       (comp,[_]) -> is_boolean comp
-  | Array       _
-  | Modular     _
-  | Float       _
-  | Enumeration _
-  | Signed      _ -> false
-
-let is_odawcioa_discrete_t typ =
-  match typ.trait with
-  | Array       (comp,[_]) -> is_discrete comp
-  | Array       _
-  | Modular     _
-  | Float       _
-  | Enumeration _
-  | Signed      _ -> false
+let whose_component predicate typ = match typ.trait with
+  | Array (component,_) -> predicate component
+  | _ -> false
 
 let is_numeric typ =
   match typ.trait with
@@ -538,28 +525,6 @@ let is_scalar typ =
   | Enumeration _
   | Modular     _
   | Signed      _ -> true
-
-(* for unary operators : "+"; "-"; "abs"; "not" *)
-let operator_exists typ opname =
-match opname with
-| "and" | "or" | "xor" ->    is_boolean typ
-                          || is_modular typ
-                          || is_odawcioa_boolean_t typ
-
-| "="  | "/="          -> not (is_limited typ)
-
-| "<"  | "<="| ">"| ">=" ->    is_scalar typ
-                            || is_odawcioa_discrete_t typ
-
-| "+"  | "-"             -> is_numeric typ
-
-| "&" -> not (is_limited typ)
-          && is_one_dim_array typ
-
-| "*"  | "/"  | "mod"| "rem" -> is_integer typ
-                            (* TODO + specific *)
-(* | "**" ->  TODO*)
-|_ -> failwith "Invalid operator name"
 
 let some_eq o1 o2 =
   match (o1,o2) with

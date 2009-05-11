@@ -442,28 +442,8 @@ let make_operator_name opname =
      | "**"  -> ada2npk_operator_prefix ^ "pow"
      | "abs" -> ada2npk_operator_prefix ^ "abs"
      | "not" -> ada2npk_operator_prefix ^ "not"
-     | _     -> Npkcontext.report_error "Parser.make_operator_name"
+     | _     -> Npkcontext.report_error "Ada_utils.make_operator_name"
              ("Cannot overload '"^opname^"' : it is not an operator")
-
-let operator_of_binop = function
-  | Plus          -> "+"
-  | Minus         -> "-"
-  | Mult          -> "*"
-  | Div           -> "/"
-  | Power         -> "**"
-  | Mod           -> "mod"
-  | Rem           -> "rem"
-  | Eq            -> "="
-  | Neq           -> "/="
-  | Le            -> "<="
-  | Lt            -> "<"
-  | Ge            -> ">="
-  | Gt            -> ">"
-  | And           -> "and"
-  | Or            -> "or"
-  | Xor           -> "xor"
-  | AndThen       -> "and then"
-  | OrElse        -> "or else"
 
 let may f = function
   | None -> None

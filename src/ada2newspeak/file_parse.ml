@@ -25,25 +25,14 @@
 
 *)
 
-let rec read_from_channel inchannel buffer =
-  try
-    begin
-      Buffer.add_string buffer ((input_line inchannel)^"\n");
-      read_from_channel inchannel buffer
-    end
-  with
-    | End_of_file -> ()
-
 let parse (fname:string) :Syntax_ada.compilation_unit =
   let cin =
     try open_in fname
     with Sys_error _ -> Npkcontext.report_error "File_parse.parse"
          ("Cannot open file \""^fname^"\" for input")
   in
-  let buffer = Buffer.create 1000 in
   let lexbuf =
-    read_from_channel cin buffer;
-    Lexing.from_string (Buffer.contents buffer) in
+    Lexing.from_channel cin in
     Lexer.init fname lexbuf;
     try
       let prog = Parser.s Lexer.token lexbuf

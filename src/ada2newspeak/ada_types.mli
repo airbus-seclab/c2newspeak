@@ -195,6 +195,14 @@ val new_array      : ?symboltable:table -> ?name:string -> t -> t list -> t
 (** Is a type compatible with another one ?  *)
 val is_compatible : t -> t -> bool
 
+(*****************
+ * Builtin types *
+ *****************)
+
+(**
+ * {3 Builtin types}
+ *)
+
 (** Retrieve a builtin type from its name.  *)
 val builtin_type : string -> t
 
@@ -204,17 +212,39 @@ val attr_get : t -> string -> value list -> value
 (** The type for integer constants. *)
 val universal_integer : t
 
+(** The type for real constants. *)
+val universal_real : t
+
+(** The type for characters and character litterals. *)
+val character : t
+
 (** The boolean type. *)
 val boolean : t
+
+val natural  : t
+val positive : t
+val integer  : t
+
+(******************
+ * Tests on types *
+ ******************)
+
+val is_boolean             : t -> bool
+val is_modular             : t -> bool
+val is_limited             : t -> bool
+val is_scalar              : t -> bool
+val is_numeric             : t -> bool
+val is_integer             : t -> bool
+val is_discrete            : t -> bool
+val is_one_dim_array       : t -> bool
+val whose_component        : (t -> bool) -> t -> bool
+
 
 (**
  * Shortcut for [attr_get] with no arguments.
  * st @. "ident" is like st'ident in Ada.
  *)
 val (@.) : t -> string -> value
-
-(** Binary operators.  *)
-val operator_exists : t -> string -> bool
 
 (** Extract a type from a value. *)
 val typeof : value -> t
