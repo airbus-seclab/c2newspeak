@@ -31,6 +31,7 @@ open Eval
 
 module Nat = Newspeak.Nat
 module  T  = Ada_types
+module TC  = Typecheck
 
 type constant_symb = Eval.constant_symb
 
@@ -43,7 +44,7 @@ let get_legacy_definition id = match String.lowercase id with
 | "float"     -> Syntax_ada.Unconstrained Syntax_ada.Float
 | "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
 | "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
-| _ ->  failwith "legacy definition available only for int float bool or char"
+| _ -> failwith "legacy definition available only for int float bool or char"
 
 let temp =
     object
@@ -615,69 +616,84 @@ and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
 and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
 
 and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
-  :Ast.exp_value =
+  :Ast.expression =
+  let direct_op_trans = function
+  | Plus  -> Ast.Plus  | Minus -> Ast.Minus | Div   -> Ast.Div
+  | Mult  -> Ast.Mult  | Or    -> Ast.Or    | And   -> Ast.And
+  | Gt    -> Ast.Gt    | Eq    -> Ast.Eq    | Rem   -> Ast.Rem
+  | Mod   -> Ast.Mod   | Power -> Ast.Power
+  |_ -> invalid_arg "direct_op_trans"
+  in
   match bop with
-  | Plus  -> Ast.Binary (Ast.Plus , normalize_exp e1, normalize_exp e2)
-  | Minus -> Ast.Binary (Ast.Minus, normalize_exp e1, normalize_exp e2)
-  | Div   -> Ast.Binary (Ast.Div  , normalize_exp e1, normalize_exp e2)
-  | Mult  -> Ast.Binary (Ast.Mult , normalize_exp e1, normalize_exp e2)
-  | Or    -> Ast.Binary (Ast.Or   , normalize_exp e1, normalize_exp e2)
-  | And   -> Ast.Binary (Ast.And  , normalize_exp e1, normalize_exp e2)
-  | Gt    -> Ast.Binary (Ast.Gt   , normalize_exp e1, normalize_exp e2)
-  | Eq    -> Ast.Binary (Ast.Eq   , normalize_exp e1, normalize_exp e2)
-  | Lt    -> fst (normalize_exp (Binary(Gt, e2, e1)))
-  | Le    -> fst (normalize_exp (Unary(Not,Binary(Gt, e1, e2))))
-  | Ge    -> fst (normalize_exp (Unary(Not,Binary(Gt, e2, e1))))
-  | Neq   -> fst (normalize_exp (Unary(Not,Binary(Eq, e1, e2))))
-  | Rem   -> Ast.Binary (Ast.Rem  , normalize_exp e1, normalize_exp e2)
-  | Mod   -> Ast.Binary (Ast.Mod  , normalize_exp e1, normalize_exp e2)
-  | Power -> Ast.Binary (Ast.Power, normalize_exp e1, normalize_exp e2)
+  (* Operators that does not exist in AST *)
+  | Lt     -> normalize_exp (Binary(Gt, e2, e1))
+  | Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
+  | Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
+  | Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
   | Xor    -> let (e2',t2) = normalize_exp e2 in
-      Ast.CondExp (normalize_exp e1,(Ast.Unary(Ast.Not,(e2',t2)),t2),(e2',t2))
-  | OrElse -> Ast.CondExp (normalize_exp e1,(Ast.CBool true,T.boolean), normalize_exp e2)
-  | AndThen-> Ast.CondExp (normalize_exp e1, normalize_exp e2,(Ast.CBool false,T.boolean))
+              Ast.CondExp (normalize_exp e1
+                          ,(Ast.Unary(Ast.Not,(e2',t2)),t2)
+                          ,(e2',t2)
+                          )
+              ,t2
+  | OrElse -> let (e1',t1) = normalize_exp e1 in
+              Ast.CondExp ((e1',t1)
+                          ,(Ast.CBool true,T.boolean)
+                          ,normalize_exp e2
+                          )
+              ,t1
+  | AndThen-> let (e1',t1) = normalize_exp e1 in
+              Ast.CondExp ((e1',t1)
+                          ,normalize_exp e2
+                          ,(Ast.CBool false,T.boolean)
+                          )
+              ,t1
+  (* Otherwise : direct translation *)
+  | _ ->  let bop' = direct_op_trans bop in
+          let (e1',t1) = normalize_exp e1 in
+          let (e2',t2) = normalize_exp e2 in
+          Ast.Binary (bop', (e1',t1), (e2',t2)),
+          TC.type_of_binop bop' t1 t2
 
-and normalize_uop (uop:unary_op) (exp:expression) :Ast.exp_value =
-  match uop with
-    | UPlus  -> Ast.Unary(Ast.UPlus , normalize_exp exp)
-    | UMinus -> Ast.Unary(Ast.UMinus, normalize_exp exp)
-    | Abs    -> Ast.Unary(Ast.Abs,    normalize_exp exp)
-    | Not    -> Ast.Unary(Ast.Not,    normalize_exp exp)
+and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
+  let (ne,t) = normalize_exp exp in
+  let uop' = match uop with
+     | UPlus  -> Ast.UPlus
+     | UMinus -> Ast.UMinus
+     | Abs    -> Ast.Abs
+     | Not    -> Ast.Not
+  in
+  Ast.Unary(uop', (ne,t)), TC.type_of_unop uop' t
 
 (**
  * Normalize an expression.
  *)
-and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
-  | CInt x   -> Ast.CInt x
-  | CFloat x -> Ast.CFloat x
-  | CBool x  -> Ast.CBool x
-  | CChar x  -> Ast.CChar x
-  | Var x  -> Ast.Var x
-  | Unary (uop, exp) -> normalize_uop uop exp
+and normalize_exp (exp:expression) :Ast.expression = match exp with
+  | CInt   x -> Ast.CInt   x,T.universal_integer
+  | CFloat x -> Ast.CFloat x,T.universal_real
+  | CBool  x -> Ast.CBool  x,T.boolean
+  | CChar  x -> Ast.CChar  x,T.character
+  | Var    x -> Ast.Var    x,T.universal_integer (* typeof (lookup) *)
+  | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
-                                        normalize_exp exp)
+                                        normalize_exp exp),T.boolean
   | FunctionCall(nom, params) ->
-      Ast.FunctionCall(nom, List.map normalize_arg params)
-
+      Ast.FunctionCall(nom, List.map normalize_arg params),T.boolean
   | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
      | "first" -> begin
-
                     match arraytyp_to_contrainte subtype with
                        None -> Npkcontext.report_error
                          "Ada_normalize First contraint"
                          "constraint is not IntegerRange"
-
                      | Some(IntegerRangeConstraint(a, b)) ->
                          if (Nat.compare a b <=0)
                          then
-                             Ast.CInt a
+                             Ast.CInt a,T.universal_integer
                          else
                            Npkcontext.report_error
                          "Ada_normalize First contraint"
                          "Zero length"
-
-
                      | _ ->  Npkcontext.report_error
                          "Normalize: in Array access"
                            "constraint is not IntegerRange"
@@ -691,7 +707,7 @@ and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
                      | Some(IntegerRangeConstraint(a, b)) ->
                          if (Nat.compare a b <=0)
                          then
-                              Ast.CInt b
+                              Ast.CInt b,T.universal_integer
                          else
                            Npkcontext.report_error
                          "Ada_normalize Length contraint"
@@ -714,7 +730,7 @@ and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
            | Some(IntegerRangeConstraint(a, b)) ->
                if (Nat.compare a b <=0)
                then
-             Ast.CInt (Nat.add (Nat.sub b a) Nat.one)
+             Ast.CInt (Nat.add (Nat.sub b a) Nat.one),T.universal_integer
                else         Npkcontext.report_error
              "Ada_normalize Length contraint"
              "Zero length"
@@ -730,9 +746,6 @@ and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
         end
   | _ -> Npkcontext.report_error "normalize:attr"
                 ("No such attribute : '" ^ attr ^ "'")
-  in value,T.universal_integer
-
-
 
 (* normalize la contrainte contrainte
    le type des bornes est typ

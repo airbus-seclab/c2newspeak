@@ -267,8 +267,6 @@ val name_to_string : Syntax_ada.name -> string
 (** Create a function name for an overloaded operator *)
 val make_operator_name : string -> string
 
-(** Converts a CIR binary operation into its string representation. *)
-val operator_of_binop : Syntax_ada.binary_op -> string
 
 (**
  * Maybe apply some function to an option value :
