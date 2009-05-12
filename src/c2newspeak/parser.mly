@@ -908,8 +908,6 @@ external_declaration:
 | declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
 | optional_extension
   EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
-| optional_extension
-  EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
 ;;
 
 optional_extension:
