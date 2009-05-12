@@ -96,9 +96,10 @@ let build prog =
 	  let lv = translate_lval lv in
 	  let e = translate_exp e in
 	    (F.Set (lv, e), loc)::[]
-(*
       | Copy (lv1, lv2, _) -> 
-*)
+	  let lv1 = translate_lval lv1 in
+	  let lv2 = translate_lval lv2 in
+	    (F.Set (lv1, F.Deref lv2), loc)::[]
       | Guard _ -> []
       | Decl (_, _, body) -> (F.Decl (translate_blk j body), loc)::[]
       | Select (br1, br2) -> 
