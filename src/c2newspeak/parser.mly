@@ -505,6 +505,11 @@ primary_expression:
 | string_literal                           { Str $1 }
 | FUNNAME                                  { FunName }
 | LPAREN expression RPAREN                 { $2 }
+| LPAREN compound_statement RPAREN         { 
+    Npkcontext.report_accept_warning "Parser.relational_expression"
+      "block within expression" Npkcontext.DirtySyntax;
+    BlkExp $2
+  }
 ;;
 
 constant:
@@ -689,11 +694,6 @@ expression:
       "comma in expression" Npkcontext.DirtySyntax;
     let loc = get_loc () in
       BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
-  }
-| compound_statement                      { 
-    Npkcontext.report_accept_warning "Parser.relational_expression"
-      "block within expression" Npkcontext.DirtySyntax;
-    BlkExp $1
   }
 ;;
 
