@@ -214,9 +214,6 @@ let rec normalize_bexp e =
 %type <Csyntax.assertion> assertion
 %start assertion
 
-%type <Csyntax.exp> expression
-%start expression
-
 %%
 /* TODO: simplify code by generalizing!!! 
 try to remove multiple occurence of same pattern: factor as much as possible
@@ -226,7 +223,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit                          { (Synthack.get_fnames (), $1) }
+  translation_unit EOF                      { (Synthack.get_fnames (), $1) }
 ;;
 
 translation_unit:
@@ -1042,7 +1039,7 @@ integer_list:
 
 // config file
 config:
-  memory_region_list                       { $1 }
+  memory_region_list EOF                   { $1 }
 ;;
 
 memory_region_list:
@@ -1059,5 +1056,5 @@ assertion:
   SYMBOL assertion                         { (SymbolToken $1)::$2 }
 | IDENTIFIER assertion                     { (IdentToken $1)::$2 }
 | constant assertion                       { (CstToken $1)::$2 }
-|                                          { [] }
+| EOF                                      { [] }
 ;;
