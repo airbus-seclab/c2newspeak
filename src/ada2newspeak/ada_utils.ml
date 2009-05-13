@@ -172,11 +172,6 @@ let check_static_subtyp subtyp value =
         Npkcontext.report_error "Ada_utils.check_static_subtyp"
           "internal error : unexpected subtype name"
 
-let constraint_is_static contrainte = match contrainte with
-  | FloatRangeConstraint   _ -> true
-  | IntegerRangeConstraint _ -> true
-  | RangeConstraint        _ -> false
-
 (* fonctions pour la gestion des types *)
 
 let base_typ subtyp = match subtyp with

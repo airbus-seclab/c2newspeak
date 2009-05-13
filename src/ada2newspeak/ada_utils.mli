@@ -100,11 +100,6 @@ val check_static_subtyp:
   Syntax_ada.subtyp -> Syntax_ada.value -> unit
 
 (**
- * Checks whether a constraint is static.
- *)
-val constraint_is_static: Syntax_ada.contrainte -> bool
-
-(**
  * Compute the Newspeak integer kind associated to the specified range.
  * See Ada_config.size_of_range
  *)
