@@ -33,6 +33,9 @@ module Nat = Newspeak.Nat
 module  T  = Ada_types
 module TC  = Typecheck
 
+let (%+) = Nat.add
+let (%-) = Nat.sub
+
 type constant_symb = Eval.constant_symb
 
 (* FIXME Temporary tweak. *)
@@ -45,22 +48,6 @@ let get_legacy_definition id = match String.lowercase id with
 | "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
 | "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
 | _ -> failwith "legacy definition available only for int float bool or char"
-
-let temp =
-    object
-        val mutable count = 0
-
-        (**
-         * Create a new temporary variable identifier.
-         * Multiple calls will yield "tmp_range0", "tmp_range1", and so on.
-         *
-         * /!\ Side-effects : calls will alter the state of [temp].
-         *)
-        method create :string =
-            let res = "tmp_range"^(string_of_int count) in
-            count <- count + 1;
-            res
-    end
 
 let string_of_name = Ada_utils.name_to_string
 
@@ -489,8 +476,6 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
      booleen qui indique si le sous-type de reference est
      statique *)
   let subtyp_of_constraint contrainte typ static_ref =
-    let static_constraint = constraint_is_static contrainte
-    in
 
     (* Dans le cas de contrainte statique, la contrainte
        du sous-type resultat reste la meme.
@@ -501,15 +486,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
        Ces temporaires sont declares et initialises dans
        firstpass.
     *)
-    let contrainte_subtyp_result = match contrainte with
-      | RangeConstraint(_, _) ->
-          let min = normalize_ident_cur (temp#create)
-          and max = normalize_ident_cur (temp#create) in
-            RangeConstraint(Var min, Var max)
-      | _ -> contrainte
-    in
-      (Constrained(typ, contrainte_subtyp_result,
-                   static_ref && static_constraint))
+      (Constrained(typ, contrainte, static_ref))
   in (match subtyp with
         | None -> ()
         | Some(_) ->
@@ -596,17 +573,13 @@ and normalize_subtyp subtyp =
       | SubtypName(name) ->
           fst (find_subtyp (normalize_name name))
 
-and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
+and array_bounds (typ:subtyp) :nat*nat=
     match typ with
-      | Unconstrained(Declared(_,Array(ConstrainedArray(
-            (Constrained(_, contr, _), None,_),_,_)),_)) -> Some contr
-      | Unconstrained(Declared(_,Array(ConstrainedArray((SubtypName _, None,_)
-            ,_,_)),_)) -> arraytyp_to_contrainte (normalize_subtyp typ)
-      | Unconstrained(Declared(_,Array(ConstrainedArray((_, c,_),_,_)),_)) -> c
-      | SubtypName _ -> arraytyp_to_contrainte (normalize_subtyp typ)
-      | Constrained ( _, contr, true) -> Some contr
-      | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
-                                      "Length not implemented for type /= array"
+      | Unconstrained(Declared(_,Array(ConstrainedArray((Constrained
+        (_, IntegerRangeConstraint (a,b), _), None,_),_,_)),_)) -> (a,b)
+      | SubtypName _ -> array_bounds (normalize_subtyp typ)
+      | _  -> Npkcontext.report_error "ada_normalize.array_bounds"
+                                      "invalid argument"
 
 (**
  * Normalize an actual argument.
@@ -680,72 +653,16 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
                                         normalize_exp exp),T.boolean
   | FunctionCall(nom, params) ->
       Ast.FunctionCall(nom, List.map normalize_arg params),T.boolean
-  | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
-     | "first" -> begin
-                    match arraytyp_to_contrainte subtype with
-                       None -> Npkcontext.report_error
-                         "Ada_normalize First contraint"
-                         "constraint is not IntegerRange"
-                     | Some(IntegerRangeConstraint(a, b)) ->
-                         if (Nat.compare a b <=0)
-                         then
-                             Ast.CInt a,T.universal_integer
-                         else
-                           Npkcontext.report_error
-                         "Ada_normalize First contraint"
-                         "Zero length"
-                     | _ ->  Npkcontext.report_error
-                         "Normalize: in Array access"
-                           "constraint is not IntegerRange"
-                    end
-     | "last" -> begin
-                    match arraytyp_to_contrainte subtype with
-                       None -> Npkcontext.report_error
-                         "Ada_normalize Last contraint"
-                         "constraint is not IntegerRange"
-
-                     | Some(IntegerRangeConstraint(a, b)) ->
-                         if (Nat.compare a b <=0)
-                         then
-                              Ast.CInt b,T.universal_integer
-                         else
-                           Npkcontext.report_error
-                         "Ada_normalize Length contraint"
-                         "Zero length"
-
-
-                     | _ ->  Npkcontext.report_error
-                         "Normalize: in Array access"
-                           "constraint is not IntegerRange"
-                    end
-
-  | "length" ->
-         (*    Array or Range type only for attributes Length *)
-        begin
-         match arraytyp_to_contrainte subtype with
-             None -> Npkcontext.report_error
-               " Ada_normalize Length contraint"
-               "constraint is not IntegerRange"
-
-           | Some(IntegerRangeConstraint(a, b)) ->
-               if (Nat.compare a b <=0)
-               then
-             Ast.CInt (Nat.add (Nat.sub b a) Nat.one),T.universal_integer
-               else         Npkcontext.report_error
-             "Ada_normalize Length contraint"
-             "Zero length"
-
-           | Some(RangeConstraint _) ->
-               Npkcontext.report_error
-             "Ada_normalize Length contraint"
-             "Range Constraint fo Length"
-
-           | _ ->  Npkcontext.report_error
-               "Normalize: in Array access"
-             "constraint is not IntegerRange"
+  | Attribute (subtype, AttributeDesignator(attr, _))->
+      begin
+        let (a,b) = array_bounds subtype in
+        match attr with
+          | "first"  -> Ast.CInt a,T.universal_integer
+          | "last"   -> Ast.CInt b,T.universal_integer
+          | "length" -> Ast.CInt (b %- a %+ Nat.one),T.universal_integer
+          | _ -> Npkcontext.report_error "normalize:attr"
+                        ("No such attribute : '" ^ attr ^ "'")
         end
-  | _ -> Npkcontext.report_error "normalize:attr"
-                ("No such attribute : '" ^ attr ^ "'")
 
 (* normalize la contrainte contrainte
    le type des bornes est typ
