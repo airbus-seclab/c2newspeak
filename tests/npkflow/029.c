@@ -1,8 +1,8 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2009  Charles Hymans
- 
+  
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -21,20 +21,9 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-type t = string
-
-let compare = compare
-
-let of_global x = x
-
-let of_local = string_of_int
-
-let to_string x = "v."^x
-
-let to_fid x = x
-
-type var = t
-
-module Set = Set.Make(String)
+void main() {
+  void (*fptr)(void);
+  (*fptr)();
+}

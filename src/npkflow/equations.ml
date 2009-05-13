@@ -37,7 +37,7 @@ and stmtkind =
   | InfLoop of blk
   | BlkLbl of blk
   | Goto of int
-  | Call of string
+  | Call of exp
 
 and exp =
     Const

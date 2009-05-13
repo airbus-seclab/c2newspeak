@@ -33,6 +33,8 @@ val of_local: int -> t
 
 val to_string: t -> string
 
+val to_fid: t -> string
+
 type var = t
 
 module Set:
@@ -47,4 +49,5 @@ sig
   val union: t -> t -> t
   val inter: t -> t -> t
   val iter: (var -> unit) -> t -> unit
+  val elements: t -> var list
 end

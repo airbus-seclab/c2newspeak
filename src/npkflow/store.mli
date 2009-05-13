@@ -44,3 +44,5 @@ val taint: exp -> t -> t
 val assign: (exp * exp) -> t -> t
 
 val is_tainted: t -> exp -> bool
+
+val fids_of_exp: t -> exp -> string list

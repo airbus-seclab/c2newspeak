@@ -78,8 +78,8 @@ let build prog =
 
   let translate_fn x =
     match x with
-	FunId f -> f
-      | _ -> invalid_arg "Factory.translate_fn: not implemented yet"
+	FunId f -> F.Global f
+      | FunDeref (e, _) -> F.Deref (translate_exp e)
   in
 
   let rec translate_blk j x =
@@ -127,7 +127,7 @@ let build prog =
     let tainted_exp = F.Global main_tainted in
     let loc = Newspeak.unknown_loc in
     let ((args, ret), _) = Hashtbl.find prog.fundecs "main" in
-    let call = ref ((F.Call "main", Newspeak.unknown_loc)::[]) in
+    let call = ref ((F.Call (F.Global "main"), Newspeak.unknown_loc)::[]) in
     let rec append_args args =
       match args with
 	  _::tl -> 

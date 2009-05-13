@@ -64,6 +64,11 @@ struct
     match s with
 	Some s -> Store.is_tainted s e
       | None -> false
+
+  let fids_of_exp s e =
+    match s with
+	Some s -> Store.fids_of_exp s e
+      | None -> []
 end
   
 let fixpoint f s =
@@ -115,28 +120,35 @@ let run (globals, fundecs, init) =
       | Goto n -> 
 	  jump n j s;
 	  Store.emptyset ()
-      | Call "malloc" -> 
+      | Call Global "malloc" -> 
 	  if (Store.is_tainted s (Local 0)) then begin
 	    let loc = Newspeak.string_of_loc loc in
 	      print_endline (loc^": malloc with external argument")
 	  end;
 	  s
       | Call f -> 
-	  try
-	    let body = Hashtbl.find fundecs f in
-	      if not (List.mem f c) then process_blk body (f::c) [] s
-	      else begin
-		prerr_endline ("Warning: recursive function '"^f
-			       ^"', no flow assumed, maybe unsound");
-		s
-	      end
-	  with Not_found -> 
-	    if not (List.mem f !unknown_funs) then begin
-	      unknown_funs := f::!unknown_funs;
-	      prerr_endline ("Warning: unknown function '"^f
-			     ^"', no flow assumed, maybe unsound")
-	    end;
-	    s
+	  let f = Store.fids_of_exp s f in
+	  let res = ref (Store.emptyset ()) in
+	  let add_call f = res := Store.join !res (process_call f c s) in
+	    List.iter add_call f;
+	    !res
+
+  and process_call f c s =
+    try
+      let body = Hashtbl.find fundecs f in
+	if not (List.mem f c) then process_blk body (f::c) [] s
+	else begin
+	  prerr_endline ("Warning: recursive function '"^f
+			 ^"', no flow assumed, maybe unsound");
+	  s
+	end
+    with Not_found -> 
+      if not (List.mem f !unknown_funs) then begin
+	unknown_funs := f::!unknown_funs;
+	prerr_endline ("Warning: unknown function '"^f
+		       ^"', no flow assumed, maybe unsound")
+      end;
+      s
   in
 
   let s = ref (Store.create ()) in

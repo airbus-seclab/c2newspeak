@@ -100,3 +100,8 @@ let assign (lv, e) s =
     else s.tainted
   in
     { s with ptrs = ptrs; tainted = tainted }
+
+let fids_of_exp s e = 
+  let x = Set.elements (eval_exp s e) in
+    List.map Var.to_fid x
+    
