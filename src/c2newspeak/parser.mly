@@ -939,13 +939,12 @@ type_qualifier:
 
 gnuc_field_declaration:
 // GNU C extension
-  optional_extension field_declaration 
-  attribute_list                           { $2 }
+  optional_extension field_declaration     { $2 }
 ;;
 
 field_declaration:
   declaration_specifiers
-  struct_declarator_list                   { flatten_field_decl ($1, $2) }
+  struct_declarator_list attribute_list    { flatten_field_decl ($1, $2) }
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
