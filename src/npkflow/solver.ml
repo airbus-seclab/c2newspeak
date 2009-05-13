@@ -86,31 +86,31 @@ let jump n j s =
 let run (globals, fundecs, init) = 
   let unknown_funs = ref [] in
 
-  let rec process_blk x j s =
+  let rec process_blk x c j s =
     match x with
 	hd::tl -> 
-	  let s = process_stmt hd j s in
-	    process_blk tl j s
+	  let s = process_stmt hd c j s in
+	    process_blk tl c j s
       | [] -> s
 
-  and process_stmt (x, loc) j s =
+  and process_stmt (x, loc) c j s =
     match x with
 	Set set -> Store.assign set s
       | Taint lv -> Store.taint lv s
       | Decl body -> 
 	  let s = Store.add_local s in
-	  let s = process_blk body j s in
+	  let s = process_blk body c j s in
 	    Store.remove_local s
       | Select (br1, br2) -> 
-	  let s1 = process_blk br1 j s in
-	  let s2 = process_blk br2 j s in
+	  let s1 = process_blk br1 c j s in
+	  let s2 = process_blk br2 c j s in
 	    Store.join s1 s2
       | InfLoop body -> 
-	  let _ = fixpoint (process_blk body j) s in
+	  let _ = fixpoint (process_blk body c j) s in
 	    Store.emptyset ()
       | BlkLbl body -> 
 	  let s_lbl = ref (Store.emptyset ()) in
-	  let s = process_blk body (s_lbl::j) s in
+	  let s = process_blk body c (s_lbl::j) s in
 	    Store.join s !s_lbl
       | Goto n -> 
 	  jump n j s;
@@ -124,7 +124,12 @@ let run (globals, fundecs, init) =
       | Call f -> 
 	  try
 	    let body = Hashtbl.find fundecs f in
-	      process_blk body [] s
+	      if not (List.mem f c) then process_blk body (f::c) [] s
+	      else begin
+		prerr_endline ("Warning: recursive function '"^f
+			       ^"', no flow assumed, maybe unsound");
+		s
+	      end
 	  with Not_found -> 
 	    if not (List.mem f !unknown_funs) then begin
 	      unknown_funs := f::!unknown_funs;
@@ -137,5 +142,5 @@ let run (globals, fundecs, init) =
   let s = ref (Store.create ()) in
   let declare_global x = s := Store.add_global x !s in
     List.iter declare_global globals;
-    let _ = process_blk init [] !s in
+    let _ = process_blk init [] [] !s in
       ()
