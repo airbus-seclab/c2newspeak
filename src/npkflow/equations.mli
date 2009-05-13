@@ -38,6 +38,7 @@ and stmtkind =
   | BlkLbl of blk
   | Goto of int
   | Call of exp
+  | Display
 
 and exp =
     Const

@@ -37,4 +37,12 @@ let to_fid x = x
 
 type var = t
 
-module Set = Set.Make(String)
+module Set = 
+struct
+  include Set.Make(String)
+    
+  let to_string x =
+    let res = ref "{ " in
+      iter (fun x -> res := !res^(to_string x)^" ") x;
+      !res^"}"
+end

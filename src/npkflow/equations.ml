@@ -38,6 +38,7 @@ and stmtkind =
   | BlkLbl of blk
   | Goto of int
   | Call of exp
+  | Display
 
 and exp =
     Const
@@ -49,7 +50,7 @@ and exp =
 let rec string_of_exp x =
   match x with
       Const -> "cst"
-    | Local _ -> "local"
+    | Local x -> (string_of_int x)^"-"
     | Global _ -> "global"
     | BinOp _ -> "bop"
     | Deref e -> "*("^(string_of_exp e)^")"
@@ -64,6 +65,7 @@ let rec string_of_stmt (x, _) =
     | BlkLbl _ -> "BlkLbl"
     | Goto _ -> "Goto"
     | Call _ -> "Call"
+    | Display -> "Display"
 
 and string_of_blk x = 
   match x with

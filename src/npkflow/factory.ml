@@ -76,6 +76,18 @@ let build prog =
 	    translate_binop op e1 e2
   in
 
+  let translate_assertion x =
+    match x with
+	(IdentToken "taint")::(SymbolToken '(')
+	::(SymbolToken '*')::(LvalToken lv)
+	::(SymbolToken ')')::(SymbolToken ';')::[] ->
+	  F.Taint (F.Deref (translate_lval lv))
+      | (IdentToken "display")::[] -> F.Display
+      | _ -> 
+	  invalid_arg ("Factory.translate_assertion: "
+		       ^"unexpected syntax of assertion")
+  in
+
   let translate_fn x =
     match x with
 	FunId f -> F.Global f
@@ -112,6 +124,7 @@ let build prog =
 	    (F.BlkLbl body, loc)::[]
       | Goto lbl -> (F.Goto (pos_of_lbl j lbl), loc)::[]
       | Call f -> (F.Call (translate_fn f), loc)::[]
+      | UserSpec x -> (translate_assertion x, loc)::[]
       | _ -> 
 	  invalid_arg ("Factory.translate_stmt: statement not handled yet: "
 		       ^(Newspeak.string_of_stmt (x, loc)))

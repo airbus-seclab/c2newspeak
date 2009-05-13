@@ -1,8 +1,8 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2009  Charles Hymans
- 
+  
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -21,22 +21,14 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-module Set = Var.Set
+extern void* malloc(unsigned int);
 
-type t = Set.t
-
-let create () = Set.empty
-
-let remove_var x = Set.remove x
-
-let is_subset = Set.subset
-
-let join = Set.union
-
-let taint = Set.union
-
-let is_tainted s t = not (Set.is_empty (Set.inter s t))
-
-let to_string = Set.to_string
+void main(int t) {
+  int x;
+  int *ptr;
+  ptr = &x;
+  *ptr = t;
+  malloc(x);  // should signal a flow here
+}

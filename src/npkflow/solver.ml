@@ -69,6 +69,11 @@ struct
     match s with
 	Some s -> Store.fids_of_exp s e
       | None -> []
+
+  let to_string s =
+    match s with
+	Some s -> Store.to_string s
+      | None -> "{}"
 end
   
 let fixpoint f s =
@@ -132,6 +137,9 @@ let run (globals, fundecs, init) =
 	  let add_call f = res := Store.join !res (process_call f c s) in
 	    List.iter add_call f;
 	    !res
+      | Display -> 
+	  print_endline (Store.to_string s);
+	  s
 
   and process_call f c s =
     try

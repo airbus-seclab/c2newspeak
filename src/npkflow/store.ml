@@ -105,3 +105,6 @@ let fids_of_exp s e =
   let x = Set.elements (eval_exp s e) in
     List.map Var.to_fid x
     
+let to_string s =
+  "poinsto relations:\n"^(PtrDom.to_string s.ptrs)
+  ^"tainted variables:\n"^(TaintDom.to_string s.tainted)

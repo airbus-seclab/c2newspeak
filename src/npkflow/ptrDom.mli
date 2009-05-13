@@ -39,3 +39,4 @@ val deref: t -> Var.Set.t -> Var.Set.t
 
 val assign: Var.Set.t -> Var.Set.t -> t -> t
 
+val to_string: t -> string

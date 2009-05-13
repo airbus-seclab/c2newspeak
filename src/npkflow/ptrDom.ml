@@ -77,3 +77,13 @@ let assign x y s =
   in
     Set.iter assign x;
     !res
+
+let to_string s =
+  let res = ref "" in
+  let to_string x y =
+    let x = Var.to_string x in
+    let y = Set.to_string y in
+      res := !res^x^" -> "^y^"\n"
+  in
+    Map.iter to_string s;
+    !res

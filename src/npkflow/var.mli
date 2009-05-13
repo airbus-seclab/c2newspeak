@@ -50,4 +50,5 @@ sig
   val inter: t -> t -> t
   val iter: (var -> unit) -> t -> unit
   val elements: t -> var list
+  val to_string: t -> string
 end

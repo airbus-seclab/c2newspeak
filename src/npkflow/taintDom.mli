@@ -36,3 +36,5 @@ val join: t -> t -> t
 val taint: Var.Set.t -> t -> t
 
 val is_tainted: t -> Var.Set.t -> bool
+
+val to_string: t -> string
