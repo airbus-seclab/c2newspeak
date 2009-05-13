@@ -79,7 +79,7 @@ let build prog =
   let translate_fn x =
     match x with
 	FunId f -> F.Global f
-      | FunDeref (e, _) -> F.Deref (translate_exp e)
+      | FunDeref (e, _) -> translate_exp e
   in
 
   let rec translate_blk j x =

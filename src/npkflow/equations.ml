@@ -46,13 +46,13 @@ and exp =
   | BinOp of (exp * exp)
   | Deref of exp
 
-let string_of_exp x =
+let rec string_of_exp x =
   match x with
       Const -> "cst"
     | Local _ -> "local"
     | Global _ -> "global"
     | BinOp _ -> "bop"
-    | Deref _ -> "*"
+    | Deref e -> "*("^(string_of_exp e)^")"
 
 let rec string_of_stmt (x, _) =
   match x with
