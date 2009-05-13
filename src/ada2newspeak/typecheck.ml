@@ -26,17 +26,9 @@ open Ast
 
 module T = Ada_types
 
-type verbose_level =
-  | Debug
-  | Warning
-  | Error
+let tc_verb = Ada_utils.Debug
 
-let tc_verb = Debug
-
-let error = match tc_verb with
-  | Debug   -> Npkcontext.print_debug
-  | Warning -> Npkcontext.report_warning "Typecheck"
-  | Error   -> Npkcontext.report_error   "Typecheck"
+let error = Ada_utils.mkerror tc_verb "Typecheck"
 
 let expect t t1 =
   if t <> t1 then (* is_compatible ? *)

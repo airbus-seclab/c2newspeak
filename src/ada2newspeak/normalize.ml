@@ -38,6 +38,8 @@ let (%-) = Nat.sub
 
 type constant_symb = Eval.constant_symb
 
+let gtbl : T.table = T.create_table 10
+
 (* FIXME Temporary tweak. *)
 let get_legacy_definition id = match String.lowercase id with
 | "integer"   -> Syntax_ada.Constrained(Syntax_ada.Integer
@@ -374,7 +376,12 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
 
   let add_enum_litt symbs typ global extern =
-    List.iter (fun (ident,v) -> add_enum (normalize_ident ident
+    List.iter (fun (ident,v) -> T.add_variable gtbl
+                                               (name_to_string
+                                               (package#current,ident))
+                                               (T.from_int T.universal_integer
+                                                           0);
+                                 add_enum (normalize_ident ident
                                                           package#current
                                                           extern)
                                          typ
@@ -599,7 +606,7 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   in
   match bop with
   (* Operators that does not exist in AST *)
-  | Lt     -> normalize_exp (Binary(Gt, e2, e1))
+  | Lt     -> normalize_exp (          Binary(Gt, e2, e1) )
   | Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
   | Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
   | Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
@@ -646,7 +653,7 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
   | CFloat x -> Ast.CFloat x,T.universal_real
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
-  | Var    x -> Ast.Var    x,T.universal_integer (* typeof (lookup) *)
+  | Var    x -> Ast.Var    x,T.boolean (*T.find_variable gtbl (name_to_string x)*)
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
@@ -1037,9 +1044,12 @@ in
            if (param.default_value <> None && param.mode <> In) then
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
-           if addparam then add_cst (normalize_ident_cur param.formal_name)
+           if addparam then begin
+              T.add_variable gtbl param.formal_name (T.from_int T.universal_integer 0);
+              add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
                                     false;
+           end;
           {Ast.param_type    = normalize_subtyp param.param_type;
            Ast.formal_name   = param.formal_name;
            Ast.mode          = param.mode;
@@ -1050,16 +1060,22 @@ in
         | Function(name, [], return_type)  ->
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
+              T.add_variable gtbl (name_to_string name)
+                                  (T.from_int T.universal_integer 0);
               add_function norm_name (Some(base_typ norm_subtyp)) false;
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
+              T.add_variable gtbl (name_to_string name)
+                                  (T.from_int T.universal_integer 0);
               add_function norm_name None false;
               Ast.Function(norm_name,
                        normalize_params param_list true,
                        normalize_subtyp return_type)
         | Procedure(name,param_list) ->
             let norm_name = normalize_name name in
+              T.add_variable gtbl (name_to_string name)
+                                  (T.from_int T.universal_integer 0);
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
@@ -1072,8 +1088,8 @@ in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let norm_def = may normalize_exp def in
           (List.iter
-             (fun x -> add_cst (normalize_ident_cur x)
-                (VarSymb(global)) global)
+             (fun x -> T.add_variable gtbl x (T.from_int T.universal_integer 0);
+                       add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
           Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable)
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
@@ -1285,7 +1301,12 @@ in
         | Ast.ObjectDecl(ident_list, _, _,
                      (Variable | Constant)) ->
             (List.iter
-               (fun x -> add_cst (normalize_ident x package#current true)
+            (fun x -> let idx=(name_to_string (normalize_ident x package#current
+            true))in
+            Npkcontext.print_debug ("+extern : "^idx);T.add_variable gtbl
+                             idx
+                             (T.from_int T.universal_integer 0);
+                         add_cst (normalize_ident x package#current true)
                                  (VarSymb(true))
                                  true
                )

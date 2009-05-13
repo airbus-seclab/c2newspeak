@@ -29,6 +29,8 @@
 let (%+) = Newspeak.Nat.add
 let (%-) = Newspeak.Nat.sub
 
+let error x = Npkcontext.print_debug ("Ada_types : "^x)
+
 (**
  * The [string] type with primitives to
  * handle it in a case-insensitive way.
@@ -240,17 +242,20 @@ let rec find_type tbl id =
     | Type typ   -> typ
 
 let rec find_variable tbl id =
-  let res = begin
-    try IHashtbl.find tbl.self id
-    with Not_found -> begin
-                        match tbl.parent_table with
-                        | None      -> raise Not_found
-                        | Some ptbl -> Variable (find_variable ptbl id)
-                      end
-  end in
-    match res with
-    | Type _       -> raise Not_found
-    | Variable var -> var
+  try
+    let res = begin
+      try IHashtbl.find tbl.self id
+      with Not_found -> begin
+                          match tbl.parent_table with
+                          | None      -> raise Not_found
+                          | Some ptbl -> Variable (find_variable ptbl id)
+                        end
+    end in
+      match res with
+      | Type _       -> raise Not_found
+      | Variable var -> var
+  with Not_found -> error ("Variable "^id^" not found");
+                    raise Not_found
 
 (*
  * Create a new type uid.

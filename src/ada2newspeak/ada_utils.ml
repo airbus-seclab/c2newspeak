@@ -29,6 +29,19 @@ module Nat = Newspeak.Nat
 exception NonStaticExpression
 exception AmbiguousTypeException
 
+type verbose_level =
+  | Silent
+  | Debug
+  | Warning
+  | Error
+
+(** Generic error. *)
+let mkerror lev modulename = match lev with
+  | Silent  -> (fun _ -> ())
+  | Debug   -> Npkcontext.print_debug
+  | Warning -> Npkcontext.report_warning modulename
+  | Error   -> Npkcontext.report_error   modulename
+
 (* arithmetique*)
 
 (* fonction propre a Ada *)

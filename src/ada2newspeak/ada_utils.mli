@@ -32,6 +32,15 @@
 exception NonStaticExpression
 exception AmbiguousTypeException
 
+type verbose_level =
+  | Silent
+  | Debug
+  | Warning
+  | Error
+
+(** Generic error. *)
+val mkerror : verbose_level -> string -> (string -> unit)
+
 (**
  * [nat] exponentiation.
  *)
