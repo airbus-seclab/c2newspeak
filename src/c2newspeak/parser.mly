@@ -698,8 +698,8 @@ expression:
 ;;
 
 argument_expression_list:
-  expression                               { $1::[] }
-| expression 
+  assignment_expression                    { $1::[] }
+| assignment_expression 
   COMMA argument_expression_list           { $1::$3 }
 ;;
 
