@@ -30,5 +30,6 @@ void main(int t) {
   int *ptr;
   ptr = &x;
   *ptr = t;
+  x = t;
   malloc(x);  // should signal a flow here
 }

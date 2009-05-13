@@ -60,7 +60,7 @@ let build prog =
     match x with
 	Local x -> F.Local x
       | Global x -> F.Global x
-      | Deref (e, _) -> F.Deref (translate_exp e)
+      | Deref (e, _) -> translate_exp e
       | Shift (lv, _) -> translate_lval lv
   
   and translate_exp x = 

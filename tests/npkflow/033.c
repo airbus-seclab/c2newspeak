@@ -25,12 +25,12 @@
 
 extern void* malloc(unsigned int);
 
-int f(void *buf, int x) {
-  /*!npk taint(*buf); */;
-}
-
-void main() {
+void main(int t) {
   int x;
-  f(&x, 4);
-  malloc(x);
+  int *ptr;
+  ptr = &x;
+  //*ptr = t;
+  /*!npk taint(*ptr); */
+  malloc(x);   // should signal a flow here
 }
+// assign v.5 should be tainted

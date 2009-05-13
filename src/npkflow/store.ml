@@ -87,6 +87,10 @@ let taint e s =
   let x = eval_exp s e in
     { s with tainted = TaintDom.taint x s.tainted }
 
+let to_string s =
+  "poinsto relations:\n"^(PtrDom.to_string s.ptrs)
+  ^"tainted variables:\n"^(TaintDom.to_string s.tainted)
+
 let is_tainted s e =
   let t = eval_exp s e in
     TaintDom.is_tainted s.tainted t
@@ -105,6 +109,3 @@ let fids_of_exp s e =
   let x = Set.elements (eval_exp s e) in
     List.map Var.to_fid x
     
-let to_string s =
-  "poinsto relations:\n"^(PtrDom.to_string s.ptrs)
-  ^"tainted variables:\n"^(TaintDom.to_string s.tainted)
