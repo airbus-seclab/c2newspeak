@@ -93,6 +93,7 @@ let jump n j s =
 
 let run (globals, fundecs, init) = 
   let unknown_funs = ref [] in
+  let alarms = ref [] in
 
   let rec process_blk x c j s =
     match x with
@@ -127,7 +128,11 @@ let run (globals, fundecs, init) =
 	  let t = Global Var.main_tainted in
 	    if (Store.points_to s p t) then begin
 	      let loc = Newspeak.string_of_loc loc in
-		print_endline (loc^": malloc with external argument")
+	      let msg = loc^": potential malloc with external argument" in
+		if not (List.mem msg !alarms) then begin
+		  alarms := msg::(!alarms);
+		  print_endline msg
+		end
 	    end;
 	    s
       | Call f -> 

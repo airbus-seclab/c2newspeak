@@ -1,1 +1,1 @@
-034.c:35#2: malloc with external argument
+034.c:35#2: potential malloc with external argument

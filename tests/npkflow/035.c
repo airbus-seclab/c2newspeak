@@ -33,5 +33,3 @@ void main(int t) {
   f(t);
   f(t);
 }
-
-++ think to change message from malloc without to potential malloc without
