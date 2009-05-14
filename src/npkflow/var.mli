@@ -25,6 +25,8 @@
 
 type t
 
+val main_tainted: string
+
 val compare: t -> t -> int
 
 val of_global: string -> t
@@ -51,4 +53,5 @@ sig
   val iter: (var -> unit) -> t -> unit
   val elements: t -> var list
   val to_string: t -> string
+  val mem: var -> t -> bool
 end

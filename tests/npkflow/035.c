@@ -1,8 +1,8 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2009  Charles Hymans
- 
+  
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -21,20 +21,17 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-type t
+extern void* malloc(unsigned int);
 
-val create: unit -> t
+void f(int x) {
+  malloc(x);          // should print only once this warning
+}
 
-val remove_var: Var.t -> t -> t
+void main(int t) {
+  f(t);
+  f(t);
+}
 
-val is_subset: t -> t -> bool
-
-val join: t -> t -> t
-
-val taint: Var.Set.t -> t -> t
-
-val is_tainted: t -> Var.Set.t -> bool
-
-val to_string: t -> string
+++ think to change message from malloc without to potential malloc without

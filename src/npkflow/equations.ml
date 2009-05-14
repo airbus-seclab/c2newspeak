@@ -31,7 +31,6 @@ and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
     Set of (exp * exp)
-  | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
   | InfLoop of blk
@@ -58,7 +57,6 @@ let rec string_of_exp x =
 let rec string_of_stmt (x, _) =
   match x with
       Set (lv, e) -> (string_of_exp lv)^" = "^(string_of_exp e)
-    | Taint _ -> "Taint"
     | Decl body -> "push;\n"^(string_of_blk body)^"pop;"
     | Select _ -> "Select"
     | InfLoop _ -> "while (1)"

@@ -31,6 +31,8 @@ let of_global x = x
 
 let of_local = string_of_int
 
+let main_tainted = "!main_tainted!"
+
 let to_string x = "v."^x
 
 let to_fid x = x

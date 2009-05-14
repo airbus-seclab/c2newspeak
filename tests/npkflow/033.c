@@ -29,8 +29,6 @@ void main(int t) {
   int x;
   int *ptr;
   ptr = &x;
-  //*ptr = t;
   /*!npk taint(*ptr); */
   malloc(x);   // should signal a flow here
 }
-// assign v.5 should be tainted
