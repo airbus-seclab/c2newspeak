@@ -192,12 +192,12 @@ let translate (globals, spec) =
 
   let find_var x =
     let (v, t) = find_symb x in
-    match v with
-	LocalSymb v -> (v, t)
-      | GlobalSymb v -> (C.Global v, t)
-      | _ -> 
-	  Npkcontext.report_error "Firstpass.find_var" 
-	    ("variable identifier expected: "^x)
+      match v with
+	  LocalSymb v -> (v, t)
+	| GlobalSymb v -> (C.Global v, t)
+	| _ -> 
+	    Npkcontext.report_error "Firstpass.find_var" 
+	      ("variable identifier expected: "^x)
   in
 
   let is_fname x =
@@ -1110,8 +1110,11 @@ let translate (globals, spec) =
 	SymbolToken x -> C.SymbolToken x
       | IdentToken x -> begin
 	  try 
-	    let (lv, _) = find_var x in
-	      C.LvalToken lv
+	    let (lv, t) = find_var x in begin
+	      match t with
+		  Fun _ -> C.IdentToken x
+		| _ -> C.LvalToken lv
+	      end
 	  with _ -> C.IdentToken x
 	end
 (* TODO: not good, do this in compile phase *)

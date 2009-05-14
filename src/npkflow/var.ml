@@ -31,10 +31,20 @@ let of_global x = x
 
 let of_local = string_of_int
 
+let main_tainted = "!main_tainted!"
+
 let to_string x = "v."^x
 
 let to_fid x = x
 
 type var = t
 
-module Set = Set.Make(String)
+module Set = 
+struct
+  include Set.Make(String)
+    
+  let to_string x =
+    let res = ref "{ " in
+      iter (fun x -> res := !res^(to_string x)^" ") x;
+      !res^"}"
+end

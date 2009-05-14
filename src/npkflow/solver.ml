@@ -56,19 +56,22 @@ struct
 	(Some s1, Some s2) -> Some (Store.join s1 s2)
       | (None, s) | (s, None) -> s
 
-  let taint e = apply (Store.taint e)
-
   let assign args = apply (Store.assign args)
 
-  let is_tainted s e =
+  let points_to s e1 e2 =
     match s with
-	Some s -> Store.is_tainted s e
+	Some s -> Store.points_to s e1 e2
       | None -> false
 
   let fids_of_exp s e =
     match s with
 	Some s -> Store.fids_of_exp s e
       | None -> []
+
+  let to_string s =
+    match s with
+	Some s -> Store.to_string s
+      | None -> "{}"
 end
   
 let fixpoint f s =
@@ -101,7 +104,6 @@ let run (globals, fundecs, init) =
   and process_stmt (x, loc) c j s =
     match x with
 	Set set -> Store.assign set s
-      | Taint lv -> Store.taint lv s
       | Decl body -> 
 	  let s = Store.add_local s in
 	  let s = process_blk body c j s in
@@ -120,18 +122,23 @@ let run (globals, fundecs, init) =
       | Goto n -> 
 	  jump n j s;
 	  Store.emptyset ()
-      | Call Global "malloc" -> 
-	  if (Store.is_tainted s (Local 0)) then begin
-	    let loc = Newspeak.string_of_loc loc in
-	      print_endline (loc^": malloc with external argument")
-	  end;
-	  s
+      | Call (Global "malloc") -> 
+	  let p = Deref (Local 0) in
+	  let t = Global Var.main_tainted in
+	    if (Store.points_to s p t) then begin
+	      let loc = Newspeak.string_of_loc loc in
+		print_endline (loc^": malloc with external argument")
+	    end;
+	    s
       | Call f -> 
 	  let f = Store.fids_of_exp s f in
 	  let res = ref (Store.emptyset ()) in
 	  let add_call f = res := Store.join !res (process_call f c s) in
 	    List.iter add_call f;
 	    !res
+      | Display -> 
+	  print_endline (Store.to_string s);
+	  s
 
   and process_call f c s =
     try

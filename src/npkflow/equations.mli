@@ -31,13 +31,13 @@ and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
     Set of (exp * exp)
-  | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
   | InfLoop of blk
   | BlkLbl of blk
   | Goto of int
   | Call of exp
+  | Display
 
 and exp =
     Const

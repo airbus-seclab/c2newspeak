@@ -41,7 +41,8 @@ let pos_of_lbl j lbl =
     pos_of_lbl 0 j
 
 let build prog =
-  let globals = ref [] in
+  let tainted_exp = F.Global Var.main_tainted in
+  let globals = ref (Var.main_tainted::[]) in
   let fundecs = Hashtbl.create 100 in
     
   let translate_global x _ = globals := x::!globals in
@@ -60,7 +61,7 @@ let build prog =
     match x with
 	Local x -> F.Local x
       | Global x -> F.Global x
-      | Deref (e, _) -> F.Deref (translate_exp e)
+      | Deref (e, _) -> translate_exp e
       | Shift (lv, _) -> translate_lval lv
   
   and translate_exp x = 
@@ -74,6 +75,18 @@ let build prog =
 	  let e1 = translate_exp e1 in
 	  let e2 = translate_exp e2 in
 	    translate_binop op e1 e2
+  in
+
+  let translate_assertion x =
+    match x with
+	(IdentToken "taint")::(SymbolToken '(')
+	::(SymbolToken '*')::(LvalToken lv)
+	::(SymbolToken ')')::(SymbolToken ';')::[] ->
+	  F.Set (F.Deref (translate_lval lv), tainted_exp)
+      | (IdentToken "display")::[] -> F.Display
+      | _ -> 
+	  invalid_arg ("Factory.translate_assertion: "
+		       ^"unexpected syntax of assertion")
   in
 
   let translate_fn x =
@@ -112,6 +125,7 @@ let build prog =
 	    (F.BlkLbl body, loc)::[]
       | Goto lbl -> (F.Goto (pos_of_lbl j lbl), loc)::[]
       | Call f -> (F.Call (translate_fn f), loc)::[]
+      | UserSpec x -> (translate_assertion x, loc)::[]
       | _ -> 
 	  invalid_arg ("Factory.translate_stmt: statement not handled yet: "
 		       ^(Newspeak.string_of_stmt (x, loc)))
@@ -123,24 +137,19 @@ let build prog =
   in
 
   let build_entry () =
-    let main_tainted = "!main_tainted!" in
-    let tainted_exp = F.Global main_tainted in
     let loc = Newspeak.unknown_loc in
     let ((args, ret), _) = Hashtbl.find prog.fundecs "main" in
     let call = ref ((F.Call (F.Global "main"), Newspeak.unknown_loc)::[]) in
     let rec append_args args =
       match args with
 	  _::tl -> 
-	    let taint = (F.Taint (F.Local 0), loc) in
 	    let set = (F.Set (F.Local 0, tainted_exp), loc) in
-	      call := (F.Decl (taint::set::(!call)), loc)::[];
+	      call := (F.Decl (set::(!call)), loc)::[];
 	      append_args tl
 	| [] -> ()
     in
-      globals := main_tainted::!globals;
       append_args args;
       call := (F.Set (tainted_exp, tainted_exp), loc)::!call;
-      call := (F.Taint tainted_exp, loc)::!call;
       match ret with
 	  Some _ -> (F.Decl (!call), loc)::[]
 	| None -> !call
