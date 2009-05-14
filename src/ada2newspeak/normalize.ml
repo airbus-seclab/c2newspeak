@@ -367,7 +367,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   in
 
-  let find_all_use (ident:identifier)
+  let find_all_use (ident:string)
         :(subtyp*location*bool) list =
     List.flatten
       (List.map

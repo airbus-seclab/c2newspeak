@@ -187,11 +187,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and package = new Ada_utils.package_manager
   in
 
-  let find_symb (x:name) :qualified_symbol = Hashtbl.find symbtbl x
+  let find_symb (x:A.name) :qualified_symbol = Hashtbl.find symbtbl x
 
-  and find_all_symb (x:name) :qualified_symbol list = Hashtbl.find_all symbtbl x
+  and find_all_symb (x:A.name) :qualified_symbol list = Hashtbl.find_all symbtbl x
 
-  and mem_symb (x:name) :bool = Hashtbl.mem symbtbl x in
+  and mem_symb (x:A.name) :bool = Hashtbl.mem symbtbl x in
 
   let find_all_use ident =
     List.flatten
@@ -202,7 +202,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   in
 
-  let find_name (name:name)
+  let find_name (name:A.name)
                 f_ident
                 f_with
                 f_current
@@ -259,7 +259,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   (* declaration d'une variable locale *)
   let add_var (loc:Newspeak.location) (st:Syntax_ada.subtyp)
-               (ident:identifier) ~(deref:bool) ~(ro:bool)
+               (ident:string) ~(deref:bool) ~(ro:bool)
       :unit=
     let x = ident_to_name ident in
       (if Hashtbl.mem symbtbl x then
@@ -366,7 +366,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and add_global (loc:Npk.location) (typ:A.subtyp)
                  (tr_typ:C.typ)     (tr_init:C.init_t option)
-                 (ro:bool)          (x:A.identifier)
+                 (ro:bool)          (x:string)
        :unit =
     let name = Normalize.normalize_ident
       x package#current package#is_extern in
@@ -402,7 +402,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         (VarSymb (C.Global(tr_name), typ, true, ro),
          tr_typ, loc)
 
-  and remove_symb (x:identifier) :unit =
+  and remove_symb (x:string) :unit =
         Hashtbl.remove symbtbl (ident_to_name x) in
 
   let remove_formals args =
@@ -419,7 +419,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          * Build a fresh identifier.
          * Several calls will yield "tmp0", "tmp1", and so on.
          *)
-        method private new_id :identifier =
+        method private new_id :string=
             let res = count in
             count<-count+1;
             "tmp"^(string_of_int res)
@@ -467,7 +467,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         | (FunSymb _,_,_)::_ -> true
         | [] -> false
     in
-    let sans_selecteur (ident:identifier) (name:name) :qualified_symbol =
+    let sans_selecteur (ident:string) (name:A.name) :qualified_symbol =
       let list_symb = find_all_symb name in
 
       let rec find_use list_symb var_masque =
@@ -540,7 +540,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       in find_interne list_symb false
 
-    and avec_selecteur (name:name) :qualified_symbol =
+    and avec_selecteur (name:A.name) :qualified_symbol =
       let list_symb = find_all_symb name in
       let rec find_fun list_symb =
         match list_symb with
@@ -566,7 +566,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 ("cannot find symbol "^(string_of_name name))
       in find_fun list_symb
 
-    and avec_selecteur_courant (ident:name) (name:name) :qualified_symbol =
+    and avec_selecteur_courant (ident:A.name) (name:A.name) :qualified_symbol =
       let list_symb = find_all_symb ident in
         let rec find_global list_symb =
         match list_symb with
@@ -885,7 +885,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      *)
   and make_arg_list (args:argument list) (spec:Ast.param list)
       :Ast.expression list =
-    let argtbl:(identifier,Ast.expression) Hashtbl.t = Hashtbl.create 5 in
+    let argtbl:(string,Ast.expression) Hashtbl.t = Hashtbl.create 5 in
 
     (**
      * Step 1 : extract positional parameters. Named parameters go into the
@@ -929,7 +929,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      *)
     and merge_with_specification (pos_list : Ast.expression list)
                                  (spec     : Ast.param      list)
-        :(A.identifier*Ast.expression) list =
+        :(string*Ast.expression) list =
             match pos_list, spec with
               |  [],_  -> (* end of positional parameters *)
                           List.map (function x -> (x.formal_name,(
@@ -1033,7 +1033,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             mem_other_symb r filter use var_masque
 
     in
-    let sans_selecteur (ident:identifier) (name:name) :C.exp*A.typ =
+    let sans_selecteur (ident:string) (name:A.name) :C.exp*A.typ =
 
       let rec find_use list_symb var_masque var_possible =
         match list_symb with
@@ -1177,7 +1177,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | _ -> find_enum_fun list_symb
 
     (* recherche d'un symbole externe, avec selecteur *)
-    and avec_selecteur (name:name) :C.exp*A.typ =
+    and avec_selecteur (name:A.name) :C.exp*A.typ =
       let rec find_enum_fun list_symb = match list_symb with
         | ((VarSymb(_)|NumberSymb(_)), _, _)::r ->
             find_enum_fun r
@@ -1226,7 +1226,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | _ -> find_enum_fun list_symb
 
     (* recherche interne uniquement *)
-    and avec_selecteur_courant (ident:name) (name:name) :C.exp*A.typ =
+    and avec_selecteur_courant (ident:A.name) (name:A.name) :C.exp*A.typ =
       let list_symb = find_all_symb ident in
       let rec find_global list_symb =
         match list_symb with

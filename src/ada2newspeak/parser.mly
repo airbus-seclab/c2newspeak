@@ -115,7 +115,7 @@ let rec build_case_ch (choices:(expression list*block)list)
  *    of the text of the declaration copied for each declaration in the
  *    series, in the same order as the list."
  *)
-let make_parameter_specification (idents:identifier list)
+let make_parameter_specification (idents:string list)
                                  (common_mode:param_mode)
                                  (common_type:subtyp)
                                  (common_default_value:expression option)
@@ -216,22 +216,22 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location>        WITH
 %token                            XOR
 
-%left AND OR XOR
-%left EQ NE LT LE GT GE
-%left PLUS MINUS CONCAT
-%nonassoc UPLUS UMINUS
-%left MULT DIV MOD REM
-%left POW ABS NOT
+%left       AND OR XOR          /*            logical operators */
+%left       EQ NE LT LE GT GE   /*         relational operators */
+%left       PLUS MINUS CONCAT   /*      binary adding operators */
+%nonassoc   UPLUS UMINUS        /*       unary adding operators */
+%left       MULT DIV MOD REM    /*        multiplying operators */
+%left       POW ABS NOT         /* highest precedence operators */
 
 %start s
 %type <Syntax_ada.compilation_unit> s
 
-%type <identifier> pragma
+%type <string> pragma
 %type <param_mode> mode
 %type <name*location> name
 %type <name list> name_list
-%type <identifier> ident
-%type <identifier list> ident_list
+%type <string> ident
+%type <string list> ident_list
 %type <argument> parameter_association
 %type <argument list> actual_parameter_part args
 %type <subtyp> subtyp
@@ -246,8 +246,8 @@ let make_range exp_b_inf exp_b_sup =
 %type <(expression list*block) list* block option> case_stmt_alternative_list
 %type <representation_clause*location> representation_clause
 %type <array_aggregate> array_aggregate
-%type <(identifier * expression) list> named_array_aggregate
-%type <identifier * expression> array_component_association
+%type <(string * expression) list> named_array_aggregate
+%type <string * expression> array_component_association
 %type <subtyp_indication list> matrix_indication
 %type <array_type_definition> constrained_array_definition
 %type <field list> record_definition
@@ -265,8 +265,6 @@ let make_range exp_b_inf exp_b_sup =
 %type <library_item*location> library_item
 %type <context_clause list> context_item context
 %type <(basic_declaration*location) list> factored_decl use_decl number_decl
-
-/*priorite*/
 
 %%
 /*grammaire*/

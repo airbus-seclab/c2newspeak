@@ -185,7 +185,7 @@ val check_compil_unit_name :
  * Extract the identifier for a representation clause.
  *)
 val extract_representation_clause_name :
-             Syntax_ada.representation_clause -> Syntax_ada.identifier
+             Syntax_ada.representation_clause -> string
 
 (**
  * Provides a default value.
@@ -263,7 +263,7 @@ end
  *)
 val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
 
-val ident_list_to_string : Syntax_ada.identifier list -> string
+val ident_list_to_string : string list -> string
 
 (** Converts a qualified name into a dotted string.  *)
 val name_to_string : Syntax_ada.name -> string
