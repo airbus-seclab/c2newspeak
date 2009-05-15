@@ -83,34 +83,38 @@ type table
  *)
 val create_table  : int -> table
 
-(**
- * Link to parent.
- * When a symbol table has a parent table, it will act as a "fallback" table for
- * lookup, reflecting the nesting of scoped blocks.
- * @raise Invalid_argument "Already linked" when it already has a parent.
- *)
-val link_to_parent : table -> parent:table -> unit
-
 (** Add a type symbol to a table. *)
-val add_type      : table -> string -> t     -> unit
+val add_type      : table -> string list -> string -> t      -> unit
 
 (** Add a variable symbol to a table. *)
-val add_variable  : table -> string -> value -> unit
+val add_variable  : table -> string list -> string  -> value -> unit
 
 (** Remove a type, given its name. *)
-val remove_type   : table -> string -> unit
+val remove_type   : table -> (string list*string)-> unit
 
 (**
  * Get a type from a symbol table.
  * @raise Not_found if no type could be found.
+ * @param context : an optional list of packages to be searched
+ * @param the queried package
+ * @param the queried identifier
  *)
-val find_type     : table -> string -> t
+val find_type :    table
+               -> ?context:string list list
+               ->  string list
+               ->  string
+            -> t
 
 (**
  * Get a variable from a symbol table.
  * @raise Not_found if no type could be found.
+ * @param see [find_type]
  *)
-val find_variable : table -> string -> value
+val find_variable :     table
+                    -> ?context:string list list
+                    ->  string list
+                    ->  string
+            -> t
 
 (** Pretty-print a symbol table to the standard output. *)
 val print_table   : table -> unit
@@ -194,6 +198,12 @@ val new_array      : ?symboltable:table -> ?name:string -> t -> t list -> t
 
 (** Is a type compatible with another one ?  *)
 val is_compatible : t -> t -> bool
+
+(**
+ * Pretty-printer for types.
+ * Type references (parents, ...) are displayed hashed for brievity's sake.
+ *)
+val print : t -> string
 
 (*****************
  * Builtin types *

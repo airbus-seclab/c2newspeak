@@ -29,7 +29,9 @@
 let (%+) = Newspeak.Nat.add
 let (%-) = Newspeak.Nat.sub
 
-let error x = Npkcontext.print_debug ("Ada_types : "^x)
+let error x =
+  if 0=1 then
+    Npkcontext.report_warning "Ada_types" x
 
 (**
  * The [string] type with primitives to
@@ -37,18 +39,26 @@ let error x = Npkcontext.print_debug ("Ada_types : "^x)
  *)
 module CaseInsensitiveString =
   struct
-    type t = string
+    type t = string list*string
 
-    let equal s1 s2 =
+    let equal_s s1 s2 =
       String.compare (String.lowercase s1) (String.lowercase s2) = 0
 
-    let hash s =
+    let equal (p1,i1) (p2,i2) =
+      equal_s i1 i2 &&
+      try List.for_all2 equal_s p1 p2
+      with Invalid_argument _ -> false
+
+    let hash_s s =
       Hashtbl.hash (String.lowercase s)
+
+    let hash (p,i) =
+      List.fold_left (fun x y -> x+hash_s y) (hash_s i) p
 
     let to_string x = x
   end
 
-(** A hash table insensitive to keys' case.  *)
+(** A (string list*string) hash table insensitive to keys' case.  *)
 module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 
 (**
@@ -119,19 +129,16 @@ and trait_t =
   | Float of int                      (* Digits *)
   | Array of t*(t list)               (* Component-indexes list *)
 
-type symbol =
-  | Variable of value
-  | Type     of t
-
 (*
  * A symbol table.
- * Side effects are everywhere (mutable option + [IHashtbl] which comes from the
- * functorial interface of [Hashtbl].
- * The [parent_table] can be changed only once by calling [link_to_parent].
+ * t_var and t_type hold respectively data related
+ * to variables and returning their type and to types.
+ *
+ * TODO : However it is not type-safe, as different information is typed the same way.
  *)
 type table = {
-  mutable parent_table : table  option;
-          self         : symbol IHashtbl.t;
+  t_var  : t IHashtbl.t;
+  t_type : t IHashtbl.t;
 }
 
 (*********************************
@@ -150,6 +157,44 @@ and to_bool v          = project_bool (snd v)
 
 let from_nat  typ ival = typ,(inject_nat  ival)
 and to_nat  v          = project_nat  (snd v)
+
+(******************
+ * Pretty-printer *
+ ******************)
+
+let print t =
+  let p_hash t  = Printf.sprintf "%08x" (Hashtbl.hash t) in
+  let p_limited x = if x then "Limited," else "" in
+  let p_parent = function
+    | None -> "<root>"
+    | Some t -> "parent:<"^p_hash t^">"
+  in
+  let p_range = function
+    | None      -> "<unlimited>"
+    | Some NullRange     -> "{}"
+    | Some (Range (a,b)) ->  "["
+                            ^   Newspeak.Nat.to_string a
+                            ^";"
+                            ^   Newspeak.Nat.to_string b
+                            ^"]"
+  in
+  let p_trait = function
+    | Signed  r -> "Signed " ^p_range r
+    | Modular m -> "Modular "^string_of_int m
+    | Float   d -> "Float "  ^string_of_int d
+    | Enumeration v -> "Enum (length ="^string_of_int (List.length v)^")"
+    | Array (c,i) -> "Array {{ component.hash = "
+                  ^p_hash c^"; indexes.hash = "
+                  ^String.concat "," (List.map p_hash i)
+                  ^"}}"
+  in
+   "{"
+  ^"H="^p_hash t
+  ^",parent = "^p_parent t.parent
+  ^p_limited t.limited
+  ^"U="^string_of_int t.uid
+  ^",trait = "^p_trait t.trait
+  ^"}"
 
 (**********
  * Ranges *
@@ -173,41 +218,36 @@ let sizeof = function
  *****************)
 
 let print_table tbl =
-  let symb_str x = match x with
-  | Variable _ -> "var"
-  | Type     _ -> "typ"
-  in
   let pad width str =
     let x = String.length str in
     let b = (width - x) / 2   in
     let a =  width - x - b    in
     (String.make a ' ')^str^(String.make b ' ')
   in
-  print_endline "+----------------------+";
-  print_endline "|     Symbol table     |";
-  print_endline "+------+---------------+";
-  print_endline "| type |      name     |";
-  print_endline "+------+---------------+";
-  IHashtbl.iter (fun n s ->
-                  List.iter print_string
-                  ["|"
-                  ;pad 6 (symb_str s)
-                  ;"|"
-                  ;pad 15 n
-                  ;"|"
-                  ];
-                  print_newline ()
-               )
-      tbl.self;
-  print_endline "+------+---------------+";
+  let line_printer t (p,i) s_t =
+    List.iter print_string
+    ["|"
+    ;pad 6 t
+    ;"|"
+    ;pad 15 (String.concat "." (p@[i]))
+    ;"| "
+    ;print s_t
+    ];
+    print_newline ()
+  in
+  print_endline "+--------------------------- . . .";
+  print_endline "|           Symbol table          ";
+  print_endline "+------+---------------+---- . . .";
+  print_endline "| type |      name     |  Contents";
+  print_endline "+------+---------------+---- . . .";
+  IHashtbl.iter (line_printer "Var") tbl.t_var;
+  IHashtbl.iter (line_printer "Typ") tbl.t_type;
+  print_endline "+------+---------------+---- . . .";
   print_newline ()
 
-let create_table size = {parent_table=None; self=IHashtbl.create size}
-
-let link_to_parent tbl ~parent =
-  match tbl.parent_table with
-  | Some _ -> raise (Invalid_argument "Already linked")
-  | None -> tbl.parent_table <- Some parent
+let create_table size = {t_var  = IHashtbl.create size;
+                         t_type = IHashtbl.create size;
+                        }
 
 (*
  * Private global symbol table.
@@ -215,47 +255,42 @@ let link_to_parent tbl ~parent =
  * builtin_type and builtin_variable. *)
 let builtin_table :table = create_table 10
 
-(*
- * Add a symbol to a table, or raise an exception in case of conflict.
- * This could be enhanced in order to support overloading.
- *)
-let try_to_add_symbol tbl name s =
-  IHashtbl.add tbl.self name s
+let add_variable tbl package id v   =
+  let descr p =
+    if p = [] then "as a local variable"
+    else "in package "^String.concat "." p
+  in
+  Npkcontext.print_debug ("SYMBTBL --> adding variable "
+    ^id
+    ^" "^descr package);
+  IHashtbl.add tbl.t_var (package,id) (fst v)
 
-let add_variable tbl id v   = try_to_add_symbol tbl id (Variable v)
+let add_type tbl package id typ =
+  Npkcontext.print_debug ("SYMBTBL --> adding type "^id);
+  IHashtbl.add tbl.t_type (package,id) typ
 
-let add_type     tbl id typ = try_to_add_symbol tbl id (Type typ)
+let remove_type tbl id = IHashtbl.remove tbl.t_type id
 
-let remove_type tbl id = IHashtbl.remove tbl.self id
-
-let rec find_type tbl id =
-  let res = begin
-    try IHashtbl.find tbl.self id
-    with Not_found -> begin
-                        match tbl.parent_table with
-                        | None      -> raise Not_found
-                        | Some ptbl -> Type (find_type ptbl id)
-                      end
-  end in
-    match res with
-    | Variable _ -> raise Not_found
-    | Type typ   -> typ
-
-let rec find_variable tbl id =
-  try
-    let res = begin
-      try IHashtbl.find tbl.self id
-      with Not_found -> begin
-                          match tbl.parent_table with
-                          | None      -> raise Not_found
-                          | Some ptbl -> Variable (find_variable ptbl id)
-                        end
-    end in
-      match res with
-      | Type _       -> raise Not_found
-      | Variable var -> var
-  with Not_found -> error ("Variable "^id^" not found");
-                    raise Not_found
+let find_information hashtbl ?context package id =
+  if package != [] then IHashtbl.find hashtbl (package,id)
+  else (* no package : try it as a local variable,
+        *              or within current package
+        *              (if provided)
+        *)
+    try IHashtbl.find hashtbl ([],id)
+    with Not_found ->
+      begin
+        match context with
+        | None   -> raise Not_found
+        | Some package_list ->
+          let p = List.find (fun pkg -> IHashtbl.mem hashtbl (pkg,id))
+                            package_list
+            (* List.find throws Not_found if     *
+             * no package matches the predicate. *
+             * This is the expected behaviour.   *)
+          in
+          IHashtbl.find hashtbl (p,id)
+      end
 
 (*
  * Create a new type uid.
@@ -284,6 +319,16 @@ let universal_integer = { type_stub with trait = Signed None; }
 
 let universal_real = { type_stub with trait = Float 100; }
 
+
+let find_type     tbl = find_information tbl.t_type
+
+let find_variable tbl ?context package id =
+  try find_information tbl.t_var ?context package id
+  with Not_found -> begin
+                      error ("Cannot find variable "^id);
+                      universal_integer
+                    end
+
 (*
  * Add (or not) a type to a symbol table.
  *)
@@ -292,7 +337,7 @@ let maybe_add ?symboltable ?name typ =
   | None    ,None   -> ()
   | Some _  ,None   -> raise (Invalid_argument  "No name provided")
   | None    ,Some _ -> raise (Invalid_argument "No table provided")
-  | Some tbl,Some n -> add_type tbl n typ
+  | Some tbl,Some n -> add_type tbl [] n typ
   end;
   typ
 
@@ -310,6 +355,7 @@ let new_enumerated ?symboltable ?name values =
     | None -> ()
     | Some tbl -> List.iter (fun (id,ival) ->
                               add_variable tbl
+                                           []
                                            id
                                            (from_int new_type ival)
                             )
@@ -377,9 +423,6 @@ let is_compatible one another =
  * Builtin types *
  *****************)
 
-let builtin_type     = find_type     builtin_table
-let builtin_variable = find_variable builtin_table
-
 (* TODO hook it with Ada_config *)
 let integer_first = min_int
 and integer_last  = max_int
@@ -406,6 +449,8 @@ let boolean = new_enumerated ~symboltable:builtin_table
 let _float = new_float ~symboltable:builtin_table
                        ~name:"float"
                        6
+
+let builtin_type x = find_type builtin_table [] x
 
 (*
  * This declaration is special because we don't want to make the character
@@ -550,4 +595,5 @@ let (@=) v1 v2 =
   && (       v1 @=?        v2)
 
 let _ =
-  add_type builtin_table "character" character
+  add_type builtin_table [] "character" character
+
