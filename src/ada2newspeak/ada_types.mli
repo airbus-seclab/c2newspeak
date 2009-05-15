@@ -84,10 +84,10 @@ type table
 val create_table  : int -> table
 
 (** Add a type symbol to a table. *)
-val add_type      : table -> string list -> string -> t      -> unit
+val add_type      : table -> string list -> string -> t -> unit
 
 (** Add a variable symbol to a table. *)
-val add_variable  : table -> string list -> string  -> value -> unit
+val add_variable  : table -> string list -> string -> t -> unit
 
 (** Remove a type, given its name. *)
 val remove_type   : table -> (string list*string)-> unit

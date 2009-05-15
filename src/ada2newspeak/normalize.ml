@@ -364,7 +364,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                                                (if global then package#current
                                                else [])
                                                i
-                                               (T.from_int T.universal_integer 0);
+                                               T.universal_integer;
                                  add_enum (p,i)
                                          typ
                                          global
@@ -1028,7 +1028,7 @@ in
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
            if addparam then begin
-              T.add_variable gtbl [] param.formal_name (T.from_int T.universal_integer 0);
+              T.add_variable gtbl [] param.formal_name T.universal_integer;
               add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
                                     false;
@@ -1044,13 +1044,13 @@ in
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
               T.add_variable gtbl (fst name) (snd name)
-                                  (T.from_int T.universal_integer 0);
+                                  T.universal_integer;
               add_function norm_name (Some(base_typ norm_subtyp)) false;
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
               T.add_variable gtbl (fst name) (snd name)
-                                  (T.from_int T.universal_integer 0);
+                                  T.universal_integer;
               add_function norm_name None false;
               Ast.Function(norm_name,
                        normalize_params param_list true,
@@ -1058,7 +1058,7 @@ in
         | Procedure(name,param_list) ->
             let norm_name = normalize_name name in
               T.add_variable gtbl (fst name) (snd name)
-                                  (T.from_int T.universal_integer 0);
+                                  T.universal_integer;
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
@@ -1071,9 +1071,9 @@ in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let norm_def = may normalize_exp def in
           (List.iter
-             (fun x -> let (p,i) = normalize_ident_cur x in
-               T.add_variable gtbl p i (T.from_int T.universal_integer 0);
-               add_cst (p,i) (VarSymb(global)) global)
+             (fun x ->
+               T.add_variable gtbl package#current x T.universal_integer;
+               add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
           Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable)
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
@@ -1094,14 +1094,19 @@ in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp v;
-              List.iter (add_ident v) ident_list;
+              List.iter (fun x ->
+                T.add_variable gtbl [] x T.universal_integer;
+                           add_ident v x) ident_list;
               StaticVal(v)
           with
             | AmbiguousTypeException -> Npkcontext.report_error
                                         "Ada_normalize.normalize_basic_decl"
                                         "uncaught ambiguous type exception"
             | NonStaticExpression -> (List.iter
-                                       (fun x -> add_cst (normalize_ident_cur x)
+                                       (fun x ->
+                                          let (p,i) = (normalize_ident_cur x) in
+                                            T.add_variable gtbl p i T.universal_integer;
+                                                  add_cst (p,i)
                                                          (VarSymb global)
                                                          global
                                        ) ident_list);
@@ -1123,6 +1128,7 @@ in
         let v = eval_static_number norm_exp csttbl package#get_use
           package extern in
           (*ajouts dans la table*)
+            T.add_variable gtbl [] ident T.universal_integer;
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
@@ -1185,9 +1191,10 @@ in
     | Loop(While(exp), instrs) -> (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-                 (Ast.Loop(Ast.For(iter, normalize_exp exp1,
-                                 normalize_exp exp2, is_rev),
-                                 normalize_block instrs), loc)
+        T.add_variable gtbl [] iter T.universal_integer;
+         (Ast.Loop(Ast.For(iter, normalize_exp exp1,
+                         normalize_exp exp2, is_rev),
+                         normalize_block instrs), loc)
     | Exit -> (Ast.Exit, loc)
     | ProcedureCall(nom, params) ->
        (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
@@ -1286,12 +1293,10 @@ in
                      (Variable | Constant)) ->
             (List.iter
             (fun x -> let (p,i)=normalize_ident x package#current true in
-              Npkcontext.print_debug ("+extern : "^i);T.add_variable gtbl
-                             p i
-                             (T.from_int T.universal_integer 0);
+                        T.add_variable gtbl p i T.universal_integer;
                          add_cst (p,i)
                                  (VarSymb(true))
-                                 true
+                                 true;
                )
                ident_list
             )
@@ -1303,12 +1308,15 @@ in
             let typ = base_typ subtyp
               (*extract_subtyp subtyp_ind*) in
               List.iter
-                (fun x -> add_cst (normalize_ident x package#current true)
+                (fun x -> let (p,i) = normalize_ident x package#current true in
+                  T.add_variable gtbl p i T.universal_integer;
+                  add_cst (p,i)
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
         | Ast.NumberDecl(ident, _, Some v) ->
             (*ajouts dans la table*)
+            T.add_variable gtbl package#current ident T.universal_integer;
             add_cst (normalize_ident ident package#current true)
                     (Number(v, true))
                     true

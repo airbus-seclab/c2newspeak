@@ -255,7 +255,7 @@ let create_table size = {t_var  = IHashtbl.create size;
  * builtin_type and builtin_variable. *)
 let builtin_table :table = create_table 10
 
-let add_variable tbl package id v   =
+let add_variable tbl package id t =
   let descr p =
     if p = [] then "as a local variable"
     else "in package "^String.concat "." p
@@ -263,7 +263,7 @@ let add_variable tbl package id v   =
   Npkcontext.print_debug ("SYMBTBL --> adding variable "
     ^id
     ^" "^descr package);
-  IHashtbl.add tbl.t_var (package,id) (fst v)
+  IHashtbl.add tbl.t_var (package,id) t
 
 let add_type tbl package id typ =
   Npkcontext.print_debug ("SYMBTBL --> adding type "^id);
@@ -353,11 +353,11 @@ let new_enumerated ?symboltable ?name values =
     } in
     begin match symboltable with
     | None -> ()
-    | Some tbl -> List.iter (fun (id,ival) ->
+    | Some tbl -> List.iter (fun (id,_) ->
                               add_variable tbl
                                            []
                                            id
-                                           (from_int new_type ival)
+                                           new_type
                             )
                             ivalues
     end;
