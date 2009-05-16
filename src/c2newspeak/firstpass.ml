@@ -697,21 +697,6 @@ let translate (globals, spec) =
     let set = (lv, t', e) in
       (set, t)
 
-(*
-    let (lv', t) = translate_lv lv in
-    let (lv', e) =
-      match op with
-	  None -> (lv', e)
-	| Some op -> 
-	    let (_, lv', _) = C.normalize_lv lv' in
-	    let e = Binop (op, lv, e) in
-	      (lv', e)
-    in
-    let (e, t) = cast (translate_exp e) t in
-    let t' = translate_typ t in
-    let set = (lv', t', e) in
-      (set, t)
-*)
 
   and init_va_args loc lv x =
     let rec init_va_args lv x =
@@ -1165,50 +1150,6 @@ let translate (globals, spec) =
     let blk2 = guard2@blk2 in
       select (blk1, blk2)
 
-(* TODO: remove dead code, unused because this function will be removed!!
-  (* TODO: 
-     - should take advantage of obviously side-effect free expression 
-     - add option to translate if using tmp variables!
-*)
-  and translate_if loc (e, blk1, blk2) =
-    let duplicate branch blk e1 e2 =
-      let b =
-	match (e1, e2) with
-	    (Cst (C.CInt c, _), _) | (_, Cst (C.CInt c, _)) -> 
-	      (Nat.compare c Nat.zero <> 0) = branch
-	  | _ -> true
-      in
-	b && (C.is_large_blk blk)
-    in
-    let build_branch branch blk e1 e2 =
-      if duplicate branch blk e1 e2 then begin
-	let lbl = new_lbl () in
-	let goto = (C.Goto lbl, loc)::[] in
-	  (Some (lbl, blk), goto)
-      end else (None, blk)
-    in
-    let rec translate e blk1 blk2 =
-      match e with
-	  IfExp (c, e1, e2) -> 
-	    let (lbl1, goto1) = build_branch true blk1 e1 e2 in
-	    let (lbl2, goto2) = build_branch false blk2 e1 e2 in
-
-	    let br1 = translate e1 goto1 goto2 in
-	    let br2 = translate e2 goto1 goto2 in
-
-	    let x = translate c br1 br2 in
-	    let x = (C.Block (x, lbl1), loc)::[] in
-	    let x = (C.Block (x, lbl2), loc)::[] in
-	      x
-	| Unop (Not, (IfExp _ as e)) -> translate e blk2 blk1
-	| Cst (C.CInt c, _) when Nat.compare c Nat.zero <> 0 -> blk1
-	| Cst (C.CInt _, _) -> blk2
-	| _ -> 
-	    let (e, _) = translate_exp e in
-	      C.build_if loc (e, blk1, blk2)
-    in
-      translate e blk1 blk2
-*)
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
