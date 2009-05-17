@@ -371,12 +371,6 @@ statement_list:
 ;;
 
 statement:
-  NPK statement                            { (UserSpec $1, get_loc ())::$2 }
-| statement_kind                           { $1 }
-;;
-
-// TODO: factor declarations??
-statement_kind:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
 | REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
@@ -406,6 +400,7 @@ statement_kind:
 | compound_statement                       { [Block $1, get_loc ()] }
 | SEMICOLON                                { [] }
 | asm SEMICOLON                            { [] }
+| NPK                                      { (UserSpec $1, get_loc ())::[] }
 ;;
 
 asm:
