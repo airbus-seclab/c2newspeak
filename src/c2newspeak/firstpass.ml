@@ -934,13 +934,11 @@ let translate (globals, spec) =
 (* TODO: maybe this loc is unnecessary *)
 	| (LocalDecl (x, EDecl e), _)::body -> 
 	    add_enum (x, e);
-(* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 
 	| (LocalDecl (x, CDecl d), _)::body ->
 	    add_compdecl (x, d);
-(* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
 
@@ -948,15 +946,15 @@ let translate (globals, spec) =
 	    Npkcontext.report_accept_warning "Firstpass.translate" 
 	      "function declaration within block" Npkcontext.DirtySyntax;
 	    translate_proto_ftyp x static ft loc;
-	    translate body
+	    let (body, e) = translate_blk_aux ends_with_exp body in
+	      ((body, []), e)
 
 	| (LocalDecl (x, VDecl (t, static, _, init)), loc)::body when static -> 
 	    Npkcontext.set_loc loc;
 	    declare_global true false x loc t init;
-	    (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((body, []), e)
-	  
+
 	| (LocalDecl (x, VDecl (t, _, extern, _)), loc)::body when extern ->
 	    declare_global false true x loc t None;
 	    let (body, e) = translate_blk_aux ends_with_exp body in
@@ -964,10 +962,9 @@ let translate (globals, spec) =
 
 	| (LocalDecl (x, VDecl (t, _, _, init)), loc)::body -> 
 	    let init = translate_local_decl (x, t, init) loc in
-	      (* TODO: try translate body *)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((init@body, []), e)
-	      
+
 	(* TODO: do the case where suffix is <> [] *)
 	(* TODO: remove body, suffix from For, use goto and labels
 	   remove break. Use goto... *)
