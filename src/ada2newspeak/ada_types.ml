@@ -134,7 +134,8 @@ and trait_t =
  * t_var and t_type hold respectively data related
  * to variables and returning their type and to types.
  *
- * TODO : However it is not type-safe, as different information is typed the same way.
+ * TODO : However it is not type-safe, as different
+ * information is typed the same way.
  *)
 type table = {
   t_var  : t IHashtbl.t;
@@ -320,7 +321,12 @@ let universal_integer = { type_stub with trait = Signed None; }
 let universal_real = { type_stub with trait = Float 100; }
 
 
-let find_type     tbl = find_information tbl.t_type
+let find_type tbl ?context package id =
+  try find_information tbl.t_type ?context package id
+  with Not_found -> begin
+                      error ("Cannot find type "^id);
+                      raise Not_found
+                    end
 
 let find_variable tbl ?context package id =
   try find_information tbl.t_var ?context package id
@@ -329,19 +335,7 @@ let find_variable tbl ?context package id =
                       universal_integer
                     end
 
-(*
- * Add (or not) a type to a symbol table.
- *)
-let maybe_add ?symboltable ?name typ =
-  begin match symboltable,name with
-  | None    ,None   -> ()
-  | Some _  ,None   -> raise (Invalid_argument  "No name provided")
-  | None    ,Some _ -> raise (Invalid_argument "No table provided")
-  | Some tbl,Some n -> add_type tbl [] n typ
-  end;
-  typ
-
-let new_enumerated ?symboltable ?name values =
+let new_enumerated ?symboltable values =
     let rec with_indices vals offset = match vals with
     |   []  -> []
     | n::tl -> (n,offset)::with_indices tl (offset+1)
@@ -361,10 +355,10 @@ let new_enumerated ?symboltable ?name values =
                             )
                             ivalues
     end;
-    maybe_add ?symboltable ?name new_type
+    new_type
 
-let new_derived ?symboltable ?name old =
-    maybe_add ?symboltable ?name { old with uid = uid#gen }
+let new_derived old =
+    { old with uid = uid#gen }
 
 (* Parent of parent of parent.  *)
 let rec root_parent typ =
@@ -372,8 +366,7 @@ let rec root_parent typ =
         | None -> typ
         | Some p -> root_parent p
 
-let new_unconstr ?symboltable ?name parent =
-    maybe_add ?symboltable ?name
+let new_unconstr parent =
     {
       type_stub with
       parent = Some (root_parent parent);
@@ -381,8 +374,7 @@ let new_unconstr ?symboltable ?name parent =
       uid = parent.uid;
     }
 
-let new_constr ?symboltable ?name parent r =
-    maybe_add ?symboltable ?name
+let new_constr parent r =
     {
       type_stub with
       parent = Some (root_parent parent);
@@ -390,25 +382,22 @@ let new_constr ?symboltable ?name parent r =
       uid = parent.uid;
     }
 
-let new_range ?symboltable ?name r =
-  new_constr ?symboltable ?name universal_integer r
+let new_range r =
+  new_constr universal_integer r
 
-let new_modular ?symboltable ?name size =
-    maybe_add ?symboltable ?name
+let new_modular size =
     {
       type_stub with
       trait = Modular size
     }
 
-let new_float ?symboltable ?name digits =
-    maybe_add ?symboltable ?name
+let new_float digits =
     {
       type_stub with
       trait = Float digits
     }
 
-let new_array ?symboltable ?name component ind =
-    maybe_add ?symboltable ?name
+let new_array component ind =
     {
       type_stub with
       trait = Array (component,ind)
@@ -427,28 +416,18 @@ let is_compatible one another =
 let integer_first = min_int
 and integer_last  = max_int
 
-let integer  = new_constr ~symboltable:builtin_table
-                          ~name:"integer"
-                          universal_integer
+let integer  = new_constr universal_integer
                           (integer_first @.. integer_last)
 
-let natural  = new_constr ~symboltable:builtin_table
-                          ~name:"natural"
-                          integer
+let natural  = new_constr integer
                           (0 @.. integer_last)
 
-let positive = new_constr ~symboltable:builtin_table
-                          ~name:"positive"
-                          integer
+let positive = new_constr integer
                           (1 @.. integer_last)
 
-let boolean = new_enumerated ~symboltable:builtin_table
-                             ~name:"boolean"
-                             ["true" ; "false"]
+let boolean = new_enumerated ~symboltable:builtin_table ["true" ; "false"]
 
-let _float = new_float ~symboltable:builtin_table
-                       ~name:"float"
-                       6
+let _float = new_float 6
 
 let builtin_type x = find_type builtin_table [] x
 
@@ -594,6 +573,9 @@ let (@=) v1 v2 =
      (typeof v1  =  typeof v2)
   && (       v1 @=?        v2)
 
+
 let _ =
-  add_type builtin_table [] "character" character
+  List.iter2 (add_type builtin_table [])
+  ["integer"; "float" ; "boolean" ; "natural" ; "positive" ; "character"]
+  [ integer ; _float  ;  boolean  ;  natural  ;  positive  ;  character ]
 

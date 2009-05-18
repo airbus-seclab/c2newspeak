@@ -1102,14 +1102,16 @@ in
             | AmbiguousTypeException -> Npkcontext.report_error
                                         "Ada_normalize.normalize_basic_decl"
                                         "uncaught ambiguous type exception"
-            | NonStaticExpression -> (List.iter
-                                       (fun x ->
-                                          let (p,i) = (normalize_ident_cur x) in
-                                            T.add_variable gtbl p i T.universal_integer;
-                                                  add_cst (p,i)
-                                                         (VarSymb global)
-                                                         global
-                                       ) ident_list);
+            | NonStaticExpression -> List.iter
+                                      (fun x ->
+                                         let (p,i) = (normalize_ident_cur x) in
+                                           T.add_variable gtbl
+                                                          p i
+                                                          T.universal_integer;
+                                                 add_cst (p,i)
+                                                        (VarSymb global)
+                                                        global
+                                      ) ident_list;
                     (*la constante n'est pas statique *) Constant
 
         in

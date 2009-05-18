@@ -152,41 +152,37 @@ val sizeof : range -> Newspeak.Nat.t
 (**
  * {3 Types}
  * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
- * Type constructors have two optional arguments, which should be given
- * together. [~symboltable] is the name of a [table] to which the type is to be
- * add with the given [~name].
  *)
 
 (** Derived type. (structural copy) *)
-val new_derived    : ?symboltable:table -> ?name:string -> t -> t
+val new_derived    : t -> t
 
 (** Unconstrained subtype. *)
-val new_unconstr   : ?symboltable:table -> ?name:string -> t -> t
+val new_unconstr   : t -> t
 
 (** Constrained subtype. *)
-val new_constr     : ?symboltable:table -> ?name:string -> t -> range -> t
+val new_constr     : t -> range -> t
 
 (** Modular type. Parameter is modulus. *)
-val new_modular    : ?symboltable:table -> ?name:string -> int -> t
+val new_modular    : int -> t
 
 (**
  * Plain integer range.
  * This differs from new_constr integer, because :
  *   - it is a different type
  *   - it does not rely on integer
- *   - it does not need an explicit "universal_integer" type
  *)
-val new_range      : ?symboltable:table -> ?name:string -> range -> t
+val new_range      : range -> t
 
 (**
  * Enumerated type.
- * [~symboltable] and [~name] have an additional meaning : if provided, the set
- * of litterals for the constructed type will be added to the symbol table.
+ * If [~symboltable] is provided, the set of litterals for
+ * the built type will be added to the symbol table.
  *)
-val new_enumerated : ?symboltable:table -> ?name:string -> string list -> t
+val new_enumerated : ?symboltable:table -> string list -> t
 
 (** Floating-point type. Parameter is number of digits. *)
-val new_float      : ?symboltable:table -> ?name:string -> int -> t
+val new_float      : int -> t
 
 (**
  * Array type.
@@ -194,7 +190,7 @@ val new_float      : ?symboltable:table -> ?name:string -> int -> t
  * the second one is a list of index types.
  * @raise Invalid_argument if the index list is empty.
  *)
-val new_array      : ?symboltable:table -> ?name:string -> t -> t list -> t
+val new_array      : t -> t list -> t
 
 (** Is a type compatible with another one ?  *)
 val is_compatible : t -> t -> bool
