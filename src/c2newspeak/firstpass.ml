@@ -872,24 +872,6 @@ let translate (globals, spec) =
     let ret = translate_typ ret in
       (args, ret)
 
-  and translate_local_decl (x, t, init) loc =
-    Npkcontext.set_loc loc;
-    add_var (t, x);
-    let (init, t) = 
-      match init with
-	  None -> ([], t)
-	| Some init -> translate_init t init
-    in
-      update_var_typ x t;
-      let v = C.Local x in
-      let build_set (o, t, e) =
-	let lv = C.Shift (v, C.exp_of_int o) in
-	  (C.Set (lv, t, e), loc)
-      in
-      let init = List.map build_set init in
-      let decl = (C.Decl (translate_typ t, x), loc) in
-	decl::init
-
   and add_enum (x, v) =
     let v = translate_exp v in
     let (v, _) = cast v CoreC.int_typ in
@@ -919,7 +901,43 @@ let translate (globals, spec) =
 	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
 	      "expression expected"
 
-      (* type and translate blk *)
+  and translate_local_decl loc x d =
+    match d with
+	EDecl e -> 
+	  add_enum (x, e);
+	  []
+      | CDecl d -> 
+	  add_compdecl (x, d);
+	  []
+      | VDecl (Fun ft, static, _, _) -> 
+	  Npkcontext.report_accept_warning "Firstpass.translate" 
+	    "function declaration within block" Npkcontext.DirtySyntax;
+	    translate_proto_ftyp x static ft loc;
+	    []
+      | VDecl (t, static, _, init) when static -> 
+	  declare_global true false x loc t init;
+	  []
+      | VDecl (t, _, extern, _) when extern -> 
+	  declare_global false true x loc t None;
+	  []
+      | VDecl (t, _, _, init) -> 
+	  add_var (t, x);
+	  let (init, t) = 
+	    match init with
+		None -> ([], t)
+	      | Some init -> translate_init t init
+	  in
+	    update_var_typ x t;
+	    let v = C.Local x in
+	    let build_set (o, t, e) =
+	      let lv = C.Shift (v, C.exp_of_int o) in
+		(C.Set (lv, t, e), loc)
+	    in
+	    let init = List.map build_set init in
+	    let decl = (C.Decl (translate_typ t, x), loc) in
+	      decl::init
+		
+  (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
    a translate_blk blk -> blk
    and a translate_blk_aux ends_with_exp blk -> blk, typ_exp option *)
@@ -930,40 +948,11 @@ let translate (globals, spec) =
 	    let e = translate_exp e in
 	      (([], []), Some e)
 	    
-(* TODO: factor all these LocalDecl !!! *)
-(* TODO: maybe this loc is unnecessary *)
-	| (LocalDecl (x, EDecl e), _)::body -> 
-	    add_enum (x, e);
-	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((body, []), e)
-
-	| (LocalDecl (x, CDecl d), _)::body ->
-	    add_compdecl (x, d);
-	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((body, []), e)
-
-	| (LocalDecl (x, VDecl (Fun ft, static, _, _)), loc)::body -> 
-	    Npkcontext.report_accept_warning "Firstpass.translate" 
-	      "function declaration within block" Npkcontext.DirtySyntax;
-	    translate_proto_ftyp x static ft loc;
-	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((body, []), e)
-
-	| (LocalDecl (x, VDecl (t, static, _, init)), loc)::body when static -> 
+	| (LocalDecl (x, d), loc)::body -> 
 	    Npkcontext.set_loc loc;
-	    declare_global true false x loc t init;
+	    let decl = translate_local_decl loc x d in
 	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((body, []), e)
-
-	| (LocalDecl (x, VDecl (t, _, extern, _)), loc)::body when extern ->
-	    declare_global false true x loc t None;
-	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((body, []), e)
-
-	| (LocalDecl (x, VDecl (t, _, _, init)), loc)::body -> 
-	    let init = translate_local_decl (x, t, init) loc in
-	    let (body, e) = translate_blk_aux ends_with_exp body in
-	      ((init@body, []), e)
+	      ((decl@body, []), e)
 
 	(* TODO: do the case where suffix is <> [] *)
 	(* TODO: remove body, suffix from For, use goto and labels
