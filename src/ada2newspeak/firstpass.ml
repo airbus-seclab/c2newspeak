@@ -1427,7 +1427,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         begin
         Npkcontext.set_loc loc;
          match instr with
-           | Ast.NullInstr -> (translate_block r)
            | Ast.Return(exp) ->
                translate_block (* WG Lval for Array diff*)
                  ((Ast.Assign(Lval (ident_to_name ret_ident),exp),loc)

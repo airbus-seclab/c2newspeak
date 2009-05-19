@@ -51,7 +51,6 @@ type binary_op =
 type block = (instruction * Newspeak.location) list
 
 and instruction =
-  | NullInstr
   | Assign        of lval
                    * expression
   | Return        of expression

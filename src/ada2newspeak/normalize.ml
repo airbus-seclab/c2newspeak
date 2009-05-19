@@ -1147,38 +1147,39 @@ in
   let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
-    | NullInstr    -> Ast.NullInstr   , loc
-    | ReturnSimple -> Ast.ReturnSimple, loc
-    | Assign(lv, exp) -> Ast.Assign(normalize_lval lv, normalize_exp exp), loc
-    | Return(exp) -> Ast.Return(normalize_exp exp), loc
+    | NullInstr    -> None
+    | ReturnSimple -> Some (Ast.ReturnSimple, loc)
+    | Assign(lv, exp) -> Some (Ast.Assign(normalize_lval lv, normalize_exp exp), loc)
+    | Return(exp) -> Some (Ast.Return(normalize_exp exp), loc)
     | If(exp, instr_then, instr_else) ->
+        Some
         (Ast.If(normalize_exp exp, normalize_block instr_then,
             normalize_block instr_else), loc)
-    | Loop(NoScheme,instrs) -> Ast.Loop(Ast.NoScheme,normalize_block instrs),loc
-    | Loop(While(exp), instrs) -> (Ast.Loop(Ast.While(normalize_exp exp),
+    | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,normalize_block instrs),loc)
+    | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
         T.add_variable gtbl [] iter T.universal_integer;
-         (Ast.Loop(Ast.For(iter, normalize_exp exp1,
+         Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
                          normalize_exp exp2, is_rev),
                          normalize_block instrs), loc)
-    | Exit -> (Ast.Exit, loc)
+    | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) ->
-       (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
+       Some (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
     | Case (e, choices, default) ->
-              Ast.Case (normalize_exp e,
+              Some (Ast.Case (normalize_exp e,
                     List.map (function e,block->
                             normalize_exp e,
                             normalize_block block)
                         choices,
                     Ada_utils.may normalize_block default
-                    ),loc
+                    ),loc)
     | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
                         remove_decl_part dp;
-                        Ast.Block (ndp, normalize_block blk), loc
+                        Some (Ast.Block (ndp, normalize_block blk), loc)
 
   and normalize_block block =
-    List.map normalize_instr block
+    List_utils.filter_map normalize_instr block
 
   and normalize_decl_part decl_part ~global =
     let tbl=Ada_types.create_table (List.length decl_part) in

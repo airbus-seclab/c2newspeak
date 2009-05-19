@@ -57,3 +57,10 @@ let rec last = function
   | [] -> raise (Invalid_argument "last")
   | [x] -> x
   | _::tl -> last tl
+
+let rec filter_map f = function
+  |   []   -> []
+  | hd::tl -> begin match f hd with
+                | None   ->    filter_map f tl
+                | Some v -> v::filter_map f tl
+              end
