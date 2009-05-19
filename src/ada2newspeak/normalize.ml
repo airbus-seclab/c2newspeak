@@ -82,7 +82,7 @@ let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_)))
   | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> name_to_string n
-  | Ast.UseDecl _ | Ast.RepresentClause _-> "<no name>"
+  | Ast.UseDecl _ -> "<no name>"
 
 let check_package_body_against_spec ~(body:Ast.declarative_part)
                                     ~(spec:Ast.package_spec) =
@@ -95,7 +95,7 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
   let filterspec = function
     | Ast.NumberDecl _ | Ast.SpecDecl   _ -> true
     | Ast.ObjectDecl _ | Ast.TypeDecl _ | Ast.SubtypDecl _
-    | Ast.RepresentClause _ | Ast.UseDecl _ -> false
+    | Ast.UseDecl _ -> false
   in
   List.iter (function sp ->
     if (filterspec sp) then
@@ -1100,7 +1100,6 @@ in
                     (Number(v, global))
                     global;
           Ast.NumberDecl(ident, norm_exp, Some v)
-    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
           types#add (normalize_ident_cur ident)
@@ -1108,7 +1107,8 @@ in
                     loc
                     global;
           Ast.SubtypDecl(ident, norm_subtyp_ind)
-    | RepresentClause x -> Ast.RepresentClause x
+    | RepresentClause _
+    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
   and normalize_package_spec (nom, list_decl) :Ast.package_spec =
     package#set_current nom;
@@ -1304,7 +1304,7 @@ in
               types#add (normalize_ident ident package#current true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
-        | Ast.SpecDecl _ | Ast.UseDecl  _ | Ast.RepresentClause _ -> ()
+        | Ast.SpecDecl _ | Ast.UseDecl  _ -> ()
 
     in match spec with
       | Ast.SubProgramSpec(Ast.Function(name, [], return_typ)) ->

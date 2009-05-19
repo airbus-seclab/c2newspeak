@@ -1717,10 +1717,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         Npkcontext.report_error
           "Firstpass.translate_basic_declaration"
           "internal error : number declaration whitout value"
-    | RepresentClause _ ->
-        Npkcontext.report_error
-          "Firstpass.translate_basic_declaration"
-          "internal error : unexpected representation clause"
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1749,10 +1745,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | NumberDecl(ident, _, _) -> remove_symb ident
     | TypeDecl _
     | SubtypDecl _ -> ()
-    | RepresentClause _ ->
-        Npkcontext.report_error
-          "Firstpass.remove_basic_declaration"
-          "internal error : unexpected representation clause"
 
   and remove_declarative_item (item,_) = match item with
     | BasicDecl(basic) -> remove_basic_declaration basic
@@ -1831,11 +1823,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | NumberDecl(_) ->
           Npkcontext.report_error
             "Firstpass.translate_global_basic_declaration"
-            "internal error : number declaration whitout value"
-      | RepresentClause _ ->
-          Npkcontext.report_error
-            "Firstpass.translate_global_basic_declaration"
-            "internal error : unexpected representation clause"
+            "internal error : number declaration without value"
 
   (* quand cette fonction est appelee, on est dans le corps d'un
      package *)

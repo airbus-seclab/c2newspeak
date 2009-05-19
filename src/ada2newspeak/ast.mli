@@ -142,7 +142,6 @@ and basic_declaration =
                      * Syntax_ada.value option
   | SubtypDecl      of string
                      * Syntax_ada.subtyp_indication
-  | RepresentClause of Syntax_ada.representation_clause
 
 and  library_item =
   | Spec of spec
