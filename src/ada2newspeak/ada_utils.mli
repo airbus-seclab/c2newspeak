@@ -88,9 +88,10 @@ val between : 'a -> 'a -> 'a -> bool
  * Checks that a constraint is compatible with another one.
  * [constraint_is_constraint_compatible ref cur] checks if [cur]
  * is compatible with [ref].
+ * May raise an error.
  *)
-val constraint_is_constraint_compatible :
-  Syntax_ada.contrainte -> Syntax_ada.contrainte -> bool
+val constraint_check_compatibility :
+  Syntax_ada.contrainte -> Syntax_ada.contrainte -> unit
 
 (**
  * Checks that a value is compatible with a constraint.

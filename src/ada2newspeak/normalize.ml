@@ -464,27 +464,10 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
      de reference, de la contrainte normalisee, et d'un
      booleen qui indique si le sous-type de reference est
      statique *)
-  let subtyp_of_constraint contrainte typ static_ref =
-
-    (* Dans le cas de contrainte statique, la contrainte
-       du sous-type resultat reste la meme.
-       Dans le cas d'un RangeCosntraint contenant des expressions
-       on genere deux temporaires, qui permettront de se
-       referer aux valeurs des bornes a l'instant de la
-       declaration du sous-type.
-       Ces temporaires sont declares et initialises dans
-       firstpass.
-    *)
-      (Constrained(typ, contrainte, static_ref))
-  in (match subtyp with
-        | None -> ()
-        | Some(_) ->
-            Npkcontext.report_error
+    if subtyp <> None then Npkcontext.report_error
               "Ada_normalize.normalize_subtyp_indication"
-              "internal error : subtyp already provided");
-
+              "internal error : subtyp already provided";
     let norm_subtyp_ref = normalize_subtyp subtyp_ref in
-
     let (norm_subtyp, norm_contrainte) =
       match (contrainte, norm_subtyp_ref) with
         | (None, Unconstrained(typ)) ->
@@ -495,20 +478,12 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
             let norm_contrainte =
               normalize_contrainte const typ
             in
-              (subtyp_of_constraint norm_contrainte typ true,
+              (Constrained(typ,norm_contrainte,true),
                Some(norm_contrainte))
         | (Some(const), Constrained(typ,const_ref,stat_ref)) ->
-            let norm_contrainte =
-              normalize_contrainte const typ
-            in
-              if not
-                (constraint_is_constraint_compatible
-                   const_ref norm_contrainte)
-              then
-                Npkcontext.report_error
-                  "Ada_normalize.normalize_subtyp_indication"
-                  "constraint error : uncompatible constraint";
-              (subtyp_of_constraint norm_contrainte typ stat_ref,
+            let norm_contrainte = normalize_contrainte const typ in
+              constraint_check_compatibility const_ref norm_contrainte;
+              (Constrained(typ,norm_contrainte,stat_ref),
                Some(norm_contrainte))
         | (_, SubtypName _ ) ->
             Npkcontext.report_error
@@ -653,16 +628,6 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
           | _ -> Npkcontext.report_error "normalize:attr"
                         ("No such attribute : '" ^ attr ^ "'")
         end
-
-(* normalize la contrainte contrainte
-   le type des bornes est typ
-   static indique si
-   on lance une erreur en cas de borne non-static
-   et si on verifie l'ordre des bornes
-   (autrement dit, on attend une contrainte statique non nulle
-   en retour. uniquement utilise dans le cas entier)
-*)
-
 
 (**
  * Normalize a constraint.

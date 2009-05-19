@@ -126,7 +126,8 @@ let nat_constraint_compatibility ref1 ref2 fils1 fils2 =
 
 
 (* verifie que la contrainte courante est compatible avec cref *)
-let constraint_is_constraint_compatible cref courante =
+let constraint_check_compatibility cref courante =
+  if not (
   match (cref, courante) with
     | (IntegerRangeConstraint(ref1, ref2),
        IntegerRangeConstraint(cour1, cour2)) ->
@@ -143,6 +144,9 @@ let constraint_is_constraint_compatible cref courante =
     | (FloatRangeConstraint _, IntegerRangeConstraint _) ->
         Npkcontext.report_error "Ada_utils.check_constraint"
           "internal error : uncompatible constraints"
+  ) then Npkcontext.report_error
+         "Constraint_is_compatible"
+         "constraint error : uncompatible constraint"
 
 (* verifie que la valeur value respecte bien la contrainte.
    la contrainte est supposee statique, et le type de value
