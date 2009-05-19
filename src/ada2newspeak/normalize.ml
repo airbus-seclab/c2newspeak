@@ -36,8 +36,6 @@ module TC  = Typecheck
 let (%+) = Nat.add
 let (%-) = Nat.sub
 
-type constant_symb = Eval.constant_symb
-
 let gtbl : T.table = T.create_table 10
 
 (* FIXME Temporary tweak. *)
@@ -561,6 +559,11 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   | Mod   -> Ast.Mod   | Power -> Ast.Power
   |_ -> invalid_arg "direct_op_trans"
   in
+  (* Is the operator overloaded ? *)
+  let ovl_opname = ([],make_operator_name bop) in
+  if (Hashtbl.mem csttbl ovl_opname) then
+    normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
+  else
   match bop with
   (* Operators that does not exist in AST *)
   | Lt     -> normalize_exp (          Binary(Gt, e2, e1) )

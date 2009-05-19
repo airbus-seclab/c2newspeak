@@ -270,8 +270,9 @@ val ident_list_to_string : string list -> string
 val name_to_string : Syntax_ada.name -> string
 
 (** Create a function name for an overloaded operator *)
-val make_operator_name : string -> string
+val make_operator_name : Syntax_ada.binary_op -> string
 
+val operator_of_string : string -> Syntax_ada.binary_op
 
 (**
  * Maybe apply some function to an option value :

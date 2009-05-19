@@ -328,9 +328,11 @@ subprogram_spec :
 | FUNCTION   name                        RETURN subtyp
                                                   {Function ((fst $2),[],$4),$1}
 | FUNCTION  STRING LPAR formal_part RPAR RETURN subtyp
-                     {Function (([],Ada_utils.make_operator_name $2), $4,$7),$1}
+                     {Function (([],Ada_utils.make_operator_name
+                     (Ada_utils.operator_of_string $2)), $4,$7),$1}
 | PROCEDURE STRING LPAR formal_part RPAR
-                     {Procedure(([],Ada_utils.make_operator_name $2), $4),   $1}
+                     {Procedure(([],Ada_utils.make_operator_name
+                     (Ada_utils.operator_of_string $2)), $4),   $1}
 ;
 
 formal_part :
