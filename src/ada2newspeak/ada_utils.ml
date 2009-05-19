@@ -454,7 +454,7 @@ let make_operator_name op =
    | Power        -> "pow"
    )
 
-let operator_of_string = function
+let operator_of_string s = match s with
   | "and" -> And
   | "or"  -> Or
   | "xor" -> Xor
@@ -471,7 +471,8 @@ let operator_of_string = function
   | "mod" -> Mod
   | "rem" -> Rem
   | "**"  -> Power
-  |_ -> invalid_arg "No such operator"
+  |_ -> Npkcontext.report_error "operator_of_string"
+         ("\""^s^"\" does not name an operator")
 
 let may f = function
   | None -> None

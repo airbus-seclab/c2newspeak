@@ -1211,7 +1211,7 @@ in
               if not (find_body_for_spec ~specification:sp
                                           ~bodylist:(List.map fst ndp)) then
                    Npkcontext.report_error "normalize_decl_part"
-                   ("Declaration of "^(name_of_spec sp)^" requires completion")
+                   ("Declaration of \""^(name_of_spec sp)^"\" requires completion")
               end
       | _ -> ()
     ) ndp;
