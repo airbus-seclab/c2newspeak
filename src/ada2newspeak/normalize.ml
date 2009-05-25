@@ -371,8 +371,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
   let add_typ nom typdecl location ~global ~extern =
     let subtyp = match typdecl with
-      | Array _
-      | Record _ -> Unconstrained(Declared(snd nom, typdecl, location))
+      | Array _ -> Unconstrained(Declared(snd nom, typdecl, location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
@@ -860,7 +859,6 @@ in
           | Declared(_,IntegerRange(contrainte,taille),_) ->
               IntegerRange(contrainte, taille)
           | Declared(_,Array  def,_) -> Array  def
-          | Declared(_,Record def,_) -> Record def
           | Declared(_, DerivedType subtyp_ind,_) -> DerivedType subtyp_ind
         in
 
@@ -924,22 +922,10 @@ in
         in
           add_typ (normalize_ident_cur ident) norm_typ loc global extern;
           norm_typ
-
     | Array(ConstrainedArray(_, _, Some _)) ->
         Npkcontext.report_error
           "Ada_normalize.normalize_typ_decl"
           "internal error : size of array already provided"
-
-    | Record (fls) ->
-        let norm_field (ids, sbtyp_ind, e_opt) =
-          (ids, normalize_subtyp_indication sbtyp_ind, e_opt)
-        in
-        let  norm_typ =
-          Record (List.map norm_field fls)
-        in
-          add_typ (normalize_ident_cur ident) norm_typ loc global extern;
-          norm_typ
-
   in
 
   let remove_typ_decl nom typ_decl = match typ_decl with
@@ -948,8 +934,7 @@ in
                   symbs
     | DerivedType  _
     | IntegerRange _
-    | Array        _
-    | Record       _ -> types#remove (normalize_ident_cur nom)
+    | Array        _ -> types#remove (normalize_ident_cur nom)
 
   in
 

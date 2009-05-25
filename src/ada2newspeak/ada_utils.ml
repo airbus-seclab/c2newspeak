@@ -222,8 +222,7 @@ let rec integer_class typ = match typ with
   | Declared(_,typdef,_) ->
       (match typdef with
          | Enum _
-         | Array _
-         | Record _ -> false
+         | Array _ -> false
          | IntegerRange _ -> true
          | DerivedType(_,_,Some(subtyp)) -> integer_class (base_typ subtyp)
          | DerivedType(_,_,None) -> Npkcontext.report_error

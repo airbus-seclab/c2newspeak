@@ -155,8 +155,6 @@ and translate_declared (typ_decl:typ_declaration) :C.typ = match typ_decl with
       "internal error : no bounds provided for IntegerRange"
 | Array(ConstrainedArray(_, subtyp_ind, taille)) ->
     C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
-| Record _ -> Npkcontext.report_error "firstpass.translate_declared"
-                "Record types are not implemented yet"
 
 (**
  * Translate a [Syntax_ada.subtyp].
@@ -1668,8 +1666,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | DerivedType ref_subtyp_ind ->
           translate_derived_typ_decl ref_subtyp_ind loc global
       | IntegerRange _
-      | Array _
-      | Record _ -> ()
+      | Array _ -> ()
 
   (* declarations basiques locales *)
   and translate_basic_declaration basic loc = match basic with

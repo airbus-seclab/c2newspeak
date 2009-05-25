@@ -250,7 +250,6 @@ let make_range exp_b_inf exp_b_sup =
 %type <string * expression> array_component_association
 %type <subtyp_indication list> matrix_indication
 %type <array_type_definition> constrained_array_definition
-%type <field list> record_definition
 %type <contrainte> contrainte
 %type <basic_declaration*location> basic_declaration
 %type <(basic_declaration*location) list> basic_declarative_part
@@ -430,8 +429,6 @@ basic_declaration :
         {TypeDecl($2,DerivedType $5),$1}
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
             { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
-| TYPE ident IS RECORD record_definition END RECORD SEMICOLON
-                { TypeDecl($2,Record $5),$1 }
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}

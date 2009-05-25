@@ -108,11 +108,6 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^", "^(option_to_string taille ikind_to_string)^")"
   | Array(array_def) ->
       "Array("^(array_definition_to_string array_def)^")"
-  | Record (_) -> (*record_type_def) -> *)
-      "Record("
-      ^(" --- TO DO --------")^")"
-
-
 
 and array_definition_to_string array = match array with
   | ConstrainedArray(range, subtyp, taille) ->
@@ -359,14 +354,7 @@ let compil_unit_to_string (context,lib_item,loc) =
   ^",\n\n"^(library_item_to_string lib_item)
   ^",\n\n"^(line_of_loc loc)^")\n"
 
-
-
-
-(* changer avec print_list *)
-let rec ast_to_string programme = match programme with
-  | compil_unit::r -> (compil_unit_to_string compil_unit)^
-      (ast_to_string r)
-  | [] -> ""
-
+let rec ast_to_string programme =
+  list_to_string programme compil_unit_to_string "" false
 
 let print_ast programme = print_string (ast_to_string programme)
