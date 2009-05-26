@@ -36,8 +36,7 @@ module Npk = Newspeak
 module A   = Syntax_ada
 module T   = Ada_types
 
-open Syntax_ada
-open Ast (* AST overrides Syntax_ada *)
+open Ast
 
 exception AmbiguousTypeException
 
@@ -55,7 +54,7 @@ type symb =
   | VarSymb  of C.lv    * A.subtyp * bool * bool (** name, type, global?, ro? *)
   | EnumSymb of C.exp   * A.typ * bool (** TODO, typename, ro? *)
   | FunSymb  of C.funexp * Ast.sub_program_spec * bool * C.ftyp (** XXX *)
-  | NumberSymb of value*bool (** XXX *)
+  | NumberSymb of A.value*bool (** XXX *)
 
 type qualified_symbol = symb*C.typ*Npk.location
 
@@ -96,10 +95,10 @@ let extract_scalar_typ (cir_typ:C.typ) :Npk.scalar_t = match cir_typ with
  *)
 let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
   match contrainte with
-    | IntegerRangeConstraint (v1,v2) ->
+    | A.IntegerRangeConstraint (v1,v2) ->
         C.Unop(K.Belongs_tmp(v1, K.Known (Nat.add v2 Nat.one)), exp)
-    | FloatRangeConstraint(_, _) -> exp
-    | RangeConstraint _ -> Npkcontext.report_error
+    | A.FloatRangeConstraint(_, _) -> exp
+    | A.RangeConstraint _ -> Npkcontext.report_error
                           "Firstpass.make_check_constraint"
                      "internal error : unexpected range constraint (non-static)"
 
@@ -108,51 +107,51 @@ let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
  *)
 let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
   match subtyp with
-    | Unconstrained _ -> exp
-    | Constrained(_, contrainte, _) ->
+    | A.Unconstrained _ -> exp
+    | A.Constrained(_, contrainte, _) ->
         make_check_constraint contrainte exp
-    | SubtypName _ ->
+    | A.SubtypName _ ->
         Npkcontext.report_error
           "Firstpass.make_check_subtyp"
           "internal error : unexpected subtyp name"
 
 let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
   match styp with
-    | Constrained( _, IntegerRangeConstraint(nat1, _) , _ ) ->
+    | A.Constrained( _, A.IntegerRangeConstraint(nat1, _) , _ ) ->
                 let borne_inf = C.Const(C.CInt(nat1)) in
                 let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
                     C.Binop (Newspeak.MultI, decal,  size)
-    | Constrained  _ -> Npkcontext.report_error "Firstpass.make_offset"
+    | A.Constrained  _ -> Npkcontext.report_error "Firstpass.make_offset"
                  "contrainte (not IntegerRangeConstraint) not coded yet "
-    | Unconstrained _ -> exp
-    | SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
+    | A.Unconstrained _ -> exp
+    | A.SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
                     "SubtypName not implemented yet (especially for Enum)"
 
 (**
  * Translate a [Syntax_ada.typ].
  *)
 let rec translate_typ (typ:A.typ) :C.typ = match typ with
-| Float        -> C.Scalar(Npk.Float            (Ada_config.size_of_float))
-| Integer      -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
-| IntegerConst -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
-| Boolean      -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
-| Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
-| String -> Npkcontext.report_error "Firstpass.translate_typ"
+| A.Float        -> C.Scalar(Npk.Float            (Ada_config.size_of_float))
+| A.Integer      -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
+| A.IntegerConst -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
+| A.Boolean      -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
+| A.Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
+| A.String -> Npkcontext.report_error "Firstpass.translate_typ"
     "String not implemented"
-| Declared(_,typ_decl, _) -> translate_declared typ_decl
+| A.Declared(_,typ_decl, _) -> translate_declared typ_decl
 
 (**
  * Translate a [Syntax_ada.typ_declaration].
  *)
-and translate_declared (typ_decl:typ_declaration) :C.typ = match typ_decl with
-| Enum(_, bits) -> C.Scalar(Npk.Int(bits))
-| DerivedType(subtyp_ind) -> translate_typ
+and translate_declared (typ_decl:A.typ_declaration) :C.typ = match typ_decl with
+| A.Enum(_, bits) -> C.Scalar(Npk.Int(bits))
+| A.DerivedType(subtyp_ind) -> translate_typ
     (Ada_utils.extract_typ subtyp_ind)
-| IntegerRange(_,Some(bits)) -> C.Scalar(Npk.Int(bits))
-| IntegerRange(_,None) -> Npkcontext.report_error
+| A.IntegerRange(_,Some(bits)) -> C.Scalar(Npk.Int(bits))
+| A.IntegerRange(_,None) -> Npkcontext.report_error
     "Firstpass.translate_declared"
       "internal error : no bounds provided for IntegerRange"
-| Array(ConstrainedArray(_, subtyp_ind, taille)) ->
+| A.Array(A.ConstrainedArray(_, subtyp_ind, taille)) ->
     C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
 
 (**
@@ -309,9 +308,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               | NumberSymb(_) | FunSymb _),_,_) -> ()
       );
       let typ_cir = match value with
-        | IntVal _ -> translate_typ IntegerConst
-        | FloatVal _ -> translate_typ Float
-        | BoolVal _ ->
+        | A.IntVal _   -> translate_typ A.IntegerConst
+        | A.FloatVal _ -> translate_typ A.Float
+        | A.BoolVal _ ->
             Npkcontext.report_error
               "Firstpass.add_number"
               "internal error : number cannot have Enum val"
@@ -435,7 +434,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         method create (loc:Newspeak.location) (t:A.typ)
           :string * (C.stmtkind * Newspeak.location) * C.lv =
             let id = s#new_id in
-              add_var loc (Unconstrained(t)) id false false;
+              add_var loc (A.Unconstrained(t)) id false false;
               let decl = (C.Decl (translate_typ t, id), loc) in
                 (id, decl, C.Local id)
     end
@@ -604,13 +603,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   in
   let translate_number v expected_typ = match v with
-      | IntVal(i) ->
-          let t = check_typ expected_typ IntegerConst
+      | A.IntVal(i) ->
+          let t = check_typ expected_typ A.IntegerConst
           in (translate_int i, t)
-      | FloatVal(f,s) ->
-          let t = check_typ expected_typ Float
+      | A.FloatVal(f,s) ->
+          let t = check_typ expected_typ A.Float
           in (C.Const(C.CFloat(f,s)), t)
-      | BoolVal _ ->
+      | A.BoolVal _ ->
           Npkcontext.report_error
             "Firstpass.translate_number"
             "internal error : number cannot have enum val"
@@ -688,8 +687,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             let (v, subtyp_lv) = translate_lv lval write trans_exp in
               match  subtyp_lv
               with
-                  Unconstrained(Declared(_, Array(
-                    ConstrainedArray(( stypindex, contraint,_ ),
+                  A.Unconstrained(A.Declared(_, A.Array(
+                    A.ConstrainedArray(( stypindex, contraint,_ ),
                                      ( stypelt,_,_),  _)), _)) ->
                     let size_base =  C.exp_of_int (C.size_of_typ (
                                 (translate_typ (base_typ stypelt)))) in
@@ -697,25 +696,25 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     let new_constr  =
                       match contraint with
                           None -> begin match stypindex with
-                            | Constrained(_, contr, _) -> contr
-                            | Unconstrained _
-                            | SubtypName _ ->
+                            | A.Constrained(_, contr, _) -> contr
+                            | A.Unconstrained _
+                            | A.SubtypName _ ->
                                 Npkcontext.report_error
                                   "Firstpass Array Access"
                                   "Unconstrained or SubtypName"
                           end
 
-                        | Some(RangeConstraint(A.CInt(a), A.CInt(b)))
+                        | Some(A.RangeConstraint(A.CInt(a), A.CInt(b)))
 
-                        | Some(IntegerRangeConstraint(a, b)) ->
+                        | Some(A.IntegerRangeConstraint(a, b)) ->
                             if (Nat.compare a b)<=0
                             then
-                              IntegerRangeConstraint(a, b)
+                              A.IntegerRangeConstraint(a, b)
                             else         Npkcontext.report_error
                               "Firstpass: in Array access"
                               "null range not accepted "
 
-                        | Some(RangeConstraint _) ->
+                        | Some(A.RangeConstraint _) ->
                             Npkcontext.report_error
                               "Firstpass: in Array access"
                               "constraint is RangeConstraint"
@@ -733,7 +732,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     let chk_exp = make_check_constraint new_constr exp in
 
                     let offset =  match new_constr
-                    with IntegerRangeConstraint(nat1, _) ->
+                    with A.IntegerRangeConstraint(nat1, _) ->
                       let borne_inf =   C.Const(C.CInt(nat1)) in
                       let decal =  C.Binop (Npk.MinusI,chk_exp, borne_inf) in
                         C.Binop (Newspeak.MultI, decal,  size_base)
@@ -752,9 +751,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let rec translate_if_exp (cond:Ast.expression) (exp_then:Ast.expression)
                            (exp_else:Ast.expression) expected_typ =
     match expected_typ with
-      | None | Some(Boolean) ->
+      | None | Some(A.Boolean) ->
           let loc = Npkcontext.get_loc () in
-          let (tmp, decl, vid) = temp#create loc Boolean in
+          let (tmp, decl, vid) = temp#create loc A.Boolean in
           let name = ident_to_name tmp in
           let instr_if = Ast.If (cond,
                              [(Ast.Assign(Lval name, exp_then),loc)],
@@ -765,8 +764,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           in
             remove_symb tmp;
             (C.Pref (decl::tr_instr_if,
-                     C.Lval (vid, translate_typ Boolean)),
-             Boolean)
+                     C.Lval (vid, translate_typ A.Boolean)),
+             A.Boolean)
       | Some(_) -> Npkcontext.report_error
           "Firstpass.translate_if_exp"
             "invalid operator and argument"
@@ -801,8 +800,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | Rem,  C.Scalar(Npk.Int   _)->C.Binop(Npk.Mod     , tr_e1, tr_e2),typ
 
       (* Comparisons *)
-      | Eq, C.Scalar t -> C.Binop (Npk.Eq t, tr_e1, tr_e2), Boolean
-      | Gt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e1, tr_e2), Boolean
+      | Eq, C.Scalar t -> C.Binop (Npk.Eq t, tr_e1, tr_e2), A.Boolean
+      | Gt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e1, tr_e2), A.Boolean
 
       | (Power | Mod | And | Or ) ,_ ->
           Npkcontext.report_error "Firstpass.translate_binop"
@@ -813,13 +812,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and translate_unop op (exp:Ast.expression) expected_typ =
     match (op, expected_typ) with
-      | (UPlus, Some(Float)) -> translate_exp exp expected_typ
+      | (UPlus, Some(A.Float)) -> translate_exp exp expected_typ
       | (UPlus, Some t) when (integer_class t) -> translate_exp exp expected_typ
 
       | (UPlus, None) ->
           let (tr_exp, typ) = translate_exp exp expected_typ in
             (match typ with
-              | Float -> (tr_exp, typ)
+              | A.Float -> (tr_exp, typ)
               | t when (integer_class t) -> (tr_exp, typ)
               | _ -> Npkcontext.report_error "Firstpass.translate_unop"
                   "Unexpected unary operator and argument")
@@ -828,7 +827,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           (* on doit determiner le type de l'operande *)
           let (_, typ) = translate_exp exp expected_typ in
             (match typ with
-               | Float ->
+               | A.Float ->
                    translate_binop Minus
                      (CFloat(0.,"0"),T.builtin_type "float") exp expected_typ
                | t when (integer_class t) ->
@@ -842,13 +841,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           translate_binop Minus (CInt(Nat.zero),T.universal_integer)
                           exp expected_typ
 
-      | (UMinus, Some(Float)) ->
+      | (UMinus, Some(A.Float)) ->
           translate_binop Minus (CFloat(0.,"0"),T.builtin_type "float")
                           exp expected_typ
 
-      | (Not, None) | (Not, Some(Boolean)) ->
-          let (exp, _) = translate_exp exp (Some(Boolean))
-          in (C.Unop (K.Not, exp), Boolean)
+      | (Not, None) | (Not, Some(A.Boolean)) ->
+          let (exp, _) = translate_exp exp (Some(A.Boolean))
+          in (C.Unop (K.Not, exp), A.Boolean)
 
       | (Abs, _) -> Npkcontext.report_error "Firstpass.translate_unop"
           "run-time abs is not implemented" (* on ignore abs *)
@@ -958,7 +957,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (** Translates a function call.  *)
   and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
                               (spec:sub_program_spec) (arg_list:argument list)
-                              (expected_typ:typ option) :C.exp*A.typ =
+                              (expected_typ:A.typ option) :C.exp*A.typ =
       let (params, ret_t) =
           match spec with
             | Function(_,params,subtyp) ->
@@ -1276,13 +1275,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and translate_exp (exp,_:Ast.expression) expected_typ = match exp with
     | CFloat (f,s) -> C.Const(C.CFloat(f,s)),
-                      check_typ expected_typ Float
+                      check_typ expected_typ A.Float
     | CInt i       -> translate_int i,
-                      check_typ expected_typ IntegerConst
+                      check_typ expected_typ A.IntegerConst
     | CChar c      -> translate_int (Nat.of_int c),
-                      check_typ expected_typ Character
+                      check_typ expected_typ A.Character
     | CBool b      -> translate_int (Ada_utils.nat_of_bool b),
-                      check_typ expected_typ Boolean
+                      check_typ expected_typ A.Boolean
     | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
@@ -1309,19 +1308,19 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   let rec destroy subt = (*du plus gros vers plus petit*)
                     let styp_fom_ind ind = let (a,_,_) = ind in a in
                     match subt with
-                        Unconstrained(Declared (_,Array(ConstrainedArray(
-                        sbtyp_ind, sbtypelt_ind, _)),_)) ->
-                          let sbtyp = styp_fom_ind sbtyp_ind in
-                          let sbtypelt = styp_fom_ind sbtypelt_ind in
-                          let deb = (sbtyp, sbtypelt) in
-                          let fin = destroy sbtypelt in
-                            deb::fin
-                      | _ -> []
+                    | A.Unconstrained(A.Declared (_,A.Array(A.ConstrainedArray(
+                      sbtyp_ind, sbtypelt_ind, _)),_)) ->
+                        let sbtyp = styp_fom_ind sbtyp_ind in
+                        let sbtypelt = styp_fom_ind sbtypelt_ind in
+                        let deb = (sbtyp, sbtypelt) in
+                        let fin = destroy sbtypelt in
+                          deb::fin
+                    | _ -> []
                   in
 
                   (*TO DO base_typ already exist use it if possible*)
                   let subtyp_to_typ sub = match sub with
-                      Constrained (z, _, _) ->  z
+                      A.Constrained (z, _, _) ->  z
                     | _ -> Npkcontext.report_error "firstpass.ml:Function Call"
                                           " for array range TO DO "
                   in
@@ -1444,8 +1443,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
            | Ast.Assign(lv,exp) ->
                (translate_affect lv exp loc)::(translate_block r)
            | Ast.If(condition,instr_then,instr_else) ->
-               let (tr_exp, typ) = translate_exp condition (Some Boolean) in
-                 if typ <> Boolean then begin
+               let (tr_exp, typ) = translate_exp condition (Some A.Boolean) in
+                 if typ <> A.Boolean then begin
                    Npkcontext.report_error "Firstpass.translate_block"
                                          "expected a boolean type for condition"
                  end;
@@ -1462,7 +1461,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
                    loc)::r)
            | Ast.Loop(For(iterator,a,b,is_reverse), body) ->
-                add_var loc (Constrained(Integer,
+                add_var loc (A.Constrained(A.Integer,
                                          Ada_config.integer_constraint,
                                          true))
                             iterator
@@ -1506,9 +1505,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                        in
                        let tr_param (param:Ast.param) ((exp,tp):Ast.expression)=
                          match param.mode with
-                           | In -> fst (translate_exp (exp,tp)
+                           | A.In -> fst (translate_exp (exp,tp)
                                           (Some(base_typ param.param_type)))
-                           | Out | InOut ->
+                           | A.Out | A.InOut ->
                                match exp with
                                  | Var(v) ->
                                      let vid, typ = translate_lv (Lval v)
@@ -1560,17 +1559,17 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and translate_param param =
     let typ_cir = match param.mode with
-      | In    -> translate_typ (base_typ param.param_type)
-      |   Out
-      | InOut -> C.Scalar(Npk.Ptr)
+      | A.In    -> translate_typ (base_typ param.param_type)
+      |   A.Out
+      | A.InOut -> C.Scalar(Npk.Ptr)
     in
         (fun _ -> typ_cir) param.formal_name
 
   and add_param loc param =
     let (deref,ro) = match param.mode with
-      | In    -> (false, true)
-      |   Out
-      | InOut -> (true, false)
+      | A.In    -> (false, true)
+      |   A.Out
+      | A.InOut -> (true, false)
     in
         add_var loc
                 param.param_type
@@ -1648,31 +1647,31 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and translate_enum_declaration idtyp typ_decl list_val_id loc global =
     List.iter
       (fun (x,id) -> add_enum loc x id
-         (Declared(idtyp, typ_decl, loc)) global)
+         (A.Declared(idtyp, typ_decl, loc)) global)
       list_val_id
 
   and translate_derived_typ_decl subtyp_ind loc global =
     match Ada_utils.extract_typ subtyp_ind with
-      | Declared(idtyp, (Enum(list_val_id, _) as typ_decl) ,_) ->
+      | A.Declared(idtyp, (A.Enum(list_val_id, _) as typ_decl) ,_) ->
           translate_enum_declaration idtyp typ_decl list_val_id loc global
       | _ -> ()
 
   and translate_typ_declaration idtyp typ_decl loc global =
     match typ_decl with
-      | Enum (list_val_id, _) ->
+      | A.Enum (list_val_id, _) ->
           translate_enum_declaration idtyp typ_decl list_val_id loc global
-      | DerivedType ref_subtyp_ind ->
+      | A.DerivedType ref_subtyp_ind ->
           translate_derived_typ_decl ref_subtyp_ind loc global
-      | IntegerRange _
-      | Array _ -> ()
+      | A.IntegerRange _
+      | A.Array _ -> ()
 
   (* declarations basiques locales *)
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl(idents, subtyp_ind, def, const) ->
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
         let read_only = match const with
-          | Variable -> false
-          | Constant | StaticVal(_) -> true in
+          | A.Variable -> false
+          | A.Constant | A.StaticVal _ -> true in
           List.fold_right
             (fun ident (list_decl, list_aff) ->
                add_var loc subtyp ident false read_only;
@@ -1730,7 +1729,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and remove_basic_declaration basic = match basic with
     | ObjectDecl(idents, _, _, _) -> List.iter remove_symb idents
-    | TypeDecl(_,Enum(idents,_))  -> List.iter (fun (x,_) -> remove_symb x)
+    | TypeDecl(_,A.Enum(idents,_))  -> List.iter (fun (x,_) -> remove_symb x)
                                                idents
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.remove_basic_declaration"
@@ -1793,8 +1792,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         let subtyp = Ada_utils.extract_subtyp subtyp_ind in
 
           let read_only = match const with
-            | Variable -> false
-            | Constant | StaticVal(_) -> true in
+            | A.Variable -> false
+            | A.Constant | A.StaticVal _ -> true in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init_t option =
             match (init, package#is_extern) with

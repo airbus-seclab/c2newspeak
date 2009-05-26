@@ -43,9 +43,9 @@ let compile(fname:string):Npkil.t =
       Sys.chdir dir_name
     end;
     Npkcontext.print_debug ("Parsing "^fname^"...");
-    let time_0 = Unix.gettimeofday () in
+    let t_0 = Unix.gettimeofday () in
     let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
-      let time_1 = Unix.gettimeofday () in
+      let t_1 = Unix.gettimeofday () in
       if (!Npkcontext.verb_ast) then begin
         print_endline "Abstract Syntax Tree";
         print_endline "----------------------";
@@ -56,18 +56,18 @@ let compile(fname:string):Npkil.t =
       Npkcontext.print_debug "Parsing done.";
       Npkcontext.print_debug "Running first pass...";
       let prog = Firstpass.translate ast in
-        let time_2 = Unix.gettimeofday () in
+        let t_2 = Unix.gettimeofday () in
         Npkcontext.forget_loc ();
         Npkcontext.print_debug "First pass done.";
         Npkcontext.print_debug ("Translating "^fname^"...");
         let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
-          let time_3 = Unix.gettimeofday () in
+          let t_3 = Unix.gettimeofday () in
           Npkcontext.print_debug
            ("   Time spent\n"
            ^"----------------\n"
-           ^"Lexing/Parsing : "^string_of_float (1000.0 *. (time_1-.time_0))^"\n"
-           ^"Translating    : "^string_of_float (1000.0 *. (time_2-.time_1))^"\n"
-           ^"Post-1st pass  : "^string_of_float (1000.0 *. (time_3-.time_2))^"\n");
+           ^"Lexing/Parsing : "^string_of_float (1000.0 *. (t_1-.t_0))^"\n"
+           ^"Translating    : "^string_of_float (1000.0 *. (t_2-.t_1))^"\n"
+           ^"Post-1st pass  : "^string_of_float (1000.0 *. (t_3-.t_2))^"\n");
           Npkcontext.forget_loc ();
           if dir_name <> "." then begin
             Npkcontext.print_debug ("Changing directory : "^current_dir);
