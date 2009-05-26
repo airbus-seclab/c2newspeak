@@ -1137,13 +1137,15 @@ in
     match instr with
     | NullInstr    -> None
     | ReturnSimple -> Some (Ast.ReturnSimple, loc)
-    | Assign(lv, exp) -> Some (Ast.Assign(normalize_lval lv, normalize_exp exp), loc)
+    | Assign(lv, exp) -> Some (Ast.Assign(normalize_lval lv,
+                                          normalize_exp exp), loc)
     | Return(exp) -> Some (Ast.Return(normalize_exp exp), loc)
     | If(exp, instr_then, instr_else) ->
         Some
         (Ast.If(normalize_exp exp, normalize_block instr_then,
             normalize_block instr_else), loc)
-    | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,normalize_block instrs),loc)
+    | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
+                                              normalize_block instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
@@ -1196,7 +1198,9 @@ in
               if not (find_body_for_spec ~specification:sp
                                           ~bodylist:(List.map fst ndp)) then
                    Npkcontext.report_error "normalize_decl_part"
-                   ("Declaration of \""^(name_of_spec sp)^"\" requires completion")
+                                           ("Declaration of \""
+                                           ^(name_of_spec sp)
+                                           ^"\" requires completion")
               end
       | _ -> ()
     ) ndp;

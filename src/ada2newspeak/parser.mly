@@ -198,7 +198,6 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location>        PROCEDURE
 %token                            QUOTE
 %token                            RANGE
-%token                            RECORD
 %token                            REM
 %token <Newspeak.location>        RETURN
 %token                            REVERSE
@@ -218,7 +217,7 @@ let make_range exp_b_inf exp_b_sup =
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
-%left       PLUS MINUS CONCAT   /*      binary adding operators */
+%left       PLUS MINUS          /*      binary adding operators */
 %nonassoc   UPLUS UMINUS        /*       unary adding operators */
 %left       MULT DIV MOD REM    /*        multiplying operators */
 %left       POW ABS NOT         /* highest precedence operators */
@@ -437,14 +436,6 @@ basic_declaration :
 
 contrainte :
 | expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
-;
-
-record_definition :
-| {[]}
-| ident_list COLON subtyp_indication SEMICOLON record_definition
-                                                            { ($1,$3,None)::$5 }
-| ident_list COLON subtyp_indication ASSIGN expression
-                        SEMICOLON record_definition {($1,$3,Some($5))::$7}
 ;
 
 constrained_array_definition :

@@ -39,7 +39,6 @@ module T   = Ada_types
 open Syntax_ada
 open Ast (* AST overrides Syntax_ada *)
 
-
 exception AmbiguousTypeException
 
 (**
@@ -185,11 +184,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and package = new Ada_utils.package_manager
   in
 
-  let find_symb (x:A.name) :qualified_symbol = Hashtbl.find symbtbl x
-
-  and find_all_symb (x:A.name) :qualified_symbol list = Hashtbl.find_all symbtbl x
-
-  and mem_symb (x:A.name) :bool = Hashtbl.mem symbtbl x in
+  let find_symb (x:A.name) = Hashtbl.find symbtbl x
+  and find_all_symb (x:A.name) = Hashtbl.find_all symbtbl x
+  and mem_symb (x:A.name) :bool = Hashtbl.mem symbtbl x
+  in
 
   let find_all_use ident =
     List.flatten
@@ -1902,8 +1900,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
     (* corps de la fonction translate *)
 
- (* Npkcontext.print_debug
-    (Print_syntax_ada.ast_to_string [compil_unit]); *)
   let normalized_compil_unit =  Normalize.normalization compil_unit false
   in
   let (ctx,lib_item,loc) = normalized_compil_unit
