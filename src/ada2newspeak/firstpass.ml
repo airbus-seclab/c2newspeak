@@ -149,8 +149,8 @@ and translate_declared (typ_decl:A.typ_declaration) :C.typ = match typ_decl with
 | A.IntegerRange(_,None) -> Npkcontext.report_error
     "Firstpass.translate_declared"
       "internal error : no bounds provided for IntegerRange"
-| A.Array(A.ConstrainedArray(_, subtyp_ind, taille)) ->
-    C.Array(translate_typ (Ada_utils.extract_typ subtyp_ind), taille)
+| A.Array a -> C.Array(translate_typ (Ada_utils.extract_typ a.A.array_component)
+                      ,a.A.array_size)
 
 (**
  * Translate a [Syntax_ada.subtyp].
@@ -685,9 +685,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             let (v, subtyp_lv) = translate_lv lval write trans_exp in
               match  subtyp_lv
               with
-                  A.Unconstrained(A.Declared(_, A.Array(
-                    A.ConstrainedArray(( stypindex, contraint,_ ),
-                                     ( stypelt,_,_),  _)), _)) ->
+                  A.Unconstrained(A.Declared(_, A.Array a, _)) ->
+                    let (stypindex, contraint,_,_ ) = a.A.array_index     in
+                    let (stypelt,_,_,_)             = a.A.array_component in
                     let size_base =  C.exp_of_int (C.size_of_typ (
                                 (translate_typ (base_typ stypelt)))) in
                     let (exp,_) = trans_exp expr (Some(base_typ stypindex)) in
@@ -1304,13 +1304,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   let arg_list = List.map snd arg_list in
 
                   let rec destroy subt = (*du plus gros vers plus petit*)
-                    let styp_fom_ind ind = let (a,_,_) = ind in a in
+                    let styp_fom_ind (a,_,_,_) = a in
                     match subt with
-                    | A.Unconstrained(A.Declared (_,A.Array(A.ConstrainedArray(
-                      sbtyp_ind, sbtypelt_ind, _)),_)) ->
-                        let sbtyp = styp_fom_ind sbtyp_ind in
-                        let sbtypelt = styp_fom_ind sbtypelt_ind in
-                        let deb = (sbtyp, sbtypelt) in
+                    | A.Unconstrained(A.Declared (_,A.Array a,_)) ->
+                        let sbtypidx = styp_fom_ind a.A.array_index     in
+                        let sbtypelt = styp_fom_ind a.A.array_component in
+                        let deb = (sbtypidx, sbtypelt) in
                         let fin = destroy sbtypelt in
                           deb::fin
                     | _ -> []
@@ -1325,9 +1324,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
                   (* TODO WG ! ajouter le belongs ! *)
                   let rec rebuild lv subt arg_list  =
-                    let lgth  = List.length arg_list in
                     let  last_exp = List.hd arg_list in
-                    let (subt_range, tpelt) = List.nth subt (lgth - 1) in
+                    let (subt_range, tpelt) = List_utils.last subt in
                       (* ! ajouter le belongs ! *)
 
                     let chk_exp = make_check_subtyp subt_range last_exp
@@ -1336,31 +1334,27 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                       C.size_of_typ ((translate_typ (base_typ tpelt)))) in
 
                     let offset = make_offset subt_range chk_exp sz in
-
-                      if (compare lgth 1 = 0) then
-
-                        let adatyp = subtyp_to_typ tpelt in
-
-                          ( C.Lval (C.Shift (lv, offset),
-                                    (  translate_typ adatyp )
-                                   ),
-                            adatyp
-                          )
-                      else
-                        let sh_lv = C.Shift (lv, chk_exp) in
-                          rebuild sh_lv subt (List.tl arg_list)
+                      match arg_list with
+                        | [_] -> let adatyp = subtyp_to_typ tpelt in
+                                   ( C.Lval (C.Shift (lv, offset),
+                                             (  translate_typ adatyp )
+                                            ),
+                                     adatyp
+                                   )
+                       | _::tl -> rebuild (C.Shift (lv, chk_exp)) subt tl
+                       | [] -> invalid_arg "offset"
                   in
 
                   let bk_typ = destroy subtyp in
 
                   let dim = List.length arg_list in
 
-                    if (compare (List.length bk_typ) dim < 0)
+                    if (List.length bk_typ < dim)
                     then Npkcontext.report_error "firstpass.ml:Function Call"
                       "more elts than dimensions";
 
-                    if (compare 0 dim = 0)
-                    then Npkcontext.report_error "firstpass.ml:Function Call"
+                    if (dim = 0) then
+                      Npkcontext.report_error "firstpass.ml:Function Call"
                       "no element for shifting";
 
                     let types = List.map (

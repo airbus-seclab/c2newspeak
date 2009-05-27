@@ -108,12 +108,11 @@ and typ_declaration_to_string typ_decl = match typ_decl with
   | Array(array_def) ->
       "Array("^(array_definition_to_string array_def)^")"
 
-and array_definition_to_string array = match array with
-  | ConstrainedArray(range, subtyp, taille) ->
-      "ConstrainedArray("
-      ^(subtyp_indication_to_string range)
-      ^", "^(subtyp_indication_to_string subtyp)
-      ^", "^(option_to_string taille string_of_int)^")"
+and array_definition_to_string ar = 
+         "index = " ^(subtyp_indication_to_string ar.array_index)
+      ^", component = "^(subtyp_indication_to_string ar.array_component)
+      ^", size = "^(option_to_string ar.array_size string_of_int)
+      ^")"
 
 
 and exp_to_string exp = match exp with
@@ -150,7 +149,7 @@ and subtyp_to_string subtyp = match subtyp with
       ^(contrainte_to_string contrainte)^", "
       ^(string_of_bool static)^")"
 
-and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp) =
+and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp, _adatype) =
   "("^(subtyp_to_string subtyp_ref)^", "
   ^(option_to_string contrainte contrainte_to_string)^", "
   ^(option_to_string subtyp subtyp_to_string)^")"

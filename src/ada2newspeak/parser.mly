@@ -70,26 +70,28 @@ let build_matrix l typ_ind loc =
       | hd::tl ->
           let recu =  crafted tl typ_elt in
           let new_ind = Unconstrained(Declared("no_name"
-                                              ,Array(ConstrainedArray(hd
-                                                                     ,recu
-                                                                     ,None
-                                                                     )
+                                                    ,Array({array_index = hd;
+                                                            array_component = recu;
+                                                            array_size = None;
+                                                           }
                                                     )
                                               ,loc
                                               )
                                      )
           in
-            ( new_ind, None, None (*Some (new_ind)*) )
+            ( new_ind, None, None, Ada_types.universal_integer (* noo *)  )
   in
     match l with
         [] -> Npkcontext.report_error "Parser.build_matrix"
           ("in build matrix, no subtyp given ")
-      | hd::[] -> ConstrainedArray(hd, typ_ind, None)
-      | hd::tl ->
-          ConstrainedArray(hd
-                          ,crafted tl typ_ind
-                          ,None
-                          )
+      | hd::[] -> {array_index     = hd;
+                   array_component = typ_ind;
+                   array_size      = None;
+                  }
+      | hd::tl -> {array_index     = hd;
+                   array_component = crafted tl typ_ind;
+                   array_size      = None;
+                  }
 
 (**
   * Prepare a list of exp*block for the Case constructor.
@@ -440,7 +442,7 @@ contrainte :
 
 constrained_array_definition :
 | LPAR matrix_indication RPAR OF subtyp_indication
-                                            {build_matrix (List.rev $2) $5 $1}
+                                            {build_matrix $2 $5 $1}
 ;
 
 matrix_indication :
@@ -585,11 +587,12 @@ expression :
 ;
 
 subtyp_indication :
-| subtyp RANGE contrainte {($1, Some($3), None)}
-| subtyp {($1, None, None)}
-/*| simple_expr DOUBLE_DOT simple_expr */
+| subtyp RANGE contrainte {$1, Some($3), None, Ada_types.universal_integer
+                                                (* no : st + add some dynamic
+                                                 * contraint*) }
+| subtyp {$1, None, None, Ada_types.universal_integer (* st *)}
 | CONST_INT DOUBLE_DOT CONST_INT
-    {(Constrained(Integer
+    {Constrained(Integer
                  ,Ada_config.integer_constraint
                  ,true
                  )
@@ -598,7 +601,7 @@ subtyp_indication :
                           )
           )
      ,None
-     )
+     ,Ada_types.new_range (Ada_types.(@...) $1 $3)
     }
 
 subtyp :

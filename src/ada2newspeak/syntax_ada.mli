@@ -104,8 +104,10 @@ and typ_declaration =
 
 (** Array type definition *)
 and array_type_definition =
-  | ConstrainedArray of subtyp_indication*subtyp_indication*int option
-    (** Constrained array : discrete interval, type of elements, array size *)
+  { array_index     : subtyp_indication;
+    array_component : subtyp_indication;
+    array_size      : int option;
+  }
 
 (** Subtype definition. *)
 and subtyp =
@@ -151,6 +153,7 @@ and contrainte =
 and subtyp_indication = subtyp
                       * contrainte option
                       * subtyp     option
+                      * Ada_types.t
 
 (** Left-value *)
 and lval =
