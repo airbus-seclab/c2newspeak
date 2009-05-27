@@ -848,7 +848,7 @@ in
             (* base type cases : we still have a derived type *)
           | Integer | Float | Boolean
           | Character -> DerivedType(norm_subtyp_ind)
-          | (String|IntegerConst) ->
+          | IntegerConst ->
               Npkcontext.report_error
                 "Ada_normalize.normalize_typ_decl"
                 "internal error : incorrect type"

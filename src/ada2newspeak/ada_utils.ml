@@ -215,8 +215,7 @@ let eq_base_typ subtyp1 subtyp2 =
 let rec integer_class typ = match typ with
   | Float
   | Boolean
-  | Character
-  | String       -> false
+  | Character -> false
   | Integer
   | IntegerConst -> true
   | Declared(_,typdef,_) ->

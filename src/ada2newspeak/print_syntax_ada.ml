@@ -87,7 +87,6 @@ let rec typ_to_string typ = match typ with
   | Float        -> "Float"
   | Boolean      -> "Boolean"
   | Character    -> "Character"
-  | String       -> "String"
   | Declared(id,typ_decl,loc) -> "Declared("
       ^id^","
       ^(typ_declaration_to_string typ_decl)^","

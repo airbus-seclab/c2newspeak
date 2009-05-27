@@ -91,7 +91,6 @@ type typ =
   | Float                                           (** Floating-point number *)
   | Boolean                                         (** Boolean               *)
   | Character                                       (** Character             *)
-  | String                                          (** String                *)
   | Declared of string*typ_declaration*location (** User-defined type     *)
 
 (** Type declaration. *)

@@ -136,8 +136,6 @@ let rec translate_typ (typ:A.typ) :C.typ = match typ with
 | A.IntegerConst -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
 | A.Boolean      -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
 | A.Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
-| A.String -> Npkcontext.report_error "Firstpass.translate_typ"
-    "String not implemented"
 | A.Declared(_,typ_decl, _) -> translate_declared typ_decl
 
 (**
