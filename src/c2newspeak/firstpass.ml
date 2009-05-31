@@ -48,6 +48,7 @@ type symb =
   | GlobalSymb of string 
   | LocalSymb of C.lv 
   | EnumSymb of C.exp
+  | CompSymb of ((string * (int * typ)) list * int * int)
 
 (* functions *)
 let find_field f r =
@@ -72,8 +73,6 @@ let seq_of_string str =
     done;
     !res
 
-(* TODO: merge compdefs and symbtbl tbls??? *)
-
 (*
    Sets scope of variables so that no goto escapes a variable declaration
    block
@@ -82,7 +81,9 @@ let translate (globals, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
-  let compdefs = Symbtbl.create () in
+(* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
+   but first needs to put the whole typing phase before firstpass
+*)
   let symbtbl = Symbtbl.create () in
 (* TODO: used_globals and one pass could be removed, if cir had a structure
    type with only the name and a hashtbl of structure names to type!!!, 
@@ -101,7 +102,11 @@ let translate (globals, spec) =
   let lbl_cnt = ref default_lbl in
 
   let find_compdef name =
-    try Symbtbl.find compdefs name
+    try 
+      let (c, _) = Symbtbl.find symbtbl name in
+	match c with
+	    CompSymb c -> c
+	  | _ -> raise Not_found
     with Not_found ->
       Npkcontext.report_error "Firstpass.find_compdef" 
 	("unknown structure or union "^name)
@@ -792,7 +797,8 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-      Symbtbl.bind compdefs name (f, sz, !last_align)
+    let data = (CompSymb (f, sz, !last_align), Comp (name, true)) in
+      Symbtbl.bind symbtbl name data
 
   and process_union_fields name f =
     let n = ref 0 in
@@ -806,7 +812,8 @@ let translate (globals, spec) =
 	(x, (0, t))
     in
     let f = List.map translate f in
-      Symbtbl.bind compdefs name (f, !n, !align)
+    let data = (CompSymb (f, !n, !align), Comp (name, false)) in
+      Symbtbl.bind symbtbl name data
 
   and translate_scalar_typ t =
     match t with
@@ -887,10 +894,8 @@ let translate (globals, spec) =
 
   and translate_blk x =
     Symbtbl.save symbtbl;
-    Symbtbl.save compdefs;
     let (body, _) = translate_blk_aux false x in
       Symbtbl.restore symbtbl;
-      Symbtbl.restore compdefs;
       body
 
   and translate_blk_exp x =
