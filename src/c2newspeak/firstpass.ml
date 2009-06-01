@@ -906,26 +906,38 @@ let translate (globals, spec) =
 	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
 	      "expression expected"
 
-  and translate_local_decl loc x d =
+  and translate_decl loc x d =
     match d with
-	EDecl e -> 
-	  add_enum (x, e);
-	  []
-      | CDecl d -> 
-	  add_compdecl (x, d);
-	  []
-      | VDecl (Fun ft, static, _, _) -> 
+	EDecl e -> add_enum (x, e)
+      | CDecl d -> add_compdecl (x, d)
+      | VDecl (_, _, extern, Some _) when extern -> 
+	  (* TODO: make a test for this case in local *)
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    "extern globals can not be initizalized"
+      | VDecl (_, static, extern, _) when static && extern -> 
+	  (* TODO: make a test for this case in local *)
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("static variable can not be extern")
+      | VDecl (Fun ft, static, _, None) -> translate_proto_ftyp x static ft loc
+      | VDecl (Fun _, _, _, Some _) -> 
+	  (* TODO: make a test for this case in local *)
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("unexpected initialization of function "^x)
+      | _ -> ()
+
+  and translate_local_decl loc x d =
+    translate_decl loc x d;
+    match d with
+	EDecl _ | CDecl _ -> []
+      | VDecl (Fun _, _, _, _) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate" 
 	    "function declaration within block" Npkcontext.DirtySyntax;
-	    translate_proto_ftyp x static ft loc;
-	    []
-      | VDecl (t, static, _, init) when static -> 
-	  declare_global true false x loc t init;
 	  []
-      | VDecl (t, _, extern, _) when extern -> 
-	  declare_global false true x loc t None;
+      | VDecl (t, static, extern, init) when static || extern -> 
+	  declare_global static extern x loc t init;
 	  []
-      | VDecl (t, _, _, init) -> 
+      | VDecl (t, _, _, init) ->
+(* TODO: see if more can be factored with translate_global_decl *) 
 	  add_var (t, x);
 	  let (init, t) = 
 	    match init with
@@ -1334,33 +1346,21 @@ let translate (globals, spec) =
     
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
+(* TODO: should be done in csyntax2CoreC *)
   let collect_glbtyps (x, loc) =
     Npkcontext.set_loc loc;
     match x with
-	FunctionDef (f, (args_t, ret_t), static, _) ->
-	  let args_t = 
-	    match args_t with
-		None -> []
-	      | Some args_t -> args_t
-	  in
-	    update_funsymb f static (Some args_t, ret_t) loc
+	FunctionDef (f, ft, static, _) -> update_funsymb f static ft loc
 
-      | GlbDecl (x, CDecl d) -> add_compdecl (x, d)
-      | GlbDecl (x, EDecl e) -> add_enum (x, e)
-
-      | GlbDecl (_, VDecl (_, _, extern, Some _)) when extern -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    "extern globals can not be initizalized"
- 
-      | GlbDecl (f, VDecl (Fun ft, static, _, None)) -> 
-	  translate_proto_ftyp f static ft loc
-
-      | GlbDecl (f, VDecl (Fun _, _, _, Some _)) -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    ("unexpected initialization of function "^f)
-
-      | GlbDecl (x, VDecl (t, static, extern, init)) ->
-	  declare_global static extern x loc t init
+      | GlbDecl (x, d) -> 
+	  translate_decl loc x d;
+	  (* TODO: check if this could not be incorporated in translate_decl!!!
+	  *)
+	  match d with
+	      VDecl (Fun _, _, _, _) -> ()
+	    | VDecl (t, static, extern, init) -> 
+		declare_global static extern x loc t init
+	    | _ -> ()
   in
 
   let add_glbdecl name (t, loc, init) =

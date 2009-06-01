@@ -26,7 +26,33 @@
 open Csyntax
 module C = CoreC
 
+(* TODO: not minimal, think about it *)
+type symb =
+  | GlobalSymb of string 
+  | LocalSymb of C.exp 
+  | EnumSymb of C.exp
+  | CompSymb of ((string * (int * typ)) list * int * int)
+
 let process (globals, specs) =
+  (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
+     but first needs to put the whole typing phase before firstpass
+  *)
+  let symbtbl = Symbtbl.create () in
+
+  let update_funtyp f ft1 =
+    let (symb, t) = Symbtbl.find symbtbl f in
+    let ft2 = CoreC.ftyp_of_typ t in
+    let ft = CoreC.min_ftyp ft1 ft2 in
+      Symbtbl.update symbtbl f (symb, C.Fun ft)
+  in
+
+  let update_funsymb f static ft loc =
+    let (fname, _, _) = loc in
+    let f' = if static then "!"^fname^"."^f else f in
+      try update_funtyp f ft
+      with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', C.Fun ft)
+  in
+
   let translate_unop x = 
     match x with
 	Neg -> C.Neg
@@ -203,12 +229,21 @@ let process (globals, specs) =
   in
 
   let translate_global (x, loc) = 
+    Npkcontext.set_loc loc;
     let x = 
       match x with
-	  FunctionDef (f, ft, static, body) -> 
+	  FunctionDef (f, (args_t, ret_t), static, body) -> 
+	    let args_t = 
+	      match args_t with
+		  None -> []
+		| Some args_t -> args_t
+	    in
+	    let ft = (Some args_t, ret_t) in
 	    let ft = translate_ftyp ft in
 	    let body = translate_blk body in
+	      update_funsymb f static ft loc;
 	      C.FunctionDef (f, ft, static, body)
+
 	| GlbDecl (x, d) -> 
 	    let d = translate_decl d in
 	      C.GlbDecl (x, d)
