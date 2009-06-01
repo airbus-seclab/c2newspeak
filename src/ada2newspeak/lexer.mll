@@ -124,16 +124,17 @@
     | "others"     -> OTHERS      | "out"        -> OUT
     | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA
     | "procedure"  -> PROCEDURE l | "range"      -> RANGE
-    | "record"     -> RECORD      | "rem"        -> REM
-    | "return"     -> RETURN    l | "reverse"    -> REVERSE
-    | "subtype"    -> SUBTYPE   l | "then"       -> THEN
-    | "type"       -> TYPE      l | "use"        -> USE      l
-    | "when"       -> WHEN        | "while"      -> WHILE    l
-    | "with"       -> WITH      l | "xor"        -> XOR
+    | "rem"        -> REM         | "return"     -> RETURN   l
+    | "reverse"    -> REVERSE     | "subtype"    -> SUBTYPE  l
+    | "then"       -> THEN        | "type"       -> TYPE     l
+    | "use"        -> USE       l | "when"       -> WHEN
+    | "while"      -> WHILE     l | "with"       -> WITH     l
+    | "xor"        -> XOR
 
     | "true"       -> TRUE        | "false"      -> FALSE
 
     |_             -> IDENT (String.lowercase w,l)
+
 (* Unrecognized tokens *)
 
     (* Task-related *)

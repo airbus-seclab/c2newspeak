@@ -91,7 +91,6 @@ type typ =
   | Float                                           (** Floating-point number *)
   | Boolean                                         (** Boolean               *)
   | Character                                       (** Character             *)
-  | String                                          (** String                *)
   | Declared of string*typ_declaration*location (** User-defined type     *)
 
 (** Type declaration. *)
@@ -102,18 +101,13 @@ and typ_declaration =
   | IntegerRange of contrainte
                   * Newspeak.ikind option
   | Array  of array_type_definition
-  | Record of field list
-
-(** A record field. *)
-and field = string list
-          * subtyp_indication
-          * expression option
-    (* TODO + object_state ? *)
 
 (** Array type definition *)
 and array_type_definition =
-  | ConstrainedArray of subtyp_indication*subtyp_indication*int option
-    (** Constrained array : discrete interval, type of elements, array size *)
+  { array_index     : subtyp_indication;
+    array_component : subtyp_indication;
+    array_size      : int option;
+  }
 
 (** Subtype definition. *)
 and subtyp =
@@ -159,6 +153,7 @@ and contrainte =
 and subtyp_indication = subtyp
                       * contrainte option
                       * subtyp     option
+                      * Ada_types.t
 
 (** Left-value *)
 and lval =

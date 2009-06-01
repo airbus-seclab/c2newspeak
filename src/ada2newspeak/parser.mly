@@ -70,26 +70,28 @@ let build_matrix l typ_ind loc =
       | hd::tl ->
           let recu =  crafted tl typ_elt in
           let new_ind = Unconstrained(Declared("no_name"
-                                              ,Array(ConstrainedArray(hd
-                                                                     ,recu
-                                                                     ,None
-                                                                     )
+                                                    ,Array({array_index = hd;
+                                                            array_component = recu;
+                                                            array_size = None;
+                                                           }
                                                     )
                                               ,loc
                                               )
                                      )
           in
-            ( new_ind, None, None (*Some (new_ind)*) )
+            ( new_ind, None, None, Ada_types.universal_integer (* noo *)  )
   in
     match l with
         [] -> Npkcontext.report_error "Parser.build_matrix"
           ("in build matrix, no subtyp given ")
-      | hd::[] -> ConstrainedArray(hd, typ_ind, None)
-      | hd::tl ->
-          ConstrainedArray(hd
-                          ,crafted tl typ_ind
-                          ,None
-                          )
+      | hd::[] -> {array_index     = hd;
+                   array_component = typ_ind;
+                   array_size      = None;
+                  }
+      | hd::tl -> {array_index     = hd;
+                   array_component = crafted tl typ_ind;
+                   array_size      = None;
+                  }
 
 (**
   * Prepare a list of exp*block for the Case constructor.
@@ -198,7 +200,6 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location>        PROCEDURE
 %token                            QUOTE
 %token                            RANGE
-%token                            RECORD
 %token                            REM
 %token <Newspeak.location>        RETURN
 %token                            REVERSE
@@ -218,7 +219,7 @@ let make_range exp_b_inf exp_b_sup =
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
-%left       PLUS MINUS CONCAT   /*      binary adding operators */
+%left       PLUS MINUS          /*      binary adding operators */
 %nonassoc   UPLUS UMINUS        /*       unary adding operators */
 %left       MULT DIV MOD REM    /*        multiplying operators */
 %left       POW ABS NOT         /* highest precedence operators */
@@ -250,7 +251,6 @@ let make_range exp_b_inf exp_b_sup =
 %type <string * expression> array_component_association
 %type <subtyp_indication list> matrix_indication
 %type <array_type_definition> constrained_array_definition
-%type <field list> record_definition
 %type <contrainte> contrainte
 %type <basic_declaration*location> basic_declaration
 %type <(basic_declaration*location) list> basic_declarative_part
@@ -430,8 +430,6 @@ basic_declaration :
         {TypeDecl($2,DerivedType $5),$1}
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
             { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
-| TYPE ident IS RECORD record_definition END RECORD SEMICOLON
-                { TypeDecl($2,Record $5),$1 }
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
@@ -442,17 +440,9 @@ contrainte :
 | expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
 ;
 
-record_definition :
-| {[]}
-| ident_list COLON subtyp_indication SEMICOLON record_definition
-                                                            { ($1,$3,None)::$5 }
-| ident_list COLON subtyp_indication ASSIGN expression
-                        SEMICOLON record_definition {($1,$3,Some($5))::$7}
-;
-
 constrained_array_definition :
 | LPAR matrix_indication RPAR OF subtyp_indication
-                                            {build_matrix (List.rev $2) $5 $1}
+                                            {build_matrix $2 $5 $1}
 ;
 
 matrix_indication :
@@ -597,11 +587,12 @@ expression :
 ;
 
 subtyp_indication :
-| subtyp RANGE contrainte {($1, Some($3), None)}
-| subtyp {($1, None, None)}
-/*| simple_expr DOUBLE_DOT simple_expr */
+| subtyp RANGE contrainte {$1, Some($3), None, Ada_types.universal_integer
+                                                (* no : st + add some dynamic
+                                                 * contraint*) }
+| subtyp {$1, None, None, Ada_types.universal_integer (* st *)}
 | CONST_INT DOUBLE_DOT CONST_INT
-    {(Constrained(Integer
+    {Constrained(Integer
                  ,Ada_config.integer_constraint
                  ,true
                  )
@@ -610,7 +601,7 @@ subtyp_indication :
                           )
           )
      ,None
-     )
+     ,Ada_types.new_range (Ada_types.(@...) $1 $3)
     }
 
 subtyp :

@@ -37,7 +37,13 @@ endif
 CP=cp
 RM=rm -rf
 OCAMLC=ocamlc -w Ael -warn-error Ael
-OCAMLOPT=ocamlopt $(OCAMLOPTFLAGS)
+
+OCAMLOPTCOMP=$(shell if ocamlopt.opt -v >/dev/null 2>&1; \
+										 then echo ocamlopt.opt ; \
+										 else echo ocamlopt ; \
+										 fi)
+
+OCAMLOPT=$(OCAMLOPTCOMP) $(OCAMLOPTFLAGS)
 OCAMLDEP=ocamldep
 OCAMLDOC=ocamldoc
 OCAMLLEX=ocamllex

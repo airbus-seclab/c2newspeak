@@ -198,7 +198,7 @@ let base_typ subtyp = match subtyp with
       Npkcontext.report_error "Ada_utils.base_type"
         "internal error : unexpected subtyp name"
 
-let extract_subtyp (_, _, subtyp) =
+let extract_subtyp (_, _, subtyp,_) =
   match subtyp with
   | None ->
       Npkcontext.report_error
@@ -215,18 +215,16 @@ let eq_base_typ subtyp1 subtyp2 =
 let rec integer_class typ = match typ with
   | Float
   | Boolean
-  | Character
-  | String       -> false
+  | Character -> false
   | Integer
   | IntegerConst -> true
   | Declared(_,typdef,_) ->
       (match typdef with
          | Enum _
-         | Array _
-         | Record _ -> false
+         | Array _ -> false
          | IntegerRange _ -> true
-         | DerivedType(_,_,Some(subtyp)) -> integer_class (base_typ subtyp)
-         | DerivedType(_,_,None) -> Npkcontext.report_error
+         | DerivedType(_,_,Some(subtyp),_) -> integer_class (base_typ subtyp)
+         | DerivedType(_,_,None,_) -> Npkcontext.report_error
                                "Ada_utils.integer_class"
                                "internal error : no subtype provided"
       )

@@ -87,7 +87,6 @@ let rec typ_to_string typ = match typ with
   | Float        -> "Float"
   | Boolean      -> "Boolean"
   | Character    -> "Character"
-  | String       -> "String"
   | Declared(id,typ_decl,loc) -> "Declared("
       ^id^","
       ^(typ_declaration_to_string typ_decl)^","
@@ -108,18 +107,12 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^", "^(option_to_string taille ikind_to_string)^")"
   | Array(array_def) ->
       "Array("^(array_definition_to_string array_def)^")"
-  | Record (_) -> (*record_type_def) -> *)
-      "Record("
-      ^(" --- TO DO --------")^")"
 
-
-
-and array_definition_to_string array = match array with
-  | ConstrainedArray(range, subtyp, taille) ->
-      "ConstrainedArray("
-      ^(subtyp_indication_to_string range)
-      ^", "^(subtyp_indication_to_string subtyp)
-      ^", "^(option_to_string taille string_of_int)^")"
+and array_definition_to_string ar = 
+         "index = " ^(subtyp_indication_to_string ar.array_index)
+      ^", component = "^(subtyp_indication_to_string ar.array_component)
+      ^", size = "^(option_to_string ar.array_size string_of_int)
+      ^")"
 
 
 and exp_to_string exp = match exp with
@@ -156,7 +149,7 @@ and subtyp_to_string subtyp = match subtyp with
       ^(contrainte_to_string contrainte)^", "
       ^(string_of_bool static)^")"
 
-and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp) =
+and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp, _adatype) =
   "("^(subtyp_to_string subtyp_ref)^", "
   ^(option_to_string contrainte contrainte_to_string)^", "
   ^(option_to_string subtyp subtyp_to_string)^")"
@@ -359,14 +352,7 @@ let compil_unit_to_string (context,lib_item,loc) =
   ^",\n\n"^(library_item_to_string lib_item)
   ^",\n\n"^(line_of_loc loc)^")\n"
 
-
-
-
-(* changer avec print_list *)
-let rec ast_to_string programme = match programme with
-  | compil_unit::r -> (compil_unit_to_string compil_unit)^
-      (ast_to_string r)
-  | [] -> ""
-
+let rec ast_to_string programme =
+  list_to_string programme compil_unit_to_string "" false
 
 let print_ast programme = print_string (ast_to_string programme)
