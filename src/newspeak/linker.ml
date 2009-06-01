@@ -296,7 +296,7 @@ let merge npkos =
 	    List.iter check_merge tl;
 	    (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !specs)
 
-let link npkos mem_zones =
+let link npkos =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
@@ -317,7 +317,6 @@ let link npkos mem_zones =
       H.specs = specs;
       H.ptr_sz = Config.size_of_ptr;
       H.src_lang = src_lang;
-      H.mem_zones = mem_zones
     } 
     in
       

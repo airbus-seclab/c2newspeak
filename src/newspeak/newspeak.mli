@@ -98,7 +98,6 @@ type t = {
   specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
-  mem_zones: mem_zones;
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -110,8 +109,6 @@ and gdecl = typ * init_t * location
 and fundec = ftyp * blk
 
 and specs = assertion list
-
-and mem_zones = (Nat.t * size_t) list
 
 and assertion = spec_token list
 

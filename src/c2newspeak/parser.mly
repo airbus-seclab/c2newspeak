@@ -208,9 +208,6 @@ let rec normalize_bexp e =
 %type <string list * Csyntax.t> parse
 %start parse
 
-%type <(Csyntax.exp * Csyntax.exp) list> config
-%start config
-
 %type <Csyntax.assertion> assertion
 %start assertion
 
@@ -1027,20 +1024,6 @@ attribute_name:
 integer_list:
   INTEGER                                  { $1::[] }
 | INTEGER COMMA integer_list               { $1::$3 }
-;;
-
-// config file
-config:
-  memory_region_list EOF                   { $1 }
-;;
-
-memory_region_list:
-  memory_region config                     { $1::$2 }
-|                                          { [] }
-;;
-
-memory_region:
-  expression COLON expression              { ($1, $3) }
 ;;
 
 /* Newspeak assertion language */

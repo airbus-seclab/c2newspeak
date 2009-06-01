@@ -100,27 +100,3 @@ let eval_exp x =
 	Npkcontext.report_error "Compiler.compile_config" 
 	  "constant address expected"
   
-let compile_config fname =
-  let cin = open_in fname in
-  let lexbuf = Lexing.from_channel cin in    
-    Lexer.init fname lexbuf;
-    try 
-(* TODO: use another function than Lexer.token here, the ref [] is not useful
-*)
-      let mem_zones = Parser.config Lexer.token lexbuf in
-      let translate (addr, sz) =
-	let addr = eval_exp addr in
-	let sz = Nat.mul (eval_exp sz) (Nat.of_int 8) in
-	let sz = 
-	  try Nat.to_int sz
-	  with _ -> 
-	    Npkcontext.report_error "Compiler.config" 
-	      "size of memory zone too large"
-	in
-	  (addr, sz)
-      in
-	List.map translate mem_zones
-    with Parsing.Parse_error -> 
-      let loc = "Compiler.compile_config" in
-      let lexeme = Lexing.lexeme lexbuf in
-	Npkcontext.report_error loc ("syntax error: unexpected token: "^lexeme)

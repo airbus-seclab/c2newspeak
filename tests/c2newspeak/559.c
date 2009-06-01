@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
+/*!npk 0x1000: 4 */
+
 void main(void){
   int *ptr;
   int x;

@@ -101,7 +101,6 @@ type t = {
   specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
-  mem_zones: mem_zones
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -113,8 +112,6 @@ and gdecl = typ * init_t * location
 and fundec = ftyp * blk
 
 and specs = assertion list
-
-and mem_zones = (Nat.t * size_t) list
 
 and assertion = spec_token list
 
@@ -593,15 +590,6 @@ let dump_globals gdecls =
       gdecls;
     String_map.iter dump_gdecl !glbs
       
-let string_of_mem_zone (addr, sz) = 
-  (Nat.to_string addr)^": "^(string_of_int (sz/8))
-
-let dump_mem_zones zones =
-  if zones <> [] then begin
-    print_endline "memory zones:";
-    List.iter (fun x -> print_endline (string_of_mem_zone x)) zones
-  end
-
 (* Exported print functions *)
 let dump prog =
   List.iter (fun x -> print_endline x) prog.fnames;
@@ -615,8 +603,7 @@ let dump prog =
     Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals prog.globals;
-    List.iter print_endline specs;
-    dump_mem_zones prog.mem_zones
+    List.iter print_endline specs
 
 let string_of_blk x = string_of_blk 0 x
 

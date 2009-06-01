@@ -24,5 +24,3 @@
 *)
 
 val compile: string -> Npkil.t
-
-val compile_config: string -> Newspeak.mem_zones

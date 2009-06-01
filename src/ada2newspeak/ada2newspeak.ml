@@ -106,7 +106,7 @@ let _ =
 
         | files ->
             let nos = List.map extract_no files in
-              if not !Npkcontext.compile_only then Linker.link nos []
+              if not !Npkcontext.compile_only then Linker.link nos
 
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
 
