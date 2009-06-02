@@ -901,15 +901,12 @@ let translate (globals, spec) =
 	EDecl e -> add_enum (x, e)
       | CDecl d -> add_compdecl (x, d)
       | VDecl (_, _, extern, Some _) when extern -> 
-	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
       | VDecl (_, static, extern, _) when static && extern -> 
-	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
       | VDecl (Fun _, _, _, Some _) -> 
-	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
       | VDecl (Fun ft, static, _, None) -> update_funsymb x static ft loc
