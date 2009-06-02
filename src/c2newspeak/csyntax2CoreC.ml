@@ -24,6 +24,7 @@
 *)
 
 open Csyntax
+module Nat = Newspeak.Nat
 module C = CoreC
 
 (* TODO: not minimal, think about it *)
@@ -31,13 +32,19 @@ type symb =
   | GlobalSymb of string 
   | LocalSymb of C.exp 
   | EnumSymb of C.exp
-  | CompSymb of ((string * (int * typ)) list * int * int)
+  | CompSymb of C.field_decl list
 
 let process (globals, specs) =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
   *)
   let symbtbl = Symbtbl.create () in
+  (* Used to generate static variables names *)
+  let current_fun = ref "" in
+  (* Counter of static variables, necessary to distinguish 2 statics in 
+     different scope of the same function, who would have the same name
+  *)
+  let static_cnt = ref 0 in
 
   let update_funtyp f ft1 =
     let (symb, t) = Symbtbl.find symbtbl f in
@@ -51,6 +58,44 @@ let process (globals, specs) =
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
       with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', C.Fun ft)
+  in
+
+  let translate_proto_ftyp f static (args, ret) loc =
+    if args = None then begin
+      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
+	("incomplete prototype for function "^f)
+    end;
+    update_funsymb f static (args, ret) loc
+  in
+
+  let get_static_name x loc =
+    let (fname, _, _) = loc in
+    let prefix = "!"^fname^"." in
+    let prefix = 
+      if !current_fun = "" then prefix else prefix^(!current_fun)^"."
+    in
+    let name = prefix^(string_of_int !static_cnt)^"."^x in
+      incr static_cnt;
+      name
+  in
+
+  let complete_typ_with_init t init =
+    let rec process x =
+      match x with
+	  (C.Sequence seq, C.Array (t, None)) -> 
+	    let n = C.exp_of_int (List.length seq) in
+	      C.Array (t, Some n)
+	| (_, t) -> t
+    in
+      match init with
+	  None -> t
+	| Some init -> process (init, t)
+  in
+
+  let declare_global static x loc t init =
+    let name = if static then get_static_name x loc else x in
+    let t = complete_typ_with_init t init in
+      Symbtbl.update symbtbl x (GlobalSymb name, t)
   in
 
   let translate_unop x = 
@@ -151,9 +196,10 @@ let process (globals, specs) =
     let ret_t = translate_typ ret_t in
       (args_t, ret_t)
 	
-  and translate_stmtkind x = 
+  and translate_stmt (x, loc) = 
+    Npkcontext.set_loc loc;
     match x with
-	LocalDecl (x, d) -> C.LocalDecl (x, translate_decl d)
+	LocalDecl (x, d) -> C.LocalDecl (x, translate_decl loc x d)
       | If (c, br1, br2) -> 
 	  let c = translate_exp c in
 	  let br1 = translate_blk br1 in
@@ -198,27 +244,52 @@ let process (globals, specs) =
 	SymbolToken x -> C.SymbolToken x
       | IdentToken x -> C.IdentToken x
       | CstToken c -> C.CstToken (translate_cst c)
-
+	  
   and translate_assertion x = List.map translate_spec_token x
 
   and translate_blk x = 
-    List.map (fun (x, loc) -> (translate_stmtkind x, loc)) x 
+    List.map (fun (x, loc) -> (translate_stmt (x, loc), loc)) x 
 
-  and translate_decl x =
-    match x with
-	VDecl (t, is_static, is_extern, init) -> 
-	  let t = translate_typ t in
-	  let init =
-	    match init with
-		None -> None
-	      | Some init -> Some (translate_init init)
-	  in
-	    C.VDecl (t, is_static, is_extern, init)
-      | EDecl e -> C.EDecl (translate_exp e)
+  and translate_decl loc x d =
+    match d with
+	VDecl (_, _, extern, Some _) when extern -> 
+	  (* TODO: make a test for this case in local *)
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    "extern globals can not be initizalized"
+      | VDecl (_, static, extern, _) when static && extern -> 
+	  (* TODO: make a test for this case in local *)
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("static variable can not be extern")
+      | VDecl (Fun _, _, _, Some _) -> 
+	  (* TODO: make a test for this case in local *)
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("unexpected initialization of function "^x)
+      | VDecl (t, is_static, is_extern, init) -> 
+	  let t = translate_typ t in begin
+	      match t with
+		  C.Fun ft -> translate_proto_ftyp x is_static ft loc
+		| _ -> ()
+	    end;
+	    let init =
+	      match init with
+		  None -> None
+		| Some init -> Some (translate_init init)
+	    in
+	      C.VDecl (t, is_static, is_extern, init)
+      | EDecl e -> 
+	  let e = translate_exp e in
+	    Symbtbl.bind symbtbl x (EnumSymb e, CoreC.int_typ);
+	    C.EDecl e
       | CDecl (is_struct, fields) -> 
+	  add_compdecl (x, (is_struct, fields));
 	  let fields = List.map translate_field_decl fields in
 	    C.CDecl (is_struct, fields)
   
+  and add_compdecl (x, (is_struct, f)) =
+    let f = List.map translate_field_decl f in
+    let data = (CompSymb f, C.Comp (x, is_struct)) in
+      Symbtbl.bind symbtbl x data
+
   and translate_field_decl (t, x, loc) = (translate_typ t, x, loc)
 
   and translate_init x =
@@ -245,7 +316,13 @@ let process (globals, specs) =
 	      C.FunctionDef (f, ft, static, body)
 
 	| GlbDecl (x, d) -> 
-	    let d = translate_decl d in
+	    let d = translate_decl loc x d in begin
+		match d with
+		    C.VDecl (C.Fun _, _, _, _) -> ()
+		  | C.VDecl (t, static, _, init) -> 
+		      declare_global static x loc t init
+		  | _ -> ()
+	      end;
 	      C.GlbDecl (x, d)
     in
       (x, loc)

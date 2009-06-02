@@ -171,14 +171,6 @@ let translate (globals, spec) =
       with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
   in
 
-  let translate_proto_ftyp f static (args, ret) loc =
-    if args = None then begin
-      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
-	("incomplete prototype for function "^f)
-    end;
-    update_funsymb f static (args, ret) loc
-  in
-
   let is_enum x =
     let (v, _) = find_symb x in
     match v with
@@ -252,8 +244,6 @@ let translate (globals, spec) =
       incr static_cnt;
       name
   in
-
-  let push_enum (x, i) = Symbtbl.bind symbtbl x (EnumSymb i, CoreC.int_typ) in
 
   let add_fundef f (ret, args) body t = 
     Hashtbl.replace fundefs f (ret, args, t, body) 
@@ -886,7 +876,7 @@ let translate (globals, spec) =
       try C.Const (C.CInt (C.eval_exp v)) 
       with Invalid_argument _ -> v
     in
-      push_enum (x, v)
+      Symbtbl.bind symbtbl x (EnumSymb v, CoreC.int_typ)
 
   and add_compdecl (x, (is_struct, f)) =
     if is_struct then process_struct_fields x f
@@ -918,11 +908,11 @@ let translate (globals, spec) =
 	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
-      | VDecl (Fun ft, static, _, None) -> translate_proto_ftyp x static ft loc
       | VDecl (Fun _, _, _, Some _) -> 
 	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
+      | VDecl (Fun ft, static, _, None) -> update_funsymb x static ft loc
       | _ -> ()
 
   and translate_local_decl loc x d =
