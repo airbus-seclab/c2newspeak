@@ -47,7 +47,6 @@ let default_lbl = 3
 type symb =
   | GlobalSymb of string 
   | LocalSymb of C.lv 
-  | EnumSymb of C.exp
   | CompSymb of ((string * (int * typ)) list * int * int)
 
 (* functions *)
@@ -84,6 +83,7 @@ let translate (globals, spec) =
 (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
    but first needs to put the whole typing phase before firstpass
 *)
+(* TODO: remove everything related to symbtbl in this module!! *)
   let symbtbl = Symbtbl.create () in
 (* TODO: used_globals and one pass could be removed, if cir had a structure
    type with only the name and a hashtbl of structure names to type!!!, 
@@ -148,9 +148,6 @@ let translate (globals, spec) =
 	Npkcontext.report_accept_warning "Firstpass.translate.find_symb" 
 	  ("unknown identifier "^x^", maybe a GNU C symbol") Npkcontext.GnuC
       end;
-      Npkcontext.report_accept_warning "Firstpass.translate.find_symb" 
-	("unknown identifier "^x^", maybe a function without prototype") 
-	Npkcontext.MissingFunDecl;
       let info = (GlobalSymb x, Fun (None, CoreC.int_typ)) in
 	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
 	Symbtbl.bind symbtbl x info;
@@ -169,22 +166,6 @@ let translate (globals, spec) =
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
       with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
-  in
-
-  let is_enum x =
-    let (v, _) = find_symb x in
-    match v with
-	EnumSymb _ -> true
-      | _ -> false
-  in
-
-  let find_enum x =
-    let (v, t) = find_symb x in
-    match v with
-	EnumSymb i -> (i, t)
-      | _ -> 
-	  Npkcontext.report_error "Firstpass.translate.typ_of_var" 
-	  ("enum identifier expected: "^x)
   in
 
   let find_var x =
@@ -514,9 +495,7 @@ let translate (globals, spec) =
     let rec translate e =
       match e with
 	  Cst (c, t) -> (C.Const c, t)
-	    
-	| Var x when is_enum x -> find_enum x
-	    
+	    	    
 	| Var _ | Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let (lv, t) = translate_lv e in
 	      (C.Lval (lv, translate_typ t), t)
@@ -787,8 +766,8 @@ let translate (globals, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-    let data = (CompSymb (f, sz, !last_align), Comp (name, true)) in
-      Symbtbl.bind symbtbl name data
+    let struct_def = (CompSymb (f, sz, !last_align), Comp (name, true)) in
+      Symbtbl.bind symbtbl name struct_def
 
   and process_union_fields name f =
     let n = ref 0 in
@@ -802,8 +781,8 @@ let translate (globals, spec) =
 	(x, (0, t))
     in
     let f = List.map translate f in
-    let data = (CompSymb (f, !n, !align), Comp (name, false)) in
-      Symbtbl.bind symbtbl name data
+    let union_def = (CompSymb (f, !n, !align), Comp (name, false)) in
+      Symbtbl.bind symbtbl name union_def
 
   and translate_scalar_typ t =
     match t with
@@ -869,15 +848,6 @@ let translate (globals, spec) =
     let ret = translate_typ ret in
       (args, ret)
 
-  and add_enum (x, v) =
-    let v = translate_exp v in
-    let (v, _) = cast v CoreC.int_typ in
-    let v = 
-      try C.Const (C.CInt (C.eval_exp v)) 
-      with Invalid_argument _ -> v
-    in
-      Symbtbl.bind symbtbl x (EnumSymb v, CoreC.int_typ)
-
   and add_compdecl (x, (is_struct, f)) =
     if is_struct then process_struct_fields x f
     else process_union_fields x f
@@ -898,8 +868,7 @@ let translate (globals, spec) =
 
   and translate_decl loc x d =
     match d with
-	EDecl e -> add_enum (x, e)
-      | CDecl d -> add_compdecl (x, d)
+	CDecl d -> add_compdecl (x, d)
       | VDecl (_, _, extern, Some _) when extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
@@ -916,10 +885,7 @@ let translate (globals, spec) =
     translate_decl loc x d;
     match d with
 	EDecl _ | CDecl _ -> []
-      | VDecl (Fun _, _, _, _) -> 
-	  Npkcontext.report_accept_warning "Firstpass.translate" 
-	    "function declaration within block" Npkcontext.DirtySyntax;
-	  []
+      | VDecl (Fun _, _, _, _) -> []
       | VDecl (t, static, extern, init) when static || extern -> 
 	  declare_global static extern x loc t init;
 	  []
