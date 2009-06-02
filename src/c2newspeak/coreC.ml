@@ -32,7 +32,7 @@ and assertion = spec_token list
 and spec_token = 
   | SymbolToken of char
   | IdentToken of string
-  | CstToken of cst
+  | CstToken of Cir.cst
       
 and global = 
     (* true if static *)
@@ -101,7 +101,7 @@ and lbl = string
 and static = bool
 
 and exp = 
-    | Cst of cst
+    | Cst of (Cir.cst * typ)
     | Var of string
     | Field of (exp * string)
     | Index of (exp * exp)
@@ -123,8 +123,6 @@ and exp =
    expression *)
     | OpExp of (binop * exp * bool)
     | BlkExp of blk
-
-and cst = (Cir.cst * typ)
 
 and unop = Neg | Not | BNot
 

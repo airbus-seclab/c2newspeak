@@ -1092,8 +1092,7 @@ let translate (globals, spec) =
 	      end
 	  with _ -> C.IdentToken x
 	end
-(* TODO: not good, do this in compile phase *)
-      | CstToken (c, _) -> C.CstToken c
+      | CstToken c -> C.CstToken c
 
 (* TODO: think about this: simplify *)
   and translate_if loc (e, blk1, blk2) =

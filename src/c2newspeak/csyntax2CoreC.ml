@@ -123,7 +123,9 @@ let process (globals, specs) =
 
   let rec translate_exp e =
     match e with
-	Cst c -> C.Cst (translate_cst c)
+	Cst (c, t) -> 
+	  let t = translate_typ t in
+	    C.Cst (c, t)
       | Var x -> C.Var x
       | Field (e, f) -> C.Field (translate_exp e, f)
       | Index (t, e) -> C.Index (translate_exp t, translate_exp e)
@@ -237,13 +239,11 @@ let process (globals, specs) =
 
   and translate_case (e, body, loc) = (translate_exp e, translate_blk body, loc)
 
-  and translate_cst (c, t) = (c, translate_typ t)
-
   and translate_spec_token x =
     match x with
 	SymbolToken x -> C.SymbolToken x
       | IdentToken x -> C.IdentToken x
-      | CstToken c -> C.CstToken (translate_cst c)
+      | CstToken (c, _) -> C.CstToken c
 	  
   and translate_assertion x = List.map translate_spec_token x
 
