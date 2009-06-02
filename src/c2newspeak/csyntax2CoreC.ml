@@ -32,8 +32,7 @@ let ret_name = "!return"
 
 (* TODO: not minimal, think about it *)
 type symb =
-  | GlobalSymb of string 
-  | LocalSymb of C.exp 
+  | VarSymb of string 
   | EnumSymb of C.exp
   | CompSymb of C.field_decl list
 
@@ -72,19 +71,15 @@ let process (globals, specs) =
 	  None -> t
 	| Some init -> process (init, t)
   in
+    
+  let add_var (t, x) = Symbtbl.bind symbtbl x (VarSymb x, t) in
 
 (* TODO: find a way to factor declare_global and add_var
    maybe necessary to complete_typ_with_init in both cases...
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let declare_global static x loc t init =
-    let name = if static then get_static_name x loc else x in
-    let t = complete_typ_with_init t init in
-      Symbtbl.update symbtbl x (GlobalSymb name, t)
-  in
-    
-  let add_var (t, x) = Symbtbl.bind symbtbl x (LocalSymb (C.Var x), t) in
+  let update_global x name t = Symbtbl.update symbtbl x (VarSymb name, t) in
 
   let add_formals (args_t, ret_t) =
     add_var (ret_t, ret_name);
@@ -107,7 +102,7 @@ let process (globals, specs) =
       Npkcontext.report_accept_warning "Csyntax2CoreC.process.find_symb" 
 	("unknown identifier "^x^", maybe a function without prototype") 
 	Npkcontext.MissingFunDecl;
-      let info = (GlobalSymb x, C.Fun (None, C.int_typ)) in
+      let info = (VarSymb x, C.Fun (None, C.int_typ)) in
 	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
 	Symbtbl.bind symbtbl x info;
 	info
@@ -124,7 +119,7 @@ let process (globals, specs) =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', C.Fun ft)
+      with Not_found -> Symbtbl.bind symbtbl f (VarSymb f', C.Fun ft)
   in
 
   let translate_proto_ftyp f static (args, ret) loc =
@@ -277,8 +272,10 @@ let process (globals, specs) =
 	    C.VDecl (C.Fun ft, is_static, is_extern, None)	    
       | VDecl (t, is_static, is_extern, init) -> 
 	  let t = translate_typ t in
-	    if is_static || is_global || is_extern 
-	    then declare_global is_static x loc t init
+	  let name = if is_static then get_static_name x loc else x in
+	  let t = complete_typ_with_init t init in
+	    if is_global || is_extern 
+	    then update_global x name t
 	    else add_var (t, x);
 	    let init =
 	      match init with
