@@ -52,7 +52,7 @@ and is_extern = bool
 
 and is_static = bool
 
-and field_decl = (typ * string * Newspeak.location)
+and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
 
@@ -162,13 +162,17 @@ let comp_of_typ t =
 let array_of_typ t =
   match t with
       Array a -> a
-    | _ -> Npkcontext.report_error "Csyntax.array_of_typ" "array type expected"
+    | _ -> Npkcontext.report_error "CoreC.array_of_typ" "array type expected"
 
-let ftyp_of_typ t =
+let ftyp_of_typ t = 
   match t with
-      Fun t -> t
-    | _ -> 
-	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
+      Fun ft -> ft
+    | _ -> Npkcontext.report_error "CoreC.ftyp_of_typ" "function type expected"
+
+let deref_typ t =
+  match t with
+      Ptr t -> t
+    | _ -> Npkcontext.report_error "CoreC.deref_typ" "pointer type expected"
 
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
   let equals (t1, _) (t2, _) = t1 = t2 in
@@ -205,7 +209,7 @@ let rec string_of_exp e =
     | Index (e1, e2) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref e -> "*("^(string_of_exp e)^")"
-    | AddrOf _ -> "AddrOf"
+    | AddrOf e -> "&("^(string_of_exp e)^")"
     | Unop (_, e) -> "op("^(string_of_exp e)^")"
     | IfExp (e1, e2, e3) -> 
 	let e1 = string_of_exp e1 in
@@ -226,4 +230,3 @@ let rec string_of_exp e =
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
-

@@ -49,7 +49,7 @@ and is_extern = bool
 
 and is_static = bool
 
-and field_decl = (typ * string * Newspeak.location)
+and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
 
@@ -145,6 +145,10 @@ val array_of_typ: typ -> (typ * exp option)
 
 val ftyp_of_typ: typ -> ftyp
 
+val deref_typ: typ -> typ
+
 val min_ftyp: ftyp -> ftyp -> ftyp
 
 val string_of_exp: exp -> string
+
+val ftyp_of_typ: typ -> ftyp

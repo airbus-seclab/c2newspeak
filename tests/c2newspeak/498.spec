@@ -1,4 +1,4 @@
-Warning: 498.c:31#6: flexible array member accepted
+Warning: 498.c:1#0: flexible array member accepted
 Newspeak output
 ---------------
 498.c

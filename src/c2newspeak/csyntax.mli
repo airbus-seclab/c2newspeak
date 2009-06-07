@@ -139,6 +139,8 @@ and binop =
 
 val exp_of_int: int -> exp
 
+val exp_of_char: char -> exp
+
 val uint_typ: typ
 
 val long_typ: typ

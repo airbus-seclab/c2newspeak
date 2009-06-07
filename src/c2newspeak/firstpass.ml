@@ -62,6 +62,7 @@ let next_aligned o x =
   let m = o mod x in
     if m = 0 then o else o + (x - m)
 
+(* TODO: remove put in csyntax2CoreC *)
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
 let seq_of_string str =
@@ -254,8 +255,9 @@ let translate (globals, spec) =
     let res = ref [] in
     let rec translate o t x =
       match (x, t) with
-	  ((Data (Str str) | Sequence ([(None, Data (Str str))])), 
-	  Array (Int (_, n), _)) when n = Config.size_of_char ->
+(* TODO: move this case to csyntax2CoreC?? *)
+	  ((Data (Str str)|Sequence ([(None, Data (Str str))])), 
+	   Array (Int (_, n), _)) when n = Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      translate o t (Sequence seq)
 
@@ -309,11 +311,13 @@ let translate (globals, spec) =
 	| ((_, (f_o, t))::fields, []) ->
 	    let f_o = o + f_o in
 	    let _ = fill_with_zeros f_o t in
+(* TODO: remove
 	      if (fields = []) then begin
 		Npkcontext.report_accept_warning 
 		  "Firstpass.translate_init.translate_field_sequence" 
 		  "missing initializers for structure" Npkcontext.DirtySyntax
 	      end;
+*)
 	      translate_field_sequence o fields []
 
 	| ([], _) -> 
@@ -399,6 +403,7 @@ let translate (globals, spec) =
 	  let init = List.map get_scalar init in
 	    (t, Some init)
 
+(* TODO: maybe should put this code in csyntax2CoreC??? *)
   and add_glb_cstr str =
     let fname = Npkcontext.get_fname () in
     let name = "!"^fname^".const_str_"^(String.escaped str) in
@@ -409,17 +414,6 @@ let translate (globals, spec) =
       end;
       (C.Global name, t)
  
-  and is_array e =
-    match e with
-	Call _ -> false
-      | Cast (_, Array _) -> true
-      | Cast (_, _) -> false
-      | _ -> 
-	  let (_, t) = translate_lv e in
-	    match t with
-		Array _ -> true
-	      | _ -> false
-
   and translate_lv x =
     match x with
 	Var x -> find_var x
@@ -431,15 +425,13 @@ let translate (globals, spec) =
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
-      | Index (e, idx) when is_array e ->  (* TODO: think about this is_array, 
+      | Index (e, idx) ->  (* TODO: think about this is_array, 
 					      a bit hacky!! *)
 	  let (lv, t) = translate_lv e in
 	  let (t, len) = CoreC.array_of_typ t in
 	  let i = translate_exp idx in
 	  let n = translate_array_len len in
 	    translate_array_access (lv, t, n) i
-
-      | Index (e, idx) -> translate_lv (Deref (Binop (Plus, e, idx)))
 	  
       | Deref e -> deref (translate_exp e)
 
@@ -515,12 +507,12 @@ let translate (globals, spec) =
 			"Array type expected"
 	      end
 						
-	| AddrOf (Index (lv, e)) -> 
+	| AddrOf (Index (lv, e)) ->
 	    let base = AddrOf (Index (lv, exp_of_int 0)) in
 	      translate (Binop (Plus, base, e))
 		
 	| AddrOf lv -> addr_of (translate_lv lv)
-	    
+
 	(* Here c is necessarily positive *)
 	| Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
 	    (C.Const (C.CInt (Nat.neg c)), Int (N.Signed, sz))
@@ -565,7 +557,7 @@ let translate (globals, spec) =
 	| Cast (e, t) -> 
 	    let e = translate_exp e in
 	      cast e t
-		
+		(* TODO: introduce type funexp in corec??*)
 	| Call (Var x, args) when is_fname x -> 
 	    let (f, (tmp_args_t, ret_t)) = find_fname x in
 	    let args_t = refine_args_t tmp_args_t args in
@@ -574,20 +566,24 @@ let translate (globals, spec) =
 	      if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
 	      (C.Call (ft', C.Fname f, args), ret_t)
 	      
-	| Call ((Deref e | e), args) -> 
+	| Call (Deref e, args) -> 
 	    let (e, t) = translate_exp e in
 	    let (args_t, ret_t) =
 	      match t with
 		  Ptr (Fun t) -> t
 		| _ -> 
-		    Npkcontext.report_error "Firstpass.translate_call"
+		    Npkcontext.report_error "Firstpass.translate_exp"
 		      "function pointer expected"
 	    in
 	    let args_t = refine_args_t args_t args in
 	    let (args, args_t) = translate_args args args_t in
 	    let ft' = translate_ftyp (args_t, ret_t) in
 	      (C.Call (ft', C.FunDeref e, args), ret_t)
-		
+
+	| Call _ -> 
+	    Npkcontext.report_error "Firstpass.translate_exp" 
+	      "unreachable code"
+	
 	| Set set ->
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
 	      "assignment within expression" Npkcontext.DirtySyntax;
@@ -734,8 +730,8 @@ let translate (globals, spec) =
   and process_struct_fields name f =
     let o = ref 0 in
     let last_align = ref 1 in
-    let translate (t, x, loc) =
-      Npkcontext.set_loc loc;
+    let translate (x, t) =
+(*      Npkcontext.set_loc loc;*)
       let cur_align = align_of t in
       let o' = next_aligned !o cur_align in
       let (o', t, sz) =
@@ -772,8 +768,8 @@ let translate (globals, spec) =
   and process_union_fields name f =
     let n = ref 0 in
     let align = ref 0 in
-    let translate (t, x, loc) =
-      Npkcontext.set_loc loc;
+    let translate (x, t) =
+      (*Npkcontext.set_loc loc;*)
       let sz = size_of t in
       let align' = align_of t in
 	align := max !align align';
@@ -1131,7 +1127,7 @@ let translate (globals, spec) =
 	  let e2 = translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) in
  	    (Plus, (e1, t1), e2)
 	      
-      | (Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq as op, Int k1, Int k2) -> 
+      | ((Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq), Int k1, Int k2) -> 
 (* TODO: put promote in csyntax!! *)
 	  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
 	  let t = Int k in
@@ -1139,24 +1135,24 @@ let translate (globals, spec) =
 	  let e2 = cast (e2, Int k2) t in
 	    (op, (e1, t), (e2, t))
 	      
-      | (Mult|Plus|Minus|Div|Gt|Eq as op, Float n1, Float n2) -> 
+      | ((Mult|Plus|Minus|Div|Gt|Eq), Float n1, Float n2) -> 
 	  let n = max n1 n2 in
 	  let t = Float n in
 	  let e1 = cast (e1, Float n1) t in
 	  let e2 = cast (e2, Float n2) t in
 	    (op, (e1, t), (e2, t))
 	      
-      | (Mult|Plus|Minus|Div|Gt|Eq as op, Float _, Int _)
-      | (Gt|Eq as op, Ptr _, Int _) ->
+      | ((Mult|Plus|Minus|Div|Gt|Eq), Float _, Int _)
+      | ((Gt|Eq), Ptr _, Int _) ->
 	  let e2 = cast (e2, t2) t1 in
 	    (op, (e1, t1), (e2, t1))
 	      
-      | (Mult|Plus|Minus|Div|Gt|Eq as op, Int _, Float _)
-      | (Gt|Eq as op, Int _, Ptr _) -> 
+      | ((Mult|Plus|Minus|Div|Gt|Eq), Int _, Float _)
+      | ((Gt|Eq), Int _, Ptr _) -> 
 	  let e1 = cast (e1, t1) t2 in
 	    (op, (e1, t2), (e2, t2))
 	      
-      | (Shiftl|Shiftr as op, Int (_, n), Int _) -> 
+      | ((Shiftl|Shiftr), Int (_, n), Int _) -> 
 	  let k = (N.Unsigned, n) in
 	  let t = Int k in
 	  let e1 = cast (e1, t1) t in
@@ -1214,10 +1210,7 @@ let translate (globals, spec) =
     in
     let e2 = 
       match (op, t) with
-	  (N.PlusPI, Ptr (Fun _)) ->
-	    Npkcontext.report_error "Firstpass.translate_binop"
-	      "pointer arithmetic forbidden on function pointers"
-	| (N.PlusPI, Ptr t) -> 
+	  (N.PlusPI, Ptr t) -> 
 	    let step = C.exp_of_int (size_of t) in
 	      C.Binop (N.MultI, e2, step)
 	| _ -> e2
@@ -1249,7 +1242,7 @@ let translate (globals, spec) =
 	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), e), t')
       | _ -> 
 	  Npkcontext.report_error "Firstpass.translate_unop" 
-	    "Unexpected unary operator and argument"
+	    "unexpected unary operator and argument"
 
   and size_of t = C.size_of_typ (translate_typ t)
 

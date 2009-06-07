@@ -239,8 +239,7 @@ let rec size_of_typ t =
 	  end;
 	  sz * n
     | Struct (_, n) | Union (_, n) -> n
-    | Fun -> 
-	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of function"
+    | Fun -> Config.size_of_char
     | Array _ -> 
 	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of array"
     | Void -> 
