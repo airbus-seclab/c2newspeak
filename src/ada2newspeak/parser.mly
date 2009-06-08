@@ -389,6 +389,8 @@ basic_declaration :
               | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
               | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
         }
+              | ident_list COLON subtyp_indication RENAMES name SEMICOLON {
+                RenamingDecl(([],List.hd $1),fst $5),$2 }
 ;
 
 contrainte :

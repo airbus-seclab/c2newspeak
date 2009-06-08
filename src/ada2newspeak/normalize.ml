@@ -599,7 +599,8 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
   | CFloat x -> Ast.CFloat x,T.universal_real
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
-  | Var(x,y) -> Ast.Var(x,y),T.find_variable gtbl x y ~context:(package#current
+  | Var    n ->  Ast.Var(normalize_name n)
+                ,T.find_variable gtbl (fst n) (snd n) ~context:(package#current
                                                               ::package#get_use)
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
