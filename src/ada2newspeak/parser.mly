@@ -450,9 +450,18 @@ instr :
   (* EXIT WHEN x --> IF x THEN EXIT END IF *) }
 | IF expression THEN instr_list instruction_else END IF
     {(If($2, $4, $5), $1)}
-| iteration_scheme LOOP instr_list END LOOP
-      { let (scheme,loc) = $1 in
-          (Loop(scheme, $3), (if loc=Newspeak.unknown_loc then $2 else loc))
+| loop_label iteration_scheme LOOP instr_list END LOOP ident_option
+      { begin match ($1, $7) with
+          | Some a, None   -> Npkcontext.report_error "Parser.loop_label"
+                      ("Loop name \""^a^"\" expected at end of loop")
+          | None  , Some b -> Npkcontext.report_error "Parser.loop_label"
+                      ("Closing loop \""^b^"\", that has no beginning")
+          | Some a, Some b -> if (a <> b) then Npkcontext.report_error
+               "Parser.loop_label" "Loop statement closed with wrong identifier"
+          | None  , None -> ()
+        end;
+        let (scheme,loc) = $2 in
+          (Loop(scheme, $4), (if loc=Newspeak.unknown_loc then $3 else loc))
       }
 | CASE expression IS case_stmt_alternative_list END CASE {Case($2,
                                                               build_case_ch
@@ -462,6 +471,14 @@ instr :
 | DECLARE declarative_part BEGIN instr_list END
                                 {Block ($2,$4),$1}
 ;
+
+loop_label:
+|             {None   }
+| ident COLON {Some $1}
+
+ident_option:
+|             {None}
+| ident       {Some $1}
 
 case_stmt_alternative_list:
 | when_others                                       {[]           , Some $1}
