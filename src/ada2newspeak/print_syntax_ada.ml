@@ -289,6 +289,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | RepresentClause(clause) ->
       "RepresentClause("
       ^(representation_clause_to_string clause)^")"
+  | RenamingDecl(n,n') -> "Renaming : "^name_to_string n^" renames "^name_to_string n'
 
 
 and declarative_item_to_string decl_item = match decl_item with

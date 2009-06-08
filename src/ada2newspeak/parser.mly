@@ -201,6 +201,7 @@ let make_range exp_b_inf exp_b_sup =
 %token                            QUOTE
 %token                            RANGE
 %token                            REM
+%token <Newspeak.location>        RENAMES
 %token <Newspeak.location>        RETURN
 %token                            REVERSE
 %token                            RPAR
@@ -434,6 +435,11 @@ basic_declaration :
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
 | representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
+| subprogram_spec RENAMES name SEMICOLON
+        { match (fst $1) with
+              | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
+              | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
+        }
 ;
 
 contrainte :

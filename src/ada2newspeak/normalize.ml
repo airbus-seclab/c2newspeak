@@ -955,6 +955,7 @@ in
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
       | BodyDecl _ -> ()
+      | BasicDecl(RenamingDecl _) -> ()
       )
     decl_part
 
@@ -1098,6 +1099,7 @@ in
                     loc
                     global;
           Ast.SubtypDecl(ident, norm_subtyp_ind)
+    | RenamingDecl _ -> failwith "Renaming declaration"
     | RepresentClause _
     | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 

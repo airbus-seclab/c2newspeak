@@ -124,12 +124,12 @@
     | "others"     -> OTHERS      | "out"        -> OUT
     | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA
     | "procedure"  -> PROCEDURE l | "range"      -> RANGE
-    | "rem"        -> REM         | "return"     -> RETURN   l
-    | "reverse"    -> REVERSE     | "subtype"    -> SUBTYPE  l
-    | "then"       -> THEN        | "type"       -> TYPE     l
-    | "use"        -> USE       l | "when"       -> WHEN
-    | "while"      -> WHILE     l | "with"       -> WITH     l
-    | "xor"        -> XOR
+    | "rem"        -> REM         | "renames"    -> RENAMES  l
+    | "return"     -> RETURN    l | "reverse"    -> REVERSE
+    | "subtype"    -> SUBTYPE   l | "then"       -> THEN
+    | "type"       -> TYPE      l | "use"        -> USE      l
+    | "when"       -> WHEN        | "while"      -> WHILE    l
+    | "with"       -> WITH      l | "xor"        -> XOR
 
     | "true"       -> TRUE        | "false"      -> FALSE
 
@@ -152,7 +152,6 @@
     (* Compilation-related  *)
         (* abstract     *)
         (* generic      *)
-        (* renames      *)
         (* separate     *)
 
     (* Type-related  *)
