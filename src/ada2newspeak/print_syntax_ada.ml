@@ -108,7 +108,7 @@ and typ_declaration_to_string typ_decl = match typ_decl with
   | Array(array_def) ->
       "Array("^(array_definition_to_string array_def)^")"
 
-and array_definition_to_string ar = 
+and array_definition_to_string ar =
          "index = " ^(subtyp_indication_to_string ar.array_index)
       ^", component = "^(subtyp_indication_to_string ar.array_component)
       ^", size = "^(option_to_string ar.array_size string_of_int)
@@ -289,8 +289,10 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | RepresentClause(clause) ->
       "RepresentClause("
       ^(representation_clause_to_string clause)^")"
-  | RenamingDecl(n,n') -> "Renaming : "^name_to_string n^" renames "^name_to_string n'
-
+  | RenamingDecl(n,n') ->  "Renaming : "
+                          ^name_to_string n
+                          ^" renames "
+                          ^name_to_string n'
 
 and declarative_item_to_string decl_item = match decl_item with
   | BasicDecl(basic_declaration) -> "BasicDecl("

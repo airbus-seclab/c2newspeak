@@ -110,9 +110,6 @@ let normalize_ident ident package extern =
   if extern then (package, ident)
             else (   []  , ident)
 
-let normalize_name (name:name) (package:package_manager) extern =
-  package#normalize_name name extern
-
 let extract_subprog_spec (ast:compilation_unit):compilation_unit =
     match ast with
       | (context, Body(SubProgramBody(spec,_,_)), loc) ->
@@ -437,22 +434,9 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           | (pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
                 ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
-
-  let normalize_name name =
-    let add_package (parents, ident) pack = match parents with
-      | [] -> (pack, ident)
-      | a when pack = a -> (pack, ident)
-      | a when (package#is_with a) -> (a, ident)
-      | _ -> Npkcontext.report_error
-          "ada_normalize.normalize_name.add_package"
-            ("unknown package "
-             ^(Ada_utils.ident_list_to_string parents))
-
-    in
-      if extern then
-        add_package name (package#current)
-        (* pas de gestion de with dans package inclus *)
-      else name
+ 
+  let normalize_name (parents, ident) =
+    package#normalize_name (parents,ident) extern
   in
 
 let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
@@ -493,7 +477,6 @@ and normalize_subtyp subtyp =
   let norm_typ typp =
     match typp with
         Declared (id,Array a,x) ->
-          
           let n_st1 =  normalize_subtyp_indication a.array_index     in
           let n_st2 =  normalize_subtyp_indication a.array_component in
 
@@ -895,7 +878,7 @@ in
           add_typ (normalize_ident_cur ident) decl loc global extern;
           decl
     | Array a when a.array_size = None ->
-        let norm_inter =  normalize_subtyp_indication a.array_index 
+        let norm_inter =  normalize_subtyp_indication a.array_index
         and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
         let subtyp = extract_subtyp norm_inter in
 
@@ -1023,7 +1006,7 @@ in
 
   let rec normalize_basic_decl item loc global reptbl = match item with
     | UseDecl(use_clause) -> package#add_use use_clause;
-        Ast.UseDecl use_clause
+        Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let norm_def = may normalize_exp def in
@@ -1032,7 +1015,7 @@ in
                T.add_variable gtbl package#current x T.universal_integer;
                add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
-          Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable)
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let normexp = normalize_exp exp in
         (* constantes *)
@@ -1072,7 +1055,8 @@ in
                     (*la constante n'est pas statique *) Constant
 
         in
-          Ast.ObjectDecl(ident_list, norm_subtyp_ind, Some normexp,status)
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Some
+          normexp,status))
     | ObjectDecl(_) ->
         Npkcontext.report_error
           "Ada_normalize.normalize_basic_decl"
@@ -1080,8 +1064,8 @@ in
            ^"or already evaluated")
     | TypeDecl(id,typ_decl) ->
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
-        in Ast.TypeDecl(id,norm_typ_decl)
-    | SpecDecl(spec) -> Ast.SpecDecl(normalize_spec spec)
+        in Some (Ast.TypeDecl(id,norm_typ_decl))
+    | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl package#get_use
@@ -1091,15 +1075,15 @@ in
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
-          Ast.NumberDecl(ident, norm_exp, Some v)
+          Some (Ast.NumberDecl(ident, norm_exp, Some v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
                     loc
                     global;
-          Ast.SubtypDecl(ident, norm_subtyp_ind)
-    | RenamingDecl _ -> failwith "Renaming declaration"
+          Some (Ast.SubtypDecl(ident, norm_subtyp_ind))
+    | RenamingDecl (n, o) -> package#add_renaming_decl (normalize_name n) (normalize_name o);None
     | RepresentClause _
     | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
@@ -1114,10 +1098,11 @@ in
                                   | _ -> true)
       list_decl in
     let rec normalize_decls decls =
-      List.map (fun (decl, loc) ->
+      List_utils.filter_map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
-                  let decl = normalize_basic_decl decl loc true represtbl
-                  in (decl,loc)
+                  match normalize_basic_decl decl loc true represtbl with
+                    | None -> None
+                    | Some decl -> Some (decl,loc)
                ) decls in
     let norm_spec = normalize_decls list_decl in
       package#reset_current;
@@ -1160,7 +1145,7 @@ in
                          normalize_block instrs), loc)
     | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) ->
-       Some (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
+       Some (Ast.ProcedureCall(normalize_name nom, List.map normalize_arg params), loc)
     | Case (e, choices, default) ->
               Some (Ast.Case (normalize_exp e,
                     List.map (function e,block->
@@ -1187,14 +1172,17 @@ in
         | _ -> true
       ) decl_part in
     let normalize_decl_items items =
-      List.map (function
+      List_utils.filter_map (function
         | BasicDecl(basic),loc ->
-            Npkcontext.set_loc loc;
-            Ast.BasicDecl(normalize_basic_decl basic  loc
-                                           global represtbl),loc
+            begin
+              Npkcontext.set_loc loc;
+              match normalize_basic_decl basic  loc global represtbl with
+                | None -> None
+                | Some decl -> Some( Ast.BasicDecl decl,loc)
+            end
         | BodyDecl(body),loc ->
             Npkcontext.set_loc loc;
-            Ast.BodyDecl(normalize_body body), loc
+            Some (Ast.BodyDecl(normalize_body body), loc)
       ) items in
     let ndp = normalize_decl_items decl_part in
     List.iter (function

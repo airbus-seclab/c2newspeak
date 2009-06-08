@@ -130,7 +130,7 @@
     | "type"       -> TYPE      l | "use"        -> USE       l
     | "when"       -> WHEN      l | "while"      -> WHILE     l
     | "with"       -> WITH      l | "xor"        -> XOR       l
-                                                              
+
     | "true"       -> TRUE      l | "false"      -> FALSE     l
 
     |_             -> IDENT (l,String.lowercase w)
@@ -231,19 +231,24 @@ rule token = parse
   | commentaire {token lexbuf}
 
   (* caracteres, chaines de caracteres *)
-  | chaine {CONST_STRING (Npkcontext.get_loc (),extrait_chaine (Lexing.lexeme lexbuf)) }
-  | char   {CONST_CHAR (Npkcontext.get_loc (),int_of_char (Lexing.lexeme lexbuf).[1]) }
+  | chaine {CONST_STRING (Npkcontext.get_loc ()
+                         ,extrait_chaine (Lexing.lexeme lexbuf))}
+  | char   {CONST_CHAR   (Npkcontext.get_loc ()
+                         ,int_of_char (Lexing.lexeme lexbuf).[1]) }
 
   (* constantes numeriques *)
   | litteral_reel {CONST_FLOAT (Npkcontext.get_loc (),Lexing.lexeme lexbuf)}
   | entier {CONST_INT (Npkcontext.get_loc (),Newspeak.Nat.of_string(
                                 strip_underscores (Lexing.lexeme lexbuf)))}
-  | entier as main_part ['e' 'E'] '+'? (entier as expo) {CONST_INT (Npkcontext.get_loc (),
+  | entier as main_part ['e' 'E'] '+'? (entier as expo)
+      {CONST_INT (Npkcontext.get_loc (),
             Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
                     * (expt_int 10 (int_of_string (strip_underscores expo)))
-            ))}
+            ))
+      }
   | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
-                CONST_INT (Npkcontext.get_loc (),Newspeak.Nat.of_int ( (int_of_based_string
+                CONST_INT (Npkcontext.get_loc ()
+                          ,Newspeak.Nat.of_int ( (int_of_based_string
                                         (int_of_string (strip_underscores base))
                                             (strip_underscores main_part))
                            * expt_int (int_of_string (strip_underscores base))
@@ -256,6 +261,4 @@ rule token = parse
   | eof { EOF }
 
   | _ {unknown_lexeme lexbuf}
-
-
 

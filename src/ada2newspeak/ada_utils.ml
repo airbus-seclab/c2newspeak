@@ -369,7 +369,8 @@ class package_manager =
         val mutable current_pkg:package                 = []
         val mutable    with_pkg:package list            = []
         val             context:(package,int) Hashtbl.t = Hashtbl.create 3
-        val mutable    extflag :bool                    = false
+        val mutable     extflag:bool                    = false
+        val            renaming:(name,name) Hashtbl.t   = Hashtbl.create 0
 
         method set_current (x,y) :unit =
           let p = x@[y] in
@@ -419,6 +420,9 @@ class package_manager =
           extflag <- false
 
         method normalize_name (name:Syntax_ada.name) extern =
+          try Npkcontext.print_debug ("Trying to find renaming_decl
+          "^name_to_string name); Hashtbl.find renaming name with
+          Not_found -> 
           if (not extern) then name
           else let (parents,ident) = name in
                let pack = self#current in
@@ -428,6 +432,11 @@ class package_manager =
                    | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
                    ("unknown package "^(ident_list_to_string parents))
 
+
+        method add_renaming_decl (new_name:name) (old_name:name) =
+          Npkcontext.print_debug ("Renaming decl : " ^ name_to_string old_name
+                                 ^     " --> "       ^ name_to_string new_name);
+          Hashtbl.add renaming new_name old_name
     end
 
 let make_operator_name op =

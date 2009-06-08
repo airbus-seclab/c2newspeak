@@ -250,9 +250,10 @@ object
     (** Perform an action with the "extern" flag. *)
     method as_extern_do :(unit->unit)->unit
 
-    (** FIXME document *)
+    (** FIXME document exact specs *)
     method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
 
+    method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
 end
 
 (**

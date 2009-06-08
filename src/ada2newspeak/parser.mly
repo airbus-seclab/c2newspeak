@@ -70,10 +70,10 @@ let build_matrix l typ_ind loc =
       | hd::tl ->
           let recu =  crafted tl typ_elt in
           let new_ind = Unconstrained(Declared("no_name"
-                                                    ,Array({array_index = hd;
-                                                            array_component = recu;
-                                                            array_size = None;
-                                                           }
+                                              ,Array({array_index     = hd
+                                                     ;array_component = recu
+                                                     ;array_size      = None
+                                                     }
                                                     )
                                               ,loc
                                               )
