@@ -277,12 +277,6 @@ subprogram_spec :
                                                   {Function ((fst $2),$4,$7),$1}
 | FUNCTION   name                        RETURN subtyp
                                                   {Function ((fst $2),[],$4),$1}
-| FUNCTION  CONST_STRING LPAR formal_part RPAR RETURN subtyp
-                     {Function (([],Ada_utils.make_operator_name
-                     (Ada_utils.operator_of_string (snd $2))), $4,$7),$1}
-| PROCEDURE CONST_STRING LPAR formal_part RPAR
-                     {Procedure(([],Ada_utils.make_operator_name
-                     (Ada_utils.operator_of_string (snd $2))), $4),   $1}
 ;
 
 formal_part :
@@ -589,6 +583,9 @@ parameter_association:
 
 ident :
 | IDENT {snd $1}
+| CONST_STRING { Ada_utils.make_operator_name (
+                    Ada_utils.operator_of_string (snd $1)
+                )}
 ;
 
 ident_list :
@@ -603,6 +600,10 @@ name_list :
 
 name :
 | IDENT {([],snd $1),fst $1}
+| CONST_STRING { ([],Ada_utils.make_operator_name (
+                    Ada_utils.operator_of_string (snd $1)
+                )), fst $1
+    }
 | name DOT ident /* TODO : trouver une meilleur solution */
       {
     let (par, ident) = fst $1
