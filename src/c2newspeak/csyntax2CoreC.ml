@@ -47,15 +47,6 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
-(* TODO: find a way to factor this with create_cstr?? *)
-let seq_of_string str =
-  let len = String.length str in
-  let res = ref [(None, Data (exp_of_char '\x00'))] in
-    for i = len - 1 downto 0 do
-      res := (None, Data (exp_of_char str.[i]))::!res
-    done;
-    !res
-
 let process (globals, specs) =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
@@ -214,7 +205,7 @@ let process (globals, specs) =
       (op, t)
   in
 
-  let rec translate_exp_with_array e =
+  let rec translate_lv e =
     match e with
 	Cst (c, t) -> 
 	  let t = translate_typ t in
@@ -227,7 +218,7 @@ let process (globals, specs) =
 	    (C.Field (e, f), t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
       | Index (a, idx) -> 
-	  let (a, t) = translate_exp_with_array a in
+	  let (a, t) = translate_lv a in
 	  let (idx, _) = translate_exp idx in begin
 	      match t with
 		  C.Array (t, _) -> (C.Index (a, idx), t)
@@ -238,13 +229,9 @@ let process (globals, specs) =
 	    end
 (* TODO: should remove Deref from csyntax, use only index!! *)
       | Deref e -> translate_exp (Index (e, exp_of_int 0))
-	  (*
-	    let (e, t) = translate_exp e in
-	    let t = C.deref_typ t in
-	    (C.Deref e, t)
-	  *)
+
       | AddrOf e -> 
-	  let (e, t) = translate_exp_with_array e in
+	  let (e, t) = translate_lv e in
 	    (C.AddrOf e, C.Ptr t)
       | Unop (op, e) -> 
 	  let (e, t) = translate_exp e in
@@ -295,7 +282,7 @@ let process (globals, specs) =
 	    (C.BlkExp blk, t)
 	      
   and translate_exp e =
-    match translate_exp_with_array e with
+    match translate_lv e with
 	(e, C.Array (t, _)) -> (C.AddrOf (C.Index (e, C.exp_of_int 0)), C.Ptr t)
       | x -> x
 
@@ -355,15 +342,12 @@ let process (globals, specs) =
   and translate_decl is_global loc x d =
     match d with
 	VDecl (_, _, extern, Some _) when extern -> 
-	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
       | VDecl (_, static, extern, _) when static && extern -> 
-	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
       | VDecl (Fun _, _, _, Some _) -> 
-	  (* TODO: make a test for this case in local *)
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
       | VDecl (Fun ft, is_static, is_extern, _) -> 
@@ -472,6 +456,7 @@ let process (globals, specs) =
 	    Npkcontext.report_error "Csyntax2CoreC.translate_blk_exp" 
 	      "expression expected at end of block"
     in
+(* TODO: build an example that make this a bug!!, think about it!! *)
 (*      Symbtbl.save symbtbl;*)
       let (blk, (e, t, loc)) = translate_aux x in
 (*	Symbtbl.restore symbtbl;*)
@@ -519,11 +504,9 @@ let process (globals, specs) =
       | ([], []) -> []
 
       | (_, []) ->
-	  (*TODO:remove	    if (fields = []) then begin*)
 	  Npkcontext.report_accept_warning 
 	    "Firstpass.translate_init.translate_field_sequence" 
 	    "missing initializers for structure" Npkcontext.DirtySyntax;
-	    (*TODO:remove end;*)
 	    []
 
       | _ -> Npkcontext.report_error "Csyntax2CoreC" "case not implemented yet"
