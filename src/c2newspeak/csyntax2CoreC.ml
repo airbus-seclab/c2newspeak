@@ -221,7 +221,7 @@ let process (globals, specs) =
 	  let (a, t) = translate_lv a in
 	  let (idx, _) = translate_exp idx in begin
 	      match t with
-		  C.Array (t, _) -> (C.Index (a, idx), t)
+		  C.Array (t, len) -> (C.Index (a, (t, len), idx), t)
 		| C.Ptr t -> (C.Deref (C.Binop (C.Plus, a, idx)), t)
 		| _ -> 
 		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
@@ -283,7 +283,8 @@ let process (globals, specs) =
 	      
   and translate_exp e =
     match translate_lv e with
-	(e, C.Array (t, _)) -> (C.AddrOf (C.Index (e, C.exp_of_int 0)), C.Ptr t)
+	(e, C.Array (t, len)) -> 
+	  (C.AddrOf (C.Index (e, (t, len), C.exp_of_int 0)), C.Ptr t)
       | x -> x
 
   (* TODO: introduce type funexp in corec??*)

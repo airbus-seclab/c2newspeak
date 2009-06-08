@@ -62,13 +62,15 @@ and typ =
   | Bitfield of (Newspeak.ikind * exp)
   | Float of int
   | Ptr of typ
-  | Array of (typ * exp option)
+  | Array of array_typ
 (* true for structure *)
   | Comp of (string * bool)
   | Fun of ftyp
   | Va_arg
   | Typeof of string
-      
+     
+and array_typ = typ * exp option
+ 
 and init = 
   | Data of exp
   | Sequence of (string option * init) list
@@ -104,7 +106,7 @@ and exp =
     | Cst of (Cir.cst * typ)
     | Var of string
     | Field of (exp * string)
-    | Index of (exp * exp)
+    | Index of (exp * array_typ * exp)
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
@@ -159,11 +161,6 @@ let comp_of_typ t =
 	Npkcontext.report_error "Csyntax.comp_of_typ" 
 	  "struct or union type expected"
 
-let array_of_typ t =
-  match t with
-      Array a -> a
-    | _ -> Npkcontext.report_error "CoreC.array_of_typ" "array type expected"
-
 let ftyp_of_typ t = 
   match t with
       Fun ft -> ft
@@ -206,7 +203,7 @@ let rec string_of_exp e =
     | Cst _ -> "Cst"
     | Var x -> x
     | Field (e, f) -> (string_of_exp e)^"."^f
-    | Index (e1, e2) -> 
+    | Index (e1, _, e2) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref e -> "*("^(string_of_exp e)^")"
     | AddrOf e -> "&("^(string_of_exp e)^")"

@@ -425,12 +425,11 @@ let translate (globals, spec) =
 	  let o = C.exp_of_int o in
 	    (C.Shift (lv, o), t)
 
-      | Index (e, idx) ->  (* TODO: think about this is_array, 
+      | Index (e, (t, len), idx) ->  (* TODO: think about this is_array, 
 					      a bit hacky!! *)
-	  let (lv, t) = translate_lv e in
-	  let (t, len) = CoreC.array_of_typ t in
-	  let i = translate_exp idx in
+	  let (lv, _) = translate_lv e in
 	  let n = translate_array_len len in
+	  let i = translate_exp idx in
 	    translate_array_access (lv, t, n) i
 	  
       | Deref e -> deref (translate_exp e)
@@ -493,22 +492,23 @@ let translate (globals, spec) =
 	      (C.Lval (lv, translate_typ t), t)
 		
 	| AddrOf (Deref e) -> translate_exp e
-	      	      
-	| AddrOf (Index (lv, Cst (C.CInt i, _)))
+	    
+	| AddrOf (Index (lv, _, Cst (C.CInt i, _)))
 	    when Nat.compare i Nat.zero = 0 ->
 	    let (lv', t) = translate_lv lv in begin
 		match t with
 		    Array (elt_t, _) -> 
 		      let (e, _) = addr_of (lv', t) in
 			(e, Ptr elt_t)
-		  | Ptr _ -> translate (AddrOf (Deref lv))
+(* TODO: try and remove this case??? *)
+		  | Ptr _ -> translate_exp lv
 		  | _ -> 
 		      Npkcontext.report_error "Firstpass.translate_lv" 
 			"Array type expected"
 	      end
 						
-	| AddrOf (Index (lv, e)) ->
-	    let base = AddrOf (Index (lv, exp_of_int 0)) in
+	| AddrOf (Index (lv, a, e)) ->
+	    let base = AddrOf (Index (lv, a, exp_of_int 0)) in
 	      translate (Binop (Plus, base, e))
 		
 	| AddrOf lv -> addr_of (translate_lv lv)

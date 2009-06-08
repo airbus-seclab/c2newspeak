@@ -59,11 +59,13 @@ and typ =
     | Bitfield of (Newspeak.ikind * exp)
     | Float of int
     | Ptr of typ
-    | Array of (typ * exp option)
+    | Array of array_typ
     | Comp of (string * is_struct)
     | Fun of ftyp
     | Va_arg
     | Typeof of string
+
+and array_typ = typ * exp option
 
 and init = 
     | Data of exp
@@ -95,7 +97,7 @@ and exp =
     | Cst of (Cir.cst * typ)
     | Var of string
     | Field of (exp * string)
-    | Index of (exp * exp)
+    | Index of (exp * array_typ * exp)
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
@@ -140,8 +142,6 @@ val exp_of_char: char -> exp
 val exp_of_int: int -> exp
 
 val comp_of_typ: typ -> string
-
-val array_of_typ: typ -> (typ * exp option)
 
 val ftyp_of_typ: typ -> ftyp
 
