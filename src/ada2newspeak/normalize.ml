@@ -1206,7 +1206,7 @@ in
           remove_decl_part decl_part;
           remove_params subprog_decl;
           Ast.SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
-    | PackageBody(name, package_spec, decl_part, block) ->
+    | PackageBody(name, package_spec, decl_part) ->
         let norm_spec = normalize_package_spec
                            (with_default package_spec
                                (parse_package_specification name)
@@ -1217,7 +1217,7 @@ in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           package#reset_current;
-          Ast.PackageBody(name, Some norm_spec, ndp, normalize_block block)
+          Ast.PackageBody(name, Some norm_spec, ndp)
 
   in
   let normalize_lib_item lib_item loc =

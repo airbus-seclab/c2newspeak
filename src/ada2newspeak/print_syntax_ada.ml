@@ -337,11 +337,10 @@ and body_to_string body = match body with
                        ^declarative_part_to_string declarative_part ^",\n\n"
                        ^block_to_string block
                   ^")"
-  | PackageBody (name, package_spec, declarative_part, block) ->
+  | PackageBody (name, package_spec, declarative_part) ->
       "PackageBody("^(name_to_string name)^",\n\n"
                    ^(option_to_string package_spec package_spec_to_string)^",\n"
                    ^declarative_part_to_string declarative_part ^",\n\n"
-                   ^block_to_string block
       ^")"
 
 let library_item_to_string lib_item = match lib_item with

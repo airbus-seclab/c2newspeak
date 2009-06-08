@@ -123,7 +123,6 @@ and  body =
   |    PackageBody of Syntax_ada.name
                     * package_spec option
                     * declarative_part
-                    * block
 
 and  declarative_item =
   | BasicDecl of basic_declaration

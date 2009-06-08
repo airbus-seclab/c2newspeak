@@ -252,7 +252,6 @@ and body =
   |    PackageBody of name
                     * package_spec option
                     * declarative_part
-                    * block
 
 and basic_declaration =
   | ObjectDecl      of string list

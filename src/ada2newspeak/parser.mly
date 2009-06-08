@@ -211,7 +211,6 @@ let make_range exp_b_inf exp_b_sup =
 %type <sub_program_spec*location> subprogram_spec
 %type <spec*location> decl
 %type <body*location> body
-%type <block> package_instr
 %type <library_item*location> library_item
 %type <context_clause list> context_item context
 %type <(basic_declaration*location) list> factored_decl use_decl number_decl
@@ -246,11 +245,11 @@ body :
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
      in (SubProgramBody(spec,$3,$5), loc)}
-| PACKAGE BODY name IS declarative_part package_instr END SEMICOLON
-    {(PackageBody((fst $3), None, $5, $6), $1)}
-| PACKAGE BODY name IS declarative_part package_instr END name SEMICOLON
-    { (check_name (fst $3) (fst $8));
-      (PackageBody((fst $3), None, $5, $6), $1)
+| PACKAGE BODY name IS declarative_part END SEMICOLON
+    {(PackageBody((fst $3), None, $5), $1)}
+| PACKAGE BODY name IS declarative_part END name SEMICOLON
+    { (check_name (fst $3) (fst $7));
+      (PackageBody((fst $3), None, $5), $1)
     }
 ;
 
@@ -263,10 +262,6 @@ decl :
         { (check_name (fst $2) (fst $6));
           (PackageSpec((fst $2), $4), $1)}
 ;
-
-package_instr :
-| {[]}
-| BEGIN instr_list {$2}
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
@@ -569,18 +564,6 @@ subtyp_indication :
                                                 (* no : st + add some dynamic
                                                  * contraint*) }
 | subtyp {$1, None, None, Ada_types.universal_integer (* st *)}
-| CONST_INT DOUBLE_DOT CONST_INT
-    {Constrained(Integer
-                 ,Ada_config.integer_constraint
-                 ,true
-                 )
-     ,Some(RangeConstraint(CInt(snd $1)
-                          ,CInt(snd $3)
-                          )
-          )
-     ,None
-     ,Ada_types.new_range (Ada_types.(@...) (snd $1) (snd $3))
-    }
 
 subtyp :
 | name {SubtypName(fst $1)}

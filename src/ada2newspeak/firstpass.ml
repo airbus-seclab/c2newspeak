@@ -1851,7 +1851,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          superieur,
          donc on accepte la declaration d'un package. Sinon, il
          s'agit d'un sous-package, ce qui n'est pas gere *)
-      | Ast.PackageBody(name, package_spec, decl_part, _), true ->
+      | Ast.PackageBody(name, package_spec, decl_part), true ->
           package#set_current name;
           (match package_spec with
              | None -> ()

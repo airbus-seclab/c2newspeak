@@ -337,7 +337,7 @@ let check_compil_unit_name compil_unit file_name =
       | Spec(SubProgramSpec(spec)) -> subprog_name spec
       | Spec(PackageSpec(name,_)) -> name
       | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
-      | Body(PackageBody(name,_,_,_)) -> name
+      | Body(PackageBody(name,_,_)) -> name
   in
     match name with
       | ([],ident) -> ident=expected_name
