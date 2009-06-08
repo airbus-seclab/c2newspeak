@@ -248,7 +248,6 @@ body :
      in (SubProgramBody(spec,$3,$5), loc)}
 | PACKAGE BODY name IS declarative_part package_instr END SEMICOLON
     {(PackageBody((fst $3), None, $5, $6), $1)}
-
 | PACKAGE BODY name IS declarative_part package_instr END name SEMICOLON
     { (check_name (fst $3) (fst $8));
       (PackageBody((fst $3), None, $5, $6), $1)
