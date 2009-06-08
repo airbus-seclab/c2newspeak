@@ -113,23 +113,24 @@
     | "array"      -> ARRAY     l | "begin"      -> BEGIN     l
     | "body"       -> BODY      l | "case"       -> CASE      l
     | "constant"   -> CONSTANT  l | "declare"    -> DECLARE   l
-    | "elsif"      -> ELSIF     l | "else"       -> ELSE      l
-    | "end"        -> END       l | "exit"       -> EXIT      l
-    | "for"        -> FOR       l | "function"   -> FUNCTION  l
-    | "if"         -> IF        l | "in"         -> IN        l
-    | "is"         -> IS        l | "loop"       -> LOOP      l
-    | "mod"        -> MOD       l | "new"        -> NEW       l
-    | "not"        -> NOT       l | "null"       -> NULL      l
-    | "of"         -> OF        l | "or"         -> OR        l
-    | "others"     -> OTHERS    l | "out"        -> OUT       l
-    | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA    l
-    | "procedure"  -> PROCEDURE l | "range"      -> RANGE     l
-    | "rem"        -> REM       l | "renames"    -> RENAMES   l
-    | "return"     -> RETURN    l | "reverse"    -> REVERSE   l
-    | "subtype"    -> SUBTYPE   l | "then"       -> THEN      l
-    | "type"       -> TYPE      l | "use"        -> USE       l
-    | "when"       -> WHEN      l | "while"      -> WHILE     l
-    | "with"       -> WITH      l | "xor"        -> XOR       l
+    | "digits"     -> DIGITS    l | "elsif"      -> ELSIF     l
+    | "else"       -> ELSE      l | "end"        -> END       l
+    | "exit"       -> EXIT      l | "for"        -> FOR       l
+    | "function"   -> FUNCTION  l | "if"         -> IF        l
+    | "in"         -> IN        l | "is"         -> IS        l
+    | "loop"       -> LOOP      l | "mod"        -> MOD       l
+    | "new"        -> NEW       l | "not"        -> NOT       l
+    | "null"       -> NULL      l | "of"         -> OF        l
+    | "or"         -> OR        l | "others"     -> OTHERS    l
+    | "out"        -> OUT       l | "package"    -> PACKAGE   l
+    | "pragma"     -> PRAGMA    l | "procedure"  -> PROCEDURE l
+    | "range"      -> RANGE     l | "rem"        -> REM       l
+    | "renames"    -> RENAMES   l | "return"     -> RETURN    l
+    | "reverse"    -> REVERSE   l | "subtype"    -> SUBTYPE   l
+    | "then"       -> THEN      l | "type"       -> TYPE      l
+    | "use"        -> USE       l | "when"       -> WHEN      l
+    | "while"      -> WHILE     l | "with"       -> WITH      l
+    | "xor"        -> XOR       l
 
     | "true"       -> TRUE      l | "false"      -> FALSE     l
 
@@ -158,7 +159,6 @@
         (* at           *)
         (* tagged       *)
         (* delta        *)
-        (* digits       *)
         (* limited      *)
         (* private      *)
 

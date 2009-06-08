@@ -152,20 +152,20 @@ let make_range exp_b_inf exp_b_sup =
 
 %token <Newspeak.location*string>         IDENT
 
-%token <Newspeak.location> ABS       AND     ARRAY     ARROW   ASSIGN
-%token <Newspeak.location> BEGIN     BODY    CASE      COLON   COMMA
-%token <Newspeak.location> CONSTANT  DECLARE DIV       DOT     DOUBLE_DOT
-%token <Newspeak.location> ELSE      ELSIF   END       EQ      EXIT
-%token <Newspeak.location> FALSE     FOR     FUNCTION  GE      GT
-%token <Newspeak.location> IF        IN      IS        LE      LOOP
-%token <Newspeak.location> LPAR      LT      MINUS     MOD     MULT
-%token <Newspeak.location> NE        NEW     NOT       NULL    OF
-%token <Newspeak.location> OR        OTHERS  OUT       PACKAGE PLUS
-%token <Newspeak.location> POW       PRAGMA  PROCEDURE QUOTE   RANGE
-%token <Newspeak.location> REM       RENAMES RETURN    REVERSE RPAR
-%token <Newspeak.location> SEMICOLON SUBTYPE THEN      TRUE    TYPE
-%token <Newspeak.location> USE       VBAR    WHEN      WHILE   WITH
-%token <Newspeak.location> XOR
+%token <Newspeak.location> ABS        AND       ARRAY   ARROW     ASSIGN
+%token <Newspeak.location> BEGIN      BODY      CASE    COLON     COMMA
+%token <Newspeak.location> CONSTANT   DECLARE   DIGITS  DIV       DOT
+%token <Newspeak.location> DOUBLE_DOT ELSE      ELSIF   END       EQ
+%token <Newspeak.location> EXIT       FALSE     FOR     FUNCTION  GE
+%token <Newspeak.location> GT         IF        IN      IS        LE
+%token <Newspeak.location> LOOP       LPAR      LT      MINUS     MOD
+%token <Newspeak.location> MULT       NE        NEW     NOT       NULL
+%token <Newspeak.location> OF         OR        OTHERS  OUT       PACKAGE
+%token <Newspeak.location> PLUS       POW       PRAGMA  PROCEDURE QUOTE
+%token <Newspeak.location> RANGE      REM       RENAMES RETURN    REVERSE
+%token <Newspeak.location> RPAR       SEMICOLON SUBTYPE THEN      TRUE
+%token <Newspeak.location> TYPE       USE       VBAR    WHEN      WHILE
+%token <Newspeak.location> WITH       XOR
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
@@ -380,6 +380,18 @@ basic_declaration :
         {TypeDecl($2,DerivedType $5),$1}
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
             { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
+| TYPE ident IS DIGITS CONST_INT SEMICOLON
+            {
+              (* digits X -> new float *)
+              TypeDecl ($2,DerivedType (Unconstrained Float
+                                       ,None
+                                       ,None
+                                       ,Ada_types.new_float(
+                                                Newspeak.Nat.to_int (snd $5))
+                                       )
+                       )
+              ,$1
+            }
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
