@@ -143,80 +143,29 @@ let make_range exp_b_inf exp_b_sup =
 
 
 %}
-/*declaration ocamlyacc*/
 %token EOF
 
-%token                            ABS
-%token                            AND
-%token                            ARRAY
-%token                            ARROW
-%token <Newspeak.location>        ASSIGN
-%token                            BEGIN
-%token                            BODY
-%token <Newspeak.location>        CASE
-%token <Newspeak.location>        COLON
-%token                            COMMA
-%token                            CONSTANT
-%token <Syntax_ada.nat>           CONST_INT
-%token <int>                      CONST_CHAR
-%token <string>                   CONST_FLOAT
-%token <Newspeak.location>        DECLARE
-%token                            DIV
-%token                            DOT
-%token                            DOUBLE_DOT
-%token                            ELSE
-%token <Newspeak.location>        ELSIF
-%token                            END
-%token                            EQ
-%token <Newspeak.location>        EXIT
-%token                            FALSE
-%token <Newspeak.location>        FOR
-%token <Newspeak.location>        FUNCTION
-%token                            GE
-%token                            GT
-%token <string*Newspeak.location> IDENT
-%token                            IN
-%token <Newspeak.location>        IF
-%token                            IS
-%token                            LE
-%token <Newspeak.location>        LOOP
-%token <Newspeak.location>        LPAR
-%token                            LT
-%token                            MINUS
-%token                            MOD
-%token                            MULT
-%token                            NE
-%token                            NEW
-%token                            NOT
-%token <Newspeak.location>        NULL
-%token                            OF
-%token                            OR
-%token                            OTHERS
-%token                            OUT
-%token <Newspeak.location>        PACKAGE
-%token                            PLUS
-%token                            POW
-%token                            PRAGMA
-%token <Newspeak.location>        PROCEDURE
-%token                            QUOTE
-%token                            RANGE
-%token                            REM
-%token <Newspeak.location>        RENAMES
-%token <Newspeak.location>        RETURN
-%token                            REVERSE
-%token                            RPAR
-%token                            SEMICOLON
-%token <Newspeak.location>        SUBTYPE
-%token <string>                   STRING
-%token                            THEN
-%token                            TRUE
-%token <Newspeak.location>        TYPE
-%token <Newspeak.location>        USE
-%token                            VBAR
-%token                            WHEN
-%token <Newspeak.location>        WHILE
-%token <Newspeak.location>        WITH
-%token                            XOR
+%token <Newspeak.location*Syntax_ada.nat> CONST_INT
+%token <Newspeak.location*int>            CONST_CHAR
+%token <Newspeak.location*string>         CONST_FLOAT
+%token <Newspeak.location*string>         CONST_STRING
+
+%token <Newspeak.location*string>         IDENT
+
+%token <Newspeak.location> ABS       AND     ARRAY     ARROW   ASSIGN
+%token <Newspeak.location> BEGIN     BODY    CASE      COLON   COMMA
+%token <Newspeak.location> CONSTANT  DECLARE DIV       DOT     DOUBLE_DOT
+%token <Newspeak.location> ELSE      ELSIF   END       EQ      EXIT
+%token <Newspeak.location> FALSE     FOR     FUNCTION  GE      GT
+%token <Newspeak.location> IF        IN      IS        LE      LOOP
+%token <Newspeak.location> LPAR      LT      MINUS     MOD     MULT
+%token <Newspeak.location> NE        NEW     NOT       NULL    OF
+%token <Newspeak.location> OR        OTHERS  OUT       PACKAGE PLUS
+%token <Newspeak.location> POW       PRAGMA  PROCEDURE QUOTE   RANGE
+%token <Newspeak.location> REM       RENAMES RETURN    REVERSE RPAR
+%token <Newspeak.location> SEMICOLON SUBTYPE THEN      TRUE    TYPE
+%token <Newspeak.location> USE       VBAR    WHEN      WHILE   WITH
+%token <Newspeak.location> XOR
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
@@ -328,12 +277,12 @@ subprogram_spec :
                                                   {Function ((fst $2),$4,$7),$1}
 | FUNCTION   name                        RETURN subtyp
                                                   {Function ((fst $2),[],$4),$1}
-| FUNCTION  STRING LPAR formal_part RPAR RETURN subtyp
+| FUNCTION  CONST_STRING LPAR formal_part RPAR RETURN subtyp
                      {Function (([],Ada_utils.make_operator_name
-                     (Ada_utils.operator_of_string $2)), $4,$7),$1}
-| PROCEDURE STRING LPAR formal_part RPAR
+                     (Ada_utils.operator_of_string (snd $2))), $4,$7),$1}
+| PROCEDURE CONST_STRING LPAR formal_part RPAR
                      {Procedure(([],Ada_utils.make_operator_name
-                     (Ada_utils.operator_of_string $2)), $4),   $1}
+                     (Ada_utils.operator_of_string (snd $2))), $4),   $1}
 ;
 
 formal_part :
@@ -575,9 +524,9 @@ expression :
 | MINUS expression %prec UMINUS {Unary (UMinus , $2    )}
 | NOT   expression              {Unary (Not    , $2    )}
 | ABS   expression              {Unary (Abs    , $2    )}
-| CONST_INT   {CInt($1)}
-| CONST_FLOAT {CFloat(float_of_string $1,$1)}
-| CONST_CHAR  {CChar($1)}
+| CONST_INT   {CInt(snd $1)}
+| CONST_FLOAT {let s = snd $1 in CFloat(float_of_string s,s)}
+| CONST_CHAR  {CChar(snd $1)}
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}
 | LPAR expression RPAR {$2}
@@ -602,12 +551,12 @@ subtyp_indication :
                  ,Ada_config.integer_constraint
                  ,true
                  )
-     ,Some(RangeConstraint(CInt($1)
-                          ,CInt($3)
+     ,Some(RangeConstraint(CInt(snd $1)
+                          ,CInt(snd $3)
                           )
           )
      ,None
-     ,Ada_types.new_range (Ada_types.(@...) $1 $3)
+     ,Ada_types.new_range (Ada_types.(@...) (snd $1) (snd $3))
     }
 
 subtyp :
@@ -625,7 +574,7 @@ parameter_association:
 ;
 
 ident :
-| IDENT {fst $1}
+| IDENT {snd $1}
 ;
 
 ident_list :
@@ -639,7 +588,7 @@ name_list :
 ;
 
 name :
-| IDENT {([],fst $1),snd $1}
+| IDENT {([],snd $1),fst $1}
 | name DOT ident /* TODO : trouver une meilleur solution */
       {
     let (par, ident) = fst $1
