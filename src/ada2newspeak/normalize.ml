@@ -755,10 +755,6 @@ in
           in match clause with
             | (EnumerationRepresentation(_, agregat), rloc) ->
                 interpret_enumeration_clause agregat symbs rloc loc
-            | AttributeDefinitionClause _,_ ->
-                     Npkcontext.report_error "normalize"
-                  "AttributeDefinitionClause is not yet implemented" (* FIXME *)
-
         end
       else
         (symbs, size)

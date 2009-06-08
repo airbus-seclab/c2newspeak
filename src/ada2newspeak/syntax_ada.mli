@@ -226,9 +226,6 @@ and array_aggregate = NamedArrayAggregate of (string * expression) list
 and representation_clause =
   | EnumerationRepresentation of string
                                * array_aggregate
-  | AttributeDefinitionClause of subtyp
-                               * string
-                               * expression
 
 and object_state =
   | Variable

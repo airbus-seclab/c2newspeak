@@ -426,7 +426,6 @@ array_aggregate :
 
 representation_clause :
 | FOR ident USE array_aggregate         {EnumerationRepresentation($2,$4)   ,$1}
-| FOR subtyp QUOTE ident USE expression {AttributeDefinitionClause($2,$4,$6),$1}
 ;
 
 instr_list :

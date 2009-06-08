@@ -346,9 +346,6 @@ let check_compil_unit_name compil_unit file_name =
 
 let extract_representation_clause_name rep_clause = match rep_clause with
   | EnumerationRepresentation(ident, _) -> ident
-  | AttributeDefinitionClause _ -> Npkcontext.report_error
-                "extract_representation_clause_name"
-        "not yet implemented for AttributeDefinitionClause" (* FIXME *)
 
 let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | None   -> def_value
