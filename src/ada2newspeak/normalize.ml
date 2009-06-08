@@ -988,10 +988,11 @@ in
                                     (VarSymb false)
                                     false;
            end;
-          {Ast.param_type    = normalize_subtyp param.param_type;
-           Ast.formal_name   = param.formal_name;
-           Ast.mode          = param.mode;
-           Ast.default_value = may normalize_exp param.default_value;}
+          { Ast.param_type    = normalize_subtyp param.param_type
+          ; Ast.formal_name   = param.formal_name
+          ; Ast.mode          = param.mode
+          ; Ast.default_value = may normalize_exp param.default_value
+        }
         )
         param_list
     in match subprog_spec with
