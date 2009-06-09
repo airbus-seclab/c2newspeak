@@ -744,8 +744,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                         " subtyp_lv has not expected typ"
   in
 
-
-
   let rec translate_if_exp (cond:Ast.expression) (exp_then:Ast.expression)
                            (exp_else:Ast.expression) expected_typ =
     match expected_typ with
@@ -755,7 +753,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           let name = ident_to_name tmp in
           let instr_if = Ast.If (cond,
                              [(Ast.Assign(Lval name, exp_then),loc)],
-                             (*WG Lval (Array)*)
                              [(Ast.Assign(Lval name, exp_else),loc)])
           in let tr_instr_if =
               translate_block [(instr_if,loc)]
@@ -767,6 +764,32 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | Some(_) -> Npkcontext.report_error
           "Firstpass.translate_if_exp"
             "invalid operator and argument"
+
+  and translate_and (e1:Ast.expression) (e2:Ast.expression) =
+    let loc = Npkcontext.get_loc () in
+    let (tr_e2,_ ) = translate_exp e2 (Some A.Boolean) in
+    let (tmp, decl, vid) = temp#create loc A.Boolean in
+    let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
+    let tr_ifexp = fst (translate_if_exp e1
+                                         e2
+                                         (Ast.CBool false,T.boolean)
+                                         (Some A.Boolean)) in
+      remove_symb tmp;
+      C.Pref (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
+             ,C.Lval (vid, translate_typ A.Boolean)), A.Boolean
+
+  and translate_or (e1:Ast.expression) (e2:Ast.expression) =
+    let loc = Npkcontext.get_loc () in
+    let (tr_e2,_ ) = translate_exp e2 (Some A.Boolean) in
+    let (tmp, decl, vid) = temp#create loc A.Boolean in
+    let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
+    let tr_ifexp = fst (translate_if_exp e1
+                                         (Ast.CBool true,T.boolean)
+                                         e2
+                                         (Some A.Boolean)) in
+      remove_symb tmp;
+      C.Pref (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
+             ,C.Lval (vid, translate_typ A.Boolean)), A.Boolean
 
   and translate_binop op (e1:Ast.expression) (e2:Ast.expression) expected_typ =
     let expected_typ1 = Ada_utils.typ_operand op expected_typ in
@@ -801,7 +824,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | Eq, C.Scalar t -> C.Binop (Npk.Eq t, tr_e1, tr_e2), A.Boolean
       | Gt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e1, tr_e2), A.Boolean
 
-      | (Power | Mod | And | Or ) ,_ ->
+      | And, C.Scalar _ -> translate_and e1 e2
+      | Or , C.Scalar _ -> translate_or  e1 e2
+
+      | (Power | Mod ) ,_ ->
           Npkcontext.report_error "Firstpass.translate_binop"
             "run-time operator not implemented"
 

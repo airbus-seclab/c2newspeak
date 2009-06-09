@@ -169,13 +169,15 @@ let parse_package_specification (name:name):package_spec =
  * a name, les noms etant traites comme extern a la normalisation
  *)
 let rec parse_extern_specification (name:name):Ast.spec*location =
-  let spec_ast = parse_specification name
-  in
-    match (normalization spec_ast true) with
-      | (_, Ast.Spec(spec), loc) -> (spec, loc)
-      | (_, Ast.Body(_), _) -> Npkcontext.report_error
-          "normalize.parse_extern_specification"
-            "internal error : specification expected, body found"
+  Npkcontext.print_debug "Parsing extern specification file";
+  let spec_ast = parse_specification name in
+  let norm_spec = (normalization spec_ast true) in
+  Npkcontext.print_debug "Done parsing extern specification file";
+  match norm_spec with
+    | (_, Ast.Spec(spec), loc) -> (spec, loc)
+    | (_, Ast.Body(_), _) -> Npkcontext.report_error
+        "normalize.parse_extern_specification"
+          "internal error : specification expected, body found"
 
 (**
  * Iterates through the abstract syntax tree, performing miscellaneous tasks.
@@ -1271,7 +1273,6 @@ in
             add_cst (normalize_ident ident package#current true)
                     (Number(v, true))
                     true
-
         | Ast.NumberDecl(_, _, None) ->
             Npkcontext.report_error
               "Ada_normalize.add_extern_spec.add_extern_basic_decl"
@@ -1294,7 +1295,6 @@ in
           add_function name (Some(base_typ return_typ)) true
       | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
-
       | Ast.PackageSpec(nom, basic_decls) ->
           package#set_current nom;
           List.iter add_extern_basic_decl basic_decls;
@@ -1306,23 +1306,23 @@ in
   (* normalise le context, en supprimant les doublons with *)
   let rec normalize_context context previous_with =
     match context with
-      | With(nom, _, _)::r when (List.mem nom previous_with) ->
-          (* doublon *)
-          normalize_context r previous_with
+      | [] -> []
       | With(nom, _, spec)::r ->
-
-          let (norm_spec, loc) = match spec with
-            | None   -> parse_extern_specification nom
-            | Some _ -> Npkcontext.report_error
-                "Ada_normalize.normalize_context"
-                  "internal error : spec provided"
-          in
-            add_extern_spec norm_spec;
-            Ast.With(nom, loc, Some(norm_spec, loc))
-            ::normalize_context r (nom::previous_with)
+          if (List.mem nom previous_with) then
+            normalize_context r previous_with
+          else begin
+            let (norm_spec, loc) = match spec with
+              | None   -> parse_extern_specification nom
+              | Some _ -> Npkcontext.report_error
+                  "Ada_normalize.normalize_context"
+                    "internal error : spec provided"
+            in
+              add_extern_spec norm_spec;
+              Ast.With(nom, loc, Some(norm_spec, loc))
+              ::normalize_context r (nom::previous_with)
+          end
       | UseContext(n)::r -> package#add_use n;
                             Ast.UseContext n::normalize_context r previous_with
-      | [] -> []
   in
 
   let (context,lib_item,loc) = compil_unit in

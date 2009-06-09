@@ -69,14 +69,11 @@ let mod_rem_aux ~is_mod na nb =
 let rem_ada = mod_rem_aux ~is_mod:false
 let mod_ada = mod_rem_aux ~is_mod:true
 
-(* calcul sur les value *)
-
 let eq_val v1 v2 =
-  let eq a b = a=b in
     match (v1, v2) with
-      | (IntVal v1, IntVal v2) -> eq v1 v2
-      | (BoolVal v1, BoolVal v2) -> eq v1 v2
-      | (FloatVal v1, FloatVal v2) -> eq v1 v2
+      | IntVal   v1, IntVal   v2 -> v1 = v2
+      | BoolVal  v1, BoolVal  v2 -> v1 = v2
+      | FloatVal v1, FloatVal v2 -> v1 = v2
       | _ ->
           Npkcontext.report_error "Ada_utils.eq_val"
             "internal error : uncompatible value"
@@ -87,18 +84,14 @@ let inf_val v1 v2 =
       |   IntVal v1,   IntVal v2 -> (Nat.compare v1 v2) < 0
       |  BoolVal v1,  BoolVal v2 -> inf v1 v2
       | FloatVal v1, FloatVal v2 -> inf v1 v2
- (*     | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2*)
       | _ ->
           Npkcontext.report_error "Ada_utils.inf_val"
             "internal error : uncompatible value"
 
-(* contraintes *)
+let nat_of_bool b =
+  if b then Newspeak.Nat.one
+       else Newspeak.Nat.zero
 
-let nat_of_bool b = match b with
-  | true -> Newspeak.Nat.one
-  | false -> Newspeak.Nat.zero
-
-(* verifie que a <= n <= b *)
 let between a b n  =
   a <= n && n <= b
 
@@ -116,7 +109,6 @@ let nat_constraint_compatibility ref1 ref2 fils1 fils2 =
   then (Nat.compare fils2 fils1) < 0
   else
     (between_nat ref1 ref2 fils1) && (between_nat ref1 ref2 fils2)
-
 
 (* verifie que la contrainte courante est compatible avec cref *)
 let constraint_check_compatibility cref courante =

@@ -9,9 +9,9 @@
 -- Author : Etienne Millon
 -- Date   : Tue Jun  9 2009
 --
-package body t279 is
+package body t280 is
   procedure main is
   begin
     p;
   end;
-end t279;
+end t280;
