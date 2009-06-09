@@ -493,19 +493,11 @@ let translate (globals, spec) =
 		
 	| AddrOf (Deref e) -> translate_exp e
 	    
-	| AddrOf (Index (lv, _, Cst (C.CInt i, _)))
+	| AddrOf (Index (lv, (t, len), Cst (C.CInt i, _)))
 	    when Nat.compare i Nat.zero = 0 ->
-	    let (lv', t) = translate_lv lv in begin
-		match t with
-		    Array (elt_t, _) -> 
-		      let (e, _) = addr_of (lv', t) in
-			(e, Ptr elt_t)
-(* TODO: try and remove this case??? *)
-		  | Ptr _ -> translate_exp lv
-		  | _ -> 
-		      Npkcontext.report_error "Firstpass.translate_lv" 
-			"Array type expected"
-	      end
+	    let (lv, _) = translate_lv lv in 
+	    let (e, _) = addr_of (lv, Array (t, len)) in
+	      (e, Ptr t)
 						
 	| AddrOf (Index (lv, a, e)) ->
 	    let base = AddrOf (Index (lv, a, exp_of_int 0)) in
