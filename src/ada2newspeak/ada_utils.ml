@@ -367,7 +367,7 @@ class package_manager =
         val mutable    with_pkg:package list            = []
         val             context:(package,int) Hashtbl.t = Hashtbl.create 3
         val mutable     extflag:bool                    = false
-        val            renaming:(name,name) Hashtbl.t   = Hashtbl.create 0
+        val mutable    renaming:(name*name) list        = []
 
         method set_current (x,y) :unit =
           let p = x@[y] in
@@ -417,8 +417,7 @@ class package_manager =
           extflag <- false
 
         method normalize_name (name:Syntax_ada.name) extern =
-          try Npkcontext.print_debug ("Trying to find renaming_decl
-          "^name_to_string name); Hashtbl.find renaming name with
+          try List.assoc name renaming with
           Not_found -> 
           if (not extern) then name
           else let (parents,ident) = name in
@@ -429,11 +428,34 @@ class package_manager =
                    | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
                    ("unknown package "^(ident_list_to_string parents))
 
-
-        method add_renaming_decl (new_name:name) (old_name:name) =
-          Npkcontext.print_debug ("Renaming decl : " ^ name_to_string old_name
-                                 ^     " --> "       ^ name_to_string new_name);
-          Hashtbl.add renaming new_name old_name
+        (**
+         * Algorithm for add_rd (A,B)  (A -> B)
+         *
+         * If A = B, detect circular dependency.
+         * If B is already a pointer to some C, we have something like
+         *      A -> B -> C
+         * So its equivalent to call (A -> C).
+         *
+         * Note that in the particular case where C = A (cycle), the recursive
+         * call is (A -> A) and the circular dependency will be detected.
+         *)
+        method add_renaming_decl new_name old_name =
+          Npkcontext.print_debug ("add_rd "
+                                 ^name_to_string new_name
+                                 ^" --> "
+                                 ^name_to_string old_name
+          );
+          if (new_name=old_name) then
+            Npkcontext.report_error "add_renaming_decl"
+                          ("Circular declaration detected for '"
+                          ^name_to_string new_name^"'.")
+          else begin
+            try
+              let pointee = List.assoc new_name renaming in
+              self#add_renaming_decl new_name pointee
+            with Not_found ->
+              renaming <- (new_name,old_name)::renaming 
+          end
     end
 
 let make_operator_name op =
