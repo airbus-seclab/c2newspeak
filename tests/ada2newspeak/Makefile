@@ -50,7 +50,7 @@ TESTS=t001 t002 t003 t004 t005 t006 t007 t008 t009 t010 \
       t241 t242 t243 t244 t245 t246 t247 t248 t249      \
 			     t252 t253 t254 t255 t256 t257 t258 t259 t260 \
 		  t261 t262	t263			t265 t266	t267 t268 t269 t270 \
-			t271 t272	t273 t274           t277
+			t271 t272	t273 t274           t277 t278
 
 include ../common.Makefile
 
