@@ -132,12 +132,13 @@ let parse_specification (name:name) :compilation_unit =
     if Sys.file_exists spec_name
     then
       let res = File_parse.parse spec_name in
-      if (!Npkcontext.verb_ast) then begin
-        print_endline "Abstract Syntax Tree (extern)";
-        print_endline "-----------------------------";
-        Print_syntax_ada.print_ast [res];
-        print_newline ();
-      end;
+      if (!Npkcontext.verb_ast) then
+        begin
+          print_endline "Abstract Syntax Tree (extern)";
+          print_endline "-----------------------------";
+          Print_syntax_ada.print_ast [res];
+          print_newline ();
+        end;
       res
     else
       let body_name = (string_of_name name)^".adb" in
