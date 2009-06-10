@@ -544,7 +544,7 @@ unary_expression:
 | AMPERSAND cast_expression                { AddrOf $2 }
 | STAR cast_expression                     { Deref $2 }
 | BNOT cast_expression                     { Unop (BNot, $2) }
-| MINUS cast_expression                    { Unop (Neg, $2) }
+| MINUS cast_expression                    { Csyntax.neg $2 }
 | NOT cast_expression                      { Unop (Not, $2) }
 | SIZEOF unary_expression                  { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_decl $3) }

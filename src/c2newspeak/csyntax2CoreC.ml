@@ -168,8 +168,7 @@ let process (globals, specs) =
 
   let translate_unop x t = 
     match (x, t) with
-	(Neg, (C.Int _| C.Float _)) -> (C.Neg, t)
-      | (Not, C.Int _) -> (C.Not, C.int_typ)
+	(Not, C.Int _) -> (C.Not, C.int_typ)
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)

@@ -311,13 +311,6 @@ let translate (globals, spec) =
 	| ((_, (f_o, t))::fields, []) ->
 	    let f_o = o + f_o in
 	    let _ = fill_with_zeros f_o t in
-(* TODO: remove
-	      if (fields = []) then begin
-		Npkcontext.report_accept_warning 
-		  "Firstpass.translate_init.translate_field_sequence" 
-		  "missing initializers for structure" Npkcontext.DirtySyntax
-	      end;
-*)
 	      translate_field_sequence o fields []
 
 	| ([], _) -> 
@@ -505,10 +498,6 @@ let translate (globals, spec) =
 		
 	| AddrOf lv -> addr_of (translate_lv lv)
 
-	(* Here c is necessarily positive *)
-	| Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
-	    (C.Const (C.CInt (Nat.neg c)), Int (N.Signed, sz))
-	      
 	| Unop (op, e) -> 
 	    let e = translate_exp e in
 	      translate_unop op e
@@ -1223,10 +1212,7 @@ let translate (globals, spec) =
 
   and translate_unop op (e, t) = 
     match (op, t, e) with
-      | (Neg, Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
-      | (Neg, Float _, _) -> 
-	  translate_binop Minus (C.exp_of_float 0., t) (e, t)
-      | (Not, Int _, _) -> (C.Unop (K.Not, e), CoreC.int_typ)
+	(Not, Int _, _) -> (C.Unop (K.Not, e), CoreC.int_typ)
       | (BNot, Int k, _) -> 
 	  let k' = C.promote k in
 	  let t' = Int k' in
