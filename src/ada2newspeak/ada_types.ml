@@ -316,6 +316,8 @@ let type_stub = {
   limited = false;
 }
 
+let unknown = {type_stub with trait = Signed (Some NullRange)}
+
 let universal_integer = { type_stub with trait = Signed None; }
 
 let universal_real = { type_stub with trait = Float 100; }
@@ -427,7 +429,7 @@ let positive = new_constr integer
 
 let boolean = new_enumerated ~symboltable:builtin_table ["true" ; "false"]
 
-let _float = new_float 6
+let std_float = new_float 6
 
 let builtin_type x = find_type builtin_table [] x
 
@@ -576,6 +578,6 @@ let (@=) v1 v2 =
 
 let _ =
   List.iter2 (add_type builtin_table [])
-  ["integer"; "float" ; "boolean" ; "natural" ; "positive" ; "character"]
-  [ integer ; _float  ;  boolean  ;  natural  ;  positive  ;  character ]
+  ["integer";    "float" ; "boolean" ; "natural" ; "positive" ; "character"]
+  [ integer ; std_float  ;  boolean  ;  natural  ;  positive  ;  character ]
 

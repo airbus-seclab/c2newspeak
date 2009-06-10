@@ -53,8 +53,6 @@ let ikind_to_string (s,taille) =
   in
     "("^string_signe^", "^(string_of_int taille)^")"
 
-
-
 let uop_to_string op = match op with
   | UPlus  -> "U+"
   | UMinus -> "U-"
@@ -87,7 +85,7 @@ let rec typ_to_string typ = match typ with
   | Float        -> "Float"
   | Boolean      -> "Boolean"
   | Character    -> "Character"
-  | Declared(id,typ_decl,loc) -> "Declared("
+  | Declared(id,typ_decl,_,loc) -> "Declared("
       ^id^","
       ^(typ_declaration_to_string typ_decl)^","
       ^(line_of_loc loc)^")"
@@ -272,7 +270,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(subtyp_indication_to_string subtyp_ind)
       ^", "^(option_to_string def exp_to_string)
       ^", "^(object_state_to_string status)^")"
-  | TypeDecl(id,typdecl) ->
+  | TypeDecl(id,typdecl,_) ->
       "TypeDecl("^id^","^(typ_declaration_to_string typdecl)^")"
   | UseDecl(use_clause) -> "UseDecl("^(name_to_string use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("

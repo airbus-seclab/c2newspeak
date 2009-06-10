@@ -69,17 +69,21 @@ let build_matrix l typ_ind loc =
         [] -> typ_elt
       | hd::tl ->
           let recu =  crafted tl typ_elt in
-          let new_ind = Unconstrained(Declared("no_name"
-                                              ,Array({array_index     = hd
-                                                     ;array_component = recu
-                                                     ;array_size      = None
-                                                     }
-                                                    )
-                                              ,loc
-                                              )
-                                     )
+          let new_ind = Unconstrained
+                          (Declared("no_name"
+                                   ,Array({array_index     = hd
+                                          ;array_component = recu
+                                          ;array_size      = None
+                                          }
+                                         )
+                                   ,Ada_types.new_array
+                                               Ada_types.unknown (* hd   *)
+                                              [Ada_types.unknown (* recu *)]
+                                   ,loc
+                                   )
+                          )
           in
-            ( new_ind, None, None, Ada_types.universal_integer (* noo *)  )
+            ( new_ind, None, None, Ada_types.unknown)
   in
     match l with
         [] -> Npkcontext.report_error "Parser.build_matrix"
@@ -361,22 +365,27 @@ basic_declaration :
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
         {ObjectDecl($1,$4,Some($6), Constant), $2}
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
-                { TypeDecl($2,Array $5),$1}
+    { TypeDecl($2,Array $5, Ada_types.new_array Ada_types.unknown
+                                               [Ada_types.unknown]),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
-    { TypeDecl($2, make_enum $5),$1}
+  { TypeDecl($2, make_enum $5,Ada_types.new_enumerated $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
-        {TypeDecl($2,DerivedType $5),$1}
+        { let (_,_,_,t) = $5 in
+            TypeDecl($2,DerivedType $5,Ada_types.new_derived t),$1
+        }
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
-            { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
+            { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)
+                      ,Ada_types.unknown),$1}
 | TYPE ident IS DIGITS CONST_INT SEMICOLON
             {
               (* digits X -> new float *)
               TypeDecl ($2,DerivedType (Unconstrained Float
                                        ,None
                                        ,None
-                                       ,Ada_types.new_float(
-                                                Newspeak.Nat.to_int (snd $5))
+                                       ,Ada_types.std_float
                                        )
+                           ,Ada_types.new_float(
+                                    Newspeak.Nat.to_int (snd $5))
                        )
               ,$1
             }

@@ -86,12 +86,15 @@ type binary_op =
 
 (** Builtin types. *)
 type typ =
-  | Integer                                         (** Integer               *)
-  | IntegerConst                                    (** Integer constant      *)
-  | Float                                           (** Floating-point number *)
-  | Boolean                                         (** Boolean               *)
-  | Character                                       (** Character             *)
-  | Declared of string*typ_declaration*location (** User-defined type     *)
+  | Integer                              (** Integer               *)
+  | IntegerConst                         (** Integer constant      *)
+  | Float                                (** Floating-point number *)
+  | Boolean                              (** Boolean               *)
+  | Character                            (** Character             *)
+  | Declared of string                   (** User-defined type     *)
+              * typ_declaration
+              * Ada_types.t
+              * location 
 
 (** Type declaration. *)
 and typ_declaration =
@@ -258,7 +261,7 @@ and basic_declaration =
                      * subtyp_indication
                      * expression option
                      * object_state
-  | TypeDecl        of string*typ_declaration
+  | TypeDecl        of string*typ_declaration*Ada_types.t
   | UseDecl         of name
   | SpecDecl        of spec
   | NumberDecl      of string

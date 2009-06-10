@@ -136,7 +136,7 @@ let rec translate_typ (typ:A.typ) :C.typ = match typ with
 | A.IntegerConst -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
 | A.Boolean      -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
 | A.Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
-| A.Declared(_,typ_decl, _) -> translate_declared typ_decl
+| A.Declared(_,typ_decl,_,_) -> translate_declared typ_decl
 
 (**
  * Translate a [Syntax_ada.typ_declaration].
@@ -685,7 +685,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             let (v, subtyp_lv) = translate_lv lval write trans_exp in
               match  subtyp_lv
               with
-                  A.Unconstrained(A.Declared(_, A.Array a, _)) ->
+                  A.Unconstrained(A.Declared(_, A.Array a,_, _)) ->
                     let (stypindex, contraint,_,_ ) = a.A.array_index     in
                     let (stypelt,_,_,_)             = a.A.array_component in
                     let size_base =  C.exp_of_int (C.size_of_typ (
@@ -1332,7 +1332,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   let rec destroy subt = (*du plus gros vers plus petit*)
                     let styp_fom_ind (a,_,_,_) = a in
                     match subt with
-                    | A.Unconstrained(A.Declared (_,A.Array a,_)) ->
+                    | A.Unconstrained(A.Declared (_,A.Array a,_,_)) ->
                         let sbtypidx = styp_fom_ind a.A.array_index     in
                         let sbtypelt = styp_fom_ind a.A.array_component in
                         let deb = (sbtypidx, sbtypelt) in
@@ -1665,12 +1665,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and translate_enum_declaration idtyp typ_decl list_val_id loc global =
     List.iter
       (fun (x,id) -> add_enum loc x id
-         (A.Declared(idtyp, typ_decl, loc)) global)
+         (A.Declared(idtyp, typ_decl, T.unknown, loc)) global)
       list_val_id
 
   and translate_derived_typ_decl subtyp_ind loc global =
     match Ada_utils.extract_typ subtyp_ind with
-      | A.Declared(idtyp, (A.Enum(list_val_id, _) as typ_decl) ,_) ->
+      | A.Declared(idtyp, (A.Enum(list_val_id, _) as typ_decl),_,_) ->
           translate_enum_declaration idtyp typ_decl list_val_id loc global
       | _ -> ()
 
