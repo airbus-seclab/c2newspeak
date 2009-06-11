@@ -154,6 +154,11 @@ val sizeof : range -> Newspeak.Nat.t
  * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
  *)
 
+(**
+ * An unknown type, different from every other one.
+ *)
+val unknown        : t
+
 (** Derived type. (structural copy) *)
 val new_derived    : t -> t
 
@@ -227,9 +232,10 @@ val character : t
 (** The boolean type. *)
 val boolean : t
 
-val natural  : t
-val positive : t
-val integer  : t
+val natural   : t
+val positive  : t
+val integer   : t
+val std_float : t
 
 (******************
  * Tests on types *

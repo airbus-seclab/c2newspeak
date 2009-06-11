@@ -371,24 +371,24 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
   let add_typ nom typdecl location ~global ~extern =
     let subtyp = match typdecl with
-      | Array _ -> Unconstrained(Declared(snd nom, typdecl, location))
+      | Array _ -> Unconstrained(Declared(snd nom, typdecl, T.unknown, location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
           let contrainte = IntegerRangeConstraint(min, max)
-          and typ = Declared(snd nom,typdecl, location)
+          and typ = Declared(snd nom,typdecl, T.unknown,location)
           in
             add_enum_litt symbs typ global extern;
             Constrained(typ, contrainte, true)
 
       | IntegerRange(contrainte, _) ->
-          Constrained(Declared(snd nom, typdecl, location), contrainte, true)
+          Constrained(Declared(snd nom, typdecl,T.unknown, location), contrainte, true)
       | DerivedType(subtyp_ind) ->
           let subtyp = extract_subtyp subtyp_ind in
           let typ = base_typ subtyp in
             begin
               match typ with
-                | Declared(_,Enum(symbs,_),_) ->
+                | Declared(_,Enum(symbs,_),_,_) ->
                     add_enum_litt symbs typ global extern
                 | _ -> ()
             end;
@@ -479,7 +479,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
 and normalize_subtyp subtyp =
   let norm_typ typp =
     match typp with
-        Declared (id,Array a,x) ->
+        Declared (id,Array a,t,x) ->
           let n_st1 =  normalize_subtyp_indication a.array_index     in
           let n_st2 =  normalize_subtyp_indication a.array_component in
 
@@ -510,10 +510,13 @@ and normalize_subtyp subtyp =
                 "Ada_normalize.normalize_typ_decl"
                 "array error : range isn't static"
         in
-          Declared (id,Array({array_index = n_st1;
-                              array_component = n_st2;
-                              array_size = taille;
-                             }), x)
+          Declared (id
+                   ,Array({array_index     = n_st1;
+                           array_component = n_st2;
+                           array_size      = taille;
+                         })
+                   ,t
+                   ,x)
       |  _ -> typp
   in
     match subtyp with (* For array norm_typ is used here*)
@@ -527,7 +530,7 @@ and array_bounds (typ:subtyp) :nat*nat=
     match typ with
     | Unconstrained(Declared(_,Array {array_index =
                 Constrained(_, IntegerRangeConstraint (a,b), _), None,_,_
-          },_)) -> (a,b)
+          },_,_)) -> (a,b)
     | SubtypName _ -> array_bounds (normalize_subtyp typ)
     | _  -> Npkcontext.report_error "ada_normalize.array_bounds"
                                       "invalid argument"
@@ -840,27 +843,33 @@ in
                 "Ada_normalize.normalize_typ_decl"
                 "internal error : incorrect type"
           (* declared types : simplification *)
-          | Declared(parent,Enum(symbs, size),_) ->
+          | Declared(parent,Enum(symbs, size),_,_) ->
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
-          | Declared(_,IntegerRange(contrainte,taille),_) ->
+          | Declared(_,IntegerRange(contrainte,taille),_,_) ->
               IntegerRange(contrainte, taille)
-          | Declared(_,Array  def,_) -> Array  def
-          | Declared(_, DerivedType subtyp_ind,_) -> DerivedType subtyp_ind
+          | Declared(_,Array  def,_,_) -> Array def
+          | Declared(_,DerivedType subtyp_ind,_,_) -> DerivedType subtyp_ind
         in
-
 
         (*constitution of the subtype representing the current declaration *)
         let norm_subtyp =
             match (extract_subtyp norm_subtyp_ind ) with
-              | Unconstrained _ -> Unconstrained(Declared(ident,typ_decl, loc))
+            | Unconstrained _ -> Unconstrained(Declared(ident
+                                                       ,typ_decl
+                                                       ,T.unknown
+                                                       ,loc
+                                                       ))
               | Constrained(_, contrainte, static) ->
               (* for enumeration types, we update the value of the constraint *)
                   let contrainte = match (typ_decl, parent_type) with
-                    | (Enum(new_assoc,_), Declared(_,Enum(symbs, _),_)) ->
+                    | (Enum(new_assoc,_), Declared(_,Enum(symbs, _),_,_)) ->
                         update_contrainte contrainte symbs new_assoc
                     | _ -> contrainte
-                  in Constrained(Declared(ident,typ_decl,loc),contrainte,static)
+                  in Constrained(Declared(ident
+                                         ,typ_decl
+                                         ,T.unknown
+                                         ,loc),contrainte,static)
               | SubtypName _ ->
                   Npkcontext.report_error
                     "Ada_normalize.normalize_typ_decl"
@@ -927,7 +936,7 @@ in
     (* incomplet *)
     List.iter
       (function (item,_) -> match item with
-      | BasicDecl(TypeDecl(id,tdecl)) -> remove_typ_decl id tdecl
+      | BasicDecl(TypeDecl(id,tdecl,_)) -> remove_typ_decl id tdecl
       | BasicDecl(SubtypDecl(ident,_))-> types#remove(normalize_ident_cur ident)
       | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
           List.iter
@@ -1062,7 +1071,7 @@ in
           "Ada_normalize.normalize_basic_decl"
           ("internal error : constant without default value"
            ^"or already evaluated")
-    | TypeDecl(id,typ_decl) ->
+    | TypeDecl(id,typ_decl,_) ->
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
         in Some (Ast.TypeDecl(id,norm_typ_decl))
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))

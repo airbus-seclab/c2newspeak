@@ -203,7 +203,7 @@ let rec integer_class typ = match typ with
   | Character -> false
   | Integer
   | IntegerConst -> true
-  | Declared(_,typdef,_) ->
+  | Declared(_,typdef,_,_) ->
       (match typdef with
          | Enum _
          | Array _ -> false

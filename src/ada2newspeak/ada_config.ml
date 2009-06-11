@@ -75,10 +75,9 @@ let size_of_range inf sup =
 (* from the specification : 13.3.(49) *)
 let size_of_boolean = 1
 
-let size_of_byte = 8
-let size_of_char = 1*size_of_byte
-let size_of_int = 4*size_of_byte
-let size_of_float = 4*size_of_byte
+let size_of_char  = Config.size_of_char
+let size_of_int   = Config.size_of_int
+let size_of_float = Config.size_of_float
 
 let integer_constraint =
   Syntax_ada.IntegerRangeConstraint(
