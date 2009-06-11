@@ -499,8 +499,9 @@ let translate (globals, spec) =
 	| AddrOf lv -> addr_of (translate_lv lv)
 
 	| Unop (op, e) -> 
-	    let e = translate_exp e in
-	      translate_unop op e
+	    let (e, _) = translate_exp e in
+	    let (op, t) = translate_unop op in
+	      (C.Unop (op, e), t)
 		
 	| Binop (op, e1, e2) -> 
 	    let e1 = translate_exp e1 in
@@ -1210,17 +1211,10 @@ let translate (globals, spec) =
     in
       (e, t)
 
-  and translate_unop op (e, t) = 
-    match (op, t, e) with
-	(Not, Int _, _) -> (C.Unop (K.Not, e), CoreC.int_typ)
-      | (BNot, Int k, _) -> 
-	  let k' = C.promote k in
-	  let t' = Int k' in
-	  let (e, t') = cast (e, t) t' in
-	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), e), t')
-      | _ -> 
-	  Npkcontext.report_error "Firstpass.translate_unop" 
-	    "unexpected unary operator and argument"
+  and translate_unop op = 
+    match op with
+	Not -> (K.Not, CoreC.int_typ)
+      | BNot k -> (K.BNot (Newspeak.domain_of_typ k), CoreC.Int k)
 
   and size_of t = C.size_of_typ (translate_typ t)
 

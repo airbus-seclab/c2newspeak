@@ -172,7 +172,8 @@ let process (globals, specs) =
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
-	  (C.BNot, C.Int (Cir.promote k))
+	  let k = Cir.promote k in
+	    (C.BNot k, C.Int k)
       | _ -> 
 	  Npkcontext.report_error "Csyntax2CoreC.translate_unop"
 	    "unexpected unary operator and argument"
