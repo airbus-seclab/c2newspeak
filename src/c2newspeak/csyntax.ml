@@ -214,7 +214,12 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       && (List.mem sign possible_signs)
       && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))
   in
-  let k = List.find is_kind ikind_tbl in
+  let k = 
+    try List.find is_kind ikind_tbl 
+    with Not_found -> 
+      Npkcontext.report_error "Csyntax.int_cst_of_lexeme"
+	("unexpected integer constant: "^(Nat.to_string x))
+  in
     (Cir.CInt x, Int k)
 
 let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
