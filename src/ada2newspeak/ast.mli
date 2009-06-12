@@ -25,6 +25,10 @@
 
 *)
 
+type name =
+  | Local  of string
+  | Global of string list*string
+
 type unary_op =
 | UPlus
 | UMinus
@@ -47,7 +51,6 @@ type binary_op =
 type block = (instruction * Newspeak.location) list
 
 and instruction =
-  | NullInstr
   | Assign        of lval
                    * expression
   | Return        of expression
@@ -74,12 +77,12 @@ and lval =
 and iteration_scheme =
   | NoScheme
   | While of expression
-  | For   of Syntax_ada.identifier
+  | For   of string
            * expression
            * expression
            * bool
 
-and argument = Syntax_ada.identifier option*expression
+and argument = string option*expression
 
 and expression = exp_value * Ada_types.t
 
@@ -103,11 +106,11 @@ and exp_value =
                   * expression
   | Attribute    of Syntax_ada.attribute_reference
 
-and  declarative_part = Ada_types.table
+and  declarative_part = Symboltbl.table
                      * (declarative_item*Newspeak.location) list
 
 and param = {
-        formal_name   : Syntax_ada.identifier;
+        formal_name   : string;
         mode          : Syntax_ada.param_mode;
         param_type    : Syntax_ada.subtyp;
         default_value : expression option;
@@ -120,26 +123,24 @@ and  body =
   |    PackageBody of Syntax_ada.name
                     * package_spec option
                     * declarative_part
-                    * block
 
 and  declarative_item =
   | BasicDecl of basic_declaration
   |  BodyDecl of body
 
 and basic_declaration =
-  | ObjectDecl      of Syntax_ada.identifier list
+  | ObjectDecl      of string list
                      * Syntax_ada.subtyp_indication
                      * expression option
                      * Syntax_ada.object_state
-  | TypeDecl        of Syntax_ada.identifier*Syntax_ada.typ_declaration
+  | TypeDecl        of string*Syntax_ada.typ_declaration
   | UseDecl         of Syntax_ada.name
   | SpecDecl        of spec
-  | NumberDecl      of Syntax_ada.identifier
+  | NumberDecl      of string
                      * expression
                      * Syntax_ada.value option
-  | SubtypDecl      of Syntax_ada.identifier
+  | SubtypDecl      of string
                      * Syntax_ada.subtyp_indication
-  | RepresentClause of Syntax_ada.representation_clause
 
 and  library_item =
   | Spec of spec

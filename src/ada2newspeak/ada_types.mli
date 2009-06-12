@@ -56,65 +56,6 @@ val from_nat : t -> Newspeak.Nat.t -> value
  *)
 val to_nat : value -> Newspeak.Nat.t option
 
-(**
- * Checked equality on values.
- * [a @= b] if [a] and [b] denote the same typed value.
- *)
-val (@=) : value -> value -> bool
-
-(**
- * Unchecked equality on values.
- * This comparison is without checking the type compatibility.
- * If [a @= b], it is guaranteed that [a @=? b].
- *)
-val (@=?) : value -> value -> bool
-
-(*****************
- * Symbol tables *
- *****************)
-(** {3 Symbol tables} *)
-
-(** The type for symbol tables.  *)
-type table
-
-(**
- * Create a new symbol table.
- * Parameter is a size hint.
- *)
-val create_table  : int -> table
-
-(**
- * Link to parent.
- * When a symbol table has a parent table, it will act as a "fallback" table for
- * lookup, reflecting the nesting of scoped blocks.
- * @raise Invalid_argument "Already linked" when it already has a parent.
- *)
-val link_to_parent : table -> parent:table -> unit
-
-(** Add a type symbol to a table. *)
-val add_type      : table -> string -> t     -> unit
-
-(** Add a variable symbol to a table. *)
-val add_variable  : table -> string -> value -> unit
-
-(** Remove a type, given its name. *)
-val remove_type   : table -> string -> unit
-
-(**
- * Get a type from a symbol table.
- * @raise Not_found if no type could be found.
- *)
-val find_type     : table -> string -> t
-
-(**
- * Get a variable from a symbol table.
- * @raise Not_found if no type could be found.
- *)
-val find_variable : table -> string -> value
-
-(** Pretty-print a symbol table to the standard output. *)
-val print_table   : table -> unit
-
 (**********
  * Ranges *
  **********)
@@ -148,41 +89,35 @@ val sizeof : range -> Newspeak.Nat.t
 (**
  * {3 Types}
  * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
- * Type constructors have two optional arguments, which should be given
- * together. [~symboltable] is the name of a [table] to which the type is to be
- * add with the given [~name].
  *)
 
+(**
+ * An unknown type, different from every other one.
+ *)
+val unknown        : t
+
 (** Derived type. (structural copy) *)
-val new_derived    : ?symboltable:table -> ?name:string -> t -> t
+val new_derived    : t -> t
 
 (** Unconstrained subtype. *)
-val new_unconstr   : ?symboltable:table -> ?name:string -> t -> t
+val new_unconstr   : t -> t
 
 (** Constrained subtype. *)
-val new_constr     : ?symboltable:table -> ?name:string -> t -> range -> t
-
-(** Modular type. Parameter is modulus. *)
-val new_modular    : ?symboltable:table -> ?name:string -> int -> t
+val new_constr     : t -> range -> t
 
 (**
  * Plain integer range.
  * This differs from new_constr integer, because :
  *   - it is a different type
  *   - it does not rely on integer
- *   - it does not need an explicit "universal_integer" type
  *)
-val new_range      : ?symboltable:table -> ?name:string -> range -> t
+val new_range      : range -> t
 
-(**
- * Enumerated type.
- * [~symboltable] and [~name] have an additional meaning : if provided, the set
- * of litterals for the constructed type will be added to the symbol table.
- *)
-val new_enumerated : ?symboltable:table -> ?name:string -> string list -> t
+(** Enumerated type. *)
+val new_enumerated : string list -> t
 
 (** Floating-point type. Parameter is number of digits. *)
-val new_float      : ?symboltable:table -> ?name:string -> int -> t
+val new_float      : int -> t
 
 (**
  * Array type.
@@ -190,31 +125,52 @@ val new_float      : ?symboltable:table -> ?name:string -> int -> t
  * the second one is a list of index types.
  * @raise Invalid_argument if the index list is empty.
  *)
-val new_array      : ?symboltable:table -> ?name:string -> t -> t list -> t
+val new_array      : t -> t list -> t
 
 (** Is a type compatible with another one ?  *)
 val is_compatible : t -> t -> bool
 
-(** Retrieve a builtin type from its name.  *)
-val builtin_type : string -> t
+(**
+ * Pretty-printer for types.
+ * Type references (parents, ...) are displayed hashed for brievity's sake.
+ *)
+val print : t -> string
+
+(*****************
+ * Builtin types *
+ *****************)
+
+(**
+ * {3 Builtin types}
+ *)
 
 (** Get an attribute for a given type.  *)
-val attr_get : t -> string -> value list -> value
+val attr_get : t -> string -> value
 
 (** The type for integer constants. *)
 val universal_integer : t
 
+(** The type for real constants. *)
+val universal_real : t
+
+(** The type for characters and character litterals. *)
+val character : t
+
 (** The boolean type. *)
 val boolean : t
 
-(**
- * Shortcut for [attr_get] with no arguments.
- * st @. "ident" is like st'ident in Ada.
- *)
-val (@.) : t -> string -> value
+val natural   : t
+val positive  : t
+val integer   : t
+val std_float : t
 
-(** Binary operators.  *)
-val operator_exists : t -> string -> bool
+(******************
+ * Tests on types *
+ ******************)
 
-(** Extract a type from a value. *)
-val typeof : value -> t
+val is_boolean             : t -> bool
+val is_scalar              : t -> bool
+val is_numeric             : t -> bool
+val is_integer             : t -> bool
+val is_discrete            : t -> bool
+

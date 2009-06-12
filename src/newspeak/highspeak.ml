@@ -34,7 +34,6 @@ type t = {
   specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
-  mem_zones: mem_zones
 }
 
 and globals = (string, gdecl) Hashtbl.t

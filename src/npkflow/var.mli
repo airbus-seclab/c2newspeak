@@ -25,6 +25,8 @@
 
 type t
 
+val main_tainted: string
+
 val compare: t -> t -> int
 
 val of_global: string -> t
@@ -32,6 +34,8 @@ val of_global: string -> t
 val of_local: int -> t
 
 val to_string: t -> string
+
+val to_fid: t -> string
 
 type var = t
 
@@ -42,8 +46,12 @@ sig
   val empty: t 
   val singleton: var -> t
   val is_empty: t -> bool
+  val subset: t -> t -> bool
   val remove: var -> t -> t
   val union: t -> t -> t
   val inter: t -> t -> t
   val iter: (var -> unit) -> t -> unit
+  val elements: t -> var list
+  val to_string: t -> string
+  val mem: var -> t -> bool
 end

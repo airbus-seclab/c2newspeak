@@ -27,4 +27,4 @@
 *)
 
 
-val link : string list -> Newspeak.mem_zones -> unit
+val link : string list -> unit

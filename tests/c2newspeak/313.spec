@@ -1,4 +1,4 @@
-Warning: 313.c:31#1124: increment statement expected
+Warning: 313.c:30#1120: increment statement expected
 Newspeak output
 ---------------
 313.c

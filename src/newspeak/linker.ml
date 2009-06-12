@@ -296,7 +296,7 @@ let merge npkos =
 	    List.iter check_merge tl;
 	    (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !specs)
 
-let link npkos mem_zones =
+let link npkos =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
@@ -317,22 +317,23 @@ let link npkos mem_zones =
       H.specs = specs;
       H.ptr_sz = Config.size_of_ptr;
       H.src_lang = src_lang;
-      H.mem_zones = mem_zones
     } 
     in
       
       Npkcontext.print_debug "File linked.";
+      Npkcontext.print_debug "Converting to Newspeak...";
       let prog = Hpk2npk.translate prog in
-      let prog = 
-	if !Npkcontext.no_opt then prog
-	else Newspeak.simplify !Npkcontext.opt_checks prog
-      in
-	
-	Newspeak.write !Npkcontext.output_file prog;
-	if !Npkcontext.verb_newspeak then begin
-	  print_endline "Newspeak output";
-	  print_endline "---------------";
-	  Newspeak.dump prog;
-	  print_newline ()
-	end
+	Npkcontext.print_debug "Conversion done.";
+	let prog = 
+	  if !Npkcontext.no_opt then prog
+	  else Newspeak.simplify !Npkcontext.opt_checks prog
+	in
+	  
+	  Newspeak.write !Npkcontext.output_file prog;
+	  if !Npkcontext.verb_newspeak then begin
+	    print_endline "Newspeak output";
+	    print_endline "---------------";
+	    Newspeak.dump prog;
+	    print_newline ()
+	  end
 

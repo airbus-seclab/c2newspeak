@@ -109,31 +109,33 @@
    *)
   let lex_word (w:string) (l:Newspeak.location) :token =
     match String.lowercase w with
-    | "abs"        -> ABS         | "and"        -> AND
-    | "array"      -> ARRAY       | "begin"      -> BEGIN
-    | "body"       -> BODY        | "case"       -> CASE     l
-    | "constant"   -> CONSTANT    | "declare"    -> DECLARE  l
-    | "elsif"      -> ELSIF     l | "else"       -> ELSE
-    | "end"        -> END         | "exit"       -> EXIT     l
-    | "for"        -> FOR       l | "function"   -> FUNCTION l
-    | "if"         -> IF        l | "in"         -> IN
-    | "is"         -> IS          | "loop"       -> LOOP     l
-    | "mod"        -> MOD         | "new"        -> NEW
-    | "not"        -> NOT         | "null"       -> NULL     l
-    | "of"         -> OF          | "or"         -> OR
-    | "others"     -> OTHERS      | "out"        -> OUT
-    | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA
-    | "procedure"  -> PROCEDURE l | "range"      -> RANGE
-    | "record"     -> RECORD      | "rem"        -> REM
-    | "return"     -> RETURN    l | "reverse"    -> REVERSE
-    | "subtype"    -> SUBTYPE   l | "then"       -> THEN
-    | "type"       -> TYPE      l | "use"        -> USE      l
-    | "when"       -> WHEN        | "while"      -> WHILE    l
-    | "with"       -> WITH      l | "xor"        -> XOR
+    | "abs"        -> ABS       l | "and"        -> AND       l
+    | "array"      -> ARRAY     l | "begin"      -> BEGIN     l
+    | "body"       -> BODY      l | "case"       -> CASE      l
+    | "constant"   -> CONSTANT  l | "declare"    -> DECLARE   l
+    | "digits"     -> DIGITS    l | "elsif"      -> ELSIF     l
+    | "else"       -> ELSE      l | "end"        -> END       l
+    | "exit"       -> EXIT      l | "for"        -> FOR       l
+    | "function"   -> FUNCTION  l | "if"         -> IF        l
+    | "in"         -> IN        l | "is"         -> IS        l
+    | "loop"       -> LOOP      l | "mod"        -> MOD       l
+    | "new"        -> NEW       l | "not"        -> NOT       l
+    | "null"       -> NULL      l | "of"         -> OF        l
+    | "or"         -> OR        l | "others"     -> OTHERS    l
+    | "out"        -> OUT       l | "package"    -> PACKAGE   l
+    | "pragma"     -> PRAGMA    l | "procedure"  -> PROCEDURE l
+    | "range"      -> RANGE     l | "rem"        -> REM       l
+    | "renames"    -> RENAMES   l | "return"     -> RETURN    l
+    | "reverse"    -> REVERSE   l | "subtype"    -> SUBTYPE   l
+    | "then"       -> THEN      l | "type"       -> TYPE      l
+    | "use"        -> USE       l | "when"       -> WHEN      l
+    | "while"      -> WHILE     l | "with"       -> WITH      l
+    | "xor"        -> XOR       l
 
-    | "true"       -> TRUE        | "false"      -> FALSE
+    | "true"       -> TRUE      l | "false"      -> FALSE     l
 
-    |_             -> IDENT (String.lowercase w,l)
+    |_             -> IDENT (l,String.lowercase w)
+
 (* Unrecognized tokens *)
 
     (* Task-related *)
@@ -151,14 +153,12 @@
     (* Compilation-related  *)
         (* abstract     *)
         (* generic      *)
-        (* renames      *)
         (* separate     *)
 
     (* Type-related  *)
         (* at           *)
         (* tagged       *)
         (* delta        *)
-        (* digits       *)
         (* limited      *)
         (* private      *)
 
@@ -200,36 +200,29 @@ let litteral_reel = reel
 let commentaire = "--" [^ '\n']*
 
 rule token = parse
-  | '('            {LPAR(Npkcontext.get_loc())}
-  | ')'            {RPAR}
-
-  (* operateurs arithmetiques *)
-  | '+'            {PLUS}
-  | '-'            {MINUS}
-  | '*'            {MULT}
-  | '/'            {DIV}
-  | "**"           {POW}
-
-  (* operateurs relationnels *)
-  | "<="           {LE}
-  | '<'            {LT}
-  | ">="           {GE}
-  | '>'            {GT}
-  | "="            {EQ}
-  | "/="           {NE}
-  | "="            {EQ}
-  | ":="           {ASSIGN(Npkcontext.get_loc())}
-
-  (* ponctuation *)
-  | ';'            {SEMICOLON}
-  | '.'            {DOT}
-  | ':'            {COLON(Npkcontext.get_loc())}
-  | ".."           {DOUBLE_DOT}
-  | ','            {COMMA}
-  | "'"            {QUOTE}
-  | "=>"           {ARROW}
-  | "|"            {VBAR}
-
+  | '('            {LPAR       (Npkcontext.get_loc())}
+  | ')'            {RPAR       (Npkcontext.get_loc())}
+  | '+'            {PLUS       (Npkcontext.get_loc())}
+  | '-'            {MINUS      (Npkcontext.get_loc())}
+  | '*'            {MULT       (Npkcontext.get_loc())}
+  | '/'            {DIV        (Npkcontext.get_loc())}
+  | "**"           {POW        (Npkcontext.get_loc())}
+  | "<="           {LE         (Npkcontext.get_loc())}
+  | '<'            {LT         (Npkcontext.get_loc())}
+  | ">="           {GE         (Npkcontext.get_loc())}
+  | '>'            {GT         (Npkcontext.get_loc())}
+  | "="            {EQ         (Npkcontext.get_loc())}
+  | "/="           {NE         (Npkcontext.get_loc())}
+  | "="            {EQ         (Npkcontext.get_loc())}
+  | ":="           {ASSIGN     (Npkcontext.get_loc())}
+  | ';'            {SEMICOLON  (Npkcontext.get_loc())}
+  | '.'            {DOT        (Npkcontext.get_loc())}
+  | ':'            {COLON      (Npkcontext.get_loc())}
+  | ".."           {DOUBLE_DOT (Npkcontext.get_loc())}
+  | ','            {COMMA      (Npkcontext.get_loc())}
+  | "'"            {QUOTE      (Npkcontext.get_loc())}
+  | "=>"           {ARROW      (Npkcontext.get_loc())}
+  | "|"            {VBAR       (Npkcontext.get_loc())}
 
   | '\n' {newline lexbuf; token lexbuf}
 
@@ -238,19 +231,24 @@ rule token = parse
   | commentaire {token lexbuf}
 
   (* caracteres, chaines de caracteres *)
-  | chaine {STRING (extrait_chaine (Lexing.lexeme lexbuf)) }
-  | char {CONST_CHAR (int_of_char (Lexing.lexeme lexbuf).[1]) }
+  | chaine {CONST_STRING (Npkcontext.get_loc ()
+                         ,extrait_chaine (Lexing.lexeme lexbuf))}
+  | char   {CONST_CHAR   (Npkcontext.get_loc ()
+                         ,int_of_char (Lexing.lexeme lexbuf).[1]) }
 
   (* constantes numeriques *)
-  | litteral_reel {CONST_FLOAT (Lexing.lexeme lexbuf)}
-  | entier {CONST_INT (Newspeak.Nat.of_string(
+  | litteral_reel {CONST_FLOAT (Npkcontext.get_loc (),Lexing.lexeme lexbuf)}
+  | entier {CONST_INT (Npkcontext.get_loc (),Newspeak.Nat.of_string(
                                 strip_underscores (Lexing.lexeme lexbuf)))}
-  | entier as main_part ['e' 'E'] '+'? (entier as expo) {CONST_INT (
+  | entier as main_part ['e' 'E'] '+'? (entier as expo)
+      {CONST_INT (Npkcontext.get_loc (),
             Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
                     * (expt_int 10 (int_of_string (strip_underscores expo)))
-            ))}
+            ))
+      }
   | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
-                CONST_INT (Newspeak.Nat.of_int ( (int_of_based_string
+                CONST_INT (Npkcontext.get_loc ()
+                          ,Newspeak.Nat.of_int ( (int_of_based_string
                                         (int_of_string (strip_underscores base))
                                             (strip_underscores main_part))
                            * expt_int (int_of_string (strip_underscores base))
@@ -263,6 +261,4 @@ rule token = parse
   | eof { EOF }
 
   | _ {unknown_lexeme lexbuf}
-
-
 

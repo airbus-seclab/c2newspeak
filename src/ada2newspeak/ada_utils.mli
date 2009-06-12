@@ -32,6 +32,15 @@
 exception NonStaticExpression
 exception AmbiguousTypeException
 
+type verbose_level =
+  | Silent
+  | Debug
+  | Warning
+  | Error
+
+(** Generic error. *)
+val mkerror : verbose_level -> string -> (string -> unit)
+
 (**
  * [nat] exponentiation.
  *)
@@ -79,9 +88,10 @@ val between : 'a -> 'a -> 'a -> bool
  * Checks that a constraint is compatible with another one.
  * [constraint_is_constraint_compatible ref cur] checks if [cur]
  * is compatible with [ref].
+ * May raise an error.
  *)
-val constraint_is_constraint_compatible :
-  Syntax_ada.contrainte -> Syntax_ada.contrainte -> bool
+val constraint_check_compatibility :
+  Syntax_ada.contrainte -> Syntax_ada.contrainte -> unit
 
 (**
  * Checks that a value is compatible with a constraint.
@@ -98,11 +108,6 @@ val value_is_static_constraint_compatible :
  *)
 val check_static_subtyp:
   Syntax_ada.subtyp -> Syntax_ada.value -> unit
-
-(**
- * Checks whether a constraint is static.
- *)
-val constraint_is_static: Syntax_ada.contrainte -> bool
 
 (**
  * Compute the Newspeak integer kind associated to the specified range.
@@ -181,7 +186,7 @@ val check_compil_unit_name :
  * Extract the identifier for a representation clause.
  *)
 val extract_representation_clause_name :
-             Syntax_ada.representation_clause -> Syntax_ada.identifier
+             Syntax_ada.representation_clause -> string
 
 (**
  * Provides a default value.
@@ -245,9 +250,10 @@ object
     (** Perform an action with the "extern" flag. *)
     method as_extern_do :(unit->unit)->unit
 
-    (** FIXME document *)
+    (** FIXME document exact specs *)
     method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
 
+    method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
 end
 
 (**
@@ -259,16 +265,15 @@ end
  *)
 val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
 
-val ident_list_to_string : Syntax_ada.identifier list -> string
+val ident_list_to_string : string list -> string
 
 (** Converts a qualified name into a dotted string.  *)
 val name_to_string : Syntax_ada.name -> string
 
 (** Create a function name for an overloaded operator *)
-val make_operator_name : string -> string
+val make_operator_name : Syntax_ada.binary_op -> string
 
-(** Converts a CIR binary operation into its string representation. *)
-val operator_of_binop : Syntax_ada.binary_op -> string
+val operator_of_string : string -> Syntax_ada.binary_op
 
 (**
  * Maybe apply some function to an option value :

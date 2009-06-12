@@ -31,10 +31,13 @@ and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
     Set of (exp * exp)
-  | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
-  | Call of string
+  | InfLoop of blk
+  | BlkLbl of blk
+  | Goto of int
+  | Call of exp
+  | Display
 
 and exp =
     Const
@@ -42,3 +45,7 @@ and exp =
   | Global of string
   | BinOp of (exp * exp)
   | Deref of exp
+
+val to_string: t -> string
+
+val string_of_exp: exp -> string

@@ -35,10 +35,14 @@ val add_local: t -> t
 
 val remove_local: t -> t
 
-val join: t -> t -> t
+val is_subset: t -> t -> bool
 
-val taint: exp -> t -> t
+val join: t -> t -> t
 
 val assign: (exp * exp) -> t -> t
 
-val is_tainted: t -> exp -> bool
+val points_to: t -> exp -> exp -> bool
+
+val fids_of_exp: t -> exp -> string list
+
+val to_string: t -> string

@@ -25,18 +25,18 @@
 
 open Equations
 
+(* TODO: maybe could perform the pointer analysis beforehand!*)
+
 module Set = Var.Set
 
 type t = {
   last_local: int;
-  ptrs: PtrDom.t;
-  tainted: TaintDom.t
+  ptrs: PtrDom.t
 }
 
 let create () = { 
   last_local = 0; 
-  ptrs = PtrDom.create (); 
-  tainted = TaintDom.create () 
+  ptrs = PtrDom.create ();
 }
 
 let add_global x s = 
@@ -46,20 +46,16 @@ let add_global x s =
 let add_local s = 
   let last_local = s.last_local + 1 in
   let v = Var.of_local last_local in
-    { s with ptrs = PtrDom.add_var v s.ptrs; last_local = last_local }
+    { ptrs = PtrDom.add_var v s.ptrs; last_local = last_local }
 
 let remove_local s = 
   let v = Var.of_local s.last_local in
   let ptrs = PtrDom.remove_var v s.ptrs in
-  let tainted = TaintDom.remove_var v s.tainted in
-    { last_local = s.last_local - 1; ptrs = ptrs; tainted = tainted }
+    { last_local = s.last_local - 1; ptrs = ptrs }
 
-let join s1 s2 = 
-  { 
-    s1 with 
-      ptrs = PtrDom.join s1.ptrs s2.ptrs; 
-      tainted = TaintDom.join s1.tainted s2.tainted 
-  }
+let is_subset s1 s2 = PtrDom.is_subset s1.ptrs s2.ptrs
+
+let join s1 s2 = { s1 with ptrs = PtrDom.join s1.ptrs s2.ptrs }
 
 let eval_exp s e =
   let rec eval_exp e =
@@ -77,20 +73,20 @@ let eval_exp s e =
   in
     eval_exp e
 
-let taint e s = 
-  let x = eval_exp s e in
-    { s with tainted = TaintDom.taint x s.tainted }
+let to_string s = PtrDom.to_string s.ptrs
 
-let is_tainted s e =
+let points_to s e v =
   let t = eval_exp s e in
-    TaintDom.is_tainted s.tainted t
+  let v = eval_exp s v in
+    Set.subset v t
 
-let assign (lv, e) s = 
+let assign (lv, e) s =
   let x = eval_exp s lv in
   let y = eval_exp s e in
   let ptrs = PtrDom.assign x y s.ptrs in
-  let tainted = 
-    if TaintDom.is_tainted s.tainted y then TaintDom.taint x s.tainted
-    else s.tainted
-  in
-    { s with ptrs = ptrs; tainted = tainted }
+    { s with ptrs = ptrs }
+
+let fids_of_exp s e = 
+  let x = Set.elements (eval_exp s e) in
+    List.map Var.to_fid x
+    

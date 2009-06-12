@@ -35,17 +35,15 @@ type nat = Newspeak.Nat.t
 (** A floating-point number *)
 type float_number = float*string
 
-type identifier = string
-
 (* FIXME : for speed's sake, the list should be reverted. *)
-type package = identifier list
+type package = string list
 
 (**
- * A qualified identifier.
+ * A qualified string.
  * For example, "Ada.Text_IO.Put_line" maps to
  * [ ["Ada","Text_IO"],"Put_Line"].
  *)
-type name = package * identifier
+type name = package * string
 
 (** Modes for subprogram parameters. *)
 type param_mode =
@@ -88,34 +86,31 @@ type binary_op =
 
 (** Builtin types. *)
 type typ =
-  | Integer                                         (** Integer               *)
-  | IntegerConst                                    (** Integer constant      *)
-  | Float                                           (** Floating-point number *)
-  | Boolean                                         (** Boolean               *)
-  | Character                                       (** Character             *)
-  | String                                          (** String                *)
-  | Declared of identifier*typ_declaration*location (** User-defined type     *)
+  | Integer                              (** Integer               *)
+  | IntegerConst                         (** Integer constant      *)
+  | Float                                (** Floating-point number *)
+  | Boolean                              (** Boolean               *)
+  | Character                            (** Character             *)
+  | Declared of string                   (** User-defined type     *)
+              * typ_declaration
+              * Ada_types.t
+              * location 
 
 (** Type declaration. *)
 and typ_declaration =
-  | Enum          of ((identifier*nat) list)
+  | Enum          of ((string*nat) list)
                     * Newspeak.ikind
   | DerivedType  of subtyp_indication
   | IntegerRange of contrainte
                   * Newspeak.ikind option
   | Array  of array_type_definition
-  | Record of field list
-
-(** A record field. *)
-and field = identifier list
-          * subtyp_indication
-          * expression option
-    (* TODO + object_state ? *)
 
 (** Array type definition *)
 and array_type_definition =
-  | ConstrainedArray of subtyp_indication*subtyp_indication*int option
-    (** Constrained array : discrete interval, type of elements, array size *)
+  { array_index     : subtyp_indication;
+    array_component : subtyp_indication;
+    array_size      : int option;
+  }
 
 (** Subtype definition. *)
 and subtyp =
@@ -129,7 +124,7 @@ and attribute_reference = subtyp * attribute_designator
 
 (** Attribute designators like "First", "Range" or "Digits" *)
 and attribute_designator =
- | AttributeDesignator of identifier * expression option
+ | AttributeDesignator of string * expression option
    (** The option is for the optional parameter. It shall be static. *)
 
 (** Expressions. *)
@@ -161,6 +156,7 @@ and contrainte =
 and subtyp_indication = subtyp
                       * contrainte option
                       * subtyp     option
+                      * Ada_types.t
 
 (** Left-value *)
 and lval =
@@ -170,7 +166,7 @@ and lval =
 
 (** Subprogram parameter *)
 and param = {
-        formal_name   : identifier;        (** Formal name              *)
+        formal_name   : string;        (** Formal name              *)
         mode          : param_mode;        (** Mode (In, Out, or InOut) *)
         param_type    : subtyp;            (** Type                     *)
         default_value : expression option; (** Default value (optional) *)
@@ -188,7 +184,7 @@ and param = {
 and iteration_scheme =
   | NoScheme                       (* Forever *)
   | While of expression            (* While [expression] evaluates to [true] *)
-  | For   of identifier
+  | For   of string
            * expression
            * expression
            * bool
@@ -196,9 +192,9 @@ and iteration_scheme =
 and block = (instruction * location) list
 
 (** Effective argument for a function or procedure call.
-    The optional identifier is the formal name in case of
+    The optional string is the formal name in case of
     a named argument ("name => value") *)
-and argument = identifier option*expression
+and argument = string option*expression
 
 (** An instruction *)
 and instruction =
@@ -226,16 +222,13 @@ and sub_program_spec =
   | Function  of name*param list*subtyp (** A Function returns a value *)
   | Procedure of name*param list        (** A Procedure does not       *)
 
-(* the identifier is the one that choose the element :
+(* the string is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)
-and array_aggregate = NamedArrayAggregate of (identifier * expression) list
+and array_aggregate = NamedArrayAggregate of (string * expression) list
 
 and representation_clause =
-  | EnumerationRepresentation of identifier
+  | EnumerationRepresentation of string
                                * array_aggregate
-  | AttributeDefinitionClause of subtyp
-                               * identifier
-                               * expression
 
 and object_state =
   | Variable
@@ -262,22 +255,23 @@ and body =
   |    PackageBody of name
                     * package_spec option
                     * declarative_part
-                    * block
 
 and basic_declaration =
-  | ObjectDecl      of identifier list
+  | ObjectDecl      of string list
                      * subtyp_indication
                      * expression option
                      * object_state
-  | TypeDecl        of identifier*typ_declaration
+  | TypeDecl        of string*typ_declaration*Ada_types.t
   | UseDecl         of name
   | SpecDecl        of spec
-  | NumberDecl      of identifier
+  | NumberDecl      of string
                      * expression
                      * value option
-  | SubtypDecl      of identifier
+  | SubtypDecl      of string
                      * subtyp_indication
   | RepresentClause of representation_clause
+  | RenamingDecl    of name (* new name *)
+                     * name (* old name *)
 
 and declarative_item =
   | BasicDecl of basic_declaration

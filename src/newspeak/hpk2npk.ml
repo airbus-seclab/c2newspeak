@@ -230,6 +230,5 @@ let translate prog =
       N.specs = specs;
       N.ptr_sz = prog.ptr_sz;
       N.src_lang = prog.src_lang;
-      N.mem_zones = prog.mem_zones
     }
 

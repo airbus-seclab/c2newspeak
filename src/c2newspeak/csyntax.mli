@@ -121,7 +121,7 @@ and exp =
 
 and cst = (Cir.cst * typ)
 
-and unop = Neg | Not | BNot
+and unop = Not | BNot
 
 and binop =
     | Plus
@@ -138,6 +138,8 @@ and binop =
     | Shiftr
 
 val exp_of_int: int -> exp
+
+val exp_of_char: char -> exp
 
 val uint_typ: typ
 
@@ -165,3 +167,5 @@ val print: t -> unit
 (** [size_of prog] counts the number of global definitions and the number
     of instructions in program prog. *)
 val size_of: t -> int
+
+val neg: exp -> exp

@@ -32,7 +32,7 @@ and assertion = spec_token list
 and spec_token = 
   | SymbolToken of char
   | IdentToken of string
-  | CstToken of cst
+  | CstToken of Cir.cst
       
 and global = 
     (* true if static *)
@@ -52,7 +52,7 @@ and is_extern = bool
 
 and is_static = bool
 
-and field_decl = (typ * string * Newspeak.location)
+and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
 
@@ -62,13 +62,15 @@ and typ =
   | Bitfield of (Newspeak.ikind * exp)
   | Float of int
   | Ptr of typ
-  | Array of (typ * exp option)
+  | Array of array_typ
 (* true for structure *)
   | Comp of (string * bool)
   | Fun of ftyp
   | Va_arg
   | Typeof of string
-      
+     
+and array_typ = typ * exp option
+ 
 and init = 
   | Data of exp
   | Sequence of (string option * init) list
@@ -101,10 +103,10 @@ and lbl = string
 and static = bool
 
 and exp = 
-    | Cst of cst
+    | Cst of (Cir.cst * typ)
     | Var of string
     | Field of (exp * string)
-    | Index of (exp * exp)
+    | Index of (exp * array_typ * exp)
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
@@ -124,9 +126,7 @@ and exp =
     | OpExp of (binop * exp * bool)
     | BlkExp of blk
 
-and cst = (Cir.cst * typ)
-
-and unop = Neg | Not | BNot
+and unop = Not | BNot of Newspeak.ikind
 
 and binop =
     | Plus
@@ -161,16 +161,15 @@ let comp_of_typ t =
 	Npkcontext.report_error "Csyntax.comp_of_typ" 
 	  "struct or union type expected"
 
-let array_of_typ t =
+let ftyp_of_typ t = 
   match t with
-      Array a -> a
-    | _ -> Npkcontext.report_error "Csyntax.array_of_typ" "array type expected"
+      Fun ft -> ft
+    | _ -> Npkcontext.report_error "CoreC.ftyp_of_typ" "function type expected"
 
-let ftyp_of_typ t =
+let deref_typ t =
   match t with
-      Fun t -> t
-    | _ -> 
-	Npkcontext.report_error "Csyntax.ftyp_of_typ" "function type expected"
+      Ptr t -> t
+    | _ -> Npkcontext.report_error "CoreC.deref_typ" "pointer type expected"
 
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
   let equals (t1, _) (t2, _) = t1 = t2 in
@@ -186,11 +185,15 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
     match (args_t1, args_t2) with  
         (None, args_t) | (args_t, None) -> args_t  
       | (Some args_t1, Some args_t2) ->
-          if not (List.for_all2 equals args_t1 args_t2) then begin
-            Npkcontext.report_error "Csyntax.min_ftyp"
-              "different argument types for function"
-          end;
-          Some args_t1
+	  let eq = 
+	    try List.for_all2 equals args_t1 args_t2 
+	    with Invalid_argument _ -> false
+	  in
+            if not eq then begin
+              Npkcontext.report_error "Csyntax.min_ftyp"
+		"different argument types for function"
+            end;
+            Some args_t1
   in
     if (ret_t1 <> ret_t2) then begin
       Npkcontext.report_error "Csyntax.min_ftyp" 
@@ -204,10 +207,10 @@ let rec string_of_exp e =
     | Cst _ -> "Cst"
     | Var x -> x
     | Field (e, f) -> (string_of_exp e)^"."^f
-    | Index (e1, e2) -> 
+    | Index (e1, _, e2) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref e -> "*("^(string_of_exp e)^")"
-    | AddrOf _ -> "AddrOf"
+    | AddrOf e -> "&("^(string_of_exp e)^")"
     | Unop (_, e) -> "op("^(string_of_exp e)^")"
     | IfExp (e1, e2, e3) -> 
 	let e1 = string_of_exp e1 in

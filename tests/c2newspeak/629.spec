@@ -1,6 +1,6 @@
 Warning: 629.c:29#1068: halting condition should be explicit
 Warning: 629.c:41#1184: goto statement accepted
-Warning: 629.c:46#1234: init statement expected
+Warning: 629.c:45#1228: init statement expected
 Warning: 629.c:48#1260: goto statement accepted
 Newspeak output
 ---------------

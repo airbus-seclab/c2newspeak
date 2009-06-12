@@ -66,17 +66,6 @@ let _ =
 		  
 	| files ->
 	    let nos = List.map extract_no files in
-	      if not !Npkcontext.compile_only then begin
-		let mem_zones = 
-		  if !Npkcontext.config_file = "" then []
-		  else Compiler.compile_config !Npkcontext.config_file
-		in
-		  (* TODO: do not rewrite this part in ada2newspeak! 
-		     factor code!! Npkcontext.link?
-		     then rename linker: npkil2hpk
-		  *)
-		Linker.link nos mem_zones
-	      end
-		
+	      if not !Npkcontext.compile_only then Linker.link nos		
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
     

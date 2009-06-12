@@ -53,8 +53,6 @@ let ikind_to_string (s,taille) =
   in
     "("^string_signe^", "^(string_of_int taille)^")"
 
-
-
 let uop_to_string op = match op with
   | UPlus  -> "U+"
   | UMinus -> "U-"
@@ -87,8 +85,7 @@ let rec typ_to_string typ = match typ with
   | Float        -> "Float"
   | Boolean      -> "Boolean"
   | Character    -> "Character"
-  | String       -> "String"
-  | Declared(id,typ_decl,loc) -> "Declared("
+  | Declared(id,typ_decl,_,loc) -> "Declared("
       ^id^","
       ^(typ_declaration_to_string typ_decl)^","
       ^(line_of_loc loc)^")"
@@ -108,18 +105,12 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^", "^(option_to_string taille ikind_to_string)^")"
   | Array(array_def) ->
       "Array("^(array_definition_to_string array_def)^")"
-  | Record (_) -> (*record_type_def) -> *)
-      "Record("
-      ^(" --- TO DO --------")^")"
 
-
-
-and array_definition_to_string array = match array with
-  | ConstrainedArray(range, subtyp, taille) ->
-      "ConstrainedArray("
-      ^(subtyp_indication_to_string range)
-      ^", "^(subtyp_indication_to_string subtyp)
-      ^", "^(option_to_string taille string_of_int)^")"
+and array_definition_to_string ar =
+         "index = " ^(subtyp_indication_to_string ar.array_index)
+      ^", component = "^(subtyp_indication_to_string ar.array_component)
+      ^", size = "^(option_to_string ar.array_size string_of_int)
+      ^")"
 
 
 and exp_to_string exp = match exp with
@@ -156,7 +147,7 @@ and subtyp_to_string subtyp = match subtyp with
       ^(contrainte_to_string contrainte)^", "
       ^(string_of_bool static)^")"
 
-and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp) =
+and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp, _adatype) =
   "("^(subtyp_to_string subtyp_ref)^", "
   ^(option_to_string contrainte contrainte_to_string)^", "
   ^(option_to_string subtyp subtyp_to_string)^")"
@@ -257,8 +248,6 @@ and representation_clause_to_string clause = match clause with
   | EnumerationRepresentation(ident, agregat) ->
       "EnumerationRepresentation("^ident^", "
       ^(array_aggregate_to_string agregat)^")"
-  | AttributeDefinitionClause(st, id, exp) ->
-      "For "^(subtyp_to_string st)^"'"^id^" use "^(exp_to_string exp)
 
 and context_clause_to_string context_clause =
   match context_clause with
@@ -281,7 +270,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(subtyp_indication_to_string subtyp_ind)
       ^", "^(option_to_string def exp_to_string)
       ^", "^(object_state_to_string status)^")"
-  | TypeDecl(id,typdecl) ->
+  | TypeDecl(id,typdecl,_) ->
       "TypeDecl("^id^","^(typ_declaration_to_string typdecl)^")"
   | UseDecl(use_clause) -> "UseDecl("^(name_to_string use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("
@@ -296,7 +285,10 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | RepresentClause(clause) ->
       "RepresentClause("
       ^(representation_clause_to_string clause)^")"
-
+  | RenamingDecl(n,n') ->  "Renaming : "
+                          ^name_to_string n
+                          ^" renames "
+                          ^name_to_string n'
 
 and declarative_item_to_string decl_item = match decl_item with
   | BasicDecl(basic_declaration) -> "BasicDecl("
@@ -343,11 +335,10 @@ and body_to_string body = match body with
                        ^declarative_part_to_string declarative_part ^",\n\n"
                        ^block_to_string block
                   ^")"
-  | PackageBody (name, package_spec, declarative_part, block) ->
+  | PackageBody (name, package_spec, declarative_part) ->
       "PackageBody("^(name_to_string name)^",\n\n"
                    ^(option_to_string package_spec package_spec_to_string)^",\n"
                    ^declarative_part_to_string declarative_part ^",\n\n"
-                   ^block_to_string block
       ^")"
 
 let library_item_to_string lib_item = match lib_item with
@@ -359,14 +350,7 @@ let compil_unit_to_string (context,lib_item,loc) =
   ^",\n\n"^(library_item_to_string lib_item)
   ^",\n\n"^(line_of_loc loc)^")\n"
 
-
-
-
-(* changer avec print_list *)
-let rec ast_to_string programme = match programme with
-  | compil_unit::r -> (compil_unit_to_string compil_unit)^
-      (ast_to_string r)
-  | [] -> ""
-
+let rec ast_to_string programme =
+  list_to_string programme compil_unit_to_string "" false
 
 let print_ast programme = print_string (ast_to_string programme)

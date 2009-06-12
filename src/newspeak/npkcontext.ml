@@ -92,8 +92,6 @@ let compile_only = ref false
 let output_file = ref ""
 let accept_partial_fdecl = ref false
 let accept_missing_fdecl = ref false
-let config_file = ref ""
-
 
 let use_cil = ref false
 let cil_printer = ref "default"
@@ -248,9 +246,6 @@ let argslist = [
   (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
    "sets strict syntax");
   
-  ("--use-config-file", Arg.Set_string config_file, 
-   "use configuration file");
-
   ("--use-cil", Arg.Set use_cil, 
    "use CIL lexer and parser instead of our own");
 

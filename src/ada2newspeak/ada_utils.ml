@@ -24,10 +24,24 @@
 
 
 open Syntax_ada
+open Big_int
 module Nat = Newspeak.Nat
 
 exception NonStaticExpression
 exception AmbiguousTypeException
+
+type verbose_level =
+  | Silent
+  | Debug
+  | Warning
+  | Error
+
+(** Generic error. *)
+let mkerror lev modulename = match lev with
+  | Silent  -> (fun _ -> ())
+  | Debug   -> Npkcontext.print_debug
+  | Warning -> Npkcontext.report_warning modulename
+  | Error   -> Npkcontext.report_error   modulename
 
 (* arithmetique*)
 
@@ -41,36 +55,25 @@ let puiss a b =
         "integer exponent negative"
     end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
 
-let mod_ada a b =
-  let a = Nat.to_big_int a
-  and b = Nat.to_big_int b in
-  let r = Big_int.mod_big_int a b in
-  let r_mod =
-    if (Big_int.sign_big_int b) < 0
-    then Big_int.sub_big_int r b
-    else r
-  in
-    Nat.of_big_int r_mod
+let mod_rem_aux ~is_mod na nb =
+  let a = Nat.to_big_int na in
+  let b = Nat.to_big_int nb in
+  let r_mod =  mod_big_int a b in
+  Nat.of_big_int (if (sign_big_int (if is_mod then b else a)) > 0
+                  then
+                    r_mod
+                  else
+                    sub_big_int r_mod (abs_big_int b)
+                 )
 
-let rem_ada na nb =
-  let a = Nat.to_big_int na
-  and b = Nat.to_big_int nb in
-  let r = Big_int.mod_big_int a b in
-  let r_mod =
-    if (Big_int.sign_big_int a) < 0
-    then Big_int.sub_big_int r b
-    else r
-  in
-    Nat.of_big_int r_mod
-
-(* calcul sur les value *)
+let rem_ada = mod_rem_aux ~is_mod:false
+let mod_ada = mod_rem_aux ~is_mod:true
 
 let eq_val v1 v2 =
-  let eq a b = a=b in
     match (v1, v2) with
-      | (IntVal v1, IntVal v2) -> eq v1 v2
-      | (BoolVal v1, BoolVal v2) -> eq v1 v2
-      | (FloatVal v1, FloatVal v2) -> eq v1 v2
+      | IntVal   v1, IntVal   v2 -> v1 = v2
+      | BoolVal  v1, BoolVal  v2 -> v1 = v2
+      | FloatVal v1, FloatVal v2 -> v1 = v2
       | _ ->
           Npkcontext.report_error "Ada_utils.eq_val"
             "internal error : uncompatible value"
@@ -81,18 +84,14 @@ let inf_val v1 v2 =
       |   IntVal v1,   IntVal v2 -> (Nat.compare v1 v2) < 0
       |  BoolVal v1,  BoolVal v2 -> inf v1 v2
       | FloatVal v1, FloatVal v2 -> inf v1 v2
- (*     | (EnumVal(v1), EnumVal(v2)) -> inf v1 v2*)
       | _ ->
           Npkcontext.report_error "Ada_utils.inf_val"
             "internal error : uncompatible value"
 
-(* contraintes *)
+let nat_of_bool b =
+  if b then Newspeak.Nat.one
+       else Newspeak.Nat.zero
 
-let nat_of_bool b = match b with
-  | true -> Newspeak.Nat.one
-  | false -> Newspeak.Nat.zero
-
-(* verifie que a <= n <= b *)
 let between a b n  =
   a <= n && n <= b
 
@@ -111,9 +110,9 @@ let nat_constraint_compatibility ref1 ref2 fils1 fils2 =
   else
     (between_nat ref1 ref2 fils1) && (between_nat ref1 ref2 fils2)
 
-
 (* verifie que la contrainte courante est compatible avec cref *)
-let constraint_is_constraint_compatible cref courante =
+let constraint_check_compatibility cref courante =
+  if not (
   match (cref, courante) with
     | (IntegerRangeConstraint(ref1, ref2),
        IntegerRangeConstraint(cour1, cour2)) ->
@@ -130,6 +129,9 @@ let constraint_is_constraint_compatible cref courante =
     | (FloatRangeConstraint _, IntegerRangeConstraint _) ->
         Npkcontext.report_error "Ada_utils.check_constraint"
           "internal error : uncompatible constraints"
+  ) then Npkcontext.report_error
+         "Constraint_is_compatible"
+         "constraint error : uncompatible constraint"
 
 (* verifie que la valeur value respecte bien la contrainte.
    la contrainte est supposee statique, et le type de value
@@ -172,11 +174,6 @@ let check_static_subtyp subtyp value =
         Npkcontext.report_error "Ada_utils.check_static_subtyp"
           "internal error : unexpected subtype name"
 
-let constraint_is_static contrainte = match contrainte with
-  | FloatRangeConstraint   _ -> true
-  | IntegerRangeConstraint _ -> true
-  | RangeConstraint        _ -> false
-
 (* fonctions pour la gestion des types *)
 
 let base_typ subtyp = match subtyp with
@@ -186,7 +183,7 @@ let base_typ subtyp = match subtyp with
       Npkcontext.report_error "Ada_utils.base_type"
         "internal error : unexpected subtyp name"
 
-let extract_subtyp (_, _, subtyp) =
+let extract_subtyp (_, _, subtyp,_) =
   match subtyp with
   | None ->
       Npkcontext.report_error
@@ -203,18 +200,16 @@ let eq_base_typ subtyp1 subtyp2 =
 let rec integer_class typ = match typ with
   | Float
   | Boolean
-  | Character
-  | String       -> false
+  | Character -> false
   | Integer
   | IntegerConst -> true
-  | Declared(_,typdef,_) ->
+  | Declared(_,typdef,_,_) ->
       (match typdef with
          | Enum _
-         | Array _
-         | Record _ -> false
+         | Array _ -> false
          | IntegerRange _ -> true
-         | DerivedType(_,_,Some(subtyp)) -> integer_class (base_typ subtyp)
-         | DerivedType(_,_,None) -> Npkcontext.report_error
+         | DerivedType(_,_,Some(subtyp),_) -> integer_class (base_typ subtyp)
+         | DerivedType(_,_,None,_) -> Npkcontext.report_error
                                "Ada_utils.integer_class"
                                "internal error : no subtype provided"
       )
@@ -327,7 +322,7 @@ let check_compil_unit_name compil_unit file_name =
       | Spec(SubProgramSpec(spec)) -> subprog_name spec
       | Spec(PackageSpec(name,_)) -> name
       | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
-      | Body(PackageBody(name,_,_,_)) -> name
+      | Body(PackageBody(name,_,_)) -> name
   in
     match name with
       | ([],ident) -> ident=expected_name
@@ -336,9 +331,6 @@ let check_compil_unit_name compil_unit file_name =
 
 let extract_representation_clause_name rep_clause = match rep_clause with
   | EnumerationRepresentation(ident, _) -> ident
-  | AttributeDefinitionClause _ -> Npkcontext.report_error
-                "extract_representation_clause_name"
-        "not yet implemented for AttributeDefinitionClause" (* FIXME *)
 
 let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | None   -> def_value
@@ -359,7 +351,8 @@ class package_manager =
         val mutable current_pkg:package                 = []
         val mutable    with_pkg:package list            = []
         val             context:(package,int) Hashtbl.t = Hashtbl.create 3
-        val mutable    extflag :bool                    = false
+        val mutable     extflag:bool                    = false
+        val mutable    renaming:(name*name) list        = []
 
         method set_current (x,y) :unit =
           let p = x@[y] in
@@ -409,6 +402,8 @@ class package_manager =
           extflag <- false
 
         method normalize_name (name:Syntax_ada.name) extern =
+          try List.assoc name renaming with
+          Not_found -> 
           if (not extern) then name
           else let (parents,ident) = name in
                let pack = self#current in
@@ -418,52 +413,77 @@ class package_manager =
                    | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
                    ("unknown package "^(ident_list_to_string parents))
 
+        (**
+         * Algorithm for add_rd (A,B)  (A -> B)
+         *
+         * If A = B, detect circular dependency.
+         * If B is already a pointer to some C, we have something like
+         *      A -> B -> C
+         * So its equivalent to call (A -> C).
+         *
+         * Note that in the particular case where C = A (cycle), the recursive
+         * call is (A -> A) and the circular dependency will be detected.
+         *)
+        method add_renaming_decl new_name old_name =
+          Npkcontext.print_debug ("add_rd "
+                                 ^name_to_string new_name
+                                 ^" --> "
+                                 ^name_to_string old_name
+          );
+          if (new_name=old_name) then
+            Npkcontext.report_error "add_renaming_decl"
+                          ("Circular declaration detected for '"
+                          ^name_to_string new_name^"'.")
+          else begin
+            try
+              let pointee = List.assoc new_name renaming in
+              self#add_renaming_decl new_name pointee
+            with Not_found ->
+              renaming <- (new_name,old_name)::renaming 
+          end
     end
 
-let make_operator_name opname =
-    let ada2npk_operator_prefix = "__ada2npk_operator_" in
-     match opname with
-     | "and" -> ada2npk_operator_prefix ^ "logical_and"
-     | "or"  -> ada2npk_operator_prefix ^ "logical_and"
-     | "xor" -> ada2npk_operator_prefix ^ "xor"
-     | "="   -> ada2npk_operator_prefix ^ "equals"
-     | "/="  -> ada2npk_operator_prefix ^ "not_equals"
-     | "<"   -> ada2npk_operator_prefix ^ "lt"
-     | "<="  -> ada2npk_operator_prefix ^ "le"
-     | ">"   -> ada2npk_operator_prefix ^ "gt"
-     | ">="  -> ada2npk_operator_prefix ^ "ge"
-     | "+"   -> ada2npk_operator_prefix ^ "plus"
-     | "-"   -> ada2npk_operator_prefix ^ "minus"
-     | "&"   -> ada2npk_operator_prefix ^ "binary_and"
-     | "*"   -> ada2npk_operator_prefix ^ "times"
-     | "/"   -> ada2npk_operator_prefix ^ "div"
-     | "mod" -> ada2npk_operator_prefix ^ "mod"
-     | "rem" -> ada2npk_operator_prefix ^ "rem"
-     | "**"  -> ada2npk_operator_prefix ^ "pow"
-     | "abs" -> ada2npk_operator_prefix ^ "abs"
-     | "not" -> ada2npk_operator_prefix ^ "not"
-     | _     -> Npkcontext.report_error "Parser.make_operator_name"
-             ("Cannot overload '"^opname^"' : it is not an operator")
+let make_operator_name op =
+  let ada2npk_operator_prefix = "__ada2npk_operator_" in
+  ada2npk_operator_prefix^
+   (match op with
+   | And| AndThen -> "logical_and"
+   | Or | OrElse  -> "logical_and"
+   | Xor          -> "xor"
+   | Eq           -> "equals"
+   | Neq          -> "not_equals"
+   | Lt           -> "lt"
+   | Le           -> "le"
+   | Gt           -> "gt"
+   | Ge           -> "ge"
+   | Plus         -> "plus"
+   | Minus        -> "minus"
+   | Mult         -> "times"
+   | Div          -> "div"
+   | Mod          -> "mod"
+   | Rem          -> "rem"
+   | Power        -> "pow"
+   )
 
-let operator_of_binop = function
-  | Plus          -> "+"
-  | Minus         -> "-"
-  | Mult          -> "*"
-  | Div           -> "/"
-  | Power         -> "**"
-  | Mod           -> "mod"
-  | Rem           -> "rem"
-  | Eq            -> "="
-  | Neq           -> "/="
-  | Le            -> "<="
-  | Lt            -> "<"
-  | Ge            -> ">="
-  | Gt            -> ">"
-  | And           -> "and"
-  | Or            -> "or"
-  | Xor           -> "xor"
-  | AndThen       -> "and then"
-  | OrElse        -> "or else"
+let operator_of_string s = match s with
+  | "and" -> And
+  | "or"  -> Or
+  | "xor" -> Xor
+  | "="   -> Eq
+  | "/="  -> Neq
+  | "<"   -> Lt
+  | "<="  -> Le
+  | ">"   -> Gt
+  | ">="  -> Ge
+  | "+"   -> Plus
+  | "-"   -> Minus
+  | "*"   -> Mult
+  | "/"   -> Div
+  | "mod" -> Mod
+  | "rem" -> Rem
+  | "**"  -> Power
+  |_ -> Npkcontext.report_error "operator_of_string"
+         ("\""^s^"\" does not name an operator")
 
 let may f = function
   | None -> None

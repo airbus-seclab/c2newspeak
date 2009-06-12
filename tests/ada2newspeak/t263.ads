@@ -1,0 +1,15 @@
+package t263 is
+  function  "+"  (Left, Right : Integer) return Integer;
+  function  "-"  (Left, Right : Integer) return Integer;
+  function  "*"  (Left, Right : Integer) return Integer;
+  function  "/"  (Left, Right : Integer) return Integer;
+  function "mod" (Left, Right : Integer) return Integer;
+  function "rem" (Left, Right : Integer) return Integer;
+  function "xor" (Left, Right : Integer) return Integer;
+  function  "<"  (Left, Right : Integer) return Integer;
+  function  "<=" (Left, Right : Integer) return Integer;
+  function  ">"  (Left, Right : Integer) return Integer;
+  function  ">=" (Left, Right : Integer) return Integer;
+  function  "="  (Left, Right : Integer) return Integer;
+  function  "/=" (Left, Right : Integer) return Integer;
+end t263;

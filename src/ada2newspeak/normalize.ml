@@ -31,37 +31,28 @@ open Eval
 
 module Nat = Newspeak.Nat
 module  T  = Ada_types
+module TC  = Typecheck
 
-type constant_symb = Eval.constant_symb
+let (%+) = Nat.add
+let (%-) = Nat.sub
 
-(* FIXME Temporary tweak. *)
-let get_legacy_definition id = match String.lowercase id with
-| "integer"   -> Syntax_ada.Constrained(Syntax_ada.Integer
-                                       ,Ada_config.integer_constraint
-                                       ,true
-                                       )
-| "float"     -> Syntax_ada.Unconstrained Syntax_ada.Float
-| "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
-| "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
-| _ ->  failwith "legacy definition available only for int float bool or char"
-
-let temp =
-    object
-        val mutable count = 0
-
-        (**
-         * Create a new temporary variable identifier.
-         * Multiple calls will yield "tmp_range0", "tmp_range1", and so on.
-         *
-         * /!\ Side-effects : calls will alter the state of [temp].
-         *)
-        method create :string =
-            let res = "tmp_range"^(string_of_int count) in
-            count <- count + 1;
-            res
-    end
+let gtbl : Symboltbl.table = Symboltbl.create_table ()
 
 let string_of_name = Ada_utils.name_to_string
+
+let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
+  | Integer            -> T.integer
+  | IntegerConst       -> T.universal_integer
+  | Float              -> T.std_float
+  | Boolean            -> T.boolean
+  | Character          -> T.character
+  | Declared (_,_,t,_) -> t
+
+let subtyp_to_adatyp : Syntax_ada.subtyp -> Ada_types.t = function
+  | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
+  | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
+  | SubtypName  n         -> try Symboltbl.find_type gtbl n
+                             with Not_found -> T.unknown
 
 (**
  * Try to find a body for a given specification.
@@ -92,7 +83,7 @@ let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_)))
   | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> name_to_string n
-  | Ast.UseDecl _ | Ast.RepresentClause _-> "<no name>"
+  | Ast.UseDecl _ -> "<no name>"
 
 let check_package_body_against_spec ~(body:Ast.declarative_part)
                                     ~(spec:Ast.package_spec) =
@@ -105,7 +96,7 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
   let filterspec = function
     | Ast.NumberDecl _ | Ast.SpecDecl   _ -> true
     | Ast.ObjectDecl _ | Ast.TypeDecl _ | Ast.SubtypDecl _
-    | Ast.RepresentClause _ | Ast.UseDecl _ -> false
+    | Ast.UseDecl _ -> false
   in
   List.iter (function sp ->
     if (filterspec sp) then
@@ -121,9 +112,6 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
 let normalize_ident ident package extern =
   if extern then (package, ident)
             else (   []  , ident)
-
-let normalize_name (name:name) (package:package_manager) extern =
-  package#normalize_name name extern
 
 let extract_subprog_spec (ast:compilation_unit):compilation_unit =
     match ast with
@@ -147,12 +135,13 @@ let parse_specification (name:name) :compilation_unit =
     if Sys.file_exists spec_name
     then
       let res = File_parse.parse spec_name in
-      if (!Npkcontext.verb_ast) then begin
-        print_endline "Abstract Syntax Tree (extern)";
-        print_endline "-----------------------------";
-        Print_syntax_ada.print_ast [res];
-        print_newline ();
-      end;
+      if (!Npkcontext.verb_ast) then
+        begin
+          print_endline "Abstract Syntax Tree (extern)";
+          print_endline "-----------------------------";
+          Print_syntax_ada.print_ast [res];
+          print_newline ();
+        end;
       res
     else
       let body_name = (string_of_name name)^".adb" in
@@ -183,13 +172,15 @@ let parse_package_specification (name:name):package_spec =
  * a name, les noms etant traites comme extern a la normalisation
  *)
 let rec parse_extern_specification (name:name):Ast.spec*location =
-  let spec_ast = parse_specification name
-  in
-    match (normalization spec_ast true) with
-      | (_, Ast.Spec(spec), loc) -> (spec, loc)
-      | (_, Ast.Body(_), _) -> Npkcontext.report_error
-          "normalize.parse_extern_specification"
-            "internal error : specification expected, body found"
+  Npkcontext.print_debug "Parsing extern specification file";
+  let spec_ast = parse_specification name in
+  let norm_spec = (normalization spec_ast true) in
+  Npkcontext.print_debug "Done parsing extern specification file";
+  match norm_spec with
+    | (_, Ast.Spec(spec), loc) -> (spec, loc)
+    | (_, Ast.Body(_), _) -> Npkcontext.report_error
+        "normalize.parse_extern_specification"
+          "internal error : specification expected, body found"
 
 (**
  * Iterates through the abstract syntax tree, performing miscellaneous tasks.
@@ -207,41 +198,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and package=new package_manager
     in
 
-  (** Wrapper between [types] (legacy, see below) and Ada_types.  *)
-  let atypes =
-    object(s)
-      val tbl :Ada_types.table = Ada_types.create_table 100
-
-      method private subtyp_to_atype (s:subtyp) :Ada_types.t =
-        match s with
-        | Constrained   _ -> failwith "Constr is not impl"
-        | Unconstrained _ -> failwith "Unconstr not impl"
-        | SubtypName    _ -> failwith "SubtypeName not impl"
-
-      method add (n:name) (st:subtyp) :unit =
-        Ada_types.add_type tbl (snd n) (s#subtyp_to_atype st);
-        Ada_types.print_table tbl
-
-      method remove (n:name) :unit =
-        Ada_types.remove_type tbl (snd n)
-
-      method mem (n:name) :bool =
-        try
-          ignore (Ada_types.find_type tbl (snd n));
-          true
-        with Not_found ->
-          begin try
-            ignore (Ada_types.builtin_type (snd n));
-            true;
-          with Not_found -> false
-          end
-
-      method find (n:name) :(subtyp*location) =
-        get_legacy_definition (snd n),Newspeak.unknown_loc
-
-    end
-  in
-
   (**
    * This object encapsulates the table of types. It is basically a Hashtbl.t
    * mapping a [name] to a triplet of :
@@ -253,7 +209,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
    *)
   let types =
     object (s)
-      val tbl = Hashtbl.create 100
+      val tbl = Hashtbl.create 0
 
       (** Add a new subtype, or raise an error in case of conflict. *)
       method add (n:Syntax_ada.name) (subtyp:subtyp)
@@ -272,13 +228,27 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
       (** Is this type known ? *)
       method mem (n:name) :bool =
-        Hashtbl.mem tbl n
-          || atypes#mem n
+             snd n = "integer"   
+          || snd n = "float"     
+          || snd n = "boolean"   
+          || snd n = "character" 
+          || Hashtbl.mem tbl n
 
       (** Find the type definition. *)
       method find (n:name) :(subtyp*location) =
-        try let (x,y,_) = Hashtbl.find tbl n in (x,y)
-        with Not_found -> atypes#find n
+        match String.lowercase (snd n) with
+          | "integer"   ->  Syntax_ada.Constrained(Syntax_ada.Integer
+                                                  ,Ada_config.integer_constraint
+                                                  ,true
+                                                  )
+                           ,Newspeak.unknown_loc
+          | "float"     ->  Syntax_ada.Unconstrained Syntax_ada.Float
+                           ,Newspeak.unknown_loc
+          | "boolean"   ->  Syntax_ada.Unconstrained Syntax_ada.Boolean
+                           ,Newspeak.unknown_loc
+          | "character" ->  Syntax_ada.Unconstrained Syntax_ada.Character
+                           ,Newspeak.unknown_loc
+          | _ -> let (x,y,_) = Hashtbl.find tbl n in (x,y)
 
       (** Find all the types matching. *)
       method find_all (n:name)
@@ -287,7 +257,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
       (** Remove a subtype definition. *)
       method remove (x:name) :unit =
-        atypes#remove x;
         Hashtbl.remove tbl x
     end
   in
@@ -377,7 +346,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   in
 
-  let find_all_use (ident:identifier)
+  let find_all_use (ident:string)
         :(subtyp*location*bool) list =
     List.flatten
       (List.map
@@ -386,9 +355,15 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
 
   let add_enum_litt symbs typ global extern =
-    List.iter (fun (ident,v) -> add_enum (normalize_ident ident
-                                                          package#current
-                                                          extern)
+    List.iter (fun (ident,v) -> let (p,i) = normalize_ident ident
+                                                            package#current
+                                                            extern
+                                in
+                                Symboltbl.add_variable gtbl
+                                               ((if global then package#current
+                                               else []),i)
+                                               (typ_to_adatyp typ);
+                                 add_enum (p,i)
                                          typ
                                          global
                                          v)
@@ -396,25 +371,24 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
   let add_typ nom typdecl location ~global ~extern =
     let subtyp = match typdecl with
-      | Array _
-      | Record _ -> Unconstrained(Declared(snd nom, typdecl, location))
+      | Array _ -> Unconstrained(Declared(snd nom, typdecl, T.unknown, location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
           let contrainte = IntegerRangeConstraint(min, max)
-          and typ = Declared(snd nom,typdecl, location)
+          and typ = Declared(snd nom,typdecl, T.unknown,location)
           in
             add_enum_litt symbs typ global extern;
             Constrained(typ, contrainte, true)
 
       | IntegerRange(contrainte, _) ->
-          Constrained(Declared(snd nom, typdecl, location), contrainte, true)
+          Constrained(Declared(snd nom, typdecl,T.unknown, location), contrainte, true)
       | DerivedType(subtyp_ind) ->
           let subtyp = extract_subtyp subtyp_ind in
           let typ = base_typ subtyp in
             begin
               match typ with
-                | Declared(_,Enum(symbs,_),_) ->
+                | Declared(_,Enum(symbs,_),_,_) ->
                     add_enum_litt symbs typ global extern
                 | _ -> ()
             end;
@@ -463,61 +437,21 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           | (pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
                 ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
-
-  let normalize_name name =
-    let add_package (parents, ident) pack = match parents with
-      | [] -> (pack, ident)
-      | a when pack = a -> (pack, ident)
-      | a when (package#is_with a) -> (a, ident)
-      | _ -> Npkcontext.report_error
-          "ada_normalize.normalize_name.add_package"
-            ("unknown package "
-             ^(Ada_utils.ident_list_to_string parents))
-
-    in
-      if extern then
-        add_package name (package#current)
-        (* pas de gestion de with dans package inclus *)
-      else name
+ 
+  let normalize_name (parents, ident) =
+    package#normalize_name (parents,ident) extern
   in
 
-let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
+let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
   (* on etablit le sous-type tel qu'il sera utilise dans
      le reste du code, a partir du type de base du sous-type
      de reference, de la contrainte normalisee, et d'un
      booleen qui indique si le sous-type de reference est
      statique *)
-  let subtyp_of_constraint contrainte typ static_ref =
-    let static_constraint = constraint_is_static contrainte
-    in
-
-    (* Dans le cas de contrainte statique, la contrainte
-       du sous-type resultat reste la meme.
-       Dans le cas d'un RangeCosntraint contenant des expressions
-       on genere deux temporaires, qui permettront de se
-       referer aux valeurs des bornes a l'instant de la
-       declaration du sous-type.
-       Ces temporaires sont declares et initialises dans
-       firstpass.
-    *)
-    let contrainte_subtyp_result = match contrainte with
-      | RangeConstraint(_, _) ->
-          let min = normalize_ident_cur (temp#create)
-          and max = normalize_ident_cur (temp#create) in
-            RangeConstraint(Var min, Var max)
-      | _ -> contrainte
-    in
-      (Constrained(typ, contrainte_subtyp_result,
-                   static_ref && static_constraint))
-  in (match subtyp with
-        | None -> ()
-        | Some(_) ->
-            Npkcontext.report_error
+    if subtyp <> None then Npkcontext.report_error
               "Ada_normalize.normalize_subtyp_indication"
-              "internal error : subtyp already provided");
-
+              "internal error : subtyp already provided";
     let norm_subtyp_ref = normalize_subtyp subtyp_ref in
-
     let (norm_subtyp, norm_contrainte) =
       match (contrainte, norm_subtyp_ref) with
         | (None, Unconstrained(typ)) ->
@@ -528,34 +462,26 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
             let norm_contrainte =
               normalize_contrainte const typ
             in
-              (subtyp_of_constraint norm_contrainte typ true,
+              (Constrained(typ,norm_contrainte,true),
                Some(norm_contrainte))
         | (Some(const), Constrained(typ,const_ref,stat_ref)) ->
-            let norm_contrainte =
-              normalize_contrainte const typ
-            in
-              if not
-                (constraint_is_constraint_compatible
-                   const_ref norm_contrainte)
-              then
-                Npkcontext.report_error
-                  "Ada_normalize.normalize_subtyp_indication"
-                  "constraint error : uncompatible constraint";
-              (subtyp_of_constraint norm_contrainte typ stat_ref,
+            let norm_contrainte = normalize_contrainte const typ in
+              constraint_check_compatibility const_ref norm_contrainte;
+              (Constrained(typ,norm_contrainte,stat_ref),
                Some(norm_contrainte))
         | (_, SubtypName _ ) ->
             Npkcontext.report_error
               "Ada_normalize.normalize_subtyp_indication"
               "internal error : unexpected subtyp name"
     in
-      (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp))
+      (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp), adatype)
 
 and normalize_subtyp subtyp =
   let norm_typ typp =
     match typp with
-        Declared (id,Array(ConstrainedArray(st1_ind, st2_ind, _)),x) ->
-          let n_st1 =  normalize_subtyp_indication st1_ind in
-          let n_st2 =  normalize_subtyp_indication st2_ind in
+        Declared (id,Array a,t,x) ->
+          let n_st1 =  normalize_subtyp_indication a.array_index     in
+          let n_st2 =  normalize_subtyp_indication a.array_component in
 
         let subtyp = extract_subtyp n_st1 in
 
@@ -584,8 +510,13 @@ and normalize_subtyp subtyp =
                 "Ada_normalize.normalize_typ_decl"
                 "array error : range isn't static"
         in
-          Declared (id,Array(ConstrainedArray(n_st1, n_st2, taille)),
-                    x )
+          Declared (id
+                   ,Array({array_index     = n_st1;
+                           array_component = n_st2;
+                           array_size      = taille;
+                         })
+                   ,t
+                   ,x)
       |  _ -> typp
   in
     match subtyp with (* For array norm_typ is used here*)
@@ -595,17 +526,14 @@ and normalize_subtyp subtyp =
       | SubtypName(name) ->
           fst (find_subtyp (normalize_name name))
 
-and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
+and array_bounds (typ:subtyp) :nat*nat=
     match typ with
-      | Unconstrained(Declared(_,Array(ConstrainedArray(
-            (Constrained(_, contr, _), None,_),_,_)),_)) -> Some contr
-      | Unconstrained(Declared(_,Array(ConstrainedArray((SubtypName _, None,_)
-            ,_,_)),_)) -> arraytyp_to_contrainte (normalize_subtyp typ)
-      | Unconstrained(Declared(_,Array(ConstrainedArray((_, c,_),_,_)),_)) -> c
-      | SubtypName _ -> arraytyp_to_contrainte (normalize_subtyp typ)
-      | Constrained ( _, contr, true) -> Some contr
-      | _  -> Npkcontext.report_error "Ada_normalize Length contraint"
-                                      "Length not implemented for type /= array"
+    | Unconstrained(Declared(_,Array {array_index =
+                Constrained(_, IntegerRangeConstraint (a,b), _), None,_,_
+          },_,_)) -> (a,b)
+    | SubtypName _ -> array_bounds (normalize_subtyp typ)
+    | _  -> Npkcontext.report_error "ada_normalize.array_bounds"
+                                      "invalid argument"
 
 (**
  * Normalize an actual argument.
@@ -615,134 +543,87 @@ and arraytyp_to_contrainte (typ:subtyp) :contrainte option =
 and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
 
 and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
-  :Ast.exp_value =
+  :Ast.expression =
+  let direct_op_trans = function
+  | Plus  -> Ast.Plus  | Minus -> Ast.Minus | Div   -> Ast.Div
+  | Mult  -> Ast.Mult  | Or    -> Ast.Or    | And   -> Ast.And
+  | Gt    -> Ast.Gt    | Eq    -> Ast.Eq    | Rem   -> Ast.Rem
+  | Mod   -> Ast.Mod   | Power -> Ast.Power
+  |_ -> invalid_arg "direct_op_trans"
+  in
+  (* Is the operator overloaded ? *)
+  let ovl_opname = ([],make_operator_name bop) in
+  if (Hashtbl.mem csttbl ovl_opname) then
+    normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
+  else
   match bop with
-  | Plus  -> Ast.Binary (Ast.Plus , normalize_exp e1, normalize_exp e2)
-  | Minus -> Ast.Binary (Ast.Minus, normalize_exp e1, normalize_exp e2)
-  | Div   -> Ast.Binary (Ast.Div  , normalize_exp e1, normalize_exp e2)
-  | Mult  -> Ast.Binary (Ast.Mult , normalize_exp e1, normalize_exp e2)
-  | Or    -> Ast.Binary (Ast.Or   , normalize_exp e1, normalize_exp e2)
-  | And   -> Ast.Binary (Ast.And  , normalize_exp e1, normalize_exp e2)
-  | Gt    -> Ast.Binary (Ast.Gt   , normalize_exp e1, normalize_exp e2)
-  | Eq    -> Ast.Binary (Ast.Eq   , normalize_exp e1, normalize_exp e2)
-  | Lt    -> fst (normalize_exp (Binary(Gt, e2, e1)))
-  | Le    -> fst (normalize_exp (Unary(Not,Binary(Gt, e1, e2))))
-  | Ge    -> fst (normalize_exp (Unary(Not,Binary(Gt, e2, e1))))
-  | Neq   -> fst (normalize_exp (Unary(Not,Binary(Eq, e1, e2))))
-  | Rem   -> Ast.Binary (Ast.Rem  , normalize_exp e1, normalize_exp e2)
-  | Mod   -> Ast.Binary (Ast.Mod  , normalize_exp e1, normalize_exp e2)
-  | Power -> Ast.Binary (Ast.Power, normalize_exp e1, normalize_exp e2)
+  (* Operators that does not exist in AST *)
+  | Lt     -> normalize_exp (          Binary(Gt, e2, e1) )
+  | Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
+  | Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
+  | Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
   | Xor    -> let (e2',t2) = normalize_exp e2 in
-      Ast.CondExp (normalize_exp e1,(Ast.Unary(Ast.Not,(e2',t2)),t2),(e2',t2))
-  | OrElse -> Ast.CondExp (normalize_exp e1,(Ast.CBool true,T.boolean), normalize_exp e2)
-  | AndThen-> Ast.CondExp (normalize_exp e1, normalize_exp e2,(Ast.CBool false,T.boolean))
+              Ast.CondExp (normalize_exp e1
+                          ,(Ast.Unary(Ast.Not,(e2',t2)),t2)
+                          ,(e2',t2)
+                          )
+              ,t2
+  | OrElse -> let (e1',t1) = normalize_exp e1 in
+              Ast.CondExp ((e1',t1)
+                          ,(Ast.CBool true,T.boolean)
+                          ,normalize_exp e2
+                          )
+              ,t1
+  | AndThen-> let (e1',t1) = normalize_exp e1 in
+              Ast.CondExp ((e1',t1)
+                          ,normalize_exp e2
+                          ,(Ast.CBool false,T.boolean)
+                          )
+              ,t1
+  (* Otherwise : direct translation *)
+  | _ ->  let bop' = direct_op_trans bop in
+          let (e1',t1) = normalize_exp e1 in
+          let (e2',t2) = normalize_exp e2 in
+          Ast.Binary (bop', (e1',t1), (e2',t2)),
+          TC.type_of_binop bop' t1 t2
 
-and normalize_uop (uop:unary_op) (exp:expression) :Ast.exp_value =
-  match uop with
-    | UPlus  -> Ast.Unary(Ast.UPlus , normalize_exp exp)
-    | UMinus -> Ast.Unary(Ast.UMinus, normalize_exp exp)
-    | Abs    -> Ast.Unary(Ast.Abs,    normalize_exp exp)
-    | Not    -> Ast.Unary(Ast.Not,    normalize_exp exp)
+and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
+  let (ne,t) = normalize_exp exp in
+  let uop' = match uop with
+     | UPlus  -> Ast.UPlus
+     | UMinus -> Ast.UMinus
+     | Abs    -> Ast.Abs
+     | Not    -> Ast.Not
+  in
+  Ast.Unary(uop', (ne,t)), TC.type_of_unop uop' t
 
 (**
  * Normalize an expression.
  *)
-and normalize_exp (exp:expression) :Ast.expression = let value = match exp with
-  | CInt x   -> Ast.CInt x
-  | CFloat x -> Ast.CFloat x
-  | CBool x  -> Ast.CBool x
-  | CChar x  -> Ast.CChar x
-  | Var x  -> Ast.Var x
-  | Unary (uop, exp) -> normalize_uop uop exp
+and normalize_exp (exp:expression) :Ast.expression = match exp with
+  | CInt   x -> Ast.CInt   x,T.universal_integer
+  | CFloat x -> Ast.CFloat x,T.universal_real
+  | CBool  x -> Ast.CBool  x,T.boolean
+  | CChar  x -> Ast.CChar  x,T.character
+  | Var    n ->  Ast.Var(normalize_name n)
+                ,Symboltbl.find_variable gtbl n ~context:(package#current
+                                                ::package#get_use)
+  | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
-                                        normalize_exp exp)
+                                        normalize_exp exp),T.boolean
   | FunctionCall(nom, params) ->
-      Ast.FunctionCall(nom, List.map normalize_arg params)
-
-  | Attribute (subtype, AttributeDesignator(attr, _))-> match attr with
-     | "first" -> begin
-
-                    match arraytyp_to_contrainte subtype with
-                       None -> Npkcontext.report_error
-                         "Ada_normalize First contraint"
-                         "constraint is not IntegerRange"
-
-                     | Some(IntegerRangeConstraint(a, b)) ->
-                         if (Nat.compare a b <=0)
-                         then
-                             Ast.CInt a
-                         else
-                           Npkcontext.report_error
-                         "Ada_normalize First contraint"
-                         "Zero length"
-
-
-                     | _ ->  Npkcontext.report_error
-                         "Normalize: in Array access"
-                           "constraint is not IntegerRange"
-                    end
-     | "last" -> begin
-                    match arraytyp_to_contrainte subtype with
-                       None -> Npkcontext.report_error
-                         "Ada_normalize Last contraint"
-                         "constraint is not IntegerRange"
-
-                     | Some(IntegerRangeConstraint(a, b)) ->
-                         if (Nat.compare a b <=0)
-                         then
-                              Ast.CInt b
-                         else
-                           Npkcontext.report_error
-                         "Ada_normalize Length contraint"
-                         "Zero length"
-
-
-                     | _ ->  Npkcontext.report_error
-                         "Normalize: in Array access"
-                           "constraint is not IntegerRange"
-                    end
-
-  | "length" ->
-         (*    Array or Range type only for attributes Length *)
-        begin
-         match arraytyp_to_contrainte subtype with
-             None -> Npkcontext.report_error
-               " Ada_normalize Length contraint"
-               "constraint is not IntegerRange"
-
-           | Some(IntegerRangeConstraint(a, b)) ->
-               if (Nat.compare a b <=0)
-               then
-             Ast.CInt (Nat.add (Nat.sub b a) Nat.one)
-               else         Npkcontext.report_error
-             "Ada_normalize Length contraint"
-             "Zero length"
-
-           | Some(RangeConstraint _) ->
-               Npkcontext.report_error
-             "Ada_normalize Length contraint"
-             "Range Constraint fo Length"
-
-           | _ ->  Npkcontext.report_error
-               "Normalize: in Array access"
-             "constraint is not IntegerRange"
+      Ast.FunctionCall(nom, List.map normalize_arg params),T.boolean
+  | Attribute (subtype, AttributeDesignator(attr, _))->
+      begin
+        let (a,b) = array_bounds subtype in
+        match attr with
+          | "first"  -> Ast.CInt a,T.universal_integer
+          | "last"   -> Ast.CInt b,T.universal_integer
+          | "length" -> Ast.CInt (b %- a %+ Nat.one),T.universal_integer
+          | _ -> Npkcontext.report_error "normalize:attr"
+                        ("No such attribute : '" ^ attr ^ "'")
         end
-  | _ -> Npkcontext.report_error "normalize:attr"
-                ("No such attribute : '" ^ attr ^ "'")
-  in value,T.universal_integer
-
-
-
-(* normalize la contrainte contrainte
-   le type des bornes est typ
-   static indique si
-   on lance une erreur en cas de borne non-static
-   et si on verifie l'ordre des bornes
-   (autrement dit, on attend une contrainte statique non nulle
-   en retour. uniquement utilise dans le cas entier)
-*)
-
 
 (**
  * Normalize a constraint.
@@ -880,10 +761,6 @@ in
           in match clause with
             | (EnumerationRepresentation(_, agregat), rloc) ->
                 interpret_enumeration_clause agregat symbs rloc loc
-            | AttributeDefinitionClause _,_ ->
-                     Npkcontext.report_error "normalize"
-                  "AttributeDefinitionClause is not yet implemented" (* FIXME *)
-
         end
       else
         (symbs, size)
@@ -961,41 +838,46 @@ in
             (* base type cases : we still have a derived type *)
           | Integer | Float | Boolean
           | Character -> DerivedType(norm_subtyp_ind)
-          | (String|IntegerConst) ->
+          | IntegerConst ->
               Npkcontext.report_error
                 "Ada_normalize.normalize_typ_decl"
                 "internal error : incorrect type"
           (* declared types : simplification *)
-          | Declared(parent,Enum(symbs, size),_) ->
+          | Declared(parent,Enum(symbs, size),_,_) ->
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
-          | Declared(_,IntegerRange(contrainte,taille),_) ->
+          | Declared(_,IntegerRange(contrainte,taille),_,_) ->
               IntegerRange(contrainte, taille)
-          | Declared(_,Array  def,_) -> Array  def
-          | Declared(_,Record def,_) -> Record def
-          | Declared(_, DerivedType subtyp_ind,_) -> DerivedType subtyp_ind
+          | Declared(_,Array  def,_,_) -> Array def
+          | Declared(_,DerivedType subtyp_ind,_,_) -> DerivedType subtyp_ind
         in
-
 
         (*constitution of the subtype representing the current declaration *)
         let norm_subtyp =
             match (extract_subtyp norm_subtyp_ind ) with
-              | Unconstrained _ -> Unconstrained(Declared(ident,typ_decl, loc))
+            | Unconstrained _ -> Unconstrained(Declared(ident
+                                                       ,typ_decl
+                                                       ,T.unknown
+                                                       ,loc
+                                                       ))
               | Constrained(_, contrainte, static) ->
               (* for enumeration types, we update the value of the constraint *)
                   let contrainte = match (typ_decl, parent_type) with
-                    | (Enum(new_assoc,_), Declared(_,Enum(symbs, _),_)) ->
+                    | (Enum(new_assoc,_), Declared(_,Enum(symbs, _),_,_)) ->
                         update_contrainte contrainte symbs new_assoc
                     | _ -> contrainte
-                  in Constrained(Declared(ident,typ_decl,loc),contrainte,static)
+                  in Constrained(Declared(ident
+                                         ,typ_decl
+                                         ,T.unknown
+                                         ,loc),contrainte,static)
               | SubtypName _ ->
                   Npkcontext.report_error
                     "Ada_normalize.normalize_typ_decl"
                     "internal error : unexpected subtyp name" in
 
         let new_subtyp_ind =
-          let (subtyp, contrainte, _) = norm_subtyp_ind in
-          (subtyp, contrainte, Some(norm_subtyp))
+          let (subtyp, contrainte, _, adatype) = norm_subtyp_ind in
+          (subtyp, contrainte, Some(norm_subtyp),adatype)
         in
         let norm_typ_decl = DerivedType(new_subtyp_ind) in
           add_typ (normalize_ident_cur ident) norm_typ_decl loc global extern;
@@ -1004,9 +886,9 @@ in
         let decl = normalize_integer_range taille contrainte in
           add_typ (normalize_ident_cur ident) decl loc global extern;
           decl
-    | Array(ConstrainedArray(intervalle_discret, subtyp_ind , None)) ->
-        let norm_inter =  normalize_subtyp_indication intervalle_discret
-        and norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
+    | Array a when a.array_size = None ->
+        let norm_inter =  normalize_subtyp_indication a.array_index
+        and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
         let subtyp = extract_subtyp norm_inter in
 
         let contrainte = match subtyp with
@@ -1030,28 +912,14 @@ in
               Npkcontext.report_error
                 "Ada_normalize.normalize_typ_decl"
                 "array error : range isn't static" in
-        let norm_typ = Array(ConstrainedArray(norm_inter,
-                                              norm_subtyp_ind,
-                                              taille))
+        let norm_typ = Array {array_index     = norm_inter;
+                              array_component = norm_subtyp_ind;
+                              array_size      = taille}
         in
           add_typ (normalize_ident_cur ident) norm_typ loc global extern;
           norm_typ
-
-    | Array(ConstrainedArray(_, _, Some _)) ->
-        Npkcontext.report_error
-          "Ada_normalize.normalize_typ_decl"
-          "internal error : size of array already provided"
-
-    | Record (fls) ->
-        let norm_field (ids, sbtyp_ind, e_opt) =
-          (ids, normalize_subtyp_indication sbtyp_ind, e_opt)
-        in
-        let  norm_typ =
-          Record (List.map norm_field fls)
-        in
-          add_typ (normalize_ident_cur ident) norm_typ loc global extern;
-          norm_typ
-
+    | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
+                          "internal error : size of array already provided"
   in
 
   let remove_typ_decl nom typ_decl = match typ_decl with
@@ -1060,8 +928,7 @@ in
                   symbs
     | DerivedType  _
     | IntegerRange _
-    | Array        _
-    | Record       _ -> types#remove (normalize_ident_cur nom)
+    | Array        _ -> types#remove (normalize_ident_cur nom)
 
   in
 
@@ -1069,7 +936,7 @@ in
     (* incomplet *)
     List.iter
       (function (item,_) -> match item with
-      | BasicDecl(TypeDecl(id,tdecl)) -> remove_typ_decl id tdecl
+      | BasicDecl(TypeDecl(id,tdecl,_)) -> remove_typ_decl id tdecl
       | BasicDecl(SubtypDecl(ident,_))-> types#remove(normalize_ident_cur ident)
       | BasicDecl(ObjectDecl(ident_list,_, _, _)) ->
           List.iter
@@ -1080,6 +947,7 @@ in
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
       | BodyDecl _ -> ()
+      | BasicDecl(RenamingDecl _) -> ()
       )
     decl_part
 
@@ -1107,29 +975,40 @@ in
            if (param.default_value <> None && param.mode <> In) then
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
-           if addparam then add_cst (normalize_ident_cur param.formal_name)
+           if addparam then begin
+              Symboltbl.add_variable gtbl ([],param.formal_name) T.unknown;
+              add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
                                     false;
-          {Ast.param_type    = normalize_subtyp param.param_type;
-           Ast.formal_name   = param.formal_name;
-           Ast.mode          = param.mode;
-           Ast.default_value = may normalize_exp param.default_value;}
+           end;
+          { Ast.param_type    = normalize_subtyp param.param_type
+          ; Ast.formal_name   = param.formal_name
+          ; Ast.mode          = param.mode
+          ; Ast.default_value = may normalize_exp param.default_value
+        }
         )
         param_list
     in match subprog_spec with
         | Function(name, [], return_type)  ->
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
+              Symboltbl.add_subprogram gtbl
+                               name
+                               []
+                               (Some (subtyp_to_adatyp return_type))
+                               ;
               add_function norm_name (Some(base_typ norm_subtyp)) false;
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
+              Symboltbl.add_variable gtbl name T.unknown;
               add_function norm_name None false;
               Ast.Function(norm_name,
                        normalize_params param_list true,
                        normalize_subtyp return_type)
         | Procedure(name,param_list) ->
             let norm_name = normalize_name name in
+              Symboltbl.add_variable gtbl name T.unknown;
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
@@ -1137,15 +1016,16 @@ in
 
   let rec normalize_basic_decl item loc global reptbl = match item with
     | UseDecl(use_clause) -> package#add_use use_clause;
-        Ast.UseDecl use_clause
+        Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let norm_def = may normalize_exp def in
           (List.iter
-             (fun x -> add_cst (normalize_ident_cur x)
-                (VarSymb(global)) global)
+             (fun x ->
+               Symboltbl.add_variable gtbl (package#current,x) T.unknown;
+               add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
-          Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable)
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let normexp = normalize_exp exp in
         (* constantes *)
@@ -1164,48 +1044,58 @@ in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp v;
-              List.iter (add_ident v) ident_list;
+              List.iter (fun x ->
+                Symboltbl.add_variable gtbl ([],x) T.unknown;
+                           add_ident v x) ident_list;
               StaticVal(v)
           with
             | AmbiguousTypeException -> Npkcontext.report_error
                                         "Ada_normalize.normalize_basic_decl"
                                         "uncaught ambiguous type exception"
-            | NonStaticExpression -> (List.iter
-                                       (fun x -> add_cst (normalize_ident_cur x)
-                                                         (VarSymb global)
-                                                         global
-                                       ) ident_list);
+            | NonStaticExpression -> List.iter
+                                      (fun x ->
+                                         let n = (normalize_ident_cur x) in
+                                           Symboltbl.add_variable gtbl
+                                                          n
+                                                          T.unknown;
+                                                 add_cst n
+                                                        (VarSymb global)
+                                                        global
+                                      ) ident_list;
                     (*la constante n'est pas statique *) Constant
 
         in
-          Ast.ObjectDecl(ident_list, norm_subtyp_ind, Some normexp,status)
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Some
+          normexp,status))
     | ObjectDecl(_) ->
         Npkcontext.report_error
           "Ada_normalize.normalize_basic_decl"
           ("internal error : constant without default value"
            ^"or already evaluated")
-    | TypeDecl(id,typ_decl) ->
+    | TypeDecl(id,typ_decl,_) ->
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
-        in Ast.TypeDecl(id,norm_typ_decl)
-    | SpecDecl(spec) -> Ast.SpecDecl(normalize_spec spec)
+        in Some (Ast.TypeDecl(id,norm_typ_decl))
+    | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl package#get_use
           package extern in
           (*ajouts dans la table*)
+            Symboltbl.add_variable gtbl ([],ident) T.unknown;
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
-          Ast.NumberDecl(ident, norm_exp, Some v)
-    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
+          Some (Ast.NumberDecl(ident, norm_exp, Some v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
                     loc
                     global;
-          Ast.SubtypDecl(ident, norm_subtyp_ind)
-    | RepresentClause x -> Ast.RepresentClause x
+          Some (Ast.SubtypDecl(ident, norm_subtyp_ind))
+    | RenamingDecl (n, o) -> package#add_renaming_decl (normalize_name n) (normalize_name o);None
+    | RepresentClause _
+    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
   and normalize_package_spec (nom, list_decl) :Ast.package_spec =
     package#set_current nom;
@@ -1218,10 +1108,11 @@ in
                                   | _ -> true)
       list_decl in
     let rec normalize_decls decls =
-      List.map (fun (decl, loc) ->
+      List_utils.filter_map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
-                  let decl = normalize_basic_decl decl loc true represtbl
-                  in (decl,loc)
+                  match normalize_basic_decl decl loc true represtbl with
+                    | None -> None
+                    | Some decl -> Some (decl,loc)
                ) decls in
     let norm_spec = normalize_decls list_decl in
       package#reset_current;
@@ -1244,40 +1135,44 @@ in
   let rec normalize_instr (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
-    | NullInstr    -> Ast.NullInstr   , loc
-    | ReturnSimple -> Ast.ReturnSimple, loc
-    | Assign(lv, exp) -> Ast.Assign(normalize_lval lv, normalize_exp exp), loc
-    | Return(exp) -> Ast.Return(normalize_exp exp), loc
+    | NullInstr    -> None
+    | ReturnSimple -> Some (Ast.ReturnSimple, loc)
+    | Assign(lv, exp) -> Some (Ast.Assign(normalize_lval lv,
+                                          normalize_exp exp), loc)
+    | Return(exp) -> Some (Ast.Return(normalize_exp exp), loc)
     | If(exp, instr_then, instr_else) ->
+        Some
         (Ast.If(normalize_exp exp, normalize_block instr_then,
             normalize_block instr_else), loc)
-    | Loop(NoScheme,instrs) -> Ast.Loop(Ast.NoScheme,normalize_block instrs),loc
-    | Loop(While(exp), instrs) -> (Ast.Loop(Ast.While(normalize_exp exp),
+    | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
+                                              normalize_block instrs),loc)
+    | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-                 (Ast.Loop(Ast.For(iter, normalize_exp exp1,
-                                 normalize_exp exp2, is_rev),
-                                 normalize_block instrs), loc)
-    | Exit -> (Ast.Exit, loc)
+        Symboltbl.add_variable gtbl ([],iter) T.unknown;
+         Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
+                         normalize_exp exp2, is_rev),
+                         normalize_block instrs), loc)
+    | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) ->
-       (Ast.ProcedureCall(nom, List.map normalize_arg params), loc)
+       Some (Ast.ProcedureCall(normalize_name nom, List.map normalize_arg params), loc)
     | Case (e, choices, default) ->
-              Ast.Case (normalize_exp e,
+              Some (Ast.Case (normalize_exp e,
                     List.map (function e,block->
                             normalize_exp e,
                             normalize_block block)
                         choices,
                     Ada_utils.may normalize_block default
-                    ),loc
+                    ),loc)
     | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
                         remove_decl_part dp;
-                        Ast.Block (ndp, normalize_block blk), loc
+                        Some (Ast.Block (ndp, normalize_block blk), loc)
 
   and normalize_block block =
-    List.map normalize_instr block
+    List_utils.filter_map normalize_instr block
 
   and normalize_decl_part decl_part ~global =
-    let tbl=Ada_types.create_table (List.length decl_part) in
+    let tbl=Symboltbl.create_table () in
     let represtbl = Hashtbl.create 50 in
     let decl_part :(declarative_item*location) list = List.filter (function
         | BasicDecl(RepresentClause(rep)), loc ->
@@ -1287,14 +1182,17 @@ in
         | _ -> true
       ) decl_part in
     let normalize_decl_items items =
-      List.map (function
+      List_utils.filter_map (function
         | BasicDecl(basic),loc ->
-            Npkcontext.set_loc loc;
-            Ast.BasicDecl(normalize_basic_decl basic  loc
-                                           global represtbl),loc
+            begin
+              Npkcontext.set_loc loc;
+              match normalize_basic_decl basic  loc global represtbl with
+                | None -> None
+                | Some decl -> Some( Ast.BasicDecl decl,loc)
+            end
         | BodyDecl(body),loc ->
             Npkcontext.set_loc loc;
-            Ast.BodyDecl(normalize_body body), loc
+            Some (Ast.BodyDecl(normalize_body body), loc)
       ) items in
     let ndp = normalize_decl_items decl_part in
     List.iter (function
@@ -1303,7 +1201,9 @@ in
               if not (find_body_for_spec ~specification:sp
                                           ~bodylist:(List.map fst ndp)) then
                    Npkcontext.report_error "normalize_decl_part"
-                   ("Declaration of "^(name_of_spec sp)^" requires completion")
+                                           ("Declaration of \""
+                                           ^(name_of_spec sp)
+                                           ^"\" requires completion")
               end
       | _ -> ()
     ) ndp;
@@ -1319,7 +1219,7 @@ in
           remove_decl_part decl_part;
           remove_params subprog_decl;
           Ast.SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
-    | PackageBody(name, package_spec, decl_part, block) ->
+    | PackageBody(name, package_spec, decl_part) ->
         let norm_spec = normalize_package_spec
                            (with_default package_spec
                                (parse_package_specification name)
@@ -1330,7 +1230,7 @@ in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           package#reset_current;
-          Ast.PackageBody(name, Some norm_spec, ndp, normalize_block block)
+          Ast.PackageBody(name, Some norm_spec, ndp)
 
   in
   let normalize_lib_item lib_item loc =
@@ -1355,9 +1255,11 @@ in
         | Ast.ObjectDecl(ident_list, _, _,
                      (Variable | Constant)) ->
             (List.iter
-               (fun x -> add_cst (normalize_ident x package#current true)
+            (fun x -> let n=normalize_ident x package#current true in
+                        Symboltbl.add_variable gtbl n T.unknown;
+                         add_cst n
                                  (VarSymb(true))
-                                 true
+                                 true;
                )
                ident_list
             )
@@ -1369,16 +1271,18 @@ in
             let typ = base_typ subtyp
               (*extract_subtyp subtyp_ind*) in
               List.iter
-                (fun x -> add_cst (normalize_ident x package#current true)
+                (fun x -> let n = normalize_ident x package#current true in
+                  Symboltbl.add_variable gtbl n T.unknown;
+                  add_cst n
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
         | Ast.NumberDecl(ident, _, Some v) ->
             (*ajouts dans la table*)
+            Symboltbl.add_variable gtbl (package#current,ident) T.universal_integer;
             add_cst (normalize_ident ident package#current true)
                     (Number(v, true))
                     true
-
         | Ast.NumberDecl(_, _, None) ->
             Npkcontext.report_error
               "Ada_normalize.add_extern_spec.add_extern_basic_decl"
@@ -1394,14 +1298,13 @@ in
               types#add (normalize_ident ident package#current true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
-        | Ast.SpecDecl _ | Ast.UseDecl  _ | Ast.RepresentClause _ -> ()
+        | Ast.SpecDecl _ | Ast.UseDecl  _ -> ()
 
     in match spec with
       | Ast.SubProgramSpec(Ast.Function(name, [], return_typ)) ->
           add_function name (Some(base_typ return_typ)) true
       | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
-
       | Ast.PackageSpec(nom, basic_decls) ->
           package#set_current nom;
           List.iter add_extern_basic_decl basic_decls;
@@ -1413,23 +1316,23 @@ in
   (* normalise le context, en supprimant les doublons with *)
   let rec normalize_context context previous_with =
     match context with
-      | With(nom, _, _)::r when (List.mem nom previous_with) ->
-          (* doublon *)
-          normalize_context r previous_with
+      | [] -> []
       | With(nom, _, spec)::r ->
-
-          let (norm_spec, loc) = match spec with
-            | None   -> parse_extern_specification nom
-            | Some _ -> Npkcontext.report_error
-                "Ada_normalize.normalize_context"
-                  "internal error : spec provided"
-          in
-            add_extern_spec norm_spec;
-            Ast.With(nom, loc, Some(norm_spec, loc))
-            ::normalize_context r (nom::previous_with)
+          if (List.mem nom previous_with) then
+            normalize_context r previous_with
+          else begin
+            let (norm_spec, loc) = match spec with
+              | None   -> parse_extern_specification nom
+              | Some _ -> Npkcontext.report_error
+                  "Ada_normalize.normalize_context"
+                    "internal error : spec provided"
+            in
+              add_extern_spec norm_spec;
+              Ast.With(nom, loc, Some(norm_spec, loc))
+              ::normalize_context r (nom::previous_with)
+          end
       | UseContext(n)::r -> package#add_use n;
                             Ast.UseContext n::normalize_context r previous_with
-      | [] -> []
   in
 
   let (context,lib_item,loc) = compil_unit in

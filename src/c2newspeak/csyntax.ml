@@ -71,6 +71,7 @@ and typ =
       
 and init = 
   | Data of exp
+(* TODO: maybe remove the string option here ???? *)
   | Sequence of (string option * init) list
 
 and stmt = (stmtkind * location)
@@ -126,7 +127,7 @@ and exp =
 
 and cst = (Cir.cst * typ)
 
-and unop = Neg | Not | BNot
+and unop = Not | BNot
 
 and binop =
     | Plus
@@ -151,6 +152,8 @@ let int_typ = Int (Signed, Config.size_of_int)
 let long_typ = Int (Signed, Config.size_of_long)
 
 let uint_typ = Int (Unsigned, Config.size_of_int)
+
+let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 
@@ -211,7 +214,12 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       && (List.mem sign possible_signs)
       && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))
   in
-  let k = List.find is_kind ikind_tbl in
+  let k = 
+    try List.find is_kind ikind_tbl 
+    with Not_found -> 
+      Npkcontext.report_error "Csyntax.int_cst_of_lexeme"
+	("unexpected integer constant: "^(Nat.to_string x))
+  in
     (Cir.CInt x, Int k)
 
 let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
@@ -255,7 +263,6 @@ let string_of_binop op =
 let string_of_unop op =
   match op with
       Not -> "!"
-    | Neg -> "-"
     | BNot -> "BNot"
 
 let rec string_of_typ margin t =
@@ -455,3 +462,8 @@ and size_of_stmt (x, _) =
 
 and size_of_case (_, body, _) = size_of_blk body
 
+let neg x = 
+  match x with
+      Cst (Cir.CInt c, Int (_, sz)) -> 
+	Cst (Cir.CInt (Nat.neg c), Int (Signed, sz))
+    | _ -> Binop (Minus, exp_of_int 0, x)

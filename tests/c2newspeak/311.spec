@@ -1,4 +1,4 @@
-Warning: 311.c:31#1113: init statement expected
+Warning: 311.c:30#1109: init statement expected
 Newspeak output
 ---------------
 311.c

@@ -38,7 +38,9 @@ ada2newspeak.FILES=\
 	ada_utils \
 	syntax_ada print_syntax_ada \
 	ada_types \
+	symboltbl \
 	ast \
+	typecheck \
 	eval \
 	parser lexer file_parse \
 	normalize firstpass ada2newspeak

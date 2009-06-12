@@ -30,7 +30,7 @@ and assertion = spec_token list
 and spec_token = 
     | SymbolToken of char
     | IdentToken of string
-    | CstToken of cst
+    | CstToken of Cir.cst
 
 and global =
     FunctionDef of (string * ftyp * is_static * blk)
@@ -49,7 +49,7 @@ and is_extern = bool
 
 and is_static = bool
 
-and field_decl = (typ * string * Newspeak.location)
+and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
 
@@ -59,11 +59,13 @@ and typ =
     | Bitfield of (Newspeak.ikind * exp)
     | Float of int
     | Ptr of typ
-    | Array of (typ * exp option)
+    | Array of array_typ
     | Comp of (string * is_struct)
     | Fun of ftyp
     | Va_arg
     | Typeof of string
+
+and array_typ = typ * exp option
 
 and init = 
     | Data of exp
@@ -92,10 +94,10 @@ and stmtkind =
 and lbl = string
 
 and exp = 
-    | Cst of cst
+    | Cst of (Cir.cst * typ)
     | Var of string
     | Field of (exp * string)
-    | Index of (exp * exp)
+    | Index of (exp * array_typ * exp)
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
@@ -115,9 +117,7 @@ and exp =
     | OpExp of (binop * exp * bool)
     | BlkExp of blk
 
-and cst = (Cir.cst * typ)
-
-and unop = Neg | Not | BNot
+and unop = Not | BNot of Newspeak.ikind
 
 and binop =
     | Plus
@@ -143,10 +143,12 @@ val exp_of_int: int -> exp
 
 val comp_of_typ: typ -> string
 
-val array_of_typ: typ -> (typ * exp option)
-
 val ftyp_of_typ: typ -> ftyp
+
+val deref_typ: typ -> typ
 
 val min_ftyp: ftyp -> ftyp -> ftyp
 
 val string_of_exp: exp -> string
+
+val ftyp_of_typ: typ -> ftyp

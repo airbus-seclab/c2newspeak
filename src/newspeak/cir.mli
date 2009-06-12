@@ -144,6 +144,7 @@ val cast: (exp * typ) -> typ -> exp
 
 val string_of_typ: typ -> string
 
+(* TODO: should remove this size_of_typ??? *)
 val size_of_typ: typ -> int
 
 val is_subtyp: typ -> typ -> bool

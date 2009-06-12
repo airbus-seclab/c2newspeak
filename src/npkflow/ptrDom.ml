@@ -23,7 +23,28 @@
   email: charles.hymans@penjili.org
 *)
 
-module Map = Map.Make(Var)
+module Map = 
+struct
+  include Map.Make(Var)
+
+  let for_all2 p m1 m2 =
+    let check k v1 =
+      let v2 = find k m2 in
+	if not (p v1 v2) then raise Exit
+    in
+      try 
+	iter check m1;
+	true
+      with Exit -> false
+
+  let map2 f m1 m2 =
+    let apply k v1 =
+      let v2 = find k m2 in
+	f v1 v2
+    in
+      mapi apply m1
+end
+
 module Set = Var.Set
 
 type t = Set.t Map.t
@@ -34,7 +55,9 @@ let add_var x s = Map.add x Set.empty s
 
 let remove_var = Map.remove
 
-let join _ _ = invalid_arg "PtrDom.join: not implemented yet"
+let is_subset = Map.for_all2 Set.subset
+
+let join = Map.map2 Set.union
 
 let pointsto s x =
   try Map.find x s
@@ -47,11 +70,20 @@ let deref s v =
     !res
 
 let assign x y s = 
-  let v = deref s y in
   let res = ref s in
   let assign x =
-    let v' = pointsto s x in
-      res := Map.add x (Set.union v' v) !res
+    let v = pointsto s x in
+      res := Map.add x (Set.union y v) !res
   in
     Set.iter assign x;
+    !res
+
+let to_string s =
+  let res = ref "" in
+  let to_string x y =
+    let x = Var.to_string x in
+    let y = Set.to_string y in
+      res := !res^x^" -> "^y^"\n"
+  in
+    Map.iter to_string s;
     !res

@@ -31,10 +31,13 @@ and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
     Set of (exp * exp)
-  | Taint of exp
   | Decl of blk
   | Select of (blk * blk)
-  | Call of string
+  | InfLoop of blk
+  | BlkLbl of blk
+  | Goto of int
+  | Call of exp
+  | Display
 
 and exp =
     Const
@@ -42,3 +45,42 @@ and exp =
   | Global of string
   | BinOp of (exp * exp)
   | Deref of exp
+
+let rec string_of_exp x =
+  match x with
+      Const -> "cst"
+    | Local x -> (string_of_int x)^"-"
+    | Global _ -> "global"
+    | BinOp _ -> "bop"
+    | Deref e -> "*("^(string_of_exp e)^")"
+
+let rec string_of_stmt (x, _) =
+  match x with
+      Set (lv, e) -> (string_of_exp lv)^" = "^(string_of_exp e)
+    | Decl body -> "push;\n"^(string_of_blk body)^"pop;"
+    | Select _ -> "Select"
+    | InfLoop _ -> "while (1)"
+    | BlkLbl _ -> "BlkLbl"
+    | Goto _ -> "Goto"
+    | Call _ -> "Call"
+    | Display -> "Display"
+
+and string_of_blk x = 
+  match x with
+      hd::tl -> 
+	let hd = string_of_stmt hd in
+	let tl = string_of_blk tl in
+	  hd^"\n"^tl
+    | [] -> ""
+
+let string_of_fundec f body = f^" =\n"^(string_of_blk body)
+
+let to_string (globals, fundecs, init) = 
+  let res = ref "globals:\n" in
+    List.iter (fun x -> res := !res^x^"\n") globals;
+    res := !res^"function declarations\n";
+    Hashtbl.iter (fun f x -> res := !res^(string_of_fundec f x)^"\n") fundecs;
+    res := !res^"init\n";
+    res := !res^(string_of_blk init);
+    !res
+

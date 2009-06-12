@@ -39,3 +39,7 @@ val size_of: ('a -> int) -> 'a list -> int
  *)
 val last : 'a list -> 'a
 
+(**
+ * Like List.map, but filter out the None elements.
+ *)
+val filter_map : ('a -> 'b option) -> 'a list -> 'b list

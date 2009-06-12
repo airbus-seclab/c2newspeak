@@ -208,14 +208,8 @@ let rec normalize_bexp e =
 %type <string list * Csyntax.t> parse
 %start parse
 
-%type <(Csyntax.exp * Csyntax.exp) list> config
-%start config
-
 %type <Csyntax.assertion> assertion
 %start assertion
-
-%type <Csyntax.exp> expression
-%start expression
 
 %%
 /* TODO: simplify code by generalizing!!! 
@@ -226,7 +220,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit                          { (Synthack.get_fnames (), $1) }
+  translation_unit EOF                      { (Synthack.get_fnames (), $1) }
 ;;
 
 translation_unit:
@@ -374,12 +368,6 @@ statement_list:
 ;;
 
 statement:
-  NPK statement                            { (UserSpec $1, get_loc ())::$2 }
-| statement_kind                           { $1 }
-;;
-
-// TODO: factor declarations??
-statement_kind:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
 | REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
@@ -409,6 +397,7 @@ statement_kind:
 | compound_statement                       { [Block $1, get_loc ()] }
 | SEMICOLON                                { [] }
 | asm SEMICOLON                            { [] }
+| NPK                                      { (UserSpec $1, get_loc ())::[] }
 ;;
 
 asm:
@@ -508,6 +497,11 @@ primary_expression:
 | string_literal                           { Str $1 }
 | FUNNAME                                  { FunName }
 | LPAREN expression RPAREN                 { $2 }
+| LPAREN compound_statement RPAREN         { 
+    Npkcontext.report_accept_warning "Parser.relational_expression"
+      "block within expression" Npkcontext.DirtySyntax;
+    BlkExp $2
+  }
 ;;
 
 constant:
@@ -550,7 +544,7 @@ unary_expression:
 | AMPERSAND cast_expression                { AddrOf $2 }
 | STAR cast_expression                     { Deref $2 }
 | BNOT cast_expression                     { Unop (BNot, $2) }
-| MINUS cast_expression                    { Unop (Neg, $2) }
+| MINUS cast_expression                    { Csyntax.neg $2 }
 | NOT cast_expression                      { Unop (Not, $2) }
 | SIZEOF unary_expression                  { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_decl $3) }
@@ -693,16 +687,11 @@ expression:
     let loc = get_loc () in
       BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
   }
-| compound_statement                      { 
-    Npkcontext.report_accept_warning "Parser.relational_expression"
-      "block within expression" Npkcontext.DirtySyntax;
-    BlkExp $1
-  }
 ;;
 
 argument_expression_list:
-  expression                               { $1::[] }
-| expression 
+  assignment_expression                    { $1::[] }
+| assignment_expression 
   COMMA argument_expression_list           { $1::$3 }
 ;;
 
@@ -911,8 +900,6 @@ external_declaration:
 | declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
 | optional_extension
   EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
-| optional_extension
-  EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
 ;;
 
 optional_extension:
@@ -944,13 +931,12 @@ type_qualifier:
 
 gnuc_field_declaration:
 // GNU C extension
-  optional_extension field_declaration 
-  attribute_list                           { $2 }
+  optional_extension field_declaration     { $2 }
 ;;
 
 field_declaration:
   declaration_specifiers
-  struct_declarator_list                   { flatten_field_decl ($1, $2) }
+  struct_declarator_list attribute_list    { flatten_field_decl ($1, $2) }
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
@@ -1040,24 +1026,10 @@ integer_list:
 | INTEGER COMMA integer_list               { $1::$3 }
 ;;
 
-// config file
-config:
-  memory_region_list                       { $1 }
-;;
-
-memory_region_list:
-  memory_region config                     { $1::$2 }
-|                                          { [] }
-;;
-
-memory_region:
-  expression COLON expression              { ($1, $3) }
-;;
-
 /* Newspeak assertion language */
 assertion:
   SYMBOL assertion                         { (SymbolToken $1)::$2 }
 | IDENTIFIER assertion                     { (IdentToken $1)::$2 }
 | constant assertion                       { (CstToken $1)::$2 }
-|                                          { [] }
+| EOF                                      { [] }
 ;;
