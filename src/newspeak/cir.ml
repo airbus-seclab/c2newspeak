@@ -716,7 +716,7 @@ let length_of_array len lv =
       (Some len, _) -> Known (Nat.of_int len)
     | (None, Global v) -> Length v
     | _ -> 
-	Npkcontext.report_error "Npkil.length_of_array" 
+	Npkcontext.report_error "Cir.length_of_array" 
 	  "unknown length of array"
 	    
 let scalar_of_typ t =

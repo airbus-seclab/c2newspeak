@@ -30,6 +30,18 @@ module C = CoreC
 (* Constants *)
 let ret_name = "!return"
 
+(* TODO: remove put in csyntax2CoreC *)
+(* TODO: code cleanup: find a way to factor this with create_cstr
+   in Npkil *)
+(* TODO: find a way to cleanup code, this is also present in firstpass!! *)
+let seq_of_string str =
+  let len = String.length str in
+  let res = ref [(None, Data (exp_of_char '\x00'))] in
+    for i = len - 1 downto 0 do
+      res := (None, Data (exp_of_char str.[i]))::!res
+    done;
+    !res
+
 (* TODO: should keep the enums in CoreC!!! such as csyntax!!
 *)
 (* TODO: not minimal, think about it *)
@@ -71,12 +83,18 @@ let process (globals, specs) =
   in
 
   let complete_typ_with_init t init =
-    let rec process x =
-      match x with
-	  (Sequence seq, C.Array (t, None)) -> 
+    let rec process (x, t) =
+      match (x, t) with
+(* TODO: find a way to simplify/remove this case?? *)
+	  ((Data (Str str)|Sequence ([(None, Data (Str str))])), 
+	   C.Array (C.Int (_, n), _)) when n = Config.size_of_char ->
+	    let seq = seq_of_string str in
+	      process (Sequence seq, t)
+
+	| (Sequence seq, C.Array (t, None)) -> 
 	    let n = C.exp_of_int (List.length seq) in
 	      C.Array (t, Some n)
-	| (_, t) -> t
+	| _ -> t
     in
       match init with
 	  None -> t
