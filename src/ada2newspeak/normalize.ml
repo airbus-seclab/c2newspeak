@@ -38,18 +38,21 @@ let (%-) = Nat.sub
 
 let gtbl : T.table = T.create_table 10
 
-(* FIXME Temporary tweak. *)
-let get_legacy_definition id = match String.lowercase id with
-| "integer"   -> Syntax_ada.Constrained(Syntax_ada.Integer
-                                       ,Ada_config.integer_constraint
-                                       ,true
-                                       )
-| "float"     -> Syntax_ada.Unconstrained Syntax_ada.Float
-| "boolean"   -> Syntax_ada.Unconstrained Syntax_ada.Boolean
-| "character" -> Syntax_ada.Unconstrained Syntax_ada.Character
-| _ -> failwith "legacy definition available only for int float bool or char"
-
 let string_of_name = Ada_utils.name_to_string
+
+let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
+  | Integer            -> T.integer
+  | IntegerConst       -> T.universal_integer
+  | Float              -> T.std_float
+  | Boolean            -> T.boolean
+  | Character          -> T.character
+  | Declared (_,_,t,_) -> t
+
+let subtyp_to_adatyp : Syntax_ada.subtyp -> Ada_types.t = function
+  | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
+  | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
+  | SubtypName  n         -> try T.find_type gtbl (fst n) (snd n) 
+                             with Not_found -> T.unknown
 
 (**
  * Try to find a body for a given specification.
@@ -195,22 +198,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and package=new package_manager
     in
 
-  (** Wrapper between [types] (legacy, see below) and Ada_types.  *)
-  let atypes =
-    object
-
-      method mem (_,i:name) :bool =
-          try
-            ignore (Ada_types.builtin_type i);
-            true;
-          with Not_found -> false
-
-      method find (n:name) :(subtyp*location) =
-        get_legacy_definition (snd n),Newspeak.unknown_loc
-
-    end
-  in
-
   (**
    * This object encapsulates the table of types. It is basically a Hashtbl.t
    * mapping a [name] to a triplet of :
@@ -222,7 +209,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
    *)
   let types =
     object (s)
-      val tbl = Hashtbl.create 100
+      val tbl = Hashtbl.create 0
 
       (** Add a new subtype, or raise an error in case of conflict. *)
       method add (n:Syntax_ada.name) (subtyp:subtyp)
@@ -241,13 +228,27 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
       (** Is this type known ? *)
       method mem (n:name) :bool =
-        Hashtbl.mem tbl n
-          || atypes#mem n
+             snd n = "integer"   
+          || snd n = "float"     
+          || snd n = "boolean"   
+          || snd n = "character" 
+          || Hashtbl.mem tbl n
 
       (** Find the type definition. *)
       method find (n:name) :(subtyp*location) =
-        try let (x,y,_) = Hashtbl.find tbl n in (x,y)
-        with Not_found -> atypes#find n
+        match String.lowercase (snd n) with
+          | "integer"   ->  Syntax_ada.Constrained(Syntax_ada.Integer
+                                                  ,Ada_config.integer_constraint
+                                                  ,true
+                                                  )
+                           ,Newspeak.unknown_loc
+          | "float"     ->  Syntax_ada.Unconstrained Syntax_ada.Float
+                           ,Newspeak.unknown_loc
+          | "boolean"   ->  Syntax_ada.Unconstrained Syntax_ada.Boolean
+                           ,Newspeak.unknown_loc
+          | "character" ->  Syntax_ada.Unconstrained Syntax_ada.Character
+                           ,Newspeak.unknown_loc
+          | _ -> let (x,y,_) = Hashtbl.find tbl n in (x,y)
 
       (** Find all the types matching. *)
       method find_all (n:name)
@@ -362,7 +363,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                                                (if global then package#current
                                                else [])
                                                i
-                                               T.unknown;
+                                               (typ_to_adatyp typ);
                                  add_enum (p,i)
                                          typ
                                          global
@@ -992,8 +993,11 @@ in
         | Function(name, [], return_type)  ->
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
-              T.add_variable gtbl (fst name) (snd name)
-                                  T.unknown;
+              T.add_subprogram gtbl
+                               name
+                               []
+                               (Some (subtyp_to_adatyp return_type))
+                               ;
               add_function norm_name (Some(base_typ norm_subtyp)) false;
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->

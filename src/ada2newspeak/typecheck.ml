@@ -40,24 +40,13 @@ let t_assert x msg =
 
 let type_of_binop op t1 t2 = match op with
   | Eq    -> expect t1 t2;
-             t_assert (not (T.is_limited t1))
-               "Equality operator is not defined -- 4.5.2.(6)";
              T.boolean
   | Or | And -> expect t1 t2;
-                t_assert (   T.is_boolean t1
-                          || T.is_modular t1
-                          || (    T.is_one_dim_array t1
-                               && T.whose_component (T.is_boolean) t1
-                             )
-                         )
+                t_assert (T.is_boolean t1)
                   "Logical operator is not defined -- 4.5.1.(2)";
                 t1
   | Gt    -> expect t1 t2;
-             t_assert (   T.is_scalar t1
-                       || (    T.is_one_dim_array t1
-                            && T.whose_component (T.is_discrete) t1
-                          )
-                      )
+             t_assert (T.is_scalar t1)
                "Ordering operator is not defined -- 4.5.2.(8)";
              T.boolean
   | Plus | Minus -> expect t1 t2;
@@ -80,12 +69,7 @@ let type_of_unop op t = match op with
   | UPlus | UMinus | Abs -> t_assert (T.is_numeric t)
                         "Unary adding operator is not defined -- 4.5.4, 4.5.6";
                       t
-  | Not            -> t_assert (    T.is_boolean t
-                                 || T.is_modular t
-                                 || (    T.is_one_dim_array t
-                                      && T.whose_component T.is_boolean t
-                                    )
-                               )
+  | Not            -> t_assert (T.is_boolean t)
                         "Unary adding operator \"not\" is not defined -- 4.5.6"
                       ;
                       t

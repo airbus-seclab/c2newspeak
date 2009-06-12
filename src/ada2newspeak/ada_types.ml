@@ -61,60 +61,21 @@ module CaseInsensitiveString =
 (** A (string list*string) hash table insensitive to keys' case.  *)
 module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 
-(**
- * A universal type.
- *
- * It is used to make an heterogeneous container by wrapping polymorphism into
- * itself, much like enum+union structures or Object containers in Java (before
- * generics).
- *
- * Each call to [embed ()] yields a couple of functions [inject,project] :
- *   - [inject x] creates a [Univ.t] wrapped value from data [x], which may
- *   have any type.
- *   - [project u] is used to unwrap the value back. It returns an option type ;
- *   more precisely, [None] is used to indicate that a bad unwrapper has been
- *   used to retrive the wrapped value.
- *
- * The current implementation is not thread-safe and may create memory leaks.
- *)
-module Univ :
-sig
-  type t
-
-  val embed: unit -> ('a -> t) * (t -> 'a option)
-end = struct
-  type t = {
-    id : unit ref;
-    store : unit -> unit;
-  }
-
-  let embed () =
-    let id = ref () in
-    let r = ref None in
-    let put a =
-      let o = Some a in
-      { id = id; store = (fun () -> r := o); }
-      in
-      let get t =
-        if id == t.id then (t.store
-        (); let a = !r in r := None;
-        a) else None
-        in
-        (put, get)
-end
-
 (********************
  * Type definitions *
  ********************)
 
+type data_t =
+  | Int of int
+  | Nat of Newspeak.Nat.t
+
 (* effective type + wrapped data *)
-type value = t*Univ.t
+type value = t*data_t
 
 and t = {
   parent  : t option; (* None indicates a root type *)
   trait   : trait_t;
   uid     : int;      (* Used to make derived types look different *)
-  limited : bool;
 }
 
 and range =
@@ -124,12 +85,20 @@ and range =
 (* type for "traits" (type of types...) *)
 and trait_t =
   | Signed of range option            (* Range constraint *)
-  | Modular of int                    (* Modulus *)
   | Enumeration of (string*int) list  (* Name-index *)
   | Float of int                      (* Digits *)
   | Array of t*(t list)               (* Component-indexes list *)
 
-(*
+(**
+ * Abstract specification for function/procedure parameters.
+ *)
+type f_param = { fp_name : string
+               ; fp_in   : bool
+               ; fp_out  : bool
+               ; fp_type : t
+               }
+
+(**
  * A symbol table.
  * t_var and t_type hold respectively data related
  * to variables and returning their type and to types.
@@ -137,27 +106,27 @@ and trait_t =
  * TODO : However it is not type-safe, as different
  * information is typed the same way.
  *)
+
 type table = {
   t_var  : t IHashtbl.t;
   t_type : t IHashtbl.t;
+  t_func : ((f_param list)*t option) IHashtbl.t
 }
 
-(*********************************
- * Value injector and projectors *
- *********************************)
+(***************************
+ * Value (de-)constructors *
+ ***************************)
 
-let (inject_int ,project_int )  = Univ.embed ()
-let (inject_bool,project_bool)  = Univ.embed ()
-let (inject_nat ,project_nat )  = Univ.embed ()
+let from_int t x = (t, Int x)
+let from_nat t x = (t, Nat x)
 
-let from_int  typ ival = typ,(inject_int  ival)
-and to_int  v          = project_int  (snd v)
+let to_int = function
+  | (_, Int v) -> Some v
+  | _          -> None
 
-let from_bool typ ival = typ,(inject_bool ival)
-and to_bool v          = project_bool (snd v)
-
-let from_nat  typ ival = typ,(inject_nat  ival)
-and to_nat  v          = project_nat  (snd v)
+let to_nat = function
+  | (_, Nat v) -> Some v
+  | _          -> None
 
 (******************
  * Pretty-printer *
@@ -165,7 +134,6 @@ and to_nat  v          = project_nat  (snd v)
 
 let print t =
   let p_hash t  = Printf.sprintf "%08x" (Hashtbl.hash t) in
-  let p_limited x = if x then "Limited," else "" in
   let p_parent = function
     | None -> "<root>"
     | Some t -> "parent:<"^p_hash t^">"
@@ -181,7 +149,6 @@ let print t =
   in
   let p_trait = function
     | Signed  r -> "Signed " ^p_range r
-    | Modular m -> "Modular "^string_of_int m
     | Float   d -> "Float "  ^string_of_int d
     | Enumeration v -> "Enum (length ="^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component.hash = "
@@ -192,7 +159,6 @@ let print t =
    "{"
   ^"H="^p_hash t
   ^",parent = "^p_parent t.parent
-  ^p_limited t.limited
   ^"U="^string_of_int t.uid
   ^",trait = "^p_trait t.trait
   ^"}"
@@ -246,15 +212,20 @@ let print_table tbl =
   print_endline "+------+---------------+---- . . .";
   print_newline ()
 
-let create_table size = {t_var  = IHashtbl.create size;
-                         t_type = IHashtbl.create size;
-                        }
-
-(*
+(**
  * Private global symbol table.
  * It is made available to the rest of the world by
- * builtin_type and builtin_variable. *)
-let builtin_table :table = create_table 10
+ * builtin_type and builtin_variable.
+ *)
+let builtin_table :table = { t_var  = IHashtbl.create 0
+                           ; t_type = IHashtbl.create 0
+                           ; t_func = IHashtbl.create 0
+                           }
+
+let create_table _size =  { t_var  = IHashtbl.copy builtin_table.t_var
+                          ; t_type = IHashtbl.copy builtin_table.t_type
+                          ; t_func = IHashtbl.copy builtin_table.t_func
+                          }
 
 let add_variable tbl package id t =
   let descr p =
@@ -269,6 +240,14 @@ let add_variable tbl package id t =
 let add_type tbl package id typ =
   Npkcontext.print_debug ("SYMBTBL --> adding type "^id);
   IHashtbl.add tbl.t_type (package,id) typ
+
+let add_subprogram tbl name params rettype =
+  IHashtbl.add tbl.t_func name (List.map (fun (a,b,c,d) ->
+    { fp_name = a
+    ; fp_in   = b
+    ; fp_out  = c
+    ; fp_type = d
+    }) params,rettype)
 
 let remove_type tbl id = IHashtbl.remove tbl.t_type id
 
@@ -313,7 +292,6 @@ let type_stub = {
   parent  = None;
   uid     = 0;
   trait   = Signed None;
-  limited = false;
 }
 
 let unknown = {type_stub with trait = Signed (Some NullRange)}
@@ -370,7 +348,6 @@ let rec root_parent typ =
 
 let new_unconstr parent =
     {
-      type_stub with
       parent = Some (root_parent parent);
       trait  = Signed None;
       uid = parent.uid;
@@ -378,7 +355,6 @@ let new_unconstr parent =
 
 let new_constr parent r =
     {
-      type_stub with
       parent = Some (root_parent parent);
       trait = Signed (Some r);
       uid = parent.uid;
@@ -386,12 +362,6 @@ let new_constr parent r =
 
 let new_range r =
   new_constr universal_integer r
-
-let new_modular size =
-    {
-      type_stub with
-      trait = Modular size
-    }
 
 let new_float digits =
     {
@@ -453,12 +423,11 @@ let character =
 let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
 | Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
-| Modular m -> Newspeak.Nat.of_int m
 | Array _
 | Float _
 | Signed None -> raise (Invalid_argument "Type with no size")
 
-let rec attr_get typ attr args =
+let rec attr_get typ attr =
   match typ.trait, attr with
     | Signed (Some Range(a,_)),"first" -> from_nat typ a
     | Signed (Some Range(_,b)),"last"  -> from_nat typ b
@@ -467,25 +436,14 @@ let rec attr_get typ attr args =
                                                                       values))
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
-        match args with
-        | [] -> attr_get typ attr [from_int integer 1]
-        | [nv] -> begin match (to_int nv) with
-                        | None -> failwith "Unreachable code"
-                        | Some n -> if attr="length" then
-                            from_nat universal_integer
-                             (length_of (List.nth ind (n-1)))
-                          else
-                            attr_get (List.nth ind (n-1)) attr []
-                  end
-        | _ -> raise ( Invalid_argument
-                      "Too many arguments")
+          if attr="length" then
+            from_nat universal_integer
+              (length_of (List.hd ind ))
+          else
+            attr_get (List.hd ind) attr
         end
-    | Modular _,      "first" -> from_int typ 0
-    | Modular size,    "last" -> from_int typ (size-1)
-    | Modular size, "modulus" -> from_int typ size
     | Float digits , "digits" -> from_int universal_integer digits
     | Array _, _
-    | Modular _, _
     | Float _ , _
     | Enumeration _ , _
     | Signed (Some Range(_,_)),  _
@@ -493,30 +451,16 @@ let rec attr_get typ attr args =
     | Signed (Some NullRange) ,  _
                  -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
-let (@.) typ attr = attr_get typ attr []
-
 (****************
  * Traits tests *
  ****************)
-
-let is_limited typ =
-  typ.limited
 
 let is_integer typ =
   match typ.trait with
   | Array       _
   | Float       _
   | Enumeration _ -> false
-  | Modular     _
   | Signed      _ -> true
-
-let is_modular typ =
-  match typ.trait with
-  | Modular     _ -> true
-  | Array       _
-  | Enumeration _
-  | Float       _
-  | Signed      _ -> false
 
 let is_boolean typ =
   root_parent typ == boolean
@@ -524,60 +468,31 @@ let is_boolean typ =
 let is_discrete typ =
   match typ.trait with
   | Signed      _
-  | Enumeration _
-  | Modular     _ -> true
+  | Enumeration _ -> true
   | Array       _
   | Float       _ -> false
-
-let whose_component predicate typ = match typ.trait with
-  | Array (component,_) -> predicate component
-  | _ -> false
 
 let is_numeric typ =
   match typ.trait with
   | Array       _
   | Enumeration _ -> false
-  | Modular     _
   | Float       _
   | Signed      _ -> true
-
-let is_one_dim_array typ =
-  match typ.trait with
-  | Array (_,ind) -> List.length ind = 1
-  | Enumeration _
-  | Float       _
-  | Modular     _
-  | Signed      _ -> false
 
 let is_scalar typ =
   match typ.trait with
   | Array       _ -> false
   | Float       _
   | Enumeration _
-  | Modular     _
   | Signed      _ -> true
 
-let some_eq o1 o2 =
-  match (o1,o2) with
-  | Some x, Some y -> x = y
-  | _, None
-  | None, _ -> false
-
-let typeof(t,_) = t
-
-(* TODO : implement it in Univ ? *)
-let (@=?) (_,v1) (_,v2) =
-       some_eq (project_int  v1) (project_int  v2)
-    || some_eq (project_bool v1) (project_bool v2)
-    || some_eq (project_nat  v1) (project_nat  v2)
-
-let (@=) v1 v2 =
-     (typeof v1  =  typeof v2)
-  && (       v1 @=?        v2)
-
-
 let _ =
-  List.iter2 (add_type builtin_table [])
-  ["integer";    "float" ; "boolean" ; "natural" ; "positive" ; "character"]
-  [ integer ; std_float  ;  boolean  ;  natural  ;  positive  ;  character ]
+  List.iter (fun (n,t) -> add_type builtin_table [] n t)
+  ["integer"  , integer
+  ;"float"    , std_float  
+  ;"boolean"  , boolean 
+  ;"natural"  , natural 
+  ;"positive" , positive 
+  ;"character", character
+  ]
 

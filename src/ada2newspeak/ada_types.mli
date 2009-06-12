@@ -56,19 +56,6 @@ val from_nat : t -> Newspeak.Nat.t -> value
  *)
 val to_nat : value -> Newspeak.Nat.t option
 
-(**
- * Checked equality on values.
- * [a @= b] if [a] and [b] denote the same typed value.
- *)
-val (@=) : value -> value -> bool
-
-(**
- * Unchecked equality on values.
- * This comparison is without checking the type compatibility.
- * If [a @= b], it is guaranteed that [a @=? b].
- *)
-val (@=?) : value -> value -> bool
-
 (*****************
  * Symbol tables *
  *****************)
@@ -88,6 +75,13 @@ val add_type      : table -> string list -> string -> t -> unit
 
 (** Add a variable symbol to a table. *)
 val add_variable  : table -> string list -> string -> t -> unit
+
+(** Add a subprogram symbol to a table. *)
+val add_subprogram : table
+                  -> (string list*string)
+                  -> (string*bool*bool*t) list
+                  -> t option
+      -> unit
 
 (** Remove a type, given its name. *)
 val remove_type   : table -> (string list*string)-> unit
@@ -168,9 +162,6 @@ val new_unconstr   : t -> t
 (** Constrained subtype. *)
 val new_constr     : t -> range -> t
 
-(** Modular type. Parameter is modulus. *)
-val new_modular    : int -> t
-
 (**
  * Plain integer range.
  * This differs from new_constr integer, because :
@@ -218,7 +209,7 @@ val print : t -> string
 val builtin_type : string -> t
 
 (** Get an attribute for a given type.  *)
-val attr_get : t -> string -> value list -> value
+val attr_get : t -> string -> value
 
 (** The type for integer constants. *)
 val universal_integer : t
@@ -242,21 +233,8 @@ val std_float : t
  ******************)
 
 val is_boolean             : t -> bool
-val is_modular             : t -> bool
-val is_limited             : t -> bool
 val is_scalar              : t -> bool
 val is_numeric             : t -> bool
 val is_integer             : t -> bool
 val is_discrete            : t -> bool
-val is_one_dim_array       : t -> bool
-val whose_component        : (t -> bool) -> t -> bool
 
-
-(**
- * Shortcut for [attr_get] with no arguments.
- * st @. "ident" is like st'ident in Ada.
- *)
-val (@.) : t -> string -> value
-
-(** Extract a type from a value. *)
-val typeof : value -> t
