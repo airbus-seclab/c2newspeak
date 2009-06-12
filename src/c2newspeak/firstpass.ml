@@ -526,12 +526,7 @@ let translate (globals, spec) =
 	      let set = translate_stmt set in
 		(C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
 	  end
-	    
-	| SizeofE e ->
-	    let (_, t) = translate e in
-	    let sz = (size_of t) / 8 in
-	      (C.exp_of_int sz, CoreC.uint_typ)
-		
+
 	| Sizeof t -> 
 	    let sz = (size_of t) / 8 in
 	      (C.exp_of_int sz, CoreC.uint_typ)

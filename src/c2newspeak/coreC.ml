@@ -114,7 +114,6 @@ and exp =
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
     | Sizeof of typ
-    | SizeofE of exp
     | Offsetof of (typ * string)
     | Str of string
     | FunName
@@ -221,7 +220,6 @@ let rec string_of_exp e =
     | Call _ -> "Call"
     | Offsetof _ -> "Offsetof"
     | Sizeof _ -> "Sizeof"
-    | SizeofE _ -> "SizeofE"
     | Str _ -> "Str"
     | FunName -> "FunName"
     | Cast (e, _) -> 
@@ -231,3 +229,17 @@ let rec string_of_exp e =
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
+
+let rec string_of_typ t =
+  match t with
+    | Void -> "Void"
+    | Int _ -> "Int"
+    | Bitfield _ -> "Bitfield"
+    | Float _ -> "Float"
+    | Ptr _ -> "Ptr"
+    | Array _ -> "Array"
+    | Comp _ -> "Comp"
+    | Fun _ -> "Fun"
+    | Va_arg -> "Va_arg"
+    | Typeof _ -> "Typeof"
+	

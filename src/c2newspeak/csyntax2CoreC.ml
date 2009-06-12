@@ -271,10 +271,12 @@ let process (globals, specs) =
 	    (C.Call (f, args), ret_t)
       | Sizeof t -> (C.Sizeof (translate_typ t), C.uint_typ)
       | SizeofE e -> 
-	  let (e, _) = translate_exp e in
-	    (C.SizeofE e, C.uint_typ)
+	  let (_, t) = translate_lv e in
+	    (C.Sizeof t, C.uint_typ)
       | Offsetof (t, f) -> (C.Offsetof (translate_typ t, f), C.uint_typ)
-      | Str x -> (C.Str x, C.Ptr C.char_typ)
+      | Str x -> 
+	  let len = C.exp_of_int ((String.length x) + 1) in
+	    (C.Str x, C.Array (C.char_typ, Some len))
       | FunName -> translate_exp (Str !current_fun)
       | Cast (e, t) -> 
 	  let (e, _) = translate_exp e in
@@ -491,7 +493,7 @@ let process (globals, specs) =
   and translate_init t x =
     match (x, t) with
 	(Data e, _) -> 
-	  let (e, _) = translate_exp e in
+	  let (e, _) = translate_lv e in
 	    C.Data e
       | (Sequence seq, C.Array (t, _)) -> 
 	  let seq = 

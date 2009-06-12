@@ -105,7 +105,6 @@ and exp =
     | Binop of (binop * exp * exp)
     | Call of (exp * exp list)
     | Sizeof of typ
-    | SizeofE of exp
     | Offsetof of (typ * string)
     | Str of string
     | FunName
@@ -150,5 +149,7 @@ val deref_typ: typ -> typ
 val min_ftyp: ftyp -> ftyp -> ftyp
 
 val string_of_exp: exp -> string
+
+val string_of_typ: typ -> string
 
 val ftyp_of_typ: typ -> ftyp
