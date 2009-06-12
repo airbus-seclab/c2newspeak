@@ -273,7 +273,7 @@ let translate src_lang prog fnames =
     match x with
 	SymbolToken c -> K.SymbolToken c
       | IdentToken x -> K.IdentToken x
-      | LvalToken lv -> K.LvalToken (translate_lv lv)
+      | LvalToken (lv, t) -> K.LvalToken (translate_lv lv, translate_typ t)
       | CstToken c -> K.CstToken (translate_cst c)
 
   and translate_assertion x = List.map translate_token x in

@@ -68,7 +68,7 @@ and assertion = spec_token list
 and spec_token =
   | SymbolToken of char
   | IdentToken of string
-  | LvalToken of lval
+  | LvalToken of (lval * typ)
   | CstToken of cst
 
 and stmt = stmtkind * location

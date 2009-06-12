@@ -47,7 +47,7 @@ and assertion = token list
 and token =
   | SymbolToken of char
   | IdentToken of string
-  | LvalToken of lv
+  | LvalToken of typ_lv
   | CstToken of cst
 
 and ginfo = typ * location * init_t option
@@ -391,13 +391,13 @@ and normalize_stmt (x, loc) =
 	   
 and normalize_token tok =
   match tok with
-    | LvalToken lv -> 
+    | LvalToken (lv, t) -> 
 	let (pref, lv, post) = normalize_lv lv in
 	  if (pref <> []) || (post <> []) then begin
 	    Npkcontext.report_error "Cir.normalize_token" 
 	      "left value without side-effects expected"
 	  end;
-	  LvalToken lv
+	  LvalToken (lv, t)
     | _ -> tok
 
 and normalize_call loc (ft, f, args) =

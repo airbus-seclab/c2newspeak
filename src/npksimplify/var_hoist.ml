@@ -71,7 +71,7 @@ and shift_vars_stmtkind i x =
 
 and shift_vars_token i x =
   match x with
-      LvalToken lv -> LvalToken (shift_vars_lval i lv)
+      LvalToken (lv, n) -> LvalToken (shift_vars_lval i lv, n)
     | _ -> x
 
 let process prog =

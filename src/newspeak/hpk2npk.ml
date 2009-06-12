@@ -96,7 +96,7 @@ let translate prog =
     match x with
 	SymbolToken c -> N.SymbolToken c
       | IdentToken s -> N.IdentToken s
-      | LvalToken lv -> N.LvalToken (translate_lval lv)
+      | LvalToken (lv, t) -> N.LvalToken (translate_lval lv, scalar_of_typ t)
       | CstToken c -> N.CstToken c
   in
 

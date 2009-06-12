@@ -118,7 +118,7 @@ and assertion = spec_token list
 and spec_token =
     | SymbolToken of char
     | IdentToken of string
-    | LvalToken of lval
+    | LvalToken of (lval * scalar_t)
     | CstToken of cst
 
 (* The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)

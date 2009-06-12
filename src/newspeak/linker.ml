@@ -186,7 +186,7 @@ and generate_token x =
   match x with
       SymbolToken c -> H.SymbolToken c
     | IdentToken x -> H.IdentToken x
-    | LvalToken lv -> H.LvalToken (generate_lv lv)
+    | LvalToken (lv, t) -> H.LvalToken (generate_lv lv, generate_typ t)
     | CstToken c -> H.CstToken c
 
 and generate_blk x = List.map generate_stmt x

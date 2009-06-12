@@ -1110,8 +1110,9 @@ let translate (globals, spec) =
 	SymbolToken x -> C.SymbolToken x
       | IdentToken x -> begin
 	  try 
-	    let (lv, _) = find_var x in
-	      C.LvalToken lv
+	    let (lv, t) = translate_lv (Var x) in
+	    let t = translate_typ t in
+	      C.LvalToken (lv, t)
 	  with _ -> C.IdentToken x
 	end
 (* TODO: not good, do this in compile phase *)

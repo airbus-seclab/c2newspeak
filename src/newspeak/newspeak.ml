@@ -121,7 +121,7 @@ and assertion = spec_token list
 and spec_token =
   | SymbolToken of char
   | IdentToken of string
-  | LvalToken of lval
+  | LvalToken of (lval * scalar_t)
   | CstToken of cst
 
 and stmtkind =
@@ -481,7 +481,7 @@ let string_of_token x =
   match x with
       SymbolToken x -> String.make 1 x
     | IdentToken x -> x
-    | LvalToken x -> "'"^(string_of_lval x)^"'"
+    | LvalToken (x, _) -> "'"^(string_of_lval x)^"'"
     | CstToken c -> string_of_cst c
 
 let string_of_assertion x =
@@ -1284,7 +1284,7 @@ and build_stmtkind builder x =
 
 and build_token builder x =
   match x with
-      LvalToken lv -> LvalToken (build_lval builder lv)
+      LvalToken (lv, t) -> LvalToken ((build_lval builder lv), t)
     | _ -> x
 
 and build_choice builder (cond, body) =
@@ -1520,7 +1520,9 @@ and visit_stmt visitor (x, loc) =
 
 and visit_token builder x =
   match x with
-      LvalToken lv -> visit_lval builder lv
+      LvalToken (lv, t) -> 
+	visit_lval builder lv;
+	visit_scalar_t builder t
     | _ -> ()
 
 let visit_fun visitor fid (t, body) =

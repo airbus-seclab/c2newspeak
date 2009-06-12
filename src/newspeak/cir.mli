@@ -35,7 +35,7 @@ and assertion = token list
 and token =
   | SymbolToken of char
   | IdentToken of string
-  | LvalToken of lv
+  | LvalToken of typ_lv
   | CstToken of cst
 
 and ginfo = typ * location * init_t option

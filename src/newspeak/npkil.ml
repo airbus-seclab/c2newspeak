@@ -62,7 +62,7 @@ and assertion = token list
 and token = 
     SymbolToken of char
   | IdentToken of string
-  | LvalToken of lval
+  | LvalToken of (lval * typ)
   | CstToken of Newspeak.cst
 
 and stmt = stmtkind * location
