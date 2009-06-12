@@ -26,7 +26,6 @@ let error x =
   if 0=1 then
     Npkcontext.report_warning "Ada_types" x
 
-
 (**
  * The [string] type with primitives to
  * handle it in a case-insensitive way.
@@ -63,6 +62,20 @@ type f_param = { fp_name : string
                ; fp_out  : bool
                ; fp_type : Ada_types.t
                }
+
+let to_fparam (a,b,c,d) =
+  { fp_name = a
+  ; fp_in   = b 
+  ; fp_out  = c
+  ; fp_type = d
+  }
+
+let from_fparam f =
+  ( f.fp_name
+  , f.fp_in  
+  , f.fp_out 
+  , f.fp_type
+  )
 
 (**
  * A symbol table.
@@ -136,12 +149,10 @@ let add_subprogram tbl name params rettype =
     ; fp_type = d
     }) params,rettype)
 
-let remove_type tbl id = IHashtbl.remove tbl.t_type id
-
 let find_information hashtbl ?context (package,id) =
   if package != [] then IHashtbl.find hashtbl (package,id)
   else (* no package : try it as a local variable,
-        *              or within current package
+        *              or within current context
         *              (if provided)
         *)
     try IHashtbl.find hashtbl ([],id)
@@ -166,12 +177,26 @@ let find_type tbl ?context n =
                       raise Not_found
                     end
 
+let find_subprogram tbl ?context n =
+  try (fun (x,y) -> List.map from_fparam x,y) (find_information tbl.t_func ?context n)
+  with Not_found -> begin
+                      error ("Cannot find subprogram "^snd n);
+                      raise Not_found
+                    end
+
 let find_variable tbl ?context n =
   try find_information tbl.t_var ?context n
-  with Not_found -> begin
-                      error ("Cannot find variable "^snd n);
-                      Ada_types.unknown
-                    end
+  with Not_found ->
+    begin
+      try
+        (* Maybe it is a parameterless function call *)
+        match find_subprogram tbl ?context n with
+          | ([], Some rt) -> rt
+          | _             -> raise Not_found
+      with Not_found ->
+        error ("Cannot find variable "^snd n);
+        Ada_types.unknown
+    end
 
 let builtin_type x = find_type builtin_table ([],x)
 
@@ -185,3 +210,14 @@ let _ =
   ;"character", Ada_types.character
   ]
 
+module Stack = struct
+  type t = table Stack.t
+
+  let create = Stack.create
+
+  let top x = Stack.top x
+
+  let enter_context x = Stack.push (create_table ()) x
+
+  let exit_context x = ignore (Stack.pop x)
+end

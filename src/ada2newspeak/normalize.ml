@@ -819,6 +819,8 @@ in
           add_typ (normalize_ident_cur ident) typ_decl loc global extern;
           typ_decl
     | DerivedType(subtyp_ind) ->
+        let (_,_,_,t) = subtyp_ind in
+          Symboltbl.add_type gtbl ([],ident) t;
         let update_contrainte contrainte symbs new_assoc =
           let find_ident v = List.find (fun (_, v') -> v'=v) symbs
           and find_new_val (ident,_) = List.assoc ident new_assoc in
@@ -1001,7 +1003,16 @@ in
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
-              Symboltbl.add_variable gtbl name T.unknown;
+              Symboltbl.add_subprogram gtbl name
+                                       (List.map (fun p -> 
+                                         ( p.formal_name
+                                         , (p.mode = In  || p.mode = InOut)
+                                         , (p.mode = Out || p.mode = InOut)
+                                         , subtyp_to_adatyp p.param_type
+                                         )
+                                         ) param_list)
+                                       (Some (subtyp_to_adatyp return_type))
+                                       ;
               add_function norm_name None false;
               Ast.Function(norm_name,
                        normalize_params param_list true,

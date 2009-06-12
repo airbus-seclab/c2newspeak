@@ -46,9 +46,6 @@ val add_subprogram : table
                   -> Ada_types.t option
       -> unit
 
-(** Remove a type, given its name. *)
-val remove_type   : table -> (string list*string)-> unit
-
 (**
  * Get a type from a symbol table.
  * @raise Not_found if no type could be found.
@@ -71,8 +68,48 @@ val find_variable :     table
                     ->  string list*string
             -> Ada_types.t
 
+val find_subprogram :     table
+                      -> ?context:string list list
+                      ->  string list*string
+      -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
+
 (** Pretty-print a symbol table to the standard output. *)
 val print_table   : table -> unit
 
 (** Retrieve a builtin type from its name.  *)
 val builtin_type : string -> Ada_types.t
+
+(**
+ * Context stack.
+ * This module represents the lexical scoping in programs.
+ *)
+module Stack : sig
+
+  (**
+   * Abstract type for context stacks.
+   * A context stack is a non-empty list of symbol tables.
+   * Impure (has side effects).
+   *)
+  type t
+
+  (**
+   * Create a new context stack, initially holding
+   * built-in types and variables.
+   *)
+  val create : unit -> t
+
+  (**
+   * Return the "top" of the stack, reflecting the innermost context.
+   *)
+  val top : t -> table
+
+  (**
+   * Create a new context and enter into it.
+   *)
+  val enter_context : t -> unit
+
+  (**
+   * Discard the current context and "go up".
+   *)
+  val exit_context : t -> unit
+end
