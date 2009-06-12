@@ -311,13 +311,6 @@ let translate (globals, spec) =
 	| ((_, (f_o, t))::fields, []) ->
 	    let f_o = o + f_o in
 	    let _ = fill_with_zeros f_o t in
-(* TODO: remove
-	      if (fields = []) then begin
-		Npkcontext.report_accept_warning 
-		  "Firstpass.translate_init.translate_field_sequence" 
-		  "missing initializers for structure" Npkcontext.DirtySyntax
-	      end;
-*)
 	      translate_field_sequence o fields []
 
 	| ([], _) -> 
@@ -505,13 +498,10 @@ let translate (globals, spec) =
 		
 	| AddrOf lv -> addr_of (translate_lv lv)
 
-	(* Here c is necessarily positive *)
-	| Unop (Neg, Cst (C.CInt c, Int (_, sz))) -> 
-	    (C.Const (C.CInt (Nat.neg c)), Int (N.Signed, sz))
-	      
 	| Unop (op, e) -> 
-	    let e = translate_exp e in
-	      translate_unop op e
+	    let (e, _) = translate_exp e in
+	    let (op, t) = translate_unop op in
+	      (C.Unop (op, e), t)
 		
 	| Binop (op, e1, e2) -> 
 	    let e1 = translate_exp e1 in
@@ -1221,20 +1211,10 @@ let translate (globals, spec) =
     in
       (e, t)
 
-  and translate_unop op (e, t) = 
-    match (op, t, e) with
-      | (Neg, Int _, _) -> translate_binop Minus (C.exp_of_int 0, t) (e, t)
-      | (Neg, Float _, _) -> 
-	  translate_binop Minus (C.exp_of_float 0., t) (e, t)
-      | (Not, Int _, _) -> (C.Unop (K.Not, e), CoreC.int_typ)
-      | (BNot, Int k, _) -> 
-	  let k' = C.promote k in
-	  let t' = Int k' in
-	  let (e, t') = cast (e, t) t' in
-	    (C.Unop (K.BNot (Newspeak.domain_of_typ k'), e), t')
-      | _ -> 
-	  Npkcontext.report_error "Firstpass.translate_unop" 
-	    "unexpected unary operator and argument"
+  and translate_unop op = 
+    match op with
+	Not -> (K.Not, CoreC.int_typ)
+      | BNot k -> (K.BNot (Newspeak.domain_of_typ k), CoreC.Int k)
 
   and size_of t = C.size_of_typ (translate_typ t)
 

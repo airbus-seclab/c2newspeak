@@ -126,7 +126,7 @@ and exp =
     | OpExp of (binop * exp * bool)
     | BlkExp of blk
 
-and unop = Neg | Not | BNot
+and unop = Not | BNot of Newspeak.ikind
 
 and binop =
     | Plus
@@ -185,11 +185,15 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
     match (args_t1, args_t2) with  
         (None, args_t) | (args_t, None) -> args_t  
       | (Some args_t1, Some args_t2) ->
-          if not (List.for_all2 equals args_t1 args_t2) then begin
-            Npkcontext.report_error "Csyntax.min_ftyp"
-              "different argument types for function"
-          end;
-          Some args_t1
+	  let eq = 
+	    try List.for_all2 equals args_t1 args_t2 
+	    with Invalid_argument _ -> false
+	  in
+            if not eq then begin
+              Npkcontext.report_error "Csyntax.min_ftyp"
+		"different argument types for function"
+            end;
+            Some args_t1
   in
     if (ret_t1 <> ret_t2) then begin
       Npkcontext.report_error "Csyntax.min_ftyp" 

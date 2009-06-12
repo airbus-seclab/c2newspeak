@@ -168,12 +168,12 @@ let process (globals, specs) =
 
   let translate_unop x t = 
     match (x, t) with
-	(Neg, (C.Int _| C.Float _)) -> (C.Neg, t)
-      | (Not, C.Int _) -> (C.Not, C.int_typ)
+	(Not, C.Int _) -> (C.Not, C.int_typ)
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
-	  (C.BNot, C.Int (Cir.promote k))
+	  let k = Cir.promote k in
+	    (C.BNot k, C.Int k)
       | _ -> 
 	  Npkcontext.report_error "Csyntax2CoreC.translate_unop"
 	    "unexpected unary operator and argument"

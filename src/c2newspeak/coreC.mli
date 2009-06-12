@@ -117,7 +117,7 @@ and exp =
     | OpExp of (binop * exp * bool)
     | BlkExp of blk
 
-and unop = Neg | Not | BNot
+and unop = Not | BNot of Newspeak.ikind
 
 and binop =
     | Plus
