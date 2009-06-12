@@ -106,7 +106,7 @@ and exp_value =
                   * expression
   | Attribute    of Syntax_ada.attribute_reference
 
-and  declarative_part = Ada_types.table
+and  declarative_part = Symboltbl.table
                      * (declarative_item*Newspeak.location) list
 
 and param = {

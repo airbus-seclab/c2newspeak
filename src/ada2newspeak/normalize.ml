@@ -36,7 +36,7 @@ module TC  = Typecheck
 let (%+) = Nat.add
 let (%-) = Nat.sub
 
-let gtbl : T.table = T.create_table 10
+let gtbl : Symboltbl.table = Symboltbl.create_table ()
 
 let string_of_name = Ada_utils.name_to_string
 
@@ -51,7 +51,7 @@ let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
 let subtyp_to_adatyp : Syntax_ada.subtyp -> Ada_types.t = function
   | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
-  | SubtypName  n         -> try T.find_type gtbl (fst n) (snd n) 
+  | SubtypName  n         -> try Symboltbl.find_type gtbl n
                              with Not_found -> T.unknown
 
 (**
@@ -359,10 +359,9 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                                                             package#current
                                                             extern
                                 in
-                                T.add_variable gtbl
-                                               (if global then package#current
-                                               else [])
-                                               i
+                                Symboltbl.add_variable gtbl
+                                               ((if global then package#current
+                                               else []),i)
                                                (typ_to_adatyp typ);
                                  add_enum (p,i)
                                          typ
@@ -607,8 +606,8 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
   | Var    n ->  Ast.Var(normalize_name n)
-                ,T.find_variable gtbl (fst n) (snd n) ~context:(package#current
-                                                              ::package#get_use)
+                ,Symboltbl.find_variable gtbl n ~context:(package#current
+                                                ::package#get_use)
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
@@ -977,7 +976,7 @@ in
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
            if addparam then begin
-              T.add_variable gtbl [] param.formal_name T.unknown;
+              Symboltbl.add_variable gtbl ([],param.formal_name) T.unknown;
               add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
                                     false;
@@ -993,7 +992,7 @@ in
         | Function(name, [], return_type)  ->
             let norm_name = normalize_name name
             and norm_subtyp = normalize_subtyp return_type in
-              T.add_subprogram gtbl
+              Symboltbl.add_subprogram gtbl
                                name
                                []
                                (Some (subtyp_to_adatyp return_type))
@@ -1002,16 +1001,14 @@ in
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
-              T.add_variable gtbl (fst name) (snd name)
-                                  T.unknown;
+              Symboltbl.add_variable gtbl name T.unknown;
               add_function norm_name None false;
               Ast.Function(norm_name,
                        normalize_params param_list true,
                        normalize_subtyp return_type)
         | Procedure(name,param_list) ->
             let norm_name = normalize_name name in
-              T.add_variable gtbl (fst name) (snd name)
-                                  T.unknown;
+              Symboltbl.add_variable gtbl name T.unknown;
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
@@ -1025,7 +1022,7 @@ in
         let norm_def = may normalize_exp def in
           (List.iter
              (fun x ->
-               T.add_variable gtbl package#current x T.unknown;
+               Symboltbl.add_variable gtbl (package#current,x) T.unknown;
                add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
@@ -1048,7 +1045,7 @@ in
                  au sous-type *)
               check_static_subtyp subtyp v;
               List.iter (fun x ->
-                T.add_variable gtbl [] x T.unknown;
+                Symboltbl.add_variable gtbl ([],x) T.unknown;
                            add_ident v x) ident_list;
               StaticVal(v)
           with
@@ -1057,11 +1054,11 @@ in
                                         "uncaught ambiguous type exception"
             | NonStaticExpression -> List.iter
                                       (fun x ->
-                                         let (p,i) = (normalize_ident_cur x) in
-                                           T.add_variable gtbl
-                                                          p i
+                                         let n = (normalize_ident_cur x) in
+                                           Symboltbl.add_variable gtbl
+                                                          n
                                                           T.unknown;
-                                                 add_cst (p,i)
+                                                 add_cst n
                                                         (VarSymb global)
                                                         global
                                       ) ident_list;
@@ -1084,7 +1081,7 @@ in
         let v = eval_static_number norm_exp csttbl package#get_use
           package extern in
           (*ajouts dans la table*)
-            T.add_variable gtbl [] ident T.unknown;
+            Symboltbl.add_variable gtbl ([],ident) T.unknown;
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
@@ -1152,7 +1149,7 @@ in
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-        T.add_variable gtbl [] iter T.unknown;
+        Symboltbl.add_variable gtbl ([],iter) T.unknown;
          Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
                          normalize_exp exp2, is_rev),
                          normalize_block instrs), loc)
@@ -1175,7 +1172,7 @@ in
     List_utils.filter_map normalize_instr block
 
   and normalize_decl_part decl_part ~global =
-    let tbl=Ada_types.create_table (List.length decl_part) in
+    let tbl=Symboltbl.create_table () in
     let represtbl = Hashtbl.create 50 in
     let decl_part :(declarative_item*location) list = List.filter (function
         | BasicDecl(RepresentClause(rep)), loc ->
@@ -1258,9 +1255,9 @@ in
         | Ast.ObjectDecl(ident_list, _, _,
                      (Variable | Constant)) ->
             (List.iter
-            (fun x -> let (p,i)=normalize_ident x package#current true in
-                        T.add_variable gtbl p i T.unknown;
-                         add_cst (p,i)
+            (fun x -> let n=normalize_ident x package#current true in
+                        Symboltbl.add_variable gtbl n T.unknown;
+                         add_cst n
                                  (VarSymb(true))
                                  true;
                )
@@ -1274,15 +1271,15 @@ in
             let typ = base_typ subtyp
               (*extract_subtyp subtyp_ind*) in
               List.iter
-                (fun x -> let (p,i) = normalize_ident x package#current true in
-                  T.add_variable gtbl p i T.unknown;
-                  add_cst (p,i)
+                (fun x -> let n = normalize_ident x package#current true in
+                  Symboltbl.add_variable gtbl n T.unknown;
+                  add_cst n
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
         | Ast.NumberDecl(ident, _, Some v) ->
             (*ajouts dans la table*)
-            T.add_variable gtbl package#current ident T.universal_integer;
+            Symboltbl.add_variable gtbl (package#current,ident) T.universal_integer;
             add_cst (normalize_ident ident package#current true)
                     (Number(v, true))
                     true

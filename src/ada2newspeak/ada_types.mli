@@ -56,63 +56,6 @@ val from_nat : t -> Newspeak.Nat.t -> value
  *)
 val to_nat : value -> Newspeak.Nat.t option
 
-(*****************
- * Symbol tables *
- *****************)
-(** {3 Symbol tables} *)
-
-(** The type for symbol tables.  *)
-type table
-
-(**
- * Create a new symbol table.
- * Parameter is a size hint.
- *)
-val create_table  : int -> table
-
-(** Add a type symbol to a table. *)
-val add_type      : table -> string list -> string -> t -> unit
-
-(** Add a variable symbol to a table. *)
-val add_variable  : table -> string list -> string -> t -> unit
-
-(** Add a subprogram symbol to a table. *)
-val add_subprogram : table
-                  -> (string list*string)
-                  -> (string*bool*bool*t) list
-                  -> t option
-      -> unit
-
-(** Remove a type, given its name. *)
-val remove_type   : table -> (string list*string)-> unit
-
-(**
- * Get a type from a symbol table.
- * @raise Not_found if no type could be found.
- * @param context : an optional list of packages to be searched
- * @param the queried package
- * @param the queried identifier
- *)
-val find_type :    table
-               -> ?context:string list list
-               ->  string list
-               ->  string
-            -> t
-
-(**
- * Get a variable from a symbol table.
- * @raise Not_found if no type could be found.
- * @param see [find_type]
- *)
-val find_variable :     table
-                    -> ?context:string list list
-                    ->  string list
-                    ->  string
-            -> t
-
-(** Pretty-print a symbol table to the standard output. *)
-val print_table   : table -> unit
-
 (**********
  * Ranges *
  **********)
@@ -170,12 +113,8 @@ val new_constr     : t -> range -> t
  *)
 val new_range      : range -> t
 
-(**
- * Enumerated type.
- * If [~symboltable] is provided, the set of litterals for
- * the built type will be added to the symbol table.
- *)
-val new_enumerated : ?symboltable:table -> string list -> t
+(** Enumerated type. *)
+val new_enumerated : string list -> t
 
 (** Floating-point type. Parameter is number of digits. *)
 val new_float      : int -> t
@@ -204,9 +143,6 @@ val print : t -> string
 (**
  * {3 Builtin types}
  *)
-
-(** Retrieve a builtin type from its name.  *)
-val builtin_type : string -> t
 
 (** Get an attribute for a given type.  *)
 val attr_get : t -> string -> value

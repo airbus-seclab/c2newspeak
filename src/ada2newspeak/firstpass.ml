@@ -853,7 +853,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             (match typ with
                | A.Float ->
                    translate_binop Minus
-                     (CFloat(0.,"0"),T.builtin_type "float") exp expected_typ
+                     (CFloat(0.,"0"),T.std_float) exp expected_typ
                | t when (integer_class t) ->
                    translate_binop Minus (CInt Nat.zero,T.universal_integer) exp
                      expected_typ
@@ -866,7 +866,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                           exp expected_typ
 
       | (UMinus, Some(A.Float)) ->
-          translate_binop Minus (CFloat(0.,"0"),T.builtin_type "float")
+          translate_binop Minus (CFloat(0.,"0"),T.std_float)
                           exp expected_typ
 
       | (Not, None) | (Not, Some(A.Boolean)) ->
