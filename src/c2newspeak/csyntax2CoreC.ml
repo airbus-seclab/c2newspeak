@@ -246,7 +246,7 @@ let process (globals, specs) =
 		      "pointer or array expected"
 	    end
 (* TODO: should remove Deref from csyntax, use only index!! *)
-      | Deref e -> translate_exp (Index (e, exp_of_int 0))
+      | Deref e -> translate_lv (Index (e, exp_of_int 0))
 
       | AddrOf e -> 
 	  let (e, t) = translate_lv e in
