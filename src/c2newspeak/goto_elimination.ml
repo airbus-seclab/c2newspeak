@@ -1095,8 +1095,8 @@ let renaming_block_variables stmts =
 	  | OpExp(op, e, b) ->
 	      let e' = replace e in
 		OpExp(op, e', b)
-	  | BlkExp blk ->
-	      let blk' = explore stack blk in BlkExp blk'
+	  | BlkExp (blk, is_after) ->
+	      let blk' = explore stack blk in BlkExp (blk', is_after)
 	  | _ -> e
       with Not_found -> e
     in 

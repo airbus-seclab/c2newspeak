@@ -117,7 +117,7 @@ and exp =
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
-    | BlkExp of blk
+    | BlkExp of (blk * bool)
 
 and cst = (Cir.cst * typ)
 
@@ -169,3 +169,7 @@ val print: t -> unit
 val size_of: t -> int
 
 val neg: exp -> exp
+
+val normalize_stmt_exp: Newspeak.location -> exp -> stmt
+
+val normalize_bexp: exp -> exp

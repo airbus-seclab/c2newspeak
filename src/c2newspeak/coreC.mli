@@ -114,7 +114,7 @@ and exp =
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
-    | BlkExp of blk
+    | BlkExp of (blk * bool)
 
 and unop = Not | BNot of Newspeak.ikind
 

@@ -161,18 +161,6 @@ let report_asm tokens =
   let tokens = List_utils.to_string (fun x -> x) "' '" tokens in
   let msg = "asm directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
-
-(* TODO: think about this simplification, this is a bit hacky?? *)
-let rec normalize_bexp e =
-  match e with
-      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
-    | Set _ | Str _ | Cast _ 
-    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) ->
-	Unop (Not, Binop (Eq, e, exp_of_int 0))
-    | Unop (Not, e) -> Unop (Not, normalize_bexp e)
-    | IfExp (c, e1, e2) -> 
-	IfExp (normalize_bexp c, normalize_bexp e1, normalize_bexp e2)
-    | _ -> e
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -386,7 +374,9 @@ statement:
 | iteration_statement                      { [$1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
-| expression SEMICOLON                     { [Exp $1, get_loc ()] }
+| expression SEMICOLON                     { 
+    [normalize_stmt_exp (get_loc ()) $1] 
+  }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | GOTO IDENTIFIER SEMICOLON                { 
@@ -500,7 +490,7 @@ primary_expression:
 | LPAREN compound_statement RPAREN         { 
     Npkcontext.report_accept_warning "Parser.relational_expression"
       "block within expression" Npkcontext.DirtySyntax;
-    BlkExp $2
+    BlkExp ($2, false)
   }
 ;;
 
@@ -563,7 +553,7 @@ cast_expression:
     let e = (Exp (Var "tmp"), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite ceation" Npkcontext.DirtySyntax;
-      BlkExp (blk@decl::e::[])
+      BlkExp (blk@decl::e::[], false)
   }
 ;;
 
@@ -685,7 +675,7 @@ expression:
     Npkcontext.report_accept_warning "Parser.expression"
       "comma in expression" Npkcontext.DirtySyntax;
     let loc = get_loc () in
-      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[]) 
+      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[], false) 
   }
 ;;
 

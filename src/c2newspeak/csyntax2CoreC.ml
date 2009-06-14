@@ -297,9 +297,9 @@ let process (globals, specs) =
 	  let (e, t) = translate_exp e in
 	  let (op, t) = translate_binop op t C.int_typ in
 	    (C.OpExp (op, e, is_after), t)
-      | BlkExp blk -> 
+      | BlkExp (blk, is_after) -> 
 	  let (blk, t) = translate_blk_exp blk in
-	    (C.BlkExp blk, t)
+	    (C.BlkExp (blk, is_after), t)
 	      
   and translate_exp e =
     match translate_lv e with

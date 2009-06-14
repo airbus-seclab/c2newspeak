@@ -146,7 +146,7 @@ let translate src_lang prog fnames =
 	  let e2 = translate_exp e2 in
 	    K.BinOp (op, e1, e2)
 
-      | Pref _ -> 
+      | BlkExp _ -> 
 	  Npkcontext.report_error "Compiler.translate_exp"
 	    "unexpected side-effect in expression"
 

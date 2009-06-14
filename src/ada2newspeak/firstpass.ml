@@ -758,8 +758,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               translate_block [(instr_if,loc)]
           in
             remove_symb tmp;
-            (C.Pref (decl::tr_instr_if,
-                     C.Lval (vid, translate_typ A.Boolean)),
+            (C.BlkExp (decl::tr_instr_if,
+                       C.Lval (vid, translate_typ A.Boolean), false),
              A.Boolean)
       | Some(_) -> Npkcontext.report_error
           "Firstpass.translate_if_exp"
@@ -775,8 +775,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                          (Ast.CBool false,T.boolean)
                                          (Some A.Boolean)) in
       remove_symb tmp;
-      C.Pref (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-             ,C.Lval (vid, translate_typ A.Boolean)), A.Boolean
+      C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
+		  , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
 
   and translate_or (e1:Ast.expression) (e2:Ast.expression) =
     let loc = Npkcontext.get_loc () in
@@ -788,8 +788,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                          e2
                                          (Some A.Boolean)) in
       remove_symb tmp;
-      C.Pref (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-             ,C.Lval (vid, translate_typ A.Boolean)), A.Boolean
+      C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
+		  , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
 
   and translate_binop op (e1:Ast.expression) (e2:Ast.expression) expected_typ =
     let expected_typ1 = Ada_utils.typ_operand op expected_typ in

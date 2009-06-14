@@ -113,7 +113,7 @@ and exp =
     | Unop of (Npkil.unop * exp)
     | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
-    | Pref of (blk * exp)
+    | BlkExp of (blk * exp * bool)
 
 and funexp =
     | Fname of string
@@ -151,7 +151,7 @@ let rec string_of_exp margin e =
 	^" "^(Newspeak.string_of_binop op)^" "
 	^(string_of_exp margin e2)
     | Call _ -> "f()"
-    | Pref (blk, e) -> 
+    | BlkExp (blk, e, _) -> 
 	"("^(string_of_blk margin blk)^(string_of_exp margin e)^")"
 
 and string_of_lv margin x =
@@ -302,11 +302,16 @@ let rec normalize_exp x =
 	let call = (Set (v, t, call), loc) in
 	  (pref@decl::call::[], Lval (v, t), [])
 	  
-    | Pref (blk, e) ->
+    | BlkExp (blk, e, is_after) ->
 	let blk = normalize_blk blk in
 	let (pref, e, post) = normalize_exp e in
-	let pref = concat_effects blk pref in
-	  (pref, e, post)
+	  if is_after then begin
+	    let post = concat_effects post blk in
+	      (pref, e, post)
+	  end else begin
+	    let pref = concat_effects blk pref in
+	      (pref, e, post)
+	  end
 	    
 and normalize_lv x =
   match x with
@@ -703,7 +708,7 @@ let is_large_blk x =
       | Unop (_, e) -> check_exp e
       | Binop (_, e1, e2) -> check_exp e1; check_exp e2
       | Call _ -> raise Exit
-      | Pref (blk, e) -> check_blk blk; check_exp e
+      | BlkExp (blk, e, _) -> check_blk blk; check_exp e
       | _ -> ()
   in
     try 

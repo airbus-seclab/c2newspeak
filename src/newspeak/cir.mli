@@ -101,7 +101,7 @@ and exp =
     | Unop of (Npkil.unop * exp)
     | Binop of (Newspeak.binop * exp * exp)
     | Call of (ftyp * funexp * exp list)
-    | Pref of (blk * exp)
+    | BlkExp of (blk * exp * bool)
 
 and funexp =
     | Fname of string

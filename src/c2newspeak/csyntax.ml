@@ -120,10 +120,12 @@ and exp =
     | Cast of (exp * typ)
 (* None is a regular assignment *)
     | Set of (exp * binop option * exp)
-(* boolean is true if the operation is appled after the evaluation of the 
+(* boolean is true if the operation is applied after the evaluation of the 
    expression *)
     | OpExp of (binop * exp * bool)
-    | BlkExp of blk
+(* boolean is true if the blk is executed after the evaluation of the 
+   expression *)
+    | BlkExp of (blk * bool)
 
 and cst = (Cir.cst * typ)
 
@@ -467,3 +469,39 @@ let neg x =
       Cst (Cir.CInt c, Int (_, sz)) -> 
 	Cst (Cir.CInt (Nat.neg c), Int (Signed, sz))
     | _ -> Binop (Minus, exp_of_int 0, x)
+(* TODO:
+let normalize_exp e =
+  let rec normalize e =
+    match e with
+	Field (e, f) -> 
+	  let (blk1, e, blk2) = normalize e in
+	    (blk1, Field (e, f), blk2)
+      | _ -> ([], e, [])
+  in
+    normalize e
+*)
+let normalize_stmt_exp loc e =
+  let rec normalize e =
+    match e with
+(* TODO:
+	Set (lv, op, IfExp (c, e1, e2)) -> 
+	  normalize (IfExp (c, Set (lv, op, e1), Set (lv, op, e2)))
+	    
+      | IfExp (c, e1, e2) -> If (c, (Exp e1, loc)::[], (Exp e2, loc)::[])
+*)
+      | _ -> Exp e
+  in
+    (normalize e, loc)
+
+(* TODO: think about this simplification, this is a bit hacky?? *)
+let rec normalize_bexp e =
+  match e with
+      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
+    | Set _ | Str _ | Cast _ 
+    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) ->
+	Unop (Not, Binop (Eq, e, exp_of_int 0))
+    | Unop (Not, e) -> Unop (Not, normalize_bexp e)
+    | IfExp (c, e1, e2) -> 
+	IfExp (normalize_bexp c, normalize_bexp e1, normalize_bexp e2)
+    | _ -> e
+

@@ -444,7 +444,7 @@ let translate (globals, spec) =
 	  let (lv, _) = translate_lv lv in
 	    (lv, t)
 
-      | BlkExp blk -> 
+      | BlkExp (blk, is_after) -> 
 	  let (body, (e, t)) = translate_blk_exp blk in
 	  let lv =
 	    match e with
@@ -453,7 +453,7 @@ let translate (globals, spec) =
 		  Npkcontext.report_error "Firstpass.translate_lv" 
 		    "left value expected"
 	  in
-	    (C.BlkLv (body, lv, false), t)
+	    (C.BlkLv (body, lv, is_after), t)
 
       | _ -> 
 	  Npkcontext.report_error "Firstpass.translate_lv" "left value expected"
@@ -524,7 +524,7 @@ let translate (globals, spec) =
 	      let blk2 = (Exp (Set (Var x, None, e2)), loc)::[] in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
-		(C.Pref (decl::set, C.Lval (v, translate_typ t)), t)
+		(C.BlkExp (decl::set, C.Lval (v, translate_typ t), false), t)
 	  end
 
 	| Sizeof t -> 
@@ -568,11 +568,11 @@ let translate (globals, spec) =
 	    let (set, t) = translate_set set in
 	    let (lv', t', _) = set in
 	    let e = C.Lval (lv', t') in
-	      (C.Pref ((C.Set set, loc)::[], e), t)
+	      (C.BlkExp ((C.Set set, loc)::[], e, false), t)
 	      		  
-	| BlkExp blk -> 
+	| BlkExp (blk, is_after) -> 
 	    let (body, (e, t)) = translate_blk_exp blk in
-	      (C.Pref (body, e), t)
+	      (C.BlkExp (body, e, is_after), t)
 
 	| Offsetof (t, f) -> 
 	    let r = fields_of_comp (CoreC.comp_of_typ t) in
@@ -681,7 +681,7 @@ let translate (globals, spec) =
 	    let (_, decl, v) = gen_tmp loc t in
 	    let (e, _) = addr_of (v, t) in
 	    let init = init_va_args loc v args in
-	      ((C.Pref (decl::init, e))::[], (Va_arg, id)::[])
+	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
 
 	| (e::args, (t, id)::args_t) ->
 	    let (e, t) = cast (translate_exp e) t in
@@ -941,7 +941,7 @@ let translate (globals, spec) =
       | Cast (e, Void) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast to void" Npkcontext.DirtySyntax;
-	  translate_stmt (Exp e, loc)
+	  translate_stmt_exp loc e
 
       | IfExp (c, e1, e2) ->
 	  let blk1 = (Exp e1, loc)::[] in
