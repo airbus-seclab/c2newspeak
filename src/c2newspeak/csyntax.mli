@@ -170,6 +170,4 @@ val size_of: t -> int
 
 val neg: exp -> exp
 
-val normalize_stmt_exp: Newspeak.location -> exp -> stmt
-
 val normalize_bexp: exp -> exp

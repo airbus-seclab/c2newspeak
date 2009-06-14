@@ -469,30 +469,8 @@ let neg x =
       Cst (Cir.CInt c, Int (_, sz)) -> 
 	Cst (Cir.CInt (Nat.neg c), Int (Signed, sz))
     | _ -> Binop (Minus, exp_of_int 0, x)
-(* TODO:
-let normalize_exp e =
-  let rec normalize e =
-    match e with
-	Field (e, f) -> 
-	  let (blk1, e, blk2) = normalize e in
-	    (blk1, Field (e, f), blk2)
-      | _ -> ([], e, [])
-  in
-    normalize e
-*)
-let normalize_stmt_exp loc e =
-  let rec normalize e =
-    match e with
-(* TODO:
-	Set (lv, op, IfExp (c, e1, e2)) -> 
-	  normalize (IfExp (c, Set (lv, op, e1), Set (lv, op, e2)))
-	    
-      | IfExp (c, e1, e2) -> If (c, (Exp e1, loc)::[], (Exp e2, loc)::[])
-*)
-      | _ -> Exp e
-  in
-    (normalize e, loc)
 
+(* TODO: remove this, put in normalize!! and remove it from parser too *)
 (* TODO: think about this simplification, this is a bit hacky?? *)
 let rec normalize_bexp e =
   match e with

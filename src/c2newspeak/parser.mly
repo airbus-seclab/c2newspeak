@@ -374,9 +374,7 @@ statement:
 | iteration_statement                      { [$1, get_loc ()] }
 | RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
 | RETURN SEMICOLON                         { [Return None, get_loc ()] }
-| expression SEMICOLON                     { 
-    [normalize_stmt_exp (get_loc ()) $1] 
-  }
+| expression SEMICOLON                     { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | GOTO IDENTIFIER SEMICOLON                { 
