@@ -121,8 +121,6 @@ val char_typ: typ
 (** type of C int type *)
 val int_typ: typ
 
-val promote: Newspeak.ikind -> Newspeak.ikind
-
 val exp_of_int: int -> exp
 
 val exp_of_float: float -> exp

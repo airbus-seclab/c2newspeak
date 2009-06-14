@@ -472,7 +472,7 @@ let translate (globals, spec) =
 	(C.Shift (lv, o), t)
     with Exit -> 
       let e = C.remove_fst_deref lv in
-      let e = translate_binop Plus (e, Ptr t) i in
+      let e = translate_binop (Plus, Ptr t) (e, Ptr t) i in
 	deref e
 
   and translate_exp e =
@@ -491,11 +491,11 @@ let translate (globals, spec) =
 	    let (lv, _) = translate_lv lv in 
 	    let (e, _) = addr_of (lv, Array (t, len)) in
 	      (e, Ptr t)
-						
-	| AddrOf (Index (lv, a, e)) ->
-	    let base = AddrOf (Index (lv, a, exp_of_int 0)) in
-	      translate (Binop (Plus, base, e))
-		
+
+	| AddrOf (Index (lv, (t, len), e)) ->
+	    let base = AddrOf (Index (lv, (t, len), exp_of_int 0)) in
+	      translate (Binop ((Plus, Ptr t), (base, Ptr t), (e, int_typ)))
+
 	| AddrOf lv -> addr_of (translate_lv lv)
 
 	| Unop (op, e) -> 
@@ -503,10 +503,10 @@ let translate (globals, spec) =
 	    let (op, t) = translate_unop op in
 	      (C.Unop (op, e), t)
 		
-	| Binop (op, e1, e2) -> 
-	    let e1 = translate_exp e1 in
-	    let e2 = translate_exp e2 in
-	      translate_binop op e1 e2
+	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
+	    let (e1, _) = translate_exp e1 in
+	    let (e2, _) = translate_exp e2 in
+	      translate_binop (op, t) (e1, t1) (e2, t2)
 		
 	| IfExp (c, e1, e2) -> begin
 	    try 
@@ -1099,89 +1099,89 @@ let translate (globals, spec) =
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
-  and normalize_binop op (e1, t1) (e2, t2) =
+  and normalize_binop (op, t) (e1, t1) (e2, t2) =
     let cast e t = fst (cast e t) in
-    match (op, t1, t2) with
-      | (Minus, Ptr _, Int _) -> 
-	  let e2 = translate_binop Minus (C.exp_of_int 0, t2) (e2, t2) in
- 	    (Plus, (e1, t1), e2)
+      match (op, t1, t2) with
+(* TODO: this should be put in the typing phase!! *)
+(* Would simplify this normalization as the operation is not modified!!! *)
+(* Maybe possible to just have to do two casts!! *)
+	| (Minus, Ptr _, Int _) -> 
+	    let e2 = 
+	      translate_binop (Minus, t2) (C.exp_of_int 0, t2) (e2, t2) 
+	    in
+ 	      (Plus, (e1, t1), e2)
+		
+	| ((Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq), Int _, Int _) -> 
+	    let e1 = cast (e1, t1) t in
+	    let e2 = cast (e2, t2) t in
+	      (op, (e1, t), (e2, t))
+		
+	| ((Mult|Plus|Minus|Div|Gt|Eq), Float _, Float _) -> 
+	    let e1 = cast (e1, t1) t in
+	    let e2 = cast (e2, t2) t in
+	      (op, (e1, t), (e2, t))
+		
+	| ((Mult|Plus|Minus|Div|Gt|Eq), Float _, Int _)
+	| ((Gt|Eq), Ptr _, Int _) ->
+	    let e2 = cast (e2, t2) t1 in
+	      (op, (e1, t1), (e2, t1))
+		
+	| ((Mult|Plus|Minus|Div|Gt|Eq), Int _, Float _)
+	| ((Gt|Eq), Int _, Ptr _) -> 
+	    let e1 = cast (e1, t1) t2 in
+	      (op, (e1, t2), (e2, t2))
+		
+	| ((Shiftl|Shiftr), Int _, Int _) -> 
+	    let e1 = cast (e1, t1) t in
+	      (op, (e1, t), (e2, t))
+		
+	| (Plus, Int _, Ptr _) -> (Plus, (e2, t2), (e1, t1))
 	      
-      | ((Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq), Int k1, Int k2) -> 
-(* TODO: put promote in csyntax!! *)
-	  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
-	  let t = Int k in
-	  let e1 = cast (e1, Int k1) t in
-	  let e2 = cast (e2, Int k2) t in
-	    (op, (e1, t), (e2, t))
-	      
-      | ((Mult|Plus|Minus|Div|Gt|Eq), Float n1, Float n2) -> 
-	  let n = max n1 n2 in
-	  let t = Float n in
-	  let e1 = cast (e1, Float n1) t in
-	  let e2 = cast (e2, Float n2) t in
-	    (op, (e1, t), (e2, t))
-	      
-      | ((Mult|Plus|Minus|Div|Gt|Eq), Float _, Int _)
-      | ((Gt|Eq), Ptr _, Int _) ->
-	  let e2 = cast (e2, t2) t1 in
-	    (op, (e1, t1), (e2, t1))
-	      
-      | ((Mult|Plus|Minus|Div|Gt|Eq), Int _, Float _)
-      | ((Gt|Eq), Int _, Ptr _) -> 
-	  let e1 = cast (e1, t1) t2 in
-	    (op, (e1, t2), (e2, t2))
-	      
-      | ((Shiftl|Shiftr), Int (_, n), Int _) -> 
-	  let k = (N.Unsigned, n) in
-	  let t = Int k in
-	  let e1 = cast (e1, t1) t in
-	    (op, (e1, t), (e2, t))
-
-      | (Plus, Int _, Ptr _) -> 
-	  Npkcontext.report_accept_warning "Firstpass.normalize_binop"
-	    "addition of a pointer to an integer" Npkcontext.DirtySyntax;
-	  (Plus, (e2, t2), (e1, t1))
-	      
-      | _ -> (op, (e1, t1), (e2, t2))
-	  
-  and translate_binop op e1 e2 =
+	| _ -> (op, (e1, t1), (e2, t2))
+	    
+  and translate_binop (op, t) e1 e2 =
     (* TODO: think about it, maybe there are nicer ways to write this!!!*)
-    let (op, (e1, t1), (e2, t2)) = normalize_binop op e1 e2 in
-    let (op, t) =
+    let (op, (e1, t1), (e2, t2)) = normalize_binop (op, t) e1 e2 in
+    let t = 
+      match op with
+	  Gt|Eq -> int_typ
+	| _ -> t
+    in
+    let op =
       match (op, t1, t2) with
 	  (* Arithmetic operations *)
 	  (* Thanks to normalization t1 = t2 *)
-	  (Mult, Int _, Int _) -> (N.MultI, t1)
-	| (Plus, Int _, Int _) -> (N.PlusI, t1)
-	| (Minus, Int _, Int _) -> (N.MinusI, t1)
-	| (Div, Int _, Int _) -> (N.DivI, t1)
-	| (Mod, Int _, Int _) -> (N.Mod, t1)
-	| (BAnd, Int k, Int _) -> (N.BAnd (Newspeak.domain_of_typ k), t1)
-	| (BXor, Int k, Int _) -> (N.BXor (Newspeak.domain_of_typ k), t1)
-	| (BOr, Int k, Int _) -> (N.BOr (Newspeak.domain_of_typ k), t1)
+	  (Mult, Int _, Int _) -> N.MultI
+	| (Plus, Int _, Int _) -> N.PlusI
+	| (Minus, Int _, Int _) -> N.MinusI
+	| (Div, Int _, Int _) -> N.DivI
+	| (Mod, Int _, Int _) -> N.Mod
+	| (BAnd, Int k, Int _) -> N.BAnd (Newspeak.domain_of_typ k)
+	| (BXor, Int k, Int _) -> N.BXor (Newspeak.domain_of_typ k)
+	| (BOr, Int k, Int _) -> N.BOr (Newspeak.domain_of_typ k)
 	    
 	(* Thanks to normalization t1 = t2 *)
-	| (Shiftl, Int _, Int _) -> (N.Shiftlt, t1)
-	| (Shiftr, Int _, Int _) -> (N.Shiftrt, t1)
+	| (Shiftl, Int _, Int _) -> N.Shiftlt
+	| (Shiftr, Int _, Int _) -> N.Shiftrt
 	    
 	(* Float operations *)
 	(* Thanks to normalization t1 = t2 *)
-	| (Mult, Float n, Float _) -> (N.MultF n, t1)
-	| (Plus, Float n, Float _) -> (N.PlusF n, t1)
-	| (Minus, Float n, Float _) -> (N.MinusF n, t1)
-	| (Div, Float n, Float _) -> (N.DivF n, t1)
+	| (Mult, Float n, Float _) -> N.MultF n
+	| (Plus, Float n, Float _) -> N.PlusF n
+	| (Minus, Float n, Float _) -> N.MinusF n
+	| (Div, Float n, Float _) -> N.DivF n
 	    
 	(* Pointer operations *)
-	| (Plus, Ptr _, Int _) -> (N.PlusPI, t1)
+	| (Plus, Ptr _, Int _) -> N.PlusPI
 	    
-	| (Minus, Ptr _, Ptr _) -> (N.MinusPP, CoreC.int_typ)
+	| (Minus, Ptr _, Ptr _) -> N.MinusPP
 	    
 	(* Integer comparisons *)
 	(* Thanks to normalization t1 = t2 *)
 	(* Function translate_scalar_typ will ensure they are both scalar 
 	   types *)
-	| (Gt, _, _) -> (N.Gt (translate_scalar_typ t1), CoreC.int_typ)
-	| (Eq, _, _) -> (N.Eq (translate_scalar_typ t1), CoreC.int_typ)
+	| (Gt, _, _) -> N.Gt (translate_scalar_typ t1)
+	| (Eq, _, _) -> N.Eq (translate_scalar_typ t1)
 	    	    
 	| _ ->
 	    Npkcontext.report_error "Firstpass.translate_binop" 
@@ -1195,8 +1195,8 @@ let translate (globals, spec) =
 	| _ -> e2
     in
     let e = C.Binop (op, e1, e2) in
+    let e = 
       (* add coerce if necessary *)
-    let e =
       match (op, t1, t) with
 	  ((N.PlusI|N.MinusI|N.MultI|N.DivI|N.Shiftlt|N.Shiftrt), _, Int k) -> 
 	    C.Unop (K.Coerce (Newspeak.domain_of_typ k), e)

@@ -253,11 +253,6 @@ let char_typ = Scalar (Int (Signed, Config.size_of_char))
 
 let int_typ = Scalar (Int int_kind)
 
-let promote k = 
-  match k with
-      (_, n) when n < Config.size_of_int -> int_kind
-    | _ -> k
-
 let concat_effects blk1 blk2 =
   if (blk1 <> []) && (blk2 <> []) then begin
     Npkcontext.report_warning "Cir.concat_effect" 

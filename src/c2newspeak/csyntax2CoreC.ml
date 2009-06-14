@@ -190,7 +190,7 @@ let process (globals, specs) =
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
-	  let k = Cir.promote k in
+	  let k = C.promote k in
 	    (C.BNot k, C.Int k)
       | _ -> 
 	  Npkcontext.report_error "Csyntax2CoreC.translate_unop"
@@ -201,7 +201,28 @@ let process (globals, specs) =
     let t = 
       match (op, t1, t2) with
 	  (Minus, C.Ptr _, C.Ptr _) -> C.int_typ
+
+	| ((Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq), 
+	   C.Int k1, C.Int k2) -> 
+	    C.Int (Newspeak.max_ikind (C.promote k1) (C.promote k2))
+
+	| ((Mult|Plus|Minus|Div|Gt|Eq), C.Float n1, C.Float n2) ->
+	    C.Float (max n1 n2)
+
+	| ((Mult|Plus|Minus|Div|Gt|Eq), C.Float _, C.Int _) -> t1
+
+	| ((Mult|Plus|Minus|Div|Gt|Eq), C.Int _, C.Float _) -> t2
+
+	| ((Shiftl|Shiftr), C.Int (_, n), C.Int _) -> 
+	    C.Int (Newspeak.Unsigned, n)
+
 	| ((Gt|Eq), _, _) -> C.int_typ
+
+	| (Plus, C.Int _, C.Ptr _) -> 
+	    Npkcontext.report_accept_warning "Firstpass.normalize_binop"
+	      "addition of a pointer to an integer" Npkcontext.DirtySyntax;
+	    t2
+
 	| _ -> t1
     in
     let op =
@@ -236,11 +257,12 @@ let process (globals, specs) =
 	    (C.Field (e, f), t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
       | Index (a, idx) -> 
-	  let (a, t) = translate_lv a in
-	  let (idx, _) = translate_exp idx in begin
-	      match t with
+	  let (a, t1) = translate_lv a in
+	  let (idx, t2) = translate_exp idx in begin
+	      match t1 with
 		  C.Array (t, len) -> (C.Index (a, (t, len), idx), t)
-		| C.Ptr t -> (C.Deref (C.Binop (C.Plus, a, idx)), t)
+		| C.Ptr t -> 
+		    (C.Deref (C.Binop ((C.Plus, t1), (a, t1), (idx, t2))), t)
 		| _ -> 
 		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
 		      "pointer or array expected"
@@ -259,7 +281,7 @@ let process (globals, specs) =
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
 	  let (op, t) = translate_binop op t1 t2 in
-	    (C.Binop (op, e1, e2), t)
+	    (C.Binop ((op, t), (e1, t1), (e2, t2)), t)
       | IfExp (c, e1, e2) -> 
 	  let (c, _) = translate_exp c in
 	  let (e1, t) = translate_exp e1 in
@@ -290,13 +312,13 @@ let process (globals, specs) =
 		None -> (None, t1)
 	      | Some op -> 
 		  let (op, t) = translate_binop op t1 t2 in
-		    (Some op, t)
+		    (Some (op, t), t)
 	  in
 	    (C.Set (lv, op, e), t)
       | OpExp (op, e, is_after) ->
 	  let (e, t) = translate_exp e in
 	  let (op, t) = translate_binop op t C.int_typ in
-	    (C.OpExp (op, e, is_after), t)
+	    (C.OpExp ((op, t), e, is_after), t)
       | BlkExp (blk, is_after) -> 
 	  let (blk, t) = translate_blk_exp blk in
 	    (C.BlkExp (blk, is_after), t)

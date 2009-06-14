@@ -96,29 +96,29 @@ and lbl = string
 and static = bool
 
 and exp = 
-    | Cst of cst
-    | Var of string
-    | Field of (exp * string)
-    | Index of (exp * exp)
-    | Deref of exp
-    | AddrOf of exp
-    | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp)
-    | Binop of (binop * exp * exp)
-    | Call of (exp * exp list)
-    | Sizeof of typ
-    | SizeofE of exp
-    | Offsetof of (typ * string)
-    | Str of string
-    | FunName
-    | Cast of (exp * typ)
-(* None is a regular assignment *)
-    | Set of (exp * binop option * exp)
-(* boolean is true if the operation is applied after the evaluation of the 
-   expression *)
-    | OpExp of (binop * exp * bool)
-    | BlkExp of (blk * bool)
-
+  | Cst of cst
+  | Var of string
+  | Field of (exp * string)
+  | Index of (exp * exp)
+  | Deref of exp
+  | AddrOf of exp
+  | Unop of (unop * exp)
+  | IfExp of (exp * exp * exp)
+  | Binop of (binop * exp * exp)
+  | Call of (exp * exp list)
+  | Sizeof of typ
+  | SizeofE of exp
+  | Offsetof of (typ * string)
+  | Str of string
+  | FunName
+  | Cast of (exp * typ)
+      (* None is a regular assignment *)
+  | Set of (exp * binop option * exp)
+      (* boolean is true if the operation is applied after the evaluation of the 
+	 expression *)
+  | OpExp of (binop * exp * bool)
+  | BlkExp of (blk * bool)
+      
 and cst = (Cir.cst * typ)
 
 and unop = Not | BNot

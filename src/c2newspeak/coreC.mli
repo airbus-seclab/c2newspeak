@@ -102,19 +102,21 @@ and exp =
     | AddrOf of exp
     | Unop of (unop * exp)
     | IfExp of (exp * exp * exp)
-    | Binop of (binop * exp * exp)
+    | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (exp * exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string
     | FunName
-    | Cast of (exp * typ)
+    | Cast of typ_exp
 (* None is a regular assignment *)
-    | Set of (exp * binop option * exp)
+    | Set of (exp * (binop * typ) option * exp)
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
-    | OpExp of (binop * exp * bool)
+    | OpExp of ((binop * typ) * exp * bool)
     | BlkExp of (blk * bool)
+
+and typ_exp = (exp * typ)
 
 and unop = Not | BNot of Newspeak.ikind
 
@@ -153,3 +155,5 @@ val string_of_exp: exp -> string
 val string_of_typ: typ -> string
 
 val ftyp_of_typ: typ -> ftyp
+
+val promote: Newspeak.ikind -> Newspeak.ikind
