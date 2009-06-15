@@ -286,7 +286,7 @@ let process (globals, specs) =
 	  let (c, _) = translate_exp c in
 	  let (e1, t) = translate_exp e1 in
 	  let (e2, _) = translate_exp e2 in
-	    (C.IfExp (c, e1, e2), t)
+	    (C.IfExp (c, e1, e2, t), t)
       | Call (f, args) -> 
 	  let (f, (_, ret_t)) = translate_funexp f in
 	  let args = translate_args args in

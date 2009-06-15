@@ -101,7 +101,7 @@ and exp =
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp)
+    | IfExp of (exp * exp * exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (exp * exp list)
     | Sizeof of typ

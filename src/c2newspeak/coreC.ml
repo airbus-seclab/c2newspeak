@@ -110,7 +110,7 @@ and exp =
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp)
+    | IfExp of (exp * exp * exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (exp * exp list)
     | Sizeof of typ
@@ -215,7 +215,7 @@ let rec string_of_exp e =
     | Deref e -> "*("^(string_of_exp e)^")"
     | AddrOf e -> "&("^(string_of_exp e)^")"
     | Unop (_, e) -> "op("^(string_of_exp e)^")"
-    | IfExp (e1, e2, e3) -> 
+    | IfExp (e1, e2, e3, _) -> 
 	let e1 = string_of_exp e1 in
 	let e2 = string_of_exp e2 in
 	let e3 = string_of_exp e3 in

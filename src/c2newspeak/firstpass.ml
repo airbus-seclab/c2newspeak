@@ -508,7 +508,7 @@ let translate (globals, spec) =
 	    let (e2, _) = translate_exp e2 in
 	      translate_binop (op, t) (e1, t1) (e2, t2)
 		
-	| IfExp (c, e1, e2) -> begin
+	| IfExp (c, e1, e2, t) -> begin
 	    try 
 	      let (c, _) = translate c in
 	      let v = C.eval_exp c in
@@ -516,9 +516,6 @@ let translate (globals, spec) =
 		translate e
 	    with Invalid_argument _ -> 
 	      let loc = Npkcontext.get_loc () in
-		(* TODO: this is a bit inefficient, 
-		   e1 gets translated twice!! *)
-	      let (_, t) = translate_exp e1 in
 	      let (x, decl, v) = gen_tmp loc t in
 	      let blk1 = (Exp (Set (Var x, None, e1)), loc)::[] in
 	      let blk2 = (Exp (Set (Var x, None, e2)), loc)::[] in
@@ -930,8 +927,8 @@ let translate (globals, spec) =
 
   and translate_stmt_exp loc e =
     match e with
-	Set (lv, op, IfExp (c, e1, e2)) ->
-	  let e = IfExp (c, Set (lv, op, e1), Set (lv, op, e2)) in
+	Set (lv, op, IfExp (c, e1, e2, t)) ->
+	  let e = IfExp (c, Set (lv, op, e1), Set (lv, op, e2), t) in
 	    translate_stmt_exp loc e
 
       | Set set -> 
@@ -943,7 +940,7 @@ let translate (globals, spec) =
 	    "cast to void" Npkcontext.DirtySyntax;
 	  translate_stmt_exp loc e
 
-      | IfExp (c, e1, e2) ->
+      | IfExp (c, e1, e2, _) ->
 	  let blk1 = (Exp e1, loc)::[] in
 	  let blk2 = (Exp e2, loc)::[] in
 	    translate_stmt (If (c, blk1, blk2), loc)
@@ -1049,13 +1046,16 @@ let translate (globals, spec) =
     in
     let rec translate_guard e =
       match e with
-	  IfExp (Cst (C.CInt c, _), t, _) when (Nat.compare c Nat.zero <> 0)-> 
+	  IfExp (Cst (C.CInt c, _), t, _, _) 
+	    when (Nat.compare c Nat.zero <> 0)-> 
 	    translate_guard t
-	| IfExp (Cst (C.CInt c, _), _, f) when (Nat.compare c Nat.zero = 0) -> 
+	| IfExp (Cst (C.CInt c, _), _, f, _) 
+	    when (Nat.compare c Nat.zero = 0) -> 
 	    translate_guard f
-	| IfExp (IfExp (c, t1, f1), t2, f2) -> 
-	    translate_guard (IfExp (c, IfExp (t1, t2, f2), IfExp (f1, t2, f2)))
-	| IfExp (c, t, f) -> 
+	| IfExp (IfExp (c, t1, f1, _), t2, f2, t) -> 
+	    translate_guard (IfExp (c, IfExp (t1, t2, f2, t), 
+				    IfExp (f1, t2, f2, t), t))
+	| IfExp (c, t, f, _) -> 
 	    let (c, _) = translate_exp c in
 	    let (pref, c, post) = C.normalize_exp c in
 	    let guard_c = (C.Guard c, loc) in
