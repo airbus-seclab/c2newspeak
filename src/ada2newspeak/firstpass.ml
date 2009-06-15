@@ -178,8 +178,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
 
-  and package = new Ada_utils.package_manager
-  in
+  and gtbl = Symboltbl.create_table () in
 
   let find_symb (x:A.name) = Hashtbl.find symbtbl x
   and find_all_symb (x:A.name) = Hashtbl.find_all symbtbl x
@@ -190,7 +189,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     List.flatten
       (List.map
          (fun pack -> find_all_symb (pack, ident))
-         package#get_use)
+         (Symboltbl.get_use gtbl))
 
 
   in
@@ -202,10 +201,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     =
     match name with
       | ([], ident) -> f_ident ident name
-      | (pack, ident) when package#is_extern
-                       ||  package#is_with pack ->
+      | (pack, ident) when (Symboltbl.is_extern gtbl)
+                       ||  (Symboltbl.is_with gtbl pack) ->
           f_with (pack,ident)
-      | (pack, ident) when pack = package#current ->
+      | (pack, ident) when pack = Symboltbl.current gtbl ->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
@@ -216,14 +215,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let find_name_record  name f_ident f_with f_current =
     match name with
       | ([], ident) -> f_ident ident name
-      | (pack, ident) when not ( (package#current = pack)
-                              || (package#is_with   pack)
-                              || (package#is_extern ))
+      | (pack, ident) when not ( (Symboltbl.current gtbl = pack)
+                              || (Symboltbl.is_with gtbl   pack)
+                              || (Symboltbl.is_extern gtbl))
         -> f_with (pack,ident)
-      | (pack, ident) when     (  package#is_extern
-                              ||  package#is_with   pack)
+      | (pack, ident) when     (  Symboltbl.is_extern gtbl
+                              ||  Symboltbl.is_with gtbl  pack)
         -> f_with (pack,ident)
-      | (pack, ident) when pack = package#current->
+      | (pack, ident) when pack = Symboltbl.current gtbl->
           f_current ([],ident) name
       | (pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
@@ -242,8 +241,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
   let translate_name (pack,id:A.name) :string =
     let tr_name =
-        if package#is_extern then pack,            id
-                             else package#current, id
+        if (Symboltbl.is_extern gtbl) then pack,            id
+                             else (Symboltbl.current gtbl), id
     in
       string_of_name tr_name
   in
@@ -285,7 +284,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un nombre local *)
   and add_number loc value lvl ident =
     let x =  Normalize.normalize_ident
-      ident package#current package#is_extern in
+      ident (Symboltbl.current gtbl) (Symboltbl.is_extern gtbl) in
       (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
 
@@ -321,7 +320,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un symbole d'enumeration *)
   and add_enum loc ident value typ global =
     let name = Normalize.normalize_ident
-      ident package#current package#is_extern in
+      ident (Symboltbl.current gtbl) (Symboltbl.is_extern gtbl) in
       (if mem_symb name
        then
          List.iter
@@ -362,7 +361,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  (ro:bool)          (x:string)
        :unit =
     let name = Normalize.normalize_ident
-      x package#current package#is_extern in
+      x (Symboltbl.current gtbl) (Symboltbl.is_extern gtbl) in
 
     let tr_name = translate_name name in
       (if mem_symb name
@@ -1634,7 +1633,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          List.iter
            (fun symb -> match symb with
               | (FunSymb (_,_,extern', _),_,_)
-                  when extern'= package#is_extern ->
+                  when extern'= (Symboltbl.is_extern gtbl) ->
                   Npkcontext.report_error "Firstpass.add_fundecl"
                     ("conflict : "^(string_of_name name)
                      ^" already declared")
@@ -1659,7 +1658,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       check_ident name;
       Hashtbl.add symbtbl name
         (FunSymb (C.Fname(translate_name name), subprogspec,
-                  package#is_extern, ftyp), C.Fun, loc);
+                  (Symboltbl.is_extern gtbl), ftyp), C.Fun, loc);
       ftyp
 
   and translate_enum_declaration idtyp typ_decl list_val_id loc global =
@@ -1719,7 +1718,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> package#add_use use_clause;
+    | UseDecl(use_clause) -> Symboltbl.add_use gtbl use_clause;
         ([],[])
 
     | NumberDecl(ident, _, Some v) ->
@@ -1753,7 +1752,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl x -> package#remove_use x
+    | UseDecl x -> Symboltbl.remove_use gtbl x
     | NumberDecl(ident, _, _) -> remove_symb ident
     | TypeDecl _
     | SubtypDecl _ -> ()
@@ -1814,7 +1813,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | A.Constant | A.StaticVal _ -> true in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init_t option =
-            match (init, package#is_extern) with
+            match (init, (Symboltbl.is_extern gtbl)) with
               | (_,true)
               | (None,_) -> Some None
               | (Some(exp),false) ->
@@ -1828,7 +1827,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | TypeDecl(idtyp,typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()
-      | UseDecl x -> package#add_use x
+      | UseDecl x -> Symboltbl.add_use gtbl x
       | SpecDecl(spec) -> translate_spec spec loc false
       | NumberDecl(ident, _, Some v) ->
            add_number loc v true ident
@@ -1857,14 +1856,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             "Firstpass.translate_spec"
                 "declaration de sous package non implemente"
         end;
-        package#set_current nom;
+        Symboltbl.set_current gtbl nom;
         let _ = List.map
           (* probleme : variables *)
           translate_global_basic_declaration
           basic_decl_list
         in
-          package#reset_current;
-          if package#is_extern then package#add_with nom
+          Symboltbl.reset_current gtbl;
+          if (Symboltbl.is_extern gtbl) then Symboltbl.add_with gtbl nom
 
   and translate_body (body:Ast.body) glob loc :unit =
 
@@ -1878,7 +1877,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          donc on accepte la declaration d'un package. Sinon, il
          s'agit d'un sous-package, ce qui n'est pas gere *)
       | Ast.PackageBody(name, package_spec, decl_part), true ->
-          package#set_current name;
+          Symboltbl.set_current gtbl name;
           (match package_spec with
              | None -> ()
              | Some(_, basic_decls) ->
@@ -1908,11 +1907,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           (match spec with
             | Some(spec, loc) ->
                 translate_spec spec loc true;
-                package#add_with nom
+                Symboltbl.add_with gtbl nom
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext x -> package#add_use x;
+      | UseContext x -> Symboltbl.add_use gtbl x;
     );
   in
     (* corps de la fonction translate *)
@@ -1923,7 +1922,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
     try
       Npkcontext.set_loc loc;
-      package#as_extern_do (fun _ -> translate_context ctx);
+      Symboltbl.as_extern_do gtbl (fun _ -> translate_context ctx);
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
       { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }

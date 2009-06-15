@@ -48,14 +48,13 @@ let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
   | Character          -> T.character
   | Declared (_,_,t,_) -> t
 
-let subtyp_to_adatyp ?pm st = match st with
+let subtyp_to_adatyp st = match st with
   | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
   | SubtypName  n         -> try
-                               match pm with
-                               | None   -> Symboltbl.find_type gtbl n
-                               | Some p -> Symboltbl.find_type
-                               ~context:(p#current::p#get_use) gtbl n
+                               Symboltbl.find_type
+                               ~context:(Symboltbl.current
+                               gtbl::Symboltbl.get_use gtbl) gtbl n
                              with Not_found ->
                                begin
                                  Npkcontext.report_warning "ST2AT"
@@ -205,7 +204,6 @@ let rec parse_extern_specification (name:name):Ast.spec*location =
 and normalization (compil_unit:compilation_unit) (extern:bool)
     :Ast.compilation_unit =
   let csttbl = Hashtbl.create 100 in
-  let package = Symboltbl.package gtbl in
 
   (**
    * This object encapsulates the table of types. It is basically a Hashtbl.t
@@ -650,10 +648,10 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
       (try
          let (val1,_) = eval_static
            norm_exp1 (Some(typ)) csttbl
-           package extern
+           gtbl extern
          and (val2,_) = eval_static
            norm_exp2 (Some(typ)) csttbl
-           package extern in
+           gtbl extern in
          let contrainte =  match (val1, val2) with
            | (FloatVal(f1),FloatVal(f2)) ->
                if f1<=f2
@@ -733,7 +731,7 @@ let interpret_enumeration_clause agregate assoc cloc loc =
               (fun (ident, exp) ->
                  let exp' = normalize_exp exp in
                  let v = eval_static_integer_exp exp' csttbl
-                   package false
+                   gtbl false
                  in (ident, v))
               assoc_list in
           let find_val ident =
@@ -1011,7 +1009,7 @@ in
              "default values are only allowed for \"in\" parameters";
            if addparam then begin
               Symboltbl.add_variable gtbl ([],param.formal_name)
-                                          (subtyp_to_adatyp ~pm:package param.param_type)
+                                          (subtyp_to_adatyp param.param_type)
               ;
               add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
@@ -1031,7 +1029,7 @@ in
               Symboltbl.add_subprogram gtbl
                                name
                                []
-                               (Some (subtyp_to_adatyp ~pm:package return_type))
+                               (Some (subtyp_to_adatyp return_type))
                                ;
               add_function norm_name (Some(base_typ norm_subtyp)) false;
               Ast.Function(norm_name, [], norm_subtyp)
@@ -1042,12 +1040,10 @@ in
                                          ( p.formal_name
                                          , (p.mode = In  || p.mode = InOut)
                                          , (p.mode = Out || p.mode = InOut)
-                                         , subtyp_to_adatyp ~pm:package
-                                                            p.param_type
+                                         , subtyp_to_adatyp p.param_type
                                          )
                                          ) param_list)
-                                       (Some (subtyp_to_adatyp ~pm:package
-                                                               return_type))
+                                       (Some (subtyp_to_adatyp return_type))
                                        ;
               add_function norm_name None false;
               Ast.Function(norm_name,
@@ -1086,8 +1082,7 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let (v,_) = eval_static normexp (Some(typ)) csttbl
-              package extern in
+            let (v,_) = eval_static normexp (Some(typ)) csttbl gtbl extern in
 
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
@@ -1126,7 +1121,7 @@ in
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
-        let v = eval_static_number norm_exp csttbl package extern in
+        let v = eval_static_number norm_exp csttbl gtbl extern in
           (*ajouts dans la table*)
             Symboltbl.add_variable gtbl (normalize_ident_cur ident) T.unknown;
             add_cst (normalize_ident_cur ident)

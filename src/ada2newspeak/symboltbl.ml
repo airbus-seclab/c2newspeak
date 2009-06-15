@@ -22,6 +22,170 @@
 
 *)
 
+(**
+ * Wraps what the "current package" is and which packages are
+ * marked using the "with" and "use" constructs.
+ *)
+class package_manager :
+object
+    (** Set the current package. *)
+    method set_current :Syntax_ada.name -> unit
+
+    (** Reset the current package. *)
+    method reset_current :unit
+
+    (**
+     * Get the current package.
+     * If [set_current] has not been called, or [reset_current] has been called
+     * after the last call to [set_current], the empty package is returned.
+     *)
+    method current    :Syntax_ada.package
+
+    (** Add a package to the "with" list. *)
+    method add_with   :Syntax_ada.name -> unit
+
+    (** Is a package in the "with" list ? *)
+    method is_with    :Syntax_ada.package -> bool
+
+    (**
+     * Add a "use" clause to the context.
+     * The added package must have been added to the "with" list.
+     * Adding a package several times is not an error.
+     *)
+    method add_use    :Syntax_ada.name -> unit
+
+    (**
+     * Remove a "use" clause from the context.
+     * Removing a package several times is not an error : if a package has been
+     * added n times, it is necessary to remove it n times to remove it from the
+     * context.
+     * Removing a package that is not in the current context will be silently
+     * ignored.
+     *)
+    method remove_use :Syntax_ada.name -> unit
+
+    (**
+     * Get the current context.
+     * It returns a list of packages that have been added and not removed.
+     * The order is not specified.
+     *)
+    method get_use    :Syntax_ada.package list
+
+    (** Returns the "extern" flag for this manager. *)
+    method is_extern :bool
+
+    (** Perform an action with the "extern" flag. *)
+    method as_extern_do :(unit->unit)->unit
+
+    (** FIXME document exact specs *)
+    method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
+
+    method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
+end = object (self)
+      val mutable current_pkg:Syntax_ada.package                 = []
+      val mutable    with_pkg:Syntax_ada.package list            = []
+      val             context:(Syntax_ada.package,int) Hashtbl.t = Hashtbl.create 3
+      val mutable     extflag:bool                    = false
+      val mutable    renaming:(Syntax_ada.name*Syntax_ada.name) list        = []
+
+      method set_current (x,y) :unit =
+        let p = x@[y] in
+          current_pkg <- p
+
+      method reset_current =
+          current_pkg <- []
+
+      method current =
+          current_pkg
+
+      method add_with (x,y) =
+        let p = x@[y] in
+          with_pkg <- p::with_pkg
+
+      method is_with pkg =
+          List.mem pkg with_pkg
+
+      method add_use (x,y) =
+        let p = x@[y] in
+        if (self#current <> p) then begin
+            if (not (self#is_with p)) then begin
+              Npkcontext.report_error "Ada_normalize.add_context"
+                ((Ada_utils.ident_list_to_string p)^" is undefined")
+            end;
+            let old_count = try Hashtbl.find context p with Not_found -> 0 in
+            Hashtbl.replace context p (old_count + 1)
+        end
+
+      method remove_use (x,y) =
+        let p = x@[y] in
+        try
+          let old_count = Hashtbl.find context p in
+          if old_count = 1 then Hashtbl.remove context p
+          else Hashtbl.replace context p (old_count - 1)
+        with Not_found -> ()
+
+      method get_use =
+        Hashtbl.fold (fun pkg _ res -> pkg::res) context []
+
+      method is_extern =
+        extflag
+
+      method as_extern_do (f:unit->unit) =
+        extflag <- true;
+        f ();
+        extflag <- false
+
+      method normalize_name (name:Syntax_ada.name) extern =
+        try List.assoc name renaming with
+        Not_found ->
+        if (not extern) then name
+        else let (parents,ident) = name in
+             let pack = self#current in
+               match parents with
+                 | []                              -> (pack, ident)
+                 | a when a=pack || self#is_with a -> (  a , ident)
+                 | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
+                 ("unknown package "^(Ada_utils.ident_list_to_string parents))
+
+      (**
+       * Algorithm for add_rd (A,B)  (A -> B)
+       *
+       * If A = B, detect circular dependency.
+       * If B is already a pointer to some C, we have something like
+       *      A -> B -> C
+       * So its equivalent to call (A -> C).
+       *
+       * Note that in the particular case where C = A (cycle), the recursive
+       * call is (A -> A) and the circular dependency will be detected.
+       *)
+      method add_renaming_decl new_name old_name =
+        Npkcontext.print_debug ("add_rd "
+                               ^Ada_utils.name_to_string new_name
+                               ^" --> "
+                               ^Ada_utils.name_to_string old_name
+        );
+        if (new_name=old_name) then
+          Npkcontext.report_error "add_renaming_decl"
+                        ("Circular declaration detected for '"
+                        ^Ada_utils.name_to_string new_name^"'.")
+        else begin
+          try
+            let pointee = List.assoc new_name renaming in
+            self#add_renaming_decl new_name pointee
+          with Not_found ->
+            renaming <- (new_name,old_name)::renaming
+        end
+  end
+
+
+
+
+
+
+
+
+
+
 let error x =
   Npkcontext.report_warning "Ada_types" x
 
@@ -89,7 +253,7 @@ type table = { mutable renaming : (string*string) list
              ; t_var    : Ada_types.t IHashtbl.t
              ; t_type   : Ada_types.t IHashtbl.t
              ; t_func   : ((f_param list)*Ada_types.t option) IHashtbl.t
-             ; pkgmgr   : Ada_utils.package_manager
+             ; pkgmgr   : package_manager
              }
 
 let print_table tbl =
@@ -129,14 +293,14 @@ let builtin_table :table = { renaming = []
                            ; t_var    = IHashtbl.create 0
                            ; t_type   = IHashtbl.create 0
                            ; t_func   = IHashtbl.create 0
-                           ; pkgmgr   = new Ada_utils.package_manager
+                           ; pkgmgr   = new package_manager
                            }
 
 let create_table _ =  { renaming = []
                       ; t_var    = IHashtbl.copy builtin_table.t_var
                       ; t_type   = IHashtbl.copy builtin_table.t_type
                       ; t_func   = IHashtbl.copy builtin_table.t_func
-                      ; pkgmgr   = new Ada_utils.package_manager
+                      ; pkgmgr   = new package_manager
                       }
 
 let add_variable tbl n t =

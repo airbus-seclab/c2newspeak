@@ -47,7 +47,7 @@ type constant_symb =
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:Ast.expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t)
-                (package:package_manager)
+                (tbl:Symboltbl.table)
                 (extern:bool)
    :(value*typ) =
 
@@ -57,7 +57,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     List.flatten
       (List.map
          (fun pack -> find_all_cst (pack, ident))
-         package#get_use) in
+         (Symboltbl.get_use tbl)) in
 
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
           :(Syntax_ada.value*Syntax_ada.typ) =
@@ -66,7 +66,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.CFloat (f,s)->FloatVal(f,s),       check_typ expected_typ Float
     | Ast.CChar  (c)  ->IntVal(Nat.of_int c),check_typ expected_typ Character
     | Ast.CBool  (b)  ->BoolVal(b),          check_typ expected_typ Boolean
-    | Ast.Var(v) -> eval_static_const (package#normalize_name v extern)
+    | Ast.Var(v) -> eval_static_const (Symboltbl.normalize_name tbl v extern)
                                       expected_typ
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
@@ -417,9 +417,9 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   in
       match name with
         | [], ident -> sans_selecteur ident name
-        | pack, ident when extern || package#is_with pack ->
+        | pack, ident when extern || Symboltbl.is_with tbl pack ->
                                                     avec_selecteur (pack,ident)
-        | (pack, ident) when pack = package#current->
+        | (pack, ident) when pack = Symboltbl.current tbl ->
                                         avec_selecteur_courant ([],ident) name
         | (pack, _) -> Npkcontext.report_error "eval_static.const"
               ("unknown package " ^(Ada_utils.ident_list_to_string pack))
@@ -431,7 +431,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
  *)
 let eval_static_integer_exp (exp:Ast.expression)
                             (csttbl:(name, constant_symb) Hashtbl.t)
-                            (package:package_manager)
+                            (tbl:Symboltbl.table)
                             (extern:bool)
     :nat =
     try
@@ -439,7 +439,7 @@ let eval_static_integer_exp (exp:Ast.expression)
           eval_static
               exp (Some IntegerConst)
               csttbl
-              package
+              tbl
               extern in
             match v with
               | FloatVal _
@@ -460,13 +460,13 @@ let eval_static_integer_exp (exp:Ast.expression)
  *)
 let eval_static_number (exp:Ast.expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
-                       (package:package_manager)
+                       (tbl:Symboltbl.table)
                        (extern:bool)
     :value =
      try
          let (v,_) = eval_static exp None
                                      csttbl
-                                     package
+                                     tbl
                                      extern in
              match v with
                | BoolVal _ -> Npkcontext.report_error
