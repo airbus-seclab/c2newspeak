@@ -23,7 +23,7 @@
 *)
 
 let error x =
-  if 0=1 then
+  if 1=1 then
     Npkcontext.report_warning "Ada_types" x
 
 (**
@@ -65,15 +65,15 @@ type f_param = { fp_name : string
 
 let to_fparam (a,b,c,d) =
   { fp_name = a
-  ; fp_in   = b 
+  ; fp_in   = b
   ; fp_out  = c
   ; fp_type = d
   }
 
 let from_fparam f =
   ( f.fp_name
-  , f.fp_in  
-  , f.fp_out 
+  , f.fp_in
+  , f.fp_out
   , f.fp_type
   )
 
@@ -86,11 +86,11 @@ let from_fparam f =
  * information is typed the same way.
  *)
 
-type table = {
-  t_var  : Ada_types.t IHashtbl.t;
-  t_type : Ada_types.t IHashtbl.t;
-  t_func : ((f_param list)*Ada_types.t option) IHashtbl.t
-}
+type table = { mutable renaming : (string*string) list
+             ; t_var    : Ada_types.t IHashtbl.t
+             ; t_type   : Ada_types.t IHashtbl.t
+             ; t_func   : ((f_param list)*Ada_types.t option) IHashtbl.t
+             }
 
 let print_table tbl =
   let pad width str =
@@ -125,20 +125,23 @@ let print_table tbl =
  * It is made available to the rest of the world by
  * builtin_type and builtin_variable.
  *)
-let builtin_table :table = { t_var  = IHashtbl.create 0
-                           ; t_type = IHashtbl.create 0
-                           ; t_func = IHashtbl.create 0
+let builtin_table :table = { renaming = []
+                           ; t_var    = IHashtbl.create 0
+                           ; t_type   = IHashtbl.create 0
+                           ; t_func   = IHashtbl.create 0
                            }
 
-let create_table _ =  { t_var  = IHashtbl.copy builtin_table.t_var
-                      ; t_type = IHashtbl.copy builtin_table.t_type
-                      ; t_func = IHashtbl.copy builtin_table.t_func
+let create_table _ =  { renaming = []
+                      ; t_var    = IHashtbl.copy builtin_table.t_var
+                      ; t_type   = IHashtbl.copy builtin_table.t_type
+                      ; t_func   = IHashtbl.copy builtin_table.t_func
                       }
 
 let add_variable tbl n t =
   IHashtbl.add tbl.t_var n t
 
 let add_type tbl n typ =
+  Npkcontext.print_debug ("Adding type "^String.concat "." (fst n@[snd n]));
   IHashtbl.add tbl.t_type n typ
 
 let add_subprogram tbl name params rettype =
@@ -149,43 +152,64 @@ let add_subprogram tbl name params rettype =
     ; fp_type = d
     }) params,rettype)
 
-let find_information hashtbl ?context (package,id) =
-  if package != [] then IHashtbl.find hashtbl (package,id)
-  else (* no package : try it as a local variable,
-        *              or within current context
-        *              (if provided)
-        *)
-    try IHashtbl.find hashtbl ([],id)
-    with Not_found ->
-      begin
-        match context with
-        | None   -> raise Not_found
-        | Some package_list ->
-          let p = List.find (fun pkg -> IHashtbl.mem hashtbl (pkg,id))
-                            package_list
-            (* List.find throws Not_found if     *
-             * no package matches the predicate. *
-             * This is the expected behaviour.   *)
-          in
-          IHashtbl.find hashtbl (p,id)
-      end
+let rec find_information hashtbl ren ?context (package,id) =
+  try find_information hashtbl ren ?context (package,List.assoc id ren) with
+    Not_found ->
+  begin
+    if package != [] then IHashtbl.find hashtbl (package,id)
+    else (* no package : try it as a local variable,
+          *              or within current context
+          *              (if provided)
+          *)
+      try IHashtbl.find hashtbl ([],id)
+      with Not_found ->
+        begin
+          match context with
+          | None   -> raise Not_found
+          | Some package_list ->
+            let p = List.find (fun pkg -> IHashtbl.mem hashtbl (pkg,id))
+                              package_list
+              (* List.find throws Not_found if     *
+               * no package matches the predicate. *
+               * This is the expected behaviour.   *)
+            in
+            IHashtbl.find hashtbl (p,id)
+        end
+  end
 
 let find_type tbl ?context n =
-  try find_information tbl.t_type ?context n
+  try find_information tbl.t_type tbl.renaming ?context n
   with Not_found -> begin
-                      error ("Cannot find type "^snd n);
+                      error ("Cannot find type "
+                            ^String.concat "." (fst n@[snd n])
+                            ^", context = {"
+                            ^String.concat ", " (
+                                                List.map (fun n ->
+                                                   "'"
+                                                  ^(String.concat "." n)
+                                                  ^"'")
+                                                  (match context with
+                                                    | None -> []
+                                                    | Some c -> c
+                                                  )
+                                                )
+                            ^"}"
+                            );
                       raise Not_found
                     end
 
 let find_subprogram tbl ?context n =
-  try (fun (x,y) -> List.map from_fparam x,y) (find_information tbl.t_func ?context n)
+  try (fun (x,y) -> List.map from_fparam x,y)
+      (find_information tbl.t_func tbl.renaming ?context n)
   with Not_found -> begin
-                      error ("Cannot find subprogram "^snd n);
+                      error ("Cannot find subprogram "
+                            ^String.concat "." (fst n@[snd n])
+                            );
                       raise Not_found
                     end
 
 let find_variable tbl ?context n =
-  try find_information tbl.t_var ?context n
+  try find_information tbl.t_var tbl.renaming ?context n
   with Not_found ->
     begin
       try
@@ -198,15 +222,18 @@ let find_variable tbl ?context n =
         Ada_types.unknown
     end
 
+let add_renaming_declaration t newname oldname =
+  t.renaming <- (newname,oldname)::t.renaming
+
 let builtin_type x = find_type builtin_table ([],x)
 
 let _ =
   List.iter (fun (n,t) -> add_type builtin_table ([],n) t)
   ["integer"  , Ada_types.integer
-  ;"float"    , Ada_types.std_float  
-  ;"boolean"  , Ada_types.boolean 
-  ;"natural"  , Ada_types.natural 
-  ;"positive" , Ada_types.positive 
+  ;"float"    , Ada_types.std_float
+  ;"boolean"  , Ada_types.boolean
+  ;"natural"  , Ada_types.natural
+  ;"positive" , Ada_types.positive
   ;"character", Ada_types.character
   ]
 

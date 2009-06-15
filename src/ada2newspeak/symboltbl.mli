@@ -73,6 +73,11 @@ val find_subprogram :     table
                       ->  string list*string
       -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
+val add_renaming_declaration :    table
+                               -> string
+                               -> string
+                     -> unit
+
 (** Pretty-print a symbol table to the standard output. *)
 val print_table   : table -> unit
 

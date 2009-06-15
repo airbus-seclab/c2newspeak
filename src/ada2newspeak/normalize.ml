@@ -48,10 +48,14 @@ let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
   | Character          -> T.character
   | Declared (_,_,t,_) -> t
 
-let subtyp_to_adatyp : Syntax_ada.subtyp -> Ada_types.t = function
+let subtyp_to_adatyp ?pm st = match st with
   | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
-  | SubtypName  n         -> try Symboltbl.find_type gtbl n
+  | SubtypName  n         -> try
+                               match pm with
+                               | None   -> Symboltbl.find_type gtbl n
+                               | Some p -> Symboltbl.find_type
+                                   ~context:(p#current::p#get_use) gtbl n
                              with Not_found -> T.unknown
 
 (**
@@ -228,10 +232,10 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
       (** Is this type known ? *)
       method mem (n:name) :bool =
-             snd n = "integer"   
-          || snd n = "float"     
-          || snd n = "boolean"   
-          || snd n = "character" 
+             snd n = "integer"
+          || snd n = "float"
+          || snd n = "boolean"
+          || snd n = "character"
           || Hashtbl.mem tbl n
 
       (** Find the type definition. *)
@@ -371,18 +375,27 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
   let add_typ nom typdecl location ~global ~extern =
     let subtyp = match typdecl with
-      | Array _ -> Unconstrained(Declared(snd nom, typdecl, T.unknown, location))
+      | Array _ -> Unconstrained(Declared(snd nom
+                                         ,typdecl
+                                         ,T.unknown
+                                         ,location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
           let contrainte = IntegerRangeConstraint(min, max)
           and typ = Declared(snd nom,typdecl, T.unknown,location)
           in
+            Symboltbl.add_type gtbl nom (
+              T.new_enumerated (fst (List.split symbs))
+            );
             add_enum_litt symbs typ global extern;
             Constrained(typ, contrainte, true)
 
       | IntegerRange(contrainte, _) ->
-          Constrained(Declared(snd nom, typdecl,T.unknown, location), contrainte, true)
+          Constrained(Declared(snd nom
+                              ,typdecl
+                              ,T.unknown
+                              ,location), contrainte, true)
       | DerivedType(subtyp_ind) ->
           let subtyp = extract_subtyp subtyp_ind in
           let typ = base_typ subtyp in
@@ -437,7 +450,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           | (pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
                 ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
- 
+
   let normalize_name (parents, ident) =
     package#normalize_name (parents,ident) extern
   in
@@ -997,21 +1010,23 @@ in
               Symboltbl.add_subprogram gtbl
                                name
                                []
-                               (Some (subtyp_to_adatyp return_type))
+                               (Some (subtyp_to_adatyp ~pm:package return_type))
                                ;
               add_function norm_name (Some(base_typ norm_subtyp)) false;
               Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_name name in
               Symboltbl.add_subprogram gtbl name
-                                       (List.map (fun p -> 
+                                       (List.map (fun p ->
                                          ( p.formal_name
                                          , (p.mode = In  || p.mode = InOut)
                                          , (p.mode = Out || p.mode = InOut)
-                                         , subtyp_to_adatyp p.param_type
+                                         , subtyp_to_adatyp ~pm:package
+                                                            p.param_type
                                          )
                                          ) param_list)
-                                       (Some (subtyp_to_adatyp return_type))
+                                       (Some (subtyp_to_adatyp ~pm:package
+                                                               return_type))
                                        ;
               add_function norm_name None false;
               Ast.Function(norm_name,
@@ -1099,12 +1114,19 @@ in
           Some (Ast.NumberDecl(ident, norm_exp, Some v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
+        let (_,_,_,t) = subtyp_ind in
+          Symboltbl.add_type gtbl ([],ident) t;
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
                     loc
                     global;
           Some (Ast.SubtypDecl(ident, norm_subtyp_ind))
-    | RenamingDecl (n, o) -> package#add_renaming_decl (normalize_name n) (normalize_name o);None
+    | RenamingDecl (n, o) ->
+        begin
+          Symboltbl.add_renaming_declaration gtbl (snd n) (snd o);
+          package#add_renaming_decl (normalize_name n) (normalize_name o);
+          None;
+        end
     | RepresentClause _
     | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
@@ -1165,8 +1187,8 @@ in
                          normalize_exp exp2, is_rev),
                          normalize_block instrs), loc)
     | Exit -> Some (Ast.Exit, loc)
-    | ProcedureCall(nom, params) ->
-       Some (Ast.ProcedureCall(normalize_name nom, List.map normalize_arg params), loc)
+    | ProcedureCall(nom, params) -> Some (Ast.ProcedureCall(normalize_name nom
+                                         ,List.map normalize_arg params), loc)
     | Case (e, choices, default) ->
               Some (Ast.Case (normalize_exp e,
                     List.map (function e,block->
@@ -1289,8 +1311,8 @@ in
                 ident_list
 
         | Ast.NumberDecl(ident, _, Some v) ->
-            (*ajouts dans la table*)
-            Symboltbl.add_variable gtbl (package#current,ident) T.universal_integer;
+            Symboltbl.add_variable gtbl (package#current,ident)
+                                   T.universal_integer;
             add_cst (normalize_ident ident package#current true)
                     (Number(v, true))
                     true

@@ -53,6 +53,7 @@ and range =
 
 (* type for "traits" (type of types...) *)
 and trait_t =
+  | Unknown
   | Signed of range option            (* Range constraint *)
   | Enumeration of (string*int) list  (* Name-index *)
   | Float of int                      (* Digits *)
@@ -94,6 +95,7 @@ let print t =
                             ^"]"
   in
   let p_trait = function
+    | Unknown -> "Unknown"
     | Signed  r -> "Signed " ^p_range r
     | Float   d -> "Float "  ^string_of_int d
     | Enumeration v -> "Enum (length ="^string_of_int (List.length v)^")"
@@ -152,7 +154,7 @@ let type_stub = {
   trait   = Signed None;
 }
 
-let unknown = {type_stub with trait = Signed (Some NullRange)}
+let unknown = {type_stub with trait = Unknown}
 
 let universal_integer = { type_stub with trait = Signed None; }
 
@@ -167,7 +169,7 @@ let new_enumerated values =
     {
       type_stub with
       trait = Enumeration ivalues;
-    } 
+    }
 
 let new_derived old =
     { old with uid = uid#gen }
@@ -255,6 +257,7 @@ let length_of typ = match typ.trait with
 | Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
 | Array _
 | Float _
+| Unknown
 | Signed None -> raise (Invalid_argument "Type with no size")
 
 let rec attr_get typ attr =
@@ -273,6 +276,7 @@ let rec attr_get typ attr =
             attr_get (List.hd ind) attr
         end
     | Float digits , "digits" -> from_int universal_integer digits
+    | Unknown, _
     | Array _, _
     | Float _ , _
     | Enumeration _ , _
@@ -290,6 +294,7 @@ let is_boolean typ =
 
 let is_integer typ =
   match typ.trait with
+  | Unknown       -> false
   | Array       _ -> false
   | Enumeration _ -> false
   | Float       _ -> false
@@ -297,6 +302,7 @@ let is_integer typ =
 
 let is_discrete typ =
   match typ.trait with
+  | Unknown       -> false
   | Array       _ -> false
   | Enumeration _ -> true
   | Float       _ -> false
@@ -304,6 +310,7 @@ let is_discrete typ =
 
 let is_numeric typ =
   match typ.trait with
+  | Unknown       -> false
   | Array       _ -> false
   | Enumeration _ -> false
   | Float       _ -> true
@@ -311,6 +318,7 @@ let is_numeric typ =
 
 let is_scalar typ =
   match typ.trait with
+  | Unknown       -> false
   | Array       _ -> false
   | Float       _ -> true
   | Enumeration _ -> true

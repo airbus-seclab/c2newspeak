@@ -403,7 +403,7 @@ class package_manager =
 
         method normalize_name (name:Syntax_ada.name) extern =
           try List.assoc name renaming with
-          Not_found -> 
+          Not_found ->
           if (not extern) then name
           else let (parents,ident) = name in
                let pack = self#current in
@@ -439,7 +439,7 @@ class package_manager =
               let pointee = List.assoc new_name renaming in
               self#add_renaming_decl new_name pointee
             with Not_found ->
-              renaming <- (new_name,old_name)::renaming 
+              renaming <- (new_name,old_name)::renaming
           end
     end
 

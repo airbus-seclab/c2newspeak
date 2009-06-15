@@ -776,7 +776,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                          (Some A.Boolean)) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-		  , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
+      , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
 
   and translate_or (e1:Ast.expression) (e2:Ast.expression) =
     let loc = Npkcontext.get_loc () in
@@ -789,7 +789,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                          (Some A.Boolean)) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-		  , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
+      , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
 
   and translate_binop op (e1:Ast.expression) (e2:Ast.expression) expected_typ =
     let expected_typ1 = Ada_utils.typ_operand op expected_typ in

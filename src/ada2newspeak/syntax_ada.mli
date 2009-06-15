@@ -94,7 +94,7 @@ type typ =
   | Declared of string                   (** User-defined type     *)
               * typ_declaration
               * Ada_types.t
-              * location 
+              * location
 
 (** Type declaration. *)
 and typ_declaration =
