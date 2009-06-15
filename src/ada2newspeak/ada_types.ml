@@ -98,7 +98,7 @@ let print t =
     | Unknown -> "Unknown"
     | Signed  r -> "Signed " ^p_range r
     | Float   d -> "Float "  ^string_of_int d
-    | Enumeration v -> "Enum (length ="^string_of_int (List.length v)^")"
+    | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component.hash = "
                   ^p_hash c^"; indexes.hash = "
                   ^String.concat "," (List.map p_hash i)

@@ -370,10 +370,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
                                                             package#current
                                                             extern
                                 in
-                                Symboltbl.add_variable gtbl
-                                               ((if global then package#current
-                                               else []),i)
-                                               (typ_to_adatyp typ);
                                  add_enum (p,i)
                                          typ
                                          global
@@ -837,12 +833,22 @@ in
         let typ_decl = enumeration_representation ident symbs
                                                   size represtbl loc in
         let id = normalize_ident_cur ident in
-        Symboltbl.add_type gtbl id (T.new_enumerated (fst (List.split symbs)));
+        let ids = fst (List.split symbs) in
+        let t = T.new_enumerated ids in
+        Symboltbl.add_type gtbl id t;
+        List.iter (fun i -> Symboltbl.add_variable gtbl
+                                                   (normalize_ident_cur i)
+                                                   t
+        ) ids;
         add_typ id typ_decl loc global extern;
         typ_decl
     | DerivedType(subtyp_ind) ->
         let (_,_,_,t) = subtyp_ind in
-          Symboltbl.add_type gtbl (normalize_ident_cur ident) t;
+        let new_t = T.new_derived t in
+          Symboltbl.add_type gtbl
+                             (normalize_ident_cur ident)
+                             new_t
+                             ;
         let update_contrainte contrainte symbs new_assoc =
           let find_ident v = List.find (fun (_, v') -> v'=v) symbs
           and find_new_val (ident,_) = List.assoc ident new_assoc in
@@ -868,6 +874,10 @@ in
                 "internal error : incorrect type"
           (* declared types : simplification *)
           | Declared(parent,Enum(symbs, size),_,_) ->
+              List.iter (fun (i,_) -> Symboltbl.add_variable gtbl
+                                        (normalize_ident_cur i)
+                                        new_t
+              ) symbs;
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
           | Declared(_,IntegerRange(contrainte,taille),_,_) ->
