@@ -46,6 +46,8 @@ val add_subprogram : table
                   -> Ada_types.t option
       -> unit
 
+val import_table : table -> table -> unit
+
 (**
  * Get a type from a symbol table.
  * @raise Not_found if no type could be found.

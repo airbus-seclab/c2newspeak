@@ -23,8 +23,7 @@
 *)
 
 let error x =
-  if 1=1 then
-    Npkcontext.report_warning "Ada_types" x
+  Npkcontext.report_warning "Ada_types" x
 
 (**
  * The [string] type with primitives to
@@ -138,10 +137,11 @@ let create_table _ =  { renaming = []
                       }
 
 let add_variable tbl n t =
+  Npkcontext.print_debug ("Adding variable "^String.concat "." (fst n@[snd n]));
   IHashtbl.add tbl.t_var n t
 
 let add_type tbl n typ =
-  Npkcontext.print_debug ("Adding type "^String.concat "." (fst n@[snd n]));
+  Npkcontext.print_debug ("Adding type  "   ^String.concat "." (fst n@[snd n]));
   IHashtbl.add tbl.t_type n typ
 
 let add_subprogram tbl name params rettype =
@@ -151,6 +151,12 @@ let add_subprogram tbl name params rettype =
     ; fp_out  = c
     ; fp_type = d
     }) params,rettype)
+
+let import_table tbl tbl' =
+  List.iter     (fun x   -> tbl.renaming <- x::tbl.renaming) tbl'.renaming;
+  IHashtbl.iter (fun k v -> IHashtbl.add tbl.t_var  k v) tbl'.t_var;
+  IHashtbl.iter (fun k v -> IHashtbl.add tbl.t_type k v) tbl'.t_type;
+  IHashtbl.iter (fun k v -> IHashtbl.add tbl.t_func k v) tbl'.t_func
 
 let rec find_information hashtbl ren ?context (package,id) =
   try find_information hashtbl ren ?context (package,List.assoc id ren) with
@@ -219,7 +225,8 @@ let find_variable tbl ?context n =
           | _             -> raise Not_found
       with Not_found ->
         error ("Cannot find variable "^snd n);
-        Ada_types.unknown
+ (*      Ada_types.unknown; *)
+        failwith "aaarg"
     end
 
 let add_renaming_declaration t newname oldname =

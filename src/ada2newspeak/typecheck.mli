@@ -30,3 +30,10 @@
 val type_of_unop  : Ast.unary_op  -> Ada_types.t -> Ada_types.t
 
 val type_of_binop : Ast.binary_op -> Ada_types.t -> Ada_types.t -> Ada_types.t
+
+(**
+ * Preprocessed binary operations (those who do not
+ * exist in the AST) need special functions.
+ *)
+
+val type_of_xor : Ada_types.t -> Ada_types.t -> Ada_types.t

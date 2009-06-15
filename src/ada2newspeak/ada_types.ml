@@ -107,7 +107,7 @@ let print t =
    "{"
   ^"H="^p_hash t
   ^",parent = "^p_parent t.parent
-  ^"U="^string_of_int t.uid
+  ^(if t.uid =0 then "" else "U="^string_of_int t.uid)
   ^",trait = "^p_trait t.trait
   ^"}"
 

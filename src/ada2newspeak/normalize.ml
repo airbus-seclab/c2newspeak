@@ -55,8 +55,15 @@ let subtyp_to_adatyp ?pm st = match st with
                                match pm with
                                | None   -> Symboltbl.find_type gtbl n
                                | Some p -> Symboltbl.find_type
-                                   ~context:(p#current::p#get_use) gtbl n
-                             with Not_found -> T.unknown
+                               ~context:(p#current::p#get_use) gtbl n
+                             with Not_found ->
+                               begin
+                                 Npkcontext.report_warning "ST2AT"
+                                   ("Cannot find type '"
+                                   ^name_to_string n
+                                   ^"'");
+                                 T.unknown;
+                               end
 
 (**
  * Try to find a body for a given specification.
@@ -385,9 +392,6 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           let contrainte = IntegerRangeConstraint(min, max)
           and typ = Declared(snd nom,typdecl, T.unknown,location)
           in
-            Symboltbl.add_type gtbl nom (
-              T.new_enumerated (fst (List.split symbs))
-            );
             add_enum_litt symbs typ global extern;
             Constrained(typ, contrainte, true)
 
@@ -575,24 +579,27 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   | Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
   | Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
   | Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
-  | Xor    -> let (e2',t2) = normalize_exp e2 in
-              Ast.CondExp (normalize_exp e1
+  | Xor    -> let (e1',t1) = normalize_exp e1 in
+              let (e2',t2) = normalize_exp e2 in
+              Ast.CondExp ((e1',t1)
                           ,(Ast.Unary(Ast.Not,(e2',t2)),t2)
                           ,(e2',t2)
                           )
-              ,t2
+              ,TC.type_of_xor t1 t2
   | OrElse -> let (e1',t1) = normalize_exp e1 in
+              let (e2',t2) = normalize_exp e2 in
               Ast.CondExp ((e1',t1)
                           ,(Ast.CBool true,T.boolean)
-                          ,normalize_exp e2
+                          ,(e2',t2)
                           )
-              ,t1
+              ,TC.type_of_binop Ast.Or t1 t2
   | AndThen-> let (e1',t1) = normalize_exp e1 in
+              let (e2',t2) = normalize_exp e2 in
               Ast.CondExp ((e1',t1)
-                          ,normalize_exp e2
+                          ,(e2',t2)
                           ,(Ast.CBool false,T.boolean)
                           )
-              ,t1
+              ,TC.type_of_binop Ast.And t1 t2
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let (e1',t1) = normalize_exp e1 in
@@ -827,13 +834,15 @@ in
   let normalize_typ_decl ident typ_decl loc global represtbl =
    match typ_decl with
     | Enum(symbs, size) ->
-        let typ_decl = enumeration_representation ident symbs size represtbl loc
-        in
-          add_typ (normalize_ident_cur ident) typ_decl loc global extern;
-          typ_decl
+        let typ_decl = enumeration_representation ident symbs
+                                                  size represtbl loc in
+        let id = normalize_ident_cur ident in
+        Symboltbl.add_type gtbl id (T.new_enumerated (fst (List.split symbs)));
+        add_typ id typ_decl loc global extern;
+        typ_decl
     | DerivedType(subtyp_ind) ->
         let (_,_,_,t) = subtyp_ind in
-          Symboltbl.add_type gtbl ([],ident) t;
+          Symboltbl.add_type gtbl (normalize_ident_cur ident) t;
         let update_contrainte contrainte symbs new_assoc =
           let find_ident v = List.find (fun (_, v') -> v'=v) symbs
           and find_new_val (ident,_) = List.assoc ident new_assoc in
@@ -899,8 +908,10 @@ in
           norm_typ_decl
     | IntegerRange(contrainte,taille) ->
         let decl = normalize_integer_range taille contrainte in
-          add_typ (normalize_ident_cur ident) decl loc global extern;
-          decl
+        let id = normalize_ident_cur ident in
+        Symboltbl.add_type gtbl id (T.new_range T.null_range);
+        add_typ id decl loc global extern;
+        decl
     | Array a when a.array_size = None ->
         let norm_inter =  normalize_subtyp_indication a.array_index
         and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
@@ -991,7 +1002,9 @@ in
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
            if addparam then begin
-              Symboltbl.add_variable gtbl ([],param.formal_name) T.unknown;
+              Symboltbl.add_variable gtbl ([],param.formal_name)
+                                          (subtyp_to_adatyp ~pm:package param.param_type)
+              ;
               add_cst (normalize_ident_cur param.formal_name)
                                     (VarSymb false)
                                     false;
@@ -1046,9 +1059,10 @@ in
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let norm_def = may normalize_exp def in
+        let (_,_,_,t) = subtyp_ind in
           (List.iter
              (fun x ->
-               Symboltbl.add_variable gtbl (package#current,x) T.unknown;
+               Symboltbl.add_variable gtbl (package#current,x) t;
                add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
@@ -1107,7 +1121,7 @@ in
         let v = eval_static_number norm_exp csttbl package#get_use
           package extern in
           (*ajouts dans la table*)
-            Symboltbl.add_variable gtbl ([],ident) T.unknown;
+            Symboltbl.add_variable gtbl (normalize_ident_cur ident) T.unknown;
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
@@ -1115,7 +1129,7 @@ in
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
         let (_,_,_,t) = subtyp_ind in
-          Symboltbl.add_type gtbl ([],ident) t;
+          Symboltbl.add_type gtbl (normalize_ident_cur ident) t;
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
                     loc
@@ -1374,4 +1388,5 @@ in
     Npkcontext.forget_loc ();
     (norm_context
     ,norm_lib_item
-    ,loc)
+    ,loc
+    )
