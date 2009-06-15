@@ -47,7 +47,6 @@ type constant_symb =
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:Ast.expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t)
-                (context:package list)
                 (package:package_manager)
                 (extern:bool)
    :(value*typ) =
@@ -58,7 +57,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     List.flatten
       (List.map
          (fun pack -> find_all_cst (pack, ident))
-         context) in
+         package#get_use) in
 
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
           :(Syntax_ada.value*Syntax_ada.typ) =
@@ -432,7 +431,6 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
  *)
 let eval_static_integer_exp (exp:Ast.expression)
                             (csttbl:(name, constant_symb) Hashtbl.t)
-                            (context:package list)
                             (package:package_manager)
                             (extern:bool)
     :nat =
@@ -440,7 +438,7 @@ let eval_static_integer_exp (exp:Ast.expression)
         let (v,_) =
           eval_static
               exp (Some IntegerConst)
-              csttbl context
+              csttbl
               package
               extern in
             match v with
@@ -462,13 +460,12 @@ let eval_static_integer_exp (exp:Ast.expression)
  *)
 let eval_static_number (exp:Ast.expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
-                       (context:package list)
                        (package:package_manager)
                        (extern:bool)
     :value =
      try
          let (v,_) = eval_static exp None
-                                     csttbl context
+                                     csttbl
                                      package
                                      extern in
              match v with

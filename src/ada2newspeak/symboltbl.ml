@@ -89,6 +89,7 @@ type table = { mutable renaming : (string*string) list
              ; t_var    : Ada_types.t IHashtbl.t
              ; t_type   : Ada_types.t IHashtbl.t
              ; t_func   : ((f_param list)*Ada_types.t option) IHashtbl.t
+             ; pkgmgr   : Ada_utils.package_manager
              }
 
 let print_table tbl =
@@ -128,12 +129,14 @@ let builtin_table :table = { renaming = []
                            ; t_var    = IHashtbl.create 0
                            ; t_type   = IHashtbl.create 0
                            ; t_func   = IHashtbl.create 0
+                           ; pkgmgr   = new Ada_utils.package_manager
                            }
 
 let create_table _ =  { renaming = []
                       ; t_var    = IHashtbl.copy builtin_table.t_var
                       ; t_type   = IHashtbl.copy builtin_table.t_type
                       ; t_func   = IHashtbl.copy builtin_table.t_func
+                      ; pkgmgr   = new Ada_utils.package_manager
                       }
 
 let add_variable tbl n t =
@@ -233,6 +236,24 @@ let add_renaming_declaration t newname oldname =
   t.renaming <- (newname,oldname)::t.renaming
 
 let builtin_type x = find_type builtin_table ([],x)
+
+let package           t = t.pkgmgr
+
+let set_current       t = t.pkgmgr#set_current
+let reset_current     t = t.pkgmgr#reset_current
+let current           t = t.pkgmgr#current
+let set_current       t = t.pkgmgr#set_current       
+let reset_current     t = t.pkgmgr#reset_current     
+let current           t = t.pkgmgr#current           
+let add_with          t = t.pkgmgr#add_with          
+let is_with           t = t.pkgmgr#is_with           
+let add_use           t = t.pkgmgr#add_use           
+let remove_use        t = t.pkgmgr#remove_use        
+let get_use           t = t.pkgmgr#get_use           
+let is_extern         t = t.pkgmgr#is_extern         
+let as_extern_do      t = t.pkgmgr#as_extern_do      
+let normalize_name    t = t.pkgmgr#normalize_name    
+let add_renaming_decl t = t.pkgmgr#add_renaming_decl 
 
 let _ =
   List.iter (fun (n,t) -> add_type builtin_table ([],n) t)

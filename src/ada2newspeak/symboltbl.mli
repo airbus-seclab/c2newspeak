@@ -86,6 +86,22 @@ val print_table   : table -> unit
 (** Retrieve a builtin type from its name.  *)
 val builtin_type : string -> Ada_types.t
 
+(** (Old) package_manager + proxies on methods *)
+val package : table -> Ada_utils.package_manager
+
+val set_current : table -> Syntax_ada.name -> unit
+val reset_current : table -> unit
+val current : table ->Syntax_ada.package
+val add_with   : table -> Syntax_ada.name -> unit
+val is_with    : table -> Syntax_ada.package -> bool
+val add_use    : table -> Syntax_ada.name -> unit
+val remove_use : table -> Syntax_ada.name -> unit
+val get_use    : table -> Syntax_ada.package list
+val is_extern : table -> bool
+val as_extern_do : table -> (unit->unit)->unit
+val normalize_name : table ->  Syntax_ada.name -> bool -> Syntax_ada.name
+val add_renaming_decl : table ->  Syntax_ada.name -> Syntax_ada.name -> unit
+
 (**
  * Context stack.
  * This module represents the lexical scoping in programs.

@@ -99,7 +99,7 @@ let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
 let check_package_body_against_spec ~(body:Ast.declarative_part)
                                     ~(spec:Ast.package_spec) =
   let (pkgname,spec_and_loc) = spec in
-  let (   _   ,body_and_loc) = body in
+  let (        body_and_loc) = body in
   let speclist = List.map fst spec_and_loc in
   let bodylist = List.map fst body_and_loc in
   (* Filter on specifications : only sp such as
@@ -204,10 +204,8 @@ let rec parse_extern_specification (name:name):Ast.spec*location =
  *)
 and normalization (compil_unit:compilation_unit) (extern:bool)
     :Ast.compilation_unit =
-  let csttbl = Hashtbl.create 100
-
-  and package=new package_manager
-    in
+  let csttbl = Hashtbl.create 100 in
+  let package = Symboltbl.package gtbl in
 
   (**
    * This object encapsulates the table of types. It is basically a Hashtbl.t
@@ -353,7 +351,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and remove_cst (ident:name) :unit = Hashtbl.remove csttbl ident in
 
   let normalize_ident_cur ident =
-    normalize_ident ident package#current extern
+    normalize_ident ident (Symboltbl.current gtbl) extern
 
   in
 
@@ -362,12 +360,12 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     List.flatten
       (List.map
          (fun pack -> types#find_all (pack, ident))
-         package#get_use)
+         (Symboltbl.get_use gtbl))
   in
 
   let add_enum_litt symbs typ global extern =
     List.iter (fun (ident,v) -> let (p,i) = normalize_ident ident
-                                                            package#current
+                                                            (Symboltbl.current gtbl)
                                                             extern
                                 in
                                  add_enum (p,i)
@@ -444,15 +442,15 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     in
         match x with
           | ([], ident) -> sans_selecteur ident
-          | (pack, _) when extern||package#is_with pack -> avec_selecteur x
-          | (pack, ident) when pack = package#current ->
+          | (pack, _) when extern||(Symboltbl.is_with gtbl pack) -> avec_selecteur x
+          | (pack, ident) when pack = (Symboltbl.current gtbl) ->
               selecteur_courant ([],ident)
           | (pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
                 ("unknown package " ^(Ada_utils.ident_list_to_string pack))
   in
 
   let normalize_name (parents, ident) =
-    package#normalize_name (parents,ident) extern
+    Symboltbl.normalize_name gtbl (parents,ident) extern
   in
 
 let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
@@ -622,8 +620,8 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
   | Var    n ->  Ast.Var(normalize_name n)
-                ,Symboltbl.find_variable gtbl n ~context:(package#current
-                                                ::package#get_use)
+                ,Symboltbl.find_variable gtbl n ~context:((Symboltbl.current gtbl)
+                                                ::(Symboltbl.get_use gtbl))
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
@@ -651,10 +649,10 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
       (* on essaye d'evaluer les bornes *)
       (try
          let (val1,_) = eval_static
-           norm_exp1 (Some(typ)) csttbl package#get_use
+           norm_exp1 (Some(typ)) csttbl
            package extern
          and (val2,_) = eval_static
-           norm_exp2 (Some(typ)) csttbl package#get_use
+           norm_exp2 (Some(typ)) csttbl
            package extern in
          let contrainte =  match (val1, val2) with
            | (FloatVal(f1),FloatVal(f2)) ->
@@ -718,7 +716,7 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
 in
   let add_extern_typdecl id typ_decl loc =
     add_typ (normalize_ident id
-                             package#current
+                             (Symboltbl.current gtbl)
                              true)
             typ_decl
             loc
@@ -734,7 +732,7 @@ let interpret_enumeration_clause agregate assoc cloc loc =
             List.map
               (fun (ident, exp) ->
                  let exp' = normalize_exp exp in
-                 let v = eval_static_integer_exp exp' csttbl package#get_use
+                 let v = eval_static_integer_exp exp' csttbl
                    package false
                  in (ident, v))
               assoc_list in
@@ -978,7 +976,7 @@ in
           List.iter
             (fun ident -> remove_cst (normalize_ident_cur ident))
             ident_list
-      | BasicDecl(UseDecl(use_clause)) -> package#remove_use use_clause
+      | BasicDecl(UseDecl(use_clause)) -> Symboltbl.remove_use gtbl use_clause
       | BasicDecl(NumberDecl(ident,_,_))->remove_cst (normalize_ident_cur ident)
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
@@ -1064,7 +1062,7 @@ in
   in
 
   let rec normalize_basic_decl item loc global reptbl = match item with
-    | UseDecl(use_clause) -> package#add_use use_clause;
+    | UseDecl(use_clause) -> Symboltbl.add_use gtbl use_clause;
         Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
@@ -1072,7 +1070,7 @@ in
         let (_,_,_,t) = subtyp_ind in
           (List.iter
              (fun x ->
-               Symboltbl.add_variable gtbl (package#current,x) t;
+               Symboltbl.add_variable gtbl ((Symboltbl.current gtbl),x) t;
                add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
@@ -1089,7 +1087,7 @@ in
         let status =
           try
             let (v,_) = eval_static normexp (Some(typ)) csttbl
-              package#get_use package extern in
+              package extern in
 
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
@@ -1128,8 +1126,7 @@ in
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
-        let v = eval_static_number norm_exp csttbl package#get_use
-          package extern in
+        let v = eval_static_number norm_exp csttbl package extern in
           (*ajouts dans la table*)
             Symboltbl.add_variable gtbl (normalize_ident_cur ident) T.unknown;
             add_cst (normalize_ident_cur ident)
@@ -1148,14 +1145,14 @@ in
     | RenamingDecl (n, o) ->
         begin
           Symboltbl.add_renaming_declaration gtbl (snd n) (snd o);
-          package#add_renaming_decl (normalize_name n) (normalize_name o);
+          Symboltbl.add_renaming_decl gtbl (normalize_name n) (normalize_name o);
           None;
         end
     | RepresentClause _
     | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
   and normalize_package_spec (nom, list_decl) :Ast.package_spec =
-    package#set_current nom;
+    Symboltbl.set_current gtbl nom;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
                                   | RepresentClause(rep), loc ->
@@ -1172,7 +1169,7 @@ in
                     | Some decl -> Some (decl,loc)
                ) decls in
     let norm_spec = normalize_decls list_decl in
-      package#reset_current;
+      Symboltbl.reset_current gtbl;
       (nom,norm_spec)
 
   and normalize_spec spec = match spec with
@@ -1229,7 +1226,6 @@ in
     List_utils.filter_map normalize_instr block
 
   and normalize_decl_part decl_part ~global =
-    let tbl=Symboltbl.create_table () in
     let represtbl = Hashtbl.create 50 in
     let decl_part :(declarative_item*location) list = List.filter (function
         | BasicDecl(RepresentClause(rep)), loc ->
@@ -1264,7 +1260,7 @@ in
               end
       | _ -> ()
     ) ndp;
-    tbl,ndp
+    ndp
 
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
@@ -1282,11 +1278,11 @@ in
                                (parse_package_specification name)
                            )
         in
-          package#set_current name;
+          Symboltbl.set_current gtbl name;
           let ndp = normalize_decl_part decl_part ~global:true in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
-          package#reset_current;
+          Symboltbl.reset_current gtbl;
           Ast.PackageBody(name, Some norm_spec, ndp)
 
   in
@@ -1312,7 +1308,7 @@ in
         | Ast.ObjectDecl(ident_list, _, _,
                      (Variable | Constant)) ->
             (List.iter
-            (fun x -> let n=normalize_ident x package#current true in
+            (fun x -> let n=normalize_ident x (Symboltbl.current gtbl) true in
                         Symboltbl.add_variable gtbl n T.unknown;
                          add_cst n
                                  (VarSymb(true))
@@ -1328,16 +1324,16 @@ in
             let typ = base_typ subtyp
               (*extract_subtyp subtyp_ind*) in
               List.iter
-                (fun x -> let n = normalize_ident x package#current true in
+                (fun x -> let n = normalize_ident x (Symboltbl.current gtbl) true in
                   Symboltbl.add_variable gtbl n T.unknown;
                   add_cst n
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
         | Ast.NumberDecl(ident, _, Some v) ->
-            Symboltbl.add_variable gtbl (package#current,ident)
+            Symboltbl.add_variable gtbl ((Symboltbl.current gtbl),ident)
                                    T.universal_integer;
-            add_cst (normalize_ident ident package#current true)
+            add_cst (normalize_ident ident (Symboltbl.current gtbl) true)
                     (Number(v, true))
                     true
         | Ast.NumberDecl(_, _, None) ->
@@ -1352,7 +1348,7 @@ in
             add_function name None true
         | Ast.SubtypDecl(ident, subtyp_ind) ->
             let subtyp = extract_subtyp subtyp_ind in
-              types#add (normalize_ident ident package#current true)
+              types#add (normalize_ident ident (Symboltbl.current gtbl) true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
         | Ast.SpecDecl _ | Ast.UseDecl  _ -> ()
@@ -1363,10 +1359,10 @@ in
       | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
       | Ast.PackageSpec(nom, basic_decls) ->
-          package#set_current nom;
+          Symboltbl.set_current gtbl nom;
           List.iter add_extern_basic_decl basic_decls;
-          package#reset_current;
-          package#add_with nom
+          Symboltbl.reset_current gtbl;
+          Symboltbl.add_with gtbl nom
 
   in
 
@@ -1388,7 +1384,7 @@ in
               Ast.With(nom, loc, Some(norm_spec, loc))
               ::normalize_context r (nom::previous_with)
           end
-      | UseContext(n)::r -> package#add_use n;
+      | UseContext(n)::r -> Symboltbl.add_use gtbl n;
                             Ast.UseContext n::normalize_context r previous_with
   in
 

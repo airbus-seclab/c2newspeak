@@ -34,7 +34,6 @@ type constant_symb =
 
 val eval_static :  Ast.expression -> Syntax_ada.typ option
                 -> (Syntax_ada.name,constant_symb) Hashtbl.t
-                -> Syntax_ada.package list
                 -> Ada_utils.package_manager
                 -> bool
   -> Syntax_ada.value*Syntax_ada.typ
@@ -42,14 +41,12 @@ val eval_static :  Ast.expression -> Syntax_ada.typ option
 
 val eval_static_integer_exp :  Ast.expression
                             -> (Syntax_ada.name, constant_symb) Hashtbl.t
-                            -> Syntax_ada.package list
                             -> Ada_utils.package_manager
                             -> bool
     -> Newspeak.Nat.t
 
 val eval_static_number  :  Ast.expression
                         -> (Syntax_ada.name, constant_symb) Hashtbl.t
-                        -> Syntax_ada.package list
                         -> Ada_utils.package_manager
                         -> bool
     -> Syntax_ada.value
