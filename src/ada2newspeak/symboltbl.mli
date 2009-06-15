@@ -137,12 +137,12 @@ module Stack : sig
    * A context stack is a non-empty list of symbol tables.
    * Impure (has side effects).
    *
-   * For example, this program :              will look like this :
-   *
-   *                                   +---------------------------------------+
-   *                                   | Standard library          (RO, NOPOP) |
-   *                                   |   - Integer : type                    |
-   *                                   |   - True    : variable (type=Boolean) |
+   * For example, this program                will look like this :
+   *                           \ 
+   *                            |      +---------------------------------------+
+   *                            |      | Standard library          (RO, NOPOP) |
+   *                           /       |   - Integer : type                    |
+   *                         |_        |   - True    : variable (type=Boolean) |
    *                                   |   - ...                               |
    *                                   +---------------------------------------+
    *  package body p is                | Program library               (NOPOP) |
@@ -157,11 +157,13 @@ module Stack : sig
    *      end;                         | SP decl_part                          |
    *    end F;                         |   - Y       : variable (type=Integer) |
    *  end p;                           +---------------------------------------+
-   *                                   | local decl_part                       |
+   *                                   | local decl_part                 (TOP) |
    *                                   |   - Z       : variable (type=Integer) |
    *                                   +---------------------------------------+
    *                                   |
-   *                                   v stack grows this way
+   * RO = nothing can be added         |
+   * NOPOP = exit_context              | stack grows this way
+   *         will complain             v 
    *
    *)
   type t
