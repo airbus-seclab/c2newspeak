@@ -28,65 +28,24 @@
  *)
 class package_manager :
 object
-    (** Set the current package. *)
     method set_current :Syntax_ada.name -> unit
-
-    (** Reset the current package. *)
     method reset_current :unit
-
-    (**
-     * Get the current package.
-     * If [set_current] has not been called, or [reset_current] has been called
-     * after the last call to [set_current], the empty package is returned.
-     *)
     method current    :Syntax_ada.package
-
-    (** Add a package to the "with" list. *)
     method add_with   :Syntax_ada.name -> unit
-
-    (** Is a package in the "with" list ? *)
     method is_with    :Syntax_ada.package -> bool
-
-    (**
-     * Add a "use" clause to the context.
-     * The added package must have been added to the "with" list.
-     * Adding a package several times is not an error.
-     *)
     method add_use    :Syntax_ada.name -> unit
-
-    (**
-     * Remove a "use" clause from the context.
-     * Removing a package several times is not an error : if a package has been
-     * added n times, it is necessary to remove it n times to remove it from the
-     * context.
-     * Removing a package that is not in the current context will be silently
-     * ignored.
-     *)
     method remove_use :Syntax_ada.name -> unit
-
-    (**
-     * Get the current context.
-     * It returns a list of packages that have been added and not removed.
-     * The order is not specified.
-     *)
     method get_use    :Syntax_ada.package list
-
-    (** Returns the "extern" flag for this manager. *)
     method is_extern :bool
-
-    (** Perform an action with the "extern" flag. *)
     method as_extern_do :(unit->unit)->unit
-
-    (** FIXME document exact specs *)
     method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
-
     method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
 end = object (self)
       val mutable current_pkg:Syntax_ada.package                 = []
       val mutable    with_pkg:Syntax_ada.package list            = []
       val             context:(Syntax_ada.package,int) Hashtbl.t = Hashtbl.create 3
       val mutable     extflag:bool                    = false
-      val mutable    renaming:(Syntax_ada.name*Syntax_ada.name) list        = []
+      val mutable    renaming:(Syntax_ada.name*Syntax_ada.name) list = []
 
       method set_current (x,y) :unit =
         let p = x@[y] in
@@ -177,15 +136,6 @@ end = object (self)
         end
   end
 
-
-
-
-
-
-
-
-
-
 let error x =
   Npkcontext.report_warning "Ada_types" x
 
@@ -253,6 +203,7 @@ type table = { mutable renaming : (string*string) list
              ; t_var    : Ada_types.t IHashtbl.t
              ; t_type   : Ada_types.t IHashtbl.t
              ; t_func   : ((f_param list)*Ada_types.t option) IHashtbl.t
+             ; t_units  : table IHashtbl.t
              ; pkgmgr   : package_manager
              }
 
@@ -293,6 +244,7 @@ let builtin_table :table = { renaming = []
                            ; t_var    = IHashtbl.create 0
                            ; t_type   = IHashtbl.create 0
                            ; t_func   = IHashtbl.create 0
+                           ; t_units  = IHashtbl.create 0
                            ; pkgmgr   = new package_manager
                            }
 
@@ -300,6 +252,7 @@ let create_table _ =  { renaming = []
                       ; t_var    = IHashtbl.copy builtin_table.t_var
                       ; t_type   = IHashtbl.copy builtin_table.t_type
                       ; t_func   = IHashtbl.copy builtin_table.t_func
+                      ; t_units  = IHashtbl.create 0
                       ; pkgmgr   = new package_manager
                       }
 
@@ -319,14 +272,8 @@ let add_subprogram tbl name params rettype =
     ; fp_type = d
     }) params,rettype)
 
-let import_table tbl tbl' =
-  List.iter     (fun x   -> tbl.renaming <- x::tbl.renaming) tbl'.renaming;
-  IHashtbl.iter (fun k v -> IHashtbl.add tbl.t_var  k v) tbl'.t_var;
-  IHashtbl.iter (fun k v -> IHashtbl.add tbl.t_type k v) tbl'.t_type;
-  IHashtbl.iter (fun k v -> IHashtbl.add tbl.t_func k v) tbl'.t_func
-
-let rec find_information hashtbl ren ?context (package,id) =
-  try find_information hashtbl ren ?context (package,List.assoc id ren) with
+let rec find_information t hashtbl (package,id) =
+  try find_information t hashtbl (package,List.assoc id t.renaming) with
     Not_found ->
   begin
     if package != [] then IHashtbl.find hashtbl (package,id)
@@ -337,11 +284,8 @@ let rec find_information hashtbl ren ?context (package,id) =
       try IHashtbl.find hashtbl ([],id)
       with Not_found ->
         begin
-          match context with
-          | None   -> raise Not_found
-          | Some package_list ->
             let p = List.find (fun pkg -> IHashtbl.mem hashtbl (pkg,id))
-                              package_list
+                              (t.pkgmgr#current::t.pkgmgr#get_use)
               (* List.find throws Not_found if     *
                * no package matches the predicate. *
                * This is the expected behaviour.   *)
@@ -350,30 +294,18 @@ let rec find_information hashtbl ren ?context (package,id) =
         end
   end
 
-let find_type tbl ?context n =
-  try find_information tbl.t_type tbl.renaming ?context n
+let find_type tbl n =
+  try find_information tbl tbl.t_type n
   with Not_found -> begin
                       error ("Cannot find type "
                             ^String.concat "." (fst n@[snd n])
-                            ^", context = {"
-                            ^String.concat ", " (
-                                                List.map (fun n ->
-                                                   "'"
-                                                  ^(String.concat "." n)
-                                                  ^"'")
-                                                  (match context with
-                                                    | None -> []
-                                                    | Some c -> c
-                                                  )
-                                                )
-                            ^"}"
                             );
                       raise Not_found
                     end
 
-let find_subprogram tbl ?context n =
+let find_subprogram tbl n =
   try (fun (x,y) -> List.map from_fparam x,y)
-      (find_information tbl.t_func tbl.renaming ?context n)
+      (find_information tbl tbl.t_func n)
   with Not_found -> begin
                       error ("Cannot find subprogram "
                             ^String.concat "." (fst n@[snd n])
@@ -381,13 +313,13 @@ let find_subprogram tbl ?context n =
                       raise Not_found
                     end
 
-let find_variable tbl ?context n =
-  try find_information tbl.t_var tbl.renaming ?context n
+let find_variable tbl n =
+  try find_information tbl tbl.t_var n
   with Not_found ->
     begin
       try
         (* Maybe it is a parameterless function call *)
-        match find_subprogram tbl ?context n with
+        match find_subprogram tbl n with
           | ([], Some rt) -> rt
           | _             -> raise Not_found
       with Not_found ->
@@ -401,14 +333,9 @@ let add_renaming_declaration t newname oldname =
 
 let builtin_type x = find_type builtin_table ([],x)
 
-let package           t = t.pkgmgr
-
 let set_current       t = t.pkgmgr#set_current
 let reset_current     t = t.pkgmgr#reset_current
 let current           t = t.pkgmgr#current
-let set_current       t = t.pkgmgr#set_current       
-let reset_current     t = t.pkgmgr#reset_current     
-let current           t = t.pkgmgr#current           
 let add_with          t = t.pkgmgr#add_with          
 let is_with           t = t.pkgmgr#is_with           
 let add_use           t = t.pkgmgr#add_use           
@@ -432,11 +359,29 @@ let _ =
 module Stack = struct
   type t = table Stack.t
 
-  let create = Stack.create
+  let create _ =
+    let s = Stack.create () in
+    Stack.push builtin_table s;
+    let library = create_table () in
+    Stack.push library s;
+    s
 
   let top x = Stack.top x
 
-  let enter_context x = Stack.push (create_table ()) x
+  let enter_context s name_opt =
+    let new_context = create_table () in
+    begin match name_opt with
+      | None      -> ()
+      | Some name -> IHashtbl.add ((Stack.top s).t_units) ([],name) new_context
+    end;
+    Stack.push new_context s
+
+  let new_unit s name =
+    while (Stack.length s > 2) do
+      ignore (Stack.pop s);
+    done;
+    (* Here Stack.length s = 2 so we are at library level *)
+    enter_context s (Some name)
 
   let exit_context x = ignore (Stack.pop x)
 end

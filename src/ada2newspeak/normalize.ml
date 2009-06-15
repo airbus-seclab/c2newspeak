@@ -52,9 +52,7 @@ let subtyp_to_adatyp st = match st with
   | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
   | SubtypName  n         -> try
-                               Symboltbl.find_type
-                               ~context:(Symboltbl.current
-                               gtbl::Symboltbl.get_use gtbl) gtbl n
+                               Symboltbl.find_type gtbl n
                              with Not_found ->
                                begin
                                  Npkcontext.report_warning "ST2AT"
@@ -618,8 +616,7 @@ and normalize_exp (exp:expression) :Ast.expression = match exp with
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
   | Var    n ->  Ast.Var(normalize_name n)
-                ,Symboltbl.find_variable gtbl n ~context:((Symboltbl.current gtbl)
-                                                ::(Symboltbl.get_use gtbl))
+                ,Symboltbl.find_variable gtbl n
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
   | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
