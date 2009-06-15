@@ -438,7 +438,7 @@ let translate (globals, spec) =
 
       | FunName -> add_glb_cstr !current_fun
 
-      | Cast (lv, t) -> 
+      | Cast (lv, _, t) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast of left value" Npkcontext.DirtySyntax;
 	  let (lv, _) = translate_lv lv in
@@ -528,9 +528,9 @@ let translate (globals, spec) =
 	    let sz = (size_of t) / 8 in
 	      (C.exp_of_int sz, CoreC.uint_typ)
 		
-	| Cast (e, t) -> 
-	    let e = translate_exp e in
-	      cast e t
+	| Cast (e, t1, t2) -> 
+	    let (e, _) = translate_exp e in
+	      cast (e, t1) t2
 		(* TODO: introduce type funexp in corec??*)
 	| Call (Var x, args) when is_fname x -> 
 	    let (f, (tmp_args_t, ret_t)) = find_fname x in
@@ -935,7 +935,7 @@ let translate (globals, spec) =
 	  let (set, _) = translate_set set in
 	    (C.Set set, loc)::[]
 
-      | Cast (e, Void) -> 
+      | Cast (e, _, Void) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast to void" Npkcontext.DirtySyntax;
 	  translate_stmt_exp loc e

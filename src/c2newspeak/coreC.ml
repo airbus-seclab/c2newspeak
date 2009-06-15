@@ -117,7 +117,7 @@ and exp =
     | Offsetof of (typ * string)
     | Str of string
     | FunName
-    | Cast of typ_exp
+    | Cast of (exp * typ * typ)
 (* None is a regular assignment *)
     | Set of (exp * (binop * typ) option * exp)
 (* boolean is true if the operation is appled after the evaluation of the 
@@ -227,7 +227,7 @@ let rec string_of_exp e =
     | Sizeof _ -> "Sizeof"
     | Str _ -> "Str"
     | FunName -> "FunName"
-    | Cast (e, _) -> 
+    | Cast (e, _, _) -> 
 	let e = string_of_exp e in
 	  "(typ) "^e
     | Set (lv, None, e) -> (string_of_exp lv)^" = "^(string_of_exp e)^";"

@@ -108,7 +108,7 @@ and exp =
     | Offsetof of (typ * string)
     | Str of string
     | FunName
-    | Cast of typ_exp
+    | Cast of (exp * typ * typ)
 (* None is a regular assignment *)
     | Set of (exp * (binop * typ) option * exp)
 (* boolean is true if the operation is applied after the evaluation of the 

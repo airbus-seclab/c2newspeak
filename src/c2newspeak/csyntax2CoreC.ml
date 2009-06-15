@@ -300,10 +300,10 @@ let process (globals, specs) =
 	  let len = C.exp_of_int ((String.length x) + 1) in
 	    (C.Str x, C.Array (C.char_typ, Some len))
       | FunName -> translate_exp (Str !current_fun)
-      | Cast (e, t) -> 
-	  let (e, _) = translate_exp e in
-	  let t = translate_typ t in
-	    (C.Cast (e, t), t)
+      | Cast (e, t2) -> 
+	  let (e, t1) = translate_exp e in
+	  let t2 = translate_typ t2 in
+	    (C.Cast (e, t1, t2), t2)
       | Set (lv, op, e) -> 
 	  let (lv, t1) = translate_exp lv in
 	  let (e, t2) = translate_exp e in
