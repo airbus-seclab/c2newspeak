@@ -324,14 +324,16 @@ let process (globals, specs) =
 	    (C.BlkExp (blk, is_after), t)
 	      
   and translate_exp e =
-    match translate_lv e with
-	(e, C.Array (t, len)) -> 
-	  (C.AddrOf (C.Index (e, (t, len), C.exp_of_int 0)), C.Ptr t)
-      | x -> x
+    let (e, t) = translate_lv e in
+      match t with
+	  C.Array (t, len) -> 
+	    (C.AddrOf (C.Index (e, (t, len), C.exp_of_int 0)), C.Ptr t)
+	| C.Fun _ -> (C.AddrOf e, C.Ptr t)
+	| _ -> (e, t)
 
   (* TODO: introduce type funexp in corec??*)
   and translate_funexp f =
-    let (f, ft) = translate_exp f in
+    let (f, ft) = translate_lv f in
       match ft with
 	  C.Fun t -> (f, t)
 	| C.Ptr (C.Fun t) -> (C.Deref f, t)
