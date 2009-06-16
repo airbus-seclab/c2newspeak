@@ -764,6 +764,14 @@ let translate (globals, spec) =
       | Typeof v -> 
 	  let (_, t) = find_var v in
 	    translate_scalar_typ t
+      | Bitfield ((s, n), sz) -> 
+	  let (sz, _) = translate_exp sz in
+	  let sz = Nat.to_int (C.eval_exp sz) in
+	    if sz > n then begin
+	      Npkcontext.report_error "Firstpass.process_struct_fields"
+		"width of bitfield exceeds its type"
+	    end;
+	    N.Int (s, sz)
       | _ -> 
 	  Npkcontext.report_error "Firstpass.translate_scalar_typ" 
 	    "scalar type expected"
@@ -771,7 +779,7 @@ let translate (globals, spec) =
   and translate_typ t =
     match t with
 	Void -> C.Void
-      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg -> 
+      | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg | Bitfield _ -> 
 	  C.Scalar (translate_scalar_typ t)
       | Fun _ -> C.Fun
       | Array (t, len) -> 
@@ -785,9 +793,6 @@ let translate (globals, spec) =
       | Typeof v -> 
 	  let (_, t) = find_var v in
 	    translate_typ t
-      | Bitfield _ -> 
-	  Npkcontext.report_error "Firstpass.translate_typ" 
-	    "bitfields not allowed outside of structures"
 
   and translate_array_len x =
     match x with
