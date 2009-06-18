@@ -137,7 +137,7 @@ end = object (self)
   end
 
 let error x =
-  Npkcontext.report_warning "Ada_types" x
+  Npkcontext.print_debug ("ERROR : Ada_types"^x)
 
 (**
  * The [string] type with primitives to
@@ -191,6 +191,15 @@ let from_fparam f =
   )
 
 (**
+ * Symbols.
+ *)
+type symbol =
+  | Variable   of Ada_types.t
+  | Type       of Ada_types.t
+  | Subprogram of ((f_param list)*Ada_types.t option)
+  | Unit       of table
+
+(**
  * A symbol table.
  * t_var and t_type hold respectively data related
  * to variables and returning their type and to types.
@@ -199,13 +208,90 @@ let from_fparam f =
  * information is typed the same way.
  *)
 
-type table = { mutable renaming : (string*string) list
-             ; t_var    : Ada_types.t IHashtbl.t
-             ; t_type   : Ada_types.t IHashtbl.t
-             ; t_func   : ((f_param list)*Ada_types.t option) IHashtbl.t
-             ; t_units  : table IHashtbl.t
-             ; pkgmgr   : package_manager
-             }
+and table = { mutable renaming : (string*string) list
+            ; t_tbl    : symbol IHashtbl.t
+            ; pkgmgr   : package_manager
+            }
+
+type symbol_type = SymV | SymT | SymS | SymU
+
+let type_of_sym = function
+  | Variable   _ -> SymV
+  | Type       _ -> SymT
+  | Subprogram _ -> SymS
+  | Unit       _ -> SymU
+
+let print_symbol = function
+  | Variable   t -> "V",Ada_types.print t
+  | Type       t -> "T",Ada_types.print t
+  | Subprogram _ -> "S","<subprogram>"
+  | Unit       _ -> "U","<unit>"
+
+let print_symbol_join s =
+  let (s1,s2) = print_symbol s in
+  s1^" "^s2
+
+let syms_of_type t l =
+  List.exists (fun x -> (type_of_sym x = t)) l
+
+exception ParameterlessFunction of Ada_types.t
+
+(* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
+let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
+  let p' x =
+    match p x with
+      | None   -> None
+      | Some y -> if filter y then Some y else None
+  in
+  match l with
+  |  []  -> raise Not_found
+  | h::t -> begin
+              match p' h with
+                | None -> extract_unique p' t
+                | Some r -> if List.exists (fun x -> p' x <> None) t
+                            then None
+                            else Some r
+            end
+
+let rec cast_v ?(filter=fun _ -> true) lst =
+  Npkcontext.print_debug ("possible interpretations (variable) = {\n"
+                         ^String.concat ",\n" (List.map print_symbol_join lst)
+                         ^"}"
+                         );
+  match extract_unique ~filter (function Variable x -> Some x
+                               | Subprogram ([],Some rt) -> raise (ParameterlessFunction rt)
+                               |_ -> None
+    ) lst with
+    | None -> error "cast_variable : Ambiguous variable name";Ada_types.unknown
+    | Some x -> x
+
+let rec cast_t lst =
+  Npkcontext.print_debug ("possible interpretations (type) = {"
+                         ^String.concat ", " (List.map print_symbol_join lst)
+                         ^"}");
+  match extract_unique (function Type x -> Some x |_ -> None) lst with
+  | None -> error "cast_type : Ambiguous type name";Ada_types.unknown
+    | Some x -> x
+
+let rec cast_s lst =
+  Npkcontext.print_debug ("possible interpretations (subprogram) = {"
+                         ^String.concat ", " (List.map print_symbol_join lst)
+                         ^"}"
+                         );
+  match lst with
+  | Subprogram x::tl when not (syms_of_type SymS tl) -> x
+  |       _     ::tl -> cast_s tl
+  |             []   -> raise Not_found
+
+let rec cast_u lst =
+  Npkcontext.print_debug ("possible interpretations (unit) = {"
+                         ^String.concat ", " (List.map print_symbol_join lst)
+                         ^"}"
+                         );
+  match lst with
+  | Unit       x::tl when not (syms_of_type SymU tl) -> x
+  |       _     ::tl -> cast_u tl
+  |             []   -> raise Not_found
 
 let print_table tbl =
   let pad width str =
@@ -214,24 +300,24 @@ let print_table tbl =
     let a =  width - x - b    in
     (String.make a ' ')^str^(String.make b ' ')
   in
-  let line_printer t (p,i) s_t =
+  let line_printer (p,i) sym =
+    let (t,sym_d) = print_symbol sym in
     List.iter print_string
     ["|"
     ;pad 6 t
     ;"|"
     ;pad 15 (String.concat "." (p@[i]))
     ;"| "
-    ;Ada_types.print s_t
+    ;sym_d
     ];
     print_newline ()
   in
   print_endline "+--------------------------- . . .";
   print_endline "|           Symbol table          ";
   print_endline "+------+---------------+---- . . .";
-  print_endline "| type |      name     |  Contents";
+  print_endline "| Type |     Name      |  Contents";
   print_endline "+------+---------------+---- . . .";
-  IHashtbl.iter (line_printer "Var") tbl.t_var;
-  IHashtbl.iter (line_printer "Typ") tbl.t_type;
+  IHashtbl.iter line_printer tbl.t_tbl;
   print_endline "+------+---------------+---- . . .";
   print_newline ()
 
@@ -241,71 +327,87 @@ let print_table tbl =
  * builtin_type and builtin_variable.
  *)
 let builtin_table :table = { renaming = []
-                           ; t_var    = IHashtbl.create 0
-                           ; t_type   = IHashtbl.create 0
-                           ; t_func   = IHashtbl.create 0
-                           ; t_units  = IHashtbl.create 0
+                           ; t_tbl    = IHashtbl.create 0
                            ; pkgmgr   = new package_manager
                            }
 
 let create_table _ =  { renaming = []
-                      ; t_var    = IHashtbl.copy builtin_table.t_var
-                      ; t_type   = IHashtbl.copy builtin_table.t_type
-                      ; t_func   = IHashtbl.copy builtin_table.t_func
-                      ; t_units  = IHashtbl.create 0
+                      ; t_tbl    = IHashtbl.copy builtin_table.t_tbl
                       ; pkgmgr   = new package_manager
                       }
 
 let add_variable tbl n t =
   Npkcontext.print_debug ("Adding variable "^String.concat "." (fst n@[snd n]));
-  IHashtbl.add tbl.t_var n t
+  IHashtbl.add tbl.t_tbl n (Variable t)
 
 let add_type tbl n typ =
   Npkcontext.print_debug ("Adding type  "   ^String.concat "." (fst n@[snd n]));
-  IHashtbl.add tbl.t_type n typ
+  IHashtbl.add tbl.t_tbl n (Type typ)
 
 let add_subprogram tbl name params rettype =
-  IHashtbl.add tbl.t_func name (List.map (fun (a,b,c,d) ->
-    { fp_name = a
-    ; fp_in   = b
-    ; fp_out  = c
-    ; fp_type = d
-    }) params,rettype)
+  IHashtbl.add tbl.t_tbl name (Subprogram (List.map to_fparam params,rettype))
 
-let rec find_information t hashtbl (package,id) =
-  try find_information t hashtbl (package,List.assoc id t.renaming) with
-    Not_found ->
+(**
+ * Find matching symbols in a table.
+ *
+ * First, look for renaming declarations.
+ * Then, it depends on the package provided :
+ *   If some package is provided, find directly this one.
+ *   If no package is provided (empty list) :
+ *     Try it first as a local variable
+ *     Then, try it with every package provided in the context.
+ *     (context = current package + use list).
+ *
+ * The return value is a list of [symbol]s for the first class that returns a
+ * non-empty result. This approach allows to correctly handle hiding.
+ *
+ * This result is to be extracted by find_xxx functions
+ * that will call cast_x on it.
+ *)
+let rec find_symbols t (package,id) =
+  let ren = try find_symbols t (package, List.assoc id t.renaming)
+            with Not_found -> []
+  in
+  if ren <> [] then ren
+  else
   begin
-    if package != [] then IHashtbl.find hashtbl (package,id)
-    else (* no package : try it as a local variable,
-          *              or within current context
-          *              (if provided)
-          *)
-      try IHashtbl.find hashtbl ([],id)
-      with Not_found ->
+    if package <> [] then IHashtbl.find_all t.t_tbl (package,id)
+    else 
+      let as_local = IHashtbl.find_all t.t_tbl ([],id) in
+      if as_local <> [] then as_local else
         begin
-            let p = List.find (fun pkg -> IHashtbl.mem hashtbl (pkg,id))
+          try
+            let p = List.find (fun pkg -> IHashtbl.mem t.t_tbl (pkg,id))
                               (t.pkgmgr#current::t.pkgmgr#get_use)
-              (* List.find throws Not_found if     *
-               * no package matches the predicate. *
-               * This is the expected behaviour.   *)
             in
-            IHashtbl.find hashtbl (p,id)
+            IHashtbl.find_all t.t_tbl (p,id)
+          with Not_found -> (* thrown by List.find if no result is found *)
+            []
         end
   end
 
 let find_type tbl n =
-  try find_information tbl tbl.t_type n
+  try cast_t (find_symbols tbl n)
   with Not_found -> begin
                       error ("Cannot find type "
                             ^String.concat "." (fst n@[snd n])
                             );
-                      raise Not_found
+                      Ada_types.unknown
                     end
+
+let type_ovl_intersection tbl n1 n2 =
+  let inter l1 l2 =
+    List.filter (fun x -> List.mem x l1) l2
+  in
+  let s1 = find_symbols tbl n1 in
+  let s2 = find_symbols tbl n2 in
+  let inte = inter s1 s2 in
+  if inte = [] then Npkcontext.print_debug "Binop : intersection empty" else ();
+  cast_v inte
 
 let find_subprogram tbl n =
   try (fun (x,y) -> List.map from_fparam x,y)
-      (find_information tbl tbl.t_func n)
+      (cast_s (find_symbols tbl n))
   with Not_found -> begin
                       error ("Cannot find subprogram "
                             ^String.concat "." (fst n@[snd n])
@@ -313,19 +415,26 @@ let find_subprogram tbl n =
                       raise Not_found
                     end
 
-let find_variable tbl n =
-  try find_information tbl tbl.t_var n
+let find_variable tbl ?expected_type n =
+  let ovl_predicate = match expected_type with
+    | Some t when t <> Ada_types.unknown
+        -> fun x ->     Ada_types.is_compatible x t
+    | _ -> fun _ -> true
+  in
+  begin
+  Npkcontext.print_debug ("Find_variable "
+                         ^snd n
+                         ^" : expected type is "
+                         ^match expected_type with None -> "None"
+                                  | Some t -> Ada_types.print t)
+  end;
+  try cast_v ~filter:ovl_predicate (find_symbols tbl n)
   with Not_found ->
     begin
-      try
-        (* Maybe it is a parameterless function call *)
-        match find_subprogram tbl n with
-          | ([], Some rt) -> rt
-          | _             -> raise Not_found
-      with Not_found ->
-        error ("Cannot find variable "^snd n);
- (*      Ada_types.unknown; *)
-        failwith "aaarg"
+       error ("Cannot find variable "
+             ^String.concat "." (fst n@[snd n])
+             );
+       Ada_types.unknown
     end
 
 let add_renaming_declaration t newname oldname =
@@ -372,7 +481,7 @@ module Stack = struct
     let new_context = create_table () in
     begin match name_opt with
       | None      -> ()
-      | Some name -> IHashtbl.add ((Stack.top s).t_units) ([],name) new_context
+      | Some name -> IHashtbl.add ((Stack.top s).t_tbl) ([],name) (Unit new_context)
     end;
     Stack.push new_context s
 

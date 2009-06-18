@@ -142,7 +142,7 @@ and designator_to_string des = match des with
 and subtyp_to_string subtyp = match subtyp with
   | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"
   | SubtypName(name) -> "SubtypName("^(name_to_string name)^")"
-  | Constrained(typ, contrainte, static) ->
+  | Constrained(typ, contrainte, static,_) ->
       "Constrained("^(typ_to_string typ)^", "
       ^(contrainte_to_string contrainte)^", "
       ^(string_of_bool static)^")"

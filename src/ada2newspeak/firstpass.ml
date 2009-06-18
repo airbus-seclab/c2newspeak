@@ -108,7 +108,7 @@ let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
 let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
   match subtyp with
     | A.Unconstrained _ -> exp
-    | A.Constrained(_, contrainte, _) ->
+    | A.Constrained(_, contrainte, _, _) ->
         make_check_constraint contrainte exp
     | A.SubtypName _ ->
         Npkcontext.report_error
@@ -117,7 +117,7 @@ let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
 
 let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
   match styp with
-    | A.Constrained( _, A.IntegerRangeConstraint(nat1, _) , _ ) ->
+    | A.Constrained( _, A.IntegerRangeConstraint(nat1, _) , _ ,_) ->
                 let borne_inf = C.Const(C.CInt(nat1)) in
                 let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
                     C.Binop (Newspeak.MultI, decal,  size)
@@ -693,7 +693,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     let new_constr  =
                       match contraint with
                           None -> begin match stypindex with
-                            | A.Constrained(_, contr, _) -> contr
+                            | A.Constrained(_, contr, _, _) -> contr
                             | A.Unconstrained _
                             | A.SubtypName _ ->
                                 Npkcontext.report_error
@@ -1342,7 +1342,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
                   (*TO DO base_typ already exist use it if possible*)
                   let subtyp_to_typ sub = match sub with
-                      A.Constrained (z, _, _) ->  z
+                      A.Constrained (z, _, _, _) ->  z
                     | _ -> Npkcontext.report_error "firstpass.ml:Function Call"
                                           " for array range TO DO "
                   in
@@ -1480,7 +1480,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
            | Ast.Loop(For(iterator,a,b,is_reverse), body) ->
                 add_var loc (A.Constrained(A.Integer,
                                          Ada_config.integer_constraint,
-                                         true))
+                                         true,T.integer))
                             iterator
                             ~deref:false
                             ~ro:false; (* should be RO, actually *)

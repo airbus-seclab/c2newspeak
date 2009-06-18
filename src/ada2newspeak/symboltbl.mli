@@ -58,11 +58,24 @@ val find_type :    table
             -> Ada_types.t
 
 (**
+ * Find the intersection of possible types.
+ * Used for example to resolve overloading in binary operations.
+ *)
+val type_ovl_intersection : table
+                          -> string list*string
+                          -> string list*string
+           -> Ada_types.t
+
+exception ParameterlessFunction of Ada_types.t
+
+(**
  * Get a variable from a symbol table.
- * @raise Not_found if no type could be found.
+ * @raise ParamterlessFunction if no variable could be found,
+ * but a parameterless function of the same name exists.
  * @param see [find_type]
  *)
 val find_variable :     table
+                    -> ?expected_type:Ada_types.t
                     ->  string list*string
             -> Ada_types.t
 

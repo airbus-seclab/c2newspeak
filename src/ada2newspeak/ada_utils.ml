@@ -160,7 +160,7 @@ let value_is_static_constraint_compatible contrainte value =
 let check_static_subtyp subtyp value =
   match subtyp with
     | Unconstrained(_) -> ()
-    | Constrained(_, contrainte, true) ->
+    | Constrained(_, contrainte, true,_) ->
         if not
           (value_is_static_constraint_compatible
              contrainte value)
@@ -168,7 +168,7 @@ let check_static_subtyp subtyp value =
           Npkcontext.report_error "Ada_utils.check_static_subtyp"
             "constraint error : value not in range"
         end
-    | Constrained(_, _, false) ->
+    | Constrained(_, _, false,_) ->
         raise NonStaticExpression
     | SubtypName _ ->
         Npkcontext.report_error "Ada_utils.check_static_subtyp"
@@ -178,7 +178,7 @@ let check_static_subtyp subtyp value =
 
 let base_typ subtyp = match subtyp with
   | Unconstrained typ -> typ
-  | Constrained (typ, _, _) -> typ
+  | Constrained (typ, _, _,_) -> typ
   | SubtypName _ ->
       Npkcontext.report_error "Ada_utils.base_type"
         "internal error : unexpected subtyp name"

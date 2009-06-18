@@ -48,19 +48,20 @@ let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
   | Character          -> T.character
   | Declared (_,_,t,_) -> t
 
-let subtyp_to_adatyp st = match st with
-  | Unconstrained typ     -> T.new_unconstr (typ_to_adatyp typ)
-  | Constrained (typ,_,_) -> T.new_unconstr (typ_to_adatyp typ) (* FIXME *)
-  | SubtypName  n         -> try
-                               Symboltbl.find_type gtbl n
-                             with Not_found ->
-                               begin
-                                 Npkcontext.report_warning "ST2AT"
-                                   ("Cannot find type '"
-                                   ^name_to_string n
-                                   ^"'");
-                                 T.unknown;
-                               end
+let subtyp_to_adatyp st =
+  match st with
+  | Unconstrained typ      -> T.new_unconstr (typ_to_adatyp typ)
+  | Constrained (_,_,_,t) -> t
+  | SubtypName  n          -> try
+                                Symboltbl.find_type gtbl n
+                              with Not_found ->
+                                begin
+                                  Npkcontext.report_warning "ST2AT"
+                                    ("Cannot find type '"
+                                    ^name_to_string n
+                                    ^"'");
+                                  T.unknown;
+                                end
 
 (**
  * Try to find a body for a given specification.
@@ -245,6 +246,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           | "integer"   ->  Syntax_ada.Constrained(Syntax_ada.Integer
                                                   ,Ada_config.integer_constraint
                                                   ,true
+                                                  ,T.integer
                                                   )
                            ,Newspeak.unknown_loc
           | "float"     ->  Syntax_ada.Unconstrained Syntax_ada.Float
@@ -379,17 +381,21 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
-          let contrainte = IntegerRangeConstraint(min, max)
-          and typ = Declared(snd nom,typdecl, T.unknown,location)
-          in
+          let contrainte = IntegerRangeConstraint(min, max) in
+          let t = T.new_enumerated (fst (List.split symbs)) in
+          let typ = Declared(snd nom,typdecl, T.unknown,location) in
             add_enum_litt symbs typ global extern;
-            Constrained(typ, contrainte, true)
+            Constrained(typ, contrainte, true, t)
 
       | IntegerRange(contrainte, _) ->
           Constrained(Declared(snd nom
                               ,typdecl
                               ,T.unknown
-                              ,location), contrainte, true)
+                              ,location)
+                     ,contrainte
+                     ,true
+                     ,T.unknown (* FIXME *)
+                     )
       | DerivedType(subtyp_ind) ->
           let subtyp = extract_subtyp subtyp_ind in
           let typ = base_typ subtyp in
@@ -463,18 +469,18 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
       match (contrainte, norm_subtyp_ref) with
         | (None, Unconstrained(typ)) ->
             (Unconstrained(typ), None)
-        | (None, Constrained(typ, const, static)) ->
-            (Constrained(typ, const, static), None)
+        | (None, Constrained(typ, const, static, t)) ->
+            (Constrained(typ, const, static, t), None)
         | (Some(const), Unconstrained(typ)) ->
             let norm_contrainte =
               normalize_contrainte const typ
             in
-              (Constrained(typ,norm_contrainte,true),
+              (Constrained(typ,norm_contrainte,true,typ_to_adatyp typ),
                Some(norm_contrainte))
-        | (Some(const), Constrained(typ,const_ref,stat_ref)) ->
+        | (Some(const), Constrained(typ,const_ref,stat_ref,t)) ->
             let norm_contrainte = normalize_contrainte const typ in
               constraint_check_compatibility const_ref norm_contrainte;
-              (Constrained(typ,norm_contrainte,stat_ref),
+              (Constrained(typ,norm_contrainte,stat_ref,t),
                Some(norm_contrainte))
         | (_, SubtypName _ ) ->
             Npkcontext.report_error
@@ -493,7 +499,7 @@ and normalize_subtyp subtyp =
         let subtyp = extract_subtyp n_st1 in
 
         let contrainte = match subtyp with
-          | Constrained(_,contrainte,_) -> contrainte
+          | Constrained(_,contrainte,_,_) -> contrainte
           | Unconstrained _ ->
               Npkcontext.report_error
                 "Ada_normalize.normalize_typ_decl"
@@ -528,15 +534,15 @@ and normalize_subtyp subtyp =
   in
     match subtyp with (* For array norm_typ is used here*)
       | Unconstrained(typ) -> Unconstrained(norm_typ typ)
-      | Constrained(typ,const,static) ->
-          Constrained(norm_typ typ,const,static)
+      | Constrained(typ,const,static,t) ->
+          Constrained(norm_typ typ,const,static,t)
       | SubtypName(name) ->
           fst (find_subtyp (normalize_name name))
 
 and array_bounds (typ:subtyp) :nat*nat=
     match typ with
     | Unconstrained(Declared(_,Array {array_index =
-                Constrained(_, IntegerRangeConstraint (a,b), _), None,_,_
+                Constrained(_, IntegerRangeConstraint (a,b), _, _), None,_,_
           },_,_)) -> (a,b)
     | SubtypName _ -> array_bounds (normalize_subtyp typ)
     | _  -> Npkcontext.report_error "ada_normalize.array_bounds"
@@ -592,8 +598,9 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
               ,TC.type_of_binop Ast.And t1 t2
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
-          let (e1',t1) = normalize_exp e1 in
-          let (e2',t2) = normalize_exp e2 in
+          let expected_type = None in
+          let (e1',t1) = normalize_exp ?expected_type e1 in
+          let (e2',t2) = normalize_exp ?expected_type e2 in
           Ast.Binary (bop', (e1',t1), (e2',t2)),
           TC.type_of_binop bop' t1 t2
 
@@ -610,19 +617,28 @@ and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
 (**
  * Normalize an expression.
  *)
-and normalize_exp (exp:expression) :Ast.expression = match exp with
+and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
+:Ast.expression = match exp with
   | CInt   x -> Ast.CInt   x,T.universal_integer
   | CFloat x -> Ast.CFloat x,T.universal_real
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
-  | Var    n ->  Ast.Var(normalize_name n)
-                ,Symboltbl.find_variable gtbl n
+  | Var    n -> begin (* n may denote the name of a paramterless function *)
+                  let n' = normalize_name n in
+                  try
+                    let t = Symboltbl.find_variable ?expected_type gtbl n in
+                    Ast.Var(normalize_name n) ,t
+                  with Symboltbl.ParameterlessFunction rt ->
+                    Ast.FunctionCall(n', []),rt
+                end
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
-  | Qualified(subtyp, exp) -> Ast.Qualified(normalize_subtyp subtyp,
-                                        normalize_exp exp),T.boolean
+  | Qualified(subtyp, exp) -> let t = subtyp_to_adatyp subtyp in
+                              Ast.Qualified(normalize_subtyp subtyp,
+                                  normalize_exp ~expected_type:t exp)
+                              ,t
   | FunctionCall(nom, params) ->
-      Ast.FunctionCall(nom, List.map normalize_arg params),T.boolean
+      Ast.FunctionCall(nom, List.map normalize_arg params),T.unknown
   | Attribute (subtype, AttributeDesignator(attr, _))->
       begin
         let (a,b) = array_bounds subtype in
@@ -887,7 +903,7 @@ in
                                                        ,T.unknown
                                                        ,loc
                                                        ))
-              | Constrained(_, contrainte, static) ->
+              | Constrained(_, contrainte, static, t) ->
               (* for enumeration types, we update the value of the constraint *)
                   let contrainte = match (typ_decl, parent_type) with
                     | (Enum(new_assoc,_), Declared(_,Enum(symbs, _),_,_)) ->
@@ -896,7 +912,11 @@ in
                   in Constrained(Declared(ident
                                          ,typ_decl
                                          ,T.unknown
-                                         ,loc),contrainte,static)
+                                         ,loc)
+                                ,contrainte
+                                ,static
+                                ,t
+                                )
               | SubtypName _ ->
                   Npkcontext.report_error
                     "Ada_normalize.normalize_typ_decl"
@@ -921,7 +941,7 @@ in
         let subtyp = extract_subtyp norm_inter in
 
         let contrainte = match subtyp with
-          | Constrained(_,contrainte,_) -> contrainte
+          | Constrained(_,contrainte,_,_) -> contrainte
           | Unconstrained _ ->
               Npkcontext.report_error
                 "Ada_normalize.normalize_typ_decl"
@@ -1058,9 +1078,13 @@ in
     | UseDecl(use_clause) -> Symboltbl.add_use gtbl use_clause;
         Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
+        let t = 
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-        let norm_def = may normalize_exp def in
-        let (_,_,_,t) = subtyp_ind in
+        let norm_def = may (fun x -> normalize_exp ~expected_type:t x) def in
           (List.iter
              (fun x ->
                Symboltbl.add_variable gtbl ((Symboltbl.current gtbl),x) t;
@@ -1173,9 +1197,9 @@ in
   in
 
   let rec normalize_lval = function
-    | Lval n -> Ast.Lval n
-    | ArrayAccess (lv,e) -> Ast.ArrayAccess(normalize_lval lv,
-                                            normalize_exp  e)
+    | Lval n -> (Ast.Lval n, Some (Symboltbl.find_variable gtbl n))
+    | ArrayAccess (lv,e) -> Ast.ArrayAccess(fst (normalize_lval lv),
+                                            normalize_exp  e),None
   in
 
   let rec normalize_instr (instr,loc) =
@@ -1183,8 +1207,11 @@ in
     match instr with
     | NullInstr    -> None
     | ReturnSimple -> Some (Ast.ReturnSimple, loc)
-    | Assign(lv, exp) -> Some (Ast.Assign(normalize_lval lv,
-                                          normalize_exp exp), loc)
+    | Assign(lv, exp) -> begin
+                           let (lv', t) = normalize_lval lv in
+                           Some (Ast.Assign(lv',
+                                      normalize_exp ?expected_type:t exp), loc)
+                         end
     | Return(exp) -> Some (Ast.Return(normalize_exp exp), loc)
     | If(exp, instr_then, instr_else) ->
         Some
