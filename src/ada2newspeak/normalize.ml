@@ -600,6 +600,7 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type = match (e1, e2) with
             | Var v1 , Var v2 -> Some (Symboltbl.type_ovl_intersection gtbl v1 v2)
+            | _      , Qualified (st,_) -> Some (subtyp_to_adatyp st)
             | _               -> None
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in

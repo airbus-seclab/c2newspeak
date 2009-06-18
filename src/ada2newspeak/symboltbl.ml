@@ -137,8 +137,10 @@ end = object (self)
   end
 
 let error x =
-  Npkcontext.print_debug ("ERROR : Ada_types"^x)
-  (*Npkcontext.report_warning "Ada_types" x*)
+  if (1=1) then
+    Npkcontext.print_debug ("ERROR : Ada_types"^x)
+  else
+    Npkcontext.report_warning "Ada_types" x
 
 (**
  * The [string] type with primitives to
