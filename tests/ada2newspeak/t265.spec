@@ -5,7 +5,7 @@ void t265.f(void) {
 }
 
 void t265.main(void) {
-  (t265.adb:14#178)^t265.f();
+  (t265.adb:14#5)^t265.f();
 }
 
 

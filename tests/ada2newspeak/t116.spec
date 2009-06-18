@@ -1,1 +1,1 @@
-Fatal error: t116.adb:11#149: uncompatible types
+Fatal error: t116.adb:11#10: uncompatible types

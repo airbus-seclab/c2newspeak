@@ -1,1 +1,1 @@
-Fatal error: t284.adb:7#128: Circular declaration detected for 'x'.
+Fatal error: t284.adb:7#5: Circular declaration detected for 'x'.

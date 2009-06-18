@@ -1,1 +1,1 @@
-Fatal error: t121.adb:3#80: expected static expression
+Fatal error: t121.adb:3#6: expected static expression
