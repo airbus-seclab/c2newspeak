@@ -1039,6 +1039,10 @@ let translate (globals, spec) =
 
 (* TODO: think about this: simplify *)
   and translate_if loc (e, blk1, blk2) =
+    (* restores the location that may have been destroyed during 
+       the translation of blk1 and blk2
+    *)
+    Npkcontext.set_loc loc;
 (* TODO: this is a bit of a hack!! *)
     let rec select (blk1, blk2) =
       match (blk1, blk2) with
