@@ -598,7 +598,10 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
               ,TC.type_of_binop Ast.And t1 t2
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
-          let expected_type = None in
+          let expected_type = match (e1, e2) with
+            | Var v1 , Var v2 -> Some (Symboltbl.type_ovl_intersection gtbl v1 v2)
+            | _               -> None
+          in
           let (e1',t1) = normalize_exp ?expected_type e1 in
           let (e2',t2) = normalize_exp ?expected_type e2 in
           Ast.Binary (bop', (e1',t1), (e2',t2)),
