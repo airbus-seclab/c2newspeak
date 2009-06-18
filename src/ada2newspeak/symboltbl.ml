@@ -222,10 +222,20 @@ let type_of_sym = function
   | Unit       _ -> SymU
 
 let print_symbol = function
-  | Variable   t -> "V",Ada_types.print t
-  | Type       t -> "T",Ada_types.print t
-  | Subprogram _ -> "S","<subprogram>"
-  | Unit       _ -> "U","<unit>"
+  | Variable     t   -> "V",Ada_types.print t
+  | Type         t   -> "T",Ada_types.print t
+  | Subprogram (p,r) -> "S",(
+                             let pdesc = " with "
+                                       ^ string_of_int (List.length p)
+                                       ^ " parameter(s)"
+                             in match r with None   -> "procedure"^pdesc
+                                           | Some t -> "function"
+                                                       ^pdesc
+                                                       ^" and return type "
+                                                       ^Ada_types.print t
+                            )
+                            
+  | Unit         _   -> "U","<unit>"
 
 let print_symbol_join s =
   let (s1,s2) = print_symbol s in
@@ -254,6 +264,7 @@ let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
             end
 
 let rec cast_v ?(filter=fun _ -> true) lst =
+  if (List.length lst > 1) then
   Npkcontext.print_debug ("possible interpretations (variable) = {\n"
                          ^String.concat ",\n" (List.map print_symbol_join lst)
                          ^"}"
@@ -271,17 +282,16 @@ let rec cast_t lst =
                          ^"}");
   match extract_unique (function Type x -> Some x |_ -> None) lst with
   | None -> error "cast_type : Ambiguous type name";Ada_types.unknown
-    | Some x -> x
+  | Some x -> x
 
 let rec cast_s lst =
   Npkcontext.print_debug ("possible interpretations (subprogram) = {"
                          ^String.concat ", " (List.map print_symbol_join lst)
                          ^"}"
                          );
-  match lst with
-  | Subprogram x::tl when not (syms_of_type SymS tl) -> x
-  |       _     ::tl -> cast_s tl
-  |             []   -> raise Not_found
+ match extract_unique (function Subprogram x -> Some x | _ -> None) lst with
+   | None -> error "cast_subprogram : Ambiguous subprogram name";[],None
+   | Some x -> x
 
 let rec cast_u lst =
   Npkcontext.print_debug ("possible interpretations (unit) = {"

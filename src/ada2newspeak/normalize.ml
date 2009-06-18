@@ -625,11 +625,16 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
   | CChar  x -> Ast.CChar  x,T.character
   | Var    n -> begin (* n may denote the name of a paramterless function *)
                   let n' = normalize_name n in
-                  try
+                    let t = try Symboltbl.find_variable ?expected_type gtbl n
+                            with Symboltbl.ParameterlessFunction (rt) -> rt
+                    in
+                    Ast.Var(n') ,t
+(*                try
                     let t = Symboltbl.find_variable ?expected_type gtbl n in
                     Ast.Var(normalize_name n) ,t
                   with Symboltbl.ParameterlessFunction rt ->
                     Ast.FunctionCall(n', []),rt
+ *)
                 end
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
