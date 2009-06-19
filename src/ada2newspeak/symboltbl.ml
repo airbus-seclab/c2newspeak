@@ -450,7 +450,7 @@ let _ =
   ;"character", Ada_types.character
   ]
 
-module Stack = struct
+module SymStack = struct
   type t = table Stack.t
 
   let create _ =
@@ -478,4 +478,28 @@ module Stack = struct
     enter_context s (Some name)
 
   let exit_context x = ignore (Stack.pop x)
+
+  (** Find some data in a stack.  *)
+  let find_rec s f =
+    let s' = Stack.copy s in
+    let r = ref None in
+    while (!r = None) do
+      let t = Stack.top s' in
+      r := f t;
+      Stack.pop s'
+    done;
+    match !r with
+    | None   -> failwith "find" (* unreachable *)
+    | Some x -> x
+
+  let s_find_variable s ?expected_type v =
+    find_variable (top s) ?expected_type v
+
+  let s_find_type s v =
+    find_type (top s) v
+
+  let s_add_variable   s = add_variable   (top s)
+  let s_add_type       s = add_type       (top s)
+  let s_add_subprogram s = add_subprogram (top s)
+
 end

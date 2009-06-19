@@ -143,7 +143,7 @@ val add_renaming_decl : table -> Syntax_ada.name -> Syntax_ada.name -> unit
  * Context stack.
  * This module represents the lexical scoping in programs.
  *)
-module Stack : sig
+module SymStack : sig
 
   (**
    * Abstract type for context stacks.
@@ -212,4 +212,20 @@ module Stack : sig
    * Named contexts can remain accessible.
    *)
   val exit_context : t -> unit
+
+  (** Find data.  *)
+  val s_find_variable : t -> ?expected_type:Ada_types.t
+                          -> string list*string -> Ada_types.t
+  val s_find_type     : t -> string list*string -> Ada_types.t
+
+  (** Add data.  *)
+  val s_add_type       : t -> string list*string -> Ada_types.t -> unit
+  val s_add_variable   : t -> string list*string -> Ada_types.t -> unit
+
+  val s_add_subprogram : t
+                    -> (string list*string)
+                    -> (string*bool*bool*Ada_types.t) list
+                    -> Ada_types.t option
+        -> unit
+
 end
