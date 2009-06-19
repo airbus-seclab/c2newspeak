@@ -991,7 +991,6 @@ in
   in
 
   let remove_decl_part decl_part =
-    (* Sym.exit_context gtbl; *)
     (* incomplet *)
     List.iter
       (function (item,_) -> match item with
@@ -1179,6 +1178,7 @@ in
 
   and normalize_package_spec (nom, list_decl) :Ast.package_spec =
     Symboltbl.set_current (Sym.top gtbl) nom;
+    Sym.enter_context ~name:(snd nom) gtbl;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
                                   | RepresentClause(rep), loc ->
@@ -1196,6 +1196,7 @@ in
                ) decls in
     let norm_spec = normalize_decls list_decl in
       Symboltbl.reset_current (Sym.top gtbl);
+      Sym.exit_context gtbl;
       (nom,norm_spec)
 
   and normalize_spec spec = match spec with
@@ -1247,8 +1248,10 @@ in
                         choices,
                     Ada_utils.may normalize_block default
                     ),loc)
-    | Block (dp,blk) -> let ndp = normalize_decl_part dp ~global:false in
+    | Block (dp,blk) -> Sym.enter_context gtbl;
+                        let ndp = normalize_decl_part dp ~global:false in
                         remove_decl_part dp;
+                        Sym.exit_context gtbl;
                         Some (Ast.Block (ndp, normalize_block blk), loc)
 
   and normalize_block block =
@@ -1293,13 +1296,17 @@ in
 
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
+        Sym.enter_context gtbl;
         let norm_subprog_decl =
-          normalize_sub_program_spec subprog_decl ~addparam:true
-        and norm_decl_part = normalize_decl_part decl_part ~global:false in
+          normalize_sub_program_spec subprog_decl ~addparam:true in
+        Sym.enter_context gtbl;
+        let norm_decl_part = normalize_decl_part decl_part ~global:false in
         let norm_block = normalize_block block
         in
           remove_decl_part decl_part;
+          Sym.exit_context gtbl;
           remove_params subprog_decl;
+          Sym.exit_context gtbl;
           Ast.SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
     | PackageBody(name, package_spec, decl_part) ->
         let norm_spec = normalize_package_spec
@@ -1308,10 +1315,12 @@ in
                            )
         in
           Symboltbl.set_current (Sym.top gtbl) name;
+          Sym.enter_context ~name:(snd name) gtbl;
           let ndp = normalize_decl_part decl_part ~global:true in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           Symboltbl.reset_current (Sym.top gtbl);
+          Sym.exit_context gtbl;
           Ast.PackageBody(name, Some norm_spec, ndp)
 
   in
@@ -1389,8 +1398,10 @@ in
           add_function name None true
       | Ast.PackageSpec(nom, basic_decls) ->
           Symboltbl.set_current (Sym.top gtbl) nom;
+          Sym.enter_context ~name:(snd nom) gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Symboltbl.reset_current (Sym.top gtbl);
+          Sym.exit_context gtbl;
           Symboltbl.add_with (Sym.top gtbl) nom
 
   in

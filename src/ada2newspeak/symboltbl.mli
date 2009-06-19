@@ -31,7 +31,7 @@
 type table
 
 (** Create a new symbol table.  *)
-val create_table  : unit -> table
+val create_table  : ?name:string -> unit -> table
 
 (** Add a type symbol to a table. *)
 val add_type      : table -> string list*string -> Ada_types.t -> unit
@@ -89,7 +89,7 @@ val add_renaming_declaration :    table
                      -> unit
 
 (** Pretty-print a symbol table to the standard output. *)
-val print_table   : table -> unit
+val print_table   : table -> string
 
 (** Retrieve a builtin type from its name.  *)
 val builtin_type : string -> Ada_types.t
@@ -188,6 +188,11 @@ module SymStack : sig
   val create : unit -> t
 
   (**
+   * Pretty-printer.
+   *)
+  val print : t -> string
+
+  (**
    * Return the "top" of the stack, reflecting the innermost context.
    *)
   val top : t -> table
@@ -205,7 +210,7 @@ module SymStack : sig
    * Contexts may be named ; in that case a unit_symbol is added
    * to the parent table in order to allow bottom-up adressing.
    *)
-  val enter_context : t -> string option-> unit
+  val enter_context : ?name:string -> t -> unit
 
   (**
    * Discard the current context and "go up".
