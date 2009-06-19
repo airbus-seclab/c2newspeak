@@ -25,7 +25,12 @@
 
 module Nat = Newspeak.Nat
 
-type t = (global * Newspeak.location) list * assertion list
+(* TODO: have hashtables rather *)
+type t = (string * glbinfo) list * (string * funinfo) list * assertion list
+
+and glbinfo = (decl * Newspeak.location)
+
+and funinfo = (ftyp * bool * blk * Newspeak.location)
 
 and assertion = spec_token list
 
@@ -34,11 +39,6 @@ and spec_token =
   | IdentToken of string
   | CstToken of Cir.cst
       
-and global = 
-    (* true if static *)
-  | FunctionDef of (string * ftyp * bool * blk)
-  | GlbDecl of (string * decl)
-
 and decl = 
     VDecl of (typ * is_static * is_extern * init option)
   | EDecl of exp
@@ -112,7 +112,7 @@ and exp =
     | Unop of (unop * exp)
     | IfExp of (exp * exp * exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (exp * exp list)
+    | Call of (exp * ftyp * exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string
@@ -250,9 +250,24 @@ let rec string_of_typ t =
     | Ptr _ -> "Ptr"
     | Array _ -> "Array"
     | Comp _ -> "Comp"
-    | Fun _ -> "Fun"
+    | Fun ft -> string_of_ftyp ft
     | Va_arg -> "Va_arg"
     | Typeof _ -> "Typeof"
+
+and string_of_ftyp (args_t, ret_t) =
+  let args_t = 
+    match args_t with
+	None -> ""
+      | Some l -> string_of_args_t l
+  in
+  let ret_t = string_of_typ ret_t in
+    args_t^" -> "^ret_t
+
+and string_of_args_t x =
+  match x with
+      (t, _)::[] -> string_of_typ t
+    | (t, _)::tl -> (string_of_typ t)^", "^(string_of_args_t tl)
+    | [] -> "void"
 	
 let promote k = 
   match k with

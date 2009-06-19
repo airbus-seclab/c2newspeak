@@ -23,7 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = ((global * Newspeak.location) list * assertion list)
+type t = (string * glbinfo) list * (string * funinfo) list * assertion list
+
+and glbinfo = (decl * Newspeak.location)
+
+and funinfo = (ftyp * bool * blk * Newspeak.location)
 
 and assertion = spec_token list
 
@@ -31,10 +35,6 @@ and spec_token =
     | SymbolToken of char
     | IdentToken of string
     | CstToken of Cir.cst
-
-and global =
-    FunctionDef of (string * ftyp * is_static * blk)
-  | GlbDecl of (string * decl)
 
 and decl = 
     VDecl of (typ * is_static * is_extern * init option)
@@ -103,7 +103,7 @@ and exp =
     | Unop of (unop * exp)
     | IfExp of (exp * exp * exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (exp * exp list)
+    | Call of (exp * ftyp * exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string

@@ -164,7 +164,7 @@ let process (globals, specs) =
 
   let translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
-      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
+      Npkcontext.report_warning "Csyntax2CoreC.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
     update_funsymb f static (args, ret) loc
@@ -182,6 +182,21 @@ let process (globals, specs) =
 	      ("variable identifier expected: "^x)
     in
       (e, t)
+  in
+
+  let refine_ftyp f (args_t, ret_t) actuals = 
+    match args_t with
+	None -> 
+	  Npkcontext.report_accept_warning "Csyntax2CoreC.refine_ftyp"  
+            "unknown arguments type at function call"   
+            Npkcontext.PartialFunDecl;
+	  let ft = (Some actuals, ret_t) in begin
+	      match f with
+		  C.Var x -> update_funtyp x ft
+		| _ -> ()
+	    end;
+	    ft
+      | Some _ -> (args_t, ret_t)
   in
 
   let translate_unop x t = 
@@ -288,9 +303,11 @@ let process (globals, specs) =
 	  let (e2, _) = translate_exp e2 in
 	    (C.IfExp (c, e1, e2, t), t)
       | Call (f, args) -> 
-	  let (f, (_, ret_t)) = translate_funexp f in
-	  let args = translate_args args in
-	    (C.Call (f, args), ret_t)
+	  let (f, ft) = translate_funexp f in
+	  let (args, actuals) = translate_args args in
+	  let ft = refine_ftyp f ft actuals in
+	  let (_, ret_t) = ft in
+	    (C.Call (f, ft, args), ret_t)
       | Sizeof t -> (C.Sizeof (translate_typ t), C.uint_typ)
       | SizeofE e -> 
 	  let (_, t) = translate_lv e in
@@ -342,11 +359,15 @@ let process (globals, specs) =
 	      "function expression expected"
 
   and translate_args x = 
-    let translate e = 
-      let (e, _) = translate_exp e in
-	e
+    let rec translate x i =
+      match x with
+	  e::tl -> 
+	    let (e, t) = translate_exp e in
+	    let (args, typs) = translate tl (i+1) in
+	      (e::args, (t, "arg"^(string_of_int i))::typs)
+	| [] -> ([], [])
     in
-      List.map translate x
+      translate x 0
 
   and translate_typ t =
     match t with
@@ -402,7 +423,7 @@ let process (globals, specs) =
 	      Npkcontext.report_accept_warning "Firstpass.translate"
 		"function declaration within block" Npkcontext.DirtySyntax
 	    end;
-	    C.VDecl (C.Fun ft, is_static, is_extern, None)	    
+	    C.VDecl (C.Fun ft, is_static, is_extern, None)
       | VDecl (t, is_static, is_extern, init) -> 
 	  let t = translate_typ t in
 	  let name = if is_static then get_static_name x loc else x in
@@ -524,7 +545,7 @@ let process (globals, specs) =
 	    List.map (fun (x, init) -> (x, translate_init t init)) seq 
 	  in
 	    C.Sequence seq
-      
+	      
       | (Sequence seq, C.Comp (s, true)) ->
 	  let f = fields_of_comp s in
 	    C.Sequence (translate_field_sequence seq f)
@@ -557,12 +578,24 @@ let process (globals, specs) =
       | _ -> Npkcontext.report_error "Csyntax2CoreC" "case not implemented yet"
   in
 
-  let translate_global (x, loc) = 
+  let translate_fundecl (f, ft, static, body, loc) =
     Npkcontext.set_loc loc;
-    let x = 
+    current_fun := f;
+    Symbtbl.save symbtbl;
+    add_formals ft;
+    let body = translate_blk body in
+      Symbtbl.restore symbtbl;
+      current_fun := "";
+      (f, (ft, static, body, loc))
+  in
+
+  let translate_globals x = 
+    let glbdecls = ref [] in
+    let fundecls = ref [] in
+    let translate (x, loc) =
+      Npkcontext.set_loc loc;
       match x with
 	  FunctionDef (f, (args_t, ret_t), static, body) -> 
-	    current_fun := f;
 	    let args_t = 
 	      match args_t with
 		  None -> []
@@ -571,18 +604,19 @@ let process (globals, specs) =
 	    let ft = (Some args_t, ret_t) in
 	    let ft = translate_ftyp ft in
 	      update_funsymb f static ft loc;
-	      Symbtbl.save symbtbl;
-	      add_formals ft;
-	      let body = translate_blk body in
-		Symbtbl.restore symbtbl;
-		current_fun := "";
-		C.FunctionDef (f, ft, static, body)
-
-	| GlbDecl (x, d) -> C.GlbDecl (x, translate_decl true loc x d)
+	      fundecls := (f, ft, static, body, loc)::(!fundecls)
+		
+	| GlbDecl (x, d) -> 
+	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
     in
-      (x, loc)
+      List.iter translate x;
+(* TODO: rather have a hashtbl!! possible once any form of typing is removed
+   from firstpass *)
+      (List.rev !glbdecls, List.rev !fundecls)
   in
 
-  let globals = List.map translate_global globals in
+   
+  let (glbdecls, fundecls) = translate_globals globals in
+  let fundecls = List.map translate_fundecl fundecls in
   let specs = List.map translate_assertion specs in
-    (globals, specs)
+    (glbdecls, fundecls, specs)

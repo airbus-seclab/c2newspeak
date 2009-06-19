@@ -77,7 +77,7 @@ let seq_of_string str =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate (globals, spec) =
+let translate (globals, fundecls, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
@@ -532,16 +532,21 @@ let translate (globals, spec) =
 	    let (e, _) = translate_exp e in
 	      cast (e, t1) t2
 		(* TODO: introduce type funexp in corec??*)
-	| Call (Var x, args) when is_fname x -> 
-	    let (f, (tmp_args_t, ret_t)) = find_fname x in
+	| Call (Var x, (Some args_t, ret_t), args) when is_fname x -> 
+	    let (f, _) = find_fname x in
+(*
 	    let args_t = refine_args_t tmp_args_t args in
+*)
+(* here translate_args refines args_t and this is useful in some cases
+   should be implemented during csyntax2CoreC too!!! *)
 	    let (args, args_t) = translate_args args args_t in
-	    let ft' = translate_ftyp (args_t, ret_t) in
-	      if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
-	      (C.Call (ft', C.Fname f, args), ret_t)
+	    let ft = translate_ftyp (args_t, ret_t) in
+(*	      if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); *)
+	      (C.Call (ft, C.Fname f, args), ret_t)
 	      
-	| Call (Deref e, args) -> 
-	    let (e, t) = translate_exp e in
+	| Call (Deref e, (Some args_t, ret_t), args) -> 
+	    let (e, _) = translate_exp e in
+(*
 	    let (args_t, ret_t) =
 	      match t with
 		  Ptr (Fun t) -> t
@@ -550,9 +555,10 @@ let translate (globals, spec) =
 		      "function pointer expected"
 	    in
 	    let args_t = refine_args_t args_t args in
+*)
 	    let (args, args_t) = translate_args args args_t in
-	    let ft' = translate_ftyp (args_t, ret_t) in
-	      (C.Call (ft', C.FunDeref e, args), ret_t)
+	    let ft = translate_ftyp (args_t, ret_t) in
+	      (C.Call (ft, C.FunDeref e, args), ret_t)
 
 	| Call _ -> 
 	    Npkcontext.report_error "Firstpass.translate_exp" 
@@ -585,10 +591,10 @@ let translate (globals, spec) =
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t)
 	| v -> v
-
+(*
   and refine_args_t args_t args =  
     match args_t with  
-        None ->   
+        None -> 
           Npkcontext.report_accept_warning "Firstpass.refine_args_t"  
             "unknown arguments type at function call"   
             Npkcontext.PartialFunDecl;  
@@ -598,7 +604,7 @@ let translate (globals, spec) =
 	  in
 	    List_utils.mapi infer_typ args  
       | Some args_t -> args_t  	      
-      
+*)
   and deref (e, t) =
     match t with
 	Ptr t -> (C.Deref (e, translate_typ t), t)
@@ -1241,49 +1247,47 @@ let translate (globals, spec) =
 	update_global x name loc (t, init)
   in
 
-  let translate_global (x, loc) =
+  let collect_funtyps (f, (ft, static, _, loc)) =
     Npkcontext.set_loc loc;
-    match x with
-	FunctionDef (f, _, _, body) ->
-	  current_fun := f;
-	  let (f', ft) = find_fname f in
-	  let ft = 
-	    match ft with
-		(Some args_t, ret_t) -> (args_t, ret_t)
-	      | (None, _) -> 
-		  Npkcontext.report_error "Firstpass.translate_global" 
-		    "unreachable code"
-	  in
-	    Symbtbl.save symbtbl;
-	    let formalids = add_formals ft in
-	    let body = translate_blk body in
-	    let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	      add_fundef f' formalids body (translate_ftyp ft);
-	      Symbtbl.restore symbtbl;
-	      current_fun := "";
-	      Hashtbl.clear lbl_tbl;
-	      lbl_cnt := default_lbl
-	      
-      | GlbDecl _ -> ()
+    update_funsymb f static ft loc
+  in
+
+  let translate_fundecl (f, (ft, static, body, loc)) =
+    Npkcontext.set_loc loc;
+    update_funsymb f static ft loc;
+    current_fun := f;
+    let (f', ft) = find_fname f in
+    let ft = 
+      match ft with
+	  (Some args_t, ret_t) -> (args_t, ret_t)
+	| (None, _) -> 
+	    Npkcontext.report_error "Firstpass.translate_global" 
+	      "unreachable code"
+    in
+      Symbtbl.save symbtbl;
+      let formalids = add_formals ft in
+      let body = translate_blk body in
+      let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
+	add_fundef f' formalids body (translate_ftyp ft);
+	Symbtbl.restore symbtbl;
+	current_fun := "";
+	Hashtbl.clear lbl_tbl;
+	lbl_cnt := default_lbl
   in
     
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
 (* TODO: should be done in csyntax2CoreC *)
-  let collect_glbtyps (x, loc) =
+  let translate_global (x, (d, loc)) =
     Npkcontext.set_loc loc;
-    match x with
-	FunctionDef (f, ft, static, _) -> update_funsymb f static ft loc
-
-      | GlbDecl (x, d) -> 
-	  translate_decl loc x d;
-	  (* TODO: check if this could not be incorporated in translate_decl!!!
-	  *)
-	  match d with
-	      VDecl (Fun _, _, _, _) -> ()
-	    | VDecl (t, static, extern, init) -> 
-		declare_global static extern x loc t init
-	    | _ -> ()
+    translate_decl loc x d;
+    (* TODO: check if this could not be incorporated in translate_decl!!!
+    *)
+    match d with
+	VDecl (Fun _, _, _, _) -> ()
+      | VDecl (t, static, extern, init) -> 
+	  declare_global static extern x loc t init
+      | _ -> ()
   in
 
   let add_glbdecl name (t, loc, init) =
@@ -1303,8 +1307,10 @@ let translate (globals, spec) =
    Or better: should do all typing first.
    Then compile.
 *)
-    List.iter collect_glbtyps globals;
+(* TODO: remove this phase too! *)
+    List.iter collect_funtyps fundecls;
     List.iter translate_global globals;
+    List.iter translate_fundecl fundecls;
 (* TODO: optimization: could remove this phase if cir had a type 
    structure of name 
    and all the structures' type were in a hashtbl *)
