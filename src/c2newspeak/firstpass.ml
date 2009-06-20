@@ -179,13 +179,6 @@ let translate (globals, fundecls, spec) =
 	      ("variable identifier expected: "^x)
   in
 
-  let is_fname x =
-    let (_, t) = find_symb x in
-      match t with
-	  Fun _ -> true
-	| _ -> false
-  in
-
   let find_fname x =
     let (v, t) = find_symb x in
       match (v, t) with
@@ -531,34 +524,16 @@ let translate (globals, fundecls, spec) =
 	| Cast (e, t1, t2) -> 
 	    let (e, _) = translate_exp e in
 	      cast (e, t1) t2
+
 		(* TODO: introduce type funexp in corec??*)
-	| Call (Var x, (Some args_t, ret_t), args) when is_fname x -> 
-	    let (f, _) = find_fname x in
-(*
-	    let args_t = refine_args_t tmp_args_t args in
-*)
+	| Call (e, (Some args_t, ret_t), args) -> 
+	    let e = translate_funexp e in
 (* here translate_args refines args_t and this is useful in some cases
-   should be implemented during csyntax2CoreC too!!! *)
+   should/could?? be implemented during csyntax2CoreC too!!! *)
+(* TODO: think about it *)
 	    let (args, args_t) = translate_args args args_t in
 	    let ft = translate_ftyp (args_t, ret_t) in
-(*	      if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); *)
-	      (C.Call (ft, C.Fname f, args), ret_t)
-	      
-	| Call (Deref e, (Some args_t, ret_t), args) -> 
-	    let (e, _) = translate_exp e in
-(*
-	    let (args_t, ret_t) =
-	      match t with
-		  Ptr (Fun t) -> t
-		| _ -> 
-		    Npkcontext.report_error "Firstpass.translate_exp"
-		      "function pointer expected"
-	    in
-	    let args_t = refine_args_t args_t args in
-*)
-	    let (args, args_t) = translate_args args args_t in
-	    let ft = translate_ftyp (args_t, ret_t) in
-	      (C.Call (ft, C.FunDeref e, args), ret_t)
+	      (C.Call (ft, e, args), ret_t)
 
 	| Call _ -> 
 	    Npkcontext.report_error "Firstpass.translate_exp" 
@@ -591,20 +566,17 @@ let translate (globals, fundecls, spec) =
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t)
 	| v -> v
-(*
-  and refine_args_t args_t args =  
-    match args_t with  
-        None -> 
-          Npkcontext.report_accept_warning "Firstpass.refine_args_t"  
-            "unknown arguments type at function call"   
-            Npkcontext.PartialFunDecl;  
-          let infer_typ i e =  
-	    let (_, t) = translate_exp e in  
-	      (t, "arg"^(string_of_int i))  
-	  in
-	    List_utils.mapi infer_typ args  
-      | Some args_t -> args_t  	      
-*)
+
+  and translate_funexp e =
+    match e with
+	Fname x -> 
+	  let (e, _) = find_fname x in
+	    C.Fname e
+      | FunDeref e -> 
+	  let (e, _) = translate_exp e in
+	    C.FunDeref e	
+
+
   and deref (e, t) =
     match t with
 	Ptr t -> (C.Deref (e, translate_typ t), t)
@@ -711,7 +683,6 @@ let translate (globals, fundecls, spec) =
     let o = ref 0 in
     let last_align = ref 1 in
     let translate (x, t) =
-(*      Npkcontext.set_loc loc;*)
       let cur_align = align_of t in
       let o' = next_aligned !o cur_align in
       let (o', t, sz) =
@@ -749,7 +720,6 @@ let translate (globals, fundecls, spec) =
     let n = ref 0 in
     let align = ref 0 in
     let translate (x, t) =
-      (*Npkcontext.set_loc loc;*)
       let sz = size_of t in
       let align' = align_of t in
 	align := max !align align';

@@ -103,7 +103,7 @@ and exp =
     | Unop of (unop * exp)
     | IfExp of (exp * exp * exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (exp * ftyp * exp list)
+    | Call of (funexp * ftyp * exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string
@@ -115,6 +115,10 @@ and exp =
    expression *)
     | OpExp of ((binop * typ) * exp * bool)
     | BlkExp of (blk * bool)
+
+and funexp =
+    Fname of string
+  | FunDeref of exp
 
 and typ_exp = (exp * typ)
 

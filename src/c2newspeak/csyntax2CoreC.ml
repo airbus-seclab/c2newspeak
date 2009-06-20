@@ -192,7 +192,7 @@ let process (globals, specs) =
             Npkcontext.PartialFunDecl;
 	  let ft = (Some actuals, ret_t) in begin
 	      match f with
-		  C.Var x -> update_funtyp x ft
+		  C.Fname x -> update_funtyp x ft
 		| _ -> ()
 	    end;
 	    ft
@@ -354,9 +354,10 @@ let process (globals, specs) =
   (* TODO: introduce type funexp in corec??*)
   and translate_funexp f =
     let (f, ft) = translate_lv f in
-      match ft with
-	  C.Fun t -> (f, t)
-	| C.Ptr (C.Fun t) -> (C.Deref f, t)
+      match (f, ft) with
+	  (C.Var f, C.Fun t) -> (C.Fname f, t)
+	| (C.Deref f, C.Fun t) -> (C.FunDeref f, t)
+	| (_, C.Ptr (C.Fun t)) -> (C.FunDeref f, t)
 	| _ -> 
 	    Npkcontext.report_error "Csyntax2CoreC.translate_call"
 	      "function expression expected"
