@@ -1,1 +1,1 @@
-Fatal error: t115.adb:10#151: uncompatible types
+Fatal error: t115.adb:10#10: uncompatible types

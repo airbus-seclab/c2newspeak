@@ -210,9 +210,9 @@ let new_array component ind =
     }
 
 let is_compatible one another =
-    match (one.parent,another.parent) with
-      | Some p1, Some p2 -> (p1 = p2 && one.uid = another.uid)
-      | _                -> false
+  let p1 = root_parent one     in
+  let p2 = root_parent another in
+    p1 = p2 && one.uid = another.uid
 
 (*****************
  * Builtin types *

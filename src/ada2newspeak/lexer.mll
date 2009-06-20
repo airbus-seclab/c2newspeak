@@ -31,16 +31,25 @@
   (* supprime les guillemets qui entourent une chaine *)
   let extrait_chaine s = String.sub s 1 (String.length s - 2)
 
+  let loc_here lexbuf =
+    (lexbuf.lex_curr_p.pos_fname
+    ,lexbuf.lex_curr_p.pos_lnum
+    ,lexbuf.lex_curr_p.pos_cnum
+    -lexbuf.lex_curr_p.pos_bol
+  )
+
   let set_loc lexbuf pos =
     lexbuf.lex_curr_p <- pos;
-    Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
+    Npkcontext.set_loc (loc_here lexbuf)
 
   let newline lexbuf =
-    let pos = lexbuf.lex_curr_p
+    let pos = 
+      { lexbuf.lex_curr_p with 
+            pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1;
+            pos_bol  = lexbuf.lex_curr_p.pos_cnum;
+      }
     in
-    let new_pos = { pos with pos_lnum = pos.pos_lnum + 1;
-          pos_bol = pos.pos_cnum };
-    in set_loc lexbuf new_pos
+    set_loc lexbuf pos
 
   let init fname lexbuf =
     let pos = { lexbuf.lex_curr_p with pos_fname = fname } in
@@ -143,28 +152,28 @@
         (* accept       *)
         (* delay        *)
         (* entry        *)
-        (* requeue      *)
+        (* requeue      *) (* Ada95 *)
         (* select       *)
         (* task         *)
         (* terminate    *)
         (* do           *)
-        (* until        *)
+        (* until        *) (* Ada95 *)
 
     (* Compilation-related  *)
-        (* abstract     *)
+        (* abstract     *) (* Ada95 *)
         (* generic      *)
         (* separate     *)
 
     (* Type-related  *)
         (* at           *)
-        (* tagged       *)
+        (* tagged       *) (* Ada95 *)
         (* delta        *)
         (* limited      *)
         (* private      *)
 
     (* Pointer-related  *)
         (* access       *)
-        (* aliased      *)
+        (* aliased      *) (* Ada95 *)
         (* all          *)
 
     (* Execution flow-related  *)
@@ -173,7 +182,7 @@
         (* exception    *)
 
     (* Misc *)
-        (* protected    *)
+        (* protected    *) (* Ada95 *)
 
 
 }
@@ -200,29 +209,29 @@ let litteral_reel = reel
 let commentaire = "--" [^ '\n']*
 
 rule token = parse
-  | '('            {LPAR       (Npkcontext.get_loc())}
-  | ')'            {RPAR       (Npkcontext.get_loc())}
-  | '+'            {PLUS       (Npkcontext.get_loc())}
-  | '-'            {MINUS      (Npkcontext.get_loc())}
-  | '*'            {MULT       (Npkcontext.get_loc())}
-  | '/'            {DIV        (Npkcontext.get_loc())}
-  | "**"           {POW        (Npkcontext.get_loc())}
-  | "<="           {LE         (Npkcontext.get_loc())}
-  | '<'            {LT         (Npkcontext.get_loc())}
-  | ">="           {GE         (Npkcontext.get_loc())}
-  | '>'            {GT         (Npkcontext.get_loc())}
-  | "="            {EQ         (Npkcontext.get_loc())}
-  | "/="           {NE         (Npkcontext.get_loc())}
-  | "="            {EQ         (Npkcontext.get_loc())}
-  | ":="           {ASSIGN     (Npkcontext.get_loc())}
-  | ';'            {SEMICOLON  (Npkcontext.get_loc())}
-  | '.'            {DOT        (Npkcontext.get_loc())}
-  | ':'            {COLON      (Npkcontext.get_loc())}
-  | ".."           {DOUBLE_DOT (Npkcontext.get_loc())}
-  | ','            {COMMA      (Npkcontext.get_loc())}
-  | "'"            {QUOTE      (Npkcontext.get_loc())}
-  | "=>"           {ARROW      (Npkcontext.get_loc())}
-  | "|"            {VBAR       (Npkcontext.get_loc())}
+  | '('  {LPAR       (loc_here lexbuf)}
+  | ')'  {RPAR       (loc_here lexbuf)}
+  | '+'  {PLUS       (loc_here lexbuf)}
+  | '-'  {MINUS      (loc_here lexbuf)}
+  | '*'  {MULT       (loc_here lexbuf)}
+  | '/'  {DIV        (loc_here lexbuf)}
+  | "**" {POW        (loc_here lexbuf)}
+  | "<=" {LE         (loc_here lexbuf)}
+  | '<'  {LT         (loc_here lexbuf)}
+  | ">=" {GE         (loc_here lexbuf)}
+  | '>'  {GT         (loc_here lexbuf)}
+  | "="  {EQ         (loc_here lexbuf)}
+  | "/=" {NE         (loc_here lexbuf)}
+  | "="  {EQ         (loc_here lexbuf)}
+  | ":=" {ASSIGN     (loc_here lexbuf)}
+  | ';'  {SEMICOLON  (loc_here lexbuf)}
+  | '.'  {DOT        (loc_here lexbuf)}
+  | ':'  {COLON      (loc_here lexbuf)}
+  | ".." {DOUBLE_DOT (loc_here lexbuf)}
+  | ','  {COMMA      (loc_here lexbuf)}
+  | "'"  {QUOTE      (loc_here lexbuf)}
+  | "=>" {ARROW      (loc_here lexbuf)}
+  | "|"  {VBAR       (loc_here lexbuf)}
 
   | '\n' {newline lexbuf; token lexbuf}
 
@@ -231,23 +240,23 @@ rule token = parse
   | commentaire {token lexbuf}
 
   (* caracteres, chaines de caracteres *)
-  | chaine {CONST_STRING (Npkcontext.get_loc ()
+  | chaine {CONST_STRING (loc_here lexbuf
                          ,extrait_chaine (Lexing.lexeme lexbuf))}
-  | char   {CONST_CHAR   (Npkcontext.get_loc ()
+  | char   {CONST_CHAR   (loc_here lexbuf
                          ,int_of_char (Lexing.lexeme lexbuf).[1]) }
 
   (* constantes numeriques *)
-  | litteral_reel {CONST_FLOAT (Npkcontext.get_loc (),Lexing.lexeme lexbuf)}
-  | entier {CONST_INT (Npkcontext.get_loc (),Newspeak.Nat.of_string(
+  | litteral_reel {CONST_FLOAT (loc_here lexbuf,Lexing.lexeme lexbuf)}
+  | entier {CONST_INT (loc_here lexbuf,Newspeak.Nat.of_string(
                                 strip_underscores (Lexing.lexeme lexbuf)))}
   | entier as main_part ['e' 'E'] '+'? (entier as expo)
-      {CONST_INT (Npkcontext.get_loc (),
+      {CONST_INT (loc_here lexbuf,
             Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
                     * (expt_int 10 (int_of_string (strip_underscores expo)))
             ))
       }
   | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
-                CONST_INT (Npkcontext.get_loc ()
+                CONST_INT (loc_here lexbuf
                           ,Newspeak.Nat.of_int ( (int_of_based_string
                                         (int_of_string (strip_underscores base))
                                             (strip_underscores main_part))
@@ -257,7 +266,7 @@ rule token = parse
                                                             exponent "0")))))}
 
   (*identifiant*)
-  | ident {lex_word (Lexing.lexeme lexbuf) (Npkcontext.get_loc ())}
+  | ident {lex_word (Lexing.lexeme lexbuf) (loc_here lexbuf)}
   | eof { EOF }
 
   | _ {unknown_lexeme lexbuf}

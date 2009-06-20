@@ -572,10 +572,8 @@ expression :
 ;
 
 subtyp_indication :
-| subtyp RANGE contrainte {$1, Some($3), None, Ada_types.universal_integer
-                                                (* no : st + add some dynamic
-                                                 * contraint*) }
-| subtyp {$1, None, None, Ada_types.universal_integer (* st *)}
+| subtyp RANGE contrainte {$1, Some($3), None, Ada_types.unknown}
+| subtyp {$1, None, None, Ada_types.unknown}
 
 subtyp :
 | name {SubtypName(fst $1)}

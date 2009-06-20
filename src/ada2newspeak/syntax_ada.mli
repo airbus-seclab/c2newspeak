@@ -115,7 +115,7 @@ and array_type_definition =
 (** Subtype definition. *)
 and subtyp =
   | Unconstrained of typ               (** Unconstrained. *)
-  | Constrained of typ*contrainte*bool (** Constrained. The boolean parameters
+  | Constrained of typ*contrainte*bool*Ada_types.t (** Constrained. The boolean parameters
                                            means the subtype is static *)
   | SubtypName of name                 (** Subtype *)
 

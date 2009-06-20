@@ -127,7 +127,11 @@ val new_float      : int -> t
  *)
 val new_array      : t -> t list -> t
 
-(** Is a type compatible with another one ?  *)
+(**
+ * Is a type compatible with another one ?
+ * [is_compatible a b] if a value of type b can be assigned
+ * to a lvalue of type b.
+ *)
 val is_compatible : t -> t -> bool
 
 (**
