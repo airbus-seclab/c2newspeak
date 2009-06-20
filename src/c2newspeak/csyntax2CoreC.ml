@@ -213,7 +213,7 @@ let process (globals, specs) =
   in
 
   let translate_binop op t1 t2 = 
-    let t = 
+    let t_in = 
       match (op, t1, t2) with
 	  (Minus, C.Ptr _, C.Ptr _) -> C.int_typ
 
@@ -231,14 +231,17 @@ let process (globals, specs) =
 	| ((Shiftl|Shiftr), C.Int (_, n), C.Int _) -> 
 	    C.Int (Newspeak.Unsigned, n)
 
-	| ((Gt|Eq), _, _) -> C.int_typ
-
 	| (Plus, C.Int _, C.Ptr _) -> 
 	    Npkcontext.report_accept_warning "Firstpass.normalize_binop"
 	      "addition of a pointer to an integer" Npkcontext.DirtySyntax;
 	    t2
 
 	| _ -> t1
+    in
+    let t_out =
+      match op with
+	  Gt|Eq -> C.int_typ
+	| _ -> t_in
     in
     let op =
 (* TODO: have csyntax use coreC operators!!! idem for unop!! *) 
@@ -256,7 +259,7 @@ let process (globals, specs) =
 	| Gt -> C.Gt
 	| Eq -> C.Eq
     in
-      (op, t)
+      (op, t_in, t_out)
   in
 
   let rec translate_lv e =
@@ -295,8 +298,8 @@ let process (globals, specs) =
       | Binop (op, e1, e2) -> 
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
-	  let (op, t) = translate_binop op t1 t2 in
-	    (C.Binop ((op, t), (e1, t1), (e2, t2)), t)
+	  let (op, t_in, t_out) = translate_binop op t1 t2 in
+	    (C.Binop ((op, t_in), (e1, t1), (e2, t2)), t_out)
       | IfExp (c, e1, e2) -> 
 	  let (c, _) = translate_exp c in
 	  let (e1, t) = translate_exp e1 in
@@ -328,14 +331,14 @@ let process (globals, specs) =
 	    match op with
 		None -> (None, t1)
 	      | Some op -> 
-		  let (op, t) = translate_binop op t1 t2 in
-		    (Some (op, t), t)
+		  let (op, t_in, t_out) = translate_binop op t1 t2 in
+		    (Some (op, t_in), t_out)
 	  in
 	    (C.Set (lv, op, e), t)
       | OpExp (op, e, is_after) ->
 	  let (e, t) = translate_exp e in
-	  let (op, t) = translate_binop op t C.int_typ in
-	    (C.OpExp ((op, t), e, is_after), t)
+	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
+	    (C.OpExp ((op, t_in), e, is_after), t_out)
       | BlkExp (blk, is_after) -> 
 	  let (blk, t) = translate_blk_exp blk in
 	    (C.BlkExp (blk, is_after), t)
