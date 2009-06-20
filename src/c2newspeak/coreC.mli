@@ -85,7 +85,7 @@ and stmtkind =
   | Exp of exp
   | Break
   | Continue
-  | Return of exp option
+  | Return
   | Block of blk
   | Goto of lbl
   | Label of lbl
@@ -96,12 +96,13 @@ and lbl = string
 and exp = 
     | Cst of (Cir.cst * typ)
     | Var of string
+    | RetVar
     | Field of (exp * string)
     | Index of (exp * array_typ * exp)
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp * typ)
+    | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (funexp * ftyp * exp list)
     | Sizeof of typ
@@ -110,10 +111,10 @@ and exp =
     | FunName
     | Cast of (exp * typ * typ)
 (* None is a regular assignment *)
-    | Set of (exp * (binop * typ) option * exp)
+    | Set of (typ_exp * (binop * typ) option * typ_exp)
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
-    | OpExp of ((binop * typ) * exp * bool)
+    | OpExp of ((binop * typ) * typ_exp * bool)
     | BlkExp of (blk * bool)
 
 and funexp =

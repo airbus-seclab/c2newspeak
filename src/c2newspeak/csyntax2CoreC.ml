@@ -268,6 +268,9 @@ let process (globals, specs) =
 	  let t = translate_typ t in
 	    (C.Cst (c, t), t)
       | Var x -> find_var x
+      | RetVar -> 
+	  let (_, t) = find_var ret_name in
+	    (C.RetVar, t)
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
 	  let r = fields_of_comp (C.comp_of_typ t) in
@@ -302,9 +305,18 @@ let process (globals, specs) =
 	    (C.Binop ((op, t_in), (e1, t1), (e2, t2)), t_out)
       | IfExp (c, e1, e2) -> 
 	  let (c, _) = translate_exp c in
-	  let (e1, t) = translate_exp e1 in
-	  let (e2, _) = translate_exp e2 in
-	    (C.IfExp (c, e1, e2, t), t)
+	  let (e1, t1) = translate_exp e1 in
+	  let (e2, t2) = translate_exp e2 in
+	  let t = 
+	    match (t1, t2) with
+		(C.Ptr _, C.Int _) -> t1
+	      | (C.Int _, C.Ptr _) -> t2
+	      | _ when t1 = t2 -> t1
+	      | _ -> 
+		  Npkcontext.report_error "Csyntax2CoreC.translate_exp"
+		    "compatible type expected"
+	  in
+	    (C.IfExp (c, (e1, t1), (e2, t2), t), t)
       | Call (f, args) -> 
 	  let (f, ft) = translate_funexp f in
 	  let (args, actuals) = translate_args args in
@@ -327,18 +339,18 @@ let process (globals, specs) =
       | Set (lv, op, e) -> 
 	  let (lv, t1) = translate_exp lv in
 	  let (e, t2) = translate_exp e in
-	  let (op, t) =
+	  let op =
 	    match op with
-		None -> (None, t1)
+		None -> None
 	      | Some op -> 
-		  let (op, t_in, t_out) = translate_binop op t1 t2 in
-		    (Some (op, t_in), t_out)
+		  let (op, t_in, _) = translate_binop op t1 t2 in
+		    Some (op, t_in)
 	  in
-	    (C.Set (lv, op, e), t)
+	    (C.Set ((lv, t1), op, (e, t2)), t1)
       | OpExp (op, e, is_after) ->
 	  let (e, t) = translate_exp e in
 	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
-	    (C.OpExp ((op, t_in), e, is_after), t_out)
+	    (C.OpExp ((op, t_in), (e, t), is_after), t_out)
       | BlkExp (blk, is_after) -> 
 	  let (blk, t) = translate_blk_exp blk in
 	    (C.BlkExp (blk, is_after), t)
@@ -442,8 +454,8 @@ let process (globals, specs) =
 	    in
 	      C.VDecl (t, is_static, is_extern, init)
       | EDecl e -> 
-	  let (e, _) = translate_exp e in
-	    Symbtbl.bind symbtbl x (EnumSymb e, CoreC.int_typ);
+	  let (e, t) = translate_exp e in
+	    Symbtbl.bind symbtbl x (EnumSymb e, t);
 	    C.EDecl e
       | CDecl (is_struct, fields) -> 
 	  add_compdecl (x, (is_struct, fields));
@@ -479,15 +491,7 @@ let process (globals, specs) =
 	    C.Exp e
       | Break -> C.Break
       | Continue -> C.Continue
-      | Return e -> 
-	  let e = 
-	    match e with
-		None -> None
-	      | Some e -> 
-		  let (e, _) = translate_exp e in
-		    Some e
-	  in
-	    C.Return e
+      | Return -> C.Return
       | Block body -> C.Block (translate_blk body)
       | Goto lbl -> C.Goto lbl
       | Label lbl -> C.Label lbl
@@ -619,7 +623,6 @@ let process (globals, specs) =
       (List.rev !glbdecls, List.rev !fundecls)
   in
 
-   
   let (glbdecls, fundecls) = translate_globals globals in
   let fundecls = List.map translate_fundecl fundecls in
   let specs = List.map translate_assertion specs in

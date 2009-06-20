@@ -404,6 +404,8 @@ let translate (globals, fundecls, spec) =
     match x with
 	Var x -> find_var x
 
+      | RetVar -> find_var ret_name
+
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
 	  let r = fields_of_comp (CoreC.comp_of_typ t) in
@@ -422,8 +424,10 @@ let translate (globals, fundecls, spec) =
 
       | OpExp (op, lv, is_after) ->
 	  let loc = Npkcontext.get_loc () in
-	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ) in
-	  let (incr, t) = translate_set (lv, Some op, e) in
+	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ)  in
+	  let (incr, t) = 
+	    translate_set (lv, Some op, (e, CoreC.int_typ)) 
+	  in
 	  let (lv, _, _) = incr in
 	    (C.BlkLv ((C.Set incr, loc)::[], lv, is_after), t)
 
@@ -473,7 +477,8 @@ let translate (globals, fundecls, spec) =
       match e with
 	  Cst (c, t) -> (C.Const c, t)
 	    	    
-	| Var _ | Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
+	| Var _ | RetVar 
+	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let (lv, t) = translate_lv e in
 	      (C.Lval (lv, translate_typ t), t)
 		
@@ -501,7 +506,7 @@ let translate (globals, fundecls, spec) =
 	    let (e2, _) = translate_exp e2 in
 	      translate_binop (op, t) (e1, t1) (e2, t2)
 		
-	| IfExp (c, e1, e2, t) -> begin
+	| IfExp (c, (e1, _), (e2, _), t) -> begin
 	    try 
 	      let (c, _) = translate c in
 	      let v = C.eval_exp c in
@@ -510,8 +515,8 @@ let translate (globals, fundecls, spec) =
 	    with Invalid_argument _ -> 
 	      let loc = Npkcontext.get_loc () in
 	      let (x, decl, v) = gen_tmp loc t in
-	      let blk1 = (Exp (Set (Var x, None, e1)), loc)::[] in
-	      let blk2 = (Exp (Set (Var x, None, e2)), loc)::[] in
+	      let blk1 = (Exp (Set ((Var x, t), None, (e1, t))), loc)::[] in
+	      let blk2 = (Exp (Set ((Var x, t), None, (e2, t))), loc)::[] in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
 		(C.BlkExp (decl::set, C.Lval (v, translate_typ t), false), t)
@@ -597,17 +602,17 @@ let translate (globals, fundecls, spec) =
     in
       (e, Ptr t)
 
-  and translate_set (lv, op, e) =
-    let (lv, t) = translate_lv lv in
-    let e = translate_exp e in
-    let t' = translate_typ t in
+  and translate_set ((lv, lv_t), op, (e, e_t)) =
+    let (lv, _) = translate_lv lv in
+    let (e, _) = translate_exp e in
+    let t' = translate_typ lv_t in
     let (lv, e) =
       match op with
-	  None -> (lv, e)
+	  None -> (lv, (e, e_t))
 	| Some op -> 
 	    let (pref, lv', post) = C.normalize_lv lv in
-	    let e' = (C.Lval (lv', t'), t) in
-	    let e = translate_binop op e' e in
+	    let e' = (C.Lval (lv', t'), lv_t) in
+	    let e = translate_binop op e' (e, e_t) in
 	    let lv = C.BlkLv (post, C.BlkLv (pref, lv', false), true) in
 	      if (post <> []) then begin
 		Npkcontext.report_warning "Firstpass.translate_set" 
@@ -615,7 +620,7 @@ let translate (globals, fundecls, spec) =
 	      end;
 	      (lv, e)
     in
-    let (e, t) = cast e t in
+    let (e, t) = cast e lv_t in
     let set = (lv, t', e) in
       (set, t)
 
@@ -908,8 +913,11 @@ let translate (globals, fundecls, spec) =
 
   and translate_stmt_exp loc e =
     match e with
-	Set (lv, op, IfExp (c, e1, e2, t)) ->
-	  let e = IfExp (c, Set (lv, op, e1), Set (lv, op, e2), t) in
+	Set (lv, op, (IfExp (c, e1, e2, t), _)) ->
+	  let e = 
+	    IfExp (c, (Set (lv, op, e1), snd e1), 
+		   (Set (lv, op, e2), snd e2), t) 
+	  in
 	    translate_stmt_exp loc e
 
       | Set set -> 
@@ -921,7 +929,7 @@ let translate (globals, fundecls, spec) =
 	    "cast to void" Npkcontext.DirtySyntax;
 	  translate_stmt_exp loc e
 
-      | IfExp (c, e1, e2, _) ->
+      | IfExp (c, (e1, _), (e2, _), _) ->
 	  let blk1 = (Exp e1, loc)::[] in
 	  let blk2 = (Exp e2, loc)::[] in
 	    translate_stmt (If (c, blk1, blk2), loc)
@@ -940,13 +948,7 @@ let translate (globals, fundecls, spec) =
 
       | Continue -> (C.Goto cnt_lbl, loc)::[]
 
-      | Return None -> (C.Goto ret_lbl, loc)::[]
-
-      | Return (Some e) ->
-(* TODO: put this in parser already?? *)
-	  let set = (Exp (Set (Var ret_name, None, e)), loc) in
-	  let return = (Return None, loc) in
-	    translate_blk (set::return::[])
+      | Return -> (C.Goto ret_lbl, loc)::[]
 
       | Goto lbl -> 
 	  let lbl = translate_lbl lbl in
@@ -1031,16 +1033,16 @@ let translate (globals, fundecls, spec) =
     in
     let rec translate_guard e =
       match e with
-	  IfExp (Cst (C.CInt c, _), t, _, _) 
+	  IfExp (Cst (C.CInt c, _), (t, _), _, _) 
 	    when (Nat.compare c Nat.zero <> 0)-> 
 	    translate_guard t
-	| IfExp (Cst (C.CInt c, _), _, f, _) 
+	| IfExp (Cst (C.CInt c, _), _, (f, _), _) 
 	    when (Nat.compare c Nat.zero = 0) -> 
 	    translate_guard f
 	| IfExp (IfExp (c, t1, f1, _), t2, f2, t) -> 
-	    translate_guard (IfExp (c, IfExp (t1, t2, f2, t), 
-				    IfExp (f1, t2, f2, t), t))
-	| IfExp (c, t, f, _) -> 
+	    translate_guard (IfExp (c, (IfExp (fst t1, t2, f2, t), t), 
+				    (IfExp (fst f1, t2, f2, t), t), t))
+	| IfExp (c, (t, _), (f, _), _) -> 
 	    let (c, _) = translate_exp c in
 	    let (pref, c, post) = C.normalize_exp c in
 	    let guard_c = (C.Guard c, loc) in

@@ -92,7 +92,7 @@ and stmtkind =
   | Exp of exp
   | Break
   | Continue
-  | Return of exp option
+  | Return
   | Block of blk
   | Goto of lbl
   | Label of lbl
@@ -105,12 +105,13 @@ and static = bool
 and exp = 
     | Cst of (Cir.cst * typ)
     | Var of string
+    | RetVar
     | Field of (exp * string)
     | Index of (exp * array_typ * exp)
     | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp * typ)
+    | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (funexp * ftyp * exp list)
     | Sizeof of typ
@@ -119,10 +120,10 @@ and exp =
     | FunName
     | Cast of (exp * typ * typ)
 (* None is a regular assignment *)
-    | Set of (exp * (binop * typ) option * exp)
+    | Set of (typ_exp * (binop * typ) option * typ_exp)
 (* boolean is true if the operation is appled after the evaluation of the 
    expression *)
-    | OpExp of ((binop * typ) * exp * bool)
+    | OpExp of ((binop * typ) * typ_exp * bool)
     | BlkExp of (blk * bool)
 
 and funexp =
@@ -213,13 +214,14 @@ let rec string_of_exp e =
       Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
     | Cst _ -> "Cst"
     | Var x -> x
+    | RetVar -> "!RetVar"
     | Field (e, f) -> (string_of_exp e)^"."^f
     | Index (e1, _, e2) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref e -> "*("^(string_of_exp e)^")"
     | AddrOf e -> "&("^(string_of_exp e)^")"
     | Unop (_, e) -> "op("^(string_of_exp e)^")"
-    | IfExp (e1, e2, e3, _) -> 
+    | IfExp (e1, (e2, _), (e3, _), _) -> 
 	let e1 = string_of_exp e1 in
 	let e2 = string_of_exp e2 in
 	let e3 = string_of_exp e3 in
@@ -234,7 +236,7 @@ let rec string_of_exp e =
     | Cast (e, _, _) -> 
 	let e = string_of_exp e in
 	  "(typ) "^e
-    | Set (lv, None, e) -> (string_of_exp lv)^" = "^(string_of_exp e)^";"
+    | Set ((lv, _), None, (e, _)) -> (string_of_exp lv)^" = "^(string_of_exp e)^";"
     | Set _ -> "Set"
     | OpExp _ -> "OpExp"
     | BlkExp _ -> "BlkExp"
