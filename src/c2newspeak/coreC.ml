@@ -72,7 +72,7 @@ and typ =
 and array_typ = typ * exp option
  
 and init = 
-  | Data of exp
+  | Data of typ_exp
   | Sequence of (string option * init) list
 
 and stmt = (stmtkind * Newspeak.location)
@@ -89,7 +89,7 @@ and stmtkind =
       *)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
-  | Exp of exp
+  | Exp of typ_exp
   | Break
   | Continue
   | Return
@@ -108,17 +108,17 @@ and exp =
     | RetVar
     | Field of (exp * string)
     | Index of (exp * array_typ * exp)
-    | Deref of exp
+    | Deref of typ_exp
     | AddrOf of exp
     | Unop of (unop * exp)
     | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (funexp * ftyp * exp list)
+    | Call of (funexp * ftyp * typ_exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string
     | FunName
-    | Cast of (exp * typ * typ)
+    | Cast of (typ_exp * typ)
 (* None is a regular assignment *)
     | Set of (typ_exp * (binop * typ) option * typ_exp)
 (* boolean is true if the operation is appled after the evaluation of the 
@@ -128,7 +128,7 @@ and exp =
 
 and funexp =
     Fname of string
-  | FunDeref of exp
+  | FunDeref of typ_exp
 
 and typ_exp = (exp * typ)
 
@@ -218,7 +218,7 @@ let rec string_of_exp e =
     | Field (e, f) -> (string_of_exp e)^"."^f
     | Index (e1, _, e2) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
-    | Deref e -> "*("^(string_of_exp e)^")"
+    | Deref (e, _) -> "*("^(string_of_exp e)^")"
     | AddrOf e -> "&("^(string_of_exp e)^")"
     | Unop (_, e) -> "op("^(string_of_exp e)^")"
     | IfExp (e1, (e2, _), (e3, _), _) -> 
@@ -233,7 +233,7 @@ let rec string_of_exp e =
     | Sizeof _ -> "Sizeof"
     | Str _ -> "Str"
     | FunName -> "FunName"
-    | Cast (e, _, _) -> 
+    | Cast ((e, _), _) -> 
 	let e = string_of_exp e in
 	  "(typ) "^e
     | Set ((lv, _), None, (e, _)) -> (string_of_exp lv)^" = "^(string_of_exp e)^";"

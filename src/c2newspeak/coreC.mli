@@ -68,7 +68,7 @@ and typ =
 and array_typ = typ * exp option
 
 and init = 
-    | Data of exp
+    | Data of typ_exp
     | Sequence of (string option * init) list
 
 and stmt = (stmtkind * Newspeak.location)
@@ -82,7 +82,7 @@ and stmtkind =
   | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
-  | Exp of exp
+  | Exp of typ_exp
   | Break
   | Continue
   | Return
@@ -99,17 +99,17 @@ and exp =
     | RetVar
     | Field of (exp * string)
     | Index of (exp * array_typ * exp)
-    | Deref of exp
+    | Deref of typ_exp
     | AddrOf of exp
     | Unop of (unop * exp)
     | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (funexp * ftyp * exp list)
+    | Call of (funexp * ftyp * typ_exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string
     | FunName
-    | Cast of (exp * typ * typ)
+    | Cast of (typ_exp * typ)
 (* None is a regular assignment *)
     | Set of (typ_exp * (binop * typ) option * typ_exp)
 (* boolean is true if the operation is applied after the evaluation of the 
@@ -119,7 +119,7 @@ and exp =
 
 and funexp =
     Fname of string
-  | FunDeref of exp
+  | FunDeref of typ_exp
 
 and typ_exp = (exp * typ)
 

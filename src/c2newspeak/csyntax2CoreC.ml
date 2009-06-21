@@ -283,7 +283,8 @@ let process (globals, specs) =
 	      match t1 with
 		  C.Array (t, len) -> (C.Index (a, (t, len), idx), t)
 		| C.Ptr t -> 
-		    (C.Deref (C.Binop ((C.Plus, t1), (a, t1), (idx, t2))), t)
+		    (C.Deref (C.Binop ((C.Plus, t1), (a, t1), (idx, t2)), t1), 
+		     t)
 		| _ -> 
 		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
 		      "pointer or array expected"
@@ -332,10 +333,10 @@ let process (globals, specs) =
 	  let len = C.exp_of_int ((String.length x) + 1) in
 	    (C.Str x, C.Array (C.char_typ, Some len))
       | FunName -> translate_exp (Str !current_fun)
-      | Cast (e, t2) -> 
-	  let (e, t1) = translate_exp e in
-	  let t2 = translate_typ t2 in
-	    (C.Cast (e, t1, t2), t2)
+      | Cast (e, t) -> 
+	  let e = translate_exp e in
+	  let t = translate_typ t in
+	    (C.Cast (e, t), t)
       | Set (lv, op, e) -> 
 	  let (lv, t1) = translate_exp lv in
 	  let (e, t2) = translate_exp e in
@@ -369,7 +370,7 @@ let process (globals, specs) =
       match (f, ft) with
 	  (C.Var f, C.Fun t) -> (C.Fname f, t)
 	| (C.Deref f, C.Fun t) -> (C.FunDeref f, t)
-	| (_, C.Ptr (C.Fun t)) -> (C.FunDeref f, t)
+	| (_, C.Ptr (C.Fun t)) -> (C.FunDeref (f, ft), t)
 	| _ -> 
 	    Npkcontext.report_error "Csyntax2CoreC.translate_call"
 	      "function expression expected"
@@ -380,7 +381,7 @@ let process (globals, specs) =
 	  e::tl -> 
 	    let (e, t) = translate_exp e in
 	    let (args, typs) = translate tl (i+1) in
-	      (e::args, (t, "arg"^(string_of_int i))::typs)
+	      ((e, t)::args, (t, "arg"^(string_of_int i))::typs)
 	| [] -> ([], [])
     in
       translate x 0
@@ -486,9 +487,7 @@ let process (globals, specs) =
 	  let body = translate_blk body in
 	  let (e, _) = translate_exp e in
 	    C.DoWhile (body, e)
-      | Exp e -> 
-	  let (e, _) = translate_exp e in
-	    C.Exp e
+      | Exp e -> C.Exp (translate_exp e)
       | Break -> C.Break
       | Continue -> C.Continue
       | Return -> C.Return
@@ -534,7 +533,7 @@ let process (globals, specs) =
 (*      Symbtbl.save symbtbl;*)
       let (blk, (e, t, loc)) = translate_aux x in
 (*	Symbtbl.restore symbtbl;*)
-	(blk@(C.Exp e, loc)::[], t)
+	(blk@(C.Exp (e, t), loc)::[], t)
   
   and add_compdecl (x, (is_struct, f)) =
     let f = List.map translate_field_decl f in
@@ -545,9 +544,8 @@ let process (globals, specs) =
 
   and translate_init t x =
     match (x, t) with
-	(Data e, _) -> 
-	  let (e, _) = translate_lv e in
-	    C.Data e
+	(Data e, _) -> C.Data (translate_lv e)
+
       | (Sequence seq, C.Array (t, _)) -> 
 	  let seq = 
 	    List.map (fun (x, init) -> (x, translate_init t init)) seq 
