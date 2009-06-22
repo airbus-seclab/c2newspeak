@@ -28,55 +28,54 @@
  *)
 class package_manager :
 object
-    method set_current :Syntax_ada.name -> unit
+    method set_current : string -> unit
     method reset_current :unit
-    method current    :Syntax_ada.package
-    method add_with   :Syntax_ada.name -> unit
-    method is_with    :Syntax_ada.package -> bool
-    method add_use    :Syntax_ada.name -> unit
-    method remove_use :Syntax_ada.name -> unit
-    method get_use    :Syntax_ada.package list
+    method current    :string option
+    method add_with   :string -> unit
+    method is_with    :string -> bool
+    method add_use    :string -> unit
+    method remove_use :string -> unit
+    method get_use    :string list
+    method get_context:string list
     method is_extern :bool
     method as_extern_do :(unit->unit)->unit
     method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
     method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
 end = object (self)
-      val mutable current_pkg:Syntax_ada.package                 = []
-      val mutable    with_pkg:Syntax_ada.package list            = []
-      val             context:(Syntax_ada.package,int) Hashtbl.t = Hashtbl.create 3
+      val mutable current_pkg:string option           = None
+      val mutable    with_pkg:string list             = []
+      val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
       val mutable     extflag:bool                    = false
-      val mutable    renaming:(Syntax_ada.name*Syntax_ada.name) list = []
+      val mutable    renaming:( Syntax_ada.name
+                              * Syntax_ada.name) list = []
 
-      method set_current (x,y) :unit =
-        let p = x@[y] in
-          current_pkg <- p
+      method set_current x =
+          current_pkg <- Some x
 
       method reset_current =
-          current_pkg <- []
+          current_pkg <- None
 
       method current =
           current_pkg
 
-      method add_with (x,y) =
-        let p = x@[y] in
-          with_pkg <- p::with_pkg
+      method add_with x =
+          with_pkg <- x::with_pkg
 
       method is_with pkg =
           List.mem pkg with_pkg
 
-      method add_use (x,y) =
-        let p = x@[y] in
-        if (self#current <> p) then begin
+      method add_use p =
+        let p' = Some p in
+        if (self#current <> p') then begin
             if (not (self#is_with p)) then begin
               Npkcontext.report_error "Ada_normalize.add_context"
-                ((Ada_utils.ident_list_to_string p)^" is undefined")
+                (p^" is undefined")
             end;
             let old_count = try Hashtbl.find context p with Not_found -> 0 in
             Hashtbl.replace context p (old_count + 1)
         end
 
-      method remove_use (x,y) =
-        let p = x@[y] in
+      method remove_use p =
         try
           let old_count = Hashtbl.find context p in
           if old_count = 1 then Hashtbl.remove context p
@@ -85,6 +84,12 @@ end = object (self)
 
       method get_use =
         Hashtbl.fold (fun pkg _ res -> pkg::res) context []
+
+      method get_context =
+        let use = self#get_use in
+        match self#current with
+          | None   -> use
+          | Some p -> p::use
 
       method is_extern =
         extflag
@@ -101,10 +106,13 @@ end = object (self)
         else let (parents,ident) = name in
              let pack = self#current in
                match parents with
-                 | []                              -> (pack, ident)
-                 | a when a=pack || self#is_with a -> (  a , ident)
+                 | None                       -> (pack   , ident)
+                 | Some a when self#is_with a -> (Some a , ident)
+                 | b      when b = pack       -> (b , ident)
                  | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
-                 ("unknown package "^(Ada_utils.ident_list_to_string parents))
+                 ("unknown package "^(match parents with
+                                        | Some x -> x
+                                        | _      -> "<no name>"))
 
       (**
        * Algorithm for add_rd (A,B)  (A -> B)
@@ -148,21 +156,31 @@ let error x =
  *)
 module CaseInsensitiveString =
   struct
-    type t = string list*string
+    type t = string option*string
 
     let equal_s s1 s2 =
       String.compare (String.lowercase s1) (String.lowercase s2) = 0
 
     let equal (p1,i1) (p2,i2) =
       equal_s i1 i2 &&
-      try List.for_all2 equal_s p1 p2
-      with Invalid_argument _ -> false
+      match (p1, p2) with
+        | Some p1', Some p2' -> equal_s p1' p2'
+        | Some _  , None     -> false
+        | None    , Some _   -> false
+        | None    , None     -> true
+      
 
     let hash_s s =
       Hashtbl.hash (String.lowercase s)
 
     let hash (p,i) =
-      List.fold_left (fun x y -> x+hash_s y) (hash_s i) p
+      let pack_hash = Hashtbl.hash
+        ( match p with
+            | None    -> None
+            | Some p' -> Some (String.lowercase p')
+        )
+      in
+      pack_hash + (hash_s i)
 
     let to_string x = x
   end
@@ -198,8 +216,9 @@ type symbol =
  *)
 
 and table = { mutable renaming : (string*string) list
-            ; t_tbl    : symbol IHashtbl.t
-            ; pkgmgr   : package_manager
+            ; t_tbl            : symbol IHashtbl.t
+            ; pkgmgr           : package_manager
+            ; t_name           : string option
             }
 
 let print_symbol = function
@@ -280,6 +299,8 @@ let cast_u ?filter = mkcast "unit"
                      ?filter
 
 let print_table tbl =
+  let out = Buffer.create 0 in
+  let print_string x = Buffer.add_string out x in
   let pad width str =
     let x = String.length str in
     let b = (width - x) / 2   in
@@ -292,20 +313,17 @@ let print_table tbl =
     ["|"
     ;pad 6 t
     ;"|"
-    ;pad 15 (String.concat "." (p@[i]))
+    ;pad 15 (Ada_utils.name_to_string (p,i))
     ;"| "
     ;sym_d
     ];
-    print_newline ()
+    print_string "\n"
   in
-  print_endline "+--------------------------- . . .";
-  print_endline "|           Symbol table          ";
-  print_endline "+------+---------------+---- . . .";
-  print_endline "| Type |     Name      |  Contents";
-  print_endline "+------+---------------+---- . . .";
+  print_string "+------+---------------+---- . . .\n";
   IHashtbl.iter line_printer tbl.t_tbl;
-  print_endline "+------+---------------+---- . . .";
-  print_newline ()
+  print_string "+------+---------------+---- . . .\n";
+  print_string "\n";
+  Buffer.contents out
 
 (**
  * Private global symbol table.
@@ -315,19 +333,21 @@ let print_table tbl =
 let builtin_table :table = { renaming = []
                            ; t_tbl    = IHashtbl.create 0
                            ; pkgmgr   = new package_manager
+                           ; t_name   = None
                            }
 
-let create_table _ =  { renaming = []
-                      ; t_tbl    = IHashtbl.copy builtin_table.t_tbl
-                      ; pkgmgr   = new package_manager
-                      }
+let create_table ?name _ =  { renaming = []
+                            ; t_tbl    = IHashtbl.copy builtin_table.t_tbl
+                            ; pkgmgr   = new package_manager
+                            ; t_name   = name
+                            }
 
 let add_variable tbl n t =
-  Npkcontext.print_debug ("Adding variable "^String.concat "." (fst n@[snd n]));
+  Npkcontext.print_debug ("Adding variable "^Ada_utils.name_to_string n);
   IHashtbl.add tbl.t_tbl n (Variable t)
 
 let add_type tbl n typ =
-  Npkcontext.print_debug ("Adding type  "   ^String.concat "." (fst n@[snd n]));
+  Npkcontext.print_debug ("Adding type  "   ^Ada_utils.name_to_string n);
   IHashtbl.add tbl.t_tbl n (Type typ)
 
 let add_subprogram tbl name params rettype =
@@ -357,16 +377,16 @@ let rec find_symbols t (package,id) =
   if ren <> [] then ren
   else
   begin
-    if package <> [] then IHashtbl.find_all t.t_tbl (package,id)
+    if package <> None then IHashtbl.find_all t.t_tbl (package,id)
     else 
-      let as_local = IHashtbl.find_all t.t_tbl ([],id) in
+      let as_local = IHashtbl.find_all t.t_tbl (None,id) in
       if as_local <> [] then as_local else
         begin
           try
-            let p = List.find (fun pkg -> IHashtbl.mem t.t_tbl (pkg,id))
-                              (t.pkgmgr#current::t.pkgmgr#get_use)
+            let p = List.find (fun pkg -> IHashtbl.mem t.t_tbl (Some pkg,id))
+                              t.pkgmgr#get_context
             in
-            IHashtbl.find_all t.t_tbl (p,id)
+            IHashtbl.find_all t.t_tbl (Some p,id)
           with Not_found -> (* thrown by List.find if no result is found *)
             []
         end
@@ -376,7 +396,7 @@ let find_type tbl n =
   try cast_t (find_symbols tbl n)
   with Not_found -> begin
                       error ("Cannot find type "
-                            ^String.concat "." (fst n@[snd n])
+                            ^Ada_utils.name_to_string n
                             );
                       Ada_types.unknown
                     end
@@ -395,7 +415,7 @@ let find_subprogram tbl n =
       (cast_s (find_symbols tbl n))
   with Not_found -> begin
                       error ("Cannot find subprogram "
-                            ^String.concat "." (fst n@[snd n])
+                            ^Ada_utils.name_to_string n
                             );
                       raise Not_found
                     end
@@ -417,7 +437,7 @@ let find_variable tbl ?expected_type n =
   with Not_found ->
     begin
        error ("Cannot find variable "
-             ^String.concat "." (fst n@[snd n])
+             ^Ada_utils.name_to_string n
              );
        Ada_types.unknown
     end
@@ -425,7 +445,7 @@ let find_variable tbl ?expected_type n =
 let add_renaming_declaration t newname oldname =
   t.renaming <- (newname,oldname)::t.renaming
 
-let builtin_type x = find_type builtin_table ([],x)
+let builtin_type x = find_type builtin_table (None,x)
 
 let set_current       t = t.pkgmgr#set_current
 let reset_current     t = t.pkgmgr#reset_current
@@ -441,7 +461,7 @@ let normalize_name    t = t.pkgmgr#normalize_name
 let add_renaming_decl t = t.pkgmgr#add_renaming_decl 
 
 let _ =
-  List.iter (fun (n,t) -> add_type builtin_table ([],n) t)
+  List.iter (fun (n,t) -> add_type builtin_table (None,n) t)
   ["integer"  , Ada_types.integer
   ;"float"    , Ada_types.std_float
   ;"boolean"  , Ada_types.boolean
@@ -451,7 +471,16 @@ let _ =
   ]
 
 module SymStack = struct
+
+  let debug_dont_push = true
+
   type t = table Stack.t
+
+  let print s =
+    let res = Buffer.create 0 in
+    Buffer.add_string res "Stack : (starting at top)\n";
+    Stack.iter (fun t -> Buffer.add_string res (print_table t)) s;
+    Buffer.contents res
 
   let create _ =
     let s = Stack.create () in
@@ -462,22 +491,38 @@ module SymStack = struct
 
   let top x = Stack.top x
 
-  let enter_context s name_opt =
-    let new_context = create_table () in
-    begin match name_opt with
-      | None      -> ()
-      | Some name -> IHashtbl.add ((Stack.top s).t_tbl) ([],name) (Unit new_context)
-    end;
-    Stack.push new_context s
+  let enter_context ?name s =
+    if (not debug_dont_push) then
+      begin
+        Npkcontext.print_debug (">>>>>>> enter_context ("
+                               ^(match name with Some n -> n
+                                               | _      ->""
+                               )^")");
+        Npkcontext.print_debug (print s);
+        let new_context = create_table ?name () in
+        begin match name with
+          | None   -> ()
+          | Some n -> IHashtbl.add ((Stack.top s).t_tbl) (None,n) (Unit new_context)
+        end;
+        Stack.push new_context s
+      end
 
   let new_unit s name =
     while (Stack.length s > 2) do
       ignore (Stack.pop s);
     done;
     (* Here Stack.length s = 2 so we are at library level *)
-    enter_context s (Some name)
+    enter_context ~name s
 
-  let exit_context x = ignore (Stack.pop x)
+  let exit_context s =
+    if not (debug_dont_push) then
+      begin
+        Npkcontext.print_debug "<<<<<<< exit_context ()";
+        if(Stack.length s > 2) then
+          ignore (Stack.pop s)
+        else
+          Npkcontext.report_error "exit_context" "Stack too small"
+      end
 
   (** Find some data in a stack.  *)
   let find_rec s f =
@@ -492,11 +537,10 @@ module SymStack = struct
     | None   -> failwith "find" (* unreachable *)
     | Some x -> x
 
-  let s_find_variable s ?expected_type v =
-    find_variable (top s) ?expected_type v
+  let s_find_variable    s    ?expected_type =
+        find_variable (top s) ?expected_type
 
-  let s_find_type s v =
-    find_type (top s) v
+  let s_find_type      s = find_type      (top s)
 
   let s_add_variable   s = add_variable   (top s)
   let s_add_type       s = add_type       (top s)

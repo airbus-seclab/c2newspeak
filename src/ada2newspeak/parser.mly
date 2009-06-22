@@ -40,14 +40,19 @@ let check_ident i1 i2 =
   else ()
 
 let check_name (p1,i1) (p2,i2) =
-  List.iter2 check_ident (p1@[i1]) (p2@[i2])
+  check_ident i1 i2;
+  match (p1, p2) with
+    | Some p1', Some p2' -> check_ident p1' p2'
+    | Some _  , None     -> invalid_arg "check_name"
+    | None    , Some _   -> invalid_arg "check_name"
+    | None    , None     -> ()
 
 let check_end decl end_name =
   let begin_name = match decl with
     | Function(name,_,_) -> name
     | Procedure(name,_) -> name
   in
-    check_name begin_name end_name
+    check_ident begin_name end_name
 
 let build_access name lst   =
   let rec build_aux lst  =
@@ -153,7 +158,6 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location*int>            CONST_CHAR
 %token <Newspeak.location*string>         CONST_FLOAT
 %token <Newspeak.location*string>         CONST_STRING
-
 %token <Newspeak.location*string>         IDENT
 
 %token <Newspeak.location> ABS        AND       ARRAY   ARROW     ASSIGN
@@ -184,7 +188,6 @@ let make_range exp_b_inf exp_b_sup =
 %type <string> pragma
 %type <param_mode> mode
 %type <name*location> name
-%type <name list> name_list
 %type <string> ident
 %type <string list> ident_list
 %type <argument> parameter_association
@@ -230,8 +233,8 @@ context :
 ;
 
 context_item :
-| WITH name_list SEMICOLON { List.map (fun n -> With(n, $1, None)) $2}
-| USE  name_list SEMICOLON { List.map (fun n -> UseContext n)      $2}
+| WITH ident_list SEMICOLON { List.map (fun n -> With(n, $1, None)) $2}
+| USE  ident_list SEMICOLON { List.map (fun n -> UseContext n)      $2}
 ;
 
 library_item :
@@ -240,41 +243,41 @@ library_item :
 ;
 
 body :
-| subprogram_spec IS declarative_part BEGIN instr_list END name SEMICOLON
+| subprogram_spec IS declarative_part BEGIN instr_list END ident SEMICOLON
     {let (spec, loc) = $1
      in
-       (check_end spec (fst $7));
+       (check_end spec $7);
        (SubProgramBody(spec,$3,$5), loc)}
 
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
     {let (spec, loc) = $1
      in (SubProgramBody(spec,$3,$5), loc)}
-| PACKAGE BODY name IS declarative_part END SEMICOLON
-    {(PackageBody((fst $3), None, $5), $1)}
-| PACKAGE BODY name IS declarative_part END name SEMICOLON
-    { (check_name (fst $3) (fst $7));
-      (PackageBody((fst $3), None, $5), $1)
+| PACKAGE BODY ident IS declarative_part END SEMICOLON
+    {(PackageBody($3, None, $5), $1)}
+| PACKAGE BODY ident IS declarative_part END name SEMICOLON
+    { (check_name (None,$3) (fst $7));
+      (PackageBody($3, None, $5), $1)
     }
 ;
 
 decl :
 | subprogram_spec SEMICOLON
     {let (spec, loc) = $1 in ((SubProgramSpec(spec)),loc)}
-| PACKAGE name IS basic_declarative_part END SEMICOLON
-    {(PackageSpec((fst $2), $4), $1)}
-| PACKAGE name IS basic_declarative_part END name SEMICOLON
-        { (check_name (fst $2) (fst $6));
-          (PackageSpec((fst $2), $4), $1)}
+| PACKAGE ident IS basic_declarative_part END SEMICOLON
+    {(PackageSpec($2, $4), $1)}
+| PACKAGE ident IS basic_declarative_part END name SEMICOLON
+        { (check_name (None,$2) (fst $6));
+          (PackageSpec($2, $4), $1)}
 ;
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
-| PROCEDURE  name  LPAR formal_part RPAR           {Procedure((fst $2),$4), $1}
-| PROCEDURE  name                                  {Procedure((fst $2),[]), $1}
-| FUNCTION   name  LPAR formal_part RPAR RETURN subtyp
-                                                  {Function ((fst $2),$4,$7),$1}
-| FUNCTION   name                        RETURN subtyp
-                                                  {Function ((fst $2),[],$4),$1}
+| PROCEDURE ident  LPAR formal_part RPAR           {Procedure($2,$4), $1}
+| PROCEDURE ident                                  {Procedure($2,[]), $1}
+| FUNCTION  ident  LPAR formal_part RPAR RETURN subtyp
+                                                 {Function ($2,$4,$7),$1}
+| FUNCTION  ident                        RETURN subtyp
+                                                  {Function ($2,[],$4),$1}
 ;
 
 formal_part :
@@ -344,7 +347,7 @@ declarative_item :
 ;
 
 use_decl :
-| USE name_list SEMICOLON {List.map (fun n -> (UseDecl n),$1) $2}
+| USE ident_list SEMICOLON {List.map (fun n -> (UseDecl n),$1) $2}
 ;
 
 number_decl :
@@ -395,14 +398,14 @@ basic_declaration :
 | representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
 | subprogram_spec RENAMES name SEMICOLON
         { match (fst $1) with
-              | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
-              | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
+        | Function  (n,_,_) -> RenamingDecl ((None,n), fst $3),$2
+        | Procedure (n,_)   -> RenamingDecl ((None,n), fst $3),$2
         }
               | ident_list COLON subtyp_indication RENAMES name SEMICOLON {
                 if (List.length $1 <> 1) then
                   Npkcontext.report_error "Parser"
                     "Only one identifier is allowed before \"renames\"";
-                RenamingDecl(([],List.hd $1),fst $5),$2 }
+                RenamingDecl((None,List.hd $1),fst $5),$2 }
 ;
 
 contrainte :
@@ -601,23 +604,18 @@ ident_list :
 | ident COMMA ident_list {$1::$3}
 ;
 
-name_list :
-| name                 {(fst $1)::[]}
-| name COMMA name_list {(fst $1)::$3}
+name :
+|           ident_or_opname { (None         , snd $1), fst $1 }
+| IDENT DOT ident_or_opname { (Some (snd $1), snd $3), fst $1 }
 ;
 
-name :
-| IDENT {([],snd $1),fst $1}
-| CONST_STRING { ([],Ada_utils.make_operator_name (
+ident_or_opname :
+| IDENT        {$1}
+| CONST_STRING { fst $1,(Ada_utils.make_operator_name (
                     Ada_utils.operator_of_string (snd $1)
-                )), fst $1
+                ))
     }
-| name DOT ident /* TODO : trouver une meilleur solution */
-      {
-    let (par, ident) = fst $1
-    in (par@[ident], $3),snd $1
-      }
-;
+
 
 %%
 

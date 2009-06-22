@@ -74,7 +74,7 @@ let brk_lbl = 2
 let default_lbl = 3
 
 (** Promotes an identifier to a name *)
-let ident_to_name ident = ([], ident)
+let ident_to_name ident = (None, ident)
 
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
@@ -188,7 +188,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let find_all_use ident =
     List.flatten
       (List.map
-         (fun pack -> find_all_symb (pack, ident))
+         (fun pack -> find_all_symb (Some pack, ident))
          (Symboltbl.get_use gtbl))
 
 
@@ -200,35 +200,33 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 f_current
     =
     match name with
-      | ([], ident) -> f_ident ident name
-      | (pack, ident) when (Symboltbl.is_extern gtbl)
+      | (None, ident) -> f_ident ident name
+      | (Some pack, ident) when (Symboltbl.is_extern gtbl)
                        ||  (Symboltbl.is_with gtbl pack) ->
-          f_with (pack,ident)
+          f_with (Some pack,ident)
       | (pack, ident) when pack = Symboltbl.current gtbl ->
-          f_current ([],ident) name
-      | (pack, _) -> Npkcontext.report_error
+          f_current (None,ident) name
+      | (Some pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
             ("unknown package "
-             ^(Ada_utils.ident_list_to_string
-                 pack))
+             ^pack)
   in
   let find_name_record  name f_ident f_with f_current =
     match name with
-      | ([], ident) -> f_ident ident name
-      | (pack, ident) when not ( (Symboltbl.current gtbl = pack)
-                              || (Symboltbl.is_with gtbl   pack)
+      | (None, ident) -> f_ident ident name
+      | (Some pack, ident) when not ( (Symboltbl.current gtbl = Some pack)
+                              || (Symboltbl.is_with gtbl pack)
                               || (Symboltbl.is_extern gtbl))
-        -> f_with (pack,ident)
-      | (pack, ident) when     (  Symboltbl.is_extern gtbl
+        -> f_with (Some pack,ident)
+      | (Some pack, ident) when     (  Symboltbl.is_extern gtbl
                               ||  Symboltbl.is_with gtbl  pack)
-        -> f_with (pack,ident)
+        -> f_with (Some pack,ident)
       | (pack, ident) when pack = Symboltbl.current gtbl->
-          f_current ([],ident) name
-      | (pack, _) -> Npkcontext.report_error
+          f_current (None,ident) name
+      | (Some pack, _) -> Npkcontext.report_error
           "Firstpass.find_name"
             ("unknown package "
-             ^(Ada_utils.ident_list_to_string
-                 pack))
+             ^pack)
   in
 
 

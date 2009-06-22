@@ -252,14 +252,14 @@ and representation_clause_to_string clause = match clause with
 and context_clause_to_string context_clause =
   match context_clause with
     | With(name, loc, spec) -> "With("
-        ^(name_to_string name)
+        ^name
         ^", "^(line_of_loc loc)^",\n"
         ^(option_to_string
             spec
             (fun (spec, loc) -> "("^(spec_to_string spec)
                ^", "^(line_of_loc loc)^")"))
         ^")"
-    | UseContext(names) -> "UseContext("^(name_to_string names)^")"
+    | UseContext(name) -> "UseContext("^name^")"
 
 and context_to_string context = list_to_string context
                                     context_clause_to_string ";\n" true
@@ -272,7 +272,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(object_state_to_string status)^")"
   | TypeDecl(id,typdecl,_) ->
       "TypeDecl("^id^","^(typ_declaration_to_string typdecl)^")"
-  | UseDecl(use_clause) -> "UseDecl("^(name_to_string use_clause)^")"
+  | UseDecl(use_clause) -> "UseDecl("^(use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("
       ^(spec_to_string spec)^")"
   | NumberDecl(idents, exp, v) ->
@@ -299,15 +299,15 @@ and declarative_item_to_string decl_item = match decl_item with
 
 and sub_program_spec_to_string spec = match spec with
   | Function(name,param_list,return_type) ->
-      "Function("^(name_to_string name)^", "
+      "Function("^name^", "
         ^(param_list_to_string param_list)^", "
         ^(subtyp_to_string return_type)^")"
   | Procedure(name,param_list) ->
-      "Procedure("^(name_to_string name)^", "
+      "Procedure("^name^", "
       ^(param_list_to_string param_list)^")"
 
 and package_spec_to_string (name, decls) =
-  "("^(name_to_string name)
+  "("^name
   ^(list_to_string
       decls
       (fun (decl, loc) ->
@@ -336,7 +336,7 @@ and body_to_string body = match body with
                        ^block_to_string block
                   ^")"
   | PackageBody (name, package_spec, declarative_part) ->
-      "PackageBody("^(name_to_string name)^",\n\n"
+      "PackageBody("^name^",\n\n"
                    ^(option_to_string package_spec package_spec_to_string)^",\n"
                    ^declarative_part_to_string declarative_part ^",\n\n"
       ^")"

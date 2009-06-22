@@ -319,14 +319,12 @@ let check_compil_unit_name compil_unit file_name =
   let (_,lib_item,_) = compil_unit in
   let name =
     match lib_item with
-      | Spec(SubProgramSpec(spec)) -> subprog_name spec
-      | Spec(PackageSpec(name,_)) -> name
+      | Spec(SubProgramSpec(spec))     -> subprog_name spec
       | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
+      | Spec(PackageSpec(name,_))   -> name
       | Body(PackageBody(name,_,_)) -> name
   in
-    match name with
-      | ([],ident) -> ident=expected_name
-      | _ -> false
+    name = expected_name
 
 
 let extract_representation_clause_name rep_clause = match rep_clause with
@@ -343,8 +341,10 @@ let list_to_string l to_string sep crochet =
 let ident_list_to_string l =
   list_to_string l (fun x -> x) "." false
 
-let name_to_string (packages, ident) =
-  ident_list_to_string (packages@[ident])
+let name_to_string (package, ident) =
+  match package with
+    | None   -> ident
+    | Some p -> ident_list_to_string (p::ident::[])
 
 let make_operator_name op =
   let ada2npk_operator_prefix = "__ada2npk_operator_" in
