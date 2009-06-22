@@ -25,18 +25,18 @@ void main(void) {
           (592.c:31#4)^1- =(uint32) 1;
           (592.c:31#4)^choose {
            -->
-            (592.c:31#4)^guard(1-_uint32);
+            (592.c:31#4)^guard(1-_int32);
             (592.c:31#4)^goto lbl4;
            -->
-            (592.c:31#4)^guard(! 1-_uint32);
+            (592.c:31#4)^guard(! 1-_int32);
           }
         } with lbl4: {
         }
         (592.c:28#1)^choose {
          -->
-          (592.c:28#1)^guard(1-_uint32);
+          (592.c:28#1)^guard(1-_int32);
          -->
-          (592.c:28#1)^guard(! 1-_uint32);
+          (592.c:28#1)^guard(! 1-_int32);
           (592.c:28#1)^goto lbl1;
         }
       }

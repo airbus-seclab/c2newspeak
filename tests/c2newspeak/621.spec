@@ -26,22 +26,22 @@ void main(void) {
               }
               (621.c:27#13)^choose {
                -->
-                (621.c:27#13)^guard(2-_uint32);
+                (621.c:27#13)^guard(2-_int32);
                 (621.c:27#13)^2- =(uint32) 0;
                 (621.c:27#13)^goto lbl4;
                -->
-                (621.c:27#13)^guard(! 2-_uint32);
+                (621.c:27#13)^guard(! 2-_int32);
               }
             }
           } with lbl4: {
           }
           (621.c:27#13)^choose {
            -->
-            (621.c:27#13)^guard(1-_uint32);
+            (621.c:27#13)^guard(1-_int32);
             (621.c:27#13)^1- =(uint32) 0;
             (621.c:27#13)^goto lbl1;
            -->
-            (621.c:27#13)^guard(! 1-_uint32);
+            (621.c:27#13)^guard(! 1-_int32);
           }
         }
       } with lbl1: {

@@ -107,7 +107,7 @@ and exp =
     | Var of string
     | RetVar
     | Field of (exp * string)
-    | Index of (exp * array_typ * exp)
+    | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp
     | AddrOf of exp
     | Unop of (unop * exp)
@@ -216,7 +216,7 @@ let rec string_of_exp e =
     | Var x -> x
     | RetVar -> "!RetVar"
     | Field (e, f) -> (string_of_exp e)^"."^f
-    | Index (e1, _, e2) -> 
+    | Index (e1, _, (e2, _)) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref (e, _) -> "*("^(string_of_exp e)^")"
     | AddrOf e -> "&("^(string_of_exp e)^")"

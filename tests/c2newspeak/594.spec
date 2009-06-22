@@ -15,13 +15,13 @@ void main(void) {
              -->
               (594.c:28#2)^choose {
                -->
-                (594.c:28#2)^guard(1-_uint32);
+                (594.c:28#2)^guard(! (1-_uint32 ==_uint32 0));
                -->
-                (594.c:28#2)^guard(! 1-_uint32);
+                (594.c:28#2)^guard((1-_uint32 ==_uint32 0));
                 (594.c:28#2)^guard(! (0-_int32 ==_int32 0));
               }
              -->
-              (594.c:28#2)^guard(! 1-_uint32);
+              (594.c:28#2)^guard((1-_uint32 ==_uint32 0));
               (594.c:28#2)^guard((0-_int32 ==_int32 0));
               (594.c:28#2)^goto lbl3;
             }
@@ -39,9 +39,9 @@ void main(void) {
         }
         (594.c:31#2)^choose {
          -->
-          (594.c:31#2)^guard(1-_uint32);
+          (594.c:31#2)^guard(1-_int32);
          -->
-          (594.c:31#2)^guard(! 1-_uint32);
+          (594.c:31#2)^guard(! 1-_int32);
           (594.c:31#2)^goto lbl1;
         }
       }

@@ -11,9 +11,9 @@ void main(void) {
     (608.c:29#2)^while (1) {
       (608.c:29#2)^choose {
        -->
-        (608.c:29#2)^guard(1-_uint32);
+        (608.c:29#2)^guard(! (1-_uint32 ==_uint32 0));
        -->
-        (608.c:29#2)^guard(! 1-_uint32);
+        (608.c:29#2)^guard((1-_uint32 ==_uint32 0));
       }
       (608.c:30#2)^1- =(uint32) 0;
     }
