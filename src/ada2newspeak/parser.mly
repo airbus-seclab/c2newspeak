@@ -188,7 +188,6 @@ let make_range exp_b_inf exp_b_sup =
 %type <string> pragma
 %type <param_mode> mode
 %type <name*location> name
-%type <name list> name_list
 %type <string> ident
 %type <string list> ident_list
 %type <argument> parameter_association
@@ -603,11 +602,6 @@ ident :
 ident_list :
 | ident                  {$1::[]}
 | ident COMMA ident_list {$1::$3}
-;
-
-name_list :
-| name                 {(fst $1)::[]}
-| name COMMA name_list {(fst $1)::$3}
 ;
 
 name :
