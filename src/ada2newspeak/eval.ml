@@ -56,7 +56,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   let find_all_use ident =
     List.flatten
       (List.map
-         (fun pack -> find_all_cst (pack, ident))
+         (fun pack -> find_all_cst (Some pack, ident))
          (Symboltbl.get_use tbl)) in
 
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
@@ -416,13 +416,13 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
 
   in
       match name with
-        | [], ident -> sans_selecteur ident name
-        | pack, ident when extern || Symboltbl.is_with tbl pack ->
-                                                    avec_selecteur (pack,ident)
+        | None, ident -> sans_selecteur ident name
+        | Some pack, ident when extern || Symboltbl.is_with tbl pack ->
+                                                    avec_selecteur (Some pack,ident)
         | (pack, ident) when pack = Symboltbl.current tbl ->
-                                        avec_selecteur_courant ([],ident) name
-        | (pack, _) -> Npkcontext.report_error "eval_static.const"
-              ("unknown package " ^(Ada_utils.ident_list_to_string pack))
+                                        avec_selecteur_courant (None,ident) name
+        | (Some pack, _) -> Npkcontext.report_error "eval_static.const"
+              ("unknown package " ^pack)
   in
       eval_static_exp exp expected_typ
 

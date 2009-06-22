@@ -91,8 +91,8 @@ let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.NumberDecl (i,_,_)
   | Ast.SubtypDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
-  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_)))
-  | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> name_to_string n
+  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
+  | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> n
   | Ast.UseDecl _ -> "<no name>"
 
 let check_package_body_against_spec ~(body:Ast.declarative_part)
@@ -113,7 +113,7 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
       begin
         if not (find_body_for_spec ~specification:sp ~bodylist)
         then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
-          ("Body for package " ^(name_to_string pkgname)
+          ("Body for package " ^pkgname
           ^" does not match its specification : cannot find a body for \""
           ^(name_of_spec sp)^"\"")
       end
@@ -121,7 +121,7 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
 
 let normalize_ident ident package extern =
   if extern then (package, ident)
-            else (   []  , ident)
+            else (None   , ident)
 
 let extract_subprog_spec (ast:compilation_unit):compilation_unit =
     match ast with
@@ -138,9 +138,9 @@ let extract_subprog_spec (ast:compilation_unit):compilation_unit =
    extrait eventuellement cette specification d'un corps
    de sous-programme, dans le cas ou aucun fichier de specification
    n'est fourni.*)
-let parse_specification (name:name) :compilation_unit =
+let parse_specification (name:string) :compilation_unit =
   (* tricherie : probleme avec sous-package *) (* FIXME *)
-  let spec_name = (string_of_name name)^".ads" in
+  let spec_name = name^".ads" in
   let spec_ast =
     if Sys.file_exists spec_name
     then
@@ -154,7 +154,7 @@ let parse_specification (name:name) :compilation_unit =
         end;
       res
     else
-      let body_name = (string_of_name name)^".adb" in
+      let body_name = name^".adb" in
         extract_subprog_spec (File_parse.parse body_name)
   in
     match spec_ast with
@@ -165,7 +165,7 @@ let parse_specification (name:name) :compilation_unit =
 
 (* renvoie la specification du package correspondant a name.
    cette specification est normalisee *)
-let parse_package_specification (name:name):package_spec =
+let parse_package_specification (name:string):package_spec =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
     | (_, Spec(SubProgramSpec _),_) ->
@@ -181,7 +181,7 @@ let parse_package_specification (name:name):package_spec =
  * renvoie la specification normalisee du package correspondant
  * a name, les noms etant traites comme extern a la normalisation
  *)
-let rec parse_extern_specification (name:name):Ast.spec*location =
+let rec parse_extern_specification (name:string) :Ast.spec*location =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
   let norm_spec = (normalization spec_ast true) in
@@ -362,7 +362,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
         :(subtyp*location*bool) list =
     List.flatten
       (List.map
-         (fun pack -> types#find_all (pack, ident))
+         (fun pack -> types#find_all (Some pack, ident))
          (Symboltbl.get_use (Sym.top gtbl)))
   in
 
@@ -446,12 +446,12 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
     in
         match x with
-          | ([], ident) -> sans_selecteur ident
-          | (pack, _) when extern||(Symboltbl.is_with (Sym.top gtbl) pack) -> avec_selecteur x
+          | (None, ident) -> sans_selecteur ident
+          | (Some pack, _) when extern||(Symboltbl.is_with (Sym.top gtbl) pack) -> avec_selecteur x
           | (pack, ident) when pack = (Symboltbl.current (Sym.top gtbl)) ->
-              selecteur_courant ([],ident)
-          | (pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
-                ("unknown package " ^(Ada_utils.ident_list_to_string pack))
+              selecteur_courant (None,ident)
+          | (Some pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
+                ("unknown package " ^pack)
   in
 
   let normalize_name (parents, ident) =
@@ -568,7 +568,7 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   |_ -> invalid_arg "direct_op_trans"
   in
   (* Is the operator overloaded ? *)
-  let ovl_opname = ([],make_operator_name bop) in
+  let ovl_opname = (None,make_operator_name bop) in
   if (Hashtbl.mem csttbl ovl_opname) then
     normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
   else
@@ -1034,7 +1034,7 @@ in
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
            if addparam then begin
-              Sym.s_add_variable gtbl ([],param.formal_name)
+              Sym.s_add_variable gtbl (None,param.formal_name)
                                           (subtyp_to_adatyp param.param_type)
               ;
               add_cst (normalize_ident_cur param.formal_name)
@@ -1118,7 +1118,7 @@ in
                  au sous-type *)
               check_static_subtyp subtyp v;
               List.iter (fun x ->
-                Sym.s_add_variable gtbl ([],x) T.unknown;
+                Sym.s_add_variable gtbl (None,x) T.unknown;
                            add_ident v x) ident_list;
               StaticVal(v)
           with
@@ -1176,9 +1176,9 @@ in
     | RepresentClause _
     | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
-  and normalize_package_spec (nom, list_decl) :Ast.package_spec =
-    Symboltbl.set_current (Sym.top gtbl) nom;
-    Sym.enter_context ~name:(snd nom) gtbl;
+  and normalize_package_spec (name, list_decl) :Ast.package_spec =
+    Symboltbl.set_current (Sym.top gtbl) name;
+    Sym.enter_context ~name gtbl;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
                                   | RepresentClause(rep), loc ->
@@ -1197,7 +1197,7 @@ in
     let norm_spec = normalize_decls list_decl in
       Symboltbl.reset_current (Sym.top gtbl);
       Sym.exit_context gtbl;
-      (nom,norm_spec)
+      (name, norm_spec)
 
   and normalize_spec spec = match spec with
     | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
@@ -1233,7 +1233,7 @@ in
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-        Sym.s_add_variable gtbl ([],iter) T.unknown;
+        Sym.s_add_variable gtbl (None,iter) T.unknown;
          Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
                          normalize_exp exp2, is_rev),
                          normalize_block instrs), loc)
@@ -1315,7 +1315,7 @@ in
                            )
         in
           Symboltbl.set_current (Sym.top gtbl) name;
-          Sym.enter_context ~name:(snd name) gtbl;
+          Sym.enter_context ~name gtbl;
           let ndp = normalize_decl_part decl_part ~global:true in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
@@ -1396,13 +1396,13 @@ in
           add_function name (Some(base_typ return_typ)) true
       | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
-      | Ast.PackageSpec(nom, basic_decls) ->
-          Symboltbl.set_current (Sym.top gtbl) nom;
-          Sym.enter_context ~name:(snd nom) gtbl;
+      | Ast.PackageSpec(name, basic_decls) ->
+          Symboltbl.set_current (Sym.top gtbl) name;
+          Sym.enter_context ~name gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Symboltbl.reset_current (Sym.top gtbl);
           Sym.exit_context gtbl;
-          Symboltbl.add_with (Sym.top gtbl) nom
+          Symboltbl.add_with (Sym.top gtbl) name
 
   in
 

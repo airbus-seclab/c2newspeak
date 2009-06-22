@@ -34,14 +34,14 @@ type table
 val create_table  : ?name:string -> unit -> table
 
 (** Add a type symbol to a table. *)
-val add_type      : table -> string list*string -> Ada_types.t -> unit
+val add_type      : table -> string option*string -> Ada_types.t -> unit
 
 (** Add a variable symbol to a table. *)
-val add_variable  : table -> string list*string -> Ada_types.t -> unit
+val add_variable  : table -> string option*string -> Ada_types.t -> unit
 
 (** Add a subprogram symbol to a table. *)
 val add_subprogram : table
-                  -> (string list*string)
+                  -> (string option*string)
                   -> (string*bool*bool*Ada_types.t) list
                   -> Ada_types.t option
       -> unit
@@ -54,7 +54,7 @@ val add_subprogram : table
  * @param the queried identifier
  *)
 val find_type :    table
-               ->  string list*string
+               ->  string option*string
             -> Ada_types.t
 
 (**
@@ -62,8 +62,8 @@ val find_type :    table
  * Used for example to resolve overloading in binary operations.
  *)
 val type_ovl_intersection : table
-                          -> string list*string
-                          -> string list*string
+                          -> string option*string
+                          -> string option*string
            -> Ada_types.t
 
 exception ParameterlessFunction of Ada_types.t
@@ -76,11 +76,11 @@ exception ParameterlessFunction of Ada_types.t
  *)
 val find_variable :     table
                     -> ?expected_type:Ada_types.t
-                    ->  string list*string
+                    ->  string option*string
             -> Ada_types.t
 
 val find_subprogram :     table
-                      ->  string list*string
+                      ->  string option*string
       -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
 val add_renaming_declaration :    table
@@ -97,7 +97,7 @@ val builtin_type : string -> Ada_types.t
 (** (Old) package_manager + proxies on methods *)
 
 (** Set the current package. *)
-val set_current       : table -> Syntax_ada.name -> unit
+val set_current       : table -> string -> unit
 (** Reset the current package. *)
 val reset_current     : table -> unit
 (**
@@ -105,17 +105,17 @@ val reset_current     : table -> unit
  * If [set_current] has not been called, or [reset_current] has been called
  * after the last call to [set_current], the empty package is returned.
  *)
-val current           : table -> Syntax_ada.package
+val current           : table -> string option
 (** Add a package to the "with" list. *)
-val add_with          : table -> Syntax_ada.name -> unit
+val add_with          : table -> string -> unit
 (** Is a package in the "with" list ? *)
-val is_with           : table -> Syntax_ada.package -> bool
+val is_with           : table -> string -> bool
 (**
  * Add a "use" clause to the context.
  * The added package must have been added to the "with" list.
  * Adding a package several times is not an error.
  *)
-val add_use           : table -> Syntax_ada.name -> unit
+val add_use           : table -> string -> unit
 (**
  * Remove a "use" clause from the context.
  * Removing a package several times is not an error : if a package has been
@@ -124,13 +124,13 @@ val add_use           : table -> Syntax_ada.name -> unit
  * Removing a package that is not in the current context will be silently
  * ignored.
  *)
-val remove_use        : table -> Syntax_ada.name -> unit
+val remove_use        : table -> string -> unit
 (**
  * Get the current context.
  * It returns a list of packages that have been added and not removed.
  * The order is not specified.
  *)
-val get_use           : table -> Syntax_ada.package list
+val get_use           : table -> string list
 (** Returns the "extern" flag for this manager. *)
 val is_extern         : table -> bool
 (** Perform an action with the "extern" flag. *)
@@ -220,15 +220,15 @@ module SymStack : sig
 
   (** Find data.  *)
   val s_find_variable : t -> ?expected_type:Ada_types.t
-                          -> string list*string -> Ada_types.t
-  val s_find_type     : t -> string list*string -> Ada_types.t
+                          -> string option*string -> Ada_types.t
+  val s_find_type     : t -> string option*string -> Ada_types.t
 
   (** Add data.  *)
-  val s_add_type       : t -> string list*string -> Ada_types.t -> unit
-  val s_add_variable   : t -> string list*string -> Ada_types.t -> unit
+  val s_add_type       : t -> string option*string -> Ada_types.t -> unit
+  val s_add_variable   : t -> string option*string -> Ada_types.t -> unit
 
   val s_add_subprogram : t
-                    -> (string list*string)
+                    -> (string option*string)
                     -> (string*bool*bool*Ada_types.t) list
                     -> Ada_types.t option
         -> unit

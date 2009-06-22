@@ -119,7 +119,7 @@ and  body =
   | SubProgramBody of sub_program_spec
                     * declarative_part
                     * block
-  |    PackageBody of Syntax_ada.name
+  |    PackageBody of string
                     * package_spec option
                     * declarative_part
 
@@ -133,7 +133,7 @@ and basic_declaration =
                      * expression option
                      * Syntax_ada.object_state
   | TypeDecl        of string*Syntax_ada.typ_declaration
-  | UseDecl         of Syntax_ada.name
+  | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string
                      * expression
@@ -150,16 +150,16 @@ and spec =
   |    PackageSpec of package_spec
 
 and context_clause =
-  | With       of Syntax_ada.name
+  | With       of string
                 * Newspeak.location
                 * (spec*Newspeak.location) option
-  | UseContext of Syntax_ada.name
+  | UseContext of string
 
 and sub_program_spec =
   | Function  of Syntax_ada.name*param list*Syntax_ada.subtyp
   | Procedure of Syntax_ada.name*param list
 
-and package_spec = Syntax_ada.name
+and package_spec = string
                  * (basic_declaration*Newspeak.location) list
 
 type compilation_unit = context_clause list

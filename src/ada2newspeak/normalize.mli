@@ -27,7 +27,7 @@
 *)
 
 val normalize_ident :
-  string -> Syntax_ada.package ->
+  string -> string option ->
   bool -> Syntax_ada.name
 
 val normalization :

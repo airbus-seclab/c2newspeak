@@ -35,15 +35,12 @@ type nat = Newspeak.Nat.t
 (** A floating-point number *)
 type float_number = float*string
 
-(* FIXME : for speed's sake, the list should be reverted. *)
-type package = string list
-
 (**
  * A qualified string.
  * For example, "Ada.Text_IO.Put_line" maps to
  * [ ["Ada","Text_IO"],"Put_Line"].
  *)
-type name = package * string
+type name = string option * string
 
 (** Modes for subprogram parameters. *)
 type param_mode =
@@ -236,12 +233,12 @@ and object_state =
   | StaticVal of value (*constante statique*)
 
 and context_clause =
-  | With       of name
+  | With       of string
                 * location
                 * (spec*location) option
-  | UseContext of name
+  | UseContext of string
 
-and package_spec = name
+and package_spec = string
                  * (basic_declaration*location) list
 
 and spec =
@@ -252,7 +249,7 @@ and body =
   | SubProgramBody of sub_program_spec
                     * declarative_part
                     * block
-  |    PackageBody of name
+  |    PackageBody of string
                     * package_spec option
                     * declarative_part
 
@@ -262,7 +259,7 @@ and basic_declaration =
                      * expression option
                      * object_state
   | TypeDecl        of string*typ_declaration*Ada_types.t
-  | UseDecl         of name
+  | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string
                      * expression
