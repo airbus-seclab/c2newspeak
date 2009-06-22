@@ -372,8 +372,11 @@ statement:
   }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
-| RETURN expression SEMICOLON              { [Return (Some $2), get_loc ()] }
-| RETURN SEMICOLON                         { [Return None, get_loc ()] }
+| RETURN expression SEMICOLON              { 
+    let loc = get_loc () in
+      (Exp (Set (RetVar, None, $2)), loc)::(Return, loc)::[]
+  }
+| RETURN SEMICOLON                         { [Return, get_loc ()] }
 | expression SEMICOLON                     { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }

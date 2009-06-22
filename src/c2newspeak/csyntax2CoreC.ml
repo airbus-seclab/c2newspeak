@@ -164,7 +164,7 @@ let process (globals, specs) =
 
   let translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
-      Npkcontext.report_warning "Firstpass.check_proto_ftyp" 
+      Npkcontext.report_warning "Csyntax2CoreC.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
     update_funsymb f static (args, ret) loc
@@ -184,6 +184,21 @@ let process (globals, specs) =
       (e, t)
   in
 
+  let refine_ftyp f (args_t, ret_t) actuals = 
+    match args_t with
+	None -> 
+	  Npkcontext.report_accept_warning "Csyntax2CoreC.refine_ftyp"  
+            "unknown arguments type at function call"   
+            Npkcontext.PartialFunDecl;
+	  let ft = (Some actuals, ret_t) in begin
+	      match f with
+		  C.Fname x -> update_funtyp x ft
+		| _ -> ()
+	    end;
+	    ft
+      | Some _ -> (args_t, ret_t)
+  in
+
   let translate_unop x t = 
     match (x, t) with
 	(Not, C.Int _) -> (C.Not, C.int_typ)
@@ -198,7 +213,7 @@ let process (globals, specs) =
   in
 
   let translate_binop op t1 t2 = 
-    let t = 
+    let t_in = 
       match (op, t1, t2) with
 	  (Minus, C.Ptr _, C.Ptr _) -> C.int_typ
 
@@ -216,14 +231,17 @@ let process (globals, specs) =
 	| ((Shiftl|Shiftr), C.Int (_, n), C.Int _) -> 
 	    C.Int (Newspeak.Unsigned, n)
 
-	| ((Gt|Eq), _, _) -> C.int_typ
-
 	| (Plus, C.Int _, C.Ptr _) -> 
 	    Npkcontext.report_accept_warning "Firstpass.normalize_binop"
 	      "addition of a pointer to an integer" Npkcontext.DirtySyntax;
 	    t2
 
 	| _ -> t1
+    in
+    let t_out =
+      match op with
+	  Gt|Eq -> C.int_typ
+	| _ -> t_in
     in
     let op =
 (* TODO: have csyntax use coreC operators!!! idem for unop!! *) 
@@ -241,7 +259,7 @@ let process (globals, specs) =
 	| Gt -> C.Gt
 	| Eq -> C.Eq
     in
-      (op, t)
+      (op, t_in, t_out)
   in
 
   let rec translate_lv e =
@@ -250,6 +268,9 @@ let process (globals, specs) =
 	  let t = translate_typ t in
 	    (C.Cst (c, t), t)
       | Var x -> find_var x
+      | RetVar -> 
+	  let (_, t) = find_var ret_name in
+	    (C.RetVar, t)
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
 	  let r = fields_of_comp (C.comp_of_typ t) in
@@ -262,7 +283,8 @@ let process (globals, specs) =
 	      match t1 with
 		  C.Array (t, len) -> (C.Index (a, (t, len), idx), t)
 		| C.Ptr t -> 
-		    (C.Deref (C.Binop ((C.Plus, t1), (a, t1), (idx, t2))), t)
+		    (C.Deref (C.Binop ((C.Plus, t1), (a, t1), (idx, t2)), t1), 
+		     t)
 		| _ -> 
 		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
 		      "pointer or array expected"
@@ -280,17 +302,28 @@ let process (globals, specs) =
       | Binop (op, e1, e2) -> 
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
-	  let (op, t) = translate_binop op t1 t2 in
-	    (C.Binop ((op, t), (e1, t1), (e2, t2)), t)
+	  let (op, t_in, t_out) = translate_binop op t1 t2 in
+	    (C.Binop ((op, t_in), (e1, t1), (e2, t2)), t_out)
       | IfExp (c, e1, e2) -> 
 	  let (c, _) = translate_exp c in
-	  let (e1, t) = translate_exp e1 in
-	  let (e2, _) = translate_exp e2 in
-	    (C.IfExp (c, e1, e2, t), t)
+	  let (e1, t1) = translate_exp e1 in
+	  let (e2, t2) = translate_exp e2 in
+	  let t = 
+	    match (t1, t2) with
+		(C.Ptr _, C.Int _) -> t1
+	      | (C.Int _, C.Ptr _) -> t2
+	      | _ when t1 = t2 -> t1
+	      | _ -> 
+		  Npkcontext.report_error "Csyntax2CoreC.translate_exp"
+		    "compatible type expected"
+	  in
+	    (C.IfExp (c, (e1, t1), (e2, t2), t), t)
       | Call (f, args) -> 
-	  let (f, (_, ret_t)) = translate_funexp f in
-	  let args = translate_args args in
-	    (C.Call (f, args), ret_t)
+	  let (f, ft) = translate_funexp f in
+	  let (args, actuals) = translate_args args in
+	  let ft = refine_ftyp f ft actuals in
+	  let (_, ret_t) = ft in
+	    (C.Call (f, ft, args), ret_t)
       | Sizeof t -> (C.Sizeof (translate_typ t), C.uint_typ)
       | SizeofE e -> 
 	  let (_, t) = translate_lv e in
@@ -300,25 +333,25 @@ let process (globals, specs) =
 	  let len = C.exp_of_int ((String.length x) + 1) in
 	    (C.Str x, C.Array (C.char_typ, Some len))
       | FunName -> translate_exp (Str !current_fun)
-      | Cast (e, t2) -> 
-	  let (e, t1) = translate_exp e in
-	  let t2 = translate_typ t2 in
-	    (C.Cast (e, t1, t2), t2)
+      | Cast (e, t) -> 
+	  let e = translate_exp e in
+	  let t = translate_typ t in
+	    (C.Cast (e, t), t)
       | Set (lv, op, e) -> 
 	  let (lv, t1) = translate_exp lv in
 	  let (e, t2) = translate_exp e in
-	  let (op, t) =
+	  let op =
 	    match op with
-		None -> (None, t1)
+		None -> None
 	      | Some op -> 
-		  let (op, t) = translate_binop op t1 t2 in
-		    (Some (op, t), t)
+		  let (op, t_in, _) = translate_binop op t1 t2 in
+		    Some (op, t_in)
 	  in
-	    (C.Set (lv, op, e), t)
+	    (C.Set ((lv, t1), op, (e, t2)), t1)
       | OpExp (op, e, is_after) ->
 	  let (e, t) = translate_exp e in
-	  let (op, t) = translate_binop op t C.int_typ in
-	    (C.OpExp ((op, t), e, is_after), t)
+	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
+	    (C.OpExp ((op, t_in), (e, t), is_after), t_out)
       | BlkExp (blk, is_after) -> 
 	  let (blk, t) = translate_blk_exp blk in
 	    (C.BlkExp (blk, is_after), t)
@@ -334,19 +367,24 @@ let process (globals, specs) =
   (* TODO: introduce type funexp in corec??*)
   and translate_funexp f =
     let (f, ft) = translate_lv f in
-      match ft with
-	  C.Fun t -> (f, t)
-	| C.Ptr (C.Fun t) -> (C.Deref f, t)
+      match (f, ft) with
+	  (C.Var f, C.Fun t) -> (C.Fname f, t)
+	| (C.Deref f, C.Fun t) -> (C.FunDeref f, t)
+	| (_, C.Ptr (C.Fun t)) -> (C.FunDeref (f, ft), t)
 	| _ -> 
 	    Npkcontext.report_error "Csyntax2CoreC.translate_call"
 	      "function expression expected"
 
   and translate_args x = 
-    let translate e = 
-      let (e, _) = translate_exp e in
-	e
+    let rec translate x i =
+      match x with
+	  e::tl -> 
+	    let (e, t) = translate_exp e in
+	    let (args, typs) = translate tl (i+1) in
+	      ((e, t)::args, (t, "arg"^(string_of_int i))::typs)
+	| [] -> ([], [])
     in
-      List.map translate x
+      translate x 0
 
   and translate_typ t =
     match t with
@@ -402,7 +440,7 @@ let process (globals, specs) =
 	      Npkcontext.report_accept_warning "Firstpass.translate"
 		"function declaration within block" Npkcontext.DirtySyntax
 	    end;
-	    C.VDecl (C.Fun ft, is_static, is_extern, None)	    
+	    C.VDecl (C.Fun ft, is_static, is_extern, None)
       | VDecl (t, is_static, is_extern, init) -> 
 	  let t = translate_typ t in
 	  let name = if is_static then get_static_name x loc else x in
@@ -417,8 +455,8 @@ let process (globals, specs) =
 	    in
 	      C.VDecl (t, is_static, is_extern, init)
       | EDecl e -> 
-	  let (e, _) = translate_exp e in
-	    Symbtbl.bind symbtbl x (EnumSymb e, CoreC.int_typ);
+	  let (e, t) = translate_exp e in
+	    Symbtbl.bind symbtbl x (EnumSymb e, t);
 	    C.EDecl e
       | CDecl (is_struct, fields) -> 
 	  add_compdecl (x, (is_struct, fields));
@@ -449,20 +487,10 @@ let process (globals, specs) =
 	  let body = translate_blk body in
 	  let (e, _) = translate_exp e in
 	    C.DoWhile (body, e)
-      | Exp e -> 
-	  let (e, _) = translate_exp e in
-	    C.Exp e
+      | Exp e -> C.Exp (translate_exp e)
       | Break -> C.Break
       | Continue -> C.Continue
-      | Return e -> 
-	  let e = 
-	    match e with
-		None -> None
-	      | Some e -> 
-		  let (e, _) = translate_exp e in
-		    Some e
-	  in
-	    C.Return e
+      | Return -> C.Return
       | Block body -> C.Block (translate_blk body)
       | Goto lbl -> C.Goto lbl
       | Label lbl -> C.Label lbl
@@ -505,7 +533,7 @@ let process (globals, specs) =
 (*      Symbtbl.save symbtbl;*)
       let (blk, (e, t, loc)) = translate_aux x in
 (*	Symbtbl.restore symbtbl;*)
-	(blk@(C.Exp e, loc)::[], t)
+	(blk@(C.Exp (e, t), loc)::[], t)
   
   and add_compdecl (x, (is_struct, f)) =
     let f = List.map translate_field_decl f in
@@ -516,15 +544,14 @@ let process (globals, specs) =
 
   and translate_init t x =
     match (x, t) with
-	(Data e, _) -> 
-	  let (e, _) = translate_lv e in
-	    C.Data e
+	(Data e, _) -> C.Data (translate_lv e)
+
       | (Sequence seq, C.Array (t, _)) -> 
 	  let seq = 
 	    List.map (fun (x, init) -> (x, translate_init t init)) seq 
 	  in
 	    C.Sequence seq
-      
+	      
       | (Sequence seq, C.Comp (s, true)) ->
 	  let f = fields_of_comp s in
 	    C.Sequence (translate_field_sequence seq f)
@@ -557,12 +584,24 @@ let process (globals, specs) =
       | _ -> Npkcontext.report_error "Csyntax2CoreC" "case not implemented yet"
   in
 
-  let translate_global (x, loc) = 
+  let translate_fundecl (f, ft, static, body, loc) =
     Npkcontext.set_loc loc;
-    let x = 
+    current_fun := f;
+    Symbtbl.save symbtbl;
+    add_formals ft;
+    let body = translate_blk body in
+      Symbtbl.restore symbtbl;
+      current_fun := "";
+      (f, (ft, static, body, loc))
+  in
+
+  let translate_globals x = 
+    let glbdecls = ref [] in
+    let fundecls = ref [] in
+    let translate (x, loc) =
+      Npkcontext.set_loc loc;
       match x with
 	  FunctionDef (f, (args_t, ret_t), static, body) -> 
-	    current_fun := f;
 	    let args_t = 
 	      match args_t with
 		  None -> []
@@ -571,18 +610,18 @@ let process (globals, specs) =
 	    let ft = (Some args_t, ret_t) in
 	    let ft = translate_ftyp ft in
 	      update_funsymb f static ft loc;
-	      Symbtbl.save symbtbl;
-	      add_formals ft;
-	      let body = translate_blk body in
-		Symbtbl.restore symbtbl;
-		current_fun := "";
-		C.FunctionDef (f, ft, static, body)
-
-	| GlbDecl (x, d) -> C.GlbDecl (x, translate_decl true loc x d)
+	      fundecls := (f, ft, static, body, loc)::(!fundecls)
+		
+	| GlbDecl (x, d) -> 
+	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
     in
-      (x, loc)
+      List.iter translate x;
+(* TODO: rather have a hashtbl!! possible once any form of typing is removed
+   from firstpass *)
+      (List.rev !glbdecls, List.rev !fundecls)
   in
 
-  let globals = List.map translate_global globals in
+  let (glbdecls, fundecls) = translate_globals globals in
+  let fundecls = List.map translate_fundecl fundecls in
   let specs = List.map translate_assertion specs in
-    (globals, specs)
+    (glbdecls, fundecls, specs)

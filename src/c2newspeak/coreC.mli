@@ -23,7 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = ((global * Newspeak.location) list * assertion list)
+type t = (string * glbinfo) list * (string * funinfo) list * assertion list
+
+and glbinfo = (decl * Newspeak.location)
+
+and funinfo = (ftyp * bool * blk * Newspeak.location)
 
 and assertion = spec_token list
 
@@ -31,10 +35,6 @@ and spec_token =
     | SymbolToken of char
     | IdentToken of string
     | CstToken of Cir.cst
-
-and global =
-    FunctionDef of (string * ftyp * is_static * blk)
-  | GlbDecl of (string * decl)
 
 and decl = 
     VDecl of (typ * is_static * is_extern * init option)
@@ -68,7 +68,7 @@ and typ =
 and array_typ = typ * exp option
 
 and init = 
-    | Data of exp
+    | Data of typ_exp
     | Sequence of (string option * init) list
 
 and stmt = (stmtkind * Newspeak.location)
@@ -82,10 +82,10 @@ and stmtkind =
   | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
-  | Exp of exp
+  | Exp of typ_exp
   | Break
   | Continue
-  | Return of exp option
+  | Return
   | Block of blk
   | Goto of lbl
   | Label of lbl
@@ -96,25 +96,30 @@ and lbl = string
 and exp = 
     | Cst of (Cir.cst * typ)
     | Var of string
+    | RetVar
     | Field of (exp * string)
     | Index of (exp * array_typ * exp)
-    | Deref of exp
+    | Deref of typ_exp
     | AddrOf of exp
     | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp * typ)
+    | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (exp * exp list)
+    | Call of (funexp * ftyp * typ_exp list)
     | Sizeof of typ
     | Offsetof of (typ * string)
     | Str of string
     | FunName
-    | Cast of (exp * typ * typ)
+    | Cast of (typ_exp * typ)
 (* None is a regular assignment *)
-    | Set of (exp * (binop * typ) option * exp)
+    | Set of (typ_exp * (binop * typ) option * typ_exp)
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
-    | OpExp of ((binop * typ) * exp * bool)
+    | OpExp of ((binop * typ) * typ_exp * bool)
     | BlkExp of (blk * bool)
+
+and funexp =
+    Fname of string
+  | FunDeref of typ_exp
 
 and typ_exp = (exp * typ)
 

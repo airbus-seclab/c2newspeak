@@ -67,9 +67,9 @@ let next_aligned o x =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [(None, Data (exp_of_char '\x00'))] in
+  let res = ref [(None, Data (exp_of_char '\x00', char_typ))] in
     for i = len - 1 downto 0 do
-      res := (None, Data (exp_of_char str.[i]))::!res
+      res := (None, Data (exp_of_char str.[i], char_typ))::!res
     done;
     !res
 
@@ -77,7 +77,7 @@ let seq_of_string str =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate (globals, spec) =
+let translate (globals, fundecls, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
@@ -179,13 +179,6 @@ let translate (globals, spec) =
 	      ("variable identifier expected: "^x)
   in
 
-  let is_fname x =
-    let (_, t) = find_symb x in
-      match t with
-	  Fun _ -> true
-	| _ -> false
-  in
-
   let find_fname x =
     let (v, t) = find_symb x in
       match (v, t) with
@@ -256,7 +249,7 @@ let translate (globals, spec) =
     let rec translate o t x =
       match (x, t) with
 (* TODO: move this case to csyntax2CoreC?? *)
-	  ((Data (Str str)|Sequence ([(None, Data (Str str))])), 
+	  ((Data (Str str, _)|Sequence ([(None, Data (Str str, _))])), 
 	   Array (Int (_, n), _)) when n = Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      translate o t (Sequence seq)
@@ -355,7 +348,7 @@ let translate (globals, spec) =
 	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
 	    (* TODO: inefficient: t is translated twice *)
-	    let (e, t) = cast (translate_exp (exp_of_int 0)) t in
+	    let (e, t) = cast (translate_exp (exp_of_int 0, int_typ)) t in
 	      res := (o, translate_typ t, e)::!res
 	| Float _ -> 
 	    res := (o, translate_typ t, C.exp_of_float 0.)::!res
@@ -403,13 +396,15 @@ let translate (globals, spec) =
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in
-	  declare_global false false name loc t (Some (Data (Str str)))
+	  declare_global false false name loc t (Some (Data (Str str, t)))
       end;
       (C.Global name, t)
  
   and translate_lv x =
     match x with
 	Var x -> find_var x
+
+      | RetVar -> find_var ret_name
 
       | Field (lv, f) -> 
 	  let (lv, t) = translate_lv lv in
@@ -422,15 +417,17 @@ let translate (globals, spec) =
 					      a bit hacky!! *)
 	  let (lv, _) = translate_lv e in
 	  let n = translate_array_len len in
-	  let i = translate_exp idx in
+	  let i = translate_exp (idx, int_typ) in
 	    translate_array_access (lv, t, n) i
 	  
       | Deref e -> deref (translate_exp e)
 
       | OpExp (op, lv, is_after) ->
 	  let loc = Npkcontext.get_loc () in
-	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ) in
-	  let (incr, t) = translate_set (lv, Some op, e) in
+	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ)  in
+	  let (incr, t) = 
+	    translate_set (lv, Some op, (e, CoreC.int_typ)) 
+	  in
 	  let (lv, _, _) = incr in
 	    (C.BlkLv ((C.Set incr, loc)::[], lv, is_after), t)
 
@@ -438,7 +435,7 @@ let translate (globals, spec) =
 
       | FunName -> add_glb_cstr !current_fun
 
-      | Cast (lv, _, t) -> 
+      | Cast ((lv, _), t) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast of left value" Npkcontext.DirtySyntax;
 	  let (lv, _) = translate_lv lv in
@@ -475,12 +472,13 @@ let translate (globals, spec) =
       let e = translate_binop (Plus, Ptr t) (e, Ptr t) i in
 	deref e
 
-  and translate_exp e =
+  and translate_exp (e, t) =
     let rec translate e =
       match e with
 	  Cst (c, t) -> (C.Const c, t)
 	    	    
-	| Var _ | Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
+	| Var _ | RetVar 
+	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let (lv, t) = translate_lv e in
 	      (C.Lval (lv, translate_typ t), t)
 		
@@ -499,16 +497,16 @@ let translate (globals, spec) =
 	| AddrOf lv -> addr_of (translate_lv lv)
 
 	| Unop (op, e) -> 
-	    let (e, _) = translate_exp e in
 	    let (op, t) = translate_unop op in
+	    let (e, _) = translate_exp (e, t) in
 	      (C.Unop (op, e), t)
 		
 	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
-	    let (e1, _) = translate_exp e1 in
-	    let (e2, _) = translate_exp e2 in
+	    let (e1, _) = translate_exp (e1, t1) in
+	    let (e2, _) = translate_exp (e2, t2) in
 	      translate_binop (op, t) (e1, t1) (e2, t2)
 		
-	| IfExp (c, e1, e2, t) -> begin
+	| IfExp (c, (e1, _), (e2, _), t) -> begin
 	    try 
 	      let (c, _) = translate c in
 	      let v = C.eval_exp c in
@@ -517,8 +515,8 @@ let translate (globals, spec) =
 	    with Invalid_argument _ -> 
 	      let loc = Npkcontext.get_loc () in
 	      let (x, decl, v) = gen_tmp loc t in
-	      let blk1 = (Exp (Set (Var x, None, e1)), loc)::[] in
-	      let blk2 = (Exp (Set (Var x, None, e2)), loc)::[] in
+	      let blk1 = (Exp (Set ((Var x, t), None, (e1, t)), t), loc)::[] in
+	      let blk2 = (Exp (Set ((Var x, t), None, (e2, t)), t), loc)::[] in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
 		(C.BlkExp (decl::set, C.Lval (v, translate_typ t), false), t)
@@ -528,31 +526,19 @@ let translate (globals, spec) =
 	    let sz = (size_of t) / 8 in
 	      (C.exp_of_int sz, CoreC.uint_typ)
 		
-	| Cast (e, t1, t2) -> 
-	    let (e, _) = translate_exp e in
+	| Cast ((e, t1), t2) -> 
+	    let (e, _) = translate_exp (e, t1) in
 	      cast (e, t1) t2
+
 		(* TODO: introduce type funexp in corec??*)
-	| Call (Var x, args) when is_fname x -> 
-	    let (f, (tmp_args_t, ret_t)) = find_fname x in
-	    let args_t = refine_args_t tmp_args_t args in
+	| Call (e, (Some args_t, ret_t), args) -> 
+	    let e = translate_funexp e in
+(* here translate_args refines args_t and this is useful in some cases
+   should/could?? be implemented during csyntax2CoreC too!!! *)
+(* TODO: think about it *)
 	    let (args, args_t) = translate_args args args_t in
-	    let ft' = translate_ftyp (args_t, ret_t) in
-	      if tmp_args_t = None then update_funtyp x (Some args_t, ret_t); 
-	      (C.Call (ft', C.Fname f, args), ret_t)
-	      
-	| Call (Deref e, args) -> 
-	    let (e, t) = translate_exp e in
-	    let (args_t, ret_t) =
-	      match t with
-		  Ptr (Fun t) -> t
-		| _ -> 
-		    Npkcontext.report_error "Firstpass.translate_exp"
-		      "function pointer expected"
-	    in
-	    let args_t = refine_args_t args_t args in
-	    let (args, args_t) = translate_args args args_t in
-	    let ft' = translate_ftyp (args_t, ret_t) in
-	      (C.Call (ft', C.FunDeref e, args), ret_t)
+	    let ft = translate_ftyp (args_t, ret_t) in
+	      (C.Call (ft, e, args), ret_t)
 
 	| Call _ -> 
 	    Npkcontext.report_error "Firstpass.translate_exp" 
@@ -577,7 +563,8 @@ let translate (globals, spec) =
 	    let o = C.exp_of_int (o / Config.size_of_byte) in
 	      (o, CoreC.uint_typ)
     in
-      match translate e with
+    let (e, _) = translate e in
+      match (e, t) with
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
 	    let (e, _) = addr_of (lv, t) in
 	      (e, Ptr t')
@@ -586,19 +573,16 @@ let translate (globals, spec) =
 	      (e, Ptr t)
 	| v -> v
 
-  and refine_args_t args_t args =  
-    match args_t with  
-        None ->   
-          Npkcontext.report_accept_warning "Firstpass.refine_args_t"  
-            "unknown arguments type at function call"   
-            Npkcontext.PartialFunDecl;  
-          let infer_typ i e =  
-	    let (_, t) = translate_exp e in  
-	      (t, "arg"^(string_of_int i))  
-	  in
-	    List_utils.mapi infer_typ args  
-      | Some args_t -> args_t  	      
-      
+  and translate_funexp e =
+    match e with
+	Fname x -> 
+	  let (e, _) = find_fname x in
+	    C.Fname e
+      | FunDeref e -> 
+	  let (e, _) = translate_exp e in
+	    C.FunDeref e	
+
+
   and deref (e, t) =
     match t with
 	Ptr t -> (C.Deref (e, translate_typ t), t)
@@ -619,17 +603,17 @@ let translate (globals, spec) =
     in
       (e, Ptr t)
 
-  and translate_set (lv, op, e) =
-    let (lv, t) = translate_lv lv in
-    let e = translate_exp e in
-    let t' = translate_typ t in
+  and translate_set ((lv, lv_t), op, (e, e_t)) =
+    let (lv, _) = translate_lv lv in
+    let (e, _) = translate_exp (e, e_t) in
+    let t' = translate_typ lv_t in
     let (lv, e) =
       match op with
-	  None -> (lv, e)
+	  None -> (lv, (e, e_t))
 	| Some op -> 
 	    let (pref, lv', post) = C.normalize_lv lv in
-	    let e' = (C.Lval (lv', t'), t) in
-	    let e = translate_binop op e' e in
+	    let e' = (C.Lval (lv', t'), lv_t) in
+	    let e = translate_binop op e' (e, e_t) in
 	    let lv = C.BlkLv (post, C.BlkLv (pref, lv', false), true) in
 	      if (post <> []) then begin
 		Npkcontext.report_warning "Firstpass.translate_set" 
@@ -637,7 +621,7 @@ let translate (globals, spec) =
 	      end;
 	      (lv, e)
     in
-    let (e, t) = cast e t in
+    let (e, t) = cast e lv_t in
     let set = (lv, t', e) in
       (set, t)
 
@@ -668,7 +652,9 @@ let translate (globals, spec) =
     let rec translate_args args args_t =
       match (args, args_t) with
 	  ([], (Va_arg, id)::[]) ->
-	    let (e, _) = cast (translate_exp (exp_of_int 0)) (Ptr char_typ) in
+	    let (e, _) = 
+	      cast (translate_exp (exp_of_int 0, int_typ)) (Ptr char_typ) 
+	    in
 	      (e::[], (Va_arg, id)::[])
 	| (_, (Va_arg, id)::[]) -> 
 	    let (args, sz) = translate_va_args args in
@@ -705,13 +691,12 @@ let translate (globals, spec) =
     let o = ref 0 in
     let last_align = ref 1 in
     let translate (x, t) =
-(*      Npkcontext.set_loc loc;*)
       let cur_align = align_of t in
       let o' = next_aligned !o cur_align in
       let (o', t, sz) =
 	match t with
 	    Bitfield ((s, n), sz) ->
-	      let (sz, _) = translate_exp sz in
+	      let (sz, _) = translate_exp (sz, int_typ) in
 	      let sz = Nat.to_int (C.eval_exp sz) in
 		if sz > n then begin
 		  Npkcontext.report_error "Firstpass.process_struct_fields"
@@ -743,7 +728,6 @@ let translate (globals, spec) =
     let n = ref 0 in
     let align = ref 0 in
     let translate (x, t) =
-      (*Npkcontext.set_loc loc;*)
       let sz = size_of t in
       let align' = align_of t in
 	align := max !align align';
@@ -765,7 +749,7 @@ let translate (globals, spec) =
 	  let (_, t) = find_var v in
 	    translate_scalar_typ t
       | Bitfield ((s, n), sz) -> 
-	  let (sz, _) = translate_exp sz in
+	  let (sz, _) = translate_exp (sz, int_typ) in
 	  let sz = Nat.to_int (C.eval_exp sz) in
 	    if sz > n then begin
 	      Npkcontext.report_error "Firstpass.process_struct_fields"
@@ -798,7 +782,7 @@ let translate (globals, spec) =
     match x with
 	None -> None
       | Some e -> 
-	  let (e, _) = translate_exp e in
+	  let (e, _) = translate_exp (e, int_typ) in
 	  let i = 
 	    try Nat.to_int (C.eval_exp e) 
 	    with Invalid_argument _ -> 
@@ -930,17 +914,20 @@ let translate (globals, spec) =
     let (blk, e) = translate x in
       (stitch blk, e)
 
-  and translate_stmt_exp loc e =
+  and translate_stmt_exp loc (e, t) =
     match e with
-	Set (lv, op, IfExp (c, e1, e2, t)) ->
-	  let e = IfExp (c, Set (lv, op, e1), Set (lv, op, e2), t) in
-	    translate_stmt_exp loc e
+	Set (lv, op, (IfExp (c, e1, e2, t), _)) ->
+	  let e = 
+	    IfExp (c, (Set (lv, op, e1), snd e1), 
+		   (Set (lv, op, e2), snd e2), t) 
+	  in
+	    translate_stmt_exp loc (e, t)
 
       | Set set -> 
 	  let (set, _) = translate_set set in
 	    (C.Set set, loc)::[]
 
-      | Cast (e, _, Void) -> 
+      | Cast (e, Void) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast to void" Npkcontext.DirtySyntax;
 	  translate_stmt_exp loc e
@@ -951,8 +938,8 @@ let translate (globals, spec) =
 	    translate_stmt (If (c, blk1, blk2), loc)
 
       | _ -> 
-	  let (e, _) = translate_exp e in
-	    (C.Exp e, loc)::[]
+	  let (e, _) = translate_exp (e, t) in
+	  (C.Exp e, loc)::[]
 
 	(* type and translate_stmt *)
   and translate_stmt (x, loc) = 
@@ -964,13 +951,7 @@ let translate (globals, spec) =
 
       | Continue -> (C.Goto cnt_lbl, loc)::[]
 
-      | Return None -> (C.Goto ret_lbl, loc)::[]
-
-      | Return (Some e) ->
-(* TODO: put this in parser already?? *)
-	  let set = (Exp (Set (Var ret_name, None, e)), loc) in
-	  let return = (Return None, loc) in
-	    translate_blk (set::return::[])
+      | Return -> (C.Goto ret_lbl, loc)::[]
 
       | Goto lbl -> 
 	  let lbl = translate_lbl lbl in
@@ -1005,7 +986,7 @@ let translate (globals, spec) =
 	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
 
       | CSwitch (e, choices, default) -> 
-	  let (e, _) = translate_exp e in
+	  let (e, _) = translate_exp (e, int_typ) in
 	  let (last_lbl, switch) = translate_switch choices in
 	  let default_action = (C.Goto default_lbl, loc)::[] in
 	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
@@ -1055,17 +1036,17 @@ let translate (globals, spec) =
     in
     let rec translate_guard e =
       match e with
-	  IfExp (Cst (C.CInt c, _), t, _, _) 
+	  IfExp (Cst (C.CInt c, _), (t, _), _, _) 
 	    when (Nat.compare c Nat.zero <> 0)-> 
 	    translate_guard t
-	| IfExp (Cst (C.CInt c, _), _, f, _) 
+	| IfExp (Cst (C.CInt c, _), _, (f, _), _) 
 	    when (Nat.compare c Nat.zero = 0) -> 
 	    translate_guard f
 	| IfExp (IfExp (c, t1, f1, _), t2, f2, t) -> 
-	    translate_guard (IfExp (c, IfExp (t1, t2, f2, t), 
-				    IfExp (f1, t2, f2, t), t))
-	| IfExp (c, t, f, _) -> 
-	    let (c, _) = translate_exp c in
+	    translate_guard (IfExp (c, (IfExp (fst t1, t2, f2, t), t), 
+				    (IfExp (fst f1, t2, f2, t), t), t))
+	| IfExp (c, (t, _), (f, _), _) -> 
+	    let (c, _) = translate_exp (c, int_typ) in
 	    let (pref, c, post) = C.normalize_exp c in
 	    let guard_c = (C.Guard c, loc) in
 	    let guard_not_c = (C.Guard (C.Unop (K.Not, c)), loc) in
@@ -1078,7 +1059,7 @@ let translate (globals, spec) =
 	    let (e1, e2) = translate_guard e in
 	      (e2, e1)
 	| e -> 
-	    let (e, _) = translate_exp e in
+	    let (e, _) = translate_exp (e, int_typ) in
 	    let (pref, e, post) = C.normalize_exp e in
 	    let guard_e = pref@(C.Guard e, loc)::post in
 	    let guard_not_e = pref@(C.Guard (C.Unop (K.Not, e)), loc)::post in
@@ -1092,7 +1073,7 @@ let translate (globals, spec) =
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
-	  let (e, t) = translate_exp e in
+	  let (e, t) = translate_exp (e, int_typ) in
 	  let t = translate_scalar_typ t in
 	  let (lbl, tl) = translate_switch tl in
 	  let lbl = if body = [] then lbl else lbl+1 in
@@ -1241,49 +1222,47 @@ let translate (globals, spec) =
 	update_global x name loc (t, init)
   in
 
-  let translate_global (x, loc) =
+  let collect_funtyps (f, (ft, static, _, loc)) =
     Npkcontext.set_loc loc;
-    match x with
-	FunctionDef (f, _, _, body) ->
-	  current_fun := f;
-	  let (f', ft) = find_fname f in
-	  let ft = 
-	    match ft with
-		(Some args_t, ret_t) -> (args_t, ret_t)
-	      | (None, _) -> 
-		  Npkcontext.report_error "Firstpass.translate_global" 
-		    "unreachable code"
-	  in
-	    Symbtbl.save symbtbl;
-	    let formalids = add_formals ft in
-	    let body = translate_blk body in
-	    let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	      add_fundef f' formalids body (translate_ftyp ft);
-	      Symbtbl.restore symbtbl;
-	      current_fun := "";
-	      Hashtbl.clear lbl_tbl;
-	      lbl_cnt := default_lbl
-	      
-      | GlbDecl _ -> ()
+    update_funsymb f static ft loc
+  in
+
+  let translate_fundecl (f, (ft, static, body, loc)) =
+    Npkcontext.set_loc loc;
+    update_funsymb f static ft loc;
+    current_fun := f;
+    let (f', ft) = find_fname f in
+    let ft = 
+      match ft with
+	  (Some args_t, ret_t) -> (args_t, ret_t)
+	| (None, _) -> 
+	    Npkcontext.report_error "Firstpass.translate_global" 
+	      "unreachable code"
+    in
+      Symbtbl.save symbtbl;
+      let formalids = add_formals ft in
+      let body = translate_blk body in
+      let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
+	add_fundef f' formalids body (translate_ftyp ft);
+	Symbtbl.restore symbtbl;
+	current_fun := "";
+	Hashtbl.clear lbl_tbl;
+	lbl_cnt := default_lbl
   in
     
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
 (* TODO: should be done in csyntax2CoreC *)
-  let collect_glbtyps (x, loc) =
+  let translate_global (x, (d, loc)) =
     Npkcontext.set_loc loc;
-    match x with
-	FunctionDef (f, ft, static, _) -> update_funsymb f static ft loc
-
-      | GlbDecl (x, d) -> 
-	  translate_decl loc x d;
-	  (* TODO: check if this could not be incorporated in translate_decl!!!
-	  *)
-	  match d with
-	      VDecl (Fun _, _, _, _) -> ()
-	    | VDecl (t, static, extern, init) -> 
-		declare_global static extern x loc t init
-	    | _ -> ()
+    translate_decl loc x d;
+    (* TODO: check if this could not be incorporated in translate_decl!!!
+    *)
+    match d with
+	VDecl (Fun _, _, _, _) -> ()
+      | VDecl (t, static, extern, init) -> 
+	  declare_global static extern x loc t init
+      | _ -> ()
   in
 
   let add_glbdecl name (t, loc, init) =
@@ -1303,8 +1282,10 @@ let translate (globals, spec) =
    Or better: should do all typing first.
    Then compile.
 *)
-    List.iter collect_glbtyps globals;
+(* TODO: remove this phase too! *)
+    List.iter collect_funtyps fundecls;
     List.iter translate_global globals;
+    List.iter translate_fundecl fundecls;
 (* TODO: optimization: could remove this phase if cir had a type 
    structure of name 
    and all the structures' type were in a hashtbl *)

@@ -682,34 +682,34 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
     if search_lbl if_blk lbl then 
       begin
-	let cond = IfExp (lbl', cond, zero) in
+	let cond = Csyntax.and_bexp lbl' cond in
 	let l' = try snd (List.hd if_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
-	let if' = If(lbl', [Goto g_lbl, g_loc], []) in
+	let if' = If (lbl', [Goto g_lbl, g_loc], []) in
 	let if_blk' = (if', l')::if_blk in
 	let if_blk' = inward lbl g_offset g_loc if_blk' in
-	let if' = If(cond, if_blk', else_blk) in
+	let if' = If (cond, if_blk', else_blk) in
 	let decls, before = extract_decls before in
 	  if before = [] then 
 	    set @ decls @ [if', l']
 	  else
-	    let before' = If(Unop(Not, lbl'), before, []) in
+	    let before' = If (Unop(Not, lbl'), before, []) in
 	      set @ decls @ [(before', lb); (if', l')]
       end
     else 
       begin
-	let cond = IfExp (Unop(Not, lbl'), cond, zero) in
+	let cond = Csyntax.and_bexp (Unop(Not, lbl')) cond in
 	let l' = try snd (List.hd else_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
-	let if' = If(lbl', [Goto g_lbl, g_loc], []) in
+	let if' = If (lbl', [Goto g_lbl, g_loc], []) in
 	let else_blk' = (if', l')::else_blk in
 	let else_blk' = inward lbl g_offset g_loc else_blk' in
-	let if' = If(cond, if_blk, else_blk') in
+	let if' = If (cond, if_blk, else_blk') in
 	let decls, before = extract_decls before in
 	  if before = [] then 
 	    set @ decls @ [if', l']
 	  else
-	    let before' = If(Unop(Not, lbl'), before, []) in
+	    let before' = If (Unop(Not, lbl'), before, []) in
 	      set @ decls @ [(before', lb); (if', l')]
       end
 
@@ -738,7 +738,7 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
     if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] 
   in
   let e = 
-    if b then (* expression for While *) IfExp(lbl', one, cond) 
+    if b then (* expression for While *) or_bexp lbl' cond 
     else (* expression for DoWhile *)  cond 
   in
   let g_lbl = goto_lbl lbl g_offset in
@@ -798,7 +798,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
 	    set @ decls @ [(declr, lb) ; (if', lb) ; (switch', l)]
     with Not_found ->
       let conds = List.map (fun (e, _, _) -> e) cases in
-      let build e e' = IfExp(e, one, e') in
+      let build e e' = or_bexp e e' in
       let e_default = List.fold_left build zero conds in
       let e_default = Unop(Not, e_default) in
       let set_else = Exp (Set(tswitch, None, e_default)) in
@@ -1142,9 +1142,7 @@ let renaming_block_variables stmts =
 	    | DoWhile(blk, e) ->
 		let blk' = explore stack blk in
 		  (DoWhile(blk', e), l)::(explore stack stmts)
-	    | Return (Some e) ->
-		let e' = replace stack e in
-		  (Return (Some e'), l)::(explore stack stmts)
+	    | Return -> (Return, l)::(explore stack stmts)
 	    | _ ->
 		(stmt, l)::(explore stack stmts)
   in explore [] stmts

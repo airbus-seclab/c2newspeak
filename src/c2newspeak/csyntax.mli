@@ -85,7 +85,7 @@ and stmtkind =
   | Exp of exp
   | Break
   | Continue
-  | Return of exp option
+  | Return
   | Block of blk
   | Goto of lbl
   | Label of lbl
@@ -98,6 +98,7 @@ and static = bool
 and exp = 
   | Cst of cst
   | Var of string
+  | RetVar
   | Field of (exp * string)
   | Index of (exp * exp)
   | Deref of exp
@@ -169,5 +170,9 @@ val print: t -> unit
 val size_of: t -> int
 
 val neg: exp -> exp
+
+val and_bexp: exp -> exp -> exp
+
+val or_bexp: exp -> exp -> exp
 
 val normalize_bexp: exp -> exp

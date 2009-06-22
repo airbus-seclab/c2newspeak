@@ -91,7 +91,7 @@ and stmtkind =
   | Exp of exp
   | Break
   | Continue
-  | Return of exp option
+  | Return
   | Block of blk
   | Goto of lbl
   | Label of lbl
@@ -104,6 +104,7 @@ and static = bool
 and exp = 
     | Cst of cst
     | Var of string
+    | RetVar
     | Field of (exp * string)
     | Index of (exp * exp)
     | Deref of exp
@@ -293,6 +294,7 @@ and string_of_exp margin e =
       Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
     | Cst _ -> "Cst"
     | Var x -> x
+    | RetVar -> "!RetVar"
     | Field (e, f) -> (string_of_exp margin e)^"."^f
     | Index (e1, e2) -> 
 	"("^(string_of_exp margin e1)^")["^(string_of_exp margin e2)^"]"
@@ -376,7 +378,7 @@ and string_of_stmt margin (x, _) =
 
     | Exp e -> string_of_exp margin e 
 
-    | Return _ -> "Return"
+    | Return -> "Return"
 
     | Break -> "break;"
 
@@ -469,6 +471,12 @@ let neg x =
       Cst (Cir.CInt c, Int (_, sz)) -> 
 	Cst (Cir.CInt (Nat.neg c), Int (Signed, sz))
     | _ -> Binop (Minus, exp_of_int 0, x)
+
+let and_bexp e1 e2 =
+  IfExp (e1, IfExp (e2, exp_of_int 1, exp_of_int 0), exp_of_int 0)
+
+let or_bexp e1 e2 =
+  IfExp (e1, exp_of_int 1, IfExp (e2, exp_of_int 1, exp_of_int 0))
 
 (* TODO: remove this, put in normalize!! and remove it from parser too *)
 (* TODO: think about this simplification, this is a bit hacky?? *)
