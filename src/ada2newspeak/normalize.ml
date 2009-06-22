@@ -1049,19 +1049,10 @@ in
         )
         param_list
     in match subprog_spec with
-        | Function(name, [], return_type)  ->
-            let norm_name = normalize_name name
-            and norm_subtyp = normalize_subtyp return_type in
-              Sym.s_add_subprogram gtbl
-                                   name
-                                   []
-                                   (Some (subtyp_to_adatyp return_type))
-                                   ;
-              add_function norm_name (Some(base_typ norm_subtyp)) false;
-              Ast.Function(norm_name, [], norm_subtyp)
         | Function(name,param_list,return_type) ->
-            let norm_name = normalize_name name in
-              Sym.s_add_subprogram gtbl name
+            let norm_name = normalize_ident_cur name in
+            let norm_subtyp = normalize_subtyp return_type in
+              Sym.s_add_subprogram gtbl norm_name
                                        (List.map (fun p ->
                                          ( p.formal_name
                                          , (p.mode = In  || p.mode = InOut)
@@ -1071,13 +1062,16 @@ in
                                          ) param_list)
                                        (Some (subtyp_to_adatyp return_type))
                                        ;
-              add_function norm_name None false;
+              add_function norm_name (if param_list = [] then
+                                        (Some(base_typ norm_subtyp))
+                                      else None)
+                                     false;
               Ast.Function(norm_name,
                        normalize_params param_list true,
-                       normalize_subtyp return_type)
+                       norm_subtyp)
         | Procedure(name,param_list) ->
-            let norm_name = normalize_name name in
-              Sym.s_add_variable gtbl name T.unknown;
+            let norm_name = normalize_ident_cur name in
+              Sym.s_add_variable gtbl norm_name T.unknown;
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)

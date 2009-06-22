@@ -52,7 +52,7 @@ let check_end decl end_name =
     | Function(name,_,_) -> name
     | Procedure(name,_) -> name
   in
-    check_name begin_name end_name
+    check_ident begin_name end_name
 
 let build_access name lst   =
   let rec build_aux lst  =
@@ -243,10 +243,10 @@ library_item :
 ;
 
 body :
-| subprogram_spec IS declarative_part BEGIN instr_list END name SEMICOLON
+| subprogram_spec IS declarative_part BEGIN instr_list END ident SEMICOLON
     {let (spec, loc) = $1
      in
-       (check_end spec (fst $7));
+       (check_end spec $7);
        (SubProgramBody(spec,$3,$5), loc)}
 
 | subprogram_spec IS declarative_part BEGIN instr_list END SEMICOLON
@@ -272,12 +272,12 @@ decl :
 
 /* on renvoie aussi la position de la spec */
 subprogram_spec :
-| PROCEDURE  name  LPAR formal_part RPAR           {Procedure((fst $2),$4), $1}
-| PROCEDURE  name                                  {Procedure((fst $2),[]), $1}
-| FUNCTION   name  LPAR formal_part RPAR RETURN subtyp
-                                                  {Function ((fst $2),$4,$7),$1}
-| FUNCTION   name                        RETURN subtyp
-                                                  {Function ((fst $2),[],$4),$1}
+| PROCEDURE ident  LPAR formal_part RPAR           {Procedure($2,$4), $1}
+| PROCEDURE ident                                  {Procedure($2,[]), $1}
+| FUNCTION  ident  LPAR formal_part RPAR RETURN subtyp
+                                                 {Function ($2,$4,$7),$1}
+| FUNCTION  ident                        RETURN subtyp
+                                                  {Function ($2,[],$4),$1}
 ;
 
 formal_part :
@@ -398,8 +398,8 @@ basic_declaration :
 | representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
 | subprogram_spec RENAMES name SEMICOLON
         { match (fst $1) with
-              | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
-              | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
+        | Function  (n,_,_) -> RenamingDecl ((None,n), fst $3),$2
+        | Procedure (n,_)   -> RenamingDecl ((None,n), fst $3),$2
         }
               | ident_list COLON subtyp_indication RENAMES name SEMICOLON {
                 if (List.length $1 <> 1) then

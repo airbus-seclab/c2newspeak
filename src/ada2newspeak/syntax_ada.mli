@@ -216,8 +216,8 @@ and instruction =
 
 (** Subprogram declaration *)
 and sub_program_spec =
-  | Function  of name*param list*subtyp (** A Function returns a value *)
-  | Procedure of name*param list        (** A Procedure does not       *)
+  | Function  of string*param list*subtyp (** A Function returns a value *)
+  | Procedure of string*param list        (** A Procedure does not       *)
 
 (* the string is the one that choose the element :
    there are other possibilities for this choice, not yet implemented *)

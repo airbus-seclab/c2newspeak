@@ -299,11 +299,11 @@ and declarative_item_to_string decl_item = match decl_item with
 
 and sub_program_spec_to_string spec = match spec with
   | Function(name,param_list,return_type) ->
-      "Function("^(name_to_string name)^", "
+      "Function("^name^", "
         ^(param_list_to_string param_list)^", "
         ^(subtyp_to_string return_type)^")"
   | Procedure(name,param_list) ->
-      "Procedure("^(name_to_string name)^", "
+      "Procedure("^name^", "
       ^(param_list_to_string param_list)^")"
 
 and package_spec_to_string (name, decls) =
