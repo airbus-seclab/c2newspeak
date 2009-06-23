@@ -417,7 +417,7 @@ let translate (globals, fundecls, spec) =
 					      a bit hacky!! *)
 	  let (lv, _) = translate_lv e in
 	  let n = translate_array_len len in
-	  let i = translate_exp (idx, int_typ) in
+	  let i = translate_exp idx in
 	    translate_array_access (lv, t, n) i
 	  
       | Deref e -> deref (translate_exp e)
@@ -475,41 +475,45 @@ let translate (globals, fundecls, spec) =
   and translate_exp (e, t) =
     let rec translate e =
       match e with
-	  Cst (c, t) -> (C.Const c, t)
+	  Cst (c, _) -> C.Const c
 	    	    
 	| Var _ | RetVar 
 	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
-	    let (lv, t) = translate_lv e in
-	      (C.Lval (lv, translate_typ t), t)
+	    let (lv, _) = translate_lv e in
+	      C.Lval (lv, translate_typ t)
 		
-	| AddrOf (Deref e) -> translate_exp e
+	| AddrOf (Deref e) -> 
+	    let (e, _) = translate_exp e in
+	      e
 	    
-	| AddrOf (Index (lv, (t, len), Cst (C.CInt i, _)))
+	| AddrOf (Index (lv, (t, len), (Cst (C.CInt i, _), _)))
 	    when Nat.compare i Nat.zero = 0 ->
 	    let (lv, _) = translate_lv lv in 
 	    let (e, _) = addr_of (lv, Array (t, len)) in
-	      (e, Ptr t)
+	      e
 
 	| AddrOf (Index (lv, (t, len), e)) ->
-	    let base = AddrOf (Index (lv, (t, len), exp_of_int 0)) in
-	      translate (Binop ((Plus, Ptr t), (base, Ptr t), (e, int_typ)))
+	    let base = AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ))) in
+	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
 
-	| AddrOf lv -> addr_of (translate_lv lv)
+	| AddrOf lv -> 
+	    let (e, _) = addr_of (translate_lv lv) in
+	      e
 
 	| Unop (op, e) -> 
 	    let (op, t) = translate_unop op in
 	    let (e, _) = translate_exp (e, t) in
-	      (C.Unop (op, e), t)
+	      C.Unop (op, e)
 		
 	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
 	    let (e1, _) = translate_exp (e1, t1) in
 	    let (e2, _) = translate_exp (e2, t2) in
-	      translate_binop (op, t) (e1, t1) (e2, t2)
+	    let (e, _) = translate_binop (op, t) (e1, t1) (e2, t2) in
+	      e
 		
 	| IfExp (c, (e1, _), (e2, _), t) -> begin
-	    try 
-	      let (c, _) = translate c in
-	      let v = C.eval_exp c in
+	    try
+	      let v = C.eval_exp (translate c) in
 	      let e = if Nat.compare v Nat.zero <> 0 then e1 else e2 in
 		translate e
 	    with Invalid_argument _ -> 
@@ -519,16 +523,17 @@ let translate (globals, fundecls, spec) =
 	      let blk2 = (Exp (Set ((Var x, t), None, (e2, t)), t), loc)::[] in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
-		(C.BlkExp (decl::set, C.Lval (v, translate_typ t), false), t)
+		C.BlkExp (decl::set, C.Lval (v, translate_typ t), false)
 	  end
 
 	| Sizeof t -> 
 	    let sz = (size_of t) / 8 in
-	      (C.exp_of_int sz, CoreC.uint_typ)
+	      C.exp_of_int sz
 		
 	| Cast ((e, t1), t2) -> 
 	    let (e, _) = translate_exp (e, t1) in
-	      cast (e, t1) t2
+	    let (e, _) = cast (e, t1) t2 in
+	      e
 
 		(* TODO: introduce type funexp in corec??*)
 	| Call (e, (Some args_t, ret_t), args) -> 
@@ -538,7 +543,7 @@ let translate (globals, fundecls, spec) =
 (* TODO: think about it *)
 	    let (args, args_t) = translate_args args args_t in
 	    let ft = translate_ftyp (args_t, ret_t) in
-	      (C.Call (ft, e, args), ret_t)
+	      C.Call (ft, e, args)
 
 	| Call _ -> 
 	    Npkcontext.report_error "Firstpass.translate_exp" 
@@ -548,22 +553,22 @@ let translate (globals, fundecls, spec) =
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
 	      "assignment within expression" Npkcontext.DirtySyntax;
 	    let loc = Npkcontext.get_loc () in
-	    let (set, t) = translate_set set in
+	    let (set, _) = translate_set set in
 	    let (lv', t', _) = set in
 	    let e = C.Lval (lv', t') in
-	      (C.BlkExp ((C.Set set, loc)::[], e, false), t)
+	      C.BlkExp ((C.Set set, loc)::[], e, false)
 	      		  
 	| BlkExp (blk, is_after) -> 
-	    let (body, (e, t)) = translate_blk_exp blk in
-	      (C.BlkExp (body, e, is_after), t)
+	    let (body, (e, _)) = translate_blk_exp blk in
+	      C.BlkExp (body, e, is_after)
 
 	| Offsetof (t, f) -> 
 	    let r = fields_of_comp (CoreC.comp_of_typ t) in
 	    let (o, _) = find_field f r in
-	    let o = C.exp_of_int (o / Config.size_of_byte) in
-	      (o, CoreC.uint_typ)
+	      C.exp_of_int (o / Config.size_of_byte)
+	      
     in
-    let (e, _) = translate e in
+    let e = translate e in
       match (e, t) with
 	  (C.Lval (lv, _), (Array (t', _) as t)) -> 
 	    let (e, _) = addr_of (lv, t) in
@@ -1037,7 +1042,7 @@ let translate (globals, fundecls, spec) =
     let rec translate_guard e =
       match e with
 	  IfExp (Cst (C.CInt c, _), (t, _), _, _) 
-	    when (Nat.compare c Nat.zero <> 0)-> 
+	    when (Nat.compare c Nat.zero <> 0)->
 	    translate_guard t
 	| IfExp (Cst (C.CInt c, _), _, (f, _), _) 
 	    when (Nat.compare c Nat.zero = 0) -> 

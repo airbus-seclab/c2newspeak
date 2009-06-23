@@ -278,13 +278,12 @@ let process (globals, specs) =
 	    (C.Field (e, f), t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
       | Index (a, idx) -> 
-	  let (a, t1) = translate_lv a in
-	  let (idx, t2) = translate_exp idx in begin
-	      match t1 with
+	  let (a, t) = translate_lv a in
+	  let idx = translate_exp idx in begin
+	      match t with
 		  C.Array (t, len) -> (C.Index (a, (t, len), idx), t)
-		| C.Ptr t -> 
-		    (C.Deref (C.Binop ((C.Plus, t1), (a, t1), (idx, t2)), t1), 
-		     t)
+		| C.Ptr elt_t -> 
+		    (C.Deref (C.Binop ((C.Plus, t), (a, t), idx), t), elt_t)
 		| _ -> 
 		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
 		      "pointer or array expected"
@@ -360,7 +359,8 @@ let process (globals, specs) =
     let (e, t) = translate_lv e in
       match t with
 	  C.Array (t, len) -> 
-	    (C.AddrOf (C.Index (e, (t, len), C.exp_of_int 0)), C.Ptr t)
+	    (C.AddrOf (C.Index (e, (t, len), (C.exp_of_int 0, C.int_typ))), 
+		       C.Ptr t)
 	| C.Fun _ -> (C.AddrOf e, C.Ptr t)
 	| _ -> (e, t)
 

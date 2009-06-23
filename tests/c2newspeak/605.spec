@@ -12,16 +12,16 @@ void main(void) {
         (605.c:28#2)^while (1) {
           (605.c:28#2)^choose {
            -->
-            (605.c:28#2)^guard(1-_uint32);
+            (605.c:28#2)^guard(! (1-_uint32 ==_uint32 0));
            -->
-            (605.c:28#2)^guard(! 1-_uint32);
+            (605.c:28#2)^guard((1-_uint32 ==_uint32 0));
           }
           (605.c:29#4)^choose {
            -->
-            (605.c:29#4)^guard(! 1-_uint32);
+            (605.c:29#4)^guard(! 1-_int32);
             (605.c:29#4)^0- =(int32) 1;
            -->
-            (605.c:29#4)^guard(1-_uint32);
+            (605.c:29#4)^guard(1-_int32);
           }
           (605.c:28#2)^do {
             (605.c:30#4)^while (1) {
@@ -29,13 +29,13 @@ void main(void) {
                -->
                 (605.c:30#4)^choose {
                  -->
-                  (605.c:30#4)^guard(1-_uint32);
+                  (605.c:30#4)^guard(! (1-_uint32 ==_uint32 0));
                  -->
-                  (605.c:30#4)^guard(! 1-_uint32);
+                  (605.c:30#4)^guard((1-_uint32 ==_uint32 0));
                   (605.c:30#4)^guard(! (0-_int32 ==_int32 0));
                 }
                -->
-                (605.c:30#4)^guard(! 1-_uint32);
+                (605.c:30#4)^guard((1-_uint32 ==_uint32 0));
                 (605.c:30#4)^guard((0-_int32 ==_int32 0));
                 (605.c:30#4)^goto lbl5;
               }
@@ -48,9 +48,9 @@ void main(void) {
         (605.c:28#2)^1- =(uint32) 1;
         (605.c:28#2)^choose {
          -->
-          (605.c:28#2)^guard(1-_uint32);
+          (605.c:28#2)^guard(1-_int32);
          -->
-          (605.c:28#2)^guard(! 1-_uint32);
+          (605.c:28#2)^guard(! 1-_int32);
           (605.c:28#2)^goto lbl1;
         }
       }

@@ -15,11 +15,11 @@ void main(void) {
       (617.c:27#4)^do {
         (617.c:27#13)^choose {
          -->
-          (617.c:27#13)^guard(1-_uint32);
+          (617.c:27#13)^guard(1-_int32);
           (617.c:27#13)^1- =(uint32) 0;
           (617.c:27#13)^goto lbl3;
          -->
-          (617.c:27#13)^guard(! 1-_uint32);
+          (617.c:27#13)^guard(! 1-_int32);
         }
       } with lbl3: {
       }

@@ -15,10 +15,10 @@ void main(void) {
             (583.c:30#2)^1- =(uint32) 1;
             (583.c:30#2)^choose {
              -->
-              (583.c:30#2)^guard(1-_uint32);
+              (583.c:30#2)^guard(1-_int32);
               (583.c:30#2)^goto lbl4;
              -->
-              (583.c:30#2)^guard(! 1-_uint32);
+              (583.c:30#2)^guard(! 1-_int32);
             }
             (583.c:29#2)^choose {
              -->
@@ -32,9 +32,9 @@ void main(void) {
         }
         (583.c:28#1)^choose {
          -->
-          (583.c:28#1)^guard(1-_uint32);
+          (583.c:28#1)^guard(1-_int32);
          -->
-          (583.c:28#1)^guard(! 1-_uint32);
+          (583.c:28#1)^guard(! 1-_int32);
           (583.c:28#1)^goto lbl1;
         }
       }

@@ -32,25 +32,25 @@ void main(void) {
       (655.c:27#2)^do {
         (655.c:33#4)^choose {
          -->
-          (655.c:33#4)^guard(2-_uint32);
+          (655.c:33#4)^guard(2-_int32);
           (655.c:33#4)^goto lbl2;
          -->
-          (655.c:33#4)^guard(! 2-_uint32);
+          (655.c:33#4)^guard(! 2-_int32);
         }
       } with lbl2: {
       }
       (655.c:33#4)^choose {
        -->
-        (655.c:33#4)^guard(! 2-_uint32);
+        (655.c:33#4)^guard(! 2-_int32);
         (655.c:36#2)^1- =(uint32) 1;
         (655.c:37#1)^choose {
          -->
-          (655.c:37#1)^guard(1-_uint32);
+          (655.c:37#1)^guard(! (1-_uint32 ==_uint32 0));
          -->
-          (655.c:37#1)^guard(! 1-_uint32);
+          (655.c:37#1)^guard((1-_uint32 ==_uint32 0));
         }
        -->
-        (655.c:33#4)^guard(2-_uint32);
+        (655.c:33#4)^guard(2-_int32);
       }
     }
   }

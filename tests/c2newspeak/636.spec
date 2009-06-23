@@ -8,9 +8,9 @@ void main(void) {
   (636.c:28#4)^0- =(uint32) 1;
   (636.c:28#9)^choose {
    -->
-    (636.c:28#9)^guard(0-_uint32);
+    (636.c:28#9)^guard(! (0-_uint32 ==_uint32 0));
    -->
-    (636.c:28#9)^guard(! 0-_uint32);
+    (636.c:28#9)^guard((0-_uint32 ==_uint32 0));
   }
 }
 

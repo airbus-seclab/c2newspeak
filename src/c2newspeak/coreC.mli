@@ -98,7 +98,7 @@ and exp =
     | Var of string
     | RetVar
     | Field of (exp * string)
-    | Index of (exp * array_typ * exp)
+    | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp
     | AddrOf of exp
     | Unop of (unop * exp)

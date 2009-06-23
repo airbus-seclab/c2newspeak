@@ -682,7 +682,7 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
   let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
     if search_lbl if_blk lbl then 
       begin
-	let cond = Csyntax.and_bexp lbl' cond in
+	let cond = Csyntax.and_bexp (normalize_bexp lbl') cond in
 	let l' = try snd (List.hd if_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
 	let if' = If (lbl', [Goto g_lbl, g_loc], []) in
@@ -698,7 +698,7 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
       end
     else 
       begin
-	let cond = Csyntax.and_bexp (Unop(Not, lbl')) cond in
+	let cond = Csyntax.and_bexp (normalize_bexp (Unop(Not, lbl'))) cond in
 	let l' = try snd (List.hd else_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
 	let if' = If (lbl', [Goto g_lbl, g_loc], []) in
@@ -738,7 +738,7 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
     if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] 
   in
   let e = 
-    if b then (* expression for While *) or_bexp lbl' cond 
+    if b then (* expression for While *) or_bexp (normalize_bexp lbl') cond 
     else (* expression for DoWhile *)  cond 
   in
   let g_lbl = goto_lbl lbl g_offset in

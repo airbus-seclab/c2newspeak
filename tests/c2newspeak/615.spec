@@ -19,11 +19,11 @@ void main(void) {
         }
         (615.c:27#13)^choose {
          -->
-          (615.c:27#13)^guard(1-_uint32);
+          (615.c:27#13)^guard(1-_int32);
           (615.c:27#13)^1- =(uint32) 0;
           (615.c:27#13)^goto lbl1;
          -->
-          (615.c:27#13)^guard(! 1-_uint32);
+          (615.c:27#13)^guard(! 1-_int32);
         }
       }
     } with lbl1: {

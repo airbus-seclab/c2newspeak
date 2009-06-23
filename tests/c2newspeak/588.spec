@@ -19,9 +19,9 @@ void main(void) {
         }
         (588.c:28#1)^choose {
          -->
-          (588.c:28#1)^guard(1-_uint32);
+          (588.c:28#1)^guard(1-_int32);
          -->
-          (588.c:28#1)^guard(! 1-_uint32);
+          (588.c:28#1)^guard(! 1-_int32);
           (588.c:28#1)^goto lbl1;
         }
       }

@@ -13,16 +13,16 @@ void main(void) {
       (654.c:26#2)^while (1) {
         (654.c:26#2)^choose {
          -->
-          (654.c:26#2)^guard(0-_uint32);
+          (654.c:26#2)^guard(! (0-_uint32 ==_uint32 0));
          -->
-          (654.c:26#2)^guard(! 0-_uint32);
+          (654.c:26#2)^guard((0-_uint32 ==_uint32 0));
         }
         (654.c:26#2)^0- =(uint32) 1;
         (654.c:26#2)^choose {
          -->
-          (654.c:26#2)^guard(0-_uint32);
+          (654.c:26#2)^guard(0-_int32);
          -->
-          (654.c:26#2)^guard(! 0-_uint32);
+          (654.c:26#2)^guard(! 0-_int32);
           (654.c:26#2)^goto lbl1;
         }
       }
