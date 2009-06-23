@@ -34,14 +34,14 @@ type table
 val create_table  : ?name:string -> unit -> table
 
 (** Add a type symbol to a table. *)
-val add_type      : table -> string option*string -> Ada_types.t -> unit
+val add_type      : table -> string -> Ada_types.t -> unit
 
 (** Add a variable symbol to a table. *)
-val add_variable  : table -> string option*string -> Ada_types.t -> unit
+val add_variable  : table -> string -> Ada_types.t -> unit
 
 (** Add a subprogram symbol to a table. *)
 val add_subprogram : table
-                  -> (string option*string)
+                  -> string
                   -> (string*bool*bool*Ada_types.t) list
                   -> Ada_types.t option
       -> unit
@@ -54,17 +54,8 @@ val add_subprogram : table
  * @param the queried identifier
  *)
 val find_type :    table
-               ->  string option*string
+               ->  string
             -> Ada_types.t
-
-(**
- * Find the intersection of possible types.
- * Used for example to resolve overloading in binary operations.
- *)
-val type_ovl_intersection : table
-                          -> string option*string
-                          -> string option*string
-           -> Ada_types.t
 
 exception ParameterlessFunction of Ada_types.t
 
@@ -76,11 +67,11 @@ exception ParameterlessFunction of Ada_types.t
  *)
 val find_variable :     table
                     -> ?expected_type:Ada_types.t
-                    ->  string option*string
+                    ->  string
             -> Ada_types.t
 
 val find_subprogram :     table
-                      ->  string option*string
+                      ->  string
       -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
 val add_renaming_declaration :    table
@@ -218,17 +209,32 @@ module SymStack : sig
    *)
   val exit_context : t -> unit
 
+  (**
+   * Find the intersection of possible types.
+   * Used for example to resolve overloading in binary operations.
+   *)
+  val type_ovl_intersection : t
+                            -> string
+                            -> string
+             -> Ada_types.t
+
   (** Find data.  *)
-  val s_find_variable : t -> ?expected_type:Ada_types.t
-                          -> string option*string -> Ada_types.t
-  val s_find_type     : t -> string option*string -> Ada_types.t
+  val s_find_variable :    t
+                        -> ?expected_type:Ada_types.t
+                        -> ?package:string
+                        -> string
+             -> Ada_types.t
+  val s_find_type     :    t
+                        -> ?package:string
+                        -> string
+             -> Ada_types.t
 
   (** Add data.  *)
-  val s_add_type       : t -> string option*string -> Ada_types.t -> unit
-  val s_add_variable   : t -> string option*string -> Ada_types.t -> unit
+  val s_add_type       : t -> string -> Ada_types.t -> unit
+  val s_add_variable   : t -> string -> Ada_types.t -> unit
 
   val s_add_subprogram : t
-                    -> (string option*string)
+                    -> (string)
                     -> (string*bool*bool*Ada_types.t) list
                     -> Ada_types.t option
         -> unit

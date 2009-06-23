@@ -156,36 +156,24 @@ let error x =
  *)
 module CaseInsensitiveString =
   struct
-    type t = string option*string
+    type t = string
 
     let equal_s s1 s2 =
       String.compare (String.lowercase s1) (String.lowercase s2) = 0
 
-    let equal (p1,i1) (p2,i2) =
-      equal_s i1 i2 &&
-      match (p1, p2) with
-        | Some p1', Some p2' -> equal_s p1' p2'
-        | Some _  , None     -> false
-        | None    , Some _   -> false
-        | None    , None     -> true
-      
+    let equal i1 i2 =
+      equal_s i1 i2
 
     let hash_s s =
       Hashtbl.hash (String.lowercase s)
 
-    let hash (p,i) =
-      let pack_hash = Hashtbl.hash
-        ( match p with
-            | None    -> None
-            | Some p' -> Some (String.lowercase p')
-        )
-      in
-      pack_hash + (hash_s i)
+    let hash i =
+      hash_s i
 
     let to_string x = x
   end
 
-(** A (string list*string) hash table insensitive to keys' case.  *)
+(** A hash table insensitive to keys' case.  *)
 module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 
 (**
@@ -307,13 +295,13 @@ let print_table tbl =
     let a =  width - x - b    in
     (String.make a ' ')^str^(String.make b ' ')
   in
-  let line_printer (p,i) sym =
+  let line_printer i sym =
     let (t,sym_d) = print_symbol sym in
     List.iter print_string
     ["|"
     ;pad 6 t
     ;"|"
-    ;pad 15 (Ada_utils.name_to_string (p,i))
+    ;pad 15 i
     ;"| "
     ;sym_d
     ];
@@ -343,11 +331,11 @@ let create_table ?name _ =  { renaming = []
                             }
 
 let add_variable tbl n t =
-  Npkcontext.print_debug ("Adding variable "^Ada_utils.name_to_string n);
+  Npkcontext.print_debug ("Adding variable "^n);
   IHashtbl.add tbl.t_tbl n (Variable t)
 
 let add_type tbl n typ =
-  Npkcontext.print_debug ("Adding type  "   ^Ada_utils.name_to_string n);
+  Npkcontext.print_debug ("Adding type "^n);
   IHashtbl.add tbl.t_tbl n (Type typ)
 
 let add_subprogram tbl name params rettype =
@@ -355,68 +343,23 @@ let add_subprogram tbl name params rettype =
 
 (**
  * Find matching symbols in a table.
- *
- * First, look for renaming declarations.
- * Then, it depends on the package provided :
- *   If some package is provided, find directly this one.
- *   If no package is provided (empty list) :
- *     Try it first as a local variable
- *     Then, try it with every package provided in the context.
- *     (context = current package + use list).
- *
- * The return value is a list of [symbol]s for the first class that returns a
- * non-empty result. This approach allows to correctly handle hiding.
- *
- * This result is to be extracted by find_xxx functions
- * that will call cast_x on it.
  *)
-let rec find_symbols t (package,id) =
-  let ren = try find_symbols t (package, List.assoc id t.renaming)
-            with Not_found -> []
-  in
-  if ren <> [] then ren
-  else
-  begin
-    if package <> None then IHashtbl.find_all t.t_tbl (package,id)
-    else 
-      let as_local = IHashtbl.find_all t.t_tbl (None,id) in
-      if as_local <> [] then as_local else
-        begin
-          try
-            let p = List.find (fun pkg -> IHashtbl.mem t.t_tbl (Some pkg,id))
-                              t.pkgmgr#get_context
-            in
-            IHashtbl.find_all t.t_tbl (Some p,id)
-          with Not_found -> (* thrown by List.find if no result is found *)
-            []
-        end
-  end
+let rec find_symbols t id =
+  try find_symbols t (List.assoc id t.renaming)
+  with Not_found -> IHashtbl.find_all t.t_tbl id
 
 let find_type tbl n =
   try cast_t (find_symbols tbl n)
   with Not_found -> begin
-                      error ("Cannot find type "
-                            ^Ada_utils.name_to_string n
-                            );
+                      error ("Cannot find type " ^n);
                       Ada_types.unknown
                     end
-
-let type_ovl_intersection tbl n1 n2 =
-  let inter l1 l2 =
-    List.filter (fun x -> List.mem x l1) l2
-  in
-  let s1 = find_symbols tbl n1 in
-  let s2 = find_symbols tbl n2 in
-  let inte = inter s1 s2 in
-  if inte = [] then Ada_types.unknown else cast_v inte
 
 let find_subprogram tbl n =
   try (fun (x,y) -> List.map from_fparam x,y)
       (cast_s (find_symbols tbl n))
   with Not_found -> begin
-                      error ("Cannot find subprogram "
-                            ^Ada_utils.name_to_string n
-                            );
+                      error ("Cannot find subprogram " ^n);
                       raise Not_found
                     end
 
@@ -428,7 +371,7 @@ let find_variable tbl ?expected_type n =
   in
   begin
   Npkcontext.print_debug ("Find_variable "
-                         ^snd n
+                         ^n
                          ^" : expected type is "
                          ^match expected_type with None -> "None"
                                   | Some t -> Ada_types.print t)
@@ -436,16 +379,14 @@ let find_variable tbl ?expected_type n =
   try cast_v ~filter:ovl_predicate (find_symbols tbl n)
   with Not_found ->
     begin
-       error ("Cannot find variable "
-             ^Ada_utils.name_to_string n
-             );
+       error ("Cannot find variable " ^n);
        Ada_types.unknown
     end
 
 let add_renaming_declaration t newname oldname =
   t.renaming <- (newname,oldname)::t.renaming
 
-let builtin_type x = find_type builtin_table (None,x)
+let builtin_type x = find_type builtin_table x
 
 let set_current       t = t.pkgmgr#set_current
 let reset_current     t = t.pkgmgr#reset_current
@@ -461,7 +402,7 @@ let normalize_name    t = t.pkgmgr#normalize_name
 let add_renaming_decl t = t.pkgmgr#add_renaming_decl 
 
 let _ =
-  List.iter (fun (n,t) -> add_type builtin_table (None,n) t)
+  List.iter (fun (n,t) -> add_type builtin_table n t)
   ["integer"  , Ada_types.integer
   ;"float"    , Ada_types.std_float
   ;"boolean"  , Ada_types.boolean
@@ -502,7 +443,7 @@ module SymStack = struct
         let new_context = create_table ?name () in
         begin match name with
           | None   -> ()
-          | Some n -> IHashtbl.add ((Stack.top s).t_tbl) (None,n) (Unit new_context)
+          | Some n -> IHashtbl.add ((Stack.top s).t_tbl) n (Unit new_context)
         end;
         Stack.push new_context s
       end
@@ -537,13 +478,26 @@ module SymStack = struct
     | None   -> failwith "find" (* unreachable *)
     | Some x -> x
 
-  let s_find_variable    s    ?expected_type =
-        find_variable (top s) ?expected_type
+  let s_find_variable s ?expected_type ?package n =
+    ignore package;
+    find_variable (top s) ?expected_type n
 
-  let s_find_type      s = find_type      (top s)
+  let s_find_type s ?package n =
+    ignore package;
+    find_type (top s) n
 
   let s_add_variable   s = add_variable   (top s)
   let s_add_type       s = add_type       (top s)
   let s_add_subprogram s = add_subprogram (top s)
+
+  let type_ovl_intersection s n1 n2 =
+    let inter l1 l2 =
+      List.filter (fun x -> List.mem x l1) l2
+    in
+    let s1 = find_symbols (top s) n1 in
+    let s2 = find_symbols (top s) n2 in
+    let inte = inter s1 s2 in
+    if inte = [] then Ada_types.unknown else cast_v inte
+
 
 end
