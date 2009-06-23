@@ -422,11 +422,11 @@ let translate (globals, fundecls, spec) =
 	  
       | Deref e -> deref (translate_exp e)
 
-      | OpExp (op, lv, is_after) ->
+      | OpExp (op, (lv, t), is_after) ->
 	  let loc = Npkcontext.get_loc () in
 	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ)  in
-	  let (incr, t) = 
-	    translate_set (lv, Some op, (e, CoreC.int_typ)) 
+	  let (incr, _) = 
+	    translate_set ((lv, t), Some op, (e, CoreC.int_typ)) 
 	  in
 	  let (lv, _, _) = incr in
 	    (C.BlkLv ((C.Set incr, loc)::[], lv, is_after), t)
