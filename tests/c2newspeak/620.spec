@@ -37,22 +37,22 @@ void main(void) {
                     (620.c:29#2)^do {
                       (620.c:28#2)^choose {
                        -->
-                        (620.c:28#2)^guard((0-_int32 ==_int32 0));
+                        (620.c:28#2)^guard((0-_uint32 ==_int32 0));
                         (620.c:29#2)^goto lbl8;
                        -->
                         (620.c:28#2)^choose {
                          -->
-                          (620.c:28#2)^guard((0-_int32 ==_int32 1));
+                          (620.c:28#2)^guard((0-_uint32 ==_int32 1));
                           (620.c:31#2)^goto lbl7;
                          -->
                           (620.c:28#2)^choose {
                            -->
-                            (620.c:28#2)^guard((0-_int32 ==_int32 2));
+                            (620.c:28#2)^guard((0-_uint32 ==_int32 2));
                             (620.c:33#2)^goto lbl6;
                            -->
-                            (620.c:28#2)^guard(! (0-_int32 ==_int32 2));
-                            (620.c:28#2)^guard(! (0-_int32 ==_int32 1));
-                            (620.c:28#2)^guard(! (0-_int32 ==_int32 0));
+                            (620.c:28#2)^guard(! (0-_uint32 ==_int32 2));
+                            (620.c:28#2)^guard(! (0-_uint32 ==_int32 1));
+                            (620.c:28#2)^guard(! (0-_uint32 ==_int32 0));
                             (620.c:28#2)^goto lbl5;
                           }
                         }

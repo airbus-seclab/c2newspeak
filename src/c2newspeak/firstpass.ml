@@ -991,7 +991,7 @@ let translate (globals, fundecls, spec) =
 	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
 
       | CSwitch (e, choices, default) -> 
-	  let (e, _) = translate_exp (e, int_typ) in
+	  let (e, _) = translate_exp e in
 	  let (last_lbl, switch) = translate_switch choices in
 	  let default_action = (C.Goto default_lbl, loc)::[] in
 	  let switch = (C.Switch (e, switch, default_action), loc)::[] in

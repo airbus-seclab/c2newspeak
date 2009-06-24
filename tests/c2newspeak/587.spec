@@ -24,16 +24,16 @@ void main(void) {
               (587.c:29#2)^do {
                 (587.c:28#2)^choose {
                  -->
-                  (587.c:28#2)^guard((0-_int32 ==_int32 1));
+                  (587.c:28#2)^guard((0-_uint32 ==_int32 1));
                   (587.c:29#2)^goto lbl6;
                  -->
                   (587.c:28#2)^choose {
                    -->
-                    (587.c:28#2)^guard((0-_int32 ==_int32 2));
+                    (587.c:28#2)^guard((0-_uint32 ==_int32 2));
                     (587.c:32#2)^goto lbl5;
                    -->
-                    (587.c:28#2)^guard(! (0-_int32 ==_int32 2));
-                    (587.c:28#2)^guard(! (0-_int32 ==_int32 1));
+                    (587.c:28#2)^guard(! (0-_uint32 ==_int32 2));
+                    (587.c:28#2)^guard(! (0-_uint32 ==_int32 1));
                     (587.c:28#2)^goto lbl4;
                   }
                 }

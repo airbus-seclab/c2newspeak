@@ -82,7 +82,7 @@ and blk = stmt list
 and stmtkind =
     LocalDecl of (string * decl)
   | If of (exp * blk * blk)
-  | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
+  | CSwitch of (typ_exp * (exp * blk * Newspeak.location) list * blk)
       (* init, while exp is true do blk and then blk, 
 	 continue jumps before the second blk 
 	 init may cotain break or continue stmt!

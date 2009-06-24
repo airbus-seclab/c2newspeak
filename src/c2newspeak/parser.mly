@@ -454,6 +454,10 @@ switch_stmt:
     case_list
   RBRACE                                   { 
     let (cases, default) = $6 in
+      (* TODO: all bexp normalizations should be done after typing and 
+	 before firstpass!!!
+	 should remove normalize_bexp from csyntax!!!
+      *)
       ($3, cases, default) 
   }
 ;;

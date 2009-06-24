@@ -79,7 +79,7 @@ and stmtkind =
   | LocalDecl of (string * decl)
   | If of (exp * blk * blk)
       (* third parameter is the default case *)
-  | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
+  | CSwitch of (typ_exp * (exp * blk * Newspeak.location) list * blk)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
   | Exp of typ_exp

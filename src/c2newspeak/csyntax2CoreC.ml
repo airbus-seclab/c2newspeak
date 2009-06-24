@@ -473,7 +473,7 @@ let process (globals, specs) =
 	  let br2 = translate_blk br2 in
 	    C.If (c, br1, br2)
       | CSwitch (e, cases, default) -> 
-	  let (e, _) = translate_exp e in
+	  let e = translate_exp e in
 	  let cases = List.map translate_case cases in
 	  let default = translate_blk default in
 	    C.CSwitch (e, cases, default)

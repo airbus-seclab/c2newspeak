@@ -23,10 +23,10 @@ void main(void) {
             (603.c:29#2)^do {
               (603.c:28#2)^choose {
                -->
-                (603.c:28#2)^guard((0-_int32 ==_int32 0));
+                (603.c:28#2)^guard((0-_uint32 ==_int32 0));
                 (603.c:29#2)^goto lbl5;
                -->
-                (603.c:28#2)^guard(! (0-_int32 ==_int32 0));
+                (603.c:28#2)^guard(! (0-_uint32 ==_int32 0));
                 (603.c:28#2)^goto lbl4;
               }
             } with lbl5: {
