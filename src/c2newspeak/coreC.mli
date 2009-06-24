@@ -97,10 +97,10 @@ and exp =
     | Cst of (Cir.cst * typ)
     | Var of string
     | RetVar
-    | Field of (exp * string)
+    | Field of (typ_exp * string)
     | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp
-    | AddrOf of exp
+    | AddrOf of typ_exp
     | Unop of (unop * exp)
     | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)

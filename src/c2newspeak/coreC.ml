@@ -106,10 +106,10 @@ and exp =
     | Cst of (Cir.cst * typ)
     | Var of string
     | RetVar
-    | Field of (exp * string)
+    | Field of (typ_exp * string)
     | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp
-    | AddrOf of exp
+    | AddrOf of typ_exp
     | Unop of (unop * exp)
     | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
@@ -215,11 +215,11 @@ let rec string_of_exp e =
     | Cst _ -> "Cst"
     | Var x -> x
     | RetVar -> "!RetVar"
-    | Field (e, f) -> (string_of_exp e)^"."^f
+    | Field ((e, _), f) -> (string_of_exp e)^"."^f
     | Index (e1, _, (e2, _)) -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref (e, _) -> "*("^(string_of_exp e)^")"
-    | AddrOf e -> "&("^(string_of_exp e)^")"
+    | AddrOf (e, _) -> "&("^(string_of_exp e)^")"
     | Unop (_, e) -> "op("^(string_of_exp e)^")"
     | IfExp (e1, (e2, _), (e3, _), _) -> 
 	let e1 = string_of_exp e1 in

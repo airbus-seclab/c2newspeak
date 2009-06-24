@@ -274,8 +274,8 @@ let process (globals, specs) =
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
 	  let r = fields_of_comp (C.comp_of_typ t) in
-	  let t = find_field f r in
-	    (C.Field (e, f), t)
+	  let f_t = find_field f r in
+	    (C.Field ((e, t), f), f_t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
       | Index (a, idx) -> 
 	  let (a, t) = translate_lv a in
@@ -293,7 +293,7 @@ let process (globals, specs) =
 
       | AddrOf e -> 
 	  let (e, t) = translate_lv e in
-	    (C.AddrOf e, C.Ptr t)
+	    (C.AddrOf (e, t), C.Ptr t)
       | Unop (op, e) -> 
 	  let (e, t) = translate_exp e in
 	  let (op, t) = translate_unop op t in
@@ -359,9 +359,9 @@ let process (globals, specs) =
     let (e, t) = translate_lv e in
       match t with
 	  C.Array (t, len) -> 
-	    (C.AddrOf (C.Index (e, (t, len), (C.exp_of_int 0, C.int_typ))), 
+	    (C.AddrOf (C.Index (e, (t, len), (C.exp_of_int 0, C.int_typ)), t), 
 		       C.Ptr t)
-	| C.Fun _ -> (C.AddrOf e, C.Ptr t)
+	| C.Fun _ -> (C.AddrOf (e, t), C.Ptr t)
 	| _ -> (e, t)
 
   (* TODO: introduce type funexp in corec??*)

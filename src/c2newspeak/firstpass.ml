@@ -402,25 +402,32 @@ let translate (globals, fundecls, spec) =
  
   and translate_lv x =
     match x with
-	Var x -> find_var x
+	Var x -> 
+	  let (x, _) = find_var x in
+	    x
 
-      | RetVar -> find_var ret_name
+      | RetVar -> 
+	  let (x, _) = find_var ret_name in
+	    x
 
-      | Field (lv, f) -> 
-	  let (lv, t) = translate_lv lv in
+      | Field ((lv, t), f) -> 
+	  let lv = translate_lv lv in
 	  let r = fields_of_comp (CoreC.comp_of_typ t) in
-	  let (o, t) = find_field f r in
+	  let (o, _) = find_field f r in
 	  let o = C.exp_of_int o in
-	    (C.Shift (lv, o), t)
+	    C.Shift (lv, o)
 
       | Index (e, (t, len), idx) ->  (* TODO: think about this is_array, 
 					      a bit hacky!! *)
-	  let (lv, _) = translate_lv e in
+	  let lv = translate_lv e in
 	  let n = translate_array_len len in
 	  let i = translate_exp idx in
-	    translate_array_access (lv, t, n) i
-	  
-      | Deref e -> deref (translate_exp e)
+	  let (lv, _) = translate_array_access (lv, t, n) i in
+	    lv
+
+      | Deref e -> 
+	  let (lv, _) = deref (translate_exp e) in
+	    lv
 
       | OpExp (op, (lv, t), is_after) ->
 	  let loc = Npkcontext.get_loc () in
@@ -429,20 +436,23 @@ let translate (globals, fundecls, spec) =
 	    translate_set ((lv, t), Some op, (e, CoreC.int_typ)) 
 	  in
 	  let (lv, _, _) = incr in
-	    (C.BlkLv ((C.Set incr, loc)::[], lv, is_after), t)
+	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
 
-      | Str str -> add_glb_cstr str
+      | Str str -> 
+	  let (lv, _) = add_glb_cstr str in
+	    lv
 
-      | FunName -> add_glb_cstr !current_fun
+      | FunName -> 
+	  let (lv, _) = add_glb_cstr !current_fun in
+	    lv
 
-      | Cast ((lv, _), t) -> 
+      | Cast ((lv, _), _) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
 	    "cast of left value" Npkcontext.DirtySyntax;
-	  let (lv, _) = translate_lv lv in
-	    (lv, t)
+	  translate_lv lv
 
       | BlkExp (blk, is_after) -> 
-	  let (body, (e, t)) = translate_blk_exp blk in
+	  let (body, (e, _)) = translate_blk_exp blk in
 	  let lv =
 	    match e with
 		C.Lval (lv, _) -> lv
@@ -450,7 +460,7 @@ let translate (globals, fundecls, spec) =
 		  Npkcontext.report_error "Firstpass.translate_lv" 
 		    "left value expected"
 	  in
-	    (C.BlkLv (body, lv, is_after), t)
+	    C.BlkLv (body, lv, is_after)
 
       | _ -> 
 	  Npkcontext.report_error "Firstpass.translate_lv" "left value expected"
@@ -479,25 +489,27 @@ let translate (globals, fundecls, spec) =
 	    	    
 	| Var _ | RetVar 
 	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
-	    let (lv, _) = translate_lv e in
+	    let lv = translate_lv e in
 	      C.Lval (lv, translate_typ t)
 		
-	| AddrOf (Deref e) -> 
+	| AddrOf (Deref e, _) -> 
 	    let (e, _) = translate_exp e in
 	      e
 	    
-	| AddrOf (Index (lv, (t, len), (Cst (C.CInt i, _), _)))
+	| AddrOf (Index (lv, (t, len), (Cst (C.CInt i, _), _)), _)
 	    when Nat.compare i Nat.zero = 0 ->
-	    let (lv, _) = translate_lv lv in 
+	    let lv = translate_lv lv in 
 	    let (e, _) = addr_of (lv, Array (t, len)) in
 	      e
 
-	| AddrOf (Index (lv, (t, len), e)) ->
-	    let base = AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ))) in
+	| AddrOf (Index (lv, (t, len), e), t') ->
+	    let base = 
+	      AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ)), t') 
+	    in
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
 
-	| AddrOf lv -> 
-	    let (e, _) = addr_of (translate_lv lv) in
+	| AddrOf (lv, t) -> 
+	    let (e, _) = addr_of (translate_lv lv, t) in
 	      e
 
 	| Unop (op, e) -> 
@@ -609,7 +621,7 @@ let translate (globals, fundecls, spec) =
       (e, Ptr t)
 
   and translate_set ((lv, lv_t), op, (e, e_t)) =
-    let (lv, _) = translate_lv lv in
+    let lv = translate_lv lv in
     let (e, _) = translate_exp (e, e_t) in
     let t' = translate_typ lv_t in
     let (lv, e) =
