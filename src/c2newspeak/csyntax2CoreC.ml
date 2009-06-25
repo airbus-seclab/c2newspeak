@@ -47,9 +47,10 @@ let seq_of_string str =
 (* TODO: not minimal, think about it *)
 (* TODO: maybe possible to merge VarSymb and EnumSymb together
    but what about CompSymb??
+   maybe have 2 tables!!!
 *)
 type symb =
-  | VarSymb of string 
+  | VarSymb of C.exp 
   | EnumSymb of C.exp
   | CompSymb of C.field_decl list
 
@@ -101,22 +102,24 @@ let process (globals, specs) =
 	| Some init -> process (init, t)
   in
     
-  let add_var (t, x) = Symbtbl.bind symbtbl x (VarSymb x, t) in
+  let add_local (t, x) = Symbtbl.bind symbtbl x (VarSymb (C.Local x), t) in
 
-(* TODO: find a way to factor declare_global and add_var
+(* TODO: find a way to factor declare_global and add_local
    maybe necessary to complete_typ_with_init in both cases...
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = Symbtbl.update symbtbl x (VarSymb name, t) in
+  let update_global x name t = 
+    Symbtbl.update symbtbl x (VarSymb (C.Global name), t) 
+  in
 
   let add_formals (args_t, ret_t) =
-    add_var (ret_t, ret_name);
+    add_local (ret_t, ret_name);
 (* TODO: think about it, not nice to have this pattern match, since in
    a function declaration there are always arguments!! 
    None is not possible *)
     match args_t with
-	Some args_t -> List.iter add_var args_t
+	Some args_t -> List.iter add_local args_t
       | None -> 
 	  Npkcontext.report_error "Csyntax2CoreC.add_formals" "unreachable code"
   in
@@ -131,7 +134,7 @@ let process (globals, specs) =
       Npkcontext.report_accept_warning "Csyntax2CoreC.process.find_symb" 
 	("unknown identifier "^x^", maybe a function without prototype") 
 	Npkcontext.MissingFunDecl;
-      let info = (VarSymb x, C.Fun (None, C.int_typ)) in
+      let info = (VarSymb (C.Global x), C.Fun (None, C.int_typ)) in
 	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
 	Symbtbl.bind symbtbl x info;
 	info
@@ -159,7 +162,7 @@ let process (globals, specs) =
     let (fname, _, _) = loc in
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (VarSymb f', C.Fun ft)
+      with Not_found -> Symbtbl.bind symbtbl f (VarSymb (C.Global f'), C.Fun ft)
   in
 
   let translate_proto_ftyp f static (args, ret) loc =
@@ -175,7 +178,7 @@ let process (globals, specs) =
     let e =
       match v with
 (* TODO: strange, see 696.c *)
-	  VarSymb _ -> C.Var x
+	  VarSymb e -> e
 	| EnumSymb i -> i
 	| _ -> 
 	    Npkcontext.report_error "Csyntax2CoreC.find_var"
@@ -368,7 +371,7 @@ let process (globals, specs) =
   and translate_funexp f =
     let (f, ft) = translate_lv f in
       match (f, ft) with
-	  (C.Var f, C.Fun t) -> (C.Fname f, t)
+	  (C.Global f, C.Fun t) -> (C.Fname f, t)
 	| (C.Deref f, C.Fun t) -> (C.FunDeref f, t)
 	| (_, C.Ptr (C.Fun t)) -> (C.FunDeref (f, ft), t)
 	| _ -> 
@@ -442,12 +445,14 @@ let process (globals, specs) =
 	    end;
 	    C.VDecl (C.Fun ft, is_static, is_extern, None)
       | VDecl (t, is_static, is_extern, init) -> 
+	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
 	  let name = if is_static then get_static_name x loc else x in
 	  let t = complete_typ_with_init t init in
-	    if is_global || is_extern 
-	    then update_global x name t
-	    else add_var (t, x);
+	    if is_global || is_extern then update_global x name t
+	    else if is_static 
+	    then Symbtbl.bind symbtbl x (VarSymb (C.Global name), t)
+	    else add_local (t, x);
 	    let init =
 	      match init with
 		  None -> None

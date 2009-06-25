@@ -402,9 +402,8 @@ let translate (globals, fundecls, spec) =
  
   and translate_lv x =
     match x with
-	Var x -> 
-	  let (x, _) = find_var x in
-	    x
+	Local x -> C.Local x
+      | Global x -> C.Global x
 
       | RetVar -> 
 	  let (x, _) = find_var ret_name in
@@ -487,7 +486,7 @@ let translate (globals, fundecls, spec) =
       match e with
 	  Cst (c, _) -> C.Const c
 	    	    
-	| Var _ | RetVar 
+	| Local _ | Global _ | RetVar 
 	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let lv = translate_lv e in
 	      C.Lval (lv, translate_typ t)
@@ -531,8 +530,12 @@ let translate (globals, fundecls, spec) =
 	    with Invalid_argument _ -> 
 	      let loc = Npkcontext.get_loc () in
 	      let (x, decl, v) = gen_tmp loc t in
-	      let blk1 = (Exp (Set ((Var x, t), None, (e1, t)), t), loc)::[] in
-	      let blk2 = (Exp (Set ((Var x, t), None, (e2, t)), t), loc)::[] in
+	      let blk1 = 
+		(Exp (Set ((Local x, t), None, (e1, t)), t), loc)::[] 
+	      in
+	      let blk2 = 
+		(Exp (Set ((Local x, t), None, (e2, t)), t), loc)::[] 
+	      in
 	      let set = (If (c, blk1, blk2), loc) in
 	      let set = translate_stmt set in
 		C.BlkExp (decl::set, C.Lval (v, translate_typ t), false)

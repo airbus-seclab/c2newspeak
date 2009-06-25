@@ -95,7 +95,8 @@ and lbl = string
 
 and exp = 
     | Cst of (Cir.cst * typ)
-    | Var of string
+    | Local of string
+    | Global of string
     | RetVar
     | Field of (typ_exp * string)
     | Index of (exp * array_typ * typ_exp)

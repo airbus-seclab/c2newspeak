@@ -69,7 +69,12 @@ let translate prog =
   and translate_lval lv =
     match lv with
 	Local v -> 
-	  let x = Hashtbl.find env v in
+	  let x = 
+	    try Hashtbl.find env v
+	    with Not_found -> 
+	      Npkcontext.report_error "Hpk2npk.translate_lval"
+		("unknown local variable "^v)
+	  in
 	    N.Local (!stack_height - x)
       | Global x -> N.Global x
       | Deref (e, sz) -> N.Deref (translate_exp e, sz)

@@ -104,7 +104,8 @@ and static = bool
 
 and exp = 
     | Cst of (Cir.cst * typ)
-    | Var of string
+    | Local of string
+    | Global of string
     | RetVar
     | Field of (typ_exp * string)
     | Index of (exp * array_typ * typ_exp)
@@ -213,7 +214,7 @@ let rec string_of_exp e =
   match e with
       Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
     | Cst _ -> "Cst"
-    | Var x -> x
+    | Local x | Global x -> x
     | RetVar -> "!RetVar"
     | Field ((e, _), f) -> (string_of_exp e)^"."^f
     | Index (e1, _, (e2, _)) -> 
