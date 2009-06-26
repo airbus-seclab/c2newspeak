@@ -43,8 +43,8 @@
     Npkcontext.set_loc (loc_here lexbuf)
 
   let newline lexbuf =
-    let pos = 
-      { lexbuf.lex_curr_p with 
+    let pos =
+      { lexbuf.lex_curr_p with
             pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1;
             pos_bol  = lexbuf.lex_curr_p.pos_cnum;
       }

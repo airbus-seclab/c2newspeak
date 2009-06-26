@@ -418,7 +418,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
       match name with
         | None, ident -> sans_selecteur ident name
         | Some pack, ident when extern || Symboltbl.is_with tbl pack ->
-                                                    avec_selecteur (Some pack,ident)
+                                            avec_selecteur (Some pack,ident)
         | (pack, ident) when pack = Symboltbl.current tbl ->
                                         avec_selecteur_courant (None,ident) name
         | (Some pack, _) -> Npkcontext.report_error "eval_static.const"

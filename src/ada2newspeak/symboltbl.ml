@@ -22,6 +22,8 @@
 
 *)
 
+module T = Ada_types
+
 (**
  * Wraps what the "current package" is and which packages are
  * marked using the "with" and "use" constructs.
@@ -146,9 +148,9 @@ end = object (self)
 
 let error x =
   if (1=1) then
-    Npkcontext.print_debug ("ERROR : Ada_types"^x)
+    Npkcontext.print_debug ("ERROR : T"^x)
   else
-    Npkcontext.report_warning "Ada_types" x
+    Npkcontext.report_warning "T" x
 
 (**
  * The [string] type with primitives to
@@ -182,7 +184,7 @@ module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 type f_param = { fp_name : string
                ; fp_in   : bool
                ; fp_out  : bool
-               ; fp_type : Ada_types.t
+               ; fp_type : T.t
                }
 
 let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
@@ -192,9 +194,9 @@ let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
  * Symbols.
  *)
 type symbol =
-  | Variable   of Ada_types.t
-  | Type       of Ada_types.t
-  | Subprogram of ((f_param list)*Ada_types.t option)
+  | Variable   of T.t
+  | Type       of T.t
+  | Subprogram of ((f_param list)*T.t option)
   | Unit       of table
 
 (**
@@ -210,8 +212,8 @@ and table = { mutable renaming : (string*string) list
             }
 
 let print_symbol = function
-  | Variable     t   -> "V",Ada_types.print t
-  | Type         t   -> "T",Ada_types.print t
+  | Variable     t   -> "V",T.print t
+  | Type         t   -> "T",T.print t
   | Subprogram (p,r) -> "S",(
                              let pdesc = " with "
                                        ^ string_of_int (List.length p)
@@ -220,16 +222,15 @@ let print_symbol = function
                                            | Some t -> "function"
                                                        ^pdesc
                                                        ^" and return type "
-                                                       ^Ada_types.print t
+                                                       ^T.print t
                             )
-                            
   | Unit         _   -> "U","<unit>"
 
 let print_symbol_join s =
   let (s1,s2) = print_symbol s in
   s1^" "^s2
 
-exception ParameterlessFunction of Ada_types.t
+exception ParameterlessFunction of T.t
 
 (* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
 let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
@@ -259,32 +260,6 @@ let mkcast desc fn  ?(filter=fun _ -> true) fallback lst  =
   match extract_unique ~filter fn lst with
     | None   -> error ("Symbol cast ("^desc^") : Ambiguous name");fallback
     | Some x -> x
-  
-let cast_v ?filter = mkcast "variable"
-                    (function Variable x -> Some x
-                            | Subprogram ([],Some rt) -> raise (ParameterlessFunction rt)
-                            |_ -> None
-                    )
-                    Ada_types.unknown
-                    ?filter 
-
-let cast_t ?filter = mkcast "type"
-                     (function Type x -> Some x
-                             | _      -> None)
-                     Ada_types.unknown
-                     ?filter
-
-let cast_s ?filter = mkcast "subprogram"
-                     (function Subprogram x -> Some x
-                             | _            -> None)
-                     ([],None)
-                     ?filter
-
-let cast_u ?filter = mkcast "unit"
-                     (function Unit x -> Some x
-                             | _      -> None)
-                     (Obj.magic ()) (* should be create_table 0*)
-                     ?filter
 
 let print_table tbl =
   let out = Buffer.create 0 in
@@ -325,7 +300,8 @@ let builtin_table :table = { renaming = []
                            }
 
 let create_table ?name _ =  { renaming = []
-                            ; t_tbl    = IHashtbl.copy builtin_table.t_tbl
+                            ; t_tbl    = (*IHashtbl.copy builtin_table.t_tbl *)
+                              IHashtbl.create 0
                             ; pkgmgr   = new package_manager
                             ; t_name   = name
                             }
@@ -341,6 +317,29 @@ let add_type tbl n typ =
 let add_subprogram tbl name params rettype =
   IHashtbl.add tbl.t_tbl name (Subprogram (List.map to_fparam params,rettype))
 
+(******** Cast functions ********)
+
+let cast_v ?filter = mkcast "variable"
+                    (function Variable x -> Some x
+                            | Subprogram ([],Some rt) ->
+                                raise (ParameterlessFunction rt)
+                            |_ -> None
+                    )
+                    T.unknown
+                    ?filter
+
+let cast_t ?filter = mkcast "type"
+                     (function Type x -> Some x
+                             | _      -> None)
+                     T.unknown
+                     ?filter
+
+let cast_s ?filter = mkcast "subprogram"
+                     (function Subprogram x -> Some x
+                             | _            -> None)
+                     ([],None)
+                     ?filter
+
 (**
  * Find matching symbols in a table.
  *)
@@ -349,24 +348,16 @@ let rec find_symbols t id =
   with Not_found -> IHashtbl.find_all t.t_tbl id
 
 let find_type tbl n =
-  try cast_t (find_symbols tbl n)
-  with Not_found -> begin
-                      error ("Cannot find type " ^n);
-                      Ada_types.unknown
-                    end
+  cast_t (find_symbols tbl n)
 
 let find_subprogram tbl n =
-  try (fun (x,y) -> List.map from_fparam x,y)
+  (fun (x,y) -> List.map from_fparam x,y)
       (cast_s (find_symbols tbl n))
-  with Not_found -> begin
-                      error ("Cannot find subprogram " ^n);
-                      raise Not_found
-                    end
 
 let find_variable tbl ?expected_type n =
   let ovl_predicate = match expected_type with
-    | Some t when t <> Ada_types.unknown
-        -> fun x ->     Ada_types.is_compatible x t
+    | Some t when t <> T.unknown
+        -> fun x ->    T.is_compatible x t
     | _ -> fun _ -> true
   in
   begin
@@ -374,14 +365,14 @@ let find_variable tbl ?expected_type n =
                          ^n
                          ^" : expected type is "
                          ^match expected_type with None -> "None"
-                                  | Some t -> Ada_types.print t)
+                                  | Some t -> T.print t)
   end;
-  try cast_v ~filter:ovl_predicate (find_symbols tbl n)
-  with Not_found ->
-    begin
-       error ("Cannot find variable " ^n);
-       Ada_types.unknown
-    end
+  cast_v ~filter:ovl_predicate (find_symbols tbl n)
+
+let find_unit t id =
+  match (find_symbols t id) with
+  | [Unit x] -> Some x
+  | _ -> None
 
 let add_renaming_declaration t newname oldname =
   t.renaming <- (newname,oldname)::t.renaming
@@ -391,24 +382,24 @@ let builtin_type x = find_type builtin_table x
 let set_current       t = t.pkgmgr#set_current
 let reset_current     t = t.pkgmgr#reset_current
 let current           t = t.pkgmgr#current
-let add_with          t = t.pkgmgr#add_with          
-let is_with           t = t.pkgmgr#is_with           
-let add_use           t = t.pkgmgr#add_use           
-let remove_use        t = t.pkgmgr#remove_use        
-let get_use           t = t.pkgmgr#get_use           
-let is_extern         t = t.pkgmgr#is_extern         
-let as_extern_do      t = t.pkgmgr#as_extern_do      
-let normalize_name    t = t.pkgmgr#normalize_name    
-let add_renaming_decl t = t.pkgmgr#add_renaming_decl 
+let add_with          t = t.pkgmgr#add_with
+let is_with           t = t.pkgmgr#is_with
+let add_use           t = t.pkgmgr#add_use
+let remove_use        t = t.pkgmgr#remove_use
+let get_use           t = t.pkgmgr#get_use
+let is_extern         t = t.pkgmgr#is_extern
+let as_extern_do      t = t.pkgmgr#as_extern_do
+let normalize_name    t = t.pkgmgr#normalize_name
+let add_renaming_decl t = t.pkgmgr#add_renaming_decl
 
 let _ =
   List.iter (fun (n,t) -> add_type builtin_table n t)
-  ["integer"  , Ada_types.integer
-  ;"float"    , Ada_types.std_float
-  ;"boolean"  , Ada_types.boolean
-  ;"natural"  , Ada_types.natural
-  ;"positive" , Ada_types.positive
-  ;"character", Ada_types.character
+  ["integer"  , T.integer
+  ;"float"    , T.std_float
+  ;"boolean"  , T.boolean
+  ;"natural"  , T.natural
+  ;"positive" , T.positive
+  ;"character", T.character
   ]
 
 module SymStack = struct
@@ -435,56 +426,115 @@ module SymStack = struct
   let enter_context ?name s =
     if (not debug_dont_push) then
       begin
-        Npkcontext.print_debug (">>>>>>> enter_context ("
-                               ^(match name with Some n -> n
-                                               | _      ->""
-                               )^")");
-        Npkcontext.print_debug (print s);
-        let new_context = create_table ?name () in
-        begin match name with
-          | None   -> ()
-          | Some n -> IHashtbl.add ((Stack.top s).t_tbl) n (Unit new_context)
-        end;
-        Stack.push new_context s
-      end
+          Npkcontext.print_debug (">>>>>>> enter_context ("
+                                 ^(match name with
+                                     | Some n -> n
+                                     | _      -> "")^")");
+          let create_context _ =
+            begin
+              let new_context = create_table ?name () in
+              begin match name with
+                | None   -> ()
+                | Some n -> IHashtbl.add ((Stack.top s).t_tbl)
+                                          n (Unit new_context)
+              end;
+              new_context;
+            end
+          in
+          let context =
+            match name with
+              | None   -> create_context ()
+              | Some n -> begin
+                            match (find_unit (top s) n) with
+                              | None   -> create_context ()
+                              | Some u -> u
+                          end
+          in
 
-  let new_unit s name =
-    while (Stack.length s > 2) do
-      ignore (Stack.pop s);
-    done;
-    (* Here Stack.length s = 2 so we are at library level *)
-    enter_context ~name s
+          Stack.push context s
+        end
 
-  let exit_context s =
-    if not (debug_dont_push) then
-      begin
-        Npkcontext.print_debug "<<<<<<< exit_context ()";
+    let new_unit s name =
+      while (Stack.length s > 2) do
+        ignore (Stack.pop s);
+      done;
+      (* Here Stack.length s = 2 so we are at library level *)
+      enter_context ~name s
+
+    let exit_context s =
+      if not (debug_dont_push) then
+        begin
+          Npkcontext.print_debug "<<<<<<< exit_context ()";
+          Npkcontext.print_debug (print s);
         if(Stack.length s > 2) then
           ignore (Stack.pop s)
         else
           Npkcontext.report_error "exit_context" "Stack too small"
       end
 
-  (** Find some data in a stack.  *)
+  (**
+   * Find some data in a stack.
+   * Applies f to every table of s, from top to bottom.
+   * The first x such as f t = Some x is returned.
+   * If forall t in s, f t = None, Not_found is raised.
+   *)
   let find_rec s f =
-    let s' = Stack.copy s in
+    let s = Stack.copy s in
     let r = ref None in
-    while (!r = None) do
-      let t = Stack.top s' in
-      r := f t;
-      Stack.pop s'
-    done;
-    match !r with
-    | None   -> failwith "find" (* unreachable *)
-    | Some x -> x
+    try
+      while (!r = None) do
+        let t = Stack.pop s in
+        r := f t
+      done;
+      match !r with
+      | None   -> failwith "find" (* unreachable *)
+      | Some x -> x
+    with Stack.Empty -> raise Not_found
 
+  (**
+   * Find something in the current package.
+   *)
+  let find_current s n =
+    let s = Stack.copy s in
+    while Stack.length s>3 do
+      ignore (Stack.pop s);
+    done;
+    if (Stack.length s <> 3) then
+      begin
+        error "No current package";
+        []
+      end
+    else
+      begin
+        find_symbols (Stack.top s) n
+      end
+
+  (**
+   * Find a variable in a symbol table stack.
+   *)
   let s_find_variable s ?expected_type ?package n =
     ignore package;
-    find_variable (top s) ?expected_type n
+    let f t =
+      try Some (find_variable ?expected_type t n)
+      with Not_found -> None
+    in
+    try
+      find_rec s f
+    with Not_found ->
+      error ("Cannot find variable "^n);
+      T.unknown
 
   let s_find_type s ?package n =
     ignore package;
-    find_type (top s) n
+    let f t =
+      try Some (find_type t n)
+      with Not_found -> None
+    in
+    try
+      find_rec s f
+    with Not_found ->
+      error ("Cannot find type "^n);
+      T.unknown
 
   let s_add_variable   s = add_variable   (top s)
   let s_add_type       s = add_type       (top s)
@@ -497,7 +547,7 @@ module SymStack = struct
     let s1 = find_symbols (top s) n1 in
     let s2 = find_symbols (top s) n2 in
     let inte = inter s1 s2 in
-    if inte = [] then Ada_types.unknown else cast_v inte
+    if inte = [] then T.unknown else cast_v inte
 
 
 end

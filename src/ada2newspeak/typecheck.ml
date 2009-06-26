@@ -92,4 +92,4 @@ let type_of_xor t1 t2 =
             "Xor is not defined -- 4.5.1.(2)";
   expect ~desc:"xor" t1 t2;
   t1
-  
+

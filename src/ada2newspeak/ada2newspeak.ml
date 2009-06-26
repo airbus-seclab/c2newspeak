@@ -62,12 +62,13 @@ let compile(fname:string):Npkil.t =
         Npkcontext.print_debug ("Translating "^fname^"...");
         let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
           let t_3 = Unix.gettimeofday () in
-          Npkcontext.print_debug
-           ("   Time spent\n"
-           ^"----------------\n"
-           ^"Lexing/Parsing : "^string_of_float (1000.0 *. (t_1-.t_0))^"\n"
-           ^"Translating    : "^string_of_float (1000.0 *. (t_2-.t_1))^"\n"
-           ^"Post-1st pass  : "^string_of_float (1000.0 *. (t_3-.t_2))^"\n");
+          List.iter Npkcontext.print_debug
+          ["   , ^ ,          Phase       | Time spent (ms)"
+          ;" .`  |  `.  ------------------+-----------------"
+          ;" (   o   )    Lexing/Parsing  | "^string_of_float(1000.*.(t_1-.t_0))
+          ;" `  /    `    Translation     | "^string_of_float(1000.*.(t_2-.t_1))
+          ;"  ` ._. `     Linking         | "^string_of_float(1000.*.(t_3-.t_2))
+          ];
           Npkcontext.forget_loc ();
           if dir_name <> "." then begin
             Npkcontext.print_debug ("Changing directory : "^current_dir);

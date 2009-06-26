@@ -142,7 +142,7 @@ module SymStack : sig
    * Impure (has side effects).
    *
    * For example, this program                will look like this :
-   *                           \ 
+   *                           \
    *                            |      +---------------------------------------+
    *                            |      | Standard library          (RO, NOPOP) |
    *                           /       |   - Integer : type                    |
@@ -167,7 +167,7 @@ module SymStack : sig
    *                                   |
    * RO = nothing can be added         |
    * NOPOP = exit_context              | stack grows this way
-   *         will complain             v 
+   *         will complain             v
    *
    *)
   type t

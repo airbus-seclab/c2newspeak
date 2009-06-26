@@ -352,7 +352,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   let normalize_ident_cur_ext ident is_ext =
     normalize_ident ident (Symboltbl.current (Sym.top gtbl)) is_ext
   in
- 
+
   let normalize_ident_cur ident =
     normalize_ident_cur_ext ident extern
 
@@ -447,7 +447,8 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     in
         match x with
           | (None, ident) -> sans_selecteur ident
-          | (Some pack, _) when extern||(Symboltbl.is_with (Sym.top gtbl) pack) -> avec_selecteur x
+          | (Some pack, _) when extern ||
+                (Symboltbl.is_with (Sym.top gtbl) pack) -> avec_selecteur x
           | (pack, ident) when pack = (Symboltbl.current (Sym.top gtbl)) ->
               selecteur_courant (None,ident)
           | (Some pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
@@ -602,9 +603,11 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type = match (e1, e2) with
-            | Var v1 , Var v2 -> Some (Sym.type_ovl_intersection gtbl (snd v1) (snd v2))
-            | _      , Qualified (st,_) -> Some (subtyp_to_adatyp st)
-            | _               -> None
+          | Var v1 , Var v2 -> Some (Sym.type_ovl_intersection gtbl
+                                                              (snd v1)
+                                                              (snd v2))
+          | _      , Qualified (st,_) -> Some (subtyp_to_adatyp st)
+          | _               -> None
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
           let (e2',t2) = normalize_exp ?expected_type e2 in
@@ -994,7 +997,8 @@ in
           List.iter
             (fun ident -> remove_cst (normalize_ident_cur ident))
             ident_list
-      | BasicDecl(UseDecl(use_clause)) -> Symboltbl.remove_use (Sym.top gtbl) use_clause
+      | BasicDecl(UseDecl(use_clause)) -> Symboltbl.remove_use (Sym.top gtbl)
+                                                                use_clause
       | BasicDecl(NumberDecl(ident,_,_))->remove_cst (normalize_ident_cur ident)
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
@@ -1075,7 +1079,7 @@ in
     | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
         Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
-        let t = 
+        let t =
           let (tp,_,_,st) = subtyp_ind in
           if st = T.unknown then subtyp_to_adatyp tp
           else st
@@ -1100,8 +1104,8 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let (v,_) = eval_static normexp (Some(typ)) csttbl (Sym.top gtbl) extern in
-
+            let (v,_) = eval_static normexp (Some typ)
+                                    csttbl (Sym.top gtbl) extern in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp v;
@@ -1158,7 +1162,8 @@ in
     | RenamingDecl (n, o) ->
         begin
           Symboltbl.add_renaming_declaration (Sym.top gtbl) (snd n) (snd o);
-          Symboltbl.add_renaming_decl (Sym.top gtbl) (normalize_name n) (normalize_name o);
+          Symboltbl.add_renaming_decl (Sym.top gtbl) (normalize_name n)
+                                                     (normalize_name o);
           None;
         end
     | RepresentClause _
@@ -1196,7 +1201,8 @@ in
   in
 
   let rec normalize_lval = function
-    | Lval n -> (Ast.Lval n, Some (Sym.s_find_variable gtbl ?package:(fst n) (snd n)))
+    | Lval n -> (Ast.Lval n, Some (Sym.s_find_variable gtbl ?package:(fst n)
+                                                        (snd n)))
     | ArrayAccess (lv,e) -> Ast.ArrayAccess(fst (normalize_lval lv),
                                             normalize_exp  e),None
   in
