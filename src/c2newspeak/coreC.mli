@@ -97,7 +97,6 @@ and exp =
     | Cst of (Cir.cst * typ)
     | Local of string
     | Global of string
-    | RetVar
     | Field of (typ_exp * string)
     | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp

@@ -405,10 +405,6 @@ let translate (globals, fundecls, spec) =
 	Local x -> C.Local x
       | Global x -> C.Global x
 
-      | RetVar -> 
-	  let (x, _) = find_var ret_name in
-	    x
-
       | Field ((lv, t), f) -> 
 	  let lv = translate_lv lv in
 	  let r = fields_of_comp (CoreC.comp_of_typ t) in
@@ -486,7 +482,7 @@ let translate (globals, fundecls, spec) =
       match e with
 	  Cst (c, _) -> C.Const c
 	    	    
-	| Local _ | Global _ | RetVar 
+	| Local _ | Global _  
 	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let lv = translate_lv e in
 	      C.Lval (lv, translate_typ t)

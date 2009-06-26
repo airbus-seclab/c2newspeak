@@ -271,9 +271,7 @@ let process (globals, specs) =
 	  let t = translate_typ t in
 	    (C.Cst (c, t), t)
       | Var x -> find_var x
-      | RetVar -> 
-	  let (_, t) = find_var ret_name in
-	    (C.RetVar, t)
+      | RetVar -> find_var ret_name
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
 	  let r = fields_of_comp (C.comp_of_typ t) in
