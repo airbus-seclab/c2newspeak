@@ -32,7 +32,6 @@ type name =
 type unary_op =
 | UPlus
 | UMinus
-| Abs
 | Not
 
 type binary_op =

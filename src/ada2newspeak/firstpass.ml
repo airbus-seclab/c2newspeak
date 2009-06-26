@@ -870,9 +870,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           let (exp, _) = translate_exp exp (Some(A.Boolean))
           in (C.Unop (K.Not, exp), A.Boolean)
 
-      | (Abs, _) -> Npkcontext.report_error "Firstpass.translate_unop"
-          "run-time abs is not implemented" (* on ignore abs *)
-
       | _ ->
           Npkcontext.report_error "Firstpass.translate_unop"
             "Unexpected unary operator and argument"

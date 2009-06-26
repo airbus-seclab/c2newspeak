@@ -614,15 +614,27 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
           Ast.Binary (bop', (e1',t1), (e2',t2)),
           TC.type_of_binop bop' t1 t2
 
+and make_abs (exp,t) =
+  let x = (exp,t) in
+  let zero =
+    if (T.is_integer t) then
+      (Ast.CInt Nat.zero,T.universal_integer)
+    else
+      (Ast.CFloat (0.0,"0.0"), T.universal_real)
+  in
+  Ast.CondExp(
+              (Ast.Binary(Ast.Gt, x, zero),T.boolean)
+             , x
+             ,(Ast.Unary(Ast.UMinus, x),t)
+             )
+
 and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
   let (ne,t) = normalize_exp exp in
-  let uop' = match uop with
-     | UPlus  -> Ast.UPlus
-     | UMinus -> Ast.UMinus
-     | Abs    -> Ast.Abs
-     | Not    -> Ast.Not
-  in
-  Ast.Unary(uop', (ne,t)), TC.type_of_unop uop' t
+  match uop with
+     | Abs    -> make_abs (ne,TC.type_of_abs t),t
+     | UPlus  -> Ast.Unary(Ast.UPlus , (ne,t)), TC.type_of_unop Ast.UPlus  t
+     | UMinus -> Ast.Unary(Ast.UMinus, (ne,t)), TC.type_of_unop Ast.UMinus t
+     | Not    -> Ast.Unary(Ast.Not   , (ne,t)), TC.type_of_unop Ast.Not    t
 
 (**
  * Normalize an expression.
@@ -1144,8 +1156,11 @@ in
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl (Sym.top gtbl) extern in
-          (*ajouts dans la table*)
-            Sym.s_add_variable gtbl ident T.universal_integer;
+            let t = match v with
+              | BoolVal _ | IntVal _ -> T.universal_integer
+              | FloatVal _           -> T.universal_real
+            in
+            Sym.s_add_variable gtbl ident t;
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;

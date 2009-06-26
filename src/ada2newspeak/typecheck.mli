@@ -37,3 +37,5 @@ val type_of_binop : Ast.binary_op -> Ada_types.t -> Ada_types.t -> Ada_types.t
  *)
 
 val type_of_xor : Ada_types.t -> Ada_types.t -> Ada_types.t
+
+val type_of_abs : Ada_types.t -> Ada_types.t

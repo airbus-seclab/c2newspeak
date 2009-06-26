@@ -162,18 +162,6 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                                    "invalid operator and argument"
 
   (**
-   * Evaluate statically the "abs E" expression.
-   *)
-  and eval_static_abs (exp:Ast.expression) :value*typ =
-      match (eval_static_exp exp expected_typ) with
-        | IntVal i, t when (integer_class t) ->
-            let abs = if (Nat.compare i Nat.zero)<0 then Nat.neg i else i
-            in (IntVal(abs), t)
-        | (FloatVal(f,_), Float) -> (FloatVal(mk_float (abs_float f)), Float)
-        | _ -> Npkcontext.report_error "eval_static.abs"
-                                   "invalid operator and argument"
-
-  (**
    * Evaluate statically the "op E" expressions.
    *)
   and eval_static_unop (op:Ast.unary_op) (exp:Ast.expression)
@@ -193,9 +181,6 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.UMinus, None
     | Ast.UMinus, Some Float                  -> eval_static_uminus exp
     | Ast.UMinus, Some t when integer_class t -> eval_static_uminus exp
-    | Ast.Abs,    None
-    | Ast.Abs,    Some Float                  -> eval_static_abs exp
-    | Ast.Abs,    Some t when integer_class t -> eval_static_abs exp
     | Ast.Not,    None
     | Ast.Not,    Some Boolean ->
             (match (eval_static_exp exp expected_typ) with

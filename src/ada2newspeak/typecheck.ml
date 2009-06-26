@@ -79,8 +79,8 @@ let type_of_binop op t1 t2 = match op with
              t1
 
 let type_of_unop op t = match op with
-  | UPlus | UMinus | Abs -> t_assert (T.is_numeric t)
-                        "Unary adding operator is not defined -- 4.5.4, 4.5.6";
+  | UPlus | UMinus -> t_assert (T.is_numeric t)
+                        "Unary adding operator is not defined -- 4.5.4";
                       t
   | Not            -> t_assert (T.is_boolean t)
                         "Unary adding operator \"not\" is not defined -- 4.5.6"
@@ -93,3 +93,7 @@ let type_of_xor t1 t2 =
   expect ~desc:"xor" t1 t2;
   t1
 
+let type_of_abs t =
+  t_assert (T.is_numeric t)
+    "Highest precedence operator 'abs' is not defined -- 4.5.6";
+  t
