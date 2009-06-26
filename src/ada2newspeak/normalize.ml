@@ -1161,7 +1161,6 @@ in
           Some (Ast.SubtypDecl(ident, norm_subtyp_ind))
     | RenamingDecl (n, o) ->
         begin
-          Symboltbl.add_renaming_declaration (Sym.top gtbl) (snd n) (snd o);
           Symboltbl.add_renaming_decl (Sym.top gtbl) (normalize_name n)
                                                      (normalize_name o);
           None;

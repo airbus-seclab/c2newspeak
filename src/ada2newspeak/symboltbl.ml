@@ -374,9 +374,6 @@ let find_unit t id =
   | [Unit x] -> Some x
   | _ -> None
 
-let add_renaming_declaration t newname oldname =
-  t.renaming <- (newname,oldname)::t.renaming
-
 let builtin_type x = find_type builtin_table x
 
 let set_current       t = t.pkgmgr#set_current
