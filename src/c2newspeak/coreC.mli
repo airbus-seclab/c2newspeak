@@ -63,7 +63,6 @@ and typ =
     | Comp of (string * is_struct)
     | Fun of ftyp
     | Va_arg
-    | Typeof of string
 
 and array_typ = typ * exp option
 

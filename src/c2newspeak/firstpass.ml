@@ -761,9 +761,6 @@ let translate (globals, fundecls, spec) =
       | Ptr (Fun _) -> N.FunPtr
       | Ptr _ -> N.Ptr
       | Va_arg -> N.Ptr
-      | Typeof v -> 
-	  let (_, t) = find_var v in
-	    translate_scalar_typ t
       | Bitfield ((s, n), sz) -> 
 	  let (sz, _) = translate_exp (sz, int_typ) in
 	  let sz = Nat.to_int (C.eval_exp sz) in
@@ -790,9 +787,6 @@ let translate (globals, fundecls, spec) =
 	  let (f, sz, _) = find_compdef s in
 	  let f = List.map translate_field f in
 	    if is_struct then C.Struct (f, sz) else C.Union (f, sz)
-      | Typeof v -> 
-	  let (_, t) = find_var v in
-	    translate_typ t
 
   and translate_array_len x =
     match x with

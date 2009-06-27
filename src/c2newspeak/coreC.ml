@@ -67,7 +67,6 @@ and typ =
   | Comp of (string * bool)
   | Fun of ftyp
   | Va_arg
-  | Typeof of string
      
 and array_typ = typ * exp option
  
@@ -257,7 +256,6 @@ let rec string_of_typ t =
     | Comp _ -> "Comp"
     | Fun ft -> string_of_ftyp ft
     | Va_arg -> "Va_arg"
-    | Typeof _ -> "Typeof"
 
 and string_of_ftyp (args_t, ret_t) =
   let args_t = 

@@ -409,7 +409,9 @@ let process (globals, specs) =
       | Comp (x, is_struct) -> C.Comp (x, is_struct)
       | Fun ft -> C.Fun (translate_ftyp ft)
       | Va_arg -> C.Va_arg
-      | Typeof x -> C.Typeof x
+      | Typeof x -> 
+	  let (_, t) = find_var x in 
+	    t
 
   and translate_ftyp (args_t, ret_t) =
     let args_t = 
