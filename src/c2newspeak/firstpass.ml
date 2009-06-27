@@ -85,6 +85,7 @@ let translate (globals, fundecls, spec) =
    but first needs to put the whole typing phase before firstpass
 *)
 (* TODO: remove everything related to symbtbl in this module!! *)
+(* TODO: remove this table!! *)
   let symbtbl = Symbtbl.create () in
 (* TODO: used_globals and one pass could be removed, if cir had a structure
    type with only the name and a hashtbl of structure names to type!!!, 
@@ -141,7 +142,7 @@ let translate (globals, fundecls, spec) =
     let args_id = List.map snd args_t in
       (ret_name, args_id)
   in
-    
+    (* TODO: remove this function *)
   let find_symb x = 
     try Symbtbl.find symbtbl x
     with Not_found -> 
@@ -167,16 +168,6 @@ let translate (globals, fundecls, spec) =
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
       with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
-  in
-
-  let find_var x =
-    let (v, t) = find_symb x in
-      match v with
-	  LocalSymb v -> (v, t)
-	| GlobalSymb v -> (C.Global v, t)
-	| _ -> 
-	    Npkcontext.report_error "Firstpass.find_var" 
-	      ("variable identifier expected: "^x)
   in
 
   let find_fname x =
@@ -1015,17 +1006,11 @@ let translate (globals, fundecls, spec) =
   and translate_token x =
     match x with
 	SymbolToken x -> C.SymbolToken x
-      | IdentToken x -> begin
-	  try 
-	    let (lv, t) = find_var x in begin
-		match t with
-		    Fun _ -> C.IdentToken x
-		  | _ -> 
-		      let t = translate_typ t in 
-			C.LvalToken (lv, t)
-	      end
-	  with _ -> C.IdentToken x
-	end
+      | IdentToken x -> C.IdentToken x
+      | LvalToken (lv, t) -> 
+	  let lv = translate_lv lv in
+	  let t = translate_typ t in
+	    C.LvalToken (lv, t)
       | CstToken c -> C.CstToken c
 
 (* TODO: think about this: simplify *)

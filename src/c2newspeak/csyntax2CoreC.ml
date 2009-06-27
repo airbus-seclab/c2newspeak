@@ -508,7 +508,14 @@ let process (globals, specs) =
   and translate_spec_token x =
     match x with
 	SymbolToken x -> C.SymbolToken x
-      | IdentToken x -> C.IdentToken x
+      | IdentToken x -> begin
+	  try
+	    let (lv, t) = find_var x in
+	      match t with
+		  C.Fun _ -> C.IdentToken x
+		| _ -> C.LvalToken (lv, t)
+	  with _ -> C.IdentToken x
+	end
       | CstToken (c, _) -> C.CstToken c
 	  
   and translate_assertion x = List.map translate_spec_token x
