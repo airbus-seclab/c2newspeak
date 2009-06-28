@@ -41,7 +41,7 @@ and decl =
     VDecl of (typ * is_static * is_extern * init option)
   | EDecl of exp
 (* struct or union: composite *)
-  | CDecl of (is_struct * field_decl list)
+  | CDecl of compdef
 
 (* true for structure, false for union *)
 and is_struct = bool
@@ -54,6 +54,8 @@ and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
 
+and compdef = (field_decl list * bool)
+
 and typ =
     | Void
     | Int of Newspeak.ikind
@@ -61,7 +63,7 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_typ
-    | Comp of (string * is_struct)
+    | Comp of compdef option ref
     | Fun of ftyp
     | Va_arg
 
@@ -147,8 +149,6 @@ val exp_of_char: char -> exp
 
 val exp_of_int: int -> exp
 
-val comp_of_typ: typ -> string
-
 val ftyp_of_typ: typ -> ftyp
 
 val deref_typ: typ -> typ
@@ -162,3 +162,5 @@ val string_of_typ: typ -> string
 val ftyp_of_typ: typ -> ftyp
 
 val promote: Newspeak.ikind -> Newspeak.ikind
+
+val comp_of_typ: typ -> (field_decl list * bool)

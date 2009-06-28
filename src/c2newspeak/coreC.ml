@@ -44,7 +44,8 @@ and decl =
     VDecl of (typ * is_static * is_extern * init option)
   | EDecl of exp
 (* struct or union: composite *)
-  | CDecl of (is_struct * field_decl list)
+(* TODO: remove this: unnecessary!!! *)
+  | CDecl of compdef
   
 (* true for structure, false for union *)
 and is_struct = bool
@@ -57,6 +58,8 @@ and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
 
+and compdef = (field_decl list * bool)
+      
 and typ =
   | Void
   | Int of Newspeak.ikind
@@ -65,7 +68,7 @@ and typ =
   | Ptr of typ
   | Array of array_typ
 (* true for structure *)
-  | Comp of (string * bool)
+  | Comp of compdef option ref
   | Fun of ftyp
   | Va_arg
      
@@ -164,7 +167,13 @@ let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 
 let comp_of_typ t =
   match t with
-      Comp (n, _)-> n
+      Comp c -> begin
+	match !c with
+	    Some c -> c
+	  | None -> 
+	      Npkcontext.report_error "Csyntax.comp_of_typ" 
+		"incomplete struct or union type"
+      end
     | _ -> 
 	Npkcontext.report_error "Csyntax.comp_of_typ" 
 	  "struct or union type expected"

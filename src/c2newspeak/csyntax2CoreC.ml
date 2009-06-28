@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: -> Parsing -> BareC -> Typing -> TypedC 
+   -> Implicit casts addition, side-effects elimination, boolean expression
+   normalization, redundant expressions/statements removal 
+   -> CoreC -> optional Goto eliminatination *)
 open Csyntax
 module Nat = Newspeak.Nat
 module C = CoreC
@@ -47,12 +51,12 @@ let seq_of_string str =
 (* TODO: not minimal, think about it *)
 (* TODO: maybe possible to merge VarSymb and EnumSymb together
    but what about CompSymb??
-   maybe have 2 tables!!!
+   TODO: maybe have 2 tables!!!
 *)
 type symb =
   | VarSymb of C.exp 
   | EnumSymb of C.exp
-  | CompSymb of C.field_decl list
+  | CompSymb of C.compdef option ref
 
 let find_field f r =
   try List.assoc f r 
@@ -140,15 +144,16 @@ let process (globals, specs) =
 	info
   in
 
-  let fields_of_comp name =
+  let find_compdef name =
     try 
       let (c, _) = Symbtbl.find symbtbl name in
 	match c with
-	    CompSymb f -> f
+	    CompSymb c -> c
 	  | _ -> raise Not_found
     with Not_found -> 
-      Npkcontext.report_error "Csyntax2CoreC.find_compdef" 
-	("unknown structure or union "^name)
+      let c = ref None in
+	Symbtbl.bind symbtbl name (CompSymb c, C.Comp c);
+	c
   in
 
   let update_funtyp f ft1 =
@@ -274,7 +279,7 @@ let process (globals, specs) =
       | RetVar -> find_var ret_name
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
-	  let r = fields_of_comp (C.comp_of_typ t) in
+	  let (r, _) = C.comp_of_typ t in
 	  let f_t = find_field f r in
 	    (C.Field ((e, t), f), f_t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
@@ -406,7 +411,8 @@ let process (globals, specs) =
 		    Some e
 	  in
 	    C.Array (t, len)
-      | Comp (x, is_struct) -> C.Comp (x, is_struct)
+(* TODO: maybe the fact that it is a struct not needed in the type?? *)
+      | Comp (x, _) -> C.Comp (find_compdef x)
       | Fun ft -> C.Fun (translate_ftyp ft)
       | Va_arg -> C.Va_arg
       | Typeof x -> 
@@ -464,9 +470,11 @@ let process (globals, specs) =
 	    Symbtbl.bind symbtbl x (EnumSymb e, t);
 	    C.EDecl e
       | CDecl (is_struct, fields) -> 
-	  add_compdecl (x, (is_struct, fields));
 	  let fields = List.map translate_field_decl fields in
-	    C.CDecl (is_struct, fields)
+	  let decl = (fields, is_struct) in
+	  let c = find_compdef x in
+	    c := Some decl;
+	    C.CDecl decl
 
   and translate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
@@ -547,11 +555,6 @@ let process (globals, specs) =
 (*	Symbtbl.restore symbtbl;*)
 	(blk@(C.Exp (e, t), loc)::[], t)
   
-  and add_compdecl (x, (is_struct, f)) =
-    let f = List.map translate_field_decl f in
-    let data = (CompSymb f, C.Comp (x, is_struct)) in
-      Symbtbl.bind symbtbl x data
-
   and translate_field_decl (t, x, _) = (x, translate_typ t)
 
   and translate_init t x =
@@ -564,12 +567,11 @@ let process (globals, specs) =
 	  in
 	    C.Sequence seq
 	      
-      | (Sequence seq, C.Comp (s, true)) ->
-	  let f = fields_of_comp s in
-	    C.Sequence (translate_field_sequence seq f)
+      | (Sequence seq, C.Comp { contents = Some (f, true) }) ->
+	  C.Sequence (translate_field_sequence seq f)
 
-      | (Sequence ((Some f, init)::[]), C.Comp (s, false)) -> 
-	  let r = fields_of_comp s in
+      | (Sequence ((Some f, init)::[]), 
+	 C.Comp { contents = Some (r, false)}) -> 
 	  let t = find_field f r in
 	  let seq = (Some f, translate_init t init)::[] in
 	    C.Sequence seq

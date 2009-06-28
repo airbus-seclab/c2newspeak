@@ -103,28 +103,6 @@ let translate (globals, fundecls, spec) =
   let lbl_tbl = Hashtbl.create 10 in
   let lbl_cnt = ref default_lbl in
 
-  let find_compdef name =
-    try 
-      let (c, _) = Symbtbl.find symbtbl name in
-	match c with
-	    CompSymb c -> c
-	  | _ -> raise Not_found
-    with Not_found ->
-      Npkcontext.report_error "Firstpass.find_compdef" 
-	("unknown structure or union "^name)
-  in
-    (* TODO: remove this function, put a record, instead of a tuple in compdef
-    *)
-  let fields_of_comp name =
-    let (f, _, _) = find_compdef name in
-      f
-  in
-
-  let align_of_comp name =
-    let (_, _, a) = find_compdef name in
-      a
-  in
-
   let new_lbl () =
     incr lbl_cnt;
     !lbl_cnt
@@ -225,11 +203,10 @@ let translate (globals, fundecls, spec) =
 
   let rec cast (e, t1) t2 = 
     match t2 with
-	Comp (name, false) when t1 <> t2 -> 
-	  let f = fields_of_comp name in
-	    if not (List.exists (fun (_, (_, f_t)) -> f_t = t1) f) 
-	    then Npkcontext.report_error "Firstpass.cast" "incompatible type";
-	    (e, t1)
+	Comp { contents = Some (f, false) } when t1 <> t2 -> 
+	  if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
+	  then Npkcontext.report_error "Firstpass.cast" "incompatible type";
+	  (e, t1)
       | _ -> 
 	  let t1' = translate_typ t1 in
 	  let t2' = translate_typ t2 in
@@ -260,13 +237,13 @@ let translate (globals, fundecls, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Comp (s, true)) ->
-	    let f = fields_of_comp s in
+	| (Sequence seq, Comp { contents = Some (f, true) }) ->
+	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
 	      t
 
-	| (Sequence ((Some f, v)::[]), Comp (s, false)) ->
-	    let r = fields_of_comp s in
+	| (Sequence ((Some f, v)::[]), Comp { contents = Some (r, false) }) ->
+	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
 	      t
@@ -359,8 +336,8 @@ let translate (globals, fundecls, spec) =
 		o := !o + sz
 	      done
 		
-	| Comp (s, _) -> 
-	    let f = fields_of_comp s in
+	| Comp { contents = Some c } -> 
+	    let (f, _, _) = translate_comp c in
 	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
 	      List.iter fill_field f
 
@@ -398,7 +375,7 @@ let translate (globals, fundecls, spec) =
 
       | Field ((lv, t), f) -> 
 	  let lv = translate_lv lv in
-	  let r = fields_of_comp (CoreC.comp_of_typ t) in
+	  let (r, _, _) = translate_comp (CoreC.comp_of_typ t) in
 	  let (o, _) = find_field f r in
 	  let o = C.exp_of_int o in
 	    C.Shift (lv, o)
@@ -565,7 +542,7 @@ let translate (globals, fundecls, spec) =
 	      C.BlkExp (body, e, is_after)
 
 	| Offsetof (t, f) -> 
-	    let r = fields_of_comp (CoreC.comp_of_typ t) in
+	    let (r, _, _) = translate_comp (CoreC.comp_of_typ t) in
 	    let (o, _) = find_field f r in
 	      C.exp_of_int (o / Config.size_of_byte)
 	      
@@ -694,7 +671,10 @@ let translate (globals, fundecls, spec) =
 
   and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
-  and process_struct_fields name f =
+  and translate_comp (f, is_struct) = 
+    if is_struct then translate_struct f else translate_union f
+
+  and translate_struct f =
     let o = ref 0 in
     let last_align = ref 1 in
     let translate (x, t) =
@@ -728,10 +708,9 @@ let translate (globals, fundecls, spec) =
     in
     let f = List.map translate f in
     let sz = next_aligned !o !last_align in
-    let struct_def = (CompSymb (f, sz, !last_align), Comp (name, true)) in
-      Symbtbl.bind symbtbl name struct_def
+      (f, sz, !last_align)
 
-  and process_union_fields name f =
+  and translate_union f =
     let n = ref 0 in
     let align = ref 0 in
     let translate (x, t) =
@@ -742,8 +721,7 @@ let translate (globals, fundecls, spec) =
 	(x, (0, t))
     in
     let f = List.map translate f in
-    let union_def = (CompSymb (f, !n, !align), Comp (name, false)) in
-      Symbtbl.bind symbtbl name union_def
+      (f, !n, !align)
 
   and translate_scalar_typ t =
     match t with
@@ -774,8 +752,15 @@ let translate (globals, fundecls, spec) =
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
-      | Comp (s, is_struct) ->
-	  let (f, sz, _) = find_compdef s in
+      | Comp c ->
+	  let (f, is_struct) = 
+	    match !c with
+		Some x -> x
+	      | None -> 
+		  Npkcontext.report_error "Firstpass.translate_typ"
+		    "incomplete type for struct or union"
+	  in
+	  let (f, sz, _) = translate_comp (f, is_struct) in
 	  let f = List.map translate_field f in
 	    if is_struct then C.Struct (f, sz) else C.Union (f, sz)
 
@@ -807,10 +792,13 @@ let translate (globals, fundecls, spec) =
     let args = List.map translate_arg args in
     let ret = translate_typ ret in
       (args, ret)
-
-  and add_compdecl (x, (is_struct, f)) =
-    if is_struct then process_struct_fields x f
-    else process_union_fields x f
+	
+  (* TODO: should invert this pair!! *)
+  and add_compdecl (name, (f, is_struct)) =
+    let c = (f, is_struct) in
+    let x = translate_comp c in
+    let def = (CompSymb x, CoreC.Comp (ref (Some c))) in
+      Symbtbl.bind symbtbl name def
 
   and translate_blk x =
     Symbtbl.save symbtbl;
@@ -1202,7 +1190,9 @@ let translate (globals, fundecls, spec) =
 
   and align_of t =
     match t with
-	Comp (n, _) -> align_of_comp n
+	Comp { contents = Some c } -> 
+	  let (_, _, a) = translate_comp c in
+	    a
       | Array (t, _) -> align_of t
       | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
