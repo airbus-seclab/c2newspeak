@@ -120,19 +120,6 @@ let translate (globals, fundecls, spec) =
     let args_id = List.map snd args_t in
       (ret_name, args_id)
   in
-    (* TODO: remove this function *)
-  let find_symb x = 
-    try Symbtbl.find symbtbl x
-    with Not_found -> 
-      if (Gnuc.is_gnuc_token x) && (not !Npkcontext.accept_gnuc) then begin
-	Npkcontext.report_accept_warning "Firstpass.translate.find_symb" 
-	  ("unknown identifier "^x^", maybe a GNU C symbol") Npkcontext.GnuC
-      end;
-      let info = (GlobalSymb x, Fun (None, CoreC.int_typ)) in
-	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
-	Symbtbl.bind symbtbl x info;
-	info
-  in
 
   let update_funtyp f ft1 =
     let (symb, t) = Symbtbl.find symbtbl f in
@@ -146,15 +133,6 @@ let translate (globals, fundecls, spec) =
     let f' = if static then "!"^fname^"."^f else f in
       try update_funtyp f ft
       with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
-  in
-
-  let find_fname x =
-    let (v, t) = find_symb x in
-      match (v, t) with
-	  (GlobalSymb f, Fun ft) -> (f, ft)
-	| _ -> 
-	    Npkcontext.report_error "Firstpass.find_fname" 
-	      ("unknown function: "^x)
   in
 
   let update_global x name loc (t, init) =
@@ -559,9 +537,7 @@ let translate (globals, fundecls, spec) =
 
   and translate_funexp e =
     match e with
-	Fname x -> 
-	  let (e, _) = find_fname x in
-	    C.Fname e
+	Fname x -> C.Fname x
       | FunDeref e -> 
 	  let (e, _) = translate_exp e in
 	    C.FunDeref e	
@@ -1216,7 +1192,6 @@ let translate (globals, fundecls, spec) =
     Npkcontext.set_loc loc;
     update_funsymb f static ft loc;
     current_fun := f;
-    let (f', ft) = find_fname f in
     let ft = 
       match ft with
 	  (Some args_t, ret_t) -> (args_t, ret_t)
@@ -1228,7 +1203,7 @@ let translate (globals, fundecls, spec) =
       let formalids = add_formals ft in
       let body = translate_blk body in
       let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	add_fundef f' formalids body (translate_ftyp ft);
+	add_fundef f formalids body (translate_ftyp ft);
 	Symbtbl.restore symbtbl;
 	current_fun := "";
 	Hashtbl.clear lbl_tbl;

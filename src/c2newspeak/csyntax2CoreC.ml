@@ -165,9 +165,12 @@ let process (globals, specs) =
 
   let update_funsymb f static ft loc =
     let (fname, _, _) = loc in
-    let f' = if static then "!"^fname^"."^f else f in
-      try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (VarSymb (C.Global f'), C.Fun ft)
+    let f' = if static then "!"^fname^"."^f else f in begin
+	try update_funtyp f ft
+	with Not_found -> 
+	  Symbtbl.bind symbtbl f (VarSymb (C.Global f'), C.Fun ft)
+      end;
+      f'
   in
 
   let translate_proto_ftyp f static (args, ret) loc =
@@ -175,7 +178,8 @@ let process (globals, specs) =
       Npkcontext.report_warning "Csyntax2CoreC.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
-    update_funsymb f static (args, ret) loc
+    let _ = update_funsymb f static (args, ret) loc in
+      ()
   in
 
   let find_var x = 
@@ -598,7 +602,7 @@ let process (globals, specs) =
       | _ -> Npkcontext.report_error "Csyntax2CoreC" "case not implemented yet"
   in
 
-  let translate_fundecl (f, ft, static, body, loc) =
+  let translate_fundecl (f, f', ft, static, body, loc) =
     Npkcontext.set_loc loc;
     current_fun := f;
     Symbtbl.save symbtbl;
@@ -606,7 +610,7 @@ let process (globals, specs) =
     let body = translate_blk body in
       Symbtbl.restore symbtbl;
       current_fun := "";
-      (f, (ft, static, body, loc))
+      (f', (ft, static, body, loc))
   in
 
   let translate_globals x = 
@@ -623,8 +627,8 @@ let process (globals, specs) =
 	    in
 	    let ft = (Some args_t, ret_t) in
 	    let ft = translate_ftyp ft in
-	      update_funsymb f static ft loc;
-	      fundecls := (f, ft, static, body, loc)::(!fundecls)
+	    let f' = update_funsymb f static ft loc in
+	      fundecls := (f, f', ft, static, body, loc)::(!fundecls)
 		
 	| GlbDecl (x, d) -> 
 	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
