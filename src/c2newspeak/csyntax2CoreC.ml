@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: -> Parsing -> BareC -> Typing -> TypedC 
+   -> Implicit casts addition, side-effects elimination, boolean expression
+   normalization, redundant expressions/statements removal 
+   -> CoreC -> optional Goto eliminatination *)
 open Csyntax
 module Nat = Newspeak.Nat
 module C = CoreC
@@ -47,12 +51,12 @@ let seq_of_string str =
 (* TODO: not minimal, think about it *)
 (* TODO: maybe possible to merge VarSymb and EnumSymb together
    but what about CompSymb??
-   maybe have 2 tables!!!
+   TODO: maybe have 2 tables!!!
 *)
 type symb =
   | VarSymb of C.exp 
   | EnumSymb of C.exp
-  | CompSymb of C.field_decl list
+  | CompSymb of C.compdef option ref
 
 let find_field f r =
   try List.assoc f r 
@@ -140,15 +144,16 @@ let process (globals, specs) =
 	info
   in
 
-  let fields_of_comp name =
+  let find_compdef name =
     try 
       let (c, _) = Symbtbl.find symbtbl name in
 	match c with
-	    CompSymb f -> f
+	    CompSymb c -> c
 	  | _ -> raise Not_found
     with Not_found -> 
-      Npkcontext.report_error "Csyntax2CoreC.find_compdef" 
-	("unknown structure or union "^name)
+      let c = ref None in
+	Symbtbl.bind symbtbl name (CompSymb c, C.Comp c);
+	c
   in
 
   let update_funtyp f ft1 =
@@ -160,9 +165,12 @@ let process (globals, specs) =
 
   let update_funsymb f static ft loc =
     let (fname, _, _) = loc in
-    let f' = if static then "!"^fname^"."^f else f in
-      try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (VarSymb (C.Global f'), C.Fun ft)
+    let f' = if static then "!"^fname^"."^f else f in begin
+	try update_funtyp f ft
+	with Not_found -> 
+	  Symbtbl.bind symbtbl f (VarSymb (C.Global f'), C.Fun ft)
+      end;
+      f'
   in
 
   let translate_proto_ftyp f static (args, ret) loc =
@@ -170,7 +178,8 @@ let process (globals, specs) =
       Npkcontext.report_warning "Csyntax2CoreC.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
-    update_funsymb f static (args, ret) loc
+    let _ = update_funsymb f static (args, ret) loc in
+      ()
   in
 
   let find_var x = 
@@ -271,12 +280,10 @@ let process (globals, specs) =
 	  let t = translate_typ t in
 	    (C.Cst (c, t), t)
       | Var x -> find_var x
-      | RetVar -> 
-	  let (_, t) = find_var ret_name in
-	    (C.RetVar, t)
+      | RetVar -> find_var ret_name
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
-	  let r = fields_of_comp (C.comp_of_typ t) in
+	  let (r, _) = C.comp_of_typ t in
 	  let f_t = find_field f r in
 	    (C.Field ((e, t), f), f_t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
@@ -408,10 +415,13 @@ let process (globals, specs) =
 		    Some e
 	  in
 	    C.Array (t, len)
-      | Comp (x, is_struct) -> C.Comp (x, is_struct)
+(* TODO: maybe the fact that it is a struct not needed in the type?? *)
+      | Comp (x, _) -> C.Comp (find_compdef x)
       | Fun ft -> C.Fun (translate_ftyp ft)
       | Va_arg -> C.Va_arg
-      | Typeof x -> C.Typeof x
+      | Typeof x -> 
+	  let (_, t) = find_var x in 
+	    t
 
   and translate_ftyp (args_t, ret_t) =
     let args_t = 
@@ -464,9 +474,11 @@ let process (globals, specs) =
 	    Symbtbl.bind symbtbl x (EnumSymb e, t);
 	    C.EDecl e
       | CDecl (is_struct, fields) -> 
-	  add_compdecl (x, (is_struct, fields));
 	  let fields = List.map translate_field_decl fields in
-	    C.CDecl (is_struct, fields)
+	  let decl = (fields, is_struct) in
+	  let c = find_compdef x in
+	    c := Some decl;
+	    C.CDecl decl
 
   and translate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
@@ -508,7 +520,14 @@ let process (globals, specs) =
   and translate_spec_token x =
     match x with
 	SymbolToken x -> C.SymbolToken x
-      | IdentToken x -> C.IdentToken x
+      | IdentToken x -> begin
+	  try
+	    let (lv, t) = find_var x in
+	      match t with
+		  C.Fun _ -> C.IdentToken x
+		| _ -> C.LvalToken (lv, t)
+	  with _ -> C.IdentToken x
+	end
       | CstToken (c, _) -> C.CstToken c
 	  
   and translate_assertion x = List.map translate_spec_token x
@@ -540,11 +559,6 @@ let process (globals, specs) =
 (*	Symbtbl.restore symbtbl;*)
 	(blk@(C.Exp (e, t), loc)::[], t)
   
-  and add_compdecl (x, (is_struct, f)) =
-    let f = List.map translate_field_decl f in
-    let data = (CompSymb f, C.Comp (x, is_struct)) in
-      Symbtbl.bind symbtbl x data
-
   and translate_field_decl (t, x, _) = (x, translate_typ t)
 
   and translate_init t x =
@@ -557,12 +571,11 @@ let process (globals, specs) =
 	  in
 	    C.Sequence seq
 	      
-      | (Sequence seq, C.Comp (s, true)) ->
-	  let f = fields_of_comp s in
-	    C.Sequence (translate_field_sequence seq f)
+      | (Sequence seq, C.Comp { contents = Some (f, true) }) ->
+	  C.Sequence (translate_field_sequence seq f)
 
-      | (Sequence ((Some f, init)::[]), C.Comp (s, false)) -> 
-	  let r = fields_of_comp s in
+      | (Sequence ((Some f, init)::[]), 
+	 C.Comp { contents = Some (r, false)}) -> 
 	  let t = find_field f r in
 	  let seq = (Some f, translate_init t init)::[] in
 	    C.Sequence seq
@@ -589,7 +602,7 @@ let process (globals, specs) =
       | _ -> Npkcontext.report_error "Csyntax2CoreC" "case not implemented yet"
   in
 
-  let translate_fundecl (f, ft, static, body, loc) =
+  let translate_fundecl (f, f', ft, static, body, loc) =
     Npkcontext.set_loc loc;
     current_fun := f;
     Symbtbl.save symbtbl;
@@ -597,7 +610,7 @@ let process (globals, specs) =
     let body = translate_blk body in
       Symbtbl.restore symbtbl;
       current_fun := "";
-      (f, (ft, static, body, loc))
+      (f', (ft, static, body, loc))
   in
 
   let translate_globals x = 
@@ -614,8 +627,8 @@ let process (globals, specs) =
 	    in
 	    let ft = (Some args_t, ret_t) in
 	    let ft = translate_ftyp ft in
-	      update_funsymb f static ft loc;
-	      fundecls := (f, ft, static, body, loc)::(!fundecls)
+	    let f' = update_funsymb f static ft loc in
+	      fundecls := (f, f', ft, static, body, loc)::(!fundecls)
 		
 	| GlbDecl (x, d) -> 
 	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
