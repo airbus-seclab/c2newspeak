@@ -163,8 +163,6 @@ val character : t
 (** The boolean type. *)
 val boolean : t
 
-val natural   : t
-val positive  : t
 val integer   : t
 val std_float : t
 

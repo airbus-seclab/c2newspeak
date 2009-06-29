@@ -225,12 +225,6 @@ and integer_last  = max_int
 let integer  = new_constr universal_integer
                           (integer_first @.. integer_last)
 
-let natural  = new_constr integer
-                          (0 @.. integer_last)
-
-let positive = new_constr integer
-                          (1 @.. integer_last)
-
 let boolean = new_enumerated ["true" ; "false"]
 
 let std_float = new_float 6
