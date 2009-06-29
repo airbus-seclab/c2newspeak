@@ -11,12 +11,13 @@ type base_typ =
     | Va_arg
     | Typeof of string
 
-and var_modifier = 
+and var_modifier = (int * modifier)
+
+and modifier =
     | Abstract
     | Variable of (string * location)
     | Function of (var_modifier * decl list)
     | Array of (var_modifier * Csyntax.exp option)
-    | Pointer of var_modifier
 
 and decl = (base_typ * var_modifier)
 
