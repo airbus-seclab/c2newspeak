@@ -55,10 +55,12 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
       and end_col = end_pos.Lexing.pos_cnum
         - end_pos.Lexing.pos_bol
       in
-      let pos = "line "^line^", col "^(string_of_int start_col)
-        ^(if start_col = end_col
-          then ""
-          else ("-"^(string_of_int end_col)))
+      let pos = "line "
+              ^ line
+              ^ ", col "
+              ^ string_of_int start_col
+              ^ "-"
+              ^ string_of_int end_col
       in
       let err_msg = "syntax error: "^pos^", unexpected token: "^lexeme in
         Npkcontext.report_error "File_parse.parse" err_msg
