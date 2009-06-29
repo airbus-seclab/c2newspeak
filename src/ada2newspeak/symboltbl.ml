@@ -24,6 +24,19 @@
 
 module T = Ada_types
 
+(* debug control *)
+
+let debug_use_new = false
+
+let error x =
+  if (debug_use_new) then
+    Npkcontext.report_warning "Symbol table" x
+  else
+    Npkcontext.print_debug ("ERROR : Symbol table"^x)
+
+let debug_dont_push = not debug_use_new
+
+
 (**
  * Wraps what the "current package" is and which packages are
  * marked using the "with" and "use" constructs.
@@ -145,12 +158,6 @@ end = object (self)
             renaming <- (new_name,old_name)::renaming
         end
   end
-
-let error x =
-  if (1=1) then
-    Npkcontext.print_debug ("ERROR : T"^x)
-  else
-    Npkcontext.report_warning "T" x
 
 (**
  * The [string] type with primitives to
@@ -394,14 +401,10 @@ let _ =
   ["integer"  , T.integer
   ;"float"    , T.std_float
   ;"boolean"  , T.boolean
-  ;"natural"  , T.natural
-  ;"positive" , T.positive
   ;"character", T.character
   ]
 
 module SymStack = struct
-
-  let debug_dont_push = true
 
   type t = table Stack.t
 
@@ -518,7 +521,7 @@ module SymStack = struct
     try
       find_rec s f
     with Not_found ->
-      error ("Cannot find variable "^n);
+      error ("Cannot find variable '"^n^"'");
       T.unknown
 
   let s_find_type s ?package n =

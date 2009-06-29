@@ -645,7 +645,7 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
   | CFloat x -> Ast.CFloat x,T.universal_real
   | CBool  x -> Ast.CBool  x,T.boolean
   | CChar  x -> Ast.CChar  x,T.character
-  | Var    n -> begin (* n may denote the name of a paramterless function *)
+  | Var    n -> begin (* n may denote the name of a parameterless function *)
                   let n' = normalize_name n in
                     let t = try Sym.s_find_variable ?expected_type gtbl
                     ?package:(fst n) (snd n)

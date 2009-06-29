@@ -73,7 +73,7 @@ let type_of_binop op t1 t2 = match op with
                   t_assert (T.is_integer t1) (* and is_specific *)
                     "Multiplying operator is not defined -- 4.5.5.(2)";
                   t1
-  | Power -> expect t2 T.natural;
+  | Power -> expect t2 T.integer;
              t_assert (T.is_integer t1) (* or float *)
                "Highest precedence operator \"**\" is not defined -- 4.5.6";
              t1

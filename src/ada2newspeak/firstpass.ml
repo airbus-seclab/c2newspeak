@@ -741,26 +741,22 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                         " subtyp_lv has not expected typ"
   in
 
-  let rec translate_if_exp (cond:Ast.expression) (exp_then:Ast.expression)
-                           (exp_else:Ast.expression) expected_typ =
-    match expected_typ with
-      | None | Some(A.Boolean) ->
-          let loc = Npkcontext.get_loc () in
-          let (tmp, decl, vid) = temp#create loc A.Boolean in
-          let name = ident_to_name tmp in
-          let instr_if = Ast.If (cond,
-                             [(Ast.Assign(Lval name, exp_then),loc)],
-                             [(Ast.Assign(Lval name, exp_else),loc)])
-          in let tr_instr_if =
-              translate_block [(instr_if,loc)]
-          in
-            remove_symb tmp;
-            (C.BlkExp (decl::tr_instr_if,
-                       C.Lval (vid, translate_typ A.Boolean), false),
-             A.Boolean)
-      | Some(_) -> Npkcontext.report_error
-          "Firstpass.translate_if_exp"
-            "invalid operator and argument"
+  let rec translate_if_exp (e_cond:Ast.expression)
+                           (e_then:Ast.expression)
+                           (e_else:Ast.expression) =
+    let loc = Npkcontext.get_loc () in
+    let (tmp, decl, vid) = temp#create loc A.Boolean in
+    let name = ident_to_name tmp in
+    let instr_if = Ast.If (e_cond,
+                       [(Ast.Assign(Lval name, e_then),loc)],
+                       [(Ast.Assign(Lval name, e_else),loc)])
+    in let tr_instr_if =
+        translate_block [(instr_if,loc)]
+    in
+      remove_symb tmp;
+      (C.BlkExp (decl::tr_instr_if,
+                 C.Lval (vid, translate_typ A.Boolean), false),
+       A.Boolean)
 
   and translate_and (e1:Ast.expression) (e2:Ast.expression) =
     let loc = Npkcontext.get_loc () in
@@ -769,8 +765,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          e2
-                                         (Ast.CBool false,T.boolean)
-                                         (Some A.Boolean)) in
+                                         (Ast.CBool false,T.boolean)) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
@@ -782,8 +777,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          (Ast.CBool true,T.boolean)
-                                         e2
-                                         (Some A.Boolean)) in
+                                         e2) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
@@ -1303,7 +1297,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
-    | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3       expected_typ
+    | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3
     | Qualified(subtyp, exp) ->
         let qtyp = check_typ expected_typ (base_typ subtyp) in
         let (tr_exp, typ) = translate_exp exp (Some(qtyp)) in
