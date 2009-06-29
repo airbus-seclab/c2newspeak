@@ -188,8 +188,28 @@ let deref_typ t =
       Ptr t -> t
     | _ -> Npkcontext.report_error "CoreC.deref_typ" "pointer type expected"
 
+let rec equals_typ t1 t2 =
+  match (t1, t2) with
+    | (Int k1, Int k2)
+    | (Bitfield (k1, _), Bitfield (k2, _)) -> k1 = k2
+    | (Ptr t1, Ptr t2)
+    | (Array (t1, _), Array (t2, _)) -> equals_typ t1 t2
+    | (Fun ft1, Fun ft2) -> equals_ftyp ft1 ft2
+    | (Comp c1, Comp c2) -> c1 == c2
+    | _ -> t1 = t2
+	  
+and equals_ftyp (args1, ret1) (args2, ret2) =
+  let b =
+    match (args1, args2) with
+	(Some args1, Some args2) -> 
+	  (List.for_all2 (fun (t1, _) (t2, _) -> equals_typ t1 t2) args1 args2)
+      | (None, None) -> true
+      | _ -> false
+  in
+    b && (equals_typ ret1 ret2)
+
 let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
-  let equals (t1, _) (t2, _) = t1 = t2 in
+  let equals (t1, _) (t2, _) = equals_typ t1 t2 in
 (* TODO???
   let equals (t1, _) (t2, _) =  
     match (t1, t2) with  
