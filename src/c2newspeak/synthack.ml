@@ -41,12 +41,13 @@ type base_typ =
     | Va_arg
     | Typeof of string
 
-and var_modifier = 
+and var_modifier = (int * modifier)
+
+and modifier = 
     | Abstract
     | Variable of (string * location)
     | Function of (var_modifier * decl list)
     | Array of (var_modifier * B.exp option)
-    | Pointer of var_modifier
 
 and decl = (base_typ * var_modifier)
 
@@ -152,20 +153,22 @@ and normalize_fields f =
 	  (decls@decls', (t, x, loc)::f)
     | [] -> ([], [])
 
-and normalize_var_modifier b v =
-  match v with
-      Abstract -> (b, None, Newspeak.unknown_loc)
-    | Variable (x, loc) -> (b, Some x, loc)
-    | Function (Variable (f, loc), args) -> 
-	(normalize_ftyp (args, b), Some f, loc)
-    | Function (Pointer v, args) -> 
-	let ft = normalize_ftyp (args, b) in
-	  normalize_var_modifier (B.Ptr ft) v
-    | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
-    | Pointer v -> normalize_var_modifier (B.Ptr b) v
-    | Function _ -> 
-	Npkcontext.report_error "Synthack.normalize_var_modifier" 
-	  "case not implemented yet"
+and apply_derefs n b = if n = 0 then b else apply_derefs (n-1) (B.Ptr b)
+
+and normalize_var_modifier b (derefs, v) =
+  let b = apply_derefs derefs b in
+    match v with
+	Abstract -> (b, None, Newspeak.unknown_loc)
+      | Variable (x, loc) -> (b, Some x, loc)
+      | Function ((0, Variable (f, loc)), args) -> 
+	  (normalize_ftyp (args, b), Some f, loc)
+      | Function ((1, v), args) -> 
+	  let ft = normalize_ftyp (args, b) in
+	    normalize_var_modifier (B.Ptr ft) (0, v)
+      | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
+      | Function _ -> 
+	  Npkcontext.report_error "Synthack.normalize_var_modifier" 
+	    "case not implemented yet"
 	  
 and normalize_ftyp (args, ret) =
   let args = List.map normalize_arg args in

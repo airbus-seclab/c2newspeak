@@ -242,7 +242,7 @@ declaration:
 ;;
 
 init_declarator_list:
-                                            { ((Abstract, []), None)::[] }
+                                            { (((0, Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
 
@@ -262,20 +262,29 @@ attr_declarator:
 ;;
 
 declarator:
-| pointer declarator                       { Pointer $2 }
+  pointer direct_declarator                { 
+    let (ptr, decl) = $2 in
+      (ptr+$1, decl)
+  }
+| direct_declarator                        { $1 }
+;;
+
+direct_declarator:
+  ident_or_tname                           { (0, Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
-| ident_or_tname                           { Variable ($1, get_loc ()) }
-| declarator LBRACKET expression RBRACKET  { Array ($1, Some $3) }
-| declarator LBRACKET 
-             type_qualifier_list RBRACKET  { Array ($1, None) }
-| declarator 
-  LPAREN parameter_list RPAREN             { Function ($1, $3) }
-| declarator LPAREN RPAREN                 { Function ($1, []) }
-| declarator LPAREN identifier_list RPAREN
-  old_parameter_declaration_list           { 
+| direct_declarator LBRACKET 
+      expression RBRACKET                  { (0, Array ($1, Some $3)) }
+| direct_declarator LBRACKET 
+      type_qualifier_list RBRACKET         { (0, Array ($1, None)) }
+| direct_declarator 
+  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
+| direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
+| direct_declarator 
+      LPAREN identifier_list RPAREN
+      old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-    Function ($1, build_funparams $3 $5) 
+    (0, Function ($1, build_funparams $3 $5))
   }
 ;;
 
@@ -296,7 +305,7 @@ struct_declarator:
 | COLON conditional_expression             { 
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    (Abstract, Some $2) 
+    ((0, Abstract), Some $2) 
   }
 ;;
 
@@ -325,11 +334,11 @@ parameter_declaration:
   declaration_specifiers declarator        { ($1, $2) }
 | declaration_specifiers 
   abstract_declarator                      { ($1, $2) }
-| declaration_specifiers                   { ($1, Abstract) }
+| declaration_specifiers                   { ($1, (0, Abstract)) }
 ;;
 
 type_name:
-  declaration_specifiers                   { ($1, Abstract) }
+  declaration_specifiers                   { ($1, (0, Abstract)) }
 | declaration_specifiers
   abstract_declarator                      { ($1, $2) }
 ;;
@@ -721,20 +730,30 @@ init_list:
 ;;
 
 abstract_declarator:
-| pointer                                  { Pointer Abstract }
-| pointer abstract_declarator              { Pointer $2 }
-| LPAREN abstract_declarator RPAREN        { $2 }
-| LBRACKET type_qualifier_list RBRACKET    { Array (Abstract, None) }
-| LBRACKET expression RBRACKET             { Array (Abstract, Some $2) }
-| abstract_declarator 
-  LBRACKET expression RBRACKET             { Array ($1, Some $3) }
-| abstract_declarator 
-  LPAREN parameter_list RPAREN             { Function ($1, $3) }
-| abstract_declarator LPAREN RPAREN        { Function ($1, []) }
+  pointer                                  { ($1, Abstract) }
+| direct_abstract_declarator               { $1 }
+| pointer direct_abstract_declarator       { 
+    let (ptr, decl) = $2 in
+      ($1+ptr, decl) 
+  }
+;;
+
+direct_abstract_declarator:
+  LPAREN abstract_declarator RPAREN        { $2 }
+| LBRACKET type_qualifier_list RBRACKET    { (0, Array ((0, Abstract), None)) }
+| LBRACKET expression RBRACKET             { 
+    (0, Array ((0, Abstract), Some $2)) 
+  }
+| direct_abstract_declarator 
+  LBRACKET expression RBRACKET             { (0, Array ($1, Some $3)) }
+| direct_abstract_declarator 
+  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
+| direct_abstract_declarator LPAREN RPAREN { (0, Function ($1, [])) }
 ;;
 
 pointer:
-  STAR type_qualifier_list                 {  }
+  STAR type_qualifier_list                 { 1 }
+| STAR type_qualifier_list pointer         { $3 + 1 }
 ;;
 
 field_list:
@@ -749,7 +768,7 @@ parameter_list:
 | parameter_declaration                    { $1::[] }
 | ELLIPSIS                                 {
     let loc = get_loc () in
-      (Va_arg, Variable ("__builtin_newspeak_va_arg", loc))::[] 
+      (Va_arg, (0, Variable ("__builtin_newspeak_va_arg", loc)))::[] 
   }
 ;;
 
@@ -935,7 +954,7 @@ field_declaration:
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    flatten_field_decl ($1, (Abstract, None)::[]) 
+    flatten_field_decl ($1, ((0, Abstract), None)::[]) 
   }
 ;;
 
@@ -1021,7 +1040,7 @@ integer_list:
 | INTEGER COMMA integer_list               { $1::$3 }
 ;;
 
-/* Newspeak assertion language */
+// Newspeak assertion language
 assertion:
   SYMBOL assertion                         { (SymbolToken $1)::$2 }
 | IDENTIFIER assertion                     { (IdentToken $1)::$2 }
