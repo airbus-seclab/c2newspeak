@@ -262,20 +262,26 @@ attr_declarator:
 ;;
 
 declarator:
-  pointer declarator                       { 
+  pointer direct_declarator                { 
     let (ptr, decl) = $2 in
-      (ptr+1, decl)
+      (ptr+$1, decl)
   }
+| direct_declarator                        { $1 }
+;;
+
+direct_declarator:
+  ident_or_tname                           { (0, Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
-| ident_or_tname                           { (0, Variable ($1, get_loc ())) }
-| declarator LBRACKET expression RBRACKET  { (0, Array ($1, Some $3)) }
-| declarator LBRACKET 
-             type_qualifier_list RBRACKET  { (0, Array ($1, None)) }
-| declarator 
+| direct_declarator LBRACKET 
+      expression RBRACKET                  { (0, Array ($1, Some $3)) }
+| direct_declarator LBRACKET 
+      type_qualifier_list RBRACKET         { (0, Array ($1, None)) }
+| direct_declarator 
   LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| declarator LPAREN RPAREN                 { (0, Function ($1, [])) }
-| declarator LPAREN identifier_list RPAREN
-  old_parameter_declaration_list           { 
+| direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
+| direct_declarator 
+      LPAREN identifier_list RPAREN
+      old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
     (0, Function ($1, build_funparams $3 $5))
@@ -724,25 +730,30 @@ init_list:
 ;;
 
 abstract_declarator:
-| pointer                                  { (1, Abstract) }
-| pointer abstract_declarator              { 
+  pointer                                  { ($1, Abstract) }
+| direct_abstract_declarator               { $1 }
+| pointer direct_abstract_declarator       { 
     let (ptr, decl) = $2 in
-      (ptr+1, decl) 
+      ($1+ptr, decl) 
   }
-| LPAREN abstract_declarator RPAREN        { $2 }
+;;
+
+direct_abstract_declarator:
+  LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET type_qualifier_list RBRACKET    { (0, Array ((0, Abstract), None)) }
 | LBRACKET expression RBRACKET             { 
     (0, Array ((0, Abstract), Some $2)) 
   }
-| abstract_declarator 
+| direct_abstract_declarator 
   LBRACKET expression RBRACKET             { (0, Array ($1, Some $3)) }
-| abstract_declarator 
+| direct_abstract_declarator 
   LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| abstract_declarator LPAREN RPAREN        { (0, Function ($1, [])) }
+| direct_abstract_declarator LPAREN RPAREN { (0, Function ($1, [])) }
 ;;
 
 pointer:
-  STAR type_qualifier_list                 {  }
+  STAR type_qualifier_list                 { 1 }
+| STAR type_qualifier_list pointer         { $3 + 1 }
 ;;
 
 field_list:
