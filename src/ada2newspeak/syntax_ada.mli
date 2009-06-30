@@ -101,6 +101,7 @@ and typ_declaration =
   | IntegerRange of contrainte
                   * Newspeak.ikind option
   | Array  of array_type_definition
+  | Record of (string*subtyp) list
 
 (** Array type definition *)
 and array_type_definition =

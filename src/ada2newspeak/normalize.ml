@@ -377,10 +377,11 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   in
   let add_typ nom typdecl location ~global ~extern =
     let subtyp = match typdecl with
-      | Array _ -> Unconstrained(Declared(snd nom
-                                         ,typdecl
-                                         ,T.unknown
-                                         ,location))
+      | Array  _
+      | Record _ -> Unconstrained(Declared(snd nom
+                                          ,typdecl
+                                          ,T.unknown
+                                          ,location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
@@ -907,10 +908,11 @@ in
               List.iter (fun (i,_) -> Sym.s_add_variable gtbl i new_t) symbs;
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
-          | Declared(_,IntegerRange(contrainte,taille),_,_) ->
-              IntegerRange(contrainte, taille)
-          | Declared(_,Array  def,_,_) -> Array def
-          | Declared(_,DerivedType subtyp_ind,_,_) -> DerivedType subtyp_ind
+          | Declared(_, (( IntegerRange(_,_)
+                        | Array  _
+                        | Record _
+                        | DerivedType _
+                        ) as def),_,_) -> def
         in
 
         (*constitution of the subtype representing the current declaration *)
@@ -987,6 +989,10 @@ in
           norm_typ
     | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
                           "internal error : size of array already provided"
+    | Record _ -> begin
+                    add_typ (normalize_ident_cur ident) typ_decl loc global extern;
+                    typ_decl
+                  end
   in
 
   let remove_typ_decl nom typ_decl = match typ_decl with
@@ -995,7 +1001,8 @@ in
                   symbs
     | DerivedType  _
     | IntegerRange _
-    | Array        _ -> types#remove (normalize_ident_cur nom)
+    | Array        _
+    | Record       _ -> types#remove (normalize_ident_cur nom)
 
   in
 

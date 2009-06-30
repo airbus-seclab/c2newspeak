@@ -151,6 +151,7 @@ and translate_declared (typ_decl:A.typ_declaration) :C.typ = match typ_decl with
       "internal error : no bounds provided for IntegerRange"
 | A.Array a -> C.Array(translate_typ (Ada_utils.extract_typ a.A.array_component)
                       ,a.A.array_size)
+| A.Record _ -> failwith "record (firstpass)"
 
 (**
  * Translate a [Syntax_ada.subtyp].
@@ -1669,7 +1670,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | A.DerivedType ref_subtyp_ind ->
           translate_derived_typ_decl ref_subtyp_ind loc global
       | A.IntegerRange _
-      | A.Array _ -> ()
+      | A.Array        _
+      | A.Record       _ -> ()
 
   (* declarations basiques locales *)
   and translate_basic_declaration basic loc = match basic with

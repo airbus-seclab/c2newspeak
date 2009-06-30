@@ -103,8 +103,13 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       "IntegerRange("
       ^(contrainte_to_string contrainte)
       ^", "^(option_to_string taille ikind_to_string)^")"
+  | Record r -> "Record("^(list_to_string r record_component_to_string
+                                          ", " false)
   | Array(array_def) ->
       "Array("^(array_definition_to_string array_def)^")"
+
+and record_component_to_string (c,st) =
+  c ^ " => " ^ subtyp_to_string st
 
 and array_definition_to_string ar =
          "index = " ^(subtyp_indication_to_string ar.array_index)

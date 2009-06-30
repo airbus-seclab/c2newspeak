@@ -205,8 +205,9 @@ let rec integer_class typ = match typ with
   | IntegerConst -> true
   | Declared(_,typdef,_,_) ->
       (match typdef with
-         | Enum _
-         | Array _ -> false
+         | Enum   _
+         | Array  _
+         | Record _ -> false
          | IntegerRange _ -> true
          | DerivedType(_,_,Some(subtyp),_) -> integer_class (base_typ subtyp)
          | DerivedType(_,_,None,_) -> Npkcontext.report_error

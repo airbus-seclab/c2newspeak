@@ -160,27 +160,28 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location*string>         CONST_STRING
 %token <Newspeak.location*string>         IDENT
 
-%token <Newspeak.location> ABS        AND       ARRAY   ARROW     ASSIGN
-%token <Newspeak.location> BEGIN      BODY      CASE    COLON     COMMA
-%token <Newspeak.location> CONSTANT   DECLARE   DIGITS  DIV       DOT
-%token <Newspeak.location> DOUBLE_DOT ELSE      ELSIF   END       EQ
-%token <Newspeak.location> EXIT       FALSE     FOR     FUNCTION  GE
-%token <Newspeak.location> GT         IF        IN      IS        LE
-%token <Newspeak.location> LOOP       LPAR      LT      MINUS     MOD
-%token <Newspeak.location> MULT       NE        NEW     NOT       NULL
-%token <Newspeak.location> OF         OR        OTHERS  OUT       PACKAGE
-%token <Newspeak.location> PLUS       POW       PRAGMA  PROCEDURE QUOTE
-%token <Newspeak.location> RANGE      REM       RENAMES RETURN    REVERSE
-%token <Newspeak.location> RPAR       SEMICOLON SUBTYPE THEN      TRUE
-%token <Newspeak.location> TYPE       USE       VBAR    WHEN      WHILE
-%token <Newspeak.location> WITH       XOR
+%token <Newspeak.location> ABS        AND     ARRAY     ARROW     ASSIGN
+%token <Newspeak.location> BEGIN      BODY    CASE      COLON     COMMA
+%token <Newspeak.location> CONSTANT   DECLARE DIGITS    DIV       DOT
+%token <Newspeak.location> DOUBLE_DOT ELSE    ELSIF     END       EQ
+%token <Newspeak.location> EXIT       FALSE   FOR       FUNCTION  GE
+%token <Newspeak.location> GT         IF      IN        IS        LE
+%token <Newspeak.location> LOOP       LPAR    LT        MINUS     MOD
+%token <Newspeak.location> MULT       NE      NEW       NOT       NULL
+%token <Newspeak.location> OF         OR      OTHERS    OUT       PACKAGE
+%token <Newspeak.location> PLUS       POW     PRAGMA    PROCEDURE QUOTE
+%token <Newspeak.location> RANGE      RECORD  REM       RENAMES   RETURN
+%token <Newspeak.location> REVERSE    RPAR    SEMICOLON SUBTYPE   THEN
+%token <Newspeak.location> TRUE       TYPE    USE       VBAR      WHEN
+%token <Newspeak.location> WHILE      WITH    XOR
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
 %left       PLUS MINUS          /*      binary adding operators */
 %nonassoc   UPLUS UMINUS        /*       unary adding operators */
 %left       MULT DIV MOD REM    /*        multiplying operators */
-%left       POW ABS NOT         /* highest precedence operators */
+%right      POW                 /* highest precedence operators */
+%nonassoc   ABS NOT
 
 %start s
 %type <Syntax_ada.compilation_unit> s
@@ -208,6 +209,8 @@ let make_range exp_b_inf exp_b_sup =
 %type <string * expression> array_component_association
 %type <subtyp_indication list> matrix_indication
 %type <array_type_definition> constrained_array_definition
+%type <string*subtyp> record_component
+%type <(string*subtyp) list> record_type_definition record_component_list
 %type <contrainte> contrainte
 %type <basic_declaration*location> basic_declaration
 %type <(basic_declaration*location) list> basic_declarative_part
@@ -392,6 +395,10 @@ basic_declaration :
                        )
               ,$1
             }
+| TYPE ident IS record_type_definition SEMICOLON {TypeDecl($2
+                                                          ,Record $4
+                                                          ,Ada_types.unknown)
+                                                 ,$1}
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
@@ -407,6 +414,18 @@ basic_declaration :
                     "Only one identifier is allowed before \"renames\"";
                 RenamingDecl((None,List.hd $1),fst $5),$2 }
 ;
+
+record_type_definition:
+  RECORD record_component_list END RECORD {$2}
+;
+
+record_component_list:
+  | record_component record_component_list {$1::$2}
+  | record_component                       {$1::[]}
+;
+
+record_component:
+  IDENT COLON IDENT SEMICOLON {(snd $1),SubtypName (None,snd $3)}
 
 contrainte :
 | expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
