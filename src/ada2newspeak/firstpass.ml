@@ -151,13 +151,22 @@ and translate_declared (typ_decl:A.typ_declaration) :C.typ = match typ_decl with
       "internal error : no bounds provided for IntegerRange"
 | A.Array a -> C.Array(translate_typ (Ada_utils.extract_typ a.A.array_component)
                       ,a.A.array_size)
-| A.Record _ -> failwith "record (firstpass)"
+| A.Record r -> let (fields,sz) = translate_record r in C.Struct (fields,sz)
+
+(**
+ * Translate a record type.
+ * Builds a CIR Struct with packed offsets.
+ *)
+and translate_record (r:(string*A.subtyp) list) :(C.field list*Npk.size_t) =
+  List.fold_left (fun (cflds,start_off) (id,st) ->
+    let ctyp = translate_subtyp st in
+    (id, (start_off, ctyp))::cflds , (start_off + C.size_of_typ ctyp)
+  ) ([],0) r
 
 (**
  * Translate a [Syntax_ada.subtyp].
  *)
 and translate_subtyp (styp:A.subtyp) :C.typ = translate_typ (base_typ styp)
-
 
 (**
  * Main translating function.

@@ -989,9 +989,13 @@ in
           norm_typ
     | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
                           "internal error : size of array already provided"
-    | Record _ -> begin
-                    add_typ (normalize_ident_cur ident) typ_decl loc global extern;
-                    typ_decl
+    | Record r -> begin
+                    let norm_fields = 
+                      List.map (fun (id, st) -> (id, normalize_subtyp st)) r
+                    in
+                    let norm_typ = Record norm_fields in
+                    add_typ (normalize_ident_cur ident) norm_typ loc global extern;
+                    norm_typ
                   end
   in
 
