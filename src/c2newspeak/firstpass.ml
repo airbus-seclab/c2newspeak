@@ -777,9 +777,7 @@ let translate (globals, fundecls, spec) =
       Symbtbl.bind symbtbl name def
 
   and translate_blk x =
-    Symbtbl.save symbtbl;
     let (body, _) = translate_blk_aux false x in
-      Symbtbl.restore symbtbl;
       body
 
   and translate_blk_exp x =
@@ -1183,11 +1181,6 @@ let translate (globals, fundecls, spec) =
 	update_global x name loc (t, init)
   in
 
-  let collect_funtyps (f, (ft, static, _, loc)) =
-    Npkcontext.set_loc loc;
-    update_funsymb f static ft loc
-  in
-
   let translate_fundecl (f, (ft, static, body, loc)) =
     Npkcontext.set_loc loc;
     update_funsymb f static ft loc;
@@ -1199,12 +1192,10 @@ let translate (globals, fundecls, spec) =
 	    Npkcontext.report_error "Firstpass.translate_global" 
 	      "unreachable code"
     in
-      Symbtbl.save symbtbl;
       let formalids = add_formals ft in
       let body = translate_blk body in
       let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
 	add_fundef f formalids body (translate_ftyp ft);
-	Symbtbl.restore symbtbl;
 	current_fun := "";
 	Hashtbl.clear lbl_tbl;
 	lbl_cnt := default_lbl
@@ -1242,8 +1233,6 @@ let translate (globals, fundecls, spec) =
    Or better: should do all typing first.
    Then compile.
 *)
-(* TODO: remove this phase too! *)
-    List.iter collect_funtyps fundecls;
     List.iter translate_global globals;
     List.iter translate_fundecl fundecls;
 (* TODO: optimization: could remove this phase if cir had a type 
