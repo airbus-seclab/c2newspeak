@@ -1,1 +1,1 @@
-Fatal error: 175.c:1#0: width of bitfield exceeds its type
+Fatal error: 175.c:32#4: width of bitfield exceeds its type

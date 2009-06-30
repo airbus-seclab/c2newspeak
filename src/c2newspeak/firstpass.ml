@@ -768,13 +768,6 @@ let translate (globals, fundecls, spec) =
     let args = List.map translate_arg args in
     let ret = translate_typ ret in
       (args, ret)
-	
-  (* TODO: should invert this pair!! *)
-  and add_compdecl (name, (f, is_struct)) =
-    let c = (f, is_struct) in
-    let x = translate_comp c in
-    let def = (CompSymb x, CoreC.Comp (ref (Some c))) in
-      Symbtbl.bind symbtbl name def
 
   and translate_blk x =
     let (body, _) = translate_blk_aux false x in
@@ -788,23 +781,7 @@ let translate (globals, fundecls, spec) =
 	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
 	      "expression expected"
 
-  and translate_decl loc x d =
-    match d with
-	CDecl d -> add_compdecl (x, d)
-      | VDecl (_, _, extern, Some _) when extern -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    "extern globals can not be initizalized"
-      | VDecl (_, static, extern, _) when static && extern -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    ("static variable can not be extern")
-      | VDecl (Fun _, _, _, Some _) -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    ("unexpected initialization of function "^x)
-      | VDecl (Fun ft, static, _, None) -> update_funsymb x static ft loc
-      | _ -> ()
-
   and translate_local_decl loc x d =
-    translate_decl loc x d;
     match d with
 	EDecl _ | CDecl _ -> []
       | VDecl (Fun _, _, _, _) -> []
@@ -1206,7 +1183,6 @@ let translate (globals, fundecls, spec) =
 (* TODO: should be done in csyntax2CoreC *)
   let translate_global (x, (d, loc)) =
     Npkcontext.set_loc loc;
-    translate_decl loc x d;
     (* TODO: check if this could not be incorporated in translate_decl!!!
     *)
     match d with

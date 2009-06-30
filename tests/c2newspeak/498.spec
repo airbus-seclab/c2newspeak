@@ -1,4 +1,3 @@
-Warning: 498.c:1#0: flexible array member accepted
 Warning: 498.c:36#2: flexible array member accepted
 Warning: 498.c:36#2: flexible array member accepted
 Warning: 498.c:36#2: flexible array member accepted
