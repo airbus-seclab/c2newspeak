@@ -1650,3 +1650,23 @@ let build_main_call ptr_sz ft params =
 	    simplify_blk false !call
       | [] -> build_call fname ft []
       | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
+
+
+let rec belongs_of_exp x =
+  match x with
+      Lval (lv, _) | AddrOf (lv, _) -> belongs_of_lval lv
+    | UnOp (Belongs b, e) -> (b, e)::(belongs_of_exp e)
+    | UnOp (_, e) -> belongs_of_exp e 
+    | BinOp (_, e1, e2) -> (belongs_of_exp e1)@(belongs_of_exp e2)
+    | _ -> []
+
+and belongs_of_lval x =
+  match x with
+      Deref (e, _) -> belongs_of_exp e
+    | Shift (lv, e) -> (belongs_of_lval lv)@(belongs_of_exp e)
+    | _ -> []
+
+let belongs_of_fn x =
+  match x with
+      FunDeref (e, _) -> belongs_of_exp e
+    | _ -> []

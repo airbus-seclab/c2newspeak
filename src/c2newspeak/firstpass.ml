@@ -121,20 +121,6 @@ let translate (globals, fundecls, spec) =
       (ret_name, args_id)
   in
 
-  let update_funtyp f ft1 =
-    let (symb, t) = Symbtbl.find symbtbl f in
-    let ft2 = CoreC.ftyp_of_typ t in
-    let ft = CoreC.min_ftyp ft1 ft2 in
-      Symbtbl.update symbtbl f (symb, Fun ft)
-  in
-
-  let update_funsymb f static ft loc =
-    let (fname, _, _) = loc in
-    let f' = if static then "!"^fname^"."^f else f in
-      try update_funtyp f ft
-      with Not_found -> Symbtbl.bind symbtbl f (GlobalSymb f', Fun ft)
-  in
-
   let update_global x name loc (t, init) =
     let v = GlobalSymb name in
     let (loc, init) =
@@ -1158,9 +1144,8 @@ let translate (globals, fundecls, spec) =
 	update_global x name loc (t, init)
   in
 
-  let translate_fundecl (f, (ft, static, body, loc)) =
+  let translate_fundecl (f, (ft, _, body, loc)) =
     Npkcontext.set_loc loc;
-    update_funsymb f static ft loc;
     current_fun := f;
     let ft = 
       match ft with

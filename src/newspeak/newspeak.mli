@@ -395,3 +395,9 @@ val max_ikind: ikind -> ikind -> ikind
 val collect_fid_addrof: t -> fid list
 
 val equal_blk: blk -> blk -> bool
+
+val belongs_of_exp: exp -> (bounds * exp) list
+
+val belongs_of_lval: lval -> (bounds * exp) list
+
+val belongs_of_fn: fn -> (bounds * exp) list
