@@ -193,6 +193,9 @@ let report_asm tokens =
 %token <int> CHARACTER
 %token <string * char option> FLOATCST
 
+%nonassoc below_ELSE
+%nonassoc ELSE
+
 %type <string list * Csyntax.t> parse
 %start parse
 
@@ -372,7 +375,8 @@ statement:
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
-| IF LPAREN expression RPAREN statement    { 
+| IF LPAREN expression RPAREN
+      statement           %prec below_ELSE {
     [If (normalize_bexp $3, $5, []), get_loc ()] 
   }
 | IF LPAREN expression RPAREN statement

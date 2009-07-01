@@ -31,7 +31,7 @@
 type table
 
 (** Create a new symbol table.  *)
-val create_table  : ?name:string -> unit -> table
+val create_table  : ?desc:string -> unit -> table
 
 (** Add a type symbol to a table. *)
 val add_type      : table -> string -> Ada_types.t -> unit
@@ -82,20 +82,6 @@ val builtin_type : string -> Ada_types.t
 
 (** (Old) package_manager + proxies on methods *)
 
-(** Set the current package. *)
-val set_current       : table -> string -> unit
-(** Reset the current package. *)
-val reset_current     : table -> unit
-(**
- * Get the current package.
- * If [set_current] has not been called, or [reset_current] has been called
- * after the last call to [set_current], the empty package is returned.
- *)
-val current           : table -> string option
-(** Add a package to the "with" list. *)
-val add_with          : table -> string -> unit
-(** Is a package in the "with" list ? *)
-val is_with           : table -> string -> bool
 (**
  * Add a "use" clause to the context.
  * The added package must have been added to the "with" list.
@@ -121,8 +107,6 @@ val get_use           : table -> string list
 val is_extern         : table -> bool
 (** Perform an action with the "extern" flag. *)
 val as_extern_do      : table -> (unit->unit)->unit
-(** FIXME document exact specs *)
-val normalize_name    : table -> Syntax_ada.name -> bool -> Syntax_ada.name
 val add_renaming_decl : table -> Syntax_ada.name -> Syntax_ada.name -> unit
 
 (**
@@ -196,13 +180,16 @@ module SymStack : sig
    * Contexts may be named ; in that case a unit_symbol is added
    * to the parent table in order to allow bottom-up adressing.
    *)
-  val enter_context : ?name:string -> t -> unit
+  val enter_context : ?name:string -> ?desc:string -> t -> unit
 
   (**
    * Discard the current context and "go up".
    * Named contexts can remain accessible.
    *)
   val exit_context : t -> unit
+
+  (** FIXME document exact specs *)
+  val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
 
   (**
    * Find the intersection of possible types.
@@ -234,4 +221,19 @@ module SymStack : sig
                     -> Ada_types.t option
         -> unit
 
+  (** Set the current package. *)
+  val set_current       : t -> string -> unit
+  (** Reset the current package. *)
+  val reset_current     : t -> unit
+  (**
+   * Get the current package.
+   * If [set_current] has not been called, or [reset_current] has been called
+   * after the last call to [set_current], the empty package is returned.
+   *)
+  val current           : t -> string option
+  (** Add a package to the "with" list. *)
+  val add_with          : t -> string -> unit
+  (** Is a package in the "with" list ? *)
+  val is_with           : t -> string -> bool
+  val s_get_use         : t -> string list
 end

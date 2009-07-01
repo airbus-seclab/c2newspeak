@@ -26,7 +26,7 @@
 *)
 
 let parse (fname:string) :Syntax_ada.compilation_unit =
-  Npkcontext.print_debug ("Parsing file '"^fname);
+  Npkcontext.print_debug ("Parsing file '"^fname^"'");
   let cin =
     try open_in fname
     with Sys_error _ -> Npkcontext.report_error "File_parse.parse"

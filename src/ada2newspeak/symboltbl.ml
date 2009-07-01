@@ -43,52 +43,21 @@ let debug_dont_push = not debug_use_new
  *)
 class package_manager :
 object
-    method set_current : string -> unit
-    method reset_current :unit
-    method current    :string option
-    method add_with   :string -> unit
-    method is_with    :string -> bool
     method add_use    :string -> unit
     method remove_use :string -> unit
     method get_use    :string list
-    method get_context:string list
     method is_extern :bool
     method as_extern_do :(unit->unit)->unit
-    method normalize_name : Syntax_ada.name -> bool -> Syntax_ada.name
     method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
 end = object (self)
-      val mutable current_pkg:string option           = None
-      val mutable    with_pkg:string list             = []
       val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
       val mutable     extflag:bool                    = false
       val mutable    renaming:( Syntax_ada.name
                               * Syntax_ada.name) list = []
 
-      method set_current x =
-          current_pkg <- Some x
-
-      method reset_current =
-          current_pkg <- None
-
-      method current =
-          current_pkg
-
-      method add_with x =
-          with_pkg <- x::with_pkg
-
-      method is_with pkg =
-          List.mem pkg with_pkg
-
       method add_use p =
-        let p' = Some p in
-        if (self#current <> p') then begin
-            if (not (self#is_with p)) then begin
-              Npkcontext.report_error "Ada_normalize.add_context"
-                (p^" is undefined")
-            end;
-            let old_count = try Hashtbl.find context p with Not_found -> 0 in
-            Hashtbl.replace context p (old_count + 1)
-        end
+        let old_count = try Hashtbl.find context p with Not_found -> 0 in
+        Hashtbl.replace context p (old_count + 1)
 
       method remove_use p =
         try
@@ -100,12 +69,6 @@ end = object (self)
       method get_use =
         Hashtbl.fold (fun pkg _ res -> pkg::res) context []
 
-      method get_context =
-        let use = self#get_use in
-        match self#current with
-          | None   -> use
-          | Some p -> p::use
-
       method is_extern =
         extflag
 
@@ -113,21 +76,6 @@ end = object (self)
         extflag <- true;
         f ();
         extflag <- false
-
-      method normalize_name (name:Syntax_ada.name) extern =
-        try List.assoc name renaming with
-        Not_found ->
-        if (not extern) then name
-        else let (parents,ident) = name in
-             let pack = self#current in
-               match parents with
-                 | None                       -> (pack   , ident)
-                 | Some a when self#is_with a -> (Some a , ident)
-                 | b      when b = pack       -> (b , ident)
-                 | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
-                 ("unknown package "^(match parents with
-                                        | Some x -> x
-                                        | _      -> "<no name>"))
 
       (**
        * Algorithm for add_rd (A,B)  (A -> B)
@@ -215,7 +163,8 @@ type symbol =
 and table = { mutable renaming : (string*string) list
             ; t_tbl            : symbol IHashtbl.t
             ; pkgmgr           : package_manager
-            ; t_name           : string option
+            ; t_desc           : string option
+            ; t_loc            : Newspeak.location
             }
 
 let print_symbol = function
@@ -279,39 +228,33 @@ let print_table tbl =
   in
   let line_printer i sym =
     let (t,sym_d) = print_symbol sym in
-    List.iter print_string
-    ["|"
-    ;pad 6 t
-    ;"|"
-    ;pad 15 i
-    ;"| "
-    ;sym_d
-    ];
+    List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
     print_string "\n"
   in
+  begin match tbl.t_desc with
+    | None -> ()
+    | Some desc -> print_string ("(" ^ desc ^ ")\n"
+                                ^ (if tbl.t_loc = Newspeak.unknown_loc then "" 
+                                   else "@"^ Newspeak.string_of_loc tbl.t_loc)
+                                ^ "\n")
+  end;
   print_string "+------+---------------+---- . . .\n";
   IHashtbl.iter line_printer tbl.t_tbl;
   print_string "+------+---------------+---- . . .\n";
   print_string "\n";
   Buffer.contents out
 
+let create_table ?desc _ =  { renaming = []
+                            ; t_tbl    = IHashtbl.create 0
+                            ; pkgmgr   = new package_manager
+                            ; t_desc   = desc
+                            ; t_loc    = Npkcontext.get_loc ()
+                            }
+
 (**
  * Private global symbol table.
- * It is made available to the rest of the world by
- * builtin_type and builtin_variable.
  *)
-let builtin_table :table = { renaming = []
-                           ; t_tbl    = IHashtbl.create 0
-                           ; pkgmgr   = new package_manager
-                           ; t_name   = None
-                           }
-
-let create_table ?name _ =  { renaming = []
-                            ; t_tbl    = (*IHashtbl.copy builtin_table.t_tbl *)
-                              IHashtbl.create 0
-                            ; pkgmgr   = new package_manager
-                            ; t_name   = name
-                            }
+let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
 
 let add_variable tbl n t =
   Npkcontext.print_debug ("Adding variable "^n);
@@ -383,17 +326,11 @@ let find_unit t id =
 
 let builtin_type x = find_type builtin_table x
 
-let set_current       t = t.pkgmgr#set_current
-let reset_current     t = t.pkgmgr#reset_current
-let current           t = t.pkgmgr#current
-let add_with          t = t.pkgmgr#add_with
-let is_with           t = t.pkgmgr#is_with
 let add_use           t = t.pkgmgr#add_use
 let remove_use        t = t.pkgmgr#remove_use
 let get_use           t = t.pkgmgr#get_use
 let is_extern         t = t.pkgmgr#is_extern
 let as_extern_do      t = t.pkgmgr#as_extern_do
-let normalize_name    t = t.pkgmgr#normalize_name
 let add_renaming_decl t = t.pkgmgr#add_renaming_decl
 
 let _ =
@@ -406,24 +343,71 @@ let _ =
 
 module SymStack = struct
 
-  type t = table Stack.t
+  type t = {         s_stack : table Stack.t
+           ; mutable s_cpkg  : string option
+           ; mutable s_with  : string list
+  }
+
+  let top s = Stack.top s.s_stack
 
   let print s =
     let res = Buffer.create 0 in
     Buffer.add_string res "Stack : (starting at top)\n";
-    Stack.iter (fun t -> Buffer.add_string res (print_table t)) s;
+    Stack.iter (fun t -> Buffer.add_string res (print_table t)) s.s_stack;
     Buffer.contents res
 
   let create _ =
     let s = Stack.create () in
     Stack.push builtin_table s;
-    let library = create_table () in
+    let library = create_table ~desc:"library" () in
     Stack.push library s;
-    s
+    { s_stack = s
+    ; s_cpkg  = None
+    ; s_with  = []
+    }
 
-  let top x = Stack.top x
+  let set_current s x = s.s_cpkg <- Some x
 
-  let enter_context ?name s =
+  let reset_current s = s.s_cpkg <- None
+
+  let current s = s.s_cpkg
+
+  let add_with s x = s.s_with <- x::s.s_with
+
+  let is_with  s x = List.mem x s.s_with
+
+  let s_add_use s p =
+    if (current s) = Some p then begin
+      if (is_with s p) then begin
+        Npkcontext.report_error "Symboltbl.s_add_use"
+          (p^" is undefined")
+      end;
+      (top s).pkgmgr#add_use p
+    end
+
+  let s_get_use s =
+    let (ctx:string list ref) = ref [] in
+    Stack.iter (fun t -> ctx := t.pkgmgr#get_use@(!ctx)) s.s_stack;
+    match s.s_cpkg with
+    | None   ->    !ctx
+    | Some p -> p::!ctx
+
+  let normalize_name s (name:Syntax_ada.name) extern =
+    try None,List.assoc (snd name) (top s).renaming with
+    Not_found ->
+    if (not extern) then name
+    else let (parents,ident) = name in
+         let pack = current s in
+           match parents with
+             | None                    -> (pack   , ident)
+             | Some a when is_with s a -> (Some a , ident)
+             | b      when b = pack    -> (b , ident)
+             | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
+             ("unknown package "^(match parents with
+                                    | Some x -> x
+                                    | _      -> "<no name>"))
+
+  let enter_context ?name ?desc (s:t) =
     if (not debug_dont_push) then
       begin
           Npkcontext.print_debug (">>>>>>> enter_context ("
@@ -432,10 +416,10 @@ module SymStack = struct
                                      | _      -> "")^")");
           let create_context _ =
             begin
-              let new_context = create_table ?name () in
+              let new_context = create_table ?desc () in
               begin match name with
                 | None   -> ()
-                | Some n -> IHashtbl.add ((Stack.top s).t_tbl)
+                | Some n -> IHashtbl.add ((Stack.top s.s_stack).t_tbl)
                                           n (Unit new_context)
               end;
               new_context;
@@ -445,18 +429,18 @@ module SymStack = struct
             match name with
               | None   -> create_context ()
               | Some n -> begin
-                            match (find_unit (top s) n) with
+                            match (find_unit (Stack.top s.s_stack) n) with
                               | None   -> create_context ()
                               | Some u -> u
                           end
           in
 
-          Stack.push context s
+          Stack.push context s.s_stack
         end
 
     let new_unit s name =
-      while (Stack.length s > 2) do
-        ignore (Stack.pop s);
+      while (Stack.length s.s_stack > 2) do
+        ignore (Stack.pop s.s_stack);
       done;
       (* Here Stack.length s = 2 so we are at library level *)
       enter_context ~name s
@@ -466,8 +450,8 @@ module SymStack = struct
         begin
           Npkcontext.print_debug "<<<<<<< exit_context ()";
           Npkcontext.print_debug (print s);
-        if(Stack.length s > 2) then
-          ignore (Stack.pop s)
+        if(Stack.length s.s_stack > 2) then
+          ignore (Stack.pop s.s_stack)
         else
           Npkcontext.report_error "exit_context" "Stack too small"
       end
@@ -512,14 +496,14 @@ module SymStack = struct
   (**
    * Find a variable in a symbol table stack.
    *)
-  let s_find_variable s ?expected_type ?package n =
+  let s_find_variable (s:t) ?expected_type ?package n =
     ignore package;
     let f t =
       try Some (find_variable ?expected_type t n)
       with Not_found -> None
     in
     try
-      find_rec s f
+      find_rec s.s_stack f
     with Not_found ->
       error ("Cannot find variable '"^n^"'");
       T.unknown
@@ -531,7 +515,7 @@ module SymStack = struct
       with Not_found -> None
     in
     try
-      find_rec s f
+      find_rec s.s_stack f
     with Not_found ->
       error ("Cannot find type "^n);
       T.unknown
@@ -548,6 +532,5 @@ module SymStack = struct
     let s2 = find_symbols (top s) n2 in
     let inte = inter s1 s2 in
     if inte = [] then T.unknown else cast_v inte
-
 
 end
