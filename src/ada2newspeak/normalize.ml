@@ -350,7 +350,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
   and remove_cst (ident:name) :unit = Hashtbl.remove csttbl ident in
 
   let normalize_ident_cur_ext ident is_ext =
-    normalize_ident ident (Symboltbl.current (Sym.top gtbl)) is_ext
+    normalize_ident ident (Sym.current gtbl) is_ext
   in
 
   let normalize_ident_cur ident =
@@ -449,15 +449,15 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
         match x with
           | (None, ident) -> sans_selecteur ident
           | (Some pack, _) when extern ||
-                (Symboltbl.is_with (Sym.top gtbl) pack) -> avec_selecteur x
-          | (pack, ident) when pack = (Symboltbl.current (Sym.top gtbl)) ->
+                (Sym.is_with gtbl pack) -> avec_selecteur x
+          | (pack, ident) when pack = (Sym.current gtbl) ->
               selecteur_courant (None,ident)
           | (Some pack, _) -> Npkcontext.report_error "Ada_normalize.find_typ"
                 ("unknown package " ^pack)
   in
 
   let normalize_name (parents, ident) =
-    Symboltbl.normalize_name (Sym.top gtbl) (parents,ident) extern
+    Sym.normalize_name gtbl (parents,ident) extern
   in
 
 let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
@@ -690,10 +690,10 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
       (try
          let (val1,_) = eval_static
            norm_exp1 (Some(typ)) csttbl
-           (Sym.top gtbl) extern
+           gtbl extern
          and (val2,_) = eval_static
            norm_exp2 (Some(typ)) csttbl
-           (Sym.top gtbl) extern in
+           gtbl extern in
          let contrainte =  match (val1, val2) with
            | (FloatVal(f1),FloatVal(f2)) ->
                if f1<=f2
@@ -770,8 +770,7 @@ let interpret_enumeration_clause agregate assoc cloc loc =
             List.map
               (fun (ident, exp) ->
                  let exp' = normalize_exp exp in
-                 let v = eval_static_integer_exp exp' csttbl
-                   (Sym.top gtbl) false
+                 let v = eval_static_integer_exp exp' csttbl gtbl false
                  in (ident, v))
               assoc_list in
           let find_val ident =
@@ -1129,8 +1128,7 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let (v,_) = eval_static normexp (Some typ)
-                                    csttbl (Sym.top gtbl) extern in
+            let (v,_) = eval_static normexp (Some typ) csttbl gtbl extern in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp v;
@@ -1168,7 +1166,7 @@ in
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp, None) ->
         let norm_exp = normalize_exp exp in
-        let v = eval_static_number norm_exp csttbl (Sym.top gtbl) extern in
+        let v = eval_static_number norm_exp csttbl gtbl extern in
             let t = match v with
               | BoolVal _ | IntVal _ -> T.universal_integer
               | FloatVal _           -> T.universal_real
@@ -1197,7 +1195,7 @@ in
     | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
 
   and normalize_package_spec (name, list_decl) :Ast.package_spec =
-    Symboltbl.set_current (Sym.top gtbl) name;
+    Sym.set_current gtbl name;
     Sym.enter_context ~name ~desc:"Package spec" gtbl;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
@@ -1215,7 +1213,7 @@ in
                     | Some decl -> Some (decl,loc)
                ) decls in
     let norm_spec = normalize_decls list_decl in
-      Symboltbl.reset_current (Sym.top gtbl);
+      Sym.reset_current gtbl;
       Sym.exit_context gtbl;
       (name, norm_spec)
 
@@ -1333,12 +1331,12 @@ in
                                (parse_package_specification name)
                            )
         in
-          Symboltbl.set_current (Sym.top gtbl) name;
+          Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package body" gtbl;
           let ndp = normalize_decl_part decl_part ~global:true in
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
-          Symboltbl.reset_current (Sym.top gtbl);
+          Sym.reset_current gtbl;
           Sym.exit_context gtbl;
           Ast.PackageBody(name, Some norm_spec, ndp)
 
@@ -1415,12 +1413,12 @@ in
       | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
       | Ast.PackageSpec(name, basic_decls) ->
-          Symboltbl.set_current (Sym.top gtbl) name;
+          Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
           List.iter add_extern_basic_decl basic_decls;
-          Symboltbl.reset_current (Sym.top gtbl);
+          Sym.reset_current gtbl;
           Sym.exit_context gtbl;
-          Symboltbl.add_with (Sym.top gtbl) name
+          Sym.add_with gtbl name
 
   in
 
