@@ -31,7 +31,7 @@
 type table
 
 (** Create a new symbol table.  *)
-val create_table  : ?name:string -> unit -> table
+val create_table  : ?desc:string -> unit -> table
 
 (** Add a type symbol to a table. *)
 val add_type      : table -> string -> Ada_types.t -> unit
@@ -196,7 +196,7 @@ module SymStack : sig
    * Contexts may be named ; in that case a unit_symbol is added
    * to the parent table in order to allow bottom-up adressing.
    *)
-  val enter_context : ?name:string -> t -> unit
+  val enter_context : ?name:string -> ?desc:string -> t -> unit
 
   (**
    * Discard the current context and "go up".

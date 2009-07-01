@@ -215,7 +215,8 @@ type symbol =
 and table = { mutable renaming : (string*string) list
             ; t_tbl            : symbol IHashtbl.t
             ; pkgmgr           : package_manager
-            ; t_name           : string option
+            ; t_desc           : string option
+            ; t_loc            : Newspeak.location
             }
 
 let print_symbol = function
@@ -279,39 +280,33 @@ let print_table tbl =
   in
   let line_printer i sym =
     let (t,sym_d) = print_symbol sym in
-    List.iter print_string
-    ["|"
-    ;pad 6 t
-    ;"|"
-    ;pad 15 i
-    ;"| "
-    ;sym_d
-    ];
+    List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
     print_string "\n"
   in
+  begin match tbl.t_desc with
+    | None -> ()
+    | Some desc -> print_string ("(" ^ desc ^ ")\n"
+                                ^ (if tbl.t_loc = Newspeak.unknown_loc then "" 
+                                   else "@"^ Newspeak.string_of_loc tbl.t_loc)
+                                ^ "\n")
+  end;
   print_string "+------+---------------+---- . . .\n";
   IHashtbl.iter line_printer tbl.t_tbl;
   print_string "+------+---------------+---- . . .\n";
   print_string "\n";
   Buffer.contents out
 
+let create_table ?desc _ =  { renaming = []
+                            ; t_tbl    = IHashtbl.create 0
+                            ; pkgmgr   = new package_manager
+                            ; t_desc   = desc
+                            ; t_loc    = Npkcontext.get_loc ()
+                            }
+
 (**
  * Private global symbol table.
- * It is made available to the rest of the world by
- * builtin_type and builtin_variable.
  *)
-let builtin_table :table = { renaming = []
-                           ; t_tbl    = IHashtbl.create 0
-                           ; pkgmgr   = new package_manager
-                           ; t_name   = None
-                           }
-
-let create_table ?name _ =  { renaming = []
-                            ; t_tbl    = (*IHashtbl.copy builtin_table.t_tbl *)
-                              IHashtbl.create 0
-                            ; pkgmgr   = new package_manager
-                            ; t_name   = name
-                            }
+let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
 
 let add_variable tbl n t =
   Npkcontext.print_debug ("Adding variable "^n);
@@ -417,13 +412,13 @@ module SymStack = struct
   let create _ =
     let s = Stack.create () in
     Stack.push builtin_table s;
-    let library = create_table () in
+    let library = create_table ~desc:"library" () in
     Stack.push library s;
     s
 
   let top x = Stack.top x
 
-  let enter_context ?name s =
+  let enter_context ?name ?desc s =
     if (not debug_dont_push) then
       begin
           Npkcontext.print_debug (">>>>>>> enter_context ("
@@ -432,7 +427,7 @@ module SymStack = struct
                                      | _      -> "")^")");
           let create_context _ =
             begin
-              let new_context = create_table ?name () in
+              let new_context = create_table ?desc () in
               begin match name with
                 | None   -> ()
                 | Some n -> IHashtbl.add ((Stack.top s).t_tbl)
