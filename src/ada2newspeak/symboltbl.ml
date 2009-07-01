@@ -156,12 +156,13 @@ type symbol =
 
 (**
  * A symbol table.
- * t_var and t_type hold respectively data related
- * to variables and returning their type and to types.
+ * t_tbl holds pairs of symbol and bool :
+ * "false" (weak) symbols may be redefined.
+ * Ex : a xxx_spec will yield weak symbols than may be redefined.
  *)
 
 and table = { mutable renaming : (string*string) list
-            ; t_tbl            : symbol IHashtbl.t
+            ; t_tbl            : (symbol*bool) IHashtbl.t
             ; pkgmgr           : package_manager
             ; t_desc           : string option
             ; t_loc            : Newspeak.location
@@ -226,7 +227,7 @@ let print_table tbl =
     let a =  width - x - b    in
     (String.make a ' ')^str^(String.make b ' ')
   in
-  let line_printer i sym =
+  let line_printer i (sym,_) =
     let (t,sym_d) = print_symbol sym in
     List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
     print_string "\n"
@@ -235,7 +236,7 @@ let print_table tbl =
     | None -> ()
     | Some desc -> print_string ("(" ^ desc ^ ")\n"
                                 ^ (if tbl.t_loc = Newspeak.unknown_loc then "" 
-                                   else "@"^ Newspeak.string_of_loc tbl.t_loc)
+                                   else "@ "^ Newspeak.string_of_loc tbl.t_loc)
                                 ^ "\n")
   end;
   print_string "+------+---------------+---- . . .\n";
@@ -256,16 +257,26 @@ let create_table ?desc _ =  { renaming = []
  *)
 let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
 
-let add_variable tbl n t =
-  Npkcontext.print_debug ("Adding variable "^n);
-  IHashtbl.add tbl.t_tbl n (Variable t)
+let add_variable ?(strongly=true) tbl n t =
+  try begin match IHashtbl.find tbl.t_tbl n with
+      | (sym,true) when sym=Variable t -> error "Homograph variable"
+      | (_sym,false) -> begin
+                          Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
+                          IHashtbl.replace tbl.t_tbl n (Variable t,strongly);
+                        end
+      | (_  , true) -> raise Not_found
+      end
+  with Not_found -> begin
+                      Npkcontext.print_debug ("Adding variable "^n);
+                      IHashtbl.add tbl.t_tbl n (Variable t,strongly)
+                    end
 
 let add_type tbl n typ =
   Npkcontext.print_debug ("Adding type "^n);
-  IHashtbl.add tbl.t_tbl n (Type typ)
+  IHashtbl.add tbl.t_tbl n (Type typ,true)
 
 let add_subprogram tbl name params rettype =
-  IHashtbl.add tbl.t_tbl name (Subprogram (List.map to_fparam params,rettype))
+  IHashtbl.add tbl.t_tbl name (Subprogram (List.map to_fparam params,rettype),true)
 
 (******** Cast functions ********)
 
@@ -295,7 +306,7 @@ let cast_s ?filter = mkcast "subprogram"
  *)
 let rec find_symbols t id =
   try find_symbols t (List.assoc id t.renaming)
-  with Not_found -> IHashtbl.find_all t.t_tbl id
+  with Not_found -> fst (List.split (IHashtbl.find_all t.t_tbl id))
 
 let find_type tbl n =
   cast_t (find_symbols tbl n)
@@ -343,10 +354,11 @@ let _ =
 
 module SymStack = struct
 
-  type t = {         s_stack : table Stack.t
-           ; mutable s_cpkg  : string option
-           ; mutable s_with  : string list
-  }
+  type t = {         s_stack  : table Stack.t
+           ; mutable s_cpkg   : string option
+           ; mutable s_with   : string list
+           ; mutable s_strong : bool
+           }
 
   let top s = Stack.top s.s_stack
 
@@ -361,9 +373,10 @@ module SymStack = struct
     Stack.push builtin_table s;
     let library = create_table ~desc:"library" () in
     Stack.push library s;
-    { s_stack = s
-    ; s_cpkg  = None
-    ; s_with  = []
+    { s_stack  = s
+    ; s_cpkg   = None
+    ; s_with   = []
+    ; s_strong = true
     }
 
   let set_current s x = s.s_cpkg <- Some x
@@ -407,9 +420,10 @@ module SymStack = struct
                                     | Some x -> x
                                     | _      -> "<no name>"))
 
-  let enter_context ?name ?desc (s:t) =
+  let enter_context ?name ?desc ?(weakly=false) (s:t) =
     if (not debug_dont_push) then
       begin
+          s.s_strong <- not weakly;
           Npkcontext.print_debug (">>>>>>> enter_context ("
                                  ^(match name with
                                      | Some n -> n
@@ -420,7 +434,7 @@ module SymStack = struct
               begin match name with
                 | None   -> ()
                 | Some n -> IHashtbl.add ((Stack.top s.s_stack).t_tbl)
-                                          n (Unit new_context)
+                                          n (Unit new_context,true)
               end;
               new_context;
             end
@@ -448,6 +462,7 @@ module SymStack = struct
     let exit_context s =
       if not (debug_dont_push) then
         begin
+          s.s_strong <- true;
           Npkcontext.print_debug "<<<<<<< exit_context ()";
           Npkcontext.print_debug (print s);
         if(Stack.length s.s_stack > 2) then
@@ -493,20 +508,35 @@ module SymStack = struct
         find_symbols (Stack.top s) n
       end
 
+  let library s =
+    let s = Stack.copy s in
+    while (Stack.length s > 2) do
+      ignore (Stack.pop s);
+    done;
+    Stack.top s
+
+  let s_find_abs_var s p n =
+    match find_unit (library s.s_stack) p with 
+      | Some tbl ->find_variable tbl n
+      | None     -> error "no such package";T.unknown
+
   (**
    * Find a variable in a symbol table stack.
    *)
   let s_find_variable (s:t) ?expected_type ?package n =
-    ignore package;
-    let f t =
-      try Some (find_variable ?expected_type t n)
-      with Not_found -> None
-    in
-    try
-      find_rec s.s_stack f
-    with Not_found ->
-      error ("Cannot find variable '"^n^"'");
-      T.unknown
+    match package with
+      | Some p -> s_find_abs_var s p n
+      | None   -> begin
+                    let f t =
+                      try Some (find_variable ?expected_type t n)
+                      with Not_found -> None
+                    in
+                    try
+                      find_rec s.s_stack f
+                    with Not_found ->
+                      error ("Cannot find variable '"^n^"'");
+                      T.unknown
+                  end
 
   let s_find_type s ?package n =
     ignore package;
@@ -520,7 +550,9 @@ module SymStack = struct
       error ("Cannot find type "^n);
       T.unknown
 
-  let s_add_variable   s = add_variable   (top s)
+  let s_add_variable s n v =
+    add_variable   (top s) n v ~strongly:s.s_strong
+
   let s_add_type       s = add_type       (top s)
   let s_add_subprogram s = add_subprogram (top s)
 

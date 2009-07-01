@@ -1070,18 +1070,18 @@ in
         }
         )
         param_list
+    in
+    let mk_param p = ( p.formal_name
+                     , (p.mode = In  || p.mode = InOut)
+                     , (p.mode = Out || p.mode = InOut)
+                     , subtyp_to_adatyp p.param_type
+                     )
     in match subprog_spec with
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_ident_cur name in
             let norm_subtyp = normalize_subtyp return_type in
               Sym.s_add_subprogram gtbl name
-                                       (List.map (fun p ->
-                                         ( p.formal_name
-                                         , (p.mode = In  || p.mode = InOut)
-                                         , (p.mode = Out || p.mode = InOut)
-                                         , subtyp_to_adatyp p.param_type
-                                         )
-                                         ) param_list)
+                                       (List.map mk_param param_list)
                                        (Some (subtyp_to_adatyp return_type))
                                        ;
               add_function norm_name (if param_list = [] then
@@ -1093,7 +1093,7 @@ in
                        norm_subtyp)
         | Procedure(name,param_list) ->
             let norm_name = normalize_ident_cur name in
-              Sym.s_add_variable gtbl name T.unknown;
+              Sym.s_add_subprogram gtbl name (List.map mk_param param_list) None;
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
@@ -1117,6 +1117,7 @@ in
              ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
+        let (_,_,_,t) = subtyp_ind in
         let normexp = normalize_exp exp in
         (* constantes *)
         let norm_subtyp_ind =
@@ -1133,7 +1134,7 @@ in
                  au sous-type *)
               check_static_subtyp subtyp v;
               List.iter (fun x ->
-                Sym.s_add_variable gtbl x T.unknown;
+                Sym.s_add_variable gtbl x t;
                            add_ident v x) ident_list;
               StaticVal(v)
           with
@@ -1145,7 +1146,7 @@ in
                                          let n = (normalize_ident_cur x) in
                                            Sym.s_add_variable gtbl
                                                           x
-                                                          T.unknown;
+                                                          t;
                                                  add_cst n
                                                         (VarSymb global)
                                                         global
@@ -1196,7 +1197,7 @@ in
 
   and normalize_package_spec (name, list_decl) :Ast.package_spec =
     Sym.set_current gtbl name;
-    Sym.enter_context ~name ~desc:"Package spec" gtbl;
+    Sym.enter_context ~name ~desc:"Package spec" ~weakly:true gtbl;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
                                   | RepresentClause(rep), loc ->
@@ -1252,7 +1253,7 @@ in
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-        Sym.s_add_variable gtbl iter T.unknown;
+        Sym.s_add_variable gtbl iter T.integer;
          Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
                          normalize_exp exp2, is_rev),
                          normalize_block instrs), loc)
@@ -1360,11 +1361,11 @@ in
       match basic_decl with
         | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
-        | Ast.ObjectDecl(ident_list, _, _,
+        | Ast.ObjectDecl(ident_list, (_,_,_,t), _,
                      (Variable | Constant)) ->
             (List.iter
             (fun x -> let n=normalize_ident_cur_ext x true in
-                        Sym.s_add_variable gtbl x T.unknown;
+                        Sym.s_add_variable gtbl x t;
                          add_cst n
                                  (VarSymb(true))
                                  true;
@@ -1376,11 +1377,11 @@ in
             (* constante statique *)
 
             let subtyp = extract_subtyp subtyp_ind in
-            let typ = base_typ subtyp
-              (*extract_subtyp subtyp_ind*) in
+            let typ = base_typ subtyp in
+            let (_,_,_,t) = subtyp_ind in
               List.iter
                 (fun x -> let n = normalize_ident_cur_ext x true in
-                  Sym.s_add_variable gtbl x T.unknown;
+                  Sym.s_add_variable gtbl x t;
                   add_cst n
                    (StaticConst(v, typ, true)) true)
                 ident_list
