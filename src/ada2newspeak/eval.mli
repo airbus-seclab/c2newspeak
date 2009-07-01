@@ -26,8 +26,8 @@
 *)
 
 type constant_symb =
-  | Number       of Syntax_ada.value*bool      (** bool = global? *)
-  | StaticConst  of Syntax_ada.value*Syntax_ada.typ*bool  (** bool = global? *)
+  | Number       of Ada_types.data_t*bool      (** bool = global? *)
+  | StaticConst  of Ada_types.data_t*Syntax_ada.typ*bool  (** bool = global? *)
   | EnumLitteral of Syntax_ada.typ*Syntax_ada.nat*bool    (** bool = global? *)
   | VarSymb      of bool            (** bool = global? *)
   | FunSymb      of Syntax_ada.typ option*bool (** bool = extern? *)
@@ -36,7 +36,7 @@ val eval_static :  Ast.expression -> Syntax_ada.typ option
                 -> (Syntax_ada.name,constant_symb) Hashtbl.t
                 -> Symboltbl.SymStack.t
                 -> bool
-  -> Syntax_ada.value*Syntax_ada.typ
+  -> Ada_types.data_t*Syntax_ada.typ
 
 
 val eval_static_integer_exp :  Ast.expression
@@ -49,4 +49,4 @@ val eval_static_number  :  Ast.expression
                         -> (Syntax_ada.name, constant_symb) Hashtbl.t
                         -> Symboltbl.SymStack.t
                         -> bool
-    -> Syntax_ada.value
+    -> Ada_types.data_t

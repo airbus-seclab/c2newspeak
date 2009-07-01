@@ -36,11 +36,6 @@ let error x =
 
 let debug_dont_push = not debug_use_new
 
-
-(**
- * Wraps what the "current package" is and which packages are
- * marked using the "with" and "use" constructs.
- *)
 class package_manager :
 object
     method add_use    :string -> unit
@@ -149,7 +144,7 @@ let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
  * Symbols.
  *)
 type symbol =
-  | Variable   of T.t
+  | Variable   of T.t*(T.value option)
   | Type       of T.t
   | Subprogram of ((f_param list)*T.t option)
   | Unit       of table
@@ -169,7 +164,7 @@ and table = { mutable renaming : (string*string) list
             }
 
 let print_symbol = function
-  | Variable     t   -> "V",T.print t
+  | Variable   (t,_) -> "V",T.print t
   | Type         t   -> "T",T.print t
   | Subprogram (p,r) -> "S",(
                              let pdesc = " with "
@@ -259,16 +254,16 @@ let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
 
 let add_variable ?(strongly=true) tbl n t =
   try begin match IHashtbl.find tbl.t_tbl n with
-      | (sym,true) when sym=Variable t -> error "Homograph variable"
+      | (Variable (tp,_),true) when t=tp -> error "Homograph variable"
       | (_sym,false) -> begin
                           Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-                          IHashtbl.replace tbl.t_tbl n (Variable t,strongly);
+                          IHashtbl.replace tbl.t_tbl n (Variable (t,None),strongly);
                         end
       | (_  , true) -> raise Not_found
       end
   with Not_found -> begin
                       Npkcontext.print_debug ("Adding variable "^n);
-                      IHashtbl.add tbl.t_tbl n (Variable t,strongly)
+                      IHashtbl.add tbl.t_tbl n (Variable (t,None),strongly)
                     end
 
 let add_type tbl n typ =
@@ -281,7 +276,7 @@ let add_subprogram tbl name params rettype =
 (******** Cast functions ********)
 
 let cast_v ?filter = mkcast "variable"
-                    (function Variable x -> Some x
+                    (function Variable (x,_) -> Some x
                             | Subprogram ([],Some rt) ->
                                 raise (ParameterlessFunction rt)
                             |_ -> None

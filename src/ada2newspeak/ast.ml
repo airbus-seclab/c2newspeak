@@ -87,7 +87,7 @@ and expression = exp_value * Ada_types.t
 
 and exp_value =
   | CInt         of Newspeak.Nat.t
-  | CFloat       of Syntax_ada.float_number
+  | CFloat       of float
   | CBool        of bool
   | CChar        of int
   | Var          of Syntax_ada.name
@@ -136,7 +136,7 @@ and basic_declaration =
   | SpecDecl        of spec
   | NumberDecl      of string
                      * expression
-                     * Syntax_ada.value option
+                     * Ada_types.data_t option
   | SubtypDecl      of string
                      * Syntax_ada.subtyp_indication
 

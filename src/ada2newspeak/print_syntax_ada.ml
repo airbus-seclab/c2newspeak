@@ -119,13 +119,13 @@ and array_definition_to_string ar =
 
 
 and exp_to_string exp = match exp with
-  | CInt(i)          -> "CInt("^(nat_to_string i)^")"
-  | CFloat(_,s)      -> "CFloat("^s^")"
-  | CBool(b)         -> "CBool("^(string_of_bool b)^")"
-  | CChar(c)         -> "CChar("^(string_of_int c)^")"
-  | Var(s)           -> "Var("^(name_to_string s)^")"
-  | Unary(op,exp)    -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
-  | Binary(op,e1,e2) -> "("^(exp_to_string e1)^" "
+  | CInt   i          -> "CInt("^(nat_to_string i)^")"
+  | CFloat s          -> "CFloat("^string_of_float s^")"
+  | CBool  b          -> "CBool("^(string_of_bool b)^")"
+  | CChar  c          -> "CChar("^(string_of_int c)^")"
+  | Var    s          -> "Var("^(name_to_string s)^")"
+  | Unary  (op,exp)   -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
+  | Binary (op,e1,e2) -> "("^(exp_to_string e1)^" "
                            ^(bop_to_string op)^" "
                            ^(exp_to_string e2)^")"
   | Qualified(subtyp, exp) -> "Qualified("
@@ -163,14 +163,13 @@ and contrainte_to_string contrainte = match contrainte with
       ^", "^(exp_to_string e2)^")"
   |  IntegerRangeConstraint(v1,v2) ->
        "IntegerRangeConstraint("^(Newspeak.string_of_bounds (v1,v2))^")"
-  |  FloatRangeConstraint((_,s1),(_,s2)) ->
-       "FloatRangeConstraint("^s1^", "^s2^")"
+  |  FloatRangeConstraint(s1,s2) ->
+       "FloatRangeConstraint("^string_of_float s1^", "^string_of_float s2^")"
 
 and value_to_string v = match v with
-  | IntVal(i) -> "IntVal("^(nat_to_string i)^")"
-  | FloatVal(_,s) -> "FloatVal("^s^")"
-(*  | EnumVal(i) -> "EnumVal("^(string_of_int i)^")"*)
-  | BoolVal(b) -> "BoolVal("^(string_of_bool b)^")"
+  | Ada_types.IntVal   i -> "IntVal("^(nat_to_string i)^")"
+  | Ada_types.FloatVal s -> "FloatVal("^string_of_float s^")"
+  | Ada_types.BoolVal  b -> "BoolVal("^(string_of_bool b)^")"
 
 and iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"

@@ -55,7 +55,7 @@ type symb =
   | VarSymb  of C.lv    * A.subtyp * bool * bool (** name, type, global?, ro? *)
   | EnumSymb of C.exp   * A.typ * bool (** TODO, typename, ro? *)
   | FunSymb  of C.funexp * Ast.sub_program_spec * bool * C.ftyp (** XXX *)
-  | NumberSymb of A.value*bool (** XXX *)
+  | NumberSymb of T.data_t*bool (** XXX *)
 
 type qualified_symbol = symb*C.typ*Npk.location
 
@@ -314,9 +314,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               | NumberSymb(_) | FunSymb _),_,_) -> ()
       );
       let typ_cir = match value with
-        | A.IntVal _   -> translate_typ A.IntegerConst
-        | A.FloatVal _ -> translate_typ A.Float
-        | A.BoolVal _ ->
+        | T.IntVal _   -> translate_typ A.IntegerConst
+        | T.FloatVal _ -> translate_typ A.Float
+        | T.BoolVal _ ->
             Npkcontext.report_error
               "Firstpass.add_number"
               "internal error : number cannot have Enum val"
@@ -609,13 +609,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   in
   let translate_number v expected_typ = match v with
-      | A.IntVal(i) ->
+      | T.IntVal(i) ->
           let t = check_typ expected_typ A.IntegerConst
           in (translate_int i, t)
-      | A.FloatVal(f,s) ->
+      | T.FloatVal f ->
           let t = check_typ expected_typ A.Float
-          in (C.Const(C.CFloat(f,s)), t)
-      | A.BoolVal _ ->
+          in (C.Const(C.CFloat(f,string_of_float f)), t)
+      | T.BoolVal _ ->
           Npkcontext.report_error
             "Firstpass.translate_number"
             "internal error : number cannot have enum val"
@@ -855,7 +855,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             (match typ with
                | A.Float ->
                    translate_binop Minus
-                     (CFloat(0.,"0"),T.std_float) exp expected_typ
+                     (CFloat(0.0),T.std_float) exp expected_typ
                | t when (integer_class t) ->
                    translate_binop Minus (CInt Nat.zero,T.universal_integer) exp
                      expected_typ
@@ -868,7 +868,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                           exp expected_typ
 
       | (UMinus, Some(A.Float)) ->
-          translate_binop Minus (CFloat(0.,"0"),T.std_float)
+          translate_binop Minus (CFloat(0.0),T.std_float)
                           exp expected_typ
 
       | (Not, None) | (Not, Some(A.Boolean)) ->
@@ -1297,14 +1297,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         avec_selecteur_courant
 
   and translate_exp (exp,_:Ast.expression) expected_typ = match exp with
-    | CFloat (f,s) -> C.Const(C.CFloat(f,s)),
-                      check_typ expected_typ A.Float
-    | CInt i       -> translate_int i,
-                      check_typ expected_typ A.IntegerConst
-    | CChar c      -> translate_int (Nat.of_int c),
-                      check_typ expected_typ A.Character
-    | CBool b      -> translate_int (Ada_utils.nat_of_bool b),
-                      check_typ expected_typ A.Boolean
+    | CFloat f -> C.Const(C.CFloat(f,string_of_float f)),
+                  check_typ expected_typ A.Float
+    | CInt   i -> translate_int i,
+                  check_typ expected_typ A.IntegerConst
+    | CChar  c -> translate_int (Nat.of_int c),
+                  check_typ expected_typ A.Character
+    | CBool  b -> translate_int (Ada_utils.nat_of_bool b),
+                  check_typ expected_typ A.Boolean
     | Var     name            -> translate_var   name    expected_typ
     | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ

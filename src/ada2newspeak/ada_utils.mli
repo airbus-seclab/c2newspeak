@@ -69,20 +69,10 @@ val rem_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
 val nat_of_bool : bool -> Newspeak.Nat.t
 
 (**
- * Operator less-than for [Syntax_ada.value].
- *)
-val inf_val : Syntax_ada.value -> Syntax_ada.value -> bool
-
-(**
- * Operator equals for [Syntax_ada.value].
- *)
-val  eq_val : Syntax_ada.value -> Syntax_ada.value -> bool
-
-(**
  * Check bounds.
  * [between a b n] evaluates to [a <= n <= b].
  *)
-val between : 'a -> 'a -> 'a -> bool
+val between : float -> float -> float -> bool
 
 (**
  * Checks that a constraint is compatible with another one.
@@ -99,7 +89,7 @@ val constraint_check_compatibility :
  * against the type of the constraint.
  *)
 val value_is_static_constraint_compatible :
-  Syntax_ada.contrainte -> Syntax_ada.value -> bool
+  Syntax_ada.contrainte -> Ada_types.data_t -> bool
 
 (**
  * Check a value against a static subtype.
@@ -107,7 +97,7 @@ val value_is_static_constraint_compatible :
  * @raise NonStaticExpression if the subtype is not static.
  *)
 val check_static_subtyp:
-  Syntax_ada.subtyp -> Syntax_ada.value -> unit
+  Syntax_ada.subtyp -> Ada_types.data_t -> unit
 
 (**
  * Compute the Newspeak integer kind associated to the specified range.

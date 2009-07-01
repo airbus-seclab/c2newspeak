@@ -35,26 +35,17 @@ type t
  **********)
 (** {3 Values } *)
 
+type data_t =
+  | IntVal   of Newspeak.Nat.t (** Integer value        *)
+  | FloatVal of float          (** Floating-point value *)
+  | BoolVal  of bool           (** Boolean value        *)
+
+val data_eq : data_t -> data_t -> bool
+
+val data_lt : data_t -> data_t -> bool
+
 (** A typed piece of data. *)
-type value
-
-(** Create typed data from an int.  *)
-val from_int : t -> int -> value
-
-(**
- * Gather int data from a given type.
- * May return [None] if the wrong type is provided.
- *)
-val to_int : value -> int option
-
-(** Create typed data from a Newspeak value.  *)
-val from_nat : t -> Newspeak.Nat.t -> value
-
-(**
- * Gather [Newspeak.Nat] data from a given type.
- * May return [None] if the wrong type is provided.
- *)
-val to_nat : value -> Newspeak.Nat.t option
+type value = t * data_t
 
 (**********
  * Ranges *

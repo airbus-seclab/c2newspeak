@@ -35,8 +35,27 @@ let (%-) = Newspeak.Nat.sub
  ********************)
 
 type data_t =
-  | Int of int
-  | Nat of Newspeak.Nat.t
+  | IntVal   of Newspeak.Nat.t
+  | FloatVal of float
+  | BoolVal  of bool
+
+let data_eq x y =
+  match (x, y) with
+    |   IntVal v1,   IntVal v2 -> v1 = v2
+    |  BoolVal v1,  BoolVal v2 -> v1 = v2
+    | FloatVal v1, FloatVal v2 -> v1 = v2
+    | _ ->
+        Npkcontext.report_error "Ada_types.data_eq"
+          "Incompatible types in '=' (data_t)"
+
+let data_lt x y =
+  match (x, y) with
+    |   IntVal v1,   IntVal v2 -> (Newspeak.Nat.compare v1 v2) < 0
+    |  BoolVal v1,  BoolVal v2 -> v1 < v2
+    | FloatVal v1, FloatVal v2 -> v1 < v2
+    | _ ->
+        Npkcontext.report_error "Ada_types.data_lt"
+          "Incompatible types in '<' (data_t)"
 
 (* effective type + wrapped data *)
 type value = t*data_t
@@ -59,21 +78,6 @@ and trait_t =
   | Float of int                      (* Digits *)
   | Array of t*(t list)               (* Component-indexes list *)
 
-
-(***************************
- * Value (de-)constructors *
- ***************************)
-
-let from_int t x = (t, Int x)
-let from_nat t x = (t, Nat x)
-
-let to_int = function
-  | (_, Int v) -> Some v
-  | _          -> None
-
-let to_nat = function
-  | (_, Nat v) -> Some v
-  | _          -> None
 
 (******************
  * Pretty-printer *
@@ -256,20 +260,20 @@ let length_of typ = match typ.trait with
 
 let rec attr_get typ attr =
   match typ.trait, attr with
-    | Signed (Some Range(a,_)),"first" -> from_nat typ a
-    | Signed (Some Range(_,b)),"last"  -> from_nat typ b
-    | Enumeration values, "first"      -> from_int typ (snd (List.hd  values))
-    | Enumeration values, "last"       -> from_int typ (snd (List_utils.last
-                                                                      values))
+    | Signed (Some Range(a,_)),"first" -> typ, IntVal a
+    | Signed (Some Range(_,b)),"last"  -> typ, IntVal b
+    | Enumeration values, "first"      -> typ, IntVal (Newspeak.Nat.of_int (snd
+                                                             (List.hd  values)))
+    | Enumeration values, "last"       -> typ, IntVal (Newspeak.Nat.of_int (snd
+                                                      (List_utils.last values)))
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
           if attr="length" then
-            from_nat universal_integer
-              (length_of (List.hd ind ))
+            universal_integer, IntVal (length_of (List.hd ind ))
           else
             attr_get (List.hd ind) attr
         end
-    | Float digits , "digits" -> from_int universal_integer digits
+    | Float digits , "digits" -> universal_integer, IntVal (Newspeak.Nat.of_int digits)
     | Unknown, _
     | Array _, _
     | Float _ , _

@@ -26,6 +26,7 @@
 open Syntax_ada
 open Big_int
 module Nat = Newspeak.Nat
+module  T  = Ada_types
 
 exception NonStaticExpression
 exception AmbiguousTypeException
@@ -69,30 +70,11 @@ let mod_rem_aux ~is_mod na nb =
 let rem_ada = mod_rem_aux ~is_mod:false
 let mod_ada = mod_rem_aux ~is_mod:true
 
-let eq_val v1 v2 =
-    match (v1, v2) with
-      | IntVal   v1, IntVal   v2 -> v1 = v2
-      | BoolVal  v1, BoolVal  v2 -> v1 = v2
-      | FloatVal v1, FloatVal v2 -> v1 = v2
-      | _ ->
-          Npkcontext.report_error "Ada_utils.eq_val"
-            "internal error : uncompatible value"
-
-let inf_val v1 v2 =
-  let inf a b = a<b in
-    match (v1, v2) with
-      |   IntVal v1,   IntVal v2 -> (Nat.compare v1 v2) < 0
-      |  BoolVal v1,  BoolVal v2 -> inf v1 v2
-      | FloatVal v1, FloatVal v2 -> inf v1 v2
-      | _ ->
-          Npkcontext.report_error "Ada_utils.inf_val"
-            "internal error : uncompatible value"
-
 let nat_of_bool b =
   if b then Newspeak.Nat.one
        else Newspeak.Nat.zero
 
-let between a b n  =
+let between a b (n:float) =
   a <= n && n <= b
 
 let between_nat a b n =
@@ -143,14 +125,14 @@ let value_is_static_constraint_compatible contrainte value =
   match (value,contrainte) with
 (*    | (EnumVal(n), IntegerRangeConstraint(inf,sup)) ->
         between_nat inf sup (Newspeak.Nat.of_int n)*)
-    | (IntVal(n), IntegerRangeConstraint(inf,sup)) ->
+    | (T.IntVal(n), IntegerRangeConstraint(inf,sup)) ->
         between_nat inf sup n
-    | (BoolVal(b), IntegerRangeConstraint(inf,sup)) ->
+    | (T.BoolVal(b), IntegerRangeConstraint(inf,sup)) ->
         between_nat inf sup (nat_of_bool b)
-    | (FloatVal(n), FloatRangeConstraint(inf,sup)) ->
+    | (T.FloatVal(n), FloatRangeConstraint(inf,sup)) ->
         between inf sup n
-    | ((BoolVal _|IntVal _), FloatRangeConstraint _)
-    | (FloatVal _, IntegerRangeConstraint _) ->
+    | ((T.BoolVal _|T.IntVal _), FloatRangeConstraint _)
+    | (T.FloatVal _, IntegerRangeConstraint _) ->
         Npkcontext.report_error "Ada_utils.check_static_constraint"
           "internal error : uncompatible value and constraint types"
     | (_,RangeConstraint _) ->

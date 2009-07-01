@@ -32,9 +32,6 @@ type location = Newspeak.location
 
 type nat = Newspeak.Nat.t
 
-(** A floating-point number *)
-type float_number = float*string
-
 (**
  * A qualified string.
  * For example, "Ada.Text_IO.Put_line" maps to
@@ -47,11 +44,6 @@ type param_mode =
 | In    (** Read-only  *)
 |   Out (** Write-only *)
 | InOut (** Read-write *)
-
-type value =
-| IntVal   of nat           (** Integer value        *)
-| FloatVal of float_number  (** Floating-point value *)
-| BoolVal  of bool          (** Boolean value        *)
 
 (** Unary operators. *)
 type unary_op =
@@ -131,7 +123,7 @@ and attribute_designator =
 (** Expressions. *)
 and expression =
   | CInt         of nat
-  | CFloat       of float_number
+  | CFloat       of float
   | CBool        of bool
   | CChar        of int
   | Var          of name
@@ -151,8 +143,8 @@ and contrainte =
   |        RangeConstraint of expression
                             * expression
   | IntegerRangeConstraint of Newspeak.bounds
-  |   FloatRangeConstraint of float_number
-                            * float_number
+  |   FloatRangeConstraint of float
+                            * float
 
 and subtyp_indication = subtyp
                       * contrainte option
@@ -234,7 +226,7 @@ and representation_clause =
 and object_state =
   | Variable
   | Constant (*constante dynamique, ou non encore evaluee*)
-  | StaticVal of value (*constante statique*)
+  | StaticVal of Ada_types.data_t (*constante statique*)
 
 and context_clause =
   | With       of string
@@ -267,7 +259,7 @@ and basic_declaration =
   | SpecDecl        of spec
   | NumberDecl      of string
                      * expression
-                     * value option
+                     * Ada_types.data_t option
   | SubtypDecl      of string
                      * subtyp_indication
   | RepresentClause of representation_clause

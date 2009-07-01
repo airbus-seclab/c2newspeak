@@ -577,7 +577,7 @@ expression :
 | NOT   expression              {Unary (Not    , $2    )}
 | ABS   expression              {Unary (Abs    , $2    )}
 | CONST_INT   {CInt(snd $1)}
-| CONST_FLOAT {let s = snd $1 in CFloat(float_of_string s,s)}
+| CONST_FLOAT {CFloat(float_of_string (snd $1))}
 | CONST_CHAR  {CChar(snd $1)}
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}

@@ -621,7 +621,7 @@ and make_abs (exp,t) =
     if (T.is_integer t) then
       (Ast.CInt Nat.zero,T.universal_integer)
     else
-      (Ast.CFloat (0.0,"0.0"), T.universal_real)
+      (Ast.CFloat (0.0), T.universal_real)
   in
   Ast.CondExp(
               (Ast.Binary(Ast.Gt, x, zero),T.boolean)
@@ -695,7 +695,7 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
            norm_exp2 (Some(typ)) csttbl
            gtbl extern in
          let contrainte =  match (val1, val2) with
-           | (FloatVal(f1),FloatVal(f2)) ->
+           | (T.FloatVal(f1),T.FloatVal(f2)) ->
                if f1<=f2
                then FloatRangeConstraint(f1, f2)
                else
@@ -703,7 +703,7 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
                    "Ada_normalize.normalize_contrainte"
                    "null range not accepted"
 
-           | (IntVal(i1), IntVal(i2)) ->
+           | (T.IntVal(i1), T.IntVal(i2)) ->
                if (Nat.compare i1 i2)<=0
                then
                  IntegerRangeConstraint(i1, i2)
@@ -712,7 +712,7 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
                    "Ada_normalize.normalize_contrainte"
                    "null range not accepted"
 
-           | (BoolVal(b1), BoolVal(b2)) ->
+           | (T.BoolVal(b1), T.BoolVal(b2)) ->
                let i1 = nat_of_bool b1
                and i2 = nat_of_bool b2
                in
@@ -1169,8 +1169,8 @@ in
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl gtbl extern in
             let t = match v with
-              | BoolVal _ | IntVal _ -> T.universal_integer
-              | FloatVal _           -> T.universal_real
+              | T.BoolVal  _ | T.IntVal _ -> T.universal_integer
+              | T.FloatVal _              -> T.universal_real
             in
             Sym.s_add_variable gtbl ident t;
             add_cst (normalize_ident_cur ident)

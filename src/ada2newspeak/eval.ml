@@ -29,16 +29,15 @@ open Syntax_ada
 open Ada_utils
 
 module Nat = Newspeak.Nat
-
-let mk_float(f:float):float_number = (f, string_of_float f)
+module  T  = Ada_types
 
 (* variable booleenne :
    cas fonction : extern
    autres : global *)
 (** Constant symbols *)
 type constant_symb =
-  | Number       of value*bool      (** bool = global? *)
-  | StaticConst  of value*typ*bool  (** bool = global? *)
+  | Number       of T.data_t*bool      (** bool = global? *)
+  | StaticConst  of T.data_t*typ*bool  (** bool = global? *)
   | EnumLitteral of typ*nat*bool    (** bool = global? *)
   | VarSymb      of bool            (** bool = global? *)
   | FunSymb      of typ option*bool (** bool = extern? *)
@@ -49,7 +48,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t)
                 (tbl:Symboltbl.SymStack.t)
                 (extern:bool)
-   :(value*typ) =
+   :(T.data_t*typ) =
 
   let find_all_cst nom = Hashtbl.find_all csttbl nom in
 
@@ -60,13 +59,13 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
          (Symboltbl.SymStack.s_get_use tbl)) in
 
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
-          :(Syntax_ada.value*Syntax_ada.typ) =
+          :(Ada_types.data_t*Syntax_ada.typ) =
     match exp with
-    | Ast.CInt   (i)  ->IntVal(i),           check_typ expected_typ IntegerConst
-    | Ast.CFloat (f,s)->FloatVal(f,s),       check_typ expected_typ Float
-    | Ast.CChar  (c)  ->IntVal(Nat.of_int c),check_typ expected_typ Character
-    | Ast.CBool  (b)  ->BoolVal(b),          check_typ expected_typ Boolean
-    | Ast.Var(v) -> eval_static_const (Symboltbl.SymStack.normalize_name tbl v extern)
+    | Ast.CInt   i -> T.IntVal(i)            , check_typ expected_typ IntegerConst
+    | Ast.CFloat f -> T.FloatVal(f)          , check_typ expected_typ Float
+    | Ast.CChar  c -> T.IntVal (Nat.of_int c), check_typ expected_typ Character
+    | Ast.CBool  b -> T.BoolVal b            , check_typ expected_typ Boolean
+    | Ast.Var    v -> eval_static_const (Symboltbl.SymStack.normalize_name tbl v extern)
                                       expected_typ
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
@@ -74,8 +73,8 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.CondExp(cond,iftrue,iffalse) ->
         begin
             match eval_static_exp cond (Some Boolean) with
-            | BoolVal true , Boolean -> eval_static_exp iftrue  expected_typ
-            | BoolVal false, Boolean -> eval_static_exp iffalse expected_typ
+            | T.BoolVal true , Boolean -> eval_static_exp iftrue  expected_typ
+            | T.BoolVal false, Boolean -> eval_static_exp iffalse expected_typ
             | _ -> Npkcontext.report_error "eval_static.exp"
                    "unexpected type for conditional expression"
         end
@@ -101,7 +100,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
    *)
   and eval_static_binop (op:Ast.binary_op) (e1:Ast.expression)
                         (e2:Ast.expression) (expected_typ:typ option)
-        :value*typ =
+        :T.data_t*typ =
     let expected_typ1 = typ_operand op expected_typ in
     let (val1, val2, typ) =
       try
@@ -125,39 +124,33 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     check_operand_typ op typ;
     match (op,val1,val2) with
       (* operations sur entiers ou flottants *)
-    | Ast.Plus , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.add v1 v2),    typ
-    | Ast.Minus, IntVal   v1  , IntVal   v2   -> IntVal  (Nat.sub v1 v2),    typ
-    | Ast.Mult , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.mul v1 v2),    typ
-    | Ast.Div  , IntVal   v1  , IntVal   v2   -> IntVal  (Nat.div v1 v2),    typ
-    | Ast.Power, IntVal   v1  , IntVal   v2   -> IntVal  (puiss   v1 v2),    typ
-    | Ast.Plus , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a +. b)), typ
-    | Ast.Minus, FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a -. b)), typ
-    | Ast.Mult , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a *. b)), typ
-    | Ast.Div  , FloatVal(a,_), FloatVal(b,_) -> FloatVal(mk_float(a /. b)), typ
-    | Ast.Power, FloatVal(v1,_), IntVal(v2) ->
-              FloatVal(mk_float (v1 ** (float_of_int (Nat.to_int v2)))), typ
-
-    (*operations sur les entiers*)
-    | (Ast.Rem, IntVal v1, IntVal v2) -> (IntVal(rem_ada v1 v2), typ)
-    | (Ast.Mod, IntVal v1, IntVal v2) -> (IntVal(mod_ada v1 v2), typ)
-
-    (* comparaisons *)
-    | Ast.Eq,  v1, v2 -> (BoolVal( eq_val v1 v2), Boolean)
-    | Ast.Gt,  v1, v2 -> (BoolVal(inf_val v2 v1), Boolean)
-
-    (* operations sur les booleens *)
-    | Ast.And,BoolVal b1,BoolVal b2 -> BoolVal(b1 && b2), Boolean
-    | Ast.Or ,BoolVal b1,BoolVal b2 -> BoolVal(b1 || b2), Boolean
+    | Ast.Plus , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.add a b), typ
+    | Ast.Minus, T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.sub a b), typ
+    | Ast.Mult , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.mul a b), typ
+    | Ast.Div  , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.div a b), typ
+    | Ast.Power, T.IntVal   a, T.IntVal   b -> T.IntVal (puiss   a b), typ
+    | Ast.Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  +.  b), typ
+    | Ast.Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  -.  b), typ
+    | Ast.Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  *.  b), typ
+    | Ast.Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  /.  b), typ
+    | Ast.Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal (rem_ada a b), typ
+    | Ast.Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal (mod_ada a b), typ
+    | Ast.Eq   ,            a,            b -> T.BoolVal(T.data_eq a b), Boolean
+    | Ast.Gt   ,            a,            b -> T.BoolVal(T.data_lt b a), Boolean
+    | Ast.And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal(a && b)     , Boolean
+    | Ast.Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal(a || b)     , Boolean
+    | Ast.Power, T.FloatVal a, T.IntVal   b ->           
+              T.FloatVal(a ** (float_of_int (Nat.to_int b))), typ
     | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"
 
   (**
    * Evaluate statically the "- E" expression.
    *)
-  and eval_static_uminus (exp:Ast.expression) :value*typ =
+  and eval_static_uminus (exp:Ast.expression) :T.data_t*typ =
       match (eval_static_exp exp expected_typ) with
-        | IntVal i, t when (integer_class t) -> (IntVal(Nat.neg i), t)
-        | (FloatVal(f,_), Float) -> (FloatVal(mk_float (-.f)), Float)
+        | T.IntVal i, t when (integer_class t) -> (T.IntVal(Nat.neg i), t)
+        | (T.FloatVal f , Float) -> (T.FloatVal(-.f), Float)
         | _ -> Npkcontext.report_error "eval_static.uminus"
                                    "invalid operator and argument"
 
@@ -165,7 +158,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
    * Evaluate statically the "op E" expressions.
    *)
   and eval_static_unop (op:Ast.unary_op) (exp:Ast.expression)
-      (expected_typ:typ option) :value*typ =
+      (expected_typ:typ option) :T.data_t*typ =
   match (op, expected_typ) with
     | Ast.UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
     | Ast.UPlus, Some Float                  -> eval_static_exp exp expected_typ
@@ -184,7 +177,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.Not,    None
     | Ast.Not,    Some Boolean ->
             (match (eval_static_exp exp expected_typ) with
-               | BoolVal(b), Boolean -> BoolVal(not b), Boolean
+               | T.BoolVal(b), Boolean -> T.BoolVal(not b), Boolean
                | _ -> Npkcontext.report_error "eval_static_unop"
                                     "Unexpected unary operator and argument"
             )
@@ -192,7 +185,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
         "eval_static.unop"
           "Unexpected unary operator and argument"
 
-  and eval_static_const (name:name) (expected_typ:typ option) :value*typ =
+  and eval_static_const (name:name) (expected_typ:typ option) :T.data_t*typ =
 
     (********** mem_other_cst **********)
     let mem_other_cst (list_cst:constant_symb list) ?(filter=(fun _ -> true))
@@ -220,7 +213,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
 
     (********** sans_selecteur **********)
 
-    let sans_selecteur (ident:string) (name:name) :value*typ =
+    let sans_selecteur (ident:string) (name:name) :T.data_t*typ =
       (* les variables masquees le sont par un symbole de fonction
          ou enum interne.
          var_possible indique si on peut avoir une variable :
@@ -230,14 +223,14 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
 
                 (******* --> find_use *******)
       let rec find_use (list_cst:constant_symb list) (var_masque:bool)
-                        (var_possible:bool) :value*typ =
+                        (var_possible:bool) :T.data_t*typ =
             match list_cst with
               | (Number _|StaticConst _|VarSymb _)::r when var_masque ->
                                             find_use r var_masque var_possible
-              | Number(IntVal(i),_)::[] when var_possible ->
-                      IntVal i, check_typ expected_typ IntegerConst
-              | Number(FloatVal(f),_)::[] when var_possible ->
-                      FloatVal f, check_typ expected_typ Float
+              | Number(T.IntVal(i),_)::[] when var_possible ->
+                      T.IntVal i, check_typ expected_typ IntegerConst
+              | Number(T.FloatVal(f),_)::[] when var_possible ->
+                      T.FloatVal f, check_typ expected_typ Float
               | StaticConst(v, typ,_)::[] when var_possible ->
                   v, check_typ expected_typ typ
               | VarSymb _::[] when var_possible -> raise NonStaticExpression
@@ -255,7 +248,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                   then (Npkcontext.report_error "eval_static.find_use"
                       (ident^" is not visible : "
                        ^"multiple use clauses cause hiding"))
-                  else (IntVal v, typ)
+                  else (T.IntVal v, typ)
 
               | FunSymb(Some typ,_)::r
                   when known_compatible_typ expected_typ typ ->
@@ -272,7 +265,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
               | EnumLitteral(typ,v,_)::r when expected_typ = None ->
                   if (mem_other_cst r None var_masque)
                   then raise AmbiguousTypeException
-                  else (IntVal v, typ)
+                  else (T.IntVal v, typ)
 
               | FunSymb(Some _,_)::r when expected_typ = None ->
                   if (mem_other_cst r None var_masque)
@@ -291,25 +284,25 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
 
                     (****** --> find_interne *****)
       and find_interne (list_cst:constant_symb list) (var_masque:bool)
-            :value*typ =
+            :T.data_t*typ =
           match list_cst with
-            | Number(IntVal i,_)::_ when not var_masque->
-                IntVal(i), check_typ expected_typ IntegerConst
-            | Number(FloatVal(f),_)::_ when not var_masque ->
-                FloatVal(f), check_typ expected_typ Float
+            | Number(T.IntVal i,_)::_ when not var_masque->
+                T.IntVal(i), check_typ expected_typ IntegerConst
+            | Number(T.FloatVal(f),_)::_ when not var_masque ->
+                T.FloatVal(f), check_typ expected_typ Float
             | StaticConst(v, typ, _)::_ when not var_masque ->
                 v, check_typ expected_typ typ
             | VarSymb(_)::_ when not var_masque ->
                 raise NonStaticExpression
             | EnumLitteral(typ, v, _)::_  when
-                known_compatible_typ expected_typ typ -> IntVal v, typ
+                known_compatible_typ expected_typ typ -> T.IntVal v, typ
             | FunSymb(Some typ,_)::_  when
                 known_compatible_typ expected_typ typ ->
                                     raise NonStaticExpression
             | EnumLitteral(typ, v, _)::r when expected_typ=None ->
                 if (mem_other_cst r (Some ident) true)
                 then raise AmbiguousTypeException
-                else (IntVal(v), typ)
+                else (T.IntVal(v), typ)
             | FunSymb(Some _,_)::r when expected_typ=None ->
                 if (mem_other_cst r (Some ident) true)
                 then raise AmbiguousTypeException
@@ -323,23 +316,23 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
 
 
         (********* avec_selecteur *********)
-  and avec_selecteur (name:name):value*typ =
+  and avec_selecteur (name:name):T.data_t*typ =
 
         (********* --> find_enum *********)
       (* les variables sont masquees *)
-      let rec find_enum (list_cst:constant_symb list) :value*typ =
+      let rec find_enum (list_cst:constant_symb list) :T.data_t*typ =
           match list_cst with
             | (Number _|StaticConst _|VarSymb _)::r -> find_enum r
             | EnumLitteral(typ,v,_)::_ when
                 known_compatible_typ expected_typ typ ->
-                IntVal v, typ
+                T.IntVal v, typ
             | FunSymb(Some(typ), _)::_
                 when known_compatible_typ expected_typ typ ->
                 raise NonStaticExpression
             | EnumLitteral(typ,v,_)::r when expected_typ=None ->
                 if mem_other_cst r None true
                 then raise AmbiguousTypeException
-                else IntVal v, typ
+                else T.IntVal v, typ
             | FunSymb(Some(_), _)::r when expected_typ=None ->
                 if mem_other_cst r None true
                 then raise AmbiguousTypeException
@@ -351,10 +344,10 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                   "uncompatible types" in
       let list_symb = find_all_cst name in
       match list_symb with
-            | Number(IntVal    i,_)::_ ->
-                        IntVal i, check_typ expected_typ IntegerConst
-            | Number(FloatVal(f),_)::_ ->
-                        FloatVal f, check_typ expected_typ Float
+            | Number(T.IntVal    i,_)::_ ->
+                        T.IntVal i, check_typ expected_typ IntegerConst
+            | Number(T.FloatVal(f),_)::_ ->
+                        T.FloatVal f, check_typ expected_typ Float
             | StaticConst(v, typ, _)::_ -> v, check_typ expected_typ typ
             | VarSymb _::_ -> raise NonStaticExpression
             | [] -> Npkcontext.report_error "eval_static.avec_selecteur"
@@ -362,31 +355,31 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
             | _ -> find_enum list_symb
 
         (********* avec_selecteur_courant) *********)
-  and avec_selecteur_courant (ident:name) (name:name) :value*typ =
+  and avec_selecteur_courant (ident:name) (name:name) :T.data_t*typ =
 
         (*********  --> find_global ) *********)
-      let rec find_global (list_symb:constant_symb list) :value*typ =
+      let rec find_global (list_symb:constant_symb list) :T.data_t*typ =
           match list_symb with
             | [] -> Npkcontext.report_error "eval_static.find_global"
                                    ("cannot find symbol "^(name_to_string name))
-            | Number(IntVal i,true)::_ ->
-                  IntVal i, check_typ expected_typ IntegerConst
-            | Number(FloatVal(f),true)::_ ->
-                  FloatVal f, check_typ expected_typ Float
-            | Number(BoolVal _, _)::_ -> Npkcontext.report_error
+            | Number(T.IntVal i,true)::_ ->
+                  T.IntVal i, check_typ expected_typ IntegerConst
+            | Number(T.FloatVal(f),true)::_ ->
+                  T.FloatVal f, check_typ expected_typ Float
+            | Number(T.BoolVal _, _)::_ -> Npkcontext.report_error
                                       "eval_static.find_global"
                                    "internal error : number cannot have EnumVal"
             | StaticConst(v, typ, true)::_ -> v, check_typ expected_typ typ
             | EnumLitteral(typ,v,true)::_
                 when known_compatible_typ expected_typ typ ->
-                IntVal v, typ
+                T.IntVal v, typ
             | FunSymb(Some typ, false)::_
                 when known_compatible_typ expected_typ typ ->
                 raise NonStaticExpression
             | EnumLitteral(typ, v, true)::r when expected_typ=None ->
                 if mem_other_cst r None false
                 then raise AmbiguousTypeException
-                else (IntVal(v), typ)
+                else (T.IntVal(v), typ)
             | FunSymb(Some(_), false)::r when expected_typ=None ->
                 if mem_other_cst r None false
                 then raise AmbiguousTypeException
@@ -427,11 +420,11 @@ let eval_static_integer_exp (exp:Ast.expression)
               tbl
               extern in
             match v with
-              | FloatVal _
-              | BoolVal  _ -> Npkcontext.report_error
+              | T.FloatVal _
+              | T.BoolVal  _ -> Npkcontext.report_error
                           "eval_static.integer_exp"
                           "expected static integer constant"
-              | IntVal i -> i
+              | T.IntVal i -> i
     with
       | NonStaticExpression -> Npkcontext.report_error
                           "eval_static.integer_exp"
@@ -447,17 +440,17 @@ let eval_static_number (exp:Ast.expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
                        (tbl:Symboltbl.SymStack.t)
                        (extern:bool)
-    :value =
+    :T.data_t =
      try
          let (v,_) = eval_static exp None
                                      csttbl
                                      tbl
                                      extern in
              match v with
-               | BoolVal _ -> Npkcontext.report_error
+               | T.BoolVal _ -> Npkcontext.report_error
                      "eval_static.integer_exp"
                      "expected static float or integer constant"
-               | FloatVal _ | IntVal _ -> v
+               | T.FloatVal _ | T.IntVal _ -> v
      with
        | NonStaticExpression -> Npkcontext.report_error
           "eval_static.integer_exp"
