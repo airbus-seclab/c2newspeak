@@ -122,11 +122,9 @@ let translate (globals, fundecls, spec) =
   in
 
   let update_global x name loc (t, init) =
-    let v = GlobalSymb name in
     let (loc, init) =
       try 
 	let (_, prev_loc, prev_init) = Hashtbl.find used_globals name in
-	  Symbtbl.update symbtbl x (v, t);
 	  match (prev_init, init) with
 	      (None, Some _) | (Some None, Some _) -> (loc, init)
 	    | (Some _, None) | (Some _, Some None) -> (prev_loc, prev_init)
@@ -134,9 +132,7 @@ let translate (globals, fundecls, spec) =
 	    | (Some Some _, Some Some _) -> 
 		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
-      with Not_found -> 
-	Symbtbl.bind symbtbl x (v, t);
-	(loc, init)
+      with Not_found -> (loc, init)
     in
 (* TODO:TODO: remove used_globals in firstpass, done in cir2npkil?? *)
       Hashtbl.replace used_globals name (t, loc, init)
