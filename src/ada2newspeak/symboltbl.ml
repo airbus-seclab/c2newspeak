@@ -515,6 +515,14 @@ module SymStack = struct
       | Some tbl ->find_variable tbl n
       | None     -> error "no such package";T.unknown
 
+
+  let s_find_abs_type s p n =
+    match find_unit (library s.s_stack) p with 
+      | Some tbl ->find_type tbl n
+      | None     -> error "no such package";T.unknown
+
+
+
   (**
    * Find a variable in a symbol table stack.
    *)
@@ -546,16 +554,31 @@ module SymStack = struct
                   end
 
   let s_find_type s ?package n =
-    ignore package;
-    let f t =
-      try Some (find_type t n)
-      with Not_found -> None
-    in
-    try
-      find_rec s.s_stack f
-    with Not_found ->
-      error ("Cannot find type "^n);
-      T.unknown
+    match package with
+      | Some p -> s_find_abs_type s p n
+      | None   -> begin
+                    try
+                      find_rec s.s_stack (fun t -> 
+                        try Some (find_type t n)
+                        with Not_found -> None
+                      )
+                    with Not_found ->
+                      begin
+                        let context = ref (s_get_use s) in
+                        let res = ref None in
+                        while (!context <> [] && !res = None) do
+                          try res := Some (s_find_abs_type  s (List.hd !context) n);
+                          with Not_found -> ();
+                          context := List.tl !context;
+                        done;
+                        match !res with
+                        | None -> begin
+                                    error ("Cannot find type "^n);
+                                    T.unknown
+                                  end
+                        | Some v -> v
+                      end
+                  end
 
   let s_add_variable s n v =
     add_variable   (top s) n v ~strongly:s.s_strong

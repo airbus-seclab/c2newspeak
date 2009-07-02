@@ -54,7 +54,7 @@ let subtyp_to_adatyp st =
   | Unconstrained typ      -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (_,_,_,t) -> t
   | SubtypName  n          -> try
-                                Sym.s_find_type gtbl (snd n)
+                                Sym.s_find_type gtbl ?package:(fst n) (snd n)
                               with Not_found ->
                                 begin
                                   Npkcontext.report_warning "ST2AT"
