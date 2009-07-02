@@ -165,14 +165,6 @@ module SymStack : sig
   val top : t -> table
 
   (**
-   * Create a new compilation unit :
-   *   - discard every context until library level
-   *   - create a new package-level context
-   *   - push it onto the current stack
-   *)
-  val new_unit : t -> string -> unit
-
-  (**
    * Create a new context and enter into it.
    * Contexts may be named ; in that case a unit_symbol is added
    * to the parent table in order to allow bottom-up adressing.

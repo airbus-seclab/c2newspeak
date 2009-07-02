@@ -1044,7 +1044,8 @@ in
 
   let normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
-      Sym.enter_context ~desc:"SP body (parameters)" gtbl;
+      if addparam then
+        Sym.enter_context ~desc:"SP body (parameters)" gtbl;
       List.map
         (fun param ->
            if func && (param.mode <> In)
@@ -1431,7 +1432,7 @@ in
           add_function name None true
       | Ast.PackageSpec(name, basic_decls) ->
           Sym.set_current gtbl name;
-          Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
+          Sym.enter_context ~name ~desc:"Package spec (extern)" ~weakly:true gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Sym.reset_current gtbl;
           Sym.exit_context gtbl;

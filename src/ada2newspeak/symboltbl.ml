@@ -428,8 +428,12 @@ module SymStack = struct
               let new_context = create_table ?desc () in
               begin match name with
                 | None   -> ()
-                | Some n -> IHashtbl.add ((Stack.top s.s_stack).t_tbl)
+                | Some n -> begin
+                              if (Stack.length s.s_stack <> 2) then
+                                error "Adding some unit outside the library";
+                              IHashtbl.add ((Stack.top s.s_stack).t_tbl)
                                           n (Unit new_context,true)
+                            end
               end;
               new_context;
             end
@@ -446,13 +450,6 @@ module SymStack = struct
 
           Stack.push context s.s_stack
         end
-
-    let new_unit s name =
-      while (Stack.length s.s_stack > 2) do
-        ignore (Stack.pop s.s_stack);
-      done;
-      (* Here Stack.length s = 2 so we are at library level *)
-      enter_context ~name s
 
     let exit_context s =
       if not (debug_dont_push) then
@@ -513,13 +510,15 @@ module SymStack = struct
   let s_find_abs_var s p n =
     match find_unit (library s.s_stack) p with 
       | Some tbl ->find_variable tbl n
-      | None     -> error "no such package";T.unknown
+      | None     -> error ("No such package "^p^" when resolving a variable");
+                    T.unknown
 
 
   let s_find_abs_type s p n =
     match find_unit (library s.s_stack) p with 
       | Some tbl ->find_type tbl n
-      | None     -> error "no such package";T.unknown
+      | None     -> error ("No such package "^p^" when resolving a type");
+                    T.unknown
 
 
 
