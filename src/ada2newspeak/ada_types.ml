@@ -216,7 +216,11 @@ let new_array component ind =
 let is_compatible one another =
   let p1 = root_parent one     in
   let p2 = root_parent another in
-    p1 = p2 && one.uid = another.uid
+       (p1 = p2 && one.uid = another.uid)
+    || (match (one.trait, another.trait) with
+          | Signed  None   , Signed (Some _) -> true
+          | Signed (Some _), Signed  None    -> true
+          | _ -> false)
 
 (*****************
  * Builtin types *

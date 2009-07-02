@@ -876,7 +876,11 @@ in
         add_typ id typ_decl loc global extern;
         typ_decl
     | DerivedType(subtyp_ind) ->
-        let (_,_,_,t) = subtyp_ind in
+        let t =
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
         let new_t = T.new_derived t in
           Sym.s_add_type gtbl ident new_t;
         let update_contrainte contrainte symbs new_assoc =
@@ -1118,7 +1122,11 @@ in
              ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
-        let (_,_,_,t) = subtyp_ind in
+        let t =
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
         let normexp = normalize_exp exp in
         (* constantes *)
         let norm_subtyp_ind =
