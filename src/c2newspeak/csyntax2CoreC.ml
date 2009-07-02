@@ -68,7 +68,7 @@ let process (globals, specs) =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
   *)
-  let symbtbl = Symbtbl.create () in
+  let symbtbl = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
   (* Counter of static variables, necessary to distinguish 2 statics in 
@@ -106,7 +106,9 @@ let process (globals, specs) =
 	| Some init -> process (init, t)
   in
     
-  let add_local (t, x) = Symbtbl.bind symbtbl x (VarSymb (C.Local x), t) in
+  let add_local (t, x) = Hashtbl.add symbtbl x (VarSymb (C.Local x), t) in
+
+  let remove_var x = Hashtbl.remove symbtbl x in
 
 (* TODO: find a way to factor declare_global and add_local
    maybe necessary to complete_typ_with_init in both cases...
@@ -114,7 +116,7 @@ let process (globals, specs) =
    need to check with examples!!!
 *)
   let update_global x name t = 
-    Symbtbl.update symbtbl x (VarSymb (C.Global name), t) 
+    Hashtbl.replace symbtbl x (VarSymb (C.Global name), t) 
   in
 
   let add_formals (args_t, ret_t) =
@@ -127,9 +129,18 @@ let process (globals, specs) =
       | None -> 
 	  Npkcontext.report_error "Csyntax2CoreC.add_formals" "unreachable code"
   in
-    
+
+  let remove_formals (args_t, _) =
+    remove_var ret_name;
+(* TODO: think about it, not nice to have this pattern match, since in
+   a function declaration there are always arguments!! 
+   None is not possible *)
+    match args_t with
+	Some args_t -> List.iter (fun (_, x) -> remove_var x) args_t
+      | None -> ()
+  in
   let find_symb x = 
-    try Symbtbl.find symbtbl x
+    try Hashtbl.find symbtbl x
     with Not_found -> 
       if (Gnuc.is_gnuc_token x) && (not !Npkcontext.accept_gnuc) then begin
 	Npkcontext.report_accept_warning "Csyntax2CoreC.process.find_symb" 
@@ -140,27 +151,27 @@ let process (globals, specs) =
 	Npkcontext.MissingFunDecl;
       let info = (VarSymb (C.Global x), C.Fun (None, C.int_typ)) in
 	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
-	Symbtbl.bind symbtbl x info;
+	Hashtbl.add symbtbl x info;
 	info
   in
 
   let find_compdef name =
     try 
-      let (c, _) = Symbtbl.find symbtbl name in
+      let (c, _) = Hashtbl.find symbtbl name in
 	match c with
 	    CompSymb c -> c
 	  | _ -> raise Not_found
     with Not_found -> 
       let c = ref None in
-	Symbtbl.bind symbtbl name (CompSymb c, C.Comp c);
+	Hashtbl.add symbtbl name (CompSymb c, C.Comp c);
 	c
   in
 
   let update_funtyp f ft1 =
-    let (symb, t) = Symbtbl.find symbtbl f in
+    let (symb, t) = Hashtbl.find symbtbl f in
     let ft2 = CoreC.ftyp_of_typ t in
     let ft = CoreC.min_ftyp ft1 ft2 in
-      Symbtbl.update symbtbl f (symb, C.Fun ft)
+      Hashtbl.replace symbtbl f (symb, C.Fun ft)
   in
 
   let update_funsymb f static ft loc =
@@ -168,7 +179,7 @@ let process (globals, specs) =
     let f' = if static then "!"^fname^"."^f else f in begin
 	try update_funtyp f ft
 	with Not_found -> 
-	  Symbtbl.bind symbtbl f (VarSymb (C.Global f'), C.Fun ft)
+	  Hashtbl.add symbtbl f (VarSymb (C.Global f'), C.Fun ft)
       end;
       f'
   in
@@ -436,6 +447,7 @@ let process (globals, specs) =
 
 
   and translate_decl is_global loc x d =
+    Npkcontext.set_loc loc;
     match d with
 	VDecl (_, _, extern, Some _) when extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
@@ -461,7 +473,7 @@ let process (globals, specs) =
 	  let t = complete_typ_with_init t init in
 	    if is_global || is_extern then update_global x name t
 	    else if is_static 
-	    then Symbtbl.bind symbtbl x (VarSymb (C.Global name), t)
+	    then Hashtbl.add symbtbl x (VarSymb (C.Global name), t)
 	    else add_local (t, x);
 	    let init =
 	      match init with
@@ -471,7 +483,7 @@ let process (globals, specs) =
 	      C.VDecl (t, is_static, is_extern, init)
       | EDecl e -> 
 	  let (e, t) = translate_exp e in
-	    Symbtbl.bind symbtbl x (EnumSymb e, t);
+	    Hashtbl.add symbtbl x (EnumSymb e, t);
 	    C.EDecl e
       | CDecl (is_struct, fields) -> 
 	  let fields = List.map translate_field_decl fields in
@@ -532,12 +544,22 @@ let process (globals, specs) =
 	  
   and translate_assertion x = List.map translate_spec_token x
 
+(* TODO: find a way to factor translate_blk and translate_blk_exp?? 
+   rather remove side-effects before csyntax2CoreC.
+*)
   and translate_blk x = 
-    (* TODO: remove this and replace symbtbl by a standard hashtbl *)
-    Symbtbl.save symbtbl;
-    let x = List.map (fun (x, loc) -> (translate_stmt (x, loc), loc)) x in
-      Symbtbl.restore symbtbl;
-      x
+    match x with 
+	(LocalDecl (x, d), loc)::tl -> 
+	  let decl = C.LocalDecl (x, translate_decl false loc x d) in
+	  let tl = translate_blk tl in
+	    remove_var x;
+	    (decl, loc)::tl
+
+      | (x, loc)::tl -> 
+	  let stmt = translate_stmt (x, loc) in
+	  let tl = translate_blk tl in
+	    (stmt, loc)::tl
+      | [] -> []
 
   and translate_blk_exp x =
     let rec translate_aux x =
@@ -545,6 +567,13 @@ let process (globals, specs) =
 	  (Exp e, loc)::[] -> 
 	    let (e, t) = translate_exp e in
 	      ([], (e, t, loc))
+
+	| (LocalDecl (x, d), loc)::tl -> 
+	    let decl = C.LocalDecl (x, translate_decl false loc x d) in
+	    let (tl, e) = translate_aux tl in
+	      remove_var x;
+	      ((decl, loc)::tl, e)
+		
 	| (hd, loc)::tl -> 
 	    let hd = (translate_stmt (hd, loc), loc) in
 	    let (blk, e) = translate_aux tl in
@@ -553,11 +582,8 @@ let process (globals, specs) =
 	    Npkcontext.report_error "Csyntax2CoreC.translate_blk_exp" 
 	      "expression expected at end of block"
     in
-(* TODO: build an example that make this a bug!!, think about it!! *)
-(*      Symbtbl.save symbtbl;*)
-      let (blk, (e, t, loc)) = translate_aux x in
-(*	Symbtbl.restore symbtbl;*)
-	(blk@(C.Exp (e, t), loc)::[], t)
+    let (blk, (e, t, loc)) = translate_aux x in
+      (blk@(C.Exp (e, t), loc)::[], t)
   
   and translate_field_decl (t, x, _) = (x, translate_typ t)
 
@@ -605,10 +631,9 @@ let process (globals, specs) =
   let translate_fundecl (f, f', ft, static, body, loc) =
     Npkcontext.set_loc loc;
     current_fun := f;
-    Symbtbl.save symbtbl;
     add_formals ft;
     let body = translate_blk body in
-      Symbtbl.restore symbtbl;
+      remove_formals ft;
       current_fun := "";
       (f', (ft, static, body, loc))
   in

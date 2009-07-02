@@ -39,7 +39,7 @@ c2newspeak.FILES=\
         csyntax2CoreC firstpass compiler \
 	params c2newspeak
 
-FILES=version utils/list_utils utils/symbtbl \
+FILES=version utils/list_utils \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix c2newspeak/, $(c2newspeak.FILES))
 
