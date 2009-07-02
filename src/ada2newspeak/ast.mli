@@ -99,7 +99,6 @@ and exp_value =
                   * expression
   | Qualified    of Syntax_ada.subtyp
                   * expression
-  | Attribute    of Syntax_ada.attribute_reference
 
 and  declarative_part = (declarative_item*Newspeak.location) list
 

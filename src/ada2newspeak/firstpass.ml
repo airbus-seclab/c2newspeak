@@ -1371,9 +1371,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   in
 
                   let bk_typ = destroy subtyp in
-
                   let dim = List.length arg_list in
-
                     if (List.length bk_typ < dim)
                     then Npkcontext.report_error "firstpass.ml:Function Call"
                       "more elts than dimensions";
@@ -1381,20 +1379,16 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     if (dim = 0) then
                       Npkcontext.report_error "firstpass.ml:Function Call"
                       "no element for shifting";
-
                     let types = List.map (
                       fun x -> Some (subtyp_to_typ (fst x))
                     ) bk_typ in
 
                     let dim_types = Array.to_list (
                       Array.sub  (Array.of_list types) 0 dim) in
-
                     let tr_arg_list =
                       List.map2 (fun x y ->
-                                   fst (translate_exp x y)) arg_list dim_types
+                        fst (translate_exp x y)) arg_list dim_types
                     in
-
-                      (*                     translate_exp exp expected_typ*)
                       match (rebuild lv bk_typ tr_arg_list) with
                           (C.Lval (a, tpelt), adatyp) ->
                             (C.Lval (a, tpelt),  adatyp)
@@ -1404,11 +1398,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               | _ -> Npkcontext.report_error "Firstpass.translate_exp"
                   "FunctionCall case but unexpected result"
           end
-
-    | Attribute _->
-        Npkcontext.report_error
-          "Firstpass.translate_exp"
-          "Last, first or Length remaining in firstpass, non static "
 
   (**
    * Make a C assignment.
