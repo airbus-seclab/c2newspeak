@@ -363,7 +363,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     List.flatten
       (List.map
          (fun pack -> types#find_all (Some pack, ident))
-         (Symboltbl.get_use (Sym.top gtbl)))
+         (Sym.s_get_use gtbl))
   in
 
   let add_enum_litt symbs typ global extern =

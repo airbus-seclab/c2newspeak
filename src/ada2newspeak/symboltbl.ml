@@ -522,15 +522,27 @@ module SymStack = struct
     match package with
       | Some p -> s_find_abs_var s p n
       | None   -> begin
-                    let f t =
-                      try Some (find_variable ?expected_type t n)
-                      with Not_found -> None
-                    in
                     try
-                      find_rec s.s_stack f
+                      find_rec s.s_stack (fun t ->
+                        try Some (find_variable ?expected_type t n)
+                        with Not_found -> None
+                      )
                     with Not_found ->
-                      error ("Cannot find variable '"^n^"'");
-                      T.unknown
+                      begin
+                        let context = ref (s_get_use s) in
+                        let res = ref None in
+                        while (!context <> [] && !res = None) do
+                          try res := Some (s_find_abs_var s (List.hd !context) n);
+                          with Not_found -> ();
+                          context := List.tl !context;
+                        done;
+                        match !res with
+                        | None -> begin
+                                    error ("Cannot find variable '"^n^"'");
+                                    T.unknown
+                                  end
+                        | Some v -> v
+                      end
                   end
 
   let s_find_type s ?package n =
