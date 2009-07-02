@@ -1680,13 +1680,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
         ([],[])
 
-    | NumberDecl(ident, _, Some v) ->
+    | NumberDecl(ident, v) ->
         add_number loc v false ident;
         ([],[])
-    | NumberDecl _ ->
-        Npkcontext.report_error
-          "Firstpass.translate_basic_declaration"
-          "internal error : number declaration whitout value"
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1712,7 +1708,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
     | UseDecl x -> Symboltbl.remove_use (Sym.top gtbl) x
-    | NumberDecl(ident, _, _) -> remove_symb ident
+    | NumberDecl(ident, _) -> remove_symb ident
     | TypeDecl _
     | SubtypDecl _ -> ()
 
@@ -1788,12 +1784,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | SubtypDecl _ -> ()
       | UseDecl x -> Symboltbl.add_use (Sym.top gtbl) x
       | SpecDecl(spec) -> translate_spec spec loc false
-      | NumberDecl(ident, _, Some v) ->
+      | NumberDecl(ident, v) ->
            add_number loc v true ident
-      | NumberDecl(_) ->
-          Npkcontext.report_error
-            "Firstpass.translate_global_basic_declaration"
-            "internal error : number declaration without value"
 
   (* quand cette fonction est appelee, on est dans le corps d'un
      package *)

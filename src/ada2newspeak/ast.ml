@@ -130,8 +130,7 @@ and basic_declaration =
   | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string
-                     * expression
-                     * Ada_types.data_t option
+                     * Ada_types.data_t
   | SubtypDecl      of string
                      * Syntax_ada.subtyp_indication
 

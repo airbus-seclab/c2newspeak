@@ -88,7 +88,7 @@ let find_body_for_spec ~(specification:Ast.basic_declaration)
 let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
   | Ast.TypeDecl   (i,_)
-  | Ast.NumberDecl (i,_,_)
+  | Ast.NumberDecl (i,_)
   | Ast.SubtypDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
@@ -1177,7 +1177,7 @@ in
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
-          Some (Ast.NumberDecl(ident, norm_exp, Some v))
+          Some (Ast.NumberDecl(ident, v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
         let (_,_,_,t) = subtyp_ind in
@@ -1402,15 +1402,11 @@ in
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
-        | Ast.NumberDecl(ident, _, Some v) ->
+        | Ast.NumberDecl(ident, v) ->
             Sym.s_add_variable gtbl ident T.universal_integer;
             add_cst (normalize_ident_cur_ext ident true)
                     (Number(v, true))
                     true
-        | Ast.NumberDecl(_, _, None) ->
-            Npkcontext.report_error
-              "Ada_normalize.add_extern_spec.add_extern_basic_decl"
-              "internal error : external number declaration without value"
         | Ast.SpecDecl(Ast.SubProgramSpec
                      (Ast.Function(name, [], return_typ))) ->
             add_function name (Some(base_typ return_typ)) true
