@@ -993,6 +993,7 @@ in
     | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
                           "internal error : size of array already provided"
     | Record r -> begin
+                    Sym.s_add_type gtbl ident (T.unknown);
                     let norm_fields = 
                       List.map (fun (id, st) -> (id, normalize_subtyp st)) r
                     in
@@ -1127,7 +1128,7 @@ in
           if st = T.unknown then subtyp_to_adatyp tp
           else st
         in
-        let normexp = normalize_exp exp in
+        let normexp = normalize_exp ~expected_type:t exp in
         (* constantes *)
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind in
@@ -1188,7 +1189,11 @@ in
           Some (Ast.NumberDecl(ident, v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
-        let (_,_,_,t) = subtyp_ind in
+        let t =
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
           Sym.s_add_type gtbl ident t;
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
@@ -1294,9 +1299,10 @@ in
                     ),loc)
     | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
                         let ndp = normalize_decl_part dp ~global:false in
+                        let norm_block = normalize_block blk in
                         remove_decl_part dp;
                         Sym.exit_context gtbl;
-                        Some (Ast.Block (ndp, normalize_block blk), loc)
+                        Some (Ast.Block (ndp, norm_block), loc)
 
   and normalize_block block =
     List_utils.filter_map normalize_instr block

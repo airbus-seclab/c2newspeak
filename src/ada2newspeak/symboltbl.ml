@@ -24,17 +24,8 @@
 
 module T = Ada_types
 
-(* debug control *)
-
-let debug_use_new = false
-
 let error x =
-  if (debug_use_new) then
-    Npkcontext.report_warning "Symbol table" x
-  else
-    Npkcontext.print_debug ("ERROR : Symbol table"^x)
-
-let debug_dont_push = not debug_use_new
+  Npkcontext.report_error "Symbol table" x
 
 class package_manager :
 object
@@ -202,7 +193,7 @@ let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
                             else Some r
             end
 
-let mkcast desc fn  ?(filter=fun _ -> true) fallback lst  =
+let mkcast desc fn  ?(filter=fun _ -> true) lst  =
   if (List.length lst > 1) then
     begin
       Npkcontext.print_debug ("Multiple interpretations for "^desc^" :");
@@ -211,7 +202,8 @@ let mkcast desc fn  ?(filter=fun _ -> true) fallback lst  =
                                                  )) lst
     end;
   match extract_unique ~filter fn lst with
-    | None   -> error ("Symbol cast ("^desc^") : Ambiguous name");fallback
+    | None   -> error ("Ambiguous "^desc^" name")
+
     | Some x -> x
 
 let print_table tbl =
@@ -221,6 +213,8 @@ let print_table tbl =
     let x = String.length str in
     let b = (width - x) / 2   in
     let a =  width - x - b    in
+    let b = max b 0 in
+    let a = max a 0 in
     (String.make a ' ')^str^(String.make b ' ')
   in
   let line_printer i (sym,_) =
@@ -293,19 +287,16 @@ let cast_v ?filter = mkcast "variable"
                                 raise (ParameterlessFunction rt)
                             |_ -> None
                     )
-                    T.unknown
                     ?filter
 
 let cast_t ?filter = mkcast "type"
                      (function Type x -> Some x
                              | _      -> None)
-                     T.unknown
                      ?filter
 
 let cast_s ?filter = mkcast "subprogram"
                      (function Subprogram x -> Some x
                              | _            -> None)
-                     ([],None)
                      ?filter
 
 (**
@@ -426,8 +417,6 @@ module SymStack = struct
                                     | _      -> "<no name>"))
 
   let enter_context ?name ?desc ?(weakly=false) (s:t) =
-    if (not debug_dont_push) then
-      begin
           Npkcontext.print_debug (">>>>>>> enter_context ("
                                  ^(match name with
                                      | Some n -> n
@@ -456,20 +445,15 @@ module SymStack = struct
                               | Some u -> u
                           end
           in
-
           Stack.push context s.s_stack
-        end
 
     let exit_context s =
-      if not (debug_dont_push) then
-        begin
-          Npkcontext.print_debug "<<<<<<< exit_context ()";
-          Npkcontext.print_debug (print s);
+        Npkcontext.print_debug "<<<<<<< exit_context ()";
+        Npkcontext.print_debug (print s);
         if(Stack.length s.s_stack > 2) then
           ignore (Stack.pop s.s_stack)
         else
           Npkcontext.report_error "exit_context" "Stack too small"
-      end
 
   (**
    * Find some data in a stack.
@@ -500,8 +484,7 @@ module SymStack = struct
     done;
     if (Stack.length s <> 3) then
       begin
-        error "No current package";
-        []
+        error "No current package"
       end
     else
       begin
@@ -518,17 +501,12 @@ module SymStack = struct
   let s_find_abs_var s p n =
     match find_unit (library s.s_stack) p with 
       | Some tbl ->find_variable tbl n
-      | None     -> error ("No such package "^p^" when resolving a variable");
-                    T.unknown
-
+      | None     -> error ("No such package "^p^" when resolving a variable")
 
   let s_find_abs_type s p n =
     match find_unit (library s.s_stack) p with 
       | Some tbl ->find_type tbl n
-      | None     -> error ("No such package "^p^" when resolving a type");
-                    T.unknown
-
-
+      | None     -> error ("No such package "^p^" when resolving a type")
 
   (**
    * Find a variable in a symbol table stack.
@@ -553,8 +531,7 @@ module SymStack = struct
                         done;
                         match !res with
                         | None -> begin
-                                    error ("Cannot find variable '"^n^"'");
-                                    T.unknown
+                                    error ("Cannot find variable '"^n^"'")
                                   end
                         | Some v -> v
                       end
@@ -580,8 +557,7 @@ module SymStack = struct
                         done;
                         match !res with
                         | None -> begin
-                                    error ("Cannot find type "^n);
-                                    T.unknown
+                                    error ("Cannot find type "^n)
                                   end
                         | Some v -> v
                       end

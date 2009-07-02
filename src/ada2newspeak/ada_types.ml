@@ -220,6 +220,8 @@ let is_compatible one another =
     || (match (one.trait, another.trait) with
           | Signed  None   , Signed (Some _) -> true
           | Signed (Some _), Signed  None    -> true
+          | Float   100    , Float _         -> true
+          | Float     _    , Float 100       -> true
           | _ -> false)
 
 (*****************
