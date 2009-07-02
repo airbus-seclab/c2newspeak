@@ -1021,7 +1021,7 @@ in
             ident_list
       | BasicDecl(UseDecl(use_clause)) -> Symboltbl.remove_use (Sym.top gtbl)
                                                                 use_clause
-      | BasicDecl(NumberDecl(ident,_,_))->remove_cst (normalize_ident_cur ident)
+      | BasicDecl(NumberDecl(ident,_))->remove_cst (normalize_ident_cur ident)
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
       | BodyDecl _ -> ()
@@ -1166,7 +1166,7 @@ in
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
         in Some (Ast.TypeDecl(id,norm_typ_decl))
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
-    | NumberDecl(ident, exp, None) ->
+    | NumberDecl(ident, exp) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl gtbl extern in
             let t = match v with
@@ -1193,8 +1193,7 @@ in
                                                      (normalize_name o);
           None;
         end
-    | RepresentClause _
-    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
+    | RepresentClause _ -> failwith "NOTREACHED"
 
   and normalize_package_spec (name, list_decl) :Ast.package_spec =
     Sym.set_current gtbl name;

@@ -279,10 +279,10 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | UseDecl(use_clause) -> "UseDecl("^(use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("
       ^(spec_to_string spec)^")"
-  | NumberDecl(idents, exp, v) ->
+  | NumberDecl(idents, exp) ->
       "NumberDecl("^idents
       ^", "^(exp_to_string exp)
-      ^", "^(option_to_string v value_to_string)^")"
+      ^")"
   | SubtypDecl(ident, subtyp_ind) ->
       "SubtypDecl("^ident^", "
       ^(subtyp_indication_to_string subtyp_ind)^")"

@@ -26,7 +26,7 @@ module T = Ada_types
 
 (* debug control *)
 
-let debug_use_new = true
+let debug_use_new = false
 
 let error x =
   if (debug_use_new) then
