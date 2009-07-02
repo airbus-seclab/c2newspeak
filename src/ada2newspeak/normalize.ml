@@ -1252,11 +1252,27 @@ in
                                               normalize_block instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
-    | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-        Sym.s_add_variable gtbl iter T.integer;
-         Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
-                         normalize_exp exp2, is_rev),
-                         normalize_block instrs), loc)
+    | Loop(For(iter, exp1, exp2, is_rev), block) -> normalize_instr (
+      Block ( [BasicDecl (ObjectDecl ( [iter]
+                                     , ( SubtypName (None,"integer")
+                                       , None
+                                       , None
+                                       , T.integer
+                                       )
+                                     , (if is_rev then Some exp2 else Some exp1)
+                                     , Variable
+                                     )
+                          )
+              , loc]
+            , [Loop( While( if is_rev then Binary(Ge,Var (None,iter),exp1)
+                                      else Binary(Le,Var (None,iter),exp2))
+                  , block@[Assign ( Lval (None, iter)
+                                  , Binary ( (if is_rev then Minus else Plus)
+                                           , Var (None,iter)
+                                           , CInt (Nat.one))
+                                  ), loc]
+            ), loc]
+    ), loc)
     | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) -> Some (Ast.ProcedureCall(normalize_name nom
                                          ,List.map normalize_arg params), loc)

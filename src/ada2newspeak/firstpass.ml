@@ -1477,37 +1477,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                translate_block
                  ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
                    loc)::r)
-           | Ast.Loop(For(iterator,a,b,is_reverse), body) ->
-                add_var loc (A.Constrained(A.Integer,
-                                         Ada_config.integer_constraint,
-                                         true,T.integer))
-                            iterator
-                            ~deref:false
-                            ~ro:false; (* should be RO, actually *)
-                let it = ident_to_name iterator in
-                let _bool = T.boolean in
-                let _uint = T.universal_integer in
-                let _it   = (Var it,_uint) in
-                let _one  = (CInt (Newspeak.Nat.of_int 1),_uint) in
-                let res = if (not is_reverse) then begin
- (* int i = a;        *) (translate_affect (Lval it) a loc)
- (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (i>b) break; *)    (((If((Binary(Gt,_it,b),_bool),[Exit,loc],[]),loc)
- (*   ...             *)     ::(body))
- (*   i++             *)      @[Assign(Lval it, (Binary (Plus,_it,
- (*                   *)                _one),_uint)),loc]
- (* }                 *)   )),loc])
-                    end else begin
- (* int i = b;        *) (translate_affect (Lval it) b loc)
- (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (a>i) break; *)    (((If((Binary(Gt,a,_it),_bool),[Exit,loc],[]),loc)
- (*   ...             *)     ::(body))
- (*   i--             *)      @[Assign(Lval it, (Binary (Minus, _it,
- (*                   *)                _one),_uint)),loc]
- (* }                 *)   )),loc])
-                    end
-                in remove_symb iterator;
-                (C.Decl (C.int_typ,iterator),loc)::res@(translate_block r)
            | Ast.ProcedureCall (name, args) -> begin
                let array_or_fun  = find_fun_symb name in
                  match array_or_fun with

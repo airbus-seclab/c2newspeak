@@ -76,10 +76,6 @@ and lval =
 and iteration_scheme =
   | NoScheme
   | While of expression
-  | For   of string
-           * expression
-           * expression
-           * bool
 
 and argument = string option*expression
 
