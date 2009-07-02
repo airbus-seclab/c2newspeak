@@ -42,13 +42,6 @@ let cnt_lbl = 1
 let brk_lbl = 2
 let default_lbl = 3
 
-(* types *)
-(* TODO: not minimal, think about it *)
-type symb =
-  | GlobalSymb of string 
-  | LocalSymb of C.lv 
-  | CompSymb of ((string * (int * typ)) list * int * int)
-
 (* functions *)
 let find_field f r =
   try List.assoc f r 
@@ -81,12 +74,6 @@ let translate (globals, fundecls, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
     
-(* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
-   but first needs to put the whole typing phase before firstpass
-*)
-(* TODO: remove everything related to symbtbl in this module!! *)
-(* TODO: remove this table!! *)
-  let symbtbl = Symbtbl.create () in
 (* TODO: used_globals and one pass could be removed, if cir had a structure
    type with only the name and a hashtbl of structure names to type!!!, 
    should be done!*)
@@ -108,15 +95,7 @@ let translate (globals, fundecls, spec) =
     !lbl_cnt
   in
 
-  let add_var (t, x) = Symbtbl.bind symbtbl x (LocalSymb (C.Local x), t) in
-
-  let update_var_typ x t =
-    Symbtbl.update symbtbl x (LocalSymb (C.Local x), t)
-  in
-
-  let add_formals (args_t, ret_t) =
-    add_var (ret_t, ret_name);
-    List.iter add_var args_t;
+  let add_formals (args_t, _) =
     let args_id = List.map snd args_t in
       (ret_name, args_id)
   in
@@ -621,11 +600,10 @@ let translate (globals, fundecls, spec) =
 
   and gen_tmp loc t =
     let x = "tmp"^(string_of_int !tmp_cnt) in
-      add_var (t, x);
-      let t = translate_typ t in
-      let decl = (C.Decl (t, x), loc) in
-	incr tmp_cnt;
-	(x, decl, C.Local x)
+    let t = translate_typ t in
+    let decl = (C.Decl (t, x), loc) in
+      incr tmp_cnt;
+      (x, decl, C.Local x)
 
   and translate_field (x, (o, t)) = (x, (o, translate_typ t))
 
@@ -772,22 +750,20 @@ let translate (globals, fundecls, spec) =
 	  []
       | VDecl (t, _, _, init) ->
 (* TODO: see if more can be factored with translate_global_decl *) 
-	  add_var (t, x);
 	  let (init, t) = 
 	    match init with
 		None -> ([], t)
 	      | Some init -> translate_init t init
 	  in
-	    update_var_typ x t;
-	    let v = C.Local x in
-	    let build_set (o, t, e) =
-	      let lv = C.Shift (v, C.exp_of_int o) in
-		(C.Set (lv, t, e), loc)
-	    in
-	    let init = List.map build_set init in
-	    let decl = (C.Decl (translate_typ t, x), loc) in
-	      decl::init
-		
+	  let v = C.Local x in
+	  let build_set (o, t, e) =
+	    let lv = C.Shift (v, C.exp_of_int o) in
+	      (C.Set (lv, t, e), loc)
+	  in
+	  let init = List.map build_set init in
+	  let decl = (C.Decl (translate_typ t, x), loc) in
+	    decl::init
+	      
   (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
    a translate_blk blk -> blk
@@ -1150,13 +1126,13 @@ let translate (globals, fundecls, spec) =
 	    Npkcontext.report_error "Firstpass.translate_global" 
 	      "unreachable code"
     in
-      let formalids = add_formals ft in
-      let body = translate_blk body in
-      let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
-	add_fundef f formalids body (translate_ftyp ft);
-	current_fun := "";
-	Hashtbl.clear lbl_tbl;
-	lbl_cnt := default_lbl
+    let formalids = add_formals ft in
+    let body = translate_blk body in
+    let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
+      add_fundef f formalids body (translate_ftyp ft);
+      current_fun := "";
+      Hashtbl.clear lbl_tbl;
+      lbl_cnt := default_lbl
   in
     
 (* TODO: a tad hacky!! Think about it *)
