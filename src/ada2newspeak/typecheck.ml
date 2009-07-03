@@ -26,7 +26,7 @@ open Ast
 
 module T = Ada_types
 
-let tc_verb = Ada_utils.Debug
+let tc_verb = Ada_utils.Error
 
 let error = Ada_utils.mkerror tc_verb "Typecheck"
 
@@ -67,14 +67,16 @@ let type_of_binop op t1 t2 = match op with
                            "Binary adding operator is not defined -- 4.5.3.(1)"
                     ;
                     t1
-  | Mult | Div
+  | Mult | Div -> expect ~desc:"binary multiplying" t1 t2;
+                  t_assert (T.is_float t1 || T.is_integer t1)
+                    "Multiplying operator is not defined -- 4.5.5.(2)";
+                  t1
   | Rem  | Mod -> expect ~desc:"binary multiplying" t1 t2;
-                  (* and more cases : integer TIMES float, etc *)
-                  t_assert (T.is_integer t1) (* and is_specific *)
+                  t_assert (T.is_integer t1)
                     "Multiplying operator is not defined -- 4.5.5.(2)";
                   t1
   | Power -> expect t2 T.integer;
-             t_assert (T.is_integer t1) (* or float *)
+             t_assert (T.is_integer t1 || T.is_float t1)
                "Highest precedence operator \"**\" is not defined -- 4.5.6";
              t1
 

@@ -161,9 +161,10 @@ val std_float : t
  * Tests on types *
  ******************)
 
-val is_boolean             : t -> bool
-val is_scalar              : t -> bool
-val is_numeric             : t -> bool
-val is_integer             : t -> bool
-val is_discrete            : t -> bool
+val is_boolean  : t -> bool
+val is_scalar   : t -> bool
+val is_numeric  : t -> bool
+val is_integer  : t -> bool
+val is_discrete : t -> bool
+val is_float    : t -> bool
 

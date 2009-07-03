@@ -328,3 +328,10 @@ let is_scalar typ =
   | Enumeration _ -> true
   | Signed      _ -> true
 
+let is_float typ =
+  match typ.trait with
+  | Unknown       -> false
+  | Array       _ -> false
+  | Float       _ -> true
+  | Enumeration _ -> false
+  | Signed      _ -> false
