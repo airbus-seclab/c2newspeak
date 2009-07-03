@@ -65,7 +65,7 @@ and typ =
     | Comp of (string * bool)
     | Fun of ftyp
     | Va_arg
-    | Typeof of string
+    | Typeof of exp
 
 and init = 
     | Data of exp

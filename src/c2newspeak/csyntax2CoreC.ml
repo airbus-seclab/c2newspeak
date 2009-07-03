@@ -430,8 +430,8 @@ let process (globals, specs) =
       | Comp (x, _) -> C.Comp (find_compdef x)
       | Fun ft -> C.Fun (translate_ftyp ft)
       | Va_arg -> C.Va_arg
-      | Typeof x -> 
-	  let (_, t) = find_var x in 
+      | Typeof e -> 
+	  let (_, t) = translate_lv e in 
 	    t
 
   and translate_ftyp (args_t, ret_t) =

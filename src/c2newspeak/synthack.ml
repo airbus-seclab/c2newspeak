@@ -120,7 +120,7 @@ let rec normalize_base_typ t =
 	end
       | Struct (n, _) -> B.Comp (n, true)
       | Union (n, _) -> B.Comp (n, false)
-      | Typeof v -> B.Typeof v
+      | Typeof v -> B.Typeof (B.Var v)
       | Enum _ -> B.Int C.int_kind
   in
     (sdecls, t)
