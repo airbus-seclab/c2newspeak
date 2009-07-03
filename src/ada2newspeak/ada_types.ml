@@ -83,7 +83,7 @@ and trait_t =
  * Pretty-printer *
  ******************)
 
-let print t =
+let rec print t =
   let p_hash t  = Printf.sprintf "%08x" (Hashtbl.hash t) in
   let p_parent = function
     | None -> "<root>"
@@ -103,9 +103,9 @@ let print t =
     | Signed  r -> "Signed " ^p_range r
     | Float   d -> "Float "  ^string_of_int d
     | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
-    | Array (c,i) -> "Array {{ component.hash = "
-                  ^p_hash c^"; indexes.hash = "
-                  ^String.concat "," (List.map p_hash i)
+    | Array (c,i) -> "Array {{ component = "
+                  ^print c^"; indexes = "
+                  ^String.concat "," (List.map print i)
                   ^"}}"
   in
    "{"
@@ -259,10 +259,10 @@ let character =
 let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
 | Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
-| Array _
-| Float _
-| Unknown
-| Signed None -> raise (Invalid_argument "Type with no size")
+| Array _     -> Npkcontext.report_error "length_of" "Type with no size (array)"
+| Float _     -> Npkcontext.report_error "length_of" "Type with no size (float)"
+| Unknown     -> Npkcontext.report_error "length_of" "Type with no size (unknown)"
+| Signed None -> Npkcontext.report_error "length_of" "Type with no size (unlimited)"
 
 let rec attr_get typ attr =
   match typ.trait, attr with
@@ -335,3 +335,6 @@ let is_float typ =
   | Float       _ -> true
   | Enumeration _ -> false
   | Signed      _ -> false
+
+let is_unknown typ =
+  typ.trait = Unknown

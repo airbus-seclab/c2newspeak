@@ -168,3 +168,4 @@ val is_integer  : t -> bool
 val is_discrete : t -> bool
 val is_float    : t -> bool
 
+val is_unknown  : t -> bool

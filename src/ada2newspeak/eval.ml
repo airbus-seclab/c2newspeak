@@ -68,7 +68,12 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.Var    v -> eval_static_const (Symboltbl.SymStack.normalize_name tbl v extern)
                                       expected_typ
     | Ast.FunctionCall _  -> raise NonStaticExpression
-    | Ast.Unary (op,exp)   -> eval_static_unop  op  exp  expected_typ
+    | Ast.Not (exp) -> begin
+                         match (eval_static_exp exp expected_typ) with
+                          | T.BoolVal(b), Boolean -> T.BoolVal(not b), Boolean
+                          | _ -> Npkcontext.report_error "eval_static_exp"
+                                               "Unexpected unary operator and argument"
+                       end
     | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
     | Ast.CondExp(cond,iftrue,iffalse) ->
         begin
@@ -135,47 +140,6 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
               T.FloatVal(a ** (float_of_int (Nat.to_int b))), typ
     | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"
-
-  (**
-   * Evaluate statically the "- E" expression.
-   *)
-  and eval_static_uminus (exp:Ast.expression) :T.data_t*typ =
-      match (eval_static_exp exp expected_typ) with
-        | T.IntVal i, t when (integer_class t) -> (T.IntVal(Nat.neg i), t)
-        | (T.FloatVal f , Float) -> (T.FloatVal(-.f), Float)
-        | _ -> Npkcontext.report_error "eval_static.uminus"
-                                   "invalid operator and argument"
-
-  (**
-   * Evaluate statically the "op E" expressions.
-   *)
-  and eval_static_unop (op:Ast.unary_op) (exp:Ast.expression)
-      (expected_typ:typ option) :T.data_t*typ =
-  match (op, expected_typ) with
-    | Ast.UPlus, Some t when integer_class t -> eval_static_exp exp expected_typ
-    | Ast.UPlus, Some Float                  -> eval_static_exp exp expected_typ
-    | Ast.UPlus, None ->
-                    let (tr_exp, typ) = eval_static_exp exp expected_typ in
-                    (match typ with
-                       | Float                  -> tr_exp, typ
-                       | t when integer_class t -> tr_exp, typ
-                       | _ -> Npkcontext.report_error "eval_static.unop"
-                             "Unexpected unary operator and argument"
-                    )
-
-    | Ast.UMinus, None
-    | Ast.UMinus, Some Float                  -> eval_static_uminus exp
-    | Ast.UMinus, Some t when integer_class t -> eval_static_uminus exp
-    | Ast.Not,    None
-    | Ast.Not,    Some Boolean ->
-            (match (eval_static_exp exp expected_typ) with
-               | T.BoolVal(b), Boolean -> T.BoolVal(not b), Boolean
-               | _ -> Npkcontext.report_error "eval_static_unop"
-                                    "Unexpected unary operator and argument"
-            )
-    | _ ->  Npkcontext.report_error
-        "eval_static.unop"
-          "Unexpected unary operator and argument"
 
   and eval_static_const (name:name) (expected_typ:typ option) :T.data_t*typ =
 

@@ -544,15 +544,6 @@ and normalize_subtyp subtyp =
       | SubtypName(name) ->
           fst (find_subtyp (normalize_name name))
 
-and array_bounds (typ:subtyp) :nat*nat=
-    match typ with
-    | Unconstrained(Declared(_,Array {array_index =
-                Constrained(_, IntegerRangeConstraint (a,b), _, _), None,_,_
-          },_,_)) -> (a,b)
-    | SubtypName _ -> array_bounds (normalize_subtyp typ)
-    | _  -> Npkcontext.report_error "ada_normalize.array_bounds"
-                                      "invalid argument"
-
 (**
  * Normalize an actual argument.
  * The identifier does not have to be normalized (it is just a plain string),
@@ -583,7 +574,7 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   | Xor    -> let (e1',t1) = normalize_exp e1 in
               let (e2',t2) = normalize_exp e2 in
               Ast.CondExp ((e1',t1)
-                          ,(Ast.Unary(Ast.Not,(e2',t2)),t2)
+                          ,(Ast.Not(e2',t2),t2)
                           ,(e2',t2)
                           )
               ,TC.type_of_xor t1 t2
@@ -626,16 +617,25 @@ and make_abs (exp,t) =
   Ast.CondExp(
               (Ast.Binary(Ast.Gt, x, zero),T.boolean)
              , x
-             ,(Ast.Unary(Ast.UMinus, x),t)
+             ,(Ast.Binary(Ast.Minus, zero, x),t)
              )
 
 and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
   let (ne,t) = normalize_exp exp in
   match uop with
      | Abs    -> make_abs (ne,TC.type_of_abs t),t
-     | UPlus  -> Ast.Unary(Ast.UPlus , (ne,t)), TC.type_of_unop Ast.UPlus  t
-     | UMinus -> Ast.Unary(Ast.UMinus, (ne,t)), TC.type_of_unop Ast.UMinus t
-     | Not    -> Ast.Unary(Ast.Not   , (ne,t)), TC.type_of_unop Ast.Not    t
+     | UMinus -> 
+         let zero = 
+           if (T.is_integer t) then
+             CInt (Nat.zero)
+           else if (T.is_float t) then
+             CFloat (0.0)
+           else Npkcontext.report_error "Normalize_uop"
+             "Unary minus is definied for integer and floating-point types"
+         in
+           normalize_exp (Binary(Minus,zero,exp))
+     | UPlus  -> (ne,TC.type_of_uplus t)
+     | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
 (**
  * Normalize an expression.
@@ -674,16 +674,14 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
       | Some top -> top
       in
       Ast.FunctionCall(nom, List.map normalize_arg params),t
-  | Attribute (subtype, AttributeDesignator(attr, _))->
+  | Attribute (st, AttributeDesignator(attr, _))->
       begin
-        let (a,b) = array_bounds subtype in
-        match attr with
-          | "first"  -> Ast.CInt a,T.universal_integer
-          | "last"   -> Ast.CInt b,T.universal_integer
-          | "length" -> Ast.CInt (b %- a %+ Nat.one),T.universal_integer
-          | _ -> Npkcontext.report_error "normalize:attr"
-                        ("No such attribute : '" ^ attr ^ "'")
-        end
+        let t = subtyp_to_adatyp st in
+        match T.attr_get t attr with
+        | (t,T.BoolVal  x) -> Ast.CBool x, t
+        | (t,T.IntVal   x) -> Ast.CInt x, t
+        | (t,T.FloatVal x) -> Ast.CFloat x, t
+      end
 
 (**
  * Normalize a constraint.
@@ -968,8 +966,10 @@ in
         let norm_inter =  normalize_subtyp_indication a.array_index
         and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
         let subtyp = extract_subtyp norm_inter in
-        let (_,_,_,tc) = a.array_component in
-        let (_,_,_,ti) = a.array_index     in
+        let (tpc,_,_,ttc) = a.array_component in
+        let (tpi,_,_,tti) = a.array_index     in
+        let tc = if ttc = T.unknown then subtyp_to_adatyp tpc else ttc in
+        let ti = if tti = T.unknown then subtyp_to_adatyp tpi else tti in
         let t = T.new_array tc [ti] in
         Sym.s_add_type gtbl ident t;
         let contrainte = match subtyp with

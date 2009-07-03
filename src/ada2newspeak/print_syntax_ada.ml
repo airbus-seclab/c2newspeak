@@ -134,8 +134,8 @@ and exp_to_string exp = match exp with
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
       ^(String.concat "," (List.map arg_to_string params))^")"
-  | Attribute (styp,des) ->
-              (subtyp_to_string styp)
+  | Attribute (n,des) ->
+              (subtyp_to_string n)
             ^ "'"
             ^ (designator_to_string des)
 

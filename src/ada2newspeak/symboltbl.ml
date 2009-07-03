@@ -213,7 +213,7 @@ let add_type ?(strongly=true) tbl n t =
       | (_  , true) -> raise Not_found
       end
   with Not_found -> begin
-                      Npkcontext.print_debug ("Adding type "^n);
+                      Npkcontext.print_debug ("Adding type "^n^" as "^T.print t);
                       IHashtbl.add tbl.t_tbl n (Type t,strongly)
                     end
 

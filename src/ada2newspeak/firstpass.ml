@@ -463,7 +463,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* fonctions pour la gestion des types *)
 
   let            check_typ = Ada_utils.check_typ
-  and        integer_class = Ada_utils.integer_class
   and known_compatible_typ = Ada_utils.known_compatible_typ in
 
   (* recherche d'un symbol de fonction : a revoir *)
@@ -850,48 +849,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | _ -> Npkcontext.report_error "Firstpass.translate_binop"
             "invalid operator and argument"
 
-  and translate_unop op (exp:Ast.expression) expected_typ =
-    match (op, expected_typ) with
-      | (UPlus, Some(A.Float)) -> translate_exp exp expected_typ
-      | (UPlus, Some t) when (integer_class t) -> translate_exp exp expected_typ
-
-      | (UPlus, None) ->
-          let (tr_exp, typ) = translate_exp exp expected_typ in
-            (match typ with
-              | A.Float -> (tr_exp, typ)
-              | t when (integer_class t) -> (tr_exp, typ)
-              | _ -> Npkcontext.report_error "Firstpass.translate_unop"
-                  "Unexpected unary operator and argument")
-
-      | (UMinus, None) ->
-          (* on doit determiner le type de l'operande *)
-          let (_, typ) = translate_exp exp expected_typ in
-            (match typ with
-               | A.Float ->
-                   translate_binop Minus
-                     (CFloat(0.0),T.std_float) exp expected_typ
-               | t when (integer_class t) ->
-                   translate_binop Minus (CInt Nat.zero,T.universal_integer) exp
-                     expected_typ
-               | _ -> Npkcontext.report_error "Firstpass.translate_unop"
-                   "Unexpected unary operator and argument")
-
-
-      | (UMinus, Some(t)) when (integer_class t) ->
-          translate_binop Minus (CInt(Nat.zero),T.universal_integer)
-                          exp expected_typ
-
-      | (UMinus, Some(A.Float)) ->
-          translate_binop Minus (CFloat(0.0),T.std_float)
-                          exp expected_typ
-
-      | (Not, None) | (Not, Some(A.Boolean)) ->
+  and translate_not (exp:Ast.expression) expected_typ =
+    match expected_typ with
+      | None
+      | Some(A.Boolean) ->
           let (exp, _) = translate_exp exp (Some(A.Boolean))
           in (C.Unop (K.Not, exp), A.Boolean)
-
-      | _ ->
-          Npkcontext.report_error "Firstpass.translate_unop"
-            "Unexpected unary operator and argument"
+      | _ -> Npkcontext.report_error "translate_not" "Unexpected type for not"
 
     (**
      * Compute the actual argument list for a subprogram call.
@@ -1319,8 +1283,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   check_typ expected_typ A.Character
     | CBool  b -> translate_int (Ada_utils.nat_of_bool b),
                   check_typ expected_typ A.Boolean
-    | Var     name            -> translate_var   name    expected_typ
-    | Unary(unop,exp)         -> translate_unop  unop  exp       expected_typ
+    | Var     name            -> translate_var  name expected_typ
+    | Not   (exp)             -> translate_not  exp  expected_typ
     | Binary(binop,exp1,exp2) -> translate_binop binop exp1 exp2 expected_typ
     | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3
     | Qualified(subtyp, exp) ->

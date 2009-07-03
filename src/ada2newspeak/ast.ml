@@ -29,11 +29,6 @@ type name =
   | Local  of string
   | Global of string list*string
 
-type unary_op =
-| UPlus
-| UMinus
-| Not
-
 type binary_op =
 | Plus
 | Minus
@@ -89,8 +84,7 @@ and exp_value =
   | Var          of Syntax_ada.name
   | FunctionCall of Syntax_ada.name
                   * argument list
-  | Unary        of unary_op
-                  * expression
+  | Not          of expression
   | Binary       of binary_op
                   * expression
                   * expression

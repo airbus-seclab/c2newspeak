@@ -112,9 +112,6 @@ and subtyp =
                                            means the subtype is static *)
   | SubtypName of name                 (** Subtype *)
 
-(** Attribute, eg Day'First *)
-and attribute_reference = subtyp * attribute_designator
-
 (** Attribute designators like "First", "Range" or "Digits" *)
 and attribute_designator =
  | AttributeDesignator of string * expression option
@@ -136,7 +133,7 @@ and expression =
                   * expression
   | Qualified    of subtyp
                   * expression
-  | Attribute    of attribute_reference
+  | Attribute    of subtyp * attribute_designator
 
 (** Constraint *)
 and contrainte =

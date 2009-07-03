@@ -31,6 +31,8 @@ let tc_verb = Ada_utils.Error
 let error = Ada_utils.mkerror tc_verb "Typecheck"
 
 let expect ?desc t1 t2 =
+  if (T.is_unknown t1 || T.is_unknown t2) then
+    error "Unknown type";
   if (not (   (t1 = t2)
            || (t1 = T.universal_integer && T.is_integer t2)
            || (t2 = T.universal_integer && T.is_integer t1)
@@ -80,14 +82,11 @@ let type_of_binop op t1 t2 = match op with
                "Highest precedence operator \"**\" is not defined -- 4.5.6";
              t1
 
-let type_of_unop op t = match op with
-  | UPlus | UMinus -> t_assert (T.is_numeric t)
-                        "Unary adding operator is not defined -- 4.5.4";
-                      t
-  | Not            -> t_assert (T.is_boolean t)
-                        "Unary adding operator \"not\" is not defined -- 4.5.6"
-                      ;
-                      t
+let type_of_not t =
+  t_assert (T.is_boolean t)
+    "Unary adding operator \"not\" is not defined -- 4.5.6"
+  ;
+  t
 
 let type_of_xor t1 t2 =
   t_assert (T.is_boolean t1 && T.is_boolean t2)
@@ -98,4 +97,9 @@ let type_of_xor t1 t2 =
 let type_of_abs t =
   t_assert (T.is_numeric t)
     "Highest precedence operator 'abs' is not defined -- 4.5.6";
+  t
+
+let type_of_uplus t = 
+  t_assert (T.is_numeric t)
+    "Unary '+' is not defined -- 4.5.4";
   t
