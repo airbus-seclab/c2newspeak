@@ -54,7 +54,7 @@ let subtyp_to_adatyp st =
   | Unconstrained typ      -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (_,_,_,t) -> t
   | SubtypName  n          -> try
-                                Sym.s_find_type gtbl (snd n)
+                                Sym.s_find_type gtbl ?package:(fst n) (snd n)
                               with Not_found ->
                                 begin
                                   Npkcontext.report_warning "ST2AT"
@@ -88,7 +88,7 @@ let find_body_for_spec ~(specification:Ast.basic_declaration)
 let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
   | Ast.TypeDecl   (i,_)
-  | Ast.NumberDecl (i,_,_)
+  | Ast.NumberDecl (i,_)
   | Ast.SubtypDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
@@ -363,7 +363,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     List.flatten
       (List.map
          (fun pack -> types#find_all (Some pack, ident))
-         (Symboltbl.get_use (Sym.top gtbl)))
+         (Sym.s_get_use gtbl))
   in
 
   let add_enum_litt symbs typ global extern =
@@ -876,7 +876,11 @@ in
         add_typ id typ_decl loc global extern;
         typ_decl
     | DerivedType(subtyp_ind) ->
-        let (_,_,_,t) = subtyp_ind in
+        let t =
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
         let new_t = T.new_derived t in
           Sym.s_add_type gtbl ident new_t;
         let update_contrainte contrainte symbs new_assoc =
@@ -989,6 +993,7 @@ in
     | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
                           "internal error : size of array already provided"
     | Record r -> begin
+                    Sym.s_add_type gtbl ident (T.unknown);
                     let norm_fields = 
                       List.map (fun (id, st) -> (id, normalize_subtyp st)) r
                     in
@@ -1021,7 +1026,7 @@ in
             ident_list
       | BasicDecl(UseDecl(use_clause)) -> Symboltbl.remove_use (Sym.top gtbl)
                                                                 use_clause
-      | BasicDecl(NumberDecl(ident,_,_))->remove_cst (normalize_ident_cur ident)
+      | BasicDecl(NumberDecl(ident,_))->remove_cst (normalize_ident_cur ident)
       | BasicDecl(RepresentClause _)
       | BasicDecl(SpecDecl _)
       | BodyDecl _ -> ()
@@ -1044,7 +1049,8 @@ in
 
   let normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
-      Sym.enter_context ~desc:"SP body (parameters)" gtbl;
+      if addparam then
+        Sym.enter_context ~desc:"SP body (parameters)" gtbl;
       List.map
         (fun param ->
            if func && (param.mode <> In)
@@ -1117,8 +1123,12 @@ in
              ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
-        let (_,_,_,t) = subtyp_ind in
-        let normexp = normalize_exp exp in
+        let t =
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
+        let normexp = normalize_exp ~expected_type:t exp in
         (* constantes *)
         let norm_subtyp_ind =
           normalize_subtyp_indication subtyp_ind in
@@ -1165,7 +1175,7 @@ in
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
         in Some (Ast.TypeDecl(id,norm_typ_decl))
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
-    | NumberDecl(ident, exp, None) ->
+    | NumberDecl(ident, exp) ->
         let norm_exp = normalize_exp exp in
         let v = eval_static_number norm_exp csttbl gtbl extern in
             let t = match v with
@@ -1176,10 +1186,14 @@ in
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;
-          Some (Ast.NumberDecl(ident, norm_exp, Some v))
+          Some (Ast.NumberDecl(ident, v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
-        let (_,_,_,t) = subtyp_ind in
+        let t =
+          let (tp,_,_,st) = subtyp_ind in
+          if st = T.unknown then subtyp_to_adatyp tp
+          else st
+        in
           Sym.s_add_type gtbl ident t;
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
@@ -1192,8 +1206,7 @@ in
                                                      (normalize_name o);
           None;
         end
-    | RepresentClause _
-    | NumberDecl(_, _, Some _) -> failwith "NOTREACHED"
+    | RepresentClause _ -> failwith "NOTREACHED"
 
   and normalize_package_spec (name, list_decl) :Ast.package_spec =
     Sym.set_current gtbl name;
@@ -1252,11 +1265,27 @@ in
                                               normalize_block instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
-    | Loop(For(iter, exp1, exp2, is_rev), instrs) ->
-        Sym.s_add_variable gtbl iter T.integer;
-         Some (Ast.Loop(Ast.For(iter, normalize_exp exp1,
-                         normalize_exp exp2, is_rev),
-                         normalize_block instrs), loc)
+    | Loop(For(iter, exp1, exp2, is_rev), block) -> normalize_instr (
+      Block ( [BasicDecl (ObjectDecl ( [iter]
+                                     , ( SubtypName (None,"integer")
+                                       , None
+                                       , None
+                                       , T.integer
+                                       )
+                                     , (if is_rev then Some exp2 else Some exp1)
+                                     , Variable
+                                     )
+                          )
+              , loc]
+            , [Loop( While( if is_rev then Binary(Ge,Var (None,iter),exp1)
+                                      else Binary(Le,Var (None,iter),exp2))
+                  , block@[Assign ( Lval (None, iter)
+                                  , Binary ( (if is_rev then Minus else Plus)
+                                           , Var (None,iter)
+                                           , CInt (Nat.one))
+                                  ), loc]
+            ), loc]
+    ), loc)
     | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) -> Some (Ast.ProcedureCall(normalize_name nom
                                          ,List.map normalize_arg params), loc)
@@ -1270,9 +1299,10 @@ in
                     ),loc)
     | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
                         let ndp = normalize_decl_part dp ~global:false in
+                        let norm_block = normalize_block blk in
                         remove_decl_part dp;
                         Sym.exit_context gtbl;
-                        Some (Ast.Block (ndp, normalize_block blk), loc)
+                        Some (Ast.Block (ndp, norm_block), loc)
 
   and normalize_block block =
     List_utils.filter_map normalize_instr block
@@ -1386,15 +1416,11 @@ in
                    (StaticConst(v, typ, true)) true)
                 ident_list
 
-        | Ast.NumberDecl(ident, _, Some v) ->
+        | Ast.NumberDecl(ident, v) ->
             Sym.s_add_variable gtbl ident T.universal_integer;
             add_cst (normalize_ident_cur_ext ident true)
                     (Number(v, true))
                     true
-        | Ast.NumberDecl(_, _, None) ->
-            Npkcontext.report_error
-              "Ada_normalize.add_extern_spec.add_extern_basic_decl"
-              "internal error : external number declaration without value"
         | Ast.SpecDecl(Ast.SubProgramSpec
                      (Ast.Function(name, [], return_typ))) ->
             add_function name (Some(base_typ return_typ)) true
@@ -1415,7 +1441,7 @@ in
           add_function name None true
       | Ast.PackageSpec(name, basic_decls) ->
           Sym.set_current gtbl name;
-          Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
+          Sym.enter_context ~name ~desc:"Package spec (extern)" ~weakly:true gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Sym.reset_current gtbl;
           Sym.exit_context gtbl;

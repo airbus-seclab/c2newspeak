@@ -359,7 +359,7 @@ number_decl :
            * As the expression must be static, we can safely copy it :
            * multiple evaluations will yield the same result.
            *)
-          List.map (fun x ->NumberDecl(x, $5, None),$2) $1
+          List.map (fun x ->NumberDecl(x, $5),$2) $1
         }
 ;
 

@@ -30,12 +30,6 @@
 (** The type for symbol tables.  *)
 type table
 
-(** Create a new symbol table.  *)
-val create_table  : ?desc:string -> unit -> table
-
-(** Add a type symbol to a table. *)
-val add_type      : table -> string -> Ada_types.t -> unit
-
 (** Add a subprogram symbol to a table. *)
 val add_subprogram : table
                   -> string
@@ -163,14 +157,6 @@ module SymStack : sig
    * Return the "top" of the stack, reflecting the innermost context.
    *)
   val top : t -> table
-
-  (**
-   * Create a new compilation unit :
-   *   - discard every context until library level
-   *   - create a new package-level context
-   *   - push it onto the current stack
-   *)
-  val new_unit : t -> string -> unit
 
   (**
    * Create a new context and enter into it.

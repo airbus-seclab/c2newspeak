@@ -86,14 +86,6 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
           check_static_subtyp subtyp value;
           (value, typ)
 
-    | Ast.Attribute  (_(*name*), AttributeDesignator (id, _(*param*))) ->
-          match id with
-          | "first" | "last" | "length" ->
-                      Npkcontext.report_error "eval_static.exp"
-                                      "First, last, length not implemented"
-          | _ ->      Npkcontext.report_error "eval_static.exp"
-                                          ("unknown attribute " ^ id)
-
   (**
    * Evaluate statically a binary expression.
    * expected_typ is the expected type of the result, not the operands.

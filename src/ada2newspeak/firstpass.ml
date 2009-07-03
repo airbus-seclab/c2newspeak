@@ -1371,9 +1371,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   in
 
                   let bk_typ = destroy subtyp in
-
                   let dim = List.length arg_list in
-
                     if (List.length bk_typ < dim)
                     then Npkcontext.report_error "firstpass.ml:Function Call"
                       "more elts than dimensions";
@@ -1381,20 +1379,16 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                     if (dim = 0) then
                       Npkcontext.report_error "firstpass.ml:Function Call"
                       "no element for shifting";
-
                     let types = List.map (
                       fun x -> Some (subtyp_to_typ (fst x))
                     ) bk_typ in
 
                     let dim_types = Array.to_list (
                       Array.sub  (Array.of_list types) 0 dim) in
-
                     let tr_arg_list =
                       List.map2 (fun x y ->
-                                   fst (translate_exp x y)) arg_list dim_types
+                        fst (translate_exp x y)) arg_list dim_types
                     in
-
-                      (*                     translate_exp exp expected_typ*)
                       match (rebuild lv bk_typ tr_arg_list) with
                           (C.Lval (a, tpelt), adatyp) ->
                             (C.Lval (a, tpelt),  adatyp)
@@ -1404,11 +1398,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               | _ -> Npkcontext.report_error "Firstpass.translate_exp"
                   "FunctionCall case but unexpected result"
           end
-
-    | Attribute _->
-        Npkcontext.report_error
-          "Firstpass.translate_exp"
-          "Last, first or Length remaining in firstpass, non static "
 
   (**
    * Make a C assignment.
@@ -1477,37 +1466,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                translate_block
                  ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
                    loc)::r)
-           | Ast.Loop(For(iterator,a,b,is_reverse), body) ->
-                add_var loc (A.Constrained(A.Integer,
-                                         Ada_config.integer_constraint,
-                                         true,T.integer))
-                            iterator
-                            ~deref:false
-                            ~ro:false; (* should be RO, actually *)
-                let it = ident_to_name iterator in
-                let _bool = T.boolean in
-                let _uint = T.universal_integer in
-                let _it   = (Var it,_uint) in
-                let _one  = (CInt (Newspeak.Nat.of_int 1),_uint) in
-                let res = if (not is_reverse) then begin
- (* int i = a;        *) (translate_affect (Lval it) a loc)
- (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (i>b) break; *)    (((If((Binary(Gt,_it,b),_bool),[Exit,loc],[]),loc)
- (*   ...             *)     ::(body))
- (*   i++             *)      @[Assign(Lval it, (Binary (Plus,_it,
- (*                   *)                _one),_uint)),loc]
- (* }                 *)   )),loc])
-                    end else begin
- (* int i = b;        *) (translate_affect (Lval it) b loc)
- (* while(1) {        *) ::(translate_block [Loop (NoScheme,
- (*   if (a>i) break; *)    (((If((Binary(Gt,a,_it),_bool),[Exit,loc],[]),loc)
- (*   ...             *)     ::(body))
- (*   i--             *)      @[Assign(Lval it, (Binary (Minus, _it,
- (*                   *)                _one),_uint)),loc]
- (* }                 *)   )),loc])
-                    end
-                in remove_symb iterator;
-                (C.Decl (C.int_typ,iterator),loc)::res@(translate_block r)
            | Ast.ProcedureCall (name, args) -> begin
                let array_or_fun  = find_fun_symb name in
                  match array_or_fun with
@@ -1722,13 +1680,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
         ([],[])
 
-    | NumberDecl(ident, _, Some v) ->
+    | NumberDecl(ident, v) ->
         add_number loc v false ident;
         ([],[])
-    | NumberDecl _ ->
-        Npkcontext.report_error
-          "Firstpass.translate_basic_declaration"
-          "internal error : number declaration whitout value"
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1754,7 +1708,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
     | UseDecl x -> Symboltbl.remove_use (Sym.top gtbl) x
-    | NumberDecl(ident, _, _) -> remove_symb ident
+    | NumberDecl(ident, _) -> remove_symb ident
     | TypeDecl _
     | SubtypDecl _ -> ()
 
@@ -1830,12 +1784,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | SubtypDecl _ -> ()
       | UseDecl x -> Symboltbl.add_use (Sym.top gtbl) x
       | SpecDecl(spec) -> translate_spec spec loc false
-      | NumberDecl(ident, _, Some v) ->
+      | NumberDecl(ident, v) ->
            add_number loc v true ident
-      | NumberDecl(_) ->
-          Npkcontext.report_error
-            "Firstpass.translate_global_basic_declaration"
-            "internal error : number declaration without value"
 
   (* quand cette fonction est appelee, on est dans le corps d'un
      package *)

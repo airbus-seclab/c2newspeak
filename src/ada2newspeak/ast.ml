@@ -76,10 +76,6 @@ and lval =
 and iteration_scheme =
   | NoScheme
   | While of expression
-  | For   of string
-           * expression
-           * expression
-           * bool
 
 and argument = string option*expression
 
@@ -103,7 +99,6 @@ and exp_value =
                   * expression
   | Qualified    of Syntax_ada.subtyp
                   * expression
-  | Attribute    of Syntax_ada.attribute_reference
 
 and  declarative_part = (declarative_item*Newspeak.location) list
 
@@ -135,8 +130,7 @@ and basic_declaration =
   | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string
-                     * expression
-                     * Ada_types.data_t option
+                     * Ada_types.data_t
   | SubtypDecl      of string
                      * Syntax_ada.subtyp_indication
 

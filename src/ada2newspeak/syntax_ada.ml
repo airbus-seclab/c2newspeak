@@ -259,7 +259,6 @@ and basic_declaration =
   | SpecDecl        of spec
   | NumberDecl      of string
                      * expression
-                     * Ada_types.data_t option
   | SubtypDecl      of string
                      * subtyp_indication
   | RepresentClause of representation_clause
