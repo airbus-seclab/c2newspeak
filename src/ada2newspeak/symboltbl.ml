@@ -34,12 +34,11 @@ object
     method get_use    :string list
     method is_extern :bool
     method as_extern_do :(unit->unit)->unit
-    method add_renaming_decl : Syntax_ada.name -> Syntax_ada.name -> unit
-end = object (self)
+end = object
       val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
       val mutable     extflag:bool                    = false
-      val mutable    renaming:( Syntax_ada.name
-                              * Syntax_ada.name) list = []
+      val mutable    renaming:( string
+                              * string) list = []
 
       method add_use p =
         let old_count = try Hashtbl.find context p with Not_found -> 0 in
@@ -63,34 +62,6 @@ end = object (self)
         f ();
         extflag <- false
 
-      (**
-       * Algorithm for add_rd (A,B)  (A -> B)
-       *
-       * If A = B, detect circular dependency.
-       * If B is already a pointer to some C, we have something like
-       *      A -> B -> C
-       * So its equivalent to call (A -> C).
-       *
-       * Note that in the particular case where C = A (cycle), the recursive
-       * call is (A -> A) and the circular dependency will be detected.
-       *)
-      method add_renaming_decl new_name old_name =
-        Npkcontext.print_debug ("add_rd "
-                               ^Ada_utils.name_to_string new_name
-                               ^" --> "
-                               ^Ada_utils.name_to_string old_name
-        );
-        if (new_name=old_name) then
-          Npkcontext.report_error "add_renaming_decl"
-                        ("Circular declaration detected for '"
-                        ^Ada_utils.name_to_string new_name^"'.")
-        else begin
-          try
-            let pointee = List.assoc new_name renaming in
-            self#add_renaming_decl new_name pointee
-          with Not_found ->
-            renaming <- (new_name,old_name)::renaming
-        end
   end
 
 (**
@@ -147,7 +118,7 @@ type symbol =
  * Ex : a xxx_spec will yield weak symbols than may be redefined.
  *)
 
-and table = { mutable renaming : (string*string) list
+and table = { mutable renaming : (string*Syntax_ada.name) list
             ; t_tbl            : (symbol*bool) IHashtbl.t
             ; pkgmgr           : package_manager
             ; t_desc           : string option
@@ -303,8 +274,7 @@ let cast_s ?filter = mkcast "subprogram"
  * Find matching symbols in a table.
  *)
 let rec find_symbols t id =
-  try find_symbols t (List.assoc id t.renaming)
-  with Not_found -> fst (List.split (IHashtbl.find_all t.t_tbl id))
+  fst (List.split (IHashtbl.find_all t.t_tbl id))
 
 let find_type tbl n =
   cast_t (find_symbols tbl n)
@@ -340,7 +310,6 @@ let remove_use        t = t.pkgmgr#remove_use
 let get_use           t = t.pkgmgr#get_use
 let is_extern         t = t.pkgmgr#is_extern
 let as_extern_do      t = t.pkgmgr#as_extern_do
-let add_renaming_decl t = t.pkgmgr#add_renaming_decl
 
 let _ =
   List.iter (fun (n,t) -> add_type builtin_table n t)
@@ -401,9 +370,34 @@ module SymStack = struct
     | None   ->    !ctx
     | Some p -> p::!ctx
 
-  let normalize_name s (name:Syntax_ada.name) extern =
-    try None,List.assoc (snd name) (top s).renaming with
-    Not_found ->
+  (**
+   * Find some data in a stack.
+   * Applies f to every table of s, from top to bottom.
+   * The first x such as f t = Some x is returned.
+   * If forall t in s, f t = None, Not_found is raised.
+   *)
+  let find_rec s f =
+    let s = Stack.copy s in
+    let r = ref None in
+    try
+      while (!r = None) do
+        let t = Stack.pop s in
+        r := f t
+      done;
+      match !r with
+      | None   -> failwith "find" (* unreachable *)
+      | Some x -> x
+    with Stack.Empty -> raise Not_found
+
+
+
+  let rec normalize_name s (name:Syntax_ada.name) extern =
+    try 
+      find_rec s.s_stack (fun t ->
+        try Some (List.assoc (snd name) t.renaming)
+        with Not_found -> None
+      )
+    with Not_found -> 
     if (not extern) then name
     else let (parents,ident) = name in
          let pack = current s in
@@ -415,6 +409,36 @@ module SymStack = struct
              ("unknown package "^(match parents with
                                     | Some x -> x
                                     | _      -> "<no name>"))
+
+  (**
+   * Algorithm for add_rd (A,B)  (A -> B)
+   *
+   * If A = B, detect circular dependency.
+   * If B is already a pointer to some C, we have something like
+   *      A -> B -> C
+   * So its equivalent to call (A -> C).
+   *
+   * Note that in the particular case where C = A (cycle), the recursive
+   * call is (A -> A) and the circular dependency will be detected.
+   *)
+  let rec add_renaming_decl s new_name old_name =
+    Npkcontext.print_debug ("add_rd "
+                           ^new_name
+                           ^" --> "
+                           ^Ada_utils.name_to_string old_name
+    );
+    if ((None,new_name) = old_name) then
+      Npkcontext.report_error "add_renaming_decl"
+                    ("Circular declaration detected for '"
+                    ^new_name^"'.")
+    else begin
+      try
+        let pointee = List.assoc new_name (top s).renaming in
+        add_renaming_decl s new_name pointee
+      with Not_found ->
+        (top s).renaming <- (new_name,old_name)::(top s).renaming
+    end
+
 
   let enter_context ?name ?desc ?(weakly=false) (s:t) =
           Npkcontext.print_debug (">>>>>>> enter_context ("
@@ -455,24 +479,6 @@ module SymStack = struct
         else
           Npkcontext.report_error "exit_context" "Stack too small"
 
-  (**
-   * Find some data in a stack.
-   * Applies f to every table of s, from top to bottom.
-   * The first x such as f t = Some x is returned.
-   * If forall t in s, f t = None, Not_found is raised.
-   *)
-  let find_rec s f =
-    let s = Stack.copy s in
-    let r = ref None in
-    try
-      while (!r = None) do
-        let t = Stack.pop s in
-        r := f t
-      done;
-      match !r with
-      | None   -> failwith "find" (* unreachable *)
-      | Some x -> x
-    with Stack.Empty -> raise Not_found
 
   (**
    * Find something in the current package.

@@ -290,7 +290,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       "RepresentClause("
       ^(representation_clause_to_string clause)^")"
   | RenamingDecl(n,n') ->  "Renaming : "
-                          ^name_to_string n
+                          ^n
                           ^" renames "
                           ^name_to_string n'
 

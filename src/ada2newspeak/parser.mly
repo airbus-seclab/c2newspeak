@@ -405,14 +405,14 @@ basic_declaration :
 | representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
 | subprogram_spec RENAMES name SEMICOLON
         { match (fst $1) with
-        | Function  (n,_,_) -> RenamingDecl ((None,n), fst $3),$2
-        | Procedure (n,_)   -> RenamingDecl ((None,n), fst $3),$2
+        | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
+        | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
         }
               | ident_list COLON subtyp_indication RENAMES name SEMICOLON {
                 if (List.length $1 <> 1) then
                   Npkcontext.report_error "Parser"
                     "Only one identifier is allowed before \"renames\"";
-                RenamingDecl((None,List.hd $1),fst $5),$2 }
+                RenamingDecl((List.hd $1),fst $5),$2 }
 ;
 
 record_type_definition:

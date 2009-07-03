@@ -262,8 +262,8 @@ and basic_declaration =
   | SubtypDecl      of string
                      * subtyp_indication
   | RepresentClause of representation_clause
-  | RenamingDecl    of name (* new name *)
-                     * name (* old name *)
+  | RenamingDecl    of string (* new name *)
+                     * name   (* old name *)
 
 and declarative_item =
   | BasicDecl of basic_declaration

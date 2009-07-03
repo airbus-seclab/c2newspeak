@@ -97,8 +97,7 @@ val get_use           : table -> string list
 (** Returns the "extern" flag for this manager. *)
 val is_extern         : table -> bool
 (** Perform an action with the "extern" flag. *)
-val as_extern_do      : table -> (unit->unit)->unit
-val add_renaming_decl : table -> Syntax_ada.name -> Syntax_ada.name -> unit
+val as_extern_do      : table -> (unit -> unit) ->unit
 
 (**
  * Context stack.
@@ -219,4 +218,6 @@ module SymStack : sig
   (** Is a package in the "with" list ? *)
   val is_with           : t -> string -> bool
   val s_get_use         : t -> string list
+
+  val add_renaming_decl : t -> string -> Syntax_ada.name -> unit
 end
