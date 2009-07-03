@@ -29,40 +29,26 @@ let error x =
 
 class package_manager :
 object
-    method add_use    :string -> unit
-    method remove_use :string -> unit
-    method get_use    :string list
-    method is_extern :bool
-    method as_extern_do :(unit->unit)->unit
+  method add_use    :string -> unit
+  method remove_use :string -> unit
+  method get_use    :string list
 end = object
-      val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
-      val mutable     extflag:bool                    = false
-      val mutable    renaming:( string
-                              * string) list = []
+  val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
 
-      method add_use p =
-        let old_count = try Hashtbl.find context p with Not_found -> 0 in
-        Hashtbl.replace context p (old_count + 1)
+  method add_use p =
+    let old_count = try Hashtbl.find context p with Not_found -> 0 in
+    Hashtbl.replace context p (old_count + 1)
 
-      method remove_use p =
-        try
-          let old_count = Hashtbl.find context p in
-          if old_count = 1 then Hashtbl.remove context p
-          else Hashtbl.replace context p (old_count - 1)
-        with Not_found -> ()
+  method remove_use p =
+    try
+      let old_count = Hashtbl.find context p in
+      if old_count = 1 then Hashtbl.remove context p
+      else Hashtbl.replace context p (old_count - 1)
+    with Not_found -> ()
 
-      method get_use =
-        Hashtbl.fold (fun pkg _ res -> pkg::res) context []
-
-      method is_extern =
-        extflag
-
-      method as_extern_do (f:unit->unit) =
-        extflag <- true;
-        f ();
-        extflag <- false
-
-  end
+  method get_use =
+    Hashtbl.fold (fun pkg _ res -> pkg::res) context []
+end
 
 (**
  * The [string] type with primitives to
@@ -72,19 +58,11 @@ module CaseInsensitiveString =
   struct
     type t = string
 
-    let equal_s s1 s2 =
+    let equal s1 s2 =
       String.compare (String.lowercase s1) (String.lowercase s2) = 0
 
-    let equal i1 i2 =
-      equal_s i1 i2
-
-    let hash_s s =
+    let hash s =
       Hashtbl.hash (String.lowercase s)
-
-    let hash i =
-      hash_s i
-
-    let to_string x = x
   end
 
 (** A hash table insensitive to keys' case.  *)
@@ -308,8 +286,6 @@ let builtin_type x = find_type builtin_table x
 let add_use           t = t.pkgmgr#add_use
 let remove_use        t = t.pkgmgr#remove_use
 let get_use           t = t.pkgmgr#get_use
-let is_extern         t = t.pkgmgr#is_extern
-let as_extern_do      t = t.pkgmgr#as_extern_do
 
 let _ =
   List.iter (fun (n,t) -> add_type builtin_table n t)

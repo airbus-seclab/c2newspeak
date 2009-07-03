@@ -94,10 +94,6 @@ val remove_use        : table -> string -> unit
  * The order is not specified.
  *)
 val get_use           : table -> string list
-(** Returns the "extern" flag for this manager. *)
-val is_extern         : table -> bool
-(** Perform an action with the "extern" flag. *)
-val as_extern_do      : table -> (unit -> unit) ->unit
 
 (**
  * Context stack.

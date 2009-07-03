@@ -83,6 +83,20 @@ let string_of_name = Ada_utils.name_to_string
 let base_typ = Ada_utils.base_typ
 
 (**
+ * A boolean flip flop.
+ *)
+let extern = object
+  val mutable extflag:bool = false
+
+  method is_it = extflag
+
+  method do_it (f:unit->unit) =
+    extflag <- true;
+    f ();
+    extflag <- false
+end
+
+(**
  * Extract a scalar type.
  * Basically, is [function (C.Scalar t) -> t].
  *)
@@ -212,7 +226,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     =
     match name with
       | (None, ident) -> f_ident ident name
-      | (Some pack, ident) when (Symboltbl.is_extern (Sym.top gtbl))
+      | (Some pack, ident) when extern#is_it
                        ||  (Sym.is_with gtbl pack) ->
           f_with (Some pack,ident)
       | (pack, ident) when pack = Sym.current gtbl ->
@@ -226,10 +240,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     match name with
       | (None, ident) -> f_ident ident name
       | (Some pack, ident) when not ( (Sym.current gtbl = Some pack)
-                              || (Sym.is_with gtbl pack)
-                              || (Symboltbl.is_extern (Sym.top gtbl)))
+                                   || (Sym.is_with gtbl pack)
+                                   || extern#is_it)
         -> f_with (Some pack,ident)
-      | (Some pack, ident) when     (  Symboltbl.is_extern (Sym.top gtbl)
+      | (Some pack, ident) when ( extern#is_it
                               ||  Sym.is_with gtbl  pack)
         -> f_with (Some pack,ident)
       | (pack, ident) when pack = Sym.current gtbl->
@@ -250,7 +264,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
   let translate_name (pack,id:A.name) :string =
     let tr_name =
-        if (Symboltbl.is_extern (Sym.top gtbl)) then pack,            id
+        if extern#is_it then pack,            id
                              else (Sym.current gtbl), id
     in
       string_of_name tr_name
@@ -293,7 +307,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un nombre local *)
   and add_number loc value lvl ident =
     let x =  Normalize.normalize_ident
-      ident (Sym.current gtbl) (Symboltbl.is_extern (Sym.top gtbl)) in
+      ident (Sym.current gtbl) extern#is_it in
       (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
 
@@ -329,7 +343,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un symbole d'enumeration *)
   and add_enum loc ident value typ global =
     let name = Normalize.normalize_ident
-      ident (Sym.current gtbl) (Symboltbl.is_extern (Sym.top gtbl)) in
+      ident (Sym.current gtbl) extern#is_it in
       (if mem_symb name
        then
          List.iter
@@ -370,7 +384,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  (ro:bool)          (x:string)
        :unit =
     let name = Normalize.normalize_ident
-      x (Sym.current gtbl) (Symboltbl.is_extern (Sym.top gtbl)) in
+      x (Sym.current gtbl) extern#is_it in
 
     let tr_name = translate_name name in
       (if mem_symb name
@@ -1591,7 +1605,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          List.iter
            (fun symb -> match symb with
               | (FunSymb (_,_,extern', _),_,_)
-                  when extern'= (Symboltbl.is_extern (Sym.top gtbl)) ->
+                  when extern'= extern#is_it ->
                   Npkcontext.report_error "Firstpass.add_fundecl"
                     ("conflict : "^(string_of_name name)
                      ^" already declared")
@@ -1616,7 +1630,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       check_ident name;
       Hashtbl.add symbtbl name
         (FunSymb (C.Fname(translate_name name), subprogspec,
-                  (Symboltbl.is_extern (Sym.top gtbl)), ftyp), C.Fun, loc);
+                  extern#is_it, ftyp), C.Fun, loc);
       ftyp
 
   and translate_enum_declaration idtyp typ_decl list_val_id loc global =
@@ -1768,7 +1782,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | A.Constant | A.StaticVal _ -> true in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init_t option =
-            match (init, (Symboltbl.is_extern (Sym.top gtbl))) with
+            match (init, extern#is_it) with
               | (_,true)
               | (None,_) -> Some None
               | (Some(exp),false) ->
@@ -1814,7 +1828,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           basic_decl_list
         in
           Sym.reset_current gtbl;
-          if (Symboltbl.is_extern (Sym.top gtbl)) then Sym.add_with gtbl nom
+          if extern#is_it then Sym.add_with gtbl nom
 
   and translate_body (body:Ast.body) glob loc :unit =
 
@@ -1873,7 +1887,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
     try
       Npkcontext.set_loc loc;
-      Symboltbl.as_extern_do (Sym.top gtbl) (fun _ -> translate_context ctx);
+      extern#do_it (fun _ -> translate_context ctx);
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
       { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }
