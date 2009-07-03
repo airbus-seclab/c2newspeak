@@ -962,7 +962,10 @@ in
         let norm_inter =  normalize_subtyp_indication a.array_index
         and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
         let subtyp = extract_subtyp norm_inter in
-
+        let (_,_,_,tc) = a.array_component in
+        let (_,_,_,ti) = a.array_index     in
+        let t = T.new_array tc [ti] in
+        Sym.s_add_type gtbl ident t;
         let contrainte = match subtyp with
           | Constrained(_,contrainte,_,_) -> contrainte
           | Unconstrained _ ->
