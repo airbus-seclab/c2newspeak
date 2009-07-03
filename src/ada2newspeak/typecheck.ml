@@ -99,7 +99,7 @@ let type_of_abs t =
     "Highest precedence operator 'abs' is not defined -- 4.5.6";
   t
 
-let type_of_uplus t = 
+let type_of_uplus t =
   t_assert (T.is_numeric t)
     "Unary '+' is not defined -- 4.5.4";
   t

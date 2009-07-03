@@ -166,7 +166,7 @@ let print_table tbl =
   begin match tbl.t_desc with
     | None -> ()
     | Some desc -> print_string ("(" ^ desc ^ ")\n"
-                                ^ (if tbl.t_loc = Newspeak.unknown_loc then "" 
+                                ^ (if tbl.t_loc = Newspeak.unknown_loc then ""
                                    else "@ "^ Newspeak.string_of_loc tbl.t_loc)
                                 ^ "\n")
   end;
@@ -192,10 +192,11 @@ let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
 let add_variable ?(strongly=true) tbl n t =
   try begin match IHashtbl.find tbl.t_tbl n with
       | (Variable (tp,_),true) when t=tp -> error "Homograph variable"
-      | (_sym,false) -> begin
-                          Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-                          IHashtbl.replace tbl.t_tbl n (Variable (t,None),strongly);
-                        end
+      | (_sym,false) ->
+          begin
+            Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
+            IHashtbl.replace tbl.t_tbl n (Variable (t,None),strongly);
+          end
       | (_  , true) -> raise Not_found
       end
   with Not_found -> begin
@@ -206,25 +207,29 @@ let add_variable ?(strongly=true) tbl n t =
 let add_type ?(strongly=true) tbl n t =
   try begin match IHashtbl.find tbl.t_tbl n with
       | (Type tp,true) when t=tp -> error "Homograph type"
-      | (_sym,false) -> begin
-                          Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-                          IHashtbl.replace tbl.t_tbl n (Type t,strongly);
-                        end
+      | (_sym,false) ->
+          begin
+            Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
+            IHashtbl.replace tbl.t_tbl n (Type t,strongly);
+          end
       | (_  , true) -> raise Not_found
       end
-  with Not_found -> begin
-                      Npkcontext.print_debug ("Adding type "^n^" as "^T.print t);
-                      IHashtbl.add tbl.t_tbl n (Type t,strongly)
-                    end
+  with Not_found ->
+    begin
+      Npkcontext.print_debug ("Adding type "^n^" as "^T.print t);
+      IHashtbl.add tbl.t_tbl n (Type t,strongly)
+    end
 
 let add_subprogram ?(strongly=true) tbl n params ret =
   let params = List.map to_fparam params in
   try begin match IHashtbl.find tbl.t_tbl n with
-      | (Subprogram (p,t),true) when p=params && t = ret -> error "Homograph subprogram"
-      | (_sym,false) -> begin
-                          Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-                          IHashtbl.replace tbl.t_tbl n (Subprogram (params,ret),strongly);
-                        end
+      | (Subprogram (p,t),true) when p = params
+                                  && t = ret -> error "Homograph subprogram"
+      | (_sym,false) ->
+          begin
+            Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
+            IHashtbl.replace tbl.t_tbl n (Subprogram (params,ret),strongly);
+          end
       | (_  , true) -> raise Not_found
       end
   with Not_found -> begin
@@ -371,12 +376,12 @@ module SymStack = struct
 
 
   let rec normalize_name s (name:Syntax_ada.name) extern =
-    try 
+    try
       find_rec s.s_stack (fun t ->
         try Some (List.assoc (snd name) t.renaming)
         with Not_found -> None
       )
-    with Not_found -> 
+    with Not_found ->
     if (not extern) then name
     else let (parents,ident) = name in
          let pack = current s in
@@ -484,17 +489,17 @@ module SymStack = struct
     Stack.top s
 
   let s_find_abs_var s p n =
-    match find_unit (library s.s_stack) p with 
+    match find_unit (library s.s_stack) p with
       | Some tbl ->find_variable tbl n
       | None     -> error ("No such package "^p^" when resolving a variable")
 
   let s_find_abs_type s p n =
-    match find_unit (library s.s_stack) p with 
+    match find_unit (library s.s_stack) p with
       | Some tbl ->find_type tbl n
       | None     -> error ("No such package "^p^" when resolving a type")
 
   let s_find_abs_subprogram s p n =
-    match find_unit (library s.s_stack) p with 
+    match find_unit (library s.s_stack) p with
       | Some tbl ->find_subprogram tbl n
       | None     -> error ("No such package "^p^" when resolving a subprogram")
 
@@ -515,7 +520,8 @@ module SymStack = struct
                         let context = ref (s_get_use s) in
                         let res = ref None in
                         while (!context <> [] && !res = None) do
-                          try res := Some (s_find_abs_var s (List.hd !context) n);
+                          try
+                            res := Some (s_find_abs_var s (List.hd !context) n);
                           with Not_found -> ();
                           context := List.tl !context;
                         done;
@@ -532,7 +538,7 @@ module SymStack = struct
       | Some p -> s_find_abs_type s p n
       | None   -> begin
                     try
-                      find_rec s.s_stack (fun t -> 
+                      find_rec s.s_stack (fun t ->
                         try Some (find_type t n)
                         with Not_found -> None
                       )
@@ -541,7 +547,9 @@ module SymStack = struct
                         let context = ref (s_get_use s) in
                         let res = ref None in
                         while (!context <> [] && !res = None) do
-                          try res := Some (s_find_abs_type  s (List.hd !context) n);
+                          try
+                            res := Some (s_find_abs_type s
+                                          (List.hd !context) n);
                           with Not_found -> ();
                           context := List.tl !context;
                         done;
@@ -558,7 +566,7 @@ module SymStack = struct
       | Some p -> s_find_abs_subprogram s p n
       | None   -> begin
                     try
-                      find_rec s.s_stack (fun t -> 
+                      find_rec s.s_stack (fun t ->
                         try Some (find_subprogram t n)
                         with Not_found -> None
                       )
@@ -567,7 +575,9 @@ module SymStack = struct
                         let context = ref (s_get_use s) in
                         let res = ref None in
                         while (!context <> [] && !res = None) do
-                          try res := Some (s_find_abs_subprogram s (List.hd !context) n);
+                          try
+                            res := Some (s_find_abs_subprogram s
+                                        (List.hd !context) n);
                           with Not_found -> ();
                           context := List.tl !context;
                         done;

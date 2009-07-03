@@ -48,7 +48,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t)
                 (tbl:Symboltbl.SymStack.t)
                 (extern:bool)
-   :(T.data_t*typ) =
+   :T.data_t =
 
   let find_all_cst nom = Hashtbl.find_all csttbl nom in
 
@@ -61,18 +61,19 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
           :(Ada_types.data_t*Syntax_ada.typ) =
     match exp with
-    | Ast.CInt   i -> T.IntVal(i)            , check_typ expected_typ IntegerConst
-    | Ast.CFloat f -> T.FloatVal(f)          , check_typ expected_typ Float
+    | Ast.CInt   i -> T.IntVal(i)          , check_typ expected_typ IntegerConst
+    | Ast.CFloat f -> T.FloatVal(f)        , check_typ expected_typ Float
     | Ast.CChar  c -> T.IntVal (Nat.of_int c), check_typ expected_typ Character
     | Ast.CBool  b -> T.BoolVal b            , check_typ expected_typ Boolean
-    | Ast.Var    v -> eval_static_const (Symboltbl.SymStack.normalize_name tbl v extern)
+    | Ast.Var    v -> eval_static_const (Symboltbl.SymStack.normalize_name
+                                                tbl v extern)
                                       expected_typ
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Not (exp) -> begin
                          match (eval_static_exp exp expected_typ) with
                           | T.BoolVal(b), Boolean -> T.BoolVal(not b), Boolean
                           | _ -> Npkcontext.report_error "eval_static_exp"
-                                               "Unexpected unary operator and argument"
+                                   "Unexpected unary operator and argument"
                        end
     | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2 expected_typ
     | Ast.CondExp(cond,iftrue,iffalse) ->
@@ -136,7 +137,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.Gt   ,            a,            b -> T.BoolVal(T.data_lt b a), Boolean
     | Ast.And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal(a && b)     , Boolean
     | Ast.Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal(a || b)     , Boolean
-    | Ast.Power, T.FloatVal a, T.IntVal   b ->           
+    | Ast.Power, T.FloatVal a, T.IntVal   b ->
               T.FloatVal(a ** (float_of_int (Nat.to_int b))), typ
     | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"
@@ -358,7 +359,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
         | (Some pack, _) -> Npkcontext.report_error "eval_static.const"
               ("unknown package " ^pack)
   in
-      eval_static_exp exp expected_typ
+      fst(eval_static_exp exp expected_typ)
 
 (**
  * Evaluate statically an integer expression. FIXME
@@ -369,7 +370,7 @@ let eval_static_integer_exp (exp:Ast.expression)
                             (extern:bool)
     :nat =
     try
-        let (v,_) =
+        let v =
           eval_static
               exp (Some IntegerConst)
               csttbl
@@ -398,7 +399,7 @@ let eval_static_number (exp:Ast.expression)
                        (extern:bool)
     :T.data_t =
      try
-         let (v,_) = eval_static exp None
+         let v = eval_static exp None
                                      csttbl
                                      tbl
                                      extern in

@@ -624,8 +624,8 @@ and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
   let (ne,t) = normalize_exp exp in
   match uop with
      | Abs    -> make_abs (ne,TC.type_of_abs t),t
-     | UMinus -> 
-         let zero = 
+     | UMinus ->
+         let zero =
            if (T.is_integer t) then
              CInt (Nat.zero)
            else if (T.is_float t) then
@@ -674,12 +674,12 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
       | Some top -> top
       in
       Ast.FunctionCall(nom, List.map normalize_arg params),t
-  | Attribute (st, AttributeDesignator(attr, _))->
+  | Attribute (st, attr)->
       begin
         let t = subtyp_to_adatyp st in
         match T.attr_get t attr with
-        | (t,T.BoolVal  x) -> Ast.CBool x, t
-        | (t,T.IntVal   x) -> Ast.CInt x, t
+        | (t,T.IntVal   x) -> Ast.CInt   x, t
+        | (t,T.BoolVal  x) -> Ast.CBool  x, t
         | (t,T.FloatVal x) -> Ast.CFloat x, t
       end
 
@@ -692,10 +692,10 @@ and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
     and norm_exp2 = normalize_exp exp2 in
       (* on essaye d'evaluer les bornes *)
       (try
-         let (val1,_) = eval_static
+         let val1 = eval_static
            norm_exp1 (Some(typ)) csttbl
            gtbl extern
-         and (val2,_) = eval_static
+         and val2 = eval_static
            norm_exp2 (Some(typ)) csttbl
            gtbl extern in
          let contrainte =  match (val1, val2) with
@@ -1003,11 +1003,12 @@ in
                           "internal error : size of array already provided"
     | Record r -> begin
                     Sym.s_add_type gtbl ident (T.unknown);
-                    let norm_fields = 
+                    let norm_fields =
                       List.map (fun (id, st) -> (id, normalize_subtyp st)) r
                     in
                     let norm_typ = Record norm_fields in
-                    add_typ (normalize_ident_cur ident) norm_typ loc global extern;
+                    add_typ (normalize_ident_cur ident) norm_typ
+                            loc global extern;
                     norm_typ
                   end
   in
@@ -1107,7 +1108,8 @@ in
                        norm_subtyp)
         | Procedure(name,param_list) ->
             let norm_name = normalize_ident_cur name in
-              Sym.s_add_subprogram gtbl name (List.map mk_param param_list) None;
+              Sym.s_add_subprogram gtbl name
+                              (List.map mk_param param_list) None;
               add_function norm_name None false;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
@@ -1147,7 +1149,7 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let (v,_) = eval_static normexp (Some typ) csttbl gtbl extern in
+            let v = eval_static normexp (Some typ) csttbl gtbl extern in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp v;
@@ -1448,7 +1450,8 @@ in
           add_function name None true
       | Ast.PackageSpec(name, basic_decls) ->
           Sym.set_current gtbl name;
-          Sym.enter_context ~name ~desc:"Package spec (extern)" ~weakly:true gtbl;
+          Sym.enter_context ~name ~desc:"Package spec (extern)"
+                            ~weakly:true gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Sym.reset_current gtbl;
           Sym.exit_context gtbl;

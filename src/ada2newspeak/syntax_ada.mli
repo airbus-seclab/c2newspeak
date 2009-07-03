@@ -112,11 +112,6 @@ and subtyp =
                                            means the subtype is static *)
   | SubtypName of name                 (** Subtype *)
 
-(** Attribute designators like "First", "Range" or "Digits" *)
-and attribute_designator =
- | AttributeDesignator of string * expression option
-   (** The option is for the optional parameter. It shall be static. *)
-
 (** Expressions. *)
 and expression =
   | CInt         of nat
@@ -133,7 +128,7 @@ and expression =
                   * expression
   | Qualified    of subtyp
                   * expression
-  | Attribute    of subtyp * attribute_designator
+  | Attribute    of subtyp * string
 
 (** Constraint *)
 and contrainte =

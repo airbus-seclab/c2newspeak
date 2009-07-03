@@ -259,10 +259,10 @@ let character =
 let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
 | Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
-| Array _     -> Npkcontext.report_error "length_of" "Type with no size (array)"
-| Float _     -> Npkcontext.report_error "length_of" "Type with no size (float)"
-| Unknown     -> Npkcontext.report_error "length_of" "Type with no size (unknown)"
-| Signed None -> Npkcontext.report_error "length_of" "Type with no size (unlimited)"
+| Array _
+| Float _
+| Unknown
+| Signed None -> Npkcontext.report_error "length_of" "Type with no size"
 
 let rec attr_get typ attr =
   match typ.trait, attr with
@@ -279,7 +279,8 @@ let rec attr_get typ attr =
           else
             attr_get (List.hd ind) attr
         end
-    | Float digits , "digits" -> universal_integer, IntVal (Newspeak.Nat.of_int digits)
+    | Float digits , "digits" -> universal_integer,
+                                    IntVal (Newspeak.Nat.of_int digits)
     | Unknown, _
     | Array _, _
     | Float _ , _

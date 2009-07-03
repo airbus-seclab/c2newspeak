@@ -137,12 +137,7 @@ and exp_to_string exp = match exp with
   | Attribute (n,des) ->
               (subtyp_to_string n)
             ^ "'"
-            ^ (designator_to_string des)
-
-and designator_to_string des = match des with
-| AttributeDesignator (id, None)       -> id
-| AttributeDesignator (id, Some param) -> id ^ "(" ^ (exp_to_string param) ^ ")"
-
+            ^ des
 
 and subtyp_to_string subtyp = match subtyp with
   | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"

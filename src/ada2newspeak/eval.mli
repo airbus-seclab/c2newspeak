@@ -36,7 +36,7 @@ val eval_static :  Ast.expression -> Syntax_ada.typ option
                 -> (Syntax_ada.name,constant_symb) Hashtbl.t
                 -> Symboltbl.SymStack.t
                 -> bool
-  -> Ada_types.data_t*Syntax_ada.typ
+  -> Ada_types.data_t
 
 
 val eval_static_integer_exp :  Ast.expression

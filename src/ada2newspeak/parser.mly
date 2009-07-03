@@ -584,9 +584,7 @@ expression :
 | LPAR expression RPAR {$2}
 | subtyp QUOTE LPAR expression RPAR {Qualified($1,$4)}
 | subtyp QUOTE ident  {Attribute ($1
-                                 ,AttributeDesignator(String.lowercase $3
-                                                     ,None
-                                                     )
+                                 ,String.lowercase $3
                                  )
                       }
 | name {Var(fst $1)}
