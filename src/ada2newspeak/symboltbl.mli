@@ -30,13 +30,6 @@
 (** The type for symbol tables.  *)
 type table
 
-(** Add a subprogram symbol to a table. *)
-val add_subprogram : table
-                  -> string
-                  -> (string*bool*bool*Ada_types.t) list
-                  -> Ada_types.t option
-      -> unit
-
 (**
  * Get a type from a symbol table.
  * @raise Not_found if no type could be found.
@@ -79,15 +72,6 @@ val builtin_type : string -> Ada_types.t
  * Adding a package several times is not an error.
  *)
 val add_use           : table -> string -> unit
-(**
- * Remove a "use" clause from the context.
- * Removing a package several times is not an error : if a package has been
- * added n times, it is necessary to remove it n times to remove it from the
- * context.
- * Removing a package that is not in the current context will be silently
- * ignored.
- *)
-val remove_use        : table -> string -> unit
 (**
  * Get the current context.
  * It returns a list of packages that have been added and not removed.
@@ -188,6 +172,11 @@ module SymStack : sig
                         -> ?package:string
                         -> string
              -> Ada_types.t
+  val s_find_subprogram : t
+                      -> ?package:string
+                      ->  string
+      -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
+
 
   (** Add data.  *)
   val s_add_type       : t -> string -> Ada_types.t -> unit

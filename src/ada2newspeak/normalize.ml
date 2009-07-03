@@ -667,7 +667,13 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
                                   normalize_exp ~expected_type:t exp)
                               ,t
   | FunctionCall(nom, params) ->
-      Ast.FunctionCall(nom, List.map normalize_arg params),T.unknown
+      let (_,top) = Sym.s_find_subprogram gtbl ?package:(fst nom) (snd nom) in
+      let t = match top with
+      | None -> Npkcontext.report_error "normalize_exp"
+                "Expected function, got procedure"
+      | Some top -> top
+      in
+      Ast.FunctionCall(nom, List.map normalize_arg params),t
   | Attribute (subtype, AttributeDesignator(attr, _))->
       begin
         let (a,b) = array_bounds subtype in
@@ -1027,13 +1033,12 @@ in
           List.iter
             (fun ident -> remove_cst (normalize_ident_cur ident))
             ident_list
-      | BasicDecl(UseDecl(use_clause)) -> Symboltbl.remove_use (Sym.top gtbl)
-                                                                use_clause
       | BasicDecl(NumberDecl(ident,_))->remove_cst (normalize_ident_cur ident)
-      | BasicDecl(RepresentClause _)
-      | BasicDecl(SpecDecl _)
-      | BodyDecl _ -> ()
-      | BasicDecl(RenamingDecl _) -> ()
+      | BasicDecl(RepresentClause _) -> ()
+      | BasicDecl(SpecDecl _)        -> ()
+      | BasicDecl(UseDecl(_))        -> ()
+      | BodyDecl _                   -> ()
+      | BasicDecl(RenamingDecl _)    -> ()
       )
     decl_part
 

@@ -1709,6 +1709,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      fonction appelee pour la partie declarative d'une fonction
      ou procedure *)
   and translate_declarative_part decl_part =
+    Sym.enter_context gtbl;
     let (decl, aff) =
       List.split (List.map translate_declarative_item decl_part)
     in List.flatten decl@List.flatten aff
@@ -1721,7 +1722,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl x -> Symboltbl.remove_use (Sym.top gtbl) x
+    | UseDecl _ -> ()
     | NumberDecl(ident, _) -> remove_symb ident
     | TypeDecl _
     | SubtypDecl _ -> ()
@@ -1731,6 +1732,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | BodyDecl(_) -> ()
 
   and remove_declarative_part decl_part =
+    Sym.exit_context gtbl;
     List.iter remove_declarative_item decl_part
 
   and add_funbody subprogspec decl_part block loc =

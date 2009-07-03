@@ -30,7 +30,6 @@ let error x =
 class package_manager :
 object
   method add_use    :string -> unit
-  method remove_use :string -> unit
   method get_use    :string list
 end = object
   val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
@@ -38,13 +37,6 @@ end = object
   method add_use p =
     let old_count = try Hashtbl.find context p with Not_found -> 0 in
     Hashtbl.replace context p (old_count + 1)
-
-  method remove_use p =
-    try
-      let old_count = Hashtbl.find context p in
-      if old_count = 1 then Hashtbl.remove context p
-      else Hashtbl.replace context p (old_count - 1)
-    with Not_found -> ()
 
   method get_use =
     Hashtbl.fold (fun pkg _ res -> pkg::res) context []
@@ -225,8 +217,20 @@ let add_type ?(strongly=true) tbl n t =
                       IHashtbl.add tbl.t_tbl n (Type t,strongly)
                     end
 
-let add_subprogram tbl name params rettype =
-  IHashtbl.add tbl.t_tbl name (Subprogram (List.map to_fparam params,rettype),true)
+let add_subprogram ?(strongly=true) tbl n params ret =
+  let params = List.map to_fparam params in
+  try begin match IHashtbl.find tbl.t_tbl n with
+      | (Subprogram (p,t),true) when p=params && t = ret -> error "Homograph subprogram"
+      | (_sym,false) -> begin
+                          Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
+                          IHashtbl.replace tbl.t_tbl n (Subprogram (params,ret),strongly);
+                        end
+      | (_  , true) -> raise Not_found
+      end
+  with Not_found -> begin
+    Npkcontext.print_debug ("Adding subprogram "^n);
+    IHashtbl.add tbl.t_tbl n (Subprogram (params,ret),strongly)
+  end
 
 (******** Cast functions ********)
 
@@ -284,7 +288,6 @@ let find_unit t id =
 let builtin_type x = find_type builtin_table x
 
 let add_use           t = t.pkgmgr#add_use
-let remove_use        t = t.pkgmgr#remove_use
 let get_use           t = t.pkgmgr#get_use
 
 let _ =
@@ -490,6 +493,11 @@ module SymStack = struct
       | Some tbl ->find_type tbl n
       | None     -> error ("No such package "^p^" when resolving a type")
 
+  let s_find_abs_subprogram s p n =
+    match find_unit (library s.s_stack) p with 
+      | Some tbl ->find_subprogram tbl n
+      | None     -> error ("No such package "^p^" when resolving a subprogram")
+
   (**
    * Find a variable in a symbol table stack.
    *)
@@ -545,13 +553,40 @@ module SymStack = struct
                       end
                   end
 
+  let s_find_subprogram s ?package n =
+    match package with
+      | Some p -> s_find_abs_subprogram s p n
+      | None   -> begin
+                    try
+                      find_rec s.s_stack (fun t -> 
+                        try Some (find_subprogram t n)
+                        with Not_found -> None
+                      )
+                    with Not_found ->
+                      begin
+                        let context = ref (s_get_use s) in
+                        let res = ref None in
+                        while (!context <> [] && !res = None) do
+                          try res := Some (s_find_abs_subprogram s (List.hd !context) n);
+                          with Not_found -> ();
+                          context := List.tl !context;
+                        done;
+                        match !res with
+                        | None -> begin
+                                    error ("Cannot find subprogram "^n)
+                                  end
+                        | Some v -> v
+                      end
+                  end
+
   let s_add_variable s n v =
     add_variable (top s) n v ~strongly:(top s).t_strong
 
   let s_add_type s n v =
     add_type (top s) n v ~strongly:(top s).t_strong
 
-  let s_add_subprogram s = add_subprogram (top s)
+  let s_add_subprogram s n v =
+    add_subprogram (top s) n v ~strongly:(top s).t_strong
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
