@@ -255,7 +255,8 @@ let translate (globals, fundecls, spec) =
 	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
 	    (* TODO: inefficient: t is translated twice *)
-	    let (e, t) = cast (translate_exp (exp_of_int 0, int_typ)) t in
+	    let (e, _) = translate_exp (exp_of_int 0, int_typ) in
+	    let (e, t) = cast (e, int_typ) t in
 	      res := (o, translate_typ t, e)::!res
 	| Float _ -> 
 	    res := (o, translate_typ t, C.exp_of_float 0.)::!res
@@ -319,16 +320,17 @@ let translate (globals, fundecls, spec) =
 	  let o = C.exp_of_int o in
 	    C.Shift (lv, o)
 
-      | Index (e, (t, len), idx) ->  (* TODO: think about this is_array, 
-					      a bit hacky!! *)
+      | Index (e, (t, len), (idx, idx_t)) ->  
+	  (* TODO: think about this is_array, a bit hacky!! *)
 	  let lv = translate_lv e in
 	  let n = translate_array_len len in
-	  let i = translate_exp idx in
-	  let (lv, _) = translate_array_access (lv, t, n) i in
+	  let (i, _) = translate_exp (idx, idx_t) in
+	  let (lv, _) = translate_array_access (lv, t, n) (i, idx_t) in
 	    lv
 
-      | Deref e -> 
-	  let (lv, _) = deref (translate_exp e) in
+      | Deref (e, t) -> 
+	  let (e, _) = translate_exp (e, t) in
+	  let (lv, _) = deref (e, t) in
 	    lv
 
       | OpExp (op, (lv, t), is_after) ->
@@ -565,9 +567,9 @@ let translate (globals, fundecls, spec) =
 
   and translate_va_args x =
     match x with
-	e::tl -> 
+	(e, t)::tl -> 
 	  let (args, sz) = translate_va_args tl in
-	  let (e, t) = translate_exp e in
+	  let (e, _) = translate_exp (e, t) in
 	    ((e, t)::args, size_of t + sz)
       | [] -> ([], 0)
 
@@ -575,9 +577,8 @@ let translate (globals, fundecls, spec) =
     let rec translate_args args args_t =
       match (args, args_t) with
 	  ([], (Va_arg, id)::[]) ->
-	    let (e, _) = 
-	      cast (translate_exp (exp_of_int 0, int_typ)) (Ptr char_typ) 
-	    in
+	    let (e, _) = translate_exp (exp_of_int 0, int_typ) in
+	    let (e, _) = cast (e, int_typ) (Ptr char_typ) in
 	      (e::[], (Va_arg, id)::[])
 	| (_, (Va_arg, id)::[]) -> 
 	    let (args, sz) = translate_va_args args in
@@ -589,10 +590,11 @@ let translate (globals, fundecls, spec) =
 	    let init = init_va_args loc v args in
 	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
 
-	| (e::args, (t, id)::args_t) ->
-	    let (e, t) = cast (translate_exp e) t in
+	| ((e, t1)::args, (t2, id)::args_t) ->
+	    let (e, _) = translate_exp (e, t1) in
+	    let (e, t2) = cast (e, t1) t2 in
 	    let (args, args_t) = translate_args args args_t in
-	      (e::args, (t, id)::args_t)
+	      (e::args, (t2, id)::args_t)
 	| ([], []) -> ([], [])
 	| _ -> 
 	    Npkcontext.report_error "Firstpass.translate_exp" 
@@ -773,9 +775,9 @@ let translate (globals, fundecls, spec) =
   and translate_blk_aux ends_with_exp x = 
     let rec translate x =
       match x with
-	  (Exp e, _)::[] when ends_with_exp -> 
-	    let e = translate_exp e in
-	      (([], []), Some e)
+	  (Exp (e, t), _)::[] when ends_with_exp -> 
+	    let (e, _) = translate_exp (e, t) in
+	      (([], []), Some (e, t))
 	    
 	| (LocalDecl (x, d), loc)::body -> 
 	    Npkcontext.set_loc loc;
