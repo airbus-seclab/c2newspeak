@@ -163,7 +163,7 @@ let translate (globals, fundecls, spec) =
 
 	| (Data e, _) -> 
 	    (* TODO: should I be using translate_set here too??? *)
-	    let (e, t) = cast (translate_exp e) t in
+	    let (e, _) = cast (translate_exp e) t in
 	      res := (o, translate_typ t, e)::!res;
 	      t
 	      
@@ -354,6 +354,8 @@ let translate (globals, fundecls, spec) =
 	  translate_lv lv
 
       | BlkExp (blk, is_after) -> 
+(* TODO: simplify translate_blk_exp so that it is unnecessary to throw away
+   a value with _ !!! *)
 	  let (body, (e, _)) = translate_blk_exp blk in
 	  let lv =
 	    match e with
@@ -950,6 +952,22 @@ let translate (globals, fundecls, spec) =
 	| Unop (Not, e) -> 
 	    let (e1, e2) = translate_guard e in
 	      (e2, e1)
+
+	| BlkExp (blk, is_after) -> 
+	    (* TODO: clean up and optimize, see if BlkExp could not 
+	       be simplified!!! *)
+	    let (body, e) = 
+	      match List.rev blk with
+		  (Exp (e, _), _)::tl -> (List.rev tl, e)
+		| _ -> 
+		    Npkcontext.report_error "Firstpass.translate_if" 
+		      "unexpected block expression"
+	    in
+	    let body = translate_blk body in
+	    let (br1, br2) = translate_guard e in
+	      if is_after then (br1@body, br2@body)
+	      else (body@br1, body@br2)
+
 	| e -> 
 	    let (e, _) = translate_exp (e, int_typ) in
 	    let (pref, e, post) = C.normalize_exp e in

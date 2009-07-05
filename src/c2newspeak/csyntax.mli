@@ -22,9 +22,8 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
-open Newspeak
 
-type t = ((global * location) list * assertion list)
+type t = ((global * Newspeak.location) list * assertion list)
 
 and assertion = spec_token list
 
@@ -57,8 +56,8 @@ and ftyp = (typ * string) list option * typ
 
 and typ =
     | Void
-    | Int of ikind
-    | Bitfield of (ikind * exp)
+    | Int of Newspeak.ikind
+    | Bitfield of (Newspeak.ikind * exp)
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
@@ -71,7 +70,7 @@ and init =
     | Data of exp
     | Sequence of (string option * init) list
 
-and stmt = (stmtkind * location)
+and stmt = (stmtkind * Newspeak.location)
 
 and blk = stmt list
 
@@ -79,7 +78,10 @@ and stmtkind =
     LocalDecl of (string * decl)
   | If of (exp * blk * blk)
       (* third parameter is the default case *)
-  | CSwitch of (exp * (exp * blk * location) list * blk)
+  | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
+(* TODO: why can't For and DoWhile be merged??? because of goto_elimination??
+   try anyway!!
+*)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
   | Exp of exp
@@ -97,10 +99,12 @@ and static = bool
 
 and exp = 
   | Cst of cst
+(* TODO: Var and RetVar slightly redundant, think about it *)
   | Var of string
   | RetVar
   | Field of (exp * string)
   | Index of (exp * exp)
+(* TODO: should remove Deref!!!, use Index instead!!! with 0 *)
   | Deref of exp
   | AddrOf of exp
   | Unop of (unop * exp)
