@@ -839,7 +839,7 @@ let translate (globals, fundecls, spec) =
 
       | _ -> 
 	  let (e, _) = translate_exp (e, t) in
-	  (C.Exp e, loc)::[]
+	    (C.Exp e, loc)::[]
 
 	(* type and translate_stmt *)
   and translate_stmt (x, loc) = 
@@ -983,8 +983,8 @@ let translate (globals, fundecls, spec) =
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
-	  let (e, t) = translate_exp (e, int_typ) in
-	  let t = translate_scalar_typ t in
+	  let (e, _) = translate_exp (e, int_typ) in
+	  let t = translate_scalar_typ int_typ in
 	  let (lbl, tl) = translate_switch tl in
 	  let lbl = if body = [] then lbl else lbl+1 in
 	    (lbl, ((e, t), (C.Goto lbl, loc)::[])::tl)
