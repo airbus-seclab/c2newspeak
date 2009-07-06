@@ -232,7 +232,7 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
             end;
             Some args_t1
   in
-    if (ret_t1 <> ret_t2) then begin
+    if (not (equals_typ ret_t1 ret_t2)) then begin
       Npkcontext.report_error "Csyntax.min_ftyp" 
 	"different return types for function"
     end;
