@@ -589,7 +589,13 @@ let process (globals, specs) =
 
   and translate_init t x =
     match (x, t) with
-	(Data e, _) -> C.Data (translate_lv e)
+(* TODO: redundant code with complete_init?? *)
+	((Data (Str str)|Sequence ([(None, Data (Str str))])), 
+	 C.Array (C.Int (_, n), _)) when n = Config.size_of_char ->
+	  let seq = seq_of_string str in
+	    translate_init t (Sequence seq)
+	      
+      | (Data e, _) -> C.Data (translate_exp e)
 
       | (Sequence seq, C.Array (t, _)) -> 
 	  let seq = 
