@@ -1400,11 +1400,12 @@ in
       match basic_decl with
         | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
-        | Ast.ObjectDecl(ident_list, (_,_,_,t), _,
+        | Ast.ObjectDecl(ident_list, (tp,_,_,t), _,
                      (Variable | Constant)) ->
             (List.iter
             (fun x -> let n=normalize_ident_cur_ext x true in
-                        Sym.s_add_variable gtbl x t;
+                        Sym.s_add_variable gtbl x (if T.is_unknown t then
+                          subtyp_to_adatyp tp else t);
                          add_cst n
                                  (VarSymb(true))
                                  true;
