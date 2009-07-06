@@ -27,21 +27,6 @@ module T = Ada_types
 let error x =
   Npkcontext.report_error "Symbol table" x
 
-class package_manager :
-object
-  method add_use    :string -> unit
-  method get_use    :string list
-end = object
-  val             context:(string,int) Hashtbl.t  = Hashtbl.create 3
-
-  method add_use p =
-    let old_count = try Hashtbl.find context p with Not_found -> 0 in
-    Hashtbl.replace context p (old_count + 1)
-
-  method get_use =
-    Hashtbl.fold (fun pkg _ res -> pkg::res) context []
-end
-
 (**
  * The [string] type with primitives to
  * handle it in a case-insensitive way.
@@ -88,13 +73,20 @@ type symbol =
  * Ex : a xxx_spec will yield weak symbols than may be redefined.
  *)
 
-and table = { mutable renaming : (string*Syntax_ada.name) list
-            ; t_tbl            : (symbol*bool) IHashtbl.t
-            ; pkgmgr           : package_manager
-            ; t_desc           : string option
-            ; t_loc            : Newspeak.location
-            ; t_strong         : bool
+and table = { mutable t_renaming : (string*Syntax_ada.name) list
+            ;         t_tbl      : (symbol*bool) IHashtbl.t
+            ;         t_desc     : string option
+            ;         t_loc      : Newspeak.location
+            ;         t_strong   : bool
+            ; mutable t_use_list : string list
             }
+
+let add_use t p =
+  if (not (List.mem p t.t_use_list)) then
+    t.t_use_list <- p::(t.t_use_list)
+
+let get_use t =
+  t.t_use_list
 
 let print_symbol = function
   | Variable   (t,_) -> "V",T.print t
@@ -117,35 +109,6 @@ let print_symbol_join s =
 
 exception ParameterlessFunction of T.t
 
-(* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
-let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
-  let p' x =
-    match p x with
-      | None   -> None
-      | Some y -> if filter y then Some y else None
-  in
-  match l with
-  |  []  -> raise Not_found
-  | h::t -> begin
-              match p' h with
-                | None -> extract_unique p' t
-                | Some r -> if List.exists (fun x -> p' x <> None) t
-                            then None
-                            else Some r
-            end
-
-let mkcast desc fn  ?(filter=fun _ -> true) lst  =
-  if (List.length lst > 1) then
-    begin
-      Npkcontext.print_debug ("Multiple interpretations for "^desc^" :");
-      List.iter (fun x -> Npkcontext.print_debug ("\t"
-                                                 ^print_symbol_join x
-                                                 )) lst
-    end;
-  match extract_unique ~filter fn lst with
-    | None   -> error ("Ambiguous "^desc^" name")
-
-    | Some x -> x
 
 let print_table tbl =
   let out = Buffer.create 0 in
@@ -176,68 +139,92 @@ let print_table tbl =
   print_string "\n";
   Buffer.contents out
 
-let create_table ?desc ?(strong=true) _ =  { renaming = []
-                                           ; t_tbl    = IHashtbl.create 0
-                                           ; pkgmgr   = new package_manager
-                                           ; t_desc   = desc
-                                           ; t_loc    = Npkcontext.get_loc ()
-                                           ; t_strong = strong
+let create_table ?desc ?(strong=true) _ =  { t_renaming = []
+                                           ; t_tbl      = IHashtbl.create 0
+                                           ; t_desc     = desc
+                                           ; t_loc      = Npkcontext.get_loc ()
+                                           ; t_strong   = strong
+                                           ; t_use_list = []
                                            }
 
-(**
- * Private global symbol table.
- *)
-let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
+(******************************************************************************
+ *                                                                            *
+ *                               add_xxx functions                            *
+ *                                                                            *
+ ******************************************************************************)
 
-let add_variable ?(strongly=true) tbl n t =
+let adder matches mksym desc ?(strongly=true) tbl n t =
   try begin match IHashtbl.find tbl.t_tbl n with
-      | (Variable (tp,_),true) when t=tp -> error "Homograph variable"
+      | (sym ,true) when matches sym t -> error ("Homograph "^desc)
       | (_sym,false) ->
           begin
-            Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-            IHashtbl.replace tbl.t_tbl n (Variable (t,None),strongly);
+            Npkcontext.print_debug ("Replacing weak "^desc^" symbol '"^n^"'");
+            IHashtbl.replace tbl.t_tbl n (mksym t ,strongly);
           end
       | (_  , true) -> raise Not_found
       end
   with Not_found -> begin
-                      Npkcontext.print_debug ("Adding variable "^n);
-                      IHashtbl.add tbl.t_tbl n (Variable (t,None),strongly)
+                      Npkcontext.print_debug ("Adding "^desc^" '"^n^"'");
+                      IHashtbl.add tbl.t_tbl n (mksym t,strongly)
                     end
 
-let add_type ?(strongly=true) tbl n t =
-  try begin match IHashtbl.find tbl.t_tbl n with
-      | (Type tp,true) when t=tp -> error "Homograph type"
-      | (_sym,false) ->
-          begin
-            Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-            IHashtbl.replace tbl.t_tbl n (Type t,strongly);
-          end
-      | (_  , true) -> raise Not_found
-      end
-  with Not_found ->
-    begin
-      Npkcontext.print_debug ("Adding type "^n^" as "^T.print t);
-      IHashtbl.add tbl.t_tbl n (Type t,strongly)
-    end
+let add_variable ?(strongly=true) =
+  adder (fun sym t -> match sym with
+                        | Variable (t', _) when t' = t -> true
+                        | _                            -> false)
+        (fun t -> Variable (t,None))
+        "variable"
+        ~strongly
+
+let add_type ?(strongly=true) =
+  adder (fun sym t -> sym = Type t)
+        (fun t -> Type t)
+        "type"
+        ~strongly
 
 let add_subprogram ?(strongly=true) tbl n params ret =
-  let params = List.map to_fparam params in
-  try begin match IHashtbl.find tbl.t_tbl n with
-      | (Subprogram (p,t),true) when p = params
-                                  && t = ret -> error "Homograph subprogram"
-      | (_sym,false) ->
-          begin
-            Npkcontext.print_debug ("Replacing weak symbol '"^n^"'");
-            IHashtbl.replace tbl.t_tbl n (Subprogram (params,ret),strongly);
-          end
-      | (_  , true) -> raise Not_found
-      end
-  with Not_found -> begin
-    Npkcontext.print_debug ("Adding subprogram "^n);
-    IHashtbl.add tbl.t_tbl n (Subprogram (params,ret),strongly)
-  end
+  adder (fun sym (params,ret) -> sym = Subprogram (params,ret))
+        (fun (params,ret) -> Subprogram (params,ret))
+        "subprogram"
+        ~strongly
+        tbl
+        n
+        (List.map to_fparam params,ret)
 
-(******** Cast functions ********)
+(******************************************************************************
+ *                                                                            *
+ *                              cast_xxx functions                            *
+ *                                                                            *
+ ******************************************************************************)
+
+(* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
+let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
+  let p' x =
+    match p x with
+      | None   -> None
+      | Some y -> if filter y then Some y else None
+  in
+  match l with
+  |  []  -> raise Not_found
+  | h::t -> begin
+              match p' h with
+                | None -> extract_unique p' t
+                | Some r -> if List.exists (fun x -> p' x <> None) t
+                            then None
+                            else Some r
+            end
+
+let mkcast desc fn  ?(filter=fun _ -> true) lst  =
+  if (List.length lst > 1) then
+    begin
+      Npkcontext.print_debug ("Multiple interpretations for "^desc^" :");
+      List.iter (fun x -> Npkcontext.print_debug ("\t"
+                                                 ^print_symbol_join x
+                                                 )) lst
+    end;
+  match extract_unique ~filter fn lst with
+    | None   -> error ("Ambiguous "^desc^" name")
+    | Some x -> x
 
 let cast_v ?filter = mkcast "variable"
                     (function Variable (x,_) -> Some x
@@ -257,9 +244,12 @@ let cast_s ?filter = mkcast "subprogram"
                              | _            -> None)
                      ?filter
 
-(**
- * Find matching symbols in a table.
- *)
+(******************************************************************************
+ *                                                                            *
+ *                              find_xxx functions                            *
+ *                                                                            *
+ ******************************************************************************)
+
 let rec find_symbols t id =
   fst (List.split (IHashtbl.find_all t.t_tbl id))
 
@@ -290,18 +280,29 @@ let find_unit t id =
   | [Unit x] -> Some x
   | _ -> None
 
-let builtin_type x = find_type builtin_table x
+(******************************************************************************
+ *                                                                            *
+ *                            builtin_table                                   *
+ *                                                                            *
+ ******************************************************************************)
 
-let add_use           t = t.pkgmgr#add_use
-let get_use           t = t.pkgmgr#get_use
+let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
+
+let builtin_type x = find_type builtin_table x
 
 let _ =
   List.iter (fun (n,t) -> add_type builtin_table n t)
-  ["integer"  , T.integer
-  ;"float"    , T.std_float
-  ;"boolean"  , T.boolean
-  ;"character", T.character
+  [ "integer"  , T.integer
+  ; "float"    , T.std_float
+  ; "boolean"  , T.boolean
+  ; "character", T.character
   ]
+
+(******************************************************************************
+ *                                                                            *
+ *                           Module SymStack                                 *
+ *                                                                            *
+ ******************************************************************************)
 
 module SymStack = struct
 
@@ -344,12 +345,12 @@ module SymStack = struct
         Npkcontext.report_error "Symboltbl.s_add_use"
           (p^" is undefined")
       end;
-      (top s).pkgmgr#add_use p
+      add_use (top s) p
     end
 
   let s_get_use s =
     let (ctx:string list ref) = ref [] in
-    Stack.iter (fun t -> ctx := t.pkgmgr#get_use@(!ctx)) s.s_stack;
+    Stack.iter (fun t -> ctx := (get_use t)@(!ctx)) s.s_stack;
     match s.s_cpkg with
     | None   ->    !ctx
     | Some p -> p::!ctx
@@ -378,7 +379,7 @@ module SymStack = struct
   let rec normalize_name s (name:Syntax_ada.name) extern =
     try
       find_rec s.s_stack (fun t ->
-        try Some (List.assoc (snd name) t.renaming)
+        try Some (List.assoc (snd name) t.t_renaming)
         with Not_found -> None
       )
     with Not_found ->
@@ -417,10 +418,10 @@ module SymStack = struct
                     ^new_name^"'.")
     else begin
       try
-        let pointee = List.assoc new_name (top s).renaming in
+        let pointee = List.assoc new_name (top s).t_renaming in
         add_renaming_decl s new_name pointee
       with Not_found ->
-        (top s).renaming <- (new_name,old_name)::(top s).renaming
+        (top s).t_renaming <- (new_name,old_name)::(top s).t_renaming
     end
 
 
@@ -488,106 +489,51 @@ module SymStack = struct
     done;
     Stack.top s
 
+  let s_find_abs desc f s p n =
+    match find_unit (library s.s_stack) p with
+      | Some tbl -> f tbl n
+      | None     -> error ("No such package "^p^" when resolving a "^desc)
+
   let s_find_abs_var s p n =
-    match find_unit (library s.s_stack) p with
-      | Some tbl ->find_variable tbl n
-      | None     -> error ("No such package "^p^" when resolving a variable")
+    s_find_abs "variable" (fun x y -> find_variable x y) s p n
 
-  let s_find_abs_type s p n =
-    match find_unit (library s.s_stack) p with
-      | Some tbl ->find_type tbl n
-      | None     -> error ("No such package "^p^" when resolving a type")
-
-  let s_find_abs_subprogram s p n =
-    match find_unit (library s.s_stack) p with
-      | Some tbl ->find_subprogram tbl n
-      | None     -> error ("No such package "^p^" when resolving a subprogram")
-
-  (**
-   * Find a variable in a symbol table stack.
-   *)
-  let s_find_variable (s:t) ?expected_type ?package n =
+  let s_find desc finder s ?package n =
     match package with
-      | Some p -> s_find_abs_var s p n
-      | None   -> begin
-                    try
-                      find_rec s.s_stack (fun t ->
-                        try Some (find_variable ?expected_type t n)
-                        with Not_found -> None
-                      )
-                    with Not_found ->
-                      begin
-                        let context = ref (s_get_use s) in
-                        let res = ref None in
-                        while (!context <> [] && !res = None) do
-                          try
-                            res := Some (s_find_abs_var s (List.hd !context) n);
-                          with Not_found -> ();
-                          context := List.tl !context;
-                        done;
-                        match !res with
-                        | None -> begin
-                                    error ("Cannot find variable '"^n^"'")
-                                  end
-                        | Some v -> v
-                      end
-                  end
+      | Some p -> s_find_abs desc finder s p n
+      | None   ->
+          begin
+           try
+             find_rec s.s_stack (fun t ->
+               try Some (finder t n)
+               with Not_found -> None
+             )
+           with Not_found ->
+             begin
+               let context = ref (s_get_use s) in
+               let res = ref None in
+               while (!context <> [] && !res = None) do
+                 try
+                   res := Some (s_find_abs desc finder s (List.hd !context) n);
+                 with Not_found -> ();
+                 context := List.tl !context;
+               done;
+               match !res with
+               | None -> begin
+                           error ("Cannot find "^desc^" '"^n^"'")
+                         end
+               | Some v -> v
+             end
+         end
+
+  let s_find_variable s ?expected_type ?package n =
+    s_find "variable" (fun tbl n -> find_variable tbl ?expected_type n)
+            s ?package n
 
   let s_find_type s ?package n =
-    match package with
-      | Some p -> s_find_abs_type s p n
-      | None   -> begin
-                    try
-                      find_rec s.s_stack (fun t ->
-                        try Some (find_type t n)
-                        with Not_found -> None
-                      )
-                    with Not_found ->
-                      begin
-                        let context = ref (s_get_use s) in
-                        let res = ref None in
-                        while (!context <> [] && !res = None) do
-                          try
-                            res := Some (s_find_abs_type s
-                                          (List.hd !context) n);
-                          with Not_found -> ();
-                          context := List.tl !context;
-                        done;
-                        match !res with
-                        | None -> begin
-                                    error ("Cannot find type "^n)
-                                  end
-                        | Some v -> v
-                      end
-                  end
+    s_find "type" find_type s ?package n
 
   let s_find_subprogram s ?package n =
-    match package with
-      | Some p -> s_find_abs_subprogram s p n
-      | None   -> begin
-                    try
-                      find_rec s.s_stack (fun t ->
-                        try Some (find_subprogram t n)
-                        with Not_found -> None
-                      )
-                    with Not_found ->
-                      begin
-                        let context = ref (s_get_use s) in
-                        let res = ref None in
-                        while (!context <> [] && !res = None) do
-                          try
-                            res := Some (s_find_abs_subprogram s
-                                        (List.hd !context) n);
-                          with Not_found -> ();
-                          context := List.tl !context;
-                        done;
-                        match !res with
-                        | None -> begin
-                                    error ("Cannot find subprogram "^n)
-                                  end
-                        | Some v -> v
-                      end
-                  end
+    s_find "subprogram" find_subprogram s ?package n
 
   let s_add_variable s n v =
     add_variable (top s) n v ~strongly:(top s).t_strong
