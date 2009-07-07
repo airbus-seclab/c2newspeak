@@ -61,7 +61,7 @@ let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
  * Symbols.
  *)
 type symbol =
-  | Variable   of T.t*(T.value option)
+  | Variable   of T.t*(T.data_t option)
   | Type       of T.t
   | Subprogram of ((f_param list)*T.t option)
   | Unit       of table
@@ -169,10 +169,10 @@ let adder matches mksym desc ?(strongly=true) tbl n t =
                     end
 
 let add_variable ?(strongly=true) =
-  adder (fun sym t -> match sym with
-                        | Variable (t', _) when t' = t -> true
-                        | _                            -> false)
-        (fun t -> Variable (t,None))
+  adder (fun sym (t,_) -> match sym with
+                          | Variable (t', _) when t' = t -> true
+                          | _                            -> false)
+        (fun (t,v) -> Variable (t,v))
         "variable"
         ~strongly
 
@@ -535,8 +535,8 @@ module SymStack = struct
   let s_find_subprogram s (package,n) =
     s_find "subprogram" find_subprogram s ?package n
 
-  let s_add_variable s n v =
-    add_variable (top s) n v ~strongly:(top s).t_strong
+  let s_add_variable s n ?value t =
+    add_variable (top s) n (t,value) ~strongly:(top s).t_strong
 
   let s_add_type s n v =
     add_type (top s) n v ~strongly:(top s).t_strong

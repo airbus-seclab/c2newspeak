@@ -143,7 +143,7 @@ module SymStack : sig
 
   (** Add data.  *)
   val s_add_type       : t -> string -> Ada_types.t -> unit
-  val s_add_variable   : t -> string -> Ada_types.t -> unit
+  val s_add_variable   : t -> string -> ?value:Ada_types.data_t -> Ada_types.t -> unit
 
   val s_add_subprogram : t
                     -> (string)

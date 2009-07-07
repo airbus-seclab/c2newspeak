@@ -1153,14 +1153,14 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let v = eval_static normexp (Some typ) csttbl gtbl extern in
+            let value = eval_static normexp (Some typ) csttbl gtbl extern in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
-              check_static_subtyp subtyp v;
+              check_static_subtyp subtyp value;
               List.iter (fun x ->
-                Sym.s_add_variable gtbl x t;
-                           add_ident v x) ident_list;
-              Ast.StaticVal v
+                Sym.s_add_variable gtbl x t ~value;
+                           add_ident value x) ident_list;
+              Ast.StaticVal value
           with
             | AmbiguousTypeException -> Npkcontext.report_error
                                         "Ada_normalize.normalize_basic_decl"
