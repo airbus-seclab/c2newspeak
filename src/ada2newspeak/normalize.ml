@@ -1290,27 +1290,38 @@ in
                                               normalize_block instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
-    | Loop(For(iter, exp1, exp2, is_rev), block) -> normalize_instr (
-      Block ( [BasicDecl (ObjectDecl ( [iter]
-                                     , ( SubtypName (None,"integer")
-                                       , None
-                                       , None
-                                       , T.integer
-                                       )
-                                     , (if is_rev then Some exp2 else Some exp1)
-                                     , Variable
-                                     )
-                          )
+    | Loop(For(iter, exp1, exp2, is_rev), block) -> 
+        let dp = [BasicDecl (ObjectDecl ( [iter]
+                             , ( SubtypName (None,"integer")
+                               , None
+                               , None
+                               , T.integer
+                               )
+                             , Some (if is_rev then exp2 else exp1)
+                             , Constant
+                             )
+                      )
               , loc]
-            , [Loop( While( if is_rev then Binary(Ge,Var (None,iter),exp1)
-                                      else Binary(Le,Var (None,iter),exp2))
-                  , block@[Assign ( Lval (None, iter)
-                                  , Binary ( (if is_rev then Minus else Plus)
-                                           , Var (None,iter)
-                                           , CInt (Nat.one))
-                                  ), loc]
+        in
+      Sym.enter_context gtbl;
+      let (ndp,init) = normalize_decl_part dp ~global:false in
+      let nblock = (List.map build_init_stmt init)@normalize_block block in
+      let res =
+      Some
+      (Ast.Block ( ndp
+                 ,
+             [Ast.Loop( Ast.While(normalize_exp ( if is_rev then Binary(Ge,Var (None,iter),exp1)
+                                                            else Binary(Le,Var (None,iter),exp2)))
+                  , nblock@[Ast.Assign ( Ast.Lval (None, iter)
+                                       , normalize_exp( Binary ( (if is_rev then Minus else Plus)
+                                                      , Var (None,iter)
+                                                      , CInt (Nat.one)))
+                                       , true (* unchecked *)
+                                       ), loc]
             ), loc]
-    ), loc)
+      ), loc) in
+      Sym.exit_context gtbl;
+      res
     | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) -> Some (Ast.ProcedureCall(normalize_name nom
                                          ,List.map normalize_arg params), loc)
