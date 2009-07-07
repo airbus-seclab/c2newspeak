@@ -1627,9 +1627,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl(idents, subtyp_ind, const) ->
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
-        let read_only = match const with
-          | A.Variable -> false
-          | A.Constant | A.StaticVal _ -> true in
+        let read_only = const <> Variable in
           List.fold_right
             (fun ident list_decl ->
                add_var loc subtyp ident false read_only;
@@ -1739,9 +1737,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         let init = get_global_init (List.hd idents) in
         let subtyp = Ada_utils.extract_subtyp subtyp_ind in
 
-          let read_only = match const with
-            | A.Variable -> false
-            | A.Constant | A.StaticVal _ -> true in
+          let read_only = const <> Variable in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init_t option =
             match (init, extern#is_it) with

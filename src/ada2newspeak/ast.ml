@@ -118,10 +118,15 @@ and  declarative_item =
   | BasicDecl of basic_declaration
   |  BodyDecl of body
 
+and object_state =
+  | Variable
+  | Constant
+  | StaticVal of Ada_types.data_t (*constante statique*)
+
 and basic_declaration =
   | ObjectDecl      of string list
                      * Syntax_ada.subtyp_indication
-                     * Syntax_ada.object_state
+                     * object_state
   | TypeDecl        of string*Syntax_ada.typ_declaration
   | UseDecl         of string
   | SpecDecl        of spec

@@ -1140,7 +1140,7 @@ in
                Sym.s_add_variable gtbl x t;
                add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
-          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Variable))
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Ast.Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let t =
           let (tp,_,_,st) = subtyp_ind in
@@ -1165,7 +1165,7 @@ in
               List.iter (fun x ->
                 Sym.s_add_variable gtbl x t;
                            add_ident v x) ident_list;
-              StaticVal(v)
+              Ast.StaticVal v
           with
             | AmbiguousTypeException -> Npkcontext.report_error
                                         "Ada_normalize.normalize_basic_decl"
@@ -1180,7 +1180,7 @@ in
                                                         (VarSymb global)
                                                         global
                                       ) ident_list;
-                    (*la constante n'est pas statique *) Constant
+                                      Ast.Constant
 
         in
           List.iter (fun x -> handle_init x normexp loc) ident_list;
@@ -1448,7 +1448,7 @@ in
         | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
         | Ast.ObjectDecl(ident_list, (tp,_,_,t),
-                     (Variable | Constant)) ->
+                     (Ast.Variable | Ast.Constant)) ->
             (List.iter
             (fun x -> let n=normalize_ident_cur_ext x true in
                         Sym.s_add_variable gtbl x (if T.is_unknown t then
@@ -1460,7 +1460,7 @@ in
                ident_list
             )
 
-        | Ast.ObjectDecl(ident_list,subtyp_ind, StaticVal(v)) ->
+        | Ast.ObjectDecl(ident_list,subtyp_ind, Ast.StaticVal v) ->
             (* constante statique *)
 
             let subtyp = extract_subtyp subtyp_ind in

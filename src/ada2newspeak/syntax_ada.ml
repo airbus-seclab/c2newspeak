@@ -217,8 +217,7 @@ and representation_clause =
 
 and object_state =
   | Variable
-  | Constant (*constante dynamique, ou non encore evaluee*)
-  | StaticVal of Ada_types.data_t (*constante statique*)
+  | Constant
 
 and context_clause =
   | With       of string

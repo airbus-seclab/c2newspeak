@@ -232,7 +232,6 @@ and param_list_to_string list =
 and object_state_to_string status = match status with
   | Variable -> "Variable"
   | Constant -> "Constant"
-  | StaticVal(value) -> "StaticVal("^(value_to_string value)^")"
 
 and array_aggregate_to_string agregat = match agregat with
   | NamedArrayAggregate(assoc_list) ->
