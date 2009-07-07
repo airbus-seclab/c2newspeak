@@ -25,10 +25,20 @@
   Olivier Levillain
   email: olivier.levillain@penjili.org
 
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
   Jasmine Duchon
   email: jasmine . duchon @ free . fr
 *)
 
+(*-----*)
+(* ABI *)
+(*-----*)
+
+let ret_lbl = 0
+let brk_lbl = 2
+let ret_ident = "!return"
 
 (*-----------------*)
 (* File extensions *)
@@ -37,13 +47,13 @@
 let ada_suffix = ".adb"
 let npko_suffix = ".no"
 
-
 (*------------------------*)
 (* Version and other info *)
 (*------------------------*)
 
 let software = "Ada2Newspeak, part of C2Newspeak"
-let authors = "Jasmine Duchon and Wenceslas Godard and Charles Hymans"
+let authors =  "Jasmine Duchon, Wenceslas Godard, "
+              ^"Charles Hymans and Etienne Millon"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
 let comment_string =

@@ -25,12 +25,15 @@
   Olivier Levillain
   email: olivier.levillain@penjili.org
 
+  Etienne Millon
+  email: etienne.millon AT gmail . com
+
   Jasmine Duchon
   email: jasmine . duchon AT free . fr
 *)
 
 
-(** Params contains fondamental parameters for C2Newspeak *)
+(** Params contains fondamental parameters for Ada2Newspeak *)
 
 (** {1 File extensions} *)
 
@@ -42,3 +45,9 @@ val npko_suffix : string
 
 val version_string : string
 val comment_string : string
+
+(** {1 ABI} *)
+
+val ret_lbl : int
+val brk_lbl : int
+val ret_ident : string

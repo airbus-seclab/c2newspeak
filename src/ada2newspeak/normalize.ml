@@ -1290,7 +1290,7 @@ in
                                               normalize_block instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block instrs), loc)
-    | Loop(For(iter, exp1, exp2, is_rev), block) -> 
+    | Loop(For(iter, exp1, exp2, is_rev), block) ->
         let dp = [BasicDecl (ObjectDecl ( [iter]
                              , ( SubtypName (None,"integer")
                                , None
@@ -1308,18 +1308,24 @@ in
       let nblock = (List.map build_init_stmt init)@normalize_block block in
       let res =
       Some
-      (Ast.Block ( ndp
-                 ,
-             [Ast.Loop( Ast.While(normalize_exp ( if is_rev then Binary(Ge,Var (None,iter),exp1)
-                                                            else Binary(Le,Var (None,iter),exp2)))
-                  , nblock@[Ast.Assign ( Ast.Lval (None, iter)
-                                       , normalize_exp( Binary ( (if is_rev then Minus else Plus)
-                                                      , Var (None,iter)
-                                                      , CInt (Nat.one)))
-                                       , true (* unchecked *)
-                                       ), loc]
-            ), loc]
-      ), loc) in
+      (Ast.Block
+        ( ndp
+        , [Ast.Loop
+             ( Ast.While
+                ( normalize_exp (if is_rev then Binary(Ge,Var(None,iter),exp1)
+                                           else Binary(Le,Var(None,iter),exp2)))
+                , nblock@[Ast.Assign ( Ast.Lval (None, iter)
+                                     , normalize_exp( Binary((if is_rev
+                                                                then Minus
+                                                                else Plus)
+                                                    , Var (None,iter)
+                                                    , CInt (Nat.one)))
+                                     , true (* unchecked *)
+                                     )
+                         , loc]
+             )
+          , loc]
+        ) , loc) in
       Sym.exit_context gtbl;
       res
     | Exit -> Some (Ast.Exit, loc)
