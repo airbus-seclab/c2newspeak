@@ -86,19 +86,19 @@ let find_body_for_spec ~(specification:Ast.basic_declaration)
 
 (** Return the name for a specification. *)
 let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
-  | Ast.ObjectDecl (idl,_,_,_) -> ident_list_to_string idl
+  | Ast.ObjectDecl (idl,_,_) -> ident_list_to_string idl
   | Ast.TypeDecl   (i,_)
   | Ast.NumberDecl (i,_)
   | Ast.SubtypDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
-  | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> n
+  | Ast.SpecDecl (Ast.PackageSpec (n,_,_)) -> n
   | Ast.UseDecl _ -> "<no name>"
 
 let check_package_body_against_spec ~(body:Ast.declarative_part)
                                     ~(spec:Ast.package_spec) =
-  let (pkgname,spec_and_loc) = spec in
-  let (        body_and_loc) = body in
+  let (pkgname,spec_and_loc,_) = spec in
+  let (        body_and_loc  ) = body in
   let speclist = List.map fst spec_and_loc in
   let bodylist = List.map fst body_and_loc in
   (* Filter on specifications : only sp such as
@@ -122,6 +122,9 @@ let check_package_body_against_spec ~(body:Ast.declarative_part)
 let normalize_ident ident package extern =
   if extern then (package, ident)
             else (None   , ident)
+
+let build_init_stmt (x,exp,loc) =
+  Ast.Assign( Ast.Lval (None,x), exp, true), loc
 
 let extract_subprog_spec (ast:compilation_unit):compilation_unit =
     match ast with
@@ -1115,7 +1118,8 @@ in
                         normalize_params param_list false)
   in
 
-  let rec normalize_basic_decl item loc global reptbl = match item with
+  let rec normalize_basic_decl item loc global reptbl handle_init =
+    match item with
     | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
         Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
@@ -1125,13 +1129,18 @@ in
           else st
         in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
-        let norm_def = may (fun x -> normalize_exp ~expected_type:t x) def in
+        begin match def with
+        | None -> ()
+        | Some exp -> List.iter (fun x -> handle_init x (normalize_exp
+                                          ~expected_type:t exp) loc)
+                        ident_list
+        end;
           (List.iter
              (fun x ->
                Sym.s_add_variable gtbl x t;
                add_cst (normalize_ident_cur x) (VarSymb(global)) global)
              ident_list);
-          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, norm_def, Variable))
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let t =
           let (tp,_,_,st) = subtyp_ind in
@@ -1174,8 +1183,8 @@ in
                     (*la constante n'est pas statique *) Constant
 
         in
-          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Some
-          normexp,status))
+          List.iter (fun x -> handle_init x normexp loc) ident_list;
+          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind,status))
     | ObjectDecl(_) ->
         Npkcontext.report_error
           "Ada_normalize.normalize_basic_decl"
@@ -1228,17 +1237,22 @@ in
                                         (rep, loc); false
                                   | _ -> true)
       list_decl in
+    let init = ref [] in
+    let add_init x exp _loc =
+      init := (x,exp)::!init
+    in
     let rec normalize_decls decls =
       List_utils.filter_map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
-                  match normalize_basic_decl decl loc true represtbl with
+                  match normalize_basic_decl decl loc true
+                        represtbl add_init with
                     | None -> None
                     | Some decl -> Some (decl,loc)
                ) decls in
     let norm_spec = normalize_decls list_decl in
       Sym.reset_current gtbl;
       Sym.exit_context gtbl;
-      (name, norm_spec)
+      (name, norm_spec, !init)
 
   and normalize_spec spec = match spec with
     | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
@@ -1262,8 +1276,10 @@ in
     | ReturnSimple -> Some (Ast.ReturnSimple, loc)
     | Assign(lv, exp) -> begin
                            let (lv', t) = normalize_lval lv in
-                           Some (Ast.Assign(lv',
-                                      normalize_exp ?expected_type:t exp), loc)
+                           Some (Ast.Assign( lv'
+                                           , normalize_exp ?expected_type:t exp
+                                           , false
+                                           ), loc)
                          end
     | Return(exp) -> Some (Ast.Return(normalize_exp exp), loc)
     | If(exp, instr_then, instr_else) ->
@@ -1307,11 +1323,12 @@ in
                     Ada_utils.may normalize_block default
                     ),loc)
     | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
-                        let ndp = normalize_decl_part dp ~global:false in
+                        let (ndp,init) = normalize_decl_part dp ~global:false in
                         let norm_block = normalize_block blk in
+                        let init_stmts = List.map build_init_stmt init in
                         remove_decl_part dp;
                         Sym.exit_context gtbl;
-                        Some (Ast.Block (ndp, norm_block), loc)
+                        Some (Ast.Block (ndp, init_stmts@norm_block), loc)
 
   and normalize_block block =
     List_utils.filter_map normalize_instr block
@@ -1325,12 +1342,17 @@ in
             (rep, loc); false
         | _ -> true
       ) decl_part in
+    let initializers = ref [] in
+    let add_init x exp loc =
+      initializers := (x,exp,loc) :: !initializers
+    in
     let normalize_decl_items items =
       List_utils.filter_map (function
         | BasicDecl(basic),loc ->
             begin
               Npkcontext.set_loc loc;
-              match normalize_basic_decl basic  loc global represtbl with
+              match normalize_basic_decl basic loc global
+                                       represtbl add_init with
                 | None -> None
                 | Some decl -> Some( Ast.BasicDecl decl,loc)
             end
@@ -1351,29 +1373,37 @@ in
               end
       | _ -> ()
     ) ndp;
-    ndp
+    let init = List.rev !initializers in
+    (ndp,init)
 
   and normalize_body body  = match body with
     | SubProgramBody(subprog_decl,decl_part,block) ->
         let norm_subprog_decl =
           normalize_sub_program_spec subprog_decl ~addparam:true in
         Sym.enter_context ~desc:"SP body (locals)" gtbl;
-        let norm_decl_part = normalize_decl_part decl_part ~global:false in
-        let norm_block = normalize_block block
-        in
+        let (norm_decl_part,init) = normalize_decl_part decl_part
+                                                        ~global:false in
+        let norm_block = normalize_block block in
+        let init_stmts = List.map build_init_stmt init in
           remove_decl_part decl_part;
           remove_params subprog_decl;
           Sym.exit_context gtbl;
-          Ast.SubProgramBody(norm_subprog_decl,norm_decl_part, norm_block)
+          Ast.SubProgramBody( norm_subprog_decl
+                            , norm_decl_part
+                            , init_stmts@norm_block)
     | PackageBody(name, package_spec, decl_part) ->
-        let norm_spec = normalize_package_spec
-                           (with_default package_spec
-                               (parse_package_specification name)
-                           )
+        let (nname,nspec,_) = normalize_package_spec
+                                (with_default package_spec
+                                    (parse_package_specification name)
+                              )
         in
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package body" gtbl;
-          let ndp = normalize_decl_part decl_part ~global:true in
+          let (ndp,init) = normalize_decl_part decl_part ~global:true in
+
+          let norm_spec = (nname,nspec,List.map (fun (x,y,_) -> (x,y)) init)
+          in
+
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           Sym.reset_current gtbl;
@@ -1400,7 +1430,7 @@ in
       match basic_decl with
         | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
-        | Ast.ObjectDecl(ident_list, (tp,_,_,t), _,
+        | Ast.ObjectDecl(ident_list, (tp,_,_,t),
                      (Variable | Constant)) ->
             (List.iter
             (fun x -> let n=normalize_ident_cur_ext x true in
@@ -1413,7 +1443,7 @@ in
                ident_list
             )
 
-        | Ast.ObjectDecl(ident_list,subtyp_ind, _, StaticVal(v)) ->
+        | Ast.ObjectDecl(ident_list,subtyp_ind, StaticVal(v)) ->
             (* constante statique *)
 
             let subtyp = extract_subtyp subtyp_ind in
@@ -1449,7 +1479,7 @@ in
           add_function name (Some(base_typ return_typ)) true
       | Ast.SubProgramSpec(Ast.Function(name, _, _)|Ast.Procedure(name, _)) ->
           add_function name None true
-      | Ast.PackageSpec(name, basic_decls) ->
+      | Ast.PackageSpec(name, basic_decls,_) ->
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package spec (extern)"
                             ~weakly:true gtbl;

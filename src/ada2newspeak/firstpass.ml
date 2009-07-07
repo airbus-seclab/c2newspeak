@@ -203,11 +203,28 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
 
+
   and gtbl = Sym.create () in
 
   let find_symb (x:A.name) = Hashtbl.find symbtbl x
   and find_all_symb (x:A.name) = Hashtbl.find_all symbtbl x
   and mem_symb (x:A.name) :bool = Hashtbl.mem symbtbl x
+  in
+
+  let (add_global_init, get_global_init) =
+    let global_init = Hashtbl.create 0
+    in
+    (fun id exp -> Npkcontext.print_debug ("add_global_init ("^id^")");
+                   Hashtbl.add global_init id exp)
+    ,
+    (fun id ->
+       let str="get_global_init ("^id^") : " in
+       try
+         let r = Hashtbl.find global_init id in
+         Npkcontext.print_debug (str^"got value");
+         Some r
+       with Not_found -> Npkcontext.print_debug (str^"no value") ;None
+    )
   in
 
   let find_all_use ident =
@@ -772,8 +789,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let (tmp, decl, vid) = temp#create loc A.Boolean in
     let name = ident_to_name tmp in
     let instr_if = Ast.If (e_cond,
-                       [(Ast.Assign(Lval name, e_then),loc)],
-                       [(Ast.Assign(Lval name, e_else),loc)])
+                       [(Ast.Assign(Lval name, e_then, false),loc)],
+                       [(Ast.Assign(Lval name, e_else, false),loc)])
     in let tr_instr_if =
         translate_block [(instr_if,loc)]
     in
@@ -1391,8 +1408,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (**
    * Translate a [Syntax_ada.Assign].
    *)
-  and translate_affect (lv:Ast.lval) (exp:Ast.expression) (loc:Npk.location) =
-    let (tr_lv,subtyp_lv) = translate_lv lv true translate_exp
+  and translate_affect lv exp loc unchecked =
+    let (tr_lv,subtyp_lv) = translate_lv lv (not unchecked) translate_exp
       (*WG*) in
     let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp_lv))
     in make_affect tr_lv tr_exp subtyp_lv loc
@@ -1408,7 +1425,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          match instr with
            | Ast.Return(exp) ->
                translate_block (* WG Lval for Array diff*)
-                 ((Ast.Assign(Lval (ident_to_name ret_ident),exp),loc)
+                 ((Ast.Assign(Lval (ident_to_name ret_ident),exp,false),loc)
                   ::(Ast.ReturnSimple,loc)::r)
            | Ast.ReturnSimple ->
                let tr_reste =
@@ -1424,8 +1441,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
              in
                  (C.Goto ret_lbl, loc)::tr_reste
            | Ast.Exit -> (C.Goto brk_lbl, loc)::(translate_block r)
-           | Ast.Assign(lv,exp) ->
-               (translate_affect lv exp loc)::(translate_block r)
+           | Ast.Assign(lv,exp,unchecked) ->
+               (translate_affect lv exp loc unchecked)::(translate_block r)
            | Ast.If(condition,instr_then,instr_else) ->
                let (tr_exp, typ) = translate_exp condition (Some A.Boolean) in
                  if typ <> A.Boolean then begin
@@ -1619,36 +1636,27 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | A.Array        _
       | A.Record       _ -> ()
 
-  (* declarations basiques locales *)
   and translate_basic_declaration basic loc = match basic with
-    | ObjectDecl(idents, subtyp_ind, def, const) ->
+    | ObjectDecl(idents, subtyp_ind, const) ->
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
         let read_only = match const with
           | A.Variable -> false
           | A.Constant | A.StaticVal _ -> true in
           List.fold_right
-            (fun ident (list_decl, list_aff) ->
+            (fun ident list_decl ->
                add_var loc subtyp ident false read_only;
-               let decl = (C.Decl(translate_subtyp subtyp,
+               (C.Decl(translate_subtyp subtyp,
                                   ident),loc)::list_decl
-               and aff =
-                 match def with
-                   | None -> list_aff
-                   | Some(exp) ->
-                       let (tr_exp,_) = translate_exp exp
-                         (Some(base_typ subtyp)) in
-                         ((make_affect (C.Local ident)
-                            tr_exp subtyp loc)::list_aff)
-               in (decl,aff))
+               )
             idents
-            ([],[])
+            []
 
     | TypeDecl (idtyp,typ_decl) ->
         translate_typ_declaration idtyp typ_decl loc false;
-        ([],[])
+        []
 
     | SubtypDecl _ ->
-        ([],[])
+        []
 
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
@@ -1656,11 +1664,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
            ^"sous package non implemente")
 
     | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
-        ([],[])
+        []
 
     | NumberDecl(ident, v) ->
         add_number loc v false ident;
-        ([],[])
+        []
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1674,12 +1682,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      ou procedure *)
   and translate_declarative_part decl_part =
     Sym.enter_context gtbl;
-    let (decl, aff) =
-      List.split (List.map translate_declarative_item decl_part)
-    in List.flatten decl@List.flatten aff
+    let decl =
+      List.map translate_declarative_item decl_part
+    in List.flatten decl
 
   and remove_basic_declaration basic = match basic with
-    | ObjectDecl(idents, _, _, _) -> List.iter remove_symb idents
+    | ObjectDecl(idents, _, _) -> List.iter remove_symb idents
     | TypeDecl(_,A.Enum(idents,_))  -> List.iter (fun (x,_) -> remove_symb x)
                                                idents
     | SpecDecl(_) -> Npkcontext.report_error
@@ -1739,8 +1747,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(idents, subtyp_ind, init, const) ->
-
+      | ObjectDecl(idents, subtyp_ind, const) ->
+        let init = get_global_init (List.hd idents) in
         let subtyp = Ada_utils.extract_subtyp subtyp_ind in
 
           let read_only = match const with
@@ -1782,19 +1790,16 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | SubProgramSpec(subprog_spec) ->
         ignore (add_fundecl subprog_spec loc)
 
-    | PackageSpec(nom, basic_decl_list) ->
+    | PackageSpec(nom, basic_decl_list,init) ->
         if (not glob) then begin Npkcontext.report_error
             "Firstpass.translate_spec"
                 "declaration de sous package non implemente"
         end;
         Sym.set_current gtbl nom;
-        let _ = List.map
-          (* probleme : variables *)
-          translate_global_basic_declaration
-          basic_decl_list
-        in
-          Sym.reset_current gtbl;
-          if extern#is_it then Sym.add_with gtbl nom
+        List.iter (fun (id, exp) -> add_global_init id exp) init;
+        List.iter translate_global_basic_declaration basic_decl_list;
+        Sym.reset_current gtbl;
+        if extern#is_it then Sym.add_with gtbl nom
 
   and translate_body (body:Ast.body) glob loc :unit =
 
@@ -1802,16 +1807,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     match (body, glob) with
       | (Ast.SubProgramBody(subprog_decl,decl_part, block), _) ->
           add_funbody subprog_decl decl_part block loc
-
-      (* si globals est fournie (Some) alors on est au niveau
-         superieur,
-         donc on accepte la declaration d'un package. Sinon, il
-         s'agit d'un sous-package, ce qui n'est pas gere *)
       | Ast.PackageBody(name, package_spec, decl_part), true ->
           Sym.set_current gtbl name;
           (match package_spec with
              | None -> ()
-             | Some(_, basic_decls) ->
+             | Some(_, basic_decls, init) ->
+                 List.iter (fun (id, exp) -> add_global_init id exp) init;
                  List.iter translate_global_basic_declaration basic_decls
           );
           List.iter translate_global_decl_item decl_part
