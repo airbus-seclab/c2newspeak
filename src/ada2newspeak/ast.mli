@@ -47,6 +47,9 @@ type block = (instruction * Newspeak.location) list
 and instruction =
   | Assign        of lval
                    * expression
+                   * bool (* If true, ro-checks will not be performed *
+                           * Useful for example for i++ in loops or   *
+                           * constant initializers                    *)
   | Return        of expression
   | ReturnSimple
   | If            of expression
@@ -118,7 +121,6 @@ and  declarative_item =
 and basic_declaration =
   | ObjectDecl      of string list
                      * Syntax_ada.subtyp_indication
-                     * expression option
                      * Syntax_ada.object_state
   | TypeDecl        of string*Syntax_ada.typ_declaration
   | UseDecl         of string
@@ -148,6 +150,7 @@ and sub_program_spec =
 
 and package_spec = string
                  * (basic_declaration*Newspeak.location) list
+                 * (string * expression) list (* initializers *)
 
 type compilation_unit = context_clause list
                       * library_item
