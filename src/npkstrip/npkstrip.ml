@@ -72,7 +72,7 @@ object (this)
 			  ^" assuming it does not call any function,"
 			  ^" strip may be incorrect")
 
-  method process_fn x =
+  method process_funexp x =
     begin match x with
 	FunId f -> this#visit_fun f
       | FunDeref _ -> List.iter this#visit_fun fid_addrof
