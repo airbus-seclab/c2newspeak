@@ -54,7 +54,7 @@ let subtyp_to_adatyp st =
   | Unconstrained typ      -> T.new_unconstr (typ_to_adatyp typ)
   | Constrained (_,_,_,t) -> t
   | SubtypName  n          -> try
-                                Sym.s_find_type gtbl ?package:(fst n) (snd n)
+                                Sym.s_find_type gtbl n
                               with Not_found ->
                                 begin
                                   Npkcontext.report_warning "ST2AT"
@@ -640,6 +640,15 @@ and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
      | UPlus  -> (ne,TC.type_of_uplus t)
      | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
+and normalize_fcall (n, params) =
+  let (_,top) = Sym.s_find_subprogram gtbl n in
+  let t = match top with
+  | None -> Npkcontext.report_error "normalize_exp"
+            "Expected function, got procedure"
+  | Some top -> top
+  in
+  Ast.FunctionCall(n, List.map normalize_arg params),t
+
 (**
  * Normalize an expression.
  *)
@@ -651,17 +660,10 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
   | CChar  x -> Ast.CChar  x,T.character
   | Var    n -> begin (* n may denote the name of a parameterless function *)
                   let n' = normalize_name n in
-                    let t = try Sym.s_find_variable ?expected_type gtbl
-                    ?package:(fst n) (snd n)
-                            with Symboltbl.ParameterlessFunction (rt) -> rt
-                    in
-                    Ast.Var(n') ,t
-(*                try
-                    let t = Symboltbl.find_variable ?expected_type gtbl n in
-                    Ast.Var(normalize_name n) ,t
-                  with Symboltbl.ParameterlessFunction rt ->
-                    Ast.FunctionCall(n', []),rt
- *)
+                    try let t = Sym.s_find_variable ?expected_type gtbl n in
+                            Ast.Var(n') ,t
+                            with Symboltbl.ParameterlessFunction (rt) ->
+                              Ast.Var(n') ,rt
                 end
   | Unary (uop, exp)    -> normalize_uop uop exp
   | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
@@ -669,14 +671,7 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
                               Ast.Qualified(normalize_subtyp subtyp,
                                   normalize_exp ~expected_type:t exp)
                               ,t
-  | FunctionCall(nom, params) ->
-      let (_,top) = Sym.s_find_subprogram gtbl ?package:(fst nom) (snd nom) in
-      let t = match top with
-      | None -> Npkcontext.report_error "normalize_exp"
-                "Expected function, got procedure"
-      | Some top -> top
-      in
-      Ast.FunctionCall(nom, List.map normalize_arg params),t
+  | FunctionCall(n, params) -> normalize_fcall (n, params)
   | Attribute (st, attr)->
       begin
         let t = subtyp_to_adatyp st in
@@ -1263,8 +1258,7 @@ in
   in
 
   let rec normalize_lval = function
-    | Lval n -> (Ast.Lval n, Some (Sym.s_find_variable gtbl ?package:(fst n)
-                                                        (snd n)))
+    | Lval n -> (Ast.Lval n, Some (Sym.s_find_variable gtbl n))
     | ArrayAccess (lv,e) -> Ast.ArrayAccess(fst (normalize_lval lv),
                                             normalize_exp  e),None
   in

@@ -525,14 +525,14 @@ module SymStack = struct
              end
          end
 
-  let s_find_variable s ?expected_type ?package n =
+  let s_find_variable s ?expected_type (package,n) =
     s_find "variable" (fun tbl n -> find_variable tbl ?expected_type n)
             s ?package n
 
-  let s_find_type s ?package n =
+  let s_find_type s (package,n) =
     s_find "type" find_type s ?package n
 
-  let s_find_subprogram s ?package n =
+  let s_find_subprogram s (package,n) =
     s_find "subprogram" find_subprogram s ?package n
 
   let s_add_variable s n v =

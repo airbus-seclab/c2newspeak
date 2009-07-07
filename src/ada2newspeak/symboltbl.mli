@@ -30,41 +30,7 @@
 (** The type for symbol tables.  *)
 type table
 
-(**
- * Get a type from a symbol table.
- * @raise Not_found if no type could be found.
- * @param context : an optional list of packages to be searched
- * @param the queried package
- * @param the queried identifier
- *)
-val find_type :    table
-               ->  string
-            -> Ada_types.t
-
 exception ParameterlessFunction of Ada_types.t
-
-(**
- * Get a variable from a symbol table.
- * @raise ParamterlessFunction if no variable could be found,
- * but a parameterless function of the same name exists.
- * @param see [find_type]
- *)
-val find_variable :     table
-                    -> ?expected_type:Ada_types.t
-                    ->  string
-            -> Ada_types.t
-
-val find_subprogram :     table
-                      ->  string
-      -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
-
-(** Pretty-print a symbol table to the standard output. *)
-val print_table   : table -> string
-
-(** Retrieve a builtin type from its name.  *)
-val builtin_type : string -> Ada_types.t
-
-(** (Old) package_manager + proxies on methods *)
 
 (**
  * Add a "use" clause to the context.
@@ -165,16 +131,13 @@ module SymStack : sig
   (** Find data.  *)
   val s_find_variable :    t
                         -> ?expected_type:Ada_types.t
-                        -> ?package:string
-                        -> string
+                        -> string option * string
              -> Ada_types.t
   val s_find_type     :    t
-                        -> ?package:string
-                        -> string
+                        -> string option * string
              -> Ada_types.t
   val s_find_subprogram : t
-                      -> ?package:string
-                      ->  string
+                        -> string option * string
       -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
 
