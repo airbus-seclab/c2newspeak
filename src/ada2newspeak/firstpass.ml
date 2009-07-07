@@ -59,20 +59,6 @@ type symb =
 
 type qualified_symbol = symb*C.typ*Npk.location
 
-(** Identifier for the return value. *)
-let ret_ident = "!return"
-
-(* TODO *)
-let ret_lbl = 0
-
-(* TODO *)
-let cnt_lbl = 1
-
-(* TODO *)
-let brk_lbl = 2
-
-(* TODO *)
-let default_lbl = 3
 
 (** Promotes an identifier to a name *)
 let ident_to_name ident = (None, ident)
@@ -438,7 +424,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         Hashtbl.remove symbtbl (ident_to_name x) in
 
   let remove_formals args =
-    remove_symb ret_ident;
+    remove_symb Params.ret_ident;
     List.iter remove_symb args
   in
 
@@ -1425,7 +1411,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          match instr with
            | Ast.Return(exp) ->
                translate_block (* WG Lval for Array diff*)
-                 ((Ast.Assign(Lval (ident_to_name ret_ident),exp,false),loc)
+                 ((Ast.Assign( Lval (ident_to_name Params.ret_ident)
+                             , exp
+                             , false),loc)
                   ::(Ast.ReturnSimple,loc)::r)
            | Ast.ReturnSimple ->
                let tr_reste =
@@ -1439,8 +1427,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                        Npkcontext.set_loc loc;
                        translate_block r
              in
-                 (C.Goto ret_lbl, loc)::tr_reste
-           | Ast.Exit -> (C.Goto brk_lbl, loc)::(translate_block r)
+                 (C.Goto Params.ret_lbl, loc)::tr_reste
+           | Ast.Exit -> (C.Goto Params.brk_lbl, loc)::(translate_block r)
            | Ast.Assign(lv,exp,unchecked) ->
                (translate_affect lv exp loc unchecked)::(translate_block r)
            | Ast.If(condition,instr_then,instr_else) ->
@@ -1455,7 +1443,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                    @(translate_block r)
            | Ast.Loop(NoScheme, body) ->
                let tr_body = translate_block body in
-                 (C.Block([C.Loop(tr_body), loc], Some (brk_lbl,[])),loc)
+                 (C.Block([C.Loop(tr_body), loc], Some (Params.brk_lbl,[])),loc)
                  ::(translate_block r)
            | Ast.Loop(While(cond), body) ->
                translate_block
@@ -1557,7 +1545,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let param_list =
       match subprog_spec with
         | Function(_, param_list, return_type) ->
-            add_var loc return_type ret_ident false false;
+            add_var loc return_type Params.ret_ident false false;
             param_list
         | Procedure(_, param_list) ->
             param_list
@@ -1565,7 +1553,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let (param_names, vids) =
       (List.split (List.map (add_param loc) param_list))
     in
-      (param_names, (ret_ident, vids))
+      (param_names, (Params.ret_ident, vids))
 
 
   and translate_sub_program_spec subprog_spec =
@@ -1736,7 +1724,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     and (params, (ret_id, args_ids)) = add_params subprogspec loc
     and body_decl = translate_declarative_part decl_part
     and body = translate_block block in
-    let body = (C.Block (body_decl@body, Some (ret_lbl,[])), loc)::[] in
+    let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
       remove_formals params;
       remove_declarative_part decl_part;
 
