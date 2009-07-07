@@ -128,7 +128,7 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
-  | Call of fn
+  | Call of funexp
   | UserSpec of assertion
 
 and stmt = stmtkind * location
@@ -177,7 +177,7 @@ and binop =
 (* comparisons *)
   | Gt of scalar_t | Eq of scalar_t
 
-and fn =
+and funexp =
     FunId of fid
   | FunDeref of (exp * ftyp)
 
@@ -277,7 +277,7 @@ val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
 val string_of_exp : exp -> string
-val string_of_fn: fn -> string
+val string_of_funexp: funexp -> string
 val string_of_lval : lval -> string
 
 val string_of_stmt: stmt -> string
@@ -303,7 +303,7 @@ object
   method process_fun: fid -> fundec -> bool
   method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
-  method process_fn: fn -> bool
+  method process_funexp: funexp -> bool
   method process_exp: exp -> bool
 (* called on expressions that are used as guards of choices *)
   method process_bexp: exp -> unit
@@ -400,4 +400,4 @@ val belongs_of_exp: exp -> (bounds * exp) list
 
 val belongs_of_lval: lval -> (bounds * exp) list
 
-val belongs_of_fn: fn -> (bounds * exp) list
+val belongs_of_funexp: funexp -> (bounds * exp) list

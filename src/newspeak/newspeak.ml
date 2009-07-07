@@ -130,7 +130,7 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
-  | Call of fn
+  | Call of funexp
   | UserSpec of assertion
 
 and stmt = stmtkind * location
@@ -178,7 +178,7 @@ and binop =
   | Gt of scalar_t
   | Eq of scalar_t
 
-and fn =
+and funexp =
     FunId of fid
   | FunDeref of (exp * ftyp)
 
@@ -438,7 +438,7 @@ and string_of_exp e =
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
 
 	  
-let string_of_fn f =
+let string_of_funexp f =
   match f with
       FunId fid -> fid^"()"
     | FunDeref (exp, (args_t, Some ret_t)) ->
@@ -538,7 +538,7 @@ let string_of_blk offset x =
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
 	  
-      | Call f -> dump_line_at loc ((string_of_fn f)^";")
+      | Call f -> dump_line_at loc ((string_of_funexp f)^";")
 	  
       | Select (body1, body2) ->
 	  dump_line_at loc "choose {";
@@ -1260,7 +1260,7 @@ and build_stmtkind builder x =
       | Goto lbl -> Goto lbl
 	  
       | Call fn -> 
-	  let fn = build_fn builder fn in
+	  let fn = build_funexp builder fn in
 	    Call fn
 
       | UserSpec assertion -> 
@@ -1279,7 +1279,7 @@ and build_choice builder (cond, body) =
   let body = build_blk builder body in
     (cond, body)
 
-and build_fn builder fn =
+and build_funexp builder fn =
   match fn with
       FunId f -> FunId f
     | FunDeref (e, ft) ->
@@ -1368,7 +1368,7 @@ object
   method process_fun (_: fid) (_: fundec) = true
   method process_fun_after () = ()
   method process_stmt (_: stmt) = true
-  method process_fn (_: fn) = true
+  method process_funexp (_: funexp) = true
   method process_exp (_: exp) = true
   method process_bexp (_: exp) = ()
   method process_lval (_: lval) = true
@@ -1463,8 +1463,8 @@ and visit_binop visitor op =
       PlusF sz | MinusF sz | MultF sz | DivF sz -> visit_size_t visitor sz
     | _ -> ()
 
-let visit_fn visitor x =
-  let continue = visitor#process_fn x in
+let visit_funexp visitor x =
+  let continue = visitor#process_funexp x in
     match x with
 	FunDeref (e, t) when continue -> 
 	  visit_exp visitor e;
@@ -1491,7 +1491,7 @@ and visit_stmt visitor (x, loc) =
 	| Decl (_, t, body) -> 
 	    visit_typ visitor t;
 	    visit_blk visitor body
-	| Call fn -> visit_fn visitor fn
+	| Call fn -> visit_funexp visitor fn
 	| Select (body1, body2) -> 
 	    visitor#set_loc loc;
 	    visit_blk visitor body1;
@@ -1666,7 +1666,7 @@ and belongs_of_lval x =
     | Shift (lv, e) -> (belongs_of_lval lv)@(belongs_of_exp e)
     | _ -> []
 
-let belongs_of_fn x =
+let belongs_of_funexp x =
   match x with
       FunDeref (e, _) -> belongs_of_exp e
     | _ -> []

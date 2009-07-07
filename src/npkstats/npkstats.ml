@@ -154,7 +154,7 @@ object (this)
     in
       true
 
-  method process_fn x =
+  method process_funexp x =
     let _ =
       match x with
 	  FunId f -> this#count_call f
