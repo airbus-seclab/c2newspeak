@@ -300,30 +300,81 @@ let _ =
 
 (******************************************************************************
  *                                                                            *
- *                           Module SymStack                                 *
+ *                           Symbol table tree                                *
  *                                                                            *
  ******************************************************************************)
 
-module SymStack = struct
+module type TREE = sig
+  type 'a t
+  val create : unit -> 'a t
+  val push   : 'a -> 'a t -> unit
+  val pop    : 'a t -> unit
+  val top    : 'a t -> 'a
+  val lookup : ('a -> 'b option) -> 'a t -> 'b option
+  val iter   : ('a -> unit) -> 'a t -> unit
+  val fold   : ('res -> 'a -> 'res) -> 'res -> 'a t -> 'res
+  val height : 'a t -> int
+  val nth    : 'a t -> int -> 'a
+end
 
-  type t = {         s_stack  : table Stack.t
+module StackedTree : TREE = struct
+  type 'a t = 'a Stack.t
+
+  let create = Stack.create
+
+  let push = Stack.push
+
+  let top = Stack.top
+
+  let pop x = ignore (Stack.pop x)
+
+  let lookup p s =
+    let s = Stack.copy s in
+    let r = ref None in
+    while( !r = None && not (Stack.is_empty s)) do
+      let t = Stack.pop s in
+        r := p t
+    done;
+    !r
+
+  let iter = Stack.iter
+
+  let height = Stack.length
+
+  let nth s n =
+    let s = Stack.copy s in
+    while (height s > n) do
+      pop s;
+    done;
+    top s
+
+  let fold f init s =
+    let r = ref init in
+    iter (fun x -> r := f !r x) s;
+    !r
+
+end
+
+module SymMake(TR:TREE) = struct
+
+  type t = {         s_stack  : table TR.t
            ; mutable s_cpkg   : string option
            ; mutable s_with   : string list
            }
 
-  let top s = Stack.top s.s_stack
+  let top s = TR.top s.s_stack
 
   let print s =
     let res = Buffer.create 0 in
     Buffer.add_string res "Stack : (starting at top)\n";
-    Stack.iter (fun t -> Buffer.add_string res (print_table t)) s.s_stack;
+    TR.iter (fun t -> Buffer.add_string res (print_table t)) s.s_stack;
     Buffer.contents res
 
   let create _ =
-    let s = Stack.create () in
-    Stack.push builtin_table s;
+    let s = TR.create () in
+    TR.push builtin_table s;
     let library = create_table ~desc:"library" () in
-    Stack.push library s;
+    TR.push library s;
     { s_stack  = s
     ; s_cpkg   = None
     ; s_with   = []
@@ -349,11 +400,10 @@ module SymStack = struct
     end
 
   let s_get_use s =
-    let (ctx:string list ref) = ref [] in
-    Stack.iter (fun t -> ctx := (get_use t)@(!ctx)) s.s_stack;
+    let ctx = TR.fold (fun r t -> (get_use t)@r) [] s.s_stack in
     match s.s_cpkg with
-    | None   ->    !ctx
-    | Some p -> p::!ctx
+    | None   ->    ctx
+    | Some p -> p::ctx
 
   (**
    * Find some data in a stack.
@@ -362,19 +412,9 @@ module SymStack = struct
    * If forall t in s, f t = None, Not_found is raised.
    *)
   let find_rec s f =
-    let s = Stack.copy s in
-    let r = ref None in
-    try
-      while (!r = None) do
-        let t = Stack.pop s in
-        r := f t
-      done;
-      match !r with
-      | None   -> failwith "find" (* unreachable *)
+    match TR.lookup f s with
       | Some x -> x
-    with Stack.Empty -> raise Not_found
-
-
+      | None -> raise Not_found
 
   let rec normalize_name s (name:Syntax_ada.name) extern =
     try
@@ -436,9 +476,9 @@ module SymStack = struct
               begin match name with
                 | None   -> ()
                 | Some n -> begin
-                              if (Stack.length s.s_stack <> 2) then
+                              if (TR.height s.s_stack <> 2) then
                                 error "Adding some unit outside the library";
-                              IHashtbl.add ((Stack.top s.s_stack).t_tbl)
+                              IHashtbl.add ((TR.top s.s_stack).t_tbl)
                                           n (Unit new_context,true)
                             end
               end;
@@ -449,53 +489,28 @@ module SymStack = struct
             match name with
               | None   -> create_context ()
               | Some n -> begin
-                            match (find_unit (Stack.top s.s_stack) n) with
+                            match (find_unit (TR.top s.s_stack) n) with
                               | None   -> create_context ()
                               | Some u -> u
                           end
           in
-          Stack.push context s.s_stack
+          TR.push context s.s_stack
 
     let exit_context s =
         Npkcontext.print_debug "<<<<<<< exit_context ()";
         Npkcontext.print_debug (print s);
-        if(Stack.length s.s_stack > 2) then
-          ignore (Stack.pop s.s_stack)
+        if(TR.height s.s_stack > 2) then
+          TR.pop s.s_stack
         else
           Npkcontext.report_error "exit_context" "Stack too small"
 
-
-  (**
-   * Find something in the current package.
-   *)
-  let find_current s n =
-    let s = Stack.copy s in
-    while Stack.length s>3 do
-      ignore (Stack.pop s);
-    done;
-    if (Stack.length s <> 3) then
-      begin
-        error "No current package"
-      end
-    else
-      begin
-        find_symbols (Stack.top s) n
-      end
-
   let library s =
-    let s = Stack.copy s in
-    while (Stack.length s > 2) do
-      ignore (Stack.pop s);
-    done;
-    Stack.top s
+    TR.nth s 2
 
   let s_find_abs desc f s p n =
     match find_unit (library s.s_stack) p with
       | Some tbl -> f tbl n
       | None     -> error ("No such package "^p^" when resolving a "^desc)
-
-  let s_find_abs_var s p n =
-    s_find_abs "variable" (fun x y -> find_variable x y) s p n
 
   let s_find desc finder s ?package n =
     match package with
@@ -554,3 +569,5 @@ module SymStack = struct
     if inte = [] then T.unknown else cast_v inte
 
 end
+
+module SymStack = SymMake (StackedTree)

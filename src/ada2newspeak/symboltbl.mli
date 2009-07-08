@@ -151,6 +151,8 @@ module SymStack : sig
                     -> Ada_types.t option
         -> unit
 
+  val s_add_use : t -> string -> unit
+
   (** Set the current package. *)
   val set_current       : t -> string -> unit
   (** Reset the current package. *)
