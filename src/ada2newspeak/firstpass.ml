@@ -35,7 +35,7 @@ module Nat = Newspeak.Nat
 module Npk = Newspeak
 module A   = Syntax_ada
 module T   = Ada_types
-module Sym = Symboltbl.SymStack
+module Sym = Symboltbl
 
 open Ast
 
@@ -1649,7 +1649,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
+    | UseDecl(use_clause) -> Sym.s_add_use gtbl use_clause;
         []
 
     | NumberDecl(ident, v) ->
@@ -1754,7 +1754,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | TypeDecl(idtyp,typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()
-      | UseDecl x -> Symboltbl.add_use (Sym.top gtbl) x
+      | UseDecl x -> Sym.s_add_use gtbl x
       | SpecDecl(spec) -> translate_spec spec loc false
       | NumberDecl(ident, v) ->
            add_number loc v true ident
@@ -1827,7 +1827,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext x -> Symboltbl.add_use (Sym.top gtbl) x;
+      | UseContext x -> Sym.s_add_use gtbl x;
     );
   in
     (* corps de la fonction translate *)

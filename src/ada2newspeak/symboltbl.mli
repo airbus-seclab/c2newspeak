@@ -22,152 +22,118 @@
 
 *)
 
-(*****************
- * Symbol tables *
- *****************)
-(** {3 Symbol tables} *)
+(**
+ * Abstract type for context stacks.
+ * A context stack is a non-empty list of symbol tables.
+ * Impure (has side effects).
+ *
+ * For example, this program                will look like this :
+ *                           \
+ *                            |      +---------------------------------------+
+ *                            |      | Standard library          (RO, NOPOP) |
+ *                           /       |   - Integer : type                    |
+ *                         |_        |   - True    : variable (type=Boolean) |
+ *                                   |   - ...                               |
+ *                                   +---------------------------------------+
+ *  package body p is                | Program library               (NOPOP) |
+ *    -- in spec : X : Integer;      |   - p       : package                 |
+ *    procedure F (T: in Boolean) is +---------------------------------------+
+ *      Y : Integer;                 | Package                               |
+ *    begin                          |   - X       : variable (type=Integer) |
+ *      declare                      +---------------------------------------+
+ *        Z : Integer;               | SP parameters                         |
+ *      begin                        |   - T       : variable (type=Boolean) |
+ *        null;                      +---------------------------------------+
+ *      end;                         | SP decl_part                          |
+ *    end F;                         |   - Y       : variable (type=Integer) |
+ *  end p;                           +---------------------------------------+
+ *                                   | local decl_part                 (TOP) |
+ *                                   |   - Z       : variable (type=Integer) |
+ *                                   +---------------------------------------+
+ *                                   |
+ * RO = nothing can be added         |
+ * NOPOP = exit_context              | stack grows this way
+ *         will complain             v
+ *
+ *)
+type t
 
-(** The type for symbol tables.  *)
-type table
+(**
+ * Create a new context stack, initially holding
+ * built-in types and variables, and an empty library.
+ *)
+val create : unit -> t
 
+(**
+ * Pretty-printer.
+ *)
+val print : t -> string
+
+(**
+ * Create a new context and enter into it.
+ * Contexts may be named ; in that case a unit_symbol is added
+ * to the parent table in order to allow bottom-up adressing.
+ *)
+val enter_context : ?name:string -> ?desc:string -> ?weakly:bool -> t -> unit
+
+(**
+ * Discard the current context and "go up".
+ * Named contexts can remain accessible.
+ *)
+val exit_context : t -> unit
+
+(** FIXME document exact specs *)
+val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
+
+(**
+ * Find the intersection of possible types.
+ * Used for example to resolve overloading in binary operations.
+ *)
+val type_ovl_intersection : t
+                          -> string
+                          -> string
+           -> Ada_types.t
+
+(** Find data.  *)
 exception ParameterlessFunction of Ada_types.t
+val s_find_variable :    t
+                      -> ?expected_type:Ada_types.t
+                      -> string option * string
+           -> Ada_types.t
+val s_find_type     :    t
+                      -> string option * string
+           -> Ada_types.t
+val s_find_subprogram : t
+                      -> string option * string
+    -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
+
+(** Add data.  *)
+val s_add_type       : t -> string -> Ada_types.t -> unit
+val s_add_variable   : t -> string -> ?value:Ada_types.data_t -> Ada_types.t -> unit
+
+val s_add_subprogram : t
+                  -> (string)
+                  -> (string*bool*bool*Ada_types.t) list
+                  -> Ada_types.t option
+      -> unit
+
+val s_add_use : t -> string -> unit
+
+(** Set the current package. *)
+val set_current       : t -> string -> unit
+(** Reset the current package. *)
+val reset_current     : t -> unit
 (**
- * Add a "use" clause to the context.
- * The added package must have been added to the "with" list.
- * Adding a package several times is not an error.
+ * Get the current package.
+ * If [set_current] has not been called, or [reset_current] has been called
+ * after the last call to [set_current], the empty package is returned.
  *)
-val add_use           : table -> string -> unit
-(**
- * Get the current context.
- * It returns a list of packages that have been added and not removed.
- * The order is not specified.
- *)
-val get_use           : table -> string list
+val current           : t -> string option
+(** Add a package to the "with" list. *)
+val add_with          : t -> string -> unit
+(** Is a package in the "with" list ? *)
+val is_with           : t -> string -> bool
+val s_get_use         : t -> string list
 
-(**
- * Context stack.
- * This module represents the lexical scoping in programs.
- *)
-module SymStack : sig
-
-  (**
-   * Abstract type for context stacks.
-   * A context stack is a non-empty list of symbol tables.
-   * Impure (has side effects).
-   *
-   * For example, this program                will look like this :
-   *                           \
-   *                            |      +---------------------------------------+
-   *                            |      | Standard library          (RO, NOPOP) |
-   *                           /       |   - Integer : type                    |
-   *                         |_        |   - True    : variable (type=Boolean) |
-   *                                   |   - ...                               |
-   *                                   +---------------------------------------+
-   *  package body p is                | Program library               (NOPOP) |
-   *    -- in spec : X : Integer;      |   - p       : package                 |
-   *    procedure F (T: in Boolean) is +---------------------------------------+
-   *      Y : Integer;                 | Package                               |
-   *    begin                          |   - X       : variable (type=Integer) |
-   *      declare                      +---------------------------------------+
-   *        Z : Integer;               | SP parameters                         |
-   *      begin                        |   - T       : variable (type=Boolean) |
-   *        null;                      +---------------------------------------+
-   *      end;                         | SP decl_part                          |
-   *    end F;                         |   - Y       : variable (type=Integer) |
-   *  end p;                           +---------------------------------------+
-   *                                   | local decl_part                 (TOP) |
-   *                                   |   - Z       : variable (type=Integer) |
-   *                                   +---------------------------------------+
-   *                                   |
-   * RO = nothing can be added         |
-   * NOPOP = exit_context              | stack grows this way
-   *         will complain             v
-   *
-   *)
-  type t
-
-  (**
-   * Create a new context stack, initially holding
-   * built-in types and variables, and an empty library.
-   *)
-  val create : unit -> t
-
-  (**
-   * Pretty-printer.
-   *)
-  val print : t -> string
-
-  (**
-   * Return the "top" of the stack, reflecting the innermost context.
-   *)
-  val top : t -> table
-
-  (**
-   * Create a new context and enter into it.
-   * Contexts may be named ; in that case a unit_symbol is added
-   * to the parent table in order to allow bottom-up adressing.
-   *)
-  val enter_context : ?name:string -> ?desc:string -> ?weakly:bool -> t -> unit
-
-  (**
-   * Discard the current context and "go up".
-   * Named contexts can remain accessible.
-   *)
-  val exit_context : t -> unit
-
-  (** FIXME document exact specs *)
-  val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
-
-  (**
-   * Find the intersection of possible types.
-   * Used for example to resolve overloading in binary operations.
-   *)
-  val type_ovl_intersection : t
-                            -> string
-                            -> string
-             -> Ada_types.t
-
-  (** Find data.  *)
-  val s_find_variable :    t
-                        -> ?expected_type:Ada_types.t
-                        -> string option * string
-             -> Ada_types.t
-  val s_find_type     :    t
-                        -> string option * string
-             -> Ada_types.t
-  val s_find_subprogram : t
-                        -> string option * string
-      -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
-
-
-  (** Add data.  *)
-  val s_add_type       : t -> string -> Ada_types.t -> unit
-  val s_add_variable   : t -> string -> ?value:Ada_types.data_t -> Ada_types.t -> unit
-
-  val s_add_subprogram : t
-                    -> (string)
-                    -> (string*bool*bool*Ada_types.t) list
-                    -> Ada_types.t option
-        -> unit
-
-  val s_add_use : t -> string -> unit
-
-  (** Set the current package. *)
-  val set_current       : t -> string -> unit
-  (** Reset the current package. *)
-  val reset_current     : t -> unit
-  (**
-   * Get the current package.
-   * If [set_current] has not been called, or [reset_current] has been called
-   * after the last call to [set_current], the empty package is returned.
-   *)
-  val current           : t -> string option
-  (** Add a package to the "with" list. *)
-  val add_with          : t -> string -> unit
-  (** Is a package in the "with" list ? *)
-  val is_with           : t -> string -> bool
-  val s_get_use         : t -> string list
-
-  val add_renaming_decl : t -> string -> Syntax_ada.name -> unit
-end
+val add_renaming_decl : t -> string -> Syntax_ada.name -> unit

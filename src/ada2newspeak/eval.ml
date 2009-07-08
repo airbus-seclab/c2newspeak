@@ -46,7 +46,7 @@ type constant_symb =
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:Ast.expression) (expected_typ:typ option)
                 (csttbl:(name,constant_symb) Hashtbl.t)
-                (tbl:Symboltbl.SymStack.t)
+                (tbl:Symboltbl.t)
                 (extern:bool)
    :T.data_t =
 
@@ -56,7 +56,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     List.flatten
       (List.map
          (fun pack -> find_all_cst (Some pack, ident))
-         (Symboltbl.SymStack.s_get_use tbl)) in
+         (Symboltbl.s_get_use tbl)) in
 
   let rec eval_static_exp (exp,_:Ast.expression) (expected_typ:typ option)
           :(Ada_types.data_t*Syntax_ada.typ) =
@@ -65,7 +65,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
     | Ast.CFloat f -> T.FloatVal(f)        , check_typ expected_typ Float
     | Ast.CChar  c -> T.IntVal (Nat.of_int c), check_typ expected_typ Character
     | Ast.CBool  b -> T.BoolVal b            , check_typ expected_typ Boolean
-    | Ast.Var    v -> eval_static_const (Symboltbl.SymStack.normalize_name
+    | Ast.Var    v -> eval_static_const (Symboltbl.normalize_name
                                                 tbl v extern)
                                       expected_typ
     | Ast.FunctionCall _  -> raise NonStaticExpression
@@ -352,9 +352,9 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
   in
       match name with
         | None, ident -> sans_selecteur ident name
-        | Some pack, ident when extern || Symboltbl.SymStack.is_with tbl pack ->
+        | Some pack, ident when extern || Symboltbl.is_with tbl pack ->
                                             avec_selecteur (Some pack,ident)
-        | (pack, ident) when pack = Symboltbl.SymStack.current tbl ->
+        | (pack, ident) when pack = Symboltbl.current tbl ->
                                         avec_selecteur_courant (None,ident) name
         | (Some pack, _) -> Npkcontext.report_error "eval_static.const"
               ("unknown package " ^pack)
@@ -366,7 +366,7 @@ let eval_static (exp:Ast.expression) (expected_typ:typ option)
  *)
 let eval_static_integer_exp (exp:Ast.expression)
                             (csttbl:(name, constant_symb) Hashtbl.t)
-                            (tbl:Symboltbl.SymStack.t)
+                            (tbl:Symboltbl.t)
                             (extern:bool)
     :nat =
     try
@@ -395,7 +395,7 @@ let eval_static_integer_exp (exp:Ast.expression)
  *)
 let eval_static_number (exp:Ast.expression)
                        (csttbl:(name, constant_symb) Hashtbl.t)
-                       (tbl:Symboltbl.SymStack.t)
+                       (tbl:Symboltbl.t)
                        (extern:bool)
     :T.data_t =
      try

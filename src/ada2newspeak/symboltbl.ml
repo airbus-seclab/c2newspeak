@@ -45,258 +45,260 @@ module CaseInsensitiveString =
 (** A hash table insensitive to keys' case.  *)
 module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 
-(**
- * Abstract specification for function/procedure parameters.
- *)
-type f_param = { fp_name : string
-               ; fp_in   : bool
-               ; fp_out  : bool
-               ; fp_type : T.t
-               }
-
-let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
-let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
-
-(**
- * Symbols.
- *)
-type symbol =
-  | Variable   of T.t*(T.data_t option)
-  | Type       of T.t
-  | Subprogram of ((f_param list)*T.t option)
-  | Unit       of table
-
-(**
- * A symbol table.
- * t_tbl holds pairs of symbol and bool :
- * "false" (weak) symbols may be redefined.
- * Ex : a xxx_spec will yield weak symbols than may be redefined.
- *)
-
-and table = { mutable t_renaming : (string*Syntax_ada.name) list
-            ;         t_tbl      : (symbol*bool) IHashtbl.t
-            ;         t_desc     : string option
-            ;         t_loc      : Newspeak.location
-            ;         t_strong   : bool
-            ; mutable t_use_list : string list
-            }
-
-let add_use t p =
-  if (not (List.mem p t.t_use_list)) then
-    t.t_use_list <- p::(t.t_use_list)
-
-let get_use t =
-  t.t_use_list
-
-let print_symbol = function
-  | Variable   (t,_) -> "V",T.print t
-  | Type         t   -> "T",T.print t
-  | Subprogram (p,r) -> "S",(
-                             let pdesc = " with "
-                                       ^ string_of_int (List.length p)
-                                       ^ " parameter(s)"
-                             in match r with None   -> "procedure"^pdesc
-                                           | Some t -> "function"
-                                                       ^pdesc
-                                                       ^" and return type "
-                                                       ^T.print t
-                            )
-  | Unit         _   -> "U","<unit>"
-
-let print_symbol_join s =
-  let (s1,s2) = print_symbol s in
-  s1^" "^s2
-
 exception ParameterlessFunction of T.t
 
+module Table = struct
+  (**
+   * Abstract specification for function/procedure parameters.
+   *)
+  type f_param = { fp_name : string
+                 ; fp_in   : bool
+                 ; fp_out  : bool
+                 ; fp_type : T.t
+                 }
 
-let print_table tbl =
-  let out = Buffer.create 0 in
-  let print_string x = Buffer.add_string out x in
-  let pad width str =
-    let x = String.length str in
-    let b = (width - x) / 2   in
-    let a =  width - x - b    in
-    let b = max b 0 in
-    let a = max a 0 in
-    (String.make a ' ')^str^(String.make b ' ')
-  in
-  let line_printer i (sym,_) =
-    let (t,sym_d) = print_symbol sym in
-    List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
-    print_string "\n"
-  in
-  begin match tbl.t_desc with
-    | None -> ()
-    | Some desc -> print_string ("(" ^ desc ^ ")\n"
-                                ^ (if tbl.t_loc = Newspeak.unknown_loc then ""
-                                   else "@ "^ Newspeak.string_of_loc tbl.t_loc)
-                                ^ "\n")
-  end;
-  print_string "+------+---------------+---- . . .\n";
-  IHashtbl.iter line_printer tbl.t_tbl;
-  print_string "+------+---------------+---- . . .\n";
-  print_string "\n";
-  Buffer.contents out
+  let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
+  let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
 
-let create_table ?desc ?(strong=true) _ =  { t_renaming = []
-                                           ; t_tbl      = IHashtbl.create 0
-                                           ; t_desc     = desc
-                                           ; t_loc      = Npkcontext.get_loc ()
-                                           ; t_strong   = strong
-                                           ; t_use_list = []
-                                           }
+  (**
+   * Symbols.
+   *)
+  type symbol =
+    | Variable   of T.t*(T.data_t option)
+    | Type       of T.t
+    | Subprogram of ((f_param list)*T.t option)
+    | Unit       of table
 
-(******************************************************************************
- *                                                                            *
- *                               add_xxx functions                            *
- *                                                                            *
- ******************************************************************************)
+  (**
+   * A symbol table.
+   * t_tbl holds pairs of symbol and bool :
+   * "false" (weak) symbols may be redefined.
+   * Ex : a xxx_spec will yield weak symbols than may be redefined.
+   *)
 
-let adder matches mksym desc ?(strongly=true) tbl n t =
-  try begin match IHashtbl.find tbl.t_tbl n with
-      | (sym ,true) when matches sym t -> error ("Homograph "^desc)
-      | (_sym,false) ->
-          begin
-            Npkcontext.print_debug ("Replacing weak "^desc^" symbol '"^n^"'");
-            IHashtbl.replace tbl.t_tbl n (mksym t ,strongly);
-          end
-      | (_  , true) -> raise Not_found
-      end
-  with Not_found -> begin
-                      Npkcontext.print_debug ("Adding "^desc^" '"^n^"'");
-                      IHashtbl.add tbl.t_tbl n (mksym t,strongly)
-                    end
+  and table = { mutable t_renaming : (string*Syntax_ada.name) list
+              ;         t_tbl      : (symbol*bool) IHashtbl.t
+              ;         t_desc     : string option
+              ;         t_loc      : Newspeak.location
+              ;         t_strong   : bool
+              ; mutable t_use_list : string list
+              }
 
-let add_variable ?(strongly=true) =
-  adder (fun sym (t,_) -> match sym with
-                          | Variable (t', _) when t' = t -> true
-                          | _                            -> false)
-        (fun (t,v) -> Variable (t,v))
-        "variable"
-        ~strongly
+  let add_use t p =
+    if (not (List.mem p t.t_use_list)) then
+      t.t_use_list <- p::(t.t_use_list)
 
-let add_type ?(strongly=true) =
-  adder (fun sym t -> sym = Type t)
-        (fun t -> Type t)
-        "type"
-        ~strongly
+  let get_use t =
+    t.t_use_list
 
-let add_subprogram ?(strongly=true) tbl n params ret =
-  adder (fun sym (params,ret) -> sym = Subprogram (params,ret))
-        (fun (params,ret) -> Subprogram (params,ret))
-        "subprogram"
-        ~strongly
-        tbl
-        n
-        (List.map to_fparam params,ret)
+  let print_symbol = function
+    | Variable   (t,_) -> "V",T.print t
+    | Type         t   -> "T",T.print t
+    | Subprogram (p,r) -> "S",(
+                               let pdesc = " with "
+                                         ^ string_of_int (List.length p)
+                                         ^ " parameter(s)"
+                               in match r with None   -> "procedure"^pdesc
+                                             | Some t -> "function"
+                                                         ^pdesc
+                                                         ^" and return type "
+                                                         ^T.print t
+                              )
+    | Unit         _   -> "U","<unit>"
 
-(******************************************************************************
- *                                                                            *
- *                              cast_xxx functions                            *
- *                                                                            *
- ******************************************************************************)
+  let print_symbol_join s =
+    let (s1,s2) = print_symbol s in
+    s1^" "^s2
 
-(* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
-let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
-  let p' x =
-    match p x with
-      | None   -> None
-      | Some y -> if filter y then Some y else None
-  in
-  match l with
-  |  []  -> raise Not_found
-  | h::t -> begin
-              match p' h with
-                | None -> extract_unique p' t
-                | Some r -> if List.exists (fun x -> p' x <> None) t
-                            then None
-                            else Some r
-            end
-
-let mkcast desc fn  ?(filter=fun _ -> true) lst  =
-  if (List.length lst > 1) then
-    begin
-      Npkcontext.print_debug ("Multiple interpretations for "^desc^" :");
-      List.iter (fun x -> Npkcontext.print_debug ("\t"
-                                                 ^print_symbol_join x
-                                                 )) lst
+  let print_table tbl =
+    let out = Buffer.create 0 in
+    let print_string x = Buffer.add_string out x in
+    let pad width str =
+      let x = String.length str in
+      let b = (width - x) / 2   in
+      let a =  width - x - b    in
+      let b = max b 0 in
+      let a = max a 0 in
+      (String.make a ' ')^str^(String.make b ' ')
+    in
+    let line_printer i (sym,_) =
+      let (t,sym_d) = print_symbol sym in
+      List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
+      print_string "\n"
+    in
+    begin match tbl.t_desc with
+      | None -> ()
+      | Some desc -> print_string ("(" ^ desc ^ ")\n"
+                                  ^ (if tbl.t_loc = Newspeak.unknown_loc then ""
+                                     else "@ "^ Newspeak.string_of_loc tbl.t_loc)
+                                  ^ "\n")
     end;
-  match extract_unique ~filter fn lst with
-    | None   -> error ("Ambiguous "^desc^" name")
-    | Some x -> x
+    print_string "+------+---------------+---- . . .\n";
+    IHashtbl.iter line_printer tbl.t_tbl;
+    print_string "+------+---------------+---- . . .\n";
+    print_string "\n";
+    Buffer.contents out
 
-let cast_v ?filter = mkcast "variable"
-                    (function Variable (x,_) -> Some x
-                            | Subprogram ([],Some rt) ->
-                                raise (ParameterlessFunction rt)
-                            |_ -> None
-                    )
-                    ?filter
+  let create_table ?desc ?(strong=true) _ =  { t_renaming = []
+                                             ; t_tbl      = IHashtbl.create 0
+                                             ; t_desc     = desc
+                                             ; t_loc      = Npkcontext.get_loc ()
+                                             ; t_strong   = strong
+                                             ; t_use_list = []
+                                             }
 
-let cast_t ?filter = mkcast "type"
-                     (function Type x -> Some x
-                             | _      -> None)
-                     ?filter
+  (******************************************************************************
+   *                                                                            *
+   *                               add_xxx functions                            *
+   *                                                                            *
+   ******************************************************************************)
 
-let cast_s ?filter = mkcast "subprogram"
-                     (function Subprogram x -> Some x
-                             | _            -> None)
-                     ?filter
+  let adder matches mksym desc ?(strongly=true) tbl n t =
+    try begin match IHashtbl.find tbl.t_tbl n with
+        | (sym ,true) when matches sym t -> error ("Homograph "^desc)
+        | (_sym,false) ->
+            begin
+              Npkcontext.print_debug ("Replacing weak "^desc^" symbol '"^n^"'");
+              IHashtbl.replace tbl.t_tbl n (mksym t ,strongly);
+            end
+        | (_  , true) -> raise Not_found
+        end
+    with Not_found -> begin
+                        Npkcontext.print_debug ("Adding "^desc^" '"^n^"'");
+                        IHashtbl.add tbl.t_tbl n (mksym t,strongly)
+                      end
 
-(******************************************************************************
- *                                                                            *
- *                              find_xxx functions                            *
- *                                                                            *
- ******************************************************************************)
+  let add_variable ?(strongly=true) =
+    adder (fun sym (t,_) -> match sym with
+                            | Variable (t', _) when t' = t -> true
+                            | _                            -> false)
+          (fun (t,v) -> Variable (t,v))
+          "variable"
+          ~strongly
 
-let rec find_symbols t id =
-  fst (List.split (IHashtbl.find_all t.t_tbl id))
+  let add_type ?(strongly=true) =
+    adder (fun sym t -> sym = Type t)
+          (fun t -> Type t)
+          "type"
+          ~strongly
 
-let find_type tbl n =
-  cast_t (find_symbols tbl n)
+  let add_subprogram ?(strongly=true) tbl n params ret =
+    adder (fun sym (params,ret) -> sym = Subprogram (params,ret))
+          (fun (params,ret) -> Subprogram (params,ret))
+          "subprogram"
+          ~strongly
+          tbl
+          n
+          (List.map to_fparam params,ret)
 
-let find_subprogram tbl n =
-  (fun (x,y) -> List.map from_fparam x,y)
-      (cast_s (find_symbols tbl n))
+  (******************************************************************************
+   *                                                                            *
+   *                              cast_xxx functions                            *
+   *                                                                            *
+   ******************************************************************************)
 
-let find_variable tbl ?expected_type n =
-  let ovl_predicate = match expected_type with
-    | Some t when t <> T.unknown
-        -> fun x ->    T.is_compatible x t
-    | _ -> fun _ -> true
-  in
-  begin
-  Npkcontext.print_debug ("Find_variable "
-                         ^n
-                         ^" : expected type is "
-                         ^match expected_type with None -> "None"
-                                  | Some t -> T.print t)
-  end;
-  cast_v ~filter:ovl_predicate (find_symbols tbl n)
+  (* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
+  let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
+    let p' x =
+      match p x with
+        | None   -> None
+        | Some y -> if filter y then Some y else None
+    in
+    match l with
+    |  []  -> raise Not_found
+    | h::t -> begin
+                match p' h with
+                  | None -> extract_unique p' t
+                  | Some r -> if List.exists (fun x -> p' x <> None) t
+                              then None
+                              else Some r
+              end
 
-let find_unit t id =
-  match (find_symbols t id) with
-  | [Unit x] -> Some x
-  | _ -> None
+  let mkcast desc fn  ?(filter=fun _ -> true) lst  =
+    if (List.length lst > 1) then
+      begin
+        Npkcontext.print_debug ("Multiple interpretations for "^desc^" :");
+        List.iter (fun x -> Npkcontext.print_debug ("\t"
+                                                   ^print_symbol_join x
+                                                   )) lst
+      end;
+    match extract_unique ~filter fn lst with
+      | None   -> error ("Ambiguous "^desc^" name")
+      | Some x -> x
 
-(******************************************************************************
- *                                                                            *
- *                            builtin_table                                   *
- *                                                                            *
- ******************************************************************************)
+  let cast_v ?filter = mkcast "variable"
+                      (function Variable (x,_) -> Some x
+                              | Subprogram ([],Some rt) ->
+                                  raise (ParameterlessFunction rt)
+                              |_ -> None
+                      )
+                      ?filter
 
-let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
+  let cast_t ?filter = mkcast "type"
+                       (function Type x -> Some x
+                               | _      -> None)
+                       ?filter
 
-let builtin_type x = find_type builtin_table x
+  let cast_s ?filter = mkcast "subprogram"
+                       (function Subprogram x -> Some x
+                               | _            -> None)
+                       ?filter
 
-let _ =
-  List.iter (fun (n,t) -> add_type builtin_table n t)
-  [ "integer"  , T.integer
-  ; "float"    , T.std_float
-  ; "boolean"  , T.boolean
-  ; "character", T.character
-  ]
+  (******************************************************************************
+   *                                                                            *
+   *                              find_xxx functions                            *
+   *                                                                            *
+   ******************************************************************************)
+
+  let rec find_symbols t id =
+    fst (List.split (IHashtbl.find_all t.t_tbl id))
+
+  let find_type tbl n =
+    cast_t (find_symbols tbl n)
+
+  let find_subprogram tbl n =
+    (fun (x,y) -> List.map from_fparam x,y)
+        (cast_s (find_symbols tbl n))
+
+  let find_variable tbl ?expected_type n =
+    let ovl_predicate = match expected_type with
+      | Some t when t <> T.unknown
+          -> fun x ->    T.is_compatible x t
+      | _ -> fun _ -> true
+    in
+    begin
+    Npkcontext.print_debug ("Find_variable "
+                           ^n
+                           ^" : expected type is "
+                           ^match expected_type with None -> "None"
+                                    | Some t -> T.print t)
+    end;
+    cast_v ~filter:ovl_predicate (find_symbols tbl n)
+
+  let find_unit t id =
+    match (find_symbols t id) with
+    | [Unit x] -> Some x
+    | _ -> None
+
+  (******************************************************************************
+   *                                                                            *
+   *                            builtin_table                                   *
+   *                                                                            *
+   ******************************************************************************)
+
+  let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
+
+  let builtin_type x = find_type builtin_table x
+
+  let _ =
+    List.iter (fun (n,t) -> add_type builtin_table n t)
+    [ "integer"  , T.integer
+    ; "float"    , T.std_float
+    ; "boolean"  , T.boolean
+    ; "character", T.character
+    ]
+
+end
 
 (******************************************************************************
  *                                                                            *
@@ -355,7 +357,9 @@ module StackedTree : TREE = struct
 
 end
 
+
 module SymMake(TR:TREE) = struct
+  open Table
 
   type t = {         s_stack  : table TR.t
            ; mutable s_cpkg   : string option
@@ -391,16 +395,17 @@ module SymMake(TR:TREE) = struct
   let is_with  s x = List.mem x s.s_with
 
   let s_add_use s p =
-    if (current s) = Some p then begin
-      if (is_with s p) then begin
-        Npkcontext.report_error "Symboltbl.s_add_use"
-          (p^" is undefined")
-      end;
+    if (is_with s p || current s = Some p) then
       add_use (top s) p
-    end
+    else
+      Npkcontext.report_error "Symboltbl.s_add_use"
+        (p^" is undefined")
 
   let s_get_use s =
     let ctx = TR.fold (fun r t -> (get_use t)@r) [] s.s_stack in
+    Npkcontext.print_debug ("s_get_use : context = {"
+                           ^String.concat "," ctx
+                           ^"}");
     match s.s_cpkg with
     | None   ->    ctx
     | Some p -> p::ctx
@@ -570,4 +575,4 @@ module SymMake(TR:TREE) = struct
 
 end
 
-module SymStack = SymMake (StackedTree)
+include SymMake (StackedTree)

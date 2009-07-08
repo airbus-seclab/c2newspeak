@@ -32,7 +32,7 @@ open Eval
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 module TC  = Typecheck
-module Sym = Symboltbl.SymStack
+module Sym = Symboltbl
 
 let (%+) = Nat.add
 let (%-) = Nat.sub
@@ -1115,7 +1115,7 @@ in
 
   let rec normalize_basic_decl item loc global reptbl handle_init =
     match item with
-    | UseDecl(use_clause) -> Symboltbl.add_use (Sym.top gtbl) use_clause;
+    | UseDecl(use_clause) -> Sym.s_add_use gtbl use_clause;
         Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let t =
@@ -1519,7 +1519,7 @@ in
               Ast.With(nom, loc, Some(norm_spec, loc))
               ::normalize_context r (nom::previous_with)
           end
-      | UseContext(n)::r -> Symboltbl.add_use (Sym.top gtbl) n;
+      | UseContext(n)::r -> Sym.s_add_use gtbl n;
                             Ast.UseContext n::normalize_context r previous_with
   in
 
