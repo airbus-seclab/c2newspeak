@@ -333,7 +333,7 @@ module StackedTree : TREE = struct
   let lookup p s =
     let s = Stack.copy s in
     let r = ref None in
-    while( !r = None && not (Stack.is_empty s)) do
+    while (!r = None && not (Stack.is_empty s)) do
       let t = Stack.pop s in
         r := p t
     done;
@@ -355,6 +355,97 @@ module StackedTree : TREE = struct
     iter (fun x -> r := f !r x) s;
     !r
 
+end
+
+
+module FCNSTree : TREE = struct
+
+  type 'a t = 'a tree ref
+
+  and 'a tree = 'a node option
+
+  and 'a node = {         fcns_contents    : 'a
+                ; mutable fcns_parent      : 'a tree
+                ; mutable fcns_firstchild  : 'a tree
+                ; mutable fcns_nextsibling : 'a tree
+                }
+
+  let create _ =
+    ref None
+ 
+  let iter f t =
+    let rec iter_tree f t =
+      match t with
+      | None   -> ()
+      | Some n -> begin
+                    f n.fcns_contents;
+                    iter_tree f n.fcns_parent
+                  end
+    in
+    iter_tree f !t
+  
+  let fold f init s =
+    let r = ref init in
+    iter (fun x -> r := f !r x) s;
+    !r
+
+  let top x =
+    match !x with
+    | None -> invalid_arg "FCNSTree.top"
+    | Some n -> n.fcns_contents
+
+  let height x = fold (fun r _ -> succ r) 0 x
+
+  let nth x n =
+    let rec nth_tree x n =
+      match x with
+      | None -> invalid_arg "FCNSTree.nth"
+      | Some {fcns_contents = c     } when n = 1 -> c
+      | Some nd                                  -> nth_tree nd.fcns_parent (pred n)
+    in nth_tree !x n
+
+  let lookup p x =
+    let rec lookup_tree p x =
+      match x with
+       | None  -> None
+       | Some n -> begin
+                     match p n.fcns_contents with
+                     | Some x -> Some x
+                     | None   -> lookup_tree p n.fcns_parent
+                   end
+    in
+    lookup_tree p !x
+
+  let pop x =
+    match !x with
+    | None  -> invalid_arg "FCNSTree.pop"
+    | Some n -> x := n.fcns_parent
+
+  let push e x =
+    let push_node e x =
+      let newnode = { fcns_contents    = e
+                    ; fcns_parent      = Some x
+                    ; fcns_firstchild  = None
+                    ; fcns_nextsibling = None
+                    }
+      in
+      if (x.fcns_firstchild = None) then
+          x.fcns_firstchild <- Some newnode
+      else
+        let rec nsstar x =
+          match x.fcns_nextsibling with
+          | None   -> x
+          | Some s -> nsstar s
+        in
+        (nsstar(x)).fcns_nextsibling <- Some newnode
+    in
+    match !x with
+    | None -> x := Some { fcns_contents    = e
+                        ; fcns_parent      = None
+                        ; fcns_firstchild  = None
+                        ; fcns_nextsibling = None
+                        }
+    | Some node -> push_node e node
 end
 
 
