@@ -9,6 +9,9 @@ module type TREE = sig
   val fold   : ('res -> 'a -> 'res) -> 'res -> 'a t -> 'res
   val height : 'a t -> int
   val nth    : 'a t -> int -> 'a
+
+  val first_child  : 'a t -> unit
+  val next_sibling : 'a t -> unit
 end
 
 module StackedTree : TREE = struct
@@ -46,6 +49,12 @@ module StackedTree : TREE = struct
     let r = ref init in
     iter (fun x -> r := f !r x) s;
     !r
+
+  let first_child _ =
+    failwith "FC/NS in StackedTree"
+
+  let next_sibling  _ =
+    failwith "FC/NS in StackedTree"
 
 end
 
@@ -139,6 +148,17 @@ module FCNSTree : TREE = struct
       | Some node -> push_node node
     end;
     x := Some newnode
+
+    let first_child x =
+      match !x with
+      | None   -> failwith "first_child"
+      | Some n -> x:= n.fcns_firstchild
+
+    let next_sibling x =
+      match !x with
+      | None   -> failwith "next_sibling"
+      | Some n -> x:= n.fcns_nextsibling
+
 end
 
 

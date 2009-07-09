@@ -10,6 +10,9 @@ module type TREE = sig
   val fold   : ('res -> 'a -> 'res) -> 'res -> 'a t -> 'res
   val height : 'a t -> int
   val nth    : 'a t -> int -> 'a
+
+  val first_child  : 'a t -> unit
+  val next_sibling : 'a t -> unit
 end
 
 module StackedTree : TREE
