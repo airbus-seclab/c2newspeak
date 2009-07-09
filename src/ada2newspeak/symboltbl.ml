@@ -518,11 +518,24 @@ module SymMake(TR:Tree.TREE) = struct
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
-      List.filter (fun x -> List.mem x l1) l2
+      List.filter (fun x -> List.exists (fun y -> print_symbol y = print_symbol x) l1) l2
     in
     let s1 = find_symbols (top s) n1 in
     let s2 = find_symbols (top s) n2 in
     let inte = inter s1 s2 in
+    let print_set set = 
+      "{"^
+      String.concat ", " (List.map (fun x -> print_symbol_join x ) set)
+      ^"}"
+    in
+    Npkcontext.print_debug ("Type_ovl_intersection : result = "
+                           ^print_set inte
+                           ^(if inte <> [] then ""
+                             else 
+                               " , L = "^print_set s1^
+                               " , R = "^print_set s2
+                            )
+                           );
     if inte = [] then T.unknown else fst (cast_v inte)
 
   let first_child  x = TR.first_child  x.s_stack

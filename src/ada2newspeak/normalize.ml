@@ -684,18 +684,14 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
 (**
  * Normalize a constraint.
  *)
-and normalize_contrainte (contrainte:contrainte) (typ:typ) :contrainte =
+and normalize_contrainte (contrainte:contrainte) (_typ:typ) :contrainte =
   let eval_range exp1 exp2 =
     let norm_exp1 = normalize_exp exp1
     and norm_exp2 = normalize_exp exp2 in
       (* on essaye d'evaluer les bornes *)
       (try
-         let val1 = eval_static
-           norm_exp1 (Some(typ)) csttbl
-           gtbl extern
-         and val2 = eval_static
-           norm_exp2 (Some(typ)) csttbl
-           gtbl extern in
+         let val1 = eval_static norm_exp1 gtbl in
+         let val2 = eval_static norm_exp2 gtbl in
          let contrainte =  match (val1, val2) with
            | (T.FloatVal(f1),T.FloatVal(f2)) ->
                if f1<=f2
@@ -772,7 +768,7 @@ let interpret_enumeration_clause agregate assoc cloc loc =
             List.map
               (fun (ident, exp) ->
                  let exp' = normalize_exp exp in
-                 let v = eval_static_integer_exp exp' csttbl gtbl false
+                 let v = eval_static_integer_exp exp' gtbl
                  in (ident, v))
               assoc_list in
           let find_val ident =
@@ -873,8 +869,8 @@ in
         let ids = fst (List.split symbs) in
         let t = T.new_enumerated ids in
         Sym.s_add_type gtbl ident t;
-        List.iter (fun i -> Sym.s_add_variable gtbl i t
-        ) ids;
+        List.iter (fun (i,v) -> Sym.s_add_variable gtbl i t ~value:(T.IntVal v)
+        ) symbs;
         add_typ id typ_decl loc global extern;
         typ_decl
     | DerivedType(subtyp_ind) ->
@@ -1153,7 +1149,7 @@ in
           (StaticConst(v, typ, global)) global in
         let status =
           try
-            let value = eval_static normexp (Some typ) csttbl gtbl extern in
+            let value = eval_static normexp gtbl in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp value;
@@ -1191,12 +1187,12 @@ in
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp) ->
         let norm_exp = normalize_exp exp in
-        let v = eval_static_number norm_exp csttbl gtbl extern in
+        let v = eval_static_number norm_exp gtbl in
             let t = match v with
               | T.BoolVal  _ | T.IntVal _ -> T.universal_integer
               | T.FloatVal _              -> T.universal_real
             in
-            Sym.s_add_variable gtbl ident t;
+            Sym.s_add_variable gtbl ident t ~value:v;
             add_cst (normalize_ident_cur ident)
                     (Number(v, global))
                     global;

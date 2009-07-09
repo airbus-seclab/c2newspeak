@@ -32,21 +32,15 @@ type constant_symb =
   | VarSymb      of bool            (** bool = global? *)
   | FunSymb      of Syntax_ada.typ option*bool (** bool = extern? *)
 
-val eval_static :  Ast.expression -> Syntax_ada.typ option
-                -> (Syntax_ada.name,constant_symb) Hashtbl.t
+val eval_static :  Ast.expression 
                 -> Symboltbl.t
-                -> bool
   -> Ada_types.data_t
 
 
 val eval_static_integer_exp :  Ast.expression
-                            -> (Syntax_ada.name, constant_symb) Hashtbl.t
                             -> Symboltbl.t
-                            -> bool
     -> Newspeak.Nat.t
 
 val eval_static_number  :  Ast.expression
-                        -> (Syntax_ada.name, constant_symb) Hashtbl.t
                         -> Symboltbl.t
-                        -> bool
     -> Ada_types.data_t
