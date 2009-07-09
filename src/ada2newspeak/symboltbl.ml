@@ -524,4 +524,4 @@ module SymMake(TR:Tree.TREE) = struct
 
 end
 
-include SymMake (Tree.StackedTree)
+include SymMake (Tree.FCNSTree)

@@ -57,7 +57,7 @@ module FCNSTree : TREE = struct
   and 'a tree = 'a node option
 
   and 'a node = {         fcns_contents    : 'a
-                ; mutable fcns_parent      : 'a tree
+                ;         fcns_parent      : 'a tree
                 ; mutable fcns_firstchild  : 'a tree
                 ; mutable fcns_nextsibling : 'a tree
                 }
@@ -86,21 +86,15 @@ module FCNSTree : TREE = struct
     | None -> invalid_arg "FCNSTree.top"
     | Some n -> n.fcns_contents
 
-  let height x = fold (fun r _ -> succ r) 0 x
+  (* Path from root to x *)
+  let path (x:'a t) =
+    fold (fun r n -> n::r) [] x
+
+  let height x =
+    fold (fun r _ -> succ r) 0 x
 
   let nth x n =
-    let rec nth_tree x n =
-      match x with
-      | None    -> invalid_arg "FCNSTree.nth"
-      | Some nd -> begin
-                     if (n = 1) then
-                       nd
-                     else
-                       nth_tree nd.fcns_parent (pred n)
-                   end
-    in
-    let r = nth_tree !x n in
-    r.fcns_contents
+    List.nth (path x) (n-1)
 
   let lookup p x =
     let rec lookup_tree p x =
