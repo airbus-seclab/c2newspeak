@@ -227,7 +227,7 @@ module Table = struct
       | Some x -> x
 
   let cast_v ?filter = mkcast "variable"
-                      (function Variable (x,_) -> Some x
+                      (function Variable (x,v) -> Some (x,v)
                               | Subprogram ([],Some rt) ->
                                   raise (ParameterlessFunction rt)
                               |_ -> None
@@ -273,7 +273,7 @@ module Table = struct
                            ^match expected_type with None -> "None"
                                     | Some t -> T.print t)
     end;
-    cast_v ~filter:ovl_predicate (find_symbols tbl n)
+    cast_v ~filter:(fun x -> ovl_predicate (fst x)) (find_symbols tbl n)
 
   let find_unit t id =
     match (find_symbols t id) with
@@ -494,9 +494,12 @@ module SymMake(TR:Tree.TREE) = struct
              end
          end
 
-  let s_find_variable s ?expected_type (package,n) =
+  let s_find_variable_value s ?expected_type (package,n) =
     s_find "variable" (fun tbl n -> find_variable tbl ?expected_type n)
             s ?package n
+
+  let s_find_variable s ?expected_type (package,n) =
+    fst (s_find_variable_value s ?expected_type (package,n))
 
   let s_find_type s (package,n) =
     s_find "type" find_type s ?package n
@@ -520,7 +523,10 @@ module SymMake(TR:Tree.TREE) = struct
     let s1 = find_symbols (top s) n1 in
     let s2 = find_symbols (top s) n2 in
     let inte = inter s1 s2 in
-    if inte = [] then T.unknown else cast_v inte
+    if inte = [] then T.unknown else fst (cast_v inte)
+
+  let first_child  x = TR.first_child  x.s_stack
+  let next_sibling x = TR.next_sibling x.s_stack
 
 end
 

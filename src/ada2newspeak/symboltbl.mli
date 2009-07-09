@@ -100,6 +100,12 @@ val s_find_variable :    t
                       -> ?expected_type:Ada_types.t
                       -> string option * string
            -> Ada_types.t
+
+val s_find_variable_value :    t
+                      -> ?expected_type:Ada_types.t
+                      -> string option * string
+           -> Ada_types.t*(Ada_types.data_t option)
+
 val s_find_type     :    t
                       -> string option * string
            -> Ada_types.t
@@ -137,3 +143,10 @@ val is_with           : t -> string -> bool
 val s_get_use         : t -> string list
 
 val add_renaming_decl : t -> string -> Syntax_ada.name -> unit
+
+(*********************
+ * Post-build search *
+ *********************)
+
+val first_child  : t -> unit
+val next_sibling : t -> unit
