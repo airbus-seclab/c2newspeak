@@ -25,22 +25,9 @@
 
 *)
 
-type constant_symb =
-  | Number       of Ada_types.data_t*bool      (** bool = global? *)
-  | StaticConst  of Ada_types.data_t*Syntax_ada.typ*bool  (** bool = global? *)
-  | EnumLitteral of Syntax_ada.typ*Syntax_ada.nat*bool    (** bool = global? *)
-  | VarSymb      of bool            (** bool = global? *)
-  | FunSymb      of Syntax_ada.typ option*bool (** bool = extern? *)
-
-val eval_static :  Ast.expression 
-                -> Symboltbl.t
-  -> Ada_types.data_t
+val eval_static :  Ast.expression -> Symboltbl.t -> Ada_types.data_t
 
 
-val eval_static_integer_exp :  Ast.expression
-                            -> Symboltbl.t
-    -> Newspeak.Nat.t
+val eval_static_integer_exp :  Ast.expression -> Symboltbl.t -> Newspeak.Nat.t
 
-val eval_static_number  :  Ast.expression
-                        -> Symboltbl.t
-    -> Ada_types.data_t
+val eval_static_number  :  Ast.expression -> Symboltbl.t -> Ada_types.data_t

@@ -31,17 +31,6 @@ open Ada_utils
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 
-(* variable booleenne :
-   cas fonction : extern
-   autres : global *)
-(** Constant symbols *)
-type constant_symb =
-  | Number       of T.data_t*bool      (** bool = global? *)
-  | StaticConst  of T.data_t*typ*bool  (** bool = global? *)
-  | EnumLitteral of typ*nat*bool    (** bool = global? *)
-  | VarSymb      of bool            (** bool = global? *)
-  | FunSymb      of typ option*bool (** bool = extern? *)
-
 (** Evaluate (at compile-time) an expression. *)
 let eval_static (exp:Ast.expression)
                 (tbl:Symboltbl.t)
