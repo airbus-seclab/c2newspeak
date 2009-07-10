@@ -161,11 +161,6 @@ and contrainte_to_string contrainte = match contrainte with
   |  FloatRangeConstraint(s1,s2) ->
        "FloatRangeConstraint("^string_of_float s1^", "^string_of_float s2^")"
 
-and value_to_string v = match v with
-  | Ada_types.IntVal   i -> "IntVal("^(nat_to_string i)^")"
-  | Ada_types.FloatVal s -> "FloatVal("^string_of_float s^")"
-  | Ada_types.BoolVal  b -> "BoolVal("^(string_of_bool b)^")"
-
 and iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"

@@ -115,6 +115,11 @@ let rec print t =
   ^",trait = "^p_trait t.trait
   ^"}"
 
+let print_data = function
+  | IntVal   i -> "IV ("^Newspeak.Nat.to_string i^")"
+  | FloatVal s -> "FV ("^string_of_float        s^")"
+  | BoolVal  b -> "BV ("^string_of_bool         b^")"
+
 (**********
  * Ranges *
  **********)

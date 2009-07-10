@@ -131,6 +131,8 @@ val is_compatible : t -> t -> bool
  *)
 val print : t -> string
 
+val print_data : data_t -> string
+
 (*****************
  * Builtin types *
  *****************)

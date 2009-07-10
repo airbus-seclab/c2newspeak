@@ -92,7 +92,8 @@ module Table = struct
     t.t_use_list
 
   let print_symbol = function
-    | Variable   (t,_) -> "V",T.print t
+    | Variable   (t,None)   -> "V",T.print t
+    | Variable   (t,Some v) -> "V *","("^T.print_data v^")"^ T.print t
     | Type         t   -> "T",T.print t
     | Subprogram (p,r) -> "S",(
                                let pdesc = " with "
@@ -518,7 +519,11 @@ module SymMake(TR:Tree.TREE) = struct
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
-      List.filter (fun x -> List.exists (fun y -> print_symbol y = print_symbol x) l1) l2
+      let sym_eq x y = match (x,y) with
+        | Variable (t1,_), Variable (t2,_) -> t1 = t2
+        | a, b -> a = b
+      in
+      List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
     in
     let s1 = find_symbols (top s) n1 in
     let s2 = find_symbols (top s) n2 in
