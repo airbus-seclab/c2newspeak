@@ -662,6 +662,15 @@ in
             ~global:true
   in
 
+  let add_numberdecl ident value =
+    let t = match value with
+      | T.BoolVal  _ -> Npkcontext.report_error "add_numberdecl"
+                        "Unexpected boolean value"
+      | T.IntVal   _ -> T.universal_integer
+      | T.FloatVal _ -> T.universal_real
+    in
+    Sym.s_add_variable gtbl ident t ~value
+  in
 
 let interpret_enumeration_clause agregate assoc cloc loc =
     Npkcontext.set_loc cloc;
@@ -1048,14 +1057,10 @@ in
         in Some (Ast.TypeDecl(id,norm_typ_decl))
     | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
     | NumberDecl(ident, exp) ->
-        let norm_exp = normalize_exp exp in
-        let v = eval_static_number norm_exp gtbl in
-            let t = match v with
-              | T.BoolVal  _ | T.IntVal _ -> T.universal_integer
-              | T.FloatVal _              -> T.universal_real
-            in
-            Sym.s_add_variable gtbl ident t ~value:v;
-          Some (Ast.NumberDecl(ident, v))
+       let norm_exp = normalize_exp exp in
+       let value = eval_static_number norm_exp gtbl in
+       add_numberdecl ident value;
+       Some (Ast.NumberDecl(ident, value))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
         let t =
@@ -1304,17 +1309,17 @@ in
                )
                ident_list
             )
-        | Ast.ObjectDecl(ident_list,subtyp_ind, Ast.StaticVal _) ->
+        | Ast.ObjectDecl(ident_list,subtyp_ind, Ast.StaticVal value) ->
             (* constante statique *)
 
             let (_,_,_,t) = subtyp_ind in
               List.iter
                 (fun x ->
-                  Sym.s_add_variable gtbl x t;
+                  Sym.s_add_variable gtbl x t ~value;
                  )
                 ident_list
-        | Ast.NumberDecl(ident, _v) -> (* FIXME *)
-            Sym.s_add_variable gtbl ident T.universal_integer
+        | Ast.NumberDecl(ident, value) ->
+            add_numberdecl ident value
         | Ast.SubtypDecl(ident, subtyp_ind) ->
             let subtyp = extract_subtyp subtyp_ind in
               types#add (normalize_ident_cur_ext ident true)
