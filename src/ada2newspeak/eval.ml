@@ -95,9 +95,11 @@ let eval_static (exp:Ast.expression)
 
   and eval_static_const (name:name) (expected_type:T.t)
     :T.data_t =
-    match snd (Symboltbl.s_find_variable_value tbl ~expected_type name) with
-      | None   -> raise NonStaticExpression
-      | Some b -> b
+    try
+      match snd (Symboltbl.s_find_variable_value tbl ~expected_type name) with
+        | None   -> raise NonStaticExpression
+        | Some b -> b
+    with Symboltbl.ParameterlessFunction _ -> raise NonStaticExpression
 
   in
       eval_static_exp exp
