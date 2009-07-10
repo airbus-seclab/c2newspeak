@@ -113,10 +113,10 @@ val new_float      : int -> t
 (**
  * Array type.
  * The first parameter is the component type ;
- * the second one is a list of index types.
+ * the second one is the index type.
  * @raise Invalid_argument if the index list is empty.
  *)
-val new_array      : t -> t list -> t
+val new_array      : t -> t -> t
 
 (**
  * Is a type compatible with another one ?
@@ -171,3 +171,9 @@ val is_discrete : t -> bool
 val is_float    : t -> bool
 
 val is_unknown  : t -> bool
+
+(****************
+ *  Translator  *
+ ****************)
+
+val translate : t -> Cir.typ

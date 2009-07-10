@@ -76,7 +76,7 @@ and trait_t =
   | Signed of range option            (* Range constraint *)
   | Enumeration of (string*int) list  (* Name-index *)
   | Float of int                      (* Digits *)
-  | Array of t*(t list)               (* Component-indexes list *)
+  | Array of t*t                      (* Component-index *)
 
 
 (******************
@@ -104,8 +104,8 @@ let rec print t =
     | Float   d -> "Float "  ^string_of_int d
     | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
-                  ^print c^"; indexes = "
-                  ^String.concat "," (List.map print i)
+                  ^print c^"; index = "
+                  ^print i
                   ^"}}"
   in
    "{"
@@ -280,9 +280,9 @@ let rec attr_get typ attr =
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
           if attr="length" then
-            universal_integer, IntVal (length_of (List.hd ind ))
+            universal_integer, IntVal (length_of ind)
           else
-            attr_get (List.hd ind) attr
+            attr_get ind attr
         end
     | Float digits , "digits" -> universal_integer,
                                     IntVal (Newspeak.Nat.of_int digits)
@@ -344,3 +344,34 @@ let is_float typ =
 
 let is_unknown typ =
   typ.trait = Unknown
+
+(****************
+ *  Translator  *
+ ****************)
+
+let minimal_size _a _b =
+  32 (* FIXME *)
+
+let float_size d =
+  if d < 6 then
+    Npkcontext.report_error "translate"
+      "'digits attribute too small for floating point type"
+  else if (d < 11) then
+    16
+  else
+    32
+
+let rec translate t =
+  let rec translate_trait = function
+  | Signed (Some Range (a,b)) -> Cir.Scalar (Newspeak.Int (Newspeak.Signed,minimal_size a b))
+  | Enumeration      v        -> translate_trait (Signed(
+                                    Some(Range ( Newspeak.Nat.one
+                                               , Newspeak.Nat.of_int (List.length v)))))
+  | Float            d        -> Cir.Scalar (Newspeak.Float (float_size d))
+  | Array          (c,i)      -> Cir.Array  (translate c, Some (Newspeak.Nat.to_int (length_of i)))
+  | Unknown          _        -> Npkcontext.report_error "Ada_types.translate"
+                                     "Type of unknown trait remaining at translate time"
+  | Signed (None|Some NullRange) ->  Npkcontext.report_error "Ada_types.translate"
+                    "Trying to translate <Signed None>"
+  in translate_trait t.trait
+  

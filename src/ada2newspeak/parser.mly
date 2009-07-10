@@ -83,7 +83,7 @@ let build_matrix l typ_ind loc =
                                          )
                                    ,Ada_types.new_array
                                                Ada_types.unknown (* hd   *)
-                                              [Ada_types.unknown (* recu *)]
+                                               Ada_types.unknown (* recu *)
                                    ,loc
                                    )
                           )
@@ -372,7 +372,7 @@ basic_declaration :
         {ObjectDecl($1,$4,Some($6), Constant), $2}
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
     { TypeDecl($2,Array $5, Ada_types.new_array Ada_types.unknown
-                                               [Ada_types.unknown]),$1}
+                                                Ada_types.unknown),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
   { TypeDecl($2, make_enum $5,Ada_types.new_enumerated $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON

@@ -874,7 +874,7 @@ in
         let (tpi,_,_,tti) = a.array_index     in
         let tc = if ttc = T.unknown then subtyp_to_adatyp tpc else ttc in
         let ti = if tti = T.unknown then subtyp_to_adatyp tpi else tti in
-        let t = T.new_array tc [ti] in
+        let t = T.new_array tc ti in
         Sym.s_add_type gtbl ident t;
         let contrainte = match subtyp with
           | Constrained(_,contrainte,_,_) -> contrainte
