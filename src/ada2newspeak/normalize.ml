@@ -1054,7 +1054,7 @@ in
               | T.BoolVal  _ | T.IntVal _ -> T.universal_integer
               | T.FloatVal _              -> T.universal_real
             in
-            Sym.s_add_variable gtbl ident t;
+            Sym.s_add_variable gtbl ident t ~value:v;
           Some (Ast.NumberDecl(ident, v))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in

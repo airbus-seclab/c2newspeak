@@ -509,6 +509,13 @@ module SymMake(TR:Tree.TREE) = struct
     s_find "subprogram" find_subprogram s ?package n
 
   let s_add_variable s n ?value t =
+    Npkcontext.print_debug ("s_add_variable : adding '"
+                           ^n^"' with "
+                           ^(match value with
+                            | None   -> "no value"
+                            | Some v -> "value "^T.print_data v
+                            )
+                           );
     add_variable (top s) n (t,value) ~strongly:(top s).t_strong
 
   let s_add_type s n v =
