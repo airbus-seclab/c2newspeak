@@ -130,9 +130,9 @@ module Table = struct
     begin match tbl.t_desc with
       | None -> ()
       | Some desc -> print_string ("(" ^ desc ^ ")\n"
-                                  ^ (if tbl.t_loc = Newspeak.unknown_loc then ""
-                                     else "@ "^ Newspeak.string_of_loc tbl.t_loc)
-                                  ^ "\n")
+                                  ^(if tbl.t_loc = Newspeak.unknown_loc then ""
+                                    else "@ "^ Newspeak.string_of_loc tbl.t_loc)
+                                  ^"\n")
     end;
     print_string "+------+---------------+---- . . .\n";
     IHashtbl.iter line_printer tbl.t_tbl;
@@ -140,19 +140,19 @@ module Table = struct
     print_string "\n";
     Buffer.contents out
 
-  let create_table ?desc ?(strong=true) _ =  { t_renaming = []
-                                             ; t_tbl      = IHashtbl.create 0
-                                             ; t_desc     = desc
-                                             ; t_loc      = Npkcontext.get_loc ()
-                                             ; t_strong   = strong
-                                             ; t_use_list = []
-                                             }
+  let create_table ?desc ?(strong=true) _ = { t_renaming = []
+                                            ; t_tbl      = IHashtbl.create 0
+                                            ; t_desc     = desc
+                                            ; t_loc      = Npkcontext.get_loc ()
+                                            ; t_strong   = strong
+                                            ; t_use_list = []
+                                            }
 
-  (******************************************************************************
-   *                                                                            *
-   *                               add_xxx functions                            *
-   *                                                                            *
-   ******************************************************************************)
+(******************************************************************************
+ *                                                                            *
+ *                               add_xxx functions                            *
+ *                                                                            *
+ ******************************************************************************)
 
   let adder matches mksym desc ?(strongly=true) tbl n t =
     try begin match IHashtbl.find tbl.t_tbl n with
@@ -192,11 +192,11 @@ module Table = struct
           n
           (List.map to_fparam params,ret)
 
-  (******************************************************************************
-   *                                                                            *
-   *                              cast_xxx functions                            *
-   *                                                                            *
-   ******************************************************************************)
+(******************************************************************************
+ *                                                                            *
+ *                              cast_xxx functions                            *
+ *                                                                            *
+ ******************************************************************************)
 
   (* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
   let rec extract_unique p ?(filter:'b->bool=fun _ -> true) l =
@@ -245,11 +245,11 @@ module Table = struct
                                | _            -> None)
                        ?filter
 
-  (******************************************************************************
-   *                                                                            *
-   *                              find_xxx functions                            *
-   *                                                                            *
-   ******************************************************************************)
+(******************************************************************************
+ *                                                                            *
+ *                              find_xxx functions                            *
+ *                                                                            *
+ ******************************************************************************)
 
   let rec find_symbols t id =
     fst (List.split (IHashtbl.find_all t.t_tbl id))
@@ -281,11 +281,11 @@ module Table = struct
     | [Unit x] -> Some x
     | _ -> None
 
-  (******************************************************************************
-   *                                                                            *
-   *                            builtin_table                                   *
-   *                                                                            *
-   ******************************************************************************)
+(******************************************************************************
+ *                                                                            *
+ *                            builtin_table                                   *
+ *                                                                            *
+ ******************************************************************************)
 
   let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
 
@@ -528,7 +528,7 @@ module SymMake(TR:Tree.TREE) = struct
     let s1 = find_symbols (top s) n1 in
     let s2 = find_symbols (top s) n2 in
     let inte = inter s1 s2 in
-    let print_set set = 
+    let print_set set =
       "{"^
       String.concat ", " (List.map (fun x -> print_symbol_join x ) set)
       ^"}"
@@ -536,7 +536,7 @@ module SymMake(TR:Tree.TREE) = struct
     Npkcontext.print_debug ("Type_ovl_intersection : result = "
                            ^print_set inte
                            ^(if inte <> [] then ""
-                             else 
+                             else
                                " , L = "^print_set s1^
                                " , R = "^print_set s2
                             )

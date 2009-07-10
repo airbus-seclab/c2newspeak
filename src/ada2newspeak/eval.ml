@@ -27,22 +27,42 @@
 
 open Syntax_ada
 open Ada_utils
+open Big_int
 
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 
-(** Evaluate (at compile-time) an expression. *)
-let eval_static (exp:Ast.expression)
-                (tbl:Symboltbl.t)
-   :T.data_t =
+let (^%) a b =
+  let a = Nat.to_big_int a
+  and b = Nat.to_big_int b in
+    if (Big_int.sign_big_int b)<0
+    then begin
+      Npkcontext.report_error "puiss"
+        "integer exponent negative"
+    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
 
-  let rec eval_static_exp (exp,t:Ast.expression)
-  :T.data_t =
+let mod_rem_aux ~is_mod na nb =
+  let a = Nat.to_big_int na in
+  let b = Nat.to_big_int nb in
+  let r_mod =  mod_big_int a b in
+  Nat.of_big_int (if (sign_big_int (if is_mod then b else a)) > 0
+                  then
+                    r_mod
+                  else
+                    sub_big_int r_mod (abs_big_int b)
+                 )
+
+let (%%) = mod_rem_aux ~is_mod:false (* rem *)
+let (%:) = mod_rem_aux ~is_mod:true  (* mod *)
+
+(** Evaluate (at compile-time) an expression. *)
+let eval_static exp tbl =
+  let rec eval_static_exp (exp,t) =
     match exp with
-    | Ast.CInt   i -> T.IntVal(i)            
-    | Ast.CFloat f -> T.FloatVal(f)          
+    | Ast.CInt   i -> T.IntVal(i)
+    | Ast.CFloat f -> T.FloatVal(f)
     | Ast.CChar  c -> T.IntVal (Nat.of_int c)
-    | Ast.CBool  b -> T.BoolVal b            
+    | Ast.CBool  b -> T.BoolVal b
     | Ast.Var    v -> eval_static_const v t
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Not exp -> begin
@@ -68,8 +88,7 @@ let eval_static (exp:Ast.expression)
    * Evaluate statically a binary expression.
    * expected_typ is the expected type of the result, not the operands.
    *)
-  and eval_static_binop (op:Ast.binary_op) (e1:Ast.expression) (e2:Ast.expression)
-        :T.data_t =
+  and eval_static_binop op e1 e2 =
     let val1 = eval_static_exp e1 in
     let val2 = eval_static_exp e2 in
     match (op,val1,val2) with
@@ -78,23 +97,23 @@ let eval_static (exp:Ast.expression)
     | Ast.Minus, T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.sub a b)
     | Ast.Mult , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.mul a b)
     | Ast.Div  , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.div a b)
-    | Ast.Power, T.IntVal   a, T.IntVal   b -> T.IntVal (puiss   a b)
-    | Ast.Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  +.  b)
-    | Ast.Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  -.  b)
-    | Ast.Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  *.  b)
-    | Ast.Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal  (a  /.  b)
-    | Ast.Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal (rem_ada a b)
-    | Ast.Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal (mod_ada a b)
+    | Ast.Power, T.IntVal   a, T.IntVal   b -> T.IntVal   (a ^% b)
+    | Ast.Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal (a +. b)
+    | Ast.Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal (a -. b)
+    | Ast.Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal (a *. b)
+    | Ast.Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
+    | Ast.Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
+    | Ast.Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
     | Ast.Eq   ,            a,            b -> T.BoolVal(T.data_eq a b)
     | Ast.Gt   ,            a,            b -> T.BoolVal(T.data_lt b a)
-    | Ast.And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal(a && b)       
-    | Ast.Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal(a || b)       
-    | Ast.Power, T.FloatVal a, T.IntVal   b -> T.FloatVal(a ** (float_of_int (Nat.to_int b)))
+    | Ast.And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
+    | Ast.Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
+    | Ast.Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
+                                  (a ** (float_of_int (Nat.to_int b)))
     | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"
 
-  and eval_static_const (name:name) (expected_type:T.t)
-    :T.data_t =
+  and eval_static_const name expected_type =
     try
       match snd (Symboltbl.s_find_variable_value tbl ~expected_type name) with
         | None   -> raise NonStaticExpression
@@ -107,9 +126,7 @@ let eval_static (exp:Ast.expression)
 (**
  * Evaluate statically an integer expression. FIXME
  *)
-let eval_static_integer_exp (exp:Ast.expression)
-                            (tbl:Symboltbl.t)
-    :nat =
+let eval_static_integer_exp exp tbl =
     try
       match (eval_static exp tbl) with
         | T.FloatVal _
@@ -128,9 +145,7 @@ let eval_static_integer_exp (exp:Ast.expression)
 (**
  * Evaluate statically an constant number.
  *)
-let eval_static_number (exp:Ast.expression)
-                       (tbl:Symboltbl.t)
-    :T.data_t =
+let eval_static_number exp tbl =
      try
          let v = eval_static exp tbl in
              match v with

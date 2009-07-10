@@ -1020,7 +1020,8 @@ in
               (* on verifie que la valeur obtenue est conforme
                  au sous-type *)
               check_static_subtyp subtyp value;
-              List.iter (fun x -> Sym.s_add_variable gtbl x t ~value) ident_list;
+              List.iter (fun x -> Sym.s_add_variable gtbl x t ~value)
+                        ident_list;
               Ast.StaticVal value
           with
             | AmbiguousTypeException -> Npkcontext.report_error
@@ -1303,7 +1304,6 @@ in
                )
                ident_list
             )
-
         | Ast.ObjectDecl(ident_list,subtyp_ind, Ast.StaticVal _) ->
             (* constante statique *)
 
@@ -1313,18 +1313,15 @@ in
                   Sym.s_add_variable gtbl x t;
                  )
                 ident_list
-
         | Ast.NumberDecl(ident, _v) -> (* FIXME *)
             Sym.s_add_variable gtbl ident T.universal_integer
-        | Ast.SpecDecl(Ast.SubProgramSpec (Ast.Function(_name, [], _return_typ))) -> ()
-        | Ast.SpecDecl(Ast.SubProgramSpec(Ast.Function(_name, _, _) |
-                                      Ast.Procedure(_name, _))) -> ()
         | Ast.SubtypDecl(ident, subtyp_ind) ->
             let subtyp = extract_subtyp subtyp_ind in
               types#add (normalize_ident_cur_ext ident true)
                 (*extract_subtyp subtyp_ind*) subtyp
                 loc true
-        | Ast.SpecDecl _ | Ast.UseDecl  _ -> ()
+        | Ast.SpecDecl _
+        | Ast.UseDecl  _ -> ()
 
     in match spec with
       | Ast.SubProgramSpec(Ast.Function(_name, [], _return_typ)) -> ()

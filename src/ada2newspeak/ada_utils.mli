@@ -42,28 +42,6 @@ type verbose_level =
 val mkerror : verbose_level -> string -> (string -> unit)
 
 (**
- * [nat] exponentiation.
- *)
-val puiss   : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
-
-(**
- * Follows Ada's [mod] operator. [a mod b] is defined by the following :
- *   - [a mod b] has the sign of [b]
- *   - [a mod b] has an absolute value less than the absolute value of [b]
- *   - there exists a signed integer [n] such as [a = b*n + (a mod b)]
- *)
-val mod_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
-
-(**
- * Follows Ada's [rem] operator. For positive [a] and [b], [a rem b] is the
- * remainder of the Euclidean division of [a] by [b]. The extension to integers
- * is defined by the following relations :
- *   - [  a  rem (-b) =   a rem b ]
- *   - [(-a) rem   b  = -(a rem b)]
- *)
-val rem_ada : Syntax_ada.nat -> Syntax_ada.nat -> Syntax_ada.nat
-
-(**
  * Convert a boolean into the native type.
  *)
 val nat_of_bool : bool -> Newspeak.Nat.t

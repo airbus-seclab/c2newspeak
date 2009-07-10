@@ -24,7 +24,6 @@
 
 
 open Syntax_ada
-open Big_int
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 
@@ -47,28 +46,6 @@ let mkerror lev modulename = match lev with
 (* arithmetique*)
 
 (* fonction propre a Ada *)
-let puiss a b =
-  let a = Nat.to_big_int a
-  and b = Nat.to_big_int b in
-    if (Big_int.sign_big_int b)<0
-    then begin
-      Npkcontext.report_error "Ada_utils.puiss"
-        "integer exponent negative"
-    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
-
-let mod_rem_aux ~is_mod na nb =
-  let a = Nat.to_big_int na in
-  let b = Nat.to_big_int nb in
-  let r_mod =  mod_big_int a b in
-  Nat.of_big_int (if (sign_big_int (if is_mod then b else a)) > 0
-                  then
-                    r_mod
-                  else
-                    sub_big_int r_mod (abs_big_int b)
-                 )
-
-let rem_ada = mod_rem_aux ~is_mod:false
-let mod_ada = mod_rem_aux ~is_mod:true
 
 let nat_of_bool b =
   if b then Newspeak.Nat.one
