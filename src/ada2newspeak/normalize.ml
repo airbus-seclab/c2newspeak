@@ -464,12 +464,10 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   |_ -> invalid_arg "direct_op_trans"
   in
   (* Is the operator overloaded ? *)
-  (*
-  let ovl_opname = (None,make_operator_name bop) in
-  try (ignore (Sym.s_find_variable gtbl ovl_opname);
-    normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)])))
-  with Not_found ->
-    *)
+  if (Sym.is_operator_overloaded gtbl bop) then
+    let ovl_opname = (None,make_operator_name bop) in
+    normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
+  else
   match bop with
   (* Operators that does not exist in AST *)
   | Lt     -> normalize_exp (          Binary(Gt, e2, e1) )

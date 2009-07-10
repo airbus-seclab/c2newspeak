@@ -113,6 +113,7 @@ val s_find_subprogram : t
                       -> string option * string
     -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
+val is_operator_overloaded : t -> Syntax_ada.binary_op -> bool
 
 (** Add data.  *)
 val s_add_type     : t -> string -> Ada_types.t -> unit

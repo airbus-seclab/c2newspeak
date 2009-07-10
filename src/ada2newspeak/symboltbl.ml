@@ -467,6 +467,7 @@ module SymMake(TR:Tree.TREE) = struct
       | Some tbl -> f tbl n
       | None     -> error ("No such package "^p^" when resolving a "^desc)
 
+  (* raise Not_found *)
   let s_find desc finder s ?package n =
     match package with
       | Some p -> s_find_abs desc finder s p n
@@ -488,29 +489,42 @@ module SymMake(TR:Tree.TREE) = struct
                  context := List.tl !context;
                done;
                match !res with
-               | None -> begin
-                           error ("Cannot find "^desc^" '"^n^"'")
-                         end
+               | None -> raise Not_found
                | Some v -> v
              end
          end
 
   let s_find_variable_value s ?expected_type (package,n) =
-    s_find "variable" (fun tbl n -> find_variable tbl ?expected_type n)
-            s ?package n
+    try
+      s_find "variable" (fun tbl n -> find_variable tbl ?expected_type n)
+              s ?package n
+    with Not_found -> error ("Cannot find variable '"^n^"'")
 
   let s_find_variable s ?expected_type (package,n) =
     fst (s_find_variable_value s ?expected_type (package,n))
 
   let s_find_type s (package,n) =
-    s_find "type" find_type s ?package n
+    try
+      s_find "type" find_type s ?package n
+    with Not_found -> error ("Cannot find type '"^n^"'")
 
   let s_find_subprogram s (package,n) =
-    s_find "subprogram" find_subprogram s ?package n
+    try
+      s_find "subprogram" find_subprogram s ?package n
+    with Not_found -> error ("Cannot find subprogram '"^n^"'")
+
+  let is_operator_overloaded s op =
+    try begin
+      let n = Ada_utils.make_operator_name op in
+      ignore (s_find "overloaded operator" find_subprogram s n);
+      true
+    end
+    with Not_found -> false
 
   let s_add_variable s n ?value t =
     Npkcontext.print_debug ("s_add_variable : adding '"
-                           ^n^"' with "
+                           ^n
+                           ^"' with "
                            ^(match value with
                             | None   -> "no value"
                             | Some v -> "value "^T.print_data v
