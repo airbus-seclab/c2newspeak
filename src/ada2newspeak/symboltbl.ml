@@ -48,17 +48,6 @@ module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
 exception ParameterlessFunction of T.t
 
 module Table = struct
-  (**
-   * Abstract specification for function/procedure parameters.
-   *)
-  type f_param = { fp_name : string
-                 ; fp_in   : bool
-                 ; fp_out  : bool
-                 ; fp_type : T.t
-                 }
-
-  let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
-  let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
 
   (**
    * Symbols.
@@ -66,7 +55,7 @@ module Table = struct
   type symbol =
     | Variable   of T.t*(T.data_t option)
     | Type       of T.t
-    | Subprogram of ((f_param list)*T.t option)
+    | Subprogram of ((T.f_param list)*T.t option)
     | Unit       of table
 
   (**
@@ -190,7 +179,7 @@ module Table = struct
           ~strongly
           tbl
           n
-          (List.map to_fparam params,ret)
+          (List.map T.to_fparam params,ret)
 
 (******************************************************************************
  *                                                                            *
@@ -258,7 +247,7 @@ module Table = struct
     cast_t (find_symbols tbl n)
 
   let find_subprogram tbl n =
-    (fun (x,y) -> List.map from_fparam x,y)
+    (fun (x,y) -> List.map T.from_fparam x,y)
         (cast_s (find_symbols tbl n))
 
   let find_variable tbl ?expected_type n =

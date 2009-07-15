@@ -177,3 +177,13 @@ val is_unknown  : t -> bool
  ****************)
 
 val translate : t -> Cir.typ
+
+(*************************
+ * Subprogram parameters *
+ *************************)
+
+type f_param
+
+val to_fparam : string*bool*bool*t -> f_param
+
+val from_fparam : f_param -> string*bool*bool*t
