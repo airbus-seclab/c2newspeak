@@ -38,13 +38,15 @@ module H = Highspeak
 (* Linking time *)
 (*--------------*)
 
+(* TODO: should make these globals, local to linking, here they eat memory. *)
 (* Association table global -> Newspeak.typ *)
 let globals = Hashtbl.create 100
+let init = ref []
 let funspecs = Hashtbl.create 100
 
 let get_glob_typ name =
   try
-    let (t, _, _) = Hashtbl.find globals name in
+    let (t, _) = Hashtbl.find globals name in
       t
   with Not_found ->
     Npkcontext.report_error "Npklink.get_glob_typ" 
@@ -68,12 +70,6 @@ and generate_ftyp (args, ret) =
       | Some t -> Some (generate_typ t)
   in
     (List.map generate_typ args, ret)
-
-let rec generate_init init =
-  match init with
-      Some l -> H.Init (List.map generate_init_field l)
-    | None when !Npkcontext.global_zero_init -> H.Zero
-    | None -> H.Init []
 
 and generate_init_field (sz, sca, e) = 
   let e = generate_exp e in
@@ -134,26 +130,30 @@ and generate_tmp_nat x =
 	let i = generate_tmp_nat v in
 	  Nat.mul_int n i
 
+let rec generate_init x loc (o, t, e) =
+  let lv = H.Shift (H.Global x, H.exp_of_int o) in
+  let e = generate_exp e in
+    init := (H.Set (lv, e, Newspeak.Scalar t), loc)::!init
+
 let generate_global_init name (_, _, init, _) =
   try
-    let (t, _, loc) = Hashtbl.find globals name in 
-    let i =
+(* TODO: why not use the loc next to init up there,
+   avoid this hashtbl lookup!! *)
+    let (_, loc) = Hashtbl.find globals name in 
       match init with
-	| Some i -> i
+(* TODO: not nice to have to rev here *)
+	  Some Some i -> List.iter (generate_init name loc) (List.rev i)
+	| Some None -> ()
 	| None -> 
 	    Npkcontext.report_accept_warning "Link.generate_global" 
-	      ("extern global variable "^name) Npkcontext.ExternGlobal;
-	    None
-    in
-      Hashtbl.replace globals name (t, generate_init i, loc)
-  with 
-      Not_found -> ()
+	      ("extern global variable "^name) Npkcontext.ExternGlobal
+  with Not_found -> ()
 
 let generate_global name (t, loc, _, used) =
   Npkcontext.set_loc loc;
   if used || (not !Npkcontext.remove_temp) then begin
     let t = generate_typ t in
-      Hashtbl.add globals name (t, H.Init [], loc);
+      Hashtbl.add globals name (t, loc);
       Npkcontext.print_debug ("Global linked: "^name)
   end
 
@@ -296,6 +296,8 @@ let merge npkos =
 	    List.iter check_merge tl;
 	    (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !specs)
 
+let generate_spec x = (H.UserSpec x, Newspeak.dummy_loc "TODO!")
+
 let link npkos =
   Npkcontext.forget_loc ();
     
@@ -303,7 +305,9 @@ let link npkos =
   let (filenames, glb_decls, fun_decls, src_lang, specs) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
+(* TODO: put generate_global and generate_global_init together?? *)
     Hashtbl.iter generate_global glb_decls;
+    init := List.map generate_spec specs;
     Hashtbl.iter generate_global_init glb_decls;
     Npkcontext.forget_loc ();
     
@@ -313,8 +317,8 @@ let link npkos =
     let prog = { 
       H.fnames = filenames;
       H.globals = globals;
+      H.init = !init;
       H.fundecs = fundecs;
-      H.specs = specs;
       H.ptr_sz = Config.size_of_ptr;
       H.src_lang = src_lang;
     } 

@@ -30,19 +30,15 @@ module N = Newspeak
 type t = {
   fnames: file list;
   globals: globals;
+  init: blk;
   fundecs: (fid, fundec) Hashtbl.t;
-  specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
 }
 
 and globals = (string, gdecl) Hashtbl.t
 
-and gdecl = typ * init_t * location
-
-and init_t = 
-    Zero
-  | Init of (size_t * scalar_t * exp) list
+and gdecl = typ * location
 
 and fundec = (string list * string list * ftyp * blk)
 
@@ -105,3 +101,5 @@ let string_of_stmtkind x =
     | Goto _ -> "Goto"
     | Call _ -> "Call"
     | UserSpec _ -> "UserSpec"
+
+let exp_of_int x = Const (CInt (Nat.of_int x))

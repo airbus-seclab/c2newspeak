@@ -29,8 +29,8 @@ open Newspeak
 type t = {
   fnames: file list;
   globals: globals;
+  init: blk;
   fundecs: (fid, fundec) Hashtbl.t;
-  specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
 }
@@ -39,11 +39,7 @@ and fundec = (string list * string list * ftyp * blk)
 
 and globals = (string, gdecl) Hashtbl.t
 
-and gdecl = typ * init_t * location
-
-and init_t = 
-    Zero
-  | Init of (size_t * scalar_t * exp) list
+and gdecl = typ * location
 
 and stmtkind =
     Set of (lval * exp * typ)
@@ -95,3 +91,5 @@ and fn =
   | FunDeref of exp
 
 val string_of_stmtkind: stmtkind -> string
+
+val exp_of_int: int -> exp
