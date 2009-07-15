@@ -369,9 +369,21 @@ let rec translate t =
                                                , Newspeak.Nat.of_int (List.length v)))))
   | Float            d        -> Cir.Scalar (Newspeak.Float (float_size d))
   | Array          (c,i)      -> Cir.Array  (translate c, Some (Newspeak.Nat.to_int (length_of i)))
-  | Unknown          _        -> Npkcontext.report_error "Ada_types.translate"
+  | Unknown                   -> Npkcontext.report_error "Ada_types.translate"
                                      "Type of unknown trait remaining at translate time"
   | Signed (None|Some NullRange) ->  Npkcontext.report_error "Ada_types.translate"
                     "Trying to translate <Signed None>"
   in translate_trait t.trait
   
+(**
+ * Subprogram parameters.
+ *)
+
+type f_param = { fp_name : string
+               ; fp_in   : bool
+               ; fp_out  : bool
+               ; fp_type : t
+               }
+
+let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
+let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
