@@ -370,8 +370,6 @@ statement_list:
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
 | declaration SEMICOLON                    { build_stmtdecl false false $1 }
-| REGISTER declaration SEMICOLON           { build_stmtdecl false false $2 }
-| AUTO declaration SEMICOLON               { build_stmtdecl false false $2 }
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
