@@ -39,7 +39,7 @@ void g(void) {
   (495.c:39#1295)^a =(int32) ! (c_int32 ==_int32 0);
 }
 
-int32 a = 0;
-int32 b = 0;
-int32 c = 0;
+int32 a;
+int32 b;
+int32 c;
 

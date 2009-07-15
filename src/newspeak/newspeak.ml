@@ -97,8 +97,8 @@ end
 type t = {
   fnames: file list;
   globals: globals;
+  init: blk;
   fundecs: (fid, fundec) Hashtbl.t;
-  specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
 }
@@ -107,7 +107,7 @@ and globals = (string, gdecl) Hashtbl.t
 
 and src_lang = C | ADA
 
-and gdecl = typ * init_t * location
+and gdecl = typ * location
 
 and fundec = ftyp * blk
 
@@ -194,10 +194,6 @@ and scalar_t =
   | Float of size_t
   | Ptr
   | FunPtr
-
-and init_t = 
-  | Zero
-  | Init of (size_t * scalar_t * exp) list
 
 and ftyp = typ list * typ option
 
@@ -451,28 +447,7 @@ let string_of_funexp f =
 let string_of_lbl l = "lbl"^(string_of_int l)
 
 (* TODO: print location too *)
-let dump_gdecl name (t, i, _) =
-  let dump_elt (o, s, e) =
-    print_string ((string_of_size_t o)^": "^(string_of_scalar s)
-		  ^" "^(string_of_exp e));
-  in
-  let rec dump_init l =
-    match l with
-      | [] -> ();
-      | [e] -> dump_elt e;
-      | e::r ->
-	  dump_elt e;
-	  print_string ";";
-	  dump_init r
-  in
-    print_string ((string_of_typ t)^" "^name);
-    match i with
-      | Zero -> print_endline " = 0;"
-      | Init [] -> print_endline ";"
-      | Init i -> 
-	  print_string " = {";
-	  dump_init i;
-	  print_endline "};"
+let dump_gdecl name (t, _) = print_endline (string_of_typ t^" "^name^";")
 
 let string_of_token x =
   match x with
@@ -598,12 +573,11 @@ let dump prog =
   let collect_funbody name body =
     funs := String_map.add name body !funs
   in
-  let specs = List.map string_of_assertion prog.specs in
-  let specs = List.sort compare specs in
+  let init = string_of_blk 0 prog.init in
     Hashtbl.iter collect_funbody prog.fundecs;
     String_map.iter dump_fundec !funs;
     dump_globals prog.globals;
-    List.iter print_endline specs
+    print_string init
 
 let string_of_blk x = string_of_blk 0 x
 
@@ -1138,11 +1112,10 @@ let rec build builder prog =
     Hashtbl.iter build_fundec prog.fundecs;
     { prog with globals = globals'; fundecs = fundecs' }
 
-and build_gdecl builder (t, init, loc) =
+and build_gdecl builder (t, loc) =
   builder#set_curloc loc;
   let t = build_typ builder t in
-  let init = build_init_t builder init in
-    (t, init, loc)
+    (t, loc)
 
 and build_fundec builder (ft, body) = 
   let ft = build_ftyp builder ft in
@@ -1188,13 +1161,6 @@ and build_ftyp builder (args, ret) =
       | None -> None
   in
     (args, ret)
-
-and build_init_t builder init =
-  match init with
-      Zero -> Zero
-    | Init cells -> 
-	let cells = List.map (build_cell builder) cells in
-	  Init cells
 
 and build_cell builder (o, t, e) =
   let o = build_size_t builder o in
@@ -1522,16 +1488,14 @@ let visit_fun visitor fid (t, body) =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, init, loc) =
+let visit_glb visitor id (t, loc) =
   visitor#set_loc loc;
-  let continue = visitor#process_gdecl id (t, init, loc) in
-    if continue then visit_typ visitor t;
-    match init with
-	Init x when continue -> List.iter (visit_init visitor) x 
-      | _ -> ()
+  let continue = visitor#process_gdecl id (t, loc) in
+    if continue then visit_typ visitor t
 
 let visit visitor prog =
   Hashtbl.iter (visit_glb visitor) prog.globals;
+  visit_blk visitor prog.init;
   Hashtbl.iter (visit_fun visitor) prog.fundecs
 
 let max_ikind = max
@@ -1595,25 +1559,15 @@ let simplify_exp opt_checks e =
 let simplify opt_checks prog =
   let fundecs = Hashtbl.create 100 in
   let globals = Hashtbl.create 100 in
-  let simplify_init_cell (o, t, e) =
-    let e = simplify_exp opt_checks e in
-      (o, t, e)
-  in
-  let simplify_global x (t, init, loc) =
-    let init = 
-      match init with
-	  Zero -> Zero
-	| Init cells -> Init (List.map simplify_init_cell cells)
-    in
-      Hashtbl.add globals x (t, init, loc)
-  in
+  let simplify_global x info = Hashtbl.add globals x info in
   let simplify_fundec f (ft, body) =
     let body = simplify_blk opt_checks body in
       Hashtbl.add fundecs f (ft, body)
   in
+  let init = simplify_blk opt_checks prog.init in
     Hashtbl.iter simplify_global prog.globals;
     Hashtbl.iter simplify_fundec prog.fundecs;
-    { prog with globals = globals; fundecs = fundecs }
+    { prog with globals = globals; init = init; fundecs = fundecs }
 
 let build_main_args ptr_sz loc params =
   let argv_name = "!ptr_array" in

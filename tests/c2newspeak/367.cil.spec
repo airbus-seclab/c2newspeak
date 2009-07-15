@@ -5,6 +5,6 @@ void main(void) {
   (367.c:30#1094)^p =(ptr) &_320(t);
 }
 
-ptr p = 0;
-int32[10] t = 0;
+ptr p;
+int32[10] t;
 

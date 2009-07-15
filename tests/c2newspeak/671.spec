@@ -10,5 +10,5 @@ void main(void) {
   (671.c:31#2)^x =(int32) 1;
 }
 
-int32 x = 0;
+int32 x;
 

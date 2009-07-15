@@ -4,6 +4,6 @@ Newspeak output
 void main(void) {
 }
 
-int32 x = 0;
-my own random . assertion ( 'x' ) 
+int32 x;
+(TODO!)^my own random . assertion ( 'x' ) 
 

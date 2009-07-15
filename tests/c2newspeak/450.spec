@@ -10,5 +10,7 @@ void main(void) {
   }
 }
 
-int8[2] !450.c.const_str_- = {0: int8 45;8: int8 0};
+int8[2] !450.c.const_str_-;
+(450.c:27#2)^!450.c.const_str_- =(int8) 45;
+(450.c:27#2)^!450.c.const_str_- + 8 =(int8) 0;
 

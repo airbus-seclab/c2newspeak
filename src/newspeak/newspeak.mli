@@ -94,8 +94,8 @@ end
 type t = {
   fnames: file list;
   globals: globals;
+  init: blk;
   fundecs: (fid, fundec) Hashtbl.t;
-  specs: specs;
   ptr_sz: size_t;
   src_lang: src_lang;
 }
@@ -104,7 +104,7 @@ and globals = (string, gdecl) Hashtbl.t
 
 and src_lang = C | ADA
 
-and gdecl = typ * init_t * location
+and gdecl = typ * location
 
 and fundec = ftyp * blk
 
@@ -193,11 +193,6 @@ and scalar_t =
   | Float of size_t
   | Ptr
   | FunPtr
-
-(* TODO: remove init, use normal initialization code *)
-and init_t = 
-  | Zero
-  | Init of (offset * scalar_t * exp) list
 
 and ftyp = typ list * typ option
 

@@ -23,6 +23,8 @@ void t035.proc(void) {
   (t035.adb:6#10)^t035.x =(int32) 2;
 }
 
-int32 t035.x = {0: int32 0};
-int32 t035.z = {0: int32 0};
+int32 t035.x;
+int32 t035.z;
+(t035.adb:3#12)^t035.z =(int32) 0;
+(t035.adb:3#12)^t035.x =(int32) 0;
 

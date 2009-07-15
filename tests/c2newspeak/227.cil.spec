@@ -6,6 +6,6 @@ void main(void) {
   (227.c:36#1121)^y =(int32) 2;
 }
 
-int32 x = 0;
-int32 y = 0;
+int32 x;
+int32 y;
 

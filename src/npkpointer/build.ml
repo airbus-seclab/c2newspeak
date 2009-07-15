@@ -128,24 +128,7 @@ let translate npk =
 
   and translate_blk x = List.iter translate_stmt x in
 
-  let translate_init_list x init =
-    let rec translate init =
-      match init with
-	  [] -> ()
-	| (_, _, e)::tl -> 
-	    let e = translate_exp e in
-	      prog := (S.Set (S.Var x, e))::!prog;
-	      translate tl
-    in
-      translate init
-  in
-
-  let translate_global x (_, init, _) =
-    Hashtbl.add vars x x;
-    match init with
-	Zero -> ()
-      | Init init_list -> translate_init_list x init_list
-  in
+  let translate_global x _ = Hashtbl.add vars x x in
 
   let translate_fundec fid (ftyp, body) =
     current_fun := fid;
@@ -162,5 +145,6 @@ let translate npk =
   in
 
     Hashtbl.iter translate_global npk.globals;
+    translate_blk npk.init;
     Hashtbl.iter translate_fundec npk.fundecs;
     (vars, (funs, !prog))

@@ -45,6 +45,7 @@ let default_args_ids fid n =
 let translate prog = 
   let fundecs = Hashtbl.create 100 in
   let globals = Hashtbl.create 100 in
+  let init = ref [] in
 
   let env = Hashtbl.create 100 in
   let stack_height = ref 0 in
@@ -204,8 +205,6 @@ let translate prog =
       | UserSpec x -> N.UserSpec (translate_assertion x) 
   in
 
-  let translate_init_cell (sz, t, e) = (sz, t, translate_exp e) in
-
   let translate_fundec f (ret_ids, arg_ids, ft, body) =
     List.iter push ret_ids;
     List.iter push arg_ids;
@@ -215,24 +214,32 @@ let translate prog =
       Hashtbl.add fundecs f (ft, body)
   in
 
-  let translate_global x (t, init, loc) =
-    let init =
-      match init with
-	  Zero -> N.Zero
-	| Init cells -> N.Init (List.map translate_init_cell cells)
-    in
-      Hashtbl.add globals x (t, init, loc)
+  let translate_init x loc (o, t, e) =
+    let lv = N.Shift (N.Global x, N.exp_of_int o) in
+    let e = translate_exp e in
+      init := (N.Set (lv, e, t), loc)::!init
+  in
+
+  let translate_global x (t, i, loc) = 
+    Hashtbl.add globals x (t, loc);
+    match i with
+	Init l -> List.iter (translate_init x loc) (List.rev l)
+      | _ -> ()
+  in
+
+  let translate_spec x = 
+    (N.UserSpec (translate_assertion x), N.dummy_loc "TODO!") 
   in
     
-  let specs = List.map translate_assertion prog.specs in
+    init := List.map translate_spec prog.specs;
     Hashtbl.iter translate_fundec prog.fundecs;
     Hashtbl.iter translate_global prog.globals;
 
     { 
       N.fnames = prog.fnames; 
       N.globals = globals;
+      N.init = !init;
       N.fundecs = fundecs;
-      N.specs = specs;
       N.ptr_sz = prog.ptr_sz;
       N.src_lang = prog.src_lang;
     }

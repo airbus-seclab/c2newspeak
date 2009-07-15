@@ -11,5 +11,5 @@ void main(void) {
   }
 }
 
-int32 x = 0;
+int32 x;
 

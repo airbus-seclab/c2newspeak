@@ -7,5 +7,5 @@ void t050.main(void) {
   (t050.adb:11#10)^t050.x =(uint1) 0-_uint1;
 }
 
-uint1 t050.x = 0;
+uint1 t050.x;
 

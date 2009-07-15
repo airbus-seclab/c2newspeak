@@ -10,5 +10,6 @@ void t082.main(void) {
   (t082.adb:13#10)^1- =(uint2) 0;
 }
 
-uint2 t082.c = {0: uint2 1};
+uint2 t082.c;
+(t082.adb:5#6)^t082.c =(uint2) 1;
 

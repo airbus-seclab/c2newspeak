@@ -17,5 +17,6 @@ void main(void) {
   }
 }
 
-int32 x = {0: int32 1};
+int32 x;
+(215.c:26#1056)^x =(int32) 1;
 

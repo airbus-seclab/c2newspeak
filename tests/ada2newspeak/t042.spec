@@ -7,5 +7,5 @@ void t042(void) {
   (t042.adb:10#7)^0- =(uint1) 1;
 }
 
-uint1 t042a.z = 0;
+uint1 t042a.z;
 

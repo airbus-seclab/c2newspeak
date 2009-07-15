@@ -12,6 +12,6 @@ void main(void) {
   }
 }
 
-ptr ptr = 0;
-int32 x = 0;
+ptr ptr;
+int32 x;
 

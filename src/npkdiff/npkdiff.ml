@@ -44,7 +44,7 @@ let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk"
 let speclist = 
   [ ]
 
-let filter_global (k, (t, init, _)) = (k, (t, init))
+let filter_global (k, (t, _)) = (k, t)
 
 let hashtbl_to_list tbl =
   let res = ref [] in

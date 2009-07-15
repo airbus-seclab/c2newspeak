@@ -7,5 +7,5 @@ void main(void) {
   (428.c:34#2)^x + 32 =(int32) 2;
 }
 
-{ int8 0; int32 32; }64 x = 0;
+{ int8 0; int32 32; }64 x;
 

@@ -108,4 +108,4 @@ void main(void) {
   }
 }
 
-int8[10] t = 0;
+int8[10] t;

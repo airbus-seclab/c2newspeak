@@ -8,5 +8,5 @@ void main(void) {
   (002.c:41#1390)^x =(int32) 0-_int32;
 }
 
-int32 x = 0;
+int32 x;
 

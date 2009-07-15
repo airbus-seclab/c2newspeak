@@ -1,7 +1,7 @@
 Number of global variables: 1
 Total size of global variables (bytes): 12
 Number of functions: 3
-Number of instructions: 7
+Number of instructions: 10
 Number of loops: 0
 Number of array operations: 0
 Number of pointer deref: 0

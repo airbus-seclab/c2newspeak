@@ -8,5 +8,5 @@ void t057.main(void) {
   (t057.adb:9#9)^0- =(uint1) t057.a_uint1;
 }
 
-uint1 t057.a = 0;
+uint1 t057.a;
 

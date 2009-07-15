@@ -15,6 +15,10 @@ void main(void) {
   }
 }
 
-int8[4] !368.c.const_str_%d\n = {0: int8 37;8: int8 100;16: int8 10;24: int8 0};
-uint1 x = 0;
+int8[4] !368.c.const_str_%d\n;
+uint1 x;
+(368.c:31#2)^!368.c.const_str_%d\n =(int8) 37;
+(368.c:31#2)^!368.c.const_str_%d\n + 8 =(int8) 100;
+(368.c:31#2)^!368.c.const_str_%d\n + 16 =(int8) 10;
+(368.c:31#2)^!368.c.const_str_%d\n + 24 =(int8) 0;
 

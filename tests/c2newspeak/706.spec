@@ -1,5 +1,5 @@
 Newspeak output
 ---------------
 706.c
-int32 y = 0;
+int32 y;
 

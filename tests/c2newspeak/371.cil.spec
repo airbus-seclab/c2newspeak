@@ -6,5 +6,6 @@ void main(void) {
   (371.c:34#1148)^0- =(fptr) x_fptr;
 }
 
-fptr x = {0: fptr &_{void -> void}(f)};
+fptr x;
+(371.c:30#1112)^x =(fptr) &_{void -> void}(f);
 

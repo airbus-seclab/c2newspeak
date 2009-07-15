@@ -4,5 +4,9 @@ Newspeak output
 void main(void) {
 }
 
-int8[4] !432.c.const_str_%d\n = {0: int8 37;8: int8 100;16: int8 10;24: int8 0};
+int8[4] !432.c.const_str_%d\n;
+(432.c:26#6)^!432.c.const_str_%d\n =(int8) 37;
+(432.c:26#6)^!432.c.const_str_%d\n + 8 =(int8) 100;
+(432.c:26#6)^!432.c.const_str_%d\n + 16 =(int8) 10;
+(432.c:26#6)^!432.c.const_str_%d\n + 24 =(int8) 0;
 

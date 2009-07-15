@@ -13,5 +13,6 @@ int32 t034.f(void) {
   (t034.adb:7#12)^0- =(int32) t034.x_int32;
 }
 
-int32 t034.x = {0: int32 1};
+int32 t034.x;
+(t034.adb:2#6)^t034.x =(int32) 1;
 

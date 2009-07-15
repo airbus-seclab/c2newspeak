@@ -7,5 +7,6 @@ void main(void) {
   (558.c:32#4)^n =(int32) 1;
 }
 
-int32 n = {0: int32 1};
+int32 n;
+(558.c:26#4)^n =(int32) 1;
 

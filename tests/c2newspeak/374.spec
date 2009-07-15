@@ -26,9 +26,9 @@ void main(void) {
   }
 }
 
-int32 t = 0;
-int32 u = 0;
-int32 x = 0;
-int32 y = 0;
-int32 z = 0;
+int32 t;
+int32 u;
+int32 x;
+int32 y;
+int32 z;
 

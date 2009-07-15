@@ -16,6 +16,6 @@ void main(void) {
   }
 }
 
-int32 a = 0;
-int32 b = 0;
+int32 a;
+int32 b;
 

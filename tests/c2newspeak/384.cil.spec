@@ -7,5 +7,5 @@ void main(void) {
   (384.c:38#1147)^0- =(ptr) &_32(1- + (belongs[0,1] i_int32 * 64) + 32);
 }
 
-int32 i = 0;
+int32 i;
 

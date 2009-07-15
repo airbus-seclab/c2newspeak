@@ -8,5 +8,5 @@ void main(void) {
   (178.c:40#2)^x + 64 =(int64) 4;
 }
 
-{ uint7 0; uint1 7; uint8 8; int64 64; }128 x = 0;
+{ uint7 0; uint1 7; uint8 8; int64 64; }128 x;
 

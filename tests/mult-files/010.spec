@@ -7,5 +7,5 @@ void f(void) {
   (toto.c:4#2)^x =(int32) 1;
 }
 
-int32 x = 0;
+int32 x;
 

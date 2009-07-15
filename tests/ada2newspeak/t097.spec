@@ -27,5 +27,5 @@ void t097.proc(int32) {
   }
 }
 
-uint1 t097.a = 0;
+uint1 t097.a;
 

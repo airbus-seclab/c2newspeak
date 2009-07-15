@@ -10,6 +10,6 @@ void t216.donull(void) {
   (t216.adb:25#10)^t216.r =(int32) 7;
 }
 
-int32[7] t216.a = 0;
-int32 t216.r = 0;
+int32[7] t216.a;
+int32 t216.r;
 

@@ -9,5 +9,5 @@ void f(void) {
 void g(void) {
 }
 
-int32 n = 0;
+int32 n;
 

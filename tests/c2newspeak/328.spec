@@ -6,6 +6,6 @@ void main(void) {
   (328.c:33#4)^!328.c.main.1.x =(uint32) 0;
 }
 
-int32 !328.c.main.0.x = 0;
-uint32 !328.c.main.1.x = 0;
+int32 !328.c.main.0.x;
+uint32 !328.c.main.1.x;
 

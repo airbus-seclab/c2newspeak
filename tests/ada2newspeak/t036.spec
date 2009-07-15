@@ -18,5 +18,6 @@ void t036.set(int32) {
   (t036.adb:12#10)^t036.x =(int32) 0-_int32;
 }
 
-int32 t036.x = {0: int32 0};
+int32 t036.x;
+(t036.adb:3#6)^t036.x =(int32) 0;
 

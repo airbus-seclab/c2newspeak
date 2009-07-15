@@ -369,7 +369,7 @@ let rec translate t =
                                                , Newspeak.Nat.of_int (List.length v)))))
   | Float            d        -> Cir.Scalar (Newspeak.Float (float_size d))
   | Array          (c,i)      -> Cir.Array  (translate c, Some (Newspeak.Nat.to_int (length_of i)))
-  | Unknown          _        -> Npkcontext.report_error "Ada_types.translate"
+  | Unknown                   -> Npkcontext.report_error "Ada_types.translate"
                                      "Type of unknown trait remaining at translate time"
   | Signed (None|Some NullRange) ->  Npkcontext.report_error "Ada_types.translate"
                     "Trying to translate <Signed None>"

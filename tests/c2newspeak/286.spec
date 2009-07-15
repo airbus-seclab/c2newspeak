@@ -20,6 +20,6 @@ void main(void) {
   }
 }
 
-int32 i = 0;
-int32 j = 0;
+int32 i;
+int32 j;
 
