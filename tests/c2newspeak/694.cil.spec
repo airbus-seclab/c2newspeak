@@ -7,5 +7,4 @@ void main(void) {
 }
 
 int8[1] !694.c.const_str_;
-(694.c)^!694.c.const_str_ =(int8) 0;
 

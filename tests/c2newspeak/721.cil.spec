@@ -8,5 +8,4 @@ void f(void) {
 
 ptr u;
 int32[1] v;
-(721.c:28#1066)^u =(ptr) &_32(v);
 

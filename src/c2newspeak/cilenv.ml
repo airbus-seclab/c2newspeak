@@ -117,7 +117,7 @@ let create_npkil name =
       fnames = name::[];
       globals = Hashtbl.copy glb_decls;
       fundecs = fundefs;
-      specs = [];
+      init = [];
       src_lang = Newspeak.C
     }
 
@@ -251,8 +251,36 @@ let get_var cil_var =
       Npkil.Global norm_name
   end else Npkil.Local cil_var.vname
 
+(* TODO: architecture dependent ?? *)
+(* TODO: probably the best way to deal with this and all size problems
+   is to set all these global constants, when a npk file is read ?? 
+Some kind of data structure with all the sizes,
+then function read returns this data structure too
+and there is an init function *)
+let char_typ = Newspeak.Int (Newspeak.Signed, Config.size_of_char)
+
+let init_of_string str =
+  let len = String.length str in
+  let res = ref [(len*8, char_typ, exp_of_int 0)] in
+    for i = len - 1 downto 0 do 
+      let c = Char.code str.[i] in
+	res := (i*8, char_typ, exp_of_int c)::!res
+    done;
+    (len + 1, Some !res)
+
+let create_cstr str =
+  (* TODO: see firstpass.ml, maybe this should not be in npkil! *)
+  let fname = Npkcontext.get_fname () in
+  let name = "!"^fname^".const_str_"^str in
+  let (len, _) = init_of_string str in
+  let t = Array (Scalar char_typ, Some len) in
+  let loc = Newspeak.dummy_loc fname in
+    (name, (t, 
+	   (* TODO: code cleanup: not nice *)
+	   loc, Npkil.Declared true, true))
+
 let get_cstr str =
-  let (name, glb) = Npkil.create_cstr str in
+  let (name, glb) = create_cstr str in
     if not (Hashtbl.mem glb_decls name) then Hashtbl.add glb_decls name glb;
     (* TODO: this is a hack, should return a cil expression rather,
        or even better should be done in first pass *)

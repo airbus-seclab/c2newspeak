@@ -34,8 +34,8 @@ open Newspeak
 type t = {
   fnames: string list;
   globals: (string, ginfo) Hashtbl.t;
+  init: blk;
   fundecs: (fid, funinfo) Hashtbl.t;
-  specs: assertion list;
   src_lang: src_lang
 }
 
@@ -48,11 +48,15 @@ and token =
   | CstToken of Newspeak.cst
 
 (* None is for extern *)
-and ginfo = typ * location * init_t option * used
-
-and init_t = (size_t * scalar_t * exp) list option
+and ginfo = typ * location * storage * used
 
 and used = bool
+
+and storage = 
+    Extern
+  | Declared of initialized
+
+and initialized = bool
 
 (* TODO: code cleanup, remove everything unecessary for link *)
 and funinfo = (string list * string list * ftyp * blk)
@@ -169,8 +173,6 @@ val is_mp_typ : typ -> typ -> bool
 val write: string -> t -> unit
 
 val read: string -> t
-
-val create_cstr: string -> (string * ginfo)
 
 val string_of_cast: Newspeak.scalar_t -> Newspeak.scalar_t -> string
 

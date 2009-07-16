@@ -8,5 +8,4 @@ void main(void) {
 }
 
 int32 n;
-(558.c:26#1056)^n =(int32) 1;
 

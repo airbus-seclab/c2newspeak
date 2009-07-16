@@ -758,10 +758,11 @@ let translate_init x t =
   and expand_elem prefix (off, i) = expand (addOffset off prefix) i in
 
     match x with
-	None -> None
+	None -> Npkil.Declared false
       | Some i ->
 	  expand NoOffset i;
-	  Some (List.rev !glb_inits)
+(*	  Some (List.rev !glb_inits)*)
+	  Npkil.Declared true
 
 (* TODO: maybe should put first pass into npkcompile ?? *)
 let translate_glb used_glb name x =
@@ -771,11 +772,10 @@ let translate_glb used_glb name x =
     Npkcontext.set_loc loc;
     if (defd || used) then begin
       let init =
-	if defd then begin
-	  Some (translate_init x.F.ginit x.F.gtype)
-	end else begin
+	if defd then translate_init x.F.ginit x.F.gtype
+	else begin
 	  assert (x.F.ginit = None);
-	  None
+	  Npkil.Extern
 	end
       in
       let t = translate_typ x.F.gtype in

@@ -24,7 +24,9 @@ void t035.proc(void) {
 }
 
 int32 t035.x;
+int32 t035.y;
 int32 t035.z;
 (t035.adb:3#12)^t035.z =(int32) 0;
+(t035.adb:3#12)^t035.y =(int32) 0;
 (t035.adb:3#12)^t035.x =(int32) 0;
 
