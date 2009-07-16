@@ -1,8 +1,7 @@
 Newspeak output
 ---------------
-051.c
-void main(void) {
+708.c
+void f(void) {
 }
 
-int8[3] x;
 

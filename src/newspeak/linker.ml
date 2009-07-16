@@ -41,7 +41,6 @@ module H = Highspeak
 (* TODO: should make these globals, local to linking, here they eat memory. *)
 (* Association table global -> Newspeak.typ *)
 let globals = Hashtbl.create 100
-let init = ref []
 let funspecs = Hashtbl.create 100
 
 let get_glob_typ name =
@@ -130,29 +129,19 @@ and generate_tmp_nat x =
 	let i = generate_tmp_nat v in
 	  Nat.mul_int n i
 
-let rec generate_init x loc (o, t, e) =
-  let lv = H.Shift (H.Global x, H.exp_of_int o) in
-  let e = generate_exp e in
-    init := (H.Set (lv, e, Newspeak.Scalar t), loc)::!init
-
-let generate_global_init name (_, loc, init, used) =
-  if used || (not !Npkcontext.remove_temp) then begin
-    match init with
-	(* TODO: not nice to have to rev here *)
-	Some Some i -> List.iter (generate_init name loc) (List.rev i)
-      | Some None -> ()
-      | None -> 
-	  Npkcontext.report_accept_warning "Link.generate_global" 
-	    ("extern global variable "^name) Npkcontext.ExternGlobal
-  end
-
-let generate_global name (t, loc, _, used) =
+let generate_global name (t, loc, storage, used) =
   Npkcontext.set_loc loc;
   if used || (not !Npkcontext.remove_temp) then begin
     let t = generate_typ t in
       Hashtbl.add globals name (t, loc);
-      Npkcontext.print_debug ("Global linked: "^name)
-  end
+      match storage with
+	  Extern -> 
+	    Npkcontext.report_accept_warning "Link.generate_global" 
+	      ("extern global variable "^name) Npkcontext.ExternGlobal
+	| _ -> ()
+  end;
+  Npkcontext.print_debug ("Global linked: "^name)
+
 
 let rec generate_stmt (sk, loc) =
   let new_sk = 
@@ -216,17 +205,17 @@ let generate_fundecs fundecs =
 let merge npkos =
   let glb_decls = Hashtbl.create 100 in
   let fnames = ref StrSet.empty in
-  let specs = ref [] in
+  let init = ref [] in
   let fundefs = ref [] in
 
   let add_fname x = fnames := StrSet.add x !fnames in
 
   let add_fundef f body = fundefs := (f, body)::!fundefs in
 
-  let add_global name (t, loc, init, used) =
+  let add_global name (t, loc, storage, used) =
     Npkcontext.set_loc loc;
     try
-      let (prev_t, prev_loc, prev_init, prev_used) = 
+      let (prev_t, prev_loc, prev_storage, prev_used) = 
 	Hashtbl.find glb_decls name 
       in
 	
@@ -242,12 +231,12 @@ let merge npkos =
 	     ^(Npkil.string_of_typ t)^"'")
       in
       let used = used || prev_used in
-      let init = 
-	match init, prev_init with
-	    (None, Some _) -> prev_init
-	  | (Some _, None) -> init
-	  | (None, None) -> prev_init
-	  | (Some (Some _), Some (Some _)) -> 
+      let storage = 
+	match (storage, prev_storage) with
+	    (Extern, Declared _) -> prev_storage
+	  | (Declared _, Extern) -> storage
+	  | (Extern, Extern) -> prev_storage
+	  | (Declared true, Declared true) -> 
 	      Npkcontext.report_error "Npklink.update_glob_link" 
 		("multiple declaration of "^name)
 	  | _ ->
@@ -264,21 +253,19 @@ let merge npkos =
 		Npkcontext.report_accept_warning "Npklink.update_glob_link"
 		  ("multiple definitions of global variable "^name^info) 
 		  Npkcontext.MultipleDef;	      
-		prev_init
+		prev_storage
       in
-	Hashtbl.replace glb_decls name (t, prev_loc, init, used)
+	Hashtbl.replace glb_decls name (t, prev_loc, storage, used)
 	  
-    with Not_found -> Hashtbl.add glb_decls name (t, loc, init, used)
+    with Not_found -> Hashtbl.add glb_decls name (t, loc, storage, used)
   in
-
-  let add_spec x = specs := (List.map generate_token x)::(!specs) in
 
   let merge npko =
     (* TODO: merge these two operations into one *)
     let prog = Npkil.read npko in
       List.iter add_fname prog.fnames;
       Hashtbl.iter add_global prog.globals;
-      List.iter add_spec prog.specs;
+      init := prog.init@(!init);
       Hashtbl.iter add_fundef prog.fundecs;
       prog.src_lang
   in
@@ -291,7 +278,7 @@ let merge npkos =
 	      ()
 	  in
 	    List.iter check_merge tl;
-	    (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !specs)
+	    (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !init)
 
 let generate_spec x = (H.UserSpec x, Newspeak.dummy_loc "TODO!")
 
@@ -299,21 +286,20 @@ let link npkos =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
-  let (filenames, glb_decls, fun_decls, src_lang, specs) = merge npkos in
+  let (filenames, glb_decls, fun_decls, src_lang, init) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
     Hashtbl.iter generate_global glb_decls;
-    init := List.map generate_spec specs;
-    Hashtbl.iter generate_global_init glb_decls;
     Npkcontext.forget_loc ();
     
     Npkcontext.print_debug "Functions...";
+    let init = generate_blk init in
     let fundecs = generate_fundecs fun_decls in
 	
     let prog = { 
       H.fnames = filenames;
       H.globals = globals;
-      H.init = !init;
+      H.init = init;
       H.fundecs = fundecs;
       H.ptr_sz = Config.size_of_ptr;
       H.src_lang = src_lang;

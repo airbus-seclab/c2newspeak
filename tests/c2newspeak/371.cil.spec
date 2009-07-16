@@ -7,5 +7,4 @@ void main(void) {
 }
 
 fptr x;
-(371.c:30#1112)^x =(fptr) &_{void -> void}(f);
 

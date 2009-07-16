@@ -46,12 +46,6 @@ void main(void) {
 }
 
 int8[6] !052.c.const_str_Hello;
-(052.c)^!052.c.const_str_Hello =(int8) 72;
-(052.c)^!052.c.const_str_Hello + 8 =(int8) 101;
-(052.c)^!052.c.const_str_Hello + 16 =(int8) 108;
-(052.c)^!052.c.const_str_Hello + 24 =(int8) 108;
-(052.c)^!052.c.const_str_Hello + 32 =(int8) 111;
-(052.c)^!052.c.const_str_Hello + 40 =(int8) 0;
 
 
 052.c:33: Warning: Too many initializers for array a2

@@ -28,21 +28,27 @@
 
 (* TODO: should count local variables from beginning of function !! *)
 
+(* TODO: remove open Cilutils!!! *)
 open Cilutils
 open Newspeak
 
 type t = {
   fnames: string list;
   globals: (string, ginfo) Hashtbl.t;
+  init: blk;
   fundecs: (fid, funinfo) Hashtbl.t;
-  specs: assertion list;
   src_lang: src_lang
 }
 
-(* None is for extern *)
-and ginfo = (typ * location * init_t option * used)
+and ginfo = (typ * location * storage * used)
 
 and used = bool
+
+and storage = 
+    Extern
+  | Declared of initialized
+
+and initialized = bool
 
 and funinfo = (string list * string list * ftyp * blk)
 
@@ -88,8 +94,6 @@ and exp =
 and fn =
     FunId of fid
   | FunDeref of exp
-
-and init_t = (size_t * scalar_t * exp) list option
 
 and unop =
 (* right bound is excluded! *)
@@ -279,29 +283,7 @@ let dump_npko prog =
 
       | UserSpec _ -> print_endline (align^"UserSpec;")
   in
-
-  let dump_init i =
-    let dump_elt (o, s, e) =
-      print_string ((string_of_size_t o)^": "^(string_of_scalar s)^" "
-		     ^(string_of_exp e));
-    in
-    let rec dump_init l =
-      match l with
-	| [] -> ()
-	| [e] -> dump_elt e
-	| e::r ->
-	    dump_elt e;
-	    print_string ";";
-	    dump_init r
-    in
-      match i with
-	| None -> ()
-	| Some i -> 
-	    print_string " = {";
-	    dump_init i;
-	    print_endline "}"
-  in
-  
+ 
   let dump_fundec name body =
     cur_fun := name;
     lbl_index := 0;
@@ -318,14 +300,14 @@ let dump_npko prog =
     print_newline ()
   in
 
-  let print_glob n (t, _, init, _) =
+  let print_glob n (t, _, storage, _) =
     let str = (string_of_typ t)^" "^n in
-      match init with
-	  None -> print_endline ("extern "^str^";")
-	| Some i -> 
-	    print_string str;
-	    dump_init i;
-	    print_endline ";"
+    let str = 
+      match storage with
+	  Extern -> "extern "^str
+	| _ -> str 
+    in
+      print_endline (str^";")
   in
 
   let print_fundef n (_, _, _, pbody) =
@@ -423,34 +405,6 @@ let read fname =
 	Npkcontext.print_debug ("Importing done.");
 	close_in cin;
 	prog
-  
-(* TODO: architecture dependent ?? *)
-(* TODO: probably the best way to deal with this and all size problems
-   is to set all these global constants, when a npk file is read ?? 
-Some kind of data structure with all the sizes,
-then function read returns this data structure too
-and there is an init function *)
-let char_typ = Int (Signed, Config.size_of_char)
-
-let init_of_string str =
-  let len = String.length str in
-  let res = ref [(len*8, char_typ, exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code str.[i] in
-	res := (i*8, char_typ, exp_of_int c)::!res
-    done;
-    (len + 1, Some !res)
-
-let create_cstr str =
-  (* TODO: see firstpass.ml, maybe this should not be in npkil! *)
-  let fname = Npkcontext.get_fname () in
-  let name = "!"^fname^".const_str_"^str in
-  let (len, init) = init_of_string str in
-  let t = Array (Scalar char_typ, Some len) in
-  let loc = Newspeak.dummy_loc fname in
-    (name, (t, 
-	   (* TODO: code cleanup: not nice *)
-	   loc, Some init, true))
 
 let string_of_cast t1 t2 =
   match (t1, t2) with
