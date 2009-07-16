@@ -294,6 +294,8 @@ let rec attr_get typ attr =
         end
     | Float digits , "digits" -> universal_integer,
                                     IntVal (Newspeak.Nat.of_int digits)
+    | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
+    | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
     | Unknown, _
     | Array _, _
     | Record _,_
