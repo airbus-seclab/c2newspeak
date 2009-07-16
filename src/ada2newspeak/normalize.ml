@@ -94,7 +94,7 @@ let find_body_for_spec ~(specification:Ast.basic_declaration)
 
 (** Return the name for a specification. *)
 let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
-  | Ast.ObjectDecl (idl,_,_) -> ident_list_to_string idl
+  | Ast.ObjectDecl (i,_,_)
   | Ast.TypeDecl   (i,_)
   | Ast.NumberDecl (i,_)
   | Ast.SubtypDecl (i,_) -> i
@@ -992,35 +992,31 @@ in
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
   in
-
   let rec normalize_basic_decl item loc global reptbl handle_init =
     match item with
     | UseDecl(use_clause) -> Sym.s_add_use gtbl use_clause;
-        Some (Ast.UseDecl use_clause)
+                             [Ast.UseDecl use_clause]
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let t = merge_types subtyp_ind in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         begin match def with
-        | None -> ()
-        | Some exp -> List.iter (fun x -> handle_init x (normalize_exp
-                                          ~expected_type:t exp) loc)
-                        ident_list
+          | None -> ()
+          | Some exp -> List.iter (fun x -> handle_init x (normalize_exp
+                                            ~expected_type:t exp) loc)
+                          ident_list
         end;
-          (List.iter (fun x -> Sym.s_add_variable gtbl x t) ident_list);
-          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Ast.Variable))
+          List.iter (fun x -> Sym.s_add_variable gtbl x t) ident_list;
+          List.map (fun ident -> 
+            Ast.ObjectDecl(ident, norm_subtyp_ind, Ast.Variable)
+          ) ident_list
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let t = merge_types subtyp_ind in
         let normexp = normalize_exp ~expected_type:t exp in
-        (* constantes *)
-        let norm_subtyp_ind =
-          normalize_subtyp_indication subtyp_ind in
-
+        let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let subtyp = extract_subtyp norm_subtyp_ind in
         let status =
           try
             let value = eval_static normexp gtbl in
-              (* on verifie que la valeur obtenue est conforme
-                 au sous-type *)
               check_static_subtyp subtyp value;
               List.iter (fun x -> Sym.s_add_variable gtbl x t ~value)
                         ident_list;
@@ -1030,44 +1026,37 @@ in
                                         "Ada_normalize.normalize_basic_decl"
                                         "uncaught ambiguous type exception"
             | NonStaticExpression -> List.iter
-                                      (fun x ->
-                                           Sym.s_add_variable gtbl
-                                                          x
-                                                          t
+                                      (fun x -> Sym.s_add_variable gtbl x t
                                       ) ident_list;
                                       Ast.Constant
 
         in
           List.iter (fun x -> handle_init x normexp loc) ident_list;
-          Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind,status))
-    | ObjectDecl(_) ->
-        Npkcontext.report_error
-          "Ada_normalize.normalize_basic_decl"
-          ("internal error : constant without default value"
-           ^"or already evaluated")
+          List.map (fun ident -> 
+            Ast.ObjectDecl(ident, norm_subtyp_ind,status)
+          ) ident_list
+    | ObjectDecl _ -> Npkcontext.report_error
+                     "Ada_normalize.normalize_basic_decl"
+                     ("internal error : constant without default value"
+                      ^"or already evaluated")
     | TypeDecl(id,typ_decl,_) ->
         let norm_typ_decl = normalize_typ_decl id typ_decl loc global reptbl
-        in Some (Ast.TypeDecl(id,norm_typ_decl))
-    | SpecDecl(spec) -> Some (Ast.SpecDecl(normalize_spec spec))
+        in [Ast.TypeDecl(id,norm_typ_decl)]
+    | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
     | NumberDecl(ident, exp) ->
-       let norm_exp = normalize_exp exp in
-       let value = eval_static_number norm_exp gtbl in
+       let value = eval_static_number (normalize_exp exp) gtbl in
        add_numberdecl ident value;
-       Some (Ast.NumberDecl(ident, value))
+       [Ast.NumberDecl(ident, value)]
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
-        let t = merge_types subtyp_ind in
-          Sym.s_add_type gtbl ident t;
-          types#add (normalize_ident_cur ident)
-                    (extract_subtyp norm_subtyp_ind)
-                    loc
-                    global;
-          Some (Ast.SubtypDecl(ident, norm_subtyp_ind))
-    | RenamingDecl (n, o) ->
-        begin
-          Sym.add_renaming_decl gtbl n (normalize_name o);
-          None;
-        end
+        Sym.s_add_type gtbl ident (merge_types subtyp_ind);
+        types#add (normalize_ident_cur ident)
+                  (extract_subtyp norm_subtyp_ind)
+                  loc
+                  global;
+        [Ast.SubtypDecl(ident, norm_subtyp_ind)]
+    | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n (normalize_name o);
+                             []
     | RepresentClause _ -> failwith "NOTREACHED"
 
   and normalize_package_spec (name, list_decl) :Ast.package_spec =
@@ -1086,13 +1075,11 @@ in
       init := (x,exp)::!init
     in
     let rec normalize_decls decls =
-      List_utils.filter_map (fun (decl, loc) ->
+      List.flatten (List.map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
-                  match normalize_basic_decl decl loc true
-                        represtbl add_init with
-                    | None -> None
-                    | Some decl -> Some (decl,loc)
-               ) decls in
+                  List.map (fun x -> (x,loc))
+                         (normalize_basic_decl decl loc true represtbl add_init)
+               ) decls) in
     let norm_spec = normalize_decls list_decl in
       Sym.reset_current gtbl;
       Sym.exit_context gtbl;
@@ -1214,20 +1201,18 @@ in
       initializers := (x,exp,loc) :: !initializers
     in
     let normalize_decl_items items =
-      List_utils.filter_map (function
+      List.map (function
         | BasicDecl(basic),loc ->
             begin
               Npkcontext.set_loc loc;
-              match normalize_basic_decl basic loc global
-                                       represtbl add_init with
-                | None -> None
-                | Some decl -> Some( Ast.BasicDecl decl,loc)
+                List.map (fun x -> Ast.BasicDecl x,loc)
+                        (normalize_basic_decl basic loc global represtbl add_init) 
             end
         | BodyDecl(body),loc ->
             Npkcontext.set_loc loc;
-            Some (Ast.BodyDecl(normalize_body body), loc)
+            [Ast.BodyDecl(normalize_body body), loc]
       ) items in
-    let ndp = normalize_decl_items decl_part in
+    let ndp = List.flatten(normalize_decl_items decl_part) in
     List.iter (function
       | Ast.BasicDecl(Ast.SpecDecl (Ast.SubProgramSpec _) as sp),loc ->
             begin Npkcontext.set_loc loc;
@@ -1298,20 +1283,12 @@ in
       match basic_decl with
         | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
-        | Ast.ObjectDecl(ident_list, subtyp_ind,
+        | Ast.ObjectDecl(ident, subtyp_ind,
                      (Ast.Variable | Ast.Constant)) ->
-            (List.iter
-            (fun x -> Sym.s_add_variable gtbl x (merge_types subtyp_ind))
-               ident_list
-            )
-        | Ast.ObjectDecl(ident_list,subtyp_ind, Ast.StaticVal value) ->
-            (* constante statique *)
+            Sym.s_add_variable gtbl ident (merge_types subtyp_ind)
+        | Ast.ObjectDecl(ident,subtyp_ind, Ast.StaticVal value) ->
             let t = merge_types subtyp_ind in
-              List.iter
-                (fun x ->
-                  Sym.s_add_variable gtbl x t ~value;
-                 )
-                ident_list
+            Sym.s_add_variable gtbl ident t ~value;
         | Ast.NumberDecl(ident, value) ->
             add_numberdecl ident value
         | Ast.SubtypDecl(ident, subtyp_ind) ->
