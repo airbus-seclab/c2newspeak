@@ -1625,24 +1625,18 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | A.Record       _ -> ()
 
   and translate_basic_declaration basic loc = match basic with
-    | ObjectDecl(idents, subtyp_ind, const) ->
+    | ObjectDecl(ident, subtyp_ind, const) ->
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
         let read_only = const <> Variable in
-          List.fold_right
-            (fun ident list_decl ->
-               add_var loc subtyp ident false read_only;
-               (C.Decl(translate_subtyp subtyp,
-                                  ident),loc)::list_decl
-               )
-            idents
-            []
+        add_var loc subtyp ident false read_only;
+        Some (C.Decl(translate_subtyp subtyp,
+          ident),loc)
 
     | TypeDecl (idtyp,typ_decl) ->
         translate_typ_declaration idtyp typ_decl loc false;
-        []
+        None
 
-    | SubtypDecl _ ->
-        []
+    | SubtypDecl _ -> None
 
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
@@ -1650,11 +1644,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
            ^"sous package non implemente")
 
     | UseDecl(use_clause) -> Sym.s_add_use gtbl use_clause;
-        []
-
+                             None
     | NumberDecl(ident, v) ->
         add_number loc v false ident;
-        []
+        None
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1663,17 +1656,12 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | BodyDecl _ -> Npkcontext.report_error "Firstpass.translate_block"
             "sous-fonction, sous-procedure ou sous package non implemente"
 
-  (* renvoie liste d'instructions (affectations par defaut)
-     fonction appelee pour la partie declarative d'une fonction
-     ou procedure *)
   and translate_declarative_part decl_part =
     Sym.enter_context gtbl;
-    let decl =
-      List.map translate_declarative_item decl_part
-    in List.flatten decl
+    List_utils.filter_map translate_declarative_item decl_part
 
   and remove_basic_declaration basic = match basic with
-    | ObjectDecl(idents, _, _) -> List.iter remove_symb idents
+    | ObjectDecl(ident, _, _) -> remove_symb ident
     | TypeDecl(_,A.Enum(idents,_))  -> List.iter (fun (x,_) -> remove_symb x)
                                                idents
     | SpecDecl(_) -> Npkcontext.report_error
@@ -1733,8 +1721,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(idents, subtyp_ind, const) ->
-        let init = get_global_init (List.hd idents) in
+      | ObjectDecl(ident, subtyp_ind, const) ->
+        let init = get_global_init ident in
         let subtyp = Ada_utils.extract_subtyp subtyp_ind in
 
           let read_only = const <> Variable in
@@ -1747,10 +1735,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp))
                   in Some((Some [(0, extract_scalar_typ tr_typ, tr_exp)]))
           in
-            List.iter
-              (add_global loc subtyp tr_typ tr_init read_only)
-              idents
-
+          add_global loc subtyp tr_typ tr_init read_only ident
       | TypeDecl(idtyp,typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()

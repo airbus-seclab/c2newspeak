@@ -124,7 +124,7 @@ and object_state =
   | StaticVal of Ada_types.data_t (*constante statique*)
 
 and basic_declaration =
-  | ObjectDecl      of string list
+  | ObjectDecl      of string
                      * Syntax_ada.subtyp_indication
                      * object_state
   | TypeDecl        of string*Syntax_ada.typ_declaration

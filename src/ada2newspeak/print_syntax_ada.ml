@@ -134,10 +134,7 @@ and exp_to_string exp = match exp with
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "
       ^(String.concat "," (List.map arg_to_string params))^")"
-  | Attribute (n,des) ->
-              (subtyp_to_string n)
-            ^ "'"
-            ^ des
+  | Attribute (n,des) -> (name_to_string n) ^ "'" ^ des
 
 and subtyp_to_string subtyp = match subtyp with
   | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"
