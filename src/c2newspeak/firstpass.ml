@@ -73,6 +73,7 @@ let seq_of_string str =
 let translate (globals, fundecls, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
+  let init = ref [] in
     
 (* TODO: used_globals and one pass could be removed, if cir had a structure
    type with only the name and a hashtbl of structure names to type!!!, 
@@ -100,21 +101,23 @@ let translate (globals, fundecls, spec) =
       (ret_name, args_id)
   in
 
-  let update_global x name loc (t, init) =
-    let (loc, init) =
+  let update_global x name loc (t, storage) =
+    let (loc, storage) =
       try 
-	let (_, prev_loc, prev_init) = Hashtbl.find used_globals name in
-	  match (prev_init, init) with
-	      (None, Some _) | (Some None, Some _) -> (loc, init)
-	    | (Some _, None) | (Some _, Some None) -> (prev_loc, prev_init)
-	    | (None, None) -> (loc, None)
-	    | (Some Some _, Some Some _) -> 
+	let (_, prev_loc, prev_storage) = Hashtbl.find used_globals name in
+	  match (prev_storage, storage) with
+	      (Npkil.Extern, _)  
+	    | (Npkil.Declared false, Npkil.Declared _) -> (loc, storage)
+	    | (Npkil.Declared _, Npkil.Extern) 
+	    | (Npkil.Declared _, Npkil.Declared false) -> 
+		(prev_loc, prev_storage)
+	    | (Npkil.Declared true, Npkil.Declared true) -> 
 		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
-      with Not_found -> (loc, init)
+      with Not_found -> (loc, storage)
     in
 (* TODO:TODO: remove used_globals in firstpass, done in cir2npkil?? *)
-      Hashtbl.replace used_globals name (t, loc, init)
+      Hashtbl.replace used_globals name (t, loc, storage)
   in
 
   let get_static_name x loc =
@@ -289,14 +292,20 @@ let translate (globals, fundecls, spec) =
     let t = translate 0 t x in
       (List.rev !res, t)
   
-  and translate_glb_init t x =
+  and translate_glb_init loc name t x =
     match x with
-	None -> (t, None)
-      | Some init -> 
-	  let (init, t) = translate_init t init in
-	  let get_scalar (o, t, e) = (o, C.scalar_of_typ t, e) in
-	  let init = List.map get_scalar init in
-	    (t, Some init)
+	None -> (t, false)
+      | Some i -> 
+	  let (i, t) = translate_init t i in
+	  let v = C.Global name in
+(* TODO: factor this with the translation of the local variable init too! *)
+	  let translate_scalar (o, t, e) = 
+	    let lv = C.Shift (v, C.exp_of_int o) in
+	      init := (C.Set (lv, t, e), loc)::!init
+	  in
+	    (* TODO: try to avoid this List.rev! *)
+	    List.iter translate_scalar (List.rev i);
+	    (t, true)
 
 (* TODO: maybe should put this code in csyntax2CoreC??? *)
   and add_glb_cstr str =
@@ -897,12 +906,12 @@ let translate (globals, fundecls, spec) =
 	  let body = (C.Block (body, Some (default_lbl, [])), loc)::default in
 	    (C.Block (body, Some (brk_lbl, [])), loc)::[]
 
-      | UserSpec x -> (C.UserSpec (translate_assertion x), loc)::[]
+      | UserSpec x -> (translate_assertion loc x)::[]
 
       | Label _ | LocalDecl _ -> 
 	  Npkcontext.report_error "Firstpass.translate_stmt" "unreachable code"
 
-  and translate_assertion x = List.map translate_token x
+  and translate_assertion loc x = (C.UserSpec (List.map translate_token x), loc)
 
   and translate_token x =
     match x with
@@ -1130,9 +1139,9 @@ let translate (globals, fundecls, spec) =
    + simplify code of global declaration!!! *)
   and declare_global static extern x loc t init =
     let name = if static then get_static_name x loc else x in
-      update_global x name loc (t, None);
-      let (t, init) = translate_glb_init t init in
-      let init = if extern then None else Some init in
+      update_global x name loc (t, Npkil.Extern);
+      let (t, init) = translate_glb_init loc name t init in
+      let init = if extern then Npkil.Extern else Npkil.Declared init in
 	update_global x name loc (t, init)
   in
 
@@ -1169,11 +1178,11 @@ let translate (globals, fundecls, spec) =
       | _ -> ()
   in
 
-  let add_glbdecl name (t, loc, init) =
+  let add_glbdecl name (t, loc, storage) =
     Npkcontext.set_loc loc;
     try
       let t = translate_typ t in
-	Hashtbl.add glbdecls name (t, loc, init)
+	Hashtbl.add glbdecls name (t, loc, storage)
     with _ -> 
       (* TODO: could at least print a warning here *)
       ()
@@ -1186,11 +1195,11 @@ let translate (globals, fundecls, spec) =
    Or better: should do all typing first.
    Then compile.
 *)
+    init := List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) spec;
     List.iter translate_global globals;
     List.iter translate_fundecl fundecls;
 (* TODO: optimization: could remove this phase if cir had a type 
    structure of name 
    and all the structures' type were in a hashtbl *)
     Hashtbl.iter add_glbdecl used_globals;
-    let spec = List.map translate_assertion spec in
-      { C.globals = glbdecls; C.fundecs = fundefs; C.specs = spec }
+      { C.globals = glbdecls; C.init = !init; C.fundecs = fundefs }

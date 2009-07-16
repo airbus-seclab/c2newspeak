@@ -77,15 +77,6 @@ let (extern,do_as_extern) =
   (fun f arg -> ext := true; f arg ; ext := false)
 
 (**
- * Extract a scalar type.
- * Basically, is [function (C.Scalar t) -> t].
- *)
-let extract_scalar_typ (cir_typ:C.typ) :Npk.scalar_t = match cir_typ with
-  | C.Scalar(t) -> t
-  | _ -> Npkcontext.report_error "Firstpass.extract_scalar_typ"
-                                 "type isn't a scalar type"
-
-(**
  * Add a "belongs" operator to an expression, according to a constraint.
  *)
 let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
@@ -188,6 +179,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
 
+  and init      = ref [] 
 
   and gtbl = Sym.create () in
 
@@ -381,12 +373,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         (EnumSymb(translate_int value, typ,
                   global), translate_typ typ, loc)
 
-  and add_global (loc:Npk.location) (typ:A.subtyp)
-                 (tr_typ:C.typ)     (tr_init:C.init_t option)
+  and add_global (loc:Npk.location) (typ: A.subtyp)
+                 (tr_typ:C.typ)     (i: (C.exp * C.typ) option)
                  (ro:bool)          (x:string)
        :unit =
-    let name = Normalize.normalize_ident
-      x (Sym.current gtbl) (extern ()) in
+    let name = Normalize.normalize_ident x (Sym.current gtbl) (extern ()) in
 
     let tr_name = translate_name name in
       (if mem_symb name
@@ -414,13 +405,21 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   | FunSymb _ |NumberSymb(_)),_,_) -> ())
             (find_all_symb name)));
 
-      Hashtbl.add globals tr_name (tr_typ, loc, tr_init);
-      Hashtbl.add symbtbl name
-        (VarSymb (C.Global(tr_name), typ, true, ro),
-         tr_typ, loc)
+      let storage = 
+	match i with
+	  | None -> Npkil.Declared false
+	  | Some (e, t) -> 
+	      init := (C.Set (C.Global tr_name, t, e), loc)::!init;
+	      Npkil.Declared true
+      in
+
+	Hashtbl.add globals tr_name (tr_typ, loc, storage);
+	Hashtbl.add symbtbl name
+          (VarSymb (C.Global(tr_name), typ, true, ro),
+           tr_typ, loc);
 
   and remove_symb (x:string) :unit =
-        Hashtbl.remove symbtbl (ident_to_name x) in
+    Hashtbl.remove symbtbl (ident_to_name x) in
 
   let remove_formals args =
     remove_symb Params.ret_ident;
@@ -1715,27 +1714,25 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
       | ObjectDecl(ident, subtyp_ind, const) ->
-        let init = get_global_init ident in
-        let subtyp = Ada_utils.extract_subtyp subtyp_ind in
-
+          let init = get_global_init ident in
+          let subtyp = Ada_utils.extract_subtyp subtyp_ind in
+	    
           let read_only = const <> Variable in
           let tr_typ = translate_subtyp subtyp in
-          let tr_init : C.init_t option =
-            match (init, extern()) with
-              | (_,true)
-              | (None,_) -> Some None
-              | (Some(exp),false) ->
-                  let (tr_exp,_) = translate_exp exp (Some(base_typ subtyp))
-                  in Some((Some [(0, extract_scalar_typ tr_typ, tr_exp)]))
-          in
-          add_global loc subtyp tr_typ tr_init read_only ident
-      | TypeDecl(idtyp,typ_decl) ->
+	  let init =
+	    match (init, extern ()) with
+              | (_, true) | (None, _) -> None
+              | (Some exp, false) ->
+		  let (e, _) = translate_exp exp (Some (base_typ subtyp)) in
+		    Some (e, tr_typ)
+	  in
+            add_global loc subtyp tr_typ init read_only ident
+      | TypeDecl (idtyp, typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()
       | UseDecl x -> Sym.s_add_use gtbl x
-      | SpecDecl(spec) -> translate_spec spec loc false
-      | NumberDecl(ident, v) ->
-           add_number loc v true ident
+      | SpecDecl spec -> translate_spec spec loc false
+      | NumberDecl(ident, v) -> add_number loc v true ident
 
   (* quand cette fonction est appelee, on est dans le corps d'un
      package *)
@@ -1752,16 +1749,16 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | SubProgramSpec(subprog_spec) ->
         ignore (add_fundecl subprog_spec loc)
 
-    | PackageSpec(nom, basic_decl_list, _ctx,init) ->
-        if (not glob) then begin Npkcontext.report_error
-            "Firstpass.translate_spec"
-                "declaration de sous package non implemente"
+    | PackageSpec (nom, basic_decl_list, _ctx, init) ->
+        if (not glob) then begin 
+	  Npkcontext.report_error "Firstpass.translate_spec"
+            "declaration de sous package non implemente"
         end;
         Sym.set_current gtbl nom;
         List.iter (fun (id, exp) -> add_global_init id exp) init;
         List.iter translate_global_basic_declaration basic_decl_list;
         Sym.reset_current gtbl;
-        if extern() then Sym.add_with gtbl nom
+        if extern () then Sym.add_with gtbl nom
 
   and translate_body (body:Ast.body) glob loc :unit =
     Npkcontext.set_loc loc;
@@ -1809,17 +1806,15 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
     (* corps de la fonction translate *)
 
-  let normalized_compil_unit =  Normalize.normalization compil_unit false
-  in
-  let (ctx,lib_item,loc) = normalized_compil_unit
-  in
+  let normalized_compil_unit =  Normalize.normalization compil_unit false in
+  let (ctx, lib_item, loc) = normalized_compil_unit in
     try
       Npkcontext.set_loc loc;
       do_as_extern translate_context ctx;
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
-      { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }
+      { C.globals = globals; C.init = !init; C.fundecs = fun_decls }
     with AmbiguousTypeException ->
       Npkcontext.report_error "Firstpass.translate"
-                "uncaught ambiguous type exception"
+        "uncaught ambiguous type exception"
 

@@ -15,13 +15,13 @@ ptr x;
 int32 y;
 (061.c:35#8)^b =(int32) 3;
 (061.c:34#8)^a =(int32) 2;
+(061.c:31#11)^t =(ptr) &_32(y);
+(061.c:30#10)^y =(int32) 1;
+(061.c:29#6)^x =(ptr) &_48(!061.c.const_str_Hello);
 (061.c:29#6)^!061.c.const_str_Hello =(int8) 72;
 (061.c:29#6)^!061.c.const_str_Hello + 8 =(int8) 101;
 (061.c:29#6)^!061.c.const_str_Hello + 16 =(int8) 108;
 (061.c:29#6)^!061.c.const_str_Hello + 24 =(int8) 108;
 (061.c:29#6)^!061.c.const_str_Hello + 32 =(int8) 111;
 (061.c:29#6)^!061.c.const_str_Hello + 40 =(int8) 0;
-(061.c:30#10)^y =(int32) 1;
-(061.c:29#6)^x =(ptr) &_48(!061.c.const_str_Hello);
-(061.c:31#11)^t =(ptr) &_32(y);
 

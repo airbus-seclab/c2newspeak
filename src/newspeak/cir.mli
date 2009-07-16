@@ -27,8 +27,8 @@ open Newspeak
 
 type t = {
   globals: (string, ginfo) Hashtbl.t;
+  init: blk;
   fundecs: (string, funinfo) Hashtbl.t;
-  specs: assertion list
 }
 and assertion = token list
 
@@ -38,9 +38,7 @@ and token =
   | LvalToken of typ_lv
   | CstToken of cst
 
-and ginfo = typ * location * init_t option
-
-and init_t = (size_t * scalar_t * exp) list option
+and ginfo = typ * location * Npkil.storage
 
 (* TODO: remove location, unused! *)
 and funinfo = (string * string list * ftyp * blk)

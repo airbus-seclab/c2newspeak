@@ -38,8 +38,8 @@ let fresh_id () =
   
 type t = {
   globals: (string, ginfo) Hashtbl.t;
+  init: blk;
   fundecs: (string, funinfo) Hashtbl.t;
-  specs: assertion list
 }
 
 and assertion = token list
@@ -50,9 +50,7 @@ and token =
   | LvalToken of typ_lv
   | CstToken of cst
 
-and ginfo = typ * location * init_t option
-
-and init_t = (size_t * scalar_t * exp) list option
+and ginfo = typ * location * Npkil.storage
 
 and field = (string * (int * typ))
 
@@ -756,7 +754,7 @@ let size_of prog =
   let add x = res := !res + x in
     Hashtbl.iter (fun _ _ -> add 1) prog.globals;
     Hashtbl.iter (fun _ x -> add (size_of_fundef x)) prog.fundecs;
-    add (List.length prog.specs);
+    add (size_of_blk prog.init);
     !res
 
 let build_if loc (e, blk1, blk2) =

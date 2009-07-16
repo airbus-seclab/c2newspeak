@@ -50,7 +50,6 @@ let translate_cst c =
 
 let translate src_lang prog fnames =
   let glbdecls = Hashtbl.create 100 in
-  let init = ref [] in
   let fundefs = Hashtbl.create 100 in
 
   let used_glbs = ref Set.empty in
@@ -205,23 +204,6 @@ let translate src_lang prog fnames =
 	  let body2 = translate_blk body2 in
 	    (K.Select (body1, body2), loc)::[]
 	  
-(*
-      | If (e, body1, body2) ->
-	  let cond1 = translate_exp e in
-	    match cond1 with
-(* TODO: remove this code and have it as a simplification for newspeak rather 
-*) 
-		(* TODO: isn't this redundant with firstpass?? *)
-		K.Const N.CInt i when Nat.compare i Nat.zero <> 0 -> 
-		  body1
-	      | K.Const N.CInt _ -> body2
-	      | _ -> 
-		  let cond2 = K.negate cond1 in
-		  let body1 = (K.Guard cond1, loc)::body1 in
-		  let body2 = (K.Guard cond2, loc)::body2 in
-		    (K.Select (body1, body2), loc)::[]
-	  end
-*)
       | Loop body -> (K.InfLoop (translate_blk body), loc)::[]
 
       | Switch switch -> translate_switch loc switch
@@ -281,25 +263,8 @@ let translate src_lang prog fnames =
     (K.UserSpec (List.map translate_token x), loc) 
   in
 	  
-  let translate_init loc x (o, t, e) =
-    let lv = K.Shift (K.Global x, K.exp_of_int o) in
-    let e = translate_exp e in
-      init := (K.Set (lv, e, K.Scalar t), loc)::!init;
-  in
-
-  let translate_glb_init loc x init =
-    match init with
-	None -> K.Extern
-      | Some None -> K.Declared false
-      | Some Some init ->
-	  used_glbs := Set.add x !used_glbs;
-	  List.iter (translate_init loc x) (List.rev init);
-	  K.Declared true
-  in
-
   let translate_glbdecl x (t, loc, init) =
     Npkcontext.set_loc loc;
-    let init = translate_glb_init loc x init in
     let t = translate_typ t in
       Hashtbl.add glbdecls x (t, loc, init, false)
   in
@@ -315,11 +280,10 @@ let translate src_lang prog fnames =
     let (t, loc, init, _) = Hashtbl.find glbdecls x in
       Hashtbl.replace glbdecls x (t, loc, init, true)
   in
-  
-    init := 
-      List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) prog.specs;
+
+  let init = translate_blk prog.init in
     Hashtbl.iter translate_glbdecl prog.globals;
     Hashtbl.iter translate_fundef prog.fundecs;
     Set.iter flag_glb !used_glbs;
-    { K.fnames = fnames; K.globals = glbdecls; K.init = !init;
+    { K.fnames = fnames; K.globals = glbdecls; K.init = init;
       K.fundecs = fundefs; K.src_lang = src_lang }
