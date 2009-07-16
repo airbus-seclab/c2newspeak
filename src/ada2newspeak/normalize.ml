@@ -51,7 +51,7 @@ let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
 
 let subtyp_to_adatyp st =
   match st with
-  | Unconstrained typ      -> T.new_unconstr (typ_to_adatyp typ)
+  | Unconstrained t      -> (*T.new_unconstr *) (typ_to_adatyp t)
   | Constrained (_,_,_,t) -> t
   | SubtypName  n          -> try
                                 Sym.s_find_type gtbl n
@@ -63,6 +63,14 @@ let subtyp_to_adatyp st =
                                     ^"'");
                                   T.unknown;
                                 end
+
+let merge_types (tp,_,_,st) =
+  if st = T.unknown then subtyp_to_adatyp tp
+  else st
+
+let return_type_of subprogram = match subprogram with
+  | Ast.Function  (_,_,st) -> Some (subtyp_to_adatyp st)
+  | Ast.Procedure _        -> None
 
 (**
  * Try to find a body for a given specification.
@@ -142,7 +150,6 @@ let extract_subprog_spec (ast:compilation_unit):compilation_unit =
    de sous-programme, dans le cas ou aucun fichier de specification
    n'est fourni.*)
 let parse_specification (name:string) :compilation_unit =
-  (* tricherie : probleme avec sous-package *) (* FIXME *)
   let spec_name = name^".ads" in
   let spec_ast =
     if Sys.file_exists spec_name
@@ -784,12 +791,8 @@ in
         add_typ id typ_decl loc global ;
         typ_decl
     | DerivedType(subtyp_ind) ->
-        let t =
-          let (tp,_,_,st) = subtyp_ind in
-          if st = T.unknown then subtyp_to_adatyp tp
-          else st
-        in
-        let new_t = T.new_derived t in
+        let t = merge_types subtyp_ind in
+        let new_t = T.new_derived t in 
           Sym.s_add_type gtbl ident new_t;
         let update_contrainte contrainte symbs new_assoc =
           let find_ident v = List.find (fun (_, v') -> v'=v) symbs
@@ -995,11 +998,7 @@ in
     | UseDecl(use_clause) -> Sym.s_add_use gtbl use_clause;
         Some (Ast.UseDecl use_clause)
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
-        let t =
-          let (tp,_,_,st) = subtyp_ind in
-          if st = T.unknown then subtyp_to_adatyp tp
-          else st
-        in
+        let t = merge_types subtyp_ind in
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         begin match def with
         | None -> ()
@@ -1010,11 +1009,7 @@ in
           (List.iter (fun x -> Sym.s_add_variable gtbl x t) ident_list);
           Some (Ast.ObjectDecl(ident_list, norm_subtyp_ind, Ast.Variable))
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
-        let t =
-          let (tp,_,_,st) = subtyp_ind in
-          if st = T.unknown then subtyp_to_adatyp tp
-          else st
-        in
+        let t = merge_types subtyp_ind in
         let normexp = normalize_exp ~expected_type:t exp in
         (* constantes *)
         let norm_subtyp_ind =
@@ -1061,11 +1056,7 @@ in
        Some (Ast.NumberDecl(ident, value))
     | SubtypDecl(ident, subtyp_ind) ->
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind  in
-        let t =
-          let (tp,_,_,st) = subtyp_ind in
-          if st = T.unknown then subtyp_to_adatyp tp
-          else st
-        in
+        let t = merge_types subtyp_ind in
           Sym.s_add_type gtbl ident t;
           types#add (normalize_ident_cur ident)
                     (extract_subtyp norm_subtyp_ind)
@@ -1081,7 +1072,7 @@ in
 
   and normalize_package_spec (name, list_decl) :Ast.package_spec =
     Sym.set_current gtbl name;
-    Sym.enter_context ~name ~desc:"Package spec" ~weakly:true gtbl;
+    Sym.enter_context ~name ~desc:"Package spec" gtbl;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
                                   | RepresentClause(rep), loc ->
@@ -1121,7 +1112,13 @@ in
                                             normalize_exp  e),None
   in
 
-  let rec normalize_instr (instr,loc) =
+  (**
+   * The optional parameter return_type helps disambiguate return_statements :
+   * while translating a block in a function, it is set to this function's
+   * return type.
+   * When translating other blocks, it shall be set to None.
+   *)
+  let rec normalize_instr ?return_type (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
     | NullInstr    -> None
@@ -1133,10 +1130,10 @@ in
                                            , false
                                            ), loc)
                          end
-    | Return(exp) -> Some (Ast.Return(normalize_exp exp), loc)
+    | Return(exp) -> Some (Ast.Return(normalize_exp ?expected_type:return_type exp), loc)
     | If(exp, instr_then, instr_else) ->
         Some
-        (Ast.If(normalize_exp exp, normalize_block instr_then,
+        (Ast.If(normalize_exp ~expected_type:T.boolean exp, normalize_block instr_then,
             normalize_block instr_else), loc)
     | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
                                               normalize_block instrs),loc)
@@ -1199,8 +1196,8 @@ in
                         Sym.exit_context gtbl;
                         Some (Ast.Block (ndp, init_stmts@norm_block), loc)
 
-  and normalize_block block =
-    List_utils.filter_map normalize_instr block
+  and normalize_block ?return_type block =
+    List_utils.filter_map (fun x -> normalize_instr ?return_type x) block
 
   and normalize_decl_part decl_part ~global =
     let represtbl = Hashtbl.create 50 in
@@ -1250,9 +1247,10 @@ in
         let norm_subprog_decl =
           normalize_sub_program_spec subprog_decl ~addparam:true in
         Sym.enter_context ~desc:"SP body (locals)" gtbl;
+        let return_type = return_type_of norm_subprog_decl in
         let (norm_decl_part,init) = normalize_decl_part decl_part
                                                         ~global:false in
-        let norm_block = normalize_block block in
+        let norm_block = normalize_block ?return_type block in
         let init_stmts = List.map build_init_stmt init in
           remove_decl_part decl_part;
           remove_params subprog_decl;
@@ -1299,18 +1297,15 @@ in
       match basic_decl with
         | Ast.TypeDecl(id,typ_decl) ->
             add_extern_typdecl id typ_decl loc
-        | Ast.ObjectDecl(ident_list, (tp,_,_,t),
+        | Ast.ObjectDecl(ident_list, subtyp_ind,
                      (Ast.Variable | Ast.Constant)) ->
             (List.iter
-            (fun x -> Sym.s_add_variable gtbl x (if T.is_unknown t then
-                          subtyp_to_adatyp tp else t)
-               )
+            (fun x -> Sym.s_add_variable gtbl x (merge_types subtyp_ind))
                ident_list
             )
         | Ast.ObjectDecl(ident_list,subtyp_ind, Ast.StaticVal value) ->
             (* constante statique *)
-
-            let (_,_,_,t) = subtyp_ind in
+            let t = merge_types subtyp_ind in
               List.iter
                 (fun x ->
                   Sym.s_add_variable gtbl x t ~value;
@@ -1332,8 +1327,7 @@ in
           ()
       | Ast.PackageSpec(name, basic_decls,_) ->
           Sym.set_current gtbl name;
-          Sym.enter_context ~name ~desc:"Package spec (extern)"
-                            ~weakly:true gtbl;
+          Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Sym.reset_current gtbl;
           Sym.exit_context gtbl;

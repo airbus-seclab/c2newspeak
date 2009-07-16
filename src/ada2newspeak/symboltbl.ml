@@ -49,29 +49,46 @@ exception ParameterlessFunction of T.t
 
 module Table = struct
 
-  (**
-   * Symbols.
-   *)
-  type symbol =
-    | Variable   of T.t*(T.data_t option)
-    | Type       of T.t
-    | Subprogram of ((T.f_param list)*T.t option)
-    | Unit       of table
+  module rec Symset : 
+    Set.S with type elt = string*SymTable.symbol
+  = 
+    Set.Make (struct
+      type t = string*SymTable.symbol
+      let compare = Pervasives.compare (* FIXME *)
+  end
+  ) 
+and SymTable : sig
+    (**
+     * Symbols.
+     *)
+    type symbol =
+      | Variable   of T.t*(T.data_t option)
+      | Type       of T.t
+      | Subprogram of ((T.f_param list)*T.t option)
+      | Unit       of table
 
-  (**
-   * A symbol table.
-   * t_tbl holds pairs of symbol and bool :
-   * "false" (weak) symbols may be redefined.
-   * Ex : a xxx_spec will yield weak symbols than may be redefined.
-   *)
+    and table = { mutable t_renaming : (string*Syntax_ada.name) list
+                ; mutable t_tbl      : Symset.t
+                ;         t_desc     : string option
+                ;         t_loc      : Newspeak.location
+                ; mutable t_use_list : string list
+                }
+  end = struct
+    type symbol =
+      | Variable   of T.t*(T.data_t option)
+      | Type       of T.t
+      | Subprogram of ((T.f_param list)*T.t option)
+      | Unit       of table
 
-  and table = { mutable t_renaming : (string*Syntax_ada.name) list
-              ;         t_tbl      : (symbol*bool) IHashtbl.t
-              ;         t_desc     : string option
-              ;         t_loc      : Newspeak.location
-              ;         t_strong   : bool
-              ; mutable t_use_list : string list
-              }
+    and table = { mutable t_renaming : (string*Syntax_ada.name) list
+                ; mutable t_tbl      : Symset.t
+                ;         t_desc     : string option
+                ;         t_loc      : Newspeak.location
+                ; mutable t_use_list : string list
+                }
+  end
+
+  open SymTable
 
   let add_use t p =
     if (not (List.mem p t.t_use_list)) then
@@ -111,7 +128,7 @@ module Table = struct
       let a = max a 0 in
       (String.make a ' ')^str^(String.make b ' ')
     in
-    let line_printer i (sym,_) =
+    let line_printer (i,sym) =
       let (t,sym_d) = print_symbol sym in
       List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
       print_string "\n"
@@ -124,18 +141,17 @@ module Table = struct
                                   ^"\n")
     end;
     print_string "+------+---------------+---- . . .\n";
-    IHashtbl.iter line_printer tbl.t_tbl;
+    Symset.iter line_printer tbl.t_tbl;
     print_string "+------+---------------+---- . . .\n";
     print_string "\n";
     Buffer.contents out
 
-  let create_table ?desc ?(strong=true) _ = { t_renaming = []
-                                            ; t_tbl      = IHashtbl.create 0
-                                            ; t_desc     = desc
-                                            ; t_loc      = Npkcontext.get_loc ()
-                                            ; t_strong   = strong
-                                            ; t_use_list = []
-                                            }
+  let create_table ?desc _ = { t_renaming = []
+                             ; t_tbl      = Symset.empty
+                             ; t_desc     = desc
+                             ; t_loc      = Npkcontext.get_loc ()
+                             ; t_use_list = []
+                             }
 
 (******************************************************************************
  *                                                                            *
@@ -143,40 +159,23 @@ module Table = struct
  *                                                                            *
  ******************************************************************************)
 
-  let adder matches mksym desc ?(strongly=true) tbl n t =
-    try begin match IHashtbl.find tbl.t_tbl n with
-        | (sym ,true) when matches sym t -> error ("Homograph "^desc)
-        | (_sym,false) ->
-            begin
-              Npkcontext.print_debug ("Replacing weak "^desc^" symbol '"^n^"'");
-              IHashtbl.replace tbl.t_tbl n (mksym t ,strongly);
-            end
-        | (_  , true) -> raise Not_found
-        end
-    with Not_found -> begin
-                        Npkcontext.print_debug ("Adding "^desc^" '"^n^"'");
-                        IHashtbl.add tbl.t_tbl n (mksym t,strongly)
-                      end
+  let adder (mksym:'a -> symbol) desc (tbl:table) (n:string) (t:'a) =
+    Npkcontext.print_debug ("Adding "^desc^" '"^n^"', now Set = {"
+      ^ String.concat ", " (List.map (fun (n,_) -> n) (Symset.elements tbl.t_tbl))
+      ^"}");
+    tbl.t_tbl <- Symset.add (n, mksym t) tbl.t_tbl
 
-  let add_variable ?(strongly=true) =
-    adder (fun sym (t,_) -> match sym with
-                            | Variable (t', _) when t' = t -> true
-                            | _                            -> false)
-          (fun (t,v) -> Variable (t,v))
+  let add_variable =
+    adder (fun (t,v) -> Variable (t,v))
           "variable"
-          ~strongly
 
-  let add_type ?(strongly=true) =
-    adder (fun sym t -> sym = Type t)
-          (fun t -> Type t)
+  let add_type =
+    adder (fun t -> Type t)
           "type"
-          ~strongly
 
-  let add_subprogram ?(strongly=true) tbl n params ret =
-    adder (fun sym (params,ret) -> sym = Subprogram (params,ret))
-          (fun (params,ret) -> Subprogram (params,ret))
+  let add_subprogram tbl n params ret =
+    adder (fun (params,ret) -> Subprogram (params,ret))
           "subprogram"
-          ~strongly
           tbl
           n
           (List.map T.to_fparam params,ret)
@@ -241,7 +240,8 @@ module Table = struct
  ******************************************************************************)
 
   let rec find_symbols t id =
-    fst (List.split (IHashtbl.find_all t.t_tbl id))
+    List.map (fun (_,x) -> x) (Symset.elements (Symset.filter (fun (m,_) -> m = id)
+                                                  t.t_tbl))
 
   let find_type tbl n =
     cast_t (find_symbols tbl n)
@@ -298,6 +298,7 @@ end
 
 module SymMake(TR:Tree.TREE) = struct
   open Table
+  open Table.SymTable
 
   type t = {         s_stack  : table TR.t
            ; mutable s_cpkg   : string option
@@ -408,21 +409,21 @@ module SymMake(TR:Tree.TREE) = struct
     end
 
 
-  let enter_context ?name ?desc ?(weakly=false) (s:t) =
+  let enter_context ?name ?desc (s:t) =
           Npkcontext.print_debug (">>>>>>> enter_context ("
                                  ^(match name with
                                      | Some n -> n
                                      | _      -> "")^")");
           let create_context _ =
             begin
-              let new_context = create_table ?desc ~strong:(not weakly) () in
+              let new_context = create_table ?desc () in
               begin match name with
                 | None   -> ()
                 | Some n -> begin
                               if (TR.height s.s_stack <> 2) then
                                 error "Adding some unit outside the library";
-                              IHashtbl.add ((TR.top s.s_stack).t_tbl)
-                                          n (Unit new_context,true)
+                                let top = TR.top s.s_stack in
+                                top.t_tbl <- Symset.add (n,Unit new_context) top.t_tbl;
                             end
               end;
               new_context;
@@ -448,8 +449,11 @@ module SymMake(TR:Tree.TREE) = struct
           Npkcontext.report_error "exit_context" "Stack too small"
 
   let library s =
-    let r = TR.nth s 2 in
-    r
+    TR.nth s 2
+
+  let is_in_library (s:t) pkg =
+    let l = library s.s_stack in
+    Symset.exists (fun (x,_) -> x = pkg) l.t_tbl 
 
   let s_find_abs desc f s p n =
     match find_unit (library s.s_stack) p with
@@ -519,13 +523,13 @@ module SymMake(TR:Tree.TREE) = struct
                             | Some v -> "value "^T.print_data v
                             )
                            );
-    add_variable (top s) n (t,value) ~strongly:(top s).t_strong
+    add_variable (top s) n (t,value)
 
   let s_add_type s n v =
-    add_type (top s) n v ~strongly:(top s).t_strong
+    add_type (top s) n v
 
   let s_add_subprogram s n v =
-    add_subprogram (top s) n v ~strongly:(top s).t_strong
+    add_subprogram (top s) n v
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =

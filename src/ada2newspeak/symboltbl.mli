@@ -74,13 +74,15 @@ val print : t -> string
  * Contexts may be named ; in that case a unit_symbol is added
  * to the parent table in order to allow bottom-up adressing.
  *)
-val enter_context : ?name:string -> ?desc:string -> ?weakly:bool -> t -> unit
+val enter_context : ?name:string -> ?desc:string -> t -> unit
 
 (**
  * Discard the current context and "go up".
  * Named contexts can remain accessible.
  *)
 val exit_context : t -> unit
+
+val is_in_library : t -> string -> bool
 
 (** FIXME document exact specs *)
 val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
