@@ -92,6 +92,11 @@ val exit_context : t -> context
  *)
 val push_saved_context : t -> context -> unit
 
+(**
+ * Extract variables for translation.
+ *)
+val extract_variables : context -> (string*Ada_types.t*Newspeak.location) list
+
 (** FIXME document exact specs *)
 val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
 
@@ -126,12 +131,14 @@ val s_find_subprogram : t
 val is_operator_overloaded : t -> string -> bool
 
 (** Add data.  *)
-val s_add_type     : t -> string -> Ada_types.t -> unit
-val s_add_variable : t -> string -> ?value:Ada_types.data_t -> Ada_types.t
+val s_add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
+val s_add_variable : t -> string -> Newspeak.location
+                       -> ?value:Ada_types.data_t -> Ada_types.t
                         -> unit
 
 val s_add_subprogram : t
-                  -> (string)
+                  -> string
+                  -> Newspeak.location
                   -> (string*bool*bool*Ada_types.t) list
                   -> Ada_types.t option
       -> unit

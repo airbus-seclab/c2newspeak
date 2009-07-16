@@ -128,6 +128,11 @@ let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
     | A.SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
                     "SubtypName not implemented yet (especially for Enum)"
 
+let translate_saved_context ctx =
+  List.map (fun (id,t,loc) ->
+    C.Decl (T.translate t, id), loc
+  ) (Sym.extract_variables ctx)
+
 (**
  * Translate a [Syntax_ada.typ].
  *)
@@ -680,7 +685,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     in
 
       match lv with
-          Ast.Lval lv ->
+        | Lval lv ->
             let (symb, _, _) = find_name_record lv
               fun_sans_sel   (*sans selecteur *)
               fun_sel_connu  (*avec selecteur connu *)
@@ -705,7 +710,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
               end
 
         (*Assignation dans un tableau*)
-        | Ast.ArrayAccess (lval, expr) ->
+        | ArrayAccess (lval, expr) ->
             let (v, subtyp_lv) = translate_lv lval write trans_exp in
               match  subtyp_lv
               with
@@ -774,9 +779,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let loc = Npkcontext.get_loc () in
     let (tmp, decl, vid) = temp#create loc A.Boolean in
     let name = ident_to_name tmp in
-    let instr_if = Ast.If (e_cond,
-                       [(Ast.Assign(Lval name, e_then, false),loc)],
-                       [(Ast.Assign(Lval name, e_else, false),loc)])
+    let instr_if = If (e_cond,
+                       [Assign(Lval name, e_then, false),loc],
+                       [Assign(Lval name, e_else, false),loc])
     in let tr_instr_if =
         translate_block [(instr_if,loc)]
     in
@@ -792,7 +797,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          e2
-                                         (Ast.CBool false,T.boolean)) in
+                                         (CBool false,T.boolean)) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
@@ -803,7 +808,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     let (tmp, decl, vid) = temp#create loc A.Boolean in
     let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
-                                         (Ast.CBool true,T.boolean)
+                                         (CBool true,T.boolean)
                                          e2) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
@@ -1409,13 +1414,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         begin
         Npkcontext.set_loc loc;
          match instr with
-           | Ast.Return(exp) ->
+           | Return(exp) ->
                translate_block (* WG Lval for Array diff*)
-                 ((Ast.Assign( Lval (ident_to_name Params.ret_ident)
+                 ((Assign( Lval (ident_to_name Params.ret_ident)
                              , exp
                              , false),loc)
-                  ::(Ast.ReturnSimple,loc)::r)
-           | Ast.ReturnSimple ->
+                  ::(ReturnSimple,loc)::r)
+           | ReturnSimple ->
                let tr_reste =
                  match r with
                    | [] -> []
@@ -1428,10 +1433,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                        translate_block r
              in
                  (C.Goto Params.ret_lbl, loc)::tr_reste
-           | Ast.Exit -> (C.Goto Params.brk_lbl, loc)::(translate_block r)
-           | Ast.Assign(lv,exp,unchecked) ->
+           | Exit -> (C.Goto Params.brk_lbl, loc)::(translate_block r)
+           | Assign(lv,exp,unchecked) ->
                (translate_affect lv exp loc unchecked)::(translate_block r)
-           | Ast.If(condition,instr_then,instr_else) ->
+           | If(condition,instr_then,instr_else) ->
                let (tr_exp, typ) = translate_exp condition (Some A.Boolean) in
                  if typ <> A.Boolean then begin
                    Npkcontext.report_error "Firstpass.translate_block"
@@ -1441,15 +1446,15 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  let tr_else = translate_block instr_else in
                    (C.build_if loc (tr_exp, tr_then, tr_else))
                    @(translate_block r)
-           | Ast.Loop(NoScheme, body) ->
+           | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
                  (C.Block([C.Loop(tr_body), loc], Some (Params.brk_lbl,[])),loc)
                  ::(translate_block r)
-           | Ast.Loop(While(cond), body) ->
+           | Loop(While(cond), body) ->
                translate_block
                  ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
                    loc)::r)
-           | Ast.ProcedureCall (name, args) -> begin
+           | ProcedureCall (name, args) -> begin
                let array_or_fun  = find_fun_symb name in
                  match array_or_fun with
                      (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->
@@ -1491,7 +1496,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  "find_fun_symb did not expect this (maybe array) as an instr! "
              end
 
-           | Ast.Case(e, choices, default)->(C.Switch(fst(translate_exp e None),
+           | Case(e, choices, default)->(C.Switch(fst(translate_exp e None),
                             (* Choices *) (List.map (function exp,block ->
                                               let (value,typ) =
                                                   translate_exp exp None
@@ -1506,13 +1511,15 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                                                     [])
                                             )
                                             ,loc)::(translate_block r)
-            | Ast.Block (dp, _ctx, blk) ->
-                          (* xlt and remove_dp has side effects :
-                             they must be done in this order *)
-                         let t_dp = translate_declarative_part dp in
-                         let res = (C.Block ((t_dp@(translate_block blk)),
-                                        None),loc)
-                         in remove_declarative_part dp; res::(translate_block r)
+            | Block (dp, ctx, blk) ->
+                          Sym.push_saved_context gtbl ctx;
+                          ignore (translate_declarative_part dp);
+                          let t_ctx = translate_saved_context ctx in
+                          let res = (C.Block ((t_ctx@(translate_block blk)),
+                                         None),loc)
+                          in remove_declarative_part dp;
+                          ignore (Sym.exit_context gtbl);
+                          res::(translate_block r)
             end
 
   and translate_param param =
@@ -1657,7 +1664,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             "sous-fonction, sous-procedure ou sous package non implemente"
 
   and translate_declarative_part decl_part =
-    Sym.enter_context gtbl;
     List_utils.filter_map translate_declarative_item decl_part
 
   and remove_basic_declaration basic = match basic with
@@ -1678,7 +1684,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | BodyDecl(_) -> ()
 
   and remove_declarative_part decl_part =
-    ignore (Sym.exit_context gtbl);
     List.iter remove_declarative_item decl_part
 
   and add_funbody subprogspec decl_part block loc =
@@ -1771,12 +1776,11 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         if extern#is_it then Sym.add_with gtbl nom
 
   and translate_body (body:Ast.body) glob loc :unit =
-
     Npkcontext.set_loc loc;
     match (body, glob) with
-      | (Ast.SubProgramBody(subprog_decl,decl_part, _ctx1, _ctx2, block), _) ->
+      | (SubProgramBody(subprog_decl,decl_part, _ctx1, _ctx2, block), _) ->
           add_funbody subprog_decl decl_part block loc
-      | Ast.PackageBody(name, package_spec, _ctx, decl_part), true ->
+      | PackageBody(name, package_spec, _ctx, decl_part), true ->
           Sym.set_current gtbl name;
           (match package_spec with
              | None -> ()
@@ -1786,7 +1790,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           );
           List.iter translate_global_decl_item decl_part
 
-      | Ast.PackageBody _, false -> Npkcontext.report_error
+      | PackageBody _, false -> Npkcontext.report_error
           "Firstpass.translate_body"
             "declaration de sous package non implemente"
 
@@ -1795,8 +1799,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   let translate_library_item lib_item loc =
     Npkcontext.set_loc loc;
     match lib_item with
-      | Ast.Body body -> translate_body body true loc
-      | Ast.Spec _    -> Npkcontext.report_error
+      | Body body -> translate_body body true loc
+      | Spec _    -> Npkcontext.report_error
             "Firstpass.translate_library_item"
             "Rien a faire pour les specifications"
   in

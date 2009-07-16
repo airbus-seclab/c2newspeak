@@ -32,10 +32,10 @@ exception ParameterlessFunction of T.t
 module Table = struct
 
   module rec Symset :
-    Set.S with type elt = string*SymTable.symbol
+    Set.S with type elt = string*Newspeak.location*SymTable.symbol
   =
     Set.Make (struct
-      type t = string*SymTable.symbol
+      type t = string*Newspeak.location*SymTable.symbol
       let compare = Pervasives.compare (* FIXME *)
   end
   )
@@ -110,7 +110,7 @@ and SymTable : sig
       let a = max a 0 in
       (String.make a ' ')^str^(String.make b ' ')
     in
-    let line_printer (i,sym) =
+    let line_printer (i,_,sym) =
       let (t,sym_d) = print_symbol sym in
       List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
       print_string "\n"
@@ -141,11 +141,12 @@ and SymTable : sig
  *                                                                            *
  ******************************************************************************)
 
-  let adder (mksym:'a -> symbol) desc (tbl:table) (n:string) (t:'a) =
+  let adder (mksym:'a -> symbol) desc (tbl:table) (n:string)
+            (loc:Newspeak.location) (t:'a) =
     Npkcontext.print_debug ("Adding "^desc^" '"^n^"', now Set = {"
-      ^ String.concat ", " (List.map fst (Symset.elements tbl.t_tbl))
+      ^ String.concat ", " (List.map (fun (x,_,_) -> x) (Symset.elements tbl.t_tbl))
       ^"}");
-    tbl.t_tbl <- Symset.add (n, mksym t) tbl.t_tbl
+    tbl.t_tbl <- Symset.add (n, loc, mksym t) tbl.t_tbl
 
   let add_variable =
     adder (fun (t,v) -> Variable (t,v))
@@ -155,11 +156,12 @@ and SymTable : sig
     adder (fun t -> Type t)
           "type"
 
-  let add_subprogram tbl n params ret =
+  let add_subprogram tbl n loc params ret =
     adder (fun (params,ret) -> Subprogram (params,ret))
           "subprogram"
           tbl
           n
+          loc
           (List.map T.to_fparam params,ret)
 
 (******************************************************************************
@@ -222,8 +224,9 @@ and SymTable : sig
  ******************************************************************************)
 
   let rec find_symbols t id =
-    List.map snd (Symset.elements (Symset.filter (fun (m,_) -> m = id)
-                                                  t.t_tbl))
+    List.map (fun (_,_,x) -> x) (Symset.elements
+                                  (Symset.filter (fun (m,_,_) -> m = id)
+                                  t.t_tbl))
 
   let find_type tbl n =
     cast_t (find_symbols tbl n)
@@ -263,7 +266,7 @@ and SymTable : sig
   let builtin_type x = find_type builtin_table x
 
   let _ =
-    List.iter (fun (n,t) -> add_type builtin_table n t)
+    List.iter (fun (n,t) -> add_type builtin_table n Newspeak.unknown_loc t)
     [ "integer"  , T.integer
     ; "float"    , T.std_float
     ; "boolean"  , T.boolean
@@ -402,7 +405,9 @@ module SymMake(TR:Tree.TREE) = struct
                               if (TR.height s.s_stack <> 2) then
                                 error "Adding some unit outside the library";
                                 let top = TR.top s.s_stack in
-                                top.t_tbl <- Symset.add (n,Unit new_context)
+                                top.t_tbl <- Symset.add (n
+                                                        ,Newspeak.unknown_loc
+                                                        ,Unit new_context)
                                                         top.t_tbl;
                             end
               end;
@@ -430,6 +435,13 @@ module SymMake(TR:Tree.TREE) = struct
 
   let push_saved_context s ctx =
     TR.push ctx s.s_stack
+
+  let extract_variables t =
+    let filter = function
+      | x, loc, Variable (y, _) -> [x,y,loc]
+      | _ -> []
+    in
+    List.flatten (List.map filter (Symset.elements t.t_tbl))
 
   let library s =
     TR.nth s 2
@@ -492,7 +504,7 @@ module SymMake(TR:Tree.TREE) = struct
     end
     with Not_found -> false
 
-  let s_add_variable s n ?value t =
+  let s_add_variable s n loc ?value t =
     Npkcontext.print_debug ("s_add_variable : adding '"
                            ^n
                            ^"' with "
@@ -501,7 +513,7 @@ module SymMake(TR:Tree.TREE) = struct
                             | Some v -> "value "^T.print_data v
                             )
                            );
-    add_variable (top s) n (t,value)
+    add_variable (top s) n loc (t,value)
 
   let s_add_type s n v =
     add_type (top s) n v
