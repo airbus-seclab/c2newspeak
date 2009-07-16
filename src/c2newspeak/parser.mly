@@ -609,7 +609,7 @@ relational_expression:
   shift_expression                         { Binop (Gt, $3, $1) }
 | relational_expression LTEQ 
   shift_expression                         { Unop (Not, Binop (Gt, $1, $3)) }
-| EXTENSION expression                     { $2 }
+| EXTENSION assignment_expression          { $2 }
 ;;
 
 equality_expression:
