@@ -581,7 +581,7 @@ and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
   | FunctionCall(n, params) -> normalize_fcall (n, params)
   | Attribute (st, attr)->
       begin
-        let t = subtyp_to_adatyp st in
+        let t = subtyp_to_adatyp (SubtypName st) in
         match T.attr_get t attr with
         | (t,T.IntVal   x) -> Ast.CInt   x, t
         | (t,T.BoolVal  x) -> Ast.CBool  x, t

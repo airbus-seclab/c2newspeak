@@ -128,7 +128,7 @@ and expression =
                   * expression
   | Qualified    of subtyp
                   * expression
-  | Attribute    of subtyp * string
+  | Attribute    of name * string
 
 (** Constraint *)
 and contrainte =

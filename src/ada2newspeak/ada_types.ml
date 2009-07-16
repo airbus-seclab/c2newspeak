@@ -77,6 +77,7 @@ and trait_t =
   | Enumeration of (string*int) list  (* Name-index *)
   | Float of int                      (* Digits *)
   | Array of t*t                      (* Component-index *)
+  | Record of (string * t) list       (* Fields *)
 
 
 (******************
@@ -107,6 +108,7 @@ let rec print t =
                   ^print c^"; index = "
                   ^print i
                   ^"}}"
+    | Record (flds) -> "Record {"^String.concat ", " (List.map fst flds)^"}"
   in
    "{"
   ^"H="^p_hash t
@@ -218,6 +220,11 @@ let new_array component ind =
       trait = Array (component,ind)
     }
 
+let new_record fields =
+  { type_stub with
+    trait = Record(fields)
+  }
+
 let is_compatible one another =
   let p1 = root_parent one     in
   let p2 = root_parent another in
@@ -265,6 +272,7 @@ let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
 | Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
 | Array _
+| Record _
 | Float _
 | Unknown
 | Signed None -> Npkcontext.report_error "length_of" "Type with no size"
@@ -288,6 +296,7 @@ let rec attr_get typ attr =
                                     IntVal (Newspeak.Nat.of_int digits)
     | Unknown, _
     | Array _, _
+    | Record _,_
     | Float _ , _
     | Enumeration _ , _
     | Signed (Some Range(_,_)),  _
@@ -306,6 +315,7 @@ let is_integer typ =
   match typ.trait with
   | Unknown       -> false
   | Array       _ -> false
+  | Record      _ -> false
   | Enumeration _ -> false
   | Float       _ -> false
   | Signed      _ -> true
@@ -314,6 +324,7 @@ let is_discrete typ =
   match typ.trait with
   | Unknown       -> false
   | Array       _ -> false
+  | Record      _ -> false
   | Enumeration _ -> true
   | Float       _ -> false
   | Signed      _ -> true
@@ -322,6 +333,7 @@ let is_numeric typ =
   match typ.trait with
   | Unknown       -> false
   | Array       _ -> false
+  | Record      _ -> false
   | Enumeration _ -> false
   | Float       _ -> true
   | Signed      _ -> true
@@ -330,6 +342,7 @@ let is_scalar typ =
   match typ.trait with
   | Unknown       -> false
   | Array       _ -> false
+  | Record      _ -> false
   | Float       _ -> true
   | Enumeration _ -> true
   | Signed      _ -> true
@@ -338,6 +351,7 @@ let is_float typ =
   match typ.trait with
   | Unknown       -> false
   | Array       _ -> false
+  | Record      _ -> false
   | Float       _ -> true
   | Enumeration _ -> false
   | Signed      _ -> false
@@ -373,6 +387,7 @@ let rec translate t =
   | Array          (c,i)      -> Cir.Array  (translate c
                                             , Some (Newspeak.Nat.to_int
                                                         (length_of i)))
+  | Record         _flds      -> failwith "translate record"
   | Unknown -> Npkcontext.report_error "Ada_types.translate"
                "Type of unknown trait remaining at translate time"
   | Signed (None|Some NullRange) ->  Npkcontext.report_error
