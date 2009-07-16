@@ -1506,7 +1506,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                                                     [])
                                             )
                                             ,loc)::(translate_block r)
-            | Ast.Block (dp, blk) ->
+            | Ast.Block (dp, _ctx, blk) ->
                           (* xlt and remove_dp has side effects :
                              they must be done in this order *)
                          let t_dp = translate_declarative_part dp in
@@ -1678,7 +1678,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | BodyDecl(_) -> ()
 
   and remove_declarative_part decl_part =
-    Sym.exit_context gtbl;
+    ignore (Sym.exit_context gtbl);
     List.iter remove_declarative_item decl_part
 
   and add_funbody subprogspec decl_part block loc =
@@ -1759,7 +1759,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     | SubProgramSpec(subprog_spec) ->
         ignore (add_fundecl subprog_spec loc)
 
-    | PackageSpec(nom, basic_decl_list,init) ->
+    | PackageSpec(nom, basic_decl_list, _ctx,init) ->
         if (not glob) then begin Npkcontext.report_error
             "Firstpass.translate_spec"
                 "declaration de sous package non implemente"
@@ -1774,13 +1774,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
     Npkcontext.set_loc loc;
     match (body, glob) with
-      | (Ast.SubProgramBody(subprog_decl,decl_part, block), _) ->
+      | (Ast.SubProgramBody(subprog_decl,decl_part, _ctx1, _ctx2, block), _) ->
           add_funbody subprog_decl decl_part block loc
-      | Ast.PackageBody(name, package_spec, decl_part), true ->
+      | Ast.PackageBody(name, package_spec, _ctx, decl_part), true ->
           Sym.set_current gtbl name;
           (match package_spec with
              | None -> ()
-             | Some(_, basic_decls, init) ->
+             | Some(_, basic_decls, _ctx, init) ->
                  List.iter (fun (id, exp) -> add_global_init id exp) init;
                  List.iter translate_global_basic_declaration basic_decls
           );

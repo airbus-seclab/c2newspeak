@@ -2,7 +2,7 @@ module type TREE = sig
   type 'a t
   val create : unit -> 'a t
   val push   : 'a -> 'a t -> unit
-  val pop    : 'a t -> unit
+  val pop    : 'a t -> 'a
   val top    : 'a t -> 'a
   val lookup : ('a -> 'b option) -> 'a t -> 'b option
   val iter   : ('a -> unit) -> 'a t -> unit
@@ -18,12 +18,9 @@ module StackedTree : TREE = struct
   type 'a t = 'a Stack.t
 
   let create = Stack.create
-
-  let push = Stack.push
-
-  let top = Stack.top
-
-  let pop x = ignore (Stack.pop x)
+  let push   = Stack.push
+  let top    = Stack.top
+  let pop    = Stack.pop
 
   let lookup p s =
     let s = Stack.copy s in
@@ -119,8 +116,12 @@ module FCNSTree : TREE = struct
 
   let pop x =
     match !x with
-    | None  -> invalid_arg "FCNSTree.pop"
-    | Some n -> x := n.fcns_parent
+    | None   -> invalid_arg "FCNSTree.pop"
+    | Some n -> begin
+                  let return_me = top x in
+                  x := n.fcns_parent;
+                  return_me
+                end
 
   let push (e:'a) (x:'a t) :unit =
     let newnode = { fcns_contents    = e

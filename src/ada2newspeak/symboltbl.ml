@@ -287,6 +287,8 @@ module SymMake(TR:Tree.TREE) = struct
            ; mutable s_with   : string list
            }
 
+  type context = table
+
   let top s = TR.top s.s_stack
 
   let print s =
@@ -373,11 +375,6 @@ module SymMake(TR:Tree.TREE) = struct
    * call is (A -> A) and the circular dependency will be detected.
    *)
   let rec add_renaming_decl s new_name old_name =
-    Npkcontext.print_debug ("add_rd "
-                           ^new_name
-                           ^" --> "
-                           ^Ada_utils.name_to_string old_name
-    );
     if ((None,new_name) = old_name) then
       Npkcontext.report_error "add_renaming_decl"
                     ("Circular declaration detected for '"
@@ -423,13 +420,16 @@ module SymMake(TR:Tree.TREE) = struct
           in
           TR.push context s.s_stack
 
-    let exit_context s =
-        Npkcontext.print_debug "<<<<<<< exit_context ()";
-        Npkcontext.print_debug (print s);
-        if(TR.height s.s_stack > 2) then
-          TR.pop s.s_stack
-        else
-          Npkcontext.report_error "exit_context" "Stack too small"
+  let exit_context s =
+    Npkcontext.print_debug "<<<<<<< exit_context ()";
+    Npkcontext.print_debug (print s);
+    if(TR.height s.s_stack > 2) then
+      TR.pop s.s_stack
+    else
+      Npkcontext.report_error "exit_context" "Stack too small"
+
+  let push_saved_context s ctx =
+    TR.push ctx s.s_stack
 
   let library s =
     TR.nth s 2
@@ -485,9 +485,8 @@ module SymMake(TR:Tree.TREE) = struct
       s_find "subprogram" find_subprogram s ?package n
     with Not_found -> error ("Cannot find subprogram '"^n^"'")
 
-  let is_operator_overloaded s op =
+  let is_operator_overloaded s n =
     try begin
-      let n = Ada_utils.make_operator_name op in
       ignore (s_find "overloaded operator" find_subprogram s n);
       true
     end

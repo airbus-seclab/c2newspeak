@@ -59,6 +59,12 @@
 type t
 
 (**
+ * A saved piece of context.
+ * Basically, it is an opaque symbol table.
+ *)
+type context
+
+(**
  * Create a new context stack, initially holding
  * built-in types and variables, and an empty library.
  *)
@@ -77,10 +83,14 @@ val print : t -> string
 val enter_context : ?name:string -> ?desc:string -> t -> unit
 
 (**
- * Discard the current context and "go up".
- * Named contexts can remain accessible.
+ * Return the current context and "go up".
  *)
-val exit_context : t -> unit
+val exit_context : t -> context
+
+(**
+ * Push some saved context.
+ *)
+val push_saved_context : t -> context -> unit
 
 (** FIXME document exact specs *)
 val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
@@ -113,7 +123,7 @@ val s_find_subprogram : t
                       -> string option * string
     -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
-val is_operator_overloaded : t -> Syntax_ada.binary_op -> bool
+val is_operator_overloaded : t -> string -> bool
 
 (** Add data.  *)
 val s_add_type     : t -> string -> Ada_types.t -> unit

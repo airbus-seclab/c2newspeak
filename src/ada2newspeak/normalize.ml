@@ -86,7 +86,7 @@ let find_body_for_spec ~(specification:Ast.basic_declaration)
   (* Try to match a spec and a body *)
   let match_ok s b = match (s,b) with
     | Ast.SpecDecl(Ast.SubProgramSpec sps),
-        Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_)) -> sps = spsb
+        Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_,_,_)) -> sps = spsb
     | Ast.ObjectDecl _ as x,Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
     | _ -> false
   in
@@ -100,13 +100,13 @@ let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.SubtypDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
-  | Ast.SpecDecl (Ast.PackageSpec (n,_,_)) -> n
+  | Ast.SpecDecl (Ast.PackageSpec (n,_,_,_)) -> n
   | Ast.UseDecl _ -> "<no name>"
 
 let check_package_body_against_spec ~(body:Ast.declarative_part)
                                     ~(spec:Ast.package_spec) =
-  let (pkgname,spec_and_loc,_) = spec in
-  let (        body_and_loc  ) = body in
+  let (pkgname,spec_and_loc,_,_) = spec in
+  let (        body_and_loc    ) = body in
   let speclist = List.map fst spec_and_loc in
   let bodylist = List.map fst body_and_loc in
   (* Filter on specifications : only sp such as
@@ -471,7 +471,7 @@ and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
   |_ -> invalid_arg "direct_op_trans"
   in
   (* Is the operator overloaded ? *)
-  if (Sym.is_operator_overloaded gtbl bop) then
+  if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
     let ovl_opname = (None,make_operator_name bop) in
     normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
   else
@@ -1081,9 +1081,9 @@ in
                          (normalize_basic_decl decl loc true represtbl add_init)
                ) decls) in
     let norm_spec = normalize_decls list_decl in
-      Sym.reset_current gtbl;
-      Sym.exit_context gtbl;
-      (name, norm_spec, !init)
+    Sym.reset_current gtbl;
+    let ctx = Sym.exit_context gtbl in
+    (name, norm_spec, ctx, !init)
 
   and normalize_spec spec = match spec with
     | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
@@ -1143,28 +1143,23 @@ in
       Sym.enter_context gtbl;
       let (ndp,init) = normalize_decl_part dp ~global:false in
       let nblock = (List.map build_init_stmt init)@normalize_block block in
-      let res =
-      Some
-      (Ast.Block
-        ( ndp
-        , [Ast.Loop
-             ( Ast.While
-                ( normalize_exp (if is_rev then Binary(Ge,Var(None,iter),exp1)
-                                           else Binary(Le,Var(None,iter),exp2)))
-                , nblock@[Ast.Assign ( Ast.Lval (None, iter)
-                                     , normalize_exp( Binary((if is_rev
-                                                                then Minus
-                                                                else Plus)
-                                                    , Var (None,iter)
-                                                    , CInt (Nat.one)))
-                                     , true (* unchecked *)
-                                     )
-                         , loc]
-             )
-          , loc]
-        ) , loc) in
-      Sym.exit_context gtbl;
-      res
+      let loop =
+        [Ast.Loop
+            ( Ast.While
+               ( normalize_exp (if is_rev then Binary(Ge,Var(None,iter),exp1)
+                                          else Binary(Le,Var(None,iter),exp2)))
+               , nblock@[Ast.Assign ( Ast.Lval (None, iter)
+                                    , normalize_exp( Binary((if is_rev
+                                                               then Minus
+                                                               else Plus)
+                                                   , Var (None,iter)
+                                                   , CInt (Nat.one)))
+                                    , true (* unchecked *)
+                                    )
+                        , loc]
+            )
+            , loc]
+      in Some (Ast.Block (ndp, Sym.exit_context gtbl, loop), loc)
     | Exit -> Some (Ast.Exit, loc)
     | ProcedureCall(nom, params) -> Some (Ast.ProcedureCall(normalize_name nom
                                          ,List.map normalize_arg params), loc)
@@ -1181,8 +1176,8 @@ in
                         let norm_block = normalize_block blk in
                         let init_stmts = List.map build_init_stmt init in
                         remove_decl_part dp;
-                        Sym.exit_context gtbl;
-                        Some (Ast.Block (ndp, init_stmts@norm_block), loc)
+                        let ctx = Sym.exit_context gtbl in
+                        Some (Ast.Block (ndp, ctx, init_stmts@norm_block), loc)
 
   and normalize_block ?return_type block =
     List_utils.filter_map (fun x -> normalize_instr ?return_type x) block
@@ -1239,29 +1234,31 @@ in
         let norm_block = normalize_block ?return_type block in
         let init_stmts = List.map build_init_stmt init in
           remove_decl_part decl_part;
-          remove_params subprog_decl;
-          Sym.exit_context gtbl;
+          let ctx1 = remove_params subprog_decl in
+          let ctx2 = Sym.exit_context gtbl in
           Ast.SubProgramBody( norm_subprog_decl
                             , norm_decl_part
+                            , ctx1
+                            , ctx2
                             , init_stmts@norm_block)
     | PackageBody(name, package_spec, decl_part) ->
-        let (nname,nspec,_) = normalize_package_spec
-                                (with_default package_spec
-                                    (parse_package_specification name)
-                              )
+        let (nname,nspec,ctx,_) = normalize_package_spec
+                                    (with_default package_spec
+                                        (parse_package_specification name)
+                                    )
         in
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package body" gtbl;
           let (ndp,init) = normalize_decl_part decl_part ~global:true in
 
-          let norm_spec = (nname,nspec,List.map (fun (x,y,_) -> (x,y)) init)
+          let norm_spec = (nname,nspec,ctx,List.map (fun (x,y,_) -> (x,y)) init)
           in
 
           remove_decl_part decl_part;
           check_package_body_against_spec ~body:ndp ~spec:norm_spec;
           Sym.reset_current gtbl;
-          Sym.exit_context gtbl;
-          Ast.PackageBody(name, Some norm_spec, ndp)
+          let ctxb = Sym.exit_context gtbl in
+          Ast.PackageBody(name, Some norm_spec, ctxb, ndp)
 
   in
   let normalize_lib_item lib_item loc =
@@ -1303,12 +1300,12 @@ in
       | Ast.SubProgramSpec(Ast.Function(_name, [], _return_typ)) -> ()
       | Ast.SubProgramSpec(Ast.Function(_name, _, _)|Ast.Procedure(_name, _)) ->
           ()
-      | Ast.PackageSpec(name, basic_decls,_) ->
+      | Ast.PackageSpec(name, basic_decls,_,_) ->
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
           List.iter add_extern_basic_decl basic_decls;
           Sym.reset_current gtbl;
-          Sym.exit_context gtbl;
+          ignore (Sym.exit_context gtbl);
           Sym.add_with gtbl name
 
   in
