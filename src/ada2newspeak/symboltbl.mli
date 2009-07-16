@@ -82,8 +82,6 @@ val enter_context : ?name:string -> ?desc:string -> t -> unit
  *)
 val exit_context : t -> unit
 
-val is_in_library : t -> string -> bool
-
 (** FIXME document exact specs *)
 val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
 

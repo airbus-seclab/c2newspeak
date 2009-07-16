@@ -792,7 +792,7 @@ in
         typ_decl
     | DerivedType(subtyp_ind) ->
         let t = merge_types subtyp_ind in
-        let new_t = T.new_derived t in 
+        let new_t = T.new_derived t in
           Sym.s_add_type gtbl ident new_t;
         let update_contrainte contrainte symbs new_assoc =
           let find_ident v = List.find (fun (_, v') -> v'=v) symbs
@@ -1130,11 +1130,12 @@ in
                                            , false
                                            ), loc)
                          end
-    | Return(exp) -> Some (Ast.Return(normalize_exp ?expected_type:return_type exp), loc)
+    | Return(exp) -> Some (Ast.Return(normalize_exp ?expected_type:return_type
+                                      exp), loc)
     | If(exp, instr_then, instr_else) ->
-        Some
-        (Ast.If(normalize_exp ~expected_type:T.boolean exp, normalize_block instr_then,
-            normalize_block instr_else), loc)
+        Some (Ast.If( normalize_exp ~expected_type:T.boolean exp
+                    , normalize_block instr_then
+                    , normalize_block instr_else), loc)
     | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
                                               normalize_block instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),

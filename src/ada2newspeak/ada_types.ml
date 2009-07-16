@@ -363,18 +363,23 @@ let float_size d =
 
 let rec translate t =
   let rec translate_trait = function
-  | Signed (Some Range (a,b)) -> Cir.Scalar (Newspeak.Int (Newspeak.Signed,minimal_size a b))
+  | Signed (Some Range (a,b)) -> Cir.Scalar (Newspeak.Int ( Newspeak.Signed
+                                                          , minimal_size a b))
   | Enumeration      v        -> translate_trait (Signed(
-                                    Some(Range ( Newspeak.Nat.one
-                                               , Newspeak.Nat.of_int (List.length v)))))
+                                  Some(Range ( Newspeak.Nat.one
+                                             , Newspeak.Nat.of_int
+                                                 (List.length v)))))
   | Float            d        -> Cir.Scalar (Newspeak.Float (float_size d))
-  | Array          (c,i)      -> Cir.Array  (translate c, Some (Newspeak.Nat.to_int (length_of i)))
-  | Unknown                   -> Npkcontext.report_error "Ada_types.translate"
-                                     "Type of unknown trait remaining at translate time"
-  | Signed (None|Some NullRange) ->  Npkcontext.report_error "Ada_types.translate"
-                    "Trying to translate <Signed None>"
+  | Array          (c,i)      -> Cir.Array  (translate c
+                                            , Some (Newspeak.Nat.to_int
+                                                        (length_of i)))
+  | Unknown -> Npkcontext.report_error "Ada_types.translate"
+               "Type of unknown trait remaining at translate time"
+  | Signed (None|Some NullRange) ->  Npkcontext.report_error
+                                    "Ada_types.translate"
+                                    "Trying to translate <Signed None>"
   in translate_trait t.trait
-  
+
 (**
  * Subprogram parameters.
  *)

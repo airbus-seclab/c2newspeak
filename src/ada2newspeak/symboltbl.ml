@@ -27,36 +27,18 @@ module T = Ada_types
 let error x =
   Npkcontext.report_error "Symbol table" x
 
-(**
- * The [string] type with primitives to
- * handle it in a case-insensitive way.
- *)
-module CaseInsensitiveString =
-  struct
-    type t = string
-
-    let equal s1 s2 =
-      String.compare (String.lowercase s1) (String.lowercase s2) = 0
-
-    let hash s =
-      Hashtbl.hash (String.lowercase s)
-  end
-
-(** A hash table insensitive to keys' case.  *)
-module IHashtbl = Hashtbl.Make(CaseInsensitiveString)
-
 exception ParameterlessFunction of T.t
 
 module Table = struct
 
-  module rec Symset : 
+  module rec Symset :
     Set.S with type elt = string*SymTable.symbol
-  = 
+  =
     Set.Make (struct
       type t = string*SymTable.symbol
       let compare = Pervasives.compare (* FIXME *)
   end
-  ) 
+  )
 and SymTable : sig
     (**
      * Symbols.
@@ -161,7 +143,7 @@ and SymTable : sig
 
   let adder (mksym:'a -> symbol) desc (tbl:table) (n:string) (t:'a) =
     Npkcontext.print_debug ("Adding "^desc^" '"^n^"', now Set = {"
-      ^ String.concat ", " (List.map (fun (n,_) -> n) (Symset.elements tbl.t_tbl))
+      ^ String.concat ", " (List.map fst (Symset.elements tbl.t_tbl))
       ^"}");
     tbl.t_tbl <- Symset.add (n, mksym t) tbl.t_tbl
 
@@ -240,7 +222,7 @@ and SymTable : sig
  ******************************************************************************)
 
   let rec find_symbols t id =
-    List.map (fun (_,x) -> x) (Symset.elements (Symset.filter (fun (m,_) -> m = id)
+    List.map snd (Symset.elements (Symset.filter (fun (m,_) -> m = id)
                                                   t.t_tbl))
 
   let find_type tbl n =
@@ -423,7 +405,8 @@ module SymMake(TR:Tree.TREE) = struct
                               if (TR.height s.s_stack <> 2) then
                                 error "Adding some unit outside the library";
                                 let top = TR.top s.s_stack in
-                                top.t_tbl <- Symset.add (n,Unit new_context) top.t_tbl;
+                                top.t_tbl <- Symset.add (n,Unit new_context)
+                                                        top.t_tbl;
                             end
               end;
               new_context;
@@ -450,10 +433,6 @@ module SymMake(TR:Tree.TREE) = struct
 
   let library s =
     TR.nth s 2
-
-  let is_in_library (s:t) pkg =
-    let l = library s.s_stack in
-    Symset.exists (fun (x,_) -> x = pkg) l.t_tbl 
 
   let s_find_abs desc f s p n =
     match find_unit (library s.s_stack) p with
