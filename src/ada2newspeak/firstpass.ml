@@ -71,16 +71,10 @@ let base_typ = Ada_utils.base_typ
 (**
  * A boolean flip flop.
  *)
-let extern = object
-  val mutable extflag:bool = false
-
-  method is_it = extflag
-
-  method do_it (f:unit->unit) =
-    extflag <- true;
-    f ();
-    extflag <- false
-end
+let (extern,do_as_extern) =
+  let ext = ref false in
+  (fun _ -> !ext),
+  (fun f arg -> ext := true; f arg ; ext := false)
 
 (**
  * Extract a scalar type.
@@ -234,7 +228,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     =
     match name with
       | (None, ident) -> f_ident ident name
-      | (Some pack, ident) when extern#is_it
+      | (Some pack, ident) when extern()
                        ||  (Sym.is_with gtbl pack) ->
           f_with (Some pack,ident)
       | (pack, ident) when pack = Sym.current gtbl ->
@@ -249,9 +243,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | (None, ident) -> f_ident ident name
       | (Some pack, ident) when not ( (Sym.current gtbl = Some pack)
                                    || (Sym.is_with gtbl pack)
-                                   || extern#is_it)
+                                   || extern())
         -> f_with (Some pack,ident)
-      | (Some pack, ident) when ( extern#is_it
+      | (Some pack, ident) when ( extern()
                               ||  Sym.is_with gtbl  pack)
         -> f_with (Some pack,ident)
       | (pack, ident) when pack = Sym.current gtbl->
@@ -272,7 +266,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
   let translate_name (pack,id:A.name) :string =
     let tr_name =
-        if extern#is_it then pack,            id
+        if extern() then pack,            id
                              else (Sym.current gtbl), id
     in
       string_of_name tr_name
@@ -315,7 +309,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un nombre local *)
   and add_number loc value lvl ident =
     let x =  Normalize.normalize_ident
-      ident (Sym.current gtbl) extern#is_it in
+      ident (Sym.current gtbl) (extern ()) in
       (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
 
@@ -351,7 +345,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* declaration d'un symbole d'enumeration *)
   and add_enum loc ident value typ global =
     let name = Normalize.normalize_ident
-      ident (Sym.current gtbl) extern#is_it in
+      ident (Sym.current gtbl) (extern ()) in
       (if mem_symb name
        then
          List.iter
@@ -392,7 +386,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  (ro:bool)          (x:string)
        :unit =
     let name = Normalize.normalize_ident
-      x (Sym.current gtbl) extern#is_it in
+      x (Sym.current gtbl) (extern ()) in
 
     let tr_name = translate_name name in
       (if mem_symb name
@@ -1496,21 +1490,18 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  "find_fun_symb did not expect this (maybe array) as an instr! "
              end
 
-           | Case(e, choices, default)->(C.Switch(fst(translate_exp e None),
-                            (* Choices *) (List.map (function exp,block ->
-                                              let (value,typ) =
-                                                  translate_exp exp None
-                                              in (value, C.scalar_of_typ
-                                                        (translate_typ typ)),
-                                                  translate_block block)
-                                              choices
-                                              ),
-                     (* "default" block *)  translate_block (
-                                                Ada_utils.with_default
-                                                                    default
-                                                                    [])
-                                            )
-                                            ,loc)::(translate_block r)
+           | Case (e, choices, default) ->
+                         (C.Switch(fst(translate_exp e None),
+                               (List.map (function exp,block ->
+                                   let (value,typ) = translate_exp exp None in
+                                   ( value
+                                   , C.scalar_of_typ (translate_typ typ)
+                                   )
+                                   , translate_block block
+                               ) choices),
+                                 translate_block
+                                   (Ada_utils.with_default default [])
+                                 ),loc)::(translate_block r)
             | Block (dp, ctx, blk) ->
                           Sym.push_saved_context gtbl ctx;
                           ignore (translate_declarative_part dp);
@@ -1522,13 +1513,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                           res::(translate_block r)
             end
 
-  and translate_param param =
-    let typ_cir = match param.mode with
+  and translate_param param = match param.mode with
       | A.In    -> translate_typ (base_typ param.param_type)
       |   A.Out
       | A.InOut -> C.Scalar(Npk.Ptr)
-    in
-        (fun _ -> typ_cir) param.formal_name
 
   and add_param loc param =
     let (deref,ro) = match param.mode with
@@ -1581,7 +1569,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          List.iter
            (fun symb -> match symb with
               | (FunSymb (_,_,extern', _),_,_)
-                  when extern'= extern#is_it ->
+                  when extern'= extern() ->
                   Npkcontext.report_error "Firstpass.add_fundecl"
                     ("conflict : "^(string_of_name name)
                      ^" already declared")
@@ -1606,7 +1594,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       check_ident name;
       Hashtbl.add symbtbl name
         (FunSymb (C.Fname(translate_name name), subprogspec,
-                  extern#is_it, ftyp), C.Fun, loc);
+                  extern(), ftyp), C.Fun, loc);
       ftyp
 
   and translate_enum_declaration idtyp typ_decl list_val_id loc global =
@@ -1733,7 +1721,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           let read_only = const <> Variable in
           let tr_typ = translate_subtyp subtyp in
           let tr_init : C.init_t option =
-            match (init, extern#is_it) with
+            match (init, extern()) with
               | (_,true)
               | (None,_) -> Some None
               | (Some(exp),false) ->
@@ -1773,7 +1761,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         List.iter (fun (id, exp) -> add_global_init id exp) init;
         List.iter translate_global_basic_declaration basic_decl_list;
         Sym.reset_current gtbl;
-        if extern#is_it then Sym.add_with gtbl nom
+        if extern() then Sym.add_with gtbl nom
 
   and translate_body (body:Ast.body) glob loc :unit =
     Npkcontext.set_loc loc;
@@ -1827,7 +1815,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
     try
       Npkcontext.set_loc loc;
-      extern#do_it (fun _ -> translate_context ctx);
+      do_as_extern translate_context ctx;
       translate_library_item lib_item loc;
       Npkcontext.forget_loc ();
       { C.globals = globals; C.fundecs = fun_decls; C.specs = [] }

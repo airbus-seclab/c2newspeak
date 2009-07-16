@@ -820,7 +820,8 @@ in
                 "internal error : incorrect type"
           (* declared types : simplification *)
           | Declared(parent,Enum(symbs, size),_,_) ->
-              List.iter (fun (i,_) -> Sym.s_add_variable gtbl i loc new_t) symbs;
+              List.iter (fun (i,_) -> Sym.s_add_variable gtbl i loc
+                                                          new_t) symbs;
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
           | Declared(_, (( IntegerRange(_,_)
@@ -1007,7 +1008,7 @@ in
                           ident_list
         end;
           List.iter (fun x -> Sym.s_add_variable gtbl x loc t) ident_list;
-          List.map (fun ident -> 
+          List.map (fun ident ->
             Ast.ObjectDecl(ident, norm_subtyp_ind, Ast.Variable)
           ) ident_list
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
@@ -1033,7 +1034,7 @@ in
 
         in
           List.iter (fun x -> handle_init x normexp loc) ident_list;
-          List.map (fun ident -> 
+          List.map (fun ident ->
             Ast.ObjectDecl(ident, norm_subtyp_ind,status)
           ) ident_list
     | ObjectDecl _ -> Npkcontext.report_error
@@ -1202,7 +1203,7 @@ in
             begin
               Npkcontext.set_loc loc;
                 List.map (fun x -> Ast.BasicDecl x,loc)
-                        (normalize_basic_decl basic loc global represtbl add_init) 
+                     (normalize_basic_decl basic loc global represtbl add_init)
             end
         | BodyDecl(body),loc ->
             Npkcontext.set_loc loc;

@@ -144,7 +144,8 @@ and SymTable : sig
   let adder (mksym:'a -> symbol) desc (tbl:table) (n:string)
             (loc:Newspeak.location) (t:'a) =
     Npkcontext.print_debug ("Adding "^desc^" '"^n^"', now Set = {"
-      ^ String.concat ", " (List.map (fun (x,_,_) -> x) (Symset.elements tbl.t_tbl))
+      ^ String.concat ", " (List.map (fun (x,_,_) -> x)
+                           (Symset.elements tbl.t_tbl))
       ^"}");
     tbl.t_tbl <- Symset.add (n, loc, mksym t) tbl.t_tbl
 
