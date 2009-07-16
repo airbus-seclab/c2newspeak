@@ -135,19 +135,16 @@ let rec generate_init x loc (o, t, e) =
   let e = generate_exp e in
     init := (H.Set (lv, e, Newspeak.Scalar t), loc)::!init
 
-let generate_global_init name (_, _, init, _) =
-  try
-(* TODO: why not use the loc next to init up there,
-   avoid this hashtbl lookup!! *)
-    let (_, loc) = Hashtbl.find globals name in 
-      match init with
-(* TODO: not nice to have to rev here *)
-	  Some Some i -> List.iter (generate_init name loc) (List.rev i)
-	| Some None -> ()
-	| None -> 
-	    Npkcontext.report_accept_warning "Link.generate_global" 
-	      ("extern global variable "^name) Npkcontext.ExternGlobal
-  with Not_found -> ()
+let generate_global_init name (_, loc, init, used) =
+  if used || (not !Npkcontext.remove_temp) then begin
+    match init with
+	(* TODO: not nice to have to rev here *)
+	Some Some i -> List.iter (generate_init name loc) (List.rev i)
+      | Some None -> ()
+      | None -> 
+	  Npkcontext.report_accept_warning "Link.generate_global" 
+	    ("extern global variable "^name) Npkcontext.ExternGlobal
+  end
 
 let generate_global name (t, loc, _, used) =
   Npkcontext.set_loc loc;
@@ -305,7 +302,6 @@ let link npkos =
   let (filenames, glb_decls, fun_decls, src_lang, specs) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
-(* TODO: put generate_global and generate_global_init together?? *)
     Hashtbl.iter generate_global glb_decls;
     init := List.map generate_spec specs;
     Hashtbl.iter generate_global_init glb_decls;
