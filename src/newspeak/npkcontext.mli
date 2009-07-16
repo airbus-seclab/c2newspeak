@@ -48,17 +48,12 @@ type error =
   | FlexArray
   | MultipleDef
   | GnuC
-  | DisableInit
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
   | ExternFunDef
 
 (** {1 Comand line options } *)
-
-(** When global_zero_init is set, cil2newspeak adds init code for all
-    globals *)
-val global_zero_init : bool ref
 
 (** if true do loops are transformed into while loops by unrolling their
     body once. *)

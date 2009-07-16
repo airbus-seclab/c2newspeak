@@ -54,7 +54,6 @@ let accept_goto = ref false
 let accept_dirty_syntax = ref false
 let use_strict_syntax = ref false
 
-let global_zero_init = ref true
 let accept_dirty_cast = ref false
 let ignores_pragmas = ref false
 let remove_temp = ref true
@@ -112,7 +111,6 @@ type error =
   | FlexArray
   | MultipleDef
   | GnuC
-  | DisableInit
   | DisableOpt
   | DisableCheckOpt
   | TransparentUnion
@@ -135,7 +133,6 @@ let flag_of_error err =
     | FlexArray -> accept_flex_array
     | MultipleDef -> accept_mult_def
     | GnuC -> accept_gnuc
-    | DisableInit -> global_zero_init
     | DisableOpt -> no_opt
     | DisableCheckOpt -> opt_checks
     | TransparentUnion -> accept_transparent_union
@@ -158,7 +155,6 @@ let opt_of_error err =
     | FlexArray -> "--accept-flexible-array"
     | MultipleDef -> "--accept-mult-def"
     | GnuC -> "--accept-gnuc"
-    | DisableInit -> "--disable-init"
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"
     | TransparentUnion -> "--accept-transparent-union"
@@ -211,9 +207,6 @@ let argslist = [
   (opt_of_error GnuC, Arg.Set (flag_of_error GnuC), 
    "accepts GNU C extensions\n");
   
-  (opt_of_error DisableInit, Arg.Clear (flag_of_error DisableInit),
-   "turn initialisation of globals to zero off");
-
   (opt_of_error DisableOpt, Arg.Set (flag_of_error DisableOpt), 
    "turn all code simplifications off");
 
