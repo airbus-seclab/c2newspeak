@@ -71,27 +71,28 @@ let base_typ = Ada_utils.base_typ
 (**
  * A boolean flip flop.
  *)
-let (extern,do_as_extern) =
+let (extern, do_as_extern) =
   let ext = ref false in
-  (fun _ -> !ext),
-  (fun f arg -> ext := true; f arg ; ext := false)
+    ((fun _ -> !ext),
+     (fun f arg -> ext := true; f arg ; ext := false))
 
 (**
  * Add a "belongs" operator to an expression, according to a constraint.
  *)
 let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
   match contrainte with
-    | A.IntegerRangeConstraint (v1,v2) ->
-        C.Unop(K.Belongs_tmp(v1, K.Known (Nat.add v2 Nat.one)), exp)
-    | A.FloatRangeConstraint(_, _) -> exp
-    | A.RangeConstraint _ -> Npkcontext.report_error
-                          "Firstpass.make_check_constraint"
-                     "internal error : unexpected range constraint (non-static)"
+    | A.IntegerRangeConstraint (v1, v2) ->
+        C.Unop (K.Belongs_tmp (v1, K.Known (Nat.add v2 Nat.one)), exp)
+    | A.FloatRangeConstraint (_, _) -> exp
+    | A.RangeConstraint _ ->
+  Npkcontext.report_error
+          "Firstpass.make_check_constraint"
+          "internal error : unexpected range constraint (non-static)"
 
 (**
  * Add a "belongs" operator to an expression, according to a subtype.
  *)
-let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
+let make_check_subtyp (subtyp: A.subtyp) (exp: C.exp) :C.exp =
   match subtyp with
     | A.Unconstrained _ -> exp
     | A.Constrained(_, contrainte, _, _) ->
@@ -101,17 +102,19 @@ let make_check_subtyp (subtyp:A.subtyp) (exp:C.exp) :C.exp =
           "Firstpass.make_check_subtyp"
           "internal error : unexpected subtyp name"
 
-let make_offset (styp:A.subtyp) (exp:C.exp) (size:C.exp) =
+let make_offset (styp: A.subtyp) (exp: C.exp) (size: C.exp) =
   match styp with
     | A.Constrained( _, A.IntegerRangeConstraint(nat1, _) , _ ,_) ->
-                let borne_inf = C.Const(C.CInt(nat1)) in
-                let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
-                    C.Binop (Newspeak.MultI, decal,  size)
-    | A.Constrained  _ -> Npkcontext.report_error "Firstpass.make_offset"
-                 "contrainte (not IntegerRangeConstraint) not coded yet "
+        let borne_inf = C.Const (C.CInt (nat1)) in
+        let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
+          C.Binop (Newspeak.MultI, decal,  size)
+    | A.Constrained  _ ->
+  Npkcontext.report_error "Firstpass.make_offset"
+          "contrainte (not IntegerRangeConstraint) not coded yet "
     | A.Unconstrained _ -> exp
-    | A.SubtypName _ -> Npkcontext.report_error "Firstpass.make_offset"
-                    "SubtypName not implemented yet (especially for Enum)"
+    | A.SubtypName _ ->
+  Npkcontext.report_error "Firstpass.make_offset"
+          "SubtypName not implemented yet (especially for Enum)"
 
 let translate_saved_context ctx =
   List.map (fun (id,t,loc) ->
@@ -122,12 +125,12 @@ let translate_saved_context ctx =
  * Translate a [Syntax_ada.typ].
  *)
 let rec translate_typ (typ:A.typ) :C.typ = match typ with
-| A.Float        -> C.Scalar(Npk.Float            (Ada_config.size_of_float))
-| A.Integer      -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
-| A.IntegerConst -> C.Scalar(Npk.Int(Npk.Signed,   Ada_config.size_of_int))
-| A.Boolean      -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_boolean))
-| A.Character    -> C.Scalar(Npk.Int(Npk.Unsigned, Ada_config.size_of_char))
-| A.Declared(_,typ_decl,_,_) -> translate_declared typ_decl
+| A.Float        -> C.Scalar (Npk.Float            (Ada_config.size_of_float))
+| A.Integer      -> C.Scalar (Npk.Int (Npk.Signed,  Ada_config.size_of_int))
+| A.IntegerConst -> C.Scalar (Npk.Int (Npk.Signed,  Ada_config.size_of_int))
+| A.Boolean      -> C.Scalar (Npk.Int (Npk.Unsigned,Ada_config.size_of_boolean))
+| A.Character    -> C.Scalar (Npk.Int (Npk.Unsigned,Ada_config.size_of_char))
+| A.Declared (_, typ_decl, _, _) -> translate_declared typ_decl
 
 (**
  * Translate a [Syntax_ada.typ_declaration].
@@ -149,10 +152,11 @@ and translate_declared (typ_decl:A.typ_declaration) :C.typ = match typ_decl with
  * Builds a CIR Struct with packed offsets.
  *)
 and translate_record (r:(string*A.subtyp) list) :(C.field list*Npk.size_t) =
-  List.fold_left (fun (cflds,start_off) (id,st) ->
+  let build_offset (cflds, start_off) (id, st) =
     let ctyp = translate_subtyp st in
-    (id, (start_off, ctyp))::cflds , (start_off + C.size_of_typ ctyp)
-  ) ([],0) r
+      (id, (start_off, ctyp))::cflds, (start_off + C.size_of_typ ctyp)
+  in
+    List.fold_left build_offset ([], 0) r
 
 (**
  * Translate a [Syntax_ada.subtyp].
@@ -179,7 +183,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* FIXME Global (?) symbol table. Strangely used. *)
   and globals   = Hashtbl.create 100
 
-  and init      = ref [] 
+  and init      = ref []
 
   and gtbl = Sym.create () in
 
@@ -209,8 +213,6 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       (List.map
          (fun pack -> find_all_symb (Some pack, ident))
          (Sym.s_get_use gtbl))
-
-
   in
 
   let find_name (name:A.name)
@@ -220,7 +222,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
     =
     match name with
       | (None, ident) -> f_ident ident name
-      | (Some pack, ident) when extern()
+      | (Some pack, ident) when extern ()
                        ||  (Sym.is_with gtbl pack) ->
           f_with (Some pack,ident)
       | (pack, ident) when pack = Sym.current gtbl ->
@@ -235,9 +237,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | (None, ident) -> f_ident ident name
       | (Some pack, ident) when not ( (Sym.current gtbl = Some pack)
                                    || (Sym.is_with gtbl pack)
-                                   || extern())
+                                   || extern ())
         -> f_with (Some pack,ident)
-      | (Some pack, ident) when ( extern()
+      | (Some pack, ident) when ( extern ()
                               ||  Sym.is_with gtbl  pack)
         -> f_with (Some pack,ident)
       | (pack, ident) when pack = Sym.current gtbl->
@@ -405,16 +407,16 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                   | FunSymb _ |NumberSymb(_)),_,_) -> ())
             (find_all_symb name)));
 
-      let storage = 
-	match i with
-	  | None -> Npkil.Declared false
-	  | Some (e, t) -> 
-	      init := (C.Set (C.Global tr_name, t, e), loc)::!init;
-	      Npkil.Declared true
+      let storage =
+  match i with
+    | None -> Npkil.Declared false
+    | Some (e, t) ->
+        init := (C.Set (C.Global tr_name, t, e), loc)::!init;
+        Npkil.Declared true
       in
 
-	Hashtbl.add globals tr_name (tr_typ, loc, storage);
-	Hashtbl.add symbtbl name
+  Hashtbl.add globals tr_name (tr_typ, loc, storage);
+  Hashtbl.add symbtbl name
           (VarSymb (C.Global(tr_name), typ, true, ro),
            tr_typ, loc);
 
@@ -559,13 +561,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       let list_symb = find_all_symb name in
       let rec find_fun list_symb =
         match list_symb with
-          | ((VarSymb(_)|NumberSymb(_)),_,_)::_ ->  (*WG TO DO *)
+          | ((VarSymb _ | NumberSymb(_)),_,_)::_ ->  (*WG TO DO *)
               Npkcontext.report_error
                "Firstpass.find_fun_symb"
                 ((string_of_name name)
                  ^" is not a funtion")
 
-          | (EnumSymb(_),_,_)::r ->
+          | (EnumSymb _, _, _)::r ->
               find_fun r
 
           | (FunSymb (_, _, true, _), C.Fun, _)::_ ->
@@ -1716,16 +1718,15 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | ObjectDecl(ident, subtyp_ind, const) ->
           let init = get_global_init ident in
           let subtyp = Ada_utils.extract_subtyp subtyp_ind in
-	    
           let read_only = const <> Variable in
           let tr_typ = translate_subtyp subtyp in
-	  let init =
-	    match (init, extern ()) with
-              | (_, true) | (None, _) -> None
-              | (Some exp, false) ->
-		  let (e, _) = translate_exp exp (Some (base_typ subtyp)) in
-		    Some (e, tr_typ)
-	  in
+          let init =
+            match (init, extern ()) with
+                    | (_, true) | (None, _) -> None
+                    | (Some exp, false) ->
+            let (e, _) = translate_exp exp (Some (base_typ subtyp)) in
+              Some (e, tr_typ)
+             in
             add_global loc subtyp tr_typ init read_only ident
       | TypeDecl (idtyp, typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
@@ -1750,8 +1751,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         ignore (add_fundecl subprog_spec loc)
 
     | PackageSpec (nom, basic_decl_list, _ctx, init) ->
-        if (not glob) then begin 
-	  Npkcontext.report_error "Firstpass.translate_spec"
+        if (not glob) then begin
+    Npkcontext.report_error "Firstpass.translate_spec"
             "declaration de sous package non implemente"
         end;
         Sym.set_current gtbl nom;
