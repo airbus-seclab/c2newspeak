@@ -46,18 +46,6 @@ let seq_of_string str =
     done;
     !res
 
-(* TODO: should keep the enums in CoreC!!! such as csyntax!!
-*)
-(* TODO: not minimal, think about it *)
-(* TODO: maybe possible to merge VarSymb and EnumSymb together
-   but what about CompSymb??
-   TODO: maybe have 2 tables!!!
-*)
-type symb =
-  | VarSymb of C.exp 
-  | EnumSymb of C.exp
-  | CompSymb of C.compdef option ref
-
 let find_field f r =
   try List.assoc f r 
   with Not_found -> 
@@ -69,6 +57,7 @@ let process (globals, specs) =
      but first needs to put the whole typing phase before firstpass
   *)
   let symbtbl = Hashtbl.create 100 in
+  let comptbl = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
   (* Counter of static variables, necessary to distinguish 2 statics in 
@@ -106,7 +95,7 @@ let process (globals, specs) =
 	| Some init -> process (init, t)
   in
     
-  let add_local (t, x) = Hashtbl.add symbtbl x (VarSymb (C.Local x), t) in
+  let add_local (t, x) = Hashtbl.add symbtbl x (C.Local x, t) in
 
   let remove_var x = Hashtbl.remove symbtbl x in
 
@@ -116,7 +105,7 @@ let process (globals, specs) =
    need to check with examples!!!
 *)
   let update_global x name t = 
-    Hashtbl.replace symbtbl x (VarSymb (C.Global name), t) 
+    Hashtbl.replace symbtbl x (C.Global name, t) 
   in
 
   let add_formals (args_t, ret_t) =
@@ -149,21 +138,17 @@ let process (globals, specs) =
       Npkcontext.report_accept_warning "Csyntax2CoreC.process.find_symb" 
 	("unknown identifier "^x^", maybe a function without prototype") 
 	Npkcontext.MissingFunDecl;
-      let info = (VarSymb (C.Global x), C.Fun (None, C.int_typ)) in
+      let info = (C.Global x, C.Fun (None, C.int_typ)) in
 	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
 	Hashtbl.add symbtbl x info;
 	info
   in
 
   let find_compdef name =
-    try 
-      let (c, _) = Hashtbl.find symbtbl name in
-	match c with
-	    CompSymb c -> c
-	  | _ -> raise Not_found
+    try Hashtbl.find comptbl name
     with Not_found -> 
       let c = ref None in
-	Hashtbl.add symbtbl name (CompSymb c, C.Comp c);
+	Hashtbl.add comptbl name c;
 	c
   in
 
@@ -179,7 +164,7 @@ let process (globals, specs) =
     let f' = if static then "!"^fname^"."^f else f in begin
 	try update_funtyp f ft
 	with Not_found -> 
-	  Hashtbl.add symbtbl f (VarSymb (C.Global f'), C.Fun ft)
+	  Hashtbl.add symbtbl f (C.Global f', C.Fun ft)
       end;
       f'
   in
@@ -191,20 +176,6 @@ let process (globals, specs) =
     end;
     let _ = update_funsymb f static (args, ret) loc in
       ()
-  in
-
-  let find_var x = 
-    let (v, t) = find_symb x in
-    let e =
-      match v with
-(* TODO: strange, see 696.c *)
-	  VarSymb e -> e
-	| EnumSymb i -> i
-	| _ -> 
-	    Npkcontext.report_error "Csyntax2CoreC.find_var"
-	      ("variable identifier expected: "^x)
-    in
-      (e, t)
   in
 
   let refine_ftyp f (args_t, ret_t) actuals = 
@@ -290,8 +261,8 @@ let process (globals, specs) =
 	Cst (c, t) -> 
 	  let t = translate_typ t in
 	    (C.Cst (c, t), t)
-      | Var x -> find_var x
-      | RetVar -> find_var ret_name
+      | Var x -> find_symb x
+      | RetVar -> find_symb ret_name
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
 	  let (r, _) = C.comp_of_typ t in
@@ -473,7 +444,7 @@ let process (globals, specs) =
 	  let t = complete_typ_with_init t init in
 	    if is_global || is_extern then update_global x name t
 	    else if is_static 
-	    then Hashtbl.add symbtbl x (VarSymb (C.Global name), t)
+	    then Hashtbl.add symbtbl x (C.Global name, t)
 	    else add_local (t, x);
 	    let init =
 	      match init with
@@ -483,7 +454,7 @@ let process (globals, specs) =
 	      C.VDecl (t, is_static, is_extern, init)
       | EDecl e -> 
 	  let (e, t) = translate_exp e in
-	    Hashtbl.add symbtbl x (EnumSymb e, t);
+	    Hashtbl.add symbtbl x (e, t);
 	    C.EDecl e
       | CDecl (is_struct, fields) -> 
 	  let fields = List.map translate_field_decl fields in
@@ -534,7 +505,7 @@ let process (globals, specs) =
 	SymbolToken x -> C.SymbolToken x
       | IdentToken x -> begin
 	  try
-	    let (lv, t) = find_var x in
+	    let (lv, t) = find_symb x in
 	      match t with
 		  C.Fun _ -> C.IdentToken x
 		| _ -> C.LvalToken (lv, t)
