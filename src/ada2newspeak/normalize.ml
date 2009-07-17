@@ -81,8 +81,7 @@ let return_type_of subprogram = match subprogram with
  *                  in a [declarative_part].
  * @return a boolean describing whether a body could be found.
  *)
-let find_body_for_spec ~(specification:Ast.basic_declaration)
-                       ~(bodylist:Ast.declarative_item list) :bool =
+let find_body_for_spec ~specification ~bodylist =
   (* Try to match a spec and a body *)
   let match_ok s b = match (s,b) with
     | Ast.SpecDecl(Ast.SubProgramSpec sps),
@@ -93,7 +92,7 @@ let find_body_for_spec ~(specification:Ast.basic_declaration)
   List.exists (function bd -> match_ok specification bd) bodylist
 
 (** Return the name for a specification. *)
-let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
+let name_of_spec spec = match spec with
   | Ast.ObjectDecl (i,_,_)
   | Ast.TypeDecl   (i,_)
   | Ast.NumberDecl (i,_)
@@ -103,8 +102,7 @@ let name_of_spec (spec:Ast.basic_declaration) :string = match spec with
   | Ast.SpecDecl (Ast.PackageSpec (n,_,_,_)) -> n
   | Ast.UseDecl _ -> "<no name>"
 
-let check_package_body_against_spec ~(body:Ast.declarative_part)
-                                    ~(spec:Ast.package_spec) =
+let check_package_body_against_spec ~body ~spec =
   let (pkgname,spec_and_loc,_,_) = spec in
   let (        body_and_loc    ) = body in
   let speclist = List.map fst spec_and_loc in
@@ -134,7 +132,7 @@ let normalize_ident ident package extern =
 let build_init_stmt (x,exp,loc) =
   Ast.Assign( Ast.Lval (None,x), exp, true), loc
 
-let extract_subprog_spec (ast:compilation_unit):compilation_unit =
+let extract_subprog_spec ast =
     match ast with
       | (context, Body(SubProgramBody(spec,_,_)), loc) ->
         (context, Spec(SubProgramSpec(spec)),     loc)
@@ -149,7 +147,7 @@ let extract_subprog_spec (ast:compilation_unit):compilation_unit =
    extrait eventuellement cette specification d'un corps
    de sous-programme, dans le cas ou aucun fichier de specification
    n'est fourni.*)
-let parse_specification (name:string) :compilation_unit =
+let parse_specification name =
   let spec_name = name^".ads" in
   let spec_ast =
     if Sys.file_exists spec_name
@@ -175,7 +173,7 @@ let parse_specification (name:string) :compilation_unit =
 
 (* renvoie la specification du package correspondant a name.
    cette specification est normalisee *)
-let parse_package_specification (name:string):package_spec =
+let parse_package_specification name =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
     | (_, Spec(SubProgramSpec _),_) ->
@@ -191,7 +189,7 @@ let parse_package_specification (name:string):package_spec =
  * renvoie la specification normalisee du package correspondant
  * a name, les noms etant traites comme extern a la normalisation
  *)
-let rec parse_extern_specification (name:string) :Ast.spec*location =
+let rec parse_extern_specification name =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
   let norm_spec = (normalization spec_ast true) in
@@ -211,9 +209,7 @@ let rec parse_extern_specification (name:string) :Ast.spec*location =
  *
  * TODO document extern
  *)
-and normalization (compil_unit:compilation_unit) (extern:bool)
-    :Ast.compilation_unit =
-
+and normalization compil_unit extern =
   (**
    * This object encapsulates the table of types. It is basically a Hashtbl.t
    * mapping a [name] to a triplet of :
@@ -228,9 +224,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
       val tbl = Hashtbl.create 0
 
       (** Add a new subtype, or raise an error in case of conflict. *)
-      method add (n:Syntax_ada.name) (subtyp:subtyp)
-      (location:location)   (global:bool)
-      :unit =
+      method add n subtyp location global =
         if s#mem n then begin
           match Hashtbl.find tbl n with
           | (_, _, glob) when global = glob ->
@@ -243,7 +237,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
     Hashtbl.add tbl n (subtyp,location,global);
 
       (** Is this type known ? *)
-      method mem (n:name) :bool =
+      method mem n =
              snd n = "integer"
           || snd n = "float"
           || snd n = "boolean"
@@ -251,7 +245,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           || Hashtbl.mem tbl n
 
       (** Find the type definition. *)
-      method find (n:name) :(subtyp*location) =
+      method find n =
         match String.lowercase (snd n) with
           | "integer"   ->  Syntax_ada.Constrained(Syntax_ada.Integer
                                                   ,Ada_config.integer_constraint
@@ -268,12 +262,11 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
           | _ -> let (x,y,_) = Hashtbl.find tbl n in (x,y)
 
       (** Find all the types matching. *)
-      method find_all (n:name)
-      :(subtyp*location*bool) list =
+      method find_all n =
         Hashtbl.find_all tbl n
 
       (** Remove a subtype definition. *)
-      method remove (x:name) :unit =
+      method remove x =
         Hashtbl.remove tbl x
     end
   in
@@ -287,7 +280,7 @@ and normalization (compil_unit:compilation_unit) (extern:bool)
 
   in
 
-  let find_all_use (ident:string)
+  let find_all_use ident
         :(subtyp*location*bool) list =
     List.flatten
       (List.map
@@ -388,12 +381,12 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
             (Constrained(typ, const, static, t), None)
         | (Some(const), Unconstrained(typ)) ->
             let norm_contrainte =
-              normalize_contrainte const typ
+              normalize_contrainte const
             in
               (Constrained(typ,norm_contrainte,true,typ_to_adatyp typ),
                Some(norm_contrainte))
         | (Some(const), Constrained(typ,const_ref,stat_ref,t)) ->
-            let norm_contrainte = normalize_contrainte const typ in
+            let norm_contrainte = normalize_contrainte const in
               constraint_check_compatibility const_ref norm_contrainte;
               (Constrained(typ,norm_contrainte,stat_ref,t),
                Some(norm_contrainte))
@@ -459,16 +452,16 @@ and normalize_subtyp subtyp =
  * The identifier does not have to be normalized (it is just a plain string),
  * but normalize the expression.
  *)
-and normalize_arg (id,e:argument) :Ast.argument = id,normalize_exp e
+and normalize_arg (id,e) = id,normalize_exp e
 
-and normalize_binop (bop:binary_op) (e1:expression) (e2:expression)
-  :Ast.expression =
-  let direct_op_trans = function
-  | Plus  -> Ast.Plus  | Minus -> Ast.Minus | Div   -> Ast.Div
-  | Mult  -> Ast.Mult  | Or    -> Ast.Or    | And   -> Ast.And
-  | Gt    -> Ast.Gt    | Eq    -> Ast.Eq    | Rem   -> Ast.Rem
-  | Mod   -> Ast.Mod   | Power -> Ast.Power
-  |_ -> invalid_arg "direct_op_trans"
+and normalize_binop bop e1 e2 =
+  let direct_op_trans =
+    function
+      | Plus  -> Ast.Plus  | Minus -> Ast.Minus | Div   -> Ast.Div
+      | Mult  -> Ast.Mult  | Or    -> Ast.Or    | And   -> Ast.And
+      | Gt    -> Ast.Gt    | Eq    -> Ast.Eq    | Rem   -> Ast.Rem
+      | Mod   -> Ast.Mod   | Power -> Ast.Power
+      |_ -> invalid_arg "direct_op_trans"
   in
   (* Is the operator overloaded ? *)
   if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
@@ -530,7 +523,7 @@ and make_abs (exp,t) =
              ,(Ast.Binary(Ast.Minus, zero, x),t)
              )
 
-and normalize_uop (uop:unary_op) (exp:expression) :Ast.expression =
+and normalize_uop uop exp =
   let (ne,t) = normalize_exp exp in
   match uop with
      | Abs    -> make_abs (ne,TC.type_of_abs t),t
@@ -559,39 +552,39 @@ and normalize_fcall (n, params) =
 (**
  * Normalize an expression.
  *)
-and normalize_exp ?(expected_type:Ada_types.t option) (exp:expression)
-:Ast.expression = match exp with
-  | CInt   x -> Ast.CInt   x,T.universal_integer
-  | CFloat x -> Ast.CFloat x,T.universal_real
-  | CBool  x -> Ast.CBool  x,T.boolean
-  | CChar  x -> Ast.CChar  x,T.character
-  | Var    n -> begin (* n may denote the name of a parameterless function *)
-                  let n' = normalize_name n in
-                    try let t = Sym.s_find_variable ?expected_type gtbl n in
-                            Ast.Var(n') ,t
-                            with Symboltbl.ParameterlessFunction (rt) ->
-                              Ast.Var(n') ,rt
-                end
-  | Unary (uop, exp)    -> normalize_uop uop exp
-  | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
-  | Qualified(subtyp, exp) -> let t = subtyp_to_adatyp subtyp in
-                              Ast.Qualified(normalize_subtyp subtyp,
-                                  normalize_exp ~expected_type:t exp)
-                              ,t
-  | FunctionCall(n, params) -> normalize_fcall (n, params)
-  | Attribute (st, attr)->
-      begin
-        let t = subtyp_to_adatyp (SubtypName st) in
-        match T.attr_get t attr with
-        | (t,T.IntVal   x) -> Ast.CInt   x, t
-        | (t,T.BoolVal  x) -> Ast.CBool  x, t
-        | (t,T.FloatVal x) -> Ast.CFloat x, t
-      end
+and normalize_exp ?expected_type exp =
+  match exp with
+    | CInt   x -> Ast.CInt   x,T.universal_integer
+    | CFloat x -> Ast.CFloat x,T.universal_real
+    | CBool  x -> Ast.CBool  x,T.boolean
+    | CChar  x -> Ast.CChar  x,T.character
+    | Var    n -> begin (* n may denote the name of a parameterless function *)
+                    let n' = normalize_name n in
+                      try let t = Sym.s_find_variable ?expected_type gtbl n in
+                              Ast.Var(n') ,t
+                              with Symboltbl.ParameterlessFunction (rt) ->
+                                Ast.Var(n') ,rt
+                  end
+    | Unary (uop, exp)    -> normalize_uop uop exp
+    | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
+    | Qualified(subtyp, exp) -> let t = subtyp_to_adatyp subtyp in
+                                Ast.Qualified(normalize_subtyp subtyp,
+                                    normalize_exp ~expected_type:t exp)
+                                ,t
+    | FunctionCall(n, params) -> normalize_fcall (n, params)
+    | Attribute (st, attr)->
+        begin
+          let t = subtyp_to_adatyp (SubtypName st) in
+          match T.attr_get t attr with
+          | (t,T.IntVal   x) -> Ast.CInt   x, t
+          | (t,T.BoolVal  x) -> Ast.CBool  x, t
+          | (t,T.FloatVal x) -> Ast.CFloat x, t
+        end
 
 (**
  * Normalize a constraint.
  *)
-and normalize_contrainte (contrainte:contrainte) (_typ:typ) :contrainte =
+and normalize_contrainte contrainte =
   let eval_range exp1 exp2 =
     let norm_exp1 = normalize_exp exp1
     and norm_exp2 = normalize_exp exp2 in
@@ -740,7 +733,7 @@ in
           begin
             try
               let norm_contrainte =
-                normalize_contrainte contrainte IntegerConst
+                normalize_contrainte contrainte
               in match norm_contrainte with
                 | IntegerRangeConstraint(min, max) ->
                     let ikind = ikind_of_range min max
@@ -1061,7 +1054,7 @@ in
                              []
     | RepresentClause _ -> failwith "NOTREACHED"
 
-  and normalize_package_spec (name, list_decl) :Ast.package_spec =
+  and normalize_package_spec (name, list_decl) =
     Sym.set_current gtbl name;
     Sym.enter_context ~name ~desc:"Package spec" gtbl;
     let represtbl = Hashtbl.create 50 in
@@ -1276,7 +1269,7 @@ in
      Ajoute egalement le nom du package
      a la liste de package accessible. *)
 (* TODO *)
-  let add_extern_spec (spec:Ast.spec) =
+  let add_extern_spec spec =
     let add_extern_basic_decl (basic_decl, loc) =
       Npkcontext.set_loc loc;
       match basic_decl with

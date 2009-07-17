@@ -59,7 +59,6 @@ type symb =
 
 type qualified_symbol = symb*C.typ*Npk.location
 
-
 (** Promotes an identifier to a name *)
 let ident_to_name ident = (None, ident)
 
@@ -79,7 +78,7 @@ let (extern, do_as_extern) =
 (**
  * Add a "belongs" operator to an expression, according to a constraint.
  *)
-let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
+let make_check_constraint contrainte exp =
   match contrainte with
     | A.IntegerRangeConstraint (v1, v2) ->
         C.Unop (K.Belongs_tmp (v1, K.Known (Nat.add v2 Nat.one)), exp)
@@ -92,7 +91,7 @@ let make_check_constraint (contrainte:A.contrainte) (exp:C.exp) :C.exp =
 (**
  * Add a "belongs" operator to an expression, according to a subtype.
  *)
-let make_check_subtyp (subtyp: A.subtyp) (exp: C.exp) :C.exp =
+let make_check_subtyp subtyp exp =
   match subtyp with
     | A.Unconstrained _ -> exp
     | A.Constrained(_, contrainte, _, _) ->
@@ -102,7 +101,7 @@ let make_check_subtyp (subtyp: A.subtyp) (exp: C.exp) :C.exp =
           "Firstpass.make_check_subtyp"
           "internal error : unexpected subtyp name"
 
-let make_offset (styp: A.subtyp) (exp: C.exp) (size: C.exp) =
+let make_offset styp exp size =
   match styp with
     | A.Constrained( _, A.IntegerRangeConstraint(nat1, _) , _ ,_) ->
         let borne_inf = C.Const (C.CInt (nat1)) in
@@ -124,7 +123,7 @@ let translate_saved_context ctx =
 (**
  * Translate a [Syntax_ada.typ].
  *)
-let rec translate_typ (typ:A.typ) :C.typ = match typ with
+let rec translate_typ = function
 | A.Float        -> C.Scalar (Npk.Float            (Ada_config.size_of_float))
 | A.Integer      -> C.Scalar (Npk.Int (Npk.Signed,  Ada_config.size_of_int))
 | A.IntegerConst -> C.Scalar (Npk.Int (Npk.Signed,  Ada_config.size_of_int))
@@ -135,17 +134,19 @@ let rec translate_typ (typ:A.typ) :C.typ = match typ with
 (**
  * Translate a [Syntax_ada.typ_declaration].
  *)
-and translate_declared (typ_decl:A.typ_declaration) :C.typ = match typ_decl with
-| A.Enum(_, bits) -> C.Scalar(Npk.Int(bits))
-| A.DerivedType(subtyp_ind) -> translate_typ
-    (Ada_utils.extract_typ subtyp_ind)
-| A.IntegerRange(_,Some(bits)) -> C.Scalar(Npk.Int(bits))
-| A.IntegerRange(_,None) -> Npkcontext.report_error
-    "Firstpass.translate_declared"
-      "internal error : no bounds provided for IntegerRange"
-| A.Array a -> C.Array(translate_typ (Ada_utils.extract_typ a.A.array_component)
-                      ,a.A.array_size)
-| A.Record r -> let (fields,sz) = translate_record r in C.Struct (fields,sz)
+and translate_declared typ_decl =
+  match typ_decl with
+    | A.Enum(_, bits) -> C.Scalar(Npk.Int(bits))
+    | A.DerivedType(subtyp_ind) -> translate_typ
+        (Ada_utils.extract_typ subtyp_ind)
+    | A.IntegerRange(_,Some(bits)) -> C.Scalar(Npk.Int(bits))
+    | A.IntegerRange(_,None) -> Npkcontext.report_error
+        "Firstpass.translate_declared"
+          "internal error : no bounds provided for IntegerRange"
+    | A.Array a -> C.Array(translate_typ
+                    (Ada_utils.extract_typ a.A.array_component)
+                          ,a.A.array_size)
+    | A.Record r -> let (fields,sz) = translate_record r in C.Struct (fields,sz)
 
 (**
  * Translate a record type.
@@ -161,13 +162,13 @@ and translate_record (r:(string*A.subtyp) list) :(C.field list*Npk.size_t) =
 (**
  * Translate a [Syntax_ada.subtyp].
  *)
-and translate_subtyp (styp:A.subtyp) :C.typ = translate_typ (base_typ styp)
+and translate_subtyp styp = translate_typ (base_typ styp)
 
 (**
  * Main translating function.
  * Takes an Ada program as and returns a CIR tree.
  *)
-let translate (compil_unit:A.compilation_unit) :Cir.t =
+let translate compil_unit =
 
   (*
    * Global hashtables and references.
@@ -187,9 +188,9 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
   and gtbl = Sym.create () in
 
-  let find_symb (x:A.name) = Hashtbl.find symbtbl x
-  and find_all_symb (x:A.name) = Hashtbl.find_all symbtbl x
-  and mem_symb (x:A.name) :bool = Hashtbl.mem symbtbl x
+  let find_symb x = Hashtbl.find symbtbl x
+  and find_all_symb x = Hashtbl.find_all symbtbl x
+  and mem_symb x = Hashtbl.mem symbtbl x
   in
 
   let (add_global_init, get_global_init) =
@@ -215,7 +216,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          (Sym.s_get_use gtbl))
   in
 
-  let find_name (name:A.name)
+  let find_name name
                 f_ident
                 f_with
                 f_current
@@ -251,14 +252,14 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   in
 
 
-  let translate_int (i:Nat.t) :C.exp = C.Const(C.CInt i)
+  let translate_int i = C.Const(C.CInt i)
   in
 
   (* fonctions de traduction des noms*)
   (* on ajoute le nom du package courant dans le cas ou on
      etudie les declarations internes *)
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
-  let translate_name (pack,id:A.name) :string =
+  let translate_name (pack,id) =
     let tr_name =
         if extern() then pack,            id
                              else (Sym.current gtbl), id
@@ -269,9 +270,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (* gestion de la table de symboles *)
 
   (* declaration d'une variable locale *)
-  let add_var (loc:Newspeak.location) (st:Syntax_ada.subtyp)
-               (ident:string) ~(deref:bool) ~(ro:bool)
-      :unit=
+  let add_var loc st ident ~deref ~ro =
     let x = ident_to_name ident in
       (if Hashtbl.mem symbtbl x then
          match Hashtbl.find symbtbl x with
@@ -375,10 +374,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         (EnumSymb(translate_int value, typ,
                   global), translate_typ typ, loc)
 
-  and add_global (loc:Npk.location) (typ: A.subtyp)
-                 (tr_typ:C.typ)     (i: (C.exp * C.typ) option)
-                 (ro:bool)          (x:string)
-       :unit =
+  and add_global loc typ tr_typ i ro x =
     let name = Normalize.normalize_ident x (Sym.current gtbl) (extern ()) in
 
     let tr_name = translate_name name in
@@ -420,7 +416,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           (VarSymb (C.Global(tr_name), typ, true, ro),
            tr_typ, loc);
 
-  and remove_symb (x:string) :unit =
+  and remove_symb x =
     Hashtbl.remove symbtbl (ident_to_name x) in
 
   let remove_formals args =
@@ -431,13 +427,13 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (** Used to generate temporary variables. *)
   let temp =
     object (s)
-        val mutable count :int = 0
+        val mutable count = 0
 
         (**
          * Build a fresh identifier.
          * Several calls will yield "tmp0", "tmp1", and so on.
          *)
-        method private new_id :string=
+        method private new_id =
             let res = count in
             count<-count+1;
             "tmp"^(string_of_int res)
@@ -454,8 +450,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
          *   - alters the internal state of the [temp] object
          *   - calls [add_var] to register this variable
          *)
-        method create (loc:Newspeak.location) (t:A.typ)
-          :string * (C.stmtkind * Newspeak.location) * C.lv =
+        method create loc t =
             let id = s#new_id in
               add_var loc (A.Unconstrained(t)) id false false;
               let decl = (C.Decl (translate_typ t, id), loc) in
@@ -484,7 +479,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         | (FunSymb _,_,_)::_ -> true
         | [] -> false
     in
-    let sans_selecteur (ident:string) (name:A.name) :qualified_symbol =
+    let sans_selecteur ident name =
       let list_symb = find_all_symb name in
 
       let rec find_use list_symb var_masque =
@@ -557,7 +552,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
 
       in find_interne list_symb false
 
-    and avec_selecteur (name:A.name) :qualified_symbol =
+    and avec_selecteur name =
       let list_symb = find_all_symb name in
       let rec find_fun list_symb =
         match list_symb with
@@ -583,7 +578,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                 ("cannot find symbol "^(string_of_name name))
       in find_fun list_symb
 
-    and avec_selecteur_courant (ident:A.name) (name:A.name) :qualified_symbol =
+    and avec_selecteur_courant ident name =
       let list_symb = find_all_symb ident in
         let rec find_global list_symb =
         match list_symb with
@@ -637,8 +632,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             "internal error : number cannot have enum val"
   in
 
-  let rec translate_lv (lv:Ast.lval) (write:bool) (trans_exp:Ast.expression
-                                          ->A.typ option->C.exp*A.typ) =
+  let rec translate_lv lv write trans_exp =
     (*cas d'un symbol sans selecteur *)
     let fun_sans_sel ident name =
       if mem_symb name then find_symb name
@@ -768,9 +762,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                         " subtyp_lv has not expected typ"
   in
 
-  let rec translate_if_exp (e_cond:Ast.expression)
-                           (e_then:Ast.expression)
-                           (e_else:Ast.expression) =
+  let rec translate_if_exp e_cond e_then e_else =
     let loc = Npkcontext.get_loc () in
     let (tmp, decl, vid) = temp#create loc A.Boolean in
     let name = ident_to_name tmp in
@@ -785,7 +777,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                  C.Lval (vid, translate_typ A.Boolean), false),
        A.Boolean)
 
-  and translate_and (e1:Ast.expression) (e2:Ast.expression) =
+  and translate_and e1 e2 =
     let loc = Npkcontext.get_loc () in
     let (tr_e2,_ ) = translate_exp e2 (Some A.Boolean) in
     let (tmp, decl, vid) = temp#create loc A.Boolean in
@@ -797,7 +789,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
 
-  and translate_or (e1:Ast.expression) (e2:Ast.expression) =
+  and translate_or e1 e2 =
     let loc = Npkcontext.get_loc () in
     let (tr_e2,_ ) = translate_exp e2 (Some A.Boolean) in
     let (tmp, decl, vid) = temp#create loc A.Boolean in
@@ -809,7 +801,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, translate_typ A.Boolean), false), A.Boolean
 
-  and translate_binop op (e1:Ast.expression) (e2:Ast.expression) expected_typ =
+  and translate_binop op e1 e2 expected_typ =
     let expected_typ1 = Ada_utils.typ_operand op expected_typ in
     let (tr_e1, tr_e2, typ) =
       try
@@ -852,7 +844,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       | _ -> Npkcontext.report_error "Firstpass.translate_binop"
             "invalid operator and argument"
 
-  and translate_not (exp:Ast.expression) expected_typ =
+  and translate_not exp expected_typ =
     match expected_typ with
       | None
       | Some(A.Boolean) ->
@@ -882,9 +874,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      * @param spec the function specification (holding default values, etc)
      * @return a list of expressions which are the actual parameters.
      *)
-  and make_arg_list (args:argument list) (spec:Ast.param list)
-      :Ast.expression list =
-    let argtbl:(string,Ast.expression) Hashtbl.t = Hashtbl.create 5 in
+  and make_arg_list args spec =
+    let argtbl = Hashtbl.create 5 in
 
     (**
      * Step 1 : extract positional parameters. Named parameters go into the
@@ -895,27 +886,25 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
      *
      * /!\ Side-effects : this function references the argtbl variable.
      *)
-    let rec extract_positional_parameters (ar :Ast.argument list)
-        :Ast.expression list =
-        (match ar with
-          |             []   -> []
-          | (Some  _, _)::_  ->
-            (* don't stop at first named argument : populate argtbl *)
-                List.iter
-                    (function
-                       | None   , _ -> Npkcontext.report_error "firstpass.fcall"
-                                 "Named parameters shall follow positional ones"
-                       | Some id, e ->
-                            if (Hashtbl.mem argtbl id) then
-                                Npkcontext.report_error "firstpass.fcall"
-                                ("Parameter "^id^" appears twice")
-                            else
-                                Hashtbl.add argtbl id e;
-                    )
-                    ar;
-                []
-          | (None   , e)::tl -> e::(extract_positional_parameters tl)
-        )
+    let rec extract_positional_parameters ar =
+      match ar with
+        |             []   -> []
+        | (Some  _, _)::_  ->
+          (* don't stop at first named argument : populate argtbl *)
+              List.iter
+                  (function
+                     | None   , _ -> Npkcontext.report_error "firstpass.fcall"
+                               "Named parameters shall follow positional ones"
+                     | Some id, e ->
+                          if (Hashtbl.mem argtbl id) then
+                              Npkcontext.report_error "firstpass.fcall"
+                              ("Parameter "^id^" appears twice")
+                          else
+                              Hashtbl.add argtbl id e;
+                  )
+                  ar;
+              []
+        | (None   , e)::tl -> e::(extract_positional_parameters tl)
 
     (**
      * Step 2 : merge this list with the function specification, in order to
@@ -959,9 +948,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         List.map snd eff_args
 
   (** Translates a function call.  *)
-  and translate_function_call (fname:C.funexp) (tr_typ:C.ftyp)
-                              (spec:sub_program_spec) (arg_list:argument list)
-                              (expected_typ:A.typ option) :C.exp*A.typ =
+  and translate_function_call fname tr_typ spec arg_list expected_typ =
       let (params, ret_t) =
           match spec with
             | Function(_,params,subtyp) ->
@@ -973,10 +960,10 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                    ^" is a procedure, function expected")
     in
     let arg_list = make_arg_list arg_list params in
-    let translate_parameter (param:Ast.param) (exp:Ast.expression) :C.exp =
+    let translate_parameter param exp =
         let (tr_exp, _) = translate_exp exp (Some(base_typ param.param_type)) in
             make_check_subtyp param.param_type tr_exp in
-    let (tr_params:C.exp list) = List.map2 translate_parameter params arg_list
+    let tr_params = List.map2 translate_parameter params arg_list
     in
         try (C.Call(tr_typ, fname, tr_params), ret_t)
         with
@@ -1032,7 +1019,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
             mem_other_symb r filter use var_masque
 
     in
-    let sans_selecteur (ident:string) (name:A.name) :C.exp*A.typ =
+    let sans_selecteur ident name =
 
       let rec find_use list_symb var_masque var_possible =
         match list_symb with
@@ -1176,7 +1163,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | _ -> find_enum_fun list_symb
 
     (* recherche d'un symbole externe, avec selecteur *)
-    and avec_selecteur (name:A.name) :C.exp*A.typ =
+    and avec_selecteur name =
       let rec find_enum_fun list_symb = match list_symb with
         | ((VarSymb(_)|NumberSymb(_)), _, _)::r ->
             find_enum_fun r
@@ -1225,7 +1212,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
           | _ -> find_enum_fun list_symb
 
     (* recherche interne uniquement *)
-    and avec_selecteur_courant (ident:A.name) (name:A.name) :C.exp*A.typ =
+    and avec_selecteur_courant ident name =
       let list_symb = find_all_symb ident in
       let rec find_global list_symb =
         match list_symb with
@@ -1277,7 +1264,8 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
       find_name name sans_selecteur avec_selecteur
         avec_selecteur_courant
 
-  and translate_exp (exp,_:Ast.expression) expected_typ = match exp with
+  and translate_exp (exp,_) expected_typ =
+    match exp with
     | CFloat f -> C.Const(C.CFloat(f,string_of_float f)),
                   check_typ expected_typ A.Float
     | CInt   i -> translate_int i,
@@ -1383,9 +1371,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (**
    * Make a C assignment.
    *)
-  and make_affect (id:C.lv)            (exp:C.exp)
-                  (subtyp_lv:A.subtyp) (loc:Npk.location)
-     :C.stmt =
+  and make_affect id exp subtyp_lv loc =
     let typ_lv = base_typ subtyp_lv in
     let typ = translate_typ typ_lv in
     let checked_exp = make_check_subtyp subtyp_lv exp
@@ -1403,7 +1389,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
   (**
    * Translate a [Syntax_ada.block].
    *)
-  and translate_block (block:Ast.block) :C.blk = match block with
+  and translate_block block = match block with
     | [] -> []
     | (instr,loc)::r ->
         begin
@@ -1461,7 +1447,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
                                   ^" is a function, procedure expected")
                            | Procedure(_, params) -> params
                        in
-                       let tr_param (param:Ast.param) ((exp,tp):Ast.expression)=
+                       let tr_param param (exp,tp)=
                          match param.mode with
                            | A.In -> fst (translate_exp (exp,tp)
                                           (Some(base_typ param.param_type)))
@@ -1761,7 +1747,7 @@ let translate (compil_unit:A.compilation_unit) :Cir.t =
         Sym.reset_current gtbl;
         if extern () then Sym.add_with gtbl nom
 
-  and translate_body (body:Ast.body) glob loc :unit =
+  and translate_body body glob loc =
     Npkcontext.set_loc loc;
     match (body, glob) with
       | (SubProgramBody(subprog_decl,decl_part, _ctx1, _ctx2, block), _) ->
