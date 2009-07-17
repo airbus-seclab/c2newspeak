@@ -200,13 +200,14 @@ let report_asm tokens =
 %left     AND
 %left     BOR
 %left     BXOR
+%left     AMPERSAND
 %nonassoc EQEQ NOTEQ
 %left     GT GTEQ
 %left     LT LTEQ
 %left     SHIFTL SHIFTR
 %left     PLUS MINUS
 %left     STAR DIV MOD
-%nonassoc UNARY_STAR UNARY_MINUS UNARY AMPERSAND
+%nonassoc prefix_OP
 %nonassoc PLUSPLUS MINUSMINUS
 %left     DOT ARROW
 
@@ -558,16 +559,16 @@ expression:
 | PLUSPLUS expression                      { OpExp (Plus, $2, false) }
 | MINUSMINUS expression                    { OpExp (Minus, $2, false) }
 | AMPERSAND expression                     { AddrOf $2 }
-| STAR expression         %prec UNARY_STAR { Deref $2 }
+| STAR expression          %prec prefix_OP { Deref $2 }
 | BNOT expression                          { Unop (BNot, $2) }
-| MINUS expression       %prec UNARY_MINUS { Csyntax.neg $2 }
+| MINUS expression         %prec prefix_OP { Csyntax.neg $2 }
 | NOT expression                           { Unop (Not, $2) }
-| SIZEOF expression            %prec UNARY { SizeofE $2 }
+| SIZEOF expression        %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
-                               %prec UNARY { Sizeof (build_type_decl $3) }
-| EXTENSION expression         %prec UNARY { $2 }
+                           %prec prefix_OP { Sizeof (build_type_decl $3) }
+| EXTENSION expression     %prec prefix_OP { $2 }
 | LPAREN type_name RPAREN expression
-                               %prec UNARY { Cast ($4, build_type_decl $2) }
+                           %prec prefix_OP { Cast ($4, build_type_decl $2) }
 | LPAREN type_name RPAREN composite        { 
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
