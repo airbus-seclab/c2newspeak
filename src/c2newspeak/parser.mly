@@ -169,9 +169,8 @@ let report_asm tokens =
 %token CHAR DOUBLE FLOAT INT SHORT LONG STRUCT UNION SIGNED UNSIGNED VOID
 %token ELLIPSIS COLON COMMA DOT LBRACE RBRACE 
 %token LBRACKET RBRACKET LPAREN RPAREN NOT 
-%token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ EQEQ NOTEQ STAREQ DIVEQ MODEQ 
-%token BXOREQ
-%token AMPERSANDEQ
+%token EQEQ NOTEQ
+%token EQ OREQ SHIFTLEQ SHIFTREQ MINUSEQ PLUSEQ STAREQ DIVEQ MODEQ BXOREQ AMPERSANDEQ
 %token SEMICOLON
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
@@ -195,6 +194,24 @@ let report_asm tokens =
 
 %nonassoc below_ELSE
 %nonassoc ELSE
+
+%right    EQ PLUSEQ MINUSEQ STAREQ DIVEQ MODEQ OREQ AMPERSANDEQ SHIFTLEQ SHIFTREQ BXOREQ
+%left     OR
+%left     AND
+%left     BOR
+%left     BXOR
+%nonassoc EQEQ NOTEQ
+%left     LT LTEQ GT GTEQ
+%left     SHIFTL SHIFTR
+%left     PLUS MINUS
+%left     STAR DIV MOD
+%nonassoc UNARY_STAR UNARY_MINUS UNARY AMPERSAND
+%nonassoc PLUSPLUS MINUSMINUS
+%left     DOT ARROW
+
+
+
+
 
 %type <string list * Csyntax.t> parse
 %start parse
@@ -276,7 +293,7 @@ direct_declarator:
   ident_or_tname                           { (0, Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
 | direct_declarator LBRACKET 
-      expression RBRACKET                  { (0, Array ($1, Some $3)) }
+      expression_sequence RBRACKET         { (0, Array ($1, Some $3)) }
 | direct_declarator LBRACKET 
       type_qualifier_list RBRACKET         { (0, Array ($1, None)) }
 | direct_declarator 
@@ -304,8 +321,8 @@ struct_declarator_list:
 
 struct_declarator:
   declarator                               { ($1, None) }
-| declarator COLON conditional_expression  { ($1, Some $3) }
-| COLON conditional_expression             { 
+| declarator COLON expression              { ($1, Some $3) }
+| COLON expression                         { 
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
     ((0, Abstract), Some $2) 
@@ -373,22 +390,22 @@ statement:
 | STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
 | EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
 | TYPEDEF declaration SEMICOLON            { build_typedef $2 }
-| IF LPAREN expression RPAREN
+| IF LPAREN expression_sequence RPAREN
       statement           %prec below_ELSE {
     [If (normalize_bexp $3, $5, []), get_loc ()] 
   }
-| IF LPAREN expression RPAREN statement
+| IF LPAREN expression_sequence RPAREN statement
   ELSE statement                           { 
     [If (normalize_bexp $3, $5, $7), get_loc ()] 
   }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
-| RETURN expression SEMICOLON              { 
+| RETURN expression_sequence SEMICOLON              { 
     let loc = get_loc () in
       (Exp (Set (RetVar, None, $2)), loc)::(Return, loc)::[]
   }
 | RETURN SEMICOLON                         { [Return, get_loc ()] }
-| expression SEMICOLON                     { [Exp $1, get_loc ()] }
+| expression_sequence SEMICOLON            { [Exp $1, get_loc ()] }
 | BREAK SEMICOLON                          { [Break, get_loc ()] }
 | CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
 | GOTO IDENTIFIER SEMICOLON                { 
@@ -448,7 +465,8 @@ iteration_statement:
       }
 | WHILE LPAREN expression RPAREN statement { For([], normalize_bexp $3, $5, []) }
 | DO statement
-  WHILE LPAREN expression RPAREN SEMICOLON { DoWhile($2, normalize_bexp $5) }
+  WHILE LPAREN expression_sequence 
+  RPAREN SEMICOLON                         { DoWhile($2, normalize_bexp $5) }
 ;;
 
 expression_statement:
@@ -457,11 +475,11 @@ expression_statement:
       "halting condition should be explicit";
     exp_of_int 1
   }
-| assignment_expression SEMICOLON           { $1 }
+| expression SEMICOLON                     { $1 }
 ;;
 
 switch_stmt:
-  SWITCH LPAREN expression RPAREN LBRACE
+  SWITCH LPAREN expression_sequence RPAREN LBRACE
     case_list
   RBRACE                                   { 
     let (cases, default) = $6 in
@@ -474,7 +492,7 @@ switch_stmt:
 ;;
 
 case_list:
-  CASE expression COLON statement_list 
+  CASE expression_sequence COLON statement_list 
   case_list                                { 
     let (cases, default) = $5 in
       (($2, $4, get_loc ())::cases, default)
@@ -492,22 +510,9 @@ case_list:
 ;;
 
 assignment_expression_list:
-  assignment_expression COMMA 
+  expression COMMA 
   assignment_expression_list               { (Exp $1, get_loc ())::$3 }
-| assignment_expression                    { (Exp $1, get_loc ())::[] }
-;;
-
-primary_expression:
-  IDENTIFIER                               { Var $1 }
-| constant                                 { Cst $1 }
-| string_literal                           { Str $1 }
-| FUNNAME                                  { FunName }
-| LPAREN expression RPAREN                 { $2 }
-| LPAREN compound_statement RPAREN         { 
-    Npkcontext.report_accept_warning "Parser.relational_expression"
-      "block within expression" Npkcontext.DirtySyntax;
-    BlkExp ($2, false)
-  }
+| expression                               { (Exp $1, get_loc ())::[] }
 ;;
 
 constant:
@@ -521,158 +526,103 @@ string_literal:
 | STRING string_literal                    { $1^$2 }
 ;;
 
-postfix_expression:
-  primary_expression                       { $1 }
-| postfix_expression 
-  LBRACKET expression RBRACKET             { Index ($1, $3) }
-| postfix_expression LPAREN RPAREN         { Call ($1, []) }
-| postfix_expression 
+expression:
+  IDENTIFIER                               { Var $1 }
+| constant                                 { Cst $1 }
+| string_literal                           { Str $1 }
+| FUNNAME                                  { FunName }
+| LPAREN expression_sequence RPAREN        { $2 }
+| LPAREN compound_statement RPAREN         { 
+    Npkcontext.report_accept_warning "Parser.relational_expression"
+      "block within expression" Npkcontext.DirtySyntax;
+    BlkExp ($2, false)
+  }
+| expression 
+  LBRACKET expression_sequence RBRACKET    { Index ($1, $3) }
+| expression 
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
-| postfix_expression DOT ident_or_tname    { Field ($1, $3) }
-| postfix_expression ARROW ident_or_tname  { Field (Deref $1, $3) }
-| postfix_expression PLUSPLUS              { OpExp (Plus, $1, true) }
-| postfix_expression MINUSMINUS            { OpExp (Minus, $1, true) }
+| expression DOT ident_or_tname            { Field ($1, $3) }
+| expression ARROW ident_or_tname          { Field (Deref $1, $3) }
+| expression PLUSPLUS                      { OpExp (Plus, $1, true) }
+| expression MINUSMINUS                    { OpExp (Minus, $1, true) }
 // GNU C
 | BUILTIN_CONSTANT_P 
-  LPAREN expression RPAREN                 { 
+  LPAREN expression_sequence RPAREN        { 
      Npkcontext.report_warning "Parser.assignment_expression"
        "__builtin_constant_p ignored, assuming value 0";
     exp_of_int 0
   }
 | OFFSETOF 
   LPAREN type_name COMMA IDENTIFIER RPAREN { Offsetof (build_type_decl $3, $5) }
-;;
-
-unary_expression:
-  postfix_expression                       { $1 }
-| PLUSPLUS unary_expression                { OpExp (Plus, $2, false) }
-| MINUSMINUS unary_expression              { OpExp (Minus, $2, false) }
-| AMPERSAND cast_expression                { AddrOf $2 }
-| STAR cast_expression                     { Deref $2 }
-| BNOT cast_expression                     { Unop (BNot, $2) }
-| MINUS cast_expression                    { Csyntax.neg $2 }
-| NOT cast_expression                      { Unop (Not, $2) }
-| SIZEOF unary_expression                  { SizeofE $2 }
-| SIZEOF LPAREN type_name RPAREN           { Sizeof (build_type_decl $3) }
-| EXTENSION assignment_expression          { $2 }
-;;
-
-cast_expression:
-  unary_expression                         { $1 }
-| LPAREN type_name RPAREN 
-  cast_expression                          { Cast ($4, build_type_decl $2) }
-| LPAREN type_name RPAREN
-  composite                                { 
+| PLUSPLUS expression                      { OpExp (Plus, $2, false) }
+| MINUSMINUS expression                    { OpExp (Minus, $2, false) }
+| AMPERSAND expression                     { AddrOf $2 }
+| STAR expression         %prec UNARY_STAR { Deref $2 }
+| BNOT expression                          { Unop (BNot, $2) }
+| MINUS expression       %prec UNARY_MINUS { Csyntax.neg $2 }
+| NOT expression                           { Unop (Not, $2) }
+| SIZEOF expression            %prec UNARY { SizeofE $2 }
+| SIZEOF LPAREN type_name RPAREN 
+                               %prec UNARY { Sizeof (build_type_decl $3) }
+| EXTENSION expression         %prec UNARY { $2 }
+| LPAREN type_name RPAREN expression       { Cast ($4, build_type_decl $2) }
+| LPAREN type_name RPAREN composite        { 
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
     let vdecl = VDecl (t, false, false, Some (Sequence $4)) in
     let decl = (LocalDecl ("tmp", vdecl), loc) in
     let e = (Exp (Var "tmp"), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
-	"local composite ceation" Npkcontext.DirtySyntax;
+	"local composite creation" Npkcontext.DirtySyntax;
       BlkExp (blk@decl::e::[], false)
   }
-;;
-
-multiplicative_expression:
-  cast_expression                          { $1 }
-| multiplicative_expression STAR 
-  cast_expression                          { Binop (Mult, $1, $3) }
-| multiplicative_expression DIV 
-  cast_expression                          { Binop (Div, $1, $3) }
-| multiplicative_expression MOD 
-  cast_expression                          { Binop (Mod, $1, $3) }
-;;
-
-additive_expression:
-  multiplicative_expression                { $1 }
-| additive_expression PLUS 
-  multiplicative_expression                { Binop (Plus, $1, $3) }
-| additive_expression MINUS 
-  multiplicative_expression                { Binop (Minus, $1, $3) }
-;;
-
-shift_expression:
-  additive_expression                      { $1 }
-| shift_expression SHIFTL 
-  additive_expression                      { Binop (Shiftl, $1, $3) }
-| shift_expression SHIFTR
-  additive_expression                      { Binop (Shiftr, $1, $3) }
-;;
-
-relational_expression:
-  shift_expression                         { $1 }
-| relational_expression GT 
-  shift_expression                         { Binop (Gt, $1, $3) }
-| relational_expression GTEQ 
-  shift_expression                         { Unop (Not, Binop (Gt, $3, $1)) }
-| relational_expression LT 
-  shift_expression                         { Binop (Gt, $3, $1) }
-| relational_expression LTEQ 
-  shift_expression                         { Unop (Not, Binop (Gt, $1, $3)) }
-;;
-
-equality_expression:
-  relational_expression                    { $1 }
-| equality_expression EQEQ 
-  relational_expression                    { Binop (Eq, $1, $3) }
-| equality_expression NOTEQ 
-  relational_expression                    { Unop (Not, Binop (Eq, $1, $3)) }
-;;
-
-and_expression:
-  equality_expression                      { $1 }
-| and_expression AMPERSAND 
-  equality_expression                      { Binop (BAnd, $1, $3) }
-;;
-
-exclusive_or_expression:
-  and_expression                           { $1 }
-| exclusive_or_expression BXOR 
-  and_expression                           { Binop (BXor, $1, $3) }
-;;
-
-inclusive_or_expression:
-  exclusive_or_expression                  { $1 }
-| inclusive_or_expression BOR 
-  exclusive_or_expression                  { Binop (BOr, $1, $3) }
-;;
-
-logical_and_expression:
-  inclusive_or_expression                  { $1 }
-| logical_and_expression AND 
-  inclusive_or_expression                  { 
+| expression STAR expression               { Binop (Mult, $1, $3) }
+| expression DIV expression                { Binop (Div, $1, $3) }
+| expression MOD expression                { Binop (Mod, $1, $3) }
+| expression PLUS expression               { Binop (Plus, $1, $3) }
+| expression MINUS expression              { Binop (Minus, $1, $3) }
+| expression SHIFTL expression             { Binop (Shiftl, $1, $3) }
+| expression SHIFTR expression             { Binop (Shiftr, $1, $3) }
+| expression GT expression                 { Binop (Gt, $1, $3) }
+| expression GTEQ expression               { Unop (Not, Binop (Gt, $3, $1)) }
+| expression LT expression                 { Binop (Gt, $3, $1) }
+| expression LTEQ expression               { Unop (Not, Binop (Gt, $1, $3)) }
+| expression EQEQ expression               { Binop (Eq, $1, $3) }
+| expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
+| expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
+| expression BXOR expression               { Binop (BXor, $1, $3) }
+| expression BOR expression                { Binop (BOr, $1, $3) }
+| expression AND expression                { 
     IfExp (normalize_bexp $1, normalize_bexp $3, exp_of_int 0) 
-}
-;;
-
-logical_or_expression:
-  logical_and_expression                   { $1 }
-| logical_or_expression OR
-  logical_and_expression                   { 
+  }
+| expression OR expression                 { 
     IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
   }
-;;
-
-conditional_expression:
-  logical_or_expression                    { $1 }
-| logical_or_expression QMARK 
-  expression COLON conditional_expression  {
-    Npkcontext.report_strict_warning "Parser.conditional_expression"
-      "conditional expression";
-    IfExp (normalize_bexp $1, $3, $5)
+| expression QMARK 
+      expression COLON expression          {
+	Npkcontext.report_strict_warning "Parser.expression"
+	  "conditional expression";
+	IfExp (normalize_bexp $1, $3, $5)
   }
+| expression assignment_operator expression { Set ($1, $2, $3) }
 ;;
 
-assignment_expression:
-  conditional_expression                   { $1 }
-| unary_expression 
-  EQ assignment_expression                 { Set ($1, None, $3) }
-| unary_expression assignment_operator
-  assignment_expression                    { Set ($1, Some $2, $3) }
+expression_sequence:
+  expression                               { $1 }
+| expression_sequence COMMA expression     { 
+    Npkcontext.report_accept_warning "Parser.expression"
+      "comma in expression" Npkcontext.DirtySyntax;
+    let loc = get_loc () in
+      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[], false) 
+  }
 ;;
 
 assignment_operator:
+| EQ                                       { None }
+| assignment_op_operator                   { Some $1 }
+;;
+
+assignment_op_operator:
   PLUSEQ                                   { Plus }
 | MINUSEQ                                  { Minus }
 | STAREQ                                   { Mult }
@@ -685,24 +635,19 @@ assignment_operator:
 | BXOREQ                                   { BXor }
 ;;
 
-expression:
-  assignment_expression                   { $1 }
-| expression COMMA assignment_expression  { 
-    Npkcontext.report_accept_warning "Parser.expression"
-      "comma in expression" Npkcontext.DirtySyntax;
-    let loc = get_loc () in
-      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[], false) 
-  }
+argument_expression_list:
+                                           { [] }
+| nonempty_argument_expression_list        { $1 }
 ;;
 
-argument_expression_list:
-  assignment_expression                    { $1::[] }
-| assignment_expression 
-  COMMA argument_expression_list           { $1::$3 }
+nonempty_argument_expression_list:
+  expression                               { $1::[] }
+| expression 
+  COMMA nonempty_argument_expression_list  { $1::$3 }
 ;;
 
 init:
-  assignment_expression                    { Data $1 }
+  expression                               { Data $1 }
 | composite                                { Sequence $1 }
 ;;
 
@@ -717,8 +662,7 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ 
-  assignment_expression                    { (Some $2, Data $4) }
+  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
 ;;
 
 init_list:
@@ -743,11 +687,11 @@ abstract_declarator:
 direct_abstract_declarator:
   LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET type_qualifier_list RBRACKET    { (0, Array ((0, Abstract), None)) }
-| LBRACKET expression RBRACKET             { 
+| LBRACKET expression_sequence RBRACKET    { 
     (0, Array ((0, Abstract), Some $2)) 
   }
 | direct_abstract_declarator 
-  LBRACKET expression RBRACKET             { (0, Array ($1, Some $3)) }
+  LBRACKET expression_sequence RBRACKET    { (0, Array ($1, Some $3)) }
 | direct_abstract_declarator 
   LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
 | direct_abstract_declarator LPAREN RPAREN { (0, Function ($1, [])) }
@@ -829,7 +773,7 @@ enum_list:
 
 enum:
   IDENTIFIER                             { ($1, None) }
-| IDENTIFIER EQ assignment_expression    { ($1, Some $3) }
+| IDENTIFIER EQ expression               { ($1, Some $3) }
 ;;
 
 field_blk:
