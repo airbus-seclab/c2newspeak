@@ -566,7 +566,8 @@ expression:
 | SIZEOF LPAREN type_name RPAREN 
                                %prec UNARY { Sizeof (build_type_decl $3) }
 | EXTENSION expression         %prec UNARY { $2 }
-| LPAREN type_name RPAREN expression       { Cast ($4, build_type_decl $2) }
+| LPAREN type_name RPAREN expression
+                               %prec UNARY { Cast ($4, build_type_decl $2) }
 | LPAREN type_name RPAREN composite        { 
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
