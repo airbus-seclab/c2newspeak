@@ -30,9 +30,7 @@
 *)
 
 module C   = Cir
-module K   = Npkil
 module Nat = Newspeak.Nat
-module Npk = Newspeak
 module A   = Syntax_ada
 module T   = Ada_types
 module Sym = Symboltbl
@@ -57,7 +55,7 @@ type symb =
   | FunSymb  of C.funexp * Ast.sub_program_spec * bool * C.ftyp (** XXX *)
   | NumberSymb of T.data_t*bool (** XXX *)
 
-type qualified_symbol = symb*C.typ*Npk.location
+type qualified_symbol = symb*C.typ*Newspeak.location
 
 (** Promotes an identifier to a name *)
 let ident_to_name ident = (None, ident)
@@ -81,7 +79,7 @@ let (extern, do_as_extern) =
 let make_check_constraint contrainte exp =
   match contrainte with
     | A.IntegerRangeConstraint (v1, v2) ->
-        C.Unop (K.Belongs_tmp (v1, K.Known (Nat.add v2 Nat.one)), exp)
+        C.Unop (Npkil.Belongs_tmp (v1, Npkil.Known (Nat.add v2 Nat.one)), exp)
     | A.FloatRangeConstraint (_, _) -> exp
     | A.RangeConstraint _ ->
   Npkcontext.report_error
@@ -105,7 +103,7 @@ let make_offset styp exp size =
   match styp with
     | A.Constrained( _, A.IntegerRangeConstraint(nat1, _) , _ ,_) ->
         let borne_inf = C.Const (C.CInt (nat1)) in
-        let decal =  C.Binop (Npk.MinusI, exp, borne_inf) in
+        let decal =  C.Binop (Newspeak.MinusI, exp, borne_inf) in
           C.Binop (Newspeak.MultI, decal,  size)
     | A.Constrained  _ ->
   Npkcontext.report_error "Firstpass.make_offset"
@@ -124,11 +122,15 @@ let translate_saved_context ctx =
  * Translate a [Syntax_ada.typ].
  *)
 let rec translate_typ = function
-| A.Float        -> C.Scalar (Npk.Float            (Ada_config.size_of_float))
-| A.Integer      -> C.Scalar (Npk.Int (Npk.Signed,  Ada_config.size_of_int))
-| A.IntegerConst -> C.Scalar (Npk.Int (Npk.Signed,  Ada_config.size_of_int))
-| A.Boolean      -> C.Scalar (Npk.Int (Npk.Unsigned,Ada_config.size_of_boolean))
-| A.Character    -> C.Scalar (Npk.Int (Npk.Unsigned,Ada_config.size_of_char))
+| A.Float        -> C.Scalar (Newspeak.Float Ada_config.size_of_float)
+| A.Integer      -> C.Scalar (Newspeak.Int
+                      (Newspeak.Signed,  Ada_config.size_of_int))
+| A.IntegerConst -> C.Scalar (Newspeak.Int
+                      (Newspeak.Signed,  Ada_config.size_of_int))
+| A.Boolean      -> C.Scalar (Newspeak.Int
+                      (Newspeak.Unsigned,Ada_config.size_of_boolean))
+| A.Character    -> C.Scalar (Newspeak.Int
+                      (Newspeak.Unsigned,Ada_config.size_of_char))
 | A.Declared (_, typ_decl, _, _) -> translate_declared typ_decl
 
 (**
@@ -136,10 +138,10 @@ let rec translate_typ = function
  *)
 and translate_declared typ_decl =
   match typ_decl with
-    | A.Enum(_, bits) -> C.Scalar(Npk.Int(bits))
+    | A.Enum(_, bits) -> C.Scalar(Newspeak.Int(bits))
     | A.DerivedType(subtyp_ind) -> translate_typ
         (Ada_utils.extract_typ subtyp_ind)
-    | A.IntegerRange(_,Some(bits)) -> C.Scalar(Npk.Int(bits))
+    | A.IntegerRange(_,Some(bits)) -> C.Scalar(Newspeak.Int(bits))
     | A.IntegerRange(_,None) -> Npkcontext.report_error
         "Firstpass.translate_declared"
           "internal error : no bounds provided for IntegerRange"
@@ -152,7 +154,7 @@ and translate_declared typ_decl =
  * Translate a record type.
  * Builds a CIR Struct with packed offsets.
  *)
-and translate_record (r:(string*A.subtyp) list) :(C.field list*Npk.size_t) =
+and translate_record r =
   let build_offset (cflds, start_off) (id, st) =
     let ctyp = translate_subtyp st in
       (id, (start_off, ctyp))::cflds, (start_off + C.size_of_typ ctyp)
@@ -293,7 +295,8 @@ let translate compil_unit =
       let tr_typ = translate_typ (base_typ st) in
       let (lv, typ_cir) =
         if deref
-        then (C.Deref(C.Lval(C.Local ident, tr_typ), tr_typ), C.Scalar Npk.Ptr)
+        then (C.Deref(C.Lval(C.Local ident, tr_typ), tr_typ),
+                C.Scalar Newspeak.Ptr)
         else (C.Local ident, tr_typ)
       in
         Hashtbl.add symbtbl x (VarSymb (lv, st, false, ro),
@@ -750,7 +753,9 @@ let translate compil_unit =
                     let offset =  match new_constr
                     with A.IntegerRangeConstraint(nat1, _) ->
                       let borne_inf =   C.Const(C.CInt(nat1)) in
-                      let decal =  C.Binop (Npk.MinusI,chk_exp, borne_inf) in
+                      let decal = C.Binop ( Newspeak.MinusI
+                                          , chk_exp
+                                          , borne_inf) in
                         C.Binop (Newspeak.MultI, decal,  size_base)
                       |  _ -> Npkcontext.report_error "Firstpass.make_offset"
                            "constr (not IntegerRangeConstraint) not impl yet"
@@ -803,16 +808,16 @@ let translate compil_unit =
 
   and translate_binop op e1 e2 expected_typ =
     let expected_typ1 = Ada_utils.typ_operand op expected_typ in
-    let (tr_e1, tr_e2, typ) =
+    let (c1, c2, typ) =
       try
-        let (tr_e1, typ1) = translate_exp e1 expected_typ1 in
-        let (tr_e2, typ2) = translate_exp e2 (Some(typ1))  in
-        (tr_e1, tr_e2, typ2)
+        let (c1, typ1) = translate_exp e1 expected_typ1 in
+        let (c2, typ2) = translate_exp e2 (Some(typ1))  in
+        (c1, c2, typ2)
       with AmbiguousTypeException ->
         try
-          let (tr_e2, typ2) = translate_exp e2 expected_typ1 in
-          let (tr_e1, typ1) = translate_exp e1 (Some(typ2))  in
-          (tr_e1, tr_e2, typ1)
+          let (c2, typ2) = translate_exp e2 expected_typ1 in
+          let (c1, typ1) = translate_exp e1 (Some(typ2))  in
+          (c1, c2, typ1)
         with AmbiguousTypeException ->
               Npkcontext.report_error "Firstpass.translate_binop"
                 "ambiguous operands"
@@ -820,19 +825,19 @@ let translate compil_unit =
       Ada_utils.check_operand_typ op typ;
       match (op,translate_typ typ) with
       (* Numeric operations *)
-      | Plus, C.Scalar(Npk.Int   _)->C.Binop(Npk.PlusI   , tr_e1, tr_e2),typ
-      | Plus, C.Scalar(Npk.Float n)->C.Binop(Npk.PlusF  n, tr_e1, tr_e2),typ
-      | Minus,C.Scalar(Npk.Int   _)->C.Binop(Npk.MinusI  , tr_e1, tr_e2),typ
-      | Minus,C.Scalar(Npk.Float n)->C.Binop(Npk.MinusF n, tr_e1, tr_e2),typ
-      | Mult, C.Scalar(Npk.Int   _)->C.Binop(Npk.MultI   , tr_e1, tr_e2),typ
-      | Mult, C.Scalar(Npk.Float n)->C.Binop(Npk.MultF  n, tr_e1, tr_e2),typ
-      | Div,  C.Scalar(Npk.Int   _)->C.Binop(Npk.DivI    , tr_e1, tr_e2),typ
-      | Div,  C.Scalar(Npk.Float n)->C.Binop(Npk.DivF   n, tr_e1, tr_e2),typ
-      | Rem,  C.Scalar(Npk.Int   _)->C.Binop(Npk.Mod     , tr_e1, tr_e2),typ
+      | Plus ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.PlusI   , c1, c2),typ
+      | Plus ,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.PlusF  n, c1, c2),typ
+      | Minus,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.MinusI  , c1, c2),typ
+      | Minus,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.MinusF n, c1, c2),typ
+      | Mult ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.MultI   , c1, c2),typ
+      | Mult ,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.MultF  n, c1, c2),typ
+      | Div  ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.DivI    , c1, c2),typ
+      | Div  ,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.DivF   n, c1, c2),typ
+      | Rem  ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.Mod     , c1, c2),typ
 
       (* Comparisons *)
-      | Eq, C.Scalar t -> C.Binop (Npk.Eq t, tr_e1, tr_e2), A.Boolean
-      | Gt, C.Scalar t -> C.Binop (Npk.Gt t, tr_e1, tr_e2), A.Boolean
+      | Eq, C.Scalar t -> C.Binop (Newspeak.Eq t, c1, c2), A.Boolean
+      | Gt, C.Scalar t -> C.Binop (Newspeak.Gt t, c1, c2), A.Boolean
 
       | And, C.Scalar _ -> translate_and e1 e2
       | Or , C.Scalar _ -> translate_or  e1 e2
@@ -849,7 +854,7 @@ let translate compil_unit =
       | None
       | Some(A.Boolean) ->
           let (exp, _) = translate_exp exp (Some(A.Boolean))
-          in (C.Unop (K.Not, exp), A.Boolean)
+          in (C.Unop (Npkil.Not, exp), A.Boolean)
       | _ -> Npkcontext.report_error "translate_not" "Unexpected type for not"
 
     (**
@@ -1503,7 +1508,7 @@ let translate compil_unit =
   and translate_param param = match param.mode with
       | A.In    -> translate_typ (base_typ param.param_type)
       |   A.Out
-      | A.InOut -> C.Scalar(Npk.Ptr)
+      | A.InOut -> C.Scalar Newspeak.Ptr
 
   and add_param loc param =
     let (deref,ro) = match param.mode with

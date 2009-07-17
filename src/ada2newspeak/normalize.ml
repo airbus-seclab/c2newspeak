@@ -27,7 +27,6 @@
 
 open Syntax_ada
 open Ada_utils
-open Eval
 
 module Nat = Newspeak.Nat
 module  T  = Ada_types
@@ -590,8 +589,8 @@ and normalize_contrainte contrainte =
     and norm_exp2 = normalize_exp exp2 in
       (* on essaye d'evaluer les bornes *)
       (try
-         let val1 = eval_static norm_exp1 gtbl in
-         let val2 = eval_static norm_exp2 gtbl in
+         let val1 = Eval.eval_static norm_exp1 gtbl in
+         let val2 = Eval.eval_static norm_exp2 gtbl in
          let contrainte =  match (val1, val2) with
            | (T.FloatVal(f1),T.FloatVal(f2)) ->
                if f1<=f2
@@ -678,7 +677,7 @@ let interpret_enumeration_clause agregate assoc cloc loc =
             List.map
               (fun (ident, exp) ->
                  let exp' = normalize_exp exp in
-                 let v = eval_static_integer_exp exp' gtbl
+                 let v = Eval.eval_static_integer_exp exp' gtbl
                  in (ident, v))
               assoc_list in
           let find_val ident =
@@ -1011,7 +1010,7 @@ in
         let subtyp = extract_subtyp norm_subtyp_ind in
         let status =
           try
-            let value = eval_static normexp gtbl in
+            let value = Eval.eval_static normexp gtbl in
               check_static_subtyp subtyp value;
               List.iter (fun x -> Sym.s_add_variable gtbl x loc t ~value)
                         ident_list;
@@ -1039,7 +1038,7 @@ in
         in [Ast.TypeDecl(id,norm_typ_decl)]
     | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
     | NumberDecl(ident, exp) ->
-       let value = eval_static_number (normalize_exp exp) gtbl in
+       let value = Eval.eval_static_number (normalize_exp exp) gtbl in
        add_numberdecl ident value loc;
        [Ast.NumberDecl(ident, value)]
     | SubtypDecl(ident, subtyp_ind) ->
