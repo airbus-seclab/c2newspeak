@@ -319,9 +319,10 @@ object
   method raise_error: string -> unit
 end
 
-val visit_fun : visitor -> fid -> fundec -> unit
-val visit_glb : visitor -> string -> gdecl -> unit
-val visit : visitor -> t -> unit
+val visit_blk: visitor -> blk -> unit
+val visit_fun: visitor -> fid -> fundec -> unit
+val visit_glb: visitor -> string -> gdecl -> unit
+val visit: visitor -> t -> unit
 
 class builder:
 object

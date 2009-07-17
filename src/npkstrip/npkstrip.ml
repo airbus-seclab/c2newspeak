@@ -95,6 +95,7 @@ let collect_used prog =
   let collector = 
     new collector (prog.globals, prog.fundecs) used_gvars used_funs fid_addrof
   in
+    Newspeak.visit_blk (collector :> Newspeak.visitor) prog.init;
     collector#visit_fun !main;
     { prog with globals = used_gvars; fundecs = used_funs }
  
