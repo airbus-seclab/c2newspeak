@@ -211,10 +211,6 @@ let report_asm tokens =
 %nonassoc PLUSPLUS MINUSMINUS
 %left     DOT ARROW
 
-
-
-
-
 %type <string list * Csyntax.t> parse
 %start parse
 
@@ -556,14 +552,14 @@ expression:
   }
 | OFFSETOF 
   LPAREN type_name COMMA IDENTIFIER RPAREN { Offsetof (build_type_decl $3, $5) }
-| PLUSPLUS expression                      { OpExp (Plus, $2, false) }
-| MINUSMINUS expression                    { OpExp (Minus, $2, false) }
-| AMPERSAND expression     %prec prefix_OP { AddrOf $2 }
-| STAR expression          %prec prefix_OP { Deref $2 }
-| BNOT expression                          { Unop (BNot, $2) }
-| MINUS expression         %prec prefix_OP { Csyntax.neg $2 }
-| NOT expression                           { Unop (Not, $2) }
-| SIZEOF expression        %prec prefix_OP { SizeofE $2 }
+| PLUSPLUS   expression    %prec prefix_OP { OpExp (Plus, $2, false) }
+| MINUSMINUS expression    %prec prefix_OP { OpExp (Minus, $2, false) }
+| AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
+| STAR       expression    %prec prefix_OP { Deref $2 }
+| BNOT       expression                    { Unop (BNot, $2) }
+| MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
+| NOT        expression                    { Unop (Not, $2) }
+| SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
                            %prec prefix_OP { Sizeof (build_type_decl $3) }
 | EXTENSION expression     %prec prefix_OP { $2 }
@@ -579,23 +575,23 @@ expression:
 	"local composite creation" Npkcontext.DirtySyntax;
       BlkExp (blk@decl::e::[], false)
   }
-| expression STAR expression               { Binop (Mult, $1, $3) }
-| expression DIV expression                { Binop (Div, $1, $3) }
-| expression MOD expression                { Binop (Mod, $1, $3) }
-| expression PLUS expression               { Binop (Plus, $1, $3) }
-| expression MINUS expression              { Binop (Minus, $1, $3) }
-| expression SHIFTL expression             { Binop (Shiftl, $1, $3) }
-| expression SHIFTR expression             { Binop (Shiftr, $1, $3) }
-| expression GT expression                 { Binop (Gt, $1, $3) }
-| expression GTEQ expression               { Unop (Not, Binop (Gt, $3, $1)) }
-| expression LT expression                 { Binop (Gt, $3, $1) }
-| expression LTEQ expression               { Unop (Not, Binop (Gt, $1, $3)) }
-| expression EQEQ expression               { Binop (Eq, $1, $3) }
-| expression NOTEQ expression              { Unop (Not, Binop (Eq, $1, $3)) }
+| expression STAR      expression          { Binop (Mult, $1, $3) }
+| expression DIV       expression          { Binop (Div, $1, $3) }
+| expression MOD       expression          { Binop (Mod, $1, $3) }
+| expression PLUS      expression          { Binop (Plus, $1, $3) }
+| expression MINUS     expression          { Binop (Minus, $1, $3) }
+| expression SHIFTL    expression          { Binop (Shiftl, $1, $3) }
+| expression SHIFTR    expression          { Binop (Shiftr, $1, $3) }
+| expression GT        expression          { Binop (Gt, $1, $3) }
+| expression GTEQ      expression          { Unop (Not, Binop (Gt, $3, $1)) }
+| expression LT        expression          { Binop (Gt, $3, $1) }
+| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) }
+| expression EQEQ      expression          { Binop (Eq, $1, $3) }
+| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) }
 | expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
-| expression BXOR expression               { Binop (BXor, $1, $3) }
-| expression BOR expression                { Binop (BOr, $1, $3) }
-| expression AND expression                { 
+| expression BXOR      expression          { Binop (BXor, $1, $3) }
+| expression BOR       expression          { Binop (BOr, $1, $3) }
+| expression AND       expression          { 
     IfExp (normalize_bexp $1, normalize_bexp $3, exp_of_int 0) 
   }
 | expression OR expression                 { 
