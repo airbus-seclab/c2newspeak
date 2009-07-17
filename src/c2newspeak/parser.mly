@@ -558,7 +558,7 @@ expression:
   LPAREN type_name COMMA IDENTIFIER RPAREN { Offsetof (build_type_decl $3, $5) }
 | PLUSPLUS expression                      { OpExp (Plus, $2, false) }
 | MINUSMINUS expression                    { OpExp (Minus, $2, false) }
-| AMPERSAND expression                     { AddrOf $2 }
+| AMPERSAND expression     %prec prefix_OP { AddrOf $2 }
 | STAR expression          %prec prefix_OP { Deref $2 }
 | BNOT expression                          { Unop (BNot, $2) }
 | MINUS expression         %prec prefix_OP { Csyntax.neg $2 }
