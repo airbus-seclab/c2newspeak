@@ -34,6 +34,10 @@ module K = Npkil
 module N = Newspeak
 module Nat = Newspeak.Nat
 
+(* TODO: should compile directly to Npkil, without going through Cir
+   TODO: should remove Cir
+*)
+
 (* Constants *)
 let ret_name = "!return"
 
@@ -316,7 +320,7 @@ let translate (globals, fundecls, spec) =
 	let loc = Npkcontext.get_loc () in
 	  declare_global false false name loc t (Some (Data (Str str, t)))
       end;
-      (C.Global name, t)
+      C.Global name
  
   and translate_lv x =
     match x with
@@ -335,14 +339,9 @@ let translate (globals, fundecls, spec) =
 	  let lv = translate_lv e in
 	  let n = translate_array_len len in
 	  let i = translate_exp (idx, idx_t) in
-	    (* TODO: remove need for type in translate_array_access!! *)
-	  let (lv, _) = translate_array_access (lv, t, n) (i, idx_t) in
-	    lv
+	    translate_array_access (lv, t, n) (i, idx_t)
 
-      | Deref (e, t) -> 
-	  let e = translate_exp (e, t) in
-	  let (lv, _) = deref (e, t) in
-	    lv
+      | Deref (e, t) -> deref (translate_exp (e, t), t)
 
       | OpExp (op, (lv, t), is_after) ->
 	  let loc = Npkcontext.get_loc () in
@@ -353,13 +352,9 @@ let translate (globals, fundecls, spec) =
 	  let (lv, _, _) = incr in
 	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
 
-      | Str str -> 
-	  let (lv, _) = add_glb_cstr str in
-	    lv
+      | Str str -> add_glb_cstr str
 
-      | FunName -> 
-	  let (lv, _) = add_glb_cstr !current_fun in
-	    lv
+      | FunName -> add_glb_cstr !current_fun
 
       | Cast ((lv, _), _) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
@@ -393,7 +388,7 @@ let translate (globals, fundecls, spec) =
       let sz = C.exp_of_int (size_of t) in
       let o = C.Unop (K.Belongs_tmp (Nat.zero, len), i) in
       let o = C.Binop (N.MultI, o, sz) in
-	(C.Shift (lv, o), t)
+	C.Shift (lv, o)
     with Exit -> 
       let e = C.remove_fst_deref lv in
       let e = translate_binop (Plus, Ptr t) (e, Ptr t) i in
@@ -413,9 +408,8 @@ let translate (globals, fundecls, spec) =
 	    
 	| AddrOf (Index (lv, (t, len), (Cst (C.CInt i, _), _)), _)
 	    when Nat.compare i Nat.zero = 0 ->
-	    let lv = translate_lv lv in 
-	    let (e, _) = addr_of (lv, Array (t, len)) in
-	      e
+	    let lv = translate_lv lv in
+	      addr_of (lv, Array (t, len))
 
 	| AddrOf (Index (lv, (t, len), e), t') ->
 	    let base = 
@@ -423,9 +417,7 @@ let translate (globals, fundecls, spec) =
 	    in
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
 
-	| AddrOf (lv, t) -> 
-	    let (e, _) = addr_of (translate_lv lv, t) in
-	      e
+	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
 	| Unop (op, e) -> 
 	    let (op, t) = translate_unop op in
@@ -502,13 +494,7 @@ let translate (globals, fundecls, spec) =
     in
     let e = translate e in
       match (e, t) with
-	  (C.Lval (lv, _), (Array _ as t)) -> 
-	    (* TODO: remove type returned in addr_of!!! *)
-	    let (e, _) = addr_of (lv, t) in
-	      e
-	| (C.Lval (lv, _), (Fun _ as t)) -> 
-	    let (e, _) = addr_of (lv, t) in
-	      e
+	  (C.Lval (lv, _), (Array _|Fun _)) -> addr_of (lv, t)
 	| _ -> e
 
   and translate_funexp e =
@@ -519,23 +505,20 @@ let translate (globals, fundecls, spec) =
 
   and deref (e, t) =
     match t with
-	Ptr t -> (C.Deref (e, translate_typ t), t)
+	Ptr t -> C.Deref (e, translate_typ t)
       | _ -> 
 	  Npkcontext.report_error "Firstpass.deref_typ" "pointer type expected"
 	    
 (* TODO: code cleanup: get rid of call to length_of_array in cir2npkil 
    with AddrOf and put it in here *)
   and addr_of (e, t) = 
-    let e =
-      match (e, t) with
-	  (C.Global f, Fun (Some args_t, ret_t)) -> 
-	    C.AddrOfFun (f, translate_ftyp (args_t, ret_t))
-	| (_, Fun (None, _)) -> 
-	    Npkcontext.report_error "Firstpass.addr_of" 
-	      "incomplete type for function"
-	| _ -> C.AddrOf (e, translate_typ t)
-    in
-      (e, Ptr t)
+    match (e, t) with
+	(C.Global f, Fun (Some args_t, ret_t)) -> 
+	  C.AddrOfFun (f, translate_ftyp (args_t, ret_t))
+      | (_, Fun (None, _)) -> 
+	  Npkcontext.report_error "Firstpass.addr_of" 
+	    "incomplete type for function"
+      | _ -> C.AddrOf (e, translate_typ t)
 
   and translate_set ((lv, lv_t), op, (e, e_t)) =
     let lv = translate_lv lv in
@@ -595,7 +578,7 @@ let translate (globals, fundecls, spec) =
 	    let sz = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
 	    let t = Array (char_typ, Some (exp_of_int sz)) in
 	    let (_, decl, v) = gen_tmp loc t in
-	    let (e, _) = addr_of (v, t) in
+	    let e = addr_of (v, t) in
 	    let init = init_va_args loc v args in
 	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
 

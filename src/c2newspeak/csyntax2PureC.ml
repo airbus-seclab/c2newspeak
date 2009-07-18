@@ -308,9 +308,8 @@ let process (globals, specs) =
 	    C.For (init, cond, body, suffix)
       | DoWhile (body, cond) -> 
 	  let body = simplify_blk body in
-	    (* TODO: maybe not nice to do exp_post!! *)
-	  let (pref, cond) = simplify_exp_post cond in
-	    C.DoWhile (body@pref, cond)
+	  let cond = simplify_bexp cond in
+	    C.DoWhile (body, cond)
       | CSwitch (e, cases, default) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (pref, e, post) = simplify_exp e in
