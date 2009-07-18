@@ -343,6 +343,7 @@ let process (globals, specs) =
 	  let (e, t) = translate_exp e in
 	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
 	    (C.OpExp ((op, t_in), (e, t), is_after), t_out)
+
       | BlkExp (blk, is_after) -> 
 	  let (blk, t) = translate_blk_exp blk in
 	    (C.BlkExp (blk, is_after), t)

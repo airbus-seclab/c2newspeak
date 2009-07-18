@@ -4,7 +4,7 @@ Newspeak output
 523.c
 void main(void) {
   (523.c:27#6)^int32 x;
-  (523.c:28#2)^int32 tmp0;
+  (523.c:28#2)^int32 !tmp0;
   (523.c:28#2)^choose {
    -->
     (523.c:28#2)^guard(! (1-_int32 ==_int32 0));

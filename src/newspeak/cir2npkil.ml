@@ -147,11 +147,11 @@ let translate src_lang prog fnames =
 	    K.BinOp (op, e1, e2)
 
       | BlkExp _ -> 
-	  Npkcontext.report_error "Compiler.translate_exp"
+	  Npkcontext.report_error "Cir2npkil.translate_exp"
 	    "unexpected side-effect in expression"
 
       | Call _ -> 
-	  Npkcontext.report_error "Compiler.translate_exp"
+	  Npkcontext.report_error "Cir2npkil.translate_exp"
 	    "unexpected call in expression"	  
   in
 
@@ -270,6 +270,7 @@ let translate src_lang prog fnames =
   in
 
   let translate_fundef f (ret_id, args_id, (args, t), body) =
+(* TODO: remove normalize!! *)
     let body = Cir.normalize body in
     let body = translate_blk body in
     let ft = translate_ftyp (args, t) in
@@ -280,8 +281,9 @@ let translate src_lang prog fnames =
     let (t, loc, init, _) = Hashtbl.find glbdecls x in
       Hashtbl.replace glbdecls x (t, loc, init, true)
   in
-
-  let init = translate_blk prog.init in
+(*TODO: remove normalize!!! *) 
+  let init = Cir.normalize prog.init in
+  let init = translate_blk init in
     Hashtbl.iter translate_glbdecl prog.globals;
     Hashtbl.iter translate_fundef prog.fundecs;
     Set.iter flag_glb !used_glbs;

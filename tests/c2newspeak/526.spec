@@ -1,4 +1,3 @@
-Warning: 526.c:30#2: expression without post effects expected
 Newspeak output
 ---------------
 526.c
