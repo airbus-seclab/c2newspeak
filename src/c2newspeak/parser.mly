@@ -541,8 +541,8 @@ expression:
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
 | expression DOT ident_or_tname            { Field ($1, $3) }
 | expression ARROW ident_or_tname          { Field (Deref $1, $3) }
-| expression PLUSPLUS                      { OpExp (Plus, $1, true) }
-| expression MINUSMINUS                    { OpExp (Minus, $1, true) }
+| expression PLUSPLUS                      { OpExp (PureC.Plus, $1, true) }
+| expression MINUSMINUS                    { OpExp (PureC.Minus, $1, true) }
 // GNU C
 | BUILTIN_CONSTANT_P 
   LPAREN expression_sequence RPAREN        { 
@@ -552,13 +552,14 @@ expression:
   }
 | OFFSETOF 
   LPAREN type_name COMMA IDENTIFIER RPAREN { Offsetof (build_type_decl $3, $5) }
-| PLUSPLUS   expression    %prec prefix_OP { OpExp (Plus, $2, false) }
-| MINUSMINUS expression    %prec prefix_OP { OpExp (Minus, $2, false) }
+| PLUSPLUS   expression    %prec prefix_OP { OpExp (PureC.Plus, $2, false) }
+| MINUSMINUS expression    %prec prefix_OP { OpExp (PureC.Minus, $2, false) }
 | AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
 | STAR       expression    %prec prefix_OP { Deref $2 }
-| BNOT       expression                    { Unop (BNot, $2) }
+// TODO: factor these with unop non-terminal
+| BNOT       expression                    { Unop (PureC.BNot, $2) }
+| NOT        expression                    { Unop (PureC.Not, $2) }
 | MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
-| NOT        expression                    { Unop (Not, $2) }
 | SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
                            %prec prefix_OP { Sizeof (build_type_decl $3) }
@@ -575,22 +576,28 @@ expression:
 	"local composite creation" Npkcontext.DirtySyntax;
       BlkExp (blk@decl::e::[], false)
   }
-| expression STAR      expression          { Binop (Mult, $1, $3) }
-| expression DIV       expression          { Binop (Div, $1, $3) }
-| expression MOD       expression          { Binop (Mod, $1, $3) }
-| expression PLUS      expression          { Binop (Plus, $1, $3) }
-| expression MINUS     expression          { Binop (Minus, $1, $3) }
-| expression SHIFTL    expression          { Binop (Shiftl, $1, $3) }
-| expression SHIFTR    expression          { Binop (Shiftr, $1, $3) }
-| expression GT        expression          { Binop (Gt, $1, $3) }
-| expression GTEQ      expression          { Unop (Not, Binop (Gt, $3, $1)) }
-| expression LT        expression          { Binop (Gt, $3, $1) }
-| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) }
-| expression EQEQ      expression          { Binop (Eq, $1, $3) }
-| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) }
-| expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
-| expression BXOR      expression          { Binop (BXor, $1, $3) }
-| expression BOR       expression          { Binop (BOr, $1, $3) }
+// TODO: factor these as binop non-terminal??
+| expression STAR      expression          { Binop (PureC.Mult, $1, $3) }
+| expression DIV       expression          { Binop (PureC.Div, $1, $3) }
+| expression MOD       expression          { Binop (PureC.Mod, $1, $3) }
+| expression PLUS      expression          { Binop (PureC.Plus, $1, $3) }
+| expression MINUS     expression          { Binop (PureC.Minus, $1, $3) }
+| expression SHIFTL    expression          { Binop (PureC.Shiftl, $1, $3) }
+| expression SHIFTR    expression          { Binop (PureC.Shiftr, $1, $3) }
+| expression GT        expression          { Binop (PureC.Gt, $1, $3) }
+| expression GTEQ      expression          { Unop (PureC.Not, 
+						   Binop (PureC.Gt, $3, $1)) }
+| expression LT        expression          { Binop (PureC.Gt, $3, $1) }
+| expression LTEQ      expression          { Unop (PureC.Not, 
+						   Binop (PureC.Gt, $1, $3)) 
+					   }
+| expression EQEQ      expression          { Binop (PureC.Eq, $1, $3) }
+| expression NOTEQ     expression          { Unop (PureC.Not, 
+						   Binop (PureC.Eq, $1, $3)) 
+					   }
+| expression AMPERSAND expression          { Binop (PureC.BAnd, $1, $3) }
+| expression BXOR      expression          { Binop (PureC.BXor, $1, $3) }
+| expression BOR       expression          { Binop (PureC.BOr, $1, $3) }
 | expression AND       expression          { 
     IfExp (normalize_bexp $1, normalize_bexp $3, exp_of_int 0) 
   }
@@ -622,16 +629,16 @@ assignment_operator:
 ;;
 
 assignment_op_operator:
-  PLUSEQ                                   { Plus }
-| MINUSEQ                                  { Minus }
-| STAREQ                                   { Mult }
-| DIVEQ                                    { Div }
-| MODEQ                                    { Mod }
-| OREQ                                     { BOr }
-| AMPERSANDEQ                              { BAnd }
-| SHIFTLEQ                                 { Shiftl }
-| SHIFTREQ                                 { Shiftr }
-| BXOREQ                                   { BXor }
+  PLUSEQ                                   { PureC.Plus }
+| MINUSEQ                                  { PureC.Minus }
+| STAREQ                                   { PureC.Mult }
+| DIVEQ                                    { PureC.Div }
+| MODEQ                                    { PureC.Mod }
+| OREQ                                     { PureC.BOr }
+| AMPERSANDEQ                              { PureC.BAnd }
+| SHIFTLEQ                                 { PureC.Shiftl }
+| SHIFTREQ                                 { PureC.Shiftr }
+| BXOREQ                                   { PureC.BXor }
 ;;
 
 argument_expression_list:

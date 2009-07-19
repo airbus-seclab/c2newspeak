@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val process: Csyntax.t -> PureC.t
+val process: PureC.t -> CoreC.t

@@ -69,6 +69,7 @@ let compile fname =
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
+(* TODO: push goto elimination after csyntax2PureC!! *)
       let globals = 
 	if !Npkcontext.accept_goto then begin
 	  Npkcontext.print_debug "Running goto_elimination...";
@@ -82,7 +83,7 @@ let compile fname =
 	Npkcontext.print_debug "Running first pass...";
 	let prog = (globals, spec) in
 	let prog = Csyntax2PureC.process prog in
-	let prog = Csyntax2CoreC.process prog in
+	let prog = PureC2CoreC.process prog in
 	let prog = Firstpass.translate prog in
 	  Npkcontext.forget_loc ();
 	  Npkcontext.print_debug "First pass done.";

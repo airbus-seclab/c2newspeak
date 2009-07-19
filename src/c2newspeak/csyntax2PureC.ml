@@ -37,7 +37,7 @@
 
 open Csyntax
 module Nat = Newspeak.Nat
-module C = Csyntax
+module C = PureC
 
 
 let exp_of_effects (pref, e, post) = 
@@ -62,18 +62,20 @@ let concat_effects blk1 blk2 =
 (* TODO: have a warning for assignments within expressions!!! *)
 let process (globals, specs) =
   let vcnt = ref 0 in
-  let gen_tmp t = 
+
+  let gen_tmp e = 
+    let t = C.Typeof e in
     let x = "!tmp"^(string_of_int (!vcnt)) in
     let decl = C.LocalDecl (x, C.VDecl (t, false, false, None)) in
       if (!vcnt = max_int) 
       then Npkcontext.report_error "Csyntax2PureC" "no more ids";
       incr vcnt;
-      (decl, Var x)
+      (decl, C.Var x)
   in
 
   let rec simplify_exp e =
     match e with
-	Cst c -> ([], C.Cst c, [])
+	Cst c -> ([], C.Cst (simplify_cst c), [])
       | Var x -> ([], C.Var x, [])
       | RetVar -> ([], C.RetVar, [])
       | Field (e, f) -> 
@@ -106,10 +108,13 @@ let process (globals, specs) =
 	  simplify_set set
       | Call call ->
 	  let loc = Npkcontext.get_loc () in
-	  let (pref, call) = simplify_call call in
-	  let (decl, lv) = gen_tmp (C.Typeof call) in
-	  let call = C.Exp (C.Set (lv, None, call)) in
-	    (pref@(decl, loc)::(call, loc)::[], lv, [])
+	  let (pref, e) = simplify_call call in 
+	  let (decl, lv) = gen_tmp e in
+	  let call = C.Exp (C.Set (lv, None, e)) in
+	  let pref = pref@(decl, loc)::(call, loc)::[] in
+	    (* TODO: have BlkExp take a pair of a block and expression instead
+	       of this: *)
+	    (pref, lv, [])
       | OpExp (op, lv, is_after) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let (pref, lv, post) = simplify_exp lv in
@@ -148,13 +153,22 @@ let process (globals, specs) =
       | IfExp (Cst (Cir.CInt _, _), e, _) -> simplify_exp e
       | IfExp (c, e1, e2) ->  
 	  let loc = Npkcontext.get_loc () in
-	  let (decl, lv) = gen_tmp (C.Typeof e) in
-	  let blk1 = (Exp (Set (lv, None, e1)), loc)::[] in
-	  let blk2 = (Exp (Set (lv, None, e2)), loc)::[] in
-	  let set = simplify_stmt (If (c, blk1, blk2), loc) in
-	    ((decl, loc)::set::[], lv, [])
+	  let c = simplify_bexp c in
+	  let (pref1, e1, post1) = simplify_exp e1 in
+	  let (pref2, e2, post2) = simplify_exp e2 in
+(* TODO: find a way to factor more with Call!!! *)
+	  let (decl, lv) = gen_tmp e1 in
+	  let br1 = pref1@(C.Exp (C.Set (lv, None, e1)), loc)::post1 in
+	  let br2 = pref2@(C.Exp (C.Set (lv, None, e2)), loc)::post2 in
+	  let ifset = C.If (c, br1, br2) in
+(* TODO: change BlkExp so that it has a blk and an expression *)
+(* TODO: put this in parser?? *)
+	    ((decl, loc)::(ifset, loc)::[], lv, [])
+
       | Offsetof (t, f) -> ([], C.Offsetof (simplify_typ t, f), [])
-		  
+
+  and simplify_cst (c, t) = (c, simplify_typ t)
+    
   and simplify_set (lv, op, e) =
     let loc = Npkcontext.get_loc () in
       match e with
@@ -179,7 +193,7 @@ let process (globals, specs) =
     let loc = Npkcontext.get_loc () in
     let (pref, e, post) = simplify_exp e in
       if (post <> []) then begin
-	let (decl, lv) = gen_tmp (C.Typeof e) in
+	let (decl, lv) = gen_tmp e in
 	let set = C.Exp (C.Set (lv, None, e)) in
 	  (pref@(decl, loc)::(set, loc)::post, lv)
       end else (pref, e)
@@ -261,7 +275,7 @@ let process (globals, specs) =
 	  let e = C.IfExp (c, e1, e2) in
 	    (* TODO: think about it!! *)
 	    e
-      | Unop (Not, e) -> Unop (Not, simplify_bexp e)
+      | Unop (C.Not, e) -> C.Unop (C.Not, simplify_bexp e)
       | _ -> exp_of_effects (simplify_exp e)
 
   and simplify_init_opt x =
@@ -277,7 +291,7 @@ let process (globals, specs) =
 	  let t = simplify_typ t in
 	  let init = simplify_init_opt init in
 	    C.VDecl (t, is_static, is_extern, init)
-      | EDecl e -> EDecl (exp_of_effects (simplify_exp e))
+      | EDecl e -> C.EDecl (exp_of_effects (simplify_exp e))
       | CDecl (is_struct, fields) -> 
 	  let fields = List.map simplify_field_decl fields in
 	    C.CDecl (is_struct, fields)
@@ -320,12 +334,20 @@ let process (globals, specs) =
       | Continue -> C.Continue
       | Goto lbl -> C.Goto lbl
       | Label lbl -> C.Label lbl
-      | UserSpec x -> C.UserSpec x
+      | UserSpec x -> C.UserSpec (simplify_assertion x)
 
   and simplify_case post (e, body, loc) = 
     let e = simplify_pure_exp e in
     let body = simplify_blk body in
       (e, post@body, loc)
+
+  and simplify_assertion x = List.map simplify_spec_token x
+
+  and simplify_spec_token x =
+    match x with
+	SymbolToken c -> C.SymbolToken c
+      | IdentToken s -> C.IdentToken s
+      | CstToken c -> C.CstToken (simplify_cst c)
 
 (* TODO: I am sure, it could be simplified, with also simplify_set
    with a good destination language *)
@@ -374,4 +396,5 @@ let process (globals, specs) =
   in
 
   let globals = List.map simplify_global globals in
-  (globals, specs)
+  let specs = List.map simplify_assertion specs in
+    (globals, specs)

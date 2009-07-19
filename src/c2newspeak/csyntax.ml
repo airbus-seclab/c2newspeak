@@ -109,9 +109,9 @@ and exp =
     | Index of (exp * exp)
     | Deref of exp
     | AddrOf of exp
-    | Unop of (unop * exp)
+    | Unop of (PureC.unop * exp)
     | IfExp of (exp * exp * exp)
-    | Binop of (binop * exp * exp)
+    | Binop of (PureC.binop * exp * exp)
     | Call of (exp * exp list)
     | Sizeof of typ
     | SizeofE of exp
@@ -120,31 +120,15 @@ and exp =
     | FunName
     | Cast of (exp * typ)
 (* None is a regular assignment *)
-    | Set of (exp * binop option * exp)
+    | Set of (exp * PureC.binop option * exp)
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
-    | OpExp of (binop * exp * bool)
+    | OpExp of (PureC.binop * exp * bool)
 (* boolean is true if the blk is executed after the evaluation of the 
    expression *)
     | BlkExp of (blk * bool)
 
 and cst = (Cir.cst * typ)
-
-and unop = Not | BNot
-
-and binop =
-    | Plus
-    | Minus
-    | Mult
-    | Div
-    | Mod
-    | Gt
-    | Eq
-    | BAnd
-    | BXor
-    | BOr
-    | Shiftl
-    | Shiftr
 
 let char_kind = (Signed, Config.size_of_char)
 
@@ -248,26 +232,6 @@ let float_cst_of_lexeme (value, suffix) =
   in
     (Cir.CFloat (f, lexeme), Float sz)
 
-let string_of_binop op =
-  match op with
-      Plus -> "+"
-    | Minus -> "-"
-    | Mult -> "*"
-    | Div -> "/"
-    | Mod -> "%"
-    | Gt -> ">"
-    | Eq -> "=="
-    | BAnd -> "&"
-    | BXor -> "bxor"
-    | BOr -> "|"
-    | Shiftl -> "<<"
-    | Shiftr -> ">>"
-
-let string_of_unop op =
-  match op with
-      Not -> "!"
-    | BNot -> "BNot"
-
 let rec string_of_typ margin t =
   match t with
       Void -> "void"
@@ -300,14 +264,14 @@ and string_of_exp margin e =
 	"("^(string_of_exp margin e1)^")["^(string_of_exp margin e2)^"]"
     | Deref e -> "*("^(string_of_exp margin e)^")"
     | AddrOf _ -> "AddrOf"
-    | Unop (op, e) -> (string_of_unop op)^"("^(string_of_exp margin e)^")"
+    | Unop (op, e) -> (PureC.string_of_unop op)^"("^(string_of_exp margin e)^")"
     | IfExp (e1, e2, e3) -> 
 	let e1 = string_of_exp margin e1 in
 	let e2 = string_of_exp margin e2 in
 	let e3 = string_of_exp margin e3 in
 	  "("^e1^") ? ("^e2^") : ("^e3^")"
     | Binop (op, e1, e2) -> 
-	(string_of_exp margin e1) ^" "^(string_of_binop op)^" "
+	(string_of_exp margin e1) ^" "^(PureC.string_of_binop op)^" "
 	^(string_of_exp margin e2)
     | Call _ -> "Call"
     | Offsetof _ -> "Offsetof"
@@ -470,7 +434,7 @@ let neg x =
   match x with
       Cst (Cir.CInt c, Int (_, sz)) -> 
 	Cst (Cir.CInt (Nat.neg c), Int (Signed, sz))
-    | _ -> Binop (Minus, exp_of_int 0, x)
+    | _ -> Binop (PureC.Minus, exp_of_int 0, x)
 
 let and_bexp e1 e2 =
   IfExp (e1, IfExp (e2, exp_of_int 1, exp_of_int 0), exp_of_int 0)
@@ -484,9 +448,11 @@ let rec normalize_bexp e =
   match e with
       Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
     | Set _ | Str _ | Cast _ 
-    | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) ->
-	Unop (Not, Binop (Eq, e, exp_of_int 0))
-    | Unop (Not, e) -> Unop (Not, normalize_bexp e)
+    | Binop ((PureC.Plus|PureC.Minus|PureC.Mult|PureC.Div|PureC.Mod
+	     |PureC.BAnd|PureC.BXor|PureC.BOr
+	     |PureC.Shiftl|PureC.Shiftr), _, _) ->
+	Unop (PureC.Not, Binop (PureC.Eq, e, exp_of_int 0))
+    | Unop (PureC.Not, e) -> Unop (PureC.Not, normalize_bexp e)
     | IfExp (c, e1, e2) -> 
 	IfExp (normalize_bexp c, normalize_bexp e1, normalize_bexp e2)
     | _ -> e

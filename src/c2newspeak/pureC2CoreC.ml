@@ -27,7 +27,7 @@
    -> Implicit casts addition, side-effects elimination, boolean expression
    normalization, redundant expressions/statements removal 
    -> CoreC -> optional Goto eliminatination *)
-open Csyntax
+open PureC
 module Nat = Newspeak.Nat
 module C = CoreC
 
