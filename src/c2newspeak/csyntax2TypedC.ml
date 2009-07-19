@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: TypedC should be exactly Csyntax + types only *)
+(* TODO: TypedC should be exactly Csyntax + types only!!!! *)
 (* TODO: -> Parsing -> BareC -> Typing -> TypedC 
    -> Implicit casts addition, side-effects elimination, boolean expression
    normalization, redundant expressions/statements removal 
@@ -281,8 +281,6 @@ let process (globals, specs) =
 		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
 		      "pointer or array expected"
 	    end
-(* TODO: should remove Deref from csyntax, use only index!! *)
-      | Deref e -> translate_lv (Index (e, exp_of_int 0))
 
       | AddrOf e -> 
 	  let (e, t) = translate_lv e in

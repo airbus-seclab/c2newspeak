@@ -104,8 +104,6 @@ and exp =
   | RetVar
   | Field of (exp * string)
   | Index of (exp * exp)
-(* TODO: should remove Deref!!!, use Index instead!!! with 0 *)
-  | Deref of exp
   | AddrOf of exp
   | Unop of (unop * exp)
   | IfExp of (exp * exp * exp)

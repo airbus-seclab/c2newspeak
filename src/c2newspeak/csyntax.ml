@@ -25,6 +25,7 @@
 
 open Newspeak
 
+(* TODO: put assertion together with globals?? *)
 type t = (global * location) list * assertion list
 
 and assertion = spec_token list
@@ -107,7 +108,6 @@ and exp =
     | RetVar
     | Field of (exp * string)
     | Index of (exp * exp)
-    | Deref of exp
     | AddrOf of exp
     | Unop of (unop * exp)
     | IfExp of (exp * exp * exp)
@@ -297,7 +297,6 @@ and string_of_exp margin e =
     | Field (e, f) -> (string_of_exp margin e)^"."^f
     | Index (e1, e2) -> 
 	"("^(string_of_exp margin e1)^")["^(string_of_exp margin e2)^"]"
-    | Deref e -> "*("^(string_of_exp margin e)^")"
     | AddrOf _ -> "AddrOf"
     | Unop (op, e) -> (string_of_unop op)^"("^(string_of_exp margin e)^")"
     | IfExp (e1, e2, e3) -> 
@@ -481,7 +480,7 @@ let or_bexp e1 e2 =
 (* TODO: think about this simplification, this is a bit hacky?? *)
 let rec normalize_bexp e =
   match e with
-      Var _ | Field _ | Index _ | Deref _ | Call _ | OpExp _ 
+      Var _ | Field _ | Index _ | Call _ | OpExp _ 
     | Set _ | Str _ | Cast _ 
     | Binop ((Plus|Minus|Mult|Div|Mod|BAnd|BXor|BOr|Shiftl|Shiftr), _, _) ->
 	Unop (Not, Binop (Eq, e, exp_of_int 0))

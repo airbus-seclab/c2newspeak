@@ -1070,8 +1070,6 @@ let renaming_block_variables stmts =
 	      let e1' = replace e1 in
 	      let e2' = replace e2 in
 		Index(e1', e2')
-	  | Deref e ->
-	      let e' = replace e in Deref e'
 	  | AddrOf e -> 
 	      let e' = replace e in AddrOf e'
 	  | Unop (op, e) ->

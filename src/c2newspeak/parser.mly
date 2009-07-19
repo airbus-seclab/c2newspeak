@@ -540,7 +540,8 @@ expression:
 | expression 
   LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
 | expression DOT ident_or_tname            { Field ($1, $3) }
-| expression ARROW ident_or_tname          { Field (Deref $1, $3) }
+| expression ARROW ident_or_tname          { Field (Index ($1, exp_of_int 0),
+						    $3) }
 | expression PLUSPLUS                      { OpExp (Plus, $1, true) }
 | expression MINUSMINUS                    { OpExp (Minus, $1, true) }
 // GNU C
@@ -555,7 +556,7 @@ expression:
 | PLUSPLUS   expression    %prec prefix_OP { OpExp (Plus, $2, false) }
 | MINUSMINUS expression    %prec prefix_OP { OpExp (Minus, $2, false) }
 | AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
-| STAR       expression    %prec prefix_OP { Deref $2 }
+| STAR       expression    %prec prefix_OP { Index ($2, exp_of_int 0) }
 // TODO: factor these with unop non-terminal
 | BNOT       expression                    { Unop (BNot, $2) }
 | NOT        expression                    { Unop (Not, $2) }
