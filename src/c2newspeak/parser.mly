@@ -533,7 +533,7 @@ expression:
 | LPAREN compound_statement RPAREN         { 
     Npkcontext.report_accept_warning "Parser.relational_expression"
       "block within expression" Npkcontext.DirtySyntax;
-    BlkExp ($2, false)
+    BlkExp $2
   }
 | expression 
   LBRACKET expression_sequence RBRACKET    { Index ($1, $3) }
@@ -574,7 +574,7 @@ expression:
     let e = (Exp (Var "tmp"), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
-      BlkExp (blk@decl::e::[], false)
+      BlkExp (blk@decl::e::[])
   }
 // TODO: factor these as binop non-terminal??
 | expression STAR      expression          { Binop (PureC.Mult, $1, $3) }
@@ -619,7 +619,7 @@ expression_sequence:
     Npkcontext.report_accept_warning "Parser.expression"
       "comma in expression" Npkcontext.DirtySyntax;
     let loc = get_loc () in
-      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[], false) 
+      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[])
   }
 ;;
 

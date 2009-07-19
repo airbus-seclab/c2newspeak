@@ -122,8 +122,8 @@ and exp =
       (* boolean is true if the operation is applied after the evaluation of the 
 	 expression *)
   | OpExp of (PureC.binop * exp * bool)
-  | BlkExp of (blk * bool)
-      
+  | BlkExp of blk
+     
 and cst = (Cir.cst * typ)
 
 val exp_of_int: int -> exp

@@ -124,9 +124,8 @@ and exp =
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
     | OpExp of (PureC.binop * exp * bool)
-(* boolean is true if the blk is executed after the evaluation of the 
-   expression *)
-    | BlkExp of (blk * bool)
+(* block ended by and expression *)
+    | BlkExp of blk
 
 and cst = (Cir.cst * typ)
 

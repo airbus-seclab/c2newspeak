@@ -134,8 +134,9 @@ let process (globals, specs) =
 	  let (pref, e, post) = simplify_exp e in
 	  let t = simplify_typ t in
 	    (pref, C.Cast (e, t), post)
-      | BlkExp (blk, is_after) -> 
+      | BlkExp blk -> 
 	  let (blk, e) =
+(* TODO: a bit inefficient *)
 	    match List.rev blk with
 		(Exp e, _)::blk -> (List.rev blk, e)
 	      | _ -> 
@@ -144,10 +145,7 @@ let process (globals, specs) =
 	  in
 	  let blk = simplify_blk blk in
 	  let (pref, e, post) = simplify_exp e in
-	  let (pref, post) =
-	    if is_after then (pref, post@blk) else (blk@pref, post) 
-	  in
-	    (pref, e, post)
+	    (blk@pref, e, post)
       | IfExp (Cst (Cir.CInt x, _), _, e) when Nat.compare x Nat.zero = 0 -> 
 	  simplify_exp e
       | IfExp (Cst (Cir.CInt _, _), e, _) -> simplify_exp e
