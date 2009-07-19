@@ -82,8 +82,7 @@ let compile fname =
       in
 	Npkcontext.print_debug "Running first pass...";
 	let prog = (globals, spec) in
-	let prog = Csyntax2PureC.process prog in
-	let prog = PureC2CoreC.process prog in
+	let prog = Csyntax2TypedC.process prog in
 	let prog = Firstpass.translate prog in
 	  Npkcontext.forget_loc ();
 	  Npkcontext.print_debug "First pass done.";

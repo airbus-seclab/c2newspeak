@@ -28,7 +28,7 @@
 *)
 
 (* TODO: should rename firstpass to semantic ??? see compiler Appel book *)
-open CoreC
+open TypedC
 module C = Cir
 module K = Npkil
 module N = Newspeak
@@ -329,7 +329,7 @@ let translate (globals, fundecls, spec) =
 
       | Field ((lv, t), f) -> 
 	  let lv = translate_lv lv in
-	  let (r, _, _) = translate_comp (CoreC.comp_of_typ t) in
+	  let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
 	  let (o, _) = find_field f r in
 	  let o = C.exp_of_int o in
 	    C.Shift (lv, o)
@@ -345,9 +345,9 @@ let translate (globals, fundecls, spec) =
 
       | OpExp (op, (lv, t), is_after) ->
 	  let loc = Npkcontext.get_loc () in
-	  let e = Cst (C.CInt (Nat.of_int 1), CoreC.int_typ)  in
+	  let e = Cst (C.CInt (Nat.of_int 1), TypedC.int_typ)  in
 	  let (incr, _) = 
-	    translate_set ((lv, t), Some op, (e, CoreC.int_typ)) 
+	    translate_set ((lv, t), Some op, (e, TypedC.int_typ)) 
 	  in
 	  let (lv, _, _) = incr in
 	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
@@ -487,7 +487,7 @@ let translate (globals, fundecls, spec) =
 	      C.BlkExp (body, e, is_after)
 
 	| Offsetof (t, f) -> 
-	    let (r, _, _) = translate_comp (CoreC.comp_of_typ t) in
+	    let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
 	    let (o, _) = find_field f r in
 	      C.exp_of_int (o / Config.size_of_byte)
 	      
@@ -1104,8 +1104,8 @@ let translate (globals, fundecls, spec) =
 
   and translate_unop op = 
     match op with
-	Not -> (K.Not, CoreC.int_typ)
-      | BNot k -> (K.BNot (Newspeak.domain_of_typ k), CoreC.Int k)
+	Not -> (K.Not, TypedC.int_typ)
+      | BNot k -> (K.BNot (Newspeak.domain_of_typ k), TypedC.Int k)
 
   and size_of t = C.size_of_typ (translate_typ t)
 

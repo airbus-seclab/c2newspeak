@@ -107,9 +107,9 @@ and exp =
 (* TODO: should remove Deref!!!, use Index instead!!! with 0 *)
   | Deref of exp
   | AddrOf of exp
-  | Unop of (PureC.unop * exp)
+  | Unop of (unop * exp)
   | IfExp of (exp * exp * exp)
-  | Binop of (PureC.binop * exp * exp)
+  | Binop of (binop * exp * exp)
   | Call of (exp * exp list)
   | Sizeof of typ
   | SizeofE of exp
@@ -118,13 +118,29 @@ and exp =
   | FunName
   | Cast of (exp * typ)
       (* None is a regular assignment *)
-  | Set of (exp * PureC.binop option * exp)
+  | Set of (exp * binop option * exp)
       (* boolean is true if the operation is applied after the evaluation of the 
 	 expression *)
-  | OpExp of (PureC.binop * exp * bool)
+  | OpExp of (binop * exp * bool)
   | BlkExp of blk
      
 and cst = (Cir.cst * typ)
+
+and unop = Not | BNot
+
+and binop =
+    | Plus
+    | Minus
+    | Mult
+    | Div
+    | Mod
+    | Gt
+    | Eq
+    | BAnd
+    | BXor
+    | BOr
+    | Shiftl
+    | Shiftr
 
 val exp_of_int: int -> exp
 

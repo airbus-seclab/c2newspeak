@@ -284,7 +284,7 @@ let rec normalize_exp x =
 	let (pref1, e1, post1) = normalize_exp e1 in
 	let (pref2, e2, post2) = normalize_exp e2 in
 	let pref = concat_effects pref1 pref2 in
-	let post = concat_effects post1 post2 in
+	let post = concat_effects post2 post1 in
 	  (pref, Binop (op, e1, e2), post)
 
     | Call (ft, f, args) ->

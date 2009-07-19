@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val translate: CoreC.t -> Cir.t
+val translate: TypedC.t -> Cir.t

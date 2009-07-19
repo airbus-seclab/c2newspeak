@@ -23,13 +23,14 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: TypedC should be exactly Csyntax + types only *)
 (* TODO: -> Parsing -> BareC -> Typing -> TypedC 
    -> Implicit casts addition, side-effects elimination, boolean expression
    normalization, redundant expressions/statements removal 
    -> CoreC -> optional Goto eliminatination *)
-open PureC
+open Csyntax
 module Nat = Newspeak.Nat
-module C = CoreC
+module C = TypedC
 
 (* Constants *)
 let ret_name = "!return"
@@ -154,8 +155,8 @@ let process (globals, specs) =
 
   let update_funtyp f ft1 =
     let (symb, t) = Hashtbl.find symbtbl f in
-    let ft2 = CoreC.ftyp_of_typ t in
-    let ft = CoreC.min_ftyp ft1 ft2 in
+    let ft2 = TypedC.ftyp_of_typ t in
+    let ft = TypedC.min_ftyp ft1 ft2 in
       Hashtbl.replace symbtbl f (symb, C.Fun ft)
   in
 
@@ -344,11 +345,12 @@ let process (globals, specs) =
 	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
 	    (C.OpExp ((op, t_in), (e, t), is_after), t_out)
 
-      | BlkExp (blk, is_after) -> 
+      | BlkExp blk -> 
 	  let (blk, t) = translate_blk_exp blk in
-	    (C.BlkExp (blk, is_after), t)
+(* TODO: remove is_after in TypedC! *)
+	    (C.BlkExp (blk, false), t)
 	      
-  and translate_exp e =
+  and translate_exp e = 
     let (e, t) = translate_lv e in
       match t with
 	  C.Array (t, len) -> 

@@ -34,9 +34,9 @@ newspeak.FILES=\
 
 c2newspeak.FILES=\
         pp_syntax pp_parser pp_lexer \
-        pureC csyntax coreC synthack gnuc parser lexer \
+        csyntax typedC synthack gnuc parser lexer \
         cilutils npkutils goto_elimination cilenv cilfirstpass cilcompiler \
-        csyntax2PureC pureC2CoreC firstpass compiler \
+        csyntax2TypedC firstpass compiler \
 	params c2newspeak
 
 FILES=version utils/list_utils \

@@ -91,7 +91,7 @@ let define_enum e =
 		None -> n
 	      | Some n -> n
 	  in
-	  let n' = B.Binop (PureC.Plus, n, B.exp_of_int 1) in
+	  let n' = B.Binop (B.Plus, n, B.exp_of_int 1) in
 	    (x, B.EDecl n)::(define_enum tl n')
       | [] -> []
   in

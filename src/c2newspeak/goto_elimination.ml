@@ -445,7 +445,7 @@ in
 		let decls, before = extract_decls before in
 		  if before = [] then decls@after
 		  else
-		    let if' = If(Unop(PureC.Not, e), before, []) in decls @ ((if', l)::after)
+		    let if' = If(Unop(Not, e), before, []) in decls @ ((if', l)::after)
 	    | Block blk -> begin
 		try
 		  let blk', stmt = f_delete_goto blk in
@@ -539,7 +539,7 @@ let out_if_else stmts lbl level g_offset =
 	      If (e, [Goto lbl', l'], []) when goto_equal lbl lbl' g_offset ->
 		  let lbl = fresh_lbl lbl in 
 		  let cond = Var lbl in
-		  let n_cond = Unop(PureC.Not, cond) in
+		  let n_cond = Unop(Not, cond) in
 		  let stmt = 
 		    if cond_equal cond e then [] else [Exp (Set (cond, None, e)), l] 
 		  in
@@ -693,12 +693,12 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	  if before = [] then 
 	    set @ decls @ [if', l']
 	  else
-	    let before' = If (Unop(PureC.Not, lbl'), before, []) in
+	    let before' = If (Unop(Not, lbl'), before, []) in
 	      set @ decls @ [(before', lb); (if', l')]
       end
     else 
       begin
-	let cond = Csyntax.and_bexp (normalize_bexp (Unop(PureC.Not, lbl'))) cond in
+	let cond = Csyntax.and_bexp (normalize_bexp (Unop(Not, lbl'))) cond in
 	let l' = try snd (List.hd else_blk) with Failure "hd" -> l in
 	let g_lbl = goto_lbl lbl g_offset in
 	let if' = If (lbl', [Goto g_lbl, g_loc], []) in
@@ -709,7 +709,7 @@ let rec if_else_in lbl l e before cond if_blk else_blk g_offset g_loc =
 	  if before = [] then 
 	    set @ decls @ [if', l']
 	  else
-	    let before' = If (Unop(PureC.Not, lbl'), before, []) in
+	    let before' = If (Unop(Not, lbl'), before, []) in
 	      set @ decls @ [(before', lb); (if', l')]
       end
 
@@ -752,7 +752,7 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
       (* optimisation when there are no stmts before the loop *)
 	set @ decls, blk', e
     else 
-      let before' = If(Unop(PureC.Not, lbl'), before, []) in
+      let before' = If(Unop(Not, lbl'), before, []) in
 	  set @ decls @ [before', lb], blk', e
   
 
@@ -794,13 +794,13 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
 	if before' = [] then
 	  set @ decls @[switch' ,l]
 	else
-	  let if' = If(Unop(PureC.Not, lbl'), before', [set_else, l]) in
+	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
 	    set @ decls @ [(declr, lb) ; (if', lb) ; (switch', l)]
     with Not_found ->
       let conds = List.map (fun (e, _, _) -> e) cases in
       let build e e' = or_bexp e e' in
       let e_default = List.fold_left build zero conds in
-      let e_default = Unop(PureC.Not, e_default) in
+      let e_default = Unop(Not, e_default) in
       let set_else = Exp (Set(tswitch, None, e_default)) in
       let default' = (if', l)::default in
       let default' = inward lbl g_offset g_loc default' in
@@ -808,7 +808,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
 	if before' = [] then
 	  set @ decls @[switch', l]
 	else
-	  let if' = If(Unop(PureC.Not, lbl'), before', [set_else, l]) in
+	  let if' = If(Unop(Not, lbl'), before', [set_else, l]) in
 	    set @ decls @ [(declr, lb) ; (if', lb) ; (switch', l)]
 
 and block_in lbl l e before blk g_offset g_loc =
@@ -819,7 +819,7 @@ and block_in lbl l e before blk g_offset g_loc =
   let decls, before = extract_decls before in
     if before = [] then decls @ [Block blk', l]
     else 
-      let if' = If(Unop(PureC.Not, lbl'), before, []) in
+      let if' = If(Unop(Not, lbl'), before, []) in
 	decls @ [(if', lb) ; (Block blk', l)] 
 
 and inward lbl g_offset g_loc stmts =
