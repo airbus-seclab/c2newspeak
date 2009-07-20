@@ -267,45 +267,6 @@ let character =
                   (all_bytes_from 255)
                  )
 
-(* Number of values in a type *)
-let length_of typ = match typ.trait with
-| Signed (Some r) -> sizeof r
-| Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
-| Array _
-| Record _
-| Float _
-| Unknown
-| Signed None -> Npkcontext.report_error "length_of" "Type with no size"
-
-let rec attr_get typ attr =
-  match typ.trait, attr with
-    | Signed (Some Range(a,_)),"first" -> typ, IntVal a
-    | Signed (Some Range(_,b)),"last"  -> typ, IntVal b
-    | Enumeration values, "first"      -> typ, IntVal (Newspeak.Nat.of_int (snd
-                                                             (List.hd  values)))
-    | Enumeration values, "last"       -> typ, IntVal (Newspeak.Nat.of_int (snd
-                                                      (List_utils.last values)))
-    | Array (_,ind) , ("first"|"last"|"length")  ->
-        begin
-          if attr="length" then
-            universal_integer, IntVal (length_of ind)
-          else
-            attr_get ind attr
-        end
-    | Float digits , "digits" -> universal_integer,
-                                    IntVal (Newspeak.Nat.of_int digits)
-    | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
-    | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
-    | Unknown, _
-    | Array _, _
-    | Record _,_
-    | Float _ , _
-    | Enumeration _ , _
-    | Signed (Some Range(_,_)),  _
-    | Signed (None)           ,  _
-    | Signed (Some NullRange) ,  _
-                 -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
-
 (****************
  * Traits tests *
  ****************)
@@ -360,6 +321,46 @@ let is_float typ =
 
 let is_unknown typ =
   typ.trait = Unknown
+
+(* Number of values in a type *)
+let length_of typ = match typ.trait with
+| Signed (Some r) -> sizeof r
+| Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
+| Array _
+| Record _
+| Float _
+| Unknown
+| Signed None -> Npkcontext.report_error "length_of" "Type with no size"
+
+let rec attr_get typ attr =
+  match typ.trait, attr with
+    | Signed (Some Range(a,_)),"first" -> typ, IntVal a
+    | Signed (Some Range(_,b)),"last"  -> typ, IntVal b
+    | Enumeration values, "first"      -> typ, IntVal (Newspeak.Nat.of_int (snd
+                                                             (List.hd  values)))
+    | Enumeration values, "last"       -> typ, IntVal (Newspeak.Nat.of_int (snd
+                                                      (List_utils.last values)))
+    | Array (_,ind) , ("first"|"last"|"length")  ->
+        begin
+          if attr="length" then
+            universal_integer, IntVal (length_of ind)
+          else
+            attr_get ind attr
+        end
+    | Float digits , "digits" -> universal_integer,
+                                    IntVal (Newspeak.Nat.of_int digits)
+    | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
+    | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
+    | _ , "succ" when is_scalar typ -> failwith "succ"
+    | Unknown, _
+    | Array _, _
+    | Record _,_
+    | Float _ , _
+    | Enumeration _ , _
+    | Signed (Some Range(_,_)),  _
+    | Signed (None)           ,  _
+    | Signed (Some NullRange) ,  _
+                 -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 (****************
  *  Translator  *

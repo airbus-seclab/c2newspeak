@@ -585,8 +585,14 @@ expression :
 | name QUOTE LPAR expression RPAR {Qualified(SubtypName (fst $1),$4)}
 | name QUOTE ident  {Attribute ( fst $1
                                  ,String.lowercase $3
+                                 ,None
                                  )
                       }
+| name QUOTE ident LPAR expression RPAR {Attribute ( fst $1
+                                                   ,String.lowercase $3
+                                                   ,Some $5
+                                                   )
+                                        }
 | name {Var(fst $1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
 ;

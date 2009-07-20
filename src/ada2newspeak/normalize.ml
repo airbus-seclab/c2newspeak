@@ -571,7 +571,24 @@ and normalize_exp ?expected_type exp =
                                     normalize_exp ~expected_type:t exp)
                                 ,t
     | FunctionCall(n, params) -> normalize_fcall (n, params)
-    | Attribute (st, attr)->
+    | Attribute (st, attr, Some exp) ->
+        begin
+          let t = subtyp_to_adatyp (SubtypName st) in
+          if attr = "succ" && T.is_scalar t then
+            begin
+              let (e',t') = normalize_exp exp in
+              ( Ast.Binary ( Ast.Plus
+                           , (e', t')
+                           , ( Ast.CInt (Newspeak.Nat.one)
+                             , T.universal_integer
+                             )
+                           )
+              , t')
+            end
+          else Npkcontext.report_error "Normalize"
+               "No such attribute"
+        end
+    | Attribute (st, attr, None) ->
         begin
           let t = subtyp_to_adatyp (SubtypName st) in
           match T.attr_get t attr with
