@@ -196,6 +196,7 @@ let report_asm tokens =
 %nonassoc ELSE
 
 %right    EQ PLUSEQ MINUSEQ STAREQ DIVEQ MODEQ OREQ AMPERSANDEQ SHIFTLEQ SHIFTREQ BXOREQ
+%right    QMARK
 %left     OR
 %left     AND
 %left     BOR
