@@ -43,18 +43,17 @@ and decl =
 (* struct or union: composite *)
   | CDecl of compdef
 
-(* true for structure, false for union *)
-and is_struct = bool
-
 and is_extern = bool
 
 and is_static = bool
 
+and compdef = (field_decl list * is_struct)
+
+and is_struct = bool
+
 and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
-
-and compdef = (field_decl list * bool)
 
 and typ =
     | Void

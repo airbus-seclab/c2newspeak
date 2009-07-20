@@ -22,10 +22,15 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
-
+(* TODO: after typing do:
+   side-effects removal: (lv++, lv+=e
+   boolean expression normalization
+   array access, pointer deref or addr_of normalization
+   implicit cast additions
+*)
 module Nat = Newspeak.Nat
 
-(* TODO: have hashtables rather *)
+(* TODO: have hashtables rather?? *)
 type t = (string * glbinfo) list * (string * funinfo) list * assertion list
 
 and glbinfo = (decl * Newspeak.location)
@@ -39,26 +44,27 @@ and spec_token =
   | IdentToken of string
   | LvalToken of typ_exp
   | CstToken of Cir.cst
-      
+
 and decl = 
     VDecl of (typ * is_static * is_extern * init option)
+(* TODO: remove this: unnecessary!! *)
   | EDecl of exp
 (* struct or union: composite *)
-(* TODO: remove this: unnecessary!!! *)
+(* TODO: remove this: unnecessary!! *)
   | CDecl of compdef
   
-(* true for structure, false for union *)
-and is_struct = bool
-
 and is_extern = bool
 
 and is_static = bool
 
+and compdef = (field_decl list * is_struct)
+
+(* true for a structure *)
+and is_struct = bool
+
 and field_decl = (string * typ)
 
 and ftyp = (typ * string) list option * typ
-
-and compdef = (field_decl list * bool)
       
 and typ =
   | Void
@@ -67,7 +73,6 @@ and typ =
   | Float of int
   | Ptr of typ
   | Array of array_typ
-(* true for structure *)
   | Comp of compdef option ref
   | Fun of ftyp
   | Va_arg

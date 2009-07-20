@@ -42,7 +42,7 @@ and decl =
     VDecl of (typ * is_static * is_extern * init option)
   | EDecl of exp
 (* struct or union: composite *)
-  | CDecl of (is_struct * field_decl list)
+  | CDecl of (field_decl list * is_struct)
   
 (* true for structure, false for union *)
 and is_struct = bool
@@ -62,7 +62,7 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of (typ * exp option)
-    | Comp of (string * bool)
+    | Comp of string
     | Fun of ftyp
     | Va_arg
     | Typeof of exp

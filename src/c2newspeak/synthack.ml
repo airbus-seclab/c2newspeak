@@ -118,8 +118,7 @@ let rec normalize_base_typ t =
 	    Npkcontext.report_error "Synthack.normalize_base_typ" 
 	      ("unknown type "^x)
 	end
-      | Struct (n, _) -> B.Comp (n, true)
-      | Union (n, _) -> B.Comp (n, false)
+      | Struct (n, _) | Union (n, _) -> B.Comp n
       | Typeof v -> B.Typeof (B.Var v)
       | Enum _ -> B.Int C.int_kind
   in
@@ -130,7 +129,7 @@ and normalize_compdef (n, is_struct, f) =
       None -> []
     | Some f -> 
 	let (decls, f) = normalize_fields f in
-	  (decls@(n, B.CDecl (is_struct, f))::[])
+	  (decls@(n, B.CDecl (f, is_struct))::[])
 
 and normalize_fields f =
   match f with

@@ -739,13 +739,12 @@ let translate (globals, fundecls, spec) =
 
   and translate_local_decl loc x d =
     match d with
-	EDecl _ | CDecl _ -> []
-      | VDecl (Fun _, _, _, _) -> []
+	VDecl (Fun _, _, _, _) -> []
       | VDecl (t, static, extern, init) when static || extern -> 
 	  declare_global static extern x loc t init;
 	  []
       | VDecl (t, _, _, init) ->
-(* TODO: see if more can be factored with translate_global_decl *) 
+	  (* TODO: see if more can be factored with translate_global_decl *) 
 	  let (init, t) = 
 	    match init with
 		None -> ([], t)
@@ -759,7 +758,8 @@ let translate (globals, fundecls, spec) =
 	  let init = List.map build_set init in
 	  let decl = (C.Decl (translate_typ t, x), loc) in
 	    decl::init
-	      
+      | EDecl _ | CDecl _ -> []
+
   (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
    a translate_blk blk -> blk

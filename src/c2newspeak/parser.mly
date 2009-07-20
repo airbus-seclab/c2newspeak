@@ -229,7 +229,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 parse:
   translation_unit EOF                      { (Synthack.get_fnames (), $1) }
 ;;
-// TODO: remove get_loc!!!
+
 translation_unit:
   NPK translation_unit                      { (GlbUserSpec $1, get_loc ())::$2 }
 | external_declaration translation_unit     { $1@$2 }

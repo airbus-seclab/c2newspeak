@@ -399,7 +399,7 @@ let process globals =
 	  in
 	    C.Array (t, len)
 (* TODO: maybe the fact that it is a struct not needed in the type?? *)
-      | Comp (x, _) -> C.Comp (find_compdef x)
+      | Comp x -> C.Comp (find_compdef x)
       | Fun ft -> C.Fun (translate_ftyp ft)
       | Va_arg -> C.Va_arg
       | Typeof e -> 
@@ -457,7 +457,7 @@ let process globals =
 	  let (e, t) = translate_exp e in
 	    Hashtbl.add symbtbl x (e, t);
 	    C.EDecl e
-      | CDecl (is_struct, fields) -> 
+      | CDecl (fields, is_struct) -> 
 	  let fields = List.map translate_field_decl fields in
 	  let decl = (fields, is_struct) in
 	  let c = find_compdef x in
