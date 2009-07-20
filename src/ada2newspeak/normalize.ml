@@ -1076,19 +1076,19 @@ in
         [Ast.SubtypDecl(ident, norm_subtyp_ind)]
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n (normalize_name o);
                              []
-    | RepresentClause _ -> failwith "NOTREACHED"
+    | RepresentClause _ -> []
 
   and normalize_package_spec (name, list_decl) =
     Sym.set_current gtbl name;
     Sym.enter_context ~name ~desc:"Package spec" gtbl;
     let represtbl = Hashtbl.create 50 in
-    let list_decl = List.filter (function
-                                  | RepresentClause(id, aggr), loc ->
-                                      Hashtbl.add represtbl
-                                        (id)
-                                        ((id, aggr), loc); false
-                                  | _ -> true)
-      list_decl in
+    List.iter (function
+               | RepresentClause(id, aggr), loc ->
+                   Hashtbl.add represtbl
+                     (id)
+                     ((id, aggr), loc)
+               | _ -> ())
+    list_decl;
     let init = ref [] in
     let add_init x exp _loc =
       init := (x,exp)::!init
@@ -1203,11 +1203,11 @@ in
 
   and normalize_decl_part decl_part ~global =
     let represtbl = Hashtbl.create 50 in
-    let decl_part :(declarative_item*location) list = List.filter (function
+    List.iter (function
         | BasicDecl(RepresentClause(id, aggr)), loc ->
-          Hashtbl.add represtbl id ((id, aggr), loc); false
-        | _ -> true
-      ) decl_part in
+          Hashtbl.add represtbl id ((id, aggr), loc)
+        | _ -> ()
+    ) decl_part;
     let initializers = ref [] in
     let add_init x exp loc =
       initializers := (x,exp,loc) :: !initializers
