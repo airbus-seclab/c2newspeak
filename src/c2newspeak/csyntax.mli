@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = ((global * Newspeak.location) list * assertion list)
+type t = (global * Newspeak.location) list
 
 and assertion = spec_token list
 
@@ -36,6 +36,7 @@ and global =
     (* true if static *)
   | FunctionDef of (string * ftyp * bool * blk)
   | GlbDecl of (string * decl)
+  | GlbUserSpec of assertion
 
 and decl = 
     VDecl of (typ * is_static * is_extern * init option)

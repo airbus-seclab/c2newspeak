@@ -229,22 +229,16 @@ try to remove multiple occurence of same pattern: factor as much as possible
 parse:
   translation_unit EOF                      { (Synthack.get_fnames (), $1) }
 ;;
-
+// TODO: remove get_loc!!!
 translation_unit:
-  NPK translation_unit                      { 
-    let (globals, spec) = $2 in
-      (globals, $1::spec)
-  }
-| external_declaration translation_unit     { 
-    let (globals, spec) = $2 in
-      ($1@globals, spec)
-  }
+  NPK translation_unit                      { (GlbUserSpec $1, get_loc ())::$2 }
+| external_declaration translation_unit     { $1@$2 }
 | SEMICOLON translation_unit                { 
     Npkcontext.report_accept_warning "Parser.translation_unit" 
       "unnecessary semicolon" Npkcontext.DirtySyntax;
     $2 
   }
-|                                           { ([], []) }
+|                                           { [] }
 ;;
 
 function_prologue:

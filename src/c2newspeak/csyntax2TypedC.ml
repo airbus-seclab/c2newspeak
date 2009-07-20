@@ -53,7 +53,7 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
-let process (globals, specs) =
+let process globals =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
   *)
@@ -616,9 +616,11 @@ let process (globals, specs) =
       (f', (ft, static, body, loc))
   in
 
-  let translate_globals x = 
+  let rec translate_globals x = 
     let glbdecls = ref [] in
     let fundecls = ref [] in
+    let specs = ref [] in
+      
     let translate (x, loc) =
       Npkcontext.set_loc loc;
       match x with
@@ -635,14 +637,14 @@ let process (globals, specs) =
 		
 	| GlbDecl (x, d) -> 
 	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
+	      
+	| GlbUserSpec x -> specs := (translate_assertion x)::!specs
     in
+      
       List.iter translate x;
-(* TODO: rather have a hashtbl!! possible once any form of typing is removed
-   from firstpass *)
-      (List.rev !glbdecls, List.rev !fundecls)
+      (List.rev !glbdecls, List.rev !fundecls, List.rev !specs)
   in
 
-  let (glbdecls, fundecls) = translate_globals globals in
+  let (glbdecls, fundecls, specs) = translate_globals globals in
   let fundecls = List.map translate_fundecl fundecls in
-  let specs = List.map translate_assertion specs in
     (glbdecls, fundecls, specs)

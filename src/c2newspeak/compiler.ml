@@ -51,7 +51,7 @@ let append_gnu_symbols globals =
     Lexer.init "__gnuc_builtin_symbols" lexbuf;
     Synthack.init_tbls ();
     try 
-      let (_, (gnuc_symbols, _)) = Parser.parse Lexer.token lexbuf in
+      let (_, gnuc_symbols) = Parser.parse Lexer.token lexbuf in
 	gnuc_symbols@globals
     with Parsing.Parse_error -> 
       Npkcontext.report_error "Compiler.append_gnu_symbols" 
@@ -59,29 +59,27 @@ let append_gnu_symbols globals =
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (fnames, (globals, spec)) = parse fname in
+  let (fnames, prog) = parse fname in
     Npkcontext.forget_loc ();
-    Npkcontext.print_size (Csyntax.size_of (globals, spec));
-    let globals = 
-      if !Npkcontext.accept_gnuc then append_gnu_symbols globals else globals
+    Npkcontext.print_size (Csyntax.size_of prog);
+    let prog = 
+      if !Npkcontext.accept_gnuc then append_gnu_symbols prog else prog
     in
     let fnames = if fnames = [] then fname::[] else fnames in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
-      if !Npkcontext.verb_ast then Csyntax.print (globals, spec);
+      if !Npkcontext.verb_ast then Csyntax.print prog;
 (* TODO: push goto elimination after csyntax2PureC!! *)
-      let globals = 
+      let prog = 
 	if !Npkcontext.accept_goto then begin
 	  Npkcontext.print_debug "Running goto_elimination...";
-	  let g = Goto_elimination.run globals in
+	  let g = Goto_elimination.run prog in
 	    Npkcontext.print_debug "Goto elimination done.";
-	    Npkcontext.print_size (Csyntax.size_of (g, spec));
+	    Npkcontext.print_size (Csyntax.size_of g);
 	    g
-	end 
-	else globals
+	end else prog
       in
 	Npkcontext.print_debug "Running first pass...";
-	let prog = (globals, spec) in
 	let prog = Csyntax2TypedC.process prog in
 	let prog = Firstpass.translate prog in
 	  Npkcontext.forget_loc ();

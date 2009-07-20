@@ -25,8 +25,7 @@
 
 open Newspeak
 
-(* TODO: put assertion together with globals?? *)
-type t = (global * location) list * assertion list
+type t = (global * location) list
 
 and assertion = spec_token list
 
@@ -39,7 +38,8 @@ and global =
     (* true if static *)
   | FunctionDef of (string * ftyp * bool * blk)
   | GlbDecl of (string * decl)
-  
+  | GlbUserSpec of assertion
+
 and decl = 
     VDecl of (typ * is_static * is_extern * init option)
   | EDecl of exp
@@ -430,8 +430,9 @@ let print prog =
       | GlbDecl (x, d) -> 
 	  let d = string_of_decl "" d in
 	    s := !s ^ (d^" "^x^";\n")
+
+      | GlbUserSpec _ -> ()
   in
-  let (prog, _) = prog in
     List.iter print prog;
     print_endline !s
 
@@ -439,10 +440,7 @@ let string_of_ftyp = string_of_ftyp ""
 let string_of_exp = string_of_exp ""
 let string_of_blk = string_of_blk ""
 
-let rec size_of (globals, specs) = 
-  let globals = List_utils.size_of size_of_global globals in
-  let specs = List.length specs in
-    globals + specs
+let rec size_of globals = List_utils.size_of size_of_global globals
 
 and size_of_global (x, _) =
   match x with
