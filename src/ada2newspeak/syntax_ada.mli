@@ -211,10 +211,6 @@ and sub_program_spec =
    there are other possibilities for this choice, not yet implemented *)
 and array_aggregate = NamedArrayAggregate of (string * expression) list
 
-and representation_clause =
-  | EnumerationRepresentation of string
-                               * array_aggregate
-
 and object_state =
   | Variable
   | Constant
@@ -252,7 +248,7 @@ and basic_declaration =
                      * expression
   | SubtypDecl      of string
                      * subtyp_indication
-  | RepresentClause of representation_clause
+  | RepresentClause of string * array_aggregate
   | RenamingDecl    of string (* new name *)
                      * name   (* old name *)
 

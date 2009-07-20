@@ -732,10 +732,8 @@ in
          kind of representation clause. *)
       if Hashtbl.mem represtbl ident then
         begin
-          let clause = Hashtbl.find represtbl ident
-          in match clause with
-            | (EnumerationRepresentation(_, agregat), rloc) ->
-                interpret_enumeration_clause agregat symbs rloc loc
+          let ((_, aggregate),rloc) = Hashtbl.find represtbl ident in
+            interpret_enumeration_clause aggregate symbs rloc loc
         end
       else
         (symbs, size)
@@ -1085,10 +1083,10 @@ in
     Sym.enter_context ~name ~desc:"Package spec" gtbl;
     let represtbl = Hashtbl.create 50 in
     let list_decl = List.filter (function
-                                  | RepresentClause(rep), loc ->
+                                  | RepresentClause(id, aggr), loc ->
                                       Hashtbl.add represtbl
-                                        (extract_representation_clause_name rep)
-                                        (rep, loc); false
+                                        (id)
+                                        ((id, aggr), loc); false
                                   | _ -> true)
       list_decl in
     let init = ref [] in
@@ -1206,10 +1204,8 @@ in
   and normalize_decl_part decl_part ~global =
     let represtbl = Hashtbl.create 50 in
     let decl_part :(declarative_item*location) list = List.filter (function
-        | BasicDecl(RepresentClause(rep)), loc ->
-          Hashtbl.add represtbl
-            (extract_representation_clause_name rep)
-            (rep, loc); false
+        | BasicDecl(RepresentClause(id, aggr)), loc ->
+          Hashtbl.add represtbl id ((id, aggr), loc); false
         | _ -> true
       ) decl_part in
     let initializers = ref [] in

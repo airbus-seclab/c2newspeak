@@ -186,45 +186,6 @@ let make_range exp_b_inf exp_b_sup =
 %start s
 %type <Syntax_ada.compilation_unit> s
 
-%type <string> pragma
-%type <param_mode> mode
-%type <name*location> name
-%type <string> ident
-%type <string list> ident_list
-%type <argument> parameter_association
-%type <argument list> actual_parameter_part args
-%type <subtyp> subtyp
-%type <subtyp_indication> subtyp_indication
-%type <expression> expression discrete_choice
-%type <instruction*location> instr
-%type <block> instr_list instruction_else when_others
-%type <name*argument list> lvalue
-%type <iteration_scheme*location> iteration_scheme
-%type <expression list> discrete_choice_list
-%type <expression list*block> case_stmt_alternative
-%type <(expression list*block) list* block option> case_stmt_alternative_list
-%type <representation_clause*location> representation_clause
-%type <array_aggregate> array_aggregate
-%type <(string * expression) list> named_array_aggregate
-%type <string * expression> array_component_association
-%type <subtyp_indication list> matrix_indication
-%type <array_type_definition> constrained_array_definition
-%type <string*subtyp> record_component
-%type <(string*subtyp) list> record_type_definition record_component_list
-%type <contrainte> contrainte
-%type <basic_declaration*location> basic_declaration
-%type <(basic_declaration*location) list> basic_declarative_part
-%type <declarative_item*location> declarative_item
-%type <(declarative_item*location) list> declarative_part
-%type <unit> pragma_argument_association pragma_argument_association_list
-%type <param list> parameter_specification formal_part
-%type <sub_program_spec*location> subprogram_spec
-%type <spec*location> decl
-%type <body*location> body
-%type <library_item*location> library_item
-%type <context_clause list> context_item context
-%type <(basic_declaration*location) list> factored_decl use_decl number_decl
-
 %%
 /*grammaire*/
 s: context library_item EOF {($1, fst $2, snd $2)}
@@ -402,7 +363,10 @@ basic_declaration :
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
-| representation_clause SEMICOLON {(RepresentClause(fst $1), snd $1)}
+| representation_clause SEMICOLON {
+                  let rc = fst $1 in
+                  (RepresentClause(fst rc, snd rc), snd $1)
+                }
 | subprogram_spec RENAMES name SEMICOLON
         { match (fst $1) with
         | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
@@ -454,7 +418,7 @@ array_aggregate :
 ;
 
 representation_clause :
-| FOR ident USE array_aggregate         {EnumerationRepresentation($2,$4)   ,$1}
+| FOR ident USE array_aggregate         {($2,$4) ,$1}
 ;
 
 instr_list :

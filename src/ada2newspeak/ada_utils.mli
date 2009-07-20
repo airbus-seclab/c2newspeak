@@ -151,12 +151,6 @@ val check_compil_unit_name :
   Syntax_ada.compilation_unit -> string -> bool
 
 (**
- * Extract the identifier for a representation clause.
- *)
-val extract_representation_clause_name :
-             Syntax_ada.representation_clause -> string
-
-(**
  * Provides a default value.
  *   - [with_default  None    x] yields [x]
  *   - [with_default (Some v) x] yields [v]

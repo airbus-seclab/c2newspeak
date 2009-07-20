@@ -238,10 +238,9 @@ and array_aggregate_to_string agregat = match agregat with
           assoc_element_to_string
           ";\n" true
 
-and representation_clause_to_string clause = match clause with
-  | EnumerationRepresentation(ident, agregat) ->
-      "EnumerationRepresentation("^ident^", "
-      ^(array_aggregate_to_string agregat)^")"
+and representation_clause_to_string (ident, agregat) =
+  "EnumerationRepresentation("^ident^", "
+  ^(array_aggregate_to_string agregat)^")"
 
 and context_clause_to_string context_clause =
   match context_clause with
@@ -276,9 +275,9 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | SubtypDecl(ident, subtyp_ind) ->
       "SubtypDecl("^ident^", "
       ^(subtyp_indication_to_string subtyp_ind)^")"
-  | RepresentClause(clause) ->
+  | RepresentClause(id,aggr) ->
       "RepresentClause("
-      ^(representation_clause_to_string clause)^")"
+      ^(representation_clause_to_string (id, aggr))^")"
   | RenamingDecl(n,n') ->  "Renaming : "
                           ^n
                           ^" renames "
