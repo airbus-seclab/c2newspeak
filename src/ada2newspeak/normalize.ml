@@ -666,7 +666,7 @@ in
       | T.IntVal   _ -> T.universal_integer
       | T.FloatVal _ -> T.universal_real
     in
-    Sym.s_add_variable gtbl ident loc t ~value
+    Sym.s_add_variable gtbl ident loc t ~value ~no_storage:true
   in
 
 let interpret_enumeration_clause agregate assoc cloc loc =
@@ -780,6 +780,7 @@ in
         Sym.s_add_type gtbl ident loc t;
         List.iter (fun (i,v) -> Sym.s_add_variable gtbl i loc t
                                                    ~value:(T.IntVal v)
+                                                   ~no_storage:true
         ) symbs;
         add_typ id typ_decl loc global ;
         typ_decl

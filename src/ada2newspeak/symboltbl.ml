@@ -44,7 +44,7 @@ and SymTable : sig
      * Symbols.
      *)
     type symbol =
-      | Variable   of T.t*(T.data_t option)
+      | Variable   of T.t*(T.data_t option)*bool
       | Type       of T.t
       | Subprogram of ((T.f_param list)*T.t option)
       | Unit       of table
@@ -57,7 +57,7 @@ and SymTable : sig
                 }
   end = struct
     type symbol =
-      | Variable   of T.t*(T.data_t option)
+      | Variable   of T.t*(T.data_t option)*bool
       | Type       of T.t
       | Subprogram of ((T.f_param list)*T.t option)
       | Unit       of table
@@ -80,8 +80,8 @@ and SymTable : sig
     t.t_use_list
 
   let print_symbol = function
-    | Variable   (t,None)   -> "V",T.print t
-    | Variable   (t,Some v) -> "V *","("^T.print_data v^")"^ T.print t
+    | Variable   (t,None,_)   -> "V",T.print t
+    | Variable   (t,Some v,_) -> "V *","("^T.print_data v^")"^ T.print t
     | Type         t   -> "T",T.print t
     | Subprogram (p,r) -> "S",(
                                let pdesc = " with "
@@ -150,7 +150,7 @@ and SymTable : sig
     tbl.t_tbl <- Symset.add (n, loc, mksym t) tbl.t_tbl
 
   let add_variable =
-    adder (fun (t,v) -> Variable (t,v))
+    adder (fun (t,v,ns) -> Variable (t,v,ns))
           "variable"
 
   let add_type =
@@ -201,7 +201,7 @@ and SymTable : sig
       | Some x -> x
 
   let cast_v ?filter = mkcast "variable"
-                      (function Variable (x,v) -> Some (x,v)
+                      (function Variable (x,v,_) -> Some (x,v)
                               | Subprogram ([],Some rt) ->
                                   raise (ParameterlessFunction rt)
                               |_ -> None
@@ -439,7 +439,7 @@ module SymMake(TR:Tree.TREE) = struct
 
   let extract_variables t =
     let filter = function
-      | x, loc, Variable (y, _) -> [x,y,loc]
+      | x, loc, Variable (y, _, false) -> [x,y,loc]
       | _ -> []
     in
     List.flatten (List.map filter (Symset.elements t.t_tbl))
@@ -505,7 +505,7 @@ module SymMake(TR:Tree.TREE) = struct
     end
     with Not_found -> false
 
-  let s_add_variable s n loc ?value t =
+  let s_add_variable s n loc ?value ?(no_storage=false) t =
     Npkcontext.print_debug ("s_add_variable : adding '"
                            ^n
                            ^"' with "
@@ -514,7 +514,7 @@ module SymMake(TR:Tree.TREE) = struct
                             | Some v -> "value "^T.print_data v
                             )
                            );
-    add_variable (top s) n loc (t,value)
+    add_variable (top s) n loc (t,value,no_storage)
 
   let s_add_type s n v =
     add_type (top s) n v
@@ -525,7 +525,7 @@ module SymMake(TR:Tree.TREE) = struct
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
       let sym_eq x y = match (x,y) with
-        | Variable (t1,_), Variable (t2,_) -> t1 = t2
+        | Variable (t1,_,_), Variable (t2,_,_) -> t1 = t2
         | a, b -> a = b
       in
       List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2

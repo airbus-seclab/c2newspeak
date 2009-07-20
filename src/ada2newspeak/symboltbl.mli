@@ -133,8 +133,10 @@ val is_operator_overloaded : t -> string -> bool
 (** Add data.  *)
 val s_add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
 val s_add_variable : t -> string -> Newspeak.location
-                       -> ?value:Ada_types.data_t -> Ada_types.t
-                        -> unit
+                       -> ?value:Ada_types.data_t
+                       -> ?no_storage:bool
+                       -> Ada_types.t
+                         -> unit
 
 val s_add_subprogram : t
                   -> string
