@@ -737,7 +737,12 @@ in
         end
       else
         (symbs, size)
-    in Enum(symbs, size)
+    in
+
+(*  let t = subtyp_to_adatyp (SubtypName (None,ident)) in
+    T.handle_representation_clause t symbs;*)
+
+    Enum(symbs, size)
 
   in
 
@@ -787,8 +792,6 @@ in
   let normalize_typ_decl ident typ_decl loc global represtbl =
    match typ_decl with
     | Enum(symbs, size) ->
-        let typ_decl = enumeration_representation ident symbs
-                                                  size represtbl loc in
         let id = normalize_ident_cur ident in
         let ids = fst (List.split symbs) in
         let t = T.new_enumerated ids in
@@ -797,6 +800,8 @@ in
                                                    ~value:(T.IntVal v)
                                                    ~no_storage:true
         ) symbs;
+        let typ_decl = enumeration_representation ident symbs
+                                                  size represtbl loc in
         add_typ id typ_decl loc global ;
         typ_decl
     | DerivedType(subtyp_ind) ->

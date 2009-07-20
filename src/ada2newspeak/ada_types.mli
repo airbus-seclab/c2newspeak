@@ -124,6 +124,9 @@ val new_record : (string*t) list -> t
  *)
 val is_compatible : t -> t -> bool
 
+(* Precondition : (is_record t) *)
+val handle_representation_clause : t -> (string * Newspeak.Nat.t) list -> unit
+
 (**
  * Pretty-printer for types.
  * Type references (parents, ...) are displayed hashed for brievity's sake.

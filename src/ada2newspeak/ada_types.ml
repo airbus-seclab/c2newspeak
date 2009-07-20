@@ -72,12 +72,12 @@ and range =
 (* type for "traits" (type of types...) *)
 and trait_t =
   | Unknown
-  | Signed of range option            (* Range constraint *)
-  | Enumeration of (string*int) list  (* Name-index *)
-  | Float of int                      (* Digits *)
-  | Array of t*t                      (* Component-index *)
-  | Record of (string * t) list       (* Fields *)
-
+  | Signed of range option              (* Range constraint *)
+  | Float of int                        (* Digits *)
+  | Array of t*t                        (* Component-index *)
+  | Record of (string * t) list         (* Fields *)
+  | Enumeration of (string*int) list    (* Name-index, repr *)
+                 * ((string * Newspeak.Nat.t) list ref)
 
 (******************
  * Pretty-printer *
@@ -101,12 +101,12 @@ let rec print t =
     | Unknown -> "Unknown"
     | Signed  r -> "Signed " ^p_range r
     | Float   d -> "Float "  ^string_of_int d
-    | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
+    | Enumeration (v,_) -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
                   ^print c^"; index = "
                   ^print i
                   ^"}}"
-    | Record (flds) -> "Record {"^String.concat ", " (List.map fst flds)^"}"
+    | Record flds -> "Record {"^String.concat ", " (List.map fst flds)^"}"
   in
    "{"
   ^"H="^p_hash t
@@ -172,7 +172,7 @@ let new_enumerated values =
     let ivalues = with_indices values 0 in
     {
       type_stub with
-      trait = Enumeration ivalues;
+      trait = Enumeration (ivalues, ref []);
     }
 
 let new_derived old =
@@ -215,7 +215,7 @@ let new_array component ind =
 
 let new_record fields =
   { type_stub with
-    trait = Record(fields)
+    trait = Record fields
   }
 
 let is_compatible one another =
@@ -228,6 +228,12 @@ let is_compatible one another =
           | Float   100    , Float _         -> true
           | Float     _    , Float 100       -> true
           | _ -> false)
+
+let handle_representation_clause t l =
+  match t.trait with
+  | Enumeration (_, translate_list) -> translate_list := l
+  | _ -> invalid_arg ("handle_representaion_clause : got "
+                    ^ print t)
 
 (*****************
  * Builtin types *
@@ -316,7 +322,7 @@ let is_unknown typ =
 (* Number of values in a type *)
 let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
-| Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
+| Enumeration (vals,_) -> Newspeak.Nat.of_int (List.length vals)
 | Array _
 | Record _
 | Float _
@@ -327,9 +333,9 @@ let rec attr_get typ attr =
   match typ.trait, attr with
     | Signed (Some (a,_)),"first" -> typ, IntVal a
     | Signed (Some (_,b)),"last"  -> typ, IntVal b
-    | Enumeration values, "first"      -> typ, IntVal (Newspeak.Nat.of_int (snd
-                                                             (List.hd  values)))
-    | Enumeration values, "last"       -> typ, IntVal (Newspeak.Nat.of_int (snd
+    | Enumeration (values,_), "first" -> typ, IntVal (Newspeak.Nat.of_int (snd
+                                                        (List.hd  values)))
+    | Enumeration (values,_), "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
                                                       (List_utils.last values)))
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
@@ -399,7 +405,7 @@ let rec translate t =
                                ( Newspeak.Signed
                                , minimal_size_signed a b
                                ))
-  | Enumeration    v    -> Cir.Scalar
+  | Enumeration   (v,_) -> Cir.Scalar
                             (Newspeak.Int
                               ( Newspeak.Unsigned
                               , minimal_size_unsigned 
@@ -408,7 +414,7 @@ let rec translate t =
   | Array        (c,i)  -> Cir.Array  ( translate c
                                       , Some (Newspeak.Nat.to_int
                                                         (length_of i)))
-  | Record         flds      ->
+  | Record        flds  ->
       let build_offset (cflds, start_off) (id, st) =
         let ctyp = translate st in
           (id, (start_off, ctyp))::cflds, (start_off + Cir.size_of_typ ctyp)
