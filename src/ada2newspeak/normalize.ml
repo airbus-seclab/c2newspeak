@@ -683,7 +683,7 @@ in
       | T.IntVal   _ -> T.universal_integer
       | T.FloatVal _ -> T.universal_real
     in
-    Sym.s_add_variable gtbl ident loc t ~value
+    Sym.s_add_variable gtbl ident loc t ~value ~no_storage:true
   in
 
 let interpret_enumeration_clause agregate assoc cloc loc =
@@ -797,6 +797,7 @@ in
         Sym.s_add_type gtbl ident loc t;
         List.iter (fun (i,v) -> Sym.s_add_variable gtbl i loc t
                                                    ~value:(T.IntVal v)
+                                                   ~no_storage:true
         ) symbs;
         add_typ id typ_decl loc global ;
         typ_decl
@@ -830,7 +831,9 @@ in
           (* declared types : simplification *)
           | Declared(parent,Enum(symbs, size),_,_) ->
               List.iter (fun (i,_) -> Sym.s_add_variable gtbl i loc
-                                                          new_t) symbs;
+                                                          new_t
+                                                          ~no_storage:true
+              ) symbs;
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
           | Declared(_, (( IntegerRange(_,_)
@@ -876,18 +879,21 @@ in
           norm_typ_decl
     | IntegerRange(contrainte,taille) ->
         let decl = normalize_integer_range taille contrainte in
+        let range = match decl with
+          | IntegerRange (IntegerRangeConstraint (min,max), _)
+              -> T.(@...) min max
+          | _ -> failwith "unreachable"
+        in
         let id = normalize_ident_cur ident in
-        Sym.s_add_type gtbl ident loc (T.new_range T.null_range);
+        Sym.s_add_type gtbl ident loc (T.new_range range);
         add_typ id decl loc global;
         decl
     | Array a when a.array_size = None ->
         let norm_inter =  normalize_subtyp_indication a.array_index
         and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
         let subtyp = extract_subtyp norm_inter in
-        let (tpc,_,_,ttc) = a.array_component in
-        let (tpi,_,_,tti) = a.array_index     in
-        let tc = if ttc = T.unknown then subtyp_to_adatyp tpc else ttc in
-        let ti = if tti = T.unknown then subtyp_to_adatyp tpi else tti in
+        let tc = merge_types a.array_component in
+        let ti = merge_types a.array_index     in
         let t = T.new_array tc ti in
         Sym.s_add_type gtbl ident loc t;
         let contrainte = match subtyp with
@@ -920,7 +926,11 @@ in
     | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
                           "internal error : size of array already provided"
     | Record r -> begin
-                    Sym.s_add_type gtbl ident loc (T.unknown);
+                    let r' = List.map
+                               (fun (id, st) ->
+                                 (id, subtyp_to_adatyp st)
+                               ) r in
+                    Sym.s_add_type gtbl ident loc (T.new_record r');
                     let norm_fields =
                       List.map (fun (id, st) -> (id, normalize_subtyp st)) r
                     in
@@ -1245,8 +1255,8 @@ in
         let norm_block = normalize_block ?return_type block in
         let init_stmts = List.map build_init_stmt init in
           remove_decl_part decl_part;
-          let ctx1 = remove_params subprog_decl in
-          let ctx2 = Sym.exit_context gtbl in
+          let ctx1 = Sym.exit_context gtbl in
+          let ctx2 = remove_params subprog_decl in
           Ast.SubProgramBody( norm_subprog_decl
                             , norm_decl_part
                             , ctx1

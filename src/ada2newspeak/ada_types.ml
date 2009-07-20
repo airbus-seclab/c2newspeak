@@ -67,8 +67,7 @@ and t = {
 }
 
 and range =
-  | NullRange
-  | Range of Newspeak.Nat.t*Newspeak.Nat.t (* min <= max *)
+  Newspeak.Nat.t*Newspeak.Nat.t (* min <= max *)
 
 (* type for "traits" (type of types...) *)
 and trait_t =
@@ -92,12 +91,11 @@ let rec print t =
   in
   let p_range = function
     | None      -> "<unlimited>"
-    | Some NullRange     -> "{}"
-    | Some (Range (a,b)) ->  "["
-                            ^   Newspeak.Nat.to_string a
-                            ^";"
-                            ^   Newspeak.Nat.to_string b
-                            ^"]"
+    | Some (a,b) ->  "["
+                   ^ Newspeak.Nat.to_string a
+                   ^ ";"
+                   ^ Newspeak.Nat.to_string b
+                   ^ "]"
   in
   let p_trait = function
     | Unknown -> "Unknown"
@@ -126,18 +124,13 @@ let print_data = function
  * Ranges *
  **********)
 
-let null_range = NullRange
+let sizeof (min,max) =
+  max %- min %+ Newspeak.Nat.one
 
-let (@...) min max =
-  if min>max then NullRange
-  else Range (min,max)
+let (@...) x y = (x, y)
 
-let (@..) min max =
-  (Newspeak.Nat.of_int min) @... (Newspeak.Nat.of_int max)
-
-let sizeof = function
-  | NullRange       -> Newspeak.Nat.zero
-  | Range (min,max) -> (max %- min %+ Newspeak.Nat.one)
+let (@..)  x y = ( Newspeak.Nat.of_int x
+                 , Newspeak.Nat.of_int y)
 
 (*****************
  * Symbol tables *
@@ -240,12 +233,10 @@ let is_compatible one another =
  * Builtin types *
  *****************)
 
-(* TODO hook it with Ada_config *)
-let integer_first = min_int
-and integer_last  = max_int
+let integer_first = Newspeak.Nat.of_string "-2147483648"
+let integer_last  = Newspeak.Nat.of_string  "2147483647"
 
-let integer  = new_constr universal_integer
-                          (integer_first @.. integer_last)
+let integer  = new_constr universal_integer (integer_first, integer_last)
 
 let boolean = new_enumerated ["true" ; "false"]
 
@@ -334,8 +325,8 @@ let length_of typ = match typ.trait with
 
 let rec attr_get typ attr =
   match typ.trait, attr with
-    | Signed (Some Range(a,_)),"first" -> typ, IntVal a
-    | Signed (Some Range(_,b)),"last"  -> typ, IntVal b
+    | Signed (Some (a,_)),"first" -> typ, IntVal a
+    | Signed (Some (_,b)),"last"  -> typ, IntVal b
     | Enumeration values, "first"      -> typ, IntVal (Newspeak.Nat.of_int (snd
                                                              (List.hd  values)))
     | Enumeration values, "last"       -> typ, IntVal (Newspeak.Nat.of_int (snd
@@ -357,43 +348,75 @@ let rec attr_get typ attr =
     | Record _,_
     | Float _ , _
     | Enumeration _ , _
-    | Signed (Some Range(_,_)),  _
-    | Signed (None)           ,  _
-    | Signed (Some NullRange) ,  _
+    | Signed _,  _
                  -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 (****************
  *  Translator  *
  ****************)
 
-let minimal_size _a _b =
-  32 (* FIXME *)
+(**
+   Minimal integer n such as 
+       -(2^(n-1)) <= a <= b <= 2^(n-1) - 1
+ *)
+let minimal_size_signed a b =
+  let (i,two_pow_i) = ref 0, ref Newspeak.Nat.one in
+  let finished _ =
+       (Newspeak.Nat.compare (Newspeak.Nat.neg (!two_pow_i))
+                             a  <= 0)
+    && (Newspeak.Nat.compare b (Newspeak.Nat.add_int (-1) (!two_pow_i)) <= 0)
+  in
+  while (not (finished ())) do
+    incr i;
+    two_pow_i := Newspeak.Nat.mul_int 2 !two_pow_i;
+  done;
+  !i + 1
 
-let float_size d =
-  if d < 6 then
-    Npkcontext.report_error "translate"
-      "'digits attribute too small for floating point type"
-  else if (d < 11) then
-    16
-  else
-    32
+(**
+   Minimal integer n such as 
+       0 <= b <= 2^n - 1 
+ *)
+let minimal_size_unsigned b =
+  let (i,two_pow_i) = ref 0, ref 1 in
+  let finished _ =
+    b <= !two_pow_i - 1
+  in
+  while (not (finished ())) do
+    incr i;
+    two_pow_i := 2 * !two_pow_i;
+  done;
+  !i
+
+
+let float_size _d =
+  (* FIXME *)
+  32
 
 let rec translate t =
   let rec translate_trait = function
-  | Signed (Some Range (a,b)) -> Cir.Scalar (Newspeak.Int ( Newspeak.Signed
-                                                          , minimal_size a b))
-  | Enumeration      v        -> translate_trait (Signed(
-                                  Some(Range ( Newspeak.Nat.one
-                                             , Newspeak.Nat.of_int
-                                                 (List.length v)))))
-  | Float            d        -> Cir.Scalar (Newspeak.Float (float_size d))
-  | Array          (c,i)      -> Cir.Array  (translate c
-                                            , Some (Newspeak.Nat.to_int
+  | Signed (Some (a,b)) -> Cir.Scalar
+                             (Newspeak.Int
+                               ( Newspeak.Signed
+                               , minimal_size_signed a b
+                               ))
+  | Enumeration    v    -> Cir.Scalar
+                            (Newspeak.Int
+                              ( Newspeak.Unsigned
+                              , minimal_size_unsigned 
+                                 (snd (List_utils.last v))))
+  | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
+  | Array        (c,i)  -> Cir.Array  ( translate c
+                                      , Some (Newspeak.Nat.to_int
                                                         (length_of i)))
-  | Record         _flds      -> failwith "translate record"
+  | Record         flds      ->
+      let build_offset (cflds, start_off) (id, st) =
+        let ctyp = translate st in
+          (id, (start_off, ctyp))::cflds, (start_off + Cir.size_of_typ ctyp)
+      in
+        Cir.Struct (List.fold_left build_offset ([], 0) flds)
   | Unknown -> Npkcontext.report_error "Ada_types.translate"
                "Type of unknown trait remaining at translate time"
-  | Signed (None|Some NullRange) ->  Npkcontext.report_error
+  | Signed None ->  Npkcontext.report_error
                                     "Ada_types.translate"
                                     "Trying to translate <Signed None>"
   in translate_trait t.trait

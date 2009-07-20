@@ -55,9 +55,6 @@ type value = t * data_t
 (** The abstract type for ranges.  *)
 type range
 
-(** The null range, (holding no elements).  *)
-val null_range : range
-
 (**
  * Write a range from its bounds.
  * If [a <= b], [a @.. b] is the range of values between [a] and [b] ;

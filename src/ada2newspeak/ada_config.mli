@@ -31,3 +31,4 @@ val size_of_int     : int
 val size_of_float   : int
 
 val integer_constraint : Syntax_ada.contrainte
+

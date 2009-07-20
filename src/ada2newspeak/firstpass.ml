@@ -1496,8 +1496,9 @@ let translate compil_unit =
                                  ),loc)::(translate_block r)
             | Block (dp, ctx, blk) ->
                           Sym.push_saved_context gtbl ctx;
-                          ignore (translate_declarative_part dp);
+                          let t_dp  = translate_declarative_part dp in
                           let t_ctx = translate_saved_context ctx in
+                          ignore t_dp;
                           let res = (C.Block ((t_ctx@(translate_block blk)),
                                          None),loc)
                           in remove_declarative_part dp;
@@ -1616,25 +1617,19 @@ let translate compil_unit =
         let subtyp =  Ada_utils.extract_subtyp subtyp_ind in
         let read_only = const <> Variable in
         add_var loc subtyp ident false read_only;
-        Some (C.Decl(translate_subtyp subtyp,
-          ident),loc)
 
     | TypeDecl (idtyp,typ_decl) ->
-        translate_typ_declaration idtyp typ_decl loc false;
-        None
+        translate_typ_declaration idtyp typ_decl loc false
 
-    | SubtypDecl _ -> None
+    | SubtypDecl _ -> ()
 
-    | SpecDecl(_) -> Npkcontext.report_error
+    | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl(use_clause) -> Sym.s_add_use gtbl use_clause;
-                             None
-    | NumberDecl(ident, v) ->
-        add_number loc v false ident;
-        None
+    | UseDecl (use_clause) -> Sym.s_add_use gtbl use_clause
+    | NumberDecl(ident, v) -> add_number loc v false ident
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -1644,7 +1639,7 @@ let translate compil_unit =
             "sous-fonction, sous-procedure ou sous package non implemente"
 
   and translate_declarative_part decl_part =
-    List_utils.filter_map translate_declarative_item decl_part
+    List.iter translate_declarative_item decl_part
 
   and remove_basic_declaration basic = match basic with
     | ObjectDecl(ident, _, _) -> remove_symb ident
@@ -1666,7 +1661,7 @@ let translate compil_unit =
   and remove_declarative_part decl_part =
     List.iter remove_declarative_item decl_part
 
-  and add_funbody subprogspec decl_part block loc =
+  and add_funbody subprogspec decl_part ctx_dp ctx_param block loc =
     let search_spec name =
         try
           let symb =
@@ -1691,14 +1686,18 @@ let translate compil_unit =
       | Function (n,_,_) -> n
       | Procedure(n,_)   -> n in
 
-    let ftyp = search_spec name
-    and (params, (ret_id, args_ids)) = add_params subprogspec loc
-    and body_decl = translate_declarative_part decl_part
-    and body = translate_block block in
+    translate_declarative_part decl_part;
+    let ftyp = search_spec name in
+    let (params, (ret_id, args_ids)) = add_params subprogspec loc in
+    Sym.push_saved_context gtbl ctx_param;
+    Sym.push_saved_context gtbl ctx_dp;
+    let body_decl = translate_saved_context ctx_dp in
+    let body = translate_block block in
     let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
       remove_formals params;
       remove_declarative_part decl_part;
-
+      ignore (Sym.exit_context gtbl);
+      ignore (Sym.exit_context gtbl);
       Hashtbl.replace fun_decls (translate_name name)
         (ret_id, args_ids, ftyp, body)
 
@@ -1755,8 +1754,8 @@ let translate compil_unit =
   and translate_body body glob loc =
     Npkcontext.set_loc loc;
     match (body, glob) with
-      | (SubProgramBody(subprog_decl,decl_part, _ctx1, _ctx2, block), _) ->
-          add_funbody subprog_decl decl_part block loc
+      | (SubProgramBody(subprog_decl,decl_part, ctx1, ctx2, block), _) ->
+          add_funbody subprog_decl decl_part ctx1 ctx2 block loc
       | PackageBody(name, package_spec, _ctx, decl_part), true ->
           Sym.set_current gtbl name;
           (match package_spec with
