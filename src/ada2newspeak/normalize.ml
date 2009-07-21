@@ -287,7 +287,7 @@ and normalization compil_unit extern =
          (Sym.s_get_use gtbl))
   in
 
-  let add_typ nom typdecl location ~global =
+  let add_typ ?(enumtype=T.unknown) nom typdecl location ~global=
     let subtyp = match typdecl with
       | Array  _
       | Record _ -> Unconstrained(Declared(snd nom
@@ -298,9 +298,8 @@ and normalization compil_unit extern =
           let min = snd (List.hd symbs)
           and max = snd (List_utils.last symbs) in
           let contrainte = IntegerRangeConstraint(min, max) in
-          let t = T.new_enumerated (fst (List.split symbs)) in
           let typ = Declared(snd nom,typdecl, T.unknown,location) in
-            Constrained(typ, contrainte, true, t)
+            Constrained(typ, contrainte, true, enumtype)
 
       | IntegerRange(contrainte, _) ->
           Constrained(Declared(snd nom
@@ -739,8 +738,8 @@ in
         (symbs, size)
     in
 
-(*  let t = subtyp_to_adatyp (SubtypName (None,ident)) in
-    T.handle_representation_clause t symbs;*)
+    let _t = subtyp_to_adatyp (SubtypName (None,ident)) in
+ (*   T.handle_representation_clause t symbs; *)
 
     Enum(symbs, size)
 
@@ -802,7 +801,7 @@ in
         ) symbs;
         let typ_decl = enumeration_representation ident symbs
                                                   size represtbl loc in
-        add_typ id typ_decl loc global ;
+        add_typ ~enumtype:t id typ_decl loc ~global;
         typ_decl
     | DerivedType(subtyp_ind) ->
         let t = merge_types subtyp_ind in
