@@ -145,6 +145,8 @@ let process globals =
 	info
   in
 
+  (* TODO: think about it: composite definitions are never removed from 
+     the comptbl!! *)
   let find_compdef name =
     try Hashtbl.find comptbl name
     with Not_found -> 
@@ -460,12 +462,14 @@ let process globals =
       | CDecl (fields, is_struct) -> 
 	  let fields = List.map translate_field_decl fields in
 	  let decl = (fields, is_struct) in
+(* TODO: think about this, but there may be a bug in the removal of a local
+   variable with the same name!!
+*)
 	  let c = find_compdef x in
 	    c := Some decl;
 	    C.CDecl decl
 
-  and translate_stmt (x, loc) = 
-    Npkcontext.set_loc loc;
+  and translate_stmt x = 
     match x with
 	If (c, br1, br2) -> 
 	  let (c, _) = translate_exp c in
@@ -522,43 +526,31 @@ let process globals =
    rather remove side-effects before csyntax2CoreC.
 *)
   and translate_blk x = 
-    match x with 
-	(LocalDecl (x, d), loc)::tl -> 
-	  let decl = C.LocalDecl (x, translate_decl false loc x d) in
-	  let tl = translate_blk tl in
-	    remove_var x;
-	    (decl, loc)::tl
-
-      | (x, loc)::tl -> 
-	  let stmt = translate_stmt (x, loc) in
-	  let tl = translate_blk tl in
-	    (stmt, loc)::tl
-      | [] -> []
+    let (blk, _) = translate_blk_exp x in
+      blk
 
   and translate_blk_exp x =
-    let rec translate_aux x =
-      match x with
-	  (Exp e, loc)::[] -> 
-	    let (e, t) = translate_exp e in
-	      ([], (e, t, loc))
+    match x with
+	(Exp e, loc)::[] -> 
+	  Npkcontext.set_loc loc;
+	  let (e, t) = translate_exp e in
+	    ((C.Exp (e, t), loc)::[], t)
 
-	| (LocalDecl (x, d), loc)::tl -> 
-	    let decl = C.LocalDecl (x, translate_decl false loc x d) in
-	    let (tl, e) = translate_aux tl in
-	      remove_var x;
-	      ((decl, loc)::tl, e)
-		
-	| (hd, loc)::tl -> 
-	    let hd = (translate_stmt (hd, loc), loc) in
-	    let (blk, e) = translate_aux tl in
-	      (hd::blk, e)
-	| [] -> 
-	    Npkcontext.report_error "Csyntax2CoreC.translate_blk_exp" 
-	      "expression expected at end of block"
-    in
-    let (blk, (e, t, loc)) = translate_aux x in
-      (blk@(C.Exp (e, t), loc)::[], t)
-  
+      | (LocalDecl (x, d), loc)::tl -> 
+	  Npkcontext.set_loc loc;
+	  let decl = C.LocalDecl (x, translate_decl false loc x d) in
+	  let (tl, e) = translate_blk_exp tl in
+	    remove_var x;
+	    ((decl, loc)::tl, e)
+	      
+      | (x, loc)::tl -> 
+	  Npkcontext.set_loc loc;
+	  let hd = (translate_stmt x, loc) in
+	  let (blk, t) = translate_blk_exp tl in
+	    (hd::blk, t)
+
+      | [] -> ([], C.Void)
+      
   and translate_field_decl (t, x, _) = (x, translate_typ t)
 
   and translate_init t x =
