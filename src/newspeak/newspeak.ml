@@ -160,7 +160,6 @@ and cst =
 
 and unop =
     Belongs of bounds
-  (* TODO: warning coercion to unsigned long long can not be represented *)
   | Coerce of bounds
   | Not
   | BNot of bounds
