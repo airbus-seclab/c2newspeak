@@ -211,6 +211,7 @@ let report_asm tokens =
 %nonassoc prefix_OP
 %nonassoc PLUSPLUS MINUSMINUS
 %left     DOT ARROW
+%left     LPAREN
 
 %type <string list * Csyntax.t> parse
 %start parse
