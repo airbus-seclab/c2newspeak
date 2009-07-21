@@ -209,7 +209,7 @@ let report_asm tokens =
 %left     PLUS MINUS
 %left     STAR DIV MOD
 %nonassoc prefix_OP
-%nonassoc PLUSPLUS MINUSMINUS
+%right    PLUSPLUS MINUSMINUS NOT BNOT
 %left     DOT ARROW
 %left     LPAREN
 
