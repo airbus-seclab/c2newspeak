@@ -31,6 +31,7 @@
 module Nat = Newspeak.Nat
 
 (* TODO: have hashtables rather?? *)
+(* TODO: the set of globals should be a hashtbl rather!!!! *)
 type t = (string * glbinfo) list * (string * funinfo) list * assertion list
 
 and glbinfo = (decl * Newspeak.location)
@@ -241,7 +242,12 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
       Npkcontext.report_error "Csyntax.min_ftyp" 
 	"different return types for function"
     end;
-    (args_t, ret_t1)  
+    (args_t, ret_t1)
+
+let rec min_typ t1 t2 =
+  match (t1, t2) with
+      (Array (_, None), Array _) -> t2
+    | _ -> t1
 
 let rec string_of_exp e =
   match e with

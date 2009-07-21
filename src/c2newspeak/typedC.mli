@@ -158,6 +158,8 @@ val deref_typ: typ -> typ
 
 val min_ftyp: ftyp -> ftyp -> ftyp
 
+val min_typ: typ -> typ -> typ
+
 val string_of_exp: exp -> string
 
 val string_of_typ: typ -> string

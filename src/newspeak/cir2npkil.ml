@@ -281,7 +281,10 @@ let translate src_lang prog fnames =
     let (t, loc, init, _) = Hashtbl.find glbdecls x in
       Hashtbl.replace glbdecls x (t, loc, init, true)
   in
-(*TODO: remove normalize!!! *) 
+(* TODO: remove normalize!!! *) 
+(* TODO: this phase is stack memory intensive!! not nice!!! *)
+(* TODO: find a way to get rid of it!! For instance, put all variables at the
+   function scope level!! *)
   let init = Cir.normalize prog.init in
   let init = translate_blk init in
     Hashtbl.iter translate_glbdecl prog.globals;

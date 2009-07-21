@@ -106,22 +106,23 @@ let translate (globals, fundecls, spec) =
   in
 
   let update_global x name loc (t, storage) =
-    let (loc, storage) =
+    let info =
       try 
-	let (_, prev_loc, prev_storage) = Hashtbl.find used_globals name in
+	let (prev_t, prev_loc, prev_storage) = Hashtbl.find used_globals name in
+	let t = TypedC.min_typ t prev_t in
 	  match (prev_storage, storage) with
 	      (Npkil.Extern, _)  
-	    | (Npkil.Declared false, Npkil.Declared _) -> (loc, storage)
+	    | (Npkil.Declared false, Npkil.Declared _) -> (t, loc, storage)
 	    | (Npkil.Declared _, Npkil.Extern) 
 	    | (Npkil.Declared _, Npkil.Declared false) -> 
-		(prev_loc, prev_storage)
+		(t, prev_loc, prev_storage)
 	    | (Npkil.Declared true, Npkil.Declared true) -> 
 		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
-      with Not_found -> (loc, storage)
+      with Not_found -> (t, loc, storage)
     in
 (* TODO:TODO: remove used_globals in firstpass, done in cir2npkil?? *)
-      Hashtbl.replace used_globals name (t, loc, storage)
+      Hashtbl.replace used_globals name info
   in
 
   let get_static_name x loc =
@@ -1163,9 +1164,7 @@ let translate (globals, fundecls, spec) =
 
   let add_glbdecl name (t, loc, storage) =
     Npkcontext.set_loc loc;
-    try
-      let t = translate_typ t in
-	Hashtbl.add glbdecls name (t, loc, storage)
+    try	Hashtbl.add glbdecls name (translate_typ t, loc, storage)
     with _ -> 
       (* TODO: could at least print a warning here *)
       ()

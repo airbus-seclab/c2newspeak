@@ -296,11 +296,8 @@ let rec convert_loops _ = invalid_arg "Not implemented yet"
 
 (* Useful types, functions and variables *)
 
-module String_map = 
+module StringMap = 
   Map.Make (struct type t = string let compare = Pervasives.compare end)
-
-module Int_map = 
-  Map.Make (struct type t = int let compare = Pervasives.compare end)
 
 let rec seq sep f l =
   match l with
@@ -557,24 +554,24 @@ let dump_fundec name ((args_t, ret_t), body) =
 
 
 let dump_globals gdecls = 
-  (* TODO: Clean this mess... String_map *)
-  let glbs = ref (String_map.empty) in
+  (* TODO: Clean this mess... StringMap *)
+  let glbs = ref (StringMap.empty) in
     Hashtbl.iter 
-      (fun name info -> glbs := (String_map.add name info !glbs)) 
+      (fun name info -> glbs := (StringMap.add name info !glbs)) 
       gdecls;
-    String_map.iter dump_gdecl !glbs
+    StringMap.iter dump_gdecl !glbs
       
 (* Exported print functions *)
 let dump prog =
   List.iter (fun x -> print_endline x) prog.fnames;
-  (* TODO: Clean this mess... String_map *)
-  let funs = ref (String_map.empty) in
+  (* TODO: Clean this mess... StringMap *)
+  let funs = ref (StringMap.empty) in
   let collect_funbody name body =
-    funs := String_map.add name body !funs
+    funs := StringMap.add name body !funs
   in
   let init = string_of_blk 0 prog.init in
     Hashtbl.iter collect_funbody prog.fundecs;
-    String_map.iter dump_fundec !funs;
+    StringMap.iter dump_fundec !funs;
     dump_globals prog.globals;
     print_string init
 

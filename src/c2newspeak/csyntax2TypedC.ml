@@ -133,10 +133,10 @@ let process globals =
     try Hashtbl.find symbtbl x
     with Not_found -> 
       if (Gnuc.is_gnuc_token x) && (not !Npkcontext.accept_gnuc) then begin
-	Npkcontext.report_accept_warning "Csyntax2CoreC.process.find_symb" 
+	Npkcontext.report_accept_warning "Csyntax2TypedC.process.find_symb" 
 	  ("unknown identifier "^x^", maybe a GNU C symbol") Npkcontext.GnuC
       end;
-      Npkcontext.report_accept_warning "Csyntax2CoreC.process.find_symb" 
+      Npkcontext.report_accept_warning "Csyntax2TypedC.process.find_symb" 
 	("unknown identifier "^x^", maybe a function without prototype") 
 	Npkcontext.MissingFunDecl;
       let info = (C.Global x, C.Fun (None, C.int_typ)) in
@@ -443,8 +443,8 @@ let process globals =
 	  let t = translate_typ t in
 	  let name = if is_static then get_static_name x loc else x in
 	  let t = complete_typ_with_init t init in
-	    if is_global || is_extern then update_global x name t
-	    else if is_static 
+	    if is_global then update_global x name t
+	    else if is_static || is_extern
 	    then Hashtbl.add symbtbl x (C.Global name, t)
 	    else add_local (t, x);
 	    let init =
@@ -644,7 +644,7 @@ let process globals =
     in
       
       List.iter translate x;
-      (List.rev !glbdecls, List.rev !fundecls, List.rev !specs)
+      (!glbdecls, !fundecls, !specs)
   in
 
   let (glbdecls, fundecls, specs) = translate_globals globals in
