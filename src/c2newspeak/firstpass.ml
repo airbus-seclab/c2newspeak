@@ -493,10 +493,7 @@ let translate (globals, fundecls, spec) =
 	      C.exp_of_int (o / Config.size_of_byte)
 	      
     in
-    let e = translate e in
-      match (e, t) with
-	  (C.Lval (lv, _), (Array _|Fun _)) -> addr_of (lv, t)
-	| _ -> e
+      translate e
 
   and translate_funexp e =
     match e with
