@@ -467,8 +467,7 @@ let process globals =
   and translate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
     match x with
-	LocalDecl (x, d) -> C.LocalDecl (x, translate_decl false loc x d)
-      | If (c, br1, br2) -> 
+	If (c, br1, br2) -> 
 	  let (c, _) = translate_exp c in
 	  let br1 = translate_blk br1 in
 	  let br2 = translate_blk br2 in
@@ -496,6 +495,9 @@ let process globals =
       | Goto lbl -> C.Goto lbl
       | Label lbl -> C.Label lbl
       | UserSpec a ->  C.UserSpec (translate_assertion a)
+      | LocalDecl _ -> 
+	  Npkcontext.report_error "Csyntax2TypedC.translate_stmt"
+	    "unreachable statement"
 
   and translate_case (e, body, loc) = 
     let (e, _) = translate_exp e in
