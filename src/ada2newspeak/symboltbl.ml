@@ -94,7 +94,7 @@ and SymTable : sig
 
   open SymTable
 
-  let add_use t p =
+  let tbl_add_use t p =
     if (not (List.mem p t.t_use_list)) then
       t.t_use_list <- p::(t.t_use_list)
 
@@ -251,14 +251,14 @@ and SymTable : sig
                                   (Symset.filter (fun (m,_,_) -> m = id)
                                   t.t_tbl))
 
-  let find_type tbl n =
+  let tbl_find_type tbl n =
     cast_t (find_symbols tbl n)
 
-  let find_subprogram tbl n =
+  let tbl_find_subprogram tbl n =
     (fun (x,y) -> List.map T.from_fparam x,y)
         (cast_s (find_symbols tbl n))
 
-  let find_variable tbl ?expected_type n =
+  let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = match expected_type with
       | Some t when t <> T.unknown
           -> fun x ->    T.is_compatible x t
@@ -273,7 +273,7 @@ and SymTable : sig
     end;
     cast_v ~filter:(fun x -> ovl_predicate (fst x)) (find_symbols tbl n)
 
-  let find_unit t id =
+  let tbl_find_unit t id =
     match (find_symbols t id) with
     | [Unit x] -> Some x
     | _ -> None
@@ -285,8 +285,6 @@ and SymTable : sig
  ******************************************************************************)
 
   let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
-
-  let builtin_type x = find_type builtin_table x
 
   let _ =
     List.iter (fun (n,t) -> add_type builtin_table n Newspeak.unknown_loc t)
@@ -343,11 +341,11 @@ module SymMake(TR:Tree.TREE) = struct
 
   let is_with  s x = List.mem x s.s_with
 
-  let s_add_use s p =
+  let add_use s p =
     if (is_with s p || current s = Some p) then
-      add_use (top s) p
+      tbl_add_use (top s) p
     else
-      Npkcontext.report_error "Symboltbl.s_add_use"
+      Npkcontext.report_error "Symboltbl.add_use"
         (p^" is undefined")
 
   let s_get_use s =
@@ -441,7 +439,7 @@ module SymMake(TR:Tree.TREE) = struct
             match name with
               | None   -> create_context ()
               | Some n -> begin
-                            match (find_unit (TR.top s.s_stack) n) with
+                            match (tbl_find_unit (TR.top s.s_stack) n) with
                               | None   -> create_context ()
                               | Some u -> u
                           end
@@ -470,7 +468,7 @@ module SymMake(TR:Tree.TREE) = struct
     TR.nth s 2
 
   let s_find_abs desc f s p n =
-    match find_unit (library s.s_stack) p with
+    match tbl_find_unit (library s.s_stack) p with
       | Some tbl -> f tbl n
       | None     -> error ("No such package "^p^" when resolving a "^desc)
 
@@ -501,33 +499,33 @@ module SymMake(TR:Tree.TREE) = struct
              end
          end
 
-  let s_find_variable_value s ?expected_type (package,n) =
+  let find_variable_value s ?expected_type (package,n) =
     try
-      s_find "variable" (fun tbl n -> find_variable tbl ?expected_type n)
+      s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
               s ?package n
     with Not_found -> error ("Cannot find variable '"^n^"'")
 
-  let s_find_variable s ?expected_type (package,n) =
-    fst (s_find_variable_value s ?expected_type (package,n))
+  let find_variable s ?expected_type (package,n) =
+    fst (find_variable_value s ?expected_type (package,n))
 
-  let s_find_type s (package,n) =
+  let find_type s (package,n) =
     try
-      s_find "type" find_type s ?package n
+      s_find "type" tbl_find_type s ?package n
     with Not_found -> error ("Cannot find type '"^n^"'")
 
-  let s_find_subprogram s (package,n) =
+  let find_subprogram s (package,n) =
     try
-      s_find "subprogram" find_subprogram s ?package n
+      s_find "subprogram" tbl_find_subprogram s ?package n
     with Not_found -> error ("Cannot find subprogram '"^n^"'")
 
   let is_operator_overloaded s n =
     try begin
-      ignore (s_find "overloaded operator" find_subprogram s n);
+      ignore (s_find "overloaded operator" tbl_find_subprogram s n);
       true
     end
     with Not_found -> false
 
-  let s_add_variable s n loc ?value ?(no_storage=false) t =
+  let add_variable s n loc ?value ?(no_storage=false) t =
     Npkcontext.print_debug ("s_add_variable : adding '"
                            ^n
                            ^"' with "
@@ -538,10 +536,10 @@ module SymMake(TR:Tree.TREE) = struct
                            );
     add_variable (top s) n loc (t,value,no_storage)
 
-  let s_add_type s n v =
+  let add_type s n v =
     add_type (top s) n v
 
-  let s_add_subprogram s n v =
+  let add_subprogram s n v =
     add_subprogram (top s) n v
 
   let type_ovl_intersection s n1 n2 =

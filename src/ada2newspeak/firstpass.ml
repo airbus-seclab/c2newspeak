@@ -1628,7 +1628,7 @@ let translate compil_unit =
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
 
-    | UseDecl (use_clause) -> Sym.s_add_use gtbl use_clause
+    | UseDecl (use_clause) -> Sym.add_use gtbl use_clause
     | NumberDecl(ident, v) -> add_number loc v false ident
 
   and translate_declarative_item (item,loc) =
@@ -1721,7 +1721,7 @@ let translate compil_unit =
       | TypeDecl (idtyp, typ_decl) ->
           translate_typ_declaration idtyp typ_decl loc true
       | SubtypDecl _ -> ()
-      | UseDecl x -> Sym.s_add_use gtbl x
+      | UseDecl x -> Sym.add_use gtbl x
       | SpecDecl spec -> translate_spec spec loc false
       | NumberDecl(ident, v) -> add_number loc v true ident
 
@@ -1792,7 +1792,7 @@ let translate compil_unit =
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext x -> Sym.s_add_use gtbl x;
+      | UseContext x -> Sym.add_use gtbl x;
     );
   in
     (* corps de la fonction translate *)

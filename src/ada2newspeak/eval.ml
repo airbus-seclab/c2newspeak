@@ -115,7 +115,7 @@ let eval_static exp tbl =
 
   and eval_static_const name expected_type =
     try
-      match snd (Symboltbl.s_find_variable_value tbl ~expected_type name) with
+      match snd (Symboltbl.find_variable_value tbl ~expected_type name) with
         | None   -> raise NonStaticExpression
         | Some b -> b
     with Symboltbl.ParameterlessFunction _ -> raise NonStaticExpression

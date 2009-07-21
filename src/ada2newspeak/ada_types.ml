@@ -362,7 +362,7 @@ let rec attr_get typ attr =
  ****************)
 
 (**
-   Minimal integer n such as 
+   Minimal integer n such that
        -(2^(n-1)) <= a <= b <= 2^(n-1) - 1
  *)
 let minimal_size_signed a b =
@@ -379,8 +379,8 @@ let minimal_size_signed a b =
   !i + 1
 
 (**
-   Minimal integer n such as 
-       0 <= b <= 2^n - 1 
+   Minimal integer n such that
+       0 <= b <= 2^n - 1
  *)
 let minimal_size_unsigned b =
   let (i,two_pow_i) = ref 0, ref 1 in
@@ -408,7 +408,7 @@ let rec translate t =
   | Enumeration   (v,_) -> Cir.Scalar
                             (Newspeak.Int
                               ( Newspeak.Unsigned
-                              , minimal_size_unsigned 
+                              , minimal_size_unsigned
                                  (snd (List_utils.last v))))
   | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
   | Array        (c,i)  -> Cir.Array  ( translate c

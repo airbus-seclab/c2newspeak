@@ -111,41 +111,41 @@ val type_ovl_intersection : t
 
 (** Find data.  *)
 exception ParameterlessFunction of Ada_types.t
-val s_find_variable :    t
-                      -> ?expected_type:Ada_types.t
-                      -> string option * string
-           -> Ada_types.t
+val find_variable :    t
+                    -> ?expected_type:Ada_types.t
+                    -> string option * string
+         -> Ada_types.t
 
-val s_find_variable_value :    t
-                      -> ?expected_type:Ada_types.t
-                      -> string option * string
-           -> Ada_types.t*(Ada_types.data_t option)
+val find_variable_value :    t
+                    -> ?expected_type:Ada_types.t
+                    -> string option * string
+         -> Ada_types.t*(Ada_types.data_t option)
 
-val s_find_type     :    t
-                      -> string option * string
-           -> Ada_types.t
-val s_find_subprogram : t
-                      -> string option * string
+val find_type     :    t
+                    -> string option * string
+         -> Ada_types.t
+val find_subprogram : t
+                    -> string option * string
     -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
 
 val is_operator_overloaded : t -> string -> bool
 
 (** Add data.  *)
-val s_add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
-val s_add_variable : t -> string -> Newspeak.location
-                       -> ?value:Ada_types.data_t
-                       -> ?no_storage:bool
-                       -> Ada_types.t
-                         -> unit
+val add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
+val add_variable : t -> string -> Newspeak.location
+                     -> ?value:Ada_types.data_t
+                     -> ?no_storage:bool
+                     -> Ada_types.t
+                       -> unit
 
-val s_add_subprogram : t
-                  -> string
-                  -> Newspeak.location
-                  -> (string*bool*bool*Ada_types.t) list
-                  -> Ada_types.t option
+val add_subprogram : t
+                -> string
+                -> Newspeak.location
+                -> (string*bool*bool*Ada_types.t) list
+                -> Ada_types.t option
       -> unit
 
-val s_add_use : t -> string -> unit
+val add_use : t -> string -> unit
 
 (** Set the current package. *)
 val set_current       : t -> string -> unit
