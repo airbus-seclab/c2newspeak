@@ -50,9 +50,6 @@ and decl =
     VDecl of (string * typ * is_static * is_extern * init option)
 (* TODO: remove this: unnecessary!! *)
   | EDecl of exp
-(* struct or union: composite *)
-(* TODO: remove this: unnecessary!! *)
-  | CDecl of compdef
   
 and is_extern = bool
 

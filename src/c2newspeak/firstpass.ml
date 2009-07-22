@@ -741,7 +741,7 @@ let translate (globals, fundecls, spec) =
 	  let init = List.map build_set init in
 	  let decl = (C.Decl (translate_typ t, x), loc) in
 	    decl::init
-      | EDecl _ | CDecl _ -> []
+      | EDecl _ -> []
 
   (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp

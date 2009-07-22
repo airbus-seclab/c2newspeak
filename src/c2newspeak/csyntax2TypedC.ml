@@ -459,15 +459,15 @@ let process globals =
 	  let (e, t) = translate_exp e in
 	    Hashtbl.add symbtbl x (e, t);
 	    C.EDecl e
-      | CDecl (fields, is_struct) -> 
-	  let fields = List.map translate_field_decl fields in
-	  let decl = (fields, is_struct) in
-(* TODO: think about this, but there may be a bug in the removal of a local
-   variable with the same name!!
-*)
-	  let c = find_compdef x in
-	    c := Some decl;
-	    C.CDecl decl
+      | CDecl _ -> 
+	  Npkcontext.report_error "Csyntax2TypedC.translate_decl"
+	    "case unreachable"
+
+  and translate_cdecl x (fields, is_struct) =
+    let fields = List.map translate_field_decl fields in
+    let decl = (fields, is_struct) in
+    let c = find_compdef x in
+      c := Some decl
 
   and translate_stmt x = 
     match x with
@@ -537,14 +537,13 @@ let process globals =
 	    ((C.Exp (e, t), loc)::[], t)
 
 (* TODO: separate CDecl from other Decls in csyntax?? *)
-      | (LocalDecl (x, (CDecl _ as d)), loc)::tl -> 
+      | (LocalDecl (x, CDecl d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  (* TODO: call a distinct function?? *)
-	  let _ = translate_decl false loc x d in
+	  translate_cdecl x d;
 	  let (tl, e) = translate_blk_exp tl in
 	    Hashtbl.remove comptbl x;
 	    (tl, e)
-	      
+
       | (LocalDecl (x, d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
 	  let decl = C.LocalDecl (x, translate_decl false loc x d) in
@@ -638,6 +637,8 @@ let process globals =
 	    let f' = update_funsymb f static ft loc in
 	      fundecls := (f, f', ft, static, body, loc)::(!fundecls)
 		
+	| GlbDecl (x, CDecl d) -> translate_cdecl x d
+
 	| GlbDecl (x, d) -> 
 	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
 	      
