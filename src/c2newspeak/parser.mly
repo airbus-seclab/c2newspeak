@@ -202,16 +202,15 @@ let report_asm tokens =
 %left     BOR
 %left     BXOR
 %left     AMPERSAND
-%nonassoc EQEQ NOTEQ
-%left     GT GTEQ
-%left     LT LTEQ
+%left     EQEQ NOTEQ
+%left     GT GTEQ LT LTEQ
 %left     SHIFTL SHIFTR
 %left     PLUS MINUS
 %left     STAR DIV MOD
 %nonassoc prefix_OP
-%right    PLUSPLUS MINUSMINUS NOT BNOT
+%right    PLUSPLUS MINUSMINUS
 %left     DOT ARROW
-%left     LPAREN
+%left     LPAREN LBRACKET
 
 %type <string list * Csyntax.t> parse
 %start parse
@@ -243,8 +242,32 @@ translation_unit:
 ;;
 
 function_prologue:
-  declaration_specifiers declarator         { ($1, $2) }
+  declaration_specifiers 
+  function_declarator                       { ($1, $2) }
 ;;
+
+function_declarator:
+  pointer direct_declarator                { 
+    let (ptr, decl) = $2 in
+      (ptr+$1, decl)
+  }
+| direct_declarator                        { $1 }
+| pointer direct_declarator 
+      LPAREN identifier_list RPAREN
+      old_parameter_declaration_list       { 
+    Npkcontext.report_accept_warning "Parser.declarator"
+      "deprecated style of function definition" Npkcontext.DirtySyntax;
+	($1, Function ($2, build_funparams $4 $6))
+  }
+| direct_declarator 
+      LPAREN identifier_list RPAREN
+      old_parameter_declaration_list       { 
+    Npkcontext.report_accept_warning "Parser.declarator"
+      "deprecated style of function definition" Npkcontext.DirtySyntax;
+    (0, Function ($1, build_funparams $3 $5))
+  }
+;;
+
 
 function_definition:
   function_prologue compound_statement      { ($1, $2) }
@@ -293,13 +316,6 @@ direct_declarator:
 | direct_declarator 
   LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
 | direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
-| direct_declarator 
-      LPAREN identifier_list RPAREN
-      old_parameter_declaration_list       { 
-    Npkcontext.report_accept_warning "Parser.declarator"
-      "deprecated style of function definition" Npkcontext.DirtySyntax;
-    (0, Function ($1, build_funparams $3 $5))
-  }
 ;;
 
 identifier_list:
@@ -554,8 +570,8 @@ expression:
 | AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
 | STAR       expression    %prec prefix_OP { Index ($2, exp_of_int 0) }
 // TODO: factor these with unop non-terminal
-| BNOT       expression                    { Unop (BNot, $2) }
-| NOT        expression                    { Unop (Not, $2) }
+| BNOT       expression    %prec prefix_OP { Unop (BNot, $2) }
+| NOT        expression    %prec prefix_OP { Unop (Not, $2) }
 | MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
 | SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
@@ -584,11 +600,9 @@ expression:
 | expression GT        expression          { Binop (Gt, $1, $3) }
 | expression GTEQ      expression          { Unop (Not, Binop (Gt, $3, $1)) }
 | expression LT        expression          { Binop (Gt, $3, $1) }
-| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) 
-					   }
+| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) }
 | expression EQEQ      expression          { Binop (Eq, $1, $3) }
-| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) 
-					   }
+| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) }
 | expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
 | expression BXOR      expression          { Binop (BXor, $1, $3) }
 | expression BOR       expression          { Binop (BOr, $1, $3) }
@@ -598,13 +612,14 @@ expression:
 | expression OR expression                 { 
     IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
   }
-| expression QMARK 
-      expression COLON expression          {
+| expression QMARK expression_sequence
+    COLON expression           %prec QMARK {
 	Npkcontext.report_strict_warning "Parser.expression"
 	  "conditional expression";
 	IfExp (normalize_bexp $1, $3, $5)
   }
-| expression assignment_operator expression { Set ($1, $2, $3) }
+| expression assignment_operator
+                   expression     %prec EQ { Set ($1, $2, $3) }
 ;;
 
 expression_sequence:
