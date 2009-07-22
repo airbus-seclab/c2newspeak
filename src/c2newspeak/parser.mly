@@ -242,8 +242,32 @@ translation_unit:
 ;;
 
 function_prologue:
-  declaration_specifiers declarator         { ($1, $2) }
+  declaration_specifiers 
+  function_declarator                       { ($1, $2) }
 ;;
+
+function_declarator:
+  pointer direct_declarator                { 
+    let (ptr, decl) = $2 in
+      (ptr+$1, decl)
+  }
+| direct_declarator                        { $1 }
+| pointer direct_declarator 
+      LPAREN identifier_list RPAREN
+      old_parameter_declaration_list       { 
+    Npkcontext.report_accept_warning "Parser.declarator"
+      "deprecated style of function definition" Npkcontext.DirtySyntax;
+	($1, Function ($2, build_funparams $4 $6))
+  }
+| direct_declarator 
+      LPAREN identifier_list RPAREN
+      old_parameter_declaration_list       { 
+    Npkcontext.report_accept_warning "Parser.declarator"
+      "deprecated style of function definition" Npkcontext.DirtySyntax;
+    (0, Function ($1, build_funparams $3 $5))
+  }
+;;
+
 
 function_definition:
   function_prologue compound_statement      { ($1, $2) }
@@ -292,13 +316,6 @@ direct_declarator:
 | direct_declarator 
   LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
 | direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
-| direct_declarator 
-      LPAREN identifier_list RPAREN
-      old_parameter_declaration_list       { 
-    Npkcontext.report_accept_warning "Parser.declarator"
-      "deprecated style of function definition" Npkcontext.DirtySyntax;
-    (0, Function ($1, build_funparams $3 $5))
-  }
 ;;
 
 identifier_list:
