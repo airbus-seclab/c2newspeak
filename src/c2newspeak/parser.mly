@@ -202,7 +202,7 @@ let report_asm tokens =
 %left     BOR
 %left     BXOR
 %left     AMPERSAND
-%nonassoc EQEQ NOTEQ
+%left     EQEQ NOTEQ
 %left     GT GTEQ
 %left     LT LTEQ
 %left     SHIFTL SHIFTR
