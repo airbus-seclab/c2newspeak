@@ -23,13 +23,10 @@
   email: charles.hymans@penjili.org
 */
 
-void main()
-{
-  int x,y,z,r;
-  r = (x <  y) > z ;
-  r =  x <  y  > z ;
+int t[];
 
-  r =  x >  y  < z ;
-  r = (x >  y) < z ;
-
+void main() {
+  t[0] = 1;
 }
+
+int t[10];

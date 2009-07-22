@@ -42,10 +42,9 @@ and spec_token =
     | CstToken of Cir.cst
 
 and decl = 
-    VDecl of (typ * is_static * is_extern * init option)
+    VDecl of (string * typ * is_static * is_extern * init option)
+(* TODO: remove this: unnecessary!! *)
   | EDecl of exp
-(* struct or union: composite *)
-  | CDecl of compdef
 
 and is_extern = bool
 
@@ -157,6 +156,8 @@ val ftyp_of_typ: typ -> ftyp
 val deref_typ: typ -> typ
 
 val min_ftyp: ftyp -> ftyp -> ftyp
+
+val min_typ: typ -> typ -> typ
 
 val string_of_exp: exp -> string
 

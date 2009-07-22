@@ -85,10 +85,6 @@ let translate (globals, fundecls, spec) =
   let used_globals = Hashtbl.create 100 in
   (* Used to generate static variables names *)
   let current_fun = ref "" in
-  (* Counter of static variables, necessary to distinguish 2 statics in 
-     different scope of the same function, who would have the same name
-  *)
-  let static_cnt = ref 0 in
 
   let tmp_cnt = ref 0 in
 
@@ -106,33 +102,23 @@ let translate (globals, fundecls, spec) =
   in
 
   let update_global x name loc (t, storage) =
-    let (loc, storage) =
+    let info =
       try 
-	let (_, prev_loc, prev_storage) = Hashtbl.find used_globals name in
+	let (prev_t, prev_loc, prev_storage) = Hashtbl.find used_globals name in
+	let t = TypedC.min_typ t prev_t in
 	  match (prev_storage, storage) with
 	      (Npkil.Extern, _)  
-	    | (Npkil.Declared false, Npkil.Declared _) -> (loc, storage)
+	    | (Npkil.Declared false, Npkil.Declared _) -> (t, loc, storage)
 	    | (Npkil.Declared _, Npkil.Extern) 
 	    | (Npkil.Declared _, Npkil.Declared false) -> 
-		(prev_loc, prev_storage)
+		(t, prev_loc, prev_storage)
 	    | (Npkil.Declared true, Npkil.Declared true) -> 
 		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
-      with Not_found -> (loc, storage)
+      with Not_found -> (t, loc, storage)
     in
-(* TODO:TODO: remove used_globals in firstpass, done in cir2npkil?? *)
-      Hashtbl.replace used_globals name (t, loc, storage)
-  in
-
-  let get_static_name x loc =
-    let (fname, _, _) = loc in
-    let prefix = "!"^fname^"." in
-    let prefix = 
-      if !current_fun = "" then prefix else prefix^(!current_fun)^"."
-    in
-    let name = prefix^(string_of_int !static_cnt)^"."^x in
-      incr static_cnt;
-      name
+(* TODO: remove used_globals in firstpass, done in cir2npkil?? *)
+      Hashtbl.replace used_globals name info
   in
 
   let add_fundef f (ret, args) body t = 
@@ -162,7 +148,7 @@ let translate (globals, fundecls, spec) =
     let res = ref [] in
     let rec translate o t x =
       match (x, t) with
-(* TODO: move this case to csyntax2CoreC?? *)
+(* TODO: move this case to csyntax2TypedC?? *)
 	  ((Data (Str str, _)|Sequence ([(None, Data (Str str, _))])), 
 	   Array (Int (_, n), _)) when n = Config.size_of_char ->
 	    let seq = seq_of_string str in
@@ -242,7 +228,7 @@ let translate (globals, fundecls, spec) =
 	      "Firstpass.translate_init.translate_sequence" 
 	      "extra initializer for array" Npkcontext.DirtySyntax
 	      
-	(* TODO: code cleanup: We fill with zeros, because CIL does too. 
+	(* TODO:TODO:TODO!! code cleanup: We fill with zeros, because CIL does too. 
 	   But it shouldn't be done like that:
 	   the region should be init to 0 by default and then filled with
 	   values ?? *)
@@ -318,7 +304,7 @@ let translate (globals, fundecls, spec) =
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in
-	  declare_global false false name loc t (Some (Data (Str str, t)))
+	  declare_global false false name name loc t (Some (Data (Str str, t)))
       end;
       C.Global name
  
@@ -492,10 +478,7 @@ let translate (globals, fundecls, spec) =
 	      C.exp_of_int (o / Config.size_of_byte)
 	      
     in
-    let e = translate e in
-      match (e, t) with
-	  (C.Lval (lv, _), (Array _|Fun _)) -> addr_of (lv, t)
-	| _ -> e
+      translate e
 
   and translate_funexp e =
     match e with
@@ -739,11 +722,11 @@ let translate (globals, fundecls, spec) =
 
   and translate_local_decl loc x d =
     match d with
-	VDecl (Fun _, _, _, _) -> []
-      | VDecl (t, static, extern, init) when static || extern -> 
-	  declare_global static extern x loc t init;
+	VDecl (_, Fun _, _, _, _) -> []
+      | VDecl (name, t, static, extern, init) when static || extern -> 
+	  declare_global static extern x name loc t init;
 	  []
-      | VDecl (t, _, _, init) ->
+      | VDecl (_, t, _, _, init) ->
 	  (* TODO: see if more can be factored with translate_global_decl *) 
 	  let (init, t) = 
 	    match init with
@@ -758,7 +741,7 @@ let translate (globals, fundecls, spec) =
 	  let init = List.map build_set init in
 	  let decl = (C.Decl (translate_typ t, x), loc) in
 	    decl::init
-      | EDecl _ | CDecl _ -> []
+      | EDecl _ -> []
 
   (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
@@ -1120,12 +1103,11 @@ let translate (globals, fundecls, spec) =
 
 (* TODO: use this function at all points where translate_glb_init is called
    + simplify code of global declaration!!! *)
-  and declare_global static extern x loc t init =
-    let name = if static then get_static_name x loc else x in
-      update_global x name loc (t, Npkil.Extern);
-      let (t, init) = translate_glb_init loc name t init in
-      let init = if extern then Npkil.Extern else Npkil.Declared init in
-	update_global x name loc (t, init)
+  and declare_global _ extern x name loc t init =
+    update_global x name loc (t, Npkil.Extern);
+    let (t, init) = translate_glb_init loc name t init in
+    let init = if extern then Npkil.Extern else Npkil.Declared init in
+      update_global x name loc (t, init)
   in
 
   let translate_fundecl (f, (ft, _, body, loc)) =
@@ -1155,17 +1137,20 @@ let translate (globals, fundecls, spec) =
     (* TODO: check if this could not be incorporated in translate_decl!!!
     *)
     match d with
-	VDecl (Fun _, _, _, _) -> ()
-      | VDecl (t, static, extern, init) -> 
-	  declare_global static extern x loc t init
+(* TODO:TODO:TODO: remove funs in VDecl *)
+(* TODO:TODO:TODO: remove static from VDecl *)
+(* TODO:TODO:TODO: think about name and x difference, shouldn't there be only normalized
+   names in typedC? *)
+(* TODO:TODO:TODO: remove EDecl and CDecl *)
+	VDecl (_, Fun _, _, _, _) -> ()
+      | VDecl (name, t, static, extern, init) -> 
+	  declare_global static extern x name loc t init
       | _ -> ()
   in
 
   let add_glbdecl name (t, loc, storage) =
     Npkcontext.set_loc loc;
-    try
-      let t = translate_typ t in
-	Hashtbl.add glbdecls name (t, loc, storage)
+    try	Hashtbl.add glbdecls name (translate_typ t, loc, storage)
     with _ -> 
       (* TODO: could at least print a warning here *)
       ()
