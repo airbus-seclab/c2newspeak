@@ -209,7 +209,7 @@ let report_asm tokens =
 %left     PLUS MINUS
 %left     STAR DIV MOD
 %nonassoc prefix_OP
-%right    PLUSPLUS MINUSMINUS NOT BNOT
+%right    PLUSPLUS MINUSMINUS
 %left     DOT ARROW
 %left     LPAREN LBRACKET
 
@@ -554,8 +554,8 @@ expression:
 | AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
 | STAR       expression    %prec prefix_OP { Index ($2, exp_of_int 0) }
 // TODO: factor these with unop non-terminal
-| BNOT       expression                    { Unop (BNot, $2) }
-| NOT        expression                    { Unop (Not, $2) }
+| BNOT       expression    %prec prefix_OP { Unop (BNot, $2) }
+| NOT        expression    %prec prefix_OP { Unop (Not, $2) }
 | MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
 | SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
