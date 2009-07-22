@@ -30,6 +30,6 @@ void main()
   r =  x <  y  > z ;
 
   r =  x >  y  < z ;
-  r =  x > (y  < z);
+  r = (x >  y) < z ;
 
 }
