@@ -112,16 +112,21 @@ let check_package_body_against_spec ~body ~spec =
 
 let insert_constant ?t s =
   match s with
-  | T.IntVal   x -> Ast.CInt   x, (match t with Some t -> t | None -> T.universal_integer)
-  | T.BoolVal  x -> Ast.CBool  x, (match t with Some t -> t | None -> T.boolean)
-  | T.FloatVal x -> Ast.CFloat x, (match t with Some t -> t | None -> T.universal_real)
+  | T.IntVal   x -> Ast.CInt   x, Ada_utils.with_default t T.universal_integer
+  | T.BoolVal  x -> Ast.CBool  x, Ada_utils.with_default t T.boolean
+  | T.FloatVal x -> Ast.CFloat x, Ada_utils.with_default t T.universal_real
 
 let normalize_ident ident package extern =
   if extern then (package, ident)
             else (None   , ident)
 
 let build_init_stmt (x,exp,loc) =
-  Ast.Assign(Ast.Lval (Symboltbl.Lexical,x,assert_known(snd exp)), exp, true), loc
+  Ast.Assign(Ast.Lval ( Symboltbl.Lexical
+                      , x
+                      , assert_known(snd exp))
+            , exp
+            , true)
+  , loc
 
 let extract_subprog_spec ast =
     match ast with
@@ -548,18 +553,20 @@ and normalize_exp ?expected_type exp =
     | CBool  x -> Ast.CBool  x,T.boolean
     | CChar  x -> Ast.CChar  x,T.character
     | Var    n -> begin (* n may denote the name of a parameterless function *)
-                      try let (sc,t) = Sym.find_variable ?expected_type gtbl n in
-                          Ast.Var(sc,(snd n),(assert_known t)) ,t
-                      with
-                      | Symboltbl.Parameterless_function rt -> Ast.FunctionCall(Sym.Lexical, snd n, []) ,rt 
-                      | Symboltbl.Variable_no_storage (t,v) -> insert_constant ~t v
+                    try
+                      let (sc,t) = Sym.find_variable ?expected_type gtbl n in
+                      Ast.Var(sc,(snd n),(assert_known t)) ,t
+                    with
+                    | Sym.Parameterless_function rt ->
+                                      Ast.FunctionCall( Sym.Lexical
+                                                      , snd n
+                                                      , []) ,rt
+                    | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
                   end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
     | Qualified(subtyp, exp) -> let t = subtyp_to_adatyp subtyp in
-                                Ast.Qualified(normalize_subtyp subtyp,
-                                    normalize_exp ~expected_type:t exp)
-                                ,t
+                                fst (normalize_exp ~expected_type:t exp),t
     | FunctionCall(n, params) -> normalize_fcall (n, params)
     | Attribute (st, attr, Some exp) ->
         begin
@@ -868,7 +875,8 @@ in
         in
         let norm_typ_decl = DerivedType(new_subtyp_ind) in
         let base_type = T.new_derived (merge_types new_subtyp_ind) in
-          add_typ ~base_type (normalize_ident_cur ident) norm_typ_decl loc ~global;
+          add_typ ~base_type (normalize_ident_cur ident)
+                  norm_typ_decl loc ~global;
           (norm_typ_decl,new_t)
     | IntegerRange(contrainte,taille) ->
         let decl = normalize_integer_range taille contrainte in
@@ -977,7 +985,9 @@ in
                                           (subtyp_to_adatyp param.param_type)
               ;
            end;
-          { Ast.param_type    = assert_known(subtyp_to_adatyp (normalize_subtyp param.param_type))
+          { Ast.param_type    = assert_known (
+                                  subtyp_to_adatyp (
+                                    normalize_subtyp param.param_type))
           ; Ast.formal_name   = param.formal_name
           ; Ast.mode          = param.mode
           ; Ast.default_value = may normalize_exp param.default_value
@@ -1057,8 +1067,8 @@ in
                      ("internal error : constant without default value"
                       ^"or already evaluated")
     | TypeDecl(id,typ_decl,_) ->
-        let (norm_typ_decl,ty) = normalize_typ_decl id typ_decl loc global reptbl
-        in [Ast.TypeDecl(id,norm_typ_decl,assert_known ty)]
+        let (norm_typ_decl,t) = normalize_typ_decl id typ_decl loc global reptbl
+        in [Ast.TypeDecl(id,norm_typ_decl,assert_known t)]
     | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
     | NumberDecl(ident, exp) ->
        let value = Eval.eval_static_number (normalize_exp exp) gtbl in

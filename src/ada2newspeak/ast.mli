@@ -91,8 +91,6 @@ and exp_value =
   | CondExp      of expression (** a ? b : c *)
                   * expression
                   * expression
-  | Qualified    of Syntax_ada.subtyp
-                  * expression
 
 and  declarative_part = (declarative_item*Newspeak.location) list
 

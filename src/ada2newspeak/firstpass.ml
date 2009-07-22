@@ -50,7 +50,7 @@ exception AmbiguousTypeException
  *     variable is read-only.
  *)
 type symb =
-  | VarSymb  of C.lv    * Ada_types.t * bool * bool (** name, type, global?, ro? *)
+  | VarSymb  of C.lv * Ada_types.t * bool * bool (** name, type, global?, ro? *)
   | EnumSymb of C.exp   * Ada_types.t * bool (** TODO, typename, ro? *)
   | FunSymb  of C.funexp * Ast.sub_program_spec * bool * C.ftyp (** XXX *)
   | NumberSymb of T.data_t*bool (** XXX *)
@@ -606,8 +606,8 @@ let translate compil_unit =
     let loc = Npkcontext.get_loc () in
     let (tmp, decl, vid) = temp#create loc T.boolean in
     let instr_if = If (e_cond,
-                       [Assign(Lval (Sym.Lexical, tmp, snd e_then), e_then, false),loc],
-                       [Assign(Lval (Sym.Lexical, tmp, snd e_else), e_else, false),loc])
+           [Assign(Lval (Sym.Lexical, tmp, snd e_then), e_then, false),loc],
+           [Assign(Lval (Sym.Lexical, tmp, snd e_else), e_else, false),loc])
     in let tr_instr_if =
         translate_block [(instr_if,loc)]
     in
@@ -822,7 +822,6 @@ let translate compil_unit =
         let (bop, rtyp) = translate_binop binop exp1 exp2 in
         (T.check_exp typ bop), rtyp
     | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3
-    | Qualified(_subtyp, exp) -> translate_exp exp
     | FunctionCall(sc, name, arg_list) ->
         (*fonction ou lecture d'un element de tableau/matrice*)
         (* let (fname, spec, tr_typ) = find_fun_symb name in *)
@@ -840,11 +839,11 @@ let translate compil_unit =
 
                   let rec destroy subt = (*du plus gros vers plus petit*)
                     match (T.extract_array_types subt) with
-                    | Some (tc, ti) -> (ti, tc)::destroy tc 
+                    | Some (tc, ti) -> (ti, tc)::destroy tc
                     | None -> []
                   in
 
-                  let rec rebuild (lv:C.lv) (subt:(T.t*T.t) list) (arg_list:C.exp list)  =
+                  let rec rebuild lv subt arg_list =
                     let  last_exp = List.hd arg_list in
                     let (_subt_range, tpelt) = List_utils.last subt in
 
@@ -1206,7 +1205,8 @@ let translate compil_unit =
     let body_decl = translate_saved_context ctx_dp in
     let body = translate_block block in
     let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
-      Hashtbl.replace fun_decls (translate_name name) (ret_id, args_ids, ftyp, body);
+      Hashtbl.replace fun_decls (translate_name name)
+                      (ret_id, args_ids, ftyp, body);
       remove_formals params;
       remove_declarative_part decl_part;
       ignore (Sym.exit_context gtbl);

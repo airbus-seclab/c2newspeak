@@ -69,10 +69,11 @@ and SymTable : sig
      * Symbols.
      *)
     type symbol =
-      | Variable   of T.t*(T.data_t option)*bool (* if true, no storage will be allocated *)
       | Type       of T.t
       | Subprogram of ((T.f_param list)*T.t option)
       | Unit       of table
+      | Variable   of T.t*(T.data_t option)*bool (* if true, no storage *
+                                                  * will be allocated   *)
 
     and table = { mutable t_renaming : (string*Syntax_ada.name) list
                 ; mutable t_tbl      : Symset.t
@@ -83,10 +84,10 @@ and SymTable : sig
                 }
   end = struct
     type symbol =
-      | Variable   of T.t*(T.data_t option)*bool
       | Type       of T.t
       | Subprogram of ((T.f_param list)*T.t option)
       | Unit       of table
+      | Variable   of T.t*(T.data_t option)*bool
 
     and table = { mutable t_renaming : (string*Syntax_ada.name) list
                 ; mutable t_tbl      : Symset.t
@@ -298,10 +299,12 @@ and SymTable : sig
  *                                                                            *
  ******************************************************************************)
 
-  let builtin_table :table = create_table Lexical ~desc:"builtin" Newspeak.unknown_loc
+  let builtin_table = create_table Lexical ~desc:"builtin" Newspeak.unknown_loc
 
   let _ =
-    List.iter (fun (n,t) -> add_type builtin_table n Newspeak.unknown_loc t (In_package "std"))
+    List.iter (fun (n,t) -> add_type builtin_table n
+                                     Newspeak.unknown_loc
+                                     t (In_package "std"))
     [ "integer"  , T.integer
     ; "float"    , T.std_float
     ; "boolean"  , T.boolean
@@ -496,32 +499,6 @@ module SymMake(TR:Tree.TREE) = struct
                | Some (p,v) -> (p,v)
              end
          end
-
-  let rec normalize_name s name extern =
-    try
-      find_rec s.s_stack (fun t ->
-        try Some (List.assoc (snd name) t.t_renaming)
-        with Not_found -> None
-      )
-    with Not_found ->
-    if (not extern) then name
-    else let (parents,ident) = name in
-         let pack = current s in
-           match parents with
-             | None                    -> (pack   , ident)
-             | Some a when is_with s a -> (Some a , ident)
-             | b      when b = pack    -> (b , ident)
-             | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
-             ("unknown package "^(match parents with
-                                    | Some x -> x
-                                    | _      -> "<no name>"))
-
-  type resolved_name = Local of string | Global of string*string
-
-  let resolve_name s name =
-    match normalize_name s name true with
-      | None,id    -> Local id
-      | Some p, id -> Global (p, id)
 
   let find_variable_value s ?expected_type (package,n) =
     try

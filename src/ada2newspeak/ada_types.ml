@@ -77,7 +77,7 @@ and trait_t =
   | Array       of t*t               (* Component-index  *)
   | Record      of (string * t) list (* Fields           *)
   | Enumeration of (string*int) list (* Name-index       *)
- 
+
 (******************
  * Pretty-printer *
  ******************)
@@ -442,9 +442,10 @@ let rec translate t =
 
 let check_exp t exp =
   match t.trait with
-  | Signed (Some (a,b)) -> Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known (Newspeak.Nat.add_int 1 b))
-                                    , exp
-                                    )
+  | Signed (Some (a,b)) ->
+      Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known (Newspeak.Nat.add_int 1 b))
+               , exp
+               )
   | _ -> exp
 
 (**

@@ -97,12 +97,7 @@ val push_saved_context : t -> context -> unit
  *)
 val extract_variables : context -> (string*Ada_types.t*Newspeak.location) list
 
-(** FIXME document exact specs *)
-val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
-
 type scope = Lexical | In_package of string
-type resolved_name = Local of string | Global of string*string
-val resolve_name : t -> Syntax_ada.name -> resolved_name
 
 (**
  * Find the intersection of possible types.

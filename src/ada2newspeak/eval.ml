@@ -81,9 +81,6 @@ let eval_static exp tbl =
                    "unexpected type for conditional expression"
         end
 
-    | Ast.Qualified(_subtyp, exp) ->
-        eval_static_exp exp
-
   (**
    * Evaluate statically a binary expression.
    * expected_typ is the expected type of the result, not the operands.
@@ -120,7 +117,8 @@ let eval_static exp tbl =
         | Symboltbl.In_package p -> Some p
       in
       let (package,id) = name in
-      match snd(snd (Symboltbl.find_variable_value tbl ~expected_type (convert_scope package,id))) with
+      match snd(snd (Symboltbl.find_variable_value tbl ~expected_type
+                      (convert_scope package,id))) with
         | None   -> raise NonStaticExpression
         | Some b -> b
     with

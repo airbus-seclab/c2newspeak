@@ -372,7 +372,7 @@ let subtyp_to_adatyp gtbl st =
                                 end
 
 let merge_types gtbl (tp,_,_,st) =
-  let res = 
+  let res =
     if T.is_unknown st then subtyp_to_adatyp gtbl tp
     else st
   in
