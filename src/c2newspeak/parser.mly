@@ -584,11 +584,9 @@ expression:
 | expression GT        expression          { Binop (Gt, $1, $3) }
 | expression GTEQ      expression          { Unop (Not, Binop (Gt, $3, $1)) }
 | expression LT        expression          { Binop (Gt, $3, $1) }
-| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) 
-					   }
+| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) }
 | expression EQEQ      expression          { Binop (Eq, $1, $3) }
-| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) 
-					   }
+| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) }
 | expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
 | expression BXOR      expression          { Binop (BXor, $1, $3) }
 | expression BOR       expression          { Binop (BOr, $1, $3) }
@@ -599,7 +597,7 @@ expression:
     IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
   }
 | expression QMARK 
-      expression COLON expression          {
+      expression_sequence COLON expression {
 	Npkcontext.report_strict_warning "Parser.expression"
 	  "conditional expression";
 	IfExp (normalize_bexp $1, $3, $5)
