@@ -196,7 +196,7 @@ let report_asm tokens =
 %nonassoc ELSE
 
 %right    EQ PLUSEQ MINUSEQ STAREQ DIVEQ MODEQ OREQ AMPERSANDEQ SHIFTLEQ SHIFTREQ BXOREQ
-%right    QMARK
+%right    QMARK conditional_EXP
 %left     OR
 %left     AND
 %left     BOR
@@ -595,8 +595,8 @@ expression:
 | expression OR expression                 { 
     IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
   }
-| expression QMARK 
-      expression_sequence COLON expression {
+| expression QMARK expression_sequence
+    COLON expression %prec conditional_EXP {
 	Npkcontext.report_strict_warning "Parser.expression"
 	  "conditional expression";
 	IfExp (normalize_bexp $1, $3, $5)
