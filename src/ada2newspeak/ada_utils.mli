@@ -46,6 +46,11 @@ val mkerror : verbose_level -> string -> (string -> unit)
  *)
 val nat_of_bool : bool -> Newspeak.Nat.t
 
+val merge_types : Symboltbl.t -> Syntax_ada.subtyp_indication -> Ada_types.t
+
+val subtyp_to_adatyp : Symboltbl.t -> Syntax_ada.subtyp -> Ada_types.t
+val    typ_to_adatyp : Syntax_ada.typ    -> Ada_types.t
+
 (**
  * Check bounds.
  * [between a b n] evaluates to [a <= n <= b].

@@ -13,7 +13,7 @@ void t058(void) {
    -->
     (t058.adb:5#5)^guard((0-_int32 > 15));
     (t058.adb:7#10)^{
-      int32 !tmp1;
+      int32 value_of_t100;
       (t058.adb:7#10)^{
         int32 t100.arg1;
         (t058.adb:7#10)^0- =(int32) 2;
@@ -24,7 +24,7 @@ void t058(void) {
    -->
     (t058.adb:5#5)^guard(! (0-_int32 > 15));
     (t058.adb:9#10)^{
-      int32 !tmp2;
+      int32 value_of_t100;
       (t058.adb:9#10)^{
         int32 t100.arg1;
         (t058.adb:9#10)^0- =(int32) -2;

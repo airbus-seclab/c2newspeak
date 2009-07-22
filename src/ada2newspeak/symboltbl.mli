@@ -100,6 +100,10 @@ val extract_variables : context -> (string*Ada_types.t*Newspeak.location) list
 (** FIXME document exact specs *)
 val normalize_name    : t -> Syntax_ada.name -> bool -> Syntax_ada.name
 
+type scope = Lexical | In_package of string
+type resolved_name = Local of string | Global of string*string
+val resolve_name : t -> Syntax_ada.name -> resolved_name
+
 (**
  * Find the intersection of possible types.
  * Used for example to resolve overloading in binary operations.
@@ -110,23 +114,27 @@ val type_ovl_intersection : t
            -> Ada_types.t
 
 (** Find data.  *)
-exception ParameterlessFunction of Ada_types.t
+
+exception Parameterless_function of Ada_types.t
+exception Variable_no_storage    of Ada_types.t * Ada_types.data_t
+
 val find_variable :    t
                     -> ?expected_type:Ada_types.t
-                    -> string option * string
-         -> Ada_types.t
+                    -> string option*string
+         -> scope * Ada_types.t
 
 val find_variable_value :    t
                     -> ?expected_type:Ada_types.t
-                    -> string option * string
-         -> Ada_types.t*(Ada_types.data_t option)
+                    -> string option*string
+         -> scope * (Ada_types.t*(Ada_types.data_t option))
 
 val find_type     :    t
                     -> string option * string
-         -> Ada_types.t
+         -> scope * Ada_types.t
+
 val find_subprogram : t
                     -> string option * string
-    -> (string*bool*bool*Ada_types.t) list * Ada_types.t option
+    -> scope * ((string*bool*bool*Ada_types.t) list * Ada_types.t option)
 
 val is_operator_overloaded : t -> string -> bool
 

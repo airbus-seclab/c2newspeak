@@ -36,9 +36,9 @@ ada2newspeak.FILES=\
 	params \
 	ada_config \
 	ada_types \
+	symboltbl \
 	ada_utils \
 	syntax_ada print_syntax_ada \
-	symboltbl \
 	ast \
 	typecheck \
 	eval \

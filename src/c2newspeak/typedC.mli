@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: is it possible to force in the data-type things like:
+   &t[0] replaces t whenever necessary
+*)
+
 type t = (string * glbinfo) list * (string * funinfo) list * assertion list
 
 and glbinfo = (decl * Newspeak.location)

@@ -53,6 +53,7 @@ let t_assert x msg =
   if (not x) then
     error ("Type assertion failed : "^msg)
 
+
 let type_of_binop op t1 t2 = match op with
   | Eq    -> expect ~desc:"binary =" t1 t2;
              T.boolean
@@ -68,11 +69,11 @@ let type_of_binop op t1 t2 = match op with
                     t_assert (T.is_numeric t1)
                            "Binary adding operator is not defined -- 4.5.3.(1)"
                     ;
-                    t1
+                    T.coerce_types t1 t2
   | Mult | Div -> expect ~desc:"binary multiplying" t1 t2;
                   t_assert (T.is_float t1 || T.is_integer t1)
                     "Multiplying operator is not defined -- 4.5.5.(2)";
-                  t1
+                  T.coerce_types t1 t2
   | Rem  | Mod -> expect ~desc:"binary multiplying" t1 t2;
                   t_assert (T.is_integer t1)
                     "Multiplying operator is not defined -- 4.5.5.(2)";

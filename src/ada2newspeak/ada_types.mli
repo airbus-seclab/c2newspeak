@@ -84,6 +84,8 @@ val sizeof : range -> Newspeak.Nat.t
  *)
 val unknown        : t
 
+val mk_unknown : string -> t
+
 (** Derived type. (structural copy) *)
 val new_derived    : t -> t
 
@@ -126,6 +128,20 @@ val is_compatible : t -> t -> bool
 
 (* Precondition : (is_record t) *)
 val handle_representation_clause : t -> (string * Newspeak.Nat.t) list -> unit
+
+(**
+ * unless (is_array t), will return None.
+ * Returns (component, index)
+ *)
+val extract_array_types : t -> (t * t) option
+
+(** Precondition : is_unknown t *)
+val get_reason : t -> string
+
+(**
+ * Coercion from universal types to finite types.
+ *)
+val coerce_types : t -> t -> t
 
 (**
  * Pretty-printer for types.
@@ -179,6 +195,8 @@ val is_unknown  : t -> bool
  ****************)
 
 val translate : t -> Cir.typ
+
+val check_exp : t -> Cir.exp -> Cir.exp
 
 (*************************
  * Subprogram parameters *

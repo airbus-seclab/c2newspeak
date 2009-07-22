@@ -25,10 +25,6 @@
 
 *)
 
-type name =
-  | Local  of string
-  | Global of string list*string
-
 type binary_op =
 | Plus
 | Minus
@@ -58,7 +54,7 @@ and instruction =
   | Loop          of iteration_scheme
                    * block
   | Exit
-  | ProcedureCall of Syntax_ada.name
+  | ProcedureCall of Symboltbl.scope * string
                    * argument list
   | Case          of expression
                    * (expression*block) list
@@ -68,7 +64,7 @@ and instruction =
                    * block
 
 and lval =
-  | Lval        of Syntax_ada.name
+  | Lval        of Symboltbl.scope * string * Ada_types.t
   | ArrayAccess of lval
                  * expression
 
@@ -85,8 +81,8 @@ and exp_value =
   | CFloat       of float
   | CBool        of bool
   | CChar        of int
-  | Var          of Syntax_ada.name
-  | FunctionCall of Syntax_ada.name
+  | Var          of Symboltbl.scope * string * Ada_types.t
+  | FunctionCall of Symboltbl.scope * string
                   * argument list
   | Not          of expression
   | Binary       of binary_op
@@ -103,7 +99,7 @@ and  declarative_part = (declarative_item*Newspeak.location) list
 and param = {
         formal_name   : string;
         mode          : Syntax_ada.param_mode;
-        param_type    : Syntax_ada.subtyp;
+        param_type    : Ada_types.t;
         default_value : expression option;
 }
 
@@ -131,7 +127,7 @@ and basic_declaration =
   | ObjectDecl      of string
                      * Syntax_ada.subtyp_indication
                      * object_state
-  | TypeDecl        of string*Syntax_ada.typ_declaration
+  | TypeDecl        of string*Syntax_ada.typ_declaration*Ada_types.t
   | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string
@@ -154,7 +150,7 @@ and context_clause =
   | UseContext of string
 
 and sub_program_spec =
-  | Function  of Syntax_ada.name*param list*Syntax_ada.subtyp
+  | Function  of Syntax_ada.name*param list*Ada_types.t
   | Procedure of Syntax_ada.name*param list
 
 and package_spec = string

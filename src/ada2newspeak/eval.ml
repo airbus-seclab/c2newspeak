@@ -63,7 +63,7 @@ let eval_static exp tbl =
     | Ast.CFloat f -> T.FloatVal(f)
     | Ast.CChar  c -> T.IntVal (Nat.of_int c)
     | Ast.CBool  b -> T.BoolVal b
-    | Ast.Var    v -> eval_static_const v t
+    | Ast.Var (s,v,_) -> eval_static_const (s,v) t
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Not exp -> begin
                        match (eval_static_exp exp) with
@@ -115,10 +115,17 @@ let eval_static exp tbl =
 
   and eval_static_const name expected_type =
     try
-      match snd (Symboltbl.find_variable_value tbl ~expected_type name) with
+      let convert_scope = function
+        | Symboltbl.Lexical -> None
+        | Symboltbl.In_package p -> Some p
+      in
+      let (package,id) = name in
+      match snd(snd (Symboltbl.find_variable_value tbl ~expected_type (convert_scope package,id))) with
         | None   -> raise NonStaticExpression
         | Some b -> b
-    with Symboltbl.ParameterlessFunction _ -> raise NonStaticExpression
+    with
+      | Symboltbl.Parameterless_function _ -> raise NonStaticExpression
+      | Symboltbl.Variable_no_storage (_,data) -> data
 
   in
       eval_static_exp exp

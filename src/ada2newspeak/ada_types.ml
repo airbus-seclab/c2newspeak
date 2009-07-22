@@ -71,14 +71,13 @@ and range =
 
 (* type for "traits" (type of types...) *)
 and trait_t =
-  | Unknown
-  | Signed of range option              (* Range constraint *)
-  | Float of int                        (* Digits *)
-  | Array of t*t                        (* Component-index *)
-  | Record of (string * t) list         (* Fields *)
-  | Enumeration of (string*int) list    (* Name-index, repr *)
-                 * ((string * Newspeak.Nat.t) list ref)
-
+  | Unknown     of string            (* Reason *)
+  | Signed      of range option      (* Range constraint *)
+  | Float       of int               (* Digits           *)
+  | Array       of t*t               (* Component-index  *)
+  | Record      of (string * t) list (* Fields           *)
+  | Enumeration of (string*int) list (* Name-index       *)
+ 
 (******************
  * Pretty-printer *
  ******************)
@@ -98,10 +97,10 @@ let rec print t =
                    ^ "]"
   in
   let p_trait = function
-    | Unknown -> "Unknown"
+    | Unknown _ -> "Unknown"
     | Signed  r -> "Signed " ^p_range r
     | Float   d -> "Float "  ^string_of_int d
-    | Enumeration (v,_) -> "Enum (length = "^string_of_int (List.length v)^")"
+    | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
                   ^print c^"; index = "
                   ^print i
@@ -158,7 +157,10 @@ let type_stub = {
   trait   = Signed None;
 }
 
-let unknown = {type_stub with trait = Unknown}
+
+let mk_unknown reason = {type_stub with trait = Unknown reason}
+
+let unknown = mk_unknown "<No reason provided>"
 
 let universal_integer = { type_stub with trait = Signed None; }
 
@@ -172,7 +174,7 @@ let new_enumerated values =
     let ivalues = with_indices values 0 in
     {
       type_stub with
-      trait = Enumeration (ivalues, ref []);
+      trait = Enumeration ivalues;
     }
 
 let new_derived old =
@@ -229,11 +231,18 @@ let is_compatible one another =
           | Float     _    , Float 100       -> true
           | _ -> false)
 
-let handle_representation_clause t l =
+let handle_representation_clause _t _l =
+  invalid_arg ("handle_representaion_clause")
+
+let extract_array_types t =
   match t.trait with
-  | Enumeration (_, translate_list) -> translate_list := l
-  | _ -> invalid_arg ("handle_representaion_clause : got "
-                    ^ print t)
+  | Array (c, i) -> Some (c,i)
+  | _            -> None
+
+let get_reason t =
+  match t.trait with
+  | Unknown r -> r
+  | _ -> invalid_arg "get_reason"
 
 (*****************
  * Builtin types *
@@ -273,7 +282,7 @@ let is_boolean typ =
 
 let is_integer typ =
   match typ.trait with
-  | Unknown       -> false
+  | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Enumeration _ -> false
@@ -282,7 +291,7 @@ let is_integer typ =
 
 let is_discrete typ =
   match typ.trait with
-  | Unknown       -> false
+  | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Enumeration _ -> true
@@ -291,7 +300,7 @@ let is_discrete typ =
 
 let is_numeric typ =
   match typ.trait with
-  | Unknown       -> false
+  | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Enumeration _ -> false
@@ -300,7 +309,7 @@ let is_numeric typ =
 
 let is_scalar typ =
   match typ.trait with
-  | Unknown       -> false
+  | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Float       _ -> true
@@ -309,7 +318,7 @@ let is_scalar typ =
 
 let is_float typ =
   match typ.trait with
-  | Unknown       -> false
+  | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Float       _ -> true
@@ -317,25 +326,31 @@ let is_float typ =
   | Signed      _ -> false
 
 let is_unknown typ =
-  typ.trait = Unknown
+  match typ.trait with
+  | Unknown     _ -> true
+  | Array       _ -> false
+  | Record      _ -> false
+  | Float       _ -> false
+  | Enumeration _ -> false
+  | Signed      _ -> false
 
 (* Number of values in a type *)
 let length_of typ = match typ.trait with
 | Signed (Some r) -> sizeof r
-| Enumeration (vals,_) -> Newspeak.Nat.of_int (List.length vals)
+| Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
 | Array _
 | Record _
 | Float _
-| Unknown
+| Unknown _
 | Signed None -> Npkcontext.report_error "length_of" "Type with no size"
 
 let rec attr_get typ attr =
   match typ.trait, attr with
     | Signed (Some (a,_)),"first" -> typ, IntVal a
     | Signed (Some (_,b)),"last"  -> typ, IntVal b
-    | Enumeration (values,_), "first" -> typ, IntVal (Newspeak.Nat.of_int (snd
-                                                        (List.hd  values)))
-    | Enumeration (values,_), "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
+    | Enumeration values, "first" -> typ, IntVal (Newspeak.Nat.of_int (snd
+                                                    (List.hd  values)))
+    | Enumeration values, "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
                                                       (List_utils.last values)))
     | Array (_,ind) , ("first"|"last"|"length")  ->
         begin
@@ -349,12 +364,12 @@ let rec attr_get typ attr =
     | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
     | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
     | _ , "succ" when is_scalar typ -> failwith "succ"
-    | Unknown, _
-    | Array _, _
-    | Record _,_
-    | Float _ , _
+    | Unknown     _ , _
+    | Array       _ , _
+    | Record      _ , _
+    | Float       _ , _
     | Enumeration _ , _
-    | Signed _,  _
+    | Signed      _ , _
                  -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 (****************
@@ -393,7 +408,6 @@ let minimal_size_unsigned b =
   done;
   !i
 
-
 let float_size _d =
   (* FIXME *)
   32
@@ -405,7 +419,7 @@ let rec translate t =
                                ( Newspeak.Signed
                                , minimal_size_signed a b
                                ))
-  | Enumeration   (v,_) -> Cir.Scalar
+  | Enumeration    v    -> Cir.Scalar
                             (Newspeak.Int
                               ( Newspeak.Unsigned
                               , minimal_size_unsigned
@@ -420,12 +434,18 @@ let rec translate t =
           (id, (start_off, ctyp))::cflds, (start_off + Cir.size_of_typ ctyp)
       in
         Cir.Struct (List.fold_left build_offset ([], 0) flds)
-  | Unknown -> Npkcontext.report_error "Ada_types.translate"
+  | Unknown _ -> Npkcontext.report_error "Ada_types.translate"
                "Type of unknown trait remaining at translate time"
-  | Signed None ->  Npkcontext.report_error
-                                    "Ada_types.translate"
-                                    "Trying to translate <Signed None>"
+  | Signed None ->  Npkcontext.print_debug "translating univ_int as Integer";
+                    translate_trait (integer.trait)
   in translate_trait t.trait
+
+let check_exp t exp =
+  match t.trait with
+  | Signed (Some (a,b)) -> Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known (Newspeak.Nat.add_int 1 b))
+                                    , exp
+                                    )
+  | _ -> exp
 
 (**
  * Subprogram parameters.
@@ -439,3 +459,8 @@ type f_param = { fp_name : string
 
 let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
 let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
+
+let coerce_types a b = match (a.trait,b.trait) with
+  | Signed (Some _), Signed None -> a
+  | Signed None, Signed (Some _) -> b
+  | _ -> a

@@ -347,3 +347,37 @@ let operator_of_string s = match s with
 let may f = function
   | None -> None
   | Some v -> Some (f v)
+
+let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
+  | Integer            -> T.integer
+  | IntegerConst       -> T.universal_integer
+  | Float              -> T.std_float
+  | Boolean            -> T.boolean
+  | Character          -> T.character
+  | Declared (_,_,t,_) -> t
+
+let subtyp_to_adatyp gtbl st =
+  match st with
+  | Unconstrained t      -> (*T.new_unconstr *) (typ_to_adatyp t)
+  | Constrained (_,_,_,t) -> t
+  | SubtypName  n          -> try
+                                snd(Symboltbl.find_type gtbl n)
+                              with Not_found ->
+                                begin
+                                  Npkcontext.report_warning "ST2AT"
+                                    ("Cannot find type '"
+                                    ^name_to_string n
+                                    ^"'");
+                                  T.unknown;
+                                end
+
+let merge_types gtbl (tp,_,_,st) =
+  let res = 
+    if T.is_unknown st then subtyp_to_adatyp gtbl tp
+    else st
+  in
+  if (T.is_unknown res) then
+    Npkcontext.report_warning "merge_types"
+    ("merged subtype indication into unknown type ("^T.get_reason res^")");
+  res
+

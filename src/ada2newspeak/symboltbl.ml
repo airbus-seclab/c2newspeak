@@ -27,13 +27,16 @@ module T = Ada_types
 let error x =
   Npkcontext.report_error "Symbol table" x
 
-exception ParameterlessFunction of T.t
+type scope = Lexical | In_package of string
+
+exception Parameterless_function of T.t
+exception Variable_no_storage    of T.t * T.data_t
 
 module Table = struct
 
   module rec Symset : sig
     type t
-    type elt = string*Newspeak.location*SymTable.symbol
+    type elt = scope*string*Newspeak.location*SymTable.symbol
 
     val empty : t
     val iter : (elt -> unit) -> t -> unit
@@ -42,7 +45,7 @@ module Table = struct
     val filter : (elt -> bool) -> t -> t
 
   end = struct
-    type elt = string*Newspeak.location*SymTable.symbol
+    type elt = scope*string*Newspeak.location*SymTable.symbol
     type t = elt list
 
     let add e sy =
@@ -66,7 +69,7 @@ and SymTable : sig
      * Symbols.
      *)
     type symbol =
-      | Variable   of T.t*(T.data_t option)*bool
+      | Variable   of T.t*(T.data_t option)*bool (* if true, no storage will be allocated *)
       | Type       of T.t
       | Subprogram of ((T.f_param list)*T.t option)
       | Unit       of table
@@ -76,6 +79,7 @@ and SymTable : sig
                 ;         t_desc     : string option
                 ;         t_loc      : Newspeak.location
                 ; mutable t_use_list : string list
+                ;         t_scope    : scope
                 }
   end = struct
     type symbol =
@@ -89,6 +93,7 @@ and SymTable : sig
                 ;         t_desc     : string option
                 ;         t_loc      : Newspeak.location
                 ; mutable t_use_list : string list
+                ;         t_scope    : scope
                 }
   end
 
@@ -132,7 +137,7 @@ and SymTable : sig
       let a = max a 0 in
       (String.make a ' ')^str^(String.make b ' ')
     in
-    let line_printer (i,_,sym) =
+    let line_printer (_,i,_,sym) =
       let (t,sym_d) = print_symbol sym in
       List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
       print_string "\n"
@@ -150,12 +155,13 @@ and SymTable : sig
     print_string "\n";
     Buffer.contents out
 
-  let create_table ?desc _ = { t_renaming = []
-                             ; t_tbl      = Symset.empty
-                             ; t_desc     = desc
-                             ; t_loc      = Npkcontext.get_loc ()
-                             ; t_use_list = []
-                             }
+  let create_table scope ?desc _ = { t_renaming = []
+                                   ; t_tbl      = Symset.empty
+                                   ; t_desc     = desc
+                                   ; t_loc      = Npkcontext.get_loc ()
+                                   ; t_use_list = []
+                                   ; t_scope    = scope
+                                   }
 
 (******************************************************************************
  *                                                                            *
@@ -164,12 +170,12 @@ and SymTable : sig
  ******************************************************************************)
 
   let adder (mksym:'a -> symbol) desc (tbl:table) (n:string)
-            (loc:Newspeak.location) (t:'a) =
+            (loc:Newspeak.location) (t:'a) where =
+    tbl.t_tbl <- Symset.add (where, n, loc, mksym t) tbl.t_tbl;
     Npkcontext.print_debug ("Adding "^desc^" '"^n^"', now Set = {"
-      ^ String.concat ", " (List.map (fun (x,_,_) -> x)
+      ^ String.concat ", " (List.map (fun (_,x,_,_) -> x)
                            (Symset.elements tbl.t_tbl))
-      ^"}");
-    tbl.t_tbl <- Symset.add (n, loc, mksym t) tbl.t_tbl
+      ^"}")
 
   let add_variable =
     adder (fun (t,v,ns) -> Variable (t,v,ns))
@@ -214,19 +220,27 @@ and SymTable : sig
     if (List.length lst > 1) then
       begin
         Npkcontext.print_debug ("Multiple interpretations for "^desc^" :");
-        List.iter (fun x -> Npkcontext.print_debug ("\t"
+        List.iter (fun (_,x) -> Npkcontext.print_debug ("\t"
                                                    ^print_symbol_join x
                                                    )) lst
       end;
-    match extract_unique ~filter fn lst with
+    let fn' (wh,x) =
+      match fn x with
+      | None -> None
+      | Some y -> Some (wh,y)
+    in
+    match extract_unique ~filter fn' lst with
       | None   -> error ("Ambiguous "^desc^" name")
       | Some x -> x
 
   let cast_v ?filter = mkcast "variable"
-                      (function Variable (x,v,_) -> Some (x,v)
-                              | Subprogram ([],Some rt) ->
-                                  raise (ParameterlessFunction rt)
-                              |_ -> None
+                      (function
+                        | Variable (x,v     ,false) -> Some (x,v)
+                        | Variable (x,Some v,true ) ->
+                            raise (Variable_no_storage (x,v))
+                        | Subprogram ([],Some rt) ->
+                            raise (Parameterless_function rt)
+                        |_ -> None
                       )
                       ?filter
 
@@ -247,18 +261,18 @@ and SymTable : sig
  ******************************************************************************)
 
   let rec find_symbols t id =
-    List.map (fun (_,_,x) -> x) (Symset.elements
-                                  (Symset.filter (fun (m,_,_) -> m = id)
+    List.map (fun (wh,_,_,x) -> wh,x) (Symset.elements
+                                  (Symset.filter (fun (_,m,_,_) -> m = id)
                                   t.t_tbl))
 
   let tbl_find_type tbl n =
     cast_t (find_symbols tbl n)
 
   let tbl_find_subprogram tbl n =
-    (fun (x,y) -> List.map T.from_fparam x,y)
-        (cast_s (find_symbols tbl n))
+      (fun (wh,(x,y)) -> wh,(List.map T.from_fparam x,y))
+          (cast_s (find_symbols tbl n))
 
-  let tbl_find_variable tbl ?expected_type n =
+  let tbl_find_variable tbl ?expected_type n :scope*(T.t*T.data_t option)=
     let ovl_predicate = match expected_type with
       | Some t when t <> T.unknown
           -> fun x ->    T.is_compatible x t
@@ -271,11 +285,11 @@ and SymTable : sig
                            ^match expected_type with None -> "None"
                                     | Some t -> T.print t)
     end;
-    cast_v ~filter:(fun x -> ovl_predicate (fst x)) (find_symbols tbl n)
+    cast_v ~filter:(fun (_,x) -> ovl_predicate (fst x)) (find_symbols tbl n)
 
   let tbl_find_unit t id =
     match (find_symbols t id) with
-    | [Unit x] -> Some x
+    | [_,Unit x] -> Some x
     | _ -> None
 
 (******************************************************************************
@@ -284,10 +298,10 @@ and SymTable : sig
  *                                                                            *
  ******************************************************************************)
 
-  let builtin_table :table = create_table ~desc:"builtin" Newspeak.unknown_loc
+  let builtin_table :table = create_table Lexical ~desc:"builtin" Newspeak.unknown_loc
 
   let _ =
-    List.iter (fun (n,t) -> add_type builtin_table n Newspeak.unknown_loc t)
+    List.iter (fun (n,t) -> add_type builtin_table n Newspeak.unknown_loc t (In_package "std"))
     [ "integer"  , T.integer
     ; "float"    , T.std_float
     ; "boolean"  , T.boolean
@@ -324,7 +338,7 @@ module SymMake(TR:Tree.TREE) = struct
   let create _ =
     let s = TR.create () in
     TR.push builtin_table s;
-    let library = create_table ~desc:"library" () in
+    let library = create_table  Lexical ~desc:"library" () in
     TR.push library s;
     { s_stack  = s
     ; s_cpkg   = None
@@ -368,25 +382,6 @@ module SymMake(TR:Tree.TREE) = struct
       | Some x -> x
       | None -> raise Not_found
 
-  let rec normalize_name s (name:Syntax_ada.name) extern =
-    try
-      find_rec s.s_stack (fun t ->
-        try Some (List.assoc (snd name) t.t_renaming)
-        with Not_found -> None
-      )
-    with Not_found ->
-    if (not extern) then name
-    else let (parents,ident) = name in
-         let pack = current s in
-           match parents with
-             | None                    -> (pack   , ident)
-             | Some a when is_with s a -> (Some a , ident)
-             | b      when b = pack    -> (b , ident)
-             | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
-             ("unknown package "^(match parents with
-                                    | Some x -> x
-                                    | _      -> "<no name>"))
-
   (**
    * Algorithm for add_rd (A,B)  (A -> B)
    *
@@ -419,14 +414,16 @@ module SymMake(TR:Tree.TREE) = struct
                                      | _      -> "")^")");
           let create_context _ =
             begin
-              let new_context = create_table ?desc () in
+              let new_context = create_table ?desc (match name with None ->
+                Lexical | Some p -> In_package p) () in
               begin match name with
                 | None   -> ()
                 | Some n -> begin
                               if (TR.height s.s_stack <> 2) then
                                 error "Adding some unit outside the library";
                                 let top = TR.top s.s_stack in
-                                top.t_tbl <- Symset.add (n
+                                top.t_tbl <- Symset.add (Lexical
+                                                        ,n
                                                         ,Newspeak.unknown_loc
                                                         ,Unit new_context)
                                                         top.t_tbl;
@@ -459,7 +456,7 @@ module SymMake(TR:Tree.TREE) = struct
 
   let extract_variables t =
     let filter = function
-      | x, loc, Variable (y, _, false) -> [x,y,loc]
+      | _,x, loc, Variable (y, _, false) -> [x,y,loc]
       | _ -> []
     in
     List.flatten (List.map filter (Symset.elements t.t_tbl))
@@ -489,15 +486,42 @@ module SymMake(TR:Tree.TREE) = struct
                let res = ref None in
                while (!context <> [] && !res = None) do
                  try
-                   res := Some (s_find_abs desc finder s (List.hd !context) n);
+                   let p = (List.hd !context) in
+                   res := Some (s_find_abs desc finder s p n);
                  with Not_found -> ();
                  context := List.tl !context;
                done;
                match !res with
                | None -> raise Not_found
-               | Some v -> v
+               | Some (p,v) -> (p,v)
              end
          end
+
+  let rec normalize_name s name extern =
+    try
+      find_rec s.s_stack (fun t ->
+        try Some (List.assoc (snd name) t.t_renaming)
+        with Not_found -> None
+      )
+    with Not_found ->
+    if (not extern) then name
+    else let (parents,ident) = name in
+         let pack = current s in
+           match parents with
+             | None                    -> (pack   , ident)
+             | Some a when is_with s a -> (Some a , ident)
+             | b      when b = pack    -> (b , ident)
+             | _ -> Npkcontext.report_error "pkgmgr.normalize_name"
+             ("unknown package "^(match parents with
+                                    | Some x -> x
+                                    | _      -> "<no name>"))
+
+  type resolved_name = Local of string | Global of string*string
+
+  let resolve_name s name =
+    match normalize_name s name true with
+      | None,id    -> Local id
+      | Some p, id -> Global (p, id)
 
   let find_variable_value s ?expected_type (package,n) =
     try
@@ -505,8 +529,8 @@ module SymMake(TR:Tree.TREE) = struct
               s ?package n
     with Not_found -> error ("Cannot find variable '"^n^"'")
 
-  let find_variable s ?expected_type (package,n) =
-    fst (find_variable_value s ?expected_type (package,n))
+  let find_variable s ?expected_type name =
+    (fun (x,(y,_)) -> (x,y)) (find_variable_value s ?expected_type name)
 
   let find_type s (package,n) =
     try
@@ -525,6 +549,9 @@ module SymMake(TR:Tree.TREE) = struct
     end
     with Not_found -> false
 
+  let scope t =
+    t.t_scope
+
   let add_variable s n loc ?value ?(no_storage=false) t =
     Npkcontext.print_debug ("s_add_variable : adding '"
                            ^n
@@ -534,17 +561,17 @@ module SymMake(TR:Tree.TREE) = struct
                             | Some v -> "value "^T.print_data v
                             )
                            );
-    add_variable (top s) n loc (t,value,no_storage)
+    add_variable (top s) n loc (t,value,no_storage) (scope (top s))
 
-  let add_type s n v =
-    add_type (top s) n v
+  let add_type s n loc v =
+    add_type (top s) n loc v (scope (top s))
 
-  let add_subprogram s n v =
-    add_subprogram (top s) n v
+  let add_subprogram s n loc v rt =
+    add_subprogram (top s) n loc v rt (scope (top s))
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
-      let sym_eq x y = match (x,y) with
+      let sym_eq (_,x) (_,y) = match (x,y) with
         | Variable (t1,_,_), Variable (t2,_,_) -> t1 = t2
         | a, b -> a = b
       in
@@ -555,7 +582,7 @@ module SymMake(TR:Tree.TREE) = struct
     let inte = inter s1 s2 in
     let print_set set =
       "{"^
-      String.concat ", " (List.map (fun x -> print_symbol_join x ) set)
+      String.concat ", " (List.map (fun (_,x) -> print_symbol_join x ) set)
       ^"}"
     in
     Npkcontext.print_debug ("Type_ovl_intersection : result = "
@@ -566,7 +593,7 @@ module SymMake(TR:Tree.TREE) = struct
                                " , R = "^print_set s2
                             )
                            );
-    if inte = [] then T.unknown else fst (cast_v inte)
+    if inte = [] then T.unknown else fst (snd (cast_v inte))
 
   let first_child  x = TR.first_child  x.s_stack
   let next_sibling x = TR.next_sibling x.s_stack
