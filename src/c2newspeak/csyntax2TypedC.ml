@@ -536,6 +536,15 @@ let process globals =
 	  let (e, t) = translate_exp e in
 	    ((C.Exp (e, t), loc)::[], t)
 
+(* TODO: separate CDecl from other Decls in csyntax?? *)
+      | (LocalDecl (x, (CDecl _ as d)), loc)::tl -> 
+	  Npkcontext.set_loc loc;
+	  (* TODO: call a distinct function?? *)
+	  let _ = translate_decl false loc x d in
+	  let (tl, e) = translate_blk_exp tl in
+	    Hashtbl.remove comptbl x;
+	    (tl, e)
+	      
       | (LocalDecl (x, d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
 	  let decl = C.LocalDecl (x, translate_decl false loc x d) in
