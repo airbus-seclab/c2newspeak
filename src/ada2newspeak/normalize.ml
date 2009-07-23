@@ -285,10 +285,13 @@ and normalization compil_unit extern =
 
   let add_typ ?(base_type=T.mk_unknown "add_typ") nom typdecl location ~global=
     let subtyp = match typdecl with
-      | Array  _
+      | Array  _ -> Unconstrained(Declared(snd nom
+                                          ,typdecl
+                                          ,T.mk_unknown "Array"
+                                          ,location))
       | Record _ -> Unconstrained(Declared(snd nom
                                           ,typdecl
-                                          ,T.mk_unknown "Array or record"
+                                          ,base_type
                                           ,location))
       | Enum(symbs,_) ->
           let min = snd (List.hd symbs)
@@ -937,8 +940,8 @@ in
                       List.map (fun (id, st) -> (id, normalize_subtyp st)) r
                     in
                     let norm_typ = Record norm_fields in
-                    add_typ (normalize_ident_cur ident) norm_typ
-                            loc global;
+                    add_typ  (normalize_ident_cur ident) norm_typ
+                              loc ~global ~base_type:t;
                     (norm_typ,t)
                   end
   in
