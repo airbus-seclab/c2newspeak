@@ -722,11 +722,11 @@ let translate (globals, fundecls, spec) =
 
   and translate_local_decl loc x d =
     match d with
-	VDecl (_, Fun _, _, _, _) -> []
-      | VDecl (name, t, static, extern, init) when static || extern -> 
+	(_, Fun _, _, _, _) -> []
+      | (name, t, static, extern, init) when static || extern -> 
 	  declare_global static extern x name loc t init;
 	  []
-      | VDecl (_, t, _, _, init) ->
+      | (_, t, _, _, init) ->
 	  (* TODO: see if more can be factored with translate_global_decl *) 
 	  let (init, t) = 
 	    match init with
@@ -741,7 +741,6 @@ let translate (globals, fundecls, spec) =
 	  let init = List.map build_set init in
 	  let decl = (C.Decl (translate_typ t, x), loc) in
 	    decl::init
-      | EDecl _ -> []
 
   (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
@@ -1142,10 +1141,9 @@ let translate (globals, fundecls, spec) =
 (* TODO:TODO:TODO: think about name and x difference, shouldn't there be only normalized
    names in typedC? *)
 (* TODO:TODO:TODO: remove EDecl and CDecl *)
-	VDecl (_, Fun _, _, _, _) -> ()
-      | VDecl (name, t, static, extern, init) -> 
+	(_, Fun _, _, _, _) -> ()
+      | (name, t, static, extern, init) -> 
 	  declare_global static extern x name loc t init
-      | _ -> ()
   in
 
   let add_glbdecl name (t, loc, storage) =

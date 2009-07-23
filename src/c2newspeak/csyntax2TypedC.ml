@@ -439,7 +439,7 @@ let process globals =
 	      Npkcontext.report_accept_warning "Firstpass.translate"
 		"function declaration within block" Npkcontext.DirtySyntax
 	    end;
-	    C.VDecl (x, C.Fun ft, is_static, is_extern, None)
+	    (x, C.Fun ft, is_static, is_extern, None)
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
@@ -454,9 +454,9 @@ let process globals =
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
-(* TODO: remove VDecl from TypedC, also remove function variable declaration!! 
+(* TODO: remove function variable declaration!! 
 *)
-	      C.VDecl (name, t, is_static, is_extern, init)
+	      (name, t, is_static, is_extern, init)
 
   and translate_edecl x e =
     let (e, t) = translate_exp e in

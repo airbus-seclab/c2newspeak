@@ -46,10 +46,7 @@ and spec_token =
   | LvalToken of typ_exp
   | CstToken of Cir.cst
 
-and decl = 
-    VDecl of (string * typ * is_static * is_extern * init option)
-(* TODO: remove this: unnecessary!! *)
-  | EDecl of exp
+and decl = (string * typ * is_static * is_extern * init option)
   
 and is_extern = bool
 
