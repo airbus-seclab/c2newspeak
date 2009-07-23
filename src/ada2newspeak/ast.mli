@@ -130,8 +130,6 @@ and basic_declaration =
   | SpecDecl        of spec
   | NumberDecl      of string
                      * Ada_types.data_t
-  | SubtypDecl      of string
-                     * Syntax_ada.subtyp_indication
 
 and  library_item =
   | Spec of spec

@@ -80,8 +80,7 @@ let find_body_for_spec ~specification ~bodylist =
 let name_of_spec spec = match spec with
   | Ast.ObjectDecl (i,_,_)
   | Ast.TypeDecl   (i,_,_)
-  | Ast.NumberDecl (i,_)
-  | Ast.SubtypDecl (i,_) -> i
+  | Ast.NumberDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
   | Ast.SpecDecl (Ast.PackageSpec (n,_,_,_)) -> n
@@ -96,7 +95,7 @@ let check_package_body_against_spec ~body ~spec =
    * filterspec sp = true will be checked.      *)
   let filterspec = function
     | Ast.NumberDecl _ | Ast.SpecDecl   _ -> true
-    | Ast.ObjectDecl _ | Ast.TypeDecl _ | Ast.SubtypDecl _
+    | Ast.ObjectDecl _ | Ast.TypeDecl _
     | Ast.UseDecl _ -> false
   in
   List.iter (function sp ->
@@ -1081,7 +1080,7 @@ in
                   (extract_subtyp norm_subtyp_ind)
                   loc
                   global;
-        [Ast.SubtypDecl(ident, norm_subtyp_ind)]
+        []
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
                              []
     | RepresentClause _ -> []
@@ -1323,11 +1322,6 @@ in
             Sym.add_variable gtbl ident loc t ~value;
         | Ast.NumberDecl(ident, value) ->
             add_numberdecl ident value loc
-        | Ast.SubtypDecl(ident, subtyp_ind) ->
-            let subtyp = extract_subtyp subtyp_ind in
-              types#add (normalize_ident_cur_ext ident true)
-                (*extract_subtyp subtyp_ind*) subtyp
-                loc true
         | Ast.SpecDecl _
         | Ast.UseDecl  _ -> ()
 

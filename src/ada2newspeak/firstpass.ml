@@ -1127,12 +1127,8 @@ let translate compil_unit =
         let st = Ada_utils.merge_types gtbl sti in
         let read_only = const <> Variable in
         add_var loc st ident false read_only
-
     | TypeDecl (idtyp,typ_decl,ty) ->
         translate_typ_declaration idtyp typ_decl ty loc false
-
-    | SubtypDecl _ -> ()
-
     | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
@@ -1161,8 +1157,7 @@ let translate compil_unit =
            ^"sous package non implemente")
     | UseDecl _ -> ()
     | NumberDecl(ident, _) -> remove_symb ident
-    | TypeDecl _
-    | SubtypDecl _ -> ()
+    | TypeDecl _ -> ()
 
   and remove_declarative_item (item,_) = match item with
     | BasicDecl(basic) -> remove_basic_declaration basic
@@ -1231,7 +1226,6 @@ let translate compil_unit =
             add_global loc subtyp tr_typ init read_only ident
       | TypeDecl (idtyp, typ_decl, ty) ->
           translate_typ_declaration idtyp typ_decl ty loc true
-      | SubtypDecl _ -> ()
       | UseDecl x -> Sym.add_use gtbl x
       | SpecDecl spec -> translate_spec spec loc false
       | NumberDecl(ident, v) -> add_number loc v true ident
