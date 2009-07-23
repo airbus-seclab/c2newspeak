@@ -876,8 +876,7 @@ in
           (subtyp, contrainte, Some(norm_subtyp),adatype)
         in
         let norm_typ_decl = DerivedType(new_subtyp_ind) in
-        let base_type = T.new_derived (merge_types new_subtyp_ind) in
-          add_typ ~base_type (normalize_ident_cur ident)
+          add_typ ~base_type:new_t (normalize_ident_cur ident)
                   norm_typ_decl loc ~global;
           (norm_typ_decl,new_t)
     | IntegerRange(contrainte,taille) ->
@@ -1005,8 +1004,7 @@ in
     in match subprog_spec with
         | Function(name,param_list,return_type) ->
             let norm_name = normalize_ident_cur name in
-            let norm_subtyp = normalize_subtyp return_type in
-            let t = subtyp_to_adatyp norm_subtyp in
+            let t = subtyp_to_adatyp return_type in
               Sym.add_subprogram gtbl name (Newspeak.unknown_loc)
                                        (List.map mk_param param_list)
                                        (Some t)
@@ -1127,14 +1125,15 @@ in
         begin
         try
           let (sc, t) = (Sym.find_variable gtbl n) in
-          (Ast.Lval (sc, snd n,t), Some t)
+          (Ast.Lval (sc, snd n,t), t)
         with
           Sym.Variable_no_storage _ ->
             Npkcontext.report_error "normalize_lval"
               "unexpected Variable_no_storage"
         end
-    | ArrayAccess (lv,e) -> Ast.ArrayAccess(fst (normalize_lval lv),
-                                            normalize_exp  e),None
+    | ArrayAccess (_lv, _e) ->
+ (*     Ast.ArrayAccess(fst (normalize_lval lv), normalize_exp  e),None; *)
+        failwith "array assignment"
   in
 
   (**
@@ -1149,9 +1148,17 @@ in
     | NullInstr    -> None
     | ReturnSimple -> Some (Ast.ReturnSimple, loc)
     | Assign(lv, exp) -> begin
-                           let (lv', t) = normalize_lval lv in
+                           let (lv', t_lv) = normalize_lval lv in
+                           let (e', t_exp) = normalize_exp exp in
+                           if (not (T.is_compatible t_lv t_exp)) then
+                             begin
+                               Npkcontext.print_debug ("LV = "^T.print t_lv);
+                               Npkcontext.print_debug ("EX = "^T.print t_exp);
+                               Npkcontext.report_error "normalize_instr"
+                                 "Incompatible types in assignment";
+                             end;
                            Some (Ast.Assign( lv'
-                                           , normalize_exp ?expected_type:t exp
+                                           , (e',t_exp)
                                            , false
                                            ), loc)
                          end

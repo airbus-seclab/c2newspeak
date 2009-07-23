@@ -220,17 +220,6 @@ let new_record fields =
     trait = Record fields
   }
 
-let is_compatible one another =
-  let p1 = root_parent one     in
-  let p2 = root_parent another in
-       (p1 = p2 && one.uid = another.uid)
-    || (match (one.trait, another.trait) with
-          | Signed  None   , Signed (Some _) -> true
-          | Signed (Some _), Signed  None    -> true
-          | Float   100    , Float _         -> true
-          | Float     _    , Float 100       -> true
-          | _ -> false)
-
 let handle_representation_clause _t _l =
   invalid_arg ("handle_representaion_clause")
 
@@ -465,3 +454,17 @@ let coerce_types a b = match (a.trait,b.trait) with
   | Signed (Some _), Signed None -> a
   | Signed None, Signed (Some _) -> b
   | _ -> a
+
+let is_compatible one another =
+  if (is_unknown one || is_unknown another) then
+    Npkcontext.report_warning "is_compatible"
+        "testing compatibility against unknown type";
+  let p1 = root_parent one     in
+  let p2 = root_parent another in
+       (p1 = p2 && one.uid = another.uid)
+    || (match (one.trait, another.trait) with
+          | Signed  None   , Signed (Some _) -> true
+          | Signed (Some _), Signed  None    -> true
+          | Float   100    , Float _         -> true
+          | Float     _    , Float 100       -> true
+          | _ -> false)
