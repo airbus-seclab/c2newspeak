@@ -420,19 +420,19 @@ let process globals =
       (args_t, ret_t)
 
 
-  and translate_decl is_global loc x d =
+  and translate_vdecl is_global loc x (t, is_static, is_extern, init) =
     Npkcontext.set_loc loc;
-    match d with
-	VDecl (_, _, extern, Some _) when extern -> 
+    match (t, init) with
+	(_, Some _) when is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
-      | VDecl (_, static, extern, _) when static && extern -> 
+      | _ when is_static && is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
-      | VDecl (Fun _, _, _, Some _) -> 
+      | (Fun _, Some _) -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
-      | VDecl (Fun ft, is_static, is_extern, _) -> 
+      | (Fun ft, _) -> 
 	  let ft = translate_ftyp ft in
 	    translate_proto_ftyp x is_static ft loc;
 	    if (not is_global) then begin
@@ -440,7 +440,7 @@ let process globals =
 		"function declaration within block" Npkcontext.DirtySyntax
 	    end;
 	    C.VDecl (x, C.Fun ft, is_static, is_extern, None)
-      | VDecl (t, is_static, is_extern, init) -> 
+      | _ -> 
 	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
 	  let name = if is_static then get_static_name x loc else x in
@@ -454,14 +454,13 @@ let process globals =
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
+(* TODO: remove VDecl from TypedC, also remove function variable declaration!! 
+*)
 	      C.VDecl (name, t, is_static, is_extern, init)
-      | EDecl e -> 
-	  let (e, t) = translate_exp e in
-	    Hashtbl.add symbtbl x (e, t);
-	    C.EDecl e
-      | CDecl _ -> 
-	  Npkcontext.report_error "Csyntax2TypedC.translate_decl"
-	    "case unreachable"
+
+  and translate_edecl x e =
+    let (e, t) = translate_exp e in
+      Hashtbl.add symbtbl x (e, t)
 
   and translate_cdecl x (fields, is_struct) =
     let fields = List.map translate_field_decl fields in
@@ -544,9 +543,17 @@ let process globals =
 	    Hashtbl.remove comptbl x;
 	    (tl, e)
 
-      | (LocalDecl (x, d), loc)::tl -> 
+(* TODO: find a way to factor this case with the next one *)
+      | (LocalDecl (x, EDecl d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  let decl = C.LocalDecl (x, translate_decl false loc x d) in
+	  translate_edecl x d;
+	  let (tl, e) = translate_blk_exp tl in
+	    remove_var x;
+	    (tl, e)
+
+      | (LocalDecl (x, VDecl d), loc)::tl -> 
+	  Npkcontext.set_loc loc;
+	  let decl = C.LocalDecl (x, translate_vdecl false loc x d) in
 	  let (tl, e) = translate_blk_exp tl in
 	    remove_var x;
 	    ((decl, loc)::tl, e)
@@ -639,8 +646,10 @@ let process globals =
 		
 	| GlbDecl (x, CDecl d) -> translate_cdecl x d
 
-	| GlbDecl (x, d) -> 
-	    glbdecls := (x, (translate_decl true loc x d, loc))::(!glbdecls)
+	| GlbDecl (x, EDecl d) -> translate_edecl x d
+
+	| GlbDecl (x, VDecl d) -> 
+	    glbdecls := (x, (translate_vdecl true loc x d, loc))::(!glbdecls)
 	      
 	| GlbUserSpec x -> specs := (translate_assertion x)::!specs
     in
