@@ -52,102 +52,10 @@ val subtyp_to_adatyp : Symboltbl.t -> Syntax_ada.subtyp -> Ada_types.t
 val    typ_to_adatyp : Syntax_ada.typ    -> Ada_types.t
 
 (**
- * Check bounds.
- * [between a b n] evaluates to [a <= n <= b].
- *)
-val between : float -> float -> float -> bool
-
-(**
- * Checks that a constraint is compatible with another one.
- * [constraint_is_constraint_compatible ref cur] checks if [cur]
- * is compatible with [ref].
- * May raise an error.
- *)
-val constraint_check_compatibility :
-  Syntax_ada.contrainte -> Syntax_ada.contrainte -> unit
-
-(**
- * Checks that a value is compatible with a constraint.
- * The constraint should be static, and the type of the value already checked
- * against the type of the constraint.
- *)
-val value_is_static_constraint_compatible :
-  Syntax_ada.contrainte -> Ada_types.data_t -> bool
-
-(**
- * Check a value against a static subtype.
- * If successfull, do nothing [()], else report an error.
- * @raise NonStaticExpression if the subtype is not static.
- *)
-val check_static_subtyp:
-  Syntax_ada.subtyp -> Ada_types.data_t -> unit
-
-(**
  * Compute the Newspeak integer kind associated to the specified range.
  * See Ada_config.size_of_range
  *)
 val ikind_of_range : Syntax_ada.nat -> Syntax_ada.nat -> Newspeak.ikind
-
-(**
- * Check compatibility between types.
- * [check_typ expected found] returns a boolean indicating whether the [found]
- * type is compatible with the [expected] type.
- * @param found      the actual type to be checked
- * @param expected   a typ option : [Some t] means that the type [t] is
-                     expected, and [None] means that there is no context type.
- * @return the resulting type
- * As Ada is strongly typed, it is almost the same as testing equality, with
- * one exception : integer constants are compatible with all integer types.
- *)
-val check_typ : Syntax_ada.typ option -> Syntax_ada.typ -> Syntax_ada.typ
-
-(**
- * Extract the underlying type of a subtype.
- *)
-val base_typ : Syntax_ada.subtyp -> Syntax_ada.typ
-
-(**
- * Extract a subtype from its indication.
- *)
-val extract_subtyp :
-  Syntax_ada.subtyp_indication -> Syntax_ada.subtyp
-
-(**
- * Directly extract the type from a subtype indication.
- * Functionnaly, [extract_type = function x -> base_typ (extract_subtyp x)].
- *)
-val extract_typ : Syntax_ada.subtyp_indication -> Syntax_ada.typ
-
-(**
- * Test the equality of types.
- * Functionnaly, [eq_base_type st1 st2 = ((base_typ st1) = (base_typ st2))].
- *)
-val eq_base_typ :
-  Syntax_ada.subtyp -> Syntax_ada.subtyp -> bool
-
-(**
- * Similar to [check_typ] but returns a boolean without raising an error.
- *)
-val known_compatible_typ :
-  Syntax_ada.typ option -> Syntax_ada.typ -> bool
-
-(**
- * Is a type an integer type ?
- *)
-val integer_class : Syntax_ada.typ -> bool
-
-(**
- * Guess the type of operands for a binary operation.
- * @param typ the expected type for the result.
- *)
-val typ_operand :
-  Ast.binary_op -> Syntax_ada.typ option -> Syntax_ada.typ option
-
-(**
- * Check if operands are compatible with a binary operation.
- *)
-val check_operand_typ :
-  Ast.binary_op -> Syntax_ada.typ -> unit
 
 (**
  * Check a compilation unit against the name of the file around it.
