@@ -104,8 +104,8 @@ let rec print t =
   let p_trait = function
     | Unknown _ -> "Unknown"
     | Signed  r   -> "Signed "^p_range (Some r)
-    | Univ_int  _ -> "Universal_integer"
-    | Univ_real _ -> "Universal_real"
+    | Univ_int    -> "Universal_integer"
+    | Univ_real   -> "Universal_real"
     | Float   d -> "Float "  ^string_of_int d
     | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
@@ -400,8 +400,8 @@ let rec attr_get typ attr =
     | Float       _ , _
     | Enumeration _ , _
     | Signed      _ , _
-    | Univ_int    _ , _
-    | Univ_real   _ , _
+    | Univ_int      , _
+    | Univ_real     , _
                  -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 (****************
