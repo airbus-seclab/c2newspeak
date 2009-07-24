@@ -693,8 +693,6 @@ let translate compil_unit =
                                )))
                                spec
               | (ev,t)::pt,s::st -> let t' = T.coerce_types t s.param_type in
-                                    Npkcontext.print_debug ("got argtype =
-                                      "^T.print s.param_type);
                                     (s.formal_name, (ev,t'))::
                                     (merge_with_specification pt st)
               | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"

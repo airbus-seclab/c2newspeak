@@ -57,11 +57,14 @@ let data_lt x y =
         Npkcontext.report_error "Ada_types.data_lt"
           "Incompatible types in '<' (data_t)"
 
-(* effective type + wrapped data *)
-type value = t*data_t
+(* "subtype" in RM *)
+type t = {
+  base  : base_t;
+  range : range option
+}
 
-and t = {
-  parent  : t option; (* None indicates a root type *)
+(* "type" in RM *)
+and base_t = {
   trait   : trait_t;
   uid     : int;      (* Used to make derived types look different *)
 }
@@ -72,11 +75,17 @@ and range =
 (* type for "traits" (type of types...) *)
 and trait_t =
   | Unknown     of string            (* Reason *)
-  | Signed      of range option      (* Range constraint *)
+  | Univ_int
+  | Univ_real
+  | Signed      of range
   | Float       of int               (* Digits           *)
   | Array       of t*t               (* Component-index  *)
   | Record      of (string * t) list (* Fields           *)
   | Enumeration of (string*int) list (* Name-index       *)
+
+
+(* effective type + wrapped data *)
+type value = t*data_t
 
 (******************
  * Pretty-printer *
@@ -84,10 +93,6 @@ and trait_t =
 
 let rec print t =
   let p_hash t  = Printf.sprintf "%08x" (Hashtbl.hash t) in
-  let p_parent = function
-    | None -> "<root>"
-    | Some t -> "parent:<"^p_hash t^">"
-  in
   let p_range = function
     | None      -> "<unlimited>"
     | Some (a,b) ->  "["
@@ -98,7 +103,9 @@ let rec print t =
   in
   let p_trait = function
     | Unknown _ -> "Unknown"
-    | Signed  r -> "Signed " ^p_range r
+    | Signed  _ -> "Signed"
+    | Univ_int  _ -> "Universal_integer"
+    | Univ_real _ -> "Universal_real"
     | Float   d -> "Float "  ^string_of_int d
     | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
@@ -109,9 +116,9 @@ let rec print t =
   in
    "{"
   ^"H="^p_hash t
-  ^",parent = "^p_parent t.parent
-  ^(if t.uid =0 then "" else "U="^string_of_int t.uid)
-  ^",trait = "^p_trait t.trait
+  ^(if t.base.uid = 0 then "" else "U="^string_of_int t.base.uid)
+  ^", trait = "^p_trait t.base.trait
+  ^", range = "^p_range t.range
   ^"}"
 
 let print_data = function
@@ -146,25 +153,17 @@ let uid = object
     count
 end
 
-(*
- * The minimal data for a type.
- * For declaring a new type (inside constructors...), one should write
- * [{type_stub with ..}]
- *)
-let type_stub = {
-  parent  = None;
-  uid     = 0;
-  trait   = Signed None;
-}
-
-
-let mk_unknown reason = {type_stub with trait = Unknown reason}
+let mk_unknown reason = {base = {trait = Unknown reason ; uid = 0}; range = None}
 
 let unknown = mk_unknown "<No reason provided>"
 
-let universal_integer = { type_stub with trait = Signed None; }
+let universal_integer = { base = {trait = Univ_int;
+                                  uid = 0};
+                          range=None}
 
-let universal_real = { type_stub with trait = Float 100; }
+let universal_real = { base = {trait = Univ_real;
+                               uid = 0};
+                          range=None}
 
 let new_enumerated values =
     let rec with_indices vals offset = match vals with
@@ -173,63 +172,79 @@ let new_enumerated values =
     in
     let ivalues = with_indices values 0 in
     {
-      type_stub with
-      trait = Enumeration ivalues;
+      base = {trait = Enumeration ivalues;
+              uid = 0
+      };
+      range = None
     }
 
-let new_derived old =
+let new_derived_base old =
     { old with uid = uid#gen }
-
-(* Parent of parent of parent.  *)
-let rec root_parent typ =
-    match typ.parent with
-        | None -> typ
-        | Some p -> root_parent p
+ 
+let new_derived old =
+  {
+    old with
+    base = new_derived_base old.base;
+  }
 
 let new_unconstr parent =
+  let parent_base = parent.base in
     {
-      parent = Some (root_parent parent);
-      trait  = Signed None;
-      uid = parent.uid;
+      base = {parent_base with uid = uid#gen};
+      range = None
     }
 
 let new_constr parent r =
+  let parent_base = parent.base in
     {
-      parent = Some (root_parent parent);
-      trait = Signed (Some r);
-      uid = parent.uid;
+      base = {parent_base with uid = uid#gen};
+      range = Some r
     }
 
 let new_range r =
-  new_constr universal_integer r
+  { base = { trait = Signed r;
+             uid = 0
+           };
+    range = None
+  }
 
 let new_float digits =
     {
-      type_stub with
-      trait = Float digits
+      base = {
+        trait = Float digits;
+        uid = 0
+      };
+      range = None
     }
 
 let new_array component ind =
     {
-      type_stub with
-      trait = Array (component,ind)
+      base = {
+        trait = Array (component,ind);
+        uid = 0;
+      };
+      range = None
     }
 
 let new_record fields =
-  { type_stub with
-    trait = Record fields
+  { 
+      base = {
+        trait = Record fields;
+        uid = 0;
+      };
+      range = None
   }
 
 let handle_representation_clause _t _l =
   invalid_arg ("handle_representaion_clause")
 
 let extract_array_types t =
-  match t.trait with
+  match t.base.trait with
   | Array (c, i) -> Some (c,i)
   | _            -> None
 
 let get_reason t =
-  match t.trait with
+  match t.base.trait with
   | Unknown r -> r
   | _ -> invalid_arg "get_reason"
 
@@ -240,7 +255,7 @@ let get_reason t =
 let integer_first = Newspeak.Nat.of_string "-2147483648"
 let integer_last  = Newspeak.Nat.of_string  "2147483647"
 
-let integer  = new_constr universal_integer (integer_first, integer_last)
+let integer  = new_range (integer_first, integer_last)
 
 let boolean = new_enumerated ["true" ; "false"]
 
@@ -267,76 +282,91 @@ let character =
  ****************)
 
 let is_boolean typ =
-  root_parent typ == boolean
+  typ.base == boolean.base
 
 let is_integer typ =
-  match typ.trait with
+  match typ.base.trait with
   | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Enumeration _ -> false
   | Float       _ -> false
   | Signed      _ -> true
+  | Univ_int      -> true
+  | Univ_real     -> false
 
 let is_discrete typ =
-  match typ.trait with
+  match typ.base.trait with
   | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Enumeration _ -> true
   | Float       _ -> false
   | Signed      _ -> true
+  | Univ_int      -> true
+  | Univ_real     -> false
 
 let is_numeric typ =
-  match typ.trait with
+  match typ.base.trait with
   | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Enumeration _ -> false
   | Float       _ -> true
   | Signed      _ -> true
+  | Univ_int      -> true
+  | Univ_real     -> true
 
 let is_scalar typ =
-  match typ.trait with
+  match typ.base.trait with
   | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Float       _ -> true
   | Enumeration _ -> true
   | Signed      _ -> true
+  | Univ_int      -> true
+  | Univ_real     -> true
 
 let is_float typ =
-  match typ.trait with
+  match typ.base.trait with
   | Unknown     _ -> false
   | Array       _ -> false
   | Record      _ -> false
   | Float       _ -> true
   | Enumeration _ -> false
   | Signed      _ -> false
+  | Univ_int      -> false
+  | Univ_real     -> true
 
 let is_unknown typ =
-  match typ.trait with
+  match typ.base.trait with
   | Unknown     _ -> true
   | Array       _ -> false
   | Record      _ -> false
   | Float       _ -> false
   | Enumeration _ -> false
   | Signed      _ -> false
+  | Univ_int      -> false
+  | Univ_real     -> false
 
 (* Number of values in a type *)
-let length_of typ = match typ.trait with
-| Signed (Some r) -> sizeof r
-| Enumeration vals -> Newspeak.Nat.of_int (List.length vals)
-| Array _
-| Record _
-| Float _
-| Unknown _
-| Signed None -> Npkcontext.report_error "length_of" "Type with no size"
+let length_of typ = match (typ.base.trait, typ.range) with
+| Signed       _  , Some r -> sizeof r
+| Enumeration vals, _      -> Newspeak.Nat.of_int (List.length vals)
+| Array        _  , _
+| Record       _  , _
+| Float        _  , _
+| Unknown      _  , _
+| Signed       _  , _
+| Univ_int        , _
+| Univ_real       , _
+    -> Npkcontext.report_error "length_of" "Type with no size"
 
 let rec attr_get typ attr =
-  match typ.trait, attr with
-    | Signed (Some (a,_)),"first" -> typ, IntVal a
-    | Signed (Some (_,b)),"last"  -> typ, IntVal b
+  match (typ.base.trait, attr) with
+    | Signed   (a,_),"first" -> typ, IntVal a
+    | Signed   (_,b),"last"  -> typ, IntVal b
     | Enumeration values, "first" -> typ, IntVal (Newspeak.Nat.of_int (snd
                                                     (List.hd  values)))
     | Enumeration values, "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
@@ -352,13 +382,15 @@ let rec attr_get typ attr =
                                     IntVal (Newspeak.Nat.of_int digits)
     | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
     | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
-    | _ , "succ" when is_scalar typ -> failwith "succ"
+    | _  , "succ" when is_scalar typ -> failwith "succ"
     | Unknown     _ , _
     | Array       _ , _
     | Record      _ , _
     | Float       _ , _
     | Enumeration _ , _
     | Signed      _ , _
+    | Univ_int    _ , _
+    | Univ_real   _ , _
                  -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 (****************
@@ -403,7 +435,7 @@ let float_size _d =
 
 let rec translate t =
   let rec translate_trait = function
-  | Signed (Some (a,b)) -> Cir.Scalar
+  | Signed ((a,b)) -> Cir.Scalar
                              (Newspeak.Int
                                ( Newspeak.Signed
                                , minimal_size_signed a b
@@ -425,13 +457,27 @@ let rec translate t =
         Cir.Struct (List.fold_left build_offset ([], 0) flds)
   | Unknown _ -> Npkcontext.report_error "Ada_types.translate"
                "Type of unknown trait remaining at translate time"
-  | Signed None ->  Npkcontext.print_debug "translating univ_int as Integer";
-                    translate_trait (integer.trait)
-  in translate_trait t.trait
+  | Univ_int  ->
+      (*
+       * This is hacky : actually, typechecking should get rid of this by
+       * synthetizing CInts' type from the context, but this could need a
+       * two-phase typechecker.
+       * Here we only type as Integer.
+       *)
+      Npkcontext.print_debug "Universal_integer remaining at translate time";
+      translate_trait integer.base.trait
+  | Univ_real ->
+      (*
+       * Same thing : we type constants as Float.
+       *)
+      Npkcontext.print_debug "Universal_real remaining at translate time";
+      translate_trait std_float.base.trait
+
+  in translate_trait t.base.trait
 
 let check_exp t exp =
-  match t.trait with
-  | Signed (Some (a,b)) ->
+  match t.base.trait with
+  | Signed (a,b) ->
       Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known (Newspeak.Nat.add_int 1 b))
                , exp
                )
@@ -450,21 +496,22 @@ type f_param = { fp_name : string
 let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
 let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
 
-let coerce_types a b = match (a.trait,b.trait) with
-  | Signed (Some _), Signed None -> a
-  | Signed None, Signed (Some _) -> b
+let coerce_types a b =
+  match (a.base.trait,b.base.trait) with
+  | Signed   _  , Univ_int   -> a
+  | Univ_int    , Signed   _ -> b
   | _ -> a
 
 let is_compatible one another =
   if (is_unknown one || is_unknown another) then
     Npkcontext.report_warning "is_compatible"
         "testing compatibility against unknown type";
-  let p1 = root_parent one     in
-  let p2 = root_parent another in
-       (p1 = p2 && one.uid = another.uid)
-    || (match (one.trait, another.trait) with
-          | Signed  None   , Signed (Some _) -> true
-          | Signed (Some _), Signed  None    -> true
-          | Float   100    , Float _         -> true
-          | Float     _    , Float 100       -> true
-          | _ -> false)
+       (one.base = another.base) 
+    || (match (one.base.trait, another.base.trait) with
+        | Signed   _ , Univ_int
+        | Univ_int   , Signed   _
+        | Float    _ , Univ_real
+        | Univ_real  , Float    _ 
+            -> true
+        | _ -> false
+        )

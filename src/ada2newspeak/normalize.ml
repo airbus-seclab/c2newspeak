@@ -451,7 +451,8 @@ and normalize_binop bop e1 e2 =
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
           let (e2',t2) = normalize_exp ?expected_type e2 in
-          Ast.Binary (bop', (e1',t1), (e2',t2)),
+          let t = T.coerce_types t1 t2 in
+          Ast.Binary (bop', (e1',t), (e2',t)),
           TC.type_of_binop bop' t1 t2
 
 and make_abs (exp,t) =
@@ -499,9 +500,14 @@ and normalize_fcall (n, params) =
  *)
 and normalize_exp ?expected_type exp =
   match exp with
-    | CInt   x -> Ast.CInt   x,(match expected_type with
-                                | Some t -> t
-                                | None -> T.universal_integer)
+    | CInt   x -> Ast.CInt   x,
+                    (match expected_type with
+                     | Some t -> t
+                     | None ->
+(*                       Npkcontext.report_warning "normalize_exp"
+                             "Typing constant as universal_integer"; *)
+                         T.universal_integer
+                     )
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CBool  x -> Ast.CBool  x,T.boolean
     | CChar  x -> Ast.CChar  x,T.character
@@ -1069,8 +1075,9 @@ in
                                Npkcontext.report_error "normalize_instr"
                                  "Incompatible types in assignment";
                              end;
+                           let t_exp' = T.coerce_types t_lv t_exp in
                            Some (Ast.Assign( lv'
-                                           , (e',t_exp)
+                                           , (e',t_exp')
                                            , false
                                            ), loc)
                          end
@@ -1078,12 +1085,12 @@ in
                                       exp), loc)
     | If(exp, instr_then, instr_else) ->
         Some (Ast.If( normalize_exp ~expected_type:T.boolean exp
-                    , normalize_block instr_then
-                    , normalize_block instr_else), loc)
+                    , normalize_block ?return_type instr_then
+                    , normalize_block ?return_type instr_else), loc)
     | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
-                                              normalize_block instrs),loc)
+                                              normalize_block ?return_type instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
-                     normalize_block instrs), loc)
+                     normalize_block ?return_type instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), block) ->
         let dp = [BasicDecl (ObjectDecl ( [iter]
                              , ( SubtypName (None,"integer")
@@ -1098,7 +1105,7 @@ in
         in
       Sym.enter_context gtbl;
       let (ndp,init) = normalize_decl_part dp ~global:false in
-      let nblock = (List.map build_init_stmt init)@normalize_block block in
+      let nblock = (List.map build_init_stmt init)@normalize_block ?return_type block in
       let loop =
         [Ast.Loop
             ( Ast.While
@@ -1124,13 +1131,13 @@ in
               Some (Ast.Case (normalize_exp e,
                     List.map (function e,block->
                             normalize_exp e,
-                            normalize_block block)
+                            normalize_block ?return_type block)
                         choices,
-                    Ada_utils.may normalize_block default
+                    Ada_utils.may (fun x -> normalize_block ?return_type x) default
                     ),loc)
     | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
                         let (ndp,init) = normalize_decl_part dp ~global:false in
-                        let norm_block = normalize_block blk in
+                        let norm_block = normalize_block ?return_type blk in
                         let init_stmts = List.map build_init_stmt init in
                         remove_decl_part dp;
                         let ctx = Sym.exit_context gtbl in
