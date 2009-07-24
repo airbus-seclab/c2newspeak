@@ -91,12 +91,12 @@ let rec typ_to_string typ = match typ with
       ^(line_of_loc loc)^")"
 
 and typ_declaration_to_string typ_decl = match typ_decl with
-  | Enum(val_list, taille) ->
+  | Enum val_list ->
       "Enum("
       ^(list_to_string val_list
           (fun (nom,id) -> "("^nom^","^id^")")
           "; " true)
-      ^", "^(ikind_to_string taille)^")"
+      ^")"
   | DerivedType(subtyp) ->
       "DerivedType("^(subtyp_indication_to_string subtyp)^")"
   | IntegerRange(contrainte, taille) ->

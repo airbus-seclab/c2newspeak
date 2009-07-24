@@ -487,7 +487,7 @@ in
 
   let normalize_typ_decl ident typ_decl loc =
    match typ_decl with
-    | Enum(symbs, _size) ->
+    | Enum symbs ->
         let ids = fst (List.split symbs) in
         let t = T.new_enumerated ids in
         Sym.add_type gtbl ident loc t;

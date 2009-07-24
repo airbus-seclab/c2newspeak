@@ -109,8 +109,7 @@ let make_enum list_val =
       | [] -> []
   in
   let list_assoc = make_id list_val 0 in
-  let max = Newspeak.Nat.of_int ((List.length list_assoc) - 1)
-  in Enum(list_assoc, Ada_config.size_of_enum Newspeak.Nat.zero max)
+  Enum list_assoc
 
 let make_range exp_b_inf exp_b_sup =
   IntegerRange(RangeConstraint(exp_b_inf, exp_b_sup), None)
