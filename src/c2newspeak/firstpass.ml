@@ -304,7 +304,7 @@ let translate (globals, fundecls, spec) =
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in
-	  declare_global false false name name loc t (Some (Data (Str str, t)))
+	  declare_global false name name loc t (Some (Data (Str str, t)))
       end;
       C.Global name
  
@@ -720,27 +720,26 @@ let translate (globals, fundecls, spec) =
 	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
 	      "expression expected"
 
-  and translate_local_decl loc x d =
-    match d with
-	(_, Fun _, _, _, _) -> []
-      | (name, t, static, extern, init) when static || extern -> 
-	  declare_global static extern x name loc t init;
-	  []
-      | (_, t, _, _, init) ->
-	  (* TODO: see if more can be factored with translate_global_decl *) 
-	  let (init, t) = 
-	    match init with
-		None -> ([], t)
-	      | Some init -> translate_init t init
-	  in
-	  let v = C.Local x in
-	  let build_set (o, t, e) =
-	    let lv = C.Shift (v, C.exp_of_int o) in
-	      (C.Set (lv, t, e), loc)
-	  in
-	  let init = List.map build_set init in
-	  let decl = (C.Decl (translate_typ t, x), loc) in
-	    decl::init
+  and translate_local_decl loc x (name, t, static, extern, init) =
+    if static || extern then begin
+      declare_global extern x name loc t init;
+      []
+    end else begin
+      (* TODO: see if more can be factored with translate_global_decl *) 
+      let (init, t) = 
+	match init with
+	    None -> ([], t)
+	  | Some init -> translate_init t init
+      in
+      let v = C.Local x in
+      let build_set (o, t, e) =
+	let lv = C.Shift (v, C.exp_of_int o) in
+	  (C.Set (lv, t, e), loc)
+      in
+      let init = List.map build_set init in
+      let decl = (C.Decl (translate_typ t, x), loc) in
+	decl::init
+    end
 
   (* type and translate blk *)
 (* TODO: do a translate_blk_exp blk -> blk, typ_exp
@@ -1102,7 +1101,7 @@ let translate (globals, fundecls, spec) =
 
 (* TODO: use this function at all points where translate_glb_init is called
    + simplify code of global declaration!!! *)
-  and declare_global _ extern x name loc t init =
+  and declare_global extern x name loc t init =
     update_global x name loc (t, Npkil.Extern);
     let (t, init) = translate_glb_init loc name t init in
     let init = if extern then Npkil.Extern else Npkil.Declared init in
@@ -1131,19 +1130,12 @@ let translate (globals, fundecls, spec) =
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
 (* TODO: should be done in csyntax2CoreC *)
-  let translate_global (x, (d, loc)) =
+  let translate_global (x, ((name, t, _, extern, init), loc)) =
     Npkcontext.set_loc loc;
-    (* TODO: check if this could not be incorporated in translate_decl!!!
-    *)
-    match d with
-(* TODO:TODO:TODO: remove funs in VDecl *)
-(* TODO:TODO:TODO: remove static from VDecl *)
-(* TODO:TODO:TODO: think about name and x difference, shouldn't there be only normalized
-   names in typedC? *)
-(* TODO:TODO:TODO: remove EDecl and CDecl *)
-	(_, Fun _, _, _, _) -> ()
-      | (name, t, static, extern, init) -> 
-	  declare_global static extern x name loc t init
+    (* TODO:TODO:TODO: remove static?? *)
+    (* TODO:TODO:TODO: think about name and x difference, shouldn't there be 
+       only normalized names in typedC? *)
+    declare_global extern x name loc t init
   in
 
   let add_glbdecl name (t, loc, storage) =

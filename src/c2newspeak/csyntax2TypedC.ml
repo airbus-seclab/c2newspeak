@@ -419,27 +419,24 @@ let process globals =
     let ret_t = translate_typ ret_t in
       (args_t, ret_t)
 
+  and translate_fdecl loc x ft is_static init = 
+    match init with
+	Some _ -> 
+	  Npkcontext.report_error "Firstpass.translate_global"
+	    ("unexpected initialization of function "^x)
+      | _ -> 
+	  let ft = translate_ftyp ft in
+	    translate_proto_ftyp x is_static ft loc
 
   and translate_vdecl is_global loc x (t, is_static, is_extern, init) =
     Npkcontext.set_loc loc;
-    match (t, init) with
-	(_, Some _) when is_extern -> 
+    match init with
+	Some _ when is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
       | _ when is_static && is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
-      | (Fun _, Some _) -> 
-	  Npkcontext.report_error "Firstpass.translate_global"
-	    ("unexpected initialization of function "^x)
-      | (Fun ft, _) -> 
-	  let ft = translate_ftyp ft in
-	    translate_proto_ftyp x is_static ft loc;
-	    if (not is_global) then begin
-	      Npkcontext.report_accept_warning "Firstpass.translate"
-		"function declaration within block" Npkcontext.DirtySyntax
-	    end;
-	    (x, C.Fun ft, is_static, is_extern, None)
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
@@ -454,8 +451,6 @@ let process globals =
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
-(* TODO: remove function variable declaration!! 
-*)
 	      (name, t, is_static, is_extern, init)
 
   and translate_edecl x e =
@@ -550,6 +545,17 @@ let process globals =
 	  let (tl, e) = translate_blk_exp tl in
 	    remove_var x;
 	    (tl, e)
+(* TODO: find a way to factor this case with the next one and maybe 
+   global declarations!! *)
+      | (LocalDecl (x, VDecl (Fun ft, is_static, _, init)), loc)::tl -> 
+	  Npkcontext.set_loc loc;
+	  translate_fdecl loc x ft is_static init;
+	  Npkcontext.report_accept_warning "Firstpass.translate"
+	    "function declaration within block" Npkcontext.DirtySyntax;
+	  let (tl, e) = translate_blk_exp tl in
+	    remove_var x;
+	    (tl, e)
+	  
 
       | (LocalDecl (x, VDecl d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
@@ -647,6 +653,9 @@ let process globals =
 	| GlbDecl (x, CDecl d) -> translate_cdecl x d
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
+
+	| GlbDecl (x, VDecl (Fun ft, is_static, _, init)) -> 
+	    translate_fdecl loc x ft is_static init
 
 	| GlbDecl (x, VDecl d) -> 
 	    glbdecls := (x, (translate_vdecl true loc x d, loc))::(!glbdecls)
