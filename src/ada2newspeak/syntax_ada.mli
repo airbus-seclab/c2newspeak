@@ -133,7 +133,6 @@ and contrainte =
 and subtyp_indication = subtyp
                       * contrainte option
                       * subtyp     option
-                      * Ada_types.t
 
 (** Left-value *)
 and lval =

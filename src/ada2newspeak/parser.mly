@@ -299,8 +299,8 @@ basic_declaration :
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
   { TypeDecl($2, make_enum $5,Ada_types.new_enumerated $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
-        { let (_,_,_,t) = $5 in
-            TypeDecl($2,DerivedType $5,Ada_types.new_derived t),$1
+        {
+            TypeDecl($2,DerivedType $5,Ada_types.unknown),$1
         }
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
             { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)
@@ -311,7 +311,6 @@ basic_declaration :
               TypeDecl ($2,DerivedType (Unconstrained Float
                                        ,None
                                        ,None
-                                       ,Ada_types.std_float
                                        )
                            ,Ada_types.new_float(
                                     Newspeak.Nat.to_int (snd $5))
@@ -515,8 +514,8 @@ expression :
 ;
 
 subtyp_indication :
-| subtyp RANGE contrainte {$1, Some($3), None, Ada_types.unknown}
-| subtyp {$1, None, None, Ada_types.unknown}
+| subtyp RANGE contrainte {$1, Some($3), None}
+| subtyp {$1, None, None}
 
 subtyp :
 | name {SubtypName(fst $1)}

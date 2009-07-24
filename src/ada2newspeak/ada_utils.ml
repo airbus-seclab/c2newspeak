@@ -142,7 +142,7 @@ let base_typ subtyp = match subtyp with
       Npkcontext.report_error "Ada_utils.base_type"
         "internal error : unexpected subtyp name"
 
-let extract_subtyp (_, _, subtyp,_) =
+let extract_subtyp (_, _, subtyp) =
   match subtyp with
   | None ->
       Npkcontext.report_error
@@ -167,8 +167,8 @@ let rec integer_class typ = match typ with
          | Enum   _
          | Record _ -> false
          | IntegerRange _ -> true
-         | DerivedType(_,_,Some(subtyp),_) -> integer_class (base_typ subtyp)
-         | DerivedType(_,_,None,_) -> Npkcontext.report_error
+         | DerivedType(_,_,Some(subtyp)) -> integer_class (base_typ subtyp)
+         | DerivedType(_,_,None) -> Npkcontext.report_error
                                "Ada_utils.integer_class"
                                "internal error : no subtype provided"
       )
@@ -370,11 +370,8 @@ let subtyp_to_adatyp gtbl st =
                                   T.unknown;
                                 end
 
-let merge_types gtbl (tp,_,_,st) =
-  let res =
-    if T.is_unknown st then subtyp_to_adatyp gtbl tp
-    else st
-  in
+let merge_types gtbl (tp,_,_) =
+  let res = subtyp_to_adatyp gtbl tp in
   if (T.is_unknown res) then
     Npkcontext.report_warning "merge_types"
     ("merged subtype indication into unknown type ("^T.get_reason res^")");

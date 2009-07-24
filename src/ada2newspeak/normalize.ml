@@ -353,7 +353,7 @@ and normalization compil_unit extern =
                 ("unknown package " ^pack)
   in
 
-let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
+let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp) =
   (* on etablit le sous-type tel qu'il sera utilise dans
      le reste du code, a partir du type de base du sous-type
      de reference, de la contrainte normalisee, et d'un
@@ -385,7 +385,7 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
               "Ada_normalize.normalize_subtyp_indication"
               "internal error : unexpected subtyp name"
     in
-      (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp), adatype)
+      (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp))
 
 and normalize_subtyp subtyp =
     match subtyp with
@@ -822,8 +822,8 @@ in
                     "internal error : unexpected subtyp name" in
 
         let new_subtyp_ind =
-          let (subtyp, contrainte, _, adatype) = norm_subtyp_ind in
-          (subtyp, contrainte, Some(norm_subtyp),adatype)
+          let (subtyp, contrainte, _) = norm_subtyp_ind in
+          (subtyp, contrainte, Some(norm_subtyp))
         in
         let norm_typ_decl = DerivedType(new_subtyp_ind) in
           add_typ ~base_type:new_t (normalize_ident_cur ident)
@@ -1090,7 +1090,6 @@ in
                              , ( SubtypName (None,"integer")
                                , None
                                , None
-                               , T.integer
                                )
                              , Some (if is_rev then exp2 else exp1)
                              , Constant

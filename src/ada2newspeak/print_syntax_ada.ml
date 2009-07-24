@@ -139,7 +139,7 @@ and subtyp_to_string subtyp = match subtyp with
       ^(contrainte_to_string contrainte)^", "
       ^(string_of_bool static)^")"
 
-and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp, _adatype) =
+and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp) =
   "("^(subtyp_to_string subtyp_ref)^", "
   ^(option_to_string contrainte contrainte_to_string)^", "
   ^(option_to_string subtyp subtyp_to_string)^")"
