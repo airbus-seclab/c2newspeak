@@ -165,7 +165,6 @@ let rec integer_class typ = match typ with
   | Declared(_,typdef,_,_) ->
       (match typdef with
          | Enum   _
-         | Array  _
          | Record _ -> false
          | IntegerRange _ -> true
          | DerivedType(_,_,Some(subtyp),_) -> integer_class (base_typ subtyp)

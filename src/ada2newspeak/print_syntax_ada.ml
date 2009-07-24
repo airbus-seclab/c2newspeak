@@ -105,18 +105,9 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^", "^(option_to_string taille ikind_to_string)^")"
   | Record r -> "Record("^(list_to_string r record_component_to_string
                                           ", " false)
-  | Array(array_def) ->
-      "Array("^(array_definition_to_string array_def)^")"
 
 and record_component_to_string (c,st) =
   c ^ " => " ^ subtyp_to_string st
-
-and array_definition_to_string ar =
-         "index = " ^(subtyp_indication_to_string ar.array_index)
-      ^", component = "^(subtyp_indication_to_string ar.array_component)
-      ^", size = "^(option_to_string ar.array_size string_of_int)
-      ^")"
-
 
 and exp_to_string exp = match exp with
   | CInt   i          -> "CInt("^(nat_to_string i)^")"

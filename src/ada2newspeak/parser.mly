@@ -67,41 +67,6 @@ let build_access name lst   =
           let rev_list = List.rev lst in
             build_aux rev_list
 
-let build_matrix l typ_ind loc =
-  (* crafted buids the subtype_indication *)
-  let rec crafted list_ind typ_elt =
-    match list_ind with
-        [] -> typ_elt
-      | hd::tl ->
-          let recu =  crafted tl typ_elt in
-          let new_ind = Unconstrained
-                          (Declared("no_name"
-                                   ,Array({array_index     = hd
-                                          ;array_component = recu
-                                          ;array_size      = None
-                                          }
-                                         )
-                                   ,Ada_types.new_array
-                                               Ada_types.unknown (* hd   *)
-                                               Ada_types.unknown (* recu *)
-                                   ,loc
-                                   )
-                          )
-          in
-            ( new_ind, None, None, Ada_types.unknown)
-  in
-    match l with
-        [] -> Npkcontext.report_error "Parser.build_matrix"
-          ("in build matrix, no subtyp given ")
-      | hd::[] -> {array_index     = hd;
-                   array_component = typ_ind;
-                   array_size      = None;
-                  }
-      | hd::tl -> {array_index     = hd;
-                   array_component = crafted tl typ_ind;
-                   array_size      = None;
-                  }
-
 (**
   * Prepare a list of exp*block for the Case constructor.
   * It takes a list of expression list * block and flattens it into
@@ -331,9 +296,6 @@ basic_declaration :
         {ObjectDecl($1,$3,Some($5), Variable), $2}
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
         {ObjectDecl($1,$4,Some($6), Constant), $2}
-| TYPE ident IS ARRAY constrained_array_definition SEMICOLON
-    { TypeDecl($2,Array $5, Ada_types.new_array Ada_types.unknown
-                                                Ada_types.unknown),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
   { TypeDecl($2, make_enum $5,Ada_types.new_enumerated $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
@@ -394,15 +356,6 @@ record_component:
 contrainte :
 | expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
 ;
-
-constrained_array_definition :
-| LPAR matrix_indication RPAR OF subtyp_indication
-                                            {build_matrix $2 $5 $1}
-;
-
-matrix_indication :
-| subtyp_indication {[$1]}
-| matrix_indication COMMA subtyp_indication {$1@[$3]}
 
 array_component_association :
 | ident ARROW expression {($1, $3)}

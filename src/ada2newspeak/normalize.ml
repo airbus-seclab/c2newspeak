@@ -285,10 +285,6 @@ and normalization compil_unit extern =
 
   let add_typ ?(base_type=T.mk_unknown "add_typ") nom typdecl location ~global=
     let subtyp = match typdecl with
-      | Array  _ -> Unconstrained(Declared(snd nom
-                                          ,typdecl
-                                          ,T.mk_unknown "Array"
-                                          ,location))
       | Record _ -> Unconstrained(Declared(snd nom
                                           ,typdecl
                                           ,base_type
@@ -392,54 +388,9 @@ let rec normalize_subtyp_indication (subtyp_ref, contrainte, subtyp, adatype) =
       (norm_subtyp_ref, norm_contrainte, Some(norm_subtyp), adatype)
 
 and normalize_subtyp subtyp =
-  let norm_typ typp =
-    match typp with
-        Declared (id,Array a,t,x) ->
-          let n_st1 =  normalize_subtyp_indication a.array_index     in
-          let n_st2 =  normalize_subtyp_indication a.array_component in
-
-        let subtyp = extract_subtyp n_st1 in
-
-        let contrainte = match subtyp with
-          | Constrained(_,contrainte,_,_) -> contrainte
-          | Unconstrained _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "array error : no range provided"
-          | SubtypName _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "internal error : unexpected subtyp name"
-        in
-
-        let taille = match contrainte with
-          | IntegerRangeConstraint(inf, sup) ->
-              Some(Nat.to_int (Nat.add Nat.one (Nat.sub sup inf)))
-
-          | FloatRangeConstraint _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "array error : range isn't discret"
-          | RangeConstraint _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "array error : range isn't static"
-        in
-          Declared (id
-                   ,Array({array_index     = n_st1;
-                           array_component = n_st2;
-                           array_size      = taille;
-                         })
-                   ,t
-                   ,x)
-      |  _ -> typp
-  in
-    match subtyp with (* For array norm_typ is used here*)
-      | Unconstrained(typ) -> Unconstrained(norm_typ typ)
-      | Constrained(typ,const,static,t) ->
-          Constrained(norm_typ typ,const,static,t)
-      | SubtypName(name) ->
-          fst (find_subtyp name)
+    match subtyp with
+      | SubtypName name -> fst (find_subtyp name)
+      | _ -> subtyp
 
 (**
  * Normalize an actual argument.
@@ -838,7 +789,6 @@ in
               check_represent_clause_order parent represtbl loc;
               enumeration_representation ident symbs size represtbl loc
           | Declared(_, (( IntegerRange(_,_)
-                        | Array  _
                         | Record _
                         | DerivedType _
                         ) as def),_,_) -> def
@@ -891,43 +841,6 @@ in
         Sym.add_type gtbl ident loc t;
         add_typ ~base_type:t id decl loc ~global;
         (decl,t)
-    | Array a when a.array_size = None ->
-        let norm_inter =  normalize_subtyp_indication a.array_index
-        and norm_subtyp_ind = normalize_subtyp_indication a.array_component in
-        let subtyp = extract_subtyp norm_inter in
-        let tc = merge_types a.array_component in
-        let ti = merge_types a.array_index     in
-        let t = T.new_array tc ti in
-        Sym.add_type gtbl ident loc t;
-        let contrainte = match subtyp with
-          | Constrained(_,contrainte,_,_) -> contrainte
-          | Unconstrained _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "array error : no range provided"
-          | SubtypName _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "internal error : unexpected subtyp name" in
-        let taille = match contrainte with
-          | IntegerRangeConstraint(inf, sup) ->
-              Some(Nat.to_int (Nat.add Nat.one (Nat.sub sup inf)))
-          | FloatRangeConstraint _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "array error : range isn't discret"
-          | RangeConstraint _ ->
-              Npkcontext.report_error
-                "Ada_normalize.normalize_typ_decl"
-                "array error : range isn't static" in
-        let norm_typ = Array {array_index     = norm_inter;
-                              array_component = norm_subtyp_ind;
-                              array_size      = taille}
-        in
-          add_typ (normalize_ident_cur ident) norm_typ loc global;
-          (norm_typ,t)
-    | Array _ -> Npkcontext.report_error "Ada_normalize.normalize_typ_decl"
-                          "internal error : size of array already provided"
     | Record r -> begin
                     let r' = List.map
                                (fun (id, st) ->

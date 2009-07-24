@@ -139,9 +139,6 @@ and translate_declared typ_decl =
     | A.IntegerRange(_,None) -> Npkcontext.report_error
         "Firstpass.translate_declared"
           "internal error : no bounds provided for IntegerRange"
-    | A.Array a -> C.Array(translate_typ
-                    (Ada_utils.extract_typ a.A.array_component)
-                          ,a.A.array_size)
     | A.Record r -> let (fields,sz) = translate_record r in C.Struct (fields,sz)
 
 (**
@@ -1119,7 +1116,6 @@ let translate compil_unit =
       | A.DerivedType ref_subtyp_ind ->
           translate_derived_typ_decl ref_subtyp_ind ty loc global
       | A.IntegerRange _
-      | A.Array        _
       | A.Record       _ -> ()
 
   and translate_basic_declaration basic loc = match basic with
