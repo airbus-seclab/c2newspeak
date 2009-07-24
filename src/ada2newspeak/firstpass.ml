@@ -63,8 +63,6 @@ let ident_to_name ident = (None, ident)
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
 
-let base_typ = Ada_utils.base_typ
-
 let unbox_resolved sc x = match sc with
   | Sym.Lexical      -> None,x
   | Sym.In_package p -> Some p,x
@@ -81,81 +79,10 @@ let (extern, do_as_extern) =
     ((fun _ -> !ext),
      (fun f arg -> ext := true; f arg ; ext := false))
 
-(**
- * Add a "belongs" operator to an expression, according to a constraint.
- *)
-let make_check_constraint contrainte exp =
-  match contrainte with
-    | A.IntegerRangeConstraint (v1, v2) ->
-        C.Unop (Npkil.Belongs_tmp (v1, Npkil.Known (Nat.add v2 Nat.one)), exp)
-    | A.FloatRangeConstraint (_, _) -> exp
-    | A.RangeConstraint _ ->
-  Npkcontext.report_error
-          "Firstpass.make_check_constraint"
-          "internal error : unexpected range constraint (non-static)"
-
-(**
- * Add a "belongs" operator to an expression, according to a subtype.
- *)
-let make_check_subtyp subtyp exp =
-  match subtyp with
-    | A.Unconstrained _ -> exp
-    | A.Constrained(_, contrainte, _, _) ->
-        make_check_constraint contrainte exp
-    | A.SubtypName _ ->
-        Npkcontext.report_error
-          "Firstpass.make_check_subtyp"
-          "internal error : unexpected subtyp name"
-
 let translate_saved_context ctx =
   List.map (fun (id,t,loc) ->
     C.Decl (T.translate t, id), loc
   ) (Sym.extract_variables ctx)
-
-(**
- * Translate a [Syntax_ada.typ].
- *)
-let rec translate_typ = function
-| A.Float        -> C.Scalar (Newspeak.Float Ada_config.size_of_float)
-| A.Integer      -> C.Scalar (Newspeak.Int
-                      (Newspeak.Signed,  Ada_config.size_of_int))
-| A.IntegerConst -> C.Scalar (Newspeak.Int
-                      (Newspeak.Signed,  Ada_config.size_of_int))
-| A.Boolean      -> C.Scalar (Newspeak.Int
-                      (Newspeak.Unsigned,Ada_config.size_of_boolean))
-| A.Character    -> C.Scalar (Newspeak.Int
-                      (Newspeak.Unsigned,Ada_config.size_of_char))
-| A.Declared (_, typ_decl, _, _) -> translate_declared typ_decl
-
-(**
- * Translate a [Syntax_ada.typ_declaration].
- *)
-and translate_declared typ_decl =
-  match typ_decl with
-    | A.Enum(_, bits) -> C.Scalar(Newspeak.Int(bits))
-    | A.DerivedType(subtyp_ind) -> translate_typ
-        (Ada_utils.extract_typ subtyp_ind)
-    | A.IntegerRange(_,Some(bits)) -> C.Scalar(Newspeak.Int(bits))
-    | A.IntegerRange(_,None) -> Npkcontext.report_error
-        "Firstpass.translate_declared"
-          "internal error : no bounds provided for IntegerRange"
-    | A.Record r -> let (fields,sz) = translate_record r in C.Struct (fields,sz)
-
-(**
- * Translate a record type.
- * Builds a CIR Struct with packed offsets.
- *)
-and translate_record r =
-  let build_offset (cflds, start_off) (id, st) =
-    let ctyp = translate_subtyp st in
-      (id, (start_off, ctyp))::cflds, (start_off + C.size_of_typ ctyp)
-  in
-    List.fold_left build_offset ([], 0) r
-
-(**
- * Translate a [Syntax_ada.subtyp].
- *)
-and translate_subtyp styp = translate_typ (base_typ styp)
 
 (**
  * Main translating function.
@@ -298,8 +225,8 @@ let translate compil_unit =
               | NumberSymb(_) | FunSymb _),_,_) -> ()
       );
       let typ_cir = match value with
-        | T.IntVal _   -> translate_typ A.IntegerConst
-        | T.FloatVal _ -> translate_typ A.Float
+        | T.IntVal _   -> T.translate T.integer
+        | T.FloatVal _ -> T.translate T.std_float
         | T.BoolVal _ ->
             Npkcontext.report_error
               "Firstpass.add_number"
@@ -610,32 +537,32 @@ let translate compil_unit =
     in
       remove_symb tmp;
       (C.BlkExp (decl::tr_instr_if,
-                 C.Lval (vid, translate_typ A.Boolean), false),
+                 C.Lval (vid, T.translate T.boolean), false),
        T.boolean)
 
   and translate_and e1 e2 =
     let loc = Npkcontext.get_loc () in
     let (tr_e2,_ ) = translate_exp e2 in
     let (tmp, decl, vid) = temp#create loc T.boolean in
-    let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
+    let assign = C.Set (vid, T.translate T.boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          e2
                                          (CBool false,T.boolean)) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-      , C.Lval (vid, translate_typ A.Boolean), false), T.boolean
+      , C.Lval (vid, T.translate T.boolean), false), T.boolean
 
   and translate_or e1 e2 =
     let loc = Npkcontext.get_loc () in
     let (tr_e2,_ ) = translate_exp e2 in
     let (tmp, decl, vid) = temp#create loc T.boolean in
-    let assign = C.Set (vid, translate_typ A.Boolean, tr_e2) in
+    let assign = C.Set (vid, T.translate T.boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          (CBool true,T.boolean)
                                          e2) in
       remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-      , C.Lval (vid, translate_typ A.Boolean), false), T.boolean
+      , C.Lval (vid, T.translate T.boolean), false), T.boolean
 
   and translate_binop op e1 e2 =
     let (c1, c2, typ) =
@@ -844,7 +771,7 @@ let translate compil_unit =
                     let  last_exp = List.hd arg_list in
                     let (_subt_range, tpelt) = List_utils.last subt in
 
-                    let chk_exp = (* make_check_subtyp subt_range *)last_exp
+                    let chk_exp = last_exp
                     in
                     let _sz =  C.exp_of_int (
                       C.size_of_typ (T.translate tpelt)) in
