@@ -938,7 +938,6 @@ in
                              [Ast.UseDecl use_clause]
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let t = merge_types subtyp_ind in
-        let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         begin match def with
           | None -> ()
           | Some exp -> List.iter (fun x -> handle_init x (normalize_exp
@@ -947,7 +946,7 @@ in
         end;
           List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
           List.map (fun ident ->
-            Ast.ObjectDecl(ident, assert_known_i norm_subtyp_ind, Ast.Variable)
+            Ast.ObjectDecl(ident, t, Ast.Variable)
           ) ident_list
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let t = merge_types subtyp_ind in
@@ -973,7 +972,7 @@ in
         in
           List.iter (fun x -> handle_init x normexp loc) ident_list;
           List.map (fun ident ->
-            Ast.ObjectDecl(ident, assert_known_i norm_subtyp_ind,status)
+            Ast.ObjectDecl(ident, t, status)
           ) ident_list
     | ObjectDecl _ -> Npkcontext.report_error
                      "Ada_normalize.normalize_basic_decl"
@@ -1236,11 +1235,9 @@ in
       match basic_decl with
         | Ast.TypeDecl(id,typ_decl,ty) ->
             add_extern_typdecl id typ_decl ty loc
-        | Ast.ObjectDecl(ident, subtyp_ind,
-                     (Ast.Variable | Ast.Constant)) ->
-            Sym.add_variable gtbl ident loc (merge_types subtyp_ind)
-        | Ast.ObjectDecl(ident,subtyp_ind, Ast.StaticVal value) ->
-            let t = merge_types subtyp_ind in
+        | Ast.ObjectDecl(ident, t, (Ast.Variable | Ast.Constant)) ->
+            Sym.add_variable gtbl ident loc t
+        | Ast.ObjectDecl(ident, t, Ast.StaticVal value) ->
             Sym.add_variable gtbl ident loc t ~value;
         | Ast.NumberDecl(ident, value) ->
             add_numberdecl ident value loc

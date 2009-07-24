@@ -1119,8 +1119,7 @@ let translate compil_unit =
       | A.Record       _ -> ()
 
   and translate_basic_declaration basic loc = match basic with
-    | ObjectDecl(ident, sti, const) ->
-        let st = Ada_utils.merge_types gtbl sti in
+    | ObjectDecl(ident, st, const) ->
         let read_only = const <> Variable in
         add_var loc st ident false read_only
     | TypeDecl (idtyp,typ_decl,ty) ->
@@ -1207,9 +1206,8 @@ let translate compil_unit =
 
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(ident, subtyp_ind, const) ->
+      | ObjectDecl(ident, subtyp, const) ->
           let init = get_global_init ident in
-          let subtyp = Ada_utils.merge_types gtbl subtyp_ind in
           let read_only = const <> Variable in
           let tr_typ = T.translate subtyp in
           let init =

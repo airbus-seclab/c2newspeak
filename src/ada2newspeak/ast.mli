@@ -123,7 +123,7 @@ and object_state =
 
 and basic_declaration =
   | ObjectDecl      of string
-                     * Syntax_ada.subtyp_indication
+                     * Ada_types.t
                      * object_state
   | TypeDecl        of string*Syntax_ada.typ_declaration*Ada_types.t
   | UseDecl         of string
