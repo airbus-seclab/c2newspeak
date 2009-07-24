@@ -266,7 +266,7 @@ and normalize_binop bop e1 e2 =
           | Var v1 , Var v2 -> Some (Sym.type_ovl_intersection gtbl
                                                               (snd v1)
                                                               (snd v2))
-          | _      , Qualified (st,_) -> Some (subtyp_to_adatyp st)
+          | _      , Qualified (n,_) -> Some (snd (Sym.find_type gtbl n))
           | _               -> None
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
@@ -344,7 +344,7 @@ and normalize_exp ?expected_type exp =
                   end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
-    | Qualified(subtyp, exp) -> let t = subtyp_to_adatyp subtyp in
+    | Qualified(stn, exp) -> let t = snd (Sym.find_type gtbl stn) in
                                 fst (normalize_exp ~expected_type:t exp),t
     | FunctionCall(n, params) -> normalize_fcall (n, params)
     | Attribute (st, attr, Some exp) ->

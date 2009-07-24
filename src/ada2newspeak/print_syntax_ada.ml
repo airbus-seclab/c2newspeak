@@ -120,7 +120,7 @@ and exp_to_string exp = match exp with
                            ^(bop_to_string op)^" "
                            ^(exp_to_string e2)^")"
   | Qualified(subtyp, exp) -> "Qualified("
-      ^(subtyp_to_string subtyp)
+      ^(name_to_string subtyp)
       ^", "^(exp_to_string exp)^")"
   | FunctionCall(nom, params) -> "FunctionCall-orArray("
       ^(name_to_string nom)^", "

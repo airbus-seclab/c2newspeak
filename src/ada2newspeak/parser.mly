@@ -495,7 +495,7 @@ expression :
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}
 | LPAR expression RPAR {$2}
-| name QUOTE LPAR expression RPAR {Qualified(SubtypName (fst $1),$4)}
+| name QUOTE LPAR expression RPAR {Qualified(fst $1,$4)}
 | name QUOTE ident  {Attribute ( fst $1
                                  ,String.lowercase $3
                                  ,None

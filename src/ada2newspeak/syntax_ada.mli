@@ -118,7 +118,7 @@ and expression =
   | Binary       of binary_op
                   * expression
                   * expression
-  | Qualified    of subtyp
+  | Qualified    of name
                   * expression
   | Attribute    of name * string * expression option
 
@@ -142,7 +142,7 @@ and lval =
 
 (** Subprogram parameter *)
 and param = {
-        formal_name   : string;        (** Formal name              *)
+        formal_name   : string;            (** Formal name              *)
         mode          : param_mode;        (** Mode (In, Out, or InOut) *)
         param_type    : subtyp;            (** Type                     *)
         default_value : expression option; (** Default value (optional) *)
