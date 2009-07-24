@@ -254,7 +254,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
       ^", "^(subtyp_indication_to_string subtyp_ind)
       ^", "^(option_to_string def exp_to_string)
       ^", "^(object_state_to_string status)^")"
-  | TypeDecl(id,typdecl,_) ->
+  | TypeDecl(id,typdecl) ->
       "TypeDecl("^id^","^(typ_declaration_to_string typdecl)^")"
   | UseDecl(use_clause) -> "UseDecl("^(use_clause)^")"
   | SpecDecl(spec) -> "SpecDecl("

@@ -232,7 +232,7 @@ and basic_declaration =
                      * subtyp_indication
                      * expression option
                      * object_state
-  | TypeDecl        of string*typ_declaration*Ada_types.t
+  | TypeDecl        of string*typ_declaration
   | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string

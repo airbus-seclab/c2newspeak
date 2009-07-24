@@ -138,6 +138,8 @@ val extract_array_types : t -> (t * t) option
 (** Precondition : is_unknown t *)
 val get_reason : t -> string
 
+val extract_symbols : t -> (string*int) list option
+
 (**
  * Coercion from universal types to finite types.
  *)

@@ -79,7 +79,6 @@ let find_body_for_spec ~specification ~bodylist =
 (** Return the name for a specification. *)
 let name_of_spec spec = match spec with
   | Ast.ObjectDecl (i,_,_)
-  | Ast.TypeDecl   (i,_,_)
   | Ast.NumberDecl (i,_) -> i
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
@@ -94,9 +93,8 @@ let check_package_body_against_spec ~body ~spec =
   (* Filter on specifications : only sp such as
    * filterspec sp = true will be checked.      *)
   let filterspec = function
-    | Ast.NumberDecl _ | Ast.SpecDecl   _ -> true
-    | Ast.ObjectDecl _ | Ast.TypeDecl _
-    | Ast.UseDecl _ -> false
+    | Ast.NumberDecl _ | Ast.SpecDecl _ -> true
+    | Ast.ObjectDecl _ | Ast.UseDecl  _ -> false
   in
   List.iter (function sp ->
     if (filterspec sp) then
@@ -283,7 +281,7 @@ and normalization compil_unit extern =
          (Sym.s_get_use gtbl))
   in
 
-  let add_typ ?(base_type=T.mk_unknown "add_typ") nom typdecl location ~global=
+  let add_typ ~base_type nom typdecl location ~global=
     let subtyp = match typdecl with
       | Record _ -> Unconstrained(Declared(snd nom
                                           ,typdecl
@@ -623,14 +621,6 @@ and normalize_contrainte contrainte =
 
 in
 
-  let add_extern_typdecl id typ_decl ty loc =
-    add_typ (normalize_ident_cur_ext id true)
-            ~base_type:ty
-            typ_decl
-            loc
-            ~global:true
-  in
-
   let add_numberdecl ident value loc =
     let t = match value with
       | T.BoolVal  _ -> Npkcontext.report_error "add_numberdecl"
@@ -757,8 +747,7 @@ in
         ) symbs;
         let typ_decl = enumeration_representation ident symbs
                                                   size represtbl loc in
-        add_typ ~base_type:t id typ_decl loc ~global;
-        (typ_decl,t)
+        add_typ ~base_type:t id typ_decl loc ~global
     | DerivedType(subtyp_ind) ->
         let t = merge_types subtyp_ind in
         let new_t = T.new_derived t in
@@ -776,6 +765,18 @@ in
                   ("internal error :"
                    ^" constraint isnt integer range for enumeration type")
         in
+
+        begin
+          match (T.extract_symbols t) with
+            | None   -> ()
+            | Some s -> 
+                  List.iter (fun (i,v) -> Sym.add_variable gtbl i loc
+                                                     new_t
+                                                     ~value:(T.IntVal (Newspeak.Nat.of_int v))
+                                                     ~no_storage:true
+                  ) s
+        end;
+
         let norm_subtyp_ind = normalize_subtyp_indication subtyp_ind in
         let parent_type = extract_typ norm_subtyp_ind in
         let typ_decl = match parent_type with
@@ -833,8 +834,7 @@ in
         in
         let norm_typ_decl = DerivedType(new_subtyp_ind) in
           add_typ ~base_type:new_t (normalize_ident_cur ident)
-                  norm_typ_decl loc ~global;
-          (norm_typ_decl,new_t)
+                  norm_typ_decl loc ~global
     | IntegerRange(contrainte,taille) ->
         let decl = normalize_integer_range taille contrainte in
         let range = match decl with
@@ -845,8 +845,7 @@ in
         let id = normalize_ident_cur ident in
         let t = T.new_range range in
         Sym.add_type gtbl ident loc t;
-        add_typ ~base_type:t id decl loc ~global;
-        (decl,t)
+        add_typ ~base_type:t id decl loc ~global
     | Record r -> begin
                     let r' = List.map
                                (fun (id, st) ->
@@ -859,8 +858,7 @@ in
                     in
                     let norm_typ = Record norm_fields in
                     add_typ  (normalize_ident_cur ident) norm_typ
-                              loc ~global ~base_type:t;
-                    (norm_typ,t)
+                              loc ~global ~base_type:t
                   end
   in
 
@@ -868,7 +866,7 @@ in
     (* incomplet *)
     List.iter
       (function (item,_) -> match item with
-      | BasicDecl(TypeDecl(id,_,_)) -> types#remove (normalize_ident_cur id)
+      | BasicDecl(TypeDecl(id,_))   -> types#remove (normalize_ident_cur id)
       | BasicDecl(SubtypDecl(id,_)) -> types#remove(normalize_ident_cur id)
       | BasicDecl(NumberDecl(_,_))     -> ()
       | BasicDecl(ObjectDecl(_,_,_,_)) -> ()
@@ -907,7 +905,7 @@ in
            end;
           { Ast.param_type    = assert_known (
                                   subtyp_to_adatyp (
-                                    normalize_subtyp param.param_type))
+                                    param.param_type))
           ; Ast.formal_name   = param.formal_name
           ; Ast.mode          = param.mode
           ; Ast.default_value = may normalize_exp param.default_value
@@ -984,9 +982,9 @@ in
                      "Ada_normalize.normalize_basic_decl"
                      ("internal error : constant without default value"
                       ^"or already evaluated")
-    | TypeDecl(id,typ_decl,_) ->
-        let (norm_typ_decl,t) = normalize_typ_decl id typ_decl loc global reptbl
-        in [Ast.TypeDecl(id,norm_typ_decl,assert_known t)]
+    | TypeDecl(id,typ_decl) ->
+        normalize_typ_decl id typ_decl loc global reptbl;
+        []
     | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
     | NumberDecl(ident, exp) ->
        let value = Eval.eval_static_number (normalize_exp exp) gtbl in
@@ -1240,8 +1238,6 @@ in
     let add_extern_basic_decl (basic_decl, loc) =
       Npkcontext.set_loc loc;
       match basic_decl with
-        | Ast.TypeDecl(id,typ_decl,ty) ->
-            add_extern_typdecl id typ_decl ty loc
         | Ast.ObjectDecl(ident, t, (Ast.Variable | Ast.Constant)) ->
             Sym.add_variable gtbl ident loc t
         | Ast.ObjectDecl(ident, t, Ast.StaticVal value) ->

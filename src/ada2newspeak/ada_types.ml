@@ -248,6 +248,11 @@ let get_reason t =
   | Unknown r -> r
   | _ -> invalid_arg "get_reason"
 
+let extract_symbols t =
+  match t.base.trait with
+  | Enumeration v -> Some v
+  | _             -> None
+
 (*****************
  * Builtin types *
  *****************)

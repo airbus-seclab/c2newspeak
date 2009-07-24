@@ -297,14 +297,13 @@ basic_declaration :
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
         {ObjectDecl($1,$4,Some($6), Constant), $2}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
-  { TypeDecl($2, make_enum $5,Ada_types.new_enumerated $5),$1}
+  { TypeDecl($2, make_enum $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
         {
-            TypeDecl($2,DerivedType $5,Ada_types.unknown),$1
+            TypeDecl($2,DerivedType $5),$1
         }
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
-            { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)
-                      ,Ada_types.unknown),$1}
+            { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
 | TYPE ident IS DIGITS CONST_INT SEMICOLON
             {
               (* digits X -> new float *)
@@ -312,14 +311,12 @@ basic_declaration :
                                        ,None
                                        ,None
                                        )
-                           ,Ada_types.new_float(
-                                    Newspeak.Nat.to_int (snd $5))
                        )
               ,$1
             }
 | TYPE ident IS record_type_definition SEMICOLON {TypeDecl($2
                                                           ,Record $4
-                                                          ,Ada_types.unknown)
+                                                          )
                                                  ,$1}
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}

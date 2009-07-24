@@ -237,42 +237,6 @@ let translate compil_unit =
 
 
 
-  (* declaration d'un symbole d'enumeration *)
-  and add_enum loc ident value typ global =
-    let name = Normalize.normalize_ident
-      ident (Sym.current gtbl) (extern ()) in
-      (if mem_symb name
-       then
-         List.iter
-           (fun x -> match x with
-                (* erreur : il y a une declaration de variable
-                   ou de nombre de meme niveau que la declaration
-                   courante *)
-              | ((VarSymb(_, _, global',_) | NumberSymb(_,global')),
-                 _,_) when global=global' ->
-                  Npkcontext.report_error "Firstpass.add_enum"
-                    ("conflict : "^ident^" already declared")
-
-              (* erreur : declaration d'un symbol d'enumeration
-                 de meme type et de meme niveau *)
-              | (EnumSymb(_, t, global'),_,_)
-                  when t=typ && global=global' ->
-                  Npkcontext.report_error "Firstpass.add_enum"
-                    ("conflict : "^ident^" already declared")
-
-              | (FunSymb (_, Function(_, [], st), false, _), _, _)
-                  when global && st=typ ->
-                  Npkcontext.report_error "Firstpass.add_enum"
-                    ("conflict : "^ident^" already declared")
-
-              | ((EnumSymb(_)|VarSymb(_)
-                 |FunSymb _ |NumberSymb(_)),_,_) -> ())
-           (find_all_symb name));
-      Hashtbl.add symbtbl
-        name
-        (EnumSymb(translate_int value, typ,
-                  global), T.translate typ, loc)
-
   and add_global loc typ tr_typ i ro x =
     let name = Normalize.normalize_ident x (Sym.current gtbl) (extern ()) in
 
@@ -1026,37 +990,14 @@ let translate compil_unit =
                   extern(), ftyp), C.Fun, loc);
       ftyp
 
-  and translate_enum_declaration _idtyp _typ_decl list_val_id ty loc global =
-    List.iter
-      (fun (x,id) -> add_enum loc x id ty global)
-      list_val_id
-
-  and translate_derived_typ_decl subtyp_ind ty loc global =
-    match Ada_utils.extract_typ subtyp_ind with
-      | A.Declared(idtyp, (A.Enum(list_val_id, _) as typ_decl),_,_) ->
-          translate_enum_declaration idtyp typ_decl list_val_id ty loc global
-      | _ -> ()
-
-  and translate_typ_declaration idtyp typ_decl ty loc global =
-    match typ_decl with
-      | A.Enum (list_val_id, _) ->
-          translate_enum_declaration idtyp typ_decl list_val_id ty loc global
-      | A.DerivedType ref_subtyp_ind ->
-          translate_derived_typ_decl ref_subtyp_ind ty loc global
-      | A.IntegerRange _
-      | A.Record       _ -> ()
-
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl(ident, st, const) ->
         let read_only = const <> Variable in
         add_var loc st ident false read_only
-    | TypeDecl (idtyp,typ_decl,ty) ->
-        translate_typ_declaration idtyp typ_decl ty loc false
     | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-
     | UseDecl (use_clause) -> Sym.add_use gtbl use_clause
     | NumberDecl(ident, v) -> add_number loc v false ident
 
@@ -1072,15 +1013,12 @@ let translate compil_unit =
 
   and remove_basic_declaration basic = match basic with
     | ObjectDecl(ident, _, _) -> remove_symb ident
-    | TypeDecl(_,A.Enum(idents,_),_)  -> List.iter (fun (x,_) -> remove_symb x)
-                                               idents
     | SpecDecl(_) -> Npkcontext.report_error
         "Firstpass.remove_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
     | UseDecl _ -> ()
     | NumberDecl(ident, _) -> remove_symb ident
-    | TypeDecl _ -> ()
 
   and remove_declarative_item (item,_) = match item with
     | BasicDecl(basic) -> remove_basic_declaration basic
@@ -1146,8 +1084,6 @@ let translate compil_unit =
               Some (e, tr_typ)
              in
             add_global loc subtyp tr_typ init read_only ident
-      | TypeDecl (idtyp, typ_decl, ty) ->
-          translate_typ_declaration idtyp typ_decl ty loc true
       | UseDecl x -> Sym.add_use gtbl x
       | SpecDecl spec -> translate_spec spec loc false
       | NumberDecl(ident, v) -> add_number loc v true ident
