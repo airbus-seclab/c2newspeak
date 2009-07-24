@@ -74,6 +74,7 @@ and SymTable : sig
       | Unit       of table
       | Variable   of T.t*(T.data_t option)*bool (* if true, no storage *
                                                   * will be allocated   *)
+                                           *bool (* R/O *)
 
     and table = { mutable t_renaming : (string*Syntax_ada.name) list
                 ; mutable t_tbl      : Symset.t
@@ -87,7 +88,7 @@ and SymTable : sig
       | Type       of T.t
       | Subprogram of ((T.f_param list)*T.t option)
       | Unit       of table
-      | Variable   of T.t*(T.data_t option)*bool
+      | Variable   of T.t*(T.data_t option)*bool * bool
 
     and table = { mutable t_renaming : (string*Syntax_ada.name) list
                 ; mutable t_tbl      : Symset.t
@@ -108,8 +109,8 @@ and SymTable : sig
     t.t_use_list
 
   let print_symbol = function
-    | Variable   (t,None,_)   -> "V",T.print t
-    | Variable   (t,Some v,_) -> "V *","("^T.print_data v^")"^ T.print t
+    | Variable   (t,None,_,_)   -> "V",T.print t
+    | Variable   (t,Some v,_,_) -> "V *","("^T.print_data v^")"^ T.print t
     | Type         t   -> "T",T.print t
     | Subprogram (p,r) -> "S",(
                                let pdesc = " with "
@@ -179,7 +180,7 @@ and SymTable : sig
       ^"}")
 
   let add_variable =
-    adder (fun (t,v,ns) -> Variable (t,v,ns))
+    adder (fun (t,v,ns,r) -> Variable (t,v,ns,r))
           "variable"
 
   let add_type =
@@ -236,8 +237,8 @@ and SymTable : sig
 
   let cast_v ?filter = mkcast "variable"
                       (function
-                        | Variable (x,v     ,false) -> Some (x,v)
-                        | Variable (x,Some v,true ) ->
+                        | Variable (x,v     ,false,r) -> Some (x,v,r)
+                        | Variable (x,Some v,true ,_) ->
                             raise (Variable_no_storage (x,v))
                         | Subprogram ([],Some rt) ->
                             raise (Parameterless_function rt)
@@ -273,7 +274,7 @@ and SymTable : sig
       (fun (wh,(x,y)) -> wh,(List.map T.from_fparam x,y))
           (cast_s (find_symbols tbl n))
 
-  let tbl_find_variable tbl ?expected_type n :scope*(T.t*T.data_t option)=
+  let tbl_find_variable tbl ?expected_type n :scope*(T.t*T.data_t option*bool)=
     let ovl_predicate = match expected_type with
       | Some t when t <> T.unknown
           -> fun x ->    T.is_compatible x t
@@ -286,7 +287,11 @@ and SymTable : sig
                            ^match expected_type with None -> "None"
                                     | Some t -> T.print t)
     end;
-    cast_v ~filter:(fun (_,x) -> ovl_predicate (fst x)) (find_symbols tbl n)
+    let s,(t,v,r) = 
+      cast_v ~filter:(fun (_,(x,_,_)) -> ovl_predicate x) (find_symbols tbl n)
+    in
+    s,(t,v,(match v with Some _ -> true | None -> r))
+    
 
   let tbl_find_unit t id =
     match (find_symbols t id) with
@@ -459,7 +464,7 @@ module SymMake(TR:Tree.TREE) = struct
 
   let extract_variables t =
     let filter = function
-      | _,x, loc, Variable (y, _, false) -> [x,y,loc]
+      | _,x, loc, Variable (y, _, false, _) -> [x,y,loc]
       | _ -> []
     in
     List.flatten (List.map filter (Symset.elements t.t_tbl))
@@ -507,7 +512,7 @@ module SymMake(TR:Tree.TREE) = struct
     with Not_found -> error ("Cannot find variable '"^n^"'")
 
   let find_variable s ?expected_type name =
-    (fun (x,(y,_)) -> (x,y)) (find_variable_value s ?expected_type name)
+    (fun (x,(y,_,z)) -> (x,(y,z))) (find_variable_value s ?expected_type name)
 
   let find_type s (package,n) =
     try
@@ -529,7 +534,7 @@ module SymMake(TR:Tree.TREE) = struct
   let scope t =
     t.t_scope
 
-  let add_variable s n loc ?value ?(no_storage=false) t =
+  let add_variable s n loc ?value ?(no_storage=false) ?(ro=false) t =
     Npkcontext.print_debug ("s_add_variable : adding '"
                            ^n
                            ^"' with "
@@ -538,7 +543,7 @@ module SymMake(TR:Tree.TREE) = struct
                             | Some v -> "value "^T.print_data v
                             )
                            );
-    add_variable (top s) n loc (t,value,no_storage) (scope (top s))
+    add_variable (top s) n loc (t,value,no_storage,ro) (scope (top s))
 
   let add_type s n loc v =
     add_type (top s) n loc v (scope (top s))
@@ -549,7 +554,7 @@ module SymMake(TR:Tree.TREE) = struct
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
       let sym_eq (_,x) (_,y) = match (x,y) with
-        | Variable (t1,_,_), Variable (t2,_,_) -> t1 = t2
+        | Variable (t1,_,_,_), Variable (t2,_,_,_) -> t1 = t2
         | a, b -> a = b
       in
       List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
@@ -570,7 +575,9 @@ module SymMake(TR:Tree.TREE) = struct
                                " , R = "^print_set s2
                             )
                            );
-    if inte = [] then T.unknown else fst (snd (cast_v inte))
+    if inte = [] then T.unknown else
+      let (_,(r,_,_)) = cast_v inte in
+      r
 
   let first_child  x = TR.first_child  x.s_stack
   let next_sibling x = TR.next_sibling x.s_stack

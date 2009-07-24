@@ -117,8 +117,8 @@ let eval_static exp tbl =
         | Symboltbl.In_package p -> Some p
       in
       let (package,id) = name in
-      match snd(snd (Symboltbl.find_variable_value tbl ~expected_type
-                      (convert_scope package,id))) with
+      let (_,(_,r,_)) = Symboltbl.find_variable_value tbl ~expected_type (convert_scope package,id) in
+      match r with
         | None   -> raise NonStaticExpression
         | Some b -> b
     with

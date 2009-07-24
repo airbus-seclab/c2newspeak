@@ -333,7 +333,7 @@ and normalize_exp ?expected_type exp =
     | CChar  x -> Ast.CChar  x,T.character
     | Var    n -> begin (* n may denote the name of a parameterless function *)
                     try
-                      let (sc,t) = Sym.find_variable ?expected_type gtbl n in
+                      let (sc,(t,_)) = Sym.find_variable ?expected_type gtbl n in
                       Ast.Var(sc,(snd n),(assert_known t)) ,t
                     with
                     | Sym.Parameterless_function rt ->
@@ -553,6 +553,7 @@ in
            if addparam then begin
               Sym.add_variable gtbl param.formal_name (Newspeak.unknown_loc)
                                           (subtyp_to_adatyp param.param_type)
+                                          ~ro:(param.mode = In)
               ;
            end;
           { Ast.param_type    = assert_known (
@@ -686,7 +687,11 @@ in
     | Lval n ->
         begin
         try
-          let (sc, t) = (Sym.find_variable gtbl n) in
+          let (sc, (t, ro)) = (Sym.find_variable gtbl n) in
+          if ro then begin
+            Npkcontext.report_error "normalize_instr"
+               ("Invalid left value : '"^name_to_string n^"' is read-only")
+          end;
           (Ast.Lval (sc, snd n,t), t)
         with
           Sym.Variable_no_storage _ ->

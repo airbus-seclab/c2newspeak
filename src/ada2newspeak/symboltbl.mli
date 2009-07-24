@@ -116,12 +116,12 @@ exception Variable_no_storage    of Ada_types.t * Ada_types.data_t
 val find_variable :    t
                     -> ?expected_type:Ada_types.t
                     -> string option*string
-         -> scope * Ada_types.t
+         -> scope * (Ada_types.t * bool)
 
 val find_variable_value :    t
                     -> ?expected_type:Ada_types.t
                     -> string option*string
-         -> scope * (Ada_types.t*(Ada_types.data_t option))
+         -> scope * (Ada_types.t*(Ada_types.data_t option)*bool)
 
 val find_type     :    t
                     -> string option * string
@@ -138,6 +138,7 @@ val add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
 val add_variable : t -> string -> Newspeak.location
                      -> ?value:Ada_types.data_t
                      -> ?no_storage:bool
+                     -> ?ro:bool
                      -> Ada_types.t
                        -> unit
 
