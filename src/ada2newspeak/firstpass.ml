@@ -662,6 +662,7 @@ let translate compil_unit =
                   ar;
               []
         | (None   , e)::tl -> e::(extract_positional_parameters tl)
+    in
 
     (**
      * Step 2 : merge this list with the function specification, in order to
@@ -672,8 +673,8 @@ let translate compil_unit =
      *
      * /!\ Side-effects : this function references the argtbl variable.
      *)
-    and merge_with_specification (pos_list : Ast.expression list)
-                                 (spec     : Ast.param      list)
+    let rec merge_with_specification (pos_list : Ast.expression list)
+                                     (spec     : Ast.param      list)
         :(string*Ast.expression) list =
             match pos_list, spec with
               |  [],_  -> (* end of positional parameters *)
@@ -691,11 +692,13 @@ let translate compil_unit =
                                    end
                                )))
                                spec
-              | e::pt,s::st -> (s.formal_name, e)::
-                               (merge_with_specification pt st)
+              | (ev,t)::pt,s::st -> let t' = T.coerce_types t s.param_type in
+                                    Npkcontext.print_debug ("got argtype =
+                                      "^T.print s.param_type);
+                                    (s.formal_name, (ev,t'))::
+                                    (merge_with_specification pt st)
               | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
                               "Too many actual arguments in function call"
-
     in
         (* Step 1... *)
         let pos      = extract_positional_parameters args in
