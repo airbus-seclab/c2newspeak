@@ -152,10 +152,14 @@ let subtyp_to_adatyp gtbl st =
                                   T.unknown;
                                 end
 
-let merge_types gtbl (tp,_,_) =
-  let res = subtyp_to_adatyp gtbl tp in
-  if (T.is_unknown res) then
+let merge_types gtbl (tp, cstr, _) =
+  let t = subtyp_to_adatyp gtbl tp in
+  if (T.is_unknown t) then
     Npkcontext.report_warning "merge_types"
-    ("merged subtype indication into unknown type ("^T.get_reason res^")");
-  res
+    ("merged subtype indication into unknown type ("^T.get_reason t^")");
+  match cstr with
+  | None -> t
+  | Some (IntegerRangeConstraint (a,b)) -> T.new_constr t (T.(@...) a b)
+  | Some (  FloatRangeConstraint _) -> Npkcontext.report_error "merge_types" "FloatRangeConstraint"
+  | Some (       RangeConstraint _) -> Npkcontext.report_error "merge_types" "RangeConstraint"
 

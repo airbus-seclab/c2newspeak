@@ -79,6 +79,8 @@ val sizeof : range -> Newspeak.Nat.t
  * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
  *)
 
+val base_type : t -> t
+
 (**
  * An unknown type, different from every other one.
  *)

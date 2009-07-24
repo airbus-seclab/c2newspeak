@@ -103,7 +103,7 @@ let rec print t =
   in
   let p_trait = function
     | Unknown _ -> "Unknown"
-    | Signed  _ -> "Signed"
+    | Signed  r   -> "Signed "^p_range (Some r)
     | Univ_int  _ -> "Universal_integer"
     | Univ_real _ -> "Universal_real"
     | Float   d -> "Float "  ^string_of_int d
@@ -116,6 +116,7 @@ let rec print t =
   in
    "{"
   ^"H="^p_hash t
+  ^", "
   ^(if t.base.uid = 0 then "" else "U="^string_of_int t.base.uid)
   ^", trait = "^p_trait t.base.trait
   ^", range = "^p_range t.range
@@ -152,6 +153,11 @@ let uid = object
     count <- count + 1;
     count
 end
+
+let base_type x = {
+  base = {x.base with uid = 0};
+  range = None
+}
 
 let mk_unknown reason = {base = {trait = Unknown reason ; uid = 0}; range = None}
 
@@ -197,7 +203,7 @@ let new_unconstr parent =
 let new_constr parent r =
   let parent_base = parent.base in
     {
-      base = {parent_base with uid = uid#gen};
+      base = parent_base;
       range = Some r
     }
 
@@ -440,7 +446,7 @@ let float_size _d =
 
 let rec translate t =
   let rec translate_trait = function
-  | Signed ((a,b)) -> Cir.Scalar
+  | Signed (a,b) -> Cir.Scalar
                              (Newspeak.Int
                                ( Newspeak.Signed
                                , minimal_size_signed a b
@@ -480,12 +486,30 @@ let rec translate t =
 
   in translate_trait t.base.trait
 
-let check_exp t exp =
+let belongs min max exp =
+    Cir.Unop ( Npkil.Belongs_tmp (min, Npkil.Known (Newspeak.Nat.add_int 1 max))
+             , exp
+             )
+
+let check_exp_store t exp =
   match t.base.trait with
-  | Signed (a,b) ->
-      Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known (Newspeak.Nat.add_int 1 b))
-               , exp
-               )
+  | Signed (a,b)  -> belongs a b exp
+  | _ -> exp
+
+let check_exp t exp =
+  let (<=%) a b =
+    Newspeak.Nat.compare a b <= 0
+  in
+  match (t.base.trait, t.range) with
+  | Signed _, None ->
+      begin
+        check_exp_store t exp
+      end
+  | Signed (a,b), Some (c,d) ->
+      begin
+        assert (a <=% c && c <=% d && d <=% b);
+        belongs c d exp
+      end
   | _ -> exp
 
 (**

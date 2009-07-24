@@ -442,6 +442,10 @@ and normalize_contrainte contrainte =
             "internal error : unexpected Numeric Range"
 
 in
+  let normalize_subtyp_ind (st,cst,w) =
+    (st, Ada_utils.may normalize_contrainte cst, w)
+  in
+
 
   let add_numberdecl ident value loc =
     let t = match value with
@@ -493,7 +497,8 @@ in
         ) symbs;
         ()
     | DerivedType(subtyp_ind) ->
-        let t = merge_types subtyp_ind in
+        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+        let t = merge_types norm_subtyp_ind in
         let new_t = T.new_derived t in
           Sym.add_type gtbl ident loc new_t;
 
@@ -588,7 +593,8 @@ in
     | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
                              [Ast.UseDecl use_clause]
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
-        let t = merge_types subtyp_ind in
+        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+        let t = merge_types norm_subtyp_ind in
         begin match def with
           | None -> ()
           | Some exp -> List.iter (fun x -> handle_init x (normalize_exp
@@ -635,7 +641,8 @@ in
        add_numberdecl ident value loc;
        [Ast.NumberDecl(ident, value)]
     | SubtypDecl(ident, subtyp_ind) ->
-        Sym.add_type gtbl ident loc (merge_types subtyp_ind);
+        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+        Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
         []
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
                              []
@@ -712,7 +719,7 @@ in
                                Npkcontext.report_error "normalize_instr"
                                  "Incompatible types in assignment";
                              end;
-                           let t_exp' = T.coerce_types t_lv t_exp in
+                           let t_exp' = T.coerce_types t_lv (T.base_type t_exp) in
                            Some (Ast.Assign( lv'
                                            , (e',t_exp')
                                            , false

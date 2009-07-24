@@ -33,9 +33,7 @@ let error = Ada_utils.mkerror tc_verb "Typecheck"
 let expect ?desc t1 t2 =
   if (T.is_unknown t1 || T.is_unknown t2) then
     error "Unknown type";
-  if (not (   (t1 = t2)
-           || (t1 = T.universal_integer && T.is_integer t2)
-           || (t2 = T.universal_integer && T.is_integer t1)
+  if (not (T.is_compatible t1 t2
   ))
   then (* is_compatible ? *)
     error ("incompatible types"
