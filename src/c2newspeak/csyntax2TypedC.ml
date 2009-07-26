@@ -304,6 +304,7 @@ let process globals =
 	    match (t1, t2) with
 		(C.Ptr _, C.Int _) -> (e1, C.Cast ((e2, t2), t1), t1)
 	      | (C.Int _, C.Ptr _) -> (C.Cast ((e1, t1), t2), e2, t2)
+	      | (C.Ptr _, C.Ptr _) -> (e1, e2, t1)
 	      | (C.Int k1, C.Int k2) when k1 <> k2 -> 
 		  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
 		  let t = C.Int k in
