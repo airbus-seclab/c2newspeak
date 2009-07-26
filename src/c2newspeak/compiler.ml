@@ -79,19 +79,20 @@ let compile fname =
 	    g
 	end else prog
       in
-	Npkcontext.print_debug "Running first pass...";
+	Npkcontext.print_debug "Typing...";
 	let prog = Csyntax2TypedC.process prog in
-	let prog = Firstpass.translate prog in
-	  Npkcontext.forget_loc ();
-	  Npkcontext.print_debug "First pass done.";
-	  Npkcontext.print_size (Cir.size_of prog);
-	  if !Npkcontext.verb_cir then Cir.print prog;
-	  Npkcontext.print_debug ("Translating "^fname^"...");
-	  let tr_prog = Cir2npkil.translate Newspeak.C prog fnames in
+	  Npkcontext.print_debug "Running first pass...";
+	  let prog = Firstpass.translate prog in
 	    Npkcontext.forget_loc ();
-	    Npkcontext.print_debug ("Translation done.");
-	    Npkcontext.forget_loc ();
-	    tr_prog
+	    Npkcontext.print_debug "First pass done.";
+	    Npkcontext.print_size (Cir.size_of prog);
+	    if !Npkcontext.verb_cir then Cir.print prog;
+	    Npkcontext.print_debug ("Translating "^fname^"...");
+	    let tr_prog = Cir2npkil.translate Newspeak.C prog fnames in
+	      Npkcontext.forget_loc ();
+	      Npkcontext.print_debug ("Translation done.");
+	      Npkcontext.forget_loc ();
+	      tr_prog
 
 let eval_exp x =
   match x with
