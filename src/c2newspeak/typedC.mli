@@ -165,3 +165,5 @@ val ftyp_of_typ: typ -> ftyp
 val promote: Newspeak.ikind -> Newspeak.ikind
 
 val comp_of_typ: typ -> (field_decl list * bool)
+
+val equals_typ: typ -> typ -> bool
