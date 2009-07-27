@@ -29,9 +29,6 @@
  * @author Etienne Millon
  *)
 
-exception NonStaticExpression
-exception AmbiguousTypeException
-
 type verbose_level =
   | Silent
   | Debug

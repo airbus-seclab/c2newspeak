@@ -27,9 +27,6 @@ open Syntax_ada
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 
-exception NonStaticExpression
-exception AmbiguousTypeException
-
 type verbose_level =
   | Silent
   | Debug

@@ -524,15 +524,11 @@ and eval_range (exp1, exp2) =
                 ^"float or integer constant")
        in contrainte
      with
-       | NonStaticExpression ->
+       | Eval.NonStaticExpression ->
            Npkcontext.report_error
              "Ada_normalize.normalize_contrainte"
                "non-static constraint are not yet supported"
-
-       | AmbiguousTypeException ->
-           Npkcontext.report_error
-             "Ada_normalize.normalize_contrainte"
-             "internal error : uncaught ambiguous type exception")
+    )
 
 let normalize_subtyp_ind (st,cst) =
   (st, Ada_utils.may eval_range cst)
@@ -685,10 +681,7 @@ and normalization compil_unit extern =
                         ident_list;
               Ast.StaticVal value
           with
-            | AmbiguousTypeException -> Npkcontext.report_error
-                                        "Ada_normalize.normalize_basic_decl"
-                                        "uncaught ambiguous type exception"
-            | NonStaticExpression -> List.iter
+            | Eval.NonStaticExpression -> List.iter
                                       (fun x -> Sym.add_variable gtbl x loc t
                                       ) ident_list;
                                       Ast.Constant

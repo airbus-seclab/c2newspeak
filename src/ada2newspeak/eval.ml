@@ -32,6 +32,8 @@ open Big_int
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 
+exception NonStaticExpression
+
 let (^%) a b =
   let a = Nat.to_big_int a
   and b = Nat.to_big_int b in
@@ -145,9 +147,6 @@ let eval_static_integer_exp exp tbl =
       | NonStaticExpression -> Npkcontext.report_error
                           "eval_static.integer_exp"
                           "expected static expression"
-      | AmbiguousTypeException -> Npkcontext.report_error
-                          "eval_static.integer_exp"
-                          "uncaught ambiguous type exception"
 
 (**
  * Evaluate statically an constant number.
@@ -164,7 +163,4 @@ let eval_static_number exp tbl =
        | NonStaticExpression -> Npkcontext.report_error
           "eval_static.integer_exp"
           "expected static expression"
-       | AmbiguousTypeException -> Npkcontext.report_error
-         "eval_static.integer_exp"
-         "uncaught ambiguous type exception"
 

@@ -37,8 +37,6 @@ module Sym = Symboltbl
 
 open Ast
 
-exception AmbiguousTypeException
-
 (**
  * Symbols.
  * A symbol may represent a variable or an enumeration litteral.
@@ -526,18 +524,9 @@ let translate compil_unit =
 
   and translate_binop op e1 e2 =
     let (c1, c2, typ) =
-      try
-        let (c1, _) = translate_exp e1 in
-        let (c2, typ2) = translate_exp e2 in
-        (c1, c2, typ2)
-      with AmbiguousTypeException ->
-        try
-          let (c2, _typ2) = translate_exp e2 in
-          let (c1, typ1) = translate_exp e1 in
-          (c1, c2, typ1)
-        with AmbiguousTypeException ->
-              Npkcontext.report_error "Firstpass.translate_binop"
-                "ambiguous operands"
+      let (c1, _) = translate_exp e1 in
+      let (c2, typ2) = translate_exp e2 in
+      (c1, c2, typ2)
     in
       match (op,T.translate typ) with
       (* Numeric operations *)
@@ -1096,13 +1085,9 @@ let translate compil_unit =
 
   let normalized_compil_unit =  Normalize.normalization compil_unit false in
   let (ctx, lib_item, loc) = normalized_compil_unit in
-    try
-      Npkcontext.set_loc loc;
-      do_as_extern translate_context ctx;
-      translate_library_item lib_item loc;
-      Npkcontext.forget_loc ();
-      { C.globals = globals; C.init = !init; C.fundecs = fun_decls }
-    with AmbiguousTypeException ->
-      Npkcontext.report_error "Firstpass.translate"
-        "uncaught ambiguous type exception"
+    Npkcontext.set_loc loc;
+    do_as_extern translate_context ctx;
+    translate_library_item lib_item loc;
+    Npkcontext.forget_loc ();
+    { C.globals = globals; C.init = !init; C.fundecs = fun_decls }
 
