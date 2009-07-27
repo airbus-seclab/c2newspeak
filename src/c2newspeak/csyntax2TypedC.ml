@@ -117,7 +117,7 @@ let process globals =
     match args_t with
 	Some args_t -> List.iter add_local args_t
       | None -> 
-	  Npkcontext.report_error "Csyntax2CoreC.add_formals" "unreachable code"
+	  Npkcontext.report_error "Csyntax2TypedC.add_formals" "unreachable code"
   in
 
   let remove_formals (args_t, _) =
@@ -174,7 +174,7 @@ let process globals =
 
   let translate_proto_ftyp f static (args, ret) loc =
     if args = None then begin
-      Npkcontext.report_warning "Csyntax2CoreC.check_proto_ftyp" 
+      Npkcontext.report_warning "Csyntax2TypedC.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
     let _ = update_funsymb f static (args, ret) loc in
@@ -184,7 +184,7 @@ let process globals =
   let refine_ftyp f (args_t, ret_t) actuals = 
     match args_t with
 	None -> 
-	  Npkcontext.report_accept_warning "Csyntax2CoreC.refine_ftyp"  
+	  Npkcontext.report_accept_warning "Csyntax2TypedC.refine_ftyp"  
             "unknown arguments type at function call"   
             Npkcontext.PartialFunDecl;
 	  let ft = (Some actuals, ret_t) in begin
@@ -205,7 +205,7 @@ let process globals =
 	  let k = C.promote k in
 	    (C.BNot k, C.Int k)
       | _ -> 
-	  Npkcontext.report_error "Csyntax2CoreC.translate_unop"
+	  Npkcontext.report_error "Csyntax2TypedC.translate_unop"
 	    "unexpected unary operator and argument"
   in
 
@@ -280,7 +280,7 @@ let process globals =
 		| C.Ptr elt_t -> 
 		    (C.Deref (C.Binop ((C.Plus, t), (a, t), idx), t), elt_t)
 		| _ -> 
-		    Npkcontext.report_error "Csyntax2CoreC.translate_exp"
+		    Npkcontext.report_error "Csyntax2TypedC.translate_exp"
 		      "pointer or array expected"
 	    end
 
@@ -300,16 +300,25 @@ let process globals =
 	  let (c, _) = translate_exp c in
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
-	  let t = 
+	  let (e1, e2, t) = 
 	    match (t1, t2) with
-		(C.Ptr _, C.Int _) -> t1
-	      | (C.Int _, C.Ptr _) -> t2
-	      | _ when t1 = t2 -> t1
+		(C.Ptr _, C.Int _) -> (e1, C.Cast ((e2, t2), t1), t1)
+	      | (C.Int _, C.Ptr _) -> (C.Cast ((e1, t1), t2), e2, t2)
+	      | (C.Ptr _, C.Ptr _) -> (e1, e2, t1)
+	      | (C.Int k1, C.Int k2) when k1 <> k2 -> 
+		  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
+		  let t = C.Int k in
+		  let e1 = if k = k1 then e1 else C.Cast ((e1, t1), t) in
+		  let e2 = if k = k2 then e2 else C.Cast ((e2, t2), t) in
+		    (e1, e2, t)
+(* TODO: couldn't it run forever?? *)
+	      | _ when t1 = t2 -> (e1, e2, t1)
 	      | _ -> 
-		  Npkcontext.report_error "Csyntax2CoreC.translate_exp"
+		  Npkcontext.report_error "Csyntax2TypedC.translate_exp"
 		    "compatible type expected"
 	  in
-	    (C.IfExp (c, (e1, t1), (e2, t2), t), t)
+	    (* TODO: could simplify this?!!! *)
+	    (C.IfExp (c, (e1, t), (e2, t), t), t)
       | Call (f, args) -> 
 	  let (f, ft) = translate_funexp f in
 	  let (args, actuals) = translate_args args in
@@ -367,7 +376,7 @@ let process globals =
 	| (C.Deref f, C.Fun t) -> (C.FunDeref f, t)
 	| (_, C.Ptr (C.Fun t)) -> (C.FunDeref (f, ft), t)
 	| _ -> 
-	    Npkcontext.report_error "Csyntax2CoreC.translate_call"
+	    Npkcontext.report_error "Csyntax2TypedC.translate_call"
 	      "function expression expected"
 
   and translate_args x = 
@@ -600,7 +609,7 @@ let process globals =
 	    C.Sequence seq
 
       | (Sequence _, _) -> 
-	  Npkcontext.report_error "Csyntax2CoreC.translate_init"
+	  Npkcontext.report_error "Csyntax2TypedC.translate_init"
 	    "this type of initialization not implemented yet"
 
   and translate_field_sequence seq fields =
@@ -618,7 +627,7 @@ let process globals =
 	    "missing initializers for structure" Npkcontext.DirtySyntax;
 	    []
 
-      | _ -> Npkcontext.report_error "Csyntax2CoreC" "case not implemented yet"
+      | _ -> Npkcontext.report_error "Csyntax2TypedC" "case not implemented yet"
   in
 
   let translate_fundecl (f, f', ft, static, body, loc) =
