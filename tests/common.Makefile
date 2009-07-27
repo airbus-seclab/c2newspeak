@@ -50,7 +50,7 @@ CLEANFILES+=$(TESTS) $(addsuffix .bak, $(TESTS)) *.no \
 check: $(TESTS)
 
 $(TESTS): %: $(PREREQ)
-	$(COMMAND) &> $*.bak; true
+	$(COMMAND) >$*.bak 2>&1; true
 	if [ -e $*.spec ]; \
 	then \
 	  if $(DIFF) > result; \

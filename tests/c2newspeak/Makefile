@@ -24,7 +24,7 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $*.cil.bak; \
+COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c >$*.cil.bak 2>&1; \
         $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
 
 DIFF=diff $*.spec $*.bak > result && \
