@@ -128,6 +128,7 @@ val find_type     :    t
          -> scope * Ada_types.t
 
 val find_subprogram : t
+                    -> ?silent:bool
                     -> string option * string
     -> scope * ((string*bool*bool*Ada_types.t) list * Ada_types.t option)
 

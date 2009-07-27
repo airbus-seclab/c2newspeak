@@ -91,7 +91,9 @@ and typ_declaration =
   | DerivedType  of subtyp_indication
   | IntegerRange of contrainte
                   * Newspeak.ikind option
-  | Record of (string*subtyp) list
+  | Record       of (string*subtyp) list
+  | Array        of subtyp_indication (* Index     *)
+                  * subtyp_indication (* Component *)
 
 (** Subtype definition. *)
 and subtyp =

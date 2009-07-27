@@ -523,10 +523,12 @@ module SymMake(TR:Tree.TREE) = struct
       s_find "type" tbl_find_type s ?package n
     with Not_found -> error ("Cannot find type '"^n^"'")
 
-  let find_subprogram s (package,n) =
+  let find_subprogram s ?(silent=false) (package,n) =
     try
       s_find "subprogram" tbl_find_subprogram s ?package n
-    with Not_found -> error ("Cannot find subprogram '"^n^"'")
+    with Not_found -> if silent then raise Not_found
+                                else error ("Cannot find subprogram '"^n^"'")
+                                
 
   let is_operator_overloaded s n =
     try begin

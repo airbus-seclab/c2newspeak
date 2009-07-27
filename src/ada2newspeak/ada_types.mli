@@ -117,7 +117,7 @@ val new_float      : int -> t
  * the second one is the index type.
  * @raise Invalid_argument if the index list is empty.
  *)
-val new_array  : t -> t -> t
+val new_array  : component:t -> index:t -> t
 
 val new_record : (string*t) list -> t
 
@@ -136,6 +136,8 @@ val handle_representation_clause : t -> (string * Newspeak.Nat.t) list -> unit
  * Returns (component, index)
  *)
 val extract_array_types : t -> (t * t) option
+
+val extract_array_base : t -> Newspeak.Nat.t
 
 (** Precondition : is_unknown t *)
 val get_reason : t -> string

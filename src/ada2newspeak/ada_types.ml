@@ -223,10 +223,10 @@ let new_float digits =
       range = None
     }
 
-let new_array component ind =
+let new_array ~component ~index =
     {
       base = {
-        trait = Array (component,ind);
+        trait = Array (component,index);
         uid = 0;
       };
       range = None
@@ -526,6 +526,18 @@ let check_exp t_ctx exp =
   match constr with
   | None -> exp
   | Some (a,b) -> belongs a b exp
+
+
+let extract_array_base t =
+  match t.base.trait with
+  | Array (_, ti) ->
+      begin
+        match compute_constr ti with
+          | None        -> Npkcontext.report_error "extract_array_base"
+                                                   "bad array index type"
+          | Some (a, _) -> a
+      end
+  | _             -> invalid_arg "extract_array_base"
 
 (**
  * Subprogram parameters.

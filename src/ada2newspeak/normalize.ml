@@ -336,13 +336,29 @@ and normalize_uop uop exp =
      | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
 and normalize_fcall (n, params) =
-  let (sc,(_,top)) = Sym.find_subprogram gtbl n in
-  let t = match top with
-  | None -> Npkcontext.report_error "normalize_exp"
-            "Expected function, got procedure"
-  | Some top -> top
-  in
-  Ast.FunctionCall(sc, (snd n), List.map normalize_arg params),t
+  (* Maybe this indexed expression is an array-value *)
+  try 
+    let (sc,(_,top)) = Sym.find_subprogram ~silent:true gtbl n in
+    let t = match top with
+    | None -> Npkcontext.report_error "normalize_exp"
+              "Expected function, got procedure"
+    | Some top -> top
+    in
+    Ast.FunctionCall(sc, (snd n), List.map normalize_arg params),t
+  with Not_found ->
+    begin
+      let (sc,(t,_)) = Sym.find_variable gtbl n in
+      let tc = match T.extract_array_types t with
+      | None -> Npkcontext.report_error "normalize_fcall" 
+                  ("Variable '"^name_to_string n^"' is not of an array type");
+      | Some (c,_) -> c
+      in
+      let base = T.extract_array_base t in
+      let prepare_param (_,x) =
+        normalize_exp (Binary (Minus,x,CInt base))
+      in
+      Ast.ArrayValue(sc, (snd n), List.map prepare_param params, t),tc
+    end
 
 (**
  * Normalize a constraint.
@@ -470,8 +486,7 @@ let normalize_typ_decl ident typ_decl loc =
                                                    ~value:(T.IntVal (Newspeak.Nat.of_int v))
                                                    ~no_storage:true
                 ) s
-      end;
-
+      end
   | IntegerRange(contrainte,taille) ->
       let decl = normalize_integer_range taille contrainte in
       let range = match decl with
@@ -489,6 +504,11 @@ let normalize_typ_decl ident typ_decl loc =
                   let t = T.new_record r' in
                   Sym.add_type gtbl ident loc t;
                 end
+  | Array (i, c) ->
+      let component = merge_types i in
+      let index     = merge_types c in
+      let t  = T.new_array ~component ~index in
+      Sym.add_type gtbl ident loc t
 
 (*
  * renvoie la specification normalisee du package correspondant
@@ -683,9 +703,17 @@ and normalization compil_unit extern =
             Npkcontext.report_error "normalize_lval"
               "unexpected Variable_no_storage"
         end
-    | ArrayAccess (_lv, _e) ->
- (*     Ast.ArrayAccess(fst (normalize_lval lv), normalize_exp  e),None; *)
-        failwith "array assignment"
+    | ArrayAccess (lv, e) ->
+        let (lv',t) = normalize_lval lv in
+        let base = T.extract_array_base t in
+        let prepare_offset e =
+          normalize_exp (Binary( Minus
+                               , e
+                               , CInt base
+                               )
+                        )
+        in
+        Ast.ArrayAccess(lv' , prepare_offset e), t
   in
 
   (**

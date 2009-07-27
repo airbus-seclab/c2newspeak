@@ -60,6 +60,12 @@ type qualified_symbol = symb*C.typ*Newspeak.location
 (** Promotes an identifier to a name *)
 let ident_to_name ident = (None, ident)
 
+let make_offset index size =
+  C.Binop (Newspeak.MultI
+          , index
+          , size
+          )
+
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
 
@@ -155,6 +161,7 @@ let translate compil_unit =
 
   let translate_int i = C.Const(C.CInt i)
   in
+  let trans_int x = translate_int (Newspeak.Nat.of_int x) in
 
   (* fonctions de traduction des noms*)
   (* on ajoute le nom du package courant dans le cas ou on
@@ -479,17 +486,6 @@ let translate compil_unit =
 
   in
 
-  let rec translate_lv lv _write _trans_exp =
-      match lv with
-        | Lval (sc,lv,t) ->
-            let clv = translate_resolved_name sc lv in
-            (clv, t)
-
-        (*Assignation dans un tableau*)
-        | ArrayAccess (_lval, _expr) ->
-            failwith "array"
-  in
-
   let rec translate_if_exp e_cond e_then e_else =
     let loc = Npkcontext.get_loc () in
     let (tmp, decl, vid) = temp#create loc T.boolean in
@@ -699,6 +695,22 @@ let translate compil_unit =
     let xtyp = T.translate ty in
     C.Lval (n, xtyp), ty
 
+  and translate_lv lv _write _trans_exp =
+      match lv with
+        | Lval (sc,lv,t) ->
+            let clv = translate_resolved_name sc lv in
+            (clv, t)
+
+        (*Assignation dans un tableau*)
+        | ArrayAccess (lv, expr) ->
+            let (x_lv,t_lv ) = translate_lv lv _write _trans_exp in
+            let (x_exp,t) = translate_exp expr in
+            let x_typ = T.translate t in
+            let size = C.size_of_typ x_typ in
+            let offset = make_offset x_exp (trans_int size) in
+            let offset' = T.check_exp (t_lv) offset in
+            C.Shift (x_lv, offset'),t
+
   and translate_exp (exp,typ) :C.exp*T.t=
     match exp with
     | CFloat f -> C.Const(C.CFloat(f,string_of_float f)), T.std_float
@@ -711,6 +723,18 @@ let translate compil_unit =
         let (bop, rtyp) = translate_binop binop exp1 exp2 in
         (T.check_exp typ bop), rtyp
     | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3
+    | ArrayValue  (sc, name, arg_list, t) ->
+        let index = match arg_list with
+          | [x] -> x
+          | _ -> failwith "array value : unexpected matrix"
+        in
+        let arr = translate_resolved_name sc name in
+        let (ex_index, t_index) = (translate_exp index) in
+        let ctyp = T.translate t_index in
+        let offset = make_offset ex_index
+                                 (trans_int (C.size_of_typ ctyp))
+        in
+        C.Lval (C.Shift (arr, offset), ctyp), t
     | FunctionCall(sc, name, arg_list) ->
         (*fonction ou lecture d'un element de tableau/matrice*)
         (* let (fname, spec, tr_typ) = find_fun_symb name in *)

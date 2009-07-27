@@ -105,6 +105,7 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^", "^(option_to_string taille ikind_to_string)^")"
   | Record r -> "Record("^(list_to_string r record_component_to_string
                                           ", " false)
+  | Array _ -> "Array(...)"
 
 and record_component_to_string (c,st) =
   c ^ " => " ^ subtyp_to_string st

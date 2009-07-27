@@ -64,6 +64,7 @@ let eval_static exp tbl =
     | Ast.CChar  c -> T.IntVal (Nat.of_int c)
     | Ast.CBool  b -> T.BoolVal b
     | Ast.Var (s,v,_) -> eval_static_const (s,v) t
+    | Ast.ArrayValue   _
     | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Not exp -> begin
                        match (eval_static_exp exp) with

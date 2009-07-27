@@ -84,6 +84,9 @@ and exp_value =
   | Var          of Symboltbl.scope * string * Ada_types.t
   | FunctionCall of Symboltbl.scope * string
                   * argument list
+  | ArrayValue   of Symboltbl.scope * string
+                  * expression list
+                  * Ada_types.t
   | Not          of expression
   | Binary       of binary_op
                   * expression
