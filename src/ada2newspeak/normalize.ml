@@ -240,7 +240,7 @@ let build_init_stmt (x,exp,loc) =
                       , x
                       , snd exp)
             , exp
-            , true)
+            )
   , loc
 
 let extract_subprog_spec ast =
@@ -801,7 +801,6 @@ and normalization compil_unit extern =
             end;
           Some (Ast.Assign( lv'
                           , (e',t_exp)
-                          , false
                           ), loc)
         end
     | Return(exp) -> Some (Ast.Return(normalize_exp ?expected_type:return_type
@@ -840,7 +839,6 @@ and normalization compil_unit extern =
                                                                else Plus)
                                                    , Var (None,iter)
                                                    , CInt (Nat.one)))
-                                    , true (* unchecked *)
                                     )
                         , loc]
             )

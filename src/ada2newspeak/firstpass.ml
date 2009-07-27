@@ -37,24 +37,6 @@ module Sym = Symboltbl
 
 open Ast
 
-(**
- * Symbols.
- * A symbol may represent a variable or an enumeration litteral.
- * The boolean parameter indicates whether :
- *   - the variable is global or local (true means global) in the cases
- *     variable and enum.
- *   - if the subprogram is internal or external (external : true)
- *   - for the variables : the last boolean parameter indicates whether a
- *     variable is read-only.
- *)
-type symb =
-  | VarSymb  of C.lv * Ada_types.t * bool * bool (** name, type, global?, ro? *)
-  | EnumSymb of C.exp   * Ada_types.t * bool (** TODO, typename, ro? *)
-  | FunSymb  of C.funexp * Ast.sub_program_spec * bool * C.ftyp (** XXX *)
-  | NumberSymb of T.data_t*bool (** XXX *)
-
-type qualified_symbol = symb*C.typ*Newspeak.location
-
 (** Promotes an identifier to a name *)
 let ident_to_name ident = (None, ident)
 
@@ -92,33 +74,22 @@ let translate_saved_context ctx =
     C.Decl (T.translate t, id), loc
   ) (Sym.extract_variables ctx)
 
+let translate_nat i =
+  C.Const(C.CInt i)
+
+let translate_int x =
+  translate_nat (Newspeak.Nat.of_int x)
+
 (**
  * Main translating function.
  * Takes an Ada program as and returns a CIR tree.
  *)
 let translate compil_unit =
 
-  (*
-   * Global hashtables and references.
-   * /!\ Side-effects !
-   *)
-
-  (** Symbol table for lexically-scoped variables. *)
-  let symbtbl   = Hashtbl.create 100
-
-  (* Function declarations. *)
-  and fun_decls = Hashtbl.create 100
-
-  (* FIXME Global (?) symbol table. Strangely used. *)
-  and globals   = Hashtbl.create 100
-
-  and init      = ref []
-
-  and gtbl = Sym.create () in
-
-  let find_all_symb x = Hashtbl.find_all symbtbl x
-  and mem_symb x = Hashtbl.mem symbtbl x
-  in
+  let fun_decls = Hashtbl.create 10 in
+  let globals   = Hashtbl.create 10 in
+  let init      = ref []            in
+  let gtbl = Sym.create ()          in
 
   let (add_global_init, get_global_init) =
     let global_init = Hashtbl.create 0
@@ -136,8 +107,6 @@ let translate compil_unit =
     )
   in
 
-  let translate_int i = C.Const(C.CInt i) in
-  let trans_int x = translate_int (Newspeak.Nat.of_int x) in
 
   (* fonctions de traduction des noms*)
   (* on ajoute le nom du package courant dans le cas ou on
@@ -153,121 +122,18 @@ let translate compil_unit =
 
   (* gestion de la table de symboles *)
 
-  (* declaration d'une variable locale *)
-  let add_var loc st ident ~deref ~ro =
-    let x = ident_to_name ident in
-      (if Hashtbl.mem symbtbl x then
-         match Hashtbl.find symbtbl x with
-
-           (* si la declaration precedente est globale, on peut
-              redefinir x*)
-           | (VarSymb   (_,_, true,_),_,_)
-           | (NumberSymb(_,true),_,_)
-           | (EnumSymb  (_,_,true),_,_)
-           | (FunSymb    _,_,_)              -> ()
-
-           (* sinon la declaration est locale,
-              cela cause une erreur *)
-           | ((VarSymb(_)|EnumSymb(_)|NumberSymb (_)),_,_)->
-               Npkcontext.report_error "Firstpass.add_var"
-                (* FIXME should be warning *)
-                 ("Variable "^(string_of_name x)
-                  ^" hides former definition.")
-      );
-      let tr_typ = T.translate st in
-      let (lv, typ_cir) =
-        if deref
-        then (C.Deref(C.Lval(C.Local ident, tr_typ), tr_typ),
-                C.Scalar Newspeak.Ptr)
-        else (C.Local ident, tr_typ)
-      in
-        Hashtbl.add symbtbl x (VarSymb (lv, st, false, ro),
-                               typ_cir, loc)
-
-  (* declaration d'un nombre local *)
-  and add_number loc value lvl ident =
-    let x =  Normalize.normalize_ident
-      ident (Sym.current gtbl) (extern ()) in
-      (if Hashtbl.mem symbtbl x then
-         match Hashtbl.find symbtbl x with
-
-           (* erreur : declaration de meme niveau deja existante *)
-           | (VarSymb(_, _, global,_),_,_)
-           | (EnumSymb(_,_, global),_,_)
-           | (NumberSymb(_,global),_,_) when global=lvl ->
-               Npkcontext.report_error "Firstpass.add_number"
-                 ("conflict : "^(string_of_name x)
-                  ^" already declared")
-           | (FunSymb _,_,_) when lvl ->
-               Npkcontext.report_error "Firstpass.add_number"
-                 ("conflict : "^(string_of_name x)
-                  ^" already declared")
-
-           (* les declarations ne sont pas de meme niveau *)
-           | ((VarSymb(_) | EnumSymb(_)
-              | NumberSymb(_) | FunSymb _),_,_) -> ()
-      );
-      let typ_cir = match value with
-        | T.IntVal _   -> T.translate T.integer
-        | T.FloatVal _ -> T.translate T.std_float
-        | T.BoolVal _ ->
-            Npkcontext.report_error
-              "Firstpass.add_number"
-              "internal error : number cannot have Enum val"
-      in
-        Hashtbl.add symbtbl x
-          (NumberSymb(value, lvl), typ_cir, loc)
-
-
-
-  and add_global loc typ tr_typ i ro x =
+  let add_global loc tr_typ i x =
     let name = Normalize.normalize_ident x (Sym.current gtbl) (extern ()) in
-
     let tr_name = translate_name name in
-      (if mem_symb name
-       then
-         (List.iter
-            (fun symb -> match symb with
-                 (* il y a une declaration de variable
-                    ou de nombre globale *)
-               | (NumberSymb(_, true),_,_)
-               | (VarSymb(_, _, true,_),_,_) ->
-                   Npkcontext.report_error "Firstpass.add_global"
-                     ("conflict : "^x^" already declared")
-
-               (* declaration d'un symbol d'enumeration global *)
-               | (EnumSymb(_, _, true),_,_) ->
-                   Npkcontext.report_error "Firstpass.add_global"
-                     ("conflict : "^x^" already declared")
-
-               (* fonction interne *)
-               | (FunSymb (_, Function(_, _, _), false, _), _, _) ->
-                   Npkcontext.report_error "Firstpass.add_enum"
-                     ("conflict : "^x^" already declared")
-
-               | ((EnumSymb _ |VarSymb _
-                  | FunSymb _ |NumberSymb(_)),_,_) -> ())
-            (find_all_symb name)));
-
-      let storage =
-  match i with
-    | None -> Npkil.Declared false
-    | Some (e, t) ->
-        init := (C.Set (C.Global tr_name, t, e), loc)::!init;
-        Npkil.Declared true
-      in
-
-  Hashtbl.add globals tr_name (tr_typ, loc, storage);
-  Hashtbl.add symbtbl name
-          (VarSymb (C.Global(tr_name), typ, true, ro),
-           tr_typ, loc);
-
-  and remove_symb x =
-    Hashtbl.remove symbtbl (ident_to_name x) in
-
-  let remove_formals args =
-    remove_symb Params.ret_ident;
-    List.iter remove_symb args
+    let storage = match i with
+      | None -> Npkil.Declared false
+      | Some (e, t) ->
+          begin
+            init := (C.Set (C.Global tr_name, t, e), loc)::!init;
+            Npkil.Declared true
+          end
+    in
+    Hashtbl.add globals tr_name (tr_typ, loc, storage)
   in
 
   (** Used to generate temporary variables. *)
@@ -298,7 +164,6 @@ let translate compil_unit =
          *)
         method create loc t =
             let id = s#new_id in
-              add_var loc t id false false;
               Sym.add_variable gtbl id loc t;
               let decl = (C.Decl (T.translate t, id), loc) in
                 (id, decl, C.Local id)
@@ -316,12 +181,11 @@ let translate compil_unit =
     let loc = Npkcontext.get_loc () in
     let (tmp, decl, vid) = temp#create loc T.boolean in
     let instr_if = If (e_cond,
-           [Assign(Lval (Sym.Lexical, tmp, snd e_then), e_then, false),loc],
-           [Assign(Lval (Sym.Lexical, tmp, snd e_else), e_else, false),loc])
+           [Assign(Lval (Sym.Lexical, tmp, snd e_then), e_then),loc],
+           [Assign(Lval (Sym.Lexical, tmp, snd e_else), e_else),loc])
     in let tr_instr_if =
         translate_block [(instr_if,loc)]
     in
-      remove_symb tmp;
       (C.BlkExp (decl::tr_instr_if,
                  C.Lval (vid, T.translate T.boolean), false),
        T.boolean)
@@ -329,24 +193,22 @@ let translate compil_unit =
   and translate_and e1 e2 =
     let loc = Npkcontext.get_loc () in
     let (tr_e2,_ ) = translate_exp e2 in
-    let (tmp, decl, vid) = temp#create loc T.boolean in
+    let (_, decl, vid) = temp#create loc T.boolean in
     let assign = C.Set (vid, T.translate T.boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          e2
                                          (CBool false,T.boolean)) in
-      remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, T.translate T.boolean), false), T.boolean
 
   and translate_or e1 e2 =
     let loc = Npkcontext.get_loc () in
     let (tr_e2,_ ) = translate_exp e2 in
-    let (tmp, decl, vid) = temp#create loc T.boolean in
+    let (_, decl, vid) = temp#create loc T.boolean in
     let assign = C.Set (vid, T.translate T.boolean, tr_e2) in
     let tr_ifexp = fst (translate_if_exp e1
                                          (CBool true,T.boolean)
                                          e2) in
-      remove_symb tmp;
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
       , C.Lval (vid, T.translate T.boolean), false), T.boolean
 
@@ -413,7 +275,7 @@ let translate compil_unit =
     let xtyp = T.translate ty in
     C.Lval (n, xtyp), ty
 
-  and translate_lv lv _write _trans_exp =
+  and translate_lv lv =
       match lv with
         | Lval (sc,lv,t) ->
             let clv = translate_resolved_name sc lv in
@@ -421,20 +283,20 @@ let translate compil_unit =
 
         (*Assignation dans un tableau*)
         | ArrayAccess (lv, expr) ->
-            let (x_lv,t_lv ) = translate_lv lv _write _trans_exp in
+            let (x_lv,t_lv ) = translate_lv lv in
             let (x_exp,t) = translate_exp expr in
             let x_typ = T.translate t in
             let size = C.size_of_typ x_typ in
-            let offset = make_offset x_exp (trans_int size) in
+            let offset = make_offset x_exp (translate_int size) in
             let offset' = T.check_exp (t_lv) offset in
             C.Shift (x_lv, offset'),t
 
   and translate_exp (exp,typ) :C.exp*T.t=
     match exp with
     | CFloat f -> C.Const(C.CFloat(f,string_of_float f)), T.std_float
-    | CInt   i -> translate_int i, typ
-    | CChar  c -> translate_int (Nat.of_int c), T.character
-    | CBool  b -> translate_int (Ada_utils.nat_of_bool b), T.boolean
+    | CInt   i -> translate_nat i, typ
+    | CChar  c -> translate_nat (Nat.of_int c), T.character
+    | CBool  b -> translate_nat (Ada_utils.nat_of_bool b), T.boolean
     | Var    (scope,name,ty)  -> translate_var scope name ty
     | Not    exp              -> translate_not exp
     | Binary(binop,exp1,exp2) ->
@@ -450,7 +312,7 @@ let translate compil_unit =
         let (ex_index, t_index) = (translate_exp index) in
         let ctyp = T.translate t_index in
         let offset = make_offset ex_index
-                                 (trans_int (C.size_of_typ ctyp))
+                                 (translate_int (C.size_of_typ ctyp))
         in
         C.Lval (C.Shift (arr, offset), ctyp), t
     | FunctionCall(sc, name, arg_list, rt) ->
@@ -468,8 +330,8 @@ let translate compil_unit =
   (**
    * Translate a [Syntax_ada.Assign].
    *)
-  and translate_affect lv exp loc unchecked =
-    let (tr_lv,subtyp_lv) = translate_lv lv (not unchecked) translate_exp in
+  and translate_affect lv exp loc =
+    let (tr_lv,subtyp_lv) = translate_lv lv in
     let (tr_exp,_) = translate_exp exp in
     make_affect tr_lv tr_exp subtyp_lv loc
 
@@ -486,7 +348,7 @@ let translate compil_unit =
                translate_block
                  ((Assign( Lval ( Sym.Lexical, Params.ret_ident, snd exp)
                                 , exp
-                                , false),loc)
+                                ),loc)
                   ::(ReturnSimple,loc)::r)
            | ReturnSimple ->
                let tr_reste =
@@ -502,8 +364,8 @@ let translate compil_unit =
              in
                  (C.Goto Params.ret_lbl, loc)::tr_reste
            | Exit -> (C.Goto Params.brk_lbl, loc)::(translate_block r)
-           | Assign(lv,exp,unchecked) ->
-               (translate_affect lv exp loc unchecked)::(translate_block r)
+           | Assign(lv,exp) ->
+               (translate_affect lv exp loc)::(translate_block r)
            | If(condition,instr_then,instr_else) ->
                let (tr_exp, typ) = translate_exp condition in
                  if (not (T.is_boolean typ ))then begin
@@ -549,7 +411,6 @@ let translate compil_unit =
                           let res = (C.Block ((t_ctx@(translate_block blk)),
                                          None),loc) in
                           let r = res::(translate_block r) in
-                          remove_declarative_part dp;
                           ignore (Sym.exit_context gtbl);
                           r
             end
@@ -559,22 +420,6 @@ let translate compil_unit =
       |   A.Out
       | A.InOut -> C.Scalar Newspeak.Ptr
 
-  and add_param loc param =
-    let (deref,ro) = match param.mode with
-      | A.In    -> (false, true)
-      |   A.Out
-      | A.InOut -> (true, false)
-    in
-        add_var loc
-                param.param_type
-                param.formal_name
-                deref
-                ro;
-        (param.formal_name,
-         param.formal_name)
-
-    (* prend une liste de parametres en argument
-       et renvoie liste de typ *)
   and translate_param_list param_list =
     (List.map translate_param param_list)
   and add_params subprog_spec loc =
@@ -582,138 +427,61 @@ let translate compil_unit =
       match subprog_spec with
         | Function(_, param_list, return_type) ->
             Sym.add_variable gtbl Params.ret_ident loc return_type;
-            add_var loc return_type Params.ret_ident false false;
             param_list
         | Procedure(_, param_list) ->
             param_list
     in
-    let (param_names, vids) =
-      (List.split (List.map (add_param loc) param_list))
-    in
-      (param_names, (Params.ret_ident, vids))
-
+    let params = List.map (fun x -> x.formal_name) param_list in
+    (params, (Params.ret_ident, params))
 
   and translate_sub_program_spec subprog_spec =
-    let (name, param_list, return_type) =
+    let (param_list, return_type) =
       match subprog_spec with
-        | Function(name,param_list,return_type) ->
-            (name, param_list, Some(return_type))
-        | Procedure(name,param_list) ->
-            (name, param_list, None)
+        | Function(_,param_list,return_type) ->
+            (param_list, Some(return_type))
+        | Procedure(_,param_list) ->
+            (param_list, None)
     in let params_typ = translate_param_list param_list in
-      (name, (params_typ, translate_subtyp_option return_type))
+      (params_typ, translate_subtyp_option return_type)
 
-  and add_fundecl subprogspec loc =
-    let check_ident name =
-     if Hashtbl.mem symbtbl name
-     then
-       let list_ident = Hashtbl.find_all symbtbl name in
-         List.iter
-           (fun symb -> match symb with
-              | (FunSymb (_,_,extern', _),_,_)
-                  when extern'= extern() ->
-                  Npkcontext.report_error "Firstpass.add_fundecl"
-                    ("conflict : "^(string_of_name name)
-                     ^" already declared")
-              | (FunSymb _, _, _) -> ()
-              | ((VarSymb(_)|NumberSymb(_)),_,_) ->
-                  Npkcontext.report_error "Firstpass.add_fundecl"
-                    ("conflict : "^(string_of_name name)
-                     ^" already declared")
-              | (EnumSymb(_,etyp,_),_,_) ->
-                  begin
-                    match subprogspec with
-                      | Function(_, [], rtyp)
-                          when etyp = rtyp ->
-                          Npkcontext.report_error "Firstpass.add_fundecl"
-                            ("conflict : "^(string_of_name name)
-                              ^" already declared")
-                      | _ -> ()
-                  end)
-           list_ident
-    in
-    let (name, ftyp) = translate_sub_program_spec subprogspec in
-      check_ident name;
-      Hashtbl.add symbtbl name
-        (FunSymb (C.Fname(translate_name name), subprogspec,
-                  extern(), ftyp), C.Fun, loc);
-      ftyp
+  and add_fundecl subprogspec =
+    translate_sub_program_spec subprogspec
 
-  and translate_basic_declaration basic loc = match basic with
-    | ObjectDecl(ident, st, const) ->
-        let read_only = const <> Variable in
-        add_var loc st ident false read_only
+  and translate_basic_declaration basic = match basic with
+    | ObjectDecl _ -> ()
     | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
     | UseDecl (use_clause) -> Sym.add_use gtbl use_clause
-    | NumberDecl(ident, v) -> add_number loc v false ident
+    | NumberDecl _ -> ()
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
     match item with
-      | BasicDecl(basic) -> translate_basic_declaration basic loc
+      | BasicDecl(basic) -> translate_basic_declaration basic
       | BodyDecl _ -> Npkcontext.report_error "Firstpass.translate_block"
             "sous-fonction, sous-procedure ou sous package non implemente"
 
   and translate_declarative_part decl_part =
     List.iter translate_declarative_item decl_part
 
-  and remove_basic_declaration basic = match basic with
-    | ObjectDecl(ident, _, _) -> remove_symb ident
-    | SpecDecl(_) -> Npkcontext.report_error
-        "Firstpass.remove_basic_declaration"
-          ("declaration de sous-fonction, sous-procedure ou "
-           ^"sous package non implemente")
-    | UseDecl _ -> ()
-    | NumberDecl(ident, _) -> remove_symb ident
-
-  and remove_declarative_item (item,_) = match item with
-    | BasicDecl(basic) -> remove_basic_declaration basic
-    | BodyDecl(_) -> ()
-
-  and remove_declarative_part decl_part =
-    List.iter remove_declarative_item decl_part
-
   and add_funbody subprogspec decl_part ctx_dp ctx_param block loc =
-    let search_spec name =
-        try
-          let symb =
-            (List.find
-               (fun symb ->
-                  match symb with
-                    | (FunSymb (_, spec, false, _),_,_) ->
-                        spec = subprogspec
-                    | ((FunSymb _ | VarSymb _
-                    | EnumSymb _ | NumberSymb _),_,_) -> false)
-               (Hashtbl.find_all symbtbl name)
-               )
-          in
-            match symb with
-              | (FunSymb (_, _, _, ftyp), C.Fun, _) -> ftyp
-              | _ ->
-                  Npkcontext.report_error "Firstpass.add_funbody.seach_spec"
-                    "internal error : typ is not a fun typ"
-        with Not_found -> add_fundecl subprogspec loc
-    in
     let name = match subprogspec with
       | Function (n,_,_) -> n
       | Procedure(n,_)   -> n in
 
-    let (params, (ret_id, args_ids)) = add_params subprogspec loc in
+    let (_, (ret_id, args_ids)) = add_params subprogspec loc in
     Sym.push_saved_context gtbl ctx_param;
     Sym.push_saved_context gtbl ctx_dp;
     translate_declarative_part decl_part;
 
-    let ftyp = search_spec name in
+    let ftyp = add_fundecl subprogspec in
     let body_decl = translate_saved_context ctx_dp in
     let body = translate_block block in
     let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
       Hashtbl.replace fun_decls (translate_name name)
                       (ret_id, args_ids, ftyp, body);
-      remove_formals params;
-      remove_declarative_part decl_part;
       ignore (Sym.exit_context gtbl);
       ignore (Sym.exit_context gtbl)
 
@@ -721,9 +489,8 @@ let translate compil_unit =
 
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(ident, subtyp, const) ->
+      | ObjectDecl(ident, subtyp, _) ->
           let init = get_global_init ident in
-          let read_only = const <> Variable in
           let tr_typ = T.translate subtyp in
           let init =
             match (init, extern ()) with
@@ -732,10 +499,10 @@ let translate compil_unit =
             let (e, _) = translate_exp exp in
               Some (e, tr_typ)
              in
-            add_global loc subtyp tr_typ init read_only ident
+            add_global loc tr_typ init ident
       | UseDecl x -> Sym.add_use gtbl x
-      | SpecDecl spec -> translate_spec spec loc false
-      | NumberDecl(ident, v) -> add_number loc v true ident
+      | SpecDecl spec -> translate_spec spec false
+      | NumberDecl _ -> ()
 
   (* quand cette fonction est appelee, on est dans le corps d'un
      package *)
@@ -747,10 +514,10 @@ let translate compil_unit =
 
       | BodyDecl(body) -> translate_body body false loc
 
-  and translate_spec spec loc glob = match spec with
+  and translate_spec spec glob = match spec with
 
     | SubProgramSpec(subprog_spec) ->
-        ignore (add_fundecl subprog_spec loc)
+        ignore (add_fundecl subprog_spec )
 
     | PackageSpec (nom, basic_decl_list, _ctx, init) ->
         if (not glob) then begin
@@ -804,8 +571,8 @@ let translate compil_unit =
       | With(nom, loc, spec) ->
           Npkcontext.set_loc loc;
           (match spec with
-            | Some(spec, loc) ->
-                translate_spec spec loc true;
+            | Some(spec, _loc) ->
+                translate_spec spec true;
                 Sym.add_with gtbl nom
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
@@ -813,9 +580,8 @@ let translate compil_unit =
       | UseContext x -> Sym.add_use gtbl x;
     );
   in
-    (* corps de la fonction translate *)
 
-  let normalized_compil_unit =  Normalize.normalization compil_unit false in
+  let normalized_compil_unit = Normalize.normalization compil_unit false in
   let (ctx, lib_item, loc) = normalized_compil_unit in
     Npkcontext.set_loc loc;
     do_as_extern translate_context ctx;

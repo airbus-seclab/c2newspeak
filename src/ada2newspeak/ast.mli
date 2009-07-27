@@ -43,9 +43,6 @@ type block = (instruction * Newspeak.location) list
 and instruction =
   | Assign        of lval
                    * expression
-                   * bool (* If true, ro-checks will not be performed *
-                           * Useful for example for i++ in loops or   *
-                           * constant initializers                    *)
   | Return        of expression
   | ReturnSimple
   | If            of expression
