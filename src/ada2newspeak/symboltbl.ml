@@ -34,19 +34,18 @@ exception Variable_no_storage    of T.t * T.data_t
 
 module Table = struct
 
-  module rec Symset : sig
-    type t
-    type elt = scope*string*Newspeak.location*SymTable.symbol
+  module Symset : sig
+    type 'a t
 
-    val empty : t
-    val iter : (elt -> unit) -> t -> unit
-    val elements : t -> elt list
-    val add : elt -> t -> t
-    val filter : (elt -> bool) -> t -> t
+    val empty : 'a t
+    val iter : ('a -> unit) -> 'a t -> unit
+    val elements : 'a t -> 'a list
+    val add : 'a -> 'a t -> 'a t
+    val filter : ('a -> bool) -> 'a t -> 'a t
 
   end = struct
-    type elt = scope*string*Newspeak.location*SymTable.symbol
-    type t = elt list
+
+    type 'a t = 'a list
 
     let add e sy =
       if (List.mem e sy) then
@@ -64,42 +63,26 @@ module Table = struct
     let elements x = List.rev x
 
     end
-and SymTable : sig
-    (**
-     * Symbols.
-     *)
-    type symbol =
-      | Type       of T.t
-      | Subprogram of ((T.f_param list)*T.t option)
-      | Unit       of table
-      | Variable   of T.t*(T.data_t option)*bool (* if true, no storage *
-                                                  * will be allocated   *)
-                                           *bool (* R/O *)
 
-    and table = { mutable t_renaming : (string*Syntax_ada.name) list
-                ; mutable t_tbl      : Symset.t
-                ;         t_desc     : string option
-                ;         t_loc      : Newspeak.location
-                ; mutable t_use_list : string list
-                ;         t_scope    : scope
-                }
-  end = struct
-    type symbol =
-      | Type       of T.t
-      | Subprogram of ((T.f_param list)*T.t option)
-      | Unit       of table
-      | Variable   of T.t*(T.data_t option)*bool * bool
+  (**
+   * Symbols.
+   *)
+  type symbol =
+    | Type       of T.t
+    | Subprogram of ((T.f_param list)*T.t option)
+    | Unit       of table
+    | Variable   of T.t*(T.data_t option)*bool (* if true, no storage *
+                                                * will be allocated   *)
+                                         *bool (* R/O *)
 
-    and table = { mutable t_renaming : (string*Syntax_ada.name) list
-                ; mutable t_tbl      : Symset.t
-                ;         t_desc     : string option
-                ;         t_loc      : Newspeak.location
-                ; mutable t_use_list : string list
-                ;         t_scope    : scope
-                }
-  end
-
-  open SymTable
+  and table = { mutable t_renaming : (string*Syntax_ada.name) list
+              ; mutable t_tbl      : elt Symset.t
+              ;         t_desc     : string option
+              ;         t_loc      : Newspeak.location
+              ; mutable t_use_list : string list
+              ;         t_scope    : scope
+              }
+  and elt = scope*string*Newspeak.location*symbol
 
   let tbl_add_use t p =
     if (not (List.mem p t.t_use_list)) then
@@ -287,11 +270,11 @@ and SymTable : sig
                            ^match expected_type with None -> "None"
                                     | Some t -> T.print t)
     end;
-    let s,(t,v,r) = 
+    let s,(t,v,r) =
       cast_v ~filter:(fun (_,(x,_,_)) -> ovl_predicate x) (find_symbols tbl n)
     in
     s,(t,v,(match v with Some _ -> true | None -> r))
-    
+
 
   let tbl_find_unit t id =
     match (find_symbols t id) with
@@ -326,7 +309,6 @@ end
 
 module SymMake(TR:Tree.TREE) = struct
   open Table
-  open Table.SymTable
 
   type t = {         s_stack  : table TR.t
            ; mutable s_cpkg   : string option
@@ -528,7 +510,6 @@ module SymMake(TR:Tree.TREE) = struct
       s_find "subprogram" tbl_find_subprogram s ?package n
     with Not_found -> if silent then raise Not_found
                                 else error ("Cannot find subprogram '"^n^"'")
-                                
 
   let is_operator_overloaded s n =
     try begin

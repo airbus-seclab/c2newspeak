@@ -160,6 +160,8 @@ let merge_types gtbl (tp, cstr, _) =
   match cstr with
   | None -> t
   | Some (IntegerRangeConstraint (a,b)) -> T.new_constr t (T.(@...) a b)
-  | Some (  FloatRangeConstraint _) -> Npkcontext.report_error "merge_types" "FloatRangeConstraint"
-  | Some (       RangeConstraint _) -> Npkcontext.report_error "merge_types" "RangeConstraint"
+  | Some (  FloatRangeConstraint _) -> Npkcontext.report_error "merge_types"
+                                                      "FloatRangeConstraint"
+  | Some (       RangeConstraint _) -> Npkcontext.report_error "merge_types"
+                                                           "RangeConstraint"
 

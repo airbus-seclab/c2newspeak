@@ -159,17 +159,26 @@ let base_type x = {
   range = None
 }
 
-let mk_unknown reason = {base = {trait = Unknown reason ; uid = 0}; range = None}
+let mk_unknown reason =
+  { base = { trait = Unknown reason
+           ; uid = 0
+           }
+  ; range = None
+  }
 
 let unknown = mk_unknown "<No reason provided>"
 
-let universal_integer = { base = {trait = Univ_int;
-                                  uid = 0};
-                          range=None}
+let universal_integer =
+  { base = { trait = Univ_int
+           ; uid = 0
+           }
+  ; range=None}
 
-let universal_real = { base = {trait = Univ_real;
-                               uid = 0};
-                          range=None}
+let universal_real =
+  { base = { trait = Univ_real
+           ; uid = 0
+           }
+  ; range=None}
 
 let new_enumerated values =
     let rec with_indices vals offset = match vals with
@@ -186,7 +195,7 @@ let new_enumerated values =
 
 let new_derived_base old =
     { old with uid = uid#gen }
- 
+
 let new_derived old =
   {
     old with
@@ -233,12 +242,10 @@ let new_array ~component ~index =
     }
 
 let new_record fields =
-  { 
-      base = {
-        trait = Record fields;
-        uid = 0;
-      };
-      range = None
+  { base = { trait = Record fields
+           ; uid = 0
+           }
+  ; range = None
   }
 
 let handle_representation_clause _t _l =
@@ -494,20 +501,6 @@ let belongs min max exp =
 let (<=%) a b =
   Newspeak.Nat.compare a b <= 0
 
-let constr_combine c1 c2 =
-  match (c1,c2) with
-    | _         , None       -> c1
-    | None      , _          -> c2
-    | Some (a,b), Some (c,d) -> if (a <=% c && d <=% b)
-                                  then None
-                                  else c1
-
-let extract_constr e = match e with
-  | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
-           , _
-           ) -> Some (a, Newspeak.Nat.add_int (-1) b_plus_1)
-  | _ -> None
-
 let compute_constr t =
   match (t.base.trait, t.range) with
     | Signed (a,b), None -> Some (a, b)
@@ -519,7 +512,21 @@ let compute_constr t =
     | _ -> None
 
 let check_exp t_ctx exp =
-  let constr = 
+  let constr_combine c1 c2 =
+    match (c1,c2) with
+      | _         , None       -> c1
+      | None      , _          -> c2
+      | Some (a,b), Some (c,d) -> if (a <=% c && d <=% b)
+                                    then None
+                                    else c1
+  in
+  let extract_constr e = match e with
+    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
+             , _
+             ) -> Some (a, Newspeak.Nat.add_int (-1) b_plus_1)
+    | _ -> None
+  in
+  let constr =
     constr_combine (compute_constr t_ctx)
                    (extract_constr exp)
   in
@@ -562,12 +569,12 @@ let is_compatible one another =
   if (is_unknown one || is_unknown another) then
     Npkcontext.report_warning "is_compatible"
         "testing compatibility against unknown type";
-       (one.base = another.base) 
+       (one.base = another.base)
     || (match (one.base.trait, another.base.trait) with
         | Signed   _ , Univ_int
         | Univ_int   , Signed   _
         | Float    _ , Univ_real
-        | Univ_real  , Float    _ 
+        | Univ_real  , Float    _
             -> true
         | _ -> false
         )

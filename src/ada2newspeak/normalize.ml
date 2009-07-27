@@ -43,15 +43,6 @@ let string_of_name = Ada_utils.name_to_string
 let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
 
-let assert_known t =
-  if (T.is_unknown t) then
-    Npkcontext.report_error "assert_known" "fail";
-    t
-
-let assert_known_i sti =
-  ignore (assert_known (merge_types sti));
-  sti
-
 let return_type_of subprogram = match subprogram with
   | Ast.Function  (_,_,st) -> Some st
   | Ast.Procedure _        -> None
@@ -128,7 +119,7 @@ let normalize_ident ident package extern =
 let build_init_stmt (x,exp,loc) =
   Ast.Assign(Ast.Lval ( Symboltbl.Lexical
                       , x
-                      , assert_known(snd exp))
+                      , snd exp)
             , exp
             , true)
   , loc
@@ -204,8 +195,9 @@ let rec normalize_exp ?expected_type exp =
     | CChar  x -> Ast.CChar  x,T.character
     | Var    n -> begin (* n may denote the name of a parameterless function *)
                     try
-                      let (sc,(t,_)) = Sym.find_variable ?expected_type gtbl n in
-                      Ast.Var(sc,(snd n),(assert_known t)) ,t
+                      let (sc,(t,_)) = Sym.find_variable ?expected_type
+                                                         gtbl n in
+                      Ast.Var(sc,(snd n),t) ,t
                     with
                     | Sym.Parameterless_function rt ->
                                       Ast.FunctionCall( Sym.Lexical
@@ -337,7 +329,7 @@ and normalize_uop uop exp =
 
 and normalize_fcall (n, params) =
   (* Maybe this indexed expression is an array-value *)
-  try 
+  try
     let (sc,(_,top)) = Sym.find_subprogram ~silent:true gtbl n in
     let t = match top with
     | None -> Npkcontext.report_error "normalize_exp"
@@ -349,7 +341,7 @@ and normalize_fcall (n, params) =
     begin
       let (sc,(t,_)) = Sym.find_variable gtbl n in
       let tc = match T.extract_array_types t with
-      | None -> Npkcontext.report_error "normalize_fcall" 
+      | None -> Npkcontext.report_error "normalize_fcall"
                   ("Variable '"^name_to_string n^"' is not of an array type");
       | Some (c,_) -> c
       in
@@ -480,11 +472,10 @@ let normalize_typ_decl ident typ_decl loc =
       begin
         match (T.extract_symbols t) with
           | None   -> ()
-          | Some s -> 
-                List.iter (fun (i,v) -> Sym.add_variable gtbl i loc
-                                                   new_t
-                                                   ~value:(T.IntVal (Newspeak.Nat.of_int v))
-                                                   ~no_storage:true
+          | Some s ->
+                List.iter (fun (i,v) ->
+                  let value = T.IntVal (Newspeak.Nat.of_int v) in
+                  Sym.add_variable gtbl i loc new_t ~value ~no_storage:true
                 ) s
       end
   | IntegerRange(contrainte,taille) ->
@@ -561,9 +552,7 @@ and normalization compil_unit extern =
                                           ~ro:(param.mode = In)
               ;
            end;
-          { Ast.param_type    = assert_known (
-                                  subtyp_to_adatyp (
-                                    param.param_type))
+          { Ast.param_type    = subtyp_to_adatyp param.param_type
           ; Ast.formal_name   = param.formal_name
           ; Ast.mode          = param.mode
           ; Ast.default_value = may normalize_exp param.default_value
@@ -584,9 +573,10 @@ and normalization compil_unit extern =
                                        (List.map mk_param param_list)
                                        (Some t)
                                        ;
-              Ast.Function(norm_name,
-                       normalize_params param_list true,
-                       assert_known t)
+              Ast.Function( norm_name
+                          , normalize_params param_list true
+                          , t
+                          )
         | Procedure(name,param_list) ->
             let norm_name = normalize_ident_cur name in
               Sym.add_subprogram gtbl name (Newspeak.unknown_loc)
@@ -727,21 +717,22 @@ and normalization compil_unit extern =
     match instr with
     | NullInstr    -> None
     | ReturnSimple -> Some (Ast.ReturnSimple, loc)
-    | Assign(lv, exp) -> begin
-                           let (lv', t_lv) = normalize_lval lv in
-                           let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
-                           if (not (T.is_compatible t_lv t_exp)) then
-                             begin
-                               Npkcontext.print_debug ("LV = "^T.print t_lv);
-                               Npkcontext.print_debug ("EX = "^T.print t_exp);
-                               Npkcontext.report_error "normalize_instr"
-                                 "Incompatible types in assignment";
-                             end;
-                           Some (Ast.Assign( lv'
-                                           , (e',t_exp)
-                                           , false
-                                           ), loc)
-                         end
+    | Assign(lv, exp) ->
+        begin
+          let (lv', t_lv) = normalize_lval lv in
+          let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
+          if (not (T.is_compatible t_lv t_exp)) then
+            begin
+              Npkcontext.print_debug ("LV = "^T.print t_lv);
+              Npkcontext.print_debug ("EX = "^T.print t_exp);
+              Npkcontext.report_error "normalize_instr"
+                "Incompatible types in assignment";
+            end;
+          Some (Ast.Assign( lv'
+                          , (e',t_exp)
+                          , false
+                          ), loc)
+        end
     | Return(exp) -> Some (Ast.Return(normalize_exp ?expected_type:return_type
                                       exp), loc)
     | If(exp, instr_then, instr_else) ->
@@ -749,7 +740,7 @@ and normalization compil_unit extern =
                     , normalize_block ?return_type instr_then
                     , normalize_block ?return_type instr_else), loc)
     | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
-                                              normalize_block ?return_type instrs),loc)
+                                       normalize_block ?return_type instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block ?return_type instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), block) ->
@@ -766,7 +757,8 @@ and normalization compil_unit extern =
         in
       Sym.enter_context gtbl;
       let (ndp,init) = normalize_decl_part dp in
-      let nblock = (List.map build_init_stmt init)@normalize_block ?return_type block in
+      let nblock =  (List.map build_init_stmt init)
+                   @normalize_block ?return_type block in
       let loop =
         [Ast.Loop
             ( Ast.While
@@ -794,7 +786,8 @@ and normalization compil_unit extern =
                             normalize_exp e,
                             normalize_block ?return_type block)
                         choices,
-                    Ada_utils.may (fun x -> normalize_block ?return_type x) default
+                    Ada_utils.may (fun x -> normalize_block ?return_type x)
+                                  default
                     ),loc)
     | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
                         let (ndp,init) = normalize_decl_part dp in
