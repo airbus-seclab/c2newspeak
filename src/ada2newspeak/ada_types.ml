@@ -26,6 +26,8 @@
  * Module definitions/inclusions *
  *********************************)
 
+module A = Syntax_ada
+
 let (%+) = Newspeak.Nat.add
 let (%-) = Newspeak.Nat.sub
 
@@ -60,7 +62,7 @@ let data_lt x y =
 (* "subtype" in RM *)
 type t = {
   base  : base_t;
-  range : range option
+  range : Syntax_ada.contrainte option
 }
 
 (* "type" in RM *)
@@ -95,15 +97,20 @@ let rec print t =
   let p_hash t  = Printf.sprintf "%08x" (Hashtbl.hash t) in
   let p_range = function
     | None      -> "<unlimited>"
-    | Some (a,b) ->  "["
-                   ^ Newspeak.Nat.to_string a
-                   ^ ";"
-                   ^ Newspeak.Nat.to_string b
-                   ^ "]"
+    | Some (A.IntegerRangeConstraint (a,b)) ->  "I["
+                                               ^ Newspeak.Nat.to_string a
+                                               ^ ";"
+                                               ^ Newspeak.Nat.to_string b
+                                               ^ "]"
+    | Some (  A.FloatRangeConstraint (a,b)) ->  "F["
+                                               ^ string_of_float a
+                                               ^ ";"
+                                               ^ string_of_float b
+                                               ^ "]"
   in
   let p_trait = function
     | Unknown _ -> "Unknown"
-    | Signed  r   -> "Signed "^p_range (Some r)
+    | Signed  (a,b) -> "Signed "^p_range (Some (A.IntegerRangeConstraint (a,b)))
     | Univ_int    -> "Universal_integer"
     | Univ_real   -> "Universal_real"
     | Float   d -> "Float "  ^string_of_int d
@@ -131,8 +138,9 @@ let print_data = function
  * Ranges *
  **********)
 
-let sizeof (min,max) =
-  max %- min %+ Newspeak.Nat.one
+let sizeof = function
+  | A.IntegerRangeConstraint (min,max) -> max %- min %+ Newspeak.Nat.one
+  |   A.FloatRangeConstraint _ -> invalid_arg "sizeof"
 
 let (@...) x y = (x, y)
 
@@ -216,7 +224,11 @@ let new_constr parent r =
       range = Some r
     }
 
-let new_range r =
+let new_range c =
+  let r = match c with
+  | A.IntegerRangeConstraint (a,b) -> (a,b)
+  | A.FloatRangeConstraint _ -> invalid_arg "new_range"
+  in
   { base = { trait = Signed r;
              uid = 0
            };
@@ -273,7 +285,7 @@ let extract_symbols t =
 let integer_first = Newspeak.Nat.of_string "-2147483648"
 let integer_last  = Newspeak.Nat.of_string  "2147483647"
 
-let integer = new_range (integer_first, integer_last)
+let integer = new_range (A.IntegerRangeConstraint(integer_first, integer_last))
 
 let boolean = new_enumerated ["true" ; "false"]
 
@@ -387,7 +399,7 @@ let (<=%) a b =
 let compute_constr t =
   match (t.base.trait, t.range) with
     | Signed (a,b), None -> Some (a, b)
-    | Signed (a,b), Some (c,d) ->
+    | Signed (a,b), Some (A.IntegerRangeConstraint(c,d)) ->
         begin
           assert (a <=% c && c <=% d && d <=% b);
           Some (c, d)

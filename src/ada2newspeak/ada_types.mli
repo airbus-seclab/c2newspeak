@@ -47,29 +47,6 @@ val data_lt : data_t -> data_t -> bool
 (** A typed piece of data. *)
 type value = t * data_t
 
-(**********
- * Ranges *
- **********)
-(** {3 Ranges} *)
-
-(** The abstract type for ranges.  *)
-type range
-
-(**
- * Write a range from its bounds.
- * If [a <= b], [a @.. b] is the range of values between [a] and [b] ;
- * else it is the [null_range].
- *)
-val (@..)  : int -> int -> range
-
-(**
- * Write a range from its bounds ([Newspeak.Nat.t] version).
- *)
-val (@...) : Newspeak.Nat.t -> Newspeak.Nat.t -> range
-
-(** The number of elements in a range. [0] for the [null_range]. *)
-val sizeof : range -> Newspeak.Nat.t
-
 (*********
  * Types *
  *********)
@@ -95,15 +72,12 @@ val new_derived    : t -> t
 val new_unconstr   : t -> t
 
 (** Constrained subtype. *)
-val new_constr     : t -> range -> t
+val new_constr     : t -> Syntax_ada.contrainte -> t
 
 (**
  * Plain integer range.
- * This differs from new_constr integer, because :
- *   - it is a different type
- *   - it does not rely on integer
  *)
-val new_range      : range -> t
+val new_range      : Syntax_ada.contrainte -> t
 
 (** Enumerated type. *)
 val new_enumerated : string list -> t

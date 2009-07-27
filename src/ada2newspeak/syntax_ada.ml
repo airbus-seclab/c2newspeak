@@ -27,11 +27,6 @@
 
 (** This module defines types for the abstract syntax tree. *)
 
-(** Location in the source code. *)
-type location = Newspeak.location
-
-type nat = Newspeak.Nat.t
-
 (**
  * A qualified string.
  * For example, "Ada.Text_IO.Put_line" maps to
@@ -73,41 +68,20 @@ type binary_op =
 | AndThen       (** "and then", logical conjunction (w/short-circuit) *)
 | OrElse        (** "or else",  logical disjunction (w/short-circuit) *)
 
-(** Builtin types. *)
-type typ =
-  | Integer                              (** Integer               *)
-  | IntegerConst                         (** Integer constant      *)
-  | Float                                (** Floating-point number *)
-  | Boolean                              (** Boolean               *)
-  | Character                            (** Character             *)
-  | Declared of string                   (** User-defined type     *)
-              * typ_declaration
-              * Ada_types.t
-              * location
-
 (** Type declaration. *)
-and typ_declaration =
-  | Enum         of (string*nat) list
+type typ_declaration =
+  | Enum         of (string*Newspeak.Nat.t) list
   | DerivedType  of subtyp_indication
-  | IntegerRange of contrainte
-                  * Newspeak.ikind option
+  | IntegerRange of expression*expression
   | Record       of (string*subtyp) list
   | Array        of subtyp_indication (* Index     *)
                   * subtyp_indication (* Component *)
 
-(** Subtype definition. *)
-and subtyp =
-  | Unconstrained of typ               (** Unconstrained. *)
-  | Constrained of typ
-                 * contrainte
-                 * bool
-                 * Ada_types.t (** Constrained. The boolean parameters
-                                           means the subtype is static *)
-  | SubtypName of name                 (** Subtype *)
+and subtyp = name
 
 (** Expressions. *)
 and expression =
-  | CInt         of nat
+  | CInt         of Newspeak.Nat.t
   | CFloat       of float
   | CBool        of bool
   | CChar        of int
@@ -125,15 +99,12 @@ and expression =
 
 (** Constraint *)
 and contrainte =
-  |        RangeConstraint of expression
-                            * expression
   | IntegerRangeConstraint of Newspeak.bounds
   |   FloatRangeConstraint of float
                             * float
 
 and subtyp_indication = subtyp
-                      * contrainte option
-                      * subtyp     option
+                      * (expression*expression) option
 
 (** Left-value *)
 and lval =
@@ -166,7 +137,7 @@ and iteration_scheme =
            * expression
            * bool
 
-and block = (instruction * location) list
+and block = (instruction * Newspeak.location) list
 
 (** Effective argument for a function or procedure call.
     The optional string is the formal name in case of
@@ -209,12 +180,12 @@ and object_state =
 
 and context_clause =
   | With       of string
-                * location
-                * (spec*location) option
+                * Newspeak.location
+                * (spec*Newspeak.location) option
   | UseContext of string
 
 and package_spec = string
-                 * (basic_declaration*location) list
+                 * (basic_declaration*Newspeak.location) list
 
 and spec =
   | SubProgramSpec of sub_program_spec
@@ -248,7 +219,7 @@ and declarative_item =
   | BasicDecl of basic_declaration
   |  BodyDecl of body
 
-and declarative_part = (declarative_item*location) list
+and declarative_part = (declarative_item*Newspeak.location) list
 
 type library_item =
   | Spec of spec
@@ -256,6 +227,6 @@ type library_item =
 
 type compilation_unit = context_clause list
                       * library_item
-                      * location
+                      * Newspeak.location
 
 type programme = compilation_unit list

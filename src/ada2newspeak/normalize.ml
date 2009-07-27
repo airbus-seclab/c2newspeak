@@ -40,6 +40,27 @@ let gtbl : Sym.t = Sym.create ()
 
 let string_of_name = Ada_utils.name_to_string
 
+let subtyp_to_adatyp gtbl n =
+  try
+    snd(Symboltbl.find_type gtbl n)
+  with Not_found ->
+    begin
+      Npkcontext.report_warning "ST2AT"
+        ("Cannot find type '"
+        ^name_to_string n
+        ^"'");
+      T.unknown;
+    end
+
+let merge_types gtbl (tp, cstr) =
+  let t = subtyp_to_adatyp gtbl tp in
+  if (T.is_unknown t) then
+    Npkcontext.report_warning "merge_types"
+    ("merged subtype indication into unknown type ("^T.get_reason t^")");
+  match cstr with
+  | None -> t
+  | Some c -> T.new_constr t c
+
 let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
 
@@ -212,7 +233,7 @@ let rec normalize_exp ?expected_type exp =
     | FunctionCall(n, params) -> normalize_fcall (n, params)
     | Attribute (st, attr, Some exp) ->
         begin
-          let t = subtyp_to_adatyp (SubtypName st) in
+          let t = subtyp_to_adatyp st in
           if attr = "succ" && T.is_scalar t then
             begin
               let (e',t') = normalize_exp exp in
@@ -229,7 +250,7 @@ let rec normalize_exp ?expected_type exp =
         end
     | Attribute (st, attr, None) ->
         begin
-          let t = subtyp_to_adatyp (SubtypName st) in
+          let t = subtyp_to_adatyp st in
           let (t,v) = T.attr_get t attr in
           (fst (insert_constant v)), t
         end
@@ -352,105 +373,64 @@ and normalize_fcall (n, params) =
       Ast.ArrayValue(sc, (snd n), List.map prepare_param params, t),tc
     end
 
-(**
- * Normalize a constraint.
- *)
-and normalize_contrainte contrainte =
-  let eval_range exp1 exp2 =
-    let norm_exp1 = normalize_exp exp1
-    and norm_exp2 = normalize_exp exp2 in
-      (* on essaye d'evaluer les bornes *)
-      (try
-         let val1 = Eval.eval_static norm_exp1 gtbl in
-         let val2 = Eval.eval_static norm_exp2 gtbl in
-         let contrainte =  match (val1, val2) with
-           | (T.FloatVal(f1),T.FloatVal(f2)) ->
-               if f1<=f2
-               then FloatRangeConstraint(f1, f2)
-               else
-                 Npkcontext.report_error
-                   "Ada_normalize.normalize_contrainte"
-                   "null range not accepted"
-
-           | (T.IntVal(i1), T.IntVal(i2)) ->
-               if (Nat.compare i1 i2)<=0
-               then
-                 IntegerRangeConstraint(i1, i2)
-               else
-                 Npkcontext.report_error
-                   "Ada_normalize.normalize_contrainte"
-                   "null range not accepted"
-
-           | (T.BoolVal(b1), T.BoolVal(b2)) ->
-               let i1 = nat_of_bool b1
-               and i2 = nat_of_bool b2
-               in
-                 if b1 <= b2
-                 then IntegerRangeConstraint(i1, i2)
-                 else
-                   Npkcontext.report_error
-                     "Ada_normalize.normalize_contrainte"
-                     "null range not accepted"
-
-           | _ ->
-               (* ce cas n'est pas cense se produire :
-                  on a verifie que les deux bornes sont de meme
-                  type.*)
+and eval_range (exp1, exp2) =
+  let norm_exp1 = normalize_exp exp1
+  and norm_exp2 = normalize_exp exp2 in
+    (* on essaye d'evaluer les bornes *)
+    (try
+       let val1 = Eval.eval_static norm_exp1 gtbl in
+       let val2 = Eval.eval_static norm_exp2 gtbl in
+       let contrainte =  match (val1, val2) with
+         | (T.FloatVal(f1),T.FloatVal(f2)) ->
+             if f1<=f2
+             then FloatRangeConstraint(f1, f2)
+             else
                Npkcontext.report_error
                  "Ada_normalize.normalize_contrainte"
-                 ("internal error : range error : expected static "
-                  ^"float or integer constant")
-         in contrainte
-       with
-         | NonStaticExpression ->
+                 "null range not accepted"
+
+         | (T.IntVal(i1), T.IntVal(i2)) ->
+             if (Nat.compare i1 i2)<=0
+             then
+               IntegerRangeConstraint(i1, i2)
+             else
+               Npkcontext.report_error
+                 "Ada_normalize.normalize_contrainte"
+                 "null range not accepted"
+
+         | (T.BoolVal(b1), T.BoolVal(b2)) ->
+             let i1 = nat_of_bool b1
+             and i2 = nat_of_bool b2
+             in
+               if b1 <= b2
+               then IntegerRangeConstraint(i1, i2)
+               else
+                 Npkcontext.report_error
+                   "Ada_normalize.normalize_contrainte"
+                   "null range not accepted"
+
+         | _ ->
+             (* ce cas n'est pas cense se produire :
+                on a verifie que les deux bornes sont de meme
+                type.*)
              Npkcontext.report_error
                "Ada_normalize.normalize_contrainte"
-                 "non-static constraint are not yet supported"
+               ("internal error : range error : expected static "
+                ^"float or integer constant")
+       in contrainte
+     with
+       | NonStaticExpression ->
+           Npkcontext.report_error
+             "Ada_normalize.normalize_contrainte"
+               "non-static constraint are not yet supported"
 
-         | AmbiguousTypeException ->
-             Npkcontext.report_error
-               "Ada_normalize.normalize_contrainte"
-               "internal error : uncaught ambiguous type exception")
-  in
-    match contrainte with
-      | RangeConstraint(exp1, exp2) ->
-          eval_range exp1 exp2
+       | AmbiguousTypeException ->
+           Npkcontext.report_error
+             "Ada_normalize.normalize_contrainte"
+             "internal error : uncaught ambiguous type exception")
 
-      | IntegerRangeConstraint _
-      | FloatRangeConstraint _ ->
-          Npkcontext.report_error
-            "Ada_normalize.eval_contrainte"
-            "internal error : unexpected Numeric Range"
-
-let normalize_subtyp_ind (st,cst,w) =
-  (st, Ada_utils.may normalize_contrainte cst, w)
-
-let normalize_integer_range taille contrainte =
-  match (taille, contrainte) with
-    | (None, RangeConstraint(_)) ->
-        begin
-          try
-            let norm_contrainte =
-              normalize_contrainte contrainte
-            in match norm_contrainte with
-              | IntegerRangeConstraint(min, max) ->
-                  let ikind = ikind_of_range min max
-                  in IntegerRange(norm_contrainte, Some(ikind))
-
-              | _ ->
-                  Npkcontext.report_error
-                    "Ada_normalize.normalize_integer_range"
-                    "internal error : uncompatible constraint type"
-          with
-              NonStaticExpression ->
-                Npkcontext.report_error
-                  "Ada_normalize.normalize_integer_range"
-                  "expected static expression"
-        end
-    | _ ->
-        Npkcontext.report_error
-          "Ada_normalize.normalize_integer_range"
-          "internal error : size or constraint already provided"
+let normalize_subtyp_ind (st,cst) =
+  (st, Ada_utils.may eval_range cst)
 
 let normalize_typ_decl ident typ_decl loc =
  match typ_decl with
@@ -478,13 +458,8 @@ let normalize_typ_decl ident typ_decl loc =
                   Sym.add_variable gtbl i loc new_t ~value ~no_storage:true
                 ) s
       end
-  | IntegerRange(contrainte,taille) ->
-      let decl = normalize_integer_range taille contrainte in
-      let range = match decl with
-        | IntegerRange (IntegerRangeConstraint (min,max), _)
-            -> T.(@...) min max
-        | _ -> failwith "unreachable"
-      in
+  | IntegerRange(min, max) ->
+      let range = eval_range (min, max) in
       let t = T.new_range range in
       Sym.add_type gtbl ident loc t
   | Record r -> begin
@@ -496,8 +471,10 @@ let normalize_typ_decl ident typ_decl loc =
                   Sym.add_type gtbl ident loc t;
                 end
   | Array (i, c) ->
-      let component = merge_types i in
-      let index     = merge_types c in
+      let ni = normalize_subtyp_ind i in
+      let nc = normalize_subtyp_ind c in
+      let component = merge_types ni in
+      let index     = merge_types nc in
       let t  = T.new_array ~component ~index in
       Sym.add_type gtbl ident loc t
 
@@ -602,7 +579,8 @@ and normalization compil_unit extern =
             Ast.ObjectDecl(ident, t, Ast.Variable)
           ) ident_list
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
-        let t = merge_types subtyp_ind in
+        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+        let t = merge_types norm_subtyp_ind in
         let normexp = normalize_exp ~expected_type:t exp in
         let status =
           try
@@ -745,8 +723,7 @@ and normalization compil_unit extern =
                      normalize_block ?return_type instrs), loc)
     | Loop(For(iter, exp1, exp2, is_rev), block) ->
         let dp = [BasicDecl (ObjectDecl ( [iter]
-                             , ( SubtypName (None,"integer")
-                               , None
+                             , ( (None,"integer")
                                , None
                                )
                              , Some (if is_rev then exp2 else exp1)

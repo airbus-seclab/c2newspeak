@@ -24,49 +24,9 @@
 
 module Nat = Newspeak.Nat
 
-let log2_sup n =
-  let zero = Big_int.zero_big_int
-  and one = Big_int.unit_big_int in
-  let two = Big_int.succ_big_int one
-  and eq_big_int a b = (Big_int.compare_big_int a b)=0
-  in
-  let rec aux n p =
-    if eq_big_int n zero then one
-    else
-      if eq_big_int n one then p
-      else aux (Big_int.add_big_int
-                  (Big_int.div_big_int n two) (Big_int.mod_big_int n two))
-        (Big_int.succ_big_int p)
-  in Big_int.int_of_big_int (aux n zero)
-
-let size_of_range inf sup =
-  let (b_inf, b_sup) =
-    if (Nat.compare inf sup)<=0 then (inf, sup)
-    else (sup, inf)
-  in
-  let max = Big_int.max_big_int
-    (Big_int.abs_big_int (Nat.to_big_int b_inf))
-    (Big_int.abs_big_int (Big_int.succ_big_int (Nat.to_big_int b_sup)))
-  in
-  let min_bit = (log2_sup max) + 1
-  in
-    if min_bit <=8 then 8
-    else if min_bit<=16 then 16
-    else if min_bit<=32 then 32
-    else if min_bit<=64 then 64
-    else begin
-      Npkcontext.report_error "Ada_utils.size_of_range"
-        "type representation is too big"
-    end
-
 (* from the specification : 13.3.(49) *)
 let size_of_boolean = 1
 
 let size_of_char  = Config.size_of_char
 let size_of_int   = Config.size_of_int
 let size_of_float = Config.size_of_float
-
-let integer_constraint =
-  Syntax_ada.IntegerRangeConstraint(
-    Newspeak.Nat.of_string("-2147483648"),
-    Newspeak.Nat.of_string("2147483647"))

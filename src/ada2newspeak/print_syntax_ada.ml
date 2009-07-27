@@ -79,18 +79,7 @@ let bop_to_string op = match op with
   | AndThen -> "and then"
   | OrElse  -> "or else"
 
-let rec typ_to_string typ = match typ with
-  | Integer      -> "Integer"
-  | IntegerConst -> "IntegerConst"
-  | Float        -> "Float"
-  | Boolean      -> "Boolean"
-  | Character    -> "Character"
-  | Declared(id,typ_decl,_,loc) -> "Declared("
-      ^id^","
-      ^(typ_declaration_to_string typ_decl)^","
-      ^(line_of_loc loc)^")"
-
-and typ_declaration_to_string typ_decl = match typ_decl with
+let rec typ_declaration_to_string typ_decl = match typ_decl with
   | Enum val_list ->
       "Enum("
       ^(list_to_string val_list
@@ -99,16 +88,18 @@ and typ_declaration_to_string typ_decl = match typ_decl with
       ^")"
   | DerivedType(subtyp) ->
       "DerivedType("^(subtyp_indication_to_string subtyp)^")"
-  | IntegerRange(contrainte, taille) ->
+  | IntegerRange(min,max) ->
       "IntegerRange("
-      ^(contrainte_to_string contrainte)
-      ^", "^(option_to_string taille ikind_to_string)^")"
+      ^exp_to_string min
+      ^", "
+      ^exp_to_string max
+      ^")"
   | Record r -> "Record("^(list_to_string r record_component_to_string
                                           ", " false)
   | Array _ -> "Array(...)"
 
 and record_component_to_string (c,st) =
-  c ^ " => " ^ subtyp_to_string st
+  c ^ " => " ^ name_to_string st
 
 and exp_to_string exp = match exp with
   | CInt   i          -> "CInt("^(nat_to_string i)^")"
@@ -132,23 +123,19 @@ and exp_to_string exp = match exp with
                                                 "("^exp_to_string e^")"
                                )
 
-and subtyp_to_string subtyp = match subtyp with
-  | Unconstrained(typ) -> "Unconstrained("^(typ_to_string typ)^")"
-  | SubtypName(name) -> "SubtypName("^(name_to_string name)^")"
-  | Constrained(typ, contrainte, static,_) ->
-      "Constrained("^(typ_to_string typ)^", "
-      ^(contrainte_to_string contrainte)^", "
-      ^(string_of_bool static)^")"
+and subtyp_indication_to_string (subtyp_ref, contrainte) =
+  "("^(name_to_string subtyp_ref)^", "
+  ^(option_to_string contrainte exp_pair_to_string)
+  ^")"
 
-and subtyp_indication_to_string (subtyp_ref, contrainte, subtyp) =
-  "("^(subtyp_to_string subtyp_ref)^", "
-  ^(option_to_string contrainte contrainte_to_string)^", "
-  ^(option_to_string subtyp subtyp_to_string)^")"
+and exp_pair_to_string (e1,e2) =
+    "("
+  ^ exp_to_string e1
+  ^ ","
+  ^ exp_to_string e2
+  ^ ")"
 
 and contrainte_to_string contrainte = match contrainte with
-  | RangeConstraint(e1, e2) ->
-      "RangeConstraint("^(exp_to_string e1)
-      ^", "^(exp_to_string e2)^")"
   |  IntegerRangeConstraint(v1,v2) ->
        "IntegerRangeConstraint("^(Newspeak.string_of_bounds (v1,v2))^")"
   |  FloatRangeConstraint(s1,s2) ->
@@ -211,7 +198,7 @@ and arg_to_string (arg:argument) :string =
 and param_to_string param =
    "{formal_name = "    ^(param.formal_name)
   ^"; mode = "         ^(mode_to_string param.mode)
-  ^"; param_type = "   ^(subtyp_to_string param.param_type)
+  ^"; param_type = "   ^(name_to_string param.param_type)
   ^"; default_value = "^(option_to_string param.default_value exp_to_string)^"}"
 
 and param_list_to_string list =
@@ -286,7 +273,7 @@ and sub_program_spec_to_string spec = match spec with
   | Function(name,param_list,return_type) ->
       "Function("^name^", "
         ^(param_list_to_string param_list)^", "
-        ^(subtyp_to_string return_type)^")"
+        ^(name_to_string return_type)^")"
   | Procedure(name,param_list) ->
       "Procedure("^name^", "
       ^(param_list_to_string param_list)^")"

@@ -49,9 +49,6 @@ let nat_of_bool b =
   if b then Newspeak.Nat.one
        else Newspeak.Nat.zero
 
-let ikind_of_range inf sup = (Newspeak.Signed,
-                              Ada_config.size_of_range inf sup)
-
 let check_compil_unit_name compil_unit file_name =
   let expected_name = Filename.chop_extension file_name in
   let subprog_name spec = match spec with
@@ -128,40 +125,4 @@ let operator_of_string s = match s with
 let may f = function
   | None -> None
   | Some v -> Some (f v)
-
-let typ_to_adatyp : Syntax_ada.typ -> Ada_types.t = function
-  | Integer            -> T.integer
-  | IntegerConst       -> T.universal_integer
-  | Float              -> T.std_float
-  | Boolean            -> T.boolean
-  | Character          -> T.character
-  | Declared (_,_,t,_) -> t
-
-let subtyp_to_adatyp gtbl st =
-  match st with
-  | Unconstrained t      -> (*T.new_unconstr *) (typ_to_adatyp t)
-  | Constrained (_,_,_,t) -> t
-  | SubtypName  n          -> try
-                                snd(Symboltbl.find_type gtbl n)
-                              with Not_found ->
-                                begin
-                                  Npkcontext.report_warning "ST2AT"
-                                    ("Cannot find type '"
-                                    ^name_to_string n
-                                    ^"'");
-                                  T.unknown;
-                                end
-
-let merge_types gtbl (tp, cstr, _) =
-  let t = subtyp_to_adatyp gtbl tp in
-  if (T.is_unknown t) then
-    Npkcontext.report_warning "merge_types"
-    ("merged subtype indication into unknown type ("^T.get_reason t^")");
-  match cstr with
-  | None -> t
-  | Some (IntegerRangeConstraint (a,b)) -> T.new_constr t (T.(@...) a b)
-  | Some (  FloatRangeConstraint _) -> Npkcontext.report_error "merge_types"
-                                                      "FloatRangeConstraint"
-  | Some (       RangeConstraint _) -> Npkcontext.report_error "merge_types"
-                                                           "RangeConstraint"
 

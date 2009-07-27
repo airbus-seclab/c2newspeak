@@ -112,13 +112,13 @@ let make_enum list_val =
   Enum list_assoc
 
 let make_range exp_b_inf exp_b_sup =
-  IntegerRange(RangeConstraint(exp_b_inf, exp_b_sup), None)
+  IntegerRange(exp_b_inf, exp_b_sup)
 
 
 %}
 %token EOF
 
-%token <Newspeak.location*Syntax_ada.nat> CONST_INT
+%token <Newspeak.location*Newspeak.Nat.t> CONST_INT
 %token <Newspeak.location*int>            CONST_CHAR
 %token <Newspeak.location*string>         CONST_FLOAT
 %token <Newspeak.location*string>         CONST_STRING
@@ -304,12 +304,11 @@ basic_declaration :
             TypeDecl($2,DerivedType $5),$1
         }
 | TYPE ident IS RANGE expression DOUBLE_DOT expression SEMICOLON
-            { TypeDecl($2, IntegerRange(RangeConstraint($5, $7), None)),$1}
+            { TypeDecl($2, IntegerRange($5, $7)),$1}
 | TYPE ident IS DIGITS CONST_INT SEMICOLON
             {
               (* digits X -> new float *)
-              TypeDecl ($2,DerivedType (Unconstrained Float
-                                       ,None
+              TypeDecl ($2,DerivedType ((None,"float")
                                        ,None
                                        )
                        )
@@ -352,10 +351,10 @@ record_component_list:
 ;
 
 record_component:
-  IDENT COLON IDENT SEMICOLON {(snd $1),SubtypName (None,snd $3)}
+  IDENT COLON IDENT SEMICOLON {(snd $1),(None,snd $3)}
 
 contrainte :
-| expression DOUBLE_DOT expression {RangeConstraint($1, $3)}
+| expression DOUBLE_DOT expression {($1, $3)}
 ;
 
 array_component_association :
@@ -516,11 +515,11 @@ expression :
 ;
 
 subtyp_indication :
-| subtyp RANGE contrainte {$1, Some($3), None}
-| subtyp {$1, None, None}
+| subtyp RANGE contrainte {$1, Some $3}
+| subtyp {$1, None}
 
 subtyp :
-| name {SubtypName(fst $1)}
+| name {(fst $1)}
 ;
 
 actual_parameter_part :

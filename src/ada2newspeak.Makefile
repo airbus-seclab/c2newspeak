@@ -32,18 +32,23 @@ newspeak.FILES=\
 	config newspeak highspeak npkcontext hpk2npk \
 	npkil cir cir2npkil linker
 
-ada2newspeak.FILES=\
-	params \
-	ada_config \
-	ada_types \
-	symboltbl \
-	ada_utils \
-	syntax_ada print_syntax_ada \
-	ast \
-	typecheck \
-	eval \
-	parser lexer file_parse \
-	normalize firstpass ada2newspeak
+ada2newspeak.FILES=                             \
+	params 					                              \
+	ada_config                                    \
+	syntax_ada                                    \
+	ada_types                                     \
+	symboltbl                                     \
+	ada_utils                                     \
+	print_syntax_ada                              \
+	ast                                           \
+	typecheck                                     \
+	eval                                          \
+	parser                                        \
+	lexer                                         \
+	file_parse                                    \
+	normalize                                     \
+	firstpass                                     \
+	ada2newspeak
 
 FILES=version utils/list_utils utils/tree \
       $(addprefix newspeak/, $(newspeak.FILES)) \

@@ -46,17 +46,6 @@ val mkerror : verbose_level -> string -> (string -> unit)
  *)
 val nat_of_bool : bool -> Newspeak.Nat.t
 
-val merge_types : Symboltbl.t -> Syntax_ada.subtyp_indication -> Ada_types.t
-
-val subtyp_to_adatyp : Symboltbl.t -> Syntax_ada.subtyp -> Ada_types.t
-val    typ_to_adatyp : Syntax_ada.typ    -> Ada_types.t
-
-(**
- * Compute the Newspeak integer kind associated to the specified range.
- * See Ada_config.size_of_range
- *)
-val ikind_of_range : Syntax_ada.nat -> Syntax_ada.nat -> Newspeak.ikind
-
 (**
  * Check a compilation unit against the name of the file around it.
  *)

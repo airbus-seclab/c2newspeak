@@ -22,12 +22,8 @@
 
 *)
 
-val size_of_range : Newspeak.Nat.t -> Newspeak.Nat.t -> int
-
 val size_of_boolean : int
 val size_of_char    : int
 val size_of_int     : int
 val size_of_float   : int
-
-val integer_constraint : Syntax_ada.contrainte
 
