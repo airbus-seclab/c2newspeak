@@ -381,10 +381,34 @@ let length_of typ = match (typ.base.trait, typ.range) with
 | Univ_real       , _
     -> Npkcontext.report_error "length_of" "Type with no size"
 
+let (<=%) a b =
+  Newspeak.Nat.compare a b <= 0
+
+let compute_constr t =
+  match (t.base.trait, t.range) with
+    | Signed (a,b), None -> Some (a, b)
+    | Signed (a,b), Some (c,d) ->
+        begin
+          assert (a <=% c && c <=% d && d <=% b);
+          Some (c, d)
+        end
+    | _ -> None
+
+
 let rec attr_get typ attr =
   match (typ.base.trait, attr) with
-    | Signed   (a,_),"first" -> typ, IntVal a
-    | Signed   (_,b),"last"  -> typ, IntVal b
+    | Signed      _ ,"first" ->
+        begin
+          match compute_constr typ with
+          | Some (a,_) -> typ, IntVal a
+          | None -> failwith "attr_get"
+        end
+    | Signed      _ ,"last" ->
+        begin
+          match compute_constr typ with
+          | Some (_,b) -> typ, IntVal b
+          | None -> failwith "attr_get"
+        end
     | Enumeration values, "first" -> typ, IntVal (Newspeak.Nat.of_int (snd
                                                     (List.hd  values)))
     | Enumeration values, "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
@@ -497,19 +521,6 @@ let belongs min max exp =
     Cir.Unop ( Npkil.Belongs_tmp (min, Npkil.Known (Newspeak.Nat.add_int 1 max))
              , exp
              )
-
-let (<=%) a b =
-  Newspeak.Nat.compare a b <= 0
-
-let compute_constr t =
-  match (t.base.trait, t.range) with
-    | Signed (a,b), None -> Some (a, b)
-    | Signed (a,b), Some (c,d) ->
-        begin
-          assert (a <=% c && c <=% d && d <=% b);
-          Some (c, d)
-        end
-    | _ -> None
 
 let check_exp t_ctx exp =
   let constr_combine c1 c2 =
