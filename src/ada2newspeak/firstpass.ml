@@ -569,102 +569,6 @@ let translate compil_unit =
         let (exp, _) = translate_exp exp
         in (C.Unop (Npkil.Not, exp), T.boolean)
 
-    (**
-     * Compute the actual argument list for a subprogram call.
-     * Given an (optionnaly named)-argument list and a function specification
-     * (describing formal parameters' name, default values, etc.)
-     *
-     * Algorithm :
-     *   - first, the positional arguments are extracted and put in the
-     *     beginning of the to-be-translated parameter list.
-     *   - then, the remaining (named) arguments are put in their right place,
-     *     according to the specification of the subprogram.
-     *   - finally, the missing named parameters are replaced with their
-     *     default values, if provided.
-     *
-     * An error may occur in one of the following cases :
-     *   - A positional parameter follows a named parameter.
-     *   - A parameter without default value is not given an actual value.
-     *   - A named parameter is specified more than once.
-     *
-     * @param args the name => value association list
-     * @param spec the function specification (holding default values, etc)
-     * @return a list of expressions which are the actual parameters.
-     *)
-  and make_arg_list args spec =
-    let argtbl = Hashtbl.create 5 in
-
-    (**
-     * Step 1 : extract positional parameters. Named parameters go into the
-     * argtbl hashtable.
-     *
-     * Non-leading positional parameters, if any, remain in the "positional"
-     * list and will lead to errors.
-     *
-     * /!\ Side-effects : this function references the argtbl variable.
-     *)
-    let rec extract_positional_parameters ar =
-      match ar with
-        |             []   -> []
-        | (Some  _, _)::_  ->
-          (* don't stop at first named argument : populate argtbl *)
-              List.iter
-                  (function
-                     | None   , _ -> Npkcontext.report_error "firstpass.fcall"
-                               "Named parameters shall follow positional ones"
-                     | Some id, e ->
-                          if (Hashtbl.mem argtbl id) then
-                              Npkcontext.report_error "firstpass.fcall"
-                              ("Parameter "^id^" appears twice")
-                          else
-                              Hashtbl.add argtbl id e;
-                  )
-                  ar;
-              []
-        | (None   , e)::tl -> e::(extract_positional_parameters tl)
-    in
-
-    (**
-     * Step 2 : merge this list with the function specification, in order to
-     * name the (formerly) positional parameters.
-     * For the remaining parameters :
-     *   - try to fetch them from the argtbl hashtable
-     *   - try to assign their default value
-     *
-     * /!\ Side-effects : this function references the argtbl variable.
-     *)
-    let rec merge_with_specification (pos_list : Ast.expression list)
-                                     (spec     : Ast.param      list)
-        :(string*Ast.expression) list =
-            match pos_list, spec with
-              |  [],_  -> (* end of positional parameters *)
-                          List.map (function x -> (x.formal_name,(
-                                   try Hashtbl.find argtbl x.formal_name
-                                   with Not_found -> begin
-                                       match x.default_value with
-                                         | Some value -> value
-                                         | None ->
-                                        Npkcontext.report_error
-                                        "firstpass.fcall"
-                                        ("No value provided for "
-                                        ^"parameter "^x.formal_name
-                                        ^", which has no default one.")
-                                   end
-                               )))
-                               spec
-              | (ev,t)::pt,s::st -> let t' = T.coerce_types t s.param_type in
-                                    (s.formal_name, (ev,t'))::
-                                    (merge_with_specification pt st)
-              | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
-                              "Too many actual arguments in function call"
-    in
-        (* Step 1... *)
-        let pos      = extract_positional_parameters args in
-        (* Step 2... *)
-        let eff_args = merge_with_specification pos spec in
-        (* We don't need the ids anymore *)
-        List.map snd eff_args
-
   (** Translates a function call.  *)
   and translate_function_call fname tr_typ spec arg_list =
       let (params, ret_t) =
@@ -677,7 +581,7 @@ let translate compil_unit =
                   ((string_of_name name)
                    ^" is a procedure, function expected")
     in
-    let arg_list = make_arg_list arg_list params in
+    let arg_list = List.map snd arg_list in
     let translate_parameter param exp =
         let (tr_exp, _) = translate_exp exp in
         T.check_exp param.param_type tr_exp
@@ -895,7 +799,7 @@ let translate compil_unit =
                                        ("Actual parameter with \"out\" or \"in "
                                         ^"out\" mode must be a variable")
                        in
-                       let arg_list = make_arg_list args params in
+                       let arg_list = List.map snd args in
                        let tr_params = List.map2 tr_param params arg_list
                        in
                          (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)

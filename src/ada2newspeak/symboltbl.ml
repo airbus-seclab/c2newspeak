@@ -69,7 +69,7 @@ module Table = struct
    *)
   type symbol =
     | Type       of T.t
-    | Subprogram of ((T.f_param list)*T.t option)
+    | Subprogram of ((Syntax_ada.param list)*T.t option)
     | Unit       of table
     | Variable   of T.t*(T.data_t option)*bool (* if true, no storage *
                                                 * will be allocated   *)
@@ -176,7 +176,7 @@ module Table = struct
           tbl
           n
           loc
-          (List.map T.to_fparam params,ret)
+          (params,ret)
 
 (******************************************************************************
  *                                                                            *
@@ -254,7 +254,7 @@ module Table = struct
     cast_t (find_symbols tbl n)
 
   let tbl_find_subprogram tbl n =
-      (fun (wh,(x,y)) -> wh,(List.map T.from_fparam x,y))
+      (fun (wh,(x,y)) -> wh,(x,y))
           (cast_s (find_symbols tbl n))
 
   let tbl_find_variable tbl ?expected_type n :scope*(T.t*T.data_t option*bool)=

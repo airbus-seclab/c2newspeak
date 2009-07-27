@@ -72,7 +72,7 @@ and iteration_scheme =
   | NoScheme
   | While of expression
 
-and argument = string option*expression
+and argument = string*expression
 
 and expression = exp_value * Ada_types.t
 

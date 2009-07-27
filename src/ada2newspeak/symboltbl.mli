@@ -130,7 +130,7 @@ val find_type     :    t
 val find_subprogram : t
                     -> ?silent:bool
                     -> string option * string
-    -> scope * ((string*bool*bool*Ada_types.t) list * Ada_types.t option)
+    -> scope * (Syntax_ada.param list * Ada_types.t option)
 
 val is_operator_overloaded : t -> string -> bool
 
@@ -146,7 +146,7 @@ val add_variable : t -> string -> Newspeak.location
 val add_subprogram : t
                 -> string
                 -> Newspeak.location
-                -> (string*bool*bool*Ada_types.t) list
+                -> Syntax_ada.param list
                 -> Ada_types.t option
       -> unit
 

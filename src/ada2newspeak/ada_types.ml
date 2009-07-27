@@ -569,19 +569,6 @@ let extract_array_base t =
       end
   | _             -> invalid_arg "extract_array_base"
 
-(**
- * Subprogram parameters.
- *)
-
-type f_param = { fp_name : string
-               ; fp_in   : bool
-               ; fp_out  : bool
-               ; fp_type : t
-               }
-
-let   to_fparam (a,b,c,d) = {  fp_name = a;fp_in = b;fp_out = c;fp_type = d}
-let from_fparam     f     = (f.fp_name , f.fp_in , f.fp_out , f.fp_type)
-
 let coerce_types a b =
   match (a.base.trait,b.base.trait) with
   | Signed   _  , Univ_int   -> a
