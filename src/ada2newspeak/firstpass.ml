@@ -683,8 +683,8 @@ let translate compil_unit =
     in
     let arg_list = make_arg_list arg_list params in
     let translate_parameter param exp =
-        let tr_exp = T.check_exp param.param_type (fst (translate_exp exp)) in
-        tr_exp
+        let (tr_exp, _) = translate_exp exp in
+        T.check_exp param.param_type tr_exp
     in
     let tr_params = List.map2 translate_parameter params arg_list
     in
@@ -782,8 +782,8 @@ let translate compil_unit =
    *)
   and make_affect id exp typ_lv loc =
     let typ = T.translate typ_lv in
-    let checked_exp = (*T.check_exp typ_lv*) exp
-    in (C.Set(id,typ,checked_exp),loc)
+    let checked_exp = T.check_exp typ_lv exp in
+    (C.Set(id,typ,checked_exp),loc)
 
   (**
    * Translate a [Syntax_ada.Assign].

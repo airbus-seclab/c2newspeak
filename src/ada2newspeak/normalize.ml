@@ -301,8 +301,7 @@ and normalize_binop bop e1 e2 =
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
           let (e2',t2) = normalize_exp ?expected_type e2 in
-          let t = T.coerce_types t1 t2 in
-          Ast.Binary (bop', (e1',t), (e2',t)),
+          Ast.Binary (bop', (e1',t1), (e2',t2)),
           TC.type_of_binop bop' t1 t2
 
 and make_abs (exp,t) =
@@ -702,7 +701,7 @@ and normalization compil_unit extern =
     | ReturnSimple -> Some (Ast.ReturnSimple, loc)
     | Assign(lv, exp) -> begin
                            let (lv', t_lv) = normalize_lval lv in
-                           let (e', t_exp) = normalize_exp exp in
+                           let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
                            if (not (T.is_compatible t_lv t_exp)) then
                              begin
                                Npkcontext.print_debug ("LV = "^T.print t_lv);
@@ -710,9 +709,8 @@ and normalization compil_unit extern =
                                Npkcontext.report_error "normalize_instr"
                                  "Incompatible types in assignment";
                              end;
-                           let t_exp' = T.coerce_types t_lv (T.base_type t_exp) in
                            Some (Ast.Assign( lv'
-                                           , (e',t_exp')
+                                           , (e',t_exp)
                                            , false
                                            ), loc)
                          end

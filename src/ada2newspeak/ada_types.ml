@@ -266,7 +266,7 @@ let extract_symbols t =
 let integer_first = Newspeak.Nat.of_string "-2147483648"
 let integer_last  = Newspeak.Nat.of_string  "2147483647"
 
-let integer  = new_range (integer_first, integer_last)
+let integer = new_range (integer_first, integer_last)
 
 let boolean = new_enumerated ["true" ; "false"]
 
@@ -491,26 +491,41 @@ let belongs min max exp =
              , exp
              )
 
-let check_exp_store t exp =
-  match t.base.trait with
-  | Signed (a,b)  -> belongs a b exp
-  | _ -> exp
+let (<=%) a b =
+  Newspeak.Nat.compare a b <= 0
 
-let check_exp t exp =
-  let (<=%) a b =
-    Newspeak.Nat.compare a b <= 0
-  in
+let constr_combine c1 c2 =
+  match (c1,c2) with
+    | _         , None       -> c1
+    | None      , _          -> c2
+    | Some (a,b), Some (c,d) -> if (a <=% c && d <=% b)
+                                  then None
+                                  else c1
+
+let extract_constr e = match e with
+  | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
+           , _
+           ) -> Some (a, Newspeak.Nat.add_int (-1) b_plus_1)
+  | _ -> None
+
+let compute_constr t =
   match (t.base.trait, t.range) with
-  | Signed _, None ->
-      begin
-        check_exp_store t exp
-      end
-  | Signed (a,b), Some (c,d) ->
-      begin
-        assert (a <=% c && c <=% d && d <=% b);
-        belongs c d exp
-      end
-  | _ -> exp
+    | Signed (a,b), None -> Some (a, b)
+    | Signed (a,b), Some (c,d) ->
+        begin
+          assert (a <=% c && c <=% d && d <=% b);
+          Some (c, d)
+        end
+    | _ -> None
+
+let check_exp t_ctx exp =
+  let constr = 
+    constr_combine (compute_constr t_ctx)
+                   (extract_constr exp)
+  in
+  match constr with
+  | None -> exp
+  | Some (a,b) -> belongs a b exp
 
 (**
  * Subprogram parameters.
