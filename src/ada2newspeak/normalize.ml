@@ -184,10 +184,13 @@ let make_arg_list args spec =
    *)
   let rec merge_with_specification (pos_list : Ast.expression list)
                                    (spec     : Ast.param      list)
-      :(string*Ast.expression) list =
+      :Ast.argument list =
           match pos_list, spec with
             |  [],_  -> (* end of positional parameters *)
-                        List.map (function x -> (x.Ast.formal_name,(
+                        List.map (function x ->
+                          ( x.Ast.formal_name
+                          , x.Ast.param_type
+                          , (
                                  try Hashtbl.find argtbl x.Ast.formal_name
                                  with Not_found -> begin
                                      match x.Ast.default_value with
@@ -202,7 +205,7 @@ let make_arg_list args spec =
                              )))
                              spec
             | (ev,t)::pt,s::st -> let t' = T.coerce_types t s.Ast.param_type in
-                                  (s.Ast.formal_name, (ev,t'))::
+                                  (s.Ast.formal_name, s.Ast.param_type, (ev,t'))::
                                   (merge_with_specification pt st)
             | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
                             "Too many actual arguments in function call"
@@ -315,10 +318,11 @@ let rec normalize_exp ?expected_type exp =
                                                          gtbl n in
                       Ast.Var(sc,(snd n),t) ,t
                     with
-                    | Sym.Parameterless_function rt ->
-                                      Ast.FunctionCall( Sym.Lexical
+                    | Sym.Parameterless_function (sc,rt) ->
+                                      Ast.FunctionCall( sc
                                                       , snd n
-                                                      , []) ,rt
+                                                      , []
+                                                      , rt) ,rt
                     | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
                   end
     | Unary (uop, exp)    -> normalize_uop uop exp
@@ -462,7 +466,7 @@ and normalize_fcall (n, params) =
     let norm_args = List.map normalize_arg params in
     let norm_spec = List.map normalize_param spec in
     let effective_args = make_arg_list norm_args norm_spec in
-    Ast.FunctionCall(sc, (snd n), effective_args),t
+    Ast.FunctionCall(sc, (snd n), effective_args, t),t
   with Not_found ->
     begin
       let (sc,(t,_)) = Sym.find_variable gtbl n in

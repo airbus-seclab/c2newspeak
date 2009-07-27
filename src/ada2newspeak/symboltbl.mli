@@ -110,7 +110,7 @@ val type_ovl_intersection : t
 
 (** Find data.  *)
 
-exception Parameterless_function of Ada_types.t
+exception Parameterless_function of scope*Ada_types.t
 exception Variable_no_storage    of Ada_types.t * Ada_types.data_t
 
 val find_variable :    t

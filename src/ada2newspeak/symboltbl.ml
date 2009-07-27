@@ -29,7 +29,7 @@ let error x =
 
 type scope = Lexical | In_package of string
 
-exception Parameterless_function of T.t
+exception Parameterless_function of scope * T.t
 exception Variable_no_storage    of T.t * T.data_t
 
 module Table = struct
@@ -224,7 +224,7 @@ module Table = struct
                         | Variable (x,Some v,true ,_) ->
                             raise (Variable_no_storage (x,v))
                         | Subprogram ([],Some rt) ->
-                            raise (Parameterless_function rt)
+                            raise (Parameterless_function (Lexical,rt))
                         |_ -> None
                       )
                       ?filter
@@ -270,10 +270,14 @@ module Table = struct
                            ^match expected_type with None -> "None"
                                     | Some t -> T.print t)
     end;
-    let s,(t,v,r) =
-      cast_v ~filter:(fun (_,(x,_,_)) -> ovl_predicate x) (find_symbols tbl n)
-    in
-    s,(t,v,(match v with Some _ -> true | None -> r))
+    try
+      let s,(t,v,r) =
+        cast_v ~filter:(fun (_,(x,_,_)) -> ovl_predicate x) (find_symbols tbl n)
+      in
+      s,(t,v,(match v with Some _ -> true | None -> r))
+    with
+    | Parameterless_function (Lexical, rt) ->
+        raise (Parameterless_function (tbl.t_scope, rt))
 
 
   let tbl_find_unit t id =

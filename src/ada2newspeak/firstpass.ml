@@ -71,6 +71,10 @@ let unbox_resolved sc x = match sc with
   | Sym.Lexical      -> None,x
   | Sym.In_package p -> Some p,x
 
+let concat_resolved_name sc  n = match sc with
+  | Sym.Lexical      ->        n
+  | Sym.In_package p -> (p^"."^n)
+
 let translate_resolved_name sc n = match sc with
   | Sym.Lexical      -> C.Local         n
   | Sym.In_package p -> C.Global (p^"."^n)
@@ -132,33 +136,7 @@ let translate compil_unit =
     )
   in
 
-  let find_all_use ident =
-    List.flatten
-      (List.map
-         (fun pack -> find_all_symb (Some pack, ident))
-         (Sym.s_get_use gtbl))
-  in
-
-  let find_name name
-                f_ident
-                f_with
-                f_current
-    =
-    match name with
-      | (None, ident) -> f_ident ident name
-      | (Some pack, ident) when extern ()
-                       ||  (Sym.is_with gtbl pack) ->
-          f_with (Some pack,ident)
-      | (pack, ident) when pack = Sym.current gtbl ->
-          f_current (None,ident) name
-      | (Some pack, _) -> Npkcontext.report_error
-          "Firstpass.find_name"
-            ("unknown package "
-             ^pack)
-  in
-
-  let translate_int i = C.Const(C.CInt i)
-  in
+  let translate_int i = C.Const(C.CInt i) in
   let trans_int x = translate_int (Newspeak.Nat.of_int x) in
 
   (* fonctions de traduction des noms*)
@@ -327,156 +305,6 @@ let translate compil_unit =
     end
   in
 
-  (* recherche d'un symbol de fonction : a revoir *)
-  let find_fun_symb name =
-
-    let rec mem_other_symb list_ident var_masque =
-      match list_ident with
-        | ((VarSymb(_)|NumberSymb(_)),_,_)::r when var_masque ->
-            mem_other_symb r var_masque
-        | ((VarSymb(_)|NumberSymb(_)),_,_)::_ ->
-            Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-              ((string_of_name name)
-               ^" is not a function")
-        | (EnumSymb(_),_,_)::r -> mem_other_symb r var_masque
-        | (FunSymb _,_,_)::_ -> true
-        | [] -> false
-    in
-    let sans_selecteur ident name =
-      let list_symb = find_all_symb name in
-
-      let rec find_use list_symb var_masque =
-        match list_symb with
-          | ((VarSymb(_)|NumberSymb(_)),_,_)::r when var_masque ->
-              find_use r var_masque
-
-          | ((VarSymb(_)|NumberSymb(_)),_,_)::_ -> (*WG TO DO *)
-              Npkcontext.report_error
-                "Firstpass.find_fun_symb"
-                (ident ^" is not a funtion 1 ")
-
-          | (EnumSymb(_),_,_)::r ->
-              find_use r var_masque
-
-          | (FunSymb (_(*fn*), _(*sp*), true, _), C.Fun, _)::r ->
-              if (mem_other_symb r var_masque)
-              then (Npkcontext.report_error
-                      "Firstpass.find_fun_symb"
-                      (ident^" is not visible : "
-                       ^"multiple use clauses cause hiding"))
-              else (*fn, sp, trt*)
-    (*        print_endline ("found --------------"
-    ^(match fn with C.Fname f -> f | _ -> "unkno"));
-        *)
-                List.hd list_symb
-
-
-          | (FunSymb (_, _, false, _), C.Fun, _)::_ -> Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-                ("internal error : imported function not "
-                 ^"tagged as extern")
-
-          | (FunSymb _, _, _)::_ -> Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-                ("internal error : translate type isn't "
-                 ^"a fun type")
-
-          | [] -> Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-                ("cannot find symbol "^ident)
-      in
-      let rec find_interne list_symb var_masque =
-        match list_symb with
-          | ((VarSymb(_,_,true,_)|NumberSymb(_,true)),
-             _,_)::r when var_masque ->
-              find_interne r var_masque
-
-          | (VarSymb(_),_,_)::_ ->
-              (*WG*)
-              List.hd list_symb
-
-          | (NumberSymb(_),_,_)::_ ->
-              Npkcontext.report_error
-                "Firstpass.find_fun_symb"
-                ((string_of_name name)
-                 ^" is not a funtion (NumberSymb)")
-
-          | (EnumSymb(_),_,_)::r ->
-              find_interne r true
-
-          | (FunSymb _, C.Fun, _)::_ ->
-              List.hd list_symb
-
-          | (FunSymb _, _,_)::_ ->
-              Npkcontext.report_error "Firstpass.find_fun_symb"
-                ("internal error : translate type isn't a fun type")
-
-          | [] -> find_use (find_all_use ident) var_masque
-
-      in find_interne list_symb false
-
-    and avec_selecteur name =
-      let list_symb = find_all_symb name in
-      let rec find_fun list_symb =
-        match list_symb with
-          | ((VarSymb _ | NumberSymb(_)),_,_)::_ ->  (*WG TO DO *)
-              Npkcontext.report_error
-               "Firstpass.find_fun_symb"
-                ((string_of_name name)
-                 ^" is not a funtion")
-
-          | (EnumSymb _, _, _)::r ->
-              find_fun r
-
-          | (FunSymb (_, _, true, _), C.Fun, _)::_ ->
-              List.hd list_symb
-
-          | (FunSymb _, _, _)::_ -> Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-                ("internal error : translate type isn't "
-                 ^"a fun type")
-
-          | [] -> Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-                ("cannot find symbol "^(string_of_name name))
-      in find_fun list_symb
-
-    and avec_selecteur_courant ident name =
-      let list_symb = find_all_symb ident in
-        let rec find_global list_symb =
-        match list_symb with
-          | ((VarSymb(_,_,false,_)|NumberSymb(_,false)),_,_)::r ->
-              find_global r
-
-          | ((VarSymb(_,_,true,_)|NumberSymb( _,true)),_,_)::_ ->(*WG TO DO *)
-              Npkcontext.report_error
-               "Firstpass.find_fun_symb"
-                ((string_of_name name)
-                 ^" is not a funtion")
-
-          | (EnumSymb(_),_,_)::r                    -> find_global r
-
-          | (FunSymb (_,_, false, _), C.Fun, _)::_ -> List.hd list_symb
-          | (FunSymb (_,_, true , _),     _, _)::_ -> (* fonction externe *)
-                              Npkcontext.report_error
-                                "Firstpass.find_fun_symb"
-                                ("cannot find symbol "^(string_of_name name))
-
-          | (FunSymb _, _, _)::_ ->
-              Npkcontext.report_error "Firstpass.find_fun_symb"
-                ("internal error : translate type isn't a fun type")
-
-          | [] -> Npkcontext.report_error
-              "Firstpass.find_fun_symb"
-                ("cannot find symbol "^(string_of_name name))
-      in find_global list_symb
-
-    in find_name name sans_selecteur
-         avec_selecteur avec_selecteur_courant
-
-  in
-
   (* fonctions de traductions *)
   let translate_subtyp_option subtyp = match subtyp with
     | None -> C.Void
@@ -558,30 +386,27 @@ let translate compil_unit =
         let (exp, _) = translate_exp exp
         in (C.Unop (Npkil.Not, exp), T.boolean)
 
-  (** Translates a function call.  *)
-  and translate_function_call fname tr_typ spec arg_list =
-      let (params, ret_t) =
-          match spec with
-            | Function(_,params,subtyp) ->
-                (params, subtyp)
-
-            | Procedure(name, _) -> Npkcontext.report_error
-                "Firstpass.translate_exp"
-                  ((string_of_name name)
-                   ^" is a procedure, function expected")
-    in
-    let arg_list = List.map snd arg_list in
-    let translate_parameter param exp =
+  (** Returns ftyp & list of params *)
+  and translate_subprogram_parameters params =
+    let translate_parameter (_id, t, exp) =
         let (tr_exp, _) = translate_exp exp in
-        T.check_exp param.param_type tr_exp
+        ( T.translate t
+        , T.check_exp t tr_exp
+        )
     in
-    let tr_params = List.map2 translate_parameter params arg_list
-    in
-        try (C.Call(tr_typ, fname, tr_params), ret_t)
-        with
-          | Invalid_argument _ -> Npkcontext.report_error
-                                "Firstpass.translate_function_call"
-                                "wrong number of arguments"
+    List.split (
+        List.map translate_parameter params
+    )
+
+  (** Translates a function call.  *)
+  and translate_function_call fname arg_list rt =
+    let (ftyp0, tr_params) = translate_subprogram_parameters arg_list in
+    let ftyp = ftyp0, T.translate rt in
+    try (C.Call(ftyp, fname, tr_params), rt)
+    with
+      | Invalid_argument _ -> Npkcontext.report_error
+                            "Firstpass.translate_function_call"
+                            "wrong number of arguments"
 
   and translate_var scope name ty =
     let n    = translate_resolved_name scope name in
@@ -628,71 +453,9 @@ let translate compil_unit =
                                  (trans_int (C.size_of_typ ctyp))
         in
         C.Lval (C.Shift (arr, offset), ctyp), t
-    | FunctionCall(sc, name, arg_list) ->
-        (*fonction ou lecture d'un element de tableau/matrice*)
-        (* let (fname, spec, tr_typ) = find_fun_symb name in *)
-        let name = unbox_resolved sc name in
-        let array_or_fun = find_fun_symb (name) in
-          begin
-            match array_or_fun with
-                (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->
-                  translate_function_call
-                    fname tr_typ spec arg_list
-              | (VarSymb(lv, subtyp, _, _),_,_) ->  begin
-
-                  (* array : strip ids *)
-                  let arg_list = List.map snd arg_list in
-
-                  let rec destroy subt = (*du plus gros vers plus petit*)
-                    match (T.extract_array_types subt) with
-                    | Some (tc, ti) -> (ti, tc)::destroy tc
-                    | None -> []
-                  in
-
-                  let rec rebuild lv subt arg_list =
-                    let  last_exp = List.hd arg_list in
-                    let (_subt_range, tpelt) = List_utils.last subt in
-
-                    let chk_exp = last_exp
-                    in
-                    let _sz =  C.exp_of_int (
-                      C.size_of_typ (T.translate tpelt)) in
-
-                    let offset = chk_exp in
-                      match arg_list with
-                        | [_] ->
-                                   ( C.Lval (C.Shift (lv, offset),
-                                             (T.translate tpelt)
-                                            ),
-                                     tpelt
-                                   )
-                       | _::tl -> rebuild (C.Shift (lv, chk_exp)) subt tl
-                       | [] -> invalid_arg "offset"
-                  in
-
-                  let bk_typ = destroy subtyp in
-                  let dim = List.length arg_list in
-                    if (List.length bk_typ < dim)
-                    then Npkcontext.report_error "firstpass.ml:Function Call"
-                      "more elts than dimensions";
-
-                    if (dim = 0) then
-                      Npkcontext.report_error "firstpass.ml:Function Call"
-                      "no element for shifting";
-
-                    let tr_arg_list =
-                      List.map (fun x ->
-                        fst (translate_exp x)) arg_list
-                    in
-                      match (rebuild lv bk_typ tr_arg_list) with
-                          (C.Lval (a, tpelt), adatyp) ->
-                            (C.Lval (a, tpelt),  adatyp)
-                        | _ ->  Npkcontext.report_error "firstpass:FCall"
-                            ("unexepted form in translate_exp")
-                end
-              | _ -> Npkcontext.report_error "Firstpass.translate_exp"
-                  "FunctionCall case but unexpected result"
-          end
+    | FunctionCall(sc, name, arg_list, rt) ->
+        let fname = C.Fname (concat_resolved_name sc name) in
+        translate_function_call fname arg_list rt
 
   (**
    * Make a C assignment.
@@ -760,42 +523,11 @@ let translate compil_unit =
                  ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
                    loc)::r)
            | ProcedureCall (sc, name, args) -> begin
-               let name = unbox_resolved sc name in
-               let array_or_fun  = find_fun_symb name in
-                 match array_or_fun with
-                     (FunSymb (fname, spec, _, tr_typ), C.Fun,  _) ->
-                       let params =
-                         match spec with
-                           | Function(_) -> Npkcontext.report_error
-                               "Firstpass.translate_instr"
-                                 ((string_of_name name)
-                                  ^" is a function, procedure expected")
-                           | Procedure(_, params) -> params
-                       in
-                       let tr_param param (exp,tp)=
-                         match param.mode with
-                           | A.In -> fst (translate_exp (exp,tp))
-                           | A.Out | A.InOut ->
-                               match exp with
-                                 | Var(sc,v,t) ->
-                                     let vid, typ = translate_lv (Lval (sc,v,t))
-                                                                 true
-                                                                 translate_exp
-                                        in
-                                       C.AddrOf(vid, T.translate typ)
-                                 | _ ->  Npkcontext.report_error
-                                     "Firstpass.translate_instr"
-                                       ("Actual parameter with \"out\" or \"in "
-                                        ^"out\" mode must be a variable")
-                       in
-                       let arg_list = List.map snd args in
-                       let tr_params = List.map2 tr_param params arg_list
-                       in
-                         (C.Exp(C.Call(tr_typ, fname, tr_params)), loc)
-                          ::(translate_block r)
-                   | _ ->
-                       Npkcontext.report_error "Firstpass.translate_instr"
-                 "find_fun_symb did not expect this (maybe array) as an instr! "
+               let fname = C.Fname (concat_resolved_name sc name) in
+                 let (ftyp0, tr_params) = translate_subprogram_parameters args in
+                 let ftyp = ftyp0, C.Void in
+                   (C.Exp(C.Call(ftyp, fname, tr_params)), loc)
+                    ::(translate_block r)
              end
 
            | Case (e, choices, default) ->

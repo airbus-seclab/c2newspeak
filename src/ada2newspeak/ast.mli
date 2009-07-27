@@ -72,7 +72,7 @@ and iteration_scheme =
   | NoScheme
   | While of expression
 
-and argument = string*expression
+and argument = string * Ada_types.t * expression
 
 and expression = exp_value * Ada_types.t
 
@@ -84,6 +84,7 @@ and exp_value =
   | Var          of Symboltbl.scope * string * Ada_types.t
   | FunctionCall of Symboltbl.scope * string
                   * argument list
+                  * Ada_types.t (* return type *)
   | ArrayValue   of Symboltbl.scope * string
                   * expression list
                   * Ada_types.t
