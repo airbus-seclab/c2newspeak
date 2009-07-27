@@ -112,6 +112,15 @@ let insert_constant ?t s =
   | T.BoolVal  x -> Ast.CBool  x, Ada_utils.with_default t T.boolean
   | T.FloatVal x -> Ast.CFloat x, Ada_utils.with_default t T.universal_real
 
+let add_numberdecl ident value loc =
+  let t = match value with
+    | T.BoolVal  _ -> Npkcontext.report_error "add_numberdecl"
+                      "Unexpected boolean value"
+    | T.IntVal   _ -> T.universal_integer
+    | T.FloatVal _ -> T.universal_real
+  in
+  Sym.add_variable gtbl ident loc t ~value ~no_storage:true
+
 let normalize_ident ident package extern =
   if extern then (package, ident)
             else (None   , ident)
@@ -177,47 +186,68 @@ let parse_package_specification name =
            "normalize.parse_package_specification"
           "internal error : specification expected, body found"
 
-(*
- * renvoie la specification normalisee du package correspondant
- * a name, les noms etant traites comme extern a la normalisation
- *)
-let rec parse_extern_specification name =
-  Npkcontext.print_debug "Parsing extern specification file";
-  let spec_ast = parse_specification name in
-  let norm_spec = (normalization spec_ast true) in
-  Npkcontext.print_debug "Done parsing extern specification file";
-  match norm_spec with
-    | (_, Ast.Spec(spec), loc) -> (spec, loc)
-    | (_, Ast.Body(_), _) -> Npkcontext.report_error
-        "normalize.parse_extern_specification"
-          "internal error : specification expected, body found"
-
 (**
- * Iterates through the abstract syntax tree, performing miscellaneous tasks.
- *   - match type identifiers to their declaration (or raise en error)
- *   - look for specs (.ads files)
- *   - transforms functions and type names to "package.ident" in their
- *     declarations.
- *
- * TODO document extern
+ * Normalize an expression.
  *)
-and normalization compil_unit extern =
-
-  let normalize_ident_cur_ext ident is_ext =
-    normalize_ident ident (Sym.current gtbl) is_ext
-  in
-
-  let normalize_ident_cur ident =
-    normalize_ident_cur_ext ident extern
-
-  in
+let rec normalize_exp ?expected_type exp =
+  match exp with
+    | CInt   x -> Ast.CInt   x,
+                    (match expected_type with
+                     | Some t -> t
+                     | None ->
+(*                       Npkcontext.report_warning "normalize_exp"
+                             "Typing constant as universal_integer"; *)
+                         T.universal_integer
+                     )
+    | CFloat x -> Ast.CFloat x,T.universal_real
+    | CBool  x -> Ast.CBool  x,T.boolean
+    | CChar  x -> Ast.CChar  x,T.character
+    | Var    n -> begin (* n may denote the name of a parameterless function *)
+                    try
+                      let (sc,(t,_)) = Sym.find_variable ?expected_type gtbl n in
+                      Ast.Var(sc,(snd n),(assert_known t)) ,t
+                    with
+                    | Sym.Parameterless_function rt ->
+                                      Ast.FunctionCall( Sym.Lexical
+                                                      , snd n
+                                                      , []) ,rt
+                    | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
+                  end
+    | Unary (uop, exp)    -> normalize_uop uop exp
+    | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
+    | Qualified(stn, exp) -> let t = snd (Sym.find_type gtbl stn) in
+                                fst (normalize_exp ~expected_type:t exp),t
+    | FunctionCall(n, params) -> normalize_fcall (n, params)
+    | Attribute (st, attr, Some exp) ->
+        begin
+          let t = subtyp_to_adatyp (SubtypName st) in
+          if attr = "succ" && T.is_scalar t then
+            begin
+              let (e',t') = normalize_exp exp in
+              ( Ast.Binary ( Ast.Plus
+                           , (e', t')
+                           , ( Ast.CInt (Newspeak.Nat.one)
+                             , T.universal_integer
+                             )
+                           )
+              , t')
+            end
+          else Npkcontext.report_error "Normalize"
+               "No such attribute"
+        end
+    | Attribute (st, attr, None) ->
+        begin
+          let t = subtyp_to_adatyp (SubtypName st) in
+          let (t,v) = T.attr_get t attr in
+          (fst (insert_constant v)), t
+        end
 
 (**
  * Normalize an actual argument.
  * The identifier does not have to be normalized (it is just a plain string),
  * but normalize the expression.
  *)
-let rec normalize_arg (id,e) = id,normalize_exp e
+and normalize_arg (id,e) = id,normalize_exp e
 
 and normalize_binop bop e1 e2 =
   let direct_op_trans =
@@ -316,62 +346,6 @@ and normalize_fcall (n, params) =
   Ast.FunctionCall(sc, (snd n), List.map normalize_arg params),t
 
 (**
- * Normalize an expression.
- *)
-and normalize_exp ?expected_type exp =
-  match exp with
-    | CInt   x -> Ast.CInt   x,
-                    (match expected_type with
-                     | Some t -> t
-                     | None ->
-(*                       Npkcontext.report_warning "normalize_exp"
-                             "Typing constant as universal_integer"; *)
-                         T.universal_integer
-                     )
-    | CFloat x -> Ast.CFloat x,T.universal_real
-    | CBool  x -> Ast.CBool  x,T.boolean
-    | CChar  x -> Ast.CChar  x,T.character
-    | Var    n -> begin (* n may denote the name of a parameterless function *)
-                    try
-                      let (sc,(t,_)) = Sym.find_variable ?expected_type gtbl n in
-                      Ast.Var(sc,(snd n),(assert_known t)) ,t
-                    with
-                    | Sym.Parameterless_function rt ->
-                                      Ast.FunctionCall( Sym.Lexical
-                                                      , snd n
-                                                      , []) ,rt
-                    | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
-                  end
-    | Unary (uop, exp)    -> normalize_uop uop exp
-    | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
-    | Qualified(stn, exp) -> let t = snd (Sym.find_type gtbl stn) in
-                                fst (normalize_exp ~expected_type:t exp),t
-    | FunctionCall(n, params) -> normalize_fcall (n, params)
-    | Attribute (st, attr, Some exp) ->
-        begin
-          let t = subtyp_to_adatyp (SubtypName st) in
-          if attr = "succ" && T.is_scalar t then
-            begin
-              let (e',t') = normalize_exp exp in
-              ( Ast.Binary ( Ast.Plus
-                           , (e', t')
-                           , ( Ast.CInt (Newspeak.Nat.one)
-                             , T.universal_integer
-                             )
-                           )
-              , t')
-            end
-          else Npkcontext.report_error "Normalize"
-               "No such attribute"
-        end
-    | Attribute (st, attr, None) ->
-        begin
-          let t = subtyp_to_adatyp (SubtypName st) in
-          let (t,v) = T.attr_get t attr in
-          (fst (insert_constant v)), t
-        end
-
-(**
  * Normalize a constraint.
  *)
 and normalize_contrainte contrainte =
@@ -441,99 +415,111 @@ and normalize_contrainte contrainte =
             "Ada_normalize.eval_contrainte"
             "internal error : unexpected Numeric Range"
 
-in
-  let normalize_subtyp_ind (st,cst,w) =
-    (st, Ada_utils.may normalize_contrainte cst, w)
-  in
+let normalize_subtyp_ind (st,cst,w) =
+  (st, Ada_utils.may normalize_contrainte cst, w)
 
+let normalize_integer_range taille contrainte =
+  match (taille, contrainte) with
+    | (None, RangeConstraint(_)) ->
+        begin
+          try
+            let norm_contrainte =
+              normalize_contrainte contrainte
+            in match norm_contrainte with
+              | IntegerRangeConstraint(min, max) ->
+                  let ikind = ikind_of_range min max
+                  in IntegerRange(norm_contrainte, Some(ikind))
 
-  let add_numberdecl ident value loc =
-    let t = match value with
-      | T.BoolVal  _ -> Npkcontext.report_error "add_numberdecl"
-                        "Unexpected boolean value"
-      | T.IntVal   _ -> T.universal_integer
-      | T.FloatVal _ -> T.universal_real
-    in
-    Sym.add_variable gtbl ident loc t ~value ~no_storage:true
-  in
-
-  let normalize_integer_range taille contrainte =
-    match (taille, contrainte) with
-      | (None, RangeConstraint(_)) ->
-          begin
-            try
-              let norm_contrainte =
-                normalize_contrainte contrainte
-              in match norm_contrainte with
-                | IntegerRangeConstraint(min, max) ->
-                    let ikind = ikind_of_range min max
-                    in IntegerRange(norm_contrainte, Some(ikind))
-
-                | _ ->
-                    Npkcontext.report_error
-                      "Ada_normalize.normalize_integer_range"
-                      "internal error : uncompatible constraint type"
-            with
-                NonStaticExpression ->
+              | _ ->
                   Npkcontext.report_error
                     "Ada_normalize.normalize_integer_range"
-                    "expected static expression"
-          end
-      | _ ->
-          Npkcontext.report_error
-            "Ada_normalize.normalize_integer_range"
-            "internal error : size or constraint already provided"
-  in
+                    "internal error : uncompatible constraint type"
+          with
+              NonStaticExpression ->
+                Npkcontext.report_error
+                  "Ada_normalize.normalize_integer_range"
+                  "expected static expression"
+        end
+    | _ ->
+        Npkcontext.report_error
+          "Ada_normalize.normalize_integer_range"
+          "internal error : size or constraint already provided"
 
-  let normalize_typ_decl ident typ_decl loc =
-   match typ_decl with
-    | Enum symbs ->
-        let ids = fst (List.split symbs) in
-        let t = T.new_enumerated ids in
-        Sym.add_type gtbl ident loc t;
-        List.iter (fun (i,v) -> Sym.add_variable gtbl i loc t
-                                                   ~value:(T.IntVal v)
+let normalize_typ_decl ident typ_decl loc =
+ match typ_decl with
+  | Enum symbs ->
+      let ids = fst (List.split symbs) in
+      let t = T.new_enumerated ids in
+      Sym.add_type gtbl ident loc t;
+      List.iter (fun (i,v) -> Sym.add_variable gtbl i loc t
+                                                 ~value:(T.IntVal v)
+                                                 ~no_storage:true
+      ) symbs;
+      ()
+  | DerivedType(subtyp_ind) ->
+      let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+      let t = merge_types norm_subtyp_ind in
+      let new_t = T.new_derived t in
+        Sym.add_type gtbl ident loc new_t;
+
+      begin
+        match (T.extract_symbols t) with
+          | None   -> ()
+          | Some s -> 
+                List.iter (fun (i,v) -> Sym.add_variable gtbl i loc
+                                                   new_t
+                                                   ~value:(T.IntVal (Newspeak.Nat.of_int v))
                                                    ~no_storage:true
-        ) symbs;
-        ()
-    | DerivedType(subtyp_ind) ->
-        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
-        let t = merge_types norm_subtyp_ind in
-        let new_t = T.new_derived t in
-          Sym.add_type gtbl ident loc new_t;
+                ) s
+      end;
 
-        begin
-          match (T.extract_symbols t) with
-            | None   -> ()
-            | Some s -> 
-                  List.iter (fun (i,v) -> Sym.add_variable gtbl i loc
-                                                     new_t
-                                                     ~value:(T.IntVal (Newspeak.Nat.of_int v))
-                                                     ~no_storage:true
-                  ) s
-        end;
+  | IntegerRange(contrainte,taille) ->
+      let decl = normalize_integer_range taille contrainte in
+      let range = match decl with
+        | IntegerRange (IntegerRangeConstraint (min,max), _)
+            -> T.(@...) min max
+        | _ -> failwith "unreachable"
+      in
+      let t = T.new_range range in
+      Sym.add_type gtbl ident loc t
+  | Record r -> begin
+                  let r' = List.map
+                             (fun (id, st) ->
+                               (id, subtyp_to_adatyp st)
+                             ) r in
+                  let t = T.new_record r' in
+                  Sym.add_type gtbl ident loc t;
+                end
 
-    | IntegerRange(contrainte,taille) ->
-        let decl = normalize_integer_range taille contrainte in
-        let range = match decl with
-          | IntegerRange (IntegerRangeConstraint (min,max), _)
-              -> T.(@...) min max
-          | _ -> failwith "unreachable"
-        in
-        let t = T.new_range range in
-        Sym.add_type gtbl ident loc t
-    | Record r -> begin
-                    let r' = List.map
-                               (fun (id, st) ->
-                                 (id, subtyp_to_adatyp st)
-                               ) r in
-                    let t = T.new_record r' in
-                    Sym.add_type gtbl ident loc t;
-                  end
-  in
+(*
+ * renvoie la specification normalisee du package correspondant
+ * a name, les noms etant traites comme extern a la normalisation
+ *)
+let rec parse_extern_specification name =
+  Npkcontext.print_debug "Parsing extern specification file";
+  let spec_ast = parse_specification name in
+  let norm_spec = (normalization spec_ast true) in
+  Npkcontext.print_debug "Done parsing extern specification file";
+  match norm_spec with
+    | (_, Ast.Spec(spec), loc) -> (spec, loc)
+    | (_, Ast.Body(_), _) -> Npkcontext.report_error
+        "normalize.parse_extern_specification"
+          "internal error : specification expected, body found"
 
-  let remove_params _ =
-      Sym.exit_context gtbl
+
+(**
+ * Iterates through the abstract syntax tree, performing miscellaneous tasks.
+ *   - match type identifiers to their declaration (or raise en error)
+ *   - look for specs (.ads files)
+ *   - transforms functions and type names to "package.ident" in their
+ *     declarations.
+ *
+ * TODO document extern
+ *)
+and normalization compil_unit extern =
+
+  let normalize_ident_cur ident =
+    normalize_ident ident (Sym.current gtbl) extern
   in
 
   let normalize_sub_program_spec subprog_spec ~addparam =
@@ -843,7 +829,7 @@ in
         let norm_block = normalize_block ?return_type block in
         let init_stmts = List.map build_init_stmt init in
           let ctx1 = Sym.exit_context gtbl in
-          let ctx2 = remove_params subprog_decl in
+          let ctx2 = Sym.exit_context gtbl in (* params *)
           Ast.SubProgramBody( norm_subprog_decl
                             , norm_decl_part
                             , ctx1
