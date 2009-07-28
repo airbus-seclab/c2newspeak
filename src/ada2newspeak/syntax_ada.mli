@@ -74,8 +74,8 @@ type typ_declaration =
   | DerivedType  of subtyp_indication
   | IntegerRange of expression*expression
   | Record       of (string*subtyp) list
-  | Array        of subtyp_indication (* Index     *)
-                  * subtyp_indication (* Component *)
+  | Array        of subtyp_indication list (* Indices   *)
+                  * subtyp_indication      (* Component *)
 
 and subtyp = name
 

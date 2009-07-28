@@ -91,7 +91,7 @@ val new_float      : int -> t
  * the second one is the index type.
  * @raise Invalid_argument if the index list is empty.
  *)
-val new_array  : component:t -> index:t -> t
+val new_array  : component:t -> index:t list -> t
 
 val new_record : (string*t) list -> t
 

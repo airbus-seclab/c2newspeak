@@ -475,12 +475,16 @@ and normalize_fcall (n, params) =
                   ("Variable '"^name_to_string n^"' is not of an array type");
       | Some (c,_) -> c
       in
-      let base = T.extract_array_base t in
-      let prepare_param (_,x) =
-        normalize_exp (Binary (Minus,x,CInt base))
-      in
-      Ast.ArrayValue(sc, (snd n), List.map prepare_param params, t),tc
+      let params' = List.map snd params in
+      Ast.ArrayValue(sc, (snd n), List.map (correct_array_index t) params', t),tc
     end
+
+(**
+ * Correct index with the type's base index.
+ *)
+and correct_array_index typ param =
+  let base = T.extract_array_base typ in
+  normalize_exp (Binary (Minus, param, CInt base))
 
 and eval_range (exp1, exp2) =
   let norm_exp1 = normalize_exp exp1
@@ -576,11 +580,12 @@ let normalize_typ_decl ident typ_decl loc =
                   Sym.add_type gtbl ident loc t;
                 end
   | Array (i, c) ->
-      let ni = normalize_subtyp_ind i in
-      let nc = normalize_subtyp_ind c in
-      let component = merge_types ni in
-      let index     = merge_types nc in
-      let t  = T.new_array ~component ~index in
+      let prepare x =
+        merge_types (normalize_subtyp_ind x)
+      in
+      let index     = List.map prepare i in
+      let component =          prepare c in
+      let t = T.new_array ~component ~index in
       Sym.add_type gtbl ident loc t
 
 (*
@@ -766,15 +771,7 @@ and normalization compil_unit extern =
         end
     | ArrayAccess (lv, e) ->
         let (lv',t) = normalize_lval lv in
-        let base = T.extract_array_base t in
-        let prepare_offset e =
-          normalize_exp (Binary( Minus
-                               , e
-                               , CInt base
-                               )
-                        )
-        in
-        Ast.ArrayAccess(lv' , prepare_offset e), t
+        Ast.ArrayAccess(lv' , correct_array_index t e), t
   in
 
   (**

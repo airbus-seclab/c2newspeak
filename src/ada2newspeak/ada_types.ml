@@ -81,7 +81,7 @@ and trait_t =
   | Univ_real
   | Signed      of range
   | Float       of int               (* Digits           *)
-  | Array       of t*t               (* Component-index  *)
+  | Array       of t*t list          (* Component-index  *)
   | Record      of (string * t) list (* Fields           *)
   | Enumeration of (string*int) list (* Name-index       *)
 
@@ -117,7 +117,7 @@ let rec print t =
     | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
                   ^print c^"; index = "
-                  ^print i
+                  ^String.concat "," (List.map print i)
                   ^"}}"
     | Record flds -> "Record {"^String.concat ", " (List.map fst flds)^"}"
   in
@@ -265,8 +265,9 @@ let handle_representation_clause _t _l =
 
 let extract_array_types t =
   match t.base.trait with
-  | Array (c, i) -> Some (c,i)
-  | _            -> None
+  | Array (c, i::[]) -> Some (c,i)
+  | Array     _      -> invalid_arg "extract_array_types"
+  | _                -> None
 
 let get_reason t =
   match t.base.trait with
@@ -425,8 +426,14 @@ let rec attr_get typ attr =
                                                     (List.hd  values)))
     | Enumeration values, "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
                                                       (List_utils.last values)))
-    | Array (_,ind) , ("first"|"last"|"length")  ->
+    | Array (_,inds) , ("first"|"last"|"length")  ->
         begin
+          let ind = match inds with
+            | []  -> invalid_arg "attr_get"
+            | [x] -> x
+            | _ -> Npkcontext.report_error "attr_get"
+                     "Attribute for matrix types"
+          in
           if attr="length" then
             universal_integer, IntVal (length_of ind)
           else
@@ -500,7 +507,12 @@ let rec translate t =
                               , minimal_size_unsigned
                                  (snd (List_utils.last v))))
   | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
-  | Array        (c,i)  -> Cir.Array  ( translate c
+  | Array        (c,is) -> let i = match is with
+                             | [] -> invalid_arg "translate"
+                             | [x] -> x
+                             | _ -> invalid_arg "translate::matrix"
+                           in
+                           Cir.Array  ( translate c
                                       , Some (Newspeak.Nat.to_int
                                                         (length_of i)))
   | Record        flds  ->
@@ -560,7 +572,7 @@ let check_exp t_ctx exp =
 
 let extract_array_base t =
   match t.base.trait with
-  | Array (_, ti) ->
+  | Array (_, ti::[]) ->
       begin
         match compute_constr ti with
           | None        -> Npkcontext.report_error "extract_array_base"

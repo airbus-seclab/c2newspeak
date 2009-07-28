@@ -296,7 +296,7 @@ basic_declaration :
 | ident_list COLON CONSTANT subtyp_indication ASSIGN expression SEMICOLON
         {ObjectDecl($1,$4,Some($6), Constant), $2}
 | TYPE ident IS ARRAY constrained_array_definition SEMICOLON
-    { TypeDecl($2,Array (fst $5, snd $5)),$1}
+    { TypeDecl($2,$5),$1}
 | TYPE ident IS LPAR ident_list RPAR SEMICOLON
   { TypeDecl($2, make_enum $5),$1}
 | TYPE ident IS NEW subtyp_indication SEMICOLON
@@ -337,8 +337,13 @@ basic_declaration :
                 RenamingDecl((List.hd $1),fst $5),$2 }
 ;
 
-constrained_array_definition :
-| LPAR subtyp_indication RPAR OF subtyp_indication {($5,$2)}
+constrained_array_definition:
+| LPAR subtyp_indication_list RPAR OF subtyp_indication {Array ($2,$5)}
+;
+
+subtyp_indication_list:
+| subtyp_indication                              { $1::[] }
+| subtyp_indication COMMA subtyp_indication_list { $1::$3 }
 ;
 
 record_type_definition:
