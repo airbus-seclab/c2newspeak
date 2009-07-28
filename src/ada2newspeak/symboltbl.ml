@@ -219,12 +219,10 @@ module Table = struct
       | Some x -> x
 
   let cast_v ?filter = mkcast "variable"
-                      (function
-                        | Variable (x,v     ,false,r) -> Some (x,v,r)
-                        | Variable (x,Some v,true ,_) ->
-                            raise (Variable_no_storage (x,v))
-                        | Subprogram ([],Some rt) ->
-                            raise (Parameterless_function (Lexical,rt))
+                      (fun s -> match s with
+                        | Variable (_,_     ,false,_) -> Some s
+                        | Variable (_,Some _,true ,_) -> Some s
+                        | Subprogram ([],Some  _)     -> Some s
                         |_ -> None
                       )
                       ?filter
@@ -271,8 +269,17 @@ module Table = struct
                                     | Some t -> T.print t)
     end;
     try
-      let s,(t,v,r) =
-        cast_v ~filter:(fun (_,(x,_,_)) -> ovl_predicate x) (find_symbols tbl n)
+      let (s,sym) = 
+        cast_v ~filter:(function
+                        | (_,(Variable (x,_,_,_))) -> ovl_predicate x
+                        | _ -> true
+                        ) (find_symbols tbl n)
+      in
+      let (t,v,r) = match sym with
+        | Variable (x,      v, false, r) -> (x, v, r)
+        | Variable (x, Some v, true , _) -> raise (Variable_no_storage (x, v))
+        | Subprogram ([], Some rt)       -> raise (Parameterless_function (s, rt))
+        | _ -> failwith "find_variable : unreachable"
       in
       s,(t,v,(match v with Some _ -> true | None -> r))
     with
@@ -567,8 +574,9 @@ module SymMake(TR:Tree.TREE) = struct
                             )
                            );
     if inte = [] then T.unknown else
-      let (_,(r,_,_)) = cast_v inte in
-      r
+      match snd (cast_v inte) with
+      | Variable (r,_,_,_) -> r
+      | _ -> invalid_arg "type_ovl_inter"
 
   let first_child  x = TR.first_child  x.s_stack
   let next_sibling x = TR.next_sibling x.s_stack
