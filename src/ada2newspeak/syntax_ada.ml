@@ -85,7 +85,7 @@ and expression =
   | CFloat       of float
   | CBool        of bool
   | CChar        of int
-  | Var          of name
+  | SelectedName of name
   | FunctionCall of name
                   * argument list
   | Unary        of unary_op

@@ -83,6 +83,7 @@ let eval_static exp tbl =
             | _ -> Npkcontext.report_error "eval_static.exp"
                    "unexpected type for conditional expression"
         end
+    | Ast.RecordValue _ -> raise NonStaticExpression
 
   (**
    * Evaluate statically a binary expression.

@@ -515,7 +515,7 @@ expression :
                                                    ,Some $5
                                                    )
                                         }
-| name {Var(fst $1)}
+| name {SelectedName(fst $1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
 ;
 

@@ -255,6 +255,9 @@ let extract_symbols t =
   | Enumeration v -> Some v
   | _             -> None
 
+let record_offset t fld =
+  ignore t; ignore fld; failwith "record offset"
+
 (*****************
  * Builtin types *
  *****************)

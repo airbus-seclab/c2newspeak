@@ -85,6 +85,10 @@ and exp_value =
   | ArrayValue   of Symboltbl.scope * string
                   * expression list
                   * Ada_types.t
+  | RecordValue  of Symboltbl.scope * string (* Variable    *)
+                  * Ada_types.t              (* Record type *)
+                  * string                   (* Field       *)
+                  * Ada_types.t              (* Field type  *)
   | Not          of expression
   | Binary       of binary_op
                   * expression

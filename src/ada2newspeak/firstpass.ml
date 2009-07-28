@@ -296,6 +296,9 @@ let translate compil_unit =
         let (bop, rtyp) = translate_binop binop exp1 exp2 in
         (T.check_exp typ bop), rtyp
     | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3
+    | FunctionCall(sc, name, arg_list, rt) ->
+        let fname = C.Fname (concat_resolved_name sc name) in
+        translate_function_call fname arg_list rt
     | ArrayValue  (sc, name, arg_list, t) ->
         let index = match arg_list with
           | [x] -> x
@@ -308,9 +311,13 @@ let translate compil_unit =
                                  (translate_int (C.size_of_typ ctyp))
         in
         C.Lval (C.Shift (arr, offset), ctyp), t
-    | FunctionCall(sc, name, arg_list, rt) ->
-        let fname = C.Fname (concat_resolved_name sc name) in
-        translate_function_call fname arg_list rt
+    | RecordValue (sc, name, trec, field, tfield) ->
+        let record = translate_resolved_name sc name in
+        let off_pos= T.record_offset trec field in
+        let offtype = T.translate T.integer in
+        let offset = make_offset (translate_int off_pos)
+                                 (translate_int (C.size_of_typ offtype)) in
+        C.Lval (C.Shift (record, offset), offtype), tfield
 
   (**
    * Make a C assignment.

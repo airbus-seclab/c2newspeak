@@ -106,7 +106,7 @@ and exp_to_string exp = match exp with
   | CFloat s          -> "CFloat("^string_of_float s^")"
   | CBool  b          -> "CBool("^(string_of_bool b)^")"
   | CChar  c          -> "CChar("^(string_of_int c)^")"
-  | Var    s          -> "Var("^(name_to_string s)^")"
+  | SelectedName s    -> "Var("^(name_to_string s)^")"
   | Unary  (op,exp)   -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
   | Binary (op,e1,e2) -> "("^(exp_to_string e1)^" "
                            ^(bop_to_string op)^" "

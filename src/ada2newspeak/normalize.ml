@@ -312,19 +312,20 @@ let rec normalize_exp ?expected_type exp =
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CBool  x -> Ast.CBool  x,T.boolean
     | CChar  x -> Ast.CChar  x,T.character
-    | Var    n -> begin (* n may denote the name of a parameterless function *)
-                    try
-                      let (sc,(t,_)) = Sym.find_variable ?expected_type
-                                                         gtbl n in
-                      Ast.Var(sc,(snd n),t) ,t
-                    with
-                    | Sym.Parameterless_function (sc,rt) ->
-                                      Ast.FunctionCall( sc
-                                                      , snd n
-                                                      , []
-                                                      , rt) ,rt
-                    | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
-                  end
+    | SelectedName n ->
+        begin
+          try
+            let (sc,(t,_)) = Sym.find_variable ?expected_type
+                                               gtbl n in
+            Ast.Var(sc,(snd n),t) ,t
+          with
+          | Sym.Parameterless_function (sc,rt) ->
+                            Ast.FunctionCall( sc
+                                            , snd n
+                                            , []
+                                            , rt) ,rt
+          | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
+        end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
     | Qualified(stn, exp) -> let t = snd (Sym.find_type gtbl stn) in
@@ -412,7 +413,7 @@ and normalize_binop bop e1 e2 =
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type = match (e1, e2) with
-          | Var v1 , Var v2 -> Some (Sym.type_ovl_intersection gtbl
+          | SelectedName v1 , SelectedName v2 -> Some (Sym.type_ovl_intersection gtbl
                                                               (snd v1)
                                                               (snd v2))
           | _      , Qualified (n,_) -> Some (snd (Sym.find_type gtbl n))
@@ -828,13 +829,13 @@ and normalization compil_unit extern =
       let loop =
         [Ast.Loop
             ( Ast.While
-               ( normalize_exp (if is_rev then Binary(Ge,Var(None,iter),exp1)
-                                          else Binary(Le,Var(None,iter),exp2)))
+               ( normalize_exp (if is_rev then Binary(Ge,SelectedName(None,iter),exp1)
+                                          else Binary(Le,SelectedName(None,iter),exp2)))
                , nblock@[Ast.Assign ( Ast.Lval (Sym.Lexical,iter,T.integer)
                                     , normalize_exp( Binary((if is_rev
                                                                then Minus
                                                                else Plus)
-                                                   , Var (None,iter)
+                                                   , SelectedName (None,iter)
                                                    , CInt (Nat.one)))
                                     )
                         , loc]
