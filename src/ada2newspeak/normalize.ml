@@ -314,17 +314,31 @@ let rec normalize_exp ?expected_type exp =
     | CChar  x -> Ast.CChar  x,T.character
     | SelectedName n ->
         begin
-          try
-            let (sc,(t,_)) = Sym.find_variable ?expected_type
-                                               gtbl n in
-            Ast.Var(sc,(snd n),t) ,t
-          with
-          | Sym.Parameterless_function (sc,rt) ->
-                            Ast.FunctionCall( sc
-                                            , snd n
-                                            , []
-                                            , rt) ,rt
-          | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
+          let resolve_variable n =
+            begin
+              try
+                let (sc,(t,_)) = Sym.find_variable ?expected_type
+                                                   gtbl n in
+                Ast.Var(sc,(snd n),t) ,t
+              with
+              | Sym.Parameterless_function (sc,rt) ->
+                                Ast.FunctionCall( sc
+                                                , snd n
+                                                , []
+                                                , rt) ,rt
+              | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
+            end
+          in
+          match n with
+          | Some pfx, fld ->
+              begin
+                try
+                  let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
+                  let (off, tf) = T.record_field t fld in
+                  Ast.RecordValue (Sym.Lexical, pfx, t, off, tf), tf
+                with Not_found -> resolve_variable n
+              end
+          | None, _       -> resolve_variable n
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2

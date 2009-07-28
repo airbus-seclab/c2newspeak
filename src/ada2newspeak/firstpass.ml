@@ -311,9 +311,8 @@ let translate compil_unit =
                                  (translate_int (C.size_of_typ ctyp))
         in
         C.Lval (C.Shift (arr, offset), ctyp), t
-    | RecordValue (sc, name, trec, field, tfield) ->
+    | RecordValue (sc, name, _trec, off_pos, tfield) ->
         let record = translate_resolved_name sc name in
-        let off_pos= T.record_offset trec field in
         let offtype = T.translate T.integer in
         let offset = make_offset (translate_int off_pos)
                                  (translate_int (C.size_of_typ offtype)) in

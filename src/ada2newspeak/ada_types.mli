@@ -108,7 +108,7 @@ val get_reason : t -> string
 
 val extract_symbols : t -> (string*int) list option
 
-val record_offset : t -> string -> int
+val record_field : t -> string -> int * t
 
 (**
  * Coercion from universal types to finite types.

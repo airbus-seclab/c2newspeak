@@ -468,10 +468,10 @@ module SymMake(TR:Tree.TREE) = struct
   let library s =
     TR.nth s 2
 
-  let s_find_abs desc f s p n =
+  let s_find_abs _desc f s p n =
     match tbl_find_unit (library s.s_stack) p with
       | Some tbl -> f tbl n
-      | None     -> error ("No such package "^p^" when resolving a "^desc)
+      | None     -> raise Not_found
 
   (* raise Not_found *)
   let s_find desc finder s ?package n =
@@ -501,18 +501,19 @@ module SymMake(TR:Tree.TREE) = struct
              end
          end
 
-  let find_variable_value s ?expected_type (package,n) =
+  let find_variable_value s ?(silent=false) ?expected_type (package,n) =
     try
       s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
               s ?package n
-    with Not_found -> error ("Cannot find variable '"^n^"'"
-                            ^(match expected_type with
-                              | None   -> ""
-                              | Some _ -> " with this expected type"
-                             ))
+    with Not_found -> if silent then raise Not_found
+                                else error ("Cannot find variable '"^n^"'"
+                                           ^(match expected_type with
+                                             | None   -> ""
+                                             | Some _ -> " with this expected type"
+                                            ))
 
-  let find_variable s ?expected_type name =
-    (fun (x,(y,_,z)) -> (x,(y,z))) (find_variable_value s ?expected_type name)
+  let find_variable s ?silent ?expected_type name =
+    (fun (x,(y,_,z)) -> (x,(y,z))) (find_variable_value ?silent s ?expected_type name)
 
   let find_type s (package,n) =
     try

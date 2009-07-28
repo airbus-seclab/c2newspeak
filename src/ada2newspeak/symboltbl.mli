@@ -114,11 +114,13 @@ exception Parameterless_function of scope*Ada_types.t
 exception Variable_no_storage    of Ada_types.t * Ada_types.data_t
 
 val find_variable :    t
+                    -> ?silent:bool
                     -> ?expected_type:Ada_types.t
                     -> string option*string
          -> scope * (Ada_types.t * bool)
 
 val find_variable_value :    t
+                    -> ?silent:bool
                     -> ?expected_type:Ada_types.t
                     -> string option*string
          -> scope * (Ada_types.t*(Ada_types.data_t option)*bool)

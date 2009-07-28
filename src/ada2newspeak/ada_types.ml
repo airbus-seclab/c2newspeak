@@ -255,8 +255,16 @@ let extract_symbols t =
   | Enumeration v -> Some v
   | _             -> None
 
-let record_offset t fld =
-  ignore t; ignore fld; failwith "record offset"
+let record_field t fld =
+  match t.base.trait with
+  | Record l -> begin
+                  try
+                    let tf = List.assoc fld l in
+                    (0, tf) (* FIXME *)
+                  with Not_found -> Npkcontext.report_error "record_field"
+                                         ("No such field : '"^fld^"'")
+                end
+  | _ -> invalid_arg "record_field"
 
 (*****************
  * Builtin types *
