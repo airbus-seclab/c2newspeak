@@ -37,9 +37,6 @@ module Sym = Symboltbl
 
 open Ast
 
-(** Promotes an identifier to a name *)
-let ident_to_name ident = (None, ident)
-
 let make_offset index size =
   C.Binop (Newspeak.MultI
           , index
@@ -48,10 +45,6 @@ let make_offset index size =
 
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
-
-let unbox_resolved sc x = match sc with
-  | Sym.Lexical      -> None,x
-  | Sym.In_package p -> Some p,x
 
 let concat_resolved_name sc  n = match sc with
   | Sym.Lexical      ->        n
@@ -386,9 +379,9 @@ let translate compil_unit =
                    loc)::r)
            | ProcedureCall (sc, name, args) -> begin
                let fname = C.Fname (concat_resolved_name sc name) in
-                 let (ftyp0, tr_params) = translate_subprogram_parameters args in
+                 let (ftyp0, tr_args) = translate_subprogram_parameters args in
                  let ftyp = ftyp0, C.Void in
-                   (C.Exp(C.Call(ftyp, fname, tr_params)), loc)
+                   (C.Exp(C.Call(ftyp, fname, tr_args)), loc)
                     ::(translate_block r)
              end
 

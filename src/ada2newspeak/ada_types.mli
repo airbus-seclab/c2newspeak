@@ -56,20 +56,10 @@ type value = t * data_t
  * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
  *)
 
-val base_type : t -> t
-
-(**
- * An unknown type, different from every other one.
- *)
-val unknown        : t
-
-val mk_unknown : string -> t
+val new_unknown : string -> t
 
 (** Derived type. (structural copy) *)
 val new_derived    : t -> t
-
-(** Unconstrained subtype. *)
-val new_unconstr   : t -> t
 
 (** Constrained subtype. *)
 val new_constr     : t -> Syntax_ada.contrainte -> t

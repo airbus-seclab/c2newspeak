@@ -169,10 +169,3 @@ val is_with           : t -> string -> bool
 val s_get_use         : t -> string list
 
 val add_renaming_decl : t -> string -> Syntax_ada.name -> unit
-
-(*********************
- * Post-build search *
- *********************)
-
-val first_child  : t -> unit
-val next_sibling : t -> unit

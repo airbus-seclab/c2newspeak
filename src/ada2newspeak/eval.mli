@@ -29,6 +29,4 @@ exception NonStaticExpression
 
 val eval_static :  Ast.expression -> Symboltbl.t -> Ada_types.data_t
 
-val eval_static_integer_exp :  Ast.expression -> Symboltbl.t -> Newspeak.Nat.t
-
 val eval_static_number  :  Ast.expression -> Symboltbl.t -> Ada_types.data_t

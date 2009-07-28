@@ -257,7 +257,7 @@ module Table = struct
 
   let tbl_find_variable tbl ?expected_type n :scope*(T.t*T.data_t option*bool)=
     let ovl_predicate = match expected_type with
-      | Some t when t <> T.unknown
+      | Some t when not (T.is_unknown t)
           -> fun x ->    T.is_compatible x t
       | _ -> fun _ -> true
     in
@@ -269,7 +269,7 @@ module Table = struct
                                     | Some t -> T.print t)
     end;
     try
-      let (s,sym) = 
+      let (s,sym) =
         cast_v ~filter:(function
                         | (_,(Variable (x,_,_,_))) -> ovl_predicate x
                         | _ -> true
@@ -277,8 +277,10 @@ module Table = struct
       in
       let (t,v,r) = match sym with
         | Variable (x,      v, false, r) -> (x, v, r)
-        | Variable (x, Some v, true , _) -> raise (Variable_no_storage (x, v))
-        | Subprogram ([], Some rt)       -> raise (Parameterless_function (s, rt))
+        | Variable (x, Some v, true , _) ->
+              raise (Variable_no_storage (x, v))
+        | Subprogram ([], Some rt)       ->
+              raise (Parameterless_function (s, rt))
         | _ -> failwith "find_variable : unreachable"
       in
       s,(t,v,(match v with Some _ -> true | None -> r))
@@ -573,14 +575,11 @@ module SymMake(TR:Tree.TREE) = struct
                                " , R = "^print_set s2
                             )
                            );
-    if inte = [] then T.unknown else
+    if inte = [] then T.new_unknown "from empty context intersection" else
       match snd (cast_v inte) with
       | Variable (r,_,_,_) -> r
       | _ -> invalid_arg "type_ovl_inter"
 
-  let first_child  x = TR.first_child  x.s_stack
-  let next_sibling x = TR.next_sibling x.s_stack
-
 end
 
-include SymMake (Tree.FCNSTree)
+include SymMake (Tree.StackedTree)

@@ -49,7 +49,7 @@ let subtyp_to_adatyp gtbl n =
         ("Cannot find type '"
         ^name_to_string n
         ^"'");
-      T.unknown;
+      T.new_unknown "Cannot find type (subtyp_to_adatyp)";
     end
 
 let merge_types gtbl (tp, cstr) =
@@ -205,8 +205,8 @@ let make_arg_list args spec =
                              )))
                              spec
             | (ev,t)::pt,s::st -> let t' = T.coerce_types t s.Ast.param_type in
-                                  (s.Ast.formal_name, s.Ast.param_type, (ev,t'))::
-                                  (merge_with_specification pt st)
+                                  (s.Ast.formal_name, s.Ast.param_type, (ev,t'))
+                                  ::(merge_with_specification pt st)
             | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
                             "Too many actual arguments in function call"
   in
@@ -476,7 +476,7 @@ and normalize_fcall (n, params) =
       | Some (c,_) -> c
       in
       let params' = List.map snd params in
-      Ast.ArrayValue(sc, (snd n), List.map (correct_array_index t) params', t),tc
+      Ast.ArrayValue(sc , snd n, List.map (correct_array_index t) params', t),tc
     end
 
 (**

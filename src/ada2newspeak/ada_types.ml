@@ -142,11 +142,6 @@ let sizeof = function
   | A.IntegerRangeConstraint (min,max) -> max %- min %+ Newspeak.Nat.one
   |   A.FloatRangeConstraint _ -> invalid_arg "sizeof"
 
-let (@...) x y = (x, y)
-
-let (@..)  x y = ( Newspeak.Nat.of_int x
-                 , Newspeak.Nat.of_int y)
-
 (*****************
  * Symbol tables *
  *****************)
@@ -162,19 +157,12 @@ let uid = object
     count
 end
 
-let base_type x = {
-  base = {x.base with uid = 0};
-  range = None
-}
-
-let mk_unknown reason =
+let new_unknown reason =
   { base = { trait = Unknown reason
            ; uid = 0
            }
   ; range = None
   }
-
-let unknown = mk_unknown "<No reason provided>"
 
 let universal_integer =
   { base = { trait = Univ_int
@@ -194,35 +182,23 @@ let new_enumerated values =
     | n::tl -> (n,offset)::with_indices tl (offset+1)
     in
     let ivalues = with_indices values 0 in
-    {
-      base = {trait = Enumeration ivalues;
-              uid = 0
-      };
-      range = None
+    { base = { trait = Enumeration ivalues
+             ; uid = 0
+             }
+    ; range = None
     }
-
-let new_derived_base old =
-    { old with uid = uid#gen }
 
 let new_derived old =
   {
     old with
-    base = new_derived_base old.base;
+    base = { old.base with uid = uid#gen };
   }
 
-let new_unconstr parent =
-  let parent_base = parent.base in
-    {
-      base = {parent_base with uid = uid#gen};
-      range = None
-    }
-
 let new_constr parent r =
-  let parent_base = parent.base in
-    {
-      base = parent_base;
-      range = Some r
-    }
+  {
+    base = parent.base;
+    range = Some r
+  }
 
 let new_range c =
   let r = match c with
