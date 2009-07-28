@@ -5,8 +5,7 @@ procedure T202 is
 
    type TabT is array (Iter) of T;
    X : TabT;
-   Y : INTEGER;
+   Y : T;
 begin
-   --Y := X'LAST;
    Y := X(4);
 end T202;

@@ -520,21 +520,10 @@ and normalize_fcall (n, params) =
   with Not_found ->
     begin
       let (sc,(t,_)) = Sym.find_variable gtbl n in
-      let tc = match T.extract_array_types t with
-      | None -> Npkcontext.report_error "normalize_fcall"
-                  ("Variable '"^name_to_string n^"' is not of an array type");
-      | Some (c,_) -> c
-      in
+      let tc = fst (T.extract_array_types t) in
       let params' = List.map snd params in
-      Ast.ArrayValue(sc , snd n, List.map (correct_array_index t) params', t),tc
+      Ast.ArrayValue(sc , snd n, List.map normalize_exp params', t),tc
     end
-
-(**
- * Correct index with the type's base index.
- *)
-and correct_array_index typ param =
-  let base = T.extract_array_base typ in
-  normalize_exp (Binary (Minus, param, CInt base))
 
 and eval_range (exp1, exp2) =
   let norm_exp1 = normalize_exp exp1
@@ -820,7 +809,7 @@ and normalization compil_unit extern =
         end
     | ArrayAccess (lv, e) ->
         let (lv',t) = normalize_lval lv in
-        Ast.ArrayAccess(lv' , correct_array_index t e), t
+        Ast.ArrayAccess(lv' , normalize_exp e), t
   in
 
   (**

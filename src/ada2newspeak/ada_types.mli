@@ -96,10 +96,9 @@ val is_compatible : t -> t -> bool
 val handle_representation_clause : t -> (string * Newspeak.Nat.t) list -> unit
 
 (**
- * unless (is_array t), will return None.
  * Returns (component, index)
  *)
-val extract_array_types : t -> (t * t) option
+val extract_array_types : t -> (t * t) 
 
 val extract_array_base : t -> Newspeak.Nat.t
 

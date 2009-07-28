@@ -241,9 +241,8 @@ let handle_representation_clause _t _l =
 
 let extract_array_types t =
   match t.base.trait with
-  | Array (c, i::[]) -> Some (c,i)
-  | Array     _      -> invalid_arg "extract_array_types"
-  | _                -> None
+  | Array (c, i::[]) -> (c,i)
+  | _                -> invalid_arg "extract_array_types"
 
 let get_reason t =
   match t.base.trait with

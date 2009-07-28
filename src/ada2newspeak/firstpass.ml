@@ -37,9 +37,12 @@ module Sym = Symboltbl
 
 open Ast
 
-let make_offset index size =
-  C.Binop (Newspeak.MultI
-          , index
+let make_offset index base size =
+  C.Binop ( Newspeak.MultI
+          , C.Binop ( Newspeak.MinusI
+                    , index
+                    , base
+                    )
           , size
           )
 
@@ -278,13 +281,15 @@ let translate compil_unit =
             let (x_exp,t) = translate_exp expr in
             let x_typ = T.translate t in
             let size = C.size_of_typ x_typ in
-            let offset = make_offset x_exp (translate_int size) in
-            let offset' = T.check_exp (t_lv) offset in
+            let base = T.extract_array_base t_lv in
+            let offset = make_offset x_exp (translate_nat base) (translate_int size) in
+            let offset' = T.check_exp t_lv offset in
             C.Shift (x_lv, offset'),t
         | RecordAccess (lv, off_pos, tf) ->
             let (record, _) = translate_lv lv in
             let offtype = T.translate T.integer in
             let offset = make_offset (translate_int off_pos)
+                                     (translate_int 0)
                                      (translate_int (C.size_of_typ offtype)) in
             C.Shift (record, offset), tf
 
@@ -305,6 +310,7 @@ let translate compil_unit =
         let fname = C.Fname (concat_resolved_name sc name) in
         translate_function_call fname arg_list rt
     | ArrayValue  (sc, name, arg_list, t) ->
+        let (tc,ti) = T.extract_array_types t in
         let index = match arg_list with
           | [x] -> x
           | _ -> failwith "array value : unexpected matrix"
@@ -312,14 +318,19 @@ let translate compil_unit =
         let arr = translate_resolved_name sc name in
         let (ex_index, t_index) = (translate_exp index) in
         let ctyp = T.translate t_index in
-        let offset = make_offset ex_index
+        Npkcontext.print_debug ("III = "^T.print ti);
+        let index' = T.check_exp ti ex_index in
+        let base = T.extract_array_base t in
+        let offset = make_offset index'
+                                 (translate_nat base)
                                  (translate_int (C.size_of_typ ctyp))
         in
-        C.Lval (C.Shift (arr, offset), ctyp), t
+        C.Lval (C.Shift (arr, offset), ctyp), tc
     | RecordValue (sc, name, _trec, off_pos, tfield) ->
         let record = translate_resolved_name sc name in
         let offtype = T.translate T.integer in
         let offset = make_offset (translate_int off_pos)
+                                 (translate_int 0)
                                  (translate_int (C.size_of_typ offtype)) in
         C.Lval (C.Shift (record, offset), offtype), tfield
 
