@@ -61,9 +61,12 @@ and instruction =
                    * block
 
 and lval =
-  | Lval        of Symboltbl.scope * string * Ada_types.t
-  | ArrayAccess of lval
-                 * expression
+  | Lval         of Symboltbl.scope * string * Ada_types.t
+  | ArrayAccess  of lval
+                  * expression
+  | RecordAccess of lval
+                  * int         (* offset *)
+                  * Ada_types.t (* Field type *)
 
 and iteration_scheme =
   | NoScheme

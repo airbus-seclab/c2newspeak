@@ -25,7 +25,7 @@
 
 *)
 
-(** This module defines types for the abstract syntax tree. *)
+(** This module defines types for the parse tree. *)
 
 (**
  * A qualified string.
@@ -108,9 +108,9 @@ and subtyp_indication = subtyp
 
 (** Left-value *)
 and lval =
-| Lval        of name
-| ArrayAccess of lval
-               * expression
+| SelectedLval of name
+| ArrayAccess  of lval
+                * expression
 
 (** Subprogram parameter *)
 and param = {

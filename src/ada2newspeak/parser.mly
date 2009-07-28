@@ -56,13 +56,13 @@ let check_end decl end_name =
 
 let build_access name lst   =
   let rec build_aux lst  =
-    match lst with [] -> (Lval name)
+    match lst with [] -> (SelectedLval name)
       | hd::tl ->
           let built = build_aux tl in
             ArrayAccess (built, hd)
   in
     match lst with
-        [] -> Lval name
+        [] -> SelectedLval name
       | _  ->
           let rev_list = List.rev lst in
             build_aux rev_list

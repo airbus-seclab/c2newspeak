@@ -68,6 +68,61 @@ let return_type_of subprogram = match subprogram with
   | Ast.Function  (_,_,st) -> Some st
   | Ast.Procedure _        -> None
 
+(**************************************************
+ *                                                *
+ *    Selected_name -> package/var, record, etc   *
+ *                                                *
+ **************************************************)
+
+type selected =
+  | SelectedVar    of Sym.scope          (* Package       *)
+                    * string             (* Varname       *)
+                    * T.t                (* Type          *)
+                    * bool               (* Ro            *)
+
+  | SelectedFCall  of Sym.scope * string (* Function name *)
+                    * T.t                (* Return type   *)
+
+  | SelectedRecord of string             (* Varname       *)
+                    * T.t                (* Record type   *)
+                    * int                (* Offset        *)
+                    * T.t                (* Field type    *)
+
+  | SelectedConst  of T.t                (* Type          *)
+                    * T.data_t           (* Value         *)
+
+
+let resolve_selected ?expected_type n =
+  let resolve_variable n =
+    begin
+      try
+        let (sc,(t, ro)) = Sym.find_variable ?expected_type
+                                             gtbl n in
+        SelectedVar(sc,(snd n),t,ro)
+      with
+      | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc
+                                                           , snd n
+                                                           , rt)
+      | Sym.Variable_no_storage (t,v) -> SelectedConst (t, v)
+    end
+  in
+  match n with
+  | Some pfx, fld ->
+      begin
+        try
+          let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
+          let (off, tf) = T.record_field t fld in
+          SelectedRecord (pfx, t, off, tf)
+        with Not_found -> resolve_variable n
+      end
+  | None, _       -> resolve_variable n
+
+(**************************************************
+ *                                                *
+ *             Body vs spec functions             *
+ *                                                *
+ **************************************************)
+
 (**
  * Try to find a body for a given specification.
  *
@@ -314,31 +369,11 @@ let rec normalize_exp ?expected_type exp =
     | CChar  x -> Ast.CChar  x,T.character
     | SelectedName n ->
         begin
-          let resolve_variable n =
-            begin
-              try
-                let (sc,(t,_)) = Sym.find_variable ?expected_type
-                                                   gtbl n in
-                Ast.Var(sc,(snd n),t) ,t
-              with
-              | Sym.Parameterless_function (sc,rt) ->
-                                Ast.FunctionCall( sc
-                                                , snd n
-                                                , []
-                                                , rt) ,rt
-              | Sym.Variable_no_storage (t,v) -> insert_constant ~t v
-            end
-          in
-          match n with
-          | Some pfx, fld ->
-              begin
-                try
-                  let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
-                  let (off, tf) = T.record_field t fld in
-                  Ast.RecordValue (Sym.Lexical, pfx, t, off, tf), tf
-                with Not_found -> resolve_variable n
-              end
-          | None, _       -> resolve_variable n
+          match resolve_selected ?expected_type n with
+          | SelectedVar   (sc, id,  t, _) -> Ast.Var(sc,id,t) ,t
+          | SelectedFCall (sc, id, rt) -> Ast.FunctionCall (sc, id, [], rt), rt
+          | SelectedConst (t,v) -> insert_constant ~t v
+          | SelectedRecord (id, tr, off, tf) -> Ast.RecordValue (Sym.Lexical, id, tr, off, tf), tf
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
@@ -770,19 +805,18 @@ and normalization compil_unit extern =
   in
 
   let rec normalize_lval = function
-    | Lval n ->
-        begin
-        try
-          let (sc, (t, ro)) = (Sym.find_variable gtbl n) in
-          if ro then begin
+    | SelectedLval n ->
+        begin match resolve_selected n with
+        | SelectedVar    (sc, id,  t,  false) -> Ast.Lval (sc, id, t), t
+        | SelectedRecord (id, tr, off, tf) ->
+            let lv = Ast.Lval (Sym.Lexical, id, tr) in
+            Ast.RecordAccess (lv, off, tf), tf
+        | SelectedVar    (_, _, _, true) -> 
             Npkcontext.report_error "normalize_instr"
                ("Invalid left value : '"^name_to_string n^"' is read-only")
-          end;
-          (Ast.Lval (sc, snd n,t), t)
-        with
-          Sym.Variable_no_storage _ ->
-            Npkcontext.report_error "normalize_lval"
-              "unexpected Variable_no_storage"
+        | SelectedFCall _
+        | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
+                               ("Invalid left-value : '"^name_to_string n^"'")
         end
     | ArrayAccess (lv, e) ->
         let (lv',t) = normalize_lval lv in

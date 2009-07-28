@@ -273,8 +273,6 @@ let translate compil_unit =
         | Lval (sc,lv,t) ->
             let clv = translate_resolved_name sc lv in
             (clv, t)
-
-        (*Assignation dans un tableau*)
         | ArrayAccess (lv, expr) ->
             let (x_lv,t_lv ) = translate_lv lv in
             let (x_exp,t) = translate_exp expr in
@@ -283,6 +281,13 @@ let translate compil_unit =
             let offset = make_offset x_exp (translate_int size) in
             let offset' = T.check_exp (t_lv) offset in
             C.Shift (x_lv, offset'),t
+        | RecordAccess (lv, off_pos, tf) ->
+            let (record, _) = translate_lv lv in
+            let offtype = T.translate T.integer in
+            let offset = make_offset (translate_int off_pos)
+                                     (translate_int (C.size_of_typ offtype)) in
+            C.Shift (record, offset), tf
+
 
   and translate_exp (exp,typ) :C.exp*T.t=
     match exp with

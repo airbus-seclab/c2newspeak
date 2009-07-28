@@ -150,7 +150,7 @@ and iteration_scheme_to_string scheme = match scheme with
 
 and lval_to_string lv =
   match lv with
-    | Lval name -> name_to_string name
+    | SelectedLval name -> name_to_string name
     | ArrayAccess (lval, e) ->
         (lval_to_string lval )^"["^(exp_to_string e)^"]"
 
