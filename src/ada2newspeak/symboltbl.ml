@@ -272,6 +272,7 @@ module Table = struct
       let (s,sym) =
         cast_v ~filter:(function
                         | (_,(Variable (x,_,_,_))) -> ovl_predicate x
+                        | (_,(Subprogram([], Some x))) -> ovl_predicate x
                         | _ -> true
                         ) (find_symbols tbl n)
       in
