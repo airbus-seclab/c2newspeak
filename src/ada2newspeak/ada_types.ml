@@ -159,20 +159,20 @@ end
 
 let new_unknown reason =
   { base = { trait = Unknown reason
-           ; uid = 0
+           ; uid = uid#gen
            }
   ; range = None
   }
 
 let universal_integer =
   { base = { trait = Univ_int
-           ; uid = 0
+           ; uid = uid#gen
            }
   ; range=None}
 
 let universal_real =
   { base = { trait = Univ_real
-           ; uid = 0
+           ; uid   = uid#gen
            }
   ; range=None}
 
@@ -183,7 +183,7 @@ let new_enumerated values =
     in
     let ivalues = with_indices values 0 in
     { base = { trait = Enumeration ivalues
-             ; uid = 0
+             ; uid = uid#gen
              }
     ; range = None
     }
@@ -205,33 +205,31 @@ let new_range c =
   | A.IntegerRangeConstraint (a,b) -> (a,b)
   | A.FloatRangeConstraint _ -> invalid_arg "new_range"
   in
-  { base = { trait = Signed r;
-             uid = 0
-           };
-    range = None
+  { base = { trait = Signed r
+           ; uid = uid#gen
+           }
+  ; range = None
   }
 
 let new_float digits =
     {
-      base = {
-        trait = Float digits;
-        uid = 0
-      };
-      range = None
+      base = { trait = Float digits
+             ; uid = uid#gen
+             }
+    ; range = None
     }
 
 let new_array ~component ~index =
     {
-      base = {
-        trait = Array (component,index);
-        uid = 0;
-      };
-      range = None
+      base = { trait = Array (component,index)
+             ; uid = uid#gen
+             }
+    ; range = None
     }
 
 let new_record fields =
   { base = { trait = Record fields
-           ; uid = 0
+           ; uid = uid#gen
            }
   ; range = None
   }
