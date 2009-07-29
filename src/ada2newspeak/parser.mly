@@ -459,14 +459,23 @@ lvalue :
 args:
 |      LPAR actual_parameter_part RPAR {    $2 }
 | args LPAR actual_parameter_part RPAR { $1@$3 }
+;;
 
-iteration_scheme :
+iteration_scheme: 
 | {NoScheme, Newspeak.unknown_loc}
 | WHILE expression {(While($2), $1)}
-| FOR ident IN         expression DOUBLE_DOT expression
-                                                {For($2,$4,$6,false), $1}
-| FOR ident IN REVERSE expression DOUBLE_DOT expression
-                                                {For($2,$5,$7, true), $1}
+| FOR ident IN for_loop_reverse for_loop_range {For($2, $5, $4), $1}
+;;
+
+for_loop_reverse:
+|         {false}
+| REVERSE {true }
+;;
+
+for_loop_range:
+| expression DOUBLE_DOT expression { DirectRange ($1, $3) }
+| name QUOTE RANGE                 { ArrayRange  (fst $1) }
+;;
 
 instruction_else :
 | {[]}

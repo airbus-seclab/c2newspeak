@@ -133,9 +133,12 @@ and iteration_scheme =
   | NoScheme                       (* Forever *)
   | While of expression            (* While [expression] evaluates to [true] *)
   | For   of string
-           * expression
-           * expression
+           * for_loop_range
            * bool
+
+and for_loop_range =
+  | DirectRange of expression * expression
+  | ArrayRange  of name
 
 and block = (instruction * Newspeak.location) list
 

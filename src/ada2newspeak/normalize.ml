@@ -853,17 +853,25 @@ and normalization compil_unit extern =
                                        normalize_block ?return_type instrs),loc)
     | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
                      normalize_block ?return_type instrs), loc)
-    | Loop(For(iter, exp1, exp2, is_rev), block) ->
-        let dp = [BasicDecl (ObjectDecl ( [iter]
-                             , ( (None,"integer")
-                               , None
-                               )
-                             , Some (if is_rev then exp2 else exp1)
-                             , Constant
+    | Loop(For(iter, range, is_rev), block) ->
+      let (exp1, exp2) = match range with
+        | DirectRange (min, max) -> (min, max)
+        | ArrayRange n -> begin
+                            let (_,(t,_)) = Sym.find_variable gtbl n in
+                            ( fst (T.attr_get t "first")
+                            , fst (T.attr_get t "last"))
+                          end
+      in
+      let dp = [BasicDecl (ObjectDecl ( [iter]
+                           , ( (None,"integer")
+                             , None
                              )
-                      )
-              , loc]
-        in
+                           , Some (if is_rev then exp2 else exp1)
+                           , Constant
+                           )
+                    )
+            , loc]
+      in
       Sym.enter_context gtbl;
       let (ndp,init) = normalize_decl_part dp in
       let nblock =  (List.map build_init_stmt init)

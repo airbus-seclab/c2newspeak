@@ -144,9 +144,13 @@ and contrainte_to_string contrainte = match contrainte with
 and iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
-  | For(iter, exp1, exp2, isrev) -> "For "^iter^" in "
+  | For(iter, range, isrev) -> "For "^iter^" in "
                     ^(if isrev then "reverse " else "")
-                    ^(exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
+                    ^for_loop_range_to_string range
+
+and for_loop_range_to_string = function
+  | DirectRange (exp1, exp2) -> (exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
+  | ArrayRange  (st) -> name_to_string st ^ "'range"
 
 and lval_to_string lv =
   match lv with
