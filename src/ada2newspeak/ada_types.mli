@@ -131,7 +131,7 @@ val print_data : data_t -> string
  *)
 
 (** Get an attribute for a given type.  *)
-val attr_get : t -> string -> value
+val attr_get :  t -> string -> Syntax_ada.expression * t
 
 (** The type for integer constants. *)
 val universal_integer : t

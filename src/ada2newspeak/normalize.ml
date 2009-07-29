@@ -383,25 +383,30 @@ let rec normalize_exp ?expected_type exp =
     | Attribute (st, attr, Some exp) ->
         begin
           let t = subtyp_to_adatyp st in
-          let op = match attr with
-            | "succ" -> Ast.Plus
-            | "pred" -> Ast.Minus
-            | _      -> Npkcontext.report_error "normalize" "No such attribute"
-          in
-            let (e',t') = normalize_exp exp in
-            ( Ast.Binary ( op
-                         , (e', t')
-                         , ( Ast.CInt (Newspeak.Nat.one)
-                           , t
-                           )
-                         )
-            , t)
+          let one = Ast.CInt (Newspeak.Nat.one) in
+          match attr with
+            | "succ" -> ( Ast.Binary ( Ast.Plus
+                                     , normalize_exp exp
+                                     , ( one, t)
+                                     )
+                        , t)
+            | "pred" -> ( Ast.Binary ( Ast.Minus
+                                     , normalize_exp exp
+                                     , ( one, t)
+                                     )
+                        , t)
+            | "pos"  -> ( fst (normalize_exp exp)
+                        , T.universal_integer
+                        )
+            | _      -> Npkcontext.report_error "normalize"
+                          ("No such function-attribute : '"^attr^"'")
         end
     | Attribute (st, attr, None) ->
         begin
           let t = subtyp_to_adatyp st in
-          let (t,v) = T.attr_get t attr in
-          (fst (insert_constant v)), t
+          let (exp,t') = T.attr_get t attr in
+          let (exp',_) = normalize_exp exp in
+          (exp',t')
         end
 
 (**

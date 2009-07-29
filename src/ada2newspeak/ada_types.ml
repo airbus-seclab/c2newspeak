@@ -402,19 +402,17 @@ let rec attr_get typ attr =
     | Signed      _ ,"first" ->
         begin
           match compute_constr typ with
-          | Some (a,_) -> typ, IntVal a
+          | Some (a,_) -> A.CInt a, typ
           | None -> failwith "attr_get"
         end
     | Signed      _ ,"last" ->
         begin
           match compute_constr typ with
-          | Some (_,b) -> typ, IntVal b
+          | Some (_,b) -> A.CInt b, typ
           | None -> failwith "attr_get"
         end
-    | Enumeration values, "first" -> typ, IntVal (Newspeak.Nat.of_int (snd
-                                                    (List.hd  values)))
-    | Enumeration values, "last"  -> typ, IntVal (Newspeak.Nat.of_int (snd
-                                                      (List_utils.last values)))
+    | Enumeration values, "first" -> A.CInt (Newspeak.Nat.of_int (snd (List.hd values))), typ
+    | Enumeration values, "last"  -> A.CInt (Newspeak.Nat.of_int (snd (List_utils.last values))), typ
     | Array (_,inds) , ("first"|"last"|"length")  ->
         begin
           let ind = match inds with
@@ -423,15 +421,14 @@ let rec attr_get typ attr =
             | _ -> Npkcontext.report_error "attr_get"
                      "Attribute for matrix types"
           in
-          if attr="length" then
-            universal_integer, IntVal (length_of ind)
+          if attr = "length" then
+            A.CInt (length_of ind), universal_integer
           else
             attr_get ind attr
         end
-    | Float digits , "digits" -> universal_integer,
-                                    IntVal (Newspeak.Nat.of_int digits)
-    | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
-    | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
+    | Float digits , "digits" -> A.CInt   (Newspeak.Nat.of_int digits), universal_integer
+    | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
+    | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
     | Unknown     _ , _
     | Array       _ , _
     | Record      _ , _
