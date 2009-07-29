@@ -368,6 +368,7 @@ let is_unknown typ =
 (* Number of values in a type *)
 let length_of typ = match (typ.base.trait, typ.range) with
 | Signed       _  , Some r -> sizeof r
+| Univ_int        , Some r -> sizeof r
 | Enumeration vals, _      -> Newspeak.Nat.of_int (List.length vals)
 | Array        _  , _
 | Record       _  , _
@@ -397,47 +398,6 @@ let compute_constr t =
                                         )
     | _ -> None
 
-let rec attr_get typ attr =
-  match (typ.base.trait, attr) with
-    | Signed      _ ,"first" ->
-        begin
-          match compute_constr typ with
-          | Some (a,_) -> A.CInt a, typ
-          | None -> failwith "attr_get"
-        end
-    | Signed      _ ,"last" ->
-        begin
-          match compute_constr typ with
-          | Some (_,b) -> A.CInt b, typ
-          | None -> failwith "attr_get"
-        end
-    | Enumeration values, "first" -> A.CInt (Newspeak.Nat.of_int (snd (List.hd values))), typ
-    | Enumeration values, "last"  -> A.CInt (Newspeak.Nat.of_int (snd (List_utils.last values))), typ
-    | Array (_,inds) , ("first"|"last"|"length")  ->
-        begin
-          let ind = match inds with
-            | []  -> invalid_arg "attr_get"
-            | [x] -> x
-            | _ -> Npkcontext.report_error "attr_get"
-                     "Attribute for matrix types"
-          in
-          if attr = "length" then
-            A.CInt (length_of ind), universal_integer
-          else
-            attr_get ind attr
-        end
-    | Float digits , "digits" -> A.CInt   (Newspeak.Nat.of_int digits), universal_integer
-    | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
-    | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
-    | Unknown     _ , _
-    | Array       _ , _
-    | Record      _ , _
-    | Float       _ , _
-    | Enumeration _ , _
-    | Signed      _ , _
-    | Univ_int      , _
-    | Univ_real     , _
-                 -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 (****************
  *  Translator  *
@@ -525,6 +485,50 @@ let rec translate t =
       translate_trait std_float.base.trait
 
   in translate_trait t.base.trait
+
+let rec attr_get typ attr =
+  match (typ.base.trait, attr) with
+    | Signed      _ ,"first" ->
+        begin
+          match compute_constr typ with
+          | Some (a,_) -> A.CInt a, typ
+          | None -> failwith "attr_get"
+        end
+    | Signed      _ ,"last" ->
+        begin
+          match compute_constr typ with
+          | Some (_,b) -> A.CInt b, typ
+          | None -> failwith "attr_get"
+        end
+    | Enumeration values, "first" -> A.CInt (Newspeak.Nat.of_int (snd (List.hd values))), typ
+    | Enumeration values, "last"  -> A.CInt (Newspeak.Nat.of_int (snd (List_utils.last values))), typ
+    | Array (_,inds) , ("first"|"last"|"length")  ->
+        begin
+          let ind = match inds with
+            | []  -> invalid_arg "attr_get"
+            | [x] -> x
+            | _ -> Npkcontext.report_error "attr_get"
+                     "Attribute for matrix types"
+          in
+          if attr = "length" then
+            A.CInt (length_of ind), universal_integer
+          else
+            attr_get ind attr
+        end
+    | Float digits , "digits" -> A.CInt   (Newspeak.Nat.of_int digits), universal_integer
+    | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
+    | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
+    | _             , "size"  -> let sz = Cir.size_of_typ (translate typ) in
+                                 A.CInt (Newspeak.Nat.of_int sz), universal_integer
+    | Unknown     _ , _
+    | Array       _ , _
+    | Record      _ , _
+    | Float       _ , _
+    | Enumeration _ , _
+    | Signed      _ , _
+    | Univ_int      , _
+    | Univ_real     , _
+                 -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
 
 let belongs min max exp =
     Cir.Unop ( Npkil.Belongs_tmp (min, Npkil.Known (Newspeak.Nat.add_int 1 max))
