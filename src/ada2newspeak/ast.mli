@@ -133,7 +133,6 @@ and basic_declaration =
   | ObjectDecl      of string
                      * Ada_types.t
                      * object_state
-  | UseDecl         of string
   | SpecDecl        of spec
   | NumberDecl      of string
                      * Ada_types.data_t
@@ -150,7 +149,6 @@ and context_clause =
   | With       of string
                 * Newspeak.location
                 * (spec*Newspeak.location) option
-  | UseContext of string
 
 and sub_program_spec =
   | Function  of Syntax_ada.name*param list*Ada_types.t

@@ -227,9 +227,9 @@ and representation_clause_to_string (ident, agregat) =
 
 and context_clause_to_string context_clause =
   match context_clause with
-    | With(name, loc, spec) -> "With("
+    | With(name, spec) -> "With("
         ^name
-        ^", "^(line_of_loc loc)^",\n"
+        ^", "
         ^(option_to_string
             spec
             (fun (spec, loc) -> "("^(spec_to_string spec)

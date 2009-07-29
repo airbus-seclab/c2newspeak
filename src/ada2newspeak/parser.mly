@@ -161,7 +161,7 @@ context :
 ;
 
 context_item :
-| WITH ident_list SEMICOLON { List.map (fun n -> With(n, $1, None)) $2}
+| WITH ident_list SEMICOLON { List.map (fun n -> With(n, None)) $2}
 | USE  ident_list SEMICOLON { List.map (fun n -> UseContext n)      $2}
 ;
 

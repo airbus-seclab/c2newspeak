@@ -183,7 +183,6 @@ and object_state =
 
 and context_clause =
   | With       of string
-                * Newspeak.location
                 * (spec*Newspeak.location) option
   | UseContext of string
 

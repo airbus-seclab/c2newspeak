@@ -149,7 +149,6 @@ let name_of_spec spec = match spec with
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
   | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
   | Ast.SpecDecl (Ast.PackageSpec (n,_,_,_)) -> n
-  | Ast.UseDecl _ -> "<no name>"
 
 let check_package_body_against_spec ~body ~spec =
   let (pkgname,spec_and_loc,_,_) = spec in
@@ -160,7 +159,7 @@ let check_package_body_against_spec ~body ~spec =
    * filterspec sp = true will be checked.      *)
   let filterspec = function
     | Ast.NumberDecl _ | Ast.SpecDecl _ -> true
-    | Ast.ObjectDecl _ | Ast.UseDecl  _ -> false
+    | Ast.ObjectDecl _ -> false
   in
   List.iter (function sp ->
     if (filterspec sp) then
@@ -647,7 +646,6 @@ let rec parse_extern_specification name =
         "normalize.parse_extern_specification"
           "internal error : specification expected, body found"
 
-
 (**
  * Iterates through the abstract syntax tree, performing miscellaneous tasks.
  *   - match type identifiers to their declaration (or raise en error)
@@ -709,7 +707,7 @@ and normalization compil_unit extern =
   let rec normalize_basic_decl item loc handle_init =
     match item with
     | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
-                             [Ast.UseDecl use_clause]
+                             []
     | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
         let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
         let t = merge_types norm_subtyp_ind in
@@ -1014,8 +1012,7 @@ and normalization compil_unit extern =
             Sym.add_variable gtbl ident loc t ~value;
         | Ast.NumberDecl(ident, value) ->
             add_numberdecl ident value loc
-        | Ast.SpecDecl _
-        | Ast.UseDecl  _ -> ()
+        | Ast.SpecDecl _ -> ()
 
     in match spec with
       | Ast.SubProgramSpec(Ast.Function(_name, [], _return_typ)) -> ()
@@ -1031,14 +1028,11 @@ and normalization compil_unit extern =
 
   in
 
-  (* normalise le context, en supprimant les doublons with *)
-  let rec normalize_context context previous_with =
-    match context with
-      | [] -> []
-      | With(nom, _, spec)::r ->
-          if (List.mem nom previous_with) then
-            normalize_context r previous_with
-          else begin
+  let normalize_context context =
+    List.fold_left (fun ctx item -> match item with
+      | With(nom, spec) ->
+          if (not (Sym.is_with gtbl nom)) then
+          begin
             let (norm_spec, loc) = match spec with
               | None   -> parse_extern_specification nom
               | Some _ -> Npkcontext.report_error
@@ -1046,15 +1040,15 @@ and normalization compil_unit extern =
                     "internal error : spec provided"
             in
               add_extern_spec norm_spec;
-              Ast.With(nom, loc, Some(norm_spec, loc))
-              ::normalize_context r (nom::previous_with)
+              Ast.With(nom, loc, Some(norm_spec, loc))::ctx
           end
-      | UseContext(n)::r -> Sym.add_use gtbl n;
-                            Ast.UseContext n::normalize_context r previous_with
+          else ctx
+      | UseContext n  -> Sym.add_use gtbl n; ctx
+    ) [] context
   in
 
   let (context,lib_item,loc) = compil_unit in
-  let norm_context = normalize_context context [] in
+  let norm_context = normalize_context context in
   let norm_lib_item = normalize_lib_item lib_item loc in
     Npkcontext.forget_loc ();
     (norm_context

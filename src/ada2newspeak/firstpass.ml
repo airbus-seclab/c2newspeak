@@ -468,7 +468,6 @@ let translate compil_unit =
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | UseDecl (use_clause) -> Sym.add_use gtbl use_clause
     | NumberDecl _ -> ()
 
   and translate_declarative_item (item,loc) =
@@ -515,7 +514,6 @@ let translate compil_unit =
               Some (e, tr_typ)
              in
             add_global loc tr_typ init ident
-      | UseDecl x -> Sym.add_use gtbl x
       | SpecDecl spec -> translate_spec spec false
       | NumberDecl _ -> ()
 
@@ -592,7 +590,6 @@ let translate compil_unit =
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
-      | UseContext x -> Sym.add_use gtbl x;
     );
   in
 
