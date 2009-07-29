@@ -8,7 +8,7 @@ void t065(void) {
   (t065.adb:29#7)^uint1 bb;
   (t065.adb:30#7)^uint1 cb;
   (t065.adb:25#7)^4- =(uint2) 1;
-  (t065.adb:26#7)^3- =(uint2) 4-_uint2;
+  (t065.adb:26#7)^3- =(uint2) belongs[0,2] 4-_uint2;
   (t065.adb:28#7)^2- =(uint1) (4-_uint2 ==_uint2 2);
   (t065.adb:29#7)^1- =(uint1) ! (4-_uint2 ==_uint2 3-_uint2);
   (t065.adb:30#7)^{

@@ -389,8 +389,13 @@ let compute_constr t =
           assert (a <=% c && c <=% d && d <=% b);
           Some (c, d)
         end
+    | Enumeration v,_
+        when not (is_boolean t) -> let min = snd (List.hd v)         in
+                                   let max = snd (List_utils.last v) in
+                                   Some ( Newspeak.Nat.of_int min
+                                        , Newspeak.Nat.of_int max
+                                        )
     | _ -> None
-
 
 let rec attr_get typ attr =
   match (typ.base.trait, attr) with
@@ -427,7 +432,6 @@ let rec attr_get typ attr =
                                     IntVal (Newspeak.Nat.of_int digits)
     | Float _ , "safe_small"  -> universal_real, FloatVal (min_float)
     | Float _ , "safe_large"  -> universal_real, FloatVal (max_float)
-    | _  , "succ" when is_scalar typ -> failwith "succ"
     | Unknown     _ , _
     | Array       _ , _
     | Record      _ , _

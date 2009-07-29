@@ -1,4 +1,4 @@
--- "succ" function-attribute for scalar types.
+-- "succ" function-attribute for enumerated types.
 --
 -- Author : Etienne Millon
 -- Date   : Mon Jul 20 2009

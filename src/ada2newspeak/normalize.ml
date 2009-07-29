@@ -383,19 +383,19 @@ let rec normalize_exp ?expected_type exp =
     | Attribute (st, attr, Some exp) ->
         begin
           let t = subtyp_to_adatyp st in
-          if attr = "succ" && T.is_scalar t then
-            begin
-              let (e',t') = normalize_exp exp in
-              ( Ast.Binary ( Ast.Plus
-                           , (e', t')
-                           , ( Ast.CInt (Newspeak.Nat.one)
-                             , T.universal_integer
-                             )
+          let op = match attr with
+            | "succ" -> Ast.Plus
+            | "pred" -> Ast.Minus
+            | _      -> Npkcontext.report_error "normalize" "No such attribute"
+          in
+            let (e',t') = normalize_exp exp in
+            ( Ast.Binary ( op
+                         , (e', t')
+                         , ( Ast.CInt (Newspeak.Nat.one)
+                           , t
                            )
-              , t')
-            end
-          else Npkcontext.report_error "Normalize"
-               "No such attribute"
+                         )
+            , t)
         end
     | Attribute (st, attr, None) ->
         begin
