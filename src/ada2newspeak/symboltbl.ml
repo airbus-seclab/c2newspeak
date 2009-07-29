@@ -144,7 +144,7 @@ module Table = struct
                                    ; t_tbl      = Symset.empty
                                    ; t_desc     = desc
                                    ; t_loc      = Npkcontext.get_loc ()
-                                   ; t_use_list = []
+                                   ; t_use_list = ["standard"]
                                    ; t_scope    = scope
                                    }
 
@@ -341,8 +341,12 @@ module SymMake(TR:Tree.TREE) = struct
 
   let create _ =
     let s = TR.create () in
-    TR.push builtin_table s;
     let library = create_table  Lexical ~desc:"library" () in
+    library.t_tbl <- Symset.add (Lexical
+                                ,"standard"
+                                ,Newspeak.unknown_loc
+                                ,Unit builtin_table)
+                                library.t_tbl;
     TR.push library s;
     { s_stack  = s
     ; s_cpkg   = None
@@ -423,7 +427,7 @@ module SymMake(TR:Tree.TREE) = struct
               begin match name with
                 | None   -> ()
                 | Some n -> begin
-                              if (TR.height s.s_stack <> 2) then
+                              if (TR.height s.s_stack <> 1) then
                                 error "Adding some unit outside the library";
                                 let top = TR.top s.s_stack in
                                 top.t_tbl <- Symset.add (Lexical
@@ -450,7 +454,7 @@ module SymMake(TR:Tree.TREE) = struct
   let exit_context s =
     Npkcontext.print_debug "<<<<<<< exit_context ()";
     Npkcontext.print_debug (print s);
-    if(TR.height s.s_stack > 2) then
+    if(TR.height s.s_stack > 1) then
       TR.pop s.s_stack
     else
       Npkcontext.report_error "exit_context" "Stack too small"
@@ -466,7 +470,7 @@ module SymMake(TR:Tree.TREE) = struct
     List.flatten (List.map filter (Symset.elements t.t_tbl))
 
   let library s =
-    TR.nth s 2
+    TR.nth s 1
 
   let s_find_abs _desc f s p n =
     match tbl_find_unit (library s.s_stack) p with
