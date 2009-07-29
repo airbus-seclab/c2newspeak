@@ -7,8 +7,9 @@ procedure t307 is
   type Enum is (A, B, C);
   X : Enum;
 begin
-    X := B;
     X := Enum'Succ (A);
-    X := C;
+    X := B;
     X := Enum'Succ (B);
+    X := C;
+    X := Enum'Succ (C);
 end t307 ;
