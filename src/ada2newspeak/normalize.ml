@@ -400,6 +400,9 @@ let rec normalize_exp ?expected_type exp =
             | _      -> Npkcontext.report_error "normalize"
                           ("No such function-attribute : '"^attr^"'")
         end
+    | Attribute (n , "address", None) ->
+        let (sc, (t, _)) = Sym.find_variable gtbl n in
+        Ast.AddressOf (sc, snd n, t), T.system_address
     | Attribute (st, attr, None) ->
         begin
           let t = subtyp_to_adatyp st in

@@ -66,8 +66,6 @@ let eval_static exp tbl =
     | Ast.CChar  c -> T.IntVal (Nat.of_int c)
     | Ast.CBool  b -> T.BoolVal b
     | Ast.Var (s,v,_) -> eval_static_const (s,v) t
-    | Ast.ArrayValue   _
-    | Ast.FunctionCall _  -> raise NonStaticExpression
     | Ast.Not exp -> begin
                        match (eval_static_exp exp) with
                         | T.BoolVal(b) -> T.BoolVal(not b)
@@ -83,7 +81,10 @@ let eval_static exp tbl =
             | _ -> Npkcontext.report_error "eval_static.exp"
                    "unexpected type for conditional expression"
         end
-    | Ast.RecordValue _ -> raise NonStaticExpression
+    | Ast.ArrayValue   _
+    | Ast.FunctionCall _
+    | Ast.RecordValue  _
+    | Ast.AddressOf    _ -> raise NonStaticExpression
 
   (**
    * Evaluate statically a binary expression.

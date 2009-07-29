@@ -303,15 +303,21 @@ module Table = struct
 
   let builtin_table = create_table Lexical ~desc:"builtin" Newspeak.unknown_loc
 
+  let system_table  = create_table Lexical ~desc:"system" Newspeak.unknown_loc
+
   let _ =
-    List.iter (fun (n,t) -> add_type builtin_table n
-                                     Newspeak.unknown_loc
-                                     t (In_package "std"))
-    [ "integer"  , T.integer
-    ; "float"    , T.std_float
-    ; "boolean"  , T.boolean
-    ; "character", T.character
-    ]
+    begin
+      List.iter (fun (n,t) -> add_type builtin_table n
+                                       Newspeak.unknown_loc
+                                       t (In_package "standard"))
+      [ "integer"  , T.integer
+      ; "float"    , T.std_float
+      ; "boolean"  , T.boolean
+      ; "character", T.character
+      ];
+      add_type system_table "address" Newspeak.unknown_loc
+               T.system_address (In_package "system")
+    end
 
 end
 
@@ -347,10 +353,15 @@ module SymMake(TR:Tree.TREE) = struct
                                 ,Newspeak.unknown_loc
                                 ,Unit builtin_table)
                                 library.t_tbl;
+    library.t_tbl <- Symset.add (Lexical
+                                ,"system"
+                                ,Newspeak.unknown_loc
+                                ,Unit system_table)
+                                library.t_tbl;
     TR.push library s;
     { s_stack  = s
     ; s_cpkg   = None
-    ; s_with   = []
+    ; s_with   = ["system"]
     }
 
   let set_current s x = s.s_cpkg <- Some x

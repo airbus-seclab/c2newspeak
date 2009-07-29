@@ -146,7 +146,10 @@ val character : t
 val boolean : t
 
 val integer   : t
+
 val std_float : t
+
+val system_address : t
 
 (******************
  * Tests on types *

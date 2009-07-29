@@ -333,6 +333,9 @@ let translate compil_unit =
                                  (translate_int 0)
                                  (translate_int (C.size_of_typ offtype)) in
         C.Lval (C.Shift (record, offset), offtype), tfield
+    | AddressOf (sc, n, t) ->
+        let t_lv = translate_resolved_name sc n in
+        C.AddrOf(t_lv, T.translate t), T.system_address
 
   (**
    * Make a C assignment.

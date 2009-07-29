@@ -267,6 +267,8 @@ let record_field t fld =
  * Builtin types *
  *****************)
 
+let system_address = new_derived (universal_integer)
+
 let integer_first = Newspeak.Nat.of_string "-2147483648"
 let integer_last  = Newspeak.Nat.of_string  "2147483647"
 
