@@ -56,15 +56,15 @@ let collect prog =
       | _ -> raise Exit
   in
 
-  let process_stmtkind x =
+  let rec process_stmtkind x =
     match x with
 	Set (lv, e, _) -> 
 	  write_lval lv; 
 	  read_exp e
+      | Decl (_, _, body) -> process_blk body
       | _ -> raise Exit
-  in
     
-  let rec process_blk x = 
+  and process_blk x = 
     match x with
 	(hd, _)::tl -> 
 	  process_stmtkind hd;
