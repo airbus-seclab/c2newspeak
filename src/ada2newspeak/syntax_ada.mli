@@ -209,20 +209,23 @@ and body =
                     * declarative_part
 
 and basic_declaration =
-  | ObjectDecl      of string list
-                     * subtyp_indication
-                     * expression option
-                     * object_state
-  | TypeDecl        of string*typ_declaration
-  | UseDecl         of string
-  | SpecDecl        of spec
-  | NumberDecl      of string
-                     * expression
-  | SubtypDecl      of string
-                     * subtyp_indication
-  | RepresentClause of string * array_aggregate
-  | RenamingDecl    of string (* new name *)
-                     * name   (* old name *)
+  | ObjectDecl           of string list
+                          * subtyp_indication
+                          * expression option
+                          * object_state
+  | TypeDecl             of string*typ_declaration
+  | UseDecl              of string
+  | SpecDecl             of spec
+  | NumberDecl           of string
+                          * expression
+  | SubtypDecl           of string
+                          * subtyp_indication
+  | RepresentClause      of string * array_aggregate
+  | RenamingDecl         of string (* new name *)
+                          * name   (* old name *)
+  | GenericInstanciation of string
+                          * name
+                          * argument list
 
 and declarative_item =
   | BasicDecl of basic_declaration

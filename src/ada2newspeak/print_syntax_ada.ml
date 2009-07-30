@@ -268,6 +268,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
                           ^n
                           ^" renames "
                           ^name_to_string n'
+  | GenericInstanciation _ -> "generic instanciation"
 
 and declarative_item_to_string decl_item = match decl_item with
   | BasicDecl(basic_declaration) -> "BasicDecl("

@@ -758,7 +758,12 @@ and normalization compil_unit extern =
         []
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
                              []
-    | RepresentClause _ -> []
+    | RepresentClause _   -> []
+    | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
+                                        ("ignoring generic instanciation of '"
+                                                         ^name_to_string n^"'");
+                                      []
+
 
   and normalize_package_spec (name, list_decl) =
     Sym.set_current gtbl name;

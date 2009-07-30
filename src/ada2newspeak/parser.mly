@@ -330,11 +330,14 @@ basic_declaration :
         | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
         | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
         }
-              | ident_list COLON subtyp_indication RENAMES name SEMICOLON {
+| ident_list COLON subtyp_indication RENAMES name SEMICOLON {
                 if (List.length $1 <> 1) then
                   Npkcontext.report_error "Parser"
                     "Only one identifier is allowed before \"renames\"";
                 RenamingDecl((List.hd $1),fst $5),$2 }
+| FUNCTION ident IS NEW name LPAR actual_parameter_part RPAR SEMICOLON
+                                          { GenericInstanciation ($2, fst $5, $7), $1 }
+
 ;
 
 constrained_array_definition:
