@@ -42,6 +42,16 @@ let collect prog =
 	Local _ -> ()
       | Global x -> written_globals := Set.add x !written_globals
       | _ -> raise Exit
+
+  and write_exp e =
+    match e with
+	Const _ -> ()
+      | Lval (lv, _) -> write_lval lv
+      | UnOp (Not, e) -> write_exp e
+      | BinOp (Eq _, e1, e2) -> 
+	  write_exp e1;
+	  write_exp e2
+      | _ -> raise Exit
   in
     
   let rec read_lval lv =
@@ -63,6 +73,10 @@ let collect prog =
 	  write_lval lv; 
 	  read_exp e
       | Decl (_, _, body) -> process_blk body
+      | Select (br1, br2) -> 
+	  process_blk br1;
+	  process_blk br2
+      | Guard e -> write_exp e
       | _ -> raise Exit
     
   and process_blk x = 
