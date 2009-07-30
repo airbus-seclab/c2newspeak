@@ -53,6 +53,7 @@ let collect prog =
     match e with
 	Const _ -> ()
       | Lval (lv, _) -> read_lval lv
+      | UnOp ((PtrToInt _|IntToPtr _|Cast _), e) -> read_exp e
       | _ -> raise Exit
   in
 
