@@ -48,7 +48,7 @@ let collect prog =
 	Const _ -> ()
       | Lval (lv, _) -> write_lval lv
       | UnOp (Not, e) -> write_exp e
-      | BinOp (Eq _, e1, e2) -> 
+      | BinOp ((Eq _|Gt _), e1, e2) -> 
 	  write_exp e1;
 	  write_exp e2
       | _ -> raise Exit
