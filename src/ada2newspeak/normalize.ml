@@ -39,10 +39,24 @@ let (%-) = Nat.sub
 let gtbl : Sym.t = Sym.create ()
 
 let string_of_name = Ada_utils.name_to_string
+let sname_to_string x = String.concat "." x
+
+let mangle_sname = function
+  | []       -> failwith "unreachable @ normalize:mangle_sname"
+  | x::[]    -> None  , x
+  | x::y::[] -> Some x, y
+  | _        -> Npkcontext.report_error "mangle_sname"
+                  "chain of selected names is too deep"
+
+let normalize_ident ident package extern =
+  match (extern,package) with
+  |  true , Some p ->  [p; ident]
+  |_               ->  [ident]
 
 let subtyp_to_adatyp gtbl n =
+  let n' = mangle_sname n in
   try
-    snd(Symboltbl.find_type gtbl n)
+    snd(Symboltbl.find_type gtbl n')
   with Not_found ->
     begin
       Npkcontext.report_warning "ST2AT"
@@ -92,30 +106,41 @@ type selected =
                     * T.data_t           (* Value         *)
 
 
-let resolve_selected ?expected_type n =
-  let resolve_variable n =
+let rec resolve_selected ?expected_type n =
+  let resolve_variable pkg id =
     begin
       try
         let (sc,(t, ro)) = Sym.find_variable ?expected_type
-                                             gtbl n in
-        SelectedVar(sc,(snd n),t,ro)
+                                             gtbl (pkg,id) in
+        SelectedVar(sc,id,t,ro)
       with
       | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc
-                                                           , snd n
+                                                           , id
                                                            , rt)
       | Sym.Variable_no_storage (t,v) -> SelectedConst (t, v)
     end
   in
   match n with
-  | Some pfx, fld ->
+  |  [] -> failwith "notreached"
+  | (pfx::fld::[]) ->
       begin
         try
           let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
           let (off, tf) = T.record_field t fld in
           SelectedRecord (pfx, t, off, tf)
-        with Not_found -> resolve_variable n
+        with Not_found -> resolve_variable (Some pfx) fld
       end
-  | None, _       -> resolve_variable n
+  |  [id]       -> resolve_variable None id
+  | x::y::_z::[] -> begin
+      match (resolve_selected (x::y::[])) with
+        | SelectedConst _ -> failwith "a constant cannot have a field"
+        | SelectedFCall _ -> failwith "a function call cannot have a field"
+        | SelectedVar   _ -> failwith "a variable cannot have a field"
+        | SelectedRecord (vn, _rt, _off, _ft) ->
+            failwith ("oho : vn = "^vn)
+    end
+  | _ -> Npkcontext.report_error "normalize"
+                    "Chain of selected_names too long"
 
 (**************************************************
  *                                                *
@@ -285,10 +310,6 @@ let add_numberdecl ident value loc =
   in
   Sym.add_variable gtbl ident loc t ~value ~no_storage:true
 
-let normalize_ident ident package extern =
-  if extern then (package, ident)
-            else (None   , ident)
-
 let build_init_stmt (x,exp,loc) =
   Ast.Assign(Ast.Lval ( Symboltbl.Lexical
                       , x
@@ -368,7 +389,7 @@ let rec normalize_exp ?expected_type exp =
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
-    | Qualified(stn, exp) -> let t = snd (Sym.find_type gtbl stn) in
+    | Qualified(stn, exp) -> let t = subtyp_to_adatyp stn in
                                 fst (normalize_exp ~expected_type:t exp),t
     | FunctionCall(n, params) -> normalize_fcall (n, params)
     | Attribute (st, attr, Some exp) ->
@@ -393,6 +414,7 @@ let rec normalize_exp ?expected_type exp =
                           ("No such function-attribute : '"^attr^"'")
         end
     | Attribute (n , "address", None) ->
+        let n = mangle_sname n in
         let (sc, (t, _)) = Sym.find_variable gtbl n in
         Ast.AddressOf (sc, snd n, t), T.system_address
     | Attribute (st, attr, None) ->
@@ -431,7 +453,7 @@ and normalize_binop bop e1 e2 =
   in
   (* Is the operator overloaded ? *)
   if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
-    let ovl_opname = (None,make_operator_name bop) in
+    let ovl_opname = [make_operator_name bop] in
     normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
   else
   match bop with
@@ -465,9 +487,9 @@ and normalize_binop bop e1 e2 =
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type = match (e1, e2) with
           | SName v1 , SName v2 -> Some (Sym.type_ovl_intersection gtbl
-                                                                   (snd v1)
-                                                                   (snd v2))
-          | _      , Qualified (n,_) -> Some (snd (Sym.find_type gtbl n))
+                                                     (List_utils.last v1)
+                                                     (List_utils.last v2))
+          | _      , Qualified (n,_) -> Some (subtyp_to_adatyp n)
           | _               -> None
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
@@ -508,6 +530,7 @@ and normalize_uop uop exp =
 
 and normalize_fcall (n, params) =
   (* Maybe this indexed expression is an array-value *)
+  let n = mangle_sname n in
   try
     let (sc,(spec,top)) = Sym.find_subprogram ~silent:true gtbl n in
     let t = match top with
@@ -656,7 +679,10 @@ let rec parse_extern_specification name =
 and normalization compil_unit extern =
 
   let normalize_ident_cur ident =
-    normalize_ident ident (Sym.current gtbl) extern
+    match (extern, Sym.current gtbl) with
+    | true, Some x -> [x;ident]
+    | true, None   -> [ident]
+    | false, _     -> [ident]
   in
 
   let normalize_sub_program_spec subprog_spec ~addparam =
@@ -808,10 +834,10 @@ and normalization compil_unit extern =
             Ast.RecordAccess (lv, off, tf), tf
         | SelectedVar    (_, _, _, true) ->
             Npkcontext.report_error "normalize_instr"
-               ("Invalid left value : '"^name_to_string n^"' is read-only")
+               ("Invalid left value : '"^sname_to_string n^"' is read-only")
         | SelectedFCall _
         | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
-                               ("Invalid left-value : '"^name_to_string n^"'")
+                               ("Invalid left-value : '"^sname_to_string n^"'")
         end
     | ArrayAccess (lv, e) ->
         let (lv',t) = normalize_lval lv in
@@ -835,7 +861,7 @@ and normalization compil_unit extern =
         let (lv', t_lv) = normalize_lval lv in
         let (_tc, ti)   = T.extract_array_types t_lv in
         let all_values  = T.all_values ti in
-        List.map2 (fun type_val exp -> 
+        List.map2 (fun type_val exp ->
           let k = insert_constant type_val in
           let v = normalize_exp exp in
           Ast.Assign (Ast.ArrayAccess (lv', k), v), loc
@@ -869,6 +895,7 @@ and normalization compil_unit extern =
       let (exp1, exp2) = match range with
         | DirectRange (min, max) -> (min, max)
         | ArrayRange n -> begin
+                            let n = mangle_sname n in
                             let (_,(t,_)) = Sym.find_variable gtbl n in
                             ( fst (T.attr_get t "first")
                             , fst (T.attr_get t "last"))
@@ -880,7 +907,7 @@ and normalization compil_unit extern =
                              end
       in
       let dp = [BasicDecl (ObjectDecl ( [iter]
-                           , ( (None,"integer")
+                           , ( ["standard";"integer"]
                              , None
                              )
                            , Some (if is_rev then exp2 else exp1)
@@ -896,14 +923,14 @@ and normalization compil_unit extern =
         (List.map build_init_stmt init)@
         [Ast.Loop
             ( Ast.While
-               ( normalize_exp (if is_rev then Binary(Ge,SName(None,iter),exp1)
-                                          else Binary(Le,SName(None,iter),exp2))
+              ( normalize_exp (if is_rev then Binary(Ge,SName([iter]),exp1)
+                                         else Binary(Le,SName([iter]),exp2))
                                )
                , nblock@[Ast.Assign ( Ast.Lval (Sym.Lexical,iter,T.integer)
                                     , normalize_exp( Binary((if is_rev
                                                                then Minus
                                                                else Plus)
-                                                   , SName (None,iter)
+                                                   , SName [iter]
                                                    , CInt (Nat.one)))
                                     )
                         , loc]
@@ -912,6 +939,7 @@ and normalization compil_unit extern =
       in [Ast.Block (ndp, Sym.exit_context gtbl, loop), loc]
     | Exit -> [Ast.Exit, loc]
     | ProcedureCall(n, params) ->
+        let n = mangle_sname n in
         let (sc,(spec,_)) = Sym.find_subprogram gtbl n in
         let norm_args = List.map normalize_arg params in
         let norm_spec = List.map normalize_param spec in

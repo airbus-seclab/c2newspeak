@@ -26,10 +26,6 @@
   Syntax_ada.subtyp_indication ->  Syntax_ada.subtyp_indication
 *)
 
-val normalize_ident :
-  string -> string option ->
-  bool -> Syntax_ada.name
-
 val normalization :
   Syntax_ada.compilation_unit -> bool ->
          Ast.compilation_unit

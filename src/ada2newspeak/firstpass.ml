@@ -103,15 +103,27 @@ let translate compil_unit =
     )
   in
 
+  let normalize_ident ident package extern =
+    if extern then (package, ident)
+              else (None   , ident)
+  in
 
   (* fonctions de traduction des noms*)
   (* on ajoute le nom du package courant dans le cas ou on
      etudie les declarations internes *)
   (* fonction appelee dans add_fundecl, add_funbody, add_global *)
   let translate_name (pack,id) =
+    (*
     let tr_name =
         if extern() then pack,            id
                              else (Sym.current gtbl), id
+    in
+    *)
+    let tr_name = match (extern(), pack, Sym.current gtbl) with
+    | true, Some p, _      -> [p;id]
+    | true, None  , _      ->   [id]
+    | false, _    , Some p -> [p;id]
+    | false, _    , None   ->   [id]
     in
       string_of_name tr_name
   in
@@ -119,7 +131,7 @@ let translate compil_unit =
   (* gestion de la table de symboles *)
 
   let add_global loc tr_typ i x =
-    let name = Normalize.normalize_ident x (Sym.current gtbl) (extern ()) in
+    let name = normalize_ident x (Sym.current gtbl) (extern ()) in
     let tr_name = translate_name name in
     let storage = match i with
       | None -> Npkil.Declared false
@@ -495,8 +507,15 @@ let translate compil_unit =
     let ftyp = add_fundecl subprogspec in
     let body_decl = translate_saved_context ctx_dp in
     let body = translate_block block in
+    let mangle_sname = function
+      | []       -> failwith "unreachable @ firstpass:mangle_sname"
+      | x::[]    -> None  , x
+      | x::y::[] -> Some x, y
+      | _        -> Npkcontext.report_error "mangle_sname"
+                      "chain of selected names is too deep"
+    in
     let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
-      Hashtbl.replace fun_decls (translate_name name)
+      Hashtbl.replace fun_decls (translate_name (mangle_sname name))
                       (ret_id, args_ids, ftyp, body);
       ignore (Sym.exit_context gtbl);
       ignore (Sym.exit_context gtbl)

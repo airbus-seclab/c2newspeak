@@ -27,12 +27,7 @@
 
 (** This module defines types for the parse tree. *)
 
-(**
- * A qualified string.
- * For example, "Ada.Text_IO.Put_line" maps to
- * [ ["Ada","Text_IO"],"Put_Line"].
- *)
-type name = string option * string
+type name = string list
 
 (** Modes for subprogram parameters. *)
 type param_mode =
@@ -85,7 +80,7 @@ and expression =
   | CFloat       of float
   | CBool        of bool
   | CChar        of int
-  | SName        of name (* selected name *)
+  | SName        of string list
   | FunctionCall of name
                   * argument list
   | Unary        of unary_op
@@ -114,7 +109,7 @@ and subtyp_indication = subtyp
 
 (** Left-value *)
 and lval =
-| SelectedLval of name
+| SelectedLval of string list
 | ArrayAccess  of lval
                 * expression
 
@@ -167,7 +162,7 @@ and instruction =
   | Loop          of iteration_scheme
                    * block
   | Exit
-  | ProcedureCall of name
+  | ProcedureCall of string list
                    * argument list
   | Case          of expression
                    * (expression*block) list

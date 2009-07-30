@@ -37,15 +37,9 @@ let check_ident i1 i2 =
   then
     Npkcontext.report_error "Parser.check_ident"
       ("syntax error : \"end "^i1^";\" expected")
-  else ()
 
-let check_name (p1,i1) (p2,i2) =
-  check_ident i1 i2;
-  match (p1, p2) with
-    | Some p1', Some p2' -> check_ident p1' p2'
-    | Some _  , None     -> invalid_arg "check_name"
-    | None    , Some _   -> invalid_arg "check_name"
-    | None    , None     -> ()
+let check_name l1 l2 =
+  List.iter2 check_ident l1 l2
 
 let check_end decl end_name =
   let begin_name = match decl with
@@ -126,17 +120,17 @@ let make_range exp_b_inf exp_b_sup =
 
 %token <Newspeak.location> ABS     AND        ARRAY   ARROW     ASSIGN
 %token <Newspeak.location> AT      BEGIN      BODY    CASE      COLON
-%token <Newspeak.location> COMMA   CONSTANT   DECLARE DIGITS    DIV   
-%token <Newspeak.location> DOT     DOUBLE_DOT ELSE    ELSIF     END     
-%token <Newspeak.location> EQ      EXIT       FALSE   FOR       FUNCTION 
-%token <Newspeak.location> GE      GT         IF      IN        IS       
-%token <Newspeak.location> LE      LOOP       LPAR    LT        MINUS    
-%token <Newspeak.location> MOD     MULT       NE      NEW       NOT    
-%token <Newspeak.location> NULL    OF         OR      OTHERS    OUT     
+%token <Newspeak.location> COMMA   CONSTANT   DECLARE DIGITS    DIV
+%token <Newspeak.location> DOT     DOUBLE_DOT ELSE    ELSIF     END
+%token <Newspeak.location> EQ      EXIT       FALSE   FOR       FUNCTION
+%token <Newspeak.location> GE      GT         IF      IN        IS
+%token <Newspeak.location> LE      LOOP       LPAR    LT        MINUS
+%token <Newspeak.location> MOD     MULT       NE      NEW       NOT
+%token <Newspeak.location> NULL    OF         OR      OTHERS    OUT
 %token <Newspeak.location> PACKAGE PLUS       POW     PRAGMA    PROCEDURE
-%token <Newspeak.location> QUOTE   RANGE      RECORD  REM       RENAMES  
-%token <Newspeak.location> RETURN  REVERSE    RPAR    SEMICOLON SUBTYPE  
-%token <Newspeak.location> THEN    TRUE       TYPE    USE       VBAR     
+%token <Newspeak.location> QUOTE   RANGE      RECORD  REM       RENAMES
+%token <Newspeak.location> RETURN  REVERSE    RPAR    SEMICOLON SUBTYPE
+%token <Newspeak.location> THEN    TRUE       TYPE    USE       VBAR
 %token <Newspeak.location> WHEN    WHILE      WITH    XOR
 
 %left       AND OR XOR          /*            logical operators */
@@ -150,6 +144,7 @@ let make_range exp_b_inf exp_b_sup =
 %start s
 %type <Syntax_ada.compilation_unit> s
 
+%type <string list*Newspeak.location> name
 %%
 /*grammaire*/
 s: context library_item EOF {($1, fst $2, snd $2)}
@@ -183,7 +178,7 @@ body :
 | PACKAGE BODY ident IS declarative_part END SEMICOLON
     {(PackageBody($3, None, $5), $1)}
 | PACKAGE BODY ident IS declarative_part END name SEMICOLON
-    { (check_name (None,$3) (fst $7));
+{ (check_name [$3] (fst $7));
       (PackageBody($3, None, $5), $1)
     }
 ;
@@ -194,7 +189,7 @@ decl :
 | PACKAGE ident IS basic_declarative_part END SEMICOLON
     {(PackageSpec($2, $4), $1)}
 | PACKAGE ident IS basic_declarative_part END name SEMICOLON
-        { (check_name (None,$2) (fst $6));
+        { (check_name [$2] (fst $6));
           (PackageSpec($2, $4), $1)}
 ;
 
@@ -308,7 +303,7 @@ basic_declaration :
 | TYPE ident IS DIGITS CONST_INT SEMICOLON
             {
               (* digits X -> new float *)
-              TypeDecl ($2,DerivedType ((None,"float")
+              TypeDecl ($2,DerivedType (["standard";"float"]
                                        ,None
                                        )
                        )
@@ -336,7 +331,7 @@ basic_declaration :
                     "Only one identifier is allowed before \"renames\"";
                 RenamingDecl((List.hd $1),fst $5),$2 }
 | FUNCTION ident IS NEW name LPAR actual_parameter_part RPAR SEMICOLON
-                                          { GenericInstanciation ($2, fst $5, $7), $1 }
+                                  { GenericInstanciation ($2, fst $5, $7), $1 }
 
 ;
 
@@ -476,8 +471,9 @@ discrete_choice:
 ;
 
 lvalue :
-| name      {((fst $1), [])}
-| name args {((fst $1), $2)}
+| name      {fst $1, []}
+| name args {fst $1, $2}
+;
 
 args:
 |      LPAR actual_parameter_part RPAR {    $2 }
@@ -548,14 +544,14 @@ expression :
                                                    ,Some $5
                                                    )
                                         }
-| name {SName(fst $1)}
+| name {SName (fst $1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
 | LPAR aggregate_association_list RPAR {Aggregate (NamedAggregate $2)}
-| LPAR expression_list            RPAR {Aggregate (PositionalAggregate $2)} 
+| LPAR expression_list            RPAR {Aggregate (PositionalAggregate $2)}
 ;
 
 expression_list:
-| expression                       {$1::[]}
+| expression COMMA expression      {$1::$3::[]}
 | expression COMMA expression_list {$1::$3}
 
 aggregate_association_list:
@@ -600,8 +596,8 @@ ident_list :
 ;
 
 name :
-|           ident_or_opname { (None         , snd $1), fst $1 }
-| IDENT DOT ident_or_opname { (Some (snd $1), snd $3), fst $1 }
+| ident_or_opname          {  (snd $1 ::[])    , fst $1 }
+| ident_or_opname DOT name { ((snd $1)::fst $3), fst $1 }
 ;
 
 ident_or_opname :

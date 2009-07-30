@@ -106,7 +106,7 @@ and exp_to_string exp = match exp with
   | CFloat s          -> "CFloat("^string_of_float s^")"
   | CBool  b          -> "CBool("^(string_of_bool b)^")"
   | CChar  c          -> "CChar("^(string_of_int c)^")"
-  | SName  s          -> "Var("^(name_to_string s)^")"
+  | SName  s          -> "Var("^list_to_string s (fun x->x)"." false ^")"
   | Unary  (op,exp)   -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
   | Binary (op,e1,e2) -> "("^(exp_to_string e1)^" "
                            ^(bop_to_string op)^" "
@@ -157,7 +157,7 @@ and for_loop_range_to_string = function
 
 and lval_to_string lv =
   match lv with
-    | SelectedLval name -> name_to_string name
+    | SelectedLval s -> list_to_string s (fun x->x)"." false
     | ArrayAccess (lval, e) ->
         (lval_to_string lval )^"["^(exp_to_string e)^"]"
 
@@ -183,7 +183,7 @@ and instr_to_string instr = match instr with
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
       ^(block_to_string block)^")"
   | ProcedureCall(nom, params) -> "ProcedureCall("
-      ^(name_to_string nom)^", "
+      ^(String.concat "." nom)^", "
       ^(String.concat "," (List.map arg_to_string params))^")"
   | Case(e,choices,default) -> "Case(("^(exp_to_string e)^"), ["
     ^ (String.concat ", "

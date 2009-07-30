@@ -413,7 +413,7 @@ module SymMake(TR:Tree.TREE) = struct
    * call is (A -> A) and the circular dependency will be detected.
    *)
   let rec add_renaming_decl s new_name old_name =
-    if ((None,new_name) = old_name) then
+    if ([new_name] = old_name) then
       Npkcontext.report_error "add_renaming_decl"
                     ("Circular declaration detected for '"
                     ^new_name^"'.")

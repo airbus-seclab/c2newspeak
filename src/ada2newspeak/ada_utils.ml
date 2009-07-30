@@ -72,10 +72,8 @@ let list_to_string l to_string sep crochet =
 let ident_list_to_string l =
   list_to_string l (fun x -> x) "." false
 
-let name_to_string (package, ident) =
-  match package with
-    | None   -> ident
-    | Some p -> ident_list_to_string (p::ident::[])
+let name_to_string =
+  String.concat "."
 
 let make_operator_name op =
   let ada2npk_operator_prefix = "__ada2npk_operator_" in
