@@ -96,6 +96,7 @@ and expression =
   | Qualified    of name
                   * expression
   | Attribute    of name * string * expression option
+  | Aggregate    of (expression * expression) list
 
 (** Constraint *)
 and contrainte =

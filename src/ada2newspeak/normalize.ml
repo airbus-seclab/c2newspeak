@@ -308,10 +308,6 @@ let extract_subprog_spec ast =
           "Ada_normalize.extract_subprog_spec"
         "subprogram body expected, package body found"
 
-(* renvoie la specification correspondant a name,
-   extrait eventuellement cette specification d'un corps
-   de sous-programme, dans le cas ou aucun fichier de specification
-   n'est fourni.*)
 let parse_specification name =
   let spec_name = name^".ads" in
   let spec_ast =
@@ -336,8 +332,6 @@ let parse_specification name =
           "normalize.parse_specification"
             "specification expected, body found"
 
-(* renvoie la specification du package correspondant a name.
-   cette specification est normalisee *)
 let parse_package_specification name =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
@@ -350,9 +344,6 @@ let parse_package_specification name =
            "normalize.parse_package_specification"
           "internal error : specification expected, body found"
 
-(**
- * Normalize an expression.
- *)
 let rec normalize_exp ?expected_type exp =
   match exp with
     | CInt   x -> Ast.CInt   x,
@@ -411,6 +402,9 @@ let rec normalize_exp ?expected_type exp =
           let (exp',_) = normalize_exp exp in
           (exp',t')
         end
+    | Aggregate _ ->
+        Npkcontext.report_error "normalize_exp"
+          "Array aggregate found without direct lvalue"
 
 (**
  * Normalize an actual argument.
@@ -828,8 +822,16 @@ and normalization compil_unit extern =
   let rec normalize_instr ?return_type (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
-    | NullInstr    -> None
-    | ReturnSimple -> Some (Ast.ReturnSimple, loc)
+    | NullInstr    -> []
+    | ReturnSimple -> [Ast.ReturnSimple, loc]
+    | Assign(lv, Aggregate assoc_list) ->
+        List.map (fun (aggr_k, aggr_v) ->
+          (* id[aggr_k] <- aggr_v *)
+          let key   = normalize_exp aggr_k in
+          let value = normalize_exp aggr_v in
+          let (lv', _)   = normalize_lval lv in
+          Ast.Assign (Ast.ArrayAccess (lv', key), value), loc
+        ) assoc_list;
     | Assign(lv, exp) ->
         begin
           let (lv', t_lv) = normalize_lval lv in
@@ -841,20 +843,20 @@ and normalization compil_unit extern =
               Npkcontext.report_error "normalize_instr"
                 "Incompatible types in assignment";
             end;
-          Some (Ast.Assign( lv'
-                          , (e',t_exp)
-                          ), loc)
+          [Ast.Assign( lv'
+                     , (e',t_exp)
+                     ), loc]
         end
-    | Return(exp) -> Some (Ast.Return(normalize_exp ?expected_type:return_type
-                                      exp), loc)
+    | Return(exp) -> [Ast.Return(normalize_exp ?expected_type:return_type
+                                 exp), loc]
     | If(exp, instr_then, instr_else) ->
-        Some (Ast.If( normalize_exp ~expected_type:T.boolean exp
-                    , normalize_block ?return_type instr_then
-                    , normalize_block ?return_type instr_else), loc)
-    | Loop(NoScheme,instrs) -> Some (Ast.Loop(Ast.NoScheme,
-                                       normalize_block ?return_type instrs),loc)
-    | Loop(While(exp), instrs) -> Some (Ast.Loop(Ast.While(normalize_exp exp),
-                     normalize_block ?return_type instrs), loc)
+        [Ast.If( normalize_exp ~expected_type:T.boolean exp
+               , normalize_block ?return_type instr_then
+               , normalize_block ?return_type instr_else), loc]
+    | Loop(NoScheme,instrs) -> [Ast.Loop(Ast.NoScheme,
+                                  normalize_block ?return_type instrs),loc]
+    | Loop(While(exp), instrs) -> [Ast.Loop(Ast.While(normalize_exp exp),
+                     normalize_block ?return_type instrs), loc]
     | Loop(For(iter, range, is_rev), block) ->
       let (exp1, exp2) = match range with
         | DirectRange (min, max) -> (min, max)
@@ -894,32 +896,32 @@ and normalization compil_unit extern =
                         , loc]
             )
             , loc]
-      in Some (Ast.Block (ndp, Sym.exit_context gtbl, loop), loc)
-    | Exit -> Some (Ast.Exit, loc)
+      in [Ast.Block (ndp, Sym.exit_context gtbl, loop), loc]
+    | Exit -> [Ast.Exit, loc]
     | ProcedureCall(n, params) ->
         let (sc,(spec,_)) = Sym.find_subprogram gtbl n in
         let norm_args = List.map normalize_arg params in
         let norm_spec = List.map normalize_param spec in
         let effective_args = make_arg_list norm_args norm_spec in
-         Some (Ast.ProcedureCall( sc, snd n,effective_args), loc)
+         [Ast.ProcedureCall( sc, snd n,effective_args), loc]
     | Case (e, choices, default) ->
-              Some (Ast.Case (normalize_exp e,
+              [Ast.Case (normalize_exp e,
                     List.map (function e,block->
                             normalize_exp e,
                             normalize_block ?return_type block)
                         choices,
                     Ada_utils.may (fun x -> normalize_block ?return_type x)
                                   default
-                    ),loc)
+                    ),loc]
     | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
                         let (ndp,init) = normalize_decl_part dp in
                         let norm_block = normalize_block ?return_type blk in
                         let init_stmts = List.map build_init_stmt init in
                         let ctx = Sym.exit_context gtbl in
-                        Some (Ast.Block (ndp, ctx, init_stmts@norm_block), loc)
+                        [Ast.Block (ndp, ctx, init_stmts@norm_block), loc]
 
   and normalize_block ?return_type block =
-    List_utils.filter_map (fun x -> normalize_instr ?return_type x) block
+    List.flatten (List.map (fun x -> normalize_instr ?return_type x) block)
 
   and normalize_decl_part decl_part =
     let represtbl = Hashtbl.create 50 in
