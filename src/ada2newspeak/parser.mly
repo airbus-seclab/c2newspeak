@@ -473,8 +473,9 @@ for_loop_reverse:
 ;;
 
 for_loop_range:
-| expression DOUBLE_DOT expression { DirectRange ($1, $3) }
-| name QUOTE RANGE                 { ArrayRange  (fst $1) }
+| expression DOUBLE_DOT expression { DirectRange  ($1, $3) }
+| name QUOTE RANGE                 { ArrayRange   (fst $1) }
+| name                             { SubtypeRange (fst $1) }
 ;;
 
 instruction_else :

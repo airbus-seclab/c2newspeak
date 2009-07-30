@@ -139,8 +139,9 @@ and iteration_scheme =
            * bool
 
 and for_loop_range =
-  | DirectRange of expression * expression
-  | ArrayRange  of name
+  | DirectRange  of expression * expression
+  | ArrayRange   of name
+  | SubtypeRange of name
 
 and block = (instruction * Newspeak.location) list
 

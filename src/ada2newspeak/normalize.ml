@@ -859,6 +859,11 @@ and normalization compil_unit extern =
                             ( fst (T.attr_get t "first")
                             , fst (T.attr_get t "last"))
                           end
+        | SubtypeRange st -> begin
+                               let t = subtyp_to_adatyp st in
+                                 ( fst (T.attr_get t "first")
+                                 , fst (T.attr_get t "last"))
+                             end
       in
       let dp = [BasicDecl (ObjectDecl ( [iter]
                            , ( (None,"integer")
@@ -872,9 +877,9 @@ and normalization compil_unit extern =
       in
       Sym.enter_context gtbl;
       let (ndp,init) = normalize_decl_part dp in
-      let nblock =  (List.map build_init_stmt init)
-                   @normalize_block ?return_type block in
+      let nblock = normalize_block ?return_type block in
       let loop =
+        (List.map build_init_stmt init)@
         [Ast.Loop
             ( Ast.While
                ( normalize_exp (if is_rev then Binary(Ge,SName(None,iter),exp1)
