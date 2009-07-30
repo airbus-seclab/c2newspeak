@@ -282,7 +282,8 @@ let translate compil_unit =
             let x_typ = T.translate t in
             let size = C.size_of_typ x_typ in
             let base = T.extract_array_base t_lv in
-            let offset = make_offset x_exp (translate_nat base) (translate_int size) in
+            let offset = make_offset x_exp (translate_nat base)
+                                           (translate_int size) in
             let offset' = T.check_exp t_lv offset in
             C.Shift (x_lv, offset'),t
         | RecordAccess (lv, off_pos, tf) ->
@@ -292,7 +293,6 @@ let translate compil_unit =
                                      (translate_int 0)
                                      (translate_int (C.size_of_typ offtype)) in
             C.Shift (record, offset), tf
-
 
   and translate_exp (exp,typ) :C.exp*T.t=
     match exp with
@@ -318,7 +318,6 @@ let translate compil_unit =
         let arr = translate_resolved_name sc name in
         let (ex_index, t_index) = (translate_exp index) in
         let ctyp = T.translate t_index in
-        Npkcontext.print_debug ("III = "^T.print ti);
         let index' = T.check_exp ti ex_index in
         let base = T.extract_array_base t in
         let offset = make_offset index'

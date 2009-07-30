@@ -489,6 +489,9 @@ let rec translate t =
   in translate_trait t.base.trait
 
 let rec attr_get typ attr =
+  let const_int x =
+    A.CInt (Newspeak.Nat.of_int x)
+  in
   match (typ.base.trait, attr) with
     | Signed      _ ,"first" ->
         begin
@@ -502,8 +505,8 @@ let rec attr_get typ attr =
           | Some (_,b) -> A.CInt b, typ
           | None -> failwith "attr_get"
         end
-    | Enumeration values, "first" -> A.CInt (Newspeak.Nat.of_int (snd (List.hd values))), typ
-    | Enumeration values, "last"  -> A.CInt (Newspeak.Nat.of_int (snd (List_utils.last values))), typ
+    | Enumeration v, "first" -> const_int (snd (List.hd v)), typ
+    | Enumeration v, "last"  -> const_int (snd (List_utils.last v)), typ
     | Array (_,inds) , ("first"|"last"|"length")  ->
         begin
           let ind = match inds with
@@ -517,11 +520,11 @@ let rec attr_get typ attr =
           else
             attr_get ind attr
         end
-    | Float digits , "digits" -> A.CInt   (Newspeak.Nat.of_int digits), universal_integer
+    | Float digits , "digits" -> const_int digits, universal_integer
     | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
     | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
     | _             , "size"  -> let sz = Cir.size_of_typ (translate typ) in
-                                 A.CInt (Newspeak.Nat.of_int sz), universal_integer
+                                 const_int sz, universal_integer
     | Unknown     _ , _
     | Array       _ , _
     | Record      _ , _

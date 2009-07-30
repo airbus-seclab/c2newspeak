@@ -520,15 +520,17 @@ module SymMake(TR:Tree.TREE) = struct
     try
       s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
               s ?package n
-    with Not_found -> if silent then raise Not_found
-                                else error ("Cannot find variable '"^n^"'"
-                                           ^(match expected_type with
-                                             | None   -> ""
-                                             | Some _ -> " with this expected type"
-                                            ))
+    with Not_found -> if silent
+                      then raise Not_found
+                      else error ("Cannot find variable '"^n^"'"
+                                 ^(match expected_type with
+                                   | None   -> ""
+                                   | Some _ -> " with this expected type"
+                                  ))
 
   let find_variable s ?silent ?expected_type name =
-    (fun (x,(y,_,z)) -> (x,(y,z))) (find_variable_value ?silent s ?expected_type name)
+    (fun (x,(y,_,z)) -> (x,(y,z)))
+    (find_variable_value ?silent s ?expected_type name)
 
   let find_type s (package,n) =
     try

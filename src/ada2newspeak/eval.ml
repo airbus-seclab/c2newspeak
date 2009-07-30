@@ -25,12 +25,10 @@
 
 *)
 
-open Syntax_ada
-open Ada_utils
-open Big_int
-
 module Nat = Newspeak.Nat
 module  T  = Ada_types
+
+open Ast
 
 exception NonStaticExpression
 
@@ -44,14 +42,15 @@ let (^%) a b =
     end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
 
 let mod_rem_aux ~is_mod na nb =
+  let module BI = Big_int in
   let a = Nat.to_big_int na in
   let b = Nat.to_big_int nb in
-  let r_mod =  mod_big_int a b in
-  Nat.of_big_int (if (sign_big_int (if is_mod then b else a)) > 0
+  let r_mod = BI.mod_big_int a b in
+  Nat.of_big_int (if (BI.sign_big_int (if is_mod then b else a)) > 0
                   then
                     r_mod
                   else
-                    sub_big_int r_mod (abs_big_int b)
+                    BI.sub_big_int r_mod (BI.abs_big_int b)
                  )
 
 let (%%) = mod_rem_aux ~is_mod:false (* rem *)
@@ -61,19 +60,19 @@ let (%:) = mod_rem_aux ~is_mod:true  (* mod *)
 let eval_static exp tbl =
   let rec eval_static_exp (exp,t) =
     match exp with
-    | Ast.CInt   i -> T.IntVal(i)
-    | Ast.CFloat f -> T.FloatVal(f)
-    | Ast.CChar  c -> T.IntVal (Nat.of_int c)
-    | Ast.CBool  b -> T.BoolVal b
-    | Ast.Var (s,v,_) -> eval_static_const (s,v) t
-    | Ast.Not exp -> begin
-                       match (eval_static_exp exp) with
-                        | T.BoolVal(b) -> T.BoolVal(not b)
-                        | _ -> Npkcontext.report_error "eval_static_exp"
-                                 "Unexpected unary operator and argument"
-                     end
-    | Ast.Binary(op,e1,e2) -> eval_static_binop op e1 e2
-    | Ast.CondExp(cond,iftrue,iffalse) ->
+    | CInt   i -> T.IntVal(i)
+    | CFloat f -> T.FloatVal(f)
+    | CChar  c -> T.IntVal (Nat.of_int c)
+    | CBool  b -> T.BoolVal b
+    | Var (s,v,_) -> eval_static_const (s,v) t
+    | Not exp -> begin
+                   match (eval_static_exp exp) with
+                    | T.BoolVal(b) -> T.BoolVal(not b)
+                    | _ -> Npkcontext.report_error "eval_static_exp"
+                             "Unexpected unary operator and argument"
+                 end
+    | Binary(op,e1,e2) -> eval_static_binop op e1 e2
+    | CondExp(cond,iftrue,iffalse) ->
         begin
             match eval_static_exp cond with
             | T.BoolVal true  -> eval_static_exp iftrue
@@ -81,10 +80,10 @@ let eval_static exp tbl =
             | _ -> Npkcontext.report_error "eval_static.exp"
                    "unexpected type for conditional expression"
         end
-    | Ast.ArrayValue   _
-    | Ast.FunctionCall _
-    | Ast.RecordValue  _
-    | Ast.AddressOf    _ -> raise NonStaticExpression
+    | ArrayValue   _
+    | FunctionCall _
+    | RecordValue  _
+    | AddressOf    _ -> raise NonStaticExpression
 
   (**
    * Evaluate statically a binary expression.
@@ -94,23 +93,22 @@ let eval_static exp tbl =
     let val1 = eval_static_exp e1 in
     let val2 = eval_static_exp e2 in
     match (op,val1,val2) with
-      (* operations sur entiers ou flottants *)
-    | Ast.Plus , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.add a b)
-    | Ast.Minus, T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.sub a b)
-    | Ast.Mult , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.mul a b)
-    | Ast.Div  , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.div a b)
-    | Ast.Power, T.IntVal   a, T.IntVal   b -> T.IntVal   (a ^% b)
-    | Ast.Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal (a +. b)
-    | Ast.Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal (a -. b)
-    | Ast.Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal (a *. b)
-    | Ast.Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
-    | Ast.Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
-    | Ast.Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
-    | Ast.Eq   ,            a,            b -> T.BoolVal(T.data_eq a b)
-    | Ast.Gt   ,            a,            b -> T.BoolVal(T.data_lt b a)
-    | Ast.And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
-    | Ast.Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
-    | Ast.Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
+    | Plus , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.add a b)
+    | Minus, T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.sub a b)
+    | Mult , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.mul a b)
+    | Div  , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.div a b)
+    | Power, T.IntVal   a, T.IntVal   b -> T.IntVal   (a ^% b)
+    | Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal (a +. b)
+    | Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal (a -. b)
+    | Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal (a *. b)
+    | Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
+    | Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
+    | Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
+    | Eq   ,            a,            b -> T.BoolVal(T.data_eq a b)
+    | Gt   ,            a,            b -> T.BoolVal(T.data_lt b a)
+    | And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
+    | Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
+    | Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
                                   (a ** (float_of_int (Nat.to_int b)))
     | _ -> Npkcontext.report_error "eval_static.binop"
                                   "invalid operator and argument"

@@ -106,7 +106,7 @@ and exp_to_string exp = match exp with
   | CFloat s          -> "CFloat("^string_of_float s^")"
   | CBool  b          -> "CBool("^(string_of_bool b)^")"
   | CChar  c          -> "CChar("^(string_of_int c)^")"
-  | SelectedName s    -> "Var("^(name_to_string s)^")"
+  | SName  s          -> "Var("^(name_to_string s)^")"
   | Unary  (op,exp)   -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
   | Binary (op,e1,e2) -> "("^(exp_to_string e1)^" "
                            ^(bop_to_string op)^" "
@@ -149,7 +149,8 @@ and iteration_scheme_to_string scheme = match scheme with
                     ^for_loop_range_to_string range
 
 and for_loop_range_to_string = function
-  | DirectRange (exp1, exp2) -> (exp_to_string exp1) ^ ".." ^(exp_to_string exp2)
+  | DirectRange (exp1, exp2) ->          (exp_to_string exp1)
+                                ^ ".." ^ (exp_to_string exp2)
   | ArrayRange  (st) -> name_to_string st ^ "'range"
 
 and lval_to_string lv =

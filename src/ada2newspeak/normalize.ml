@@ -366,13 +366,14 @@ let rec normalize_exp ?expected_type exp =
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CBool  x -> Ast.CBool  x,T.boolean
     | CChar  x -> Ast.CChar  x,T.character
-    | SelectedName n ->
+    | SName n ->
         begin
           match resolve_selected ?expected_type n with
           | SelectedVar   (sc, id,  t, _) -> Ast.Var(sc,id,t) ,t
           | SelectedFCall (sc, id, rt) -> Ast.FunctionCall (sc, id, [], rt), rt
           | SelectedConst (t,v) -> insert_constant ~t v
-          | SelectedRecord (id, tr, off, tf) -> Ast.RecordValue (Sym.Lexical, id, tr, off, tf), tf
+          | SelectedRecord (id, tr, off, tf) ->
+              Ast.RecordValue (Sym.Lexical, id, tr, off, tf), tf
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
@@ -469,9 +470,9 @@ and normalize_binop bop e1 e2 =
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type = match (e1, e2) with
-          | SelectedName v1 , SelectedName v2 -> Some (Sym.type_ovl_intersection gtbl
-                                                              (snd v1)
-                                                              (snd v2))
+          | SName v1 , SName v2 -> Some (Sym.type_ovl_intersection gtbl
+                                                                   (snd v1)
+                                                                   (snd v2))
           | _      , Qualified (n,_) -> Some (snd (Sym.find_type gtbl n))
           | _               -> None
           in
@@ -806,7 +807,7 @@ and normalization compil_unit extern =
         | SelectedRecord (id, tr, off, tf) ->
             let lv = Ast.Lval (Sym.Lexical, id, tr) in
             Ast.RecordAccess (lv, off, tf), tf
-        | SelectedVar    (_, _, _, true) -> 
+        | SelectedVar    (_, _, _, true) ->
             Npkcontext.report_error "normalize_instr"
                ("Invalid left value : '"^name_to_string n^"' is read-only")
         | SelectedFCall _
@@ -880,13 +881,14 @@ and normalization compil_unit extern =
       let loop =
         [Ast.Loop
             ( Ast.While
-               ( normalize_exp (if is_rev then Binary(Ge,SelectedName(None,iter),exp1)
-                                          else Binary(Le,SelectedName(None,iter),exp2)))
+               ( normalize_exp (if is_rev then Binary(Ge,SName(None,iter),exp1)
+                                          else Binary(Le,SName(None,iter),exp2))
+                               )
                , nblock@[Ast.Assign ( Ast.Lval (Sym.Lexical,iter,T.integer)
                                     , normalize_exp( Binary((if is_rev
                                                                then Minus
                                                                else Plus)
-                                                   , SelectedName (None,iter)
+                                                   , SName (None,iter)
                                                    , CInt (Nat.one)))
                                     )
                         , loc]
