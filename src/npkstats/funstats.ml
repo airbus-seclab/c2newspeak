@@ -77,6 +77,10 @@ let collect prog =
 	  process_blk br1;
 	  process_blk br2
       | Guard e -> write_exp e
+      | DoWith (body, _, action) -> 
+	  process_blk body;
+	  process_blk action
+      | Goto _ -> ()
       | _ -> raise Exit
     
   and process_blk x = 
