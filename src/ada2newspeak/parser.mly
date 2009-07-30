@@ -124,20 +124,20 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location*string>         CONST_STRING
 %token <Newspeak.location*string>         IDENT
 
-%token <Newspeak.location> ABS        AND     ARRAY     ARROW     ASSIGN
-%token <Newspeak.location> BEGIN      BODY    CASE      COLON     COMMA
-%token <Newspeak.location> CONSTANT   DECLARE DIGITS    DIV       DOT
-%token <Newspeak.location> DOUBLE_DOT ELSE    ELSIF     END       EQ
-%token <Newspeak.location> EXIT       FALSE   FOR       FUNCTION  GE
-%token <Newspeak.location> GT         IF      IN        IS        LE
-%token <Newspeak.location> LOOP       LPAR    LT        MINUS     MOD
-%token <Newspeak.location> MULT       NE      NEW       NOT       NULL
-%token <Newspeak.location> OF         OR      OTHERS    OUT       PACKAGE
-%token <Newspeak.location> PLUS       POW     PRAGMA    PROCEDURE QUOTE
-%token <Newspeak.location> RANGE      RECORD  REM       RENAMES   RETURN
-%token <Newspeak.location> REVERSE    RPAR    SEMICOLON SUBTYPE   THEN
-%token <Newspeak.location> TRUE       TYPE    USE       VBAR      WHEN
-%token <Newspeak.location> WHILE      WITH    XOR
+%token <Newspeak.location> ABS     AND        ARRAY   ARROW     ASSIGN
+%token <Newspeak.location> AT      BEGIN      BODY    CASE      COLON
+%token <Newspeak.location> COMMA   CONSTANT   DECLARE DIGITS    DIV   
+%token <Newspeak.location> DOT     DOUBLE_DOT ELSE    ELSIF     END     
+%token <Newspeak.location> EQ      EXIT       FALSE   FOR       FUNCTION 
+%token <Newspeak.location> GE      GT         IF      IN        IS       
+%token <Newspeak.location> LE      LOOP       LPAR    LT        MINUS    
+%token <Newspeak.location> MOD     MULT       NE      NEW       NOT    
+%token <Newspeak.location> NULL    OF         OR      OTHERS    OUT     
+%token <Newspeak.location> PACKAGE PLUS       POW     PRAGMA    PROCEDURE
+%token <Newspeak.location> QUOTE   RANGE      RECORD  REM       RENAMES  
+%token <Newspeak.location> RETURN  REVERSE    RPAR    SEMICOLON SUBTYPE  
+%token <Newspeak.location> THEN    TRUE       TYPE    USE       VBAR     
+%token <Newspeak.location> WHEN    WHILE      WITH    XOR
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
@@ -377,6 +377,26 @@ array_aggregate :
 
 representation_clause :
 | FOR ident USE array_aggregate         {($2,$4) ,$1}
+| FOR ident QUOTE ident USE expression  { Npkcontext.set_loc $1;
+                                          Npkcontext.report_warning "parser"
+                                          "ignoring representation clause";
+                                          ($2,NamedArrayAggregate []), $1
+                                          }
+| FOR ident USE RECORD record_clause_list END RECORD
+                                        { Npkcontext.set_loc $1;
+                                          Npkcontext.report_warning "parser"
+                                          "ignoring representation clause";
+                                          ($2,NamedArrayAggregate []), $1
+                                          }
+;
+
+record_clause_list:
+| record_clause {}
+| record_clause record_clause_list {}
+;
+
+record_clause:
+| ident AT expression RANGE expression DOUBLE_DOT expression SEMICOLON {}
 ;
 
 instr_list :
