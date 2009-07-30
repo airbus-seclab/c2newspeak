@@ -30,38 +30,83 @@ module Set = Set.Make(String)
 let collect prog = 
   let empty = ref Set.empty in
   let pure = ref Set.empty in
+  let global = ref Set.empty in
   let other = ref Set.empty in
 
-  let rec process_lval lv =
+  let written_globals = ref Set.empty in
+  let read_globals = ref Set.empty in
+
+  let rec write_lval lv =
     match lv with
 	(* Assumes local do not *)
-	Local _ -> true
-      | _ -> false
+	Local _ -> ()
+      | Global x -> written_globals := Set.add x !written_globals
+      | _ -> raise Exit
 
-  and process_exp e =
+  and write_exp e =
     match e with
-	Const _ -> true
-      | Lval (lv, _) -> process_lval lv
-      | _ -> false
-  in
-
-  let process_stmtkind x =
-    match x with
-	Set (lv, e, _) -> (process_lval lv) && (process_exp e)
-      | _ -> false
+	Const _ -> ()
+      | Lval (lv, _) -> write_lval lv
+      | UnOp (Not, e) -> write_exp e
+      | BinOp ((Eq _|Gt _), e1, e2) -> 
+	  write_exp e1;
+	  write_exp e2
+      | _ -> raise Exit
   in
     
-  let rec process_blk x = 
+  let rec read_lval lv =
+    match lv with
+	Local _ -> ()
+      | _ -> raise Exit
+
+  and read_exp e =
+    match e with
+	Const _ -> ()
+      | Lval (lv, _) -> read_lval lv
+      | UnOp ((PtrToInt _|IntToPtr _|Cast _), e) -> read_exp e
+      | _ -> raise Exit
+  in
+
+  let rec process_stmtkind x =
     match x with
-	(hd, _)::tl -> (process_stmtkind hd) && (process_blk tl)
-      | [] -> true
+	Set (lv, e, _) -> 
+	  write_lval lv; 
+	  read_exp e
+      | Decl (_, _, body) -> process_blk body
+      | Select (br1, br2) -> 
+	  process_blk br1;
+	  process_blk br2
+      | Guard e -> write_exp e
+      | DoWith (body, _, action) -> 
+	  process_blk body;
+	  process_blk action
+      | Goto _ -> ()
+      | _ -> raise Exit
+    
+  and process_blk x = 
+    match x with
+	(hd, _)::tl -> 
+	  process_stmtkind hd;
+	  process_blk tl
+      | [] -> ()
   in
 
   let process_fundec f (_, blk) =
     let tbl =
       match blk with
 	  [] -> empty
-	| _ -> if (process_blk blk) then pure else other
+	| _ -> 
+	    let tbl =
+	      try 
+		process_blk blk;
+		if (Set.is_empty !written_globals) 
+		  && (Set.is_empty !read_globals) then pure
+		else global
+	      with Exit -> other
+	    in
+	      written_globals := Set.empty;
+	      read_globals := Set.empty;
+	      tbl
     in
       tbl := Set.add f !tbl
   in
@@ -69,11 +114,16 @@ let collect prog =
     Hashtbl.iter process_fundec prog.fundecs;
     let empty_nb = Set.cardinal !empty in
     let pure_nb = Set.cardinal !pure in
+    let global_nb = Set.cardinal !global in
     let other_nb = Set.cardinal !other in
       if empty_nb <> 0 
       then print_endline ("Empty functions: "^string_of_int empty_nb);
       if pure_nb <> 0 
       then print_endline ("Pure functions: "^string_of_int pure_nb);
+      if global_nb <> 0 then begin
+	print_endline ("Functions that read/update globals: "
+		       ^string_of_int global_nb)
+      end;
       if other_nb <> 0 then begin
   	print_endline "Remaining functions: ";
 	Set.iter print_endline !other
