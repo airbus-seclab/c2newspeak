@@ -530,11 +530,11 @@ expression :
 ;
 
 aggregate_association_list:
-| expression_or_others ARROW expression                             {($1, $3)::[]}
-| expression_or_others ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
+| exp_or_others ARROW expression                                  {($1, $3)::[]}
+| exp_or_others ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
 ;
 
-expression_or_others:
+exp_or_others:
 | expression {Some $1}
 | OTHERS     {None   }
 ;;

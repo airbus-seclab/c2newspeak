@@ -916,7 +916,7 @@ and normalization compil_unit extern =
 
   and normalize_assign_aggregate lv bare_assoc_list loc =
     let module ValSet = Set.Make (
-      struct 
+      struct
         type t = T.data_t
         let compare = Pervasives.compare
       end
@@ -959,11 +959,21 @@ and normalization compil_unit extern =
       | Some oth_exp ->
           begin
             let all_values  = T.all_values ti in
-            let mk_set l = List.fold_left (fun x y -> ValSet.add y x) ValSet.empty l in
+            let mk_set l =
+              List.fold_left (fun x y -> ValSet.add y x)
+                             ValSet.empty l
+            in
             let all_values_set = mk_set all_values in
-            let defined_values_set = mk_set
-                (List.map (fun x -> Eval.eval_static (normalize_exp (fst x)) gtbl) assoc_list) in
-            let missing_others = ValSet.elements (ValSet.diff all_values_set defined_values_set) in
+            let defined_values_set =
+              mk_set
+                (List.map
+                  (fun x -> Eval.eval_static (normalize_exp (fst x)) gtbl)
+                 assoc_list)
+            in
+            let missing_others =
+              ValSet.elements (ValSet.diff all_values_set
+                                           defined_values_set)
+            in
             List.rev_map (function
                         | T.IntVal   x -> (CInt   x, oth_exp)
                         | T.FloatVal x -> (CFloat x, oth_exp)
