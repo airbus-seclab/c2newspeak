@@ -359,7 +359,7 @@ record_component_list:
 ;
 
 record_component:
-  IDENT COLON IDENT SEMICOLON {(snd $1),(None,snd $3)}
+  IDENT COLON subtyp SEMICOLON {(snd $1),$3}
 
 contrainte :
 | expression DOUBLE_DOT expression {($1, $3)}
