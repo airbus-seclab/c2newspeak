@@ -26,7 +26,8 @@
 
 TARGET=npkstats
 DIRS=newspeak/ npkstats/
-FILES=version newspeak/newspeak npkstats/maxcount npkstats/npkstats
+FILES=version newspeak/newspeak npkstats/maxcount npkstats/funstats \
+      npkstats/npkstats
 LIBX=nums.cmxa
 
 include common.Makefile

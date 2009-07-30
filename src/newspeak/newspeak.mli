@@ -91,14 +91,16 @@ end
 
 (* The type of a program: file names, global variable declarations,
     function definitions and the size of pointers. *)
+
 type t = {
   fnames: file list;
   globals: globals;
   init: blk;
-  fundecs: (fid, fundec) Hashtbl.t;
-  ptr_sz: size_t;
+  fundecs: (fid, fundec) Hashtbl.t; (** table of all declared functions *)
+  ptr_sz: size_t;                   (** size of pointers in number of bits *)
   src_lang: src_lang;
 }
+
 
 and globals = (string, gdecl) Hashtbl.t
 

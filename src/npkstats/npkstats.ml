@@ -38,6 +38,8 @@ let fun_to_count = ref []
 
 let graphs = ref false
 
+let funstats = ref false
+
 let output = ref "a"
 
 let add_counted_call f = fun_to_count := f::!fun_to_count
@@ -60,6 +62,8 @@ let speclist =
    ("--debug", Arg.Set debug, "debugging mode");
    
    ("--more-verb", Arg.Set more_verb, "more statistics");
+
+   ("--funstats", Arg.Set funstats, "more statistics on functions")
   ]
 
 type counters = 
@@ -320,7 +324,8 @@ let _ =
       Newspeak.visit (collector :> Newspeak.visitor) prog;
       print_endline (collector#to_string !verbose);
       Maxcount.print max_stats;
-      if !graphs then collector#gen_graphs !output
+      if !graphs then collector#gen_graphs !output;
+      if !funstats then Funstats.collect prog
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0

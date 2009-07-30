@@ -66,7 +66,7 @@ $(TESTS): %: $(PREREQ)
 	echo $*
 
 $(TESTS.SPEC): %.spec: $(PREREQ)
-	$(COMMAND) &> $*.spec; true
+	$(COMMAND) > $*.spec 2>&1; true
 	cat $*.spec
 
 clean:
