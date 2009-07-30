@@ -824,8 +824,17 @@ and normalization compil_unit extern =
     match instr with
     | NullInstr    -> []
     | ReturnSimple -> [Ast.ReturnSimple, loc]
-    | Assign(lv, Aggregate (bare_assoc_list)) ->
+    | Assign(lv, Aggregate (NamedAggregate bare_assoc_list)) ->
         normalize_assign_aggregate lv bare_assoc_list loc
+    | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
+        let (lv', t_lv) = normalize_lval lv in
+        let (_tc, ti)   = T.extract_array_types t_lv in
+        let all_values  = T.all_values ti in
+        List.map2 (fun type_val exp -> 
+          let k = insert_constant type_val in
+          let v = normalize_exp exp in
+          Ast.Assign (Ast.ArrayAccess (lv', k), v), loc
+        ) all_values exp_list
     | Assign(lv, exp) ->
         begin
           let (lv', t_lv) = normalize_lval lv in

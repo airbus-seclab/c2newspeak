@@ -527,8 +527,13 @@ expression :
                                         }
 | name {SName(fst $1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
-| LPAR aggregate_association_list RPAR {Aggregate $2}
+| LPAR aggregate_association_list RPAR {Aggregate (NamedAggregate $2)}
+| LPAR expression_list            RPAR {Aggregate (PositionalAggregate $2)} 
 ;
+
+expression_list:
+| expression                       {$1::[]}
+| expression COMMA expression_list {$1::$3}
 
 aggregate_association_list:
 | exp_or_others ARROW expression                                  {($1, $3)::[]}

@@ -96,8 +96,12 @@ and expression =
   | Qualified    of name
                   * expression
   | Attribute    of name * string * expression option
-  | Aggregate    of (expression option * expression) list
-                              (* ^__ None means "others" *)
+  | Aggregate    of aggregate
+
+and aggregate =
+  | NamedAggregate of (expression option * expression) list
+                                (* ^__ None means "others" *)
+  | PositionalAggregate of (expression list)
 
 (** Constraint *)
 and contrainte =
