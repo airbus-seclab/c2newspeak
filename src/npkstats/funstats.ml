@@ -28,18 +28,50 @@ open Newspeak
 module Set = Set.Make(String)
 
 let collect prog = 
+  let empty = ref Set.empty in
   let pure = ref Set.empty in
   let other = ref Set.empty in
 
-  let sort_function f (_, blk) =
-    match blk with
-	[] -> pure := Set.add f !pure
-      | _ -> other := Set.add f !other
+  let rec process_lval lv =
+    match lv with
+	(* Assumes local do not *)
+	Local _ -> true
+      | _ -> false
+
+  and process_exp e =
+    match e with
+	Const _ -> true
+      | Lval (lv, _) -> process_lval lv
+      | _ -> false
+  in
+
+  let process_stmtkind x =
+    match x with
+	Set (lv, e, _) -> (process_lval lv) && (process_exp e)
+      | _ -> false
+  in
+    
+  let rec process_blk x = 
+    match x with
+	(hd, _)::tl -> (process_stmtkind hd) && (process_blk tl)
+      | [] -> true
+  in
+
+  let process_fundec f (_, blk) =
+    let tbl =
+      match blk with
+	  [] -> empty
+	| _ -> if (process_blk blk) then pure else other
+    in
+      tbl := Set.add f !tbl
   in
   
-    Hashtbl.iter sort_function prog.fundecs;
+    Hashtbl.iter process_fundec prog.fundecs;
+    let empty_nb = Set.cardinal !empty in
     let pure_nb = Set.cardinal !pure in
     let other_nb = Set.cardinal !other in
+      if empty_nb <> 0 
+      then print_endline ("Empty functions: "^string_of_int empty_nb);
       if pure_nb <> 0 
       then print_endline ("Pure functions: "^string_of_int pure_nb);
       if other_nb <> 0 then begin
