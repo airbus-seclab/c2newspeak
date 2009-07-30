@@ -824,14 +824,8 @@ and normalization compil_unit extern =
     match instr with
     | NullInstr    -> []
     | ReturnSimple -> [Ast.ReturnSimple, loc]
-    | Assign(lv, Aggregate assoc_list) ->
-        List.map (fun (aggr_k, aggr_v) ->
-          (* id[aggr_k] <- aggr_v *)
-          let key   = normalize_exp aggr_k in
-          let value = normalize_exp aggr_v in
-          let (lv', _)   = normalize_lval lv in
-          Ast.Assign (Ast.ArrayAccess (lv', key), value), loc
-        ) assoc_list;
+    | Assign(lv, Aggregate (bare_assoc_list)) ->
+        normalize_assign_aggregate lv bare_assoc_list loc
     | Assign(lv, exp) ->
         begin
           let (lv', t_lv) = normalize_lval lv in
@@ -919,6 +913,70 @@ and normalization compil_unit extern =
                         let init_stmts = List.map build_init_stmt init in
                         let ctx = Sym.exit_context gtbl in
                         [Ast.Block (ndp, ctx, init_stmts@norm_block), loc]
+
+  and normalize_assign_aggregate lv bare_assoc_list loc =
+    let module ValSet = Set.Make (
+      struct 
+        type t = T.data_t
+        let compare = Pervasives.compare
+      end
+    ) in
+    (*
+     * From bare_assoc_list : (exp option * exp) list
+     * we want to build some assoc_list : (exp * exp) list * exp option.
+     * In this step we can check that :
+     *   - there is at most one others clause.
+     *   - if present, it is the last one.
+     *)
+    let (assoc_list, others_opt) =
+      List.fold_left (fun (kvl, others_exp) (exp_option, value) ->
+        match exp_option with
+        | Some e ->
+            begin
+              if others_exp <> None then
+                Npkcontext.report_error "normalize"
+                "In an aggregate, \"others\" shall be the last clause";
+              ((e, value)::kvl, None)
+            end
+        | None ->
+            begin
+              if others_exp <> None then
+                Npkcontext.report_error "normalize"
+                "In an aggregate, there shall be only one \"others\" clause";
+              (kvl, Some value)
+            end
+      ) ([],None) bare_assoc_list
+    in
+    (*
+     * Now, using lv's type, we can :
+     *   - compute missing elements
+     *   - replace 'others' with them
+     *)
+    let (lv', t_lv) = normalize_lval lv in
+    let (_tc, ti)   = T.extract_array_types t_lv in
+    let other_list = match others_opt with
+      | None         -> []
+      | Some oth_exp ->
+          begin
+            let all_values  = T.all_values ti in
+            let mk_set l = List.fold_left (fun x y -> ValSet.add y x) ValSet.empty l in
+            let all_values_set = mk_set all_values in
+            let defined_values_set = mk_set
+                (List.map (fun x -> Eval.eval_static (normalize_exp (fst x)) gtbl) assoc_list) in
+            let missing_others = ValSet.elements (ValSet.diff all_values_set defined_values_set) in
+            List.rev_map (function
+                        | T.IntVal   x -> (CInt   x, oth_exp)
+                        | T.FloatVal x -> (CFloat x, oth_exp)
+                        | T.BoolVal  x -> (CBool  x, oth_exp)
+                     ) missing_others
+          end
+    in
+    List.rev_map (fun (aggr_k, aggr_v) ->
+      (* id[aggr_k] <- aggr_v *)
+      let key   = normalize_exp aggr_k in
+      let value = normalize_exp aggr_v in
+      Ast.Assign (Ast.ArrayAccess (lv', key), value), loc
+    ) (other_list@assoc_list)
 
   and normalize_block ?return_type block =
     List.flatten (List.map (fun x -> normalize_instr ?return_type x) block)

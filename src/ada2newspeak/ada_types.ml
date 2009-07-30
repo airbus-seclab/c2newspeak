@@ -400,6 +400,15 @@ let compute_constr t =
                                         )
     | _ -> None
 
+let all_values typ =
+  let rec interval a b =
+    if (Newspeak.Nat.compare b a < 0) then []
+    else IntVal a::(interval (Newspeak.Nat.add_int 1 a) b)
+  in
+  match (compute_constr typ) with
+    | Some (a, b) -> interval a b
+    | None -> Npkcontext.report_error "length_of" "Type has infinite values"
+
 
 (****************
  *  Translator  *

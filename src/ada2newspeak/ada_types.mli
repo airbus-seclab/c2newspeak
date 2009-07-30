@@ -114,6 +114,9 @@ val record_field : t -> string -> int * t
  *)
 val coerce_types : t -> t -> t
 
+(* For finite types (suitable as array indexes) *)
+val all_values : t -> data_t list
+
 (**
  * Pretty-printer for types.
  * Type references (parents, ...) are displayed hashed for brievity's sake.

@@ -526,13 +526,18 @@ expression :
                                         }
 | name {SName(fst $1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
-| LPAR aggregate_association_list RPAR {Aggregate $2 }
+| LPAR aggregate_association_list RPAR {Aggregate $2}
 ;
 
 aggregate_association_list:
-| expression ARROW expression                                  {($1, $3)::[]}
-| expression ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
+| expression_or_others ARROW expression                             {($1, $3)::[]}
+| expression_or_others ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
 ;
+
+expression_or_others:
+| expression {Some $1}
+| OTHERS     {None   }
+;;
 
 subtyp_indication :
 | subtyp RANGE contrainte {$1, Some $3}
