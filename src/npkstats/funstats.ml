@@ -50,6 +50,7 @@ let write_env (g, l) env =
       glb_write = GlbSet.union g env.glb_write;
       loc_write = LocSet.union l env.loc_write 
   }
+
 let read_env (g, l) env = 
   { 
     env with 
@@ -57,12 +58,22 @@ let read_env (g, l) env =
       loc_read = LocSet.union l env.loc_read
   }
 
-let join_env env1 env2 = {
-  env1 with
-    glb_read = GlbSet.union env1.glb_read env2.glb_read;
-    glb_write = GlbSet.union env1.glb_write env2.glb_write;
-    loc_read = LocSet.union env1.loc_read env2.loc_read;
-    loc_write = LocSet.union env1.loc_write env2.loc_write
+let shift_loc n x =
+  let res = ref LocSet.empty in
+  let shift v = res := LocSet.add (v - n) !res in
+    LocSet.iter shift x;
+    !res
+  
+
+let call_env env env_f = 
+  let loc_read = shift_loc env.height env_f.loc_read in
+  let loc_write = shift_loc env.height env_f.loc_write in
+  {
+  env with
+    glb_read = GlbSet.union env.glb_read env_f.glb_read;
+    glb_write = GlbSet.union env.glb_write env_f.glb_write;
+    loc_read = LocSet.union env.loc_read loc_read;
+    loc_write = LocSet.union env.loc_write loc_write
 }
 
 let global_is_used env = 
@@ -108,7 +119,8 @@ let print_results funtbl =
 		       ^string_of_int !global_nb)
       end;
       if !deref_nb <> 0 then begin
-	print_endline ("Functions that deref locals: "^string_of_int !deref_nb)
+	print_endline ("Functions that deref arguments: "
+		       ^string_of_int !deref_nb)
       end;
       if !other_nb <> 0 then begin
   	print_endline "Remaining functions: ";
@@ -174,8 +186,8 @@ let collect prog =
       | Call FunId f -> begin
 	  match process_fun f with
 	      Empty | Pure -> env
-	    | Globals env_f -> join_env env env_f
-	    | LocDeref _ -> raise Exit
+	    | Globals env_f -> call_env env env_f
+	    | LocDeref env_f -> call_env env env_f
 	    | Other -> raise Exit
 	end
       | InfLoop body -> process_blk env body

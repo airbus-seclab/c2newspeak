@@ -12,4 +12,4 @@ Maximum number of variables on the stack: 0
 Maximum height of the stack (bytes): 0
 Maximum depth of function calls: 1
 Maximum depth of imbricated loops: 0
-Functions that deref locals: 1
+Functions that deref arguments: 1
