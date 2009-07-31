@@ -135,6 +135,7 @@ and basic_declaration =
   | ObjectDecl      of string
                      * Ada_types.t
                      * object_state
+                     * block option
   | SpecDecl        of spec
   | NumberDecl      of string
                      * Ada_types.data_t
@@ -159,7 +160,6 @@ and sub_program_spec =
 and package_spec = string
                  * (basic_declaration*Newspeak.location) list
                  * Symboltbl.context
-                 * (string * expression) list (* initializers *)
 
 type compilation_unit = context_clause list
                       * library_item

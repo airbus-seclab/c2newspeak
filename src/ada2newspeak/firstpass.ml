@@ -87,31 +87,11 @@ let translate compil_unit =
   let init      = ref []            in
   let gtbl = Sym.create ()          in
 
-  let (add_global_init, get_global_init) =
-    let global_init = Hashtbl.create 0
-    in
-    (fun id exp -> Npkcontext.print_debug ("add_global_init ("^id^")");
-                   Hashtbl.add global_init id exp)
-    ,
-    (fun id ->
-       let str="get_global_init ("^id^") : " in
-       try
-         let r = Hashtbl.find global_init id in
-         Npkcontext.print_debug (str^"got value");
-         Some r
-       with Not_found -> Npkcontext.print_debug (str^"no value") ;None
-    )
-  in
-
   let normalize_ident ident package extern =
     if extern then (package, ident)
               else (None   , ident)
   in
 
-  (* fonctions de traduction des noms*)
-  (* on ajoute le nom du package courant dans le cas ou on
-     etudie les declarations internes *)
-  (* fonction appelee dans add_fundecl, add_funbody, add_global *)
   let translate_name (pack,id) =
     (*
     let tr_name =
@@ -128,21 +108,6 @@ let translate compil_unit =
       string_of_name tr_name
   in
 
-  (* gestion de la table de symboles *)
-
-  let add_global loc tr_typ i x =
-    let name = normalize_ident x (Sym.current gtbl) (extern ()) in
-    let tr_name = translate_name name in
-    let storage = match i with
-      | None -> Npkil.Declared false
-      | Some (e, t) ->
-          begin
-            init := (C.Set (C.Global tr_name, t, e), loc)::!init;
-            Npkil.Declared true
-          end
-    in
-    Hashtbl.add globals tr_name (tr_typ, loc, storage)
-  in
 
   (** Used to generate temporary variables. *)
   let temp =
@@ -422,26 +387,26 @@ let translate compil_unit =
              end
 
            | Case (e, choices, default) ->
-                         (C.Switch(fst(translate_exp e),
-                               (List.map (function exp,block ->
-                                   let (value,typ) = translate_exp exp in
-                                   ( value
-                                   , C.scalar_of_typ (T.translate typ)
-                                   )
-                                   , translate_block block
-                               ) choices),
-                                 translate_block
-                                   (Ada_utils.with_default default [])
-                                 ),loc)::(translate_block r)
+                   (C.Switch(fst(translate_exp e),
+                         (List.map (function exp,block ->
+                             let (value,typ) = translate_exp exp in
+                             ( value
+                             , C.scalar_of_typ (T.translate typ)
+                             )
+                             , translate_block block
+                         ) choices),
+                           translate_block
+                             (Ada_utils.with_default default [])
+                           ),loc)::(translate_block r)
             | Block (dp, ctx, blk) ->
-                          Sym.push_saved_context gtbl ctx;
-                          translate_declarative_part dp;
-                          let t_ctx = translate_saved_context ctx in
-                          let res = (C.Block ((t_ctx@(translate_block blk)),
-                                         None),loc) in
-                          let r = res::(translate_block r) in
-                          ignore (Sym.exit_context gtbl);
-                          r
+                   Sym.push_saved_context gtbl ctx;
+                   let init = translate_declarative_part dp in
+                   let t_ctx = translate_saved_context ctx in
+                   let res = (C.Block ((t_ctx@(translate_block (init@blk))),
+                                  None),loc) in
+                   let r = res::(translate_block r) in
+                   ignore (Sym.exit_context gtbl);
+                   r
             end
 
   and translate_param param = match param.mode with
@@ -477,12 +442,13 @@ let translate compil_unit =
     translate_sub_program_spec subprogspec
 
   and translate_basic_declaration basic = match basic with
-    | ObjectDecl _ -> ()
+    | ObjectDecl (_,_,_,Some init_blk) -> init_blk
+    | ObjectDecl (_,_,_,None) -> []
     | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | NumberDecl _ -> ()
+    | NumberDecl _ -> []
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
@@ -492,21 +458,21 @@ let translate compil_unit =
             "sous-fonction, sous-procedure ou sous package non implemente"
 
   and translate_declarative_part decl_part =
-    List.iter translate_declarative_item decl_part
+    List.fold_left (fun blk dp ->
+      blk @translate_declarative_item dp
+    ) [] decl_part
 
   and add_funbody subprogspec decl_part ctx_dp ctx_param block loc =
     let name = match subprogspec with
       | Function (n,_,_) -> n
       | Procedure(n,_)   -> n in
-
     let (_, (ret_id, args_ids)) = add_params subprogspec loc in
     Sym.push_saved_context gtbl ctx_param;
     Sym.push_saved_context gtbl ctx_dp;
-    translate_declarative_part decl_part;
-
+    let init = translate_declarative_part decl_part in
     let ftyp = add_fundecl subprogspec in
     let body_decl = translate_saved_context ctx_dp in
-    let body = translate_block block in
+    let body = translate_block (init@block) in
     let mangle_sname = function
       | []       -> failwith "unreachable @ firstpass:mangle_sname"
       | x::[]    -> None  , x
@@ -522,44 +488,52 @@ let translate compil_unit =
 
   in
 
+  let add_global loc tr_typ i x =
+    let name = normalize_ident x (Sym.current gtbl) (extern ()) in
+    let tr_name = translate_name name in
+    let storage = match i with
+      | None -> Npkil.Declared false
+      | Some init_stmt ->
+          begin
+            init := (translate_block init_stmt)@(!init);
+            Npkil.Declared true
+          end
+    in
+    Hashtbl.add globals tr_name (tr_typ, loc, storage)
+  in
+
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(ident, subtyp, _) ->
-          let init = get_global_init ident in
+      | ObjectDecl(ident, subtyp, _, init_o) ->
           let tr_typ = T.translate subtyp in
           let init =
-            match (init, extern ()) with
-                    | (_, true) | (None, _) -> None
-                    | (Some exp, false) ->
-            let (e, _) = translate_exp exp in
-              Some (e, tr_typ)
-             in
-            add_global loc tr_typ init ident
+            begin
+            match (init_o, extern ()) with
+              | (_, true) | (None, _) -> None
+              | (Some blk, false) ->
+                  Some blk
+            end
+          in
+          add_global loc tr_typ init ident
       | SpecDecl spec -> translate_spec spec false
       | NumberDecl _ -> ()
 
-  (* quand cette fonction est appelee, on est dans le corps d'un
-     package *)
   and translate_global_decl_item (item,loc) =
     Npkcontext.set_loc loc;
     match item with
       | BasicDecl(basic) ->
           translate_global_basic_declaration (basic, loc)
-
       | BodyDecl(body) -> translate_body body false loc
 
   and translate_spec spec glob = match spec with
-
     | SubProgramSpec(subprog_spec) ->
         ignore (add_fundecl subprog_spec )
-
-    | PackageSpec (nom, basic_decl_list, _ctx, init) ->
+    | PackageSpec (nom, basic_decl_list, _ctx) ->
         if (not glob) then begin
     Npkcontext.report_error "Firstpass.translate_spec"
             "declaration de sous package non implemente"
         end;
         Sym.set_current gtbl nom;
-        List.iter (fun (id, exp) -> add_global_init id exp) init;
         List.iter translate_global_basic_declaration basic_decl_list;
         Sym.reset_current gtbl;
         if extern () then Sym.add_with gtbl nom
@@ -574,10 +548,9 @@ let translate compil_unit =
           Sym.push_saved_context gtbl ctx;
           (match package_spec with
              | None -> ()
-             | Some(_, basic_decls, ctx, init) ->
+             | Some(_, basic_decls, ctx) ->
                  begin
                    Sym.push_saved_context gtbl ctx;
-                   List.iter (fun (id, exp) -> add_global_init id exp) init;
                    List.iter translate_global_basic_declaration basic_decls;
                    ignore (Sym.exit_context gtbl)
                  end
