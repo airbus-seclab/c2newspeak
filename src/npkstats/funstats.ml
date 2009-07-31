@@ -125,6 +125,7 @@ let collect prog =
 		read_globals := Set.union read !read_globals
 	    | Other -> raise Exit
 	end
+      | InfLoop body -> process_blk body
       | _ -> raise Exit
     
   and process_blk x = 
