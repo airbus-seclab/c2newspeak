@@ -133,16 +133,26 @@ let collect prog =
 
   let rec process_lval env lv =
     match lv with
-	(* Assumes local do not *)
 	Local _ -> ((GlbSet.empty, LocSet.empty), (GlbSet.empty, LocSet.empty))
       | Global x -> 
 	  ((GlbSet.singleton x, LocSet.empty), (GlbSet.empty, LocSet.empty))
-      | Deref (Lval (Local x, _), _) -> 
-	  ((GlbSet.empty, LocSet.singleton (env.height - x)), 
-	   (GlbSet.empty, LocSet.empty))
+      | Deref (e, _) -> 
+	  let ((g, l), r) = process_exp_as_ptr env e in
+	    if not (GlbSet.is_empty g) then raise Exit;
+	    ((g, l), r)
       | Shift (lv, e) -> 
 	  let (a, (glb1, loc1)) = process_lval env lv in
 	  let (glb2, loc2) = process_exp env e in
+	    (a, (GlbSet.union glb1 glb2, LocSet.union loc1 loc2))
+
+  and process_exp_as_ptr env e =
+    match e with
+	Lval (Local x, _) -> 
+	  ((GlbSet.empty, LocSet.singleton (env.height - x)), 
+	   (GlbSet.empty, LocSet.empty))
+      | BinOp (PlusPI, e1, e2) ->
+	  let (a, (glb1, loc1)) = process_exp_as_ptr env e1 in
+	  let (glb2, loc2) = process_exp env e2 in
 	    (a, (GlbSet.union glb1 glb2, LocSet.union loc1 loc2))
       | _ -> raise Exit
 
