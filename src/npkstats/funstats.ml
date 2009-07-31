@@ -122,16 +122,24 @@ let collect prog =
   let rec process_lval env lv =
     match lv with
 	(* Assumes local do not *)
-	Local _ -> (GlbSet.empty, LocSet.empty)
-      | Global x -> (GlbSet.singleton x, LocSet.empty)
+	Local _ -> ((GlbSet.empty, LocSet.empty), (GlbSet.empty, LocSet.empty))
+      | Global x -> 
+	  ((GlbSet.singleton x, LocSet.empty), (GlbSet.empty, LocSet.empty))
       | Deref (Lval (Local x, _), _) -> 
-	  (GlbSet.empty, LocSet.singleton (env.height - x))
+	  ((GlbSet.empty, LocSet.singleton (env.height - x)), 
+	   (GlbSet.empty, LocSet.empty))
+      | Shift (lv, e) -> 
+	  let (a, (glb1, loc1)) = process_lval env lv in
+	  let (glb2, loc2) = process_exp env e in
+	    (a, (GlbSet.union glb1 glb2, LocSet.union loc1 loc2))
       | _ -> raise Exit
 
   and process_exp env e =
     match e with
 	Const _ -> (GlbSet.empty, LocSet.empty)
-      | Lval (lv, _) -> process_lval env lv
+      | Lval (lv, _) -> 
+	  let ((glb1, loc1), (glb2, loc2)) = process_lval env lv in
+	    (GlbSet.union glb1 glb2, LocSet.union loc1 loc2)
       | UnOp ((PtrToInt _|IntToPtr _|Cast _|Not), e) -> process_exp env e
       | BinOp ((Eq _|Gt _), e1, e2) -> 
 	  let (glb1, loc1) = process_exp env e1 in
@@ -143,7 +151,9 @@ let collect prog =
   let rec process_stmtkind env x =
     match x with
 	Set (lv, e, _) -> 
-	  let env = write_env (process_lval env lv) env in
+	  let (a, r) = process_lval env lv in
+	  let env = write_env a env in
+	  let env = read_env r env in
 	    read_env (process_exp env e) env
       | Decl (_, _, body) -> 
 	  let env = { env with height = env.height + 1 } in
