@@ -142,7 +142,7 @@ let collect prog =
 	    (GlbSet.union glb1 glb2, LocSet.union loc1 loc2)
       | UnOp ((Coerce _|PtrToInt _|IntToPtr _|Cast _|Not), e) -> 
 	  process_exp env e
-      | BinOp ((Eq _|Gt _|PlusI|MinusI), e1, e2) -> 
+      | BinOp ((Eq _|Gt _|PlusI|MinusI|PlusPI), e1, e2) -> 
 	  let (glb1, loc1) = process_exp env e1 in
 	  let (glb2, loc2) = process_exp env e2 in
 	    (GlbSet.union glb1 glb2, LocSet.union loc1 loc2)
