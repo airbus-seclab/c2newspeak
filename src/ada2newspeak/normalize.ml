@@ -651,6 +651,17 @@ let normalize_typ_decl ident typ_decl loc =
       let component =          prepare c in
       let t = T.new_array ~component ~index in
       Sym.add_type gtbl ident loc t
+  | Access stn ->
+      (*
+       * let te = subtyp_to_adatyp stn in
+       * let t = T.new_access te in
+       *)
+      ignore stn;
+      let t = T.new_unknown "access type" in
+      Sym.add_type gtbl ident loc t
+
+
+      
 
 (*
  * renvoie la specification normalisee du package correspondant

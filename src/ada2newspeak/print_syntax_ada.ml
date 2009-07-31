@@ -97,6 +97,7 @@ let rec typ_declaration_to_string typ_decl = match typ_decl with
   | Record r -> "Record("^(list_to_string r record_component_to_string
                                           ", " false)
   | Array _ -> "Array(...)"
+  | Access _ -> "Access(...)"
 
 and record_component_to_string (c,st) =
   c ^ " => " ^ name_to_string st

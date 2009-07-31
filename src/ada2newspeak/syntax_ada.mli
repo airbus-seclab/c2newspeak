@@ -71,6 +71,7 @@ type typ_declaration =
   | Record       of (string*subtyp) list
   | Array        of subtyp_indication list (* Indices   *)
                   * subtyp_indication      (* Component *)
+  | Access       of subtyp
 
 and subtyp = name
 

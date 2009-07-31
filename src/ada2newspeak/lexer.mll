@@ -119,7 +119,8 @@
   let lex_word (w:string) (l:Newspeak.location) :token =
     let lw = String.lowercase w in
     match lw with
-    | "abs"        -> ABS       l | "and"        -> AND       l
+    | "abs"        -> ABS       l | "access"     -> ACCESS    l
+    | "all"        -> ALL       l | "and"        -> AND       l
     | "array"      -> ARRAY     l | "at"         -> AT        l
     | "begin"      -> BEGIN     l | "body"       -> BODY      l
     | "case"       -> CASE      l | "constant"   -> CONSTANT  l

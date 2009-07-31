@@ -118,20 +118,21 @@ let make_range exp_b_inf exp_b_sup =
 %token <Newspeak.location*string>         CONST_STRING
 %token <Newspeak.location*string>         IDENT
 
-%token <Newspeak.location> ABS     AND        ARRAY   ARROW     ASSIGN
-%token <Newspeak.location> AT      BEGIN      BODY    CASE      COLON
-%token <Newspeak.location> COMMA   CONSTANT   DECLARE DIGITS    DIV
-%token <Newspeak.location> DOT     DOUBLE_DOT ELSE    ELSIF     END
-%token <Newspeak.location> EQ      EXIT       FALSE   FOR       FUNCTION
-%token <Newspeak.location> GE      GT         IF      IN        IS
-%token <Newspeak.location> LE      LOOP       LPAR    LT        MINUS
-%token <Newspeak.location> MOD     MULT       NE      NEW       NOT
-%token <Newspeak.location> NULL    OF         OR      OTHERS    OUT
-%token <Newspeak.location> PACKAGE PLUS       POW     PRAGMA    PROCEDURE
-%token <Newspeak.location> QUOTE   RANGE      RECORD  REM       RENAMES
-%token <Newspeak.location> RETURN  REVERSE    RPAR    SEMICOLON SUBTYPE
-%token <Newspeak.location> THEN    TRUE       TYPE    USE       VBAR
-%token <Newspeak.location> WHEN    WHILE      WITH    XOR
+%token <Newspeak.location> ABS       ACCESS    ALL     AND        ARRAY
+%token <Newspeak.location> ARROW     ASSIGN    AT      BEGIN      BODY
+%token <Newspeak.location> CASE      COLON     COMMA   CONSTANT   DECLARE
+%token <Newspeak.location> DIGITS    DIV       DOT     DOUBLE_DOT ELSE
+%token <Newspeak.location> ELSIF     END       EQ      EXIT       FALSE
+%token <Newspeak.location> FOR       FUNCTION  GE      GT         IF
+%token <Newspeak.location> IN        IS        LE      LOOP       LPAR
+%token <Newspeak.location> LT        MINUS     MOD     MULT       NE
+%token <Newspeak.location> NEW       NOT       NULL    OF         OR
+%token <Newspeak.location> OTHERS    OUT       PACKAGE PLUS       POW
+%token <Newspeak.location> PRAGMA    PROCEDURE QUOTE   RANGE      RECORD
+%token <Newspeak.location> REM       RENAMES   RETURN  REVERSE    RPAR
+%token <Newspeak.location> SEMICOLON SUBTYPE   THEN    TRUE       TYPE
+%token <Newspeak.location> USE       VBAR      WHEN    WHILE      WITH
+%token <Newspeak.location> XOR
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
@@ -313,6 +314,7 @@ basic_declaration :
                                                           ,Record $4
                                                           )
                                                  ,$1}
+| TYPE ident IS ACCESS name SEMICOLON {TypeDecl ($2, Access (fst $5)), $1}
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
