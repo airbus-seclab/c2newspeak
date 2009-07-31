@@ -21,7 +21,7 @@
 #  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 #  email: charles.hymans@penjili.org
 
-COMMAND=$(C2NEWSPEAK) $*.c &> /dev/null; \
+COMMAND=$(C2NEWSPEAK) $*.c > /dev/null 2>&1; \
         $(NPKCHECK) `[ -e $*.in ] && cat $*.in` a.npk
 TESTS=000 001 002 003 004 005 006 007 008
 PREREQ=%.c
