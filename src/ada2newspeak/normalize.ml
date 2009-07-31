@@ -728,19 +728,6 @@ and normalization compil_unit extern =
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
   in
-  let build_init_stmt (x,exp,ty,loc) =
-    match exp with None -> None
-    | Some def ->
-        let (sc, (t,_)) = Sym.find_variable gtbl (None,x) in
-        let (ne, te) = normalize_exp ~expected_type:ty def in
-        Some [Ast.Assign(Ast.Lval ( sc
-                                  , x
-                                  , t)
-                        , (ne,te)
-                        )
-              , loc
-        ]
-  in
   let rec normalize_basic_decl item loc =
     match item with
     | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
@@ -753,31 +740,36 @@ and normalization compil_unit extern =
           Ast.ObjectDecl( ident
                         , t
                         , Ast.Variable
-                        , build_init_stmt (ident, def, t, loc)
+                        , build_init_stmt (ident, def, loc)
                         )
         ) ident_list
     | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
         let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
         let t = merge_types norm_subtyp_ind in
-        let normexp = normalize_exp ~expected_type:t exp in
-        let status =
-          try
-            let value = Eval.eval_static normexp gtbl in
-              List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
-                        ident_list;
-              Ast.StaticVal value
-          with
-            | Eval.NonStaticExpression -> List.iter
-                                      (fun x -> Sym.add_variable gtbl x loc t
-                                      ) ident_list;
-                                      Ast.Constant
-
+        let status = begin
+          match exp with
+          | Aggregate _ ->
+              List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+              Ast.Constant
+          | _ ->
+            try
+              let normexp = normalize_exp ~expected_type:t exp in
+              let value = Eval.eval_static normexp gtbl in
+                List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
+                          ident_list;
+                Ast.StaticVal value
+            with
+              | Eval.NonStaticExpression -> List.iter
+                                        (fun x -> Sym.add_variable gtbl x loc t
+                                        ) ident_list;
+                                        Ast.Constant
+        end
         in
           List.map (fun ident ->
             Ast.ObjectDecl( ident
                           , t
                           , status
-                          , build_init_stmt (ident, Some exp, t, loc)
+                          , build_init_stmt (ident, Some exp, loc)
                           )
           ) ident_list
     | ObjectDecl _ -> Npkcontext.report_error
@@ -833,16 +825,17 @@ and normalization compil_unit extern =
     | PackageSpec(package_spec) ->
         Ast.PackageSpec(normalize_package_spec package_spec)
 
-  and normalize_lval = function
+  and normalize_lval ?(force=false) = function
     | SelectedLval n ->
         begin match resolve_selected n with
-        | SelectedVar    (sc, id,  t,  false) -> Ast.Lval (sc, id, t), t
+        | SelectedVar    (sc, id,  t, ro) ->
+            if (ro && not force) then
+            Npkcontext.report_error "normalize_instr"
+               ("Invalid left value : '"^sname_to_string n^"' is read-only");
+            Ast.Lval (sc, id, t), t
         | SelectedRecord (id, tr, off, tf) ->
             let lv = Ast.Lval (Sym.Lexical, id, tr) in
             Ast.RecordAccess (lv, off, tf), tf
-        | SelectedVar    (_, _, _, true) ->
-            Npkcontext.report_error "normalize_instr"
-               ("Invalid left value : '"^sname_to_string n^"' is read-only")
         | SelectedFCall _
         | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
                                ("Invalid left-value : '"^sname_to_string n^"'")
@@ -851,13 +844,19 @@ and normalization compil_unit extern =
         let (lv',t) = normalize_lval lv in
         Ast.ArrayAccess(lv' , normalize_exp e), t
 
+  and build_init_stmt (x,exp,loc) =
+    match exp with
+    | None -> None
+    | Some def ->
+        Some (normalize_block ~force_lval:true [Assign(SelectedLval [x], def), loc])
+
   (**
    * The optional parameter return_type helps disambiguate return_statements :
    * while translating a block in a function, it is set to this function's
    * return type.
    * When translating other blocks, it shall be set to None.
    *)
-  and normalize_instr ?return_type (instr,loc) =
+  and normalize_instr ?return_type ?(force_lval=false) (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
     | NullInstr    -> []
@@ -875,7 +874,7 @@ and normalization compil_unit extern =
         ) all_values exp_list
     | Assign(lv, exp) ->
         begin
-          let (lv', t_lv) = normalize_lval lv in
+          let (lv', t_lv) = normalize_lval ~force:force_lval lv in
           let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
           if (not (T.is_compatible t_lv t_exp)) then
             begin
@@ -1040,8 +1039,8 @@ and normalization compil_unit extern =
       Ast.Assign (Ast.ArrayAccess (lv', key), value), loc
     ) (other_list@assoc_list)
 
-  and normalize_block ?return_type block =
-    List.flatten (List.map (fun x -> normalize_instr ?return_type x) block)
+  and normalize_block ?return_type ?(force_lval=false) block =
+    List.flatten (List.map (fun x -> normalize_instr ?return_type ~force_lval x) block)
 
   and normalize_decl_part decl_part =
     let represtbl = Hashtbl.create 50 in
