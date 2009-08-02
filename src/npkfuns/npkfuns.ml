@@ -44,6 +44,7 @@ module Set = Set.Make(String)
 let process prog =
   let funtbl = Hashtbl.create 100 in
   let todo = Queue.create () in
+  let unknown_funs = ref Set.empty in
 
   let init_fun f _ = 
     Hashtbl.add funtbl f (Some Set.empty, Set.empty);
@@ -67,6 +68,20 @@ let process prog =
 		    Set.iter (fun x -> Queue.add x todo) preds
   in
 
+  let get_fun f =
+    try
+      let (used, _) = Hashtbl.find funtbl f in
+	match used with
+	    Some used -> used
+	  | None -> raise Exit
+    with Not_found -> 
+      if not (Set.mem f !unknown_funs) then begin
+	unknown_funs := Set.add f !unknown_funs;
+	print_endline ("unknown function "^f^", assuming no global is modified")
+      end;
+      Set.empty
+  in
+
   let print_fun f (used, _) =
     let used = 
       match used with
@@ -82,7 +97,8 @@ let process prog =
     match x with
 	Local _ -> Set.empty
       | Global x -> Set.singleton x
-      | _ -> raise Exit
+      | Deref (e, _) -> process_exp e
+      | Shift (lv, e) -> Set.union (process_lval lv) (process_exp e)
 
   and process_exp x =
     match x with
@@ -90,7 +106,9 @@ let process prog =
       | UnOp (_, e) -> process_exp e
       | BinOp (_, e1, e2) -> Set.union (process_exp e1) (process_exp e2)
       | Lval (lv, _) -> process_lval lv
-      | _ -> raise Exit
+	  (* TODO: maybe this case could be more precise *)
+      | AddrOf (lv, _) -> process_lval lv
+      | AddrOfFun _ -> Set.empty
   in
 
   let rec process_blk x =
@@ -101,12 +119,15 @@ let process prog =
   and process_stmtkind x =
     match x with
 	Set (lv, e, _) -> Set.union (process_lval lv) (process_exp e)
+      | Copy (lv1, lv2, _) -> Set.union (process_lval lv1) (process_lval lv2)
+      | Guard e -> process_exp e
       | Decl (_, _, body) -> process_blk body
       | Select (br1, br2) -> Set.union (process_blk br1) (process_blk br2)
-      | Guard e -> process_exp e
+      | InfLoop body -> process_blk body
       | DoWith (body, _, action) -> 
 	  Set.union (process_blk body) (process_blk action)
       | Goto _ -> Set.empty
+      | Call FunId f -> get_fun f
       | _ -> raise Exit
   in
 
