@@ -32,7 +32,7 @@ open Ptrspeak
 *)
 
 (* put in file analysis.ml function run *)      
-let join p1 p2 = List_utils.merge compare p1 p2
+let join p1 p2 = ListUtils.merge compare p1 p2
 let singleton x = x::[]
 let emptyset = []
 let rec is_subset x y =
@@ -42,7 +42,7 @@ let rec is_subset x y =
     | (_::x, _::y) -> is_subset x y
     | _ -> x = []
 let to_string x = 
-  let str = List_utils.to_string (fun x -> x) ", " x in
+  let str = ListUtils.to_string (fun x -> x) ", " x in
     "{ "^str^" }"
 
 let run (fundecs, prog) = 

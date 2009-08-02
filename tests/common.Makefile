@@ -27,6 +27,7 @@ WC=wc -c
 C2NEWSPEAK=../../bin/c2newspeak
 ADA2NEWSPEAK=../../bin/ada2newspeak
 NPKSTATS=../../bin/npkstats
+NPKFUNS=../../bin/npkfuns
 NPKFLOW=../../bin/npkflow
 NPKSTRIP=../../bin/npkstrip --newspeak
 NPK2BYTESZ = ../../bin/npk2bytesz --newspeak

@@ -24,16 +24,9 @@
 # email: charles.hymans@penjili.org
 #
 
-DIR=c2newspeak mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck \
-    npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns
+TARGET=npkfuns
+DIRS=newspeak/ utils/ npkfuns/
+FILES=version utils/listUtils newspeak/newspeak npkfuns/npkfuns
+LIBX=nums.cmxa
 
-.PHONY: $(DIR)
-
-all: $(DIR)
-
-clean: $(DIR)
-
-$(DIR):
-	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
-
+include common.Makefile

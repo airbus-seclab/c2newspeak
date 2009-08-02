@@ -47,7 +47,7 @@ let rec string_of_exp e =
     | Deref e -> "["^(string_of_exp e)^"]"
 
 let string_of_fun f params =
-  let params = List_utils.to_string (fun x -> x) ", " params in
+  let params = ListUtils.to_string (fun x -> x) ", " params in
     f^"("^params^")"
 
 let string_of_stmt x =

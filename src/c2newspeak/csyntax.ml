@@ -394,7 +394,7 @@ let string_of_ftyp margin (args_t, _) =
   let args =
     match args_t with
 	None -> "? -> ret_t"
-      | Some args_t -> List_utils.to_string string_of_arg ", " args_t
+      | Some args_t -> ListUtils.to_string string_of_arg ", " args_t
   in
     "("^args^") -> ret_t"
 
@@ -411,7 +411,7 @@ let string_of_fname (args_t, ret_t) name =
   let args_t = 
     match args_t with
 	None -> ""
-      | Some args_t -> List_utils.to_string string_of_arg_t ", " args_t
+      | Some args_t -> ListUtils.to_string string_of_arg_t ", " args_t
   in
   let ret_t = string_of_typ ret_t in
     ret_t^" "^name^"("^args_t^")"
@@ -439,20 +439,20 @@ let string_of_ftyp = string_of_ftyp ""
 let string_of_exp = string_of_exp ""
 let string_of_blk = string_of_blk ""
 
-let rec size_of globals = List_utils.size_of size_of_global globals
+let rec size_of globals = ListUtils.size_of size_of_global globals
 
 and size_of_global (x, _) =
   match x with
       FunctionDef (_, _, _, body) -> (size_of_blk body) + 1
     | _ -> 1
 
-and size_of_blk x = List_utils.size_of size_of_stmt x
+and size_of_blk x = ListUtils.size_of size_of_stmt x
 
 and size_of_stmt (x, _) =
   match x with
       If (_, br1, br2) -> (size_of_blk br1) + (size_of_blk br2) + 1
     | CSwitch (_, cases, default) -> 
-	1 + (List_utils.size_of size_of_case cases) + (size_of_blk default)
+	1 + (ListUtils.size_of size_of_case cases) + (size_of_blk default)
     | For (init, _, body, final) -> 
 	1 + (size_of_blk init) + (size_of_blk body) + (size_of_blk final)
     | DoWhile (body, _) -> 1 + (size_of_blk body)
