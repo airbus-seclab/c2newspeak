@@ -297,17 +297,17 @@ module Table = struct
 
 (******************************************************************************
  *                                                                            *
- *                            builtin_table                                   *
+ *                            Builtin tables                                  *
  *                                                                            *
  ******************************************************************************)
 
-  let builtin_table = create_table Lexical ~desc:"builtin" Newspeak.unknown_loc
+  let standard_table = create_table Lexical ~desc:"standard" Newspeak.unknown_loc
 
   let system_table  = create_table Lexical ~desc:"system" Newspeak.unknown_loc
 
   let _ =
     begin
-      List.iter (fun (n,t) -> add_type builtin_table n
+      List.iter (fun (n,t) -> add_type standard_table n
                                        Newspeak.unknown_loc
                                        t (In_package "standard"))
       [ "integer"  , T.integer
@@ -351,7 +351,7 @@ module SymMake(TR:Tree.TREE) = struct
     library.t_tbl <- Symset.add (Lexical
                                 ,"standard"
                                 ,Newspeak.unknown_loc
-                                ,Unit builtin_table)
+                                ,Unit standard_table)
                                 library.t_tbl;
     library.t_tbl <- Symset.add (Lexical
                                 ,"system"
@@ -361,7 +361,7 @@ module SymMake(TR:Tree.TREE) = struct
     TR.push library s;
     { s_stack  = s
     ; s_cpkg   = None
-    ; s_with   = ["system"]
+    ; s_with   = ["system";"machine_code";"unchecked_conversion"]
     }
 
   let set_current s x = s.s_cpkg <- Some x
