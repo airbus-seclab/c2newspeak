@@ -240,12 +240,14 @@ let handle_representation_clause _t _l =
 let extract_array_types t =
   match t.base.trait with
   | Array (c, i::[]) -> (c,i)
-  | _                -> invalid_arg "extract_array_types"
+  | _                -> Npkcontext.report_error "extract_array_types"
+                          "assertion (is_array) failed"
 
 let get_reason t =
   match t.base.trait with
   | Unknown r -> r
-  | _ -> invalid_arg "get_reason"
+  | _ -> Npkcontext.report_error "get_reason"
+          "assertion (is_unknown) failed"
 
 let extract_symbols t =
   match t.base.trait with
@@ -261,7 +263,8 @@ let record_field t fld =
                   with Not_found -> Npkcontext.report_error "record_field"
                                          ("No such field : '"^fld^"'")
                 end
-  | _ -> invalid_arg "record_field"
+  | _ -> Npkcontext.report_error "record_field"
+          "assertion (is_record) failed"
 
 (*****************
  * Builtin types *
