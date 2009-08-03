@@ -132,7 +132,7 @@ let rec string_of_typ t =
     | Fun -> "fun"
 
 let string_of_ftyp (args_t, ret_t) =
-  let args_t = List_utils.to_string string_of_typ ", " args_t in
+  let args_t = ListUtils.to_string string_of_typ ", " args_t in
   let ret_t = string_of_typ ret_t in
     "("^args_t^") -> "^ret_t
 
@@ -732,7 +732,7 @@ let rec remove_fst_deref lv =
 	Npkcontext.report_error "Cir.remove_fst_deref" "pointer deref expected"
 
 
-let rec size_of_blk x = List_utils.size_of size_of_stmt x
+let rec size_of_blk x = ListUtils.size_of size_of_stmt x
 
 and size_of_stmt (x, _) = 
   match x with
@@ -742,7 +742,7 @@ and size_of_stmt (x, _) =
     | Loop body -> 1 + (size_of_blk body)
     | Select (br1, br2) -> 1 + (size_of_blk br1) + (size_of_blk br2)
     | Switch (_, cases, default) -> 
-	1 + (List_utils.size_of size_of_case cases) + size_of_blk default
+	1 + (ListUtils.size_of size_of_case cases) + size_of_blk default
     | _ -> 1
 
 and size_of_case (_, body) = size_of_blk body

@@ -479,8 +479,8 @@ and normalize_binop bop e1 e2 =
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type = match (e1, e2) with
           | SName v1 , SName v2 -> Some (Sym.type_ovl_intersection gtbl
-                                                     (List_utils.last v1)
-                                                     (List_utils.last v2))
+                                                     (ListUtils.last v1)
+                                                     (ListUtils.last v2))
           | _      , Qualified (n,_) -> Some (subtyp_to_adatyp n)
           | _               -> None
           in

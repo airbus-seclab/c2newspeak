@@ -394,7 +394,7 @@ let compute_constr t =
         end
     | Enumeration v,_
         when not (is_boolean t) -> let min = snd (List.hd v)         in
-                                   let max = snd (List_utils.last v) in
+                                   let max = snd (ListUtils.last v) in
                                    Some ( Newspeak.Nat.of_int min
                                         , Newspeak.Nat.of_int max
                                         )
@@ -461,7 +461,7 @@ let rec translate t =
                             (Newspeak.Int
                               ( Newspeak.Unsigned
                               , minimal_size_unsigned
-                                 (snd (List_utils.last v))))
+                                 (snd (ListUtils.last v))))
   | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
   | Array        (c,is) -> let i = match is with
                              | [] -> invalid_arg "translate"
@@ -515,7 +515,7 @@ let rec attr_get typ attr =
           | None -> failwith "attr_get"
         end
     | Enumeration v, "first" -> const_int (snd (List.hd v)), typ
-    | Enumeration v, "last"  -> const_int (snd (List_utils.last v)), typ
+    | Enumeration v, "last"  -> const_int (snd (ListUtils.last v)), typ
     | Array (_,inds) , ("first"|"last"|"length")  ->
         begin
           let ind = match inds with

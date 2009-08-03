@@ -47,8 +47,8 @@ let add_counted_call f = fun_to_count := f::!fun_to_count
 let more_verb = ref false
 
 let speclist = 
-  [("--count-call", Arg.String add_counted_call, 
-    "count the number of function calls");
+  [("--count-call fid", Arg.String add_counted_call, 
+    "count the number of calls to function fid");
 
    ("--verbose", Arg.Set verbose, 
     "prints out the detailed statistics for each function");

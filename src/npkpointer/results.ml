@@ -28,7 +28,7 @@ type t = (string, string list) Hashtbl.t
 let print vars g =
   let print_rel x l =
     let x = Hashtbl.find vars x in
-    let l = List_utils.to_string (fun x -> Hashtbl.find vars x) ", " l in
+    let l = ListUtils.to_string (fun x -> Hashtbl.find vars x) ", " l in
       print_endline (x^" -> { "^l^" }")
   in
     print_endline "Points-to relations:";
