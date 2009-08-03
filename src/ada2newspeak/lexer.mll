@@ -198,12 +198,10 @@ let chaine = '"' ([^ '"']|"""")* '"'
 
 (*Nombres*)
 let entier = chiffre ('_'? chiffre)*
-let reel = entier '.' entier
+let real = entier '.' entier
 
 let extended_digit = ['0'-'9' 'a'-'f' 'A'-'F']
 let based_numeral = extended_digit ('_'? extended_digit)*
-
-let litteral_reel = reel
 
 (*commentaires*)
 let commentaire = "--" [^ '\n']*
@@ -246,22 +244,24 @@ rule token = parse
                          ,int_of_char (Lexing.lexeme lexbuf).[1]) }
 
   (* constantes numeriques *)
-  | litteral_reel {CONST_FLOAT (loc_here lexbuf,Lexing.lexeme lexbuf)}
+  | real   {CONST_FLOAT (loc_here lexbuf,Lexing.lexeme lexbuf)}
+  | real ['e' 'E'] (['+''-']?) entier 
+          {CONST_FLOAT (loc_here lexbuf,Lexing.lexeme lexbuf)}
   | entier {CONST_INT (loc_here lexbuf,Newspeak.Nat.of_string(
                                 strip_underscores (Lexing.lexeme lexbuf)))}
   | entier as main_part ['e' 'E'] '+'? (entier as expo)
       {CONST_INT (loc_here lexbuf,
-            Newspeak.Nat.of_int( (int_of_string (strip_underscores main_part))
-                    * (expt_int 10 (int_of_string (strip_underscores expo)))
+            Newspeak.Nat.of_int( (int_of_string (main_part))
+                    * (expt_int 10 (int_of_string (expo)))
             ))
       }
   | entier as base '#' (based_numeral as main_part) '#' (entier as exponent)? {
                 CONST_INT (loc_here lexbuf
                           ,Newspeak.Nat.of_int ( (int_of_based_string
-                                        (int_of_string (strip_underscores base))
+                                        (int_of_string (base))
                                             (strip_underscores main_part))
-                           * expt_int (int_of_string (strip_underscores base))
-                                            (int_of_string (strip_underscores
+                           * expt_int (int_of_string (base))
+                                            (int_of_string (
                                                 (Ada_utils.with_default
                                                             exponent "0")))))}
 
