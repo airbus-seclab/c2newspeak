@@ -309,9 +309,14 @@ let translate compil_unit =
                                  (translate_int 0)
                                  (translate_int (C.size_of_typ offtype)) in
         C.Lval (C.Shift (record, offset), offtype), tfield
-    | AddressOf (sc, n, t) ->
+    | AddressOf (sc, n, t, off) ->
         let t_lv = translate_resolved_name sc n in
-        C.AddrOf(t_lv, T.translate t), T.system_address
+        let lv' = match off with
+          | None   -> t_lv
+          | Some e -> let (xe,_) = translate_exp e in
+                      C.Shift (t_lv, xe)
+        in
+        C.AddrOf(lv', T.translate t), T.system_address
 
   (**
    * Make a C assignment.

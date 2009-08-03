@@ -556,13 +556,15 @@ expression :
            in
            if (String.lowercase $6 <> "address") then
              error ();
-           begin match $3 with
-           | [None, CInt z] when z = Newspeak.Nat.zero -> ()
-           | _ -> error ()
-           end;
+           let idx = 
+             begin match $3 with
+             | [None, i] -> i
+             | _ -> error ()
+             end
+           in
            Attribute (fst $1
                      ,String.lowercase $6
-                     ,None
+                     ,Some idx
                      )
           }
 | name {SName (fst $1)}

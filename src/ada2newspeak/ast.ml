@@ -101,6 +101,7 @@ and exp_value =
                   * expression
   | AddressOf    of Symboltbl.scope * string
                   * Ada_types.t
+                  * expression option (* offset *)
 
 and  declarative_part = (declarative_item*Newspeak.location) list
 
