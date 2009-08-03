@@ -95,9 +95,13 @@ and expression =
   | Aggregate    of aggregate
 
 and aggregate =
-  | NamedAggregate of (expression option * expression) list
-                                (* ^__ None means "others" *)
+  | NamedAggregate      of (aggregate_selector * expression) list
   | PositionalAggregate of (expression list)
+
+and aggregate_selector =
+  | AggrExp   of expression
+  | AggrRange of expression * expression
+  | AggrOthers
 
 (** Constraint *)
 and contrainte =

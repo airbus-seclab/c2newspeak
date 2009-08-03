@@ -557,13 +557,14 @@ expression_list:
 | expression COMMA expression_list {$1::$3}
 
 aggregate_association_list:
-| exp_or_others ARROW expression                                  {($1, $3)::[]}
-| exp_or_others ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
+| aggregate_lpart ARROW expression                                  {($1, $3)::[]}
+| aggregate_lpart ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
 ;
 
-exp_or_others:
-| expression {Some $1}
-| OTHERS     {None   }
+aggregate_lpart:
+| expression                       {AggrExp      $1   }
+| expression DOUBLE_DOT expression {AggrRange ($1, $3)}
+| OTHERS                           {AggrOthers        }
 ;;
 
 subtyp_indication :

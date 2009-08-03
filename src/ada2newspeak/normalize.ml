@@ -868,7 +868,7 @@ and normalization compil_unit extern =
         let (_tc, ti)   = T.extract_array_types t_lv in
         let all_values  = T.all_values ti in
         List.map2 (fun type_val exp ->
-          let k = insert_constant type_val in
+          let k = insert_constant (T.IntVal type_val) in
           let v = normalize_exp exp in
           Ast.Assign (Ast.ArrayAccess (lv', k), v), loc
         ) all_values exp_list
@@ -966,12 +966,7 @@ and normalization compil_unit extern =
                         [Ast.Block (ndp, ctx, norm_block), loc]
 
   and normalize_assign_aggregate lv bare_assoc_list loc =
-    let module ValSet = Set.Make (
-      struct
-        type t = T.data_t
-        let compare = Pervasives.compare
-      end
-    ) in
+    let module NatSet = Set.Make (Newspeak.Nat) in
     (*
      * From bare_assoc_list : (exp option * exp) list
      * we want to build some assoc_list : (exp * exp) list * exp option.
@@ -980,16 +975,38 @@ and normalization compil_unit extern =
      *   - if present, it is the last one.
      *)
     let (assoc_list, others_opt) =
-      List.fold_left (fun (kvl, others_exp) (exp_option, value) ->
-        match exp_option with
-        | Some e ->
+      let compute_val x =
+        let x' = normalize_exp x in
+        match (Eval.eval_static x' gtbl) with
+        | T.IntVal x -> x
+        | _ -> Npkcontext.report_error "normalize"
+                ("Within an aggregate, selectors"
+                ^"should evaluate as integers")
+      in
+      List.fold_left (fun (kvl, others_exp) (selector, value) ->
+        match selector with
+        | AggrExp e ->
             begin
               if others_exp <> None then
                 Npkcontext.report_error "normalize"
                 "In an aggregate, \"others\" shall be the last clause";
-              ((e, value)::kvl, None)
+              let e' = compute_val e in
+              ((e', value)::kvl, None)
             end
-        | None ->
+        | AggrRange (e1, e2) ->
+            begin
+              if others_exp <> None then
+                Npkcontext.report_error "normalize"
+                "In an aggregate, \"others\" shall be the last clause";
+              let e1' = compute_val e1 in
+              let e2' = compute_val e2 in
+              let rec interval a b =
+                if (Newspeak.Nat.compare b a < 0) then []
+                else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+              in
+              (interval e1' e2')@kvl, None
+            end
+        | AggrOthers ->
             begin
               if others_exp <> None then
                 Npkcontext.report_error "normalize"
@@ -1011,33 +1028,27 @@ and normalization compil_unit extern =
           begin
             let all_values  = T.all_values ti in
             let mk_set l =
-              List.fold_left (fun x y -> ValSet.add y x)
-                             ValSet.empty l
+              List.fold_left (fun x y -> NatSet.add y x)
+                             NatSet.empty l
             in
             let all_values_set = mk_set all_values in
             let defined_values_set =
-              mk_set
-                (List.map
-                  (fun x -> Eval.eval_static (normalize_exp (fst x)) gtbl)
-                 assoc_list)
+              mk_set (List.map fst assoc_list)
             in
             let missing_others =
-              ValSet.elements (ValSet.diff all_values_set
+              NatSet.elements (NatSet.diff all_values_set
                                            defined_values_set)
             in
-            List.rev_map (function
-                        | T.IntVal   x -> (CInt   x, oth_exp)
-                        | T.FloatVal x -> (CFloat x, oth_exp)
-                        | T.BoolVal  x -> (CBool  x, oth_exp)
-                     ) missing_others
+            List.rev_map (function x -> (CInt x, oth_exp)) missing_others
           end
     in
+    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
     List.rev_map (fun (aggr_k, aggr_v) ->
       (* id[aggr_k] <- aggr_v *)
       let key   = normalize_exp aggr_k in
       let value = normalize_exp aggr_v in
       Ast.Assign (Ast.ArrayAccess (lv', key), value), loc
-    ) (other_list@assoc_list)
+    ) (other_list@assoc_list')
 
   and normalize_block ?return_type ?(force_lval=false) block =
     List.flatten (List.map (fun x -> normalize_instr ?return_type ~force_lval x) block)
