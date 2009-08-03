@@ -536,16 +536,35 @@ expression :
 | FALSE       {CBool(false)}
 | LPAR expression RPAR {$2}
 | name QUOTE LPAR expression RPAR {Qualified(fst $1,$4)}
-| name QUOTE ident  {Attribute ( fst $1
-                                 ,String.lowercase $3
-                                 ,None
-                                 )
-                      }
-| name QUOTE ident LPAR expression RPAR {Attribute ( fst $1
+| name QUOTE ident  {Attribute (fst $1
+                               ,String.lowercase $3
+                               ,None
+                               )
+                    }
+| name QUOTE ident LPAR expression RPAR {Attribute (fst $1
                                                    ,String.lowercase $3
                                                    ,Some $5
                                                    )
                                         }
+| name LPAR actual_parameter_part RPAR QUOTE ident
+          {
+           let error _ = begin
+             Npkcontext.set_loc $5;
+             Npkcontext.report_error "parser"
+             "Attributes of lvalue are not supported"
+           end
+           in
+           if (String.lowercase $6 <> "address") then
+             error ();
+           begin match $3 with
+           | [None, CInt z] when z = Newspeak.Nat.zero -> ()
+           | _ -> error ()
+           end;
+           Attribute (fst $1
+                     ,String.lowercase $6
+                     ,None
+                     )
+          }
 | name {SName (fst $1)}
 | name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
 | LPAR aggregate_association_list RPAR {Aggregate (NamedAggregate $2)}
