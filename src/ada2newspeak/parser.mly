@@ -192,6 +192,14 @@ decl :
 | PACKAGE ident IS basic_declarative_part END name SEMICOLON
         { (check_name [$2] (fst $6));
           (PackageSpec($2, $4), $1)}
+| PACKAGE ident IS NEW name LPAR actual_parameter_part RPAR SEMICOLON
+              { Npkcontext.set_loc $1;
+                Npkcontext.report_warning "parser"
+                  ("Ignoring instanciation of generic package '"
+                  ^Ada_utils.name_to_string (fst $5)
+                  ^"'");
+                PackageSpec($2, []), $1
+              }
 ;
 
 /* on renvoie aussi la position de la spec */
@@ -334,7 +342,6 @@ basic_declaration :
                 RenamingDecl((List.hd $1),fst $5),$2 }
 | FUNCTION ident IS NEW name LPAR actual_parameter_part RPAR SEMICOLON
                                   { GenericInstanciation ($2, fst $5, $7), $1 }
-
 ;
 
 constrained_array_definition:
