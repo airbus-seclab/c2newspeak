@@ -955,7 +955,7 @@ attribute_name:
     end;
     [] 
   }
-| IDENTIFIER LPAREN STRING RPAREN               {
+| IDENTIFIER LPAREN string_list RPAREN               {
     if ($1 = "alias") then begin
       Npkcontext.report_warning "Parser.attribute" 
       ("ignoring attribute alias")
@@ -995,6 +995,11 @@ attribute_name:
       imode::[]
   }
 | CONST                                    { [] }
+;;
+
+string_list:
+  STRING                                   { () }
+| STRING string_list                       { () }
 ;;
 
 integer_list:
