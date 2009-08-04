@@ -25,9 +25,60 @@
 (* TODO: factor launcher and error treatment *)
 open Newspeak
 
+let exec_name = "npkfuns"
+
+let input = ref ""
+
+let stats = ref false
+
+let speclist = 
+  [
+    ("--stats", Arg.Set stats, "prints stats instead of function signatures")
+  ]
+
+let anon_fun file = 
+  if !input <> "" then invalid_arg "you can only analyse one file at a time";
+  input := file
+
+let usage_msg = exec_name^" [options] [-help|--help] file.npk"
+
 (* Analysis section *)
 
 module Set = Set.Make(String)
+module Map = Map.Make(struct type t = int let compare = compare end)
+
+let print_fun f (used, _) =
+  let used = 
+    match used with
+	None -> "?"
+      | Some used -> 
+	  let used = Set.elements used in
+	    ListUtils.to_string (fun x -> x) ", " used
+  in
+    print_endline (f^": "^used)
+
+let print_results funtbl = 
+  if !stats then begin
+    let stats = ref Map.empty in
+    let collect_stat _ (used, _) =
+      match used with
+	  None -> ()
+	| Some used ->
+	    let n = Set.cardinal used in
+	    let v = 
+	      try Map.find n !stats
+	      with Not_found -> 0
+	    in
+	      stats := Map.add n (v+1) !stats
+    in
+    let print_stat n v =
+      print_endline ("number of functions using "^string_of_int n^" globals: "
+		     ^string_of_int v)
+    in
+      Hashtbl.iter collect_stat funtbl;
+      Map.iter print_stat !stats
+  end else Hashtbl.iter print_fun funtbl
+
 
 (* for each function, collect:
    - the set of globals it needs directly (present in any expression)
@@ -41,7 +92,7 @@ module Set = Set.Make(String)
    - if globals have changed, then add all f callers to the todo set
    - until there are no more functions in the todo set
 *)
-let process prog =
+let process fids prog =
   let funtbl = Hashtbl.create 100 in
   let todo = Queue.create () in
   let unknown_funs = ref Set.empty in
@@ -82,17 +133,6 @@ let process prog =
       Set.empty
   in
 
-  let print_fun f (used, _) =
-    let used = 
-      match used with
-	  None -> "?"
-	| Some used -> 
-	    let used = Set.elements used in
-	      ListUtils.to_string (fun x -> x) ", " used
-    in
-      print_endline (f^": "^used)
-  in
-
   let rec process_lval x =
     match x with
 	Local _ -> Set.empty
@@ -128,6 +168,12 @@ let process prog =
 	  Set.union (process_blk body) (process_blk action)
       | Goto _ -> Set.empty
       | Call FunId f -> get_fun f
+      | Call FunDeref _ -> 
+	  let res = ref Set.empty in
+	  let collect f = res := Set.union (get_fun f) !res in
+	    List.iter collect fids;
+	    !res
+	      
       | _ -> raise Exit
   in
 
@@ -140,22 +186,10 @@ let process prog =
 	  update_fun f used
       done
     with Queue.Empty -> 
-      Hashtbl.iter print_fun funtbl
+      print_results funtbl
     
 
 (* Execution section *)
-
-let exec_name = "npkfuns"
-
-let input = ref ""
-
-let speclist = []
-
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
-
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
 let _ =
   try
@@ -164,7 +198,8 @@ let _ =
     then invalid_arg ("no file specified. Try "^exec_name^" --help");
 
     let prog = Newspeak.read !input in
-      process prog
+    let fids = collect_fid_addrof prog in
+      process fids prog
 
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
