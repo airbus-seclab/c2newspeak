@@ -937,8 +937,8 @@ attribute_name:
     begin match $1 with
 	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
-      | "__deprecated__" | "deprecated" | "__malloc__" | "__warn_unused_result__" 
-      | "__unused__" -> ()
+      | "__deprecated__" | "deprecated" | "__malloc__" 
+      | "__warn_unused_result__" | "__unused__" | "__artificial__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -955,10 +955,12 @@ attribute_name:
     end;
     [] 
   }
-| IDENTIFIER LPAREN STRING RPAREN               {
-    if $1 <> "alias" then raise Parsing.Parse_error;
-    Npkcontext.report_warning "Parser.attribute" 
-      "ignoring attribute alias";
+| IDENTIFIER LPAREN string_list RPAREN               {
+    if ($1 = "alias") then begin
+      Npkcontext.report_warning "Parser.attribute" 
+      ("ignoring attribute alias")
+    end else if ($1 <> "__warning__") && ($1 <> "__error__")
+    then raise Parsing.Parse_error;
     []
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
@@ -994,6 +996,11 @@ attribute_name:
       imode::[]
   }
 | CONST                                    { [] }
+;;
+
+string_list:
+  STRING                                   { () }
+| STRING string_list                       { () }
 ;;
 
 integer_list:
