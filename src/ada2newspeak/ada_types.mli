@@ -85,6 +85,8 @@ val new_array  : component:t -> index:t list -> t
 
 val new_record : (string*t) list -> t
 
+val new_access : t -> t
+
 (**
  * Is a type compatible with another one ?
  * [is_compatible a b] if a value of type b can be assigned
@@ -106,6 +108,8 @@ val extract_array_base : t -> Newspeak.Nat.t
 val get_reason : t -> string
 
 val extract_symbols : t -> (string*int) list option
+
+val extract_access_type : t -> t
 
 val record_field : t -> string -> int * t
 

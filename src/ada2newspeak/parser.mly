@@ -535,6 +535,7 @@ expression :
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}
 | LPAR expression RPAR {$2}
+| ident_or_opname DOT ALL {PtrDeref ([snd $1])}
 | name QUOTE LPAR expression RPAR {Qualified(fst $1,$4)}
 | name QUOTE ident  {Attribute (fst $1
                                ,String.lowercase $3

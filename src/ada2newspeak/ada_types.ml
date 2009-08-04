@@ -84,6 +84,7 @@ and trait_t =
   | Array       of t*t list          (* Component-index  *)
   | Record      of (string * t) list (* Fields           *)
   | Enumeration of (string*int) list (* Name-index       *)
+  | Access      of t
 
 
 (* effective type + wrapped data *)
@@ -120,6 +121,7 @@ let rec print t =
                   ^String.concat "," (List.map print i)
                   ^"}}"
     | Record flds -> "Record {"^String.concat ", " (List.map fst flds)^"}"
+    | Access t -> "Access "^p_hash t
   in
    "{"
   ^"H="^p_hash t
@@ -234,6 +236,13 @@ let new_record fields =
   ; range = None
   }
 
+let new_access t =
+  { base = { trait = Access t
+           ; uid = uid#gen
+           }
+  ; range = None
+  }
+
 let handle_representation_clause _t _l =
   invalid_arg ("handle_representaion_clause")
 
@@ -253,6 +262,12 @@ let extract_symbols t =
   match t.base.trait with
   | Enumeration v -> Some v
   | _             -> None
+
+let extract_access_type t =
+  match t.base.trait with
+  | Access te -> te
+  | _ -> Npkcontext.report_error "extract_access_type"
+           "This type is not an access type, it cannot be dereferenced"
 
 let record_field t fld =
   match t.base.trait with
@@ -314,6 +329,7 @@ let is_integer typ =
   | Signed      _ -> true
   | Univ_int      -> true
   | Univ_real     -> false
+  | Access      _ -> false
 
 let is_discrete typ =
   match typ.base.trait with
@@ -325,6 +341,7 @@ let is_discrete typ =
   | Signed      _ -> true
   | Univ_int      -> true
   | Univ_real     -> false
+  | Access      _ -> false
 
 let is_numeric typ =
   match typ.base.trait with
@@ -336,6 +353,7 @@ let is_numeric typ =
   | Signed      _ -> true
   | Univ_int      -> true
   | Univ_real     -> true
+  | Access      _ -> false
 
 let is_scalar typ =
   match typ.base.trait with
@@ -347,6 +365,7 @@ let is_scalar typ =
   | Signed      _ -> true
   | Univ_int      -> true
   | Univ_real     -> true
+  | Access      _ -> false
 
 let is_float typ =
   match typ.base.trait with
@@ -358,6 +377,7 @@ let is_float typ =
   | Signed      _ -> false
   | Univ_int      -> false
   | Univ_real     -> true
+  | Access      _ -> false
 
 let is_unknown typ =
   match typ.base.trait with
@@ -369,6 +389,7 @@ let is_unknown typ =
   | Signed      _ -> false
   | Univ_int      -> false
   | Univ_real     -> false
+  | Access      _ -> false
 
 (* Number of values in a type *)
 let length_of typ = match (typ.base.trait, typ.range) with
@@ -380,6 +401,7 @@ let length_of typ = match (typ.base.trait, typ.range) with
 | Float        _  , _
 | Unknown      _  , _
 | Signed       _  , _
+| Access       _  , _
 | Univ_int        , _
 | Univ_real       , _
     -> Npkcontext.report_error "length_of" "Type with no size"
@@ -480,6 +502,7 @@ let rec translate t =
           (id, (start_off, ctyp))::cflds, (start_off + Cir.size_of_typ ctyp)
       in
         Cir.Struct (List.fold_left build_offset ([], 0) flds)
+  | Access         _    -> Cir.Scalar Newspeak.Ptr
   | Unknown _ -> Npkcontext.report_error "Ada_types.translate"
                "Type of unknown trait remaining at translate time"
   | Univ_int  ->
@@ -543,6 +566,7 @@ let rec attr_get typ attr =
     | Float       _ , _
     | Enumeration _ , _
     | Signed      _ , _
+    | Access      _ , _
     | Univ_int      , _
     | Univ_real     , _
                  -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))

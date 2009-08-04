@@ -384,6 +384,15 @@ let rec normalize_exp ?expected_type exp =
     | Qualified(stn, exp) -> let t = subtyp_to_adatyp stn in
                                 fst (normalize_exp ~expected_type:t exp),t
     | FunctionCall(n, params) -> normalize_fcall (n, params)
+    | PtrDeref n ->
+        begin
+          match resolve_selected n with
+            | SelectedVar   (sc, id,  t, _) ->
+                let te = T.extract_access_type t in
+                Ast.PtrDeref (sc, id, t), te
+            | _ -> Npkcontext.report_error "normalize_exp"
+                     "Expected a variable before 'all"
+        end
     | Attribute (n , "address", eoff) ->
         let n = mangle_sname n in
         let (sc, (t, _)) = Sym.find_variable gtbl n in
@@ -644,12 +653,8 @@ let normalize_typ_decl ident typ_decl loc =
       let t = T.new_array ~component ~index in
       Sym.add_type gtbl ident loc t
   | Access stn ->
-      (*
-       * let te = subtyp_to_adatyp stn in
-       * let t = T.new_access te in
-       *)
-      ignore stn;
-      let t = T.new_unknown "access type" in
+      let te = subtyp_to_adatyp stn in
+      let t = T.new_access te in
       Sym.add_type gtbl ident loc t
 
 (*

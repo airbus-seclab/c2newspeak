@@ -124,6 +124,7 @@ and exp_to_string exp = match exp with
                                                 "("^exp_to_string e^")"
                                )
   | Aggregate _ -> "... aggregate ..."
+  | PtrDeref n -> name_to_string n^".all"
 
 and subtyp_indication_to_string (subtyp_ref, contrainte) =
   "("^(name_to_string subtyp_ref)^", "

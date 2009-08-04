@@ -84,6 +84,7 @@ and expression =
   | SName        of string list
   | FunctionCall of name
                   * argument list
+  | PtrDeref     of name
   | Unary        of unary_op
                   * expression
   | Binary       of binary_op

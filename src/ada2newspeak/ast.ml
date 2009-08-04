@@ -92,6 +92,8 @@ and exp_value =
                   * Ada_types.t              (* Record type  *)
                   * int                      (* Field offset *)
                   * Ada_types.t              (* Field type   *)
+  | PtrDeref     of Symboltbl.scope * string
+                  * Ada_types.t
   | Not          of expression
   | Binary       of binary_op
                   * expression

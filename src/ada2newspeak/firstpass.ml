@@ -317,6 +317,10 @@ let translate compil_unit =
                       C.Shift (t_lv, xe)
         in
         C.AddrOf(lv', T.translate t), T.system_address
+    | PtrDeref (sc, n, t) ->
+        let xlv = translate_resolved_name sc n in
+        let xt = T.translate t in
+        C.Lval (C.Deref (C.Lval (xlv, xt), xt), xt), t
 
   (**
    * Make a C assignment.

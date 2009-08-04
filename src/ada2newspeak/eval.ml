@@ -83,6 +83,7 @@ let eval_static exp tbl =
     | ArrayValue   _
     | FunctionCall _
     | RecordValue  _
+    | PtrDeref     _
     | AddressOf    _ -> raise NonStaticExpression
 
   (**
