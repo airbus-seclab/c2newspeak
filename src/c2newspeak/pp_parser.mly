@@ -43,7 +43,8 @@ parse:
   SHARP PRAGMA pp_token_list NEW_LINE   { Pragma }
 | SHARP INTEGER STRING 
   integer_list NEW_LINE                 { Line ($3, $2) }
-| SHARP INTEGER SECTION NEW_LINE        { Non_directive }
+| SHARP INTEGER SECTION integer_list 
+  NEW_LINE                              { Non_directive }
 ;;
 
 pp_token_list:
