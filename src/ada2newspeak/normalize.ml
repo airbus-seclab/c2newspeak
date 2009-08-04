@@ -95,8 +95,7 @@ type selected =
   | SelectedFCall  of Sym.scope * string (* Function name *)
                     * T.t                (* Return type   *)
 
-  | SelectedRecord of string             (* Varname       *)
-                    * T.t                (* Record type   *)
+  | SelectedRecord of Ast.lval           (* Varname       *)
                     * int                (* Offset        *)
                     * T.t                (* Field type    *)
 
@@ -122,17 +121,20 @@ let rec resolve_selected ?expected_type n =
         try
           let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
           let (off, tf) = T.record_field t fld in
-          SelectedRecord (pfx, t, off, tf)
+          let lv = Ast.Var (Sym.Lexical, pfx, t) in
+          SelectedRecord (lv , off, tf)
         with Not_found -> resolve_variable (Some pfx) fld
       end
   | Var id -> resolve_variable None id
-  | SName (SName (Var _, _) as pf, _z) -> begin
+  | SName (SName (Var _, _) as pf, z) -> begin
       match (resolve_selected pf) with
         | SelectedConst _ -> failwith "a constant cannot have a field"
         | SelectedFCall _ -> failwith "a function call cannot have a field"
         | SelectedVar   _ -> failwith "a variable cannot have a field"
-        | SelectedRecord (vn, _rt, _off, _ft) ->
-            failwith ("oho : vn = "^vn)
+        | SelectedRecord (lv, off0, tf0) ->
+            let (off,tf) = T.record_field tf0 z in
+            let lv = Ast.RecordAccess (lv,off0,tf0) in
+            SelectedRecord (lv, off, tf)
     end
   | _ -> Npkcontext.report_error "normalize"
                     "Chain of selected_names too long"
@@ -375,8 +377,7 @@ let rec normalize_exp ?expected_type exp =
           | SelectedVar   (sc, id,  t, _) -> Ast.Lval(Ast.Var(sc,id,t)) ,t
           | SelectedFCall (sc, id, rt) -> Ast.FunctionCall (sc, id, [], rt), rt
           | SelectedConst (t,v) -> insert_constant ~t v
-          | SelectedRecord (id, tr, off, tf) ->
-              let lv = Ast.Var (Sym.Lexical, id, tr) in
+          | SelectedRecord (lv, off, tf) ->
               Ast.Lval(Ast.RecordAccess(lv, off, tf)), tf
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
@@ -825,8 +826,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
             Npkcontext.report_error "normalize_instr"
                ("Invalid left value : '"^id^"' is read-only");
             Ast.Var  (sc, id, t), t
-        | SelectedRecord (id, tr, off, tf) ->
-            let lv = Ast.Var (Sym.Lexical, id, tr) in
+        | SelectedRecord (lv, off, tf) ->
             Ast.RecordAccess (lv, off, tf), tf
         | SelectedFCall _
         | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
