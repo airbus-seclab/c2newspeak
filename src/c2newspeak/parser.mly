@@ -959,7 +959,8 @@ attribute_name:
     if ($1 = "alias") then begin
       Npkcontext.report_warning "Parser.attribute" 
       ("ignoring attribute alias")
-    end else if $1 <> "__warning__" then raise Parsing.Parse_error;
+    end else if ($1 <> "__warning__") && ($1 <> "__error__")
+    then raise Parsing.Parse_error;
     []
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
