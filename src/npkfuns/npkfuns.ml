@@ -25,9 +25,27 @@
 (* TODO: factor launcher and error treatment *)
 open Newspeak
 
+let exec_name = "npkfuns"
+
+let input = ref ""
+
+let stats = ref false
+
+let speclist = 
+  [
+    ("--stats", Arg.Set stats, "prints stats instead of function signatures")
+  ]
+
+let anon_fun file = 
+  if !input <> "" then invalid_arg "you can only analyse one file at a time";
+  input := file
+
+let usage_msg = exec_name^" [options] [-help|--help] file.npk"
+
 (* Analysis section *)
 
 module Set = Set.Make(String)
+module Map = Map.Make(struct type t = int let compare = compare end)
 
 let print_fun f (used, _) =
   let used = 
@@ -40,7 +58,26 @@ let print_fun f (used, _) =
     print_endline (f^": "^used)
 
 let print_results funtbl = 
-  Hashtbl.iter print_fun funtbl
+  if !stats then begin
+    let stats = ref Map.empty in
+    let collect_stat _ (used, _) =
+      match used with
+	  None -> ()
+	| Some used ->
+	    let n = Set.cardinal used in
+	    let v = 
+	      try Map.find n !stats
+	      with Not_found -> 0
+	    in
+	      stats := Map.add n (v+1) !stats
+    in
+    let print_stat n v =
+      print_endline ("number of functions using "^string_of_int n^" globals: "
+		     ^string_of_int v)
+    in
+      Hashtbl.iter collect_stat funtbl;
+      Map.iter print_stat !stats
+  end else Hashtbl.iter print_fun funtbl
 
 
 (* for each function, collect:
@@ -153,18 +190,6 @@ let process fids prog =
     
 
 (* Execution section *)
-
-let exec_name = "npkfuns"
-
-let input = ref ""
-
-let speclist = []
-
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
-
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
 let _ =
   try
