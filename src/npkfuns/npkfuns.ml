@@ -29,6 +29,20 @@ open Newspeak
 
 module Set = Set.Make(String)
 
+let print_fun f (used, _) =
+  let used = 
+    match used with
+	None -> "?"
+      | Some used -> 
+	  let used = Set.elements used in
+	    ListUtils.to_string (fun x -> x) ", " used
+  in
+    print_endline (f^": "^used)
+
+let print_results funtbl = 
+  Hashtbl.iter print_fun funtbl
+
+
 (* for each function, collect:
    - the set of globals it needs directly (present in any expression)
    - the set of its callers
@@ -41,7 +55,7 @@ module Set = Set.Make(String)
    - if globals have changed, then add all f callers to the todo set
    - until there are no more functions in the todo set
 *)
-let process prog =
+let process fids prog =
   let funtbl = Hashtbl.create 100 in
   let todo = Queue.create () in
   let unknown_funs = ref Set.empty in
@@ -82,17 +96,6 @@ let process prog =
       Set.empty
   in
 
-  let print_fun f (used, _) =
-    let used = 
-      match used with
-	  None -> "?"
-	| Some used -> 
-	    let used = Set.elements used in
-	      ListUtils.to_string (fun x -> x) ", " used
-    in
-      print_endline (f^": "^used)
-  in
-
   let rec process_lval x =
     match x with
 	Local _ -> Set.empty
@@ -128,6 +131,12 @@ let process prog =
 	  Set.union (process_blk body) (process_blk action)
       | Goto _ -> Set.empty
       | Call FunId f -> get_fun f
+      | Call FunDeref _ -> 
+	  let res = ref Set.empty in
+	  let collect f = res := Set.union (get_fun f) !res in
+	    List.iter collect fids;
+	    !res
+	      
       | _ -> raise Exit
   in
 
@@ -140,7 +149,7 @@ let process prog =
 	  update_fun f used
       done
     with Queue.Empty -> 
-      Hashtbl.iter print_fun funtbl
+      print_results funtbl
     
 
 (* Execution section *)
@@ -164,7 +173,8 @@ let _ =
     then invalid_arg ("no file specified. Try "^exec_name^" --help");
 
     let prog = Newspeak.read !input in
-      process prog
+    let fids = collect_fid_addrof prog in
+      process fids prog
 
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
