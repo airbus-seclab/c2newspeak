@@ -937,8 +937,8 @@ attribute_name:
     begin match $1 with
 	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
-      | "__deprecated__" | "deprecated" | "__malloc__" | "__warn_unused_result__" 
-      | "__unused__" -> ()
+      | "__deprecated__" | "deprecated" | "__malloc__" 
+      | "__warn_unused_result__" | "__unused__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -956,9 +956,10 @@ attribute_name:
     [] 
   }
 | IDENTIFIER LPAREN STRING RPAREN               {
-    if $1 <> "alias" then raise Parsing.Parse_error;
-    Npkcontext.report_warning "Parser.attribute" 
-      "ignoring attribute alias";
+    if ($1 = "alias") then begin
+      Npkcontext.report_warning "Parser.attribute" 
+      ("ignoring attribute alias")
+    end else if $1 <> "__warning__" then raise Parsing.Parse_error;
     []
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
