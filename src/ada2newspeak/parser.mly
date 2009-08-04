@@ -416,8 +416,7 @@ instr :
 | NULL {(NullInstr, $1)}
 | RETURN expression {(Return($2), $1)}
 | RETURN {ReturnSimple, $1}
-| lvalue { ProcedureCall(fst $1, []),snd $1}
-| lvalue LPAR actual_parameter_part RPAR { ProcedureCall(fst $1, $3),$2 }
+| lvalue { LvalInstr(fst $1),snd $1}
 | lvalue ASSIGN expression { Assign (fst $1, $3), $2 }
 | EXIT {Exit, $1}
 | EXIT WHEN expression { If($3,[Exit,$1],[]), $1

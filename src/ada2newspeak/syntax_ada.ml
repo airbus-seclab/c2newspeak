@@ -167,8 +167,7 @@ and instruction =
   | Loop          of iteration_scheme
                    * block
   | Exit
-  | ProcedureCall of lval
-                   * argument list
+  | LvalInstr     of lval        (* To properly handle procedure calls *)
   | Case          of expression
                    * (expression*block) list
                    * block option
