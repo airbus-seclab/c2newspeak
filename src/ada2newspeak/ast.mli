@@ -61,12 +61,14 @@ and instruction =
                    * block
 
 and lval =
-  | Lval         of Symboltbl.scope * string * Ada_types.t
+  | Var          of Symboltbl.scope * string * Ada_types.t
   | ArrayAccess  of lval
-                  * expression
+                  * expression list
   | RecordAccess of lval
                   * int         (* offset *)
                   * Ada_types.t (* Field type *)
+  | PtrDeref     of lval
+                  * Ada_types.t
 
 and iteration_scheme =
   | NoScheme
@@ -81,19 +83,7 @@ and exp_value =
   | CFloat       of float
   | CBool        of bool
   | CChar        of int
-  | Var          of Symboltbl.scope * string * Ada_types.t
-  | FunctionCall of Symboltbl.scope * string
-                  * argument list
-                  * Ada_types.t (* return type *)
-  | ArrayValue   of Symboltbl.scope * string
-                  * expression list
-                  * Ada_types.t
-  | RecordValue  of Symboltbl.scope * string (* Variable     *)
-                  * Ada_types.t              (* Record type  *)
-                  * int                      (* Field offset *)
-                  * Ada_types.t              (* Field type   *)
-  | PtrDeref     of Symboltbl.scope * string
-                  * Ada_types.t
+  | Lval         of lval
   | Not          of expression
   | Binary       of binary_op
                   * expression
@@ -101,9 +91,11 @@ and exp_value =
   | CondExp      of expression (** a ? b : c *)
                   * expression
                   * expression
-  | AddressOf    of Symboltbl.scope * string
+  | AddressOf    of lval
                   * Ada_types.t
-                  * expression option (* offset *)
+  | FunctionCall of Symboltbl.scope * string
+                  * argument list
+                  * Ada_types.t (* return type *)
 
 and  declarative_part = (declarative_item*Newspeak.location) list
 

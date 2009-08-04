@@ -37,9 +37,7 @@ let (%+) = Nat.add
 let (%-) = Nat.sub
 
 let gtbl : Sym.t = Sym.create ()
-
-let string_of_name = Ada_utils.name_to_string
-let sname_to_string x = String.concat "." x
+let g_extern = ref false
 
 let mangle_sname = function
   | []       -> failwith "unreachable @ normalize:mangle_sname"
@@ -48,10 +46,10 @@ let mangle_sname = function
   | _        -> Npkcontext.report_error "mangle_sname"
                   "chain of selected names is too deep"
 
-let normalize_ident ident package extern =
-  match (extern,package) with
-  |  true , Some p ->  [p; ident]
-  |_               ->  [ident]
+let rec make_name_of_lval = function
+  | Var x -> [x]
+  | SName (pf, tl) ->make_name_of_lval pf@[tl]
+  | _ -> invalid_arg "make_name_of_lval"
 
 let subtyp_to_adatyp gtbl n =
   let n' = mangle_sname n in
@@ -114,15 +112,12 @@ let rec resolve_selected ?expected_type n =
                                              gtbl (pkg,id) in
         SelectedVar(sc,id,t,ro)
       with
-      | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc
-                                                           , id
-                                                           , rt)
+      | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc , id , rt)
       | Sym.Variable_no_storage (t,v) -> SelectedConst (t, v)
     end
   in
   match n with
-  |  [] -> failwith "notreached"
-  | (pfx::fld::[]) ->
+  | SName(Var pfx, fld) ->
       begin
         try
           let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
@@ -130,9 +125,9 @@ let rec resolve_selected ?expected_type n =
           SelectedRecord (pfx, t, off, tf)
         with Not_found -> resolve_variable (Some pfx) fld
       end
-  |  [id]       -> resolve_variable None id
-  | x::y::_z::[] -> begin
-      match (resolve_selected (x::y::[])) with
+  | Var id -> resolve_variable None id
+  | SName (SName (Var _, _) as pf, _z) -> begin
+      match (resolve_selected pf) with
         | SelectedConst _ -> failwith "a constant cannot have a field"
         | SelectedFCall _ -> failwith "a function call cannot have a field"
         | SelectedVar   _ -> failwith "a variable cannot have a field"
@@ -196,6 +191,7 @@ let check_package_body_against_spec ~body ~spec =
           ^(name_of_spec sp)^"\"")
       end
   ) speclist
+
 
 (**
  * Compute the actual argument list for a subprogram call.
@@ -370,35 +366,30 @@ let rec normalize_exp ?expected_type exp =
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CBool  x -> Ast.CBool  x,T.boolean
     | CChar  x -> Ast.CChar  x,T.character
-    | SName n ->
+    | Lval(ParExp(n, params)) -> normalize_fcall (n, params)
+    | Lval(PtrDeref _ as lv) -> let nlv, tlv = normalize_lval lv in
+                                Ast.Lval (nlv), tlv
+    | Lval lv ->
         begin
-          match resolve_selected ?expected_type n with
-          | SelectedVar   (sc, id,  t, _) -> Ast.Var(sc,id,t) ,t
+          match resolve_selected ?expected_type lv with
+          | SelectedVar   (sc, id,  t, _) -> Ast.Lval(Ast.Var(sc,id,t)) ,t
           | SelectedFCall (sc, id, rt) -> Ast.FunctionCall (sc, id, [], rt), rt
           | SelectedConst (t,v) -> insert_constant ~t v
           | SelectedRecord (id, tr, off, tf) ->
-              Ast.RecordValue (Sym.Lexical, id, tr, off, tf), tf
+              let lv = Ast.Var (Sym.Lexical, id, tr) in
+              Ast.Lval(Ast.RecordAccess(lv, off, tf)), tf
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
-    | Qualified(stn, exp) -> let t = subtyp_to_adatyp stn in
+    | Qualified(lv, exp) -> let stn = make_name_of_lval lv in
+                            let t = subtyp_to_adatyp stn in
                                 fst (normalize_exp ~expected_type:t exp),t
-    | FunctionCall(n, params) -> normalize_fcall (n, params)
-    | PtrDeref n ->
+    | Attribute (lv , "address", None) ->
+        let (nlv, tlv) = normalize_lval lv in
+        Ast.AddressOf (nlv, tlv), T.system_address
+    | Attribute (lv, attr, Some exp) ->
         begin
-          match resolve_selected n with
-            | SelectedVar   (sc, id,  t, _) ->
-                let te = T.extract_access_type t in
-                Ast.PtrDeref (sc, id, t), te
-            | _ -> Npkcontext.report_error "normalize_exp"
-                     "Expected a variable before 'all"
-        end
-    | Attribute (n , "address", eoff) ->
-        let n = mangle_sname n in
-        let (sc, (t, _)) = Sym.find_variable gtbl n in
-        Ast.AddressOf (sc, snd n, t, may normalize_exp eoff), T.system_address
-    | Attribute (st, attr, Some exp) ->
-        begin
+          let st = make_name_of_lval lv in
           let t = subtyp_to_adatyp st in
           let one = Ast.CInt (Newspeak.Nat.one) in
           match attr with
@@ -418,8 +409,9 @@ let rec normalize_exp ?expected_type exp =
             | _      -> Npkcontext.report_error "normalize"
                           ("No such function-attribute : '"^attr^"'")
         end
-    | Attribute (st, attr, None) ->
+    | Attribute (lv, attr, None) ->
         begin
+          let st = make_name_of_lval lv in
           let t = subtyp_to_adatyp st in
           let (exp,t') = T.attr_get t attr in
           let (exp',_) = normalize_exp exp in
@@ -454,8 +446,8 @@ and normalize_binop bop e1 e2 =
   in
   (* Is the operator overloaded ? *)
   if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
-    let ovl_opname = [make_operator_name bop] in
-    normalize_exp (FunctionCall(ovl_opname,[(None,e1);(None,e2)]))
+    let ovl_opname = make_operator_name bop in
+    normalize_exp (Lval(ParExp(Var ovl_opname,[(None,e1);(None,e2)])))
   else
   match bop with
   (* Operators that does not exist in AST *)
@@ -486,11 +478,15 @@ and normalize_binop bop e1 e2 =
               ,TC.type_of_binop Ast.And t1 t2
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
-          let expected_type = match (e1, e2) with
-          | SName v1 , SName v2 -> Some (Sym.type_ovl_intersection gtbl
-                                                     (ListUtils.last v1)
-                                                     (ListUtils.last v2))
-          | _      , Qualified (n,_) -> Some (subtyp_to_adatyp n)
+          let expected_type =
+            match (e1, e2) with
+          | Lval l1 , Lval l2 -> let v1 = make_name_of_lval l1 in
+                                 let v2 = make_name_of_lval l2 in
+                                 Some (Sym.type_ovl_intersection gtbl
+                                      (ListUtils.last v1)
+                                      (ListUtils.last v2))
+          | _      , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
+                                          Some (subtyp_to_adatyp n)
           | _               -> None
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
@@ -531,6 +527,7 @@ and normalize_uop uop exp =
 
 and normalize_fcall (n, params) =
   (* Maybe this indexed expression is an array-value *)
+  let n = make_name_of_lval n in
   let n = mangle_sname n in
   try
     let (sc,(spec,top)) = Sym.find_subprogram ~silent:true gtbl n in
@@ -548,7 +545,8 @@ and normalize_fcall (n, params) =
       let (sc,(t,_)) = Sym.find_variable gtbl n in
       let tc = fst (T.extract_array_types t) in
       let params' = List.map snd params in
-      Ast.ArrayValue(sc , snd n, List.map normalize_exp params', t),tc
+      let lv = Ast.Var (sc, snd n, t) in
+      Ast.Lval (Ast.ArrayAccess(lv, List.map normalize_exp params')),tc
     end
 
 and eval_range (exp1, exp2) =
@@ -603,10 +601,10 @@ and eval_range (exp1, exp2) =
                "non-static constraint are not yet supported"
     )
 
-let normalize_subtyp_ind (st,cst) =
+and normalize_subtyp_ind (st,cst) =
   (st, Ada_utils.may eval_range cst)
 
-let normalize_typ_decl ident typ_decl loc =
+and normalize_typ_decl ident typ_decl loc =
  match typ_decl with
   | Enum symbs ->
       let ids = fst (List.split symbs) in
@@ -661,7 +659,7 @@ let normalize_typ_decl ident typ_decl loc =
  * renvoie la specification normalisee du package correspondant
  * a name, les noms etant traites comme extern a la normalisation
  *)
-let rec parse_extern_specification name =
+and parse_extern_specification name =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
   let norm_spec = (normalization spec_ast true) in
@@ -672,25 +670,13 @@ let rec parse_extern_specification name =
         "normalize.parse_extern_specification"
           "internal error : specification expected, body found"
 
-(**
- * Iterates through the abstract syntax tree, performing miscellaneous tasks.
- *   - match type identifiers to their declaration (or raise en error)
- *   - look for specs (.ads files)
- *   - transforms functions and type names to "package.ident" in their
- *     declarations.
- *
- * TODO document extern
- *)
-and normalization compil_unit extern =
+and normalize_ident_cur ident =
+  match (!g_extern, Sym.current gtbl) with
+  | true, Some x -> [x;ident]
+  | true, None   -> [ident]
+  | false, _     -> [ident]
 
-  let normalize_ident_cur ident =
-    match (extern, Sym.current gtbl) with
-    | true, Some x -> [x;ident]
-    | true, None   -> [ident]
-    | false, _     -> [ident]
-  in
-
-  let normalize_sub_program_spec subprog_spec ~addparam =
+and normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
       if addparam then
         Sym.enter_context ~desc:"SP body (parameters)" gtbl;
@@ -732,8 +718,8 @@ and normalization compil_unit extern =
                               param_list None;
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
-  in
-  let rec normalize_basic_decl item loc =
+
+  and normalize_basic_decl item loc =
     match item with
     | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
                              []
@@ -830,30 +816,37 @@ and normalization compil_unit extern =
     | PackageSpec(package_spec) ->
         Ast.PackageSpec(normalize_package_spec package_spec)
 
-  and normalize_lval ?(force=false) = function
-    | SelectedLval n ->
-        begin match resolve_selected n with
+  and normalize_lval ?(force=false) ?expected_type = function
+    | (Var _ | SName _) as lv->
+        (* Only in write contexts *)
+        begin match resolve_selected ?expected_type lv with
         | SelectedVar    (sc, id,  t, ro) ->
             if (ro && not force) then
             Npkcontext.report_error "normalize_instr"
-               ("Invalid left value : '"^sname_to_string n^"' is read-only");
-            Ast.Lval (sc, id, t), t
+               ("Invalid left value : '"^id^"' is read-only");
+            Ast.Var  (sc, id, t), t
         | SelectedRecord (id, tr, off, tf) ->
-            let lv = Ast.Lval (Sym.Lexical, id, tr) in
+            let lv = Ast.Var (Sym.Lexical, id, tr) in
             Ast.RecordAccess (lv, off, tf), tf
         | SelectedFCall _
         | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
-                               ("Invalid left-value : '"^sname_to_string n^"'")
+                               ("Invalid left-value")
         end
-    | ArrayAccess (lv, e) ->
+    | ParExp (lv, e) ->
         let (lv',t) = normalize_lval lv in
-        Ast.ArrayAccess(lv' , normalize_exp e), t
+        Ast.ArrayAccess(lv' , List.map (fun x -> normalize_exp (snd x)) e), t
+    | PtrDeref lv ->
+        begin
+          let (nlv, tlv) = normalize_lval lv in
+          let te = T.extract_access_type tlv in
+          Ast.PtrDeref (nlv, tlv), te
+        end
 
   and build_init_stmt (x,exp,loc) =
     match exp with
     | None -> None
     | Some def ->
-        Some (normalize_block ~force_lval:true [Assign(SelectedLval [x], def), loc])
+        Some (normalize_block ~force_lval:true [Assign(Var x, def), loc])
 
   (**
    * The optional parameter return_type helps disambiguate return_statements :
@@ -875,7 +868,7 @@ and normalization compil_unit extern =
         List.map2 (fun type_val exp ->
           let k = insert_constant (T.IntVal type_val) in
           let v = normalize_exp exp in
-          Ast.Assign (Ast.ArrayAccess (lv', k), v), loc
+          Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc
         ) all_values exp_list
     | Assign(lv, exp) ->
         begin
@@ -906,12 +899,14 @@ and normalization compil_unit extern =
       let (exp1, exp2) = match range with
         | DirectRange (min, max) -> (min, max)
         | ArrayRange n -> begin
+                            let n = make_name_of_lval n in
                             let n = mangle_sname n in
                             let (_,(t,_)) = Sym.find_variable gtbl n in
                             ( fst (T.attr_get t "first")
                             , fst (T.attr_get t "last"))
                           end
-        | SubtypeRange st -> begin
+        | SubtypeRange lv -> begin
+                               let st = make_name_of_lval lv in
                                let t = subtyp_to_adatyp st in
                                  ( fst (T.attr_get t "first")
                                  , fst (T.attr_get t "last"))
@@ -933,14 +928,14 @@ and normalization compil_unit extern =
       let loop =
         [Ast.Loop
             ( Ast.While
-              ( normalize_exp (if is_rev then Binary(Ge,SName([iter]),exp1)
-                                         else Binary(Le,SName([iter]),exp2))
+              ( normalize_exp (if is_rev then Binary(Ge,Lval(Var iter),exp1)
+                                         else Binary(Le,Lval(Var iter),exp2))
                                )
-               , nblock@[Ast.Assign ( Ast.Lval (Sym.Lexical,iter,T.integer)
+               , nblock@[Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
                                     , normalize_exp( Binary((if is_rev
                                                                then Minus
                                                                else Plus)
-                                                   , SName [iter]
+                                                   , Lval(Var iter)
                                                    , CInt (Nat.one)))
                                     )
                         , loc]
@@ -948,7 +943,8 @@ and normalization compil_unit extern =
             , loc]
       in [Ast.Block (ndp, Sym.exit_context gtbl, loop), loc]
     | Exit -> [Ast.Exit, loc]
-    | ProcedureCall(n, params) ->
+    | ProcedureCall(lv, params) ->
+        let n = make_name_of_lval lv in
         let n = mangle_sname n in
         let (sc,(spec,_)) = Sym.find_subprogram gtbl n in
         let norm_args = List.map normalize_arg params in
@@ -1052,11 +1048,11 @@ and normalization compil_unit extern =
       (* id[aggr_k] <- aggr_v *)
       let key   = normalize_exp aggr_k in
       let value = normalize_exp aggr_v in
-      Ast.Assign (Ast.ArrayAccess (lv', key), value), loc
+      Ast.Assign (Ast.ArrayAccess (lv', [key]), value), loc
     ) (other_list@assoc_list')
 
   and normalize_block ?return_type ?(force_lval=false) block =
-    List.flatten (List.map (fun x -> normalize_instr ?return_type ~force_lval x) block)
+    List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
 
   and normalize_decl_part decl_part =
     let represtbl = Hashtbl.create 50 in
@@ -1123,7 +1119,21 @@ and normalization compil_unit extern =
           let ctxb = Sym.exit_context gtbl in
           Ast.PackageBody(name, Some norm_spec, ctxb, ndp)
 
-  in
+
+
+
+(**
+ * Iterates through the abstract syntax tree, performing miscellaneous tasks.
+ *   - match type identifiers to their declaration (or raise en error)
+ *   - look for specs (.ads files)
+ *   - transforms functions and type names to "package.ident" in their
+ *     declarations.
+ *
+ * TODO document extern
+ *)
+and normalization compil_unit extern =
+  g_extern := extern;
+
   let normalize_lib_item lib_item loc =
     Npkcontext.set_loc loc;
     match lib_item with
@@ -1132,11 +1142,6 @@ and normalization compil_unit extern =
 
   in
 
-  (* ajoute toutes les declarations contenues dans la
-     spec, sans normalisation (puisque deja normalise).
-     Ajoute egalement le nom du package
-     a la liste de package accessible. *)
-(* TODO *)
   let add_extern_spec spec =
     let add_extern_basic_decl (basic_decl, loc) =
       Npkcontext.set_loc loc;
@@ -1150,9 +1155,7 @@ and normalization compil_unit extern =
         | Ast.SpecDecl _ -> ()
 
     in match spec with
-      | Ast.SubProgramSpec(Ast.Function(_name, [], _return_typ)) -> ()
-      | Ast.SubProgramSpec(Ast.Function(_name, _, _)|Ast.Procedure(_name, _)) ->
-          ()
+      | Ast.SubProgramSpec _ -> ()
       | Ast.PackageSpec(name, basic_decls,_) ->
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;

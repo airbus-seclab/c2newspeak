@@ -301,13 +301,13 @@ module Table = struct
  *                                                                            *
  ******************************************************************************)
 
-  let standard_table = create_table Lexical ~desc:"standard" Newspeak.unknown_loc
+  let standard_tbl = create_table Lexical ~desc:"standard" Newspeak.unknown_loc
 
-  let system_table  = create_table Lexical ~desc:"system" Newspeak.unknown_loc
+  let system_tbl  = create_table Lexical ~desc:"system" Newspeak.unknown_loc
 
   let _ =
     begin
-      List.iter (fun (n,t) -> add_type standard_table n
+      List.iter (fun (n,t) -> add_type standard_tbl n
                                        Newspeak.unknown_loc
                                        t (In_package "standard"))
       [ "integer"  , T.integer
@@ -315,7 +315,7 @@ module Table = struct
       ; "boolean"  , T.boolean
       ; "character", T.character
       ];
-      add_type system_table "address" Newspeak.unknown_loc
+      add_type system_tbl "address" Newspeak.unknown_loc
                T.system_address (In_package "system")
     end
 
@@ -351,12 +351,12 @@ module SymMake(TR:Tree.TREE) = struct
     library.t_tbl <- Symset.add (Lexical
                                 ,"standard"
                                 ,Newspeak.unknown_loc
-                                ,Unit standard_table)
+                                ,Unit standard_tbl)
                                 library.t_tbl;
     library.t_tbl <- Symset.add (Lexical
                                 ,"system"
                                 ,Newspeak.unknown_loc
-                                ,Unit system_table)
+                                ,Unit system_tbl)
                                 library.t_tbl;
     TR.push library s;
     { s_stack  = s

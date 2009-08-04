@@ -37,10 +37,10 @@ module Sym = Symboltbl
 
 open Ast
 
-let make_offset index base size =
+let make_offset t index base size =
   C.Binop ( Newspeak.MultI
           , C.Binop ( Newspeak.MinusI
-                    , index
+                    , T.check_exp t index
                     , base
                     )
           , size
@@ -154,8 +154,8 @@ let translate compil_unit =
     let loc = Npkcontext.get_loc () in
     let (tmp, decl, vid) = temp#create loc T.boolean in
     let instr_if = If (e_cond,
-           [Assign(Lval (Sym.Lexical, tmp, snd e_then), e_then),loc],
-           [Assign(Lval (Sym.Lexical, tmp, snd e_else), e_else),loc])
+           [Assign(Var (Sym.Lexical, tmp, snd e_then), e_then),loc],
+           [Assign(Var (Sym.Lexical, tmp, snd e_else), e_else),loc])
     in let tr_instr_if =
         translate_block [(instr_if,loc)]
     in
@@ -243,33 +243,36 @@ let translate compil_unit =
                             "Firstpass.translate_function_call"
                             "wrong number of arguments"
 
-  and translate_var scope name ty =
-    let n    = translate_resolved_name scope name in
-    let xtyp = T.translate ty in
-    C.Lval (n, xtyp), ty
-
   and translate_lv lv =
       match lv with
-        | Lval (sc,lv,t) ->
+        | Var (sc,lv,t) ->
             let clv = translate_resolved_name sc lv in
             (clv, t)
-        | ArrayAccess (lv, expr) ->
+        | ArrayAccess (lv, [expr]) ->
             let (x_lv,t_lv ) = translate_lv lv in
-            let (x_exp,t) = translate_exp expr in
-            let x_typ = T.translate t in
+            let (x_exp,_) = translate_exp expr in
+            let (tc, ti) = T.extract_array_types t_lv in
+            let x_typ = T.translate tc in
             let size = C.size_of_typ x_typ in
             let base = T.extract_array_base t_lv in
-            let offset = make_offset x_exp (translate_nat base)
+            let index = translate_nat base in
+            let offset = make_offset ti x_exp index
                                            (translate_int size) in
-            let offset' = T.check_exp t_lv offset in
-            C.Shift (x_lv, offset'),t
+            C.Shift (x_lv, offset),tc
         | RecordAccess (lv, off_pos, tf) ->
             let (record, _) = translate_lv lv in
-            let offtype = T.translate T.integer in
-            let offset = make_offset (translate_int off_pos)
+            let ti = T.integer in
+            let offtype = T.translate ti in
+            let offset = make_offset ti
+                                     (translate_int off_pos)
                                      (translate_int 0)
                                      (translate_int (C.size_of_typ offtype)) in
             C.Shift (record, offset), tf
+        | PtrDeref (lv, t) ->
+            let (xlv, _) = translate_lv lv in
+            let xt = T.translate t in
+            C.Deref (C.Lval (xlv, xt), xt), t
+        | ArrayAccess(_, _) -> failwith "matrix access"
 
   and translate_exp (exp,typ) :C.exp*T.t=
     match exp with
@@ -277,7 +280,8 @@ let translate compil_unit =
     | CInt   i -> translate_nat i, typ
     | CChar  c -> translate_nat (Nat.of_int c), T.character
     | CBool  b -> translate_nat (Ada_utils.nat_of_bool b), T.boolean
-    | Var    (scope,name,ty)  -> translate_var scope name ty
+    | Lval   l -> let (tlv,tp) = translate_lv l in
+                  C.Lval (tlv,T.translate tp), typ
     | Not    exp              -> translate_not exp
     | Binary(binop,exp1,exp2) ->
         let (bop, rtyp) = translate_binop binop exp1 exp2 in
@@ -286,41 +290,9 @@ let translate compil_unit =
     | FunctionCall(sc, name, arg_list, rt) ->
         let fname = C.Fname (concat_resolved_name sc name) in
         translate_function_call fname arg_list rt
-    | ArrayValue  (sc, name, arg_list, t) ->
-        let (tc,ti) = T.extract_array_types t in
-        let index = match arg_list with
-          | [x] -> x
-          | _ -> failwith "array value : unexpected matrix"
-        in
-        let arr = translate_resolved_name sc name in
-        let (ex_index, t_index) = (translate_exp index) in
-        let ctyp = T.translate t_index in
-        let index' = T.check_exp ti ex_index in
-        let base = T.extract_array_base t in
-        let offset = make_offset index'
-                                 (translate_nat base)
-                                 (translate_int (C.size_of_typ ctyp))
-        in
-        C.Lval (C.Shift (arr, offset), ctyp), tc
-    | RecordValue (sc, name, _trec, off_pos, tfield) ->
-        let record = translate_resolved_name sc name in
-        let offtype = T.translate T.integer in
-        let offset = make_offset (translate_int off_pos)
-                                 (translate_int 0)
-                                 (translate_int (C.size_of_typ offtype)) in
-        C.Lval (C.Shift (record, offset), offtype), tfield
-    | AddressOf (sc, n, t, off) ->
-        let t_lv = translate_resolved_name sc n in
-        let lv' = match off with
-          | None   -> t_lv
-          | Some e -> let (xe,_) = translate_exp e in
-                      C.Shift (t_lv, xe)
-        in
-        C.AddrOf(lv', T.translate t), T.system_address
-    | PtrDeref (sc, n, t) ->
-        let xlv = translate_resolved_name sc n in
-        let xt = T.translate t in
-        C.Lval (C.Deref (C.Lval (xlv, xt), xt), xt), t
+    | AddressOf (lv, _) ->
+        let (lv', tlv) = translate_lv lv in
+        C.AddrOf(lv', T.translate tlv), T.system_address
 
   (**
    * Make a C assignment.
@@ -349,9 +321,9 @@ let translate compil_unit =
          match instr with
            | Return(exp) ->
                translate_block
-                 ((Assign( Lval ( Sym.Lexical, Params.ret_ident, snd exp)
-                                , exp
-                                ),loc)
+                 ((Assign( Var ( Sym.Lexical, Params.ret_ident, snd exp)
+                               , exp
+                               ),loc)
                   ::(ReturnSimple,loc)::r)
            | ReturnSimple ->
                let tr_reste =

@@ -48,19 +48,6 @@ let check_end decl end_name =
   in
     check_ident begin_name end_name
 
-let build_access name lst   =
-  let rec build_aux lst  =
-    match lst with [] -> (SelectedLval name)
-      | hd::tl ->
-          let built = build_aux tl in
-            ArrayAccess (built, hd)
-  in
-    match lst with
-        [] -> SelectedLval name
-      | _  ->
-          let rev_list = List.rev lst in
-            build_aux rev_list
-
 (**
   * Prepare a list of exp*block for the Case constructor.
   * It takes a list of expression list * block and flattens it into
@@ -108,7 +95,12 @@ let make_enum list_val =
 let make_range exp_b_inf exp_b_sup =
   IntegerRange(exp_b_inf, exp_b_sup)
 
+let report_perror s =
+  Npkcontext.report_error "parser" s
 
+let extract_name = function
+  | (Some x,_,_) -> x
+  | _ -> report_perror "No name"
 %}
 %token EOF
 
@@ -179,7 +171,8 @@ body :
 | PACKAGE BODY ident IS declarative_part END SEMICOLON
     {(PackageBody($3, None, $5), $1)}
 | PACKAGE BODY ident IS declarative_part END name SEMICOLON
-{ (check_name [$3] (fst $7));
+{ let n = fst $7 in
+  (check_name [$3] n);
       (PackageBody($3, None, $5), $1)
     }
 ;
@@ -190,13 +183,15 @@ decl :
 | PACKAGE ident IS basic_declarative_part END SEMICOLON
     {(PackageSpec($2, $4), $1)}
 | PACKAGE ident IS basic_declarative_part END name SEMICOLON
-        { (check_name [$2] (fst $6));
+{ let n = fst $6 in
+          (check_name [$2] n);
           (PackageSpec($2, $4), $1)}
 | PACKAGE ident IS NEW name LPAR actual_parameter_part RPAR SEMICOLON
-              { Npkcontext.set_loc $1;
+              { let n = fst $5 in
+                Npkcontext.set_loc $1;
                 Npkcontext.report_warning "parser"
                   ("Ignoring instanciation of generic package '"
-                  ^Ada_utils.name_to_string (fst $5)
+                  ^Ada_utils.name_to_string (n)
                   ^"'");
                 PackageSpec($2, []), $1
               }
@@ -322,7 +317,9 @@ basic_declaration :
                                                           ,Record $4
                                                           )
                                                  ,$1}
-| TYPE ident IS ACCESS name SEMICOLON {TypeDecl ($2, Access (fst $5)), $1}
+| TYPE ident IS ACCESS name SEMICOLON {
+  let n = fst $5 in
+  TypeDecl ($2, Access n), $1}
 | SUBTYPE ident IS subtyp_indication SEMICOLON
         {SubtypDecl($2,$4), $1}
 | decl  {let (spec, loc) = $1 in (SpecDecl(spec), loc)}
@@ -331,17 +328,21 @@ basic_declaration :
                   (RepresentClause(fst rc, snd rc), snd $1)
                 }
 | subprogram_spec RENAMES name SEMICOLON
-        { match (fst $1) with
-        | Function  (n,_,_) -> RenamingDecl (n, fst $3),$2
-        | Procedure (n,_)   -> RenamingDecl (n, fst $3),$2
+        {
+          let nm = fst $3 in
+          match (fst $1) with
+        | Function  (n,_,_) -> RenamingDecl (n, nm),$2
+        | Procedure (n,_)   -> RenamingDecl (n, nm),$2
         }
 | ident_list COLON subtyp_indication RENAMES name SEMICOLON {
+  let n = fst $5 in
                 if (List.length $1 <> 1) then
                   Npkcontext.report_error "Parser"
                     "Only one identifier is allowed before \"renames\"";
-                RenamingDecl((List.hd $1),fst $5),$2 }
+                RenamingDecl((List.hd $1),n),$2 }
 | FUNCTION ident IS NEW name LPAR actual_parameter_part RPAR SEMICOLON
-                                  { GenericInstanciation ($2, fst $5, $7), $1 }
+                                  { let n = fst ($5) in
+                                    GenericInstanciation ($2, n, $7), $1 }
 ;
 
 constrained_array_definition:
@@ -415,12 +416,9 @@ instr :
 | NULL {(NullInstr, $1)}
 | RETURN expression {(Return($2), $1)}
 | RETURN {ReturnSimple, $1}
-| name {ProcedureCall(fst $1, []),snd $1}
-| name LPAR actual_parameter_part RPAR {ProcedureCall(fst $1, $3),snd $1}
-| lvalue ASSIGN expression
-    { let (nm, ind) = $1 in
-        (Assign ( (build_access nm (List.map snd ind)) , $3), $2)
-    }
+| lvalue { ProcedureCall(fst $1, []),snd $1}
+| lvalue LPAR actual_parameter_part RPAR { ProcedureCall(fst $1, $3),$2 }
+| lvalue ASSIGN expression { Assign (fst $1, $3), $2 }
 | EXIT {Exit, $1}
 | EXIT WHEN expression { If($3,[Exit,$1],[]), $1
   (* EXIT WHEN x --> IF x THEN EXIT END IF *) }
@@ -480,14 +478,11 @@ discrete_choice:
 ;
 
 lvalue :
-| name      {fst $1, []}
-| name args {fst $1, $2}
+| IDENT                                  {Var (snd $1)       , fst $1}
+| lvalue DOT ident                       {SName (fst $1, $3) , $2}
+| lvalue DOT ALL                         {PtrDeref (fst $1)  , $2}
+| lvalue LPAR actual_parameter_part RPAR {ParExp (fst $1, $3), $2}
 ;
-
-args:
-|      LPAR actual_parameter_part RPAR {    $2 }
-| args LPAR actual_parameter_part RPAR { $1@$3 }
-;;
 
 iteration_scheme:
 | {NoScheme, Newspeak.unknown_loc}
@@ -502,8 +497,8 @@ for_loop_reverse:
 
 for_loop_range:
 | expression DOUBLE_DOT expression { DirectRange  ($1, $3) }
-| name QUOTE RANGE                 { ArrayRange   (fst $1) }
-| name                             { SubtypeRange (fst $1) }
+| lvalue QUOTE RANGE               { ArrayRange (fst $1) }
+| lvalue                           { SubtypeRange (fst $1) }
 ;;
 
 instruction_else :
@@ -542,43 +537,20 @@ expression :
 | TRUE        {CBool(true)}
 | FALSE       {CBool(false)}
 | LPAR expression RPAR {$2}
-| ident_or_opname DOT ALL {PtrDeref ([snd $1])}
-| name QUOTE LPAR expression RPAR {Qualified(fst $1,$4)}
-| name QUOTE ident  {Attribute (fst $1
-                               ,String.lowercase $3
-                               ,None
-                               )
-                    }
-| name QUOTE ident LPAR expression RPAR {Attribute (fst $1
+| lvalue QUOTE LPAR expression RPAR { Qualified(fst $1 ,$4) }
+| lvalue QUOTE ident  {Attribute (fst $1
+                              ,String.lowercase $3
+                              ,None
+                              )
+                   }
+| lvalue QUOTE ident LPAR expression RPAR {Attribute (fst $1
                                                    ,String.lowercase $3
                                                    ,Some $5
                                                    )
                                         }
-| name LPAR actual_parameter_part RPAR QUOTE ident
-          {
-           let error _ = begin
-             Npkcontext.set_loc $5;
-             Npkcontext.report_error "parser"
-             "Attributes of lvalue are not supported"
-           end
-           in
-           if (String.lowercase $6 <> "address") then
-             error ();
-           let idx = 
-             begin match $3 with
-             | [None, i] -> i
-             | _ -> error ()
-             end
-           in
-           Attribute (fst $1
-                     ,String.lowercase $6
-                     ,Some idx
-                     )
-          }
-| name {SName (fst $1)}
-| name LPAR actual_parameter_part RPAR {FunctionCall((fst $1), $3)}
 | LPAR aggregate_association_list RPAR {Aggregate (NamedAggregate $2)}
 | LPAR expression_list            RPAR {Aggregate (PositionalAggregate $2)}
+| lvalue { Lval (fst $1)}
 ;
 
 expression_list:
@@ -586,11 +558,11 @@ expression_list:
 | expression COMMA expression_list {$1::$3}
 
 aggregate_association_list:
-| aggregate_lpart ARROW expression                                  {($1, $3)::[]}
-| aggregate_lpart ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
+| aggr_lpart ARROW expression                                  {($1, $3)::[]}
+| aggr_lpart ARROW expression COMMA aggregate_association_list {($1, $3)::$5}
 ;
 
-aggregate_lpart:
+aggr_lpart:
 | expression                       {AggrExp      $1   }
 | expression DOUBLE_DOT expression {AggrRange ($1, $3)}
 | OTHERS                           {AggrOthers        }
@@ -602,7 +574,7 @@ subtyp_indication :
 ;
 
 subtyp :
-| name {(fst $1)}
+| name {fst $1}
 ;
 
 actual_parameter_part :
@@ -628,8 +600,8 @@ ident_list :
 ;
 
 name :
-| ident_or_opname          {  (snd $1 ::[])    , fst $1 }
-| ident_or_opname DOT name { ((snd $1)::fst $3), fst $1 }
+| ident_or_opname          { (snd $1 ::[])    , fst $1}
+| ident_or_opname DOT name {((snd $1)::fst $3), fst $1}
 ;
 
 ident_or_opname :

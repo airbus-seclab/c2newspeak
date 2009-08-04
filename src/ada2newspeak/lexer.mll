@@ -245,7 +245,7 @@ rule token = parse
 
   (* constantes numeriques *)
   | real   {CONST_FLOAT (loc_here lexbuf,Lexing.lexeme lexbuf)}
-  | real ['e' 'E'] (['+''-']?) entier 
+  | real ['e' 'E'] (['+''-']?) entier
           {CONST_FLOAT (loc_here lexbuf,Lexing.lexeme lexbuf)}
   | entier {CONST_INT (loc_here lexbuf,Newspeak.Nat.of_string(
                                 strip_underscores (Lexing.lexeme lexbuf)))}

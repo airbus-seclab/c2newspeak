@@ -107,24 +107,20 @@ and exp_to_string exp = match exp with
   | CFloat s          -> "CFloat("^string_of_float s^")"
   | CBool  b          -> "CBool("^(string_of_bool b)^")"
   | CChar  c          -> "CChar("^(string_of_int c)^")"
-  | SName  s          -> "Var("^list_to_string s (fun x->x)"." false ^")"
+  | Lval   l          -> "LV "^lval_to_string l
   | Unary  (op,exp)   -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"
   | Binary (op,e1,e2) -> "("^(exp_to_string e1)^" "
                            ^(bop_to_string op)^" "
                            ^(exp_to_string e2)^")"
   | Qualified(subtyp, exp) -> "Qualified("
-      ^(name_to_string subtyp)
+      ^(lval_to_string subtyp)
       ^", "^(exp_to_string exp)^")"
-  | FunctionCall(nom, params) -> "FunctionCall-orArray("
-      ^(name_to_string nom)^", "
-      ^(String.concat "," (List.map arg_to_string params))^")"
-  | Attribute (n,des,arg) -> (name_to_string n) ^ "'" ^ des
-                             ^ (match arg with None -> ""
-                                            |  Some e ->
-                                                "("^exp_to_string e^")"
-                               )
+  | Attribute (lv,des,arg) -> (lval_to_string lv) ^ "'" ^ des
+                              ^ (match arg with None -> ""
+                                             |  Some e ->
+                                                 "("^exp_to_string e^")"
+                                )
   | Aggregate _ -> "... aggregate ..."
-  | PtrDeref n -> name_to_string n^".all"
 
 and subtyp_indication_to_string (subtyp_ref, contrainte) =
   "("^(name_to_string subtyp_ref)^", "
@@ -154,14 +150,19 @@ and iteration_scheme_to_string scheme = match scheme with
 and for_loop_range_to_string = function
   | DirectRange (exp1, exp2) ->          (exp_to_string exp1)
                                 ^ ".." ^ (exp_to_string exp2)
-  | ArrayRange   n -> name_to_string n ^ "'range"
-  | SubtypeRange n -> name_to_string n
+  | ArrayRange   n -> lval_to_string n ^ "'range"
+  | SubtypeRange n -> lval_to_string n
 
 and lval_to_string lv =
   match lv with
-    | SelectedLval s -> list_to_string s (fun x->x)"." false
-    | ArrayAccess (lval, e) ->
-        (lval_to_string lval )^"["^(exp_to_string e)^"]"
+    | Var s -> s
+    | SName (lv,s) -> (lval_to_string lv^"."^s)
+    | ParExp (lval, e) ->
+         (lval_to_string lval )
+        ^"["
+        ^(list_to_string e arg_to_string "," false)
+        ^"]"
+    | PtrDeref v -> lval_to_string v^".all"
 
 and block_to_string block =
   list_to_string block
@@ -184,8 +185,8 @@ and instr_to_string instr = match instr with
   | Loop(scheme, block) ->
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
       ^(block_to_string block)^")"
-  | ProcedureCall(nom, params) -> "ProcedureCall("
-      ^(String.concat "." nom)^", "
+  | ProcedureCall(lv, params) -> "ProcedureCall("
+      ^(lval_to_string lv)^", "
       ^(String.concat "," (List.map arg_to_string params))^")"
   | Case(e,choices,default) -> "Case(("^(exp_to_string e)^"), ["
     ^ (String.concat ", "

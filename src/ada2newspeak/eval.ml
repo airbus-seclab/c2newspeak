@@ -64,7 +64,7 @@ let eval_static exp tbl =
     | CFloat f -> T.FloatVal(f)
     | CChar  c -> T.IntVal (Nat.of_int c)
     | CBool  b -> T.BoolVal b
-    | Var (s,v,_) -> eval_static_const (s,v) t
+    | Lval (Var (s,v,_)) -> eval_static_const (s,v) t
     | Not exp -> begin
                    match (eval_static_exp exp) with
                     | T.BoolVal(b) -> T.BoolVal(not b)
@@ -80,10 +80,8 @@ let eval_static exp tbl =
             | _ -> Npkcontext.report_error "eval_static.exp"
                    "unexpected type for conditional expression"
         end
-    | ArrayValue   _
+    | Lval         _
     | FunctionCall _
-    | RecordValue  _
-    | PtrDeref     _
     | AddressOf    _ -> raise NonStaticExpression
 
   (**

@@ -81,18 +81,15 @@ and expression =
   | CFloat       of float
   | CBool        of bool
   | CChar        of int
-  | SName        of string list
-  | FunctionCall of name
-                  * argument list
-  | PtrDeref     of name
   | Unary        of unary_op
                   * expression
   | Binary       of binary_op
                   * expression
                   * expression
-  | Qualified    of name
+  | Qualified    of lval
                   * expression
-  | Attribute    of name * string * expression option
+  | Lval         of lval
+  | Attribute    of lval * string * expression option
   | Aggregate    of aggregate
 
 and aggregate =
@@ -115,9 +112,11 @@ and subtyp_indication = subtyp
 
 (** Left-value *)
 and lval =
-| SelectedLval of string list
-| ArrayAccess  of lval
-                * expression
+| Var       of string
+| SName     of lval * string
+| ParExp    of lval
+             * argument list
+| PtrDeref  of lval
 
 (** Subprogram parameter *)
 and param = {
@@ -145,8 +144,8 @@ and iteration_scheme =
 
 and for_loop_range =
   | DirectRange  of expression * expression
-  | ArrayRange   of name
-  | SubtypeRange of name
+  | ArrayRange   of lval
+  | SubtypeRange of lval
 
 and block = (instruction * Newspeak.location) list
 
@@ -168,7 +167,7 @@ and instruction =
   | Loop          of iteration_scheme
                    * block
   | Exit
-  | ProcedureCall of string list
+  | ProcedureCall of lval
                    * argument list
   | Case          of expression
                    * (expression*block) list
