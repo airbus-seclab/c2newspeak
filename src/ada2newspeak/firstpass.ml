@@ -236,12 +236,7 @@ let translate compil_unit =
   (** Translates a function call.  *)
   and translate_function_call fname arg_list rt =
     let (ftyp0, tr_params) = translate_subprogram_parameters arg_list in
-    let ftyp = ftyp0, T.translate rt in
-    try (C.Call(ftyp, fname, tr_params), rt)
-    with
-      | Invalid_argument _ -> Npkcontext.report_error
-                            "Firstpass.translate_function_call"
-                            "wrong number of arguments"
+    C.Call((ftyp0, T.translate rt), fname, tr_params), rt
 
   and translate_lv lv =
       match lv with
