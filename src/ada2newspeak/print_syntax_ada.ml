@@ -185,9 +185,7 @@ and instr_to_string instr = match instr with
   | Loop(scheme, block) ->
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
       ^(block_to_string block)^")"
-  | ProcedureCall(lv, params) -> "ProcedureCall("
-      ^(lval_to_string lv)^", "
-      ^(String.concat "," (List.map arg_to_string params))^")"
+  | LvalInstr(lv) -> "LvalInstr " ^(lval_to_string lv)
   | Case(e,choices,default) -> "Case(("^(exp_to_string e)^"), ["
     ^ (String.concat ", "
      (List.map (function e,block ->

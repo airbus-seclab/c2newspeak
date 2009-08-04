@@ -870,6 +870,17 @@ and normalize_sub_program_spec subprog_spec ~addparam =
           let v = normalize_exp exp in
           Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc
         ) all_values exp_list
+    | LvalInstr(ParExp(lv, params)) ->
+        let n = make_name_of_lval lv in
+        let n = mangle_sname n in
+        let (sc,(spec,_)) = Sym.find_subprogram gtbl n in
+        let norm_args = List.map normalize_arg params in
+        let norm_spec = List.map normalize_param spec in
+        let effective_args = make_arg_list norm_args norm_spec in
+         [Ast.ProcedureCall( sc, snd n,effective_args), loc]
+    | LvalInstr((Var _|SName (Var _,_)) as lv) -> normalize_instr (LvalInstr (ParExp(lv, [])),loc)
+    | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
+                       "Statement looks like a procedure call but is not one"
     | Assign(lv, exp) ->
         begin
           let (lv', t_lv) = normalize_lval ~force:force_lval lv in
@@ -943,14 +954,6 @@ and normalize_sub_program_spec subprog_spec ~addparam =
             , loc]
       in [Ast.Block (ndp, Sym.exit_context gtbl, loop), loc]
     | Exit -> [Ast.Exit, loc]
-    | ProcedureCall(lv, params) ->
-        let n = make_name_of_lval lv in
-        let n = mangle_sname n in
-        let (sc,(spec,_)) = Sym.find_subprogram gtbl n in
-        let norm_args = List.map normalize_arg params in
-        let norm_spec = List.map normalize_param spec in
-        let effective_args = make_arg_list norm_args norm_spec in
-         [Ast.ProcedureCall( sc, snd n,effective_args), loc]
     | Case (e, choices, default) ->
               [Ast.Case (normalize_exp e,
                     List.map (function e,block->
