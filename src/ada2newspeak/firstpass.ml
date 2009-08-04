@@ -256,12 +256,7 @@ let translate compil_unit =
             C.Shift (x_lv, offset),tc
         | RecordAccess (lv, off_pos, tf) ->
             let (record, _) = translate_lv lv in
-            let ti = T.integer in
-            let offtype = T.translate ti in
-            let offset = make_offset ti
-                                     (translate_int off_pos)
-                                     (translate_int 0)
-                                     (translate_int (C.size_of_typ offtype)) in
+            let offset = translate_int off_pos in
             C.Shift (record, offset), tf
         | PtrDeref (lv, t) ->
             let (xlv, _) = translate_lv lv in

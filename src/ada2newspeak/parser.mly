@@ -562,7 +562,11 @@ aggregate_association_list:
 ;
 
 aggr_lpart:
-| expression                       {AggrExp      $1   }
+| expression                       {
+                                     match $1 with
+                                      | Lval(Var x) -> AggrField x
+                                      | _           -> AggrExp   $1
+                                   }
 | expression DOUBLE_DOT expression {AggrRange ($1, $3)}
 | OTHERS                           {AggrOthers        }
 ;;

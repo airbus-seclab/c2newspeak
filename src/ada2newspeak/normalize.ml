@@ -860,7 +860,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | NullInstr    -> []
     | ReturnSimple -> [Ast.ReturnSimple, loc]
     | Assign(lv, Aggregate (NamedAggregate bare_assoc_list)) ->
-        normalize_assign_aggregate lv bare_assoc_list loc
+        let (nlv, tlv) = normalize_lval lv in
+        normalize_assign_aggregate nlv tlv bare_assoc_list loc
     | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
         let (lv', t_lv) = normalize_lval lv in
         let (_tc, ti)   = T.extract_array_types t_lv in
@@ -969,90 +970,115 @@ and normalize_sub_program_spec subprog_spec ~addparam =
                         let ctx = Sym.exit_context gtbl in
                         [Ast.Block (ndp, ctx, norm_block), loc]
 
-  and normalize_assign_aggregate lv bare_assoc_list loc =
-    let module NatSet = Set.Make (Newspeak.Nat) in
-    (*
-     * From bare_assoc_list : (exp option * exp) list
-     * we want to build some assoc_list : (exp * exp) list * exp option.
-     * In this step we can check that :
-     *   - there is at most one others clause.
-     *   - if present, it is the last one.
-     *)
-    let (assoc_list, others_opt) =
-      let compute_val x =
-        let x' = normalize_exp x in
-        match (Eval.eval_static x' gtbl) with
-        | T.IntVal x -> x
-        | _ -> Npkcontext.report_error "normalize"
-                ("Within an aggregate, selectors"
-                ^"should evaluate as integers")
+  and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
+    let array_case _ =
+      let module NatSet = Set.Make (Newspeak.Nat) in
+      (*
+       * From bare_assoc_list : (selector * exp) list
+       * we want to build some assoc_list : (exp * exp) list * exp option.
+       * In this step we can check that :
+       *   - there is at most one others clause.
+       *   - if present, it is the last one.
+       *)
+      let (assoc_list, others_opt) =
+        let compute_val x =
+          let x' = normalize_exp x in
+          match (Eval.eval_static x' gtbl) with
+          | T.IntVal x -> x
+          | _ -> Npkcontext.report_error "normalize"
+                  ("Within an aggregate, selectors"
+                  ^"should evaluate as integers")
+        in
+        List.fold_left (fun (kvl, others_exp) (selector, value) ->
+          let rec handle = function
+          | AggrExp e ->
+              begin
+                if others_exp <> None then
+                  Npkcontext.report_error "normalize"
+                  "In an aggregate, \"others\" shall be the last clause";
+                let e' = compute_val e in
+                ((e', value)::kvl, None)
+              end
+          | AggrRange (e1, e2) ->
+              begin
+                if others_exp <> None then
+                  Npkcontext.report_error "normalize"
+                  "In an aggregate, \"others\" shall be the last clause";
+                let e1' = compute_val e1 in
+                let e2' = compute_val e2 in
+                let rec interval a b =
+                  if (Newspeak.Nat.compare b a < 0) then []
+                  else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+                in
+                (interval e1' e2')@kvl, None
+              end
+          | AggrOthers ->
+              begin
+                if others_exp <> None then
+                  Npkcontext.report_error "normalize"
+                  "In an aggregate, there shall be only one \"others\" clause";
+                (kvl, Some value)
+              end
+          | AggrField f -> handle (AggrExp (Lval(Var f)))
+          in handle selector
+        ) ([],None) bare_assoc_list
       in
-      List.fold_left (fun (kvl, others_exp) (selector, value) ->
-        match selector with
-        | AggrExp e ->
+      (*
+       * Now, using lv's type, we can :
+       *   - compute missing elements
+       *   - replace 'others' with them
+       *)
+      let (_tc, ti)   = T.extract_array_types t_lv in
+      let other_list = match others_opt with
+        | None         -> []
+        | Some oth_exp ->
             begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, \"others\" shall be the last clause";
-              let e' = compute_val e in
-              ((e', value)::kvl, None)
-            end
-        | AggrRange (e1, e2) ->
-            begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, \"others\" shall be the last clause";
-              let e1' = compute_val e1 in
-              let e2' = compute_val e2 in
-              let rec interval a b =
-                if (Newspeak.Nat.compare b a < 0) then []
-                else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+              let all_values  = T.all_values ti in
+              let mk_set l =
+                List.fold_left (fun x y -> NatSet.add y x)
+                               NatSet.empty l
               in
-              (interval e1' e2')@kvl, None
+              let all_values_set = mk_set all_values in
+              let defined_values_set =
+                mk_set (List.map fst assoc_list)
+              in
+              let missing_others =
+                NatSet.elements (NatSet.diff all_values_set
+                                             defined_values_set)
+              in
+              List.rev_map (function x -> (CInt x, oth_exp)) missing_others
             end
-        | AggrOthers ->
-            begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, there shall be only one \"others\" clause";
-              (kvl, Some value)
-            end
-      ) ([],None) bare_assoc_list
+      in
+      let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
+      List.rev_map (fun (aggr_k, aggr_v) ->
+        (* id[aggr_k] <- aggr_v *)
+        let key   = normalize_exp aggr_k in
+        let value = normalize_exp aggr_v in
+        Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
+      ) (other_list@assoc_list')
+      (* end of array_case *)
     in
-    (*
-     * Now, using lv's type, we can :
-     *   - compute missing elements
-     *   - replace 'others' with them
-     *)
-    let (lv', t_lv) = normalize_lval lv in
-    let (_tc, ti)   = T.extract_array_types t_lv in
-    let other_list = match others_opt with
-      | None         -> []
-      | Some oth_exp ->
-          begin
-            let all_values  = T.all_values ti in
-            let mk_set l =
-              List.fold_left (fun x y -> NatSet.add y x)
-                             NatSet.empty l
-            in
-            let all_values_set = mk_set all_values in
-            let defined_values_set =
-              mk_set (List.map fst assoc_list)
-            in
-            let missing_others =
-              NatSet.elements (NatSet.diff all_values_set
-                                           defined_values_set)
-            in
-            List.rev_map (function x -> (CInt x, oth_exp)) missing_others
-          end
+    let record_case _ =
+      (* (selector * exp) list --> string*exp list *)
+      let assoc_list = List.fold_left (fun fvl (selector, value) ->
+        match selector with
+        | AggrField f -> (f, value)::fvl
+        | _ -> Npkcontext.report_error "normalize:aggregate"
+                 "Expected a field name in aggregate"
+        (* FIXME *)
+      ) [] bare_assoc_list in
+      List.rev_map (fun (aggr_fld, aggr_val) ->
+        (* id.aggr_fld <- aggr_v *)
+        let (off, tf) = T.record_field t_lv aggr_fld in
+        let v = normalize_exp aggr_val in
+        Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
+      ) assoc_list
+      (* end of record_case *)
     in
-    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
-    List.rev_map (fun (aggr_k, aggr_v) ->
-      (* id[aggr_k] <- aggr_v *)
-      let key   = normalize_exp aggr_k in
-      let value = normalize_exp aggr_v in
-      Ast.Assign (Ast.ArrayAccess (lv', [key]), value), loc
-    ) (other_list@assoc_list')
+      if      T.is_array  t_lv then array_case  ()
+      else if T.is_record t_lv then record_case ()
+      else Npkcontext.report_error "normalize_assign_aggregate"
+             "Expecting an array or a record as lvalue"
 
   and normalize_block ?return_type ?(force_lval=false) block =
     List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)

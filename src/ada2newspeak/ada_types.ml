@@ -269,18 +269,6 @@ let extract_access_type t =
   | _ -> Npkcontext.report_error "extract_access_type"
            "This type is not an access type, it cannot be dereferenced"
 
-let record_field t fld =
-  match t.base.trait with
-  | Record l -> begin
-                  try
-                    let tf = List.assoc fld l in
-                    (0, tf) (* FIXME *)
-                  with Not_found -> Npkcontext.report_error "record_field"
-                                         ("No such field : '"^fld^"'")
-                end
-  | _ -> Npkcontext.report_error "record_field"
-          "assertion (is_record) failed"
-
 (*****************
  * Builtin types *
  *****************)
@@ -321,15 +309,9 @@ let is_boolean typ =
 
 let is_integer typ =
   match typ.base.trait with
-  | Unknown     _ -> false
-  | Array       _ -> false
-  | Record      _ -> false
-  | Enumeration _ -> false
-  | Float       _ -> false
   | Signed      _ -> true
   | Univ_int      -> true
-  | Univ_real     -> false
-  | Access      _ -> false
+  | _             -> false
 
 let is_discrete typ =
   match typ.base.trait with
@@ -369,27 +351,24 @@ let is_scalar typ =
 
 let is_float typ =
   match typ.base.trait with
-  | Unknown     _ -> false
-  | Array       _ -> false
-  | Record      _ -> false
   | Float       _ -> true
-  | Enumeration _ -> false
-  | Signed      _ -> false
-  | Univ_int      -> false
   | Univ_real     -> true
-  | Access      _ -> false
+  | _             -> false
+
+let is_array typ =
+  match typ.base.trait with
+  | Array _ -> true
+  | _       -> false
+
+let is_record typ =
+  match typ.base.trait with
+  | Record _ -> true
+  | _       -> false
 
 let is_unknown typ =
   match typ.base.trait with
   | Unknown     _ -> true
-  | Array       _ -> false
-  | Record      _ -> false
-  | Float       _ -> false
-  | Enumeration _ -> false
-  | Signed      _ -> false
-  | Univ_int      -> false
-  | Univ_real     -> false
-  | Access      _ -> false
+  | _             -> false
 
 (* Number of values in a type *)
 let length_of typ = match (typ.base.trait, typ.range) with
@@ -522,6 +501,29 @@ let rec translate t =
       translate_trait std_float.base.trait
 
   in translate_trait t.base.trait
+
+let record_field t fld =
+  match t.base.trait with
+  | Record l -> begin
+                  let (off, result) = List.fold_left (fun (off,found) (field,tf) ->
+                    if (found = None) then
+                      begin
+                        if field = fld then
+                          (off, Some tf)
+                        else
+                          (off + Cir.size_of_typ (translate tf), None)
+                      end
+                    else (* already found *)
+                      (off, found)
+                  ) (0, None) l in
+                  match result with
+                  | Some r -> (off,r)
+                  | None   -> Npkcontext.report_error "record_field"
+                                ("No such field : '"^fld^"'")
+                end
+  | _ -> Npkcontext.report_error "record_field"
+          "assertion (is_record) failed"
+
 
 let rec attr_get typ attr =
   let const_int x =

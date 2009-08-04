@@ -97,6 +97,7 @@ and aggregate =
   | PositionalAggregate of (expression list)
 
 and aggregate_selector =
+  | AggrField of string
   | AggrExp   of expression
   | AggrRange of expression * expression
   | AggrOthers
