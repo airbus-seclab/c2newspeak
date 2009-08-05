@@ -216,8 +216,7 @@ and object_state_to_string status = match status with
   | Variable -> "Variable"
   | Constant -> "Constant"
 
-and array_aggregate_to_string agregat = match agregat with
-  | NamedArrayAggregate(assoc_list) ->
+and array_aggregate_to_string assoc_list =
       let assoc_element_to_string (ident, exp) =
         "("^ident^", "^(exp_to_string exp)^")"
       in

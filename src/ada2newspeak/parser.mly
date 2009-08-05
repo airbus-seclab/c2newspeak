@@ -380,7 +380,7 @@ named_array_aggregate :
 ;
 
 array_aggregate :
-| LPAR named_array_aggregate RPAR {NamedArrayAggregate($2)}
+| LPAR named_array_aggregate RPAR {$2}
 ;
 
 representation_clause :
@@ -388,13 +388,13 @@ representation_clause :
 | FOR ident QUOTE ident USE expression  { Npkcontext.set_loc $1;
                                           Npkcontext.report_warning "parser"
                                           "ignoring representation clause";
-                                          ($2,NamedArrayAggregate []), $1
+                                          ($2,[]), $1
                                           }
 | FOR ident USE RECORD record_clause_list END RECORD
                                         { Npkcontext.set_loc $1;
                                           Npkcontext.report_warning "parser"
                                           "ignoring representation clause";
-                                          ($2,NamedArrayAggregate []), $1
+                                          ($2,[]), $1
                                           }
 ;
 

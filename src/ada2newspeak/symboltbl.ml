@@ -279,7 +279,7 @@ module Table = struct
       let (t,v,r) = match sym with
         | Variable (x,      v, false, r) -> (x, v, r)
         | Variable (x, Some v, true , _) ->
-              raise (Variable_no_storage (x, v))
+              raise (Variable_no_storage (x, T.get_enum_litt_value x v))
         | Subprogram ([], Some rt)       ->
               raise (Parameterless_function (s, rt))
         | _ -> failwith "find_variable : unreachable"

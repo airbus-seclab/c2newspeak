@@ -61,8 +61,8 @@ let data_lt x y =
 
 (* "subtype" in RM *)
 type t = {
-  base  : base_t;
-  range : Syntax_ada.contrainte option
+  base         : base_t;
+  range        : Syntax_ada.contrainte option;
 }
 
 (* "type" in RM *)
@@ -170,13 +170,15 @@ let universal_integer =
   { base = { trait = Univ_int
            ; uid = uid#gen
            }
-  ; range=None}
+  ; range=None
+  }
 
 let universal_real =
   { base = { trait = Univ_real
            ; uid   = uid#gen
            }
-  ; range=None}
+  ; range=None
+  }
 
 let new_enumerated values =
     let rec with_indices vals offset = match vals with
@@ -199,7 +201,7 @@ let new_derived old =
 let new_constr parent r =
   {
     base = parent.base;
-    range = Some r
+    range = Some r ;
   }
 
 let new_range c =
@@ -243,9 +245,6 @@ let new_access t =
   ; range = None
   }
 
-let handle_representation_clause _t _l =
-  invalid_arg ("handle_representaion_clause")
-
 let extract_array_types t =
   match t.base.trait with
   | Array (c, i::[]) -> (c,i)
@@ -268,6 +267,49 @@ let extract_access_type t =
   | Access te -> te
   | _ -> Npkcontext.report_error "extract_access_type"
            "This type is not an access type, it cannot be dereferenced"
+
+(**************************
+ * Representation clauses *
+ **************************)
+
+let represtbl : (t, (data_t * data_t) list) Hashtbl.t = Hashtbl.create 0
+
+let is_increasing l =
+  match l with
+  |  []  -> invalid_arg "is_increasing"
+  | h::t -> fst (List.fold_left (fun (r,pred) e ->
+      if r then (Newspeak.Nat.compare e pred > 0,e)
+      else false, Newspeak.Nat.zero
+  ) (true, h) t)
+
+let handle_enum_repr_clause t l =
+  let values_expected = 
+  begin match t.base.trait with
+    | Enumeration v -> List.map (fun (_,x) -> Newspeak.Nat.of_int x) v
+    | _ -> Npkcontext.report_error "handle_enum_repr_clause"
+                           "This type is not an enumeration"
+  end in
+  if Hashtbl.mem represtbl t then
+    Npkcontext.report_error "handle_enum_repr_clause"
+            "A representation clause has already been given for this type";
+  let (values_got, values_int) = List.split l in
+  if not (is_increasing values_int) then
+    Npkcontext.report_error "handle_enum_repr_clause"
+      "In representation clause, values should be ordered";
+  if (values_got <> values_expected) then
+    Npkcontext.report_error "handle_enum_repr_clause"
+      "In representation clause, some litterals are missing";
+  let mapping = List.map (fun (x,y) -> (IntVal x, IntVal y)) l in
+  Hashtbl.add represtbl t mapping
+  (* FIXME check if not frozen *)
+
+let rec get_enum_litt_value t x =
+  try
+    let l = Hashtbl.find represtbl t
+    in
+    List.assoc x l
+  with Not_found ->
+    x
 
 (*****************
  * Builtin types *
@@ -388,6 +430,16 @@ let length_of typ = match (typ.base.trait, typ.range) with
 let (<=%) a b =
   Newspeak.Nat.compare a b <= 0
 
+let extrema l =
+  match l with
+  |  [] -> invalid_arg "extrema"
+  | h::t ->
+  List.fold_left (fun (min, max) x ->
+    if      data_lt x min then (x  , max)
+    else if data_lt max x then (min, x  )
+    else                       (min, max)
+  ) (h,h) t
+
 let compute_constr t =
   match (t.base.trait, t.range) with
     | Signed (a,b), None -> Some (a, b)
@@ -397,11 +449,15 @@ let compute_constr t =
           Some (c, d)
         end
     | Enumeration v,_
-        when not (is_boolean t) -> let min = snd (List.hd v)         in
-                                   let max = snd (ListUtils.last v) in
-                                   Some ( Newspeak.Nat.of_int min
-                                        , Newspeak.Nat.of_int max
-                                        )
+        when not (is_boolean t)->
+          begin
+            let v' = List.map (fun (_,y) ->get_enum_litt_value t (IntVal (Newspeak.Nat.of_int y))) v in
+            let (min, max) = match extrema v' with
+            | IntVal x, IntVal y -> (x,y)
+            | _ -> invalid_arg "compute_constr"
+            in
+            Some (min, max)
+          end
     | _ -> None
 
 let all_values typ =
@@ -412,7 +468,6 @@ let all_values typ =
   match (compute_constr typ) with
     | Some (a, b) -> interval a b
     | None -> Npkcontext.report_error "length_of" "Type has infinite values"
-
 
 (****************
  *  Translator  *
@@ -439,7 +494,8 @@ let minimal_size_signed a b =
    Minimal integer n such that
        0 <= b <= 2^n - 1
  *)
-let minimal_size_unsigned b =
+let minimal_size_unsigned b' =
+  let b = Newspeak.Nat.to_int b' in
   let (i,two_pow_i) = ref 0, ref 1 in
   let finished _ =
     b <= !two_pow_i - 1
@@ -454,18 +510,28 @@ let float_size _d =
   (* FIXME *)
   32
 
-let rec translate t =
-  let rec translate_trait = function
+let rec translate t = match t.base.trait with
   | Signed (a,b) -> Cir.Scalar
                              (Newspeak.Int
                                ( Newspeak.Signed
                                , minimal_size_signed a b
-                               ))
-  | Enumeration    v    -> Cir.Scalar
-                            (Newspeak.Int
-                              ( Newspeak.Unsigned
-                              , minimal_size_unsigned
-                                 (snd (ListUtils.last v))))
+                               )) 
+  | Enumeration    v    -> begin
+                             let (min, max) = match (compute_constr t) with
+                               | Some bounds -> bounds
+                               | None -> ( Newspeak.Nat.zero
+                                         , Newspeak.Nat.of_int (snd (ListUtils.last v)))
+                             in
+                             let ikind = 
+                               if (Newspeak.Nat.compare min Newspeak.Nat.zero < 0) then
+                                 ( Newspeak.Signed
+                                 , minimal_size_signed min max)
+                               else
+                                 ( Newspeak.Unsigned
+                                 , minimal_size_unsigned max)
+                             in 
+                               Cir.Scalar (Newspeak.Int ikind)
+                           end
   | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
   | Array        (c,is) -> let i = match is with
                              | [] -> invalid_arg "translate"
@@ -492,15 +558,13 @@ let rec translate t =
        * Here we only type as Integer.
        *)
       Npkcontext.print_debug "Universal_integer remaining at translate time";
-      translate_trait integer.base.trait
+      translate integer
   | Univ_real ->
       (*
        * Same thing : we type constants as Float.
        *)
       Npkcontext.print_debug "Universal_real remaining at translate time";
-      translate_trait std_float.base.trait
-
-  in translate_trait t.base.trait
+      translate std_float
 
 let record_field t fld =
   match t.base.trait with

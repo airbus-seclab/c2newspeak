@@ -180,10 +180,6 @@ and sub_program_spec =
   | Function  of string*param list*subtyp (** A Function returns a value *)
   | Procedure of string*param list        (** A Procedure does not       *)
 
-(* the string is the one that choose the element :
-   there are other possibilities for this choice, not yet implemented *)
-and array_aggregate = NamedArrayAggregate of (string * expression) list
-
 and object_state =
   | Variable
   | Constant
@@ -220,7 +216,7 @@ and basic_declaration =
                           * expression
   | SubtypDecl           of string
                           * subtyp_indication
-  | RepresentClause      of string * array_aggregate
+  | RepresentClause      of string * (string * expression) list
   | RenamingDecl         of string (* new name *)
                           * name   (* old name *)
   | GenericInstanciation of string

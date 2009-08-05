@@ -95,7 +95,9 @@ val new_access : t -> t
 val is_compatible : t -> t -> bool
 
 (* Precondition : (is_record t) *)
-val handle_representation_clause : t -> (string * Newspeak.Nat.t) list -> unit
+val handle_enum_repr_clause : t -> (Newspeak.Nat.t * Newspeak.Nat.t) list -> unit
+
+val get_enum_litt_value : t -> data_t -> data_t
 
 (**
  * Returns (component, index)

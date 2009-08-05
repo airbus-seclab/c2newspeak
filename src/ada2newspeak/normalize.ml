@@ -36,7 +36,7 @@ module Sym = Symboltbl
 let (%+) = Nat.add
 let (%-) = Nat.sub
 
-let gtbl : Sym.t = Sym.create ()
+let gtbl = Sym.create ()
 let g_extern = ref false
 
 let mangle_sname = function
@@ -656,10 +656,30 @@ and normalize_typ_decl ident typ_decl loc =
       let t = T.new_access te in
       Sym.add_type gtbl ident loc t
 
-(*
- * renvoie la specification normalisee du package correspondant
- * a name, les noms etant traites comme extern a la normalisation
- *)
+and add_representation_clause id aggr loc =
+  Npkcontext.set_loc loc;
+  let t = subtyp_to_adatyp [id] in
+  let assoc_list : (Newspeak.Nat.t * Newspeak.Nat.t) list =
+      List.map (fun (i, exp) ->
+        let orgn_val =
+          try
+            let (_,(_,x,_)) = Sym.find_variable_value ~expected_type:t gtbl (None,i) in x
+          with Sym.Variable_no_storage (_,x) -> Some x
+        in
+        let original = match orgn_val with
+          | None -> Npkcontext.report_error "normalize:repclause"
+                      ("No value found for key '"^i^"'")
+          | Some x -> x
+        in
+        let exp' = normalize_exp exp in
+        let value = Eval.eval_static exp' gtbl in
+        match (original, value) with
+        | T.IntVal a, T.IntVal b -> (a,b)
+        | _ -> Npkcontext.report_error "representation_clause"
+                 "Expected an integer value for representation clause"
+    ) aggr in
+  T.handle_enum_repr_clause t assoc_list
+
 and parse_extern_specification name =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
@@ -782,7 +802,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         []
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
                              []
-    | RepresentClause _   -> []
+    | RepresentClause (id, aggr)   -> add_representation_clause id aggr loc;[]
     | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
                                         ("ignoring generic instanciation of '"
                                                          ^name_to_string n^"'");
@@ -792,14 +812,6 @@ and normalize_sub_program_spec subprog_spec ~addparam =
   and normalize_package_spec (name, list_decl) =
     Sym.set_current gtbl name;
     Sym.enter_context ~name ~desc:"Package spec" gtbl;
-    let represtbl = Hashtbl.create 50 in
-    List.iter (function
-               | RepresentClause(id, aggr), loc ->
-                   Hashtbl.add represtbl
-                     (id)
-                     ((id, aggr), loc)
-               | _ -> ())
-    list_decl;
     let rec normalize_decls decls =
       List.flatten (List.map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
@@ -1111,12 +1123,6 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
 
   and normalize_decl_part decl_part =
-    let represtbl = Hashtbl.create 50 in
-    List.iter (function
-        | BasicDecl(RepresentClause(id, aggr)), loc ->
-          Hashtbl.add represtbl id ((id, aggr), loc)
-        | _ -> ()
-    ) decl_part;
     let normalize_decl_items items =
       List.map (function
         | BasicDecl(basic),loc ->
