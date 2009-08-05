@@ -107,9 +107,9 @@ let rec resolve_selected ?expected_type n =
   let resolve_variable pkg id =
     begin
       try
-        let (sc,(t, ro)) = Sym.find_variable ?expected_type
+        let (sc,(act_id, t, ro)) = Sym.find_variable ?expected_type
                                              gtbl (pkg,id) in
-        SelectedVar(sc,id,t,ro)
+        SelectedVar(sc,act_id,t,ro)
       with
       | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc , id , rt)
       | Sym.Variable_no_storage (t,v) -> SelectedConst (t, v)
@@ -119,9 +119,11 @@ let rec resolve_selected ?expected_type n =
   | SName(Var pfx, fld) ->
       begin
         try
-          let (_,(t,_)) = Sym.find_variable ~silent:true gtbl (None, pfx) in
+          let (_,(act_id,t,_)) =
+            Sym.find_variable ~silent:true gtbl (None, pfx)
+          in
           let (off, tf) = T.record_field t fld in
-          let lv = Ast.Var (Sym.Lexical, pfx, t) in
+          let lv = Ast.Var (Sym.Lexical, act_id, t) in
           SelectedRecord (lv , off, tf)
         with Not_found -> resolve_variable (Some pfx) fld
       end
@@ -543,10 +545,10 @@ and normalize_fcall (n, params) =
     Ast.FunctionCall(sc, act_name, effective_args, t),t
   with Not_found ->
     begin
-      let (sc,(t,_)) = Sym.find_variable gtbl n in
+      let (sc,(act_id, t,_)) = Sym.find_variable gtbl n in
       let tc = fst (T.extract_array_types t) in
       let params' = List.map snd params in
-      let lv = Ast.Var (sc, snd n, t) in
+      let lv = Ast.Var (sc, act_id, t) in
       Ast.Lval (Ast.ArrayAccess(lv, List.map normalize_exp params')),tc
     end
 
@@ -663,7 +665,7 @@ and add_representation_clause id aggr loc =
       List.map (fun (i, exp) ->
         let orgn_val =
           try
-            let (_,(_,x,_)) = Sym.find_variable_value ~expected_type:t
+            let (_,(_,_,x,_)) = Sym.find_variable_value ~expected_type:t
                                                       gtbl (None,i)
                             in x
           with Sym.Variable_no_storage (_,x) -> Some x
@@ -808,8 +810,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | RepresentClause (id, EnumRepClause aggr) ->
         add_representation_clause id aggr loc;[]
     | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
-                                 ("Ignoring representation clause for '"^id^"'");
-                                 []
+                                ("Ignoring representation clause for '"^id^"'");
+                                []
     | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
                                         ("ignoring generic instanciation of '"
                                                          ^name_to_string n^"'");
@@ -933,7 +935,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         | ArrayRange n -> begin
                             let n = make_name_of_lval n in
                             let n = mangle_sname n in
-                            let (_,(t,_)) = Sym.find_variable gtbl n in
+                            let (_,(_,t,_)) = Sym.find_variable gtbl n in
                             ( fst (T.attr_get t "first")
                             , fst (T.attr_get t "last"))
                           end

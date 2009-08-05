@@ -117,13 +117,13 @@ val find_variable :    t
                     -> ?silent:bool
                     -> ?expected_type:Ada_types.t
                     -> string option*string
-         -> scope * (Ada_types.t * bool)
+         -> scope * (string*Ada_types.t * bool)
 
 val find_variable_value :    t
                     -> ?silent:bool
                     -> ?expected_type:Ada_types.t
                     -> string option*string
-         -> scope * (Ada_types.t*(Ada_types.data_t option)*bool)
+         -> scope * (string*Ada_types.t*(Ada_types.data_t option)*bool)
 
 val find_type     :    t
                     -> string option * string
