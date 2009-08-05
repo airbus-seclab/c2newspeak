@@ -531,7 +531,7 @@ and normalize_fcall (n, params) =
   let n = make_name_of_lval n in
   let n = mangle_sname n in
   try
-    let (sc,(spec,top)) = Sym.find_subprogram ~silent:true gtbl n in
+    let (sc,(act_name,spec,top)) = Sym.find_subprogram ~silent:true gtbl n in
     let t = match top with
     | None -> Npkcontext.report_error "normalize_exp"
               "Expected function, got procedure"
@@ -540,7 +540,7 @@ and normalize_fcall (n, params) =
     let norm_args = List.map normalize_arg params in
     let norm_spec = List.map normalize_param spec in
     let effective_args = make_arg_list norm_args norm_spec in
-    Ast.FunctionCall(sc, (snd n), effective_args, t),t
+    Ast.FunctionCall(sc, act_name, effective_args, t),t
   with Not_found ->
     begin
       let (sc,(t,_)) = Sym.find_variable gtbl n in
@@ -802,7 +802,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
         Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
         []
-    | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
+    | RenamingDecl (n, o) -> let o' = mangle_sname o in
+                             Sym.add_renaming_decl gtbl n o';
                              []
     | RepresentClause (id, EnumRepClause aggr) ->
         add_representation_clause id aggr loc;[]
@@ -892,11 +893,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | LvalInstr(ParExp(lv, params)) ->
         let n = make_name_of_lval lv in
         let n = mangle_sname n in
-        let (sc,(spec,_)) = Sym.find_subprogram gtbl n in
+        let (sc,(act_name,spec,_)) = Sym.find_subprogram gtbl n in
         let norm_args = List.map normalize_arg params in
         let norm_spec = List.map normalize_param spec in
         let effective_args = make_arg_list norm_args norm_spec in
-         [Ast.ProcedureCall( sc, snd n,effective_args), loc]
+         [Ast.ProcedureCall( sc, act_name, effective_args), loc]
     | LvalInstr((Var _|SName (Var _,_)) as lv) ->
         normalize_instr (LvalInstr (ParExp(lv, [])),loc)
     | LvalInstr _ -> Npkcontext.report_error "normalize_instr"

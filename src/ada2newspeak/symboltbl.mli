@@ -132,7 +132,7 @@ val find_type     :    t
 val find_subprogram : t
                     -> ?silent:bool
                     -> string option * string
-    -> scope * (Syntax_ada.param list * Ada_types.t option)
+    -> scope * (string * Syntax_ada.param list * Ada_types.t option)
 
 val is_operator_overloaded : t -> string -> bool
 
@@ -170,4 +170,4 @@ val add_with          : t -> string -> unit
 val is_with           : t -> string -> bool
 val s_get_use         : t -> string list
 
-val add_renaming_decl : t -> string -> Syntax_ada.name -> unit
+val add_renaming_decl : t -> string -> string option * string -> unit

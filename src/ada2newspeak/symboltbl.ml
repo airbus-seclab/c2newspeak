@@ -69,14 +69,13 @@ module Table = struct
    *)
   type symbol =
     | Type       of T.t
-    | Subprogram of ((Syntax_ada.param list)*T.t option)
+    | Subprogram of (string*(Syntax_ada.param list)*T.t option)
     | Unit       of table
     | Variable   of T.t*(T.data_t option)*bool (* if true, no storage *
                                                 * will be allocated   *)
                                          *bool (* R/O *)
 
-  and table = { mutable t_renaming : (string*Syntax_ada.name) list
-              ; mutable t_tbl      : elt Symset.t
+  and table = { mutable t_tbl      : elt Symset.t
               ;         t_desc     : string option
               ;         t_loc      : Newspeak.location
               ; mutable t_use_list : string list
@@ -95,7 +94,7 @@ module Table = struct
     | Variable   (t,None,_,_)   -> "V",T.print t
     | Variable   (t,Some v,_,_) -> "V *","("^T.print_data v^")"^ T.print t
     | Type         t   -> "T",T.print t
-    | Subprogram (p,r) -> "S",(
+    | Subprogram (_,p,r) -> "S",(
                                let pdesc = " with "
                                          ^ string_of_int (List.length p)
                                          ^ " parameter(s)"
@@ -140,8 +139,7 @@ module Table = struct
     print_string "\n";
     Buffer.contents out
 
-  let create_table scope ?desc _ = { t_renaming = []
-                                   ; t_tbl      = Symset.empty
+  let create_table scope ?desc _ = { t_tbl      = Symset.empty
                                    ; t_desc     = desc
                                    ; t_loc      = Npkcontext.get_loc ()
                                    ; t_use_list = ["standard"]
@@ -171,7 +169,7 @@ module Table = struct
           "type"
 
   let add_subprogram tbl n loc params ret =
-    adder (fun (params,ret) -> Subprogram (params,ret))
+    adder (fun (params,ret) -> Subprogram (n,params,ret))
           "subprogram"
           tbl
           n
@@ -222,7 +220,7 @@ module Table = struct
                       (fun s -> match s with
                         | Variable (_,_     ,false,_) -> Some s
                         | Variable (_,Some _,true ,_) -> Some s
-                        | Subprogram ([],Some  _)     -> Some s
+                        | Subprogram (_,[],Some  _)   -> Some s
                         |_ -> None
                       )
                       ?filter
@@ -252,7 +250,7 @@ module Table = struct
     cast_t (find_symbols tbl n)
 
   let tbl_find_subprogram tbl n =
-      (fun (wh,(x,y)) -> wh,(x,y))
+      (fun (wh,(x,y,z)) -> wh,(x,y,z))
           (cast_s (find_symbols tbl n))
 
   let tbl_find_variable tbl ?expected_type n :scope*(T.t*T.data_t option*bool)=
@@ -271,8 +269,8 @@ module Table = struct
     try
       let (s,sym) =
         cast_v ~filter:(function
-                        | (_,(Variable (x,_,_,_))) -> ovl_predicate x
-                        | (_,(Subprogram([], Some x))) -> ovl_predicate x
+                        | (_,(Variable (x,_,_,_)))        -> ovl_predicate x
+                        | (_,(Subprogram(_, [], Some x))) -> ovl_predicate x
                         | _ -> true
                         ) (find_symbols tbl n)
       in
@@ -280,7 +278,7 @@ module Table = struct
         | Variable (x,      v, false, r) -> (x, v, r)
         | Variable (x, Some v, true , _) ->
               raise (Variable_no_storage (x, T.get_enum_litt_value x v))
-        | Subprogram ([], Some rt)       ->
+        | Subprogram (_,[], Some rt)     ->
               raise (Parameterless_function (s, rt))
         | _ -> failwith "find_variable : unreachable"
       in
@@ -330,9 +328,10 @@ end
 module SymMake(TR:Tree.TREE) = struct
   open Table
 
-  type t = {         s_stack  : table TR.t
-           ; mutable s_cpkg   : string option
-           ; mutable s_with   : string list
+  type t = {         s_stack    : table TR.t
+           ; mutable s_cpkg     : string option
+           ; mutable s_with     : string list
+           ; mutable s_renaming : (string*(string option*string)) list
            }
 
   type context = table
@@ -359,9 +358,10 @@ module SymMake(TR:Tree.TREE) = struct
                                 ,Unit system_tbl)
                                 library.t_tbl;
     TR.push library s;
-    { s_stack  = s
-    ; s_cpkg   = None
-    ; s_with   = ["system";"machine_code";"unchecked_conversion"]
+    { s_stack    = s
+    ; s_cpkg     = None
+    ; s_with     = ["system";"machine_code";"unchecked_conversion"]
+    ; s_renaming = []
     }
 
   let set_current s x = s.s_cpkg <- Some x
@@ -413,17 +413,20 @@ module SymMake(TR:Tree.TREE) = struct
    * call is (A -> A) and the circular dependency will be detected.
    *)
   let rec add_renaming_decl s new_name old_name =
-    if ([new_name] = old_name) then
+    if ((None,new_name) = old_name) then
       Npkcontext.report_error "add_renaming_decl"
                     ("Circular declaration detected for '"
                     ^new_name^"'.")
-    else begin
+    else
       try
-        let pointee = List.assoc new_name (top s).t_renaming in
+        let pointee = List.assoc new_name s.s_renaming in
         add_renaming_decl s new_name pointee
       with Not_found ->
-        (top s).t_renaming <- (new_name,old_name)::(top s).t_renaming
-    end
+    Npkcontext.print_debug ("SYM : adding renaming declaration "
+                           ^new_name^" --> "^(match old_name with
+                                              | Some p,i -> p^"."^i
+                                              | None  ,i -> i));
+    s.s_renaming <- (new_name,old_name)::s.s_renaming
 
 
   let enter_context ?name ?desc (s:t) =
@@ -537,7 +540,10 @@ module SymMake(TR:Tree.TREE) = struct
       s_find "type" tbl_find_type s ?package n
     with Not_found -> error ("Cannot find type '"^n^"'")
 
-  let find_subprogram s ?(silent=false) (package,n) =
+  let rec find_subprogram s ?(silent=false) (package,n) =
+    try
+      find_subprogram s (List.assoc n s.s_renaming)
+    with Not_found ->
     try
       s_find "subprogram" tbl_find_subprogram s ?package n
     with Not_found -> if silent then raise Not_found
