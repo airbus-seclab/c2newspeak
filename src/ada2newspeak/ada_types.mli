@@ -113,6 +113,8 @@ val extract_access_type : t -> t
 
 val record_field : t -> string -> int * t
 
+val all_record_fields : t -> string list
+
 (**
  * Coercion from universal types to finite types.
  *)

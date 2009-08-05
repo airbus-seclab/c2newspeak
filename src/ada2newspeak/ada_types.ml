@@ -524,7 +524,6 @@ let record_field t fld =
   | _ -> Npkcontext.report_error "record_field"
           "assertion (is_record) failed"
 
-
 let rec attr_get typ attr =
   let const_int x =
     A.CInt (Newspeak.Nat.of_int x)
@@ -612,6 +611,12 @@ let extract_array_base t =
           | Some (a, _) -> a
       end
   | _             -> invalid_arg "extract_array_base"
+
+let all_record_fields t =
+  match t.base.trait with
+  | Record l -> List.map fst l
+  | _ -> Npkcontext.report_error "all_record_fields"
+           "This type is not a record type"
 
 let coerce_types a b =
   match (a.base.trait,b.base.trait) with

@@ -1059,20 +1059,47 @@ and normalize_sub_program_spec subprog_spec ~addparam =
       (* end of array_case *)
     in
     let record_case _ =
-      (* (selector * exp) list --> string*exp list *)
-      let assoc_list = List.fold_left (fun fvl (selector, value) ->
+      let module FieldSet = Set.Make (String) in
+      (* (selector*exp) list --> (string*exp) list*exp option *)
+      let (assoc_list,other) = List.fold_left (fun (fvl,others_opt) (selector, value) ->
         match selector with
-        | AggrField f -> (f, value)::fvl
+        | AggrField  f -> begin
+                            if (others_opt) <> None then
+                              Npkcontext.report_error "normalize:aggregate"
+                                "'others' clause should be the last one";
+                            (f, value)::fvl,others_opt
+                          end
+        | AggrOthers   -> begin
+                            if (others_opt) <> None then
+                              Npkcontext.report_error "normalize:aggregate"
+                              "There shall be only one 'others' clause";
+                            fvl,Some value
+                          end
         | _ -> Npkcontext.report_error "normalize:aggregate"
                  "Expected a field name in aggregate"
-        (* FIXME *)
-      ) [] bare_assoc_list in
+      ) ([],None) bare_assoc_list in
+      let other_list = match other with
+        | None           -> []
+        | Some other_exp ->
+            begin
+              let flds = T.all_record_fields t_lv in
+              let mk_set l =
+                List.fold_left (fun x y -> FieldSet.add y x)
+                               FieldSet.empty l
+              in
+              let all_fields = mk_set flds in
+              let defined    = mk_set (List.map fst assoc_list) in
+              let missing_others =
+                FieldSet.elements (FieldSet.diff all_fields defined) in
+              List.map (fun f -> (f, other_exp)) missing_others
+            end
+      in
       List.rev_map (fun (aggr_fld, aggr_val) ->
         (* id.aggr_fld <- aggr_v *)
         let (off, tf) = T.record_field t_lv aggr_fld in
         let v = normalize_exp aggr_val in
         Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
-      ) assoc_list
+      ) (assoc_list@other_list)
       (* end of record_case *)
     in
       if      T.is_array  t_lv then array_case  ()
