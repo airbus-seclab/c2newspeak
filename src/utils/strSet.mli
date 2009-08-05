@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -22,37 +22,23 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
-(* TODO: factor launcher and error treatment for the several newspeak 
-   utilities *)
 
-let exec_name = "npkfuns"
+type t
 
-let input = ref ""
+val empty: t
 
-let stats = ref false
+val singleton: string -> t
 
-let speclist = 
-  [
-    ("--stats", Arg.Set stats, "prints stats instead of function signatures")
-  ]
+val add: string -> t -> t
 
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
+val mem: string -> t -> bool
 
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
+val iter: (string -> unit) -> t -> unit
 
-let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^exec_name^" --help");
+val union: t -> t -> t
 
-    let prog = Newspeak.read !input in
-    let glbs = GlbCollect.process prog in
-      if !stats then GlbCollect.print_stats glbs
-      else GlbCollect.print glbs
+val subset: t -> t -> bool
 
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+val elements: t -> string list
+
+val cardinal: t -> int
