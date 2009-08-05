@@ -1097,7 +1097,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
       List.rev_map (fun (aggr_fld, aggr_val) ->
         (* id.aggr_fld <- aggr_v *)
         let (off, tf) = T.record_field t_lv aggr_fld in
-        let v = normalize_exp aggr_val in
+        let v = normalize_exp ~expected_type:tf aggr_val in
         Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
       ) (assoc_list@other_list)
       (* end of record_case *)
