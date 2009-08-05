@@ -380,31 +380,24 @@ named_array_aggregate :
 ;
 
 array_aggregate :
-| LPAR named_array_aggregate RPAR {NamedArrayAggregate($2)}
+| LPAR named_array_aggregate RPAR {$2}
 ;
 
 representation_clause :
-| FOR ident USE array_aggregate         {($2,$4) ,$1}
-| FOR ident QUOTE ident USE expression  { Npkcontext.set_loc $1;
-                                          Npkcontext.report_warning "parser"
-                                          "ignoring representation clause";
-                                          ($2,NamedArrayAggregate []), $1
-                                          }
+| FOR ident USE array_aggregate         {($2,EnumRepClause $4) ,$1}
+| FOR ident QUOTE ident USE expression  {($2,SizeRepClause $6), $1}
 | FOR ident USE RECORD record_clause_list END RECORD
-                                        { Npkcontext.set_loc $1;
-                                          Npkcontext.report_warning "parser"
-                                          "ignoring representation clause";
-                                          ($2,NamedArrayAggregate []), $1
-                                          }
+                                        {($2,RecordRepClause $5), $1}
 ;
 
 record_clause_list:
-| record_clause {}
-| record_clause record_clause_list {}
+| record_clause                    {$1::[]}
+| record_clause record_clause_list {$1::$2}
 ;
 
 record_clause:
-| ident AT expression RANGE expression DOUBLE_DOT expression SEMICOLON {}
+| ident AT expression RANGE expression DOUBLE_DOT expression SEMICOLON
+                                              {$1, $3, $5, $7}
 ;
 
 instr_list :
@@ -562,7 +555,11 @@ aggregate_association_list:
 ;
 
 aggr_lpart:
-| expression                       {AggrExp      $1   }
+| expression                       {
+                                     match $1 with
+                                      | Lval(Var x) -> AggrField x
+                                      | _           -> AggrExp   $1
+                                   }
 | expression DOUBLE_DOT expression {AggrRange ($1, $3)}
 | OTHERS                           {AggrOthers        }
 ;;

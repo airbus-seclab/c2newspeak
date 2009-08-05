@@ -95,7 +95,10 @@ val new_access : t -> t
 val is_compatible : t -> t -> bool
 
 (* Precondition : (is_record t) *)
-val handle_representation_clause : t -> (string * Newspeak.Nat.t) list -> unit
+val handle_enum_repr_clause : t -> (Newspeak.Nat.t * Newspeak.Nat.t) list
+                              -> unit
+
+val get_enum_litt_value : t -> data_t -> data_t
 
 (**
  * Returns (component, index)
@@ -112,6 +115,8 @@ val extract_symbols : t -> (string*int) list option
 val extract_access_type : t -> t
 
 val record_field : t -> string -> int * t
+
+val all_record_fields : t -> string list
 
 (**
  * Coercion from universal types to finite types.
@@ -162,13 +167,14 @@ val system_address : t
  * Tests on types *
  ******************)
 
+val is_array    : t -> bool
 val is_boolean  : t -> bool
-val is_scalar   : t -> bool
-val is_numeric  : t -> bool
-val is_integer  : t -> bool
 val is_discrete : t -> bool
 val is_float    : t -> bool
-
+val is_integer  : t -> bool
+val is_numeric  : t -> bool
+val is_record   : t -> bool
+val is_scalar   : t -> bool
 val is_unknown  : t -> bool
 
 (****************

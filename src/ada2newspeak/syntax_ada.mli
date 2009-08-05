@@ -97,6 +97,7 @@ and aggregate =
   | PositionalAggregate of (expression list)
 
 and aggregate_selector =
+  | AggrField of string
   | AggrExp   of expression
   | AggrRange of expression * expression
   | AggrOthers
@@ -179,10 +180,6 @@ and sub_program_spec =
   | Function  of string*param list*subtyp (** A Function returns a value *)
   | Procedure of string*param list        (** A Procedure does not       *)
 
-(* the string is the one that choose the element :
-   there are other possibilities for this choice, not yet implemented *)
-and array_aggregate = NamedArrayAggregate of (string * expression) list
-
 and object_state =
   | Variable
   | Constant
@@ -219,12 +216,17 @@ and basic_declaration =
                           * expression
   | SubtypDecl           of string
                           * subtyp_indication
-  | RepresentClause      of string * array_aggregate
+  | RepresentClause      of string * representation_clause
   | RenamingDecl         of string (* new name *)
                           * name   (* old name *)
   | GenericInstanciation of string
                           * name
                           * argument list
+
+and representation_clause =
+  | EnumRepClause of (string * expression) list
+  | SizeRepClause of expression
+  | RecordRepClause of (string * expression * expression * expression) list
 
 and declarative_item =
   | BasicDecl of basic_declaration

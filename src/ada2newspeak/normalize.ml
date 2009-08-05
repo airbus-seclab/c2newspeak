@@ -36,7 +36,7 @@ module Sym = Symboltbl
 let (%+) = Nat.add
 let (%-) = Nat.sub
 
-let gtbl : Sym.t = Sym.create ()
+let gtbl = Sym.create ()
 let g_extern = ref false
 
 let mangle_sname = function
@@ -656,10 +656,32 @@ and normalize_typ_decl ident typ_decl loc =
       let t = T.new_access te in
       Sym.add_type gtbl ident loc t
 
-(*
- * renvoie la specification normalisee du package correspondant
- * a name, les noms etant traites comme extern a la normalisation
- *)
+and add_representation_clause id aggr loc =
+  Npkcontext.set_loc loc;
+  let t = subtyp_to_adatyp [id] in
+  let assoc_list : (Newspeak.Nat.t * Newspeak.Nat.t) list =
+      List.map (fun (i, exp) ->
+        let orgn_val =
+          try
+            let (_,(_,x,_)) = Sym.find_variable_value ~expected_type:t
+                                                      gtbl (None,i)
+                            in x
+          with Sym.Variable_no_storage (_,x) -> Some x
+        in
+        let original = match orgn_val with
+          | None -> Npkcontext.report_error "normalize:repclause"
+                      ("No value found for key '"^i^"'")
+          | Some x -> x
+        in
+        let exp' = normalize_exp exp in
+        let value = Eval.eval_static exp' gtbl in
+        match (original, value) with
+        | T.IntVal a, T.IntVal b -> (a,b)
+        | _ -> Npkcontext.report_error "representation_clause"
+                 "Expected an integer value for representation clause"
+    ) aggr in
+  T.handle_enum_repr_clause t assoc_list
+
 and parse_extern_specification name =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
@@ -782,7 +804,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         []
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
                              []
-    | RepresentClause _   -> []
+    | RepresentClause (id, EnumRepClause aggr) ->
+        add_representation_clause id aggr loc;[]
+    | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
+                                 ("Ignoring representation clause for '"^id^"'");
+                                 []
     | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
                                         ("ignoring generic instanciation of '"
                                                          ^name_to_string n^"'");
@@ -792,14 +818,6 @@ and normalize_sub_program_spec subprog_spec ~addparam =
   and normalize_package_spec (name, list_decl) =
     Sym.set_current gtbl name;
     Sym.enter_context ~name ~desc:"Package spec" gtbl;
-    let represtbl = Hashtbl.create 50 in
-    List.iter (function
-               | RepresentClause(id, aggr), loc ->
-                   Hashtbl.add represtbl
-                     (id)
-                     ((id, aggr), loc)
-               | _ -> ())
-    list_decl;
     let rec normalize_decls decls =
       List.flatten (List.map (fun (decl, loc) ->
                   Npkcontext.set_loc loc;
@@ -860,7 +878,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | NullInstr    -> []
     | ReturnSimple -> [Ast.ReturnSimple, loc]
     | Assign(lv, Aggregate (NamedAggregate bare_assoc_list)) ->
-        normalize_assign_aggregate lv bare_assoc_list loc
+        let (nlv, tlv) = normalize_lval lv in
+        normalize_assign_aggregate nlv tlv bare_assoc_list loc
     | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
         let (lv', t_lv) = normalize_lval lv in
         let (_tc, ti)   = T.extract_array_types t_lv in
@@ -878,7 +897,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         let norm_spec = List.map normalize_param spec in
         let effective_args = make_arg_list norm_args norm_spec in
          [Ast.ProcedureCall( sc, snd n,effective_args), loc]
-    | LvalInstr((Var _|SName (Var _,_)) as lv) -> normalize_instr (LvalInstr (ParExp(lv, [])),loc)
+    | LvalInstr((Var _|SName (Var _,_)) as lv) ->
+        normalize_instr (LvalInstr (ParExp(lv, [])),loc)
     | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
                        "Statement looks like a procedure call but is not one"
     | Assign(lv, exp) ->
@@ -969,101 +989,148 @@ and normalize_sub_program_spec subprog_spec ~addparam =
                         let ctx = Sym.exit_context gtbl in
                         [Ast.Block (ndp, ctx, norm_block), loc]
 
-  and normalize_assign_aggregate lv bare_assoc_list loc =
-    let module NatSet = Set.Make (Newspeak.Nat) in
-    (*
-     * From bare_assoc_list : (exp option * exp) list
-     * we want to build some assoc_list : (exp * exp) list * exp option.
-     * In this step we can check that :
-     *   - there is at most one others clause.
-     *   - if present, it is the last one.
-     *)
-    let (assoc_list, others_opt) =
-      let compute_val x =
-        let x' = normalize_exp x in
-        match (Eval.eval_static x' gtbl) with
-        | T.IntVal x -> x
-        | _ -> Npkcontext.report_error "normalize"
-                ("Within an aggregate, selectors"
-                ^"should evaluate as integers")
+  and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
+    let array_case _ =
+      let module NatSet = Set.Make (Newspeak.Nat) in
+      (*
+       * From bare_assoc_list : (selector * exp) list
+       * we want to build some assoc_list : (exp * exp) list * exp option.
+       * In this step we can check that :
+       *   - there is at most one others clause.
+       *   - if present, it is the last one.
+       *)
+      let (assoc_list, others_opt) =
+        let compute_val x =
+          let x' = normalize_exp x in
+          match (Eval.eval_static x' gtbl) with
+          | T.IntVal x -> x
+          | _ -> Npkcontext.report_error "normalize"
+                  ("Within an aggregate, selectors"
+                  ^"should evaluate as integers")
+        in
+        List.fold_left (fun (kvl, others_exp) (selector, value) ->
+          let rec handle = function
+          | AggrExp e ->
+              begin
+                if others_exp <> None then
+                  Npkcontext.report_error "normalize"
+                  "In an aggregate, \"others\" shall be the last clause";
+                let e' = compute_val e in
+                ((e', value)::kvl, None)
+              end
+          | AggrRange (e1, e2) ->
+              begin
+                if others_exp <> None then
+                  Npkcontext.report_error "normalize"
+                  "In an aggregate, \"others\" shall be the last clause";
+                let e1' = compute_val e1 in
+                let e2' = compute_val e2 in
+                let rec interval a b =
+                  if (Newspeak.Nat.compare b a < 0) then []
+                  else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+                in
+                (interval e1' e2')@kvl, None
+              end
+          | AggrOthers ->
+              begin
+                if others_exp <> None then
+                  Npkcontext.report_error "normalize"
+                  "In an aggregate, there shall be only one \"others\" clause";
+                (kvl, Some value)
+              end
+          | AggrField f -> handle (AggrExp (Lval(Var f)))
+          in handle selector
+        ) ([],None) bare_assoc_list
       in
-      List.fold_left (fun (kvl, others_exp) (selector, value) ->
-        match selector with
-        | AggrExp e ->
+      (*
+       * Now, using lv's type, we can :
+       *   - compute missing elements
+       *   - replace 'others' with them
+       *)
+      let (_tc, ti)   = T.extract_array_types t_lv in
+      let other_list = match others_opt with
+        | None         -> []
+        | Some oth_exp ->
             begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, \"others\" shall be the last clause";
-              let e' = compute_val e in
-              ((e', value)::kvl, None)
-            end
-        | AggrRange (e1, e2) ->
-            begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, \"others\" shall be the last clause";
-              let e1' = compute_val e1 in
-              let e2' = compute_val e2 in
-              let rec interval a b =
-                if (Newspeak.Nat.compare b a < 0) then []
-                else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+              let all_values  = T.all_values ti in
+              let mk_set l =
+                List.fold_left (fun x y -> NatSet.add y x)
+                               NatSet.empty l
               in
-              (interval e1' e2')@kvl, None
+              let all_values_set = mk_set all_values in
+              let defined_values_set =
+                mk_set (List.map fst assoc_list)
+              in
+              let missing_others =
+                NatSet.elements (NatSet.diff all_values_set
+                                             defined_values_set)
+              in
+              List.rev_map (function x -> (CInt x, oth_exp)) missing_others
             end
-        | AggrOthers ->
+      in
+      let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
+      List.rev_map (fun (aggr_k, aggr_v) ->
+        (* id[aggr_k] <- aggr_v *)
+        let key   = normalize_exp aggr_k in
+        let value = normalize_exp aggr_v in
+        Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
+      ) (other_list@assoc_list')
+      (* end of array_case *)
+    in
+    let record_case _ =
+      let module FieldSet = Set.Make (String) in
+      (* (selector*exp) list --> (string*exp) list*exp option *)
+      let (assoc_list,other) = List.fold_left
+        (fun (fvl,others_opt) (selector, value) ->
+        match selector with
+        | AggrField  f -> begin
+                            if (others_opt) <> None then
+                              Npkcontext.report_error "normalize:aggregate"
+                                "'others' clause should be the last one";
+                            (f, value)::fvl,others_opt
+                          end
+        | AggrOthers   -> begin
+                            if (others_opt) <> None then
+                              Npkcontext.report_error "normalize:aggregate"
+                              "There shall be only one 'others' clause";
+                            fvl,Some value
+                          end
+        | _ -> Npkcontext.report_error "normalize:aggregate"
+                 "Expected a field name in aggregate"
+      ) ([],None) bare_assoc_list in
+      let other_list = match other with
+        | None           -> []
+        | Some other_exp ->
             begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, there shall be only one \"others\" clause";
-              (kvl, Some value)
+              let flds = T.all_record_fields t_lv in
+              let mk_set l =
+                List.fold_left (fun x y -> FieldSet.add y x)
+                               FieldSet.empty l
+              in
+              let all_fields = mk_set flds in
+              let defined    = mk_set (List.map fst assoc_list) in
+              let missing_others =
+                FieldSet.elements (FieldSet.diff all_fields defined) in
+              List.map (fun f -> (f, other_exp)) missing_others
             end
-      ) ([],None) bare_assoc_list
+      in
+      List.rev_map (fun (aggr_fld, aggr_val) ->
+        (* id.aggr_fld <- aggr_v *)
+        let (off, tf) = T.record_field t_lv aggr_fld in
+        let v = normalize_exp ~expected_type:tf aggr_val in
+        Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
+      ) (assoc_list@other_list)
+      (* end of record_case *)
     in
-    (*
-     * Now, using lv's type, we can :
-     *   - compute missing elements
-     *   - replace 'others' with them
-     *)
-    let (lv', t_lv) = normalize_lval lv in
-    let (_tc, ti)   = T.extract_array_types t_lv in
-    let other_list = match others_opt with
-      | None         -> []
-      | Some oth_exp ->
-          begin
-            let all_values  = T.all_values ti in
-            let mk_set l =
-              List.fold_left (fun x y -> NatSet.add y x)
-                             NatSet.empty l
-            in
-            let all_values_set = mk_set all_values in
-            let defined_values_set =
-              mk_set (List.map fst assoc_list)
-            in
-            let missing_others =
-              NatSet.elements (NatSet.diff all_values_set
-                                           defined_values_set)
-            in
-            List.rev_map (function x -> (CInt x, oth_exp)) missing_others
-          end
-    in
-    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
-    List.rev_map (fun (aggr_k, aggr_v) ->
-      (* id[aggr_k] <- aggr_v *)
-      let key   = normalize_exp aggr_k in
-      let value = normalize_exp aggr_v in
-      Ast.Assign (Ast.ArrayAccess (lv', [key]), value), loc
-    ) (other_list@assoc_list')
+      if      T.is_array  t_lv then array_case  ()
+      else if T.is_record t_lv then record_case ()
+      else Npkcontext.report_error "normalize_assign_aggregate"
+             "Expecting an array or a record as lvalue"
 
   and normalize_block ?return_type ?(force_lval=false) block =
     List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
 
   and normalize_decl_part decl_part =
-    let represtbl = Hashtbl.create 50 in
-    List.iter (function
-        | BasicDecl(RepresentClause(id, aggr)), loc ->
-          Hashtbl.add represtbl id ((id, aggr), loc)
-        | _ -> ()
-    ) decl_part;
     let normalize_decl_items items =
       List.map (function
         | BasicDecl(basic),loc ->
