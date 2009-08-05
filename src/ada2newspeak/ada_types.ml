@@ -283,7 +283,7 @@ let is_increasing l =
   ) (true, h) t)
 
 let handle_enum_repr_clause t l =
-  let values_expected = 
+  let values_expected =
   begin match t.base.trait with
     | Enumeration v -> List.map (fun (_,x) -> Newspeak.Nat.of_int x) v
     | _ -> Npkcontext.report_error "handle_enum_repr_clause"
@@ -451,7 +451,8 @@ let compute_constr t =
     | Enumeration v,_
         when not (is_boolean t)->
           begin
-            let v' = List.map (fun (_,y) ->get_enum_litt_value t (IntVal (Newspeak.Nat.of_int y))) v in
+            let v' = List.map (fun (_, y) ->
+              get_enum_litt_value t (IntVal (Newspeak.Nat.of_int y))) v in
             let (min, max) = match extrema v' with
             | IntVal x, IntVal y -> (x,y)
             | _ -> invalid_arg "compute_constr"
@@ -515,21 +516,23 @@ let rec translate t = match t.base.trait with
                              (Newspeak.Int
                                ( Newspeak.Signed
                                , minimal_size_signed a b
-                               )) 
+                               ))
   | Enumeration    v    -> begin
                              let (min, max) = match (compute_constr t) with
                                | Some bounds -> bounds
                                | None -> ( Newspeak.Nat.zero
-                                         , Newspeak.Nat.of_int (snd (ListUtils.last v)))
+                                         , Newspeak.Nat.of_int
+                                             (snd (ListUtils.last v)))
                              in
-                             let ikind = 
-                               if (Newspeak.Nat.compare min Newspeak.Nat.zero < 0) then
+                             let ikind =
+                               if (Newspeak.Nat.compare min
+                                     Newspeak.Nat.zero < 0) then
                                  ( Newspeak.Signed
                                  , minimal_size_signed min max)
                                else
                                  ( Newspeak.Unsigned
                                  , minimal_size_unsigned max)
-                             in 
+                             in
                                Cir.Scalar (Newspeak.Int ikind)
                            end
   | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
@@ -569,7 +572,8 @@ let rec translate t = match t.base.trait with
 let record_field t fld =
   match t.base.trait with
   | Record l -> begin
-                  let (off, result) = List.fold_left (fun (off,found) (field,tf) ->
+                  let (off, result) = List.fold_left
+                    (fun (off,found) (field,tf) ->
                     if (found = None) then
                       begin
                         if field = fld then

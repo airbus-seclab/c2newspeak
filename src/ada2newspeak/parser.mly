@@ -384,27 +384,20 @@ array_aggregate :
 ;
 
 representation_clause :
-| FOR ident USE array_aggregate         {($2,$4) ,$1}
-| FOR ident QUOTE ident USE expression  { Npkcontext.set_loc $1;
-                                          Npkcontext.report_warning "parser"
-                                          "ignoring representation clause";
-                                          ($2,[]), $1
-                                          }
+| FOR ident USE array_aggregate         {($2,EnumRepClause $4) ,$1}
+| FOR ident QUOTE ident USE expression  {($2,SizeRepClause $6), $1}
 | FOR ident USE RECORD record_clause_list END RECORD
-                                        { Npkcontext.set_loc $1;
-                                          Npkcontext.report_warning "parser"
-                                          "ignoring representation clause";
-                                          ($2,[]), $1
-                                          }
+                                        {($2,RecordRepClause $5), $1}
 ;
 
 record_clause_list:
-| record_clause {}
-| record_clause record_clause_list {}
+| record_clause                    {$1::[]}
+| record_clause record_clause_list {$1::$2}
 ;
 
 record_clause:
-| ident AT expression RANGE expression DOUBLE_DOT expression SEMICOLON {}
+| ident AT expression RANGE expression DOUBLE_DOT expression SEMICOLON
+                                              {$1, $3, $5, $7}
 ;
 
 instr_list :

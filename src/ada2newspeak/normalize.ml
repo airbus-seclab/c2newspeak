@@ -663,7 +663,9 @@ and add_representation_clause id aggr loc =
       List.map (fun (i, exp) ->
         let orgn_val =
           try
-            let (_,(_,x,_)) = Sym.find_variable_value ~expected_type:t gtbl (None,i) in x
+            let (_,(_,x,_)) = Sym.find_variable_value ~expected_type:t
+                                                      gtbl (None,i)
+                            in x
           with Sym.Variable_no_storage (_,x) -> Some x
         in
         let original = match orgn_val with
@@ -802,7 +804,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         []
     | RenamingDecl (n, o) -> Sym.add_renaming_decl gtbl n o;
                              []
-    | RepresentClause (id, aggr)   -> add_representation_clause id aggr loc;[]
+    | RepresentClause (id, EnumRepClause aggr) ->
+        add_representation_clause id aggr loc;[]
+    | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
+                                 ("Ignoring representation clause for '"^id^"'");
+                                 []
     | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
                                         ("ignoring generic instanciation of '"
                                                          ^name_to_string n^"'");
@@ -891,7 +897,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         let norm_spec = List.map normalize_param spec in
         let effective_args = make_arg_list norm_args norm_spec in
          [Ast.ProcedureCall( sc, snd n,effective_args), loc]
-    | LvalInstr((Var _|SName (Var _,_)) as lv) -> normalize_instr (LvalInstr (ParExp(lv, [])),loc)
+    | LvalInstr((Var _|SName (Var _,_)) as lv) ->
+        normalize_instr (LvalInstr (ParExp(lv, [])),loc)
     | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
                        "Statement looks like a procedure call but is not one"
     | Assign(lv, exp) ->
@@ -1073,7 +1080,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     let record_case _ =
       let module FieldSet = Set.Make (String) in
       (* (selector*exp) list --> (string*exp) list*exp option *)
-      let (assoc_list,other) = List.fold_left (fun (fvl,others_opt) (selector, value) ->
+      let (assoc_list,other) = List.fold_left
+        (fun (fvl,others_opt) (selector, value) ->
         match selector with
         | AggrField  f -> begin
                             if (others_opt) <> None then

@@ -224,9 +224,10 @@ and array_aggregate_to_string assoc_list =
           assoc_element_to_string
           ";\n" true
 
-and representation_clause_to_string (ident, agregat) =
-  "EnumerationRepresentation("^ident^", "
-  ^(array_aggregate_to_string agregat)^")"
+and representation_clause_to_string = function
+  | EnumRepClause (agregat) -> array_aggregate_to_string agregat
+  | SizeRepClause (sz)      -> "size = "^exp_to_string sz
+  | RecordRepClause _       -> "record"
 
 and context_clause_to_string context_clause =
   match context_clause with
@@ -261,9 +262,9 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | SubtypDecl(ident, subtyp_ind) ->
       "SubtypDecl("^ident^", "
       ^(subtyp_indication_to_string subtyp_ind)^")"
-  | RepresentClause(id,aggr) ->
-      "RepresentClause("
-      ^(representation_clause_to_string (id, aggr))^")"
+  | RepresentClause(id,rc) ->
+      "RepresentClause("^id^","
+      ^(representation_clause_to_string rc)^")"
   | RenamingDecl(n,n') ->  "Renaming : "
                           ^n
                           ^" renames "

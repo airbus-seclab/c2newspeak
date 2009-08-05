@@ -216,12 +216,17 @@ and basic_declaration =
                           * expression
   | SubtypDecl           of string
                           * subtyp_indication
-  | RepresentClause      of string * (string * expression) list
+  | RepresentClause      of string * representation_clause
   | RenamingDecl         of string (* new name *)
                           * name   (* old name *)
   | GenericInstanciation of string
                           * name
                           * argument list
+
+and representation_clause =
+  | EnumRepClause of (string * expression) list
+  | SizeRepClause of expression
+  | RecordRepClause of (string * expression * expression * expression) list
 
 and declarative_item =
   | BasicDecl of basic_declaration
