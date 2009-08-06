@@ -114,17 +114,16 @@ let extract_name = function
 %token <Newspeak.location> ARROW     ASSIGN    AT      BEGIN      BODY
 %token <Newspeak.location> CASE      COLON     COMMA   CONSTANT   DECLARE
 %token <Newspeak.location> DIGITS    DIV       DOT     DOUBLE_DOT ELSE
-%token <Newspeak.location> ELSIF     END       EQ      EXIT       FALSE
-%token <Newspeak.location> FOR       FUNCTION  GE      GT         IF
-%token <Newspeak.location> IN        IS        LE      LOOP       LPAR
-%token <Newspeak.location> LT        MINUS     MOD     MULT       NE
-%token <Newspeak.location> NEW       NOT       NULL    OF         OR
-%token <Newspeak.location> OTHERS    OUT       PACKAGE PLUS       POW
-%token <Newspeak.location> PRAGMA    PROCEDURE QUOTE   RANGE      RECORD
-%token <Newspeak.location> REM       RENAMES   RETURN  REVERSE    RPAR
-%token <Newspeak.location> SEMICOLON SUBTYPE   THEN    TRUE       TYPE
-%token <Newspeak.location> USE       VBAR      WHEN    WHILE      WITH
-%token <Newspeak.location> XOR
+%token <Newspeak.location> ELSIF     END       EQ      EXIT       FOR
+%token <Newspeak.location> FUNCTION  GE        GT      IF         IN
+%token <Newspeak.location> IS        LE        LOOP    LPAR       LT
+%token <Newspeak.location> MINUS     MOD       MULT    NE         NEW
+%token <Newspeak.location> NOT       NULL      OF      OR         OTHERS
+%token <Newspeak.location> OUT       PACKAGE   PLUS    POW        PRAGMA
+%token <Newspeak.location> PROCEDURE QUOTE     RANGE   RECORD     REM
+%token <Newspeak.location> RENAMES   RETURN    REVERSE RPAR       SEMICOLON
+%token <Newspeak.location> SUBTYPE   THEN      TYPE    USE        VBAR
+%token <Newspeak.location> WHEN      WHILE     WITH    XOR
 
 %left       AND OR XOR          /*            logical operators */
 %left       EQ NE LT LE GT GE   /*         relational operators */
@@ -526,8 +525,6 @@ expression :
 | CONST_INT   {CInt(snd $1)}
 | CONST_FLOAT {CFloat(float_of_string (snd $1))}
 | CONST_CHAR  {CChar(snd $1)}
-| TRUE        {CBool(true)}
-| FALSE       {CBool(false)}
 | LPAR expression RPAR {$2}
 | lvalue QUOTE LPAR expression RPAR { Qualified(fst $1 ,$4) }
 | lvalue QUOTE ident  {Attribute (fst $1

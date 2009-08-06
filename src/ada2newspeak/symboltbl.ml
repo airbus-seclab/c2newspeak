@@ -313,6 +313,12 @@ module Table = struct
       ; "boolean"  , T.boolean
       ; "character", T.character
       ];
+      add_variable standard_tbl "true"  Newspeak.unknown_loc
+                   (T.boolean,Some (T.BoolVal true ),true,true)
+                   (In_package "standard");
+      add_variable standard_tbl "false" Newspeak.unknown_loc
+                   (T.boolean,Some (T.BoolVal false),true,true)
+                   (In_package "standard");
       add_type system_tbl "address" Newspeak.unknown_loc
                T.system_address (In_package "system")
     end

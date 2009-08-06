@@ -368,7 +368,6 @@ let rec normalize_exp ?expected_type exp =
                          T.universal_integer
                      )
     | CFloat x -> Ast.CFloat x,T.universal_real
-    | CBool  x -> Ast.CBool  x,T.boolean
     | CChar  x -> Ast.CChar  x,T.character
     | Lval(ParExp(n, params)) -> normalize_fcall (n, params)
     | Lval(PtrDeref _ as lv) -> let nlv, tlv = normalize_lval lv in

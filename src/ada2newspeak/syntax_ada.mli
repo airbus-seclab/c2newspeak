@@ -79,7 +79,6 @@ and subtyp = name
 and expression =
   | CInt         of Newspeak.Nat.t
   | CFloat       of float
-  | CBool        of bool
   | CChar        of int
   | Unary        of unary_op
                   * expression

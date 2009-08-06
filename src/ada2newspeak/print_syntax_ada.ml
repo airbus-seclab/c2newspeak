@@ -105,7 +105,6 @@ and record_component_to_string (c,st) =
 and exp_to_string exp = match exp with
   | CInt   i          -> "CInt("^(nat_to_string i)^")"
   | CFloat s          -> "CFloat("^string_of_float s^")"
-  | CBool  b          -> "CBool("^(string_of_bool b)^")"
   | CChar  c          -> "CChar("^(string_of_int c)^")"
   | Lval   l          -> "LV "^lval_to_string l
   | Unary  (op,exp)   -> "("^(uop_to_string op)^" " ^(exp_to_string exp)^")"

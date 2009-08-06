@@ -127,20 +127,19 @@
     | "declare"    -> DECLARE   l | "digits"     -> DIGITS    l
     | "elsif"      -> ELSIF     l | "else"       -> ELSE      l
     | "end"        -> END       l | "exit"       -> EXIT      l
-    | "false"      -> FALSE     l | "for"        -> FOR       l
-    | "function"   -> FUNCTION  l | "if"         -> IF        l
-    | "in"         -> IN        l | "is"         -> IS        l
-    | "loop"       -> LOOP      l | "mod"        -> MOD       l
-    | "new"        -> NEW       l | "not"        -> NOT       l
-    | "null"       -> NULL      l | "of"         -> OF        l
-    | "or"         -> OR        l | "others"     -> OTHERS    l
-    | "out"        -> OUT       l | "package"    -> PACKAGE   l
-    | "pragma"     -> PRAGMA    l | "procedure"  -> PROCEDURE l
-    | "range"      -> RANGE     l | "record"     -> RECORD    l
-    | "rem"        -> REM       l | "renames"    -> RENAMES   l
-    | "return"     -> RETURN    l | "reverse"    -> REVERSE   l
-    | "subtype"    -> SUBTYPE   l | "then"       -> THEN      l
-    | "true"       -> TRUE      l | "type"       -> TYPE      l
+    | "for"        -> FOR       l | "function"   -> FUNCTION  l
+    | "if"         -> IF        l | "in"         -> IN        l
+    | "is"         -> IS        l | "loop"       -> LOOP      l
+    | "mod"        -> MOD       l | "new"        -> NEW       l
+    | "not"        -> NOT       l | "null"       -> NULL      l
+    | "of"         -> OF        l | "or"         -> OR        l
+    | "others"     -> OTHERS    l | "out"        -> OUT       l
+    | "package"    -> PACKAGE   l | "pragma"     -> PRAGMA    l
+    | "procedure"  -> PROCEDURE l | "range"      -> RANGE     l
+    | "record"     -> RECORD    l | "rem"        -> REM       l
+    | "renames"    -> RENAMES   l | "return"     -> RETURN    l
+    | "reverse"    -> REVERSE   l | "subtype"    -> SUBTYPE   l
+    | "then"       -> THEN      l | "type"       -> TYPE      l
     | "use"        -> USE       l | "when"       -> WHEN      l
     | "while"      -> WHILE     l | "with"       -> WITH      l
     | "xor"        -> XOR       l
