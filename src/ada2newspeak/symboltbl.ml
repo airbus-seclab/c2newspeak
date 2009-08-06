@@ -334,8 +334,6 @@ module SymMake(TR:Tree.TREE) = struct
            ; mutable s_renaming : (string*(string option*string)) list
            }
 
-  type context = table
-
   let top s = TR.top s.s_stack
 
   let print s =
@@ -469,19 +467,12 @@ module SymMake(TR:Tree.TREE) = struct
     Npkcontext.print_debug "<<<<<<< exit_context ()";
     Npkcontext.print_debug (print s);
     if(TR.height s.s_stack > 1) then
-      TR.pop s.s_stack
+      ignore (TR.pop s.s_stack)
     else
       Npkcontext.report_error "exit_context" "Stack too small"
 
   let push_saved_context s ctx =
     TR.push ctx s.s_stack
-
-  let extract_variables t =
-    let filter = function
-      | _,x, loc, Variable (_, y, _, false, _) -> [x,y,loc]
-      | _ -> []
-    in
-    List.flatten (List.map filter (Symset.elements t.t_tbl))
 
   let library s =
     TR.nth s 1

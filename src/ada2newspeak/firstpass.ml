@@ -65,11 +65,6 @@ let (extern, do_as_extern) =
     ((fun _ -> !ext),
      (fun f arg -> ext := true; f arg ; ext := false))
 
-let translate_saved_context ctx =
-  List.map (fun (id,t,loc) ->
-    C.Decl (T.translate t, id), loc
-  ) (Sym.extract_variables ctx)
-
 let translate_nat i =
   C.Const(C.CInt i)
 
@@ -85,7 +80,7 @@ let translate compil_unit =
   let fun_decls = Hashtbl.create 10 in
   let globals   = Hashtbl.create 10 in
   let init      = ref []            in
-  let gtbl = Sym.create ()          in
+  let curpkg    = ref None          in
 
   let normalize_ident ident package extern =
     if extern then (package, ident)
@@ -93,13 +88,7 @@ let translate compil_unit =
   in
 
   let translate_name (pack,id) =
-    (*
-    let tr_name =
-        if extern() then pack,            id
-                             else (Sym.current gtbl), id
-    in
-    *)
-    let tr_name = match (extern(), pack, Sym.current gtbl) with
+    let tr_name = match (extern(), pack, !curpkg) with
     | true, Some p, _      -> [p;id]
     | true, None  , _      ->   [id]
     | false, _    , Some p -> [p;id]
@@ -137,7 +126,6 @@ let translate compil_unit =
          *)
         method create loc t =
             let id = s#new_id in
-              Sym.add_variable gtbl id loc t;
               let decl = (C.Decl (T.translate t, id), loc) in
                 (id, decl, C.Local id)
     end
@@ -369,14 +357,11 @@ let translate compil_unit =
                            translate_block
                              (Ada_utils.with_default default [])
                            ),loc)::(translate_block r)
-            | Block (dp, ctx, blk) ->
-                   Sym.push_saved_context gtbl ctx;
-                   let init = translate_declarative_part dp in
-                   let t_ctx = translate_saved_context ctx in
-                   let res = (C.Block ((t_ctx@(translate_block (init@blk))),
+            | Block (dp, blk) ->
+                   let (t_dp, init) = translate_declarative_part dp in
+                   let res = (C.Block ((t_dp@(translate_block (init@blk))),
                                   None),loc) in
                    let r = res::(translate_block r) in
-                   ignore (Sym.exit_context gtbl);
                    r
             end
 
@@ -387,14 +372,11 @@ let translate compil_unit =
 
   and translate_param_list param_list =
     (List.map translate_param param_list)
-  and add_params subprog_spec loc =
+  and add_params subprog_spec =
     let param_list =
       match subprog_spec with
-        | Function(_, param_list, return_type) ->
-            Sym.add_variable gtbl Params.ret_ident loc return_type;
-            param_list
-        | Procedure(_, param_list) ->
-            param_list
+        | Function (_, param_list, _) -> param_list
+        | Procedure(_, param_list)    -> param_list
     in
     let params = List.map (fun x -> x.formal_name) param_list in
     (params, (Params.ret_ident, params))
@@ -412,37 +394,37 @@ let translate compil_unit =
   and add_fundecl subprogspec =
     translate_sub_program_spec subprogspec
 
-  and translate_basic_declaration basic = match basic with
-    | ObjectDecl (_,_,_,Some init_blk) -> init_blk
-    | ObjectDecl (_,_,_,None) -> []
+  and translate_basic_declaration basic loc = match basic with
+    | ObjectDecl (id,t,_,Some init_blk) -> [C.Decl (T.translate t, id), loc],init_blk
+    | ObjectDecl (id,t,_,None) -> [C.Decl (T.translate t, id), loc],[]
     | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
           ("declaration de sous-fonction, sous-procedure ou "
            ^"sous package non implemente")
-    | NumberDecl _ -> []
+    | NumberDecl _ -> [],[]
 
   and translate_declarative_item (item,loc) =
     Npkcontext.set_loc loc;
     match item with
-      | BasicDecl(basic) -> translate_basic_declaration basic
+      | BasicDecl basic -> translate_basic_declaration basic loc
       | BodyDecl _ -> Npkcontext.report_error "Firstpass.translate_block"
             "sous-fonction, sous-procedure ou sous package non implemente"
 
   and translate_declarative_part decl_part =
-    List.fold_left (fun blk dp ->
-      blk @translate_declarative_item dp
-    ) [] decl_part
+    List.fold_left (fun (decls,iblk) dp ->
+      let (ndecls,niblk) = translate_declarative_item dp
+      in
+      (decls @ ndecls),
+      (iblk  @ niblk )
+    ) ([],[]) decl_part
 
-  and add_funbody subprogspec decl_part ctx_dp ctx_param block loc =
+  and add_funbody subprogspec decl_part block loc =
     let name = match subprogspec with
       | Function (n,_,_) -> n
       | Procedure(n,_)   -> n in
-    let (_, (ret_id, args_ids)) = add_params subprogspec loc in
-    Sym.push_saved_context gtbl ctx_param;
-    Sym.push_saved_context gtbl ctx_dp;
-    let init = translate_declarative_part decl_part in
+    let (_, (ret_id, args_ids)) = add_params subprogspec in
+    let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = add_fundecl subprogspec in
-    let body_decl = translate_saved_context ctx_dp in
     let body = translate_block (init@block) in
     let mangle_sname = function
       | []       -> failwith "unreachable @ firstpass:mangle_sname"
@@ -454,13 +436,10 @@ let translate compil_unit =
     let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
       Hashtbl.replace fun_decls (translate_name (mangle_sname name))
                       (ret_id, args_ids, ftyp, body);
-      ignore (Sym.exit_context gtbl);
-      ignore (Sym.exit_context gtbl)
-
   in
 
   let add_global loc tr_typ i x =
-    let name = normalize_ident x (Sym.current gtbl) (extern ()) in
+    let name = normalize_ident x (!curpkg) (extern ()) in
     let tr_name = translate_name name in
     let storage = match i with
       | None -> Npkil.Declared false
@@ -499,35 +478,30 @@ let translate compil_unit =
   and translate_spec spec glob = match spec with
     | SubProgramSpec(subprog_spec) ->
         ignore (add_fundecl subprog_spec )
-    | PackageSpec (nom, basic_decl_list, _ctx) ->
+    | PackageSpec (nom, basic_decl_list) ->
         if (not glob) then begin
     Npkcontext.report_error "Firstpass.translate_spec"
             "declaration de sous package non implemente"
         end;
-        Sym.set_current gtbl nom;
+        curpkg := Some nom;
         List.iter translate_global_basic_declaration basic_decl_list;
-        Sym.reset_current gtbl;
-        if extern () then Sym.add_with gtbl nom
+        curpkg := None
 
   and translate_body body glob loc =
     Npkcontext.set_loc loc;
     match (body, glob) with
-      | (SubProgramBody(subprog_decl,decl_part, ctx1, ctx2, block), _) ->
-          add_funbody subprog_decl decl_part ctx1 ctx2 block loc
-      | PackageBody(name, package_spec, ctx, decl_part), true ->
-          Sym.set_current gtbl name;
-          Sym.push_saved_context gtbl ctx;
+      | (SubProgramBody(subprog_decl,decl_part, block), _) ->
+          add_funbody subprog_decl decl_part block loc
+      | PackageBody(name, package_spec, decl_part), true ->
+          curpkg := Some name;
           (match package_spec with
              | None -> ()
-             | Some(_, basic_decls, ctx) ->
+             | Some(_, basic_decls) ->
                  begin
-                   Sym.push_saved_context gtbl ctx;
                    List.iter translate_global_basic_declaration basic_decls;
-                   ignore (Sym.exit_context gtbl)
                  end
           );
           List.iter translate_global_decl_item decl_part;
-          ignore (Sym.exit_context gtbl)
 
       | PackageBody _, false -> Npkcontext.report_error
           "Firstpass.translate_body"
@@ -546,12 +520,11 @@ let translate compil_unit =
 
   let rec translate_context =
     List.iter (function
-      | With(nom, loc, spec) ->
+      | With(_, loc, spec) ->
           Npkcontext.set_loc loc;
           (match spec with
             | Some(spec, _loc) ->
-                translate_spec spec true;
-                Sym.add_with gtbl nom
+                translate_spec spec true
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")

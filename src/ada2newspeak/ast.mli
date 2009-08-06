@@ -57,7 +57,6 @@ and instruction =
                    * (expression*block) list
                    * block option
   | Block         of declarative_part
-                   * Symboltbl.context
                    * block
 
 and lval =
@@ -109,12 +108,9 @@ and param = {
 and  body =
   | SubProgramBody of sub_program_spec
                     * declarative_part
-                    * Symboltbl.context (* parameters *)
-                    * Symboltbl.context (* locals     *)
                     * block
   |    PackageBody of string
                     * package_spec option
-                    * Symboltbl.context
                     * declarative_part
 
 and  declarative_item =
@@ -154,7 +150,6 @@ and sub_program_spec =
 
 and package_spec = string
                  * (basic_declaration*Newspeak.location) list
-                 * Symboltbl.context
 
 type compilation_unit = context_clause list
                       * library_item

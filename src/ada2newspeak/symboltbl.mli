@@ -59,12 +59,6 @@
 type t
 
 (**
- * A saved piece of context.
- * Basically, it is an opaque symbol table.
- *)
-type context
-
-(**
  * Create a new context stack, initially holding
  * built-in types and variables, and an empty library.
  *)
@@ -85,17 +79,7 @@ val enter_context : ?name:string -> ?desc:string -> t -> unit
 (**
  * Return the current context and "go up".
  *)
-val exit_context : t -> context
-
-(**
- * Push some saved context.
- *)
-val push_saved_context : t -> context -> unit
-
-(**
- * Extract variables for translation.
- *)
-val extract_variables : context -> (string*Ada_types.t*Newspeak.location) list
+val exit_context : t -> unit
 
 type scope = Lexical | In_package of string
 
