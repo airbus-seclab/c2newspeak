@@ -27,17 +27,34 @@ open Newspeak
 
 let universe () = ()
 
+let emptyset = ()
+
+let prepare_call _ _ = ()
+
+let apply _ _ = ()
+
 type t = unit
 
 let process prog = 
   let current_loc = ref Newspeak.unknown_loc in
+(* 
+   list of functions to analyze
+   when this list is empty, analysis ends
+*)
+(* TODO: could try a queue instead?? *)
+  let todo = ref [] in
+  let funtbl = Hashtbl.create 100 in
 
-  let print_err () = 
-    let msg = 
-      Newspeak.string_of_loc !current_loc^": potential null pointer deref"
-    in
-      print_endline msg
+  let print_err msg = 
+    print_endline (Newspeak.string_of_loc !current_loc^": "^msg)
   in
+
+  let warn_deref () = print_err "potential null pointer deref" in
+
+(* TODO: maybe find a way to remove emptyset???!!! 
+   use an exception instead
+*)
+  let init_fun f _ = Hashtbl.add funtbl f (emptyset, emptyset) in
 
   let rec check_lval x = 
     match x with
@@ -46,13 +63,13 @@ let process prog =
       | Shift (lv, e) -> 
 	  check_lval lv;
 	  check_exp e
-      | _ -> print_err ()
+      | _ -> warn_deref ()
 
   and check_exp x = 
     match x with
 	Const _ -> ()
       | AddrOf (lv, _) -> check_lval lv
-      | _ -> print_err ()
+      | _ -> warn_deref ()
   in
 
   let rec process_blk x s =
@@ -70,17 +87,37 @@ let process prog =
 	  check_exp e;
 	  s
       | Decl (_, _, body) -> process_blk body s
+      | Call FunId f -> begin
+	  try
+	    let (init, rel) = Hashtbl.find funtbl f in
+	    let init = prepare_call init s in
+	    let s = apply rel s in
+	      Hashtbl.replace funtbl f (init, rel);
+	      todo := f::!todo;
+	      s
+	  with Not_found -> 
+	    print_err ("missing function: "^f
+		       ^", call ignored, analysis may be unsound")
+	end
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
+    (* initialization *)
+    Hashtbl.iter init_fun prog.fundecs;
+    let s = universe () in
+    let s = process_blk prog.init s in
+    let _ = process_stmtkind (Call (FunId "main")) s in
 
-
-  let s = universe () in
-  let s = process_blk prog.init s in
-  let (_, body) = 
-    try Hashtbl.find prog.fundecs "main"
-    with Not_found -> invalid_arg "Analysis.process: missing main function"
-  in
-  let _ = process_blk body s in
-    ()
-
+    (* fixpoint computation *)
+    try
+      while true do
+	match !todo with
+	    f::tl -> 
+	      todo := tl;
+	      let (_, body) = Hashtbl.find prog.fundecs f in
+	      let (s, _) = Hashtbl.find funtbl f in
+		process_blk body s
+	 | [] -> raise Exit
+      done;
+      ()
+    with Exit -> ()

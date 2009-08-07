@@ -49,7 +49,7 @@ let _ =
     then invalid_arg ("no file specified. Try "^exec_name^" --help");
 
     let prog = Newspeak.read !input in
-      Analysis.process prog
+      Solver.process prog
 
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
