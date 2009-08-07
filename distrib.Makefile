@@ -38,10 +38,10 @@ CIL=$(CILDIR)/cil.cmxa
 
 #FILES
 EXE=c2newspeak npkstrip npkstats npksimplify npk2bytesz \
-    npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow npkfuns
+    npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow npkfuns npknull
 COMPONENTS=newspeak $(EXE)
 
-CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo
+CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~
 
 #rules
 .PHONY: clean doc lib
