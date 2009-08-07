@@ -23,7 +23,6 @@
   email: charles.hymans@penjili.org
 */
 
-int x = 1;
-
-void main() {
+int main() {
+  return 0;
 }

@@ -39,9 +39,21 @@ let process prog =
       print_endline msg
   in
 
-  let check_lval _ = print_err () in
+  let rec check_lval x = 
+    match x with
+	Global _ -> ()
+      | Local _ -> ()
+      | Shift (lv, e) -> 
+	  check_lval lv;
+	  check_exp e
+      | _ -> print_err ()
 
-  let check_exp _ = print_err () in
+  and check_exp x = 
+    match x with
+	Const _ -> ()
+      | AddrOf (lv, _) -> check_lval lv
+      | _ -> print_err ()
+  in
 
   let rec process_blk x s =
     match x with
@@ -63,6 +75,11 @@ let process prog =
 
 
   let s = universe () in
-  let _ = process_blk prog.init s in
-    invalid_arg "Analysis.process: incomplete analysis: main not called"
+  let s = process_blk prog.init s in
+  let (_, body) = 
+    try Hashtbl.find prog.fundecs "main"
+    with Not_found -> invalid_arg "Analysis.process: missing main function"
+  in
+  let _ = process_blk body s in
+    ()
 
