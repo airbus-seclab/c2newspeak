@@ -69,6 +69,7 @@ let process prog =
 	  check_lval lv;
 	  check_exp e;
 	  s
+      | Decl (_, _, body) -> process_blk body s
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 

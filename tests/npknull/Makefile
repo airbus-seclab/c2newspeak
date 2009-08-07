@@ -24,7 +24,7 @@
 COMMAND=$(C2NEWSPEAK) $*.c > /dev/null 2>&1; \
         $(NPKNULL) `[ -e $*.in ] && cat $*.in` a.npk
 PREREQ=%.c
-TESTS=000 001
+TESTS=000 001 002
 
 include ../common.Makefile
 
