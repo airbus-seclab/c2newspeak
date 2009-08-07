@@ -37,19 +37,19 @@ let expect ?desc t1 t2 =
   ))
   then (* is_compatible ? *)
     error ("incompatible types"
-          ^(match desc with
-            | None -> ""
-            | Some s -> " in '"^s^"'"
-           )
-          ^"\nL = "
-          ^T.print t1
-          ^"\nR = "
-          ^T.print t2
+          ^ (match desc with
+             | None -> ""
+             | Some s -> " in '" ^ s ^ "'"
+            )
+          ^ "\nL = "
+          ^ T.print t1
+          ^ "\nR = "
+          ^ T.print t2
           )
 
 let t_assert x msg =
   if (not x) then
-    error ("Type assertion failed : "^msg)
+    error ("Type assertion failed : " ^ msg)
 
 
 let type_of_binop op t1 t2 = match op with

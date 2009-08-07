@@ -30,6 +30,7 @@
 *)
 
 module C   = Cir
+module N   = Newspeak
 module Nat = Newspeak.Nat
 module A   = Syntax_ada
 module T   = Ada_types
@@ -38,8 +39,8 @@ module Sym = Symboltbl
 open Ast
 
 let make_offset t index base size =
-  C.Binop ( Newspeak.MultI
-          , C.Binop ( Newspeak.MinusI
+  C.Binop ( N.MultI
+          , C.Binop ( N.MinusI
                     , T.check_exp t index
                     , base
                     )
@@ -51,11 +52,11 @@ let string_of_name = Ada_utils.name_to_string
 
 let concat_resolved_name sc  n = match sc with
   | Sym.Lexical      ->        n
-  | Sym.In_package p -> (p^"."^n)
+  | Sym.In_package p -> (p ^ "." ^ n)
 
 let translate_resolved_name sc n = match sc with
   | Sym.Lexical      -> C.Local         n
-  | Sym.In_package p -> C.Global (p^"."^n)
+  | Sym.In_package p -> C.Global (p ^ "." ^ n)
 
 (**
  * A boolean flip flop.
@@ -69,7 +70,7 @@ let translate_nat i =
   C.Const(C.CInt i)
 
 let translate_int x =
-  translate_nat (Newspeak.Nat.of_int x)
+  translate_nat (N.Nat.of_int x)
 
 (**
  * Main translating function.
@@ -109,8 +110,8 @@ let translate compil_unit =
          *)
         method private new_id =
             let res = count in
-            count<-count+1;
-            "tmp"^(string_of_int res)
+            count <- count + 1;
+            "tmp" ^ (string_of_int res)
 
         (**
          * Create a new temporary variable.
@@ -181,19 +182,19 @@ let translate compil_unit =
     in
       match (op,T.translate typ) with
       (* Numeric operations *)
-      | Plus ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.PlusI   , c1, c2),typ
-      | Plus ,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.PlusF  n, c1, c2),typ
-      | Minus,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.MinusI  , c1, c2),typ
-      | Minus,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.MinusF n, c1, c2),typ
-      | Mult ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.MultI   , c1, c2),typ
-      | Mult ,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.MultF  n, c1, c2),typ
-      | Div  ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.DivI    , c1, c2),typ
-      | Div  ,C.Scalar(Newspeak.Float n)->C.Binop(Newspeak.DivF   n, c1, c2),typ
-      | Rem  ,C.Scalar(Newspeak.Int   _)->C.Binop(Newspeak.Mod     , c1, c2),typ
+      | Plus ,C.Scalar(N.Int   _) -> C.Binop(N.PlusI   , c1, c2),typ
+      | Plus ,C.Scalar(N.Float n) -> C.Binop(N.PlusF  n, c1, c2),typ
+      | Minus,C.Scalar(N.Int   _) -> C.Binop(N.MinusI  , c1, c2),typ
+      | Minus,C.Scalar(N.Float n) -> C.Binop(N.MinusF n, c1, c2),typ
+      | Mult ,C.Scalar(N.Int   _) -> C.Binop(N.MultI   , c1, c2),typ
+      | Mult ,C.Scalar(N.Float n) -> C.Binop(N.MultF  n, c1, c2),typ
+      | Div  ,C.Scalar(N.Int   _) -> C.Binop(N.DivI    , c1, c2),typ
+      | Div  ,C.Scalar(N.Float n) -> C.Binop(N.DivF   n, c1, c2),typ
+      | Rem  ,C.Scalar(N.Int   _) -> C.Binop(N.Mod     , c1, c2),typ
 
       (* Comparisons *)
-      | Eq, C.Scalar t -> C.Binop (Newspeak.Eq t, c1, c2), T.boolean
-      | Gt, C.Scalar t -> C.Binop (Newspeak.Gt t, c1, c2), T.boolean
+      | Eq, C.Scalar t -> C.Binop (N.Eq t, c1, c2), T.boolean
+      | Gt, C.Scalar t -> C.Binop (N.Gt t, c1, c2), T.boolean
 
       | And, C.Scalar _ -> translate_and e1 e2
       | Or , C.Scalar _ -> translate_or  e1 e2
@@ -252,7 +253,7 @@ let translate compil_unit =
             C.Deref (C.Lval (xlv, xt), xt), t
         | ArrayAccess(_, _) -> failwith "matrix access"
 
-  and translate_exp (exp,typ) :C.exp*T.t=
+  and translate_exp (exp,typ) :C.exp * T.t =
     match exp with
     | CFloat f -> C.Const(C.CFloat(f,string_of_float f)), T.std_float
     | CInt   i -> translate_nat i, typ
@@ -327,8 +328,8 @@ let translate compil_unit =
                  end;
                  let tr_then = translate_block instr_then in
                  let tr_else = translate_block instr_else in
-                   (C.build_if loc (tr_exp, tr_then, tr_else))
-                   @(translate_block r)
+                     (C.build_if loc (tr_exp, tr_then, tr_else))
+                   @ (translate_block r)
            | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
                  (C.Block([C.Loop(tr_body), loc], Some (Params.brk_lbl,[])),loc)
@@ -359,7 +360,7 @@ let translate compil_unit =
                            ),loc)::(translate_block r)
             | Block (dp, blk) ->
                    let (t_dp, init) = translate_declarative_part dp in
-                   let res = (C.Block ((t_dp@(translate_block (init@blk))),
+                   let res = (C.Block ((t_dp @ (translate_block (init @ blk))),
                                   None),loc) in
                    let r = res::(translate_block r) in
                    r
@@ -368,7 +369,7 @@ let translate compil_unit =
   and translate_param param = match param.mode with
       | A.In    -> T.translate param.param_type
       |   A.Out
-      | A.InOut -> C.Scalar Newspeak.Ptr
+      | A.InOut -> C.Scalar N.Ptr
 
   and translate_param_list param_list =
     (List.map translate_param param_list)
@@ -395,12 +396,15 @@ let translate compil_unit =
     translate_sub_program_spec subprogspec
 
   and translate_basic_declaration basic loc = match basic with
-    | ObjectDecl (id,t,_,Some init_blk) -> [C.Decl (T.translate t, id), loc],init_blk
-    | ObjectDecl (id,t,_,None) -> [C.Decl (T.translate t, id), loc],[]
+    | ObjectDecl (id,t,_,blkopt) ->
+        [C.Decl (T.translate t, id), loc],(match blkopt with
+                                           | Some b -> b
+                                           | None   -> []
+                                          )
     | SpecDecl _ -> Npkcontext.report_error
         "Firstpass.translate_basic_declaration"
-          ("declaration de sous-fonction, sous-procedure ou "
-           ^"sous package non implemente")
+          ( "declaration de sous-fonction, sous-procedure ou "
+          ^ "sous package non implemente")
     | NumberDecl _ -> [],[]
 
   and translate_declarative_item (item,loc) =
@@ -425,7 +429,7 @@ let translate compil_unit =
     let (_, (ret_id, args_ids)) = add_params subprogspec in
     let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = add_fundecl subprogspec in
-    let body = translate_block (init@block) in
+    let body = translate_block (init @ block) in
     let mangle_sname = function
       | []       -> failwith "unreachable @ firstpass:mangle_sname"
       | x::[]    -> None  , x
@@ -433,7 +437,7 @@ let translate compil_unit =
       | _        -> Npkcontext.report_error "mangle_sname"
                       "chain of selected names is too deep"
     in
-    let body = (C.Block (body_decl@body, Some (Params.ret_lbl,[])), loc)::[] in
+    let body = (C.Block (body_decl @ body, Some (Params.ret_lbl,[])), loc)::[] in
       Hashtbl.replace fun_decls (translate_name (mangle_sname name))
                       (ret_id, args_ids, ftyp, body);
   in
@@ -445,7 +449,7 @@ let translate compil_unit =
       | None -> Npkil.Declared false
       | Some init_stmt ->
           begin
-            init := (translate_block init_stmt)@(!init);
+            init := (translate_block init_stmt) @ (!init);
             Npkil.Declared true
           end
     in

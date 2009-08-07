@@ -35,7 +35,7 @@ exception NonStaticExpression
 let (^%) a b =
   let a = Nat.to_big_int a
   and b = Nat.to_big_int b in
-    if (Big_int.sign_big_int b)<0
+    if Big_int.sign_big_int b < 0
     then begin
       Npkcontext.report_error "puiss"
         "integer exponent negative"

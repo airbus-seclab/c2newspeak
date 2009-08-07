@@ -94,20 +94,20 @@ val type_ovl_intersection : t
 
 (** Find data.  *)
 
-exception Parameterless_function of scope*Ada_types.t
+exception Parameterless_function of scope * Ada_types.t
 exception Variable_no_storage    of Ada_types.t * Ada_types.data_t
 
 val find_variable :    t
                     -> ?silent:bool
                     -> ?expected_type:Ada_types.t
-                    -> string option*string
-         -> scope * (string*Ada_types.t * bool)
+                    -> string option * string
+         -> scope * (string * Ada_types.t * bool)
 
 val find_variable_value :    t
                     -> ?silent:bool
                     -> ?expected_type:Ada_types.t
-                    -> string option*string
-         -> scope * (string*Ada_types.t*(Ada_types.data_t option)*bool)
+                    -> string option * string
+         -> scope * (string * Ada_types.t * (Ada_types.data_t option) * bool)
 
 val find_type     :    t
                     -> string option * string

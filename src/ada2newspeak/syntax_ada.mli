@@ -65,10 +65,10 @@ type binary_op =
 
 (** Type declaration. *)
 type typ_declaration =
-  | Enum         of (string*Newspeak.Nat.t) list
+  | Enum         of (string * Newspeak.Nat.t) list
   | DerivedType  of subtyp_indication
-  | IntegerRange of expression*expression
-  | Record       of (string*subtyp) list
+  | IntegerRange of expression * expression
+  | Record       of (string * subtyp) list
   | Array        of subtyp_indication list (* Indices   *)
                   * subtyp_indication      (* Component *)
   | Access       of subtyp
@@ -108,7 +108,7 @@ and contrainte =
                             * float
 
 and subtyp_indication = subtyp
-                      * (expression*expression) option
+                      * (expression * expression) option
 
 (** Left-value *)
 and lval =
@@ -152,7 +152,7 @@ and block = (instruction * Newspeak.location) list
 (** Effective argument for a function or procedure call.
     The optional string is the formal name in case of
     a named argument ("name => value") *)
-and argument = string option*expression
+and argument = string option * expression
 
 (** An instruction *)
 and instruction =
@@ -169,15 +169,15 @@ and instruction =
   | Exit
   | LvalInstr     of lval        (* To properly handle procedure calls *)
   | Case          of expression
-                   * (expression*block) list
+                   * (expression * block) list
                    * block option
   | Block         of declarative_part
                    * block                (** "declare" block *)
 
 (** Subprogram declaration *)
 and sub_program_spec =
-  | Function  of string*param list*subtyp (** A Function returns a value *)
-  | Procedure of string*param list        (** A Procedure does not       *)
+  | Function  of string * param list * subtyp (** A Function returns a value *)
+  | Procedure of string * param list          (** A Procedure does not       *)
 
 and object_state =
   | Variable
@@ -185,11 +185,11 @@ and object_state =
 
 and context_clause =
   | With       of string
-                * (spec*Newspeak.location) option
+                * (spec * Newspeak.location) option
   | UseContext of string
 
 and package_spec = string
-                 * (basic_declaration*Newspeak.location) list
+                 * (basic_declaration * Newspeak.location) list
 
 and spec =
   | SubProgramSpec of sub_program_spec
@@ -208,7 +208,7 @@ and basic_declaration =
                           * subtyp_indication
                           * expression option
                           * object_state
-  | TypeDecl             of string*typ_declaration
+  | TypeDecl             of string * typ_declaration
   | UseDecl              of string
   | SpecDecl             of spec
   | NumberDecl           of string
@@ -231,7 +231,7 @@ and declarative_item =
   | BasicDecl of basic_declaration
   |  BodyDecl of body
 
-and declarative_part = (declarative_item*Newspeak.location) list
+and declarative_part = (declarative_item * Newspeak.location) list
 
 type library_item =
   | Spec of spec

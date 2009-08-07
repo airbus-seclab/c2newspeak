@@ -26,11 +26,11 @@
 *)
 
 let parse (fname:string) :Syntax_ada.compilation_unit =
-  Npkcontext.print_debug ("Parsing file '"^fname^"'");
+  Npkcontext.print_debug ("Parsing file '" ^ fname ^ "'");
   let cin =
     try open_in fname
     with Sys_error _ -> Npkcontext.report_error "File_parse.parse"
-         ("Cannot open file \""^fname^"\" for input")
+         ("Cannot open file \"" ^ fname ^ "\" for input")
   in
   let lexbuf =
     Lexing.from_channel cin in
@@ -39,7 +39,7 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
       let prog = Parser.s Lexer.token lexbuf
       in
         close_in cin;
-        Npkcontext.print_debug ("Done parsing file '"^fname^"'");
+        Npkcontext.print_debug ("Done parsing file '" ^ fname ^ "'");
         if not (Ada_utils.check_compil_unit_name prog fname)
         then Npkcontext.report_warning "File_parse.parse"
                     "file name does not match unit name";
@@ -62,7 +62,7 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
               ^ "-"
               ^ string_of_int end_col
       in
-      let err_msg = "syntax error: "^pos^", unexpected token: "^lexeme in
+      let err_msg = "syntax error: " ^ pos ^ ", unexpected token: " ^ lexeme in
         Npkcontext.report_error "File_parse.parse" err_msg
 
 

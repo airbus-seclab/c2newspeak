@@ -52,21 +52,21 @@ let npko_suffix = ".no"
 (*------------------------*)
 
 let software = "Ada2Newspeak, part of C2Newspeak"
-let authors =  "Jasmine Duchon, Wenceslas Godard, "
-              ^"Charles Hymans and Etienne Millon"
+let authors  =  "Jasmine Duchon, Wenceslas Godard, "
+              ^ "Charles Hymans and Etienne Millon"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
 let comment_string =
-  "   The Newspeak language and C2Newspeak have initially been developped in\n"
- ^" EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles\n"
- ^" Hymans.\n"
- ^"\n"
- ^"   Ada2Newspeak compiles Ada code into Newspeak language, which allows \n"
- ^" static analysis and statistics on Ada code thanks to a simpler and non \n"
- ^" ambiguous language. First implementation by Jasmine Duchon.\n"
+   "   The Newspeak language and C2Newspeak have initially been developped in\n"
+ ^ " EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles\n"
+ ^ " Hymans.\n"
+ ^ "\n"
+ ^ "   Ada2Newspeak compiles Ada code into Newspeak language, which allows \n"
+ ^ " static analysis and statistics on Ada code thanks to a simpler and non \n"
+ ^ " ambiguous language. First implementation by Jasmine Duchon.\n"
 
 let version_string =
-  software^" version "^Version.version
-  ^" build "^Version.revision^" ("^Version.date^").\n"
-  ^"Software under "^licence^". Copyright "^copyright^".\n"
-  ^"Authors "^authors^".\n"
+  software ^ " version " ^ Version.version
+           ^ " build "   ^ Version.revision ^ " (" ^ Version.date ^ ").\n"
+           ^ "Software under " ^ licence ^ ". Copyright " ^ copyright ^ ".\n"
+           ^ "Authors " ^ authors ^ ".\n"

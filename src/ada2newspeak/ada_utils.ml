@@ -67,7 +67,7 @@ let with_default (opt:'a option) (def_value:'a):'a = match opt with
 
 let list_to_string l to_string sep crochet =
   let r = String.concat sep (List.map to_string l) in
-  if crochet then "["^r^"]" else r
+  if crochet then "[" ^ r ^ "]" else r
 
 let ident_list_to_string l =
   list_to_string l (fun x -> x) "." false
@@ -77,7 +77,7 @@ let name_to_string =
 
 let make_operator_name op =
   let ada2npk_operator_prefix = "__ada2npk_operator_" in
-  ada2npk_operator_prefix^
+  ada2npk_operator_prefix ^
    (match op with
    | And| AndThen -> "logical_and"
    | Or | OrElse  -> "logical_and"
@@ -115,7 +115,7 @@ let operator_of_string s = match s with
   | "rem" -> Rem
   | "**"  -> Power
   |_ -> Npkcontext.report_error "operator_of_string"
-         ("\""^s^"\" does not name an operator")
+         ("\"" ^ s ^ "\" does not name an operator")
 
 let may f = function
   | None -> None

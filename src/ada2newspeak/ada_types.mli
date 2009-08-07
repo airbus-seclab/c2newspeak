@@ -83,7 +83,7 @@ val new_float      : int -> t
  *)
 val new_array  : component:t -> index:t list -> t
 
-val new_record : (string*t) list -> t
+val new_record : (string * t) list -> t
 
 val new_access : t -> t
 
@@ -110,7 +110,7 @@ val extract_array_base : t -> Newspeak.Nat.t
 (** Precondition : is_unknown t *)
 val get_reason : t -> string
 
-val extract_symbols : t -> (string*int) list option
+val extract_symbols : t -> (string * int) list option
 
 val extract_access_type : t -> t
 

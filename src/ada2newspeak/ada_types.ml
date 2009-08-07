@@ -72,7 +72,7 @@ and base_t = {
 }
 
 and range =
-  Newspeak.Nat.t*Newspeak.Nat.t (* min <= max *)
+  Newspeak.Nat.t * Newspeak.Nat.t (* min <= max *)
 
 (* type for "traits" (type of types...) *)
 and trait_t =

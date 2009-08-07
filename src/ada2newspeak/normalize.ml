@@ -48,7 +48,7 @@ let mangle_sname = function
 
 let rec make_name_of_lval = function
   | Var x -> [x]
-  | SName (pf, tl) ->make_name_of_lval pf@[tl]
+  | SName (pf, tl) -> make_name_of_lval pf @ [tl]
   | _ -> invalid_arg "make_name_of_lval"
 
 let subtyp_to_adatyp gtbl n =
@@ -58,9 +58,9 @@ let subtyp_to_adatyp gtbl n =
   with Not_found ->
     begin
       Npkcontext.report_warning "ST2AT"
-        ("Cannot find type '"
-        ^name_to_string n
-        ^"'");
+        ( "Cannot find type '"
+        ^ name_to_string n
+        ^ "'");
       T.new_unknown "Cannot find type (subtyp_to_adatyp)";
     end
 
@@ -68,7 +68,7 @@ let merge_types gtbl (tp, cstr) =
   let t = subtyp_to_adatyp gtbl tp in
   if (T.is_unknown t) then
     Npkcontext.report_warning "merge_types"
-    ("merged subtype indication into unknown type ("^T.get_reason t^")");
+    ("merged subtype indication into unknown type (" ^ T.get_reason t ^ ")");
   match cstr with
   | None -> t
   | Some c -> T.new_constr t c
@@ -190,9 +190,9 @@ let check_package_body_against_spec ~body ~spec =
       begin
         if not (find_body_for_spec ~specification:sp ~bodylist)
         then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
-          ("Body for package " ^pkgname
-          ^" does not match its specification : cannot find a body for \""
-          ^(name_of_spec sp)^"\"")
+          ( "Body for package " ^ pkgname
+          ^ " does not match its specification : cannot find a body for \""
+          ^ name_of_spec sp ^ "\"")
       end
   ) speclist
 
@@ -243,7 +243,7 @@ let make_arg_list args spec =
                    | Some id, e ->
                         if (Hashtbl.mem argtbl id) then
                             Npkcontext.report_error "firstpass.fcall"
-                            ("Parameter "^id^" appears twice")
+                            ("Parameter " ^ id ^ " appears twice")
                         else
                             Hashtbl.add argtbl id e;
                 )
@@ -277,9 +277,9 @@ let make_arg_list args spec =
                                        | None ->
                                       Npkcontext.report_error
                                       "firstpass.fcall"
-                                      ("No value provided for "
-                                      ^"parameter "^x.Ast.formal_name
-                                      ^", which has no default one.")
+                                      ( "No value provided for "
+                                      ^ "parameter " ^ x.Ast.formal_name
+                                      ^ ", which has no default one.")
                                  end
                              )))
                              spec
@@ -322,7 +322,7 @@ let extract_subprog_spec ast =
         "subprogram body expected, package body found"
 
 let parse_specification name =
-  let spec_name = name^".ads" in
+  let spec_name = name ^ ".ads" in
   let spec_ast =
     if Sys.file_exists spec_name
     then
@@ -336,7 +336,7 @@ let parse_specification name =
         end;
       res
     else
-      let body_name = name^".adb" in
+      let body_name = name ^ ".adb" in
         extract_subprog_spec (File_parse.parse body_name)
   in
     match spec_ast with
@@ -351,8 +351,8 @@ let parse_package_specification name =
     | (_, Spec(SubProgramSpec _),_) ->
                 Npkcontext.report_error
                    "Ada_normalize.parse_package_specification"
-                  ("package specification expected, "
-                  ^"subprogram specification found")
+                  ( "package specification expected, "
+                  ^ "subprogram specification found")
     | (_, Body _, _) -> Npkcontext.report_error
            "normalize.parse_package_specification"
           "internal error : specification expected, body found"
@@ -409,7 +409,7 @@ let rec normalize_exp ?expected_type exp =
                         , T.universal_integer
                         )
             | _      -> Npkcontext.report_error "normalize"
-                          ("No such function-attribute : '"^attr^"'")
+                          ("No such function-attribute : '" ^ attr ^ "'")
         end
     | Attribute (lv, attr, None) ->
         begin
@@ -471,13 +471,13 @@ and normalize_binop bop e1 e2 =
                           ,(e2',t2)
                           )
               ,TC.type_of_binop Ast.Or t1 t2
-  | AndThen-> let (e1',t1) = normalize_exp e1 in
-              let (e2',t2) = normalize_exp e2 in
-              Ast.CondExp ((e1',t1)
-                          ,(e2',t2)
-                          ,(Ast.CBool false,T.boolean)
-                          )
-              ,TC.type_of_binop Ast.And t1 t2
+  | AndThen -> let (e1',t1) = normalize_exp e1 in
+               let (e2',t2) = normalize_exp e2 in
+               Ast.CondExp ((e1',t1)
+                           ,(e2',t2)
+                           ,(Ast.CBool false,T.boolean)
+                           )
+               ,TC.type_of_binop Ast.And t1 t2
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type =
@@ -560,15 +560,15 @@ and eval_range (exp1, exp2) =
        let val2 = Eval.eval_static norm_exp2 gtbl in
        let contrainte =  match (val1, val2) with
          | (T.FloatVal(f1),T.FloatVal(f2)) ->
-             if f1<=f2
-             then FloatRangeConstraint(f1, f2)
+             if f1 <= f2
+             then FloatRangeConstraint (f1, f2)
              else
                Npkcontext.report_error
                  "Ada_normalize.normalize_contrainte"
                  "null range not accepted"
 
          | (T.IntVal(i1), T.IntVal(i2)) ->
-             if (Nat.compare i1 i2)<=0
+             if (Nat.compare i1 i2) <= 0
              then
                IntegerRangeConstraint(i1, i2)
              else
@@ -593,8 +593,8 @@ and eval_range (exp1, exp2) =
                 type.*)
              Npkcontext.report_error
                "Ada_normalize.normalize_contrainte"
-               ("internal error : range error : expected static "
-                ^"float or integer constant")
+               ( "internal error : range error : expected static "
+               ^ "float or integer constant")
        in contrainte
      with
        | Eval.NonStaticExpression ->
@@ -671,7 +671,7 @@ and add_representation_clause id aggr loc =
         in
         let original = match orgn_val with
           | None -> Npkcontext.report_error "normalize:repclause"
-                      ("No value found for key '"^i^"'")
+                      ("No value found for key '" ^ i ^ "'")
           | Some x -> x
         in
         let exp' = normalize_exp exp in
@@ -709,8 +709,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
            if func && (param.mode <> In)
            then Npkcontext.report_error
               "Normalize.normalize_params"
-             ("invalid parameter mode : functions can only have"
-             ^" \"in\" parameters");
+             ( "invalid parameter mode : functions can only have"
+             ^ " \"in\" parameters");
            if (param.default_value <> None && param.mode <> In) then
              Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
@@ -789,8 +789,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
           ) ident_list
     | ObjectDecl _ -> Npkcontext.report_error
                      "Ada_normalize.normalize_basic_decl"
-                     ("internal error : constant without default value"
-                      ^"or already evaluated")
+                     ( "internal error : constant without default value"
+                     ^ "or already evaluated")
     | TypeDecl(id,typ_decl) ->
         normalize_typ_decl id typ_decl loc;
         []
@@ -809,11 +809,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | RepresentClause (id, EnumRepClause aggr) ->
         add_representation_clause id aggr loc;[]
     | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
-                                ("Ignoring representation clause for '"^id^"'");
+                                ("Ignoring representation clause for '" ^ id ^ "'");
                                 []
     | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
                                         ("ignoring generic instanciation of '"
-                                                         ^name_to_string n^"'");
+                                        ^ name_to_string n ^ "'");
                                       []
 
 
@@ -837,14 +837,14 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | PackageSpec(package_spec) ->
         Ast.PackageSpec(normalize_package_spec package_spec)
 
-  and normalize_lval ?(force=false) ?expected_type = function
-    | (Var _ | SName _) as lv->
+  and normalize_lval ?(force = false) ?expected_type = function
+    | (Var _ | SName _) as lv ->
         (* Only in write contexts *)
         begin match resolve_selected ?expected_type lv with
         | SelectedVar    (sc, id,  t, ro) ->
             if (ro && not force) then
             Npkcontext.report_error "normalize_instr"
-               ("Invalid left value : '"^id^"' is read-only");
+               ("Invalid left value : '" ^ id ^ "' is read-only");
             Ast.Var  (sc, id, t), t
         | SelectedRecord (lv, off, tf) ->
             Ast.RecordAccess (lv, off, tf), tf
@@ -874,7 +874,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
    * return type.
    * When translating other blocks, it shall be set to None.
    *)
-  and normalize_instr ?return_type ?(force_lval=false) (instr,loc) =
+  and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
     Npkcontext.set_loc loc;
     match instr with
     | NullInstr    -> []
@@ -909,8 +909,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
           let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
           if (not (T.is_compatible t_lv t_exp)) then
             begin
-              Npkcontext.print_debug ("LV = "^T.print t_lv);
-              Npkcontext.print_debug ("EX = "^T.print t_exp);
+              Npkcontext.print_debug ("LV = " ^ T.print t_lv);
+              Npkcontext.print_debug ("EX = " ^ T.print t_exp);
               Npkcontext.report_error "normalize_instr"
                 "Incompatible types in assignment";
             end;
@@ -964,13 +964,13 @@ and normalize_sub_program_spec subprog_spec ~addparam =
               ( normalize_exp (if is_rev then Binary(Ge,Lval(Var iter),exp1)
                                          else Binary(Le,Lval(Var iter),exp2))
                                )
-               , nblock@[Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
-                                    , normalize_exp( Binary((if is_rev
-                                                               then Minus
-                                                               else Plus)
-                                                   , Lval(Var iter)
-                                                   , CInt (Nat.one)))
-                                    )
+               , nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
+                                      , normalize_exp( Binary((if is_rev
+                                                                 then Minus
+                                                                 else Plus)
+                                                     , Lval(Var iter)
+                                                     , CInt (Nat.one)))
+                                      )
                         , loc]
             )
             , loc]
@@ -980,9 +980,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     | Exit -> [Ast.Exit, loc]
     | Case (e, choices, default) ->
               [Ast.Case (normalize_exp e,
-                    List.map (function e,block->
-                            normalize_exp e,
-                            normalize_block ?return_type block)
+                    List.map (fun (e,block) ->
+                                normalize_exp e,
+                                normalize_block ?return_type block)
                         choices,
                     Ada_utils.may (fun x -> normalize_block ?return_type x)
                                   default
@@ -1009,8 +1009,8 @@ and normalize_sub_program_spec subprog_spec ~addparam =
           match (Eval.eval_static x' gtbl) with
           | T.IntVal x -> x
           | _ -> Npkcontext.report_error "normalize"
-                  ("Within an aggregate, selectors"
-                  ^"should evaluate as integers")
+                  ( "Within an aggregate, selectors"
+                  ^ "should evaluate as integers")
         in
         List.fold_left (fun (kvl, others_exp) (selector, value) ->
           let rec handle = function
@@ -1033,7 +1033,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
                   if (Newspeak.Nat.compare b a < 0) then []
                   else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
                 in
-                (interval e1' e2')@kvl, None
+                (interval e1' e2') @ kvl, None
               end
           | AggrOthers ->
               begin
@@ -1078,7 +1078,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         let key   = normalize_exp aggr_k in
         let value = normalize_exp aggr_v in
         Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
-      ) (other_list@assoc_list')
+      ) (other_list @ assoc_list')
       (* end of array_case *)
     in
     let record_case _ =
@@ -1123,7 +1123,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         let (off, tf) = T.record_field t_lv aggr_fld in
         let v = normalize_exp ~expected_type:tf aggr_val in
         Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
-      ) (assoc_list@other_list)
+      ) (assoc_list @ other_list)
       (* end of record_case *)
     in
       if      T.is_array  t_lv then array_case  ()
@@ -1131,7 +1131,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
       else Npkcontext.report_error "normalize_assign_aggregate"
              "Expecting an array or a record as lvalue"
 
-  and normalize_block ?return_type ?(force_lval=false) block =
+  and normalize_block ?return_type ?(force_lval = false) block =
     List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
 
   and normalize_decl_part decl_part =
@@ -1154,9 +1154,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
               if not (find_body_for_spec ~specification:sp
                                           ~bodylist:(List.map fst ndp)) then
                    Npkcontext.report_error "normalize_decl_part"
-                                           ("Declaration of \""
-                                           ^(name_of_spec sp)
-                                           ^"\" requires completion")
+                                           ( "Declaration of \""
+                                           ^ (name_of_spec sp)
+                                           ^ "\" requires completion")
               end
       | _ -> ()
     ) ndp;

@@ -33,16 +33,16 @@
 let compile(fname:string):Npkil.t =
   if not (Filename.check_suffix fname Params.ada_suffix) then begin
     Npkcontext.report_error "Ada2newspeak.compile"
-      (fname^" is not a .adb file")
+      (fname ^ " is not a .adb file")
   end;
   let base_name = Filename.basename fname in
   let dir_name = Filename.dirname fname in
   let current_dir = Sys.getcwd () in
     if dir_name <> "." then begin
-      Npkcontext.print_debug ("Changing directory : "^dir_name);
+      Npkcontext.print_debug ("Changing directory : " ^ dir_name);
       Sys.chdir dir_name
     end;
-    Npkcontext.print_debug ("Parsing "^fname^"...");
+    Npkcontext.print_debug ("Parsing " ^ fname ^ "...");
     let t_0 = Unix.gettimeofday () in
     let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
       let t_1 = Unix.gettimeofday () in
@@ -59,19 +59,21 @@ let compile(fname:string):Npkil.t =
         let t_2 = Unix.gettimeofday () in
         Npkcontext.forget_loc ();
         Npkcontext.print_debug "First pass done.";
-        Npkcontext.print_debug ("Translating "^fname^"...");
+        Npkcontext.print_debug ("Translating " ^ fname ^ "...");
         let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
           let t_3 = Unix.gettimeofday () in
+          let time_string a b =
+            string_of_float (1000. *. (a -. b)) in
           List.iter Npkcontext.print_debug
           ["   , ^ ,          Phase       | Time spent (ms)"
           ;" .`  |  `.  ------------------+-----------------"
-          ;" (   o   )    Lexing/Parsing  | "^string_of_float(1000.*.(t_1-.t_0))
-          ;" `  /    `    Translation     | "^string_of_float(1000.*.(t_2-.t_1))
-          ;"  ` ._. `     Linking         | "^string_of_float(1000.*.(t_3-.t_2))
+          ;" (   o   )    Lexing/Parsing  | " ^ time_string t_1 t_0
+          ;" `  /    `    Translation     | " ^ time_string t_2 t_1
+          ;"  ` ._. `     Linking         | " ^ time_string t_3 t_2
           ];
           Npkcontext.forget_loc ();
           if dir_name <> "." then begin
-            Npkcontext.print_debug ("Changing directory : "^current_dir);
+            Npkcontext.print_debug ("Changing directory : " ^ current_dir);
             Sys.chdir current_dir
           end;
           if (!Npkcontext.verb_npko) then begin

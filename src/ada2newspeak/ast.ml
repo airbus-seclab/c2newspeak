@@ -54,7 +54,7 @@ and instruction =
   | ProcedureCall of Symboltbl.scope * string
                    * argument list
   | Case          of expression
-                   * (expression*block) list
+                   * (expression * block) list
                    * block option
   | Block         of declarative_part
                    * block
@@ -96,7 +96,7 @@ and exp_value =
                   * argument list
                   * Ada_types.t (* return type *)
 
-and  declarative_part = (declarative_item*Newspeak.location) list
+and declarative_part = (declarative_item * Newspeak.location) list
 
 and param = {
         formal_name   : string;
@@ -142,14 +142,14 @@ and spec =
 and context_clause =
   | With       of string
                 * Newspeak.location
-                * (spec*Newspeak.location) option
+                * (spec * Newspeak.location) option
 
 and sub_program_spec =
-  | Function  of Syntax_ada.name*param list*Ada_types.t
-  | Procedure of Syntax_ada.name*param list
+  | Function  of Syntax_ada.name * param list * Ada_types.t
+  | Procedure of Syntax_ada.name * param list
 
 and package_spec = string
-                 * (basic_declaration*Newspeak.location) list
+                 * (basic_declaration * Newspeak.location) list
 
 type compilation_unit = context_clause list
                       * library_item
