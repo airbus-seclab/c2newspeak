@@ -70,12 +70,17 @@ let process prog =
       | Shift (lv, e) -> 
 	  check_lval lv;
 	  check_exp e
-      | _ -> warn_deref ()
+      | Deref _ -> warn_deref ()
 
   and check_exp x = 
     match x with
 	Const _ -> ()
       | AddrOf (lv, _) -> check_lval lv
+      | Lval (lv, _) -> check_lval lv
+      | UnOp (_, e) -> check_exp e
+      | BinOp (_, e1, e2) -> 
+	  check_exp e1;
+	  check_exp e2
       | _ -> warn_deref ()
   in
 
