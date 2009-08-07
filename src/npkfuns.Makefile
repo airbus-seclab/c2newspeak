@@ -27,7 +27,7 @@
 TARGET=npkfuns
 DIRS=newspeak/ utils/ npkfuns/
 FILES=version utils/listUtils utils/strSet newspeak/newspeak \
-      npkfuns/glbCollect npkfuns/npkfuns
+      npkfuns/glbCollect npkfuns/funCollect npkfuns/npkfuns
 LIBX=nums.cmxa
 
 include common.Makefile

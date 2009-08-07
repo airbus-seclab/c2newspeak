@@ -22,40 +22,9 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
-(* TODO: factor launcher and error treatment for the several newspeak 
-   utilities *)
 
-let exec_name = "npkfuns"
+type t
 
-let input = ref ""
+val process: Newspeak.t -> t
 
-let stats = ref false
-
-let speclist = 
-  [
-    ("--stats", Arg.Set stats, "prints stats instead of function signatures")
-  ]
-
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
-
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
-
-let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^exec_name^" --help");
-
-    let prog = Newspeak.read !input in
-    let glbs = GlbCollect.process prog in
-      if !stats then GlbCollect.print_stats glbs
-      else GlbCollect.print glbs
-(*
-    let funs = FunCollect.process prog in
-      FunCollect.print funs
-*)
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+val print: t -> unit
