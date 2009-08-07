@@ -25,8 +25,8 @@
 #
 
 TARGET=npknull
-DIRS=newspeak/ npknull/
-FILES=version newspeak/newspeak npknull/solver npknull/npknull
+DIRS=newspeak/ utils/ npknull/
+FILES=version newspeak/newspeak utils/strSet npknull/solver npknull/npknull
 LIBX=nums.cmxa
 
 include common.Makefile

@@ -33,10 +33,13 @@ let prepare_call _ _ = ()
 
 let apply _ _ = ()
 
+let join _ _ = ()
+
 type t = unit
 
 let process prog = 
   let current_loc = ref Newspeak.unknown_loc in
+  let errors = ref StrSet.empty in
 (* 
    list of functions to analyze
    when this list is empty, analysis ends
@@ -46,7 +49,11 @@ let process prog =
   let funtbl = Hashtbl.create 100 in
 
   let print_err msg = 
-    print_endline (Newspeak.string_of_loc !current_loc^": "^msg)
+    let msg = Newspeak.string_of_loc !current_loc^": "^msg in
+      if not (StrSet.mem msg !errors) then begin
+	errors := StrSet.add msg !errors;
+	print_endline msg
+      end
   in
 
   let warn_deref () = print_err "potential null pointer deref" in
@@ -99,6 +106,10 @@ let process prog =
 	    print_err ("missing function: "^f
 		       ^", call ignored, analysis may be unsound")
 	end
+      | Select (br1, br2) -> join (process_blk br1 s) (process_blk br2 s)
+      | Guard e -> 
+	  check_exp e; 
+	  s
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
