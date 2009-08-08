@@ -35,6 +35,8 @@ let apply _ _ = ()
 
 let join _ _ = ()
 
+let contains _ _ = true
+
 type t = unit
 
 let process prog = 
@@ -63,7 +65,7 @@ let process prog =
 	  (lbl', s')::tl when lbl = lbl' -> 
 	    let s = join s s' in
 	      (lbl, s)::tl
-	| _::tl -> goto tl
+	| hd::tl -> hd::(goto tl)
 	| [] -> invalid_arg "Solver.goto: unreachable code"
     in
       lbl_tbl := goto !lbl_tbl
@@ -147,6 +149,13 @@ let process prog =
       | Goto lbl -> 
 	  goto lbl s;
 	  emptyset
+      | InfLoop body -> 
+	  let rec fixpoint x =
+	    let x' = process_blk body x in
+	      if not (contains x x') then fixpoint (join x x')
+	  in
+	    fixpoint s;
+	    emptyset
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
