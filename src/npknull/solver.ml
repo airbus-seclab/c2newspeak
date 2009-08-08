@@ -97,12 +97,12 @@ let process prog =
     match x with
 	Const _ -> ()
       | AddrOf (lv, _) -> check_lval lv
+      | AddrOfFun _ -> ()
       | Lval (lv, _) -> check_lval lv
       | UnOp (_, e) -> check_exp e
       | BinOp (_, e1, e2) -> 
 	  check_exp e1;
 	  check_exp e2
-      | _ -> warn_deref ()
   in
 
   let rec process_blk x s =
