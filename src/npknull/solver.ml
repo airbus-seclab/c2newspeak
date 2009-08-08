@@ -47,6 +47,27 @@ let process prog =
 (* TODO: could try a queue instead?? *)
   let todo = ref [] in
   let funtbl = Hashtbl.create 100 in
+  let lbl_tbl = ref [] in
+
+  let push lbl = lbl_tbl := (lbl, emptyset)::!lbl_tbl in
+  let pop () = 
+    match !lbl_tbl with
+	(_, s)::tl -> 
+	  lbl_tbl := tl;
+	  s
+      | [] -> invalid_arg "Solver.pop: unreachable code"
+  in
+  let goto lbl s = 
+    let rec goto tbl =
+      match tbl with
+	  (lbl', s')::tl when lbl = lbl' -> 
+	    let s = join s s' in
+	      (lbl, s)::tl
+	| _::tl -> goto tl
+	| [] -> invalid_arg "Solver.goto: unreachable code"
+    in
+      lbl_tbl := goto !lbl_tbl
+  in
 
   let print_err msg = 
     let msg = Newspeak.string_of_loc !current_loc^": "^msg in
@@ -115,6 +136,17 @@ let process prog =
       | Guard e -> 
 	  check_exp e; 
 	  s
+(* TODO: change labels?? with the number of DoWith to traverse, 
+   but harder to manipulate? *)
+      | DoWith (body, lbl, action) -> 
+	  push lbl;
+	  let s1 = process_blk body s in
+	  let s2 = pop () in
+	  let s2 = process_blk action s2 in
+	    join s1 s2
+      | Goto lbl -> 
+	  goto lbl s;
+	  emptyset
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
