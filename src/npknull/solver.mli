@@ -23,6 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
-
-val process: Newspeak.t -> t
+val process: Newspeak.t -> unit
