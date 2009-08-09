@@ -23,7 +23,23 @@
   email: charles.hymans@penjili.org
 *)
 
-(** returns the number of null pointer derefs signals and the set of reachable 
-    functions
-*)
-val process: Newspeak.t -> (StrSet.t * int)
+type t
+
+(* TODO: should abstract this type!! *)
+type memloc = string
+
+val universe: unit -> t
+
+val emptyset: t
+
+val join: t -> t -> t
+
+val contains: t -> t -> bool
+
+val memloc_is_valid: t -> memloc -> bool
+
+val prepare_call: t -> t -> (bool * t)
+
+val apply: t -> t -> t
+
+val set_pointsto: memloc -> memloc -> t -> t

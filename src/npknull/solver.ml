@@ -25,94 +25,16 @@
 
 open Newspeak
 
-module Map = Map.Make(String)
-module Set = Set.Make(String)
-
-type offset = int
-
-(* set of location times offset, None is for unknown *)
-type info = (Set.t * offset option)
-
-(* map from locations: 
-   G.global name, 
-   L.local number, or 
-   H.heap anonymous location 
-   to association list from offset to info
-*)
-type store = (offset * info) list Map.t
-
-(* None is for emptyset *)
-(* TODO: try to get rid of this emptyset, use an exception instead!! *)
-type t = store option
-
-let universe () = Some Map.empty
-
-let emptyset = None
-
-let prepare_call _ _ = invalid_arg "Solver.prepare_call: not implemented yet"
-
-let apply _ _ = invalid_arg "Solver.apply: not implemented yet"
-
-(* TODO: this should be greatly improved!!! 
-   right now O(n)*log(n)
-   Too costly!!
-*)
-let join s1 s2 = 
-  match (s1, s2) with
-      (Some s1, Some s2) -> 
-	let s = ref s2 in
-	let add_info x d1 =
-	  try
-	    let d2 = Map.find x s2 in
-	      if d1 <> d2 
-	      then invalid_arg "Solver.join: not implemented yet <>"
-	  with Not_found -> 
-	    invalid_arg "Solver.join: not implemented yet Not_found"
-	in
-	  Map.iter add_info s1;
-	  Some !s
-    | (None, s) | (s, None) -> s
-
-(* TODO: this should be greatly improved!!
-   copy on write, patricia trie, partial recursion...
-*)
-let contains s1 s2 = 
-  match (s1, s2) with
-      (_, None) -> true
-    | (None, _) -> false
-    | (Some s1, Some s2) -> 
-	let check_info x d1 =
-	  try
-	    let d2 = Map.find x s2 in
-	      if d1 <> d2 
-	      then invalid_arg "Solver.contains: not implemented yet"
-	  with Not_found -> raise Exit
-	in
-	  try
-	    Map.iter check_info s1;
-	    true
-	  with Exit -> false
-
-(* TODO: find a way to remove emptyset/None!!! *)
-let set_pointsto m1 m2 s = 
-  match s with
-      Some s -> Some (Map.add m1 ((0, (Set.singleton m2, Some 0))::[]) s)
-    | None -> None
-
-(* TODO: this is really awkward that this is needed!! *)
-let memloc_is_valid s m = 
-  match s with
-      Some s -> begin
-	try 
-	  let s = Map.find m s in
-	    List.mem_assoc 0 s
-	with Not_found -> false
-      end
-    | None -> true
-
 let memloc_of_local env v = "L."^string_of_int (env - v)
 
+let env_of_ftyp (args, ret) = 
+  let n = List.length args in
+    match ret with
+	None -> n - 1
+      | Some _ -> n
+
 let process prog = 
+  let warn_cnt = ref 0 in
   let current_loc = ref Newspeak.unknown_loc in
   let errors = ref StrSet.empty in
 (* 
@@ -124,13 +46,15 @@ let process prog =
   let funtbl = Hashtbl.create 100 in
   let lbl_tbl = ref [] in
 
+  let live_funs = ref StrSet.empty in
+
   let memloc_cnt = ref (-1) in
   let gen_memloc () = 
     incr memloc_cnt;
     "H."^string_of_int !memloc_cnt
   in
 
-  let push lbl = lbl_tbl := (lbl, emptyset)::!lbl_tbl in
+  let push lbl = lbl_tbl := (lbl, Store.emptyset)::!lbl_tbl in
   let pop () = 
     match !lbl_tbl with
 	(_, s)::tl -> 
@@ -142,7 +66,7 @@ let process prog =
     let rec goto tbl =
       match tbl with
 	  (lbl', s')::tl when lbl = lbl' -> 
-	    let s = join s s' in
+	    let s = Store.join s s' in
 	      (lbl, s)::tl
 	| hd::tl -> hd::(goto tl)
 	| [] -> invalid_arg "Solver.goto: unreachable code"
@@ -154,17 +78,25 @@ let process prog =
     let msg = Newspeak.string_of_loc !current_loc^": "^msg in
       if not (StrSet.mem msg !errors) then begin
 	errors := StrSet.add msg !errors;
-	print_endline msg
+	prerr_endline msg
       end
   in
 
-  let warn_deref () = print_err "potential null pointer deref" in
+  let warn_deref () = 
+    let msg = "potential null pointer deref" in
+    let msg = Newspeak.string_of_loc !current_loc^": "^msg in
+      if not (StrSet.mem msg !errors) then begin
+	incr warn_cnt;
+	errors := StrSet.add msg !errors;
+	print_endline msg
+      end
+  in
 
   let exp_is_valid env s x =
     match x with
 	Lval (Local n, Ptr) -> 
 	  let v = memloc_of_local env n in
-	    memloc_is_valid s v
+	    Store.memloc_is_valid s v
       | _ -> false
   in
 
@@ -208,9 +140,9 @@ let process prog =
 	  try
 	    let rel = Hashtbl.find funtbl f in
 	      (* TODO: think about this, rewrite *)
-	    let (is_new, init) = prepare_call rel s in
+	    let (is_new, init) = Store.prepare_call rel s in
 	      if is_new then todo := (f, init)::!todo;
-	      apply rel s
+	      Store.apply rel s
 	  with Not_found -> 
 	    print_err ("missing function: "^f
 		       ^", call ignored, analysis may be unsound");
@@ -219,7 +151,7 @@ let process prog =
       | Select (br1, br2) -> 
 	  let s1 = process_blk br1 env s in
 	  let s2 = process_blk br2 env s in
-	    join s1 s2
+	    Store.join s1 s2
       | Guard e -> 
 	  check_exp env s e;
 	  s
@@ -230,36 +162,40 @@ let process prog =
 	  let s1 = process_blk body env s in
 	  let s2 = pop () in
 	  let s2 = process_blk action env s2 in
-	    join s1 s2
+	    Store.join s1 s2
       | Goto lbl -> 
 	  goto lbl s;
-	  emptyset
+	  Store.emptyset
       | InfLoop body -> 
 	  let rec fixpoint x =
 	    let x' = process_blk body env x in
-	      if not (contains x x') then fixpoint (join x x')
+	      if not (Store.contains x x') then fixpoint (Store.join x x')
 	  in
 	    fixpoint s;
-	    emptyset
+	    Store.emptyset
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
     (* initialization *)
-    Hashtbl.iter (fun f _ -> Hashtbl.add funtbl f ()) prog.fundecs;
-    let s = universe () in
+    Hashtbl.iter (fun f _ -> Hashtbl.add funtbl f Store.emptyset) prog.fundecs;
+    let s = Store.universe () in
     let s = process_blk prog.init 0 s in
-    let s = set_pointsto "L.2" (gen_memloc ()) s in
-      todo := ("main", (2, s))::[];
+    let s = Store.set_pointsto "L.2" (gen_memloc ()) s in
+      todo := ("main", s)::[];
       
       (* fixpoint computation *)
-      try
+      begin try
 	while true do
 	  match !todo with
-	      (f, (env, s))::tl -> 
+	      (f, s)::tl -> 
+		live_funs := StrSet.add f !live_funs;
 		todo := tl;
-		let (_, body) = Hashtbl.find prog.fundecs f in
+		let (ft, body) = Hashtbl.find prog.fundecs f in
+		let env = env_of_ftyp ft in
 		let _ = process_blk body env s in
 		  ()
 	    | [] -> raise Exit
 	done
       with Exit -> ()
+      end;
+      (!live_funs, !warn_cnt)

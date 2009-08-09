@@ -42,3 +42,5 @@ val subset: t -> t -> bool
 val elements: t -> string list
 
 val cardinal: t -> int
+
+val remove: string -> t -> t

@@ -33,7 +33,7 @@ let stats = ref false
 
 let speclist = 
   [
-    ("--stats", Arg.Set stats, "prints stats instead of function signatures")
+    ("--stats", Arg.Set stats, "prints analysis stats")
   ]
 
 let anon_fun file = 
@@ -49,7 +49,8 @@ let _ =
     then invalid_arg ("no file specified. Try "^exec_name^" --help");
 
     let prog = Newspeak.read !input in
-      Solver.process prog
+    let results = Solver.process prog in
+      if !stats then Stats.print prog results
 
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
