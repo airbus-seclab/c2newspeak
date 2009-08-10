@@ -131,12 +131,14 @@ let assign (lv, e, t) env s =
     | Some s -> 
 	try
 	  let a = lval_to_memloc env s lv in
-	    match t with
-		Ptr -> 
-		  let p = eval_exp env s e in
-		  let s = set_pointsto a p s in
-		    Some s
-	      | _ -> Some (forget_memloc a s)
+	    try
+	      match t with
+		  Ptr -> 
+		    let p = eval_exp env s e in
+		    let s = set_pointsto a p s in
+		      Some s
+		| _ -> raise Unknown
+	    with Unknown -> Some (forget_memloc a s)
 	with Unknown -> universe ()
 
 let string_of_info (a, o) =
