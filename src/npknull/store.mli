@@ -53,3 +53,5 @@ val to_string: t -> string
 val assign: (lval * exp * scalar_t) -> int -> t -> t
 
 val lval_to_memloc: int -> t -> lval -> memloc
+
+val remove_local: int -> t -> t

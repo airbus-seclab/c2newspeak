@@ -135,7 +135,10 @@ let process prog =
 	  check_lval env s lv;
 	  check_exp env s e;
 	  Store.assign (lv, e, t) env s
-      | Decl (_, _, body) -> process_blk body (env+1) s
+      | Decl (_, _, body) -> 
+	  let env = env + 1 in
+	  let s = process_blk body env s in
+	    Store.remove_local env s
       | Call FunId f -> begin
 	  try
 	    let rel = Hashtbl.find funtbl f in

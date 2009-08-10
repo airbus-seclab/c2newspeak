@@ -107,9 +107,6 @@ let memloc_is_valid s m =
       end
     | None -> true
 
-let memloc_of_local env v = "L."^string_of_int (env - v)
-
-
 let lval_to_memloc env _ lv =
   match lv with
       Global x -> "G."^x
@@ -170,6 +167,14 @@ let to_string s =
 	  Map.iter to_string m;
 	  !res
     | None -> "{}"
+
+(* TODO: find a way to remove this option, remove emptyset!! *)
+let remove_local v s =
+  match s with
+      Some s -> 
+	let v = "L."^string_of_int v in
+	  Some (Map.remove v s)
+    | None -> None
 
 (* TODO: find a way to remove emptyset/None!!! *)
 let set_pointsto m1 m2 s = 
