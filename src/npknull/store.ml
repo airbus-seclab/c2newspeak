@@ -25,6 +25,8 @@
 
 open Newspeak
 
+exception Unknown
+
 module Map = Map.Make(String)
 module Set = Set.Make(String)
 
@@ -95,12 +97,6 @@ let contains s1 s2 =
 	    true
 	  with Exit -> false
 
-(* TODO: find a way to remove emptyset/None!!! *)
-let set_pointsto m1 m2 s = 
-  match s with
-      Some s -> Some (Map.add m1 ((0, (Set.singleton m2, Some 0))::[]) s)
-    | None -> None
-
 (* TODO: this is really awkward that this is needed!! *)
 let memloc_is_valid s m = 
   match s with
@@ -111,4 +107,72 @@ let memloc_is_valid s m =
 	with Not_found -> false
       end
     | None -> true
+
+let memloc_of_local env v = "L."^string_of_int (env - v)
+
+
+let lval_to_memloc env _ lv =
+  match lv with
+      Global x -> "G."^x
+    | Local x -> "L."^string_of_int (env - x)
+    | _ -> raise Unknown
+
+let eval_exp env s e =
+  match e with
+      AddrOf (lv, _) -> lval_to_memloc env s lv
+    | _ -> raise Unknown
+
+let set_pointsto m1 m2 s =
+  (* TODO: could be optimized/made more precise *)
+  if Map.mem m1 s then Map.remove m1 s
+  else Map.add m1 ((0, (Set.singleton m2, Some 0))::[]) s
+
+let assign (lv, e, t) env s =
+  match s with
+      None -> None
+    | Some s -> 
+	try
+	  match t with
+	      Ptr -> 
+		let a = lval_to_memloc env s lv in
+		let p = eval_exp env s e in
+		let s = set_pointsto a p s in
+		  Some s
+	    | _ -> raise Unknown
+	with Unknown -> universe ()
+
+let string_of_info (a, o) =
+  let a = Set.elements a in
+  let a =
+    match a with
+	a::[] -> a
+      | _ -> "{"^ListUtils.to_string (fun x -> x) "," a^"}"
+  in
+  let o =
+    match o with
+	None -> "?"
+      | Some x -> string_of_int x
+  in
+    "("^a^", "^o^")"
+
+let to_string s =
+  match s with
+      Some m -> 
+	let res = ref "" in
+	let to_string l data =
+	  let to_string (offset, info) =
+	    let info = string_of_info info in
+	      res := !res^" ("^l^", "^string_of_int offset^") -> "^info
+	  in
+	    List.iter to_string data
+	in
+	  Map.iter to_string m;
+	  !res
+    | None -> "{}"
+
+(* TODO: find a way to remove emptyset/None!!! *)
+let set_pointsto m1 m2 s = 
+  match s with
+      Some s -> Some (set_pointsto m1 m2 s)
+    | None -> None
 

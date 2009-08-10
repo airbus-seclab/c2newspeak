@@ -25,8 +25,6 @@
 
 open Newspeak
 
-let memloc_of_local env v = "L."^string_of_int (env - v)
-
 let env_of_ftyp (args, ret) = 
   let n = List.length args in
     match ret with
@@ -93,11 +91,13 @@ let process prog =
   in
 
   let exp_is_valid env s x =
-    match x with
-	Lval (Local n, Ptr) -> 
-	  let v = memloc_of_local env n in
-	    Store.memloc_is_valid s v
-      | _ -> false
+    try
+      match x with
+	  Lval (lv, Ptr) -> 
+	    let a = Store.lval_to_memloc env s lv in
+	      Store.memloc_is_valid s a
+	| _ -> raise Store.Unknown
+    with Store.Unknown -> false
   in
 
   let rec check_lval env s x = 
@@ -131,10 +131,10 @@ let process prog =
 	      
   and process_stmtkind x env s =
     match x with
-	Set (lv, e, _) -> 
+	Set (lv, e, t) -> 
 	  check_lval env s lv;
 	  check_exp env s e;
-	  s
+	  Store.assign (lv, e, t) env s
       | Decl (_, _, body) -> process_blk body (env+1) s
       | Call FunId f -> begin
 	  try

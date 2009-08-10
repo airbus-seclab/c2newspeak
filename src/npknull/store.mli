@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+open Newspeak
+
+exception Unknown
+
 type t
 
 (* TODO: should abstract this type!! *)
@@ -43,3 +47,9 @@ val prepare_call: t -> t -> (bool * t)
 val apply: t -> t -> t
 
 val set_pointsto: memloc -> memloc -> t -> t
+
+val to_string: t -> string
+
+val assign: (lval * exp * scalar_t) -> int -> t -> t
+
+val lval_to_memloc: int -> t -> lval -> memloc
