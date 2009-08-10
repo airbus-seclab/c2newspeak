@@ -1,3 +1,8 @@
+Warning: t086.adb:17#8: An interval check should be inserted here [12.5;25.2]
+Warning: t086.adb:16#7: An interval check should be inserted here [10.;50.2]
+Warning: t086.adb:10#6: An interval check should be inserted here [10.;50.2]
+Warning: t086.adb:8#7: An interval check should be inserted here [12.5;25.2]
+Warning: t086.adb:7#6: An interval check should be inserted here [10.;50.2]
 Newspeak output
 ---------------
 t086.adb

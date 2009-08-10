@@ -683,7 +683,14 @@ let check_exp t_ctx exp =
   in
   match constr with
   | Some (A.IntegerRangeConstraint(a,b)) -> belongs a b exp
-(*  | Some (A.FloatRangeConstraint(a,b)) -> belongs a b exp *)
+  | Some (A.FloatRangeConstraint  (a,b)) ->
+      Npkcontext.report_warning "check_exp"
+        ( "An interval check should be inserted here ["
+        ^ string_of_float a
+        ^ ";"
+        ^ string_of_float b
+        ^ "]");
+      exp
   | _ -> exp
 
 
