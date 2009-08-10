@@ -53,9 +53,17 @@ let universe () = Some Map.empty
 
 let emptyset = None
 
-let prepare_call _ _ = invalid_arg "Store.prepare_call: not implemented yet"
+let prepare_call rel s = 
+  match (rel, s) with
+      (None, None) -> 
+	invalid_arg "Store.prepare_call: not implemented yet NoneNone"
+    | (None, _) -> (true, s)
+    | _ -> invalid_arg "Store.prepare_call: not implemented yet NoneNone"
 
-let apply _ _ = invalid_arg "Store.apply: not implemented yet"
+let apply rel s = 
+  match (rel, s) with
+      (None, _) | (_, None) -> None
+    | _ -> invalid_arg "Store.apply: not implemented yet"
 
 (* TODO: this should be greatly improved!!! 
    right now O(n)*log(n)
