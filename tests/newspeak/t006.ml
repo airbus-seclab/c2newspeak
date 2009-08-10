@@ -3,7 +3,7 @@ object (this)
   inherit Newspeak.visitor
 
   method process_exp e =
-    print_endline (Newspeak.string_of_loc (this#get_loc ()));
+    print_endline (Newspeak.string_of_loc this#get_loc);
     false
 end
 
