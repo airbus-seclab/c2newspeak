@@ -279,6 +279,7 @@ let translate compil_unit =
   and make_affect id exp typ_lv loc =
     let typ = T.translate typ_lv in
     let checked_exp = T.check_exp typ_lv exp in
+    Npkcontext.print_debug ("Assign : LV  = "^T.print typ_lv);
     (C.Set(id,typ,checked_exp),loc)
 
   (**
