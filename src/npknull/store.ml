@@ -121,6 +121,8 @@ let eval_exp env s e =
       AddrOf (lv, _) -> lval_to_memloc env s lv
     | _ -> raise Unknown
 
+let forget_memloc m s = Map.remove m s 
+
 let set_pointsto m1 m2 s =
   (* TODO: could be optimized/made more precise *)
   if Map.mem m1 s then Map.remove m1 s
@@ -131,13 +133,13 @@ let assign (lv, e, t) env s =
       None -> None
     | Some s -> 
 	try
-	  match t with
-	      Ptr -> 
-		let a = lval_to_memloc env s lv in
-		let p = eval_exp env s e in
-		let s = set_pointsto a p s in
-		  Some s
-	    | _ -> raise Unknown
+	  let a = lval_to_memloc env s lv in
+	    match t with
+		Ptr -> 
+		  let p = eval_exp env s e in
+		  let s = set_pointsto a p s in
+		    Some s
+	      | _ -> Some (forget_memloc a s)
 	with Unknown -> universe ()
 
 let string_of_info (a, o) =
@@ -175,3 +177,13 @@ let set_pointsto m1 m2 s =
       Some s -> Some (set_pointsto m1 m2 s)
     | None -> None
 
+(* usefull for debug *)
+(*
+let assign set env s =
+  print_endline "Store.assign";
+  print_endline (to_string s);
+  let s = assign set env s in
+    print_endline (to_string s);
+    print_endline "Store.assign ends";
+    s
+*)
