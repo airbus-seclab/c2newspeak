@@ -88,16 +88,47 @@ object (this)
 
 end
 
+let rec global_of_lval x =
+  match x with
+      Global x -> x
+    | Shift (lv, _) -> global_of_lval lv
+    | _ -> invalid_arg "Npkstrip.global_of_lval: unreachable code"
+
 let collect_used prog =
   let used_gvars = Hashtbl.create 100 in
   let used_funs = Hashtbl.create 100 in
   let fid_addrof = Newspeak.collect_fid_addrof prog in
+
   let collector = 
     new collector (prog.globals, prog.fundecs) used_gvars used_funs fid_addrof
   in
-    Newspeak.visit_blk (collector :> Newspeak.visitor) prog.init;
+
+  let visit_init (x, _) =
+    match x with
+	Set (lv, e, _) -> 
+	  let g = global_of_lval lv in
+	    if Hashtbl.mem used_gvars g 
+	    then Newspeak.visit_exp (collector :> Newspeak.visitor) e
+      | UserSpec x -> Newspeak.visit_assertion (collector :> Newspeak.visitor) x
+      | _ -> invalid_arg "Npkstrip.visit_init: case not implemented yet"
+  in
+    
+  let rec strip_init x =
+    match x with
+	((Set (lv, _, _), _) as hd)::tl -> 
+	  let tl = strip_init tl in
+	  let g = global_of_lval lv in
+	    if Hashtbl.mem used_gvars g then hd::tl
+	    else tl
+      | ((UserSpec _, _) as hd)::tl -> hd::(strip_init tl)
+      | [] -> []
+      | _ -> invalid_arg "Npkstrip.strip_init: case not implemented yet"
+  in
+
     collector#visit_fun !main;
-    { prog with globals = used_gvars; fundecs = used_funs }
+    List.iter visit_init prog.init;
+    let init = strip_init prog.init in
+      { prog with init = init; globals = used_gvars; fundecs = used_funs }
  
 let filter_globals used_gvars globals = 
   let is_used (x, _, _) = StringSet.mem x used_gvars in

@@ -110,8 +110,6 @@ and gdecl = typ * location
 
 and fundec = ftyp * blk
 
-and specs = assertion list
-
 and assertion = spec_token list
 
 and spec_token =
@@ -321,6 +319,8 @@ object
   method raise_error: string -> unit
 end
 
+val visit_assertion: visitor -> assertion -> unit
+val visit_exp: visitor -> exp -> unit
 val visit_blk: visitor -> blk -> unit
 val visit_fun: visitor -> fid -> fundec -> unit
 val visit_glb: visitor -> string -> gdecl -> unit

@@ -111,8 +111,6 @@ and gdecl = typ * location
 
 and fundec = ftyp * blk
 
-and specs = assertion list
-
 and assertion = spec_token list
 
 and spec_token =
@@ -1464,8 +1462,10 @@ and visit_stmt visitor (x, loc) =
 	    visit_blk visitor body;
 	    visit_blk visitor action
 	| Goto _ -> ()
-	| UserSpec assertion -> List.iter (visit_token visitor) assertion
+	| UserSpec assertion -> visit_assertion visitor assertion
     end else ()
+
+and visit_assertion visitor x = List.iter (visit_token visitor) x
 
 and visit_token builder x =
   match x with
