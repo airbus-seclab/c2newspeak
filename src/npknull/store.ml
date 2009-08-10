@@ -97,48 +97,68 @@ let contains s1 s2 =
 	  with Exit -> false
 
 (* TODO: this is really awkward that this is needed!! *)
-let memloc_is_valid s m = 
+let addr_is_valid s (m, o) = 
   match s with
       Some s -> begin
 	try 
 	  let s = Map.find m s in
-	    List.mem_assoc 0 s
+	    List.mem_assoc o s
 	with Not_found -> false
       end
     | None -> true
 
-let lval_to_memloc env _ lv =
+let rec lval_to_abaddr env s lv =
   match lv with
-      Global x -> "G."^x
-    | Local x -> "L."^string_of_int (env - x)
+      Global x -> ("G."^x, Some 0)
+    | Local x -> ("L."^string_of_int (env - x), Some 0)
+    | Shift (lv, Const CInt n) -> 
+	let (m, o) = lval_to_abaddr env s lv in
+	let o = 
+	  match o with
+	      None -> None
+	    | Some o -> Some (o + (Nat.to_int n))
+	in
+	  (m, o)
     | _ -> raise Unknown
 
 let eval_exp env s e =
   match e with
-      AddrOf (lv, _) -> lval_to_memloc env s lv
+      AddrOf (lv, _) -> 
+	let (m, _) = lval_to_abaddr env s lv in
+	  m
     | _ -> raise Unknown
+
+let abaddr_to_addr (m, o) = 
+  match o with
+      Some o -> (m, o)
+    | None -> raise Unknown
+
+let abaddr_to_memloc (m, _) = m
 
 let forget_memloc m s = Map.remove m s 
 
-let set_pointsto m1 m2 s =
+let set_pointsto (m1, o) m2 s =
   (* TODO: could be optimized/made more precise *)
   if Map.mem m1 s then Map.remove m1 s
-  else Map.add m1 ((0, (Set.singleton m2, Some 0))::[]) s
+  else Map.add m1 ((o, (Set.singleton m2, Some 0))::[]) s
 
 let assign (lv, e, t) env s =
   match s with
       None -> None
     | Some s -> 
 	try
-	  let a = lval_to_memloc env s lv in
+	  let a = lval_to_abaddr env s lv in
 	    try
-	      match t with
-		  Ptr -> 
-		    let p = eval_exp env s e in
-		    let s = set_pointsto a p s in
-		      Some s
-		| _ -> raise Unknown
-	    with Unknown -> Some (forget_memloc a s)
+	      let a = abaddr_to_addr a in
+		match t with
+		    Ptr -> 
+		      let p = eval_exp env s e in
+		      let s = set_pointsto a p s in
+			Some s
+		  | _ -> raise Unknown
+	    with Unknown -> 
+	      let m = abaddr_to_memloc a in
+		Some (forget_memloc m s)
 	with Unknown -> universe ()
 
 let string_of_info (a, o) =

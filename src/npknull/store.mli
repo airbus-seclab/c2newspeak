@@ -40,18 +40,20 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val memloc_is_valid: t -> memloc -> bool
+val addr_is_valid: t -> (memloc * int) -> bool
 
 val prepare_call: t -> t -> (bool * t)
 
 val apply: t -> t -> t
 
-val set_pointsto: memloc -> memloc -> t -> t
+val set_pointsto: (memloc * int) -> memloc -> t -> t
 
 val to_string: t -> string
 
 val assign: (lval * exp * scalar_t) -> int -> t -> t
 
-val lval_to_memloc: int -> t -> lval -> memloc
+val lval_to_abaddr: int -> t -> lval -> (memloc * int option)
+
+val abaddr_to_addr: (memloc * int option) -> (memloc * int)
 
 val remove_local: int -> t -> t

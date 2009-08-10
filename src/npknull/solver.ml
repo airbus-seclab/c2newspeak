@@ -94,8 +94,9 @@ let process prog =
     try
       match x with
 	  Lval (lv, Ptr) -> 
-	    let a = Store.lval_to_memloc env s lv in
-	      Store.memloc_is_valid s a
+	    let a = Store.lval_to_abaddr env s lv in
+	    let a = Store.abaddr_to_addr a in
+	      Store.addr_is_valid s a
 	| _ -> raise Store.Unknown
     with Store.Unknown -> false
   in
@@ -183,7 +184,7 @@ let process prog =
     Hashtbl.iter (fun f _ -> Hashtbl.add funtbl f Store.emptyset) prog.fundecs;
     let s = Store.universe () in
     let s = process_blk prog.init 0 s in
-    let s = Store.set_pointsto "L.2" (gen_memloc ()) s in
+    let s = Store.set_pointsto ("L.2", 0) (gen_memloc ()) s in
       todo := ("main", s)::[];
       
       (* fixpoint computation *)
