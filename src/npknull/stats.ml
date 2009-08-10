@@ -25,18 +25,14 @@
 
 open Newspeak
 
-class collector =
+class collector deref_nb =
 object 
   inherit Newspeak.visitor
-    
-  val mutable deref_nb = 0
-
-  method deref_nb = deref_nb
 
   method process_lval x =
     let _ = 
       match x with
-	  Deref _ -> deref_nb <- deref_nb + 1
+	  Deref _ -> incr deref_nb
 	| _ -> ()
     in
       (* TODO: maybe visitor too complex, shouldn't have to return a bool, just
@@ -46,13 +42,14 @@ end
 
 (* TODO: share this code with npkstats!! *)
 let count_derefs prog live_funs =
-  let collector = new collector in
+  let deref_nb = ref 0 in
+  let collector = new collector deref_nb in
   let visit_fun f dec =
     if StrSet.mem f live_funs 
-    then Newspeak.visit_fun (collector:>Newspeak.visitor) f dec
+    then Newspeak.visit_fun collector f dec
   in
     Hashtbl.iter visit_fun prog.fundecs;
-    collector#deref_nb
+    !deref_nb
 
 let print prog (live_funs, warn_nb) = 
   let funs = Hashtbl.length prog.fundecs in
