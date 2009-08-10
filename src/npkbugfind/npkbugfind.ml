@@ -55,7 +55,7 @@ class scanner =
 object (this)
   inherit Newspeak.visitor
 
-  method print_warning msg = print_warning (this#get_loc ()) msg
+  method print_warning msg = print_warning this#get_loc msg
     
   method process_exp e =
     let _ = 

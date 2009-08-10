@@ -312,7 +312,7 @@ object
   (* Sets current location *)
   method set_loc: location -> unit
   (* Gets current location *)
-  method get_loc: unit -> location
+  method get_loc: location
   method print_warning: string -> unit
   (* Throws an Invalid_argument in a standard way, with the file and line
      number *)

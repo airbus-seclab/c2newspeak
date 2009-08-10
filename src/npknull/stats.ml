@@ -25,14 +25,16 @@
 
 open Newspeak
 
-class collector deref_nb =
-object 
+class collector warnings =
+object (this)
   inherit Newspeak.visitor
 
   method process_lval x =
     let _ = 
       match x with
-	  Deref _ -> incr deref_nb
+	  Deref _ -> 
+	    let loc = Newspeak.string_of_loc this#get_loc in
+	      warnings := StrSet.add loc !warnings
 	| _ -> ()
     in
       (* TODO: maybe visitor too complex, shouldn't have to return a bool, just
@@ -42,14 +44,14 @@ end
 
 (* TODO: share this code with npkstats!! *)
 let count_derefs prog live_funs =
-  let deref_nb = ref 0 in
-  let collector = new collector deref_nb in
+  let warnings = ref StrSet.empty in
+  let collector = new collector warnings in
   let visit_fun f dec =
     if StrSet.mem f live_funs 
     then Newspeak.visit_fun collector f dec
   in
     Hashtbl.iter visit_fun prog.fundecs;
-    !deref_nb
+    StrSet.cardinal !warnings
 
 let print prog (live_funs, warn_nb) = 
   let funs = Hashtbl.length prog.fundecs in

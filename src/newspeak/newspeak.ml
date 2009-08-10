@@ -1322,7 +1322,7 @@ class visitor =
 object 
   val mutable cur_loc = unknown_loc
   method set_loc loc = cur_loc <- loc
-  method get_loc () = cur_loc
+  method get_loc = cur_loc
 
   method process_gdecl (_: string) (_: gdecl) = true
   method process_fun (_: fid) (_: fundec) = true
