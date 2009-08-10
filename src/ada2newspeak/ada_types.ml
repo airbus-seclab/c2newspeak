@@ -442,12 +442,13 @@ let extrema l =
 
 let compute_constr t =
   match (t.base.trait, t.range) with
-    | Signed (a,b), None -> Some (a, b)
+    | Signed (a,b), None -> Some (A.IntegerRangeConstraint(a, b))
     | Signed (a,b), Some (A.IntegerRangeConstraint(c,d)) ->
         begin
           assert (a <=% c && c <=% d && d <=% b);
-          Some (c, d)
+          t.range
         end
+    | Float _ , Some (A.FloatRangeConstraint _) -> t.range
     | Enumeration v,_
         when not (is_boolean t)->
           begin
@@ -457,7 +458,7 @@ let compute_constr t =
             | IntVal x, IntVal y -> (x,y)
             | _ -> invalid_arg "compute_constr"
             in
-            Some (min, max)
+            Some (A.IntegerRangeConstraint (min, max))
           end
     | _ -> None
 
@@ -467,8 +468,8 @@ let all_values typ =
     else a::(interval (Newspeak.Nat.add_int 1 a) b)
   in
   match (compute_constr typ) with
-    | Some (a, b) -> interval a b
-    | None -> Npkcontext.report_error "length_of" "Type has infinite values"
+    | Some (A.IntegerRangeConstraint(a, b)) -> interval a b
+    | _ -> invalid_arg "all_values"
 
 (****************
  *  Translator  *
@@ -519,10 +520,10 @@ let rec translate t = match t.base.trait with
                                ))
   | Enumeration    v    -> begin
                              let (min, max) = match (compute_constr t) with
-                               | Some bounds -> bounds
-                               | None -> ( Newspeak.Nat.zero
-                                         , Newspeak.Nat.of_int
-                                             (snd (ListUtils.last v)))
+                               | Some (A.IntegerRangeConstraint (x,y))-> (x,y)
+                               | _ -> ( Newspeak.Nat.zero
+                                      , Newspeak.Nat.of_int
+                                          (snd (ListUtils.last v)))
                              in
                              let ikind =
                                if (Newspeak.Nat.compare min
@@ -600,14 +601,14 @@ let rec attr_get typ attr =
     | Signed      _ ,"first" ->
         begin
           match compute_constr typ with
-          | Some (a,_) -> A.CInt a, typ
-          | None -> failwith "attr_get"
+          | Some (A.IntegerRangeConstraint(a,_)) -> A.CInt a, typ
+          | _ -> failwith "attr_get"
         end
     | Signed      _ ,"last" ->
         begin
           match compute_constr typ with
-          | Some (_,b) -> A.CInt b, typ
-          | None -> failwith "attr_get"
+          | Some (A.IntegerRangeConstraint(_,b)) -> A.CInt b, typ
+          | _ -> failwith "attr_get"
         end
     | Enumeration v, "first" -> const_int (snd (List.hd v)), typ
     | Enumeration v, "last"  -> const_int (snd (ListUtils.last v)), typ
@@ -627,6 +628,20 @@ let rec attr_get typ attr =
     | Float digits , "digits" -> const_int digits, universal_integer
     | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
     | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
+    | Float _ , "first"       ->
+        begin
+          match typ.range with
+          | Some (A.FloatRangeConstraint (x,_)) -> A.CFloat x, universal_real
+          | _ -> Npkcontext.report_error "attr_get"
+                     "Unconstrained subtype has no 'first attribute"
+        end
+    | Float _ , "last"       ->
+        begin
+          match typ.range with
+          | Some (A.FloatRangeConstraint (_,y)) -> A.CFloat y, universal_real
+          | _ -> Npkcontext.report_error "attr_get"
+                     "Unconstrained subtype has no 'last attribute"
+        end
     | _             , "size"  -> let sz = Cir.size_of_typ (translate typ) in
                                  const_int sz, universal_integer
     | Unknown     _ , _
@@ -638,7 +653,7 @@ let rec attr_get typ attr =
     | Access      _ , _
     | Univ_int      , _
     | Univ_real     , _
-                 -> raise ( Invalid_argument ("No such attribute : '"^attr^"'"))
+                 -> Npkcontext.report_error "attr_get" ("No such attribute : '"^attr^"'")
 
 let belongs min max exp =
     Cir.Unop ( Npkil.Belongs_tmp (min, Npkil.Known (Newspeak.Nat.add_int 1 max))
@@ -650,14 +665,16 @@ let check_exp t_ctx exp =
     match (c1,c2) with
       | _         , None       -> c1
       | None      , _          -> c2
-      | Some (a,b), Some (c,d) -> if (a <=% c && d <=% b)
-                                    then None
-                                    else c1
+      |   Some (A.IntegerRangeConstraint(a,b))
+        , Some (A.IntegerRangeConstraint(c,d))
+          -> if (a <=% c && d <=% b) then None
+                                     else c1
+      | _ -> Npkcontext.report_error "check_exp" "Float range constraint found"
   in
   let extract_constr e = match e with
     | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
              , _
-             ) -> Some (a, Newspeak.Nat.add_int (-1) b_plus_1)
+             ) -> Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
     | _ -> None
   in
   let constr =
@@ -665,8 +682,16 @@ let check_exp t_ctx exp =
                    (extract_constr exp)
   in
   match constr with
-  | None -> exp
-  | Some (a,b) -> belongs a b exp
+  | Some (A.IntegerRangeConstraint(a,b)) -> belongs a b exp
+  | Some (A.FloatRangeConstraint  (a,b)) ->
+      Npkcontext.report_warning "check_exp"
+        ( "An interval check should be inserted here ["
+        ^ string_of_float a
+        ^ ";"
+        ^ string_of_float b
+        ^ "]");
+      exp
+  | _ -> exp
 
 
 let extract_array_base t =
@@ -674,9 +699,9 @@ let extract_array_base t =
   | Array (_, ti::[]) ->
       begin
         match compute_constr ti with
-          | None        -> Npkcontext.report_error "extract_array_base"
+          | Some (A.IntegerRangeConstraint(a, _)) -> a
+          | _           -> Npkcontext.report_error "extract_array_base"
                                                    "bad array index type"
-          | Some (a, _) -> a
       end
   | _             -> invalid_arg "extract_array_base"
 

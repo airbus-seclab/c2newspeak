@@ -420,16 +420,21 @@ module SymMake(TR:Tree.TREE) = struct
    * Note that in the particular case where C = A (cycle), the recursive
    * call is (A -> A) and the circular dependency will be detected.
    *)
-  let rec add_renaming_decl s new_name old_name =
+  let add_renaming_decl s new_name old_name =
     if ((None,new_name) = old_name) then
       Npkcontext.report_error "add_renaming_decl"
                     ( "Circular declaration detected for '" ^ new_name ^ "'.")
     else
-      try
-        let pointee = List.assoc new_name s.s_renaming in
-        add_renaming_decl s new_name pointee
-      with Not_found ->
-    s.s_renaming <- (new_name,old_name)::s.s_renaming
+      Npkcontext.print_debug ( "renaming_declaration : "
+                             ^ new_name
+                             ^ " --> "
+                             ^ (match (fst old_name) with
+                               | None   -> ""
+                               | Some p -> p ^ "."
+                               )
+                             ^ (snd old_name)
+                             );
+      s.s_renaming <- (new_name,old_name)::s.s_renaming
 
 
   let enter_context ?name ?desc (s:t) =
