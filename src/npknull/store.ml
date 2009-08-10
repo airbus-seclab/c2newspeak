@@ -53,9 +53,9 @@ let universe () = Some Map.empty
 
 let emptyset = None
 
-let prepare_call _ _ = invalid_arg "Solver.prepare_call: not implemented yet"
+let prepare_call _ _ = invalid_arg "Store.prepare_call: not implemented yet"
 
-let apply _ _ = invalid_arg "Solver.apply: not implemented yet"
+let apply _ _ = invalid_arg "Store.apply: not implemented yet"
 
 (* TODO: this should be greatly improved!!! 
    right now O(n)*log(n)
@@ -69,9 +69,8 @@ let join s1 s2 =
 	  try
 	    let d2 = Map.find x s2 in
 	      if d1 <> d2 
-	      then invalid_arg "Solver.join: not implemented yet <>"
-	  with Not_found -> 
-	    invalid_arg "Solver.join: not implemented yet Not_found"
+	      then invalid_arg "Store.join: not implemented yet <>"
+	  with Not_found -> s := Map.add x d1 !s
 	in
 	  Map.iter add_info s1;
 	  Some !s
@@ -89,7 +88,7 @@ let contains s1 s2 =
 	  try
 	    let d2 = Map.find x s2 in
 	      if d1 <> d2 
-	      then invalid_arg "Solver.contains: not implemented yet"
+	      then invalid_arg "Store.contains: not implemented yet"
 	  with Not_found -> raise Exit
 	in
 	  try
