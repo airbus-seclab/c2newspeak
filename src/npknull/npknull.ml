@@ -34,6 +34,8 @@ let stats = ref false
 let speclist = 
   [
     ("--stats", Arg.Set stats, "prints analysis stats");
+    ("--use-stubs", Arg.Unit Context.set_use_stubs, 
+     "skips warning messages when using stubs");
     ("--verbose", Arg.Unit Context.set_verbose, "prints more details")
   ]
 

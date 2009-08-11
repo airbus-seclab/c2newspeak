@@ -136,7 +136,7 @@ let addr_is_valid s (m, o) =
 let rec lval_to_abaddr env s lv =
   match lv with
       Global x -> ("G."^x, Some 0)
-    | Local x -> ("L."^string_of_int (env - x), Some 0)
+    | Local x -> (Memloc.of_local (env - x), Some 0)
     | Shift (lv, Const CInt n) -> 
 	let (m, o) = lval_to_abaddr env s lv in
 	let o = 

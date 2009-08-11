@@ -23,33 +23,14 @@
   email: charles.hymans@penjili.org
 *)
 
-let current_loc = ref Newspeak.unknown_loc
+let errno_loc = Memloc.gen ()
 
-let errors = ref StrSet.empty
-
-let verbose = ref false
-
-let use_stubs = ref false
-
-let warn_cnt = ref 0
-
-(* TODO: factor set_verbose and set_use_stubs *)
-let set_verbose () = verbose := true
-
-let set_use_stubs () = use_stubs := true
-
-let print_verbose msg = if !verbose then print_endline msg
-  
-(* TODO: factor print_err and report_stub_used *)
-let print_err msg = 
-  let msg = Newspeak.string_of_loc !current_loc^": "^msg in
-    if not (StrSet.mem msg !errors) then begin
-      errors := StrSet.add msg !errors;
-      prerr_endline msg
-    end
-      
-let report_stub_used msg = if not !use_stubs then print_err msg
-  
-let get_current_loc () = Newspeak.string_of_loc !current_loc
-
-let set_current_loc loc = current_loc := loc
+let process f env s =
+  match f with
+      "__errno_location" -> 
+	(* TODO: factor with print_err!! *)
+	Context.report_stub_used ("missing function: "^f^", stub used, "
+				  ^"use option --use-stubs to skip this "
+				  ^"message");
+	Store.set_pointsto (Memloc.of_local env, 0) errno_loc s
+    | _ -> raise Not_found

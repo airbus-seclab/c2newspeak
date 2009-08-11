@@ -33,8 +33,7 @@ let env_of_ftyp (args, ret) =
 
 let process prog = 
   let warn_cnt = ref 0 in
-  let current_loc = ref Newspeak.unknown_loc in
-  let errors = ref StrSet.empty in
+  let warnings = ref StrSet.empty in
 (* 
    list of functions to analyze
    when this list is empty, analysis ends
@@ -49,12 +48,6 @@ let process prog =
   let current_fun = ref "" in
 
   let live_funs = ref StrSet.empty in
-
-  let memloc_cnt = ref (-1) in
-  let gen_memloc () = 
-    incr memloc_cnt;
-    "H."^string_of_int !memloc_cnt
-  in
 
   let push lbl = lbl_tbl := (lbl, Store.emptyset)::!lbl_tbl in
   let pop () = 
@@ -76,20 +69,12 @@ let process prog =
       lbl_tbl := goto !lbl_tbl
   in
 
-  let print_err msg = 
-    let msg = Newspeak.string_of_loc !current_loc^": "^msg in
-      if not (StrSet.mem msg !errors) then begin
-	errors := StrSet.add msg !errors;
-	prerr_endline msg
-      end
-  in
-
   let warn_deref () = 
     let msg = "potential null pointer deref" in
-    let msg = Newspeak.string_of_loc !current_loc^": "^msg in
-      if not (StrSet.mem msg !errors) then begin
+    let msg = Context.get_current_loc ()^": "^msg in
+      if not (StrSet.mem msg !warnings) then begin
 	incr warn_cnt;
-	errors := StrSet.add msg !errors;
+	warnings := StrSet.add msg !warnings;
 	print_endline msg
       end
   in
@@ -130,7 +115,7 @@ let process prog =
     match x with
 	[] -> s
       | (x, loc)::tl -> 
-	  current_loc := loc;
+	  Context.set_current_loc loc;
 	  let s = process_stmtkind x env s in
 	    process_blk tl env s
 	      
@@ -163,9 +148,11 @@ let process prog =
 	      end;
 	      Store.apply s rel
 	  with Not_found -> 
-	    print_err ("missing function: "^f
-		       ^", call ignored, analysis may be unsound");
-	    s
+	    try Stubs.process f env s
+	    with Not_found -> 
+	      Context.print_err ("missing function: "^f
+				 ^", call ignored, analysis may be unsound");
+	      s
 	end
       | Select (br1, br2) -> 
 	  let s1 = process_blk br1 env s in
@@ -204,7 +191,7 @@ let process prog =
     Hashtbl.iter init_fun prog.fundecs;
     let s = Store.universe () in
     let s = process_blk prog.init 0 s in
-    let s = Store.set_pointsto ("L.2", 0) (gen_memloc ()) s in
+    let s = Store.set_pointsto ("L.2", 0) (Memloc.gen ()) s in
       Hashtbl.add init_tbl "main" s;
       todo := "main"::[];
       

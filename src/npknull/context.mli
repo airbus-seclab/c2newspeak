@@ -26,3 +26,13 @@
 val set_verbose: unit -> unit
 
 val print_verbose: string -> unit
+
+val report_stub_used: string -> unit
+
+val get_current_loc: unit -> string
+
+val set_current_loc: Newspeak.location -> unit
+
+val print_err: string -> unit
+
+val set_use_stubs: unit -> unit
