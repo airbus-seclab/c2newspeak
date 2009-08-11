@@ -29,9 +29,6 @@ exception Unknown
 
 type t
 
-(* TODO: should abstract this type!! *)
-type memloc = string
-
 val universe: unit -> t
 
 val emptyset: t
@@ -40,22 +37,24 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val addr_is_valid: t -> (memloc * int) -> bool
+val addr_is_valid: t -> (Memloc.t * int) -> bool
 
 val prepare_call: t -> t -> (bool * t)
 
 val apply: t -> t -> t
 
-val set_pointsto: (memloc * int) -> memloc -> t -> t
+val set_pointsto: (Memloc.t * int) -> Memloc.t -> t -> t
 
 val to_string: t -> string
 
 val assign: (lval * exp * scalar_t) -> int -> t -> t
 
-val lval_to_abaddr: int -> t -> lval -> (memloc * int option)
+val lval_to_abaddr: int -> t -> lval -> (Memloc.t * int option)
 
-val abaddr_to_addr: (memloc * int option) -> (memloc * int)
+val abaddr_to_addr: (Memloc.t * int option) -> (Memloc.t * int)
 
 val remove_local: int -> t -> t
 
 val guard: exp -> int -> t -> t
+
+val is_empty: t -> bool

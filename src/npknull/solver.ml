@@ -121,7 +121,8 @@ let process prog =
 	      
   and process_stmtkind x env s =
     match x with
-	Set (lv, e, t) -> 
+	_ when Store.is_empty s -> s
+      | Set (lv, e, t) -> 
 	  check_lval env s lv;
 	  check_exp env s e;
 	  Store.assign (lv, e, t) env s

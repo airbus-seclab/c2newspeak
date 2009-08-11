@@ -26,11 +26,10 @@
 open Newspeak
 
 exception Unknown
+exception Emptyset
 
 module Map = Map.Make(String)
 module Set = Set.Make(String)
-
-type memloc = string
 
 type offset = int
 
@@ -55,6 +54,8 @@ type t = (store * store) option
 let universe () = Some (Map.empty, Map.empty)
 
 let emptyset = None
+
+let is_empty s = s = None
 
 let apply s rel = 
   match (s, rel) with
@@ -125,6 +126,8 @@ let prepare_call s rel =
 	  (is_new, Some (s, s))
     | _ -> invalid_arg "Store.prepare_call: not implemented yet"
 
+let find_info (m, o) s = List.assoc o (Map.find m s)
+
 (* TODO: this is really awkward that this is needed!! *)
 let addr_is_valid s (m, o) = 
   match s with
@@ -135,6 +138,11 @@ let addr_is_valid s (m, o) =
 	with Not_found -> false
       end
     | None -> true
+
+let abaddr_to_addr (m, o) = 
+  match o with
+      Some o -> (m, o)
+    | None -> raise Unknown
 
 let rec lval_to_abaddr env s lv =
   match lv with
@@ -148,6 +156,24 @@ let rec lval_to_abaddr env s lv =
 	    | Some o -> Some (o + (Nat.to_int n))
 	in
 	  (m, o)
+    | Deref (Lval (lv, Ptr), _) -> 
+	let a = lval_to_abaddr env s lv in
+	let a = abaddr_to_addr a in
+	let i = 
+	  try find_info a s
+	  with Not_found -> raise Unknown
+	in
+	let (m, o) = 
+	  match i with
+	      PointsTo d -> d
+	    | _ -> raise Unknown
+	in
+	let m =
+	  match Set.elements m with
+	      m::[] -> m
+	    | _ -> raise Unknown
+	in
+	  (m, o)
     | _ -> raise Unknown
 
 let eval_exp env s e =
@@ -156,11 +182,6 @@ let eval_exp env s e =
 	let (m, _) = lval_to_abaddr env s lv in
 	  m
     | _ -> raise Unknown
-
-let abaddr_to_addr (m, o) = 
-  match o with
-      Some o -> (m, o)
-    | None -> raise Unknown
 
 let abaddr_to_memloc (m, _) = m
 
@@ -259,6 +280,11 @@ let guard e env s =
 	  with Unknown -> s
 	in
 	  Some (i, s)
+
+let lval_to_abaddr env s lv =
+  match s with
+      Some (_, s) -> lval_to_abaddr env s lv
+    | None -> raise Emptyset
 
 (* usefull for debug *)
 (*
