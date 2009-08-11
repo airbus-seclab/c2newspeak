@@ -179,6 +179,9 @@ let process prog =
 	  in
 	    fixpoint s;
 	    Store.emptyset
+      | UserSpec ((IdentToken "__npknull_display")::_) -> 
+	  print_endline (Store.to_string s);
+	  s
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
