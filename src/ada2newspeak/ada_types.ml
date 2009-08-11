@@ -247,9 +247,9 @@ let new_access t =
 
 let extract_array_types t =
   match t.base.trait with
-  | Array (c, i::[]) -> (c,i)
-  | _                -> Npkcontext.report_error "extract_array_types"
-                          "assertion (is_array) failed"
+  | Array (c, i) -> (c,i)
+  | _            -> Npkcontext.report_error "extract_array_types"
+                      "assertion (is_array) failed"
 
 let get_reason t =
   match t.base.trait with
@@ -537,14 +537,19 @@ let rec translate t = match t.base.trait with
                                Cir.Scalar (Newspeak.Int ikind)
                            end
   | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
-  | Array        (c,is) -> let i = match is with
-                             | [] -> invalid_arg "translate"
-                             | [x] -> x
-                             | _ -> invalid_arg "translate::matrix"
-                           in
-                           Cir.Array  ( translate c
-                                      , Some (Newspeak.Nat.to_int
-                                                        (length_of i)))
+  | Array        (c,is) ->
+      begin
+        match is with
+        | [] -> invalid_arg "translate"
+        | i0::i ->
+            List.fold_left (fun (ar:Cir.typ) (ind:t) ->
+              Cir.Array ( ar
+                        , Some (Newspeak.Nat.to_int
+                                   (length_of ind)
+                               )
+              )
+            ) (translate c) (i0::i);
+      end
   | Record        flds  ->
       let build_offset (cflds, start_off) (id, st) =
         let ctyp = translate st in
@@ -694,16 +699,11 @@ let check_exp t_ctx exp =
   | _ -> exp
 
 
-let extract_array_base t =
-  match t.base.trait with
-  | Array (_, ti::[]) ->
-      begin
-        match compute_constr ti with
-          | Some (A.IntegerRangeConstraint(a, _)) -> a
-          | _           -> Npkcontext.report_error "extract_array_base"
-                                                   "bad array index type"
-      end
-  | _             -> invalid_arg "extract_array_base"
+let extract_base ti =
+  match compute_constr ti with
+    | Some (A.IntegerRangeConstraint(a, _)) -> a
+    | _           -> Npkcontext.report_error "extract_array_base"
+                                             "bad array index type"
 
 let all_record_fields t =
   match t.base.trait with
