@@ -38,15 +38,6 @@ module Sym = Symboltbl
 
 open Ast
 
-let make_offset t index base size =
-  C.Binop ( N.MultI
-          , C.Binop ( N.MinusI
-                    , T.check_exp t index
-                    , base
-                    )
-          , size
-          )
-
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
 
@@ -97,7 +88,6 @@ let translate compil_unit =
     in
       string_of_name tr_name
   in
-
 
   (** Used to generate temporary variables. *)
   let temp =
@@ -232,17 +222,39 @@ let translate compil_unit =
         | Var (sc,lv,t) ->
             let clv = translate_resolved_name sc lv in
             (clv, t)
-        | ArrayAccess (lv, [expr]) ->
+        | ArrayAccess (lv, exps) ->
             let (x_lv,t_lv ) = translate_lv lv in
-            let (x_exp,_) = translate_exp expr in
-            let (tc, ti) = T.extract_array_types t_lv in
-            let x_typ = T.translate tc in
-            let size = C.size_of_typ x_typ in
-            let base = T.extract_array_base t_lv in
-            let index = translate_nat base in
-            let offset = make_offset ti x_exp index
-                                           (translate_int size) in
-            C.Shift (x_lv, offset),tc
+            let x_exps = List.map (fun x -> fst (translate_exp x)) exps in
+            let (tc,ti) = T.extract_array_types t_lv in
+            let size_c = C.size_of_typ (T.translate tc) in
+
+            let tyexl = List.map2 (fun x y -> x,y) ti x_exps in
+
+            let exp_offset = List.fold_left (fun old_off (ty, exp) ->
+              (* FIXME rebase and check exp *)
+              let base = T.extract_base ty in
+              let exp' = T.check_exp ty exp in
+              let rebased_exp = if (base = Newspeak.Nat.zero) then exp'
+                                else C.Binop ( N.MinusI
+                                             , exp'
+                                             , (translate_nat base)
+                                             )
+              in
+              if old_off = translate_nat (Newspeak.Nat.zero) then rebased_exp
+              else
+              C.Binop ( N.PlusI
+                      , rebased_exp
+                      , C.Binop( N.MultI
+                               , translate_nat (T.length_of ty)
+                               , old_off
+                               )
+                      )
+            ) (translate_nat Newspeak.Nat.zero) tyexl in
+            let offset = C.Binop( N.MultI
+                                , exp_offset
+                                , translate_int size_c
+                                ) in
+            C.Shift (x_lv, offset), tc
         | RecordAccess (lv, off_pos, tf) ->
             let (record, _) = translate_lv lv in
             let offset = translate_int off_pos in
@@ -251,7 +263,6 @@ let translate compil_unit =
             let (xlv, _) = translate_lv lv in
             let xt = T.translate t in
             C.Deref (C.Lval (xlv, xt), xt), t
-        | ArrayAccess(_, _) -> failwith "matrix access"
 
   and translate_exp (exp,typ) :C.exp * T.t =
     match exp with

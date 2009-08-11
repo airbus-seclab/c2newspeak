@@ -853,8 +853,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
                                ("Invalid left-value")
         end
     | ParExp (lv, e) ->
-        let (lv',t) = normalize_lval lv in
-        Ast.ArrayAccess(lv' , List.map (fun x -> normalize_exp (snd x)) e), t
+        let (lv',tlv) = normalize_lval lv in
+        let (tc,_ti) = T.extract_array_types tlv in
+        Ast.ArrayAccess(lv' , List.map (fun x -> normalize_exp (snd x)) e), tc
     | PtrDeref lv ->
         begin
           let (nlv, tlv) = normalize_lval lv in
@@ -884,7 +885,10 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         normalize_assign_aggregate nlv tlv bare_assoc_list loc
     | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
         let (lv', t_lv) = normalize_lval lv in
-        let (_tc, ti)   = T.extract_array_types t_lv in
+        let ti = match T.extract_array_types t_lv with
+        | (_, [i]) -> i
+        | _ -> Npkcontext.report_error "normalize_instr" "unexpected matrix type"
+        in
         let all_values  = T.all_values ti in
         List.map2 (fun type_val exp ->
           let k = insert_constant (T.IntVal type_val) in
@@ -1051,7 +1055,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
        *   - compute missing elements
        *   - replace 'others' with them
        *)
-      let (_tc, ti)   = T.extract_array_types t_lv in
+      let ti = match T.extract_array_types t_lv with
+      | (_, [i]) -> i
+      | _ -> Npkcontext.report_error "aggregate"
+               "Unexpected matrix type"
+      in
       let other_list = match others_opt with
         | None         -> []
         | Some oth_exp ->

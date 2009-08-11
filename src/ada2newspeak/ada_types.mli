@@ -103,9 +103,9 @@ val get_enum_litt_value : t -> data_t -> data_t
 (**
  * Returns (component, index)
  *)
-val extract_array_types : t -> (t * t)
+val extract_array_types : t -> (t * t list)
 
-val extract_array_base : t -> Newspeak.Nat.t
+val extract_base: t -> Newspeak.Nat.t
 
 (** Precondition : is_unknown t *)
 val get_reason : t -> string
@@ -125,6 +125,8 @@ val coerce_types : t -> t -> t
 
 (* For finite types (suitable as array indexes) *)
 val all_values : t -> Newspeak.Nat.t list
+
+val length_of : t -> Newspeak.Nat.t
 
 (**
  * Pretty-printer for types.
