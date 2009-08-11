@@ -148,8 +148,15 @@ let process prog =
 	      end;
 	      Store.apply s rel
 	  with Not_found -> 
-	    try Stubs.process f env s
-	    with Not_found -> 
+	    try 
+	      let s = Stubs.process f env s in
+		(* TODO: factor with print_err!! *)
+		Context.report_stub_used ("missing function: "^f
+					  ^", stub used, "
+					  ^"use option --use-stubs to "^
+					  "skip this message");
+		s
+  	    with Not_found -> 
 	      Context.print_err ("missing function: "^f
 				 ^", call ignored, analysis may be unsound");
 	      s

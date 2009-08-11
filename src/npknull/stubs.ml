@@ -28,9 +28,6 @@ let errno_loc = Memloc.gen ()
 let process f env s =
   match f with
       "__errno_location" -> 
-	(* TODO: factor with print_err!! *)
-	Context.report_stub_used ("missing function: "^f^", stub used, "
-				  ^"use option --use-stubs to skip this "
-				  ^"message");
 	Store.set_pointsto (Memloc.of_local env, 0) errno_loc s
+    | "__assert_fail" -> Store.emptyset
     | _ -> raise Not_found
