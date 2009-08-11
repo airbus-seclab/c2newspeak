@@ -160,7 +160,7 @@ let process prog =
 	    Store.join s1 s2
       | Guard e -> 
 	  check_exp env s e;
-	  s
+	  Store.guard e env s
 (* TODO: change labels?? with the number of DoWith to traverse, 
    but harder to manipulate? *)
       | DoWith (body, lbl, action) -> 

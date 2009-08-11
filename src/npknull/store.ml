@@ -35,7 +35,10 @@ type memloc = string
 type offset = int
 
 (* set of location times offset, None is for unknown *)
-type info = (Set.t * offset option)
+type info = 
+    NotNull                 (* this value is not really nice, 
+			       think about removing it *)
+  | PointsTo of (Set.t * offset option)
 
 (* map from locations: 
    G.global name, 
@@ -166,8 +169,16 @@ let forget_memloc m s = Map.remove m s
 let store_set_pointsto (m1, o) m2 s =
   (* TODO: could be optimized/made more precise *)
   if Map.mem m1 s then Map.remove m1 s
-  else Map.add m1 ((o, (Set.singleton m2, Some 0))::[]) s
+  else Map.add m1 ((o, PointsTo (Set.singleton m2, Some 0))::[]) s
 
+let store_guard (m, o) s =
+  if Map.mem m s then s
+  else Map.add m ((o, NotNull)::[]) s
+
+(* TODO: there is most probably a bug if there is a value 
+   at address (v, 0) and a value is copied at address (v, 1)
+   the value at (v, 0) should be removed!!!
+*)
 let assign (lv, e, t) env s =
   match s with
       None -> None
@@ -187,19 +198,22 @@ let assign (lv, e, t) env s =
 		Some (i, forget_memloc m s)
 	with Unknown -> universe ()
 
-let string_of_info (a, o) =
-  let a = Set.elements a in
-  let a =
-    match a with
-	a::[] -> a
-      | _ -> "{"^ListUtils.to_string (fun x -> x) "," a^"}"
-  in
-  let o =
-    match o with
-	None -> "?"
-      | Some x -> string_of_int x
-  in
-    "("^a^", "^o^")"
+let string_of_info i =
+  match i with
+      NotNull -> "<> 0"
+    | PointsTo (a, o) -> 
+	let a = Set.elements a in
+	let a =
+	  match a with
+	      a::[] -> a
+	    | _ -> "{"^ListUtils.to_string (fun x -> x) "," a^"}"
+	in
+	let o =
+	  match o with
+	      None -> "?"
+	    | Some x -> string_of_int x
+	in
+	  "("^a^", "^o^")"
 
 let to_string s =
   match s with
@@ -230,6 +244,22 @@ let set_pointsto m1 m2 s =
       Some (i, s) -> Some (i, store_set_pointsto m1 m2 s)
     | None -> None
 
+let guard e env s = 
+  match s with
+      None -> None
+    | Some (i, s) -> 
+	let s = 
+	  try
+	    match e with
+		UnOp (Not, BinOp (Eq Ptr, Lval (lv, Ptr), Const Nil)) ->
+		  let a = lval_to_abaddr env s lv in
+		  let a = abaddr_to_addr a in
+		  store_guard a s
+	      | _ -> s
+	  with Unknown -> s
+	in
+	  Some (i, s)
+
 (* usefull for debug *)
 (*
 let assign set env s =
@@ -256,5 +286,14 @@ let apply s rel =
   let s = apply s rel in
     print_endline (to_string s);
     print_endline "Store.apply ends";
+    s
+
+let guard e env s =
+  print_endline "Store.guard";
+  print_endline (Newspeak.string_of_exp e);
+  print_endline (to_string s);
+  let s = guard e env s in
+  print_endline (to_string s);
+    print_endline "Store.guard ends";
     s
 *)

@@ -56,5 +56,5 @@ let _ =
       if !stats then Stats.print prog results
 
   with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
+    Context.print_err ("Fatal error: "^s);
     exit 0

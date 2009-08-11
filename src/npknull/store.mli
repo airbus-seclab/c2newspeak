@@ -57,3 +57,5 @@ val lval_to_abaddr: int -> t -> lval -> (memloc * int option)
 val abaddr_to_addr: (memloc * int option) -> (memloc * int)
 
 val remove_local: int -> t -> t
+
+val guard: exp -> int -> t -> t
