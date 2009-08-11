@@ -54,9 +54,9 @@ let universe () = Some (Map.empty, Map.empty)
 let emptyset = None
 
 let apply s rel = 
-  match (rel, s) with
+  match (s, rel) with
       (None, _) | (_, None) -> None
-    | Some (i, _), Some (_, s) -> Some (i, s)
+    | (Some (i, _), Some (_, s)) -> Some (i, s)
 
 let store_join s1 s2 =
   let s = ref s2 in
@@ -249,11 +249,11 @@ let prepare_call rel s =
     print_endline "Store.prepare_call ends";
     (is_new, s)
 
-let apply rel s = 
+let apply s rel = 
   print_endline "Store.apply";
-  print_endline (to_string rel);
   print_endline (to_string s);
-  let s = apply rel s in
+  print_endline (to_string rel);
+  let s = apply s rel in
     print_endline (to_string s);
     print_endline "Store.apply ends";
     s
