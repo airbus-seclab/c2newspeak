@@ -213,7 +213,7 @@ let process prog =
 	while true do
 	  match !todo with
 	      f::tl -> 
-(*		print_endline ("Analyzing: "^f);*)
+		Context.print_verbose ("Analyzing: "^f);
 		current_fun := f;
 		live_funs := StrSet.add f !live_funs;
 		todo := tl;
