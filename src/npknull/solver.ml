@@ -41,8 +41,12 @@ let process prog =
 *)
 (* TODO: could try a queue instead?? *)
   let todo = ref [] in
-  let funtbl = Hashtbl.create 100 in
+  let fun_tbl = Hashtbl.create 100 in
   let lbl_tbl = ref [] in
+  let init_tbl = Hashtbl.create 100 in
+  let keep_fun = ref false in
+  let pred_tbl = Hashtbl.create 100 in
+  let current_fun = ref "" in
 
   let live_funs = ref StrSet.empty in
 
@@ -142,11 +146,22 @@ let process prog =
 	    Store.remove_local env s
       | Call FunId f -> begin
 	  try
-	    let rel = Hashtbl.find funtbl f in
+	    let rel = Hashtbl.find fun_tbl f in
 	      (* TODO: think about this, rewrite *)
-	    let (is_new, init) = Store.prepare_call rel s in
-	      if is_new then todo := (f, init)::!todo;
-	      Store.apply rel s
+	    let (is_new, init) = Store.prepare_call s rel in
+	      if is_new then begin
+		let pred = Hashtbl.find pred_tbl f in
+		let init = 
+		  try Store.join (Hashtbl.find init_tbl f) init
+		  with Not_found -> init
+		in
+		  if not (List.mem !current_fun pred) 
+		  then Hashtbl.replace pred_tbl f (!current_fun::pred);
+		  Hashtbl.replace init_tbl f init;
+		  if not (List.mem f !todo) then todo := f::!todo;
+		  keep_fun := true
+	      end;
+	      Store.apply s rel
 	  with Not_found -> 
 	    print_err ("missing function: "^f
 		       ^", call ignored, analysis may be unsound");
@@ -180,24 +195,43 @@ let process prog =
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
+  let init_fun f _ =
+    Hashtbl.add fun_tbl f Store.emptyset;
+    Hashtbl.add pred_tbl f []
+  in
+
     (* initialization *)
-    Hashtbl.iter (fun f _ -> Hashtbl.add funtbl f Store.emptyset) prog.fundecs;
+    Hashtbl.iter init_fun prog.fundecs;
     let s = Store.universe () in
     let s = process_blk prog.init 0 s in
     let s = Store.set_pointsto ("L.2", 0) (gen_memloc ()) s in
-      todo := ("main", s)::[];
+      Hashtbl.add init_tbl "main" s;
+      todo := "main"::[];
       
       (* fixpoint computation *)
       begin try
 	while true do
 	  match !todo with
-	      (f, s)::tl -> 
+	      f::tl -> 
+(*		print_endline ("Analyzing: "^f);*)
+		current_fun := f;
 		live_funs := StrSet.add f !live_funs;
 		todo := tl;
+		let s = Hashtbl.find init_tbl f in
 		let (ft, body) = Hashtbl.find prog.fundecs f in
 		let env = env_of_ftyp ft in
-		let _ = process_blk body env s in
-		  ()
+		let s = process_blk body env s in
+		  if !keep_fun then keep_fun := false
+		  else Hashtbl.remove init_tbl f;
+		  keep_fun := false;
+		  let rel = Hashtbl.find fun_tbl f in
+		    if not (Store.contains rel s) then begin
+		      let s = Store.join rel s in
+			Hashtbl.replace fun_tbl f s;
+			let pred = Hashtbl.find pred_tbl f in
+			  todo := pred@(!todo)
+		    end;
+		    ()
 	    | [] -> raise Exit
 	done
       with Exit -> ()
