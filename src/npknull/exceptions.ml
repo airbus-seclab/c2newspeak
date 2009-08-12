@@ -23,7 +23,5 @@
   email: charles.hymans@penjili.org
 *)
 
-(** [process f s] applies stub [f] to state [s].
-    @raise Not_found when function [f] is unknown.
-*)
-val process: string -> int -> State.t -> State.t
+exception Unknown
+exception Emptyset

@@ -23,38 +23,28 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
+type offset = int
 
-exception Unknown
+type addr = Memloc.t * offset
 
 type t
 
-val universe: unit -> t
-
-val emptyset: t
+val universe: t
 
 val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val addr_is_valid: t -> (Memloc.t * int) -> bool
+val read_addr: t -> addr -> (Memloc.t * int option)
 
-val prepare_call: t -> t -> (bool * t)
+val write: addr -> Memloc.t -> t -> t
 
-val apply: t -> t -> t
+val guard: addr -> t -> t
 
-val set_pointsto: (Memloc.t * int) -> Memloc.t -> t -> t
+val remove_memloc: Memloc.t -> t -> t
+
+val forget_memloc: Memloc.t -> t -> t
+
+val addr_is_valid: t -> addr -> bool
 
 val to_string: t -> string
-
-val assign: (lval * exp * scalar_t) -> int -> t -> t
-
-val lval_to_abaddr: int -> t -> lval -> (Memloc.t * int option)
-
-val abaddr_to_addr: (Memloc.t * int option) -> (Memloc.t * int)
-
-val remove_local: int -> t -> t
-
-val guard: exp -> int -> t -> t
-
-val is_empty: t -> bool

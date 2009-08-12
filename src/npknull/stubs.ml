@@ -28,6 +28,6 @@ let errno_loc = Memloc.gen ()
 let process f env s =
   match f with
       "__errno_location" -> 
-	Store.set_pointsto (Memloc.of_local env, 0) errno_loc s
-    | "__assert_fail" -> Store.emptyset
+	State.set_pointsto (Memloc.of_local env, 0) errno_loc s
+    | "__assert_fail" -> State.emptyset
     | _ -> raise Not_found

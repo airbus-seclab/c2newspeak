@@ -49,7 +49,7 @@ let process prog =
 
   let live_funs = ref StrSet.empty in
 
-  let push lbl = lbl_tbl := (lbl, Store.emptyset)::!lbl_tbl in
+  let push lbl = lbl_tbl := (lbl, State.emptyset)::!lbl_tbl in
   let pop () = 
     match !lbl_tbl with
 	(_, s)::tl -> 
@@ -61,7 +61,7 @@ let process prog =
     let rec goto tbl =
       match tbl with
 	  (lbl', s')::tl when lbl = lbl' -> 
-	    let s = Store.join s s' in
+	    let s = State.join s s' in
 	      (lbl, s)::tl
 	| hd::tl -> hd::(goto tl)
 	| [] -> invalid_arg "Solver.goto: unreachable code"
@@ -83,11 +83,11 @@ let process prog =
     try
       match x with
 	  Lval (lv, Ptr) -> 
-	    let a = Store.lval_to_abaddr env s lv in
-	    let a = Store.abaddr_to_addr a in
-	      Store.addr_is_valid s a
-	| _ -> raise Store.Unknown
-    with Store.Unknown -> false
+	    let a = State.lval_to_abaddr env s lv in
+	    let a = State.abaddr_to_addr a in
+	      State.addr_is_valid s a
+	| _ -> raise Exceptions.Unknown
+    with Exceptions.Unknown -> false
   in
 
   let rec check_lval env s x = 
@@ -121,24 +121,24 @@ let process prog =
 	      
   and process_stmtkind x env s =
     match x with
-	_ when Store.is_empty s -> s
+	_ when State.is_empty s -> s
       | Set (lv, e, t) -> 
 	  check_lval env s lv;
 	  check_exp env s e;
-	  Store.assign (lv, e, t) env s
+	  State.assign (lv, e, t) env s
       | Decl (_, _, body) -> 
 	  let env = env + 1 in
 	  let s = process_blk body env s in
-	    Store.remove_local env s
+	    State.remove_local env s
       | Call FunId f -> begin
 	  try
 	    let rel = Hashtbl.find fun_tbl f in
 	      (* TODO: think about this, rewrite *)
-	    let (is_new, init) = Store.prepare_call s rel in
+	    let (is_new, init) = State.prepare_call s rel in
 	      if is_new then begin
 		let pred = Hashtbl.find pred_tbl f in
 		let init = 
-		  try Store.join (Hashtbl.find init_tbl f) init
+		  try State.join (Hashtbl.find init_tbl f) init
 		  with Not_found -> init
 		in
 		  if not (List.mem !current_fun pred) 
@@ -147,7 +147,7 @@ let process prog =
 		  if not (List.mem f !todo) then todo := f::!todo;
 		  keep_fun := true
 	      end;
-	      Store.apply s rel
+	      State.apply s rel
 	  with Not_found -> 
 	    try 
 	      let s = Stubs.process f env s in
@@ -165,10 +165,10 @@ let process prog =
       | Select (br1, br2) -> 
 	  let s1 = process_blk br1 env s in
 	  let s2 = process_blk br2 env s in
-	    Store.join s1 s2
+	    State.join s1 s2
       | Guard e -> 
 	  check_exp env s e;
-	  Store.guard e env s
+	  State.guard e env s
 (* TODO: change labels?? with the number of DoWith to traverse, 
    but harder to manipulate? *)
       | DoWith (body, lbl, action) -> 
@@ -176,33 +176,33 @@ let process prog =
 	  let s1 = process_blk body env s in
 	  let s2 = pop () in
 	  let s2 = process_blk action env s2 in
-	    Store.join s1 s2
+	    State.join s1 s2
       | Goto lbl -> 
 	  goto lbl s;
-	  Store.emptyset
+	  State.emptyset
       | InfLoop body -> 
 	  let rec fixpoint x =
 	    let x' = process_blk body env x in
-	      if not (Store.contains x x') then fixpoint (Store.join x x')
+	      if not (State.contains x x') then fixpoint (State.join x x')
 	  in
 	    fixpoint s;
-	    Store.emptyset
+	    State.emptyset
       | UserSpec ((IdentToken "__npknull_display")::_) -> 
-	  print_endline (Store.to_string s);
+	  print_endline (State.to_string s);
 	  s
       | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
   in
 
   let init_fun f _ =
-    Hashtbl.add fun_tbl f Store.emptyset;
+    Hashtbl.add fun_tbl f State.emptyset;
     Hashtbl.add pred_tbl f []
   in
 
     (* initialization *)
     Hashtbl.iter init_fun prog.fundecs;
-    let s = Store.universe () in
+    let s = State.universe in
     let s = process_blk prog.init 0 s in
-    let s = Store.set_pointsto ("L.2", 0) (Memloc.gen ()) s in
+    let s = State.set_pointsto ("L.2", 0) (Memloc.gen ()) s in
       Hashtbl.add init_tbl "main" s;
       todo := "main"::[];
       
@@ -223,8 +223,8 @@ let process prog =
 		  else Hashtbl.remove init_tbl f;
 		  keep_fun := false;
 		  let rel = Hashtbl.find fun_tbl f in
-		    if not (Store.contains rel s) then begin
-		      let s = Store.join rel s in
+		    if not (State.contains rel s) then begin
+		      let s = State.join rel s in
 			Hashtbl.replace fun_tbl f s;
 			let pred = Hashtbl.find pred_tbl f in
 			  todo := pred@(!todo)
