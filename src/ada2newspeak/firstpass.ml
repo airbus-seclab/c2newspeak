@@ -138,53 +138,49 @@ let translate compil_unit =
     in let tr_instr_if =
         translate_block [(instr_if,loc)]
     in
-      (C.BlkExp (decl::tr_instr_if,
-                 C.Lval (vid, T.translate T.boolean), false),
-       T.boolean)
+      C.BlkExp (decl::tr_instr_if,
+                 C.Lval (vid, T.translate T.boolean), false)
 
   and translate_and e1 e2 =
     let loc = Npkcontext.get_loc () in
-    let (tr_e2,_ ) = translate_exp e2 in
+    let tr_e2 = translate_exp e2 in
     let (_, decl, vid) = temp#create loc T.boolean in
     let assign = C.Set (vid, T.translate T.boolean, tr_e2) in
-    let tr_ifexp = fst (translate_if_exp e1
-                                         e2
-                                         (CBool false,T.boolean)) in
+    let tr_ifexp = translate_if_exp e1
+                                    e2
+                                    (CBool false,T.boolean) in
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-      , C.Lval (vid, T.translate T.boolean), false), T.boolean
+      , C.Lval (vid, T.translate T.boolean), false)
 
   and translate_or e1 e2 =
     let loc = Npkcontext.get_loc () in
-    let (tr_e2,_ ) = translate_exp e2 in
+    let tr_e2 = translate_exp e2 in
     let (_, decl, vid) = temp#create loc T.boolean in
     let assign = C.Set (vid, T.translate T.boolean, tr_e2) in
-    let tr_ifexp = fst (translate_if_exp e1
-                                         (CBool true,T.boolean)
-                                         e2) in
+    let tr_ifexp = translate_if_exp e1
+                                    (CBool true,T.boolean)
+                                    e2 in
       C.BlkExp (decl::(assign,loc)::[C.Exp tr_ifexp,loc]
-      , C.Lval (vid, T.translate T.boolean), false), T.boolean
+      , C.Lval (vid, T.translate T.boolean), false)
 
-  and translate_binop op e1 e2 =
-    let (c1, c2, typ) =
-      let (c1, _) = translate_exp e1 in
-      let (c2, typ2) = translate_exp e2 in
-      (c1, c2, typ2)
-    in
+  and translate_binop typ op e1 e2 =
+      let c1 = translate_exp e1 in
+      let c2 = translate_exp e2 in
       match (op,T.translate typ) with
       (* Numeric operations *)
-      | Plus ,C.Scalar(N.Int   _) -> C.Binop(N.PlusI   , c1, c2),typ
-      | Plus ,C.Scalar(N.Float n) -> C.Binop(N.PlusF  n, c1, c2),typ
-      | Minus,C.Scalar(N.Int   _) -> C.Binop(N.MinusI  , c1, c2),typ
-      | Minus,C.Scalar(N.Float n) -> C.Binop(N.MinusF n, c1, c2),typ
-      | Mult ,C.Scalar(N.Int   _) -> C.Binop(N.MultI   , c1, c2),typ
-      | Mult ,C.Scalar(N.Float n) -> C.Binop(N.MultF  n, c1, c2),typ
-      | Div  ,C.Scalar(N.Int   _) -> C.Binop(N.DivI    , c1, c2),typ
-      | Div  ,C.Scalar(N.Float n) -> C.Binop(N.DivF   n, c1, c2),typ
-      | Rem  ,C.Scalar(N.Int   _) -> C.Binop(N.Mod     , c1, c2),typ
+      | Plus ,C.Scalar(N.Int   _) -> C.Binop(N.PlusI   , c1, c2)
+      | Plus ,C.Scalar(N.Float n) -> C.Binop(N.PlusF  n, c1, c2)
+      | Minus,C.Scalar(N.Int   _) -> C.Binop(N.MinusI  , c1, c2)
+      | Minus,C.Scalar(N.Float n) -> C.Binop(N.MinusF n, c1, c2)
+      | Mult ,C.Scalar(N.Int   _) -> C.Binop(N.MultI   , c1, c2)
+      | Mult ,C.Scalar(N.Float n) -> C.Binop(N.MultF  n, c1, c2)
+      | Div  ,C.Scalar(N.Int   _) -> C.Binop(N.DivI    , c1, c2)
+      | Div  ,C.Scalar(N.Float n) -> C.Binop(N.DivF   n, c1, c2)
+      | Rem  ,C.Scalar(N.Int   _) -> C.Binop(N.Mod     , c1, c2)
 
       (* Comparisons *)
-      | Eq, C.Scalar t -> C.Binop (N.Eq t, c1, c2), T.boolean
-      | Gt, C.Scalar t -> C.Binop (N.Gt t, c1, c2), T.boolean
+      | Eq, C.Scalar t -> C.Binop (N.Eq t, c1, c2)
+      | Gt, C.Scalar t -> C.Binop (N.Gt t, c1, c2)
 
       | And, C.Scalar _ -> translate_and e1 e2
       | Or , C.Scalar _ -> translate_or  e1 e2
@@ -197,13 +193,13 @@ let translate compil_unit =
             "invalid operator and argument"
 
   and translate_not exp =
-        let (exp, _) = translate_exp exp
-        in (C.Unop (Npkil.Not, exp), T.boolean)
+        let exp = translate_exp exp
+        in C.Unop (Npkil.Not, exp)
 
   (** Returns ftyp & list of params *)
   and translate_subprogram_parameters params =
     let translate_parameter (_id, t, exp) =
-        let (tr_exp, _) = translate_exp exp in
+        let tr_exp = translate_exp exp in
         ( T.translate t
         , T.check_exp t tr_exp
         )
@@ -215,7 +211,7 @@ let translate compil_unit =
   (** Translates a function call.  *)
   and translate_function_call fname arg_list rt =
     let (ftyp0, tr_params) = translate_subprogram_parameters arg_list in
-    C.Call((ftyp0, T.translate rt), fname, tr_params), rt
+    C.Call((ftyp0, T.translate rt), fname, tr_params)
 
   and translate_lv lv =
       match lv with
@@ -224,7 +220,7 @@ let translate compil_unit =
             (clv, t)
         | ArrayAccess (lv, exps) ->
             let (x_lv,t_lv ) = translate_lv lv in
-            let x_exps = List.map (fun x -> fst (translate_exp x)) exps in
+            let x_exps = List.map translate_exp exps in
             let (tc,ti) = T.extract_array_types t_lv in
             let size_c = C.size_of_typ (T.translate tc) in
 
@@ -264,25 +260,25 @@ let translate compil_unit =
             let xt = T.translate t in
             C.Deref (C.Lval (xlv, xt), xt), t
 
-  and translate_exp (exp,typ) :C.exp * T.t =
+  and translate_exp (exp,typ) :C.exp =
     match exp with
-    | CFloat f -> C.Const(C.CFloat(f,string_of_float f)), T.std_float
-    | CInt   i -> translate_nat i, typ
-    | CChar  c -> translate_nat (Nat.of_int c), T.character
-    | CBool  b -> translate_nat (Ada_utils.nat_of_bool b), T.boolean
+    | CFloat f -> C.Const(C.CFloat(f,string_of_float f))
+    | CInt   i -> translate_nat i
+    | CChar  c -> translate_nat (Nat.of_int c)
+    | CBool  b -> translate_nat (Ada_utils.nat_of_bool b)
     | Lval   l -> let (tlv,tp) = translate_lv l in
-                  C.Lval (tlv,T.translate tp), typ
+                  C.Lval (tlv, T.translate tp)
     | Not    exp              -> translate_not exp
     | Binary(binop,exp1,exp2) ->
-        let (bop, rtyp) = translate_binop binop exp1 exp2 in
-        (T.check_exp typ bop), rtyp
+        let bop = translate_binop (snd exp1) binop exp1 exp2 in
+        (T.check_exp typ bop)
     | CondExp(e1,e2,e3)       -> translate_if_exp e1 e2 e3
     | FunctionCall(sc, name, arg_list, rt) ->
         let fname = C.Fname (concat_resolved_name sc name) in
         translate_function_call fname arg_list rt
     | AddressOf (lv, _) ->
         let (lv', tlv) = translate_lv lv in
-        C.AddrOf(lv', T.translate tlv), T.system_address
+        C.AddrOf(lv', T.translate tlv)
 
   (**
    * Make a C assignment.
@@ -299,7 +295,7 @@ let translate compil_unit =
    *)
   and translate_affect lv exp loc =
     let (tr_lv,subtyp_lv) = translate_lv lv in
-    let (tr_exp,_) = translate_exp exp in
+    let tr_exp = translate_exp exp in
     make_affect tr_lv tr_exp subtyp_lv loc
 
   (**
@@ -334,11 +330,7 @@ let translate compil_unit =
            | Assign(lv,exp) ->
                (translate_affect lv exp loc)::(translate_block r)
            | If(condition,instr_then,instr_else) ->
-               let (tr_exp, typ) = translate_exp condition in
-                 if (not (T.is_boolean typ ))then begin
-                   Npkcontext.report_error "Firstpass.translate_block"
-                                         "expected a boolean type for condition"
-                 end;
+               let tr_exp = translate_exp condition in
                  let tr_then = translate_block instr_then in
                  let tr_else = translate_block instr_else in
                      (C.build_if loc (tr_exp, tr_then, tr_else))
@@ -360,11 +352,11 @@ let translate compil_unit =
              end
 
            | Case (e, choices, default) ->
-                   (C.Switch(fst(translate_exp e),
+                   (C.Switch(translate_exp e,
                          (List.map (function exp,block ->
-                             let (value,typ) = translate_exp exp in
+                             let value = translate_exp exp in
                              ( value
-                             , C.scalar_of_typ (T.translate typ)
+                             , C.scalar_of_typ (T.translate (snd exp))
                              )
                              , translate_block block
                          ) choices),
