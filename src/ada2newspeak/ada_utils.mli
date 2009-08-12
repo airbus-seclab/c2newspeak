@@ -38,6 +38,18 @@ type verbose_level =
 (** Generic error. *)
 val mkerror : verbose_level -> string -> (string -> unit)
 
+type progress =
+  | Parsing   of string 
+  | Semcheck  of string 
+  | Translate of string 
+  | Post
+  | Done of progress
+
+(**
+ * Log progress.
+ *)
+val log_progress : progress -> unit
+
 (**
  * Convert a boolean into the native type.
  *)

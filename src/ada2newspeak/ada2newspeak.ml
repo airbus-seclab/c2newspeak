@@ -27,6 +27,8 @@
   email : charles . hymans AT eads . net
 *)
 
+open Ada_utils
+
 (**
  * Parse a file, compile it and translate it into a Npkil representation.
  *)
@@ -42,7 +44,6 @@ let compile(fname:string):Npkil.t =
       Npkcontext.print_debug ("Changing directory : " ^ dir_name);
       Sys.chdir dir_name
     end;
-    Npkcontext.print_debug ("Parsing " ^ fname ^ "...");
     let t_0 = Unix.gettimeofday () in
     let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
       let t_1 = Unix.gettimeofday () in
@@ -53,13 +54,14 @@ let compile(fname:string):Npkil.t =
         print_newline ();
       end;
       Npkcontext.forget_loc ();
-      Npkcontext.print_debug "Parsing done.";
-      Npkcontext.print_debug "Running first pass...";
-      let prog = Firstpass.translate ast in
+      let norm_tree = Normalize.normalization ast false in
+      log_progress (Translate fname);
+      Npkcontext.print_debug "Translating to CIR...";
+      let prog = Firstpass.translate norm_tree in
+        log_progress (Done(Translate fname));
         let t_2 = Unix.gettimeofday () in
         Npkcontext.forget_loc ();
-        Npkcontext.print_debug "First pass done.";
-        Npkcontext.print_debug ("Translating " ^ fname ^ "...");
+        log_progress (Post);
         let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
           let t_3 = Unix.gettimeofday () in
           let time_string a b =
@@ -80,6 +82,7 @@ let compile(fname:string):Npkil.t =
             print_endline "Newspeak Object output";
             print_endline "----------------------";
             Npkil.dump_npko tr_prog;
+          log_progress (Done Post);
             print_newline ();
           end;
           tr_prog

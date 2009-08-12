@@ -1209,6 +1209,21 @@ and normalize_sub_program_spec subprog_spec ~addparam =
  * TODO document extern
  *)
 and normalization compil_unit extern =
+  let name_of_sp_spec = function
+    | Function (x,_,_)
+    | Procedure (x,_)  -> x
+  in
+  let name_of_synt_spec = function
+    | SubProgramSpec sps -> name_of_sp_spec sps
+    | PackageSpec (x,_) -> x
+  in
+  let cu_name = match compil_unit with
+  | (_, Spec s,_) -> name_of_synt_spec s
+  | (_, Body (SubProgramBody (s,_,_)),_) -> name_of_sp_spec s
+  | (_, Body (PackageBody (n,_,_)),_)    -> n
+  in
+  log_progress (Semcheck cu_name);
+
   g_extern := extern;
 
   let normalize_lib_item lib_item loc =
@@ -1266,6 +1281,7 @@ and normalization compil_unit extern =
   let norm_context = normalize_context context in
   let norm_lib_item = normalize_lib_item lib_item loc in
     Npkcontext.forget_loc ();
+    log_progress (Done(Semcheck cu_name));
     (norm_context
     ,norm_lib_item
     ,loc
