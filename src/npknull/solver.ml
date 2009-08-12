@@ -126,6 +126,10 @@ let process prog =
 	  check_lval env s lv;
 	  check_exp env s e;
 	  State.assign (lv, e, t) env s
+      | Copy (lv1, lv2, _) -> 
+	  check_lval env s lv1;
+	  check_lval env s lv2;
+	  State.forget_lval lv1 env s
       | Decl (_, _, body) -> 
 	  let env = env + 1 in
 	  let s = process_blk body env s in

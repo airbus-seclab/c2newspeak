@@ -166,6 +166,17 @@ let set_pointsto m1 m2 s =
       Some (i, s) -> Some (i, Store.write m1 m2 s)
     | None -> None
 
+let forget_lval lv env s =
+  match s with
+      None -> None
+    | Some (i, s) -> 
+	try
+	  let a = lval_to_abaddr env s lv in
+	  let m = abaddr_to_memloc a in
+	  let s = Store.forget_memloc m s in
+	    Some (i, s)
+	with Exceptions.Unknown -> universe
+
 let guard e env s = 
   match s with
       None -> None

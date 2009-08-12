@@ -56,3 +56,5 @@ val remove_local: int -> t -> t
 val guard: exp -> int -> t -> t
 
 val is_empty: t -> bool
+
+val forget_lval: lval -> int -> t -> t
