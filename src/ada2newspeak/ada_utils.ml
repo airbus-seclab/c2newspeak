@@ -118,6 +118,22 @@ let operator_of_string s = match s with
          ("\"" ^ s ^ "\" does not name an operator")
 
 let may f = function
-  | None -> None
+  | None   -> None
   | Some v -> Some (f v)
 
+type progress =
+  | Parsing   of string 
+  | Semcheck  of string 
+  | Translate of string 
+  | Post
+  | Done of progress
+
+let log_progress p =
+  let rec s_prog = function
+  | Parsing   f ->   ("Parsing<"^f^">")
+  | Semcheck  f ->  ("Semcheck<"^f^">")
+  | Translate f -> ("Translate<"^f^">")
+  | Post        -> ("Post")
+  | Done p      -> ("Done<"^s_prog p^">")
+  in
+  Npkcontext.print_debug ("###PROGRESS### "^s_prog p)

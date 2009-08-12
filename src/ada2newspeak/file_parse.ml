@@ -25,8 +25,10 @@
 
 *)
 
+open Ada_utils
+
 let parse (fname:string) :Syntax_ada.compilation_unit =
-  Npkcontext.print_debug ("Parsing file '" ^ fname ^ "'");
+  log_progress (Parsing fname);
   let cin =
     try open_in fname
     with Sys_error _ -> Npkcontext.report_error "File_parse.parse"
@@ -39,10 +41,10 @@ let parse (fname:string) :Syntax_ada.compilation_unit =
       let prog = Parser.s Lexer.token lexbuf
       in
         close_in cin;
-        Npkcontext.print_debug ("Done parsing file '" ^ fname ^ "'");
         if not (Ada_utils.check_compil_unit_name prog fname)
         then Npkcontext.report_warning "File_parse.parse"
                     "file name does not match unit name";
+        log_progress (Done (Parsing fname));
         prog
     with Parsing.Parse_error ->
       let start_pos = Lexing.lexeme_start_p lexbuf
