@@ -540,8 +540,7 @@ let translate compil_unit =
     );
   in
 
-  let normalized_compil_unit = Normalize.normalization compil_unit false in
-  let (ctx, lib_item, loc) = normalized_compil_unit in
+  let (ctx, lib_item, loc) = compil_unit in
     Npkcontext.set_loc loc;
     do_as_extern translate_context ctx;
     translate_library_item lib_item loc;

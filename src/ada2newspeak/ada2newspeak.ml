@@ -54,8 +54,10 @@ let compile(fname:string):Npkil.t =
       end;
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
-      Npkcontext.print_debug "Running first pass...";
-      let prog = Firstpass.translate ast in
+      Npkcontext.print_debug "Running semantic analysis...";
+      let norm_tree = Normalize.normalization ast false in
+      Npkcontext.print_debug "Translating to CIR...";
+      let prog = Firstpass.translate norm_tree in
         let t_2 = Unix.gettimeofday () in
         Npkcontext.forget_loc ();
         Npkcontext.print_debug "First pass done.";
