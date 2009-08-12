@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-let current_loc = ref Newspeak.unknown_loc
+let current_loc = ref (Newspeak.dummy_loc "initialization")
 
 let errors = ref StrSet.empty
 

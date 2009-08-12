@@ -207,8 +207,10 @@ let process prog =
     let s = State.universe in
     let s = process_blk prog.init 0 s in
     let s = State.set_pointsto ("L.2", 0) (Memloc.gen ()) s in
-      Hashtbl.add init_tbl "main" s;
+      if not (Hashtbl.mem prog.fundecs "main")
+      then invalid_arg "Solver.process: missing main function";
       todo := "main"::[];
+      Hashtbl.add init_tbl "main" s;
       
       (* fixpoint computation *)
       begin try
