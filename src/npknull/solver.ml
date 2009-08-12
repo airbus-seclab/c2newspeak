@@ -137,21 +137,20 @@ let process prog =
       | Call FunId f -> begin
 	  try
 	    let rel = Hashtbl.find fun_tbl f in
-	      (* TODO: think about this, rewrite *)
-	    let (is_new, init) = State.prepare_call s rel in
-	      if is_new then begin
-		let pred = Hashtbl.find pred_tbl f in
-		let init = 
-		  try State.join (Hashtbl.find init_tbl f) init
-		  with Not_found -> init
-		in
-		  if not (List.mem !current_fun pred) 
-		  then Hashtbl.replace pred_tbl f (!current_fun::pred);
-		  Hashtbl.replace init_tbl f init;
-		  if not (List.mem f !todo) then todo := f::!todo;
-		  keep_fun := true
+	    let (ft, _) = Hashtbl.find prog.fundecs f in
+	    let env_f = env_of_ftyp ft in
+	    let (init, tr) = State.prepare_call (env, s) (env_f, rel) in begin
+		match init with
+		    Some init -> 
+		      let pred = Hashtbl.find pred_tbl f in
+			if not (List.mem !current_fun pred)
+			then Hashtbl.replace pred_tbl f (!current_fun::pred);
+			Hashtbl.replace init_tbl f init;
+			if not (List.mem f !todo) then todo := f::!todo;
+			keep_fun := true
+		  | None -> ()
 	      end;
-	      State.apply s rel
+	      State.apply s tr rel
 	  with Not_found -> 
 	    try 
 	      let s = Stubs.process f env s in
@@ -206,6 +205,7 @@ let process prog =
     Hashtbl.iter init_fun prog.fundecs;
     let s = State.universe in
     let s = process_blk prog.init 0 s in
+(* TODO: do this only if main has the right type!! *)
     let s = State.set_pointsto ("L.2", 0) (Memloc.gen ()) s in
       if not (Hashtbl.mem prog.fundecs "main")
       then invalid_arg "Solver.process: missing main function";
@@ -225,8 +225,11 @@ let process prog =
 		let (ft, body) = Hashtbl.find prog.fundecs f in
 		let env = env_of_ftyp ft in
 		let s = process_blk body env s in
-		  if !keep_fun then keep_fun := false
-		  else Hashtbl.remove init_tbl f;
+		  (* TODO: couldn't the init be put in the rel?
+		     and the compaction done only once the analysis of the 
+		     function is finished?
+		  *)
+		  if not !keep_fun then Hashtbl.remove init_tbl f;
 		  keep_fun := false;
 		  let rel = Hashtbl.find fun_tbl f in
 		    if not (State.contains rel s) then begin

@@ -37,16 +37,13 @@ type offset = int
 (* TODO: try to get rid of this emptyset, use an exception instead!! *)
 type t = (Store.t * Store.t) option
 
+type transport = unit
+
 let universe = Some (Store.universe, Store.universe)
 
 let emptyset = None
 
 let is_empty s = s = None
-
-let apply s rel = 
-  match (s, rel) with
-      (None, _) | (_, None) -> None
-    | (Some (i, _), Some (_, s)) -> Some (i, s)  
 
 (* TODO: this should be greatly improved!!! 
    right now O(n)*log(n)
@@ -67,24 +64,6 @@ let contains s1 s2 =
     | (None, _) -> false
 (* TODO: strange but assumes they have both the same init *)
     | (Some (_, s1), Some (_, s2)) -> Store.contains s1 s2
-
-let prepare_call s rel = 
-  match (rel, s) with
-      (None, None) -> 
-	invalid_arg "Store.prepare_call: not implemented yet NoneNone"
-    | (None, _) -> (true, s)
-    | (Some (i, _), Some (_, s)) -> 
-	let (is_new, s) = 
-	  if Store.contains i s then (false, s) 
-	    (* TODO: this is strange because here
-	       s is not really needed, behavior not
-	       assembled.
-	       think about primitives again
-	    *)
-	  else (true, Store.join i s)
-	in
-	  (is_new, Some (s, s))
-    | _ -> invalid_arg "Store.prepare_call: not implemented yet"
 
 (* TODO: this is really awkward that this is needed!! *)
 let addr_is_valid s a = 
@@ -198,6 +177,23 @@ let lval_to_abaddr env s lv =
       Some (_, s) -> lval_to_abaddr env s lv
     | None -> raise Emptyset
 
+let apply s _ rel = 
+  match (s, rel) with
+      (None, _) | (_, None) -> None
+    | (Some (i, _), Some (_, s)) -> Some (i, s)  
+
+let prepare_call (_, s) (_, rel) = 
+  match (s, rel) with
+      (None, None) -> 
+	invalid_arg "Store.prepare_call: not implemented yet NoneNone"
+    | (None, _) -> (None, ())
+    | (_, None) -> (Some s, ())
+    | (Some (_, s), Some (i, _)) -> 
+	let s =
+	  if Store.contains i s then None else Some (Some (s, s))
+	in
+	  (s, ())
+
 (* usefull for debug *)
 (*
 let assign set env s =
@@ -234,4 +230,12 @@ let guard e env s =
   print_endline (to_string s);
     print_endline "Store.guard ends";
     s
+
+let contains s1 s2 =
+  print_endline "State.contains";
+  print_endline (to_string s1);
+  print_endline (to_string s2);
+  let b = contains s1 s2 in
+    print_endline "State.contains ends";
+    b
 *)

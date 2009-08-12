@@ -28,6 +28,7 @@ type t = string
 let cnt = ref (-1)
   
 let gen () =
+  if !cnt = max_int then invalid_arg "Memloc.gen: no more locations";
   incr cnt;
   "H."^string_of_int !cnt
 
