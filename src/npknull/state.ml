@@ -37,7 +37,7 @@ type offset = int
 (* TODO: try to get rid of this emptyset, use an exception instead!! *)
 type t = (Store.t * Store.t) option
 
-type transport = unit
+type transport = (Memloc.t * Memloc.t) list
 
 let universe = Some (Store.universe, Store.universe)
 
@@ -78,7 +78,7 @@ let abaddr_to_addr (m, o) =
 
 let rec lval_to_abaddr env s lv =
   match lv with
-      Global x -> ("G."^x, Some 0)
+      Global x -> (Memloc.of_global x, Some 0)
     | Local x -> (Memloc.of_local (env - x), Some 0)
     | Shift (lv, Const CInt n) -> 
 	let (m, o) = lval_to_abaddr env s lv in
@@ -135,7 +135,7 @@ let to_string s =
 let remove_local v s =
   match s with
       Some (i, s) -> 
-	let v = "L."^string_of_int v in
+	let v = Memloc.of_local v in
 	  Some (i, Store.remove_memloc v s)
     | None -> None
 
@@ -182,17 +182,20 @@ let apply s _ rel =
       (None, _) | (_, None) -> None
     | (Some (i, _), Some (_, s)) -> Some (i, s)  
 
-let prepare_call (_, s) (_, rel) = 
+let prepare_call (env, s) (env_f, rel) = 
   match (s, rel) with
       (None, None) -> 
 	invalid_arg "Store.prepare_call: not implemented yet NoneNone"
-    | (None, _) -> (None, ())
-    | (_, None) -> (Some s, ())
+    | (None, _) -> (None, [])
+    | (Some (_, s), None) -> 
+	let s = Store.shift (env-env_f) s in
+	  (Some (Some (s, s)), [])
     | (Some (_, s), Some (i, _)) -> 
+(*	let s = Store.shift env s env_f in*)
 	let s =
 	  if Store.contains i s then None else Some (Some (s, s))
 	in
-	  (s, ())
+	  (s, [])
 
 (* usefull for debug *)
 (*

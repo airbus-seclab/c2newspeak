@@ -24,8 +24,14 @@
 *)
 
 (* TODO: have this type abstract?? *)
-type t = string
+type t
 
 val gen: unit -> t
 
+val of_global: string -> t
+
 val of_local: int -> t
+
+val compare: t -> t -> int
+
+val to_string: t -> string

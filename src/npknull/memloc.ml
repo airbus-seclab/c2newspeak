@@ -23,13 +23,26 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = string
+type t = 
+    Local of int
+  | Global of string
+  | Heap of int
 
 let cnt = ref (-1)
   
 let gen () =
   if !cnt = max_int then invalid_arg "Memloc.gen: no more locations";
   incr cnt;
-  "H."^string_of_int !cnt
+  Heap !cnt
 
-let of_local x = "L."^string_of_int x
+let of_global x = Global x
+
+let of_local x = Local x
+
+let compare = compare
+
+let to_string x =
+  match x with
+      Local x -> "L."^string_of_int x
+    | Global x -> "G."^x
+    | Heap x -> "H."^string_of_int x

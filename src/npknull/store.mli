@@ -48,3 +48,5 @@ val forget_memloc: Memloc.t -> t -> t
 val addr_is_valid: t -> addr -> bool
 
 val to_string: t -> string
+
+val shift: int -> t -> t

@@ -206,7 +206,7 @@ let process prog =
     let s = State.universe in
     let s = process_blk prog.init 0 s in
 (* TODO: do this only if main has the right type!! *)
-    let s = State.set_pointsto ("L.2", 0) (Memloc.gen ()) s in
+    let s = State.set_pointsto (Memloc.of_local 2, 0) (Memloc.gen ()) s in
       if not (Hashtbl.mem prog.fundecs "main")
       then invalid_arg "Solver.process: missing main function";
       todo := "main"::[];

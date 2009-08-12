@@ -25,8 +25,8 @@
 
 open Newspeak
 
-module Map = Map.Make(String)
-module Set = Set.Make(String)
+module Map = Map.Make(Memloc)
+module Set = Set.Make(Memloc)
 
 type offset = int
 
@@ -85,8 +85,8 @@ let string_of_info i =
 	let a = Set.elements a in
 	let a =
 	  match a with
-	      a::[] -> a
-	    | _ -> "{"^ListUtils.to_string (fun x -> x) "," a^"}"
+	      a::[] -> Memloc.to_string a
+	    | _ -> "{"^ListUtils.to_string Memloc.to_string "," a^"}"
 	in
 	let o =
 	  match o with
@@ -124,13 +124,31 @@ let remove_memloc = Map.remove
 
 let to_string s =
   let res = ref "" in
-  let to_string l data =
+  let to_string m data =
     let to_string (offset, info) =
+      let m = Memloc.to_string m in
       let info = string_of_info info in
-	res := !res^" ("^l^", "^string_of_int offset^") -> "^info
+	res := !res^" ("^m^", "^string_of_int offset^") -> "^info
     in
       List.iter to_string data
   in
     Map.iter to_string s;
     !res
 
+let shift _ s = s
+
+(*
+let shift n s =
+  let res = ref Map.empty in
+(* TODO: not nice, think about the structure of memlocs!! *)
+  let shift_memloc m = 
+    match 
+  in
+  let shift m (offset, info) =
+    let m = shift_memloc m in
+    let info = shift_info info in
+      res := Map.add m info !res
+  in
+    Map.iter shift s;
+    !res
+*)
