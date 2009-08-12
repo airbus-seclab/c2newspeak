@@ -24,7 +24,6 @@
 */
 
 void f(int *y) {
-  /*!npk __npknull_display */
   *y = 0;        // should not display any pointer out of bounds
 }
 

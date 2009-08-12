@@ -41,6 +41,12 @@ let of_local x = Local x
 
 let compare = compare
 
+let shift n m = 
+  match m with
+      Local x when x >= n -> Local (x-n)
+    | Local _ -> gen () 
+    | _ -> m
+
 let to_string x =
   match x with
       Local x -> "L."^string_of_int x

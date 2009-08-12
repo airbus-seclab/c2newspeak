@@ -135,20 +135,40 @@ let to_string s =
     Map.iter to_string s;
     !res
 
-let shift _ s = s
-
-(*
 let shift n s =
   let res = ref Map.empty in
-(* TODO: not nice, think about the structure of memlocs!! *)
-  let shift_memloc m = 
-    match 
+  let shift_info x =
+    match x with
+	PointsTo (m, o) -> 
+	  let res = ref Set.empty in
+	  let shift_memloc x = res := Set.add (Memloc.shift n x) !res in
+	    Set.iter shift_memloc m;
+	    PointsTo (!res, o)
+      | NotNull -> NotNull
   in
-  let shift m (offset, info) =
-    let m = shift_memloc m in
-    let info = shift_info info in
+  let shift m info =
+    let m = Memloc.shift n m in
+    let info = 
+      List.map (fun (offset, info) -> (offset, shift_info info)) info
+    in
       res := Map.add m info !res
   in
     Map.iter shift s;
     !res
+
+(*
+(* usefull for debug *)
+let shift n s =
+  print_endline "Store.shift";
+  print_endline (string_of_int n);
+  print_endline (to_string s);
+  let s = shift n s in
+    print_endline (to_string s);
+    print_endline "Store.shift ends";
+    s
+*)
+(*
+let contains s1 s2 =
+  print_endline "Store.contains";
+  print_endline "Store.contains ends";
 *)

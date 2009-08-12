@@ -34,4 +34,6 @@ val of_local: int -> t
 
 val compare: t -> t -> int
 
+val shift: int -> t -> t
+
 val to_string: t -> string

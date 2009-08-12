@@ -183,19 +183,17 @@ let apply s _ rel =
     | (Some (i, _), Some (_, s)) -> Some (i, s)  
 
 let prepare_call (env, s) (env_f, rel) = 
-  match (s, rel) with
-      (None, None) -> 
-	invalid_arg "Store.prepare_call: not implemented yet NoneNone"
-    | (None, _) -> (None, [])
-    | (Some (_, s), None) -> 
+  match s with
+      None -> (None, [])
+    | Some (_, s) ->
 	let s = Store.shift (env-env_f) s in
-	  (Some (Some (s, s)), [])
-    | (Some (_, s), Some (i, _)) -> 
-(*	let s = Store.shift env s env_f in*)
-	let s =
-	  if Store.contains i s then None else Some (Some (s, s))
-	in
-	  (s, [])
+	  match rel with
+	      None -> (Some (Some (s, s)), [])
+	    | Some (i, _) -> 
+		let s =
+		  if Store.contains i s then None else Some (Some (s, s))
+		in
+		  (s, [])
 
 (* usefull for debug *)
 (*
