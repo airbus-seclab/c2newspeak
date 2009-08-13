@@ -39,6 +39,14 @@ type t = (Store.t * Store.t) option
 
 type transport = (Memloc.t * Memloc.t) list
 
+let invert tr = List.map (fun (x, y) -> (y, x)) tr
+
+let string_of_transport tr =
+  let string_of_assoc (x, y) =
+    Memloc.to_string x^"/"^Memloc.to_string y
+  in
+    "["^ListUtils.to_string string_of_assoc ", " tr^"]"
+
 let universe = Some (Store.universe, Store.universe)
 
 let emptyset = None
@@ -177,16 +185,19 @@ let lval_to_abaddr env s lv =
       Some (_, s) -> lval_to_abaddr env s lv
     | None -> raise Emptyset
 
-let apply s _ rel = 
+let apply s tr rel = 
   match (s, rel) with
       (None, _) | (_, None) -> None
-    | (Some (i, _), Some (_, s)) -> Some (i, s)  
+    | (Some (i, _), Some (_, s)) -> 
+	let tr = invert tr in
+	let s = Store.subst tr s in
+	  Some (i, s)
 
 let prepare_call (env, s) (env_f, rel) = 
   match s with
       None -> (None, [])
     | Some (_, s) ->
-	let s = Store.shift (env-env_f) s in
+	let (s, tr) = Store.shift (env-env_f) s in
 	  match rel with
 	      None -> (Some (Some (s, s)), [])
 	    | Some (i, _) -> 
@@ -194,7 +205,7 @@ let prepare_call (env, s) (env_f, rel) =
 		let s =
 		  if Store.contains i s then None else Some (Some (s, s))
 		in
-		  (s, [])
+		  (s, tr)
 
 (* usefull for debug *)
 (*
@@ -204,24 +215,6 @@ let assign set env s =
   let s = assign set env s in
     print_endline (to_string s);
     print_endline "Store.assign ends";
-    s
-
-let prepare_call rel s =
-  print_endline "Store.prepare_call";
-  print_endline (to_string rel);
-  print_endline (to_string s);
-  let (is_new, s) = prepare_call rel s in
-    print_endline (to_string s);
-    print_endline "Store.prepare_call ends";
-    (is_new, s)
-
-let apply s rel = 
-  print_endline "Store.apply";
-  print_endline (to_string s);
-  print_endline (to_string rel);
-  let s = apply s rel in
-    print_endline (to_string s);
-    print_endline "Store.apply ends";
     s
 
 let guard e env s =
@@ -240,4 +233,26 @@ let contains s1 s2 =
   let b = contains s1 s2 in
     print_endline "State.contains ends";
     b
+
+let prepare_call (env, s) (env_f, rel) =
+  print_endline "Store.prepare_call";
+  print_endline (to_string rel);
+  print_endline (to_string s);
+  let (s, tr) = prepare_call (env, s) (env_f, rel) in begin
+      match s with
+	  Some s -> print_endline (to_string s)
+	| None -> ()
+    end;
+    print_endline (string_of_transport tr);
+    print_endline "Store.prepare_call ends";
+    (s, tr)
+
+let apply s tr rel = 
+  print_endline "Store.apply";
+  print_endline (to_string s);
+  print_endline (to_string rel);
+  let s = apply s tr rel in
+    print_endline (to_string s);
+    print_endline "Store.apply ends";
+    s
 *)

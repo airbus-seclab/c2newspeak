@@ -142,24 +142,30 @@ let remove_memloc = Map.remove
 (* TODO: O(n) expensive? *)
 let shift n s =
   let res = ref Map.empty in
+  let tr = ref [] in
+  let shift_memloc x = 
+    let y = Memloc.shift n x in
+      if (x <> y) && not (List.mem_assoc x !tr) then tr := (x, y)::!tr;
+      y
+  in
   let shift_info x =
     match x with
 	PointsTo (m, o) -> 
 	  let res = ref Set.empty in
-	  let shift_memloc x = res := Set.add (Memloc.shift n x) !res in
+	  let shift_memloc x = res := Set.add (shift_memloc x) !res in
 	    Set.iter shift_memloc m;
 	    PointsTo (!res, o)
       | NotNull -> NotNull
   in
   let shift m info =
-    let m = Memloc.shift n m in
+    let m = shift_memloc m in
     let info = 
       List.map (fun (offset, info) -> (offset, shift_info info)) info
     in
       res := Map.add m info !res
   in
     Map.iter shift s;
-    !res
+    (!res, !tr)
 
 (* TODO: O(n) expensive? 
    Have the inverse map?

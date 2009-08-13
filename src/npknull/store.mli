@@ -49,7 +49,10 @@ val addr_is_valid: t -> addr -> bool
 
 val to_string: t -> string
 
-val shift: int -> t -> t
+(* TODO: maybe simplify shift and subst by merging them together!! *)
+val shift: int -> t -> (t * (Memloc.t * Memloc.t) list)
+
+val subst: (Memloc.t * Memloc.t) list -> t -> t
 
 (* [unify_on dst n src] tries to transport [src] to the world of [dst]
    knowing that both have [n] locals.
