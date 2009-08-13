@@ -105,8 +105,21 @@ let rec lval_to_abaddr env s lv =
 let eval_exp env s e =
   match e with
       AddrOf (lv, _) -> 
-	let (m, _) = lval_to_abaddr env s lv in
-	  m
+	(* TODO: could there be a bug here throwing away the offset *)
+	let (m, o) = lval_to_abaddr env s lv in begin
+	    match o with
+		Some 0 -> m
+	      | _ -> raise Exceptions.Unknown
+	  end
+    | Lval (lv, Ptr) -> 
+(* TODO: code looks similar to Deref *)
+	let a = lval_to_abaddr env s lv in
+	let a = abaddr_to_addr a in
+	let (m, o) = Store.read_addr s a in begin
+	  match o with
+	      Some 0 -> m
+	    | _ -> raise Exceptions.Unknown
+	  end
     | _ -> raise Exceptions.Unknown
 
 let abaddr_to_memloc (m, _) = m
@@ -211,12 +224,15 @@ let prepare_call (env, s) (env_f, rel) =
 (*
 let assign set env s =
   print_endline "Store.assign";
-  print_endline (to_string s);
-  let s = assign set env s in
+  let (lv, e, _) = set in
+    print_endline (Newspeak.string_of_lval lv^" = "^Newspeak.string_of_exp e);
     print_endline (to_string s);
-    print_endline "Store.assign ends";
-    s
-
+    let s = assign set env s in
+      print_endline (to_string s);
+      print_endline "Store.assign ends";
+      s
+*)
+(*
 let guard e env s =
   print_endline "Store.guard";
   print_endline (Newspeak.string_of_exp e);
@@ -237,7 +253,9 @@ let contains s1 s2 =
 (*
 let prepare_call (env, s) (env_f, rel) =
   print_endline "State.prepare_call";
+  print_endline (string_of_int env);
   print_endline (to_string s);
+  print_endline (string_of_int env_f);
   print_endline (to_string rel);
   let (s, tr) = prepare_call (env, s) (env_f, rel) in begin
       match s with
@@ -247,7 +265,8 @@ let prepare_call (env, s) (env_f, rel) =
     print_endline (string_of_transport tr);
     print_endline "State.prepare_call ends";
     (s, tr)
-
+*)
+(*
 let apply s tr rel = 
   print_endline "State.apply";
   print_endline (to_string s);
