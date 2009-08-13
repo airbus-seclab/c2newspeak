@@ -29,7 +29,7 @@ COMMAND=$(ADA2NEWSPEAK) $(OPTION) $*.adb
 PREREQ=%.adb $(ADA2NEWSPEAK)
 CLEANFILES=*.bak
 
-TESTS=t001 t002                t006 t007 t008 t009 t010 \
+TESTS=t001 t002 t003 t004 t005 t006 t007 t008 t009 t010 \
       t011 t012 t013 t014 t015 t016 t017 t018 t019 t020 \
       t021 t022 t023 t024 t025 t026 t027 t028 t029 t030 \
       t031 t032 t033 t034 t035 t036 t037 t038      t040 \
@@ -47,7 +47,7 @@ TESTS=t001 t002                t006 t007 t008 t009 t010 \
       t211                          t217 t218 t219 t220 \
       t221 t222 t223 t224 t225 t226 t227 t228 t229 t230 \
       t231 t232      t234 t235 t236 t237 t238 t239 t240 \
-      t241 t242 t243 t244 t245           t248 t249 t250 \
+      t241 t242 t243 t244 t245 t246 t247 t248 t249 t250 \
            t252 t253 t254 t255 t256 t257 t258 t259 t260 \
       t261 t262 t263      t265 t266 t267 t268 t269 t270 \
       t271 t272 t273 t274 t275 t276 t277 t278           \

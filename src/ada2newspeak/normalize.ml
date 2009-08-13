@@ -210,103 +210,6 @@ let check_package_body_against_spec ~body ~spec =
       end
   ) speclist
 
-(**
- * Compute the actual argument list for a subprogram call.
- * Given an (optionnaly named)-argument list and a function specification
- * (describing formal parameters' name, default values, etc.)
- *
- * Algorithm :
- *   - first, the positional arguments are extracted and put in the
- *     beginning of the to-be-translated parameter list.
- *   - then, the remaining (named) arguments are put in their right place,
- *     according to the specification of the subprogram.
- *   - finally, the missing named parameters are replaced with their
- *     default values, if provided.
- *
- * An error may occur in one of the following cases :
- *   - A positional parameter follows a named parameter.
- *   - A parameter without default value is not given an actual value.
- *   - A named parameter is specified more than once.
- *
- * @param args the name => value association list
- * @param spec the function specification (holding default values, etc)
- * @return a list of expressions which are the actual parameters.
- *)
-let make_arg_list args spec =
-  let argtbl = Hashtbl.create 5 in
-
-  (**
-   * Step 1 : extract positional parameters. Named parameters go into the
-   * argtbl hashtable.
-   *
-   * Non-leading positional parameters, if any, remain in the "positional"
-   * list and will lead to errors.
-   *
-   * /!\ Side-effects : this function references the argtbl variable.
-   *)
-  let rec extract_positional_parameters ar =
-    match ar with
-      |             []   -> []
-      | (Some  _, _)::_  ->
-        (* don't stop at first named argument : populate argtbl *)
-            List.iter
-                (function
-                   | None   , _ -> Npkcontext.report_error "firstpass.fcall"
-                             "Named parameters shall follow positional ones"
-                   | Some id, e ->
-                        if (Hashtbl.mem argtbl id) then
-                            Npkcontext.report_error "firstpass.fcall"
-                            ("Parameter " ^ id ^ " appears twice")
-                        else
-                            Hashtbl.add argtbl id e;
-                )
-                ar;
-            []
-      | (None   , e)::tl -> e::(extract_positional_parameters tl)
-  in
-
-  (**
-   * Step 2 : merge this list with the function specification, in order to
-   * name the (formerly) positional parameters.
-   * For the remaining parameters :
-   *   - try to fetch them from the argtbl hashtable
-   *   - try to assign their default value
-   *
-   * /!\ Side-effects : this function references the argtbl variable.
-   *)
-  let rec merge_with_specification (pos_list : Ast.expression list)
-                                   (spec     : Ast.param      list)
-      :Ast.argument list =
-          match pos_list, spec with
-            |  [],_  -> (* end of positional parameters *)
-                        List.map (function x ->
-                          ( x.Ast.formal_name
-                          , x.Ast.param_type
-                          , (
-                                 try Hashtbl.find argtbl x.Ast.formal_name
-                                 with Not_found -> begin
-                                     match x.Ast.default_value with
-                                       | Some value -> value
-                                       | None ->
-                                      Npkcontext.report_error
-                                      "firstpass.fcall"
-                                      ( "No value provided for "
-                                      ^ "parameter " ^ x.Ast.formal_name
-                                      ^ ", which has no default one.")
-                                 end
-                             )))
-                             spec
-            | (ev,t)::pt,s::st -> let t' = T.coerce_types t s.Ast.param_type in
-                                  (s.Ast.formal_name, s.Ast.param_type, (ev,t'))
-                                  ::(merge_with_specification pt st)
-            | _::_,[]     -> Npkcontext.report_error "Firstpass.function_call"
-                            "Too many actual arguments in function call"
-  in
-      (* Step 1... *)
-      let pos      = extract_positional_parameters args in
-      (* Step 2... *)
-      let eff_args = merge_with_specification pos spec in
-      eff_args
 
 let insert_constant ?t s =
   match s with
@@ -433,18 +336,116 @@ let rec normalize_exp ?expected_type exp =
           "Array aggregate found without direct lvalue"
 
 (**
+ * Compute the actual argument list for a subprogram call.
+ * Given an (optionnaly named)-argument list and a function specification
+ * (describing formal parameters' name, default values, etc.)
+ *
+ * Algorithm :
+ *   - first, the positional arguments are extracted and put in the
+ *     beginning of the to-be-translated parameter list.
+ *   - then, the remaining (named) arguments are put in their right place,
+ *     according to the specification of the subprogram.
+ *   - finally, the missing named parameters are replaced with their
+ *     default values, if provided.
+ *
+ * An error may occur in one of the following cases :
+ *   - A positional parameter follows a named parameter.
+ *   - A parameter without default value is not given an actual value.
+ *   - A named parameter is specified more than once.
+ *
+ * @param args the name => value association list
+ * @param spec the function specification (holding default values, etc)
+ * @return a list of expressions which are the actual parameters.
+ *)
+and make_arg_list args spec =
+  let argtbl = Hashtbl.create 5 in
+
+  (**
+   * Step 1 : extract positional parameters. Named parameters go into the
+   * argtbl hashtable.
+   *
+   * Non-leading positional parameters, if any, remain in the "positional"
+   * list and will lead to errors.
+   *
+   * /!\ Side-effects : this function references the argtbl variable.
+   *)
+  let rec extract_positional_parameters ar =
+    match ar with
+      |             []   -> []
+      | (Some  _, _)::_  ->
+        (* don't stop at first named argument : populate argtbl *)
+            List.iter
+                (function
+                   | None   , _ -> Npkcontext.report_error "normalize.fcall"
+                             "Named parameters shall follow positional ones"
+                   | Some id, e ->
+                        if (Hashtbl.mem argtbl id) then
+                            Npkcontext.report_error "normalize.fcall"
+                            ("Parameter " ^ id ^ " appears twice")
+                        else
+                            Hashtbl.add argtbl id e;
+                )
+                ar;
+            []
+      | (None   , e)::tl -> e::(extract_positional_parameters tl)
+  in
+
+  let make_arg_copy arg exp = match (arg.mode, fst exp) with
+  | In , _          -> None
+  | _  , Ast.Lval l -> Some (l , arg.formal_name)
+  | _ -> Npkcontext.report_error "make_arg_copy"
+                ( "Actual parameter with \"out\" or \"in out\" mode "
+                ^ "must be a left-value")
+  in
+
+  (**
+   * Step 2 : merge this list with the function specification, in order to
+   * name the (formerly) positional parameters.
+   * For the remaining parameters :
+   *   - try to fetch them from the argtbl hashtable
+   *   - try to assign their default value
+   *
+   * /!\ Side-effects : this function references the argtbl variable.
+   *)
+  let rec merge_with_specification (pos_list : Ast.expression list)
+                                   (spec     :     param      list)
+      :Ast.argument list =
+          match pos_list, spec with
+            |  [],_  -> (* end of positional parameters *)
+                        List.map (function x ->
+                          let value = 
+                            ( try Hashtbl.find argtbl x.formal_name
+                              with Not_found ->
+                                match x.default_value with
+                                  | Some value -> normalize_exp value
+                                  | None -> Npkcontext.report_error
+                                              "normalize.fcall"
+                                            ( "No value provided for "
+                                            ^ "parameter " ^ x.formal_name
+                                            ^ ", which has no default one.")
+                            ) in
+                          ( subtyp_to_adatyp x.param_type
+                          , value
+                          , make_arg_copy x value
+                          )) spec
+            | (ev,_)::pt,s::st -> let t = subtyp_to_adatyp s.param_type in
+                                  (t, (ev,t), make_arg_copy s (ev,t))
+                                  ::(merge_with_specification pt st)
+            | _::_,[]     -> Npkcontext.report_error "normalize.function_call"
+                            "Too many actual arguments in function call"
+  in
+      (* Step 1... *)
+      let pos      = extract_positional_parameters args in
+      (* Step 2... *)
+      let eff_args = merge_with_specification pos spec in
+      eff_args
+
+(**
  * Normalize an actual argument.
  * The identifier does not have to be normalized (it is just a plain string),
  * but normalize the expression.
  *)
 and normalize_arg (id,e) = id,normalize_exp e
-
-and normalize_param param =
-  { Ast.param_type    = subtyp_to_adatyp param.param_type
-  ; Ast.formal_name   = param.formal_name
-  ; Ast.mode          = param.mode
-  ; Ast.default_value = may normalize_exp param.default_value
-  }
 
 and normalize_binop bop e1 e2 =
   let direct_op_trans =
@@ -548,8 +549,7 @@ and normalize_fcall (n, params) =
     | Some top -> top
     in
     let norm_args = List.map normalize_arg params in
-    let norm_spec = List.map normalize_param spec in
-    let effective_args = make_arg_list norm_args norm_spec in
+    let effective_args = make_arg_list norm_args spec in
     Ast.FunctionCall(sc, act_name, effective_args, t),t
   with Not_found ->
     begin
@@ -728,7 +728,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
                                           ~ro:(param.mode = In)
               ;
            end;
-           normalize_param param
+           { Ast.formal_name = param.formal_name
+           ; Ast.param_type  = subtyp_to_adatyp param.param_type
+           }
         )
         param_list
     in
@@ -908,9 +910,8 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let n = mangle_sname n in
       let (sc,(act_name,spec,_)) = Sym.find_subprogram gtbl n in
       let norm_args = List.map normalize_arg params in
-      let norm_spec = List.map normalize_param spec in
-      let effective_args = make_arg_list norm_args norm_spec in
-       [Ast.ProcedureCall( sc, act_name, effective_args), loc]
+      let effective_args = make_arg_list norm_args spec in
+      [Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)
   | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
