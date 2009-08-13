@@ -54,7 +54,7 @@ let compile(fname:string):Npkil.t =
         print_newline ();
       end;
       Npkcontext.forget_loc ();
-      let norm_tree = Normalize.normalization ast false in
+      let norm_tree = Normalize.normalization ast in
       log_progress (Translate fname);
       Npkcontext.print_debug "Translating to CIR...";
       let prog = Firstpass.translate norm_tree in

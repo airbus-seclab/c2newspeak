@@ -26,6 +26,4 @@
   Syntax_ada.subtyp_indication ->  Syntax_ada.subtyp_indication
 *)
 
-val normalization :
-  Syntax_ada.compilation_unit -> bool ->
-         Ast.compilation_unit
+val normalization : Syntax_ada.compilation_unit -> Ast.compilation_unit

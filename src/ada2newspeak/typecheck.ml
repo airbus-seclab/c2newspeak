@@ -26,9 +26,7 @@ open Ast
 
 module T = Ada_types
 
-let tc_verb = Ada_utils.Error
-
-let error = Ada_utils.mkerror tc_verb "Typecheck"
+let error = Npkcontext.report_error "Typecheck"
 
 let expect ?desc t1 t2 =
   if (T.is_unknown t1 || T.is_unknown t2) then

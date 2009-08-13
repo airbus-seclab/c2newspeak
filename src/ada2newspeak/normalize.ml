@@ -37,7 +37,21 @@ let (%+) = Nat.add
 let (%-) = Nat.sub
 
 let gtbl = Sym.create ()
-let g_extern = ref false
+
+(* Name-related functions *)
+
+let name_of_sp_spec = function
+  | Function (x,_,_)
+  | Procedure (x,_)  -> x
+
+let name_of_synt_spec = function
+  | SubProgramSpec sps -> name_of_sp_spec sps
+  | PackageSpec (x,_) -> x
+
+let compilation_unit_name = function
+  | (_, Spec s,_) -> name_of_synt_spec s
+  | (_, Body (SubProgramBody (s,_,_)),_) -> name_of_sp_spec s
+  | (_, Body (PackageBody (n,_,_)),_)    -> n
 
 let mangle_sname = function
   | []       -> failwith "unreachable @ normalize:mangle_sname"
@@ -195,7 +209,6 @@ let check_package_body_against_spec ~body ~spec =
           ^ name_of_spec sp ^ "\"")
       end
   ) speclist
-
 
 (**
  * Compute the actual argument list for a subprogram call.
@@ -359,14 +372,10 @@ let parse_package_specification name =
 
 let rec normalize_exp ?expected_type exp =
   match exp with
-    | CInt   x -> Ast.CInt   x,
-                    (match expected_type with
-                     | Some t -> t
-                     | None ->
-(*                       Npkcontext.report_warning "normalize_exp"
-                             "Typing constant as universal_integer"; *)
-                         T.universal_integer
-                     )
+    | CInt   x -> Ast.CInt   x, (match expected_type with
+                                | Some t -> t
+                                | None -> T.universal_integer
+                                )
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CChar  x -> Ast.CChar  x,T.character
     | Lval(ParExp(n, params)) -> normalize_fcall (n, params)
@@ -686,7 +695,7 @@ and add_representation_clause id aggr loc =
 and parse_extern_specification name =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
-  let norm_spec = (normalization spec_ast true) in
+  let norm_spec = (normalization spec_ast) in
   Npkcontext.print_debug "Done parsing extern specification file";
   match norm_spec with
     | (_, Ast.Spec(spec), loc) -> (spec, loc)
@@ -695,10 +704,9 @@ and parse_extern_specification name =
           "internal error : specification expected, body found"
 
 and normalize_ident_cur ident =
-  match (!g_extern, Sym.current gtbl) with
-  | true, Some x -> [x;ident]
-  | true, None   -> [ident]
-  | false, _     -> [ident]
+  match (Sym.current gtbl) with
+  | Some x -> [x;ident]
+  | None   -> [ident]
 
 and normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
@@ -743,509 +751,479 @@ and normalize_sub_program_spec subprog_spec ~addparam =
               Ast.Procedure(norm_name,
                         normalize_params param_list false)
 
-  and normalize_basic_decl item loc =
-    match item with
-    | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
-                             []
-    | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
-        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
-        let t = merge_types norm_subtyp_ind in
-        List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+and normalize_basic_decl item loc =
+  match item with
+  | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
+                           []
+  | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
+      let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+      let t = merge_types norm_subtyp_ind in
+      List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+      List.map (fun ident ->
+        Ast.ObjectDecl( ident
+                      , t
+                      , Ast.Variable
+                      , build_init_stmt (ident, def, loc)
+                      )
+      ) ident_list
+  | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
+      let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+      let t = merge_types norm_subtyp_ind in
+      let status = begin
+        match exp with
+        | Aggregate _ ->
+            List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+            Ast.Constant
+        | _ ->
+          try
+            let normexp = normalize_exp ~expected_type:t exp in
+            let value = Eval.eval_static normexp gtbl in
+              List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
+                        ident_list;
+              Ast.StaticVal value
+          with
+            | Eval.NonStaticExpression -> List.iter
+                                      (fun x -> Sym.add_variable gtbl x loc t
+                                      ) ident_list;
+                                      Ast.Constant
+      end
+      in
         List.map (fun ident ->
           Ast.ObjectDecl( ident
                         , t
-                        , Ast.Variable
-                        , build_init_stmt (ident, def, loc)
+                        , status
+                        , build_init_stmt (ident, Some exp, loc)
                         )
         ) ident_list
-    | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
-        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
-        let t = merge_types norm_subtyp_ind in
-        let status = begin
-          match exp with
-          | Aggregate _ ->
-              List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
-              Ast.Constant
-          | _ ->
-            try
-              let normexp = normalize_exp ~expected_type:t exp in
-              let value = Eval.eval_static normexp gtbl in
-                List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
-                          ident_list;
-                Ast.StaticVal value
-            with
-              | Eval.NonStaticExpression -> List.iter
-                                        (fun x -> Sym.add_variable gtbl x loc t
-                                        ) ident_list;
-                                        Ast.Constant
-        end
-        in
-          List.map (fun ident ->
-            Ast.ObjectDecl( ident
-                          , t
-                          , status
-                          , build_init_stmt (ident, Some exp, loc)
-                          )
-          ) ident_list
-    | ObjectDecl _ -> Npkcontext.report_error
-                     "Ada_normalize.normalize_basic_decl"
-                     ( "internal error : constant without default value"
-                     ^ "or already evaluated")
-    | TypeDecl(id,typ_decl) ->
-        normalize_typ_decl id typ_decl loc;
-        []
-    | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
-    | NumberDecl(ident, exp) ->
-       let value = Eval.eval_static_number (normalize_exp exp) gtbl in
-       add_numberdecl ident value loc;
-       [Ast.NumberDecl(ident, value)]
-    | SubtypDecl(ident, subtyp_ind) ->
-        let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
-        Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
-        []
-    | RenamingDecl (n, o) -> let o' = mangle_sname o in
-                             Sym.add_renaming_decl gtbl n o';
-                             []
-    | RepresentClause (id, EnumRepClause aggr) ->
-        add_representation_clause id aggr loc;[]
-    | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
-                                ("Ignoring representation clause for '" ^ id ^ "'");
-                                []
-    | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
-                                        ("ignoring generic instanciation of '"
-                                        ^ name_to_string n ^ "'");
-                                      []
+  | ObjectDecl _ -> Npkcontext.report_error
+                   "Ada_normalize.normalize_basic_decl"
+                   ( "internal error : constant without default value"
+                   ^ "or already evaluated")
+  | TypeDecl(id,typ_decl) ->
+      normalize_typ_decl id typ_decl loc;
+      []
+  | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
+  | NumberDecl(ident, exp) ->
+     let value = Eval.eval_static_number (normalize_exp exp) gtbl in
+     add_numberdecl ident value loc;
+     [Ast.NumberDecl(ident, value)]
+  | SubtypDecl(ident, subtyp_ind) ->
+      let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+      Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
+      []
+  | RenamingDecl (n, o) -> let o' = mangle_sname o in
+                           Sym.add_renaming_decl gtbl n o';
+                           []
+  | RepresentClause (id, EnumRepClause aggr) ->
+      add_representation_clause id aggr loc;[]
+  | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
+                              ("Ignoring representation clause for '" ^ id ^ "'");
+                              []
+  | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
+                                      ("ignoring generic instanciation of '"
+                                      ^ name_to_string n ^ "'");
+                                    []
 
 
-  and normalize_package_spec (name, list_decl) =
-    Sym.set_current gtbl name;
-    Sym.enter_context ~name ~desc:"Package spec" gtbl;
-    let rec normalize_decls decls =
-      List.flatten (List.map (fun (decl, loc) ->
-                  Npkcontext.set_loc loc;
-                  List.map (fun x -> (x,loc))
-                         (normalize_basic_decl decl loc)
-               ) decls) in
-    let norm_spec = normalize_decls list_decl in
-    Sym.reset_current gtbl;
-    Sym.exit_context gtbl;
-    (name, norm_spec)
+and normalize_package_spec (name, list_decl) =
+  Sym.set_current gtbl name;
+  Sym.enter_context ~name ~desc:"Package spec" gtbl;
+  let rec normalize_decls decls =
+    List.flatten (List.map (fun (decl, loc) ->
+                Npkcontext.set_loc loc;
+                List.map (fun x -> (x,loc))
+                       (normalize_basic_decl decl loc)
+             ) decls) in
+  let norm_spec = normalize_decls list_decl in
+  Sym.reset_current gtbl;
+  Sym.exit_context gtbl;
+  (name, norm_spec)
 
-  and normalize_spec spec = match spec with
-    | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
-          normalize_sub_program_spec subprogr_spec ~addparam:false)
-    | PackageSpec(package_spec) ->
-        Ast.PackageSpec(normalize_package_spec package_spec)
+and normalize_spec spec = match spec with
+  | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
+        normalize_sub_program_spec subprogr_spec ~addparam:false)
+  | PackageSpec(package_spec) ->
+      Ast.PackageSpec(normalize_package_spec package_spec)
 
-  and normalize_lval ?(force = false) ?expected_type = function
-    | (Var _ | SName _) as lv ->
-        (* Only in write contexts *)
-        begin match resolve_selected ?expected_type lv with
-        | SelectedVar    (sc, id,  t, ro) ->
-            if (ro && not force) then
-            Npkcontext.report_error "normalize_instr"
-               ("Invalid left value : '" ^ id ^ "' is read-only");
-            Ast.Var  (sc, id, t), t
-        | SelectedRecord (lv, off, tf) ->
-            Ast.RecordAccess (lv, off, tf), tf
-        | SelectedFCall _
-        | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
-                               ("Invalid left-value")
-        end
-    | ParExp (lv, e) ->
-        let (lv',tlv) = normalize_lval lv in
-        let (tc,_ti) = T.extract_array_types tlv in
-        Ast.ArrayAccess(lv' , List.map (fun x -> normalize_exp (snd x)) e), tc
-    | PtrDeref lv ->
-        begin
-          let (nlv, tlv) = normalize_lval lv in
-          let te = T.extract_access_type tlv in
-          Ast.PtrDeref (nlv, tlv), te
-        end
-
-  and build_init_stmt (x,exp,loc) =
-    match exp with
-    | None -> None
-    | Some def ->
-        Some (normalize_block ~force_lval:true [Assign(Var x, def), loc])
-
-  (**
-   * The optional parameter return_type helps disambiguate return_statements :
-   * while translating a block in a function, it is set to this function's
-   * return type.
-   * When translating other blocks, it shall be set to None.
-   *)
-  and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
-    Npkcontext.set_loc loc;
-    match instr with
-    | NullInstr    -> []
-    | ReturnSimple -> [Ast.ReturnSimple, loc]
-    | Assign(lv, Aggregate (NamedAggregate bare_assoc_list)) ->
+and normalize_lval ?(force = false) ?expected_type = function
+  | (Var _ | SName _) as lv ->
+      (* Only in write contexts *)
+      begin match resolve_selected ?expected_type lv with
+      | SelectedVar    (sc, id,  t, ro) ->
+          if (ro && not force) then
+          Npkcontext.report_error "normalize_instr"
+             ("Invalid left value : '" ^ id ^ "' is read-only");
+          Ast.Var  (sc, id, t), t
+      | SelectedRecord (lv, off, tf) ->
+          Ast.RecordAccess (lv, off, tf), tf
+      | SelectedFCall _
+      | SelectedConst _ -> Npkcontext.report_error "normalize_lval"
+                             ("Invalid left-value")
+      end
+  | ParExp (lv, e) ->
+      let (lv',tlv) = normalize_lval lv in
+      let (tc,_ti) = T.extract_array_types tlv in
+      Ast.ArrayAccess(lv' , List.map (fun x -> normalize_exp (snd x)) e), tc
+  | PtrDeref lv ->
+      begin
         let (nlv, tlv) = normalize_lval lv in
-        normalize_assign_aggregate nlv tlv bare_assoc_list loc
-    | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
-        let (lv', t_lv) = normalize_lval lv in
-        let ti = match T.extract_array_types t_lv with
-        | (_, [i]) -> i
-        | _ -> Npkcontext.report_error "normalize_instr" "unexpected matrix type"
-        in
-        let all_values  = T.all_values ti in
-        List.map2 (fun type_val exp ->
-          let k = insert_constant (T.IntVal type_val) in
-          let v = normalize_exp exp in
-          Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc
-        ) all_values exp_list
-    | LvalInstr(ParExp(lv, params)) ->
-        let n = make_name_of_lval lv in
-        let n = mangle_sname n in
-        let (sc,(act_name,spec,_)) = Sym.find_subprogram gtbl n in
-        let norm_args = List.map normalize_arg params in
-        let norm_spec = List.map normalize_param spec in
-        let effective_args = make_arg_list norm_args norm_spec in
-         [Ast.ProcedureCall( sc, act_name, effective_args), loc]
-    | LvalInstr((Var _|SName (Var _,_)) as lv) ->
-        normalize_instr (LvalInstr (ParExp(lv, [])),loc)
-    | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
-                       "Statement looks like a procedure call but is not one"
-    | Assign(lv, exp) ->
-        begin
-          let (lv', t_lv) = normalize_lval ~force:force_lval lv in
-          let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
-          if (not (T.is_compatible t_lv t_exp)) then
-            begin
-              Npkcontext.print_debug ("LV = " ^ T.print t_lv);
-              Npkcontext.print_debug ("EX = " ^ T.print t_exp);
-              Npkcontext.report_error "normalize_instr"
-                "Incompatible types in assignment";
-            end;
-          [Ast.Assign( lv'
-                     , (e',t_exp)
-                     ), loc]
-        end
-    | Return(exp) -> [Ast.Return(normalize_exp ?expected_type:return_type
-                                 exp), loc]
-    | If(exp, instr_then, instr_else) ->
-        [Ast.If( normalize_exp ~expected_type:T.boolean exp
-               , normalize_block ?return_type instr_then
-               , normalize_block ?return_type instr_else), loc]
-    | Loop(NoScheme,instrs) -> [Ast.Loop(Ast.NoScheme,
-                                  normalize_block ?return_type instrs),loc]
-    | Loop(While(exp), instrs) -> [Ast.Loop(Ast.While(normalize_exp exp),
-                     normalize_block ?return_type instrs), loc]
-    | Loop(For(iter, range, is_rev), block) ->
-      let (exp1, exp2) = match range with
-        | DirectRange (min, max) -> (min, max)
-        | ArrayRange n -> begin
-                            let n = make_name_of_lval n in
-                            let n = mangle_sname n in
-                            let (_,(_,t,_)) = Sym.find_variable gtbl n in
-                            ( fst (T.attr_get t "first")
-                            , fst (T.attr_get t "last"))
-                          end
-        | SubtypeRange lv -> begin
-                               let st = make_name_of_lval lv in
-                               let t = subtyp_to_adatyp st in
-                                 ( fst (T.attr_get t "first")
-                                 , fst (T.attr_get t "last"))
-                             end
-      in
-      let dp = [BasicDecl (ObjectDecl ( [iter]
-                           , ( ["standard";"integer"]
-                             , None
-                             )
-                           , Some (if is_rev then exp2 else exp1)
-                           , Constant
-                           )
-                    )
-            , loc]
-      in
-      Sym.enter_context gtbl;
-      let ndp = normalize_decl_part dp in
-      let nblock = normalize_block ?return_type block in
-      let loop =
-        [Ast.Loop
-            ( Ast.While
-              ( normalize_exp (if is_rev then Binary(Ge,Lval(Var iter),exp1)
-                                         else Binary(Le,Lval(Var iter),exp2))
-                               )
-               , nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
-                                      , normalize_exp( Binary((if is_rev
-                                                                 then Minus
-                                                                 else Plus)
-                                                     , Lval(Var iter)
-                                                     , CInt (Nat.one)))
-                                      )
-                        , loc]
-            )
-            , loc]
-      in
-      Sym.exit_context gtbl;
-      [Ast.Block (ndp, loop), loc]
-    | Exit -> [Ast.Exit, loc]
-    | Case (e, choices, default) ->
-              [Ast.Case (normalize_exp e,
-                    List.map (fun (e,block) ->
-                                normalize_exp e,
-                                normalize_block ?return_type block)
-                        choices,
-                    Ada_utils.may (fun x -> normalize_block ?return_type x)
-                                  default
-                    ),loc]
-    | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
-                        let ndp = normalize_decl_part dp in
-                        let norm_block = normalize_block ?return_type blk in
-                        Sym.exit_context gtbl;
-                        [Ast.Block (ndp, norm_block), loc]
+        let te = T.extract_access_type tlv in
+        Ast.PtrDeref (nlv, tlv), te
+      end
 
-  and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
-    let array_case _ =
-      let module NatSet = Set.Make (Newspeak.Nat) in
-      (*
-       * From bare_assoc_list : (selector * exp) list
-       * we want to build some assoc_list : (exp * exp) list * exp option.
-       * In this step we can check that :
-       *   - there is at most one others clause.
-       *   - if present, it is the last one.
-       *)
-      let (assoc_list, others_opt) =
-        let compute_val x =
-          let x' = normalize_exp x in
-          match (Eval.eval_static x' gtbl) with
-          | T.IntVal x -> x
-          | _ -> Npkcontext.report_error "normalize"
-                  ( "Within an aggregate, selectors"
-                  ^ "should evaluate as integers")
-        in
-        List.fold_left (fun (kvl, others_exp) (selector, value) ->
-          let rec handle = function
-          | AggrExp e ->
-              begin
-                if others_exp <> None then
-                  Npkcontext.report_error "normalize"
-                  "In an aggregate, \"others\" shall be the last clause";
-                let e' = compute_val e in
-                ((e', value)::kvl, None)
-              end
-          | AggrRange (e1, e2) ->
-              begin
-                if others_exp <> None then
-                  Npkcontext.report_error "normalize"
-                  "In an aggregate, \"others\" shall be the last clause";
-                let e1' = compute_val e1 in
-                let e2' = compute_val e2 in
-                let rec interval a b =
-                  if (Newspeak.Nat.compare b a < 0) then []
-                  else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
-                in
-                (interval e1' e2') @ kvl, None
-              end
-          | AggrOthers ->
-              begin
-                if others_exp <> None then
-                  Npkcontext.report_error "normalize"
-                  "In an aggregate, there shall be only one \"others\" clause";
-                (kvl, Some value)
-              end
-          | AggrField f -> handle (AggrExp (Lval(Var f)))
-          in handle selector
-        ) ([],None) bare_assoc_list
-      in
-      (*
-       * Now, using lv's type, we can :
-       *   - compute missing elements
-       *   - replace 'others' with them
-       *)
-      let ti = match T.extract_array_types t_lv with
-      | (_, [i]) -> i
-      | _ -> Npkcontext.report_error "aggregate"
-               "Unexpected matrix type"
-      in
-      let other_list = match others_opt with
-        | None         -> []
-        | Some oth_exp ->
-            begin
-              let all_values  = T.all_values ti in
-              let mk_set l =
-                List.fold_left (fun x y -> NatSet.add y x)
-                               NatSet.empty l
-              in
-              let all_values_set = mk_set all_values in
-              let defined_values_set =
-                mk_set (List.map fst assoc_list)
-              in
-              let missing_others =
-                NatSet.elements (NatSet.diff all_values_set
-                                             defined_values_set)
-              in
-              List.rev_map (function x -> (CInt x, oth_exp)) missing_others
-            end
-      in
-      let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
-      List.rev_map (fun (aggr_k, aggr_v) ->
-        (* id[aggr_k] <- aggr_v *)
-        let key   = normalize_exp aggr_k in
-        let value = normalize_exp aggr_v in
-        Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
-      ) (other_list @ assoc_list')
-      (* end of array_case *)
-    in
-    let record_case _ =
-      let module FieldSet = Set.Make (String) in
-      (* (selector*exp) list --> (string*exp) list*exp option *)
-      let (assoc_list,other) = List.fold_left
-        (fun (fvl,others_opt) (selector, value) ->
-        match selector with
-        | AggrField  f -> begin
-                            if (others_opt) <> None then
-                              Npkcontext.report_error "normalize:aggregate"
-                                "'others' clause should be the last one";
-                            (f, value)::fvl,others_opt
-                          end
-        | AggrOthers   -> begin
-                            if (others_opt) <> None then
-                              Npkcontext.report_error "normalize:aggregate"
-                              "There shall be only one 'others' clause";
-                            fvl,Some value
-                          end
-        | _ -> Npkcontext.report_error "normalize:aggregate"
-                 "Expected a field name in aggregate"
-      ) ([],None) bare_assoc_list in
-      let other_list = match other with
-        | None           -> []
-        | Some other_exp ->
-            begin
-              let flds = T.all_record_fields t_lv in
-              let mk_set l =
-                List.fold_left (fun x y -> FieldSet.add y x)
-                               FieldSet.empty l
-              in
-              let all_fields = mk_set flds in
-              let defined    = mk_set (List.map fst assoc_list) in
-              let missing_others =
-                FieldSet.elements (FieldSet.diff all_fields defined) in
-              List.map (fun f -> (f, other_exp)) missing_others
-            end
-      in
-      List.rev_map (fun (aggr_fld, aggr_val) ->
-        (* id.aggr_fld <- aggr_v *)
-        let (off, tf) = T.record_field t_lv aggr_fld in
-        let v = normalize_exp ~expected_type:tf aggr_val in
-        Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
-      ) (assoc_list @ other_list)
-      (* end of record_case *)
-    in
-      if      T.is_array  t_lv then array_case  ()
-      else if T.is_record t_lv then record_case ()
-      else Npkcontext.report_error "normalize_assign_aggregate"
-             "Expecting an array or a record as lvalue"
-
-  and normalize_block ?return_type ?(force_lval = false) block =
-    List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
-
-  and normalize_decl_part decl_part =
-    let normalize_decl_items items =
-      List.map (function
-        | BasicDecl(basic),loc ->
-            begin
-              Npkcontext.set_loc loc;
-                List.map (fun x -> Ast.BasicDecl x,loc)
-                     (normalize_basic_decl basic loc)
-            end
-        | BodyDecl(body),loc ->
-            Npkcontext.set_loc loc;
-            [Ast.BodyDecl(normalize_body body), loc]
-      ) items in
-    let ndp = List.flatten(normalize_decl_items decl_part) in
-    List.iter (function
-      | Ast.BasicDecl(Ast.SpecDecl (Ast.SubProgramSpec _) as sp),loc ->
-            begin Npkcontext.set_loc loc;
-              if not (find_body_for_spec ~specification:sp
-                                          ~bodylist:(List.map fst ndp)) then
-                   Npkcontext.report_error "normalize_decl_part"
-                                           ( "Declaration of \""
-                                           ^ (name_of_spec sp)
-                                           ^ "\" requires completion")
-              end
-      | _ -> ()
-    ) ndp;
-    ndp
-
-  and normalize_body body  = match body with
-    | SubProgramBody(subprog_decl,decl_part,block) ->
-        let norm_subprog_decl =
-          normalize_sub_program_spec subprog_decl ~addparam:true in
-        Sym.enter_context ~desc:"SP body (locals)" gtbl;
-        let return_type = return_type_of norm_subprog_decl in
-        let norm_decl_part = normalize_decl_part decl_part in
-        let norm_block = normalize_block ?return_type block in
-        Sym.exit_context gtbl;
-        Sym.exit_context gtbl; (* params *)
-        Ast.SubProgramBody( norm_subprog_decl
-                          , norm_decl_part
-                          , norm_block)
-    | PackageBody(name, package_spec, decl_part) ->
-        let (nname,nspec) = normalize_package_spec
-                                (with_default package_spec
-                                    (parse_package_specification name)
-                                )
-        in
-          Sym.set_current gtbl name;
-          Sym.enter_context ~name ~desc:"Package body" gtbl;
-          let ndp = normalize_decl_part decl_part in
-          let norm_spec = (nname,nspec)
-          in
-          check_package_body_against_spec ~body:ndp ~spec:norm_spec;
-          Sym.reset_current gtbl;
-          Sym.exit_context gtbl;
-          Ast.PackageBody(name, Some norm_spec, ndp)
+and build_init_stmt (x,exp,loc) =
+  match exp with
+  | None -> None
+  | Some def ->
+      Some (normalize_block ~force_lval:true [Assign(Var x, def), loc])
 
 (**
- * Iterates through the abstract syntax tree, performing miscellaneous tasks.
- *   - match type identifiers to their declaration (or raise en error)
- *   - look for specs (.ads files)
- *   - transforms functions and type names to "package.ident" in their
- *     declarations.
- *
- * TODO document extern
+ * The optional parameter return_type helps disambiguate return_statements :
+ * while translating a block in a function, it is set to this function's
+ * return type.
+ * When translating other blocks, it shall be set to None.
  *)
-and normalization compil_unit extern =
-  let name_of_sp_spec = function
-    | Function (x,_,_)
-    | Procedure (x,_)  -> x
-  in
-  let name_of_synt_spec = function
-    | SubProgramSpec sps -> name_of_sp_spec sps
-    | PackageSpec (x,_) -> x
-  in
-  let cu_name = match compil_unit with
-  | (_, Spec s,_) -> name_of_synt_spec s
-  | (_, Body (SubProgramBody (s,_,_)),_) -> name_of_sp_spec s
-  | (_, Body (PackageBody (n,_,_)),_)    -> n
-  in
-  log_progress (Semcheck cu_name);
+and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
+  Npkcontext.set_loc loc;
+  match instr with
+  | NullInstr    -> []
+  | ReturnSimple -> [Ast.ReturnSimple, loc]
+  | Assign(lv, Aggregate (NamedAggregate bare_assoc_list)) ->
+      let (nlv, tlv) = normalize_lval lv in
+      normalize_assign_aggregate nlv tlv bare_assoc_list loc
+  | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
+      let (lv', t_lv) = normalize_lval lv in
+      let ti = match T.extract_array_types t_lv with
+      | (_, [i]) -> i
+      | _ -> Npkcontext.report_error "normalize_instr" "unexpected matrix type"
+      in
+      let all_values  = T.all_values ti in
+      List.map2 (fun type_val exp ->
+        let k = insert_constant (T.IntVal type_val) in
+        let v = normalize_exp exp in
+        Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc
+      ) all_values exp_list
+  | LvalInstr(ParExp(lv, params)) ->
+      let n = make_name_of_lval lv in
+      let n = mangle_sname n in
+      let (sc,(act_name,spec,_)) = Sym.find_subprogram gtbl n in
+      let norm_args = List.map normalize_arg params in
+      let norm_spec = List.map normalize_param spec in
+      let effective_args = make_arg_list norm_args norm_spec in
+       [Ast.ProcedureCall( sc, act_name, effective_args), loc]
+  | LvalInstr((Var _|SName (Var _,_)) as lv) ->
+      normalize_instr (LvalInstr (ParExp(lv, [])),loc)
+  | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
+                     "Statement looks like a procedure call but is not one"
+  | Assign(lv, exp) ->
+      begin
+        let (lv', t_lv) = normalize_lval ~force:force_lval lv in
+        let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
+        if (not (T.is_compatible t_lv t_exp)) then
+          begin
+            Npkcontext.print_debug ("LV = " ^ T.print t_lv);
+            Npkcontext.print_debug ("EX = " ^ T.print t_exp);
+            Npkcontext.report_error "normalize_instr"
+              "Incompatible types in assignment";
+          end;
+        [Ast.Assign( lv'
+                   , (e',t_exp)
+                   ), loc]
+      end
+  | Return(exp) -> [Ast.Return(normalize_exp ?expected_type:return_type
+                               exp), loc]
+  | If(exp, instr_then, instr_else) ->
+      [Ast.If( normalize_exp ~expected_type:T.boolean exp
+             , normalize_block ?return_type instr_then
+             , normalize_block ?return_type instr_else), loc]
+  | Loop(NoScheme,instrs) -> [Ast.Loop(Ast.NoScheme,
+                                normalize_block ?return_type instrs),loc]
+  | Loop(While(exp), instrs) -> [Ast.Loop(Ast.While(normalize_exp exp),
+                   normalize_block ?return_type instrs), loc]
+  | Loop(For(iter, range, is_rev), block) ->
+    let (exp1, exp2) = match range with
+      | DirectRange (min, max) -> (min, max)
+      | ArrayRange n -> begin
+                          let n = make_name_of_lval n in
+                          let n = mangle_sname n in
+                          let (_,(_,t,_)) = Sym.find_variable gtbl n in
+                          ( fst (T.attr_get t "first")
+                          , fst (T.attr_get t "last"))
+                        end
+      | SubtypeRange lv -> begin
+                             let st = make_name_of_lval lv in
+                             let t = subtyp_to_adatyp st in
+                               ( fst (T.attr_get t "first")
+                               , fst (T.attr_get t "last"))
+                           end
+    in
+    let dp = [BasicDecl (ObjectDecl ( [iter]
+                         , ( ["standard";"integer"]
+                           , None
+                           )
+                         , Some (if is_rev then exp2 else exp1)
+                         , Constant
+                         )
+                  )
+          , loc]
+    in
+    Sym.enter_context gtbl;
+    let ndp = normalize_decl_part dp in
+    let nblock = normalize_block ?return_type block in
+    let loop =
+      [Ast.Loop
+          ( Ast.While
+            ( normalize_exp (if is_rev then Binary(Ge,Lval(Var iter),exp1)
+                                       else Binary(Le,Lval(Var iter),exp2))
+                             )
+             , nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
+                                    , normalize_exp( Binary((if is_rev
+                                                               then Minus
+                                                               else Plus)
+                                                   , Lval(Var iter)
+                                                   , CInt (Nat.one)))
+                                    )
+                      , loc]
+          )
+          , loc]
+    in
+    Sym.exit_context gtbl;
+    [Ast.Block (ndp, loop), loc]
+  | Exit -> [Ast.Exit, loc]
+  | Case (e, choices, default) ->
+            [Ast.Case (normalize_exp e,
+                  List.map (fun (e,block) ->
+                              normalize_exp e,
+                              normalize_block ?return_type block)
+                      choices,
+                  Ada_utils.may (fun x -> normalize_block ?return_type x)
+                                default
+                  ),loc]
+  | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
+                      let ndp = normalize_decl_part dp in
+                      let norm_block = normalize_block ?return_type blk in
+                      Sym.exit_context gtbl;
+                      [Ast.Block (ndp, norm_block), loc]
 
-  g_extern := extern;
+and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
+  let array_case _ =
+    let module NatSet = Set.Make (Newspeak.Nat) in
+    (*
+     * From bare_assoc_list : (selector * exp) list
+     * we want to build some assoc_list : (exp * exp) list * exp option.
+     * In this step we can check that :
+     *   - there is at most one others clause.
+     *   - if present, it is the last one.
+     *)
+    let (assoc_list, others_opt) =
+      let compute_val x =
+        let x' = normalize_exp x in
+        match (Eval.eval_static x' gtbl) with
+        | T.IntVal x -> x
+        | _ -> Npkcontext.report_error "normalize"
+                ( "Within an aggregate, selectors"
+                ^ "should evaluate as integers")
+      in
+      List.fold_left (fun (kvl, others_exp) (selector, value) ->
+        let rec handle = function
+        | AggrExp e ->
+            begin
+              if others_exp <> None then
+                Npkcontext.report_error "normalize"
+                "In an aggregate, \"others\" shall be the last clause";
+              let e' = compute_val e in
+              ((e', value)::kvl, None)
+            end
+        | AggrRange (e1, e2) ->
+            begin
+              if others_exp <> None then
+                Npkcontext.report_error "normalize"
+                "In an aggregate, \"others\" shall be the last clause";
+              let e1' = compute_val e1 in
+              let e2' = compute_val e2 in
+              let rec interval a b =
+                if (Newspeak.Nat.compare b a < 0) then []
+                else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+              in
+              (interval e1' e2') @ kvl, None
+            end
+        | AggrOthers ->
+            begin
+              if others_exp <> None then
+                Npkcontext.report_error "normalize"
+                "In an aggregate, there shall be only one \"others\" clause";
+              (kvl, Some value)
+            end
+        | AggrField f -> handle (AggrExp (Lval(Var f)))
+        in handle selector
+      ) ([],None) bare_assoc_list
+    in
+    (*
+     * Now, using lv's type, we can :
+     *   - compute missing elements
+     *   - replace 'others' with them
+     *)
+    let ti = match T.extract_array_types t_lv with
+    | (_, [i]) -> i
+    | _ -> Npkcontext.report_error "aggregate"
+             "Unexpected matrix type"
+    in
+    let other_list = match others_opt with
+      | None         -> []
+      | Some oth_exp ->
+          begin
+            let all_values  = T.all_values ti in
+            let mk_set l =
+              List.fold_left (fun x y -> NatSet.add y x)
+                             NatSet.empty l
+            in
+            let all_values_set = mk_set all_values in
+            let defined_values_set =
+              mk_set (List.map fst assoc_list)
+            in
+            let missing_others =
+              NatSet.elements (NatSet.diff all_values_set
+                                           defined_values_set)
+            in
+            List.rev_map (function x -> (CInt x, oth_exp)) missing_others
+          end
+    in
+    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
+    List.rev_map (fun (aggr_k, aggr_v) ->
+      (* id[aggr_k] <- aggr_v *)
+      let key   = normalize_exp aggr_k in
+      let value = normalize_exp aggr_v in
+      Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
+    ) (other_list @ assoc_list')
+    (* end of array_case *)
+  in
+  let record_case _ =
+    let module FieldSet = Set.Make (String) in
+    (* (selector*exp) list --> (string*exp) list*exp option *)
+    let (assoc_list,other) = List.fold_left
+      (fun (fvl,others_opt) (selector, value) ->
+      match selector with
+      | AggrField  f -> begin
+                          if (others_opt) <> None then
+                            Npkcontext.report_error "normalize:aggregate"
+                              "'others' clause should be the last one";
+                          (f, value)::fvl,others_opt
+                        end
+      | AggrOthers   -> begin
+                          if (others_opt) <> None then
+                            Npkcontext.report_error "normalize:aggregate"
+                            "There shall be only one 'others' clause";
+                          fvl,Some value
+                        end
+      | _ -> Npkcontext.report_error "normalize:aggregate"
+               "Expected a field name in aggregate"
+    ) ([],None) bare_assoc_list in
+    let other_list = match other with
+      | None           -> []
+      | Some other_exp ->
+          begin
+            let flds = T.all_record_fields t_lv in
+            let mk_set l =
+              List.fold_left (fun x y -> FieldSet.add y x)
+                             FieldSet.empty l
+            in
+            let all_fields = mk_set flds in
+            let defined    = mk_set (List.map fst assoc_list) in
+            let missing_others =
+              FieldSet.elements (FieldSet.diff all_fields defined) in
+            List.map (fun f -> (f, other_exp)) missing_others
+          end
+    in
+    List.rev_map (fun (aggr_fld, aggr_val) ->
+      (* id.aggr_fld <- aggr_v *)
+      let (off, tf) = T.record_field t_lv aggr_fld in
+      let v = normalize_exp ~expected_type:tf aggr_val in
+      Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
+    ) (assoc_list @ other_list)
+    (* end of record_case *)
+  in
+    if      T.is_array  t_lv then array_case  ()
+    else if T.is_record t_lv then record_case ()
+    else Npkcontext.report_error "normalize_assign_aggregate"
+           "Expecting an array or a record as lvalue"
 
-  let normalize_lib_item lib_item loc =
+and normalize_block ?return_type ?(force_lval = false) block =
+  List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
+
+and normalize_decl_part decl_part =
+  let normalize_decl_items items =
+    List.map (function
+      | BasicDecl(basic),loc ->
+          begin
+            Npkcontext.set_loc loc;
+              List.map (fun x -> Ast.BasicDecl x,loc)
+                   (normalize_basic_decl basic loc)
+          end
+      | BodyDecl(body),loc ->
+          Npkcontext.set_loc loc;
+          [Ast.BodyDecl(normalize_body body), loc]
+    ) items in
+  let ndp = List.flatten(normalize_decl_items decl_part) in
+  List.iter (function
+    | Ast.BasicDecl(Ast.SpecDecl (Ast.SubProgramSpec _) as sp),loc ->
+          begin Npkcontext.set_loc loc;
+            if not (find_body_for_spec ~specification:sp
+                                        ~bodylist:(List.map fst ndp)) then
+                 Npkcontext.report_error "normalize_decl_part"
+                                         ( "Declaration of \""
+                                         ^ (name_of_spec sp)
+                                         ^ "\" requires completion")
+            end
+    | _ -> ()
+  ) ndp;
+  ndp
+
+and normalize_body body  = match body with
+  | SubProgramBody(subprog_decl,decl_part,block) ->
+      let norm_subprog_decl =
+        normalize_sub_program_spec subprog_decl ~addparam:true in
+      Sym.enter_context ~desc:"SP body (locals)" gtbl;
+      let return_type = return_type_of norm_subprog_decl in
+      let norm_decl_part = normalize_decl_part decl_part in
+      let norm_block = normalize_block ?return_type block in
+      Sym.exit_context gtbl;
+      Sym.exit_context gtbl; (* params *)
+      Ast.SubProgramBody( norm_subprog_decl
+                        , norm_decl_part
+                        , norm_block)
+  | PackageBody(name, package_spec, decl_part) ->
+      let (nname,nspec) = normalize_package_spec
+                              (with_default package_spec
+                                  (parse_package_specification name)
+                              )
+      in
+        Sym.set_current gtbl name;
+        Sym.enter_context ~name ~desc:"Package body" gtbl;
+        let ndp = normalize_decl_part decl_part in
+        let norm_spec = (nname,nspec)
+        in
+        check_package_body_against_spec ~body:ndp ~spec:norm_spec;
+        Sym.reset_current gtbl;
+        Sym.exit_context gtbl;
+        Ast.PackageBody(name, Some norm_spec, ndp)
+
+and normalize_lib_item lib_item loc =
+  Npkcontext.set_loc loc;
+  match lib_item with
+    | Spec(spec) -> Ast.Spec(normalize_spec spec)
+    | Body(body) -> Ast.Body(normalize_body body)
+
+and add_extern_spec spec =
+  let add_extern_basic_decl (basic_decl, loc) =
     Npkcontext.set_loc loc;
-    match lib_item with
-      | Spec(spec) -> Ast.Spec(normalize_spec spec)
-      | Body(body) -> Ast.Body(normalize_body body)
-
-  in
-
-  let add_extern_spec spec =
-    let add_extern_basic_decl (basic_decl, loc) =
-      Npkcontext.set_loc loc;
-      match basic_decl with
-        | Ast.ObjectDecl(ident, t, (Ast.Variable | Ast.Constant),_) ->
-            Sym.add_variable gtbl ident loc t
-        | Ast.ObjectDecl(ident, t, Ast.StaticVal value,_) ->
-            Sym.add_variable gtbl ident loc t ~value;
-        | Ast.NumberDecl(ident, value) ->
-            add_numberdecl ident value loc
-        | Ast.SpecDecl _ -> ()
-
+    match basic_decl with
+      | Ast.ObjectDecl(ident, t, (Ast.Variable | Ast.Constant),_) ->
+          Sym.add_variable gtbl ident loc t
+      | Ast.ObjectDecl(ident, t, Ast.StaticVal value,_) ->
+          Sym.add_variable gtbl ident loc t ~value;
+      | Ast.NumberDecl(ident, value) ->
+          add_numberdecl ident value loc
+      | Ast.SpecDecl _ -> ()
     in match spec with
       | Ast.SubProgramSpec _ -> ()
       | Ast.PackageSpec(name, basic_decls) ->
@@ -1256,33 +1234,37 @@ and normalization compil_unit extern =
           ignore (Sym.exit_context gtbl);
           Sym.add_with gtbl name
 
-  in
+and normalize_context context =
+  List.fold_left (fun ctx item -> match item with
+    | With(nom, spec) ->
+        if (not (Sym.is_with gtbl nom)) then
+        begin
+          let (norm_spec, loc) = match spec with
+            | None   -> parse_extern_specification nom
+            | Some _ -> Npkcontext.report_error
+                "Ada_normalize.normalize_context"
+                  "internal error : spec provided"
+          in
+            add_extern_spec norm_spec;
+            Ast.With(nom, loc, Some(norm_spec, loc))::ctx
+        end
+        else ctx
+    | UseContext n  -> Sym.add_use gtbl n; ctx
+  ) [] context
 
-  let normalize_context context =
-    List.fold_left (fun ctx item -> match item with
-      | With(nom, spec) ->
-          if (not (Sym.is_with gtbl nom)) then
-          begin
-            let (norm_spec, loc) = match spec with
-              | None   -> parse_extern_specification nom
-              | Some _ -> Npkcontext.report_error
-                  "Ada_normalize.normalize_context"
-                    "internal error : spec provided"
-            in
-              add_extern_spec norm_spec;
-              Ast.With(nom, loc, Some(norm_spec, loc))::ctx
-          end
-          else ctx
-      | UseContext n  -> Sym.add_use gtbl n; ctx
-    ) [] context
-  in
-
+(**
+ * Iterates through the abstract syntax tree, performing miscellaneous tasks.
+ *   - match type identifiers to their declaration (or raise en error)
+ *   - look for specs (.ads files)
+ *   - transforms functions and type names to "package.ident" in their
+ *     declarations.
+ *)
+and normalization compil_unit =
+  let cu_name = compilation_unit_name compil_unit in
+  log_progress (Semcheck cu_name);
   let (context,lib_item,loc) = compil_unit in
   let norm_context = normalize_context context in
   let norm_lib_item = normalize_lib_item lib_item loc in
-    Npkcontext.forget_loc ();
-    log_progress (Done(Semcheck cu_name));
-    (norm_context
-    ,norm_lib_item
-    ,loc
-    )
+  Npkcontext.forget_loc ();
+  log_progress (Done(Semcheck cu_name));
+  (norm_context ,norm_lib_item ,loc)

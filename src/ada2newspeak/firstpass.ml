@@ -41,7 +41,7 @@ open Ast
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
 
-let concat_resolved_name sc  n = match sc with
+let concat_resolved_name sc n = match sc with
   | Sym.Lexical      ->        n
   | Sym.In_package p -> (p ^ "." ^ n)
 
@@ -49,9 +49,6 @@ let translate_resolved_name sc n = match sc with
   | Sym.Lexical      -> C.Local         n
   | Sym.In_package p -> C.Global (p ^ "." ^ n)
 
-(**
- * A boolean flip flop.
- *)
 let (extern, do_as_extern) =
   let ext = ref false in
     ((fun _ -> !ext),
@@ -74,17 +71,11 @@ let translate compil_unit =
   let init      = ref []            in
   let curpkg    = ref None          in
 
-  let normalize_ident ident package extern =
-    if extern then (package, ident)
-              else (None   , ident)
-  in
-
   let translate_name (pack,id) =
-    let tr_name = match (extern(), pack, !curpkg) with
-    | true, Some p, _      -> [p;id]
-    | true, None  , _      ->   [id]
-    | false, _    , Some p -> [p;id]
-    | false, _    , None   ->   [id]
+    let tr_name = match (pack, !curpkg) with
+    | Some p, _      -> [p;id]
+    |  _    , Some p -> [p;id]
+    | None  , None   ->   [id]
     in
       string_of_name tr_name
   in
@@ -120,13 +111,6 @@ let translate compil_unit =
               let decl = (C.Decl (T.translate t, id), loc) in
                 (id, decl, C.Local id)
     end
-  in
-
-  (* fonctions de traductions *)
-  let translate_subtyp_option subtyp = match subtyp with
-    | None -> C.Void
-    | Some(subtyp) -> T.translate subtyp
-
   in
 
   let rec translate_if_exp e_cond e_then e_else =
@@ -191,10 +175,6 @@ let translate compil_unit =
 
       | _ -> Npkcontext.report_error "Firstpass.translate_binop"
             "invalid operator and argument"
-
-  and translate_not exp =
-        let exp = translate_exp exp
-        in C.Unop (Npkil.Not, exp)
 
   (** Returns ftyp & list of params *)
   and translate_subprogram_parameters params =
@@ -268,7 +248,7 @@ let translate compil_unit =
     | CBool  b -> translate_nat (Ada_utils.nat_of_bool b)
     | Lval   l -> let (tlv,tp) = translate_lv l in
                   C.Lval (tlv, T.translate tp)
-    | Not    exp              -> translate_not exp
+    | Not    exp              -> C.Unop (Npkil.Not, translate_exp exp)
     | Binary(binop,exp1,exp2) ->
         let bop = translate_binop (snd exp1) binop exp1 exp2 in
         (T.check_exp typ bop)
@@ -371,13 +351,9 @@ let translate compil_unit =
                    r
             end
 
-  and translate_param param = match param.mode with
-      | A.In    -> T.translate param.param_type
-      |   A.Out
-      | A.InOut -> C.Scalar N.Ptr
-
   and translate_param_list param_list =
-    (List.map translate_param param_list)
+    (List.map (fun p -> T.translate p.param_type) param_list)
+
   and add_params subprog_spec =
     let param_list =
       match subprog_spec with
@@ -395,10 +371,11 @@ let translate compil_unit =
         | Procedure(_,param_list) ->
             (param_list, None)
     in let params_typ = translate_param_list param_list in
-      (params_typ, translate_subtyp_option return_type)
-
-  and add_fundecl subprogspec =
-    translate_sub_program_spec subprogspec
+      ( params_typ, ( match return_type with
+                      | None     -> C.Void
+                      | Some(st) -> T.translate st
+                    )
+      )
 
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl (id,t,_,blkopt) ->
@@ -433,7 +410,7 @@ let translate compil_unit =
       | Procedure(n,_)   -> n in
     let (_, (ret_id, args_ids)) = add_params subprogspec in
     let (body_decl,init) = translate_declarative_part decl_part in
-    let ftyp = add_fundecl subprogspec in
+    let ftyp = translate_sub_program_spec subprogspec in
     let body = translate_block (init @ block) in
     let mangle_sname = function
       | []       -> failwith "unreachable @ firstpass:mangle_sname"
@@ -448,8 +425,7 @@ let translate compil_unit =
   in
 
   let add_global loc tr_typ i x =
-    let name = normalize_ident x (!curpkg) (extern ()) in
-    let tr_name = translate_name name in
+    let tr_name = translate_name (!curpkg,x) in
     let storage = match i with
       | None -> Npkil.Declared false
       | Some init_stmt ->
@@ -466,15 +442,10 @@ let translate compil_unit =
       | ObjectDecl(ident, subtyp, _, init_o) ->
           let tr_typ = T.translate subtyp in
           let init =
-            begin
-            match (init_o, extern ()) with
-              | (_, true) | (None, _) -> None
-              | (Some blk, false) ->
-                  Some blk
-            end
+            if extern() then None else init_o
           in
           add_global loc tr_typ init ident
-      | SpecDecl spec -> translate_spec spec false
+      | SpecDecl spec -> translate_spec spec
       | NumberDecl _ -> ()
 
   and translate_global_decl_item (item,loc) =
@@ -482,26 +453,22 @@ let translate compil_unit =
     match item with
       | BasicDecl(basic) ->
           translate_global_basic_declaration (basic, loc)
-      | BodyDecl(body) -> translate_body body false loc
+      | BodyDecl(body) -> translate_body body loc
 
-  and translate_spec spec glob = match spec with
+  and translate_spec spec = match spec with
     | SubProgramSpec(subprog_spec) ->
-        ignore (add_fundecl subprog_spec )
+        ignore (translate_sub_program_spec subprog_spec )
     | PackageSpec (nom, basic_decl_list) ->
-        if (not glob) then begin
-    Npkcontext.report_error "Firstpass.translate_spec"
-            "declaration de sous package non implemente"
-        end;
         curpkg := Some nom;
         List.iter translate_global_basic_declaration basic_decl_list;
         curpkg := None
 
-  and translate_body body glob loc =
+  and translate_body body loc =
     Npkcontext.set_loc loc;
-    match (body, glob) with
-      | (SubProgramBody(subprog_decl,decl_part, block), _) ->
+    match body with
+      | SubProgramBody(subprog_decl,decl_part, block) ->
           add_funbody subprog_decl decl_part block loc
-      | PackageBody(name, package_spec, decl_part), true ->
+      | PackageBody(name, package_spec, decl_part) ->
           curpkg := Some name;
           (match package_spec with
              | None -> ()
@@ -511,17 +478,12 @@ let translate compil_unit =
                  end
           );
           List.iter translate_global_decl_item decl_part;
-
-      | PackageBody _, false -> Npkcontext.report_error
-          "Firstpass.translate_body"
-            "declaration de sous package non implemente"
-
   in
 
   let translate_library_item lib_item loc =
     Npkcontext.set_loc loc;
     match lib_item with
-      | Body body -> translate_body body true loc
+      | Body body -> translate_body body loc
       | Spec _    -> Npkcontext.report_error
             "Firstpass.translate_library_item"
             "Rien a faire pour les specifications"
@@ -533,7 +495,7 @@ let translate compil_unit =
           Npkcontext.set_loc loc;
           (match spec with
             | Some(spec, _loc) ->
-                translate_spec spec true
+                translate_spec spec
             | None -> Npkcontext.report_error
                 "Firstpass.translate_context"
                   "internal error : no specification provided")
