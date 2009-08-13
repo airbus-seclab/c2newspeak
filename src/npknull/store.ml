@@ -102,7 +102,7 @@ let join s1 s2 =
       let d2 = Map.find x s2 in
 	if d1 <> d2 
 	then invalid_arg "Store.join: not implemented yet <>"
-	  with Not_found -> s := Map.add x d1 !s
+    with Not_found -> ()
   in
     Map.iter add_info s1;
     !s

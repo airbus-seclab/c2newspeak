@@ -233,11 +233,12 @@ let contains s1 s2 =
   let b = contains s1 s2 in
     print_endline "State.contains ends";
     b
-
+*)
+(*
 let prepare_call (env, s) (env_f, rel) =
-  print_endline "Store.prepare_call";
-  print_endline (to_string rel);
+  print_endline "State.prepare_call";
   print_endline (to_string s);
+  print_endline (to_string rel);
   let (s, tr) = prepare_call (env, s) (env_f, rel) in begin
       match s with
 	  Some s -> print_endline (to_string s)
@@ -248,7 +249,7 @@ let prepare_call (env, s) (env_f, rel) =
     (s, tr)
 
 let apply s tr rel = 
-  print_endline "Store.apply";
+  print_endline "State.apply";
   print_endline (to_string s);
   print_endline (to_string rel);
   let s = apply s tr rel in
