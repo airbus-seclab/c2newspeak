@@ -24,7 +24,7 @@
 */
 // should not err on Not_found
 void g(int *z) {  // should not compute g twice!
-  *z = 0;
+  *z = 0;         // should not signal any null pointer deref
 }
 
 void f(int *y) {

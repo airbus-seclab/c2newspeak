@@ -210,7 +210,7 @@ let prepare_call (env, s) (env_f, rel) =
   match s with
       None -> (None, [])
     | Some (_, s) ->
-	let (s, tr) = Store.shift (env-env_f) s in
+	let (s, tr) = Store.shift env s env_f in
 	  match rel with
 	      None -> (Some (Some (s, s)), [])
 	    | Some (i, _) -> 

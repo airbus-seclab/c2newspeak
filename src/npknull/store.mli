@@ -50,7 +50,7 @@ val addr_is_valid: t -> addr -> bool
 val to_string: t -> string
 
 (* TODO: maybe simplify shift and subst by merging them together!! *)
-val shift: int -> t -> (t * (Memloc.t * Memloc.t) list)
+val shift: int -> t -> int -> (t * (Memloc.t * Memloc.t) list)
 
 val subst: (Memloc.t * Memloc.t) list -> t -> t
 

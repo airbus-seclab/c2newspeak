@@ -140,7 +140,9 @@ let contains s1 s2 =
 let remove_memloc = Map.remove
 
 (* TODO: O(n) expensive? *)
-let shift n s =
+(* shifts and removes unreachable cells *)
+let shift n1 s n2 =
+  let n = n1-n2 in
   let res = ref Map.empty in
   let tr = ref [] in
   let shift_memloc x = 
@@ -148,23 +150,44 @@ let shift n s =
       if (x <> y) && not (List.mem_assoc x !tr) then tr := (x, y)::!tr;
       y
   in
-  let shift_info x =
-    match x with
-	PointsTo (m, o) -> 
-	  let res = ref Set.empty in
-	  let shift_memloc x = res := Set.add (shift_memloc x) !res in
-	    Set.iter shift_memloc m;
-	    PointsTo (!res, o)
-      | NotNull -> NotNull
-  in
-  let shift m info =
-    let m = shift_memloc m in
-    let info = 
-      List.map (fun (offset, info) -> (offset, shift_info info)) info
+  let todo = ref [] in
+  let visited = ref [] in
+
+  let shift_info (offset, x) =
+    let x =
+      match x with
+	  PointsTo (m, o) -> 
+	    let res = ref Set.empty in
+	    let shift_memloc x = 
+	      if not (List.mem x !visited) then todo := x::!todo;
+	      res := Set.add (shift_memloc x) !res 
+	    in
+	      Set.iter shift_memloc m;
+	      PointsTo (!res, o)
+	| NotNull -> NotNull    
     in
-      res := Map.add m info !res
+      (offset, x)
   in
-    Map.iter shift s;
+
+    for i = n to n1 do
+      todo := (Memloc.of_local i)::!todo
+    done; begin
+      try
+	while true do
+	  match !todo with
+	      [] -> raise Exit
+	    | m::tl -> 
+		visited := m::!visited;
+		todo := tl;
+		try
+		  let info = Map.find m s in
+		  let m = shift_memloc m in
+		  let info = List.map shift_info info in
+		    res := Map.add m info !res
+		with Not_found -> ()
+	done
+      with Exit -> ()
+    end;
     (!res, !tr)
 
 (* TODO: O(n) expensive? 
@@ -218,7 +241,7 @@ let unify_on dst n src =
   in
     for i = 0 to n-1 do
       let m = Memloc.of_local i in
-      todo := (m, m)::!todo
+	todo := (m, m)::!todo
     done;
     begin
       try
@@ -249,17 +272,19 @@ let unify_on dst n src =
     subst !tr src
 
 
-(*
 (* usefull for debug *)
-let shift n s =
+(*
+let shift n1 s n2 =
   print_endline "Store.shift";
-  print_endline (string_of_int n);
+  print_endline (string_of_int n1);
+  print_endline (string_of_int n2);
   print_endline (to_string s);
-  let s = shift n s in
+  let (s, tr) = shift n1 s n2 in
     print_endline (to_string s);
     print_endline "Store.shift ends";
-    s
-
+    (s, tr)
+*)
+(*
 let unify_on dst n src =
   print_endline "Store.unify_on";
   print_endline (to_string dst);
