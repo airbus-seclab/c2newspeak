@@ -73,7 +73,9 @@ and iteration_scheme =
   | NoScheme
   | While of expression
 
-and argument = string * Ada_types.t * expression
+and argument = Ada_types.t
+             * expression
+             * (lval * string) option (* copy-in/copy-out *)
 
 and expression = exp_value * Ada_types.t
 
@@ -100,9 +102,7 @@ and declarative_part = (declarative_item * Newspeak.location) list
 
 and param = {
         formal_name   : string;
-        mode          : Syntax_ada.param_mode;
         param_type    : Ada_types.t;
-        default_value : expression option;
 }
 
 and  body =

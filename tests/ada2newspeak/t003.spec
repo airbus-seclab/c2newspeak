@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
 t003.adb
-void t003(ptr, ptr) {
-  (t003.adb:3#7)^[1-_int32]32 =(int32) 4;
-  (t003.adb:4#7)^[0-_float32]32 =(float32) 4.5;
+void t003(int32, float32) {
+  (t003.adb:3#7)^1- =(int32) 4;
+  (t003.adb:4#7)^0- =(float32) 4.5;
 }
 
 

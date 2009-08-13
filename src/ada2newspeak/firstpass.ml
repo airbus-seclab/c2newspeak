@@ -177,21 +177,48 @@ let translate compil_unit =
             "invalid operator and argument"
 
   (** Returns ftyp & list of params *)
-  and translate_subprogram_parameters params =
-    let translate_parameter (_id, t, exp) =
-        let tr_exp = translate_exp exp in
-        ( T.translate t
-        , T.check_exp t tr_exp
-        )
+  and translate_subprogram_parameters (params:Ast.argument list) =
+    (* FIXME use fold_left *)
+    let copy_in  = ref [] in
+    let copy_out = ref [] in
+    let translate_parameter ((t, exp, cback_opt):Ast.argument) =
+      let x_t = T.translate t in
+      match cback_opt with
+      | None          -> ( x_t
+                         , T.check_exp t (translate_exp exp)
+                         )
+      | Some (lv,var) ->
+          begin
+            let eff_var = "!eff_" ^ var in
+            let eff_exp = C.Lval (C.Local eff_var , x_t) in
+            let (x_lv,_) = translate_lv lv in
+            copy_in :=
+              ( C.Decl (x_t, eff_var) 
+              , Newspeak.unknown_loc)
+              :: !copy_in;
+            copy_out :=
+              ( C.Set(x_lv, x_t, eff_exp)
+              , Newspeak.unknown_loc)
+              :: !copy_out;
+            ( x_t
+            , eff_exp
+            )
+          end
     in
-    List.split (
-        List.map translate_parameter params
-    )
+    let (x, y) = List.split (List.map translate_parameter params) in
+    (x, y, !copy_in, !copy_out)
 
-  (** Translates a function call.  *)
-  and translate_function_call fname arg_list rt =
-    let (ftyp0, tr_params) = translate_subprogram_parameters arg_list in
-    C.Call((ftyp0, T.translate rt), fname, tr_params)
+  (** Translates a function call. *)
+  and translate_function_call fname (arg_list:Ast.argument list) rt =
+    let (ftyp0, tr_params, copy_in, copy_out) =
+      translate_subprogram_parameters arg_list in
+    C.BlkExp ( copy_in
+             , C.BlkExp ( copy_out
+                        , C.Call((ftyp0, T.translate rt), fname, tr_params)
+                        , true
+                        )
+             , false
+             )
 
   and translate_lv lv =
       match lv with
@@ -325,10 +352,13 @@ let translate compil_unit =
                    loc)::r)
            | ProcedureCall (sc, name, args) -> begin
                let fname = C.Fname (concat_resolved_name sc name) in
-                 let (ftyp0, tr_args) = translate_subprogram_parameters args in
+                 let (ftyp0, tr_args, copy_in, copy_out) =
+                   translate_subprogram_parameters args in
                  let ftyp = ftyp0, C.Void in
-                   (C.Exp(C.Call(ftyp, fname, tr_args)), loc)
-                    ::(translate_block r)
+                      copy_in
+                    @ (C.Exp(C.Call(ftyp, fname, tr_args)), loc)
+                   :: copy_out
+                    @ (translate_block r)
              end
 
            | Case (e, choices, default) ->
