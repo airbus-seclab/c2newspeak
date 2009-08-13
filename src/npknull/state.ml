@@ -231,8 +231,7 @@ let assign set env s =
       print_endline (to_string s);
       print_endline "Store.assign ends";
       s
-*)
-(*
+
 let guard e env s =
   print_endline "Store.guard";
   print_endline (Newspeak.string_of_exp e);
