@@ -245,10 +245,9 @@ let process prog =
 		  keep_fun := false;
 		  let rel = Hashtbl.find fun_tbl f in
 		    if not (State.contains rel s) then begin
-		      let s = State.join rel s in
-			Hashtbl.replace fun_tbl f s;
-			let pred = Hashtbl.find pred_tbl f in
-			  todo := pred@(!todo)
+		      Hashtbl.replace fun_tbl f s;
+		      let pred = Hashtbl.find pred_tbl f in
+			todo := pred@(!todo)
 		    end;
 		    ()
 	    | [] -> raise Exit

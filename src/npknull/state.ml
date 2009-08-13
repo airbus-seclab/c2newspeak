@@ -136,7 +136,7 @@ let assign (lv, e, t) env s =
 
 let to_string s =
   match s with
-      Some (_, m) -> Store.to_string m
+      Some (m1, m2) -> Store.to_string m1^" ===> "^Store.to_string m2
     | None -> "{}"
 
 (* TODO: find a way to remove this option, remove emptyset!! *)
@@ -242,10 +242,10 @@ let prepare_call (env, s) (env_f, rel) =
   let (s, tr) = prepare_call (env, s) (env_f, rel) in begin
       match s with
 	  Some s -> print_endline (to_string s)
-	| None -> ()
+	| None -> print_endline "not reanalyzing"
     end;
     print_endline (string_of_transport tr);
-    print_endline "Store.prepare_call ends";
+    print_endline "State.prepare_call ends";
     (s, tr)
 
 let apply s tr rel = 
@@ -254,6 +254,6 @@ let apply s tr rel =
   print_endline (to_string rel);
   let s = apply s tr rel in
     print_endline (to_string s);
-    print_endline "Store.apply ends";
+    print_endline "State.apply ends";
     s
 *)

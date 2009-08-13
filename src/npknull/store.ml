@@ -260,10 +260,6 @@ let shift n s =
     print_endline "Store.shift ends";
     s
 
-let contains s1 s2 =
-  print_endline "Store.contains";
-  print_endline "Store.contains ends";
-
 let unify_on dst n src =
   print_endline "Store.unify_on";
   print_endline (to_string dst);
@@ -272,4 +268,13 @@ let unify_on dst n src =
     print_endline (to_string s);
     print_endline "Store.unify_on ends";
     s
+
+let contains s1 s2 =
+  print_endline "Store.contains";
+  print_endline (to_string s1);
+  print_endline (to_string s2);
+  let r = contains s1 s2 in
+    print_endline (string_of_bool r);
+    print_endline "Store.contains ends";
+    r
 *)
