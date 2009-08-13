@@ -209,12 +209,12 @@ let unify_on dst n src =
 	    | _ -> 
 		print_endline (string_of_info v1);
 		print_endline (string_of_info v2);
-		invalid_arg "Store.unify_info_on: not implemented yet"
+		invalid_arg "Store.unify_info_on: not implemented yet3"
 	end
       | _ -> 
 	  print_endline (string_of_info v1);
 	  print_endline (string_of_info v2);
-	  invalid_arg "Store.unify_info_on: not implemented yet"
+	  invalid_arg "Store.unify_info_on: not implemented yet4"
   in
     for i = 0 to n-1 do
       let m = Memloc.of_local i in
@@ -240,6 +240,8 @@ let unify_on dst n src =
 		      (None, None) -> ()
 		    | (Some ((0, v1)::[]), Some ((0, v2)::[])) -> 
 			unify_info_on v1 v2
+		    | (None, _) -> ()
+		    | (Some _, None) -> ()
 		    | _ -> invalid_arg "Store.unify_on: not implemented yet"
 	done
       with Exit -> ()

@@ -69,6 +69,16 @@ let process prog =
       lbl_tbl := goto !lbl_tbl
   in
 
+  let add_main_info ft s =
+    match ft with
+	(_::_::[], Some _) -> 
+	  State.set_pointsto (Memloc.of_local 2, 0) (Memloc.gen ()) s
+      | (_::_::[], None) -> 
+	  State.set_pointsto (Memloc.of_local 1, 0) (Memloc.gen ()) s
+      | ([], _) -> s
+      | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
+  in
+
   let warn_deref () = 
     let msg = "potential null pointer deref" in
     let msg = Context.get_current_loc ()^": "^msg in
@@ -205,10 +215,12 @@ let process prog =
     Hashtbl.iter init_fun prog.fundecs;
     let s = State.universe in
     let s = process_blk prog.init 0 s in
+    let (ft, _) = 
+      try Hashtbl.find prog.fundecs "main"
+      with Not_found -> invalid_arg "Solver.process: missing main function"
+    in
 (* TODO: do this only if main has the right type!! *)
-    let s = State.set_pointsto (Memloc.of_local 2, 0) (Memloc.gen ()) s in
-      if not (Hashtbl.mem prog.fundecs "main")
-      then invalid_arg "Solver.process: missing main function";
+    let s = add_main_info ft s in
       todo := "main"::[];
       Hashtbl.add init_tbl "main" s;
       
