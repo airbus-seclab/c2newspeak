@@ -107,21 +107,6 @@ let join s1 s2 =
     Map.iter add_info s1;
     !s
 
-let contains s1 s2 =
-  let check_info x d1 =
-    try
-      let d2 = Map.find x s2 in
-	if d1 <> d2 
-	then invalid_arg "Store.contains: not implemented yet"
-    with Not_found -> raise Exit
-  in
-    try
-      Map.iter check_info s1;
-      true
-    with Exit -> false
-
-let remove_memloc = Map.remove
-
 let to_string s =
   let res = ref "" in
   let to_string m data =
@@ -135,6 +120,26 @@ let to_string s =
     Map.iter to_string s;
     !res
 
+let contains s1 s2 =
+  let check_info x d1 =
+    try
+      let d2 = Map.find x s2 in
+	if d1 <> d2 
+	then begin
+	  print_endline (to_string s1);
+	  print_endline (to_string s2);
+	  invalid_arg "Store.contains: not implemented yet"
+	end
+    with Not_found -> raise Exit
+  in
+    try
+      Map.iter check_info s1;
+      true
+    with Exit -> false
+
+let remove_memloc = Map.remove
+
+(* TODO: O(n) expensive? *)
 let shift n s =
   let res = ref Map.empty in
   let shift_info x =
@@ -156,6 +161,86 @@ let shift n s =
     Map.iter shift s;
     !res
 
+(* TODO: O(n) expensive? 
+   Have the inverse map?
+   TOOD: code very similar to shift??
+*)
+let subst tr s = 
+  let res = ref Map.empty in
+  let subst_info x = 
+    match x with
+	PointsTo (m, o) -> 
+	  let res = ref Set.empty in
+	  let subst_memloc x = res := Set.add (Memloc.subst tr x) !res in
+	    Set.iter subst_memloc m;
+	    PointsTo (!res, o)
+      | NotNull -> NotNull
+  in
+  let subst m info =
+    let m = Memloc.subst tr m in
+    let info = 
+      List.map (fun (offset, info) -> (offset, subst_info info)) info
+    in
+      res := Map.add m info !res
+  in
+    Map.iter subst s;
+    !res
+
+(* TODO: O(n) expensive? *)
+let unify_on dst n src =
+  let todo = ref [] in
+  let tr = ref [] in
+  let unify_info_on v1 v2 =
+    match (v1, v2) with
+	(PointsTo (x1, Some o1), PointsTo (x2, Some o2)) -> begin
+	  if o1 <> 0 
+	  then invalid_arg "Store.unify_info_on: not implemented yet1";
+	  if o2 <> 0 
+	  then invalid_arg "Store.unify_info_on: not implemented yet2";
+	  (* TODO: since always doing Set.elements, why not use a list?? *)
+	  match (Set.elements x1, Set.elements x2) with
+	      (x1::[], x2::[]) -> todo := (x1, x2)::!todo
+	    | _ -> 
+		print_endline (string_of_info v1);
+		print_endline (string_of_info v2);
+		invalid_arg "Store.unify_info_on: not implemented yet"
+	end
+      | _ -> 
+	  print_endline (string_of_info v1);
+	  print_endline (string_of_info v2);
+	  invalid_arg "Store.unify_info_on: not implemented yet"
+  in
+    for i = 0 to n-1 do
+      let m = Memloc.of_local i in
+      todo := (m, m)::!todo
+    done;
+    begin
+      try
+	while true do
+	  match !todo with
+	      [] -> raise Exit
+	    | (m1, m2)::tl -> 
+		todo := tl;
+		if Memloc.unify m1 m2 then tr := (m2, m1)::!tr;
+		let v1 = 
+		  try Some (Map.find m1 dst) 
+		  with Not_found -> None 
+		in
+		let v2 = 
+		  try Some (Map.find m2 src) 
+		  with Not_found -> None 
+		in
+		  match (v1, v2) with
+		      (None, None) -> ()
+		    | (Some ((0, v1)::[]), Some ((0, v2)::[])) -> 
+			unify_info_on v1 v2
+		    | _ -> invalid_arg "Store.unify_on: not implemented yet"
+	done
+      with Exit -> ()
+    end;
+    subst !tr src
+
+
 (*
 (* usefull for debug *)
 let shift n s =
@@ -166,9 +251,17 @@ let shift n s =
     print_endline (to_string s);
     print_endline "Store.shift ends";
     s
-*)
-(*
+
 let contains s1 s2 =
   print_endline "Store.contains";
   print_endline "Store.contains ends";
+
+let unify_on dst n src =
+  print_endline "Store.unify_on";
+  print_endline (to_string dst);
+  print_endline (to_string src);
+  let s = unify_on dst n src in
+    print_endline (to_string s);
+    print_endline "Store.unify_on ends";
+    s
 *)

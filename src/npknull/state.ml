@@ -190,6 +190,7 @@ let prepare_call (env, s) (env_f, rel) =
 	  match rel with
 	      None -> (Some (Some (s, s)), [])
 	    | Some (i, _) -> 
+		let s = Store.unify_on i env s in
 		let s =
 		  if Store.contains i s then None else Some (Some (s, s))
 		in

@@ -47,8 +47,19 @@ let shift n m =
     | Local _ -> gen () 
     | _ -> m
 
+let subst tr x = try List.assoc x tr with Not_found -> x
+
 let to_string x =
   match x with
       Local x -> "L."^string_of_int x
     | Global x -> "G."^x
     | Heap x -> "H."^string_of_int x
+
+let unify m1 m2 = 
+  match (m1, m2) with
+      (Local x, Local y) when x = y -> false
+    | (Heap x, Heap y) when x <> y -> true
+    | _ -> 
+	print_endline (to_string m1);
+	print_endline (to_string m2);
+	invalid_arg "Memloc.unify: not implemented yet"
