@@ -582,9 +582,7 @@ parameter_association:
 
 ident :
 | IDENT {snd $1}
-| CONST_STRING { Ada_utils.make_operator_name (
-                    Ada_utils.operator_of_string (snd $1)
-                )}
+| CONST_STRING { Ada_utils.operator_of_string (snd $1) }
 ;
 
 ident_list :
@@ -599,9 +597,7 @@ name :
 
 ident_or_opname :
 | IDENT        {$1}
-| CONST_STRING { fst $1,(Ada_utils.make_operator_name (
-                    Ada_utils.operator_of_string (snd $1)
-                ))
+| CONST_STRING { fst $1,(Ada_utils.operator_of_string (snd $1))
     }
 
 

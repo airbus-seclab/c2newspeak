@@ -29,15 +29,6 @@
  * @author Etienne Millon
  *)
 
-type verbose_level =
-  | Silent
-  | Debug
-  | Warning
-  | Error
-
-(** Generic error. *)
-val mkerror : verbose_level -> string -> (string -> unit)
-
 type progress =
   | Parsing   of string 
   | Semcheck  of string 
@@ -68,24 +59,13 @@ val check_compil_unit_name :
  *)
 val with_default : 'a option -> 'a -> 'a
 
-(**
- * Make up a string from a list.
- * @param some list of elements
- * @param a printer
- * @param a separator
- * @param whether the function shall enclose the result between brackets.
- *)
-val list_to_string : 'a list -> ('a -> string) -> string -> bool -> string
-
-val ident_list_to_string : string list -> string
-
 (** Converts a qualified name into a dotted string.  *)
 val name_to_string : Syntax_ada.name -> string
 
 (** Create a function name for an overloaded operator *)
 val make_operator_name : Syntax_ada.binary_op -> string
 
-val operator_of_string : string -> Syntax_ada.binary_op
+val operator_of_string : string -> string
 
 (**
  * Maybe apply some function to an option value :

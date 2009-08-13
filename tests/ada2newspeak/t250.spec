@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 t250.adb
-uint2 t250.__ada2npk_operator_plus(uint2, uint2) {
+uint2 t250.!op_+(uint2, uint2) {
   (t250.adb:9#10)^do {
     (t250.adb:11#8)^choose {
      -->
@@ -111,7 +111,7 @@ void t250.f(void) {
       (t250.adb:34#8)^{
         uint2 right;
         (t250.adb:34#8)^0- =(uint2) belongs[0,2] 4-_uint2;
-        (t250.adb:34#8)^t250.__ada2npk_operator_plus();
+        (t250.adb:34#8)^t250.!op_+();
       }
     }
     (t250.adb:34#8)^1- =(uint2) belongs[0,2] 0-_uint2;

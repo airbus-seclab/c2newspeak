@@ -59,7 +59,7 @@ TESTS=t001 t002                t006 t007 t008 t009 t010 \
       t331 t332 t333 t334 t335 t336 t337 t338 t339 t340 \
       t341 t342 t343 t344 t345 t346 t347 t348 t349      \
       t351 t352 t353 t354 t355 t356 t357 t358 t359 t360 \
-      t361 t362 t363 t364 t365 t366
+      t361 t362 t363 t364 t365 t366 t367
 
 include ../common.Makefile
 

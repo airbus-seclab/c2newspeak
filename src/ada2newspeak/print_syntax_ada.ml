@@ -32,8 +32,14 @@ open Syntax_ada
 
 let nat_to_string = Newspeak.Nat.to_string
 
-let list_to_string = Ada_utils.list_to_string
 let name_to_string = Ada_utils.name_to_string
+
+let list_to_string l to_string sep crochet =
+  let r = String.concat sep (List.map to_string l) in
+  if crochet then "[" ^ r ^ "]" else r
+
+let ident_list_to_string l =
+  list_to_string l (fun x -> x) "." false
 
 let option_to_string a to_string = match a with
   | None -> "None"

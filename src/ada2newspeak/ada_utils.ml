@@ -27,21 +27,6 @@ open Syntax_ada
 module Nat = Newspeak.Nat
 module  T  = Ada_types
 
-type verbose_level =
-  | Silent
-  | Debug
-  | Warning
-  | Error
-
-(** Generic error. *)
-let mkerror lev modulename = match lev with
-  | Silent  -> (fun _ -> ())
-  | Debug   -> Npkcontext.print_debug
-  | Warning -> Npkcontext.report_warning modulename
-  | Error   -> Npkcontext.report_error   modulename
-
-(* fonction propre a Ada *)
-
 let nat_of_bool b =
   if b then Newspeak.Nat.one
        else Newspeak.Nat.zero
@@ -65,57 +50,33 @@ let with_default (opt:'a option) (def_value:'a):'a = match opt with
     | None   -> def_value
     | Some x -> x
 
-let list_to_string l to_string sep crochet =
-  let r = String.concat sep (List.map to_string l) in
-  if crochet then "[" ^ r ^ "]" else r
-
-let ident_list_to_string l =
-  list_to_string l (fun x -> x) "." false
-
 let name_to_string =
   String.concat "."
 
 let make_operator_name op =
-  let ada2npk_operator_prefix = "__ada2npk_operator_" in
+  let ada2npk_operator_prefix = "!op_" in
   ada2npk_operator_prefix ^
    (match op with
-   | And| AndThen -> "logical_and"
-   | Or | OrElse  -> "logical_and"
-   | Xor          -> "xor"
-   | Eq           -> "equals"
-   | Neq          -> "not_equals"
-   | Lt           -> "lt"
-   | Le           -> "le"
-   | Gt           -> "gt"
-   | Ge           -> "ge"
-   | Plus         -> "plus"
-   | Minus        -> "minus"
-   | Mult         -> "times"
-   | Div          -> "div"
-   | Mod          -> "mod"
-   | Rem          -> "rem"
-   | Power        -> "pow"
+   | And| AndThen -> "and" | Or | OrElse  -> "or"
+   | Xor          -> "xor" | Eq           -> "="
+   | Neq          -> "/="  | Lt           -> "<"
+   | Le           -> "<="  | Gt           -> ">"
+   | Ge           -> ">="  | Plus         -> "+"
+   | Minus        -> "-"   | Mult         -> "*"
+   | Div          -> "/iv" | Mod          -> "mod"
+   | Rem          -> "rem" | Power        -> "**"
    )
 
-let operator_of_string s = match s with
-  | "and" -> And
-  | "or"  -> Or
-  | "xor" -> Xor
-  | "="   -> Eq
-  | "/="  -> Neq
-  | "<"   -> Lt
-  | "<="  -> Le
-  | ">"   -> Gt
-  | ">="  -> Ge
-  | "+"   -> Plus
-  | "-"   -> Minus
-  | "*"   -> Mult
-  | "/"   -> Div
-  | "mod" -> Mod
-  | "rem" -> Rem
-  | "**"  -> Power
+let operator_of_string s =
+  begin match s with
+  | "and" | "or"  | "xor" | "="   
+  | "/="  | "<"   | "<="  | ">"   
+  | ">="  | "+"   | "-"   | "*"   
+  | "/"   | "mod" | "rem" | "**"  -> ()
   |_ -> Npkcontext.report_error "operator_of_string"
          ("\"" ^ s ^ "\" does not name an operator")
+  end;
+  "!op_"^s
 
 let may f = function
   | None   -> None
