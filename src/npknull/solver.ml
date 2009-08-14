@@ -152,7 +152,7 @@ let process prog =
 	    State.remove_local env s
       | Call FunId f -> begin
 	  try
-	    let rel = Hashtbl.find fun_tbl f in
+	    let (rel, complete) = Hashtbl.find fun_tbl f in
 	    let (ft, _) = Hashtbl.find prog.fundecs f in
 	    let env_f = env_of_ftyp ft in
 	    let (init, tr) = State.prepare_call (env, s) (env_f, rel) in begin
@@ -164,7 +164,7 @@ let process prog =
 			Hashtbl.replace init_tbl f init;
 			if not (List.mem f !todo) then todo := f::!todo;
 			keep_fun := true
-		  | None -> ()
+		  | None -> if not complete then keep_fun := true
 	      end;
 	      State.apply s tr rel
 	  with Not_found -> 
@@ -213,7 +213,7 @@ let process prog =
   in
 
   let init_fun f _ =
-    Hashtbl.add fun_tbl f State.emptyset;
+    Hashtbl.add fun_tbl f (State.emptyset, false);
     Hashtbl.add pred_tbl f []
   in
 
@@ -244,22 +244,23 @@ let process prog =
 		  let (ft, body) = Hashtbl.find prog.fundecs f in
 		  let env = env_of_ftyp ft in
 		  let s = process_blk body env s in
-		    (* TODO: couldn't the init be put in the rel?
-		       and the compaction done only once the analysis of the 
-		       function is finished?
-		    *)
-		    if not !keep_fun then Hashtbl.remove init_tbl f;
-		    keep_fun := false;
-		    try
-		      let rel = Hashtbl.find fun_tbl f in
+		    begin try
+		      let (rel, _) = Hashtbl.find fun_tbl f in
 			if not (State.contains rel s) then begin
-			  Hashtbl.replace fun_tbl f s;
+			  Hashtbl.replace fun_tbl f (s, not !keep_fun);
 			  let pred = Hashtbl.find pred_tbl f in
 			    todo := pred@(!todo)
 			end;
 			()
 		    with Exceptions.NotImplemented msg -> 
 		      Context.print_err ("Not implemented yet: "^msg)
+		    end;
+		    (* TODO: couldn't the init be put in the rel?
+		       and the compaction done only once the analysis of the 
+		       function is finished?
+		    *)
+		    if not !keep_fun then Hashtbl.remove init_tbl f;
+		    keep_fun := false;
 		end
 	    | [] -> raise Exit
 	done

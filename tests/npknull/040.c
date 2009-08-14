@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
+// should not fail with Not_found error
+
 void f(int*)
 {
 }
@@ -38,5 +40,5 @@ void main()
   int x;
   int y;
   
-  g(&x,&y);
+  g(&x, &y);
 }
