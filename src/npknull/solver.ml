@@ -126,7 +126,13 @@ let process prog =
 	[] -> s
       | (x, loc)::tl -> 
 	  Context.set_current_loc loc;
-	  let s = process_stmtkind x env s in
+	  let s = 
+	    try process_stmtkind x env s 
+	    with Exceptions.NotImplemented msg -> 
+	      keep_fun := true;
+	      Context.print_err ("Not implemented yet: "^msg);
+	      s
+	  in
 	    process_blk tl env s
 	      
   and process_stmtkind x env s =
@@ -176,14 +182,14 @@ let process prog =
 	      s
 	end
       | Select (br1, br2) -> 
-	  let s1 = process_blk br1 env s in
-	  let s2 = process_blk br2 env s in
-	    State.join s1 s2
+	    let s1 = process_blk br1 env s in
+	    let s2 = process_blk br2 env s in
+	      State.join s1 s2
       | Guard e -> 
 	  check_exp env s e;
 	  State.guard e env s
-(* TODO: change labels?? with the number of DoWith to traverse, 
-   but harder to manipulate? *)
+	    (* TODO: change labels?? with the number of DoWith to traverse, 
+	       but harder to manipulate? *)
       | DoWith (body, lbl, action) -> 
 	  push lbl;
 	  let s1 = process_blk body env s in
@@ -203,7 +209,7 @@ let process prog =
       | UserSpec ((IdentToken "__npknull_display")::_) -> 
 	  print_endline (State.to_string s);
 	  s
-      | _ -> invalid_arg "Analysis.process_stmtkind: case not implemented"
+      | _ -> raise (Exceptions.NotImplemented "Analysis.process_stmtkind")
   in
 
   let init_fun f _ =
@@ -229,27 +235,32 @@ let process prog =
 	while true do
 	  match !todo with
 	      f::tl -> 
-		Context.print_verbose ("Analyzing: "^f);
-		current_fun := f;
-		live_funs := StrSet.add f !live_funs;
 		todo := tl;
-		let s = Hashtbl.find init_tbl f in
-		let (ft, body) = Hashtbl.find prog.fundecs f in
-		let env = env_of_ftyp ft in
-		let s = process_blk body env s in
-		  (* TODO: couldn't the init be put in the rel?
-		     and the compaction done only once the analysis of the 
-		     function is finished?
-		  *)
-		  if not !keep_fun then Hashtbl.remove init_tbl f;
-		  keep_fun := false;
-		  let rel = Hashtbl.find fun_tbl f in
-		    if not (State.contains rel s) then begin
-		      Hashtbl.replace fun_tbl f s;
-		      let pred = Hashtbl.find pred_tbl f in
-			todo := pred@(!todo)
-		    end;
-		    ()
+		begin
+		  Context.print_verbose ("Analyzing: "^f);
+		  current_fun := f;
+		  live_funs := StrSet.add f !live_funs;
+		  let s = Hashtbl.find init_tbl f in
+		  let (ft, body) = Hashtbl.find prog.fundecs f in
+		  let env = env_of_ftyp ft in
+		  let s = process_blk body env s in
+		    (* TODO: couldn't the init be put in the rel?
+		       and the compaction done only once the analysis of the 
+		       function is finished?
+		    *)
+		    if not !keep_fun then Hashtbl.remove init_tbl f;
+		    keep_fun := false;
+		    try
+		      let rel = Hashtbl.find fun_tbl f in
+			if not (State.contains rel s) then begin
+			  Hashtbl.replace fun_tbl f s;
+			  let pred = Hashtbl.find pred_tbl f in
+			    todo := pred@(!todo)
+			end;
+			()
+		    with Exceptions.NotImplemented msg -> 
+		      Context.print_err ("Not implemented yet: "^msg)
+		end
 	    | [] -> raise Exit
 	done
       with Exit -> ()

@@ -60,6 +60,5 @@ let unify m1 m2 =
       _ when m1 = m2 -> false
     | (Heap _, Heap _) -> true
     | _ -> 
-	print_endline (to_string m1);
-	print_endline (to_string m2);
-	invalid_arg "Memloc.unify: not implemented yet"
+	let msg = "Memloc.unify: "^to_string m1^"/"^to_string m2 in
+	  raise (Exceptions.NotImplemented msg)
