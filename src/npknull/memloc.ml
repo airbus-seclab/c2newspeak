@@ -57,7 +57,7 @@ let to_string x =
 
 let unify m1 m2 = 
   match (m1, m2) with
-      (Local x, Local y) | (Heap x, Heap y) when x = y -> false
+      _ when m1 = m2 -> false
     | (Heap _, Heap _) -> true
     | _ -> 
 	print_endline (to_string m1);
