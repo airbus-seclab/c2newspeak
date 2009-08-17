@@ -413,7 +413,7 @@ and make_arg_list args spec =
           match pos_list, spec with
             |  [],_  -> (* end of positional parameters *)
                         List.map (function x ->
-                          let value = 
+                          let value =
                             ( try Hashtbl.find argtbl x.formal_name
                               with Not_found ->
                                 match x.default_value with
@@ -665,6 +665,9 @@ and normalize_typ_decl ident typ_decl loc =
       let te = subtyp_to_adatyp stn in
       let t = T.new_access te in
       Sym.add_type gtbl ident loc t
+  | Digits d ->
+      let t = T.new_float d in
+      Sym.add_type gtbl ident loc t
 
 and add_representation_clause id aggr loc =
   Npkcontext.set_loc loc;
@@ -818,8 +821,9 @@ and normalize_basic_decl item loc =
                            []
   | RepresentClause (id, EnumRepClause aggr) ->
       add_representation_clause id aggr loc;[]
-  | RepresentClause (id, _) -> Npkcontext.report_warning "parser"
-                              ("Ignoring representation clause for '" ^ id ^ "'");
+  | RepresentClause (id, _) -> Npkcontext.report_warning "normalize"
+                              ( "Ignoring representation clause "
+                              ^ "for '" ^ id ^ "'");
                               []
   | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
                                       ("ignoring generic instanciation of '"
@@ -890,10 +894,10 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
   match instr with
   | NullInstr    -> []
   | ReturnSimple -> [Ast.ReturnSimple, loc]
-  | Assign(lv, Aggregate (NamedAggregate bare_assoc_list)) ->
+  | Assign(lv, Aggregate (NamedAggr bare_assoc_list)) ->
       let (nlv, tlv) = normalize_lval lv in
       normalize_assign_aggregate nlv tlv bare_assoc_list loc
-  | Assign(lv, Aggregate (PositionalAggregate exp_list)) ->
+  | Assign(lv, Aggregate (PositionalAggr exp_list)) ->
       let (lv', t_lv) = normalize_lval lv in
       let ti = match T.extract_array_types t_lv with
       | (_, [i]) -> i

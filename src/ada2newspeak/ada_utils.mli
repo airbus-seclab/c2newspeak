@@ -30,9 +30,9 @@
  *)
 
 type progress =
-  | Parsing   of string 
-  | Semcheck  of string 
-  | Translate of string 
+  | Parsing   of string
+  | Semcheck  of string
+  | Translate of string
   | Post
   | Done of progress
 

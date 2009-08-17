@@ -69,9 +69,9 @@ let make_operator_name op =
 
 let operator_of_string s =
   begin match s with
-  | "and" | "or"  | "xor" | "="   
-  | "/="  | "<"   | "<="  | ">"   
-  | ">="  | "+"   | "-"   | "*"   
+  | "and" | "or"  | "xor" | "="
+  | "/="  | "<"   | "<="  | ">"
+  | ">="  | "+"   | "-"   | "*"
   | "/"   | "mod" | "rem" | "**"  -> ()
   |_ -> Npkcontext.report_error "operator_of_string"
          ("\"" ^ s ^ "\" does not name an operator")
@@ -83,9 +83,9 @@ let may f = function
   | Some v -> Some (f v)
 
 type progress =
-  | Parsing   of string 
-  | Semcheck  of string 
-  | Translate of string 
+  | Parsing   of string
+  | Semcheck  of string
+  | Translate of string
   | Post
   | Done of progress
 

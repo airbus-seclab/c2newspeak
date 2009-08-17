@@ -193,7 +193,7 @@ let translate compil_unit =
             let eff_exp = C.Lval (C.Local eff_var , x_t) in
             let (x_lv,_) = translate_lv lv in
             copy_in :=
-              ( C.Decl (x_t, eff_var) 
+              ( C.Decl (x_t, eff_var)
               , Newspeak.unknown_loc)
               :: !copy_in;
             copy_out :=
@@ -449,7 +449,7 @@ let translate compil_unit =
       | _        -> Npkcontext.report_error "mangle_sname"
                       "chain of selected names is too deep"
     in
-    let body = (C.Block (body_decl @ body, Some (Params.ret_lbl,[])), loc)::[] in
+    let body = (C.Block (body_decl @ body,Some (Params.ret_lbl,[])), loc)::[] in
       Hashtbl.replace fun_decls (translate_name (mangle_sname name))
                       (ret_id, args_ids, ftyp, body);
   in

@@ -104,6 +104,7 @@ let rec typ_declaration_to_string typ_decl = match typ_decl with
                                           ", " false)
   | Array _ -> "Array(...)"
   | Access _ -> "Access(...)"
+  | Digits _ -> "Digits(...)"
 
 and record_component_to_string (c,st) =
   c ^ " => " ^ name_to_string st

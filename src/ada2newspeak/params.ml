@@ -56,14 +56,14 @@ let authors  =  "Jasmine Duchon, Wenceslas Godard, "
               ^ "Charles Hymans and Etienne Millon"
 let licence = "LGPL v. 2.1"
 let copyright = "EADS"
-let comment_string =
-   "   The Newspeak language and C2Newspeak have initially been developped in\n"
- ^ " EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles\n"
- ^ " Hymans.\n"
- ^ "\n"
- ^ "   Ada2Newspeak compiles Ada code into Newspeak language, which allows \n"
- ^ " static analysis and statistics on Ada code thanks to a simpler and non \n"
- ^ " ambiguous language. First implementation by Jasmine Duchon.\n"
+let comment_string = String.concat "\n"
+ [ "   The Newspeak language and C2Newspeak have initially been developped in"
+ ; " EADS Innovation Works, Suresnes, France, by Olivier Levillain and Charles"
+ ; " Hymans."
+ ; ""
+ ; "   Ada2Newspeak compiles Ada code into Newspeak language, which allows "
+ ; " static analysis and statistics on Ada code thanks to a simpler and non "
+ ; " ambiguous language. First implementation by Jasmine Duchon." ]
 
 let version_string =
   software ^ " version " ^ Version.version
