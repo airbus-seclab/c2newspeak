@@ -975,10 +975,14 @@ attribute_name:
   }
 | IDENTIFIER LPAREN 
     IDENTIFIER COMMA INTEGER COMMA INTEGER 
-  RPAREN                                   { 
-    if $1 <> "__format__" then raise Parsing.Parse_error;
+  RPAREN                                   {
+(* TODO: instead of comparing all the possibilities __format__, format...
+   maybe have a treatment that trims the __ first and then compares
+   and do that in an uniform way??
+*)
+    if $1 <> "__format__" && $1 <> "format" then raise Parsing.Parse_error;
     begin match $3 with
-	"__printf__" | "__scanf__" -> ()
+	"__printf__" | "printf" | "__scanf__" -> ()
       | _ -> raise Parsing.Parse_error
     end;
     [] 
