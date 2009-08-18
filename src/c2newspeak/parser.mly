@@ -935,7 +935,7 @@ attribute_name_list:
 attribute_name:
   IDENTIFIER                               { 
     begin match $1 with
-	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
+	"aligned" | "__aligned__" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
       | "__warn_unused_result__" | "__unused__" | "__artificial__" -> ()
