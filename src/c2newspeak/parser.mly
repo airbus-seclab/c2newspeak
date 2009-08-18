@@ -573,6 +573,7 @@ expression:
 | BNOT       expression    %prec prefix_OP { Unop (BNot, $2) }
 | NOT        expression    %prec prefix_OP { Unop (Not, $2) }
 | MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
+| PLUS       expression                    { $2 }
 | SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
                            %prec prefix_OP { Sizeof (build_type_decl $3) }
