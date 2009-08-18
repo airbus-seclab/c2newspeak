@@ -199,6 +199,7 @@ let process globals =
   let translate_unop x t = 
     match (x, t) with
 	(Not, C.Int _) -> (C.Not, C.int_typ)
+      | (Not, C.Ptr _) -> (C.Not, C.int_typ)
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
@@ -288,9 +289,9 @@ let process globals =
 	  let (e, t) = translate_lv e in
 	    (C.AddrOf (e, t), C.Ptr t)
       | Unop (op, e) -> 
-	  let (e, t) = translate_exp e in
-	  let (op, t) = translate_unop op t in
-	    (C.Unop (op, e), t)
+	  let (e, t1) = translate_exp e in
+	  let (op, t2) = translate_unop op t1 in
+	    (C.Unop (op, t1, e), t2)
       | Binop (op, e1, e2) -> 
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in

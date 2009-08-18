@@ -419,10 +419,7 @@ let translate (globals, fundecls, spec) =
 
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
-	| Unop (op, e) -> 
-	    let (op, t) = translate_unop op in
-	    let e = translate_exp (e, t) in
-	      C.Unop (op, e)
+	| Unop x -> C.Unop (translate_unop x)
 		
 	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
 	    let e1 = translate_exp (e1, t1) in
@@ -938,7 +935,7 @@ let translate (globals, fundecls, spec) =
 	    let e1 = select (guard_c::post@t1, guard_not_c::post@f1) in
 	    let e2 = select (guard_c::post@t2, guard_not_c::post@f2) in
 	      (pref@e1, pref@e2)
-	| Unop (Not, e) -> 
+	| Unop (Not, _, e) -> 
 	    let (e1, e2) = translate_guard e in
 	      (e2, e1)
 
@@ -1097,10 +1094,25 @@ let translate (globals, fundecls, spec) =
     in
       (e, t)
 
-  and translate_unop op = 
-    match op with
-	Not -> (K.Not, TypedC.int_typ)
-      | BNot k -> (K.BNot (Newspeak.domain_of_typ k), TypedC.Int k)
+  and translate_unop (op, t, e) = 
+    let e = translate_exp (e, t) in
+    let e = 
+      match (op, t) with
+	  (Not, Ptr _) -> 
+(* TODO: this is a bit of a hack, have Nil in cir?? *)
+	    let nil = 
+	      C.Unop (K.Cast (N.Int C.int_kind, N.Ptr), C.exp_of_int 0) 
+	    in
+	      C.Binop (Newspeak.Eq Newspeak.Ptr, e, nil)
+	| _ -> e
+    in
+    let op =
+      match op with
+	  Not -> K.Not
+	| BNot k -> K.BNot (Newspeak.domain_of_typ k)
+    in
+      (op, e)
+
 
   and size_of t = C.size_of_typ (translate_typ t)
 
