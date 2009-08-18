@@ -602,6 +602,17 @@ let process globals =
       | (Sequence seq, C.Comp { contents = Some (f, true) }) ->
 	  C.Sequence (translate_field_sequence seq f)
 
+      | (Sequence ((None, init)::[]), C.Comp { contents = Some (r, false) }) ->
+	  let t = 
+	    match r with
+		(_, b)::_ -> b
+	      | _ -> 
+		  Npkcontext.report_error "Firstpass.translate_init"
+		    "unexpected empty union"
+	  in
+	  let seq = (None, translate_init t init)::[] in
+	    C.Sequence seq
+
       | (Sequence ((Some f, init)::[]), 
 	 C.Comp { contents = Some (r, false)}) -> 
 	  let t = find_field f r in

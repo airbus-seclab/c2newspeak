@@ -145,6 +145,8 @@ let translate (globals, fundecls, spec) =
 	  let t2' = translate_typ t2 in
 	    (C.cast (e, t1') t2', t2)
 
+(* TODO: this should be simplified because a bit is done already in 
+   csyntax2TypedC!!! *)
   and translate_init t x =
     let res = ref [] in
     let rec translate o t x =
@@ -175,13 +177,24 @@ let translate (globals, fundecls, spec) =
 	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
 	      t
+	| (Sequence ((None, v)::[]), Comp { contents = Some (r, false) }) ->
+	    let (r, _, _) = translate_union r in
+	    let (f_o, f_t) = 
+	      match r with
+		  (_, b)::_ -> b
+		| _ -> 
+		    Npkcontext.report_error "Firstpass.translate_init"
+		      "unexpected empty union"
+	    in
+	    let _ = translate (o + f_o) f_t v in
+	      t
 
 	| (Sequence ((Some f, v)::[]), Comp { contents = Some (r, false) }) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
 	      t
-		
+	
 	| (Sequence _, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
