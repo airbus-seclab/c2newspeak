@@ -473,10 +473,12 @@ iteration_statement:
 	  "init statement expected";
 	For([], normalize_bexp $4, $6, []) 
       }
-| WHILE LPAREN expression RPAREN statement { For([], normalize_bexp $3, $5, []) }
+| WHILE LPAREN expression_sequence RPAREN 
+  statement                                { For ([], normalize_bexp $3, $5, [])
+					   }
 | DO statement
   WHILE LPAREN expression_sequence 
-  RPAREN SEMICOLON                         { DoWhile($2, normalize_bexp $5) }
+  RPAREN SEMICOLON                         { DoWhile ($2, normalize_bexp $5) }
 ;;
 
 expression_statement:
