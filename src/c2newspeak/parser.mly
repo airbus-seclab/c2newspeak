@@ -948,7 +948,7 @@ attribute_name:
       | "__transparent_union__" -> 
 	  Npkcontext.report_accept_warning "Parser.attribute_name" 
 	    "transparent union" Npkcontext.TransparentUnion
-      | "weak" ->
+      | "weak" | "__weak__" ->
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute weak"
       | _ -> raise Parsing.Parse_error
