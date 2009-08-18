@@ -861,6 +861,7 @@ external_declaration:
   STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
+| INLINE STATIC function_definition        { build_fundef true $3 }
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
