@@ -1,5 +1,5 @@
-Warning: 742.c:29#1063: comma in expression accepted
-Warning: 742.c:30#1084: comma in expression accepted
+Warning: 742.c:29#0: comma in expression accepted
+Warning: 742.c:30#0: comma in expression accepted
 Newspeak output
 ---------------
 742.c

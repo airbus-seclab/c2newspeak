@@ -1,6 +1,6 @@
-Warning: 722.c:29#1084: comma in expression accepted
-Warning: 722.c:30#1114: comma in expression accepted
-Warning: 722.c:31#1146: comma in expression accepted
+Warning: 722.c:29#0: comma in expression accepted
+Warning: 722.c:30#0: comma in expression accepted
+Warning: 722.c:31#0: comma in expression accepted
 Warning: 722.c:29#2: assignment within expression accepted
 Warning: 722.c:31#2: assignment within expression accepted
 Newspeak output

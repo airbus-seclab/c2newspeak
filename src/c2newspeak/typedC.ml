@@ -113,7 +113,7 @@ and exp =
     | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp
     | AddrOf of typ_exp
-    | Unop of (unop * exp)
+    | Unop of (unop * typ * exp)
     | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (funexp * ftyp * typ_exp list)
@@ -253,7 +253,7 @@ let rec string_of_exp e =
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
     | Deref (e, _) -> "*("^(string_of_exp e)^")"
     | AddrOf (e, _) -> "&("^(string_of_exp e)^")"
-    | Unop (_, e) -> "op("^(string_of_exp e)^")"
+    | Unop (_, _, e) -> "op("^(string_of_exp e)^")"
     | IfExp (e1, (e2, _), (e3, _), _) -> 
 	let e1 = string_of_exp e1 in
 	let e2 = string_of_exp e2 in

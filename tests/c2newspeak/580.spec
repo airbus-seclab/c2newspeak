@@ -1,4 +1,4 @@
-Warning: 580.c:30#1094: goto statement accepted
+Warning: 580.c:30#0: goto statement accepted
 Newspeak output
 ---------------
 580.c

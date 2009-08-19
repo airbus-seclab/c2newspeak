@@ -126,9 +126,8 @@ let contains s1 s2 =
       let d2 = Map.find x s2 in
 	if d1 <> d2 
 	then begin
-	  print_endline (to_string s1);
-	  print_endline (to_string s2);
-	  invalid_arg "Store.contains: not implemented yet"
+	  let msg = "Store.contains: "^to_string s1^" && "^to_string s2 in
+	    raise (Exceptions.NotImplemented msg)
 	end
     with Not_found -> raise Exit
   in

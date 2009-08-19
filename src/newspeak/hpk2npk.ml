@@ -111,46 +111,60 @@ let translate prog =
   let prefix_args loc f ft args args_ids =
     let rec add args =
       match args with
-	  (e::args, t::args_t, x::args_ids) -> 
+	| (arg::args, t::args_t, x::args_ids) -> 
 	    push tmp_var;
-	    let set = translate_set (Local tmp_var, e, t) in
+            let set = begin match arg with
+              | In    e -> Some (translate_set (Local tmp_var, e, t))
+              | InOut l -> Some (translate_set (Local tmp_var, Lval (l, t), t))
+              | Out   _ -> None
+            end in
 	    let call = add (args, args_t, args_ids) in
-	      pop tmp_var;
-	      N.Decl (x, t, (set, loc)::(call, loc)::[])
-	| _ -> N.Call (translate_fn ft f)
+            let copy_out = match arg with
+              | In    _ -> None
+              | Out   l
+              | InOut l -> Some (translate_set (l, Lval (Local tmp_var, t), t))
+            in
+            pop tmp_var;
+            let call_with_copyout = match copy_out with
+            | None   -> (call, loc)::[]
+            | Some c -> (call, loc)::(c, loc)::[]
+            in
+            let full_call = match set with
+            | None   -> call_with_copyout
+            | Some s -> (s, loc)::call_with_copyout
+            in
+            N.Decl (x, t, full_call)
+        | ([], [], []) -> N.Call (translate_fn ft f)
+        | _ -> Npkcontext.report_error "hpk2npk.prefix_args"
+                 "Mismatching number of parameters"
     in
     let (args_t, _) = ft in
       add (args, args_t, args_ids)
   in
 
   let suffix_rets fid loc f ft (args, rets) args_ids =
-    let rec add rets =
+    let add rets =
       match rets with
 	  (* TODO: should have one list instead of two here!!! *)
-	  (lv::rets, t::rets_t) -> 
+	  (Some lv, Some t) -> 
 	    push tmp_var;
 	    let e = Lval (Local tmp_var, t) in
 	    let set = translate_set (lv, e, t) in
-	    let call = add (rets, rets_t) in
+	    let call = prefix_args loc f ft args args_ids in
 	    let x = "value_of_"^fid in
 	      pop tmp_var;
 	      N.Decl (x, t, (call, loc)::(set, loc)::[])
 	| _ -> prefix_args loc f ft args args_ids
     in
-    let rec add_fst rets =
+    let add_fst rets =
       match rets with
-	  ((Local v)::rets, _::rets_t) 
+	  (Some (Local v), Some _) 
 	    when Hashtbl.find env v = !stack_height -> 
-	      add_fst (rets, rets_t)
+	      add(None, None)
 	| _ -> add rets
     in
     let (_, rets_t) = ft in
     (* TODO: change ret_typ in ftyp so that it is a list *)
-    let rets_t =
-      match rets_t with
-	  None -> []
-	| Some t -> t::[]
-    in
     let rets = (rets, rets_t) in
       add_fst rets
   in

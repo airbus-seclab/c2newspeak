@@ -73,11 +73,14 @@ and iteration_scheme =
   | NoScheme
   | While of expression
 
-and argument = Ada_types.t
-             * expression
-             * (lval * string) option (* copy-in/copy-out *)
-
 and expression = exp_value * Ada_types.t
+
+and argument = Ada_types.t * arg_mode
+
+and arg_mode = 
+  | In    of expression
+  | Out   of lval
+  | InOut of lval
 
 and exp_value =
   | CInt         of Newspeak.Nat.t

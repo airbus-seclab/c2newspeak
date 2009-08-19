@@ -1,4 +1,4 @@
-Warning: 601.c:30#1100: goto statement accepted
+Warning: 601.c:30#0: goto statement accepted
 Newspeak output
 ---------------
 601.c

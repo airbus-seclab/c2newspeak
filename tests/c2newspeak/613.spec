@@ -1,4 +1,4 @@
-Warning: 613.c:28#1055: ignoring attribute alias
+Warning: 613.c:28#0: ignoring attribute alias
 Newspeak output
 ---------------
 613.c

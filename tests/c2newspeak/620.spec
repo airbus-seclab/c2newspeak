@@ -1,5 +1,5 @@
-Warning: 620.c:32#1116: goto statement accepted
-Warning: 620.c:34#1138: goto statement accepted
+Warning: 620.c:32#0: goto statement accepted
+Warning: 620.c:34#0: goto statement accepted
 Newspeak output
 ---------------
 620.c

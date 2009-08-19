@@ -170,7 +170,7 @@ let nat_of_lexeme base x =
     match base with
 	None -> (read_digit, 10)
       | Some "0" -> (read_digit, 8)
-      | Some "0x" -> (read_hex_digit, 16)
+      | Some ("0x"|"0X") -> (read_hex_digit, 16)
       | _ -> Npkcontext.report_error "Csyntax.nat_of_lexeme" "invalid base"
   in
   let v = ref Nat.zero in

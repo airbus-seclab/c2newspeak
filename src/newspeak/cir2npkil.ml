@@ -186,7 +186,7 @@ let translate src_lang prog fnames =
 	    (K.DoWith (body, lbl, action), loc)::[]
 
       | Set (lv, _, Call c) ->
-	  let call = translate_call (lv::[]) c in
+	  let call = translate_call (Some lv) c in
 	    (call, loc)::[]
 
       | Set x -> 
@@ -209,7 +209,7 @@ let translate src_lang prog fnames =
       | Switch switch -> translate_switch loc switch
 
       | Exp (Call c) -> 
-	  let call = translate_call [] c in
+	  let call = translate_call None c in
 	    (call, loc)::[]
 
       | UserSpec x -> (translate_assertion loc x)::[]
@@ -226,11 +226,20 @@ let translate src_lang prog fnames =
 	Fname f -> K.FunId f
       | FunDeref e -> K.FunDeref (translate_exp e)
       
+  and translate_arg arg =
+    match arg with
+      | In    e -> K.In    (translate_exp e)
+      | Out   l -> K.Out   (translate_lv l)
+      | InOut l -> K.InOut (translate_lv l)
+
   and translate_call ret (ft, fn, args) =
-    let args = List.map translate_exp args in
+    let args = List.map translate_arg args in
     let ft = translate_ftyp ft in
     let fn = translate_fn fn in
-    let ret = List.map translate_lv ret in
+    let ret = match ret with
+      | Some r -> Some (translate_lv r)
+      | None   -> None
+    in
       K.Call (args, ft, fn, ret)
 
   and translate_switch loc (e, cases, default) =

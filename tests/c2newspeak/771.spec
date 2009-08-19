@@ -1,4 +1,4 @@
-Warning: 771.c:10#91: goto statement accepted
+Warning: 771.c:10#0: goto statement accepted
 Newspeak output
 ---------------
 771.c

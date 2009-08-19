@@ -30,7 +30,7 @@ open Pp_syntax
 
 let set_loc lexbuf pos = 
   lexbuf.lex_curr_p <- pos;
-  Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
+  Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
 let init fname lexbuf = 
   let pos = { lexbuf.lex_curr_p with pos_fname = fname } in
@@ -110,18 +110,19 @@ let line_comment = "//" line
 let letter = ['a'-'z'] | ['A'-'Z'] | '_'
 let digit = ['0'-'9']
 let oct_digit = ['0'-'7']
-let hex_digit = digit | ['A'-'F'] 
-let lower_case_hex_digit = digit | ['a'-'f']
+let hex_digit = digit | ['A'-'F'] | ['a'-'f']
 
 let sign = ("U"|"u") as sign
 let length = ("l"|"L"|"LL") as length
-let oct_integer = "0" (oct_digit+ as value) sign? length?
 let hex_prefix = "0x" | "0X"
-let hex_integer = 
-    (hex_prefix (hex_digit+ as value) sign? length?)
-  | (hex_prefix (lower_case_hex_digit+ as value) sign? length?)
 
+let oct_integer = ("0" as prefix) (oct_digit+ as value) sign? length?
+let hex_integer = (hex_prefix as prefix) (hex_digit+ as value) sign? length?
 let integer = (digit+ as value) sign? length?
+let integer_constant = 
+    (oct_integer | hex_integer | integer) sign? length?
+  | (oct_integer | hex_integer | integer) length? sign?
+
 let float = 
   ((digit+ | digit+ '.' digit+ | '.' digit+) (('e'|'E') '-'? digit+)? as value)
   ("F" as suffix)?
@@ -178,9 +179,7 @@ rule token = parse
   | "volatile"          { VOLATILE }
 
 (* values *)
-  | oct_integer         { INTEGER (Some "0", value, sign, length) }
-  | integer             { INTEGER (None, value, sign, length) }
-  | hex_integer         { INTEGER (Some "0x", value, sign, length) }
+  | integer_constant    { INTEGER (prefix, value, sign, length) }
   | "'" ((('\\'_)|[^'\\''\''])+ as c)
     "'"                 { CHARACTER (character (Lexing.from_string c)) }
   | wide_character      { Npkcontext.report_error "Lexer.token" 
@@ -274,9 +273,7 @@ and comment = parse
 
 and npk_spec = parse
 (* TODO: try to factor code more *)
-  | oct_integer         { INTEGER (Some "0", value, sign, length) }
-  | integer             { INTEGER (None, value, sign, length) }
-  | hex_integer         { INTEGER (Some "0x", value, sign, length) }
+  | integer_constant    { INTEGER (prefix, value, sign, length) }
   | float               { FLOATCST (value, suffix) }
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
 

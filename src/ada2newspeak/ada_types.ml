@@ -80,7 +80,7 @@ and trait_t =
   | Univ_int
   | Univ_real
   | Signed      of range
-  | Float       of int               (* Digits           *)
+  | Float       of Newspeak.Nat.t    (* Digits           *)
   | Array       of t*t list          (* Component-index  *)
   | Record      of (string * t) list (* Fields           *)
   | Enumeration of (string*int) list (* Name-index       *)
@@ -114,7 +114,7 @@ let rec print t =
     | Signed  (a,b) -> "Signed "^p_range (Some (A.IntegerRangeConstraint (a,b)))
     | Univ_int    -> "Universal_integer"
     | Univ_real   -> "Universal_real"
-    | Float   d -> "Float "  ^string_of_int d
+    | Float   d -> "Float "  ^Newspeak.Nat.to_string d
     | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
     | Array (c,i) -> "Array {{ component = "
                   ^print c^"; index = "
@@ -324,7 +324,7 @@ let integer = new_range (A.IntegerRangeConstraint(integer_first, integer_last))
 
 let boolean = new_enumerated ["true" ; "false"]
 
-let std_float = new_float 6
+let std_float = new_float (Newspeak.Nat.of_int 6)
 
 (*
  * This declaration is special because we don't want to make the character
@@ -599,8 +599,11 @@ let record_field t fld =
           "assertion (is_record) failed"
 
 let rec attr_get typ attr =
+  let const_nat x =
+    A.CInt x
+  in
   let const_int x =
-    A.CInt (Newspeak.Nat.of_int x)
+    const_nat (Newspeak.Nat.of_int x)
   in
   match (typ.base.trait, attr) with
     | Signed      _ ,"first" ->
@@ -630,7 +633,7 @@ let rec attr_get typ attr =
           else
             attr_get ind attr
         end
-    | Float digits , "digits" -> const_int digits, universal_integer
+    | Float digits , "digits" -> const_nat digits, universal_integer
     | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
     | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
     | Float _ , "first"       ->
@@ -657,8 +660,8 @@ let rec attr_get typ attr =
     | Signed      _ , _
     | Access      _ , _
     | Univ_int      , _
-    | Univ_real     , _
-                 -> Npkcontext.report_error "attr_get" ("No such attribute : '"^attr^"'")
+    | Univ_real     , _ -> Npkcontext.report_error "attr_get"
+                           ("No such attribute : '"^attr^"'")
 
 let belongs min max exp =
     Cir.Unop ( Npkil.Belongs_tmp (min, Npkil.Known (Newspeak.Nat.add_int 1 max))
@@ -677,10 +680,11 @@ let check_exp t_ctx exp =
       | _ -> Npkcontext.report_error "check_exp" "Float range constraint found"
   in
   let extract_constr e = match e with
-    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
+  | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
              , _
-             ) -> Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
-    | _ -> None
+             )
+      -> Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
+  | _ -> None
   in
   let constr =
     constr_combine (compute_constr t_ctx)

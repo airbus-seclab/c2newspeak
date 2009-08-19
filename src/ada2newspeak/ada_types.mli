@@ -73,7 +73,7 @@ val new_range      : Syntax_ada.contrainte -> t
 val new_enumerated : string list -> t
 
 (** Floating-point type. Parameter is number of digits. *)
-val new_float      : int -> t
+val new_float      : Newspeak.Nat.t -> t
 
 (**
  * Array type.

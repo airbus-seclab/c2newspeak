@@ -159,15 +159,10 @@ and normalize_var_modifier b (derefs, v) =
     match v with
 	Abstract -> (b, None, Newspeak.unknown_loc)
       | Variable (x, loc) -> (b, Some x, loc)
-      | Function ((0, Variable (f, loc)), args) -> 
-	  (normalize_ftyp (args, b), Some f, loc)
-      | Function ((1, v), args) -> 
+      | Function (x, args) -> 
 	  let ft = normalize_ftyp (args, b) in
-	    normalize_var_modifier (B.Ptr ft) (0, v)
+	    normalize_var_modifier ft x
       | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
-      | Function _ -> 
-	  Npkcontext.report_error "Synthack.normalize_var_modifier" 
-	    "case not implemented yet"
 	  
 and normalize_ftyp (args, ret) =
   let args = List.map normalize_arg args in

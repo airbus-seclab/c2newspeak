@@ -38,7 +38,7 @@ let gen_struct_id () =
    !! *)
 
 let get_loc () =
-  let pos = symbol_start_pos () in
+  let pos = Parsing.symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
 let apply_attrs attrs t =
@@ -438,11 +438,14 @@ asm:
 asm_statement_list:
   asm_statement                            { $1::[] }
 | asm_statement COLON asm_statement_list   { $1::$3 }
+| COLON asm_statement_list                 { $2 }
+| asm_statement COMMA asm_statement_list   { $1::$3 }
 ;;
 
 asm_statement:
   string_literal                           { $1 }
 | string_literal LPAREN IDENTIFIER RPAREN  { $1 }
+| string_literal LPAREN INTEGER RPAREN     { $1 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
@@ -473,10 +476,12 @@ iteration_statement:
 	  "init statement expected";
 	For([], normalize_bexp $4, $6, []) 
       }
-| WHILE LPAREN expression RPAREN statement { For([], normalize_bexp $3, $5, []) }
+| WHILE LPAREN expression_sequence RPAREN 
+  statement                                { For ([], normalize_bexp $3, $5, [])
+					   }
 | DO statement
   WHILE LPAREN expression_sequence 
-  RPAREN SEMICOLON                         { DoWhile($2, normalize_bexp $5) }
+  RPAREN SEMICOLON                         { DoWhile ($2, normalize_bexp $5) }
 ;;
 
 expression_statement:
@@ -573,6 +578,7 @@ expression:
 | BNOT       expression    %prec prefix_OP { Unop (BNot, $2) }
 | NOT        expression    %prec prefix_OP { Unop (Not, $2) }
 | MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
+| PLUS       expression                    { $2 }
 | SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
                            %prec prefix_OP { Sizeof (build_type_decl $3) }
@@ -861,6 +867,7 @@ external_declaration:
   STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
+| INLINE STATIC function_definition        { build_fundef true $3 }
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
@@ -935,10 +942,11 @@ attribute_name_list:
 attribute_name:
   IDENTIFIER                               { 
     begin match $1 with
-	"aligned" | "__cdecl__" | "noreturn" | "__noreturn__"
+	"aligned" | "__aligned__" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
-      | "__warn_unused_result__" | "__unused__" | "__artificial__" -> ()
+      | "__warn_unused_result__" | "__unused__" | "unused" 
+      | "__artificial__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -948,7 +956,7 @@ attribute_name:
       | "__transparent_union__" -> 
 	  Npkcontext.report_accept_warning "Parser.attribute_name" 
 	    "transparent union" Npkcontext.TransparentUnion
-      | "weak" ->
+      | "weak" | "__weak__" ->
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute weak"
       | _ -> raise Parsing.Parse_error
@@ -965,7 +973,7 @@ attribute_name:
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
     match ($1, $3) with
-	(("__format_arg__" | "aligned"), _::[]) -> []
+	(("__format_arg__" | "aligned" | "__regparm__"), _::[]) -> []
       | (("packed" | "__packed__"), _::[]) -> 
 	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
 	    "packed attribute" Npkcontext.Pack;
@@ -975,10 +983,14 @@ attribute_name:
   }
 | IDENTIFIER LPAREN 
     IDENTIFIER COMMA INTEGER COMMA INTEGER 
-  RPAREN                                   { 
-    if $1 <> "__format__" then raise Parsing.Parse_error;
+  RPAREN                                   {
+(* TODO: instead of comparing all the possibilities __format__, format...
+   maybe have a treatment that trims the __ first and then compares
+   and do that in an uniform way??
+*)
+    if $1 <> "__format__" && $1 <> "format" then raise Parsing.Parse_error;
     begin match $3 with
-	"__printf__" | "__scanf__" -> ()
+	"__printf__" | "printf" | "__scanf__" -> ()
       | _ -> raise Parsing.Parse_error
     end;
     [] 

@@ -72,6 +72,7 @@ type typ_declaration =
   | Array        of subtyp_indication list (* Indices   *)
                   * subtyp_indication      (* Component *)
   | Access       of subtyp
+  | Digits       of Newspeak.Nat.t
 
 and subtyp = name
 
@@ -92,8 +93,8 @@ and expression =
   | Aggregate    of aggregate
 
 and aggregate =
-  | NamedAggregate      of (aggregate_selector * expression) list
-  | PositionalAggregate of (expression list)
+  | NamedAggr      of (aggregate_selector * expression) list
+  | PositionalAggr of (expression list)
 
 and aggregate_selector =
   | AggrField of string

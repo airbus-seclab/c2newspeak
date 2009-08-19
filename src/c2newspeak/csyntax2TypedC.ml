@@ -199,6 +199,7 @@ let process globals =
   let translate_unop x t = 
     match (x, t) with
 	(Not, C.Int _) -> (C.Not, C.int_typ)
+      | (Not, C.Ptr _) -> (C.Not, C.int_typ)
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
@@ -288,9 +289,9 @@ let process globals =
 	  let (e, t) = translate_lv e in
 	    (C.AddrOf (e, t), C.Ptr t)
       | Unop (op, e) -> 
-	  let (e, t) = translate_exp e in
-	  let (op, t) = translate_unop op t in
-	    (C.Unop (op, e), t)
+	  let (e, t1) = translate_exp e in
+	  let (op, t2) = translate_unop op t1 in
+	    (C.Unop (op, t1, e), t2)
       | Binop (op, e1, e2) -> 
 	  let (e1, t1) = translate_exp e1 in
 	  let (e2, t2) = translate_exp e2 in
@@ -302,8 +303,10 @@ let process globals =
 	  let (e2, t2) = translate_exp e2 in
 	  let (e1, e2, t) = 
 	    match (t1, t2) with
-		(C.Ptr _, C.Int _) -> (e1, C.Cast ((e2, t2), t1), t1)
-	      | (C.Int _, C.Ptr _) -> (C.Cast ((e1, t1), t2), e2, t2)
+		(C.Ptr _, C.Int _) | (C.Float _, C.Int _) -> 
+		  (e1, C.Cast ((e2, t2), t1), t1)
+	      | (C.Int _, C.Ptr _) | (C.Int _, C.Float _) -> 
+		  (C.Cast ((e1, t1), t2), e2, t2)
 	      | (C.Ptr _, C.Ptr _) -> (e1, e2, t1)
 	      | (C.Int k1, C.Int k2) when k1 <> k2 -> 
 		  let k = Newspeak.max_ikind (C.promote k1) (C.promote k2) in
@@ -601,6 +604,17 @@ let process globals =
 	      
       | (Sequence seq, C.Comp { contents = Some (f, true) }) ->
 	  C.Sequence (translate_field_sequence seq f)
+
+      | (Sequence ((None, init)::[]), C.Comp { contents = Some (r, false) }) ->
+	  let t = 
+	    match r with
+		(_, b)::_ -> b
+	      | _ -> 
+		  Npkcontext.report_error "Firstpass.translate_init"
+		    "unexpected empty union"
+	  in
+	  let seq = (None, translate_init t init)::[] in
+	    C.Sequence seq
 
       | (Sequence ((Some f, init)::[]), 
 	 C.Comp { contents = Some (r, false)}) -> 

@@ -1,4 +1,4 @@
-Warning: 412.c:27#1088: extern function definition ignored
+Warning: 412.c:27#0: extern function definition ignored
 Newspeak output
 ---------------
 412.c

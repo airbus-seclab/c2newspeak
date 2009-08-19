@@ -1,5 +1,5 @@
-Warning: 654.c:27#1061: goto statement accepted
-Warning: 654.c:33#1136: goto statement accepted
+Warning: 654.c:27#0: goto statement accepted
+Warning: 654.c:33#0: goto statement accepted
 Newspeak output
 ---------------
 654.c

@@ -1,4 +1,4 @@
-Warning: 586.c:36#1155: goto statement accepted
+Warning: 586.c:36#0: goto statement accepted
 Newspeak output
 ---------------
 586.c

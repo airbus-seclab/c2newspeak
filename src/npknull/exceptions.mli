@@ -24,3 +24,6 @@
 *)
 
 exception Unknown
+
+(* TODO: remove this exception once the analyser is complete!! *)
+exception NotImplemented of string

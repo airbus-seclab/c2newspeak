@@ -145,6 +145,8 @@ let translate (globals, fundecls, spec) =
 	  let t2' = translate_typ t2 in
 	    (C.cast (e, t1') t2', t2)
 
+(* TODO: this should be simplified because a bit is done already in 
+   csyntax2TypedC!!! *)
   and translate_init t x =
     let res = ref [] in
     let rec translate o t x =
@@ -175,13 +177,24 @@ let translate (globals, fundecls, spec) =
 	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
 	      t
+	| (Sequence ((None, v)::[]), Comp { contents = Some (r, false) }) ->
+	    let (r, _, _) = translate_union r in
+	    let (f_o, f_t) = 
+	      match r with
+		  (_, b)::_ -> b
+		| _ -> 
+		    Npkcontext.report_error "Firstpass.translate_init"
+		      "unexpected empty union"
+	    in
+	    let _ = translate (o + f_o) f_t v in
+	      t
 
 	| (Sequence ((Some f, v)::[]), Comp { contents = Some (r, false) }) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
 	      t
-		
+	
 	| (Sequence _, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
@@ -406,10 +419,7 @@ let translate (globals, fundecls, spec) =
 
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
-	| Unop (op, e) -> 
-	    let (op, t) = translate_unop op in
-	    let e = translate_exp (e, t) in
-	      C.Unop (op, e)
+	| Unop x -> C.Unop (translate_unop x)
 		
 	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
 	    let e1 = translate_exp (e1, t1) in
@@ -453,6 +463,7 @@ let translate (globals, fundecls, spec) =
    should/could?? be implemented during csyntax2CoreC too!!! *)
 (* TODO: think about it *)
 	    let (args, args_t) = translate_args args args_t in
+            let args = List.map (fun x -> C.In x) args in
 	    let ft = translate_ftyp (args_t, ret_t) in
 	      C.Call (ft, e, args)
 
@@ -925,7 +936,7 @@ let translate (globals, fundecls, spec) =
 	    let e1 = select (guard_c::post@t1, guard_not_c::post@f1) in
 	    let e2 = select (guard_c::post@t2, guard_not_c::post@f2) in
 	      (pref@e1, pref@e2)
-	| Unop (Not, e) -> 
+	| Unop (Not, _, e) -> 
 	    let (e1, e2) = translate_guard e in
 	      (e2, e1)
 
@@ -1084,10 +1095,25 @@ let translate (globals, fundecls, spec) =
     in
       (e, t)
 
-  and translate_unop op = 
-    match op with
-	Not -> (K.Not, TypedC.int_typ)
-      | BNot k -> (K.BNot (Newspeak.domain_of_typ k), TypedC.Int k)
+  and translate_unop (op, t, e) = 
+    let e = translate_exp (e, t) in
+    let e = 
+      match (op, t) with
+	  (Not, Ptr _) -> 
+(* TODO: this is a bit of a hack, have Nil in cir?? *)
+	    let nil = 
+	      C.Unop (K.Cast (N.Int C.int_kind, N.Ptr), C.exp_of_int 0) 
+	    in
+	      C.Binop (Newspeak.Eq Newspeak.Ptr, e, nil)
+	| _ -> e
+    in
+    let op =
+      match op with
+	  Not -> K.Not
+	| BNot k -> K.BNot (Newspeak.domain_of_typ k)
+    in
+      (op, e)
+
 
   and size_of t = C.size_of_typ (translate_typ t)
 

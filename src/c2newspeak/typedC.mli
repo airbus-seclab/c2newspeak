@@ -102,7 +102,7 @@ and exp =
     | Index of (exp * array_typ * typ_exp)
     | Deref of typ_exp
     | AddrOf of typ_exp
-    | Unop of (unop * exp)
+    | Unop of (unop * typ * exp)
     | IfExp of (exp * typ_exp * typ_exp * typ)
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (funexp * ftyp * typ_exp list)

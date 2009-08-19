@@ -36,13 +36,19 @@ let parse fname =
 	close_in cin;
 	(fnames, globals)
     with Parsing.Parse_error -> 
-      let loc = "Compiler.parse" in
+      let src_file = "Compiler.parse" in
       let lexeme = Lexing.lexeme lexbuf in
       let msg = "syntax error: unexpected token: "^lexeme in
       let advice = ", rewrite your code" in
+      let pos = Lexing.lexeme_start_p lexbuf in
+      let loc = 
+	(pos.Lexing.pos_fname, pos.Lexing.pos_lnum, 
+	 pos.Lexing.pos_cnum-pos.Lexing.pos_bol) 
+      in
+	Npkcontext.set_loc loc;
 	if (not !Npkcontext.accept_gnuc)
-	then Npkcontext.report_accept_warning loc msg Npkcontext.GnuC;
-	Npkcontext.report_error loc (msg^advice)
+	then Npkcontext.report_accept_warning src_file msg Npkcontext.GnuC;
+	Npkcontext.report_error src_file (msg^advice)
 
 (* TODO: try to do this using function parse ? factor code with previous 
    function *)

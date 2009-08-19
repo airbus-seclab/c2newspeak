@@ -1,4 +1,4 @@
-Warning: 356.c:27#1121: extern function definition ignored
+Warning: 356.c:27#0: extern function definition ignored
 Newspeak output
 ---------------
 356.c

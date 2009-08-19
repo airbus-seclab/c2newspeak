@@ -1,4 +1,4 @@
-Warning: 513.c:29#1074: conditional expression
+Warning: 513.c:29#0: conditional expression
 Newspeak output
 ---------------
 513.c

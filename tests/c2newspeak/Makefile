@@ -111,6 +111,8 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	740 741 742 743 744 745 746 747 748 749 \
 	750 751 752 				\
 					    	\
+	750 751 752 753 754 755 756 757 758 759 \
+	760 761 762 763 764 765 766 767 768 769 \
 	    771
 
 PREREQ=%.c
@@ -191,5 +193,5 @@ TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
 .PHONY: $(TESTS.CIL.SPEC)
 
 $(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
-	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c &> $@; true
+	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c > $@ 2>&1; true
 	cat $@

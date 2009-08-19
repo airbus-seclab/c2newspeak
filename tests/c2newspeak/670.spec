@@ -1,4 +1,4 @@
-Warning: 670.c:27#1047: unspecified integer kind
+Warning: 670.c:27#0: unspecified integer kind
 Newspeak output
 ---------------
 670.c

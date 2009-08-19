@@ -60,8 +60,13 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
-  | Call of (exp list * ftyp * fn * lval list)
+  | Call of (arg list * ftyp * fn * lval option)
   | UserSpec of assertion
+
+and arg =
+  | In    of exp  (* Copy-in only (C style) *)
+  | Out   of lval (* Copy-out only (no initializer) *)
+  | InOut of lval (* Copy-in + Copy-out *)
 
 and assertion = token list
 

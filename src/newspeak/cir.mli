@@ -98,8 +98,13 @@ and exp =
     | AddrOfFun of (string * ftyp)
     | Unop of (Npkil.unop * exp)
     | Binop of (Newspeak.binop * exp * exp)
-    | Call of (ftyp * funexp * exp list)
+    | Call of (ftyp * funexp * arg list)
     | BlkExp of (blk * exp * bool)
+
+and arg =
+  | In    of exp  (* Copy-in only (C style) *)
+  | Out   of lv   (* Copy-out only (no initializer) *)
+  | InOut of lv   (* Copy-in + Copy-out *)
 
 and funexp =
     | Fname of string
