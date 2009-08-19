@@ -694,8 +694,8 @@ and translate_call ret f args =
   let args = List.map translate_exp args in
   let ret =
     match ret with
-	None -> []
-      | Some lv -> (translate_lval lv)::[]
+	None    -> None
+      | Some lv -> Some (translate_lval lv)
   in
   let fn = 
     match f with

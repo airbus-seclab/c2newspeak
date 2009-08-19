@@ -53,7 +53,7 @@ and stmtkind =
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
 (* have a list of typed exp and a list of typed lval *)
-  | Call of (exp list * ftyp * fn * lval list)
+  | Call of (exp list * ftyp * fn * lval option)
   | UserSpec of assertion
 
 and specs = assertion list

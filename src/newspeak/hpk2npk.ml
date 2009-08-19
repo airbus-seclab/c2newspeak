@@ -124,33 +124,28 @@ let translate prog =
   in
 
   let suffix_rets fid loc f ft (args, rets) args_ids =
-    let rec add rets =
+    let add rets =
       match rets with
 	  (* TODO: should have one list instead of two here!!! *)
-	  (lv::rets, t::rets_t) -> 
+	  (Some lv, Some t) -> 
 	    push tmp_var;
 	    let e = Lval (Local tmp_var, t) in
 	    let set = translate_set (lv, e, t) in
-	    let call = add (rets, rets_t) in
+	    let call = prefix_args loc f ft args args_ids in
 	    let x = "value_of_"^fid in
 	      pop tmp_var;
 	      N.Decl (x, t, (call, loc)::(set, loc)::[])
 	| _ -> prefix_args loc f ft args args_ids
     in
-    let rec add_fst rets =
+    let add_fst rets =
       match rets with
-	  ((Local v)::rets, _::rets_t) 
+	  (Some (Local v), Some _) 
 	    when Hashtbl.find env v = !stack_height -> 
-	      add_fst (rets, rets_t)
+	      add(None, None)
 	| _ -> add rets
     in
     let (_, rets_t) = ft in
     (* TODO: change ret_typ in ftyp so that it is a list *)
-    let rets_t =
-      match rets_t with
-	  None -> []
-	| Some t -> t::[]
-    in
     let rets = (rets, rets_t) in
       add_fst rets
   in

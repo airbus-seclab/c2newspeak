@@ -157,7 +157,10 @@ let rec generate_stmt (sk, loc) =
 	  let args = List.map generate_exp args in
 	  let ft = generate_ftyp ft in
 	  let fn = generate_fn fn in
-	  let rets = List.map generate_lv rets in
+	  let rets = match rets with
+            | Some r -> Some (generate_lv r)
+            | None   -> None
+          in
 	  H.Call (args, ft, fn, rets)
       | Goto lbl -> H.Goto lbl
       | DoWith (body, lbl, action) ->
