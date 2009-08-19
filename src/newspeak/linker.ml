@@ -142,6 +142,11 @@ let generate_global name (t, loc, storage, used) =
   end;
   Npkcontext.print_debug ("Global linked: "^name)
 
+let generate_arg arg =
+  match arg with
+    | In    e -> H.In    (generate_exp e)
+    | Out   l -> H.Out   (generate_lv l)
+    | InOut l -> H.InOut (generate_lv l)
 
 let rec generate_stmt (sk, loc) =
   let new_sk = 
@@ -154,10 +159,13 @@ let rec generate_stmt (sk, loc) =
 	  H.Select (generate_blk body1, generate_blk body2)
       | InfLoop b -> H.InfLoop (List.map generate_stmt b)
       | Call (args, ft, fn, rets) ->
-	  let args = List.map generate_exp args in
+	  let args = List.map generate_arg args in
 	  let ft = generate_ftyp ft in
 	  let fn = generate_fn fn in
-	  let rets = List.map generate_lv rets in
+	  let rets = match rets with
+            | Some r -> Some (generate_lv r)
+            | None   -> None
+          in
 	  H.Call (args, ft, fn, rets)
       | Goto lbl -> H.Goto lbl
       | DoWith (body, lbl, action) ->
