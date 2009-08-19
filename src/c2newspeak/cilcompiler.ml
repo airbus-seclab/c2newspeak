@@ -691,7 +691,7 @@ and translate_call ret f args =
 	  Npkcontext.report_error "Cilcompiler.translate_exp" 
 	    "case not handled yet"
   in
-  let args = List.map translate_exp args in
+  let args = List.map (fun x -> K.In (translate_exp x)) args in
   let ret =
     match ret with
 	None    -> None

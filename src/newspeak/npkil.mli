@@ -83,8 +83,13 @@ and stmtkind =
   | DoWith of (blk * Newspeak.lbl * blk)
   | Goto of Newspeak.lbl
       (* (in, type, function, out) *)
-  | Call of (exp list * ftyp * fn * lval option)
+  | Call of (arg list * ftyp * fn * lval option)
   | UserSpec of assertion
+
+and arg =
+  | In    of exp  (* Copy-in only (C style) *)
+  | Out   of lval (* Copy-out only (no initializer) *)
+  | InOut of lval (* Copy-in + Copy-out *)
 
 and vid = int
 
