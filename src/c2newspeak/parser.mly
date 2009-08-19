@@ -438,11 +438,13 @@ asm:
 asm_statement_list:
   asm_statement                            { $1::[] }
 | asm_statement COLON asm_statement_list   { $1::$3 }
+| asm_statement COMMA asm_statement_list   { $1::$3 }
 ;;
 
 asm_statement:
   string_literal                           { $1 }
 | string_literal LPAREN IDENTIFIER RPAREN  { $1 }
+| string_literal LPAREN INTEGER RPAREN     { $1 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
