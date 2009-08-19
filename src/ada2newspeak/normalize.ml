@@ -390,12 +390,16 @@ and make_arg_list args spec =
       | (None   , e)::tl -> e::(extract_positional_parameters tl)
   in
 
-  let make_arg_copy arg exp = match (arg.mode, fst exp) with
-  | In , _          -> None
-  | _  , Ast.Lval l -> Some (l , arg.formal_name)
-  | _ -> Npkcontext.report_error "make_arg_copy"
-                ( "Actual parameter with \"out\" or \"in out\" mode "
-                ^ "must be a left-value")
+  let make_arg arg exp =
+    let mode = match (arg.mode, fst exp) with
+    | In    , _          -> Ast.In   exp
+    | Out   , Ast.Lval l -> Ast.Out   l
+    | InOut , Ast.Lval l -> Ast.InOut l
+    | _ -> Npkcontext.report_error "make_arg_copy"
+                  ( "Actual parameter with \"out\" or \"in out\" mode "
+                  ^ "must be a left-value")
+    in
+    (subtyp_to_adatyp arg.param_type, mode)
   in
 
   (**
@@ -424,12 +428,9 @@ and make_arg_list args spec =
                                             ^ "parameter " ^ x.formal_name
                                             ^ ", which has no default one.")
                             ) in
-                          ( subtyp_to_adatyp x.param_type
-                          , value
-                          , make_arg_copy x value
-                          )) spec
+                          make_arg x value) spec
             | (ev,_)::pt,s::st -> let t = subtyp_to_adatyp s.param_type in
-                                  (t, (ev,t), make_arg_copy s (ev,t))
+                                  (make_arg s (ev,t))
                                   ::(merge_with_specification pt st)
             | _::_,[]     -> Npkcontext.report_error "normalize.function_call"
                             "Too many actual arguments in function call"
