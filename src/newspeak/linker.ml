@@ -155,6 +155,7 @@ let rec generate_stmt (sk, loc) =
       | InfLoop b -> H.InfLoop (List.map generate_stmt b)
       | Call (args, ft, fn, rets) ->
 	  let args = List.map generate_exp args in
+	  let args = List.map (fun x -> H.In x) args in
 	  let ft = generate_ftyp ft in
 	  let fn = generate_fn fn in
 	  let rets = match rets with

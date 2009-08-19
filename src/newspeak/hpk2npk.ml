@@ -111,12 +111,13 @@ let translate prog =
   let prefix_args loc f ft args args_ids =
     let rec add args =
       match args with
-	  (e::args, t::args_t, x::args_ids) -> 
+	  ((In e)::args, t::args_t, x::args_ids) -> 
 	    push tmp_var;
 	    let set = translate_set (Local tmp_var, e, t) in
 	    let call = add (args, args_t, args_ids) in
 	      pop tmp_var;
 	      N.Decl (x, t, (set, loc)::(call, loc)::[])
+        | (_::_, _::_, _::_) -> failwith "Out/InOut parameter"
 	| _ -> N.Call (translate_fn ft f)
     in
     let (args_t, _) = ft in

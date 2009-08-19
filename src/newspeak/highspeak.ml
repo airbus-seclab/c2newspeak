@@ -54,8 +54,13 @@ and stmtkind =
   | Goto of lbl
 (* TODO: in case of a funderef, the ftyp is redundant!! *)
 (* The ftyp should be in the list of args and the list of lval!! *)
-  | Call of (exp list * ftyp * fn * lval option)
+  | Call of (arg list * ftyp * fn * lval option)
   | UserSpec of assertion
+
+and arg =
+  | In    of exp  (* Copy-in only (C style) *)
+  | Out   of lval (* Copy-out only (no initializer) *)
+  | InOut of lval (* Copy-in + Copy-out *)
 
 and specs = assertion list
 
