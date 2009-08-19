@@ -982,6 +982,13 @@ attribute_name:
       | (("__nonnull__" | "__nonnull"), _) -> []
       | _ -> raise Parsing.Parse_error
   }
+| IDENTIFIER LPAREN LPAREN 
+      IDENTIFIER LPAREN type_name RPAREN 
+      RPAREN RPAREN                         { 
+	if $1 <> "aligned" then raise Parsing.Parse_error;
+	if $4 <> "__alignof__" then raise Parsing.Parse_error;
+	[]
+      }
 | IDENTIFIER LPAREN 
     IDENTIFIER COMMA INTEGER COMMA INTEGER 
   RPAREN                                   {
