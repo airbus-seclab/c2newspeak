@@ -680,6 +680,7 @@ composite:
 named_init_list:
   named_init COMMA named_init_list         { $1::$3 }
 | named_init                               { $1::[] }
+| named_init COMMA                         { $1::[] }
 ;;
 
 named_init:
