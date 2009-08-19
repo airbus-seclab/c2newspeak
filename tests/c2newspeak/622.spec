@@ -1,4 +1,4 @@
-Warning: 622.c:33#1114: goto statement accepted
+Warning: 622.c:33#0: goto statement accepted
 Newspeak output
 ---------------
 622.c

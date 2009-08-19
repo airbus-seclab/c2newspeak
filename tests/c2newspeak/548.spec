@@ -1,4 +1,4 @@
-Warning: 548.c:33#1109: local composite creation accepted
+Warning: 548.c:33#0: local composite creation accepted
 Newspeak output
 ---------------
 548.c

@@ -1,5 +1,5 @@
-Warning: 525.c:29#1084: comma in expression accepted
-Warning: 525.c:29#1084: block within expression accepted
+Warning: 525.c:29#0: comma in expression accepted
+Warning: 525.c:29#0: block within expression accepted
 Warning: 525.c:29#28: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------

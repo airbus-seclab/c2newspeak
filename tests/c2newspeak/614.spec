@@ -1,4 +1,4 @@
-Warning: 614.c:26#1033: ignoring attribute weak
+Warning: 614.c:26#0: ignoring attribute weak
 Newspeak output
 ---------------
 614.c

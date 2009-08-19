@@ -1,4 +1,4 @@
-Warning: 593.c:39#1172: goto statement accepted
+Warning: 593.c:39#0: goto statement accepted
 Newspeak output
 ---------------
 593.c

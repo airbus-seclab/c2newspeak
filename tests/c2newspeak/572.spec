@@ -1,4 +1,4 @@
-Warning: 572.c:29#1099: extern function definition ignored
+Warning: 572.c:29#0: extern function definition ignored
 Newspeak output
 ---------------
 572.c

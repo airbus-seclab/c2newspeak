@@ -1,4 +1,4 @@
-Warning: 447.c:30#1125: block within expression accepted
+Warning: 447.c:30#0: block within expression accepted
 Newspeak output
 ---------------
 447.c

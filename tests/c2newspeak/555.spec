@@ -1,4 +1,4 @@
-Warning: 555.c:33#1137: switch with default case in intermediary position accepted
+Warning: 555.c:33#0: switch with default case in intermediary position accepted
 Newspeak output
 ---------------
 555.c

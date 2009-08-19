@@ -38,7 +38,7 @@ let gen_struct_id () =
    !! *)
 
 let get_loc () =
-  let pos = symbol_start_pos () in
+  let pos = Parsing.symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
 let apply_attrs attrs t =

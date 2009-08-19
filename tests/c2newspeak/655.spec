@@ -1,7 +1,7 @@
-Warning: 655.c:30#1102: goto statement accepted
-Warning: 655.c:33#1136: goto statement accepted
-Warning: 655.c:35#1155: goto statement accepted
-Warning: 655.c:36#1168: goto statement accepted
+Warning: 655.c:30#0: goto statement accepted
+Warning: 655.c:33#0: goto statement accepted
+Warning: 655.c:35#0: goto statement accepted
+Warning: 655.c:36#0: goto statement accepted
 Newspeak output
 ---------------
 655.c

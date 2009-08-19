@@ -1,4 +1,4 @@
-Warning: 610.c:34#1142: goto statement accepted
+Warning: 610.c:34#0: goto statement accepted
 Newspeak output
 ---------------
 610.c

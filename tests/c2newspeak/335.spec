@@ -1,12 +1,12 @@
-Warning: 335.c:27#1067: identifier s is defined as a type, avoid using it for another purpose
-Warning: 335.c:32#1102: 'short' is not normalized: use 'short int' instead
-Warning: 335.c:33#1111: 'long' is not normalized: use 'long int' instead
-Warning: 335.c:34#1119: 'long long' is not standard: use 'long long int' instead
-Warning: 335.c:39#1179: init statement expected
-Warning: 335.c:41#1207: increment statement expected
-Warning: 335.c:43#1230: init statement expected
-Warning: 335.c:44#1234: halting condition should be explicit
-Warning: 335.c:45#1247: init statement expected
+Warning: 335.c:27#0: identifier s is defined as a type, avoid using it for another purpose
+Warning: 335.c:32#0: 'short' is not normalized: use 'short int' instead
+Warning: 335.c:33#0: 'long' is not normalized: use 'long int' instead
+Warning: 335.c:34#0: 'long long' is not standard: use 'long long int' instead
+Warning: 335.c:39#0: init statement expected
+Warning: 335.c:41#0: increment statement expected
+Warning: 335.c:43#0: init statement expected
+Warning: 335.c:44#0: halting condition should be explicit
+Warning: 335.c:45#0: init statement expected
 Newspeak output
 ---------------
 335.c

@@ -1,4 +1,4 @@
-Warning: 764.c:28#1056: comma in expression accepted
+Warning: 764.c:28#0: comma in expression accepted
 Newspeak output
 ---------------
 764.c

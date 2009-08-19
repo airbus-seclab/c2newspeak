@@ -1,6 +1,6 @@
-Warning: 671.c:29#1055: comma in expression accepted
-Warning: 671.c:30#1093: comma in expression accepted
-Warning: 671.c:31#1131: comma in expression accepted
+Warning: 671.c:29#0: comma in expression accepted
+Warning: 671.c:30#0: comma in expression accepted
+Warning: 671.c:31#0: comma in expression accepted
 Newspeak output
 ---------------
 671.c

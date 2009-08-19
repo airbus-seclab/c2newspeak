@@ -30,7 +30,7 @@ open Pp_syntax
 
 let set_loc lexbuf pos = 
   lexbuf.lex_curr_p <- pos;
-  Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum)
+  Npkcontext.set_loc (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
 let init fname lexbuf = 
   let pos = { lexbuf.lex_curr_p with pos_fname = fname } in

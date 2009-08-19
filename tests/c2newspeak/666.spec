@@ -1,4 +1,4 @@
-Warning: 666.c:29#1088: asm directive 'bswap %0' '=r' '0' ignored
+Warning: 666.c:29#0: asm directive 'bswap %0' '=r' '0' ignored
 Newspeak output
 ---------------
 666.c
