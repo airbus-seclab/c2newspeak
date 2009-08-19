@@ -942,7 +942,8 @@ attribute_name:
 	"aligned" | "__aligned__" | "__cdecl__" | "noreturn" | "__noreturn__"
       | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
-      | "__warn_unused_result__" | "__unused__" | "__artificial__" -> ()
+      | "__warn_unused_result__" | "__unused__" | "unused" 
+      | "__artificial__" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
