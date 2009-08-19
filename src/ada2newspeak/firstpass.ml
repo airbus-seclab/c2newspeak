@@ -206,7 +206,7 @@ let translate compil_unit =
           end
     in
     let (x, y) = List.split (List.map translate_parameter params) in
-    (x, y, !copy_in, !copy_out)
+    (x, List.map (fun x -> C.In x) y, !copy_in, !copy_out)
 
   (** Translates a function call. *)
   and translate_function_call fname (arg_list:Ast.argument list) rt =

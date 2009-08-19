@@ -110,8 +110,13 @@ and exp =
     | AddrOfFun of (string * ftyp)
     | Unop of (Npkil.unop * exp)
     | Binop of (Newspeak.binop * exp * exp)
-    | Call of (ftyp * funexp * exp list)
+    | Call of (ftyp * funexp * arg list)
     | BlkExp of (blk * exp * bool)
+
+and arg =
+  | In    of exp  (* Copy-in only (C style) *)
+  | Out   of lv   (* Copy-out only (no initializer) *)
+  | InOut of lv   (* Copy-in + Copy-out *)
 
 and funexp =
     | Fname of string
@@ -425,23 +430,24 @@ and normalize_exp_post loc e t =
 	(pref, Lval (v, t))
     end else (pref, e)
       
-and normalize_rets loc rets t =
-  match rets with
-      lv::[] -> 
-	let (pref, lv) = normalize_lv_post loc lv t in
-	  (pref, lv::[])
-    | [] -> ([], [])
-    | _ -> Npkcontext.report_error "Cir.normalize_rets" "unreachable statement"
-	
 and normalize_args loc args args_t =
   match (args, args_t) with
-      (e::args, t::args_t) -> 
+    | ((Out lv)::args, t::args_t) -> 
+	let (pref1, args) = normalize_args loc args args_t in
+	let (pref2, e) = normalize_exp_post loc (Lval (lv, t)) t in
+        let lv' = begin match e with
+        | Lval (l,_) -> l
+        | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable"
+        end in
+	let pref = concat_effects pref1 pref2 in
+	  (pref, (Out lv')::args)
+    | ((In e)::args, t::args_t) -> 
 	let (pref1, args) = normalize_args loc args args_t in
 	let (pref2, e) = normalize_exp_post loc e t in
 	let pref = concat_effects pref1 pref2 in
-	  (pref, e::args)
+	  (pref, (In e)::args)
     | ([], []) -> ([], [])
-    | _ -> Npkcontext.report_error "Cir.normalize_rets" "unreachable statement"
+    | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable statement"
 	
 and normalize_choice pref ((e, t), body) =
   let (empty_pref, e, empty_post) = normalize_exp e in

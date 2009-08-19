@@ -463,6 +463,7 @@ let translate (globals, fundecls, spec) =
    should/could?? be implemented during csyntax2CoreC too!!! *)
 (* TODO: think about it *)
 	    let (args, args_t) = translate_args args args_t in
+            let args = List.map (fun x -> C.In x) args in
 	    let ft = translate_ftyp (args_t, ret_t) in
 	      C.Call (ft, e, args)
 

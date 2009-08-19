@@ -227,7 +227,10 @@ let translate src_lang prog fnames =
       | FunDeref e -> K.FunDeref (translate_exp e)
       
   and translate_arg arg =
-      K.In (translate_exp arg)
+    match arg with
+      | In    e -> K.In    (translate_exp e)
+      | Out   l -> K.Out   (translate_lv l)
+      | InOut l -> K.InOut (translate_lv l)
 
   and translate_call ret (ft, fn, args) =
     let args = List.map translate_arg args in
