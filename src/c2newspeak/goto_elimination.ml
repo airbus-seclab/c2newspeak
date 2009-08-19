@@ -363,7 +363,7 @@ let rec split_lbl stmts lbl =
 	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
 
 let sibling_elimination stmts lbl g_offset vdecls =
-let rec direction stmts =
+  let rec direction stmts =
   match stmts with
       [] -> raise Not_found
     | (stmt, _)::stmts ->
@@ -646,7 +646,7 @@ let outward stmts lbl g_level g_offset =
 		  match cases with 
 		      [] -> [], [], false
 		    | (e, blk, l')::cases ->
-			let blk', stmts, b' = out blk stmts out_switch_loop has_label in
+			let blk', stmts, b' = fold blk stmts out_switch_loop has_label in
 			  if not b' then 
 			    let cases', stmts', b' = case_fold cases in
 			      (e, blk, l')::cases', stmts', b'
