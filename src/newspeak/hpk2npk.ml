@@ -111,14 +111,32 @@ let translate prog =
   let prefix_args loc f ft args args_ids =
     let rec add args =
       match args with
-	  ((In e)::args, t::args_t, x::args_ids) -> 
+	| (arg::args, t::args_t, x::args_ids) -> 
 	    push tmp_var;
-	    let set = translate_set (Local tmp_var, e, t) in
+            let set = begin match arg with
+              | In    e -> Some (translate_set (Local tmp_var, e, t))
+              | InOut l -> Some (translate_set (Local tmp_var, Lval (l, t), t))
+              | Out   _ -> None
+            end in
 	    let call = add (args, args_t, args_ids) in
-	      pop tmp_var;
-	      N.Decl (x, t, (set, loc)::(call, loc)::[])
-        | (_::_, _::_, _::_) -> failwith "Out/InOut parameter"
-	| _ -> N.Call (translate_fn ft f)
+            let copy_out = match arg with
+              | In    _ -> None
+              | Out   l
+              | InOut l -> Some (translate_set (l, Lval (Local tmp_var, t), t))
+            in
+            pop tmp_var;
+            let call_with_copyout = match copy_out with
+            | None   -> (call, loc)::[]
+            | Some c -> (call, loc)::(c, loc)::[]
+            in
+            let full_call = match set with
+            | None   -> call_with_copyout
+            | Some s -> (s, loc)::call_with_copyout
+            in
+            N.Decl (x, t, full_call)
+        | ([], [], []) -> N.Call (translate_fn ft f)
+        | _ -> Npkcontext.report_error "hpk2npk.prefix_args"
+                 "Mismatching number of parameters"
     in
     let (args_t, _) = ft in
       add (args, args_t, args_ids)
