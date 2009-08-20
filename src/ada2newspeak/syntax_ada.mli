@@ -177,8 +177,7 @@ and instruction =
 
 (** Subprogram declaration *)
 and sub_program_spec =
-  | Function  of string * param list * subtyp (** A Function returns a value *)
-  | Procedure of string * param list          (** A Procedure does not       *)
+  | Subprogram of string * param list * subtyp option
 
 and object_state =
   | Variable
@@ -193,11 +192,11 @@ and package_spec = string
                  * (basic_declaration * Newspeak.location) list
 
 and spec =
-  | SubProgramSpec of sub_program_spec
+  | SubprogramSpec of sub_program_spec
   |    PackageSpec of package_spec
 
 and body =
-  | SubProgramBody of sub_program_spec
+  | SubprogramBody of sub_program_spec
                     * declarative_part
                     * block
   |    PackageBody of string

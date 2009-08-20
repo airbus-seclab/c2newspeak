@@ -131,7 +131,6 @@ val add_variable : t -> string -> Newspeak.location
 
 val add_subprogram : t
                 -> string
-                -> Newspeak.location
                 -> Syntax_ada.param list
                 -> Ada_types.t option
       -> unit

@@ -45,8 +45,7 @@ let check_name l1 = function
 
 let check_end decl end_name =
   let begin_name = match decl with
-    | Function(name,_,_) -> name
-    | Procedure(name,_) -> name
+    | Subprogram(name,_,_) -> name
   in
     match end_name with
     | None    -> ()
@@ -180,14 +179,14 @@ body :
 | subprogram_spec IS declarative_part
   BEGIN instr_list END ident_opt SEMICOLON { let (spec, loc) = $1 in
                                              check_end spec $7;
-                                             SubProgramBody(spec,$3,$5), loc }
+                                             SubprogramBody(spec,$3,$5), loc }
 | PACKAGE BODY ident IS declarative_part
   END name_opt SEMICOLON                   { check_name [$3] $7;
                                              PackageBody($3, None, $5), $1 }
 ;;
 
 decl :
-| subprogram_spec SEMICOLON                { (SubProgramSpec(fst $1)), snd $1 }
+| subprogram_spec SEMICOLON                { (SubprogramSpec(fst $1)), snd $1 }
 | PACKAGE ident IS basic_declarative_part
   END name_opt SEMICOLON                   { check_name [$2] $6;
                                              PackageSpec($2, $4), $1 }
@@ -204,9 +203,9 @@ decl :
 ;;
 
 subprogram_spec :
-| PROCEDURE ident full_formal_part         { Procedure($2,$3)    , $1 }
+| PROCEDURE ident full_formal_part         { Subprogram ($2,$3,None)    , $1 }
 | FUNCTION  ident full_formal_part
-            RETURN subtyp                  { Function ($2,$3,$5) , $1 }
+            RETURN subtyp                  { Subprogram ($2,$3,Some $5) , $1 }
 ;;
 
 full_formal_part :
@@ -315,9 +314,7 @@ basic_declaration :
                                              snd (fst $1)), snd $1 }
 | subprogram_spec RENAMES name SEMICOLON   { let nm = fst $3 in
                                              match (fst $1) with
-                                             | Function  (n,_,_) ->
-                                                 RenamingDecl (n, nm),$2
-                                             | Procedure (n,_)   ->
+                                             | Subprogram (n,_,_) ->
                                                  RenamingDecl (n, nm),$2
                                            }
 | ident_list COLON subtyp_indication

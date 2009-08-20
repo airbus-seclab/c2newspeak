@@ -171,12 +171,12 @@ module Table = struct
     adder (fun t -> Type t)
           "type"
 
-  let add_subprogram tbl n loc params ret =
+  let add_subprogram tbl n params ret =
     adder (fun (params,ret) -> Subprogram (n,params,ret))
           "subprogram"
           tbl
           n
-          loc
+          Newspeak.unknown_loc
           (params,ret)
 
 (******************************************************************************
@@ -582,8 +582,8 @@ module SymMake(TR:Tree.TREE) = struct
   let add_type s n loc v =
     add_type (top s) n loc v (scope (top s))
 
-  let add_subprogram s n loc v rt =
-    add_subprogram (top s) n loc v rt (scope (top s))
+  let add_subprogram s n v rt =
+    add_subprogram (top s) n v rt (scope (top s))
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
