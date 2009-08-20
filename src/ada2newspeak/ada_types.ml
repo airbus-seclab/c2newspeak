@@ -597,13 +597,15 @@ let rec attr_get typ attr =
         begin
           match compute_constr typ with
           | Some (A.IntegerRangeConstraint(a,_)) -> A.CInt a, typ
-          | _ -> failwith "attr_get"
+          | _ -> Npkcontext.report_error "attr_get"
+                   "This type does not have a 'first attribute"
         end
     | Signed      _ ,"last" ->
         begin
           match compute_constr typ with
           | Some (A.IntegerRangeConstraint(_,b)) -> A.CInt b, typ
-          | _ -> failwith "attr_get"
+          | _ -> Npkcontext.report_error "attr_get"
+                   "This type does not have a 'first attribute"
         end
     | Enumeration v, "first" -> const_int (snd (List.hd v)), typ
     | Enumeration v, "last"  -> const_int (snd (ListUtils.last v)), typ

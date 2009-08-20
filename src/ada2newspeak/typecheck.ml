@@ -46,57 +46,56 @@ let expect ?desc t1 t2 =
           )
 
 let t_assert x msg =
-  if (not x) then
+  if not x then
     error ("Type assertion failed : " ^ msg)
-
 
 let type_of_binop op t1 t2 = match op with
   | Eq    -> expect ~desc:"binary =" t1 t2;
              T.boolean
   | Or | And -> expect ~desc:"binary or" t1 t2;
-                t_assert (T.is_boolean t1)
-                  "Logical operator is not defined -- 4.5.1.(2)";
+                if not (T.is_boolean t1) then
+                 error "Logical operator is not defined -- 4.5.1.(2)";
                 t1
   | Gt    -> expect ~desc: "binary >" t1 t2;
-             t_assert (T.is_scalar t1)
-               "Ordering operator is not defined -- 4.5.2.(8)";
+             if not (T.is_scalar t1) then
+               error "Ordering operator is not defined -- 4.5.2.(8)";
              T.boolean
   | Plus | Minus -> expect ~desc:"binary adding" t1 t2;
-                    t_assert (T.is_numeric t1)
-                           "Binary adding operator is not defined -- 4.5.3.(1)"
+                    if not (T.is_numeric t1) then
+                          error "Binary adding operator is not defined -- 4.5.3.(1)"
                     ;
                     T.coerce_types t1 t2
   | Mult | Div -> expect ~desc:"binary multiplying" t1 t2;
-                  t_assert (T.is_float t1 || T.is_integer t1)
-                    "Multiplying operator is not defined -- 4.5.5.(2)";
+                  if not (T.is_float t1 || T.is_integer t1) then
+                    error "Multiplying operator is not defined -- 4.5.5.(2)";
                   T.coerce_types t1 t2
   | Rem  | Mod -> expect ~desc:"binary multiplying" t1 t2;
-                  t_assert (T.is_integer t1)
-                    "Multiplying operator is not defined -- 4.5.5.(2)";
+                  if not (T.is_integer t1) then
+                    error "Multiplying operator is not defined -- 4.5.5.(2)";
                   t1
   | Power -> expect t2 T.integer;
-             t_assert (T.is_integer t1 || T.is_float t1)
-               "Highest precedence operator \"**\" is not defined -- 4.5.6";
+             if not (T.is_integer t1 || T.is_float t1) then
+              error "Highest precedence operator \"**\" is not defined -- 4.5.6";
              t1
 
 let type_of_not t =
-  t_assert (T.is_boolean t)
-    "Unary adding operator \"not\" is not defined -- 4.5.6"
+  if not (T.is_boolean t) then
+    error "Unary operator \"not\" is not defined -- 4.5.6"
   ;
   t
 
 let type_of_xor t1 t2 =
-  t_assert (T.is_boolean t1 && T.is_boolean t2)
-            "Xor is not defined -- 4.5.1.(2)";
+  if not (T.is_boolean t1 && T.is_boolean t2) then
+    error "Xor is not defined -- 4.5.1.(2)";
   expect ~desc:"xor" t1 t2;
   t1
 
 let type_of_abs t =
-  t_assert (T.is_numeric t)
-    "Highest precedence operator 'abs' is not defined -- 4.5.6";
+  if not (T.is_numeric t) then
+   error "Highest precedence operator 'abs' is not defined -- 4.5.6";
   t
 
 let type_of_uplus t =
-  t_assert (T.is_numeric t)
-    "Unary '+' is not defined -- 4.5.4";
+  if not (T.is_numeric t) then
+   error "Unary '+' is not defined -- 4.5.4";
   t

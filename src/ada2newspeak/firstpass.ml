@@ -413,7 +413,7 @@ let translate compil_unit =
     let ftyp = translate_sub_program_spec subprogspec in
     let body = translate_block (init @ block) in
     let mangle_sname = function
-      | []       -> failwith "unreachable @ firstpass:mangle_sname"
+      | []       -> Npkcontext.report_error "fstpass:mangle_sname" "unreachable"
       | x::[]    -> None  , x
       | x::y::[] -> Some x, y
       | _        -> Npkcontext.report_error "mangle_sname"

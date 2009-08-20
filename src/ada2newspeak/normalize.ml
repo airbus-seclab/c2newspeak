@@ -53,7 +53,7 @@ let compilation_unit_name = function
   | (_, Body (PackageBody (n,_,_)),_)    -> n
 
 let mangle_sname = function
-  | []       -> failwith "unreachable @ normalize:mangle_sname"
+  | []       -> Npkcontext.report_error "mangle_sname" "unreachable"
   | x::[]    -> None  , x
   | x::y::[] -> Some x, y
   | _        -> Npkcontext.report_error "mangle_sname"
@@ -142,9 +142,10 @@ let rec resolve_selected ?expected_type n =
   | Var id -> resolve_variable None id
   | SName (SName (Var _, _) as pf, z) -> begin
       match (resolve_selected pf) with
-        | SelectedConst _ -> failwith "a constant cannot have a field"
-        | SelectedFCall _ -> failwith "a function call cannot have a field"
-        | SelectedVar   _ -> failwith "a variable cannot have a field"
+        | SelectedFCall _ 
+        | SelectedVar   _ 
+        | SelectedConst _ -> Npkcontext.report_error "resolve_selected"
+                                    "bad type for selected value field"
         | SelectedRecord (lv, off0, tf0) ->
             let (off,tf) = T.record_field tf0 z in
             let lv = Ast.RecordAccess (lv,off0,tf0) in

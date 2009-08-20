@@ -283,7 +283,7 @@ module Table = struct
               raise (Variable_no_storage (x, T.get_enum_litt_value x v))
         | Subprogram (_,[], Some rt)     ->
               raise (Parameterless_function (s, rt))
-        | _ -> failwith "find_variable : unreachable"
+        | _ -> Npkcontext.report_error "find_variable" "unreachable"
       in
       s,(n,t,v,(match v with Some _ -> true | None -> r))
     with
@@ -304,7 +304,7 @@ module Table = struct
 
   let standard_tbl = create_table Lexical ~desc:"standard" Newspeak.unknown_loc
 
-  let system_tbl  = create_table Lexical ~desc:"system" Newspeak.unknown_loc
+  let system_tbl   = create_table Lexical ~desc:"system"   Newspeak.unknown_loc
 
   let _ =
     begin
@@ -316,12 +316,12 @@ module Table = struct
       ; "boolean"  , T.boolean
       ; "character", T.character
       ];
-      add_variable standard_tbl "true"  Newspeak.unknown_loc
-                   (T.boolean,Some (T.BoolVal true ),true,true)
-                   (In_package "standard");
-      add_variable standard_tbl "false" Newspeak.unknown_loc
-                   (T.boolean,Some (T.BoolVal false),true,true)
-                   (In_package "standard");
+      List.iter (fun (n,v) ->
+        add_variable standard_tbl n Newspeak.unknown_loc
+                     (T.boolean,Some (T.BoolVal v),true,true)
+                     (In_package "standard");
+      ) ["false",false
+        ;"true" ,true];
       add_type system_tbl "address" Newspeak.unknown_loc
                T.system_address (In_package "system")
     end
