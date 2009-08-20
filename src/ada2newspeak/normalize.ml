@@ -798,9 +798,16 @@ and normalize_basic_decl item loc =
       []
   | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
   | NumberDecl(ident, exp) ->
-     let value = Eval.eval_static_number (normalize_exp exp) gtbl in
-     add_numberdecl ident value loc;
-     [Ast.NumberDecl(ident, value)]
+      begin
+        try
+          let value = Eval.eval_static (normalize_exp exp) gtbl in
+          add_numberdecl ident value loc;
+          [Ast.NumberDecl(ident, value)]
+        with
+          | Eval.NonStaticExpression -> Npkcontext.report_error
+             "eval_static.integer_exp"
+             "expected static expression"
+      end
   | SubtypDecl(ident, subtyp_ind) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);

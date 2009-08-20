@@ -131,19 +131,3 @@ let eval_static exp tbl =
   in
       eval_static_exp exp
 
-(**
- * Evaluate statically an constant number.
- *)
-let eval_static_number exp tbl =
-     try
-         let v = eval_static exp tbl in
-             match v with
-               | T.BoolVal _ -> Npkcontext.report_error
-                     "eval_static.integer_exp"
-                     "expected static float or integer constant"
-               | T.FloatVal _ | T.IntVal _ -> v
-     with
-       | NonStaticExpression -> Npkcontext.report_error
-          "eval_static.integer_exp"
-          "expected static expression"
-
