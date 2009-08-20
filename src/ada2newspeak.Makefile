@@ -34,7 +34,6 @@ newspeak.FILES=\
 
 ada2newspeak.FILES=  \
 	params 					   \
-	ada_config         \
 	syntax_ada         \
 	ada_types          \
 	symboltbl          \

@@ -103,8 +103,8 @@ let eval_static exp tbl =
     | Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
     | Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
     | Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
-    | Eq   ,            a,            b -> T.BoolVal(T.data_eq a b)
-    | Gt   ,            a,            b -> T.BoolVal(T.data_lt b a)
+    | Eq   ,            a,            b -> T.BoolVal (T.data_compare a b = 0)
+    | Gt   ,            a,            b -> T.BoolVal (T.data_compare a b > 0)
     | And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
     | Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
     | Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
