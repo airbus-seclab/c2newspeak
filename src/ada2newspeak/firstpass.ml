@@ -361,8 +361,7 @@ let translate compil_unit =
   and add_params subprog_spec =
     let param_list =
       match subprog_spec with
-        | Function (_, param_list, _) -> param_list
-        | Procedure(_, param_list)    -> param_list
+        | Subprogram (_, param_list, _) -> param_list
     in
     let params = List.map (fun x -> x.formal_name) param_list in
     (params, (Params.ret_ident, params))
@@ -370,10 +369,7 @@ let translate compil_unit =
   and translate_sub_program_spec subprog_spec =
     let (param_list, return_type) =
       match subprog_spec with
-        | Function(_,param_list,return_type) ->
-            (param_list, Some(return_type))
-        | Procedure(_,param_list) ->
-            (param_list, None)
+        | Subprogram(_,param_list,return_type) -> (param_list, return_type)
     in let params_typ = translate_param_list param_list in
       ( params_typ, ( match return_type with
                       | None     -> C.Void
@@ -410,14 +406,14 @@ let translate compil_unit =
 
   and add_funbody subprogspec decl_part block loc =
     let name = match subprogspec with
-      | Function (n,_,_) -> n
-      | Procedure(n,_)   -> n in
+      | Subprogram (n,_,_) -> n
+    in
     let (_, (ret_id, args_ids)) = add_params subprogspec in
     let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = translate_sub_program_spec subprogspec in
     let body = translate_block (init @ block) in
     let mangle_sname = function
-      | []       -> failwith "unreachable @ firstpass:mangle_sname"
+      | []       -> Npkcontext.report_error "fstpass:mangle_sname" "unreachable"
       | x::[]    -> None  , x
       | x::y::[] -> Some x, y
       | _        -> Npkcontext.report_error "mangle_sname"

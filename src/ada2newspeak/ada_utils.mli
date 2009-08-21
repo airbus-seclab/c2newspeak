@@ -29,20 +29,25 @@
  * @author Etienne Millon
  *)
 
+(**
+ * This type, and the log_progress function are used to log compilation
+ * progress to STDERR. Lines with "###PROGRESS###" are meant to be parsed
+ * by some external script.
+ *)
 type progress =
-  | Parsing   of string
-  | Semcheck  of string
-  | Translate of string
-  | Post
-  | Done of progress
+  | Parsing   of string (* Name of file                  *)
+  | Semcheck  of string (* Name of compilation unit      *)
+  | Translate of string (* Name of compilation unit      *)
+  | Post                (* Everything after ada2newspeak *)
+  | Done of progress    (* When something is done        *)
 
 (**
- * Log progress.
+ * Log progress, as explained in "progress".
  *)
 val log_progress : progress -> unit
 
 (**
- * Convert a boolean into the native type.
+ * Convert a boolean into a "native" integer.
  *)
 val nat_of_bool : bool -> Newspeak.Nat.t
 
@@ -65,6 +70,10 @@ val name_to_string : Syntax_ada.name -> string
 (** Create a function name for an overloaded operator *)
 val make_operator_name : Syntax_ada.binary_op -> string
 
+(**
+ * Prepend a special string to an operator name.
+ * Will raise an error if it is not a valid operator name.
+ *)
 val operator_of_string : string -> string
 
 (**

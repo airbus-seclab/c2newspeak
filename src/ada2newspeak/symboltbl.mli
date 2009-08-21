@@ -90,7 +90,7 @@ type scope = Lexical | In_package of string
 val type_ovl_intersection : t
                           -> string
                           -> string
-           -> Ada_types.t
+           -> Ada_types.t option
 
 (** Find data.  *)
 
@@ -131,7 +131,6 @@ val add_variable : t -> string -> Newspeak.location
 
 val add_subprogram : t
                 -> string
-                -> Newspeak.location
                 -> Syntax_ada.param list
                 -> Ada_types.t option
       -> unit

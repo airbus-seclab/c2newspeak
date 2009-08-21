@@ -41,23 +41,14 @@ type data_t =
   | FloatVal of float
   | BoolVal  of bool
 
-let data_eq x y =
+let data_compare x y =
   match (x, y) with
-    |   IntVal v1,   IntVal v2 -> v1 = v2
-    |  BoolVal v1,  BoolVal v2 -> v1 = v2
-    | FloatVal v1, FloatVal v2 -> v1 = v2
+    |   IntVal a,   IntVal b -> Newspeak.Nat.compare a b
+    |  BoolVal a,  BoolVal b -> Pervasives.compare a b
+    | FloatVal a, FloatVal b -> Pervasives.compare a b
     | _ ->
         Npkcontext.report_error "Ada_types.data_eq"
           "Incompatible types in '=' (data_t)"
-
-let data_lt x y =
-  match (x, y) with
-    |   IntVal v1,   IntVal v2 -> (Newspeak.Nat.compare v1 v2) < 0
-    |  BoolVal v1,  BoolVal v2 -> v1 < v2
-    | FloatVal v1, FloatVal v2 -> v1 < v2
-    | _ ->
-        Npkcontext.report_error "Ada_types.data_lt"
-          "Incompatible types in '<' (data_t)"
 
 (* "subtype" in RM *)
 type t = {
@@ -85,10 +76,6 @@ and trait_t =
   | Record      of (string * t) list (* Fields           *)
   | Enumeration of (string*int) list (* Name-index       *)
   | Access      of t
-
-
-(* effective type + wrapped data *)
-type value = t*data_t
 
 (******************
  * Pretty-printer *
@@ -435,9 +422,9 @@ let extrema l =
   |  [] -> invalid_arg "extrema"
   | h::t ->
   List.fold_left (fun (min, max) x ->
-    if      data_lt x min then (x  , max)
-    else if data_lt max x then (min, x  )
-    else                       (min, max)
+    if      data_compare x min < 0 then (x  , max)
+    else if data_compare max x < 0 then (min, x  )
+    else                                (min, max)
   ) (h,h) t
 
 let compute_constr t =
@@ -610,13 +597,15 @@ let rec attr_get typ attr =
         begin
           match compute_constr typ with
           | Some (A.IntegerRangeConstraint(a,_)) -> A.CInt a, typ
-          | _ -> failwith "attr_get"
+          | _ -> Npkcontext.report_error "attr_get"
+                   "This type does not have a 'first attribute"
         end
     | Signed      _ ,"last" ->
         begin
           match compute_constr typ with
           | Some (A.IntegerRangeConstraint(_,b)) -> A.CInt b, typ
-          | _ -> failwith "attr_get"
+          | _ -> Npkcontext.report_error "attr_get"
+                   "This type does not have a 'first attribute"
         end
     | Enumeration v, "first" -> const_int (snd (List.hd v)), typ
     | Enumeration v, "last"  -> const_int (snd (ListUtils.last v)), typ

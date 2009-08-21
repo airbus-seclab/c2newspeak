@@ -33,14 +33,11 @@ let nat_of_bool b =
 
 let check_compil_unit_name compil_unit file_name =
   let expected_name = Filename.chop_extension file_name in
-  let subprog_name spec = match spec with
-    | Function(name,_,_) -> name
-    | Procedure(name,_) -> name in
   let (_,lib_item,_) = compil_unit in
   let name =
     match lib_item with
-      | Spec(SubProgramSpec(spec))     -> subprog_name spec
-      | Body(SubProgramBody(spec,_,_)) -> subprog_name spec
+      | Spec(SubprogramSpec(Subprogram (name,_,_)))     -> name
+      | Body(SubprogramBody(Subprogram (name,_,_),_,_)) -> name
       | Spec(PackageSpec(name,_))   -> name
       | Body(PackageBody(name,_,_)) -> name
   in

@@ -41,20 +41,19 @@ let gtbl = Sym.create ()
 (* Name-related functions *)
 
 let name_of_sp_spec = function
-  | Function (x,_,_)
-  | Procedure (x,_)  -> x
+  | Subprogram (x,_,_) -> x
 
 let name_of_synt_spec = function
-  | SubProgramSpec sps -> name_of_sp_spec sps
+  | SubprogramSpec sps -> name_of_sp_spec sps
   | PackageSpec (x,_) -> x
 
 let compilation_unit_name = function
   | (_, Spec s,_) -> name_of_synt_spec s
-  | (_, Body (SubProgramBody (s,_,_)),_) -> name_of_sp_spec s
+  | (_, Body (SubprogramBody (s,_,_)),_) -> name_of_sp_spec s
   | (_, Body (PackageBody (n,_,_)),_)    -> n
 
 let mangle_sname = function
-  | []       -> failwith "unreachable @ normalize:mangle_sname"
+  | []       -> Npkcontext.report_error "mangle_sname" "unreachable"
   | x::[]    -> None  , x
   | x::y::[] -> Some x, y
   | _        -> Npkcontext.report_error "mangle_sname"
@@ -91,8 +90,7 @@ let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
 
 let return_type_of subprogram = match subprogram with
-  | Ast.Function  (_,_,st) -> Some st
-  | Ast.Procedure _        -> None
+  | Ast.Subprogram (_,_,st) -> st
 
 (**************************************************
  *                                                *
@@ -144,9 +142,10 @@ let rec resolve_selected ?expected_type n =
   | Var id -> resolve_variable None id
   | SName (SName (Var _, _) as pf, z) -> begin
       match (resolve_selected pf) with
-        | SelectedConst _ -> failwith "a constant cannot have a field"
-        | SelectedFCall _ -> failwith "a function call cannot have a field"
-        | SelectedVar   _ -> failwith "a variable cannot have a field"
+        | SelectedFCall _ 
+        | SelectedVar   _ 
+        | SelectedConst _ -> Npkcontext.report_error "resolve_selected"
+                                    "bad type for selected value field"
         | SelectedRecord (lv, off0, tf0) ->
             let (off,tf) = T.record_field tf0 z in
             let lv = Ast.RecordAccess (lv,off0,tf0) in
@@ -184,8 +183,8 @@ let find_body_for_spec ~specification ~bodylist =
 let name_of_spec spec = match spec with
   | Ast.ObjectDecl (i,_,_,_)
   | Ast.NumberDecl (i,_) -> i
-  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Function  (n,_,_)))
-  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Procedure (n,_))) -> name_to_string n
+  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Subprogram (n,_,_)))
+      -> name_to_string n
   | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> n
 
 let check_package_body_against_spec ~body ~spec =
@@ -228,8 +227,8 @@ let add_numberdecl ident value loc =
 
 let extract_subprog_spec ast =
     match ast with
-      | (context, Body(SubProgramBody(spec,_,_)), loc) ->
-        (context, Spec(SubProgramSpec(spec)),     loc)
+      | (context, Body(SubprogramBody(spec,_,_)), loc) ->
+        (context, Spec(SubprogramSpec(spec)),     loc)
       | (_, Spec _, _) -> Npkcontext.report_error
           "Ada_normalize.extract_subprog_spec"
         "body expected, specification found"
@@ -264,7 +263,7 @@ let parse_specification name =
 let parse_package_specification name =
   match (parse_specification name) with
     | (_, Spec(PackageSpec(name, decls)),_) -> (name, decls)
-    | (_, Spec(SubProgramSpec _),_) ->
+    | (_, Spec(SubprogramSpec _),_) ->
                 Npkcontext.report_error
                    "Ada_normalize.parse_package_specification"
                   ( "package specification expected, "
@@ -492,12 +491,12 @@ and normalize_binop bop e1 e2 =
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type =
-            match (e1, e2) with
+          match (e1, e2) with
           | Lval l1 , Lval l2 -> let v1 = make_name_of_lval l1 in
                                  let v2 = make_name_of_lval l2 in
-                                 Some (Sym.type_ovl_intersection gtbl
+                                 Sym.type_ovl_intersection gtbl
                                       (ListUtils.last v1)
-                                      (ListUtils.last v2))
+                                      (ListUtils.last v2)
           | _      , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
                                           Some (subtyp_to_adatyp n)
           | _               -> None
@@ -739,38 +738,28 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         param_list
     in
     match subprog_spec with
-        | Function(name,param_list,return_type) ->
+        | Subprogram(name,param_list,return_type) ->
             let norm_name = normalize_ident_cur name in
-            let t = subtyp_to_adatyp return_type in
-              Sym.add_subprogram gtbl name (Newspeak.unknown_loc)
-                                       param_list
-                                       (Some t)
-                                       ;
-              Ast.Function( norm_name
-                          , normalize_params param_list true
-                          , t
-                          )
-        | Procedure(name,param_list) ->
-            let norm_name = normalize_ident_cur name in
-              Sym.add_subprogram gtbl name (Newspeak.unknown_loc)
-                              param_list None;
-              Ast.Procedure(norm_name,
-                        normalize_params param_list false)
+            let t = Ada_utils.may subtyp_to_adatyp return_type in
+            Sym.add_subprogram gtbl name param_list t;
+            Ast.Subprogram ( norm_name
+                           , normalize_params param_list (return_type <> None)
+                           , t
+                           )
 
 and normalize_basic_decl item loc =
   match item with
-  | UseDecl(use_clause) -> Sym.add_use gtbl use_clause;
-                           []
+  | UseDecl(use_clause) -> Sym.add_use gtbl use_clause; []
   | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
       List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
       List.map (fun ident ->
-        Ast.ObjectDecl( ident
-                      , t
-                      , Ast.Variable
-                      , build_init_stmt (ident, def, loc)
-                      )
+        Ast.ObjectDecl ( ident
+                       , t
+                       , Ast.Variable
+                       , build_init_stmt (ident, def, loc)
+                       )
       ) ident_list
   | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
@@ -810,9 +799,16 @@ and normalize_basic_decl item loc =
       []
   | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
   | NumberDecl(ident, exp) ->
-     let value = Eval.eval_static_number (normalize_exp exp) gtbl in
-     add_numberdecl ident value loc;
-     [Ast.NumberDecl(ident, value)]
+      begin
+        try
+          let value = Eval.eval_static (normalize_exp exp) gtbl in
+          add_numberdecl ident value loc;
+          [Ast.NumberDecl(ident, value)]
+        with
+          | Eval.NonStaticExpression -> Npkcontext.report_error
+             "eval_static.integer_exp"
+             "expected static expression"
+      end
   | SubtypDecl(ident, subtyp_ind) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
@@ -847,7 +843,7 @@ and normalize_package_spec (name, list_decl) =
   (name, norm_spec)
 
 and normalize_spec spec = match spec with
-  | SubProgramSpec(subprogr_spec) -> Ast.SubProgramSpec(
+  | SubprogramSpec(subprogr_spec) -> Ast.SubProgramSpec(
         normalize_sub_program_spec subprogr_spec ~addparam:false)
   | PackageSpec(package_spec) ->
       Ast.PackageSpec(normalize_package_spec package_spec)
@@ -1185,7 +1181,7 @@ and normalize_decl_part decl_part =
   ndp
 
 and normalize_body body  = match body with
-  | SubProgramBody(subprog_decl,decl_part,block) ->
+  | SubprogramBody(subprog_decl,decl_part,block) ->
       let norm_subprog_decl =
         normalize_sub_program_spec subprog_decl ~addparam:true in
       Sym.enter_context ~desc:"SP body (locals)" gtbl;

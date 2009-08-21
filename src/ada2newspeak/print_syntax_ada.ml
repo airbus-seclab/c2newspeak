@@ -285,11 +285,11 @@ and declarative_item_to_string decl_item = match decl_item with
       "BodyDecl("^(body_to_string body)^")"
 
 and sub_program_spec_to_string spec = match spec with
-  | Function(name,param_list,return_type) ->
+  | Subprogram(name,param_list,Some return_type) ->
       "Function("^name^", "
         ^(param_list_to_string param_list)^", "
         ^(name_to_string return_type)^")"
-  | Procedure(name,param_list) ->
+  | Subprogram(name,param_list,None) ->
       "Procedure("^name^", "
       ^(param_list_to_string param_list)^")"
 
@@ -311,13 +311,13 @@ and declarative_part_to_string dp :string =
           ";\n" true)
 
 and spec_to_string spec = match spec with
-  | SubProgramSpec(subprogspec) -> "SubProgramSpec("
+  | SubprogramSpec(subprogspec) -> "SubProgramSpec("
       ^(sub_program_spec_to_string subprogspec)^")"
   | PackageSpec(packagespec) -> "PackageSpec("
       ^(package_spec_to_string packagespec)^")"
 
 and body_to_string body = match body with
-  | SubProgramBody (subprog_decl, declarative_part, block) ->
+  | SubprogramBody (subprog_decl, declarative_part, block) ->
       "SubProgramBody("^(sub_program_spec_to_string subprog_decl)       ^",\n\n"
                        ^declarative_part_to_string declarative_part ^",\n\n"
                        ^block_to_string block

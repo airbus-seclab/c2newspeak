@@ -103,8 +103,8 @@ let eval_static exp tbl =
     | Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
     | Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
     | Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
-    | Eq   ,            a,            b -> T.BoolVal(T.data_eq a b)
-    | Gt   ,            a,            b -> T.BoolVal(T.data_lt b a)
+    | Eq   ,            a,            b -> T.BoolVal (T.data_compare a b = 0)
+    | Gt   ,            a,            b -> T.BoolVal (T.data_compare a b > 0)
     | And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
     | Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
     | Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
@@ -130,20 +130,4 @@ let eval_static exp tbl =
 
   in
       eval_static_exp exp
-
-(**
- * Evaluate statically an constant number.
- *)
-let eval_static_number exp tbl =
-     try
-         let v = eval_static exp tbl in
-             match v with
-               | T.BoolVal _ -> Npkcontext.report_error
-                     "eval_static.integer_exp"
-                     "expected static float or integer constant"
-               | T.FloatVal _ | T.IntVal _ -> v
-     with
-       | NonStaticExpression -> Npkcontext.report_error
-          "eval_static.integer_exp"
-          "expected static expression"
 

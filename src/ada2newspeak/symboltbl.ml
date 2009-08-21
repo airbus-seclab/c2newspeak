@@ -171,12 +171,12 @@ module Table = struct
     adder (fun t -> Type t)
           "type"
 
-  let add_subprogram tbl n loc params ret =
+  let add_subprogram tbl n params ret =
     adder (fun (params,ret) -> Subprogram (n,params,ret))
           "subprogram"
           tbl
           n
-          loc
+          Newspeak.unknown_loc
           (params,ret)
 
 (******************************************************************************
@@ -283,7 +283,7 @@ module Table = struct
               raise (Variable_no_storage (x, T.get_enum_litt_value x v))
         | Subprogram (_,[], Some rt)     ->
               raise (Parameterless_function (s, rt))
-        | _ -> failwith "find_variable : unreachable"
+        | _ -> Npkcontext.report_error "find_variable" "unreachable"
       in
       s,(n,t,v,(match v with Some _ -> true | None -> r))
     with
@@ -304,7 +304,7 @@ module Table = struct
 
   let standard_tbl = create_table Lexical ~desc:"standard" Newspeak.unknown_loc
 
-  let system_tbl  = create_table Lexical ~desc:"system" Newspeak.unknown_loc
+  let system_tbl   = create_table Lexical ~desc:"system"   Newspeak.unknown_loc
 
   let _ =
     begin
@@ -316,12 +316,12 @@ module Table = struct
       ; "boolean"  , T.boolean
       ; "character", T.character
       ];
-      add_variable standard_tbl "true"  Newspeak.unknown_loc
-                   (T.boolean,Some (T.BoolVal true ),true,true)
-                   (In_package "standard");
-      add_variable standard_tbl "false" Newspeak.unknown_loc
-                   (T.boolean,Some (T.BoolVal false),true,true)
-                   (In_package "standard");
+      List.iter (fun (n,v) ->
+        add_variable standard_tbl n Newspeak.unknown_loc
+                     (T.boolean,Some (T.BoolVal v),true,true)
+                     (In_package "standard");
+      ) ["false",false
+        ;"true" ,true];
       add_type system_tbl "address" Newspeak.unknown_loc
                T.system_address (In_package "system")
     end
@@ -582,8 +582,8 @@ module SymMake(TR:Tree.TREE) = struct
   let add_type s n loc v =
     add_type (top s) n loc v (scope (top s))
 
-  let add_subprogram s n loc v rt =
-    add_subprogram (top s) n loc v rt (scope (top s))
+  let add_subprogram s n v rt =
+    add_subprogram (top s) n v rt (scope (top s))
 
   let type_ovl_intersection s n1 n2 =
     let inter l1 l2 =
@@ -610,10 +610,12 @@ module SymMake(TR:Tree.TREE) = struct
                                 " , R = " ^ print_set s2
                              )
                            );
-    if inte = [] then T.new_unknown "from empty context intersection" else
+    if inte = [] then Some (T.new_unknown "from empty context intersection") else
+    try
       match snd (cast_v inte) with
-      | Variable (_,r,_,_,_) -> r
+      | Variable (_,r,_,_,_) -> Some r
       | _ -> invalid_arg "type_ovl_inter"
+    with Not_found -> None
 
 end
 

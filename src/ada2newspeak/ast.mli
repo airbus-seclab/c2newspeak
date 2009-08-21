@@ -148,8 +148,7 @@ and context_clause =
                 * (spec * Newspeak.location) option
 
 and sub_program_spec =
-  | Function  of Syntax_ada.name * param list * Ada_types.t
-  | Procedure of Syntax_ada.name * param list
+  | Subprogram of Syntax_ada.name * param list * Ada_types.t option
 
 and package_spec = string
                  * (basic_declaration * Newspeak.location) list

@@ -35,17 +35,19 @@ type t
  **********)
 (** {3 Values } *)
 
+(**
+ * A plain piece of data. Used to describe compile-time values.
+ *)
 type data_t =
   | IntVal   of Newspeak.Nat.t (** Integer value        *)
   | FloatVal of float          (** Floating-point value *)
   | BoolVal  of bool           (** Boolean value        *)
 
-val data_eq : data_t -> data_t -> bool
-
-val data_lt : data_t -> data_t -> bool
-
-(** A typed piece of data. *)
-type value = t * data_t
+(**
+ * Comparison of data_t values.
+ * Will raise an error if both sides are not of the same type.
+ *)
+val data_compare : data_t -> data_t -> int
 
 (*********
  * Types *
@@ -56,9 +58,13 @@ type value = t * data_t
  * The type [t] is an abstraction for what Ada95 types (and subtypes) are.
  *)
 
+(**
+ * Unknown type. This is most useful for debugging.
+ * The string parameter is a description of where it comes from.
+ *)
 val new_unknown : string -> t
 
-(** Derived type. (structural copy) *)
+(** Derived type. *)
 val new_derived    : t -> t
 
 (** Constrained subtype. *)
@@ -83,8 +89,15 @@ val new_float      : Newspeak.Nat.t -> t
  *)
 val new_array  : component:t -> index:t list -> t
 
+(**
+ * Record type.
+ * The argument is a label-types association list.
+ *)
 val new_record : (string * t) list -> t
 
+(**
+ * New access (pointer) type.
+ *)
 val new_access : t -> t
 
 (**
@@ -98,6 +111,9 @@ val is_compatible : t -> t -> bool
 val handle_enum_repr_clause : t -> (Newspeak.Nat.t * Newspeak.Nat.t) list
                               -> unit
 
+(**
+ * Fetch a value for an enumeration litteral.
+ *)
 val get_enum_litt_value : t -> data_t -> data_t
 
 (**
@@ -105,17 +121,32 @@ val get_enum_litt_value : t -> data_t -> data_t
  *)
 val extract_array_types : t -> (t * t list)
 
+(**
+ * Return the base (first element) of an index type.
+ * This allows a correct translation in firstpass :
+ * the actual offset is   (index - base) * (component size)
+ *)
 val extract_base: t -> Newspeak.Nat.t
 
 (** Precondition : is_unknown t *)
 val get_reason : t -> string
 
+(**
+ * Return a list of symbols for an enumerated type,
+ * or None if the type is not enumerated.
+ *)
 val extract_symbols : t -> (string * int) list option
 
+(**
+ * Return the pointee type, or fail.
+ *)
 val extract_access_type : t -> t
 
 val record_field : t -> string -> int * t
 
+(**
+ * Return the record fields'names, or fail.
+ *)
 val all_record_fields : t -> string list
 
 (**
@@ -123,9 +154,10 @@ val all_record_fields : t -> string list
  *)
 val coerce_types : t -> t -> t
 
-(* For finite types (suitable as array indexes) *)
+(** For finite types, return all values. *)
 val all_values : t -> Newspeak.Nat.t list
 
+(** For finite types, return the number of values. *)
 val length_of : t -> Newspeak.Nat.t
 
 (**
@@ -134,6 +166,7 @@ val length_of : t -> Newspeak.Nat.t
  *)
 val print : t -> string
 
+(** Printer for data_t. *)
 val print_data : data_t -> string
 
 (*****************
@@ -153,36 +186,47 @@ val universal_integer : t
 (** The type for real constants. *)
 val universal_real : t
 
-(** The type for characters and character litterals. *)
+(** Standard.Character *)
 val character : t
 
-(** The boolean type. *)
+(** Standard.Boolean *)
 val boolean : t
 
-val integer   : t
+(** Standard.Integer *)
+val integer : t
 
+(** Standard.Float *)
 val std_float : t
 
+(** System.Address *)
 val system_address : t
 
 (******************
  * Tests on types *
  ******************)
+                            (* Unk Arr Rec Flo Enu Sig UIn URe Acc *)
 
-val is_array    : t -> bool
-val is_boolean  : t -> bool
-val is_discrete : t -> bool
-val is_float    : t -> bool
-val is_integer  : t -> bool
-val is_numeric  : t -> bool
-val is_record   : t -> bool
-val is_scalar   : t -> bool
-val is_unknown  : t -> bool
+val is_array    : t -> bool (*      X                              *)
+val is_boolean  : t -> bool (*                  ?                  *)
+val is_discrete : t -> bool (*                  X   X   X          *)
+val is_float    : t -> bool (*              X               X      *)
+val is_integer  : t -> bool (*                      X   X          *)
+val is_numeric  : t -> bool (*              X       X   X   X      *)
+val is_record   : t -> bool (*          X                          *)
+val is_scalar   : t -> bool (*              X   X   X   X   X      *)
+val is_unknown  : t -> bool (*  X                                  *)
+
+(*
+ * The ? for is_boolean means that it only tests that the type
+ * has the same base as Standard.Boolean.
+ *)
 
 (****************
  *  Translator  *
  ****************)
 
+(** Compute the CIR type associated to some type. *)
 val translate : t -> Cir.typ
 
+(** Returns a check expression, according to the type's constraint. *)
 val check_exp : t -> Cir.exp -> Cir.exp
