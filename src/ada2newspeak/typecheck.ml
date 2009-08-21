@@ -52,7 +52,7 @@ let t_assert x msg =
 let type_of_binop op t1 t2 = match op with
   | Eq    -> expect ~desc:"binary =" t1 t2;
              T.boolean
-  | Or | And -> expect ~desc:"binary or" t1 t2;
+  | Or | And -> expect ~desc:"binary logical op" t1 t2;
                 if not (T.is_boolean t1) then
                  error "Logical operator is not defined -- 4.5.1.(2)";
                 t1
