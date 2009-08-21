@@ -29,4 +29,4 @@
 type t
 
 val count: bool -> Newspeak.t -> t
-val print: t -> unit
+val print: t -> out_channel option -> unit

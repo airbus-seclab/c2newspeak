@@ -145,16 +145,35 @@ let count debug prog =
   let stats = process_call "main" in
     (!exact, stats)
       
-let print (exact, st) =
+let print (exact, st) xout =
   let symb = if exact then "" else "<= " in
-    print_endline ("Maximum number of variables on the stack: "
-		    ^symb^(string_of_int st.nb_vars));
-    print_endline ("Maximum height of the stack (bytes): "
-		    ^symb^(string_of_int st.sz_vars));
-    print_endline ("Maximum depth of function calls: "
-		    ^symb^(string_of_int st.call_depth));
-    print_endline ("Maximum depth of imbricated loops: "
-		    ^symb^(string_of_int st.loop_depth));
-    if !rec_fun <> "" then 
-      print_endline ("At least one recursive function: "^ !rec_fun)
+  let nb = string_of_int st.nb_vars in
+  let sz = string_of_int st.sz_vars in
+  let call_depth = string_of_int st.call_depth in
+  let loop_depth = string_of_int st.loop_depth in
+  let s1 = "Maximum number of variables on the stack" in
+  let s2 = "Maximum height of the stack (bytes)" in
+  let s3 = "Maximum depth of function calls" in
+  let s4 = "Maximum depth of imbricated loops" in
+  let s5 = "At least one recursive function" in
+    print_endline (s1^": "^symb^nb);
+    print_endline (s2^": "^symb^sz);
+    print_endline (s3^": "^symb^call_depth);
+    print_endline (s4^": "^symb^loop_depth);
+    if !rec_fun <> "" then
+      print_endline (s5^": "^(!rec_fun));
+    match xout with
+	None -> ()
+      | Some cout ->
+	  let s =
+	    List.fold_left (fun s (c, n) ->
+			      s^"<stats class=\""^c^"\" val=\""^symb^n^"\"></stats>\n"
+			   ) "" [(s1, nb) ; (s2, sz) ; (s3, call_depth) ; (s4, loop_depth)]
+	  in
+	  let s =
+	    if !rec_fun<> "" then
+	      s^"<stats class=\""^s5^"\" val=\""^(!rec_fun)^"\"></stats>\n"
+	    else s
+	  in
+	    output_string cout s
 

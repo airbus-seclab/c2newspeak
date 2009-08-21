@@ -42,6 +42,8 @@ let funstats = ref false
 
 let output = ref "a"
 
+let xout = ref ""
+
 let add_counted_call f = fun_to_count := f::!fun_to_count
 
 let more_verb = ref false
@@ -63,7 +65,9 @@ let speclist =
    
    ("--more-verb", Arg.Set more_verb, "more statistics");
 
-   ("--funstats", Arg.Set funstats, "more statistics on functions")
+   ("--funstats", Arg.Set funstats, "more statistics on functions");
+   
+   ("--xml", Arg.Set_string xout, "generates data into xml format")
   ]
 
 type counters = 
@@ -84,16 +88,31 @@ let incr_counters dest src =
   dest.pointer_arith <- dest.pointer_arith + src.pointer_arith;
   dest.fpointer <- dest.fpointer + src.fpointer
 
-let string_of_counters counters =
-  "Number of instructions: "^(string_of_int counters.instrs)^"\n"
-  ^"Number of loops: "^(string_of_int counters.loop)^"\n"
-  ^"Number of array operations: "^(string_of_int counters.array)^"\n"
-  ^"Number of pointer deref: "
-  ^(string_of_int counters.pointer_deref)^"\n"
-  ^"Number of pointer arithmetic (+): "
-  ^(string_of_int counters.pointer_arith)^"\n"
-  ^"Number of function pointer call: "
-  ^(string_of_int counters.fpointer)
+let string_of_counters counters b =
+  let s1 = "Number of instructions" in
+  let n1 = string_of_int counters.instrs in
+  let s2 = "Number of loops" in
+  let n2 = string_of_int counters.loop in
+  let s3 = "Number of array operations" in
+  let n3 = string_of_int counters.array in
+  let s4 = "Number of pointer deref" in
+  let n4 = string_of_int counters.pointer_deref in
+  let s5 = "Number of pointer arithmetic (+)" in
+  let n5 = string_of_int counters.pointer_arith in
+  let s6 = "Number of function pointer call" in
+  let n6 = string_of_int counters.fpointer in
+  let out = s1^": "^n1^"\n"^s2^": "^n2^"\n"^s3^": "^n3^"\n"
+    ^s4^": "^n4^"\n"^s5^": "^n5^"\n"^s6^": "^n6
+  in
+  let xml = 
+    if b then List.fold_left (
+	  fun s (c, n) ->
+	    s^"<stats class=\""^c^"\" val=\""^n^"\"></stats>\n"
+	) "" [(s1, n1) ; (s2, n2) ; (s3, n3) ; (s4, n4) ; (s5, n5) ; (s6, n6)]
+    else ""
+  in
+    out, xml
+
 
 (*
 let collect filter funstats =
@@ -242,19 +261,36 @@ object (this)
       close_out cout
 
 
-  method to_string verbose = 
+  method to_string verbose cout = 
     let res = Buffer.create 100 in
     let fun_counter = ref 0 in
+    let b, cout = 
+      match cout with 
+	  None -> false, stdout
+	| Some cout -> true, cout 
+    in
     let string_of_call f x = 
-      Buffer.add_string res 
-	("\n"^"Number of calls to "^f^": "^(string_of_int x))
+      let n = string_of_int x in
+      let s = "Number of calls to " in
+      let out = "\n"^s^f^": "^n in
+	Buffer.add_string res out;
+	if b then 
+	  "<stats class=\""^s^"\" val=\""^n^"\"></stats>\n" 
+	else ""
+	  
     in
     
     let string_of_fun f counters =
       let f = if !obfuscate then string_of_int !fun_counter else f in
+      let out, xml = string_of_counters counters b in
+      let s = "Function" in
 	incr fun_counter;
-	Buffer.add_string res 
-	  ("\n"^"Function: "^f^"\n"^(string_of_counters counters))
+	let out = "\n"^s^": "^f^"\n"^out in
+	  Buffer.add_string res out;
+	if b then 
+	  "<stats class=\""^s^"\" val=\""^f^"\"></stats>\n"^xml 
+	else ""
+
     in
     let string_of_globals globstats =
       let to_string s (typ, nb) = 
@@ -283,11 +319,21 @@ object (this)
       let s = s ^ "Number of occurences of a given pair (array type, size):\n" in
 	List.fold_left array_to_string s ltab
     in
-      Buffer.add_string res 
-	("Number of global variables: "^(string_of_int globals)^"\n"
-	 ^"Total size of global variables (bytes): "^(string_of_int bytes)^"\n"
-	 ^"Number of functions: "
-	 ^(string_of_int (Hashtbl.length funstats))^"\n");
+    let s1 = "Number of global variables" in
+    let n1 = string_of_int globals in
+    let s2 = "Total size of global variables (bytes)" in
+    let n2 = string_of_int bytes in
+    let s3 = "Number of functions" in
+    let n3 = string_of_int (Hashtbl.length funstats) in
+      Buffer.add_string res (s1^": "^n1^"\n"^s2^": "^n2^"\n"^s3^": "^n3^"\n");
+      if b then begin
+	let xml = List.fold_left (
+	  fun s (c, n) ->
+	    s^"<stats class=\""^c^"\" val=\""^n^"\"></stats>\n"
+	) "" [(s1, n1) ; (s2, n2) ; (s3, n3)]
+	in
+	  output_string cout xml
+      end;
       if !more_verb then 
 	begin
 	  Buffer.add_string res ((string_of_globals globstats)^"\n");
@@ -295,10 +341,21 @@ object (this)
 	  ("Number of functions with (void -> void) prototype: " 
 	   ^(string_of_int void_fun)^"\n")
 	end;
-      Buffer.add_string res (string_of_counters counters);
-      Hashtbl.iter string_of_call callstats;
-      if verbose then Hashtbl.iter string_of_fun funstats;
-      Buffer.contents res
+      let out, xml = string_of_counters counters b in
+	Buffer.add_string res out;
+	if xml <> "" then output_string cout xml;
+	let xml =
+	  Hashtbl.fold (fun f x s -> 
+			  s^(string_of_call f x)) callstats ""
+	in
+	  if xml <> "" then output_string cout xml;
+      if verbose then begin
+	let xml = Hashtbl.fold (fun f x s-> 
+				s^(string_of_fun f x)) funstats "" in
+	  if xml = "" then ()
+	  else output_string cout xml
+      end;
+	Buffer.contents res
 
   initializer List.iter (fun f -> Hashtbl.add callstats f 0) fun_to_count
 end
@@ -322,8 +379,30 @@ let _ =
     let collector = new collector prog.ptr_sz !fun_to_count in
     let max_stats = Maxcount.count !debug prog in
       Newspeak.visit (collector :> Newspeak.visitor) prog;
-      print_endline (collector#to_string !verbose);
-      Maxcount.print max_stats;
+      let cout = 
+	if !xout <> "" then begin
+	  let dtd = "<!-- <!DOCTYPE npkstats [\n" ^
+	    "<! ELEMENT npkstats stats ?>\n" ^ 
+	    "<! ELEMENT stats ?>\n" ^
+	    "<! ATTLIST stats class (#PCDATA) #REQUIRED "^
+	    "val (#PCDATA) #REQUIRED ?>\n" ^
+	    "]> -->\n" in
+	  let header = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" in
+	  let cout = open_out_gen [Open_wronly;Open_binary;Open_creat] 0o644 !xout in
+	    output_string cout (header^dtd^"<npkstats>\n");
+	    Some cout
+	end
+	else None
+      in
+	print_endline (collector#to_string !verbose cout);
+	Maxcount.print max_stats cout;
+	begin
+	  match cout with 
+	      None -> ()
+	    | Some cout ->
+		  output_string cout "</npkstats>\n";
+		  close_out cout
+	end;
       if !graphs then collector#gen_graphs !output;
       if !funstats then Funstats.collect prog
   with Invalid_argument s -> 
