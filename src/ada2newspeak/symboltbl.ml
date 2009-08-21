@@ -610,10 +610,12 @@ module SymMake(TR:Tree.TREE) = struct
                                 " , R = " ^ print_set s2
                              )
                            );
-    if inte = [] then T.new_unknown "from empty context intersection" else
+    if inte = [] then Some (T.new_unknown "from empty context intersection") else
+    try
       match snd (cast_v inte) with
-      | Variable (_,r,_,_,_) -> r
+      | Variable (_,r,_,_,_) -> Some r
       | _ -> invalid_arg "type_ovl_inter"
+    with Not_found -> None
 
 end
 

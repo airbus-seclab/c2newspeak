@@ -90,7 +90,7 @@ type scope = Lexical | In_package of string
 val type_ovl_intersection : t
                           -> string
                           -> string
-           -> Ada_types.t
+           -> Ada_types.t option
 
 (** Find data.  *)
 

@@ -4,8 +4,8 @@
 -- Date   : Thu Aug 20 2009
 --
 procedure t383 is
-  type PI is access Integer;
+  type T is range 0..1;
   B : Boolean;
 begin
-  B := PI > PI;
+  B := T > T;
 end t383;

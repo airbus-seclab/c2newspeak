@@ -491,12 +491,12 @@ and normalize_binop bop e1 e2 =
   (* Otherwise : direct translation *)
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type =
-            match (e1, e2) with
+          match (e1, e2) with
           | Lval l1 , Lval l2 -> let v1 = make_name_of_lval l1 in
                                  let v2 = make_name_of_lval l2 in
-                                 Some (Sym.type_ovl_intersection gtbl
+                                 Sym.type_ovl_intersection gtbl
                                       (ListUtils.last v1)
-                                      (ListUtils.last v2))
+                                      (ListUtils.last v2)
           | _      , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
                                           Some (subtyp_to_adatyp n)
           | _               -> None
