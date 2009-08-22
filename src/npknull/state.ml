@@ -182,6 +182,20 @@ let lval_to_abaddr env s lv =
       Some s -> lval_to_abaddr env s lv
     | None -> raise Exceptions.Unknown
 
+(* TODO: write an unsound example with write into a universe pointer!!! *)
+let transport_to s memlocs pre = 
+  match (s, pre) with
+      (Some s, Some pre) -> Some (Store.transport_to s memlocs pre)
+    | _ -> s
+
+let split memlocs s =
+  match s with
+      Some s -> 
+	let (unreach, reach) = Store.split memlocs s in
+	  (Some reach, Some unreach)
+(* TODO: not nice to have the possibility of emptyset!!! *)
+    | None -> (None, None)
+
 (* TODO:
 let apply s tr rel = 
   match (s, rel) with

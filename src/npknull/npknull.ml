@@ -52,7 +52,8 @@ let _ =
     then invalid_arg ("no file specified. Try "^exec_name^" --help");
 
     let prog = Newspeak.read !input in
-    let results = Solver.process prog in
+    let glb_tbl = GlbCollect.process prog in
+    let results = Solver.process glb_tbl prog in
       if !stats then Stats.print prog results
 
   with Invalid_argument s -> 

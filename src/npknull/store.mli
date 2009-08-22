@@ -54,7 +54,6 @@ val shift: int -> t -> int -> (t * (Memloc.t * Memloc.t) list)
 
 val subst: (Memloc.t * Memloc.t) list -> t -> t
 
-(* [unify_on dst n src] tries to transport [src] to the world of [dst]
-   knowing that both have [n] locals.
-*)
-val unify_on: t -> int -> t -> t
+val transport_to: t -> Memloc.t list -> t -> t
+
+val split: Memloc.t list -> t -> (t * t)

@@ -54,3 +54,11 @@ val guard: exp -> int -> t -> t
 val is_empty: t -> bool
 
 val forget_lval: lval -> int -> t -> t
+
+(* [split vars s] splits state s into two parts:
+   - the substate reachable from any variable in [vars]
+   - the remaining
+*)
+val split: Memloc.t list -> t -> (t * t)
+
+val transport_to: t -> Memloc.t list -> t -> t

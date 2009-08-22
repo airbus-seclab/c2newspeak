@@ -38,6 +38,9 @@ type info =
 			       think about removing it *)
   | PointsTo of (Set.t * offset option)
 
+(* TODO: this is too complex: do a product of a pointsto
+   and a non-null domain
+*)
 (* map from locations: 
    G.global name, 
    L.local number, or 
@@ -214,20 +217,22 @@ let subst tr s =
     Map.iter subst s;
     !res
 
-(* TODO: O(n) expensive? *)
-let unify_on dst n src =
-  let todo = ref [] in
-  let tr = ref [] in
-  let unify_info_on v1 v2 =
+let transport_to src memlocs dst =
+  let todo = ref (List.map (fun x -> (x, x)) memlocs) in
+  let res = ref Map.empty in
+
+  let transport_info_to v1 v2 =
     match (v1, v2) with
-	(PointsTo (x1, Some o1), PointsTo (x2, Some o2)) -> begin
+	(PointsTo (s1, Some o1), PointsTo (s2, Some o2)) -> begin
 	  if o1 <> 0 
 	  then invalid_arg "Store.unify_info_on: not implemented yet1";
 	  if o2 <> 0 
 	  then invalid_arg "Store.unify_info_on: not implemented yet2";
 	  (* TODO: since always doing Set.elements, why not use a list?? *)
-	  match (Set.elements x1, Set.elements x2) with
-	      (x1::[], x2::[]) -> todo := (x1, x2)::!todo
+	  match (Set.elements s1, Set.elements s2) with
+	      (x1::[], x2::[]) -> 
+		todo := (x1, x2)::!todo;
+		PointsTo (s2, Some o1)
 	    | _ -> 
 		print_endline (string_of_info v1);
 		print_endline (string_of_info v2);
@@ -238,39 +243,56 @@ let unify_on dst n src =
 	  print_endline (string_of_info v2);
 	  invalid_arg "Store.unify_info_on: not implemented yet4"
   in
-    for i = 0 to n-1 do
-      let m = Memloc.of_local i in
-	todo := (m, m)::!todo
-    done;
-    begin
-      try
-	while true do
-	  match !todo with
-	      [] -> raise Exit
-	    | (m1, m2)::tl -> 
-		todo := tl;
-		if Memloc.unify m1 m2 then tr := (m2, m1)::!tr;
-		let v1 = 
-		  try Some (Map.find m1 dst) 
-		  with Not_found -> None 
-		in
-		let v2 = 
-		  try Some (Map.find m2 src) 
-		  with Not_found -> None 
-		in
-		  match (v1, v2) with
-		      (None, None) -> ()
-		    | (Some ((0, v1)::[]), Some ((0, v2)::[])) -> 
-			unify_info_on v1 v2
-		    | (None, _) -> ()
-		    | (Some _, None) -> ()
-		    | _ -> invalid_arg "Store.unify_on: not implemented yet"
-	done
-      with Exit -> ()
+
+    begin try
+      while true do
+	match !todo with
+	    (m1, m2)::tl ->
+	      todo := tl;
+	      if not (Memloc.unify m1 m2) then raise Exceptions.Unknown;
+	      let v1 = try Map.find m1 src with Not_found -> [] in
+	      let v2 = try Map.find m2 dst with Not_found -> [] in begin 
+		match (v1, v2) with
+		    ([], []) -> ()
+		  | ((0, v1)::[], (0, v2)::[]) -> 
+		      let v = transport_info_to v1 v2 in
+			res := Map.add m1 ((0, v)::[]) !res
+		  | ([], _) -> ()
+		  | (_, []) -> ()
+		  | _ -> invalid_arg "Store.unify_on: not implemented yet"
+		end
+	  | [] -> raise Exit
+      done
+    with Exit -> ()
     end;
-    subst !tr src
+    !res
 
+let split memlocs s = 
+  let todo = ref memlocs in
+  let unreach = ref s in
+  let reach = ref Map.empty in
+    
+  let collect_memlocs v =
+    match v with
+	PointsTo (x, _) -> todo := (Set.elements x)@(!todo)
+      | _ -> ()
+  in
 
+    begin try
+      while true do
+	match !todo with
+	    x::tl -> 
+	      todo := tl;
+	      let v = try Map.find x !unreach with Not_found -> [] in
+		if v <> [] then reach := Map.add x v !reach;
+		unreach := Map.remove x !unreach;
+		List.iter (fun (_, info) -> collect_memlocs info) v
+	  | [] -> raise Exit
+      done
+    with Exit -> ()
+    end;
+    (!unreach, !reach)
+    
 (* usefull for debug *)
 (*
 let shift n1 s n2 =

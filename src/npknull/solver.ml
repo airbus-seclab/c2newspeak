@@ -31,6 +31,12 @@ let env_of_ftyp (args, ret) =
 	None -> n - 1
       | Some _ -> n
 
+let rec create_locals env n =
+  let rec create n =
+    if n < 0 then [] else (Memloc.of_local (env-n))::(create (n-1))
+  in
+    create n
+
 let build_main_info ft s =
   match ft with
       (_::_::[], Some _) -> 
@@ -40,7 +46,7 @@ let build_main_info ft s =
     | ([], _) -> s
     | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
 
-let process prog = 
+let process glb_tbl prog = 
 (* results of the analysis *)
   let warnings = ref StrSet.empty in
   let warn_cnt = ref 0 in
@@ -159,26 +165,42 @@ let process prog =
 	  let s = State.remove_local !env s in
 	    decr env;
 	    s
+	      
+(* TODO: treatment for function call could be more precise:
+   - list of pre/post in the table
+   - differentiate between read and write
+   - 
+*)
       | Call FunId f -> begin
 	  try
-	    let (_, _) = Hashtbl.find fun_tbl f in
-(*
+	    let (pre, post) = Hashtbl.find fun_tbl f in
 	    let (ft, _) = Hashtbl.find prog.fundecs f in
-	    let env_f = env_of_ftyp ft in
-	    let (init, tr) = State.prepare_call (env, s) (env_f, rel) in begin
-		match init with
-		    Some init -> 
-		      let pred = Hashtbl.find pred_tbl f in
-			if not (List.mem !current_fun pred)
-			then Hashtbl.replace pred_tbl f (!current_fun::pred);
-			Hashtbl.replace init_tbl f init;
-			if not (List.mem f !todo) then todo := f::!todo;
-			keep_fun := true
-		  | None -> if not complete then keep_fun := true
-	      end;
-	      State.apply s tr rel
-*)
-	      State.universe
+	    let locals_nb = env_of_ftyp ft in
+	    let locals = create_locals !env locals_nb in
+	    let globals = Hashtbl.find glb_tbl f in
+	    let globals = List.map Memloc.of_global globals in
+	    let memlocs = locals@globals in
+	  (* TODO: split and transport_to could maybe be performed together?? *)
+	    let (unreach, reach) = State.split memlocs s in
+	      (* probably needs !env and locals *)
+	      try
+		(* problem, here missing the actual to formal (shift) 
+		   should be done within the transport_to
+		   also should be able to get the mapping
+		   from reach to pre, in order to apply its inverse
+		*)
+		let reach = State.transport_to reach memlocs pre in
+		  if not (State.contains pre reach) then begin
+		    let pre = State.join reach pre in
+		    let pred = Hashtbl.find pred_tbl f in
+		      if not (List.mem !current_fun pred)
+		      then Hashtbl.replace pred_tbl f (!current_fun::pred);
+		      Hashtbl.replace fun_tbl f (pre, post);
+		      if not (List.mem f !todo) then todo := f::!todo
+		  end;
+		  unreach (* TODO: State.glue unreach (post tr^(-1)) *)
+	      with Exceptions.Unknown -> 
+		invalid_arg "Solver.call: not implemented yet"
 	  with Not_found -> 
 	    try 
 	      let s = Stubs.process f !env s in
@@ -237,7 +259,6 @@ let process prog =
       try Hashtbl.find prog.fundecs "main"
       with Not_found -> invalid_arg "Solver.process: missing main function"
     in
-(* TODO: do this only if main has the right type!! *)
     let s = build_main_info ft s in
       todo := "main"::[];
       Hashtbl.add fun_tbl "main" (s, State.emptyset);
