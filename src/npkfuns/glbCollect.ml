@@ -28,16 +28,12 @@ open Newspeak
 module Set = StrSet
 module Map = Map.Make(struct type t = int let compare = compare end)
 
-type used_glbs = Set.t
+type t = (Newspeak.fid, string list) Hashtbl.t
 
-type preds = Set.t
-
-type t = (Newspeak.fid, used_glbs) Hashtbl.t * (Newspeak.fid, preds) Hashtbl.t
-
-let print_stats (glb_tbl, _) = 
+let print_stats glb_tbl = 
   let stats = ref Map.empty in
   let collect_stat _ used =
-    let n = Set.cardinal used in
+    let n = List.length used in
     let v = 
       try Map.find n !stats
       with Not_found -> 0
@@ -51,9 +47,8 @@ let print_stats (glb_tbl, _) =
     Hashtbl.iter collect_stat glb_tbl;
     Map.iter print_stat !stats
 
-let print (glb_tbl, _) = 
+let print glb_tbl = 
   let print_fun f used =
-    let used = Set.elements used in
     let used = ListUtils.to_string (fun x -> x) ", " used in
       print_endline (f^": "^used)
   in
@@ -158,4 +153,7 @@ let process prog =
       done;
     with Queue.Empty -> ()
     end;
-    (glb_tbl, pred_tbl)
+    
+    let res = Hashtbl.create 100 in
+      Hashtbl.iter (fun f x -> Hashtbl.add res f (StrSet.elements x)) glb_tbl;
+      res
