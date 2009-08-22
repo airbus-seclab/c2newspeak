@@ -28,44 +28,36 @@ open Newspeak
 module Set = StrSet
 module Map = Map.Make(struct type t = int let compare = compare end)
 
-type used_glbs = Set.t option
+type used_glbs = Set.t
 
 type preds = Set.t
 
-type t = (Newspeak.fid, (used_glbs * preds)) Hashtbl.t
+type t = (Newspeak.fid, used_glbs) Hashtbl.t * (Newspeak.fid, preds) Hashtbl.t
 
-let print_stats funtbl = 
+let print_stats (glb_tbl, _) = 
   let stats = ref Map.empty in
-  let collect_stat _ (used, _) =
-    match used with
-	None -> ()
-      | Some used ->
-	  let n = Set.cardinal used in
-	  let v = 
-	    try Map.find n !stats
-	    with Not_found -> 0
-	  in
-	    stats := Map.add n (v+1) !stats
+  let collect_stat _ used =
+    let n = Set.cardinal used in
+    let v = 
+      try Map.find n !stats
+      with Not_found -> 0
+    in
+      stats := Map.add n (v+1) !stats
   in
   let print_stat n v =
     print_endline ("number of functions using "^string_of_int n^" globals: "
 		   ^string_of_int v)
   in
-    Hashtbl.iter collect_stat funtbl;
+    Hashtbl.iter collect_stat glb_tbl;
     Map.iter print_stat !stats
 
-let print funtbl = 
-  let print_fun f (used, _) =
-    let used = 
-      match used with
-	  None -> "?"
-	| Some used -> 
-	    let used = Set.elements used in
-	      ListUtils.to_string (fun x -> x) ", " used
-    in
+let print (glb_tbl, _) = 
+  let print_fun f used =
+    let used = Set.elements used in
+    let used = ListUtils.to_string (fun x -> x) ", " used in
       print_endline (f^": "^used)
   in
-    Hashtbl.iter print_fun funtbl
+    Hashtbl.iter print_fun glb_tbl
 
 
 (* for each function, collect:
@@ -82,38 +74,29 @@ let print funtbl =
 *)
 let process prog =
   let fids = collect_fid_addrof prog in
-  let funtbl = Hashtbl.create 100 in
+  let glb_tbl = Hashtbl.create 100 in
+  let pred_tbl = Hashtbl.create 100 in
   let todo = Queue.create () in
   let unknown_funs = ref Set.empty in
 
   let init_fun f _ = 
-    Hashtbl.add funtbl f (Some Set.empty, Set.empty);
+    Hashtbl.add glb_tbl f (Set.empty);
+    Hashtbl.add pred_tbl f Set.empty;
     Queue.add f todo
   in
 
   let update_fun f x =
-    let (used, preds) = Hashtbl.find funtbl f in
-      match used with
-	  None -> ()
-	| Some used -> 
-	    match x with
-		Some x when Set.subset x used -> ()
-	      | _ -> 
-		  let used = 
-		    match x with
-			None -> None
-		      | Some x -> Some (Set.union x used)
-		  in
-		    Hashtbl.replace funtbl f (used, preds);
-		    Set.iter (fun x -> Queue.add x todo) preds
+    let used = Hashtbl.find glb_tbl f in
+      if not (Set.subset x used) then begin
+	let preds = Hashtbl.find pred_tbl f in
+	let used = Set.union x used in
+	  Hashtbl.replace glb_tbl f used;
+	  Set.iter (fun x -> Queue.add x todo) preds
+      end
   in
 
   let get_fun f =
-    try
-      let (used, _) = Hashtbl.find funtbl f in
-	match used with
-	    Some used -> used
-	  | None -> raise Exit
+    try Hashtbl.find glb_tbl f
     with Not_found -> 
       if not (Set.mem f !unknown_funs) then begin
 	unknown_funs := Set.add f !unknown_funs;
@@ -162,8 +145,7 @@ let process prog =
 	  let collect f = res := Set.union (get_fun f) !res in
 	    List.iter collect fids;
 	    !res
-	      
-      | _ -> raise Exit
+      | _ -> invalid_arg "GlbCollect.process_stmtkind: not implemented yet"
   in
 
     Hashtbl.iter init_fun prog.fundecs;
@@ -171,9 +153,9 @@ let process prog =
       while true do
 	let f = Queue.take todo in
 	let (_, body) = Hashtbl.find prog.fundecs f in
-	let used = try Some (process_blk body) with Exit -> None in
+	let used = process_blk body in
 	  update_fun f used
       done;
     with Queue.Empty -> ()
     end;
-    funtbl
+    (glb_tbl, pred_tbl)

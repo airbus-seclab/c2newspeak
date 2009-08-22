@@ -31,23 +31,41 @@ let env_of_ftyp (args, ret) =
 	None -> n - 1
       | Some _ -> n
 
+let build_main_info ft s =
+  match ft with
+      (_::_::[], Some _) -> 
+	State.set_pointsto (Memloc.of_local 2, 0) (Memloc.gen ()) s
+    | (_::_::[], None) -> 
+	State.set_pointsto (Memloc.of_local 1, 0) (Memloc.gen ()) s
+    | ([], _) -> s
+    | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
+
 let process prog = 
-  let warn_cnt = ref 0 in
+(* results of the analysis *)
   let warnings = ref StrSet.empty in
-(* 
-   list of functions to analyze
-   when this list is empty, analysis ends
+  let warn_cnt = ref 0 in
+(* set of reachable functions *)
+  let live_funs = ref StrSet.empty in
+
+(*
+  worklist: 
+  list of functions to analyze
+  when this list is empty, analysis ends
 *)
 (* TODO: could try a queue instead?? *)
   let todo = ref [] in
+(* mapping from function to pre/post relation *)
   let fun_tbl = Hashtbl.create 100 in
-  let lbl_tbl = ref [] in
-  let init_tbl = Hashtbl.create 100 in
-  let keep_fun = ref false in
-  let pred_tbl = Hashtbl.create 100 in
-  let current_fun = ref "" in
 
-  let live_funs = ref StrSet.empty in
+(* inverse call graph *)
+  let pred_tbl = Hashtbl.create 100 in
+
+
+(* used during the analysis of a function *)
+  let current_fun = ref "" in (* name of the function currently analysed *)
+  let env = ref 0 in          (* number of local variables *)
+  let lbl_tbl = ref [] in     (* table of states at each jump label *)
+
 
   let push lbl = lbl_tbl := (lbl, State.emptyset)::!lbl_tbl in
   let pop () = 
@@ -69,16 +87,6 @@ let process prog =
       lbl_tbl := goto !lbl_tbl
   in
 
-  let add_main_info ft s =
-    match ft with
-	(_::_::[], Some _) -> 
-	  State.set_pointsto (Memloc.of_local 2, 0) (Memloc.gen ()) s
-      | (_::_::[], None) -> 
-	  State.set_pointsto (Memloc.of_local 1, 0) (Memloc.gen ()) s
-      | ([], _) -> s
-      | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
-  in
-
   let warn_deref () = 
     let msg = "potential null pointer deref" in
     let msg = Context.get_current_loc ()^": "^msg in
@@ -89,70 +97,72 @@ let process prog =
       end
   in
 
-  let exp_is_valid env s x =
+  let exp_is_valid s x =
     try
       match x with
 	  Lval (lv, Ptr) -> 
-	    let a = State.lval_to_abaddr env s lv in
+	    let a = State.lval_to_abaddr !env s lv in
 	    let a = State.abaddr_to_addr a in
 	      State.addr_is_valid s a
 	| _ -> raise Exceptions.Unknown
     with Exceptions.Unknown -> false
   in
 
-  let rec check_lval env s x = 
+  let rec check_lval s x = 
     match x with
 	Global _ -> ()
       | Local _ -> ()
       | Shift (lv, e) -> 
-	  check_lval env s lv;
-	  check_exp env s e
-      | Deref (e, _) -> if not (exp_is_valid env s e) then warn_deref ()
+	  check_lval s lv;
+	  check_exp s e
+      | Deref (e, _) -> if not (exp_is_valid s e) then warn_deref ()
 
-  and check_exp env s x = 
+  and check_exp s x = 
     match x with
 	Const _ -> ()
-      | AddrOf (lv, _) -> check_lval env s lv
+      | AddrOf (lv, _) -> check_lval s lv
       | AddrOfFun _ -> ()
-      | Lval (lv, _) -> check_lval env s lv
-      | UnOp (_, e) -> check_exp env s e
+      | Lval (lv, _) -> check_lval s lv
+      | UnOp (_, e) -> check_exp s e
       | BinOp (_, e1, e2) -> 
-	  check_exp env s e1;
-	  check_exp env s e2
+	  check_exp s e1;
+	  check_exp s e2
   in
 
-  let rec process_blk x env s =
+  let rec process_blk x s =
     match x with
 	[] -> s
       | (x, loc)::tl -> 
 	  Context.set_current_loc loc;
 	  let s = 
-	    try process_stmtkind x env s 
+	    try process_stmtkind x s 
 	    with Exceptions.NotImplemented msg -> 
-	      keep_fun := true;
 	      Context.print_err ("Not implemented yet: "^msg);
 	      s
 	  in
-	    process_blk tl env s
+	    process_blk tl s
 	      
-  and process_stmtkind x env s =
+  and process_stmtkind x s =
     match x with
 	_ when State.is_empty s -> s
       | Set (lv, e, t) -> 
-	  check_lval env s lv;
-	  check_exp env s e;
-	  State.assign (lv, e, t) env s
+	  check_lval s lv;
+	  check_exp s e;
+	  State.assign (lv, e, t) !env s
       | Copy (lv1, lv2, _) -> 
-	  check_lval env s lv1;
-	  check_lval env s lv2;
-	  State.forget_lval lv1 env s
+	  check_lval s lv1;
+	  check_lval s lv2;
+	  State.forget_lval lv1 !env s
       | Decl (_, _, body) -> 
-	  let env = env + 1 in
-	  let s = process_blk body env s in
-	    State.remove_local env s
+	  incr env;
+	  let s = process_blk body s in
+	  let s = State.remove_local !env s in
+	    decr env;
+	    s
       | Call FunId f -> begin
 	  try
-	    let (rel, complete) = Hashtbl.find fun_tbl f in
+	    let (_, _) = Hashtbl.find fun_tbl f in
+(*
 	    let (ft, _) = Hashtbl.find prog.fundecs f in
 	    let env_f = env_of_ftyp ft in
 	    let (init, tr) = State.prepare_call (env, s) (env_f, rel) in begin
@@ -167,9 +177,11 @@ let process prog =
 		  | None -> if not complete then keep_fun := true
 	      end;
 	      State.apply s tr rel
+*)
+	      State.universe
 	  with Not_found -> 
 	    try 
-	      let s = Stubs.process f env s in
+	      let s = Stubs.process f !env s in
 		(* TODO: factor with print_err!! *)
 		Context.report_stub_used ("missing function: "^f
 					  ^", stub used, "
@@ -182,26 +194,26 @@ let process prog =
 	      s
 	end
       | Select (br1, br2) -> 
-	    let s1 = process_blk br1 env s in
-	    let s2 = process_blk br2 env s in
+	    let s1 = process_blk br1 s in
+	    let s2 = process_blk br2 s in
 	      State.join s1 s2
       | Guard e -> 
-	  check_exp env s e;
-	  State.guard e env s
+	  check_exp s e;
+	  State.guard e !env s
 	    (* TODO: change labels?? with the number of DoWith to traverse, 
 	       but harder to manipulate? *)
       | DoWith (body, lbl, action) -> 
 	  push lbl;
-	  let s1 = process_blk body env s in
+	  let s1 = process_blk body s in
 	  let s2 = pop () in
-	  let s2 = process_blk action env s2 in
+	  let s2 = process_blk action s2 in
 	    State.join s1 s2
       | Goto lbl -> 
 	  goto lbl s;
 	  State.emptyset
       | InfLoop body -> 
 	  let rec fixpoint x =
-	    let x' = process_blk body env x in
+	    let x' = process_blk body x in
 	      if not (State.contains x x') then fixpoint (State.join x x')
 	  in
 	    fixpoint s;
@@ -213,55 +225,40 @@ let process prog =
   in
 
   let init_fun f _ =
-    Hashtbl.add fun_tbl f (State.emptyset, false);
+    Hashtbl.add fun_tbl f (State.emptyset, State.emptyset);
     Hashtbl.add pred_tbl f []
   in
-
+    
     (* initialization *)
     Hashtbl.iter init_fun prog.fundecs;
     let s = State.universe in
-    let s = process_blk prog.init 0 s in
+    let s = process_blk prog.init s in
     let (ft, _) = 
       try Hashtbl.find prog.fundecs "main"
       with Not_found -> invalid_arg "Solver.process: missing main function"
     in
 (* TODO: do this only if main has the right type!! *)
-    let s = add_main_info ft s in
+    let s = build_main_info ft s in
       todo := "main"::[];
-      Hashtbl.add init_tbl "main" s;
+      Hashtbl.add fun_tbl "main" (s, State.emptyset);
       
       (* fixpoint computation *)
       begin try
 	while true do
 	  match !todo with
-	      f::tl -> 
+	      f::tl -> begin
 		todo := tl;
-		begin
-		  Context.print_verbose ("Analyzing: "^f);
-		  current_fun := f;
-		  live_funs := StrSet.add f !live_funs;
-		  let s = Hashtbl.find init_tbl f in
-		  let (ft, body) = Hashtbl.find prog.fundecs f in
-		  let env = env_of_ftyp ft in
-		  let s = process_blk body env s in
-		    begin try
-		      let (rel, _) = Hashtbl.find fun_tbl f in
-			if not (State.contains rel s) then begin
-			  Hashtbl.replace fun_tbl f (s, not !keep_fun);
-			  let pred = Hashtbl.find pred_tbl f in
-			    todo := pred@(!todo)
-			end;
-			()
-		    with Exceptions.NotImplemented msg -> 
-		      Context.print_err ("Not implemented yet: "^msg)
-		    end;
-		    (* TODO: couldn't the init be put in the rel?
-		       and the compaction done only once the analysis of the 
-		       function is finished?
-		    *)
-		    if not !keep_fun then Hashtbl.remove init_tbl f;
-		    keep_fun := false;
-		end
+		Context.print_verbose ("Analyzing: "^f);
+		current_fun := f;
+		live_funs := StrSet.add f !live_funs;
+		let (pre, _) = Hashtbl.find fun_tbl f in
+		let (ft, body) = Hashtbl.find prog.fundecs f in
+		  env := env_of_ftyp ft;
+		  let post = process_blk body pre in
+		    Hashtbl.replace fun_tbl f (pre, post);
+		    let pred = Hashtbl.find pred_tbl f in
+		      todo := pred@(!todo)
+	      end
 	    | [] -> raise Exit
 	done
       with Exit -> ()

@@ -27,8 +27,6 @@ open Newspeak
 
 type t
 
-type transport
-
 val universe: t
 
 val emptyset: t
@@ -38,10 +36,6 @@ val join: t -> t -> t
 val contains: t -> t -> bool
 
 val addr_is_valid: t -> (Memloc.t * int) -> bool
-
-val prepare_call: (int * t) -> (int * t) -> (t option * transport)
-
-val apply: t -> transport -> t -> t
 
 val set_pointsto: (Memloc.t * int) -> Memloc.t -> t -> t
 
