@@ -199,11 +199,14 @@ let split memlocs s =
 type subst = (Memloc.t * Memloc.t) list
 
 let build_param_map env n =
-  let rec build n =
-    if n < 0 then [] 
-    else (Memloc.of_local (env-n), Memloc.of_local n)::(build (n-1))
+  let delta = env - n in
+  let rec build x =
+    if x < 0 then [] else begin
+      let y = if x < delta then Memloc.gen () else Memloc.of_local (x-delta) in
+	(Memloc.of_local x, y)::(build (x-1))
+    end
   in
-    build n
+    build env
 
 let transport tr s =
   match s with
