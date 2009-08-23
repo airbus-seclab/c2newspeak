@@ -98,13 +98,16 @@ let string_of_info i =
 	in
 	  "("^a^", "^o^")"
 
+(* TODO: could be optimized!! by a map2 that doesn't traverse shared 
+   subtrees *)
 let join s1 s2 =
-  let s = ref s2 in
+  let s = ref Map.empty in
   let add_info x d1 =
     try
       let d2 = Map.find x s2 in
 	if d1 <> d2 
-	then invalid_arg "Store.join: not implemented yet <>"
+	then invalid_arg "Store.join: not implemented yet <>";
+	s := Map.add x d1 !s
     with Not_found -> ()
   in
     Map.iter add_info s1;
@@ -342,4 +345,14 @@ let build_transport src memlocs dst =
   let x = build_transport src memlocs dst in
     print_endline "Store.build_transport ends";
     x
+*)
+(*
+let join s1 s2 =
+  print_endline "Store.join";
+  print_endline (to_string s1);
+  print_endline (to_string s2);
+  let s = join s1 s2 in
+    print_endline (to_string s);
+    print_endline "Store.join ends";
+    s
 *)

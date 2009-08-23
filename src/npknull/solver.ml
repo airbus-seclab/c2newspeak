@@ -189,7 +189,6 @@ let process glb_tbl prog =
 		let tr2 = State.build_transport reach memlocs pre in
 		let reach = State.transport tr2 reach in
 		let tr = State.invert (State.compose tr1 tr2) in
-		let post = State.transport tr post in
 		  if not (State.contains pre reach) then begin
 		    let pre = State.join reach pre in
 		    let pred = Hashtbl.find pred_tbl f in
@@ -198,7 +197,8 @@ let process glb_tbl prog =
 		      Hashtbl.replace fun_tbl f (pre, post);
 		      if not (List.mem f !todo) then todo := f::!todo
 		  end;
-		  State.glue unreach post
+		  let post = State.transport tr post in
+		    State.glue unreach post
 	      with Exceptions.Unknown ->
 		print_endline (State.to_string reach);
 		print_endline (State.to_string pre);
