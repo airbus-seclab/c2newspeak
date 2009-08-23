@@ -67,7 +67,7 @@ let print glb_tbl =
    - if globals have changed, then add all f callers to the todo set
    - until there are no more functions in the todo set
 *)
-let process prog =
+let process silent prog =
   let fids = collect_fid_addrof prog in
   let glb_tbl = Hashtbl.create 100 in
   let pred_tbl = Hashtbl.create 100 in
@@ -95,7 +95,10 @@ let process prog =
     with Not_found -> 
       if not (Set.mem f !unknown_funs) then begin
 	unknown_funs := Set.add f !unknown_funs;
-	print_endline ("unknown function "^f^", assuming no global is modified")
+	if not silent then begin
+	  print_endline ("unknown function "^f
+			 ^", assuming no global is modified")
+	end
       end;
       Set.empty
   in
@@ -140,7 +143,7 @@ let process prog =
 	  let collect f = res := Set.union (get_fun f) !res in
 	    List.iter collect fids;
 	    !res
-      | _ -> invalid_arg "GlbCollect.process_stmtkind: not implemented yet"
+      | UserSpec _ -> Set.empty
   in
 
     Hashtbl.iter init_fun prog.fundecs;
@@ -157,3 +160,4 @@ let process prog =
     let res = Hashtbl.create 100 in
       Hashtbl.iter (fun f x -> Hashtbl.add res f (StrSet.elements x)) glb_tbl;
       res
+	

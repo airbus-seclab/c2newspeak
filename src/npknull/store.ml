@@ -196,7 +196,7 @@ let shift n1 s n2 =
    Have the inverse map?
    TOOD: code very similar to shift??
 *)
-let subst tr s = 
+let transport tr s =
   let res = ref Map.empty in
   let subst_info x = 
     match x with
@@ -217,11 +217,25 @@ let subst tr s =
     Map.iter subst s;
     !res
 
-let transport_to src memlocs dst =
-  let todo = ref (List.map (fun x -> (x, x)) memlocs) in
-  let res = ref Map.empty in
+let glue s1 s2 =
+  let res = ref s1 in
+  let add_info x y = res := Map.add x y !res in
+    Map.iter add_info s2;
+    !res
 
-  let transport_info_to v1 v2 =
+let build_transport src memlocs dst =
+  let todo = ref [] in
+  let res = ref [] in
+    
+  let add_assoc x y = 
+    todo := (x, y)::!todo;
+    if x <> y then begin
+      if not (Memloc.unify x y) then raise Exceptions.Unknown;
+      res := (x, y)::!res
+    end
+  in
+
+  let build_transport_info v1 v2 =
     match (v1, v2) with
 	(PointsTo (s1, Some o1), PointsTo (s2, Some o2)) -> begin
 	  if o1 <> 0 
@@ -230,9 +244,7 @@ let transport_to src memlocs dst =
 	  then invalid_arg "Store.unify_info_on: not implemented yet2";
 	  (* TODO: since always doing Set.elements, why not use a list?? *)
 	  match (Set.elements s1, Set.elements s2) with
-	      (x1::[], x2::[]) -> 
-		todo := (x1, x2)::!todo;
-		PointsTo (s2, Some o1)
+	      (x1::[], x2::[]) -> add_assoc x1 x2
 	    | _ -> 
 		print_endline (string_of_info v1);
 		print_endline (string_of_info v2);
@@ -244,19 +256,17 @@ let transport_to src memlocs dst =
 	  invalid_arg "Store.unify_info_on: not implemented yet4"
   in
 
+    List.iter (fun x -> add_assoc x x) memlocs;
     begin try
       while true do
 	match !todo with
 	    (m1, m2)::tl ->
 	      todo := tl;
-	      if not (Memloc.unify m1 m2) then raise Exceptions.Unknown;
 	      let v1 = try Map.find m1 src with Not_found -> [] in
 	      let v2 = try Map.find m2 dst with Not_found -> [] in begin 
 		match (v1, v2) with
 		    ([], []) -> ()
-		  | ((0, v1)::[], (0, v2)::[]) -> 
-		      let v = transport_info_to v1 v2 in
-			res := Map.add m1 ((0, v)::[]) !res
+		  | ((0, v1)::[], (0, v2)::[]) -> build_transport_info v1 v2
 		  | ([], _) -> ()
 		  | (_, []) -> ()
 		  | _ -> invalid_arg "Store.unify_on: not implemented yet"
@@ -323,4 +333,13 @@ let contains s1 s2 =
     print_endline (string_of_bool r);
     print_endline "Store.contains ends";
     r
+
+let build_transport src memlocs dst =
+  print_endline "Store.build_transport starts";
+  print_endline (to_string src);
+  List.iter (fun x -> print_endline (Memloc.to_string x)) memlocs;
+  print_endline (to_string dst);
+  let x = build_transport src memlocs dst in
+    print_endline "Store.build_transport ends";
+    x
 *)

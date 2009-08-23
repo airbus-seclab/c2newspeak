@@ -61,4 +61,16 @@ val forget_lval: lval -> int -> t -> t
 *)
 val split: Memloc.t list -> t -> (t * t)
 
-val transport_to: t -> Memloc.t list -> t -> t
+type subst
+
+val build_transport: t -> Memloc.t list -> t -> subst
+
+val build_param_map: int -> int -> subst
+
+val transport: subst -> t -> t
+
+val invert: subst -> subst
+
+val compose: subst -> subst -> subst
+
+val glue: t -> t -> t

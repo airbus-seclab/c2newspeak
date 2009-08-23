@@ -183,18 +183,41 @@ let lval_to_abaddr env s lv =
     | None -> raise Exceptions.Unknown
 
 (* TODO: write an unsound example with write into a universe pointer!!! *)
-let transport_to s memlocs pre = 
+let build_transport s memlocs pre = 
   match (s, pre) with
-      (Some s, Some pre) -> Some (Store.transport_to s memlocs pre)
-    | _ -> s
+      (Some s, Some pre) -> Store.build_transport s memlocs pre
+    | _ -> []
 
 let split memlocs s =
   match s with
       Some s -> 
 	let (unreach, reach) = Store.split memlocs s in
-	  (Some reach, Some unreach)
+	  (Some unreach, Some reach)
 (* TODO: not nice to have the possibility of emptyset!!! *)
     | None -> (None, None)
+
+type subst = (Memloc.t * Memloc.t) list
+
+let build_param_map env n =
+  let rec build n =
+    if n < 0 then [] 
+    else (Memloc.of_local (env-n), Memloc.of_local n)::(build (n-1))
+  in
+    build n
+
+let transport tr s =
+  match s with
+      Some s -> Some (Store.transport tr s)
+    | None -> None
+
+let invert subst = List.map (fun (x, y) -> (y, x)) subst
+
+let compose subst1 subst2 = subst1@subst2
+
+let glue s1 s2 =
+  match (s1, s2) with
+      (Some s1, Some s2) -> Some (Store.glue s1 s2)
+    | _ -> None
 
 (* TODO:
 let apply s tr rel = 

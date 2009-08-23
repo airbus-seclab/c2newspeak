@@ -180,16 +180,16 @@ let process glb_tbl prog =
 	    let globals = Hashtbl.find glb_tbl f in
 	    let globals = List.map Memloc.of_global globals in
 	    let memlocs = locals@globals in
-	  (* TODO: split and transport_to could maybe be performed together?? *)
 	    let (unreach, reach) = State.split memlocs s in
-	      (* probably needs !env and locals *)
+	    let tr1 = State.build_param_map !env locals_nb in
+	    let reach = State.transport tr1 reach in
 	      try
-		(* problem, here missing the actual to formal (shift) 
-		   should be done within the transport_to
-		   also should be able to get the mapping
-		   from reach to pre, in order to apply its inverse
-		*)
-		let reach = State.transport_to reach memlocs pre in
+		let locals = create_locals locals_nb locals_nb in
+		let memlocs = locals@globals in
+		let tr2 = State.build_transport reach memlocs pre in
+		let reach = State.transport tr2 reach in
+		let tr = State.invert (State.compose tr1 tr2) in
+		let post = State.transport tr post in
 		  if not (State.contains pre reach) then begin
 		    let pre = State.join reach pre in
 		    let pred = Hashtbl.find pred_tbl f in
@@ -198,8 +198,10 @@ let process glb_tbl prog =
 		      Hashtbl.replace fun_tbl f (pre, post);
 		      if not (List.mem f !todo) then todo := f::!todo
 		  end;
-		  unreach (* TODO: State.glue unreach (post tr^(-1)) *)
-	      with Exceptions.Unknown -> 
+		  State.glue unreach post
+	      with Exceptions.Unknown ->
+		print_endline (State.to_string reach);
+		print_endline (State.to_string pre);
 		invalid_arg "Solver.call: not implemented yet"
 	  with Not_found -> 
 	    try 
@@ -240,7 +242,7 @@ let process glb_tbl prog =
 	  in
 	    fixpoint s;
 	    State.emptyset
-      | UserSpec ((IdentToken "__npknull_display")::_) -> 
+      | UserSpec ((IdentToken "display")::_) -> 
 	  print_endline (State.to_string s);
 	  s
       | _ -> raise (Exceptions.NotImplemented "Analysis.process_stmtkind")
