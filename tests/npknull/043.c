@@ -23,24 +23,18 @@
   email: charles.hymans@penjili.org
 */
 
-// should not fail with Not_found
+int **g;
 
-void f(int *a) {
+void f() {
+  *g = 0;           // if g points to ptr, then ptr is now a null pointer
 }
 
-void h() {
-  int a;
-  f(&a);
-}
-
-void main () {
+void main() {
+  int *ptr;
   int x;
-  int *y;
-  
-  if (x)
-    {
-      f(y);
-    }
-  
-  h();
+
+  ptr = &x;
+  if (x) g = &ptr;  // if x <> 0 then g points to ptr
+  f();
+  *ptr = 1;         // should display a potential null pointer deref here
 }

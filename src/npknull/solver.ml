@@ -274,13 +274,15 @@ let process glb_tbl prog =
 		Context.print_verbose ("Analyzing: "^f);
 		current_fun := f;
 		live_funs := StrSet.add f !live_funs;
-		let (pre, _) = Hashtbl.find fun_tbl f in
+		let (pre, post) = Hashtbl.find fun_tbl f in
 		let (ft, body) = Hashtbl.find prog.fundecs f in
 		  env := env_of_ftyp ft;
-		  let post = process_blk body pre in
-		    Hashtbl.replace fun_tbl f (pre, post);
-		    let pred = Hashtbl.find pred_tbl f in
-		      todo := pred@(!todo)
+		  let new_post = process_blk body pre in
+		    if not (State.contains post new_post) then begin
+		      Hashtbl.replace fun_tbl f (pre, new_post);
+		      let pred = Hashtbl.find pred_tbl f in
+			todo := pred@(!todo)
+		    end
 	      end
 	    | [] -> raise Exit
 	done
