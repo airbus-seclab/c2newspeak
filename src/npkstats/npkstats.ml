@@ -269,13 +269,13 @@ object (this)
 	  None -> false, stdout
 	| Some cout -> true, cout 
     in
-    let string_of_call f x = 
+    let string_of_call f x =
       let n = string_of_int x in
       let s = "Number of calls to " in
       let out = "\n"^s^f^": "^n in
 	Buffer.add_string res out;
-	if b then 
-	  "<stats class=\""^s^"\" val=\""^n^"\"></stats>\n" 
+	if b then
+	  "<stats class=\""^s^"\" val=\""^n^"\"></stats>\n"
 	else ""
 	  
     in
@@ -287,24 +287,28 @@ object (this)
 	incr fun_counter;
 	let out = "\n"^s^": "^f^"\n"^out in
 	  Buffer.add_string res out;
-	if b then 
-	  "<stats class=\""^s^"\" val=\""^f^"\"></stats>\n"^xml 
+	if b then
+	  "<stats class=\""^s^"\" val=\""^f^"\"></stats>\n"^xml
 	else ""
 
     in
     let string_of_globals globstats =
-      let to_string s (typ, nb) = 
-	  s^(string_of_typ typ)^": "
-	  ^(string_of_int nb)^"\n"
+      let to_string (typ, nb) =
+	let t = string_of_typ typ in
+	let n = string_of_int nb in
+	  (t^": "^n^"\n"),
+	("<stats class=\""^t^"\" val=\""^n^"\"></stats>")
       in
-      let array_to_string s ((typ, sz), nb) = 
-	s^(string_of_typ typ)^", "
-	^(string_of_int sz)^": "
-	^(string_of_int nb)^"\n"
+      let array_to_string ((typ, sz), nb) =
+	let t = string_of_typ typ in
+	let n1 = string_of_int sz in
+	let n2 = string_of_int nb in
+	  (t^", "^n1^": "^n2^"\n"),
+	  ("<stats class=\""^t^" " ^n1^"\" val=\""^n2^"\"></stats>")
       in
       let add_array l typ nb =
-	match typ with 
-	    Array t -> (t, nb)::l 
+	match typ with
+	    Array t -> (t, nb)::l
 	  | _ -> l
       in
       let build_lists t n (l, ltab) =
@@ -314,11 +318,17 @@ object (this)
       let l, ltab = Hashtbl.fold build_lists globstats ([], []) in
       let l = List.sort (fun v1 v2 -> (snd v2) - (snd v1)) l in
       let ltab = List.sort (fun v1 v2 -> (snd(fst(v2)) - snd(fst(v1)))) ltab in
-      let s = "Number of globals with a given type: \n" in
-      let s = List.fold_left to_string s l in
-      let s = s ^ "Number of occurences of a given pair (array type, size):\n" in
-	List.fold_left array_to_string s ltab
-    in
+      let out = "Number of globals with a given type: \n" in
+      let out, xml = List.fold_left ( 
+	fun (out, xml) e ->
+	  let o, x = to_string e in
+	    out^o, xml^x) (out, "") l in
+      let out = out ^ "Number of occurences of a given pair (array type, size):\n" in
+	List.fold_left (
+	  fun (out, xml) e ->
+	    let o, x = array_to_string e in
+	      out^o, xml^x) (out, xml) ltab
+       in 
     let s1 = "Number of global variables" in
     let n1 = string_of_int globals in
     let s2 = "Total size of global variables (bytes)" in
@@ -334,23 +344,28 @@ object (this)
 	in
 	  output_string cout xml
       end;
-      if !more_verb then 
+      if !more_verb then
 	begin
-	  Buffer.add_string res ((string_of_globals globstats)^"\n");
-	  Buffer.add_string res 
-	  ("Number of functions with (void -> void) prototype: " 
-	   ^(string_of_int void_fun)^"\n")
+	  let out, xml = string_of_globals globstats in
+	  let s = "Number of functions with (void -> void) prototype: "  in
+	  let n = string_of_int void_fun in
+	    Buffer.add_string res (out^"\n");
+	    Buffer.add_string res (s^n^"\n");
+	    if b then begin
+	      output_string cout xml;
+	      output_string cout ("<stats class=\""^s^"\" val=\""^n^"\"></stats>")
+	    end
 	end;
       let out, xml = string_of_counters counters b in
 	Buffer.add_string res out;
 	if xml <> "" then output_string cout xml;
 	let xml =
-	  Hashtbl.fold (fun f x s -> 
+	  Hashtbl.fold (fun f x s ->
 			  s^(string_of_call f x)) callstats ""
 	in
 	  if xml <> "" then output_string cout xml;
       if verbose then begin
-	let xml = Hashtbl.fold (fun f x s-> 
+	let xml = Hashtbl.fold (fun f x s->
 				s^(string_of_fun f x)) funstats "" in
 	  if xml = "" then ()
 	  else output_string cout xml
