@@ -26,32 +26,18 @@
 (* TODO: if there are may cells get rid of their cases in this module *)
 open Newspeak
 
-exception Emptyset
-
 module Map = Map.Make(String)
 module Set = Set.Make(String)
 
-type offset = int
-
 (* None is for emptyset *)
-(* TODO: try to get rid of this emptyset, use an exception instead!! *)
-type t = (Store.t * Store.t) option
+(* TODO: try to get rid of this emptyset, use an exception instead?? *)
+type t = Store.t option
 
-type transport = (Memloc.t * Memloc.t) list
-
-let invert tr = List.map (fun (x, y) -> (y, x)) tr
-
-let string_of_transport tr =
-  let string_of_assoc (x, y) =
-    Memloc.to_string x^"/"^Memloc.to_string y
-  in
-    "["^ListUtils.to_string string_of_assoc ", " tr^"]"
-
-let universe = Some (Store.universe, Store.universe)
+let universe = Some (Store.universe)
 
 let emptyset = None
 
-let is_empty s = s = None
+let is_empty s = (s = None)
 
 (* TODO: this should be greatly improved!!! 
    right now O(n)*log(n)
@@ -59,8 +45,7 @@ let is_empty s = s = None
 *)
 let join s1 s2 = 
   match (s1, s2) with
-(* TODO: strange, assumes init are both the same here!! *)
-      (Some (i, s1), Some (_, s2)) -> Some (i, Store.join s1 s2)
+      (Some s1, Some s2) -> Some (Store.join s1 s2)
     | (None, s) | (s, None) -> s
 
 (* TODO: this should be greatly improved!!
@@ -70,13 +55,12 @@ let contains s1 s2 =
   match (s1, s2) with
       (_, None) -> true
     | (None, _) -> false
-(* TODO: strange but assumes they have both the same init *)
-    | (Some (_, s1), Some (_, s2)) -> Store.contains s1 s2
+    | (Some s1, Some s2) -> Store.contains s1 s2
 
 (* TODO: this is really awkward that this is needed!! *)
 let addr_is_valid s a = 
   match s with
-      Some (_, s) -> Store.addr_is_valid s a
+      Some s -> Store.addr_is_valid s a
     | None -> true
 
 let abaddr_to_addr (m, o) = 
@@ -131,7 +115,7 @@ let abaddr_to_memloc (m, _) = m
 let assign (lv, e, t) env s =
   match s with
       None -> None
-    | Some (i, s) -> 
+    | Some s -> 
 	try
 	  let a = lval_to_abaddr env s lv in
 	    try
@@ -140,47 +124,47 @@ let assign (lv, e, t) env s =
 		    Ptr -> 
 		      let p = eval_exp env s e in
 		      let s = Store.write a p s in
-			Some (i, s)
+			Some s
 		  | _ -> raise Exceptions.Unknown
 	    with Exceptions.Unknown -> 
 	      let m = abaddr_to_memloc a in
-		Some (i, Store.forget_memloc m s)
+		Some (Store.forget_memloc m s)
 	with Exceptions.Unknown -> universe
 
 let to_string s =
   match s with
-      Some (m1, m2) -> Store.to_string m1^" ===> "^Store.to_string m2
+      Some m -> Store.to_string m
     | None -> "{}"
 
 (* TODO: find a way to remove this option, remove emptyset!! *)
 let remove_local v s =
   match s with
-      Some (i, s) -> 
+      Some s -> 
 	let v = Memloc.of_local v in
-	  Some (i, Store.remove_memloc v s)
+	  Some (Store.remove_memloc v s)
     | None -> None
 
 (* TODO: find a way to remove emptyset/None!!! *)
 let set_pointsto m1 m2 s = 
   match s with
-      Some (i, s) -> Some (i, Store.write m1 m2 s)
+      Some s -> Some (Store.write m1 m2 s)
     | None -> None
 
 let forget_lval lv env s =
   match s with
       None -> None
-    | Some (i, s) -> 
+    | Some s -> 
 	try
 	  let a = lval_to_abaddr env s lv in
 	  let m = abaddr_to_memloc a in
 	  let s = Store.forget_memloc m s in
-	    Some (i, s)
+	    Some s
 	with Exceptions.Unknown -> universe
 
 let guard e env s = 
   match s with
       None -> None
-    | Some (i, s) -> 
+    | Some s -> 
 	let s = 
 	  try
 	    match e with
@@ -191,13 +175,54 @@ let guard e env s =
 	      | _ -> s
 	  with Exceptions.Unknown -> s
 	in
-	  Some (i, s)
+	  Some s
 
 let lval_to_abaddr env s lv =
   match s with
-      Some (_, s) -> lval_to_abaddr env s lv
-    | None -> raise Emptyset
+      Some s -> lval_to_abaddr env s lv
+    | None -> raise Exceptions.Unknown
 
+(* TODO: write an unsound example with write into a universe pointer!!! *)
+let build_transport s memlocs pre = 
+  match (s, pre) with
+      (Some s, Some pre) -> Store.build_transport s memlocs pre
+    | _ -> []
+
+let split memlocs s =
+  match s with
+      Some s -> 
+	let (unreach, reach) = Store.split memlocs s in
+	  (Some unreach, Some reach)
+(* TODO: not nice to have the possibility of emptyset!!! *)
+    | None -> (None, None)
+
+type subst = (Memloc.t * Memloc.t) list
+
+let build_param_map env n =
+  let delta = env - n in
+  let rec build x =
+    if x < 0 then [] else begin
+      let y = if x < delta then Memloc.gen () else Memloc.of_local (x-delta) in
+	(Memloc.of_local x, y)::(build (x-1))
+    end
+  in
+    build env
+
+let transport tr s =
+  match s with
+      Some s -> Some (Store.transport tr s)
+    | None -> None
+
+let invert subst = List.map (fun (x, y) -> (y, x)) subst
+
+let compose subst1 subst2 = subst1@subst2
+
+let glue s1 s2 =
+  match (s1, s2) with
+      (Some s1, Some s2) -> Some (Store.glue s1 s2)
+    | _ -> None
+
+(* TODO:
 let apply s tr rel = 
   match (s, rel) with
       (None, _) | (_, None) -> None
@@ -219,6 +244,17 @@ let prepare_call (env, s) (env_f, rel) =
 		  if Store.contains i s then None else Some (Some (s, s))
 		in
 		  (s, tr)
+
+type transport = (Memloc.t * Memloc.t) list
+
+let invert tr = List.map (fun (x, y) -> (y, x)) tr
+
+let string_of_transport tr =
+  let string_of_assoc (x, y) =
+    Memloc.to_string x^"/"^Memloc.to_string y
+  in
+    "["^ListUtils.to_string string_of_assoc ", " tr^"]"
+*)
 
 (* usefull for debug *)
 (*

@@ -52,9 +52,10 @@ val to_string: t -> string
 (* TODO: maybe simplify shift and subst by merging them together!! *)
 val shift: int -> t -> int -> (t * (Memloc.t * Memloc.t) list)
 
-val subst: (Memloc.t * Memloc.t) list -> t -> t
+val build_transport: t -> Memloc.t list -> t -> (Memloc.t * Memloc.t) list
 
-(* [unify_on dst n src] tries to transport [src] to the world of [dst]
-   knowing that both have [n] locals.
-*)
-val unify_on: t -> int -> t -> t
+val split: Memloc.t list -> t -> (t * t)
+
+val transport: (Memloc.t * Memloc.t) list -> t -> t
+
+val glue: t -> t -> t

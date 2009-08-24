@@ -26,4 +26,5 @@
 (** returns the number of null pointer derefs signals and the set of reachable 
     functions
 *)
-val process: Newspeak.t -> (StrSet.t * int)
+val process: 
+  (Newspeak.fid, string list) Hashtbl.t -> Newspeak.t -> (StrSet.t * int)

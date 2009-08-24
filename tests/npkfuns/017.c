@@ -23,10 +23,6 @@
   email: charles.hymans@penjili.org
 */
 
-char x;
-
 void main() {
-  char *ptr;
-  ptr = &x;
   /*!npk display(); */
 }

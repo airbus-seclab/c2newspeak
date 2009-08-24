@@ -23,13 +23,13 @@
   email: charles.hymans@penjili.org
 *)
 
-type used_glbs = StrSet.t option
+(* For each function, list of globals immediately (syntactically present) 
+   read or written in the function or any function it may call
+*)
+type t = (Newspeak.fid, string list) Hashtbl.t
 
-type preds = StrSet.t
-
-type t = (Newspeak.fid, (used_glbs * preds)) Hashtbl.t
-
-val process: Newspeak.t -> t
+(** [process silent prog] *)
+val process: bool -> Newspeak.t -> t
 
 val print: t -> unit
 

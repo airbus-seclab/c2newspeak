@@ -23,10 +23,23 @@
   email: charles.hymans@penjili.org
 */
 
-char x;
+// should not fail with Not_found
 
-void main() {
-  char *ptr;
-  ptr = &x;
-  /*!npk display(); */
+void f(int *a) {
+}
+
+void h() {
+  int a;
+  f(&a);
+}
+
+void main () {
+  int x;
+  int *y;
+  
+  if (x) {
+    f(y);
+  }
+  
+  h();
 }

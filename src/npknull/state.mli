@@ -27,8 +27,6 @@ open Newspeak
 
 type t
 
-type transport
-
 val universe: t
 
 val emptyset: t
@@ -38,10 +36,6 @@ val join: t -> t -> t
 val contains: t -> t -> bool
 
 val addr_is_valid: t -> (Memloc.t * int) -> bool
-
-val prepare_call: (int * t) -> (int * t) -> (t option * transport)
-
-val apply: t -> transport -> t -> t
 
 val set_pointsto: (Memloc.t * int) -> Memloc.t -> t -> t
 
@@ -60,3 +54,23 @@ val guard: exp -> int -> t -> t
 val is_empty: t -> bool
 
 val forget_lval: lval -> int -> t -> t
+
+(* [split vars s] splits state s into two parts:
+   - the substate reachable from any variable in [vars]
+   - the remaining
+*)
+val split: Memloc.t list -> t -> (t * t)
+
+type subst
+
+val build_transport: t -> Memloc.t list -> t -> subst
+
+val build_param_map: int -> int -> subst
+
+val transport: subst -> t -> t
+
+val invert: subst -> subst
+
+val compose: subst -> subst -> subst
+
+val glue: t -> t -> t
