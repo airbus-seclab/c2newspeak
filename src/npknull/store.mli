@@ -41,6 +41,10 @@ val guard: addr -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
+(* TODO: write non-regression test that makes soundness bug because of this!!!
+   and remove this!!!
+   (in other words, pb with deref of top!!)
+*)
 val forget_memloc: Memloc.t -> t -> t
 
 val addr_is_valid: t -> addr -> bool
