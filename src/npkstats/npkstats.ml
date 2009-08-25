@@ -275,7 +275,7 @@ object (this)
       let out = "\n"^s^f^": "^n in
 	Buffer.add_string res out;
 	if b then
-	  "<stats class=\""^s^"\" val=\""^n^"\"></stats>\n"
+	  "<stats type=\"function\" class=\""^s^"\" val=\""^n^"\"></stats>\n"
 	else ""
 	  
     in
