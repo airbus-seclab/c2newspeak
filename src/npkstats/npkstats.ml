@@ -107,7 +107,7 @@ let string_of_counters counters b =
   let xml = 
     if b then List.fold_left (
 	  fun s (c, n) ->
-	    s^"<stats class=\""^c^"\" val=\""^n^"\"></stats>\n"
+	    s^"<stats type=\"instruction\" class=\""^c^"\" val=\""^n^"\"></stats>\n"
 	) "" [(s1, n1) ; (s2, n2) ; (s3, n3) ; (s4, n4) ; (s5, n5) ; (s6, n6)]
     else ""
   in
@@ -275,7 +275,7 @@ object (this)
       let out = "\n"^s^f^": "^n in
 	Buffer.add_string res out;
 	if b then
-	  "<stats class=\""^s^"\" val=\""^n^"\"></stats>\n"
+	  "<stats type=\"function\" class=\""^s^"\" val=\""^n^"\"></stats>\n"
 	else ""
 	  
     in
@@ -297,14 +297,14 @@ object (this)
 	let t = string_of_typ typ in
 	let n = string_of_int nb in
 	  (t^": "^n^"\n"),
-	("<stats class=\""^t^"\" val=\""^n^"\"></stats>")
+	("<global type=\""^t^"\" nb=\""^n^"\"></global>")
       in
       let array_to_string ((typ, sz), nb) =
 	let t = string_of_typ typ in
 	let n1 = string_of_int sz in
 	let n2 = string_of_int nb in
 	  (t^", "^n1^": "^n2^"\n"),
-	  ("<stats class=\""^t^" " ^n1^"\" val=\""^n2^"\"></stats>")
+	  ("<array type=\""^t^" " ^n1^"\" nb=\""^n2^"\"></array>")
       in
       let add_array l typ nb =
 	match typ with
@@ -338,9 +338,9 @@ object (this)
       Buffer.add_string res (s1^": "^n1^"\n"^s2^": "^n2^"\n"^s3^": "^n3^"\n");
       if b then begin
 	let xml = List.fold_left (
-	  fun s (c, n) ->
-	    s^"<stats class=\""^c^"\" val=\""^n^"\"></stats>\n"
-	) "" [(s1, n1) ; (s2, n2) ; (s3, n3)]
+	  fun s (t, c, n) ->
+	    s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^n^"\"></stats>\n"
+	) "" [("global", s1, n1) ; ("global", s2, n2) ; ("function", s3, n3)]
 	in
 	  output_string cout xml
       end;
@@ -353,7 +353,7 @@ object (this)
 	    Buffer.add_string res (s^n^"\n");
 	    if b then begin
 	      output_string cout xml;
-	      output_string cout ("<stats class=\""^s^"\" val=\""^n^"\"></stats>")
+	      output_string cout ("<void class=\""^s^"\" val=\""^n^"\"></void>")
 	    end
 	end;
       let out, xml = string_of_counters counters b in
@@ -397,10 +397,18 @@ let _ =
       let cout = 
 	if !xout <> "" then begin
 	  let dtd = "<!-- <!DOCTYPE npkstats [\n" ^
-	    "<! ELEMENT npkstats stats ?>\n" ^ 
+	    "<! ELEMENT npkstats (stats global void array) ?>\n" ^ 
 	    "<! ELEMENT stats ?>\n" ^
-	    "<! ATTLIST stats class (#PCDATA) #REQUIRED "^
+	    "<! ELEMENT global ?>\n" ^
+	    "<! ATTLIST stats type (#PCDATA) #REQUIRED "^
+	    "class (#PCDATA) #REQUIRED "^
 	    "val (#PCDATA) #REQUIRED ?>\n" ^
+	    "<! ATTLIST global type (#PCDATA) #REQUIRED "^
+	    "nb (#PCDATA #REQUIRED ?>\n" ^
+	    "<! ATTLIST array type (#PCDATA) #REQUIRED "^
+	    "nb (#PCDATA #REQUIRED ?>\n" ^
+	    "<! ATTLIST void class (#PCDATA) #REQUIRED "^
+	    "val (#PCDATA) #REQUIRED >\n" ^
 	    "]> -->\n" in
 	  let header = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" in
 	  let cout = open_out_gen [Open_wronly;Open_binary;Open_creat] 0o644 !xout in
