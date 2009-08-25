@@ -88,22 +88,12 @@ let rec lval_to_abaddr env s lv =
 
 let eval_exp env s e =
   match e with
-      AddrOf (lv, _) -> 
-	(* TODO: could there be a bug here throwing away the offset *)
-	let (m, o) = lval_to_abaddr env s lv in begin
-	    match o with
-		Some 0 -> m
-	      | _ -> raise Exceptions.Unknown
-	  end
+      AddrOf (lv, _) -> lval_to_abaddr env s lv
     | Lval (lv, Ptr) -> 
 (* TODO: code looks similar to Deref *)
 	let a = lval_to_abaddr env s lv in
 	let a = abaddr_to_addr a in
-	let (m, o) = Store.read_addr s a in begin
-	  match o with
-	      Some 0 -> m
-	    | _ -> raise Exceptions.Unknown
-	  end
+	  Store.read_addr s a
     | _ -> raise Exceptions.Unknown
 
 let abaddr_to_memloc (m, _) = m
@@ -123,7 +113,7 @@ let assign (lv, e, t) env s =
 		match t with
 		    Ptr -> 
 		      let p = eval_exp env s e in
-		      let s = Store.write a p s in
+		      let s = Store.assign a p s in
 			Some s
 		  | _ -> raise Exceptions.Unknown
 	    with Exceptions.Unknown -> 
@@ -147,7 +137,7 @@ let remove_local v s =
 (* TODO: find a way to remove emptyset/None!!! *)
 let set_pointsto m1 m2 s = 
   match s with
-      Some s -> Some (Store.write m1 m2 s)
+      Some s -> Some (Store.assign m1 (m2, Some 0) s)
     | None -> None
 
 let forget_lval lv env s =

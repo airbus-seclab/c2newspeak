@@ -28,7 +28,8 @@ TARGET=npknull
 DIRS=newspeak/ utils/ npkfuns/ npknull/
 FILES=version newspeak/newspeak utils/listUtils utils/strSet \
       npkfuns/glbCollect \
-      npknull/context npknull/exceptions npknull/memloc npknull/store \
+      npknull/context npknull/exceptions npknull/memloc \
+      npknull/fieldInsensitivePtr npknull/nonNullPtr npknull/store \
       npknull/state npknull/stubs \
       npknull/solver npknull/stats npknull/npknull
 LIBX=nums.cmxa

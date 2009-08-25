@@ -41,13 +41,12 @@ val guard: addr -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
+(* TODO: remove this primitive?? at least on the store *)
 val forget_memloc: Memloc.t -> t -> t
 
 val addr_is_valid: t -> addr -> bool
 
 val to_string: t -> string
-
-val build_transport: t -> Memloc.t list -> t -> (Memloc.t * Memloc.t) list
 
 val split: Memloc.t list -> t -> (t * t)
 

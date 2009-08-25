@@ -49,7 +49,7 @@ val to_string: t -> string
 
 val build_transport: t -> Memloc.t list -> t -> (Memloc.t * Memloc.t) list
 
-val split: Memloc.t list -> t -> (t * t)
+val split: Memloc.t list -> t -> (t * t * Memloc.t list)
 
 val transport: (Memloc.t * Memloc.t) list -> t -> t
 
