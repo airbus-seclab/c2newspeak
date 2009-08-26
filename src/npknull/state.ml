@@ -23,6 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: remove totally all forget_memlocs, universes....
+   if there is a top within a function analysis, the whole analysis may be
+   unsound!!!
+*)
+
 (* TODO: if there are may cells get rid of their cases in this module *)
 open Newspeak
 
@@ -100,7 +105,7 @@ let abaddr_to_memloc (m, _) = m
    at address (v, 0) and a value is copied at address (v, 1)
    the value at (v, 0) should be removed!!!
 *)
-let assign (lv, e, t) env s =
+let assign (lv, e, _) env s =
   match s with
       None -> None
     | Some s -> 
@@ -108,12 +113,9 @@ let assign (lv, e, t) env s =
 	  let a = lval_to_abaddr env s lv in
 	    try
 	      let a = abaddr_to_addr a in
-		match t with
-		    Ptr -> 
-		      let p = eval_exp env s e in
-		      let s = Store.assign a p s in
-			Some s
-		  | _ -> raise Exceptions.Unknown
+	      let p = eval_exp env s e in
+	      let s = Store.assign a p s in
+		Some s
 	    with Exceptions.Unknown -> 
 	      let m = abaddr_to_memloc a in
 		Some (Store.forget_memloc m s)
