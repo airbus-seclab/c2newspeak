@@ -80,13 +80,10 @@ let rec lval_to_abaddr env s lv =
 	    | Some o -> Some (o + (Nat.to_int n))
 	in
 	  (m, o)
-    | Deref (Lval (lv, Ptr), _) -> 
-	let a = lval_to_abaddr env s lv in
-	let a = abaddr_to_addr a in
-	  Store.read_addr s a
+    | Deref (e, _) -> eval_exp env s e
     | _ -> raise Exceptions.Unknown
 
-let eval_exp env s e =
+and eval_exp env s e =
   match e with
       AddrOf (lv, _) -> lval_to_abaddr env s lv
     | Lval (lv, Ptr) -> 
