@@ -274,34 +274,7 @@ let contains s1 s2 =
   let b = contains s1 s2 in
     print_endline "State.contains ends";
     b
-*)
-(*
-let prepare_call (env, s) (env_f, rel) =
-  print_endline "State.prepare_call";
-  print_endline (string_of_int env);
-  print_endline (to_string s);
-  print_endline (string_of_int env_f);
-  print_endline (to_string rel);
-  let (s, tr) = prepare_call (env, s) (env_f, rel) in begin
-      match s with
-	  Some s -> print_endline (to_string s)
-	| None -> print_endline "not reanalyzing"
-    end;
-    print_endline (string_of_transport tr);
-    print_endline "State.prepare_call ends";
-    (s, tr)
-*)
-(*
-let apply s tr rel = 
-  print_endline "State.apply";
-  print_endline (to_string s);
-  print_endline (to_string rel);
-  let s = apply s tr rel in
-    print_endline (to_string s);
-    print_endline "State.apply ends";
-    s
-*)
-(*
+
 let join s1 s2 =
   print_endline "State.join";
   print_endline (to_string s1);
@@ -310,4 +283,14 @@ let join s1 s2 =
     print_endline (to_string s);
     print_endline "State.join ends";
     s
+
+let glue s1 s2 =
+  print_endline "State.glue";
+  print_endline (to_string s1);
+  print_endline (to_string s2);
+  let s = glue s1 s2 in
+    print_endline (to_string s);
+    print_endline "State.glue ends";
+    s
+
 *)
