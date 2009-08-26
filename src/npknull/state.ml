@@ -181,10 +181,10 @@ let build_transport s memlocs pre =
 let split memlocs s =
   match s with
       Some s -> 
-	let (unreach, reach) = Store.split memlocs s in
-	  (Some unreach, Some reach)
+	let (unreach, reach, tr) = Store.split memlocs s in
+	  (Some unreach, Some reach, tr)
 (* TODO: not nice to have the possibility of emptyset!!! *)
-    | None -> (None, None)
+    | None -> (None, None, [])
 
 type subst = (Memloc.t * Memloc.t) list
 

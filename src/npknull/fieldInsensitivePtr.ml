@@ -155,14 +155,18 @@ let split memlocs s =
   let todo = ref memlocs in
   let unreach = ref s in
   let reach = ref Map.empty in
-  let memlocs = ref [] in
-    
+  let vars = ref [] in
+  let tr = ref [] in
+
     begin try
       while true do
 	match !todo with
 	    x::tl -> 
 	      todo := tl;
-	      memlocs := x::!memlocs;
+	      vars := x::!vars;
+	      (* TODO: wouldn't this abstract away memlocs which are already
+		 abstracted??? *)
+	      if not (List.mem x memlocs) then tr := (x, Memloc.gen ())::!tr;
 	      let v = try Map.find x !unreach with Not_found -> [] in
 		if v <> [] then reach := Map.add x v !reach;
 		unreach := Map.remove x !unreach;
@@ -171,7 +175,7 @@ let split memlocs s =
       done
     with Exit -> ()
     end;
-    (!unreach, !reach, !memlocs)
+    (!unreach, !reach, !vars, !tr)
     
 (* TODO: O(n) expensive? 
    Have the inverse map?
@@ -223,7 +227,8 @@ let contains s1 s2 =
     print_endline (string_of_bool r);
     print_endline "Store.contains ends";
     r
-
+*)
+(*
 let build_transport src memlocs dst =
   print_endline "Store.build_transport starts";
   print_endline (to_string src);

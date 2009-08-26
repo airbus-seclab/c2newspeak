@@ -180,8 +180,9 @@ let process glb_tbl prog =
 	    let globals = Hashtbl.find glb_tbl f in
 	    let globals = List.map Memloc.of_global globals in
 	    let memlocs = locals@globals in
-	    let (unreach, reach) = State.split memlocs s in
+	    let (unreach, reach, tr0) = State.split memlocs s in
 	    let tr1 = State.build_param_map !env locals_nb in
+	    let tr1 = State.compose tr0 tr1 in
 	    let reach = State.transport tr1 reach in
 	      try
 		let locals = create_locals locals_nb locals_nb in

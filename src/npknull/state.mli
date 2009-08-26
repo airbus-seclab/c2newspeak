@@ -55,13 +55,16 @@ val is_empty: t -> bool
 
 val forget_lval: lval -> int -> t -> t
 
-(* [split vars s] splits state s into two parts:
-   - the substate reachable from any variable in [vars]
-   - the remaining
-*)
-val split: Memloc.t list -> t -> (t * t)
-
 type subst
+
+(* [split vars s] splits state s into two parts:
+   - the portion of the store unreachable from [vars]
+   - the portion reachable from any variable in [vars]
+   - in reach, the variables not in [vars] are abstracted away, this 
+   modification is returned as a substition from variables to logic variables
+*)
+val split: Memloc.t list -> t -> (t * t * subst)
+
 
 val build_transport: t -> Memloc.t list -> t -> subst
 
