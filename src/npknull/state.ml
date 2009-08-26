@@ -301,3 +301,13 @@ let apply s tr rel =
     print_endline "State.apply ends";
     s
 *)
+(*
+let join s1 s2 =
+  print_endline "State.join";
+  print_endline (to_string s1);
+  print_endline (to_string s2);
+  let s = join s1 s2 in
+    print_endline (to_string s);
+    print_endline "State.join ends";
+    s
+*)

@@ -87,6 +87,7 @@ let list_insert x l =
   let rec insert l =
     match l with
 	y::tl when compare x y > 0 -> y::(insert tl)
+      | y::_ when compare x y = 0 -> l
       | _ -> x::l
   in
     insert l
@@ -194,5 +195,14 @@ let join s1 s2 =
   let s = join s1 s2 in
     print_endline (to_string s);
     print_endline "Store.join ends";
+    s
+*)
+(*
+let guard m s =
+  print_endline "NonNullPtr.guard";
+  print_endline (to_string s);
+  let s = guard m s in
+    print_endline (to_string s);
+    print_endline "NonNullPtr.guard ends";
     s
 *)
