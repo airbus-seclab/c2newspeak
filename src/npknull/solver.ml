@@ -93,6 +93,12 @@ let process glb_tbl prog =
       lbl_tbl := goto !lbl_tbl
   in
 
+  let update_pred_tbl f =
+    let pred = Hashtbl.find pred_tbl f in
+      if not (List.mem !current_fun pred)
+      then Hashtbl.replace pred_tbl f (!current_fun::pred)
+  in
+
   let warn_deref () = 
     let msg = "potential null pointer deref" in
     let msg = Context.get_current_loc ()^": "^msg in
@@ -190,11 +196,9 @@ let process glb_tbl prog =
 		let tr2 = State.build_transport reach memlocs pre in
 		let reach = State.transport tr2 reach in
 		let tr = State.invert (State.compose tr1 tr2) in
+		  update_pred_tbl f;
 		  if not (State.contains pre reach) then begin
 		    let pre = State.join reach pre in
-		    let pred = Hashtbl.find pred_tbl f in
-		      if not (List.mem !current_fun pred)
-		      then Hashtbl.replace pred_tbl f (!current_fun::pred);
 		      Hashtbl.replace fun_tbl f (pre, post);
 		      if not (List.mem f !todo) then todo := f::!todo
 		  end;
