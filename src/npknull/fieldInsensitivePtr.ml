@@ -129,6 +129,14 @@ let build_transport src memlocs dst =
       res := (x, y)::!res
     end
   in
+
+  let rec unify_values v1 v2 =
+    match (v1, v2) with
+	(v1::tl1, v2::tl2) -> 
+	  add_assoc v1 v2;
+	  unify_values tl1 tl2
+      | ([], _) | (_, []) -> ()
+  in
     
     List.iter (fun x -> add_assoc x x) memlocs;
     begin try
@@ -137,14 +145,8 @@ let build_transport src memlocs dst =
 	    (m1, m2)::tl ->
 	      todo := tl;
 	      let v1 = try Map.find m1 src with Not_found -> [] in
-	      let v2 = try Map.find m2 dst with Not_found -> [] in begin 
-		  match (v1, v2) with
-		      ([], []) -> ()
-		    | (v1::[], v2::[]) -> add_assoc v1 v2
-		    | ([], _) -> ()
-		    | (_, []) -> ()
-		    | _ -> invalid_arg "Store.unify_on: not implemented yet"
-		end
+	      let v2 = try Map.find m2 dst with Not_found -> [] in 
+		unify_values v1 v2;
 	  | [] -> raise Exit
       done
     with Exit -> ()
