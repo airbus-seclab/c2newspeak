@@ -130,6 +130,7 @@ let build_transport src memlocs dst =
     end
   in
 
+(* TODO: I am sure this is somehow unsound *)
   let rec unify_values v1 v2 =
     match (v1, v2) with
 	(v1::tl1, v2::tl2) -> 
