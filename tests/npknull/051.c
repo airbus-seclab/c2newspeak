@@ -28,7 +28,6 @@ void main() {
   char *ptr;
   
   ptr = &x;
-  
-  ptr++;
+  ptr = ptr + 1;
   *ptr = 0;   // should not signal any null pointer deref here
 }

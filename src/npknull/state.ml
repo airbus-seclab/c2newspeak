@@ -97,6 +97,9 @@ and eval_exp env s e =
 	let a = abaddr_to_addr a in
 	  Store.read_addr s a
     | UnOp ((PtrToInt _| IntToPtr _), e) -> eval_exp env s e
+    | BinOp (PlusPI, e, _) -> 
+	let (v, _) = eval_exp env s e in
+	  (v, None)
     | _ -> raise Exceptions.Unknown
 
 let abaddr_to_memloc (m, _) = m
