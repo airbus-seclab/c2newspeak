@@ -189,14 +189,11 @@ let split memlocs s =
 type subst = (Memloc.t * Memloc.t) list
 
 let build_param_map env n =
-  let delta = env - n in
-  let rec build x =
-    if x < 0 then [] else begin
-      let y = if x < delta then Memloc.gen () else Memloc.of_local (x-delta) in
-	(Memloc.of_local x, y)::(build (x-1))
-    end
-  in
-    build env
+  let res = ref [] in
+    for i = 0 to n do
+      res := (Memloc.of_local (env-i), Memloc.of_local (n-i))::!res
+    done;
+    !res
 
 let transport tr s =
   match s with
@@ -205,46 +202,26 @@ let transport tr s =
 
 let invert subst = List.map (fun (x, y) -> (y, x)) subst
 
-let compose subst1 subst2 = subst1@subst2
+let compose subst1 subst2 = 
+  let subst2 = ref subst2 in
+  let compose_with (x, y) =
+    try
+      let z = List.assoc y !subst2 in
+	subst2 := List.remove_assoc y !subst2;
+	(x, z)
+    with Not_found -> (x, y)
+  in
+  let subst1 = List.map compose_with subst1 in
+    subst1@(!subst2)
 
 let glue s1 s2 =
   match (s1, s2) with
       (Some s1, Some s2) -> Some (Store.glue s1 s2)
     | _ -> None
 
-(* TODO:
-let apply s tr rel = 
-  match (s, rel) with
-      (None, _) | (_, None) -> None
-    | (Some (i, _), Some (_, s)) -> 
-	let tr = invert tr in
-	let s = Store.subst tr s in
-	  Some (i, s)
-
-let prepare_call (env, s) (env_f, rel) = 
-  match s with
-      None -> (None, [])
-    | Some (_, s) ->
-	let (s, tr) = Store.shift env s env_f in
-	  match rel with
-	      None -> (Some (Some (s, s)), [])
-	    | Some (i, _) -> 
-		let s = Store.unify_on i env s in
-		let s =
-		  if Store.contains i s then None else Some (Some (s, s))
-		in
-		  (s, tr)
-
-type transport = (Memloc.t * Memloc.t) list
-
-let invert tr = List.map (fun (x, y) -> (y, x)) tr
-
 let string_of_transport tr =
-  let string_of_assoc (x, y) =
-    Memloc.to_string x^"/"^Memloc.to_string y
-  in
+  let string_of_assoc (x, y) = Memloc.to_string x^" -> "^Memloc.to_string y in
     "["^ListUtils.to_string string_of_assoc ", " tr^"]"
-*)
 
 (* usefull for debug *)
 (*
@@ -293,4 +270,28 @@ let glue s1 s2 =
     print_endline "State.glue ends";
     s
 
+*)
+
+(*
+let compose tr1 tr2 =
+  print_endline "State.compose";
+  print_endline (string_of_transport tr1);
+  print_endline (string_of_transport tr2);
+  let tr = compose tr1 tr2 in
+  print_endline (string_of_transport tr);
+    print_endline "State.ends";
+    tr
+*)
+
+(*
+let split memlocs s =
+  print_endline "State.split";
+  print_endline (ListUtils.to_string Memloc.to_string ", " memlocs);
+  print_endline (to_string s);
+  let (unreach, reach, tr) = split memlocs s in
+    print_endline (to_string unreach);
+    print_endline (to_string reach);
+    print_endline (string_of_transport tr);
+    print_endline "State.split ends";
+    (unreach, reach, tr)
 *)
