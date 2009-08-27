@@ -25,17 +25,16 @@
 
 // should not loop forever
 
-int *__errno_location (void);
+char t[10];
 
-
-void f(int line, ...) {
+void f(char **) {
 }
 
 void main () {
-  *__errno_location ();
- 
+  char *tmp;
+  tmp = &t[0];
 
   while (1) {
-    f(1, "a");
+    f(&tmp);
   }
 }
