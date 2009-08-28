@@ -27,19 +27,16 @@
 
 char t, u, v;
 
-struct s {
-  char *a;
-  char *b;
-} x, y;
-
-void h(struct s*) {
+void h(char *) {
 }
 
 void main() {
-  x.a = &t;
+  char *x;
+  char *y;
+  x = &t;
   h(&x);
   
-  y.a = &u;
-  y.b = &v;
+  y = &u;
+  y = &v;
   h(&y);
 }

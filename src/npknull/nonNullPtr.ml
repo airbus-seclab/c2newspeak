@@ -27,6 +27,21 @@ open Newspeak
 
 module Map = Map.Make(Memloc)
 
+let rec list_meet l1 l2 =
+  match (l1, l2) with
+    | (x1::tl1, x2::_) when x1 < x2 -> list_meet tl1 l2
+    | (x1::_, x2::tl2) when x1 > x2 -> list_meet l1 tl2
+    | (x::tl1, _::tl2) -> x::(list_meet tl1 tl2)
+    | (_, []) | ([], _) -> []
+
+let rec list_contains l1 l2 =
+  match (l1, l2) with
+      (x1::_, x2::_) when x1 < x2 -> false
+    | (x1::_, x2::tl2) when x1 > x2 -> list_contains l1 tl2
+    | (_::tl1, _::tl2) -> list_contains tl1 tl2
+    | ([], _) -> true
+    | (_, []) -> false
+ 
 type offset = int
 
 type addr = Memloc.t * offset
@@ -43,9 +58,8 @@ let join s1 s2 =
   let add_info x d1 =
     try
       let d2 = Map.find x s2 in
-	if d1 <> d2 
-	then invalid_arg "Store.join: not implemented yet <>";
-	s := Map.add x d1 !s
+      let d = list_meet d1 d2 in
+	s := Map.add x d !s
     with Not_found -> ()
   in
     Map.iter add_info s1;
@@ -68,10 +82,7 @@ let contains s1 s2 =
   let check x d1 =
     try
       let d2 = Map.find x s2 in
-	if d1 <> d2 then begin
-	  let msg = "Store.contains: "^to_string s1^" && "^to_string s2 in
-	    raise (Exceptions.NotImplemented msg)
-	end
+	if not (list_contains d1 d2) then raise Exit
     with Not_found -> raise Exit
   in
     try

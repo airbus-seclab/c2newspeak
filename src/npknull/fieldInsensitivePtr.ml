@@ -42,6 +42,14 @@ let rec list_join l1 l2 =
     | (x::tl1, _::tl2) -> x::(list_join tl1 tl2)
     | ([], l) | (l, []) -> l
 
+let rec list_contains l1 l2 =
+  match (l1, l2) with
+      (x1::tl1, x2::_) when Memloc.compare x1 x2 < 0 -> list_contains tl1 l2
+    | (x1::_, x2::_) when Memloc.compare x1 x2 > 0 -> false
+    | (_::tl1, _::tl2) -> list_contains tl1 tl2
+    | (_, []) -> true
+    | ([], _) -> false
+
 module Map = Map.Make(Memloc)
 
 type offset = int
@@ -83,10 +91,7 @@ let contains s1 s2 =
   let check x d2 =
     try
       let d1 = Map.find x s1 in
-	if d1 <> d2 then begin
-	  let msg = "Store.contains: "^to_string s1^" && "^to_string s2 in
-	    raise (Exceptions.NotImplemented msg)
-	end
+	if not (list_contains d1 d2) then raise Exit
     with Not_found -> raise Exit
   in
     try
