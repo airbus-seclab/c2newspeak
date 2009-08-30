@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
+exception Emptyset
 exception Unknown
 
 (* TODO: remove this exception once the analyser is complete!! *)

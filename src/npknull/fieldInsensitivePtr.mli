@@ -50,5 +50,9 @@ val transport: (Memloc.t * Memloc.t) list -> t -> t
 
 val glue: t -> t -> t
 
-(* TODO: this primitive is not well chosen, think about it *)
+(* TODO: this primitive is not well chosen, think about it
+   None is emptyset
+
+   @raise Exceptions.Emptyset
+ *)
 val read_addr: t -> Dom.addr -> (Memloc.t * int option)

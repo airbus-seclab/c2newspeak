@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-exception Unknown
 exception Emptyset
+exception Unknown
 
 exception NotImplemented of string

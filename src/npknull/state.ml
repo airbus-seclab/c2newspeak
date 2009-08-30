@@ -92,7 +92,8 @@ and translate_exp env s e =
   match e with
       AddrOf (lv, _) -> Dom.Abaddr (lval_to_abaddr env s lv)
     | AddrOfFun (f, _) -> Dom.AddrOfFun f
-    | Lval (lv, Ptr) -> 
+(* TODO: is it sound not to consider type here?? *)
+    | Lval (lv, _) -> 
 (* TODO: code looks similar to Deref *)
 	let a = lval_to_abaddr env s lv in
 	let a = abaddr_to_addr a in
@@ -108,13 +109,12 @@ and exp_to_abaddr env s e =
       Dom.Abaddr a -> a
     | _ -> raise Exceptions.Unknown
 
-let exp_to_fun env s e =
-  match e with
-      Lval (lv, _) -> 
-	let a = lval_to_abaddr env s lv in
-	let a = abaddr_to_addr a in
-	  Store.read_fun s a
-    | _ -> raise Exceptions.Unknown
+let exp_to_fun env s e = 
+  try
+    let a = exp_to_abaddr env s e in
+    let a = abaddr_to_addr a in
+      Store.read_fun s a
+  with Exceptions.Emptyset -> []
 
 let abaddr_to_memloc (m, _) = m
 
@@ -138,7 +138,9 @@ let assign (lv, e, _) env s =
 	    with Exceptions.Unknown -> 
 	      let m = abaddr_to_memloc a in
 		Some (Store.forget_memloc m s)
-	with Exceptions.Unknown -> universe
+	with 
+	    Exceptions.Emptyset -> None
+	  | Exceptions.Unknown -> universe
 
 let to_string s =
   match s with

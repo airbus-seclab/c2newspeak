@@ -96,12 +96,10 @@ let contains s1 s2 =
     with Exit -> false
 
 let read_addr s (m, _) =
-  let x = 
-    try Map.find m s
-    with Not_found -> raise Exceptions.Unknown
-  in
+  let x = try Map.find m s with Not_found -> raise Exceptions.Emptyset in
     match x with
 	m::[] -> (m, None)
+      | [] -> raise Exceptions.Emptyset
       | _ -> raise Exceptions.Unknown
 
 let assign (m1, _) (m2, _) s =

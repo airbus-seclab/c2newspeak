@@ -144,10 +144,7 @@ let glue s1 s2 =
     Map.iter add_info s2;
     !res
 
-let read s (m, _) = 
-  try Map.find m s
-  with Not_found -> 
-    raise Exceptions.Unknown (* TODO: shouldn't it be [] in this case?? *)
+let read s (m, _) = try Map.find m s with Not_found -> []
 
 (* usefull for debug *)
 (*
