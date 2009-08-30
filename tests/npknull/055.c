@@ -23,41 +23,27 @@
   email: charles.hymans@penjili.org
 */
 
-// should not loop forever
+// this is a test to check that the analysis does not too many unecessary
+// calls to functions.
+// it seems that the most efficient traversal method here is:
+// main -> f -> g -> h -> i -> h -> g -> f -> main
+//
 
-void h(char *ptr) {
-
-  while (1)
-    {
-      ptr++;
-    }
+void i() {
 }
 
-void k(char *ptr) {
-
-  while (1)
-    {
-      ptr++;
-    }
+void h() {
+  i();
 }
 
+void g() {
+  h();
+}
 
-typedef struct {
-  int *a;
-  char b[10];
-} S;
+void f() {
+  g();
+}
 
-
-void main()
-{
-  int x;
-  int y;
-  S z;
-
-  h(&y);
-  z.a = &y;
-  k(z.b);
-
-  k(&x);
-  h(&x);
+void main() {
+  f();
 }

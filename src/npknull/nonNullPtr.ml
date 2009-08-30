@@ -42,12 +42,8 @@ let rec list_contains l1 l2 =
     | ([], _) -> true
     | (_, []) -> false
  
-type offset = int
-
-type addr = Memloc.t * offset
-
 (* Set of locations wich are nulls *)
-type t = offset list Map.t
+type t = Dom.offset list Map.t
 
 let universe = Map.empty
 

@@ -85,21 +85,35 @@ let rec lval_to_abaddr env s lv =
 	    | Some o -> Some (o + (Nat.to_int n))
 	in
 	  (m, o)
-    | Deref (e, _) -> eval_exp env s e
+    | Deref (e, _) -> exp_to_abaddr env s e
     | _ -> raise Exceptions.Unknown
 
-and eval_exp env s e =
+and translate_exp env s e =
   match e with
-      AddrOf (lv, _) -> lval_to_abaddr env s lv
+      AddrOf (lv, _) -> Dom.Abaddr (lval_to_abaddr env s lv)
+    | AddrOfFun (f, _) -> Dom.AddrOfFun f
     | Lval (lv, Ptr) -> 
 (* TODO: code looks similar to Deref *)
 	let a = lval_to_abaddr env s lv in
 	let a = abaddr_to_addr a in
-	  Store.read_addr s a
-    | UnOp ((PtrToInt _| IntToPtr _), e) -> eval_exp env s e
+	  Dom.Abaddr (Store.read_addr s a)
+    | UnOp ((PtrToInt _| IntToPtr _), e) -> translate_exp env s e
     | BinOp (PlusPI, e, _) -> 
-	let (v, _) = eval_exp env s e in
-	  (v, None)
+	let (v, _) = exp_to_abaddr env s e in
+	  Dom.Abaddr (v, None)
+    | _ -> raise Exceptions.Unknown
+
+and exp_to_abaddr env s e =
+  match translate_exp env s e with
+      Dom.Abaddr a -> a
+    | _ -> raise Exceptions.Unknown
+
+let exp_to_fun env s e =
+  match e with
+      Lval (lv, _) -> 
+	let a = lval_to_abaddr env s lv in
+	let a = abaddr_to_addr a in
+	  Store.read_fun s a
     | _ -> raise Exceptions.Unknown
 
 let abaddr_to_memloc (m, _) = m
@@ -108,6 +122,8 @@ let abaddr_to_memloc (m, _) = m
    at address (v, 0) and a value is copied at address (v, 1)
    the value at (v, 0) should be removed!!!
 *)
+(* TODO: most probably a bug because the type of the assignment 
+   is not considered *)
 let assign (lv, e, _) env s =
   match s with
       None -> None
@@ -116,8 +132,8 @@ let assign (lv, e, _) env s =
 	  let a = lval_to_abaddr env s lv in
 	    try
 	      let a = abaddr_to_addr a in
-	      let p = eval_exp env s e in
-	      let s = Store.assign a p s in
+	      let e = translate_exp env s e in
+	      let s = Store.assign a e s in
 		Some s
 	    with Exceptions.Unknown -> 
 	      let m = abaddr_to_memloc a in
@@ -140,7 +156,7 @@ let remove_local v s =
 (* TODO: find a way to remove emptyset/None!!! *)
 let set_pointsto m1 m2 s = 
   match s with
-      Some s -> Some (Store.assign m1 (m2, Some 0) s)
+      Some s -> Some (Store.assign m1 (Dom.Abaddr (m2, Some 0)) s)
     | None -> None
 
 let forget_lval lv env s =
@@ -225,6 +241,11 @@ let glue s1 s2 =
 let string_of_transport tr =
   let string_of_assoc (x, y) = Memloc.to_string x^" -> "^Memloc.to_string y in
     "["^ListUtils.to_string string_of_assoc ", " tr^"]"
+
+let exp_to_fun env s e =
+  match s with
+      Some s -> exp_to_fun env s e
+    | None -> []
 
 (* usefull for debug *)
 (*

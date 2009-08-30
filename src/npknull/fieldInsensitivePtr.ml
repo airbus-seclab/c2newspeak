@@ -52,10 +52,6 @@ let rec list_contains l1 l2 =
 
 module Map = Map.Make(Memloc)
 
-type offset = int
-
-type addr = Memloc.t * offset
-
 type t = Memloc.t list Map.t
 
 let universe = Map.empty
@@ -119,9 +115,6 @@ let addr_is_valid _ _ = false
 let guard _ s = s
 
 let remove_memloc = Map.remove
-
-(* most probably incorrect, unsound, such a primitive shouldn't exist! *)
-let forget_memloc = Map.remove
 
 let build_transport src memlocs dst =
   let todo = ref [] in

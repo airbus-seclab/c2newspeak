@@ -23,10 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-type offset = int
-
-type addr = Memloc.t * offset
-
 type t
 
 val universe: t
@@ -35,9 +31,9 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val assign: addr -> (Memloc.t * offset option) -> t -> t
+val assign: Dom.addr -> Dom.exp -> t -> t
 
-val guard: addr -> t -> t
+val guard: Dom.addr -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
@@ -47,7 +43,7 @@ val remove_memloc: Memloc.t -> t -> t
 *)
 val forget_memloc: Memloc.t -> t -> t
 
-val addr_is_valid: t -> addr -> bool
+val addr_is_valid: t -> Dom.addr -> bool
 
 val to_string: t -> string
 
@@ -60,4 +56,7 @@ val transport: (Memloc.t * Memloc.t) list -> t -> t
 val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it *)
-val read_addr: t -> addr -> (Memloc.t * int option)
+val read_addr: t -> Dom.addr -> (Memloc.t * int option)
+
+(* TODO: this primitive name is not well chosen, think about it *)
+val read_fun: t -> Dom.addr -> string list

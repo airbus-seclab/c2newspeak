@@ -177,51 +177,12 @@ let process glb_tbl prog =
    - differentiate between read and write
    - 
 *)
-      | Call FunId f -> begin
-	  try
-	    let (pre, post) = Hashtbl.find fun_tbl f in
-	    let (ft, _) = Hashtbl.find prog.fundecs f in
-	    let locals_nb = env_of_ftyp ft in
-	    let locals = create_locals !env locals_nb in
-	    let globals = Hashtbl.find glb_tbl f in
-	    let globals = List.map Memloc.of_global globals in
-	    let memlocs = locals@globals in
-	    let (unreach, reach, tr0) = State.split memlocs s in
-	    let tr1 = State.build_param_map !env locals_nb in
-	    let tr1 = State.compose tr0 tr1 in
-	    let reach = State.transport tr1 reach in
-	      try
-		let locals = create_locals locals_nb locals_nb in
-		let memlocs = locals@globals in
-		let tr2 = State.build_transport reach memlocs pre in
-		let reach = State.transport tr2 reach in
-		let tr = State.invert (State.compose tr1 tr2) in
-		  update_pred_tbl f;
-		  if not (State.contains pre reach) then begin
-		    let pre = State.join reach pre in
-		      Hashtbl.replace fun_tbl f (pre, post);
-		      if not (List.mem f !todo) then todo := f::!todo
-		  end;
-		  let post = State.transport tr post in
-		    State.glue unreach post
-	      with Exceptions.Unknown ->
-		print_endline (State.to_string reach);
-		print_endline (State.to_string pre);
-		invalid_arg "Solver.call: not implemented yet"
-	  with Not_found -> 
-	    try 
-	      let s = Stubs.process f !env s in
-		(* TODO: factor with print_err!! *)
-		Context.report_stub_used ("missing function: "^f
-					  ^", stub used, "
-					  ^"use option --use-stubs to "^
-					  "skip this message");
-		s
-  	    with Not_found -> 
-	      Context.print_err ("missing function: "^f
-				 ^", call ignored, analysis may be unsound");
-	      s
-	end
+      | Call f -> 
+	  let f = process_funexp f s in
+	  let res = ref State.emptyset in
+	  let add_call f = res := State.join !res (process_call f s) in
+	    List.iter add_call f;
+	    !res
       | Select (br1, br2) -> 
 	    let s1 = process_blk br1 s in
 	    let s2 = process_blk br2 s in
@@ -250,9 +211,63 @@ let process glb_tbl prog =
       | UserSpec ((IdentToken "display")::_) -> 
 	  print_endline (State.to_string s);
 	  s
-      | _ -> raise (Exceptions.NotImplemented "Analysis.process_stmtkind")
-  in
+      | UserSpec _ -> 
+	  raise (Exceptions.NotImplemented "Analysis.process_stmtkind")
 
+  and process_funexp e s =
+    match e with
+	FunId f -> f::[]
+      | FunDeref (e, _) -> 
+	  try State.exp_to_fun !env s e
+	  with Exceptions.Unknown -> 
+	    raise (Exceptions.NotImplemented "Analysis.process_funexp")
+
+  and process_call f s =
+    try
+      let (pre, post) = Hashtbl.find fun_tbl f in
+      let (ft, _) = Hashtbl.find prog.fundecs f in
+      let locals_nb = env_of_ftyp ft in
+      let locals = create_locals !env locals_nb in
+      let globals = Hashtbl.find glb_tbl f in
+      let globals = List.map Memloc.of_global globals in
+      let memlocs = locals@globals in
+      let (unreach, reach, tr0) = State.split memlocs s in
+      let tr1 = State.build_param_map !env locals_nb in
+      let tr1 = State.compose tr0 tr1 in
+      let reach = State.transport tr1 reach in
+	try
+	  let locals = create_locals locals_nb locals_nb in
+	  let memlocs = locals@globals in
+	  let tr2 = State.build_transport reach memlocs pre in
+	  let reach = State.transport tr2 reach in
+	  let tr = State.invert (State.compose tr1 tr2) in
+	    update_pred_tbl f;
+	    if not (State.contains pre reach) then begin
+	      let pre = State.join reach pre in
+		Hashtbl.replace fun_tbl f (pre, post);
+		if not (List.mem f !todo) then todo := f::!todo
+	    end;
+	    let post = State.transport tr post in
+	      State.glue unreach post
+	with Exceptions.Unknown ->
+	  print_endline (State.to_string reach);
+	  print_endline (State.to_string pre);
+	  invalid_arg "Solver.call: not implemented yet"
+    with Not_found -> 
+      try 
+	let s = Stubs.process f !env s in
+	  (* TODO: factor with print_err!! *)
+	  Context.report_stub_used ("missing function: "^f
+				    ^", stub used, "
+				    ^"use option --use-stubs to "^
+				    "skip this message");
+	  s
+      with Not_found -> 
+	Context.print_err ("missing function: "^f
+			   ^", call ignored, analysis may be unsound");
+	s
+ in
+  
   let init_fun f _ =
     Hashtbl.add fun_tbl f (State.emptyset, State.emptyset);
     Hashtbl.add pred_tbl f []

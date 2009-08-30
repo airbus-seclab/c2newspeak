@@ -65,7 +65,6 @@ type subst
 *)
 val split: Memloc.t list -> t -> (t * t * subst)
 
-
 val build_transport: t -> Memloc.t list -> t -> subst
 
 val build_param_map: int -> int -> subst
@@ -77,3 +76,5 @@ val invert: subst -> subst
 val compose: subst -> subst -> subst
 
 val glue: t -> t -> t
+
+val exp_to_fun: int -> t -> exp -> string list

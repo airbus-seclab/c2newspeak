@@ -27,46 +27,57 @@ open Newspeak
 
 module P1 = FieldInsensitivePtr
 module P2 = NonNullPtr
+module P3 = FPtrStore
 
-type offset = int
+type t = (P1.t * P2.t * P3.t)
 
-type addr = Memloc.t * offset
+let universe = (P1.universe, P2.universe, P3.universe)
 
-type t = (P1.t * P2.t)
+let join (a1, a2, a3) (b1, b2, b3) = 
+  (P1.join a1 b1, P2.join a2 b2, P3.join a3 b3)
 
-let universe = (P1.universe, P2.universe)
+let contains (a1, a2, a3) (b1, b2, b3) = 
+  P1.contains a1 b1 && P2.contains a2 b2 && P3.contains a3 b3
 
-let join (a1, a2) (b1, b2) = (P1.join a1 b1, P2.join a2 b2)
+let assign (m, o) e (s1, s2, s3) = 
+  match e with
+      Dom.Abaddr a -> 
+	(P1.assign (m, o) a s1, P2.assign (m, o) a s2, P3.forget_memloc m s3)
+    | Dom.AddrOfFun f -> (s1, P2.forget_memloc m s2, P3.assign (m, o) f s3)
 
-let contains (a1, a2) (b1, b2) = P1.contains a1 b1 && P2.contains a2 b2
+let guard a (s1, s2, s3) = (P1.guard a s1, P2.guard a s2, s3)
 
-let assign a m (s1, s2) = (P1.assign a m s1, P2.assign a m s2)
+let remove_memloc m (s1, s2, s3) = 
+  (P1.remove_memloc m s1, P2.remove_memloc m s2, P3.remove_memloc m s3)
 
-let guard a (s1, s2) = (P1.guard a s1, P2.guard a s2)
-
-let remove_memloc m (s1, s2) = (P1.remove_memloc m s1, P2.remove_memloc m s2)
-
-let forget_memloc m (s1, s2) = (P1.forget_memloc m s1, P2.forget_memloc m s2)
+let forget_memloc m (s1, s2, s3) = 
+  (s1, P2.forget_memloc m s2, P3.forget_memloc m s3)
 
 (* TODO: could be optimized *)
-let addr_is_valid (s1, s2) a =
+let addr_is_valid (s1, s2, _) a =
   (P1.addr_is_valid s1 a) || (P2.addr_is_valid s2 a)
 
-let build_transport (src, _) memlocs (dst, _) =
+let build_transport (src, _, _) memlocs (dst, _, _) =
   P1.build_transport src memlocs dst
 
-let split memlocs (s1, s2) =
+let split memlocs (s1, s2, s3) =
   let (unreach1, reach1, memlocs, tr) = P1.split memlocs s1 in
   let (unreach2, reach2) = P2.split memlocs s2 in
-    ((unreach1, unreach2), (reach1, reach2), tr)
+  let (unreach3, reach3) = P3.split memlocs s3 in
+    ((unreach1, unreach2, unreach3), (reach1, reach2, reach3), tr)
 
-let transport tr (s1, s2) = (P1.transport tr s1, P2.transport tr s2)
+let transport tr (s1, s2, s3) = 
+  (P1.transport tr s1, P2.transport tr s2, P3.transport tr s3)
 
-let glue (a1, a2) (b1, b2) = (P1.glue a1 b1, P2.glue a2 b2)
+let glue (a1, a2, a3) (b1, b2, b3) = 
+  (P1.glue a1 b1, P2.glue a2 b2, P3.glue a3 b3)
 
-let read_addr (s, _) a = P1.read_addr s a
+let read_addr (s, _, _) a = P1.read_addr s a
 
-let to_string (s1, s2) = P1.to_string s1^" "^P2.to_string s2
+let read_fun (_, _, s) a = P3.read s a
+
+let to_string (s1, s2, s3) = 
+  P1.to_string s1^" "^P2.to_string s2^" "^P3.to_string s3
 
 (* usefull for debug *)
 (*
