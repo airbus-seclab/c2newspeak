@@ -25,5 +25,6 @@
 
 val set_verbose: unit -> unit
 
+val set_loc: Newspeak.location -> unit
 
 val print_err: string -> unit

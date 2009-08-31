@@ -39,9 +39,29 @@ and fundec = blk
 
 and blk = stmt list
 
-and stmt = 
-    Set 
+and stmt = stmtkind * Newspeak.location
+
+and stmtkind =
+    Set of (lval * exp)
   | If
   | While
   | Call
   | Assert
+
+and lval = Global of string
+
+and exp = 
+    Const of cst
+  | Lval of lval
+  | UnOp of (unop * exp)
+  | BinOp of (binop * exp * exp)
+
+and cst = CInt of Int32.t
+
+and unop =
+    Belongs of bounds
+  | Coerce of bounds
+
+and binop = PlusI | MinusI | MultI | DivI | Mod | Gt | Eq
+
+and bounds = Int32.t * Int32.t

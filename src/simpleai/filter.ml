@@ -25,14 +25,56 @@
 
 open Newspeak
 
+module Nat = Newspeak.Nat
 module S = Simple
 
+let is_int t =
+  match t with
+      Int (Signed, 32) -> true
+    | _ -> false
+
+let process_const c =
+  match c with
+      CInt n -> 
+	if not (Newspeak.belongs n (Newspeak.domain_of_typ (Signed, 32))) 
+	then begin
+	  invalid_arg ("Filter.process_const: "
+		       ^"integer not representable as a 32 bits integer")
+	end;
+	S.CInt (Int32.of_string (Nat.to_string n))
+    | _ -> invalid_arg "Filter.process_const: integer constant expected"
+    
+let rec process_lval lv =
+  match lv with
+      Global x -> S.Global x
+    | _ -> invalid_arg "Filter.process_lval: not implemented yet"
+	
+and process_exp e =
+  match e with
+      Const c -> S.Const (process_const c)
+    | _ -> invalid_arg "Filter.process_exp: not implemented yet"
+  
+let rec process_blk x = List.map process_stmt x 
+  
+and process_stmt (x, loc) = 
+  Context.set_loc loc;
+  (process_stmtkind x, loc)
+    
+and process_stmtkind x =
+  match x with
+      Set (lv, e, t) -> 
+	if not (is_int t) then begin
+	  invalid_arg ("Filter.process_stmtkind: "
+		       ^"integer expected at assignment")
+	end;
+	S.Set (process_lval lv, process_exp e)
+    | _ -> invalid_arg "Filter.process_stmtkind: not implemented yet"
+	
+	
 let process prog = 
   let globals = Hashtbl.create 100 in
   let fundecs = Hashtbl.create 100 in
-
-  let process_blk _ = [] in
-
+    
   let init = process_blk prog.init in
     {
       S.fnames = prog.fnames;

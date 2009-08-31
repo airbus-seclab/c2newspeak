@@ -25,12 +25,17 @@
 
 let verbose = ref false
 
+let current_loc = ref (Newspeak.dummy_loc "simpleai")
+
 let errors = ref StrSet.empty
 
 let set_verbose () = verbose := true
 
+let set_loc loc = current_loc := loc
+
 let print_err msg = 
-  if not (StrSet.mem msg !errors) then begin
-    errors := StrSet.add msg !errors;
-    prerr_endline msg
-  end
+  let msg = (Newspeak.string_of_loc !current_loc)^": "^msg in
+    if not (StrSet.mem msg !errors) then begin
+      errors := StrSet.add msg !errors;
+      prerr_endline msg
+    end
