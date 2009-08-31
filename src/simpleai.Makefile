@@ -24,16 +24,11 @@
 # email: charles.hymans@penjili.org
 #
 
-DIR=c2newspeak mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck \
-    npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npknull simpleai
+TARGET=simpleai
+DIRS=newspeak/ utils/ simpleai/
+FILES=version newspeak/newspeak utils/strSet \
+      simpleai/context simpleai/simple \
+      simpleai/filter simpleai/fixpoint simpleai/simpleai
+LIBX=nums.cmxa
 
-.PHONY: $(DIR)
-
-all: $(DIR)
-
-clean: $(DIR)
-
-$(DIR):
-	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
-
+include common.Makefile
