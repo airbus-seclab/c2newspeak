@@ -73,6 +73,11 @@ let abaddr_to_addr (m, o) =
       Some o -> (m, o)
     | None -> raise Exceptions.Unknown
 
+let deref_abaddr a =
+  match a with
+      Dom.Abaddr a -> a
+    | _ -> raise Exceptions.Emptyset
+
 let rec lval_to_abaddr env s lv =
   match lv with
       Global x -> (Memloc.of_global x, Some 0)
@@ -85,7 +90,9 @@ let rec lval_to_abaddr env s lv =
 	    | Some o -> Some (o + (Nat.to_int n))
 	in
 	  (m, o)
-    | Deref (e, _) -> exp_to_abaddr env s e
+    | Deref (e, _) -> 
+	let a = translate_exp env s e in
+	  deref_abaddr a
     | _ -> raise Exceptions.Unknown
 
 and translate_exp env s e =
@@ -96,25 +103,31 @@ and translate_exp env s e =
     | Lval (lv, _) -> 
 (* TODO: code looks similar to Deref *)
 	let a = lval_to_abaddr env s lv in
-	let a = abaddr_to_addr a in
-	  Dom.Abaddr (Store.read_addr s a)
+	let a = abaddr_to_addr a in 
+	let a = 
+	  match Store.read_addr s a with
+	      Some a -> Dom.Abaddr a
+	    | None -> Dom.Cst
+	in
+	  a
     | UnOp ((PtrToInt _| IntToPtr _), e) -> translate_exp env s e
     | BinOp (PlusPI, e, _) -> 
-	let (v, _) = exp_to_abaddr env s e in
+	let a = translate_exp env s e in
+	let (v, _) = deref_abaddr a in
 	  Dom.Abaddr (v, None)
     | _ -> raise Exceptions.Unknown
 
-and exp_to_abaddr env s e =
-  match translate_exp env s e with
-      Dom.Abaddr a -> a
-    | _ -> raise Exceptions.Unknown
-
 let exp_to_fun env s e = 
-  try
-    let a = exp_to_abaddr env s e in
-    let a = abaddr_to_addr a in
-      Store.read_fun s a
-  with Exceptions.Emptyset -> []
+(* TODO: is it sound not to consider type here?? *)
+  match e with
+      Lval (lv, _) -> begin
+	try
+	  let a = lval_to_abaddr env s lv in
+	    let a = abaddr_to_addr a in 
+	      Store.read_fun s a
+	with Exceptions.Emptyset -> []
+	end
+    | _ -> raise Exceptions.Unknown
 
 let abaddr_to_memloc (m, _) = m
 
@@ -138,8 +151,8 @@ let assign (lv, e, _) env s =
 	    with Exceptions.Unknown -> 
 	      let m = abaddr_to_memloc a in
 		Some (Store.forget_memloc m s)
-	with 
-	    Exceptions.Emptyset -> None
+	with
+	    Exceptions.Emptyset -> emptyset
 	  | Exceptions.Unknown -> universe
 
 let to_string s =

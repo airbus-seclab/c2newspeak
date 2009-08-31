@@ -32,3 +32,4 @@ type abaddr = Memloc.t * offset option
 type exp =
     AddrOfFun of string
   | Abaddr of abaddr
+  | Cst                           (* value that is either nil or invalid *)

@@ -55,8 +55,9 @@ val transport: (Memloc.t * Memloc.t) list -> t -> t
 
 val glue: t -> t -> t
 
-(* TODO: this primitive is not well chosen, think about it *)
-val read_addr: t -> Dom.addr -> (Memloc.t * int option)
+(* TODO: this primitive is not well chosen, think about it
+   None is nil of uninitialized *)
+val read_addr: t -> Dom.addr -> Dom.abaddr option
 
 (* TODO: this primitive name is not well chosen, think about it *)
 val read_fun: t -> Dom.addr -> string list
