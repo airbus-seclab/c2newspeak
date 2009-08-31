@@ -82,18 +82,17 @@ let rec lval_to_abaddr env s lv =
   match lv with
       Global x -> (Memloc.of_global x, Some 0)
     | Local x -> (Memloc.of_local (env - x), Some 0)
-    | Shift (lv, Const CInt n) -> 
+    | Shift (lv, i) -> 
 	let (m, o) = lval_to_abaddr env s lv in
 	let o = 
-	  match o with
-	      None -> None
-	    | Some o -> Some (o + (Nat.to_int n))
+	  match (o, i) with
+	      (Some o, Const CInt n) -> Some (o + (Nat.to_int n))
+	    | _ -> None
 	in
 	  (m, o)
     | Deref (e, _) -> 
 	let a = translate_exp env s e in
 	  deref_abaddr a
-    | _ -> raise Exceptions.Unknown
 
 and translate_exp env s e =
   match e with
@@ -153,7 +152,7 @@ let assign (lv, e, _) env s =
 		Some (Store.forget_memloc m s)
 	with
 	    Exceptions.Emptyset -> emptyset
-	  | Exceptions.Unknown -> universe
+	  | Exceptions.Unknown -> universe (* TODO: should remove this case altogether, source of unsoundness!! *)
 
 let to_string s =
   match s with
