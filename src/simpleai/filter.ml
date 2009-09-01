@@ -125,14 +125,16 @@ let process_assertion x =
   match x with
       LvalToken lv::SymbolToken c::SymbolToken '='::CstToken (CInt n)::[] -> 
 	let lv = process_typed_lval lv in
-	let n = process_nat n in begin
-	    match c with
-	      '=' -> S.Equals (lv, n)
-	    | '<' -> S.IsLess (lv, n)
+	let n = S.CInt (process_nat n) in
+	let cmp =
+	  match c with
+	      '=' -> S.Equals
+	    | '<' -> S.IsLess
 	    | _ -> 
 		invalid_arg ("Filter.process_assertion: "
 			     ^"unexpected operator in assertion")
-	  end
+	in
+	  (lv, cmp, n)
     | _ -> 
 	invalid_arg "Filter.process_assertion: unexpected syntax for assertion"
 
@@ -181,10 +183,14 @@ let process prog =
   let init = process_blk prog.init in
     Hashtbl.iter process_global prog.globals;
     Hashtbl.iter process_fundec prog.fundecs;
-    {
-      S.fnames = prog.fnames;
-      S.globals = globals;
-      S.init = init;
-      S.fundecs = fundecs;
-      S.src_lang = prog.src_lang;
-    }
+    let prog =
+      {
+	S.fnames = prog.fnames;
+	S.globals = globals;
+	S.init = init;
+	S.fundecs = fundecs;
+	S.src_lang = prog.src_lang;
+      }
+    in
+      Context.print_verbose (Simple.to_string prog);
+      prog

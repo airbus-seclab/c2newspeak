@@ -22,7 +22,7 @@
 #  email: charles.hymans@penjili.org
 
 COMMAND=$(C2NEWSPEAK) `[ -e $*.in0 ] && cat $*.in0` $*.c > /dev/null 2>&1; \
-        $(SIMPLEAI) `[ -e $*.in ] && cat $*.in` a.npk
+        $(SIMPLEAI) --verbose `[ -e $*.in ] && cat $*.in` a.npk
 PREREQ=%.c
 TESTS=000 001 002 003 004 005 006
 

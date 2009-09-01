@@ -31,6 +31,8 @@ let errors = ref StrSet.empty
 
 let set_verbose () = verbose := true
 
+let print_verbose str = if !verbose then print_endline str
+
 let set_loc loc = current_loc := loc
 
 let print_err msg = 

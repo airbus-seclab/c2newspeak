@@ -74,12 +74,17 @@ and binop =
 
 and bounds = integer * integer
 
-and assertion =
-    Equals of (lval * integer)          (** x == c *)
-  | IsLess of (lval * integer)          (** x <= c *)
+and assertion = (lval * cmp * cst)      (** x == c
+					    x <= c *)
+and cmp =
+    Equals
+  | IsLess
 
 and vid = string
 
 and fid = string
 
 and integer = Int32.t
+
+
+val to_string: t -> string
