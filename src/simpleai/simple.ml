@@ -55,12 +55,9 @@ and lval = Global of vid
 and exp = 
     Const of cst
   | Lval of lval
-  | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
 and cst = CInt of integer
-
-and unop = Coerce of bounds
 
 and binop = PlusI | MinusI | MultI | DivI | Mod | Gt | Eq
 

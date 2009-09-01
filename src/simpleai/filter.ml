@@ -64,13 +64,7 @@ let process_bounds (l, u) =
   if not (Newspeak.contains int_bounds (l, u)) then begin
     invalid_arg ("Filter.process_bounds: "
 		 ^"bounds not representable as 32 bits integer")
-  end;
-  (Int32.of_string (Nat.to_string l), Int32.of_string (Nat.to_string u))
-
-let process_unop op =
-  match op with
-      Coerce bounds -> S.Coerce (process_bounds bounds)
-    | _ -> invalid_arg "Filter.process_unop: coercion expected"
+  end
     
 let process_binop op =
   match op with
@@ -91,10 +85,9 @@ let rec process_lval lv =
 and process_exp e =
   match e with
       Const c -> S.Const (process_const c)
-    | UnOp (op, e) -> 
-	let e = process_exp e in
-	let op = process_unop op in
-	  S.UnOp (op, e)
+    | UnOp (Coerce bounds, e) -> 
+	process_bounds bounds;
+	process_exp e
     | BinOp (op, e1, e2) -> 
 	let e1 = process_exp e1 in
 	let e2 = process_exp e2 in

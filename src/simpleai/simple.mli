@@ -35,7 +35,7 @@ type t = {
   src_lang: Newspeak.src_lang;          (** source programming language *)
 }
 
-and globals = (fid, gdecl) Hashtbl.t    (** Table of global names to location *)
+and globals = (vid, gdecl) Hashtbl.t    (** Table of global names to location *)
 
 and gdecl = Newspeak.location
 
@@ -59,12 +59,9 @@ and lval = Global of vid                (** global variable *)
 and exp =
     Const of cst                        (** integer constant *)
   | Lval of lval                        (** left value *)
-  | UnOp of (unop * exp)                (** unary operation *)
   | BinOp of (binop * exp * exp)        (** binary operation *)
 
 and cst = CInt of integer
-
-and unop = Coerce of bounds             (** check within bounds: non-blocking *)
 
 and binop = 
     PlusI                               (** addition *)
