@@ -115,6 +115,15 @@ let process_guard e not_e =
     | _ -> 
 	invalid_arg "Filter.process_guard: unexpected guard, case not handled"
 
+let process_loop_guard lbl_exit x =
+  match x with
+      ((Guard e, _)::[], (Guard not_e, _)::(Goto lbl, _)::[]) 
+	when lbl = lbl_exit -> 
+	  process_guard e not_e
+    | _ -> 
+	invalid_arg ("Filter.process_loop_guard: "
+		     ^"unexpected loop guard, case not handled")
+
 let rec process_blk x = List.map process_stmt x 
   
 and process_stmt (x, loc) = 
@@ -132,7 +141,13 @@ and process_stmtkind x =
 	let br2 = process_blk br2 in
 	  S.If (e, br1, br2)
     | Call f -> S.Call (process_funexp f)
-    | _ -> invalid_arg "Filter.process_stmtkind: not implemented yet"
+    | DoWith ((InfLoop ((Select loop_guard, _)::body), _)::[], lbl, []) -> 
+	let e = process_loop_guard lbl loop_guard in
+	let body = process_blk body in
+	  S.While (e, body)
+    | _ -> 
+	invalid_arg ("Filter.process_stmtkind: "
+		     ^"unexpected statement, case not handled yet")
 	
 	
 let process prog = 
