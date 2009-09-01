@@ -43,7 +43,7 @@ and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
     Set of (lval * exp)
-  | If
+  | If of (exp * blk * blk)
   | While
   | Call of funexp
   | Assert

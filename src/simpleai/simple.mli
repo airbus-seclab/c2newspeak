@@ -48,7 +48,7 @@ and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
     Set of (lval * exp)                 (** assignment *)
-  | If                                  (** if then else *)
+  | If of (exp * blk * blk)             (** if then else *)
   | While                               (** while loop *)
   | Call of funexp                      (** function call *)
   | Assert                              (** assertion *)

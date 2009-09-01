@@ -101,12 +101,19 @@ and process_exp e =
     | Lval (lv, t) -> 
 	process_scalar_t t;
 	S.Lval (process_lval lv)
-    | _ -> invalid_arg "Filter.process_exp: not implemented yet"
+    | _ -> invalid_arg "Filter.process_exp: integer expression expected"
   
 let process_funexp f =
   match f with
       FunId f -> S.FunId f
     | _ -> invalid_arg "Filter.process_funexp: known function call expected"
+
+let process_guard e not_e =
+  match (e, not_e) with
+      (e1, UnOp (Not, e2)) | (UnOp (Not, e1), e2) when e1 = e2 -> 
+	process_exp e
+    | _ -> 
+	invalid_arg "Filter.process_guard: unexpected guard, case not handled"
 
 let rec process_blk x = List.map process_stmt x 
   
@@ -119,6 +126,11 @@ and process_stmtkind x =
       Set (lv, e, t) -> 
 	process_scalar_t t;
 	S.Set (process_lval lv, process_exp e)
+    | Select ((Guard e, _)::br1, (Guard not_e, _)::br2) ->
+	let e = process_guard e not_e in
+	let br1 = process_blk br1 in
+	let br2 = process_blk br2 in
+	  S.If (e, br1, br2)
     | Call f -> S.Call (process_funexp f)
     | _ -> invalid_arg "Filter.process_stmtkind: not implemented yet"
 	
