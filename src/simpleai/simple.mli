@@ -31,12 +31,11 @@ type t = {
   fnames: Newspeak.file list;           (** list of source file names *)
   globals: globals;                     (** program variables *)
   init: blk;                            (** initialization block of globals *)
-  fundecs: (Newspeak.fid, fundec) Hashtbl.t;  
-                                        (** table of all declared functions *)
+  fundecs: (fid, fundec) Hashtbl.t;     (** table of all declared functions *)
   src_lang: Newspeak.src_lang;          (** source programming language *)
 }
 
-and globals = (string, gdecl) Hashtbl.t (** Table of global names to location *)
+and globals = (fid, gdecl) Hashtbl.t    (** Table of global names to location *)
 
 and gdecl = Newspeak.location
 
@@ -51,11 +50,11 @@ and stmtkind =
   | If of (exp * blk * blk)             (** if then else *)
   | While of (exp * blk)                (** while loop *)
   | Call of funexp                      (** function call *)
-  | Assert                              (** assertion *)
+  | Assert of assertion                 (** assertion *)
 
-and funexp = FunId of string
+and funexp = FunId of fid
 
-and lval = Global of string             (** global variable *)
+and lval = Global of vid                (** global variable *)
 
 and exp =
     Const of cst                        (** integer constant *)
@@ -63,7 +62,7 @@ and exp =
   | UnOp of (unop * exp)                (** unary operation *)
   | BinOp of (binop * exp * exp)        (** binary operation *)
 
-and cst = CInt of Int32.t
+and cst = CInt of integer
 
 and unop = Coerce of bounds             (** check within bounds: non-blocking *)
 
@@ -76,4 +75,14 @@ and binop =
   | Gt                                  (** strictly greater than *)
   | Eq                                  (** equality *)
 
-and bounds = Int32.t * Int32.t
+and bounds = integer * integer
+
+and assertion =
+    Equals of (lval * integer)          (** x == c *)
+  | IsLess of (lval * integer)          (** x <= c *)
+
+and vid = string
+
+and fid = string
+
+and integer = Int32.t

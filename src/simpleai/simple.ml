@@ -27,11 +27,11 @@ type t = {
   fnames: Newspeak.file list;
   globals: globals;
   init: blk;
-  fundecs: (Newspeak.fid, fundec) Hashtbl.t;
+  fundecs: (fid, fundec) Hashtbl.t;
   src_lang: Newspeak.src_lang;
 }
 
-and globals = (string, gdecl) Hashtbl.t
+and globals = (vid, gdecl) Hashtbl.t
 
 and gdecl = Newspeak.location
 
@@ -46,11 +46,11 @@ and stmtkind =
   | If of (exp * blk * blk)
   | While of (exp * blk)
   | Call of funexp
-  | Assert
+  | Assert of assertion
 
-and funexp = FunId of string
+and funexp = FunId of fid
 
-and lval = Global of string
+and lval = Global of vid
 
 and exp = 
     Const of cst
@@ -58,10 +58,20 @@ and exp =
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
-and cst = CInt of Int32.t
+and cst = CInt of integer
 
 and unop = Coerce of bounds
 
 and binop = PlusI | MinusI | MultI | DivI | Mod | Gt | Eq
 
-and bounds = Int32.t * Int32.t
+and bounds = integer * integer
+
+and assertion =
+    Equals of (lval * integer)
+  | IsLess of (lval * integer)
+
+and vid = string
+
+and fid = string
+
+and integer = Int32.t

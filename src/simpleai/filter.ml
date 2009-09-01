@@ -48,14 +48,16 @@ let process_ftyp (args, ret) =
     invalid_arg "Filter.process_ftyp: function with no parameter expected"
   end
 
+let process_nat n =
+  if not (Newspeak.belongs n int_bounds) then begin
+    invalid_arg ("Filter.process_const: "
+		 ^"integer not representable as a 32 bits integer")
+  end;
+  Int32.of_string (Nat.to_string n)
+
 let process_const c =
   match c with
-      CInt n -> 
-	if not (Newspeak.belongs n int_bounds) then begin
-	  invalid_arg ("Filter.process_const: "
-		       ^"integer not representable as a 32 bits integer")
-	end;
-	S.CInt (Int32.of_string (Nat.to_string n))
+      CInt n -> S.CInt (process_nat n)
     | _ -> invalid_arg "Filter.process_const: integer constant expected"
 
 let process_bounds (l, u) = 
@@ -98,10 +100,12 @@ and process_exp e =
 	let e2 = process_exp e2 in
 	let op = process_binop op in
 	  S.BinOp (op, e1, e2)
-    | Lval (lv, t) -> 
-	process_scalar_t t;
-	S.Lval (process_lval lv)
+    | Lval x -> S.Lval (process_typed_lval x)
     | _ -> invalid_arg "Filter.process_exp: integer expression expected"
+
+and process_typed_lval (lv, t) = 
+  process_scalar_t t;
+  process_lval lv
   
 let process_funexp f =
   match f with
@@ -124,6 +128,21 @@ let process_loop_guard lbl_exit x =
 	invalid_arg ("Filter.process_loop_guard: "
 		     ^"unexpected loop guard, case not handled")
 
+let process_assertion x =
+  match x with
+      LvalToken lv::SymbolToken c::SymbolToken '='::CstToken (CInt n)::[] -> 
+	let lv = process_typed_lval lv in
+	let n = process_nat n in begin
+	    match c with
+	      '=' -> S.Equals (lv, n)
+	    | '<' -> S.IsLess (lv, n)
+	    | _ -> 
+		invalid_arg ("Filter.process_assertion: "
+			     ^"unexpected operator in assertion")
+	  end
+    | _ -> 
+	invalid_arg "Filter.process_assertion: unexpected syntax for assertion"
+
 let rec process_blk x = List.map process_stmt x 
   
 and process_stmt (x, loc) = 
@@ -145,6 +164,7 @@ and process_stmtkind x =
 	let e = process_loop_guard lbl loop_guard in
 	let body = process_blk body in
 	  S.While (e, body)
+    | UserSpec (IdentToken "assert"::x) -> S.Assert (process_assertion x)
     | _ -> 
 	invalid_arg ("Filter.process_stmtkind: "
 		     ^"unexpected statement, case not handled yet")
