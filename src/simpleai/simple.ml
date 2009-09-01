@@ -45,8 +45,10 @@ and stmtkind =
     Set of (lval * exp)
   | If
   | While
-  | Call
+  | Call of funexp
   | Assert
+
+and funexp = FunId of string
 
 and lval = Global of string
 
@@ -58,9 +60,7 @@ and exp =
 
 and cst = CInt of Int32.t
 
-and unop =
-    Belongs of bounds
-  | Coerce of bounds
+and unop = Coerce of bounds
 
 and binop = PlusI | MinusI | MultI | DivI | Mod | Gt | Eq
 

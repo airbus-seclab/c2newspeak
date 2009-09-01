@@ -24,6 +24,6 @@
 COMMAND=$(C2NEWSPEAK) `[ -e $*.in0 ] && cat $*.in0` $*.c > /dev/null 2>&1; \
         $(SIMPLEAI) `[ -e $*.in ] && cat $*.in` a.npk
 PREREQ=%.c
-TESTS=000 001 002
+TESTS=000 001 002 003
 
 include ../common.Makefile

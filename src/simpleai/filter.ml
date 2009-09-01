@@ -68,7 +68,7 @@ let process_bounds (l, u) =
 let process_unop op =
   match op with
       Coerce bounds -> S.Coerce (process_bounds bounds)
-    | _ -> invalid_arg "Filter.process_unop: not implemented yet"
+    | _ -> invalid_arg "Filter.process_unop: coercion expected"
     
 let process_binop op =
   match op with
@@ -103,6 +103,11 @@ and process_exp e =
 	S.Lval (process_lval lv)
     | _ -> invalid_arg "Filter.process_exp: not implemented yet"
   
+let process_funexp f =
+  match f with
+      FunId f -> S.FunId f
+    | _ -> invalid_arg "Filter.process_funexp: known function call expected"
+
 let rec process_blk x = List.map process_stmt x 
   
 and process_stmt (x, loc) = 
@@ -114,6 +119,7 @@ and process_stmtkind x =
       Set (lv, e, t) -> 
 	process_scalar_t t;
 	S.Set (process_lval lv, process_exp e)
+    | Call f -> S.Call (process_funexp f)
     | _ -> invalid_arg "Filter.process_stmtkind: not implemented yet"
 	
 	

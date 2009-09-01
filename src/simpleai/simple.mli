@@ -50,8 +50,10 @@ and stmtkind =
     Set of (lval * exp)                 (** assignment *)
   | If                                  (** if then else *)
   | While                               (** while loop *)
-  | Call                                (** function call *)
+  | Call of funexp                      (** function call *)
   | Assert                              (** assertion *)
+
+and funexp = FunId of string
 
 and lval = Global of string             (** global variable *)
 
@@ -63,9 +65,7 @@ and exp =
 
 and cst = CInt of Int32.t
 
-and unop =
-    Belongs of bounds                   (** check within bounds: blocking *)
-  | Coerce of bounds                    (** check within bounds: non-blocking *)
+and unop = Coerce of bounds             (** check within bounds: non-blocking *)
 
 and binop = 
     PlusI                               (** addition *)
