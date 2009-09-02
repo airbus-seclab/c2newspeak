@@ -26,6 +26,8 @@
 (* This is the code that should be implemented by students *)
 open Simple
 
+module State = TopState
+
 let add_globals tbl s =
   let res = ref s in
   let add_global x _ = res := State.add_var x !res in
