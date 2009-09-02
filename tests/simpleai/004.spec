@@ -8,7 +8,7 @@ void main() {
 }
 
 Analysis starts
-29: x -> ? 
+29: x -> [-2147483648, 2147483647] 
 30: x -> 1 
 30: x -> 1 
 Final state: x -> 2 

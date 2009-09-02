@@ -29,7 +29,7 @@ DIRS=newspeak/ utils/ simpleai/
 FILES=version newspeak/newspeak utils/strSet \
       simpleai/context simpleai/simple \
       simpleai/filter simpleai/sigs simpleai/topState \
-      simpleai/unrelState simpleai/cst \
+      simpleai/unrelState simpleai/cst simpleai/range \
       simpleai/solver simpleai/simpleai
 LIBX=nums.cmxa
 

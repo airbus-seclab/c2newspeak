@@ -26,7 +26,7 @@
 (* This is the code that should be implemented by students *)
 open Simple
 
-module State = UnrelState.Make(Cst)
+module State = UnrelState.Make(Range)
 
 let add_globals tbl s =
   let res = ref s in

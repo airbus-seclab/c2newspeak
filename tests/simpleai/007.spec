@@ -6,5 +6,5 @@ void main() {
 }
 
 Analysis starts
-29: x -> ? 
-Final state: x -> ? 
+29: x -> [-2147483648, 2147483647] 
+Final state: x -> [-2147483648, 2147483647] 
