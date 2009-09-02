@@ -48,7 +48,7 @@ let _ =
 
     let prog = Newspeak.read !input in
     let simple = Filter.process prog in
-      Fixpoint.compute simple
+      Solver.compute simple
       
   with Invalid_argument s -> 
     Context.print_err ("Fatal error: "^s);

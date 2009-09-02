@@ -42,9 +42,9 @@ val add_var: Simple.vid -> t -> t
     expression [e] to the variable denoted by left value [lv].  *)
 val assign: Simple.lval -> Simple.exp -> t -> t
 
-(** [guard e s] splits stats [s] in a state that evaluates [e] to not 0
-    and a state that evaluate [e] to 0. *)
-val guard: Simple.exp -> t -> (t * t)
+(** [guard e s] splits stats [s] in a state that evaluates [e] to a value 
+    different from 0. *)
+val guard: Simple.exp -> t -> t
 
 (** [implies s a] returns true if assertion [a] is checked by state [s]. *)
 val implies: t -> Simple.assertion -> bool

@@ -35,7 +35,7 @@ let add_var _ _ = ()
 
 let assign _ _ _ = ()
 
-let guard _ _ = ((), ())
+let guard _ _ = ()
 
 let implies _ _ = false
 

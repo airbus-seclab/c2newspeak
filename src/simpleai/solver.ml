@@ -69,19 +69,19 @@ let compute prog =
 	      s
       | If (e, br1, br2) -> 
 	  (* TODO: do a check_exp *)
-(* TODO: have a guard of e and not e!!! *)
-	  let (s1, s2) = State.guard e s in
+	  let s1 = State.guard e s in
+	  let s2 = State.guard (UnOp (Not, e)) s in
 	  let s1 = compute_blk br1 s1 in
 	  let s2 = compute_blk br2 s2 in
 	    State.join s1 s2
       | While (e, body) ->
 	  (* TODO: do a check_exp *)
 	  let f s =
-	    let (s, _) = State.guard e s in
+	    let s = State.guard e s in
 	      compute_blk body s
 	  in
 	  let s = fixpoint f s in
-	  let (_, s) = State.guard e s in
+	  let s = State.guard (UnOp (Not, e)) s in
 	    s
       | Assert a -> 
 	  if not (State.implies s a) 
