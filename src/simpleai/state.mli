@@ -49,5 +49,9 @@ val guard: Simple.exp -> t -> t
 (** [implies s a] returns true if assertion [a] is checked by state [s]. *)
 val implies: t -> Simple.assertion -> bool
 
+(** [is_safe_binop s (op, e1, e2)] returns true if the evaluation of binary
+    opertion [op] on arguments [e1] and [e2] is safe in state [s]. *)
+val is_safe_binop: t -> (Simple.binop * Simple.exp * Simple.exp) -> bool
+
 (** [to_string s] prints the informations in the *)
 val to_string: t -> string

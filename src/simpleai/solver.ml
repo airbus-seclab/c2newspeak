@@ -40,6 +40,22 @@ let fixpoint f s =
   in
     fixpoint s
 
+let check_exp loc e s =
+  let rec check e =
+    match e with
+	UnOp (_, e) -> check e
+      | BinOp (op, e1, e2) ->
+	  check e1;
+	  check e2;
+	  if not (State.is_safe_binop s (op, e1, e2)) then begin
+	    print_endline (Simple.string_of_loc loc^": "
+			   ^"potential invalid operation: "
+			   ^(Simple.string_of_binop op))
+	  end
+      | _ -> ()
+  in
+    check e
+
 let compute prog = 
   let rec compute_blk x s =
     match x with
@@ -55,7 +71,7 @@ let compute prog =
   and compute_stmtkind loc x s =
     match x with
 	Set (lv, e) -> 
-	  (* TODO: do a check_exp *)
+	  check_exp loc e s;
 	  State.assign lv e s
       | Call FunId f -> 
 	  let body = 
@@ -68,15 +84,15 @@ let compute prog =
 	      print_endline ("Return from function: "^f);
 	      s
       | If (e, br1, br2) -> 
-	  (* TODO: do a check_exp *)
+	  check_exp loc e s;
 	  let s1 = State.guard e s in
 	  let s2 = State.guard (UnOp (Not, e)) s in
 	  let s1 = compute_blk br1 s1 in
 	  let s2 = compute_blk br2 s2 in
 	    State.join s1 s2
       | While (e, body) ->
-	  (* TODO: do a check_exp *)
 	  let f s =
+	    check_exp loc e s;
 	    let s = State.guard e s in
 	      compute_blk body s
 	  in

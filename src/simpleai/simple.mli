@@ -91,6 +91,10 @@ and integer = Int32.t
 
 val to_string: t -> string
 
+val string_of_unop: unop -> string
+
+val string_of_binop: binop -> string
+
 val string_of_loc: Newspeak.location -> string
 
 val string_of_lval: lval -> string

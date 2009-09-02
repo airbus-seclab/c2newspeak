@@ -39,4 +39,6 @@ let guard _ _ = ()
 
 let implies _ _ = false
 
+let is_safe_binop _ _ = false
+
 let to_string _ = "?"

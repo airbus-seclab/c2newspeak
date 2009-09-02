@@ -10,5 +10,7 @@ void main() {
 Analysis starts
 29: ?
 30: ?
+30: potential invalid operation: >
 30: ?
+30: potential invalid operation: +
 Final state: ?
