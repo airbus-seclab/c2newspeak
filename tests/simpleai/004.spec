@@ -11,4 +11,4 @@ Analysis starts
 29: x -> ? 
 30: x -> 1 
 30: x -> 1 
-Final state: x -> ? 
+Final state: x -> 2 

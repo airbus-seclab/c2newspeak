@@ -27,6 +27,11 @@ open Simple
 
 module Map = Map.Make(struct type t = Simple.vid let compare = compare end)
 
+exception Emptyset
+exception Unknown
+
+type bop = EQ | GT | NEQ | LTE
+
 module type Data =
 sig
   type t
@@ -40,6 +45,7 @@ sig
   val add: t -> t -> t
   val is_safe_add: t -> t -> bool
   val gt: t -> t -> t
+  val guard: bop -> t -> t -> t
   val to_string: t -> string
 end
 
@@ -115,18 +121,29 @@ struct
 	  let x = eval_lval lv in
 	  let v = eval_exp s e in
 	    Some (Map.add x v s)
-	      
-  let guard _ s = 
+     
+  let exp_to_eq e s =
+    let rec translate e =
+      match e with
+	| BinOp (Eq, Lval Global x, e) -> (x, EQ, eval_exp s e)
+	| BinOp (Gt, e, Lval Global x) -> (x, GT, eval_exp s e)
+	| UnOp (Not, BinOp (Gt, e, Lval Global x)) -> (x, LTE, eval_exp s e)
+	| UnOp (Not, BinOp (Eq, Lval Global x, e)) -> (x, NEQ, eval_exp s e)
+	| _ -> raise Unknown
+    in
+      translate e
+      
+  let guard e s = 
     match s with
 	None -> None
       | Some s -> 
-(* TODO: not easy, think about the language of guards!!! *)
-	  Some s
-(*
-	  let v = eval_exp s e in
-	    try Val.guard v
-	    with Sigs.Emptyset -> None 
-*)
+	  try
+	    let (x, op, c) = exp_to_eq e s in
+	    let v = read s x in
+	    let v = Val.guard op c v in
+	      Some (Map.add x v s)
+	  with Unknown -> Some s
+	    | Emptyset -> None
 
   let implies s (lv, cmp, c) = 
     match s with

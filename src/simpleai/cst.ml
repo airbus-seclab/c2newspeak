@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+open UnrelState
+
 type t = 
     Top
   | Val of Int32.t
@@ -71,6 +73,11 @@ let is_safe_add x y =
     | _ -> false
 	
 let implies _ = false
+
+let guard op c x =
+  match (op, c, x) with
+      (LTE, Val i, Val x) when Int32.compare i x > 0 -> raise Emptyset
+    | _ -> x
 
 let to_string v = 
   match v with

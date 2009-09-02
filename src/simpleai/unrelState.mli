@@ -23,6 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
+exception Emptyset
+exception Unknown
+
+type bop = EQ | GT | NEQ | LTE
+
 module type Data =
 sig
   type t
@@ -36,6 +41,7 @@ sig
   val add: t -> t -> t
   val is_safe_add: t -> t -> bool
   val gt: t -> t -> t
+  val guard: bop -> t -> t -> t
   val to_string: t -> string
 end
 
