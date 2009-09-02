@@ -5,7 +5,7 @@ void main() {
 }
 
 Analysis starts
-30: ?
+30: 
 Call function: f
 Return from function: f
-Final state: ?
+Final state: 

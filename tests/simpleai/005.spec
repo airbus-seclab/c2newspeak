@@ -7,9 +7,9 @@ void main() {
 }
 
 Analysis starts
-29: ?
-28: ?
-28: potential invalid operation: >
-31: ?
+29: i -> ? 
+28: i -> 0 
+31: i -> 0 
+31: i -> ? 
 31: potential invalid operation: +
-Final state: ?
+Final state: i -> ? 

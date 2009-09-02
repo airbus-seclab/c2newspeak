@@ -6,6 +6,5 @@ void main() {
 }
 
 Analysis starts
-29: ?
-29: potential invalid operation: ==
-Final state: ?
+29: x -> ? 
+Final state: x -> ? 

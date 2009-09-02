@@ -5,8 +5,8 @@ void main() {
 }
 
 Analysis starts
-29: ?
+29: x -> ? 
 29: assertion violation
-30: ?
+30: x -> ? 
 30: assertion violation
-Final state: ?
+Final state: x -> ? 

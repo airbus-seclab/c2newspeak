@@ -4,5 +4,5 @@ void main() {
 }
 
 Analysis starts
-26: ?
-Final state: ?
+26: x -> ? 
+Final state: x -> 1 

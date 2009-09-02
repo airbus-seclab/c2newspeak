@@ -28,7 +28,7 @@ TARGET=simpleai
 DIRS=newspeak/ utils/ simpleai/
 FILES=version newspeak/newspeak utils/strSet \
       simpleai/context simpleai/simple \
-      simpleai/filter simpleai/sigs simpleai/topState \
+      simpleai/filter simpleai/sigs simpleai/topState simpleai/cstState \
       simpleai/solver simpleai/simpleai
 LIBX=nums.cmxa
 
