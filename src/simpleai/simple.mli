@@ -59,9 +59,12 @@ and lval = Global of vid                (** global variable *)
 and exp =
     Const of cst                        (** integer constant *)
   | Lval of lval                        (** left value *)
+  | UnOp of (unop * exp)                (** unary operation *)
   | BinOp of (binop * exp * exp)        (** binary operation *)
 
 and cst = CInt of integer
+
+and unop = Not                          (** negation *)
 
 and binop = 
     PlusI                               (** addition *)

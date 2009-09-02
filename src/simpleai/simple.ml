@@ -55,9 +55,12 @@ and lval = Global of vid
 and exp = 
     Const of cst
   | Lval of lval
+  | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
 and cst = CInt of integer
+
+and unop = Not
 
 and binop = PlusI | MinusI | MultI | DivI | Mod | Gt | Eq
 
@@ -78,6 +81,10 @@ let string_of_loc (_, line, _) = string_of_int line
 let string_of_cst c =
   match c with
       CInt i -> Int32.to_string i
+
+let string_of_unop op =
+  match op with
+      Not -> "!"
 
 let string_of_binop op =
   match op with
@@ -101,6 +108,7 @@ let rec string_of_exp e =
   match e with
       Const c -> string_of_cst c
     | Lval lv -> string_of_lval lv
+    | UnOp (op, e) -> string_of_unop op^" "^string_of_exp e
     | BinOp (op, e1, e2) -> 
 	"("^string_of_exp e1^" "^string_of_binop op^" "^string_of_exp e2^")"
 

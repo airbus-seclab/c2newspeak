@@ -85,6 +85,7 @@ let rec process_lval lv =
 and process_exp e =
   match e with
       Const c -> S.Const (process_const c)
+    | UnOp (Not, e) -> S.UnOp (S.Not, process_exp e)
     | UnOp (Coerce bounds, e) -> 
 	process_bounds bounds;
 	process_exp e
