@@ -28,7 +28,7 @@ TARGET=simpleai
 DIRS=newspeak/ utils/ simpleai/
 FILES=version newspeak/newspeak utils/strSet \
       simpleai/context simpleai/simple \
-      simpleai/filter simpleai/fixpoint simpleai/simpleai
+      simpleai/filter simpleai/state simpleai/fixpoint simpleai/simpleai
 LIBX=nums.cmxa
 
 include common.Makefile

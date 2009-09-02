@@ -6,3 +6,8 @@ void main() {
       }
 }
 
+Analysis starts
+29: ?
+28: ?
+31: ?
+Final state: ?

@@ -11,3 +11,12 @@ void main() {
 35:   z = (x == y);
 }
 
+Analysis starts
+29: ?
+30: ?
+31: ?
+32: ?
+33: ?
+34: ?
+35: ?
+Final state: ?

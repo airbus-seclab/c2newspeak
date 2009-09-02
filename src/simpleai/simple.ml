@@ -148,4 +148,9 @@ let to_string prog =
     res := !res^string_of_blk "" prog.init;
     Hashtbl.iter string_of_fundec prog.fundecs;
     !res
+
+let string_of_stmtkind = string_of_stmtkind ""
   
+let string_of_stmt = string_of_stmt ""
+
+let string_of_blk = string_of_blk ""

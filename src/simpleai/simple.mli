@@ -86,5 +86,16 @@ and fid = string
 
 and integer = Int32.t
 
-
 val to_string: t -> string
+
+val string_of_loc: Newspeak.location -> string
+
+val string_of_lval: lval -> string
+
+val string_of_exp: exp -> string
+
+val string_of_stmtkind: stmtkind -> string
+
+val string_of_stmt: stmt -> string
+
+val string_of_blk: blk -> string
