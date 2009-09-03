@@ -120,19 +120,21 @@ let build_transport src memlocs dst =
     
   let add_assoc x y = 
     todo := (x, y)::!todo;
-    if x <> y then begin
-      if not (Memloc.unify x y) then raise Exceptions.Unknown;
-      res := Subst.assoc x y !res
-    end
+    if x <> y then res := Subst.assoc x y !res
   in
 
-(* TODO: I am sure this is somehow unsound *)
   let rec unify_values v1 v2 =
     match (v1, v2) with
 	(v1::tl1, v2::tl2) -> 
 	  add_assoc v1 v2;
 	  unify_values tl1 tl2
-      | ([], _) | (_, []) -> ()
+      | ([], []) -> ()
+(* TODO: if transport could suppress locations, there could be less 
+   Unknown exceptions here??
+   so there could be less distinct pre/post tuple in the global tabulation
+   would be less re-analyses of the same function...
+*)
+      | _ -> raise Exceptions.Unknown
   in
     
     List.iter (fun x -> add_assoc x x) memlocs;

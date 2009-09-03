@@ -46,6 +46,7 @@ let build_main_info ft s =
     | ([], _) -> s
     | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
 
+
 let process glb_tbl prog = 
 (* results of the analysis *)
   let warnings = ref StrSet.empty in
@@ -97,6 +98,38 @@ let process glb_tbl prog =
     let pred = Hashtbl.find pred_tbl f in
       if not (List.mem !current_fun pred)
       then Hashtbl.replace pred_tbl f (!current_fun::pred)
+  in
+
+  let schedule f = if not (List.mem f !todo) then todo := f::!todo in
+
+
+  let apply_rel f memlocs unreach tr1 reach rel_list =
+    let rec apply rel_list =
+      match rel_list with
+	  [] -> 
+	    schedule f;
+	    (State.emptyset, (reach, State.emptyset)::[])
+	| (pre, post)::tl -> 
+	    try
+	      let tr2 = State.build_transport reach memlocs pre in
+	      let reach = State.transport tr2 reach in
+	      let pre = 
+		if State.contains pre reach then pre
+		else begin
+		  schedule f;
+		  State.join reach pre
+		end
+	      in
+	      let tr = Subst.invert (Subst.compose tr1 tr2) in
+	      let post = State.transport tr post in
+		(State.glue unreach post, (pre, post)::tl)
+	    with Exceptions.Unknown -> 
+	      let (s, tl) = apply tl in
+		(s, (pre, post)::tl)
+    in
+    let (s, rel_list) = apply rel_list in
+      Hashtbl.replace fun_tbl f rel_list;
+      s
   in
 
   let warn_deref () = 
@@ -224,7 +257,10 @@ let process glb_tbl prog =
 
   and process_call f s =
     try
-      let (pre, post) = Hashtbl.find fun_tbl f in
+(* TODO: maybe could look for the function's semantics after having prepared
+   the current state?? *)
+      let rel_list = Hashtbl.find fun_tbl f in
+
       let (ft, _) = Hashtbl.find prog.fundecs f in
       let locals_nb = env_of_ftyp ft in
       let locals = create_locals !env locals_nb in
@@ -234,24 +270,12 @@ let process glb_tbl prog =
       let (unreach, reach) = State.split memlocs s in
       let tr1 = Subst.build_param_map !env locals_nb in
       let reach = State.transport tr1 reach in
-	try
-	  let locals = create_locals locals_nb locals_nb in
-	  let memlocs = locals@globals in
-	  let tr2 = State.build_transport reach memlocs pre in
-	  let reach = State.transport tr2 reach in
-	  let tr = Subst.invert (Subst.compose tr1 tr2) in
-	    update_pred_tbl f;
-	    if not (State.contains pre reach) then begin
-	      let pre = State.join reach pre in
-		Hashtbl.replace fun_tbl f (pre, post);
-		if not (List.mem f !todo) then todo := f::!todo
-	    end;
-	    let post = State.transport tr post in
-	      State.glue unreach post
-	with Exceptions.Unknown ->
-	  print_endline (State.to_string reach);
-	  print_endline (State.to_string pre);
-	  invalid_arg "Solver.call: not implemented yet"
+      let locals = create_locals locals_nb locals_nb in
+      let memlocs = locals@globals in
+
+	update_pred_tbl f;
+	apply_rel f memlocs unreach tr1 reach rel_list
+
     with Not_found -> 
       try 
 	let s = Stubs.process f !env s in
@@ -265,10 +289,28 @@ let process glb_tbl prog =
 	Context.print_err ("missing function: "^f
 			   ^", call ignored, analysis may be unsound");
 	s
- in
+  in
+    
+  let process_fun f body rel_list = 
+    let changed = ref false in
+    let process_pre (pre, post) =
+      let new_post = process_blk body pre in
+	if State.contains post new_post then (pre, post)
+	else begin
+	  changed := true;
+	  (pre, new_post)
+	end
+    in
+    let rel_list = List.map process_pre rel_list in
+      Hashtbl.replace fun_tbl f rel_list;
+      if !changed then begin
+	let pred = Hashtbl.find pred_tbl f in
+	  todo := pred@(!todo)
+      end
+  in
   
   let init_fun f _ =
-    Hashtbl.add fun_tbl f (State.emptyset, State.emptyset);
+    Hashtbl.add fun_tbl f [];
     Hashtbl.add pred_tbl f []
   in
     
@@ -281,8 +323,8 @@ let process glb_tbl prog =
       with Not_found -> invalid_arg "Solver.process: missing main function"
     in
     let s = build_main_info ft s in
-      todo := "main"::[];
-      Hashtbl.add fun_tbl "main" (s, State.emptyset);
+      schedule "main";
+      Hashtbl.add fun_tbl "main" ((s, State.emptyset)::[]);
       
       (* fixpoint computation *)
       begin try
@@ -293,15 +335,12 @@ let process glb_tbl prog =
 		Context.print_verbose ("Analyzing: "^f);
 		current_fun := f;
 		live_funs := StrSet.add f !live_funs;
-		let (pre, post) = Hashtbl.find fun_tbl f in
+		(* TODO: could be optimized and analysed only the pre/post
+		   conditions which are not yet complete!! *)
+		let rel_list = Hashtbl.find fun_tbl f in
 		let (ft, body) = Hashtbl.find prog.fundecs f in
 		  env := env_of_ftyp ft;
-		  let new_post = process_blk body pre in
-		    if not (State.contains post new_post) then begin
-		      Hashtbl.replace fun_tbl f (pre, new_post);
-		      let pred = Hashtbl.find pred_tbl f in
-			todo := pred@(!todo)
-		    end
+		  process_fun f body rel_list
 	      end
 	    | [] -> raise Exit
 	done

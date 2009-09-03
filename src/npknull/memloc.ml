@@ -52,13 +52,3 @@ let to_string x =
       Local x -> "L."^string_of_int x
     | Global x -> "G."^x
     | Heap x -> "H."^string_of_int x
-
-let unify m1 m2 = m1 <> m2
-(* TODO: ??
-  match (m1, m2) with
-      _ when m1 = m2 -> false
-    | (Heap _, Heap _) -> true
-    | _ -> 
-	let msg = "Memloc.unify: "^to_string m1^"/"^to_string m2 in
-	  raise (Exceptions.NotImplemented msg)
-*)

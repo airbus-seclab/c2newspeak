@@ -35,6 +35,5 @@ void main() {
   y = &x;
 
   f(&x);
-  /*!npk display */
   f(&y);
 }
