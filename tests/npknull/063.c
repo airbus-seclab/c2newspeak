@@ -27,8 +27,7 @@
 
 int x, y, z;
 
-void f(int *, int *)
-{
+void f(int *, int *) {
 }
 
 void main() {

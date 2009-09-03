@@ -23,6 +23,21 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: important note, 
+   functions whose arguments differ after a given depth are going to be 
+   analyzed multiple times EVEN if the values after some depth are never
+   used by the function
+   !!!!!!!!!!!!
+   f(int *x );
+   that uses only *x
+   
+   called on g
+   and called on y that point to z that point to u
+   is going to be analyzed twice, instead of once!!!
+
+   think about memcpy
+*)
+
 open Newspeak
 
 let env_of_ftyp (args, ret) = 
