@@ -231,9 +231,10 @@ let build_transport src memlocs dst =
   print_endline (to_string src);
   List.iter (fun x -> print_endline (Memloc.to_string x)) memlocs;
   print_endline (to_string dst);
-  let x = build_transport src memlocs dst in
+  let tr = build_transport src memlocs dst in
+    print_endline (Subst.to_string tr);
     print_endline "Store.build_transport ends";
-    x
+    tr
 *)
 (*
 let join s1 s2 =
