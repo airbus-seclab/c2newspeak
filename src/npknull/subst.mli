@@ -36,3 +36,5 @@ val identity: t
 val assoc: Memloc.t -> Memloc.t -> t -> t
 
 val apply: t -> Memloc.t -> Memloc.t
+
+val to_string: t -> string

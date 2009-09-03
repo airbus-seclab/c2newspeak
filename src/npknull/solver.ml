@@ -120,9 +120,11 @@ let process glb_tbl prog =
 		  State.join reach pre
 		end
 	      in
+(* TODO: push this code back up!!! *)
 	      let tr = Subst.invert (Subst.compose tr1 tr2) in
+	      let rel_list = (pre, post)::tl in
 	      let post = State.transport tr post in
-		(State.glue unreach post, (pre, post)::tl)
+		(State.glue unreach post, rel_list)
 	    with Exceptions.Unknown -> 
 	      let (s, tl) = apply tl in
 		(s, (pre, post)::tl)

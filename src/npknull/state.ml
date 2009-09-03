@@ -310,3 +310,15 @@ let build_param_map env n =
     print_endline (string_of_transport tr);
     tr
 *)
+(*
+let build_transport s memlocs pre =
+  print_endline "State.build_transport";
+  List.iter (fun x -> print_string (Memloc.to_string x^" ")) memlocs;
+  print_newline ();
+  print_endline (to_string s);
+  print_endline (to_string pre);
+  let tr = build_transport s memlocs pre in
+  print_endline (Subst.to_string tr);
+  print_endline "State.build_transport ends";
+    tr
+*)
