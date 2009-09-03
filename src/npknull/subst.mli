@@ -23,10 +23,16 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = (Memloc.t * Memloc.t) list
+type t
 
 val build_param_map: int -> int -> t
 
 val invert: t -> t
 
 val compose: t -> t -> t
+
+val identity: t
+
+val assoc: Memloc.t -> Memloc.t -> t -> t
+
+val apply: t -> Memloc.t -> Memloc.t

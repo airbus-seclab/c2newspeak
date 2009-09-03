@@ -47,8 +47,6 @@ let shift n m =
     | Local _ -> gen () 
     | _ -> m
 
-let subst tr x = try List.assoc x tr with Not_found -> x
-
 let to_string x =
   match x with
       Local x -> "L."^string_of_int x

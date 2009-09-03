@@ -209,7 +209,7 @@ let lval_to_abaddr env s lv =
 let build_transport s memlocs pre = 
   match (s, pre) with
       (Some s, Some pre) -> Store.build_transport s memlocs pre
-    | _ -> []
+    | _ -> Subst.identity
 
 let split memlocs s =
   match s with

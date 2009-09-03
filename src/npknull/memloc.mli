@@ -36,8 +36,6 @@ val compare: t -> t -> int
 
 val shift: int -> t -> t
 
-val subst: (t * t) list -> t -> t
-
 val unify: t -> t -> bool
 
 val to_string: t -> string

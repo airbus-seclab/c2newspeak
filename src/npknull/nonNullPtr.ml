@@ -142,7 +142,7 @@ let split memlocs s =
 let transport tr s =
   let res = ref Map.empty in
   let subst m i =
-    let m = Memloc.subst tr m in
+    let m = Subst.apply tr m in
       res := Map.add m i !res
   in
     Map.iter subst s;

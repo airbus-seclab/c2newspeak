@@ -116,13 +116,13 @@ let remove_memloc = Map.remove
 
 let build_transport src memlocs dst =
   let todo = ref [] in
-  let res = ref [] in
+  let res = ref Subst.identity in
     
   let add_assoc x y = 
     todo := (x, y)::!todo;
     if x <> y then begin
       if not (Memloc.unify x y) then raise Exceptions.Unknown;
-      res := (x, y)::!res
+      res := Subst.assoc x y !res
     end
   in
 
@@ -179,8 +179,8 @@ let split memlocs s =
 let transport tr s =
   let res = ref Map.empty in
   let subst m info =
-    let m = Memloc.subst tr m in
-    let info = List.map (Memloc.subst tr) info in
+    let m = Subst.apply tr m in
+    let info = List.map (Subst.apply tr) info in
       res := Map.add m info !res
   in
     Map.iter subst s;
