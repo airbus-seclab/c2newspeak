@@ -40,7 +40,7 @@ let speclist =
   [ ("--main", Arg.Set_string main,
     "Choose main function from which to strip");
     
-    ("--newspeak", Arg.Set print,
+    ("--print-newspeak", Arg.Set print,
     "Print output");
     
     ("-o", Arg.Set_string output, 
@@ -49,7 +49,7 @@ let speclist =
 
 module StringSet = Set.Make(String)
 
-class collector (globals, fundecs) used_gvars used_funs fid_addrof =
+class collector (globals, fundecs) used_gvars used_funs =
 object (this)
   inherit Newspeak.visitor
 
@@ -75,7 +75,7 @@ object (this)
   method process_funexp x =
     begin match x with
 	FunId f -> this#visit_fun f
-      | FunDeref _ -> List.iter this#visit_fun fid_addrof
+      | _ -> ()
     end;
     true
 
@@ -85,6 +85,13 @@ object (this)
 	  this#add_global x;
 	  true
       | _ -> true
+
+  method process_exp x =
+    begin match x with
+	AddrOfFun (f, _) -> this#visit_fun f
+      | _ -> ()
+    end;
+    true
 
 end
 
@@ -97,10 +104,9 @@ let rec global_of_lval x =
 let collect_used prog =
   let used_gvars = Hashtbl.create 100 in
   let used_funs = Hashtbl.create 100 in
-  let fid_addrof = Newspeak.collect_fid_addrof prog in
 
   let collector = 
-    new collector (prog.globals, prog.fundecs) used_gvars used_funs fid_addrof
+    new collector (prog.globals, prog.fundecs) used_gvars used_funs
   in
 
   let visit_init (x, _) =
