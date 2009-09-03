@@ -29,8 +29,8 @@ DIRS=newspeak/ utils/ npkfuns/ npknull/
 FILES=version newspeak/newspeak utils/listUtils utils/strSet \
       npkfuns/glbCollect \
       npknull/context npknull/exceptions npknull/memloc npknull/dom \
-      npknull/fieldInsensitivePtr npknull/nonNullPtr npknull/fPtrStore \
-      npknull/store npknull/state npknull/stubs \
+      npknull/subst npknull/fieldInsensitivePtr npknull/nonNullPtr \
+      npknull/fPtrStore npknull/store npknull/state npknull/stubs \
       npknull/solver npknull/stats npknull/npknull
 LIBX=nums.cmxa
 

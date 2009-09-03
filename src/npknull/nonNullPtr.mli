@@ -46,7 +46,7 @@ val to_string: t -> string
 
 val split: Memloc.t list -> t -> (t * t)
 
-val transport: (Memloc.t * Memloc.t) list -> t -> t
+val transport: Subst.t -> t -> t
 
 val glue: t -> t -> t
 

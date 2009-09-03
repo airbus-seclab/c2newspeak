@@ -23,33 +23,30 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
+type t = (Memloc.t * Memloc.t) list
 
-val universe: t
+let build_param_map env n =
+  let res = ref [] in
+    for i = 0 to env do
+      let j = if i <= n then Memloc.of_local (n-i) else Memloc.gen () in
+	res := (Memloc.of_local (env-i), j)::!res
+    done;
+    !res
 
-val join: t -> t -> t
+let invert subst = List.map (fun (x, y) -> (y, x)) subst
 
-val contains: t -> t -> bool
+let compose subst1 subst2 = 
+  let subst2 = ref subst2 in
+  let compose_with (x, y) =
+    try
+      let z = List.assoc y !subst2 in
+	subst2 := List.remove_assoc y !subst2;
+	(x, z)
+    with Not_found -> (x, y)
+  in
+  let subst1 = List.map compose_with subst1 in
+    subst1@(!subst2)
 
-val assign: Dom.addr -> Dom.abaddr -> t -> t
-
-val guard: Dom.addr -> t -> t
-
-val remove_memloc: Memloc.t -> t -> t
-
-val addr_is_valid: t -> Dom.addr -> bool
-
-val to_string: t -> string
-
-val split: Memloc.t list -> t -> (t * t * Memloc.t list)
-
-val build_transport: t -> Memloc.t list -> t -> Subst.t
-
-val transport: Subst.t -> t -> t
-
-val glue: t -> t -> t
-
-(* TODO: this primitive is not well chosen, think about it
-   None is nil or uninitialized
- *)
-val read_addr: t -> Dom.addr -> Dom.abaddr option
+let to_string tr =
+  let string_of_assoc (x, y) = Memloc.to_string x^" -> "^Memloc.to_string y in
+    "["^ListUtils.to_string string_of_assoc ", " tr^"]"

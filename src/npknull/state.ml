@@ -219,51 +219,15 @@ let split memlocs s =
 (* TODO: not nice to have the possibility of emptyset!!! *)
     | None -> (None, None)
 
-type subst = (Memloc.t * Memloc.t) list
-
-let build_param_map env n =
-  let res = ref [] in
-    for i = 0 to env do
-      let j = if i <= n then Memloc.of_local (n-i) else Memloc.gen () in
-	res := (Memloc.of_local (env-i), j)::!res
-    done;
-    !res
-
-(* TODO: ???
-  let res = ref [] in
-    for i = 0 to n do
-      res := (Memloc.of_local (env-i), Memloc.of_local (n-i))::!res
-    done;
-    !res
-*)
-
 let transport tr s =
   match s with
       Some s -> Some (Store.transport tr s)
     | None -> None
 
-let invert subst = List.map (fun (x, y) -> (y, x)) subst
-
-let compose subst1 subst2 = 
-  let subst2 = ref subst2 in
-  let compose_with (x, y) =
-    try
-      let z = List.assoc y !subst2 in
-	subst2 := List.remove_assoc y !subst2;
-	(x, z)
-    with Not_found -> (x, y)
-  in
-  let subst1 = List.map compose_with subst1 in
-    subst1@(!subst2)
-
 let glue s1 s2 =
   match (s1, s2) with
       (Some s1, Some s2) -> Some (Store.glue s1 s2)
     | _ -> None
-
-let string_of_transport tr =
-  let string_of_assoc (x, y) = Memloc.to_string x^" -> "^Memloc.to_string y in
-    "["^ListUtils.to_string string_of_assoc ", " tr^"]"
 
 let exp_to_fun env s e =
   match s with

@@ -232,14 +232,14 @@ let process glb_tbl prog =
       let globals = List.map Memloc.of_global globals in
       let memlocs = locals@globals in
       let (unreach, reach) = State.split memlocs s in
-      let tr1 = State.build_param_map !env locals_nb in
+      let tr1 = Subst.build_param_map !env locals_nb in
       let reach = State.transport tr1 reach in
 	try
 	  let locals = create_locals locals_nb locals_nb in
 	  let memlocs = locals@globals in
 	  let tr2 = State.build_transport reach memlocs pre in
 	  let reach = State.transport tr2 reach in
-	  let tr = State.invert (State.compose tr1 tr2) in
+	  let tr = Subst.invert (Subst.compose tr1 tr2) in
 	    update_pred_tbl f;
 	    if not (State.contains pre reach) then begin
 	      let pre = State.join reach pre in

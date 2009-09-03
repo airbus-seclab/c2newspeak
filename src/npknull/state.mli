@@ -55,8 +55,6 @@ val is_empty: t -> bool
 
 val forget_lval: lval -> int -> t -> t
 
-type subst
-
 (* [split vars s] splits state s into two parts:
    - the portion of the store unreachable from [vars]
    - the portion reachable from any variable in [vars]
@@ -65,15 +63,9 @@ type subst
 *)
 val split: Memloc.t list -> t -> (t * t)
 
-val build_transport: t -> Memloc.t list -> t -> subst
+val build_transport: t -> Memloc.t list -> t -> Subst.t
 
-val build_param_map: int -> int -> subst
-
-val transport: subst -> t -> t
-
-val invert: subst -> subst
-
-val compose: subst -> subst -> subst
+val transport: Subst.t -> t -> t
 
 val glue: t -> t -> t
 

@@ -47,11 +47,11 @@ val addr_is_valid: t -> Dom.addr -> bool
 
 val to_string: t -> string
 
-val build_transport: t -> Memloc.t list -> t -> (Memloc.t * Memloc.t) list
+val build_transport: t -> Memloc.t list -> t -> Subst.t
+
+val transport: Subst.t -> t -> t
 
 val split: Memloc.t list -> t -> (t * t)
-
-val transport: (Memloc.t * Memloc.t) list -> t -> t
 
 val glue: t -> t -> t
 

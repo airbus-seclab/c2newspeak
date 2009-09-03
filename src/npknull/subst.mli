@@ -23,33 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
+type t = (Memloc.t * Memloc.t) list
 
-val universe: t
+val build_param_map: int -> int -> t
 
-val join: t -> t -> t
+val invert: t -> t
 
-val contains: t -> t -> bool
-
-val assign: Dom.addr -> Dom.abaddr -> t -> t
-
-val guard: Dom.addr -> t -> t
-
-val remove_memloc: Memloc.t -> t -> t
-
-val addr_is_valid: t -> Dom.addr -> bool
-
-val to_string: t -> string
-
-val split: Memloc.t list -> t -> (t * t * Memloc.t list)
-
-val build_transport: t -> Memloc.t list -> t -> Subst.t
-
-val transport: Subst.t -> t -> t
-
-val glue: t -> t -> t
-
-(* TODO: this primitive is not well chosen, think about it
-   None is nil or uninitialized
- *)
-val read_addr: t -> Dom.addr -> Dom.abaddr option
+val compose: t -> t -> t
