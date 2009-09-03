@@ -62,10 +62,10 @@ let build_transport (src, _, _) memlocs (dst, _, _) =
   P1.build_transport src memlocs dst
 
 let split memlocs (s1, s2, s3) =
-  let (unreach1, reach1, memlocs, tr) = P1.split memlocs s1 in
+  let (unreach1, reach1, memlocs) = P1.split memlocs s1 in
   let (unreach2, reach2) = P2.split memlocs s2 in
   let (unreach3, reach3) = P3.split memlocs s3 in
-    ((unreach1, unreach2, unreach3), (reach1, reach2, reach3), tr)
+    ((unreach1, unreach2, unreach3), (reach1, reach2, reach3))
 
 let transport tr (s1, s2, s3) = 
   (P1.transport tr s1, P2.transport tr s2, P3.transport tr s3)

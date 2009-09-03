@@ -155,7 +155,6 @@ let split memlocs s =
   let unreach = ref s in
   let reach = ref Map.empty in
   let vars = ref [] in
-  let tr = ref [] in
 
     begin try
       while true do
@@ -163,9 +162,6 @@ let split memlocs s =
 	    x::tl -> 
 	      todo := tl;
 	      vars := x::!vars;
-	      (* TODO: wouldn't this abstract away memlocs which are already
-		 abstracted??? *)
-	      if not (List.mem x memlocs) then tr := (x, Memloc.gen ())::!tr;
 	      let v = try Map.find x !unreach with Not_found -> [] in
 		if v <> [] then reach := Map.add x v !reach;
 		unreach := Map.remove x !unreach;
@@ -174,7 +170,7 @@ let split memlocs s =
       done
     with Exit -> ()
     end;
-    (!unreach, !reach, !vars, !tr)
+    (!unreach, !reach, !vars)
     
 (* TODO: O(n) expensive? 
    Have the inverse map?

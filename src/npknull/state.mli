@@ -63,7 +63,7 @@ type subst
    - in reach, the variables not in [vars] are abstracted away, this 
    modification is returned as a substition from variables to logic variables
 *)
-val split: Memloc.t list -> t -> (t * t * subst)
+val split: Memloc.t list -> t -> (t * t)
 
 val build_transport: t -> Memloc.t list -> t -> subst
 

@@ -214,19 +214,28 @@ let build_transport s memlocs pre =
 let split memlocs s =
   match s with
       Some s -> 
-	let (unreach, reach, tr) = Store.split memlocs s in
-	  (Some unreach, Some reach, tr)
+	let (unreach, reach) = Store.split memlocs s in
+	  (Some unreach, Some reach)
 (* TODO: not nice to have the possibility of emptyset!!! *)
-    | None -> (None, None, [])
+    | None -> (None, None)
 
 type subst = (Memloc.t * Memloc.t) list
 
 let build_param_map env n =
   let res = ref [] in
+    for i = 0 to env do
+      let j = if i <= n then Memloc.of_local (n-i) else Memloc.gen () in
+	res := (Memloc.of_local (env-i), j)::!res
+    done;
+    !res
+
+(* TODO: ???
+  let res = ref [] in
     for i = 0 to n do
       res := (Memloc.of_local (env-i), Memloc.of_local (n-i))::!res
     done;
     !res
+*)
 
 let transport tr s =
   match s with
@@ -308,9 +317,6 @@ let glue s1 s2 =
     print_endline "State.glue ends";
     s
 
-*)
-
-(*
 let compose tr1 tr2 =
   print_endline "State.compose";
   print_endline (string_of_transport tr1);
@@ -319,9 +325,7 @@ let compose tr1 tr2 =
   print_endline (string_of_transport tr);
     print_endline "State.ends";
     tr
-*)
 
-(*
 let split memlocs s =
   print_endline "State.split";
   print_endline (ListUtils.to_string Memloc.to_string ", " memlocs);
@@ -332,4 +336,13 @@ let split memlocs s =
     print_endline (string_of_transport tr);
     print_endline "State.split ends";
     (unreach, reach, tr)
+*)
+(*
+let build_param_map env n =
+  print_endline "State.build_param_map";
+  print_endline (string_of_int env);
+  print_endline (string_of_int n);
+  let tr = build_param_map env n in
+    print_endline (string_of_transport tr);
+    tr
 *)
