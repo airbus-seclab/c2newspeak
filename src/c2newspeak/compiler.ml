@@ -65,13 +65,13 @@ let append_gnu_symbols globals =
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (fnames, prog) = parse fname in
+  let (src_fnames, prog) = parse fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
     let prog = 
       if !Npkcontext.accept_gnuc then append_gnu_symbols prog else prog
     in
-    let fnames = if fnames = [] then fname::[] else fnames in
+    let src_fnames = if src_fnames = [] then fname::[] else src_fnames in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;
@@ -86,7 +86,7 @@ let compile fname =
 	end else prog
       in
 	Npkcontext.print_debug "Typing...";
-	let prog = Csyntax2TypedC.process prog in
+	let prog = Csyntax2TypedC.process fname prog in
 	  Npkcontext.print_debug "Running first pass...";
 	  let prog = Firstpass.translate prog in
 	    Npkcontext.forget_loc ();
@@ -94,7 +94,7 @@ let compile fname =
 	    Npkcontext.print_size (Cir.size_of prog);
 	    if !Npkcontext.verb_cir then Cir.print prog;
 	    Npkcontext.print_debug ("Translating "^fname^"...");
-	    let tr_prog = Cir2npkil.translate Newspeak.C prog fnames in
+	    let tr_prog = Cir2npkil.translate Newspeak.C prog src_fnames in
 	      Npkcontext.forget_loc ();
 	      Npkcontext.print_debug ("Translation done.");
 	      Npkcontext.forget_loc ();

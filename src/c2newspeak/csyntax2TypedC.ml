@@ -53,7 +53,7 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
-let process globals =
+let process fname globals =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
   *)
@@ -66,8 +66,7 @@ let process globals =
   *)
   let static_cnt = ref 0 in
 
-  let get_static_name x loc =
-    let (fname, _, _) = loc in
+  let get_static_name x =
     let prefix = "!"^fname^"." in
     let prefix = 
       if !current_fun = "" then prefix else prefix^(!current_fun)^"."
@@ -105,9 +104,7 @@ let process globals =
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = 
-    Hashtbl.replace symbtbl x (C.Global name, t) 
-  in
+  let update_global x name t = Hashtbl.replace symbtbl x (C.Global name, t) in
 
   let add_formals (args_t, ret_t) =
     add_local (ret_t, ret_name);
@@ -162,8 +159,7 @@ let process globals =
       Hashtbl.replace symbtbl f (symb, C.Fun ft)
   in
 
-  let update_funsymb f static ft loc =
-    let (fname, _, _) = loc in
+  let update_funsymb f static ft =
     let f' = if static then "!"^fname^"."^f else f in begin
 	try update_funtyp f ft
 	with Not_found -> 
@@ -172,12 +168,12 @@ let process globals =
       f'
   in
 
-  let translate_proto_ftyp f static (args, ret) loc =
+  let translate_proto_ftyp f static (args, ret) =
     if args = None then begin
       Npkcontext.report_warning "Csyntax2TypedC.check_proto_ftyp" 
 	("incomplete prototype for function "^f)
     end;
-    let _ = update_funsymb f static (args, ret) loc in
+    let _ = update_funsymb f static (args, ret) in
       ()
   in
 
@@ -431,14 +427,14 @@ let process globals =
     let ret_t = translate_typ ret_t in
       (args_t, ret_t)
 
-  and translate_fdecl loc x ft is_static init = 
+  and translate_fdecl x ft is_static init = 
     match init with
 	Some _ -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
       | _ -> 
 	  let ft = translate_ftyp ft in
-	    translate_proto_ftyp x is_static ft loc
+	    translate_proto_ftyp x is_static ft
 
   and translate_vdecl is_global loc x (t, is_static, is_extern, init) =
     Npkcontext.set_loc loc;
@@ -452,7 +448,7 @@ let process globals =
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
-	  let name = if is_static then get_static_name x loc else x in
+	  let name = if is_static then get_static_name x else x in
 	  let t = complete_typ_with_init t init in
 	    if is_global then update_global x name t
 	    else if is_static || is_extern
@@ -561,7 +557,7 @@ let process globals =
    global declarations!! *)
       | (LocalDecl (x, VDecl (Fun ft, is_static, _, init)), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  translate_fdecl loc x ft is_static init;
+	  translate_fdecl x ft is_static init;
 	  Npkcontext.report_accept_warning "Firstpass.translate"
 	    "function declaration within block" Npkcontext.DirtySyntax;
 	  let (tl, e) = translate_blk_exp tl in
@@ -670,7 +666,7 @@ let process globals =
 	    in
 	    let ft = (Some args_t, ret_t) in
 	    let ft = translate_ftyp ft in
-	    let f' = update_funsymb f static ft loc in
+	    let f' = update_funsymb f static ft in
 	      fundecls := (f, f', ft, static, body, loc)::(!fundecls)
 		
 	| GlbDecl (x, CDecl d) -> translate_cdecl x d
@@ -678,7 +674,7 @@ let process globals =
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 
 	| GlbDecl (x, VDecl (Fun ft, is_static, _, init)) -> 
-	    translate_fdecl loc x ft is_static init
+	    translate_fdecl x ft is_static init
 
 	| GlbDecl (x, VDecl d) -> 
 	    glbdecls := (x, (translate_vdecl true loc x d, loc))::(!glbdecls)
