@@ -54,9 +54,13 @@ let to_string tr =
 let identity = []
 
 let assoc x y s =
-  (* do not associate the same variable twice *) 
-  if (List.mem_assoc x s) then raise Exceptions.Unknown;
-  (x, y)::s
+  try
+    let prev_y = List.assoc x s in
+      (* do not associate the same variable to different values twice *) 
+      if prev_y <> y then raise Exceptions.Unknown;
+      s
+  with Not_found -> (x, y)::s
+  
 
 let apply tr x = try List.assoc x tr with Not_found -> x
 
