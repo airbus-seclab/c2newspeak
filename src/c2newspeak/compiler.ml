@@ -88,7 +88,7 @@ let compile fname =
 	Npkcontext.print_debug "Typing...";
 	let prog = Csyntax2TypedC.process fname prog in
 	  Npkcontext.print_debug "Running first pass...";
-	  let prog = Firstpass.translate prog in
+	  let prog = Firstpass.translate fname prog in
 	    Npkcontext.forget_loc ();
 	    Npkcontext.print_debug "First pass done.";
 	    Npkcontext.print_size (Cir.size_of prog);

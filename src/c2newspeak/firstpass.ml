@@ -74,7 +74,7 @@ let seq_of_string str =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate (globals, fundecls, spec) =
+let translate fname (globals, fundecls, spec) =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in
@@ -177,6 +177,7 @@ let translate (globals, fundecls, spec) =
 	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
 	      t
+
 	| (Sequence ((None, v)::[]), Comp { contents = Some (r, false) }) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = 
@@ -313,7 +314,9 @@ let translate (globals, fundecls, spec) =
 
 (* TODO: maybe should put this code in csyntax2CoreC??? *)
   and add_glb_cstr str =
-    let fname = Npkcontext.get_fname () in
+(* TODO: it's strange to need fname here! 
+   should maybe be factored with code in csyntax2TypedC
+*)
     let name = "!"^fname^".const_str_"^(String.escaped str) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
