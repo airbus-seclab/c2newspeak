@@ -30,7 +30,11 @@ open Newspeak
 let list_insert x l =
   let rec insert l =
     match l with
-	y::tl when Memloc.compare x y > 0 -> y::(insert tl)
+	y::tl -> 
+	  let c = Memloc.compare x y in
+	    if c = 0 then l
+	    else if c < 0 then x::l
+	    else y::(insert tl)
       | _ -> x::l
   in
     insert l
