@@ -55,6 +55,7 @@ and lval = Global of vid
 and exp = 
     Const of cst
   | Lval of lval
+  | Random of (integer * integer)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
 
@@ -108,6 +109,7 @@ let rec string_of_exp e =
   match e with
       Const c -> string_of_cst c
     | Lval lv -> string_of_lval lv
+    | Random (l, u) -> "["^Int32.to_string l^", "^Int32.to_string u^"]"
     | UnOp (op, e) -> string_of_unop op^" "^string_of_exp e
     | BinOp (op, e1, e2) -> 
 	"("^string_of_exp e1^" "^string_of_binop op^" "^string_of_exp e2^")"

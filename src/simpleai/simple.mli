@@ -59,6 +59,7 @@ and lval = Global of vid                (** global variable *)
 and exp =
     Const of cst                        (** integer constant *)
   | Lval of lval                        (** left value *)
+  | Random of (integer * integer)       (** random value *)
   | UnOp of (unop * exp)                (** unary operation *)
   | BinOp of (binop * exp * exp)        (** binary operation *)
 

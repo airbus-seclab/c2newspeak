@@ -33,6 +33,8 @@ let universe = Top
 
 let singleton i = Val i
 
+let of_bounds (l, u) =  if Int32.compare l u = 0 then Val l else Top
+
 let contains x y =
   match (x, y) with
       (Top, _) -> true

@@ -38,6 +38,7 @@ sig
 
   val universe: t
   val singleton: Int32.t -> t
+  val of_bounds: (Int32.t * Int32.t) -> t
   val join: t -> t -> t
   val contains: t -> t -> bool
   val implies: (t * Simple.cmp * Int32.t) -> bool
@@ -108,6 +109,7 @@ struct
     match e with
 	Const CInt i -> Val.singleton i
       | Lval Global x -> read s x
+      | Random b -> Val.of_bounds b
       | UnOp (Not, e) -> Val.neg (eval_exp s e)
       | BinOp (op, e1, e2) -> 
 	  let v1 = eval_exp s e1 in

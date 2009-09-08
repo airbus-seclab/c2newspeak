@@ -34,6 +34,8 @@ let universe =
 
 let singleton i = (i, i)
 
+let of_bounds x = x
+
 let contains (l1, u1) (l2, u2) = 
   Int32.compare l1 l2 <= 0 && Int32.compare u1 u2 >= 0
 

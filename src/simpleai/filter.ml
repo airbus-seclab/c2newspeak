@@ -161,6 +161,11 @@ and process_stmtkind x =
 	let body = process_blk body in
 	  S.While (e, body)
     | UserSpec (IdentToken "assert"::x) -> S.Assert (process_assertion x)
+    | UserSpec (LvalToken (lv, t)::IdentToken "between"
+		  ::CstToken (CInt l)::IdentToken "and"::CstToken (CInt u)::
+		  []) -> 
+	process_scalar_t t;
+	S.Set (process_lval lv, S.Random (process_nat l, process_nat u))
     | _ -> 
 	invalid_arg ("Filter.process_stmtkind: "
 		     ^"unexpected statement, case not handled yet")
