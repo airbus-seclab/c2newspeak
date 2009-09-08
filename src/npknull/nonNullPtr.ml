@@ -120,6 +120,22 @@ let remove_memloc = Map.remove
 (* most probably incorrect, unsound, such a primitive shouldn't exist! *)
 let forget_memloc = Map.remove
 
+let forget_buffer ((m, o), sz) s =
+  try
+    let data = Map.find m s in
+(* TODO: probably have off by ones!! *)
+    let rec forget l = 
+      match l with
+(* TODO: this constant not good *)
+	  offset::tl when offset + 32 <= o -> offset::(forget tl)
+	| offset::_ when o + sz <= offset -> l
+	| _::tl -> forget tl
+	| [] -> []
+    in
+    let data = forget data in
+      if data <> [] then Map.add m data s else Map.remove m s
+  with Not_found -> s
+
 let split memlocs s = 
   let unreach = ref s in
   let reach = ref Map.empty in

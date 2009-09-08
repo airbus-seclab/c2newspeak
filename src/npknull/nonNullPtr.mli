@@ -40,6 +40,8 @@ val remove_memloc: Memloc.t -> t -> t
 (* TODO: remove this primitive?? at least on the store *)
 val forget_memloc: Memloc.t -> t -> t
 
+val forget_buffer: (Dom.addr * int) -> t -> t
+
 val addr_is_valid: t -> Dom.addr -> bool
 
 val to_string: t -> string

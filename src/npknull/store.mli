@@ -31,7 +31,7 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val assign: Dom.addr -> Dom.exp -> t -> t
+val assign: (Dom.addr * Dom.exp * int) -> t -> t
 
 val guard: Dom.addr -> t -> t
 

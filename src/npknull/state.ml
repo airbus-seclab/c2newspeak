@@ -90,7 +90,8 @@ let rec lval_to_abaddr env s lv =
 
 and translate_exp env s e =
   match e with
-      AddrOf (lv, _) -> Dom.Abaddr (lval_to_abaddr env s lv)
+      Const _ -> Dom.Cst
+    | AddrOf (lv, _) -> Dom.Abaddr (lval_to_abaddr env s lv)
     | AddrOfFun (f, _) -> Dom.AddrOfFun f
 (* TODO: is it sound not to consider type here?? *)
     | Lval (lv, _) -> 
@@ -148,7 +149,7 @@ let abaddr_to_memloc (m, _) = m
 *)
 (* TODO: most probably a bug because the type of the assignment 
    is not considered *)
-let assign (lv, e, _) env s =
+let assign (lv, e, t) env s =
   match s with
       None -> None
     | Some s -> 
@@ -157,7 +158,9 @@ let assign (lv, e, _) env s =
 	    try
 	      let a = abaddr_to_addr a in
 	      let e = translate_exp env s e in
-	      let s = Store.assign a e s in
+		(* TODO: this constant not nice!! *)
+	      let sz = Newspeak.size_of_scalar 32 t in
+	      let s = Store.assign (a, e, sz) s in
 		Some s
 	    with Exceptions.Unknown -> 
 	      let m = abaddr_to_memloc a in
@@ -180,9 +183,11 @@ let remove_local v s =
     | None -> None
 
 (* TODO: find a way to remove emptyset/None!!! *)
+(* TODO: this primitive is strange, to remove?? *)
 let set_pointsto m1 m2 s = 
   match s with
-      Some s -> Some (Store.assign m1 (Dom.Abaddr (m2, Some 0)) s)
+(* TODO: not good this constant!! *)
+      Some s -> Some (Store.assign (m1, (Dom.Abaddr (m2, Some 0)), 32) s)
     | None -> None
 
 let forget_lval lv env s =

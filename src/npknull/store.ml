@@ -39,12 +39,13 @@ let join (a1, a2, a3) (b1, b2, b3) =
 let contains (a1, a2, a3) (b1, b2, b3) = 
   P1.contains a1 b1 && P2.contains a2 b2 && P3.contains a3 b3
 
-let assign (m, o) e (s1, s2, s3) = 
+let assign ((m, o), e, sz) (s1, s2, s3) = 
   match e with
       Dom.Abaddr a -> 
 	(P1.assign (m, o) a s1, P2.assign (m, o) a s2, P3.forget_memloc m s3)
     | Dom.AddrOfFun f -> (s1, P2.forget_memloc m s2, P3.assign (m, o) f s3)
-    | Dom.Cst -> (s1, P2.forget_memloc m s2, P3.forget_memloc m s3)
+    | Dom.Cst -> 
+	(s1, P2.forget_buffer ((m, o), sz) s2, P3.forget_memloc m s3)
 
 let guard a (s1, s2, s3) = (P1.guard a s1, P2.guard a s2, s3)
 
