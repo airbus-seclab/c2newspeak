@@ -88,6 +88,33 @@ let process glb_tbl prog =
   let env = ref 0 in          (* number of local variables *)
   let lbl_tbl = ref [] in     (* table of states at each jump label *)
 
+  let string_of_fun_tbl () =
+    let stats = ref [] in
+    let count _ data =
+      let x = List.length data in
+      let c = 
+	try
+	  let c = List.assoc x !stats in
+	    stats := List.remove_assoc x !stats;
+	    c + 1
+	with Not_found -> 1
+      in
+	stats := (x, c)::!stats
+    in
+      Hashtbl.iter count fun_tbl;
+      stats := List.sort (fun (x, _) (y, _) -> compare x y) !stats;
+      let res = ref "Function distribution: " in
+      let string_of_elem (nb_infos, nb_funs) =
+	let nb_infos =
+	  if nb_infos = 1 then "a hoare triple"
+	  else string_of_int nb_infos^" hoare triples"
+	in
+	  res := (!res^"\nNumber of function with "
+		  ^nb_infos^": "^string_of_int nb_funs)
+      in
+	List.iter string_of_elem !stats;
+	!res
+  in
 
   let push lbl = lbl_tbl := (lbl, State.emptyset)::!lbl_tbl in
   let pop () = 
@@ -346,7 +373,7 @@ let process glb_tbl prog =
     in
     let s = build_main_info ft s in
       schedule "main";
-      Hashtbl.add fun_tbl "main" ((s, State.emptyset)::[]);
+      Hashtbl.replace fun_tbl "main" ((s, State.emptyset)::[]);
       
       (* fixpoint computation *)
       begin try
@@ -368,4 +395,5 @@ let process glb_tbl prog =
 	done
       with Exit -> ()
       end;
+      Context.print_verbose (string_of_fun_tbl ());
       (!live_funs, !warn_cnt)
