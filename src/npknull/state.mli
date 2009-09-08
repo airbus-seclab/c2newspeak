@@ -35,17 +35,11 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val addr_is_valid: t -> (Memloc.t * int) -> bool
-
 val set_pointsto: (Memloc.t * int) -> Memloc.t -> t -> t
 
 val to_string: t -> string
 
 val assign: (lval * exp * scalar_t) -> int -> t -> t
-
-val lval_to_abaddr: int -> t -> lval -> (Memloc.t * int option)
-
-val abaddr_to_addr: (Memloc.t * int option) -> (Memloc.t * int)
 
 val remove_local: int -> t -> t
 
@@ -70,3 +64,5 @@ val transport: Subst.t -> t -> t
 val glue: t -> t -> t
 
 val exp_to_fun: int -> t -> exp -> string list
+
+val exp_is_valid: int -> t -> exp -> bool

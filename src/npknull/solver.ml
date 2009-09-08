@@ -158,18 +158,23 @@ let process glb_tbl prog =
 	print_endline msg
       end
   in
-
+(*
   let exp_is_valid s x =
     try
+(* TODO: should do something like exp_to_ptr
+   then check_deref???
+*)
       match x with
 	  Lval (lv, Ptr) -> 
 	    let a = State.lval_to_abaddr !env s lv in
 	    let a = State.abaddr_to_addr a in
 	      State.addr_is_valid s a
-	| _ -> raise Exceptions.Unknown
+	| _ -> 
+	    print_endline (Newspeak.string_of_exp x);
+	    raise Exceptions.Unknown
     with Exceptions.Unknown -> false
   in
-
+*)
   let rec check_lval s x = 
     match x with
 	Global _ -> ()
@@ -177,7 +182,7 @@ let process glb_tbl prog =
       | Shift (lv, e) -> 
 	  check_lval s lv;
 	  check_exp s e
-      | Deref (e, _) -> if not (exp_is_valid s e) then warn_deref ()
+      | Deref (e, _) -> if not (State.exp_is_valid !env s e) then warn_deref ()
 
   and check_exp s x = 
     match x with

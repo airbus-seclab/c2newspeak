@@ -33,3 +33,11 @@ type exp =
     AddrOfFun of string
   | Abaddr of abaddr
   | Cst
+
+let string_of_abaddr (m, o) =
+  let o =
+    match o with
+	Some o -> string_of_int o
+      | None -> "?"
+  in
+    "("^Memloc.to_string m^", "^o^")"

@@ -62,12 +62,6 @@ let contains s1 s2 =
     | (None, _) -> false
     | (Some s1, Some s2) -> Store.contains s1 s2
 
-(* TODO: this is really awkward that this is needed!! *)
-let addr_is_valid s a = 
-  match s with
-      Some s -> Store.addr_is_valid s a
-    | None -> true
-
 let abaddr_to_addr (m, o) = 
   match o with
       Some o -> (m, o)
@@ -100,7 +94,6 @@ and translate_exp env s e =
     | AddrOfFun (f, _) -> Dom.AddrOfFun f
 (* TODO: is it sound not to consider type here?? *)
     | Lval (lv, _) -> 
-(* TODO: code looks similar to Deref *)
 	let a = lval_to_abaddr env s lv in
 	let a = abaddr_to_addr a in 
 	let a = 
@@ -115,6 +108,25 @@ and translate_exp env s e =
 	let (v, _) = deref_abaddr a in
 	  Dom.Abaddr (v, None)
     | _ -> raise Exceptions.Unknown
+
+let exp_to_ptr env s e =
+  let rec exp_to_ptr e =
+    match e with
+	Lval (lv, Ptr) -> lval_to_abaddr env s lv
+      | BinOp (PlusPI, e, _) -> exp_to_ptr e
+      | _ -> raise Exceptions.Unknown
+  in
+    exp_to_ptr e
+
+let exp_is_valid env s e =
+  match s with
+      None -> true
+    | Some s -> 
+	try
+	  let a = exp_to_ptr env s e in
+	  let a = abaddr_to_addr a in
+	    Store.addr_is_valid s a
+	with Exceptions.Unknown -> false
 
 let exp_to_fun env s e = 
 (* TODO: is it sound not to consider type here?? *)
@@ -199,11 +211,6 @@ let guard e env s =
 	  with Exceptions.Unknown -> s
 	in
 	  Some s
-
-let lval_to_abaddr env s lv =
-  match s with
-      Some s -> lval_to_abaddr env s lv
-    | None -> raise Exceptions.Unknown
 
 (* TODO: write an unsound example with write into a universe pointer!!! *)
 let build_transport s memlocs pre = 
