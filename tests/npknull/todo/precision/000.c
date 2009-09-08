@@ -23,11 +23,27 @@
   email: charles.hymans@penjili.org
 */
 
+typedef struct {
+  int *a;
+  char b[30];
+} T;
+
 void main() {
-  char t[10];
-  char *ptr;
+  T g;
+  int x;
+  int z;
+  char *dst;
   int i;
-  i = 0;
-  ptr = &t[0];
-  ptr[i] = 0;        // should not signal any null pointer deref here
+
+  // initialized here
+  g.a = &x;
+  
+  dst = &g.b[0];
+  
+  for (i = 0; i < 30; i++) {
+    *dst = 1;
+    dst++;
+  }
+
+  z = *(g.a);   // precision should not show any null pointer deref here
 }
