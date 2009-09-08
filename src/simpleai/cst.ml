@@ -73,6 +73,8 @@ let is_safe_add x y =
 	let z = Int32.add x y in
 	  (Int32.compare z y >= 0) && (Int32.compare z x >= 0)
     | _ -> false
+
+let is_safe_mul _ _ = false
 	
 let implies _ = false
 

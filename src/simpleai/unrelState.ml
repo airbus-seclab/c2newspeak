@@ -45,6 +45,7 @@ sig
   val neg: t -> t
   val add: t -> t -> t
   val is_safe_add: t -> t -> bool
+  val is_safe_mul: t -> t -> bool
   val gt: t -> t -> t
   val guard: bop -> t -> t -> t
   val to_string: t -> string
@@ -167,6 +168,7 @@ struct
 	  let v2 = eval_exp s e2 in
 	    match op with
 		PlusI -> Val.is_safe_add v1 v2
+	      | MultI -> Val.is_safe_mul v1 v2
 	      | Eq|Gt -> true
 	      | _ -> false
 	      

@@ -23,8 +23,11 @@
   email: charles.hymans@penjili.org
 */
 
-int a;
+int a, b, c;
 
 void main() {
   /*!npk a between 10 and 100*/
+  /*!npk b between 0 and 47*/
+
+  c = a * b; // should not show any warning, needs to improve precision
 }

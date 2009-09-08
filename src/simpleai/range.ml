@@ -59,6 +59,9 @@ let is_safe_add (_, u1) (_, u2) =
   let u = Int32.add u1 u2 in
     (Int32.compare u u1 >= 0) && (Int32.compare u u2 >= 0)
 
+let is_safe_mul _ _ = false
+  
+
 let gt _ _ = (Int32.zero, Int32.one)
 
 let normalize (l, u) =
