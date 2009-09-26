@@ -23,16 +23,23 @@
   email: charles.hymans@penjili.org
 */
 
-extern void *calloc (unsigned int, unsigned int);
+typedef struct {
+  int *a;
+  int b;
+} T;
+
+int x;
+T g;
 
 void main() {
- int *x;
- int *ptr;
+  int *ptr;
 
- x = calloc(1, sizeof(int));
+  // initialized here
+  g.a = &x;
 
- *x = 1;   // precision/model: should not display any null pointer deref
+  ptr = &g.b;
+  // should know the offset on which ptr is pointing to
+  *ptr = 1;
 
- ptr = 0;
- *ptr = 1; // soundness: should display potential null pointer deref
+  *(g.a) = 1;   // precision should not show any null pointer deref here
 }

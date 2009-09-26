@@ -25,7 +25,7 @@
 
 open Newspeak
 
-module P1 = FieldInsensitivePtr
+module P1 = FieldInsensitivePtrOffs
 module P2 = NonNullPtr
 module P3 = FPtrStore
 
