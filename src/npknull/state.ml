@@ -164,7 +164,8 @@ let assign (lv, e, t) env s =
 	      try
 		let (a, n) = Abaddr.to_buffer a in
 (* TODO: not good this constant, remove!! *)
-		let n = if n > max_int - 32 then max_int else n + 32 in
+		let sz = Newspeak.size_of_scalar 32 t in
+		let n = if n > max_int - sz then max_int else n + sz in
 		  Some (Store.forget_buffer (a, n) s)
 	      with Exceptions.Unknown ->
 		let m = Abaddr.to_memloc a in

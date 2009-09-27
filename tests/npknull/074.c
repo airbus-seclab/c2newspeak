@@ -24,26 +24,20 @@
 */
 
 typedef struct {
-  int *a;
   char b[30];
+  int *a;
 } T;
 
-void main() {
-  T g;
-  int x;
-  int z;
-  char *dst;
-  int i;
+T g;
+int x;
+char *ptr;
 
+void main() {
   // initialized here
   g.a = &x;
   
-  dst = &g.b[0];
-  
-  for (i = 0; i < 30; i++) {
-    *dst = 1;
-    dst++;
-  }
+  ptr = &g.b[0];
+  *ptr = 0;
 
-  z = *(g.a);   // precision should not show any null pointer deref here
+  *(g.a) = 1;   // precision should not show any null pointer deref here
 }

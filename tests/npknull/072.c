@@ -33,8 +33,6 @@ T g;
 char *ptr;
 
 void main() {
-  int i;
-  
   // initialized here
   g.a = &x;
   
