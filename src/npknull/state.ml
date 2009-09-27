@@ -102,12 +102,12 @@ and translate_exp env s e =
     | UnOp ((PtrToInt _| IntToPtr _), e) -> translate_exp env s e
     | BinOp (PlusPI, e, _) -> 
 	let a = translate_exp env s e in
-	let v = 
+	let p = 
 	  match a with
-	      Dom.Ptr (v, _) -> v
+	      Dom.Ptr p -> p
 	    | _ -> raise Exceptions.Unknown
 	in
-	  Dom.Ptr (v, None)
+	  Dom.Ptr p
     | _ -> raise Exceptions.Unknown
 
 let exp_to_ptr env s e =

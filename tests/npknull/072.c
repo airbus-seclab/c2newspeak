@@ -1,7 +1,7 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,21 +21,28 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-type offset = int
+typedef struct {
+  int *a;
+  char b[30];
+} T;
 
-type size = int
+int x;
+T g;
+char *ptr;
 
-type addr = Memloc.t * offset
-
-type buffer = addr * size
-
-(* represents the pointer <(loc, offset): size, delta>, 
-   where delta is unknown but between 0 and size-1 *)
-type abptr = Memloc.t * (offset * size) option
-
-type exp =
-    AddrOfFun of string
-  | Ptr of abptr
-  | Cst                           (* value that is either nil or invalid *)
+void main() {
+  int i;
+  
+  // initialized here
+  g.a = &x;
+  
+  ptr = &g.b[0];
+  
+  ptr++;
+  // should know the zone on which ptr may point
+  *ptr = 1;
+  
+  *(g.a) = 1;   // precision should not show any null pointer deref here
+}
