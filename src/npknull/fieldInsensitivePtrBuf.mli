@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+type num_pred = (int * int) option
+
 type t
 
 val universe: t
@@ -31,27 +33,30 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-(* [assign a s] writes a non-null pointer at address [a] *)
-val assign: Dom.addr -> t -> t
+(* [assign x (y, o, n) s] may assign of the value [(y, )] to any
+   position of variable [x].
+   The value [(y, o)] represents the pointers [<(y, o): n, delta>] where
+   [o], [n] and [delta] verify predicate [num_pred]
+*)
+val assign: Dom.addr -> Memloc.t * num_pred -> t -> t
 
 val guard: Dom.addr -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
-(* TODO: remove this primitive?? at least on the store *)
-val forget_memloc: Memloc.t -> t -> t
-
-val forget_buffer: (Dom.addr * int) -> t -> t
-
 val addr_is_valid: t -> Dom.addr -> bool
 
 val to_string: t -> string
 
-val split: Memloc.t list -> t -> (t * t)
+val split: Memloc.t list -> t -> (t * t * Memloc.t list)
+
+val build_transport: t -> Memloc.t list -> t -> Subst.t
 
 val transport: Subst.t -> t -> t
 
 val glue: t -> t -> t
 
-(* TODO: this primitive is not well chosen, think about it *)
-val read_addr: t -> Dom.addr -> (Memloc.t * int option)
+(* TODO: this primitive is not well chosen, think about it
+   None is nil or uninitialized
+ *)
+val read_addr: t -> Dom.addr -> Dom.abptr option

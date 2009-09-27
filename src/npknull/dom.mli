@@ -25,13 +25,15 @@
 
 type offset = int
 
+type size = int
+
 type addr = Memloc.t * offset
 
-type abaddr = Memloc.t * offset option
+type buffer = addr * size
+
+type abptr = Memloc.t * (offset * size) option
 
 type exp =
     AddrOfFun of string
-  | Abaddr of abaddr
+  | Ptr of abptr
   | Cst                           (* value that is either nil or invalid *)
-
-val string_of_abaddr: abaddr -> string

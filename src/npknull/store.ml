@@ -25,7 +25,7 @@
 
 open Newspeak
 
-module P1 = FieldInsensitivePtrOffs
+module P1 = FieldInsensitivePtrBuf
 module P2 = NonNullPtr
 module P3 = FPtrStore
 
@@ -41,8 +41,8 @@ let contains (a1, a2, a3) (b1, b2, b3) =
 
 let assign ((m, o), e, sz) (s1, s2, s3) = 
   match e with
-      Dom.Abaddr a -> 
-	(P1.assign (m, o) a s1, P2.assign (m, o) a s2, P3.forget_memloc m s3)
+      Dom.Ptr a -> 
+	(P1.assign (m, o) a s1, P2.assign (m, o) s2, P3.forget_memloc m s3)
     | Dom.AddrOfFun f -> (s1, P2.forget_memloc m s2, P3.assign (m, o) f s3)
     | Dom.Cst -> 
 	(s1, P2.forget_buffer ((m, o), sz) s2, P3.forget_memloc m s3)
@@ -54,6 +54,10 @@ let remove_memloc m (s1, s2, s3) =
 
 let forget_memloc m (s1, s2, s3) = 
   (s1, P2.forget_memloc m s2, P3.forget_memloc m s3)
+
+let forget_buffer buf (s1, s2, s3) =
+  let ((m, _), _) = buf in
+    (s1, P2.forget_buffer buf s2, P3.forget_memloc m s3)
 
 (* TODO: could be optimized *)
 let addr_is_valid (s1, s2, _) a =

@@ -23,18 +23,48 @@
   email: charles.hymans@penjili.org
 *)
 
-type offset = int
+(* offset, size of zone *)
+type range_offset = int * int
 
-type size = int
+let offset_zero = (0, 1)
 
-type addr = Memloc.t * offset
+let offset_universe = (0, max_int)
 
-type buffer = addr * size
+let offset_shift n (o, sz) = 
+  let o = o + n in
+  let o = if o < 0 then max_int else o in
+    (o, sz)
 
-(* None is top *)
-type abptr = Memloc.t * (offset * size) option
+let offset_to_int (o, n) = 
+  if n <> 1 then raise Exceptions.Unknown;
+  o
 
-type exp =
-    AddrOfFun of string
-  | Ptr of abptr
-  | Cst
+let offset_to_zone x = x
+
+let offset_to_string (o, sz) = 
+  "["^string_of_int o^": "^string_of_int sz^"]"
+
+type t = Memloc.t * range_offset
+    
+let singleton x = (x, offset_zero)
+
+let of_buffer ((x, o), n) = (x, (o, n))
+
+let shift n (x, o) = (x, offset_shift n o)
+
+let forget_offset (x, _) = (x, offset_universe)
+
+let to_memloc (x, _) = x
+
+let to_addr (x, o) = (x, offset_to_int o)
+
+let to_buffer (x, o) = 
+  let (o, n) = offset_to_zone o in
+    ((x, o), n)
+      
+let to_exp n (x, (o, sz)) =
+  let sz = sz + n - 1 in
+  let sz = if sz < 0 then max_int else sz in
+    Dom.Ptr (x, Some (o, sz))
+
+let to_string (x, o) = "("^Memloc.to_string x^", "^offset_to_string o^")"

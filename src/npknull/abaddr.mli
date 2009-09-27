@@ -23,18 +23,26 @@
   email: charles.hymans@penjili.org
 *)
 
-type offset = int
+type t
 
-type size = int
+val singleton: Memloc.t -> t
 
-type addr = Memloc.t * offset
+val of_buffer: Dom.buffer -> t
 
-type buffer = addr * size
+val shift: int -> t -> t
 
-(* None is top *)
-type abptr = Memloc.t * (offset * size) option
+val forget_offset: t -> t
 
-type exp =
-    AddrOfFun of string
-  | Ptr of abptr
-  | Cst
+(* raise Exceptions.Unknown if not singleton *)
+val to_addr: t -> Dom.addr
+
+val to_buffer: t -> Dom.buffer
+
+val to_memloc: t -> Memloc.t
+
+(* TODO: to have this primitive is a bit strange 
+   should rather have a Ptr.addr_of!!!
+*)
+val to_exp: int -> t -> Dom.exp
+
+val to_string: t -> string

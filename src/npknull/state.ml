@@ -62,52 +62,52 @@ let contains s1 s2 =
     | (None, _) -> false
     | (Some s1, Some s2) -> Store.contains s1 s2
 
-let abaddr_to_addr (m, o) = 
-  match o with
-      Some o -> (m, o)
-    | None -> raise Exceptions.Unknown
-
-let deref_abaddr a =
+let deref_abaddr a n =
   match a with
-      Dom.Abaddr a -> a
+      Dom.Ptr (x, Some (o, sz)) -> ((x, o), sz-n)
+    | Dom.Ptr (x, None) -> ((x, 0), max_int)
     | _ -> raise Exceptions.Emptyset
 
 let rec lval_to_abaddr env s lv =
   match lv with
-      Global x -> (Memloc.of_global x, Some 0)
-    | Local x -> (Memloc.of_local (env - x), Some 0)
-    | Shift (lv, i) -> 
-	let (m, o) = lval_to_abaddr env s lv in
-	let o = 
-	  match (o, i) with
-	      (Some o, Const CInt n) -> Some (o + (Nat.to_int n))
-	    | _ -> None
-	in
-	  (m, o)
-    | Deref (e, _) -> 
+      Global x -> Abaddr.singleton (Memloc.of_global x)
+    | Local x -> Abaddr.singleton (Memloc.of_local (env - x))
+    | Shift (lv, Const CInt n) -> 
+	let a = lval_to_abaddr env s lv in
+	  Abaddr.shift (Nat.to_int n) a
+    | Shift (lv, _) -> Abaddr.forget_offset (lval_to_abaddr env s lv)
+    | Deref (e, n) -> 
 	let a = translate_exp env s e in
-	  deref_abaddr a
+	let buf = deref_abaddr a n in
+	  Abaddr.of_buffer buf
 
 and translate_exp env s e =
   match e with
       Const _ -> Dom.Cst
-    | AddrOf (lv, _) -> Dom.Abaddr (lval_to_abaddr env s lv)
+    | AddrOf (lv, n) -> 
+	let a = lval_to_abaddr env s lv in
+	  Abaddr.to_exp n a
     | AddrOfFun (f, _) -> Dom.AddrOfFun f
 (* TODO: is it sound not to consider type here?? *)
     | Lval (lv, _) -> 
 	let a = lval_to_abaddr env s lv in
-	let a = abaddr_to_addr a in 
+	let a = Abaddr.to_addr a in 
 	let a = 
+(* TODO: read_addr should directly return a Dom.exp!!! *)
 	  match Store.read_addr s a with
-	      Some a -> Dom.Abaddr a
+	      Some p -> Dom.Ptr p
 	    | None -> Dom.Cst
 	in
 	  a
     | UnOp ((PtrToInt _| IntToPtr _), e) -> translate_exp env s e
     | BinOp (PlusPI, e, _) -> 
 	let a = translate_exp env s e in
-	let (v, _) = deref_abaddr a in
-	  Dom.Abaddr (v, None)
+	let v = 
+	  match a with
+	      Dom.Ptr (v, _) -> v
+	    | _ -> raise Exceptions.Unknown
+	in
+	  Dom.Ptr (v, None)
     | _ -> raise Exceptions.Unknown
 
 let exp_to_ptr env s e =
@@ -125,7 +125,7 @@ let exp_is_valid env s e =
     | Some s -> 
 	try
 	  let a = exp_to_ptr env s e in
-	  let a = abaddr_to_addr a in
+	  let a = Abaddr.to_addr a in
 	    Store.addr_is_valid s a
 	with Exceptions.Unknown -> false
 
@@ -135,13 +135,11 @@ let exp_to_fun env s e =
       Lval (lv, _) -> begin
 	try
 	  let a = lval_to_abaddr env s lv in
-	    let a = abaddr_to_addr a in 
+	    let a = Abaddr.to_addr a in 
 	      Store.read_fun s a
 	with Exceptions.Emptyset -> []
 	end
     | _ -> raise Exceptions.Unknown
-
-let abaddr_to_memloc (m, _) = m
 
 (* TODO: there is most probably a bug if there is a value 
    at address (v, 0) and a value is copied at address (v, 1)
@@ -156,15 +154,21 @@ let assign (lv, e, t) env s =
 	try
 	  let a = lval_to_abaddr env s lv in
 	    try
-	      let a = abaddr_to_addr a in
+	      let a = Abaddr.to_addr a in
 	      let e = translate_exp env s e in
 		(* TODO: this constant not nice!! *)
 	      let sz = Newspeak.size_of_scalar 32 t in
 	      let s = Store.assign (a, e, sz) s in
 		Some s
 	    with Exceptions.Unknown -> 
-	      let m = abaddr_to_memloc a in
-		Some (Store.forget_memloc m s)
+	      try
+		let (a, n) = Abaddr.to_buffer a in
+(* TODO: not good this constant, remove!! *)
+		let n = if n > max_int - 32 then max_int else n + 32 in
+		  Some (Store.forget_buffer (a, n) s)
+	      with Exceptions.Unknown ->
+		let m = Abaddr.to_memloc a in
+		  Some (Store.forget_memloc m s)
 	with
 	    Exceptions.Emptyset -> emptyset
 	  | Exceptions.Unknown -> universe (* TODO: should remove this case altogether, source of unsoundness!! *)
@@ -187,7 +191,7 @@ let remove_local v s =
 let set_pointsto m1 m2 s = 
   match s with
 (* TODO: not good this constant!! *)
-      Some s -> Some (Store.assign (m1, (Dom.Abaddr (m2, Some 0)), 32) s)
+      Some s -> Some (Store.assign (m1, (Dom.Ptr (m2, None)), 32) s)
     | None -> None
 
 let forget_lval lv env s =
@@ -196,7 +200,7 @@ let forget_lval lv env s =
     | Some s -> 
 	try
 	  let a = lval_to_abaddr env s lv in
-	  let m = abaddr_to_memloc a in
+	  let m = Abaddr.to_memloc a in
 	  let s = Store.forget_memloc m s in
 	    Some s
 	with Exceptions.Unknown -> universe
@@ -210,7 +214,7 @@ let guard e env s =
 	    match e with
 		UnOp (Not, BinOp (Eq Ptr, Lval (lv, Ptr), Const Nil)) ->
 		  let a = lval_to_abaddr env s lv in
-		  let a = abaddr_to_addr a in
+		  let a = Abaddr.to_addr a in
 		    Store.guard a s
 	      | _ -> s
 	  with Exceptions.Unknown -> s

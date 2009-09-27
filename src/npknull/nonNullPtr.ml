@@ -105,7 +105,7 @@ let write_nonnull (m, o) s =
   let d = list_insert o d in
     Map.add m d s
   
-let assign a _ s = write_nonnull a s
+let assign a s = write_nonnull a s
 
 let addr_is_valid s (m, o) = 
   try 

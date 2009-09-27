@@ -38,7 +38,8 @@ void main() {
   g.a = &x;
 
   ptr = &g.b;
-  // should know the offset on which ptr is pointing to
+  // should know that the offset on which ptr is pointing to is disjoint from 
+  // field a
   *ptr = 1;
 
   *(g.a) = 1;   // precision should not show any null pointer deref here

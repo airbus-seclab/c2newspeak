@@ -37,12 +37,6 @@ val guard: Dom.addr -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
-(* TODO: write non-regression test that makes soundness bug because of this!!!
-   and remove this!!!
-   (in other words, pb with deref of top!!)
-*)
-val forget_memloc: Memloc.t -> t -> t
-
 val addr_is_valid: t -> Dom.addr -> bool
 
 val to_string: t -> string
@@ -57,7 +51,20 @@ val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it
    None is nil of uninitialized *)
-val read_addr: t -> Dom.addr -> Dom.abaddr option
+val read_addr: t -> Dom.addr -> Dom.abptr option
 
 (* TODO: this primitive name is not well chosen, think about it *)
 val read_fun: t -> Dom.addr -> string list
+
+(* TODO: write non-regression test that makes soundness bug because of this!!!
+   and remove this!!!
+   (in other words, pb with deref of top!!)
+*)
+val forget_memloc: Memloc.t -> t -> t
+
+(* TODO: write non-regression test that makes soundness bug because of this!!!
+   and remove this!!!
+   (in other words, pb with deref of top!!)
+*)
+val forget_buffer: Dom.buffer -> t -> t
+
