@@ -213,7 +213,8 @@ let guard e env s =
 	let s = 
 	  try
 	    match e with
-		UnOp (Not, BinOp (Eq Ptr, Lval (lv, Ptr), Const Nil)) ->
+		UnOp (Not, BinOp (Eq Ptr, Lval (lv, Ptr), Const Nil))
+	      | UnOp (Not, BinOp (Eq Ptr, Const Nil, Lval (lv, Ptr))) ->
 		  let a = lval_to_abaddr env s lv in
 		  let a = Abaddr.to_addr a in
 		    Store.guard a s
