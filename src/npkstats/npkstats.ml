@@ -297,14 +297,14 @@ object (this)
 	let t = string_of_typ typ in
 	let n = string_of_int nb in
 	  (t^": "^n^"\n"),
-	("<global type=\""^t^"\" nb=\""^n^"\"></global>")
+	("<global type=\""^t^"\" nb=\""^n^"\"></global>\n")
       in
       let array_to_string ((typ, sz), nb) =
 	let t = string_of_typ typ in
 	let n1 = string_of_int sz in
 	let n2 = string_of_int nb in
 	  (t^", "^n1^": "^n2^"\n"),
-	  ("<array type=\""^t^" " ^n1^"\" nb=\""^n2^"\"></array>")
+	  ("<array type=\""^t^" " ^n1^"\" nb=\""^n2^"\"></array>\n")
       in
       let add_array l typ nb =
 	match typ with
@@ -353,7 +353,7 @@ object (this)
 	    Buffer.add_string res (s^n^"\n");
 	    if b then begin
 	      output_string cout xml;
-	      output_string cout ("<void class=\""^s^"\" val=\""^n^"\"></void>")
+	      output_string cout ("<void class=\""^s^"\" val=\""^n^"\"></void>\n")
 	    end
 	end;
       let out, xml = string_of_counters counters b in
