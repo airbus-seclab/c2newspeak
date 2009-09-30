@@ -35,4 +35,9 @@ let process f env s =
 	  State.set_pointsto (Memloc.of_local (env-2), 0) (Memloc.gen ()) s 
 	in
 	  State.join s s_alloc
+    | "malloc" ->
+	let s_alloc = 
+	  State.set_pointsto (Memloc.of_local (env-1), 0) (Memloc.gen ()) s 
+	in
+	  State.join s s_alloc
     | _ -> raise Not_found
