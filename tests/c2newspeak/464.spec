@@ -4,7 +4,7 @@ Newspeak output
 464.c
 void main(void) {
   (464.c:32#7)^fptr x;
-  (464.c:33#2)^0- =(fptr) (ptr) 1;
+  (464.c:33#2)^0- =(fptr) (fptr <= int32) 1;
 }
 
 

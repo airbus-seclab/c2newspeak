@@ -429,7 +429,7 @@ let cast t e t' =
     | (Ptr, Int ((_, n) as k)) when (n = Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (PtrToInt k, e)
-    | (Int ((_, n) as k), (Ptr|FunPtr)) when (n = Config.size_of_ptr) -> 
+    | (Int ((_, n) as k), Ptr) when (n = Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (IntToPtr k, e)
     | (FunPtr, Ptr) ->
@@ -445,6 +445,9 @@ let cast t e t' =
 	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(string_of_cast t t'))
 	end;
+	UnOp (Cast (t, t'), e)
+    | (Int (_, n), FunPtr) when (n = Config.size_of_ptr) -> 
+	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
     | _ -> 
 	Npkcontext.report_error "Npkil.cast"

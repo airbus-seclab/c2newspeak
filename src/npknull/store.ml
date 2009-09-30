@@ -104,6 +104,7 @@ let exp_to_ptr env s e =
 	      | _ -> v2
 	  in
 	    v
+      | UnOp (Cast (Int _, FunPtr), e) -> exp_to_ptr e
       | _ -> raise Exceptions.Unknown
   in
     exp_to_ptr e
