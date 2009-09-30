@@ -38,7 +38,7 @@ val contains: t -> t -> bool
    The value [(y, o)] represents the pointers [<(y, o): n, delta>] where
    [o], [n] and [delta] verify predicate [num_pred]
 *)
-val assign: Dom.addr -> Memloc.t * num_pred -> t -> t
+val assign: Memloc.t -> Memloc.t * num_pred -> t -> t
 
 val guard: Dom.addr -> t -> t
 
@@ -57,6 +57,6 @@ val transport: Subst.t -> t -> t
 val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it
-   None is nil or uninitialized
+   raises Exceptions.Emptyset when nil or unitialized pointer
  *)
-val read_addr: t -> Dom.addr -> Dom.abptr option
+val read: t -> Memloc.t -> Dom.abptr

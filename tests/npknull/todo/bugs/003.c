@@ -23,16 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
+// should not loop forever
 extern void *calloc (unsigned int, unsigned int);
 
 void main() {
- int *x;
  int *ptr;
 
- x = calloc(1, sizeof(int));
-
- *x = 1;   // precision/model: should not display any null pointer deref
-
- ptr = 0;
- *ptr = 1; // soundness: should display potential null pointer deref
+ while (1) {
+   ptr = calloc(1, sizeof(int));
+ }
 }

@@ -30,4 +30,9 @@ let process f env s =
       "__errno_location" -> 
 	State.set_pointsto (Memloc.of_local env, 0) errno_loc s
     | "__assert_fail" -> State.emptyset
+    | "calloc" ->
+	let s_alloc = 
+	  State.set_pointsto (Memloc.of_local (env-2), 0) (Memloc.gen ()) s 
+	in
+	  State.join s s_alloc
     | _ -> raise Not_found

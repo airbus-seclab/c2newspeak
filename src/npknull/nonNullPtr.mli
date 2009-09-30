@@ -43,6 +43,7 @@ val forget_memloc: Memloc.t -> t -> t
 
 val forget_buffer: (Dom.addr * int) -> t -> t
 
+(* TODO: valid if non-null, maybe should call it may_be_null or is_not_null *)
 val addr_is_valid: t -> Dom.addr -> bool
 
 val to_string: t -> string

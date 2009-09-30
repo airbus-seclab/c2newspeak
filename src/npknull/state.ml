@@ -68,6 +68,8 @@ let deref_abaddr a n =
     | Dom.Ptr (x, None) -> ((x, 0), max_int)
     | _ -> raise Exceptions.Emptyset
 
+(* TODO:should remove lval_to_abaddr and translate_exp, since they are done in
+   store.ml, think about simplifying types of abaddr and dom too!! *)
 let rec lval_to_abaddr env s lv =
   match lv with
       Global x -> Abaddr.singleton (Memloc.of_global x)
@@ -93,10 +95,9 @@ and translate_exp env s e =
 	let a = lval_to_abaddr env s lv in
 	let a = Abaddr.to_addr a in 
 	let a = 
-(* TODO: read_addr should directly return a Dom.exp!!! *)
-	  match Store.read_addr s a with
-	      Some p -> Dom.Ptr p
-	    | None -> Dom.Cst
+	  (* TODO: read_addr should directly return a Dom.exp!!! *)
+	  try Dom.Ptr (Store.read_addr s a) 
+	  with Exceptions.Emptyset -> Dom.Cst
 	in
 	  a
     | UnOp ((PtrToInt _| IntToPtr _), e) -> translate_exp env s e
@@ -147,10 +148,13 @@ let exp_to_fun env s e =
 *)
 (* TODO: most probably a bug because the type of the assignment 
    is not considered *)
-let assign (lv, e, t) env s =
+let assign args env s =
   match s with
       None -> None
     | Some s -> 
+	try Some (Store.assign args env s)
+	with Exceptions.Emptyset -> emptyset
+(*
 	try
 	  let a = lval_to_abaddr env s lv in
 	    try
@@ -158,6 +162,7 @@ let assign (lv, e, t) env s =
 	      let e = translate_exp env s e in
 		(* TODO: this constant not nice!! *)
 	      let sz = Newspeak.size_of_scalar 32 t in
+		print_endline "here";
 	      let s = Store.assign (a, e, sz) s in
 		Some s
 	    with Exceptions.Unknown -> 
@@ -173,6 +178,7 @@ let assign (lv, e, t) env s =
 	with
 	    Exceptions.Emptyset -> emptyset
 	  | Exceptions.Unknown -> universe (* TODO: should remove this case altogether, source of unsoundness!! *)
+*)
 
 let to_string s =
   match s with
@@ -191,8 +197,7 @@ let remove_local v s =
 (* TODO: this primitive is strange, to remove?? *)
 let set_pointsto m1 m2 s = 
   match s with
-(* TODO: not good this constant!! *)
-      Some s -> Some (Store.assign (m1, (Dom.Ptr (m2, None)), 32) s)
+      Some s -> Some (Store.set_pointsto m1 m2 s)
     | None -> None
 
 let forget_lval lv env s =

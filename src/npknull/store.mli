@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+open Newspeak
+
 type t
 
 val universe: t
@@ -31,7 +33,8 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val assign: (Dom.addr * Dom.exp * int) -> t -> t
+(* TODO: the int is the environment, maybe should remove it *)
+val assign: (lval * exp * scalar_t) -> int -> t -> t
 
 val guard: Dom.addr -> t -> t
 
@@ -50,8 +53,8 @@ val split: Memloc.t list -> t -> (t * t)
 val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it
-   None is nil of uninitialized *)
-val read_addr: t -> Dom.addr -> Dom.abptr option
+   raises Exceptions.Emptyset when is nil of uninitialized *)
+val read_addr: t -> Dom.addr -> Dom.abptr
 
 (* TODO: this primitive name is not well chosen, think about it *)
 val read_fun: t -> Dom.addr -> string list
@@ -68,3 +71,5 @@ val forget_memloc: Memloc.t -> t -> t
 *)
 val forget_buffer: Dom.buffer -> t -> t
 
+(* TODO: not good this primitive, think about removing it!! *)
+val set_pointsto: Dom.addr -> Memloc.t -> t -> t

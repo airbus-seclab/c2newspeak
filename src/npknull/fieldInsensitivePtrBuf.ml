@@ -122,14 +122,14 @@ let contains s1 s2 =
       true
     with Exit -> false
 
-let read_addr s (m, _) =
+let read s m =
   let x = try Map.find m s with Not_found -> [] in
     match x with
-	(x, p)::[] -> Some (x, p)
-      | [] -> None
+	(x, p)::[] -> (x, p)
+      | [] -> raise Exceptions.Emptyset
       | _ -> raise Exceptions.Unknown
 
-let assign (m, _) v s =
+let assign m v s =
 (* TODO: could be optimized *)
   let d = try Map.find m s with Not_found -> [] in
   let d = insert_info v d in
