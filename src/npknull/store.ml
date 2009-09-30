@@ -94,7 +94,7 @@ let exp_to_ptr env s e =
 *)
       | UnOp (Coerce _, e) -> exp_to_ptr e
       | BinOp (PlusPI, e, _) -> exp_to_ptr e
-      | BinOp (PlusI, e1, e2) ->
+      | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
 	  let v1 = exp_to_ptr e1 in
 	  let v2 = exp_to_ptr e2 in
 	  let v =
