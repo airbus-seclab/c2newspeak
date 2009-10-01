@@ -209,7 +209,9 @@ let process glb_tbl prog =
       | Shift (lv, e) -> 
 	  check_lval s lv;
 	  check_exp s e
-      | Deref (e, _) -> if not (State.exp_is_valid !env s e) then warn_deref ()
+      | Deref (e, _) -> 
+	  check_exp s e;
+	  if not (State.exp_is_valid !env s e) then warn_deref ()
 
   and check_exp s x = 
     match x with

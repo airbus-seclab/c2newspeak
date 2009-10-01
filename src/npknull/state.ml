@@ -28,6 +28,8 @@
    unsound!!!
 *)
 
+(* TODO: think about cleaning up between state and store!!! 
+   (in particular remove translate_exp and lval_to_abaddr from this module) *)
 (* TODO: if there are may cells get rid of their cases in this module *)
 open Newspeak
 
@@ -128,7 +130,9 @@ let exp_is_valid env s e =
 	  let a = exp_to_ptr env s e in
 	  let a = Abaddr.to_addr a in
 	    Store.addr_is_valid s a
-	with Exceptions.Unknown -> false
+	with
+	    Exceptions.Emptyset -> true
+	  | Exceptions.Unknown -> false
 
 let exp_to_fun env s e = 
 (* TODO: is it sound not to consider type here?? *)

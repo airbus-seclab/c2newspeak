@@ -23,9 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
-// should not fail with Fatal error: exception Exceptions.Emptyset
-void main() {
-  int **x;
+// should not loop forever
+extern void *calloc (unsigned int, unsigned int);
 
-  **x = 1;
+void main() {
+ int *ptr;
+
+ while (1) {
+   ptr = calloc(1, sizeof(int));
+ }
 }
