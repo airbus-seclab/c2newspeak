@@ -406,9 +406,7 @@ let translate fname (globals, fundecls, spec) =
 	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let lv = translate_lv e in
 	      C.Lval (lv, translate_typ t)
-		
-	| AddrOf (Deref e, _) -> translate_exp e
-	    
+			    
 	| AddrOf (Index (lv, (t, len), (Cst (C.CInt i, _), _)), _)
 	    when Nat.compare i Nat.zero = 0 ->
 	    let lv = translate_lv lv in

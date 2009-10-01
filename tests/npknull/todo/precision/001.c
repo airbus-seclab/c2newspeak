@@ -23,13 +23,18 @@
   email: charles.hymans@penjili.org
 */
 
-struct m {
-  unsigned short int a;
-  char b[108];
-};
+/*
+  This code is correct because:
+  * argv[argc] is a null pointer.
+  * argv[0] through to argv[argc-1] are pointers to strings.
+  (from 
+  http://publications.gbdirect.co.uk/c_book/chapter10/arguments_to_main.html)
+ */
 
-void main() {
-  unsigned int x;
-
-  x = (((struct m *) 0)->b); // precision: should not signal any null pointer because this really creates a pointer, think about it
+int main(int argc, char** argv) {
+  int i;
+  for (i = 1; argv[i]; i++) // precision: should not show any null pointer deref
+    {
+      argv[i][0] = 1;       // precision: should not show any null pointer deref
+    }
 }

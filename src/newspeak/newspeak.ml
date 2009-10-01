@@ -756,6 +756,12 @@ object
       | _ -> e
 end
 
+let rec addr_of_deref lv = 
+  match lv with
+      Deref (e, _) -> e
+    | Shift (lv, i) -> BinOp (PlusPI, addr_of_deref lv, i)
+    | _ -> raise Not_found
+
 class simplify_ptr =
 object
   inherit builder
@@ -764,6 +770,14 @@ object
     match lv with
 	Deref (AddrOf (lv, n), n') when n' <= n -> lv
       | _ -> lv
+
+  method process_exp e =
+    match e with
+	AddrOf (lv, _) -> begin
+	  try addr_of_deref lv
+	  with Not_found -> e
+	end
+      | _ -> e
 end
 
 let nat_op op =

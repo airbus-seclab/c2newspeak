@@ -23,18 +23,15 @@
   email: charles.hymans@penjili.org
 */
 
-char t[1];
-char u[1];
-
-void f(char *) {
-}
+struct s {
+  int a;
+  char t[100000];
+};
 
 void main() {
-  char * options[] = { &t[0], &u[0] };
-  int *ptr;
-  int x;
-
-  ptr = &x;
-  f(options[0]);
-  *ptr = 1; // precision: should not display any null pointer deref here
+  char x;
+  char *ptr;
+  // should compile the same way here!!
+  ptr = (char*) &(*((struct s *)(&x + 4)));
+  ptr = (char*) &(((struct s *)&x)->t);
 }

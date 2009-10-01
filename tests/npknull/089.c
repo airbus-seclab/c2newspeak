@@ -23,18 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
-char t[1];
-char u[1];
-
-void f(char *) {
-}
+struct m {
+  unsigned short int a;
+  char b[108];
+};
 
 void main() {
-  char * options[] = { &t[0], &u[0] };
-  int *ptr;
-  int x;
+  unsigned int x;
 
-  ptr = &x;
-  f(options[0]);
-  *ptr = 1; // precision: should not display any null pointer deref here
+  x = (((struct m *) 0)->b); // precision: should not signal any null pointer because this really creates a pointer, think about it
 }
