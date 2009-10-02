@@ -77,7 +77,7 @@ let lval_to_addr env s lv =
 let exp_to_ptr env s e =
   let rec exp_to_ptr e =
     match e with
-	Const _ | AddrOfFun _ -> None
+	Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> None
       | Lval (lv, _) ->
 	  let m = lval_to_memloc env s lv in
 	  let p =
