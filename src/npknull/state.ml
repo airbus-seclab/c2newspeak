@@ -219,8 +219,8 @@ let guard e env s =
   match s with
       None -> None
     | Some s -> 
-	let s = 
-	  try
+	try
+	  let s =
 	    match e with
 		UnOp (Not, BinOp (Eq Ptr, Lval (lv, Ptr), Const Nil))
 	      | UnOp (Not, BinOp (Eq Ptr, Const Nil, Lval (lv, Ptr))) ->
@@ -228,9 +228,11 @@ let guard e env s =
 		  let a = Abaddr.to_addr a in
 		    Store.guard a s
 	      | _ -> s
-	  with Exceptions.Unknown -> s
-	in
-	  Some s
+	  in
+	    Some s
+	with 
+	    Exceptions.Emptyset -> None
+	  | Exceptions.Unknown -> Some s
 
 (* TODO: write an unsound example with write into a universe pointer!!! *)
 let build_transport s memlocs pre = 
