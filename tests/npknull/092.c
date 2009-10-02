@@ -23,18 +23,19 @@
   email: charles.hymans@penjili.org
 */
 
-char t[1];
-char u[1];
-
-void f(char *) {
-}
+int x;
+char t;
+char u;
 
 void main() {
-  char * options[] = { &t[0], &u[0] };
   int *ptr;
-  int x;
+  char *y;
+  char *z;
 
+  if (x) y = &t; else y = &u;
   ptr = &x;
-  f(options[0]);
+
+  z = y;
+
   *ptr = 1; // precision: should not display any null pointer deref here
 }

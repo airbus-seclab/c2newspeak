@@ -30,6 +30,12 @@ open Newspeak
 (* offset, size of the zone *)
 type num_pred = (int * int) option
 
+type exp =
+    Empty
+  | Lval of Memloc.t
+  | AddrOf of (Memloc.t * num_pred)
+  | BinOp of (exp * exp)
+
 let join_num_pred x1 x2 = if x1 = x2 then x1 else None
 
 let contains_num_pred x1 x2 = (x1 = None) || (x1 = x2)
@@ -127,13 +133,26 @@ let read s m =
     match x with
 	(x, p)::[] -> (x, p)
       | [] -> raise Exceptions.Emptyset
-      | _ -> raise Exceptions.Unknown
+      | _ -> print_endline "this is raised!!!"; raise Exceptions.Unknown
 
-let assign m v s =
-(* TODO: could be optimized *)
-  let d = try Map.find m s with Not_found -> [] in
-  let d = insert_info v d in
-    Map.add m d s
+let eval s e =
+  let rec eval e =
+    match e with
+	Lval m -> Map.find m s
+      | AddrOf v -> v::[]
+      | BinOp (e1, e2) -> (eval e1)@(eval e2)
+      | Empty -> raise Not_found
+  in
+    eval e
+
+let assign m e s =
+  try
+    let v = eval s e in
+      (* TODO: could be optimized *)
+    let res = ref (try Map.find m s with Not_found -> []) in
+      List.iter (fun x -> res := insert_info x !res) v;
+      Map.add m !res s
+  with Not_found -> s
 
 let addr_is_valid _ _ = false
 

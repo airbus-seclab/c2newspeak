@@ -165,16 +165,33 @@ let assign2 (lv, e, sz) env s1 s =
     with Exceptions.Unknown -> 
       let m = lval_to_memloc env s1 lv in
 	P2.forget_memloc m s
-      
+  
+(* TODO: should put this into a P1 adapter, rather than have such a complex 
+   store, remove exp_to_ptr (redundant code!!) *)   
+let translate_exp_P1 env s e =
+  let rec translate e =
+    match e with
+	Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> P1.Empty
+      | Lval (lv, _) -> P1.Lval (lval_to_memloc env s lv)
+      | AddrOf (lv, n) -> 
+	  let (m, o) = lval_to_addr env s lv in
+	    P1.AddrOf (m, Some (o, n))
+      | UnOp (Coerce _, e) -> translate e
+      | BinOp (PlusPI, e, _) -> translate e
+      | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
+	  let v1 = translate e1 in
+	  let v2 = translate e2 in
+	    P1.BinOp (v1, v2)
+      | UnOp (Cast (Int _, FunPtr), e) -> translate e
+      | _ -> raise Exceptions.Unknown
+  in
+    translate e
+ 
 let assign (lv, e, t) env (s1, s2, s3) = 
   try
     let m = lval_to_memloc env s1 lv in
-    let p = exp_to_ptr env s1 e in
-    let s1 = 
-      match p with
-	  Some p -> P1.assign m p s1 
-	| None -> s1
-    in
+    let p = translate_exp_P1 env s1 e in
+    let s1 = P1.assign m p s1 in
     (* TODO: this constant not nice!! *)
     let sz = Newspeak.size_of_scalar 32 t in
     let s2 = assign2 (lv, e, sz) env s1 s2 in
@@ -196,7 +213,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
 
 let set_pointsto (m1, o) m2 (s1, s2, s3) =
 (* TODO: not good this constant!!! *)
-  let s1 = P1.assign m1 (m2, Some (0, 32)) s1 in
+  let s1 = P1.assign m1 (P1.AddrOf (m2, Some (0, 32))) s1 in
   let s2 = P2.assign (m1, o) s2 in
   let s3 = P3.forget_memloc m1 s3 in
     (s1, s2, s3)
