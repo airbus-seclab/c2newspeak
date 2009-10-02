@@ -144,7 +144,7 @@ let glue s1 s2 =
     Map.iter add_info s2;
     !res
 
-let read s (m, _) = try Map.find m s with Not_found -> []
+let read s m = try Map.find m s with Not_found -> []
 
 (* usefull for debug *)
 (*

@@ -251,7 +251,9 @@ let glue (a1, a2, a3) (b1, b2, b3) =
 
 let read_addr (s, _, _) (m, _) = P1.read s m
 
-let read_fun (_, _, s) a = P3.read s a
+let read_fun env (s1, _, s) lv = 
+  let m = lval_to_memloc env s1 lv in
+    P3.read s m
 
 let to_string (s1, s2, s3) = 
   P1.to_string s1^" "^P2.to_string s2^" "^P3.to_string s3

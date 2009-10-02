@@ -57,7 +57,7 @@ val glue: t -> t -> t
 val read_addr: t -> Dom.addr -> Dom.abptr
 
 (* TODO: this primitive name is not well chosen, think about it *)
-val read_fun: t -> Dom.addr -> string list
+val read_fun: int -> t -> Newspeak.lval -> string list
 
 (* TODO: write non-regression test that makes soundness bug because of this!!!
    and remove this!!!

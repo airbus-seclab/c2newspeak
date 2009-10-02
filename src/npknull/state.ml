@@ -135,27 +135,28 @@ let exp_is_valid env s e =
 	  | Exceptions.Unknown -> false
 
 let exp_to_fun env s e = 
-  let rec exp_to_fun e =
-    (* TODO: is it sound not to consider type here?? *)
-    match e with
-	Lval (lv, _) -> begin
-	  try
-	    let a = lval_to_abaddr env s lv in
-	    let a = Abaddr.to_addr a in 
-	      Store.read_fun s a
-	  with 
-	      Exceptions.Emptyset -> []
-	    | Exceptions.Unknown -> 
-		raise (Exceptions.NotImplemented "State.exp_to_fun: case Lval")
-	end
-	  (* TODO: not good these constants!!! *)
-      | UnOp (Cast (_, t), e) when Newspeak.size_of_scalar 32 t = 32 ->
+  match s with
+      None -> []
+    | Some s -> 
+	let rec exp_to_fun e =
+	  (* TODO: is it sound not to consider type here?? *)
+	  match e with
+	      Lval (lv, _) -> begin
+		try Store.read_fun env s lv
+		with 
+		    Exceptions.Emptyset -> []
+		  | Exceptions.Unknown -> 
+		      raise (Exceptions.NotImplemented 
+			       "State.exp_to_fun: case Lval")
+	      end
+		(* TODO: not good these constants!!! *)
+	    | UnOp (Cast (_, t), e) when Newspeak.size_of_scalar 32 t = 32 ->
+		exp_to_fun e
+	    | _ -> 
+		let msg = "State.exp_to_fun: "^(Newspeak.string_of_exp e) in
+		  raise (Exceptions.NotImplemented msg)
+	in
 	  exp_to_fun e
-      | _ -> 
-	  let msg = "State.exp_to_fun: "^(Newspeak.string_of_exp e) in
-	    raise (Exceptions.NotImplemented msg)
-  in
-    exp_to_fun e
 
 (* TODO: there is most probably a bug if there is a value 
    at address (v, 0) and a value is copied at address (v, 1)
@@ -268,11 +269,6 @@ let glue s1 s2 =
   match (s1, s2) with
       (Some s1, Some s2) -> Some (Store.glue s1 s2)
     | _ -> None
-
-let exp_to_fun env s e =
-  match s with
-      Some s -> exp_to_fun env s e
-    | None -> []
 
 (* usefull for debug *)
 (*

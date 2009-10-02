@@ -1,7 +1,7 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,28 +21,14 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-type t
+// should not display: Exceptions.NotImplemented("State.exp_to_fun: case Lval")
 
-val universe: t
+typedef void (*fptr)(void);
 
-val join: t -> t -> t
-
-val contains: t -> t -> bool
-
-val assign: Dom.addr -> string -> t -> t
-
-val remove_memloc: Memloc.t -> t -> t
-
-val forget_memloc: Memloc.t -> t -> t
-
-val to_string: t -> string
-
-val split: Memloc.t list -> t -> (t * t)
-
-val transport: Subst.t -> t -> t
-
-val glue: t -> t -> t
-
-val read: t -> Memloc.t -> string list
+void main() {
+  fptr t[10];
+  int i;
+  (t[i])();
+}
