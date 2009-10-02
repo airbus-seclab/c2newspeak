@@ -163,7 +163,7 @@ and unop =
   | BNot of bounds
   | PtrToInt of ikind
   | IntToPtr of ikind
-  | Cast of (scalar_t * scalar_t)
+  | Cast of (scalar_t * scalar_t) (* source type => dest type *)
 
 and binop =
   | PlusI | MinusI | MultI | DivI | Mod

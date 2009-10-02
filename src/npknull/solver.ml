@@ -230,12 +230,7 @@ let process glb_tbl prog =
 	[] -> s
       | (x, loc)::tl -> 
 	  Context.set_current_loc loc;
-	  let s = 
-	    try process_stmtkind x s 
-	    with Exceptions.NotImplemented msg -> 
-	      Context.print_err ("Not implemented yet: "^msg);
-	      s
-	  in
+	  let s = process_stmtkind x s in
 	    process_blk tl s
 	      
   and process_stmtkind x s =
