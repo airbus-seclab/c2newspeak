@@ -56,6 +56,7 @@ let lval_to_memloc env s lv =
 	  let m = lval_to_memloc lv in
 	  let (m, _) = P1.read s m in
 	    m
+      | BinOp (PlusPI, e, _) -> exp_to_memloc e
       | _ -> raise Exceptions.Unknown
   in
     lval_to_memloc lv
@@ -237,7 +238,7 @@ let addr_is_valid (s1, s2, _) a =
 let build_transport (src, _, _) memlocs (dst, _, _) =
   P1.build_transport src memlocs dst
 
-let split memlocs (s1, s2, s3) =
+let split memlocs (s1, s2, s3)= 
   let (unreach1, reach1, memlocs) = P1.split memlocs s1 in
   let (unreach2, reach2) = P2.split memlocs s2 in
   let (unreach3, reach3) = P3.split memlocs s3 in
