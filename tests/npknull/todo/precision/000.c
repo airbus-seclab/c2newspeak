@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
+// this one is successfully analyzed by space invaders
+// (they have several states at the end)
 // look at litterature of static analyzers for file open/file closed
 void main() {
   int *ptr;

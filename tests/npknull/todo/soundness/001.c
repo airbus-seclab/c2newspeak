@@ -23,22 +23,27 @@
   email: charles.hymans@penjili.org
 */
 
-/*
-  This code is correct because:
-  * argv[argc] is a null pointer.
-  * argv[0] through to argv[argc-1] are pointers to strings.
-  (from 
-  http://publications.gbdirect.co.uk/c_book/chapter10/arguments_to_main.html)
- */
+typedef struct {
+  int *a;
+  int *b;
+  int *c;
+} s;
 
-// seems to be correctly analyzed with space invader, need to check this!!
-int main(int argc, char** argv) {
-  int i;
+void main () {
+  int v;
+  int w;
+  
+  s y;
+  s *x;
 
-  for (i = 1; argv[i]; i++) // precision: should not show any null pointer deref
-    {
-      argv[i][0] = 1;       // precision: should not show any null pointer deref
-    }
+  int *ptr;
+  
+  x = &y;
 
-  return 0;
+  x->a = &v;
+  x->b = &w;
+  *(x->b) = 1;        // precision: should not signal any null pointer deref
+  x->c = 0;           // precision: should not signal any null pointer deref
+  
+  *ptr = 1; // soundness: should signal this null pointer deref
 }
