@@ -44,7 +44,7 @@ val contains: t -> t -> bool
    The value [(y, o)] represents the pointers [<(y, o): n, delta>] where
    [o], [n] and [delta] verify predicate [num_pred]
 *)
-val assign: Memloc.t -> exp -> t -> t
+val assign: Memloc.t list -> exp -> t -> t
 
 val guard: Dom.addr -> t -> t
 

@@ -23,6 +23,14 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: anything that goes to top is unsound, because to deref something in top
+   stops the analysis:
+
+   blabla
+   top
+   *ptr = 1; // even if it was correct this stops execution
+   *ptr2 = 2;
+*)
 (* TODO: this domain is too complex, the translations should be done on top
    of each domain into some independent adapters *)
 open Newspeak
@@ -50,6 +58,7 @@ let get_one_abptr x =
 	raise Exceptions.Unknown
 
 (* TODO: shouldn't this all be done in P1?? *)
+(* TODO: should remove lval_to_memloc?? *)
 let lval_to_memloc env s lv =
   let rec lval_to_memloc lv =
     match lv with
@@ -68,6 +77,32 @@ let lval_to_memloc env s lv =
       | _ -> raise Exceptions.Unknown
   in
     lval_to_memloc lv
+
+(* TODO: should never raise Exceptions.Unknown!!! (may be unsound) *)
+let lval_to_memloc_list env s lv =
+  let rec translate_lval lv =
+    match lv with
+	Global x -> (Memloc.of_global x)::[]
+      | Local x -> (Memloc.of_local (env - x))::[]
+      | Shift (lv, _) -> translate_lval lv
+      | Deref (e, _) -> translate_exp e
+  
+  and translate_exp e =
+    match e with
+	Lval (lv, _) ->
+	  let m = translate_lval lv in
+	  let res = ref [] in
+	  let read_loc m =
+	    let m = P1.read s m  in
+	    let m = List.map (fun (x, _) -> x) m in
+	      res := !res@m
+	  in
+	    List.iter read_loc m;
+	    !res
+      | BinOp (PlusPI, e, _) -> translate_exp e
+      | _ -> raise Exceptions.Unknown
+  in
+    translate_lval lv
 
 let lval_to_addr env s lv =
   let rec lval_to_addr lv =
@@ -159,21 +194,22 @@ let may_be_null env s1 s2 e =
     may_be_null e
 
 let assign2 (lv, e, sz) env s1 s =
-  try 
-(* TODO: this constant is not nice*)
-      if (sz <> 32) then raise Exceptions.Unknown;
-      if may_be_null env s1 s e then raise Exceptions.Unknown;
-      let a = lval_to_addr env s1 lv in
-	P2.assign a s
+  try
+    (* TODO: this constant is not nice*)
+    if (sz <> 32) then raise Exceptions.Unknown;
+    if may_be_null env s1 s e then raise Exceptions.Unknown;
+    let a = lval_to_addr env s1 lv in
+      P2.assign a s
   with Exceptions.Unknown -> 
     (* TODO: this memloc gets computed multiple times, optimize?? *) 
-    try
-      let (a, n) = lval_to_buffer env s1 lv in
-(* TODO: maybe a bug here because of overflow!! *)
-	P2.forget_buffer (a, n+sz-1) s
-    with Exceptions.Unknown -> 
-      let m = lval_to_memloc env s1 lv in
-	P2.forget_memloc m s
+    let (a, n) = lval_to_buffer env s1 lv in
+      (* TODO: maybe a bug here because of overflow!! *)
+      P2.forget_buffer (a, n+sz-1) s
+
+let forget_memloc_list2 m s =
+  let res = ref s in
+    List.iter (fun x -> res := P2.forget_memloc x !res) m;
+    !res
   
 (* TODO: should put this into a P1 adapter, rather than have such a complex 
    store, remove exp_to_ptr (redundant code!!) *)   
@@ -198,14 +234,18 @@ let translate_exp_P1 env s e =
  
 let assign (lv, e, t) env (s1, s2, s3) = 
   try
-    let m = lval_to_memloc env s1 lv in
+    let m = lval_to_memloc_list env s1 lv in
     let p = translate_exp_P1 env s1 e in
     let s1 = P1.assign m p s1 in
     (* TODO: this constant not nice!! *)
     let sz = Newspeak.size_of_scalar 32 t in
-    let s2 = assign2 (lv, e, sz) env s1 s2 in
-    let s3 = P3.forget_memloc m s3 in
-      (s1, s2, s3)
+    let s2 = 
+      try assign2 (lv, e, sz) env s1 s2 
+      with Exceptions.Unknown -> forget_memloc_list2 m s2
+    in
+    let s3 = ref s3 in
+      List.iter (fun x -> s3 := P3.forget_memloc x !s3) m;
+      (s1, s2, !s3)
   with Exceptions.Unknown -> 
     (* TODO: most probably unsound, should remove all universe cases!!! *)
     universe
@@ -222,7 +262,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
 
 let set_pointsto (m1, o) m2 (s1, s2, s3) =
 (* TODO: not good this constant!!! *)
-  let s1 = P1.assign m1 (P1.AddrOf (m2, Some (0, 32))) s1 in
+  let s1 = P1.assign [m1] (P1.AddrOf (m2, Some (0, 32))) s1 in
   let s2 = P2.assign (m1, o) s2 in
   let s3 = P3.forget_memloc m1 s3 in
     (s1, s2, s3)
@@ -259,31 +299,6 @@ let glue (a1, a2, a3) (b1, b2, b3) =
   (P1.glue a1 b1, P2.glue a2 b2, P3.glue a3 b3)
 
 let read_addr (s, _, _) (m, _) = get_one_abptr (P1.read s m)
-
-let lval_to_memloc_list env s lv =
-  let rec translate_lval lv =
-    match lv with
-	Global x -> (Memloc.of_global x)::[]
-      | Local x -> (Memloc.of_local (env - x))::[]
-      | Shift (lv, _) -> translate_lval lv
-      | Deref (e, _) -> translate_exp e
-  
-  and translate_exp e =
-    match e with
-	Lval (lv, _) ->
-	  let m = translate_lval lv in
-	  let res = ref [] in
-	  let read_loc m =
-	    let m = P1.read s m  in
-	    let m = List.map (fun (x, _) -> x) m in
-	      res := !res@m
-	  in
-	    List.iter read_loc m;
-	    !res
-      | BinOp (PlusPI, e, _) -> translate_exp e
-      | _ -> raise Exceptions.Unknown
-  in
-    translate_lval lv
 
 let read_fun env (s1, _, s) lv = 
 (* TODO: should do a lval_to_memloc_list!! *)

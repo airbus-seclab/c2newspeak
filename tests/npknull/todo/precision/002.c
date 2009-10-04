@@ -29,21 +29,19 @@ typedef struct {
   int *c;
 } s;
 
-void main () {
-  int v;
-  int w;
-  
-  s y;
-  s *x;
+int v;
+int w;
 
-  int *ptr;
+s y;
+s *x;
+
+int *ptr;
+
+void main () {
   
   x = &y;
 
   x->a = &v;
   x->b = &w;
   *(x->b) = 1;        // precision: should not signal any null pointer deref
-  x->c = 0;           // precision: should not signal any null pointer deref
-  
-  *ptr = 1; // soundness: should signal this null pointer deref
 }

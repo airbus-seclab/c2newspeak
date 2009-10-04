@@ -133,22 +133,31 @@ let read s m = try Map.find m s with Not_found -> raise Exceptions.Emptyset
 let eval s e =
   let rec eval e =
     match e with
-	Lval m -> Map.find m s
+	Lval m -> begin
+	  try Map.find m s 
+	  with Not_found -> []
+	end
       | AddrOf v -> v::[]
       | BinOp (e1, e2) -> (eval e1)@(eval e2)
-      | Empty -> raise Not_found
+      | Empty -> []
   in
     eval e
 
 let assign m e s =
-  try
-    let v = eval s e in
-      (* TODO: could be optimized *)
-    let res = ref (try Map.find m s with Not_found -> []) in
-      List.iter (fun x -> res := insert_info x !res) v;
-      Map.add m !res s
-  with Not_found -> s
-
+  let v = eval s e in
+    if v = [] then s
+    else begin
+      let res = ref s in
+      let assign_memloc m =
+	(* TODO: could be optimized *)
+	let info = ref (try Map.find m !res with Not_found -> []) in
+	  List.iter (fun x -> info := insert_info x !info) v;
+	  res := Map.add m !info !res
+      in
+	List.iter assign_memloc m;
+	!res
+    end
+  
 let addr_is_valid _ _ = false
 
 let guard _ s = s
