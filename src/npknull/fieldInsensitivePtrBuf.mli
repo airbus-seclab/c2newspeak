@@ -65,4 +65,5 @@ val glue: t -> t -> t
 (* TODO: this primitive is not well chosen, think about it
    raises Exceptions.Emptyset when nil or unitialized pointer
  *)
-val read: t -> Memloc.t -> Dom.abptr
+(* TODO: maybe remove this type Dom.abptr?? *)
+val read: t -> Memloc.t -> Dom.abptr list

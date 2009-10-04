@@ -128,12 +128,7 @@ let contains s1 s2 =
       true
     with Exit -> false
 
-let read s m =
-  let x = try Map.find m s with Not_found -> [] in
-    match x with
-	(x, p)::[] -> (x, p)
-      | [] -> raise Exceptions.Emptyset
-      | _ -> print_endline "this is raised!!!"; raise Exceptions.Unknown
+let read s m = try Map.find m s with Not_found -> raise Exceptions.Emptyset
 
 let eval s e =
   let rec eval e =

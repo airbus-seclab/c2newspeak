@@ -41,6 +41,14 @@ let join (a1, a2, a3) (b1, b2, b3) =
 let contains (a1, a2, a3) (b1, b2, b3) = 
   P1.contains a1 b1 && P2.contains a2 b2 && P3.contains a3 b3
 
+(* TOOD: this function should not exist!! *)
+let get_one_abptr x =
+  match x with
+      x::[] -> x
+    | _ -> 
+	print_endline "Store.get_one_abptr: this is raised!!!"; 
+	raise Exceptions.Unknown
+
 (* TODO: shouldn't this all be done in P1?? *)
 let lval_to_memloc env s lv =
   let rec lval_to_memloc lv =
@@ -54,7 +62,7 @@ let lval_to_memloc env s lv =
     match e with
 	Lval (lv, _) ->
 	  let m = lval_to_memloc lv in
-	  let (m, _) = P1.read s m in
+	  let (m, _) = get_one_abptr (P1.read s m) in
 	    m
       | BinOp (PlusPI, e, _) -> exp_to_memloc e
       | _ -> raise Exceptions.Unknown
@@ -82,7 +90,7 @@ let exp_to_ptr env s e =
       | Lval (lv, _) ->
 	  let m = lval_to_memloc env s lv in
 	  let p =
-	    try Some (P1.read s m)
+	    try Some (get_one_abptr (P1.read s m))
 	    with Exceptions.Emptyset -> None
 	  in
 	    p
@@ -250,11 +258,39 @@ let transport tr (s1, s2, s3) =
 let glue (a1, a2, a3) (b1, b2, b3) = 
   (P1.glue a1 b1, P2.glue a2 b2, P3.glue a3 b3)
 
-let read_addr (s, _, _) (m, _) = P1.read s m
+let read_addr (s, _, _) (m, _) = get_one_abptr (P1.read s m)
+
+let lval_to_memloc_list env s lv =
+  let rec translate_lval lv =
+    match lv with
+	Global x -> (Memloc.of_global x)::[]
+      | Local x -> (Memloc.of_local (env - x))::[]
+      | Shift (lv, _) -> translate_lval lv
+      | Deref (e, _) -> translate_exp e
+  
+  and translate_exp e =
+    match e with
+	Lval (lv, _) ->
+	  let m = translate_lval lv in
+	  let res = ref [] in
+	  let read_loc m =
+	    let m = P1.read s m  in
+	    let m = List.map (fun (x, _) -> x) m in
+	      res := !res@m
+	  in
+	    List.iter read_loc m;
+	    !res
+      | BinOp (PlusPI, e, _) -> translate_exp e
+      | _ -> raise Exceptions.Unknown
+  in
+    translate_lval lv
 
 let read_fun env (s1, _, s) lv = 
-  let m = lval_to_memloc env s1 lv in
-    P3.read s m
+(* TODO: should do a lval_to_memloc_list!! *)
+  let m = lval_to_memloc_list env s1 lv in
+  let res = ref [] in
+    List.iter (fun x -> res := !res@(P3.read s x)) m;
+    !res
 
 let to_string (s1, s2, s3) = 
   P1.to_string s1^" "^P2.to_string s2^" "^P3.to_string s3
