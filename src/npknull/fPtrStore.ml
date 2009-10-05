@@ -23,8 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
-
 (* TODO: could be factored into a ListSet module in utils *)
 
 let list_insert x l =
@@ -55,6 +53,10 @@ module Map = Map.Make(Memloc)
 type offset = int
 
 type addr = Memloc.t * offset
+
+type exp = 
+    Lval of Memloc.t
+  | AddrOfFun of string
 
 (* for each location the names of functions it may point to *)
 type t = string list Map.t
@@ -103,11 +105,34 @@ let contains s1 s2 =
       true
     with Exit -> false
 
+let eval s e = 
+  match e with
+      Lval m -> begin try Map.find m s with Not_found -> [] end
+    | AddrOfFun f -> [f]
+
+let assign m e s =
+  let v = List.map (eval s) e in
+  let v = List.flatten v in
+    if v = [] then s 
+    else begin
+      let res = ref s in
+	(* TODO: could be optimized+factored with FieldInsensitivePtrBuf!! *)
+      let assign_memloc m =
+	let info = ref (try Map.find m !res with Not_found -> []) in
+	  List.iter (fun x -> info := list_insert x !info) v;
+	  res := Map.add m !info !res
+      in
+	List.iter assign_memloc m;
+	!res
+    end
+  
+(*
 (* TODO: think about it should not be an address but rather a function here! *)
 let assign (m, _) f s = 
   let d = try Map.find m s with Not_found -> [] in
   let d = list_insert f d in
     Map.add m d s
+*)
 
 let remove_memloc = Map.remove
 

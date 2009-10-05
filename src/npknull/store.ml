@@ -235,7 +235,24 @@ let translate_exp_P1 env s e =
       | _ -> raise Exceptions.Unknown
   in
     translate e
- 
+
+let translate_exp_P3 env s e =
+  let rec translate e =
+    match e with
+	Const _ | AddrOf _ | BinOp (Eq _, _, _) -> []
+      | Lval (lv, _) -> 
+	  let m = lval_to_memloc_list env s lv in
+	    List.map (fun x -> P3.Lval x) m
+      | AddrOfFun (f, _) -> [P3.AddrOfFun f]
+      | UnOp (Coerce _, e) -> translate e
+      | BinOp (PlusPI, e, _) -> translate e
+      | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
+	  (translate e1)@(translate e2)
+      | UnOp (Cast _, e) -> translate e
+      | _ -> print_endline "here"; print_endline (Newspeak.string_of_exp e); raise Exceptions.Unknown
+  in
+    translate e
+
 let assign (lv, e, t) env (s1, s2, s3) = 
   try
     let m = lval_to_memloc_list env s1 lv in
@@ -247,9 +264,9 @@ let assign (lv, e, t) env (s1, s2, s3) =
       try assign2 (lv, e, sz) env s1 s2 
       with Exceptions.Unknown -> forget_memloc_list2 m s2
     in
-    let s3 = ref s3 in
-      List.iter (fun x -> s3 := P3.forget_memloc x !s3) m;
-      (s1, s2, !s3)
+    let fp = translate_exp_P3 env s1 e in
+    let s3 = P3.assign m fp s3 in
+      (s1, s2, s3)
   with Exceptions.Unknown -> 
     (* TODO: most probably unsound, should remove all universe cases!!! *)
     forget ()

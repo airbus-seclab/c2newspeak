@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+type exp = 
+    Lval of Memloc.t
+  | AddrOfFun of string
+
 type t
 
 (* TODO: should remove this function, unsound *)
@@ -35,7 +39,7 @@ val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val assign: Dom.addr -> string -> t -> t
+val assign: Memloc.t list -> exp list -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 

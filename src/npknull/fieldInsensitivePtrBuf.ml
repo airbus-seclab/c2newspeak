@@ -144,15 +144,18 @@ let eval s e =
 let assign m e s =
   let v = List.map (eval s) e in
   let v = List.flatten v in
-  let res = ref s in
-  let assign_memloc m =
-    (* TODO: could be optimized *)
-    let info = ref (try Map.find m !res with Not_found -> []) in
-      List.iter (fun x -> info := insert_info x !info) v;
-      res := Map.add m !info !res
-  in
-    List.iter assign_memloc m;
-    !res
+    if v = [] then s 
+    else begin
+      let res = ref s in
+      let assign_memloc m =
+	(* TODO: could be optimized *)
+	let info = ref (try Map.find m !res with Not_found -> []) in
+	  List.iter (fun x -> info := insert_info x !info) v;
+	  res := Map.add m !info !res
+      in
+	List.iter assign_memloc m;
+	!res
+    end
   
 let addr_is_valid _ _ = false
 
