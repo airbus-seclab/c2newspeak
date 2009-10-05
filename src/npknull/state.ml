@@ -216,16 +216,10 @@ let set_pointsto m1 m2 s =
       Some s -> Some (Store.set_pointsto m1 m2 s)
     | None -> None
 
-let forget_lval lv env s =
+let copy args env s =
   match s with
       None -> None
-    | Some s -> 
-	try
-	  let a = lval_to_abaddr env s lv in
-	  let m = Abaddr.to_memloc a in
-	  let s = Store.forget_memloc m s in
-	    Some s
-	with Exceptions.Unknown -> Some (Store.forget ())
+    | Some s -> Some (Store.copy args env s)
 
 let guard e env s = 
   match s with

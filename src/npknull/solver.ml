@@ -243,7 +243,7 @@ let process glb_tbl prog =
       | Copy (lv1, lv2, _) -> 
 	  check_lval s lv1;
 	  check_lval s lv2;
-	  State.forget_lval lv1 !env s
+	  State.copy (lv1, lv2) !env s
       | Decl (_, _, body) -> 
 	  incr env;
 	  let s = process_blk body s in

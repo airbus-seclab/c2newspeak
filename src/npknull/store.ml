@@ -249,7 +249,10 @@ let translate_exp_P3 env s e =
       | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
 	  (translate e1)@(translate e2)
       | UnOp (Cast _, e) -> translate e
-      | _ -> print_endline "here"; print_endline (Newspeak.string_of_exp e); raise Exceptions.Unknown
+      | _ -> 
+	  print_endline "here"; 
+	  print_endline (Newspeak.string_of_exp e); 
+	  raise Exceptions.Unknown
   in
     translate e
 
@@ -271,6 +274,16 @@ let assign (lv, e, t) env (s1, s2, s3) =
     (* TODO: most probably unsound, should remove all universe cases!!! *)
     forget ()
 
+let copy (dst, src) env (s1, s2, s3) =
+  let dst = lval_to_memloc_list env s1 dst in
+  let src = lval_to_memloc_list env s1 src in
+  let p = List.map (fun x -> P1.Lval x) src in
+  let s1 = P1.assign dst p s1 in
+  let s2 = forget_memloc_list2 dst s2 in
+  let fp = List.map (fun x -> P3.Lval x) src in
+  let s3 = P3.assign dst fp s3 in
+    (s1, s2, s3)
+
 (*
 ((m, o), e, sz) (s1, s2, s3) = 
   match e with
@@ -291,9 +304,6 @@ let guard a (s1, s2, s3) = (P1.guard a s1, P2.guard a s2, s3)
 
 let remove_memloc m (s1, s2, s3) = 
   (P1.remove_memloc m s1, P2.remove_memloc m s2, P3.remove_memloc m s3)
-
-let forget_memloc m (s1, s2, s3) = 
-  (s1, P2.forget_memloc m s2, P3.forget_memloc m s3)
 
 let forget_buffer buf (s1, s2, s3) =
   let ((m, _), _) = buf in

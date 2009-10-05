@@ -37,6 +37,8 @@ val contains: t -> t -> bool
 (* TODO: the int is the environment, maybe should remove it *)
 val assign: (lval * exp * scalar_t) -> int -> t -> t
 
+val copy: (lval * lval) -> int -> t -> t
+
 val guard: Dom.addr -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
@@ -65,12 +67,6 @@ val set_pointsto: Dom.addr -> Memloc.t -> t -> t
 
 (* TODO: should remove this function, unsound *)
 val forget: unit -> t
-
-(* TODO: write non-regression test that makes soundness bug because of this!!!
-   and remove this!!!
-   (in other words, pb with deref of top!!)
-*)
-val forget_memloc: Memloc.t -> t -> t
 
 (* TODO: write non-regression test that makes soundness bug because of this!!!
    and remove this!!!
