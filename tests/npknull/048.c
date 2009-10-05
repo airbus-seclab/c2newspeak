@@ -28,7 +28,7 @@ struct s {
 } a, b;
 
 void f() {
-  *a.g = 0;         // if a.g points to ptr, then ptr is now a null pointer
+  *a.g = 0;    // if a.g points to ptr, then ptr is now a null pointer
 }
 
 void main() {
@@ -39,5 +39,5 @@ void main() {
   b.g = &ptr;
   a = b;
   f();
-  *ptr = 1;         // should display a potential null pointer deref here
+  *ptr = 1;    // soundness: should display a potential null pointer deref here
 }

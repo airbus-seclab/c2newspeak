@@ -101,8 +101,12 @@ let lval_to_memloc_list env s lv =
 	  in
 	    List.iter read_loc m;
 	    !res
+      | UnOp (IntToPtr _, e) 
       | BinOp (PlusPI, e, _) -> translate_exp e
-      | _ -> raise Exceptions.Unknown
+      | _ -> 
+	  print_endline "Store.lval_to_memloc_list";
+	  print_endline (Newspeak.string_of_exp e);
+	  raise Exceptions.Unknown
   in
     translate_lval lv
 
@@ -272,6 +276,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
     let s3 = P3.assign m fp s3 in
       (s1, s2, s3)
   with Exceptions.Unknown -> 
+    print_endline "Store.assign";
     (* TODO: most probably unsound, should remove all universe cases!!! *)
     forget ()
 
