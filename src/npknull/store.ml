@@ -225,14 +225,16 @@ let translate_exp_P1 env s e =
       | AddrOf (lv, n) -> 
 	  let (m, o) = lval_to_addr env s lv in
 	    [P1.AddrOf (m, Some (o, n))]
-      | UnOp (Coerce _, e) -> translate e
+      | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _), e)
       | BinOp (PlusPI, e, _) -> translate e
       | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
 	  let v1 = translate e1 in
 	  let v2 = translate e2 in
 	    v1@v2
-      | UnOp (Cast (Int _, FunPtr), e) -> translate e
-      | _ -> raise Exceptions.Unknown
+      | _ -> 
+	  print_endline "Store.translate_exp_P1";
+	  print_endline (Newspeak.string_of_exp e);
+	  raise Exceptions.Unknown
   in
     translate e
 
@@ -244,13 +246,12 @@ let translate_exp_P3 env s e =
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P3.Lval x) m
       | AddrOfFun (f, _) -> [P3.AddrOfFun f]
-      | UnOp (Coerce _, e) -> translate e
+      | UnOp ((Coerce _|Cast _|PtrToInt _), e) 
       | BinOp (PlusPI, e, _) -> translate e
       | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
 	  (translate e1)@(translate e2)
-      | UnOp (Cast _, e) -> translate e
       | _ -> 
-	  print_endline "here"; 
+	  print_endline "Store.translate_exp_P3";
 	  print_endline (Newspeak.string_of_exp e); 
 	  raise Exceptions.Unknown
   in
