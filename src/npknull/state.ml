@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: remove totally all forget_memlocs, universes....
+(* TODO: remove totally all forget_memlocs, forgets....
    if there is a top within a function analysis, the whole analysis may be
    unsound!!!
 *)

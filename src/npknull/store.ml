@@ -290,16 +290,6 @@ let copy (dst, src) env (s1, s2, s3) =
   let s3 = P3.assign dst fp s3 in
     (s1, s2, s3)
 
-(*
-((m, o), e, sz) (s1, s2, s3) = 
-  match e with
-      Dom.Ptr a -> 
-	(P1.assign m a s1, P2.assign (m, o) s2, P3.forget_memloc m s3)
-    | Dom.AddrOfFun f -> (s1, P2.forget_memloc m s2, P3.assign (m, o) f s3)
-    | Dom.Cst -> 
-	(s1, P2.forget_buffer ((m, o), sz) s2, P3.forget_memloc m s3)
-*)
-
 let set_pointsto (m1, o) m2 (s1, s2, s3) =
 (* TODO: not good this constant!!! *)
   let s1 = P1.assign [m1] [P1.AddrOf (m2, Some (0, 32))] s1 in
@@ -310,10 +300,6 @@ let guard a (s1, s2, s3) = (P1.guard a s1, P2.guard a s2, s3)
 
 let remove_memloc m (s1, s2, s3) = 
   (P1.remove_memloc m s1, P2.remove_memloc m s2, P3.remove_memloc m s3)
-
-let forget_buffer buf (s1, s2, s3) =
-  let ((m, _), _) = buf in
-    (s1, P2.forget_buffer buf s2, P3.forget_memloc m s3)
 
 (* TODO: could be optimized *)
 let addr_is_valid (s1, s2, _) a =

@@ -43,9 +43,6 @@ val assign: Memloc.t list -> exp list -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
-(* TODO: should remove this function, unsound *)
-val forget_memloc: Memloc.t -> t -> t
-
 val to_string: t -> string
 
 val split: Memloc.t list -> t -> (t * t)

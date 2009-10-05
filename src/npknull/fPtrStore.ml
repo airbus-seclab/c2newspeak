@@ -136,11 +136,6 @@ let assign (m, _) f s =
 
 let remove_memloc = Map.remove
 
-(* most probably incorrect, unsound, such a primitive shouldn't exist! *)
-let forget_memloc m s = 
-  print_endline "FPtrStore.forget_memloc, this is called";
-  Map.remove m s
-
 let split memlocs s = 
   let unreach = ref s in
   let reach = ref Map.empty in
