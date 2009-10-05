@@ -285,7 +285,6 @@ let set_pointsto (m1, o) m2 (s1, s2, s3) =
 (* TODO: not good this constant!!! *)
   let s1 = P1.assign [m1] [P1.AddrOf (m2, Some (0, 32))] s1 in
   let s2 = P2.assign (m1, o) s2 in
-  let s3 = P3.forget_memloc m1 s3 in
     (s1, s2, s3)
 
 let guard a (s1, s2, s3) = (P1.guard a s1, P2.guard a s2, s3)
