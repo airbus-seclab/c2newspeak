@@ -55,9 +55,7 @@ let contains (a1, a2, a3) (b1, b2, b3) =
 let get_one_abptr x =
   match x with
       x::[] -> x
-    | _ -> 
-	print_endline "Store.get_one_abptr: this is raised!!!"; 
-	raise Exceptions.Unknown
+    | _ -> raise Exceptions.Unknown
 
 (* TODO: shouldn't this all be done in P1?? *)
 (* TODO: should remove lval_to_memloc?? *)
