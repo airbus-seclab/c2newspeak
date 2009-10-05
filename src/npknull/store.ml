@@ -229,7 +229,7 @@ let translate_exp_P1 env s e =
 	    [P1.AddrOf (m, Some (o, n))]
       | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _), e)
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
-      | BinOp ((PlusI|MinusI|MultI|Shiftrt|BAnd _|BOr _), e1, e2) ->
+      | BinOp ((PlusI|MinusI|MultI|Shiftrt|BAnd _|BOr _|MinusPP), e1, e2) ->
 	  let v1 = translate e1 in
 	  let v2 = translate e2 in
 	    v1@v2
@@ -250,7 +250,7 @@ let translate_exp_P3 env s e =
       | AddrOfFun (f, _) -> [P3.AddrOfFun f]
       | UnOp ((Coerce _|Cast _|PtrToInt _), e) 
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
-      | BinOp ((PlusI|MinusI|MultI|Shiftrt|BAnd _|BOr _), e1, e2) ->
+      | BinOp ((PlusI|MinusI|MultI|Shiftrt|BAnd _|BOr _|MinusPP), e1, e2) ->
 	  (translate e1)@(translate e2)
       | _ -> 
 	  print_endline "Store.translate_exp_P3";
