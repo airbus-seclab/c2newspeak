@@ -25,6 +25,10 @@
 
 type t
 
+(* TODO: should remove this function, unsound *)
+val forget: unit -> t
+
+(** [universe] the domain with no variable. *)
 val universe: t
 
 val join: t -> t -> t
@@ -35,6 +39,7 @@ val assign: Dom.addr -> string -> t -> t
 
 val remove_memloc: Memloc.t -> t -> t
 
+(* TODO: should remove this function, unsound *)
 val forget_memloc: Memloc.t -> t -> t
 
 val to_string: t -> string

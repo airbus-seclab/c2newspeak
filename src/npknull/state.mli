@@ -27,6 +27,7 @@ open Newspeak
 
 type t
 
+(** [universe] the state with no variable. *)
 val universe: t
 
 val emptyset: t
@@ -47,6 +48,7 @@ val guard: exp -> int -> t -> t
 
 val is_empty: t -> bool
 
+(* TODO: should remove this primitive, unsound *)
 val forget_lval: lval -> int -> t -> t
 
 (* [split vars s] splits state s into two parts:

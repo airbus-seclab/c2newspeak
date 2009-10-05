@@ -27,6 +27,7 @@ open Newspeak
 
 type t
 
+(** [universe] the store with no variable. *)
 val universe: t
 
 val join: t -> t -> t
@@ -59,6 +60,12 @@ val read_addr: t -> Dom.addr -> Dom.abptr
 (* TODO: this primitive name is not well chosen, think about it *)
 val read_fun: int -> t -> Newspeak.lval -> string list
 
+(* TODO: not good this primitive, think about removing it!! *)
+val set_pointsto: Dom.addr -> Memloc.t -> t -> t
+
+(* TODO: should remove this function, unsound *)
+val forget: unit -> t
+
 (* TODO: write non-regression test that makes soundness bug because of this!!!
    and remove this!!!
    (in other words, pb with deref of top!!)
@@ -71,5 +78,3 @@ val forget_memloc: Memloc.t -> t -> t
 *)
 val forget_buffer: Dom.buffer -> t -> t
 
-(* TODO: not good this primitive, think about removing it!! *)
-val set_pointsto: Dom.addr -> Memloc.t -> t -> t

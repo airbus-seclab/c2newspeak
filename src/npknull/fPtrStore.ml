@@ -61,6 +61,10 @@ type t = string list Map.t
 
 let universe = Map.empty
 
+let forget () =
+  print_endline "FPtrStore.universe, this is called";
+  Map.empty
+
 (* TODO: could be optimized!! by a map2 that doesn't traverse shared 
    subtrees *)
 let join s1 s2 =
@@ -108,7 +112,9 @@ let assign (m, _) f s =
 let remove_memloc = Map.remove
 
 (* most probably incorrect, unsound, such a primitive shouldn't exist! *)
-let forget_memloc = Map.remove
+let forget_memloc m s = 
+  print_endline "FPtrStore.forget_memloc, this is called";
+  Map.remove m s
 
 let split memlocs s = 
   let unreach = ref s in

@@ -28,24 +28,22 @@ typedef struct server {
   int *b;
 } s;
 
-void main () {
-  s x;
+s x;
 
-  int a;
-  int b;
-  //  config_t context;
-  int *ptr;
-  int *ptr2;
-  int v;
+int a;
+int b;
+int *ptr;
+int *ptr2;
+int v;
+
+void main () {
 
   ptr = &v;
 
   x.a = &a;
   x.b = &b;
-
   v = *x.b;
-  
   *ptr = 1;          // precision: should not signal any null pointer deref
-# 0 "Should signal this bug!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+
   *ptr2 = 1;        // soundness: should signal a null pointer deref
 }

@@ -28,11 +28,13 @@ type num_pred = (int * int) option
 type t
 
 type exp =
-    Empty
-  | Lval of Memloc.t
-  | AddrOf of (Memloc.t * num_pred)
-  | BinOp of (exp * exp)
+    Lval of Memloc.t                (** Pointers stored at memloc *)
+  | AddrOf of (Memloc.t * num_pred) (** Pointer *)
 
+(* TODO: remove this function, unsound *)
+val forget: unit -> t
+
+(** [universe] the domain with no variable. *)
 val universe: t
 
 val join: t -> t -> t
@@ -44,7 +46,7 @@ val contains: t -> t -> bool
    The value [(y, o)] represents the pointers [<(y, o): n, delta>] where
    [o], [n] and [delta] verify predicate [num_pred]
 *)
-val assign: Memloc.t list -> exp -> t -> t
+val assign: Memloc.t list -> exp list -> t -> t
 
 val guard: Dom.addr -> t -> t
 

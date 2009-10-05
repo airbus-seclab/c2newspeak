@@ -43,6 +43,8 @@ type t = (P1.t * P2.t * P3.t)
 
 let universe = (P1.universe, P2.universe, P3.universe)
 
+let forget () = (P1.forget (), P2.universe, P3.forget ())
+
 let join (a1, a2, a3) (b1, b2, b3) = 
   (P1.join a1 b1, P2.join a2 b2, P3.join a3 b3)
 
@@ -216,17 +218,19 @@ let forget_memloc_list2 m s =
 let translate_exp_P1 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> P1.Empty
-      | Lval (lv, _) -> P1.Lval (lval_to_memloc env s lv)
+	Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> []
+      | Lval (lv, _) -> 
+	  let m = lval_to_memloc_list env s lv in
+	    List.map (fun x -> P1.Lval x) m
       | AddrOf (lv, n) -> 
 	  let (m, o) = lval_to_addr env s lv in
-	    P1.AddrOf (m, Some (o, n))
+	    [P1.AddrOf (m, Some (o, n))]
       | UnOp (Coerce _, e) -> translate e
       | BinOp (PlusPI, e, _) -> translate e
       | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
 	  let v1 = translate e1 in
 	  let v2 = translate e2 in
-	    P1.BinOp (v1, v2)
+	    v1@v2
       | UnOp (Cast (Int _, FunPtr), e) -> translate e
       | _ -> raise Exceptions.Unknown
   in
@@ -248,7 +252,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
       (s1, s2, !s3)
   with Exceptions.Unknown -> 
     (* TODO: most probably unsound, should remove all universe cases!!! *)
-    universe
+    forget ()
 
 (*
 ((m, o), e, sz) (s1, s2, s3) = 
@@ -262,7 +266,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
 
 let set_pointsto (m1, o) m2 (s1, s2, s3) =
 (* TODO: not good this constant!!! *)
-  let s1 = P1.assign [m1] (P1.AddrOf (m2, Some (0, 32))) s1 in
+  let s1 = P1.assign [m1] [P1.AddrOf (m2, Some (0, 32))] s1 in
   let s2 = P2.assign (m1, o) s2 in
   let s3 = P3.forget_memloc m1 s3 in
     (s1, s2, s3)

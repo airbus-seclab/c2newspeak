@@ -193,7 +193,7 @@ let assign args env s =
 		  Some (Store.forget_memloc m s)
 	with
 	    Exceptions.Emptyset -> emptyset
-	  | Exceptions.Unknown -> universe (* TODO: should remove this case altogether, source of unsoundness!! *)
+	  | Exceptions.Unknown -> forget () (* TODO: should remove this case altogether, source of unsoundness!! *)
 *)
 
 let to_string s =
@@ -225,7 +225,7 @@ let forget_lval lv env s =
 	  let m = Abaddr.to_memloc a in
 	  let s = Store.forget_memloc m s in
 	    Some s
-	with Exceptions.Unknown -> universe
+	with Exceptions.Unknown -> Some (Store.forget ())
 
 let guard e env s = 
   match s with

@@ -31,10 +31,8 @@ open Newspeak
 type num_pred = (int * int) option
 
 type exp =
-    Empty
-  | Lval of Memloc.t
+    Lval of Memloc.t
   | AddrOf of (Memloc.t * num_pred)
-  | BinOp of (exp * exp)
 
 let join_num_pred x1 x2 = if x1 = x2 then x1 else None
 
@@ -93,6 +91,10 @@ type t = info Map.t
 
 let universe = Map.empty
 
+let forget () = 
+  print_endline "FieldInsensitivePtrBuf.forget: this is called";
+  Map.empty
+
 (* TODO: could be optimized!! by a map2 that doesn't traverse shared 
    subtrees *)
 let join s1 s2 =
@@ -131,32 +133,26 @@ let contains s1 s2 =
 let read s m = try Map.find m s with Not_found -> raise Exceptions.Emptyset
 
 let eval s e =
-  let rec eval e =
-    match e with
-	Lval m -> begin
-	  try Map.find m s 
-	  with Not_found -> []
-	end
-      | AddrOf v -> v::[]
-      | BinOp (e1, e2) -> (eval e1)@(eval e2)
-      | Empty -> []
-  in
-    eval e
+  match e with
+      Lval m -> begin
+	try Map.find m s 
+	with Not_found -> []
+      end
+    | AddrOf v -> v::[]
+
 
 let assign m e s =
-  let v = eval s e in
-    if v = [] then s
-    else begin
-      let res = ref s in
-      let assign_memloc m =
-	(* TODO: could be optimized *)
-	let info = ref (try Map.find m !res with Not_found -> []) in
-	  List.iter (fun x -> info := insert_info x !info) v;
-	  res := Map.add m !info !res
-      in
-	List.iter assign_memloc m;
-	!res
-    end
+  let v = List.map (eval s) e in
+  let v = List.flatten v in
+  let res = ref s in
+  let assign_memloc m =
+    (* TODO: could be optimized *)
+    let info = ref (try Map.find m !res with Not_found -> []) in
+      List.iter (fun x -> info := insert_info x !info) v;
+      res := Map.add m !info !res
+  in
+    List.iter assign_memloc m;
+    !res
   
 let addr_is_valid _ _ = false
 
