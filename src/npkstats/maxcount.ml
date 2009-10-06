@@ -173,7 +173,7 @@ let print (exact, st) xout =
 	  in
 	  let s =
 	    if !rec_fun<> "" then
-	      s^"<stats class=\""^s5^"\" val=\""^(!rec_fun)^"\"></stats>\n"
+	      s^"<stats type=\"warning\" class=\""^s5^"\" val=\""^(!rec_fun)^"\"></stats>\n"
 	    else s
 	  in
 	    output_string cout s
