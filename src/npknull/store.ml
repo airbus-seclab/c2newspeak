@@ -102,9 +102,8 @@ let lval_to_memloc_list env s lv =
       | UnOp (IntToPtr _, e) 
       | BinOp (PlusPI, e, _) -> translate_exp e
       | _ -> 
-	  print_endline "Store.lval_to_memloc_list";
-	  print_endline (Newspeak.string_of_exp e);
-	  raise Exceptions.Unknown
+	  invalid_arg ("Store.lval_to_memloc_list: case not handled yet: "
+		       ^ Newspeak.string_of_exp e)
   in
     translate_lval lv
 
@@ -227,7 +226,7 @@ let translate_exp_P1 env s e =
       | AddrOf (lv, n) -> 
 	  let (m, o) = lval_to_addr env s lv in
 	    [P1.AddrOf (m, Some (o, n))]
-      | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _), e)
+      | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _|BNot _), e)
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
       | BinOp ((PlusI|MinusI|MultI|Shiftlt|Shiftrt
 	       |BAnd _|BOr _|MinusPP), e1, e2) ->
@@ -236,7 +235,7 @@ let translate_exp_P1 env s e =
 	    v1@v2
       | _ -> 
 	  invalid_arg ("Store.translate_exp_P1: case not implemented yet: "
-		       ^Newspeak.string_of_exp e);
+		       ^Newspeak.string_of_exp e)
   in
     translate e
 
@@ -248,15 +247,14 @@ let translate_exp_P3 env s e =
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P3.Lval x) m
       | AddrOfFun (f, _) -> [P3.AddrOfFun f]
-      | UnOp ((Coerce _|Cast _|PtrToInt _), e) 
+      | UnOp ((Coerce _|Cast _|PtrToInt _|BNot _), e) 
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
       | BinOp ((PlusI|MinusI|MultI|Shiftrt|Shiftlt
 	       |BAnd _|BOr _|MinusPP), e1, e2) ->
 	  (translate e1)@(translate e2)
       | _ -> 
-	  print_endline "Store.translate_exp_P3";
-	  print_endline (Newspeak.string_of_exp e); 
-	  raise Exceptions.Unknown
+	  invalid_arg ("Store.translate_exp_P3: case not implemented yet: "
+		       ^Newspeak.string_of_exp e)
   in
     translate e
 
