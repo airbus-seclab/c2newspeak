@@ -166,10 +166,14 @@ let remove_memloc = Map.remove
 let build_transport src memlocs dst =
   let todo = ref [] in
   let res = ref Subst.identity in
-    
+  let visited = ref [] in
+
   let add_assoc x y = 
-    todo := (x, y)::!todo;
-    if x <> y then res := Subst.assoc x y !res
+    if not (List.mem (x, y) !visited) then begin
+      visited := (x, y)::!visited;
+      todo := (x, y)::!todo;
+      res := Subst.assoc x y !res
+    end
   in
 
   let rec unify_values v1 v2 =

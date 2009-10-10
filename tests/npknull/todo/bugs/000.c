@@ -23,13 +23,14 @@
   email: charles.hymans@penjili.org
 */
 
-// should not loop forever??
-
-void f(int *y) {
+// shouldn't there be two hoare triples here??
+void f(int *, int *) {
 }
 
 void main() {
-  int *x;
-  x = &x;
-  f(&x);
+  int x;
+  int y;
+
+  f(&x, &x);
+  f(&x, &y);
 }

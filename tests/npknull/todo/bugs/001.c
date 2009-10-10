@@ -23,14 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
-// shouldn't there be two hoare triples here??
-void f(int *, int *) {
-}
+// should not loop forever
+extern void *calloc (unsigned int, unsigned int);
 
 void main() {
-  int x;
-  int y;
+ int *ptr;
 
-  f(&x, &x);
-  f(&x, &y);
+ while (1) {
+   ptr = calloc(1, sizeof(int));
+ }
 }

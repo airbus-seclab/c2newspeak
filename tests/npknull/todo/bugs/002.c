@@ -24,12 +24,19 @@
 */
 
 // should not loop forever
-extern void *calloc (unsigned int, unsigned int);
+// try this one with space-invader!!!
+extern void *malloc(unsigned int);
 
-void main() {
- int *ptr;
+void g(char **y)
+{
+  *y = malloc(1);
+}
 
- while (1) {
-   ptr = calloc(1, sizeof(int));
- }
+void main()
+{
+  char *x;
+
+  while (1) {
+      g(&x);
+    }
 }

@@ -25,41 +25,14 @@
 
 // should not loop forever
 
-extern void *malloc (unsigned int);
+char *x;
 
-typedef struct {
-  int *a;
-  int *b;
-} t;
-
-void f(int *b) {
+char *g() {
+  return x;
 }
 
-int* g() {
-  int *b;
-  
-  b = malloc(sizeof(int));
-  
-  return b;
-}
+void main() {
+  x = &x;
 
-
-void main () {
-  int **srv;
-  int *s;
-  t context;
-  int **dc;
-  
-  context.a = &s;
-  
-  s = g();
-  context.b = g();
-  
-  *context.b = *context.b;
-  
-  dc = malloc(sizeof(int**));
-  
-  *dc = g();
-  
-  f(*dc);
+  g();
 }
