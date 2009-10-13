@@ -219,7 +219,7 @@ let forget_memloc_list2 m s =
 let translate_exp_P1 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOfFun _ | BinOp ((Eq _|DivF _|MultF _), _, _) 
+	Const _ | AddrOfFun _ | BinOp ((Eq _|Gt _|DivF _|MultF _), _, _) 
       | UnOp (Not, _) -> []
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
@@ -232,7 +232,7 @@ let translate_exp_P1 env s e =
 	    let m = lval_to_memloc_list env s lv in
 	      List.map (fun m -> P1.AddrOf (m, None)) m
 	end
-      | UnOp ((Coerce _|PtrToInt _|BNot _|Focus _
+      | UnOp ((Coerce _|PtrToInt _|BNot _|Focus _|IntToPtr _
 	      |Cast (Int _, FunPtr)|Cast (Float _, Float _)|Cast (FunPtr, Ptr)
 	      |Cast (Int _, Float _)|Cast (Float _, Int _)), e)
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
@@ -250,13 +250,13 @@ let translate_exp_P1 env s e =
 let translate_exp_P3 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOf _ | BinOp ((Eq _|DivF _|MultF _), _, _) 
+	Const _ | AddrOf _ | BinOp ((Eq _|Gt _|DivF _|MultF _), _, _) 
       | UnOp (Not, _) -> []
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P3.Lval x) m
       | AddrOfFun (f, _) -> [P3.AddrOfFun f]
-      | UnOp ((Coerce _|Cast _|PtrToInt _|BNot _|Focus _), e) 
+      | UnOp ((Coerce _|Cast _|PtrToInt _|IntToPtr _|BNot _|Focus _), e) 
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
       | BinOp ((PlusI|MinusI|MultI|Shiftrt|Shiftlt
 	       |BAnd _|BOr _|MinusPP), e1, e2) ->
