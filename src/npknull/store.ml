@@ -226,8 +226,9 @@ let translate_exp_P1 env s e =
       | AddrOf (lv, n) -> 
 	  let (m, o) = lval_to_addr env s lv in
 	    [P1.AddrOf (m, Some (o, n))]
-      | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _|BNot _
-	      |Focus _|Cast (Float _, Float _)|Cast (FunPtr, Ptr)), e)
+      | UnOp ((Coerce _|PtrToInt _|BNot _|Focus _
+	      |Cast (Int _, FunPtr)|Cast (Float _, Float _)|Cast (FunPtr, Ptr)
+	      |Cast (Int _, Float _)), e)
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
       | BinOp ((PlusI|MinusI|MultI|Shiftlt|Shiftrt
 	       |BAnd _|BOr _|MinusPP), e1, e2) ->
