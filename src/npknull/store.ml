@@ -226,7 +226,7 @@ let translate_exp_P1 env s e =
       | AddrOf (lv, n) -> 
 	  let (m, o) = lval_to_addr env s lv in
 	    [P1.AddrOf (m, Some (o, n))]
-      | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _|BNot _), e)
+      | UnOp ((Coerce _|Cast (Int _, FunPtr)|PtrToInt _|BNot _|Focus _), e)
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
       | BinOp ((PlusI|MinusI|MultI|Shiftlt|Shiftrt
 	       |BAnd _|BOr _|MinusPP), e1, e2) ->
@@ -247,7 +247,7 @@ let translate_exp_P3 env s e =
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P3.Lval x) m
       | AddrOfFun (f, _) -> [P3.AddrOfFun f]
-      | UnOp ((Coerce _|Cast _|PtrToInt _|BNot _), e) 
+      | UnOp ((Coerce _|Cast _|PtrToInt _|BNot _|Focus _), e) 
       | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
       | BinOp ((PlusI|MinusI|MultI|Shiftrt|Shiftlt
 	       |BAnd _|BOr _|MinusPP), e1, e2) ->

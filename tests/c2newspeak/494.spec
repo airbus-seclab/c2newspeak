@@ -2,7 +2,7 @@ Newspeak output
 ---------------
 494.c
 void main(void) {
-  (494.c:33#2)^y =(ptr) (x_ptr + 192);
+  (494.c:33#2)^y =(ptr) focus32 (x_ptr + 192);
 }
 
 ptr x;

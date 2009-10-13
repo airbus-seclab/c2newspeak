@@ -158,6 +158,7 @@ and cst =
 and unop =
     Belongs of bounds
   | Coerce of bounds
+  | Focus of size_t
   | Not
   | BNot of bounds
   | PtrToInt of ikind

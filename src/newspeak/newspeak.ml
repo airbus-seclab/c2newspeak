@@ -145,7 +145,7 @@ and lval =
 and exp =
     Const of cst
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * size_t)
+  | AddrOf of (lval * size_t) (* TODO: remove size_t here!!! *)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
@@ -159,6 +159,7 @@ and cst =
 and unop =
     Belongs of bounds
   | Coerce of bounds
+  | Focus of size_t
   | Not
   | BNot of bounds
   | PtrToInt of ikind
@@ -380,6 +381,7 @@ let string_of_unop op =
   match op with
       Belongs r -> "belongs"^(string_of_bounds r)
     | Coerce r -> "coerce"^(string_of_bounds r)
+    | Focus sz -> "focus"^(string_of_size_t sz)
     | Cast (typ, typ') ->
 	"("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
     | Not -> "!"
@@ -771,13 +773,17 @@ object
 	Deref (AddrOf (lv, n), n') when n' <= n -> lv
       | _ -> lv
 
-  method process_exp e =
+  method process_exp e = 
     match e with
-	AddrOf (lv, _) -> begin
-	  try addr_of_deref lv
+(* TODO: here should have an AddrOf lv 
+   no need to add the focus, it will be here
+*)
+	AddrOf (lv, n) -> begin
+	  try UnOp (Focus n, addr_of_deref lv)
 	  with Not_found -> e
 	end
       | _ -> e
+
 end
 
 let nat_op op =
@@ -1314,7 +1320,7 @@ and build_unop builder op =
 	let t1 = build_scalar_t builder t1 in
 	let t2 = build_scalar_t builder t2 in
 	  Cast (t1, t2)
-    | Belongs _ | Coerce _ | Not | BNot _-> op
+    | Belongs _ | Coerce _ | Focus _ | Not | BNot _-> op
 
 and build_binop builder op =
   match op with
