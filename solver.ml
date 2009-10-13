@@ -10,7 +10,9 @@ let display_version _ =
 
 let handle_file fname =
   let npk = Newspeak.read fname in
-  print_endline (String.concat "," npk.Newspeak.fnames)
+  print_endline (String.concat "," npk.Newspeak.fnames);
+  let prg = Pcomp.compile npk in
+  ignore prg
 
 let main _ =
   let optlist = [ 'h', "help"    , Some display_help,    None
