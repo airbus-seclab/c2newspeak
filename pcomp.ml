@@ -1,6 +1,10 @@
 open Newspeak
 
-let fail loc x = failwith (string_of_loc loc^" : "^x)
+let abort s =
+  prerr_endline s;
+  exit 3
+
+let fail loc x = abort (string_of_loc loc^" : "^x)
 
 let assert_int_typ loc t =
   if (t <> Scalar (Int (Unsigned, 32))) then
@@ -50,5 +54,8 @@ let rec pcomp_stmt (sk, loc) =
 and pcomp_blk x = List.map pcomp_stmt x
 
 let compile npk =
-  let (_, main_blk) = Hashtbl.find npk.fundecs "main" in
+  let (_, main_blk) =
+    try Hashtbl.find npk.fundecs "main"
+    with Not_found -> abort "No 'main' function"
+  in
   pcomp_blk main_blk
