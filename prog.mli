@@ -26,6 +26,7 @@ and var = string
 and exp =
   | Const of cst
   | Var   of var
+  | Not   of exp
   | Op    of binop * exp * exp
 
 and lbl = int
