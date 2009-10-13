@@ -219,7 +219,8 @@ let forget_memloc_list2 m s =
 let translate_exp_P1 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOfFun _ | BinOp ((Eq _|DivF _), _, _) | UnOp (Not, _) -> []
+	Const _ | AddrOfFun _ | BinOp ((Eq _|DivF _|MultF _), _, _) 
+      | UnOp (Not, _) -> []
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P1.Lval x) m
@@ -249,7 +250,8 @@ let translate_exp_P1 env s e =
 let translate_exp_P3 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOf _ | BinOp ((Eq _|DivF _), _, _) | UnOp (Not, _) -> []
+	Const _ | AddrOf _ | BinOp ((Eq _|DivF _|MultF _), _, _) 
+      | UnOp (Not, _) -> []
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P3.Lval x) m
