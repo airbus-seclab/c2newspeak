@@ -4,4 +4,4 @@ and node = int
 
 and vertex = node * node * label
 
-and label = unit
+and label = string
