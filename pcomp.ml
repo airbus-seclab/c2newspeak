@@ -44,9 +44,10 @@ let rec pcomp_exp loc = function
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
                              Prog.Op (op, (pcomp_exp loc e1),
                                           (pcomp_exp loc e2))
+  | UnOp (Coerce _ , e) -> pcomp_exp loc e
   | AddrOfFun _ | AddrOf _
   | UnOp (( Cast _ | IntToPtr _ | PtrToInt _ 
-          | BNot _ | Coerce _   | Belongs  _), _)
+          | BNot _ | Belongs  _), _)
   | Const (CFloat _ | Nil) ->
       fail loc "Invalid expression"
 

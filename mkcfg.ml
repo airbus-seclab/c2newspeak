@@ -4,22 +4,19 @@ module Lbl = struct
   let next = succ
 end
 
-let process_stmt stmt (nodes, vertices, lbl) =
+let process_stmt stmt (lbl, vertices) =
   let lbl' = Lbl.next lbl in
   ignore stmt;
-  (lbl' :: nodes, (lbl, lbl', ())::vertices, lbl')
+  (lbl', (lbl, lbl', ())::vertices)
 
 let process blk =
-  let (n, v, _ ) =
-    let l0 = Lbl.init in
-    List.fold_right process_stmt blk ([l0], [], l0)
-  in
-  (n, v)
+  let l0 = Lbl.init in
+  List.fold_right process_stmt blk (l0, [])
 
 let dump (n, v) =
     "---\n"
-  ^ "nodes:\n"
-  ^ String.concat "" (List.map (fun n -> "  - "^string_of_int n^"\n") n)
+  ^ "lastnode: "
+  ^ string_of_int n^"\n"
   ^ "vertices:"
     ^ (if v = [] then " []\n" else 
       "\n"

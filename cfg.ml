@@ -1,4 +1,4 @@
-type t = node list * vertex list
+type t = int * vertex list
 
 and node = int
 
