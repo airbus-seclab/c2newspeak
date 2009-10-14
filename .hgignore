@@ -1,3 +1,5 @@
 Syntax: regexp
 \.no$
 \.npk$
+\.cm[io]$
+^solver$
