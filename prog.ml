@@ -10,7 +10,7 @@ type t = blk
 and blk = stmt list
 
 and stmt = stmtkind * Newspeak.location
-  
+
 and stmtkind =
   | Set      of var * exp
   | Guard    of exp

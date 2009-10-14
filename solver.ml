@@ -1,6 +1,6 @@
 
 let display_help _ =
-  print_endline ("Usage : "^Sys.argv.(0)^" file.npk")
+  print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk")
 
 let display_version _ =
   print_endline "Version : pre-alpha";
@@ -21,7 +21,7 @@ let fname_suffix str =
 
 let c2newspeak fname =
   let tmpnam = "/tmp/solver_a.npk" in
-  let ret = Sys.command ("c2newspeak -o "^tmpnam^" "^fname) in
+  let ret = Sys.command ("c2newspeak -o " ^ tmpnam ^ " " ^ fname) in
   if ret <> 0 then failwith "c2newspeak error"
   else
     tmpnam

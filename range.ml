@@ -40,13 +40,13 @@ let meet a b = match (a, b) with
       end
 
 let to_string =
-  let int_inf_to_string x =
+  let string_of_int_inf x =
     if x = max_int then "+oo"
     else if x = min_int then "-oo"
     else string_of_int x
   in function
   | None        -> "(bot)"
-  | Some (a, b) when a = b -> "{"^string_of_int a^"}"
-  | Some (a, b)            -> "["^int_inf_to_string a^";"
-                                 ^int_inf_to_string b^"]"
+  | Some (a, b) when a = b -> "{" ^ string_of_int     a ^ "}"
+  | Some (a, b)            -> "[" ^ string_of_int_inf a ^ ";"
+                                  ^ string_of_int_inf b ^ "]"
 

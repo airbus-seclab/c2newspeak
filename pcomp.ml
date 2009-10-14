@@ -4,12 +4,12 @@ let abort s =
   prerr_endline s;
   exit 3
 
-let fail loc x = abort (string_of_loc loc^" : "^x)
+let fail loc x = abort (string_of_loc loc ^ " : " ^ x)
 
 let assert_int_typ loc = function
   | Scalar (Int (Signed, 32)) -> ()
   | Scalar (Int (Signed, sz)) ->
-        fail loc ("Bad int size ("^string_of_int sz^")")
+        fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
   | Scalar (Int (Unsigned, _)) -> fail loc "Unsigned value"
   | Region _ | Array _  ->        fail loc "Not a scalar"
   | Scalar (Float _| FunPtr | Ptr) -> fail loc "Bad scalar"
@@ -42,11 +42,11 @@ let rec pcomp_exp loc = function
   | Lval (lv, scal) -> assert_int loc scal; Prog.Var (pcomp_var loc lv)
   | UnOp (Not, e1) -> Prog.Not (pcomp_exp loc e1)
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
-                             Prog.Op (op, (pcomp_exp loc e1),
-                                          (pcomp_exp loc e2))
+                             Prog.Op (op, (pcomp_exp loc e1)
+                                        , (pcomp_exp loc e2))
   | UnOp (Coerce _ , e) -> pcomp_exp loc e
   | AddrOfFun _ | AddrOf _
-  | UnOp (( Cast _ | IntToPtr _ | PtrToInt _ 
+  | UnOp (( Cast _ | IntToPtr _ | PtrToInt _
           | BNot _ | Belongs  _), _)
   | Const (CFloat _ | Nil) ->
       fail loc "Invalid expression"
@@ -85,5 +85,5 @@ let compile npk =
     abort "Multiple functions";
   match blko with
   | None -> abort "No 'main' function"
-  | Some (_,b) -> pcomp_blk b
-  
+  | Some (_, b) -> pcomp_blk b
+
