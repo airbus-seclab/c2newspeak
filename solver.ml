@@ -13,7 +13,7 @@ let handle_file_npk fname =
   print_endline (String.concat "," npk.Newspeak.fnames);
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
-  ignore cfg
+  print_endline (Mkcfg.dump cfg)
 
 let fname_suffix str =
   let dot = String.rindex str '.' in
