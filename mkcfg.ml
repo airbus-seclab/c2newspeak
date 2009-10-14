@@ -5,6 +5,8 @@ module Lbl = struct
   let next = succ
 end
 
+let nop (x:Range.t) :Range.t = x
+
 (**
  * lbl is the last label used.
  *)
@@ -16,14 +18,14 @@ let rec process_stmt (stmt,_) (lbl, alist, vertices, join) =
   match stmt with
   | InfLoop b -> let btm = Lbl.next lbl in
                  let (top, vert) = process_blk b alist btm in
-                 (top, alist,   (btm, top,   "(reloop)")
-                              ::(btm, jnode, "(loop-btm)")
+                 (top, alist,   (btm, top,   ("(reloop)", nop))
+                              ::(btm, jnode, ("(loop-btm)", nop))
                               ::vert@vertices, None)
   | Select  (b1, b2) -> let (l1, v1) = process_blk           b1 alist jnode in
                         let (l2, v2) = process_blk ~join:lbl b2 alist l1    in
                         let top = Lbl.next l2 in
-                        (top, alist,   (top,l1,"(select : 1)")
-                                     ::(top,l2,"(select : 2)")
+                        (top, alist,   (top,l1,("(select : 1)", nop))
+                                     ::(top,l2,("(select : 2)", nop))
                                      ::v1@v2@vertices, None)
 
   | DoWith   (b1, lmid, b2) -> let (top_b2, v2) = process_blk b2 alist jnode in
@@ -33,10 +35,12 @@ let rec process_stmt (stmt,_) (lbl, alist, vertices, join) =
                                (top_b1, alist, v1@v2@vertices, None)
   | Goto     l -> let lbl' = Lbl.next lbl in
                   let ljmp = List.assoc l alist in
-                  (lbl', alist, (lbl', ljmp, "(jump)")::(lbl', jnode, "(njmp)")::vertices, None)
+                  (lbl', alist, (lbl', ljmp,  ("(jump)", nop))
+                              ::(lbl', jnode, ("(njmp)", nop))
+                              ::vertices, None)
   | Set      _
   | Guard    _ -> let lbl' = Lbl.next lbl in
-                  (lbl', alist, (lbl', jnode, "(stmt)")::vertices, None)
+                  (lbl', alist, (lbl', jnode, ("(stmt)", nop))::vertices, None)
 
 and process_blk ?join blk al l0 =
   let (lastnode, _, vertices, _) =
@@ -52,7 +56,7 @@ let dump (n, v) =
   ^ "vertices:"
     ^ (if v = [] then " []\n" else 
       "\n"
-    ^ (String.concat "" (List.map (fun (a, b, s) ->
+    ^ (String.concat "" (List.map (fun (a, b, (s,_)) ->
       "  - ["^string_of_int a^", "^string_of_int b^"]"
       ^ (if s = "" then "" else " # "^s)
       ^"\n") v))
