@@ -5,18 +5,31 @@ module Lbl = struct
   let next = succ
 end
 
-let process_stmt (stmt,_) (lbl, vertices) =
+(**
+ * lbl is the last label used.
+ *)
+let rec process_stmt ?join (stmt,_) (lbl, vertices) =
   match stmt with
-  | InfLoop _ -> (lbl, (lbl, lbl, ())::vertices)
+  | InfLoop b -> let (top, vert) = process_blk b lbl in
+                 (top, (lbl, top, ())::vert@vertices)
+  | Select  (b1, b2) -> let (l1, v1) = process_blk b1 lbl in
+                        let (l2, v2) = process_blk ~join:lbl b2 l1 in
+                        let top = Lbl.next l2 in
+                        (top, (top,l1,())::(top,l2,())::v1@v2@vertices)
   | Set      _
   | Guard    _
-  | Select   _
   | DoWith   _
   | Goto     _ -> let lbl' = Lbl.next lbl in
-                  (lbl', (lbl, lbl', ())::vertices)
+                  let join_node = begin match join with
+                  | None   -> lbl
+                  | Some l -> l
+                  end in
+                  (lbl', (lbl', join_node, ())::vertices)
 
-let process blk =
-  List.fold_right process_stmt blk (Lbl.init, [])
+and process_blk ?join blk l0 =
+  List.fold_right (fun x y -> process_stmt ?join x y) blk (l0, [])
+
+let process blk = process_blk blk Lbl.init
 
 let dump (n, v) =
     "---\n"
