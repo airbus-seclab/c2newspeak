@@ -6,9 +6,13 @@ let abort s =
 
 let fail loc x = abort (string_of_loc loc^" : "^x)
 
-let assert_int_typ loc t =
-  if (t <> Scalar (Int (Unsigned, 32))) then
-    fail loc "Not an int"
+let assert_int_typ loc = function
+  | Scalar (Int (Signed, 32)) -> ()
+  | Scalar (Int (Signed, sz)) ->
+        fail loc ("Bad int size ("^string_of_int sz^")")
+  | Scalar (Int (Unsigned, _)) -> fail loc "Unsigned value"
+  | Region _ | Array _  ->        fail loc "Not a scalar"
+  | Scalar (Float _| FunPtr | Ptr) -> fail loc "Bad scalar"
 
 let assert_int loc st =
   assert_int_typ loc (Scalar st)
