@@ -107,54 +107,60 @@ let lval_to_memloc_list env s lv =
   in
     translate_lval lv
 
-let lval_to_addr env s lv =
-  let rec lval_to_addr lv =
-    match lv with
-	Global _ | Local _ -> (lval_to_memloc env s lv, 0)
-      | Shift (lv, Const CInt n) -> 
-	  let (m, o) = lval_to_addr lv in
-	    (* TODO: maybe a bug with integer overflow here!! *)
-	    (m, o + (Nat.to_int n))
-      | _ ->
-	  (*print_endline (Newspeak.string_of_lval lv);*)
-	  raise Exceptions.Unknown
-  in
-    lval_to_addr lv
-
-let exp_to_ptr env s e =
-  let rec exp_to_ptr e =
-    match e with
-	Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> None
-      | Lval (lv, _) ->
-	  let m = lval_to_memloc env s lv in
-	  let p =
-	    try Some (get_one_abptr (P1.read s m))
-	    with Exceptions.Emptyset -> None
-	  in
-	    p
-      | AddrOf (lv, n) -> 
-	  let (m, o) = lval_to_addr env s lv in
-	    Some (m, Some (o, n))
-(*
-	  let m = lval_to_memloc env s lv in
-	    Some (m, None)
+let rec lval_to_addr env s lv =
+  match lv with
+      Global _ | Local _ -> (lval_to_memloc env s lv, 0)
+    | Shift (lv, Const CInt n) -> 
+	let (m, o) = lval_to_addr env s lv in
+	  (* TODO: maybe a bug with integer overflow here!! *)
+	  (m, o + (Nat.to_int n))
+    | Deref (_, _) -> 
+(* TODO: needs a domain on pointer more precise, since the delta is unknown!!
+	let p = exp_to_ptr env s e in
+	let _ =
+	  match p with
+	      None -> print_endline "{}"
+	    | Some (m, None) -> print_endline (Memloc.to_string m^", ?")
+	    | Some (m, Some (o, sz)) -> 
+		let a = "("^Memloc.to_string m^", "^string_of_int o^")" in
+		  print_endline ("<"^a^": "^string_of_int sz^", ?>")
+	in
+	  print_endline (Newspeak.string_of_exp e);
 *)
-      | UnOp (Coerce _, e) -> exp_to_ptr e
-      | BinOp (PlusPI, e, _) -> exp_to_ptr e
-      | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
-	  let v1 = exp_to_ptr e1 in
-	  let v2 = exp_to_ptr e2 in
-	  let v =
-	    match (v1, v2) with
-		(Some _, Some _) -> raise Exceptions.Unknown
-	      | (Some _, _) -> v1
-	      | _ -> v2
-	  in
-	    v
-      | UnOp (Cast (Int _, FunPtr), e) -> exp_to_ptr e
-      | _ -> raise Exceptions.Unknown
-  in
-    exp_to_ptr e
+	  raise Exceptions.Unknown
+    | _ -> raise Exceptions.Unknown
+
+and exp_to_ptr env s e =
+  match e with
+      Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> None
+    | Lval (lv, _) ->
+	let m = lval_to_memloc env s lv in
+	let p =
+	  try Some (get_one_abptr (P1.read s m))
+	  with Exceptions.Emptyset -> None
+	in
+	  p
+    | AddrOf (lv, n) -> 
+	let (m, o) = lval_to_addr env s lv in
+	  Some (m, Some (o, n))
+	    (*
+	      let m = lval_to_memloc env s lv in
+	      Some (m, None)
+	    *)
+    | UnOp (Coerce _, e) 
+    | BinOp (PlusPI, e, _) -> exp_to_ptr env s e
+    | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
+	let v1 = exp_to_ptr env s e1 in
+	let v2 = exp_to_ptr env s e2 in
+	let v =
+	  match (v1, v2) with
+	      (Some _, Some _) -> raise Exceptions.Unknown
+	    | (Some _, _) -> v1
+	    | _ -> v2
+	in
+	  v
+    | UnOp (Cast (Int _, FunPtr), e) -> exp_to_ptr env s e
+    | _ -> raise Exceptions.Unknown
 
 (* TODO: here may use abaddr??? *)
 let lval_to_buffer env s lv =
