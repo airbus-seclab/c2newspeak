@@ -15,7 +15,9 @@ let assert_int loc st =
 
 let pcomp_var loc = function
   | Global s -> s
-  | _ -> fail loc "Not a global variable"
+  | Local _
+  | Deref _
+  | Shift _ -> fail loc "Not a global variable"
 
 let pcomp_binop loc binop =
   match binop with
@@ -25,7 +27,11 @@ let pcomp_binop loc binop =
   | DivI    -> Prog.Div
   | Gt scal -> assert_int loc scal; Prog.Gt
   | Eq scal -> assert_int loc scal; Prog.Eq
-  | _ -> fail loc "Invalid binary operation"
+  | PlusF _ | DivF _ | MultF _ | MinusF _
+  | BXor  _ | BAnd _ | BOr _
+  | MinusPP | PlusPI
+  | Shiftrt | Shiftlt
+  | Mod -> fail loc "Invalid binary operation"
 
 let rec pcomp_exp loc = function
   | Const (CInt c) -> Prog.Const c
@@ -34,26 +40,36 @@ let rec pcomp_exp loc = function
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
                              Prog.Op (op, (pcomp_exp loc e1),
                                           (pcomp_exp loc e2))
-  | _ -> fail loc "Invalid expression"
+  | AddrOfFun _ | AddrOf _
+  | UnOp (( Cast _ | IntToPtr _ | PtrToInt _ 
+          | BNot _ | Coerce _   | Belongs  _), _)
+  | Const (CFloat _ | Nil) ->
+      fail loc "Invalid expression"
+
 
 let rec pcomp_stmt (sk, loc) =
   let sk' = match sk with
   | Set (lv, exp, scal) -> assert_int loc scal;
                            Prog.Set (pcomp_var loc lv, pcomp_exp loc exp)
   | Guard e             -> Prog.Guard (pcomp_exp loc e)
-  | Decl (s, ty, b)     -> assert_int_typ loc ty; Prog.Decl (s, pcomp_blk b)
   | Select (b1, b2)     -> Prog.Select ((pcomp_blk b1), (pcomp_blk b2))
   | InfLoop b           -> Prog.InfLoop (pcomp_blk b)
   | DoWith (b1, l, b2)  -> Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2)
   | Goto l              -> Prog.Goto l
   | UserSpec asrt       -> Prog.UserSpec asrt
-  | _ -> fail loc "Invalid statement"
+  | Call _
+  | Copy _
+  | Decl _              -> fail loc "Invalid statement"
   in
     (sk', loc)
 
 and pcomp_blk x = List.map pcomp_stmt x
 
 let compile npk =
+  (* Check that all variables are int *)
+  Hashtbl.iter (fun _ (ty, loc) ->
+    assert_int_typ loc ty
+  ) npk.globals;
   let (_, main_blk) =
     try Hashtbl.find npk.fundecs "main"
     with Not_found -> abort "No 'main' function"
