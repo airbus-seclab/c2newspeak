@@ -190,6 +190,7 @@ let may_be_null env s1 s2 e =
 	  let a = lval_to_addr env s1 lv in
 	    not (P2.addr_is_valid s2 a)
       | BinOp (PlusPI, e, _) -> may_be_null e
+      | UnOp (Focus _, e) -> may_be_null e
       | _ ->
 	  (*	print_endline (Newspeak.string_of_exp e);*)
 	  true
