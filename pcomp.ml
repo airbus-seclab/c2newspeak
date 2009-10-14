@@ -74,8 +74,15 @@ let compile npk =
   Hashtbl.iter (fun _ (ty, loc) ->
     assert_int_typ loc ty
   ) npk.globals;
-  let (_, main_blk) =
-    try Hashtbl.find npk.fundecs "main"
-    with Not_found -> abort "No 'main' function"
-  in
-  pcomp_blk main_blk
+  let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
+    let blko' =
+      if fname = "main" then Some blk
+                      else None
+    in (succ nfun, blko')
+  ) npk.fundecs (0, None) in
+  if nfun > 1 then
+    abort "Multiple functions";
+  match blko with
+  | None -> abort "No 'main' function"
+  | Some (_,b) -> pcomp_blk b
+  
