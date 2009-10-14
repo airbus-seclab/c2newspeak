@@ -61,7 +61,7 @@ let rec pcomp_stmt (sk, loc) =
   | InfLoop b           -> Prog.InfLoop (pcomp_blk b)
   | DoWith (b1, l, b2)  -> Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2)
   | Goto l              -> Prog.Goto l
-  | UserSpec asrt       -> Prog.UserSpec asrt
+  | UserSpec _
   | Call _
   | Copy _
   | Decl _              -> fail loc "Invalid statement"

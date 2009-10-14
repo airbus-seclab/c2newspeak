@@ -1,17 +1,22 @@
+open Prog
 
 module Lbl = struct
   let init = 0
   let next = succ
 end
 
-let process_stmt stmt (lbl, vertices) =
-  let lbl' = Lbl.next lbl in
-  ignore stmt;
-  (lbl', (lbl, lbl', ())::vertices)
+let process_stmt (stmt,_) (lbl, vertices) =
+  match stmt with
+  | InfLoop _ -> (lbl, (lbl, lbl, ())::vertices)
+  | Set      _
+  | Guard    _
+  | Select   _
+  | DoWith   _
+  | Goto     _ -> let lbl' = Lbl.next lbl in
+                  (lbl', (lbl, lbl', ())::vertices)
 
 let process blk =
-  let l0 = Lbl.init in
-  List.fold_right process_stmt blk (l0, [])
+  List.fold_right process_stmt blk (Lbl.init, [])
 
 let dump (n, v) =
     "---\n"

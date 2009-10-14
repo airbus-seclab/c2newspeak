@@ -18,7 +18,6 @@ and stmtkind =
   | InfLoop  of blk
   | DoWith   of blk * lbl * blk
   | Goto     of lbl
-  | UserSpec of Newspeak.assertion
 
 and var = string
 
