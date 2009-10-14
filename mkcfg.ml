@@ -44,7 +44,6 @@ let rec process_stmt (stmt, _) (lbl, alist, vertices, join) =
   | Goto     l -> let lbl' = Lbl.next lbl in
                   let ljmp = List.assoc l alist in
                   (lbl', alist, (lbl', ljmp,  ("(jump)", nop))
-                              ::(lbl', jnode, ("(njmp)", nop))
                               ::vertices, None)
   | Set      _
   | Guard    _ -> let lbl' = Lbl.next lbl in
