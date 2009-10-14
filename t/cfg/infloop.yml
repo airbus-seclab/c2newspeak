@@ -1,3 +1,4 @@
-lastnode: 0
+lastnode: 1
 vertices:
-  - [0, 0]
+  - [1, 1]
+  - [1, 0]

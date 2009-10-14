@@ -11,7 +11,7 @@ plan tests => scalar @tests;
 
 foreach (@tests) {
 TODO: {
-  local $TODO = 'Not yet implemented' if /goto|while|loop|infinite/;
+  local $TODO = 'Not yet implemented' if 0;
   /\/(\w+)\.c$/ or die "Bad filename format : $_";
   my $test_name = $1;
   my $yml_fname = $_;
