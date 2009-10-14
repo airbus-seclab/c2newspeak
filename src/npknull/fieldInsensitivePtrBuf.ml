@@ -171,8 +171,8 @@ let build_transport src memlocs dst =
   let add_assoc x y = 
     if not (List.mem (x, y) !visited) then begin
       visited := (x, y)::!visited;
-      todo := (x, y)::!todo;
-      res := Subst.assoc x y !res
+      res := Subst.assoc x y !res;
+      todo := (x, y)::!todo
     end
   in
 

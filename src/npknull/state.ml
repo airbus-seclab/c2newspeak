@@ -284,15 +284,18 @@ let guard e env s =
   print_endline (to_string s);
     print_endline "Store.guard ends";
     s
-
+*)
+(*
 let contains s1 s2 =
   print_endline "State.contains";
   print_endline (to_string s1);
   print_endline (to_string s2);
   let b = contains s1 s2 in
+    if b then print_endline "true" else print_endline "false";
     print_endline "State.contains ends";
     b
-
+*)
+(*
 let join s1 s2 =
   print_endline "State.join";
   print_endline (to_string s1);
@@ -351,4 +354,4 @@ let build_transport s memlocs pre =
   print_endline (Subst.to_string tr);
   print_endline "State.build_transport ends";
     tr
-*)
+  *)
