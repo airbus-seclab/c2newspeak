@@ -10,7 +10,6 @@ let display_version _ =
 
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
-  print_endline (String.concat "," npk.Newspeak.fnames);
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
   print_endline (Mkcfg.dump cfg)

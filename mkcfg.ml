@@ -20,7 +20,10 @@ let dump (n, v) =
     "---\n"
   ^ "nodes:\n"
   ^ String.concat "" (List.map (fun n -> "  - "^string_of_int n^"\n") n)
-  ^ "vertices:\n"
-  ^ (String.concat "" (List.map (fun (a, b, _) ->
-    "  - ["^string_of_int a^", "^string_of_int b^"]\n") v))
+  ^ "vertices:"
+    ^ (if v = [] then " []\n" else 
+      "\n"
+    ^ (String.concat "" (List.map (fun (a, b, _) ->
+      "  - ["^string_of_int a^", "^string_of_int b^"]\n") v))
+    )
   ^ "...\n"

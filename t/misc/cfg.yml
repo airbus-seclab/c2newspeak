@@ -1,0 +1,13 @@
+type: map
+mapping:
+  "nodes":
+    type:     seq
+    required: yes
+    sequence:
+      - type: int
+  "vertices":
+    type:     seq
+    sequence:
+      - type: seq
+        sequence:
+          - type: int
