@@ -47,7 +47,7 @@ let rec pcomp_exp loc = function
   | UnOp (Coerce _ , e) -> pcomp_exp loc e
   | AddrOfFun _ | AddrOf _
   | UnOp (( Cast _ | IntToPtr _ | PtrToInt _
-          | BNot _ | Belongs  _), _)
+          | BNot _ | Belongs  _ | Focus _), _)
   | Const (CFloat _ | Nil) ->
       fail loc "Invalid expression"
 
@@ -76,10 +76,9 @@ let compile npk =
     assert_int_typ loc ty
   ) npk.globals;
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
-    let blko' =
-      if fname = "main" then Some blk
-                      else None
-    in (succ nfun, blko')
+    ( succ nfun
+    , if fname = "main" then Some blk
+                        else None)
   ) npk.fundecs (0, None) in
   if nfun > 1 then
     abort "Multiple functions";

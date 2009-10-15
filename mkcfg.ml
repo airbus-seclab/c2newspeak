@@ -21,7 +21,6 @@ let rec process_stmt (stmt, _) (lbl, alist, vertices, join) =
                  ( top
                  , alist
                  ,   (btm, top,   ("(reloop)", nop))
-                   ::(btm, jnode, ("(loop-btm)", nop))
                    ::vert
                    @ vertices
                  , None)
