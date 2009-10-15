@@ -86,7 +86,7 @@ and lval =
 and exp =
     Const of cst
   | Lval of (lval * typ)
-  | AddrOf of (lval * size_t)
+  | AddrOf of (lval * size_t)  (* TODO: remove size_t, use Focus *)
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)

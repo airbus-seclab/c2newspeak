@@ -88,7 +88,7 @@ let rec lval_to_abaddr env s lv =
 and translate_exp env s e =
   match e with
       Const _ -> Dom.Cst
-    | AddrOf (lv, n) -> 
+    | UnOp (Focus n, AddrOf lv) -> 
 	let a = lval_to_abaddr env s lv in
 	  Abaddr.to_exp n a
     | AddrOfFun (f, _) -> Dom.AddrOfFun f

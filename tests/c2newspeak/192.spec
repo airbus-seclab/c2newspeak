@@ -9,7 +9,7 @@ void main(void) {
 
 int8[6] !192.c.const_str_Hello;
 ptr ptr;
-(test53-b.c:1#6)^ptr =(ptr) &_48(!192.c.const_str_Hello);
+(test53-b.c:1#6)^ptr =(ptr) focus48 &(!192.c.const_str_Hello);
 (test53-b.c:1#6)^!192.c.const_str_Hello =(int8) 72;
 (test53-b.c:1#6)^!192.c.const_str_Hello + 8 =(int8) 101;
 (test53-b.c:1#6)^!192.c.const_str_Hello + 16 =(int8) 108;

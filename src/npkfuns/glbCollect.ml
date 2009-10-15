@@ -117,7 +117,7 @@ let process silent prog =
       | BinOp (_, e1, e2) -> Set.union (process_exp e1) (process_exp e2)
       | Lval (lv, _) -> process_lval lv
 	  (* TODO: maybe this case could be more precise *)
-      | AddrOf (lv, _) -> process_lval lv
+      | AddrOf lv -> process_lval lv
       | AddrOfFun _ -> Set.empty
   in
 

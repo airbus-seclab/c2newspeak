@@ -145,7 +145,7 @@ and lval =
 and exp =
     Const of cst
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * size_t) (* TODO: remove size_t here!!! *)
+  | AddrOf of lval
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)
@@ -421,7 +421,7 @@ and string_of_exp e =
   match e with
       Const c -> string_of_cst c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
-    | AddrOf (lv, sz) -> "&_"^(string_of_size_t sz)^"("^(string_of_lval lv)^")"
+    | AddrOf lv -> "&("^(string_of_lval lv)^")"
     | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp ft)^"}("^fid^")"
     | BinOp (op, e1, e2) ->
 	"("^(string_of_exp e1)^" "^(string_of_binop op)^
@@ -627,7 +627,7 @@ let bind_var x t body =
   and bind_in_exp n e =
     match e with
 	Lval (lv, t) -> Lval (bind_in_lval n lv, t)
-      | AddrOf (lv, sz) -> AddrOf (bind_in_lval n lv, sz)
+      | AddrOf lv -> AddrOf (bind_in_lval n lv)
       | UnOp (op, e) -> UnOp (op, bind_in_exp n e)
       | BinOp (op, e1, e2) -> BinOp (op, bind_in_exp n e1, bind_in_exp n e2)
       | _ -> e
@@ -770,16 +770,13 @@ object
 
   method process_lval lv =
     match lv with
-	Deref (AddrOf (lv, n), n') when n' <= n -> lv
+	Deref (UnOp (Focus n, AddrOf lv), n') when n' <= n -> lv
       | _ -> lv
 
   method process_exp e = 
     match e with
-(* TODO: here should have an AddrOf lv 
-   no need to add the focus, it will be here
-*)
-	AddrOf (lv, n) -> begin
-	  try UnOp (Focus n, addr_of_deref lv)
+	AddrOf lv -> begin
+	  try addr_of_deref lv
 	  with Not_found -> e
 	end
       | _ -> e
@@ -991,7 +988,7 @@ and simplify_exp actions e =
   let e = 
     match e with
 	Lval (lv, sca) -> Lval (simplify_lval actions lv, sca)
-      | AddrOf (lv, sz) -> AddrOf (simplify_lval actions lv, sz)
+      | AddrOf lv -> AddrOf (simplify_lval actions lv)
       | UnOp (o, e) -> UnOp (o, simplify_exp actions e)
       | BinOp (o, e1, e2) -> 
 	  BinOp (o, simplify_exp actions e1, simplify_exp actions e2)
@@ -1291,10 +1288,9 @@ and build_exp builder e =
 	  let lv = build_lval builder lv in
 	  let t = build_scalar_t builder t in
 	    Lval (lv, t)
-      | AddrOf (lv, sz) -> 
+      | AddrOf lv -> 
 	  let lv = build_lval builder lv in
-	  let sz = build_size_t builder sz in
-	    AddrOf (lv, sz)
+	    AddrOf lv
       | AddrOfFun f -> AddrOfFun f
       | UnOp (op, e) ->
 	  let op = build_unop builder op in
@@ -1320,7 +1316,8 @@ and build_unop builder op =
 	let t1 = build_scalar_t builder t1 in
 	let t2 = build_scalar_t builder t2 in
 	  Cast (t1, t2)
-    | Belongs _ | Coerce _ | Focus _ | Not | BNot _-> op
+    | Focus sz -> Focus (build_size_t builder sz)
+    | Belongs _ | Coerce _ | Not | BNot _-> op
 
 and build_binop builder op =
   match op with
@@ -1424,9 +1421,7 @@ and visit_exp visitor x =
     if continue then begin
       match x with
 	  Lval (lv, _) -> visit_lval visitor lv
-	| AddrOf (lv, sz) -> 
-	    visit_lval visitor lv;
-	    visit_size_t visitor sz
+	| AddrOf lv -> visit_lval visitor lv
 	| UnOp (op, e) -> 
 	    visitor#process_unop op;
 	    visit_exp visitor e
@@ -1592,7 +1587,8 @@ let build_main_args ptr_sz loc params =
     let (len, param_init) = init_of_string p in
     let param_init = List.rev (set_of_init loc name param_init) in
     let lv = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
-    let e = AddrOf (Global name, len*char_sz) in
+    let e = AddrOf (Global name) in
+    let e = UnOp (Focus (len*char_sz), e) in
     let init_argv = (Set (lv, e, Ptr), loc) in
     let globals = (name, Array (Scalar char_typ, len))::globals in
     let init = init_argv::param_init@init in
@@ -1602,7 +1598,8 @@ let build_main_args ptr_sz loc params =
   let init = List.rev init in
   let argv_glob = (argv_name, Array (Scalar Ptr, n)) in
   let argc = exp_of_int n in
-  let argv = AddrOf (Global argv_name, n*ptr_sz) in
+  let argv = AddrOf (Global argv_name) in
+  let argv = UnOp (Focus (n*ptr_sz), argv) in
     (argv_glob::globals, init, argc::argv::[])
 
 
@@ -1624,7 +1621,7 @@ let build_main_call ptr_sz ft params =
 
 let rec belongs_of_exp x =
   match x with
-      Lval (lv, _) | AddrOf (lv, _) -> belongs_of_lval lv
+      Lval (lv, _) | AddrOf lv -> belongs_of_lval lv
     | UnOp (Belongs b, e) -> (b, e)::(belongs_of_exp e)
     | UnOp (_, e) -> belongs_of_exp e 
     | BinOp (_, e1, e2) -> (belongs_of_exp e1)@(belongs_of_exp e2)

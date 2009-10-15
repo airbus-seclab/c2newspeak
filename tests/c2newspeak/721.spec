@@ -8,5 +8,5 @@ void f(void) {
 
 ptr u;
 int32[1] v;
-(721.c:28#5)^u =(ptr) &_32(v);
+(721.c:28#5)^u =(ptr) focus32 &(v);
 

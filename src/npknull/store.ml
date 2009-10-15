@@ -140,7 +140,7 @@ and exp_to_ptr env s e =
 	  with Exceptions.Emptyset -> None
 	in
 	  p
-    | AddrOf (lv, n) -> 
+    | UnOp (Focus n, AddrOf lv) -> 
 	let (m, o) = lval_to_addr env s lv in
 	  Some (m, Some (o, n))
 	    (*
@@ -231,7 +231,7 @@ let translate_exp_P1 env s e =
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P1.Lval x) m
-      | AddrOf (lv, n) -> begin
+      | UnOp (Focus n, AddrOf lv) -> begin
 	  try
 	    let (m, o) = lval_to_addr env s lv in
 	      [P1.AddrOf (m, Some (o, n))]

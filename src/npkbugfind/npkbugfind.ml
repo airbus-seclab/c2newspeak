@@ -104,7 +104,7 @@ let scan_binop env op e1 e2 =
 	
 let rec scan_exp env x =
   match x with
-      Lval (lv, _) | AddrOf (lv, _) -> scan_lval env lv
+      Lval (lv, _) | AddrOf lv -> scan_lval env lv
     | UnOp (op, e) -> 
 	let env = scan_exp env e in
 	  scan_unop env op e
@@ -170,7 +170,7 @@ let find_bound e env =
 
 let rec scan2_exp env x =
   match x with
-      Lval (lv, _) | AddrOf (lv, _) -> scan2_lval env lv
+      Lval (lv, _) | AddrOf lv -> scan2_lval env lv
     | UnOp (Belongs (_, u), e) -> begin
 	try
 	  let c = find_bound e env in

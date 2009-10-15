@@ -61,7 +61,7 @@ let translate prog =
     match e with
 	Const c -> N.Const c
       | Lval (lv, t) -> N.Lval (translate_lval lv, scalar_of_typ t)
-      | AddrOf (lv, sz) -> N.AddrOf (translate_lval lv, sz)
+      | AddrOf (lv, sz) -> N.UnOp (N.Focus sz, N.AddrOf (translate_lval lv))
       | AddrOfFun (f, ft) -> N.AddrOfFun (f, ft)
       | UnOp (op, e) -> N.UnOp (op, translate_exp e)
       | BinOp (op, e1, e2) -> N.BinOp (op, translate_exp e1, translate_exp e2)

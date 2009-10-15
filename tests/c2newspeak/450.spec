@@ -4,9 +4,9 @@ Newspeak output
 void main(void) {
   (450.c:27#2)^choose {
    -->
-    (450.c:27#2)^guard(! (&_16(!450.c.const_str_-) ==_ptr nil));
+    (450.c:27#2)^guard(! (focus16 &(!450.c.const_str_-) ==_ptr nil));
    -->
-    (450.c:27#2)^guard((&_16(!450.c.const_str_-) ==_ptr nil));
+    (450.c:27#2)^guard((focus16 &(!450.c.const_str_-) ==_ptr nil));
   }
 }
 

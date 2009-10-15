@@ -3,7 +3,7 @@ Newspeak output
 772.c
 void main(void) {
   (772.c:29#2)^ptr f.arg1;
-  (772.c:29#2)^0- =(ptr) &_40(!772.c.const_str_main);
+  (772.c:29#2)^0- =(ptr) focus40 &(!772.c.const_str_main);
   (772.c:29#2)^f();
 }
 

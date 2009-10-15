@@ -162,10 +162,11 @@ let collect prog =
       | Lval (lv, _) -> 
 	  let ((glb1, loc1), (glb2, loc2)) = process_lval env lv in
 	    (GlbSet.union glb1 glb2, LocSet.union loc1 loc2)
-      | AddrOf (lv, _) ->
+      | AddrOf lv ->
 	  let (_, v) = process_lval env lv in
 	    v
-      | UnOp ((Belongs _|Coerce _|PtrToInt _|IntToPtr _|Cast _|Not), e) -> 
+      | UnOp ((Focus _|Belongs _|Coerce _|PtrToInt _
+	      |IntToPtr _|Cast _|Not), e) -> 
 	  process_exp env e
       | BinOp ((Eq _|Gt _|PlusI|MinusI|PlusPI|MultI|Mod|DivI|MinusPP), 
 	       e1, e2) -> 

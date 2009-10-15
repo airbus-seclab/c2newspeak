@@ -39,7 +39,7 @@ and shift_vars_exp i x =
   match x with
       Const _ -> x
     | Lval (lv, n) -> Lval (shift_vars_lval i lv, n)
-    | AddrOf (lv, n) -> AddrOf (shift_vars_lval i lv, n)
+    | AddrOf lv -> AddrOf (shift_vars_lval i lv)
     | AddrOfFun _ -> x
     | UnOp (op, e) -> UnOp (op, shift_vars_exp i e)
     | BinOp (op, e1, e2) -> 

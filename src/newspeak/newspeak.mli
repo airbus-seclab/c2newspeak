@@ -144,7 +144,7 @@ and lval =
 and exp =
     Const of cst
   | Lval of (lval * scalar_t)
-  | AddrOf of (lval * size_t)
+  | AddrOf of lval
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
   | BinOp of (binop * exp * exp)

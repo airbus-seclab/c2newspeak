@@ -66,7 +66,7 @@ and process_exp e =
   match e with
       Const _ | AddrOfFun _ -> e
     | Lval (lv, t) -> Lval (process_lval lv, t)
-    | AddrOf (lv, n) -> AddrOf (process_lval lv, n) 
+    | AddrOf lv -> AddrOf (process_lval lv)
     | UnOp (op, e) -> 
 	let e = process_exp e in
 	  process_unop op e

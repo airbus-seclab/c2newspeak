@@ -68,7 +68,7 @@ let build prog =
     match x with
 	Const _ -> F.Const
       | Lval (lv, _) -> F.Deref (translate_lval lv)
-      | AddrOf (lv, _) -> translate_lval lv
+      | AddrOf lv -> translate_lval lv
       | AddrOfFun (f, _) -> F.Global f
       | UnOp (_, e) -> translate_exp e
       | BinOp (op, e1, e2) -> 

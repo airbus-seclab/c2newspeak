@@ -216,7 +216,7 @@ let process glb_tbl prog =
   and check_exp s x = 
     match x with
 	Const _ -> ()
-      | AddrOf (lv, _) -> check_lval s lv
+      | AddrOf lv -> check_lval s lv
       | AddrOfFun _ -> ()
       | Lval (lv, _) -> check_lval s lv
       | UnOp (_, e) -> check_exp s e

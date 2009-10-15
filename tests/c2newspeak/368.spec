@@ -6,10 +6,10 @@ void main(void) {
   (368.c:31#2)^0- =(uint1) x_uint1;
   (368.c:31#2)^{
     ptr printf.arg1;
-    (368.c:31#2)^0- =(ptr) &_32(!368.c.const_str_%d\n);
+    (368.c:31#2)^0- =(ptr) focus32 &(!368.c.const_str_%d\n);
     (368.c:31#2)^{
       ptr printf.arg2;
-      (368.c:31#2)^0- =(ptr) &_8(2-);
+      (368.c:31#2)^0- =(ptr) focus8 &(2-);
       (368.c:31#2)^printf();
     }
   }

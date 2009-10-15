@@ -8,5 +8,5 @@ ptr f(void) {
 
 ptr !011-b.c.0.TmD;
 int32[1] TmIoE;
-(nctmf2.c:4#12)^!011-b.c.0.TmD =(ptr) (&_32(TmIoE) + 32);
+(nctmf2.c:4#12)^!011-b.c.0.TmD =(ptr) (focus32 &(TmIoE) + 32);
 

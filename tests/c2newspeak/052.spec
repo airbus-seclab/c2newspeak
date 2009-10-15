@@ -8,7 +8,7 @@ Newspeak output
 052.c
 void main(void) {
   (052.c:31#8)^ptr x;
-  (052.c:31#8)^0- =(ptr) &_48(!052.c.const_str_Hello);
+  (052.c:31#8)^0- =(ptr) focus48 &(!052.c.const_str_Hello);
   (052.c:32#7)^{
     int8[3] a1;
     (052.c:32#7)^0- =(int8) 1;

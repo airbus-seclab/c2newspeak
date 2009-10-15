@@ -67,7 +67,7 @@ let translate npk =
 	    locals := tl;
 	    x
 	| _ -> 
-	    invalid_arg ("Npkpointer.translate.translate_ftyp: "
+	    invalid_arg ("Build.translate.translate_ftyp: "
 			 ^"unexpected empty variable stack")
     in
       List.map bind params
@@ -84,9 +84,10 @@ let translate npk =
     match e with
 	Const _ -> S.Const
       | Lval (lv, _) -> S.Deref (translate_lval lv)
-      | AddrOf (lv, _) -> translate_lval lv
+      | AddrOf lv -> translate_lval lv
+      | UnOp (Focus _, e) -> translate_exp e
       | _ -> 
-	  invalid_arg "Npkpointer.translate_exp: expression not implemented yet"
+	  invalid_arg "Build.translate_exp: expression not implemented yet"
   in
 
   let translate_fn fn =
