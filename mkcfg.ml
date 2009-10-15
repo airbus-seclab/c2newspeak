@@ -21,9 +21,9 @@ let f_set = function
   | Not _ | Var _
       -> (fun _ -> failwith "Unsupported set statement")
 
-let f_guard _ =
+let f_guard _ x =
   prerr_endline "Warning : unsupported guard statement";
-  nop
+  x
 
 (**
  * lbl is the last label used.
