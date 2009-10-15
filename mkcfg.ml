@@ -86,7 +86,7 @@ and process_blk ?join blk al l0 =
 
 let process blk = process_blk blk [] Lbl.init
 
-let dump (n, v) =
+let dump_yaml (n, v) =
     "---\n"
   ^ "lastnode: "
   ^ string_of_int n ^ "\n"
@@ -99,3 +99,9 @@ let dump (n, v) =
       ^ "\n") v))
     )
   ^ "...\n"
+
+let dump_dot (_, v) =
+    "digraph G {\n"
+  ^ String.concat "\n" (List.map (fun (a, b, _) ->
+      "  "^string_of_int a^" -> "^string_of_int b) v)
+  ^ "}\n"

@@ -5,12 +5,19 @@ let display_version _ =
   print_endline "Author  : Etienne Millon";
   print_endline "Contact : etienne DOT millon AT eads DOT net"
 
+let output_graphviz cfg =
+  let file = open_out "cfg.dot" in
+  output_string file (Mkcfg.dump_dot cfg);
+  close_out file
+
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
+  if (Options.get Options.Graphviz) then
+    output_graphviz cfg;
   if (Options.get Options.Cfg_only) then
-    print_endline (Mkcfg.dump cfg)
+    print_endline (Mkcfg.dump_yaml cfg)
   else
     begin
       print_endline "---";
@@ -55,6 +62,8 @@ let main _ =
         , Some (Options.set Options.Cfg_only), None
   ; 'v', "verbose" , "output more information"
         , Some (Options.set Options.Verbose), None
+  ; 'd', "dot", "output in to cfg.dot (graphviz)"
+        , Some (Options.set Options.Graphviz), None
   ; 't', "selftest", "run unit tests (output TAP)", None, Some run_selftests
   ] in
   let display_help _ =

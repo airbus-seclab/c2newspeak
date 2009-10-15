@@ -26,5 +26,5 @@ pcomp.cmi: prog.cmi
 mkcfg.cmi: cfg.cmi prog.cmi range.cmi pcomp.cmi
 solver.cmi: mkcfg.cmi fixpoint.cmi options.cmi test.cmi
 cfg.cmi: range.cmi
-fixpoint.cmi: range.cmi
+fixpoint.cmi: range.cmi options.cmi
 test.cmi: tap.cmi

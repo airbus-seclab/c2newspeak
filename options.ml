@@ -2,6 +2,7 @@
 type t =
   | Cfg_only
   | Verbose
+  | Graphviz
 
 let options = ref []
 
