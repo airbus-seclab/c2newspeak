@@ -6,6 +6,7 @@ use Test::Command;
 
 sub kwalify_schema_ok {
   my $fname = shift;
+  ok(-e $fname, "Schema $fname exists");
   stdout_unlike (['kwalify', '-m', $fname], qr/INVALID/, "Schema : $fname");
 }
 
@@ -15,12 +16,15 @@ sub kwalify_ok {
                   "YAML : $fname against $schema");
 }
 
-my @cfg = <t/cfg/*.yml>;
+my @cfg    = <t/cfg/*.yml>;
+my @solver = <t/solver/*.yml>;
 
-plan tests => 1 + scalar @cfg;
+my $schemas = 2;
+
+plan tests => 2 * $schemas + scalar @cfg + scalar @solver;
 
 &kwalify_schema_ok ('t/misc/cfg.yml');
+&kwalify_schema_ok ('t/misc/solver.yml');
 
-foreach (@cfg) {
-  &kwalify_ok ('t/misc/cfg.yml', $_);
-}
+&kwalify_ok ('t/misc/cfg.yml',    $_) foreach (@cfg) ;
+&kwalify_ok ('t/misc/solver.yml', $_) foreach (@solver) ;

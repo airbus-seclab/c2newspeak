@@ -20,10 +20,9 @@ let handle_file_npk fname =
     begin
       print_endline "---";
       Array.iteri (fun i r ->
-          print_endline (string_of_int i ^
-                ": \"" ^ Range.to_string r^"\"")
+          print_endline ("  - {id: "^ string_of_int i ^
+          ", value: \"" ^ Range.to_string r^"\"}")
       ) (Fixpoint.solve cfg);
-      print_endline "...";
     end
 
 let fname_suffix str =
