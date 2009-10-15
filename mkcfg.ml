@@ -9,19 +9,21 @@ end
 
 let nop (x:Range.t) :Range.t = x
 
-let f_set e =
-  match e with
+let f_set = function
   | Const n -> let n' = Newspeak.Nat.to_int n in
                (fun _ -> Range.from_bounds n' n')
   | Op (Plus, Var _, Const n) -> let n' = Newspeak.Nat.to_int n in
                                  Range.shift n'
+  (* Unsupported statements *)
   | Op (Plus, (Op _|Not _|Const _), _)
   | Op (Plus, Var _, _)
   | Op ((Eq|Gt|Div|Minus|Mult), _, _)
-  | Not _ | Var _ -> (fun _ -> failwith "Unsupported set statement")
+  | Not _ | Var _
+      -> (fun _ -> failwith "Unsupported set statement")
 
 let f_guard _ =
-  (fun _ -> failwith "Unsupported guard statement")
+  prerr_endline "Warning : unsupported guard statement";
+  nop
 
 (**
  * lbl is the last label used.
@@ -63,13 +65,13 @@ let rec process_stmt (stmt, _) (lbl, alist, vertices, join) =
   | Set      (_, e) -> let lbl' = Lbl.next lbl in
                        ( lbl'
                        , alist
-                       ,   (lbl', jnode, ("(stmt)", f_set e))
+                       ,   (lbl', jnode, ("(stmt:set)", f_set e))
                          ::vertices
                        , None)
   | Guard    (e)    -> let lbl' = Lbl.next lbl in
                        ( lbl'
                        , alist
-                       ,   (lbl', jnode, ("(stmt)", f_guard e))
+                       ,   (lbl', jnode, ("(stmt:guard)", f_guard e))
                          ::vertices
                        , None)
 

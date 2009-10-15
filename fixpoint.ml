@@ -8,12 +8,12 @@ let rec filter_map f = function
 
 let f ln vertices x =
   Array.init (ln + 1) ( fun i ->
-    (* meet ( f(origin) / (origin, dest, f) in v / dest = i) *)
+    (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
     let from_vals = filter_map (fun (origin, dest, (_,f)) ->
       if (dest = i) then Some (f (x.(origin)))
                     else None
     ) vertices in
-    List.fold_left Range.meet Range.bottom from_vals
+    List.fold_left Range.join Range.bottom from_vals
   )
 
 let rec kleene f x =
@@ -23,5 +23,5 @@ let rec kleene f x =
   else kleene f fx
 
 let solve (ln, v) =
-  let x0 = Array.make (ln + 1) Range.top in
+  let x0 = Array.make (ln + 1) Range.bottom in
   kleene (f ln v) x0
