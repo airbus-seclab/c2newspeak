@@ -18,10 +18,12 @@ let handle_file_npk fname =
     print_endline (Mkcfg.dump cfg)
   else
     begin
-      print_endline "Solution :";
+      print_endline "---";
       Array.iteri (fun i r ->
-        print_endline (string_of_int i ^ " --> " ^ Range.to_string r)
-      ) (Fixpoint.solve cfg)
+          print_endline (string_of_int i ^
+                ": \"" ^ Range.to_string r^"\"")
+      ) (Fixpoint.solve cfg);
+      print_endline "...";
     end
 
 let fname_suffix str =
