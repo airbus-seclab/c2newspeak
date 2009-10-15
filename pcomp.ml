@@ -84,6 +84,8 @@ let compile npk =
   ) npk.fundecs (0, None) in
   if nfun > 1 then
     abort "Multiple functions";
+  if npk.init <> [] then
+    abort "Initialization block";
   match blko with
   | None -> abort "No 'main' function"
   | Some (_, b) -> pcomp_blk b
