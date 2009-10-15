@@ -34,18 +34,22 @@ let test_condition msg condition reason =
   else
     test_not_ok msg reason
 
-let assert_equal msg expected actual =
+let assert_equal ?printer expected actual msg =
   test_condition msg (expected = actual)
-      (Some ("Expected : "^string_of_int expected
-            ^" but got : "^string_of_int actual))
+    (match printer with None -> None
+      | Some p -> Some ("Expected : "^p expected
+                      ^ " but got : "^p actual))
 
-let assert_true msg what =
+let assert_equal_int msg expected actual =
+  assert_equal ~printer:string_of_int msg expected actual
+
+let assert_true what msg =
   test_condition msg what None
 
-let assert_false msg what =
-  assert_true msg (not what)
+let assert_false what msg =
+  assert_true (not what) msg 
 
-let assert_equal_string msg expected actual =
+let assert_equal_string expected actual msg =
   test_condition msg (String.compare expected actual = 0)
       (Some ("Expected : "^expected
             ^" but got : "^actual))
