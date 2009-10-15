@@ -71,10 +71,12 @@ let rec pcomp_stmt (sk, loc) =
 and pcomp_blk x = List.map pcomp_stmt x
 
 let compile npk =
-  (* Check that all variables are int *)
-  Hashtbl.iter (fun _ (ty, loc) ->
-    assert_int_typ loc ty
-  ) npk.globals;
+  (* Check that there is at most one variable, and it is an int. *)
+  if (Hashtbl.fold (fun _ (ty, loc) count ->
+    assert_int_typ loc ty;
+    count + 1
+  ) npk.globals 0) > 1 then
+    abort "Multiple variables";
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
     ( succ nfun
     , if fname = "main" then Some blk
