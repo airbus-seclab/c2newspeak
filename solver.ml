@@ -1,4 +1,6 @@
 
+let cfg_only = ref false
+
 let display_help _ =
   print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk")
 
@@ -12,11 +14,15 @@ let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
-  print_endline (Mkcfg.dump cfg);
-  print_endline "Solution :";
-  Array.iteri (fun i r ->
-    print_endline (string_of_int i ^ " --> " ^ Range.to_string r)
-  ) (Fixpoint.solve cfg)
+  if (!cfg_only) then
+    print_endline (Mkcfg.dump cfg)
+  else
+    begin
+      print_endline "Solution :";
+      Array.iteri (fun i r ->
+        print_endline (string_of_int i ^ " --> " ^ Range.to_string r)
+      ) (Fixpoint.solve cfg)
+    end
 
 let fname_suffix str =
   let dot = String.rindex str '.' in
@@ -41,8 +47,9 @@ let handle_file fname =
     failwith "I don't know what to do with this file"
 
 let main _ =
-  let optlist = [ 'h', "help"    , Some display_help,    None
-                ; 'v', "version" , Some display_version, None
+  let optlist = [ 'h', "help"    , Some display_help,        None
+                ; 'v', "version" , Some display_version,     None
+                ; 'g', "cfg"     , Getopt.set cfg_only true, None
                 ] in
   if (Array.length Sys.argv = 1) then
     display_help ()

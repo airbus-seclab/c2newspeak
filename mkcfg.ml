@@ -5,7 +5,23 @@ module Lbl = struct
   let next = succ
 end
 
+(* Abstract transfer functions *)
+
 let nop (x:Range.t) :Range.t = x
+
+let f_set e =
+  match e with
+  | Const n -> let n' = Newspeak.Nat.to_int n in
+               (fun _ -> Range.from_bounds n' n')
+  | Op (Plus, Var _, Const n) -> let n' = Newspeak.Nat.to_int n in
+                                 Range.shift n'
+  | Op (Plus, (Op _|Not _|Const _), _)
+  | Op (Plus, Var _, _)
+  | Op ((Eq|Gt|Div|Minus|Mult), _, _)
+  | Not _ | Var _ -> (fun _ -> failwith "Unsupported set statement")
+
+let f_guard _ =
+  (fun _ -> failwith "Unsupported guard statement")
 
 (**
  * lbl is the last label used.
@@ -44,9 +60,18 @@ let rec process_stmt (stmt, _) (lbl, alist, vertices, join) =
                   let ljmp = List.assoc l alist in
                   (lbl', alist, (lbl', ljmp,  ("(jump)", nop))
                               ::vertices, None)
-  | Set      _
-  | Guard    _ -> let lbl' = Lbl.next lbl in
-                  (lbl', alist, (lbl', jnode, ("(stmt)", nop))::vertices, None)
+  | Set      (_, e) -> let lbl' = Lbl.next lbl in
+                       ( lbl'
+                       , alist
+                       ,   (lbl', jnode, ("(stmt)", f_set e))
+                         ::vertices
+                       , None)
+  | Guard    (e)    -> let lbl' = Lbl.next lbl in
+                       ( lbl'
+                       , alist
+                       ,   (lbl', jnode, ("(stmt)", f_guard e))
+                         ::vertices
+                       , None)
 
 and process_blk ?join blk al l0 =
   let (lastnode, _, vertices, _) =

@@ -22,7 +22,8 @@ clean:
 	rm -f $(EXEC) *.cmo *.cmi
 
 pcomp.cmi: prog.cmi
-mkcfg.cmi: cfg.cmi prog.cmi
+mkcfg.cmi: cfg.cmi prog.cmi range.cmi
 solver.cmi: mkcfg.cmi
 cfg.cmi: range.cmi
 solver.cmi: fixpoint.cmi
+fixpoint.cmi: range.cmi

@@ -14,7 +14,7 @@ and stmt = stmtkind * Newspeak.location
 and stmtkind =
   | Set      of var * exp
   | Guard    of exp
-  | Select   of blk * blk    (* XXX *)
+  | Select   of blk * blk
   | InfLoop  of blk
   | DoWith   of blk * lbl * blk
   | Goto     of lbl

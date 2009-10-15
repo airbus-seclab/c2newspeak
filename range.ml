@@ -39,6 +39,17 @@ let meet a b = match (a, b) with
         else                      None
       end
 
+let is_infinite x =
+  x == max_int || x == min_int
+
+let add_overflow n x =
+  if (is_infinite x) then x
+  else x + n
+
+let shift n = function
+  | None        -> None
+  | Some (a, b) -> Some (add_overflow n a, add_overflow n b)
+
 let to_string =
   let string_of_int_inf x =
     if x = max_int then "+oo"

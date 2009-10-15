@@ -7,6 +7,8 @@ use Test::More;
 
 my @tests = <t/cfg/*.c>;
 
+my $cmd = './solver --cfg';
+
 plan tests => scalar @tests;
 
 foreach (@tests) {
@@ -20,7 +22,7 @@ TODO: {
   my $exp_text = read_file $yml_fname;
   my $exp_yaml = Load ($exp_text);
 
-  my $output = qx#./solver $_#;
+  my $output = qx#$cmd $_#;
   my $got_yaml = Load ($output);
 
   is_deeply ($got_yaml, $exp_yaml, "CFG (YAML) for $test_name.c");
