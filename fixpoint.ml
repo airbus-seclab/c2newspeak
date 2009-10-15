@@ -25,7 +25,8 @@ let inline_print v =
     
 
 let rec kleene n f x =
- (* prerr_endline ("Iteration #"^string_of_int n^" : "^inline_print x); *)
+  if (Options.get Options.Verbose) then
+    prerr_endline ("Iteration #"^string_of_int n^" : "^inline_print x);
   let fx = f x in
   if fx = x then
     x
