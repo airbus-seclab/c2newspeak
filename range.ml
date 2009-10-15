@@ -31,7 +31,7 @@ let meet a b = match (a, b) with
             else if u2 <= u1 then from_bounds l1 u2
             else                  from_bounds l1 u1
           end
-        else if l2 < u1 then
+        else if l2 <= u1 then
           begin
             if u2 <= u1 then      from_bounds l2 u2
             else                  from_bounds l2 u1
