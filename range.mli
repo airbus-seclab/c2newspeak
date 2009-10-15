@@ -18,4 +18,6 @@ val meet : t -> t -> t
 
 val shift : int -> t -> t
 
+val add_bound : ?min:int -> ?max:int -> t -> t
+
 val to_string : t -> string

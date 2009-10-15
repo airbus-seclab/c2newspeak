@@ -86,3 +86,23 @@ let compile npk =
   | None -> abort "No 'main' function"
   | Some (_, b) -> pcomp_blk b
 
+module Print = struct
+  open Prog
+
+  let par x = " ( "^x^" ) "
+
+  let binop = function
+    | Plus  -> "+"
+    | Minus -> "-"
+    | Mult  -> "*"
+    | Div   -> "/"
+    | Gt    -> ">"
+    | Eq    -> "=="
+
+  let rec exp = function
+    | Const c -> Newspeak.Nat.to_string c
+    | Var v   -> v
+    | Not e -> "!" ^par (exp e)
+    | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)
+
+end
