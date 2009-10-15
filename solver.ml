@@ -42,23 +42,31 @@ let handle_file fname =
   else
     failwith "I don't know what to do with this file"
 
+let run_selftests =
+  function
+  | "range" -> Test.range ()
+  | _       -> invalid_arg "Bad test suite"
+
 let main _ =
-
-
-  let ops = [ 'h', "help"    , "this help message",   None
-            ; 'V', "version" , "show version number", Some display_version
-            ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
-                                     , Some (Options.set Options.Cfg_only)
-            ; 'v', "verbose" , "output more information"
-                                     , Some (Options.set Options.Verbose)
-            ] in
+  let ops =
+  [ 'h', "help"    , "this help message",   None                , None
+  ; 'V', "version" , "show version number", Some display_version, None
+  ; 'g', "cfg"     , "dump (YAML) control flow graph and exit" 
+        , Some (Options.set Options.Cfg_only), None
+  ; 'v', "verbose" , "output more information"
+        , Some (Options.set Options.Verbose), None
+  ; 't', "selftest", "run unit tests (output TAP)", None, Some run_selftests
+  ] in
   let display_help _ =
     print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk");
-    List.iter (fun (s, l, h, _) ->
+    List.iter (fun (s, l, h, _, _) ->
       print_endline ("-"^(String.make 1 s)^" / --"^l^" : "^h)
     ) ops in
-  let optlist = List.map (fun (s, l, _, fo) ->
-      (s, l, (match fo with None -> Some display_help | Some f -> Some f), None)
+  let optlist = List.map (fun (s, l, _, fo, go) ->
+    match (fo, go) with
+    | None,   None -> s, l, Some display_help, None
+    | Some f, None -> s, l, Some f, None
+    | _,    Some g -> s, l, None, Some g
   ) ops in
   if (Array.length Sys.argv = 1) then
     display_help ()
