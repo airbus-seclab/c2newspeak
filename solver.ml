@@ -1,8 +1,6 @@
 
 let cfg_only = ref false
 
-let display_help _ =
-  print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk")
 
 let display_version _ =
   print_endline "Version : pre-alpha";
@@ -48,10 +46,21 @@ let handle_file fname =
     failwith "I don't know what to do with this file"
 
 let main _ =
-  let optlist = [ 'h', "help"    , Some display_help,        None
-                ; 'v', "version" , Some display_version,     None
-                ; 'g', "cfg"     , Getopt.set cfg_only true, None
-                ] in
+
+
+  let ops = [ 'h', "help"    , "this help message",   None
+            ; 'v', "version" , "show version number", Some display_version
+            ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
+                                     , Getopt.set cfg_only true
+            ] in
+  let display_help _ =
+    print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk");
+    List.iter (fun (s, l, h, _) ->
+      print_endline ("-"^(String.make 1 s)^" / --"^l^" : "^h)
+    ) ops in
+  let optlist = List.map (fun (s, l, _, fo) ->
+      (s, l, (match fo with None -> Some display_help | Some f -> Some f), None)
+  ) ops in
   if (Array.length Sys.argv = 1) then
     display_help ()
   else
