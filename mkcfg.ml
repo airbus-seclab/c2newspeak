@@ -11,10 +11,13 @@ end
 
 let nop (x:Range.t) :Range.t = x
 
-let f_set = function
-  | Op (Plus, Var _, Const n) -> Range.shift n
-  | Const n -> (fun _ -> Range.from_bounds n n)
-  | _ ->       (fun _ -> failwith "Unsupported set statement")
+let f_set e x =
+  if x = Range.bottom then Range.bottom
+  else
+    match e with
+    | Op (Plus, Var _, Const n) -> Range.shift n x
+    | Const n -> Range.from_bounds n n
+    | _ -> failwith "Unsupported set statement"
 
 let f_guard e x =
   match e with

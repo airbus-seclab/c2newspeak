@@ -60,6 +60,7 @@ let to_string =
     else string_of_int x
   in function
   | None        -> "(bot)"
+  | Some (a, b) when a = min_int && b = max_int -> "(top)"
   | Some (a, b) when a = b -> "{" ^ string_of_int     a ^ "}"
   | Some (a, b)            -> "[" ^ string_of_int_inf a ^ ";"
                                   ^ string_of_int_inf b ^ "]"

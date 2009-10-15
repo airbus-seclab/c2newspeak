@@ -13,7 +13,7 @@ let f ln vertices x =
       if (dest = i) then Some (f (x.(origin)))
                     else None
     ) vertices in
-    List.fold_left Range.join Range.bottom from_vals
+    List.fold_left Range.join x.(i) from_vals
   )
 
 let inline_print v =
@@ -34,4 +34,5 @@ let rec kleene n f x =
 
 let solve (ln, v) =
   let x0 = Array.make (ln + 1) Range.bottom in
+  x0.(ln) <- Range.top;
   kleene 0 (f ln v) x0

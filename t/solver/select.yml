@@ -1,6 +1,6 @@
   - {id: 0, value: "[3;8]"}
-  - {id: 1, value: "(bot)"}
-  - {id: 2, value: "(bot)"}
-  - {id: 3, value: "(bot)"}
-  - {id: 4, value: "(bot)"}
-  - {id: 5, value: "(bot)"}
+  - {id: 1, value: "(top)"}
+  - {id: 2, value: "(top)"}
+  - {id: 3, value: "{0}"}
+  - {id: 4, value: "(top)"}
+  - {id: 5, value: "(top)"}
