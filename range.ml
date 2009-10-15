@@ -12,7 +12,7 @@ let bottom = None
 let (<=%) a b = match (a, b) with
   | None, _ -> true
   | Some _, None -> false
-  | Some (a, b), Some (c, d) -> a <= c && b <= d
+  | Some (a, b), Some (c, d) -> c <= a && b <= d
 
 let join a b = match (a, b) with
   | None, _ -> b
