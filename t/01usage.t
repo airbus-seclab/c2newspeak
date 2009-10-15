@@ -12,7 +12,7 @@ foreach (qw/-h --help/) {
   stdout_like ([$cmd, $_], qr/^Usage/, 'Help message with '.$_);
 }
 
-foreach (qw/-v --version/) {
+foreach (qw/-V --version/) {
   stdout_like ([$cmd, $_], qr/^Version/,                           'Version with '.$_);
   stdout_like ([$cmd, $_], qr/LGPLv2/,                             'License with '.$_);
   stdout_like ([$cmd, $_], qr/Etienne Millon/,                     'Author with ' .$_);

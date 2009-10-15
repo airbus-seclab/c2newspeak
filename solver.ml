@@ -1,7 +1,4 @@
 
-let cfg_only = ref false
-
-
 let display_version _ =
   print_endline "Version : pre-alpha";
   print_endline "License : LGPLv2";
@@ -12,7 +9,7 @@ let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
-  if (!cfg_only) then
+  if (Options.get Options.Cfg_only) then
     print_endline (Mkcfg.dump cfg)
   else
     begin
@@ -49,9 +46,11 @@ let main _ =
 
 
   let ops = [ 'h', "help"    , "this help message",   None
-            ; 'v', "version" , "show version number", Some display_version
+            ; 'V', "version" , "show version number", Some display_version
             ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
-                                     , Getopt.set cfg_only true
+                                     , Some (Options.set Options.Cfg_only)
+            ; 'v', "verbose" , "output more information"
+                                     , Some (Options.set Options.Verbose)
             ] in
   let display_help _ =
     print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk");

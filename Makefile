@@ -2,7 +2,7 @@
 MLFLAGS=-I +getopt -I $(NEWSPEAK) -w Ae -warn-error Ae
 EXTRALIB=getopt.cma newspeak.cma
 EXEC=solver
-OBJ=range.cmo cfg.cmo prog.cmo pcomp.cmo mkcfg.cmo fixpoint.cmo solver.cmo
+OBJ=options.cmo range.cmo cfg.cmo prog.cmo pcomp.cmo mkcfg.cmo fixpoint.cmo solver.cmo
 
 all: $(EXEC)
 
@@ -23,7 +23,6 @@ clean:
 
 pcomp.cmi: prog.cmi
 mkcfg.cmi: cfg.cmi prog.cmi range.cmi pcomp.cmi
-solver.cmi: mkcfg.cmi
+solver.cmi: mkcfg.cmi fixpoint.cmi options.cmi
 cfg.cmi: range.cmi
-solver.cmi: fixpoint.cmi
 fixpoint.cmi: range.cmi
