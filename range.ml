@@ -51,7 +51,7 @@ let shift n = function
   | Some (a, b) -> Some (add_overflow n a, add_overflow n b)
 
 let add_bound ?(min=min_int) ?(max=max_int) =
-  join (from_bounds min max)
+  meet (from_bounds min max)
 
 let to_string =
   let string_of_int_inf x =

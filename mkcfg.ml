@@ -7,6 +7,8 @@ end
 
 (* Abstract transfer functions *)
 
+(* Range specific *)
+
 let nop (x:Range.t) :Range.t = x
 
 let f_set = function
@@ -19,9 +21,10 @@ let f_guard e x =
   | Op (Gt, Var _, Const n) -> Range.add_bound ~min:(n + 1) x
   | Op (Gt, Const n, Var _) -> Range.add_bound ~max:(n - 1) x
   | Op (Eq, Var _, Const n) -> Range.add_bound ~min:n ~max:n x
-  | _ -> prerr_endline ( "Warning - unsupported guard statement : "
-                           ^ Pcomp.Print.exp e);
-  x
+  | Not (Op (Gt, Var _, Const n)) -> Range.add_bound ~max:n x
+  | Not (Op (Gt, Const n, Var _)) -> Range.add_bound ~min:n x
+  | Not (Op (Eq, Var _, Const _)) -> x
+  | _ -> failwith ( "Warning - unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 (**
  * lbl is the last label used.

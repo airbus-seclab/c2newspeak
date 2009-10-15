@@ -16,12 +16,21 @@ let f ln vertices x =
     List.fold_left Range.join Range.bottom from_vals
   )
 
-let rec kleene f x =
+let inline_print v =
+  String.concat ", " (Array.to_list (Array.mapi
+    (fun i x ->
+      string_of_int i ^ "--> " ^ Range.to_string x
+    ) v
+  ))
+    
+
+let rec kleene n f x =
+ (* prerr_endline ("Iteration #"^string_of_int n^" : "^inline_print x); *)
   let fx = f x in
   if fx = x then
     x
-  else kleene f fx
+  else kleene (succ n) f fx
 
 let solve (ln, v) =
   let x0 = Array.make (ln + 1) Range.bottom in
-  kleene (f ln v) x0
+  kleene 0 (f ln v) x0
