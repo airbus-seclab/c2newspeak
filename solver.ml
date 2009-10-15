@@ -12,7 +12,11 @@ let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
-  print_endline (Mkcfg.dump cfg)
+  print_endline (Mkcfg.dump cfg);
+  print_endline "Solution :";
+  Array.iteri (fun i r ->
+    print_endline (string_of_int i ^ " --> " ^ Range.to_string r)
+  ) (Fixpoint.solve cfg)
 
 let fname_suffix str =
   let dot = String.rindex str '.' in
