@@ -10,21 +10,15 @@ end
 let nop (x:Range.t) :Range.t = x
 
 let f_set = function
-  | Op (Plus, Var _, Const n) -> let n' = Newspeak.Nat.to_int n in
-                                 Range.shift n'
-
-  | Const n -> let n' = Newspeak.Nat.to_int n in
-               (fun _ -> Range.from_bounds n' n')
-  | _ -> (fun _ -> failwith "Unsupported set statement")
+  | Op (Plus, Var _, Const n) -> Range.shift n
+  | Const n -> (fun _ -> Range.from_bounds n n)
+  | _ ->       (fun _ -> failwith "Unsupported set statement")
 
 let f_guard e x =
   match e with
-  | Op (Gt, Var _, Const n) -> let n' = Newspeak.Nat.to_int n in
-                               Range.add_bound ~min:(n' + 1) x
-  | Op (Gt, Const n, Var _) -> let n' = Newspeak.Nat.to_int n in
-                               Range.add_bound ~max:(n' - 1) x
-  | Op (Eq, Var _, Const n) -> let n' = Newspeak.Nat.to_int n in
-                               Range.add_bound ~min:n' ~max:n' x
+  | Op (Gt, Var _, Const n) -> Range.add_bound ~min:(n + 1) x
+  | Op (Gt, Const n, Var _) -> Range.add_bound ~max:(n - 1) x
+  | Op (Eq, Var _, Const n) -> Range.add_bound ~min:n ~max:n x
   | _ -> prerr_endline ( "Warning - unsupported guard statement : "
                            ^ Pcomp.Print.exp e);
   x

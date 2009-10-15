@@ -38,7 +38,7 @@ let pcomp_binop loc binop =
   | Mod -> fail loc "Invalid binary operation"
 
 let rec pcomp_exp loc = function
-  | Const (CInt c) -> Prog.Const c
+  | Const (CInt c) -> Prog.Const (Newspeak.Nat.to_int c)
   | Lval (lv, scal) -> assert_int loc scal; Prog.Var (pcomp_var loc lv)
   | UnOp (Not, e1) -> Prog.Not (pcomp_exp loc e1)
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
@@ -89,7 +89,7 @@ let compile npk =
 module Print = struct
   open Prog
 
-  let par x = " ( "^x^" ) "
+  let par x = " ("^x^") "
 
   let binop = function
     | Plus  -> "+"
@@ -100,7 +100,7 @@ module Print = struct
     | Eq    -> "=="
 
   let rec exp = function
-    | Const c -> Newspeak.Nat.to_string c
+    | Const c -> string_of_int c
     | Var v   -> v
     | Not e -> "!" ^par (exp e)
     | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)
