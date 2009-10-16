@@ -3,6 +3,7 @@ type t =
   | Cfg_only
   | Verbose
   | Graphviz
+  | Widening
 
 type opt_action =
   | Help

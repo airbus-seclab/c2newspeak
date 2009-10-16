@@ -55,20 +55,18 @@ let rec pcomp_exp loc = function
 let rec pcomp_stmt (sk, loc) =
   let sk' = match sk with
   | Set (lv, exp, scal) -> assert_int loc scal;
-                           Prog.Set (pcomp_var loc lv, pcomp_exp loc exp)
-  | Guard e             -> Prog.Guard (pcomp_exp loc e)
-  | Select (b1, b2)     -> Prog.Select ((pcomp_blk b1), (pcomp_blk b2))
-  | InfLoop b           -> Prog.InfLoop (pcomp_blk b)
-  | DoWith (b1, l, b2)  -> Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2)
-  | Goto l              -> Prog.Goto l
-  | UserSpec _
-  | Call _
-  | Copy _
-  | Decl _              -> fail loc "Invalid statement"
+                           Some (Prog.Set (pcomp_var loc lv, pcomp_exp loc exp))
+  | Guard e             -> Some (Prog.Guard (pcomp_exp loc e))
+  | Select (b1, b2)     -> Some (Prog.Select ((pcomp_blk b1), (pcomp_blk b2)))
+  | InfLoop b           -> Some (Prog.InfLoop (pcomp_blk b))
+  | DoWith (b1, l, b2)  -> Some (Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2))
+  | Goto l              -> Some (Prog.Goto l)
+  | UserSpec [IdentToken "widen"] -> Options.set Options.Widening; None
+  | _ -> fail loc "Invalid statement"
   in
-    (sk', loc)
+    Utils.may (fun s -> (s, loc)) sk'
 
-and pcomp_blk x = List.map pcomp_stmt x
+and pcomp_blk x = Utils.filter_map pcomp_stmt x
 
 let compile npk =
   (* Check that there is at most one variable, and it is an int. *)

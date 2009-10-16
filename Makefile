@@ -2,7 +2,7 @@
 MLFLAGS=-I $(NEWSPEAK) -w Ae -warn-error Ae
 EXTRALIB=newspeak.cma
 EXEC=solver
-OBJ=options.cmo range.cmo cfg.cmo prog.cmo pcomp.cmo mkcfg.cmo fixpoint.cmo \
+OBJ=options.cmo utils.cmo range.cmo cfg.cmo prog.cmo pcomp.cmo mkcfg.cmo fixpoint.cmo \
 		tap.cmo test.cmo solver.cmo
 
 all: $(EXEC)
@@ -22,9 +22,9 @@ check:
 clean:
 	rm -f $(EXEC) *.cmo *.cmi
 
-pcomp.cmi: prog.cmi
+pcomp.cmi: prog.cmi utils.cmi
 mkcfg.cmi: cfg.cmi prog.cmi range.cmi pcomp.cmi
 solver.cmi: mkcfg.cmi fixpoint.cmi options.cmi test.cmi
 cfg.cmi: range.cmi
-fixpoint.cmi: range.cmi options.cmi
+fixpoint.cmi: range.cmi options.cmi utils.cmi
 test.cmi: tap.cmi

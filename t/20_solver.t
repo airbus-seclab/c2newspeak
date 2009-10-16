@@ -13,6 +13,8 @@ my $cmd = './solver';
 plan tests => scalar @tests;
 
 foreach (@tests) {
+TODO: {
+  local $TODO = 'Not yet implemented' if /incr_infinite/;
   /\/(\w+)\.c$/ or die "Bad filename format : $_";
   my $test_name = $1;
   my $yml_fname = $_;
@@ -25,4 +27,5 @@ foreach (@tests) {
   my $got_yaml = Load ($output);
 
   is_deeply ($got_yaml, $exp_yaml, "Solver (YAML) for $test_name.c");
+  }
 }

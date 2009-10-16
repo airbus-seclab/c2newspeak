@@ -3,6 +3,7 @@ type t =
   | Cfg_only
   | Verbose
   | Graphviz
+  | Widening
 
 type opt_action =
   | Help
@@ -16,5 +17,7 @@ type opt = char       (* Short *)
          * opt_action
 
 val parse_cmdline : opt list -> (string -> unit) -> string array -> unit
+
+val set : t -> unit
 
 val get : t -> bool
