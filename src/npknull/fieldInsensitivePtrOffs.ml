@@ -25,22 +25,35 @@
 
 open Newspeak
 
-(* TODO: try to factor as much code as possible with fieldInsensitivePtr *)
+(* TODO: try to factor as much code as possible with fieldInsensitiveBuf *)
 
-type offset = int option
+(* offset, delta, size of the zone *)
+type num_pred = (int * int * int) option
 
-let join_offset x1 x2 = if x1 = x2 then x1 else None
+type exp =
+    Lval of Memloc.t
+  | AddrOf of (Memloc.t * num_pred)
 
-let contains_offset x1 x2 = (x1 = None) || (x1 = x2)
+let join_num_pred x1 x2 = if x1 = x2 then x1 else None
 
-type info = (Memloc.t * offset) list
+let contains_num_pred x1 x2 = (x1 = None) || (x1 = x2)
+
+let string_of_num_pred y p = 
+  match p with 
+      Some (o, delta, n) -> 
+	"<"^y^", ("^string_of_int o^", "^string_of_int delta
+	^", "^string_of_int n^">"
+    | None -> y
+
+
+type info = (Memloc.t * num_pred) list
 
 (* TODO: could be factored into a ListSet module in utils *)
 let insert_info (x, o) l =
   let rec insert l =
     match l with
 	(y, _ as hd)::tl when Memloc.compare x y > 0 -> hd::(insert tl)
-      | (y, o')::tl when Memloc.compare x y = 0 -> (x, join_offset o o')::tl
+      | (y, o')::tl when Memloc.compare x y = 0 -> (x, join_num_pred o o')::tl
       | _ -> (x, o)::l
   in
     insert l
@@ -52,7 +65,7 @@ let rec join_info l1 l2 =
     | ((x1, _)::_, (x2, _ as hd)::tl2) when Memloc.compare x1 x2 > 0 -> 
 	hd::(join_info l1 tl2)
     | ((x, o1)::tl1, (_, o2)::tl2) -> 
-	(x, join_offset o1 o2)::(join_info tl1 tl2)
+	(x, join_num_pred o1 o2)::(join_info tl1 tl2)
     | ([], l) | (l, []) -> l
 
 let rec contains_info l1 l2 =
@@ -61,17 +74,13 @@ let rec contains_info l1 l2 =
 	contains_info tl1 l2
     | ((x1, _)::_, (x2, _)::_) when Memloc.compare x1 x2 > 0 -> false
     | ((_, o1)::tl1, (_, o2)::tl2) -> 
-	contains_offset o1 o2 && contains_info tl1 tl2
+	contains_num_pred o1 o2 && contains_info tl1 tl2
     | (_, []) -> true
     | ([], _) -> false
 
 let string_of_info x (y, o) =
   let y = Memloc.to_string y in
-  let y = 
-    match o with 
-	Some o -> "("^y^", "^string_of_int o^")"
-      | None -> y
-  in
+  let y = string_of_num_pred y o in
     x^" -> "^y
 
 let memlocs_of_info v = List.map (fun (x, _) -> x) v
@@ -83,6 +92,10 @@ module Map = Map.Make(Memloc)
 type t = info Map.t
 
 let universe = Map.empty
+
+let forget () = 
+  print_endline "FieldInsensitivePtrBuf.forget: this is called";
+  Map.empty
 
 (* TODO: could be optimized!! by a map2 that doesn't traverse shared 
    subtrees *)
@@ -119,19 +132,33 @@ let contains s1 s2 =
       true
     with Exit -> false
 
-let read_addr s (m, _) =
-  let x = try Map.find m s with Not_found -> [] in
-    match x with
-	hd::[] -> Some hd
-      | [] -> None
-      | _ -> raise Exceptions.Unknown
+let read s m = try Map.find m s with Not_found -> raise Exceptions.Emptyset
 
-let assign (m, _) v s =
-(* TODO: could be optimized *)
-  let d = try Map.find m s with Not_found -> [] in
-  let d = insert_info v d in
-    Map.add m d s
+let eval s e =
+  match e with
+      Lval m -> begin
+	try Map.find m s 
+	with Not_found -> []
+      end
+    | AddrOf v -> v::[]
 
+
+let assign m e s =
+  let v = List.map (eval s) e in
+  let v = List.flatten v in
+    if v = [] then s 
+    else begin
+      let res = ref s in
+      let assign_memloc m =
+	(* TODO: could be optimized *)
+	let info = ref (try Map.find m !res with Not_found -> []) in
+	  List.iter (fun x -> info := insert_info x !info) v;
+	  res := Map.add m !info !res
+      in
+	List.iter assign_memloc m;
+	!res
+    end
+  
 let addr_is_valid _ _ = false
 
 let guard _ s = s
@@ -141,10 +168,14 @@ let remove_memloc = Map.remove
 let build_transport src memlocs dst =
   let todo = ref [] in
   let res = ref Subst.identity in
-    
+  let visited = ref [] in
+
   let add_assoc x y = 
-    todo := (x, y)::!todo;
-    if x <> y then res := Subst.assoc x y !res
+    if not (List.mem (x, y) !visited) then begin
+      visited := (x, y)::!visited;
+      res := Subst.assoc x y !res;
+      todo := (x, y)::!todo
+    end
   in
 
   let rec unify_values v1 v2 =

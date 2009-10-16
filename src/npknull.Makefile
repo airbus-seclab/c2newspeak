@@ -30,7 +30,7 @@ FILES=version newspeak/newspeak utils/listUtils utils/strSet \
       npkfuns/glbCollect \
       npknull/context npknull/exceptions npknull/memloc npknull/abaddr \
       npknull/dom \
-      npknull/subst npknull/fieldInsensitivePtrBuf npknull/nonNullPtr \
+      npknull/subst npknull/fieldInsensitivePtrOffs npknull/nonNullPtr \
       npknull/fPtrStore npknull/store npknull/state npknull/stubs \
       npknull/solver npknull/stats npknull/npknull
 LIBX=nums.cmxa

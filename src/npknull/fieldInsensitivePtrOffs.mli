@@ -23,15 +23,30 @@
   email: charles.hymans@penjili.org
 *)
 
+type num_pred = (int * int * int) option
+
 type t
 
+type exp =
+    Lval of Memloc.t                (** Pointers stored at memloc *)
+  | AddrOf of (Memloc.t * num_pred) (** Pointer *)
+
+(* TODO: remove this function, unsound *)
+val forget: unit -> t
+
+(** [universe] the domain with no variable. *)
 val universe: t
 
 val join: t -> t -> t
 
 val contains: t -> t -> bool
 
-val assign: Dom.addr -> Dom.abaddr -> t -> t
+(* [assign x (y, o, n) s] may assign of the value [(y, )] to any
+   position of variable [x].
+   The value [(y, o)] represents the pointers [<(y, o): n, delta>] where
+   [o], [n] and [delta] verify predicate [num_pred]
+*)
+val assign: Memloc.t list -> exp list -> t -> t
 
 val guard: Dom.addr -> t -> t
 
@@ -50,6 +65,7 @@ val transport: Subst.t -> t -> t
 val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it
-   None is nil or uninitialized
+   raises Exceptions.Emptyset when nil or unitialized pointer
  *)
-val read_addr: t -> Dom.addr -> Dom.abaddr option
+(* TODO: maybe remove this type Dom.abptr?? *)
+val read: t -> Memloc.t -> (Memloc.t * num_pred) list

@@ -35,7 +35,7 @@
    of each domain into some independent adapters *)
 open Newspeak
 
-module P1 = FieldInsensitivePtrBuf
+module P1 = FieldInsensitivePtrOffs
 module P2 = NonNullPtr
 module P3 = FPtrStore
 
@@ -114,22 +114,19 @@ let rec lval_to_addr env s lv =
 	let (m, o) = lval_to_addr env s lv in
 	  (* TODO: maybe a bug with integer overflow here!! *)
 	  (m, o + (Nat.to_int n))
-    | Deref (_, _) -> 
-(* TODO: needs a domain on pointer more precise, since the delta is unknown!!
+    | Deref (e, _) -> 
 	let p = exp_to_ptr env s e in
-	let _ =
+	let a =
 	  match p with
-	      None -> print_endline "{}"
-	    | Some (m, None) -> print_endline (Memloc.to_string m^", ?")
-	    | Some (m, Some (o, sz)) -> 
-		let a = "("^Memloc.to_string m^", "^string_of_int o^")" in
-		  print_endline ("<"^a^": "^string_of_int sz^", ?>")
+	    | Some (m, Some (o, delta, _)) -> 
+		(* TODO: maybe a integer overflow?? *)
+		(m, o + delta)
+	    | _ -> raise Exceptions.Unknown
 	in
-	  print_endline (Newspeak.string_of_exp e);
-*)
-	  raise Exceptions.Unknown
+	  a
     | _ -> raise Exceptions.Unknown
 
+(* TODO: is the sz really needed in exp_to_ptr?? *)
 and exp_to_ptr env s e =
   match e with
       Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> None
@@ -142,8 +139,8 @@ and exp_to_ptr env s e =
 	  p
     | UnOp (Focus n, AddrOf lv) -> 
 	let (m, o) = lval_to_addr env s lv in
-	  Some (m, Some (o, n))
-	    (*
+	  Some (m, Some (o, 0, n))
+	    (* TODO: could be a fallback, if more precision is needed
 	      let m = lval_to_memloc env s lv in
 	      Some (m, None)
 	    *)
@@ -176,7 +173,7 @@ let lval_to_buffer env s lv =
 	      Some (m, o) ->
 		let (o, n) =
 		  match o with
-		      Some x -> x
+		      Some (o, _, n) -> (o, n)
 		    | None -> (0, max_int)
 		in
 		  ((m, o), n)
@@ -234,7 +231,7 @@ let translate_exp_P1 env s e =
       | UnOp (Focus n, AddrOf lv) -> begin
 	  try
 	    let (m, o) = lval_to_addr env s lv in
-	      [P1.AddrOf (m, Some (o, n))]
+	      [P1.AddrOf (m, Some (o, 0, n))]
 	  with Exceptions.Unknown -> 
 	    let m = lval_to_memloc_list env s lv in
 	      List.map (fun m -> P1.AddrOf (m, None)) m
@@ -305,7 +302,7 @@ let copy (dst, src) env (s1, s2, s3) =
 
 let set_pointsto (m1, o) m2 (s1, s2, s3) =
 (* TODO: not good this constant!!! *)
-  let s1 = P1.assign [m1] [P1.AddrOf (m2, Some (0, 32))] s1 in
+  let s1 = P1.assign [m1] [P1.AddrOf (m2, Some (0, 0, 32))] s1 in
   let s2 = P2.assign (m1, o) s2 in
     (s1, s2, s3)
 
@@ -333,7 +330,14 @@ let transport tr (s1, s2, s3) =
 let glue (a1, a2, a3) (b1, b2, b3) = 
   (P1.glue a1 b1, P2.glue a2 b2, P3.glue a3 b3)
 
-let read_addr (s, _, _) (m, _) = get_one_abptr (P1.read s m)
+let read_addr (s, _, _) (m, _) = 
+  let (x, info) = get_one_abptr (P1.read s m) in
+  let info = 
+    match info with
+	Some (o, _, sz) -> Some (o, sz)
+      | None -> None
+  in
+    (x, info)
 
 let read_fun env (s1, _, s) lv = 
 (* TODO: should do a lval_to_memloc_list!! *)
