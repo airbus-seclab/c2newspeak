@@ -8,7 +8,7 @@ let assert_not_incl a b =
   assert_false (a <=% b)
 
 let range _ =
-  test_plan 81;
+  test_plan 103;
 
   (*
    *               [-L-]
@@ -51,15 +51,9 @@ let range _ =
   in
 
 
-  let i = min_int in
-  let m = -22 in
-  let m' = -20 in
-  let a = -8 in
-  let p = 2  in
-  let q = 7  in
-  let b = 55 in
-  let n = 123 in
-  let n' = 1503 in
+  let i = min_int in let m = -22 in let m' = -20  in
+  let a = -8      in let p = 2   in let q  = 7    in
+  let b = 55      in let n = 123 in let n' = 1503 in
   let j = max_int in
 
   let z = from_bounds in
@@ -93,6 +87,16 @@ let range _ =
   (*                           |            *) tc (z i p) (z b b)   bot;
   (*                           [---]        *) tc (z i p) (z b n)   bot;
   (*                           [----------  *) tc (z i p) (z b j)   bot;
+
+  (* R = [-oo;+oo] *)
+  (*  -oo          a         b         +oo  *)
+  (*                                        *) tc top   top     top;
+  (*  -------------]                        *) tc top (z i a) (z i a);
+  (*  ------------------------------------  *) tc top (z i j) (z i j);
+  (*               |                        *) tc top (z a a) (z a a);
+  (*               [---------]              *) tc top (z a b) (z a b);
+  (*               [----------------------  *) tc top (z a j) (z a j);
+
 
   (* R = {p} *)
   (*  -oo   m    a     p     b    n    +oo  *)
@@ -149,5 +153,26 @@ let range _ =
   (*                             |          *) tc (z a b) (z n n)  bot;
   (*                             [---]      *) tc (z a b) (z n n') bot;
   (*                             [--------  *) tc (z a b) (z n j)  bot;
+
+  (* R = [p;+oo] *)
+  (*  -oo    m    a   p        b   n   +oo  *)
+  (*                R [-------------------  *)
+  (*                                        *)
+  (*                                        *) tc (z p j)   bot     bot;
+  (*  -------]                              *) tc (z p j) (z i m)   bot;
+  (*  ----------------]                     *) tc (z p j) (z i p) (z p p);
+  (*  -------------------------]            *) tc (z p j) (z i b) (z p b);
+  (*  ------------------------------------  *) tc (z p j) (z i j) (z p j);
+  (*         |                              *) tc (z p j) (z m m)   bot;
+  (*         [----]                         *) tc (z p j) (z m a)   bot;
+  (*         [--------]                     *) tc (z p j) (z m p) (z p p);
+  (*         [-----------------]            *) tc (z p j) (z m b) (z p b);
+  (*         [----------------------------  *) tc (z p j) (z m j) (z p j);
+  (*                  |                     *) tc (z p j) (z p p) (z p p);
+  (*                  [--------]            *) tc (z p j) (z p b) (z p b);
+  (*                  [-------------------  *) tc (z p j) (z p j) (z p j);
+  (*                           |            *) tc (z p j) (z b b) (z b b);
+  (*                           [---]        *) tc (z p j) (z b n) (z b n);
+  (*                           [----------  *) tc (z p j) (z b j) (z b j);
 
   test_end ()
