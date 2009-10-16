@@ -17,7 +17,7 @@ solver: $(OBJ)
 	ocamlc $(MLFLAGS) -c $<
 
 check:
-	prove
+	prove t/*.t
 
 clean:
 	rm -f $(EXEC) *.cmo *.cmi

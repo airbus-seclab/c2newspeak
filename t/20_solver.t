@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+BEGIN {require 't/misc/skip_all.pl';}
 use YAML::Syck;
 use File::Slurp;
 use Test::More;
