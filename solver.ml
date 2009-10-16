@@ -56,31 +56,17 @@ let run_selftests =
 
 let main _ =
   let ops =
-  [ 'h', "help"    , "this help message",   None                , None
-  ; 'V', "version" , "show version number", Some display_version, None
-  ; 'g', "cfg"     , "dump (YAML) control flow graph and exit" 
-        , Some (Options.set Options.Cfg_only), None
+  [ 'h', "help"    , "this help message",   Options.Help
+  ; 'V', "version" , "show version number", Options.Call display_version
+  ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
+                      , Options.Set Options.Cfg_only
   ; 'v', "verbose" , "output more information"
-        , Some (Options.set Options.Verbose), None
+                      , Options.Set Options.Verbose
   ; 'd', "dot", "output in to cfg.dot (graphviz)"
-        , Some (Options.set Options.Graphviz), None
-  ; 't', "selftest", "run unit tests (output TAP)", None, Some run_selftests
+                      , Options.Set Options.Graphviz
+  ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
   ] in
-  let display_help _ =
-    print_endline ("Usage : " ^ Sys.argv.(0) ^ " file.npk");
-    List.iter (fun (s, l, h, _, _) ->
-      print_endline ("-"^(String.make 1 s)^" / --"^l^" : "^h)
-    ) ops in
-  let optlist = List.map (fun (s, l, _, fo, go) ->
-    match (fo, go) with
-    | None,   None -> s, l, Some display_help, None
-    | Some f, None -> s, l, Some f, None
-    | _,    Some g -> s, l, None, Some g
-  ) ops in
-  if (Array.length Sys.argv = 1) then
-    display_help ()
-  else
-    Getopt.parse_cmdline optlist handle_file
+  Options.parse_cmdline ops handle_file Sys.argv
 
 let _ =
   main ()

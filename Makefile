@@ -1,6 +1,6 @@
 .PHONY: all check clean 
-MLFLAGS=-I +getopt -I $(NEWSPEAK) -w Ae -warn-error Ae
-EXTRALIB=getopt.cma newspeak.cma
+MLFLAGS=-I $(NEWSPEAK) -w Ae -warn-error Ae
+EXTRALIB=newspeak.cma
 EXEC=solver
 OBJ=options.cmo range.cmo cfg.cmo prog.cmo pcomp.cmo mkcfg.cmo fixpoint.cmo \
 		tap.cmo test.cmo solver.cmo
