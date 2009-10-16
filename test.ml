@@ -8,7 +8,7 @@ let assert_not_incl a b =
   assert_false (a <=% b)
 
 let range _ =
-  test_plan 65;
+  test_plan 81;
 
   (*
    *               [-L-]
@@ -50,6 +50,7 @@ let range _ =
     assert_equal ~printer:to_string (meet r q) m name
   in
 
+
   let i = min_int in
   let m = -22 in
   let m' = -20 in
@@ -72,9 +73,31 @@ let range _ =
   (*               [---------]              *) tc bot (z a b) bot;
   (*               [----------------------  *) tc bot (z a j) bot;
 
+  (* R = [-oo;p] *)
+  (*  -oo    m    a   p        b   n   +oo  *)
+  (*  ----------------] R                   *)
+  (*                                        *)
+  (*                                        *) tc (z i p)   bot     bot;
+  (*  -------]                              *) tc (z i p) (z i m) (z i m);
+  (*  ----------------]                     *) tc (z i p) (z i p) (z i p);
+  (*  -------------------------]            *) tc (z i p) (z i b) (z i p);
+  (*  ------------------------------------  *) tc (z i p) (z i j) (z i p);
+  (*         |                              *) tc (z i p) (z m m) (z m m);
+  (*         [----]                         *) tc (z i p) (z m a) (z m a);
+  (*         [--------]                     *) tc (z i p) (z m p) (z m p);
+  (*         [-----------------]            *) tc (z i p) (z m b) (z m p);
+  (*         [----------------------------  *) tc (z i p) (z m j) (z m p);
+  (*                  |                     *) tc (z i p) (z p p) (z p p);
+  (*                  [--------]            *) tc (z i p) (z p b) (z p p);
+  (*                  [-------------------  *) tc (z i p) (z p j) (z p p);
+  (*                           |            *) tc (z i p) (z b b)   bot;
+  (*                           [---]        *) tc (z i p) (z b n)   bot;
+  (*                           [----------  *) tc (z i p) (z b j)   bot;
+
   (* R = {p} *)
   (*  -oo   m    a     p     b    n    +oo  *)
   (*                   | R                  *)
+  (*                                        *)
   (*                                        *) tc (z p p)   bot     bot;
   (*  -----------]                          *) tc (z p p) (z i a)   bot;
   (*  -----------------]                    *) tc (z p p) (z i p) (z p p);
@@ -94,8 +117,8 @@ let range _ =
 
   (* R = [a;b] *)
   (* -oo  m  m'  a   p   q   b   n   n' +oo *)
-  (*                                        *)
   (*             [-----R-----]              *)
+  (*                                        *)
   (*                                        *) tc (z a b)   bot     bot;
   (* -----]                                 *) tc (z a b) (z i m)   bot;
   (* ------------]                          *) tc (z a b) (z i a) (z a a);
