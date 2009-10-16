@@ -5,4 +5,4 @@
   - {id: 4, value: "{10}"}
   - {id: 5, value: "[0;10]"}
   - {id: 6, value: "[0;10]"}
-  - {id: 7, value: "(top)"}
+  - {id: 7, value: "{0}"}

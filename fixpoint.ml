@@ -34,5 +34,5 @@ let rec kleene n f x =
 
 let solve (ln, v) =
   let x0 = Array.make (ln + 1) Range.bottom in
-  x0.(ln) <- Range.top;
+  x0.(ln) <- Range.from_bounds 0 0;
   kleene 0 (f ln v) x0

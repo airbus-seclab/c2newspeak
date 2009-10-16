@@ -1,6 +1,6 @@
 int i;
 void main(void)
 {
-  i = 0;
   i = 1;
+  i = 2;
 }
