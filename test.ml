@@ -8,7 +8,7 @@ let assert_not_incl a b =
   assert_false (a <=% b)
 
 let range _ =
-  test_plan 34;
+  test_plan 65;
 
   (*
    *               [-L-]
@@ -42,57 +42,89 @@ let range _ =
 
   (* Meet *)
 
-  (* FIXME + infinite cases *)
-  (* FIXME + nondegenerate cases *)
-  let m = -25 and a = -5 and
-      p = 0   and q = 8  and
-      b = 13  and n = 42 in
-  let fb = from_bounds in
-                      (*  m      a   p   q   b      n      *)
-                      (*                                   *)
-  let  r  = fb a b in (*         [-----R-----]             *)
-  let q01 = fb m m in (*  | Q1                             *)
-  let q02 = fb m a in (*  [-Q2---]                         *)
-  let q03 = fb m p in (*  [-Q3-------]                     *)
-  let q04 = fb m q in (*  [-Q4-----------]                 *)
-  let q05 = fb m b in (*  [-Q5---------------]             *)
-  let q06 = fb m n in (*  [-Q6----------------------]      *)
-  let q07 = fb a a in (*         | Q7                      *)
-  let q08 = fb a p in (*         [Q8]                      *)
-  let q09 = fb a q in (*         [-Q9----]                 *)
-  let q10 = fb a b in (*         [-Q10-------]             *)
-  let q11 = fb a n in (*         [-Q11--------------]      *)
-  let q12 = fb p p in (*            | Q12                  *)
-  let q13 = fb p q in (*            [Q13-]                 *)
-  let q14 = fb p b in (*            [-Q14----]             *)
-  let q15 = fb p n in (*            [-Q15-----------]      *)
-  let q16 = fb q q in (*                 | Q16             *)
-  let q17 = fb q b in (*                 [Q17]             *)
-  let q18 = fb q n in (*                 [-Q18------]      *)
-  let q19 = fb b b in (*                     | Q19         *)
-  let q20 = fb b n in (*                     [-Q20--]      *)
-  let q21 = fb n n in (*                            | Q21  *)
+  let bot = bottom in
+  let tc r q m =
+    let name = to_string r ^" /\\ "
+              ^to_string q ^" == "
+              ^to_string m in
+    assert_equal ~printer:to_string (meet r q) m name
+  in
 
-  assert_equal (meet r q01) bottom "q01";
-  assert_equal (meet r q02) q07    "q02";
-  assert_equal (meet r q03) q08    "q03";
-  assert_equal (meet r q04) q09    "q04";
-  assert_equal (meet r q05) r      "q05";
-  assert_equal (meet r q06) r      "q06";
-  assert_equal (meet r q07) q07    "q07";
-  assert_equal (meet r q08) q08    "q08";
-  assert_equal (meet r q09) q09    "q09";
-  assert_equal (meet r q10) q10    "q10";
-  assert_equal (meet r q11) q10    "q11";
-  assert_equal (meet r q12) q12    "q12";
-  assert_equal (meet r q13) q13    "q13";
-  assert_equal (meet r q14) q14    "q14";
-  assert_equal (meet r q15) q14    "q15";
-  assert_equal (meet r q16) q16    "q16";
-  assert_equal (meet r q17) q17    "q17";
-  assert_equal (meet r q18) q17    "q18";
-  assert_equal (meet r q19) q19    "q19";
-  assert_equal (meet r q20) q19    "q20";
-  assert_equal (meet r q21) bottom "q21";
+  let i = min_int in
+  let m = -22 in
+  let m' = -20 in
+  let a = -8 in
+  let p = 2  in
+  let q = 7  in
+  let b = 55 in
+  let n = 123 in
+  let n' = 1503 in
+  let j = max_int in
+
+  let z = from_bounds in
+
+  (* R = {} *)
+  (*  -oo          a         b         +oo  *)
+  (*                                        *) tc bot   bot   bot;
+  (*  -------------]                        *) tc bot (z i a) bot;
+  (*  ------------------------------------  *) tc bot (z i j) bot;
+  (*               |                        *) tc bot (z a a) bot;
+  (*               [---------]              *) tc bot (z a b) bot;
+  (*               [----------------------  *) tc bot (z a j) bot;
+
+  (* R = {p} *)
+  (*  -oo   m    a     p     b    n    +oo  *)
+  (*                   | R                  *)
+  (*                                        *) tc (z p p)   bot     bot;
+  (*  -----------]                          *) tc (z p p) (z i a)   bot;
+  (*  -----------------]                    *) tc (z p p) (z i p) (z p p);
+  (*  -----------------------]              *) tc (z p p) (z i b) (z p p);
+  (*  ------------------------------------  *) tc (z p p) (z i j) (z p p);
+  (*        |                               *) tc (z p p) (z m m)   bot;
+  (*        [----]                          *) tc (z p p) (z m a)   bot;
+  (*        [----------]                    *) tc (z p p) (z m p) (z p p);
+  (*        [----------------]              *) tc (z p p) (z m b) (z p p);
+  (*        [-----------------------------  *) tc (z p p) (z m j) (z p p);
+  (*                   |                    *) tc (z p p) (z p p) (z p p);
+  (*                   [-----]              *) tc (z p p) (z p b) (z p p);
+  (*                   [------------------  *) tc (z p p) (z p j) (z p p);
+  (*                         |              *) tc (z p p) (z b b)   bot;
+  (*                         [----]         *) tc (z p p) (z b n)   bot;
+  (*                         [------------  *) tc (z p p) (z b j)   bot;
+
+  (* R = [a;b] *)
+  (* -oo  m  m'  a   p   q   b   n   n' +oo *)
+  (*                                        *)
+  (*             [-----R-----]              *)
+  (*                                        *) tc (z a b)   bot     bot;
+  (* -----]                                 *) tc (z a b) (z i m)   bot;
+  (* ------------]                          *) tc (z a b) (z i a) (z a a);
+  (* ----------------]                      *) tc (z a b) (z i p) (z a p);
+  (* ------------------------]              *) tc (z a b) (z i b) (z a b);
+  (* ----------------------------]          *) tc (z a b) (z i n) (z a b);
+  (* -------------------------------------  *) tc (z a b) (z i j) (z a b);
+  (*      |                                 *) tc (z a b) (z m m)   bot;
+  (*      [--]                              *) tc (z a b) (z m m')  bot;
+  (*      [------]                          *) tc (z a b) (z m a) (z a a);
+  (*      [----------]                      *) tc (z a b) (z m p) (z a p);
+  (*      [------------------]              *) tc (z a b) (z m b) (z a b);
+  (*      [----------------------]          *) tc (z a b) (z m n) (z a b);
+  (*      [-------------------------------  *) tc (z a b) (z m j) (z a b);
+  (*             |                          *) tc (z a b) (z a a) (z a a);
+  (*             [---]                      *) tc (z a b) (z a p) (z a p);
+  (*             [-----------]              *) tc (z a b) (z a b) (z a b);
+  (*             [---------------]          *) tc (z a b) (z a n) (z a b);
+  (*             [------------------------  *) tc (z a b) (z a j) (z a b);
+  (*                 |                      *) tc (z a b) (z p p) (z p p);
+  (*                 [---]                  *) tc (z a b) (z p q) (z p q);
+  (*                 [-------]              *) tc (z a b) (z p b) (z p b);
+  (*                 [-----------]          *) tc (z a b) (z p n) (z p b);
+  (*                 [--------------------  *) tc (z a b) (z p j) (z p b);
+  (*                         |              *) tc (z a b) (z b b) (z b b);
+  (*                         [---]          *) tc (z a b) (z b n) (z b b);
+  (*                         [------------  *) tc (z a b) (z b j) (z b b);
+  (*                             |          *) tc (z a b) (z n n)  bot;
+  (*                             [---]      *) tc (z a b) (z n n') bot;
+  (*                             [--------  *) tc (z a b) (z n j)  bot;
 
   test_end ()
