@@ -18,7 +18,7 @@ let inline_print v =
     
 
 let rec kleene n f x =
-  if (Options.get Options.Verbose) then
+  if (Options.get_verbose ()) then
     prerr_endline ("Iteration #"^string_of_int n^" : "^inline_print x);
   let fx = f x in
   if fx = x then
@@ -32,7 +32,7 @@ let solve (ln, v) =
   let x0 = Array.make (ln + 1) Range.bottom in
   x0.(ln) <- Range.from_bounds 0 0;
   let g =
-    if Options.get Options.Widening then
+    if (Options.get_widening ()) then
       widen f
     else
       f

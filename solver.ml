@@ -14,9 +14,9 @@ let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let prg = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
-  if (Options.get Options.Graphviz) then
+  if (Options.get_graphviz ()) then
     output_graphviz cfg;
-  if (Options.get Options.Cfg_only) then
+  if (Options.get_cfg_only ()) then
     print_endline (Mkcfg.dump_yaml cfg)
   else
     begin
@@ -59,11 +59,11 @@ let main _ =
   [ 'h', "help"    , "this help message",   Options.Help
   ; 'V', "version" , "show version number", Options.Call display_version
   ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
-                      , Options.Set Options.Cfg_only
+                      , Options.Call Options.set_cfg_only
   ; 'v', "verbose" , "output more information"
-                      , Options.Set Options.Verbose
+                      , Options.Call Options.set_verbose
   ; 'd', "dot", "output in to cfg.dot (graphviz)"
-                      , Options.Set Options.Graphviz
+                      , Options.Call Options.set_graphviz
   ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
   ] in
   Options.parse_cmdline ops handle_file Sys.argv
