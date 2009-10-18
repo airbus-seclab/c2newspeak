@@ -65,6 +65,9 @@ let main _ =
   ; 'd', "dot", "output in to cfg.dot (graphviz)"
                       , Options.Call Options.set_graphviz
   ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
+  ; 'a', "algorithm", "select a fixpoint algorithm "
+                     ^"(rr : roundrobin, wl : worklist (default))",
+                     Options.Carg Options.set_fp_algo
   ] in
   Options.parse_cmdline ops handle_file Sys.argv
 

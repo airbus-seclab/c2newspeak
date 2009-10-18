@@ -1,4 +1,8 @@
 
+type fp_algorithm =
+  | Roundrobin
+  | Worklist
+
 val set_cfg_only : unit -> unit
 val get_cfg_only : unit -> bool
 val set_verbose  : unit -> unit
@@ -7,6 +11,8 @@ val set_graphviz : unit -> unit
 val get_graphviz : unit -> bool
 val set_widening : unit -> unit
 val get_widening : unit -> bool
+val set_fp_algo  : string -> unit
+val get_fp_algo  : unit -> fp_algorithm
 
 type opt_action =
   | Help

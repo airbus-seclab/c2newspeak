@@ -1,4 +1,13 @@
 
+type fp_algorithm =
+  | Roundrobin
+  | Worklist
+
+let fp_alg_str = function
+  | "rr" -> Roundrobin
+  | "wl" -> Worklist
+  | s    -> invalid_arg ("no such fixpoint algorithm : "^s)
+
 let     widening = ref false
 let set_widening _ =   widening := true
 let get_widening _ = ! widening
@@ -14,6 +23,10 @@ let get_cfg_only _ = ! cfg_only
 let     graphviz = ref false
 let set_graphviz _ =   graphviz := true
 let get_graphviz _ = ! graphviz
+
+let     fp_algo  = ref Worklist
+let set_fp_algo x =   fp_algo := fp_alg_str x
+let get_fp_algo _ = ! fp_algo
 
 type opt_action =
   | Help
