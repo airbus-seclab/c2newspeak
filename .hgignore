@@ -1,5 +1,6 @@
 Syntax: regexp
 \.no$
 \.npk$
+\.swp$
 \.cm[io]$
 ^solver$
