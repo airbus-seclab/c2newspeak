@@ -1,2 +1,2 @@
 #!/bin/bash
-./solver --selftest range
+npksolver --selftest range

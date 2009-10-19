@@ -4,7 +4,7 @@ use warnings;
 BEGIN {require 't/misc/skip_all.pl';}
 use Test::Command tests => 13;
 
-my $cmd = './solver';
+my $cmd = 'npksolver';
 
 exit_is_num ($cmd, 0, 'Silent fail is not an error');
 stdout_like ($cmd, qr/^Usage/, 'Help message without args');

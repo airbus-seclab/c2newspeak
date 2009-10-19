@@ -8,7 +8,7 @@ use Test::More;
 
 my @src = <t/src/*.c>;
 
-my $cmd = './solver --cfg';
+my $cmd = 'npksolver --cfg';
 
 my @tests = <t/cfg/*.yml>;
 
