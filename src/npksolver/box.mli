@@ -19,25 +19,22 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(** This is a cross product of several Range.t *)
+
 type t
 
 val bottom : t
 
-val from_bounds : int -> int -> t
+val from_bounds : string -> int -> int -> t
 
-(* a C b *)
-val (<=%) : t -> t -> bool
-
-(* a \/ b *)
 val join : t -> t -> t
 
-(* a /\ b *)
 val meet : t -> t -> t
 
 val widen : t -> t -> t
 
-val shift : int -> t -> t
+val shift : string -> int -> t -> t
 
-val add_bound : ?min:int -> ?max:int -> t -> t
+val add_bound : ?min:int -> ?max:int -> string -> t -> t
 
 val to_string : t -> string

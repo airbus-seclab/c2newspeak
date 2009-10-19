@@ -89,12 +89,12 @@ let range _ =
                                                                         
   (* R = [-oo;+oo] *)                                                   
   (*  -oo          a         b         +oo  *)                          
-  (*                                        *) tc   top     top   true    top     top;
-  (*  -------------]                        *) tc   top   (z i a) false (z i a)   top;
-  (*  ------------------------------------  *) tc   top   (z i j) true  (z i j)   top;
-  (*               |                        *) tc   top   (z a a) false (z a a)   top;
-  (*               [---------]              *) tc   top   (z a b) false (z a b)   top;
-  (*               [----------------------  *) tc   top   (z a j) false (z a j)   top;
+  (*                                        *) tc (z i j) (z i j) true  (z i j) (z i j);
+  (*  -------------]                        *) tc (z i j) (z i a) false (z i a) (z i j);
+  (*  ------------------------------------  *) tc (z i j) (z i j) true  (z i j) (z i j);
+  (*               |                        *) tc (z i j) (z a a) false (z a a) (z i j);
+  (*               [---------]              *) tc (z i j) (z a b) false (z a b) (z i j);
+  (*               [----------------------  *) tc (z i j) (z a j) false (z a j) (z i j);
                                                                         
                                                                         
   (* R = {p} *)                                                         
@@ -185,7 +185,7 @@ let range _ =
   List.iter (fun r ->
     assert_widen bot r bot;
     assert_widen r bot bot;
-  ) [bot; z a a; z a b; z i a; z a j; top];
+  ) [bot; z a a; z a b; z i a; z a j; z i j];
 
   (* [a;b] W [p;+oo] = [a;+oo] *)
   assert_widen (z a b) (z p j) (z a j);
