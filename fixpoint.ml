@@ -1,9 +1,18 @@
 
-
 let new_value x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
     let from_vals = Utils.filter_map (fun (origin, dest, (_,f)) ->
-      if (dest = i) then Some (f (x.(origin)))
+      if (dest = i) then
+                      begin
+                        let xo = x.(origin) in
+                        let r = 
+                          if Options.get_widening() then
+                            Range.widen xo (f xo)
+                          else
+                            f xo
+                        in
+                        Some r
+                      end
                     else None
     ) vertices in
     List.fold_left Range.join x.(i) from_vals
@@ -44,11 +53,6 @@ let inline_print v =
   ))
 
 let solve (ln, v) =
-  if Options.get_widening () then
-  	begin
-      print_endline "Widening is not implemented yet";
-      exit 3;
-    end;
   let x0 = Array.make (ln + 1) Range.bottom in
   x0.(ln) <- Range.from_bounds 0 0;
   let (res, ops) =
