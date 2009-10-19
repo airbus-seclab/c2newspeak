@@ -302,6 +302,7 @@ let process glb_tbl prog =
 	    raise (Exceptions.NotImplemented "Analysis.process_funexp")
 
   and process_call f s =
+    Context.print_graph ("vertex: "^(!current_fun)^", "^f);
     try
 (* TODO: maybe could look for the function's semantics after having prepared
    the current state?? *)
@@ -379,6 +380,7 @@ let process glb_tbl prog =
 	      f::tl -> begin
 		todo := tl;
 		Context.print_verbose ("Analyzing: "^f);
+		Context.print_graph ("node: "^f);
 		current_fun := f;
 		live_funs := StrSet.add f !live_funs;
 		(* TODO: could be optimized and analysed only the pre/post

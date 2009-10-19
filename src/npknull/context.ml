@@ -33,6 +33,8 @@ let use_stubs = ref false
 
 let warn_cnt = ref 0
 
+let graph = ref false
+
 (* TODO: factor set_verbose and set_use_stubs *)
 let set_verbose () = verbose := true
 
@@ -53,3 +55,7 @@ let report_stub_used msg = if not !use_stubs then print_err msg
 let get_current_loc () = Newspeak.string_of_loc !current_loc
 
 let set_current_loc loc = current_loc := loc
+
+let set_graph () = graph := true
+
+let print_graph str = if !graph then print_endline ("[G] "^str)

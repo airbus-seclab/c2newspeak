@@ -25,6 +25,10 @@
 
 val set_verbose: unit -> unit
 
+val set_graph: unit -> unit
+
+val print_graph: string -> unit
+
 val print_verbose: string -> unit
 
 val report_stub_used: string -> unit
