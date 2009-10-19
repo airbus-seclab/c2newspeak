@@ -8,7 +8,7 @@ let assert_not_incl a b =
   assert_false (a <=% b)
 
 let range _ =
-  test_plan 270;
+  test_plan 284;
 
   (* Incl + Join + Meet *)
 
@@ -153,5 +153,25 @@ let range _ =
   (*                           |            *) tc (z p j) (z b b) false (z b b) (z p j);
   (*                           [---]        *) tc (z p j) (z b n) false (z b n) (z p j);
   (*                           [----------  *) tc (z p j) (z b j) false (z b j) (z p j);
+
+  (* Widen *)
+
+  let assert_widen a b w =
+    let n = to_string a ^ " W "^ to_string b ^ " = " ^ to_string w in
+    assert_equal ~printer:to_string (widen a b) w n
+  in
+
+  (* {} W x = x W {} = {} *)
+  List.iter (fun r ->
+    assert_widen bot r bot;
+    assert_widen r bot bot;
+  ) [bot; z a a; z a b; z i a; z a j; top];
+
+  (* [a;b] W [p;+oo] = [a;+oo] *)
+  assert_widen (z a b) (z p j) (z a j);
+
+  (* [a;b] W [-oo;p] = [-oo;b] *)
+  assert_widen (z a b) (z i p) (z i b);
+  
 
   test_end ()

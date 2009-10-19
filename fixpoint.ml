@@ -8,9 +8,11 @@ let new_value x vertices i =
     ) vertices in
     List.fold_left Range.join x.(i) from_vals
 
-(* roundrobin function *)
-let f_rr ln vertices x =
-  Array.init (ln + 1) (new_value x vertices)
+(* roundrobin algorithm *)
+let rec kleene ?(n=0) v x =
+  let fx = Array.init (Array.length x) (new_value x v) in
+  if fx = x then x, (n*Array.length x)
+  else kleene ~n:(succ n) v fx
 
 (* worklist algorithm *)
 let f_worklist vertices x =
@@ -41,11 +43,6 @@ let inline_print v =
     ) v
   ))
 
-let rec kleene n f x =
-  let fx = f x in
-  if fx = x then x, (n*Array.length x)
-  else kleene (succ n) f fx
-
 let solve (ln, v) =
   if Options.get_widening () then
   	begin
@@ -56,7 +53,7 @@ let solve (ln, v) =
   x0.(ln) <- Range.from_bounds 0 0;
   let (res, ops) =
     match Options.get_fp_algo () with
-    | Options.Roundrobin -> kleene 0 (f_rr ln v) x0
+    | Options.Roundrobin -> kleene v x0
     | Options.Worklist   -> f_worklist v x0
   in
   if (Options.get_verbose ()) then

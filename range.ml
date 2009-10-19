@@ -39,6 +39,20 @@ let meet a b = match (a, b) with
         else                      None
       end
 
+let widen a b =
+  match (a, b) with
+  | None         , _             -> None
+  | _            , None          -> None
+  | Some (l1, u1), Some (l2, u2) -> let l = if l2 < l1
+                                      then min_int
+                                      else l1
+                                    in
+                                    let u = if u2 > u1
+                                      then max_int
+                                      else u1
+                                    in
+                                    Some (l, u)
+
 let is_infinite x =
   x == max_int || x == min_int
 

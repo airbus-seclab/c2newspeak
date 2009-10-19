@@ -16,6 +16,8 @@ val join : t -> t -> t
 (* a /\ b *)
 val meet : t -> t -> t
 
+val widen : t -> t -> t
+
 val shift : int -> t -> t
 
 val add_bound : ?min:int -> ?max:int -> t -> t
