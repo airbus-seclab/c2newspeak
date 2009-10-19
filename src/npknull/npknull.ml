@@ -36,6 +36,7 @@ let speclist =
     ("--stats", Arg.Set stats, "prints analysis stats");
     ("--use-stubs", Arg.Unit Context.set_use_stubs, 
      "skips warning messages when using stubs");
+    ("--graph", Arg.Unit Context.set_graph, "prints infos to display call graph during analysis");
     ("--verbose", Arg.Unit Context.set_verbose, "prints more details")
   ]
 
