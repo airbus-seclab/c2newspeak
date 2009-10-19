@@ -10,7 +10,7 @@ my @src = <t/src/*.c>;
 
 my @tests = <t/solver/*.yml>;
 
-my $cmd = './solver';
+my $cmd = 'npksolver';
 
 plan tests => scalar @tests;
 

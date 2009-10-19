@@ -35,7 +35,8 @@ let f_set e x =
   if x = Range.bottom then Range.bottom
   else
     match e with
-    | Op (Plus, Var _, Const n) -> Range.shift n x
+    | Op (Plus,  Var _, Const n) -> Range.shift   n  x
+    | Op (Minus, Var _, Const n) -> Range.shift (-n) x
     | Const n -> Range.from_bounds n n
     | _ -> failwith "Unsupported set statement"
 
@@ -122,6 +123,9 @@ let dump_yaml (n, v) =
 
 let dump_dot (_, v) =
     "digraph G {\n"
-  ^ String.concat "\n" (List.map (fun (a, b, _) ->
-      "  "^string_of_int a^" -> "^string_of_int b) v)
-  ^ "}\n"
+  ^ String.concat "" (List.map (fun (a, b, (s, _)) ->
+       "  "  ^ string_of_int a
+    ^ " -> " ^ string_of_int b
+    ^ " [label=\"" ^ s ^ "\"]"
+  ) v)
+  ^ "\n}\n"
