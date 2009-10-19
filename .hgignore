@@ -3,4 +3,4 @@ Syntax: regexp
 \.npk$
 \.swp$
 \.cm[io]$
-^solver$
+^npksolver$
