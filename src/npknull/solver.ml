@@ -90,27 +90,27 @@ let process glb_tbl prog =
 
   let string_of_fun_tbl () =
     let stats = ref [] in
-    let count _ data =
+    let count f data =
       let x = List.length data in
       let c = 
 	try
 	  let c = List.assoc x !stats in
 	    stats := List.remove_assoc x !stats;
-	    c + 1
-	with Not_found -> 1
+	    StrSet.add f c
+	with Not_found -> StrSet.singleton f
       in
 	stats := (x, c)::!stats
     in
       Hashtbl.iter count fun_tbl;
       stats := List.sort (fun (x, _) (y, _) -> compare x y) !stats;
       let res = ref "Function distribution: " in
-      let string_of_elem (nb_infos, nb_funs) =
-	let nb_infos =
-	  if nb_infos = 1 then "a hoare triple"
-	  else string_of_int nb_infos^" hoare triples"
-	in
-	  res := (!res^"\nNumber of function with "
-		  ^nb_infos^": "^string_of_int nb_funs)
+      let string_of_elem (nb_infos, funs) =
+	let nb_funs = StrSet.cardinal funs in
+	  res := !res^"\nNumber of function with ";
+	  if nb_infos = 1 then res := !res^"a hoare triple"
+	  else res := !res^string_of_int nb_infos^" hoare triples";
+	  res := !res^": "^string_of_int nb_funs;
+	  if nb_funs = 1 then res := !res^" ("^StrSet.min_elt funs^")"
       in
 	List.iter string_of_elem !stats;
 	!res
@@ -302,7 +302,7 @@ let process glb_tbl prog =
 	    raise (Exceptions.NotImplemented "Analysis.process_funexp")
 
   and process_call f s =
-    Context.print_graph ("vertex: "^(!current_fun)^", "^f);
+    Context.print_graph ("edge: "^(!current_fun)^", "^f);
     try
 (* TODO: maybe could look for the function's semantics after having prepared
    the current state?? *)
@@ -379,15 +379,16 @@ let process glb_tbl prog =
 	  match !todo with
 	      f::tl -> begin
 		todo := tl;
-		Context.print_verbose ("Analyzing: "^f);
-		Context.print_graph ("node: "^f);
 		current_fun := f;
 		live_funs := StrSet.add f !live_funs;
 		(* TODO: could be optimized and analysed only the pre/post
 		   conditions which are not yet complete!! *)
 		let rel_list = Hashtbl.find fun_tbl f in
+		let sz = string_of_int (List.length rel_list) in
 		let (ft, body) = Hashtbl.find prog.fundecs f in
 		  env := env_of_ftyp ft;
+		  Context.print_verbose ("Analyzing: "^f^" ("^sz^")");
+		  Context.print_graph ("node: "^f);
 		  process_fun f body rel_list
 	      end
 	    | [] -> raise Exit

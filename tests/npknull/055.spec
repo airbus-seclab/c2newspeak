@@ -1,11 +1,11 @@
-Analyzing: main
-Analyzing: f
-Analyzing: g
-Analyzing: h
-Analyzing: i
-Analyzing: h
-Analyzing: g
-Analyzing: f
-Analyzing: main
+Analyzing: main (1)
+Analyzing: f (1)
+Analyzing: g (1)
+Analyzing: h (1)
+Analyzing: i (1)
+Analyzing: h (1)
+Analyzing: g (1)
+Analyzing: f (1)
+Analyzing: main (1)
 Function distribution: 
 Number of function with a hoare triple: 5
