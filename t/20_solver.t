@@ -6,7 +6,9 @@ use YAML::Syck;
 use File::Slurp;
 use Test::More;
 
-my @tests = <t/solver/*.c>;
+my @src = <t/src/*.c>;
+
+my @tests = <t/solver/*.yml>;
 
 my $cmd = './solver';
 
@@ -15,17 +17,18 @@ plan tests => scalar @tests;
 foreach (@tests) {
 TODO: {
   local $TODO = 'Not yet implemented' if 0;
-  /\/(\w+)\.c$/ or die "Bad filename format : $_";
-  my $test_name = $1;
-  my $yml_fname = $_;
-  $yml_fname =~ s/c$/yml/;
-  die "Cannot find $yml_fname" unless -e $yml_fname;
-  my $exp_text = read_file $yml_fname;
+  /\/(\d+)\.yml$/ or die "Bad filename format : $_";
+  my $test_num = $1;
+  my ($src_fname) = grep /$test_num/, @src;
+
+  die "Cannot find $src_fname" unless -e $src_fname;
+
+  my $exp_text = read_file $_;
   my $exp_yaml = Load ($exp_text);
 
-  my $output = qx#$cmd $_#;
+  my $output = qx#$cmd $src_fname#;
   my $got_yaml = Load ($output);
 
-  is_deeply ($got_yaml, $exp_yaml, "Solver (YAML) for $test_name.c");
+  is_deeply ($got_yaml, $exp_yaml, "Solver (YAML) for $test_num");
   }
 }
