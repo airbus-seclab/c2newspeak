@@ -90,27 +90,27 @@ let process glb_tbl prog =
 
   let string_of_fun_tbl () =
     let stats = ref [] in
-    let count _ data =
+    let count f data =
       let x = List.length data in
       let c = 
 	try
 	  let c = List.assoc x !stats in
 	    stats := List.remove_assoc x !stats;
-	    c + 1
-	with Not_found -> 1
+	    StrSet.add f c
+	with Not_found -> StrSet.singleton f
       in
 	stats := (x, c)::!stats
     in
       Hashtbl.iter count fun_tbl;
       stats := List.sort (fun (x, _) (y, _) -> compare x y) !stats;
       let res = ref "Function distribution: " in
-      let string_of_elem (nb_infos, nb_funs) =
-	let nb_infos =
-	  if nb_infos = 1 then "a hoare triple"
-	  else string_of_int nb_infos^" hoare triples"
-	in
-	  res := (!res^"\nNumber of function with "
-		  ^nb_infos^": "^string_of_int nb_funs)
+      let string_of_elem (nb_infos, funs) =
+	let nb_funs = StrSet.cardinal funs in
+	  res := !res^"\nNumber of function with ";
+	  if nb_infos = 1 then res := !res^"a hoare triple"
+	  else res := !res^string_of_int nb_infos^" hoare triples";
+	  res := !res^": "^string_of_int nb_funs;
+	  if nb_funs = 1 then res := !res^" ("^StrSet.min_elt funs^")"
       in
 	List.iter string_of_elem !stats;
 	!res

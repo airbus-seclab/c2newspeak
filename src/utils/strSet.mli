@@ -44,3 +44,5 @@ val elements: t -> string list
 val cardinal: t -> int
 
 val remove: string -> t -> t
+
+val min_elt: t -> string
