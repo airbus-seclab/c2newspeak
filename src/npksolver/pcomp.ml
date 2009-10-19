@@ -90,11 +90,12 @@ and pcomp_blk x = Utils.filter_map pcomp_stmt x
 
 let compile npk =
   (* Check that there is at most one variable, and it is an int. *)
-  if (Hashtbl.fold (fun _ (ty, loc) count ->
+  let globals = 
+  Hashtbl.fold (fun s (ty, loc) l ->
     assert_int_typ loc ty;
-    count + 1
-  ) npk.globals 0) > 1 then
-    abort "Multiple variables";
+    s::l
+  ) npk.globals []
+  in
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
     ( succ nfun
     , if fname = "main" then Some blk
@@ -106,7 +107,7 @@ let compile npk =
     abort "Initialization block";
   match blko with
   | None -> abort "No 'main' function"
-  | Some (_, b) -> pcomp_blk b
+  | Some (_, b) -> (pcomp_blk b,globals)
 
 module Print = struct
   open Prog

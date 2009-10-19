@@ -80,3 +80,8 @@ let add_bound ?(min=min_int) ?(max=max_int) var x =
 
 let to_string x =
   String.concat ", " (Alist.map (fun s r -> s^"->"^Range.to_string r) x)
+
+let yaml_dump x =
+  "{"^
+  String.concat ", " (Alist.map (fun s r -> s^": \""^Range.to_string r^"\"") x)
+  ^"}"

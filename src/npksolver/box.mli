@@ -38,3 +38,5 @@ val shift : string -> int -> t -> t
 val add_bound : ?min:int -> ?max:int -> string -> t -> t
 
 val to_string : t -> string
+
+val yaml_dump : t -> string

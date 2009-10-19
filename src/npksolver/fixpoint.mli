@@ -19,4 +19,4 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val solve : Cfg.t -> Range.t array
+val solve : string list -> Cfg.t -> Box.t array

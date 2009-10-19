@@ -14,7 +14,7 @@ foreach (@tests) {
   my $should_be_ok = ($1 eq 'ok');
   my $testname = $2;
   my $cmd = Test::Command->new (cmd => ['npksolver', '--cfg', $_]);
-  $cmd->exit_cmp_ok(($should_be_ok ? '==' : '>'), 0,
+  $cmd->exit_cmp_ok(($should_be_ok ? '==' : '!='), 0,
                      $testname.' : return value');
   $cmd->stderr_unlike(qr/Fatal error/, $testname.' : no exception');
 }

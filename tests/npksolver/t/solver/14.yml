@@ -1,8 +1,8 @@
-  - {id: 0, value: "{0}"}
-  - {id: 1, value: "[0;9]"}
-  - {id: 2, value: "[1;10]"}
-  - {id: 3, value: "[0;10]"}
-  - {id: 4, value: "{0}"}
-  - {id: 5, value: "[0;10]"}
-  - {id: 6, value: "[0;10]"}
-  - {id: 7, value: "{0}"}
+  - {id: 0, value: {i: "{0}"}}
+  - {id: 1, value: {i: "[0;9]"}}
+  - {id: 2, value: {i: "[1;10]"}}
+  - {id: 3, value: {i: "[0;10]"}}
+  - {id: 4, value: {i: "{0}"}}
+  - {id: 5, value: {i: "[0;10]"}}
+  - {id: 6, value: {i: "[0;10]"}}
+  - {id: 7, value: {i: "{0}"}}

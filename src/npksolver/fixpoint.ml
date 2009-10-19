@@ -27,7 +27,7 @@ let new_value x vertices i =
                         let xo = x.(origin) in
                         let r = 
                           if Options.get_widening() then
-                            Range.widen xo (f xo)
+                            Box.widen xo (f xo)
                           else
                             f xo
                         in
@@ -35,7 +35,7 @@ let new_value x vertices i =
                       end
                     else None
     ) vertices in
-    List.fold_left Range.join x.(i) from_vals
+    List.fold_left Box.join x.(i) from_vals
 
 (* roundrobin algorithm *)
 let rec kleene ?(n=0) v x =
@@ -72,9 +72,12 @@ let inline_print v =
     ) v
   ))
 
-let solve (ln, v) =
-  let x0 = Array.make (ln + 1) Range.bottom in
-  x0.(ln) <- Range.from_bounds 0 0;
+let solve vars (ln, v) =
+  let x0 = Array.make (ln + 1) Box.bottom in
+  x0.(ln) <- List.fold_left (fun r v ->
+      Box.join (Box.from_bounds v 0 0) r
+    ) Box.bottom vars;
+  (* FIXME zero init *)
   let (res, ops) =
     match Options.get_fp_algo () with
     | Options.Roundrobin -> kleene v x0

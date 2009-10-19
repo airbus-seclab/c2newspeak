@@ -19,7 +19,7 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val compile : Newspeak.t -> Prog.t
+val compile : Newspeak.t -> Prog.t * string list
 
 module Print : sig
   val exp : Prog.exp -> string

@@ -27,27 +27,25 @@ end
 
 (* Abstract transfer functions *)
 
-(* Range specific *)
+let nop x = x
 
-let nop (x:Range.t) :Range.t = x
-
-let f_set e x =
-  if x = Range.bottom then Range.bottom
+let f_set v e x =
+  if x = Box.bottom then Box.bottom
   else
     match e with
-    | Op (Plus,  Var _, Const n) -> Range.shift   n  x
-    | Op (Minus, Var _, Const n) -> Range.shift (-n) x
-    | Const n -> Range.from_bounds n n
+    | Op (Plus,  Var v', Const n) when v' = v -> Box.shift v   n  x
+    | Op (Minus, Var v', Const n) when v' = v -> Box.shift v (-n) x
+    | Const n -> Box.from_bounds v n n
     | _ -> failwith "Unsupported set statement"
 
 let f_guard e x =
   match e with
-  | Op (Gt, Var _, Const n) -> Range.add_bound ~min:(n + 1) x
-  | Op (Gt, Const n, Var _) -> Range.add_bound ~max:(n - 1) x
-  | Op (Eq, Var _, Const n) -> Range.add_bound ~min:n ~max:n x
-  | Not (Op (Gt, Var _, Const n)) -> Range.add_bound ~max:n x
-  | Not (Op (Gt, Const n, Var _)) -> Range.add_bound ~min:n x
-  | Not (Op (Eq, Var _, Const _)) -> x
+  |      Op (Gt, Var v, Const n)  -> Box.add_bound v ~min:(n + 1) x
+  |      Op (Gt, Const n, Var v)  -> Box.add_bound v ~max:(n - 1) x
+  |      Op (Eq, Var v, Const n)  -> Box.add_bound v ~min:n ~max:n x
+  | Not (Op (Gt, Var v, Const n)) -> Box.add_bound v ~max:n x
+  | Not (Op (Gt, Const n, Var v)) -> Box.add_bound v ~min:n x
+  | Not (Op (Eq, Var _, Const _)) -> x (* FIXME ?? *)
   | _ -> failwith ( "Warning - unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 (**
@@ -87,10 +85,10 @@ let rec process_stmt (stmt, _) (lbl, alist, vertices, join) =
                   let ljmp = List.assoc l alist in
                   (lbl', alist, (lbl', ljmp,  ("(jump)", nop))
                               ::vertices, None)
-  | Set      (_, e) -> let lbl' = Lbl.next lbl in
+  | Set      (v, e) -> let lbl' = Lbl.next lbl in
                        ( lbl'
                        , alist
-                       ,   (lbl', jnode, ("(stmt:set)", f_set e))
+                       ,   (lbl', jnode, ("(stmt:set)", f_set v e))
                          ::vertices
                        , None)
   | Guard    (e)    -> let lbl' = Lbl.next lbl in
