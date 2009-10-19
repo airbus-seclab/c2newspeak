@@ -45,4 +45,4 @@ val cardinal: t -> int
 
 val remove: string -> t -> t
 
-val min_elt: t -> string
+val to_string: t -> string

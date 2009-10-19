@@ -24,3 +24,10 @@
 *)
 
 include Set.Make(String)
+
+let to_string s =
+  let res = ref "" in
+  let add_elem x = if !res = "" then res := x else res := !res^", "^x in
+    iter add_elem s;
+    !res
+  

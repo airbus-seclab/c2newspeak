@@ -110,7 +110,7 @@ let process glb_tbl prog =
 	  if nb_infos = 1 then res := !res^"a hoare triple"
 	  else res := !res^string_of_int nb_infos^" hoare triples";
 	  res := !res^": "^string_of_int nb_funs;
-	  if nb_funs = 1 then res := !res^" ("^StrSet.min_elt funs^")"
+	  if nb_funs <= 3 then res := !res^" ("^StrSet.to_string funs^")"
       in
 	List.iter string_of_elem !stats;
 	!res
