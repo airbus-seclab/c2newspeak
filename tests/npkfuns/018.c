@@ -23,18 +23,14 @@
   email: charles.hymans@penjili.org
 */
 
-char x;
-char *ptr = &x;
+char *ptr;
 
 void g() {
-  *ptr = 0;             // precision: should not signal any null pointer deref
+  *ptr = 0;
 }
 
+// should say that f needs global ptr
 void f() {
   g();
-}
-
-void main() {
-  f();
 }
 

@@ -74,6 +74,10 @@ let process silent prog =
   let todo = Queue.create () in
   let unknown_funs = ref Set.empty in
 
+  let current_fun = ref "" in
+
+  let print_verbose str = if not silent then print_endline str in
+
   let init_fun f _ = 
     Hashtbl.add glb_tbl f (Set.empty);
     Hashtbl.add pred_tbl f Set.empty;
@@ -81,6 +85,7 @@ let process silent prog =
   in
 
   let update_fun f x =
+(*    print_verbose ("Updating: "^f); *)
     let used = Hashtbl.find glb_tbl f in
       if not (Set.subset x used) then begin
 	let preds = Hashtbl.find pred_tbl f in
@@ -91,14 +96,18 @@ let process silent prog =
   in
 
   let get_fun f =
-    try Hashtbl.find glb_tbl f
+    try 
+      (* update predecessor table *)
+      let preds = Hashtbl.find pred_tbl f in
+      let preds = Set.add !current_fun preds in
+	Hashtbl.replace pred_tbl f preds;
+
+	Hashtbl.find glb_tbl f
     with Not_found -> 
       if not (Set.mem f !unknown_funs) then begin
 	unknown_funs := Set.add f !unknown_funs;
-	if not silent then begin
-	  print_endline ("unknown function "^f
-			 ^", assuming no global is modified")
-	end
+	print_verbose ("unknown function "^f
+		       ^", assuming no global is modified")
       end;
       Set.empty
   in
@@ -150,9 +159,11 @@ let process silent prog =
     begin try
       while true do
 	let f = Queue.take todo in
-	let (_, body) = Hashtbl.find prog.fundecs f in
-	let used = process_blk body in
-	  update_fun f used
+	  current_fun := f;
+(*	  print_verbose ("Analyzing: "^f); *)
+	  let (_, body) = Hashtbl.find prog.fundecs f in
+	  let used = process_blk body in
+	    update_fun f used
       done;
     with Queue.Empty -> ()
     end;
