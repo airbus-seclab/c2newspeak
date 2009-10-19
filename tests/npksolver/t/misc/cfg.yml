@@ -1,0 +1,12 @@
+type: map
+mapping:
+  "lastnode":
+    type:     int
+    required: yes
+  "vertices":
+    type:     seq
+    required: yes
+    sequence:
+      - type: seq
+        sequence:
+          - type: int
