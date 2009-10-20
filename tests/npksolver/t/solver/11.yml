@@ -1,5 +1,5 @@
   - {id: 0, value: {x: "{0}"}}
-  - {id: 1, value: {x: "(bot)"}}
-  - {id: 2, value: {x: "(bot)"}}
+  - {id: 1, bottom: yes}
+  - {id: 2, bottom: yes}
   - {id: 3, value: {x: "{0}"}}
   - {id: 4, value: {x: "{0}"}}

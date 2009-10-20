@@ -25,8 +25,6 @@ type t
 
 val bottom : t
 
-val bottom_var : string -> t
-
 val from_bounds : string -> int -> int -> t
 
 val join : t -> t -> t

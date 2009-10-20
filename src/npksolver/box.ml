@@ -19,6 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+let may_cons h t = Utils.may (fun x -> h::x) t
+
 module Alist : sig
   (** Association list *)
   type t
@@ -27,9 +29,9 @@ module Alist : sig
 
   val singleton : string -> Range.t -> t
 
-  val apply : (Range.t -> Range.t -> Range.t) -> t -> t -> t
+  val merge : (Range.t -> Range.t -> Range.t) -> t -> t -> t option
 
-  val replace : string -> (Range.t -> Range.t) -> t -> t
+  val replace : string -> (Range.t -> Range.t) -> t -> t option
 
   val map : (string -> Range.t -> 'a) -> t -> 'a list
 
@@ -45,26 +47,33 @@ end = struct
   let singleton k x =
     (k, x)::[]
 
-  let rec apply f x1 x2 = match (x1, x2) with
-    | [], _  -> x2
-    | _ , [] -> x1
+  let rec merge f x1 x2 = match (x1, x2) with
+    | [], _  -> Some x2
+    | _ , [] -> Some x1
     | (s1,r1)::t1, (s2,r2)::t2 ->
         match String.compare s1 s2 with
         | 0 -> begin
                  let r = f r1 r2 in
-                 if r = Range.top
-                 then         apply f t1 t2
-                 else (s1,r)::apply f t1 t2
+                 if r = Range.bottom then None
+                 else if r = Range.top
+                 then         merge f t1 t2
+                 else
+                   may_cons (s1, r) (merge f t1 t2)
                end
-        | x when x < 0 -> (s1,r1)::apply f t1 x2
-        | _  (* > 0 *) -> (s2,r2)::apply f x1 t2
+        | x when x < 0 -> may_cons (s1,r1) (merge f t1 x2)
+        | _  (* > 0 *) -> may_cons (s2,r2) (merge f x1 t2)
 
   let rec replace var f = function
-    | [] -> []
+    | [] -> Some []
     | (s, r)::t -> match String.compare s var with
-      | 0 -> (s, f r)::t
-      | x when x < 0 -> (s, r)::replace var f t
-      | _ (* > 0 *)  -> (s, r)::t
+      | 0 -> begin
+               let fr = f r in
+               if fr = Range.bottom then
+                 None
+               else Some ((s, fr)::t)
+             end (* XXX may *)
+      | x when x < 0 -> may_cons (s, r) (replace var f t)
+      | _ (* > 0 *)  -> Some ((s, r)::t)
 
   let map f =
     List.map (fun (k, x) -> f k x)
@@ -76,32 +85,49 @@ end = struct
 
 end
 
-type t = Alist.t
+type t = Alist.t option
 
-let bottom = Alist.empty
-
-let bottom_var var =
-  Alist.singleton var (Range.bottom)
+let bottom = None
 
 let from_bounds var min max =
-  Alist.singleton var (Range.from_bounds min max)
+  Some (Alist.singleton var (Range.from_bounds min max))
 
-let join  = Alist.apply Range.join
-let meet  = Alist.apply Range.meet
-let widen = Alist.apply Range.widen
+let bind2 f x y =
+  match (x, y) with
+  | None, _ -> y
+  | _, None -> x
+  | Some x', Some y' -> f x' y'
 
-let shift var n x =
-  Alist.replace var (Range.shift n) x
+let bind2_bot f x y =
+  match (x, y) with
+  | None, _ -> None
+  | _, None -> None
+  | Some x', Some y' -> f x' y'
 
-let add_bound ?(min=min_int) ?(max=max_int) var x =
-  Alist.replace var (Range.add_bound ~min ~max) x
+let join  = bind2     (Alist.merge Range.join)
+let meet  = bind2_bot (Alist.merge Range.meet)
+let widen = bind2_bot (Alist.merge Range.widen)
 
-let get_var = Alist.assoc
+let shift var n = function
+  | None   -> None
+  | Some x -> Alist.replace var (Range.shift n) x
+  (* XXX bind *)
 
-let to_string x =
-  String.concat ", " (Alist.map (fun s r -> s^"->"^Range.to_string r) x)
+let add_bound ?(min=min_int) ?(max=max_int) var = function
+  | None   -> None
+  | Some x -> 
+    Alist.replace var (Range.add_bound ~min ~max) x
 
-let yaml_dump x =
-  "{"^
-  String.concat ", " (Alist.map (fun s r -> s^": \""^Range.to_string r^"\"") x)
-  ^"}"
+let get_var v = function
+  | None -> raise Not_found
+  | Some x -> Alist.assoc v x
+
+let to_string = function
+  | None -> "(bot)"
+  | Some x -> String.concat ", " (Alist.map (fun s r -> s^"->"^Range.to_string r) x)
+
+let yaml_dump = function
+  | None   -> "bottom: yes"
+  | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun s r ->
+      s ^": \""^Range.to_string r^"\"") x))
+      ^"}"

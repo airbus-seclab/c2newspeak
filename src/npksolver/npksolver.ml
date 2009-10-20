@@ -43,7 +43,7 @@ let handle_file_npk fname =
       print_endline "---";
       Array.iteri (fun i r ->
           print_endline ("  - {id: "^ string_of_int i ^
-          ", value: " ^ Box.yaml_dump r^"}")
+          ", "^ Box.yaml_dump r^"}")
       ) (Fixpoint.solve vars cfg);
     end
 

@@ -202,7 +202,7 @@ end
 module Test_box = struct
 open Box
 let run _ =
-  test_plan 6;
+  test_plan 7;
   assert_exn (fun s -> get_var s bottom) Not_found "x" "Box.bottom as no variables";
 
   let ae got exp name =
@@ -220,7 +220,7 @@ let run _ =
 
   ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} . i = { }";
 
-  ae (add_bound ~min:3 ~max:3 "i" i2j5) (join j5 (bottom_var "i"))
+  ae (add_bound ~min:3 ~max:3 "i" i2j5) bottom
      "{i: 2, j: 5} / i <= {3} = {j: 5}";
 
   ae (join (join (from_bounds "i" min_int 0) (from_bounds "j" 5 5))
@@ -229,6 +229,8 @@ let run _ =
      (from_bounds "j" 5 8)
      "{i: R-, j: 5} \\/ {i: R+, j: 8} = {j: [5;8]}"
      ;
+
+  ae (add_bound "i" ~max:0 i2) bottom "{i: 2} /\\ {i: R-} = bot";
 
   test_end ()
 end
