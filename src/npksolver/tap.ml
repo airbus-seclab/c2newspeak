@@ -74,3 +74,9 @@ let assert_equal_string expected actual msg =
       (Some ("Expected : "^expected
             ^" but got : "^actual))
 
+
+let assert_exn f e x n =
+  try
+    ignore (f x);
+    test_not_ok n (Some "no exception was raised")
+  with e' -> test_condition n (e' = e) (Some "Another exception was raised")

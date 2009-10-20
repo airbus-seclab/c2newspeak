@@ -21,6 +21,8 @@
 
 type t
 
+val top : t
+
 val bottom : t
 
 val from_bounds : int -> int -> t

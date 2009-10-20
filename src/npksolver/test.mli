@@ -20,3 +20,5 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 val range : unit -> unit
+
+val box : unit -> unit

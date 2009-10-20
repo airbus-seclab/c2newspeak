@@ -25,6 +25,8 @@ type t
 
 val bottom : t
 
+val bottom_var : string -> t
+
 val from_bounds : string -> int -> int -> t
 
 val join : t -> t -> t
@@ -36,6 +38,8 @@ val widen : t -> t -> t
 val shift : string -> int -> t -> t
 
 val add_bound : ?min:int -> ?max:int -> string -> t -> t
+
+val get_var : string -> t -> Range.t
 
 val to_string : t -> string
 

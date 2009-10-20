@@ -25,6 +25,8 @@ let from_bounds a b =
   assert (a <= b);
   Some (a, b)
 
+let top = Some (min_int, max_int)
+
 let bottom = None
 
 let (<=%) a b = match (a, b) with

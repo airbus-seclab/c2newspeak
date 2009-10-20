@@ -21,20 +21,24 @@
 
 module Alist : sig
   (** Association list *)
-  type 'a t
+  type t
 
-  val empty : 'a t
+  val empty : t
 
-  val singleton : string -> 'a -> 'a t
+  val singleton : string -> Range.t -> t
 
-  val apply : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+  val apply : (Range.t -> Range.t -> Range.t) -> t -> t -> t
 
-  val replace : string -> ('a -> 'a) -> 'a t -> 'a t
+  val replace : string -> (Range.t -> Range.t) -> t -> t
 
-  val map : (string -> 'a -> 'b) -> 'a t -> 'b list
+  val map : (string -> Range.t -> 'a) -> t -> 'a list
+
+  val assoc : string -> t -> Range.t
 end = struct
-  (** Invariant : list is sorted according to String.compare *)
-  type 'a t = (string * 'a) list
+  (** Invariants : - list is sorted according to String.compare
+   *               - there are no "top" elements
+   *)
+  type t = (string * Range.t) list
 
   let empty = []
 
@@ -46,7 +50,12 @@ end = struct
     | _ , [] -> x1
     | (s1,r1)::t1, (s2,r2)::t2 ->
         match String.compare s1 s2 with
-        | 0 -> (s1,f r1 r2)::apply f t1 t2
+        | 0 -> begin
+                 let r = f r1 r2 in
+                 if r = Range.top
+                 then         apply f t1 t2
+                 else (s1,r)::apply f t1 t2
+               end
         | x when x < 0 -> (s1,r1)::apply f t1 x2
         | _  (* > 0 *) -> (s2,r2)::apply f x1 t2
 
@@ -59,11 +68,20 @@ end = struct
 
   let map f =
     List.map (fun (k, x) -> f k x)
+
+  let rec assoc v = function
+    | (v', x)::_ when v = v'                  -> x
+    | (v', _)::t when String.compare v v' > 0 -> assoc v t
+    | _ -> raise Not_found
+
 end
 
-type t = Range.t Alist.t
+type t = Alist.t
 
 let bottom = Alist.empty
+
+let bottom_var var =
+  Alist.singleton var (Range.bottom)
 
 let from_bounds var min max =
   Alist.singleton var (Range.from_bounds min max)
@@ -77,6 +95,8 @@ let shift var n x =
 
 let add_bound ?(min=min_int) ?(max=max_int) var x =
   Alist.replace var (Range.add_bound ~min ~max) x
+
+let get_var = Alist.assoc
 
 let to_string x =
   String.concat ", " (Alist.map (fun s r -> s^"->"^Range.to_string r) x)
