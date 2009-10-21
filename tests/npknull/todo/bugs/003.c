@@ -26,8 +26,12 @@
 // should not loop forever
 char z;
 char y;
+
 char *x;
 char *v;
+char *u;
+char w;
+char *a;
 
 
 void g(char *) {
@@ -37,36 +41,28 @@ void p(char *) {
   g(x);
 }
 
-void k(char *dst) {
+void k() {
+  char *dst = &w;
   *dst = *x;
 }
 
-void h(char *dst, char *src) {
-  *dst = *src;
-}
-
-void f(char *a) {
-  h(x, a);
+void h() {
+  char *src = &u;
+  *x = *src;
 }
 
 void main(void) {
-  int t;
-  char *u;
   int c;
-  char w;
-  char *a;
 
   x = &y;
   u = &z;
+  a = &v;
     
-  f(&u);
+  h();
 
   if (c == 0) {
-    k(&w);
+    k();
   }
-  
   p(&w);
-
-  a = &v;
   p(&a);
 }
