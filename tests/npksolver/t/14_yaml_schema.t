@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 BEGIN {require 't/misc/skip_all.pl';}
-use Test::More;
+use Test::More skip_all => 'kwalify tests disabled';
 use Test::Command;
 use File::Slurp;
 use lib 't/lib';

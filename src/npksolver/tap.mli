@@ -37,3 +37,5 @@ val assert_true  : bool -> string -> unit
 val assert_false : bool -> string -> unit
 
 val assert_equal_string : string -> string -> string -> unit
+
+val assert_exn : ('a -> 'b) -> exn -> 'a -> string -> unit

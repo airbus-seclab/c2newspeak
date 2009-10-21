@@ -1,3 +1,3 @@
-  - {id: 0, value: "(bot)"}
-  - {id: 1, value: "[0;+oo]"}
-  - {id: 2, value: "[0;+oo]"}
+  - {id: 0, bottom: yes}
+  - {id: 1, value: {i: "[0;+oo]"}}
+  - {id: 2, value: {i: "[0;+oo]"}}

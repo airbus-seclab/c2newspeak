@@ -58,7 +58,7 @@ let pcomp_binop loc binop =
   | Mod -> fail loc "Invalid binary operation"
 
 let rec pcomp_exp loc = function
-  | Const (CInt c) -> Prog.Const (Newspeak.Nat.to_int c)
+  | Const (CInt c) -> Prog.Const c
   | Lval (lv, scal) -> assert_int loc scal; Prog.Var (pcomp_var loc lv)
   | UnOp (Not, e1) -> Prog.Not (pcomp_exp loc e1)
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
@@ -90,11 +90,12 @@ and pcomp_blk x = Utils.filter_map pcomp_stmt x
 
 let compile npk =
   (* Check that there is at most one variable, and it is an int. *)
-  if (Hashtbl.fold (fun _ (ty, loc) count ->
+  let globals = 
+  Hashtbl.fold (fun s (ty, loc) l ->
     assert_int_typ loc ty;
-    count + 1
-  ) npk.globals 0) > 1 then
-    abort "Multiple variables";
+    s::l
+  ) npk.globals []
+  in
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
     ( succ nfun
     , if fname = "main" then Some blk
@@ -106,7 +107,7 @@ let compile npk =
     abort "Initialization block";
   match blko with
   | None -> abort "No 'main' function"
-  | Some (_, b) -> pcomp_blk b
+  | Some (_, b) -> (pcomp_blk b,globals)
 
 module Print = struct
   open Prog
@@ -122,7 +123,7 @@ module Print = struct
     | Eq    -> "=="
 
   let rec exp = function
-    | Const c -> string_of_int c
+    | Const c -> Newspeak.Nat.to_string c
     | Var v   -> v
     | Not e -> "!" ^par (exp e)
     | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)

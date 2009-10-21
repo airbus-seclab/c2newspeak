@@ -32,7 +32,7 @@ let output_graphviz cfg =
 
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
-  let prg = Pcomp.compile npk in
+  let (prg, vars) = Pcomp.compile npk in
   let cfg = Mkcfg.process prg in
   if (Options.get_graphviz ()) then
     output_graphviz cfg;
@@ -43,8 +43,8 @@ let handle_file_npk fname =
       print_endline "---";
       Array.iteri (fun i r ->
           print_endline ("  - {id: "^ string_of_int i ^
-          ", value: \"" ^ Range.to_string r^"\"}")
-      ) (Fixpoint.solve cfg);
+          ", "^ Box.yaml_dump r^"}")
+      ) (Fixpoint.solve vars cfg);
     end
 
 let fname_suffix str =
@@ -72,6 +72,7 @@ let handle_file fname =
 let run_selftests =
   function
   | "range" -> Test.range ()
+  | "box"   -> Test.box ()
   | _       -> invalid_arg "Bad test suite"
 
 let main _ =

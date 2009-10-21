@@ -25,4 +25,4 @@ and node = int
 
 and vertex = node * node * label
 
-and label = string * (Range.t -> Range.t)
+and label = string * (Box.t -> Box.t)
