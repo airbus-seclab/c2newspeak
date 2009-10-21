@@ -284,7 +284,7 @@ let contains s1 s2 =
     print_endline "Store.contains ends";
     r
 *)
-
+(*
 let build_transport src memlocs dst =
   print_endline "Store.build_transport starts";
   print_endline (to_string src);
@@ -294,7 +294,7 @@ let build_transport src memlocs dst =
     print_endline (Subst.to_string tr);
     print_endline "Store.build_transport ends";
     tr
-
+*)
 (*
 let join s1 s2 =
   print_endline "Store.join";

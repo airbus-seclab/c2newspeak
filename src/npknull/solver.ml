@@ -146,12 +146,10 @@ let process glb_tbl prog =
 
 
   let apply_rel f memlocs unreach tr1 reach rel_list =
-    print_endline ("apply_rel: "^f);
     let rec apply rel_list =
       match rel_list with
 	  [] -> 
 	    schedule f;
-	    print_endline "HHHHHHH";
 	    (State.emptyset, (reach, State.emptyset)::[])
 	| (pre, post)::tl -> 
 	    try
