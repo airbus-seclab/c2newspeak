@@ -37,6 +37,8 @@ val shift : string -> int -> t -> t
 
 val add_bound : ?min:int -> ?max:int -> string -> t -> t
 
+val set_var : string -> int -> t -> t
+
 val get_var : string -> t -> Range.t
 
 val to_string : t -> string

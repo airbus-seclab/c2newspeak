@@ -81,7 +81,7 @@ end = struct
   let rec assoc v = function
     | (v', x)::_ when v = v'                  -> x
     | (v', _)::t when String.compare v v' > 0 -> assoc v t
-    | _ -> raise Not_found
+    | _ -> Range.top
 
 end
 
@@ -113,13 +113,16 @@ let shift var n = function
   | Some x -> Alist.replace var (Range.shift n) x
   (* XXX bind *)
 
-let add_bound ?(min=min_int) ?(max=max_int) var = function
-  | None   -> None
-  | Some x -> 
-    Alist.replace var (Range.add_bound ~min ~max) x
+let add_bound ?(min=min_int) ?(max=max_int) var x =
+  meet (from_bounds var min max) x
+
+let set_var var n = function
+  | None -> None
+  | Some x -> Alist.replace var (fun _ -> Range.from_bounds n n) x
+  (* XXX bind *)
 
 let get_var v = function
-  | None -> raise Not_found
+  | None   -> raise Not_found
   | Some x -> Alist.assoc v x
 
 let to_string = function

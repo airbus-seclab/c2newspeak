@@ -203,7 +203,7 @@ module Test_box = struct
 open Box
 let run _ =
   test_plan 7;
-  assert_exn (fun s -> get_var s bottom) Not_found "x" "Box.bottom as no variables";
+  assert_exn (fun s -> get_var s bottom) Not_found "x" "Box.bottom has no variables";
 
   let ae got exp name =
     assert_equal ~printer:to_string got exp name
