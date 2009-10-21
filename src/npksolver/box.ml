@@ -92,6 +92,12 @@ let bottom = None
 let from_bounds var min max =
   Some (Alist.singleton var (Range.from_bounds min max))
 
+(* Haskell's (=<<) *)
+(* bind : ('a -> 'b option) -> 'a option -> 'b option *)
+let bind f = function
+  | None   -> None
+  | Some x -> f x
+
 let bind2 f x y =
   match (x, y) with
   | None, _ -> y
@@ -108,18 +114,14 @@ let join  = bind2     (Alist.merge Range.join)
 let meet  = bind2_bot (Alist.merge Range.meet)
 let widen = bind2_bot (Alist.merge Range.widen)
 
-let shift var n = function
-  | None   -> None
-  | Some x -> Alist.replace var (Range.shift n) x
-  (* XXX bind *)
+let shift var n =
+  bind (Alist.replace var (Range.shift n))
 
 let add_bound ?(min=min_int) ?(max=max_int) var x =
   meet (from_bounds var min max) x
 
-let set_var var n = function
-  | None -> None
-  | Some x -> Alist.replace var (fun _ -> Range.from_bounds n n) x
-  (* XXX bind *)
+let set_var var n =
+  bind (Alist.replace var (fun _ -> Range.from_bounds n n))
 
 let get_var v = function
   | None   -> raise Not_found
