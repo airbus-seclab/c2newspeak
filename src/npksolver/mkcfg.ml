@@ -35,6 +35,7 @@ let f_set v e x =
     match e with
     | Op (Plus,  Var v', Const n) when v' = v -> Box.shift v   n  x
     | Op (Minus, Var v', Const n) when v' = v -> Box.shift v (-n) x
+    | Var v'  -> Box.assign_var ~src:v' ~dest:v x
     | Const n -> Box.set_var v n x
     | _ -> failwith "Unsupported set statement"
 

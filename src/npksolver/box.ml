@@ -120,6 +120,12 @@ let shift var n =
 let add_bound ?(min=min_int) ?(max=max_int) var x =
   meet (from_bounds var min max) x
 
+let assign_var ~src ~dest =
+  bind (fun x ->
+    let value = Alist.assoc src x in
+    Alist.replace dest (fun _ -> value) x
+  )
+
 let set_var var n =
   bind (Alist.replace var (fun _ -> Range.from_bounds n n))
 
