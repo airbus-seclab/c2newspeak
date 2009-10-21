@@ -99,12 +99,14 @@ let add_overflow n x =
   if (is_infinite x) then x
   else x +: n
 
-let shift n = function
-  | None        -> None
-  | Some (a, b) -> Some (add_overflow n a, add_overflow n b)
+let plus ab cd = match (ab, cd) with
+  | None       , _           -> None
+  | _          , None        -> None
+  | Some (a, b), Some (c, d) -> Some (add_overflow a c, add_overflow b d)
 
-let add_bound ?(min=min_nat) ?(max=max_nat) =
-  meet (from_bounds min max)
+let neg = function
+  | None -> None
+  | Some (a, b) -> Some (Newspeak.Nat.neg a, Newspeak.Nat.neg b)
 
 let to_string =
   let string_of_nat_inf x =

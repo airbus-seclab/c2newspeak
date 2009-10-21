@@ -38,8 +38,8 @@ val meet : t -> t -> t
 
 val widen : t -> t -> t
 
-val shift : Newspeak.Nat.t -> t -> t
+val plus : t -> t -> t
 
-val add_bound : ?min:Newspeak.Nat.t -> ?max:Newspeak.Nat.t -> t -> t
+val neg : t -> t
 
 val to_string : t -> string

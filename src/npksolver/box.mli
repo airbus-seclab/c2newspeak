@@ -35,11 +35,7 @@ val widen : t -> t -> t
 
 val shift : string -> Newspeak.Nat.t -> t -> t
 
-val add_bound : ?min:Newspeak.Nat.t -> ?max:Newspeak.Nat.t -> string -> t -> t
-
-val assign_var : src:string -> dest:string -> t -> t
-
-val set_var : string -> Newspeak.Nat.t -> t -> t
+val set_var : string -> Range.t -> t -> t
 
 val get_var : string -> t -> Range.t
 

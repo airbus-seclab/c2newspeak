@@ -20,10 +20,6 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 open Tap
 
-(* FIXME factor *)
-
-let min_nat = Newspeak.Nat.of_string "-2147483648"
-let max_nat = Newspeak.Nat.of_string "2147483647"
 let noi = Newspeak.Nat.of_int
 
 module Test_range = struct
@@ -57,10 +53,16 @@ let run _ =
     assert_equal ~printer:to_string (join r q) j name_j;
   in
 
-  let i = min_nat  in let m = noi (-22) in let m' = noi (-20) in
-  let a = noi (-8) in let p = noi 2     in let q  = noi 7     in
-  let b = noi 55   in let n = noi 123  in let n' = noi 1503 in
-  let j = max_nat in
+  let i  = Utils.min_nat in
+  let m  = noi (-22)     in
+  let m' = noi (-20)     in
+  let a  = noi (-8)      in
+  let p  = noi 2         in
+  let q  = noi 7         in
+  let b  = noi 55        in
+  let n  = noi 123       in
+  let n' = noi 1503      in
+  let j  = Utils.max_nat in
 
   let z = from_bounds in
 
@@ -231,17 +233,17 @@ let run _ =
 
   ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} . i = { }";
 
-  ae (add_bound ~min:nat3 ~max:nat3 "i" i2j5) bottom
+  ae (meet (from_bounds "i" nat3 nat3) i2j5) bottom
      "{i: 2, j: 5} / i <= {3} = {j: 5}";
 
-  ae (join (join (from_bounds "i" min_nat nat0) (from_bounds "j" nat5 nat5))
-           (join (from_bounds "i" nat0 max_nat) (from_bounds "j" nat8 nat8))
+  ae (join (join (from_bounds "i" Utils.min_nat nat0) (from_bounds "j" nat5 nat5))
+           (join (from_bounds "i" nat0 Utils.max_nat) (from_bounds "j" nat8 nat8))
      )
      (from_bounds "j" nat5 nat8)
      "{i: R-, j: 5} \\/ {i: R+, j: 8} = {j: [5;8]}"
      ;
 
-  ae (add_bound "i" ~max:nat0 i2) bottom "{i: 2} /\\ {i: R-} = bot";
+  ae (meet (from_bounds "i" Utils.min_nat nat0) i2) bottom "{i: 2} /\\ {i: R-} = bot";
 
   test_end ()
 end

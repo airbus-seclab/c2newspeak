@@ -30,3 +30,7 @@ let rec filter_map f = function
 let may f = function
   | None   -> None
   | Some x -> Some (f x)
+
+let min_nat = Newspeak.Nat.of_string "-2147483648"
+let max_nat = Newspeak.Nat.of_string "2147483647"
+

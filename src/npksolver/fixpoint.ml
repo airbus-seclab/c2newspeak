@@ -77,7 +77,6 @@ let solve vars (ln, v) =
   x0.(ln) <- List.fold_left (fun r v ->
       Box.join (Box.from_bounds v Newspeak.Nat.zero Newspeak.Nat.zero) r
     ) Box.bottom vars;
-  (* FIXME zero init *)
   let (res, ops) =
     match Options.get_fp_algo () with
     | Options.Roundrobin -> kleene v x0

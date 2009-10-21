@@ -22,3 +22,6 @@
 val filter_map : ('a -> 'b option) -> 'a list -> 'b list
 
 val may : ('a -> 'b) -> 'a option -> 'b option
+
+val min_nat : Newspeak.Nat.t
+val max_nat : Newspeak.Nat.t

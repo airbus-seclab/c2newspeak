@@ -21,11 +21,6 @@
 
 let may_cons h t = Utils.may (fun x -> h::x) t
 
-(* XXX factor *)
-
-let min_nat = Newspeak.Nat.of_string "-2147483648"
-let max_nat = Newspeak.Nat.of_string "2147483647"
-
 module Alist : sig
   (** Association list *)
   type t
@@ -120,19 +115,10 @@ let meet  = bind2_bot (Alist.merge Range.meet)
 let widen = bind2_bot (Alist.merge Range.widen)
 
 let shift var n =
-  bind (Alist.replace var (Range.shift n))
+  bind (Alist.replace var (Range.plus (Range.from_bounds n n)))
 
-let add_bound ?(min=min_nat) ?(max=max_nat) var x =
-  meet (from_bounds var min max) x
-
-let assign_var ~src ~dest =
-  bind (fun x ->
-    let value = Alist.assoc src x in
-    Alist.replace dest (fun _ -> value) x
-  )
-
-let set_var var n =
-  bind (Alist.replace var (fun _ -> Range.from_bounds n n))
+let set_var var r =
+  bind (Alist.replace var (fun _ -> r))
 
 let get_var v = function
   | None   -> raise Not_found

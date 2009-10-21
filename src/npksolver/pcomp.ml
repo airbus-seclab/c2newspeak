@@ -89,7 +89,6 @@ let rec pcomp_stmt (sk, loc) =
 and pcomp_blk x = Utils.filter_map pcomp_stmt x
 
 let compile npk =
-  (* Check that there is at most one variable, and it is an int. *)
   let globals = 
   Hashtbl.fold (fun s (ty, loc) l ->
     assert_int_typ loc ty;
