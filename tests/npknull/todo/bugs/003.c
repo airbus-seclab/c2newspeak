@@ -27,10 +27,10 @@
 char z;
 char y;
 
-char *x;
+char **x;
 char *v;
 char *u;
-char w;
+char *w;
 char *a;
 
 
@@ -42,13 +42,11 @@ void p(char *) {
 }
 
 void k() {
-  char *dst = &w;
-  *dst = *x;
+  w = *x;
 }
 
 void h() {
-  char *src = &u;
-  *x = *src;
+  *x = u;
 }
 
 void main(void) {
@@ -57,7 +55,7 @@ void main(void) {
   x = &y;
   u = &z;
   a = &v;
-    
+  
   h();
 
   if (c == 0) {
