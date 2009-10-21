@@ -19,83 +19,102 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t = (int * int) option
+type nat = Newspeak.Nat.t
+
+let (<=:) a b = Newspeak.Nat.compare a b <= 0
+let (<:)  a b = Newspeak.Nat.compare a b <  0
+let (+:)  a b = Newspeak.Nat.add     a b
+
+let min_nat = Newspeak.Nat.of_string "-2147483648"
+let max_nat = Newspeak.Nat.of_string "2147483647"
+
+let nat_min x y =
+  if x <: y
+    then x
+    else y
+
+let nat_max x y =
+  if x <: y
+    then y
+    else x
+
+type t = (nat * nat) option
 
 let from_bounds a b =
-  assert (a <= b);
+  assert (a <=: b);
   Some (a, b)
 
-let top = Some (min_int, max_int)
+let top = Some (min_nat, max_nat)
 
 let bottom = None
 
 let (<=%) a b = match (a, b) with
-  | None, _ -> true
-  | Some _, None -> false
-  | Some (a, b), Some (c, d) -> c <= a && b <= d
+  | None       , _           -> true
+  | Some _     , None        -> false
+  | Some (a, b), Some (c, d) -> c <=: a && b <=: d
 
 let join a b = match (a, b) with
   | None, _ -> b
   | _, None -> a
   | Some (l1, u1), Some (l2, u2) ->
-      Some (min l1 l2, max u1 u2)
+      Some (nat_min l1 l2, nat_max u1 u2)
 
 let meet a b = match (a, b) with
   | None, _ -> None
   | _, None -> None
   | Some (l1, u1), Some (l2, u2) ->
       begin
-        if l2 <= l1 then
+        if l2 <=: l1 then
           begin
-            if u2 < l1 then       None
-            else if u2 <= u1 then from_bounds l1 u2
-            else                  from_bounds l1 u1
+            if u2 <: l1
+              then None
+              else from_bounds l1 (nat_min u1 u2)
           end
-        else if l2 <= u1 then
+        else
           begin
-            if u2 <= u1 then      from_bounds l2 u2
-            else                  from_bounds l2 u1
+            if u1 <: l2
+              then None
+              else from_bounds l2 (nat_min u1 u2)
           end
-        else                      None
       end
 
 let widen a b =
   match (a, b) with
   | None         , _             -> None
   | _            , None          -> None
-  | Some (l1, u1), Some (l2, u2) -> let l = if l2 < l1
-                                      then min_int
+  | Some (l1, u1), Some (l2, u2) -> let l = if l2 <: l1
+                                      then min_nat
                                       else l1
                                     in
-                                    let u = if u2 > u1
-                                      then max_int
+                                    let u = if u1 <: u2
+                                      then max_nat
                                       else u1
                                     in
                                     Some (l, u)
 
 let is_infinite x =
-  x == max_int || x == min_int
+  x == max_nat || x == min_nat
 
 let add_overflow n x =
   if (is_infinite x) then x
-  else x + n
+  else x +: n
 
 let shift n = function
   | None        -> None
   | Some (a, b) -> Some (add_overflow n a, add_overflow n b)
 
-let add_bound ?(min=min_int) ?(max=max_int) =
+let add_bound ?(min=min_nat) ?(max=max_nat) =
   meet (from_bounds min max)
 
 let to_string =
-  let string_of_int_inf x =
-    if x = max_int then "+oo"
-    else if x = min_int then "-oo"
-    else string_of_int x
+  let string_of_nat_inf x =
+    if      x = max_nat then "+oo"
+    else if x = min_nat then "-oo"
+    else Newspeak.Nat.to_string x
   in function
   | None        -> "(bot)"
-  | Some (a, b) when a = min_int && b = max_int -> "(top)"
-  | Some (a, b) when a = b -> "{" ^ string_of_int     a ^ "}"
-  | Some (a, b)            -> "[" ^ string_of_int_inf a ^ ";"
-                                  ^ string_of_int_inf b ^ "]"
+  | Some (a, b) when a = min_nat && b = max_nat -> "(top)"
+  | Some (a, b) when a = b -> "{" ^ Newspeak.Nat.to_string a ^ "}"
+  | Some (a, b)            -> "[" ^ string_of_nat_inf      a ^ ";"
+                                  ^ string_of_nat_inf      b ^ "]"
 

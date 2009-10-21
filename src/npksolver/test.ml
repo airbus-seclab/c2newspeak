@@ -20,6 +20,12 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 open Tap
 
+(* FIXME factor *)
+
+let min_nat = Newspeak.Nat.of_string "-2147483648"
+let max_nat = Newspeak.Nat.of_string "2147483647"
+let noi = Newspeak.Nat.of_int
+
 module Test_range = struct
 open Range
 
@@ -51,11 +57,10 @@ let run _ =
     assert_equal ~printer:to_string (join r q) j name_j;
   in
 
-
-  let i = min_int in let m = -22 in let m' = -20  in
-  let a = -8      in let p = 2   in let q  = 7    in
-  let b = 55      in let n = 123 in let n' = 1503 in
-  let j = max_int in
+  let i = min_nat  in let m = noi (-22) in let m' = noi (-20) in
+  let a = noi (-8) in let p = noi 2     in let q  = noi 7     in
+  let b = noi 55   in let n = noi 123  in let n' = noi 1503 in
+  let j = max_nat in
 
   let z = from_bounds in
 
@@ -209,28 +214,34 @@ let run _ =
     assert_equal ~printer:to_string got exp name
   in
 
-  let i2 = from_bounds "i" 2 2 in
-  let j5 = from_bounds "j" 5 5 in
+  let nat0 = noi 0 in
+  let nat2 = noi 2 in
+  let nat3 = noi 3 in
+  let nat5 = noi 5 in
+  let nat8 = noi 8 in
+
+  let i2 = from_bounds "i" nat2 nat2 in
+  let j5 = from_bounds "j" nat5 nat5 in
 
   let i2j5 = meet i2 j5 in
   assert_equal ~printer:Range.to_string (get_var "i" i2j5)
-      (Range.from_bounds 2 2) "{i: 2} /\\ {j: 5} . i = {2}";
+      (Range.from_bounds nat2 nat2) "{i: 2} /\\ {j: 5} . i = {2}";
   assert_equal ~printer:Range.to_string (get_var "j" i2j5)
-      (Range.from_bounds 5 5) "{i: 2} /\\ {j: 5} . i = {5}";
+      (Range.from_bounds nat5 nat5) "{i: 2} /\\ {j: 5} . i = {5}";
 
   ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} . i = { }";
 
-  ae (add_bound ~min:3 ~max:3 "i" i2j5) bottom
+  ae (add_bound ~min:nat3 ~max:nat3 "i" i2j5) bottom
      "{i: 2, j: 5} / i <= {3} = {j: 5}";
 
-  ae (join (join (from_bounds "i" min_int 0) (from_bounds "j" 5 5))
-           (join (from_bounds "i" 0 max_int) (from_bounds "j" 8 8))
+  ae (join (join (from_bounds "i" min_nat nat0) (from_bounds "j" nat5 nat5))
+           (join (from_bounds "i" nat0 max_nat) (from_bounds "j" nat8 nat8))
      )
-     (from_bounds "j" 5 8)
+     (from_bounds "j" nat5 nat8)
      "{i: R-, j: 5} \\/ {i: R+, j: 8} = {j: [5;8]}"
      ;
 
-  ae (add_bound "i" ~max:0 i2) bottom "{i: 2} /\\ {i: R-} = bot";
+  ae (add_bound "i" ~max:nat0 i2) bottom "{i: 2} /\\ {i: R-} = bot";
 
   test_end ()
 end

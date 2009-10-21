@@ -25,7 +25,7 @@ val top : t
 
 val bottom : t
 
-val from_bounds : int -> int -> t
+val from_bounds : Newspeak.Nat.t -> Newspeak.Nat.t -> t
 
 (* a C b *)
 val (<=%) : t -> t -> bool
@@ -38,8 +38,8 @@ val meet : t -> t -> t
 
 val widen : t -> t -> t
 
-val shift : int -> t -> t
+val shift : Newspeak.Nat.t -> t -> t
 
-val add_bound : ?min:int -> ?max:int -> t -> t
+val add_bound : ?min:Newspeak.Nat.t -> ?max:Newspeak.Nat.t -> t -> t
 
 val to_string : t -> string

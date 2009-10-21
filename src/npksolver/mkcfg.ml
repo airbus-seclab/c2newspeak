@@ -20,6 +20,9 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 open Prog
 
+let (+:) = Newspeak.Nat.add
+let (-:) = Newspeak.Nat.sub
+
 module Lbl = struct
   let init = 0
   let next = succ
@@ -33,16 +36,17 @@ let f_set v e x =
   if x = Box.bottom then Box.bottom
   else
     match e with
-    | Op (Plus,  Var v', Const n) when v' = v -> Box.shift v   n  x
-    | Op (Minus, Var v', Const n) when v' = v -> Box.shift v (-n) x
+    | Op (Plus,  Var v', Const n) when v' = v -> Box.shift v     n  x
+    | Op (Minus, Var v', Const n) when v' = v ->
+        Box.shift v (Newspeak.Nat.neg n) x
     | Var v'  -> Box.assign_var ~src:v' ~dest:v x
     | Const n -> Box.set_var v n x
     | _ -> failwith "Unsupported set statement"
 
 let f_guard e x =
   match e with
-  |      Op (Gt, Var v, Const n)  -> Box.add_bound v ~min:(n + 1) x
-  |      Op (Gt, Const n, Var v)  -> Box.add_bound v ~max:(n - 1) x
+  |      Op (Gt, Var v, Const n)  -> Box.add_bound v ~min:(n +: Newspeak.Nat.one) x
+  |      Op (Gt, Const n, Var v)  -> Box.add_bound v ~max:(n -: Newspeak.Nat.one) x
   |      Op (Eq, Var v, Const n)  -> Box.add_bound v ~min:n ~max:n x
   | Not (Op (Gt, Var v, Const n)) -> Box.add_bound v ~max:n x
   | Not (Op (Gt, Const n, Var v)) -> Box.add_bound v ~min:n x
