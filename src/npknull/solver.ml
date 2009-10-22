@@ -61,7 +61,8 @@ let build_main_info ft s =
     | ([], _) -> s
     | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
 
-
+(* TODO: should implement the naive analysis that follows function calls, 
+   in order to see the difference and count the number of calls *)
 let process glb_tbl prog = 
 (* results of the analysis *)
   let warnings = ref StrSet.empty in
@@ -78,6 +79,8 @@ let process glb_tbl prog =
   let todo = ref [] in
 (* mapping from function to pre/post relation *)
   let fun_tbl = Hashtbl.create 100 in
+  let cache_miss = ref 0 in
+  let cache_hit = ref 0 in
 
 (* inverse call graph *)
   let pred_tbl = Hashtbl.create 100 in
@@ -113,7 +116,9 @@ let process glb_tbl prog =
 	  if nb_funs <= 3 then res := !res^" ("^StrSet.to_string funs^")"
       in
 	List.iter string_of_elem !stats;
-	!res
+	"Cache misses: "^(string_of_int !cache_miss)^"/"
+	^(string_of_int (!cache_miss + !cache_hit))^"\n"
+	^(!res)
   in
 
   let push lbl = lbl_tbl := (lbl, State.emptyset)::!lbl_tbl in
@@ -149,6 +154,7 @@ let process glb_tbl prog =
     let rec apply rel_list =
       match rel_list with
 	  [] -> 
+	    incr cache_miss;
 	    schedule f;
 	    (State.emptyset, (reach, State.emptyset)::[])
 	| (pre, post)::tl -> 
@@ -166,6 +172,7 @@ let process glb_tbl prog =
 	      let tr = Subst.invert (Subst.compose tr1 tr2) in
 	      let rel_list = (pre, post)::tl in
 	      let post = State.transport tr post in
+		incr cache_hit;
 		(State.glue unreach post, rel_list)
 	    with Exceptions.Unknown -> 
 	      let (s, tl) = apply tl in
