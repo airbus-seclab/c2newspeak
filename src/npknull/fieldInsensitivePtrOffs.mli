@@ -69,3 +69,5 @@ val glue: t -> t -> t
  *)
 (* TODO: maybe remove this type Dom.abptr?? *)
 val read: t -> Memloc.t -> (Memloc.t * num_pred) list
+
+val test: unit -> unit

@@ -24,16 +24,7 @@
 # email: charles.hymans@penjili.org
 #
 
-DIR=c2newspeak mult-files npkstats npksimplify mem_opt npk2bytesz npkcheck \
-    npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npktests npknull simpleai npksolver
+all:
+	../../bin/npktests
 
-.PHONY: $(DIR)
-
-all: $(DIR)
-
-clean: $(DIR)
-
-$(DIR):
-	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
-
+clean:

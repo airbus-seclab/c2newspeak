@@ -236,6 +236,8 @@ let split memlocs s =
 (* TODO: O(n) expensive? 
    Have the inverse map?
    TOOD: code very similar to shift??
+   shouldn't it be better to iterated on the substitution only?? and keep the
+   map unchanged?? 
 *)
 let transport tr s =
   let res = ref Map.empty in
@@ -305,3 +307,25 @@ let join s1 s2 =
     print_endline "Store.join ends";
     s
 *)
+
+let test () =
+  print_string "npknull/FieldInsensitivePtrOffs.test... ";
+  let a = Memloc.of_global "a" in
+  let b = Memloc.of_global "b" in
+  let c = Memloc.of_global "c" in
+  let d = Memloc.of_global "d" in
+
+  let src = universe in
+
+  let src = assign [a] [AddrOf (d, None)] src in
+  let src = assign [b] [AddrOf (d, None)] src in
+
+  let dst = universe in
+
+  let dst = assign [a] [AddrOf (d, None)] dst in
+  let dst = assign [b] [AddrOf (c, None)] dst in
+
+    try
+      let _ = build_transport src [b; a] dst in
+	invalid_arg "Failed"
+    with Exceptions.Unknown -> print_endline "OK"

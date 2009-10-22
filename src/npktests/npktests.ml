@@ -22,21 +22,20 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
+(* TODO: factor launcher and error treatment for the several newspeak 
+   utilities *)
 
-type t
+let exec_name = "npknull"
 
-val build_param_map: int -> int -> t
+let speclist = 
+  [
+  ]
 
-val invert: t -> t
+let anon_fun _ =  ()
 
-val compose: t -> t -> t
+let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
-val identity: t
-
-val assoc: Memloc.t -> Memloc.t -> t -> t
-
-val apply: t -> Memloc.t -> Memloc.t
-
-val to_string: t -> string
-
-val test: unit -> unit
+let _ =
+  Arg.parse speclist anon_fun usage_msg;
+  Subst.test ();
+  FieldInsensitivePtrOffs.test ()

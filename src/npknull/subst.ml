@@ -59,7 +59,29 @@ let assoc x y s =
       (* do not associate the same variable to different values twice *) 
       if prev_y <> y then raise Exceptions.Unknown;
       s
-  with Not_found -> if x = y then s else (x, y)::s
+  with Not_found -> (x, y)::s
 
 let apply tr x = try List.assoc x tr with Not_found -> x
 
+
+(* useful for debug
+let assoc x y s =
+  print_endline "Subst.assoc";
+  print_endline (to_string s);
+  print_endline (Memloc.to_string x);
+  print_endline (Memloc.to_string y);
+  let s = assoc x y s in
+    print_endline (to_string s);
+    s
+*)
+
+let test () =
+  print_string "npknull/Subst.test... ";
+  let a = Memloc.of_global "a" in
+  let b = Memloc.of_global "b" in
+  let s = identity in
+  let s = assoc a a s in
+    try
+      let _ = assoc a b s in
+	invalid_arg "Failed"
+    with Exceptions.Unknown -> print_endline "OK"
