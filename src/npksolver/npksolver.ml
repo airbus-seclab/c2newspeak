@@ -72,7 +72,8 @@ let handle_file fname =
 let run_selftests =
   function
   | "range" -> Test.range ()
-  | "box"   -> Test.box ()
+  | "box"   -> Test.box   ()
+  | "const" -> Test.const ()
   | _       -> invalid_arg "Bad test suite"
 
 let main _ =

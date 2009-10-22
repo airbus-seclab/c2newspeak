@@ -19,8 +19,18 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val range : unit -> unit
+type t
 
-val box   : unit -> unit
+val top : t
 
-val const : unit -> unit
+val bottom : t
+
+val const : int -> t
+
+val (<=%) : t -> t -> bool
+
+val to_string : t -> string
+
+val join : t -> t -> t
+
+val meet : t -> t -> t

@@ -19,8 +19,37 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val range : unit -> unit
+type t =
+  | Top
+  | Cst of int
+  | Bot
 
-val box   : unit -> unit
+let top = Top
 
-val const : unit -> unit
+let bottom = Bot
+
+let const x = Cst x
+
+let (<=%) a b = match (a, b) with
+  | Bot  , _     -> true
+  | _    , Top   -> true
+  | Cst x, Cst y -> x = y
+  | _            -> false
+
+let join a b = match (a, b) with
+  | Bot, _   -> b
+  | _  , Bot -> a
+  | Cst x, Cst y when x = y -> a
+  | _ -> Top
+
+let meet a b = match (a, b) with
+  | Top, _   -> b
+  | _  , Top -> a
+  | Cst x, Cst y when x = y -> a
+  | _ -> Bot
+
+let to_string = function
+  | Top   -> "top"
+  | Cst x -> string_of_int x
+  | Bot   -> "bot"
+

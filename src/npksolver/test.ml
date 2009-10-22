@@ -248,6 +248,47 @@ let run _ =
   test_end ()
 end
 
-let range = Test_range.run
+module Test_const = struct
+open Const
 
+let run _ =
+  test_plan (16 * 3);
+  let bot = bottom in
+  let c = const in
+
+  let tc a b r j m =
+    let n_op ?r op = to_string a ^ " " ^ op ^ " " ^ to_string b
+      ^ (match r with None -> "" | Some x -> " = "^to_string x)
+    in
+    let name_inc = n_op (if r then "<=" else "</") in
+    let name_j = n_op ~r:j "\\/" in
+    let name_m = n_op ~r:m "/\\" in
+    assert_equal (a <=% b) r name_inc;
+    assert_equal ~printer:to_string (join a b) j name_j;
+    assert_equal ~printer:to_string (meet a b) m name_m;
+  in
+
+  tc  bot   bot  true   bot   bot;
+  tc  bot  (c 2) true  (c 2)  bot;
+  tc  bot  (c 5) true  (c 5)  bot;
+  tc  bot   top  true   top   bot;
+  tc (c 2)  bot  false (c 2)  bot;
+  tc (c 2) (c 2) true  (c 2) (c 2);
+  tc (c 2) (c 5) false  top   bot;
+  tc (c 2)  top  true   top  (c 2);
+  tc (c 5)  bot  false (c 5)  bot;
+  tc (c 5) (c 2) false  top   bot;
+  tc (c 5) (c 5) true  (c 5) (c 5);
+  tc (c 5)  top  true   top  (c 5);
+  tc  top   bot  false  top   bot;
+  tc  top  (c 2) false  top  (c 2);
+  tc  top  (c 5) false  top  (c 5);
+  tc  top   top  true   top   top;
+
+  test_end ()
+
+end
+
+let range = Test_range.run
 let box   = Test_box.run
+let const = Test_const.run
