@@ -75,7 +75,7 @@ let inline_print v =
 let solve vars (ln, v) =
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- List.fold_left (fun r v ->
-      Box.join (Box.from_bounds v Newspeak.Nat.zero Newspeak.Nat.zero) r
+      Box.join (Box.from_bounds v 0 0) r
     ) Box.bottom vars;
   let (res, ops) =
     match Options.get_fp_algo () with

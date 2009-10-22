@@ -25,7 +25,7 @@ val top : t
 
 val bottom : t
 
-val from_bounds : Newspeak.Nat.t -> Newspeak.Nat.t -> t
+val from_bounds : int -> int -> t
 
 (* a C b *)
 val (<=%) : t -> t -> bool

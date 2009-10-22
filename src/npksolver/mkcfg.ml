@@ -44,13 +44,13 @@ let f_set v e x =
     then Box.bottom
     else Box.set_var v (eval x e) x
 
-let add_bound v ?(min=Utils.min_nat) ?(max=Utils.max_nat) =
+let add_bound v ?(min=min_int) ?(max=max_int) =
   Box.meet (Box.from_bounds v min max)
 
 let f_guard e x =
   match e with
-  |      Op (Gt, Var v, Const n)  -> add_bound v ~min:(n +: Newspeak.Nat.one) x
-  |      Op (Gt, Const n, Var v)  -> add_bound v ~max:(n -: Newspeak.Nat.one) x
+  |      Op (Gt, Var v, Const n)  -> add_bound v ~min:(n + 1) x
+  |      Op (Gt, Const n, Var v)  -> add_bound v ~max:(n - 1) x
   |      Op (Eq, Var v, Const n)  -> add_bound v ~min:n ~max:n x
   | Not (Op (Gt, Var v, Const n)) -> add_bound v ~max:n x
   | Not (Op (Gt, Const n, Var v)) -> add_bound v ~min:n x

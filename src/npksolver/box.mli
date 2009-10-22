@@ -25,7 +25,7 @@ type t
 
 val bottom : t
 
-val from_bounds : string -> Newspeak.Nat.t -> Newspeak.Nat.t -> t
+val from_bounds : string -> int -> int -> t
 
 val join : t -> t -> t
 
@@ -33,7 +33,7 @@ val meet : t -> t -> t
 
 val widen : t -> t -> t
 
-val shift : string -> Newspeak.Nat.t -> t -> t
+val shift : string -> int -> t -> t
 
 val set_var : string -> Range.t -> t -> t
 

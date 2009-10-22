@@ -49,7 +49,7 @@ and exp =
 
 and lbl = int
 
-and cst = Newspeak.Nat.t
+and cst = int
 
 and binop =
   | Plus
