@@ -19,27 +19,37 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t
+type t =
+  | Top
+  | Cst of int
+  | Bot
 
-val top : t
+let top = Top
 
-val bottom : t
+let bottom = Bot
 
-val from_bounds : int -> int -> t
+let const x = Cst x
 
-(* a C b *)
-val (<=%) : t -> t -> bool
+let (<=%) a b = match (a, b) with
+  | Bot  , _     -> true
+  | _    , Top   -> true
+  | Cst x, Cst y -> x = y
+  | _            -> false
 
-(* a \/ b *)
-val join : t -> t -> t
+let join a b = match (a, b) with
+  | Bot, _   -> b
+  | _  , Bot -> a
+  | Cst x, Cst y when x = y -> a
+  | _ -> Top
 
-(* a /\ b *)
-val meet : t -> t -> t
+let meet a b = match (a, b) with
+  | Top, _   -> b
+  | _  , Top -> a
+  | Cst x, Cst y when x = y -> a
+  | _ -> Bot
 
-val widen : t -> t -> t
+let to_string = function
+  | Top   -> "top"
+  | Cst x -> string_of_int x
+  | Bot   -> "bot"
 
-val plus : t -> t -> t
-
-val neg : t -> t
-
-val to_string : t -> string

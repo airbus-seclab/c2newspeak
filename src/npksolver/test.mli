@@ -21,4 +21,6 @@
 
 val range : unit -> unit
 
-val box : unit -> unit
+val box   : unit -> unit
+
+val const : unit -> unit

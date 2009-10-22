@@ -33,24 +33,28 @@ end
 let nop x = x
 
 let f_set v e x =
-  if x = Box.bottom then Box.bottom
-  else
-    match e with
-    | Op (Plus,  Var v', Const n) when v' = v -> Box.shift v     n  x
-    | Op (Minus, Var v', Const n) when v' = v ->
-        Box.shift v (Newspeak.Nat.neg n) x
-    | Var v'  -> Box.assign_var ~src:v' ~dest:v x
-    | Const n -> Box.set_var v n x
+  let rec eval x = function
+    | Const n            -> Range.from_bounds n n
+    | Var v'             -> Box.get_var v' x
+    | Op (Plus,  e1, e2) -> Range.plus (eval x e1) (eval x e2)
+    | Op (Minus, e1, e2) -> Range.plus (eval x e1) (Range.neg (eval x e2))
     | _ -> failwith "Unsupported set statement"
+  in
+  if x = Box.bottom
+    then Box.bottom
+    else Box.set_var v (eval x e) x
+
+let add_bound v ?(min=min_int) ?(max=max_int) =
+  Box.meet (Box.from_bounds v min max)
 
 let f_guard e x =
   match e with
-  |      Op (Gt, Var v, Const n)  -> Box.add_bound v ~min:(n +: Newspeak.Nat.one) x
-  |      Op (Gt, Const n, Var v)  -> Box.add_bound v ~max:(n -: Newspeak.Nat.one) x
-  |      Op (Eq, Var v, Const n)  -> Box.add_bound v ~min:n ~max:n x
-  | Not (Op (Gt, Var v, Const n)) -> Box.add_bound v ~max:n x
-  | Not (Op (Gt, Const n, Var v)) -> Box.add_bound v ~min:n x
-  | Not (Op (Eq, Var _, Const _)) -> x (* FIXME ?? *)
+  |      Op (Gt, Var v, Const n)  -> add_bound v ~min:(n + 1) x
+  |      Op (Gt, Const n, Var v)  -> add_bound v ~max:(n - 1) x
+  |      Op (Eq, Var v, Const n)  -> add_bound v ~min:n ~max:n x
+  | Not (Op (Gt, Var v, Const n)) -> add_bound v ~max:n x
+  | Not (Op (Gt, Const n, Var v)) -> add_bound v ~min:n x
+  | Not (Op (Eq, Var _, Const _)) -> x
   | _ -> failwith ( "Warning - unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 (**
