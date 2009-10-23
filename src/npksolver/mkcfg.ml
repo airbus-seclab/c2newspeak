@@ -29,29 +29,22 @@ module Lbl = struct
   let next = succ
 end
 
-(* Abstract transfer functions *)
+(* Abstract domain *)
+
+let dom = Range.dom
 
 let nop x = x
 
-(* XXX move -> range *)
 let f_set v e x =
   let lookup v = Box.get_var v x in
   if x = Box.bottom
     then Box.bottom
-    else Box.set_var v (Range.eval lookup e) x
+    else Box.set_var v (dom.eval lookup e) x
 
-let add_bound v ?(min=min_int) ?(max=max_int) =
-  Box.guard v (Range.from_bounds min max)
-
-let f_guard e x =
-  match e with
-  |      Op (Gt, Var v, Const n)  -> add_bound v ~min:(n + 1) x
-  |      Op (Gt, Const n, Var v)  -> add_bound v ~max:(n - 1) x
-  |      Op (Eq, Var v, Const n)  -> add_bound v ~min:n ~max:n x
-  | Not (Op (Gt, Var v, Const n)) -> add_bound v ~max:n x
-  | Not (Op (Gt, Const n, Var v)) -> add_bound v ~min:n x
-  | Not (Op (Eq, Var _, Const _)) -> x
-  | _ -> failwith ( "Warning - unsupported guard statement : " ^ Pcomp.Print.exp e)
+let f_guard e (x: Box.t) =
+  match dom.guard e with
+  | None -> x
+  | Some (v, f) -> Box.guard v f x
 
 (**
  * lbl is the last label used.

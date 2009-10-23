@@ -150,22 +150,24 @@ let mult r1 r2 =
                              ; mult_mm r1m r2m
                              ]
 
+open Prog
+
 let eval lookup x =
   let bool_top   = from_bounds 0 1 in
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in
   let rec eval = function 
-  | Prog.Const n            -> from_bounds n n
-  | Prog.Var v'             -> lookup v'
-  | Prog.Op (Prog.Plus,  e1, e2) -> plus (eval e1) (eval e2)
-  | Prog.Op (Prog.Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
-  | Prog.Not e' -> begin match eval e' with
+  | Const n            -> from_bounds n n
+  | Var v'             -> lookup v'
+  | Op (Plus,  e1, e2) -> plus (eval e1) (eval e2)
+  | Op (Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
+  | Not e' -> begin match eval e' with
                            | Some (0,0)            -> bool_true
                            | Some (a,_) when a > 0 -> bool_false
                            | Some (_,b) when b < 0 -> bool_false
                            | _                     -> bool_top
                    end
-  | Prog.Op (Prog.Eq, e1, e2) ->
+  | Op (Eq, e1, e2) ->
                            let r1 = eval e1 in
                            let r2 = eval e2 in
                            if meet r1 r2 = None then bool_false
@@ -175,10 +177,20 @@ let eval lookup x =
                                                        &&  c = d -> bool_true
                            | _ -> bool_top
                            end
-  | Prog.Op (Prog.Mult, e1, e2) -> mult (eval e1) (eval e2)
+  | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
   | _ -> failwith "not impl"
   in
   eval x
+
+let guard e =
+  match e with
+  |      Op (Gt, Var v, Const n)  -> Some (v, meet (from_bounds (n + 1) max_int))
+  |      Op (Gt, Const n, Var v)  -> Some (v, meet (from_bounds min_int (n - 1)))
+  |      Op (Eq, Var v, Const n)  -> Some (v, meet (from_bounds n n))
+  | Not (Op (Gt, Var v, Const n)) -> Some (v, meet (from_bounds min_int n))
+  | Not (Op (Gt, Const n, Var v)) -> Some (v, meet (from_bounds n max_int))
+  | Not (Op (Eq, Var _, Const _)) -> None
+  | _ -> failwith ( "Warning - unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 let dom = { Domain.top       = top
           ; Domain.bottom    = bottom
@@ -187,4 +199,6 @@ let dom = { Domain.top       = top
           ; Domain.join      = join
           ; Domain.meet      = meet
           ; Domain.to_string = to_string
+          ; Domain.eval      = eval
+          ; Domain.guard     = guard
           }
