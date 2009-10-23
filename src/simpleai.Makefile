@@ -51,7 +51,7 @@ simple.a simple.cmxa: $(FILES.CMX)
 	@echo "Building library            "simple.cmx
 	@$(OCAMLOPT) -a $(FILES.CMX) -o simple.cmxa
 
-CLEANFILES=simple.a simple.cma simple.cmxa simpleai/simple.cmo
+CLEANFILES=simple.a simple.cma simple.cmxa simpleai/simple.cmo $(FILES.CMO)
 
 
 
