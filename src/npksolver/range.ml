@@ -87,7 +87,7 @@ let plus ab cd = match (ab, cd) with
 
 let neg = function
   | None -> None
-  | Some (a, b) -> Some (- a, - b)
+  | Some (a, b) -> Some (- b, - a)
 
 let to_string =
   let string_of_inf x =
@@ -100,6 +100,36 @@ let to_string =
   | Some (a, b) when a = b -> "{" ^ string_of_int a ^ "}"
   | Some (a, b)            -> "[" ^ string_of_inf a ^ ";"
                                   ^ string_of_inf b ^ "]"
+
+
+let eval lookup x =
+  let bool_top   = from_bounds 0 1 in
+  let bool_true  = from_bounds 1 1 in
+  let bool_false = from_bounds 0 0 in
+  let rec eval = function 
+  | Prog.Const n            -> from_bounds n n
+  | Prog.Var v'             -> lookup v'
+  | Prog.Op (Prog.Plus,  e1, e2) -> plus (eval e1) (eval e2)
+  | Prog.Op (Prog.Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
+  | Prog.Not e' -> begin match eval e' with
+                           | Some (0,0)            -> bool_true
+                           | Some (a,_) when a > 0 -> bool_false
+                           | Some (_,b) when b < 0 -> bool_false
+                           | _                     -> bool_top
+                   end
+  | Prog.Op (Prog.Eq, e1, e2) ->
+                           let r1 = eval e1 in
+                           let r2 = eval e2 in
+                           if meet r1 r2 = None then bool_false
+                           else begin match (r1, r2) with
+                           | Some (a, b), Some (c, d) when a = b
+                                                       &&  b = c
+                                                       &&  c = d -> bool_true
+                           | _ -> bool_top
+                           end
+  | _ -> failwith "not impl"
+  in
+  eval x
 
 let dom = { Domain.top       = top
           ; Domain.bottom    = bottom

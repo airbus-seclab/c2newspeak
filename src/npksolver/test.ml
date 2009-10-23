@@ -31,7 +31,7 @@ let assert_not_incl a b =
   assert_false (dom.incl a b)
 
 let run _ =
-  test_plan 284;
+  test_plan 294;
 
   (* Incl + Join + Meet *)
 
@@ -194,6 +194,39 @@ let run _ =
 
   (* [a;b] W [-oo;p] = [-oo;b] *)
   assert_widen (z a b) (z i p) (z i b);
+
+  (* assert (not [a;b] == [c;d]) *)
+  let tc_not a b c d name =
+    assert_equal ~printer:dom.to_string (eval (function
+        "v" -> from_bounds a b | _ -> invalid_arg "no variable"
+    ) (Prog.Not (Prog.Var "v"))) (from_bounds c d) name
+  in
+
+  tc_not 0       0       1 1 "not [0;0] == [1;1]";
+  tc_not 1       1       0 0 "not [1;1] == [0;0]";
+  tc_not min_int max_int 0 1 "not  top  == [0;1]";
+  tc_not min_int (-1)    0 0 "not [-oo;-1] == [0;0]";
+  tc_not 1       max_int 0 0 "not [1;+oo] == [0;0]";
+
+  (* assert [a;b] .==. [c;d] == [e;f] *)
+  let tc_eqeq a b c d e f name =
+    assert_equal ~printer:dom.to_string (eval (function
+      | "x" -> from_bounds a b
+      | "y" -> from_bounds c d
+      | _ -> invalid_arg "no variable"
+    ) (Prog.Op (Prog.Eq, Prog.Var "x", Prog.Var "y"))) (from_bounds e f) name
+  in
+  
+  tc_eqeq 2 5  8  13 0 0 "[2;5] .==. [8;13] == [0;0]";
+  tc_eqeq 3 12 10 16 0 1 "[3;12] .==. [10;16] == [0;1]";
+  tc_eqeq 5 5  5  5  1 1 "{5} .==. {5} == [1;1]";
+  tc_eqeq 0 0  5  5  0 0 "{0} .==. {5} == [0;0]";
+
+  assert_equal ~printer:dom.to_string (eval (function
+      "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable"
+    ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Var "v")))
+    (from_bounds (-5) (-3)) "- [3;5] == [-5;-3]";
+
 
   test_end ()
 end

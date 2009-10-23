@@ -33,17 +33,12 @@ end
 
 let nop x = x
 
+(* XXX move -> range *)
 let f_set v e x =
-  let rec eval x = function
-    | Const n            -> Range.dom.from_val n
-    | Var v'             -> Box.get_var v' x
-    | Op (Plus,  e1, e2) -> Range.plus (eval x e1) (eval x e2)
-    | Op (Minus, e1, e2) -> Range.plus (eval x e1) (Range.neg (eval x e2))
-    | _ -> failwith "Unsupported set statement"
-  in
+  let lookup v = Box.get_var v x in
   if x = Box.bottom
     then Box.bottom
-    else Box.set_var v (eval x e) x
+    else Box.set_var v (Range.eval lookup e) x
 
 let add_bound v ?(min=min_int) ?(max=max_int) =
   Box.guard v (Range.from_bounds min max)
