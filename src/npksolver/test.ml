@@ -193,7 +193,6 @@ let run _ =
 
   (* [a;b] W [-oo;p] = [-oo;b] *)
   assert_widen (z a b) (z i p) (z i b);
-  
 
   test_end ()
 end
@@ -202,7 +201,7 @@ module Test_box = struct
 open Box
 let run _ =
   test_plan 7;
-  assert_exn (fun s -> get_var s bottom) Not_found "x" "Box.bottom has no variables";
+  assert_equal (get_var "x" bottom) Range.bottom "Box.bottom has no variables";
 
   let ae got exp name =
     assert_equal ~printer:to_string got exp name

@@ -121,7 +121,7 @@ let set_var var r =
   bind (Alist.replace var (fun _ -> r))
 
 let get_var v = function
-  | None   -> raise Not_found
+  | None   -> Range.bottom
   | Some x -> Alist.assoc v x
 
 let to_string = function
