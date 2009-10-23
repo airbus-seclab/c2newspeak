@@ -84,10 +84,11 @@ let process glb_tbl prog =
 
 (* inverse call graph *)
   let pred_tbl = Hashtbl.create 100 in
-
+  let depth_tbl = Hashtbl.create 100 in
 
 (* used during the analysis of a function *)
   let current_fun = ref ("", 0) in (* name of the function currently analysed *)
+  let current_depth = ref 0 in
   let env = ref 0 in          (* number of local variables *)
   let lbl_tbl = ref [] in     (* table of states at each jump label *)
 
@@ -147,11 +148,35 @@ let process glb_tbl prog =
   let update_pred_tbl f =
     let pred = find_preds f in
       if not (List.mem !current_fun pred)
-      then Hashtbl.replace pred_tbl f (!current_fun::pred)
+      then begin
+	let (fname, _) = f in
+	let d = Hashtbl.find depth_tbl fname in
+	let d = max d (!current_depth+1) in
+	  Hashtbl.replace depth_tbl fname d;
+	  Hashtbl.replace pred_tbl f (!current_fun::pred)
+      end
   in
 
   let schedule f = if not (List.mem f !todo) then todo := f::!todo in
 
+
+  let deepest_todo () = 
+    let rec deepest_todo l =
+      match l with
+	| (f, i)::[] -> 
+	    let depth = Hashtbl.find depth_tbl f in
+	      ((f, i, depth), [])
+	| (f1, i1)::tl -> 
+	    let depth1 = Hashtbl.find depth_tbl f1 in
+	    let ((f2, i2, depth2), tl) = deepest_todo tl in
+	      if depth2 > depth1 then ((f2, i2, depth2), (f1, i1)::tl) 
+	      else ((f1, i1, depth1), (f2, i2)::tl)
+	| [] -> raise Exit
+    in
+    let (res, new_todo) = deepest_todo !todo in
+      todo := new_todo;
+      res
+  in
 
   let apply_rel f memlocs unreach tr1 reach rel_list =
     let rec apply i rel_list =
@@ -374,7 +399,10 @@ let process glb_tbl prog =
       end
   in
   
-  let init_fun f _ = Hashtbl.add fun_tbl f [] in
+  let init_fun f _ = 
+    Hashtbl.add fun_tbl f [];
+    Hashtbl.add depth_tbl f 0 
+  in
     
     (* initialization *)
     Hashtbl.iter init_fun prog.fundecs;
@@ -391,22 +419,19 @@ let process glb_tbl prog =
       (* fixpoint computation *)
       begin try
 	while true do
-	  match !todo with
-	      (f, i)::tl -> begin
-		todo := tl;
-		current_fun := (f, i);
-		live_funs := StrSet.add f !live_funs;
-		(* TODO: could be optimized and analysed only the pre/post
-		   conditions which are not yet complete!! *)
-		let rel_list = Hashtbl.find fun_tbl f in
-		let sz = string_of_int (List.length rel_list) in
-		let (ft, body) = Hashtbl.find prog.fundecs f in
-		  env := env_of_ftyp ft;
-		  Context.print_verbose ("Analyzing: "^f^" ("^sz^")");
-		  Context.print_graph ("node: "^f);
-		  process_fun (f, i) body rel_list
-	      end
-	    | [] -> raise Exit
+	  let (f, i, depth) = deepest_todo () in
+	    current_fun := (f, i);
+	    current_depth := depth;
+	    live_funs := StrSet.add f !live_funs;
+	    (* TODO: could be optimized and analysed only the pre/post
+	       conditions which are not yet complete!! *)
+	    let rel_list = Hashtbl.find fun_tbl f in
+	    let sz = string_of_int (List.length rel_list) in
+	    let (ft, body) = Hashtbl.find prog.fundecs f in
+	      env := env_of_ftyp ft;
+	      Context.print_verbose ("Analyzing: "^f^" ("^sz^")");
+	      Context.print_graph ("node: "^f);
+	      process_fun (f, i) body rel_list
 	done
       with Exit -> ()
       end;
