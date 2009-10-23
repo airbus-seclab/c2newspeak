@@ -33,7 +33,7 @@ val meet : t -> t -> t
 
 val widen : t -> t -> t
 
-val guard : string -> Range.t -> t -> t
+val guard : string -> (Range.t -> Range.t) -> t -> t
 
 val set_var : string -> Range.t -> t -> t
 

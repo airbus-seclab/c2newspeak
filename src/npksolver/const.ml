@@ -47,6 +47,40 @@ let to_string = function
   | Cst x -> string_of_int x
   | Bot   -> "bot"
 
+let lift2 f a b = match (a, b) with
+  | Bot   , _     -> Bot
+  | _     , Bot   -> Bot
+  | Cst x , Cst y -> Cst (f x y)
+  | Top   , _     -> Top
+  | _     , Top   -> Top
+
+let eval lookup e =
+  let int_of_bool = function
+    | true  -> 1
+    | false -> 0
+  in
+  let eop = function
+    | Prog.Plus -> (+)
+    | Prog.Minus -> (-)
+    | Prog.Eq -> (fun x y -> int_of_bool (x = y))
+    | Prog.Gt -> (fun x y -> int_of_bool (x > y))
+    | Prog.Div -> (/)
+    | Prog.Mult -> fun x y -> x * y
+  in
+  let rec eval = function
+    | Prog.Const n -> Cst n
+    | Prog.Var v -> lookup v
+    | Prog.Not e -> begin match (eval e) with
+                    | Bot -> Bot
+                    | _   -> Top
+                    (* TODO lift *)
+                    end
+    | Prog.Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
+  in
+  eval e
+
+let guard _e = None
+
 let dom = { Domain.top       = Top
           ; Domain.bottom    = Bot
           ; Domain.from_val  = (fun x -> Cst x)
@@ -54,4 +88,6 @@ let dom = { Domain.top       = Top
           ; Domain.join      = join
           ; Domain.meet      = meet
           ; Domain.to_string = to_string
+          ; Domain.eval      = eval
+          ; Domain.guard     = guard
           }

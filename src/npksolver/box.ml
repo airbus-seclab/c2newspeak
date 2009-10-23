@@ -116,8 +116,8 @@ let widen = bind2_bot (Alist.merge Range.widen)
 let singleton v r =
   Some (Alist.singleton v r)
 
-let guard var r =
-  meet (singleton var r)
+let guard var f =
+  bind (Alist.replace var f)
 
 let set_var var r =
   bind (Alist.replace var (fun _ -> r))
