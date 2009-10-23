@@ -72,7 +72,7 @@ let process glb_tbl prog =
 
 (*
   worklist: 
-  list of functions to analyze
+  list of functions to analyze, index of hoare triple to update
   when this list is empty, analysis ends
 *)
 (* TODO: could try a queue instead?? *)
@@ -87,9 +87,12 @@ let process glb_tbl prog =
 
 
 (* used during the analysis of a function *)
-  let current_fun = ref "" in (* name of the function currently analysed *)
+  let current_fun = ref ("", 0) in (* name of the function currently analysed *)
   let env = ref 0 in          (* number of local variables *)
   let lbl_tbl = ref [] in     (* table of states at each jump label *)
+
+
+  let find_preds f = try Hashtbl.find pred_tbl f with Not_found -> [] in
 
   let string_of_fun_tbl () =
     let stats = ref [] in
@@ -142,7 +145,7 @@ let process glb_tbl prog =
   in
 
   let update_pred_tbl f =
-    let pred = Hashtbl.find pred_tbl f in
+    let pred = find_preds f in
       if not (List.mem !current_fun pred)
       then Hashtbl.replace pred_tbl f (!current_fun::pred)
   in
@@ -151,11 +154,12 @@ let process glb_tbl prog =
 
 
   let apply_rel f memlocs unreach tr1 reach rel_list =
-    let rec apply rel_list =
+    let rec apply i rel_list =
       match rel_list with
 	  [] -> 
 	    incr cache_miss;
-	    schedule f;
+	    schedule (f, i);
+	    update_pred_tbl (f, i);
 	    (State.emptyset, (reach, State.emptyset)::[])
 	| (pre, post)::tl -> 
 	    try
@@ -164,7 +168,7 @@ let process glb_tbl prog =
 	      let pre = 
 		if State.contains pre reach then pre
 		else begin
-		  schedule f;
+		  schedule (f, i);
 		  State.join reach pre
 		end
 	      in
@@ -173,12 +177,13 @@ let process glb_tbl prog =
 	      let rel_list = (pre, post)::tl in
 	      let post = State.transport tr post in
 		incr cache_hit;
+		update_pred_tbl (f, i);
 		(State.glue unreach post, rel_list)
 	    with Exceptions.Unknown -> 
-	      let (s, tl) = apply tl in
+	      let (s, tl) = apply (i+1) tl in
 		(s, (pre, post)::tl)
     in
-    let (s, rel_list) = apply rel_list in
+    let (s, rel_list) = apply 0 rel_list in
       Hashtbl.replace fun_tbl f rel_list;
       s
   in
@@ -309,7 +314,7 @@ let process glb_tbl prog =
 	    raise (Exceptions.NotImplemented "Analysis.process_funexp")
 
   and process_call f s =
-    Context.print_graph ("edge: "^(!current_fun)^", "^f);
+    Context.print_graph ("edge: "^(fst !current_fun)^", "^f);
     try
 (* TODO: maybe could look for the function's semantics after having prepared
    the current state?? *)
@@ -327,7 +332,6 @@ let process glb_tbl prog =
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 
-	update_pred_tbl f;
 	apply_rel f memlocs unreach tr1 reach rel_list
 
     with Not_found -> 
@@ -345,28 +349,32 @@ let process glb_tbl prog =
 	s
   in
     
-  let process_fun f body rel_list = 
+  let process_fun (f, i) body rel_list = 
     let changed = ref false in
-    let process_pre (pre, post) =
-      let new_post = process_blk body pre in
-	if State.contains post new_post then (pre, post)
-	else begin
-	  changed := true;
-	  (pre, new_post)
-	end
+    let rec process_pre i rel_list =
+      match rel_list with
+	  (pre, post)::tl when i = 0 -> 
+	    let new_post = process_blk body pre in
+	    let hd = 
+	      if State.contains post new_post then (pre, post)
+	      else begin
+		changed := true;
+		(pre, new_post)
+	      end
+	    in
+	      hd::tl
+	| hd::tl -> hd::(process_pre (i-1) tl)
+	| [] -> []
     in
-    let rel_list = List.map process_pre rel_list in
+    let rel_list = process_pre i rel_list in
       Hashtbl.replace fun_tbl f rel_list;
       if !changed then begin
-	let pred = Hashtbl.find pred_tbl f in
-	  todo := pred@(!todo)
+	let pred = find_preds (f, i) in
+	  List.iter schedule pred
       end
   in
   
-  let init_fun f _ =
-    Hashtbl.add fun_tbl f [];
-    Hashtbl.add pred_tbl f []
-  in
+  let init_fun f _ = Hashtbl.add fun_tbl f [] in
     
     (* initialization *)
     Hashtbl.iter init_fun prog.fundecs;
@@ -377,16 +385,16 @@ let process glb_tbl prog =
       with Not_found -> invalid_arg "Solver.process: missing main function"
     in
     let s = build_main_info ft s in
-      schedule "main";
+      schedule ("main", 0);
       Hashtbl.replace fun_tbl "main" ((s, State.emptyset)::[]);
       
       (* fixpoint computation *)
       begin try
 	while true do
 	  match !todo with
-	      f::tl -> begin
+	      (f, i)::tl -> begin
 		todo := tl;
-		current_fun := f;
+		current_fun := (f, i);
 		live_funs := StrSet.add f !live_funs;
 		(* TODO: could be optimized and analysed only the pre/post
 		   conditions which are not yet complete!! *)
@@ -396,7 +404,7 @@ let process glb_tbl prog =
 		  env := env_of_ftyp ft;
 		  Context.print_verbose ("Analyzing: "^f^" ("^sz^")");
 		  Context.print_graph ("node: "^f);
-		  process_fun f body rel_list
+		  process_fun (f, i) body rel_list
 	      end
 	    | [] -> raise Exit
 	done
