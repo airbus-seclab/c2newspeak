@@ -101,6 +101,54 @@ let to_string =
   | Some (a, b)            -> "[" ^ string_of_inf a ^ ";"
                                   ^ string_of_inf b ^ "]"
 
+(* safe mult *)
+let smul a b =
+  if      a = 0       then 0
+  else if b = 0       then 0
+  else if a = max_int then
+    if b > 0
+      then max_int
+      else min_int
+  else if a = min_int then
+    if a > 0
+      then min_int
+      else max_int
+  else if b = max_int then
+    if a > 0
+      then max_int
+      else min_int
+  else if b = min_int then
+    if a > 0
+      then min_int
+      else max_int
+  else a * b
+
+
+let mult_pp r1 r2 = match (r1, r2) with
+  | None       , _    -> None
+  | _          , None -> None
+  | Some (a, b), Some (c,d) -> from_bounds (smul a c) (smul b d)
+
+let mult_mp r1 r2 = match (r1, r2) with
+  | None       , _    -> None
+  | _          , None -> None
+  | Some (a, b), Some (c,d) -> from_bounds (smul a d) (smul b c)
+
+let mult_mm r1 r2 = match (r1, r2) with
+  | None       , _    -> None
+  | _          , None -> None
+  | Some (a, b), Some (c,d) -> from_bounds (smul b d) (smul a c)
+
+let mult r1 r2 =
+  let r1p = meet r1 (Some (0, max_int)) in
+  let r1m = meet r1 (Some (min_int, 0)) in
+  let r2p = meet r2 (Some (0, max_int)) in
+  let r2m = meet r2 (Some (min_int, 0)) in
+  List.fold_left join bottom [ mult_pp r1p r2p
+                             ; mult_mp r1m r2p
+                             ; mult_mp r2m r1p 
+                             ; mult_mm r1m r2m
+                             ]
 
 let eval lookup x =
   let bool_top   = from_bounds 0 1 in
@@ -127,6 +175,7 @@ let eval lookup x =
                                                        &&  c = d -> bool_true
                            | _ -> bool_top
                            end
+  | Prog.Op (Prog.Mult, e1, e2) -> mult (eval e1) (eval e2)
   | _ -> failwith "not impl"
   in
   eval x

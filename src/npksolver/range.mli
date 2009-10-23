@@ -25,10 +25,6 @@ val from_bounds : int -> int -> t
 
 val widen : t -> t -> t
 
-val plus : t -> t -> t
-
-val neg : t -> t
-
 val eval : (string -> t) -> Prog.exp -> t
 
 val dom : t Domain.t
