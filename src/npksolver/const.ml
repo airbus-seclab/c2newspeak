@@ -24,12 +24,6 @@ type t =
   | Cst of int
   | Bot
 
-let top = Top
-
-let bottom = Bot
-
-let const x = Cst x
-
 let (<=%) a b = match (a, b) with
   | Bot  , _     -> true
   | _    , Top   -> true
@@ -53,3 +47,11 @@ let to_string = function
   | Cst x -> string_of_int x
   | Bot   -> "bot"
 
+let dom = { Domain.top       = Top
+          ; Domain.bottom    = Bot
+          ; Domain.from_val  = (fun x -> Cst x)
+          ; Domain.incl      = (<=%)
+          ; Domain.join      = join
+          ; Domain.meet      = meet
+          ; Domain.to_string = to_string
+          }

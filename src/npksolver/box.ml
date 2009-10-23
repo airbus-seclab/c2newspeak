@@ -19,6 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+open Domain
+
 let may_cons h t = Utils.may (fun x -> h::x) t
 
 module Alist : sig
@@ -54,8 +56,8 @@ end = struct
         match String.compare s1 s2 with
         | 0 -> begin
                  let r = f r1 r2 in
-                 if r = Range.bottom then None
-                 else if r = Range.top
+                 if r = Range.dom.bottom then None
+                 else if r = Range.dom.top
                  then         merge f t1 t2
                  else
                    may_cons (s1, r) (merge f t1 t2)
@@ -68,7 +70,7 @@ end = struct
     | (s, r)::t -> match String.compare s var with
       | 0 -> begin
                let fr = f r in
-               if fr = Range.bottom then
+               if fr = Range.dom.bottom then
                  None
                else Some ((s, fr)::t)
              end (* XXX may *)
@@ -81,16 +83,13 @@ end = struct
   let rec assoc v = function
     | (v', x)::_ when v = v'                  -> x
     | (v', _)::t when String.compare v v' > 0 -> assoc v t
-    | _ -> Range.top
+    | _ -> Range.dom.top
 
 end
 
 type t = Alist.t option
 
 let bottom = None
-
-let from_bounds var min max =
-  Some (Alist.singleton var (Range.from_bounds min max))
 
 (* Haskell's (=<<) *)
 (* bind : ('a -> 'b option) -> 'a option -> 'b option *)
@@ -110,26 +109,32 @@ let bind2_bot f x y =
   | _, None -> None
   | Some x', Some y' -> f x' y'
 
-let join  = bind2     (Alist.merge Range.join)
-let meet  = bind2_bot (Alist.merge Range.meet)
+let join  = bind2     (Alist.merge Range.dom.join)
+let meet  = bind2_bot (Alist.merge Range.dom.meet)
 let widen = bind2_bot (Alist.merge Range.widen)
 
+let singleton v r =
+  Some (Alist.singleton v r)
+
+let guard var r =
+  meet (singleton var r)
+
 let shift var n =
-  bind (Alist.replace var (Range.plus (Range.from_bounds n n)))
+  bind (Alist.replace var (Range.plus (Range.dom.from_val n)))
 
 let set_var var r =
   bind (Alist.replace var (fun _ -> r))
 
 let get_var v = function
-  | None   -> Range.bottom
+  | None   -> Range.dom.bottom
   | Some x -> Alist.assoc v x
 
 let to_string = function
   | None -> "(bot)"
-  | Some x -> String.concat ", " (Alist.map (fun s r -> s^"->"^Range.to_string r) x)
+  | Some x -> String.concat ", " (Alist.map (fun s r -> s^"->"^Range.dom.to_string r) x)
 
 let yaml_dump = function
   | None   -> "bottom: yes"
   | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun s r ->
-      s ^": \""^Range.to_string r^"\"") x))
+      s ^": \""^Range.dom.to_string r^"\"") x))
       ^"}"

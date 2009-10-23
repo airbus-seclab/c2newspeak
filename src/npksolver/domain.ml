@@ -19,6 +19,14 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t
-
-val dom : t Domain.t
+type 'a t = { top       : 'a
+            ; bottom    : 'a
+            ; from_val  : int -> 'a
+            ; incl      : 'a -> 'a -> bool
+            ; join      : 'a -> 'a -> 'a
+            ; meet      : 'a -> 'a -> 'a
+            (* widen *)
+            ; to_string : 'a -> string
+            (* plus *)
+            (* neg *)
+            }

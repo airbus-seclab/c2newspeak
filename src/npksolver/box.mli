@@ -25,7 +25,7 @@ type t
 
 val bottom : t
 
-val from_bounds : string -> int -> int -> t
+val singleton : string -> Range.t -> t
 
 val join : t -> t -> t
 
@@ -34,6 +34,8 @@ val meet : t -> t -> t
 val widen : t -> t -> t
 
 val shift : string -> int -> t -> t
+
+val guard : string -> Range.t -> t -> t
 
 val set_var : string -> Range.t -> t -> t
 

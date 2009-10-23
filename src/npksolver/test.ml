@@ -19,36 +19,37 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 open Tap
+open Domain
 
 module Test_range = struct
 open Range
 
 let assert_incl a b =
-  assert_true (a <=% b)
+  assert_true (dom.incl a b)
 
 let assert_not_incl a b =
-  assert_false (a <=% b)
+  assert_false (dom.incl a b)
 
 let run _ =
   test_plan 284;
 
   (* Incl + Join + Meet *)
 
-  let bot = bottom in
+  let bot = dom.bottom in
   let tc r q i m j =
-    let name_i = to_string r ^ (if i then " <= "
+    let name_i = dom.to_string r ^ (if i then " <= "
                                      else " </= ")
-               ^ to_string q in
-    let name_m = to_string r ^" /\\ "
-               ^ to_string q ^" == "
-               ^ to_string m in
-    let name_j = to_string r ^" \\/ "
-               ^ to_string q ^" == "
-               ^ to_string j in
+               ^ dom.to_string q in
+    let name_m = dom.to_string r ^" /\\ "
+               ^ dom.to_string q ^" == "
+               ^ dom.to_string m in
+    let name_j = dom.to_string r ^" \\/ "
+               ^ dom.to_string q ^" == "
+               ^ dom.to_string j in
     if i then assert_incl     r q name_i
          else assert_not_incl r q name_i;
-    assert_equal ~printer:to_string (meet r q) m name_m;
-    assert_equal ~printer:to_string (join r q) j name_j;
+    assert_equal ~printer:dom.to_string (dom.meet r q) m name_m;
+    assert_equal ~printer:dom.to_string (dom.join r q) j name_j;
   in
 
   let i  = min_int in let m  = (-22)   in let m' = (-20)   in
@@ -178,8 +179,8 @@ let run _ =
   (* Widen *)
 
   let assert_widen a b w =
-    let n = to_string a ^ " W "^ to_string b ^ " = " ^ to_string w in
-    assert_equal ~printer:to_string (widen a b) w n
+    let n = dom.to_string a ^ " W "^ dom.to_string b ^ " = " ^ dom.to_string w in
+    assert_equal ~printer:dom.to_string (widen a b) w n
   in
 
   (* {} W x = x W {} = {} *)
@@ -201,34 +202,41 @@ module Test_box = struct
 open Box
 let run _ =
   test_plan 7;
-  assert_equal (get_var "x" bottom) Range.bottom "Box.bottom has no variables";
+  assert_equal (get_var "x" bottom) Range.dom.bottom "Box.bottom has no variables";
 
   let ae got exp name =
     assert_equal ~printer:to_string got exp name
   in
 
-  let i2 = from_bounds "i" 2 2 in
-  let j5 = from_bounds "j" 5 5 in
+  let sg var v =
+    singleton var (Range.dom.from_val v)
+  in
+  let intvl var x y =
+    singleton var (Range.from_bounds x y)
+  in
+
+  let i2 = sg "i" 2 in
+  let j5 = sg "j" 5 in
 
   let i2j5 = meet i2 j5 in
-  assert_equal ~printer:Range.to_string (get_var "i" i2j5)
-      (Range.from_bounds 2 2) "{i: 2} /\\ {j: 5} . i = {2}";
-  assert_equal ~printer:Range.to_string (get_var "j" i2j5)
-      (Range.from_bounds 5 5) "{i: 2} /\\ {j: 5} . i = {5}";
+  assert_equal ~printer:Range.dom.to_string (get_var "i" i2j5)
+      (Range.dom.from_val 2) "{i: 2} /\\ {j: 5} . i = {2}";
+  assert_equal ~printer:Range.dom.to_string (get_var "j" i2j5)
+      (Range.dom.from_val 5) "{i: 2} /\\ {j: 5} . i = {5}";
 
   ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} . i = { }";
 
-  ae (meet (from_bounds "i" 3 3) i2j5) bottom
+  ae (meet (sg "i" 3) i2j5) bottom
      "{i: 2, j: 5} / i <= {3} = {j: 5}";
 
-  ae (join (join (from_bounds "i" min_int 0) (from_bounds "j" 5 5))
-           (join (from_bounds "i" 0 max_int) (from_bounds "j" 8 8))
+  ae (join (join (intvl "i" min_int 0) (sg "j" 5))
+           (join (intvl "i" 0 max_int) (sg "j" 8))
      )
-     (from_bounds "j" 5 8)
+     (intvl "j" 5 8)
      "{i: R-, j: 5} \\/ {i: R+, j: 8} = {j: [5;8]}"
      ;
 
-  ae (meet (from_bounds "i" min_int 0) i2) bottom "{i: 2} /\\ {i: R-} = bot";
+  ae (meet (intvl "i" min_int 0) i2) bottom "{i: 2} /\\ {i: R-} = bot";
 
   test_end ()
 end
@@ -238,19 +246,20 @@ open Const
 
 let run _ =
   test_plan (16 * 3);
-  let bot = bottom in
-  let c = const in
+  let top = dom.top in
+  let bot = dom.bottom in
+  let c = dom.from_val in
 
   let tc a b r j m =
-    let n_op ?r op = to_string a ^ " " ^ op ^ " " ^ to_string b
-      ^ (match r with None -> "" | Some x -> " = "^to_string x)
+    let n_op ?r op = dom.to_string a ^ " " ^ op ^ " " ^ dom.to_string b
+      ^ (match r with None -> "" | Some x -> " = "^ dom.to_string x)
     in
     let name_inc = n_op (if r then "<=" else "</") in
     let name_j = n_op ~r:j "\\/" in
     let name_m = n_op ~r:m "/\\" in
-    assert_equal (a <=% b) r name_inc;
-    assert_equal ~printer:to_string (join a b) j name_j;
-    assert_equal ~printer:to_string (meet a b) m name_m;
+    assert_equal (dom.incl a b) r name_inc;
+    assert_equal ~printer:dom.to_string (dom.join a b) j name_j;
+    assert_equal ~printer:dom.to_string (dom.meet a b) m name_m;
   in
 
   tc  bot   bot  true   bot   bot;

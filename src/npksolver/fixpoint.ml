@@ -19,6 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+open Domain
+
 let new_value x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
     let from_vals = Utils.filter_map (fun (origin, dest, (_,f)) ->
@@ -68,15 +70,16 @@ let f_worklist vertices x =
 let inline_print v =
   String.concat ", " (Array.to_list (Array.mapi
     (fun i x ->
-      string_of_int i ^ "--> " ^ Range.to_string x
+      string_of_int i ^ "--> " ^ Range.dom.to_string x
     ) v
   ))
 
 let solve vars (ln, v) =
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- List.fold_left (fun r v ->
-      Box.join (Box.from_bounds v 0 0) r
+      Box.join (Box.singleton v (Range.dom.from_val 0)) r
     ) Box.bottom vars;
+
   let (res, ops) =
     match Options.get_fp_algo () with
     | Options.Roundrobin -> kleene v x0
