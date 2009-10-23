@@ -31,7 +31,7 @@ let assert_not_incl a b =
   assert_false (dom.incl a b)
 
 let run _ =
-  test_plan 294;
+  test_plan 302;
 
   (* Incl + Join + Meet *)
 
@@ -227,6 +227,23 @@ let run _ =
     ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Var "v")))
     (from_bounds (-5) (-3)) "- [3;5] == [-5;-3]";
 
+  (* assert [a;b] .*. [c;d] == [e;f] *)
+  let tc_mult a b c d e f name =
+    assert_equal ~printer:dom.to_string (eval (function
+      | "x" -> from_bounds a b
+      | "y" -> from_bounds c d
+      | _ -> invalid_arg "no variable"
+    ) (Prog.Op (Prog.Mult, Prog.Var "x", Prog.Var "y"))) (from_bounds e f) name
+  in
+
+  tc_mult   5    5    2    8    10   40  "[5;5] .*. [2;8] == [10;40]";
+  tc_mult (-2) (-1)   5   12  (-24) (-5) "[-2;-1] .*. [5;12] == [-24;-5]";
+  tc_mult   5   12  (-2) (-1) (-24) (-5) "[5;12] .*. [-2;-1] == [-24;-5]";
+  tc_mult   0    2    0    3     0    6  "[0;2] .*. [0;3] == [0;6]";
+  tc_mult (-8) (-7) (-2) (-1)    7   16  "[-8;-7] .*. [-2;-1] == [7;16]";
+  tc_mult (-5)   1  (-3)   8  (-40)  15  "[-5;1] .*. [-3;8] == [-40;15]";
+  tc_mult   2    j    2    j     4    j  "[2;+oo] .*. [2;+oo] == [4;+oo]";
+  tc_mult   i  (-1)   i  (-1)    1    j  "[-oo:-1] .*. [-oo;-1] == [1;+oo]";
 
   test_end ()
 end

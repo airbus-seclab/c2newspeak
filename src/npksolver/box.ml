@@ -119,9 +119,6 @@ let singleton v r =
 let guard var r =
   meet (singleton var r)
 
-let shift var n =
-  bind (Alist.replace var (Range.plus (Range.dom.from_val n)))
-
 let set_var var r =
   bind (Alist.replace var (fun _ -> r))
 
