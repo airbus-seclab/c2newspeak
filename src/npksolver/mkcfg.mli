@@ -24,4 +24,4 @@ val process : Prog.t -> Cfg.t * ( Newspeak.location * int
 
 val dump_yaml : Cfg.t -> string
 
-val dump_dot : Cfg.t -> string
+val dump_dot : ?results:string array -> Cfg.t -> string

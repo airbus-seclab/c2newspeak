@@ -150,9 +150,12 @@ let dump_yaml (n, v) =
     )
   ^ "...\n"
 
-let dump_dot (_, v) =
+let dump_dot ?(results=[||]) (_, v) =
     "digraph G {\n"
-  ^ String.concat "" (List.map (fun (a, b, (s, _)) ->
+    ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
+      string_of_int i^"[label=\""^s^"\"]\n"
+    ) results))
+    ^ String.concat "" (List.map (fun (a, b, (s, _)) ->
        "  "  ^ string_of_int a
     ^ " -> " ^ string_of_int b
     ^ " [label=\"" ^ s ^ "\"]"

@@ -25,19 +25,23 @@ let display_version _ =
   print_endline "Author  : Etienne Millon";
   print_endline "Contact : etienne DOT millon AT eads DOT net"
 
-let output_graphviz cfg =
+let output_graphviz ?results cfg =
   let file = open_out "cfg.dot" in
-  output_string file (Mkcfg.dump_dot cfg);
+  output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
 
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
   let (cfg, watchpoints) = Mkcfg.process prg in
-  if (Options.get_graphviz ()) then
-    output_graphviz cfg;
   if (Options.get_cfg_only ()) then
+    begin
+    if (Options.get_graphviz ()) then
+    begin
+      output_graphviz cfg
+    end;
     print_endline (Mkcfg.dump_yaml cfg)
+    end
   else
     begin
       let solve_results = Fixpoint.solve vars cfg in
@@ -47,6 +51,11 @@ let handle_file_npk fname =
             print_endline ("  - {id: "^ string_of_int i ^
             ", "^ Box.yaml_dump r^"}")
         ) solve_results end;
+      begin
+      if (Options.get_graphviz ()) then
+        let r = Array.map Box.to_string solve_results in
+        output_graphviz ~results:r cfg
+      end;
       Warnings.compute watchpoints solve_results
     end
 
