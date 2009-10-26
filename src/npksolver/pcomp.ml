@@ -6,12 +6,12 @@
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -90,7 +90,7 @@ let rec pcomp_stmt (sk, loc) =
 and pcomp_blk x = Utils.filter_map pcomp_stmt x
 
 let compile npk =
-  let globals = 
+  let globals =
   Hashtbl.fold (fun s (ty, loc) l ->
     assert_int_typ loc ty;
     s::l
@@ -122,10 +122,13 @@ module Print = struct
     | Gt    -> ">"
     | Eq    -> "=="
 
+  let var = function
+    | Prog.L n -> ":"^string_of_int n
+    | Prog.G x -> x
+
   let rec exp = function
     | Const c -> string_of_int c
-    | Var (G x) -> x
-    | Var (L n) -> ":"^string_of_int n
+    | Var v -> var v
     | Not e -> "!" ^par (exp e)
     | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)
 

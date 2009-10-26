@@ -6,12 +6,12 @@
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -59,127 +59,128 @@ let run _ =
 
   let z = from_bounds in
 
-  (* R = {} *)
+  (* R = {} *)                                 let t = tc bot in
   (*  -oo          a         b         +oo  *)
-  (*                                        *) tc   bot     bot   true    bot     bot;
-  (*  -------------]                        *) tc   bot   (z i a) true    bot   (z i a);
-  (*  ------------------------------------  *) tc   bot   (z i j) true    bot   (z i j);
-  (*               |                        *) tc   bot   (z a a) true    bot   (z a a);
-  (*               [---------]              *) tc   bot   (z a b) true    bot   (z a b);
-  (*               [----------------------  *) tc   bot   (z a j) true    bot   (z a j);
-                                                                        
-  (* R = [-oo;p] *)                                                     
-  (*  -oo    m    a   p        b   n   +oo  *)                          
-  (*  ----------------] R                   *)                          
-  (*                                        *)                          
-  (*                                        *) tc (z i p)   bot   false   bot   (z i p);
-  (*  -------]                              *) tc (z i p) (z i m) false (z i m) (z i p);
-  (*  ----------------]                     *) tc (z i p) (z i p) true  (z i p) (z i p);
-  (*  -------------------------]            *) tc (z i p) (z i b) true  (z i p) (z i b);
-  (*  ------------------------------------  *) tc (z i p) (z i j) true  (z i p) (z i j);
-  (*         |                              *) tc (z i p) (z m m) false (z m m) (z i p);
-  (*         [----]                         *) tc (z i p) (z m a) false (z m a) (z i p);
-  (*         [--------]                     *) tc (z i p) (z m p) false (z m p) (z i p);
-  (*         [-----------------]            *) tc (z i p) (z m b) false (z m p) (z i b);
-  (*         [----------------------------  *) tc (z i p) (z m j) false (z m p) (z i j);
-  (*                  |                     *) tc (z i p) (z p p) false (z p p) (z i p);
-  (*                  [--------]            *) tc (z i p) (z p b) false (z p p) (z i b);
-  (*                  [-------------------  *) tc (z i p) (z p j) false (z p p) (z i j);
-  (*                           |            *) tc (z i p) (z b b) false   bot   (z i b);
-  (*                           [---]        *) tc (z i p) (z b n) false   bot   (z i n);
-  (*                           [----------  *) tc (z i p) (z b j) false   bot   (z i j);
-                                                                        
-  (* R = [-oo;+oo] *)                                                   
-  (*  -oo          a         b         +oo  *)                          
-  (*                                        *) tc (z i j) (z i j) true  (z i j) (z i j);
-  (*  -------------]                        *) tc (z i j) (z i a) false (z i a) (z i j);
-  (*  ------------------------------------  *) tc (z i j) (z i j) true  (z i j) (z i j);
-  (*               |                        *) tc (z i j) (z a a) false (z a a) (z i j);
-  (*               [---------]              *) tc (z i j) (z a b) false (z a b) (z i j);
-  (*               [----------------------  *) tc (z i j) (z a j) false (z a j) (z i j);
-                                                                        
-                                                                        
-  (* R = {p} *)                                                         
-  (*  -oo   m    a     p     b    n    +oo  *)                          
-  (*                   | R                  *)                          
-  (*                                        *)                          
-  (*                                        *) tc (z p p)   bot   false   bot   (z p p);
-  (*  -----------]                          *) tc (z p p) (z i a) false   bot   (z i p);
-  (*  -----------------]                    *) tc (z p p) (z i p) true  (z p p) (z i p);
-  (*  -----------------------]              *) tc (z p p) (z i b) true  (z p p) (z i b);
-  (*  ------------------------------------  *) tc (z p p) (z i j) true  (z p p) (z i j);
-  (*        |                               *) tc (z p p) (z m m) false   bot   (z m p);
-  (*        [----]                          *) tc (z p p) (z m a) false   bot   (z m p);
-  (*        [----------]                    *) tc (z p p) (z m p) true  (z p p) (z m p);
-  (*        [----------------]              *) tc (z p p) (z m b) true  (z p p) (z m b);
-  (*        [-----------------------------  *) tc (z p p) (z m j) true  (z p p) (z m j);
-  (*                   |                    *) tc (z p p) (z p p) true  (z p p) (z p p);
-  (*                   [-----]              *) tc (z p p) (z p b) true  (z p p) (z p b);
-  (*                   [------------------  *) tc (z p p) (z p j) true  (z p p) (z p j);
-  (*                         |              *) tc (z p p) (z b b) false   bot   (z p b);
-  (*                         [----]         *) tc (z p p) (z b n) false   bot   (z p n);
-  (*                         [------------  *) tc (z p p) (z b j) false   bot   (z p j);
-                                                                        
-  (* R = [a;b] *)                                                       
-  (* -oo  m  m'  a   p   q   b   n   n' +oo *)                          
-  (*             [-----R-----]              *)                          
-  (*                                        *)                          
-  (*                                        *) tc (z a b)   bot   false   bot   (z a b);
-  (* -----]                                 *) tc (z a b) (z i m) false   bot   (z i b);
-  (* ------------]                          *) tc (z a b) (z i a) false (z a a) (z i b);
-  (* ----------------]                      *) tc (z a b) (z i p) false (z a p) (z i b);
-  (* ------------------------]              *) tc (z a b) (z i b) true  (z a b) (z i b);
-  (* ----------------------------]          *) tc (z a b) (z i n) true  (z a b) (z i n);
-  (* -------------------------------------  *) tc (z a b) (z i j) true  (z a b) (z i j);
-  (*      |                                 *) tc (z a b) (z m m) false   bot   (z m b);
-  (*      [--]                              *) tc (z a b) (z m m')false   bot   (z m b);
-  (*      [------]                          *) tc (z a b) (z m a) false (z a a) (z m b);
-  (*      [----------]                      *) tc (z a b) (z m p) false (z a p) (z m b);
-  (*      [------------------]              *) tc (z a b) (z m b) true  (z a b) (z m b);
-  (*      [----------------------]          *) tc (z a b) (z m n) true  (z a b) (z m n);
-  (*      [-------------------------------  *) tc (z a b) (z m j) true  (z a b) (z m j);
-  (*             |                          *) tc (z a b) (z a a) false (z a a) (z a b);
-  (*             [---]                      *) tc (z a b) (z a p) false (z a p) (z a b);
-  (*             [-----------]              *) tc (z a b) (z a b) true  (z a b) (z a b);
-  (*             [---------------]          *) tc (z a b) (z a n) true  (z a b) (z a n);
-  (*             [------------------------  *) tc (z a b) (z a j) true  (z a b) (z a j);
-  (*                 |                      *) tc (z a b) (z p p) false (z p p) (z a b);
-  (*                 [---]                  *) tc (z a b) (z p q) false (z p q) (z a b);
-  (*                 [-------]              *) tc (z a b) (z p b) false (z p b) (z a b);
-  (*                 [-----------]          *) tc (z a b) (z p n) false (z p b) (z a n);
-  (*                 [--------------------  *) tc (z a b) (z p j) false (z p b) (z a j);
-  (*                         |              *) tc (z a b) (z b b) false (z b b) (z a b);
-  (*                         [---]          *) tc (z a b) (z b n) false (z b b) (z a n);
-  (*                         [------------  *) tc (z a b) (z b j) false (z b b) (z a j);
-  (*                             |          *) tc (z a b) (z n n) false   bot   (z a n);
-  (*                             [---]      *) tc (z a b) (z n n')false   bot   (z a n');
-  (*                             [--------  *) tc (z a b) (z n j) false   bot   (z a j);
-                                                                        
-  (* R = [p;+oo] *)                                                     
-  (*  -oo    m    a   p        b   n   +oo  *)                          
-  (*                R [-------------------  *)                          
-  (*                                        *)                          
-  (*                                        *) tc (z p j)   bot   false   bot   (z p j);
-  (*  -------]                              *) tc (z p j) (z i m) false   bot   (z i j);
-  (*  ----------------]                     *) tc (z p j) (z i p) false (z p p) (z i j);
-  (*  -------------------------]            *) tc (z p j) (z i b) false (z p b) (z i j);
-  (*  ------------------------------------  *) tc (z p j) (z i j) true  (z p j) (z i j);
-  (*         |                              *) tc (z p j) (z m m) false   bot   (z m j);
-  (*         [----]                         *) tc (z p j) (z m a) false   bot   (z m j);
-  (*         [--------]                     *) tc (z p j) (z m p) false (z p p) (z m j);
-  (*         [-----------------]            *) tc (z p j) (z m b) false (z p b) (z m j);
-  (*         [----------------------------  *) tc (z p j) (z m j) true  (z p j) (z m j);
-  (*                  |                     *) tc (z p j) (z p p) false (z p p) (z p j);
-  (*                  [--------]            *) tc (z p j) (z p b) false (z p b) (z p j);
-  (*                  [-------------------  *) tc (z p j) (z p j) true  (z p j) (z p j);
-  (*                           |            *) tc (z p j) (z b b) false (z b b) (z p j);
-  (*                           [---]        *) tc (z p j) (z b n) false (z b n) (z p j);
-  (*                           [----------  *) tc (z p j) (z b j) false (z b j) (z p j);
+  (*                                        *) t   bot   true    bot     bot;
+  (*  -------------]                        *) t (z i a) true    bot   (z i a);
+  (*  ------------------------------------  *) t (z i j) true    bot   (z i j);
+  (*               |                        *) t (z a a) true    bot   (z a a);
+  (*               [---------]              *) t (z a b) true    bot   (z a b);
+  (*               [----------------------  *) t (z a j) true    bot   (z a j);
+
+  (* R = [-oo;p] *)                            let t = tc (z i p) in
+  (*  -oo    m    a   p        b   n   +oo  *)
+  (*  ----------------] R                   *)
+  (*                                        *)
+  (*                                        *) t   bot   false   bot   (z i p);
+  (*  -------]                              *) t (z i m) false (z i m) (z i p);
+  (*  ----------------]                     *) t (z i p) true  (z i p) (z i p);
+  (*  -------------------------]            *) t (z i b) true  (z i p) (z i b);
+  (*  ------------------------------------  *) t (z i j) true  (z i p) (z i j);
+  (*         |                              *) t (z m m) false (z m m) (z i p);
+  (*         [----]                         *) t (z m a) false (z m a) (z i p);
+  (*         [--------]                     *) t (z m p) false (z m p) (z i p);
+  (*         [-----------------]            *) t (z m b) false (z m p) (z i b);
+  (*         [----------------------------  *) t (z m j) false (z m p) (z i j);
+  (*                  |                     *) t (z p p) false (z p p) (z i p);
+  (*                  [--------]            *) t (z p b) false (z p p) (z i b);
+  (*                  [-------------------  *) t (z p j) false (z p p) (z i j);
+  (*                           |            *) t (z b b) false   bot   (z i b);
+  (*                           [---]        *) t (z b n) false   bot   (z i n);
+  (*                           [----------  *) t (z b j) false   bot   (z i j);
+
+  (* R = [-oo;+oo] *)                          let t = tc (z i j) in
+  (*  -oo          a         b         +oo  *)
+  (*                                        *) t (z i j) true  (z i j) (z i j);
+  (*  -------------]                        *) t (z i a) false (z i a) (z i j);
+  (*  ------------------------------------  *) t (z i j) true  (z i j) (z i j);
+  (*               |                        *) t (z a a) false (z a a) (z i j);
+  (*               [---------]              *) t (z a b) false (z a b) (z i j);
+  (*               [----------------------  *) t (z a j) false (z a j) (z i j);
+
+  (* R = {p} *)                                let t = tc (z p p) in
+  (*  -oo   m    a     p     b    n    +oo  *)
+  (*                   | R                  *)
+  (*                                        *)
+  (*                                        *) t   bot   false   bot   (z p p);
+  (*  -----------]                          *) t (z i a) false   bot   (z i p);
+  (*  -----------------]                    *) t (z i p) true  (z p p) (z i p);
+  (*  -----------------------]              *) t (z i b) true  (z p p) (z i b);
+  (*  ------------------------------------  *) t (z i j) true  (z p p) (z i j);
+  (*        |                               *) t (z m m) false   bot   (z m p);
+  (*        [----]                          *) t (z m a) false   bot   (z m p);
+  (*        [----------]                    *) t (z m p) true  (z p p) (z m p);
+  (*        [----------------]              *) t (z m b) true  (z p p) (z m b);
+  (*        [-----------------------------  *) t (z m j) true  (z p p) (z m j);
+  (*                   |                    *) t (z p p) true  (z p p) (z p p);
+  (*                   [-----]              *) t (z p b) true  (z p p) (z p b);
+  (*                   [------------------  *) t (z p j) true  (z p p) (z p j);
+  (*                         |              *) t (z b b) false   bot   (z p b);
+  (*                         [----]         *) t (z b n) false   bot   (z p n);
+  (*                         [------------  *) t (z b j) false   bot   (z p j);
+
+  (* R = [a;b] *)                              let t = tc (z a b) in
+  (* -oo  m  m'  a   p   q   b   n   n' +oo *)
+  (*             [-----R-----]              *)
+  (*                                        *)
+  (*                                        *) t   bot   false   bot   (z a b);
+  (* -----]                                 *) t (z i m) false   bot   (z i b);
+  (* ------------]                          *) t (z i a) false (z a a) (z i b);
+  (* ----------------]                      *) t (z i p) false (z a p) (z i b);
+  (* ------------------------]              *) t (z i b) true  (z a b) (z i b);
+  (* ----------------------------]          *) t (z i n) true  (z a b) (z i n);
+  (* -------------------------------------  *) t (z i j) true  (z a b) (z i j);
+  (*      |                                 *) t (z m m) false   bot   (z m b);
+  (*      [--]                              *) t (z m m')false   bot   (z m b);
+  (*      [------]                          *) t (z m a) false (z a a) (z m b);
+  (*      [----------]                      *) t (z m p) false (z a p) (z m b);
+  (*      [------------------]              *) t (z m b) true  (z a b) (z m b);
+  (*      [----------------------]          *) t (z m n) true  (z a b) (z m n);
+  (*      [-------------------------------  *) t (z m j) true  (z a b) (z m j);
+  (*             |                          *) t (z a a) false (z a a) (z a b);
+  (*             [---]                      *) t (z a p) false (z a p) (z a b);
+  (*             [-----------]              *) t (z a b) true  (z a b) (z a b);
+  (*             [---------------]          *) t (z a n) true  (z a b) (z a n);
+  (*             [------------------------  *) t (z a j) true  (z a b) (z a j);
+  (*                 |                      *) t (z p p) false (z p p) (z a b);
+  (*                 [---]                  *) t (z p q) false (z p q) (z a b);
+  (*                 [-------]              *) t (z p b) false (z p b) (z a b);
+  (*                 [-----------]          *) t (z p n) false (z p b) (z a n);
+  (*                 [--------------------  *) t (z p j) false (z p b) (z a j);
+  (*                         |              *) t (z b b) false (z b b) (z a b);
+  (*                         [---]          *) t (z b n) false (z b b) (z a n);
+  (*                         [------------  *) t (z b j) false (z b b) (z a j);
+  (*                             |          *) t (z n n) false   bot   (z a n);
+  (*                             [---]      *) t (z n n')false   bot   (z a n');
+  (*                             [--------  *) t (z n j) false   bot   (z a j);
+
+  (* R = [p;+oo] *)                            let t = tc (z p j) in
+  (*  -oo    m    a   p        b   n   +oo  *)
+  (*                R [-------------------  *)
+  (*                                        *)
+  (*                                        *) t   bot   false   bot   (z p j);
+  (*  -------]                              *) t (z i m) false   bot   (z i j);
+  (*  ----------------]                     *) t (z i p) false (z p p) (z i j);
+  (*  -------------------------]            *) t (z i b) false (z p b) (z i j);
+  (*  ------------------------------------  *) t (z i j) true  (z p j) (z i j);
+  (*         |                              *) t (z m m) false   bot   (z m j);
+  (*         [----]                         *) t (z m a) false   bot   (z m j);
+  (*         [--------]                     *) t (z m p) false (z p p) (z m j);
+  (*         [-----------------]            *) t (z m b) false (z p b) (z m j);
+  (*         [----------------------------  *) t (z m j) true  (z p j) (z m j);
+  (*                  |                     *) t (z p p) false (z p p) (z p j);
+  (*                  [--------]            *) t (z p b) false (z p b) (z p j);
+  (*                  [-------------------  *) t (z p j) true  (z p j) (z p j);
+  (*                           |            *) t (z b b) false (z b b) (z p j);
+  (*                           [---]        *) t (z b n) false (z b n) (z p j);
+  (*                           [----------  *) t (z b j) false (z b j) (z p j);
 
   (* Widen *)
 
   let assert_widen a b w =
-    let n = dom.to_string a ^ " W "^ dom.to_string b ^ " = " ^ dom.to_string w in
+    let n = dom.to_string a ^ " W "
+          ^ dom.to_string b ^ " = "
+          ^ dom.to_string w in
     assert_equal ~printer:dom.to_string (widen a b) w n
   in
 
@@ -214,9 +215,10 @@ let run _ =
       | Prog.G "x" -> from_bounds a b
       | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Eq, Prog.Var (Prog.G "x"), Prog.Var (Prog.G "y")))) (from_bounds e f) name
+    ) (Prog.Op (Prog.Eq, Prog.Var (Prog.G "x"),
+                         Prog.Var (Prog.G "y")))) (from_bounds e f) name
   in
-  
+
   tc_eqeq 2 5  8  13 0 0 "[2;5] .==. [8;13] == [0;0]";
   tc_eqeq 3 12 10 16 0 1 "[3;12] .==. [10;16] == [0;1]";
   tc_eqeq 5 5  5  5  1 1 "{5} .==. {5} == [1;1]";
@@ -233,7 +235,8 @@ let run _ =
       | Prog.G "x" -> from_bounds a b
       | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Mult, Prog.Var (Prog.G "x"), Prog.Var (Prog.G "y")))) (from_bounds e f) name
+    ) (Prog.Op (Prog.Mult, Prog.Var (Prog.G "x"),
+                           Prog.Var (Prog.G "y")))) (from_bounds e f) name
   in
 
   tc_mult   5    5    2    8    10   40  "[5;5] .*. [2;8] == [10;40]";
@@ -253,7 +256,8 @@ open Box
 let run _ =
   test_plan 7;
   let get_gvar v = get_var (Prog.G v) in
-  assert_equal (get_gvar "x" bottom) Range.dom.bottom "Box.bottom has no variables";
+  assert_equal (get_gvar "x" bottom) Range.dom.bottom
+                        "Box.bottom has no variables";
 
   let ae got exp name =
     assert_equal ~printer:to_string got exp name

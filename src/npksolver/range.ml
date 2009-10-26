@@ -6,12 +6,12 @@
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -146,7 +146,7 @@ let mult r1 r2 =
   let r2m = meet r2 (Some (min_int, 0)) in
   List.fold_left join bottom [ mult_pp r1p r2p
                              ; mult_mp r1m r2p
-                             ; mult_mp r2m r1p 
+                             ; mult_mp r2m r1p
                              ; mult_mm r1m r2m
                              ]
 
@@ -156,7 +156,7 @@ let eval lookup x =
   let bool_top   = from_bounds 0 1 in
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in
-  let rec eval = function 
+  let rec eval = function
   | Const n            -> from_bounds n n
   | Var v'             -> lookup v'
   | Op (Plus,  e1, e2) -> plus (eval e1) (eval e2)
@@ -184,13 +184,13 @@ let eval lookup x =
 
 let guard e =
   match e with
-  |      Op (Gt, Var v, Const n)  -> Some (v, meet (from_bounds (n + 1) max_int))
-  |      Op (Gt, Const n, Var v)  -> Some (v, meet (from_bounds min_int (n - 1)))
+  |      Op (Gt, Var v, Const n)  -> Some (v, meet (from_bounds (n+1) max_int))
+  |      Op (Gt, Const n, Var v)  -> Some (v, meet (from_bounds min_int (n-1)))
   |      Op (Eq, Var v, Const n)  -> Some (v, meet (from_bounds n n))
   | Not (Op (Gt, Var v, Const n)) -> Some (v, meet (from_bounds min_int n))
   | Not (Op (Gt, Const n, Var v)) -> Some (v, meet (from_bounds n max_int))
   | Not (Op (Eq, Var _, Const _)) -> None
-  | _ -> failwith ( "Warning - unsupported guard statement : " ^ Pcomp.Print.exp e)
+  | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 let dom = { Domain.top       = top
           ; Domain.bottom    = bottom

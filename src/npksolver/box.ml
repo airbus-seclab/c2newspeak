@@ -6,12 +6,12 @@
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -28,10 +28,6 @@ let varcmp a b = match (a, b) with
   | Prog.G _ , Prog.L _ -> 1
   | Prog.G a', Prog.G b' -> String.compare a' b'
   | Prog.L a', Prog.L b' -> Pervasives.compare a' b'
-
-let var_to_string = function
-  | Prog.L n -> ":"^string_of_int n
-  | Prog.G x -> x
 
 module Alist : sig
   (** Association list *)
@@ -138,10 +134,12 @@ let get_var v = function
 
 let to_string = function
   | None -> "(bot)"
-  | Some x -> String.concat ", " (Alist.map (fun s r -> var_to_string s^"->"^Range.dom.to_string r) x)
+  | Some x -> String.concat ", " (Alist.map (fun v r ->
+                Pcomp.Print.var v^"->"^Range.dom.to_string r)
+              x)
 
 let yaml_dump = function
   | None   -> "bottom: yes"
-  | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun s r ->
-      var_to_string s ^": \""^Range.dom.to_string r^"\"") x))
+  | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
+      Pcomp.Print.var v ^": \""^Range.dom.to_string r^"\"") x))
       ^"}"

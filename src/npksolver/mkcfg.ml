@@ -6,12 +6,12 @@
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -73,8 +73,8 @@ let rec process_stmt (stmt, _) c =
                                     @c.vertices
                  ;        join     = None
                  }
-  | Select  (b1, b2) -> let (l1, v1) = process_blk           b1 c.alist jnode in
-                        let (l2, v2) = process_blk ~join:c.lbl b2 c.alist l1    in
+  | Select  (b1, b2) -> let (l1, v1) = process_blk b1 c.alist jnode in
+                        let (l2, v2) = process_blk ~join:c.lbl b2 c.alist l1  in
                         let top = Lbl.next l2 in
                         { c with lbl      = top
                         ;        vertices =  (top, l1, ("(select : 1)", nop))
@@ -84,7 +84,8 @@ let rec process_stmt (stmt, _) c =
                                             @c.vertices
                         ; join = None
                         }
-  | DoWith   (b1, lmid, b2) -> let (top_b2, v2) = process_blk b2 c.alist jnode in
+  | DoWith   (b1, lmid, b2) -> let (top_b2, v2) =
+                                 process_blk b2 c.alist jnode in
                                let (top_b1, v1) =
                                  process_blk b1 ((lmid, top_b2)::c.alist) top_b2
                                in
