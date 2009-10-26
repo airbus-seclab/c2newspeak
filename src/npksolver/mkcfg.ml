@@ -56,7 +56,7 @@ type stmt_context =
   ; alist    : (int*int) list (* XXX *)
   ; vertices : Cfg.vertex list
   ; join     : int option   (* XXX *)
-  ; wp       : Newspeak.location list
+  ; wp       : (Newspeak.location * int * (Prog.var * int * int) option) list
   }
 
 let rec process_stmt (stmt, loc) c =
@@ -120,7 +120,8 @@ let rec process_stmt (stmt, loc) c =
                        ; vertices = c'.vertices@c.vertices
                        ; join = None
                        }
-  | AssertFalse -> { c with wp = loc::c.wp }
+  | AssertFalse   -> { c with wp = (loc, c.lbl, None)::c.wp }
+  | AssertBound (v, inf, sup) -> { c with wp = (loc, c.lbl, Some (v, inf, sup))::c.wp }
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk

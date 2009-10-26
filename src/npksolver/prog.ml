@@ -40,6 +40,7 @@ and stmtkind =
   | Goto     of lbl
   | Decl     of blk
   | AssertFalse
+  | AssertBound of var * int * int
 
 and var =
   | G of string

@@ -19,7 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-let compute watchpoints _results =
-  List.iter (fun x ->
-    print_endline (Newspeak.string_of_loc x ^ ": Assert false")
+let compute watchpoints results =
+  List.iter (function
+  | loc, _, None -> print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
+  | loc, l, Some (v, inf, sup) ->
+      let r = Box.get_var v results.(l) in
+      if not (Range.dom.Domain.incl r (Range.from_bounds inf sup)) then
+        print_endline (Newspeak.string_of_loc loc ^ ": Bound check")
   ) watchpoints

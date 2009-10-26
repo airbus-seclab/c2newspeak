@@ -71,7 +71,6 @@ let rec pcomp_exp loc = function
   | Const (CFloat _ | Nil) ->
       fail loc "Invalid expression"
 
-
 let rec pcomp_stmt (sk, loc) =
   let sk' = match sk with
   | Set (lv, exp, scal) -> assert_int loc scal;
@@ -83,6 +82,12 @@ let rec pcomp_stmt (sk, loc) =
   | Goto l              -> Some (Prog.Goto l)
   | UserSpec [IdentToken "widen"] -> Options.set_widening (); None
   | UserSpec [IdentToken "assert";IdentToken "false"] -> Some Prog.AssertFalse
+  | UserSpec [IdentToken "assert";IdentToken "bound"
+             ;LvalToken (v,_);CstToken (CInt inf);CstToken (CInt sup)] ->
+               let v' = pcomp_var loc v in
+               let inf' = Newspeak.Nat.to_int inf in
+               let sup' = Newspeak.Nat.to_int sup in
+               Some (Prog.AssertBound (v', inf', sup'))
   | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
   | _ -> fail loc "Invalid statement"
   in
