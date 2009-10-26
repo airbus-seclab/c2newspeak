@@ -82,6 +82,7 @@ let rec pcomp_stmt (sk, loc) =
   | DoWith (b1, l, b2)  -> Some (Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2))
   | Goto l              -> Some (Prog.Goto l)
   | UserSpec [IdentToken "widen"] -> Options.set_widening (); None
+  | UserSpec [IdentToken "assert";IdentToken "false"] -> Some Prog.AssertFalse
   | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
   | _ -> fail loc "Invalid statement"
   in

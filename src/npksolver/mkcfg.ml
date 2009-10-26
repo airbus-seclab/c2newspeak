@@ -56,9 +56,10 @@ type stmt_context =
   ; alist    : (int*int) list (* XXX *)
   ; vertices : Cfg.vertex list
   ; join     : int option   (* XXX *)
+  ; wp       : Newspeak.location list
   }
 
-let rec process_stmt (stmt, _) c =
+let rec process_stmt (stmt, loc) c =
   let jnode = begin match c.join with
   | None   -> c.lbl
   | Some l -> l
@@ -66,69 +67,73 @@ let rec process_stmt (stmt, _) c =
   end in
   match stmt with
   | InfLoop b -> let btm = Lbl.next c.lbl in
-                 let (top, vert) = process_blk b c.alist btm in
-                 { c with lbl      = top
-                 ;        vertices = (btm, top, ("(reloop)", nop))
-                                   ::vert
+                 let c' = process_blk b c.alist btm in
+                 { c with lbl      = c'.lbl
+                 ;        vertices = (btm, c'.lbl, ("(reloop)", nop))
+                                   ::c'.vertices
                                     @c.vertices
                  ;        join     = None
                  }
-  | Select  (b1, b2) -> let (l1, v1) = process_blk b1 c.alist jnode in
-                        let (l2, v2) = process_blk ~join:c.lbl b2 c.alist l1  in
-                        let top = Lbl.next l2 in
-                        { c with lbl      = top
-                        ;        vertices =  (top, l1, ("(select : 1)", nop))
-                                           ::(top, l2, ("(select : 2)", nop))
-                                           ::v1
-                                            @v2
-                                            @c.vertices
-                        ; join = None
-                        }
-  | DoWith   (b1, lmid, b2) -> let (top_b2, v2) =
-                                 process_blk b2 c.alist jnode in
-                               let (top_b1, v1) =
-                                 process_blk b1 ((lmid, top_b2)::c.alist) top_b2
-                               in
-                               { c with lbl      = top_b1
-                               ;        vertices = v1 @ v2 @ c.vertices
-                               ;        join     = None
-                               }
-  | Goto     l -> let lbl' = Lbl.next c.lbl in
-                  let ljmp = List.assoc l c.alist in
+  | Select (b1, b2) -> let c1 = process_blk b1 c.alist jnode in
+                       let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
+                       let top = Lbl.next c2.lbl in
+                       { c with lbl      = top
+                       ;        vertices =  (top, c1.lbl, ("(select : 1)", nop))
+                                          ::(top, c2.lbl, ("(select : 2)", nop))
+                                          ::c1.vertices
+                                           @c2.vertices
+                                           @c.vertices
+                       ; join = None
+                       }
+  | DoWith (b1, lmid, b2) -> let c2(*top_b2, v2 XXX *) =
+                               process_blk b2 c.alist jnode in
+                             let c1(* top_b1, v1 XXX*) =
+                               process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl
+                             in
+                             { c with lbl      = c1.lbl
+                             ;        vertices = c1.vertices
+                                               @ c2.vertices
+                                               @  c.vertices
+                             ;        join     = None
+                             }
+  | Goto l -> let lbl' = Lbl.next c.lbl in
+              let ljmp = List.assoc l c.alist in
+              { c with lbl = lbl'
+              ;        vertices = (lbl', ljmp,  ("(jump)", nop))
+                                ::c.vertices
+              ; join = None
+              }
+  | Set (v, e) -> let lbl' = Lbl.next c.lbl in
                   { c with lbl = lbl'
-                  ;        vertices = (lbl', ljmp,  ("(jump)", nop))
-                                    ::c.vertices
+                  ; vertices =(lbl', jnode, ("(stmt:set)", f_set v e))
+                             ::c.vertices
                   ; join = None
                   }
-  | Set      (v, e) -> let lbl' = Lbl.next c.lbl in
-                       { c with lbl = lbl'
-                       ; vertices =(lbl', jnode, ("(stmt:set)", f_set v e))
-                                  ::c.vertices
+  | Guard e -> let lbl' = Lbl.next c.lbl in
+               { c with lbl = lbl'
+               ; vertices =  (lbl', jnode, ("(stmt:guard)", f_guard e))
+                           ::c.vertices
+               ; join = None
+               }
+  | Decl b -> let c' = process_blk b c.alist jnode in
+                       { c with lbl = c'.lbl
+                       ; vertices = c'.vertices@c.vertices
                        ; join = None
                        }
-  | Guard    (e)    -> let lbl' = Lbl.next c.lbl in
-                       { c with lbl = lbl'
-                       ; vertices =  (lbl', jnode, ("(stmt:guard)", f_guard e))
-                                   ::c.vertices
-                       ; join = None
-                       }
-  | Decl b -> let (top, vert) = process_blk b c.alist jnode in
-                       { c with lbl = top
-                       ; vertices = vert@c.vertices
-                       ; join = None
-                       }
+  | AssertFalse -> { c with wp = loc::c.wp }
 
 and process_blk ?join blk al l0 =
-  let c =
     List.fold_right process_stmt blk
       { lbl = l0
       ; alist = al
       ; vertices = []
       ; join = join
+      ; wp = []
       }
-  in (c.lbl, c.vertices)
 
-let process blk = process_blk blk [] Lbl.init
+let process blk =
+  let c = process_blk blk [] Lbl.init in
+  (c.lbl, c.vertices), c.wp
 
 let dump_yaml (n, v) =
     "---\n"

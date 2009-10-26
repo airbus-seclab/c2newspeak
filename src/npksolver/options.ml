@@ -48,6 +48,10 @@ let     fp_algo  = ref Worklist
 let set_fp_algo x =   fp_algo := fp_alg_str x
 let get_fp_algo _ = ! fp_algo
 
+let     solver = ref false
+let set_solver _ =   solver := true
+let get_solver _ = ! solver
+
 type opt_action =
   | Help
   | Call of (unit -> unit)

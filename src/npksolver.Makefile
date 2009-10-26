@@ -26,8 +26,8 @@
 
 TARGET=npksolver
 DIRS=newspeak/ npksolver/
-npksolver.FILES=options utils prog pcomp domain const range box cfg mkcfg fixpoint \
-		tap test npksolver
+npksolver.FILES=options utils prog pcomp domain const range box cfg mkcfg \
+		warnings fixpoint tap test npksolver
                   
 FILES=version newspeak/newspeak \
       $(addprefix npksolver/,$(npksolver.FILES))

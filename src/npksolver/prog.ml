@@ -39,6 +39,7 @@ and stmtkind =
   | DoWith   of blk * lbl * blk
   | Goto     of lbl
   | Decl     of blk
+  | AssertFalse
 
 and var =
   | G of string

@@ -33,18 +33,21 @@ let output_graphviz cfg =
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
-  let cfg = Mkcfg.process prg in
+  let (cfg, watchpoints) = Mkcfg.process prg in
   if (Options.get_graphviz ()) then
     output_graphviz cfg;
   if (Options.get_cfg_only ()) then
     print_endline (Mkcfg.dump_yaml cfg)
   else
     begin
-      print_endline "---";
-      Array.iteri (fun i r ->
-          print_endline ("  - {id: "^ string_of_int i ^
-          ", "^ Box.yaml_dump r^"}")
-      ) (Fixpoint.solve vars cfg);
+      let solve_results = Fixpoint.solve vars cfg in
+      if Options.get_solver () then begin
+        print_endline "---";
+        Array.iteri (fun i r ->
+            print_endline ("  - {id: "^ string_of_int i ^
+            ", "^ Box.yaml_dump r^"}")
+        ) solve_results end;
+      Warnings.compute watchpoints solve_results
     end
 
 let fname_suffix str =
@@ -78,18 +81,19 @@ let run_selftests =
 
 let main _ =
   let ops =
-  [ 'h', "help"    , "this help message",   Options.Help
-  ; 'V', "version" , "show version number", Options.Call display_version
-  ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
-                      , Options.Call Options.set_cfg_only
-  ; 'v', "verbose" , "output more information"
-                      , Options.Call Options.set_verbose
-  ; 'd', "dot", "output in to cfg.dot (graphviz)"
-                      , Options.Call Options.set_graphviz
-  ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
-  ; 'a', "algorithm", "select a fixpoint algorithm "
+  [ 'a', "algorithm", "select a fixpoint algorithm "
                      ^"(rr : roundrobin, wl : worklist (default))",
                      Options.Carg Options.set_fp_algo
+  ; 'd', "dot", "output in to cfg.dot (graphviz)"
+                      , Options.Call Options.set_graphviz
+  ; 'h', "help"    , "this help message",   Options.Help
+  ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
+                      , Options.Call Options.set_cfg_only
+  ; 's', "solver" , "display solver output", Options.Call Options.set_solver
+  ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
+  ; 'v', "verbose" , "output more information"
+                      , Options.Call Options.set_verbose
+  ; 'V', "version" , "show version number", Options.Call display_version
   ] in
   Options.parse_cmdline ops handle_file Sys.argv
 

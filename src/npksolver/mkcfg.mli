@@ -19,7 +19,7 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val process : Prog.t -> Cfg.t
+val process : Prog.t -> Cfg.t * Newspeak.location list
 
 val dump_yaml : Cfg.t -> string
 

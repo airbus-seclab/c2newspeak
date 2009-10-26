@@ -97,7 +97,6 @@ type t = Alist.t option
 
 let bottom = None
 
-(* Haskell's (=<<) *)
 (* bind : ('a -> 'b option) -> 'a option -> 'b option *)
 let bind f = function
   | None   -> None

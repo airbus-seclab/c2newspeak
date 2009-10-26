@@ -19,32 +19,7 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type fp_algorithm =
-  | Roundrobin
-  | Worklist
-
-val set_cfg_only : unit -> unit
-val get_cfg_only : unit -> bool
-val set_verbose  : unit -> unit
-val get_verbose  : unit -> bool
-val set_graphviz : unit -> unit
-val get_graphviz : unit -> bool
-val set_widening : unit -> unit
-val get_widening : unit -> bool
-val set_fp_algo  : string -> unit
-val get_fp_algo  : unit -> fp_algorithm
-val set_solver   : unit -> unit
-val get_solver   : unit -> bool
-
-type opt_action =
-  | Help
-  | Call of (unit -> unit)
-  | Carg of (string -> unit)
-
-type opt = char       (* Short *)
-         * string     (* Long  *)
-         * string     (* Help string *)
-         * opt_action
-
-val parse_cmdline : opt list -> (string -> unit) -> string array -> unit
-
+let compute watchpoints _results =
+  List.iter (fun x ->
+    print_endline (Newspeak.string_of_loc x ^ ": Assert false")
+  ) watchpoints
