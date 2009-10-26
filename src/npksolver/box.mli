@@ -25,7 +25,7 @@ type t
 
 val bottom : t
 
-val singleton : string -> Range.t -> t
+val singleton : Prog.var -> Range.t -> t
 
 val join : t -> t -> t
 
@@ -33,11 +33,11 @@ val meet : t -> t -> t
 
 val widen : t -> t -> t
 
-val guard : string -> (Range.t -> Range.t) -> t -> t
+val guard : Prog.var -> (Range.t -> Range.t) -> t -> t
 
-val set_var : string -> Range.t -> t -> t
+val set_var : Prog.var -> Range.t -> t -> t
 
-val get_var : string -> t -> Range.t
+val get_var : Prog.var -> t -> Range.t
 
 val to_string : t -> string
 

@@ -38,10 +38,10 @@ let assert_int loc st =
   assert_int_typ loc (Scalar st)
 
 let pcomp_var loc = function
-  | Global s -> s
-  | Local _
+  | Global s -> Prog.G s
+  | Local  n -> Prog.L n
   | Deref _
-  | Shift _ -> fail loc "Not a global variable"
+  | Shift _ -> fail loc "Pointer dereference"
 
 let pcomp_binop loc binop =
   match binop with
@@ -82,6 +82,7 @@ let rec pcomp_stmt (sk, loc) =
   | DoWith (b1, l, b2)  -> Some (Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2))
   | Goto l              -> Some (Prog.Goto l)
   | UserSpec [IdentToken "widen"] -> Options.set_widening (); None
+  | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
   | _ -> fail loc "Invalid statement"
   in
     Utils.may (fun s -> (s, loc)) sk'
@@ -123,7 +124,8 @@ module Print = struct
 
   let rec exp = function
     | Const c -> string_of_int c
-    | Var v   -> v
+    | Var (G x) -> x
+    | Var (L n) -> ":"^string_of_int n
     | Not e -> "!" ^par (exp e)
     | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)
 

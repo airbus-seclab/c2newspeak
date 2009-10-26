@@ -78,7 +78,7 @@ let solve vars (ln, v) =
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- List.fold_left (fun r v ->
       Box.join (Box.singleton v (Range.dom.from_val 0)) r
-    ) Box.bottom vars;
+    ) Box.bottom (List.map (fun x -> Prog.G x) vars);
 
   let (res, ops) =
     match Options.get_fp_algo () with

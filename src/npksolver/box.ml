@@ -23,26 +23,36 @@ open Domain
 
 let may_cons h t = Utils.may (fun x -> h::x) t
 
+let varcmp a b = match (a, b) with
+  | Prog.L _ , Prog.G _ -> -1
+  | Prog.G _ , Prog.L _ -> 1
+  | Prog.G a', Prog.G b' -> String.compare a' b'
+  | Prog.L a', Prog.L b' -> Pervasives.compare a' b'
+
+let var_to_string = function
+  | Prog.L n -> ":"^string_of_int n
+  | Prog.G x -> x
+
 module Alist : sig
   (** Association list *)
   type t
 
   val empty : t
 
-  val singleton : string -> Range.t -> t
+  val singleton : Prog.var -> Range.t -> t
 
   val merge : (Range.t -> Range.t -> Range.t) -> t -> t -> t option
 
-  val replace : string -> (Range.t -> Range.t) -> t -> t option
+  val replace : Prog.var -> (Range.t -> Range.t) -> t -> t option
 
-  val map : (string -> Range.t -> 'a) -> t -> 'a list
+  val map : (Prog.var -> Range.t -> 'a) -> t -> 'a list
 
-  val assoc : string -> t -> Range.t
+  val assoc : Prog.var -> t -> Range.t
 end = struct
   (** Invariants : - list is sorted according to String.compare
    *               - there are no "top" elements
    *)
-  type t = (string * Range.t) list
+  type t = (Prog.var * Range.t) list
 
   let empty = []
 
@@ -53,7 +63,7 @@ end = struct
     | [], _  -> Some x2
     | _ , [] -> Some x1
     | (s1,r1)::t1, (s2,r2)::t2 ->
-        match String.compare s1 s2 with
+        match varcmp s1 s2 with
         | 0 -> begin
                  let r = f r1 r2 in
                  if r = Range.dom.bottom then None
@@ -67,7 +77,7 @@ end = struct
 
   let rec replace var f = function
     | [] -> Some []
-    | (s, r)::t -> match String.compare s var with
+    | (s, r)::t -> match varcmp s var with
       | 0 -> begin
                let fr = f r in
                if fr = Range.dom.bottom then
@@ -82,7 +92,7 @@ end = struct
 
   let rec assoc v = function
     | (v', x)::_ when v = v'                  -> x
-    | (v', _)::t when String.compare v v' > 0 -> assoc v t
+    | (v', _)::t when varcmp v v' > 0 -> assoc v t
     | _ -> Range.dom.top
 
 end
@@ -128,10 +138,10 @@ let get_var v = function
 
 let to_string = function
   | None -> "(bot)"
-  | Some x -> String.concat ", " (Alist.map (fun s r -> s^"->"^Range.dom.to_string r) x)
+  | Some x -> String.concat ", " (Alist.map (fun s r -> var_to_string s^"->"^Range.dom.to_string r) x)
 
 let yaml_dump = function
   | None   -> "bottom: yes"
   | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun s r ->
-      s ^": \""^Range.dom.to_string r^"\"") x))
+      var_to_string s ^": \""^Range.dom.to_string r^"\"") x))
       ^"}"
