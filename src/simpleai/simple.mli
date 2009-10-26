@@ -27,83 +27,89 @@
     All variables have type int.
 *)
 
-type t = {
-  fnames: Newspeak.file list;           (** list of source file names *)
-  globals: globals;                     (** program variables *)
-  init: blk;                            (** initialization block of globals *)
-  fundecs: (fid, fundec) Hashtbl.t;     (** table of all declared functions *)
-  src_lang: Newspeak.src_lang;          (** source programming language *)
-}
+module type T =
+sig 
+  type t = {
+    fnames: Newspeak.file list;           (** list of source file names *)
+    globals: globals;                     (** program variables *)
+    init: blk;                            (** initialization block of globals *)
+    fundecs: (fid, fundec) Hashtbl.t;     (** table of all declared functions *)
+    src_lang: Newspeak.src_lang;          (** source programming language *)
+  }
+      
+  and globals = (vid, gdecl) Hashtbl.t    (** Table of global names to location *)
+      
+  and gdecl = Newspeak.location
+      
+  and fundec = blk
+      
+  and blk = stmt list
+      
+  and stmt = stmtkind * Newspeak.location
+      
+  and stmtkind =
+      Set of (lval * exp)                 (** assignment *)
+    | If of (exp * blk * blk)             (** if then else *)
+    | While of (exp * blk)                (** while loop *)
+    | Call of funexp                      (** function call *)
+    | Assert of assertion                 (** assertion *)
 
-and globals = (vid, gdecl) Hashtbl.t    (** Table of global names to location *)
+  and funexp = FunId of fid
+    
+  and lval = Global of vid                (** global variable *)
+    
+  and exp =
+      Const of cst                        (** integer constant *)
+    | Lval of lval                        (** left value *)
+    | Random of (integer * integer)       (** random value *)
+    | UnOp of (unop * exp)                (** unary operation *)
+    | BinOp of (binop * exp * exp)        (** binary operation *)
+	
+  and cst = CInt of integer
+    
+  and unop = Not                          (** negation *)
+      
+  and binop = 
+      PlusI                               (** addition *)
+    | MinusI                              (** substraction *)
+    | MultI                               (** multiplication *)
+    | DivI                                (** division *)
+    | Mod                                 (** modulo *)
+    | Gt                                  (** strictly greater than *)
+    | Eq                                  (** equality *)
+	
+  and bounds = integer * integer
+      
+  and assertion = (lval * cmp * cst)      (** x == c
+					      x <= c *)
+  and cmp =
+      Equals
+    | IsLess
+	
+  and vid = string
+      
+  and fid = string
+      
+  and integer = Int32.t
+      
+  val to_string: t -> string
+    
+  val string_of_unop: unop -> string
+    
+  val string_of_binop: binop -> string
+    
+  val string_of_loc: Newspeak.location -> string
+    
+  val string_of_lval: lval -> string
+    
+  val string_of_exp: exp -> string
+    
+  val string_of_stmtkind: stmtkind -> string
+    
+  val string_of_stmt: stmt -> string
+    
+  val string_of_blk: blk -> string
 
-and gdecl = Newspeak.location
+end
 
-and fundec = blk
-
-and blk = stmt list
-
-and stmt = stmtkind * Newspeak.location
-
-and stmtkind =
-    Set of (lval * exp)                 (** assignment *)
-  | If of (exp * blk * blk)             (** if then else *)
-  | While of (exp * blk)                (** while loop *)
-  | Call of funexp                      (** function call *)
-  | Assert of assertion                 (** assertion *)
-
-and funexp = FunId of fid
-
-and lval = Global of vid                (** global variable *)
-
-and exp =
-    Const of cst                        (** integer constant *)
-  | Lval of lval                        (** left value *)
-  | Random of (integer * integer)       (** random value *)
-  | UnOp of (unop * exp)                (** unary operation *)
-  | BinOp of (binop * exp * exp)        (** binary operation *)
-
-and cst = CInt of integer
-
-and unop = Not                          (** negation *)
-
-and binop = 
-    PlusI                               (** addition *)
-  | MinusI                              (** substraction *)
-  | MultI                               (** multiplication *)
-  | DivI                                (** division *)
-  | Mod                                 (** modulo *)
-  | Gt                                  (** strictly greater than *)
-  | Eq                                  (** equality *)
-
-and bounds = integer * integer
-
-and assertion = (lval * cmp * cst)      (** x == c
-					    x <= c *)
-and cmp =
-    Equals
-  | IsLess
-
-and vid = string
-
-and fid = string
-
-and integer = Int32.t
-
-val to_string: t -> string
-
-val string_of_unop: unop -> string
-
-val string_of_binop: binop -> string
-
-val string_of_loc: Newspeak.location -> string
-
-val string_of_lval: lval -> string
-
-val string_of_exp: exp -> string
-
-val string_of_stmtkind: stmtkind -> string
-
-val string_of_stmt: stmt -> string
-
-val string_of_blk: blk -> string
+include T
