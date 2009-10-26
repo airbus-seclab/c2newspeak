@@ -38,8 +38,11 @@ and stmtkind =
   | InfLoop  of blk
   | DoWith   of blk * lbl * blk
   | Goto     of lbl
+  | Decl     of blk
 
-and var = string
+and var =
+  | G of string
+  | L of int
 
 and exp =
   | Const of cst

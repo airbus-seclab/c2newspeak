@@ -198,8 +198,8 @@ let run _ =
   (* assert (not [a;b] == [c;d]) *)
   let tc_not a b c d name =
     assert_equal ~printer:dom.to_string (dom.eval (function
-        "v" -> from_bounds a b | _ -> invalid_arg "no variable"
-    ) (Prog.Not (Prog.Var "v"))) (from_bounds c d) name
+        Prog.G "v" -> from_bounds a b | _ -> invalid_arg "no variable"
+    ) (Prog.Not (Prog.Var (Prog.G "v")))) (from_bounds c d) name
   in
 
   tc_not 0       0       1 1 "not [0;0] == [1;1]";
@@ -211,10 +211,10 @@ let run _ =
   (* assert [a;b] .==. [c;d] == [e;f] *)
   let tc_eqeq a b c d e f name =
     assert_equal ~printer:dom.to_string (dom.eval (function
-      | "x" -> from_bounds a b
-      | "y" -> from_bounds c d
+      | Prog.G "x" -> from_bounds a b
+      | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Eq, Prog.Var "x", Prog.Var "y"))) (from_bounds e f) name
+    ) (Prog.Op (Prog.Eq, Prog.Var (Prog.G "x"), Prog.Var (Prog.G "y")))) (from_bounds e f) name
   in
   
   tc_eqeq 2 5  8  13 0 0 "[2;5] .==. [8;13] == [0;0]";
@@ -223,17 +223,17 @@ let run _ =
   tc_eqeq 0 0  5  5  0 0 "{0} .==. {5} == [0;0]";
 
   assert_equal ~printer:dom.to_string (dom.eval (function
-      "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Var "v")))
+      Prog.G "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable"
+    ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Var (Prog.G "v"))))
     (from_bounds (-5) (-3)) "- [3;5] == [-5;-3]";
 
   (* assert [a;b] .*. [c;d] == [e;f] *)
   let tc_mult a b c d e f name =
     assert_equal ~printer:dom.to_string (dom.eval (function
-      | "x" -> from_bounds a b
-      | "y" -> from_bounds c d
+      | Prog.G "x" -> from_bounds a b
+      | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Mult, Prog.Var "x", Prog.Var "y"))) (from_bounds e f) name
+    ) (Prog.Op (Prog.Mult, Prog.Var (Prog.G "x"), Prog.Var (Prog.G "y")))) (from_bounds e f) name
   in
 
   tc_mult   5    5    2    8    10   40  "[5;5] .*. [2;8] == [10;40]";
@@ -252,26 +252,27 @@ module Test_box = struct
 open Box
 let run _ =
   test_plan 7;
-  assert_equal (get_var "x" bottom) Range.dom.bottom "Box.bottom has no variables";
+  let get_gvar v = get_var (Prog.G v) in
+  assert_equal (get_gvar "x" bottom) Range.dom.bottom "Box.bottom has no variables";
 
   let ae got exp name =
     assert_equal ~printer:to_string got exp name
   in
 
   let sg var v =
-    singleton var (Range.dom.from_val v)
+    singleton (Prog.G var) (Range.dom.from_val v)
   in
   let intvl var x y =
-    singleton var (Range.from_bounds x y)
+    singleton (Prog.G var) (Range.from_bounds x y)
   in
 
   let i2 = sg "i" 2 in
   let j5 = sg "j" 5 in
 
   let i2j5 = meet i2 j5 in
-  assert_equal ~printer:Range.dom.to_string (get_var "i" i2j5)
+  assert_equal ~printer:Range.dom.to_string (get_gvar "i" i2j5)
       (Range.dom.from_val 2) "{i: 2} /\\ {j: 5} . i = {2}";
-  assert_equal ~printer:Range.dom.to_string (get_var "j" i2j5)
+  assert_equal ~printer:Range.dom.to_string (get_gvar "j" i2j5)
       (Range.dom.from_val 5) "{i: 2} /\\ {j: 5} . i = {5}";
 
   ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} . i = { }";
