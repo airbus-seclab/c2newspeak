@@ -32,15 +32,19 @@ and blk = stmt list
 and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
-  | Set      of var * exp
-  | Guard    of exp
-  | Select   of blk * blk
-  | InfLoop  of blk
-  | DoWith   of blk * lbl * blk
-  | Goto     of lbl
-  | Decl     of blk
-  | AssertFalse
-  | AssertBound of var * int * int
+  | Set     of var * exp
+  | Guard   of exp
+  | Select  of blk * blk
+  | InfLoop of blk
+  | DoWith  of blk * lbl * blk
+  | Goto    of lbl
+  | Decl    of blk
+  | Assert  of check
+
+and check =
+  | AFalse
+  | ABound of var * int * int
+  | AEq    of var * int
 
 and var =
   | G of string

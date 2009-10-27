@@ -3,3 +3,4 @@
   - {id: 2, bottom: yes}
   - {id: 3, value: {x: "{0}"}}
   - {id: 4, value: {x: "{0}"}}
+  - {id: 5, value: {}}

@@ -1,3 +1,4 @@
   - {id: 0, value: {i: "{2}"}}
   - {id: 1, value: {i: "{1}"}}
   - {id: 2, value: {i: "{0}"}}
+  - {id: 3, value: {}}

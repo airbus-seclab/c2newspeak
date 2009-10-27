@@ -5,6 +5,7 @@ BEGIN {require 't/misc/skip_all.pl';}
 use YAML::Syck;
 use File::Slurp;
 use Test::More;
+use Test::Differences::Color;
 
 my @src = <t/src/*.c>;
 
@@ -29,6 +30,6 @@ TODO: {
   my $output = qx#$cmd $src_fname#;
   my $got_yaml = Load ($output);
 
-  is_deeply ($got_yaml, $exp_yaml, "Solver (YAML) for $test_num");
+  eq_or_diff ($got_yaml, $exp_yaml, "Solver (YAML) for $test_num");
   }
 }

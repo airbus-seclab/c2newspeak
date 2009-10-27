@@ -23,6 +23,8 @@
 
 type t
 
+val top : t
+
 val bottom : t
 
 val singleton : Prog.var -> Range.t -> t
@@ -38,6 +40,10 @@ val guard : Prog.var -> (Range.t -> Range.t) -> t -> t
 val set_var : Prog.var -> Range.t -> t -> t
 
 val get_var : Prog.var -> t -> Range.t
+
+val push : t -> t
+
+val pop  : t -> t
 
 val to_string : t -> string
 

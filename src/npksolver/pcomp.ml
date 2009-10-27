@@ -81,13 +81,22 @@ let rec pcomp_stmt (sk, loc) =
   | DoWith (b1, l, b2)  -> Some (Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2))
   | Goto l              -> Some (Prog.Goto l)
   | UserSpec [IdentToken "widen"] -> Options.set_widening (); None
-  | UserSpec [IdentToken "assert";IdentToken "false"] -> Some Prog.AssertFalse
-  | UserSpec [IdentToken "assert";IdentToken "bound"
-             ;LvalToken (v,_);CstToken (CInt inf);CstToken (CInt sup)] ->
-               let v' = pcomp_var loc v in
-               let inf' = Newspeak.Nat.to_int inf in
-               let sup' = Newspeak.Nat.to_int sup in
-               Some (Prog.AssertBound (v', inf', sup'))
+  | UserSpec [IdentToken "assert"
+             ;IdentToken "false"] -> Some (Prog.Assert Prog.AFalse)
+  | UserSpec [IdentToken "assert"
+             ;IdentToken "bound"
+             ;LvalToken (v,_)
+             ;CstToken (CInt inf)
+             ;CstToken (CInt sup)] -> let v' = pcomp_var loc v in
+                                      let inf' = Newspeak.Nat.to_int inf in
+                                      let sup' = Newspeak.Nat.to_int sup in
+                                      Some (Prog.Assert (Prog.ABound (v', inf', sup')))
+  | UserSpec [IdentToken "assert"
+             ;IdentToken "eq"
+             ;LvalToken (v,_)
+             ;CstToken (CInt c)] -> let v' = pcomp_var loc v in
+                                    let c' = Newspeak.Nat.to_int c in
+                                    Some (Prog.Assert (Prog.AEq (v', c')))
   | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
   | _ -> fail loc "Invalid statement"
   in

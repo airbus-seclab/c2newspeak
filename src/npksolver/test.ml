@@ -254,10 +254,14 @@ end
 module Test_box = struct
 open Box
 let run _ =
-  test_plan 7;
+  test_plan 11;
   let get_gvar v = get_var (Prog.G v) in
+  let get_lvar n = get_var (Prog.L n) in
   assert_equal (get_gvar "x" bottom) Range.dom.bottom
                         "Box.bottom has no variables";
+
+  assert_equal (get_gvar "x" top) Range.dom.top
+                        "Box.top returns top for global variables";
 
   let ae got exp name =
     assert_equal ~printer:to_string got exp name
@@ -279,7 +283,7 @@ let run _ =
   assert_equal ~printer:Range.dom.to_string (get_gvar "j" i2j5)
       (Range.dom.from_val 5) "{i: 2} /\\ {j: 5} . i = {5}";
 
-  ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} . i = { }";
+  ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} = { i: 2, j: 5 }";
 
   ae (meet (sg "i" 3) i2j5) bottom
      "{i: 2, j: 5} / i <= {3} = {j: 5}";
@@ -292,6 +296,19 @@ let run _ =
      ;
 
   ae (meet (intvl "i" min_int 0) i2) bottom "{i: 2} /\\ {i: R-} = bot";
+
+  let b = Box.set_var (Prog.G "x") (Range.from_bounds 5 5) top in
+  assert_equal ~printer:Range.dom.to_string (get_gvar "x" b) (Range.from_bounds 5 5)
+      "Global <- 5; Global == 5";
+
+  (* local variables *)
+
+  assert_equal (get_lvar 0 top) Range.dom.top
+                        "Box.top returns top for local variables";
+
+  let b = Box.set_var (Prog.L 0) (Range.from_bounds 5 5) top in
+  assert_equal ~printer:Range.dom.to_string (get_lvar 0 b) (Range.from_bounds 5 5)
+      "Local <- 5; Local == 5";
 
   test_end ()
 end

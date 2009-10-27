@@ -24,7 +24,7 @@ open Domain
 let new_value x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
     let from_vals = Utils.filter_map (fun (origin, dest, (_,f)) ->
-      if (dest = i) then
+      if (dest = i) then (* FIXME style *)
                       begin
                         let xo = x.(origin) in
                         let r =
@@ -67,12 +67,9 @@ let f_worklist vertices x =
   done;
   (x, !ops)
 
-let solve vars (ln, v) =
+let solve (ln, v) =
   let x0 = Array.make (ln + 1) Box.bottom in
-  x0.(ln) <- List.fold_left (fun r v ->
-      Box.join (Box.singleton v (Range.dom.from_val 0)) r
-    ) Box.bottom (List.map (fun x -> Prog.G x) vars);
-
+  x0.(ln) <- Box.top;
   let (res, ops) =
     match Options.get_fp_algo () with
     | Options.Roundrobin -> kleene v x0

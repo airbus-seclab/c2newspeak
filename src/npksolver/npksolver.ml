@@ -33,7 +33,7 @@ let output_graphviz ?results cfg =
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
-  let (cfg, watchpoints) = Mkcfg.process prg in
+  let (cfg, watchpoints) = Mkcfg.process prg vars in
   if (Options.get_cfg_only ()) then
     begin
     if (Options.get_graphviz ()) then
@@ -44,7 +44,7 @@ let handle_file_npk fname =
     end
   else
     begin
-      let solve_results = Fixpoint.solve vars cfg in
+      let solve_results = Fixpoint.solve cfg in
       if Options.get_solver () then begin
         print_endline "---";
         Array.iteri (fun i r ->

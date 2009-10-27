@@ -19,5 +19,5 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val compute : (Newspeak.location * int * (Prog.var * int * int) option
+val compute : (Newspeak.location * int * Prog.check
               ) list -> Box.t array -> unit
