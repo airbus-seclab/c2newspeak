@@ -18,12 +18,28 @@
  *)
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
+open Prog
 
 let compute watchpoints results =
+  begin
+  if Options.get_verbose() then
+    Printf.fprintf stderr "Watchpoint list : %s"
+      (String.concat "," (List.map (fun (_,x,_) -> string_of_int x)
+      watchpoints))
+  end;
   List.iter (function
-  | loc, _, None -> print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
-  | loc, l, Some (v, inf, sup) ->
+  | loc, _, AFalse-> print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
+  | loc, l, ABound (v, inf, sup) ->
       let r = Box.get_var v results.(l) in
       if not (Range.dom.Domain.incl r (Range.from_bounds inf sup)) then
         print_endline (Newspeak.string_of_loc loc ^ ": Bound check")
+  | loc, l, AEq (v, i) ->
+      let r = Box.get_var v results.(l) in
+      begin
+      if Options.get_verbose() then
+      Printf.fprintf stderr "eq check : r = %s, bound = {%d}" 
+        (Range.dom.Domain.to_string r) i
+      end;
+      if not (Range.dom.Domain.incl r (Range.from_bounds i i)) then
+        print_endline (Newspeak.string_of_loc loc ^ ": Value is different")
   ) watchpoints

@@ -1,5 +1,6 @@
-lastnode: 5
+lastnode: 6
 vertices:
+  - [6, 5]
   - [5, 2]
   - [5, 4]
   - [2, 1]

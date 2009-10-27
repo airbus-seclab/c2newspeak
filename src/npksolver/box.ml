@@ -45,7 +45,7 @@ module Alist : sig
 
   val assoc : Prog.var -> t -> Range.t
 end = struct
-  (** Invariants : - list is sorted according to String.compare
+  (** Invariants : - list is sorted according to varcmp
    *               - there are no "top" elements
    *)
   type t = (Prog.var * Range.t) list
@@ -53,6 +53,7 @@ end = struct
   let empty = []
 
   let singleton k x =
+    assert(x<>Range.dom.top);
     (k, x)::[]
 
   let rec merge f x1 x2 = match (x1, x2) with
@@ -95,6 +96,8 @@ end
 
 type t = Alist.t option
 
+let top = Some (Alist.empty)
+
 let bottom = None
 
 (* bind : ('a -> 'b option) -> 'a option -> 'b option *)
@@ -124,8 +127,8 @@ let singleton v r =
 let guard var f =
   bind (Alist.replace var f)
 
-let set_var var r =
-  bind (Alist.replace var (fun _ -> r))
+let set_var v r =
+  bind (Alist.merge (fun x _ -> x) (Alist.singleton v r))
 
 let get_var v = function
   | None   -> Range.dom.bottom
@@ -137,7 +140,8 @@ let to_string = function
                 Pcomp.Print.var v^"->"^Range.dom.to_string r)
               x)
 
-let yaml_dump = function
+let yaml_dump =
+  function
   | None   -> "bottom: yes"
   | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
       Pcomp.Print.var v ^": \""^Range.dom.to_string r^"\"") x))

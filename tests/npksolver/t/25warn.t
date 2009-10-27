@@ -16,7 +16,7 @@ plan tests => scalar @tests;
 
 foreach (@tests) {
 TODO: {
-  local $TODO = 'Not yet implemented' if 0;
+  local $TODO = 'Not yet implemented' if /23/;
   /\/(\d+)\.spec$/ or die "Bad filename format : $_";
   my $test_num = $1;
   my ($src_fname) = grep /$test_num/, @src;

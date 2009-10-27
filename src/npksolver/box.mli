@@ -23,6 +23,8 @@
 
 type t
 
+val top : t
+
 val bottom : t
 
 val singleton : Prog.var -> Range.t -> t

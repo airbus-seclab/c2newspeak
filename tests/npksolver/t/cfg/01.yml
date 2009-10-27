@@ -1,4 +1,5 @@
 ---
-lastnode: 0
-vertices: []
+lastnode: 1
+vertices:
+  - [1, 0]
 ...
