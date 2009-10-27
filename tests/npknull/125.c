@@ -23,27 +23,46 @@
   email: charles.hymans@penjili.org
 */
 
-// this is a test to check that the analysis does not do too many unecessary
-// calls to functions.
-// it seems that the most efficient traversal method here is:
-// main -> f -> g -> h -> i -> h -> g -> f -> main
-//
-
-void i() {
+// should interrogate the cache table only 10 times (instead of 65)
+void f0() {
 }
 
-void h() {
-  i();
+void f1() {
 }
 
-void g() {
-  h();
+void f2() {
 }
 
-void f() {
-  g();
+void f3() {
+}
+
+void f4() {
+}
+
+void f5() {
+}
+
+void f6() {
+}
+
+void f7() {
+}
+
+void f8() {
+}
+
+void f9() {
 }
 
 void main() {
-  f();
+  f0();
+  f1();
+  f2();
+  f3();
+  f4();
+  f5();
+  f6();
+  f7();
+  f8();
+  f9();
 }

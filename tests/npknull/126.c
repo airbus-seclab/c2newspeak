@@ -23,27 +23,14 @@
   email: charles.hymans@penjili.org
 */
 
-// this is a test to check that the analysis does not do too many unecessary
-// calls to functions.
-// it seems that the most efficient traversal method here is:
-// main -> f -> g -> h -> i -> h -> g -> f -> main
-//
-
-void i() {
+// should not loop forever
+void f(char *) {
 }
 
-void h() {
-  i();
-}
+void main () {
+  char tmp;
 
-void g() {
-  h();
-}
-
-void f() {
-  g();
-}
-
-void main() {
-  f();
+  while (1) {
+    f(&tmp);
+  }
 }
