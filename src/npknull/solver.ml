@@ -91,8 +91,15 @@ let build_main_info ft s =
     | ([], _) -> s
     | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"
 
+let string_of_triple (pre, post) = 
+  State.to_string pre^" --> "^State.to_string post
+
+let string_of_info x =
+  ListUtils.to_string string_of_triple "\n" x
+
 let string_of_stats fun_tbl cache_miss cache_hit =
   let stats = ref [] in
+  let max = ref 0 in
   let count f data =
     let x = List.length data in
     let c = 
@@ -102,6 +109,7 @@ let string_of_stats fun_tbl cache_miss cache_hit =
 	  StrSet.add f c
       with Not_found -> StrSet.singleton f
     in
+      if x > !max then max := x;
       stats := (x, c)::!stats
   in
     Hashtbl.iter count fun_tbl;
@@ -113,7 +121,14 @@ let string_of_stats fun_tbl cache_miss cache_hit =
 	if nb_infos = 1 then res := !res^"a hoare triple"
 	else res := !res^string_of_int nb_infos^" hoare triples";
 	res := !res^": "^string_of_int nb_funs;
-	if nb_funs <= 3 then res := !res^" ("^StrSet.to_string funs^")"
+	if nb_funs <= 3 then res := !res^" ("^StrSet.to_string funs^")";
+	if nb_infos = !max then begin
+	  let show_fun f =
+	    res := !res^("\nFunction: "^f^"\n");
+	    res := !res^(string_of_info (Hashtbl.find fun_tbl f))
+	  in
+	    StrSet.iter show_fun funs
+	end
     in
       List.iter string_of_elem !stats;
       "Cache misses: "^(string_of_int !cache_miss)^"/"

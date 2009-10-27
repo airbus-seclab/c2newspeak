@@ -6,3 +6,13 @@ Analyzing: i (0)
 Cache misses: 4/4
 Function distribution: 
 Number of function with a hoare triple: 5
+Function: f
+   -->   
+Function: g
+   -->   
+Function: h
+   -->   
+Function: i
+   -->   
+Function: main
+   -->   
