@@ -10,7 +10,7 @@ void main(void)
     /*!npk assert eq i 3 */
     i = 4;
   }
-  /*!npk assert eq i 3 */
+  /*!npk assert eq i 4 */
   i = 1;
   /*!npk assert eq i 1 */
 }

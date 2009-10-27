@@ -41,6 +41,10 @@ val set_var : Prog.var -> Range.t -> t -> t
 
 val get_var : Prog.var -> t -> Range.t
 
+val push : t -> t
+
+val pop  : t -> t
+
 val to_string : t -> string
 
 val yaml_dump : t -> string

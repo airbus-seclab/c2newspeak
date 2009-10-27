@@ -79,6 +79,8 @@ end = struct
                let fr = f r in
                if fr = Range.dom.bottom then
                  None
+               else if fr = Range.dom.top then
+                 Some t
                else Some ((s, fr)::t)
              end (* XXX may *)
       | x when x < 0 -> may_cons (s, r) (replace var f t)
@@ -94,55 +96,100 @@ end = struct
 
 end
 
-type t = Alist.t option
+type box = { store : Alist.t ; esp : int }
 
-let top = Some (Alist.empty)
+type t = box option
+
+let top = Some {store = Alist.empty ; esp = 0}
 
 let bottom = None
 
-(* bind : ('a -> 'b option) -> 'a option -> 'b option *)
 let bind f = function
   | None   -> None
-  | Some x -> f x
+  | Some x ->
+      begin
+        match f (x.store) with
+        | None -> None
+        | Some y -> Some { x with store = y }
+      end
 
 let bind2 f x y =
   match (x, y) with
   | None, _ -> y
   | _, None -> x
-  | Some x', Some y' -> f x' y'
+  | Some x', Some y' ->
+      begin
+        match f x'.store y'.store with
+        | None -> None
+        | Some z -> Some { x' with store = z }
+      end
+
 
 let bind2_bot f x y =
   match (x, y) with
   | None, _ -> None
   | _, None -> None
-  | Some x', Some y' -> f x' y'
+  | Some x', Some y' ->
+      begin
+        match f x'.store y'.store with
+        | None -> None
+        | Some z -> Some { x' with store = z }
+      end
 
 let join  = bind2     (Alist.merge Range.dom.join)
 let meet  = bind2_bot (Alist.merge Range.dom.meet)
 let widen = bind2_bot (Alist.merge Range.widen)
 
 let singleton v r =
-  Some (Alist.singleton v r)
+  Some { store = Alist.singleton v r ; esp = 0 }
 
 let guard var f =
   bind (Alist.replace var f)
 
 let set_var v r =
-  bind (Alist.merge (fun x _ -> x) (Alist.singleton v r))
+  let set_replace esp = function
+    | Prog.G v -> Prog.G v
+    | Prog.L n -> Prog.L (esp - n)
+  in
+  function
+  | None   -> None
+  | Some x ->
+      begin
+        match Alist.merge (fun a _ -> a) (Alist.singleton (set_replace x.esp v) r) (x.store) with
+        | None   -> None
+        | Some y -> Some { x with store = y }
+      end
+
+let push = function
+  | None   -> None
+  | Some x -> Some { x with esp = x.esp + 1 }
+
+let pop  = function
+  | None   -> None
+  | Some x ->
+      let s = Alist.replace (Prog.L x.esp) (fun _ -> Range.dom.top) x.store in
+      match s with None -> None
+      | Some s' -> 
+      Some { store = s' ; esp = x.esp - 1 }
 
 let get_var v = function
   | None   -> Range.dom.bottom
-  | Some x -> Alist.assoc v x
+  | Some x ->
+      begin
+        match v with
+        | Prog.G _ -> Alist.assoc v x.store
+        | Prog.L n -> Alist.assoc (Prog.L (x.esp - n)) x.store
+      end
 
 let to_string = function
   | None -> "(bot)"
   | Some x -> String.concat ", " (Alist.map (fun v r ->
                 Pcomp.Print.var v^"->"^Range.dom.to_string r)
-              x)
+              x.store)
 
 let yaml_dump =
   function
   | None   -> "bottom: yes"
   | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
-      Pcomp.Print.var v ^": \""^Range.dom.to_string r^"\"") x))
+      Pcomp.Print.var v ^": \""^Range.dom.to_string r^"\"") x.store))
       ^"}"

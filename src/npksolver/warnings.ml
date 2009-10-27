@@ -23,7 +23,7 @@ open Prog
 let compute watchpoints results =
   begin
   if Options.get_verbose() then
-    Printf.fprintf stderr "Watchpoint list : %s"
+    Printf.fprintf stderr "Watchpoint list : %s\n"
       (String.concat "," (List.map (fun (_,x,_) -> string_of_int x)
       watchpoints))
   end;
@@ -37,7 +37,7 @@ let compute watchpoints results =
       let r = Box.get_var v results.(l) in
       begin
       if Options.get_verbose() then
-      Printf.fprintf stderr "eq check : r = %s, bound = {%d}" 
+      Printf.fprintf stderr "eq check : r = %s, bound = {%d}\n" 
         (Range.dom.Domain.to_string r) i
       end;
       if not (Range.dom.Domain.incl r (Range.from_bounds i i)) then

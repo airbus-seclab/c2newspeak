@@ -118,9 +118,14 @@ let rec process_stmt (stmt, loc) c =
                            ::c.vertices
                ; join = None
                }
-  | Decl b -> let c' = process_blk b c.alist jnode in
-                       { c with lbl = c'.lbl
-                       ; vertices = c'.vertices@c.vertices
+  | Decl b -> let l_pop = Lbl.next jnode in
+              let c' = process_blk b c.alist l_pop in
+              let l_push = Lbl.next c'.lbl in
+                       { c with lbl = l_push
+                       ; vertices =   (l_push, c'.lbl, ("(push)", Box.push))
+                                    ::(l_pop, jnode  , ("(pop)" , Box.pop))
+                                    ::c'.vertices
+                                     @c.vertices
                        ; join = None
                        ; wp = c'.wp@c.wp
                        }
