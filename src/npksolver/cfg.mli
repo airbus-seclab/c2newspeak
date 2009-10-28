@@ -23,6 +23,4 @@ type t = int * vertex list
 
 and node = int
 
-and vertex = node * node * label
-
-and label = string * (Box.t -> Box.t)
+and vertex = node * node * string * (Box.t -> Box.t)

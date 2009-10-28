@@ -69,7 +69,7 @@ let rec process_stmt (stmt, loc) c =
   | InfLoop b -> let btm = Lbl.next c.lbl in
                  let c' = process_blk b c.alist btm in
                  { c with lbl      = c'.lbl
-                 ;        vertices = (btm, c'.lbl, ("(reloop)", nop))
+                 ;        vertices = (btm, c'.lbl, "(reloop)", nop)
                                    ::c'.vertices
                                     @c.vertices
                  ;        join     = None
@@ -79,8 +79,8 @@ let rec process_stmt (stmt, loc) c =
                        let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
                        let top = Lbl.next c2.lbl in
                        { c with lbl      = top
-                       ;        vertices =  (top, c1.lbl, ("(select : 1)", nop))
-                                          ::(top, c2.lbl, ("(select : 2)", nop))
+                       ;        vertices =  (top, c1.lbl, "(select : 1)", nop)
+                                          ::(top, c2.lbl, "(select : 2)", nop)
                                           ::c1.vertices
                                            @c2.vertices
                                            @c.vertices
@@ -102,19 +102,19 @@ let rec process_stmt (stmt, loc) c =
   | Goto l -> let lbl' = Lbl.next c.lbl in
               let ljmp = List.assoc l c.alist in
               { c with lbl = lbl'
-              ;        vertices = (lbl', ljmp,  ("(jump)", nop))
+              ;        vertices = (lbl', ljmp, "(jump)", nop)
                                 ::c.vertices
               ; join = None
               }
   | Set (v, e) -> let lbl' = Lbl.next c.lbl in
                   { c with lbl = lbl'
-                  ; vertices =(lbl', jnode, ("(stmt:set)", f_set v e))
+                  ; vertices =(lbl', jnode, "(stmt:set)", f_set v e)
                              ::c.vertices
                   ; join = None
                   }
   | Guard e -> let lbl' = Lbl.next c.lbl in
                { c with lbl = lbl'
-               ; vertices =  (lbl', jnode, ("(stmt:guard)", f_guard e))
+               ; vertices =  (lbl', jnode, "(stmt:guard)", f_guard e)
                            ::c.vertices
                ; join = None
                }
@@ -122,14 +122,18 @@ let rec process_stmt (stmt, loc) c =
               let c' = process_blk b c.alist l_pop in
               let l_push = Lbl.next c'.lbl in
                        { c with lbl = l_push
-                       ; vertices =   (l_push, c'.lbl, ("(push)", Box.push))
-                                    ::(l_pop, jnode  , ("(pop)" , Box.pop))
+                       ; vertices =   (l_push, c'.lbl, "(push)", Box.push)
+                                    ::(l_pop, jnode  , "(pop)" , Box.pop)
                                     ::c'.vertices
                                      @c.vertices
                        ; join = None
                        ; wp = c'.wp@c.wp
                        }
-  | Assert ck -> { c with wp = (loc, c.lbl, ck)::c.wp }
+  | Assert ck ->
+      let l = Lbl.next c.lbl in
+      { c with lbl = l
+      ;   vertices = (l,c.lbl, "(watchpoint)", nop)::c.vertices
+      ;         wp = (loc, l, ck)::c.wp }
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
@@ -148,7 +152,7 @@ let init vars x =
 let process blk vars =
   let c = process_blk blk [] Lbl.init in
   let lbl' = Lbl.next c.lbl in
-  (lbl', (lbl',c.lbl,("(init)", init vars))::c.vertices), c.wp
+  (lbl', (lbl',c.lbl,"(init)", init vars)::c.vertices), c.wp
 
 let dump_yaml (n, v) =
     "---\n"
@@ -157,7 +161,7 @@ let dump_yaml (n, v) =
   ^ "vertices:"
     ^ (if v = [] then " []\n" else
       "\n"
-    ^ (String.concat "" (List.map (fun (a, b, (s, _)) ->
+    ^ (String.concat "" (List.map (fun (a, b, s, _) ->
       "  - [" ^ string_of_int a ^ ", " ^ string_of_int b ^ "]"
       ^ (if s = "" then "" else " # " ^ s)
       ^ "\n") v))
@@ -169,7 +173,7 @@ let dump_dot ?(results=[||]) (_, v) =
     ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
       string_of_int i^"[label=\""^s^"\"]\n"
     ) results))
-    ^ String.concat "" (List.map (fun (a, b, (s, _)) ->
+    ^ String.concat "" (List.map (fun (a, b, s, _) ->
        "  "  ^ string_of_int a
     ^ " -> " ^ string_of_int b
     ^ " [label=\"" ^ s ^ "\"]"

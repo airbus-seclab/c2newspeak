@@ -23,7 +23,7 @@ open Domain
 
 let new_value x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
-    let from_vals = Utils.filter_map (fun (origin, dest, (_,f)) ->
+    let from_vals = Utils.filter_map (fun (origin, dest, _, f) ->
       if (dest = i) then (* FIXME style *)
                       begin
                         let xo = x.(origin) in
@@ -59,7 +59,7 @@ let f_worklist vertices x =
     let ov = x.(n) in
     x.(n) <- nv;
     if (nv <> ov) then
-      let successors = Utils.filter_map (fun (src, dst, _) ->
+      let successors = Utils.filter_map (fun (src, dst, _, _) ->
         if src == n then Some dst
                     else None
         ) vertices in

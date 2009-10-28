@@ -28,7 +28,9 @@ let compute watchpoints results =
       watchpoints))
   end;
   List.iter (function
-  | loc, _, AFalse-> print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
+  | loc, l, AFalse ->
+      if results.(l) <> Box.bottom then
+        print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
   | loc, l, ABound (v, inf, sup) ->
       let r = Box.get_var v results.(l) in
       if not (Range.dom.Domain.incl r (Range.from_bounds inf sup)) then
