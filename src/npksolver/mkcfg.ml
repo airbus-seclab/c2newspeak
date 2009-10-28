@@ -165,7 +165,7 @@ let dump_yaml (n, v) =
   ^ "...\n"
 
 let dump_dot ?(results=[||]) (_, v) =
-    "digraph G {\n"
+      "digraph G {\nnode [shape=box]\n"
     ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
       string_of_int i^"[label=\""^s^"\"]\n"
     ) results))
