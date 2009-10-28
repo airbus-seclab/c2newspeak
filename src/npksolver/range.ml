@@ -189,7 +189,10 @@ let guard e =
   |      Op (Eq, Var v, Const n)  -> Some (v, meet (from_bounds n n))
   | Not (Op (Gt, Var v, Const n)) -> Some (v, meet (from_bounds min_int n))
   | Not (Op (Gt, Const n, Var v)) -> Some (v, meet (from_bounds n max_int))
-  | Not (Op (Eq, Var _, Const _)) -> None
+  | Not (Op (Eq, Var v, Const n)) -> Some (v, function
+                                              | Some(x,y) when x = y && x = n -> None
+                                              | r -> r
+                                          )
   | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 let dom = { Domain.top       = top

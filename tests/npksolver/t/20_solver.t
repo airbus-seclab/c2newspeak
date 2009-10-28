@@ -5,7 +5,7 @@ BEGIN {require 't/misc/skip_all.pl';}
 use YAML::Syck;
 use File::Slurp;
 use Test::More;
-use Test::Differences::Color;
+use Test::Differences;
 
 my @src = <t/src/*.c>;
 
