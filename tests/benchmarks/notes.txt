@@ -1,0 +1,5 @@
+Should test with all openly available tools:
+invader
+airac
+npknull
+radu rugina's tools...
