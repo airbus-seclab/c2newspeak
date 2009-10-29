@@ -19,32 +19,32 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-(** This is a cross product of several Range.t *)
+(** This is a cross product of several 'a *)
 
-type t
+type 'a t
 
-val top : t
+val top : 'a t
 
-val bottom : t
+val bottom : 'a t
 
-val singleton : Prog.var -> Range.t -> t
+val singleton : Prog.var -> 'a -> 'a t
 
-val join : t -> t -> t
+val join : 'a Domain.t -> 'a t -> 'a t -> 'a t
 
-val meet : t -> t -> t
+val meet : 'a Domain.t -> 'a t -> 'a t -> 'a t
 
-val widen : t -> t -> t
+val widen : 'a Domain.t -> 'a t -> 'a t -> 'a t
 
-val guard : Prog.var -> (Range.t -> Range.t) -> t -> t
+val guard : 'a Domain.t -> Prog.var -> ('a -> 'a) -> 'a t -> 'a  t
 
-val set_var : Prog.var -> Range.t -> t -> t
+val set_var : 'a Domain.t -> Prog.var -> 'a -> 'a t -> 'a t
 
-val get_var : Prog.var -> t -> Range.t
+val get_var : 'a Domain.t -> Prog.var -> 'a t -> 'a
 
-val push : t -> t
+val push : 'a t -> 'a t
 
-val pop  : t -> t
+val pop  : 'a Domain.t -> 'a t -> 'a t
 
-val to_string : t -> string
+val to_string : 'a Domain.t -> 'a t -> string
 
-val yaml_dump : t -> string
+val yaml_dump : 'a Domain.t -> 'a t -> string

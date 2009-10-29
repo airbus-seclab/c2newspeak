@@ -20,7 +20,7 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 let display_version _ =
-  print_endline "Version : pre-alpha";
+  print_endline ("Version : " ^ Version.version ^ " -  rev " ^ Version.revision);
   print_endline "License : LGPLv2";
   print_endline "Author  : Etienne Millon";
   print_endline "Contact : etienne DOT millon AT eads DOT net"
@@ -31,9 +31,10 @@ let output_graphviz ?results cfg =
   close_out file
 
 let handle_file_npk fname =
+  let dom = Range.dom in
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
-  let (cfg, watchpoints) = Mkcfg.process prg vars in
+  let (cfg, watchpoints) = Mkcfg.process prg vars dom in
   if (Options.get_cfg_only ()) then
     begin
     if (Options.get_graphviz ()) then
@@ -44,19 +45,19 @@ let handle_file_npk fname =
     end
   else
     begin
-      let solve_results = Fixpoint.solve cfg in
+      let solve_results = Fixpoint.solve dom cfg in
       if Options.get_solver () then begin
         print_endline "---";
         Array.iteri (fun i r ->
             print_endline ("  - {id: "^ string_of_int i ^
-            ", "^ Box.yaml_dump r^"}")
+            ", "^ Box.yaml_dump dom r^"}")
         ) solve_results end;
       begin
       if (Options.get_graphviz ()) then
-        let r = Array.map Box.to_string solve_results in
+        let r = Array.map (Box.to_string dom) solve_results in
         output_graphviz ~results:r cfg
       end;
-      Warnings.compute watchpoints solve_results
+      Warnings.compute watchpoints dom solve_results
     end
 
 let fname_suffix str =

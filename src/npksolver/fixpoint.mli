@@ -19,4 +19,4 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val solve : Cfg.t -> Box.t array
+val solve : 'a Domain.t -> 'a Cfg.t -> 'a Box.t array

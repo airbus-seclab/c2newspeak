@@ -19,8 +19,14 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 open Prog
+open Domain
 
-let compute watchpoints results =
+(* FIXME not ok if not convex *)
+let intvl dom a b =
+  dom.join (dom.from_val a)
+           (dom.from_val b)
+
+let compute watchpoints dom results =
   begin
   if Options.get_verbose() then
     Printf.fprintf stderr "Watchpoint list : %s\n"
@@ -32,16 +38,16 @@ let compute watchpoints results =
       if results.(l) <> Box.bottom then
         print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
   | loc, l, ABound (v, inf, sup) ->
-      let r = Box.get_var v results.(l) in
-      if not (Range.dom.Domain.incl r (Range.from_bounds inf sup)) then
+      let r = Box.get_var dom v results.(l) in
+      if not (dom.incl r (intvl dom inf sup)) then
         print_endline (Newspeak.string_of_loc loc ^ ": Bound check")
   | loc, l, AEq (v, i) ->
-      let r = Box.get_var v results.(l) in
+      let r = Box.get_var dom v results.(l) in
       begin
       if Options.get_verbose() then
       Printf.fprintf stderr "eq check : r = %s, bound = {%d}\n" 
-        (Range.dom.Domain.to_string r) i
+        (dom.to_string r) i
       end;
-      if not (Range.dom.Domain.incl r (Range.from_bounds i i)) then
+      if not (dom.incl r (dom.from_val i)) then
         print_endline (Newspeak.string_of_loc loc ^ ": Value is different")
   ) watchpoints

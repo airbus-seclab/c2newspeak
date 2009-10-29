@@ -21,7 +21,7 @@
 
 open Domain
 
-let new_value x vertices i =
+let new_value dom x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
     let from_vals = Utils.filter_map (fun (origin, dest, _, f) ->
       if (dest = i) then (* FIXME style *)
@@ -29,7 +29,7 @@ let new_value x vertices i =
                         let xo = x.(origin) in
                         let r =
                           if Options.get_widening() then
-                            Box.widen xo (f xo)
+                            Box.widen dom xo (f xo)
                           else
                             f xo
                         in
@@ -37,16 +37,16 @@ let new_value x vertices i =
                       end
                     else None
     ) vertices in
-    List.fold_left Box.join x.(i) from_vals
+    List.fold_left (Box.join dom) x.(i) from_vals
 
 (* roundrobin algorithm *)
-let rec kleene ?(n=0) v x =
-  let fx = Array.init (Array.length x) (new_value x v) in
+let rec kleene ?(n=0) dom v x =
+  let fx = Array.init (Array.length x) (new_value dom x v) in
   if fx = x then x, (n*Array.length x)
-  else kleene ~n:(succ n) v fx
+  else kleene ~n:(succ n) dom v fx
 
 (* worklist algorithm *)
-let f_worklist vertices x =
+let f_worklist dom vertices x =
   let worklist = Queue.create () in
   let ops = ref 0 in
   Array.iteri (fun i _ ->
@@ -55,7 +55,7 @@ let f_worklist vertices x =
   while (not (Queue.is_empty worklist)) do
     incr ops;
     let n = Queue.take worklist in
-    let nv = new_value x vertices n in
+    let nv = new_value dom x vertices n in
     let ov = x.(n) in
     x.(n) <- nv;
     if (nv <> ov) then
@@ -67,13 +67,13 @@ let f_worklist vertices x =
   done;
   (x, !ops)
 
-let solve (ln, v) =
+let solve dom (ln, v) =
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top;
   let (res, ops) =
     match Options.get_fp_algo () with
-    | Options.Roundrobin -> kleene v x0
-    | Options.Worklist   -> f_worklist v x0
+    | Options.Roundrobin -> kleene dom v x0
+    | Options.Worklist   -> f_worklist dom v x0
   in
   if (Options.get_verbose ()) then
     prerr_endline ("FP computed in "^string_of_int ops^" iterations");

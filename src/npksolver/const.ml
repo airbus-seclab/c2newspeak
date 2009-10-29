@@ -44,7 +44,7 @@ let meet a b = match (a, b) with
 
 let to_string = function
   | Top   -> "top"
-  | Cst x -> string_of_int x
+  | Cst x -> "{"^string_of_int x^"}"
   | Bot   -> "bot"
 
 let lift2 f a b = match (a, b) with
@@ -87,6 +87,7 @@ let dom = { Domain.top       = Top
           ; Domain.incl      = (<=%)
           ; Domain.join      = join
           ; Domain.meet      = meet
+          ; Domain.widen     = (fun _a _b -> failwith "Const:widen")
           ; Domain.to_string = to_string
           ; Domain.eval      = eval
           ; Domain.guard     = guard

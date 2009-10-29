@@ -201,6 +201,7 @@ let dom = { Domain.top       = top
           ; Domain.incl      = (<=%)
           ; Domain.join      = join
           ; Domain.meet      = meet
+          ; Domain.widen     = widen
           ; Domain.to_string = to_string
           ; Domain.eval      = eval
           ; Domain.guard     = guard

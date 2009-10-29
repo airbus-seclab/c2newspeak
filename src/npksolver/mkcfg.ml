@@ -31,32 +31,31 @@ end
 
 (* Abstract domain *)
 
-let dom = Range.dom
-
 let nop x = x
 
-let f_set v e x =
-  let lookup v = Box.get_var v x in
+let f_set dom v e x =
+  let lookup v = Box.get_var dom v x in
   if x = Box.bottom
     then Box.bottom
-    else Box.set_var v (dom.eval lookup e) x
+    else Box.set_var dom v (dom.eval lookup e) x
 
-let f_guard e (x: Box.t) =
+let f_guard dom e x =
   match dom.guard e with
   | None -> x
-  | Some (v, f) -> Box.guard v f x
+  | Some (v, f) -> Box.guard dom v f x
 
 (**
  * The type used to fold over blocks.
  *
  * lbl is the last label used.
  *)
-type stmt_context =
-  { lbl      : int (* XXX *)
-  ; alist    : (int*int) list (* XXX *)
-  ; vertices : Cfg.vertex list
-  ; join     : int option   (* XXX *)
+type 'a stmt_context =
+  { lbl      : int                (* XXX *)
+  ; alist    : (int*int) list     (* XXX *)
+  ; vertices : 'a Cfg.vertex list
+  ; join     : int option         (* XXX *)
   ; wp       : (Newspeak.location * int * Prog.check) list
+  ; dom      : 'a Domain.t
   }
 
 let rec process_stmt (stmt, loc) c =
@@ -67,7 +66,7 @@ let rec process_stmt (stmt, loc) c =
   end in
   match stmt with
   | InfLoop b -> let btm = Lbl.next c.lbl in
-                 let c' = process_blk b c.alist btm in
+                 let c' = process_blk c.dom b c.alist btm in
                  { c with lbl      = c'.lbl
                  ;        vertices = (btm, c'.lbl, "(reloop)", nop)
                                    ::c'.vertices
@@ -75,8 +74,8 @@ let rec process_stmt (stmt, loc) c =
                  ;        join     = None
                  ; wp = c'.wp @ c.wp
                  }
-  | Select (b1, b2) -> let c1 = process_blk b1 c.alist jnode in
-                       let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
+  | Select (b1, b2) -> let c1 = process_blk c.dom b1 c.alist jnode in
+                       let c2 = process_blk c.dom ~join:c.lbl b2 c.alist c1.lbl in
                        let top = Lbl.next c2.lbl in
                        { c with lbl      = top
                        ;        vertices =  (top, c1.lbl, "(select : 1)", nop)
@@ -88,9 +87,9 @@ let rec process_stmt (stmt, loc) c =
                        ; wp = c1.wp @ c2.wp @ c.wp
                        }
   | DoWith (b1, lmid, b2) -> let c2 =
-                               process_blk b2 c.alist jnode in
+                               process_blk c.dom b2 c.alist jnode in
                              let c1 =
-                               process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl
+                               process_blk c.dom b1 ((lmid, c2.lbl)::c.alist) c2.lbl
                              in
                              { c with lbl      = c1.lbl
                              ;        vertices = c1.vertices
@@ -108,22 +107,22 @@ let rec process_stmt (stmt, loc) c =
               }
   | Set (v, e) -> let lbl' = Lbl.next c.lbl in
                   { c with lbl = lbl'
-                  ; vertices =(lbl', jnode, "(stmt:set)", f_set v e)
+                  ; vertices =(lbl', jnode, "(stmt:set)", f_set c.dom v e)
                              ::c.vertices
                   ; join = None
                   }
   | Guard e -> let lbl' = Lbl.next c.lbl in
                { c with lbl = lbl'
-               ; vertices =  (lbl', jnode, "(stmt:guard)", f_guard e)
+               ; vertices =  (lbl', jnode, "(stmt:guard)", f_guard c.dom e)
                            ::c.vertices
                ; join = None
                }
   | Decl b -> let l_pop = Lbl.next jnode in
-              let c' = process_blk b c.alist l_pop in
+              let c' = process_blk c.dom b c.alist l_pop in
               let l_push = Lbl.next c'.lbl in
                        { c with lbl = l_push
                        ; vertices =   (l_push, c'.lbl, "(push)", Box.push)
-                                    ::(l_pop, jnode  , "(pop)" , Box.pop)
+                                    ::(l_pop, jnode  , "(pop)" , Box.pop c.dom)
                                     ::c'.vertices
                                      @c.vertices
                        ; join = None
@@ -135,24 +134,25 @@ let rec process_stmt (stmt, loc) c =
       ;   vertices = (l,c.lbl, "(watchpoint)", nop)::c.vertices
       ;         wp = (loc, l, ck)::c.wp }
 
-and process_blk ?join blk al l0 =
+and process_blk ?join dom blk al l0 =
     List.fold_right process_stmt blk
       { lbl = l0
       ; alist = al
       ; vertices = []
       ; join = join
       ; wp = []
+      ; dom = dom
       }
 
-let init vars x =
+let init dom vars x =
   List.fold_left (fun r v ->
-      Box.meet (Box.singleton (Prog.G v) (Range.dom.from_val 0)) r
+      Box.meet dom (Box.singleton (Prog.G v) (dom.from_val 0)) r
     ) x vars
 
-let process blk vars =
-  let c = process_blk blk [] Lbl.init in
+let process blk vars dom =
+  let c = process_blk dom blk [] Lbl.init in
   let lbl' = Lbl.next c.lbl in
-  (lbl', (lbl',c.lbl,"(init)", init vars)::c.vertices), c.wp
+  (lbl', (lbl',c.lbl,"(init)", init dom vars)::c.vertices), c.wp
 
 let dump_yaml (n, v) =
     "---\n"

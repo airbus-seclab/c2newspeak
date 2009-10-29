@@ -20,4 +20,4 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 val compute : (Newspeak.location * int * Prog.check
-              ) list -> Box.t array -> unit
+              ) list -> 'a Domain.t -> 'a Box.t array -> unit

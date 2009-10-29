@@ -19,8 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t = int * vertex list
+type 'a t = int * 'a vertex list
 
 and node = int
 
-and vertex = node * node * string * (Box.t -> Box.t)
+and 'a vertex = node * node * string * ('a Box.t -> 'a Box.t)
