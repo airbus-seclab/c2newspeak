@@ -124,8 +124,8 @@ let rec process_stmt (stmt, loc) c =
               let c' = process_blk c.dom b c.alist l_pop in
               let l_push = Lbl.next c'.lbl in
                        { c with lbl = l_push
-                       ; vertices =   (l_push, c'.lbl, "(push)", Box.push)
-                                    ::(l_pop, jnode  , "(pop)" , Box.pop c.dom)
+                       ; vertices =   (l_push, c'.lbl, "(push)", Box.push c.dom)
+                                    ::(l_pop, jnode  , "(pop)" , Box.pop  c.dom)
                                     ::c'.vertices
                                      @c.vertices
                        ; join = None

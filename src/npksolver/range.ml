@@ -19,6 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+open Utils.Lift
+
 type t = (int * int) option
 
 let from_bounds a b =
@@ -29,21 +31,22 @@ let top = Some (min_int, max_int)
 
 let bottom = None
 
-let (<=%) a b = match (a, b) with
-  | None       , _           -> true
-  | Some _     , None        -> false
-  | Some (a, b), Some (c, d) -> c <= a && b <= d
+let (<=%) r1 r2 =
+  maybe true  (fun (a, b) ->
+  maybe false (fun (c, d) ->
+      c <= a && b <= d
+  ) r2
+  ) r1
 
-let join a b = match (a, b) with
-  | None, _ -> b
-  | _, None -> a
-  | Some (l1, u1), Some (l2, u2) ->
-      Some (min l1 l2, max u1 u2)
+let join r1 r2 =
+  maybe r2 (fun (l1, u1) ->
+  maybe r1 (fun (l2, u2) ->
+    Some (min l1 l2, max u1 u2)
+  ) r2
+  ) r1
 
-let meet a b = match (a, b) with
-  | None, _ -> None
-  | _, None -> None
-  | Some (l1, u1), Some (l2, u2) ->
+let meet =
+  bind2 (fun (l1, u1) (l2, u2) ->
       begin
         if l2 <= l1 then
           begin
@@ -58,20 +61,20 @@ let meet a b = match (a, b) with
               else from_bounds l2 (min u1 u2)
           end
       end
+  )
 
-let widen a b =
-  match (a, b) with
-  | None         , _             -> None
-  | _            , None          -> None
-  | Some (l1, u1), Some (l2, u2) -> let l = if l2 < l1
-                                      then min_int
-                                      else l1
-                                    in
-                                    let u = if u1 < u2
-                                      then max_int
-                                      else u1
-                                    in
-                                    Some (l, u)
+let widen =
+  bind2 (fun (l1, u1) (l2, u2) ->
+    let l = if l2 < l1
+      then min_int
+      else l1
+    in
+    let u = if u1 < u2
+      then max_int
+      else u1
+    in
+    Some (l, u)
+  )
 
 let is_infinite x =
   x == max_int || x == min_int
@@ -80,28 +83,30 @@ let add_overflow n x =
   if (is_infinite x) then x
   else x + n
 
-let plus ab cd = match (ab, cd) with
-  | None       , _           -> None
-  | _          , None        -> None
-  | Some (a, b), Some (c, d) -> Some (add_overflow a c, add_overflow b d)
+let plus =
+  bind2 (fun (a, b) (c, d) ->
+    Some (add_overflow a c, add_overflow b d)
+  )
 
-let neg = function
-  | None -> None
-  | Some (a, b) -> Some (- b, - a)
+let neg =
+  bind (fun (a, b) -> Some (- b, - a))
 
 let to_string =
   let string_of_inf x =
     if      x = max_int then "+oo"
     else if x = min_int then "-oo"
     else string_of_int x
-  in function
-  | None        -> "(bot)"
-  | Some (a, b) when a = min_int && b = max_int -> "(top)"
-  | Some (a, b) when a = b -> "{" ^ string_of_int a ^ "}"
-  | Some (a, b)            -> "[" ^ string_of_inf a ^ ";"
-                                  ^ string_of_inf b ^ "]"
+  in
+  maybe "(bot)"
+    ( function
+      | (a, b) when a = min_int && b = max_int -> "(top)"
+      | (a, b) when a = b -> "{" ^ string_of_int a ^ "}"
+      | (a, b)            -> "[" ^ string_of_inf a ^ ";"
+                                 ^ string_of_inf b ^ "]"
+    )
 
 (* safe mult *)
+
 let smul a b =
   if      a = 0       then 0
   else if b = 0       then 0
@@ -123,21 +128,9 @@ let smul a b =
       else max_int
   else a * b
 
-
-let mult_pp r1 r2 = match (r1, r2) with
-  | None       , _    -> None
-  | _          , None -> None
-  | Some (a, b), Some (c,d) -> from_bounds (smul a c) (smul b d)
-
-let mult_mp r1 r2 = match (r1, r2) with
-  | None       , _    -> None
-  | _          , None -> None
-  | Some (a, b), Some (c,d) -> from_bounds (smul a d) (smul b c)
-
-let mult_mm r1 r2 = match (r1, r2) with
-  | None       , _    -> None
-  | _          , None -> None
-  | Some (a, b), Some (c,d) -> from_bounds (smul b d) (smul a c)
+let mult_pp = bind2 (fun (a, b) (c,d) -> from_bounds (smul a c) (smul b d))
+let mult_mp = bind2 (fun (a, b) (c,d) -> from_bounds (smul a d) (smul b c))
+let mult_mm = bind2 (fun (a, b) (c,d) -> from_bounds (smul b d) (smul a c))
 
 let mult r1 r2 =
   let r1p = meet r1 (Some (0, max_int)) in

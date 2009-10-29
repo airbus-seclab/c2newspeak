@@ -26,22 +26,17 @@ let abort s =
 
 let fail loc x = abort (string_of_loc loc ^ " : " ^ x)
 
-let assert_int_typ loc = function
+let rec assert_int_typ loc = function
   | Scalar (Int (Signed, 32)) -> ()
   | Scalar (Int (Signed, sz)) ->
         fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
+  | Array (t, _sz) -> assert_int_typ loc t
   | Scalar (Int (Unsigned, _)) -> fail loc "Unsigned value"
-  | Region _ | Array _  ->        fail loc "Not a scalar"
+  | Region _  ->        fail loc "Not a scalar"
   | Scalar (Float _| FunPtr | Ptr) -> fail loc "Bad scalar"
 
 let assert_int loc st =
   assert_int_typ loc (Scalar st)
-
-let pcomp_var loc = function
-  | Global s -> Prog.G s
-  | Local  n -> Prog.L n
-  | Deref _
-  | Shift _ -> fail loc "Pointer dereference"
 
 let pcomp_binop loc binop =
   match binop with
@@ -70,6 +65,12 @@ let rec pcomp_exp loc = function
           | BNot _ | Belongs  _ | Focus _), _)
   | Const (CFloat _ | Nil) ->
       fail loc "Invalid expression"
+
+and pcomp_var loc = function
+  | Global s     -> Prog.G s
+  | Local  n     -> Prog.L n
+  | Shift (v, e) -> Prog.Shift (pcomp_var loc v, pcomp_exp loc e)
+  | Deref  _ -> fail loc "Pointer dereference"
 
 let rec pcomp_stmt (sk, loc) =
   let sk' = match sk with
@@ -127,8 +128,6 @@ let compile npk =
 module Print = struct
   open Prog
 
-  let par x = " ("^x^") "
-
   let binop = function
     | Plus  -> "+"
     | Minus -> "-"
@@ -137,15 +136,16 @@ module Print = struct
     | Gt    -> ">"
     | Eq    -> "=="
 
-  let var = function
-    | Prog.L n -> ":"^string_of_int n
-    | Prog.G x -> x
+  let rec var = function
+    | L n          -> ":"^string_of_int n
+    | G x          -> x
+    | Shift (v, e) -> var v ^ "[" ^ exp e ^ "]"
 
-  let rec exp = function
+  and exp = function
     | Const c -> string_of_int c
     | Var v -> var v
-    | Not e -> "!" ^par (exp e)
-    | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)
+    | Not e -> "!" ^ exp e
+    | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2
 
   let asrt = function
     | AFalse     -> "false"

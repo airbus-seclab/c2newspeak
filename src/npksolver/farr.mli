@@ -19,19 +19,6 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val filter_map : ('a -> 'b option) -> 'a list -> 'b list
+type 'a t
 
-val may : ('a -> 'b) -> 'a option -> 'b option
-
-module Lift : sig
-  type 'a lift = 'a option
-
-  val bind : ('a -> 'b lift) -> 'a lift -> 'b lift
-
-  val return : 'a -> 'a lift
-
-  val maybe : 'b -> ('a -> 'b) -> 'a lift -> 'b
-
-  val bind2 : ('a -> 'b -> 'c lift) -> 'a lift -> 'b lift -> 'c lift
-
-end
+val a_dom : 'a Domain.t -> 'a t Domain.t

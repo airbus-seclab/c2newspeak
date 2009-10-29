@@ -47,8 +47,9 @@ and check =
   | AEq    of var * int
 
 and var =
-  | G of string
-  | L of int
+  | G     of string
+  | L     of int
+  | Shift of var * exp
 
 and exp =
   | Const of cst

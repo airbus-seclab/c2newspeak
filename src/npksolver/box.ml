@@ -23,11 +23,7 @@ open Domain
 
 let may_cons h t = Utils.may (fun x -> h::x) t
 
-let varcmp a b = match (a, b) with
-  | Prog.L _ , Prog.G _ -> -1
-  | Prog.G _ , Prog.L _ -> 1
-  | Prog.G a', Prog.G b' -> String.compare a' b'
-  | Prog.L a', Prog.L b' -> Pervasives.compare a' b'
+let varcmp = Pervasives.compare
 
 module Alist : sig
   (** Association list *)
@@ -95,103 +91,93 @@ end = struct
 
 end
 
+open Utils.Lift
+
 type 'a box = { store : 'a Alist.t ; esp : int }
 
-type 'a t = 'a box option
+type 'a t = 'a box lift
 
 let top = Some {store = Alist.empty ; esp = 0}
 
 let bottom = None
 
-let bind f = function
-  | None   -> None
-  | Some x ->
-      begin
-        match f (x.store) with
-        | None -> None
-        | Some y -> Some { x with store = y }
-      end
+let update_store fs x =
+  bind (fun s ->
+    return { x with store = s }
+  ) fs
 
-let bind2 f x y =
-  match (x, y) with
-  | None, _ -> y
-  | _, None -> x
-  | Some x', Some y' ->
-      begin
-        match f x'.store y'.store with
-        | None -> None
-        | Some z -> Some { x' with store = z }
-      end
+let bind_store f x y =
+  update_store (f x.store y.store) x
 
+let bind2_l f x y =
+  maybe y (fun x' ->
+  maybe x (fun y' ->
+    bind_store f x' y'
+  ) y
+  ) x
 
-let bind2_bot f x y =
-  match (x, y) with
-  | None, _ -> None
-  | _, None -> None
-  | Some x', Some y' ->
-      begin
-        match f x'.store y'.store with
-        | None -> None
-        | Some z -> Some { x' with store = z }
-      end
+let bind2' f =
+  bind2 (bind_store f)
 
-let join  dom = bind2     (Alist.merge dom dom.join)
-let meet  dom = bind2_bot (Alist.merge dom dom.meet)
-let widen dom = bind2_bot (Alist.merge dom dom.widen)
+let join  dom = bind2_l (Alist.merge dom dom.join)
+let meet  dom = bind2'  (Alist.merge dom dom.meet)
+let widen dom = bind2'  (Alist.merge dom dom.widen)
 
 let singleton v r =
   Some { store = Alist.singleton v r ; esp = 0 }
 
 let guard dom var f =
-  bind (Alist.replace dom var f)
+  bind (fun x ->
+  update_store
+    (Alist.replace dom var f (x.store)) x
+  )
+
+let adjust_esp esp =
+    function
+    | Prog.L n -> Prog.L (esp - n)
+    | x -> x
 
 let set_var dom v r =
-  let set_replace esp = function
-    | Prog.G v -> Prog.G v
-    | Prog.L n -> Prog.L (esp - n)
-  in
-  function
-  | None   -> None
-  | Some x ->
-      begin
-        match Alist.merge dom (fun a _ -> a)
-          (Alist.singleton (set_replace x.esp v) r) (x.store) with
-        | None   -> None
-        | Some y -> Some { x with store = y }
-      end
+  bind (fun x ->
+    update_store
+    (Alist.merge dom
+                     (fun a _ -> a)
+                     (Alist.singleton (adjust_esp x.esp v) r)
+                     x.store
+      ) x
+  )
 
-let get_var dom v = function
-  | None   -> dom.bottom
-  | Some x ->
-      begin
-        match v with
-        | Prog.G _ -> Alist.assoc dom v x.store
-        | Prog.L n -> Alist.assoc dom (Prog.L (x.esp - n)) x.store
-      end
+let get_var dom v =
+  maybe dom.bottom
+    (fun x ->
+       Alist.assoc dom 
+                   (adjust_esp x.esp v)
+                   x.store
+    )
 
-let push = function
-  | None   -> None
-  | Some x -> Some { x with esp = x.esp + 1 }
+let push _dom =
+  bind (fun x ->
+      return { x with esp = x.esp + 1 }
+  )
 
-let pop dom = function
-  | None   -> None
-  | Some x ->
-      let s = Alist.replace dom (Prog.L x.esp)
-        (fun _ -> dom.top) x.store
-      in
-      match s with None -> None
-      | Some s' -> 
-      Some { store = s' ; esp = x.esp - 1 }
+let pop dom =
+  bind (fun x ->
+  bind (fun s' ->
+        Some { store = s' ; esp = x.esp - 1 }
+        ) (Alist.replace dom (Prog.L x.esp)
+          (fun _ -> dom.top) x.store
+      )
+  )
 
-let to_string dom = function
-  | None -> "(bot)"
-  | Some x -> String.concat ", " (Alist.map (fun v r ->
+let to_string dom =
+  maybe "(bot)"
+    (fun x -> String.concat ", " (Alist.map (fun v r ->
                 Pcomp.Print.var v^"->"^dom.to_string r)
-              x.store)
+              x.store))
 
 let yaml_dump dom =
-  function
-  | None   -> "bottom: yes"
-  | Some x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
+  maybe "bottom: yes"
+    (fun x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
       Pcomp.Print.var v ^": \""^dom.to_string r^"\"") x.store))
       ^"}"
+    )

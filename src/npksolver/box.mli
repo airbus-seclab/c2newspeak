@@ -41,7 +41,7 @@ val set_var : 'a Domain.t -> Prog.var -> 'a -> 'a t -> 'a t
 
 val get_var : 'a Domain.t -> Prog.var -> 'a t -> 'a
 
-val push : 'a t -> 'a t
+val push : 'a Domain.t -> 'a t -> 'a t
 
 val pop  : 'a Domain.t -> 'a t -> 'a t
 

@@ -31,3 +31,25 @@ let may f = function
   | None   -> None
   | Some x -> Some (f x)
 
+module Lift = struct
+  type 'a lift = 'a option
+
+  let bind f = function
+    | None   -> None
+    | Some x -> f x
+
+  let return x = Some x
+
+  let maybe d f = function
+    | None   -> d
+    | Some x -> f x
+
+  let bind2 f x y =
+    bind (fun x' ->
+    bind (fun y' ->
+      f x' y'
+    ) y
+    ) x
+
+end
+
