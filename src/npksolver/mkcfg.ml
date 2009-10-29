@@ -78,8 +78,8 @@ let rec process_stmt (stmt, loc) c =
                        let c2 = process_blk c.dom ~join:c.lbl b2 c.alist c1.lbl in
                        let top = Lbl.next c2.lbl in
                        { c with lbl      = top
-                       ;        vertices =  (top, c1.lbl, "(select : 1)", nop)
-                                          ::(top, c2.lbl, "(select : 2)", nop)
+                       ;        vertices =  (top, c1.lbl, "", nop)
+                                          ::(top, c2.lbl, "", nop)
                                           ::c1.vertices
                                            @c2.vertices
                                            @c.vertices
@@ -107,13 +107,16 @@ let rec process_stmt (stmt, loc) c =
               }
   | Set (v, e) -> let lbl' = Lbl.next c.lbl in
                   { c with lbl = lbl'
-                  ; vertices =(lbl', jnode, "(stmt:set)", f_set c.dom v e)
-                             ::c.vertices
+                  ; vertices = ( lbl'
+                               , jnode
+                               , Pcomp.Print.stmtk stmt
+                               , f_set c.dom v e)
+                               ::c.vertices
                   ; join = None
                   }
   | Guard e -> let lbl' = Lbl.next c.lbl in
                { c with lbl = lbl'
-               ; vertices =  (lbl', jnode, "(stmt:guard)", f_guard c.dom e)
+               ; vertices =  (lbl', jnode, Pcomp.Print.stmtk stmt, f_guard c.dom e)
                            ::c.vertices
                ; join = None
                }

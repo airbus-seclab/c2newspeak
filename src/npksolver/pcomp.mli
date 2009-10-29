@@ -22,6 +22,7 @@
 val compile : Newspeak.t -> Prog.t * string list
 
 module Print : sig
-  val var : Prog.var -> string
-  val exp : Prog.exp -> string
+  val stmtk : Prog.stmtkind -> string
+  val var   : Prog.var      -> string
+  val exp   : Prog.exp      -> string
 end

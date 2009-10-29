@@ -147,4 +147,21 @@ module Print = struct
     | Not e -> "!" ^par (exp e)
     | Op (op, e1, e2) -> par (exp e1) ^ (binop op) ^ par (exp e2)
 
+  let asrt = function
+    | AFalse     -> "false"
+    | AEq (v, x) -> var v ^ " == " ^ string_of_int x
+    | ABound (v, a, b) ->   var v ^ " <=% ["
+                          ^ string_of_int a ^ ";"
+                                           ^ string_of_int b ^ "]"
+
+  let stmtk = function
+    | Set (v, e) -> var v ^ " = " ^ exp e
+    | Guard e -> "["^exp e^"]"
+    | Assert a -> "assert "^asrt a
+    | Decl    _ -> "(decl)"
+    | InfLoop _ -> "(infloop)"
+    | Select  _ -> "(select)"
+    | DoWith  _ -> "(dowith)"
+    | Goto    _ -> "(goto)"
+
 end
