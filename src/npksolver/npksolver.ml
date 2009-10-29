@@ -30,8 +30,7 @@ let output_graphviz ?results cfg =
   output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
 
-let handle_file_npk fname =
-  let dom = Range.dom in
+let handle_file_npk dom fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
   let (cfg, watchpoints) = Mkcfg.process prg vars dom in
@@ -74,11 +73,18 @@ let c2newspeak fname =
 
 let handle_file fname =
   let sfx = fname_suffix fname in
+  let handle = 
+    begin
+      match Options.get_domain () with
+      | Options.Const -> handle_file_npk Const.dom
+      | Options.Range -> handle_file_npk Range.dom
+    end
+  in
   if (String.compare sfx "npk" = 0) then
-    handle_file_npk fname
+    handle fname
   else if (String.compare sfx "c"   = 0) then
     let tmpname = c2newspeak fname in
-    handle_file_npk tmpname
+    handle tmpname
   else
     failwith "I don't know what to do with this file"
 
@@ -94,11 +100,14 @@ let main _ =
   [ 'a', "algorithm", "select a fixpoint algorithm "
                      ^"(rr : roundrobin, wl : worklist (default))",
                      Options.Carg Options.set_fp_algo
-  ; 'd', "dot", "output in to cfg.dot (graphviz)"
-                      , Options.Call Options.set_graphviz
+  ; 'd', "domain", "select a domain "
+                  ^ "(c : constants, r : ranges (default))",
+                    Options.Carg Options.set_domain
   ; 'h', "help"    , "this help message",   Options.Help
   ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
                       , Options.Call Options.set_cfg_only
+  ; 'r', "graphviz", "output in to cfg.dot (graphviz)"
+                      , Options.Call Options.set_graphviz
   ; 's', "solver" , "display solver output", Options.Call Options.set_solver
   ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
   ; 'v', "verbose" , "output more information"

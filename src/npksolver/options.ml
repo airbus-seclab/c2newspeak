@@ -23,10 +23,19 @@ type fp_algorithm =
   | Roundrobin
   | Worklist
 
+type domain_t =
+  | Const
+  | Range
+
 let fp_alg_str = function
   | "rr" -> Roundrobin
   | "wl" -> Worklist
   | s    -> invalid_arg ("no such fixpoint algorithm : "^s)
+
+let domain_str = function
+  | "c" -> Const
+  | "r" -> Range
+  | s    -> invalid_arg ("no such domain : "^s)
 
 let     widening = ref false
 let set_widening _ =   widening := true
@@ -51,6 +60,10 @@ let get_fp_algo _ = ! fp_algo
 let     solver = ref false
 let set_solver _ =   solver := true
 let get_solver _ = ! solver
+
+let     domain = ref Range
+let set_domain x =   domain := domain_str x
+let get_domain _ = ! domain
 
 type opt_action =
   | Help
