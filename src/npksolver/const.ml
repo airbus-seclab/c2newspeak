@@ -54,32 +54,44 @@ let lift2 f a b = match (a, b) with
   | Top   , _     -> Top
   | _     , Top   -> Top
 
+let liftv v = function
+  | Bot -> Bot
+  | _   -> v
+
+open Prog
+
 let eval lookup e =
   let int_of_bool = function
     | true  -> 1
     | false -> 0
   in
   let eop = function
-    | Prog.Plus -> (+)
-    | Prog.Minus -> (-)
-    | Prog.Eq -> (fun x y -> int_of_bool (x = y))
-    | Prog.Gt -> (fun x y -> int_of_bool (x > y))
-    | Prog.Div -> (/)
-    | Prog.Mult -> fun x y -> x * y
+    | Plus -> (+)
+    | Minus -> (-)
+    | Eq -> (fun x y -> int_of_bool (x = y))
+    | Gt -> (fun x y -> int_of_bool (x > y))
+    | Div -> (/)
+    | Mult -> fun x y -> x * y
   in
   let rec eval = function
-    | Prog.Const n -> Cst n
-    | Prog.Var v -> lookup v
-    | Prog.Not e -> begin match (eval e) with
-                    | Bot -> Bot
-                    | _   -> Top
-                    (* TODO lift *)
-                    end
-    | Prog.Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
+    | Const n -> Cst n
+    | Var v -> lookup v
+    | Not e -> liftv Top (eval e)
+    | Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
   in
   eval e
 
-let guard _e = None
+let guard = function
+  |      Op (Eq, Var v, Const n)  (* v == n *) -> Some (v, liftv (Cst n))
+  |      Op (Gt, Var v, Const _)  (* v >  n *) -> Some (v, liftv Top)
+  |      Op (Gt, Const _, Var v)  (* n >  v *) -> Some (v, liftv Top)
+  | Not (Op (Gt, Var v, Const _)) (* v <= n *) -> Some (v, liftv Top)
+  | Not (Op (Gt, Const _, Var v)) (* n <= v *) -> Some (v, liftv Top)
+  | Not (Op (Eq, Var v, Const _)) (* v != n *) -> Some (v, liftv Top)
+                                    
+                                    
+                                    
+  | e -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 let dom = { Domain.top       = Top
           ; Domain.bottom    = Bot
