@@ -1,41 +1,38 @@
 Static analyzers quiz
 
 scope
-022: non-initialized pointer deref
-011: array of pointers
-023: invalid pointer arithmetic (on variable)
-012: pointer arithmetic (on array)
-010: function pointer
-014: deallocation
-015: union (and pointers)
-033: signed/unsigned integer overflow
-034: char integer overflow
-035: greater than with strange implicit cast
+char integer overflow
+signed/unsigned integer overflow
+greater than with strange implicit cast
+non-initialized pointer deref
+array of pointers
+invalid pointer arithmetic (on variable)
+pointer arithmetic (on array)
+union (and pointers)
+function pointer
+deallocation
 
 soundness of C model
-036: initialization in C (I don't know what to think)
-026: cast between integer and pointer
-004: initialisation of a pointer as a sequence of 4 bytes of value 0
-005: same as 004, but more in the memcpy style (soundness)
-007: same as 005, but precision version
-006: partial copy (1 byte) (could happen with off-by-ones)
-018: memcpy over structures of pointers (soundness)
-009: pointer arithmetic and cross field boundaries
-000: offsetof
-001: invalid offsetof
+memset 0 with off by one (should put a simplified version in base)??
+initialisation of a pointer as a sequence of 4 bytes of value 0
+same as 004, but more in the memcpy style (soundness)
+same as 005, but precision version
+partial copy (1 byte) (could happen with off-by-ones)
+memcpy over structures of pointers (soundness)
+pointer arithmetic and cross field boundaries
+offsetof
+invalid offsetof
+initialization in C (I don't know what to think)
 
 precision
-037: simple do while
-027: memset 0 with off by one (should put a simplified version in base)
-020: simple test with != guard (instead of <), not good for widening
-002: random pointer (from an uninitialized int, to mimic from the outside of the program) and comparison with a known pointer before deref
-013: pointer arithmetic (with loop, similar to 012)
-016: strings with some 0
-003: relation between error code and initialized index (maybe not put in base)
-025: similar to 003, but with use (maybe remove 003)
-028: similar to 025, but with error
-032: precision on structure of function pointer
-029: function pointer
-030: variation on 029
-031: variation on 029
+simple do while
+simple test with != guard (instead of <), not good for widening
+random pointer (from an uninitialized int, to mimic from the outside of the program) and comparison with a known pointer before deref
+pointer arithmetic (with loop, similar to 012)
+cast between integer and pointer
+strings with some 0
+similar to 003, but with use (maybe remove 003)
+precision on structure of function pointer
+function pointer
+variation on previous one
 
