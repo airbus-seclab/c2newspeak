@@ -30,6 +30,6 @@ void main() {
   char *ptr;
   
   ptr = &t[0];
-  ptr = ptr + 100;
-  *ptr = 1;        // soundness: should signal a pointer out of bounds
+  ptr = ptr + 100; // soundness: should signal a pointer out of bounds
+  *ptr = 1;        // soundness: or should signal a pointer out of bounds
 }

@@ -35,10 +35,10 @@ void main() {
 
   y = &a;
 
-  // simulate a memcopy(&y, &x, 4);
+  // simulate a memcpy(&y, &x, 4);
   // in other words does y = x;
-  dst = &y;
-  src = &x;
+  dst = (char*) &y;
+  src = (char*) &x;
   
   dst[0] = src[0];
   dst[1] = src[1];

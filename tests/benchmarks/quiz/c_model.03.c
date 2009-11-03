@@ -32,8 +32,8 @@ void main() {
   char *src;
   
   x = &a;
-  dst = &y;
-  src = &x;
+  dst = (char*) &y;
+  src = (char*) &x;
   
   dst[0] = src[0];
   dst[1] = src[1];

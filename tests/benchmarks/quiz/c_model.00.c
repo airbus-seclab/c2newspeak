@@ -39,7 +39,5 @@ void memset_zero(char *ptr, unsigned int n) {
 
 void main() {
   T x;
-  char witness[10];
   memset_zero((char*)&x, sizeof(T)+1);
-  *(x.p) = 1;
 }

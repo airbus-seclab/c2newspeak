@@ -34,7 +34,7 @@ void main() {
 
   //  do the same as: y = 0;
   // this kind of code may be found in a memset
-  dst = &y;
+  dst = (char*) &y;
   dst[0] = 0;
   dst[1] = 0;
   dst[2] = 0;
