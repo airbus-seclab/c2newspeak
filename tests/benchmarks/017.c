@@ -41,6 +41,7 @@ int main() {
   // what is the value of p2 here? should be corrupted
   // in Venet's analyses will say p2 points to x and not signal any warning
   // Venet's analyses only check pointer out of bounds (not invalid pointers)
+  // TODO: could be made more simple (without a function call)
   *p1 = 1;
   
   return 0;

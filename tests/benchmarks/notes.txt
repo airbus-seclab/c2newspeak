@@ -1,5 +1,65 @@
+basic tests
+011: array of pointers
+022: non-initialized pointer deref
+023: invalid pointer arithmetic (on variable)
+012: pointer arithmetic (on array)
+010: function pointer
+014: deallocation
+015: union (and pointers)
+033: signed/unsigned integer overflow
+034: char integer overflow
+035: greater than with strange implicit cast
+036: initialization in C (I don't know what to think)
+019: structure with pointer (maybe do not put in the test base)
+
+casts:
+026: cast between integer and pointer
+
+C memory model
+(memset style)
+004: initialisation of a pointer as a sequence of 4 bytes of value 0
+024: memset 0 over a structure with a pointer (maybe not in test base)
+
+(memcpy style)
+005: same as 004, but more in the memcpy style (soundness)
+007: same as 005, but precision version
+006: partial copy (1 byte) (could happen with off-by-ones)
+018: memcpy over structures of pointers (soundness)
+
+008: same as 007, but with function call
+017: partial copy (same as 006) but with function call
+021: similar to 017 but with arithmetic after (maybe not put in the test base)
+
+009: pointer arithmetic and cross field boundaries
+
+pointers niceties
+002: random pointer (from an uninitialized int, to mimic from the outside of 
+the program) and comparison with a known pointer before deref
+
+038: somewhat similar &(* ptr) to 000
+000: offsetof
+001: invalid offsetof
+
+loops
+020: simple test with != guard (instead of <), not good for widening
+027: memset 0 with off by one (should put a simplified version in base)
+037: simple do while
+
+precision
+013: pointer arithmetic (with loop, similar to 012)
+016: strings with some 0
+003: relation between error code and initialized index (maybe not put in base)
+025: similar to 003, but with use (maybe remove 003)
+028: similar to 025, but with error
+032: precision on structure of function pointer
+029: function pointer
+030: variation on 029
+031: variation on 029
+
 Should test with all openly available tools:
 invader
 airac
 npknull
-radu rugina's tools...
+radu rugina's tools
+llvm analysis
+...

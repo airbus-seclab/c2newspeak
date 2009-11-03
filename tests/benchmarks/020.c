@@ -23,23 +23,16 @@
   email: charles.hymans@penjili.org
 */
 
-int x;
-
-void onecpy(char* dst, char* src) {
-  *dst = *src;
-}
-
+// simple loop
 int main() {
-  int *p1;
-  int *p2;
+  int i;
+  int t[10000];
   
-  p1 = &x;
-  
-  onecpy((char*)&p1, (char*)&p2);
-  
-  // soundness: should be a warning here (since only one byte is copied)
-  // similar to 006.c
-  *p1 = 1;
-  
-  return 0;
+  i = 0;
+  // test on widening
+  while (i != 10000) {
+    // precision: should not signal any out of bounds
+    t[i] = 0;
+    i++;
+  }
 }

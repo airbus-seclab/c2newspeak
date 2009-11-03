@@ -39,9 +39,9 @@ void main() {
   x.b = &t;
 
   ptr = &x.a;
-  ptr++;
+  ptr++; // soundness: should signal an error here
 
   *ptr = 0;
 
-  *x.b = 1;  // soundness: should signal a null pointer deref
+  *x.b = 1;  // soundness: or should signal a null pointer deref
 }

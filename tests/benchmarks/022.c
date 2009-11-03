@@ -26,6 +26,6 @@
 void main() {
   int *p;
    
-  // should be a warning here
+  // soundness: should be a warning here, uninitialized pointer deref
   *p = 1;
 }
