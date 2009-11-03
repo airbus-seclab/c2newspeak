@@ -23,10 +23,13 @@
   email: charles.hymans@penjili.org
 */
 
-// pointer initialization
+char t[10];
+
+void f() {
+  // precision: should not signal any array out of bounds here
+  t[100] = 4;
+}
+
+
 void main() {
-  int *p;
-  
-  // soundness: should be a warning here
-  *p = 1;
 }
