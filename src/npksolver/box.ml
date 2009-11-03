@@ -25,31 +25,39 @@ let may_cons h t = Utils.may (fun x -> h::x) t
 
 let varcmp = Pervasives.compare
 
+type var =
+  | Local of int
+  | Global of string
+
+let var_from_prog = function
+  | Prog.L n -> Local  n
+  | Prog.G s -> Global s
+  | _ -> invalid_arg "var_from_prog"
+  
+let prog_from_var = function
+  | Local  n -> Prog.L n
+  | Global s -> Prog.G s
+
 module Alist : sig
   (** Association list *)
   type 'a t
-
   val empty : 'a t
-
   val singleton : Prog.var -> 'a -> 'a t
-
   val merge : 'a Domain.t -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
-
   val replace : 'a Domain.t -> Prog.var -> ('a -> 'a) -> 'a t -> 'a t option
-
   val map : (Prog.var -> 'a -> 'b) -> 'a t -> 'b list
-
   val assoc : 'a Domain.t -> Prog.var -> 'a t -> 'a
 end = struct
   (** Invariants : - list is sorted according to varcmp
    *               - there are no "top" elements
    *)
-  type 'a t = (Prog.var * 'a) list
+  type 'a t = (var * 'a) list
 
   let empty = []
 
   let singleton k x =
-    (k, x)::[]
+    let k' = var_from_prog k in
+    (k', x)::[]
 
   let rec merge dom f x1 x2 = match (x1, x2) with
     | [], _  -> Some x2
@@ -69,24 +77,25 @@ end = struct
 
   let rec replace dom var f = function
     | [] -> Some []
-    | (s, r)::t -> match varcmp s var with
+    | (s, r)::t -> match varcmp s (var_from_prog var) with
       | 0 -> begin
                let fr = f r in
-               if fr = dom.bottom then
-                 None
-               else if fr = dom.top then
-                 Some t
-               else Some ((s, fr)::t)
+               if fr = dom.bottom
+                 then None
+                 else
+                   if fr = dom.top
+                     then Some t
+                     else Some ((s, fr)::t)
              end (* XXX may *)
       | x when x < 0 -> may_cons (s, r) (replace dom var f t)
       | _ (* > 0 *)  -> Some ((s, r)::t)
 
   let map f =
-    List.map (fun (k, x) -> f k x)
+    List.map (fun (k, x) -> f (prog_from_var k) x)
 
   let rec assoc dom v = function
-    | (v', x)::_ when v = v'          -> x
-    | (v', _)::t when varcmp v v' > 0 -> assoc dom v t
+    | (v', x)::_ when (var_from_prog v) = v'          -> x
+    | (v', _)::t when varcmp (var_from_prog v) v' > 0 -> assoc dom v t
     | _ -> dom.top
 
 end

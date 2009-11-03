@@ -19,32 +19,6 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type fp_algorithm =
-  | Roundrobin
-  | Worklist
+type 'a t
 
-type domain_t =
-  | Const
-  | Range
-  | Array_top
-
-val set_cfg_only : unit   -> unit val get_cfg_only : unit -> bool
-val set_verbose  : unit   -> unit val get_verbose  : unit -> bool
-val set_graphviz : unit   -> unit val get_graphviz : unit -> bool
-val set_widening : unit   -> unit val get_widening : unit -> bool
-val set_fp_algo  : string -> unit val get_fp_algo  : unit -> fp_algorithm
-val set_solver   : unit   -> unit val get_solver   : unit -> bool
-val set_domain   : string -> unit val get_domain   : unit -> domain_t
-
-type opt_action =
-  | Help
-  | Call of (unit -> unit)
-  | Carg of (string -> unit)
-
-type opt = char       (* Short *)
-         * string     (* Long  *)
-         * string     (* Help string *)
-         * opt_action
-
-val parse_cmdline : opt list -> (string -> unit) -> string array -> unit
-
+val a_dom : 'a Domain.t -> 'a t Domain.t

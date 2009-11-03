@@ -19,32 +19,10 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type fp_algorithm =
-  | Roundrobin
-  | Worklist
+type 'a t = 'a
 
-type domain_t =
-  | Const
-  | Range
-  | Array_top
+let x_eval dom lookup = function
+  | Prog.Var (Prog.Shift _) -> dom.Domain.top
+  | e -> dom.Domain.eval lookup e
 
-val set_cfg_only : unit   -> unit val get_cfg_only : unit -> bool
-val set_verbose  : unit   -> unit val get_verbose  : unit -> bool
-val set_graphviz : unit   -> unit val get_graphviz : unit -> bool
-val set_widening : unit   -> unit val get_widening : unit -> bool
-val set_fp_algo  : string -> unit val get_fp_algo  : unit -> fp_algorithm
-val set_solver   : unit   -> unit val get_solver   : unit -> bool
-val set_domain   : string -> unit val get_domain   : unit -> domain_t
-
-type opt_action =
-  | Help
-  | Call of (unit -> unit)
-  | Carg of (string -> unit)
-
-type opt = char       (* Short *)
-         * string     (* Long  *)
-         * string     (* Help string *)
-         * opt_action
-
-val parse_cmdline : opt list -> (string -> unit) -> string array -> unit
-
+let a_dom dom = { dom with Domain.eval = x_eval dom }

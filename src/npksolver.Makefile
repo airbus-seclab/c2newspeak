@@ -26,7 +26,8 @@
 
 TARGET=npksolver
 DIRS=newspeak/ npksolver/
-npksolver.FILES=options utils prog pcomp domain const range farr box cfg mkcfg \
+npksolver.FILES=options utils prog pcomp domain const range farr arr_top \
+		box cfg mkcfg \
 		warnings fixpoint tap test npksolver
                   
 FILES=version newspeak/newspeak \

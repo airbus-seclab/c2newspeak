@@ -76,8 +76,9 @@ let handle_file fname =
   let handle = 
     begin
       match Options.get_domain () with
-      | Options.Const -> handle_file_npk Const.dom
-      | Options.Range -> handle_file_npk Range.dom
+      | Options.Const     -> handle_file_npk Const.dom
+      | Options.Range     -> handle_file_npk Range.dom
+      | Options.Array_top -> handle_file_npk (Arr_top.a_dom Range.dom)
     end
   in
   if (String.compare sfx "npk" = 0) then
@@ -101,7 +102,7 @@ let main _ =
                      ^"(rr : roundrobin, wl : worklist (default))",
                      Options.Carg Options.set_fp_algo
   ; 'd', "domain", "select a domain "
-                  ^ "(c : constants, r : ranges (default))",
+                  ^ "(c : constants, r : ranges, at : array_top (default))",
                     Options.Carg Options.set_domain
   ; 'h', "help"    , "this help message",   Options.Help
   ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"

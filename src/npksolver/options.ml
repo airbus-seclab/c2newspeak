@@ -26,6 +26,7 @@ type fp_algorithm =
 type domain_t =
   | Const
   | Range
+  | Array_top
 
 let fp_alg_str = function
   | "rr" -> Roundrobin
@@ -35,6 +36,7 @@ let fp_alg_str = function
 let domain_str = function
   | "c" -> Const
   | "r" -> Range
+  | "at" -> Array_top
   | s    -> invalid_arg ("no such domain : "^s)
 
 let     widening = ref false
@@ -61,7 +63,7 @@ let     solver = ref false
 let set_solver _ =   solver := true
 let get_solver _ = ! solver
 
-let     domain = ref Range
+let     domain = ref Array_top
 let set_domain x =   domain := domain_str x
 let get_domain _ = ! domain
 
