@@ -31,7 +31,6 @@ struct s {
 void main() {
   char x;
   char *ptr;
-  ptr = (char*) &(*((struct s *)(&x + 4)));
   ptr = &x;
   // this code is not correct (compare with 000.c)
   ptr = (char*) &(((struct s *)ptr)->t);
