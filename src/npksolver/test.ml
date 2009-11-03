@@ -200,7 +200,7 @@ let run _ =
   let tc_not a b c d name =
     assert_equal ~printer:dom.to_string (dom.eval (function
         Prog.G "v" -> from_bounds a b | _ -> invalid_arg "no variable"
-    ) (Prog.Not (Prog.Var (Prog.G "v")))) (from_bounds c d) name
+    ) (Prog.Not (Prog.Lval (Prog.G "v", Prog.Int)))) (from_bounds c d) name
   in
 
   tc_not 0       0       1 1 "not [0;0] == [1;1]";
@@ -215,8 +215,8 @@ let run _ =
       | Prog.G "x" -> from_bounds a b
       | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Eq, Prog.Var (Prog.G "x"),
-                         Prog.Var (Prog.G "y")))) (from_bounds e f) name
+    ) (Prog.Op (Prog.Eq, Prog.Lval (Prog.G "x", Prog.Int),
+                         Prog.Lval (Prog.G "y", Prog.Int)))) (from_bounds e f) name
   in
 
   tc_eqeq 2 5  8  13 0 0 "[2;5] .==. [8;13] == [0;0]";
@@ -226,7 +226,7 @@ let run _ =
 
   assert_equal ~printer:dom.to_string (dom.eval (function
       Prog.G "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Var (Prog.G "v"))))
+    ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Lval (Prog.G "v", Prog.Int))))
     (from_bounds (-5) (-3)) "- [3;5] == [-5;-3]";
 
   (* assert [a;b] .*. [c;d] == [e;f] *)
@@ -235,8 +235,8 @@ let run _ =
       | Prog.G "x" -> from_bounds a b
       | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Mult, Prog.Var (Prog.G "x"),
-                           Prog.Var (Prog.G "y")))) (from_bounds e f) name
+    ) (Prog.Op (Prog.Mult, Prog.Lval (Prog.G "x", Prog.Int),
+                           Prog.Lval (Prog.G "y", Prog.Int)))) (from_bounds e f) name
   in
 
   tc_mult   5    5    2    8    10   40  "[5;5] .*. [2;8] == [10;40]";

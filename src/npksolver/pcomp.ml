@@ -52,9 +52,15 @@ let pcomp_binop loc binop =
   | Shiftrt | Shiftlt
   | Mod -> fail loc "Invalid binary operation"
 
+let pcomp_type = function
+  | Scalar _ -> Prog.Int
+  | Array (_, sz) -> Prog.Array(sz)
+  | Region _ -> invalid_arg "pcomp_type : region"
+
 let rec pcomp_exp loc = function
   | Const (CInt c) -> Prog.Const (Newspeak.Nat.to_int c)
-  | Lval (lv, scal) -> assert_int loc scal; Prog.Var (pcomp_var loc lv)
+  | Lval (lv, scal) -> assert_int loc scal;
+                       Prog.Lval (pcomp_var loc lv, pcomp_type (Scalar scal)) (* XXX *)
   | UnOp (Not, e1) -> Prog.Not (pcomp_exp loc e1)
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
                              Prog.Op (op, (pcomp_exp loc e1)
@@ -136,26 +142,26 @@ module Print = struct
     | Gt    -> ">"
     | Eq    -> "=="
 
-  let rec var = function
+  let rec lval = function
     | L n          -> ":"^string_of_int n
     | G x          -> x
-    | Shift (v, e) -> var v ^ "[" ^ exp e ^ "]"
+    | Shift (v, e) -> lval v ^ "[" ^ exp e ^ "]"
 
   and exp = function
     | Const c -> string_of_int c
-    | Var v -> var v
+    | Lval (v,_) -> lval v
     | Not e -> "!" ^ exp e
     | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2
 
   let asrt = function
     | AFalse     -> "false"
-    | AEq (v, x) -> var v ^ " == " ^ string_of_int x
-    | ABound (v, a, b) ->   var v ^ " <=% ["
+    | AEq (v, x) -> lval v ^ " == " ^ string_of_int x
+    | ABound (v, a, b) ->   lval v ^ " <=% ["
                           ^ string_of_int a ^ ";"
                                            ^ string_of_int b ^ "]"
 
   let stmtk = function
-    | Set (v, e) -> var v ^ " = " ^ exp e
+    | Set (v, e) -> lval v ^ " = " ^ exp e
     | Guard e -> "["^exp e^"]"
     | Assert a -> "assert "^asrt a
     | Decl    _ -> "(decl)"

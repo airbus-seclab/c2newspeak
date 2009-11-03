@@ -151,7 +151,7 @@ let eval lookup x =
   let bool_false = from_bounds 0 0 in
   let rec eval = function
   | Const n            -> from_bounds n n
-  | Var v'             -> lookup v'
+  | Lval (v',_)        -> lookup v'
   | Op (Plus,  e1, e2) -> plus (eval e1) (eval e2)
   | Op (Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
   | Not e' -> begin match eval e' with
@@ -177,12 +177,12 @@ let eval lookup x =
 
 let guard e =
   match e with
-  |      Op (Gt, Var v, Const n)  -> Some (v, meet (from_bounds (n+1) max_int))
-  |      Op (Gt, Const n, Var v)  -> Some (v, meet (from_bounds min_int (n-1)))
-  |      Op (Eq, Var v, Const n)  -> Some (v, meet (from_bounds n n))
-  | Not (Op (Gt, Var v, Const n)) -> Some (v, meet (from_bounds min_int n))
-  | Not (Op (Gt, Const n, Var v)) -> Some (v, meet (from_bounds n max_int))
-  | Not (Op (Eq, Var v, Const n)) -> Some (v, function
+  |      Op (Gt, Lval (v,_), Const n)  -> Some (v, meet (from_bounds (n+1) max_int))
+  |      Op (Gt, Const n, Lval (v,_))  -> Some (v, meet (from_bounds min_int (n-1)))
+  |      Op (Eq, Lval (v,_), Const n)  -> Some (v, meet (from_bounds n n))
+  | Not (Op (Gt, Lval (v,_), Const n)) -> Some (v, meet (from_bounds min_int n))
+  | Not (Op (Gt, Const n, Lval (v,_))) -> Some (v, meet (from_bounds n max_int))
+  | Not (Op (Eq, Lval (v,_), Const n)) -> Some (v, function
                                               | Some(x,y) when x = y && x = n -> None
                                               | r -> r
                                           )

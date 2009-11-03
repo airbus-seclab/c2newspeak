@@ -75,19 +75,19 @@ let eval lookup e =
   in
   let rec eval = function
     | Const n -> Cst n
-    | Var v -> lookup v
+    | Lval (v,_) -> lookup v
     | Not e -> liftv Top (eval e)
     | Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
   in
   eval e
 
 let guard = function
-  |      Op (Eq, Var v, Const n)  (* v == n *) -> Some (v, liftv (Cst n))
-  |      Op (Gt, Var v, Const _)  (* v >  n *) -> Some (v, liftv Top)
-  |      Op (Gt, Const _, Var v)  (* n >  v *) -> Some (v, liftv Top)
-  | Not (Op (Gt, Var v, Const _)) (* v <= n *) -> Some (v, liftv Top)
-  | Not (Op (Gt, Const _, Var v)) (* n <= v *) -> Some (v, liftv Top)
-  | Not (Op (Eq, Var v, Const _)) (* v != n *) -> Some (v, liftv Top)
+  |      Op (Eq, Lval (v,_), Const n)  (* v == n *) -> Some (v, liftv (Cst n))
+  |      Op (Gt, Lval (v,_), Const _)  (* v >  n *) -> Some (v, liftv Top)
+  |      Op (Gt, Const _, Lval (v,_))  (* n >  v *) -> Some (v, liftv Top)
+  | Not (Op (Gt, Lval (v,_), Const _)) (* v <= n *) -> Some (v, liftv Top)
+  | Not (Op (Gt, Const _, Lval (v,_))) (* n <= v *) -> Some (v, liftv Top)
+  | Not (Op (Eq, Lval (v,_), Const _)) (* v != n *) -> Some (v, liftv Top)
                                     
                                     
                                     

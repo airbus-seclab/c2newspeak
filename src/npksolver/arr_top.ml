@@ -22,7 +22,7 @@
 type 'a t = 'a
 
 let x_eval dom lookup = function
-  | Prog.Var (Prog.Shift _) -> dom.Domain.top
+  | Prog.Lval (Prog.Shift _,_) -> dom.Domain.top
   | e -> dom.Domain.eval lookup e
 
 let a_dom dom = { dom with Domain.eval = x_eval dom }

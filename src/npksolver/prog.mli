@@ -32,7 +32,7 @@ and blk = stmt list
 and stmt = stmtkind * Newspeak.location
 
 and stmtkind =
-  | Set     of var * exp
+  | Set     of lval * exp
   | Guard   of exp
   | Select  of blk * blk
   | InfLoop of blk
@@ -43,17 +43,21 @@ and stmtkind =
 
 and check =
   | AFalse
-  | ABound of var * int * int
-  | AEq    of var * int
+  | ABound of lval * int * int
+  | AEq    of lval * int
 
-and var =
+and lval =
   | G     of string
   | L     of int
-  | Shift of var * exp
+  | Shift of lval * exp
+
+and typ =
+  | Int
+  | Array of int
 
 and exp =
   | Const of cst
-  | Var   of var
+  | Lval  of lval * typ
   | Not   of exp
   | Op    of binop * exp * exp
 

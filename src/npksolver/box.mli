@@ -27,7 +27,7 @@ val top : 'a t
 
 val bottom : 'a t
 
-val singleton : Prog.var -> 'a -> 'a t
+val singleton : Prog.lval -> 'a -> 'a t
 
 val join : 'a Domain.t -> 'a t -> 'a t -> 'a t
 
@@ -35,11 +35,11 @@ val meet : 'a Domain.t -> 'a t -> 'a t -> 'a t
 
 val widen : 'a Domain.t -> 'a t -> 'a t -> 'a t
 
-val guard : 'a Domain.t -> Prog.var -> ('a -> 'a) -> 'a t -> 'a  t
+val guard : 'a Domain.t -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 
-val set_var : 'a Domain.t -> Prog.var -> 'a -> 'a t -> 'a t
+val set_var : 'a Domain.t -> Prog.lval -> 'a -> 'a t -> 'a t
 
-val get_var : 'a Domain.t -> Prog.var -> 'a t -> 'a
+val get_var : 'a Domain.t -> Prog.lval -> 'a t -> 'a
 
 val push : 'a Domain.t -> 'a t -> 'a t
 

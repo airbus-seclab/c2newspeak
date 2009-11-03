@@ -27,6 +27,6 @@ type 'a t = { top       : 'a
             ; meet      : 'a -> 'a -> 'a
             ; widen     : 'a -> 'a -> 'a
             ; to_string : 'a -> string
-            ; eval  : (Prog.var -> 'a) -> Prog.exp -> 'a
-            ; guard : Prog.exp -> (Prog.var * ('a -> 'a)) option
+            ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
+            ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) option
             }

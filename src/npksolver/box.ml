@@ -42,11 +42,11 @@ module Alist : sig
   (** Association list *)
   type 'a t
   val empty : 'a t
-  val singleton : Prog.var -> 'a -> 'a t
+  val singleton : Prog.lval -> 'a -> 'a t
   val merge : 'a Domain.t -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
-  val replace : 'a Domain.t -> Prog.var -> ('a -> 'a) -> 'a t -> 'a t option
-  val map : (Prog.var -> 'a -> 'b) -> 'a t -> 'b list
-  val assoc : 'a Domain.t -> Prog.var -> 'a t -> 'a
+  val replace : 'a Domain.t -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
+  val map : (Prog.lval -> 'a -> 'b) -> 'a t -> 'b list
+  val assoc : 'a Domain.t -> Prog.lval -> 'a t -> 'a
 end = struct
   (** Invariants : - list is sorted according to varcmp
    *               - there are no "top" elements
@@ -181,12 +181,12 @@ let pop dom =
 let to_string dom =
   maybe "(bot)"
     (fun x -> String.concat ", " (Alist.map (fun v r ->
-                Pcomp.Print.var v^"->"^dom.to_string r)
+                Pcomp.Print.lval v^"->"^dom.to_string r)
               x.store))
 
 let yaml_dump dom =
   maybe "bottom: yes"
     (fun x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
-      Pcomp.Print.var v ^": \""^dom.to_string r^"\"") x.store))
+      Pcomp.Print.lval v ^": \""^dom.to_string r^"\"") x.store))
       ^"}"
     )
