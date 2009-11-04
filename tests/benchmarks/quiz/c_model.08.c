@@ -32,7 +32,6 @@ void main() {
   char x;
   char *ptr;
   ptr = &x;
-  // this code is not correct (compare with 000.c)
   ptr = (char*) &(((struct s *)ptr)->t);
-  ptr[50000] = 1;                       // segmentation fault here
+  ptr[50000] = 1; // soundness: should signal error here
 }

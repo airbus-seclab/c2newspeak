@@ -36,8 +36,7 @@ typedef struct {
 } S;
 
 int witness;
-int x;
-S s1 = {0, &x};
+S s1 = {0, &witness};
 
 int main() {
   S s2;
@@ -45,45 +44,9 @@ int main() {
   witness = 0;
   my_memcpy(&s2, &s1, sizeof(S));
   *s2.ptr = 10000000;
-  // should signal an array out of bounds
+  // soundness: should signal an array out of bounds
   // because of the copy of structure s1 into structure s2
   t[witness] = 0;
   return 0;
 }
 
-/* results of Airac
-Airac5: public-1.0, analyzing test.c
-= Progress =
-Parsing. (0.00s)
-Transforming..... (0.00s)
-Computing fixpoint with widening. (0.00s)
-Computing fixpoint with narrowing (0.00s)
-Inspecting result. (0.00s)
-Refining alarms (0.00s)
-
-= Input Program Size =
-Procedures: 3
-Blocks:     17
-Commands:   39
-
-= Analysis Parameters =
-Analyze every procedure: no
-Inlining depth: 1
-Unrolling bound: 0
-Expected iterations: 300
-
-= Analysis Times =
-Total: 0.00s
-Parsing: 0.00s
-Transforming: 0.00s
-Computing fixpoint with widening: 0.00s
-Computing fixpoint with narrowing: 0.00s
-Inspecting result: 0.00s
-Refining alarms: 0.00s
-
-= Alarms =
-Total number of alarms: 0
-
------------------------------
-Airac is not sound: 0 alarms
- */

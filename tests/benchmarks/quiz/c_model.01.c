@@ -23,22 +23,21 @@
   email: charles.hymans@penjili.org
 */
 
-int a;
+typedef struct {
+  int a;
+  int *p;
+} T;
+
+void memset_zero(char *ptr, unsigned int n) {
+  int i;
+  for (i = 0; i < n; i++) {
+    *ptr = 0;
+  // should signal alarm!!
+    ptr++;
+  }
+}
 
 void main() {
-  int *y;
-  char *dst;
-  
-
-  y = &a;
-
-  //  do the same as: y = 0;
-  // this kind of code may be found in a memset
-  dst = (char*) &y;
-  dst[0] = 0;
-  dst[1] = 0;
-  dst[2] = 0;
-  dst[3] = 0;
-
-  *y = 1;   // should signal a null pointer deref
+  T x;
+  memset_zero((char*)&x, sizeof(T)+1);
 }

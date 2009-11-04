@@ -24,14 +24,6 @@
 */
 
 void main() {
-  T x;
-  char witness[10];
-  memset_zero((char*)&x, sizeof(T)+1);
-  *(x.p) = 1;
-}
-
-
-void main() {
   int *ptr;
   int a;
   int tmp;

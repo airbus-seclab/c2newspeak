@@ -32,7 +32,8 @@ int main() {
     witness[100] = 1;
   } else {
     // precision: should not signal this alarm 
-    // (because C fills with 0 at initialization?)
+    // (because C fills with 0 at initialization)
+    // cf. ISO/IEC 9899-1999 6.7.8 14 19
     witness[100] = 1;
   }
   return 0;

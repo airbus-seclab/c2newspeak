@@ -36,3 +36,4 @@ precision on structure of function pointer
 function pointer
 variation on previous one
 
+parser example (first read an integer n, and then n structures)

@@ -23,13 +23,14 @@
   email: charles.hymans@penjili.org
 */
 
+extern int unknown_int(void);
+
 int g;
 
 void main() {
-  int x;
   int *ptr;
   
-  ptr = (int*)x; // mimics reading from the outside world
+  ptr = (int*) unknown_int(); // mimics reading from the outside world
   if (ptr != &g) return;
   // precision: should not signal any error
   *ptr = 1;
