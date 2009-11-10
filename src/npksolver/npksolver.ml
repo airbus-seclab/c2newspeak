@@ -78,7 +78,6 @@ let handle_file fname =
       match Options.get_domain () with
       | Options.Const     -> handle_file_npk Const.dom
       | Options.Range     -> handle_file_npk Range.dom
-      | Options.Array_top -> handle_file_npk (Arr_top.a_dom Range.dom)
     end
   in
   if (String.compare sfx "npk" = 0) then

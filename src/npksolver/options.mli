@@ -26,7 +26,6 @@ type fp_algorithm =
 type domain_t =
   | Const
   | Range
-  | Array_top
 
 val set_cfg_only : unit   -> unit val get_cfg_only : unit -> bool
 val set_verbose  : unit   -> unit val get_verbose  : unit -> bool
