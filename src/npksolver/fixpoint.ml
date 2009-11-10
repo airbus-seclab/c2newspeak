@@ -29,7 +29,7 @@ let new_value dom x vertices i =
       | Cfg.Init vs ->
               List.fold_left (fun r v ->
                   Box.meet dom
-                           (Box.singleton (Prog.G v) (dom.from_val 0))
+                           (Box.singleton dom (Prog.G v) (dom.from_val 0))
                            r
                 ) x vs
       | Cfg.Pop  -> Box.pop  dom x
@@ -38,7 +38,7 @@ let new_value dom x vertices i =
               begin
                 match dom.guard e with
                 | None -> x
-                | Some (v, f) -> Box.guard dom v f x
+                | Some (v, f) -> Box.guard v f x
               end
       | Cfg.Set (v, e) ->
               begin
@@ -83,7 +83,7 @@ let f_worklist dom vertices x =
     let nv = new_value dom x vertices n in
     let ov = x.(n) in
     x.(n) <- nv;
-    if (nv <> ov) then
+    if (not (Box.equal nv ov)) then
       let successors = Utils.filter_map (fun (src, dst, _, _) ->
         if src == n then Some dst
                     else None
@@ -126,7 +126,7 @@ let compute_warn watchpoints dom results =
 let solve wp (ln, v) =
   { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
-  x0.(ln) <- Box.top;
+  x0.(ln) <- Box.top dom;
   let (res, ops) =
     match Options.get_fp_algo () with
     | Options.Roundrobin -> kleene dom v x0

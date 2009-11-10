@@ -263,20 +263,20 @@ let run _ =
   assert_equal (get_gvar "x" bottom) Range.dom.bottom
                         "Box.bottom has no variables";
 
-  assert_equal (get_gvar "x" top) Range.dom.top
+  assert_equal (get_gvar "x" (top dom)) Range.dom.top
                         "Box.top returns top for global variables";
 
   let ae got exp name =
-    assert_equal ~printer:(to_string dom) got exp name
+    assert_equal ~cmp:Box.equal ~printer:(to_string dom) got exp name
   in
 
   let meet = meet dom in
   let join = join dom in
   let sg var v =
-    singleton (Prog.G var) (Range.dom.from_val v)
+    singleton dom (Prog.G var) (Range.dom.from_val v)
   in
   let intvl var x y =
-    singleton (Prog.G var) (Range.from_bounds x y)
+    singleton dom (Prog.G var) (Range.from_bounds x y)
   in
 
   let i2 = sg "i" 2 in
@@ -302,16 +302,16 @@ let run _ =
 
   ae (meet (intvl "i" min_int 0) i2) bottom "{i: 2} /\\ {i: R-} = bot";
 
-  let b = Box.set_var dom (Prog.G "x") (Range.from_bounds 5 5) top in
+  let b = Box.set_var dom (Prog.G "x") (Range.from_bounds 5 5) (top dom) in
   assert_equal ~printer:Range.dom.to_string (get_gvar "x" b) (Range.from_bounds 5 5)
       "Global <- 5; Global == 5";
 
   (* local variables *)
 
-  assert_equal (get_lvar 0 top) Range.dom.top
+  assert_equal (get_lvar 0 (top dom)) Range.dom.top
                         "Box.top returns top for local variables";
 
-  let b = Box.set_var dom (Prog.L 0) (Range.from_bounds 5 5) top in
+  let b = Box.set_var dom (Prog.L 0) (Range.from_bounds 5 5) (top dom) in
   assert_equal ~printer:Range.dom.to_string (get_lvar 0 b) (Range.from_bounds 5 5)
       "Local <- 5; Local == 5";
 
