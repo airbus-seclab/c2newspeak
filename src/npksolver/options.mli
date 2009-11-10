@@ -23,17 +23,12 @@ type fp_algorithm =
   | Roundrobin
   | Worklist
 
-type domain_t =
-  | Const
-  | Range
-
 val set_cfg_only : unit   -> unit val get_cfg_only : unit -> bool
 val set_verbose  : unit   -> unit val get_verbose  : unit -> bool
 val set_graphviz : unit   -> unit val get_graphviz : unit -> bool
 val set_widening : unit   -> unit val get_widening : unit -> bool
 val set_fp_algo  : string -> unit val get_fp_algo  : unit -> fp_algorithm
 val set_solver   : unit   -> unit val get_solver   : unit -> bool
-val set_domain   : string -> unit val get_domain   : unit -> domain_t
 
 type opt_action =
   | Help

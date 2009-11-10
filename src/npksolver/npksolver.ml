@@ -19,6 +19,14 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+let domain_str = function
+  | "c" -> Domain.pack Const.dom
+  | "r" -> Domain.pack Range.dom
+  | s    -> invalid_arg ("no such domain : "^s)
+
+let     domain = ref (Domain.pack Range.dom)
+let set_domain x =   domain := domain_str x
+
 let display_version _ =
   print_endline ("Version : " ^ Version.version ^ " -  rev " ^ Version.revision);
   print_endline "License : LGPLv2";
@@ -31,7 +39,7 @@ let output_graphviz ?results cfg =
   output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
 
-let (-->) (f:'a Domain.scope) (g:'a -> 'b) :'b Domain.scope = 
+let (-->) (f:'a Domain.scope) (g:'a -> 'b) :'b Domain.scope =
   { Domain.bind =
       fun x ->
         g (f.Domain.bind x)
@@ -52,10 +60,15 @@ let handle_file_npk fname =
       Fixpoint.solve wpts cfg
       --> graph_results
 
+type fname = C | Npk | Unknown
+
 let fname_suffix str =
   let dot = String.rindex str '.' in
   let len = String.length str in
-  String.sub str (dot + 1) (len - dot - 1)
+  match String.sub str (dot + 1) (len - dot - 1) with
+  | "c"   -> C
+  | "npk" -> Npk
+  | _     -> Unknown
 
 let c2newspeak fname =
   let tmpnam = "/tmp/solver_a.npk" in
@@ -65,22 +78,11 @@ let c2newspeak fname =
     tmpnam
 
 let handle_file fname =
-  let sfx = fname_suffix fname in
-  let dom = 
-    match Options.get_domain () with
-    | Options.Const -> Domain.pack Const.dom
-    | Options.Range -> Domain.pack Range.dom
-  in
-  let handle fname =
-    Domain.with_dom dom (handle_file_npk fname)
-  in
-  if (String.compare sfx "npk" = 0) then
-    handle fname
-  else if (String.compare sfx "c"   = 0) then
-    let tmpname = c2newspeak fname in
-    handle tmpname
-  else
-    failwith "I don't know what to do with this file"
+  let handle fname = Domain.with_dom !domain (handle_file_npk fname) in
+  match fname_suffix fname with
+  | Npk     -> handle fname
+  | C       -> handle (c2newspeak fname)
+  | Unknown -> failwith "I don't know what to do with this file"
 
 let run_selftests =
   function
@@ -89,26 +91,38 @@ let run_selftests =
   | "const" -> Test.const ()
   | _       -> invalid_arg "Bad test suite"
 
-let main _ =
+let main args =
   let ops =
-  [ 'a', "algorithm", "select a fixpoint algorithm "
-                     ^"(rr : roundrobin, wl : worklist (default))",
-                     Options.Carg Options.set_fp_algo
-  ; 'd', "domain", "select a domain "
-                  ^ "(c : constants, r : ranges, at : array_top (default))",
-                    Options.Carg Options.set_domain
-  ; 'h', "help"    , "this help message",   Options.Help
-  ; 'g', "cfg"     , "dump (YAML) control flow graph and exit"
-                      , Options.Call Options.set_cfg_only
-  ; 'r', "graphviz", "output in to cfg.dot (graphviz)"
-                      , Options.Call Options.set_graphviz
-  ; 's', "solver" , "display solver output", Options.Call Options.set_solver
-  ; 't', "selftest", "run unit tests (output TAP)", Options.Carg run_selftests
-  ; 'v', "verbose" , "output more information"
-                      , Options.Call Options.set_verbose
-  ; 'V', "version" , "show version number", Options.Call display_version
+  [ 'a'
+  , "algorithm"
+  , "select a fixpoint algorithm (rr : roundrobin, wl : worklist (default))"
+  , Options.Carg Options.set_fp_algo
+  ; 'd' , "domain"
+  , "select a domain (c : constants, r : ranges, at : array_top (default))"
+  , Options.Carg set_domain
+  ; 'h', "help"
+  , "this help message"
+  , Options.Help
+  ; 'g', "cfg"
+  , "dump (YAML) control flow graph and exit"
+  , Options.Call Options.set_cfg_only
+  ; 'r', "graphviz"
+  , "output in to cfg.dot (graphviz)"
+  , Options.Call Options.set_graphviz
+  ; 's', "solver"
+  , "display solver output"
+  , Options.Call Options.set_solver
+  ; 't', "selftest"
+  , "run unit tests (output TAP)"
+  , Options.Carg run_selftests
+  ; 'v', "verbose"
+  , "output more information"
+  , Options.Call Options.set_verbose
+  ; 'V', "version"
+  , "show version number"
+  , Options.Call display_version
   ] in
-  Options.parse_cmdline ops handle_file Sys.argv
+  Options.parse_cmdline ops handle_file args
 
 let _ =
-  main ()
+  main Sys.argv
