@@ -23,7 +23,32 @@ open Domain
 
 let new_value dom x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
-    let from_vals = Utils.filter_map (fun (origin, dest, _, f) ->
+    let from_vals = Utils.filter_map (fun (origin, dest, _, stmt) ->
+      let f x = match stmt with
+      | Cfg.Nop -> x
+      | Cfg.Init vs ->
+              List.fold_left (fun r v ->
+                  Box.meet dom
+                           (Box.singleton (Prog.G v) (dom.from_val 0))
+                           r
+                ) x vs
+      | Cfg.Pop  -> Box.pop  dom x
+      | Cfg.Push -> Box.push dom x
+      | Cfg.Guard e ->
+              begin
+                match dom.guard e with
+                | None -> x
+                | Some (v, f) -> Box.guard dom v f x
+              end
+      | Cfg.Set (v, e) ->
+              begin
+                let lookup v = Box.get_var dom v x in
+                if x = Box.bottom
+                  then Box.bottom
+                  else Box.set_var dom v (dom.eval lookup e) x
+              end
+
+      in
       if (dest = i) then (* FIXME style *)
                       begin
                         let xo = x.(origin) in
@@ -67,7 +92,38 @@ let f_worklist dom vertices x =
   done;
   (x, !ops)
 
-let solve dom (ln, v) =
+let compute_warn watchpoints dom results =
+  let intvl dom a b =
+    dom.join (dom.from_val a)
+             (dom.from_val b)
+  in
+  begin
+  if Options.get_verbose() then
+    Printf.fprintf stderr "Watchpoint list : %s\n"
+      (String.concat "," (List.map (fun (_,x,_) -> string_of_int x)
+      watchpoints))
+  end;
+  List.iter (function
+  | loc, l, Prog.AFalse ->
+      if results.(l) <> Box.bottom then
+        print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
+  | loc, l, Prog.ABound (v, inf, sup) ->
+      let r = Box.get_var dom v results.(l) in
+      if not (dom.incl r (intvl dom inf sup)) then
+        print_endline (Newspeak.string_of_loc loc ^ ": Bound check")
+  | loc, l, Prog.AEq (v, i) ->
+      let r = Box.get_var dom v results.(l) in
+      begin
+      if Options.get_verbose() then
+      Printf.fprintf stderr "eq check : r = %s, bound = {%d}\n" 
+        (dom.to_string r) i
+      end;
+      if not (dom.incl r (dom.from_val i)) then
+        print_endline (Newspeak.string_of_loc loc ^ ": Value is different")
+  ) watchpoints
+
+
+let solve wp dom (ln, v) =
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top;
   let (res, ops) =
@@ -77,4 +133,11 @@ let solve dom (ln, v) =
   in
   if (Options.get_verbose ()) then
     prerr_endline ("FP computed in "^string_of_int ops^" iterations");
+  if Options.get_solver () then begin
+    print_endline "---";
+    Array.iteri (fun i r ->
+        print_endline ("  - {id: "^ string_of_int i ^
+        ", "^ Box.yaml_dump dom r^"}")
+    ) res end;
+  compute_warn wp dom res;
   res

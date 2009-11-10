@@ -19,11 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val process : Prog.t -> string list -> 'a Domain.t
-                -> 'a Cfg.t * ( Newspeak.location
-                            * int
-                            * Prog.check) list
+val process : Prog.t -> string list
+                -> Cfg.t * ( Newspeak.location
+                         * int
+                         * Prog.check) list
 
-val dump_yaml : 'a Cfg.t -> string
+val dump_yaml : Cfg.t -> string
 
-val dump_dot : ?results:string array -> 'a Cfg.t -> string
+val dump_dot : ?results:string array -> Cfg.t -> string

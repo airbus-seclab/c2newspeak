@@ -19,8 +19,18 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a t = int * 'a vertex list
+type node = int
 
-and node = int
+type stmt =
+  | Nop
+  | Set   of Prog.lval * Prog.exp
+  | Guard of Prog.exp
+  | Push
+  | Pop
+  | Init of string list
 
-and 'a vertex = node * node * string * ('a Box.t -> 'a Box.t)
+type vertex = node * node * string * stmt
+
+type t = int * vertex list
+
+
