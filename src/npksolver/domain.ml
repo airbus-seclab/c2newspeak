@@ -1,5 +1,5 @@
 (*
-  This file is part of npksolver, a solver for Newspeak,
+  tHIS FIle is part of npksolver, a solver for Newspeak,
   a minimal language framework well suited for static analysis.
 
   This library is free software; you can redistribute it and/or
@@ -19,14 +19,27 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a t = { top       : 'a
-            ; bottom    : 'a
-            ; from_val  : int -> 'a
-            ; incl      : 'a -> 'a -> bool
-            ; join      : 'a -> 'a -> 'a
-            ; meet      : 'a -> 'a -> 'a
-            ; widen     : 'a -> 'a -> 'a
-            ; to_string : 'a -> string
-            ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
-            ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) option
-            }
+type 'a c_dom =
+  { top       : 'a
+  ; bottom    : 'a
+  ; from_val  : int -> 'a
+  ; incl      : 'a -> 'a -> bool
+  ; join      : 'a -> 'a -> 'a
+  ; meet      : 'a -> 'a -> 'a
+  ; widen     : 'a -> 'a -> 'a
+  ; to_string : 'a -> string
+  ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
+  ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) option
+  }
+
+type 't scope = 
+  { bind : 'a. 'a c_dom -> 't }
+
+type t =
+  { open_dom : 'a. 'a scope -> 'a }
+
+let pack imp =
+  { open_dom = fun scope -> scope.bind imp }
+
+let with_dom p e =
+  p.open_dom e

@@ -88,19 +88,17 @@ let guard = function
   | Not (Op (Gt, Lval (v,_), Const _)) (* v <= n *) -> Some (v, liftv Top)
   | Not (Op (Gt, Const _, Lval (v,_))) (* n <= v *) -> Some (v, liftv Top)
   | Not (Op (Eq, Lval (v,_), Const _)) (* v != n *) -> Some (v, liftv Top)
-                                    
-                                    
-                                    
   | e -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
-let dom = { Domain.top       = Top
-          ; Domain.bottom    = Bot
-          ; Domain.from_val  = (fun x -> Cst x)
-          ; Domain.incl      = (<=%)
-          ; Domain.join      = join
-          ; Domain.meet      = meet
-          ; Domain.widen     = (fun _a _b -> failwith "Const:widen")
-          ; Domain.to_string = to_string
-          ; Domain.eval      = eval
-          ; Domain.guard     = guard
-          }
+let dom =
+  { Domain.top       = Top
+  ; Domain.bottom    = Bot
+  ; Domain.from_val  = (fun x -> Cst x)
+  ; Domain.incl      = (<=%)
+  ; Domain.join      = join
+  ; Domain.meet      = meet
+  ; Domain.widen     = (fun _a _b -> failwith "Const:widen")
+  ; Domain.to_string = to_string
+  ; Domain.eval      = eval
+  ; Domain.guard     = guard
+  }

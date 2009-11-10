@@ -181,7 +181,7 @@ let run _ =
     let n = dom.to_string a ^ " W "
           ^ dom.to_string b ^ " = "
           ^ dom.to_string w in
-    assert_equal ~printer:dom.to_string (widen a b) w n
+    assert_equal ~printer:dom.to_string (dom.widen a b) w n
   in
 
   (* {} W x = x W {} = {} *)

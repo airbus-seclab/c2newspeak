@@ -23,6 +23,4 @@ type t
 
 val from_bounds : int -> int -> t
 
-val widen : t -> t -> t
-
-val dom : t Domain.t
+val dom : t Domain.c_dom

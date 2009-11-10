@@ -21,4 +21,4 @@
 
 type t
 
-val dom : t Domain.t
+val dom : t Domain.c_dom

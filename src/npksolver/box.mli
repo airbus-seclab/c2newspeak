@@ -29,22 +29,22 @@ val bottom : 'a t
 
 val singleton : Prog.lval -> 'a -> 'a t
 
-val join : 'a Domain.t -> 'a t -> 'a t -> 'a t
+val join : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
-val meet : 'a Domain.t -> 'a t -> 'a t -> 'a t
+val meet : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
-val widen : 'a Domain.t -> 'a t -> 'a t -> 'a t
+val widen : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
-val guard : 'a Domain.t -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
+val guard : 'a Domain.c_dom -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 
-val set_var : 'a Domain.t -> Prog.lval -> 'a -> 'a t -> 'a t
+val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
 
-val get_var : 'a Domain.t -> Prog.lval -> 'a t -> 'a
+val get_var : 'a Domain.c_dom -> Prog.lval -> 'a t -> 'a
 
-val push : 'a Domain.t -> 'a t -> 'a t
+val push : 'a Domain.c_dom -> 'a t -> 'a t
 
-val pop  : 'a Domain.t -> 'a t -> 'a t
+val pop  : 'a Domain.c_dom -> 'a t -> 'a t
 
-val to_string : 'a Domain.t -> 'a t -> string
+val to_string : 'a Domain.c_dom -> 'a t -> string
 
-val yaml_dump : 'a Domain.t -> 'a t -> string
+val yaml_dump : 'a Domain.c_dom -> 'a t -> string

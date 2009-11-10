@@ -19,4 +19,4 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val solve : (Newspeak.location * int * Prog.check) list -> 'a Domain.t -> Cfg.t -> 'a Box.t array
+val solve : (Newspeak.location * int * Prog.check) list -> 'a Domain.c_dom -> Cfg.t -> 'a Box.t array

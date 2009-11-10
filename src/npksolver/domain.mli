@@ -19,14 +19,24 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a t = { top       : 'a
-            ; bottom    : 'a
-            ; from_val  : int -> 'a
-            ; incl      : 'a -> 'a -> bool
-            ; join      : 'a -> 'a -> 'a
-            ; meet      : 'a -> 'a -> 'a
-            ; widen     : 'a -> 'a -> 'a
-            ; to_string : 'a -> string
-            ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
-            ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) option
-            }
+type 'a c_dom =
+  { top       : 'a
+  ; bottom    : 'a
+  ; from_val  : int -> 'a
+  ; incl      : 'a -> 'a -> bool
+  ; join      : 'a -> 'a -> 'a
+  ; meet      : 'a -> 'a -> 'a
+  ; widen     : 'a -> 'a -> 'a
+  ; to_string : 'a -> string
+  ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
+  ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) option
+  }
+
+type t
+
+val pack : 'a c_dom -> t
+
+type 't scope = 
+  { bind : 'a. 'a c_dom -> 't }
+
+val with_dom : t -> 'a scope -> 'a

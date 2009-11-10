@@ -43,10 +43,10 @@ module Alist : sig
   type 'a t
   val empty : 'a t
   val singleton : Prog.lval -> 'a -> 'a t
-  val merge : 'a Domain.t -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
-  val replace : 'a Domain.t -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
+  val merge : 'a Domain.c_dom -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
+  val replace : 'a Domain.c_dom -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
   val map : (Prog.lval -> 'a -> 'b) -> 'a t -> 'b list
-  val assoc : 'a Domain.t -> Prog.lval -> 'a t -> 'a
+  val assoc : 'a Domain.c_dom -> Prog.lval -> 'a t -> 'a
 end = struct
   (** Invariants : - list is sorted according to varcmp
    *               - there are no "top" elements

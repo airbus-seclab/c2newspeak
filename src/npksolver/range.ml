@@ -188,14 +188,16 @@ let guard e =
                                           )
   | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
-let dom = { Domain.top       = top
-          ; Domain.bottom    = bottom
-          ; Domain.from_val  = (fun n -> from_bounds n n)
-          ; Domain.incl      = (<=%)
-          ; Domain.join      = join
-          ; Domain.meet      = meet
-          ; Domain.widen     = widen
-          ; Domain.to_string = to_string
-          ; Domain.eval      = eval
-          ; Domain.guard     = guard
-          }
+let dom =
+  { Domain.top       = top
+  ; Domain.bottom    = bottom
+  ; Domain.from_val  = (fun n -> from_bounds n n)
+  ; Domain.incl      = (<=%)
+  ; Domain.join      = join
+  ; Domain.meet      = meet
+  ; Domain.widen     = widen
+  ; Domain.to_string = to_string
+  ; Domain.eval      = eval
+  ; Domain.guard     = guard
+  }
+

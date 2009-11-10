@@ -25,30 +25,31 @@ let display_version _ =
   print_endline "Author  : Etienne Millon";
   print_endline "Contact : etienne DOT millon AT eads DOT net"
 
-let output_graphviz ?results cfg =
+let output_graphviz dom ?results cfg =
+  if (Options.get_graphviz ()) then
   let file = open_out "cfg.dot" in
+  let results = match results with
+  | None   -> None
+  | Some r -> Some (Array.map (Box.to_string dom) r) in
   output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
 
-let handle_file_npk dom fname =
+let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
-  let (cfg, watchpoints) = Mkcfg.process prg vars in
-  if (Options.get_cfg_only ()) then
-    begin
-    if (Options.get_graphviz ()) then
-    begin
-      output_graphviz cfg
-    end;
-    print_endline (Mkcfg.dump_yaml cfg)
-    end
-  else
-    let res = Fixpoint.solve watchpoints dom cfg in
-    begin
-    if (Options.get_graphviz ()) then
-      let r = Array.map (Box.to_string dom) res in
-      output_graphviz ~results:r cfg
-    end
+  let (cfg, wpts) = Mkcfg.process prg vars in
+  { Domain.bind = fun dom ->
+    if (Options.get_cfg_only ()) then
+      begin
+      output_graphviz dom cfg;
+      print_endline (Mkcfg.dump_yaml cfg)
+      end
+    else
+      begin
+      let results = Fixpoint.solve wpts dom cfg in
+      output_graphviz dom ~results cfg;
+      end
+  }
 
 let fname_suffix str =
   let dot = String.rindex str '.' in
@@ -64,12 +65,13 @@ let c2newspeak fname =
 
 let handle_file fname =
   let sfx = fname_suffix fname in
-  let handle = 
-    begin
-      match Options.get_domain () with
-      | Options.Const     -> handle_file_npk Const.dom
-      | Options.Range     -> handle_file_npk Range.dom
-    end
+  let dom = 
+    match Options.get_domain () with
+    | Options.Const -> Domain.pack Const.dom
+    | Options.Range -> Domain.pack Range.dom
+  in
+  let handle fname =
+    Domain.with_dom dom (handle_file_npk fname)
   in
   if (String.compare sfx "npk" = 0) then
     handle fname
