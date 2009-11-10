@@ -43,3 +43,6 @@ let pack imp =
 
 let with_dom p e =
   p.open_dom e
+
+let do_nothing =
+  { bind =  fun _ -> () }

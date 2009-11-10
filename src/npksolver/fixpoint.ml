@@ -123,7 +123,8 @@ let compute_warn watchpoints dom results =
   ) watchpoints
 
 
-let solve wp dom (ln, v) =
+let solve wp (ln, v) =
+  { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top;
   let (res, ops) =
@@ -140,4 +141,5 @@ let solve wp dom (ln, v) =
         ", "^ Box.yaml_dump dom r^"}")
     ) res end;
   compute_warn wp dom res;
-  res
+  Array.map (Box.to_string dom) res
+  }

@@ -40,3 +40,5 @@ type 't scope =
   { bind : 'a. 'a c_dom -> 't }
 
 val with_dom : t -> 'a scope -> 'a
+
+val do_nothing : unit scope

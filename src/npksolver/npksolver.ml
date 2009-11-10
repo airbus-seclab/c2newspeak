@@ -25,31 +25,32 @@ let display_version _ =
   print_endline "Author  : Etienne Millon";
   print_endline "Contact : etienne DOT millon AT eads DOT net"
 
-let output_graphviz dom ?results cfg =
+let output_graphviz ?results cfg =
   if (Options.get_graphviz ()) then
   let file = open_out "cfg.dot" in
-  let results = match results with
-  | None   -> None
-  | Some r -> Some (Array.map (Box.to_string dom) r) in
   output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
+
+let (-->) (f:'a Domain.scope) (g:'a -> 'b) :'b Domain.scope = 
+  { Domain.bind =
+      fun x ->
+        g (f.Domain.bind x)
+  }
 
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
   let (cfg, wpts) = Mkcfg.process prg vars in
-  { Domain.bind = fun dom ->
+  let graph_results results = output_graphviz ~results cfg in
     if (Options.get_cfg_only ()) then
       begin
-      output_graphviz dom cfg;
-      print_endline (Mkcfg.dump_yaml cfg)
+      output_graphviz cfg;
+      print_endline (Mkcfg.dump_yaml cfg);
+      Domain.do_nothing
       end
     else
-      begin
-      let results = Fixpoint.solve wpts dom cfg in
-      output_graphviz dom ~results cfg;
-      end
-  }
+      Fixpoint.solve wpts cfg
+      --> graph_results
 
 let fname_suffix str =
   let dot = String.rindex str '.' in
