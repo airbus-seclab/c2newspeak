@@ -281,7 +281,8 @@ let process glb_tbl prog =
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 
-	apply_rel f memlocs unreach tr1 reach rel_list
+      let post = apply_rel f memlocs tr1 reach rel_list in
+	State.glue unreach post
 
     with Not_found -> 
       try 
@@ -308,7 +309,7 @@ let process glb_tbl prog =
       let env = { cur_fun = f; height = height_of_ftyp ft; lbl_tbl = [] } in
 	process_blk env body pre
 	  
-  and apply_rel f memlocs unreach tr1 reach rel_list =
+  and apply_rel f memlocs tr1 reach rel_list =
     let rec apply rel_list =
       match rel_list with
 	  [] -> 
@@ -316,7 +317,6 @@ let process glb_tbl prog =
 	    let post = process_fun f reach in
 (* TODO: could this code be factored with the other case?? *)
 	    let s = State.transport (Subst.invert tr1) post in
-	    let s = State.glue unreach s in
 	      (s, (reach, post)::[])
 	| (pre, post)::tl -> 
 	    try
@@ -337,7 +337,7 @@ let process glb_tbl prog =
 (* TODO: push this code back up!!! *)
 	      let tr = Subst.invert (Subst.compose tr1 tr2) in
 	      let s = State.transport tr post in
-		(State.glue unreach s, rel_list)
+		(s, rel_list)
 	    with Exceptions.Unknown -> 
 	      let (s, tl) = apply tl in
 		(s, (pre, post)::tl)
