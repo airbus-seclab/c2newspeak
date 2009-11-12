@@ -87,7 +87,7 @@ let rec pcomp_stmt (sk, loc) =
   | InfLoop b           -> Some (Prog.InfLoop (pcomp_blk b))
   | DoWith (b1, l, b2)  -> Some (Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2))
   | Goto l              -> Some (Prog.Goto l)
-  | UserSpec [IdentToken "widen"] -> Options.set_widening (); None
+  | UserSpec [IdentToken "widen"] -> Options.set Options.widening true; None
   | UserSpec [IdentToken "assert"
              ;IdentToken "false"] -> Some (Prog.Assert Prog.AFalse)
   | UserSpec [IdentToken "assert"
