@@ -25,6 +25,9 @@
 
 open Newspeak
 
+module Map = Map.Make(Memloc)
+module Set = Set.Make(Memloc)
+
 (* TODO: try to factor as much code as possible with fieldInsensitiveBuf *)
 
 (* offset, delta, size of the zone *)
@@ -86,8 +89,6 @@ let string_of_info x (y, o) =
 let memlocs_of_info v = List.map (fun (x, _) -> x) v
 
 let subst_info tr v = List.map (fun (x, o) -> (Subst.apply tr x, o)) v
-
-module Map = Map.Make(Memloc)
 
 type t = info Map.t
 
@@ -232,6 +233,98 @@ let split memlocs s =
     with Exit -> ()
     end;
     (!unreach, !reach, !vars)
+
+
+(*
+  merges nodes that are indistiguashible by access path from memlocs
+  pseudo-code:
+  P = { {x} | x in Init } \cup { x | notin Init }
+  W = { {x} | x in Init }
+  while W <> 0 do
+    get X from W
+    Y = succ (X)
+    for all R in P such that R \inter Y <> 0 and R notincludedin Y do
+      R1 = R \inter Y
+      R2 = R \ R1
+      P = (P\ {R}) \cup {R1, R2}
+      if R \in W then W = (W\{R}) \cup {R1, R2} 
+      else W = W \cup R1
+    done
+  done
+*)
+let normalize memlocs s =
+  let succ x = 
+    let res = ref Set.empty in
+    let add_succ x =
+      try 
+	let y = Map.find x s in
+	let y = memlocs_of_info y in
+	  List.iter (fun x -> res := Set.add x !res) y
+      with Not_found -> ()
+    in
+      Set.iter add_succ x;
+      !res
+  in
+
+
+  (* mapping from variables to equivalence class (set of variables) *)
+  let partition = ref Map.empty in
+  (* worklist of sets of variables to process *)
+  let worklist = ref [] in
+
+  let add_partition nodes =
+    Set.iter (fun x -> partition := Map.add x nodes !partition) nodes
+  in    
+
+  let init x = 
+    let set_x = Set.singleton x in
+      partition := Map.add x set_x !partition;
+      worklist := set_x::!worklist
+  in
+
+    List.iter init memlocs;
+    begin
+      try
+	while true do
+	  match !worklist with
+	      x::tl -> 
+		worklist := tl;
+		let y = succ x in
+		let new_nodes = ref Set.empty in
+		let nodes = ref [] in
+		let add_node n =
+		  try
+		    let r = Map.find n !partition in
+		      if not (Set.subset r y) then begin
+			if not (List.mem r !nodes) then begin
+			  nodes := r::!nodes
+			end
+		      end
+		  with Not_found -> new_nodes := Set.add n !new_nodes
+		in
+		  Set.iter add_node y;
+		  
+		  if not (Set.is_empty !new_nodes) then begin
+		    add_partition !new_nodes;
+		    worklist := !new_nodes::!worklist
+		  end;
+		  
+		  let add_node r =
+		    let r1 = Set.inter r y in
+		    let r2 = Set.diff r y in
+		      add_partition r1;
+		      add_partition r2;
+		      worklist := r1::!worklist
+		  in
+		  List.iter add_node !nodes;
+		  ()
+
+	    | [] -> raise Exit
+	done
+      with Exit -> ()
+    end;
+    s
+
     
 (* TODO: O(n) expensive? 
    Have the inverse map?

@@ -275,13 +275,25 @@ let process glb_tbl prog =
       let globals = Hashtbl.find glb_tbl f in
       let globals = List.map Memloc.of_global globals in
       let memlocs = locals@globals in
+(* splits the store into reachable and unreachable 
+   (from globals and function arguments) portions
+*)
       let (unreach, reach) = State.split memlocs s in
+
+(* do parameter passing (could/should? do this before??) that way locals 
+   are built only once?? *)
       let tr = Subst.build_param_map env.height locals_nb in
       let reach = State.transport tr reach in
+   
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 
+(* TODO:
+   let test = State.normalize memlocs reach in
+*)
+
       let post = apply_rel f memlocs reach rel_list in
+
       let post = State.transport (Subst.invert tr) post in
 	State.glue unreach post
 

@@ -254,6 +254,11 @@ let split memlocs s =
 (* TODO: not nice to have the possibility of emptyset!!! *)
     | None -> (None, None)
 
+let normalize memlocs s =
+  match s with
+      Some s -> Some (Store.normalize memlocs s)
+    | None -> None
+
 let transport tr s =
   match s with
       Some s -> Some (Store.transport tr s)

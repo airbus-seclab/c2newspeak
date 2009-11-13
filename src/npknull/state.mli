@@ -68,3 +68,5 @@ val glue: t -> t -> t
 val exp_to_fun: int -> t -> exp -> string list
 
 val exp_is_valid: int -> t -> exp -> bool
+
+val normalize: Memloc.t list -> t -> t
