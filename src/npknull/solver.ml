@@ -288,10 +288,9 @@ let process glb_tbl prog =
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 
-(* TODO:
-   let test = State.normalize memlocs reach in
+(* TODO      let test = State.normalize memlocs reach in
+	print_endline (State.to_string test);
 *)
-
       let post = apply_rel f memlocs reach rel_list in
 
       let post = State.transport (Subst.invert tr) post in

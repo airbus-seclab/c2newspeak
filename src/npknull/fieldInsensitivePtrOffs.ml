@@ -88,7 +88,11 @@ let string_of_info x (y, o) =
 
 let memlocs_of_info v = List.map (fun (x, _) -> x) v
 
-let subst_info tr v = List.map (fun (x, o) -> (Subst.apply tr x, o)) v
+let subst_info tr v = 
+  let res = ref [] in
+  let add_info (x, o) = res := insert_info (Subst.apply tr x, o) !res in
+    List.iter add_info v;
+    !res
 
 type t = info Map.t
 
@@ -233,7 +237,37 @@ let split memlocs s =
     with Exit -> ()
     end;
     (!unreach, !reach, !vars)
+  
+    
+(* TODO: O(n) expensive? 
+   Have the inverse map?
+   TOOD: code very similar to shift??
+   shouldn't it be better to iterated on the substitution only?? and keep the
+   map unchanged?? 
+*)
+let transport tr s =
+  let res = ref Map.empty in
+  let subst m info =
+    let m = Subst.apply tr m in
+    let info = subst_info tr info in
+      res := Map.add m info !res
+  in
+    Map.iter subst s;
+    !res
 
+(* tr is a substition of many to one
+   TODO: could factor with transport ??
+ *)
+let merge tr s =
+  let res = ref Map.empty in
+  let add_node m info =
+    let m = Subst.apply tr m in
+    let info = subst_info tr info in
+    let info = try join_info info (Map.find m !res) with Not_found -> info in
+      res := Map.add m info !res
+  in
+    Map.iter add_node s;
+    !res
 
 (*
   merges nodes that are indistiguashible by access path from memlocs
@@ -323,24 +357,18 @@ let normalize memlocs s =
 	done
       with Exit -> ()
     end;
-    s
-
     
-(* TODO: O(n) expensive? 
-   Have the inverse map?
-   TOOD: code very similar to shift??
-   shouldn't it be better to iterated on the substitution only?? and keep the
-   map unchanged?? 
-*)
-let transport tr s =
-  let res = ref Map.empty in
-  let subst m info =
-    let m = Subst.apply tr m in
-    let info = subst_info tr info in
-      res := Map.add m info !res
-  in
-    Map.iter subst s;
-    !res
+    (* a list of nodes to merge *)
+    let res = ref [] in
+    let add_merge x s = 
+      if Set.cardinal s <> 1 then begin
+	let y = Set.min_elt s in
+	  res := (x, y)::!res;
+      end
+    in
+      Map.iter add_merge !partition;
+      
+      merge !res s
 
 let glue s1 s2 =
   let res = ref s1 in

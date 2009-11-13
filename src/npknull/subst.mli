@@ -23,7 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
+(* TODO: abstract this type away!!
+   not good!!!
+*)
+type t = (Memloc.t * Memloc.t) list
 
 val build_param_map: int -> int -> t
 
