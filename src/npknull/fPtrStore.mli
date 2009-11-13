@@ -47,8 +47,10 @@ val to_string: t -> string
 
 val split: Memloc.t list -> t -> (t * t)
 
-val transport: Subst.t -> t -> t
-
 val glue: t -> t -> t
 
 val read: t -> Memloc.t -> string list
+
+val transport: Subst.t -> t -> t
+(* TODO: factor code with transport *)
+val normalize: Subst.t -> t -> t

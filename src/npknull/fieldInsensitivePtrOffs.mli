@@ -72,4 +72,4 @@ val read: t -> Memloc.t -> (Memloc.t * num_pred) list
 
 val test: unit -> unit
 
-val normalize: Memloc.t list -> t -> t
+val normalize: Memloc.t list -> t -> (Subst.t * t)

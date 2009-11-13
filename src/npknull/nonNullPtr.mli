@@ -50,9 +50,12 @@ val to_string: t -> string
 
 val split: Memloc.t list -> t -> (t * t)
 
-val transport: Subst.t -> t -> t
-
 val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it *)
 val read_addr: t -> Dom.addr -> (Memloc.t * int option)
+
+val transport: Subst.t -> t -> t
+
+(* TODO: try to merge this with transport!!! *)
+val normalize: Subst.t -> t -> t

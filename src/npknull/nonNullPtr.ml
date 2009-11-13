@@ -151,6 +151,13 @@ let split memlocs s =
     List.iter add_memloc memlocs;
     (!unreach, !reach)
     
+let glue s1 s2 =
+  let res = ref s1 in
+  let add_info x y = res := Map.add x y !res in
+    Map.iter add_info s2;
+    !res
+
+
 (* TODO: O(n) expensive? 
    Have the inverse map?
    TOOD: code very similar to shift??
@@ -164,10 +171,15 @@ let transport tr s =
     Map.iter subst s;
     !res
 
-let glue s1 s2 =
-  let res = ref s1 in
-  let add_info x y = res := Map.add x y !res in
-    Map.iter add_info s2;
+(* TODO: factor this code with transport *)
+let normalize tr s =
+  let res = ref Map.empty in
+  let add_info m i = 
+    let m = Subst.apply tr m in
+    let i = try list_meet i (Map.find m !res) with Not_found -> i in
+      res := Map.add m i !res
+  in
+    Map.iter add_info s;
     !res
 
 (* usefull for debug *)

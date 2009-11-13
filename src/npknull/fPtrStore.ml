@@ -164,6 +164,18 @@ let transport tr s =
     Map.iter subst s;
     !res
 
+(* TODO: factor code with transport *)
+let normalize tr s =
+  let res = ref Map.empty in
+  let subst m info =
+    let m = Subst.apply tr m in
+    let info = try list_join info (Map.find m !res) with Not_found -> info in
+      res := Map.add m info !res
+  in
+    Map.iter subst s;
+    !res
+  
+
 let glue s1 s2 =
   let res = ref s1 in
   let add_info x y = res := Map.add x y !res in
