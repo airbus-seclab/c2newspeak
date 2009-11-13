@@ -23,15 +23,26 @@ type fp_algorithm =
   | Roundrobin
   | Worklist
 
-val set_cfg_only : unit   -> unit val get_cfg_only : unit -> bool
-val set_verbose  : unit   -> unit val get_verbose  : unit -> bool
-val set_graphviz : unit   -> unit val get_graphviz : unit -> bool
-val set_widening : unit   -> unit val get_widening : unit -> bool
-val set_fp_algo  : string -> unit val get_fp_algo  : unit -> fp_algorithm
-val set_solver   : unit   -> unit val get_solver   : unit -> bool
+type 'a control
+
+type 'a c_control
+
+val set : 'a control -> 'a -> unit
+val get : 'a control -> 'a
+
+val cfg_only : bool control
+val verbose  : bool control
+val graphviz : bool control
+val widening : bool control
+val solver   : bool control
+val fp_algo : fp_algorithm c_control
+
+val set_cc : 'a c_control -> string -> unit
+val get_cc : 'a c_control -> 'a
 
 type opt_action =
   | Help
+  | Set  of bool control
   | Call of (unit -> unit)
   | Carg of (string -> unit)
 

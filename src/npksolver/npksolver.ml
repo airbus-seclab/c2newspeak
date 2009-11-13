@@ -24,8 +24,8 @@ let domain_str = function
   | "r" -> Domain.pack Range.dom
   | s    -> invalid_arg ("no such domain : "^s)
 
-let     domain = ref (Domain.pack Range.dom)
-let set_domain x =   domain := domain_str x
+let       domain = ref (Domain.pack Range.dom)
+let set_domain x = domain := domain_str x
 
 let display_version _ =
   print_endline ("Version : " ^ Version.version ^ " -  rev " ^ Version.revision);
@@ -34,7 +34,7 @@ let display_version _ =
   print_endline "Contact : etienne DOT millon AT eads DOT net"
 
 let output_graphviz ?results cfg =
-  if (Options.get_graphviz ()) then
+  if (Options.get Options.graphviz) then
   let file = open_out "cfg.dot" in
   output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
@@ -50,7 +50,7 @@ let handle_file_npk fname =
   let (prg, vars) = Pcomp.compile npk in
   let (cfg, wpts) = Mkcfg.process prg vars in
   let graph_results results = output_graphviz ~results cfg in
-    if (Options.get_cfg_only ()) then
+    if (Options.get Options.cfg_only) then
       begin
       output_graphviz cfg;
       print_endline (Mkcfg.dump_yaml cfg);
@@ -96,7 +96,7 @@ let main args =
   [ 'a'
   , "algorithm"
   , "select a fixpoint algorithm (rr : roundrobin, wl : worklist (default))"
-  , Options.Carg Options.set_fp_algo
+  , Options.Carg (Options.set_cc Options.fp_algo)
   ; 'd' , "domain"
   , "select a domain (c : constants, r : ranges, at : array_top (default))"
   , Options.Carg set_domain
@@ -105,19 +105,19 @@ let main args =
   , Options.Help
   ; 'g', "cfg"
   , "dump (YAML) control flow graph and exit"
-  , Options.Call Options.set_cfg_only
+  , Options.Set Options.cfg_only
   ; 'r', "graphviz"
   , "output in to cfg.dot (graphviz)"
-  , Options.Call Options.set_graphviz
+  , Options.Set Options.graphviz
   ; 's', "solver"
   , "display solver output"
-  , Options.Call Options.set_solver
+  , Options.Set Options.solver
   ; 't', "selftest"
   , "run unit tests (output TAP)"
   , Options.Carg run_selftests
   ; 'v', "verbose"
   , "output more information"
-  , Options.Call Options.set_verbose
+  , Options.Set Options.verbose
   ; 'V', "version"
   , "show version number"
   , Options.Call display_version

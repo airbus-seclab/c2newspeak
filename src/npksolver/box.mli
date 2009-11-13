@@ -23,11 +23,11 @@
 
 type 'a t
 
-val top : 'a t
+val top : 'a Domain.c_dom -> 'a t
 
 val bottom : 'a t
 
-val singleton : Prog.lval -> 'a -> 'a t
+val singleton : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
 
 val join : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
@@ -35,7 +35,7 @@ val meet : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
 val widen : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
-val guard : 'a Domain.c_dom -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
+val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 
 val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
 
@@ -48,3 +48,5 @@ val pop  : 'a Domain.c_dom -> 'a t -> 'a t
 val to_string : 'a Domain.c_dom -> 'a t -> string
 
 val yaml_dump : 'a Domain.c_dom -> 'a t -> string
+
+val equal : 'a t -> 'a t -> bool

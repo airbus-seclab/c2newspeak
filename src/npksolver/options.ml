@@ -28,32 +28,33 @@ let fp_alg_str = function
   | "wl" -> Worklist
   | s    -> invalid_arg ("no such fixpoint algorithm : "^s)
 
-let     widening = ref false
-let set_widening _ =   widening := true
-let get_widening _ = ! widening
+type 'a control = 'a ref
 
-let     verbose = ref false
-let set_verbose _ =   verbose := true
-let get_verbose _ = ! verbose
+type 'a c_control = (string -> 'a) * 'a control
 
-let     cfg_only = ref false
-let set_cfg_only _ =   cfg_only := true
-let get_cfg_only _ = ! cfg_only
+let set c x =
+  c := x
 
-let     graphviz = ref false
-let set_graphviz _ =   graphviz := true
-let get_graphviz _ = ! graphviz
+let get c =
+  !c
 
-let     fp_algo  = ref Worklist
-let set_fp_algo x =   fp_algo := fp_alg_str x
-let get_fp_algo _ = ! fp_algo
+let set_cc (f,r) s =
+  set r (f s)
 
-let     solver = ref false
-let set_solver _ =   solver := true
-let get_solver _ = ! solver
+let get_cc (_,r) =
+  get r
+
+let widening = ref false
+let verbose = ref false
+let cfg_only = ref false
+let graphviz = ref false
+let solver = ref false
+
+let fp_algo  = (fp_alg_str, ref Worklist)
 
 type opt_action =
   | Help
+  | Set  of bool control
   | Call of (unit -> unit)
   | Carg of (string -> unit)
 
@@ -82,6 +83,7 @@ let parse_cmdline o handle argv =
         | (_,_,_,Help  )::[] -> display_help (); None
         | (_,_,_,Call f)::[] -> f () ; None
         | (_,_,_,Carg f)::[] -> Some f
+        | (_,_,_,Set c)::[]  -> set c true; None
         | _::_::_ -> invalid_arg "Several matches"
         | [] -> invalid_arg "No such option"
       end

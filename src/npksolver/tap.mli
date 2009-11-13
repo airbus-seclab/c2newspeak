@@ -28,7 +28,12 @@ val test_end : unit -> unit
 
 val test_ok : string -> unit
 
-val assert_equal : ?printer:('a -> string) -> 'a -> 'a -> string -> unit
+val assert_equal : ?cmp:('a -> 'a -> bool)
+                -> ?printer:('a -> string)
+                -> 'a
+                -> 'a
+                -> string
+              -> unit
 
 val assert_equal_int : int -> int -> string -> unit
 

@@ -41,41 +41,55 @@ let prog_from_var = function
 module Alist : sig
   (** Association list *)
   type 'a t
-  val empty : 'a t
-  val singleton : Prog.lval -> 'a -> 'a t
-  val merge : 'a Domain.c_dom -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
-  val replace : 'a Domain.c_dom -> Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
+  val empty : 'a Domain.c_dom -> 'a t
+  val singleton : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
+  val equal : 'a t -> 'a t -> bool
+  val merge : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
+  val replace : Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
   val map : (Prog.lval -> 'a -> 'b) -> 'a t -> 'b list
-  val assoc : 'a Domain.c_dom -> Prog.lval -> 'a t -> 'a
+  val assoc : Prog.lval -> 'a t -> 'a
 end = struct
   (** Invariants : - list is sorted according to varcmp
    *               - there are no "top" elements
    *)
-  type 'a t = (var * 'a) list
+  type 'a t = { dom: 'a Domain.c_dom
+              ; lst: (var * 'a) list
+              }
 
-  let empty = []
+  let empty dom = { dom = dom ; lst = [] }
 
-  let singleton k x =
+  let singleton dom k x =
     let k' = var_from_prog k in
-    (k', x)::[]
+    { lst = (k', x)::[] ; dom = dom }
 
-  let rec merge dom f x1 x2 = match (x1, x2) with
-    | [], _  -> Some x2
-    | _ , [] -> Some x1
-    | (s1,r1)::t1, (s2,r2)::t2 ->
-        match varcmp s1 s2 with
-        | 0 -> begin
-                 let r = f r1 r2 in
-                 if r = dom.bottom then None
-                 else if r = dom.top
-                 then         merge dom f t1 t2
-                 else
-                   may_cons (s1, r) (merge dom f t1 t2)
-               end
-        | x when x < 0 -> may_cons (s1,r1) (merge dom f t1 x2)
-        | _  (* > 0 *) -> may_cons (s2,r2) (merge dom f x1 t2)
+  let equal a b =
+    a.lst = b.lst
 
-  let rec replace dom var f = function
+  let merge f x1 x2 =
+    let dom = x1.dom in
+    let rec merge_l x1 x2 =
+      match (x1, x2) with
+      | [], _  -> Some x2
+      | _ , [] -> Some x1
+      | (s1,r1)::t1, (s2,r2)::t2 ->
+          match varcmp s1 s2 with
+          | 0 -> begin
+                   let r = f r1 r2 in
+                   if r = dom.bottom then None
+                   else if r = dom.top
+                   then         merge_l t1 t2
+                   else
+                     may_cons (s1, r) (merge_l t1 t2)
+                 end
+          | x when x < 0 -> may_cons (s1,r1) (merge_l t1 x2)
+          | _  (* > 0 *) -> may_cons (s2,r2) (merge_l x1 t2)
+    in
+    Utils.may (fun l -> { dom = dom ; lst = l })
+              (merge_l x1.lst x2.lst)
+
+  let replace var f x =
+    let dom = x.dom in
+    let rec repl_l = function
     | [] -> Some []
     | (s, r)::t -> match varcmp s (var_from_prog var) with
       | 0 -> begin
@@ -87,16 +101,23 @@ end = struct
                      then Some t
                      else Some ((s, fr)::t)
              end (* XXX may *)
-      | x when x < 0 -> may_cons (s, r) (replace dom var f t)
+      | x when x < 0 -> may_cons (s, r) (repl_l t)
       | _ (* > 0 *)  -> Some ((s, r)::t)
+    in
+    Utils.may (fun l -> { dom = dom ; lst = l })
+              (repl_l x.lst)
 
-  let map f =
-    List.map (fun (k, x) -> f (prog_from_var k) x)
+  let map f x =
+    List.map (fun (k, x) -> f (prog_from_var k) x) x.lst
 
-  let rec assoc dom v = function
+  let assoc v x =
+    let dom = x.dom in
+    let rec assoc_l = function
     | (v', x)::_ when (var_from_prog v) = v'          -> x
-    | (v', _)::t when varcmp (var_from_prog v) v' > 0 -> assoc dom v t
+    | (v', _)::t when varcmp (var_from_prog v) v' > 0 -> assoc_l t
     | _ -> dom.top
+    in
+    assoc_l x.lst
 
 end
 
@@ -106,7 +127,13 @@ type 'a box = { store : 'a Alist.t ; esp : int }
 
 type 'a t = 'a box lift
 
-let top = Some {store = Alist.empty ; esp = 0}
+let equal a b = match (a, b) with
+  | None, None -> true
+  | Some a, Some b ->    a.esp = b.esp
+                      && Alist.equal a.store b.store
+  | _ -> false
+
+let top dom = Some {store = Alist.empty dom ; esp = 0}
 
 let bottom = None
 
@@ -128,17 +155,17 @@ let bind2_l f x y =
 let bind2' f =
   bind2 (bind_store f)
 
-let join  dom = bind2_l (Alist.merge dom dom.join)
-let meet  dom = bind2'  (Alist.merge dom dom.meet)
-let widen dom = bind2'  (Alist.merge dom dom.widen)
+let join  dom = bind2_l (Alist.merge dom.join)
+let meet  dom = bind2'  (Alist.merge dom.meet)
+let widen dom = bind2'  (Alist.merge dom.widen)
 
-let singleton v r =
-  Some { store = Alist.singleton v r ; esp = 0 }
+let singleton dom v r =
+  Some { store = Alist.singleton dom v r ; esp = 0 }
 
-let guard dom var f =
+let guard var f =
   bind (fun x ->
   update_store
-    (Alist.replace dom var f (x.store)) x
+    (Alist.replace var f (x.store)) x
   )
 
 let adjust_esp esp =
@@ -149,18 +176,16 @@ let adjust_esp esp =
 let set_var dom v r =
   bind (fun x ->
     update_store
-    (Alist.merge dom
-                     (fun a _ -> a)
-                     (Alist.singleton (adjust_esp x.esp v) r)
-                     x.store
+    (Alist.merge (fun a _ -> a)
+                 (Alist.singleton dom (adjust_esp x.esp v) r)
+                 x.store
       ) x
   )
 
 let get_var dom v =
   maybe dom.bottom
     (fun x ->
-       Alist.assoc dom 
-                   (adjust_esp x.esp v)
+       Alist.assoc (adjust_esp x.esp v)
                    x.store
     )
 
@@ -173,7 +198,7 @@ let pop dom =
   bind (fun x ->
   bind (fun s' ->
         Some { store = s' ; esp = x.esp - 1 }
-        ) (Alist.replace dom (Prog.L x.esp)
+        ) (Alist.replace (Prog.L x.esp)
           (fun _ -> dom.top) x.store
       )
   )

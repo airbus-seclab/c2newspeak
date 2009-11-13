@@ -54,8 +54,8 @@ let test_condition msg condition reason =
   else
     test_not_ok msg reason
 
-let assert_equal ?printer actual expected msg =
-  test_condition msg (expected = actual)
+let assert_equal ?(cmp=(=)) ?printer actual expected msg =
+  test_condition msg (cmp expected actual)
     (match printer with None -> None
       | Some p -> Some ("Expected : "^p expected
                       ^ " but got : "^p actual))
