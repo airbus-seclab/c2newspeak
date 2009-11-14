@@ -52,5 +52,9 @@ val glue: t -> t -> t
 val read: t -> Memloc.t -> string list
 
 val transport: Subst.t -> t -> t
+
+(* TODO: factor code with transport *)
+val transport_invert: (Memloc.t * Memloc.t list) list -> t -> t
+
 (* TODO: factor code with transport *)
 val normalize: Subst.t -> t -> t

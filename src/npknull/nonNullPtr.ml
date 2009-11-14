@@ -171,6 +171,19 @@ let transport tr s =
     Map.iter subst s;
     !res
 
+(* TODO: factor with transport *)
+let transport_invert tr s =
+(* TODO: this subst_apply also in FieldInsensitivePtrOffset.transport_invert
+   find a way to factor (by putting out the transport data-structure??? *)
+  let subst_apply x = try List.assoc x tr with Not_found -> x::[] in
+  let res = ref Map.empty in
+  let subst m info =
+    let m = subst_apply m in
+      List.iter (fun m -> res := Map.add m info !res) m
+  in
+    Map.iter subst s;
+    !res
+
 (* TODO: factor this code with transport *)
 let normalize tr s =
   let res = ref Map.empty in

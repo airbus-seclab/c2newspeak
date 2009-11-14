@@ -255,6 +255,27 @@ let transport tr s =
     Map.iter subst s;
     !res
 
+(* TODO: think about it, factor this code with transport!! *)
+let transport_invert tr s =
+  let subst_apply x = try List.assoc x tr with Not_found -> x::[] in
+  let subst_info v = 
+    let res = ref [] in
+    let add_info (x, o) =
+      let x = subst_apply x in
+	List.iter (fun x -> res := insert_info (x, o) !res) x
+    in
+      List.iter add_info v;
+      !res
+  in
+  let res = ref Map.empty in
+  let subst m info = 
+    let m = subst_apply m in
+    let info = subst_info info in
+      List.iter (fun m -> res := Map.add m info !res) m
+  in
+    Map.iter subst s;
+    !res
+
 (* tr is a substition of many to one
    TODO: could factor with transport ??
  *)

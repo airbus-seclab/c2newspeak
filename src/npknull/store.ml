@@ -328,10 +328,29 @@ let normalize memlocs (s1, s2, s3) =
   let (tr, s1) = P1.normalize memlocs s1 in
   let s2 = P2.normalize tr s2 in
   let s3 = P3.normalize tr s3 in
-    (s1, s2, s3)
+    ((s1, s2, s3), tr)
 
 let transport tr (s1, s2, s3) = 
   (P1.transport tr s1, P2.transport tr s2, P3.transport tr s3)
+
+let transport_invert tr (s1, s2, s3) =
+  let rec invert tr =
+    match tr with
+	[] -> []
+      |	(x, y)::tl -> 
+	  let tr = invert tl in
+	    try
+	      let im = List.assoc y tr in
+	      let tr = List.remove_assoc y tr in
+	      let tr = (y, x::im)::tr in
+		tr
+	    with Not_found -> (y, x::[])::tr
+  in
+  let tr = invert tr in
+  let s1 = P1.transport_invert tr s1 in
+  let s2 = P2.transport_invert tr s2 in
+  let s3 = P3.transport_invert tr s3 in
+    (s1, s2, s3)
 
 let glue (a1, a2, a3) (b1, b2, b3) = 
   (P1.glue a1 b1, P2.glue a2 b2, P3.glue a3 b3)

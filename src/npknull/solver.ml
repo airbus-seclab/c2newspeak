@@ -282,20 +282,28 @@ let process glb_tbl prog =
 
 (* do parameter passing (could/should? do this before??) that way locals 
    are built only once?? *)
-      let tr = Subst.build_param_map env.height locals_nb in
-      let reach = State.transport tr reach in
+      let tr1 = Subst.build_param_map env.height locals_nb in
+      let reach = State.transport tr1 reach in
    
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 
-(* TODO:
-      let test = State.normalize memlocs reach in
-	print_endline (State.to_string test);
+(* TODO: add this
+   should split this code in two parts, and use transport
+      let (reach, tr2) = State.normalize memlocs reach in
 *)
 
-      let post = apply_rel f memlocs reach rel_list in
+      let post = get_post f memlocs reach rel_list in
 
-      let post = State.transport (Subst.invert tr) post in
+(* TODO: add this
+      let post = State.transport_invert tr2 post in
+*)
+(* TODO: right now unsound need to implement and add this too
+      let post = State.compose reach tr2 post in
+	print_endline (State.to_string post);
+*)
+
+      let post = State.transport (Subst.invert tr1) post in
 	State.glue unreach post
 
     with Not_found -> 
@@ -323,7 +331,7 @@ let process glb_tbl prog =
       let env = { cur_fun = f; height = height_of_ftyp ft; lbl_tbl = [] } in
 	process_blk env body pre
 	  
-  and apply_rel f memlocs reach rel_list =
+  and get_post f memlocs reach rel_list =
     let rec apply rel_list =
       match rel_list with
 	  [] -> 

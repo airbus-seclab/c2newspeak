@@ -63,10 +63,12 @@ val build_transport: t -> Memloc.t list -> t -> Subst.t
 
 val transport: Subst.t -> t -> t
 
+val transport_invert: Subst.t -> t -> t
+
 val glue: t -> t -> t
 
 val exp_to_fun: int -> t -> exp -> string list
 
 val exp_is_valid: int -> t -> exp -> bool
 
-val normalize: Memloc.t list -> t -> t
+val normalize: Memloc.t list -> t -> (t * Subst.t)

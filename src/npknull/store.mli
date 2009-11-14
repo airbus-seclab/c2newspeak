@@ -51,6 +51,8 @@ val build_transport: t -> Memloc.t list -> t -> Subst.t
 
 val transport: Subst.t -> t -> t
 
+val transport_invert: Subst.t -> t -> t
+
 val split: Memloc.t list -> t -> (t * t)
 
 val glue: t -> t -> t
@@ -65,4 +67,4 @@ val read_fun: int -> t -> Newspeak.lval -> string list
 (* TODO: not good this primitive, think about removing it!! *)
 val set_pointsto: Dom.addr -> Memloc.t -> t -> t
 
-val normalize: Memloc.t list -> t -> t
+val normalize: Memloc.t list -> t -> (t * Subst.t)

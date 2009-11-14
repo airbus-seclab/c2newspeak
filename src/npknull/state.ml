@@ -256,12 +256,19 @@ let split memlocs s =
 
 let normalize memlocs s =
   match s with
-      Some s -> Some (Store.normalize memlocs s)
-    | None -> None
+      Some s -> 
+	let (s, tr) = Store.normalize memlocs s in
+	  (Some s, tr)
+    | None -> (None, Subst.identity) (* TODO: not that nice of a code here *)
 
 let transport tr s =
   match s with
       Some s -> Some (Store.transport tr s)
+    | None -> None
+
+let transport_invert tr s =
+  match s with
+      Some s -> Some (Store.transport_invert tr s)
     | None -> None
 
 let glue s1 s2 =
