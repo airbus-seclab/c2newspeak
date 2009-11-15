@@ -53,6 +53,8 @@ val transport: Subst.t -> t -> t
 
 val transport_invert: Subst.t -> t -> t
 
+val compose: t -> Subst.t -> t -> t
+
 val split: Memloc.t list -> t -> (t * t)
 
 val glue: t -> t -> t

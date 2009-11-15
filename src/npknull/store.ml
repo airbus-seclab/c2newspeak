@@ -352,6 +352,13 @@ let transport_invert tr (s1, s2, s3) =
   let s3 = P3.transport_invert tr s3 in
     (s1, s2, s3)
 
+let compose (a1, a2, a3) tr (b1, b2, b3) = 
+  let (memlocs, _) = List.split tr in
+  let s1 = P1.compose a1 memlocs b1 in
+  let s2 = P2.compose a2 memlocs b2 in
+  let s3 = P3.compose a3 memlocs b3 in
+    (s1, s2, s3)
+
 let glue (a1, a2, a3) (b1, b2, b3) = 
   (P1.glue a1 b1, P2.glue a2 b2, P3.glue a3 b3)
 

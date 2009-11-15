@@ -65,6 +65,8 @@ val transport: Subst.t -> t -> t
 (* TODO: try to factor with transport *)
 val transport_invert: (Memloc.t * Memloc.t list) list -> t -> t
 
+val compose: t -> Memloc.t list -> t -> t
+
 val glue: t -> t -> t
 
 (* TODO: this primitive is not well chosen, think about it

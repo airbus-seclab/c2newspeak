@@ -56,5 +56,7 @@ val transport: Subst.t -> t -> t
 (* TODO: factor code with transport *)
 val transport_invert: (Memloc.t * Memloc.t list) list -> t -> t
 
+val compose: t -> Memloc.t list -> t -> t
+
 (* TODO: factor code with transport *)
 val normalize: Subst.t -> t -> t

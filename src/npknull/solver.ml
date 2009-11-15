@@ -290,18 +290,23 @@ let process glb_tbl prog =
 
 (* TODO: add this
    should split this code in two parts, and use transport
-      let (reach, tr2) = State.normalize memlocs reach in
 *)
+      let (reach, tr2) = State.normalize memlocs reach in
+
 
       let post = get_post f memlocs reach rel_list in
 
-(* TODO: add this
+(* TODO: add this *)
       let post = State.transport_invert tr2 post in
+(* TODO: right now unsound need to implement and add this too *)
+(* { \sigma \mid \exists \sigma1 \in reach and \sigma2 \in post
+   \forall V \in partition tr2, 
+   \exists x \sigma(x) = \sigma2(x) 
+    \sigma(V\x) = \sigma1(V\x) } 
+   in other words, for all elements in the partition one of them is updated by
+   post, the other ones keep their value in reach
 *)
-(* TODO: right now unsound need to implement and add this too
       let post = State.compose reach tr2 post in
-	print_endline (State.to_string post);
-*)
 
       let post = State.transport (Subst.invert tr1) post in
 	State.glue unreach post

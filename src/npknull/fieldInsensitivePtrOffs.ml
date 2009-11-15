@@ -276,6 +276,19 @@ let transport_invert tr s =
     Map.iter subst s;
     !res
 
+(* TODO: very similar code with NonNullPtr and FPtrStore, how to factor?? *)
+let compose s1 memlocs s2 =
+  let res = ref s2 in
+  let add_s1 m =
+(* TODO: factor this try Map.find... with *)
+    let info1 = try Map.find m s1 with Not_found -> [] in
+    let info2 = try Map.find m s2 with Not_found -> [] in
+    let info = join_info info1 info2 in
+      res := Map.add m info !res
+  in
+    List.iter add_s1 memlocs;
+    !res
+
 (* tr is a substition of many to one
    TODO: could factor with transport ??
  *)
