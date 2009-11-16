@@ -23,6 +23,9 @@
   email: charles.hymans@penjili.org
 */
 
+// precision on function error code
+// and relation between size and array (or split)
+
 char t1[10];
 char t2[20];
 

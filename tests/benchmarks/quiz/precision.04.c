@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 */
 
+// storage and retrieval of a pointer value into an integer
+
 void main() {
   int *ptr;
   int a;

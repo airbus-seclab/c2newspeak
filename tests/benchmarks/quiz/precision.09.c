@@ -23,55 +23,39 @@
   email: charles.hymans@penjili.org
 */
 
-typedef void (*fptr)();
+extern void read(char *data);
 
 typedef struct {
-  char *name;
-  fptr func;
+  int a;
+  int b;
 } S;
 
-void f() {
-  char t[10];
-  t[100] = 1;
-}
+S result[10];
 
-void g() {
-  char u[10];
-  u[100] = 2;
-}
-
-S table[2] = {
-  {"f", &f},
-  {"g", &g}
-};
-
-int my_strcmp(char *s1, char *s2) {
-  while (*s1 == *s2) {
-    if (*s1 == '\0') return 0;
-    s1++;
-    s2++;
-  }
-  return (*(unsigned char *)s1) - (*(unsigned char *)s2);
-}
-
-fptr find(char *s) {
+void parse(int *data) {
   int i;
-  for (i = 0; i < 2; i++) {
-    if (my_strcmp(table[i].name, s) == 0) {
-      return table[i].func;
-    }
+  int n;
+  
+  n = *data;
+  data++;
+
+  // thanks to this test
+  if (n < 0) return;
+  if (n > 10) return;
+
+  // precision: should show the absence of pointer deref
+  for (i = 0; i < n; i++) {
+    result[i].a = *data;
+    data++;
+    result[i].b = *data;
+    data++;
   }
-  return 0;
 }
 
-int main() {
-  char name[10];
-  fptr f;
-  f = find("h");
-  if (f) {
-    // precision: this code is unreachable (could be simplified with a simple
-    // assert false here (or an invalid array access)
-    (*f)();
-  }
-  return 0;
+
+void main() {
+  char data[84];
+  
+  read(data);           // unknown function, reads some data from external input
+  parse((int *)data);
 }
