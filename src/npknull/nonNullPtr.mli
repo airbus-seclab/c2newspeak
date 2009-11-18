@@ -61,6 +61,3 @@ val transport: Subst.t -> t -> t
 val transport_invert: (Memloc.t * Memloc.t list) list -> t -> t
 
 val compose: t -> Memloc.t list -> t -> t
-
-(* TODO: try to merge this with transport!!! *)
-val normalize: Subst.t -> t -> t

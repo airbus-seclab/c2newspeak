@@ -74,4 +74,4 @@ val exp_to_fun: int -> t -> exp -> string list
 
 val exp_is_valid: int -> t -> exp -> bool
 
-val normalize: Memloc.t list -> t -> (t * Subst.t)
+val normalize: Memloc.t list -> t -> Subst.t

@@ -69,4 +69,4 @@ val read_fun: int -> t -> Newspeak.lval -> string list
 (* TODO: not good this primitive, think about removing it!! *)
 val set_pointsto: Dom.addr -> Memloc.t -> t -> t
 
-val normalize: Memloc.t list -> t -> (t * Subst.t)
+val normalize: Memloc.t list -> t -> Subst.t

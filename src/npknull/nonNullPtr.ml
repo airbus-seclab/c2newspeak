@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+(* TODO: extract the data-structure to factor nonNullPtr, 
+   FieldInsensitivePtrOffs and FPtr *)
 open Newspeak
 
 module Map = Map.Make(Memloc)
@@ -157,19 +159,20 @@ let glue s1 s2 =
     Map.iter add_info s2;
     !res
 
-
 (* TODO: O(n) expensive? 
    Have the inverse map?
    TOOD: code very similar to shift??
 *)
 let transport tr s =
   let res = ref Map.empty in
-  let subst m i =
+  let add_info m i = 
     let m = Subst.apply tr m in
+    let i = try list_meet i (Map.find m !res) with Not_found -> i in
       res := Map.add m i !res
   in
-    Map.iter subst s;
+    Map.iter add_info s;
     !res
+
 
 (* TODO: factor with transport *)
 let transport_invert tr s =
@@ -195,17 +198,6 @@ let compose s1 memlocs s2 =
       res := Map.add m info !res
   in
     List.iter add_s1 memlocs;
-    !res
-
-(* TODO: factor this code with transport *)
-let normalize tr s =
-  let res = ref Map.empty in
-  let add_info m i = 
-    let m = Subst.apply tr m in
-    let i = try list_meet i (Map.find m !res) with Not_found -> i in
-      res := Map.add m i !res
-  in
-    Map.iter add_info s;
     !res
 
 (* usefull for debug *)

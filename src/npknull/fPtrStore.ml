@@ -153,16 +153,18 @@ let split memlocs s =
     
 (* TODO: O(n) expensive? 
    Have the inverse map?
-   TOOD: code very similar to shift??
+   TODO: code very similar to shift??
 *)
 let transport tr s =
   let res = ref Map.empty in
   let subst m info =
     let m = Subst.apply tr m in
+    let info = try list_join info (Map.find m !res) with Not_found -> info in
       res := Map.add m info !res
   in
     Map.iter subst s;
     !res
+
 
 (* TODO: factor with transport *)
 let transport_invert tr s =
@@ -189,18 +191,6 @@ let compose s1 memlocs s2 =
   in
     List.iter add_s1 memlocs;
     !res
-
-(* TODO: factor code with transport *)
-let normalize tr s =
-  let res = ref Map.empty in
-  let subst m info =
-    let m = Subst.apply tr m in
-    let info = try list_join info (Map.find m !res) with Not_found -> info in
-      res := Map.add m info !res
-  in
-    Map.iter subst s;
-    !res
-  
 
 let glue s1 s2 =
   let res = ref s1 in

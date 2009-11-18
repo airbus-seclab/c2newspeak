@@ -239,22 +239,6 @@ let split memlocs s =
     (!unreach, !reach, !vars)
   
     
-(* TODO: O(n) expensive? 
-   Have the inverse map?
-   TOOD: code very similar to shift??
-   shouldn't it be better to iterated on the substitution only?? and keep the
-   map unchanged?? 
-*)
-let transport tr s =
-  let res = ref Map.empty in
-  let subst m info =
-    let m = Subst.apply tr m in
-    let info = subst_info tr info in
-      res := Map.add m info !res
-  in
-    Map.iter subst s;
-    !res
-
 (* TODO: think about it, factor this code with transport!! *)
 let transport_invert tr s =
   let subst_apply x = try List.assoc x tr with Not_found -> x::[] in
@@ -290,9 +274,13 @@ let compose s1 memlocs s2 =
     !res
 
 (* tr is a substition of many to one
-   TODO: could factor with transport ??
- *)
-let merge tr s =
+   TODO: O(n) expensive? 
+   Have the inverse map?
+   TOOD: code very similar to shift??
+   shouldn't it be better to iterated on the substitution only?? and keep the
+   map unchanged?? 
+*)
+let transport tr s =
   let res = ref Map.empty in
   let add_node m info =
     let m = Subst.apply tr m in
@@ -402,7 +390,7 @@ let normalize memlocs s =
     in
       Map.iter add_merge !partition;
       
-      (!tr, merge !tr s)
+      !tr
 
 let glue s1 s2 =
   let res = ref s1 in

@@ -288,11 +288,9 @@ let process glb_tbl prog =
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 
-(* TODO: add this
-   should split this code in two parts, and use transport
-*)
-      let (reach, tr2) = State.normalize memlocs reach in
-
+      let tr2 = State.normalize memlocs reach in
+(* TODO: could this transport be made once with the previous transport?? *)
+      let reach = State.transport tr2 reach in
 
       let post = get_post f memlocs reach rel_list in
 

@@ -256,10 +256,8 @@ let split memlocs s =
 
 let normalize memlocs s =
   match s with
-      Some s -> 
-	let (s, tr) = Store.normalize memlocs s in
-	  (Some s, tr)
-    | None -> (None, Subst.identity) (* TODO: not that nice of a code here *)
+      Some s -> Store.normalize memlocs s
+    | None -> Subst.identity
 
 let transport tr s =
   match s with

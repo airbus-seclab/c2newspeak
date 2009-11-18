@@ -324,11 +324,7 @@ let split memlocs (s1, s2, s3)=
   let (unreach3, reach3) = P3.split memlocs s3 in
     ((unreach1, unreach2, unreach3), (reach1, reach2, reach3))
 
-let normalize memlocs (s1, s2, s3) =
-  let (tr, s1) = P1.normalize memlocs s1 in
-  let s2 = P2.normalize tr s2 in
-  let s3 = P3.normalize tr s3 in
-    ((s1, s2, s3), tr)
+let normalize memlocs (s1, _, _) = P1.normalize memlocs s1
 
 let transport tr (s1, s2, s3) = 
   (P1.transport tr s1, P2.transport tr s2, P3.transport tr s3)
