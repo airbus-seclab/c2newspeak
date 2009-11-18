@@ -330,26 +330,15 @@ let transport tr (s1, s2, s3) =
   (P1.transport tr s1, P2.transport tr s2, P3.transport tr s3)
 
 let transport_invert tr (s1, s2, s3) =
-  let rec invert tr =
-    match tr with
-	[] -> []
-      |	(x, y)::tl -> 
-	  let tr = invert tl in
-	    try
-	      let im = List.assoc y tr in
-	      let tr = List.remove_assoc y tr in
-	      let tr = (y, x::im)::tr in
-		tr
-	    with Not_found -> (y, x::[])::tr
-  in
-  let tr = invert tr in
-  let s1 = P1.transport_invert tr s1 in
-  let s2 = P2.transport_invert tr s2 in
-  let s3 = P3.transport_invert tr s3 in
+  let tr = Subst.invert tr in
+  let s1 = P1.transport tr s1 in
+  let s2 = P2.transport tr s2 in
+  let s3 = P3.transport tr s3 in
     (s1, s2, s3)
 
 let compose (a1, a2, a3) tr (b1, b2, b3) = 
-  let (memlocs, _) = List.split tr in
+(* TODO: bring this up *)
+  let memlocs = Subst.domain tr in
   let s1 = P1.compose a1 memlocs b1 in
   let s2 = P2.compose a2 memlocs b2 in
   let s3 = P3.compose a3 memlocs b3 in

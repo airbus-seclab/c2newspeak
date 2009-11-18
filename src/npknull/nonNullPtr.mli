@@ -57,7 +57,4 @@ val read_addr: t -> Dom.addr -> (Memloc.t * int option)
 
 val transport: Subst.t -> t -> t
 
-(* TODO: factor with transport *)
-val transport_invert: (Memloc.t * Memloc.t list) list -> t -> t
-
 val compose: t -> Memloc.t list -> t -> t

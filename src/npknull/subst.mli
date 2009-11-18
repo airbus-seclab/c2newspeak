@@ -26,9 +26,11 @@
 (* TODO: abstract this type away!!
    not good!!!
 *)
-type t = (Memloc.t * Memloc.t) list
+type t
 
 val identity: t
+
+val domain: t -> Memloc.t list
 
 (** [assoc x y tr] adds the association that [x] is maped to [y] to the 
     transport mapping [tr] *)
@@ -39,7 +41,7 @@ val invert: t -> t
 
 val compose: t -> t -> t
 
-val apply: t -> Memloc.t -> Memloc.t
+val apply: t -> Memloc.t -> Memloc.t list
 
 val to_string: t -> string
 

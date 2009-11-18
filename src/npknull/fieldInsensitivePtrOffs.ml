@@ -90,7 +90,10 @@ let memlocs_of_info v = List.map (fun (x, _) -> x) v
 
 let subst_info tr v = 
   let res = ref [] in
-  let add_info (x, o) = res := insert_info (Subst.apply tr x, o) !res in
+  let add_info (x, o) =
+    let x = Subst.apply tr x in
+      List.iter (fun x -> res := insert_info (x, o) !res) x
+  in
     List.iter add_info v;
     !res
 
@@ -238,27 +241,31 @@ let split memlocs s =
     end;
     (!unreach, !reach, !vars)
   
-    
-(* TODO: think about it, factor this code with transport!! *)
-let transport_invert tr s =
-  let subst_apply x = try List.assoc x tr with Not_found -> x::[] in
-  let subst_info v = 
-    let res = ref [] in
-    let add_info (x, o) =
-      let x = subst_apply x in
-	List.iter (fun x -> res := insert_info (x, o) !res) x
-    in
-      List.iter add_info v;
-      !res
-  in
+
+(* tr is a substition of many to one
+   TODO: O(n) expensive? 
+   Have the inverse map?
+   TOOD: code very similar to shift??
+   shouldn't it be better to iterated on the substitution only?? and keep the
+   map unchanged?? 
+*)
+let transport tr s =
   let res = ref Map.empty in
-  let subst m info = 
-    let m = subst_apply m in
-    let info = subst_info info in
-      List.iter (fun m -> res := Map.add m info !res) m
+  let subst m info =
+    let m = Subst.apply tr m in
+    let info = subst_info tr info in
+    let add_info m = 
+      let info = try join_info info (Map.find m !res) with Not_found -> info in
+	res := Map.add m info !res
+    in
+      List.iter add_info m
   in
     Map.iter subst s;
     !res
+
+    
+(* TODO: think about it, factor this code with transport!! *)
+let transport_invert = transport
 
 (* TODO: very similar code with NonNullPtr and FPtrStore, how to factor?? *)
 let compose s1 memlocs s2 =
@@ -271,24 +278,6 @@ let compose s1 memlocs s2 =
       res := Map.add m info !res
   in
     List.iter add_s1 memlocs;
-    !res
-
-(* tr is a substition of many to one
-   TODO: O(n) expensive? 
-   Have the inverse map?
-   TOOD: code very similar to shift??
-   shouldn't it be better to iterated on the substitution only?? and keep the
-   map unchanged?? 
-*)
-let transport tr s =
-  let res = ref Map.empty in
-  let add_node m info =
-    let m = Subst.apply tr m in
-    let info = subst_info tr info in
-    let info = try join_info info (Map.find m !res) with Not_found -> info in
-      res := Map.add m info !res
-  in
-    Map.iter add_node s;
     !res
 
 (*
@@ -451,8 +440,8 @@ let join s1 s2 =
     s
 *)
 
-let test () =
-  print_string "npknull/FieldInsensitivePtrOffs.test... ";
+let test1 () =
+  print_string "npknull/FieldInsensitivePtrOffs.test1... ";
   let a = Memloc.of_global "a" in
   let b = Memloc.of_global "b" in
   let c = Memloc.of_global "c" in
@@ -472,3 +461,6 @@ let test () =
       let _ = build_transport src [b; a] dst in
 	invalid_arg "Failed"
     with Exceptions.Unknown -> print_endline "OK"
+
+let test () =
+  test1 ()

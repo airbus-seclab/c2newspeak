@@ -165,24 +165,13 @@ let glue s1 s2 =
 *)
 let transport tr s =
   let res = ref Map.empty in
-  let add_info m i = 
+  let subst m i = 
     let m = Subst.apply tr m in
-    let i = try list_meet i (Map.find m !res) with Not_found -> i in
-      res := Map.add m i !res
-  in
-    Map.iter add_info s;
-    !res
-
-
-(* TODO: factor with transport *)
-let transport_invert tr s =
-(* TODO: this subst_apply also in FieldInsensitivePtrOffset.transport_invert
-   find a way to factor (by putting out the transport data-structure??? *)
-  let subst_apply x = try List.assoc x tr with Not_found -> x::[] in
-  let res = ref Map.empty in
-  let subst m info =
-    let m = subst_apply m in
-      List.iter (fun m -> res := Map.add m info !res) m
+    let add_info m =
+      let i = try list_meet i (Map.find m !res) with Not_found -> i in
+	res := Map.add m i !res
+    in
+      List.iter add_info m
   in
     Map.iter subst s;
     !res

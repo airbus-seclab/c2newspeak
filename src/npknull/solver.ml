@@ -284,7 +284,7 @@ let process glb_tbl prog =
    are built only once?? *)
       let tr1 = Subst.build_param_map env.height locals_nb in
       let reach = State.transport tr1 reach in
-   
+
       let locals = create_locals locals_nb locals_nb in
       let memlocs = locals@globals in
 

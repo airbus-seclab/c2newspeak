@@ -159,22 +159,11 @@ let transport tr s =
   let res = ref Map.empty in
   let subst m info =
     let m = Subst.apply tr m in
-    let info = try list_join info (Map.find m !res) with Not_found -> info in
-      res := Map.add m info !res
-  in
-    Map.iter subst s;
-    !res
-
-
-(* TODO: factor with transport *)
-let transport_invert tr s =
-(* TODO: this subst_apply also in FieldInsensitivePtrOffset.transport_invert
-   find a way to factor (by putting out the transport data-structure??? *)
-  let subst_apply x = try List.assoc x tr with Not_found -> x::[] in
-  let res = ref Map.empty in
-  let subst m info =
-    let m = subst_apply m in
-      List.iter (fun m -> res := Map.add m info !res) m
+    let add_info m =
+      let info = try list_join info (Map.find m !res) with Not_found -> info in
+	res := Map.add m info !res
+    in
+      List.iter add_info m
   in
     Map.iter subst s;
     !res
