@@ -269,9 +269,9 @@ let transport_invert tr s =
       Some s -> Some (Store.transport_invert tr s)
     | None -> None
 
-let compose s1 tr s2 =
+let compose s1 memlocs s2 =
   match (s1, s2) with
-      (Some s1, Some s2) -> Some (Store.compose s1 tr s2)
+      (Some s1, Some s2) -> Some (Store.compose s1 memlocs s2)
 (* TODO: this case, kind of strange... *)
     | _ -> s2
 

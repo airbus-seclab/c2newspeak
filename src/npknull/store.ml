@@ -336,9 +336,7 @@ let transport_invert tr (s1, s2, s3) =
   let s3 = P3.transport tr s3 in
     (s1, s2, s3)
 
-let compose (a1, a2, a3) tr (b1, b2, b3) = 
-(* TODO: bring this up *)
-  let memlocs = Subst.domain tr in
+let compose (a1, a2, a3) memlocs (b1, b2, b3) = 
   let s1 = P1.compose a1 memlocs b1 in
   let s2 = P2.compose a2 memlocs b2 in
   let s3 = P3.compose a3 memlocs b3 in
