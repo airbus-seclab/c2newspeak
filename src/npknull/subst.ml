@@ -25,13 +25,7 @@
 
 type t = (Memloc.t * Memloc.t) list
 
-let build_param_map env n =
-  let res = ref [] in
-    for i = 0 to env do
-      let j = if i <= n then Memloc.of_local (n-i) else Memloc.gen () in
-	res := (Memloc.of_local (env-i), j)::!res
-    done;
-    !res
+let identity = []
 
 let invert subst = List.map (fun (x, y) -> (y, x)) subst
 
@@ -51,8 +45,6 @@ let to_string tr =
   let string_of_assoc (x, y) = Memloc.to_string x^" -> "^Memloc.to_string y in
     "["^ListUtils.to_string string_of_assoc ", " tr^"]"
 
-let identity = []
-
 let assoc x y s =
   try
     let prev_y = List.assoc x s in
@@ -62,6 +54,14 @@ let assoc x y s =
   with Not_found -> (x, y)::s
 
 let apply tr x = try List.assoc x tr with Not_found -> x
+
+let build_param_map env n =
+  let res = ref [] in
+    for i = 0 to env do
+      let j = if i <= n then Memloc.of_local (n-i) else Memloc.gen () in
+	res := (Memloc.of_local (env-i), j)::!res
+    done;
+    !res
 
 
 (* useful for debug

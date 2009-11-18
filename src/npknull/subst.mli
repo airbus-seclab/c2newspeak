@@ -28,18 +28,22 @@
 *)
 type t = (Memloc.t * Memloc.t) list
 
-val build_param_map: int -> int -> t
+val identity: t
 
+(** [assoc x y tr] adds the association that [x] is maped to [y] to the 
+    transport mapping [tr] *)
+val assoc: Memloc.t -> Memloc.t -> t -> t
+
+(** computes the inverse transport mapping *)
 val invert: t -> t
 
 val compose: t -> t -> t
-
-val identity: t
-
-val assoc: Memloc.t -> Memloc.t -> t -> t
 
 val apply: t -> Memloc.t -> Memloc.t
 
 val to_string: t -> string
 
+val build_param_map: int -> int -> t
+
+(** unit tests *)
 val test: unit -> unit

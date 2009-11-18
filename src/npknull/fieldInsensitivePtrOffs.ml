@@ -381,11 +381,11 @@ let normalize memlocs s =
     end;
     
     (* a list of nodes to merge *)
-    let tr = ref [] in
+    let tr = ref Subst.identity in
     let add_merge x s = 
       if Set.cardinal s <> 1 then begin
 	let y = Set.min_elt s in
-	  tr := (x, y)::!tr;
+	  tr := Subst.assoc x y !tr;
       end
     in
       Map.iter add_merge !partition;
