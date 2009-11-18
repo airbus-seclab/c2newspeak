@@ -264,11 +264,6 @@ let transport tr s =
       Some s -> Some (Store.transport tr s)
     | None -> None
 
-let transport_invert tr s =
-  match s with
-      Some s -> Some (Store.transport_invert tr s)
-    | None -> None
-
 let compose s1 memlocs s2 =
   match (s1, s2) with
       (Some s1, Some s2) -> Some (Store.compose s1 memlocs s2)

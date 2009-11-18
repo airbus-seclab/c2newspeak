@@ -51,8 +51,6 @@ val build_transport: t -> Memloc.t list -> t -> Subst.t
 
 val transport: Subst.t -> t -> t
 
-val transport_invert: Subst.t -> t -> t
-
 val compose: t -> Memloc.t list -> t -> t
 
 val split: Memloc.t list -> t -> (t * t)

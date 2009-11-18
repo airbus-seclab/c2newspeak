@@ -329,13 +329,6 @@ let normalize memlocs (s1, _, _) = P1.normalize memlocs s1
 let transport tr (s1, s2, s3) = 
   (P1.transport tr s1, P2.transport tr s2, P3.transport tr s3)
 
-let transport_invert tr (s1, s2, s3) =
-  let tr = Subst.invert tr in
-  let s1 = P1.transport tr s1 in
-  let s2 = P2.transport tr s2 in
-  let s3 = P3.transport tr s3 in
-    (s1, s2, s3)
-
 let compose (a1, a2, a3) memlocs (b1, b2, b3) = 
   let s1 = P1.compose a1 memlocs b1 in
   let s2 = P2.compose a2 memlocs b2 in
