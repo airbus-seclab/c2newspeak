@@ -66,7 +66,7 @@ let contains s1 s2 =
 
 let deref_abaddr a n =
   match a with
-      Dom.Ptr (x, Some (o, sz)) -> ((x, o), sz-n)
+      Dom.Ptr (x, Some (o, sz)) -> ((x, o), sz-n+1)
     | Dom.Ptr (x, None) -> ((x, 0), max_int)
     | _ -> raise Exceptions.Emptyset
 
@@ -170,31 +170,6 @@ let assign args env s =
     | Some s -> 
 	try Some (Store.assign args env s)
 	with Exceptions.Emptyset -> emptyset
-(*
-	try
-	  let a = lval_to_abaddr env s lv in
-	    try
-	      let a = Abaddr.to_addr a in
-	      let e = translate_exp env s e in
-		(* TODO: this constant not nice!! *)
-	      let sz = Newspeak.size_of_scalar 32 t in
-		print_endline "here";
-	      let s = Store.assign (a, e, sz) s in
-		Some s
-	    with Exceptions.Unknown -> 
-	      try
-		let (a, n) = Abaddr.to_buffer a in
-(* TODO: not good this constant, remove!! *)
-		let sz = Newspeak.size_of_scalar 32 t in
-		let n = if n > max_int - sz then max_int else n + sz in
-		  Some (Store.forget_buffer (a, n) s)
-	      with Exceptions.Unknown ->
-		let m = Abaddr.to_memloc a in
-		  Some (Store.forget_memloc m s)
-	with
-	    Exceptions.Emptyset -> emptyset
-	  | Exceptions.Unknown -> forget () (* TODO: should remove this case altogether, source of unsoundness!! *)
-*)
 
 let to_string s =
   match s with

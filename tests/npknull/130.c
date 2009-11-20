@@ -1,7 +1,7 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,33 +21,16 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-type t
+int *x;
+int y;
+int **ptr;
+int tmp;
 
-val singleton: Memloc.t -> t
-
-val of_buffer: Dom.buffer -> t
-
-val shift: int -> t -> t
-
-val forget_offset: t -> t
-
-(* raise Exceptions.Unknown if not singleton *)
-val to_addr: t -> Dom.addr
-
-val to_buffer: t -> Dom.buffer
-
-val to_memloc: t -> Memloc.t
-
-(* TODO: to have this primitive is a bit strange 
-   should rather have a Ptr.addr_of!!!
-*)
-val to_exp: int -> t -> Dom.exp
-
-(** [to_string a] returns the representation of the abstract address
-    as a string, which is made of tuple (m, o):
-    m is the memory location
-    o is the offset, presented as a range
-*)
-val to_string: t -> string
+void main() {
+  ptr = &x;
+  *ptr = &y;
+  
+  tmp = *(*ptr);    // precision: should not report any warning
+}

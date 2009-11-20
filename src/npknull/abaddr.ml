@@ -42,7 +42,7 @@ let offset_to_int (o, n) =
 let offset_to_zone x = x
 
 let offset_to_string (o, sz) = 
-  "["^string_of_int o^": "^string_of_int sz^"]"
+  "["^string_of_int o^": "^string_of_int (o+sz-1)^"]"
 
 type t = Memloc.t * range_offset
     
