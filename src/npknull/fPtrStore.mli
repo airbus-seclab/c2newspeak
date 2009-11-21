@@ -29,9 +29,6 @@ type exp =
 
 type t
 
-(* TODO: should remove this function, unsound *)
-val forget: unit -> t
-
 (** [universe] the domain with no variable. *)
 val universe: t
 

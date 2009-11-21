@@ -25,5 +25,3 @@
 
 exception Emptyset
 exception Unknown
-
-exception NotImplemented of string

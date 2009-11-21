@@ -63,10 +63,6 @@ type t = string list Map.t
 
 let universe = Map.empty
 
-let forget () =
-  print_endline "FPtrStore.universe, this is called";
-  Map.empty
-
 (* TODO: could be optimized!! by a map2 that doesn't traverse shared 
    subtrees *)
 let join s1 s2 =

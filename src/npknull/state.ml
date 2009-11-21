@@ -146,15 +146,15 @@ let exp_to_fun env s e =
 		with 
 		    Exceptions.Emptyset -> []
 		  | Exceptions.Unknown -> 
-		      raise (Exceptions.NotImplemented 
-			       "State.exp_to_fun: case Lval")
+		      invalid_arg ("Not implemented yet: "
+				   ^"State.exp_to_fun: case Lval")
 	      end
 		(* TODO: not good these constants!!! *)
 	    | UnOp (Cast (_, t), e) when Newspeak.size_of_scalar 32 t = 32 ->
 		exp_to_fun e
 	    | _ -> 
-		let msg = "State.exp_to_fun: "^(Newspeak.string_of_exp e) in
-		  raise (Exceptions.NotImplemented msg)
+		invalid_arg ("Not implemented yet: "
+			     ^"State.exp_to_fun: "^(Newspeak.string_of_exp e))
 	in
 	  exp_to_fun e
 

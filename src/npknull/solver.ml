@@ -252,7 +252,7 @@ let process glb_tbl prog =
 	  print_endline (State.to_string s);
 	  s
       | UserSpec _ -> 
-	  raise (Exceptions.NotImplemented "Analysis.process_stmtkind")
+	  invalid_arg "Analysis.process_stmtkind: not implemented yet"
 
   and process_funexp env e s =
     match e with
@@ -260,7 +260,7 @@ let process glb_tbl prog =
       | FunDeref (e, _) -> 
 	  try State.exp_to_fun env.height s e
 	  with Exceptions.Unknown -> 
-	    raise (Exceptions.NotImplemented "Analysis.process_funexp")
+	    invalid_arg "Analysis.process_funexp: not implemented yet"
 
   and process_call env f s =
     Context.print_graph ("edge: "^env.cur_fun^", "^f);
