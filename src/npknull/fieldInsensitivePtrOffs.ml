@@ -101,10 +101,6 @@ type t = info Map.t
 
 let universe = Map.empty
 
-let forget () = 
-  print_endline "FieldInsensitivePtrBuf.forget: this is called";
-  Map.empty
-
 (* TODO: could be optimized!! by a map2 that doesn't traverse shared 
    subtrees *)
 let join s1 s2 =

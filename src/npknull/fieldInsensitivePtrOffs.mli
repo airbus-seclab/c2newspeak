@@ -37,9 +37,6 @@ type exp =
     Lval of Memloc.t                (** Pointers stored at memloc *)
   | AddrOf of (Memloc.t * num_pred) (** Pointer *)
 
-(* TODO: remove this function, unsound *)
-val forget: unit -> t
-
 (** [universe] the domain with no variable. *)
 val universe: t
 

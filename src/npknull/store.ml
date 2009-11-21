@@ -43,8 +43,6 @@ type t = (P1.t * P2.t * P3.t)
 
 let universe = (P1.universe, P2.universe, P3.universe)
 
-let forget () = (P1.forget (), P2.universe, P3.forget ())
-
 let join (a1, a2, a3) (b1, b2, b3) = 
   (P1.join a1 b1, P2.join a2 b2, P3.join a3 b3)
 
@@ -286,9 +284,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
     let s3 = P3.assign m fp s3 in
       (s1, s2, s3)
   with Exceptions.Unknown -> 
-    print_endline "Store.assign";
-    (* TODO: most probably unsound, should remove all universe cases!!! *)
-    forget ()
+    invalid_arg "Store.assign: not implemented yet"
 
 let copy (dst, src) env (s1, s2, s3) =
   let dst = lval_to_memloc_list env s1 dst in
