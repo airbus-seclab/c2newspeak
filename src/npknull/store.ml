@@ -113,31 +113,31 @@ let rec lval_to_addr env s lv =
 	  (* TODO: maybe a bug with integer overflow here!! *)
 	  (m, o + (Nat.to_int n))
     | Deref (e, _) -> 
-	let p = exp_to_ptr env s e in
-	let a =
-	  match p with
-	    | Some (m, Some (o, delta, _)) -> 
+	let (m, o) = exp_to_ptr env s e in
+	let o =
+	  match o with
+	    | Some (o, delta, _) -> 
 		(* TODO: maybe a integer overflow?? *)
-		(m, o + delta)
+		(o + delta)
 	    | _ -> raise Exceptions.Unknown
 	in
-	  a
+	  (m, o)
     | _ -> raise Exceptions.Unknown
 
 (* TODO: is the sz really needed in exp_to_ptr?? *)
 and exp_to_ptr env s e =
   match e with
-      Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> None
+      Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> raise Exceptions.Unknown
     | Lval (lv, _) ->
 	let m = lval_to_memloc env s lv in
 	let p =
-	  try Some (get_one_abptr (P1.read s m))
-	  with Exceptions.Emptyset -> None
+	  try get_one_abptr (P1.read s m)
+	  with Exceptions.Emptyset -> raise Exceptions.Unknown
 	in
 	  p
     | UnOp (Focus n, AddrOf lv) -> 
 	let (m, o) = lval_to_addr env s lv in
-	  Some (m, Some (o, 0, n))
+	  (m, Some (o, 0, n))
 	    (* TODO: could be a fallback, if more precision is needed
 	      let m = lval_to_memloc env s lv in
 	      Some (m, None)
@@ -145,13 +145,19 @@ and exp_to_ptr env s e =
     | UnOp (Coerce _, e) 
     | BinOp (PlusPI, e, _) -> exp_to_ptr env s e
     | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
-	let v1 = exp_to_ptr env s e1 in
-	let v2 = exp_to_ptr env s e2 in
+	let v1 = 
+	  try Some (exp_to_ptr env s e1)
+	  with Exceptions.Unknown -> None
+	in
+	let v2 = 
+	  try Some (exp_to_ptr env s e2)
+	  with Exceptions.Unknown -> None
+	in
 	let v =
 	  match (v1, v2) with
-	      (Some _, Some _) -> raise Exceptions.Unknown
-	    | (Some _, _) -> v1
-	    | _ -> v2
+	      (Some _, Some _) | (None, None) -> raise Exceptions.Unknown
+	    | (Some v1, _) -> v1
+	    | (_, Some v2) -> v2
 	in
 	  v
     | UnOp (Cast (Int _, FunPtr), e) -> exp_to_ptr env s e
@@ -166,18 +172,13 @@ let lval_to_buffer env s lv =
 	  (* TODO: maybe a bug with integer overflow here!! *)
 	  ((m, o + (Nat.to_int n)), 1)
     | Deref (e, _) -> 
-	let res =
-	  match exp_to_ptr env s e with
-	      Some (m, o) ->
-		let (o, n) =
-		  match o with
-		      Some (o, _, n) -> (o, n)
-		    | None -> (0, max_int)
-		in
-		  ((m, o), n)
-	    | None -> raise Exceptions.Unknown
+	let (m, o) = exp_to_ptr env s e in
+	let (o, n) =
+	  match o with
+	      Some (o, _, n) -> (o, n)
+	    | None -> (0, max_int)
 	in
-	  res
+	  ((m, o), n)
     | _ ->
 	(*print_endline (Newspeak.string_of_lval lv);*)
 	raise Exceptions.Unknown
