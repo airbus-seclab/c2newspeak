@@ -45,7 +45,7 @@ let string_of_num_pred y p =
   match p with 
       Some (o, delta, n) -> 
 	"<"^y^", ("^string_of_int o^", "^string_of_int delta
-	^", "^string_of_int n^">"
+	^", "^string_of_int n^")>"
     | None -> y
 
 

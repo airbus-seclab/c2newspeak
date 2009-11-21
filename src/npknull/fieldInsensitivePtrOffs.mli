@@ -23,6 +23,12 @@
   email: charles.hymans@penjili.org
 *)
 
+(** predicate representing the numerical information of pointer:
+    offset, delta, size of the zone
+    or None which means unknown
+    representing the fact that the pointer may move from offset to
+    offset+size-1, and is at currently offset+delta
+*)
 type num_pred = (int * int * int) option
 
 type t
