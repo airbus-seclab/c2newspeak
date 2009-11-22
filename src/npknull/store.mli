@@ -68,3 +68,5 @@ val read_fun: int -> t -> Newspeak.lval -> string list
 val set_pointsto: Dom.addr -> Memloc.t -> t -> t
 
 val normalize: Memloc.t list -> t -> Subst.t
+
+val may_be_null: int -> t -> exp -> bool

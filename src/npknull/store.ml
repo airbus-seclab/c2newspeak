@@ -192,14 +192,17 @@ let lval_to_buffer env s lv =
 	(*print_endline (Newspeak.string_of_lval lv);*)
 	raise Exceptions.Unknown
 
-let may_be_null env s1 s2 e =
+let may_be_null env s1 s e =
   let rec may_be_null e =
     match e with
 	AddrOf _ -> false
 	  (* TODO: this constant: not nice!!! *)
-      | Lval (lv, t) when Newspeak.size_of_scalar 32 t = 32 ->
-	  let a = lval_to_addr env s1 lv in
-	    not (P2.addr_is_valid s2 a)
+      | Lval (lv, t) when Newspeak.size_of_scalar 32 t = 32 -> begin
+	  try
+	    let a = lval_to_addr env s1 lv in
+	      not (P2.addr_is_valid s a)
+	  with Exceptions.Unknown -> true
+	end
       | BinOp (PlusPI, e, _) -> may_be_null e
       | UnOp (Focus _, e) -> may_be_null e
       | _ ->
@@ -287,7 +290,7 @@ let assign (lv, e, t) env (s1, s2, s3) =
     (* TODO: this constant not nice!! *)
     let sz = Newspeak.size_of_scalar 32 t in
     let s2 = 
-      try assign2 (lv, e, sz) env s1 s2 
+      try assign2 (lv, e, sz) env s1 s2
       with Exceptions.Unknown -> forget_memloc_list2 m s2
     in
     let fp = translate_exp_P3 env s1 e in
@@ -361,6 +364,8 @@ let read_fun env (s1, _, s) lv =
 
 let to_string (s1, s2, s3) = 
   P1.to_string s1^" "^P2.to_string s2^" "^P3.to_string s3
+
+let may_be_null env (s1, s2, _) e = may_be_null env s1 s2 e
 
 (* usefull for debug *)
 (*

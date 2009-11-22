@@ -113,26 +113,10 @@ and translate_exp env s e =
 	  Dom.Ptr p
     | _ -> raise Exceptions.Unknown
 
-let exp_to_ptr env s e =
-  let rec exp_to_ptr e =
-    match e with
-	Lval (lv, Ptr) -> lval_to_abaddr env s lv
-      | BinOp (PlusPI, e, _) -> exp_to_ptr e
-      | _ -> raise Exceptions.Unknown
-  in
-    exp_to_ptr e
-
 let exp_is_valid env s e =
   match s with
       None -> true
-    | Some s -> 
-	try
-	  let a = exp_to_ptr env s e in
-	  let a = Abaddr.to_addr a in
-	    Store.addr_is_valid s a
-	with
-	    Exceptions.Emptyset -> true
-	  | Exceptions.Unknown -> false
+    | Some s -> not (Store.may_be_null env s e)
 
 let exp_to_fun env s e = 
   match s with
