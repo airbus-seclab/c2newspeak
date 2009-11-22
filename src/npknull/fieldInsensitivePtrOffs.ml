@@ -31,22 +31,29 @@ module Set = Set.Make(Memloc)
 (* TODO: try to factor as much code as possible with fieldInsensitiveBuf *)
 
 (* offset, delta, size of the zone *)
-type num_pred = (int * int * int) option
+type num_pred = (int * int) option * int option
 
 type exp =
     Lval of Memloc.t
   | AddrOf of (Memloc.t * num_pred)
 
-let join_num_pred x1 x2 = if x1 = x2 then x1 else None
+let join_num_pred (o1, n1) (o2, n2) = 
+  let o = if o1 = o2 then o1 else None in
+  let n = if n1 = n2 then n1 else None in
+    (o, n)
 
-let contains_num_pred x1 x2 = (x1 = None) || (x1 = x2)
+let contains_num_pred (o1, n1) (o2, n2) =
+  ((o1 = None) || (o1 = o2)) && ((n1 = None) || (n1 = n2))
 
 let string_of_num_pred y p = 
-  match p with 
-      Some (o, delta, n) -> 
+  match p with
+      (Some (o, delta), Some n) -> 
 	"<"^y^", ("^string_of_int o^", "^string_of_int delta
 	^", "^string_of_int n^")>"
-    | None -> y
+    | (Some (o, delta), None) ->
+	"<"^y^", ("^string_of_int o^", "^string_of_int delta^", ?)>"
+    | (None, Some n) -> "<"^y^", (?, ?, "^string_of_int n^")>"
+    | (None, None) -> y
 
 
 type info = (Memloc.t * num_pred) list
@@ -438,20 +445,22 @@ let join s1 s2 =
 
 let test1 () =
   print_string "npknull/FieldInsensitivePtrOffs.test1... ";
+  let exp_of_var x = [AddrOf (x, (None, None))] in
+
   let a = Memloc.of_global "a" in
   let b = Memloc.of_global "b" in
   let c = Memloc.of_global "c" in
   let d = Memloc.of_global "d" in
 
   let src = universe in
-
-  let src = assign [a] [AddrOf (d, None)] src in
-  let src = assign [b] [AddrOf (d, None)] src in
+    
+  let src = assign [a] (exp_of_var d) src in
+  let src = assign [b] (exp_of_var d) src in
 
   let dst = universe in
 
-  let dst = assign [a] [AddrOf (d, None)] dst in
-  let dst = assign [b] [AddrOf (c, None)] dst in
+  let dst = assign [a] (exp_of_var d) dst in
+  let dst = assign [b] (exp_of_var c) dst in
 
     try
       let _ = build_transport src [b; a] dst in

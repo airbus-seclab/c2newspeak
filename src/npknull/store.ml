@@ -35,6 +35,26 @@
    of each domain into some independent adapters *)
 open Newspeak
 
+let deref (m, (o, _)) =
+  let o =
+    match o with
+	Some (o, delta) -> 
+	  (* TODO: maybe a integer overflow?? *)
+	  Some (o+delta)
+      | None -> None
+  in
+    (m, o)
+
+let abaddr_to_addr (m, o) =
+  match o with
+      Some o -> (m, o)
+    | _ -> raise Exceptions.Unknown
+
+let abaddr_to_buffer (m, o) =
+  match o with
+      Some o -> ((m, o), 1)
+    | None -> ((m, 0), max_int)
+
 module P1 = FieldInsensitivePtrOffs
 module P2 = NonNullPtr
 module P3 = FPtrStore
@@ -113,18 +133,12 @@ let rec lval_to_addr env s lv =
 	  (* TODO: maybe a bug with integer overflow here!! *)
 	  (m, o + (Nat.to_int n))
     | Deref (e, _) -> 
-	let (m, o) = exp_to_ptr env s e in
-	let o =
-	  match o with
-	    | Some (o, delta, _) -> 
-		(* TODO: maybe a integer overflow?? *)
-		(o + delta)
-	    | _ -> raise Exceptions.Unknown
-	in
-	  (m, o)
+	let a = deref (exp_to_ptr env s e) in
+	  abaddr_to_addr a
     | _ -> raise Exceptions.Unknown
 
 (* TODO: is the sz really needed in exp_to_ptr?? *)
+(* TODO: put this in wrapper around P1!! *)
 and exp_to_ptr env s e =
   match e with
       Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> raise Exceptions.Unknown
@@ -137,7 +151,7 @@ and exp_to_ptr env s e =
 	  p
     | UnOp (Focus n, AddrOf lv) -> 
 	let (m, o) = lval_to_addr env s lv in
-	  (m, Some (o, 0, n))
+	  (m, (Some (o, 0), Some n))
 	    (* TODO: could be a fallback, if more precision is needed
 	      let m = lval_to_memloc env s lv in
 	      Some (m, None)
@@ -172,13 +186,8 @@ let lval_to_buffer env s lv =
 	  (* TODO: maybe a bug with integer overflow here!! *)
 	  ((m, o + (Nat.to_int n)), 1)
     | Deref (e, _) -> 
-	let (m, o) = exp_to_ptr env s e in
-	let (o, n) =
-	  match o with
-	      Some (o, _, n) -> (o, n)
-	    | None -> (0, max_int)
-	in
-	  ((m, o), n)
+	let a = deref (exp_to_ptr env s e) in
+	  abaddr_to_buffer a
     | _ ->
 	(*print_endline (Newspeak.string_of_lval lv);*)
 	raise Exceptions.Unknown
@@ -218,7 +227,7 @@ let forget_memloc_list2 m s =
     !res
   
 (* TODO: should put this into a P1 adapter, rather than have such a complex 
-   store, remove exp_to_ptr (redundant code!!) *)   
+   store, remove exp_to_ptr (redundant code!!) *)
 let translate_exp_P1 env s e =
   let rec translate e =
     match e with
@@ -230,10 +239,10 @@ let translate_exp_P1 env s e =
       | UnOp (Focus n, AddrOf lv) -> begin
 	  try
 	    let (m, o) = lval_to_addr env s lv in
-	      [P1.AddrOf (m, Some (o, 0, n))]
+	      [P1.AddrOf (m, (Some (o, 0), Some n))]
 	  with Exceptions.Unknown -> 
 	    let m = lval_to_memloc_list env s lv in
-	      List.map (fun m -> P1.AddrOf (m, None)) m
+	      List.map (fun m -> P1.AddrOf (m, (None, None))) m
 	end
       | UnOp ((Coerce _|PtrToInt _|BNot _|Focus _|IntToPtr _
 	      |Cast (Int _, FunPtr)|Cast (Float _, Float _)|Cast (FunPtr, Ptr)
@@ -298,8 +307,7 @@ let copy (dst, src) env (s1, s2, s3) =
     (s1, s2, s3)
 
 let set_pointsto (m1, o) m2 (s1, s2, s3) =
-(* TODO: not good this constant!!! *)
-  let s1 = P1.assign [m1] [P1.AddrOf (m2, Some (0, 0, 32))] s1 in
+  let s1 = P1.assign [m1] [P1.AddrOf (m2, (Some (0, 0), None))] s1 in
   let s2 = P2.assign (m1, o) s2 in
     (s1, s2, s3)
 
@@ -339,8 +347,8 @@ let read_addr (s, _, _) (m, _) =
   let (x, info) = get_one_abptr (P1.read s m) in
   let info = 
     match info with
-	Some (o, _, sz) -> Some (o, sz)
-      | None -> None
+	(Some (o, _), Some sz) -> Some (o, sz)
+      | _ -> None
   in
     (x, info)
 

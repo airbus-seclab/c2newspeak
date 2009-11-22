@@ -29,7 +29,7 @@
     representing the fact that the pointer may move from offset to
     offset+size-1, and is at currently offset+delta
 *)
-type num_pred = (int * int * int) option
+type num_pred = (int * int) option * int option
 
 type t
 
