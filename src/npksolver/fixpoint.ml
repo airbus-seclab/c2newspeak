@@ -21,34 +21,42 @@
 
 open Domain
 
+let rec assoc f = function
+  | [] -> invalid_arg "assoc"
+  | h::t -> begin
+              match f h with
+              | None   -> assoc f t
+              | Some r -> r
+            end
+
+let eval_stmt dom stmt x = match stmt with
+  | Cfg.Nop -> x
+  | Cfg.Init vs ->
+          List.fold_left (fun r v ->
+              Box.meet dom
+                       (Box.singleton dom (Prog.G v) (dom.from_val 0))
+                       r
+            ) x vs
+  | Cfg.Pop  -> Box.pop  dom x
+  | Cfg.Push -> Box.push dom x
+  | Cfg.Guard e ->
+          begin
+            match dom.guard e with
+            | None -> x
+            | Some (v, f) -> Box.guard v f x
+          end
+  | Cfg.Set (v, e) ->
+          begin
+            let lookup v = Box.get_var dom v x in
+            if x = Box.bottom
+              then Box.bottom
+              else Box.set_var dom v (dom.eval lookup e) x
+          end
+
 let new_value dom x vertices i =
     (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
     let from_vals = Utils.filter_map (fun (origin, dest, _, stmt) ->
-      let f x = match stmt with
-      | Cfg.Nop -> x
-      | Cfg.Init vs ->
-              List.fold_left (fun r v ->
-                  Box.meet dom
-                           (Box.singleton dom (Prog.G v) (dom.from_val 0))
-                           r
-                ) x vs
-      | Cfg.Pop  -> Box.pop  dom x
-      | Cfg.Push -> Box.push dom x
-      | Cfg.Guard e ->
-              begin
-                match dom.guard e with
-                | None -> x
-                | Some (v, f) -> Box.guard v f x
-              end
-      | Cfg.Set (v, e) ->
-              begin
-                let lookup v = Box.get_var dom v x in
-                if x = Box.bottom
-                  then Box.bottom
-                  else Box.set_var dom v (dom.eval lookup e) x
-              end
-
-      in
+      let f = eval_stmt dom stmt in
       if (dest = i) then (* FIXME style *)
                       begin
                         let xo = x.(origin) in
@@ -71,26 +79,39 @@ let rec kleene ?(n=0) dom v x =
   else kleene ~n:(succ n) dom v fx
 
 (* worklist algorithm *)
-let f_worklist dom vertices x =
+let f_horwitz dom v x =
+  let succ i = Utils.filter_map (
+      function (src,j,_,_) when src = i-> Some j
+             | _ -> None
+  ) v in
+  let f (i,j) = assoc
+    (function
+     | (i',j',_,s) when i' = i && j' = j ->
+         let g = eval_stmt dom s in
+         let r =
+           if Options.get Options.widening then
+             fun xo -> Box.widen dom xo (g xo)
+           else
+             g
+         in
+       Some r
+     | _ -> None
+    ) v
+  in
   let worklist = Queue.create () in
-  let ops = ref 0 in
-  Array.iteri (fun i _ ->
-    Queue.add i worklist
-  ) x;
+  Queue.add (Array.length x - 1) worklist;
   while (not (Queue.is_empty worklist)) do
-    incr ops;
-    let n = Queue.take worklist in
-    let nv = new_value dom x vertices n in
-    let ov = x.(n) in
-    x.(n) <- nv;
-    if (not (Box.equal nv ov)) then
-      let successors = Utils.filter_map (fun (src, dst, _, _) ->
-        if src == n then Some dst
-                    else None
-        ) vertices in
-        List.iter (fun m -> Queue.add m worklist) successors
+    let i = Queue.take worklist in
+    List.iter (fun j ->
+      let r = Box.join dom x.(j) (f(i,j) x.(i)) in
+      if (not (Box.equal r x.(j))) then
+        begin
+          Queue.add j worklist;
+          x.(j) <- r
+        end
+    ) (succ i)
   done;
-  (x, !ops)
+  (x, 0)
 
 let compute_warn watchpoints dom results =
   let intvl dom a b =
@@ -130,7 +151,7 @@ let solve wp (ln, v) =
   let (res, ops) =
     match Options.get_cc Options.fp_algo with
     | Options.Roundrobin -> kleene dom v x0
-    | Options.Worklist   -> f_worklist dom v x0
+    | Options.Worklist   -> f_horwitz dom v x0
   in
   if (Options.get Options.verbose) then
     prerr_endline ("FP computed in "^string_of_int ops^" iterations");
