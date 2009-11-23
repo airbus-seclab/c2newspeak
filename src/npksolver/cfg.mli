@@ -29,8 +29,8 @@ type stmt =
   | Pop
   | Init of string list
 
-type vertex = node * node * string * stmt
+type edge = node * node * stmt
 
-type t = int * vertex list
+type t = int * edge list
 
 

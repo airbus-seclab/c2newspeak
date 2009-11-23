@@ -1,4 +1,4 @@
 lastnode: 2
-vertices:
+edges:
   - [2, 1]
   - [1, 0]

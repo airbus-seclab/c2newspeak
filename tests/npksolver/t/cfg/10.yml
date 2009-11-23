@@ -1,5 +1,5 @@
 lastnode: 5
-vertices:
+edges:
   - [5, 4]
   - [2, 4]
   - [4, 3]

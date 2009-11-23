@@ -26,18 +26,33 @@ module Lbl = struct
   let next = succ
 end
 
+let print_stmt = function
+  | Cfg.Nop           -> "(nop)"
+  | Cfg.Set (lv, exp) -> Pcomp.Print.lval lv ^ " <- " ^ Pcomp.Print.exp exp
+  | Cfg.Guard exp     -> "[ " ^ Pcomp.Print.exp exp ^ " ]"
+  | Cfg.Push          -> "(push)"
+  | Cfg.Pop           -> "(pop)"
+  | Cfg.Init _vars    -> "(init)"
+
 (**
  * The type used to fold over blocks.
  *
  * lbl is the last label used.
  *)
 type 'a stmt_context =
-  { lbl      : int                (* XXX *)
-  ; alist    : (int*int) list     (* XXX *)
-  ; vertices : Cfg.vertex list
-  ; join     : int option         (* XXX *)
-  ; wp       : (Newspeak.location * int * Prog.check) list
+  { lbl   : int                (* XXX *)
+  ; alist : (int*int) list     (* XXX *)
+  ; edges : Cfg.edge list
+  ; join  : int option         (* XXX *)
+  ; wp    : (Newspeak.location * int * Prog.check) list
   }
+
+(* Edge builders *)
+(* a --<l>--> b means (a, b, l  ) *)
+(* a --<>-->  b means (a, b, Nop) *)
+let (--<) src lbl = (src,lbl)
+let (>-->) (src,lbl) dst = (src,dst,lbl)
+let (--<>-->) src dst = (src,dst,Cfg.Nop)
 
 let rec process_stmt (stmt, loc) c =
   let jnode = begin match c.join with
@@ -48,22 +63,22 @@ let rec process_stmt (stmt, loc) c =
   match stmt with
   | InfLoop b -> let btm = Lbl.next c.lbl in
                  let c' = process_blk b c.alist btm in
-                 { c with lbl      = c'.lbl
-                 ;        vertices = (btm, c'.lbl, "(reloop)", Cfg.Nop)
-                                   ::c'.vertices
-                                    @c.vertices
-                 ;        join     = None
+                 { c with lbl   = c'.lbl
+                 ;        edges = (btm --<>--> c'.lbl)
+                                  ::c'.edges
+                                   @c.edges
+                 ;        join    = None
                  ; wp = c'.wp @ c.wp
                  }
   | Select (b1, b2) -> let c1 = process_blk b1 c.alist jnode in
                        let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
                        let top = Lbl.next c2.lbl in
-                       { c with lbl      = top
-                       ;        vertices =  (top, c1.lbl, "", Cfg.Nop)
-                                          ::(top, c2.lbl, "", Cfg.Nop)
-                                          ::c1.vertices
-                                           @c2.vertices
-                                           @c.vertices
+                       { c with lbl   = top
+                       ;        edges = (top --<>--> c1.lbl)
+                                      ::(top --<>--> c2.lbl)
+                                      ::c1.edges
+                                       @c2.edges
+                                       @c.edges
                        ; join = None
                        ; wp = c1.wp @ c2.wp @ c.wp
                        }
@@ -72,57 +87,54 @@ let rec process_stmt (stmt, loc) c =
                              let c1 =
                                process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl
                              in
-                             { c with lbl      = c1.lbl
-                             ;        vertices = c1.vertices
-                                               @ c2.vertices
-                                               @  c.vertices
-                             ;        join     = None
+                             { c with lbl   = c1.lbl
+                             ;        edges = c1.edges
+                                               @ c2.edges
+                                               @  c.edges
+                             ;        join  = None
                              ; wp = c1.wp @ c2.wp @ c.wp
                              }
   | Goto l -> let lbl' = Lbl.next c.lbl in
               let ljmp = List.assoc l c.alist in
               { c with lbl = lbl'
-              ;        vertices = (lbl', ljmp, "(jump)", Cfg.Nop)
-                                ::c.vertices
+              ;        edges = (lbl' --<>--> ljmp)
+                                ::c.edges
               ; join = None
               }
   | Set (v, e) -> let lbl' = Lbl.next c.lbl in
                   { c with lbl = lbl'
-                  ; vertices = ( lbl'
-                               , jnode
-                               , Pcomp.Print.stmtk stmt
-                               , Cfg.Set (v, e))
-                               ::c.vertices
+                  ; edges = ( lbl' --<Cfg.Set (v, e)>--> jnode )
+                               ::c.edges
                   ; join = None
                   }
   | Guard e -> let lbl' = Lbl.next c.lbl in
                { c with lbl = lbl'
-               ; vertices =  (lbl', jnode, Pcomp.Print.stmtk stmt, Cfg.Guard e)
-                           ::c.vertices
+               ; edges = (lbl' --<Cfg.Guard e>--> jnode)
+                          ::c.edges
                ; join = None
                }
   | Decl b -> let l_pop = Lbl.next jnode in
               let c' = process_blk b c.alist l_pop in
               let l_push = Lbl.next c'.lbl in
                        { c with lbl = l_push
-                       ; vertices =   (l_push, c'.lbl, "(push)", Cfg.Push)
-                                    ::(l_pop, jnode  , "(pop)" , Cfg.Pop )
-                                    ::c'.vertices
-                                     @c.vertices
+                       ; edges = (l_push --<Cfg.Push>--> c'.lbl)
+                                  ::(l_pop  --<Cfg.Pop >--> jnode )
+                                  ::c'.edges
+                                   @c.edges
                        ; join = None
                        ; wp = c'.wp@c.wp
                        }
   | Assert ck ->
       let l = Lbl.next c.lbl in
       { c with lbl = l
-      ;   vertices = (l,c.lbl, "(watchpoint)", Cfg.Nop)::c.vertices
+      ;   edges = (l --<>--> c.lbl)::c.edges
       ;         wp = (loc, l, ck)::c.wp }
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
       { lbl = l0
       ; alist = al
-      ; vertices = []
+      ; edges = []
       ; join = join
       ; wp = []
       }
@@ -130,30 +142,32 @@ and process_blk ?join blk al l0 =
 let process blk vars =
   let c = process_blk blk [] Lbl.init in
   let lbl' = Lbl.next c.lbl in
-  (lbl', (lbl',c.lbl,"(init)", Cfg.Init vars)::c.vertices), c.wp
+  (lbl', (lbl'--<Cfg.Init vars>--> c.lbl)::c.edges), c.wp
 
-let dump_yaml (n, v) =
+let dump_yaml (n, e) =
     "---\n"
   ^ "lastnode: "
   ^ string_of_int n ^ "\n"
-  ^ "vertices:"
-    ^ (if v = [] then " []\n" else
+  ^ "edges:"
+    ^ (if e = [] then " []\n" else
       "\n"
-    ^ (String.concat "" (List.map (fun (a, b, s, _) ->
+    ^ (String.concat "" (List.map (fun (a, b, stmt) ->
+      let s = print_stmt stmt in
       "  - [" ^ string_of_int a ^ ", " ^ string_of_int b ^ "]"
       ^ (if s = "" then "" else " # " ^ s)
-      ^ "\n") v))
+      ^ "\n") e))
     )
   ^ "...\n"
 
-let dump_dot ?(results=[||]) (_, v) =
+let dump_dot ?(results=[||]) (_, e) =
       "digraph G {\nnode [shape=box]\n"
     ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
       string_of_int i^"[label=\""^s^"\"]\n"
     ) results))
-    ^ String.concat "" (List.map (fun (a, b, s, _) ->
+    ^ String.concat "" (List.map (fun (a, b, stmt) ->
+      let s = print_stmt stmt in
        "  "  ^ string_of_int a
     ^ " -> " ^ string_of_int b
     ^ " [label=\"" ^ s ^ "\"]"
-  ) v)
+  ) e)
   ^ "\n}\n"

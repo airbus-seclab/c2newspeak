@@ -53,9 +53,9 @@ let eval_stmt dom stmt x = match stmt with
               else Box.set_var dom v (dom.eval lookup e) x
           end
 
-let new_value dom x vertices i =
-    (* join ( f(origin) / (origin, dest, f) in v / dest = i) *)
-    let from_vals = Utils.filter_map (fun (origin, dest, _, stmt) ->
+let new_value dom x edges i =
+    (* join ( f(origin) / (origin, dest, f) in edges / dest = i) *)
+    let from_vals = Utils.filter_map (fun (origin, dest, stmt) ->
       let f = eval_stmt dom stmt in
       if (dest = i) then (* FIXME style *)
                       begin
@@ -69,7 +69,7 @@ let new_value dom x vertices i =
                         Some r
                       end
                     else None
-    ) vertices in
+    ) edges in
     List.fold_left (Box.join dom) x.(i) from_vals
 
 (* roundrobin algorithm *)
@@ -81,12 +81,12 @@ let rec kleene ?(n=0) dom v x =
 (* worklist algorithm *)
 let f_horwitz dom v x =
   let succ i = Utils.filter_map (
-      function (src,j,_,_) when src = i-> Some j
+      function (src,j,_) when src = i-> Some j
              | _ -> None
   ) v in
   let f (i,j) = assoc
     (function
-     | (i',j',_,s) when i' = i && j' = j ->
+     | (i',j',s) when i' = i && j' = j ->
          let g = eval_stmt dom s in
          let r =
            if Options.get Options.widening then
