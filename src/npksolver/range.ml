@@ -177,15 +177,15 @@ let eval lookup x =
 
 let guard e =
   match e with
-  |      Op (Gt, Lval (v,_), Const n)  -> Some (v, meet (from_bounds (n+1) max_int))
-  |      Op (Gt, Const n, Lval (v,_))  -> Some (v, meet (from_bounds min_int (n-1)))
-  |      Op (Eq, Lval (v,_), Const n)  -> Some (v, meet (from_bounds n n))
-  | Not (Op (Gt, Lval (v,_), Const n)) -> Some (v, meet (from_bounds min_int n))
-  | Not (Op (Gt, Const n, Lval (v,_))) -> Some (v, meet (from_bounds n max_int))
-  | Not (Op (Eq, Lval (v,_), Const n)) -> Some (v, function
+  |      Op (Gt, Lval (v,_), Const n)  -> [v, meet (from_bounds (n+1) max_int)]
+  |      Op (Gt, Const n, Lval (v,_))  -> [v, meet (from_bounds min_int (n-1))]
+  |      Op (Eq, Lval (v,_), Const n)  -> [v, meet (from_bounds n n)]
+  | Not (Op (Gt, Lval (v,_), Const n)) -> [v, meet (from_bounds min_int n)]
+  | Not (Op (Gt, Const n, Lval (v,_))) -> [v, meet (from_bounds n max_int)]
+  | Not (Op (Eq, Lval (v,_), Const n)) -> [v, function
                                               | Some(x,y) when x = y && x = n -> None
                                               | r -> r
-                                          )
+                                          ]
   | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 let dom =

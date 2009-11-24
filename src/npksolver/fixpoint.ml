@@ -32,11 +32,9 @@ let eval_stmt dom stmt x = match stmt with
   | Cfg.Pop  -> Box.pop  dom x
   | Cfg.Push -> Box.push dom x
   | Cfg.Guard e ->
-          begin
-            match dom.guard e with
-            | None -> x
-            | Some (v, f) -> Box.guard v f x
-          end
+            List.fold_left (fun x (v, f) ->
+              Box.guard v f x
+            ) x (dom.guard e)
   | Cfg.Set (v, e) ->
           begin
             let lookup v = Box.get_var dom v x in

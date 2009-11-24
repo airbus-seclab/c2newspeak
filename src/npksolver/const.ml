@@ -82,12 +82,12 @@ let eval lookup e =
   eval e
 
 let guard = function
-  |      Op (Eq, Lval (v,_), Const n)  (* v == n *) -> Some (v, liftv (Cst n))
-  |      Op (Gt, Lval (v,_), Const _)  (* v >  n *) -> Some (v, liftv Top)
-  |      Op (Gt, Const _, Lval (v,_))  (* n >  v *) -> Some (v, liftv Top)
-  | Not (Op (Gt, Lval (v,_), Const _)) (* v <= n *) -> Some (v, liftv Top)
-  | Not (Op (Gt, Const _, Lval (v,_))) (* n <= v *) -> Some (v, liftv Top)
-  | Not (Op (Eq, Lval (v,_), Const _)) (* v != n *) -> Some (v, liftv Top)
+  |      Op (Eq, Lval (v,_), Const n)  (* v == n *) -> [v, liftv (Cst n)]
+  |      Op (Gt, Lval (v,_), Const _)  (* v >  n *) -> [v, liftv Top]
+  |      Op (Gt, Const _, Lval (v,_))  (* n >  v *) -> [v, liftv Top]
+  | Not (Op (Gt, Lval (v,_), Const _)) (* v <= n *) -> [v, liftv Top]
+  | Not (Op (Gt, Const _, Lval (v,_))) (* n <= v *) -> [v, liftv Top]
+  | Not (Op (Eq, Lval (v,_), Const _)) (* v != n *) -> [v, liftv Top]
   | e -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
 let dom =
