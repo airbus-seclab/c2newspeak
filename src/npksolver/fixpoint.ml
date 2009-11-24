@@ -21,14 +21,6 @@
 
 open Domain
 
-let rec assoc f = function
-  | [] -> invalid_arg "assoc"
-  | h::t -> begin
-              match f h with
-              | None   -> assoc f t
-              | Some r -> r
-            end
-
 let eval_stmt dom stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
@@ -68,29 +60,6 @@ let f_horwitz dom v x =
       ) (Cfg.NodeMap.find i v)
     with Not_found -> []
   in
-  (* FIXME *)
-  (*
-  let succ i = Utils.filter_map (
-      function (src,j,_) when src = i-> Some j
-             | _ -> None
-  ) v in
-  *)
-  (*
-  let f (i,j) = assoc
-    (function
-     | (i',j',s) when i' = i && j' = j ->
-         let g = eval_stmt dom s in
-         let r =
-           if Options.get Options.widening then
-             fun xo -> Box.widen dom xo (g xo)
-           else
-             g
-         in
-       Some r
-     | _ -> None
-    ) v
-  in
-  *)
   let worklist = Queue.create () in
   Queue.add (Array.length x - 1) worklist;
   while (not (Queue.is_empty worklist)) do
