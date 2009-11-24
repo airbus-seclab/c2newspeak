@@ -34,6 +34,8 @@ let print_stmt = function
   | Cfg.Pop           -> "(pop)"
   | Cfg.Init _vars    -> "(init)"
 
+type edge = Cfg.node * Cfg.node * Cfg.stmt
+
 (**
  * The type used to fold over blocks.
  *
@@ -42,7 +44,7 @@ let print_stmt = function
 type 'a stmt_context =
   { lbl   : int                (* XXX *)
   ; alist : (int*int) list     (* XXX *)
-  ; edges : Cfg.edge list
+  ; edges : edge list
   ; join  : int option         (* XXX *)
   ; wp    : (Newspeak.location * int * Prog.check) list
   }
@@ -50,21 +52,27 @@ type 'a stmt_context =
 (* Edge builders *)
 (* a --<l>--> b means (a, b, l  ) *)
 (* a --<>-->  b means (a, b, Nop) *)
-let (--<) src lbl = (src,lbl)
+let (>--<) src lbl = (src,lbl)
 let (>-->) (src,lbl) dst = (src,dst,lbl)
-let (--<>-->) src dst = (src,dst,Cfg.Nop)
+let (>--<>-->) src dst = (src,dst,Cfg.Nop)
+
+(* Reduce edges *)
+let reduce_edges e =
+    List.fold_left (fun map (src, dest, stmt) ->
+      let lst =
+        try Cfg.NodeMap.find src map
+        with Not_found -> []
+      in
+        Cfg.NodeMap.add src ((dest,stmt)::lst) map
+    ) (Cfg.NodeMap.empty) e
 
 let rec process_stmt (stmt, loc) c =
-  let jnode = begin match c.join with
-  | None   -> c.lbl
-  | Some l -> l
-  (* XXX with_default *)
-  end in
+  let jnode = Utils.with_default c.lbl c.join in
   match stmt with
   | InfLoop b -> let btm = Lbl.next c.lbl in
                  let c' = process_blk b c.alist btm in
                  { c with lbl   = c'.lbl
-                 ;        edges = (btm --<>--> c'.lbl)
+                 ;        edges = (btm >--<>--> c'.lbl)
                                   ::c'.edges
                                    @c.edges
                  ;        join    = None
@@ -74,8 +82,8 @@ let rec process_stmt (stmt, loc) c =
                        let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
                        let top = Lbl.next c2.lbl in
                        { c with lbl   = top
-                       ;        edges = (top --<>--> c1.lbl)
-                                      ::(top --<>--> c2.lbl)
+                       ;        edges = (top >--<>--> c1.lbl)
+                                      ::(top >--<>--> c2.lbl)
                                       ::c1.edges
                                        @c2.edges
                                        @c.edges
@@ -97,19 +105,19 @@ let rec process_stmt (stmt, loc) c =
   | Goto l -> let lbl' = Lbl.next c.lbl in
               let ljmp = List.assoc l c.alist in
               { c with lbl = lbl'
-              ;        edges = (lbl' --<>--> ljmp)
+              ;        edges = (lbl' >--<>--> ljmp)
                                 ::c.edges
               ; join = None
               }
   | Set (v, e) -> let lbl' = Lbl.next c.lbl in
                   { c with lbl = lbl'
-                  ; edges = ( lbl' --<Cfg.Set (v, e)>--> jnode )
+                  ; edges = ( lbl' >--<Cfg.Set (v, e)>--> jnode )
                                ::c.edges
                   ; join = None
                   }
   | Guard e -> let lbl' = Lbl.next c.lbl in
                { c with lbl = lbl'
-               ; edges = (lbl' --<Cfg.Guard e>--> jnode)
+               ; edges = (lbl' >--<Cfg.Guard e>--> jnode)
                           ::c.edges
                ; join = None
                }
@@ -117,17 +125,17 @@ let rec process_stmt (stmt, loc) c =
               let c' = process_blk b c.alist l_pop in
               let l_push = Lbl.next c'.lbl in
                        { c with lbl = l_push
-                       ; edges = (l_push --<Cfg.Push>--> c'.lbl)
-                                  ::(l_pop  --<Cfg.Pop >--> jnode )
-                                  ::c'.edges
-                                   @c.edges
+                       ; edges = (l_push >--<Cfg.Push>--> c'.lbl)
+                               ::(l_pop  >--<Cfg.Pop >--> jnode )
+                               ::c'.edges
+                                @c.edges
                        ; join = None
                        ; wp = c'.wp@c.wp
                        }
   | Assert ck ->
       let l = Lbl.next c.lbl in
       { c with lbl = l
-      ;   edges = (l --<>--> c.lbl)::c.edges
+      ;   edges = (l >--<>--> c.lbl)::c.edges
       ;         wp = (loc, l, ck)::c.wp }
 
 and process_blk ?join blk al l0 =
@@ -142,20 +150,32 @@ and process_blk ?join blk al l0 =
 let process blk vars =
   let c = process_blk blk [] Lbl.init in
   let lbl' = Lbl.next c.lbl in
-  (lbl', (lbl'--<Cfg.Init vars>--> c.lbl)::c.edges), c.wp
+  let edges = (lbl' >--<Cfg.Init vars>--> c.lbl)::c.edges in
+  let map = reduce_edges edges in
+  (lbl', map), c.wp
 
 let dump_yaml (n, e) =
     "---\n"
   ^ "lastnode: "
   ^ string_of_int n ^ "\n"
   ^ "edges:"
-    ^ (if e = [] then " []\n" else
+    ^ (if Cfg.NodeMap.is_empty e then " []\n" else
       "\n"
-    ^ (String.concat "" (List.map (fun (a, b, stmt) ->
-      let s = print_stmt stmt in
-      "  - [" ^ string_of_int a ^ ", " ^ string_of_int b ^ "]"
-      ^ (if s = "" then "" else " # " ^ s)
-      ^ "\n") e))
+    ^ (Cfg.NodeMap.fold
+        (fun src es s ->
+          s^"  - {id: "^string_of_int src^ ", s: [" ^ 
+          (String.concat ", "
+            ( List.map
+              ( fun (dest, stmt) ->
+                let s' = print_stmt stmt in
+                   "{n: "^ string_of_int dest ^ ", "
+                   ^"stmt: \"" ^ s' ^"\"}"
+              ) es
+            )
+          )
+          ^"]}\n"
+        ) e ""
+      )
     )
   ^ "...\n"
 
@@ -164,10 +184,16 @@ let dump_dot ?(results=[||]) (_, e) =
     ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
       string_of_int i^"[label=\""^s^"\"]\n"
     ) results))
-    ^ String.concat "" (List.map (fun (a, b, stmt) ->
-      let s = print_stmt stmt in
-       "  "  ^ string_of_int a
-    ^ " -> " ^ string_of_int b
-    ^ " [label=\"" ^ s ^ "\"]"
-  ) e)
+
+    ^ (Cfg.NodeMap.fold (fun src es s ->
+      s^
+        (String.concat ""
+          (List.map (fun (dest, stmt) ->
+          let s' = print_stmt stmt in
+          "  "  ^ string_of_int src
+          ^ " -> " ^ string_of_int dest
+          ^ " [label=\"" ^ s' ^ "\"]"
+          ) es )
+        )
+    ) e "")
   ^ "\n}\n"

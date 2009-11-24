@@ -29,8 +29,9 @@ type stmt =
   | Pop
   | Init of string list
 
-type edge = node * node * stmt
+module NodeMap : sig
+  include Map.S
+end with type key = node
 
-type t = int * edge list
-
+type t = int * ((node * stmt) list) NodeMap.t
 

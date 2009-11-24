@@ -93,11 +93,7 @@ let run_selftests =
 
 let main args =
   let ops =
-  [ 'a'
-  , "algorithm"
-  , "select a fixpoint algorithm (rr : roundrobin, wl : worklist (default))"
-  , Options.Carg (Options.set_cc Options.fp_algo)
-  ; 'd' , "domain"
+  [ 'd' , "domain"
   , "select a domain (c : constants, r : ranges, at : array_top (default))"
   , Options.Carg set_domain
   ; 'h', "help"

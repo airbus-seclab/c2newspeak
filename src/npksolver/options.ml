@@ -50,8 +50,6 @@ let cfg_only = ref false
 let graphviz = ref false
 let solver = ref false
 
-let fp_algo  = (fp_alg_str, ref Worklist)
-
 type opt_action =
   | Help
   | Set  of bool control

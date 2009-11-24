@@ -35,7 +35,6 @@ val verbose  : bool control
 val graphviz : bool control
 val widening : bool control
 val solver   : bool control
-val fp_algo : fp_algorithm c_control
 
 val set_cc : 'a c_control -> string -> unit
 val get_cc : 'a c_control -> 'a

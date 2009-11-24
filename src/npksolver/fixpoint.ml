@@ -53,37 +53,29 @@ let eval_stmt dom stmt x = match stmt with
               else Box.set_var dom v (dom.eval lookup e) x
           end
 
-let new_value dom x edges i =
-    (* join ( f(origin) / (origin, dest, f) in edges / dest = i) *)
-    let from_vals = Utils.filter_map (fun (origin, dest, stmt) ->
-      let f = eval_stmt dom stmt in
-      if (dest = i) then (* FIXME style *)
-                      begin
-                        let xo = x.(origin) in
-                        let r =
-                          if Options.get Options.widening then
-                            Box.widen dom xo (f xo)
-                          else
-                            f xo
-                        in
-                        Some r
-                      end
-                    else None
-    ) edges in
-    List.fold_left (Box.join dom) x.(i) from_vals
-
-(* roundrobin algorithm *)
-let rec kleene ?(n=0) dom v x =
-  let fx = Array.init (Array.length x) (new_value dom x v) in
-  if fx = x then x, (n*Array.length x)
-  else kleene ~n:(succ n) dom v fx
-
 (* worklist algorithm *)
 let f_horwitz dom v x =
+  let succ i =
+    try
+      List.map (fun (dest,stmt) ->
+       let g = eval_stmt dom stmt in
+       let r =
+         if Options.get Options.widening then
+           fun xo -> Box.widen dom xo (g xo)
+         else
+           g
+       in (dest, r)
+      ) (Cfg.NodeMap.find i v)
+    with Not_found -> []
+  in
+  (* FIXME *)
+  (*
   let succ i = Utils.filter_map (
       function (src,j,_) when src = i-> Some j
              | _ -> None
   ) v in
+  *)
+  (*
   let f (i,j) = assoc
     (function
      | (i',j',s) when i' = i && j' = j ->
@@ -98,12 +90,13 @@ let f_horwitz dom v x =
      | _ -> None
     ) v
   in
+  *)
   let worklist = Queue.create () in
   Queue.add (Array.length x - 1) worklist;
   while (not (Queue.is_empty worklist)) do
     let i = Queue.take worklist in
-    List.iter (fun j ->
-      let r = Box.join dom x.(j) (f(i,j) x.(i)) in
+    List.iter (fun (j, fij) ->
+      let r = Box.join dom x.(j) (fij x.(i)) in
       if (not (Box.equal r x.(j))) then
         begin
           Queue.add j worklist;
@@ -111,7 +104,7 @@ let f_horwitz dom v x =
         end
     ) (succ i)
   done;
-  (x, 0)
+  x
 
 let compute_warn watchpoints dom results =
   let intvl dom a b =
@@ -148,13 +141,7 @@ let solve wp (ln, v) =
   { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top dom;
-  let (res, ops) =
-    match Options.get_cc Options.fp_algo with
-    | Options.Roundrobin -> kleene dom v x0
-    | Options.Worklist   -> f_horwitz dom v x0
-  in
-  if (Options.get Options.verbose) then
-    prerr_endline ("FP computed in "^string_of_int ops^" iterations");
+  let res = f_horwitz dom v x0 in
   if Options.get Options.solver then begin
     print_endline "---";
     Array.iteri (fun i r ->

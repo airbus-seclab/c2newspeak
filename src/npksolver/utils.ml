@@ -31,6 +31,10 @@ let may f = function
   | None   -> None
   | Some x -> Some (f x)
 
+let with_default d = function
+  | None   -> d
+  | Some x -> x
+
 module Lift = struct
   type 'a lift = 'a option
 

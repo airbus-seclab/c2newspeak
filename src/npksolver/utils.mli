@@ -23,6 +23,8 @@ val filter_map : ('a -> 'b option) -> 'a list -> 'b list
 
 val may : ('a -> 'b) -> 'a option -> 'b option
 
+val with_default : 'a -> 'a option -> 'a
+
 module Lift : sig
   type 'a lift = 'a option
 

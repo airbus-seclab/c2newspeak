@@ -1,4 +1,7 @@
+---
 lastnode: 2
 edges:
-  - [2, 1]
-  - [1, 0]
+  - {id: 1, s: [{n: 0, stmt: "i <- i+1"}]}
+  - {id: 2, s: [{n: 1, stmt: "(init)"}]}
+...
+
