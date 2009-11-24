@@ -93,7 +93,7 @@ module S = VMap
 
 type 'a box = { store : 'a S.t ; esp : int }
 
-type 'a t = 'a box lift
+type 'a t = 'a box option
 
 let equal a b = match (a, b) with
   | None, None -> true

@@ -19,26 +19,7 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val filter_map : ('a -> 'b option) -> 'a list -> 'b list
+type ('a, 'b) t
 
-val filter_list : 'a option list -> 'a list
+val make : 'a Domain.c_dom -> 'b Domain.c_dom -> ('a, 'b) t Domain.c_dom
 
-val may : ('a -> 'b) -> 'a option -> 'b option
-
-val with_default : 'a -> 'a option -> 'a
-
-module Lift : sig
-
-  val bind : ('a -> 'b option) -> 'a option -> 'b option
-
-  val (>>=) : 'a option -> ('a -> 'b option) -> 'b option
-
-  val return : 'a -> 'a option
-
-  val maybe : 'b -> ('a -> 'b) -> 'a option -> 'b
-
-  val bind2 : ('a -> 'b -> 'c option) -> 'a option -> 'b option -> 'c option
-
-  val liftM2 : ('a -> 'b -> 'c) -> 'a option -> 'b option -> 'c option
-
-end
