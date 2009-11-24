@@ -19,6 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+let rec filter_list = function
+  | [] -> []
+  | Some h::t -> h::filter_list t
+  | None  ::t ->    filter_list t
+
 let rec filter_map f = function
   |  []  -> []
   | h::t -> begin
@@ -38,15 +43,15 @@ let with_default d = function
 module Lift = struct
   type 'a lift = 'a option
 
+  let maybe d f = function
+    | None   -> d
+    | Some x -> f x
+
   let bind f = function
     | None   -> None
     | Some x -> f x
 
   let return x = Some x
-
-  let maybe d f = function
-    | None   -> d
-    | Some x -> f x
 
   let bind2 f x y =
     bind (fun x' ->

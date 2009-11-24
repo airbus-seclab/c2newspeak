@@ -296,7 +296,7 @@ let run _ =
   ae (join (join (intvl "i" min_int 0) (sg "j" 5))
            (join (intvl "i" 0 max_int) (sg "j" 8))
      )
-     (intvl "j" 5 8)
+     (join (intvl "i" min_int max_int) (intvl "j" 5 8))
      "{i: R-, j: 5} \\/ {i: R+, j: 8} = {j: [5;8]}"
      ;
 

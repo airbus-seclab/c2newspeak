@@ -21,6 +21,8 @@
 
 val filter_map : ('a -> 'b option) -> 'a list -> 'b list
 
+val filter_list : 'a option list -> 'a list
+
 val may : ('a -> 'b) -> 'a option -> 'b option
 
 val with_default : 'a -> 'a option -> 'a

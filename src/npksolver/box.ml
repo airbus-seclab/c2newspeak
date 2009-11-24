@@ -25,21 +25,7 @@ let may_cons h t = Utils.may (fun x -> h::x) t
 
 let varcmp = Pervasives.compare
 
-type var =
-  | Local of int
-  | Global of string
-
-let var_from_prog = function
-  | Prog.L n -> Local  n
-  | Prog.G s -> Global s
-  | _ -> invalid_arg "var_from_prog"
-  
-let prog_from_var = function
-  | Local  n -> Prog.L n
-  | Global s -> Prog.G s
-
-module Alist : sig
-  (** Association list *)
+module type STORE = sig
   type 'a t
   val empty : 'a Domain.c_dom -> 'a t
   val singleton : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
@@ -48,92 +34,74 @@ module Alist : sig
   val replace : Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
   val map : (Prog.lval -> 'a -> 'b) -> 'a t -> 'b list
   val assoc : Prog.lval -> 'a t -> 'a
-end = struct
-  (** Invariants : - list is sorted according to varcmp
-   *               - there are no "top" elements
-   *)
-  type 'a t = { dom: 'a Domain.c_dom
-              ; lst: (var * 'a) list
-              }
+end
 
-  let empty dom = { dom = dom ; lst = [] }
+module VMap : STORE = struct
+  type 'a t =
+    { dom : 'a Domain.c_dom
+    ; map : (Prog.lval, 'a) Pmap.t
+    }
 
-  let singleton dom k x =
-    let k' = var_from_prog k in
-    { lst = (k', x)::[] ; dom = dom }
+  let empty_map () = Pmap.create varcmp
 
-  let equal a b =
-    a.lst = b.lst
+  let empty dom =
+    { dom = dom
+    ; map = empty_map ()
+    }
 
-  let merge f x1 x2 =
-    let dom = x1.dom in
-    let rec merge_l x1 x2 =
-      match (x1, x2) with
-      | [], _  -> Some x2
-      | _ , [] -> Some x1
-      | (s1,r1)::t1, (s2,r2)::t2 ->
-          match varcmp s1 s2 with
-          | 0 -> begin
-                   let r = f r1 r2 in
-                   if r = dom.bottom then None
-                   else if r = dom.top
-                   then         merge_l t1 t2
-                   else
-                     may_cons (s1, r) (merge_l t1 t2)
-                 end
-          | x when x < 0 -> may_cons (s1,r1) (merge_l t1 x2)
-          | _  (* > 0 *) -> may_cons (s2,r2) (merge_l x1 t2)
-    in
-    Utils.may (fun l -> { dom = dom ; lst = l })
-              (merge_l x1.lst x2.lst)
+  let singleton dom lv x =
+    { dom = dom
+    ; map = Pmap.add lv x (empty_map ())
+    }
 
-  let replace var f x =
-    let dom = x.dom in
-    let rec repl_l = function
-    | [] -> Some []
-    | (s, r)::t -> match varcmp s (var_from_prog var) with
-      | 0 -> begin
-               let fr = f r in
-               if fr = dom.bottom
-                 then None
-                 else
-                   if fr = dom.top
-                     then Some t
-                     else Some ((s, fr)::t)
-             end (* XXX may *)
-      | x when x < 0 -> may_cons (s, r) (repl_l t)
-      | _ (* > 0 *)  -> Some ((s, r)::t)
-    in
-    Utils.may (fun l -> { dom = dom ; lst = l })
-              (repl_l x.lst)
+  let assoc lv x =
+    try
+      Pmap.find lv x.map
+    with Not_found -> x.dom.top
 
   let map f x =
-    List.map (fun (k, x) -> f (prog_from_var k) x) x.lst
+    Pmap.foldi (fun k v l -> (f k v)::l) x.map []
 
-  let assoc v x =
-    let dom = x.dom in
-    let rec assoc_l = function
-    | (v', x)::_ when (var_from_prog v) = v'          -> x
-    | (v', _)::t when varcmp (var_from_prog v) v' > 0 -> assoc_l t
-    | _ -> dom.top
+  let equal a b =
+    Pmap.equal (=) a.map b.map
+
+  let merge f a b =
+    let map = 
+      Pmap.foldi (fun k v ->
+        Utils.Lift.bind (fun m ->
+        try
+          let res = f v (Pmap.find k m) in
+          if res = a.dom.bottom
+            then None
+            else Some (Pmap.add k res m)
+        with Not_found ->
+          Some (Pmap.add k v m)
+        )
+      ) a.map (Some b.map)
     in
-    assoc_l x.lst
+    Utils.may (fun m -> { a with map = m }) map
+
+  let replace v f x =
+    let sg = singleton x.dom v x.dom.top in
+    merge (fun a1 _a2 -> f a1) x sg
 
 end
 
 open Utils.Lift
 
-type 'a box = { store : 'a Alist.t ; esp : int }
+module S = VMap
+
+type 'a box = { store : 'a S.t ; esp : int }
 
 type 'a t = 'a box lift
 
 let equal a b = match (a, b) with
   | None, None -> true
   | Some a, Some b ->    a.esp = b.esp
-                      && Alist.equal a.store b.store
+                      && S.equal a.store b.store
   | _ -> false
 
-let top dom = Some {store = Alist.empty dom ; esp = 0}
+let top dom = Some {store = S.empty dom ; esp = 0}
 
 let bottom = None
 
@@ -155,17 +123,17 @@ let bind2_l f x y =
 let bind2' f =
   bind2 (bind_store f)
 
-let join  dom = bind2_l (Alist.merge dom.join)
-let meet  dom = bind2'  (Alist.merge dom.meet)
-let widen dom = bind2'  (Alist.merge dom.widen)
+let join  dom = bind2_l (S.merge dom.join)
+let meet  dom = bind2'  (S.merge dom.meet)
+let widen dom = bind2'  (S.merge dom.widen)
 
 let singleton dom v r =
-  Some { store = Alist.singleton dom v r ; esp = 0 }
+  Some { store = S.singleton dom v r ; esp = 0 }
 
 let guard var f =
   bind (fun x ->
   update_store
-    (Alist.replace var f (x.store)) x
+    (S.replace var f (x.store)) x
   )
 
 let adjust_esp esp =
@@ -176,8 +144,8 @@ let adjust_esp esp =
 let set_var dom v r =
   bind (fun x ->
     update_store
-    (Alist.merge (fun a _ -> a)
-                 (Alist.singleton dom (adjust_esp x.esp v) r)
+    (S.merge (fun a _ -> a)
+                 (S.singleton dom (adjust_esp x.esp v) r)
                  x.store
       ) x
   )
@@ -185,7 +153,7 @@ let set_var dom v r =
 let get_var dom v =
   maybe dom.bottom
     (fun x ->
-       Alist.assoc (adjust_esp x.esp v)
+       S.assoc (adjust_esp x.esp v)
                    x.store
     )
 
@@ -198,20 +166,34 @@ let pop dom =
   bind (fun x ->
   bind (fun s' ->
         Some { store = s' ; esp = x.esp - 1 }
-        ) (Alist.replace (Prog.L x.esp)
+        ) (S.replace (Prog.L x.esp)
           (fun _ -> dom.top) x.store
       )
   )
 
 let to_string dom =
   maybe "(bot)"
-    (fun x -> String.concat ", " (Alist.map (fun v r ->
+    (fun x -> String.concat ", " (S.map (fun v r ->
                 Pcomp.Print.lval v^"->"^dom.to_string r)
               x.store))
 
 let yaml_dump dom =
   maybe "bottom: yes"
-    (fun x -> "value: {" ^(String.concat ", " (Alist.map (fun v r ->
-      Pcomp.Print.lval v ^": \""^dom.to_string r^"\"") x.store))
-      ^"}"
+    (fun x -> "value: {" ^
+      (String.concat ", "
+        (Utils.filter_list
+          (S.map
+            (fun v r ->
+              if r = dom.top then None
+              else Some (
+                  Pcomp.Print.lval v
+                ^ ": \""
+                ^ dom.to_string r
+                ^ "\""
+              )
+            ) x.store
+          )
+        )
+      )
+      ^ "}"
     )
