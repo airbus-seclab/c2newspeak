@@ -273,7 +273,7 @@ let run _ =
   let meet = meet dom in
   let join = join dom in
   let sg var v =
-    singleton dom (Prog.G var) (Range.dom.from_val v)
+    singleton dom (Prog.G var) (const Range.dom v)
   in
   let intvl var x y =
     singleton dom (Prog.G var) (Range.from_bounds x y)
@@ -284,9 +284,9 @@ let run _ =
 
   let i2j5 = meet i2 j5 in
   assert_equal ~printer:Range.dom.to_string (get_gvar "i" i2j5)
-      (Range.dom.from_val 2) "{i: 2} /\\ {j: 5} . i = {2}";
+      (const Range.dom 2) "{i: 2} /\\ {j: 5} . i = {2}";
   assert_equal ~printer:Range.dom.to_string (get_gvar "j" i2j5)
-      (Range.dom.from_val 5) "{i: 2} /\\ {j: 5} . i = {5}";
+      (const Range.dom 5) "{i: 2} /\\ {j: 5} . i = {5}";
 
   ae (join i2 j5) i2j5 "{i: 2} \\/ {j: 5} = { i: 2, j: 5 }";
 
@@ -325,7 +325,7 @@ let run _ =
   test_plan (16 * 3);
   let top = dom.top in
   let bot = dom.bottom in
-  let c = dom.from_val in
+  let c = const dom in
 
   let tc a b r j m =
     let n_op ?r op = dom.to_string a ^ " " ^ op ^ " " ^ dom.to_string b

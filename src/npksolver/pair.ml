@@ -25,9 +25,6 @@ open Utils.Lift
 
 type ('a, 'b) t = ('a * 'b) option
  
-let from_val da db x =
-  Some (da.from_val x, db.from_val x)
-
 let incl da db x y =
   with_default false (
     x >>= fun (xa, xb) ->
@@ -79,7 +76,6 @@ let to_string da db =
 let make da db =
   { top = Some (da.top, db.top)
   ; bottom = None
-  ; from_val  = from_val  da db
   ; join  = liftM2 (join  da db)
   ; widen = liftM2 (widen da db)
   ; to_string = to_string da db

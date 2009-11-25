@@ -93,7 +93,6 @@ let guard = function
 let dom =
   { Domain.top       = Top
   ; Domain.bottom    = Bot
-  ; Domain.from_val  = (fun x -> Cst x)
   ; Domain.incl      = (<=%)
   ; Domain.join      = join
   ; Domain.meet      = meet

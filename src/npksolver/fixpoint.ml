@@ -24,9 +24,10 @@ open Domain
 let eval_stmt dom stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
+          let zero = const dom 0 in
           List.fold_left (fun r v ->
               Box.meet dom
-                       (Box.singleton dom (Prog.G v) (dom.from_val 0))
+                       (Box.singleton dom (Prog.G v) zero)
                        r
             ) x vs
   | Cfg.Pop  -> Box.pop  dom x
@@ -75,8 +76,8 @@ let f_horwitz dom v x =
 
 let compute_warn watchpoints dom results =
   let intvl dom a b =
-    dom.join (dom.from_val a)
-             (dom.from_val b)
+    dom.join (const dom a)
+             (const dom b)
   in
   begin
   if Options.get Options.verbose then
@@ -99,7 +100,7 @@ let compute_warn watchpoints dom results =
       Printf.fprintf stderr "eq check : r = %s, bound = {%d}\n" 
         (dom.to_string r) i
       end;
-      if not (dom.incl r (dom.from_val i)) then
+      if not (dom.incl r (const dom i)) then
         print_endline (Newspeak.string_of_loc loc ^ ": Value is different")
   ) watchpoints
 

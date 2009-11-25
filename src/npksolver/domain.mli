@@ -22,7 +22,6 @@
 type 'a c_dom =
   { top       : 'a
   ; bottom    : 'a
-  ; from_val  : int -> 'a
   ; incl      : 'a -> 'a -> bool
   ; join      : 'a -> 'a -> 'a
   ; meet      : 'a -> 'a -> 'a
@@ -42,3 +41,5 @@ type 't scope =
 val with_dom : t -> 'a scope -> 'a
 
 val do_nothing : unit scope
+
+val const : 'a c_dom -> int -> 'a

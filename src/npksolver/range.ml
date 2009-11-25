@@ -191,7 +191,6 @@ let guard e =
 let dom =
   { Domain.top       = top
   ; Domain.bottom    = bottom
-  ; Domain.from_val  = (fun n -> from_bounds n n)
   ; Domain.incl      = (<=%)
   ; Domain.join      = join
   ; Domain.meet      = meet

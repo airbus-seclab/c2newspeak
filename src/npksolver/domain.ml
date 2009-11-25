@@ -22,7 +22,6 @@
 type 'a c_dom =
   { top       : 'a
   ; bottom    : 'a
-  ; from_val  : int -> 'a
   ; incl      : 'a -> 'a -> bool
   ; join      : 'a -> 'a -> 'a
   ; meet      : 'a -> 'a -> 'a
@@ -46,3 +45,10 @@ let with_dom p e =
 
 let do_nothing =
   { bind =  fun _ -> () }
+
+let const dom n =
+  let empty_env _ =
+    invalid_arg "empty_environment"
+  in
+  dom.eval empty_env (Prog.Const n)
+
