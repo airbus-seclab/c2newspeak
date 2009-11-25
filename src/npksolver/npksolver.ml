@@ -22,6 +22,8 @@
 let domain_str = function
   | "c" -> Domain.pack Const.dom
   | "r" -> Domain.pack Range.dom
+  | "p" -> Domain.pack Parity.dom
+  | "pr" -> Domain.pack (Pair.make Parity.dom Range.dom)
   | s    -> invalid_arg ("no such domain : "^s)
 
 let       domain = ref (Domain.pack Range.dom)
@@ -94,7 +96,12 @@ let run_selftests =
 let main args =
   let ops =
   [ 'd' , "domain"
-  , "select a domain (c : constants, r : ranges, at : array_top (default))"
+  , "select a domain ("
+    ^   "c : constants"
+    ^ ", r : ranges (default)"
+    ^ ", p : parity"
+    ^ ", rp : range + parity"
+    ^ ")"
   , Options.Carg set_domain
   ; 'h', "help"
   , "this help message"
