@@ -23,7 +23,8 @@ let domain_str = function
   | "c" -> Domain.pack Const.dom
   | "r" -> Domain.pack Range.dom
   | "p" -> Domain.pack Parity.dom
-  | "pr" -> Domain.pack (Pair.make Parity.dom Range.dom)
+  | "rp" -> Domain.pack (Pair.make Parity.dom Range.dom)
+  | "ra" -> Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
   | s    -> invalid_arg ("no such domain : "^s)
 
 let       domain = ref (Domain.pack Range.dom)
@@ -101,6 +102,7 @@ let main args =
     ^ ", r : ranges (default)"
     ^ ", p : parity"
     ^ ", rp : range + parity"
+    ^ ", ra : range + folded arrays of range"
     ^ ")"
   , Options.Carg set_domain
   ; 'h', "help"

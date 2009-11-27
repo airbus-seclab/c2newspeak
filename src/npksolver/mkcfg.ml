@@ -124,19 +124,19 @@ let rec process_stmt (stmt, loc) c =
   | Decl b -> let l_pop = Lbl.next jnode in
               let c' = process_blk b c.alist l_pop in
               let l_push = Lbl.next c'.lbl in
-                       { c with lbl = l_push
-                       ; edges = (l_push >--<Cfg.Push>--> c'.lbl)
-                               ::(l_pop  >--<Cfg.Pop >--> jnode )
-                               ::c'.edges
-                                @c.edges
-                       ; join = None
-                       ; wp = c'.wp@c.wp
-                       }
+              { c with lbl = l_push
+              ; edges = (l_push >--<Cfg.Push>--> c'.lbl)
+                      ::(l_pop  >--<Cfg.Pop >--> jnode )
+                      ::c'.edges
+                       @c.edges
+              ; join = None
+              ; wp = c'.wp@c.wp
+              }
   | Assert ck ->
       let l = Lbl.next c.lbl in
       { c with lbl = l
-      ;   edges = (l >--<>--> c.lbl)::c.edges
-      ;         wp = (loc, l, ck)::c.wp }
+      ; edges = (l >--<>--> c.lbl)::c.edges
+      ; wp = (loc, l, ck)::c.wp }
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk

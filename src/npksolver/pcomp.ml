@@ -32,8 +32,8 @@ let rec assert_int_typ loc = function
         fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
   | Array (t, _sz) -> assert_int_typ loc t
   | Scalar (Int (Unsigned, _)) -> fail loc "Unsigned value"
-  | Region _  ->        fail loc "Not a scalar"
-  | Scalar (Float _| FunPtr | Ptr) -> fail loc "Bad scalar"
+  | Scalar _ -> fail loc "Bad scalar"
+  | Region _ -> fail loc "Not a scalar"
 
 let assert_int loc st =
   assert_int_typ loc (Scalar st)
@@ -46,11 +46,7 @@ let pcomp_binop loc binop =
   | DivI    -> Prog.Div
   | Gt scal -> assert_int loc scal; Prog.Gt
   | Eq scal -> assert_int loc scal; Prog.Eq
-  | PlusF _ | DivF _ | MultF _ | MinusF _
-  | BXor  _ | BAnd _ | BOr _
-  | MinusPP | PlusPI
-  | Shiftrt | Shiftlt
-  | Mod -> fail loc "Invalid binary operation"
+  | _ -> fail loc "Invalid binary operation"
 
 let pcomp_type = function
   | Scalar _ -> Prog.Int
@@ -66,11 +62,8 @@ let rec pcomp_exp loc = function
                              Prog.Op (op, (pcomp_exp loc e1)
                                         , (pcomp_exp loc e2))
   | UnOp (Coerce _ , e) -> pcomp_exp loc e
-  | AddrOfFun _ | AddrOf _
-  | UnOp (( Cast _ | IntToPtr _ | PtrToInt _
-          | BNot _ | Belongs  _ | Focus _), _)
-  | Const (CFloat _ | Nil) ->
-      fail loc "Invalid expression"
+  | UnOp (Belongs _, e) -> pcomp_exp loc e
+  | _ -> fail loc "Invalid expression"
 
 and pcomp_var loc = function
   | Global s     -> Prog.G s
@@ -135,12 +128,8 @@ module Print = struct
   open Prog
 
   let binop = function
-    | Plus  -> "+"
-    | Minus -> "-"
-    | Mult  -> "*"
-    | Div   -> "/"
-    | Gt    -> ">"
-    | Eq    -> "=="
+    | Plus  -> "+" | Minus -> "-" | Mult  -> "*"
+    | Div   -> "/" | Gt    -> ">" | Eq    -> "=="
 
   let rec lval = function
     | L n          -> ":"^string_of_int n
@@ -156,18 +145,16 @@ module Print = struct
   let asrt = function
     | AFalse     -> "false"
     | AEq (v, x) -> lval v ^ " == " ^ string_of_int x
-    | ABound (v, a, b) ->   lval v ^ " <=% ["
-                          ^ string_of_int a ^ ";"
-                                           ^ string_of_int b ^ "]"
+    | ABound (v, a, b) -> lval v ^ " <=% ["
+                        ^ string_of_int a ^ ";"
+                        ^ string_of_int b ^ "]"
 
   let stmtk = function
     | Set (v, e) -> lval v ^ " = " ^ exp e
-    | Guard e -> "["^exp e^"]"
-    | Assert a -> "assert "^asrt a
-    | Decl    _ -> "(decl)"
-    | InfLoop _ -> "(infloop)"
-    | Select  _ -> "(select)"
-    | DoWith  _ -> "(dowith)"
+    | Guard e -> "[" ^ exp e ^ "]"
+    | Assert a -> "assert " ^ asrt a
+    | Decl    _ -> "(decl)"   | InfLoop _ -> "(infloop)"
+    | Select  _ -> "(select)" | DoWith  _ -> "(dowith)"
     | Goto    _ -> "(goto)"
 
 end
