@@ -36,12 +36,18 @@ let eval_stmt dom stmt x = match stmt with
             List.fold_left (fun x (v, f) ->
               Box.guard v f x
             ) x (dom.guard e)
-  | Cfg.Set (v, e) ->
+  | Cfg.Set (lv, e) ->
           begin
-            let lookup v = Box.get_var dom v x in
-            if x = Box.bottom
-              then Box.bottom
-              else Box.set_var dom v (dom.eval lookup e) x
+            let lookup lv' = Box.get_var dom lv' x in
+            if x = Box.bottom then Box.bottom
+              else
+              begin
+                let new_value = dom.eval lookup e in
+                (* TODO old_value could be lazy here ? *)
+                let old_value = lookup lv in
+                let (where, what) = dom.update lv ~old_value ~new_value in
+                Box.set_var dom where what x
+              end
           end
 
 (* worklist algorithm *)

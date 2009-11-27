@@ -83,5 +83,6 @@ let make da db =
   ; incl      = incl      da db
   ; meet      = meet      da db
   ; guard     = guard     da db
+  ; update    = destructive_update
   }
 

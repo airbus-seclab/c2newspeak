@@ -19,6 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+type 'a update_method = Prog.lval        (* lvalue in program text *)
+                     -> old_value:'a     (* old value of variable  *)
+                     -> new_value:'a     (* new value evaluated    *)
+                     -> (Prog.lval * 'a) (* where to write what    *)
+
 type 'a c_dom =
   { top       : 'a
   ; bottom    : 'a
@@ -29,7 +34,10 @@ type 'a c_dom =
   ; to_string : 'a -> string
   ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
   ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) list
+  ; update : 'a update_method
   }
+
+val destructive_update : 'a update_method
 
 type t
 

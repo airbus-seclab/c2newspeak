@@ -104,5 +104,6 @@ let dom =
   ; to_string = to_string
   ; eval      = eval
   ; guard     = guard
+  ; update    = destructive_update
   }
 

@@ -198,5 +198,6 @@ let dom =
   ; Domain.to_string = to_string
   ; Domain.eval      = eval
   ; Domain.guard     = guard
+  ; Domain.update    = Domain.destructive_update
   }
 
