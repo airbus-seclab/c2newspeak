@@ -66,77 +66,65 @@ let reduce_edges e =
         Cfg.NodeMap.add src ((dest,stmt)::lst) map
     ) (Cfg.NodeMap.empty) e
 
+let update ?(new_edges=[]) ?(new_watch=[]) ~label c =
+  { c with lbl = label
+  ; join = None
+  ; wp = new_watch@c.wp
+  ; edges = new_edges@c.edges
+  }
+
 let rec process_stmt (stmt, loc) c =
   let jnode = Utils.with_default c.lbl c.join in
   match stmt with
-  | InfLoop b -> let btm = Lbl.next c.lbl in
-                 let c' = process_blk b c.alist btm in
-                 { c with lbl   = c'.lbl
-                 ;        edges = (btm >--<>--> c'.lbl)
-                                  ::c'.edges
-                                   @c.edges
-                 ;        join    = None
-                 ; wp = c'.wp @ c.wp
-                 }
-  | Select (b1, b2) -> let c1 = process_blk b1 c.alist jnode in
-                       let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
-                       let top = Lbl.next c2.lbl in
-                       { c with lbl   = top
-                       ;        edges = (top >--<>--> c1.lbl)
-                                      ::(top >--<>--> c2.lbl)
-                                      ::c1.edges
-                                       @c2.edges
-                                       @c.edges
-                       ; join = None
-                       ; wp = c1.wp @ c2.wp @ c.wp
-                       }
-  | DoWith (b1, lmid, b2) -> let c2 =
-                               process_blk b2 c.alist jnode in
-                             let c1 =
-                               process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl
-                             in
-                             { c with lbl   = c1.lbl
-                             ;        edges = c1.edges
-                                               @ c2.edges
-                                               @  c.edges
-                             ;        join  = None
-                             ; wp = c1.wp @ c2.wp @ c.wp
-                             }
-  | Goto l -> let lbl' = Lbl.next c.lbl in
-              let ljmp = List.assoc l c.alist in
-              { c with lbl = lbl'
-              ;        edges = (lbl' >--<>--> ljmp)
-                                ::c.edges
-              ; join = None
-              }
-  | Set (v, e) -> let lbl' = Lbl.next c.lbl in
-                  { c with lbl = lbl'
-                  ; edges = ( lbl' >--<Cfg.Set (v, e)>--> jnode )
-                               ::c.edges
-                  ; join = None
-                  }
-  | Guard e -> let lbl' = Lbl.next c.lbl in
-               { c with lbl = lbl'
-               ; edges = (lbl' >--<Cfg.Guard e>--> jnode)
-                          ::c.edges
-               ; join = None
-               }
-  | Decl b -> let l_pop = Lbl.next jnode in
-              let c' = process_blk b c.alist l_pop in
-              let l_push = Lbl.next c'.lbl in
-              { c with lbl = l_push
-              ; edges = (l_push >--<Cfg.Push>--> c'.lbl)
-                      ::(l_pop  >--<Cfg.Pop >--> jnode )
-                      ::c'.edges
-                       @c.edges
-              ; join = None
-              ; wp = c'.wp@c.wp
-              }
+  | InfLoop b ->
+      let btm = Lbl.next c.lbl in
+      let c' = process_blk b c.alist btm in
+      update c ~new_edges:((btm >--<>--> c'.lbl) ::c'.edges)
+               ~new_watch:c'.wp
+               ~label:c'.lbl
+  | Select (b1, b2) ->
+      let c1 = process_blk b1 c.alist jnode in
+      let c2 = process_blk ~join:c.lbl b2 c.alist c1.lbl in
+      let top = Lbl.next c2.lbl in
+      update c ~label:top
+               ~new_edges:((top >--<>--> c1.lbl)
+                         ::(top >--<>--> c2.lbl)
+                         ::c1.edges
+                          @c2.edges)
+               ~new_watch:(c1.wp@c2.wp)
+  | DoWith (b1, lmid, b2) ->
+      let c2 = process_blk b2 c.alist jnode in
+      let c1 = process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl in
+      update c ~label:c1.lbl
+               ~new_edges:(c1.edges@c2.edges)
+               ~new_watch:(c1.wp@c2.wp)
+  | Goto l ->
+      let lbl' = Lbl.next c.lbl in
+      let ljmp = List.assoc l c.alist in
+      update c ~label:lbl'
+               ~new_edges:[lbl' >--<>--> ljmp]
+  | Set (v, e) ->
+      let lbl' = Lbl.next c.lbl in
+      update c ~label:lbl'
+               ~new_edges:[lbl' >--<Cfg.Set (v, e)>--> jnode]
+  | Guard e ->
+      let lbl' = Lbl.next c.lbl in
+      update c ~label:lbl'
+               ~new_edges:[lbl' >--<Cfg.Guard e>--> jnode]
+  | Decl b ->
+      let l_pop = Lbl.next jnode in
+      let c' = process_blk b c.alist l_pop in
+      let l_push = Lbl.next c'.lbl in
+      update c ~label:l_push
+               ~new_edges:( (l_push >--<Cfg.Push>--> c'.lbl)
+                          ::(l_pop  >--<Cfg.Pop >--> jnode )
+                          ::c'.edges)
+               ~new_watch:c'.wp
   | Assert ck ->
       let l = Lbl.next c.lbl in
-      { c with lbl = l
-      ; edges = (l >--<>--> c.lbl)::c.edges
-      ; wp = (loc, l, ck)::c.wp }
+      update c ~label:l
+               ~new_edges:[l >--<>--> c.lbl]
+               ~new_watch:[loc, l, ck]
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
