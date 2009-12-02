@@ -47,20 +47,10 @@ let join r1 r2 =
 
 let meet =
   bind2 (fun (l1, u1) (l2, u2) ->
-      begin
-        if l2 <= l1 then
-          begin
-            if u2 < l1
-              then None
-              else from_bounds l1 (min u1 u2)
-          end
-        else
-          begin
-            if u1 < l2
-              then None
-              else from_bounds l2 (min u1 u2)
-          end
-      end
+      if (l2 > u1 || l1 > u2) then
+        None
+      else
+        from_bounds (max l1 l2) (min u1 u2)
   )
 
 let widen =
