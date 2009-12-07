@@ -27,31 +27,22 @@ TARGET=simpleai
 DIRS=newspeak/ utils/ simpleai/
 LIBX=nums.cmxa
 
-INSTALL.FILES=simpleai/simpleNpk.cmi simpleNpk.cma simpleNpk.cmxa \
-              simpleNpk.a 
 
-all: $(INSTALL.FILES) ../bin/$(TARGET)
-	$(CP) $(INSTALL.FILES) ../bin
+all: ../bin/$(TARGET)
+
 
 
 FILES=version newspeak/newspeak utils/strSet \
       simpleai/context simpleai/simple \
       simpleai/filter simpleai/sigs simpleai/topState \
       simpleai/unrelState simpleai/cst simpleai/range \
-      simpleai/simpleNpk simpleai/solver simpleai/simpleai
+      simpleai/solver simpleai/simpleai
 
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
-simpleNpk.cma: $(FILES.CMO)
-	@echo "Building library            "simpleNpk.cma
-	@$(OCAMLC) newspeak.cma -a $(FILES.CMO) -o simpleNpk.cma
 
-simpleNpk.a simpleNpk.cmxa: $(FILES.CMX)
-	@echo "Building library            "simpleNpk.cmx
-	@$(OCAMLOPT) -a $(FILES.CMX) -o simpleNpk.cmxa
-
-CLEANFILES=simpleNpk.a simpleNpk.cma simpleNpk.cmxa $(FILES.CMO)
+CLEANFILES=$(FILES.CMO)
 
 
 
