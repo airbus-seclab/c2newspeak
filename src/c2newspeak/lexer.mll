@@ -124,7 +124,7 @@ let integer_constant =
   | (oct_integer | hex_integer | integer) length? sign?
 
 let float = 
-  ((digit+ | digit+ '.' digit+ | '.' digit+) (('e'|'E') '-'? digit+)? as value)
+  ((digit+ | digit+ '.' digit+ | '.' digit+ | digit+ '.') (('e'|'E') '-'? digit+)? as value)
   ("F" as suffix)?
 let identifier = letter (letter|digit)*
 let wide_string = 'L''"' [^'"']* '"'
