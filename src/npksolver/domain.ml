@@ -56,7 +56,7 @@ let const dom n =
   let empty_env _ =
     invalid_arg "empty_environment"
   in
-  dom.eval empty_env (Prog.Const n)
+  dom.eval empty_env (Prog.Const (Prog.CInt n))
 
 let destructive_update text_lv ~old_value ~new_value =
   ignore old_value;

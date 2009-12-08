@@ -75,7 +75,8 @@ let eval_bop = function
   | _ -> Top
 
 let rec eval lookup = function
-  | Const c -> from_val c
+  | Const (CInt c) -> from_val c
+  | Const Nil -> Top
   | Lval (lv, _) -> lookup lv
   | Op (op, e1, e2) ->
       let r1 = eval lookup e1 in
@@ -85,7 +86,7 @@ let rec eval lookup = function
     if r = Bot then Bot else Top
 
 let guard = function
-  | Op (Eq, Lval (lv, _), Const n) -> [lv, meet (from_val n)]
+  | Op (Eq, Lval (lv, _), Const (CInt n)) -> [lv, meet (from_val n)]
   | _ -> []
 
 let to_string = function

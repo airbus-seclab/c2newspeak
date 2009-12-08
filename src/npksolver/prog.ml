@@ -63,7 +63,9 @@ and exp =
 
 and lbl = int
 
-and cst = int
+and cst =
+  | CInt of int
+  | Nil
 
 and binop =
   | Plus

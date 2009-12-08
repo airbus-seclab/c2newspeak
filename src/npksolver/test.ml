@@ -226,7 +226,7 @@ let run _ =
 
   assert_equal ~printer:dom.to_string (dom.eval (function
       Prog.G "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Minus, Prog.Const 0, Prog.Lval (Prog.G "v", Prog.Int))))
+    ) (Prog.Op (Prog.Minus, Prog.Const (Prog.CInt 0), Prog.Lval (Prog.G "v", Prog.Int))))
     (from_bounds (-5) (-3)) "- [3;5] == [-5;-3]";
 
   (* assert [a;b] .*. [c;d] == [e;f] *)

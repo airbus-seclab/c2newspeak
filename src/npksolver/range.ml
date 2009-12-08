@@ -140,8 +140,8 @@ let eval lookup x =
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in
   let rec eval = function
-  | Const n            -> from_bounds n n
-  | Lval ((L _| G _) as v',_)        -> lookup v'
+  | Const (CInt n)            -> from_bounds n n
+  | Lval ((L _| G _) as v',_) -> lookup v'
   | Lval (_, _)        -> top
   | Op (Plus,  e1, e2) -> plus (eval e1) (eval e2)
   | Op (Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
@@ -162,18 +162,20 @@ let eval lookup x =
                            | _ -> bool_top
                            end
   | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
-  | _ -> failwith "not impl"
+  | Const Nil -> top
+  | e -> failwith ( "range domain : unimplemented evaluator : "
+                  ^ Pcomp.Print.exp e )
   in
   eval x
 
 let guard e =
   match e with
-  |      Op (Gt, Lval (v,_), Const n)  -> [v, meet (from_bounds (n+1) max_int)]
-  |      Op (Gt, Const n, Lval (v,_))  -> [v, meet (from_bounds min_int (n-1))]
-  |      Op (Eq, Lval (v,_), Const n)  -> [v, meet (from_bounds n n)]
-  | Not (Op (Gt, Lval (v,_), Const n)) -> [v, meet (from_bounds min_int n)]
-  | Not (Op (Gt, Const n, Lval (v,_))) -> [v, meet (from_bounds n max_int)]
-  | Not (Op (Eq, Lval (v,_), Const n)) -> [v, function
+  |      Op (Gt, Lval (v,_), Const (CInt n))  -> [v, meet (from_bounds (n+1) max_int)]
+  |      Op (Gt, Const (CInt n), Lval (v,_))  -> [v, meet (from_bounds min_int (n-1))]
+  |      Op (Eq, Lval (v,_), Const (CInt n))  -> [v, meet (from_bounds n n)]
+  | Not (Op (Gt, Lval (v,_), Const (CInt n))) -> [v, meet (from_bounds min_int n)]
+  | Not (Op (Gt, Const (CInt n), Lval (v,_))) -> [v, meet (from_bounds n max_int)]
+  | Not (Op (Eq, Lval (v,_), Const (CInt n))) -> [v, function
                                               | Some(x,y) when x = y && x = n -> None
                                               | r -> r
                                           ]

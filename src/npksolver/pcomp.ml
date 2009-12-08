@@ -26,17 +26,17 @@ let abort s =
 
 let fail loc x = abort (string_of_loc loc ^ " : " ^ x)
 
-let rec assert_int_typ loc = function
-  | Scalar (Int (Signed, 32)) -> ()
-  | Scalar (Int (Signed, sz)) ->
-        fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
-  | Array (t, _sz) -> assert_int_typ loc t
-  | Scalar (Int (Unsigned, _)) -> fail loc "Unsigned value"
-  | Scalar _ -> fail loc "Bad scalar"
-  | Region _ -> fail loc "Not a scalar"
+let check_scalar_type loc = function
+  | Int (Signed, 32) -> ()
+  | Ptr -> ()
+  | Int (Signed, sz)  -> fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
+  | Int (Unsigned, _) -> fail loc "Unsigned value"
+  | _ -> fail loc "Bad scalar"
 
-let assert_int loc st =
-  assert_int_typ loc (Scalar st)
+let rec check_type loc = function
+  | Scalar s -> check_scalar_type loc s
+  | Array (t, _sz) -> check_type loc t
+  | Region _ -> fail loc "Not a scalar"
 
 let pcomp_binop loc binop =
   match binop with
@@ -44,8 +44,8 @@ let pcomp_binop loc binop =
   | MinusI  -> Prog.Minus
   | MultI   -> Prog.Mult
   | DivI    -> Prog.Div
-  | Gt scal -> assert_int loc scal; Prog.Gt
-  | Eq scal -> assert_int loc scal; Prog.Eq
+  | Gt scal -> check_scalar_type loc scal; Prog.Gt
+  | Eq scal -> check_scalar_type loc scal; Prog.Eq
   | _ -> fail loc "Invalid binary operation"
 
 let pcomp_type = function
@@ -54,8 +54,9 @@ let pcomp_type = function
   | Region _ -> invalid_arg "pcomp_type : region"
 
 let rec pcomp_exp loc = function
-  | Const (CInt c) -> Prog.Const (Newspeak.Nat.to_int c)
-  | Lval (lv, scal) -> assert_int loc scal;
+  | Const (CInt c) -> Prog.Const (Prog.CInt (Newspeak.Nat.to_int c))
+  | Const Nil -> Prog.Const Prog.Nil
+  | Lval (lv, scal) -> check_scalar_type loc scal;
                        Prog.Lval (pcomp_var loc lv, pcomp_type (Scalar scal)) (* XXX *)
   | UnOp (Not, e1) -> Prog.Not (pcomp_exp loc e1)
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
@@ -63,7 +64,7 @@ let rec pcomp_exp loc = function
                                         , (pcomp_exp loc e2))
   | UnOp (Coerce _ , e) -> pcomp_exp loc e
   | UnOp (Belongs _, e) -> pcomp_exp loc e
-  | _ -> fail loc "Invalid expression"
+  | e -> fail loc ("Invalid expression : " ^ Newspeak.string_of_exp e)
 
 and pcomp_var loc = function
   | Global s     -> Prog.G s
@@ -73,7 +74,7 @@ and pcomp_var loc = function
 
 let rec pcomp_stmt (sk, loc) =
   let sk' = match sk with
-  | Set (lv, exp, scal) -> assert_int loc scal;
+  | Set (lv, exp, scal) -> check_scalar_type loc scal;
                            Some (Prog.Set (pcomp_var loc lv, pcomp_exp loc exp))
   | Guard e             -> Some (Prog.Guard (pcomp_exp loc e))
   | Select (b1, b2)     -> Some (Prog.Select ((pcomp_blk b1), (pcomp_blk b2)))
@@ -98,7 +99,7 @@ let rec pcomp_stmt (sk, loc) =
                                     let c' = Newspeak.Nat.to_int c in
                                     Some (Prog.Assert (Prog.AEq (v', c')))
   | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
-  | _ -> fail loc "Invalid statement"
+  | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
   in
     Utils.may (fun s -> (s, loc)) sk'
 
@@ -107,7 +108,7 @@ and pcomp_blk x = Utils.filter_map pcomp_stmt x
 let compile npk =
   let globals =
   Hashtbl.fold (fun s (ty, loc) l ->
-    assert_int_typ loc ty;
+    check_type loc ty;
     s::l
   ) npk.globals []
   in
@@ -137,7 +138,8 @@ module Print = struct
     | Shift (v, e) -> lval v ^ "[" ^ exp e ^ "]"
 
   and exp = function
-    | Const c -> string_of_int c
+    | Const (CInt c) -> string_of_int c
+    | Const Nil -> "null"
     | Lval (v,_) -> lval v
     | Not e -> "!" ^ exp e
     | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2
