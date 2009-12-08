@@ -30,7 +30,7 @@ LIBX+=-I +bisect -pp 'camlp4o -unsafe $(INSTRUMENT_CMA)'
 OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert
 EXTRALINKFLAGS=-I +bisect bisect.cmxa
 else
-OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert -unsafe -g
+OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert -unsafe
 endif
 
 #utils
