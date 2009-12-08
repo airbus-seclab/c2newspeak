@@ -62,8 +62,8 @@ let rec pcomp_exp loc = function
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
                              Prog.Op (op, (pcomp_exp loc e1)
                                         , (pcomp_exp loc e2))
-  | UnOp (Coerce _ , e) -> pcomp_exp loc e
-  | UnOp (Belongs _, e) -> pcomp_exp loc e
+  | UnOp ((Focus _|Coerce _| Belongs _), e) -> pcomp_exp loc e
+  | AddrOf lv -> Prog.AddrOf (pcomp_var loc lv)
   | e -> fail loc ("Invalid expression : " ^ Newspeak.string_of_exp e)
 
 and pcomp_var loc = function
@@ -140,6 +140,7 @@ module Print = struct
   and exp = function
     | Const (CInt c) -> string_of_int c
     | Const Nil -> "null"
+    | AddrOf lv -> "&("^lval lv^")"
     | Lval (v,_) -> lval v
     | Not e -> "!" ^ exp e
     | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2

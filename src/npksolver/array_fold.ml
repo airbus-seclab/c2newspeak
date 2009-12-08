@@ -33,6 +33,7 @@ let rewrite_lv = function
   | lv -> lv
 
 let rec rewrite = function
+  | AddrOf lv -> AddrOf (rewrite_lv lv)
   | Const c -> Const c
   | Lval (lv, t) -> Lval (rewrite_lv lv, t)
   | Op (op, e1, e2) -> Op (op, rewrite e1, rewrite e2)

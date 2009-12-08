@@ -56,10 +56,11 @@ and typ =
   | Array of int
 
 and exp =
-  | Const of cst
-  | Lval  of lval * typ
-  | Not   of exp
-  | Op    of binop * exp * exp
+  | Const  of cst
+  | Lval   of lval * typ
+  | Not    of exp
+  | Op     of binop * exp * exp
+  | AddrOf of lval
 
 and lbl = int
 

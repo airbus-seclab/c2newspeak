@@ -163,6 +163,7 @@ let eval lookup x =
                            end
   | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
   | Const Nil -> top
+  | AddrOf _ -> top
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )
   in

@@ -77,6 +77,7 @@ let eval_bop = function
 let rec eval lookup = function
   | Const (CInt c) -> from_val c
   | Const Nil -> Top
+  | AddrOf _ -> Top
   | Lval (lv, _) -> lookup lv
   | Op (op, e1, e2) ->
       let r1 = eval lookup e1 in

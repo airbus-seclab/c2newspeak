@@ -76,6 +76,7 @@ let eval lookup e =
   let rec eval = function
     | Const (CInt n) -> Cst n
     | Const Nil -> Top
+    | AddrOf _ -> Top
     | Lval (v,_) -> lookup v
     | Not e -> liftv Top (eval e)
     | Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
