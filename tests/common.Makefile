@@ -38,6 +38,7 @@ NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 NPKDIFF=../../bin/npkdiff
 NPKPOINTER=../../bin/npkpointer
 SIMPLEAI=../../bin/simpleai
+NPKSOLVER=../../bin/npksolver
 
 ifeq ($(strip $(DIFF)),)
 DIFF=diff $*.spec $*.bak
