@@ -19,6 +19,4 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val solve : (Newspeak.location * int * Prog.check) list
-          -> Cfg.t
-          -> string array Domain.scope
+val solve : Cfg.t -> string array Domain.scope

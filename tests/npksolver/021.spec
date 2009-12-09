@@ -1,1 +1,1 @@
-021.c:5#28: Bound check
+021.c:5#28: Array index out of bounds

@@ -39,12 +39,7 @@ and stmtkind =
   | DoWith  of blk * lbl * blk
   | Goto    of lbl
   | Decl    of blk
-  | Assert  of check
-
-and check =
-  | AFalse
-  | ABound of lval * int * int
-  | AEq    of lval * int
+  | Assert  of exp
 
 and lval =
   | G     of string
@@ -61,6 +56,9 @@ and exp =
   | Not    of exp
   | Op     of binop * exp * exp
   | AddrOf of lval
+  | Belongs of bounds * exp
+
+and bounds = int * int
 
 and lbl = int
 

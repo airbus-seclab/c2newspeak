@@ -62,7 +62,10 @@ let rec pcomp_exp loc = function
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
                              Prog.Op (op, (pcomp_exp loc e1)
                                         , (pcomp_exp loc e2))
-  | UnOp ((Focus _|Coerce _| Belongs _), e) -> pcomp_exp loc e
+  | UnOp (Belongs (a, b), e) -> Prog.Belongs (( Newspeak.Nat.to_int a
+                                              , Newspeak.Nat.to_int b)
+                                             , (pcomp_exp loc e))
+  | UnOp ((Focus _|Coerce _), e) -> pcomp_exp loc e
   | AddrOf lv -> Prog.AddrOf (pcomp_var loc lv)
   | e -> fail loc ("Invalid expression : " ^ Newspeak.string_of_exp e)
 
@@ -83,21 +86,27 @@ let rec pcomp_stmt (sk, loc) =
   | Goto l              -> Some (Prog.Goto l)
   | UserSpec [IdentToken "widen"] -> Options.set Options.widening true; None
   | UserSpec [IdentToken "assert"
-             ;IdentToken "false"] -> Some (Prog.Assert Prog.AFalse)
+             ;IdentToken "false"] -> Some (Prog.Assert (Prog.Const (Prog.CInt 0)))
   | UserSpec [IdentToken "assert"
              ;IdentToken "bound"
-             ;LvalToken (v,_)
+             ;LvalToken (v,t)
              ;CstToken (CInt inf)
              ;CstToken (CInt sup)] -> let v' = pcomp_var loc v in
                                       let inf' = Newspeak.Nat.to_int inf in
                                       let sup' = Newspeak.Nat.to_int sup in
-                                      Some (Prog.Assert (Prog.ABound (v', inf', sup')))
+                                      Some (Prog.Set (v', Prog.Belongs
+                                          ((inf', sup'),
+                                          Prog. Lval (v',
+                                          pcomp_type (Scalar t)))))
   | UserSpec [IdentToken "assert"
              ;IdentToken "eq"
-             ;LvalToken (v,_)
+             ;LvalToken (v,t)
              ;CstToken (CInt c)] -> let v' = pcomp_var loc v in
                                     let c' = Newspeak.Nat.to_int c in
-                                    Some (Prog.Assert (Prog.AEq (v', c')))
+                                    Some (Prog.Assert (Prog.Op
+                                      (Prog.Eq, Prog.Lval (v',
+                                      pcomp_type (Scalar t)),
+                                      Prog.Const (Prog.CInt c'))))
   | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
   | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
   in
@@ -144,20 +153,18 @@ module Print = struct
     | Lval (v,_) -> lval v
     | Not e -> "!" ^ exp e
     | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2
-
-  let asrt = function
-    | AFalse     -> "false"
-    | AEq (v, x) -> lval v ^ " == " ^ string_of_int x
-    | ABound (v, a, b) -> lval v ^ " <=% ["
-                        ^ string_of_int a ^ ";"
-                        ^ string_of_int b ^ "]"
+    | Belongs ((a, b), e) -> "Belongs(" ^ string_of_int a
+                                        ^ ";" ^ string_of_int b
+                                        ^ ")[" ^ exp e ^ "]"
 
   let stmtk = function
     | Set (v, e) -> lval v ^ " = " ^ exp e
-    | Guard e -> "[" ^ exp e ^ "]"
-    | Assert a -> "assert " ^ asrt a
-    | Decl    _ -> "(decl)"   | InfLoop _ -> "(infloop)"
-    | Select  _ -> "(select)" | DoWith  _ -> "(dowith)"
-    | Goto    _ -> "(goto)"
+    | Guard  e -> "[" ^ exp e ^ "]"
+    | Decl   _ -> "(decl)"
+    | InfLoop _ -> "(infloop)"
+    | Select _ -> "(select)"
+    | DoWith  _ -> "(dowith)"
+    | Goto   _ -> "(goto)"
+    | Assert e -> "Assert (" ^ exp e ^ ")"
 
 end

@@ -28,10 +28,9 @@ type stmt =
   | Push
   | Pop
   | Init of string list
+  | Assert_true of Prog.exp
 
-module NodeMap : sig
-  include Map.S
-end with type key = node
+module NodeMap : Map.S with type key = node
 
-type t = int * ((node * stmt) list) NodeMap.t
+type t = int * ((node * stmt * Newspeak.location) list) NodeMap.t
 

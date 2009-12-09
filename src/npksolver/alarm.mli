@@ -19,8 +19,9 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val process : Prog.t -> string list -> Cfg.t
+type t =
+  | ArrayOOB
+  | Assert_bottom
+  | Assertion_failed of string
 
-val dump_yaml : Cfg.t -> string
-
-val dump_dot : ?results:string array -> Cfg.t -> string
+val emit : Newspeak.location -> t -> unit

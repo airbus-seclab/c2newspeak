@@ -51,7 +51,7 @@ let (-->) (f:'a Domain.scope) (g:'a -> 'b) :'b Domain.scope =
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, vars) = Pcomp.compile npk in
-  let (cfg, wpts) = Mkcfg.process prg vars in
+  let cfg = Mkcfg.process prg vars in
   let graph_results results = output_graphviz ~results cfg in
     if (Options.get Options.cfg_only) then
       begin
@@ -60,7 +60,7 @@ let handle_file_npk fname =
       Domain.do_nothing
       end
     else
-      Fixpoint.solve wpts cfg
+      Fixpoint.solve cfg
       --> graph_results
 
 type fname = C | Npk | Unknown

@@ -60,7 +60,12 @@ let liftv v = function
 
 open Prog
 
-let eval lookup e =
+let is_in_range a b = function
+  | Bot -> true
+  | Cst c -> a <= c && c <= b
+  | Top -> false
+
+let eval loc lookup e =
   let int_of_bool = function
     | true  -> 1
     | false -> 0
@@ -80,10 +85,15 @@ let eval lookup e =
     | Lval (v,_) -> lookup v
     | Not e -> liftv Top (eval e)
     | Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
+    | Belongs ((a, b), e) ->
+        let res = eval e in
+        if (not (is_in_range a b res)) then
+          Alarm.emit loc Alarm.ArrayOOB;
+        res
   in
   eval e
 
-let guard = function
+let guard _loc = function
   |      Op (Eq, Lval (v,_), Const (CInt n))  (* v == n *) -> [v, liftv (Cst n)]
   |      Op (Gt, Lval (v,_), Const _)         (* v >  n *)
   |      Op (Gt, Const _, Lval (v,_))         (* n >  v *)
@@ -92,18 +102,13 @@ let guard = function
   | Not (Op (Eq, Lval (v,_), Const _))        (* v != n *) -> [v, liftv Top]
   | e -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
-let is_in_range a b = function
-  | Bot -> true
-  | Cst c -> a <= c && c <= b
-  | Top -> false
-
 let dom =
   { Domain.top       = Top
   ; Domain.bottom    = Bot
   ; Domain.incl      = (<=%)
   ; Domain.join      = join
   ; Domain.meet      = meet
-  ; Domain.widen     = (fun _a _b -> failwith "Const:widen")
+  ; Domain.widen     = (fun _ _ -> failwith "Const:widen")
   ; Domain.is_in_range = is_in_range
   ; Domain.to_string = to_string
   ; Domain.eval      = eval

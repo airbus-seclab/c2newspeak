@@ -133,9 +133,12 @@ let mult r1 r2 =
                              ; mult_mm r1m r2m
                              ]
 
+let is_in_range a b r =
+  r <=% from_bounds a b
+
 open Prog
 
-let eval lookup x =
+let eval loc lookup x =
   let bool_top   = from_bounds 0 1 in
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in
@@ -164,12 +167,17 @@ let eval lookup x =
   | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
   | Const Nil -> top
   | AddrOf _ -> top
+  | Belongs ((a, b), e) ->
+      let r = eval e in
+      if (not (is_in_range a b r)) then
+        Alarm.emit loc Alarm.ArrayOOB;
+      r
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )
   in
   eval x
 
-let guard e =
+let guard _loc e =
   match e with
   |      Op (Gt, Lval (v,_), Const (CInt n))  -> [v, meet (from_bounds (n+1) max_int)]
   |      Op (Gt, Const (CInt n), Lval (v,_))  -> [v, meet (from_bounds min_int (n-1))]
@@ -177,13 +185,10 @@ let guard e =
   | Not (Op (Gt, Lval (v,_), Const (CInt n))) -> [v, meet (from_bounds min_int n)]
   | Not (Op (Gt, Const (CInt n), Lval (v,_))) -> [v, meet (from_bounds n max_int)]
   | Not (Op (Eq, Lval (v,_), Const (CInt n))) -> [v, function
-                                              | Some(x,y) when x = y && x = n -> None
-                                              | r -> r
-                                          ]
+                                                 | Some(x,y) when x = y && x = n -> None
+                                                 | r -> r
+                                                 ]
   | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
-
-let is_in_range a b r =
-  r <=% from_bounds a b
 
 let dom =
   { Domain.top         = top

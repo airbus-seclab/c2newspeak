@@ -33,8 +33,9 @@ let print_stmt = function
   | Cfg.Push          -> "(push)"
   | Cfg.Pop           -> "(pop)"
   | Cfg.Init _vars    -> "(init)"
+  | Cfg.Assert_true e -> "(assert:"^Pcomp.Print.exp e^")"
 
-type edge = Cfg.node * Cfg.node * Cfg.stmt
+type edge = Cfg.node * Cfg.node * (Cfg.stmt * Newspeak.location)
 
 (**
  * The type used to fold over blocks.
@@ -46,7 +47,6 @@ type 'a stmt_context =
   ; alist : (int*int) list     (* XXX *)
   ; edges : edge list
   ; join  : int option         (* XXX *)
-  ; wp    : (Newspeak.location * int * Prog.check) list
   }
 
 (* Edge builders *)
@@ -54,22 +54,21 @@ type 'a stmt_context =
 (* a --<>-->  b means (a, b, Nop) *)
 let (>--<) src lbl = (src,lbl)
 let (>-->) (src,lbl) dst = (src,dst,lbl)
-let (>--<>-->) src dst = (src,dst,Cfg.Nop)
+let (>--<>-->) src dst = (src,dst,(Cfg.Nop, Newspeak.unknown_loc))
 
 (* Reduce edges *)
 let reduce_edges e =
-    List.fold_left (fun map (src, dest, stmt) ->
+    List.fold_left (fun map (src, dest, (stmt, loc)) ->
       let lst =
         try Cfg.NodeMap.find src map
         with Not_found -> []
       in
-        Cfg.NodeMap.add src ((dest,stmt)::lst) map
+        Cfg.NodeMap.add src ((dest,stmt,loc)::lst) map
     ) (Cfg.NodeMap.empty) e
 
-let update ?(new_edges=[]) ?(new_watch=[]) ~label c =
+let update ?(new_edges=[]) ~label c =
   { c with lbl = label
   ; join = None
-  ; wp = new_watch@c.wp
   ; edges = new_edges@c.edges
   }
 
@@ -80,7 +79,6 @@ let rec process_stmt (stmt, loc) c =
       let btm = Lbl.next c.lbl in
       let c' = process_blk b c.alist btm in
       update c ~new_edges:((btm >--<>--> c'.lbl) ::c'.edges)
-               ~new_watch:c'.wp
                ~label:c'.lbl
   | Select (b1, b2) ->
       let c1 = process_blk b1 c.alist jnode in
@@ -91,13 +89,11 @@ let rec process_stmt (stmt, loc) c =
                          ::(top >--<>--> c2.lbl)
                          ::c1.edges
                           @c2.edges)
-               ~new_watch:(c1.wp@c2.wp)
   | DoWith (b1, lmid, b2) ->
       let c2 = process_blk b2 c.alist jnode in
       let c1 = process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl in
       update c ~label:c1.lbl
                ~new_edges:(c1.edges@c2.edges)
-               ~new_watch:(c1.wp@c2.wp)
   | Goto l ->
       let lbl' = Lbl.next c.lbl in
       let ljmp = List.assoc l c.alist in
@@ -106,25 +102,23 @@ let rec process_stmt (stmt, loc) c =
   | Set (v, e) ->
       let lbl' = Lbl.next c.lbl in
       update c ~label:lbl'
-               ~new_edges:[lbl' >--<Cfg.Set (v, e)>--> jnode]
+               ~new_edges:[lbl' >--<(Cfg.Set (v, e), loc)>--> jnode]
   | Guard e ->
       let lbl' = Lbl.next c.lbl in
       update c ~label:lbl'
-               ~new_edges:[lbl' >--<Cfg.Guard e>--> jnode]
+               ~new_edges:[lbl' >--<(Cfg.Guard e, loc)>--> jnode]
   | Decl b ->
       let l_pop = Lbl.next jnode in
       let c' = process_blk b c.alist l_pop in
       let l_push = Lbl.next c'.lbl in
       update c ~label:l_push
-               ~new_edges:( (l_push >--<Cfg.Push>--> c'.lbl)
-                          ::(l_pop  >--<Cfg.Pop >--> jnode )
+               ~new_edges:( (l_push >--<(Cfg.Push, loc)>--> c'.lbl)
+                          ::(l_pop  >--<(Cfg.Pop , loc)>--> jnode )
                           ::c'.edges)
-               ~new_watch:c'.wp
-  | Assert ck ->
+  | Assert e ->
       let l = Lbl.next c.lbl in
       update c ~label:l
-               ~new_edges:[l >--<>--> c.lbl]
-               ~new_watch:[loc, l, ck]
+               ~new_edges:[l >--<(Cfg.Assert_true e, loc)>--> c.lbl]
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
@@ -132,15 +126,14 @@ and process_blk ?join blk al l0 =
       ; alist = al
       ; edges = []
       ; join = join
-      ; wp = []
       }
 
 let process blk vars =
   let c = process_blk blk [] Lbl.init in
   let lbl' = Lbl.next c.lbl in
-  let edges = (lbl' >--<Cfg.Init vars>--> c.lbl)::c.edges in
+  let edges = (lbl' >--<(Cfg.Init vars, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
   let map = reduce_edges edges in
-  (lbl', map), c.wp
+  (lbl', map)
 
 let dump_yaml (n, e) =
     "---\n"
@@ -154,7 +147,7 @@ let dump_yaml (n, e) =
           s^"  - {id: "^string_of_int src^ ", s: [" ^ 
           (String.concat ", "
             ( List.map
-              ( fun (dest, stmt) ->
+              ( fun (dest, stmt, _loc) ->
                 let s' = print_stmt stmt in
                    "{n: "^ string_of_int dest ^ ", "
                    ^"stmt: \"" ^ s' ^"\"}"
@@ -176,7 +169,7 @@ let dump_dot ?(results=[||]) (_, e) =
     ^ (Cfg.NodeMap.fold (fun src es s ->
       s^
         (String.concat ""
-          (List.map (fun (dest, stmt) ->
+          (List.map (fun (dest, stmt, _loc) ->
           let s' = print_stmt stmt in
           "  "  ^ string_of_int src
           ^ " -> " ^ string_of_int dest

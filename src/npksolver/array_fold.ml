@@ -32,18 +32,19 @@ let rewrite_lv = function
   | Shift (lv, _) -> lv
   | lv -> lv
 
-let rec rewrite = function
+let rec rewrite loc = function
   | AddrOf lv -> AddrOf (rewrite_lv lv)
   | Const c -> Const c
   | Lval (lv, t) -> Lval (rewrite_lv lv, t)
-  | Op (op, e1, e2) -> Op (op, rewrite e1, rewrite e2)
-  | Not e -> Not (rewrite e)
+  | Op (op, e1, e2) -> Op (op, rewrite loc e1, rewrite loc e2)
+  | Not e -> Not (rewrite loc e)
+  | Belongs (b, e) -> Belongs (b, rewrite loc e)
 
-let eval dom lookup e =
-  dom.eval lookup (rewrite e)
+let eval dom loc lookup e =
+  dom.eval loc lookup (rewrite loc e)
 
-let guard dom e =
-  dom.guard (rewrite e)
+let guard dom loc e =
+  dom.guard loc (rewrite loc e)
 
 let update dom text_lv ~old_value ~new_value =
   (rewrite_lv text_lv, dom.join old_value new_value)

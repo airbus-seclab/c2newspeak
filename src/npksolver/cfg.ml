@@ -28,11 +28,11 @@ type stmt =
   | Push
   | Pop
   | Init of string list
+  | Assert_true of Prog.exp
 
 module NodeMap = Map.Make (struct
   type t = node
   let compare = Pervasives.compare
 end)
 
-type t = int * ((node * stmt) list) NodeMap.t
-
+type t = int * ((node * stmt * Newspeak.location) list) NodeMap.t

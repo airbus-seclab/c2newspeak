@@ -74,19 +74,26 @@ let eval_bop = function
   (* TODO improve precision ? *)
   | _ -> Top
 
-let rec eval lookup = function
+let is_in_range _ _ _ = false
+
+let rec eval loc lookup = function
   | Const (CInt c) -> from_val c
   | Const Nil -> Top
   | AddrOf _ -> Top
   | Lval (lv, _) -> lookup lv
   | Op (op, e1, e2) ->
-      let r1 = eval lookup e1 in
-      let r2 = eval lookup e2 in
+      let r1 = eval loc lookup e1 in
+      let r2 = eval loc lookup e2 in
       eval_bop (op, r1, r2)
-  | Not e -> let r = eval lookup e in
+  | Not e -> let r = eval loc lookup e in
     if r = Bot then Bot else Top
+  | Belongs ((a, b), e) ->
+      let res = eval loc lookup e in
+      if (not (is_in_range a b res)) then
+        Alarm.emit loc Alarm.ArrayOOB;
+      res
 
-let guard = function
+let guard _loc = function
   | Op (Eq, Lval (lv, _), Const (CInt n)) -> [lv, meet (from_val n)]
   | _ -> []
 
@@ -95,8 +102,6 @@ let to_string = function
   | Bot  -> "bot"
   | Odd  -> "odd"
   | Even -> "even"
-
-let is_in_range _ _ _ = false
 
 let dom =
   { top         = Top

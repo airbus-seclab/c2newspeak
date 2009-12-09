@@ -21,7 +21,7 @@
 
 open Domain
 
-let eval_stmt dom stmt x = match stmt with
+let eval_stmt dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
           let zero = const dom 0 in
@@ -35,27 +35,34 @@ let eval_stmt dom stmt x = match stmt with
   | Cfg.Guard e ->
             List.fold_left (fun x (v, f) ->
               Box.guard v f x
-            ) x (dom.guard e)
+            ) x (dom.guard loc e)
   | Cfg.Set (lv, e) ->
           begin
             let lookup lv' = Box.get_var dom lv' x in
             if x = Box.bottom then Box.bottom
               else
               begin
-                let new_value = dom.eval lookup e in
+                let new_value = dom.eval loc lookup e in
                 (* TODO old_value could be lazy here ? *)
                 let old_value = lookup lv in
                 let (where, what) = dom.update lv ~old_value ~new_value in
                 Box.set_var dom where what x
               end
           end
+  | Cfg.Assert_true e ->
+        let lookup lv' = Box.get_var dom lv' x in
+        let r = dom.eval loc lookup e in
+        let zero = dom.eval loc lookup (Prog.Const (Prog.CInt 0)) in
+        if (dom.incl zero r) then
+          Alarm.emit loc (Alarm.Assertion_failed (Pcomp.Print.exp e));
+        x
 
 (* worklist algorithm *)
 let f_horwitz dom v x =
   let succ i =
     try
-      List.map (fun (dest,stmt) ->
-       let g = eval_stmt dom stmt in
+      List.map (fun (dest, stmt, loc) ->
+       let g = eval_stmt dom loc stmt in
        let r =
          if Options.get Options.widening then
            fun xo -> Box.widen dom xo (g xo)
@@ -80,34 +87,7 @@ let f_horwitz dom v x =
   done;
   x
 
-let compute_warn watchpoints dom results =
-  begin
-  if Options.get Options.verbose then
-    Printf.fprintf stderr "Watchpoint list : %s\n"
-      (String.concat "," (List.map (fun (_,x,_) -> string_of_int x)
-      watchpoints))
-  end;
-  List.iter (function
-  | loc, l, Prog.AFalse ->
-      if results.(l) <> Box.bottom then
-        print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
-  | loc, l, Prog.ABound (v, inf, sup) ->
-      let r = Box.get_var dom v results.(l) in
-      if not (dom.is_in_range inf sup r) then
-        print_endline (Newspeak.string_of_loc loc ^ ": Bound check")
-  | loc, l, Prog.AEq (v, i) ->
-      let r = Box.get_var dom v results.(l) in
-      begin
-      if Options.get Options.verbose then
-      Printf.fprintf stderr "eq check : r = %s, bound = {%d}\n" 
-        (dom.to_string r) i
-      end;
-      if not (dom.incl r (const dom i)) then
-        print_endline (Newspeak.string_of_loc loc ^ ": Value is different")
-  ) watchpoints
-
-
-let solve wp (ln, v) =
+let solve (ln, v) =
   { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top dom;
@@ -118,6 +98,5 @@ let solve wp (ln, v) =
         print_endline ("  - {id: "^ string_of_int i ^
         ", "^ Box.yaml_dump dom r^"}")
     ) res end;
-  compute_warn wp dom res;
   Array.map (Box.to_string dom) res
   }

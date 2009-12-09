@@ -33,8 +33,8 @@ type 'a c_dom =
   ; widen     : 'a -> 'a -> 'a
   ; to_string : 'a -> string
   ; is_in_range : int -> int -> 'a -> bool
-  ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
-  ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) list
+  ; eval  : Newspeak.location -> (Prog.lval -> 'a) -> Prog.exp -> 'a
+  ; guard : Newspeak.location -> Prog.exp -> (Prog.lval * ('a -> 'a)) list
   ; update : 'a update_method
   }
 
@@ -57,7 +57,7 @@ let const dom n =
   let empty_env _ =
     invalid_arg "empty_environment"
   in
-  dom.eval empty_env (Prog.Const (Prog.CInt n))
+  dom.eval Newspeak.unknown_loc empty_env (Prog.Const (Prog.CInt n))
 
 let destructive_update text_lv ~old_value ~new_value =
   ignore old_value;
