@@ -73,6 +73,11 @@ let to_string da db =
   | Some (a,b) -> "Pair (" ^ da.to_string a ^ ";"
                            ^ db.to_string b ^ ")"
 
+let is_in_range d1 d2 a b = function
+  | None -> true
+  | Some (x1, x2) -> d1.is_in_range a b x1
+                  || d2.is_in_range a b x2
+
 let make da db =
   { top = Some (da.top, db.top)
   ; bottom = None
@@ -84,5 +89,6 @@ let make da db =
   ; meet      = meet      da db
   ; guard     = guard     da db
   ; update    = destructive_update
+  ; is_in_range = is_in_range da db
   }
 

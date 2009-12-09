@@ -96,16 +96,19 @@ let to_string = function
   | Odd  -> "odd"
   | Even -> "even"
 
+let is_in_range _ _ _ = false
+
 let dom =
-  { top       = Top
-  ; bottom    = Bot
-  ; incl      = incl
-  ; join      = join
-  ; meet      = meet
-  ; widen     = (fun _ -> invalid_arg "parity:widen")
-  ; to_string = to_string
-  ; eval      = eval
-  ; guard     = guard
-  ; update    = destructive_update
+  { top         = Top
+  ; bottom      = Bot
+  ; incl        = incl
+  ; join        = join
+  ; meet        = meet
+  ; widen       = (fun _ -> invalid_arg "parity:widen")
+  ; to_string   = to_string
+  ; eval        = eval
+  ; guard       = guard
+  ; update      = destructive_update
+  ; is_in_range = is_in_range
   }
 

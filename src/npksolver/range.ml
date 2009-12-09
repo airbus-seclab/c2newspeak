@@ -182,16 +182,20 @@ let guard e =
                                           ]
   | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
+let is_in_range a b r =
+  r <=% from_bounds a b
+
 let dom =
-  { Domain.top       = top
-  ; Domain.bottom    = bottom
-  ; Domain.incl      = (<=%)
-  ; Domain.join      = join
-  ; Domain.meet      = meet
-  ; Domain.widen     = widen
-  ; Domain.to_string = to_string
-  ; Domain.eval      = eval
-  ; Domain.guard     = guard
-  ; Domain.update    = Domain.destructive_update
+  { Domain.top         = top
+  ; Domain.bottom      = bottom
+  ; Domain.incl        = (<=%)
+  ; Domain.join        = join
+  ; Domain.meet        = meet
+  ; Domain.widen       = widen
+  ; Domain.to_string   = to_string
+  ; Domain.eval        = eval
+  ; Domain.guard       = guard
+  ; Domain.update      = Domain.destructive_update
+  ; Domain.is_in_range = is_in_range
   }
 

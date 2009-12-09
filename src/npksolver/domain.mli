@@ -32,6 +32,7 @@ type 'a c_dom =
   ; meet      : 'a -> 'a -> 'a
   ; widen     : 'a -> 'a -> 'a
   ; to_string : 'a -> string
+  ; is_in_range : int -> int -> 'a -> bool
   ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
   ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) list
   ; update : 'a update_method

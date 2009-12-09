@@ -81,10 +81,6 @@ let f_horwitz dom v x =
   x
 
 let compute_warn watchpoints dom results =
-  let intvl dom a b =
-    dom.join (const dom a)
-             (const dom b)
-  in
   begin
   if Options.get Options.verbose then
     Printf.fprintf stderr "Watchpoint list : %s\n"
@@ -97,7 +93,7 @@ let compute_warn watchpoints dom results =
         print_endline (Newspeak.string_of_loc loc ^ ": Assert false")
   | loc, l, Prog.ABound (v, inf, sup) ->
       let r = Box.get_var dom v results.(l) in
-      if not (dom.incl r (intvl dom inf sup)) then
+      if not (dom.is_in_range inf sup r) then
         print_endline (Newspeak.string_of_loc loc ^ ": Bound check")
   | loc, l, Prog.AEq (v, i) ->
       let r = Box.get_var dom v results.(l) in

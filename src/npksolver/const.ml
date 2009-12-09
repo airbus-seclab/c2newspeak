@@ -92,6 +92,11 @@ let guard = function
   | Not (Op (Eq, Lval (v,_), Const _))        (* v != n *) -> [v, liftv Top]
   | e -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
 
+let is_in_range a b = function
+  | Bot -> true
+  | Cst c -> a <= c && c <= b
+  | Top -> false
+
 let dom =
   { Domain.top       = Top
   ; Domain.bottom    = Bot
@@ -99,6 +104,7 @@ let dom =
   ; Domain.join      = join
   ; Domain.meet      = meet
   ; Domain.widen     = (fun _a _b -> failwith "Const:widen")
+  ; Domain.is_in_range = is_in_range
   ; Domain.to_string = to_string
   ; Domain.eval      = eval
   ; Domain.guard     = guard
