@@ -25,6 +25,19 @@ let may_cons h t = Utils.may (fun x -> h::x) t
 
 let varcmp = Pervasives.compare
 
+type var =
+  | Local  of int
+  | Global of string
+
+let to_var = function
+  | Prog.L n -> Local  n
+  | Prog.G s -> Global s
+  | _ -> invalid_arg "box.ml:to_var: nor L nor G"
+
+let from_var = function
+  | Local  n -> Prog.L n
+  | Global s -> Prog.G s
+
 module type STORE = sig
   type 'a t
   val empty : 'a Domain.c_dom -> 'a t
@@ -39,7 +52,7 @@ end
 module VMap : STORE = struct
   type 'a t =
     { dom : 'a Domain.c_dom
-    ; map : (Prog.lval, 'a) Pmap.t
+    ; map : (var, 'a) Pmap.t
     }
 
   let empty_map () = Pmap.create varcmp
@@ -51,16 +64,16 @@ module VMap : STORE = struct
 
   let singleton dom lv x =
     { dom = dom
-    ; map = Pmap.add lv x (empty_map ())
+    ; map = Pmap.add (to_var lv) x (empty_map ())
     }
 
   let assoc lv x =
     try
-      Pmap.find lv x.map
+      Pmap.find (to_var lv) x.map
     with Not_found -> x.dom.top
 
   let map f x =
-    Pmap.foldi (fun k v l -> (f k v)::l) x.map []
+    Pmap.foldi (fun k v l -> (f (from_var k) v)::l) x.map []
 
   let equal a b =
     Pmap.equal (=) a.map b.map
