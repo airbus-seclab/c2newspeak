@@ -19,24 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t =
-  | ArrayOOB
-  | Assert_bottom
-  | Assertion_failed of string
+open Domain
 
-let string_of_alarm = function
-  | ArrayOOB           -> "Array index out of bounds"
-  | Assert_bottom      -> "Assert false"
-  | Assertion_failed s -> "Assertion failed : " ^ s
+type 'a t
 
-module Alarm_set = Set.Make(String)
-
-let alarms = ref (Alarm_set.empty)
-
-let emit loc s =
-  let alarm_text = Newspeak.string_of_loc loc ^ ": " ^ string_of_alarm s in
-  if (not (Alarm_set.mem alarm_text !alarms)) then
-    begin
-      alarms := Alarm_set.add alarm_text !alarms;
-      print_endline alarm_text
-    end
+val make : 'a c_dom -> 'a t Domain.c_dom

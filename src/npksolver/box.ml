@@ -29,10 +29,14 @@ type var =
   | Local  of int
   | Global of string
 
-let to_var = function
+let rec to_var dom =
+  let all_top = fun _ -> dom.top in
+  function
   | Prog.L n -> Local  n
   | Prog.G s -> Global s
-  | _ -> invalid_arg "box.ml:to_var: nor L nor G"
+  | Prog.Shift (l, e) ->
+      ignore (dom.eval all_top e); (* in order to emit alarms *)
+      to_var dom l
 
 let from_var = function
   | Local  n -> Prog.L n
@@ -64,12 +68,12 @@ module VMap : STORE = struct
 
   let singleton dom lv x =
     { dom = dom
-    ; map = Pmap.add (to_var lv) x (empty_map ())
+    ; map = Pmap.add (to_var dom lv) x (empty_map ())
     }
 
   let assoc lv x =
     try
-      Pmap.find (to_var lv) x.map
+      Pmap.find (to_var x.dom lv) x.map
     with Not_found -> x.dom.top
 
   let map f x =
