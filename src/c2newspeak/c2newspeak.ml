@@ -54,6 +54,7 @@ let _ =
 	let no = create_no fname in
 	let prog = compile fname in
 	  Npkil.write no prog;
+	  dump_xml_warns ();
 	  no
       end
     in
@@ -62,7 +63,8 @@ let _ =
 	  file::[] 
 	    when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
 	      let prog = compile file in
-		Npkil.write !Npkcontext.output_file prog
+		Npkil.write !Npkcontext.output_file prog;
+		dump_xml_warns ()
 		  
 	| files ->
 	    let nos = List.map extract_no files in

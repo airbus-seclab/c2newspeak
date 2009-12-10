@@ -388,7 +388,6 @@ let string_of_options () =
   let options = ref [("-o", !output_file)] 
   in
     if !compile_only then options := ("-c", "")::!options;
-    options := ("-o", !output_file)::!options;
     if !accept_dirty_cast then options := ("--accept-dirty-cast", "")::!options;
     if !accept_dirty_syntax then options := ("--accept-dirty-syntax", "")::!options;
     if !accept_partial_fdecl then options := ("--accept-incomplete-fundecl", "")::!options;
