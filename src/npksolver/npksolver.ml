@@ -19,13 +19,18 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-let domain_str = function
-  | "c" -> Domain.pack Const.dom
-  | "r" -> Domain.pack Range.dom
-  | "p" -> Domain.pack Parity.dom
-  | "rp" -> Domain.pack (Pair.make Parity.dom Range.dom)
-  | "ra" -> Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
-  | s    -> invalid_arg ("no such domain : "^s)
+let domains = Hashtbl.create 0
+
+let domain_str s =
+  try
+    fst (Hashtbl.find domains s)
+  with Not_found -> invalid_arg ("no such domain : "^s)
+
+let register_domains =
+  let register_domain (k, desc, dom) =
+    Hashtbl.add domains k (dom, desc)
+  in
+  List.iter register_domain
 
 let       domain = ref (Domain.pack Range.dom)
 let set_domain x = domain := domain_str x
@@ -95,37 +100,25 @@ let run_selftests =
   | _       -> invalid_arg "Bad test suite"
 
 let main args =
+  register_domains
+    [ "c" , "constants"                     , Domain.pack Const.dom
+    ; "r" , "ranges (default)"              , Domain.pack Range.dom
+    ; "p" , "parity"                        , Domain.pack Parity.dom
+    ; "rp", "range + parity"                , Domain.pack (Pair.make Parity.dom Range.dom)
+    ; "ra", "range + folded arrays of range", Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
+    ];
+  let domain_descrs = Hashtbl.fold (fun k (_, descr) s ->
+    k^" : "^descr^" "^ s
+  ) domains "" in
   let ops =
-  [ 'd' , "domain"
-  , "select a domain ("
-    ^   "c : constants"
-    ^ ", r : ranges (default)"
-    ^ ", p : parity"
-    ^ ", rp : range + parity"
-    ^ ", ra : range + folded arrays of range"
-    ^ ")"
-  , Options.Carg set_domain
-  ; 'h', "help"
-  , "this help message"
-  , Options.Help
-  ; 'g', "cfg"
-  , "dump (YAML) control flow graph and exit"
-  , Options.Set Options.cfg_only
-  ; 'r', "graphviz"
-  , "output in to cfg.dot (graphviz)"
-  , Options.Set Options.graphviz
-  ; 's', "solver"
-  , "display solver output"
-  , Options.Set Options.solver
-  ; 't', "selftest"
-  , "run unit tests (output TAP)"
-  , Options.Carg run_selftests
-  ; 'v', "verbose"
-  , "output more information"
-  , Options.Set Options.verbose
-  ; 'V', "version"
-  , "show version number"
-  , Options.Call display_version
+  [ 'd', "domain"   , "select a domain ("^domain_descrs^")" , Options.Carg set_domain
+  ; 'h', "help"     , "this help message"                   , Options.Help
+  ; 'g', "cfg"      , "dump (YAML) control flow graph "     , Options.Set Options.cfg_only
+  ; 'r', "graphviz" , "output in to cfg.dot (graphviz)"     , Options.Set Options.graphviz
+  ; 's', "solver"   , "display solver output"               , Options.Set Options.solver
+  ; 't', "selftest" , "run unit tests (output TAP)"         , Options.Carg run_selftests
+  ; 'v', "verbose"  , "output more information"             , Options.Set Options.verbose
+  ; 'V', "version"  , "show version number"                 , Options.Call display_version
   ] in
   Options.parse_cmdline ops handle_file args
 

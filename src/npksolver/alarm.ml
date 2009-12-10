@@ -21,12 +21,10 @@
 
 type t =
   | ArrayOOB
-  | Assert_bottom
   | Assertion_failed of string
 
 let string_of_alarm = function
   | ArrayOOB           -> "Array index out of bounds"
-  | Assert_bottom      -> "Assert false"
   | Assertion_failed s -> "Assertion failed : " ^ s
 
 module Alarm_set = Set.Make(String)
