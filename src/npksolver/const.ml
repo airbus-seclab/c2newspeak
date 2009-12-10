@@ -65,7 +65,7 @@ let is_in_range a b = function
   | Cst c -> a <= c && c <= b
   | Top -> false
 
-let eval loc lookup e =
+let eval lookup e =
   let int_of_bool = function
     | true  -> 1
     | false -> 0
@@ -85,7 +85,7 @@ let eval loc lookup e =
     | Lval (v,_) -> lookup v
     | Not e -> liftv Top (eval e)
     | Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
-    | Belongs ((a, b), e) ->
+    | Belongs ((a, b), loc, e) ->
         let res = eval e in
         if (not (is_in_range a b res)) then
           Alarm.emit loc Alarm.ArrayOOB;
@@ -93,7 +93,7 @@ let eval loc lookup e =
   in
   eval e
 
-let guard _loc = function
+let guard = function
   |      Op (Eq, Lval (v,_), Const (CInt n))  (* v == n *) -> [v, liftv (Cst n)]
   |      Op (Gt, Lval (v,_), Const _)         (* v >  n *)
   |      Op (Gt, Const _, Lval (v,_))         (* n >  v *)

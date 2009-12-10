@@ -35,14 +35,14 @@ let eval_stmt dom loc stmt x = match stmt with
   | Cfg.Guard e ->
             List.fold_left (fun x (v, f) ->
               Box.guard v f x
-            ) x (dom.guard loc e)
+            ) x (dom.guard e)
   | Cfg.Set (lv, e) ->
           begin
             let lookup lv' = Box.get_var dom lv' x in
             if x = Box.bottom then Box.bottom
               else
               begin
-                let new_value = dom.eval loc lookup e in
+                let new_value = dom.eval lookup e in
                 (* TODO old_value could be lazy here ? *)
                 let old_value = lookup lv in
                 let (where, what) = dom.update lv ~old_value ~new_value in
@@ -51,8 +51,8 @@ let eval_stmt dom loc stmt x = match stmt with
           end
   | Cfg.Assert_true e ->
         let lookup lv' = Box.get_var dom lv' x in
-        let r = dom.eval loc lookup e in
-        let zero = dom.eval loc lookup (Prog.Const (Prog.CInt 0)) in
+        let r = dom.eval lookup e in
+        let zero = dom.eval lookup (Prog.Const (Prog.CInt 0)) in
         if (dom.incl zero r) then
           Alarm.emit loc (Alarm.Assertion_failed (Pcomp.Print.exp e));
         x

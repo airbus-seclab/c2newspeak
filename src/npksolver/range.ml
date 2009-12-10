@@ -138,7 +138,7 @@ let is_in_range a b r =
 
 open Prog
 
-let eval loc lookup x =
+let eval lookup x =
   let bool_top   = from_bounds 0 1 in
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in
@@ -167,7 +167,7 @@ let eval loc lookup x =
   | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
   | Const Nil -> top
   | AddrOf _ -> top
-  | Belongs ((a, b), e) ->
+  | Belongs ((a, b), loc, e) ->
       let r = eval e in
       if (not (is_in_range a b r)) then
         Alarm.emit loc Alarm.ArrayOOB;
@@ -177,7 +177,7 @@ let eval loc lookup x =
   in
   eval x
 
-let guard _loc e =
+let guard e =
   match e with
   |      Op (Gt, Lval (v,_), Const (CInt n))  -> [v, meet (from_bounds (n+1) max_int)]
   |      Op (Gt, Const (CInt n), Lval (v,_))  -> [v, meet (from_bounds min_int (n-1))]

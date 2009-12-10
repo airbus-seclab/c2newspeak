@@ -64,6 +64,7 @@ let rec pcomp_exp loc = function
                                         , (pcomp_exp loc e2))
   | UnOp (Belongs (a, b), e) -> Prog.Belongs (( Newspeak.Nat.to_int a
                                               , Newspeak.Nat.to_int b)
+                                             , loc
                                              , (pcomp_exp loc e))
   | UnOp ((Focus _|Coerce _), e) -> pcomp_exp loc e
   | AddrOf lv -> Prog.AddrOf (pcomp_var loc lv)
@@ -96,6 +97,7 @@ let rec pcomp_stmt (sk, loc) =
                                       let sup' = Newspeak.Nat.to_int sup in
                                       Some (Prog.Set (v', Prog.Belongs
                                           ((inf', sup'),
+                                          loc,
                                           Prog. Lval (v',
                                           pcomp_type (Scalar t)))))
   | UserSpec [IdentToken "assert"
@@ -153,7 +155,7 @@ module Print = struct
     | Lval (v,_) -> lval v
     | Not e -> "!" ^ exp e
     | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2
-    | Belongs ((a, b), e) -> "Belongs(" ^ string_of_int a
+    | Belongs ((a, b), _, e) -> "Belongs(" ^ string_of_int a
                                         ^ ";" ^ string_of_int b
                                         ^ ")[" ^ exp e ^ "]"
 

@@ -56,7 +56,7 @@ and exp =
   | Not    of exp
   | Op     of binop * exp * exp
   | AddrOf of lval
-  | Belongs of bounds * exp
+  | Belongs of bounds * Newspeak.location * exp
 
 and bounds = int * int
 

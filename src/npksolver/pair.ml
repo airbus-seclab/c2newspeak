@@ -47,23 +47,23 @@ let meet da db x y =
       None
     else Some (ma, mb)
 
-let eval da db loc l e =
+let eval da db l e =
   let la e = maybe da.bottom fst (l e) in
   let lb e = maybe db.bottom snd (l e) in
-  let ra = da.eval loc la e in
+  let ra = da.eval la e in
   if ra = da.bottom
     then None
     else
-      let rb = db.eval loc lb e in
+      let rb = db.eval lb e in
       if rb = db.bottom
         then None
         else Some (ra , rb)
 
-let guard da db loc e =
+let guard da db e =
   let prom_l f (a, b) = (  a, f b) in
   let prom_r f (a, b) = (f a,   b) in
-  let ga = List.map (fun (lv, f) -> (lv, may (prom_r f))) (da.guard loc e) in
-  let gb = List.map (fun (lv, f) -> (lv, may (prom_l f))) (db.guard loc e) in
+  let ga = List.map (fun (lv, f) -> (lv, may (prom_r f))) (da.guard e) in
+  let gb = List.map (fun (lv, f) -> (lv, may (prom_l f))) (db.guard e) in
   ga@gb
 
 let to_string da db =
