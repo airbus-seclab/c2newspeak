@@ -145,6 +145,7 @@ let eval lookup x =
   let rec eval = function
   | Const (CInt n)            -> from_bounds n n
   | Lval ((L _| G _) as v',_) -> lookup v'
+  | Lval (Shift _,_) -> top
   | Op (Plus,  e1, e2) -> plus (eval e1) (eval e2)
   | Op (Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
   | Not e' -> begin match eval e' with
