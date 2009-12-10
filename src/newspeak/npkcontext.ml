@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,11 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah (dot) zennou (at) eads (dot) net
 *)
 
 (* TODO: 
@@ -91,6 +96,7 @@ let compile_only = ref false
 let output_file = ref ""
 let accept_partial_fdecl = ref false
 let accept_missing_fdecl = ref false
+let xml_output = ref ""
 
 let use_cil = ref false
 let cil_printer = ref "default"
@@ -265,6 +271,9 @@ let argslist = [
 
   ("--print-newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
+
+  ("--xml", Arg.Set_string xml_output, 
+   "gives the name of XML output file\n");
 ]
 
 
@@ -295,12 +304,18 @@ let get_loc () = !cur_loc
 (*----------------------------------------*)
 (* Warnings/errors generation and display *)
 (*----------------------------------------*)
+let xml_warns = ref []
 
 let string_of_err kind where msg =
   let warn = kind^(string_of_loc !cur_loc)^msg in
     if (!verb_debug && where <> "") then warn^" ("^where^")" else warn
 
+let xml_string_of_err where msg =
+  "<warn where=\""^where^"\" msg=\""^msg^"\">"^"</warn>"
+
 let report_warning where msg =
+  if String.compare !xml_output "" <> 0 then
+    xml_warns := (xml_string_of_err where msg)::!xml_warns;
   prerr_endline (string_of_err "Warning: " where msg)
 
 let string_of_error = string_of_err ""
@@ -365,3 +380,61 @@ let report_accept_warning loc msg err_typ =
 
 let report_strict_warning msg err =
   if !use_strict_syntax then report_warning msg err
+
+let string_of_options () =
+  let add s (c, v) =
+    s ^ "<option name=\""^c^"\" val=\""^v^"\"></option>\n"
+  in
+  let options = ref [("-o", !output_file)] 
+  in
+    if !compile_only then options := ("-c", "")::!options;
+    options := ("-o", !output_file)::!options;
+    if !accept_dirty_cast then options := ("--accept-dirty-cast", "")::!options;
+    if !accept_dirty_syntax then options := ("--accept-dirty-syntax", "")::!options;
+    if !accept_partial_fdecl then options := ("--accept-incomplete-fundecl", "")::!options;
+    if !accept_missing_fdecl then options := ("--accept-missing-fundecl", "")::!options;
+    if !accept_forward_goto then options := ("--accept-forward-goto", "")::!options;
+    if !accept_goto then options := ("--accept-goto", "")::!options;
+    if !accept_transparent_union then options := ("--accept-transparent-union", "")::!options;
+    if !accept_extern then options := ("--accept-extern", "")::!options;
+    if !accept_mult_def then options := ("--accept-mult-def", "")::!options;
+    if !accept_gnuc then options := ("--accept-gnuc", "")::!options;
+    if !no_opt then options := ("--disable-opt", "")::!options;
+    if not !opt_checks then options := ("--disable-checks-opt", "")::!options;
+    if not !remove_temp then options := ("--disable-vars-elimination", "")::!options;
+    if !remove_do_loops then options := ("--remove-do-loops", "")::!options;
+    if !ignores_pragmas then options := ("--ignore-pragma", "")::!options;
+    if !ignores_asm then options := ("--ignore-asm", "")::!options;
+    if !ignores_pack then options := ("--ignore-pack", "")::!options;
+    if !ignores_extern_fundef then options := ("--ignore-extern-definition", "")::!options;
+    if !ignores_volatile then options := ("--ignore-volatile", "")::!options;
+    if !use_strict_syntax then options := ("--use-strict-syntax", "")::!options;
+    if !use_cil then begin
+	options := ("--use-cil", "")::!options;
+	options := ("--use-cil-printer", !cil_printer)::!options;
+    end;
+    if !version then options := ("--version", "")::!options;
+    if !verb_ast && !verb_debug && !verb_newspeak then options := ("-v", "")::!options;
+    if !verb_debug then options := ("--debug", "")::!options;
+    if !verb_ast then options := ("--print-ast", "")::!options;
+    if !verb_cir then options := ("--print-cir", "")::!options;
+    if !verb_npko then options := ("--print-npko", "")::!options;
+    if !verb_newspeak then options := ("--print-newspeak", "")::!options;
+    if String.compare !xml_output "" <> 0 then options := ("--xml", !xml_output)::!options;
+    List.fold_left add "" !options
+
+let dump_xml_warns () =
+  if String.compare !xml_output "" <> 0 then 
+    begin
+      let xml_cout = 
+	open_out_gen [Open_wronly;Open_creat] 0o644 !xml_output
+      in
+      let header = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" in
+	output_string xml_cout header;
+	output_string xml_cout "<c2newspeak>\n<options>\n";
+	output_string xml_cout "</options><warns>\n";
+	output_string xml_cout (string_of_options ());
+	List.iter (output_string xml_cout) !xml_warns;
+	output_string xml_cout "</warns>\n</c2newspeak>\n";
+	close_out xml_cout
+    end

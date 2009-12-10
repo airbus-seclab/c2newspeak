@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,11 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah (dot) zennou (at) eads (dot) net
 *)
 
 
@@ -95,7 +100,8 @@ val output_file : string ref
 (** TODO: document that *)
 val handle_cmdline_options : string -> string -> unit
 
-
+(** Name of the xml output file *)
+val xml_output : string ref 
 
 (** {1 Location handling } *)
 
@@ -142,3 +148,6 @@ val cil_printer: string ref
 (** [print_size sz] displays [sz] as the current size of the representation 
     in debug mode. *)
 val print_size: int -> unit
+
+(** writes all warnings into the xml_ouput file *)
+val dump_xml_warns: unit -> unit
