@@ -73,3 +73,7 @@ and binop =
   | Div
   | Gt
   | Eq
+
+and annotation =
+  | Widening
+  | Domain of string

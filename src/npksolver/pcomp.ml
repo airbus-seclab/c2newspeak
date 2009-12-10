@@ -77,44 +77,59 @@ and pcomp_var loc = function
   | Deref  _ -> fail loc "Pointer dereference"
 
 let rec pcomp_stmt (sk, loc) =
-  let sk' = match sk with
+  let (sk', ann) = match sk with
   | Set (lv, exp, scal) -> check_scalar_type loc scal;
-                           Some (Prog.Set (pcomp_var loc lv, pcomp_exp loc exp))
-  | Guard e             -> Some (Prog.Guard (pcomp_exp loc e))
-  | Select (b1, b2)     -> Some (Prog.Select ((pcomp_blk b1), (pcomp_blk b2)))
-  | InfLoop b           -> Some (Prog.InfLoop (pcomp_blk b))
-  | DoWith (b1, l, b2)  -> Some (Prog.DoWith (pcomp_blk b1, l, pcomp_blk b2))
-  | Goto l              -> Some (Prog.Goto l)
-  | UserSpec [IdentToken "widen"] -> Options.set Options.widening true; None
+      [Prog.Set (pcomp_var loc lv, pcomp_exp loc exp)],[]
+  | Guard e             -> [Prog.Guard (pcomp_exp loc e)],[]
+  | Select (b1, b2)     ->
+      let (s1, a1) = pcomp_blk b1 in
+      let (s2, a2) = pcomp_blk b2 in
+      [Prog.Select (s1, s2)], a1@a2
+  | InfLoop b           ->
+      let (s, a) = pcomp_blk b in
+      [Prog.InfLoop s], a
+  | DoWith (b1, l, b2)  ->
+      let (s1, a1) = pcomp_blk b1 in
+      let (s2, a2) = pcomp_blk b2 in
+      [Prog.DoWith (s1, l, s2)], a1@a2
+  | Goto l              -> [Prog.Goto l],[]
+  | UserSpec [IdentToken "widen"] -> [],[Prog.Widening]
   | UserSpec [IdentToken "assert"
-             ;IdentToken "false"] -> Some (Prog.Assert (Prog.Const (Prog.CInt 0)))
+             ;IdentToken "false"] -> [Prog.Assert (Prog.Const (Prog.CInt 0))],[]
   | UserSpec [IdentToken "assert"
              ;IdentToken "bound"
              ;LvalToken (v,t)
              ;CstToken (CInt inf)
-             ;CstToken (CInt sup)] -> let v' = pcomp_var loc v in
-                                      let inf' = Newspeak.Nat.to_int inf in
-                                      let sup' = Newspeak.Nat.to_int sup in
-                                      Some (Prog.Set (v', Prog.Belongs
-                                          ((inf', sup'),
-                                          loc,
-                                          Prog. Lval (v',
-                                          pcomp_type (Scalar t)))))
+             ;CstToken (CInt sup)] ->
+     let v' = pcomp_var loc v in
+     let inf' = Newspeak.Nat.to_int inf in
+     let sup' = Newspeak.Nat.to_int sup in
+     [Prog.Set ( v'
+               , Prog.Belongs ( (inf', sup')
+                              , loc
+                              , Prog. Lval (v', pcomp_type (Scalar t))
+                              )
+               )],[]
   | UserSpec [IdentToken "assert"
              ;IdentToken "eq"
              ;LvalToken (v,t)
-             ;CstToken (CInt c)] -> let v' = pcomp_var loc v in
-                                    let c' = Newspeak.Nat.to_int c in
-                                    Some (Prog.Assert (Prog.Op
-                                      (Prog.Eq, Prog.Lval (v',
-                                      pcomp_type (Scalar t)),
-                                      Prog.Const (Prog.CInt c'))))
-  | Decl (_s, _t, blk)  -> Some (Prog.Decl (pcomp_blk blk))
+             ;CstToken (CInt c)] ->
+     let v' = pcomp_var loc v in
+     let c' = Newspeak.Nat.to_int c in
+     [Prog.Assert (Prog.Op
+       (Prog.Eq, Prog.Lval (v',
+       pcomp_type (Scalar t)),
+       Prog.Const (Prog.CInt c')))],[]
+  | Decl (_s, _t, blk) ->
+      let (s, a) = pcomp_blk blk in
+      [Prog.Decl s], a
   | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
   in
-    Utils.may (fun s -> (s, loc)) sk'
+    (List.map (fun x -> (x, loc)) sk'), ann
 
-and pcomp_blk x = Utils.filter_map pcomp_stmt x
+and pcomp_blk x = List.fold_right (fun s (stmts, anns) ->
+    let (s', ann) = pcomp_stmt s in
+    s'@stmts, ann@anns) x ([],[])
 
 let compile npk =
   let globals =
@@ -134,7 +149,9 @@ let compile npk =
     abort "Initialization block";
   match blko with
   | None -> abort "No 'main' function"
-  | Some (_, b) -> (pcomp_blk b,globals)
+  | Some (_, b) ->
+      let (blk, ann) = pcomp_blk b in
+      (blk, ann ,globals)
 
 module Print = struct
   open Prog

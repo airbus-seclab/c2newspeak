@@ -55,7 +55,11 @@ let (-->) (f:'a Domain.scope) (g:'a -> 'b) :'b Domain.scope =
 
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
-  let (prg, vars) = Pcomp.compile npk in
+  let (prg, ann, vars) = Pcomp.compile npk in
+  List.iter (function
+    | Prog.Widening -> Options.set Options.widening true
+    | Prog.Domain _ -> invalid_arg "handle_file_npk: Domain"
+  ) ann;
   let cfg = Mkcfg.process prg vars in
   let graph_results results = output_graphviz ~results cfg in
     if (Options.get Options.cfg_only) then
