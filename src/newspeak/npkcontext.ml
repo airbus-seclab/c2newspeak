@@ -310,12 +310,12 @@ let string_of_err kind where msg =
   let warn = kind^(string_of_loc !cur_loc)^msg in
     if (!verb_debug && where <> "") then warn^" ("^where^")" else warn
 
-let xml_string_of_err where msg =
-  "<warn where=\""^where^"\" msg=\""^msg^"\">"^"</warn>"
+let xml_string_of_err msg =
+  "<warn where=\""^(string_of_loc !cur_loc)^"\" msg=\""^msg^"\">"^"</warn>\n"
 
 let report_warning where msg =
   if String.compare !xml_output "" <> 0 then
-    xml_warns := (xml_string_of_err where msg)::!xml_warns;
+    xml_warns := (xml_string_of_err msg)::!xml_warns;
   prerr_endline (string_of_err "Warning: " where msg)
 
 let string_of_error = string_of_err ""
@@ -431,8 +431,8 @@ let dump_xml_warns () =
       let header = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" in
 	output_string xml_cout header;
 	output_string xml_cout "<c2newspeak>\n<options>\n";
-	output_string xml_cout "</options><warns>\n";
 	output_string xml_cout (string_of_options ());
+	output_string xml_cout "</options>\n<warns>\n";
 	List.iter (output_string xml_cout) !xml_warns;
 	output_string xml_cout "</warns>\n</c2newspeak>\n";
 	close_out xml_cout
