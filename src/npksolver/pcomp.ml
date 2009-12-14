@@ -145,13 +145,12 @@ let compile npk =
   ) npk.fundecs (0, None) in
   if nfun > 1 then
     abort "Multiple functions";
-  if npk.init <> [] then
-    abort "Initialization block";
+  let (blk_init, ann_init) = pcomp_blk npk.init in
   match blko with
   | None -> abort "No 'main' function"
   | Some (_, b) ->
       let (blk, ann) = pcomp_blk b in
-      (blk, ann ,globals)
+      (blk_init@blk, ann_init@ann ,globals)
 
 module Print = struct
   open Prog
