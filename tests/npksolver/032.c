@@ -1,5 +1,6 @@
 int x;
 int a[2];
+/*!npk domain const */
 int main(void)
 {
   int rand;

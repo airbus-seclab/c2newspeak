@@ -49,6 +49,4 @@ type 't scope =
 
 val with_dom : t -> 'a scope -> 'a
 
-val do_nothing : unit scope
-
 val const : 'a c_dom -> int -> 'a

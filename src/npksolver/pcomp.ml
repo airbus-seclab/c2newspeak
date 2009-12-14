@@ -94,6 +94,7 @@ let rec pcomp_stmt (sk, loc) =
       [Prog.DoWith (s1, l, s2)], a1@a2
   | Goto l              -> [Prog.Goto l],[]
   | UserSpec [IdentToken "widen"] -> [],[Prog.Widening]
+  | UserSpec [IdentToken "domain"; IdentToken d] -> [],[Prog.Domain d]
   | UserSpec [IdentToken "assert"
              ;IdentToken "false"] -> [Prog.Assert (Prog.Const (Prog.CInt 0))],[]
   | UserSpec [IdentToken "assert"

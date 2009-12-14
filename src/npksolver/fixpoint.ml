@@ -87,8 +87,8 @@ let f_horwitz dom v x =
   done;
   x
 
-let solve (ln, v) =
-  { Domain.bind = fun dom ->
+let solve dom (ln, v) =
+  Domain.with_dom dom { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top dom;
   let res = f_horwitz dom v x0 in

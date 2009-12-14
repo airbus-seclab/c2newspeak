@@ -50,9 +50,6 @@ let pack imp =
 let with_dom p e =
   p.open_dom e
 
-let do_nothing =
-  { bind =  fun _ -> () }
-
 let const dom n =
   let empty_env _ =
     invalid_arg "empty_environment"
