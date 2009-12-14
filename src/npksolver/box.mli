@@ -39,7 +39,7 @@ val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 
 val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
 
-val get_var : 'a Domain.c_dom -> Prog.lval -> 'a t -> 'a
+val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
 
 val push : 'a Domain.c_dom -> 'a t -> 'a t
 

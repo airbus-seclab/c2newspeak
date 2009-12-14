@@ -170,7 +170,11 @@ let eval lookup x =
   | Belongs ((a, b), loc, e) ->
       let r = eval e in
       if (not (is_in_range a b r)) then
-        Alarm.emit loc Alarm.ArrayOOB;
+        begin
+          Alarm.emit loc Alarm.ArrayOOB;
+          if (Options.get Options.verbose) then
+            prerr_endline (to_string r ^ " </= [" ^ string_of_int a ^ ";" ^ string_of_int b ^ "]")
+        end;
       r
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )

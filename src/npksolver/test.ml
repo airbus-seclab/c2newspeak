@@ -258,8 +258,8 @@ let run _ =
 
   let dom = Range.dom in
 
-  let get_gvar v = get_var dom (Prog.G v) in
-  let get_lvar n = get_var dom (Prog.L n) in
+  let get_gvar v x = environment dom x (Prog.G v) in
+  let get_lvar n x = environment dom x (Prog.L n) in
   assert_equal (get_gvar "x" bottom) Range.dom.bottom
                         "Box.bottom has no variables";
 

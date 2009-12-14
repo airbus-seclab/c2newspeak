@@ -38,7 +38,7 @@ let eval_stmt dom loc stmt x = match stmt with
             ) x (dom.guard e)
   | Cfg.Set (lv, e) ->
           begin
-            let lookup lv' = Box.get_var dom lv' x in
+            let lookup = Box.environment dom x in
             if x = Box.bottom then Box.bottom
               else
               begin
@@ -50,7 +50,7 @@ let eval_stmt dom loc stmt x = match stmt with
               end
           end
   | Cfg.Assert_true e ->
-        let lookup lv' = Box.get_var dom lv' x in
+        let lookup = Box.environment dom x in
         let r = dom.eval lookup e in
         let zero = dom.eval lookup (Prog.Const (Prog.CInt 0)) in
         if (dom.incl zero r) then

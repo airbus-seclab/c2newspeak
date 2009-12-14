@@ -29,14 +29,18 @@ type var =
   | Local  of int
   | Global of string
 
-let rec to_var dom =
-  let all_top = fun _ -> dom.top in
+let rec to_var ?env dom =
+  let all_top _ = dom.top in
+  let lookup = match env with
+    | Some e -> e
+    | None -> all_top
+  in
   function
   | Prog.L n -> Local  n
   | Prog.G s -> Global s
   | Prog.Shift (l, e) ->
-      ignore (dom.eval all_top e); (* in order to emit alarms *)
-      to_var dom l
+      ignore (dom.eval lookup e); (* in order to emit alarms *)
+      to_var ?env dom l
 
 let from_var = function
   | Local  n -> Prog.L n
@@ -45,12 +49,12 @@ let from_var = function
 module type STORE = sig
   type 'a t
   val empty : 'a Domain.c_dom -> 'a t
-  val singleton : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
+  val singleton : ?env:(Prog.lval -> 'a) -> 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
   val equal : 'a t -> 'a t -> bool
   val merge : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
   val replace : Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
   val map : (Prog.lval -> 'a -> 'b) -> 'a t -> 'b list
-  val assoc : Prog.lval -> 'a t -> 'a
+  val assoc : (Prog.lval -> 'a) -> Prog.lval -> 'a t -> 'a
 end
 
 module VMap : STORE = struct
@@ -66,14 +70,14 @@ module VMap : STORE = struct
     ; map = empty_map ()
     }
 
-  let singleton dom lv x =
+  let singleton ?env dom lv x =
     { dom = dom
-    ; map = Pmap.add (to_var dom lv) x (empty_map ())
+    ; map = Pmap.add (to_var ?env dom lv) x (empty_map ())
     }
 
-  let assoc lv x =
+  let assoc env lv x =
     try
-      Pmap.find (to_var x.dom lv) x.map
+      Pmap.find (to_var ~env x.dom lv) x.map
     with Not_found -> x.dom.top
 
   let map f x =
@@ -158,21 +162,20 @@ let adjust_esp esp =
     | Prog.L n -> Prog.L (esp - n)
     | x -> x
 
-let set_var dom v r =
+let rec environment dom bx lv =
+  maybe dom.bottom
+        (fun x -> S.assoc (environment dom bx)
+          (adjust_esp x.esp lv) x.store)
+        bx
+
+let set_var dom v r bx =
   bind (fun x ->
     update_store
     (S.merge (fun a _ -> a)
-                 (S.singleton dom (adjust_esp x.esp v) r)
-                 x.store
+              (S.singleton ~env:(environment dom bx) dom (adjust_esp x.esp v) r)
+              x.store
       ) x
-  )
-
-let get_var dom v =
-  maybe dom.bottom
-    (fun x ->
-       S.assoc (adjust_esp x.esp v)
-                   x.store
-    )
+  ) bx
 
 let push _dom =
   bind (fun x ->
