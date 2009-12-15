@@ -28,8 +28,9 @@ let to_string dom x =
   "folded (" ^ dom.to_string x ^ ")"
 
 (* transform shift (x, _) to x *)
+(* TODO : unsound *)
 let rewrite_lv = function
-  | Shift (lv, _) -> lv
+  | Shift (lv, _, _) -> lv
   | lv -> lv
 
 let rec rewrite = function
@@ -40,8 +41,8 @@ let rec rewrite = function
   | Not e -> Not (rewrite e)
   | Belongs (b, loc, e) -> Belongs (b, loc, rewrite e)
 
-let eval dom lookup e =
-  dom.eval lookup (rewrite e)
+let eval dom lookup addr e =
+  dom.eval lookup addr (rewrite e)
 
 let guard dom e =
   dom.guard (rewrite e)

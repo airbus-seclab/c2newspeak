@@ -1,1 +1,1 @@
-035.c:7#2: Pointer offset out of bounds
+035.c:8#2: Pointer offset out of bounds

@@ -47,14 +47,14 @@ let meet da db x y =
       None
     else Some (ma, mb)
 
-let eval da db l e =
+let eval da db l addr e =
   let la e = maybe da.bottom fst (l e) in
   let lb e = maybe db.bottom snd (l e) in
-  let ra = da.eval la e in
+  let ra = da.eval la addr e in
   if ra = da.bottom
     then None
     else
-      let rb = db.eval lb e in
+      let rb = db.eval lb addr e in
       if rb = db.bottom
         then None
         else Some (ra , rb)

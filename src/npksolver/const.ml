@@ -65,7 +65,7 @@ let is_in_range a b = function
   | Cst c -> a <= c && c <= b
   | Top -> false
 
-let eval lookup e =
+let eval lookup _sz e =
   let int_of_bool = function
     | true  -> 1
     | false -> 0

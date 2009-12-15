@@ -87,3 +87,5 @@ val foldi : ('a -> 'b -> 'c -> 'c) -> ('a , 'b) t -> 'c -> 'c
 val equal : ('b -> 'b -> bool) -> ('a, 'b) t -> ('a, 'b) t -> bool
 
 val merge : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
+
+val to_string : ('a -> string) -> ('b -> string) -> ('a, 'b) t -> string

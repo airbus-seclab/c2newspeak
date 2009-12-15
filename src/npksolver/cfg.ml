@@ -25,7 +25,7 @@ type stmt =
   | Nop
   | Set   of Prog.lval * Prog.exp
   | Guard of Prog.exp
-  | Push
+  | Push  of int
   | Pop
   | Init of (string * int) list
   | Assert_true of Prog.exp

@@ -38,17 +38,17 @@ and stmtkind =
   | InfLoop of blk
   | DoWith  of blk * lbl * blk
   | Goto    of lbl
-  | Decl    of blk
+  | Decl    of blk * int (* size *)
   | Assert  of exp
 
 and lval =
   | G     of string
   | L     of int
-  | Shift of lval * exp
+  | Shift of lval * exp * Newspeak.location
 
-and var =
-  | Local  of int
-  | Global of string
+and addr =
+  | Stack of int
+  | Heap  of string
 
 and typ =
   | Int

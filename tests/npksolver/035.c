@@ -2,9 +2,8 @@
 int *p;
 int a[2];
 
-int main(void)
+void main(void)
 {
   p = a;
   p += 10;
-  return 0;
 }

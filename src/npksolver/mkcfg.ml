@@ -30,7 +30,7 @@ let print_stmt = function
   | Cfg.Nop           -> "(nop)"
   | Cfg.Set (lv, exp) -> Pcomp.Print.lval lv ^ " <- " ^ Pcomp.Print.exp exp
   | Cfg.Guard exp     -> "[ " ^ Pcomp.Print.exp exp ^ " ]"
-  | Cfg.Push          -> "(push)"
+  | Cfg.Push  _sz     -> "(push)"
   | Cfg.Pop           -> "(pop)"
   | Cfg.Init _vars    -> "(init)"
   | Cfg.Assert_true e -> "(assert:"^Pcomp.Print.exp e^")"
@@ -107,13 +107,13 @@ let rec process_stmt (stmt, loc) c =
       let lbl' = Lbl.next c.lbl in
       update c ~label:lbl'
                ~new_edges:[lbl' >--<(Cfg.Guard e, loc)>--> jnode]
-  | Decl b ->
+  | Decl (b, sz) ->
       let l_pop = Lbl.next jnode in
       let c' = process_blk b c.alist l_pop in
       let l_push = Lbl.next c'.lbl in
       update c ~label:l_push
-               ~new_edges:( (l_push >--<(Cfg.Push, loc)>--> c'.lbl)
-                          ::(l_pop  >--<(Cfg.Pop , loc)>--> jnode )
+               ~new_edges:( (l_push >--<(Cfg.Push sz, loc)>--> c'.lbl)
+                          ::(l_pop  >--<(Cfg.Pop    , loc)>--> jnode )
                           ::c'.edges)
   | Assert e ->
       let l = Lbl.next c.lbl in

@@ -138,7 +138,7 @@ let is_in_range a b r =
 
 open Prog
 
-let eval lookup x =
+let eval lookup _addr x =
   let bool_top   = from_bounds 0 1 in
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in

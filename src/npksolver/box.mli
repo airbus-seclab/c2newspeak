@@ -41,9 +41,9 @@ val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
 
 val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
 
-val get_size : 'a t -> Prog.var -> int
+val get_size : 'a t -> Prog.addr -> int
 
-val push : 'a Domain.c_dom -> 'a t -> 'a t
+val push : 'a Domain.c_dom -> size:int -> 'a t -> 'a t
 
 val pop  : 'a Domain.c_dom -> 'a t -> 'a t
 
@@ -52,3 +52,5 @@ val to_string : 'a Domain.c_dom -> 'a t -> string
 val yaml_dump : 'a Domain.c_dom -> 'a t -> string
 
 val equal : 'a t -> 'a t -> bool
+
+val addr_of : 'a t -> Prog.lval -> Prog.addr

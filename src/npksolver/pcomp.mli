@@ -23,13 +23,9 @@ val compile : Newspeak.t -> Prog.t * Prog.annotation list * (string * int) list
 
 val size_of_typ : Prog.typ -> int
 
-val to_var : ?env:(Prog.lval -> 'a) -> 'a Domain.c_dom -> Prog.lval -> Prog.var
-
-val from_var : Prog.var -> Prog.lval
-
 module Print : sig
   val stmtk : Prog.stmtkind -> string
   val lval  : Prog.lval     -> string
   val exp   : Prog.exp      -> string
-  val var   : Prog.var      -> string
+  val addr  : Prog.addr     -> string
 end

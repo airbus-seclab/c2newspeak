@@ -74,7 +74,7 @@ let rec pcomp_exp loc = function
 and pcomp_var loc = function
   | Global s     -> Prog.G s
   | Local  n     -> Prog.L n
-  | Shift (v, e) -> Prog.Shift (pcomp_var loc v, pcomp_exp loc e)
+  | Shift (v, e) -> Prog.Shift (pcomp_var loc v, pcomp_exp loc e, loc)
   | Deref  _ -> fail loc "Pointer dereference"
 
 let rec pcomp_stmt (sk, loc) =
@@ -122,9 +122,10 @@ let rec pcomp_stmt (sk, loc) =
        (Prog.Eq, Prog.Lval (v',
        pcomp_type (Scalar t)),
        Prog.Const (Prog.CInt c')))],[]
-  | Decl (_s, _t, blk) ->
+  | Decl (_s, t, blk) ->
       let (s, a) = pcomp_blk blk in
-      [Prog.Decl s], a
+      let sz = Newspeak.size_of 32 t in
+      [Prog.Decl (s, sz)], a
   | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
   in
     (List.map (fun x -> (x, loc)) sk'), ann
@@ -137,7 +138,7 @@ let compile npk =
   let globals =
   Hashtbl.fold (fun s (ty, loc) l ->
     check_type loc ty;
-    (s, Newspeak.size_of 1 ty)::l
+    (s, Newspeak.size_of 32 ty)::l
   ) npk.globals []
   in
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
@@ -155,25 +156,8 @@ let compile npk =
       (blk_init@blk, ann_init@ann ,globals)
 
 let size_of_typ = function
-  | Prog.Int     -> 1
-  | Prog.Array n -> n
-
-let rec to_var ?env dom =
-  let all_top _ = dom.Domain.top in
-  let lookup = match env with
-    | Some e -> e
-    | None -> all_top
-  in
-  function
-  | Prog.L n -> Prog.Local  n
-  | Prog.G s -> Prog.Global s
-  | Prog.Shift (l, e) ->
-      ignore (dom.Domain.eval lookup e); (* in order to emit alarms *)
-      to_var ?env dom l
-
-let from_var = function
-  | Prog.Local  n -> Prog.L n
-  | Prog.Global s -> Prog.G s
+  | Prog.Int     -> 32
+  | Prog.Array n -> 32 * n
 
 module Print = struct
   open Prog
@@ -184,9 +168,9 @@ module Print = struct
     | PlusPtr _ -> "+ptr"
 
   let rec lval = function
-    | L n          -> ":"^string_of_int n
-    | G x          -> x
-    | Shift (v, e) -> lval v ^ "[" ^ exp e ^ "]"
+    | L n              -> ":"^string_of_int n
+    | G x              -> x
+    | Shift (v, e, _l) -> lval v ^ "[" ^ exp e ^ "]"
 
   and exp = function
     | Const (CInt c) -> string_of_int c
@@ -209,8 +193,8 @@ module Print = struct
     | Goto   _ -> "(goto)"
     | Assert e -> "Assert (" ^ exp e ^ ")"
 
-  let var = function
-    | Local  n -> "Local "  ^ string_of_int n
-    | Global s -> "Global " ^ s
+  let addr = function
+    | Stack x -> "L"^string_of_int x
+    | Heap  x -> x
 
 end

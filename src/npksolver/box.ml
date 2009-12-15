@@ -28,18 +28,18 @@ let varcmp = Pervasives.compare
 module type STORE = sig
   type 'a t
   val empty : 'a Domain.c_dom -> 'a t
-  val singleton : ?env:(Prog.lval -> 'a) -> 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
+  val singleton : 'a Domain.c_dom -> Prog.addr -> 'a -> 'a t
   val equal : 'a t -> 'a t -> bool
   val merge : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
-  val replace : Prog.lval -> ('a -> 'a) -> 'a t -> 'a t option
-  val map : (Prog.lval -> 'a -> 'b) -> 'a t -> 'b list
-  val assoc : (Prog.lval -> 'a) -> Prog.lval -> 'a t -> 'a
+  val replace : Prog.addr -> ('a -> 'a) -> 'a t -> 'a t option
+  val map : (Prog.addr -> 'a -> 'b) -> 'a t -> 'b list
+  val assoc : Prog.addr -> 'a t -> 'a
 end
 
 module VMap : STORE = struct
   type 'a t =
     { dom : 'a Domain.c_dom
-    ; map : (Prog.var, 'a) Pmap.t
+    ; map : (Prog.addr, 'a) Pmap.t
     }
 
   let empty_map () = Pmap.create varcmp
@@ -49,18 +49,18 @@ module VMap : STORE = struct
     ; map = empty_map ()
     }
 
-  let singleton ?env dom lv x =
+  let singleton dom addr x =
     { dom = dom
-    ; map = Pmap.add (Pcomp.to_var ?env dom lv) x (empty_map ())
+    ; map = Pmap.add addr x (empty_map ())
     }
 
-  let assoc env lv x =
+  let assoc addr x =
     try
-      Pmap.find (Pcomp.to_var ~env x.dom lv) x.map
+      Pmap.find addr x.map
     with Not_found -> x.dom.top
 
   let map f x =
-    Pmap.foldi (fun k v l -> (f (Pcomp.from_var k) v)::l) x.map []
+    Pmap.foldi (fun k v l -> (f k v)::l) x.map []
 
   let equal a b =
     Pmap.equal (=) a.map b.map
@@ -93,7 +93,7 @@ module S = VMap
 
 type 'a box = { store : 'a S.t
               ; esp   : int
-              ; size  : (Prog.var, int) Pmap.t
+              ; size  : (Prog.addr, int) Pmap.t
               }
 
 type 'a t = 'a box option
@@ -107,14 +107,10 @@ let equal a b = match (a, b) with
 let top dom =
   Some { store = S.empty dom
        ; esp = 0
-       ; size = Pmap.empty
+       ; size = Pmap.add (Prog.Stack 0) 32 Pmap.empty
        }
 
 let bottom = None
-
-let update_store so x =
-  so >>= fun s ->
-  return { x with store = s }
 
 let bind2' f xo yo =
   xo >>= fun x ->
@@ -135,69 +131,96 @@ let join dom xo yo =
           ;        size  = Pmap.merge x.size y.size
           }
 
-let meet  dom = bind2'  (S.merge dom.meet)
-let widen dom = bind2'  (S.merge dom.widen)
+let meet  dom x y =
+  bind2' (S.merge dom.meet) x y
+
+let widen dom = bind2' (S.merge dom.widen)
+
+let rec addr_convert ?(check=fun _ _ _ -> ()) esp =
+  function
+    | Prog.L n -> Prog.Stack (esp - n)
+    | Prog.G s -> Prog.Heap  s
+    | Prog.Shift (l, e, loc) ->
+        let addr_base = addr_convert esp l in
+        check e addr_base loc;
+        addr_base
+
+let addr_of_ck ?check xo l =
+  match xo with
+  | None -> invalid_arg "box.addr_of : no values"
+  | Some x -> addr_convert ?check x.esp l
+
+let addr_of xo l = addr_of_ck xo l
+
+let get_size x addr = match x with
+  | None -> invalid_arg "get_size : bottom"
+  | Some x ->
+      try
+        Pmap.find addr x.size
+      with Not_found ->
+        invalid_arg ( "get_size : cannot find variable '"
+                    ^ Pcomp.Print.addr addr
+                    ^ "'" )
 
 let singleton dom v ~size r =
-  Some { store = S.singleton dom v r
+  let addr = addr_convert 0 v in
+  Some { store = S.singleton dom addr r
        ; esp = 0
-       ; size = Pmap.add (Pcomp.to_var dom v) size Pmap.empty
+       ; size = Pmap.add addr size
+               (Pmap.add (Prog.Stack 0) 32 Pmap.empty)
        }
 
-let guard var f =
-  bind (fun x ->
-  update_store
-    (S.replace var f (x.store)) x
-  )
+let guard var f xo =
+  let addr = addr_of xo var in
+  xo >>= fun x ->
+  S.replace addr f (x.store) >>= fun s ->
+  return { x with store = s }
 
-let adjust_esp esp =
-    function
-    | Prog.L n -> Prog.L (esp - n)
-    | x -> x
-
-let rec environment dom bx lv =
+let rec environment dom bx v =
+  let addr = addr_of bx v in
   maybe dom.bottom
-        (fun x -> S.assoc (environment dom bx)
-          (adjust_esp x.esp lv) x.store)
+        (fun x -> S.assoc addr x.store)
         bx
 
 let set_var dom v r bx =
-  bind (fun x ->
-    update_store
-    (S.merge (fun a _ -> a)
-              (S.singleton ~env:(environment dom bx) dom (adjust_esp x.esp v) r)
-              x.store
-      ) x
-  ) bx
+  let check e a loc =
+    let r = dom.eval (environment dom bx)
+                     (addr_of bx)
+                     e
+    in
+    let size = get_size bx a in
+    if not (dom.is_in_range 0 size r) then
+      Alarm.emit loc Alarm.ArrayOOB
+        ~reason:(dom.to_string r^" </= [0;"^string_of_int size^"]")
+  in
+  let addr = addr_of_ck ~check bx v in
+  bx >>= fun x ->
+  (S.merge (fun a _ -> a)
+           (S.singleton dom addr r)
+            x.store)
+  >>= fun s ->
+  return { x with store = s }
 
-let push _dom =
+let push _dom ~size =
   bind (fun x ->
-      return { x with esp = x.esp + 1 }
+      return { x with esp = succ x.esp
+             ; size = Pmap.add (Prog.Stack (succ x.esp)) size x.size
+             }
   )
 
 let pop dom =
   bind (fun x ->
   bind (fun s' ->
-      Some { store = s' ; esp = x.esp - 1 ; size = x.size }
-        ) (S.replace (Prog.L x.esp)
+      Some { store = s' ; esp = pred x.esp ; size = x.size } (* XXX remove Local esp *)
+        ) (S.replace (Prog.Stack x.esp)
           (fun _ -> dom.top) x.store
       )
   )
 
-let get_size x var = match x with
-  | None -> invalid_arg "get_size : bottom"
-  | Some x ->
-      try
-        Pmap.find var x.size
-      with Not_found ->
-        invalid_arg ( "get_size : cannot find variable '"
-                    ^ Pcomp.Print.var var
-                    ^ "'" )
-
 let to_string dom =
   maybe "(bot)"
     (fun x -> String.concat ", " (S.map (fun v r ->
-                Pcomp.Print.lval v^"->"^dom.to_string r)
+                Pcomp.Print.addr v^"->"^dom.to_string r)
               x.store))
 
 let yaml_dump dom =
@@ -208,12 +231,11 @@ let yaml_dump dom =
           (S.map
             (fun v r ->
               if r = dom.top then None
-              else Some (
-                  Pcomp.Print.lval v
-                ^ ": \""
-                ^ dom.to_string r
-                ^ "\""
-              )
+              else Some ( Pcomp.Print.addr v
+                        ^ ": \""
+                        ^ dom.to_string r
+                        ^ "\""
+                        )
             ) x.store
           )
         )

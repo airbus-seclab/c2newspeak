@@ -198,9 +198,10 @@ let run _ =
 
   (* assert (not [a;b] == [c;d]) *)
   let tc_not a b c d name =
-    assert_equal ~printer:dom.to_string (dom.eval (function
-        Prog.G "v" -> from_bounds a b | _ -> invalid_arg "no variable"
-    ) (Prog.Not (Prog.Lval (Prog.G "v", Prog.Int)))) (from_bounds c d) name
+    assert_equal ~printer:dom.to_string (dom.eval
+    (function Prog.G "v" -> from_bounds a b | _ -> invalid_arg "no variable")
+    (function Prog.G "v" -> Prog.Heap "v"   | _ -> invalid_arg "no variable")
+    (Prog.Not (Prog.Lval (Prog.G "v", Prog.Int)))) (from_bounds c d) name
   in
 
   tc_not 0       0       1 1 "not [0;0] == [1;1]";
@@ -215,7 +216,12 @@ let run _ =
       | Prog.G "x" -> from_bounds a b
       | Prog.G "y" -> from_bounds c d
       | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Eq, Prog.Lval (Prog.G "x", Prog.Int),
+    ) ( function
+      | Prog.G "x" -> Prog.Heap "x"
+      | Prog.G "y" -> Prog.Heap "y"
+      | _ -> invalid_arg "no variable"
+    )
+    (Prog.Op (Prog.Eq, Prog.Lval (Prog.G "x", Prog.Int),
                          Prog.Lval (Prog.G "y", Prog.Int)))) (from_bounds e f) name
   in
 
@@ -224,9 +230,10 @@ let run _ =
   tc_eqeq 5 5  5  5  1 1 "{5} .==. {5} == [1;1]";
   tc_eqeq 0 0  5  5  0 0 "{0} .==. {5} == [0;0]";
 
-  assert_equal ~printer:dom.to_string (dom.eval (function
-      Prog.G "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable"
-    ) (Prog.Op (Prog.Minus, Prog.Const (Prog.CInt 0), Prog.Lval (Prog.G "v", Prog.Int))))
+  assert_equal ~printer:dom.to_string (dom.eval
+  (function Prog.G "v" -> from_bounds 3 5 | _ -> invalid_arg "no variable")
+  (function Prog.G "v" -> Prog.Heap "v"   | _ -> invalid_arg "no variable")
+  (Prog.Op (Prog.Minus, Prog.Const (Prog.CInt 0), Prog.Lval (Prog.G "v", Prog.Int))))
     (from_bounds (-5) (-3)) "- [3;5] == [-5;-3]";
 
   (* assert [a;b] .*. [c;d] == [e;f] *)
@@ -234,6 +241,10 @@ let run _ =
     assert_equal ~printer:dom.to_string (dom.eval (function
       | Prog.G "x" -> from_bounds a b
       | Prog.G "y" -> from_bounds c d
+      | _ -> invalid_arg "no variable"
+    ) ( function
+      | Prog.G "x" -> Prog.Heap "x"
+      | Prog.G "y" -> Prog.Heap "y"
       | _ -> invalid_arg "no variable"
     ) (Prog.Op (Prog.Mult, Prog.Lval (Prog.G "x", Prog.Int),
                            Prog.Lval (Prog.G "y", Prog.Int)))) (from_bounds e f) name

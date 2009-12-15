@@ -19,11 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = (Prog.var -> int) (* size mapping *)
-                     -> Prog.lval         (* lvalue in program text *)
-                     -> old_value:'a      (* old value of variable  *)
-                     -> new_value:'a      (* new value evaluated    *)
-                     -> (Prog.lval * 'a)  (* where to write what    *)
+type 'a update_method = (Prog.addr -> int) (* size mapping *)
+                     -> Prog.lval          (* lvalue in program text *)
+                     -> old_value:'a       (* old value of variable  *)
+                     -> new_value:'a       (* new value evaluated    *)
+                     -> (Prog.lval * 'a)   (* where to write what    *)
 
 type 'a c_dom =
   { top       : 'a
@@ -34,7 +34,7 @@ type 'a c_dom =
   ; widen     : 'a -> 'a -> 'a
   ; to_string : 'a -> string
   ; is_in_range : int -> int -> 'a -> bool
-  ; eval  : (Prog.lval -> 'a) -> Prog.exp -> 'a
+  ; eval  : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> 'a
   ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) list
   ; update : 'a update_method
   }

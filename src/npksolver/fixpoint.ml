@@ -30,8 +30,8 @@ let eval_stmt dom loc stmt x = match stmt with
                        (Box.singleton dom ~size (Prog.G v) zero)
                        r
             ) x vs
-  | Cfg.Pop  -> Box.pop  dom x
-  | Cfg.Push -> Box.push dom x
+  | Cfg.Pop       -> Box.pop  dom x
+  | Cfg.Push size -> Box.push dom x ~size
   | Cfg.Guard e ->
             List.fold_left (fun x (v, f) ->
               Box.guard v f x
@@ -42,7 +42,7 @@ let eval_stmt dom loc stmt x = match stmt with
             if x = Box.bottom then Box.bottom
               else
               begin
-                let new_value = dom.eval lookup e in
+                let new_value = dom.eval lookup (Box.addr_of x) e in
                 (* TODO old_value could be lazy here ? *)
                 let old_value = lookup lv in
                 let (where, what) = dom.update (Box.get_size x) lv ~old_value ~new_value in
@@ -51,8 +51,8 @@ let eval_stmt dom loc stmt x = match stmt with
           end
   | Cfg.Assert_true e ->
         let lookup = Box.environment dom x in
-        let r = dom.eval lookup e in
-        let zero = dom.eval lookup (Prog.Const (Prog.CInt 0)) in
+        let r = dom.eval lookup (Box.addr_of x) e in
+        let zero = const dom 0 in
         if (dom.incl zero r) then
           Alarm.emit loc (Alarm.Assertion_failed (Pcomp.Print.exp e));
         x

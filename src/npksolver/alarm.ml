@@ -33,7 +33,7 @@ module Alarm_set = Set.Make(String)
 
 let alarms = ref (Alarm_set.empty)
 
-let emit loc s =
+let emit ?reason loc s =
   let str_loc =
     if loc = Newspeak.unknown_loc then
       "(no loc)"
@@ -43,5 +43,10 @@ let emit loc s =
   if (not (Alarm_set.mem alarm_text !alarms)) then
     begin
       alarms := Alarm_set.add alarm_text !alarms;
-      print_endline alarm_text
+      print_endline alarm_text;
+      match reason with
+      | None -> ()
+      | Some r ->
+        if (Options.get Options.verbose) then
+          print_endline ("Reason : " ^ r)
     end
