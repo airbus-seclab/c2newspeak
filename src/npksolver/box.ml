@@ -25,27 +25,6 @@ let may_cons h t = Utils.may (fun x -> h::x) t
 
 let varcmp = Pervasives.compare
 
-type var =
-  | Local  of int
-  | Global of string
-
-let rec to_var ?env dom =
-  let all_top _ = dom.top in
-  let lookup = match env with
-    | Some e -> e
-    | None -> all_top
-  in
-  function
-  | Prog.L n -> Local  n
-  | Prog.G s -> Global s
-  | Prog.Shift (l, e) ->
-      ignore (dom.eval lookup e); (* in order to emit alarms *)
-      to_var ?env dom l
-
-let from_var = function
-  | Local  n -> Prog.L n
-  | Global s -> Prog.G s
-
 module type STORE = sig
   type 'a t
   val empty : 'a Domain.c_dom -> 'a t
@@ -60,7 +39,7 @@ end
 module VMap : STORE = struct
   type 'a t =
     { dom : 'a Domain.c_dom
-    ; map : (var, 'a) Pmap.t
+    ; map : (Prog.var, 'a) Pmap.t
     }
 
   let empty_map () = Pmap.create varcmp
@@ -72,16 +51,16 @@ module VMap : STORE = struct
 
   let singleton ?env dom lv x =
     { dom = dom
-    ; map = Pmap.add (to_var ?env dom lv) x (empty_map ())
+    ; map = Pmap.add (Pcomp.to_var ?env dom lv) x (empty_map ())
     }
 
   let assoc env lv x =
     try
-      Pmap.find (to_var ~env x.dom lv) x.map
+      Pmap.find (Pcomp.to_var ~env x.dom lv) x.map
     with Not_found -> x.dom.top
 
   let map f x =
-    Pmap.foldi (fun k v l -> (f (from_var k) v)::l) x.map []
+    Pmap.foldi (fun k v l -> (f (Pcomp.from_var k) v)::l) x.map []
 
   let equal a b =
     Pmap.equal (=) a.map b.map
@@ -114,7 +93,7 @@ module S = VMap
 
 type 'a box = { store : 'a S.t
               ; esp   : int
-              ; size  : (var, int) Pmap.t
+              ; size  : (Prog.var, int) Pmap.t
               }
 
 type 'a t = 'a box option
@@ -133,32 +112,36 @@ let top dom =
 
 let bottom = None
 
-let update_store fs x =
-  bind (fun s ->
-    return { x with store = s }
-  ) fs
+let update_store so x =
+  so >>= fun s ->
+  return { x with store = s }
 
-let bind_store f x y =
-  update_store (f x.store y.store) x
+let bind2' f xo yo =
+  xo >>= fun x ->
+  yo >>= fun y ->
+  f x.store y.store >>= fun s ->
+  return { x with store = s
+         ;        size  = Pmap.merge x.size y.size
+         }
 
-let bind2_l f x y =
-  maybe y (fun x' ->
-  maybe x (fun y' ->
-    bind_store f x' y'
-  ) y
-  ) x
+let join dom xo yo =
+  match (xo, yo) with
+    | None   , _      -> yo
+    | _      , None   -> xo
+    | Some x , Some y ->
+        S.merge dom.join x.store y.store >>= fun s ->
+        return
+          { x with store = s
+          ;        size  = Pmap.merge x.size y.size
+          }
 
-let bind2' f =
-  bind2 (bind_store f)
-
-let join  dom = bind2_l (S.merge dom.join)
 let meet  dom = bind2'  (S.merge dom.meet)
 let widen dom = bind2'  (S.merge dom.widen)
 
 let singleton dom v ~size r =
   Some { store = S.singleton dom v r
        ; esp = 0
-       ; size = Pmap.add (to_var dom v) size Pmap.empty
+       ; size = Pmap.add (Pcomp.to_var dom v) size Pmap.empty
        }
 
 let guard var f =
@@ -201,9 +184,15 @@ let pop dom =
       )
   )
 
-let get_size dom x lv = match x with
+let get_size x var = match x with
   | None -> invalid_arg "get_size : bottom"
-  | Some x -> Pmap.find (to_var dom lv) x.size
+  | Some x ->
+      try
+        Pmap.find var x.size
+      with Not_found ->
+        invalid_arg ( "get_size : cannot find variable '"
+                    ^ Pcomp.Print.var var
+                    ^ "'" )
 
 let to_string dom =
   maybe "(bot)"

@@ -46,6 +46,10 @@ and lval =
   | L     of int
   | Shift of lval * exp
 
+and var =
+  | Local  of int
+  | Global of string
+
 and typ =
   | Int
   | Array of int
@@ -73,7 +77,7 @@ and binop =
   | Div
   | Gt
   | Eq
-  | PlusPtr
+  | PlusPtr of Newspeak.location
 
 and annotation =
   | Widening

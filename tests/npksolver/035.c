@@ -5,6 +5,6 @@ int a[2];
 int main(void)
 {
   p = a;
-  p++;
+  p += 10;
   return 0;
 }

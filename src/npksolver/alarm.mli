@@ -21,6 +21,7 @@
 
 type t =
   | ArrayOOB
+  | PtrOOB
   | Assertion_failed of string
 
 val emit : Newspeak.location -> t -> unit

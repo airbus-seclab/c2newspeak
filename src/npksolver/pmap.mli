@@ -85,3 +85,5 @@ val foldi : ('a -> 'b -> 'c -> 'c) -> ('a , 'b) t -> 'c -> 'c
     key and the associated value for each binding of the map. *)
 
 val equal : ('b -> 'b -> bool) -> ('a, 'b) t -> ('a, 'b) t -> bool
+
+val merge : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t

@@ -30,7 +30,7 @@ PREREQ=%.c $(NPKSOLVER)
 TESTS = 000                                     \
                                         018 019 \
         020 021 022 023 024 025 026 027 028 029 \
- 				030	031 032 033 034
+ 				030	031 032 033
 
 include ../common.Makefile
 

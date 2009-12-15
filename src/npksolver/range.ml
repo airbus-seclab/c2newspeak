@@ -176,7 +176,7 @@ let eval lookup x =
       r
   | Const Nil -> top
   | AddrOf _ -> top
-  | Op (PlusPtr, _, _) -> top
+  | Op (PlusPtr loc, _, _) -> Alarm.emit loc Alarm.PtrOOB; top
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )
   in

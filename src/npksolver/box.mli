@@ -41,7 +41,7 @@ val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
 
 val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
 
-val get_size : 'a Domain.c_dom -> 'a t -> Prog.lval -> int
+val get_size : 'a t -> Prog.var -> int
 
 val push : 'a Domain.c_dom -> 'a t -> 'a t
 

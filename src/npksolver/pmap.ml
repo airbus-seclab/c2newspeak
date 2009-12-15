@@ -183,3 +183,10 @@ let equal cmp m1 m2 =
         equal_aux (cons_enum r1 e1) (cons_enum r2 e2)
   in equal_aux (cons_enum m1.map End) (cons_enum m2.map End)
 
+let merge' a b =
+  assert (a.cmp == b.cmp);
+  { a with
+    map = merge a.map b.map
+  }
+
+let merge = merge'

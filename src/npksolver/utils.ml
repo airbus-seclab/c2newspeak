@@ -56,11 +56,10 @@ module Lift = struct
   let return x = Some x
 
   let bind2 f x y =
-    bind (fun x' ->
-    bind (fun y' ->
-      f x' y'
-    ) y
-    ) x
+    x >>= fun x' ->
+    y >>= fun y' ->
+    f x' y'
+   
 
   let liftM2 f x y =
     x >>= fun x' ->

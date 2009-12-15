@@ -77,7 +77,7 @@ let eval lookup e =
     | Gt -> (fun x y -> int_of_bool (x > y))
     | Div -> (/)
     | Mult -> fun x y -> x * y
-    | PlusPtr -> fun x _ -> x
+    | PlusPtr loc -> (fun x _ -> Alarm.emit loc Alarm.PtrOOB; x)
   in
   let rec eval = function
     | Const (CInt n) -> Cst n

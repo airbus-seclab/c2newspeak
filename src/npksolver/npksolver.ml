@@ -96,11 +96,12 @@ let run_selftests =
 
 let main args =
   register_domains
-    [ "const"            , "constants"                     , Domain.pack Const.dom
-    ; "range"            , "ranges (default)"              , Domain.pack Range.dom
-    ; "parity"           , "parity"                        , Domain.pack Parity.dom
-    ; "range+parity"     , "range + parity"                , Domain.pack (Pair.make Parity.dom Range.dom)
-    ; "range+fold(range)", "range + folded arrays of range", Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
+    [ "const"        , "constants"            , Domain.pack Const.dom
+    ; "range"        , "ranges (default)"     , Domain.pack Range.dom
+    ; "parity"       , "parity"               , Domain.pack Parity.dom
+    ; "range_parity" , "range + parity"       , Domain.pack (Pair.make Parity.dom Range.dom)
+    ; "range_fold"   , "range + folded arrays", Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
+    ; "ptr_range"    , "ptr offset for range" , Domain.pack (Ptr_offset.make Range.dom)
     ];
   let domain_descrs = Hashtbl.fold (fun k (_, descr) s ->
     k^" : "^descr^" "^ s
