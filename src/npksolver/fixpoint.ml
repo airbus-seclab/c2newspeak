@@ -33,9 +33,10 @@ let eval_stmt dom loc stmt x = match stmt with
   | Cfg.Pop       -> Box.pop  dom x
   | Cfg.Push size -> Box.push dom x ~size
   | Cfg.Guard e ->
+            let env = Box.environment dom x in
             List.fold_left (fun x (v, f) ->
               Box.guard v f x
-            ) x (dom.guard e)
+            ) x (dom.guard env (Box.addr_of x) e)
   | Cfg.Set (lv, e) ->
           begin
             let lookup = Box.environment dom x in

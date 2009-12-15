@@ -59,11 +59,21 @@ let eval da db l addr e =
         then None
         else Some (ra , rb)
 
-let guard da db e =
+let guard da db env addr e =
   let prom_l f (a, b) = (  a, f b) in
   let prom_r f (a, b) = (f a,   b) in
-  let ga = List.map (fun (lv, f) -> (lv, may (prom_r f))) (da.guard e) in
-  let gb = List.map (fun (lv, f) -> (lv, may (prom_l f))) (db.guard e) in
+  let env_a x =
+    match env x with
+    | None -> invalid_arg "pair : guard : env_a"
+    | Some (a, _) -> a
+  in
+  let env_b x =
+    match env x with
+    | None -> invalid_arg "pair : guard : env_b"
+    | Some (_, b) -> b
+  in
+  let ga = List.map (fun (lv, f) -> (lv, may (prom_r f))) (da.guard env_a addr e) in
+  let gb = List.map (fun (lv, f) -> (lv, may (prom_l f))) (db.guard env_b addr e) in
   ga@gb
 
 let to_string da db =

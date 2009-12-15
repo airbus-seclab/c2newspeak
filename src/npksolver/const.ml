@@ -94,7 +94,7 @@ let eval lookup _sz e =
   in
   eval e
 
-let guard = function
+let guard _ _ = function
   |      Op (Eq, Lval (v,_), Const (CInt n))  (* v == n *) -> [v, liftv (Cst n)]
   |      Op (Gt, Lval (v,_), Const _)         (* v >  n *)
   |      Op (Gt, Const _, Lval (v,_))         (* n >  v *)

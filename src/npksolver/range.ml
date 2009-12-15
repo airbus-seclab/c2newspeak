@@ -182,7 +182,7 @@ let eval lookup _addr x =
   in
   eval x
 
-let guard e =
+let guard _ _ e =
   match e with
   |      Op (Gt, Lval (v,_), Const (CInt n))  -> [v, meet (from_bounds (n+1) max_int)]
   |      Op (Gt, Const (CInt n), Lval (v,_))  -> [v, meet (from_bounds min_int (n-1))]

@@ -35,7 +35,7 @@ type 'a c_dom =
   ; to_string : 'a -> string
   ; is_in_range : int -> int -> 'a -> bool
   ; eval  : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> 'a
-  ; guard : Prog.exp -> (Prog.lval * ('a -> 'a)) list
+  ; guard : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> (Prog.lval * ('a -> 'a)) list
   ; update : 'a update_method
   }
 

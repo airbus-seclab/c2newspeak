@@ -93,7 +93,7 @@ let rec eval lookup _addr = function
         Alarm.emit loc Alarm.ArrayOOB;
       res
 
-let guard = function
+let guard _ _ = function
   | Op (Eq, Lval (lv, _), Const (CInt n)) -> [lv, meet (from_val n)]
   | _ -> []
 

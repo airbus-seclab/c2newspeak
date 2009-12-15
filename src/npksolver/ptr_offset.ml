@@ -116,8 +116,35 @@ let rec eval dom env addr_of =
              ( "Ptr_offset : invalid expression : "
              ^ Pcomp.Print.exp exp ); top dom
 
-let guard dom exp =
-  List.map (fun (l, x) -> (l, lift x)) (dom.guard exp)
+let guard dom env addr_of =
+  let liftg = List.map (fun (l, x) -> (l, lift x)) in
+  let l_env x = (env x).offset in
+  function
+    (* (var +p off > ptr) *)
+  | Op (Gt, Op(PlusPtr _loc1, AddrOf (var), off), (Lval (ptr, _) as lv)) ->
+      begin
+      let r = env ptr in
+      match r.var with
+      | PointsTo (var', _loc) when var' = addr_of var ->
+          let rew_guard =
+            Op (Gt, off, lv)
+          in
+          liftg (dom.guard l_env addr_of rew_guard)
+      | _ -> []
+      end
+    (* ! (var +p off > ptr) *)
+  | Not (Op (Gt, Op(PlusPtr _loc1, AddrOf (var), off), (Lval (ptr, _) as lv))) ->
+      begin
+      let r = env ptr in
+      match r.var with
+      | PointsTo (var', _loc) when var' = addr_of var ->
+          let rew_guard =
+            Not (Op (Gt, off, lv))
+          in
+          liftg (dom.guard l_env addr_of rew_guard)
+      | _ -> []
+      end
+  | exp -> liftg (dom.guard l_env addr_of exp)
 
 let ptr_update dom size_of lv ~old_value ~new_value =
   ignore old_value;

@@ -44,8 +44,8 @@ let rec rewrite = function
 let eval dom lookup addr e =
   dom.eval lookup addr (rewrite e)
 
-let guard dom e =
-  dom.guard (rewrite e)
+let guard dom env addr e =
+  dom.guard env addr (rewrite e)
 
 let update dom _ text_lv ~old_value ~new_value =
   (rewrite_lv text_lv, dom.join old_value new_value)
