@@ -46,6 +46,7 @@ let pcomp_binop loc binop =
   | DivI    -> Prog.Div
   | Gt scal -> check_scalar_type loc scal; Prog.Gt
   | Eq scal -> check_scalar_type loc scal; Prog.Eq
+  | PlusPI  -> Prog.PlusPtr
   | _ -> fail loc "Invalid binary operation"
 
 let pcomp_type = function
@@ -159,6 +160,7 @@ module Print = struct
   let binop = function
     | Plus  -> "+" | Minus -> "-" | Mult  -> "*"
     | Div   -> "/" | Gt    -> ">" | Eq    -> "=="
+    | PlusPtr -> "+ptr"
 
   let rec lval = function
     | L n          -> ":"^string_of_int n

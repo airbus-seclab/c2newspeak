@@ -73,6 +73,7 @@ and binop =
   | Div
   | Gt
   | Eq
+  | PlusPtr
 
 and annotation =
   | Widening
