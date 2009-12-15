@@ -19,7 +19,7 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val process : Prog.t -> string list -> Cfg.t
+val process : Prog.t -> (string * int) list -> Cfg.t
 
 val dump_yaml : Cfg.t -> string
 

@@ -25,9 +25,9 @@ let eval_stmt dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
           let zero = const dom 0 in
-          List.fold_left (fun r v ->
+          List.fold_left (fun r (v, size) ->
               Box.meet dom
-                       (Box.singleton dom (Prog.G v) zero)
+                       (Box.singleton dom ~size (Prog.G v) zero)
                        r
             ) x vs
   | Cfg.Pop  -> Box.pop  dom x
@@ -38,19 +38,19 @@ let eval_stmt dom loc stmt x = match stmt with
             ) x (dom.guard e)
   | Cfg.Set (lv, e) ->
           begin
-            let lookup lv' = Box.get_var dom lv' x in
+            let lookup = Box.environment dom x in
             if x = Box.bottom then Box.bottom
               else
               begin
                 let new_value = dom.eval lookup e in
                 (* TODO old_value could be lazy here ? *)
                 let old_value = lookup lv in
-                let (where, what) = dom.update lv ~old_value ~new_value in
+                let (where, what) = dom.update (Box.get_size x) lv ~old_value ~new_value in
                 Box.set_var dom where what x
               end
           end
   | Cfg.Assert_true e ->
-        let lookup lv' = Box.get_var dom lv' x in
+        let lookup = Box.environment dom x in
         let r = dom.eval lookup e in
         let zero = dom.eval lookup (Prog.Const (Prog.CInt 0)) in
         if (dom.incl zero r) then
@@ -87,8 +87,8 @@ let f_horwitz dom v x =
   done;
   x
 
-let solve (ln, v) =
-  { Domain.bind = fun dom ->
+let solve dom (ln, v) =
+  Domain.with_dom dom { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top dom;
   let res = f_horwitz dom v x0 in

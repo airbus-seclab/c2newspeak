@@ -19,10 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = Prog.lval        (* lvalue in program text *)
-                     -> old_value:'a     (* old value of variable  *)
-                     -> new_value:'a     (* new value evaluated    *)
-                     -> (Prog.lval * 'a) (* where to write what    *)
+type 'a update_method = (Prog.var -> int) (* size mapping *)
+                     -> Prog.lval         (* lvalue in program text *)
+                     -> old_value:'a      (* old value of variable  *)
+                     -> new_value:'a      (* new value evaluated    *)
+                     -> (Prog.lval * 'a)  (* where to write what    *)
 
 type 'a c_dom =
   { top       : 'a
@@ -48,7 +49,5 @@ type 't scope =
   { bind : 'a. 'a c_dom -> 't }
 
 val with_dom : t -> 'a scope -> 'a
-
-val do_nothing : unit scope
 
 val const : 'a c_dom -> int -> 'a

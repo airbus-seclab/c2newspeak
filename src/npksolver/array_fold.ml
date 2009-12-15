@@ -46,7 +46,7 @@ let eval dom lookup e =
 let guard dom e =
   dom.guard (rewrite e)
 
-let update dom text_lv ~old_value ~new_value =
+let update dom _ text_lv ~old_value ~new_value =
   (rewrite_lv text_lv, dom.join old_value new_value)
 
 let make dom =

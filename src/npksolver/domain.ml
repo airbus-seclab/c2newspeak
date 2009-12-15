@@ -1,5 +1,5 @@
 (*
-  tHIS FIle is part of npksolver, a solver for Newspeak,
+  This file is part of npksolver, a solver for Newspeak,
   a minimal language framework well suited for static analysis.
 
   This library is free software; you can redistribute it and/or
@@ -19,10 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = Prog.lval        (* lvalue in program text *)
-                     -> old_value:'a     (* old value of variable  *)
-                     -> new_value:'a     (* new value evaluated    *)
-                     -> (Prog.lval * 'a) (* where to write what    *)
+type 'a update_method = (Prog.var -> int) (* size mapping *)
+                     -> Prog.lval         (* lvalue in program text *)
+                     -> old_value:'a      (* old value of variable  *)
+                     -> new_value:'a      (* new value evaluated    *)
+                     -> (Prog.lval * 'a)  (* where to write what    *)
 
 type 'a c_dom =
   { top       : 'a
@@ -50,15 +51,12 @@ let pack imp =
 let with_dom p e =
   p.open_dom e
 
-let do_nothing =
-  { bind =  fun _ -> () }
-
 let const dom n =
   let empty_env _ =
     invalid_arg "empty_environment"
   in
   dom.eval empty_env (Prog.Const (Prog.CInt n))
 
-let destructive_update text_lv ~old_value ~new_value =
+let destructive_update _map text_lv ~old_value ~new_value =
   ignore old_value;
   (text_lv, new_value)

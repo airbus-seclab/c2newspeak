@@ -47,30 +47,22 @@ let output_graphviz ?results cfg =
   output_string file (Mkcfg.dump_dot ?results cfg);
   close_out file
 
-let (-->) (f:'a Domain.scope) (g:'a -> 'b) :'b Domain.scope =
-  { Domain.bind =
-      fun x ->
-        g (f.Domain.bind x)
-  }
-
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
   let (prg, ann, vars) = Pcomp.compile npk in
   List.iter (function
     | Prog.Widening -> Options.set Options.widening true
-    | Prog.Domain _ -> invalid_arg "handle_file_npk: Domain"
+    | Prog.Domain d -> domain := domain_str d
   ) ann;
   let cfg = Mkcfg.process prg vars in
   let graph_results results = output_graphviz ~results cfg in
     if (Options.get Options.cfg_only) then
       begin
       output_graphviz cfg;
-      print_endline (Mkcfg.dump_yaml cfg);
-      Domain.do_nothing
+      print_endline (Mkcfg.dump_yaml cfg)
       end
     else
-      Fixpoint.solve cfg
-      --> graph_results
+      graph_results (Fixpoint.solve !domain cfg)
 
 type fname = C | Npk | Unknown
 
@@ -90,10 +82,9 @@ let c2newspeak fname =
     tmpnam
 
 let handle_file fname =
-  let handle fname = Domain.with_dom !domain (handle_file_npk fname) in
   match fname_suffix fname with
-  | Npk     -> handle fname
-  | C       -> handle (c2newspeak fname)
+  | Npk     -> handle_file_npk fname
+  | C       -> handle_file_npk (c2newspeak fname)
   | Unknown -> failwith "I don't know what to do with this file"
 
 let run_selftests =
@@ -105,11 +96,12 @@ let run_selftests =
 
 let main args =
   register_domains
-    [ "c" , "constants"                     , Domain.pack Const.dom
-    ; "r" , "ranges (default)"              , Domain.pack Range.dom
-    ; "p" , "parity"                        , Domain.pack Parity.dom
-    ; "rp", "range + parity"                , Domain.pack (Pair.make Parity.dom Range.dom)
-    ; "ra", "range + folded arrays of range", Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
+    [ "const"        , "constants"            , Domain.pack Const.dom
+    ; "range"        , "ranges (default)"     , Domain.pack Range.dom
+    ; "parity"       , "parity"               , Domain.pack Parity.dom
+    ; "range_parity" , "range + parity"       , Domain.pack (Pair.make Parity.dom Range.dom)
+    ; "range_fold"   , "range + folded arrays", Domain.pack (Pair.make Range.dom (Array_fold.make Range.dom))
+    ; "ptr_range"    , "ptr offset for range" , Domain.pack (Ptr_offset.make Range.dom)
     ];
   let domain_descrs = Hashtbl.fold (fun k (_, descr) s ->
     k^" : "^descr^" "^ s

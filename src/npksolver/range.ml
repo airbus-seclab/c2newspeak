@@ -165,13 +165,18 @@ let eval lookup x =
                            | _ -> bool_top
                            end
   | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
-  | Const Nil -> top
-  | AddrOf _ -> top
   | Belongs ((a, b), loc, e) ->
       let r = eval e in
       if (not (is_in_range a b r)) then
-        Alarm.emit loc Alarm.ArrayOOB;
+        begin
+          Alarm.emit loc Alarm.ArrayOOB;
+          if (Options.get Options.verbose) then
+            prerr_endline (to_string r ^ " </= [" ^ string_of_int a ^ ";" ^ string_of_int b ^ "]")
+        end;
       r
+  | Const Nil -> top
+  | AddrOf _ -> top
+  | Op (PlusPtr loc, _, _) -> Alarm.emit loc Alarm.PtrOOB; top
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )
   in

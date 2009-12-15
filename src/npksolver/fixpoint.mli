@@ -19,4 +19,4 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val solve : Cfg.t -> string array Domain.scope
+val solve : Domain.t -> Cfg.t -> string array

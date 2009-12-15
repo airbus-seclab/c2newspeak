@@ -46,6 +46,7 @@ let pcomp_binop loc binop =
   | DivI    -> Prog.Div
   | Gt scal -> check_scalar_type loc scal; Prog.Gt
   | Eq scal -> check_scalar_type loc scal; Prog.Eq
+  | PlusPI  -> Prog.PlusPtr loc
   | _ -> fail loc "Invalid binary operation"
 
 let pcomp_type = function
@@ -94,6 +95,7 @@ let rec pcomp_stmt (sk, loc) =
       [Prog.DoWith (s1, l, s2)], a1@a2
   | Goto l              -> [Prog.Goto l],[]
   | UserSpec [IdentToken "widen"] -> [],[Prog.Widening]
+  | UserSpec [IdentToken "domain"; IdentToken d] -> [],[Prog.Domain d]
   | UserSpec [IdentToken "assert"
              ;IdentToken "false"] -> [Prog.Assert (Prog.Const (Prog.CInt 0))],[]
   | UserSpec [IdentToken "assert"
@@ -135,7 +137,7 @@ let compile npk =
   let globals =
   Hashtbl.fold (fun s (ty, loc) l ->
     check_type loc ty;
-    s::l
+    (s, Newspeak.size_of 1 ty)::l
   ) npk.globals []
   in
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
@@ -145,13 +147,33 @@ let compile npk =
   ) npk.fundecs (0, None) in
   if nfun > 1 then
     abort "Multiple functions";
-  if npk.init <> [] then
-    abort "Initialization block";
+  let (blk_init, ann_init) = pcomp_blk npk.init in
   match blko with
   | None -> abort "No 'main' function"
   | Some (_, b) ->
       let (blk, ann) = pcomp_blk b in
-      (blk, ann ,globals)
+      (blk_init@blk, ann_init@ann ,globals)
+
+let size_of_typ = function
+  | Prog.Int     -> 1
+  | Prog.Array n -> n
+
+let rec to_var ?env dom =
+  let all_top _ = dom.Domain.top in
+  let lookup = match env with
+    | Some e -> e
+    | None -> all_top
+  in
+  function
+  | Prog.L n -> Prog.Local  n
+  | Prog.G s -> Prog.Global s
+  | Prog.Shift (l, e) ->
+      ignore (dom.Domain.eval lookup e); (* in order to emit alarms *)
+      to_var ?env dom l
+
+let from_var = function
+  | Prog.Local  n -> Prog.L n
+  | Prog.Global s -> Prog.G s
 
 module Print = struct
   open Prog
@@ -159,6 +181,7 @@ module Print = struct
   let binop = function
     | Plus  -> "+" | Minus -> "-" | Mult  -> "*"
     | Div   -> "/" | Gt    -> ">" | Eq    -> "=="
+    | PlusPtr _ -> "+ptr"
 
   let rec lval = function
     | L n          -> ":"^string_of_int n
@@ -185,5 +208,9 @@ module Print = struct
     | DoWith  _ -> "(dowith)"
     | Goto   _ -> "(goto)"
     | Assert e -> "Assert (" ^ exp e ^ ")"
+
+  let var = function
+    | Local  n -> "Local "  ^ string_of_int n
+    | Global s -> "Global " ^ s
 
 end

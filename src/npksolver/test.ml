@@ -258,8 +258,8 @@ let run _ =
 
   let dom = Range.dom in
 
-  let get_gvar v = get_var dom (Prog.G v) in
-  let get_lvar n = get_var dom (Prog.L n) in
+  let get_gvar v x = environment dom x (Prog.G v) in
+  let get_lvar n x = environment dom x (Prog.L n) in
   assert_equal (get_gvar "x" bottom) Range.dom.bottom
                         "Box.bottom has no variables";
 
@@ -273,10 +273,10 @@ let run _ =
   let meet = meet dom in
   let join = join dom in
   let sg var v =
-    singleton dom (Prog.G var) (const Range.dom v)
+    singleton ~size:1 dom (Prog.G var) (const Range.dom v)
   in
   let intvl var x y =
-    singleton dom (Prog.G var) (Range.from_bounds x y)
+    singleton ~size:1 dom (Prog.G var) (Range.from_bounds x y)
   in
 
   let i2 = sg "i" 2 in
