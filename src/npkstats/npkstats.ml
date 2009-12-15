@@ -107,7 +107,7 @@ let string_of_counters counters b =
   let xml = 
     if b then List.fold_left (
 	  fun s (c, n) ->
-	    s^"<stats type=\"instruction\" class=\""^c^"\" val=\""^n^"\"></stats>\n"
+	    s^"<stats type=\"Statements\" class=\""^c^"\" val=\""^n^"\"></stats>\n"
 	) "" [(s1, n1) ; (s2, n2) ; (s3, n3) ; (s4, n4) ; (s5, n5) ; (s6, n6)]
     else ""
   in
@@ -275,7 +275,7 @@ object (this)
       let out = "\n"^s^f^": "^n in
 	Buffer.add_string res out;
 	if b then
-	  "<stats type=\"function\" class=\""^s^"\" val=\""^n^"\"></stats>\n"
+	  "<stats type=\"Functions\" class=\""^s^"\" val=\""^n^"\"></stats>\n"
 	else ""
 	  
     in
@@ -283,7 +283,7 @@ object (this)
     let string_of_fun f counters =
       let f = if !obfuscate then string_of_int !fun_counter else f in
       let out, xml = string_of_counters counters b in
-      let s = "Function" in
+      let s = "Functions" in
 	incr fun_counter;
 	let out = "\n"^s^": "^f^"\n"^out in
 	  Buffer.add_string res out;
@@ -340,7 +340,7 @@ object (this)
 	let xml = List.fold_left (
 	  fun s (t, c, n) ->
 	    s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^n^"\"></stats>\n"
-	) "" [("global", s1, n1) ; ("global", s2, n2) ; ("function", s3, n3)]
+	) "" [("Global variables", s1, n1) ; ("Global variables", s2, n2) ; ("Functions", s3, n3)]
 	in
 	  output_string cout xml
       end;

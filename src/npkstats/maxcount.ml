@@ -169,7 +169,7 @@ let print (exact, st) xout =
 	    List.fold_left (fun s (t, c, n) ->
 			      s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^symb^n^"\"></stats>\n"
 			   ) "" [("analysis", s1, nb) ; ("analysis", s2, sz) ; 
-				 ("function", s3, call_depth) ; ("instruction", s4, loop_depth)]
+				 ("Functions", s3, call_depth) ; ("Statements", s4, loop_depth)]
 	  in
 	  let s =
 	    if !rec_fun<> "" then
