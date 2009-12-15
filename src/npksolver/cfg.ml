@@ -27,7 +27,7 @@ type stmt =
   | Guard of Prog.exp
   | Push
   | Pop
-  | Init of string list
+  | Init of (string * int) list
   | Assert_true of Prog.exp
 
 module NodeMap = Map.Make (struct

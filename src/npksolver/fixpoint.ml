@@ -25,9 +25,9 @@ let eval_stmt dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
           let zero = const dom 0 in
-          List.fold_left (fun r v ->
+          List.fold_left (fun r (v, size) ->
               Box.meet dom
-                       (Box.singleton dom (Prog.G v) zero)
+                       (Box.singleton dom ~size (Prog.G v) zero)
                        r
             ) x vs
   | Cfg.Pop  -> Box.pop  dom x

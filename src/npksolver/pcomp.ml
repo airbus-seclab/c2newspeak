@@ -137,7 +137,7 @@ let compile npk =
   let globals =
   Hashtbl.fold (fun s (ty, loc) l ->
     check_type loc ty;
-    s::l
+    (s, Newspeak.size_of 1 ty)::l
   ) npk.globals []
   in
   let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->

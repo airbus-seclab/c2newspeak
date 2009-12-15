@@ -273,10 +273,10 @@ let run _ =
   let meet = meet dom in
   let join = join dom in
   let sg var v =
-    singleton dom (Prog.G var) (const Range.dom v)
+    singleton ~size:1 dom (Prog.G var) (const Range.dom v)
   in
   let intvl var x y =
-    singleton dom (Prog.G var) (Range.from_bounds x y)
+    singleton ~size:1 dom (Prog.G var) (Range.from_bounds x y)
   in
 
   let i2 = sg "i" 2 in

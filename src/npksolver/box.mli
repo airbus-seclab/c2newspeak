@@ -27,7 +27,7 @@ val top : 'a Domain.c_dom -> 'a t
 
 val bottom : 'a t
 
-val singleton : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t
+val singleton : 'a Domain.c_dom -> Prog.lval -> size:int -> 'a -> 'a t
 
 val join : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
 
@@ -40,6 +40,8 @@ val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
 
 val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
+
+val get_size : 'a Domain.c_dom -> 'a t -> Prog.lval -> int
 
 val push : 'a Domain.c_dom -> 'a t -> 'a t
 

@@ -112,7 +112,10 @@ open Utils.Lift
 
 module S = VMap
 
-type 'a box = { store : 'a S.t ; esp : int }
+type 'a box = { store : 'a S.t
+              ; esp   : int
+              ; size  : (var, int) Pmap.t
+              }
 
 type 'a t = 'a box option
 
@@ -122,7 +125,11 @@ let equal a b = match (a, b) with
                       && S.equal a.store b.store
   | _ -> false
 
-let top dom = Some {store = S.empty dom ; esp = 0}
+let top dom =
+  Some { store = S.empty dom
+       ; esp = 0
+       ; size = Pmap.empty
+       }
 
 let bottom = None
 
@@ -148,8 +155,11 @@ let join  dom = bind2_l (S.merge dom.join)
 let meet  dom = bind2'  (S.merge dom.meet)
 let widen dom = bind2'  (S.merge dom.widen)
 
-let singleton dom v r =
-  Some { store = S.singleton dom v r ; esp = 0 }
+let singleton dom v ~size r =
+  Some { store = S.singleton dom v r
+       ; esp = 0
+       ; size = Pmap.add (to_var dom v) size Pmap.empty
+       }
 
 let guard var f =
   bind (fun x ->
@@ -185,11 +195,15 @@ let push _dom =
 let pop dom =
   bind (fun x ->
   bind (fun s' ->
-        Some { store = s' ; esp = x.esp - 1 }
+      Some { store = s' ; esp = x.esp - 1 ; size = x.size }
         ) (S.replace (Prog.L x.esp)
           (fun _ -> dom.top) x.store
       )
   )
+
+let get_size dom x lv = match x with
+  | None -> invalid_arg "get_size : bottom"
+  | Some x -> Pmap.find (to_var dom lv) x.size
 
 let to_string dom =
   maybe "(bot)"
