@@ -44,8 +44,7 @@ let eval_stmt dom loc stmt x = match stmt with
               else
               begin
                 let new_value = dom.eval lookup (Box.addr_of x) e in
-                (* TODO old_value could be lazy here ? *)
-                let old_value = lookup lv in
+                let old_value _ = lookup lv in
                 let (where, what) = dom.update (Box.get_size x) loc lv ~old_value ~new_value in
                 Box.set_var dom where what x
               end
