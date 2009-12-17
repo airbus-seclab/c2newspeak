@@ -28,7 +28,7 @@ let assert_incl a b =
   assert_true (dom.incl a b)
 
 let assert_not_incl a b =
-  assert_false (dom.incl a b)
+  assert_true (not (dom.incl a b))
 
 let run _ =
   test_plan 302;

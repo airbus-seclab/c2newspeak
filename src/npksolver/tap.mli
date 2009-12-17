@@ -19,15 +19,18 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-(* Producer for the test anything protocol. *)
-(* Not reentrant. *)
+(** Producer for the Test Anything Protocol. *)
 
+(** Sets the number of tests to run. *)
 val test_plan : int -> unit
 
+(** End testing. *)
 val test_end : unit -> unit
 
+(** Simple 'ok()' function. *)
 val test_ok : string -> unit
 
+(** Assert that two values are equal. *)
 val assert_equal : ?cmp:('a -> 'a -> bool)
                 -> ?printer:('a -> string)
                 -> 'a
@@ -35,12 +38,12 @@ val assert_equal : ?cmp:('a -> 'a -> bool)
                 -> string
               -> unit
 
+(** Assert that two int values are equal. *)
 val assert_equal_int : int -> int -> string -> unit
 
-val assert_true  : bool -> string -> unit
-
-val assert_false : bool -> string -> unit
-
+(** Assert that two string values are equal. *)
 val assert_equal_string : string -> string -> string -> unit
 
-val assert_exn : ('a -> 'b) -> exn -> 'a -> string -> unit
+(** Assert that a boolean is true. *)
+val assert_true  : bool -> string -> unit
+

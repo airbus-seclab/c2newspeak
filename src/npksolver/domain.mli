@@ -19,36 +19,65 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = (Prog.addr -> int)     (* size mapping           *)
-                     -> Newspeak.location      (* location of update     *)
-                     -> Prog.lval              (* lvalue in program text *)
-                     -> old_value:(unit -> 'a) (* old value of variable  *)
-                     -> new_value:'a           (* new value evaluated    *)
-                     -> (Prog.lval * 'a)       (* where to write what    *)
+(** Callback when updating a variable.  *)
+type 'a update_check = (Prog.addr -> int) (* size mapping           *)
+                     -> Newspeak.location (* location of update     *)
+                     -> 'a                (* new value evaluated    *)
+                     -> unit              (* where to write what    *)
 
+(**
+ * Unpacked abstract domain.
+ *)
 type 'a c_dom =
-  { top       : 'a
-  ; bottom    : 'a
-  ; incl      : 'a -> 'a -> bool
-  ; join      : 'a -> 'a -> 'a
-  ; meet      : 'a -> 'a -> 'a
-  ; widen     : 'a -> 'a -> 'a
-  ; to_string : 'a -> string
+  { top         : 'a
+  ; bottom      : 'a
+  ; incl        : 'a -> 'a -> bool
+  ; join        : 'a -> 'a -> 'a
+  ; meet        : 'a -> 'a -> 'a
+  ; widen       : 'a -> 'a -> 'a
+  ; to_string   : 'a -> string
   ; is_in_range : int -> int -> 'a -> bool
-  ; eval  : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> 'a
-  ; guard : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> (Prog.lval * ('a -> 'a)) list
-  ; update : 'a update_method
+  ; eval        : (Prog.lval -> 'a)             (** Environment            *)
+               -> (Prog.lval -> Prog.addr)      (** Abstract addr_of       *)
+               -> Prog.exp                      (** Expression to evaluate *)
+               -> 'a                            (** Abstract result        *)
+  ; guard       : (Prog.lval -> 'a)             (** Environment            *)
+               -> (Prog.lval -> Prog.addr)      (** Abstract addr_of       *)
+               -> Prog.exp                      (** Expression to evaluate *)
+               -> (Prog.lval * ('a -> 'a)) list (** List of (lv, f) pairs on
+                                                  * which Box.guard will be
+                                                  * called.
+                                                  *)
+  ; update : 'a update_check option
   }
 
-val destructive_update : 'a update_method
+(**
+ * An evaluator for constant integers.
+ * For example, const Range.com 0 = [0;0], etc.
+ *)
+val const : 'a c_dom -> int -> 'a
 
+(**
+ * Packed abstract domain.
+ * t really means 'exists a. t = a c_dom'.
+ * Packing/unpacking is made with pack and with_dom.
+ *)
 type t
 
+(**
+ * Pack an abstract domain.
+ *)
 val pack : 'a c_dom -> t
 
+(**
+ * A wrapping scope.
+ * 't scope is like "some piece of computation taking an abstract domain (c_dom) in
+ * parameter and returning 't".
+ *)
 type 't scope = 
   { bind : 'a. 'a c_dom -> 't }
 
+(**
+ * Unpack an abstract domain.
+ *)
 val with_dom : t -> 'a scope -> 'a
-
-val const : 'a c_dom -> int -> 'a

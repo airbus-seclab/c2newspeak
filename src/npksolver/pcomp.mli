@@ -19,10 +19,23 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(**
+ * Program compiler.
+ * Takes a Newspeak file, and outputs :
+ *   - the program's text.
+ *   - a list of annotations.
+ *   - a list of global variables with their sizes.
+ *)
 val compile : Newspeak.t -> Prog.t * Prog.annotation list * (string * int) list
 
+(**
+ * The size of a type.
+ *)
 val size_of_typ : Prog.typ -> int
 
+(**
+ * Pretty-printer for Prog types.
+ *)
 module Print : sig
   val stmtk : Prog.stmtkind -> string
   val lval  : Prog.lval     -> string

@@ -19,8 +19,10 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-open Domain
+(**
+ * An abstract domain to add structure to pointer offsets.
+ *)
 
 type 'a t
 
-val make : 'a c_dom -> 'a t Domain.c_dom
+val make : 'a Domain.c_dom -> 'a t Domain.c_dom

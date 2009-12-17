@@ -142,10 +142,9 @@ let guard dom env addr_of =
       end
   | exp -> liftg (dom.guard l_env addr_of exp)
 
-let ptr_update dom size_of loc lv ~old_value ~new_value =
-  ignore old_value;
+let ptr_update dom size_of loc new_value =
   let alarm ?reason _ =
-    Alarm.emit loc Alarm.PtrOOB ?reason;
+    Alarm.emit loc Alarm.Ptr_OOB ?reason;
   in
   begin
   match new_value.var with
@@ -157,8 +156,7 @@ let ptr_update dom size_of loc lv ~old_value ~new_value =
       if not (dom.is_in_range 0 sz new_value.offset) then
         alarm ~reason:(dom.to_string new_value.offset
                ^ " </= [0;" ^ string_of_int sz ^ "]") ()
-  end ;
-  (lv, new_value)
+  end
 
 let make dom =
   { top         = top dom
@@ -170,6 +168,6 @@ let make dom =
   ; to_string   = (fun r -> "PtrOff (" ^ dom.to_string r.offset ^ ")")
   ; eval        = eval  dom
   ; guard       = guard dom
-  ; update      = ptr_update dom
+  ; update      = Some (ptr_update dom)
   ; is_in_range = (fun _ _ _ -> false)
   }

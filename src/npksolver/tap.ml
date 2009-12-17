@@ -66,17 +66,7 @@ let assert_equal_int msg expected actual =
 let assert_true what msg =
   test_condition msg what None
 
-let assert_false what msg =
-  assert_true (not what) msg
-
 let assert_equal_string expected actual msg =
   test_condition msg (String.compare expected actual = 0)
       (Some ("Expected : "^expected
             ^" but got : "^actual))
-
-
-let assert_exn f e x n =
-  try
-    ignore (f x);
-    test_not_ok n (Some "no exception was raised")
-  with e' -> test_condition n (e' = e) (Some "Another exception was raised")

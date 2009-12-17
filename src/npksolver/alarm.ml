@@ -20,13 +20,13 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 type t =
-  | ArrayOOB
-  | PtrOOB
-  | Assertion_failed of string
+  | Array_OOB                   (** Array index out of bounds    *)
+  | Ptr_OOB                     (** Pointer offset out of bounds *)
+  | Assertion_failed of string  (** Null pointer dereference     *)
 
 let string_of_alarm = function
-  | ArrayOOB           -> "Array index out of bounds"
-  | PtrOOB             -> "Pointer offset out of bounds"
+  | Array_OOB          -> "Array index out of bounds"
+  | Ptr_OOB            -> "Pointer offset out of bounds"
   | Assertion_failed s -> "Assertion failed : " ^ s
 
 module Alarm_set = Set.Make(String)

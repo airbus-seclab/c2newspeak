@@ -19,25 +19,38 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type fp_algorithm =
-  | Roundrobin
-  | Worklist
+(**
+ * Global options.
+ *)
 
+(**
+ * A control is a 'tweak' meant to be get and set.
+ *)
 type 'a control
 
-type 'a c_control
-
+(** Set a tweak. *)
 val set : 'a control -> 'a -> unit
+
+(** Get a tweak. *)
 val get : 'a control -> 'a
 
+(** Process cfg only. *)
 val cfg_only : bool control
+
+(** Output more data. *)
 val verbose  : bool control
+
+(** Generate a DOT file. *)
 val graphviz : bool control
+
+(** Use widening. *)
 val widening : bool control
+
+(** Display solver output (abstract values). *)
 val solver   : bool control
 
-val set_cc : 'a c_control -> string -> unit
-val get_cc : 'a c_control -> 'a
+(** Getopt-style parser. *)
+(* TODO use Arg instead. *)
 
 type opt_action =
   | Help

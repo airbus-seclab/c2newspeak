@@ -18,12 +18,6 @@
  *)
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
-(**
- * Stripped-down language :
- *   - only ints
- *   - only globals
- *   - no function calls
- *)
 
 type t = blk
 

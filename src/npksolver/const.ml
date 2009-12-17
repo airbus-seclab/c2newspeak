@@ -77,7 +77,7 @@ let eval lookup _sz e =
     | Gt -> (fun x y -> int_of_bool (x > y))
     | Div -> (/)
     | Mult -> fun x y -> x * y
-    | PlusPtr loc -> (fun x _ -> Alarm.emit loc Alarm.PtrOOB; x)
+    | PlusPtr loc -> (fun x _ -> Alarm.emit loc Alarm.Ptr_OOB; x)
   in
   let rec eval = function
     | Const (CInt n) -> Cst n
@@ -89,7 +89,7 @@ let eval lookup _sz e =
     | Belongs ((a, b), loc, e) ->
         let res = eval e in
         if (not (is_in_range a b res)) then
-          Alarm.emit loc Alarm.ArrayOOB;
+          Alarm.emit loc Alarm.Array_OOB;
         res
   in
   eval e
@@ -114,5 +114,5 @@ let dom =
   ; Domain.to_string = to_string
   ; Domain.eval      = eval
   ; Domain.guard     = guard
-  ; Domain.update    = Domain.destructive_update
+  ; Domain.update    = None
   }

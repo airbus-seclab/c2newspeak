@@ -44,9 +44,12 @@ let eval_stmt dom loc stmt x = match stmt with
               else
               begin
                 let new_value = dom.eval lookup (Box.addr_of x) e in
-                let old_value _ = lookup lv in
-                let (where, what) = dom.update (Box.get_size x) loc lv ~old_value ~new_value in
-                Box.set_var dom where what x
+                begin
+                  match dom.update with
+                  | None -> ()
+                  | Some check -> check (Box.get_size x) loc new_value
+                end;
+                Box.set_var dom lv new_value x
               end
           end
   | Cfg.Assert_true e ->

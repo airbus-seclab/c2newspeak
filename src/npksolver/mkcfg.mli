@@ -19,8 +19,22 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(**
+ * Build a control-flow graph from a program.
+ * The second argument is a list of global variable and their sizes.
+ *)
 val process : Prog.t -> (string * int) list -> Cfg.t
 
+(**
+ * Dump a CFG as a YAML string.
+ *)
 val dump_yaml : Cfg.t -> string
 
+(**
+ * Dump a CFG as a DOT (graphviz) string.
+ * If 'results' is passed, it will be used to decorate nodes.
+ * For example, if the result of Fixpoint.solve is passed,
+ * The generated DOT string will represent the abstract values at
+ * every node.
+ *)
 val dump_dot : ?results:string array -> Cfg.t -> string

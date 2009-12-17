@@ -19,38 +19,104 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-(** This is a cross product of several 'a *)
-
+(**
+ * A 'box' is a mapping between lvalues and abstract values.
+ * It is a non-relational abstract store.
+ * Every vertex in the control-flow graph has an specific box value. 
+ *
+ * The type t is purely functional, and can be copied without fear of sharing or
+ * side effects.
+ *)
 type 'a t
 
-val top : 'a Domain.c_dom -> 'a t
-
-val bottom : 'a t
-
-val singleton : 'a Domain.c_dom -> Prog.lval -> size:int -> 'a -> 'a t
-
-val join : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
-
-val meet : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
-
-val widen : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
-
-val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
-
-val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
-
-val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
-
-val get_size : 'a t -> Prog.addr -> int
-
-val push : 'a Domain.c_dom -> size:int -> 'a t -> 'a t
-
-val pop  : 'a Domain.c_dom -> 'a t -> 'a t
-
-val to_string : 'a Domain.c_dom -> 'a t -> string
-
-val yaml_dump : 'a Domain.c_dom -> 'a t -> string
-
+(**
+ * Equality test.
+ *)
 val equal : 'a t -> 'a t -> bool
 
+(**
+ * The 'top' value, meaning that no information is known.
+ *)
+val top : 'a Domain.c_dom -> 'a t
+
+(**
+ * The 'bottom' value, meaning that the associated control-flow graph vertex is
+ * unreachable (dead code).
+ *)
+val bottom : 'a t
+
+(**
+ * A box with a single variable with the specified size and abstract value.
+ *)
+val singleton : 'a Domain.c_dom -> Prog.lval -> size:int -> 'a -> 'a t
+
+(**
+ * Variable-wise abstract join operation.
+ *)
+val join : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
+
+(**
+ * Variable-wise abstract meet operation.
+ *)
+val meet : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
+
+(**
+ * Variable-wise widening operation.
+ *)
+val widen : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
+
+(**
+ * Guard evaluation.
+ * 'guard lv f x' applies f to the abstract value of lv in x.
+ *)
+val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
+
+(**
+ * Set the abstract value for a lvalue. 
+ *)
+val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
+
+(**
+ * Get abstract value of variables.
+ * 'environment dom x' is a 'lookup' function.
+ *)
+val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
+
+(**
+ * Returns the size of a variable.
+ *)
+val get_size : 'a t -> Prog.addr -> int
+
+(**
+ * Maps lvalues to abstract addresses.
+ * Global variables are 'naturally' associated to Heap addresses,
+ * and local variables are mapped onto Stack addresses by the mean of a
+ * "stack pointer" related to a specific box value.
+ * The stack pointer is incremented (resp. decremented) by the push (resp. pop)
+ * function.
+ *)
 val addr_of : 'a t -> Prog.lval -> Prog.addr
+
+(**
+ * Increment the stack pointer.
+ * "Pushes" the stack pointer to allocate space for a new variable of size
+ * 'size'.  Note that the stack pointer is not related the size of the new
+ * variable : local variable numbering is only lexical.
+ *)
+val push : 'a Domain.c_dom -> size:int -> 'a t -> 'a t
+
+(**
+ * Decrement the stack pointer.
+ * The opposite of push. The value of the most recent variable is wiped out.
+ *)
+val pop : 'a Domain.c_dom -> 'a t -> 'a t
+
+(**
+ * Pretty printer.
+ *)
+val to_string : 'a Domain.c_dom -> 'a t -> string
+
+(**
+ * YAML dumper.
+ *)
+val yaml_dump : 'a Domain.c_dom -> 'a t -> string

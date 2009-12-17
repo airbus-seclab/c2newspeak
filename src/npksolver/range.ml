@@ -169,14 +169,14 @@ let eval lookup _addr x =
       let r = eval e in
       if (not (is_in_range a b r)) then
         begin
-          Alarm.emit loc Alarm.ArrayOOB;
+          Alarm.emit loc Alarm.Array_OOB;
           if (Options.get Options.verbose) then
             prerr_endline (to_string r ^ " </= [" ^ string_of_int a ^ ";" ^ string_of_int b ^ "]")
         end;
       r
   | Const Nil -> top
   | AddrOf _ -> top
-  | Op (PlusPtr loc, _, _) -> Alarm.emit loc Alarm.PtrOOB; top
+  | Op (PlusPtr loc, _, _) -> Alarm.emit loc Alarm.Ptr_OOB; top
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )
   in
@@ -205,7 +205,7 @@ let dom =
   ; Domain.to_string   = to_string
   ; Domain.eval        = eval
   ; Domain.guard       = guard
-  ; Domain.update      = Domain.destructive_update
+  ; Domain.update      = None
   ; Domain.is_in_range = is_in_range
   }
 

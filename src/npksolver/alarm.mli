@@ -19,9 +19,18 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(** Npksolver alarms.  *)
 type t =
-  | ArrayOOB
-  | PtrOOB
-  | Assertion_failed of string
+  | Array_OOB                   (** Array index out of bounds.            *)
+  | Ptr_OOB                     (** Pointer offset out of bounds.         *)
+  | Assertion_failed of string  (** Generic error with a specific reason. *)
 
+(**
+ * Emit an alarm.
+ *
+ * An alarm emission is associated to a particular location in the
+ * analyzed source code.
+ * If the same alarm is emitted several times from the same location,
+ * it will be printed only once.
+ *)
 val emit : ?reason:string -> Newspeak.location -> t -> unit

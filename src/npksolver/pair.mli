@@ -19,6 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(**
+ * Pair of abstract domains.
+ * The most "stupid" combinator, which remembers everything.
+ *)
+
 type ('a, 'b) t
 
 val make : 'a Domain.c_dom -> 'b Domain.c_dom -> ('a, 'b) t Domain.c_dom

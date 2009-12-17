@@ -19,6 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(** Unit test suites, which output TAP. *)
+
 val range : unit -> unit
 
 val box   : unit -> unit

@@ -182,6 +182,12 @@ let rec environment dom bx v =
         (fun x -> S.assoc addr x.store)
         bx
 
+(*
+ * TODO 
+ * could it be written as :
+ *     guard v (fun _ -> r) bx
+ * (+ checks) ?
+ *)
 let set_var dom v r bx =
   let check e a loc =
     let r = dom.eval (environment dom bx)
@@ -190,7 +196,7 @@ let set_var dom v r bx =
     in
     let size = get_size bx a in
     if not (dom.is_in_range 0 size r) then
-      Alarm.emit loc Alarm.ArrayOOB
+      Alarm.emit loc Alarm.Array_OOB
         ~reason:(dom.to_string r^" </= [0;"^string_of_int size^"]")
   in
   let addr = addr_of_ck ~check bx v in

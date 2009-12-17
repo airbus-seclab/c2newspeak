@@ -19,4 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+(**
+ * Solve a program (emit alarms).
+ * Returns an array of printed abstract values for CFG vertices.
+ *)
 val solve : Domain.t -> Cfg.t -> string array

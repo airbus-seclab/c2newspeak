@@ -19,25 +19,32 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = (Prog.addr -> int)     (* size mapping           *)
-                     -> Newspeak.location      (* location of update     *)
-                     -> Prog.lval              (* lvalue in program text *)
-                     -> old_value:(unit -> 'a) (* old value of variable  *)
-                     -> new_value:'a           (* new value evaluated    *)
-                     -> (Prog.lval * 'a)       (* where to write what    *)
+type 'a update_check = (Prog.addr -> int) (* size mapping           *)
+                     -> Newspeak.location (* location of update     *)
+                     -> 'a                (* new value evaluated    *)
+                     -> unit              (* where to write what    *)
 
 type 'a c_dom =
-  { top       : 'a
-  ; bottom    : 'a
-  ; incl      : 'a -> 'a -> bool
-  ; join      : 'a -> 'a -> 'a
-  ; meet      : 'a -> 'a -> 'a
-  ; widen     : 'a -> 'a -> 'a
-  ; to_string : 'a -> string
+  { top         : 'a
+  ; bottom      : 'a
+  ; incl        : 'a -> 'a -> bool
+  ; join        : 'a -> 'a -> 'a
+  ; meet        : 'a -> 'a -> 'a
+  ; widen       : 'a -> 'a -> 'a
+  ; to_string   : 'a -> string
   ; is_in_range : int -> int -> 'a -> bool
-  ; eval  : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> 'a
-  ; guard : (Prog.lval -> 'a) -> (Prog.lval -> Prog.addr) -> Prog.exp -> (Prog.lval * ('a -> 'a)) list
-  ; update : 'a update_method
+  ; eval        : (Prog.lval -> 'a)             (** Environment            *)
+               -> (Prog.lval -> Prog.addr)      (** Abstract addr_of       *)
+               -> Prog.exp                      (** Expression to evaluate *)
+               -> 'a                            (** Abstract result        *)
+  ; guard       : (Prog.lval -> 'a)             (** Environment            *)
+               -> (Prog.lval -> Prog.addr)      (** Abstract addr_of       *)
+               -> Prog.exp                      (** Expression to evaluate *)
+               -> (Prog.lval * ('a -> 'a)) list (** List of (lv, f) pairs on
+                                                  * which Box.guard will be
+                                                  * called.
+                                                  *)
+  ; update : 'a update_check option
   }
 
 type 't scope = 
@@ -57,7 +64,3 @@ let const dom n =
     invalid_arg "empty_environment"
   in
   dom.eval empty_env empty_env (Prog.Const (Prog.CInt n))
-
-let destructive_update _map _loc text_lv ~old_value ~new_value =
-  ignore old_value;
-  (text_lv, new_value)
