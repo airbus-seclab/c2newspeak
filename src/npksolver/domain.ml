@@ -19,7 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = (Prog.addr -> int) (* size mapping *)
+type 'a update_method = (Prog.addr -> int) (* size mapping           *)
+                     -> Newspeak.location  (* location of update     *)
                      -> Prog.lval          (* lvalue in program text *)
                      -> old_value:'a       (* old value of variable  *)
                      -> new_value:'a       (* new value evaluated    *)
@@ -57,6 +58,6 @@ let const dom n =
   in
   dom.eval empty_env empty_env (Prog.Const (Prog.CInt n))
 
-let destructive_update _map text_lv ~old_value ~new_value =
+let destructive_update _map _loc text_lv ~old_value ~new_value =
   ignore old_value;
   (text_lv, new_value)

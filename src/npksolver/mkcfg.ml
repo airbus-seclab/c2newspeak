@@ -27,13 +27,13 @@ module Lbl = struct
 end
 
 let print_stmt = function
-  | Cfg.Nop           -> "(nop)"
-  | Cfg.Set (lv, exp) -> Pcomp.Print.lval lv ^ " <- " ^ Pcomp.Print.exp exp
-  | Cfg.Guard exp     -> "[ " ^ Pcomp.Print.exp exp ^ " ]"
-  | Cfg.Push  _sz     -> "(push)"
-  | Cfg.Pop           -> "(pop)"
-  | Cfg.Init _vars    -> "(init)"
-  | Cfg.Assert_true e -> "(assert:"^Pcomp.Print.exp e^")"
+  | Cfg.Nop             -> "(nop)"
+  | Cfg.Set (lv, exp,_) -> Pcomp.Print.lval lv ^ " <- " ^ Pcomp.Print.exp exp
+  | Cfg.Guard exp       -> "[ " ^ Pcomp.Print.exp exp ^ " ]"
+  | Cfg.Push  _sz       -> "(push)"
+  | Cfg.Pop             -> "(pop)"
+  | Cfg.Init _vars      -> "(init)"
+  | Cfg.Assert_true e   -> "(assert:"^Pcomp.Print.exp e^")"
 
 type edge = Cfg.node * Cfg.node * (Cfg.stmt * Newspeak.location)
 
@@ -102,7 +102,7 @@ let rec process_stmt (stmt, loc) c =
   | Set (v, e) ->
       let lbl' = Lbl.next c.lbl in
       update c ~label:lbl'
-               ~new_edges:[lbl' >--<(Cfg.Set (v, e), loc)>--> jnode]
+               ~new_edges:[lbl' >--<(Cfg.Set (v, e, loc), loc)>--> jnode]
   | Guard e ->
       let lbl' = Lbl.next c.lbl in
       update c ~label:lbl'

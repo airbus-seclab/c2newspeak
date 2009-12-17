@@ -19,7 +19,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a update_method = (Prog.addr -> int) (* size mapping *)
+type 'a update_method = (Prog.addr -> int) (* size mapping           *)
+                     -> Newspeak.location  (* location of update     *)
                      -> Prog.lval          (* lvalue in program text *)
                      -> old_value:'a       (* old value of variable  *)
                      -> new_value:'a       (* new value evaluated    *)

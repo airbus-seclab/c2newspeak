@@ -6,7 +6,7 @@ int i;                           // when rb_in -> (rb_data, n),
 int rb_data[100];                //         pointer arithmetics ok
 int *rb_in;                      // <=>     0 <= n < 100
 
-int main(void)
+void main(void)
 {
                                  // Loop invariant :
                                  // exists n in [0;99]. rb_in -> (rb_data, n)
@@ -22,5 +22,4 @@ int main(void)
                                  //   with 0 <= n - 97 < 100
     }                            //
   }                              // induction ok
-  return 0;
 }

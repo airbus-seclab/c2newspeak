@@ -24,7 +24,7 @@ open Prog
 
 type ptr =
   | Top
-  | PointsTo of (Prog.addr * Newspeak.location)
+  | PointsTo of Prog.addr
   | Null
   | Bot
 
@@ -86,12 +86,8 @@ let lift f x =
   { x with offset = f x.offset }
 
 let rec eval dom env addr_of =
-  let add_loc loc = function
-    | PointsTo (a, _) -> PointsTo (a, loc)
-    | x -> x
-  in
   function
-  | Op (PlusPtr loc, lv, off) ->
+  | Op (PlusPtr _loc, lv, off) ->
       let r = eval dom env addr_of lv in
       (* comprehending environment for { x + off / x <- r.off } *)
       let c_env = function
@@ -99,7 +95,7 @@ let rec eval dom env addr_of =
         | _ -> invalid_arg "ptr_offset.eval"
       in
       let off' = dom.eval c_env addr_of (Op (Plus, Lval (G "!", Int), off)) in
-      { var = add_loc loc r.var
+      { var = r.var
       ; offset = off'
       }
   | Const (CInt 0) ->
@@ -107,7 +103,7 @@ let rec eval dom env addr_of =
       ; offset = dom.top
       }
   | AddrOf v ->
-      { var = PointsTo (addr_of v, Newspeak.unknown_loc)
+      { var = PointsTo (addr_of v)
       ; offset = const dom 0
       }
   | Lval (lv, _sc) ->
@@ -125,7 +121,7 @@ let guard dom env addr_of =
       begin
       let r = env ptr in
       match r.var with
-      | PointsTo (var', _loc) when var' = addr_of var ->
+      | PointsTo var' when var' = addr_of var ->
           let rew_guard =
             Op (Gt, off, lv)
           in
@@ -137,7 +133,7 @@ let guard dom env addr_of =
       begin
       let r = env ptr in
       match r.var with
-      | PointsTo (var', _loc) when var' = addr_of var ->
+      | PointsTo var' when var' = addr_of var ->
           let rew_guard =
             Not (Op (Gt, off, lv))
           in
@@ -146,9 +142,9 @@ let guard dom env addr_of =
       end
   | exp -> liftg (dom.guard l_env addr_of exp)
 
-let ptr_update dom size_of lv ~old_value ~new_value =
+let ptr_update dom size_of loc lv ~old_value ~new_value =
   ignore old_value;
-  let alarm ?(loc=Newspeak.unknown_loc) ?reason _ =
+  let alarm ?reason _ =
     Alarm.emit loc Alarm.PtrOOB ?reason;
   in
   begin
@@ -156,11 +152,11 @@ let ptr_update dom size_of lv ~old_value ~new_value =
   | Null -> alarm ~reason:"points-to Null" ()
   | Top  -> alarm ~reason:("points-to Top (off = "^dom.to_string new_value.offset^")")  ()
   | Bot  -> alarm ~reason:"points-to Bot"  ()
-  | PointsTo (var, loc) ->
+  | PointsTo var ->
       let sz = size_of var in
       if not (dom.is_in_range 0 sz new_value.offset) then
-        alarm ~loc ~reason:(dom.to_string new_value.offset
-                    ^ " </= [0;" ^ string_of_int sz ^ "]") ()
+        alarm ~reason:(dom.to_string new_value.offset
+               ^ " </= [0;" ^ string_of_int sz ^ "]") ()
   end ;
   (lv, new_value)
 

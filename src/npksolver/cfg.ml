@@ -23,7 +23,7 @@ type node = int
 
 type stmt =
   | Nop
-  | Set   of Prog.lval * Prog.exp
+  | Set   of Prog.lval * Prog.exp * Newspeak.location
   | Guard of Prog.exp
   | Push  of int
   | Pop
