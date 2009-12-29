@@ -68,6 +68,9 @@ let _ =
 		  
 	| files ->
 	    let nos = List.map extract_no files in
-	      if not !Npkcontext.compile_only then Linker.link nos		
+	      if not !Npkcontext.compile_only then begin 
+		Linker.link nos;
+		dump_xml_warns ()
+	      end
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
     
