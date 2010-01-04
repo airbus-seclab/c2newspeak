@@ -47,9 +47,8 @@ module Lift = struct
     | None   -> d
     | Some x -> f x
 
-  let bind f = function
-    | None   -> None
-    | Some x -> f x
+  let bind f =
+    maybe None f
 
   let (>>=) x f = bind f x
 
@@ -59,12 +58,8 @@ module Lift = struct
     x >>= fun x' ->
     y >>= fun y' ->
     f x' y'
-   
 
-  let liftM2 f x y =
-    x >>= fun x' ->
-    y >>= fun y' ->
-    return (f x' y')
+  let liftM2 f =
+    bind2 (fun x y -> return (f x y))
 
 end
-
