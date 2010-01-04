@@ -312,14 +312,12 @@ let string_of_err kind where msg =
 
 let xml_string_of_err msg =
   let regexp = Str.regexp "\"" in
-    let msg' = Str.global_replace regexp "\\\"" msg in
+    let msg' = Str.global_replace regexp "&quot;" msg in
   "<warn where=\""^(string_of_loc !cur_loc)^"\" msg=\""^msg'^"\">"^"</warn>\n"
 
 let report_warning where msg =
   if String.compare !xml_output "" <> 0 then
-    let regexp = Str.regexp "\"" in
-    let msg' = Str.global_replace regexp "\\\"" msg in
-    xml_warns := (xml_string_of_err msg')::!xml_warns;
+    xml_warns := (xml_string_of_err msg)::!xml_warns;
   prerr_endline (string_of_err "Warning: " where msg)
 
 let string_of_error = string_of_err ""
