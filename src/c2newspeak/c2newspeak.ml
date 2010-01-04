@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,11 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah (dot) zennou (at) eads (dot) net
 *)
 
 open Npkcontext
@@ -68,6 +73,9 @@ let _ =
 		  
 	| files ->
 	    let nos = List.map extract_no files in
-	      if not !Npkcontext.compile_only then Linker.link nos		
+	      if not !Npkcontext.compile_only then begin 
+		Linker.link nos;
+		dump_xml_warns ()
+	      end
   with Invalid_argument msg -> Npkcontext.exit_on_error msg
     
