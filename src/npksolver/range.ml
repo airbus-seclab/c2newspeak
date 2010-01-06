@@ -98,24 +98,13 @@ let to_string =
 (* safe mult *)
 
 let smul a b =
+  let inf_of_sign c = if c then max_int else min_int in
   if      a = 0       then 0
   else if b = 0       then 0
-  else if a = max_int then
-    if b > 0
-      then max_int
-      else min_int
-  else if a = min_int then
-    if a > 0
-      then min_int
-      else max_int
-  else if b = max_int then
-    if a > 0
-      then max_int
-      else min_int
-  else if b = min_int then
-    if a > 0
-      then min_int
-      else max_int
+  else if a = max_int then inf_of_sign (b > 0)
+  else if a = min_int then inf_of_sign (b < 0)
+  else if b = max_int then inf_of_sign (a > 0)
+  else if b = min_int then inf_of_sign (a < 0)
   else a * b
 
 let mult_pp = bind2 (fun (a, b) (c,d) -> from_bounds (smul a c) (smul b d))

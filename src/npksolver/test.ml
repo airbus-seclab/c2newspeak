@@ -31,7 +31,7 @@ let assert_not_incl a b =
   assert_true (not (dom.incl a b))
 
 let run _ =
-  test_plan 302;
+  test_plan 303;
 
   (* Incl + Join + Meet *)
 
@@ -258,6 +258,7 @@ let run _ =
   tc_mult (-5)   1  (-3)   8  (-40)  15  "[-5;1] .*. [-3;8] == [-40;15]";
   tc_mult   2    j    2    j     4    j  "[2;+oo] .*. [2;+oo] == [4;+oo]";
   tc_mult   i  (-1)   i  (-1)    1    j  "[-oo:-1] .*. [-oo;-1] == [1;+oo]";
+  tc_mult   i    0    1    1     i    0  "{1} x [-oo;0] == [-oo;0]";
 
   test_end ()
 end
