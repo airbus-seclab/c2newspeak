@@ -92,7 +92,7 @@ let rec eval dom env addr_of =
       (* comprehending environment for { x + off / x <- r.off } *)
       let c_env = function
         | G "!" -> r.offset
-        | _ -> invalid_arg "ptr_offset.eval"
+        | v -> (env v).offset
       in
       let off' = dom.eval c_env addr_of (Op (Plus, Lval (G "!", Int), off)) in
       { var = r.var
