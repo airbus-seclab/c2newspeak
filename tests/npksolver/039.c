@@ -5,5 +5,5 @@ int *p;
 void main(void)
 {
   p = data;
-  p += x; 
+  p += x;
 }
