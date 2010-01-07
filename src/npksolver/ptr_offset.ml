@@ -108,9 +108,10 @@ let rec eval dom env addr_of =
       }, []
   | Lval (lv, _sc) ->
       env lv, []
-  | exp -> prerr_endline
-             ( "Ptr_offset : invalid expression : "
-             ^ Pcomp.Print.exp exp ); top dom, []
+  | exp -> if Options.get Options.verbose then
+             prerr_endline ( "Ptr_offset : invalid expression : "
+                           ^ Pcomp.Print.exp exp );
+           top dom, []
 
 let guard dom env addr_of =
   let liftg = List.map (fun (l, x) -> (l, lift x)) in

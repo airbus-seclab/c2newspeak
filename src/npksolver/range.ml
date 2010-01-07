@@ -182,7 +182,9 @@ let guard _ _ e =
                                                  | Some(x,y) when x = y && x = n -> None
                                                  | r -> r
                                                  ]
-  | _ -> failwith ("Unsupported guard statement : " ^ Pcomp.Print.exp e)
+  | _ -> if Options.get Options.verbose then
+           prerr_endline ("Unsupported guard statement : " ^ Pcomp.Print.exp e);
+         []
 
 let dom =
   { Domain.top         = top

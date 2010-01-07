@@ -1,6 +1,6 @@
 /* Simple ringbuffer-like writes. */
 
-/*!npk domain ptr_range */
+/*!npk domain ptr_and_range */
 
 int i;                           // when rb_in -> (rb_data, n),
 int rb_data[100];                //         pointer arithmetics ok

@@ -99,6 +99,7 @@ let main args =
     [ "const"        , "constants"            , Domain.pack Const.dom
     ; "range"        , "ranges (default)"     , Domain.pack Range.dom
     ; "ptr_range"    , "ptr offset for range" , Domain.pack (Ptr_offset.make Range.dom)
+    ; "ptr_and_range", "ptr_offset and range" , Domain.pack (Pair.make Range.dom (Ptr_offset.make Range.dom))
     ];
   let domain_descrs = Hashtbl.fold (fun k (_, descr) s ->
     k^" : "^descr^" "^ s
