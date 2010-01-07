@@ -43,21 +43,23 @@ let eval_stmt dom loc stmt x = match stmt with
             if x = Box.bottom then Box.bottom
               else
               begin
-                let new_value = dom.eval lookup (Box.addr_of x) e in
-                begin
+                let (new_value, alrms_eval) = dom.eval lookup (Box.addr_of x) e in
+                let alrms_update =
                   match dom.update with
-                  | None -> ()
+                  | None -> []
                   | Some check -> check (Box.get_size x) loc new_value
-                end;
+                in
+                List.iter Alarm.emit (alrms_eval@alrms_update);
                 Box.set_var dom lv new_value x
               end
           end
   | Cfg.Assert_true e ->
         let lookup = Box.environment dom x in
-        let r = dom.eval lookup (Box.addr_of x) e in
+        let (r, alrms) = dom.eval lookup (Box.addr_of x) e in
+        List.iter Alarm.emit alrms;
         let zero = const dom 0 in
         if (dom.incl zero r) then
-          Alarm.emit loc (Alarm.Assertion_failed (Pcomp.Print.exp e));
+          Alarm.emit (loc, (Alarm.Assertion_failed (Pcomp.Print.exp e)), None);
         x
 
 (* worklist algorithm *)

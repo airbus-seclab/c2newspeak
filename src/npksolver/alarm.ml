@@ -19,7 +19,7 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t =
+type alarm_kind =
   | Array_OOB                   (** Array index out of bounds    *)
   | Ptr_OOB                     (** Pointer offset out of bounds *)
   | Assertion_failed of string  (** Null pointer dereference     *)
@@ -29,11 +29,13 @@ let string_of_alarm = function
   | Ptr_OOB            -> "Pointer offset out of bounds"
   | Assertion_failed s -> "Assertion failed : " ^ s
 
+type t = Newspeak.location * alarm_kind * string option
+
 module Alarm_set = Set.Make(String)
 
 let alarms = ref (Alarm_set.empty)
 
-let emit ?reason loc s =
+let emit (loc, s, reason) =
   let str_loc =
     if loc = Newspeak.unknown_loc then
       "(no loc)"
@@ -50,3 +52,9 @@ let emit ?reason loc s =
         if (Options.get Options.verbose) then
           print_endline ("Reason : " ^ r)
     end
+
+let combine ?(extra=[]) f (r1, a1) (r2, a2) =
+  (f r1 r2, extra@a1@a2)
+
+let meet a b =
+  List.filter (fun x -> List.mem x b) a

@@ -47,12 +47,14 @@ let to_string = function
   | Cst x -> "{"^string_of_int x^"}"
   | Bot   -> "bot"
 
-let lift2 f a b = match (a, b) with
-  | Bot   , _     -> Bot
-  | _     , Bot   -> Bot
-  | Cst x , Cst y -> Cst (f x y)
-  | Top   , _     -> Top
-  | _     , Top   -> Top
+let lift2 f (ra, aa) (rb, ab) =
+  let (r, aop) = match (ra, rb) with
+  | Bot   , _     -> Bot, []
+  | _     , Bot   -> Bot, []
+  | Cst x , Cst y -> let (rop, aop) = f x y in Cst rop, aop
+  | Top   , _     -> Top, []
+  | _     , Top   -> Top, []
+  in r, (aop @ aa @ ab)
 
 let liftv v = function
   | Bot -> Bot
@@ -70,27 +72,31 @@ let eval lookup _sz e =
     | true  -> 1
     | false -> 0
   in
-  let eop = function
-    | Plus -> (+)
-    | Minus -> (-)
-    | Eq -> (fun x y -> int_of_bool (x = y))
-    | Gt -> (fun x y -> int_of_bool (x > y))
-    | Div -> (/)
-    | Mult -> fun x y -> x * y
-    | PlusPtr loc -> (fun x _ -> Alarm.emit loc Alarm.Ptr_OOB; x)
+  let eop o x y = match o with
+    | Plus  -> x + y, []
+    | Minus -> x - y, []
+    | Div   -> x / y, []
+    | Mult  -> x * y, []
+    | Eq    -> int_of_bool (x = y), []
+    | Gt    -> int_of_bool (x > y), []
+    | PlusPtr loc -> x, [loc, Alarm.Ptr_OOB, None]
   in
   let rec eval = function
-    | Const (CInt n) -> Cst n
-    | Const Nil -> Top
-    | AddrOf _ -> Top
-    | Lval (v,_) -> lookup v
-    | Not e -> liftv Top (eval e)
+    | Const (CInt n) -> Cst n, []
+    | Const Nil -> Top, []
+    | AddrOf _ -> Top, []
+    | Lval (v,_) -> lookup v, []
+    | Not e -> liftv Top (fst (eval e)), []
     | Op (op, e1, e2) -> lift2 (eop op) (eval e1) (eval e2)
     | Belongs ((a, b), loc, e) ->
-        let res = eval e in
-        if (not (is_in_range a b res)) then
-          Alarm.emit loc Alarm.Array_OOB;
-        res
+        let res = fst (eval e) in
+        let alrm = 
+          if (is_in_range a b res) then
+            []
+          else
+            [loc, Alarm.Array_OOB, None]
+        in
+        (res, alrm)
   in
   eval e
 

@@ -20,10 +20,12 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 (** Npksolver alarms.  *)
-type t =
+type alarm_kind =
   | Array_OOB                   (** Array index out of bounds.            *)
   | Ptr_OOB                     (** Pointer offset out of bounds.         *)
   | Assertion_failed of string  (** Generic error with a specific reason. *)
+
+type t = Newspeak.location * alarm_kind * string option
 
 (**
  * Emit an alarm.
@@ -33,4 +35,16 @@ type t =
  * If the same alarm is emitted several times from the same location,
  * it will be printed only once.
  *)
-val emit : ?reason:string -> Newspeak.location -> t -> unit
+val emit : t -> unit
+
+(**
+ * Combine alarms.
+ *)
+val combine : ?extra:t list
+           -> ('a -> 'a -> 'a)
+           -> ('a * t list) -> ('a * t list) -> ('a * t list)
+
+(**
+ * Return the meet of alarm sets.
+ *)
+val meet : t list -> t list -> t list

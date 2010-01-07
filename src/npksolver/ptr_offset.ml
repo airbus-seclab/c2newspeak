@@ -88,29 +88,29 @@ let lift f x =
 let rec eval dom env addr_of =
   function
   | Op (PlusPtr _loc, lv, off) ->
-      let r = eval dom env addr_of lv in
+      let (r, alrm1) = eval dom env addr_of lv in
       (* comprehending environment for { x + off / x <- r.off } *)
       let c_env = function
         | G "!" -> r.offset
         | v -> (env v).offset
       in
-      let off' = dom.eval c_env addr_of (Op (Plus, Lval (G "!", Int), off)) in
+      let (off', alrm2) = dom.eval c_env addr_of (Op (Plus, Lval (G "!", Int), off)) in
       { var = r.var
       ; offset = off'
-      }
+      }, alrm1@alrm2
   | Const (CInt 0) ->
       { var = Null
       ; offset = dom.top
-      }
+      }, []
   | AddrOf v ->
       { var = PointsTo (addr_of v)
       ; offset = const dom 0
-      }
+      }, []
   | Lval (lv, _sc) ->
-      env lv
+      env lv, []
   | exp -> prerr_endline
              ( "Ptr_offset : invalid expression : "
-             ^ Pcomp.Print.exp exp ); top dom
+             ^ Pcomp.Print.exp exp ); top dom, []
 
 let guard dom env addr_of =
   let liftg = List.map (fun (l, x) -> (l, lift x)) in
@@ -144,7 +144,7 @@ let guard dom env addr_of =
 
 let ptr_update dom size_of loc new_value =
   let alarm ?reason _ =
-    Alarm.emit loc Alarm.Ptr_OOB ?reason;
+    [loc, Alarm.Ptr_OOB, reason]
   in
   begin
   match new_value.var with
@@ -153,7 +153,9 @@ let ptr_update dom size_of loc new_value =
   | Bot  -> alarm ~reason:"points-to Bot"  ()
   | PointsTo var ->
       let sz = size_of var in
-      if not (dom.is_in_range 0 sz new_value.offset) then
+      if (dom.is_in_range 0 sz new_value.offset) then
+        []
+      else
         alarm ~reason:(dom.to_string new_value.offset
                ^ " </= [0;" ^ string_of_int sz ^ "]") ()
   end

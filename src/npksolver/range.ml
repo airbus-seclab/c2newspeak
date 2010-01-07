@@ -78,8 +78,8 @@ let plus =
     Some (add_overflow a c, add_overflow b d)
   )
 
-let neg =
-  bind (fun (a, b) -> Some (- b, - a))
+let neg (r, alrm) =
+  bind (fun (a, b) -> Some (- b, - a)) r, alrm
 
 let to_string =
   let string_of_inf x =
@@ -132,20 +132,18 @@ let eval lookup _addr x =
   let bool_true  = from_bounds 1 1 in
   let bool_false = from_bounds 0 0 in
   let rec eval = function
-  | Const (CInt n)            -> from_bounds n n
-  | Lval ((L _| G _) as v',_) -> lookup v'
-  | Lval (Shift _,_) -> top
-  | Op (Plus,  e1, e2) -> plus (eval e1) (eval e2)
-  | Op (Minus, e1, e2) -> plus (eval e1) (neg (eval e2))
-  | Not e' -> begin match eval e' with
+  | Const (CInt n)            -> from_bounds n n, []
+  | Lval ((L _| G _) as v',_) -> lookup v', []
+  | Lval (Shift _,_) -> top, [] (* TODO maybe an alarm here ? *)
+  | Op (Plus,  e1, e2) -> Alarm.combine plus (eval e1) (eval e2)
+  | Op (Minus, e1, e2) -> Alarm.combine plus (eval e1) (neg (eval e2))
+  | Not e' -> begin match fst (eval e') with
                            | Some (0,0)            -> bool_true
                            | Some (a,_) when a > 0 -> bool_false
                            | Some (_,b) when b < 0 -> bool_false
                            | _                     -> bool_top
-                   end
-  | Op (Eq, e1, e2) ->
-                           let r1 = eval e1 in
-                           let r2 = eval e2 in
+              end, []
+  | Op (Eq, e1, e2) -> Alarm.combine (fun r1  r2 ->
                            if meet r1 r2 = None then bool_false
                            else begin match (r1, r2) with
                            | Some (a, b), Some (c, d) when a = b
@@ -153,19 +151,21 @@ let eval lookup _addr x =
                                                        &&  c = d -> bool_true
                            | _ -> bool_top
                            end
-  | Op (Mult, e1, e2) -> mult (eval e1) (eval e2)
+                      ) (eval e1) (eval e2)
+  | Op (Mult, e1, e2) -> Alarm.combine mult (eval e1) (eval e2)
   | Belongs ((a, b), loc, e) ->
-      let r = eval e in
-      if (not (is_in_range a b r)) then
-        begin
-          Alarm.emit loc Alarm.Array_OOB;
-          if (Options.get Options.verbose) then
-            prerr_endline (to_string r ^ " </= [" ^ string_of_int a ^ ";" ^ string_of_int b ^ "]")
-        end;
-      r
-  | Const Nil -> top
-  | AddrOf _ -> top
-  | Op (PlusPtr loc, _, _) -> Alarm.emit loc Alarm.Ptr_OOB; top
+      let (r, a1) = eval e in
+      let alrms =
+        if (is_in_range a b r) then
+          []
+        else
+            let reason = to_string r ^ " </= [" ^ string_of_int a
+                                          ^ ";" ^ string_of_int b ^ "]" in
+            [loc, Alarm.Array_OOB, Some reason]
+      in (r, a1@alrms)
+  | Const Nil -> top, []
+  | AddrOf _ -> top, []
+  | Op (PlusPtr loc, _, _) -> top, [loc, Alarm.Ptr_OOB, None]
   | e -> failwith ( "range domain : unimplemented evaluator : "
                   ^ Pcomp.Print.exp e )
   in

@@ -190,14 +190,16 @@ let rec environment dom bx v =
  *)
 let set_var dom v r bx =
   let check e a loc =
-    let r = dom.eval (environment dom bx)
-                     (addr_of bx)
-                     e
+    let (r, alrms) = dom.eval (environment dom bx)
+                              (addr_of bx)
+                              e
     in
+    List.iter Alarm.emit alrms;
     let size = get_size bx a in
     if not (dom.is_in_range 0 size r) then
-      Alarm.emit loc Alarm.Array_OOB
-        ~reason:(dom.to_string r^" </= [0;"^string_of_int size^"]")
+      Alarm.emit ( loc
+                 , Alarm.Array_OOB
+                 , Some (dom.to_string r^" </= [0;"^string_of_int size^"]"))
   in
   let addr = addr_of_ck ~check bx v in
   bx >>= fun x ->

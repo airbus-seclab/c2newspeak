@@ -50,14 +50,13 @@ let meet da db x y =
 let eval da db l addr e =
   let la e = maybe da.bottom fst (l e) in
   let lb e = maybe db.bottom snd (l e) in
-  let ra = da.eval la addr e in
-  if ra = da.bottom
+  let (ra, alrm_a) = da.eval la addr e in
+  let (rb, alrm_b) = db.eval lb addr e in
+  let r = if ra = da.bottom || rb = db.bottom
     then None
-    else
-      let rb = db.eval lb addr e in
-      if rb = db.bottom
-        then None
-        else Some (ra , rb)
+    else Some (ra , rb)
+  in
+  (r, Alarm.meet alrm_a alrm_b)
 
 let guard da db env addr e =
   let prom_l f (a, b) = (  a, f b) in
@@ -87,6 +86,22 @@ let is_in_range d1 d2 a b = function
   | Some (x1, x2) -> d1.is_in_range a b x1
                   || d2.is_in_range a b x2
 
+let update da db sz l =
+  function
+  | None -> []
+  | Some (xa, xb) ->
+      let alrm_a =
+        match da.update with
+        | None -> []
+        | Some f -> f sz l xa
+      in
+      let alrm_b =
+        match db.update with
+        | None -> []
+        | Some f -> f sz l xb
+      in
+      Alarm.meet alrm_a alrm_b
+
 let make da db =
   { top = Some (da.top, db.top)
   ; bottom = None
@@ -97,7 +112,7 @@ let make da db =
   ; incl      = incl      da db
   ; meet      = meet      da db
   ; guard     = guard     da db
-  ; update    = None
+  ; update    = Some (update    da db)
   ; is_in_range = is_in_range da db
   }
 

@@ -22,7 +22,7 @@
 type 'a update_check = (Prog.addr -> int) (* size mapping           *)
                      -> Newspeak.location (* location of update     *)
                      -> 'a                (* new value evaluated    *)
-                     -> unit              (* where to write what    *)
+                     -> Alarm.t list      (* alarms to report       *)
 
 type 'a c_dom =
   { top         : 'a
@@ -37,6 +37,7 @@ type 'a c_dom =
                -> (Prog.lval -> Prog.addr)      (** Abstract addr_of       *)
                -> Prog.exp                      (** Expression to evaluate *)
                -> 'a                            (** Abstract result        *)
+                * Alarm.t list                  (** Alarms                 *)
   ; guard       : (Prog.lval -> 'a)             (** Environment            *)
                -> (Prog.lval -> Prog.addr)      (** Abstract addr_of       *)
                -> Prog.exp                      (** Expression to evaluate *)
@@ -63,4 +64,4 @@ let const dom n =
   let empty_env _ =
     invalid_arg "empty_environment"
   in
-  dom.eval empty_env empty_env (Prog.Const (Prog.CInt n))
+  fst (dom.eval empty_env empty_env (Prog.Const (Prog.CInt n)))
