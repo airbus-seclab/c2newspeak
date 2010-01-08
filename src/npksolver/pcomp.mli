@@ -26,7 +26,7 @@
  *   - a list of annotations.
  *   - a list of global variables with their sizes.
  *)
-val compile : Newspeak.t -> Prog.t * Prog.annotation list * (string * int) list
+val compile : Newspeak.t -> Prog.t
 
 (**
  * The size of a type.

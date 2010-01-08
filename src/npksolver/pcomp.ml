@@ -126,6 +126,7 @@ let rec pcomp_stmt (sk, loc) =
       let (s, a) = pcomp_blk blk in
       let sz = Newspeak.size_of 32 t in
       [Prog.Decl (s, sz)], a
+  | Call (FunId f) -> [Prog.Call f],[]
   | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
   in
     (List.map (fun x -> (x, loc)) sk'), ann
@@ -141,19 +142,25 @@ let compile npk =
     (s, Newspeak.size_of 32 ty)::l
   ) npk.globals []
   in
-  let nfun, blko = Hashtbl.fold (fun fname blk (nfun, _) ->
-    ( succ nfun
-    , if fname = "main" then Some blk
-                        else None)
-  ) npk.fundecs (0, None) in
-  if nfun > 1 then
-    abort "Multiple functions";
+  let blko = Hashtbl.fold (fun fname blk _ ->
+    if fname = "main" then Some blk
+                      else None
+  ) npk.fundecs None in
   let (blk_init, ann_init) = pcomp_blk npk.init in
   match blko with
   | None -> abort "No 'main' function"
   | Some (_, b) ->
-      let (blk, ann) = pcomp_blk b in
-      (blk_init@blk, ann_init@ann ,globals)
+      let (blk, anns) = pcomp_blk b in
+      let sizes = List.fold_left (fun m (n, s) -> Pmap.add n s m) (Pmap.create String.compare) globals in
+      let func = Pmap.add "main" blk (Pmap.create String.compare) in
+      let func' = Pmap.mapi (fun k v ->
+        if k = "main" then blk_init@v
+        else v
+      ) func in
+      { Prog.func = func'
+      ; anns = ann_init@anns
+      ; sizes = sizes
+      }
 
 let size_of_typ = function
   | Prog.Int     -> 32
@@ -185,13 +192,14 @@ module Print = struct
 
   let stmtk = function
     | Set (v, e) -> lval v ^ " = " ^ exp e
-    | Guard  e -> "[" ^ exp e ^ "]"
-    | Decl   _ -> "(decl)"
-    | InfLoop _ -> "(infloop)"
-    | Select _ -> "(select)"
-    | DoWith  _ -> "(dowith)"
-    | Goto   _ -> "(goto)"
-    | Assert e -> "Assert (" ^ exp e ^ ")"
+    | Guard    e -> "[" ^ exp e ^ "]"
+    | Decl     _ -> "(decl)"
+    | InfLoop  _ -> "(infloop)"
+    | Select   _ -> "(select)"
+    | DoWith   _ -> "(dowith)"
+    | Goto     _ -> "(goto)"
+    | Assert   e -> "Assert (" ^ exp e ^ ")"
+    | Call     f -> "Call ("^f^")"
 
   let addr = function
     | Stack x -> "L"^string_of_int x

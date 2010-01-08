@@ -19,7 +19,11 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type t = blk
+type t =
+  { func  : (string, blk) Pmap.t
+  ; anns  : annotation list
+  ; sizes : (string, int) Pmap.t
+  }
 
 and blk = stmt list
 
@@ -34,6 +38,7 @@ and stmtkind =
   | Goto    of lbl
   | Decl    of blk * int (* size *)
   | Assert  of exp
+  | Call    of string
 
 and lval =
   | G     of string
@@ -76,3 +81,4 @@ and binop =
 and annotation =
   | Widening
   | Domain of string
+

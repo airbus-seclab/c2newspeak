@@ -21,9 +21,16 @@
 open Prog
 open Domain
 
-module Lbl = struct
+module Lbl : sig
+  type t
+  val init : t
+  val next : t -> t
+  val to_int : t -> int
+end = struct
+  type t = int
   let init = 0
   let next = succ
+  let to_int n = n
 end
 
 let print_stmt = function
@@ -34,8 +41,9 @@ let print_stmt = function
   | Cfg.Pop             -> "(pop)"
   | Cfg.Init _vars      -> "(init)"
   | Cfg.Assert_true e   -> "(assert:"^Pcomp.Print.exp e^")"
+  | Cfg.Call f          -> "(fcall:"^f^")"
 
-type edge = Cfg.node * Cfg.node * (Cfg.stmt * Newspeak.location)
+type edge = Lbl.t * Lbl.t * (Cfg.stmt * Newspeak.location)
 
 (**
  * The type used to fold over blocks.
@@ -43,10 +51,10 @@ type edge = Cfg.node * Cfg.node * (Cfg.stmt * Newspeak.location)
  * lbl is the last label used.
  *)
 type 'a stmt_context =
-  { lbl   : int                (* XXX *)
-  ; alist : (int*int) list     (* XXX *)
+  { lbl   : Lbl.t
+  ; alist : (int * Lbl.t) list
   ; edges : edge list
-  ; join  : int option         (* XXX *)
+  ; join  : Lbl.t option
   }
 
 (* Edge builders *)
@@ -59,12 +67,13 @@ let (>--<>-->) src dst = (src,dst,(Cfg.Nop, Newspeak.unknown_loc))
 (* Reduce edges *)
 let reduce_edges e =
     List.fold_left (fun map (src, dest, (stmt, loc)) ->
+      let src' = Lbl.to_int src in
       let lst =
-        try Cfg.NodeMap.find src map
+        try Pmap.find src' map
         with Not_found -> []
       in
-        Cfg.NodeMap.add src ((dest,stmt,loc)::lst) map
-    ) (Cfg.NodeMap.empty) e
+        Pmap.add src' ((Lbl.to_int dest,stmt,loc)::lst) map
+    ) (Pmap.empty) e
 
 let update ?(new_edges=[]) ~label c =
   { c with lbl = label
@@ -119,6 +128,10 @@ let rec process_stmt (stmt, loc) c =
       let l = Lbl.next c.lbl in
       update c ~label:l
                ~new_edges:[l >--<(Cfg.Assert_true e, loc)>--> c.lbl]
+  | Call f ->
+      let l = Lbl.next c.lbl in
+      update c ~label:l
+               ~new_edges:[l >--<(Cfg.Call f, loc)>--> c.lbl]
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
@@ -128,21 +141,22 @@ and process_blk ?join blk al l0 =
       ; join = join
       }
 
-let process blk vars =
+let process prg =
+  let blk = Pmap.find "main" prg.func in
   let c = process_blk blk [] Lbl.init in
   let lbl' = Lbl.next c.lbl in
-  let edges = (lbl' >--<(Cfg.Init vars, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
+  let edges = (lbl' >--<(Cfg.Init prg.sizes, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
   let map = reduce_edges edges in
-  (lbl', map)
+  (Lbl.to_int lbl', map)
 
 let dump_yaml (n, e) =
     "---\n"
   ^ "lastnode: "
   ^ string_of_int n ^ "\n"
   ^ "edges:"
-    ^ (if Cfg.NodeMap.is_empty e then " []\n" else
+    ^ (if Pmap.is_empty e then " []\n" else
       "\n"
-    ^ (Cfg.NodeMap.fold
+    ^ (Pmap.foldi
         (fun src es s ->
           s^"  - {id: "^string_of_int src^ ", s: [" ^ 
           (String.concat ", "
@@ -166,7 +180,7 @@ let dump_dot ?(results=[||]) (_, e) =
       string_of_int i^"[label=\""^s^"\"]\n"
     ) results))
 
-    ^ (Cfg.NodeMap.fold (fun src es s ->
+    ^ (Pmap.foldi (fun src es s ->
       s^
         (String.concat ""
           (List.map (fun (dest, stmt, _loc) ->

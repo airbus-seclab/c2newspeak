@@ -23,7 +23,7 @@
  * Build a control-flow graph from a program.
  * The second argument is a list of global variable and their sizes.
  *)
-val process : Prog.t -> (string * int) list -> Cfg.t
+val process : Prog.t -> Cfg.t
 
 (**
  * Dump a CFG as a YAML string.

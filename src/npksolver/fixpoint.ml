@@ -25,11 +25,11 @@ let eval_stmt dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
           let zero = const dom 0 in
-          List.fold_left (fun r (v, size) ->
+          Pmap.foldi (fun v size r ->
               Box.meet dom
                        (Box.singleton dom ~size (Prog.G v) zero)
                        r
-            ) x vs
+            ) vs x
   | Cfg.Pop       -> Box.pop  dom x
   | Cfg.Push size -> Box.push dom x ~size
   | Cfg.Guard e ->
@@ -61,6 +61,8 @@ let eval_stmt dom loc stmt x = match stmt with
         if (dom.incl zero r) then
           Alarm.emit (loc, (Alarm.Assertion_failed (Pcomp.Print.exp e)), None);
         x
+  | Cfg.Call _f ->
+        Box.top dom
 
 (* worklist algorithm *)
 let f_horwitz dom v x =
@@ -74,7 +76,7 @@ let f_horwitz dom v x =
          else
            g
        in (dest, r)
-      ) (Cfg.NodeMap.find i v)
+      ) (Pmap.find i v)
     with Not_found -> []
   in
   let worklist = Queue.create () in

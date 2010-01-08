@@ -49,12 +49,12 @@ let output_graphviz ?results cfg =
 
 let handle_file_npk fname =
   let npk = Newspeak.read fname in
-  let (prg, ann, vars) = Pcomp.compile npk in
+  let prg = Pcomp.compile npk in
   List.iter (function
     | Prog.Widening -> Options.set Options.widening true
     | Prog.Domain d -> domain := domain_str d
-  ) ann;
-  let cfg = Mkcfg.process prg vars in
+  ) prg.Prog.anns;
+  let cfg = Mkcfg.process prg in
   let graph_results results = output_graphviz ~results cfg in
     if (Options.get Options.cfg_only) then
       begin

@@ -26,10 +26,12 @@
 
 TARGET=npksolver
 DIRS=newspeak/ npksolver/
-npksolver.FILES=options utils alarm prog pcomp \
+npksolver.FILES= \
+		pmap \
+		options utils alarm prog pcomp \
 		domain const range \
 		pair ptr_offset \
-		pmap box cfg mkcfg \
+		box cfg mkcfg \
 		fixpoint tap test npksolver
                   
 FILES=version newspeak/newspeak \
