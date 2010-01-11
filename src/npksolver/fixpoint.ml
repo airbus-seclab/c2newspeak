@@ -21,13 +21,16 @@
 
 open Domain
 
-let eval_stmt dom loc stmt x = match stmt with
+let rec eval_stmt dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
-          let zero = const dom 0 in
           Pmap.foldi (fun v size r ->
               Box.meet dom
-                       (Box.singleton dom ~size (Prog.G v) zero)
+                       (Box.singleton
+                           dom ~size
+                           (Prog.G v)
+                           (const dom 0)
+                       )
                        r
             ) vs x
   | Cfg.Pop       -> Box.pop  dom x
@@ -57,27 +60,34 @@ let eval_stmt dom loc stmt x = match stmt with
         let lookup = Box.environment dom x in
         let (r, alrms) = dom.eval lookup (Box.addr_of x) e in
         List.iter Alarm.emit alrms;
-        let zero = const dom 0 in
-        if (dom.incl zero r) then
+        if (dom.incl (const dom 0) r) then
           Alarm.emit (loc, (Alarm.Assertion_failed (Pcomp.Print.exp e)), None);
         x
-  | Cfg.Call _f ->
-        Box.top dom
+  | Cfg.Call (f,_id) ->
+      Box.enter_function f x
 
 (* worklist algorithm *)
-let f_horwitz dom v x =
+let f_horwitz dom _funcs v x =
   let succ i =
-    try
-      List.map (fun (dest, stmt, loc) ->
-       let g = eval_stmt dom loc stmt in
-       let r =
-         if Options.get Options.widening then
-           fun xo -> Box.widen dom xo (g xo)
-         else
-           g
-       in (dest, r)
-      ) (Pmap.find i v)
-    with Not_found -> []
+    let next_nodes =
+      try
+        List.map (fun ((_fname, dest), stmt, loc) ->
+         let g = eval_stmt dom loc stmt in
+         let r =
+           if Options.get Options.widening then
+             fun xo -> Box.widen dom xo (g xo)
+           else
+             g
+         in (dest, r)
+        ) (Pmap.find ("main",i) v)
+      with Not_found -> []
+    in
+    if next_nodes <> [] then next_nodes
+    else
+      match Box.caller x.(i) with
+        | None -> []
+        | Some node ->
+            [node, Box.leave_function]
   in
   let worklist = Queue.create () in
   Queue.add (Array.length x - 1) worklist;
@@ -94,11 +104,12 @@ let f_horwitz dom v x =
   done;
   x
 
-let solve dom (ln, v) =
+let solve dom funcs =
+  let (ln, v) = Pmap.find "main" funcs in
   Domain.with_dom dom { Domain.bind = fun dom ->
   let x0 = Array.make (ln + 1) Box.bottom in
   x0.(ln) <- Box.top dom;
-  let res = f_horwitz dom v x0 in
+  let res = f_horwitz dom funcs v x0 in
   if Options.get Options.solver then begin
     print_endline "---";
     Array.iteri (fun i r ->

@@ -225,6 +225,15 @@ let pop dom =
       )
   )
 
+let enter_function _fname x =
+  x
+
+let leave_function x =
+  x
+
+let caller _x =
+  None
+
 let to_string dom =
   maybe "(bot)"
     (fun x -> String.concat ", " (S.map (fun v r ->

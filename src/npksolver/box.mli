@@ -112,6 +112,21 @@ val push : 'a Domain.c_dom -> size:int -> 'a t -> 'a t
 val pop : 'a Domain.c_dom -> 'a t -> 'a t
 
 (**
+ * Enter another function's graph.
+ *) 
+val enter_function : string -> 'a t -> 'a t
+
+(**
+ * Return to caller.
+ *)
+val leave_function : 'a t -> 'a t
+
+(**
+ * Return the nodeid of the caller, or None for "main".
+ *)
+val caller : 'a t -> int option
+
+(**
  * Pretty printer.
  *)
 val to_string : 'a Domain.c_dom -> 'a t -> string

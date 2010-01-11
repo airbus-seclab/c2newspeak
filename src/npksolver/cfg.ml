@@ -21,14 +21,18 @@
 
 type node = int
 
+type nodeid = string * node (* function name, node *)
+
 type stmt =
   | Nop
   | Set   of Prog.lval * Prog.exp * Newspeak.location
   | Guard of Prog.exp
-  | Push  of int
+  | Push  of int (* size *)
   | Pop
-  | Init of (string, int) Pmap.t
+  | Init of (string, int) Pmap.t (* globals : name, size *)
   | Assert_true of Prog.exp
-  | Call of string
+  | Call of nodeid
 
-type t = int * (node, (node * stmt * Newspeak.location) list) Pmap.t
+type func_t = int * (nodeid, (nodeid * stmt * Newspeak.location) list) Pmap.t
+
+type t = (string, func_t) Pmap.t
