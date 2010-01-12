@@ -69,7 +69,7 @@ let (>--<>-->) src dst = (src,dst,(Cfg.Nop, Newspeak.unknown_loc))
 (* add to a list of values *)
 let pmap_add_list : 'k -> 'v -> ('k, 'v list) Pmap.t -> ('k, 'v list) Pmap.t =
   fun k v m ->
-  let old_value = 
+  let old_value =
     try
       Pmap.find k m
     with Not_found -> []
@@ -144,7 +144,7 @@ let rec process_stmt (stmt, loc) c =
       update c ~label:l
                ~new_edges:[l >--<(stmt)>-->(entry f)]
 
-and entry f = Lbl.init f (* FIXME *)
+and entry f = Lbl.init f (* Will be changed to the real entry point during analysis *)
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
@@ -173,16 +173,16 @@ let dump_yaml prg =
   ^ "lastnode: "
   ^ string_of_int n ^ "\n"
   ^ "edges:"
-    ^ (if Pmap.is_empty e then " []\n" else
+  ^ (if Pmap.is_empty e then " []\n" else
       "\n"
     ^ (Pmap.foldi
-        (fun (_fname, src) es s ->
-          s^"  - {id: "^string_of_int src^ ", s: [" ^ 
+        (fun (fname, src) es s ->
+          s^"  - {id: "^ fname ^string_of_int src^ ", s: [" ^
           (String.concat ", "
             ( List.map
-              ( fun ((_fname, dest), stmt, _loc) ->
+              ( fun ((fname, dest), stmt, _loc) ->
                 let s' = print_stmt stmt in
-                   "{n: "^ string_of_int dest ^ ", "
+                   "{n: "^ fname ^ string_of_int dest ^ ", "
                    ^"stmt: \"" ^ s' ^"\"}"
               ) es
             )
@@ -193,20 +193,26 @@ let dump_yaml prg =
     )
   ^ "...\n"
 
-let dump_dot ?(results=[||]) prg =
-  let (_, e) = Pmap.find "main" prg in
+let dump_dot ?results prg =
+  let header =
+    match results with
+    | None -> ""
+    | Some res ->
+      Resultmap.fold (fun fn i str s ->
+        s ^ fn ^string_of_int i^"[label=\""^str^"\"]\n"
+      ) res ""
+  in
+  let fname = "main" in
+  let (_, e) = Pmap.find fname prg in
       "digraph G {\nnode [shape=box]\n"
-    ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
-      string_of_int i^"[label=\""^s^"\"]\n"
-    ) results))
-
-    ^ (Pmap.foldi (fun (_fname, src) es s ->
+    ^ header
+    ^ (Pmap.foldi (fun (fsrc, src) es s ->
       s^
         (String.concat ""
-          (List.map (fun ((_fname, dest), stmt, _loc) ->
+          (List.map (fun ((fdest, dest), stmt, _loc) ->
           let s' = print_stmt stmt in
-          "  "  ^ string_of_int src
-          ^ " -> " ^ string_of_int dest
+            "  "   ^ fsrc  ^ string_of_int src
+          ^ " -> " ^ fdest ^ string_of_int dest
           ^ " [label=\"" ^ s' ^ "\"]"
           ) es )
         )

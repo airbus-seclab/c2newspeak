@@ -37,4 +37,4 @@ val dump_yaml : Cfg.t -> string
  * The generated DOT string will represent the abstract values at
  * every node.
  *)
-val dump_dot : ?results:string array -> Cfg.t -> string
+val dump_dot : ?results:(string Resultmap.t) -> Cfg.t -> string

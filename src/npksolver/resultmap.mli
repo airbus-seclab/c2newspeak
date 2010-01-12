@@ -20,7 +20,27 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 (**
- * Solve a program (emit alarms).
- * Returns an array of pretty-printed abstract values for CFG vertices.
+ * This datastructure is a mutable mapping from (string * int) couples
+ * to arbitrary results (of type 'a).
  *)
-val solve : Domain.t -> Cfg.t -> string Resultmap.t
+
+type 'a t
+
+(**
+ * Constructor.
+ * The list parameter is a list of strings and the associated number of cells.
+ *)
+val make : (string * int) list -> 'a -> 'a t
+
+val size : 'a t -> string -> int
+
+val get : 'a t -> string -> int -> 'a
+
+val set : 'a t -> string -> int -> 'a -> unit
+
+val fold : (string -> int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+
+val iter : (string -> int -> 'a -> unit) -> 'a t -> unit
+
+val map : ('a -> 'b) -> 'a t -> 'b t
+

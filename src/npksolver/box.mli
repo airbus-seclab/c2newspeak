@@ -113,8 +113,9 @@ val pop : 'a Domain.c_dom -> 'a t -> 'a t
 
 (**
  * Enter another function's graph.
+ * The argument is the return "address"
  *) 
-val enter_function : string -> 'a t -> 'a t
+val enter_function : (string * int) -> 'a t -> 'a t
 
 (**
  * Return to caller.
@@ -122,9 +123,9 @@ val enter_function : string -> 'a t -> 'a t
 val leave_function : 'a t -> 'a t
 
 (**
- * Return the nodeid of the caller, or None for "main".
+ * Return the nodeid of the caller, or None if there is no caller (for "main").
  *)
-val caller : 'a t -> int option
+val caller : 'a t -> (string * int) option
 
 (**
  * Pretty printer.
