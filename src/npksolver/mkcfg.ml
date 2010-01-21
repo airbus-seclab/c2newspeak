@@ -23,14 +23,14 @@ open Domain
 
 module Lbl : sig
   type t
-  val init : t
+  val init : string -> t
   val next : t -> t
-  val to_int : t -> int
+  val to_int : t -> string * int
 end = struct
-  type t = int
-  let init = 0
-  let next = succ
-  let to_int n = n
+  type t = string * int
+  let init s = (s, 0)
+  let next (s, n) = (s, succ n)
+  let to_int (s, n) = (s, n)
 end
 
 let print_stmt = function
@@ -41,7 +41,7 @@ let print_stmt = function
   | Cfg.Pop             -> "(pop)"
   | Cfg.Init _vars      -> "(init)"
   | Cfg.Assert_true e   -> "(assert:"^Pcomp.Print.exp e^")"
-  | Cfg.Call f          -> "(fcall:"^f^")"
+  | Cfg.Call (f,id)     -> "(fcall:"^f^"@"^string_of_int id^")"
 
 type edge = Lbl.t * Lbl.t * (Cfg.stmt * Newspeak.location)
 
@@ -65,14 +65,24 @@ let (>-->) (src,lbl) dst = (src,dst,lbl)
 let (>--<>-->) src dst = (src,dst,(Cfg.Nop, Newspeak.unknown_loc))
 
 (* Reduce edges *)
+
+(* add to a list of values *)
+let pmap_add_list : 'k -> 'v -> ('k, 'v list) Pmap.t -> ('k, 'v list) Pmap.t =
+  fun k v m ->
+  let old_value =
+    try
+      Pmap.find k m
+    with Not_found -> []
+  in
+  Pmap.add k (v::old_value) m
+
 let reduce_edges e =
     List.fold_left (fun map (src, dest, (stmt, loc)) ->
-      let src' = Lbl.to_int src in
-      let lst =
-        try Pmap.find src' map
-        with Not_found -> []
-      in
-        Pmap.add src' ((Lbl.to_int dest,stmt,loc)::lst) map
+      pmap_add_list (Lbl.to_int src)
+                    (Lbl.to_int dest
+                    ,stmt
+                    ,loc)
+                    map
     ) (Pmap.empty) e
 
 let update ?(new_edges=[]) ~label c =
@@ -130,8 +140,11 @@ let rec process_stmt (stmt, loc) c =
                ~new_edges:[l >--<(Cfg.Assert_true e, loc)>--> c.lbl]
   | Call f ->
       let l = Lbl.next c.lbl in
+      let stmt = (Cfg.Call (Lbl.to_int c.lbl), loc) in
       update c ~label:l
-               ~new_edges:[l >--<(Cfg.Call f, loc)>--> c.lbl]
+               ~new_edges:[l >--<(stmt)>-->(entry f)]
+
+and entry f = Lbl.init f (* Will be changed to the real entry point during analysis *)
 
 and process_blk ?join blk al l0 =
     List.fold_right process_stmt blk
@@ -141,29 +154,35 @@ and process_blk ?join blk al l0 =
       ; join = join
       }
 
-let process prg =
-  let blk = Pmap.find "main" prg.func in
-  let c = process_blk blk [] Lbl.init in
-  let lbl' = Lbl.next c.lbl in
-  let edges = (lbl' >--<(Cfg.Init prg.sizes, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
-  let map = reduce_edges edges in
-  (Lbl.to_int lbl', map)
+let process_fun sizes fname blk =
+  let c = process_blk blk [] (Lbl.init fname) in
+  if fname = "main" then
+    let lbl' = Lbl.next c.lbl in
+    let edges = (lbl' >--<(Cfg.Init sizes, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
+    let map = reduce_edges edges in
+    (snd (Lbl.to_int lbl'), map)
+  else
+    (snd (Lbl.to_int c.lbl), reduce_edges c.edges)
 
-let dump_yaml (n, e) =
+let process prg =
+  Pmap.mapi (process_fun prg.sizes) prg.func
+
+let dump_yaml prg =
+  let (n, e) = Pmap.find "main" prg in
     "---\n"
   ^ "lastnode: "
   ^ string_of_int n ^ "\n"
   ^ "edges:"
-    ^ (if Pmap.is_empty e then " []\n" else
+  ^ (if Pmap.is_empty e then " []\n" else
       "\n"
     ^ (Pmap.foldi
-        (fun src es s ->
-          s^"  - {id: "^string_of_int src^ ", s: [" ^ 
+        (fun (fname, src) es s ->
+          s^"  - {id: "^ fname ^string_of_int src^ ", s: [" ^
           (String.concat ", "
             ( List.map
-              ( fun (dest, stmt, _loc) ->
+              ( fun ((fname, dest), stmt, _loc) ->
                 let s' = print_stmt stmt in
-                   "{n: "^ string_of_int dest ^ ", "
+                   "{n: "^ fname ^ string_of_int dest ^ ", "
                    ^"stmt: \"" ^ s' ^"\"}"
               ) es
             )
@@ -174,19 +193,26 @@ let dump_yaml (n, e) =
     )
   ^ "...\n"
 
-let dump_dot ?(results=[||]) (_, e) =
+let dump_dot ?results prg =
+  let header =
+    match results with
+    | None -> ""
+    | Some res ->
+      Resultmap.fold (fun fn i str s ->
+        s ^ fn ^string_of_int i^"[label=\""^str^"\"]\n"
+      ) res ""
+  in
+  let fname = "main" in
+  let (_, e) = Pmap.find fname prg in
       "digraph G {\nnode [shape=box]\n"
-    ^ String.concat "" (Array.to_list (Array.mapi (fun i s ->
-      string_of_int i^"[label=\""^s^"\"]\n"
-    ) results))
-
-    ^ (Pmap.foldi (fun src es s ->
+    ^ header
+    ^ (Pmap.foldi (fun (fsrc, src) es s ->
       s^
         (String.concat ""
-          (List.map (fun (dest, stmt, _loc) ->
+          (List.map (fun ((fdest, dest), stmt, _loc) ->
           let s' = print_stmt stmt in
-          "  "  ^ string_of_int src
-          ^ " -> " ^ string_of_int dest
+            "  "   ^ fsrc  ^ string_of_int src
+          ^ " -> " ^ fdest ^ string_of_int dest
           ^ " [label=\"" ^ s' ^ "\"]"
           ) es )
         )

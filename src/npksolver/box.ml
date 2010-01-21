@@ -91,10 +91,12 @@ open Utils.Lift
 
 module S = VMap
 
-type 'a box = { store : 'a S.t
-              ; esp   : int
-              ; size  : (Prog.addr, int) Pmap.t
-              }
+type 'a box =
+  { store     : 'a S.t
+  ; esp       : int
+  ; size      : (Prog.addr, int) Pmap.t
+  ; callstack : (string * int) list
+  }
 
 type 'a t = 'a box option
 
@@ -105,9 +107,10 @@ let equal a b = match (a, b) with
   | _ -> false
 
 let top dom =
-  Some { store = S.empty dom
-       ; esp = 0
-       ; size = Pmap.add (Prog.Stack 0) 32 Pmap.empty
+  Some { store     = S.empty dom
+       ; esp       = 0
+       ; size      = Pmap.add (Prog.Stack 0) 32 Pmap.empty
+       ; callstack = []
        }
 
 let bottom = None
@@ -164,10 +167,11 @@ let get_size x addr = match x with
 
 let singleton dom v ~size r =
   let addr = addr_convert 0 v in
-  Some { store = S.singleton dom addr r
-       ; esp = 0
-       ; size = Pmap.add addr size
-               (Pmap.add (Prog.Stack 0) 32 Pmap.empty)
+  Some { store     = S.singleton dom addr r
+       ; esp       = 0
+       ; size      = Pmap.add addr size
+                    (Pmap.add (Prog.Stack 0) 32 Pmap.empty)
+       ; callstack = []
        }
 
 let guard var f xo =
@@ -219,11 +223,27 @@ let push _dom ~size =
 let pop dom =
   bind (fun x ->
   bind (fun s' ->
-      Some { store = s' ; esp = pred x.esp ; size = x.size } (* XXX remove Local esp *)
+      Some { x with store = s' ; esp = pred x.esp } (* XXX remove Local esp *)
         ) (S.replace (Prog.Stack x.esp)
           (fun _ -> dom.top) x.store
       )
   )
+
+let enter_function (f, id) xo =
+  xo >>= fun x ->
+  return { x with callstack = (f, id)::x.callstack }
+
+let leave_function xo =
+  xo >>= fun x ->
+  match x.callstack with
+  |  []  -> failwith "Box.leave_function : no caller"
+  | _::t -> return { x with callstack = t }
+
+let caller xo =
+  xo >>= fun x ->
+  match x.callstack with
+  |  []  -> None
+  | h::_ -> Some h
 
 let to_string dom =
   maybe "(bot)"

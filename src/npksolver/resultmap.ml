@@ -19,20 +19,37 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type node = int
+type 'a t = (string, 'a array) Hashtbl.t
 
-type nodeid = string * node (* function name, node *)
+let make sizes init =
+  let h = Hashtbl.create 0 in
+  List.iter (fun (str, sz) ->
+    Hashtbl.add h str (Array.make sz init)
+  ) sizes;
+  h
 
-type stmt =
-  | Nop
-  | Set   of Prog.lval * Prog.exp * Newspeak.location
-  | Guard of Prog.exp
-  | Push  of int (* size *)
-  | Pop
-  | Init of (string, int) Pmap.t (* globals : name, size *)
-  | Assert_true of Prog.exp
-  | Call of nodeid
+let get h str =
+  Array.get (Hashtbl.find h str)
 
-type func_t = int * (nodeid, (nodeid * stmt * Newspeak.location) list) Pmap.t
+let set h str =
+  Array.set (Hashtbl.find h str)
 
-type t = (string, func_t) Pmap.t
+let array_foldi f a x0 =
+  let arr_i = Array.mapi (fun i x -> (i,x)) a in
+  let l = Array.to_list arr_i in
+  List.fold_left (fun r (i, x) -> f i x r) x0 l
+
+let fold f =
+  Hashtbl.fold (fun str -> array_foldi (f str))
+
+let iter f h =
+  fold (fun s i v _ -> f s i v) h ()
+
+let map f h =
+  let l =  Hashtbl.fold (fun str a l -> (str, a)::l) h [] in
+  let h' = Hashtbl.create 0 in
+  List.iter (fun (s, a) -> Hashtbl.add h' s (Array.map f a)) l;
+  h'
+
+let size h str =
+  Array.length(Hashtbl.find h str)

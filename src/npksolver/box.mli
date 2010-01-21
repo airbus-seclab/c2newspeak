@@ -112,6 +112,22 @@ val push : 'a Domain.c_dom -> size:int -> 'a t -> 'a t
 val pop : 'a Domain.c_dom -> 'a t -> 'a t
 
 (**
+ * Enter another function's graph.
+ * The argument is the return "address"
+ *) 
+val enter_function : (string * int) -> 'a t -> 'a t
+
+(**
+ * Return to caller.
+ *)
+val leave_function : 'a t -> 'a t
+
+(**
+ * Return the nodeid of the caller, or None if there is no caller (for "main").
+ *)
+val caller : 'a t -> (string * int) option
+
+(**
  * Pretty printer.
  *)
 val to_string : 'a Domain.c_dom -> 'a t -> string

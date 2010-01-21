@@ -19,20 +19,28 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type node = int
+(**
+ * This datastructure is a mutable mapping from (string * int) couples
+ * to arbitrary results (of type 'a).
+ *)
 
-type nodeid = string * node (* function name, node *)
+type 'a t
 
-type stmt =
-  | Nop
-  | Set   of Prog.lval * Prog.exp * Newspeak.location
-  | Guard of Prog.exp
-  | Push  of int (* size *)
-  | Pop
-  | Init of (string, int) Pmap.t (* globals : name, size *)
-  | Assert_true of Prog.exp
-  | Call of nodeid
+(**
+ * Constructor.
+ * The list parameter is a list of strings and the associated number of cells.
+ *)
+val make : (string * int) list -> 'a -> 'a t
 
-type func_t = int * (nodeid, (nodeid * stmt * Newspeak.location) list) Pmap.t
+val size : 'a t -> string -> int
 
-type t = (string, func_t) Pmap.t
+val get : 'a t -> string -> int -> 'a
+
+val set : 'a t -> string -> int -> 'a -> unit
+
+val fold : (string -> int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+
+val iter : (string -> int -> 'a -> unit) -> 'a t -> unit
+
+val map : ('a -> 'b) -> 'a t -> 'b t
+
