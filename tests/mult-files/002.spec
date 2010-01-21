@@ -1,3 +1,5 @@
+Warning: 002-a.c:32#2: expression of type signed integer used as an array index ignored
+Warning: 002-a.c:34#2: expression of type signed integer used as an array index ignored
 Newspeak output
 ---------------
 002-a.c

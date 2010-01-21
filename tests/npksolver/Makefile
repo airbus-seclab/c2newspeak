@@ -24,7 +24,8 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=$(NPKSOLVER) $*.c
+COMMAND=$(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` -o $*.npk $*.c; \
+	 $(NPKSOLVER) $*.npk
 PREREQ=%.c $(NPKSOLVER)
 
 TESTS = 000                                     \

@@ -51,6 +51,7 @@ let ignores_extern_fundef = ref false
 let ignores_pack = ref false
 let ignores_volatile = ref false
 let accept_gnuc = ref false
+let accept_signed_index = ref false
 let opt_checks = ref true
 
 let accept_forward_goto = ref false
@@ -121,6 +122,7 @@ type error =
   | DisableCheckOpt
   | TransparentUnion
   | ExternFunDef
+  | SignedIndex
 
 let flag_of_error err =
   match err with
@@ -143,6 +145,7 @@ let flag_of_error err =
     | DisableCheckOpt -> opt_checks
     | TransparentUnion -> accept_transparent_union
     | ExternFunDef -> ignores_extern_fundef
+    | SignedIndex -> accept_signed_index
  
 let opt_of_error err =
   match err with
@@ -165,6 +168,7 @@ let opt_of_error err =
     | DisableCheckOpt -> "--disable-checks-opt"
     | TransparentUnion -> "--accept-transparent-union"
     | ExternFunDef -> "--ignore-extern-definition"
+    | SignedIndex -> "--accept-signed-index"
 
 (* Version *)
 
@@ -209,6 +213,9 @@ let argslist = [
 
   (opt_of_error MultipleDef, Arg.Set (flag_of_error MultipleDef),
    "accepts multiple definitions of the same variables");
+
+  (opt_of_error SignedIndex, Arg.Set (flag_of_error SignedIndex),
+   "accepts signed integer expressions to be used as array indices");
 
   (opt_of_error GnuC, Arg.Set (flag_of_error GnuC), 
    "accepts GNU C extensions\n");
@@ -399,6 +406,7 @@ let string_of_options () =
     if !accept_transparent_union then options := ("--accept-transparent-union", "")::!options;
     if !accept_extern then options := ("--accept-extern", "")::!options;
     if !accept_mult_def then options := ("--accept-mult-def", "")::!options;
+    if !accept_signed_index then options := ("--accept-signed-index", "")::!options;
     if !accept_gnuc then options := ("--accept-gnuc", "")::!options;
     if !no_opt then options := ("--disable-opt", "")::!options;
     if not !opt_checks then options := ("--disable-checks-opt", "")::!options;

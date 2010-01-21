@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,11 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
 (* TODO: should not fill initializations with 0 by default!!!! 
@@ -381,8 +386,25 @@ let translate fname (globals, fundecls, spec) =
 	  Npkcontext.report_error "Firstpass.translate_lv" "left value expected"
 
   and translate_array_access (lv, t, n) i =
+    let warn_report () =
+      Npkcontext.report_ignore_warning "Firstparse.translate_array_access" 
+	"expression of type signed integer used as an array index" Npkcontext.SignedIndex 
+    in
+    let rec check_index_type i t =
+      match t with 
+	  Int (N.Signed, _) -> check_exp i
+	| _ -> ()
+    and check_exp i =
+	match i with
+	    C.Lval _ -> warn_report ()
+	  | C.Const (C.CInt c)  when Nat.compare c Nat.zero < 0 -> warn_report ()
+	  | C.Binop  (_, e1, e2) -> check_exp e1; check_exp e2
+	  | C.BlkExp (_, e, _) -> check_exp e 
+	  | _ -> ()
+    in
     try
-      let (i, _) = i in
+      let (i, typ) = i in
+	check_index_type i typ;
       let len = 
 	try C.length_of_array n lv 
 	with Invalid_argument _ when !Npkcontext.accept_flex_array -> 

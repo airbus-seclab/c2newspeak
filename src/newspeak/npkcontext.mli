@@ -57,6 +57,7 @@ type error =
   | DisableCheckOpt
   | TransparentUnion
   | ExternFunDef
+  | SignedIndex
 
 (** {1 Comand line options } *)
 

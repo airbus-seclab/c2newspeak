@@ -1,3 +1,4 @@
+Warning: 003.c:38#2: expression of type signed integer used as an array index ignored
 Newspeak output
 ---------------
 003.c
