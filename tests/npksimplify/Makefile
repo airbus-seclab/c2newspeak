@@ -14,14 +14,14 @@
 #  
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 #
 #  Charles Hymans
 #  EADS Innovation Works - SE/CS
 #  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 #  email: charles.hymans@penjili.org
 
-COMMAND=$(C2NEWSPEAK) `[ -e $*.in 0] && cat $*.in0` $*.c > /dev/null 2>&1; \
+COMMAND=$(C2NEWSPEAK) `[ -e $*.in0] && cat $*.in0` $*.c > /dev/null 2>&1; \
         $(NPKSIMPLIFY) `[ -e $*.in ] && cat $*.in` a.npk
 TESTS=000 001 002 003 004 005 006 007 008 009
 PREREQ=%.c
