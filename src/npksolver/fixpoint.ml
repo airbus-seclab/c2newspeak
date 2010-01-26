@@ -25,24 +25,23 @@ let rec eval_stmt dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
           Pmap.foldi (fun v size r ->
-              Box.meet dom
-                       (Box.singleton
+              Box.meet (Box.singleton
                            dom ~size
                            (Prog.G v)
                            (const dom 0)
                        )
                        r
             ) vs x
-  | Cfg.Pop       -> Box.pop  dom x
-  | Cfg.Push size -> Box.push dom x ~size
+  | Cfg.Pop       -> Box.pop  x
+  | Cfg.Push size -> Box.push x ~size
   | Cfg.Guard e ->
-            let env = Box.environment dom x in
+            let env = Box.environment x in
             List.fold_left (fun x (v, f) ->
               Box.guard v f x
             ) x (dom.guard env (Box.addr_of x) e)
   | Cfg.Set (lv, e, loc) ->
           begin
-            let lookup = Box.environment dom x in
+            let lookup = Box.environment x in
             if x = Box.bottom then Box.bottom
               else
               begin
@@ -53,11 +52,11 @@ let rec eval_stmt dom loc stmt x = match stmt with
                   | Some check -> check (Box.get_size x) loc new_value
                 in
                 List.iter Alarm.emit (alrms_eval@alrms_update);
-                Box.set_var dom lv new_value x
+                Box.set_var lv new_value x
               end
           end
   | Cfg.Assert_true e ->
-        let lookup = Box.environment dom x in
+        let lookup = Box.environment x in
         let (r, alrms) = dom.eval lookup (Box.addr_of x) e in
         List.iter Alarm.emit alrms;
         if (dom.incl (const dom 0) r) then
@@ -75,7 +74,7 @@ let f_horwitz dom v x =
          let g = eval_stmt dom loc stmt in
          let r =
            if Options.get Options.widening then
-             fun xo -> Box.widen dom xo (g xo)
+             fun xo -> Box.widen xo (g xo)
            else
              g
          in (dest, r)
@@ -97,7 +96,7 @@ let f_horwitz dom v x =
     List.iter (fun (j, fij) ->
       let xj = Resultmap.get x main j in
       let xi = Resultmap.get x f    i in
-      let r = Box.join dom xj (fij xi) in
+      let r = Box.join xj (fij xi) in
       if (not (Box.equal r xj)) then
         begin
           Queue.add (f, j) worklist;
@@ -119,7 +118,7 @@ let solve dom funcs =
     print_endline "---";
     Resultmap.iter (fun fn i r ->
         print_endline ("  - {id: "^ fn^string_of_int i ^
-        ", "^ Box.yaml_dump dom r^"}")
+        ", "^ Box.yaml_dump r^"}")
     ) res end;
-  Resultmap.map (Box.to_string dom) res
+  Resultmap.map Box.to_string res
   }

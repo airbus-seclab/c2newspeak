@@ -53,17 +53,17 @@ val singleton : 'a Domain.c_dom -> Prog.lval -> size:int -> 'a -> 'a t
 (**
  * Variable-wise abstract join operation.
  *)
-val join : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
+val join : 'a t -> 'a t -> 'a t
 
 (**
  * Variable-wise abstract meet operation.
  *)
-val meet : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
+val meet : 'a t -> 'a t -> 'a t
 
 (**
  * Variable-wise widening operation.
  *)
-val widen : 'a Domain.c_dom -> 'a t -> 'a t -> 'a t
+val widen : 'a t -> 'a t -> 'a t
 
 (**
  * Guard evaluation.
@@ -74,13 +74,13 @@ val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 (**
  * Set the abstract value for a lvalue. 
  *)
-val set_var : 'a Domain.c_dom -> Prog.lval -> 'a -> 'a t -> 'a t
+val set_var : Prog.lval -> 'a -> 'a t -> 'a t
 
 (**
  * Get abstract value of variables.
  * 'environment dom x' is a 'lookup' function.
  *)
-val environment : 'a Domain.c_dom -> 'a t -> (Prog.lval -> 'a)
+val environment : 'a t -> (Prog.lval -> 'a)
 
 (**
  * Returns the size of a variable.
@@ -103,13 +103,13 @@ val addr_of : 'a t -> Prog.lval -> Prog.addr
  * 'size'.  Note that the stack pointer is not related the size of the new
  * variable : local variable numbering is only lexical.
  *)
-val push : 'a Domain.c_dom -> size:int -> 'a t -> 'a t
+val push : size:int -> 'a t -> 'a t
 
 (**
  * Decrement the stack pointer.
  * The opposite of push. The value of the most recent variable is wiped out.
  *)
-val pop : 'a Domain.c_dom -> 'a t -> 'a t
+val pop : 'a t -> 'a t
 
 (**
  * Enter another function's graph.
@@ -130,9 +130,9 @@ val caller : 'a t -> (string * int) option
 (**
  * Pretty printer.
  *)
-val to_string : 'a Domain.c_dom -> 'a t -> string
+val to_string : 'a t -> string
 
 (**
  * YAML dumper.
  *)
-val yaml_dump : 'a Domain.c_dom -> 'a t -> string
+val yaml_dump : 'a t -> string

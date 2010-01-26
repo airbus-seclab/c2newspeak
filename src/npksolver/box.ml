@@ -34,6 +34,7 @@ module type STORE = sig
   val replace : Prog.addr -> ('a -> 'a) -> 'a t -> 'a t option
   val map : (Prog.addr -> 'a -> 'b) -> 'a t -> 'b list
   val assoc : Prog.addr -> 'a t -> 'a
+  val dom : 'a t -> 'a Domain.c_dom
 end
 
 module VMap : STORE = struct
@@ -85,6 +86,8 @@ module VMap : STORE = struct
     let sg = singleton x.dom v x.dom.top in
     merge (fun a1 _a2 -> f a1) x sg
 
+  let dom x = x.dom
+
 end
 
 open Utils.Lift
@@ -115,29 +118,33 @@ let top dom =
 
 let bottom = None
 
-let bind2' f xo yo =
-  xo >>= fun x ->
-  yo >>= fun y ->
-  f x.store y.store >>= fun s ->
-  return { x with store = s
-         ;        size  = Pmap.merge x.size y.size
-         }
-
-let join dom xo yo =
+let join xo yo =
   match (xo, yo) with
     | None   , _      -> yo
     | _      , None   -> xo
     | Some x , Some y ->
-        S.merge dom.join x.store y.store >>= fun s ->
+        S.merge (S.dom x.store).join x.store y.store >>= fun s ->
         return
           { x with store = s
           ;        size  = Pmap.merge x.size y.size
           }
 
-let meet  dom x y =
-  bind2' (S.merge dom.meet) x y
+let meet xo yo =
+  xo >>= fun x ->
+  yo >>= fun y ->
+  S.merge ((S.dom x.store).meet) x.store y.store >>= fun s ->
+  return { x with store = s
+         ;        size  = Pmap.merge x.size y.size
+         }
 
-let widen dom = bind2' (S.merge dom.widen)
+let widen xo yo =
+  xo >>= fun x ->
+  yo >>= fun y ->
+  S.merge ((S.dom x.store).widen) x.store y.store >>= fun s ->
+  return { x with store = s
+         ;        size  = Pmap.merge x.size y.size
+         }
+
 
 let rec addr_convert ?(check=fun _ _ _ -> ()) esp =
   function
@@ -180,11 +187,11 @@ let guard var f xo =
   S.replace addr f (x.store) >>= fun s ->
   return { x with store = s }
 
-let rec environment dom bx v =
+let rec environment bx v =
   let addr = addr_of bx v in
-  maybe dom.bottom
-        (fun x -> S.assoc addr x.store)
-        bx
+  match bx with
+  | Some x -> S.assoc addr x.store
+  | None -> invalid_arg "environment : bottom"
 
 (*
  * TODO 
@@ -192,9 +199,11 @@ let rec environment dom bx v =
  *     guard v (fun _ -> r) bx
  * (+ checks) ?
  *)
-let set_var dom v r bx =
+let set_var v r bx =
+  bx >>= fun x ->
+  let dom = S.dom x.store in
   let check e a loc =
-    let (r, alrms) = dom.eval (environment dom bx)
+    let (r, alrms) = dom.eval (environment bx)
                               (addr_of bx)
                               e
     in
@@ -206,28 +215,24 @@ let set_var dom v r bx =
                  , Some (dom.to_string r^" </= [0;"^string_of_int size^"]"))
   in
   let addr = addr_of_ck ~check bx v in
-  bx >>= fun x ->
-  (S.merge (fun a _ -> a)
-           (S.singleton dom addr r)
-            x.store)
-  >>= fun s ->
+  S.merge (fun a _ -> a)
+          (S.singleton dom addr r)
+           x.store >>= fun s ->
   return { x with store = s }
 
-let push _dom ~size =
+let push ~size =
   bind (fun x ->
       return { x with esp = succ x.esp
              ; size = Pmap.add (Prog.Stack (succ x.esp)) size x.size
              }
   )
 
-let pop dom =
-  bind (fun x ->
-  bind (fun s' ->
-      Some { x with store = s' ; esp = pred x.esp } (* XXX remove Local esp *)
-        ) (S.replace (Prog.Stack x.esp)
-          (fun _ -> dom.top) x.store
-      )
-  )
+let pop xo =
+  xo >>= fun x ->
+  let dom = S.dom x.store in
+  S.replace (Prog.Stack x.esp) (fun _ -> dom.top) x.store
+    >>= fun s' ->
+    Some { x with store = s' ; esp = pred x.esp } (* XXX remove Local esp *)
 
 let enter_function (f, id) xo =
   xo >>= fun x ->
@@ -245,15 +250,18 @@ let caller xo =
   |  []  -> None
   | h::_ -> Some h
 
-let to_string dom =
+let to_string xo =
   maybe "(bot)"
     (fun x -> String.concat ", " (S.map (fun v r ->
-                Pcomp.Print.addr v^"->"^dom.to_string r)
+                Pcomp.Print.addr v^"->"^(S.dom x.store).to_string r)
               x.store))
+    xo
 
-let yaml_dump dom =
+let yaml_dump xo =
   maybe "bottom: yes"
-    (fun x -> "value: {" ^
+    (fun x ->
+      let dom = S.dom x.store in
+      "value: {" ^
       (String.concat ", "
         (Utils.filter_list
           (S.map
@@ -269,4 +277,4 @@ let yaml_dump dom =
         )
       )
       ^ "}"
-    )
+    ) xo
