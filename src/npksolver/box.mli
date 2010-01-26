@@ -22,7 +22,7 @@
 (**
  * A 'box' is a mapping between lvalues and abstract values.
  * It is a non-relational abstract store.
- * Every vertex in the control-flow graph has an specific box value. 
+ * Every vertex in the control-flow graph has an specific box value.
  *
  * The type t is purely functional, and can be copied without fear of sharing or
  * side effects.
@@ -72,7 +72,7 @@ val widen : 'a t -> 'a t -> 'a t
 val guard : Prog.lval -> ('a -> 'a) -> 'a t -> 'a  t
 
 (**
- * Set the abstract value for a lvalue. 
+ * Set the abstract value for a lvalue.
  *)
 val set_var : Prog.lval -> 'a -> 'a t -> 'a t
 
@@ -110,22 +110,6 @@ val push : size:int -> 'a t -> 'a t
  * The opposite of push. The value of the most recent variable is wiped out.
  *)
 val pop : 'a t -> 'a t
-
-(**
- * Enter another function's graph.
- * The argument is the return "address"
- *) 
-val enter_function : (string * int) -> 'a t -> 'a t
-
-(**
- * Return to caller.
- *)
-val leave_function : 'a t -> 'a t
-
-(**
- * Return the nodeid of the caller, or None if there is no caller (for "main").
- *)
-val caller : 'a t -> (string * int) option
 
 (**
  * Pretty printer.

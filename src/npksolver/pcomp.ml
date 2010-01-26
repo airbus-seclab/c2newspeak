@@ -142,25 +142,24 @@ let compile npk =
     (s, Newspeak.size_of 32 ty)::l
   ) npk.globals []
   in
-  let blko = Hashtbl.fold (fun fname blk _ ->
-    if fname = "main" then Some blk
-                      else None
-  ) npk.fundecs None in
+  let sizes = List.fold_left (fun m (n, s) -> Pmap.add n s m) (Pmap.create String.compare) globals in
   let (blk_init, ann_init) = pcomp_blk npk.init in
-  match blko with
-  | None -> abort "No 'main' function"
-  | Some (_, b) ->
-      let (blk, anns) = pcomp_blk b in
-      let sizes = List.fold_left (fun m (n, s) -> Pmap.add n s m) (Pmap.create String.compare) globals in
-      let func = Pmap.add "main" blk (Pmap.create String.compare) in
-      let func' = Pmap.mapi (fun k v ->
-        if k = "main" then blk_init@v
-        else v
-      ) func in
-      { Prog.func = func'
-      ; anns = ann_init@anns
-      ; sizes = sizes
-      }
+
+  let (func, anns) =
+    Hashtbl.fold
+      (fun fname (_,b) (map, anns) ->
+         let (blk, anns') = pcomp_blk b in
+         let block =
+           if fname = "main" then blk_init@blk
+           else blk
+         in
+         (Pmap.add fname block map, anns'@anns)
+      ) npk.fundecs (Pmap.create String.compare, ann_init)
+  in
+  { Prog.func = func
+  ; anns = anns
+  ; sizes = sizes
+  }
 
 let size_of_typ = function
   | Prog.Int     -> 32

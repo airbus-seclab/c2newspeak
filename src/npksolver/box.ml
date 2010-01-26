@@ -23,8 +23,6 @@ open Domain
 
 let may_cons h t = Utils.may (fun x -> h::x) t
 
-let varcmp = Pervasives.compare
-
 module type STORE = sig
   type 'a t
   val empty : 'a Domain.c_dom -> 'a t
@@ -43,16 +41,14 @@ module VMap : STORE = struct
     ; map : (Prog.addr, 'a) Pmap.t
     }
 
-  let empty_map () = Pmap.create varcmp
-
   let empty dom =
     { dom = dom
-    ; map = empty_map ()
+    ; map = Pmap.empty
     }
 
   let singleton dom addr x =
     { dom = dom
-    ; map = Pmap.add addr x (empty_map ())
+    ; map = Pmap.add addr x Pmap.empty
     }
 
   let assoc addr x =
@@ -98,7 +94,6 @@ type 'a box =
   { store     : 'a S.t
   ; esp       : int
   ; size      : (Prog.addr, int) Pmap.t
-  ; callstack : (string * int) list
   }
 
 type 'a t = 'a box option
@@ -113,7 +108,6 @@ let top dom =
   Some { store     = S.empty dom
        ; esp       = 0
        ; size      = Pmap.add (Prog.Stack 0) 32 Pmap.empty
-       ; callstack = []
        }
 
 let bottom = None
@@ -178,7 +172,6 @@ let singleton dom v ~size r =
        ; esp       = 0
        ; size      = Pmap.add addr size
                     (Pmap.add (Prog.Stack 0) 32 Pmap.empty)
-       ; callstack = []
        }
 
 let guard var f xo =
@@ -233,22 +226,6 @@ let pop xo =
   S.replace (Prog.Stack x.esp) (fun _ -> dom.top) x.store
     >>= fun s' ->
     Some { x with store = s' ; esp = pred x.esp } (* XXX remove Local esp *)
-
-let enter_function (f, id) xo =
-  xo >>= fun x ->
-  return { x with callstack = (f, id)::x.callstack }
-
-let leave_function xo =
-  xo >>= fun x ->
-  match x.callstack with
-  |  []  -> failwith "Box.leave_function : no caller"
-  | _::t -> return { x with callstack = t }
-
-let caller xo =
-  xo >>= fun x ->
-  match x.callstack with
-  |  []  -> None
-  | h::_ -> Some h
 
 let to_string xo =
   maybe "(bot)"

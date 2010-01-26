@@ -48,7 +48,7 @@ type 'a c_dom =
   ; update : 'a update_check option
   }
 
-type 't scope = 
+type 't scope =
   { bind : 'a. 'a c_dom -> 't }
 
 type t =

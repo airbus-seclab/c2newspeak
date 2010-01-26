@@ -159,8 +159,10 @@ let eval lookup _addr x =
         if (is_in_range a b r) then
           []
         else
-            let reason = to_string r ^ " </= [" ^ string_of_int a
-                                          ^ ";" ^ string_of_int b ^ "]" in
+            let reason =
+                 "eval <"^Pcomp.Print.exp e^"> = "
+                ^ to_string r ^ " </= [" ^ string_of_int a
+                                   ^ ";" ^ string_of_int b ^ "]" in
             [loc, Alarm.Array_OOB, Some reason]
       in (r, a1@alrms)
   | Const Nil -> top, []

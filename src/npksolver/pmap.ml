@@ -80,7 +80,7 @@ let merge t1 t2 =
 let create cmp = { cmp = cmp; map = Empty }
 let empty = { cmp = compare; map = Empty }
 
-let is_empty x = 
+let is_empty x =
 	x.map = Empty
 
 let add x d { cmp = cmp; map = map } =

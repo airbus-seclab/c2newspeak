@@ -21,7 +21,7 @@
 
 open Domain
 
-let rec eval_stmt dom loc stmt x = match stmt with
+let rec eval_stmt cs dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
           Pmap.foldi (fun v size r ->
@@ -53,8 +53,8 @@ let rec eval_stmt dom loc stmt x = match stmt with
                 in
                 List.iter Alarm.emit (alrms_eval@alrms_update);
                 Box.set_var lv new_value x
-              end
-          end
+              end;
+          end 
   | Cfg.Assert_true e ->
         let lookup = Box.environment x in
         let (r, alrms) = dom.eval lookup (Box.addr_of x) e in
@@ -63,57 +63,65 @@ let rec eval_stmt dom loc stmt x = match stmt with
           Alarm.emit (loc, (Alarm.Assertion_failed (Pcomp.Print.exp e)), None);
         x
   | Cfg.Call (f, id) ->
-      Box.enter_function (f, id) x
+      Stack.push (f, id) cs;
+      x
 
 (* worklist algorithm *)
-let f_horwitz dom v x =
+let f_horwitz dom funcs x =
+  let callstack = Stack.create () in
   let succ f i =
-    let next_nodes =
-      try
-        List.map (fun ((_fname, dest), stmt, loc) ->
-         let g = eval_stmt dom loc stmt in
-         let r =
-           if Options.get Options.widening then
-             fun xo -> Box.widen xo (g xo)
-           else
-             g
-         in (dest, r)
-        ) (Pmap.find (f, i) v)
-      with Not_found -> []
-    in
-    if next_nodes <> [] then next_nodes
-    else
-      match Box.caller (Resultmap.get x f i) with
-        | None -> []
-        | Some (_fname, node) ->
-            [node, Box.leave_function]
+      let (_,func) = Pmap.find f funcs in
+      List.map (fun (dest, stmt, loc) ->
+       let g = eval_stmt callstack dom loc stmt in
+       let r =
+         if Options.get Options.widening then
+           fun xo -> Box.widen xo (g xo)
+         else
+           g
+       in (dest, r)
+      ) (Pmap.find (f, i) func)
   in
   let worklist = Queue.create () in
   let main = "main" in
   Queue.add (main, (Resultmap.size x main) - 1) worklist;
   while (not (Queue.is_empty worklist)) do
     let (f, i) = Queue.take worklist in
-    List.iter (fun (j, fij) ->
-      let xj = Resultmap.get x main j in
-      let xi = Resultmap.get x f    i in
+    let succ_nodes =
+      if i = 0 then (* function exit *)
+        begin
+        try
+          let exit = Stack.pop callstack in
+          [exit, fun x -> x]
+        with Stack.Empty ->
+          []
+        end
+      else
+        try
+          succ f i
+        with
+          Not_found -> invalid_arg (f^"+"^string_of_int i^" has no successor")
+    in
+    List.iter (fun ((nextf, j), fij) ->
+      let xj = Resultmap.get x nextf j in
+      let xi = Resultmap.get x f     i in
       let r = Box.join xj (fij xi) in
       if (not (Box.equal r xj)) then
         begin
-          Queue.add (f, j) worklist;
-          Resultmap.set x f j r
+          Queue.add (nextf, j) worklist;
+          Resultmap.set x nextf j r
         end
-    ) (succ f i)
+    ) succ_nodes;
   done;
   x
 
 let solve dom funcs =
   let main = "main" in
-  let (ln, v) = Pmap.find main funcs in
+  let (ln, _) = Pmap.find main funcs in
   let funcs' = Pmap.foldi (fun fname (ln, _) r -> (fname, ln + 1)::r) funcs [] in
   Domain.with_dom dom { Domain.bind = fun dom ->
   let x0 = Resultmap.make funcs' Box.bottom in
   Resultmap.set x0 main ln (Box.top dom);
-  let res = f_horwitz dom v x0 in
+  let res = f_horwitz dom funcs x0 in
   if Options.get Options.solver then begin
     print_endline "---";
     Resultmap.iter (fun fn i r ->

@@ -75,7 +75,7 @@ val pack : 'a c_dom -> t
  * 't scope is like "some piece of computation taking an abstract domain (c_dom) in
  * parameter and returning 't".
  *)
-type 't scope = 
+type 't scope =
   { bind : 'a. 'a c_dom -> 't }
 
 (**

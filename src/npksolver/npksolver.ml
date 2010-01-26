@@ -36,7 +36,7 @@ let       domain = ref (Domain.pack Range.dom)
 let set_domain x = domain := domain_str x
 
 let display_version _ =
-  print_endline ("Version : " ^ Version.version ^ " -  rev " ^ Version.revision);
+  print_endline ("Version : " ^ Version.version ^ " - rev " ^ Version.revision);
   print_endline "License : LGPLv2";
   print_endline "Author  : Etienne Millon";
   print_endline "Contact : etienne DOT millon AT eads DOT net"
@@ -76,7 +76,7 @@ let fname_suffix str =
 
 let c2newspeak fname =
   let tmpnam = "/tmp/solver_a.npk" in
-  let ret = Sys.command ("c2newspeak -o " ^ tmpnam ^ " " ^ fname) in
+  let ret = Sys.command ("c2newspeak --accept-signed-index -o " ^ tmpnam ^ " " ^ fname) in
   if ret <> 0 then failwith "c2newspeak error"
   else
     tmpnam
