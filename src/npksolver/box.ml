@@ -91,9 +91,9 @@ open Utils.Lift
 module S = VMap
 
 type 'a box =
-  { store     : 'a S.t
-  ; esp       : int
-  ; size      : (Prog.addr, int) Pmap.t
+  { store : 'a S.t
+  ; esp   : int
+  ; typ   : (Prog.addr, Prog.typ) Pmap.t
   }
 
 type 'a t = 'a box option
@@ -104,10 +104,17 @@ let equal a b = match (a, b) with
                       && S.equal a.store b.store
   | _ -> false
 
+(*
+ * Initial value for typ.
+ * The initial value, at Stack 0 is the return value of "main".
+ *)
+let initial_typ =
+  Pmap.add (Prog.Stack 0) Prog.Int Pmap.empty
+
 let top dom =
-  Some { store     = S.empty dom
-       ; esp       = 0
-       ; size      = Pmap.add (Prog.Stack 0) 32 Pmap.empty
+  Some { store = S.empty dom
+       ; esp   = 0
+       ; typ   = initial_typ
        }
 
 let bottom = None
@@ -120,7 +127,7 @@ let join xo yo =
         S.merge (S.dom x.store).join x.store y.store >>= fun s ->
         return
           { x with store = s
-          ;        size  = Pmap.merge x.size y.size
+          ;        typ   = Pmap.merge x.typ y.typ
           }
 
 let meet xo yo =
@@ -128,7 +135,7 @@ let meet xo yo =
   yo >>= fun y ->
   S.merge ((S.dom x.store).meet) x.store y.store >>= fun s ->
   return { x with store = s
-         ;        size  = Pmap.merge x.size y.size
+         ;         typ  = Pmap.merge x.typ y.typ
          }
 
 let widen xo yo =
@@ -136,7 +143,7 @@ let widen xo yo =
   yo >>= fun y ->
   S.merge ((S.dom x.store).widen) x.store y.store >>= fun s ->
   return { x with store = s
-         ;        size  = Pmap.merge x.size y.size
+         ;        typ   = Pmap.merge x.typ y.typ
          }
 
 
@@ -156,22 +163,25 @@ let addr_of_ck ?check xo l =
 
 let addr_of xo l = addr_of_ck xo l
 
-let get_size x addr = match x with
-  | None -> invalid_arg "get_size : bottom"
+let typeof x addr = match x with
+  | None -> invalid_arg "typeof : bottom"
   | Some x ->
       try
-        Pmap.find addr x.size
+        Pmap.find addr x.typ
       with Not_found ->
         invalid_arg ( "get_size : cannot find variable '"
                     ^ Pcomp.Print.addr addr
                     ^ "'" )
 
-let singleton dom v ~size r =
+let get_size x addr =
+  let ty = typeof x addr in
+  Pcomp.size_of_typ ty
+
+let singleton dom v ~typ r =
   let addr = addr_convert 0 v in
-  Some { store     = S.singleton dom addr r
-       ; esp       = 0
-       ; size      = Pmap.add addr size
-                    (Pmap.add (Prog.Stack 0) 32 Pmap.empty)
+  Some { store = S.singleton dom addr r
+       ; esp   = 0
+       ; typ   = Pmap.add addr typ initial_typ
        }
 
 let guard var f xo =
@@ -213,10 +223,10 @@ let set_var v r bx =
            x.store >>= fun s ->
   return { x with store = s }
 
-let push ~size =
+let push ~typ =
   bind (fun x ->
       return { x with esp = succ x.esp
-             ; size = Pmap.add (Prog.Stack (succ x.esp)) size x.size
+             ; typ = Pmap.add (Prog.Stack (succ x.esp)) typ x.typ
              }
   )
 

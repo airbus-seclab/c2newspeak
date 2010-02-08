@@ -46,9 +46,9 @@ val top : 'a Domain.c_dom -> 'a t
 val bottom : 'a t
 
 (**
- * A box with a single variable with the specified size and abstract value.
+ * A box with a single variable with the specified type and abstract value.
  *)
-val singleton : 'a Domain.c_dom -> Prog.lval -> size:int -> 'a -> 'a t
+val singleton : 'a Domain.c_dom -> Prog.lval -> typ:Prog.typ -> 'a -> 'a t
 
 (**
  * Variable-wise abstract join operation.
@@ -88,6 +88,11 @@ val environment : 'a t -> (Prog.lval -> 'a)
 val get_size : 'a t -> Prog.addr -> int
 
 (**
+ * Returns the type of a variable.
+ *)
+val typeof : 'a t -> Prog.addr -> Prog.typ
+
+(**
  * Maps lvalues to abstract addresses.
  * Global variables are 'naturally' associated to Heap addresses,
  * and local variables are mapped onto Stack addresses by the mean of a
@@ -99,11 +104,10 @@ val addr_of : 'a t -> Prog.lval -> Prog.addr
 
 (**
  * Increment the stack pointer.
- * "Pushes" the stack pointer to allocate space for a new variable of size
- * 'size'.  Note that the stack pointer is not related the size of the new
- * variable : local variable numbering is only lexical.
+ * "Pushes" the stack pointer to allocate space for a new variable of type
+ * 'typ'.
  *)
-val push : size:int -> 'a t -> 'a t
+val push : typ:Prog.typ -> 'a t -> 'a t
 
 (**
  * Decrement the stack pointer.

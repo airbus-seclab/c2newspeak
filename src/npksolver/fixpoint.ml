@@ -24,16 +24,16 @@ open Domain
 let rec eval_stmt cs dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
-          Pmap.foldi (fun v size r ->
+          Pmap.foldi (fun v typ r ->
               Box.meet (Box.singleton
-                           dom ~size
+                           dom ~typ
                            (Prog.G v)
                            (const dom 0)
                        )
                        r
             ) vs x
-  | Cfg.Pop       -> Box.pop  x
-  | Cfg.Push size -> Box.push x ~size
+  | Cfg.Pop      -> Box.pop  x
+  | Cfg.Push typ -> Box.push x ~typ
   | Cfg.Guard e ->
             let env = Box.environment x in
             List.fold_left (fun x (v, f) ->

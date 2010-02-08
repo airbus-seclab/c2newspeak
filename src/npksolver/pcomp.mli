@@ -41,4 +41,5 @@ module Print : sig
   val lval  : Prog.lval     -> string
   val exp   : Prog.exp      -> string
   val addr  : Prog.addr     -> string
+  val typ   : Prog.typ      -> string
 end

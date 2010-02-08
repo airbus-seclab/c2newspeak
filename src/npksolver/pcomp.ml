@@ -49,10 +49,13 @@ let pcomp_binop loc binop =
   | PlusPI  -> Prog.PlusPtr loc
   | _ -> fail loc "Invalid binary operation"
 
-let pcomp_type = function
-  | Scalar _ -> Prog.Int
-  | Array (_, sz) -> Prog.Array(sz)
-  | Region _ -> invalid_arg "pcomp_type : region"
+let rec pcomp_type = function
+  | Scalar (Int _ik) -> Prog.Int
+  | Scalar Ptr -> Prog.Ptr
+  | Array (ty, sz) -> Prog.Array(pcomp_type ty, sz)
+  | Region _           -> invalid_arg "pcomp_type : region"
+  | Scalar (Float _sz) -> invalid_arg "pcomp_type : float"
+  | Scalar FunPtr      -> invalid_arg "pcomp_type : fptr"
 
 let rec pcomp_exp loc = function
   | Const (CInt c) -> Prog.Const (Prog.CInt (Newspeak.Nat.to_int c))
@@ -122,10 +125,10 @@ let rec pcomp_stmt (sk, loc) =
        (Prog.Eq, Prog.Lval (v',
        pcomp_type (Scalar t)),
        Prog.Const (Prog.CInt c')))],[]
-  | Decl (_s, t, blk) ->
+  | Decl (_v, t, blk) ->
       let (s, a) = pcomp_blk blk in
-      let sz = Newspeak.size_of 32 t in
-      [Prog.Decl (s, sz)], a
+      let t' = pcomp_type t in
+      [Prog.Decl (s, t')], a
   | Call (FunId f) -> [Prog.Call f],[]
   | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
   in
@@ -139,12 +142,11 @@ let compile npk =
   let globals =
   Hashtbl.fold (fun s (ty, loc) l ->
     check_type loc ty;
-    (s, Newspeak.size_of 32 ty)::l
+    (s, pcomp_type ty)::l
   ) npk.globals []
   in
-  let sizes = List.fold_left (fun m (n, s) -> Pmap.add n s m) (Pmap.create String.compare) globals in
+  let typ = List.fold_left (fun m (n, t) -> Pmap.add n t m) (Pmap.create String.compare) globals in
   let (blk_init, ann_init) = pcomp_blk npk.init in
-
   let (func, anns) =
     Hashtbl.fold
       (fun fname (_,b) (map, anns) ->
@@ -157,13 +159,15 @@ let compile npk =
       ) npk.fundecs (Pmap.create String.compare, ann_init)
   in
   { Prog.func = func
-  ; anns = anns
-  ; sizes = sizes
+  ;      anns = anns
+  ;      typ  = typ
   }
 
-let size_of_typ = function
+let rec size_of_typ =
+  function
   | Prog.Int     -> 32
-  | Prog.Array n -> 32 * n
+  | Prog.Ptr     -> 32
+  | Prog.Array (ty, n) -> n * size_of_typ ty
 
 module Print = struct
   open Prog
@@ -203,5 +207,11 @@ module Print = struct
   let addr = function
     | Stack x -> "L"^string_of_int x
     | Heap  x -> x
+
+  let rec typ = function
+    | Int -> "Int"
+    | Ptr -> "Ptr"
+    | Array (ty, n) -> typ ty ^ "[" ^ string_of_int n ^ "]"
+
 
 end

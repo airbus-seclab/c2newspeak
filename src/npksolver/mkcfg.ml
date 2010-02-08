@@ -158,17 +158,17 @@ and process_blk ?join blk al l0 =
       ; join = join
       }
 
-let process_fun sizes fname blk =
+let process_fun typs fname blk =
   let c = process_blk blk [] (Lbl (fname, 0)) in
   if fname = "main" then
     let lbl' = lbl_next c.lbl in
-    let edges = (lbl' >--<(Cfg.Init sizes, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
+    let edges = (lbl' >--<(Cfg.Init typs, Newspeak.unknown_loc)>--> c.lbl)::c.edges in
     (snd (lbl_build lbl'), edges)
   else
     (snd (lbl_build c.lbl), c.edges)
 
 let process prg =
-  let funcs = Pmap.mapi (process_fun prg.sizes) prg.func in
+  let funcs = Pmap.mapi (process_fun prg.typ) prg.func in
   let entries = Pmap.map fst funcs in
   Pmap.map (fun (ent, e) -> (ent, reduce_edges entries e)) funcs
 
@@ -234,7 +234,7 @@ let to_string prg =
     | Cfg.Nop -> "Nop"
     | Cfg.Set (l, e, _loc) -> "S " ^ Pcomp.Print.lval l ^ " <- " ^ Pcomp.Print.exp e
     | Cfg.Guard e -> "G " ^ Pcomp.Print.exp e
-    | Cfg.Push s -> "Push " ^ string_of_int s
+    | Cfg.Push ty -> "Push " ^ Pcomp.Print.typ ty
     | Cfg.Pop -> "Pop"
     | Cfg.Init _ -> "Init (...)"
     | Cfg.Assert_true e -> "Assert " ^ Pcomp.Print.exp e

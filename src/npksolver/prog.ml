@@ -20,9 +20,9 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 type t =
-  { func  : (string, blk) Pmap.t
-  ; anns  : annotation list
-  ; sizes : (string, int) Pmap.t
+  { func : (string, blk) Pmap.t
+  ; anns : annotation list
+  ; typ  : (string, typ) Pmap.t
   }
 
 and blk = stmt list
@@ -36,7 +36,7 @@ and stmtkind =
   | InfLoop of blk
   | DoWith  of blk * lbl * blk
   | Goto    of lbl
-  | Decl    of blk * int (* size *)
+  | Decl    of blk * typ
   | Assert  of exp
   | Call    of string
 
@@ -51,7 +51,8 @@ and addr =
 
 and typ =
   | Int
-  | Array of int
+  | Ptr
+  | Array of typ * int
 
 and exp =
   | Const  of cst

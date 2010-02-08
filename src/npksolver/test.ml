@@ -277,10 +277,10 @@ let run _ =
   in
 
   let sg var v =
-    singleton ~size:1 dom (Prog.G var) (const Range.dom v)
+    singleton ~typ:(Prog.Int) dom (Prog.G var) (const Range.dom v)
   in
   let intvl var x y =
-    singleton ~size:1 dom (Prog.G var) (Range.from_bounds x y)
+    singleton ~typ:(Prog.Int) dom (Prog.G var) (Range.from_bounds x y)
   in
 
   let i2 = sg "i" 2 in

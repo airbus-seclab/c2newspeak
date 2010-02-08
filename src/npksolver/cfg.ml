@@ -27,9 +27,9 @@ type stmt =
   | Nop
   | Set   of Prog.lval * Prog.exp * Newspeak.location
   | Guard of Prog.exp
-  | Push  of int (* size *)
+  | Push  of Prog.typ
   | Pop
-  | Init of (string, int) Pmap.t (* globals : name, size *)
+  | Init of (string, Prog.typ) Pmap.t (* globals : name, type *)
   | Assert_true of Prog.exp
   | Call of nodeid
 
