@@ -27,7 +27,7 @@
 TARGET=npksolver
 DIRS=newspeak/ npksolver/
 npksolver.FILES= \
-		pmap resultmap \
+		pmap resultmap yaml \
 		options utils alarm prog pcomp \
 		domain const range \
 		pair ptr_offset \

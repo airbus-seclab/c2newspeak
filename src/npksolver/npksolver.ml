@@ -59,7 +59,7 @@ let handle_file_npk fname =
     if (Options.get Options.cfg_only) then
       begin
       output_graphviz cfg;
-      print_endline (Mkcfg.dump_yaml cfg)
+      print_endline (Yaml.render (Mkcfg.dump_yaml cfg))
       end
     else
       graph_results (Fixpoint.solve !domain cfg)

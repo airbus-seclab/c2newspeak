@@ -244,24 +244,17 @@ let to_string xo =
               x.store))
     xo
 
-let yaml_dump xo =
-  maybe "bottom: yes"
-    (fun x ->
+let dump_yaml = function
+  | None -> None
+  | Some x ->
       let dom = S.dom x.store in
-      "value: {" ^
-      (String.concat ", "
-        (Utils.filter_list
+      let values = 
+        Utils.filter_list
           (S.map
             (fun v r ->
               if r = dom.top then None
-              else Some ( Pcomp.Print.addr v
-                        ^ ": \""
-                        ^ dom.to_string r
-                        ^ "\""
-                        )
+              else Some ( Pcomp.Print.addr v, Yaml.String (dom.to_string r))
             ) x.store
           )
-        )
-      )
-      ^ "}"
-    ) xo
+      in
+      Some (Yaml.Dict values)

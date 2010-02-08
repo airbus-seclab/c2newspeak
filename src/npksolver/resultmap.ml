@@ -42,9 +42,6 @@ let array_foldi f a x0 =
 let fold f =
   Hashtbl.fold (fun str -> array_foldi (f str))
 
-let iter f h =
-  fold (fun s i v _ -> f s i v) h ()
-
 let map f h =
   let l =  Hashtbl.fold (fun str a l -> (str, a)::l) h [] in
   let h' = Hashtbl.create 0 in

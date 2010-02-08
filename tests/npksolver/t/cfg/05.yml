@@ -1,7 +1,7 @@
 ---
 lastnode: 2
 edges:
-  - {id: 1, s: [{n: 0, stmt: "i <- i+1"}]}
-  - {id: 2, s: [{n: 1, stmt: "(init)"}]}
+  - {id: "main:1", s: [{n: "main:0", stmt: "i <- i+1"}]}
+  - {id: "main:2", s: [{n: "main:1", stmt: "(init)"}]}
 ...
 

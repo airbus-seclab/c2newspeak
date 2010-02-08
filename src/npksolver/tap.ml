@@ -70,3 +70,11 @@ let assert_equal_string expected actual msg =
   test_condition msg (String.compare expected actual = 0)
       (Some ("Expected : "^expected
             ^" but got : "^actual))
+
+let assert_exn k msg =
+  try
+    begin
+      k ();
+      test_not_ok ("No exception during test : "^msg) None
+    end
+  with _ -> test_ok msg

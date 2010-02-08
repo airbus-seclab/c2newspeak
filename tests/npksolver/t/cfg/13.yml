@@ -1,8 +1,8 @@
 ---
 lastnode: 3
 edges:
-  - {id: 1, s: [{n: 2, stmt: "(nop)"}]}
-  - {id: 2, s: [{n: 1, stmt: "i <- i+1"}]}
-  - {id: 3, s: [{n: 2, stmt: "(init)"}]}
+  - {id: "main:1", s: [{n: "main:2", stmt: "(nop)"}]}
+  - {id: "main:2", s: [{n: "main:1", stmt: "i <- i+1"}]}
+  - {id: "main:3", s: [{n: "main:2", stmt: "(init)"}]}
 ...
 

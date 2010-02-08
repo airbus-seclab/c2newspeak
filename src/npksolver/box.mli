@@ -122,5 +122,6 @@ val to_string : 'a t -> string
 
 (**
  * YAML dumper.
+ * Returns "None" for a bottom value, and a dictionnary of values, otherwise.
  *)
-val yaml_dump : 'a t -> string
+val dump_yaml : 'a t -> Yaml.t option

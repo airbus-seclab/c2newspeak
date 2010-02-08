@@ -19,33 +19,27 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-(** Producer for the Test Anything Protocol. *)
+type t =
+  | String of string
+  | Int    of int
+  | List   of t list
+  | Dict   of (string * t) list
 
-(** Sets the number of tests to run. *)
-val test_plan : int -> unit
+let rec render_data = function
+  | String s -> "\"" ^ String.escaped s ^ "\""
+  | Int n    -> string_of_int n
+  | List ys  -> "[ " ^ (String.concat ", " (List.rev_map render_data ys)) ^ " ]"
+  | Dict kvs ->
+        "{"
+      ^ (String.concat ", "
+           (List.map
+             (fun (k, v) ->
+                k ^ ": " ^ render_data v
+             )
+             kvs
+           )
+        )
+      ^ "}"
 
-(** End testing. *)
-val test_end : unit -> unit
-
-(** Simple 'ok()' function. *)
-val test_ok : string -> unit
-
-(** Assert that two values are equal. *)
-val assert_equal : ?cmp:('a -> 'a -> bool)
-                -> ?printer:('a -> string)
-                -> 'a
-                -> 'a
-                -> string
-              -> unit
-
-(** Assert that two int values are equal. *)
-val assert_equal_int : int -> int -> string -> unit
-
-(** Assert that two string values are equal. *)
-val assert_equal_string : string -> string -> string -> unit
-
-(** Assert that a boolean is true. *)
-val assert_true : bool -> string -> unit
-
-(** Assert that some exception will be raised during a computation. *)
-val assert_exn : (unit -> unit) -> string -> unit
+let render y =
+  "---\n" ^ render_data y ^ "\n...\n"

@@ -1,6 +1,6 @@
 ---
 lastnode: 1
 edges:
-  - {id: 1, s: [{n: 0, stmt: "(init)"}]}
+  - {id: "main:1", s: [{n: "main:0", stmt: "(init)"}]}
 ...
 

@@ -173,30 +173,50 @@ let process prg =
   Pmap.map (fun (ent, e) -> (ent, reduce_edges entries e)) funcs
 
 let dump_yaml prg =
-  let (n, e) = Pmap.find "main" prg in
-    "---\n"
-  ^ "lastnode: "
-  ^ string_of_int n ^ "\n"
-  ^ "edges:"
-  ^ (if Pmap.is_empty e then " []\n" else
-      "\n"
-    ^ (Pmap.foldi
+  let (n, e) =
+    try
+      Pmap.find "main" prg
+    with Not_found -> prerr_endline "No 'main' function was found, exiting."; exit 3
+  in
+  let edges = 
+    (if Pmap.is_empty e then [] else
+      (Pmap.foldi
         (fun (fname, src) es s ->
-          s^"  - {id: "^ fname ^string_of_int src^ ", s: [" ^
-          (String.concat ", "
-            ( List.map
-              ( fun ((fname, dest), stmt, _loc) ->
-                let s' = print_stmt stmt in
-                   "{n: "^ fname ^ string_of_int dest ^ ", "
-                   ^"stmt: \"" ^ s' ^"\"}"
-              ) es
-            )
-          )
-          ^"]}\n"
-        ) e ""
+         let succ = 
+           List.map
+             ( fun ((fdest, dest), stmt, _loc) ->
+               let s' = print_stmt stmt in
+               Yaml.Dict
+                 [ "n"    , Yaml.String (fdest ^ ":" ^ string_of_int dest)
+                 ; "stmt" , Yaml.String s'
+                 ]
+             ) es
+         in
+          (Yaml.Dict
+            [ "id", Yaml.String (fname ^ ":" ^ string_of_int src)
+            ; "s" , Yaml.List succ
+            ]
+          )::s
+        ) e []
       )
     )
-  ^ "...\n"
+  in
+    (*
+  let sort_by_id a b =
+    match (a, b) with
+    | Yaml.Dict la, Yaml.Dict lb ->
+        let key l =
+          try List.assoc "id" l
+          with Not_found -> failwith "sort_by_id"
+        in
+        compare (key la) (key lb)
+    | _ -> failwith "sort_by_id"
+  in
+    *)
+  Yaml.Dict
+    [ "lastnode", Yaml.Int n 
+    ; "edges"   , Yaml.List edges
+    ]
 
 let dump_dot ?results prg =
   let header =

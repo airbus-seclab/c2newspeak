@@ -1,13 +1,13 @@
 ---
 lastnode: 8
 edges:
-  - {id: 1, s: [{n: 6, stmt: "(nop)"}]}
-  - {id: 2, s: [{n: 1, stmt: "i <- i-1"}]}
-  - {id: 3, s: [{n: 2, stmt: "[ i>0 ]"}]}
-  - {id: 4, s: [{n: 0, stmt: "(nop)"}]}
-  - {id: 5, s: [{n: 4, stmt: "[ !i>0 ]"}]}
-  - {id: 6, s: [{n: 5, stmt: "(nop)"}, {n: 3, stmt: "(nop)"}]}
-  - {id: 7, s: [{n: 6, stmt: "i <- 10"}]}
-  - {id: 8, s: [{n: 7, stmt: "(init)"}]}
+  - {id: "main:1", s: [{n: "main:6", stmt: "(nop)"}]}
+  - {id: "main:2", s: [{n: "main:1", stmt: "i <- i-1"}]}
+  - {id: "main:3", s: [{n: "main:2", stmt: "[ i>0 ]"}]}
+  - {id: "main:4", s: [{n: "main:0", stmt: "(nop)"}]}
+  - {id: "main:5", s: [{n: "main:4", stmt: "[ !i>0 ]"}]}
+  - {id: "main:6", s: [{n: "main:3", stmt: "(nop)"}, {n: "main:5", stmt: "(nop)"}]}
+  - {id: "main:7", s: [{n: "main:6", stmt: "i <- 10"}]}
+  - {id: "main:8", s: [{n: "main:7", stmt: "(init)"}]}
 ...
 

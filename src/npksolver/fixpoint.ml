@@ -125,11 +125,23 @@ let solve dom funcs =
   let x0 = Resultmap.make funcs' Box.bottom in
   Resultmap.set x0 main ln (Box.top dom);
   let res = f_horwitz dom funcs x0 in
-  if Options.get Options.solver then begin
-    print_endline "---";
-    Resultmap.iter (fun fn i r ->
-        print_endline ("  - {id: "^ fn^string_of_int i ^
-        ", "^ Box.yaml_dump r^"}")
-    ) res end;
+  if Options.get Options.solver then
+    begin
+      let yaml = Resultmap.fold
+                   (fun f n v rs ->
+                      let value = 
+                      match Box.dump_yaml v with
+                        | None   -> ("bottom", Yaml.String "yes")
+                        | Some d -> ("value" , d)
+                      in
+                      (Yaml.Dict
+                         ["id"   , Yaml.String (f ^ ":" ^ string_of_int n)
+                         ; value
+                         ]
+                      )::rs
+                   ) res []
+      in
+      print_endline (Yaml.render (Yaml.List yaml))
+    end;
   Resultmap.map Box.to_string res
   }

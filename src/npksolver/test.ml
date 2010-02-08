@@ -266,8 +266,7 @@ let run _ =
 
   let get_gvar v x = environment x (Prog.G v) in
   let get_lvar n x = environment x (Prog.L n) in
-  assert_equal (get_gvar "x" bottom) Range.dom.bottom
-                        "Box.bottom has no variables";
+  assert_exn (fun _ -> ignore (get_gvar "x" bottom)) "Box.bottom has no variables";
 
   assert_equal (get_gvar "x" (top dom)) Range.dom.top
                         "Box.top returns top for global variables";
