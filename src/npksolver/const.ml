@@ -24,12 +24,6 @@ type t =
   | Cst of int
   | Bot
 
-let (<=%) a b = match (a, b) with
-  | Bot  , _     -> true
-  | _    , Top   -> true
-  | Cst x, Cst y -> x = y
-  | _            -> false
-
 let join a b = match (a, b) with
   | Bot, _   -> b
   | _  , Bot -> a
@@ -112,7 +106,6 @@ let guard _ _ = function
 let dom =
   { Domain.top       = Top
   ; Domain.bottom    = Bot
-  ; Domain.incl      = (<=%)
   ; Domain.join      = join
   ; Domain.meet      = meet
   ; Domain.widen     = (fun _ _ -> failwith "Const:widen")

@@ -191,7 +191,6 @@ let guard _ _ e =
 let dom =
   { Domain.top         = top
   ; Domain.bottom      = bottom
-  ; Domain.incl        = (<=%)
   ; Domain.join        = join
   ; Domain.meet        = meet
   ; Domain.widen       = widen

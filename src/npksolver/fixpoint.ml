@@ -59,7 +59,10 @@ let rec eval_stmt cs dom loc stmt x = match stmt with
         let lookup = Box.environment x in
         let (r, alrms) = dom.eval lookup (Box.addr_of x) e in
         List.iter Alarm.emit alrms;
-        if (dom.incl (const dom 0) r) then
+        let has_zero x =
+          dom.join x (const dom 0) = x
+        in
+        if (has_zero r) then
           Alarm.emit (loc, (Alarm.Assertion_failed (Pcomp.Print.exp e)), None);
         x
   | Cfg.Call (f, id) ->

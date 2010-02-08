@@ -25,14 +25,6 @@ open Utils.Lift
 
 type ('a, 'b) t = ('a * 'b) option
  
-let incl da db x y =
-  with_default false (
-    x >>= fun (xa, xb) ->
-    y >>= fun (ya, yb) ->
-    return ( da.incl xa ya
-          || db.incl xb yb )
-  )
-
 let join  da db (xa, xb) (ya, yb) = (da.join  xa ya, db.join  xb yb)
 let widen da db (xa, xb) (ya, yb) = (da.widen xa ya, db.widen xb yb)
 
@@ -109,7 +101,6 @@ let make da db =
   ; widen = liftM2 (widen da db)
   ; to_string = to_string da db
   ; eval      = eval      da db
-  ; incl      = incl      da db
   ; meet      = meet      da db
   ; guard     = guard     da db
   ; update    = Some (update    da db)

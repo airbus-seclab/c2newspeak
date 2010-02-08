@@ -31,7 +31,6 @@ type 'a update_check = (Prog.addr -> int) (* size mapping           *)
 type 'a c_dom =
   { top         : 'a
   ; bottom      : 'a
-  ; incl        : 'a -> 'a -> bool
   ; join        : 'a -> 'a -> 'a
   ; meet        : 'a -> 'a -> 'a
   ; widen       : 'a -> 'a -> 'a

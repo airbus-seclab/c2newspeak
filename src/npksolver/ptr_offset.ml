@@ -69,19 +69,6 @@ let meet dom x y =
   ; offset = dom.meet x.offset y.offset
   }
 
-let incl dom x y =
-  match (x.var, y.var) with
-  | Bot, _ -> true
-  | _, Top -> true
-  | _, Bot -> false
-  | Top, _ -> false
-  | Null, Null -> true
-  | PointsTo x', PointsTo y' when x' = y' ->
-      dom.incl x.offset y.offset
-  | PointsTo _, PointsTo _ -> false
-  | PointsTo _ , Null -> false
-  | Null , PointsTo _ -> false
-
 let lift f x =
   { x with offset = f x.offset }
 
@@ -164,7 +151,6 @@ let ptr_update dom size_of loc new_value =
 let make dom =
   { top         = top dom
   ; bottom      = bot dom
-  ; incl        = incl dom
   ; join        = join dom
   ; meet        = meet dom
   ; widen       = (fun _ -> invalid_arg "ptr_offset : widen")
