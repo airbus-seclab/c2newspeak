@@ -398,8 +398,11 @@ let translate fname (globals, fundecls, spec) =
 	match i with
 	    C.Lval _ -> warn_report ()
 	  | C.Const (C.CInt c)  when Nat.compare c Nat.zero < 0 -> warn_report ()
+	  | C.Unop   (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
+	      when Nat.compare c Nat.zero = 0 ->  
+	      check_exp e
 	  | C.Binop  (_, e1, e2) -> check_exp e1; check_exp e2
-	  | C.BlkExp (_, e, _) -> check_exp e 
+	  | C.BlkExp (_, e, _) -> check_exp e    
 	  | _ -> ()
     in
     try

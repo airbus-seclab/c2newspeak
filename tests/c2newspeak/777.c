@@ -26,7 +26,9 @@
   email: olivier.levillain@penjili.org
 */
 
-void main(void) {
-  float x;
-  x = 1.;
+void main() {   
+  int a; 
+  char tab[20];
+
+  tab[-a] = 5;
 }
