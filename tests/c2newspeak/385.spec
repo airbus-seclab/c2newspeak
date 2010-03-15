@@ -1,3 +1,4 @@
+Warning: 385.c:31#2: expression of type signed integer used as an array index ignored
 Newspeak output
 ---------------
 385.c

@@ -75,6 +75,28 @@ let seq_of_string str =
     done;
     !res
 
+
+(* For detecting integers index, accesses and Addrof (accesss)*)
+let warn_report () =
+  Npkcontext.report_ignore_warning "Firstparse.translate_array_access" 
+    "expression of type signed integer used as an array index" Npkcontext.SignedIndex 
+
+let rec check_index_type i t =
+  match t with 
+      Int (N.Signed, _) -> check_exp i
+    | _ -> ()
+and check_exp i =
+  match i with
+      C.Lval _ -> warn_report ()
+    | C.Const (C.CInt c)  when Nat.compare c Nat.zero < 0 -> warn_report ()
+    | C.Unop   (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
+	when Nat.compare c Nat.zero = 0 ->  
+	check_exp e
+    | C.Binop  (_, e1, e2) -> check_exp e1; check_exp e2
+    | C.BlkExp (_, e, _) -> check_exp e    
+    | _ -> ()
+
+
 (*
    Sets scope of variables so that no goto escapes a variable declaration
    block
@@ -386,25 +408,6 @@ let translate fname (globals, fundecls, spec) =
 	  Npkcontext.report_error "Firstpass.translate_lv" "left value expected"
 
   and translate_array_access (lv, t, n) i =
-    let warn_report () =
-      Npkcontext.report_ignore_warning "Firstparse.translate_array_access" 
-	"expression of type signed integer used as an array index" Npkcontext.SignedIndex 
-    in
-    let rec check_index_type i t =
-      match t with 
-	  Int (N.Signed, _) -> check_exp i
-	| _ -> ()
-    and check_exp i =
-	match i with
-	    C.Lval _ -> warn_report ()
-	  | C.Const (C.CInt c)  when Nat.compare c Nat.zero < 0 -> warn_report ()
-	  | C.Unop   (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
-	      when Nat.compare c Nat.zero = 0 ->  
-	      check_exp e
-	  | C.Binop  (_, e1, e2) -> check_exp e1; check_exp e2
-	  | C.BlkExp (_, e, _) -> check_exp e    
-	  | _ -> ()
-    in
     try
       let (i, typ) = i in
 	check_index_type i typ;
@@ -441,8 +444,11 @@ let translate fname (globals, fundecls, spec) =
 	    let base = 
 	      AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ)), t') 
 	    in
+	      (*Cas AddrOf Access, the access is check to detected integers*)  
+	    let access  = translate_exp e in
+	      check_index_type access (snd e);
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
-
+		
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
 	| Unop x -> C.Unop (translate_unop x)

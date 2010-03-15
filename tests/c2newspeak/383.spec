@@ -1,4 +1,5 @@
 Warning: 383.c:33#2: expression of type signed integer used as an array index ignored
+Warning: 383.c:33#2: expression of type signed integer used as an array index ignored
 Newspeak output
 ---------------
 383.c
