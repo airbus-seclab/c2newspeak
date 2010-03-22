@@ -1,5 +1,5 @@
-#
-# C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
+compiles: #
+# C2Newspeak C code into Newspeak. Newspeak is a minimal language 
 # well-suited for static analysis.
 # Copyright (C) 2007  Charles Hymans, Olivier Levillain
 # 
@@ -111,7 +111,7 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	740 741 742 743 744 745 746 747 748 749 \
 	750 751 752 753 754 755 756 757 758 759 \
 	760 761 762 763 764 765 766 767 768 769 \
-	770 771 772 773 774 775 776 777
+	770 771 772 773 774 775 776 777 778
 
 PREREQ=%.c
 CLEANFILES=$(addsuffix .cil.bak, $(TESTS))

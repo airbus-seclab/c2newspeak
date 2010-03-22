@@ -273,7 +273,8 @@ let process fname globals =
 	  let (a, t) = translate_lv a in
 	  let idx = translate_exp idx in begin
 	      match t with
-		  C.Array (t, len) -> (C.Index (a, (t, len), idx), t)
+		  C.Array (t, len) -> 
+		    (C.Index (a, (t, len), idx), t)
 		| C.Ptr elt_t -> 
 		    (C.Deref (C.Binop ((C.Plus, t), (a, t), idx), t), elt_t)
 		| _ -> 

@@ -81,6 +81,34 @@ let warn_report () =
   Npkcontext.report_ignore_warning "Firstparse.translate_array_access" 
     "expression of type signed integer used as an array index" Npkcontext.SignedIndex 
 
+let check_array_type_length typ =
+  let rec length typ =
+    match typ with
+	C.Array (typ', n) -> begin
+	  match n with
+	      None -> raise Exit
+	    | Some n -> Nat.mul (Nat.of_int n) (length typ') 
+	end
+      | C.Void -> raise Exit
+      | C.Scalar s -> 
+	  begin
+	    match s with
+		N.Int (_, sz) -> Nat.of_int sz
+	      | N.Float sz -> Nat.of_int sz
+	      | N.Ptr -> Nat.of_int (Config.size_of_ptr)
+	      | N.FunPtr -> Nat.of_int (Config.size_of_ptr)
+	  end
+      | C.Struct (_, sz) -> Nat.of_int sz
+      | C.Union (_, sz) -> Nat.of_int sz
+      | C.Fun _ -> raise Exit  
+  in
+    try 
+      let sz = length typ in 
+	if Nat.compare sz (Nat.of_int Config.max_array_length) > 0 then
+	  Npkcontext.report_error "Firstpass.translate_typ" 
+	    "invalid size for array"
+    with Exit -> ()
+
 let rec check_index_type i t =
   match t with 
       Int (N.Signed, _) -> check_exp i
@@ -364,7 +392,7 @@ let translate fname (globals, fundecls, spec) =
 	  let o = C.exp_of_int o in
 	    C.Shift (lv, o)
 
-      | Index (e, (t, len), (idx, idx_t)) ->  
+      | Index (e, (t, len), (idx, idx_t)) -> 
 	  (* TODO: think about this is_array, a bit hacky!! *)
 	  let lv = translate_lv e in
 	  let n = translate_array_len len in
@@ -373,7 +401,7 @@ let translate fname (globals, fundecls, spec) =
 
       | Deref (e, t) -> deref (translate_exp (e, t), t)
 
-      | OpExp (op, (lv, t), is_after) ->
+      | OpExp (op, (lv, t), is_after) -> 
 	  let loc = Npkcontext.get_loc () in
 	  let e = Cst (C.CInt (Nat.of_int 1), TypedC.int_typ)  in
 	  let (incr, _) = 
@@ -707,7 +735,7 @@ let translate fname (globals, fundecls, spec) =
       | Int _ | Float _ | Ptr (Fun _) | Ptr _ | Va_arg | Bitfield _ -> 
 	  C.Scalar (translate_scalar_typ t)
       | Fun _ -> C.Fun
-      | Array (t, len) -> 
+      | Array (t, len) ->
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
@@ -781,7 +809,9 @@ let translate fname (globals, fundecls, spec) =
 	  (C.Set (lv, t, e), loc)
       in
       let init = List.map build_set init in
-      let decl = (C.Decl (translate_typ t, x), loc) in
+      let t' = translate_typ t in
+	check_array_type_length t';
+      let decl = (C.Decl (t', x), loc) in
 	decl::init
     end
 
@@ -835,7 +865,7 @@ let translate fname (globals, fundecls, spec) =
 
   and translate_stmt_exp loc (e, t) =
     match e with
-	Set (lv, op, (IfExp (c, e1, e2, t), _)) ->
+	Set (lv, op, (IfExp (c, e1, e2, t), _)) -> 
 	  let e = 
 	    IfExp (c, (Set (lv, op, e1), snd e1), 
 		   (Set (lv, op, e2), snd e2), t) 

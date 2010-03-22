@@ -61,7 +61,6 @@ let is_safe_add (_, u1) (_, u2) =
 
 let is_safe_mul _ _ = false
   
-
 let gt _ _ = (Int32.zero, Int32.one)
 
 let normalize (l, u) =
