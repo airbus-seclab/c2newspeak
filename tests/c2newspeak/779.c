@@ -25,8 +25,14 @@
   Olivier Levillain
   email: olivier.levillain@penjili.org
 */
+void   penjili_display(void);
 
-void main (){
-  unsigned char to[3][64739246];
-  to[2][64739245] = 'b';
-}
+
+ 
+  int *f(a, b)
+    char a ;
+    int  b = 4;
+  {
+    a = b;
+    return 0;
+  }

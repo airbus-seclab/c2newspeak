@@ -231,7 +231,7 @@ let exp_of_float x = Const (CFloat (x, string_of_float x))
 
 (* TODO: this is a temporary hack, remove this function and align_of 
    put in csyntax *)
-let rec size_of_typ t =
+let rec size_of_typ t = 
   match t with
       Scalar t -> Newspeak.size_of_scalar Config.size_of_ptr t
     | Array (t, Some n) -> 

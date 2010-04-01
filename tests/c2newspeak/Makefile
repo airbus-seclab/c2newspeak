@@ -25,7 +25,7 @@ compiles: #
 #
 
 COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c >$*.cil.bak 2>&1; \
-        $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
+        $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c 
 
 DIFF=diff $*.spec $*.bak > result && \
      if [ -e $*.cil.spec ]; then \
@@ -111,7 +111,8 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	740 741 742 743 744 745 746 747 748 749 \
 	750 751 752 753 754 755 756 757 758 759 \
 	760 761 762 763 764 765 766 767 768 769 \
-	770 771 772 773 774 775 776 777 778
+	770 771 772 773 774 775 776 777 778 779 \
+	780 781 \
 
 PREREQ=%.c
 CLEANFILES=$(addsuffix .cil.bak, $(TESTS))

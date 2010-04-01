@@ -124,7 +124,7 @@ and exp =
     | Cast of (typ_exp * typ)
 (* None is a regular assignment *)
     | Set of (typ_exp * (binop * typ) option * typ_exp)
-(* boolean is true if the operation is appled after the evaluation of the 
+(* boolean is true if the operation is applied after the evaluation of the 
    expression *)
     | OpExp of ((binop * typ) * typ_exp * bool)
     | BlkExp of (blk * bool)
@@ -188,7 +188,7 @@ let deref_typ t =
       Ptr t -> t
     | _ -> Npkcontext.report_error "CoreC.deref_typ" "pointer type expected"
 
-let rec equals_typ t1 t2 =
+let rec equals_typ t1 t2 = 
   match (t1, t2) with
     | (Int k1, Int k2)
     | (Bitfield (k1, _), Bitfield (k2, _)) -> k1 = k2

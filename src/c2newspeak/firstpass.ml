@@ -191,7 +191,7 @@ let translate fname (globals, fundecls, spec) =
   let rec cast (e, t1) t2 = 
     match t2 with
 	Comp { contents = Some (f, false) } 
-	  when not (TypedC.equals_typ t1 t2) -> 
+	  when not (TypedC.equals_typ t1 t2) ->
 	  if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
 	  then Npkcontext.report_error "Firstpass.cast" "incompatible type";
 	  (e, t1)
