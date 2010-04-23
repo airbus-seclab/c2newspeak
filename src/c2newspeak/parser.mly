@@ -998,7 +998,8 @@ attribute_name:
 *)
     if $1 <> "__format__" && $1 <> "format" then raise Parsing.Parse_error;
     begin match $3 with
-	"__printf__" | "printf" | "__scanf__" -> ()
+	"__printf__" | "printf" | "__scanf__" | "scanf"
+      | "__strftime__" | "strftime" | "__strfmon__" | "strfmon"-> ()
       | _ -> raise Parsing.Parse_error
     end;
     [] 
