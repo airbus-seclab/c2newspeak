@@ -88,6 +88,7 @@ let _ =
   Hashtbl.add token_tbl "__func__" FUNNAME;
 
   Hashtbl.add token_tbl "__signed__" SIGNED;
+  Hashtbl.add token_tbl "__signed" SIGNED;
 
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
