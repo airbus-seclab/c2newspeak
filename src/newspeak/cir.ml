@@ -479,6 +479,9 @@ let eval_exp e =
       | Shiftlt -> 
 	  let p = Big_int.power_int_positive_big_int 2 v2 in
 	    Big_int.mult_big_int v1 p
+      | Shiftrt -> 
+	  let p = Big_int.power_int_positive_big_int 2 v2 in
+	    Big_int.div_big_int v1 p
       | Eq (Int _) ->
 	  if Big_int.compare_big_int v1 v2 = 0 then Big_int.unit_big_int
 	  else Big_int.zero_big_int
