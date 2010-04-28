@@ -833,6 +833,63 @@ type_specifier:
       "unspecified integer kind";
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
+
+| LONG SIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long signed int' is not normalized: "
+       ^"use 'signed long int' instead");
+    Integer (Newspeak.Signed, Config.size_of_long)
+      }
+
+| LONG SIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long signed' is not normalized: "
+       ^"use 'signed long int' instead");
+    Integer (Newspeak.Signed, Config.size_of_long)
+      }
+
+| LONG UNSIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long unsigned int' is not normalized: "
+       ^"use 'unsigned long int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_long)
+  }
+
+| LONG UNSIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long unsigned' is not normalized: "
+       ^"use 'unsigned long int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_long)
+  }
+
+| SHORT SIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short signed int' is not normalized: "
+       ^"use 'signed short int' instead");
+    Integer (Newspeak.Signed, Config.size_of_short)
+      }
+
+| SHORT SIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short signed' is not normalized: "
+       ^"use 'signed short int' instead");
+    Integer (Newspeak.Signed, Config.size_of_short)
+      }
+
+| SHORT UNSIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short unsigned int' is not normalized: "
+       ^"use 'unsigned short int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_short)
+  }
+
+| SHORT UNSIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short unsigned' is not normalized: "
+       ^"use 'unsigned short int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_short)
+  }
+
 | ftyp                                   { Float $1 }
 | STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
 | STRUCT ident_or_tname                  { Struct ($2, None) }
@@ -845,18 +902,7 @@ type_specifier:
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some $4) }
-| SHORT UNSIGNED INT                     { 
-    Npkcontext.report_strict_warning "Parser.type_specifier" 
-      ("'short unsigned int' is not normalized: "
-	^"use 'usigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short) 
-  }
-| LONG UNSIGNED INT                     { 
-    Npkcontext.report_strict_warning "Parser.type_specifier" 
-      ("'long unsigned int' is not normalized: "
-	^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long) 
-  }
+
 | TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
 | VA_LIST                                { Va_arg }
 ;;
