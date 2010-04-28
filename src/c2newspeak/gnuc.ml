@@ -90,6 +90,9 @@ let _ =
   Hashtbl.add token_tbl "__signed__" SIGNED;
   Hashtbl.add token_tbl "__signed" SIGNED;
 
+  Hashtbl.add token_tbl "__volatile__" VOLATILE;
+  Hashtbl.add token_tbl "__volatile" VOLATILE;
+
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 
