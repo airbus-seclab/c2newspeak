@@ -100,7 +100,7 @@ let check_array_type_length typ =
 	  end
       | C.Struct (_, sz) -> Nat.of_int sz
       | C.Union (_, sz) -> Nat.of_int sz
-      | C.Fun _ -> raise Exit  
+      | C.Fun -> raise Exit
   in
     try 
       let sz = length typ in 
