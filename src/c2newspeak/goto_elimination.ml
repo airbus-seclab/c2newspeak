@@ -380,30 +380,33 @@ in
 	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], stmts
+	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], [], stmts
 	    | Block blk -> begin
 		try
-		  let e, blk', after = b_delete_goto blk in
+		  let e, before, blk', after = b_delete_goto blk in
 		  let decls, blk' = extract_decls blk' in
 		  let blk' = blk' @ after in
-		    if blk' = [] then e, decls, stmts
+		    if blk' = [] then e, before, decls, stmts
 		    else
-		      e, decls @ [Block blk', l], stmts
+		      e, before, decls @ [Block blk', l], stmts
 		with
 		    Not_found -> 
-		      let e, blk, after = b_delete_goto stmts in
-			e, (stmt, l)::blk, after
+		      let e, before, blk, after = b_delete_goto stmts in
+			e, before, (stmt, l)::blk, after
 	      end
+	    | LocalDecl _ ->
+		let e, before, blk, after = b_delete_goto stmts in
+		  e, (stmt, l)::before, blk, after 
 	    | _ ->
-		let e, blk, after = b_delete_goto stmts in
-		  e, (stmt, l)::blk, after
+		let e, before, blk, after = b_delete_goto stmts in
+		  e, before, (stmt, l)::blk, after
   in
   let backward_wrap stmt l stmts =
     try
-      let e, blk', after = b_delete_goto ((stmt,l)::stmts) in
+      let e, before, blk', after = b_delete_goto ((stmt,l)::stmts) in
       let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
       let blk', after' = avoid_break_continue_capture blk' l l' g_offset vdecls in
-	(DoWhile (blk', e), l)::(after'@after)
+	before@((DoWhile (blk', e), l)::(after'@after))
     with
 	(* goto may have disappeared because of optimizations *)
 	Not_found -> (stmt, l)::stmts
@@ -1192,7 +1195,7 @@ let run prog =
     (* goto elimination *)
     let stmts = ref stmts in
     let move lbl g = 
-      stmts := elimination !stmts lbl g vars;
+      stmts := elimination !stmts lbl g vars
     in
       Hashtbl.iter move lbls;
       deleting_goto_ids !stmts
