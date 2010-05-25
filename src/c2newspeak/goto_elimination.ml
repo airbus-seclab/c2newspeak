@@ -386,9 +386,9 @@ in
 		  let e, before, blk', after = b_delete_goto blk in
 		  let decls, blk' = extract_decls blk' in
 		  let blk' = blk' @ after in
-		    if blk' = [] then e, before, decls, stmts
+		    if blk' = [] then e, before@decls, [], stmts
 		    else
-		      e, before, decls @ [Block blk', l], stmts
+		      e, before@decls, [Block blk', l], stmts
 		with
 		    Not_found -> 
 		      let e, before, blk, after = b_delete_goto stmts in
@@ -906,6 +906,21 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    
   in
   let lifting stmts =
+    let rec out_of_block stmts =
+      (* delete the block where goto is (if it is the case) *)
+      match stmts with
+	  [] -> [], []
+	| (Block blk, l)::stmts -> 
+	    if has_goto blk lbl g_offset then
+	      let decls, blk' = extract_decls blk in
+	      decls, blk'@stmts
+	    else
+	      let decls, stmts' = out_of_block stmts in 
+	      decls, (Block blk, l)::stmts'
+	| (stmt, l)::stmts ->
+	    let decls, stmts' = out_of_block stmts in 
+	    decls, (stmt, l)::stmts'
+    in
     let rec lift stmts =
       match stmts with
 	  [] -> [], false
@@ -913,9 +928,9 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 	    match stmt with
 		Block blk ->
 		  let blk', b = lift blk in 
-		 if b then (Block blk', l)::stmts, true
-		 else 
-		   let stmts', b = lift stmts in (stmt, l)::stmts', b
+		    if b then (Block blk', l)::stmts, true
+		    else 
+		      let stmts', b = lift stmts in (stmt, l)::stmts', b
 	      | _ -> 
 		  if search_lbl [stmt, l] lbl then
 		    let blk, after, e = split_goto stmts in
@@ -937,7 +952,8 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    let stmts', b = lift stmts in
 		    (stmt, l)::stmts', b
     in
-      fst (lift stmts)
+    let decl, stmts' = out_of_block stmts in
+      decl @ fst (lift stmts') 
   in
   let rec lifting_and_inward stmts = 
     if has_goto stmts lbl g_offset then
