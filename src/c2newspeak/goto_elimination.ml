@@ -921,6 +921,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 	    let decls, stmts' = out_of_block stmts in 
 	    decls, (stmt, l)::stmts'
     in
+    let decl, out_stmts = out_of_block stmts in
     let rec lift stmts =
       match stmts with
 	  [] -> [], false
@@ -947,13 +948,12 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    let blk' = inward lbl g_offset g_loc blk' in	   
 		      (* do-while loop *)
 		    let blk' = [DoWhile(blk', lbl'), l_set] in
-		      blk' @ after @ after', true
+		      decl @ blk' @ after @ after', true
 		  else 
 		    let stmts', b = lift stmts in
 		    (stmt, l)::stmts', b
     in
-    let decl, stmts' = out_of_block stmts in
-      decl @ fst (lift stmts') 
+      fst (lift out_stmts) 
   in
   let rec lifting_and_inward stmts = 
     if has_goto stmts lbl g_offset then
