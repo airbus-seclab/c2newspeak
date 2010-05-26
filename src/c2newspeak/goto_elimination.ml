@@ -898,47 +898,40 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		with
 		    Not_found -> 
 		      let blk, after, e = split_goto stmts in
-		  (stmt, l)::blk, after, e
+			(stmt, l)::blk, after, e
 	      end
 	    | _ ->
 		let blk, after, e = split_goto stmts in
 		  (stmt, l)::blk, after, e
 		    
   in
-  let lifting stmts =
-    let rec lift stmts =
-  match stmts with
-      [] -> [], false
-    | (stmt, l)::stmts ->
-	match stmt with
-	    Block blk -> 
-	      let blk', b = lift blk in 
-		if b then (Block blk', l)::stmts, true
-		else 
-		  let stmts', b = lift stmts in (stmt, l)::stmts', b
-	  | _ -> 
-	      if search_lbl [stmt, l] lbl then begin
-		let blk, after, e = split_goto stmts in
-		let g_lbl = goto_lbl lbl g_offset in
-		let lbl' = Var (fresh_lbl lbl) in
-		let if' = If(lbl', [Goto g_lbl, g_loc], []) in
-		let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
-		let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), l_set] in
-		let blk', after' = avoid_break_continue_capture blk l l_set g_offset vdecls in
-		let blk' = [(if', l) ; (stmt, l)] @ blk' @ set in
-		  (* inward transformations on the blk chunk. We know that the
-		     first stmt is the goto stmt and the second one contains
-		     the label stmt *)
-		    let blk' = inward lbl g_offset g_loc blk' in	   
-		      (* do-while loop *)
-		    let blk' = [DoWhile(blk', lbl'), l_set] in
-		      blk' @ after @ after', true
-	      end
-		  else 
-		    let stmts', b = lift stmts in
-		    (stmt, l)::stmts', b
-    in
-  fst (lift stmts)
+  let rec lifting stmts =
+    match stmts with
+	[] -> []
+      | (stmt, l)::stmts -> 
+	  match stmt with
+	      Block blk when search_lbl [stmt, l] lbl && has_goto [stmt, l] lbl g_offset ->
+		    (Block (lifting blk), l)::stmts
+	    | _ ->
+		if search_lbl [stmt, l] lbl then 
+		  let blk, after, e = split_goto stmts in
+		  let g_lbl = goto_lbl lbl g_offset in
+		  let lbl' = Var (fresh_lbl lbl) in
+		  let if' = If(lbl', [Goto g_lbl, g_loc], []) in
+		  let l_set = try snd (List.hd (List.rev blk)) with Failure "hd" -> l in
+		  let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), l_set] in
+		  let blk', after' = avoid_break_continue_capture blk l l_set g_offset vdecls in
+		  let blk' = [(if', l) ; (stmt, l)] @ blk' @ set in
+		    (* inward transformations on the blk chunk. We know that the
+		       first stmt is the goto stmt and the second one contains
+		       the label stmt *)
+		  let blk' = inward lbl g_offset g_loc blk' in	   
+		    (* do-while loop *)
+		  let blk' = [DoWhile(blk', lbl'), l_set] in
+		    blk' @ after @ after'
+ 		else 
+		  let stmts' = lifting stmts in
+		    (stmt, l)::stmts'
   in
   let rec lifting_and_inward stmts = 
     if has_goto stmts lbl g_offset then
@@ -991,7 +984,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		  let blk', b' = lifting_and_inward blk in
 		  let stmts', b' = if b' then stmts, b' else lifting_and_inward stmts in
 		    (DoWhile(blk', e), l)::stmts', b'
-
+		      
 	      | Block blk ->
 		  let blk', b = lifting_and_inward blk in
 		  let stmt' = Block blk' in
@@ -999,7 +992,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    else
 		      let stmts', b' = lifting_and_inward stmts in
 			(stmt', l)::stmts', b'
-
+			  
 	      | _ -> let stmts', b = lifting_and_inward stmts in (stmt, l)::stmts', b
   in
     fst (lifting_and_inward stmts)
