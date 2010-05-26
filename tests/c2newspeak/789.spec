@@ -10,20 +10,20 @@ void main(void) {
     uint32 goto.lbl2;
     (789.c:2#2)^0- =(uint32) 0;
     (789.c:12#2)^do {
-      (789.c:6#4)^while (1) {
+      (789.c:5#2)^while (1) {
         (789.c:2#9)^choose {
          -->
           (789.c:2#9)^guard(! (1-_uint32 ==_uint32 0));
          -->
           (789.c:2#9)^guard((1-_uint32 ==_uint32 0));
         }
-        (789.c:6#4)^1- =(uint32) 1;
-        (789.c:6#4)^choose {
+        (789.c:5#2)^1- =(uint32) 1;
+        (789.c:5#2)^choose {
          -->
-          (789.c:6#4)^guard(1-_int32);
+          (789.c:5#2)^guard(1-_int32);
          -->
-          (789.c:6#4)^guard(! 1-_int32);
-          (789.c:6#4)^goto lbl1;
+          (789.c:5#2)^guard(! 1-_int32);
+          (789.c:5#2)^goto lbl1;
         }
       }
     } with lbl1: {

@@ -906,24 +906,25 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    
   in
   let lifting stmts =
-    let rec out_of_block stmts =
-      (* delete the block where goto is (if it is the case) *)
-      match stmts with
-	  [] -> [], []
-	| (Block blk, l)::stmts -> 
-	    if has_goto blk lbl g_offset then
-	      let decls, blk' = extract_decls blk in
-	      decls, blk'@stmts
-	    else
-	      let decls, stmts' = out_of_block stmts in 
-	      decls, (Block blk, l)::stmts'
-	| (stmt, l)::stmts ->
-	    let decls, stmts' = out_of_block stmts in 
-	    decls, (stmt, l)::stmts'
-    in
-      (* retrieving variable declarations local to the block
-	 containing the goto stmt *)
-    let decl, out_stmts = out_of_block stmts in
+    (* let rec out_of_block stmts = *)
+(*       (\* delete the block where goto is (if it is the case) *\) *)
+(*       match stmts with *)
+(* 	  [] -> [], [] *)
+(* 	| (Block blk, l)::stmts ->  *)
+(* 	    if has_goto blk lbl g_offset then *)
+(* 	      let decls, blk' = extract_decls blk in *)
+(* 	      decls, blk'@stmts *)
+(* 	    else *)
+(* 	      let decls, stmts' = out_of_block stmts in  *)
+(* 	      decls, (Block blk, l)::stmts' *)
+(* 	| (stmt, l)::stmts -> *)
+(* 	    let decls, stmts' = out_of_block stmts in  *)
+(* 	    decls, (stmt, l)::stmts' *)
+(*     in *)
+(*       (\* retrieving variable declarations local to the block *)
+(* 	 containing the goto stmt *\) *)
+(*     let decl, out_stmts = out_of_block stmts in *)
+
 let rec lift stmts =
   match stmts with
       [] -> [], false
@@ -950,13 +951,13 @@ let rec lift stmts =
 		    let blk' = inward lbl g_offset g_loc blk' in	   
 		      (* do-while loop *)
 		    let blk' = [DoWhile(blk', lbl'), l_set] in
-		      decl @ blk' @ after @ after', true
+		      blk' @ after @ after', true
 	      end
 		  else 
 		    let stmts', b = lift stmts in
 		    (stmt, l)::stmts', b
     in
-  fst (lift out_stmts)
+  fst (lift stmts)
   in
   let rec lifting_and_inward stmts = 
     if has_goto stmts lbl g_offset then
@@ -1046,9 +1047,10 @@ let elimination stmts lbl (gotos, lo) vdecls =
 	    stmts := sibling_elimination !stmts lbl id vdecls
 	end
       end
-      else
+      else 
 	(* goto and label are sibling; eliminate goto and label *) 
 	stmts := sibling_elimination !stmts lbl id vdecls
+
   in
     List.iter move gotos;
     !stmts
@@ -1208,6 +1210,47 @@ let rec deleting_goto_ids stmts =
 
 	  | _ -> (stmt, l)::(deleting_goto_ids stmts)
 
+let promoting_block_variables stmts =
+  let rec promote stmts =
+    match stmts with
+	[] -> [], []
+      | (stmt, l)::stmts' ->
+	  let decl, stmts' = promote stmts' in
+	  match stmt with
+	      LocalDecl _ -> (stmt, l)::decl, stmts'
+
+	    | Block blk -> 
+		let bdecl, blk' = promote blk
+		in bdecl @ decl, (Block blk', l)::stmts'
+
+	    | DoWhile(blk, e) ->
+		let ddecl, blk' = promote blk in
+		  ddecl @ decl, (DoWhile(blk', e), l)::stmts'
+
+	    | For(blk1, e, blk2, blk3) ->
+		let decl1, blk1' = promote blk1 in
+		let decl2, blk2' = promote blk2 in
+		let decl3, blk3' = promote blk3 in
+		  decl1@decl2@decl3@decl, (For(blk1', e, blk2', blk3'), l)::stmts'
+
+	    | If(e, iblk, eblk) -> 
+		let idecl, iblk' = promote iblk in
+		let edecl, eblk' = promote eblk in
+		  idecl@edecl@decl, (If(e, iblk', eblk'), l)::stmts'
+
+	    | CSwitch(e, cases, default) ->
+		let cdecl, cases' = List.fold_right (fun (e, blk, l) (decl, cases) -> 
+					 let decl', blk' = promote blk in
+					   decl'@decl, (e, blk', l)::cases) cases ([], [])
+		in
+		let ddecl, default' = promote default in
+		  cdecl@ddecl@decl, (CSwitch(e, cases', default'), l)::stmts'
+
+	    | _ -> decl, (stmt, l)::stmts'
+
+  in
+  let decl, stmts' = promote stmts in decl @ stmts'
+
 let run prog =
   let elimination lbls stmts vars =
     (* goto elimination *)
@@ -1231,8 +1274,10 @@ let run prog =
 	(* processing goto elimination *)
 	let vars = ref [] in
 	let stmts' = vdecls'@stmts' in
-	  (* replacing vars with the same name *)
+	  (* replacing vars with the same name and making them to be
+	  at function scope *)
 	let stmts' = renaming_block_variables stmts' in
+	let stmts' = promoting_block_variables stmts' in
 	let stmts' = elimination lbls stmts' vars in
 	let _, l = List.hd vdecls' in
 	let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
