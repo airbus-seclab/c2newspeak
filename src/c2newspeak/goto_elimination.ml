@@ -906,26 +906,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 		    
   in
   let lifting stmts =
-    (* let rec out_of_block stmts = *)
-(*       (\* delete the block where goto is (if it is the case) *\) *)
-(*       match stmts with *)
-(* 	  [] -> [], [] *)
-(* 	| (Block blk, l)::stmts ->  *)
-(* 	    if has_goto blk lbl g_offset then *)
-(* 	      let decls, blk' = extract_decls blk in *)
-(* 	      decls, blk'@stmts *)
-(* 	    else *)
-(* 	      let decls, stmts' = out_of_block stmts in  *)
-(* 	      decls, (Block blk, l)::stmts' *)
-(* 	| (stmt, l)::stmts -> *)
-(* 	    let decls, stmts' = out_of_block stmts in  *)
-(* 	    decls, (stmt, l)::stmts' *)
-(*     in *)
-(*       (\* retrieving variable declarations local to the block *)
-(* 	 containing the goto stmt *\) *)
-(*     let decl, out_stmts = out_of_block stmts in *)
-
-let rec lift stmts =
+    let rec lift stmts =
   match stmts with
       [] -> [], false
     | (stmt, l)::stmts ->
