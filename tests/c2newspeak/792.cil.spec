@@ -1,1 +1,1 @@
-Fatal error: 792.c:11#78: unexpected label
+Fatal error: 792.c:8#63: unexpected label
