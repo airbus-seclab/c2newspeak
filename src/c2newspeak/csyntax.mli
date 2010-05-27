@@ -80,9 +80,6 @@ and stmtkind =
   | If of (exp * blk * blk)
       (* third parameter is the default case *)
   | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
-(* TODO: why can't For and DoWhile be merged??? because of goto_elimination??
-   try anyway!!
-*)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
   | Exp of exp
