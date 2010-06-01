@@ -246,7 +246,9 @@ let rec size_of_typ t =
     | Array _ -> 
 	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of array"
     | Void -> 
-	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of void"
+	if not !Npkcontext.accept_gnuc then
+	  Npkcontext.report_accept_warning "Csyntax.size_of_typ" "unknown size of void" Npkcontext.GnuC;
+	Config.size_of_void
 
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)

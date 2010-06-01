@@ -35,3 +35,6 @@ val size_of_ptr: int
 val size_of_float: int
 val size_of_double: int
 val size_of_longdouble: int
+
+(* only defined in gnuc mode *)
+val size_of_void: int
