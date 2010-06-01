@@ -1031,7 +1031,7 @@ attribute_name:
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
     match ($1, $3) with
-	(("__format_arg__" | "aligned" | "__regparm__"), _::[]) -> []
+	(("__format_arg__" | "aligned" | "__regparm__" | "regparm"), _::[]) -> []
       | (("packed" | "__packed__"), _::[]) -> 
 	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
 	    "packed attribute" Npkcontext.Pack;
