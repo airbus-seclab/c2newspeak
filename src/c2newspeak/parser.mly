@@ -443,8 +443,7 @@ asm_statement_list:
 
 asm_statement:
   string_literal                           { $1 }
-| string_literal LPAREN IDENTIFIER RPAREN  { $1 }
-| string_literal LPAREN INTEGER RPAREN     { $1 }
+| string_literal LPAREN expression RPAREN  { $1 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
