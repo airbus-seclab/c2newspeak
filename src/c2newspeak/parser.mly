@@ -588,8 +588,8 @@ expression:
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
     let vdecl = VDecl (t, false, false, Some (Sequence $4)) in
-    let decl = (LocalDecl ("tmp", vdecl), loc) in
-    let e = (Exp (Var "tmp"), loc) in
+    let decl = (LocalDecl (".tmp", vdecl), loc) in
+    let e = (Exp (Var ".tmp"), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
       BlkExp (blk@decl::e::[])
@@ -623,6 +623,17 @@ expression:
 	  "conditional expression";
 	IfExp (normalize_bexp $1, $3, $5)
   }
+
+| expression QMARK COLON expression           %prec QMARK {
+    let e = normalize_bexp $1 in
+    let loc = get_loc () in
+    let t = Csyntax.Typeof e in
+    let vdecl = VDecl (t, false, false, Some (Data e)) in
+    let decl = (LocalDecl (".tmp", vdecl), loc) in
+    let e' = Var ".tmp" in
+      BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
+  }
+
 | expression assignment_operator
                    expression     %prec EQ { Set ($1, $2, $3) }
 ;;
