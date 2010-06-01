@@ -30,8 +30,6 @@
 *)
 module Nat = Newspeak.Nat
 
-(* TODO: have hashtables rather?? *)
-(* TODO: the set of globals should be a hashtbl rather!!!! *)
 type t = (string * glbinfo) list * (string * funinfo) list * assertion list
 
 and glbinfo = (decl * Newspeak.location)
@@ -88,7 +86,7 @@ and stmtkind =
   | CSwitch of (typ_exp * (exp * blk * Newspeak.location) list * blk)
       (* init, while exp is true do blk and then blk, 
 	 continue jumps before the second blk 
-	 init may cotain break or continue stmt!
+	 init may contain break or continue stmt!
       *)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)

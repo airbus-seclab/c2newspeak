@@ -52,7 +52,6 @@ let apply_attrs attrs t =
 	Npkcontext.report_error "Parser.apply_attr" 
 	  "more than one attribute not handled yet"
 
-(* TODO: code not so nice: simplify? *)
 (* TODO: simplify by having just a function build_decl??? *)
 let process_decls (build_sdecl, build_vdecl) (b, m) =
   let (sdecls, b) = Synthack.normalize_base_typ b in
@@ -685,6 +684,7 @@ named_init_list:
 
 named_init:
   DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
+| DOT IDENTIFIER EQ LBRACE init_list RBRACE { (Some $2, Sequence $5) }
 ;;
 
 init_list:
