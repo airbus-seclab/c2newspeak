@@ -240,6 +240,7 @@ let float_cst_of_lexeme (value, suffix) =
     match suffix with
 	None -> (value, Config.size_of_double)
       | Some 'F' -> (value^"F", Config.size_of_float)
+      | Some 'L' | Some 'l' -> (value^"L", Config.size_of_longdouble)
       | _ -> 
 	  Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
 	    "unknown suffix for float"
