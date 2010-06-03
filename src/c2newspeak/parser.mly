@@ -925,6 +925,7 @@ external_declaration:
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | INLINE STATIC function_definition        { build_fundef true $3 }
+| ATTRIBUTE LPAREN LPAREN attribute_name_list RPAREN RPAREN STATIC function_definition { build_fundef true $8 }
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
