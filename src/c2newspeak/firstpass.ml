@@ -768,7 +768,7 @@ let translate fname (globals, fundecls, spec) =
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	    end;
-	    if (i = 0) then begin
+	    if (i = 0) && (not !Npkcontext.accept_gnuc) then begin
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"array should have at least 1 element"
 	    end;
