@@ -256,31 +256,57 @@ let translate fname (globals, fundecls, spec) =
 	      "this type of initialization not implemented yet"
 	  
     and translate_field_sequence o fields seq =
-      match (fields, seq) with
-	  ((fname, (f_o, t))::fields, (expected_f, hd)::seq) ->
-	    let f_o = o + f_o in
-	    let _ = 
-	      match expected_f with
-		  Some f when fname <> f ->
-		    Npkcontext.report_error 
-		      "Firstpass.translate_field_sequence" 
-		      ("initialization of field "^fname^" expected")
-		| _ -> ()
-	    in
-	    let _ = translate f_o t hd in
-	      translate_field_sequence o fields seq
-
-	| ([], []) -> ()
-
-	| ((_, (f_o, t))::fields, []) ->
-	    let f_o = o + f_o in
-	    let _ = fill_with_zeros f_o t in
-	      translate_field_sequence o fields []
-
-	| ([], _) -> 
-	    Npkcontext.report_accept_warning 
-	      "Firstpass.translate_init.translate_field_sequence" 
-	      "extra initializer for structure" Npkcontext.DirtySyntax
+      let rec remove f l =
+	match l with 
+	    [] -> []
+	  | (f', x)::l -> 
+	      if String.compare f f' = 0 then l else (f', x)::(remove f l)
+      in
+      let rec next f fields =
+	match fields with
+	    [] -> raise Not_found 
+	  | (f', _)::fields -> 
+	      if String.compare f f' = 0 then List.hd fields else next f fields
+      in
+      let rec fold not_init seq current =
+	match seq with
+	    [] -> List.iter (fun (_, (f_o, t)) -> 
+			       let f_o = o + f_o in
+			       ignore (fill_with_zeros f_o t)) not_init
+		  
+	  | (fname, hd)::seq when not_init <> [] -> begin
+	      try 
+		let name, (f_o, t) = 
+		  match fname with 
+		      Some f -> List.find (fun (f', _) -> String.compare f f' = 0) fields 
+		    | None -> current
+		in
+		let not_init' = remove name not_init in
+		let f_o' = o + f_o in
+		let _ = translate f_o' t hd in
+		let current' = 
+		  try next name fields
+		  with
+		      Failure _ -> current 
+		    | Not_found ->  
+			Npkcontext.report_accept_warning 
+			  "Firstpass.translate_init.translate_field_sequence" 
+			  "extra initializer for structure" Npkcontext.DirtySyntax;
+			current
+		in
+		  fold not_init' seq current'
+	      with Not_found ->
+		Npkcontext.report_error 
+		  "Firstpass.translate_init.translate_field_sequence" 
+		  "Unknown field "
+	    end
+	      
+	  | _ -> 
+	      Npkcontext.report_accept_warning 
+		"Firstpass.translate_init.translate_field_sequence" 
+		"extra initializer for structure" Npkcontext.DirtySyntax
+		
+      in fold fields seq (List.hd fields)
 	  
     and translate_sequence o t n seq =
       match seq with

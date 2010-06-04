@@ -619,7 +619,12 @@ let process fname globals =
 	  let seq = (Some f, translate_init t init)::[] in
 	    C.Sequence seq
 
-      | (Sequence _, _) -> 
+      | (Sequence seq, C.Ptr t) ->
+	  let seq = 
+	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
+	    C.Sequence seq
+
+      | (Sequence _, _) ->
 	  Npkcontext.report_error "Csyntax2TypedC.translate_init"
 	    "this type of initialization not implemented yet"
 
