@@ -101,12 +101,11 @@ let preprocessing lbls stmts =
   (* For every goto stmt:
      - adds conditional goto statement
      - adds the additional boolean variables 
-     - fills the level/offset table. Goto label are slightly
-     modified to make them unique 
+     - fills the (label -> goto id, offset) table. 
 *)
   let nth = ref 0 in
   let cond_addition stmts =
-    let rec add level stmts =
+    let rec add stmts =
     match stmts with
 	[] -> []
       | (stmt, l)::stmts ->
@@ -116,58 +115,56 @@ let preprocessing lbls stmts =
 		let lbl' = goto_lbl lbl o in
 		  begin
 		    try 
-		      let (gotos, (l', o')) = Hashtbl.find lbls lbl in
-			Hashtbl.replace lbls lbl ((level, o, l)::gotos, (l', o'));
+		      let (gotos, o') = Hashtbl.find lbls lbl in
+			Hashtbl.replace lbls lbl ((o, l)::gotos, o');
 		    with Not_found ->
-		      Hashtbl.add lbls lbl ([level, o, l], (0, Newspeak.unknown_loc))
+		      Hashtbl.add lbls lbl ([o, l],  Newspeak.unknown_loc)
 		  end;
 		  nth := !nth + 1;
 		  let if' = If(dummy_cond, [Goto lbl', l], []) in
-		    (if', l)::(add level stmts)
+		    (if', l)::(add stmts)
 	      end
 
 	    | Label lbl -> begin
 		try
 		  let (gotos, _) = Hashtbl.find lbls lbl in
-		    Hashtbl.replace lbls lbl (gotos, (level, l))
+		    Hashtbl.replace lbls lbl (gotos, l)
 		with
-		    Not_found -> Hashtbl.add lbls lbl ([], (level, l))
+		    Not_found -> Hashtbl.add lbls lbl ([], l)
 	      end;
-		(stmt, l)::(add level stmts)
+		(stmt, l)::(add stmts)
 
 	    | If(e, if_blk, else_blk) ->
-		let level' = level+1 in
-		let if_blk' = add level' if_blk in
-		let else_blk' = add level' else_blk in
-		let stmts' = add level stmts in
+		let if_blk' = add if_blk in
+		let else_blk' = add else_blk in
+		let stmts' = add stmts in
 		  (If(e, if_blk', else_blk'), l)::stmts'
 		    
 	    | DoWhile(blk, e) ->
-		let blk' = add (level+1) blk in
-		  (DoWhile(blk', e), l)::(add level stmts)
+		let blk' = add blk in
+		  (DoWhile(blk', e), l)::(add stmts)
 		    
 	    | Block blk -> 
-		let blk' = add level blk in
-		  (Block blk', l)::(add level stmts)
+		let blk' = add blk in
+		  (Block blk', l)::(add stmts)
 		    
 	    | For(blk1, e, blk2, blk3) ->
 		(* we suppose that only blk2 may contain goto stmts *)
-		let blk2' = add (level+1) blk2 in
-		  (For (blk1, e, blk2', blk3), l)::(add level stmts)
+		let blk2' = add blk2 in
+		  (For (blk1, e, blk2', blk3), l)::(add stmts)
 		    
 	    | CSwitch(e, cases, default) ->
-		let level' = level+1 in
 		let add_cases cases (e, blk, l) =
-		  let blk' = add level' blk in
+		  let blk' = add blk in
 		    (e, blk', l)::cases
 		in
 		let cases' = List.rev (List.fold_left add_cases [] cases) in
-		let default' = add level' default in
-		  (CSwitch(e, cases', default'), l)::(add level stmts)
+		let default' = add default in
+		  (CSwitch(e, cases', default'), l)::(add stmts)
 		    
-	    | _ -> (stmt, l)::(add level stmts)
+	    | _ -> (stmt, l)::(add stmts)
     in
-      add 0 stmts
+      add stmts
   in
     if stmts = [] then ([], [])
     else begin
@@ -433,7 +430,8 @@ in
 		try
 		  let blk', stmt' = f_delete_goto blk in (Block blk', l)::stmts, stmt'
 		with
-		    Not_found -> let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
+		    Not_found -> 
+		      let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
 	      end
 	    | _ -> let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
   in
@@ -997,17 +995,61 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
   in
     fst (lifting_and_inward stmts)
 
-  
-let elimination stmts lbl (gotos, lo) vdecls =
+
+let rec compute_level stmts lbl id =
+  let rec compute n stmts =
+    match stmts with
+	[] -> -1, -1
+      | (stmt, _)::stmts' ->
+	  let ll, lo = 
+	    match stmt with
+		Label lbl' when lbl = lbl' -> n, -1
+	      | If (_, [Goto lbl', _], []) when goto_equal lbl lbl' id -> -1, n
+	      | If (_, if_blk, else_blk) ->
+		  let n' = n+1 in
+		  let il, io = compute n' if_blk in
+		    if il <> -1 && io <> -1 then
+		      il, io
+		    else
+		      let el, eo = compute n' else_blk in
+			max il el, max io eo
+	      | Block blk -> compute n blk
+	      | For(_,_,blk,_) -> compute (n+1) blk
+	      | DoWhile(blk, _) -> compute (n+1) blk
+	      | CSwitch (_, cases, default) ->
+		  let n' = n+1 in
+		  let il, io = List.fold_left (fun (ll, lo) (_, blk, _) -> 
+				    (* optimize : exit as soon as ll, lo <> -1, -1 *)
+				       let ll', lo' = compute n' blk in
+					 max ll ll', max lo lo'
+					      ) (-1, -1) cases
+		  in
+		    if il <> -1 && io <> -1 then
+		      il, io
+		    else
+		      let el, eo = compute n' default in
+			max il el, max io eo
+	      | _ -> -1, -1
+		  
+	  in
+	    if ll <> -1 && lo <> -1 then 
+	      ll, lo 
+	    else
+	      let ll', lo' = compute n stmts' in
+		max ll ll', max lo lo'
+  in
+    compute 0 stmts
+
+let elimination stmts lbl gotos vdecls =
   (* moves all gotos of the given label lbl. lo is the pair
      (level, offset) of the label statement *)
-  let l_level, _ = lo in
   let stmts = ref stmts in	
   let move goto =
-    let l, id, o = goto in
+    let id, o = goto in
+    let l_level, l = compute_level !stmts lbl id in
     let l = ref l in
       (* force goto and label to be directly related *)
-      if indirectly_related !stmts lbl id then 
+      if indirectly_related !stmts lbl id then
 	  stmts := outward !stmts lbl l id;
       (* force goto and label to be siblings *)
       if directly_related !stmts lbl id then begin
@@ -1015,7 +1057,7 @@ let elimination stmts lbl (gotos, lo) vdecls =
 	  stmts := outward !stmts lbl l id;
 	  stmts := sibling_elimination !stmts lbl id vdecls
 	end
-	else begin
+	else begin 
 	  let l_level = ref l_level in
 	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls;
 	    stmts := sibling_elimination !stmts lbl id vdecls
@@ -1267,7 +1309,7 @@ let run prog =
   let elimination lbls stmts vars =
     (* goto elimination *)
     let stmts = ref stmts in
-    let move lbl g = 
+    let move lbl (g, _) = 
       stmts := elimination !stmts lbl g vars
     in
       Hashtbl.iter move lbls;
