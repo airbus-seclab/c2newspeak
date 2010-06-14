@@ -34,10 +34,7 @@
 open Npkcontext
 
 let compile fname =
-  let prog =
-    if !Npkcontext.use_cil then Cilcompiler.compile fname
-    else Compiler.compile fname
-  in
+  let prog = Compiler.compile fname in
     if (!Npkcontext.verb_npko) then begin
       print_endline "Newspeak Object output";
       print_endline "----------------------";

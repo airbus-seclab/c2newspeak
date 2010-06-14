@@ -49,9 +49,6 @@ OCAMLDOC=ocamldoc
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc
 
-CILDIR=../cil/obj
-CIL=$(CILDIR)/cil.cmxa
-DIRS+=$(CILDIR)
 INCLUDE=$(addprefix -I ,$(DIRS))
 
 CMX=$(addsuffix .cmx,$(FILES))
@@ -65,7 +62,7 @@ CLEANFILES+=\
 	$(addsuffix .o,$(FILES))   \
 	$(addsuffix .cmp,$(FILES))
 
-../bin/$(TARGET): $(CIL) $(CMX)
+../bin/$(TARGET): $(CMX)
 	@echo "Linking                     "$(TARGET)
 	@$(OCAMLOPT) $(EXTRALINKFLAGS) $(INCLUDE) $(LIBX) $(CMX) -o $@
 

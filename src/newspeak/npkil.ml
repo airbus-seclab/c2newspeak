@@ -28,8 +28,6 @@
 
 (* TODO: should count local variables from beginning of function !! *)
 
-(* TODO: remove open Cilutils!!! *)
-open Cilutils
 open Newspeak
 
 type t = {

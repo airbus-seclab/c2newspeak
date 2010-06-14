@@ -49,7 +49,6 @@ $(DISTDIR): clean-all
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
 	$(CP) -r lib $(DISTDIR)
-	$(CP) -r cil $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r distrib.Makefile $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)

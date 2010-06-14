@@ -23,15 +23,7 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c >$*.cil.bak 2>&1; \
-        $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
-
-DIFF=diff $*.spec $*.bak > result && \
-     if [ -e $*.cil.spec ]; then \
-       diff $*.cil.spec $*.cil.bak; \
-     else \
-       diff $*.spec $*.cil.bak; \
-     fi
+COMMAND= $(C2NEWSPEAK) --print-newspeak `[ -e $*.in ] && cat $*.in` $*.c
 
 TESTS = 000 001 002 003 004 005 006 007 008 009 \
         010 011 012 013 014 015 016 017 018 019 \
