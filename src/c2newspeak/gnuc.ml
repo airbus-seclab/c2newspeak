@@ -53,6 +53,7 @@ let _ =
   Hashtbl.add token_tbl "__attribute__" ATTRIBUTE;
   Hashtbl.add token_tbl "__attribute" ATTRIBUTE;   
   Hashtbl.add token_tbl "__restrict" RESTRICT;
+  Hashtbl.add token_tbl "__restrict__" RESTRICT;
   Hashtbl.add token_tbl "__builtin_va_list" VA_LIST;
   Hashtbl.add token_tbl "__inline__" INLINE;
   Hashtbl.add token_tbl "__inline" INLINE;
@@ -87,6 +88,10 @@ let _ =
   Hashtbl.add token_tbl "__func__" FUNNAME;
 
   Hashtbl.add token_tbl "__signed__" SIGNED;
+  Hashtbl.add token_tbl "__signed" SIGNED;
+
+  Hashtbl.add token_tbl "__volatile__" VOLATILE;
+  Hashtbl.add token_tbl "__volatile" VOLATILE;
 
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 

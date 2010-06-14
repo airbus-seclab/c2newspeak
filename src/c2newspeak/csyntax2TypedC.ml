@@ -104,7 +104,8 @@ let process fname globals =
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = Hashtbl.replace symbtbl x (C.Global name, t) in
+  let update_global x name t = 
+    Hashtbl.replace symbtbl x (C.Global name, t) in
 
   let add_formals (args_t, ret_t) =
     add_local (ret_t, ret_name);
@@ -147,7 +148,7 @@ let process fname globals =
   let find_compdef name =
     try Hashtbl.find comptbl name
     with Not_found -> 
-      let c = ref None in
+      let c = TypedC.Unknown name in
 	Hashtbl.add comptbl name c;
 	c
   in
@@ -338,7 +339,7 @@ let process fname globals =
 	  let e = translate_exp e in
 	  let t = translate_typ t in
 	    (C.Cast (e, t), t)
-      | Set (lv, op, e) -> 
+      | Set (lv, op, e) ->
 	  let (lv, t1) = translate_exp lv in
 	  let (e, t2) = translate_exp e in
 	  let op =
@@ -349,7 +350,7 @@ let process fname globals =
 		    Some (op, t_in)
 	  in
 	    (C.Set ((lv, t1), op, (e, t2)), t1)
-      | OpExp (op, e, is_after) ->
+      | OpExp (op, e, is_after) -> 
 	  let (e, t) = translate_exp e in
 	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
 	    (C.OpExp ((op, t_in), (e, t), is_after), t_out)
@@ -468,9 +469,24 @@ let process fname globals =
 
   and translate_cdecl x (fields, is_struct) =
     let fields = List.map translate_field_decl fields in
-    let decl = (fields, is_struct) in
-    let c = find_compdef x in
-      c := Some decl
+    let decl = C.Known (fields, is_struct) in
+    let is_unknown t =
+      match t with
+	  C.Comp (C.Unknown s) when s = x -> true
+	| _ -> false
+    in 
+    let check_type s (_, t) symbols =
+      if is_unknown t then s::symbols else symbols
+    in 
+    let update_type s =
+      let symbols = try Hashtbl.find_all symbtbl s with Not_found -> [] in
+      let symbols' = List.map (fun (v, t) -> if is_unknown t then (v, C.Comp decl) else (v, t)) symbols in
+	List.iter (fun _ -> Hashtbl.remove symbtbl s) symbols;
+	List.iter (fun x -> Hashtbl.add symbtbl s x) (List.rev symbols')
+    in
+      Hashtbl.add comptbl x decl;
+      let symbols = Hashtbl.fold check_type symbtbl [] in
+	List.iter update_type symbols
 
   and translate_stmt x = 
     match x with
@@ -599,10 +615,10 @@ let process fname globals =
 	  in
 	    C.Sequence seq
 	      
-      | (Sequence seq, C.Comp { contents = Some (f, true) }) ->
+      | (Sequence seq, C.Comp (TypedC.Known (f, true))) ->
 	  C.Sequence (translate_field_sequence seq f)
 
-      | (Sequence ((None, init)::[]), C.Comp { contents = Some (r, false) }) ->
+      | (Sequence ((None, init)::[]), C.Comp (TypedC.Known (r, false))) ->
 	  let t = 
 	    match r with
 		(_, b)::_ -> b
@@ -614,12 +630,22 @@ let process fname globals =
 	    C.Sequence seq
 
       | (Sequence ((Some f, init)::[]), 
-	 C.Comp { contents = Some (r, false)}) -> 
+	 C.Comp (TypedC.Known (r, false))) -> 
 	  let t = find_field f r in
 	  let seq = (Some f, translate_init t init)::[] in
 	    C.Sequence seq
 
-      | (Sequence _, _) -> 
+      | (Sequence seq, C.Ptr t) ->
+	  let seq = 
+	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
+	    C.Sequence seq
+
+      | (Sequence seq, C.Int _) ->
+	  let seq = 
+	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
+	    C.Sequence seq
+
+      | (Sequence _, _) ->
 	  Npkcontext.report_error "Csyntax2TypedC.translate_init"
 	    "this type of initialization not implemented yet"
 
@@ -656,10 +682,17 @@ let process fname globals =
     let fundecls = ref [] in
     let specs = ref [] in
       
+    let update_glbdecls s (x, ((n, t, static, extern, init), loc)) =
+      let t' = 
+	match t with 
+	    C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
+	  | _ -> t
+      in (x, ((n, t', static, extern, init), loc))
+    in
     let translate (x, loc) =
       Npkcontext.set_loc loc;
       match x with
-	  FunctionDef (f, (args_t, ret_t), static, body) -> 
+	  FunctionDef (f, (args_t, ret_t), static, body) ->
 	    let args_t = 
 	      match args_t with
 		  None -> []
@@ -670,7 +703,9 @@ let process fname globals =
 	    let f' = update_funsymb f static ft in
 	      fundecls := (f, f', ft, static, body, loc)::(!fundecls)
 		
-	| GlbDecl (x, CDecl d) -> translate_cdecl x d
+	| GlbDecl (x, CDecl d) -> 
+	    translate_cdecl x d;
+	    glbdecls := List.map (update_glbdecls x) !glbdecls
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 

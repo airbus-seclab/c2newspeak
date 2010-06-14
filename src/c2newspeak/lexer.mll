@@ -125,7 +125,7 @@ let integer_constant =
 
 let float = 
   ((digit+ | digit+ '.' digit+ | '.' digit+ | digit+ '.') (('e'|'E') '-'? digit+)? as value)
-  ("F" as suffix)?
+  ("F"|"l"|"L" as suffix)?
 let identifier = letter (letter|digit)*
 let wide_string = 'L''"' [^'"']* '"'
 

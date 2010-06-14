@@ -52,7 +52,6 @@ let apply_attrs attrs t =
 	Npkcontext.report_error "Parser.apply_attr" 
 	  "more than one attribute not handled yet"
 
-(* TODO: code not so nice: simplify? *)
 (* TODO: simplify by having just a function build_decl??? *)
 let process_decls (build_sdecl, build_vdecl) (b, m) =
   let (sdecls, b) = Synthack.normalize_base_typ b in
@@ -444,8 +443,7 @@ asm_statement_list:
 
 asm_statement:
   string_literal                           { $1 }
-| string_literal LPAREN IDENTIFIER RPAREN  { $1 }
-| string_literal LPAREN INTEGER RPAREN     { $1 }
+| string_literal LPAREN expression RPAREN  { $1 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
@@ -589,8 +587,8 @@ expression:
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
     let vdecl = VDecl (t, false, false, Some (Sequence $4)) in
-    let decl = (LocalDecl ("tmp", vdecl), loc) in
-    let e = (Exp (Var "tmp"), loc) in
+    let decl = (LocalDecl (".tmp", vdecl), loc) in
+    let e = (Exp (Var ".tmp"), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
       BlkExp (blk@decl::e::[])
@@ -624,6 +622,17 @@ expression:
 	  "conditional expression";
 	IfExp (normalize_bexp $1, $3, $5)
   }
+
+| expression QMARK COLON expression           %prec QMARK {
+    let e = normalize_bexp $1 in
+    let loc = get_loc () in
+    let t = Csyntax.Typeof e in
+    let vdecl = VDecl (t, false, false, Some (Data e)) in
+    let decl = (LocalDecl (".tmp", vdecl), loc) in
+    let e' = Var ".tmp" in
+      BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
+  }
+
 | expression assignment_operator
                    expression     %prec EQ { Set ($1, $2, $3) }
 ;;
@@ -685,6 +694,7 @@ named_init_list:
 
 named_init:
   DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
+| DOT IDENTIFIER EQ LBRACE init_list RBRACE { (Some $2, Sequence $5) }
 ;;
 
 init_list:
@@ -833,6 +843,63 @@ type_specifier:
       "unspecified integer kind";
     Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
+
+| LONG SIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long signed int' is not normalized: "
+       ^"use 'signed long int' instead");
+    Integer (Newspeak.Signed, Config.size_of_long)
+      }
+
+| LONG SIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long signed' is not normalized: "
+       ^"use 'signed long int' instead");
+    Integer (Newspeak.Signed, Config.size_of_long)
+      }
+
+| LONG UNSIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long unsigned int' is not normalized: "
+       ^"use 'unsigned long int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_long)
+  }
+
+| LONG UNSIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'long unsigned' is not normalized: "
+       ^"use 'unsigned long int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_long)
+  }
+
+| SHORT SIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short signed int' is not normalized: "
+       ^"use 'signed short int' instead");
+    Integer (Newspeak.Signed, Config.size_of_short)
+      }
+
+| SHORT SIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short signed' is not normalized: "
+       ^"use 'signed short int' instead");
+    Integer (Newspeak.Signed, Config.size_of_short)
+      }
+
+| SHORT UNSIGNED INT                        {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short unsigned int' is not normalized: "
+       ^"use 'unsigned short int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_short)
+  }
+
+| SHORT UNSIGNED                            {
+  Npkcontext.report_strict_warning "Parser.type_specifier" 
+      ("'short unsigned' is not normalized: "
+       ^"use 'unsigned short int' instead");
+    Integer (Newspeak.Unsigned, Config.size_of_short)
+  }
+
 | ftyp                                   { Float $1 }
 | STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
 | STRUCT ident_or_tname                  { Struct ($2, None) }
@@ -845,18 +912,7 @@ type_specifier:
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some $4) }
-| SHORT UNSIGNED INT                     { 
-    Npkcontext.report_strict_warning "Parser.type_specifier" 
-      ("'short unsigned int' is not normalized: "
-	^"use 'usigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short) 
-  }
-| LONG UNSIGNED INT                     { 
-    Npkcontext.report_strict_warning "Parser.type_specifier" 
-      ("'long unsigned int' is not normalized: "
-	^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long) 
-  }
+
 | TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
 | VA_LIST                                { Va_arg }
 ;;
@@ -869,6 +925,8 @@ external_declaration:
 | function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | INLINE STATIC function_definition        { build_fundef true $3 }
+| ATTRIBUTE LPAREN LPAREN attribute_name_list 
+  RPAREN RPAREN STATIC function_definition { build_fundef true $8 }
 // GNU C extension
 | optional_extension 
   EXTERN function_definition               { 
@@ -883,6 +941,7 @@ external_declaration:
 | declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
 | optional_extension
   EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
+| asm SEMICOLON                            { [] }
 ;;
 
 optional_extension:
@@ -974,7 +1033,7 @@ attribute_name:
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
     match ($1, $3) with
-	(("__format_arg__" | "aligned" | "__regparm__"), _::[]) -> []
+	(("__format_arg__" | "aligned" | "__regparm__" | "regparm"), _::[]) -> []
       | (("packed" | "__packed__"), _::[]) -> 
 	  Npkcontext.report_ignore_warning "Parser.attribute_name" 
 	    "packed attribute" Npkcontext.Pack;
@@ -998,7 +1057,8 @@ attribute_name:
 *)
     if $1 <> "__format__" && $1 <> "format" then raise Parsing.Parse_error;
     begin match $3 with
-	"__printf__" | "printf" | "__scanf__" -> ()
+	"__printf__" | "printf" | "__scanf__" | "scanf"
+      | "__strftime__" | "strftime" | "__strfmon__" | "strfmon"-> ()
       | _ -> raise Parsing.Parse_error
     end;
     [] 

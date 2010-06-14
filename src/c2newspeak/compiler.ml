@@ -75,7 +75,6 @@ let compile fname =
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;
-(* TODO: push goto elimination after csyntax2PureC!! *)
       let prog = 
 	if !Npkcontext.accept_goto then begin
 	  Npkcontext.print_debug "Running goto_elimination...";

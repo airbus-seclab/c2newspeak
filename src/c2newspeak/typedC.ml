@@ -30,8 +30,6 @@
 *)
 module Nat = Newspeak.Nat
 
-(* TODO: have hashtables rather?? *)
-(* TODO: the set of globals should be a hashtbl rather!!!! *)
 type t = (string * glbinfo) list * (string * funinfo) list * assertion list
 
 and glbinfo = (decl * Newspeak.location)
@@ -68,10 +66,12 @@ and typ =
   | Float of int
   | Ptr of typ
   | Array of array_typ
-  | Comp of compdef option ref
+  | Comp of aux_comp
   | Fun of ftyp
   | Va_arg
      
+and aux_comp = Unknown of string | Known of compdef
+
 and array_typ = typ * exp option
  
 and init = 
@@ -88,7 +88,7 @@ and stmtkind =
   | CSwitch of (typ_exp * (exp * blk * Newspeak.location) list * blk)
       (* init, while exp is true do blk and then blk, 
 	 continue jumps before the second blk 
-	 init may cotain break or continue stmt!
+	 init may contain break or continue stmt!
       *)
   | For of (blk * exp * blk * blk)
   | DoWhile of (blk * exp)
@@ -168,11 +168,11 @@ let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 let comp_of_typ t =
   match t with
       Comp c -> begin
-	match !c with
-	    Some c -> c
-	  | None -> 
+	match c with
+	    Known c -> c
+	  | Unknown s -> 
 	      Npkcontext.report_error "Csyntax.comp_of_typ" 
-		"incomplete struct or union type"
+		("incomplete struct or union type " ^ s)
       end
     | _ -> 
 	Npkcontext.report_error "Csyntax.comp_of_typ" 

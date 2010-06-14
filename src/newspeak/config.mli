@@ -37,3 +37,6 @@ val size_of_double: int
 val size_of_longdouble: int
 
 val is_char_type_signed: bool
+
+(* only defined in gnuc mode *)
+val size_of_void: int

@@ -100,7 +100,7 @@ let check_array_type_length typ =
 	  end
       | C.Struct (_, sz) -> Nat.of_int sz
       | C.Union (_, sz) -> Nat.of_int sz
-      | C.Fun _ -> raise Exit  
+      | C.Fun -> raise Exit
   in
     try 
       let sz = length typ in 
@@ -190,7 +190,7 @@ let translate fname (globals, fundecls, spec) =
 
   let rec cast (e, t1) t2 = 
     match t2 with
-	Comp { contents = Some (f, false) } 
+	Comp (TypedC.Known (f, false)) 
 	  when not (TypedC.equals_typ t1 t2) ->
 	  if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
 	  then Npkcontext.report_error "Firstpass.cast" "incompatible type";
@@ -228,12 +228,12 @@ let translate fname (globals, fundecls, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Comp { contents = Some (f, true) }) ->
+	| (Sequence seq, Comp (TypedC.Known (f, true))) ->
 	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
 	      t
 
-	| (Sequence ((None, v)::[]), Comp { contents = Some (r, false) }) ->
+	| (Sequence ((None, v)::[]), Comp (TypedC.Known (r, false))) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = 
 	      match r with
@@ -245,42 +245,68 @@ let translate fname (globals, fundecls, spec) =
 	    let _ = translate (o + f_o) f_t v in
 	      t
 
-	| (Sequence ((Some f, v)::[]), Comp { contents = Some (r, false) }) ->
+	| (Sequence ((Some f, v)::[]), Comp (TypedC.Known (r, false) )) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
 	      t
-	
+	    	
 	| (Sequence _, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
 	  
     and translate_field_sequence o fields seq =
-      match (fields, seq) with
-	  ((fname, (f_o, t))::fields, (expected_f, hd)::seq) ->
-	    let f_o = o + f_o in
-	    let _ = 
-	      match expected_f with
-		  Some f when fname <> f ->
-		    Npkcontext.report_error 
-		      "Firstpass.translate_field_sequence" 
-		      ("initialization of field "^fname^" expected")
-		| _ -> ()
-	    in
-	    let _ = translate f_o t hd in
-	      translate_field_sequence o fields seq
-
-	| ([], []) -> ()
-
-	| ((_, (f_o, t))::fields, []) ->
-	    let f_o = o + f_o in
-	    let _ = fill_with_zeros f_o t in
-	      translate_field_sequence o fields []
-
-	| ([], _) -> 
-	    Npkcontext.report_accept_warning 
-	      "Firstpass.translate_init.translate_field_sequence" 
-	      "extra initializer for structure" Npkcontext.DirtySyntax
+      let rec remove f l =
+	match l with 
+	    [] -> []
+	  | (f', x)::l -> 
+	      if String.compare f f' = 0 then l else (f', x)::(remove f l)
+      in
+      let rec next f fields =
+	match fields with
+	    [] -> raise Not_found 
+	  | (f', _)::fields -> 
+	      if String.compare f f' = 0 then List.hd fields else next f fields
+      in
+      let rec fold not_init seq current =
+	match seq with
+	    [] -> List.iter (fun (_, (f_o, t)) -> 
+			       let f_o = o + f_o in
+			       ignore (fill_with_zeros f_o t)) not_init
+		  
+	  | (fname, hd)::seq when not_init <> [] -> begin
+	      try 
+		let name, (f_o, t) = 
+		  match fname with 
+		      Some f -> List.find (fun (f', _) -> String.compare f f' = 0) fields 
+		    | None -> current
+		in
+		let not_init' = remove name not_init in
+		let f_o' = o + f_o in
+		let _ = translate f_o' t hd in
+		let current' = 
+		  try next name fields
+		  with
+		      Failure _ -> current 
+		    | Not_found ->  
+			Npkcontext.report_accept_warning 
+			  "Firstpass.translate_init.translate_field_sequence" 
+			  "extra initializer for structure" Npkcontext.DirtySyntax;
+			current
+		in
+		  fold not_init' seq current'
+	      with Not_found ->
+		Npkcontext.report_error 
+		  "Firstpass.translate_init.translate_field_sequence" 
+		  "Unknown field "
+	    end
+	      
+	  | _ -> 
+	      Npkcontext.report_accept_warning 
+		"Firstpass.translate_init.translate_field_sequence" 
+		"extra initializer for structure" Npkcontext.DirtySyntax
+		
+      in fold fields seq (List.hd fields)
 	  
     and translate_sequence o t n seq =
       match seq with
@@ -340,7 +366,7 @@ let translate fname (globals, fundecls, spec) =
 		o := !o + sz
 	      done
 		
-	| Comp { contents = Some c } -> 
+	| Comp (TypedC.Known c) -> 
 	    let (f, _, _) = translate_comp c in
 	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
 	      List.iter fill_field f
@@ -739,13 +765,13 @@ let translate fname (globals, fundecls, spec) =
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
-      | Comp c ->
+      | Comp c -> 
 	  let (f, is_struct) = 
-	    match !c with
-		Some x -> x
-	      | None -> 
+	    match c with
+		TypedC.Known x -> x
+	      | TypedC.Unknown s -> 
 		  Npkcontext.report_error "Firstpass.translate_typ"
-		    "incomplete type for struct or union"
+		    ("incomplete type for struct or union "^s)
 	  in
 	  let (f, sz, _) = translate_comp (f, is_struct) in
 	  let f = List.map translate_field f in
@@ -768,7 +794,7 @@ let translate fname (globals, fundecls, spec) =
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	    end;
-	    if (i = 0) then begin
+	    if (i = 0) && (not !Npkcontext.accept_gnuc) then begin
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"array should have at least 1 element"
 	    end;
@@ -1181,7 +1207,7 @@ let translate fname (globals, fundecls, spec) =
 
   and align_of t =
     match t with
-	Comp { contents = Some c } -> 
+	Comp (TypedC.Known c) -> 
 	  let (_, _, a) = translate_comp c in
 	    a
       | Array (t, _) -> align_of t

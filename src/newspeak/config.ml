@@ -40,3 +40,6 @@ let size_of_longdouble = 12*size_of_byte
 let max_array_length = max_sizeof / size_of_byte
 
 let is_char_type_signed = true
+
+(* only defined in gnuc mode *)
+let size_of_void = 1*size_of_byte
