@@ -66,10 +66,12 @@ and typ =
   | Float of int
   | Ptr of typ
   | Array of array_typ
-  | Comp of compdef option ref
+  | Comp of aux_comp
   | Fun of ftyp
   | Va_arg
      
+and aux_comp = Unknown of string | Known of compdef
+
 and array_typ = typ * exp option
  
 and init = 
@@ -166,11 +168,11 @@ let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
 let comp_of_typ t =
   match t with
       Comp c -> begin
-	match !c with
-	    Some c -> c
-	  | None -> 
+	match c with
+	    Known c -> c
+	  | Unknown s -> 
 	      Npkcontext.report_error "Csyntax.comp_of_typ" 
-		"incomplete struct or union type"
+		("incomplete struct or union type " ^ s)
       end
     | _ -> 
 	Npkcontext.report_error "Csyntax.comp_of_typ" 

@@ -190,7 +190,7 @@ let translate fname (globals, fundecls, spec) =
 
   let rec cast (e, t1) t2 = 
     match t2 with
-	Comp { contents = Some (f, false) } 
+	Comp (TypedC.Known (f, false)) 
 	  when not (TypedC.equals_typ t1 t2) ->
 	  if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
 	  then Npkcontext.report_error "Firstpass.cast" "incompatible type";
@@ -228,12 +228,12 @@ let translate fname (globals, fundecls, spec) =
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
 	
-	| (Sequence seq, Comp { contents = Some (f, true) }) ->
+	| (Sequence seq, Comp (TypedC.Known (f, true))) ->
 	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
 	      t
 
-	| (Sequence ((None, v)::[]), Comp { contents = Some (r, false) }) ->
+	| (Sequence ((None, v)::[]), Comp (TypedC.Known (r, false))) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = 
 	      match r with
@@ -245,12 +245,12 @@ let translate fname (globals, fundecls, spec) =
 	    let _ = translate (o + f_o) f_t v in
 	      t
 
-	| (Sequence ((Some f, v)::[]), Comp { contents = Some (r, false) }) ->
+	| (Sequence ((Some f, v)::[]), Comp (TypedC.Known (r, false) )) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
 	      t
-	
+	    	
 	| (Sequence _, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
@@ -366,7 +366,7 @@ let translate fname (globals, fundecls, spec) =
 		o := !o + sz
 	      done
 		
-	| Comp { contents = Some c } -> 
+	| Comp (TypedC.Known c) -> 
 	    let (f, _, _) = translate_comp c in
 	    let fill_field (_, (f_o, t)) = fill_with_zeros (o + f_o) t in
 	      List.iter fill_field f
@@ -765,13 +765,13 @@ let translate fname (globals, fundecls, spec) =
 	  let t = translate_typ t in
 	  let len = translate_array_len len in
 	    C.Array (t, len)
-      | Comp c ->
+      | Comp c -> 
 	  let (f, is_struct) = 
-	    match !c with
-		Some x -> x
-	      | None -> 
+	    match c with
+		TypedC.Known x -> x
+	      | TypedC.Unknown s -> 
 		  Npkcontext.report_error "Firstpass.translate_typ"
-		    "incomplete type for struct or union"
+		    ("incomplete type for struct or union "^s)
 	  in
 	  let (f, sz, _) = translate_comp (f, is_struct) in
 	  let f = List.map translate_field f in
@@ -1207,7 +1207,7 @@ let translate fname (globals, fundecls, spec) =
 
   and align_of t =
     match t with
-	Comp { contents = Some c } -> 
+	Comp (TypedC.Known c) -> 
 	  let (_, _, a) = translate_comp c in
 	    a
       | Array (t, _) -> align_of t

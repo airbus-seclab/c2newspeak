@@ -62,9 +62,11 @@ and typ =
     | Float of int
     | Ptr of typ
     | Array of array_typ
-    | Comp of compdef option ref
+    | Comp of aux_comp 
     | Fun of ftyp
     | Va_arg
+
+and aux_comp = Unknown of string | Known of compdef
 
 and array_typ = typ * exp option
 

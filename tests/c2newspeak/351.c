@@ -22,7 +22,6 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 */
-
 struct s;
 
 struct s x;

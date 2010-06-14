@@ -286,7 +286,7 @@ let translate src_lang prog fnames =
       Hashtbl.add fundefs f (ret_id::[], args_id, ft, body)
   in
 
-  let flag_glb x =
+  let flag_glb x = 
     let (t, loc, init, _) = Hashtbl.find glbdecls x in
       Hashtbl.replace glbdecls x (t, loc, init, true)
   in
