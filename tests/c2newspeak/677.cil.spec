@@ -3,10 +3,10 @@ Newspeak output
 677.c
 void main(void) {
   int32 tmp;
-  (677.c:31#1101)^f();
+  (677.c:31#1101)^tmp <- f();
   (677.c:31#1101)^choose {
    -->
-    (677.c:31#1101)^guard(! (0-_int32 ==_int32 0));
+    (677.c:31#1101)^guard(! (tmp_int32 ==_int32 0));
     (677.c:31#1101)^choose {
      -->
       (677.c:31#1101)^guard(! (x_int32 ==_int32 0));
@@ -15,7 +15,7 @@ void main(void) {
       (677.c:31#1101)^guard((x_int32 ==_int32 0));
     }
    -->
-    (677.c:31#1101)^guard((0-_int32 ==_int32 0));
+    (677.c:31#1101)^guard((tmp_int32 ==_int32 0));
   }
 }
 

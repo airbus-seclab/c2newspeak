@@ -5,9 +5,7 @@ Newspeak output
 678.c
 void main(void) {
   (678.c:27#2)^int32 !tmp0;
-  (678.c:27#2)^int32 f.arg1;
-  (678.c:27#2)^0- =(int32) 1;
-  (678.c:27#2)^f();
+  (678.c:27#2)^!tmp0 <- f(1);
 }
 
 

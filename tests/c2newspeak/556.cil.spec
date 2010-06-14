@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 556.c
-void f(int32, int32) {
+void f(int32 i, int32 j) {
 }
 
 

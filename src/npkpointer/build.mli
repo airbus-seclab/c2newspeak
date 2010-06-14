@@ -23,5 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-
-val translate: Newspeak.t -> Ptrspeak.prog
+val translate: Lowspeak.t -> Ptrspeak.prog

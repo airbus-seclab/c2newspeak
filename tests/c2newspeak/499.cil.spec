@@ -4,7 +4,7 @@ Newspeak output
 void main(void) {
   (499.c:35#1170)^ptr ptr;
   (499.c:36#1182)^ptr y;
-  (499.c:37#1188)^0- =(ptr) focus32 (1-_ptr + 32);
+  (499.c:37#1188)^y =(ptr) focus32 (ptr_ptr + 32);
 }
 
 

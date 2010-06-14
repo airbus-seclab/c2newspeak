@@ -3,7 +3,7 @@ Newspeak output
 049.c
 void main(void) {
   (049.c:32#7)^int8 c;
-  (049.c:33#2)^0- =(int8) [x_ptr]8_int8;
+  (049.c:33#2)^c =(int8) [x_ptr]8_int8;
 }
 
 int8[6] !049.c.const_str_Hello;

@@ -3,8 +3,8 @@ Newspeak output
 571.c
 void main(void) {
   (571.c:29#2)^ptr !tmp0;
-  (571.c:29#2)^f();
-  (571.c:29#2)^[0-_ptr]32 =(int32) ([0-_ptr]32_int32 & 0);
+  (571.c:29#2)^!tmp0 <- f();
+  (571.c:29#2)^[!tmp0_ptr]32 =(int32) ([!tmp0_ptr]32_int32 & 0);
 }
 
 

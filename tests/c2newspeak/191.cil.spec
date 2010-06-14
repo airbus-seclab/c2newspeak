@@ -3,7 +3,7 @@ Newspeak output
 191.c
 void main(void) {
   (a.c:2#1132)^int32 y;
-  (a.c:3#1137)^0- =(int32) 1;
+  (a.c:3#1137)^y =(int32) 1;
 }
 
 

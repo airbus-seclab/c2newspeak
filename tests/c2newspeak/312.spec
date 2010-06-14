@@ -7,11 +7,11 @@ void main(void) {
   (312.c:29#6)^int32 x;
   (312.c:30#2)^choose {
    -->
-    (312.c:30#2)^guard(! (0-_int32 ==_int32 0));
-    (312.c:30#2)^2- =(ptr) focus320 &(1-);
+    (312.c:30#2)^guard(! (x_int32 ==_int32 0));
+    (312.c:30#2)^ptr =(ptr) focus320 &(t);
    -->
-    (312.c:30#2)^guard((0-_int32 ==_int32 0));
-    (312.c:30#2)^2- =(ptr) nil;
+    (312.c:30#2)^guard((x_int32 ==_int32 0));
+    (312.c:30#2)^ptr =(ptr) nil;
   }
 }
 

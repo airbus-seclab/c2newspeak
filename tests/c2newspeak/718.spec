@@ -4,7 +4,7 @@ Newspeak output
 void f(void) {
 }
 
-void g(fptr) {
+void g(fptr f) {
 }
 
 

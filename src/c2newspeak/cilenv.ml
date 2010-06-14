@@ -287,7 +287,7 @@ let get_cstr str =
     let sz = Nat.of_int (((String.length str) + 1) * Config.size_of_char) in
       Npkil.AddrOf (Npkil.Global name, Npkil.Known sz)
 
-let get_ret_var () = Npkil.Local "!ret"
+let get_ret_var () = Npkil.Local "!return"
 
 let get_ret_lbl () = return_lbl
 

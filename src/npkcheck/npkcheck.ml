@@ -38,7 +38,8 @@ TODO:
    - check that the size of all types is less than max_int (the sum of all??)
 *)
 
-open Newspeak
+open Lowspeak
+module N = Newspeak
 
 let inputs = ref []
 
@@ -51,7 +52,7 @@ let speclist =
 
 let subtyp t1 t2 =
   match (t1, t2) with
-      (Int ik1, Int ik2) -> 
+      (N.Int ik1, N.Int ik2) -> 
 	let d1 = Newspeak.domain_of_typ ik1 in
 	let d2 = Newspeak.domain_of_typ ik2 in
 	  Newspeak.contains d2 d1
@@ -59,31 +60,32 @@ let subtyp t1 t2 =
 
 let rec hastype t e =
   match (e, t) with
-      (Const (CInt i), Int k) -> belongs i (domain_of_typ k)
-    | (Const (CFloat _), Float _) -> true
-    | (Const Nil, (Ptr|FunPtr)) -> true
+      (Const (N.CInt i),   N.Int k) -> N.belongs i (N.domain_of_typ k)
+    | (Const (N.CFloat _), N.Float _) -> true
+    | (Const N.Nil, (N.Ptr|N.FunPtr)) -> true
     | (Lval (_, t'), _) -> subtyp t' t
-    | (AddrOf _, Ptr) -> true
-    | (AddrOfFun _, FunPtr) -> true
-    | (UnOp ((Belongs b| Coerce b | BNot b), _), Int k) -> 
-	contains (domain_of_typ k) b
-    | (UnOp (Not, _), Int _) -> true
-    | (UnOp (PtrToInt k', _), Int k) -> k = k'
-    | (UnOp (IntToPtr _, _), Ptr) -> true
-    | (UnOp (Cast (_, t'), _), _) -> t = t'
-    | (BinOp ((PlusF _|MinusF _|MultF _|DivF _), _, _), Float _) -> true
-    | (BinOp ((BOr b|BAnd b|BXor b), _, _), Int k) ->
-	contains (domain_of_typ k) b
-    | (BinOp ((Shiftlt|Shiftrt), _, _), Int _) -> true
-    | (BinOp (PlusPI, _, _), Ptr) -> true
-    | (BinOp (MinusPP, _, _), Int _) -> true
-    | (BinOp ((Gt _|Eq _), _, _), Int _) -> true
-    | (BinOp (Mod, _, _), Int _) -> true
+    | (AddrOf _, N.Ptr) -> true
+    | (AddrOfFun _, N.FunPtr) -> true
+    | (UnOp ((N.Belongs b| N.Coerce b | N.BNot b), _), N.Int k) -> 
+	N.contains (N.domain_of_typ k) b
+    | (UnOp (N.Not, _), N.Int _) -> true
+    | (UnOp (N.PtrToInt k', _), N.Int k) -> k = k'
+    | (UnOp (N.IntToPtr _, _), N.Ptr) -> true
+    | (UnOp (N.Cast (_, t'), _), _) -> t = t'
+    | (BinOp ((N.PlusF _|N.MinusF _
+              |N.MultF _|N.DivF _), _, _), N.Float _) -> true
+    | (BinOp ((N.BOr b|N.BAnd b|N.BXor b), _, _), N.Int k) ->
+	N.contains (N.domain_of_typ k) b
+    | (BinOp ((N.Shiftlt|N.Shiftrt), _, _), N.Int _) -> true
+    | (BinOp (N.PlusPI, _, _), N.Ptr) -> true
+    | (BinOp (N.MinusPP, _, _), N.Int _) -> true
+    | (BinOp ((N.Gt _|N.Eq _), _, _), N.Int _) -> true
+    | (BinOp (N.Mod, _, _), N.Int _) -> true
     | _ -> false
 
 class checker ptr_sz =
 object (self)
-  inherit Newspeak.visitor
+  inherit Lowspeak.visitor
 
   method process_length x =
     if x <= 0 
@@ -92,8 +94,8 @@ object (self)
   method process_lval x =
     let _ =
       match x with
-	  Shift (_, BinOp (MultI, _, Const CInt _)) -> ()
-	| Shift (_, Const CInt _) -> ()
+	  Shift (_, BinOp (N.MultI, _, Const N.CInt _)) -> ()
+	| Shift (_, Const N.CInt _) -> ()
 	| Shift (_, _) -> self#raise_error "unexpected expression in shift"
 	| _ -> ()
     in
@@ -102,8 +104,8 @@ object (self)
   method process_bexp x =
     let rec check x =
       match x with
-	  BinOp ((Gt _|Eq _), _, _) 
-	| UnOp (Not, BinOp ((Gt _|Eq _), _, _)) -> ()
+	  BinOp ((N.Gt _|N.Eq _), _, _) 
+	| UnOp (N.Not, BinOp ((N.Gt _|N.Eq _), _, _)) -> ()
 	| _ -> self#raise_error "unexpected expression as guard"
     in
       check x
@@ -113,7 +115,7 @@ object (self)
       match x with
 	  Set (_, e, t) ->
 	    if not (hastype t e)
-	    then self#raise_error ("expression of type "^(string_of_scalar t)
+	    then self#raise_error ("expression of type "^(N.string_of_scalar t)
 				    ^" expected in assignment")
 	| _ -> ()
     in
@@ -122,14 +124,14 @@ object (self)
   method process_typ t =
     let rec check_size t =
       match t with
-	  Scalar t -> Newspeak.size_of_scalar ptr_sz t
-	| Array (t, len) -> 
+	  N.Scalar t -> Newspeak.size_of_scalar ptr_sz t
+	| N.Array (t, len) -> 
 	    let n = check_size t in
 	      if n > max_int/len then begin
 		self#raise_error ("size of type not representable as an int")
 	      end;
 	      n * len
-	| Region (fields, n) -> 
+	| N.Region (fields, n) -> 
 	    List.iter (fun (_, t) -> ignore (check_size t)) fields;
 	    n
     in
@@ -138,9 +140,9 @@ object (self)
 end
 
 let check_file fname =
-    let prog = Newspeak.read fname in
-    let checker = new checker prog.ptr_sz in
-      Newspeak.visit (checker :> Newspeak.visitor) prog
+    let prog = Npk2lpk.translate (Newspeak.read fname) in
+    let checker = new checker prog.Lowspeak.ptr_sz in
+      Lowspeak.visit (checker :> Lowspeak.visitor) prog
 
 let _ = 
   try

@@ -38,3 +38,5 @@ let size_of_double = 8*size_of_byte
 let size_of_longdouble = 12*size_of_byte
 
 let max_array_length = max_sizeof / size_of_byte
+
+let is_char_type_signed = true

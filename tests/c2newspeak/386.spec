@@ -3,11 +3,11 @@ Newspeak output
 386.c
 void main(void) {
   (386.c:27#8)^ptr t;
-  (386.c:27#8)^0- =(ptr) focus96 &(!386.c.const_str_Hello world);
+  (386.c:27#8)^t =(ptr) focus96 &(!386.c.const_str_Hello world);
   (386.c:28#8)^{
     ptr u;
-    (386.c:28#8)^0- =(ptr) focus96 &(!386.c.const_str_Hello world);
-    (386.c:29#2)^[1-_ptr]8 =(int8) [0-_ptr]8_int8;
+    (386.c:28#8)^u =(ptr) focus96 &(!386.c.const_str_Hello world);
+    (386.c:29#2)^[t_ptr]8 =(int8) [u_ptr]8_int8;
   }
 }
 

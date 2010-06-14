@@ -89,8 +89,6 @@ let verbose boolean () =
   verb_debug := boolean;
   verb_newspeak := boolean
 
-(* File options *)
-
 let input_files = ref []
 let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
@@ -281,6 +279,7 @@ let argslist = [
 
   ("--xml", Arg.Set_string xml_output, 
    "gives the name of XML output file\n");
+
 ]
 
 

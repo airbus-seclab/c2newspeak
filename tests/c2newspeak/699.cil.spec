@@ -7,7 +7,7 @@ Newspeak output
 699.c
 void main(void) {
   (699.c:27#1053)^int32 x;
-  (699.c:28#1058)^0- =(int32) 0;
+  (699.c:28#1058)^x =(int32) 0;
 }
 
 

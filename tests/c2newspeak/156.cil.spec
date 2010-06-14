@@ -12,14 +12,12 @@ Debug: Globals...
 Debug: Functions...
 Debug: Function linked: main
 Debug: File linked.
-Debug: Converting to Newspeak...
-Debug: Conversion done.
 Newspeak output
 ---------------
 156.c
 void main(void) {
   (156.c:27#1072)^int32 x;
-  (156.c:28#1077)^0- =(int32) 3;
+  (156.c:28#1077)^x =(int32) 3;
 }
 
 

@@ -31,7 +31,8 @@
 (* TODO: think about cleaning up between state and store!!! 
    (in particular remove translate_exp and lval_to_abaddr from this module) *)
 (* TODO: if there are may cells get rid of their cases in this module *)
-open Newspeak
+open Lowspeak
+module N = Newspeak
 
 module Map = Map.Make(String)
 module Set = Set.Make(String)
@@ -76,9 +77,9 @@ let rec lval_to_abaddr env s lv =
   match lv with
       Global x -> Abaddr.singleton (Memloc.of_global x)
     | Local x -> Abaddr.singleton (Memloc.of_local (env - x))
-    | Shift (lv, Const CInt n) -> 
+    | Shift (lv, Const N.CInt n) -> 
 	let a = lval_to_abaddr env s lv in
-	  Abaddr.shift (Nat.to_int n) a
+	  Abaddr.shift (N.Nat.to_int n) a
     | Shift (lv, _) -> Abaddr.forget_offset (lval_to_abaddr env s lv)
     | Deref (e, n) -> 
 	let a = translate_exp env s e in
@@ -88,7 +89,7 @@ let rec lval_to_abaddr env s lv =
 and translate_exp env s e =
   match e with
       Const _ -> Dom.Cst
-    | UnOp (Focus n, AddrOf lv) -> 
+    | UnOp (N.Focus n, AddrOf lv) -> 
 	let a = lval_to_abaddr env s lv in
 	  Abaddr.to_exp n a
     | AddrOfFun (f, _) -> Dom.AddrOfFun f
@@ -102,8 +103,8 @@ and translate_exp env s e =
 	  with Exceptions.Emptyset -> Dom.Cst
 	in
 	  a
-    | UnOp ((PtrToInt _| IntToPtr _), e) -> translate_exp env s e
-    | BinOp (PlusPI, e, _) -> 
+    | UnOp ((N.PtrToInt _| N.IntToPtr _), e) -> translate_exp env s e
+    | BinOp (N.PlusPI, e, _) -> 
 	let a = translate_exp env s e in
 	let p = 
 	  match a with
@@ -134,11 +135,11 @@ let exp_to_fun env s e =
 				   ^"State.exp_to_fun: case Lval")
 	      end
 		(* TODO: not good these constants!!! *)
-	    | UnOp (Cast (_, t), e) when Newspeak.size_of_scalar 32 t = 32 ->
+	    | UnOp (N.Cast (_, t), e) when Newspeak.size_of_scalar 32 t = 32 ->
 		exp_to_fun e
 	    | _ -> 
 		invalid_arg ("Not implemented yet: "
-			     ^"State.exp_to_fun: "^(Newspeak.string_of_exp e))
+			     ^"State.exp_to_fun: "^(Lowspeak.string_of_exp e))
 	in
 	  exp_to_fun e
 
@@ -187,8 +188,8 @@ let guard e env s =
 	try
 	  let s =
 	    match e with
-		UnOp (Not, BinOp (Eq Ptr, Lval (lv, Ptr), Const Nil))
-	      | UnOp (Not, BinOp (Eq Ptr, Const Nil, Lval (lv, Ptr))) ->
+		UnOp (N.Not, BinOp (N.Eq N.Ptr, Lval (lv, N.Ptr), Const N.Nil))
+	      | UnOp (N.Not, BinOp (N.Eq N.Ptr, Const N.Nil, Lval (lv, N.Ptr))) ->
 		  let a = lval_to_abaddr env s lv in
 		  let a = Abaddr.to_addr a in
 		    Store.guard a s

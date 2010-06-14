@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val print: Newspeak.t -> (StrSet.t * int) -> unit
+val print: Lowspeak.t -> (StrSet.t * int) -> unit

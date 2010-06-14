@@ -28,5 +28,5 @@
 
 type t
 
-val count: bool -> Newspeak.t -> t
+val count: bool -> Lowspeak.t -> t
 val print: t -> out_channel option -> unit

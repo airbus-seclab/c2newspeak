@@ -27,4 +27,4 @@
     functions
 *)
 val process: 
-  (Newspeak.fid, string list) Hashtbl.t -> Newspeak.t -> (StrSet.t * int)
+  (Newspeak.fid, string list) Hashtbl.t -> Lowspeak.t -> (StrSet.t * int)

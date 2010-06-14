@@ -51,6 +51,7 @@ OCAMLYACC=ocamlyacc
 
 CILDIR=../cil/obj
 CIL=$(CILDIR)/cil.cmxa
+DIRS+=$(CILDIR)
 INCLUDE=$(addprefix -I ,$(DIRS))
 
 CMX=$(addsuffix .cmx,$(FILES))

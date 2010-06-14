@@ -4,7 +4,7 @@ Newspeak output
 665.c
 void main(void) {
   (665.c:26#25)^uint64 i;
-  (665.c:27#2)^0- =(uint64) 0;
+  (665.c:27#2)^i =(uint64) 0;
 }
 
 

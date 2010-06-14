@@ -4,7 +4,7 @@ Newspeak output
 void main(void) {
   (055.c:30#6)^int32 y;
   (055.c:31#7)^int8 x;
-  (055.c:31#7)^0- =(int8) coerce[-128,127] 1-_int32;
+  (055.c:31#7)^x =(int8) coerce[-128,127] y_int32;
 }
 
 

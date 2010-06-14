@@ -8,15 +8,15 @@ void main(void) {
     (734.c:32#2)^while (1) {
       (734.c:32#2)^choose {
        -->
-        (734.c:32#2)^guard(! (1-_int32 ==_int32 0));
-        (734.c:32#2)^guard(! (0-_int32 ==_int32 0));
+        (734.c:32#2)^guard(! (a_int32 ==_int32 0));
+        (734.c:32#2)^guard(! (b_int32 ==_int32 0));
        -->
         (734.c:32#2)^choose {
          -->
-          (734.c:32#2)^guard(! (1-_int32 ==_int32 0));
-          (734.c:32#2)^guard((0-_int32 ==_int32 0));
+          (734.c:32#2)^guard(! (a_int32 ==_int32 0));
+          (734.c:32#2)^guard((b_int32 ==_int32 0));
          -->
-          (734.c:32#2)^guard((1-_int32 ==_int32 0));
+          (734.c:32#2)^guard((a_int32 ==_int32 0));
         }
         (734.c:32#2)^goto lbl1;
       }

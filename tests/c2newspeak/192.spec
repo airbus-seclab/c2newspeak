@@ -4,7 +4,7 @@ test53-a.c
 test53-b.c
 void main(void) {
   (test53-a.c:3#7)^int8 x;
-  (test53-a.c:4#2)^0- =(int8) [ptr_ptr]8_int8;
+  (test53-a.c:4#2)^x =(int8) [ptr_ptr]8_int8;
 }
 
 int8[6] !192.c.const_str_Hello;

@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
+open Lowspeak
 
 type t
 
@@ -35,7 +35,7 @@ val join: t -> t -> t
 val contains: t -> t -> bool
 
 (* TODO: the int is the environment, maybe should remove it *)
-val assign: (lval * exp * scalar_t) -> int -> t -> t
+val assign: (lval * exp * Newspeak.scalar_t) -> int -> t -> t
 
 val copy: (lval * lval) -> int -> t -> t
 
@@ -62,7 +62,7 @@ val glue: t -> t -> t
 val read_addr: t -> Dom.addr -> Dom.abptr
 
 (* TODO: this primitive name is not well chosen, think about it *)
-val read_fun: int -> t -> Newspeak.lval -> string list
+val read_fun: int -> t -> Lowspeak.lval -> string list
 
 (* TODO: not good this primitive, think about removing it!! *)
 val set_pointsto: Dom.addr -> Memloc.t -> t -> t

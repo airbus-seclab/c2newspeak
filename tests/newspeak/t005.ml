@@ -24,6 +24,6 @@
 *)
 
 let _ =
-  let prog = Newspeak.read Sys.argv.(1) in
-  let fid_list = Newspeak.collect_fid_addrof prog in
+  let prog = Npk2lpk.translate (Newspeak.read Sys.argv.(1)) in
+  let fid_list = Lowspeak.collect_fid_addrof prog in
     List.iter print_endline fid_list

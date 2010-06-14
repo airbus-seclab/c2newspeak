@@ -24,13 +24,15 @@
 # email: charles.hymans@penjili.org
 #
 
-INSTALL.FILES=newspeak/newspeak.cmi newspeak.cma newspeak.cmxa \
-              newspeak.a
+INSTALL.FILES=newspeak/newspeak.cmi newspeak/lowspeak.cmi \
+							newspeak/npkcontext.cmi newspeak/npk2lpk.cmi \
+							newspeak.cma newspeak.cmxa newspeak.a
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
 
-FILES=version newspeak/newspeak
+FILES=version newspeak/newspeak newspeak/config \
+			newspeak/lowspeak newspeak/npkcontext newspeak/npk2lpk
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
@@ -40,7 +42,7 @@ newspeak.cma: $(FILES.CMO)
 
 newspeak.a newspeak.cmxa: $(FILES.CMX)
 	@echo "Building library            "newspeak.cmx
-	@$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
+	$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
 
 CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo
 

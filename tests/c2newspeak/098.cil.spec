@@ -3,7 +3,7 @@ Newspeak output
 098.c
 void main(void) {
   (098.c:27#1074)^float32 x;
-  (098.c:28#1079)^0- =(float32) 0-_float32;
+  (098.c:28#1079)^x =(float32) x_float32;
 }
 
 

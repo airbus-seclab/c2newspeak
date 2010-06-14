@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
+open Lowspeak
 
 module Set = StrSet
 module Map = Map.Make(struct type t = int let compare = compare end)

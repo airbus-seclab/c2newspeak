@@ -23,5 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-
-val collect: Newspeak.t -> unit
+val collect: Lowspeak.t -> unit

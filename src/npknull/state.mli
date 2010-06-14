@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
+open Lowspeak
 
 type t
 
@@ -40,7 +40,7 @@ val set_pointsto: (Memloc.t * int) -> Memloc.t -> t -> t
 
 val to_string: t -> string
 
-val assign: (lval * exp * scalar_t) -> int -> t -> t
+val assign: (lval * exp * Newspeak.scalar_t) -> int -> t -> t
 
 val remove_local: int -> t -> t
 

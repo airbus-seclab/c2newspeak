@@ -32,7 +32,9 @@ include ../common.Makefile
 .SILENT: $(EXEC)
 
 $(EXEC): %_check: %.ml
-	ocamlc -I ../../bin ../../bin/newspeak.cma $*.ml -o $*_check
+	ocamlc -I ../../bin -I ../../src/newspeak -I ../../cil/obj str.cma \
+		../../src/newspeak/config.ml ../../bin/newspeak.cma \
+		../../src/newspeak/npkcontext.ml ../../src/newspeak/npk2lpk.ml $*.ml -o $*_check
 
 %.npk: %.c
 	@$(C2NEWSPEAK) $*.c -o $*.npk

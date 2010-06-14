@@ -34,7 +34,6 @@ NPKSTRIP=../../bin/npkstrip
 NPK2BYTESZ = ../../bin/npk2bytesz --newspeak
 NPKBUGFIND=../../bin/npkbugfind
 NPKCHECK=../../bin/npkcheck
-NPKSIMPLIFY = ../../bin/npksimplify --newspeak
 NPKDIFF=../../bin/npkdiff
 NPKPOINTER=../../bin/npkpointer
 SIMPLEAI=../../bin/simpleai

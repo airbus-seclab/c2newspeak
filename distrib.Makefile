@@ -37,7 +37,7 @@ CILDIR=cil/obj
 CIL=$(CILDIR)/cil.cmxa
 
 #FILES
-EXE=c2newspeak npkstrip npkstats npksimplify npk2bytesz \
+EXE=c2newspeak npkstrip npkstats npk2bytesz \
     npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow \
     npkfuns npktests npknull simpleai npksolver
 COMPONENTS=newspeak $(EXE)

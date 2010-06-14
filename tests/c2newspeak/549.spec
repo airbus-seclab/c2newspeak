@@ -6,8 +6,8 @@ void main(void) {
   (549.c:28#6)^int32 x;
   (549.c:29#15)^uint32 y;
   (549.c:31#7)^{ uint32 0; int32 0; }32 tmp;
-  (549.c:31#7)^0- =(uint32) 1-_uint32;
-  (549.c:31#2)^2- =(int32) 0-_int32;
+  (549.c:31#7)^tmp =(uint32) y_uint32;
+  (549.c:31#2)^x =(int32) tmp_int32;
 }
 
 

@@ -46,7 +46,7 @@ let _ =
     if !input = "" 
     then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
 
-    let prog = Newspeak.read !input in
+    let prog = Npk2lpk.translate (Newspeak.read !input) in
     let (vars, prog) = Build.translate prog in
       if !debug then Ptrspeak.print (vars, prog);
     let graph = Analysis.run prog in

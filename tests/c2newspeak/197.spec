@@ -9,23 +9,23 @@ void main(void) {
       (197.c:29#2)^do {
         (197.c:30#4)^choose {
          -->
-          (197.c:30#4)^guard(! (1-_int32 ==_int32 0));
+          (197.c:30#4)^guard(! (x_int32 ==_int32 0));
           (197.c:31#6)^goto lbl2;
          -->
-          (197.c:30#4)^guard((1-_int32 ==_int32 0));
+          (197.c:30#4)^guard((x_int32 ==_int32 0));
         }
         (197.c:33#4)^choose {
          -->
-          (197.c:33#4)^guard(! (0-_int32 ==_int32 0));
+          (197.c:33#4)^guard(! (y_int32 ==_int32 0));
           (197.c:34#6)^goto lbl1;
          -->
-          (197.c:33#4)^guard((0-_int32 ==_int32 0));
+          (197.c:33#4)^guard((y_int32 ==_int32 0));
         }
         (197.c:29#2)^choose {
          -->
-          (197.c:29#2)^guard((10 > 1-_int32));
+          (197.c:29#2)^guard((10 > x_int32));
          -->
-          (197.c:29#2)^guard(! (10 > 1-_int32));
+          (197.c:29#2)^guard(! (10 > x_int32));
           (197.c:29#2)^goto lbl1;
         }
       } with lbl2: {

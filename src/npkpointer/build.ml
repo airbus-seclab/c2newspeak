@@ -23,7 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
+open Lowspeak
+module N = Newspeak
 module S = Ptrspeak
 
 let translate npk = 
@@ -85,7 +86,7 @@ let translate npk =
 	Const _ -> S.Const
       | Lval (lv, _) -> S.Deref (translate_lval lv)
       | AddrOf lv -> translate_lval lv
-      | UnOp (Focus _, e) -> translate_exp e
+      | UnOp (N.Focus _, e) -> translate_exp e
       | _ -> 
 	  invalid_arg "Build.translate_exp: expression not implemented yet"
   in

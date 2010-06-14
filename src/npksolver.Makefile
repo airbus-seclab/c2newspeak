@@ -34,8 +34,9 @@ npksolver.FILES= \
 		box cfg mkcfg \
 		fixpoint tap test npksolver
                   
-FILES=version newspeak/newspeak \
+FILES=version newspeak/newspeak newspeak/config newspeak/lowspeak \
+      newspeak/npkcontext newspeak/npk2lpk \
       $(addprefix npksolver/,$(npksolver.FILES))
-LIBX=nums.cmxa
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

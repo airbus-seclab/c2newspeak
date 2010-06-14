@@ -4,7 +4,7 @@ Newspeak output
 t362.adb
 void t362(void) {
   (t362.adb:10#5)^float32 f;
-  (t362.adb:12#6)^0- =(float32) (4. *. 2.);
+  (t362.adb:12#6)^f =(float32) (4. *. 2.);
 }
 
 
