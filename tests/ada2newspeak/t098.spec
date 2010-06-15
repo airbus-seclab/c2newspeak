@@ -12,9 +12,9 @@ uint3 t098.g(void) {
 void t098.main(uint2 z) {
   (t098.adb:19#9)^int32 x;
   (t098.adb:21#10)^{
-    int32 !tmp0;
-    (t098.adb:21#10)^!tmp0 <- t098.t096();
-    (t098.adb:21#10)^x =(int32) !tmp0_int32;
+    int32 tmp_cir!0;
+    (t098.adb:21#10)^tmp_cir!0 <- t098.t096();
+    (t098.adb:21#10)^x =(int32) tmp_cir!0_int32;
   }
   (t098.adb:22#11)^t099(0);
 }

@@ -3,8 +3,8 @@ Newspeak output
 ---------------
 587.c
 void main(void) {
-  (587.c:27#6)^uint32 goto.lbl;
-  (587.c:27#6)^goto.lbl =(uint32) 0;
+  (587.c:27#6)^uint32 goto!lbl;
+  (587.c:27#6)^goto!lbl =(uint32) 0;
   (587.c:27#6)^{
     int32 i;
     (587.c:28#2)^uint32 switch.587.c:28#2.0;
@@ -12,10 +12,10 @@ void main(void) {
       (587.c:28#2)^while (1) {
         (587.c:28#2)^choose {
          -->
-          (587.c:28#2)^guard(! goto.lbl_int32);
+          (587.c:28#2)^guard(! goto!lbl_int32);
           (587.c:28#2)^switch.587.c:28#2.0 =(uint32) coerce[0,4294967295] i_int32;
          -->
-          (587.c:28#2)^guard(goto.lbl_int32);
+          (587.c:28#2)^guard(goto!lbl_int32);
           (587.c:28#2)^switch.587.c:28#2.0 =(uint32) 0;
         }
         (587.c:28#2)^do {
@@ -50,12 +50,12 @@ void main(void) {
           (587.c:36#7)^i =(int32) 0;
         } with lbl3: {
         }
-        (587.c:28#2)^goto.lbl =(uint32) 1;
+        (587.c:28#2)^goto!lbl =(uint32) 1;
         (587.c:28#2)^choose {
          -->
-          (587.c:28#2)^guard(goto.lbl_int32);
+          (587.c:28#2)^guard(goto!lbl_int32);
          -->
-          (587.c:28#2)^guard(! goto.lbl_int32);
+          (587.c:28#2)^guard(! goto!lbl_int32);
           (587.c:28#2)^goto lbl1;
         }
       }

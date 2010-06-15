@@ -6,8 +6,8 @@ void main(void) {
   (617.c:27#4)^uint32 continue.617.c:29#13.0;
   (617.c:27#4)^continue.617.c:29#13.0 =(uint32) 0;
   (617.c:27#4)^{
-    uint32 goto.lbl;
-    (617.c:27#4)^goto.lbl =(uint32) 0;
+    uint32 goto!lbl;
+    (617.c:27#4)^goto!lbl =(uint32) 0;
     (617.c:27#4)^while (1) {
       (617.c:27#13)^while (1) {
         (617.c:29#13)^continue.617.c:29#13.0 =(uint32) 1;

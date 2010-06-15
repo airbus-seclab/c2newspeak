@@ -87,12 +87,11 @@ let translate compil_unit =
 
         (**
          * Build a fresh identifier.
-         * Several calls will yield "tmp0", "tmp1", and so on.
          *)
         method private new_id =
             let res = count in
             count <- count + 1;
-            "tmp" ^ (string_of_int res)
+            Temps.to_string res (Temps.Misc "ada_firstpass")
 
         (**
          * Create a new temporary variable.

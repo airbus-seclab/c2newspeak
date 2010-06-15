@@ -3,8 +3,8 @@ Newspeak output
 ---------------
 610.c
 void main(void) {
-  (610.c:27#6)^uint32 goto.lbl;
-  (610.c:27#6)^goto.lbl =(uint32) 0;
+  (610.c:27#6)^uint32 goto!lbl;
+  (610.c:27#6)^goto!lbl =(uint32) 0;
   (610.c:27#6)^{
     int32 i;
     (610.c:28#2)^do {
@@ -35,23 +35,23 @@ void main(void) {
           }
         } with lbl5: {
         }
-        (610.c:34#6)^goto.lbl =(uint32) 1;
+        (610.c:34#6)^goto!lbl =(uint32) 1;
         (610.c:34#6)^choose {
          -->
-          (610.c:34#6)^guard(goto.lbl_int32);
+          (610.c:34#6)^guard(goto!lbl_int32);
           (610.c:34#6)^goto lbl4;
          -->
-          (610.c:34#6)^guard(! goto.lbl_int32);
+          (610.c:34#6)^guard(! goto!lbl_int32);
         }
         (610.c:35#6)^i =(int32) 2;
       } with lbl4: {
       }
       (610.c:34#6)^choose {
        -->
-        (610.c:34#6)^guard(goto.lbl_int32);
+        (610.c:34#6)^guard(goto!lbl_int32);
         (610.c:34#6)^goto lbl1;
        -->
-        (610.c:34#6)^guard(! goto.lbl_int32);
+        (610.c:34#6)^guard(! goto!lbl_int32);
       }
       (610.c:38#4)^i =(int32) 1;
     } with lbl1: {
@@ -59,11 +59,11 @@ void main(void) {
     (610.c:41#2)^while (1) {
       (610.c:41#2)^choose {
        -->
-        (610.c:41#2)^guard(! (goto.lbl_uint32 ==_uint32 0));
+        (610.c:41#2)^guard(! (goto!lbl_uint32 ==_uint32 0));
        -->
-        (610.c:41#2)^guard((goto.lbl_uint32 ==_uint32 0));
+        (610.c:41#2)^guard((goto!lbl_uint32 ==_uint32 0));
       }
-      (610.c:42#2)^goto.lbl =(uint32) 0;
+      (610.c:42#2)^goto!lbl =(uint32) 0;
     }
   }
 }

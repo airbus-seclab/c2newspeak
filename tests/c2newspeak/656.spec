@@ -3,8 +3,8 @@ Newspeak output
 ---------------
 656.c
 void main(void) {
-  (656.c:26#6)^uint32 goto.lbl;
-  (656.c:26#6)^goto.lbl =(uint32) 0;
+  (656.c:26#6)^uint32 goto!lbl;
+  (656.c:26#6)^goto!lbl =(uint32) 0;
   (656.c:26#6)^{
     int32 i;
     (656.c:28#7)^int32 i.0;

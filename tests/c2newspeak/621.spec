@@ -10,8 +10,8 @@ void main(void) {
     uint32 break.621.c:29#13.1;
     (621.c:27#4)^break.621.c:29#13.1 =(uint32) 0;
     (621.c:27#4)^{
-      uint32 goto.lbl;
-      (621.c:27#4)^goto.lbl =(uint32) 0;
+      uint32 goto!lbl;
+      (621.c:27#4)^goto!lbl =(uint32) 0;
       (621.c:27#4)^do {
         (621.c:27#4)^while (1) {
           (621.c:27#13)^do {

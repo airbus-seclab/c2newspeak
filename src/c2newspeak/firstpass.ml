@@ -43,8 +43,11 @@ module Nat = Newspeak.Nat
    TODO: should remove Cir
 *)
 
-(* Constants *)
-let ret_name = "!return"
+let new_id =
+  let c = ref 0 in
+  fun _ ->
+    incr c;
+    !c
 
 let ret_lbl = 0
 let cnt_lbl = 1
@@ -153,6 +156,7 @@ let translate fname (globals, fundecls, spec) =
 
   let add_formals (args_t, _) =
     let args_id = List.map snd args_t in
+    let ret_name = Temps.to_string 0 Temps.Return in
       (ret_name, args_id)
   in
 
@@ -398,7 +402,7 @@ let translate fname (globals, fundecls, spec) =
 (* TODO: it's strange to need fname here! 
    should maybe be factored with code in csyntax2TypedC
 *)
-    let name = "!"^fname^".const_str_"^(String.escaped str) in
+    let name = Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in
@@ -676,7 +680,7 @@ let translate fname (globals, fundecls, spec) =
       translate_args args args_t
 
   and gen_tmp loc t =
-    let x = "tmp"^(string_of_int !tmp_cnt) in
+    let x = Temps.to_string !tmp_cnt (Temps.Misc "firstpass") in
     let t = translate_typ t in
     let decl = (C.Decl (t, x), loc) in
       incr tmp_cnt;

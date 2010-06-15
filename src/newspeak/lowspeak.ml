@@ -186,6 +186,12 @@ let build_main_args ptr_sz loc params =
   let argv = UnOp (N.Focus (n*ptr_sz), argv) in
     (argv_glob::globals, init, argc::argv::[])
 
+let new_id =
+  let c = ref 0 in
+  fun _ ->
+    incr c;
+    !c
+
 let build_call f (args_t, ret_t) args =
   let loc = N.dummy_loc ("!Newspeak.build_call_"^f) in
   let call = ref [Call (FunId f), loc] in
@@ -201,7 +207,9 @@ let build_call f (args_t, ret_t) args =
     List.iter2 create_arg (List.rev args_t) (List.rev args);
     begin match ret_t with
         None -> ()
-      | Some t -> call := [Decl ("value_of_"^f, t, !call), loc]
+      | Some t ->
+          let id = Temps.to_string (new_id ()) (Temps.Value_of f) in
+          call := [Decl (id, t, !call), loc]
     end;
     !call
 

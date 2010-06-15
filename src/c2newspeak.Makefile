@@ -29,7 +29,7 @@ DIRS=$(CILDIR) utils/ newspeak/ c2newspeak/
 LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
 
 newspeak.FILES=\
-	config newspeak lowspeak npkcontext npk2lpk \
+	config temps newspeak lowspeak npkcontext npk2lpk \
 	npkil cir cir2npkil linker
 
 c2newspeak.FILES=\

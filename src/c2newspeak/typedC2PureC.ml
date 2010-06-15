@@ -65,7 +65,7 @@ let process (globals, specs) =
 
   let gen_tmp e = 
     let t = C.Typeof e in
-    let x = "!tmp"^(string_of_int (!vcnt)) in
+    let x = Temps.to_string !vcnt (Temps.Misc "typedC2pureC") in
     let decl = C.LocalDecl (x, C.VDecl (t, false, false, None)) in
       if (!vcnt = max_int) 
       then Npkcontext.report_error "Csyntax2PureC" "no more ids";

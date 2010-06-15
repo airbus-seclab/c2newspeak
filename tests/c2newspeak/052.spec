@@ -8,7 +8,7 @@ Newspeak output
 052.c
 void main(void) {
   (052.c:31#8)^ptr x;
-  (052.c:31#8)^x =(ptr) focus48 &(!052.c.const_str_Hello);
+  (052.c:31#8)^x =(ptr) focus48 &(cstr!1!052.c.Hello);
   (052.c:32#7)^{
     int8[3] a1;
     (052.c:32#7)^a1 =(int8) 1;
@@ -68,11 +68,11 @@ void main(void) {
   }
 }
 
-int8[6] !052.c.const_str_Hello;
-(052.c:31#8)^!052.c.const_str_Hello =(int8) 72;
-(052.c:31#8)^!052.c.const_str_Hello + 8 =(int8) 101;
-(052.c:31#8)^!052.c.const_str_Hello + 16 =(int8) 108;
-(052.c:31#8)^!052.c.const_str_Hello + 24 =(int8) 108;
-(052.c:31#8)^!052.c.const_str_Hello + 32 =(int8) 111;
-(052.c:31#8)^!052.c.const_str_Hello + 40 =(int8) 0;
+int8[6] cstr!1!052.c.Hello;
+(052.c:31#8)^cstr!1!052.c.Hello =(int8) 72;
+(052.c:31#8)^cstr!1!052.c.Hello + 8 =(int8) 101;
+(052.c:31#8)^cstr!1!052.c.Hello + 16 =(int8) 108;
+(052.c:31#8)^cstr!1!052.c.Hello + 24 =(int8) 108;
+(052.c:31#8)^cstr!1!052.c.Hello + 32 =(int8) 111;
+(052.c:31#8)^cstr!1!052.c.Hello + 40 =(int8) 0;
 

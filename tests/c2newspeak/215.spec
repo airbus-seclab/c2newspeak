@@ -8,10 +8,10 @@ int32 f(void) {
 
 void main(void) {
   (215.c:34#6)^int32[10] t;
-  (215.c:36#2)^int32 !tmp0;
-  (215.c:36#2)^!tmp0 =(int32) t + (belongs[0,9] x_int32 * 32)_int32;
+  (215.c:36#2)^int32 tmp_cir!0;
+  (215.c:36#2)^tmp_cir!0 =(int32) t + (belongs[0,9] x_int32 * 32)_int32;
   (215.c:36#2)^x =(int32) coerce[-2147483648,2147483647] (x_int32 + 1);
-  (215.c:36#2)^!tmp0 <- f();
+  (215.c:36#2)^tmp_cir!0 <- f();
 }
 
 int32 x;

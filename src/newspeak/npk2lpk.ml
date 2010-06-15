@@ -27,7 +27,13 @@ open Newspeak
 
 module L = Lowspeak
 
-let tmp_var = "!tmp"
+let tmp_var = Temps.to_string 0 (Temps.Misc "npk2lpk")
+
+let new_id =
+  let c = ref 0 in
+  fun _ ->
+    incr c;
+    !c
 
 let scalar_of_typ t =
   match t with
@@ -151,7 +157,7 @@ let translate prog =
             let e = Lval (Local tmp_var, t) in
             let set = translate_set (lv, e, t) in
             let call = prefix_args loc f ft args args_ids in
-            let x = "value_of_"^fid in
+            let x = Temps.to_string (new_id ()) (Temps.Value_of fid) in
               pop tmp_var;
               L.Decl (x, t, (call, loc)::(set, loc)::[])
         | _ -> prefix_args loc f ft args args_ids

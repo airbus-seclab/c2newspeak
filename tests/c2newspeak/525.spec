@@ -15,16 +15,16 @@ void main(void) {
     (525.c:29#2)^guard((x_int32 ==_int32 0));
     (525.c:29#28)^y =(int32) 1;
     (525.c:29#28)^{
-      int32 tmp0;
+      int32 tmp_firstpass!0;
       (525.c:29#28)^choose {
        -->
         (525.c:29#28)^guard(! (x_int32 ==_int32 0));
-        (525.c:29#28)^tmp0 =(int32) 1;
+        (525.c:29#28)^tmp_firstpass!0 =(int32) 1;
        -->
         (525.c:29#28)^guard((x_int32 ==_int32 0));
-        (525.c:29#28)^tmp0 =(int32) 0;
+        (525.c:29#28)^tmp_firstpass!0 =(int32) 0;
       }
-      (525.c:29#2)^x =(int32) tmp0_int32;
+      (525.c:29#2)^x =(int32) tmp_firstpass!0_int32;
     }
   }
 }

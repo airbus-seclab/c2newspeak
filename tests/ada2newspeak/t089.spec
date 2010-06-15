@@ -19,20 +19,20 @@ void t089.main(void) {
   (t089.adb:32#9)^int32 z;
   (t089.adb:33#9)^uint3 w;
   (t089.adb:35#10)^{
-    int32 !tmp2;
-    (t089.adb:35#10)^!tmp2 <- t089.b();
-    (t089.adb:35#10)^x =(int32) !tmp2_int32;
+    int32 tmp_cir!2;
+    (t089.adb:35#10)^tmp_cir!2 <- t089.b();
+    (t089.adb:35#10)^x =(int32) tmp_cir!2_int32;
   }
   (t089.adb:36#10)^y =(uint3) 5;
   (t089.adb:37#10)^{
-    int32 !tmp1;
-    (t089.adb:37#10)^!tmp1 <- t089.a();
-    (t089.adb:37#10)^z =(int32) belongs[10,15] !tmp1_int32;
+    int32 tmp_cir!1;
+    (t089.adb:37#10)^tmp_cir!1 <- t089.a();
+    (t089.adb:37#10)^z =(int32) belongs[10,15] tmp_cir!1_int32;
   }
   (t089.adb:38#10)^{
-    uint3 !tmp0;
-    (t089.adb:38#10)^!tmp0 <- t089.jourdusoleil();
-    (t089.adb:38#10)^w =(uint3) belongs[0,6] !tmp0_uint3;
+    uint3 tmp_cir!0;
+    (t089.adb:38#10)^tmp_cir!0 <- t089.jourdusoleil();
+    (t089.adb:38#10)^w =(uint3) belongs[0,6] tmp_cir!0_uint3;
   }
 }
 

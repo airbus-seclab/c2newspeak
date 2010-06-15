@@ -3,8 +3,8 @@ Newspeak output
 ---------------
 592.c
 void main(void) {
-  (592.c:27#6)^uint32 goto.lbl;
-  (592.c:27#6)^goto.lbl =(uint32) 0;
+  (592.c:27#6)^uint32 goto!lbl;
+  (592.c:27#6)^goto!lbl =(uint32) 0;
   (592.c:27#6)^{
     int32 i;
     (592.c:28#1)^do {
@@ -22,21 +22,21 @@ void main(void) {
             }
           } with lbl5: {
           }
-          (592.c:31#4)^goto.lbl =(uint32) 1;
+          (592.c:31#4)^goto!lbl =(uint32) 1;
           (592.c:31#4)^choose {
            -->
-            (592.c:31#4)^guard(goto.lbl_int32);
+            (592.c:31#4)^guard(goto!lbl_int32);
             (592.c:31#4)^goto lbl4;
            -->
-            (592.c:31#4)^guard(! goto.lbl_int32);
+            (592.c:31#4)^guard(! goto!lbl_int32);
           }
         } with lbl4: {
         }
         (592.c:28#1)^choose {
          -->
-          (592.c:28#1)^guard(goto.lbl_int32);
+          (592.c:28#1)^guard(goto!lbl_int32);
          -->
-          (592.c:28#1)^guard(! goto.lbl_int32);
+          (592.c:28#1)^guard(! goto!lbl_int32);
           (592.c:28#1)^goto lbl1;
         }
       }

@@ -25,13 +25,13 @@
 #
 
 INSTALL.FILES=newspeak/newspeak.cmi newspeak/lowspeak.cmi \
-							newspeak/npkcontext.cmi newspeak/npk2lpk.cmi \
+							newspeak/npkcontext.cmi newspeak/temps.cmi newspeak/npk2lpk.cmi \
 							newspeak.cma newspeak.cmxa newspeak.a
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
 
-FILES=version newspeak/newspeak newspeak/config \
+FILES=version newspeak/newspeak newspeak/config newspeak/temps \
 			newspeak/lowspeak newspeak/npkcontext newspeak/npk2lpk
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))

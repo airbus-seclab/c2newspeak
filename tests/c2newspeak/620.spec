@@ -4,8 +4,8 @@ Newspeak output
 ---------------
 620.c
 void main(void) {
-  (620.c:27#6)^uint32 goto.lbl;
-  (620.c:27#6)^goto.lbl =(uint32) 0;
+  (620.c:27#6)^uint32 goto!lbl;
+  (620.c:27#6)^goto!lbl =(uint32) 0;
   (620.c:27#6)^{
     int32 i;
     (620.c:28#2)^uint32 switch.620.c:28#2.1;
@@ -13,10 +13,10 @@ void main(void) {
       (620.c:28#2)^while (1) {
         (620.c:28#2)^choose {
          -->
-          (620.c:28#2)^guard(! goto.lbl_int32);
+          (620.c:28#2)^guard(! goto!lbl_int32);
           (620.c:28#2)^switch.620.c:28#2.1 =(uint32) coerce[0,4294967295] i_int32;
          -->
-          (620.c:28#2)^guard(goto.lbl_int32);
+          (620.c:28#2)^guard(goto!lbl_int32);
           (620.c:28#2)^switch.620.c:28#2.1 =(uint32) 0;
         }
         (620.c:28#2)^{
@@ -25,10 +25,10 @@ void main(void) {
             (620.c:28#2)^while (1) {
               (620.c:28#2)^choose {
                -->
-                (620.c:28#2)^guard(! goto.lbl_int32);
+                (620.c:28#2)^guard(! goto!lbl_int32);
                 (620.c:28#2)^switch.620.c:28#2.0 =(uint32) switch.620.c:28#2.1_uint32;
                -->
-                (620.c:28#2)^guard(goto.lbl_int32);
+                (620.c:28#2)^guard(goto!lbl_int32);
                 (620.c:28#2)^switch.620.c:28#2.0 =(uint32) 0;
               }
               (620.c:28#2)^do {
@@ -62,31 +62,31 @@ void main(void) {
                     (620.c:30#7)^goto lbl5;
                   } with lbl7: {
                   }
-                  (620.c:32#2)^goto.lbl =(uint32) 1;
+                  (620.c:32#2)^goto!lbl =(uint32) 1;
                   (620.c:32#2)^choose {
                    -->
-                    (620.c:32#2)^guard(goto.lbl_int32);
+                    (620.c:32#2)^guard(goto!lbl_int32);
                     (620.c:32#2)^goto lbl5;
                    -->
-                    (620.c:32#2)^guard(! goto.lbl_int32);
+                    (620.c:32#2)^guard(! goto!lbl_int32);
                   }
                 } with lbl6: {
                 }
-                (620.c:34#2)^goto.lbl =(uint32) 1;
+                (620.c:34#2)^goto!lbl =(uint32) 1;
                 (620.c:34#2)^choose {
                  -->
-                  (620.c:34#2)^guard(goto.lbl_int32);
+                  (620.c:34#2)^guard(goto!lbl_int32);
                   (620.c:34#2)^goto lbl5;
                  -->
-                  (620.c:34#2)^guard(! goto.lbl_int32);
+                  (620.c:34#2)^guard(! goto!lbl_int32);
                 }
               } with lbl5: {
               }
               (620.c:28#2)^choose {
                -->
-                (620.c:28#2)^guard(goto.lbl_int32);
+                (620.c:28#2)^guard(goto!lbl_int32);
                -->
-                (620.c:28#2)^guard(! goto.lbl_int32);
+                (620.c:28#2)^guard(! goto!lbl_int32);
                 (620.c:28#2)^goto lbl3;
               }
             }
@@ -95,9 +95,9 @@ void main(void) {
         }
         (620.c:28#2)^choose {
          -->
-          (620.c:28#2)^guard(goto.lbl_int32);
+          (620.c:28#2)^guard(goto!lbl_int32);
          -->
-          (620.c:28#2)^guard(! goto.lbl_int32);
+          (620.c:28#2)^guard(! goto!lbl_int32);
           (620.c:28#2)^goto lbl1;
         }
       }

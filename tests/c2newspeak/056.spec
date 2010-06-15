@@ -6,8 +6,8 @@ int32 f(void) {
 }
 
 void main(void) {
-  (056.c:34#2)^int32 !tmp0;
-  (056.c:34#2)^!tmp0 <- f();
+  (056.c:34#2)^int32 tmp_cir!0;
+  (056.c:34#2)^tmp_cir!0 <- f();
 }
 
 

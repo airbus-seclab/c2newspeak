@@ -29,7 +29,7 @@
 
 open Csyntax
   
-let fresh_lbl lbl = "goto."^lbl
+let fresh_lbl lbl = Temps.to_string 0 (Temps.Goto_label lbl)
 
 let goto_lbl lbl g_offset = lbl ^ "." ^ g_offset
 

@@ -8,12 +8,12 @@ int32 f(int32 a) {
 
 void main(void) {
   (065.c:31#6)^int32 x;
-  (065.c:32#2)^int32 !tmp0;
-  (065.c:32#2)^!tmp0 <- f(2);
+  (065.c:32#2)^int32 tmp_cir!0;
+  (065.c:32#2)^tmp_cir!0 <- f(2);
   (065.c:32#2)^{
-    int32 !tmp1;
-    (065.c:32#2)^!tmp1 <- f(3);
-    (065.c:32#2)^x =(int32) coerce[-2147483648,2147483647] (!tmp0_int32 + !tmp1_int32);
+    int32 tmp_cir!1;
+    (065.c:32#2)^tmp_cir!1 <- f(3);
+    (065.c:32#2)^x =(int32) coerce[-2147483648,2147483647] (tmp_cir!0_int32 + tmp_cir!1_int32);
   }
 }
 

@@ -4,8 +4,8 @@ Newspeak output
 ---------------
 619.c
 void main(void) {
-  (619.c:27#6)^uint32 goto.lbl;
-  (619.c:27#6)^goto.lbl =(uint32) 0;
+  (619.c:27#6)^uint32 goto!lbl;
+  (619.c:27#6)^goto!lbl =(uint32) 0;
   (619.c:27#6)^{
     int32 i;
     (619.c:28#1)^while (1) {

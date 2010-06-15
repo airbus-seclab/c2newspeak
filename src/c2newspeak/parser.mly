@@ -30,6 +30,12 @@ open Synthack
 
 let struct_cnt = ref 0
 
+let new_id =
+  let c = ref 0 in
+  fun _ ->
+    incr c;
+    !c
+
 let gen_struct_id () = 
   incr struct_cnt;
   "anon_struct"^(string_of_int !struct_cnt)
@@ -587,8 +593,9 @@ expression:
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
     let vdecl = VDecl (t, false, false, Some (Sequence $4)) in
-    let decl = (LocalDecl (".tmp", vdecl), loc) in
-    let e = (Exp (Var ".tmp"), loc) in
+    let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
+    let decl = (LocalDecl (id, vdecl), loc) in
+    let e = (Exp (Var id), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
       BlkExp (blk@decl::e::[])
@@ -628,8 +635,9 @@ expression:
     let loc = get_loc () in
     let t = Csyntax.Typeof e in
     let vdecl = VDecl (t, false, false, Some (Data e)) in
-    let decl = (LocalDecl (".tmp", vdecl), loc) in
-    let e' = Var ".tmp" in
+    let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
+    let decl = (LocalDecl (id, vdecl), loc) in
+    let e' = Var id in
       BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
   }
 
