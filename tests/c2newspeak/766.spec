@@ -1,1 +1,1 @@
-Fatal error: 766.c:80#0: syntax error: unexpected token: sdsfdd, rewrite your code or try option --accept-gnuc
+Fatal error: 766.c:80#0: syntax error: unexpected token: sdsfdd, rewrite your code

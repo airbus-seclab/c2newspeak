@@ -48,26 +48,26 @@ let ignores_asm = ref false
 let ignores_extern_fundef = ref false
 let ignores_pack = ref false
 let ignores_volatile = ref false
-let accept_gnuc = ref false
-let accept_signed_index = ref false
+let accept_gnuc = ref true
+let accept_signed_index = ref true
 let opt_checks = ref true
 
-let accept_forward_goto = ref false
-let accept_goto = ref false
+let accept_forward_goto = ref true
+let accept_goto = ref true
 
-let accept_dirty_syntax = ref false
+let accept_dirty_syntax = ref true
 let use_strict_syntax = ref false
 
-let accept_dirty_cast = ref false
+let accept_dirty_cast = ref true
 let ignores_pragmas = ref false
 let remove_temp = ref true
 let remove_do_loops = ref false
-let accept_extern = ref false
-let accept_flex_array = ref false
+let accept_extern = ref true
+let accept_flex_array = ref true
 
 let no_opt = ref false
 
-let accept_mult_def = ref false
+let accept_mult_def = ref true
 
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
@@ -80,7 +80,7 @@ let verb_ast = ref false
 let verb_cir = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
-let accept_transparent_union = ref false
+let accept_transparent_union = ref true
 
 let verbose boolean () =
   verb_ast := boolean;
@@ -91,8 +91,8 @@ let input_files = ref []
 let anon_fun file = input_files := file::!input_files
 let compile_only = ref false
 let output_file = ref ""
-let accept_partial_fdecl = ref false
-let accept_missing_fdecl = ref false
+let accept_partial_fdecl = ref true
+let accept_missing_fdecl = ref true
 let xml_output = ref ""
 
 type error =
@@ -140,83 +140,95 @@ let flag_of_error err =
     | ExternFunDef -> ignores_extern_fundef
     | SignedIndex -> accept_signed_index
  
-let opt_of_error err =
+let opt_of_flag err =
   match err with
       Asm -> "--ignore-asm"
     | Pragma -> "--ignore-pragma"
     | Pack -> "--ignore-pack"
     | Volatile -> "--ignore-volatile"
-    | DirtyCast -> "--accept-dirty-cast"
-    | DirtySyntax -> "--accept-dirty-syntax"
-    | PartialFunDecl -> "--accept-incomplete-fundecl"
-    | MissingFunDecl -> "--accept-missing-fundecl"
-    | ForwardGoto -> "--accept-forward-goto"
-    | BackwardGoto -> "--accept-goto"
+    | DirtyCast -> "--reject-dirty-cast"
+    | DirtySyntax -> "--reject-dirty-syntax"
+    | PartialFunDecl -> "--reject-incomplete-fundecl"
+    | MissingFunDecl -> "--reject-missing-fundecl"
+    | ForwardGoto -> "--reject-forward-goto"
+    | BackwardGoto -> "--reject-goto"
     | StrictSyntax -> "--use-strict-syntax"
-    | ExternGlobal -> "--accept-extern"
-    | FlexArray -> "--accept-flexible-array"
-    | MultipleDef -> "--accept-mult-def"
-    | GnuC -> "--accept-gnuc"
+    | ExternGlobal -> "--reject-extern"
+    | FlexArray -> "--reject-flexible-array"
+    | MultipleDef -> "--reject-mult-def"
+    | GnuC -> "--reject-gnuc"
     | DisableOpt -> "--disable-opt"
     | DisableCheckOpt -> "--disable-checks-opt"
-    | TransparentUnion -> "--accept-transparent-union"
+    | TransparentUnion -> "--reject-transparent-union"
     | ExternFunDef -> "--ignore-extern-definition"
-    | SignedIndex -> "--accept-signed-index"
+    | SignedIndex -> "--reject-signed-index"
 
 (* Version *)
 
 let version = ref false
 
-let set_gotos () =
-  accept_forward_goto := true;
-  accept_goto := true
+let clear_gotos () =
+  accept_forward_goto := false;
+  accept_goto := false
+
+let set_ansi () =
+  accept_dirty_cast := false;
+  accept_dirty_syntax := false;
+  accept_partial_fdecl := false;
+  accept_missing_fdecl := false;
+  accept_extern := false;
+  accept_flex_array := false;
+  accept_mult_def := false;
+  accept_gnuc := false;
+  accept_transparent_union := false;
+  accept_signed_index := false
 
 let argslist = [
   ("-c", Arg.Set compile_only,
    "compiles only into a .no file");
   
-  ("-o", Arg.Set_string output_file, 
+  ("-o", Arg.Set_string output_file,
    "gives the name of Newspeak output\n");
 
-  (opt_of_error DirtyCast, Arg.Set (flag_of_error DirtyCast),
-   "accepts horrible casts to be translated");
+  (opt_of_flag DirtyCast, Arg.Clear (flag_of_error DirtyCast),
+   "rejects casts");
 
-  (opt_of_error DirtySyntax, Arg.Set (flag_of_error DirtySyntax),
-   "accepts dirty syntax");
+  (opt_of_flag DirtySyntax, Arg.Clear (flag_of_error DirtySyntax),
+   "rejects dirty syntax");
 
-  (opt_of_error PartialFunDecl, Arg.Set (flag_of_error PartialFunDecl),
-   "accepts call to function whose argument type is unknown");
+  (opt_of_flag PartialFunDecl, Arg.Clear (flag_of_error PartialFunDecl),
+   "rejects call to function whose argument type is unknown");
 
-  (opt_of_error MissingFunDecl, Arg.Set (flag_of_error MissingFunDecl),
-   "accepts call to function whose prototype is not declared");
+  (opt_of_flag MissingFunDecl, Arg.Clear (flag_of_error MissingFunDecl),
+   "rejects call to function whose prototype is not declared");
 
-  (opt_of_error ForwardGoto, Arg.Set (flag_of_error ForwardGoto),
-   "accepts forward goto statements");
+  (opt_of_flag ForwardGoto, Arg.Clear (flag_of_error ForwardGoto),
+   "rejects forward goto statements");
 
-  (opt_of_error BackwardGoto, Arg.Unit set_gotos, "accepts goto statements ");
+  (opt_of_flag BackwardGoto, Arg.Unit clear_gotos, "accepts goto statements ");
 
-  (opt_of_error TransparentUnion, Arg.Set (flag_of_error TransparentUnion),
-   "accepts transparent unions");
+  (opt_of_flag TransparentUnion, Arg.Clear (flag_of_error TransparentUnion),
+   "rejects transparent unions");
 
-  (opt_of_error ExternGlobal, Arg.Set (flag_of_error ExternGlobal),
+  (opt_of_flag ExternGlobal, Arg.Set (flag_of_error ExternGlobal),
    "accepts variables that are only declared as extern but still used");
 
-  (opt_of_error FlexArray, Arg.Set (flag_of_error FlexArray),
-   "accept flexible array members");
+  (opt_of_flag FlexArray, Arg.Clear (flag_of_error FlexArray),
+   "rejects flexible array members");
 
-  (opt_of_error MultipleDef, Arg.Set (flag_of_error MultipleDef),
+  (opt_of_flag MultipleDef, Arg.Set (flag_of_error MultipleDef),
    "accepts multiple definitions of the same variables");
 
-  (opt_of_error SignedIndex, Arg.Set (flag_of_error SignedIndex),
-   "accepts signed integer expressions to be used as array indices");
+  (opt_of_flag SignedIndex, Arg.Clear (flag_of_error SignedIndex),
+   "rejects signed integer expressions to be used as array indices");
 
-  (opt_of_error GnuC, Arg.Set (flag_of_error GnuC), 
-   "accepts GNU C extensions\n");
+  (opt_of_flag GnuC, Arg.Clear (flag_of_error GnuC),
+   "rejects GNU C extensions\n");
   
-  (opt_of_error DisableOpt, Arg.Set (flag_of_error DisableOpt), 
+  (opt_of_flag DisableOpt, Arg.Set (flag_of_error DisableOpt),
    "turn all code simplifications off");
 
-  (opt_of_error DisableCheckOpt, Arg.Clear (flag_of_error DisableCheckOpt),
+  (opt_of_flag DisableCheckOpt, Arg.Clear (flag_of_error DisableCheckOpt),
    "turn code simplifications that remove checks off");
 
   ("--disable-vars-elimination", Arg.Clear remove_temp,
@@ -227,22 +239,22 @@ let argslist = [
    ^"Carefull: this transformation is exponential in the imbrication "
    ^"depth of do loops\n");
 
-  (opt_of_error Pragma, Arg.Set (flag_of_error Pragma),
+  (opt_of_flag Pragma, Arg.Set (flag_of_error Pragma),
    "ignores any #pragma directive");
 
-  (opt_of_error Asm, Arg.Set (flag_of_error Asm),
+  (opt_of_flag Asm, Arg.Set (flag_of_error Asm),
    "ignores any asm directive");
 
-  (opt_of_error Pack, Arg.Set (flag_of_error Pack),
+  (opt_of_flag Pack, Arg.Set (flag_of_error Pack),
    "ignores any packed attribute");
 
-  (opt_of_error ExternFunDef, Arg.Set (flag_of_error ExternFunDef),
+  (opt_of_flag ExternFunDef, Arg.Set (flag_of_error ExternFunDef),
    "ignores the body of extern function definitions");
 
-  (opt_of_error Volatile, Arg.Set (flag_of_error Volatile),
+  (opt_of_flag Volatile, Arg.Set (flag_of_error Volatile),
    "ignores 'volatile' type qualifier\n");
   
-  (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
+  (opt_of_flag StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
    "sets strict syntax");
   
   ("--version", Arg.Set version,
@@ -266,14 +278,13 @@ let argslist = [
   ("--print-newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
 
-  ("--xml", Arg.Set_string xml_output, 
+  ("--xml", Arg.Set_string xml_output,
    "gives the name of XML output file\n");
 
+  ("--ansi", Arg.Unit set_ansi,
+   "accept only ANSI C + some common rules in embedded software");
+
 ]
-
-
-
-
 
 (*-------------------*)
 (* Location handling *)
@@ -363,14 +374,14 @@ let handle_cmdline_options version_string comment_string =
       
 let report_ignore_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
-    let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
+    let advice = ", rewrite your code or try option "^(opt_of_flag err_typ) in
       report_error loc (msg^" not supported yet"^advice)
   end;
   report_warning loc (msg^" ignored")
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
-    let advice = ", rewrite your code or try option "^(opt_of_error err_typ) in
+    let advice = ", rewrite your code or try option "^(opt_of_flag err_typ) in
       report_error loc (msg^advice)
   end;
   report_warning loc (msg^" accepted")

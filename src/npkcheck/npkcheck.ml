@@ -27,7 +27,7 @@
 *)
 
 (* Sanity check for Newspeak programs:
-   - check that all array sizes are > 0 
+   - check that all array sizes are >= 0 
      (process_length)
    - check that all shifts are necessarily of the form + int or + (e * int) 
      (process_lval)
@@ -88,7 +88,7 @@ object (self)
   inherit Lowspeak.visitor
 
   method process_length x =
-    if x <= 0 
+    if x < 0 
     then self#raise_error "invalid length for array"
 
   method process_lval x =
@@ -127,7 +127,7 @@ object (self)
 	  N.Scalar t -> Newspeak.size_of_scalar ptr_sz t
 	| N.Array (t, len) -> 
 	    let n = check_size t in
-	      if n > max_int/len then begin
+	      if len <> 0 && n > max_int/len then begin
 		self#raise_error ("size of type not representable as an int")
 	      end;
 	      n * len

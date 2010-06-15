@@ -1,3 +1,4 @@
+Warning: 577.c:28#25: unknown identifier assume, maybe a function without prototype accepted
 Newspeak output
 ---------------
 577.c

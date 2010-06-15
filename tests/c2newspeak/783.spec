@@ -6,6 +6,9 @@ Warning: 783.c:7#0: 'short signed' is not normalized: use 'signed short int' ins
 Warning: 783.c:8#0: 'short signed int' is not normalized: use 'signed short int' instead
 Warning: 783.c:9#0: 'short unsigned' is not normalized: use 'unsigned short int' instead
 Warning: 783.c:10#0: 'short unsigned int' is not normalized: use 'unsigned short int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
 Newspeak output
 ---------------
 783.c
