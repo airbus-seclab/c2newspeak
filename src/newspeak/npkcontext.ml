@@ -39,8 +39,6 @@
    different files.
 *)
 
-open Cil
-
 (*----------------------*)
 (* Command line options *)
 (*----------------------*)
@@ -96,9 +94,6 @@ let output_file = ref ""
 let accept_partial_fdecl = ref false
 let accept_missing_fdecl = ref false
 let xml_output = ref ""
-
-let use_cil = ref false
-let cil_printer = ref "default"
 
 type error =
     Asm
@@ -249,12 +244,6 @@ let argslist = [
   
   (opt_of_error StrictSyntax, Arg.Set (flag_of_error StrictSyntax),
    "sets strict syntax");
-  
-  ("--use-cil", Arg.Set use_cil, 
-   "use CIL lexer and parser instead of our own");
-
-  ("--use-cil-printer", Arg.Set_string cil_printer,
-   "verbose options: uses \"default\" or \"plain\" Cil output\n");
   
   ("--version", Arg.Set version,
    "prints the version of the software");
@@ -417,10 +406,6 @@ let string_of_options () =
     if !ignores_extern_fundef then options := ("--ignore-extern-definition", "")::!options;
     if !ignores_volatile then options := ("--ignore-volatile", "")::!options;
     if !use_strict_syntax then options := ("--use-strict-syntax", "")::!options;
-    if !use_cil then begin
-	options := ("--use-cil", "")::!options;
-	options := ("--use-cil-printer", !cil_printer)::!options;
-    end;
     if !version then options := ("--version", "")::!options;
     if !verb_ast && !verb_debug && !verb_newspeak then options := ("-v", "")::!options;
     if !verb_debug then options := ("--debug", "")::!options;

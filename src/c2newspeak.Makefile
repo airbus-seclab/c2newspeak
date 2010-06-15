@@ -25,8 +25,8 @@
 #
 
 TARGET=c2newspeak
-DIRS=$(CILDIR) utils/ newspeak/ c2newspeak/
-LIBX=unix.cmxa str.cmxa nums.cmxa $(CIL)
+DIRS=utils/ newspeak/ c2newspeak/
+LIBX=unix.cmxa str.cmxa nums.cmxa
 
 newspeak.FILES=\
 	config temps newspeak lowspeak npkcontext npk2lpk \
@@ -35,7 +35,7 @@ newspeak.FILES=\
 c2newspeak.FILES=\
         pp_syntax pp_parser pp_lexer \
         csyntax typedC synthack gnuc parser lexer \
-        cilutils npkutils goto_elimination cilenv cilfirstpass cilcompiler \
+        goto_elimination \
         csyntax2TypedC firstpass compiler \
 	params c2newspeak
 

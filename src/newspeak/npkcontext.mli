@@ -140,12 +140,6 @@ val print_debug : string -> unit
 (** Displays a message as a fatal error and exits the program *)
 val exit_on_error : string -> 'a
 
-(** Whether to use CIL lexer and parser *)
-val use_cil: bool ref
-
-(** Name of the printer to use to output CIL syntactic elements *)
-val cil_printer: string ref
-
 (** [print_size sz] displays [sz] as the current size of the representation 
     in debug mode. *)
 val print_size: int -> unit

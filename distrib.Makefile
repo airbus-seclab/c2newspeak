@@ -33,9 +33,6 @@ CP=cp
 RM=rm -rf
 OCAMLDOC=ocamldoc
 
-CILDIR=cil/obj
-CIL=$(CILDIR)/cil.cmxa
-
 #FILES
 EXE=c2newspeak npkstrip npkstats npk2bytesz \
     npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow \
@@ -47,7 +44,7 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~
 #rules
 .PHONY: clean doc lib
 
-all: bin $(CIL) $(COMPONENTS) doc lib
+all: bin $(COMPONENTS) doc lib
 
 # for bisect support you may need the latest version
 #   darcs get http://bisect.x9c.fr
@@ -77,19 +74,8 @@ bin/lib/assert.h:
 bin:
 	@mkdir bin
 
-$(COMPONENTS): $(CILDIR) src/version.ml
+$(COMPONENTS): src/version.ml
 	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
-
-$(CIL): $(CILDIR)
-	cd cil; tar xzf cil-1.3.5.tar.gz
-	cd cil/cil; patch Makefile.in ../Makefile.in.patch
-	cd cil/cil; ./configure
-	for i in cil/cil/obj/*; do $(CP) cil/machdep.ml $$i; done
-	cd cil/cil; $(MAKE)
-	for i in cil/cil/obj/*; do $(CP) $$i/* $(CILDIR); done
-
-$(CILDIR):
-	mkdir $(CILDIR)
 
 doc: doc/index.html
 
@@ -101,7 +87,3 @@ clean: $(COMPONENTS)
 	@echo "Cleaning files installed in "bin/, doc/
 	@$(RM) $(CLEANFILES)
 
-clean-all:
-	@$(MAKE) -s clean
-	@echo "Cleaning files for          "cil
-	@$(RM) -r cil/cil $(CILDIR)
