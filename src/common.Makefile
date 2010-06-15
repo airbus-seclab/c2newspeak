@@ -39,9 +39,9 @@ RM=rm -rf
 OCAMLC=ocamlc -w Ael -warn-error Ael
 
 OCAMLOPTCOMP=$(shell if ocamlopt.opt -v >/dev/null 2>&1; \
-										 then echo ocamlopt.opt ; \
-										 else echo ocamlopt ; \
-										 fi)
+		 then echo ocamlopt.opt ; \
+		 else echo ocamlopt ; \
+		 fi)
 
 OCAMLOPT=$(OCAMLOPTCOMP) $(OCAMLOPTFLAGS)
 OCAMLDEP=ocamldep

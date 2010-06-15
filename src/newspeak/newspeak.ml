@@ -597,7 +597,7 @@ let string_of_stmt x = string_of_blk (x::[])
 let write name prog =
   let cout = open_out_bin name in
     Marshal.to_channel cout "NPK!" [];
-    Marshal.to_channel cout (Version.version, Version.revision) [];
+    Marshal.to_channel cout Version.newspeak_hash [];
     Marshal.to_channel cout prog [];
     close_out cout
 
@@ -608,7 +608,7 @@ let read name =
       if str <> "NPK!" 
       then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
       let version = Marshal.from_channel cin in
-        if (version <> (Version.version, Version.revision)) then begin
+        if (version <> Version.newspeak_hash) then begin
           invalid_arg ("Newspeak.read: this file was generated with a "
                        ^"different version of c2newspeak. "
                        ^"Please regenerate your file or install the latest "
