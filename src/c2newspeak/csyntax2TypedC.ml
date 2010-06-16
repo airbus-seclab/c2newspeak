@@ -53,6 +53,7 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
+
 let process fname globals =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
@@ -75,7 +76,6 @@ let process fname globals =
       incr static_cnt;
       name
   in
-
   let complete_typ_with_init t init =
     let rec process (x, t) =
       match (x, t) with
@@ -153,6 +153,27 @@ let process fname globals =
 	c
   in
 
+  let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
+    let t' = 
+      match t with 
+	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
+	| _ -> t
+    in (x, ((n, t', static, extern, init), loc))
+  in
+
+  let update_local_vdecls s =
+    let vars = Hashtbl.fold (fun
+      x (e, t) vars ->
+	 match e, t with 
+	     C.Local _, C.Comp (C.Unknown s') when s = s' -> 
+	       x::vars
+	   | _ -> vars) symbtbl []
+    in
+    let t' = C.Comp (find_compdef s) in
+      List.iter (fun x ->
+		   Hashtbl.replace symbtbl x (C.Local x, t')
+		) vars
+  in
   let update_funtyp f ft1 =
     let (symb, t) = Hashtbl.find symbtbl f in
     let ft2 = TypedC.ftyp_of_typ t in
@@ -560,6 +581,7 @@ let process fname globals =
 	  Npkcontext.set_loc loc;
 	  translate_cdecl x d;
 	  let (tl, e) = translate_blk_exp tl in
+	    update_local_vdecls x;
 	    Hashtbl.remove comptbl x;
 	    (tl, e)
 
@@ -682,13 +704,7 @@ let process fname globals =
     let fundecls = ref [] in
     let specs = ref [] in
       
-    let update_glbdecls s (x, ((n, t, static, extern, init), loc)) =
-      let t' = 
-	match t with 
-	    C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
-	  | _ -> t
-      in (x, ((n, t', static, extern, init), loc))
-    in
+    
     let translate (x, loc) =
       Npkcontext.set_loc loc;
       match x with
@@ -705,7 +721,7 @@ let process fname globals =
 		
 	| GlbDecl (x, CDecl d) -> 
 	    translate_cdecl x d;
-	    glbdecls := List.map (update_glbdecls x) !glbdecls
+	    glbdecls := List.map (update_vdecl x) !glbdecls
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 

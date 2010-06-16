@@ -215,11 +215,11 @@ let translate src_lang prog fnames =
       | UserSpec x -> (translate_assertion loc x)::[]
 
       | Exp _ -> 
-	  Npkcontext.report_error "Compiler.translate_stmt" 
+	  Npkcontext.report_error "Cir2npkil.translate_stmt" 
 	    "unexpected expression as statement"
 
       | Decl _ -> 
-	  Npkcontext.report_error "Compiler.translate_stmt" "unreachable code"
+	  Npkcontext.report_error "Cir2npkil.translate_stmt" "unreachable code"
 
   and translate_fn fn =
     match fn with
@@ -287,8 +287,12 @@ let translate src_lang prog fnames =
   in
 
   let flag_glb x = 
-    let (t, loc, init, _) = Hashtbl.find glbdecls x in
-      Hashtbl.replace glbdecls x (t, loc, init, true)
+    try  
+      let (t, loc, init, _) = Hashtbl.find glbdecls x in
+	Hashtbl.replace glbdecls x (t, loc, init, true)
+    with Not_found -> 
+      Npkcontext.report_error "Cir2npkil.flag_glb" ("illegal use of " ^ x ^ " (undefined type)" )
+      
   in
 (* TODO: remove normalize!!! *) 
 (* TODO: this phase is stack memory intensive!! not nice!!! *)

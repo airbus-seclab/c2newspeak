@@ -278,7 +278,7 @@ let translate fname (globals, fundecls, spec) =
 	      try 
 		let name, (f_o, t) = 
 		  match fname with 
-		      Some f -> List.find (fun (f', _) -> String.compare f f' = 0) fields 
+		      Some f -> List.find (fun (f', _) -> String.compare f f' = 0) fields
 		    | None -> current
 		in
 		let not_init' = remove name not_init in
@@ -842,25 +842,48 @@ let translate fname (globals, fundecls, spec) =
     end
 
   (* type and translate blk *)
-(* TODO: do a translate_blk_exp blk -> blk, typ_exp
-   a translate_blk blk -> blk
-   and a translate_blk_aux ends_with_exp blk -> blk, typ_exp option *)
   and translate_blk_aux ends_with_exp x = 
+    (*let rec next_cdecl x blk =
+      match blk with
+	  [] -> raise Not_found 
+	| (LocalDecl (x', None))::blk' when x = x' -> next_cdecl x blk
+	| (Local (x', C.Comp Some _ ) as cdecl)::blk' when x = x' -> cdecl
+	| _::blk' -> next_cdecl x blk'
+    in
+    let next body x decl forward_decls =
+      try let decl' = next_cdecl body x in decl', decl'::forward_cdecls
+      with Not_found -> decl, decl'::forward_cdecls
+    in
+    *)
     let rec translate x =
       match x with
 	  (Exp (e, t), _)::[] when ends_with_exp -> 
 	    let e = translate_exp (e, t) in
 	      (([], []), Some (e, t))
 	    
-	| (LocalDecl (x, d), loc)::body -> 
+	| (LocalDecl (x, d), loc)::body -> begin
 	    Npkcontext.set_loc loc;
 	    let decl = translate_local_decl loc x d in
+	    (*let decl', forward_cdecls' = 
+	      match decl with
+		  C.Struct ([], _) 
+		| C.Union ([], _) -> 
+		    let decl' = translate_local_decl (next body x decl forward_decls) in
+		      decl', decl'::forward_cdecls
+		| CDecl _ -> decl, decl::forward_cdecls
+		| VDecl (x, Comp (Unknown s) as t) ->
+			   let t' = 
+			     try List.find s forward_cdecls 
+			     with Not_found -> t
+			   in
+			     VDecl (x, t'), forward_cdecls
+	    in*)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((decl@body, []), e)
-
+	  end
 	(* TODO: do the case where suffix is <> [] *)
 	(* TODO: remove body, suffix from For, use goto and labels
-	   remove break. Use goto... *)
+	   remove break. *)
 	| ((Label lbl, loc) as stmt)::tl -> 
 	    let lbl = translate_lbl lbl in
 	    let tl = 
