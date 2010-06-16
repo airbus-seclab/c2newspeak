@@ -48,7 +48,7 @@ let _ =
     if !input = "" 
     then invalid_arg ("no file specified. Try "^exec_name^" --help");
 
-    let prog = Newspeak.read !input in
+    let prog = Npk2lpk.translate (Newspeak.read !input) in
     let glbs = GlbCollect.process false prog in
       if !stats then GlbCollect.print_stats glbs
       else GlbCollect.print glbs

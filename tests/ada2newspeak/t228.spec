@@ -7,7 +7,7 @@ Newspeak output
 t228.adb
 void t228(void) {
   (t228.adb:8#7)^int32 x;
-  (t228.adb:8#7)^0- =(int32) 2;
+  (t228.adb:8#7)^x =(int32) 2;
 }
 
 

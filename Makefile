@@ -31,13 +31,16 @@ DISTFILE=$(DISTDIR).tar.gz
 VERSION.FILE=src/version.ml
 CLEANFILES+=$(VERSION.FILE) $(DISTDIR) $(DISTFILE)
 
+NEWSPEAK_HASH=$(shell md5sum src/newspeak/newspeak.ml | cut -c 1-32)
+
 genversion=\
 hg parents --template 'let date = "{date|shortdate}"\n' > $(VERSION.FILE); \
 hg parents --template 'let version = "$(VERSION)"\n' >> $(VERSION.FILE); \
-hg parents --template 'let revision = "{node|short}"\n' >> $(VERSION.FILE)
+hg parents --template 'let revision = "{node|short}"\n' >> $(VERSION.FILE); \
+echo "let newspeak_hash=\"$(NEWSPEAK_HASH)\"" >> $(VERSION.FILE)
 
 #Version number generation
-$(VERSION.FILE):
+$(VERSION.FILE): src/newspeak/newspeak.ml
 	@echo "Creating version file       "$(VERSION.FILE)
 	@$(genversion)
 
@@ -49,7 +52,6 @@ $(DISTDIR): clean-all
 	$(CP) -r doc $(DISTDIR)
 	$(CP) -r src $(DISTDIR)
 	$(CP) -r lib $(DISTDIR)
-	$(CP) -r cil $(DISTDIR)
 	$(CP) -r INSTALL.txt lgpl.txt limitations.txt  $(DISTDIR)
 	$(CP) -r distrib.Makefile $(DISTDIR)/Makefile
 	tar czf $(DISTFILE) $(DISTDIR)

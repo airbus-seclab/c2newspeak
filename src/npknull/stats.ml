@@ -23,11 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
+open Lowspeak
 
 class collector warnings =
 object (this)
-  inherit Newspeak.visitor
+  inherit Lowspeak.visitor
 
   method process_lval x =
     let _ = 
@@ -48,7 +48,7 @@ let count_derefs prog live_funs =
   let collector = new collector warnings in
   let visit_fun f dec =
     if StrSet.mem f live_funs 
-    then Newspeak.visit_fun collector f dec
+    then Lowspeak.visit_fun collector f dec
   in
     Hashtbl.iter visit_fun prog.fundecs;
     StrSet.cardinal !warnings

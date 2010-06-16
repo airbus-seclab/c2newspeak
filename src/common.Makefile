@@ -39,9 +39,9 @@ RM=rm -rf
 OCAMLC=ocamlc -w Ael -warn-error Ael
 
 OCAMLOPTCOMP=$(shell if ocamlopt.opt -v >/dev/null 2>&1; \
-										 then echo ocamlopt.opt ; \
-										 else echo ocamlopt ; \
-										 fi)
+		 then echo ocamlopt.opt ; \
+		 else echo ocamlopt ; \
+		 fi)
 
 OCAMLOPT=$(OCAMLOPTCOMP) $(OCAMLOPTFLAGS)
 OCAMLDEP=ocamldep
@@ -49,8 +49,6 @@ OCAMLDOC=ocamldoc
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc
 
-CILDIR=../cil/obj
-CIL=$(CILDIR)/cil.cmxa
 INCLUDE=$(addprefix -I ,$(DIRS))
 
 CMX=$(addsuffix .cmx,$(FILES))
@@ -64,7 +62,7 @@ CLEANFILES+=\
 	$(addsuffix .o,$(FILES))   \
 	$(addsuffix .cmp,$(FILES))
 
-../bin/$(TARGET): $(CIL) $(CMX)
+../bin/$(TARGET): $(CMX)
 	@echo "Linking                     "$(TARGET)
 	@$(OCAMLOPT) $(EXTRALINKFLAGS) $(INCLUDE) $(LIBX) $(CMX) -o $@
 

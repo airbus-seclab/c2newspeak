@@ -7,6 +7,9 @@ Warning: 335.c:41#0: increment statement expected
 Warning: 335.c:43#0: init statement expected
 Warning: 335.c:44#0: halting condition should be explicit
 Warning: 335.c:45#0: init statement expected
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
 Newspeak output
 ---------------
 335.c
@@ -16,23 +19,23 @@ void main(void) {
     (335.c:38#2)^while (1) {
       (335.c:38#2)^choose {
        -->
-        (335.c:38#2)^guard((10 > 0-_int32));
+        (335.c:38#2)^guard((10 > i_int32));
        -->
-        (335.c:38#2)^guard(! (10 > 0-_int32));
+        (335.c:38#2)^guard(! (10 > i_int32));
         (335.c:38#2)^goto lbl1;
       }
-      (335.c:38#16)^0- =(int32) coerce[-2147483648,2147483647] (0-_int32 + 1);
+      (335.c:38#16)^i =(int32) coerce[-2147483648,2147483647] (i_int32 + 1);
     }
   } with lbl1: {
   }
-  (335.c:40#6)^0- =(int32) 0;
+  (335.c:40#6)^i =(int32) 0;
   (335.c:40#2)^do {
     (335.c:40#2)^while (1) {
       (335.c:40#2)^choose {
        -->
-        (335.c:40#2)^guard((10 > 0-_int32));
+        (335.c:40#2)^guard((10 > i_int32));
        -->
-        (335.c:40#2)^guard(! (10 > 0-_int32));
+        (335.c:40#2)^guard(! (10 > i_int32));
         (335.c:40#2)^goto lbl4;
       }
     }
@@ -42,9 +45,9 @@ void main(void) {
     (335.c:42#2)^while (1) {
       (335.c:42#2)^choose {
        -->
-        (335.c:42#2)^guard((10 > 0-_int32));
+        (335.c:42#2)^guard((10 > i_int32));
        -->
-        (335.c:42#2)^guard(! (10 > 0-_int32));
+        (335.c:42#2)^guard(! (10 > i_int32));
         (335.c:42#2)^goto lbl7;
       }
     }

@@ -1,4 +1,7 @@
 Warning: 511.c:30#0: comma terminated initializer
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
+Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
 Newspeak output
 ---------------
 511.c

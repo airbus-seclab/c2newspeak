@@ -8,14 +8,14 @@ void main(void) {
    -->
     (118.c:29#2)^choose {
      -->
-      (118.c:29#2)^guard(! (1-_int32 ==_int32 0));
+      (118.c:29#2)^guard(! (x_int32 ==_int32 0));
      -->
-      (118.c:29#2)^guard((1-_int32 ==_int32 0));
-      (118.c:29#2)^guard(! (0-_int32 ==_int32 0));
+      (118.c:29#2)^guard((x_int32 ==_int32 0));
+      (118.c:29#2)^guard(! (y_int32 ==_int32 0));
     }
    -->
-    (118.c:29#2)^guard((1-_int32 ==_int32 0));
-    (118.c:29#2)^guard((0-_int32 ==_int32 0));
+    (118.c:29#2)^guard((x_int32 ==_int32 0));
+    (118.c:29#2)^guard((y_int32 ==_int32 0));
   }
 }
 

@@ -26,11 +26,12 @@
 
 TARGET=npkflow
 DIRS=newspeak/ npkflow/
-FILES=version newspeak/newspeak \
+FILES=version newspeak/newspeak newspeak/config newspeak/temps newspeak/lowspeak \
+      newspeak/npkcontext newspeak/npk2lpk \
       npkflow/equations npkflow/var npkflow/factory \
       npkflow/ptrDom \
       npkflow/store npkflow/solver \
       npkflow/npkflow
-LIBX=nums.cmxa
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

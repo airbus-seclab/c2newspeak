@@ -25,7 +25,6 @@
 
 open Newspeak
 
-module Nat = Newspeak.Nat
 module S = Simple
 
 let int_bounds = Newspeak.domain_of_typ (Signed, 32)
@@ -40,7 +39,7 @@ let process_typ t =
       Scalar t -> process_scalar_t t
     | _ -> invalid_arg "Filter.process_typ: scalar type expected"
 
-let process_ftyp (args, ret) =
+let process_ftyp args ret =
   if ret <> None then begin
     invalid_arg "Filter.process_ftyp: function without return value expected"
   end;
@@ -98,10 +97,15 @@ and process_exp e =
     | _ -> invalid_arg "Filter.process_exp: integer expression expected"
 
 and process_typed_lval (lv, t) = 
-  process_scalar_t t;
+  process_typ t;
   process_lval lv
   
-let process_funexp f =
+let process_funexp (_args, ft, f, _lvo) =
+  begin
+    match ft with
+      | [], None -> ()
+      | _ -> invalid_arg "Filter.process_funexp: only void -> void functions are allowed" 
+  end;
   match f with
       FunId f -> S.FunId f
     | _ -> invalid_arg "Filter.process_funexp: known function call expected"
@@ -124,8 +128,8 @@ let process_loop_guard lbl_exit x =
 
 let process_assertion x =
   match x with
-      LvalToken lv::SymbolToken c::SymbolToken '='::CstToken (CInt n)::[] -> 
-	let lv = process_typed_lval lv in
+      LvalToken (lv,t)::SymbolToken c::SymbolToken '='::CstToken (CInt n)::[] -> 
+	let lv' = process_typed_lval (lv, t) in
 	let n = S.CInt (process_nat n) in
 	let cmp =
 	  match c with
@@ -135,7 +139,7 @@ let process_assertion x =
 		invalid_arg ("Filter.process_assertion: "
 			     ^"unexpected operator in assertion")
 	in
-	  (lv, cmp, n)
+	  (lv', cmp, n)
     | _ -> 
 	invalid_arg "Filter.process_assertion: unexpected syntax for assertion"
 
@@ -164,7 +168,7 @@ and process_stmtkind x =
     | UserSpec (LvalToken (lv, t)::IdentToken "between"
 		  ::CstToken (CInt l)::IdentToken "and"::CstToken (CInt u)::
 		  []) -> 
-	process_scalar_t t;
+	process_typ t;
 	S.Set (process_lval lv, S.Random (process_nat l, process_nat u))
     | _ -> 
 	invalid_arg ("Filter.process_stmtkind: "
@@ -180,9 +184,9 @@ let process prog =
     Hashtbl.add globals x loc
   in
 
-  let process_fundec f (t, body) = 
-    process_ftyp t;
-    let body = process_blk body in
+  let process_fundec f fd = 
+    process_ftyp fd.args fd.ret;
+    let body = process_blk fd.body in
       Hashtbl.add fundecs f body
   in
 

@@ -16,7 +16,7 @@
 (!Newspeak.build_call_main)^1- + 40 =(int8) 0;
 (!Newspeak.build_call_main)^0- + 32 =(ptr) focus48 &(1-);
 (!Newspeak.build_call_main)^{
-  int32 value_of_main;
+  int32 value_of!1!main;
   (!Newspeak.build_call_main)^int32 arg1;
   (!Newspeak.build_call_main)^0- =(int32) 2;
   (!Newspeak.build_call_main)^{

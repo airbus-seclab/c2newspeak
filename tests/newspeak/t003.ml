@@ -23,13 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
-
 let _ =
   try
-    let prog = Newspeak.read Sys.argv.(1) in
-    let (ft, _) = Hashtbl.find prog.fundecs "main" in
+    let prog = Npk2lpk.translate (Newspeak.read Sys.argv.(1)) in
+    let (ft, _) = Hashtbl.find prog.Lowspeak.fundecs "main" in
     let args = ["Hello"; "World"] in
-    let body = Newspeak.build_main_call prog.ptr_sz ft args in
-      print_endline (Newspeak.string_of_blk body)
+    let body = Lowspeak.build_main_call prog.Lowspeak.ptr_sz ft args in
+      print_endline (Lowspeak.string_of_blk body)
   with Invalid_argument str -> print_endline str

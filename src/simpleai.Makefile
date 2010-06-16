@@ -25,14 +25,13 @@
 #
 TARGET=simpleai
 DIRS=newspeak/ utils/ simpleai/
-LIBX=nums.cmxa
-
+LIBX=nums.cmxa str.cmxa
 
 all: ../bin/$(TARGET)
 
-
-
-FILES=version newspeak/newspeak utils/strSet \
+FILES=version utils/strSet \
+      newspeak/newspeak newspeak/config newspeak/temps newspeak/lowspeak \
+      newspeak/npkcontext newspeak/npk2lpk \
       simpleai/context simpleai/simple \
       simpleai/filter simpleai/sigs simpleai/topState \
       simpleai/unrelState simpleai/cst simpleai/range \

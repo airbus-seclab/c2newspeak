@@ -38,7 +38,7 @@
    think about memcpy
 *)
 
-open Newspeak
+open Lowspeak
 
 type env = {
   cur_fun: string;

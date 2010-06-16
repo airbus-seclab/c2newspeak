@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007  Charles Hymans
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -22,11 +22,7 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 
-  Olivier Levillain
-  email: olivier.levillain@penjili.org
 *)
-
-
 
 (** Newspeak is a language designed for the purpose of static analysis. 
     It was designed with these features in mind:
@@ -101,24 +97,18 @@ type t = {
   src_lang: src_lang;
 }
 
+and fundec = {
+  args : (string * typ) list;
+  ret  : typ option;
+  body : blk;
+}
 
 and globals = (string, gdecl) Hashtbl.t
 
-and src_lang = C | ADA
-
 and gdecl = typ * location
 
-and fundec = ftyp * blk
+and src_lang = C | ADA
 
-and assertion = spec_token list
-
-and spec_token =
-    | SymbolToken of char
-    | IdentToken of string
-    | LvalToken of (lval * scalar_t)
-    | CstToken of cst
-
-(* The exp list of ChooseAssert is a list of booleans. The block is applied if and only if each boolean is true (each boolean must be evaluated)*)
 and stmtkind =
     Set of (lval * exp * scalar_t)
   | Copy of (lval * lval * size_t)
@@ -128,22 +118,37 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl * blk)
   | Goto of lbl
-  | Call of funexp
+  | Call of (arg list * ftyp * funexp * lval option)
   | UserSpec of assertion
+
+and arg =
+  | In    of exp  (** Copy-in only (C style) *)
+  | Out   of lval (** Copy-out only (no initializer) *)
+  | InOut of lval (** Copy-in + Copy-out *)
+
+and specs = assertion list
+
+and assertion = spec_token list
+
+and spec_token =
+  | SymbolToken of char
+  | IdentToken of string
+  | LvalToken of (lval * typ)
+  | CstToken of cst
 
 and stmt = stmtkind * location
 
 and blk = stmt list
 
 and lval =
-    Local of vid
+    Local of string
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
 
 and exp =
     Const of cst
-  | Lval of (lval * scalar_t)
+  | Lval of (lval * typ)
   | AddrOf of lval
   | AddrOfFun of (fid * ftyp)
   | UnOp of (unop * exp)
@@ -151,9 +156,27 @@ and exp =
 
 and cst = 
     CInt of Nat.t
-  (* TODO: warning floats with more than 64 bits can not be represented *)
   | CFloat of (float * string)
   | Nil
+
+and ftyp = typ list * typ option
+
+and typ =
+    Scalar of scalar_t
+  | Array of (typ * length)
+  | Region of (field list * size_t)
+
+and scalar_t =
+    Int of ikind
+  | Float of size_t
+  | Ptr
+  | FunPtr
+
+and field = offset * typ
+
+and funexp =
+    FunId of fid
+  | FunDeref of (exp * ftyp)
 
 and unop =
     Belongs of bounds
@@ -178,25 +201,6 @@ and binop =
 (* comparisons *)
   | Gt of scalar_t | Eq of scalar_t
 
-and funexp =
-    FunId of fid
-  | FunDeref of (exp * ftyp)
-
-and typ =
-    Scalar of scalar_t
-  | Array of (typ * length)
-  | Region of (field list * size_t)
-
-and field = offset * typ
-
-and scalar_t =
-    Int of ikind
-  | Float of size_t
-  | Ptr
-  | FunPtr
-
-and ftyp = typ list * typ option
-
 and lbl = int
 and vid = int
 and fid = string
@@ -211,16 +215,14 @@ and bounds = (Nat.t * Nat.t)
 
 and location = string * int * int
 
+val unknown_loc: location
+val dummy_loc: string -> location
 
 (* {1 Constants} *)
 
 val zero : exp
 val one : exp
 val zero_f : exp
-
-val unknown_loc: location
-val dummy_loc: string -> location
-
 
 (* {1 Manipulation and Simplifications} *)
 
@@ -231,14 +233,10 @@ val domain_of_typ : sign_t * size_t -> bounds
 
 val belongs: Nat.t -> bounds -> bool
 
-(* TODO: change this to subset! *)
 val contains: bounds -> bounds -> bool
 
 (* Negation of a boolean condition. *)
 val negate : exp -> exp
-
-(* [exp_of_int i] wraps i into a Newspeak expression. *)
-val exp_of_int : int -> exp
 
 (* Deletion of useless Gotos and Labels. *)
 val simplify_gotos : blk -> blk
@@ -281,14 +279,6 @@ val string_of_stmt: stmt -> string
 (** [string_of_block blk] returns the string representation of block [blk]. *)
 val string_of_blk: blk -> string
 
-val dump : t -> unit
-
-(** [dump_globals glbdecls] prints the global definitions [glbdecls] to
-    standard output. *)
-val dump_globals: globals -> unit
-
-val dump_fundec : string -> fundec -> unit
-
 val string_of_binop: binop -> string
 
 
@@ -329,7 +319,6 @@ val visit: visitor -> t -> unit
 
 class builder:
 object
-(* TODO: should have the same name as in the visitor!!! *)
   method set_curloc: location -> unit
   method curloc: location
   method process_global: string -> gdecl -> gdecl
@@ -366,27 +355,6 @@ val size_of_scalar : size_t -> scalar_t -> size_t
 *)
 val size_of : size_t -> typ -> size_t
 
-(** [bind_var x t blk] encloses the block [blk] with the declaration of 
-    variable [x] of type [t] and then binds all occurances of [x] as a global
-    variable in [blk].
-*)
-val bind_var: string -> typ -> blk -> stmtkind
-
-(** [build_call f ft args] builds the call to function [f] of type [ft] with
-    arguments [args].
-    @raise Invalid_argument "Newspeak.build_call: non scalar argument" if
-    some argument is not of scalar type
-*)
-val build_call: fid -> ftyp -> exp list -> blk
-
-(** [build_main_call ptr_sz ft params] returns a block
-   of newspeak code to call the main function with parameters [params].
-   @param ptr_sz the size of pointers
-   @param the type of main
-   @param the parameters with which [main] is called
-*)
-val build_main_call: size_t -> ftyp -> string list -> blk
-
 val max_ikind: ikind -> ikind -> ikind
 
 (** returns the list of all function identifiers that are stored as function
@@ -400,3 +368,7 @@ val belongs_of_exp: exp -> (bounds * exp) list
 val belongs_of_lval: lval -> (bounds * exp) list
 
 val belongs_of_funexp: funexp -> (bounds * exp) list
+
+val dump : t -> unit
+
+val exp_of_int : int -> exp

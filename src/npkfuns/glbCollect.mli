@@ -29,7 +29,7 @@
 type t = (Newspeak.fid, string list) Hashtbl.t
 
 (** [process silent prog] *)
-val process: bool -> Newspeak.t -> t
+val process: bool -> Lowspeak.t -> t
 
 val print: t -> unit
 

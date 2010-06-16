@@ -1,1 +1,1 @@
---accept-dirty-syntax --accept-gnuc --ignore-extern-definition
+--ignore-extern-definition

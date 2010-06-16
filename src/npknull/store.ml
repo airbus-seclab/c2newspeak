@@ -33,7 +33,8 @@
 *)
 (* TODO: this domain is too complex, the translations should be done on top
    of each domain into some independent adapters *)
-open Newspeak
+open Lowspeak
+module N = Newspeak
 
 let deref (m, (o, _)) =
   let o =
@@ -91,7 +92,7 @@ let lval_to_memloc env s lv =
 	  let m = lval_to_memloc lv in
 	  let (m, _) = get_one_abptr (P1.read s m) in
 	    m
-      | BinOp (PlusPI, e, _) -> exp_to_memloc e
+      | BinOp (N.PlusPI, e, _) -> exp_to_memloc e
       | _ -> raise Exceptions.Unknown
   in
     lval_to_memloc lv
@@ -117,21 +118,21 @@ let lval_to_memloc_list env s lv =
 	  in
 	    List.iter read_loc m;
 	    !res
-      | UnOp (IntToPtr _, e) 
-      | BinOp (PlusPI, e, _) -> translate_exp e
+      | UnOp (N.IntToPtr _, e) 
+      | BinOp (N.PlusPI, e, _) -> translate_exp e
       | _ -> 
 	  invalid_arg ("Store.lval_to_memloc_list: case not handled yet: "
-		       ^ Newspeak.string_of_exp e)
+		       ^ Lowspeak.string_of_exp e)
   in
     translate_lval lv
 
 let rec lval_to_addr env s lv =
   match lv with
       Global _ | Local _ -> (lval_to_memloc env s lv, 0)
-    | Shift (lv, Const CInt n) -> 
+    | Shift (lv, Const N.CInt n) -> 
 	let (m, o) = lval_to_addr env s lv in
 	  (* TODO: maybe a bug with integer overflow here!! *)
-	  (m, o + (Nat.to_int n))
+	  (m, o + (N.Nat.to_int n))
     | Deref (e, _) -> 
 	let a = deref (exp_to_ptr env s e) in
 	  abaddr_to_addr a
@@ -141,7 +142,7 @@ let rec lval_to_addr env s lv =
 (* TODO: put this in wrapper around P1!! *)
 and exp_to_ptr env s e =
   match e with
-      Const _ | AddrOfFun _ | BinOp (Eq _, _, _) -> raise Exceptions.Unknown
+      Const _ | AddrOfFun _ | BinOp (N.Eq _, _, _) -> raise Exceptions.Unknown
     | Lval (lv, _) ->
 	let m = lval_to_memloc env s lv in
 	let p =
@@ -149,16 +150,16 @@ and exp_to_ptr env s e =
 	  with Exceptions.Emptyset -> raise Exceptions.Unknown
 	in
 	  p
-    | UnOp (Focus n, AddrOf lv) -> 
+    | UnOp (N.Focus n, AddrOf lv) -> 
 	let (m, o) = lval_to_addr env s lv in
 	  (m, (Some (o, 0), Some n))
 	    (* TODO: could be a fallback, if more precision is needed
 	      let m = lval_to_memloc env s lv in
 	      Some (m, None)
 	    *)
-    | UnOp (Coerce _, e) 
-    | BinOp (PlusPI, e, _) -> exp_to_ptr env s e
-    | BinOp ((PlusI|Shiftrt|BAnd _), e1, e2) ->
+    | UnOp (N.Coerce _, e) 
+    | BinOp (N.PlusPI, e, _) -> exp_to_ptr env s e
+    | BinOp ((N.PlusI|N.Shiftrt|N.BAnd _), e1, e2) ->
 	let v1 = 
 	  try Some (exp_to_ptr env s e1)
 	  with Exceptions.Unknown -> None
@@ -167,24 +168,23 @@ and exp_to_ptr env s e =
 	  try Some (exp_to_ptr env s e2)
 	  with Exceptions.Unknown -> None
 	in
-	let v =
-	  match (v1, v2) with
-	      (Some _, Some _) | (None, None) -> raise Exceptions.Unknown
-	    | (Some v1, _) -> v1
-	    | (_, Some v2) -> v2
-	in
-	  v
-    | UnOp (Cast (Int _, FunPtr), e) -> exp_to_ptr env s e
+        begin
+          match (v1, v2) with
+            (Some _, Some _) | (None, None) -> raise Exceptions.Unknown
+            | (Some v1, _) -> v1
+            | (_, Some v2) -> v2
+        end
+    | UnOp (N.Cast (N.Int _, N.FunPtr), e) -> exp_to_ptr env s e
     | _ -> raise Exceptions.Unknown
 
 (* TODO: here may use abaddr??? *)
 let lval_to_buffer env s lv =
   match lv with
       Global _ | Local _ -> ((lval_to_memloc env s lv, 0), 1)
-    | Shift (lv, Const CInt n) -> 
+    | Shift (lv, Const N.CInt n) -> 
 	let (m, o) = lval_to_addr env s lv in
 	  (* TODO: maybe a bug with integer overflow here!! *)
-	  ((m, o + (Nat.to_int n)), 1)
+	  ((m, o + (N.Nat.to_int n)), 1)
     | Deref (e, _) -> 
 	let a = deref (exp_to_ptr env s e) in
 	  abaddr_to_buffer a
@@ -203,8 +203,8 @@ let may_be_null env s1 s e =
 	      not (P2.addr_is_valid s a)
 	  with Exceptions.Unknown -> true
 	end
-      | BinOp (PlusPI, e, _) -> may_be_null e
-      | UnOp (Focus _, e) -> may_be_null e
+      | BinOp (N.PlusPI, e, _) -> may_be_null e
+      | UnOp (N.Focus _, e) -> may_be_null e
       | _ ->
 	  (*	print_endline (Newspeak.string_of_exp e);*)
 	  true
@@ -234,12 +234,12 @@ let forget_memloc_list2 m s =
 let translate_exp_P1 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOfFun _ | BinOp ((Eq _|Gt _|DivF _|MultF _), _, _) 
-      | UnOp (Not, _) -> []
+	Const _ | AddrOfFun _ | BinOp ((N.Eq _|N.Gt _|N.DivF _|N.MultF _), _, _) 
+      | UnOp (N.Not, _) -> []
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P1.Lval x) m
-      | UnOp (Focus n, AddrOf lv) -> begin
+      | UnOp (N.Focus n, AddrOf lv) -> begin
 	  try
 	    let (m, o) = lval_to_addr env s lv in
 	      [P1.AddrOf (m, (Some (o, 0), Some n))]
@@ -247,38 +247,38 @@ let translate_exp_P1 env s e =
 	    let m = lval_to_memloc_list env s lv in
 	      List.map (fun m -> P1.AddrOf (m, (None, None))) m
 	end
-      | UnOp ((Coerce _|PtrToInt _|BNot _|Focus _|IntToPtr _
-	      |Cast (Int _, FunPtr)|Cast (Float _, Float _)|Cast (FunPtr, Ptr)
-	      |Cast (Int _, Float _)|Cast (Float _, Int _)), e)
-      | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
-      | BinOp ((PlusI|MinusI|MultI|Shiftlt|Shiftrt
-	       |BAnd _|BOr _|MinusPP), e1, e2) ->
+      | UnOp ((N.Coerce _|N.PtrToInt _|N.BNot _|N.Focus _|N.IntToPtr _
+	      |N.Cast (N.Int _, N.FunPtr)|N.Cast (N.Float _, N.Float _)|N.Cast (N.FunPtr, N.Ptr)
+	      |N.Cast (N.Int _, N.Float _)|N.Cast (N.Float _, N.Int _)), e)
+      | BinOp ((N.PlusPI|N.DivI|N.Mod), e, _) -> translate e
+      | BinOp ((N.PlusI|N.MinusI|N.MultI|N.Shiftlt|N.Shiftrt
+	       |N.BAnd _|N.BOr _|N.MinusPP), e1, e2) ->
 	  let v1 = translate e1 in
 	  let v2 = translate e2 in
 	    v1@v2
       | _ -> 
 	  invalid_arg ("Store.translate_exp_P1: case not implemented yet: "
-		       ^Newspeak.string_of_exp e)
+		       ^Lowspeak.string_of_exp e)
   in
     translate e
 
 let translate_exp_P3 env s e =
   let rec translate e =
     match e with
-	Const _ | AddrOf _ | BinOp ((Eq _|Gt _|DivF _|MultF _), _, _) 
-      | UnOp (Not, _) -> []
+	Const _ | AddrOf _ | BinOp ((N.Eq _|N.Gt _|N.DivF _|N.MultF _), _, _) 
+      | UnOp (N.Not, _) -> []
       | Lval (lv, _) -> 
 	  let m = lval_to_memloc_list env s lv in
 	    List.map (fun x -> P3.Lval x) m
       | AddrOfFun (f, _) -> [P3.AddrOfFun f]
-      | UnOp ((Coerce _|Cast _|PtrToInt _|IntToPtr _|BNot _|Focus _), e) 
-      | BinOp ((PlusPI|DivI|Mod), e, _) -> translate e
-      | BinOp ((PlusI|MinusI|MultI|Shiftrt|Shiftlt
-	       |BAnd _|BOr _|MinusPP), e1, e2) ->
+      | UnOp ((N.Coerce _|N.Cast _|N.PtrToInt _|N.IntToPtr _|N.BNot _|N.Focus _), e) 
+      | BinOp ((N.PlusPI|N.DivI|N.Mod), e, _) -> translate e
+      | BinOp ((N.PlusI|N.MinusI|N.MultI|N.Shiftrt|N.Shiftlt
+	       |N.BAnd _|N.BOr _|N.MinusPP), e1, e2) ->
 	  (translate e1)@(translate e2)
       | _ -> 
 	  invalid_arg ("Store.translate_exp_P3: case not implemented yet: "
-		       ^Newspeak.string_of_exp e)
+		       ^Lowspeak.string_of_exp e)
   in
     translate e
 

@@ -25,6 +25,6 @@
 
 let _ =
   try
-    let _ = Newspeak.read Sys.argv.(1) in
+    let _ = Npk2lpk.translate (Newspeak.read Sys.argv.(1)) in
       ()
   with Invalid_argument str -> print_endline str

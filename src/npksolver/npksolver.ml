@@ -48,7 +48,7 @@ let output_graphviz ?results cfg =
   close_out file
 
 let handle_file_npk fname =
-  let npk = Newspeak.read fname in
+  let npk = Npk2lpk.translate (Newspeak.read fname) in
   let prg = Pcomp.compile npk in
   List.iter (function
     | Prog.Widening -> Options.set Options.widening true

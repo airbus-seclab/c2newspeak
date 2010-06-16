@@ -23,8 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
-
 let input = ref ""
 
 let usage_msg = "npkflow [options] [-help|--help] file.npk"
@@ -43,7 +41,7 @@ let _ =
     Arg.parse speclist anon_fun usage_msg;
     if !input = "" then invalid_arg "no file specified. Try option --help";
 
-    let prog = Newspeak.read !input in
+    let prog = Npk2lpk.translate (Newspeak.read !input) in
     let eqs = Factory.build prog in
       Solver.run eqs
   with Invalid_argument s -> 

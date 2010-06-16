@@ -8,9 +8,9 @@ void main(void) {
   (140.c:31#7)^ptr ptr;
   (140.c:32#2)^choose {
    -->
-    (140.c:32#2)^guard(((ptr) 1-_int32 ==_ptr 0-_ptr));
+    (140.c:32#2)^guard(((ptr) x_int32 ==_ptr ptr_ptr));
    -->
-    (140.c:32#2)^guard(! ((ptr) 1-_int32 ==_ptr 0-_ptr));
+    (140.c:32#2)^guard(! ((ptr) x_int32 ==_ptr ptr_ptr));
   }
 }
 

@@ -1,7 +1,7 @@
 Newspeak output
 ---------------
 716.c
-void f(ptr) {
+void f(ptr x) {
 }
 
 

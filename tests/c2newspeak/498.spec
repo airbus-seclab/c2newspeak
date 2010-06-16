@@ -6,7 +6,7 @@ Newspeak output
 498.c
 void main(void) {
   (498.c:35#12)^ptr ptr;
-  (498.c:36#2)^[(0-_ptr + 352)]32 =(int32) 1;
+  (498.c:36#2)^[(ptr_ptr + 352)]32 =(int32) 1;
 }
 
 

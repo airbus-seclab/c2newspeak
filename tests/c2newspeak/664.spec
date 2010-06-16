@@ -2,15 +2,13 @@ Newspeak output
 ---------------
 664.c
 void main(void) {
-  (664.c:29#2)^ptr f.arg1;
-  (664.c:29#2)^0- =(ptr) focus40 &(!664.c.const_str_main);
-  (664.c:29#2)^f();
+  (664.c:29#2)^f(focus40 &(cstr!1!664.c.main));
 }
 
-int8[5] !664.c.const_str_main;
-(664.c:29#2)^!664.c.const_str_main =(int8) 109;
-(664.c:29#2)^!664.c.const_str_main + 8 =(int8) 97;
-(664.c:29#2)^!664.c.const_str_main + 16 =(int8) 105;
-(664.c:29#2)^!664.c.const_str_main + 24 =(int8) 110;
-(664.c:29#2)^!664.c.const_str_main + 32 =(int8) 0;
+int8[5] cstr!1!664.c.main;
+(664.c:29#2)^cstr!1!664.c.main =(int8) 109;
+(664.c:29#2)^cstr!1!664.c.main + 8 =(int8) 97;
+(664.c:29#2)^cstr!1!664.c.main + 16 =(int8) 105;
+(664.c:29#2)^cstr!1!664.c.main + 24 =(int8) 110;
+(664.c:29#2)^cstr!1!664.c.main + 32 =(int8) 0;
 

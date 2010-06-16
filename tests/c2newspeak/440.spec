@@ -5,7 +5,7 @@ Newspeak output
 440.c
 void main(void) {
   (440.c:33#4)^{ int32 0; }32 x;
-  (440.c:34#2)^0- =(int32) 1;
+  (440.c:34#2)^x =(int32) 1;
 }
 
 

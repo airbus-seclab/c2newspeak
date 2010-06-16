@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val build: Newspeak.t -> Equations.t
+val build: Lowspeak.t -> Equations.t

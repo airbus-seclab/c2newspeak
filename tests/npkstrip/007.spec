@@ -4,8 +4,6 @@ void f(void) {
 }
 
 void main(void) {
-  (007.c:32#2)^fptr execute.arg1;
-  (007.c:32#2)^0- =(fptr) &_{void -> void}(f);
-  (007.c:32#2)^execute();
+  (007.c:32#2)^execute(&_{void -> void}(f));
 }
 

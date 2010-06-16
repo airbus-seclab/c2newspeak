@@ -26,7 +26,7 @@
   email: olivier.levillain@penjili.org
 *)
 
-open Newspeak
+open Lowspeak
 
 type stats = {
   nb_vars: int;
@@ -67,7 +67,7 @@ let count_call st = { st with call_depth = st.call_depth + 1 }
 let rec_fun = ref ""
 
 let count debug prog =
-  let fid_addrof = Newspeak.collect_fid_addrof prog in
+  let fid_addrof = Lowspeak.collect_fid_addrof prog in
   let unknown_funs = ref [] in
   let exact = ref true in
   let fun_tbl = Hashtbl.create 100 in
@@ -79,62 +79,62 @@ let count debug prog =
     with Not_found -> 
       if debug then print_endline ("counting stack height of "^f);
       let height = 
-	try 
-	  let (_, body) = Hashtbl.find prog.fundecs f in
-	    process_blk body init_stats
-	with Not_found -> 
-	  if not (List.mem f !unknown_funs) then begin
-	    unknown_funs := f::!unknown_funs;
-	    prerr_endline ("Warning: function "^f^" body not defined")
-	  end;
-	  init_stats
+        try 
+          let (_, body) = Hashtbl.find prog.fundecs f in
+            process_blk body init_stats
+        with Not_found -> 
+          if not (List.mem f !unknown_funs) then begin
+            unknown_funs := f::!unknown_funs;
+            prerr_endline ("Warning: function "^f^" body not defined")
+          end;
+          init_stats
       in
       let height = count_call height in
-	Hashtbl.add fun_tbl f height;
-	height
-	      
+        Hashtbl.add fun_tbl f height;
+        height
+              
   and process_blk x info =
     match x with
-	(stmt, loc)::blk -> 
-	  current_loc := loc;
-	  let info1 = process_stmt stmt info in
-	  let info2 = process_blk blk info in
-	    max_stats info1 info2
+        (stmt, loc)::blk -> 
+          current_loc := loc;
+          let info1 = process_stmt stmt info in
+          let info2 = process_blk blk info in
+            max_stats info1 info2
       | [] -> info
-	  
+          
   and process_stmt x info =
     match x with
       | Decl (_, t, body) -> 
-	  let info = count_decl prog.ptr_sz t info in
-	    process_blk body info
+          let info = count_decl prog.ptr_sz t info in
+            process_blk body info
       | DoWith (body, _, action) -> 
-	  let body_info = process_blk body info in
-	  let action_info = process_blk action info in
-	    max_stats body_info action_info
+          let body_info = process_blk body info in
+          let action_info = process_blk action info in
+            max_stats body_info action_info
       | Call (FunId f) -> 
-	  if List.mem f !fset then 
-	    begin
-	      rec_fun := f; 
-	      info
-	    end
-	  else 
-	    begin
-	      fset := f::!fset;
-	      let info_f = process_call f in
-		fset := List.tl !fset;
-		add_stats info info_f
-	    end
+          if List.mem f !fset then 
+            begin
+              rec_fun := f; 
+              info
+            end
+          else 
+            begin
+              fset := f::!fset;
+              let info_f = process_call f in
+                fset := List.tl !fset;
+                add_stats info info_f
+            end
       | Call _ -> 
-	  let build_call f = (Call (FunId f), !current_loc)::[] in
-	  let alternatives = List.map build_call fid_addrof in
-	    if alternatives <> [] then exact := false;
-	    List.fold_left (process_alternatives info) init_stats alternatives
+          let build_call f = (Call (FunId f), !current_loc)::[] in
+          let alternatives = List.map build_call fid_addrof in
+            if alternatives <> [] then exact := false;
+            List.fold_left (process_alternatives info) init_stats alternatives
       | Select (lblk, rblk) -> 
-	  let stats = process_alternatives info init_stats lblk in
-	    process_alternatives info stats rblk
+          let stats = process_alternatives info init_stats lblk in
+            process_alternatives info stats rblk
       | InfLoop body -> 
-	  let info = count_loop info in
-	    process_blk body info
+          let info = count_loop info in
+            process_blk body info
       | _ -> info
 
   and process_alternatives info max_so_far body =
@@ -163,18 +163,18 @@ let print (exact, st) xout =
     if !rec_fun <> "" then
       print_endline (s5^": "^(!rec_fun));
     match xout with
-	None -> ()
+        None -> ()
       | Some cout ->
-	  let s =
-	    List.fold_left (fun s (t, c, n) ->
-			      s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^symb^n^"\"></stats>\n"
-			   ) "" [("analysis", s1, nb) ; ("analysis", s2, sz) ; 
-				 ("Functions", s3, call_depth) ; ("Statements", s4, loop_depth)]
-	  in
-	  let s =
-	    if !rec_fun<> "" then
-	      s^"<stats type=\"warning\" class=\""^s5^"\" val=\""^(!rec_fun)^"\"></stats>\n"
-	    else s
-	  in
-	    output_string cout s
+          let s =
+            List.fold_left (fun s (t, c, n) ->
+                              s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^symb^n^"\"></stats>\n"
+                           ) "" [("analysis", s1, nb) ; ("analysis", s2, sz) ; 
+                                 ("Functions", s3, call_depth) ; ("Statements", s4, loop_depth)]
+          in
+          let s =
+            if !rec_fun<> "" then
+              s^"<stats type=\"warning\" class=\""^s5^"\" val=\""^(!rec_fun)^"\"></stats>\n"
+            else s
+          in
+            output_string cout s
 

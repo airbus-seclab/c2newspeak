@@ -1,23 +1,15 @@
 Newspeak output
 ---------------
 t268.adb
-int32 t268.!op_+(int32, int32) {
-  (t268.adb:9#10)^2- =(int32) 0;
+int32 t268.!op+(int32 left, int32 right) {
+  (t268.adb:9#10)^!return =(int32) 0;
 }
 
 void t268.main(void) {
   (t268.adb:13#7)^int32 x;
-  (t268.adb:15#8)^int32 !tmp0;
-  (t268.adb:15#8)^{
-    int32 left;
-    (t268.adb:15#8)^0- =(int32) 0;
-    (t268.adb:15#8)^{
-      int32 right;
-      (t268.adb:15#8)^0- =(int32) 0;
-      (t268.adb:15#8)^t268.!op_+();
-    }
-  }
-  (t268.adb:15#8)^1- =(int32) 0-_int32;
+  (t268.adb:15#8)^int32 tmp_cir!0;
+  (t268.adb:15#8)^tmp_cir!0 <- t268.!op+(0, 0);
+  (t268.adb:15#8)^x =(int32) tmp_cir!0_int32;
 }
 
 

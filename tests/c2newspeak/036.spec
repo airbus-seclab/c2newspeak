@@ -8,15 +8,15 @@ void main(void) {
     (036.c:33#2)^do {
       (036.c:32#2)^choose {
        -->
-        (036.c:32#2)^guard((1-_int32 ==_int32 1));
+        (036.c:32#2)^guard((x_int32 ==_int32 1));
         (036.c:33#2)^goto lbl2;
        -->
-        (036.c:32#2)^guard(! (1-_int32 ==_int32 1));
+        (036.c:32#2)^guard(! (x_int32 ==_int32 1));
         (036.c:32#2)^goto lbl1;
       }
     } with lbl2: {
     }
-    (036.c:36#6)^0- =(int32) 4;
+    (036.c:36#6)^y =(int32) 4;
   } with lbl1: {
   }
 }

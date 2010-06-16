@@ -4,7 +4,7 @@ Newspeak output
 151.c
 void main(void) {
   (151.c:29#7)^ptr ptr;
-  (151.c:30#2)^0- =(ptr) (ptr <= fptr) &_{int32 -> int32}(f);
+  (151.c:30#2)^ptr =(ptr) (ptr <= fptr) &_{(int32) -> int32}(f);
 }
 
 

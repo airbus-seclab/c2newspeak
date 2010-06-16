@@ -28,7 +28,8 @@
    2) no lbl (Goto n where n is the number of labeled blocks to cross before
    getting there)
 *)
-open Newspeak
+open Lowspeak
+module N = Newspeak
 module F = Equations
 
 let pos_of_lbl j lbl = 
@@ -49,10 +50,12 @@ let build prog =
 
   let translate_binop op e1 e2 =
     match op with
-	PlusI | MinusI | MultI | DivI | Mod | BOr _ | BAnd _ 
-      | Shiftlt | Shiftrt | MinusPP | Gt _ | Eq _ -> 
+	N.PlusI | N.MinusI | N.MultI
+      | N.DivI | N.Mod | N.BOr _
+      | N.BAnd _ | N.Shiftlt | N.Shiftrt
+      | N.MinusPP | N.Gt _ | N.Eq _ -> 
 	  F.BinOp (e1, e2)
-      | PlusPI -> e1
+      | N.PlusPI -> e1
       | _ -> invalid_arg ("Factory.translate_binop: not implemented yet: "
 			  ^(Newspeak.string_of_binop op))
   in
@@ -128,7 +131,7 @@ let build prog =
       | UserSpec x -> (translate_assertion x, loc)::[]
       | _ -> 
 	  invalid_arg ("Factory.translate_stmt: statement not handled yet: "
-		       ^(Newspeak.string_of_stmt (x, loc)))
+		       ^(Lowspeak.string_of_stmt (x, loc)))
   in
 
   let translate_fundec f (_, body) =

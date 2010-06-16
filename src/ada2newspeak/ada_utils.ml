@@ -51,18 +51,17 @@ let name_to_string =
   String.concat "."
 
 let make_operator_name op =
-  let ada2npk_operator_prefix = "!op_" in
-  ada2npk_operator_prefix ^
-   (match op with
+  let op_str = match op with
    | And| AndThen -> "and" | Or | OrElse  -> "or"
    | Xor          -> "xor" | Eq           -> "="
    | Neq          -> "/="  | Lt           -> "<"
    | Le           -> "<="  | Gt           -> ">"
    | Ge           -> ">="  | Plus         -> "+"
    | Minus        -> "-"   | Mult         -> "*"
-   | Div          -> "/iv" | Mod          -> "mod"
+   | Div          -> "/"   | Mod          -> "mod"
    | Rem          -> "rem" | Power        -> "**"
-   )
+  in
+  Temps.to_string 0 (Temps.Ada_operator op_str)
 
 let operator_of_string s =
   begin match s with
@@ -73,7 +72,7 @@ let operator_of_string s =
   |_ -> Npkcontext.report_error "operator_of_string"
          ("\"" ^ s ^ "\" does not name an operator")
   end;
-  "!op_"^s
+  Temps.to_string 0 (Temps.Ada_operator s)
 
 let may f = function
   | None   -> None

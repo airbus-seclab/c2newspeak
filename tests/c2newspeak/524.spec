@@ -7,18 +7,18 @@ Newspeak output
 void main(void) {
   (524.c:27#6)^int32 x;
   (524.c:28#6)^int32 y;
-  (524.c:29#24)^0- =(int32) 1;
+  (524.c:29#24)^y =(int32) 1;
   (524.c:29#24)^{
-    int32 tmp0;
+    int32 tmp_firstpass!0;
     (524.c:29#24)^choose {
      -->
-      (524.c:29#24)^guard(! (2-_int32 ==_int32 0));
-      (524.c:29#24)^0- =(int32) 1;
+      (524.c:29#24)^guard(! (x_int32 ==_int32 0));
+      (524.c:29#24)^tmp_firstpass!0 =(int32) 1;
      -->
-      (524.c:29#24)^guard((2-_int32 ==_int32 0));
-      (524.c:29#24)^0- =(int32) 0;
+      (524.c:29#24)^guard((x_int32 ==_int32 0));
+      (524.c:29#24)^tmp_firstpass!0 =(int32) 0;
     }
-    (524.c:29#2)^2- =(int32) 0-_int32;
+    (524.c:29#2)^x =(int32) tmp_firstpass!0_int32;
   }
 }
 

@@ -220,7 +220,7 @@ let print prog = Hashtbl.iter print_fundec prog.fundecs
 
 let create_tmp loc t = 
   let id = fresh_id () in
-  let x = "!tmp"^(string_of_int id) in
+  let x = Temps.to_string id (Temps.Misc "cir") in
   let decl = (Decl (t, x), loc) in
   let v = Local x in
     (decl, v)

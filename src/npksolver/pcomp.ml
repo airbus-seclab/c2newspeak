@@ -18,61 +18,62 @@
  *)
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
-open Newspeak
+open Lowspeak
+module N = Newspeak
 
 let abort s =
   prerr_endline s;
   exit 3
 
-let fail loc x = abort (string_of_loc loc ^ " : " ^ x)
+let fail loc x = abort (Newspeak.string_of_loc loc ^ " : " ^ x)
 
 let check_scalar_type loc = function
-  | Int (Signed, 32) -> ()
-  | Ptr -> ()
-  | Int (Signed, sz)  -> fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
-  | Int (Unsigned, _) -> fail loc "Unsigned value"
+  | N.Int (N.Signed, 32) -> ()
+  | N.Ptr -> ()
+  | N.Int (N.Signed, sz)  -> fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
+  | N.Int (N.Unsigned, _) -> fail loc "Unsigned value"
   | _ -> fail loc "Bad scalar"
 
 let rec check_type loc = function
-  | Scalar s -> check_scalar_type loc s
-  | Array (t, _sz) -> check_type loc t
-  | Region _ -> fail loc "Not a scalar"
+  | N.Scalar s -> check_scalar_type loc s
+  | N.Array (t, _sz) -> check_type loc t
+  | N.Region _ -> fail loc "Not a scalar"
 
 let pcomp_binop loc binop =
   match binop with
-  | PlusI   -> Prog.Plus
-  | MinusI  -> Prog.Minus
-  | MultI   -> Prog.Mult
-  | DivI    -> Prog.Div
-  | Gt scal -> check_scalar_type loc scal; Prog.Gt
-  | Eq scal -> check_scalar_type loc scal; Prog.Eq
-  | PlusPI  -> Prog.PlusPtr loc
+  | N.PlusI   -> Prog.Plus
+  | N.MinusI  -> Prog.Minus
+  | N.MultI   -> Prog.Mult
+  | N.DivI    -> Prog.Div
+  | N.Gt scal -> check_scalar_type loc scal; Prog.Gt
+  | N.Eq scal -> check_scalar_type loc scal; Prog.Eq
+  | N.PlusPI  -> Prog.PlusPtr loc
   | _ -> fail loc "Invalid binary operation"
 
 let rec pcomp_type = function
-  | Scalar (Int _ik) -> Prog.Int
-  | Scalar Ptr -> Prog.Ptr
-  | Array (ty, sz) -> Prog.Array(pcomp_type ty, sz)
-  | Region _           -> invalid_arg "pcomp_type : region"
-  | Scalar (Float _sz) -> invalid_arg "pcomp_type : float"
-  | Scalar FunPtr      -> invalid_arg "pcomp_type : fptr"
+  | N.Scalar (N.Int _ik) -> Prog.Int
+  | N.Scalar N.Ptr -> Prog.Ptr
+  | N.Array (ty, sz) -> Prog.Array(pcomp_type ty, sz)
+  | N.Region _           -> invalid_arg "pcomp_type : region"
+  | N.Scalar (N.Float _sz) -> invalid_arg "pcomp_type : float"
+  | N.Scalar N.FunPtr      -> invalid_arg "pcomp_type : fptr"
 
 let rec pcomp_exp loc = function
-  | Const (CInt c) -> Prog.Const (Prog.CInt (Newspeak.Nat.to_int c))
-  | Const Nil -> Prog.Const Prog.Nil
+  | Const (N.CInt c) -> Prog.Const (Prog.CInt (Newspeak.Nat.to_int c))
+  | Const N.Nil -> Prog.Const Prog.Nil
   | Lval (lv, scal) -> check_scalar_type loc scal;
-                       Prog.Lval (pcomp_var loc lv, pcomp_type (Scalar scal)) (* XXX *)
-  | UnOp (Not, e1) -> Prog.Not (pcomp_exp loc e1)
+                       Prog.Lval (pcomp_var loc lv, pcomp_type (N.Scalar scal)) (* XXX *)
+  | UnOp (N.Not, e1) -> Prog.Not (pcomp_exp loc e1)
   | BinOp (binop, e1, e2) -> let op = pcomp_binop loc binop in
                              Prog.Op (op, (pcomp_exp loc e1)
                                         , (pcomp_exp loc e2))
-  | UnOp (Belongs (a, b), e) -> Prog.Belongs (( Newspeak.Nat.to_int a
-                                              , Newspeak.Nat.to_int b)
-                                             , loc
-                                             , (pcomp_exp loc e))
-  | UnOp ((Focus _|Coerce _), e) -> pcomp_exp loc e
+  | UnOp (N.Belongs (a, b), e) -> Prog.Belongs (( N.Nat.to_int a
+                                                , N.Nat.to_int b)
+                                               , loc
+                                               , (pcomp_exp loc e))
+  | UnOp ((N.Focus _|N.Coerce _), e) -> pcomp_exp loc e
   | AddrOf lv -> Prog.AddrOf (pcomp_var loc lv)
-  | e -> fail loc ("Invalid expression : " ^ Newspeak.string_of_exp e)
+  | e -> fail loc ("Invalid expression : " ^ Lowspeak.string_of_exp e)
 
 and pcomp_var loc = function
   | Global s     -> Prog.G s
@@ -104,33 +105,33 @@ let rec pcomp_stmt (sk, loc) =
   | UserSpec [IdentToken "assert"
              ;IdentToken "bound"
              ;LvalToken (v,t)
-             ;CstToken (CInt inf)
-             ;CstToken (CInt sup)] ->
+             ;CstToken (N.CInt inf)
+             ;CstToken (N.CInt sup)] ->
      let v' = pcomp_var loc v in
      let inf' = Newspeak.Nat.to_int inf in
      let sup' = Newspeak.Nat.to_int sup in
      [Prog.Set ( v'
                , Prog.Belongs ( (inf', sup')
                               , loc
-                              , Prog. Lval (v', pcomp_type (Scalar t))
+                              , Prog. Lval (v', pcomp_type t)
                               )
                )],[]
   | UserSpec [IdentToken "assert"
              ;IdentToken "eq"
              ;LvalToken (v,t)
-             ;CstToken (CInt c)] ->
+             ;CstToken (N.CInt c)] ->
      let v' = pcomp_var loc v in
      let c' = Newspeak.Nat.to_int c in
      [Prog.Assert (Prog.Op
        (Prog.Eq, Prog.Lval (v',
-       pcomp_type (Scalar t)),
+       pcomp_type t),
        Prog.Const (Prog.CInt c')))],[]
   | Decl (_v, t, blk) ->
       let (s, a) = pcomp_blk blk in
       let t' = pcomp_type t in
       [Prog.Decl (s, t')], a
   | Call (FunId f) -> [Prog.Call f],[]
-  | _ -> fail loc ("Invalid statement : " ^ Newspeak.string_of_stmt (sk, loc))
+  | _ -> fail loc ("Invalid statement : " ^ Lowspeak.string_of_stmt (sk, loc))
   in
     (List.map (fun x -> (x, loc)) sk'), ann
 

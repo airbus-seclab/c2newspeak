@@ -1,1 +1,11 @@
-Fatal error: 119.c:27#2: unknown identifier f, maybe a function without prototype, rewrite your code or try option --accept-missing-fundecl
+Warning: 119.c:27#2: unknown identifier f, maybe a function without prototype accepted
+Warning: 119.c:27#2: unknown arguments type at function call accepted
+Newspeak output
+---------------
+119.c
+void main(void) {
+  (119.c:27#2)^int32 tmp_cir!0;
+  (119.c:27#2)^tmp_cir!0 <- f();
+}
+
+

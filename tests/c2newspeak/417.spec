@@ -4,7 +4,7 @@ Newspeak output
 417.c
 void main(void) {
   (417.c:27#6)^int32 x;
-  (417.c:28#2)^0- =(int32) 0;
+  (417.c:28#2)^x =(int32) 0;
 }
 
 

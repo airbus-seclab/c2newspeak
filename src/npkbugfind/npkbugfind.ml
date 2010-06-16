@@ -78,7 +78,7 @@ object (this)
 	    when t1 = t1a && t1 = t1b && t2 = t2a && t2 = t2b ->
 	    this#print_warning 
 	      "maybe unnecessary casts, due to improper operator" 
-	| BinOp (MinusI, Const CInt x, Lval (_, Int (Signed, _))) 
+	| BinOp (MinusI, Const CInt x, Lval (_, Scalar (Int (Signed, _))))
 	    when Nat.compare x Nat.zero = 0 -> 
 	    this#print_warning 
 	      "negation of a variable: make sure it cannot be min_int"
@@ -147,9 +147,9 @@ and scan_stmt env (x, loc) =
 	scan_blk env action
     | Goto _ | Call _ | Set _ | Copy _ | Guard _ | UserSpec _ -> ()
 
-let scan_fundef f (_, body) = 
+let scan_fundef f fd = 
   if !debug then print_endline ("Scanning function: "^f);
-  scan_blk [] body
+  scan_blk [] fd.body
 
 let scan_prog fundefs = 
   Hashtbl.iter scan_fundef fundefs
@@ -232,9 +232,9 @@ and scan2_stmt env (x, loc) =
     | Call _ | Copy _ | Guard _ | UserSpec _ -> env
 
 (* propagates the list of conditions that are verified in each block *)
-let scan2_fundef f (_, body) = 
+let scan2_fundef f fd = 
   if !debug then print_endline ("Scanning function: "^f);
-  let _ = scan2_blk Env.empty body in
+  let _ = scan2_blk Env.empty fd.body in
     ()
 
 let scan2_prog fundefs = 
