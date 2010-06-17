@@ -210,14 +210,14 @@ let argslist = [
   (opt_of_flag TransparentUnion, Arg.Clear (flag_of_error TransparentUnion),
    "rejects transparent unions");
 
-  (opt_of_flag ExternGlobal, Arg.Set (flag_of_error ExternGlobal),
+  (opt_of_flag ExternGlobal, Arg.Clear (flag_of_error ExternGlobal),
    "accepts variables that are only declared as extern but still used");
 
   (opt_of_flag FlexArray, Arg.Clear (flag_of_error FlexArray),
    "rejects flexible array members");
 
-  (opt_of_flag MultipleDef, Arg.Set (flag_of_error MultipleDef),
-   "accepts multiple definitions of the same variables");
+  (opt_of_flag MultipleDef, Arg.Clear (flag_of_error MultipleDef),
+   "rejects multiple definitions of the same variables");
 
   (opt_of_flag SignedIndex, Arg.Clear (flag_of_error SignedIndex),
    "rejects signed integer expressions to be used as array indices");
@@ -381,7 +381,7 @@ let report_ignore_warning loc msg err_typ =
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
-    let advice = ", rewrite your code or try option "^(opt_of_flag err_typ) in
+    let advice = ", rewrite your code or remove option "^(opt_of_flag err_typ) in
       report_error loc (msg^advice)
   end;
   report_warning loc (msg^" accepted")
