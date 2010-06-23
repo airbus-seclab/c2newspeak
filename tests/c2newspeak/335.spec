@@ -7,9 +7,6 @@ Warning: 335.c:41#0: increment statement expected
 Warning: 335.c:43#0: init statement expected
 Warning: 335.c:44#0: halting condition should be explicit
 Warning: 335.c:45#0: init statement expected
-Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
-Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
-Warning: __gnuc_builtin_symbols:1#0: 'long' is not normalized: use 'long int' instead
 Newspeak output
 ---------------
 335.c
