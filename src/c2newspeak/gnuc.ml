@@ -41,7 +41,7 @@ let builtins =
      "extern int __builtin_strcmp(char *str1, char *str2);";
      "extern char *__builtin_strncpy(char *dst, char *src, unsigned int sz);";
      "extern char *__builtin_strncat(char *dst, char *src, unsigned int sz);";
-     "extern long __builtin_expect(long exp, long val);";
+     "extern long int __builtin_expect(long int exp, long int val);";
     ]
 (* TODO: check that all these tokens can not be function names!!!!
    otherwise do it somehow differently!!

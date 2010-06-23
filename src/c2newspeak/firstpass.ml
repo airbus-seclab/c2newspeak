@@ -81,7 +81,7 @@ let seq_of_string str =
 
 (* For detecting integers index, accesses and Addrof (accesss)*)
 let warn_report () =
-  Npkcontext.report_ignore_warning "Firstparse.translate_array_access" 
+  Npkcontext.report_accept_warning "Firstparse.translate_array_access" 
     "expression of type signed integer used as an array index" Npkcontext.SignedIndex 
 
 let check_array_type_length typ =

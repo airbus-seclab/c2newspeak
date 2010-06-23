@@ -349,8 +349,13 @@ let handle_cmdline_options version_string comment_string =
     
     Arg.parse argslist anon_fun usage_msg;
 
-    if !(flag_of_error MissingFunDecl) 
+(*    if !(flag_of_error MissingFunDecl) 
     then (flag_of_error PartialFunDecl) := true;
+*)   
+    if (not !(flag_of_error PartialFunDecl)) 
+    then (flag_of_error MissingFunDecl) := false;
+
+
 
     if !version then begin
       print_endline version_string;
