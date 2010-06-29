@@ -28,6 +28,6 @@ let _ =
     let prog = Npk2lpk.translate (Newspeak.read Sys.argv.(1)) in
     let (ft, _) = Hashtbl.find prog.Lowspeak.fundecs "main" in
     let args = ["Hello"; "World"] in
-    let body = Lowspeak.build_main_call prog.Lowspeak.ptr_sz ft args in
+    let body = Lowspeak.build_main_call prog.Lowspeak.ptr_sz ft args 1 30 in
       print_endline (Lowspeak.string_of_blk body)
   with Invalid_argument str -> print_endline str

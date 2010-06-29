@@ -1,7 +1,8 @@
 (*
   C2Newspea: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007-2010  Charles Hymans, Olivier Levillain, Sarah Zennou, 
+  Etienne Millon
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +25,16 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou 
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah.zennou@eads.net
+
+  Etienne Millon
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: etienne.millon@eads.net
 *)
 
 module N = Newspeak
@@ -1029,21 +1040,34 @@ let simplify opt_checks prog =
     Hashtbl.iter simplify_fundec prog.fundecs;
     { prog with globals = globals; init = init; fundecs = fundecs }
 
-let build_main_call ptr_sz ft params =
+let build_main_call ptr_sz ft params argc max_arg_len =
+  (* argc takes into account of the program name *)
+  (* max_arg_len takes into account of the '\0' *)
   let fname = "main" in
   let loc = N.dummy_loc "!Newspeak.build_call_main" in
   let (args_t, _) = ft in
   let blk = begin
     match args_t with
         [N.Scalar N.Int _; N.Scalar N.Ptr] ->
-          let (globals, init, args) = build_main_args ptr_sz loc params in
-          let call = build_call fname ft args in
-          let call = ref (init@call) in
-          let bind_global (x, t) = call := [bind_var x t !call, loc] in
-            List.iter bind_global globals;
-            !call
+	  if params <> [] then
+            let (globals, init, args) = build_main_args ptr_sz loc params in
+            let call = build_call fname ft args in
+            let call = ref (init@call) in
+            let bind_global (x, t) = call := [bind_var x t !call, loc] in
+              List.iter bind_global globals;
+              !call
+	  else
+	    let n = 
+	      Big_int.mult_big_int (Big_int.big_int_of_int argc) (Big_int.big_int_of_int max_arg_len) 
+	    in
+	    let n' = Big_int.mult_big_int n (Big_int.big_int_of_int 8) in
+	      if Big_int.compare_big_int Big_int.zero_big_int n' < 0 
+		|| Big_int.compare_big_int n' (Big_int.big_int_of_int Config.max_sizeof) > 0 then
+		  invalid_arg "Lowspeak.build_main_call: invalid parameters argc and/or max_arg_len"
+	      else
+		invalid_arg "Lowspeak.build_main_call: to continue"
       | [] -> build_call fname ft []
-      | _ -> invalid_arg "Newspeak.build_main_call: invalid type for main"
+      | _ -> invalid_arg "Lowspeak.build_main_call: invalid type for main"
   end in
     simplify_blk true blk
 

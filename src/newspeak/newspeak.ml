@@ -823,7 +823,31 @@ let simplify_gotos blk =
           stack := tl
       | [] -> invalid_arg "Newspeak.simplify_gotos: unexpected empty stack"
   in
-
+  let rec has_no_guard_with_goto blk =
+    let rec last_is_goto blk =
+      match blk with
+	  [] -> false
+	| [Goto _, _] -> true
+	| _::tl -> last_is_goto tl
+    in
+    let rec has_no_guard blk =
+      match blk with
+	  []         -> true
+	| (s, _)::tl ->
+	    let b = 
+	      match s with
+		  Guard _                  -> false
+		| Select _                 -> false
+		| Decl (_, _, body)        -> has_no_guard body
+		| InfLoop blk              -> has_no_guard blk
+		| DoWith (blk, _, actions) -> (has_no_guard blk) && (has_no_guard actions)
+		| _                        -> true
+	    in
+	      b && (has_no_guard tl)
+    in
+      if has_no_guard blk then last_is_goto blk
+      else false
+  in
   let rec simplify_blk x =
     match x with
         hd::tl -> 
@@ -859,16 +883,17 @@ let simplify_gotos blk =
   and remove_final_goto lbl blk =
     let rec remove blk =
       match blk with
-          (Goto lbl', _)::[] when List.assoc lbl' !stack = lbl -> []
-        | hd::tl -> hd::(remove tl)
-        | [] -> []
+          (Goto lbl', _)::[] when List.assoc lbl' !stack = lbl           -> []
+	| (InfLoop body, _)::[] when has_no_guard_with_goto body         -> remove body
+        | hd::tl                                                         -> hd::(remove tl)
+        | []                                                             -> []
     in
       try remove blk
       with Not_found -> blk
 
   and simplify_dowith loc (body, lbl, action) =
     match body with
-        (DoWith (body, lbl', []), _)::[] ->
+        (DoWith (body, lbl', []), _)::[] -> 
           push lbl' lbl;
           let x = simplify_dowith_goto loc (body, lbl, []) in
             pop ();
@@ -890,7 +915,6 @@ let simplify_gotos blk =
     let body = remove_final_goto lbl body in
       simplify_dowith loc (body, lbl, action)
   in
-    
   let blk = simplify_blk blk in
     if not (LblSet.is_empty !used_lbls) 
     then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";
