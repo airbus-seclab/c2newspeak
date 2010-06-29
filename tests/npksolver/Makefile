@@ -34,6 +34,8 @@ TESTS = 000                                     \
  				030	031 032 033	034	035 036 037 038 039 \
 				040 041 042 043
 
+CLEANFILES+=$(addsuffix .npk, $(TESTS))
+
 include ../common.Makefile
 
 tap-tests:

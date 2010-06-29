@@ -39,4 +39,6 @@ FILES=version newspeak/newspeak newspeak/config newspeak/temps newspeak/lowspeak
       $(addprefix npksolver/,$(npksolver.FILES))
 LIBX=nums.cmxa str.cmxa
 
+CLEANFILES+=$(addprefix npksolver/,cfg.cmo prog.cmo)
+
 include common.Makefile
