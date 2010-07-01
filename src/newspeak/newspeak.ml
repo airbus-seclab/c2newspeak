@@ -828,6 +828,7 @@ let simplify_gotos blk =
       match blk with
 	  [] -> false
 	| [Goto _, _] -> true
+	| [DoWith (body, _, []), _] -> last_is_goto body
 	| _::tl -> last_is_goto tl
     in
     let rec has_no_guard blk =
