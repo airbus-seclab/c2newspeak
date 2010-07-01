@@ -5,8 +5,6 @@ Newspeak output
 void main(void) {
   (543.c:27#6)^int32 x;
   (543.c:29#7)^x =(int32) 0;
-  (543.c:29#2)^while (1) {
-  }
 }
 
 

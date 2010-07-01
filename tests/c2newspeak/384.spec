@@ -1,4 +1,4 @@
-Warning: 384.c:38#2: expression of type signed integer used as an array index accepted
+Warning: 384.c:38#2: expression of type signed integer used as an array index ignored
 Newspeak output
 ---------------
 384.c

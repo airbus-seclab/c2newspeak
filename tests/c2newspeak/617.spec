@@ -9,9 +9,7 @@ void main(void) {
     uint32 goto!lbl;
     (617.c:27#4)^goto!lbl =(uint32) 0;
     (617.c:27#4)^while (1) {
-      (617.c:27#13)^while (1) {
-        (617.c:29#13)^continue.617.c:29#13.0 =(uint32) 1;
-      }
+      (617.c:29#13)^continue.617.c:29#13.0 =(uint32) 1;
       (617.c:27#4)^do {
         (617.c:27#13)^choose {
          -->
