@@ -334,289 +334,285 @@ end
  *                                                                            *
  ******************************************************************************)
 
-module SymMake(TR:Tree.TREE) = struct
-  open Table
+open Table
 
-  type t = {         s_stack    : table TR.t
-           ; mutable s_cpkg     : string option
-           ; mutable s_with     : string list
-           ; mutable s_renaming : (string * (string option * string)) list
-           }
+type t = {         s_stack    : table Tree.t
+         ; mutable s_cpkg     : string option
+         ; mutable s_with     : string list
+         ; mutable s_renaming : (string * (string option * string)) list
+         }
 
-  let top s = TR.top s.s_stack
+let top s = Tree.top s.s_stack
 
-  let print s =
-    let res = Buffer.create 0 in
-    Buffer.add_string res "Stack : (starting at top)\n";
-    TR.iter (fun t -> Buffer.add_string res (print_table t)) s.s_stack;
-    Buffer.contents res
+let print s =
+  let res = Buffer.create 0 in
+  Buffer.add_string res "Stack : (starting at top)\n";
+  Tree.iter (fun t -> Buffer.add_string res (print_table t)) s.s_stack;
+  Buffer.contents res
 
-  let create _ =
-    let s = TR.create () in
-    let library = create_table  Lexical ~desc:"library" () in
-    library.t_tbl <- Symset.add (Lexical
-                                ,"standard"
-                                ,Newspeak.unknown_loc
-                                ,Unit standard_tbl)
-                                library.t_tbl;
-    library.t_tbl <- Symset.add (Lexical
-                                ,"system"
-                                ,Newspeak.unknown_loc
-                                ,Unit system_tbl)
-                                library.t_tbl;
-    TR.push library s;
-    { s_stack    = s
-    ; s_cpkg     = None
-    ; s_with     = ["system";"machine_code";"unchecked_conversion"]
-    ; s_renaming = []
-    }
+let create _ =
+  let s = Tree.create () in
+  let library = create_table  Lexical ~desc:"library" () in
+  library.t_tbl <- Symset.add (Lexical
+                              ,"standard"
+                              ,Newspeak.unknown_loc
+                              ,Unit standard_tbl)
+                              library.t_tbl;
+  library.t_tbl <- Symset.add (Lexical
+                              ,"system"
+                              ,Newspeak.unknown_loc
+                              ,Unit system_tbl)
+                              library.t_tbl;
+  Tree.push library s;
+  { s_stack    = s
+  ; s_cpkg     = None
+  ; s_with     = ["system";"machine_code";"unchecked_conversion"]
+  ; s_renaming = []
+  }
 
-  let set_current s x = s.s_cpkg <- Some x
+let set_current s x = s.s_cpkg <- Some x
 
-  let reset_current s = s.s_cpkg <- None
+let reset_current s = s.s_cpkg <- None
 
-  let current s = s.s_cpkg
+let current s = s.s_cpkg
 
-  let add_with s x = s.s_with <- x::s.s_with
+let add_with s x = s.s_with <- x::s.s_with
 
-  let is_with  s x = List.mem x s.s_with
+let is_with  s x = List.mem x s.s_with
 
-  let add_use s p =
-    if (is_with s p || current s = Some p) then
-      tbl_add_use (top s) p
-    else
-      Npkcontext.report_error "Symboltbl.add_use"
-        (p ^ " is undefined")
+let add_use s p =
+  if (is_with s p || current s = Some p) then
+    tbl_add_use (top s) p
+  else
+    Npkcontext.report_error "Symboltbl.add_use"
+      (p ^ " is undefined")
 
-  let s_get_use s =
-    let ctx = TR.fold (fun r t -> (get_use t) @ r) [] s.s_stack in
-    Npkcontext.print_debug ( "s_get_use : context = {"
-                           ^ String.concat "," ctx
-                           ^ "}"
+let s_get_use s =
+  let ctx = Tree.fold (fun r t -> (get_use t) @ r) [] s.s_stack in
+  Npkcontext.print_debug ( "s_get_use : context = {"
+                         ^ String.concat "," ctx
+                         ^ "}"
+                         );
+  match s.s_cpkg with
+  | None   ->    ctx
+  | Some p -> p::ctx
+
+(**
+ * Find some data in a stack.
+ * Applies f to every table of s, from top to bottom.
+ * The first x such as f t = Some x is returned.
+ * If forall t in s, f t = None, Not_found is raised.
+ *)
+let find_rec s f =
+  match Tree.lookup f s with
+    | Some x -> x
+    | None -> raise Not_found
+
+(**
+ * Algorithm for add_rd (A,B)  (A -> B)
+ *
+ * If A = B, detect circular dependency.
+ * If B is already a pointer to some C, we have something like
+ *      A -> B -> C
+ * So its equivalent to call (A -> C).
+ *
+ * Note that in the particular case where C = A (cycle), the recursive
+ * call is (A -> A) and the circular dependency will be detected.
+ *)
+let add_renaming_decl s new_name old_name =
+  if ((None,new_name) = old_name) then
+    Npkcontext.report_error "add_renaming_decl"
+                  ( "Circular declaration detected for '" ^ new_name ^ "'.")
+  else
+    Npkcontext.print_debug ( "renaming_declaration : "
+                           ^ new_name
+                           ^ " --> "
+                           ^ (match (fst old_name) with
+                             | None   -> ""
+                             | Some p -> p ^ "."
+                             )
+                           ^ (snd old_name)
                            );
-    match s.s_cpkg with
-    | None   ->    ctx
-    | Some p -> p::ctx
-
-  (**
-   * Find some data in a stack.
-   * Applies f to every table of s, from top to bottom.
-   * The first x such as f t = Some x is returned.
-   * If forall t in s, f t = None, Not_found is raised.
-   *)
-  let find_rec s f =
-    match TR.lookup f s with
-      | Some x -> x
-      | None -> raise Not_found
-
-  (**
-   * Algorithm for add_rd (A,B)  (A -> B)
-   *
-   * If A = B, detect circular dependency.
-   * If B is already a pointer to some C, we have something like
-   *      A -> B -> C
-   * So its equivalent to call (A -> C).
-   *
-   * Note that in the particular case where C = A (cycle), the recursive
-   * call is (A -> A) and the circular dependency will be detected.
-   *)
-  let add_renaming_decl s new_name old_name =
-    if ((None,new_name) = old_name) then
-      Npkcontext.report_error "add_renaming_decl"
-                    ( "Circular declaration detected for '" ^ new_name ^ "'.")
-    else
-      Npkcontext.print_debug ( "renaming_declaration : "
-                             ^ new_name
-                             ^ " --> "
-                             ^ (match (fst old_name) with
-                               | None   -> ""
-                               | Some p -> p ^ "."
-                               )
-                             ^ (snd old_name)
-                             );
-      s.s_renaming <- (new_name,old_name)::s.s_renaming
+    s.s_renaming <- (new_name,old_name)::s.s_renaming
 
 
-  let enter_context ?name ?desc (s:t) =
-          Npkcontext.print_debug ( ">>>>>>> enter_context ("
-                                 ^ (match name with
-                                      | Some n -> n
-                                      | _      -> ""
-                                   )
-                                 ^ ")");
-          let create_context _ =
-            begin
-              let new_context = create_table ?desc (match name with None ->
-                Lexical | Some p -> In_package p) () in
-              begin match name with
-                | None   -> ()
-                | Some n -> begin
-                              if (TR.height s.s_stack <> 1) then
-                                error "Adding some unit outside the library";
-                                let top = TR.top s.s_stack in
-                                top.t_tbl <- Symset.add (Lexical
-                                                        ,n
-                                                        ,Newspeak.unknown_loc
-                                                        ,Unit new_context)
-                                                        top.t_tbl;
-                            end
-              end;
-              new_context;
-            end
-          in
-          let context =
-            match name with
-              | None   -> create_context ()
-              | Some n -> begin
-                            match (tbl_find_unit (TR.top s.s_stack) n) with
-                              | None   -> create_context ()
-                              | Some u -> u
-                          end
-          in
-          TR.push context s.s_stack
-
-  let exit_context s =
-    Npkcontext.print_debug "<<<<<<< exit_context ()";
-    Npkcontext.print_debug (print s);
-    if(TR.height s.s_stack > 1) then
-      ignore (TR.pop s.s_stack)
-    else
-      Npkcontext.report_error "exit_context" "Stack too small"
-
-  let push_saved_context s ctx =
-    TR.push ctx s.s_stack
-
-  let library s =
-    TR.nth s 1
-
-  let s_find_abs _desc f s p n =
-    match tbl_find_unit (library s.s_stack) p with
-      | Some tbl -> f tbl n
-      | None     -> raise Not_found
-
-  (* raise Not_found *)
-  let s_find desc finder s ?package n =
-    match package with
-      | Some p -> s_find_abs desc finder s p n
-      | None   ->
-          begin
-           try
-             find_rec s.s_stack (fun t ->
-               try Some (finder t n)
-               with Not_found -> None
-             )
-           with Not_found ->
-             begin
-               let context = ref (s_get_use s) in
-               let res = ref None in
-               while (!context <> [] && !res = None) do
-                 try
-                   let p = (List.hd !context) in
-                   res := Some (s_find_abs desc finder s p n);
-                 with Not_found -> ();
-                 context := List.tl !context;
-               done;
-               match !res with
-               | None -> raise Not_found
-               | Some (p,v) -> (p,v)
-             end
-         end
-
-  let find_variable_value s ?(silent = false) ?expected_type (package,n) =
-    try
-      s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
-              s ?package n
-    with Not_found -> if silent
-                      then raise Not_found
-                      else error ("Cannot find variable '" ^ n ^ "'"
-                                 ^ (match expected_type with
-                                   | None   -> ""
-                                   | Some _ -> " with this expected type")
+let enter_context ?name ?desc (s:t) =
+        Npkcontext.print_debug ( ">>>>>>> enter_context ("
+                               ^ (match name with
+                                    | Some n -> n
+                                    | _      -> ""
                                  )
+                               ^ ")");
+        let create_context _ =
+          begin
+            let new_context = create_table ?desc (match name with None ->
+              Lexical | Some p -> In_package p) () in
+            begin match name with
+              | None   -> ()
+              | Some n -> begin
+                            if (Tree.height s.s_stack <> 1) then
+                              error "Adding some unit outside the library";
+                              let top = Tree.top s.s_stack in
+                              top.t_tbl <- Symset.add (Lexical
+                                                      ,n
+                                                      ,Newspeak.unknown_loc
+                                                      ,Unit new_context)
+                                                      top.t_tbl;
+                          end
+            end;
+            new_context;
+          end
+        in
+        let context =
+          match name with
+            | None   -> create_context ()
+            | Some n -> begin
+                          match (tbl_find_unit (Tree.top s.s_stack) n) with
+                            | None   -> create_context ()
+                            | Some u -> u
+                        end
+        in
+        Tree.push context s.s_stack
 
-  let rec find_variable s ?silent ?expected_type name =
-    try
-      find_variable s ?silent ?expected_type
-                    (List.assoc (snd name) s.s_renaming)
-    with Not_found ->
-    (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
-    (find_variable_value ?silent s ?expected_type name)
+let exit_context s =
+  Npkcontext.print_debug "<<<<<<< exit_context ()";
+  Npkcontext.print_debug (print s);
+  if(Tree.height s.s_stack > 1) then
+    ignore (Tree.pop s.s_stack)
+  else
+    Npkcontext.report_error "exit_context" "Stack too small"
 
-  let find_type s (package,n) =
-    try
-      s_find "type" tbl_find_type s ?package n
-    with Not_found -> error ("Cannot find type '" ^ n ^ "'")
+let push_saved_context s ctx =
+  Tree.push ctx s.s_stack
 
-  let rec find_subprogram s ?(silent = false) (package,n) =
-    try
-      find_subprogram s (List.assoc n s.s_renaming)
-    with Not_found ->
-    try
-      s_find "subprogram" tbl_find_subprogram s ?package n
-    with Not_found -> if silent then
-                        raise Not_found
-                      else
-                        error ("Cannot find subprogram '" ^ n ^ "'")
+let library s =
+  Tree.nth s 1
 
-  let is_operator_overloaded s n =
-    try begin
-      ignore (s_find "overloaded operator" tbl_find_subprogram s n);
-      true
-    end
-    with Not_found -> false
+let s_find_abs _desc f s p n =
+  match tbl_find_unit (library s.s_stack) p with
+    | Some tbl -> f tbl n
+    | None     -> raise Not_found
 
-  let scope t =
-    t.t_scope
+(* raise Not_found *)
+let s_find desc finder s ?package n =
+  match package with
+    | Some p -> s_find_abs desc finder s p n
+    | None   ->
+        begin
+         try
+           find_rec s.s_stack (fun t ->
+             try Some (finder t n)
+             with Not_found -> None
+           )
+         with Not_found ->
+           begin
+             let context = ref (s_get_use s) in
+             let res = ref None in
+             while (!context <> [] && !res = None) do
+               try
+                 let p = (List.hd !context) in
+                 res := Some (s_find_abs desc finder s p n);
+               with Not_found -> ();
+               context := List.tl !context;
+             done;
+             match !res with
+             | None -> raise Not_found
+             | Some (p,v) -> (p,v)
+           end
+       end
 
-  let add_variable s n loc ?value ?(no_storage = false) ?(ro = false) t =
-    Npkcontext.print_debug ( "s_add_variable : adding '"
-                           ^ n
-                           ^ "' with "
-                           ^ (match value with
-                             | None   -> "no value"
-                             | Some v -> "value " ^ T.print_data v
-                             )
-                           );
-    add_variable (top s) n loc (t,value,no_storage,ro) (scope (top s))
+let find_variable_value s ?(silent = false) ?expected_type (package,n) =
+  try
+    s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
+            s ?package n
+  with Not_found -> if silent
+                    then raise Not_found
+                    else error ("Cannot find variable '" ^ n ^ "'"
+                               ^ (match expected_type with
+                                 | None   -> ""
+                                 | Some _ -> " with this expected type")
+                               )
 
-  let add_type s n loc v =
-    add_type (top s) n loc v (scope (top s))
+let rec find_variable s ?silent ?expected_type name =
+  try
+    find_variable s ?silent ?expected_type
+                  (List.assoc (snd name) s.s_renaming)
+  with Not_found ->
+  (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
+  (find_variable_value ?silent s ?expected_type name)
 
-  let add_subprogram s n v rt =
-    add_subprogram (top s) n v rt (scope (top s))
+let find_type s (package,n) =
+  try
+    s_find "type" tbl_find_type s ?package n
+  with Not_found -> error ("Cannot find type '" ^ n ^ "'")
 
-  let type_ovl_intersection s n1 n2 =
-    let inter l1 l2 =
-      let sym_eq (_,x) (_,y) = match (x,y) with
-        | Variable (_,t1,_,_,_), Variable (_,t2,_,_,_) -> t1 = t2
-        | a, b -> a = b
-      in
-      List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
+let rec find_subprogram s ?(silent = false) (package,n) =
+  try
+    find_subprogram s (List.assoc n s.s_renaming)
+  with Not_found ->
+  try
+    s_find "subprogram" tbl_find_subprogram s ?package n
+  with Not_found -> if silent then
+                      raise Not_found
+                    else
+                      error ("Cannot find subprogram '" ^ n ^ "'")
+
+let is_operator_overloaded s n =
+  try begin
+    ignore (s_find "overloaded operator" tbl_find_subprogram s n);
+    true
+  end
+  with Not_found -> false
+
+let scope t =
+  t.t_scope
+
+let add_variable s n loc ?value ?(no_storage = false) ?(ro = false) t =
+  Npkcontext.print_debug ( "s_add_variable : adding '"
+                         ^ n
+                         ^ "' with "
+                         ^ (match value with
+                           | None   -> "no value"
+                           | Some v -> "value " ^ T.print_data v
+                           )
+                         );
+  add_variable (top s) n loc (t,value,no_storage,ro) (scope (top s))
+
+let add_type s n loc v =
+  add_type (top s) n loc v (scope (top s))
+
+let add_subprogram s n v rt =
+  add_subprogram (top s) n v rt (scope (top s))
+
+let type_ovl_intersection s n1 n2 =
+  let inter l1 l2 =
+    let sym_eq (_,x) (_,y) = match (x,y) with
+      | Variable (_,t1,_,_,_), Variable (_,t2,_,_,_) -> t1 = t2
+      | a, b -> a = b
     in
-    let s1 = find_symbols (top s) n1 in
-    let s2 = find_symbols (top s) n2 in
-    let inte = inter s1 s2 in
-    let print_set set = "{"
-                      ^ String.concat ", " (List.map (fun (_,x) ->
-                                    print_symbol_join x)
-                        set)
-                      ^ "}"
-    in
-    Npkcontext.print_debug ( "Type_ovl_intersection : result = "
-                           ^ print_set inte
-                           ^ (if inte <> [] then ""
-                              else
-                                " , L = " ^ print_set s1 ^
-                                " , R = " ^ print_set s2
-                             )
-                           );
-    if inte = [] then Some (T.new_unknown "from empty context intersection") else
-    try
-      match snd (cast_v inte) with
-      | Variable (_,r,_,_,_) -> Some r
-      | _ -> invalid_arg "type_ovl_inter"
-    with Not_found -> None
+    List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
+  in
+  let s1 = find_symbols (top s) n1 in
+  let s2 = find_symbols (top s) n2 in
+  let inte = inter s1 s2 in
+  let print_set set = "{"
+                    ^ String.concat ", " (List.map (fun (_,x) ->
+                                  print_symbol_join x)
+                      set)
+                    ^ "}"
+  in
+  Npkcontext.print_debug ( "Type_ovl_intersection : result = "
+                         ^ print_set inte
+                         ^ (if inte <> [] then ""
+                            else
+                              " , L = " ^ print_set s1 ^
+                              " , R = " ^ print_set s2
+                           )
+                         );
+  if inte = [] then Some (T.new_unknown "from empty context intersection") else
+  try
+    match snd (cast_v inte) with
+    | Variable (_,r,_,_,_) -> Some r
+    | _ -> invalid_arg "type_ovl_inter"
+  with Not_found -> None
 
-end
-
-include SymMake (Tree.StackedTree)

@@ -1,4 +1,4 @@
-Warning: 777.c:33#2: expression of type signed integer used as an array index ignored
+Warning: 777.c:33#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
 777.c

@@ -159,7 +159,7 @@ and normalize_var_modifier b (derefs, v) =
     match v with
 	Abstract -> (b, None, Newspeak.unknown_loc)
       | Variable (x, loc) -> (b, Some x, loc)
-      | Function (x, args) -> 
+      | Function (x, args) ->
 	  let ft = normalize_ftyp (args, b) in
 	    normalize_var_modifier ft x
       | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v

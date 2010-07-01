@@ -81,7 +81,7 @@ let seq_of_string str =
 
 (* For detecting integers index, accesses and Addrof (accesss)*)
 let warn_report () =
-  Npkcontext.report_ignore_warning "Firstparse.translate_array_access" 
+  Npkcontext.report_accept_warning "Firstparse.translate_array_access" 
     "expression of type signed integer used as an array index" Npkcontext.SignedIndex 
 
 let check_array_type_length typ =
@@ -192,14 +192,14 @@ let translate fname (globals, fundecls, spec) =
 	lbl'
   in
 
-  let rec cast (e, t1) t2 = 
+  let rec cast (e, t1) t2 = 	      
     match t2 with
 	Comp (TypedC.Known (f, false)) 
 	  when not (TypedC.equals_typ t1 t2) ->
 	  if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
 	  then Npkcontext.report_error "Firstpass.cast" "incompatible type";
 	  (e, t1)
-      | _ -> 
+      | _ -> 	     
 	  let t1' = translate_typ t1 in
 	  let t2' = translate_typ t2 in
 	    (C.cast (e, t1') t2', t2)
