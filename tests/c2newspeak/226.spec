@@ -1,4 +1,4 @@
-Warning: 226.c:29#2: expression of type signed integer used as an array index ignored
+Warning: 226.c:29#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
 226.c
