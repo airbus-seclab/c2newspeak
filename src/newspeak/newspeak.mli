@@ -372,3 +372,7 @@ val belongs_of_funexp: funexp -> (bounds * exp) list
 val dump : t -> unit
 
 val exp_of_int : int -> exp
+
+(** returns the name of local variable introduced to store the result
+of the functions *)
+val return_value: string

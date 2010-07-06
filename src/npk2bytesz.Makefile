@@ -26,7 +26,7 @@
 
 TARGET=npk2bytesz
 DIRS=newspeak/ npk2bytesz/
-FILES=version newspeak/newspeak npk2bytesz/npk2bytesz
-LIBX=nums.cmxa
+FILES=version newspeak/temps newspeak/newspeak npk2bytesz/npk2bytesz
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

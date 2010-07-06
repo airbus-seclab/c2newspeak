@@ -1576,3 +1576,5 @@ let belongs_of_funexp x =
     | _ -> []
 
 let exp_of_int x = Const (CInt (Nat.of_int x))
+
+let return_value = Temps.return_value

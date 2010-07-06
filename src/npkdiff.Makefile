@@ -26,7 +26,7 @@
 
 TARGET=npkdiff
 DIRS=newspeak/ npkdiff/
-FILES=version newspeak/newspeak npkdiff/npkdiff
-LIBX=nums.cmxa
+FILES=version newspeak/temps newspeak/newspeak npkdiff/npkdiff
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

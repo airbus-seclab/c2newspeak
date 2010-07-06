@@ -27,7 +27,7 @@
 TARGET=npkfuns
 DIRS=newspeak/ utils/ npkfuns/
 FILES=version utils/listUtils utils/strSet \
-      newspeak/newspeak newspeak/config newspeak/temps newspeak/lowspeak \
+      newspeak/temps newspeak/newspeak newspeak/config newspeak/lowspeak \
       newspeak/npkcontext newspeak/npk2lpk \
       npkfuns/glbCollect npkfuns/funCollect npkfuns/npkfuns
 LIBX=nums.cmxa str.cmxa

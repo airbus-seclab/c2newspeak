@@ -26,7 +26,7 @@
 
 TARGET=npkpointer
 DIRS=utils/ newspeak/ npkpointer/
-FILES=version newspeak/newspeak newspeak/config newspeak/temps newspeak/lowspeak \
+FILES=version newspeak/temps newspeak/newspeak newspeak/config newspeak/lowspeak \
       newspeak/npkcontext newspeak/npk2lpk utils/listUtils npkpointer/ptrspeak npkpointer/build \
       npkpointer/results npkpointer/analysis npkpointer/npkpointer
 LIBX=nums.cmxa str.cmxa

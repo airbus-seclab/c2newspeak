@@ -26,10 +26,10 @@
 
 TARGET=npktests
 DIRS=newspeak/ utils/ npknull/ npktests/
-FILES=version newspeak/newspeak utils/listUtils \
+FILES=version newspeak/temps newspeak/newspeak utils/listUtils \
       npknull/memloc npknull/exceptions npknull/subst \
       npknull/fieldInsensitivePtrOffs \
       npktests/npktests
-LIBX=nums.cmxa
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

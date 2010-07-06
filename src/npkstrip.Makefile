@@ -26,7 +26,7 @@
 
 TARGET=npkstrip
 DIRS=newspeak/ npkstrip/
-LIBX=nums.cmxa
-FILES=version newspeak/newspeak npkstrip/npkstrip
+LIBX=nums.cmxa str.cmxa
+FILES=version newspeak/temps newspeak/newspeak npkstrip/npkstrip
 
 include common.Makefile

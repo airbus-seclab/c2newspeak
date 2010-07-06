@@ -26,7 +26,7 @@
 
 TARGET=npkbugfind
 DIRS=newspeak/ utils/ npkbugfind/
-FILES=version newspeak/newspeak npkbugfind/npkbugfind
-LIBX=nums.cmxa
+FILES=version newspeak/temps newspeak/newspeak npkbugfind/npkbugfind
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile
