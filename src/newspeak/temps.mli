@@ -54,6 +54,12 @@ type t =
 val to_string : int -> t -> string
 
 (**
+  * Name of return value (from the callee).
+  * The same as `to_string (_ Return)`
+  *)
+val return_value : string
+
+(**
   * "Inspect" functions.
   * Given a variable name, what category does it belong to ?
   *)

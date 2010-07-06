@@ -32,9 +32,6 @@ open Csyntax
 module Nat = Newspeak.Nat
 module C = TypedC
 
-(* Constants *)
-let ret_name = "!return"
-
 (* TODO: remove put in csyntax2CoreC *)
 (* TODO: code cleanup: find a way to factor this with create_cstr
    in Npkil *)
@@ -108,7 +105,7 @@ let process fname globals =
     Hashtbl.replace symbtbl x (C.Global name, t) in
 
   let add_formals (args_t, ret_t) =
-    add_local (ret_t, ret_name);
+    add_local (ret_t, Temps.return_value);
 (* TODO: think about it, not nice to have this pattern match, since in
    a function declaration there are always arguments!! 
    None is not possible *)
@@ -119,7 +116,7 @@ let process fname globals =
   in
 
   let remove_formals (args_t, _) =
-    remove_var ret_name;
+    remove_var Temps.return_value;
 (* TODO: think about it, not nice to have this pattern match, since in
    a function declaration there are always arguments!! 
    None is not possible *)
@@ -284,7 +281,7 @@ let process fname globals =
 	  let t = translate_typ t in
 	    (C.Cst (c, t), t)
       | Var x -> find_symb x
-      | RetVar -> find_symb ret_name
+      | RetVar -> find_symb Temps.return_value
       | Field (e, f) -> 
 	  let (e, t) = translate_exp e in
 	  let (r, _) = C.comp_of_typ t in

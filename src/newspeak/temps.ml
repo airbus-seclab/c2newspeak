@@ -62,6 +62,8 @@ let to_string id x =
             sep ^ "op" ^ s
           else invalid_arg ("Temps.to_string : ada operator '" ^ s ^ "'")
 
+let return_value = to_string 0 Return
+
 let is_special s =
   let sep_chr = String.get sep 0 in
   String.contains s sep_chr
