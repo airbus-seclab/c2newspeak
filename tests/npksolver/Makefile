@@ -24,7 +24,9 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=$(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` -o $*.npk $*.c; \
+COMMAND=$(C2NEWSPEAK) --reject-missing-fundecl \
+											`[ -e $*.in ] && cat $*.in` \
+											-o $*.npk $*.c; \
 	 $(NPKSOLVER) $*.npk
 PREREQ=%.c $(NPKSOLVER)
 
