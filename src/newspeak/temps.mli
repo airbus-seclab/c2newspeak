@@ -39,12 +39,13 @@
   * For example, variables needed to store temporary values created by the
   * evaluation of C expressions with side effects.
   *)
-type t = Cstr of string * string (** String litterals : filename and string contents *)
-       | Return                  (** Return value (inside function) *)
-       | Value_of of string      (** Return value (inside caller) *)
-       | Misc of string          (** Generic temporary variable *)
-       | Goto_label of string    (** Boolean used to replace a 'goto' statement *)
-       | Ada_operator of string  (** Ada operator. See ada2newspeak/ada_utils *)
+type t =
+  | Cstr of string * string (** String litterals : filename and contents *)
+  | Return                  (** Return value (inside function) *)
+  | Value_of of string      (** Return value (inside caller) *)
+  | Misc of string          (** Generic temporary variable *)
+  | Goto_label of string    (** Boolean used to replace a 'goto' statement *)
+  | Ada_operator of string  (** Ada operator. See ada2newspeak/ada_utils *)
 
 (**
   * The first parameter is a unique integer provided by the caller, added to
@@ -52,3 +53,63 @@ type t = Cstr of string * string (** String litterals : filename and string cont
   *)
 val to_string : int -> t -> string
 
+(**
+  * "Inspect" functions.
+  * Given a variable name, what category does it belong to ?
+  *)
+
+(**
+  * Special variables.
+  * Ie, variables which do not appear in the C program.
+  *
+  *   is_special (Temps.to_string _ _) = true
+  *)
+val is_special : string -> bool
+
+(**
+  * String litterals.
+  * Returns `true` for a special string litteral variable, `false` otherwise.
+  *
+  *   is_string_litteral (Temps.to_string _ (Cstr (_, s))) = Some s
+  *)
+val is_string_litteral : string -> bool
+
+(**
+  * Return values, inside the function.
+  *
+  *   is_return_value (Temps.to_string _ Return) = true
+  *)
+val is_return_value : string -> bool
+
+(**
+  * Return values, in the caller.
+  * Returns `Some function_name` for a return value, `None` otherwise.
+  *
+  *   is_value_of (Temps.to_string _ (Value_of s)) = Some s
+  *)
+val is_value_of : string -> string option
+
+(**
+  * Generic values.
+  * Each generic value has a domain. Returns `Some domain` for those variables,
+  * `None` otherwise.
+  *
+  *   is_generic_temp (Temps.to_string _ (Misc s)) = Some s
+  *)
+val is_generic_temp : string -> string option
+
+(**
+  * Goto labels created during goto elimination pass.
+  * Return `Some label` for those variables, `None` otherwise.
+  *
+  *   is_goto_label (Temps.to_string _ (Goto_label s)) = Some s
+  *)
+val is_goto_label : string -> string option
+
+(**
+  * Ada overloaded operators.
+  * Return `Some op_name` for those variables, `None` otherwise.
+  *
+  *   is_ada_operator (Temps.to_string _ (Ada_operator op)) = Some op
+  *)
+val is_ada_operator : string -> string option

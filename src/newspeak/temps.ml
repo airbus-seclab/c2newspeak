@@ -41,16 +41,17 @@ type t = Cstr of string * string
        | Goto_label of string
        | Ada_operator of string
 
+let sep = "!"
+
 let to_string id x =
-  let sep = "!" in
   let id_str = string_of_int id in
     match x with
-      | Cstr (fname, s) -> "cstr" ^ sep ^ id_str ^ sep ^ (fname ^ "." ^ s)
-      | Return -> "!return"
-      | Value_of s -> "value_of" ^ sep ^ id_str ^ sep ^ s
-      | Misc desc -> "tmp_" ^ desc ^ sep ^ id_str
-      | Goto_label lbl -> "goto" ^ sep ^ lbl
-      | Ada_operator s ->
+      | Cstr (fname, s) -> "cstr"     ^ sep      ^ id_str ^ sep ^ fname ^ "." ^ s
+      | Return          -> sep        ^ "return"
+      | Value_of s      -> "value_of" ^ sep      ^ id_str ^ sep ^ s
+      | Misc desc       -> "tmp_"     ^ desc     ^ sep    ^ id_str
+      | Goto_label lbl  -> "goto"     ^ sep      ^ lbl
+      | Ada_operator s  ->
           let operators =
             [ "and" ; "or" ; "xor" ; "=" ; "/="  ; "<"
             ; "<="  ; ">"  ; ">="  ; "+" ; "-"   ; "*"
@@ -61,3 +62,53 @@ let to_string id x =
             sep ^ "op" ^ s
           else invalid_arg ("Temps.to_string : ada operator '" ^ s ^ "'")
 
+let is_special s =
+  let sep_chr = String.get sep 0 in
+  String.contains s sep_chr
+
+let is_return_value s =
+  s = sep ^ "return"
+
+let is_string_litteral s = 
+  let re = Str.regexp ( "^" ^ "cstr" ^ Str.quote sep ) in
+  Str.string_match re s 0
+
+(**
+  * Utility function.
+  * Takes a regexp description **with a grouping pattern** and
+  * extracts the matching part.
+  *)
+let extract_group (re:string) (s:string) :string option =
+  if Str.string_match (Str.regexp re) s 0 then
+    try
+      Some (Str.matched_group 1 s)
+    with Not_found -> None
+  else
+  None
+
+let is_value_of =
+  extract_group ( "^"
+                ^ "value_of"
+                ^ Str.quote sep ^ "[0-9]+"
+                ^ Str.quote sep ^ "\\(.*\\)"
+                ^ "$"
+                )
+
+let is_goto_label =
+  extract_group ( "^" ^ "goto" ^ Str.quote sep
+                ^ "\\(.*\\)"
+                ^ "$"
+                )
+
+let is_ada_operator =
+  extract_group ( "^" ^ Str.quote sep ^ "op"
+                ^ "\\(.*\\)"
+                ^ "$"
+                )
+
+let is_generic_temp =
+  extract_group ( "^" ^ "tmp_"
+                ^ "\\(.*\\)"
+                ^ Str.quote sep ^ "[0-9]+"
+                ^ "$"
+                )
