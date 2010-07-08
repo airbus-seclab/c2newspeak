@@ -23,7 +23,7 @@
 
 COMMAND=./$*_check $*.npk
 PREREQ=%_check %.npk
-TESTS=t000 t001 t002 t003 t004 t005 t006
+TESTS=t000 t001 t002 t004 t005 t006
 EXEC=$(addsuffix _check, $(TESTS))
 CLEANFILES=t002.npk t003.npk t005.npk *_check *.exe t006.npk
 
