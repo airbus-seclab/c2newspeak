@@ -45,6 +45,9 @@ type t =
   | Value_of of string      (** Return value (inside caller) *)
   | Misc of string          (** Generic temporary variable *)
   | Goto_label of string    (** Boolean used to replace a 'goto' statement *)
+  | Argv                    (** Parameter of the main function whose type is _char **_ *)
+  | Argv_value              (** String of one the cells of the main parameter of type _char **_ *)
+  | Arg                     (** Function argument *)
   | Ada_operator of string  (** Ada operator. See ada2newspeak/ada_utils *)
 
 (**

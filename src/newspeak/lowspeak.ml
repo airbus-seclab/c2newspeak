@@ -176,9 +176,9 @@ let set_of_init loc name init =
     List.map set_of_init init
 
 let build_main_args ptr_sz loc params =
-  let argv_name = "!ptr_array" in
+  let argv_name = Temps.to_string 0 Temps.Argv in
   let process_param (n, globals, init) p =
-    let name = "!param_str"^(string_of_int n) in
+    let name = Temps.to_string n Temps.Argv_value in
     let (len, param_init) = init_of_string p in
     let param_init = List.rev (set_of_init loc name param_init) in
     let lv = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
@@ -197,6 +197,26 @@ let build_main_args ptr_sz loc params =
   let argv = UnOp (N.Focus (n*ptr_sz), argv) in
     (argv_glob::globals, init, argc::argv::[])
 
+let build_template_main_args ptr_sz loc argc arg_len =
+  let argv_name = Temps.to_string 0 Temps.Argv in
+  let process_cell n =
+    let name      = Temps.to_string n Temps.Argv_value in
+    let lv        = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
+    let e         = AddrOf (Global name) in
+    let e         = UnOp (N.Focus (arg_len * Config.size_of_char), e) in
+      [Set (lv, e, N.Ptr), loc], [name, N.Array (N.Scalar char_typ, arg_len * Config.size_of_char)]
+  in
+  let res = ref ([], []) in
+    for i = 0 to argc-1 do
+      res := process_cell i 
+    done;
+    let init, globals = !res in
+    let argv_glob = (argv_name, N.Array (N.Scalar N.Ptr, argc)) in
+    let argc' = exp_of_int argc in
+    let argv = AddrOf (Global argv_name) in
+    let argv = UnOp (N.Focus (argc*ptr_sz), argv) in
+      (argv_glob::globals, List.rev init, [argc' ; argv])
+
 let new_id =
   let c = ref 0 in
   fun _ ->
@@ -211,7 +231,7 @@ let build_call f (args_t, ret_t) args =
     match t with
         N.Scalar st ->
           call := (Set (Local 0, e, st), loc)::!call;
-          call := [Decl ("arg"^(string_of_int !i), t, !call), loc];
+          call := [Decl (Temps.to_string !i Temps.Arg, t, !call), loc];
           incr i
       | _ -> invalid_arg "Newspeak.build_call: non scalar argument type"
   in
@@ -1065,7 +1085,12 @@ let build_main_call ptr_sz ft params argc max_arg_len =
 		|| Big_int.compare_big_int n' (Big_int.big_int_of_int Config.max_sizeof) > 0 then
 		  invalid_arg "Lowspeak.build_main_call: invalid parameters argc and/or max_arg_len"
 	      else
-		invalid_arg "Lowspeak.build_main_call: to continue"
+		let (globals, init, args) = build_template_main_args ptr_sz loc argc max_arg_len in
+		let call = build_call fname ft args in
+		let call = ref (init@call) in
+		let bind_global (x, t) = call := [bind_var x t !call, loc] in
+		  List.iter bind_global globals;
+		  !call
       | [] -> build_call fname ft []
       | _ -> invalid_arg "Lowspeak.build_main_call: invalid type for main"
   end in
@@ -1074,27 +1099,27 @@ let build_main_call ptr_sz ft params argc max_arg_len =
 let rec belongs_of_exp x =
   match x with
       Lval (lv, _) | AddrOf lv -> belongs_of_lval lv
-    | UnOp (N.Belongs b, e) -> (b, e)::(belongs_of_exp e)
-    | UnOp (_, e) -> belongs_of_exp e 
-    | BinOp (_, e1, e2) -> (belongs_of_exp e1)@(belongs_of_exp e2)
-    | _ -> []
+    | UnOp (N.Belongs b, e)    -> (b, e)::(belongs_of_exp e)
+    | UnOp (_, e)              -> belongs_of_exp e 
+    | BinOp (_, e1, e2)        -> (belongs_of_exp e1)@(belongs_of_exp e2)
+    | _                        -> []
 
 and belongs_of_lval x =
   match x with
-      Deref (e, _) -> belongs_of_exp e
+      Deref (e, _)  -> belongs_of_exp e
     | Shift (lv, e) -> (belongs_of_lval lv)@(belongs_of_exp e)
-    | _ -> []
+    | _             -> []
 
 let belongs_of_funexp x =
   match x with
       FunDeref (e, _) -> belongs_of_exp e
-    | _ -> []
+    | _               -> []
 
 let rec build builder prog = 
   let globals' = Hashtbl.create 100 in
   let fundecs' = Hashtbl.create 100 in
   let build_global x gdecl = 
-    let gdecl = build_gdecl builder gdecl in
+    let gdecl = build_gdecl builder gdecl      in
     let gdecl = builder#process_global x gdecl in
       Hashtbl.add globals' x gdecl
   in
@@ -1119,29 +1144,29 @@ and build_fundec builder (ft, body) =
 
 and build_typ builder t =
   match t with
-      N.Scalar t -> N.Scalar (build_scalar_t builder t)
-    | N.Array (t, n) ->
+      N.Scalar t            -> N.Scalar (build_scalar_t builder t)
+    | N.Array (t, n)        ->
         let t = build_typ builder t in
           N.Array (t, n)
     | N.Region (fields, sz) ->
         let fields = List.map (build_field builder) fields in
-        let sz = build_size_t builder sz in
+        let sz = build_size_t builder sz                   in
           N.Region (fields, sz)
 
 and build_scalar_t builder t =
   match t with
-      N.Int k ->
+      N.Int k    ->
         let k = build_ikind builder k in
           N.Int k
     | N.Float sz ->
         let sz = build_size_t builder sz in
           N.Float sz
-    | N.Ptr -> t
-    | N.FunPtr -> t
+    | N.Ptr      -> t
+    | N.FunPtr   -> t
 
 and build_field builder (o, t) =
   let o = build_offset builder o in
-  let t = build_typ builder t in
+  let t = build_typ builder t    in
     (o, t)
 
 and build_ikind builder (sign, sz) =
@@ -1158,9 +1183,9 @@ and build_ftyp builder (args, ret) =
     (args, ret)
 
 and build_cell builder (o, t, e) =
-  let o = build_size_t builder o in
+  let o = build_size_t builder o   in
   let t = build_scalar_t builder t in
-  let e = build_exp builder e in
+  let e = build_exp builder e      in
     (o, t, e)
 
 and build_offset builder o = builder#process_offset o
@@ -1172,9 +1197,9 @@ and build_blk builder blk =
     match blk with
         hd::tl -> 
           let hd = build_stmt builder hd in
-          let tl = build_blk builder tl in
+          let tl = build_blk builder tl  in
             hd::tl
-      | [] -> []
+      | []     -> []
   in
     builder#process_blk blk
 
@@ -1187,22 +1212,23 @@ and build_stmtkind builder x =
   builder#enter_stmtkind x; 
   let x = 
     match x with
-        Set (lv, e, t) ->
-          let lv = build_lval builder lv in
-          let e = build_exp builder e in
+        Set (lv, e, t)       ->
+          let lv = build_lval builder lv   in
+          let e = build_exp builder e      in
           let t = build_scalar_t builder t in
             Set (lv, e, t)
               
-      | Copy (lv1, lv2, n) ->
+      | Copy (lv1, lv2, n)   ->
           let lv1 = build_lval builder lv1 in
           let lv2 = build_lval builder lv2 in
-          let n = build_size_t builder n in
+          let n = build_size_t builder n   in
             Copy (lv1, lv2, n)
               
-      | Guard b -> Guard (build_exp builder b)
+      | Guard b               -> 
+	  Guard (build_exp builder b)
 
-      | Decl (x, t, body) ->
-          let t = build_typ builder t in
+      | Decl (x, t, body)     ->
+          let t = build_typ builder t       in
           let body = build_blk builder body in
             Decl (x, t, body)
               

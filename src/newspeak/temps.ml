@@ -39,6 +39,9 @@ type t = Cstr of string * string
        | Value_of of string
        | Misc of string
        | Goto_label of string
+       | Argv 
+       | Argv_value
+       | Arg
        | Ada_operator of string
 
 let sep = "!"
@@ -51,6 +54,9 @@ let to_string id x =
       | Value_of s      -> "value_of" ^ sep      ^ id_str ^ sep ^ s
       | Misc desc       -> "tmp_"     ^ desc     ^ sep    ^ id_str
       | Goto_label lbl  -> "goto"     ^ sep      ^ lbl
+      | Argv            -> sep        ^ "ptr_array"
+      | Arg             -> "arg"      ^ sep      ^ id_str
+      | Argv_value      -> "argv_str" ^ sep      ^ id_str 
       | Ada_operator s  ->
           let operators =
             [ "and" ; "or" ; "xor" ; "=" ; "/="  ; "<"
