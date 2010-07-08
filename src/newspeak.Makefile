@@ -38,7 +38,7 @@ FILES.CMX=$(addsuffix .cmx,$(FILES))
 
 newspeak.cma: $(FILES.CMO)
 	@echo "Building library            "newspeak.cma
-	@$(OCAMLC) nums.cma -a $(FILES.CMO) -o newspeak.cma
+	@$(OCAMLC) nums.cma str.cma -a $(FILES.CMO) -o newspeak.cma
 
 newspeak.a newspeak.cmxa: $(FILES.CMX)
 	@echo "Building library            "newspeak.cmx
@@ -48,6 +48,6 @@ CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo
 
 TARGET=newspeak
 DIRS=newspeak/
-LIBX=nums.cmxa
+LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

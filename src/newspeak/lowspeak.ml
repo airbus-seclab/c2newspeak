@@ -1081,7 +1081,7 @@ let build_main_call ptr_sz ft params argc max_arg_len =
 	      Big_int.mult_big_int (Big_int.big_int_of_int argc) (Big_int.big_int_of_int max_arg_len) 
 	    in
 	    let n' = Big_int.mult_big_int n (Big_int.big_int_of_int 8) in
-	      if Big_int.compare_big_int Big_int.zero_big_int n' < 0 
+	      if Big_int.compare_big_int Big_int.zero_big_int n' > 0 
 		|| Big_int.compare_big_int n' (Big_int.big_int_of_int Config.max_sizeof) > 0 then
 		  invalid_arg "Lowspeak.build_main_call: invalid parameters argc and/or max_arg_len"
 	      else
