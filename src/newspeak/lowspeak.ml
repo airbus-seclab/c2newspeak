@@ -160,62 +160,8 @@ let char_typ =
   in
   N.Int (char_signedness, Config.size_of_char)
 
-let init_of_string str =
-  let len = String.length str in
-  let res = ref [(len * Config.size_of_char, char_typ, exp_of_int 0)] in
-    for i = len - 1 downto 0 do 
-      let c = Char.code (String.get str i) in
-        res := (i * Config.size_of_char, char_typ, exp_of_int c)::!res
-    done;
-    (len + 1, !res)
 
-let set_of_init loc name init =
-  let set_of_init (offs, t, e) = 
-    (Set (Shift (Global name, exp_of_int offs), e, t), loc)
-  in
-    List.map set_of_init init
 
-let build_main_args ptr_sz loc params =
-  let argv_name = Temps.to_string 0 Temps.Argv in
-  let process_param (n, globals, init) p =
-    let name = Temps.to_string n Temps.Argv_value in
-    let (len, param_init) = init_of_string p in
-    let param_init = List.rev (set_of_init loc name param_init) in
-    let lv = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
-    let e = AddrOf (Global name) in
-    let e = UnOp (N.Focus (len * Config.size_of_char), e) in
-    let init_argv = (Set (lv, e, N.Ptr), loc) in
-    let globals = (name, N.Array (N.Scalar char_typ, len))::globals in
-    let init = init_argv::param_init@init in
-      (n+1, globals, init)
-  in
-  let (n, globals, init) = List.fold_left process_param (0, [], []) params in
-  let init = List.rev init in
-  let argv_glob = (argv_name, N.Array (N.Scalar N.Ptr, n)) in
-  let argc = exp_of_int n in
-  let argv = AddrOf (Global argv_name) in
-  let argv = UnOp (N.Focus (n*ptr_sz), argv) in
-    (argv_glob::globals, init, argc::argv::[])
-
-let build_template_main_args ptr_sz loc argc arg_len =
-  let argv_name = Temps.to_string 0 Temps.Argv in
-  let process_cell n =
-    let name      = Temps.to_string n Temps.Argv_value in
-    let lv        = Shift (Global argv_name, exp_of_int (n * ptr_sz)) in
-    let e         = AddrOf (Global name) in
-    let e         = UnOp (N.Focus (arg_len * Config.size_of_char), e) in
-      [Set (lv, e, N.Ptr), loc], [name, N.Array (N.Scalar char_typ, arg_len * Config.size_of_char)]
-  in
-  let res = ref ([], []) in
-    for i = 0 to argc-1 do
-      res := process_cell i 
-    done;
-    let init, globals = !res in
-    let argv_glob = (argv_name, N.Array (N.Scalar N.Ptr, argc)) in
-    let argc' = exp_of_int argc in
-    let argv = AddrOf (Global argv_name) in
-    let argv = UnOp (N.Focus (argc*ptr_sz), argv) in
-      (argv_glob::globals, List.rev init, [argc' ; argv])
 
 let new_id =
   let c = ref 0 in
@@ -223,26 +169,6 @@ let new_id =
     incr c;
     !c
 
-let build_call f (args_t, ret_t) args =
-  let loc = N.dummy_loc ("!Newspeak.build_call_"^f) in
-  let call = ref [Call (FunId f), loc] in
-  let i = ref 0 in
-  let create_arg t e =
-    match t with
-        N.Scalar st ->
-          call := (Set (Local 0, e, st), loc)::!call;
-          call := [Decl (Temps.to_string !i Temps.Arg, t, !call), loc];
-          incr i
-      | _ -> invalid_arg "Newspeak.build_call: non scalar argument type"
-  in
-    List.iter2 create_arg (List.rev args_t) (List.rev args);
-    begin match ret_t with
-        None -> ()
-      | Some t ->
-          let id = Temps.to_string (new_id ()) (Temps.Value_of f) in
-          call := [Decl (id, t, !call), loc]
-    end;
-    !call
 
 (***************************************************)
 
@@ -1060,41 +986,7 @@ let simplify opt_checks prog =
     Hashtbl.iter simplify_fundec prog.fundecs;
     { prog with globals = globals; init = init; fundecs = fundecs }
 
-let build_main_call ptr_sz ft params argc max_arg_len =
-  (* argc takes into account of the program name *)
-  (* max_arg_len takes into account of the '\0' *)
-  let fname = "main" in
-  let loc = N.dummy_loc "!Newspeak.build_call_main" in
-  let (args_t, _) = ft in
-  let blk = begin
-    match args_t with
-        [N.Scalar N.Int _; N.Scalar N.Ptr] ->
-	  if params <> [] then
-            let (globals, init, args) = build_main_args ptr_sz loc params in
-            let call = build_call fname ft args in
-            let call = ref (init@call) in
-            let bind_global (x, t) = call := [bind_var x t !call, loc] in
-              List.iter bind_global globals;
-              !call
-	  else
-	    let n = 
-	      Big_int.mult_big_int (Big_int.big_int_of_int argc) (Big_int.big_int_of_int max_arg_len) 
-	    in
-	    let n' = Big_int.mult_big_int n (Big_int.big_int_of_int 8) in
-	      if Big_int.compare_big_int Big_int.zero_big_int n' > 0 
-		|| Big_int.compare_big_int n' (Big_int.big_int_of_int Config.max_sizeof) > 0 then
-		  invalid_arg "Lowspeak.build_main_call: invalid parameters argc and/or max_arg_len"
-	      else
-		let (globals, init, args) = build_template_main_args ptr_sz loc argc max_arg_len in
-		let call = build_call fname ft args in
-		let call = ref (init@call) in
-		let bind_global (x, t) = call := [bind_var x t !call, loc] in
-		  List.iter bind_global globals;
-		  !call
-      | [] -> build_call fname ft []
-      | _ -> invalid_arg "Lowspeak.build_main_call: invalid type for main"
-  end in
-    simplify_blk true blk
+
 
 let rec belongs_of_exp x =
   match x with

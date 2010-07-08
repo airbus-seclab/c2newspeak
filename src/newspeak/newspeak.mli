@@ -226,6 +226,7 @@ val zero_f : exp
 
 (* {1 Manipulation and Simplifications} *)
 
+val char_typ : scalar_t
 
 (* Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type. *)

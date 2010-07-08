@@ -81,37 +81,6 @@ and exp =
   | UnOp of (Newspeak.unop * exp)
   | BinOp of (Newspeak.binop * exp * exp)
 
-(** [build_main_call ptr_sz ft params argc max_arg_len] returns a block
-   of newspeak code to call the main function with parameters [params].
-   @param ptr_sz the size of pointers
-   @param the type of main
-   @param the parameters with which [main] is called
-   @param argc the number of parameters
-   @param max_arg_len the maximal size of each parameter. 
-    This parameter is only used when [params] = [] to generate 
-    the char ** pointer to points to an array of size argc and whose cells are 
-    of size max_arg_len
-
-    Note that : 
-    - if params <> [] then both argc and max_arg_len are ignored
-    - if params = [] then argc and max_arg_len have to satisfy 
-      0<= argc*max_arg_len*8 <= Config.max_sizeof otherwise invalid_arg is raised
-*)
-val build_main_call: Newspeak.size_t -> Newspeak.ftyp -> string list -> int -> int -> blk
-
-(** [bind_var x t blk] encloses the block [blk] with the declaration of 
-    variable [x] of type [t] and then binds all occurances of [x] as a global
-    variable in [blk].
-*)
-val bind_var: string -> Newspeak.typ -> blk -> stmtkind
-
-(** [build_call f ft args] builds the call to function [f] of type [ft] with
-    arguments [args].
-    @raise Invalid_argument "Newspeak.build_call: non scalar argument" if
-    some argument is not of scalar type
-*)
-val build_call: Newspeak.fid -> Newspeak.ftyp -> exp list -> blk
-
 val dump : t -> unit
 
 (** [dump_globals glbdecls] prints the global definitions [glbdecls] to
@@ -119,6 +88,7 @@ val dump : t -> unit
 val dump_globals: Newspeak.globals -> unit
 
 val dump_fundec : string -> fundec -> unit
+
 
 (* Visitor *)
 class visitor:
@@ -168,6 +138,7 @@ val string_of_stmt : stmt -> string
 val string_of_blk : blk -> string
 
 val simplify: bool -> t -> t
+val simplify_blk: bool -> blk -> blk
 
 val exp_of_int: int -> exp
 val string_of_lval : lval -> string

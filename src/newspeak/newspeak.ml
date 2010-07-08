@@ -1578,3 +1578,9 @@ let belongs_of_funexp x =
 let exp_of_int x = Const (CInt (Nat.of_int x))
 
 let return_value = Temps.return_value
+
+let char_typ =
+  let char_signedness =
+    if Config.is_char_type_signed then Signed else Unsigned
+  in
+  Int (char_signedness, Config.size_of_char)
