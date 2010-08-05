@@ -154,6 +154,7 @@ let process fname globals =
     let update t =
       match t with 
 	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
+	| C.Ptr (C.Comp C.Unknown s') when s = s' -> C.Ptr (C.Comp (find_compdef s))
 	| _                                 -> t
     in
     let args' = 
