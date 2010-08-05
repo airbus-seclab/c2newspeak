@@ -150,6 +150,21 @@ let process fname globals =
 	c
   in
 
+  let update_fdecl s (args, ret) =
+    let update t =
+      match t with 
+	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
+	| _                                 -> t
+    in
+    let args' = 
+      match args with 
+	  Some args -> Some (List.map (fun (t, x) -> update t, x) args)
+	| None -> None
+    in
+    let ret' = update ret in
+      args', ret'
+  in
+
   let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
     let t' = 
       match t with 
@@ -718,7 +733,17 @@ let process fname globals =
 		
 	| GlbDecl (x, CDecl d) -> 
 	    translate_cdecl x d;
-	    glbdecls := List.map (update_vdecl x) !glbdecls
+	    glbdecls := List.map (update_vdecl x) !glbdecls;
+	    let fdecls = Hashtbl.fold (fun f (symb, t) l -> 
+			    let t' = 
+			      match t with
+				  TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
+				| _             -> t
+			    in
+			      (f, (symb, t'))::l) symbtbl [] 
+	    in 
+	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) (List.rev fdecls) 
+	   
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 
@@ -734,7 +759,7 @@ let process fname globals =
       List.iter translate x;
       (!glbdecls, !fundecls, !specs)
   in
-
+   
   let (glbdecls, fundecls, specs) = translate_globals globals in
   let fundecls = List.map translate_fundecl fundecls in
     (glbdecls, fundecls, specs)

@@ -847,18 +847,6 @@ let translate fname (globals, fundecls, spec) =
 
   (* type and translate blk *)
   and translate_blk_aux ends_with_exp x = 
-    (*let rec next_cdecl x blk =
-      match blk with
-	  [] -> raise Not_found 
-	| (LocalDecl (x', None))::blk' when x = x' -> next_cdecl x blk
-	| (Local (x', C.Comp Some _ ) as cdecl)::blk' when x = x' -> cdecl
-	| _::blk' -> next_cdecl x blk'
-    in
-    let next body x decl forward_decls =
-      try let decl' = next_cdecl body x in decl', decl'::forward_cdecls
-      with Not_found -> decl, decl'::forward_cdecls
-    in
-    *)
     let rec translate x =
       match x with
 	  (Exp (e, t), _)::[] when ends_with_exp -> 
@@ -868,20 +856,6 @@ let translate fname (globals, fundecls, spec) =
 	| (LocalDecl (x, d), loc)::body -> begin
 	    Npkcontext.set_loc loc;
 	    let decl = translate_local_decl loc x d in
-	    (*let decl', forward_cdecls' = 
-	      match decl with
-		  C.Struct ([], _) 
-		| C.Union ([], _) -> 
-		    let decl' = translate_local_decl (next body x decl forward_decls) in
-		      decl', decl'::forward_cdecls
-		| CDecl _ -> decl, decl::forward_cdecls
-		| VDecl (x, Comp (Unknown s) as t) ->
-			   let t' = 
-			     try List.find s forward_cdecls 
-			     with Not_found -> t
-			   in
-			     VDecl (x, t'), forward_cdecls
-	    in*)
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((decl@body, []), e)
 	  end
