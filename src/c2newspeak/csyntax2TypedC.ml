@@ -169,23 +169,28 @@ let process fname globals =
   let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
     let t' = 
       match t with 
-	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
-	| _ -> t
+	  C.Comp (C.Unknown s') when s = s'       -> C.Comp (find_compdef s)
+	| C.Ptr (C.Comp C.Unknown s') when s = s' -> C.Ptr (C.Comp (find_compdef s))
+	| _                                       -> t
     in (x, ((n, t', static, extern, init), loc))
   in
 
   let update_local_vdecls s =
-    let vars = Hashtbl.fold (fun
-      x (e, t) vars ->
+    let vars, pvars = Hashtbl.fold (fun
+      x (e, t) (vars, pvars) ->
 	 match e, t with 
 	     C.Local _, C.Comp (C.Unknown s') when s = s' -> 
-	       x::vars
-	   | _ -> vars) symbtbl []
+	       x::vars, pvars
+	   | C.Local _, C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
+	       vars, x::pvars
+	   | _ -> vars, pvars) symbtbl ([], [])
     in
     let t' = C.Comp (find_compdef s) in
       List.iter (fun x ->
 		   Hashtbl.replace symbtbl x (C.Local x, t')
-		) vars
+		) vars;
+      List.iter (fun x ->
+		   Hashtbl.replace symbtbl x (C.Local x, C.Ptr t')) pvars
   in
   let update_funtyp f ft1 =
     let (symb, t) = Hashtbl.find symbtbl f in
@@ -712,6 +717,24 @@ let process fname globals =
       (f', (ft, static, body, loc))
   in
 
+  let update_struct_type s t =
+    let new_type = find_compdef s in
+    let rec update t = 
+      match t with 
+	  C.Known (fields, true) -> 
+	    let fields' = List.map (fun (n, t) -> 
+				      let t' = 
+					match t with 
+					    C.Ptr (C.Comp (C.Unknown s')) when s = s' ->  
+					      C.Ptr (C.Comp new_type)
+					  | _ -> t
+				      in (n, t')) fields in
+	      C.Known (fields', true)
+	| _ -> t
+    in
+      update t
+  in
+    
   let rec translate_globals x = 
     let glbdecls = ref [] in
     let fundecls = ref [] in
@@ -734,17 +757,27 @@ let process fname globals =
 		
 	| GlbDecl (x, CDecl d) -> 
 	    translate_cdecl x d;
+	    (* udapting the type of var of kind C.Comp (Unknown ...)) *)
 	    glbdecls := List.map (update_vdecl x) !glbdecls;
+	    (* updating the sig of fun whose one of the parameters is
+	       of the form C.Comp (Unknown ...) *)
 	    let fdecls = Hashtbl.fold (fun f (symb, t) l -> 
-			    let t' = 
-			      match t with
-				  TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
-				| _             -> t
-			    in
-			      (f, (symb, t'))::l) symbtbl [] 
+					 let t' = 
+					   match t with
+					       TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
+					     | _             -> t
+					 in
+					   (f, (symb, t'))::l) symbtbl [] 
 	    in 
-	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) (List.rev fdecls) 
-	   
+	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) (List.rev fdecls); 
+	      (* updating the type of struct type whose one of the field
+		 is of the form Ptr (C.Comp (Unknown ...)) *)
+	      let comps = Hashtbl.fold (fun x' v l ->
+					  let v' = update_struct_type x v in
+					  if v' = v then l else (x', v')::l
+				       ) comptbl []
+	      in
+		List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps)
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 
