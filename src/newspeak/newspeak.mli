@@ -282,7 +282,12 @@ val string_of_blk: blk -> string
 
 val string_of_binop: binop -> string
 
+val string_of_formal_args: (string * typ) list -> string
 val string_of_actual_args: arg list -> string
+val string_of_ret: typ option -> string
+val string_of_size_t: size_t -> string
+val string_of_lbl: lbl -> string
+val string_of_assertion: assertion -> string
 
 (* Visitor *)
 class visitor:
@@ -378,3 +383,7 @@ val exp_of_int : int -> exp
 (** returns the name of local variable introduced to store the result
 of the functions *)
 val return_value: string
+
+(** returns true whenever the parameter is a name of variable
+introduced by Newspeak *)
+val is_generic_temp: string -> string option

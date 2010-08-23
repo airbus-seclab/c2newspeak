@@ -1584,3 +1584,5 @@ let char_typ =
     if Config.is_char_type_signed then Signed else Unsigned
   in
   Int (char_signedness, Config.size_of_char)
+
+let is_generic_temp name = Temps.is_generic_temp name
