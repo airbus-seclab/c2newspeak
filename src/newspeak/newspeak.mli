@@ -282,6 +282,7 @@ val string_of_blk: blk -> string
 
 val string_of_binop: binop -> string
 
+val string_of_actual_args: arg list -> string
 
 (* Visitor *)
 class visitor:
