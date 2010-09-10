@@ -53,3 +53,8 @@ let map f h =
 
 let size h str =
   Array.length(Hashtbl.find h str)
+
+let to_string printer x =
+  fold (fun s i v str ->
+          s ^ ":" ^ string_of_int i ^ "=" ^ printer v ^ "," ^ str
+  ) x ""

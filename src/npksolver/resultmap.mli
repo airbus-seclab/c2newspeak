@@ -44,3 +44,5 @@ val set : 'a t -> string -> int -> 'a -> unit
 val fold : (string -> int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
 val map : ('a -> 'b) -> 'a t -> 'b t
+
+val to_string : ('a -> string) -> 'a t -> string
