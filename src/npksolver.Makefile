@@ -31,6 +31,7 @@ npksolver.FILES= \
 		options utils alarm prog pcomp \
 		interval \
 		domain const range \
+		ptr_plus_range \
 		pair ptr_offset \
 		box cfg mkcfg \
 		fixpoint tap test npksolver

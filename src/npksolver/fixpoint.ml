@@ -66,7 +66,10 @@ let rec eval_stmt cs dom loc stmt x = match stmt with
           dom.join x (const dom 0) = x
         in
         if (has_zero r) then
-          Alarm.emit (loc, (Alarm.Assertion_failed (Pcomp.Print.exp e)), None);
+          Alarm.emit ( loc
+                     , Alarm.Assertion_failed (Pcomp.Print.exp e)
+                     , Some ("0 ∈ " ^ dom.to_string r)
+                     );
         x
   | Cfg.Call (f, id) ->
       Stack.push (f, id) cs;
@@ -107,6 +110,8 @@ let f_horwitz dom funcs x =
         with
           Not_found -> invalid_arg (f^"+"^string_of_int i^" has no successor")
     in
+    if Options.get Options.verbose then
+      prerr_endline (Resultmap.to_string Box.to_string x);
     List.iter (fun ((nextf, j), fij) ->
       let xj = Resultmap.get x nextf j in
       let xi = Resultmap.get x f     i in

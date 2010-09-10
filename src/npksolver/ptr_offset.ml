@@ -23,6 +23,7 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 open Domain
+open Utils
 open Prog
 
 type ptr =
@@ -104,7 +105,7 @@ let rec eval dom env addr_of =
            top dom, []
 
 let guard dom env addr_of =
-  let liftg = List.map (fun (l, x) -> (l, lift x)) in
+  let liftg = List.map (Arrow.second lift) in
   let l_env x = (env x).offset in
   function
     (* (var +p off > ptr) *)

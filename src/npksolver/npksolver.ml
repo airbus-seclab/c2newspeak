@@ -35,7 +35,7 @@ let register_domains =
   in
   List.iter register_domain
 
-let       domain = ref (Domain.pack Range.dom)
+let       domain = ref (Domain.pack Ptr_plus_range.dom)
 let set_domain x = domain := domain_str x
 
 let display_version _ =
@@ -99,10 +99,31 @@ let run_selftests =
 
 let main args =
   register_domains
-    [ "const"        , "constants"            , Domain.pack Const.dom
-    ; "range"        , "ranges (default)"     , Domain.pack Range.dom
-    ; "ptr_range"    , "ptr offset for range" , Domain.pack (Ptr_offset.make Range.dom)
-    ; "ptr_and_range", "ptr_offset and range" , Domain.pack (Pair.make Range.dom (Ptr_offset.make Range.dom))
+    [ ( "const"
+      , "constants"
+      , Domain.pack Const.dom
+      )
+    ; ("range"
+      , "ranges (default)"
+      , Domain.pack Range.dom
+      )
+    ; ( "ptr_range"
+      , "ptr offset for range"
+      , Domain.pack
+          (Ptr_offset.make Range.dom)
+      )
+    ; ( "ptr_and_range"
+      , "ptr_offset and range"
+      , Domain.pack
+          (Pair.make
+             (Range.dom)
+             (Ptr_offset.make Range.dom)
+          )
+      )
+    ; ( "ptr_plus_range"
+      , "ptr_offset and range (improved)"
+      , Domain.pack Ptr_plus_range.dom
+      )
     ];
   let domain_descrs = Hashtbl.fold (fun k (_, descr) s ->
     k^" : "^descr^" "^ s

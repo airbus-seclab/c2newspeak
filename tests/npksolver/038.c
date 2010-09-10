@@ -1,4 +1,3 @@
-/*!npk domain ptr_range */
 
 int rb_data[100];
 int *rb_in;
