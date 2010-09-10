@@ -22,7 +22,8 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-open Utils.Lift
+open Utils.Maybe
+open Utils.Maybe.Monad
 
 type t = (int * int) option
 
@@ -35,29 +36,29 @@ let top = Some (min_int, max_int)
 let bottom = None
 
 let (<=%) r1 r2 =
-  maybe true  (fun (a, b) ->
-  maybe false (fun (c, d) ->
-      c <= a && b <= d
-  ) r2
-  ) r1
+  match (r1, r2) with
+    | None, _ -> true
+    | Some _, None -> false
+    | Some (a, b), Some (c, d) ->
+        c <= a && b <= d
 
 let join r1 r2 =
-  maybe r2 (fun (l1, u1) ->
-  maybe r1 (fun (l2, u2) ->
-    Some (min l1 l2, max u1 u2)
-  ) r2
-  ) r1
+  match (r1, r2) with
+    | None, _ -> r2
+    | Some _, None -> r1
+    | Some (l1, u1), Some (l2, u2) -> Some (min l1 l2, max u1 u2)
+            
+let meet x1 x2 =
+  x1 >>= fun (l1, u1) ->
+  x2 >>= fun (l2, u2) ->
+    if (l2 > u1 || l1 > u2) then
+      None
+    else
+      from_bounds (max l1 l2) (min u1 u2)
 
-let meet =
-  bind2 (fun (l1, u1) (l2, u2) ->
-      if (l2 > u1 || l1 > u2) then
-        None
-      else
-        from_bounds (max l1 l2) (min u1 u2)
-  )
-
-let widen =
-  bind2 (fun (l1, u1) (l2, u2) ->
+let widen x1 x2 =
+  x1 >>= fun (l1, u1) ->
+  x2 >>= fun (l2, u2) ->
     let l = if l2 < l1
       then min_int
       else l1
@@ -67,7 +68,6 @@ let widen =
       else u1
     in
     Some (l, u)
-  )
 
 let is_infinite x =
   x == max_int || x == min_int
@@ -77,12 +77,12 @@ let add_overflow n x =
   else x + n
 
 let plus =
-  bind2 (fun (a, b) (c, d) ->
-    Some (add_overflow a c, add_overflow b d)
+  liftM2 (fun (l1, u1) (l2, u2) ->
+    (add_overflow l1 l2, add_overflow u1 u2)
   )
 
 let neg (r, alrm) =
-  bind (fun (a, b) -> Some (- b, - a)) r, alrm
+  (r >>= (fun (a, b) -> Some (- b, - a)), alrm)
 
 let to_string =
   let string_of_inf x =
@@ -110,9 +110,9 @@ let smul a b =
   else if b = min_int then inf_of_sign (a < 0)
   else a * b
 
-let mult_pp = bind2 (fun (a, b) (c,d) -> from_bounds (smul a c) (smul b d))
-let mult_mp = bind2 (fun (a, b) (c,d) -> from_bounds (smul a d) (smul b c))
-let mult_mm = bind2 (fun (a, b) (c,d) -> from_bounds (smul b d) (smul a c))
+let mult_pp = liftM2 (fun (a, b) (c,d) -> (smul a c, smul b d))
+let mult_mp = liftM2 (fun (a, b) (c,d) -> (smul a d, smul b c))
+let mult_mm = liftM2 (fun (a, b) (c,d) -> (smul b d, smul a c))
 
 let mult r1 r2 =
   let r1p = meet r1 (Some (0, max_int)) in

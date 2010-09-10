@@ -22,47 +22,45 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-let rec filter_list = function
-  | [] -> []
-  | Some h::t -> h::filter_list t
-  | None  ::t ->    filter_list t
+module Maybe = struct
 
-let rec filter_map f = function
-  |  []  -> []
-  | h::t -> begin
-              match f h with
-              | None   ->    filter_map f t
-              | Some r -> r::filter_map f t
-            end
+  let rec cat_maybes = function
+    | [] -> []
+    | Some h::t -> h::cat_maybes t
+    | None  ::t ->    cat_maybes t
 
-let may f = function
-  | None   -> None
-  | Some x -> Some (f x)
+  let fmap f = function
+    | None   -> None
+    | Some x -> Some (f x)
 
-let with_default d = function
-  | None   -> d
-  | Some x -> x
-
-module Lift = struct
-  type 'a lift = 'a option
+  let from_maybe d = function
+    | None   -> d
+    | Some x -> x
 
   let maybe d f = function
     | None   -> d
     | Some x -> f x
 
-  let bind f =
-    maybe None f
+  module Monad = struct
 
-  let (>>=) x f = bind f x
+    let (>>=) x f = match x with
+      | None   -> None
+      | Some x -> f x
 
-  let return x = Some x
+    let return x = Some x
 
-  let bind2 f x y =
-    x >>= fun x' ->
-    y >>= fun y' ->
-    f x' y'
+    let liftM2 f mx my =
+      mx >>= fun x ->
+      my >>= fun y ->
+      return (f x y)
 
-  let liftM2 f =
-    bind2 (fun x y -> return (f x y))
+  end
+
+end
+
+module Arrow = struct
+
+  let first  f (a, b) = (f a,   b)
+  let second f (a, b) = (  a, f b)
 
 end

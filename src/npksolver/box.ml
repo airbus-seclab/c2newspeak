@@ -24,7 +24,8 @@
 
 open Domain
 
-let may_cons h t = Utils.may (fun x -> h::x) t
+open Utils.Maybe
+open Utils.Maybe.Monad
 
 module type STORE = sig
   type 'a t
@@ -39,6 +40,8 @@ module type STORE = sig
 end
 
 module VMap : STORE = struct
+  open Utils.Maybe
+
   type 'a t =
     { dom : 'a Domain.t
     ; map : (Prog.addr, 'a) Pmap.t
@@ -67,8 +70,8 @@ module VMap : STORE = struct
 
   let merge f a b =
     let map = 
-      Pmap.foldi (fun k v ->
-        Utils.Lift.bind (fun m ->
+      Pmap.foldi (fun k v x ->
+        x >>= fun m ->
         try
           let res = f v (Pmap.find k m) in
           if res = a.dom.bottom
@@ -76,10 +79,9 @@ module VMap : STORE = struct
             else Some (Pmap.add k res m)
         with Not_found ->
           Some (Pmap.add k v m)
-        )
       ) a.map (Some b.map)
     in
-    Utils.may (fun m -> { a with map = m }) map
+    fmap (fun m -> { a with map = m }) map
 
   let replace v f x =
     let sg = singleton x.dom v x.dom.top in
@@ -88,8 +90,6 @@ module VMap : STORE = struct
   let dom x = x.dom
 
 end
-
-open Utils.Lift
 
 module S = VMap
 
@@ -227,11 +227,11 @@ let set_var v r bx =
   return { x with store = s }
 
 let push ~typ =
-  bind (fun x ->
-      return { x with esp = succ x.esp
-             ; typ = Pmap.add (Prog.Stack (succ x.esp)) typ x.typ
-             }
-  )
+  fmap (fun x ->
+          { x with esp = succ x.esp
+          ; typ = Pmap.add (Prog.Stack (succ x.esp)) typ x.typ
+          }
+       )
 
 let pop xo =
   xo >>= fun x ->
@@ -252,7 +252,7 @@ let dump_yaml = function
   | Some x ->
       let dom = S.dom x.store in
       let values = 
-        Utils.filter_list
+        cat_maybes
           (S.map
             (fun v r ->
               if r = dom.top then None

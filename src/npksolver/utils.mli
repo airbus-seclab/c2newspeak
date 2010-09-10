@@ -22,68 +22,64 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-(**
- * Filter out None elements, and unlift others.
- *)
-val filter_map : ('a -> 'b option) -> 'a list -> 'b list
+module Maybe : sig
 
 (**
  * Filter out None elements, and keep others.
  *)
-val filter_list : 'a option list -> 'a list
-
-(**
- * Apply a function - or not.
- * may f  None    = None
- * may f (Some x) = Some (f x)
- *)
-val may : ('a -> 'b) -> 'a option -> 'b option
+val cat_maybes : 'a option list -> 'a list
 
 (**
  * Add a default value.
- * with_default defval  None    = defval
- * with_default defval (Some x) = x
+ *     from_maybe defval  None    = defval
+ *     from_maybe defval (Some x) = x
  *)
-val with_default : 'a -> 'a option -> 'a
+val from_maybe : 'a -> 'a option -> 'a
+
+(**
+ * Apply a function - or not.
+ *     fmap f  None    = None
+ *     fmap f (Some x) = Some (f x)
+ *)
+val fmap : ('a -> 'b) -> 'a option -> 'b option
+
+(**
+  * Functional counterpart of pattern-matching.
+  *     maybe d f  None    = d
+  *     maybe d f (Some x) = f x
+  *)
+val maybe : 'b -> ('a -> 'b) -> 'a option -> 'b
 
 (**
  * Haskell's Maybe monad.
  *)
-module Lift : sig
+module Monad : sig
 
-  (**
-   * Monadic composition of option values.
-   *  None    >>= f = None
-   * (Some x) >>= f = f x
-   *)
-  val (>>=) : 'a option -> ('a -> 'b option) -> 'b option
+    (**
+     * Monadic composition of option values.
+     *  None    >>= f = None
+     * (Some x) >>= f = f x
+     *)
+    val (>>=) : 'a option -> ('a -> 'b option) -> 'b option
 
-  (**
-   * Monad entry point.
-   * return a = Some a
-   *)
-  val return : 'a -> 'a option
+    (**
+     * Monad entry point.
+     * return a = Some a
+     *)
+    val return : 'a -> 'a option
 
-  (**
-   * Flipped version of (>>=).
-   *)
-  val bind : ('a -> 'b option) -> 'a option -> 'b option
+    (**
+     * Lift a binary operation.
+     *)
+    val liftM2 : ('a -> 'b -> 'c) -> 'a option -> 'b option -> 'c option
 
-  (**
-   * Applicative version of pattern matching.
-   * maybe x f  None = x
-   * maybe x f (Some y) = f y
-   *)
-  val maybe : 'b -> ('a -> 'b) -> 'a option -> 'b
-
-  (**
-   * Lift a binary operation.
-   *)
-  val liftM2 : ('a -> 'b -> 'c) -> 'a option -> 'b option -> 'c option
-
-  (**
-   * Same as liftM2, but allows to return None.
-   *)
-  val bind2 : ('a -> 'b -> 'c option) -> 'a option -> 'b option -> 'c option
+  end
 
 end
+
+module Arrow : sig
+  val first  : ('a1 -> 'a2) -> ('a1 * 'b) -> ('a2 * 'b)
+  val second : ('b1 -> 'b2) -> ('a * 'b1) -> ('a * 'b2)
+end
+
+ 

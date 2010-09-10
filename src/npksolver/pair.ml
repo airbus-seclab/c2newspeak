@@ -23,8 +23,9 @@
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
 open Domain
-open Utils
-open Utils.Lift
+open Utils.Maybe
+open Utils.Arrow
+open Utils.Maybe.Monad
 
 type ('a, 'b) t = ('a * 'b) option
  
@@ -54,8 +55,6 @@ let eval da db l addr e =
   (r, Alarm.meet alrm_a alrm_b)
 
 let guard da db env addr e =
-  let prom_l f (a, b) = (  a, f b) in
-  let prom_r f (a, b) = (f a,   b) in
   let env_a x =
     match env x with
     | None -> invalid_arg "pair : guard : env_a"
@@ -66,8 +65,8 @@ let guard da db env addr e =
     | None -> invalid_arg "pair : guard : env_b"
     | Some (_, b) -> b
   in
-  let ga = List.map (fun (lv, f) -> (lv, may (prom_r f))) (da.guard env_a addr e) in
-  let gb = List.map (fun (lv, f) -> (lv, may (prom_l f))) (db.guard env_b addr e) in
+  let ga = List.map (fun (lv, f) -> (lv, fmap (first f))) (da.guard env_a addr e) in
+  let gb = List.map (fun (lv, f) -> (lv, fmap (second f))) (db.guard env_b addr e) in
   ga@gb
 
 let to_string da db =

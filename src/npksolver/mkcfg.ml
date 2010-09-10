@@ -24,6 +24,8 @@
 open Prog
 open Domain
 
+open Utils.Maybe
+
 let print_stmt = function
   | Cfg.Nop             -> "(nop)"
   | Cfg.Set (lv, exp,_) -> Pcomp.Print.lval lv ^ " <- " ^ Pcomp.Print.exp exp
@@ -101,7 +103,7 @@ let update ?(new_edges=[]) ~label c =
   }
 
 let rec process_stmt (stmt, loc) c =
-  let jnode = Utils.with_default c.lbl c.join in
+  let jnode = from_maybe c.lbl c.join in
   match stmt with
   | InfLoop b ->
       let btm = lbl_next c.lbl in
