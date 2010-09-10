@@ -26,4 +26,4 @@ type t
 
 val from_bounds : int -> int -> t
 
-val dom : t Domain.c_dom
+val dom : t Domain.t

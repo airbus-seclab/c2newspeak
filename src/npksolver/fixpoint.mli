@@ -26,4 +26,4 @@
  * Solve a program (emit alarms).
  * Returns an array of pretty-printed abstract values for CFG vertices.
  *)
-val solve : Domain.t -> Cfg.t -> string Resultmap.t
+val solve : Domain.packed_dom -> Cfg.t -> string Resultmap.t

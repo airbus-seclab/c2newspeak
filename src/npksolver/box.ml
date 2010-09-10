@@ -28,19 +28,19 @@ let may_cons h t = Utils.may (fun x -> h::x) t
 
 module type STORE = sig
   type 'a t
-  val empty : 'a Domain.c_dom -> 'a t
-  val singleton : 'a Domain.c_dom -> Prog.addr -> 'a -> 'a t
+  val empty : 'a Domain.t -> 'a t
+  val singleton : 'a Domain.t -> Prog.addr -> 'a -> 'a t
   val equal : 'a t -> 'a t -> bool
   val merge : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t option
   val replace : Prog.addr -> ('a -> 'a) -> 'a t -> 'a t option
   val map : (Prog.addr -> 'a -> 'b) -> 'a t -> 'b list
   val assoc : Prog.addr -> 'a t -> 'a
-  val dom : 'a t -> 'a Domain.c_dom
+  val dom : 'a t -> 'a Domain.t
 end
 
 module VMap : STORE = struct
   type 'a t =
-    { dom : 'a Domain.c_dom
+    { dom : 'a Domain.t
     ; map : (Prog.addr, 'a) Pmap.t
     }
 

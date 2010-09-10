@@ -40,7 +40,7 @@ val equal : 'a t -> 'a t -> bool
 (**
  * The 'top' value, meaning that no information is known.
  *)
-val top : 'a Domain.c_dom -> 'a t
+val top : 'a Domain.t -> 'a t
 
 (**
  * The 'bottom' value, meaning that the associated control-flow graph vertex is
@@ -51,7 +51,7 @@ val bottom : 'a t
 (**
  * A box with a single variable with the specified type and abstract value.
  *)
-val singleton : 'a Domain.c_dom -> Prog.lval -> typ:Prog.typ -> 'a -> 'a t
+val singleton : 'a Domain.t -> Prog.lval -> typ:Prog.typ -> 'a -> 'a t
 
 (**
  * Variable-wise abstract join operation.

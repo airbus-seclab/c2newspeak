@@ -28,4 +28,4 @@
 
 type 'a t
 
-val make : 'a Domain.c_dom -> 'a t Domain.c_dom
+val make : 'a Domain.t -> 'a t Domain.t

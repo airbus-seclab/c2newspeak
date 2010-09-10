@@ -29,5 +29,5 @@
 
 type ('a, 'b) t
 
-val make : 'a Domain.c_dom -> 'b Domain.c_dom -> ('a, 'b) t Domain.c_dom
+val make : 'a Domain.t -> 'b Domain.t -> ('a, 'b) t Domain.t
 

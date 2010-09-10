@@ -31,7 +31,7 @@ type 'a update_check = (Prog.addr -> int) (* size mapping           *)
 (**
  * Unpacked abstract domain.
  *)
-type 'a c_dom =
+type 'a t =
   { top         : 'a
   ; bottom      : 'a
   ; join        : 'a -> 'a -> 'a
@@ -58,19 +58,19 @@ type 'a c_dom =
  * An evaluator for constant integers.
  * For example, const Range.com 0 = [0;0], etc.
  *)
-val const : 'a c_dom -> int -> 'a
+val const : 'a t -> int -> 'a
 
 (**
  * Packed abstract domain.
  * t really means 'exists a. t = a c_dom'.
  * Packing/unpacking is made with pack and with_dom.
  *)
-type t
+type packed_dom
 
 (**
  * Pack an abstract domain.
  *)
-val pack : 'a c_dom -> t
+val pack : 'a t -> packed_dom
 
 (**
  * A wrapping scope.
@@ -78,9 +78,9 @@ val pack : 'a c_dom -> t
  * parameter and returning 't".
  *)
 type 't scope =
-  { bind : 'a. 'a c_dom -> 't }
+  { bind : 'a. 'a t -> 't }
 
 (**
  * Unpack an abstract domain.
  *)
-val with_dom : t -> 'a scope -> 'a
+val with_dom : packed_dom -> 'a scope -> 'a

@@ -27,7 +27,7 @@ type 'a update_check = (Prog.addr -> int) (* size mapping           *)
                      -> 'a                (* new value evaluated    *)
                      -> Alarm.t list      (* alarms to report       *)
 
-type 'a c_dom =
+type 'a t =
   { top         : 'a
   ; bottom      : 'a
   ; join        : 'a -> 'a -> 'a
@@ -51,9 +51,9 @@ type 'a c_dom =
   }
 
 type 't scope =
-  { bind : 'a. 'a c_dom -> 't }
+  { bind : 'a . 'a t -> 't }
 
-type t =
+type packed_dom =
   { open_dom : 'a. 'a scope -> 'a }
 
 let pack imp =
