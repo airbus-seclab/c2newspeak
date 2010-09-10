@@ -29,6 +29,7 @@ COMMAND=$(C2NEWSPEAK) --reject-missing-fundecl \
 											-o $*.npk $*.c; \
 	 $(NPKSOLVER) $*.npk
 PREREQ=%.c $(NPKSOLVER)
+DIFF=diff -u $*.spec $*.bak
 
 TESTS = 000                                     \
                                         018 019 \
