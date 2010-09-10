@@ -116,6 +116,7 @@ let main args =
   ; 't', "selftest" , "run unit tests (output TAP)"         , Options.Carg run_selftests
   ; 'v', "verbose"  , "output more information"             , Options.Set Options.verbose
   ; 'V', "version"  , "show version number"                 , Options.Call display_version
+  ; 'w', "widening" , "use widening"                        , Options.Set Options.widening
   ] in
   Options.parse_cmdline ops handle_file args
 
