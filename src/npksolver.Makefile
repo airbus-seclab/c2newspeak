@@ -29,6 +29,7 @@ DIRS=newspeak/ npksolver/
 npksolver.FILES= \
 		pmap resultmap yaml \
 		options utils alarm prog pcomp \
+		interval \
 		domain const range \
 		pair ptr_offset \
 		box cfg mkcfg \

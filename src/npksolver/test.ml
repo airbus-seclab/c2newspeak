@@ -21,8 +21,9 @@
  *)
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
-open Tap
 open Domain
+open Interval
+open Tap
 
 module Test_range = struct
 open Range
@@ -282,7 +283,7 @@ let run _ =
     singleton ~typ:(Prog.Int) dom (Prog.G var) (const Range.dom v)
   in
   let intvl var x y =
-    singleton ~typ:(Prog.Int) dom (Prog.G var) (Range.from_bounds x y)
+    singleton ~typ:(Prog.Int) dom (Prog.G var) (from_bounds x y)
   in
 
   let i2 = sg "i" 2 in
@@ -308,8 +309,8 @@ let run _ =
 
   ae (meet (intvl "i" min_int 0) i2) bottom "{i: 2} /\\ {i: R-} = bot";
 
-  let b = Box.set_var (Prog.G "x") (Range.from_bounds 5 5) (top dom) in
-  assert_equal ~printer:Range.dom.to_string (get_gvar "x" b) (Range.from_bounds 5 5)
+  let b = Box.set_var (Prog.G "x") (from_bounds 5 5) (top dom) in
+  assert_equal ~printer:Range.dom.to_string (get_gvar "x" b) (from_bounds 5 5)
       "Global <- 5; Global == 5";
 
   (* local variables *)
@@ -317,8 +318,8 @@ let run _ =
   assert_equal (get_lvar 0 (top dom)) Range.dom.top
                         "Box.top returns top for local variables";
 
-  let b = Box.set_var (Prog.L 0) (Range.from_bounds 5 5) (top dom) in
-  assert_equal ~printer:Range.dom.to_string (get_lvar 0 b) (Range.from_bounds 5 5)
+  let b = Box.set_var (Prog.L 0) (from_bounds 5 5) (top dom) in
+  assert_equal ~printer:Range.dom.to_string (get_lvar 0 b) (from_bounds 5 5)
       "Local <- 5; Local == 5";
 
   test_end ()

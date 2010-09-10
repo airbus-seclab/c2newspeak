@@ -22,4 +22,24 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-val dom : int Interval.t Domain.t
+type 'a t = ('a * 'a) option
+
+val from_bounds : 'a -> 'a -> 'a t
+
+val empty : 'a t
+
+val meet : 'a t -> 'a t -> 'a t
+
+val join : 'a t -> 'a t -> 'a t
+
+val widen : int t -> int t -> int t
+
+val (<=%) : 'a t -> 'a t -> bool
+
+val plus : int t -> int t -> int t
+
+val mult : int t -> int t -> int t
+
+val neg : int t -> int t
+
+val to_string : int t -> string

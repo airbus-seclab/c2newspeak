@@ -22,6 +22,29 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
+module Signatures = struct
+  module type MONAD = sig
+    type 'a m
+    val return : 'a -> 'a m
+    val (>>=) : 'a m -> ('a -> 'b m) -> 'b m
+  end
+  module type MONAD_S = sig
+    type 'a m
+    val liftM2 : ('a -> 'b -> 'c) -> 'a m -> 'b m -> 'c m
+  end
+end
+
+module Monad (M:Signatures.MONAD) = struct
+  open M
+
+  type 'a m = 'a M.m
+
+  let liftM2 f mx my =
+    mx >>= fun x ->
+    my >>= fun y ->
+    return (f x y)
+end
+
 module Maybe = struct
 
   let rec cat_maybes = function
@@ -41,21 +64,13 @@ module Maybe = struct
     | None   -> d
     | Some x -> f x
 
-  module Monad = struct
+  let (>>=) x f = match x with
+    | None   -> None
+    | Some x -> f x
 
-    let (>>=) x f = match x with
-      | None   -> None
-      | Some x -> f x
+  let return x = Some x
 
-    let return x = Some x
-
-    let liftM2 f mx my =
-      mx >>= fun x ->
-      my >>= fun y ->
-      return (f x y)
-
-  end
-
+  type 'a m = 'a option
 end
 
 module Arrow = struct

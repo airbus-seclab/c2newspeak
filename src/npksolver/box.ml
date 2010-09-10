@@ -25,7 +25,6 @@
 open Domain
 
 open Utils.Maybe
-open Utils.Maybe.Monad
 
 module type STORE = sig
   type 'a t

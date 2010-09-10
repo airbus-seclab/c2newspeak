@@ -25,7 +25,8 @@
 open Domain
 open Utils.Maybe
 open Utils.Arrow
-open Utils.Maybe.Monad
+module Maybe_monad = Utils.Monad(Utils.Maybe)
+open Maybe_monad
 
 type ('a, 'b) t = ('a * 'b) option
  
