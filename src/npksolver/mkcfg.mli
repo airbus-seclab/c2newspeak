@@ -33,6 +33,8 @@ val process : Prog.t -> Cfg.t
  *)
 val to_string : Cfg.t -> string
 
+val print_stmt : Cfg.stmt -> string
+
 (**
  * Dump a CFG as a YAML string.
  *)

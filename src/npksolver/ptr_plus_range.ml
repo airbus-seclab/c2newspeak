@@ -28,6 +28,7 @@ open Prog
 
 type t =
   | Top
+  | Array
   | Range    of int Interval.t
   | Pointsto of addr * int Interval.t
   | Null
@@ -41,15 +42,20 @@ let join ?(with_widening=false) a b = match (a, b) with
   | Range x, Range y ->
       if with_widening
         then Range (Range.dom.widen x y)
-        else Range (Range.dom.join x y)
+        else Range (Range.dom.join  x y)
   | Pointsto (x,ox), Pointsto (y,oy) when x = y ->
-      Pointsto (x, Range.dom.join ox oy)
+      if with_widening
+        then Pointsto (x, Range.dom.widen ox oy)
+        else Pointsto (x, Range.dom.join  ox oy)
   | Pointsto _, Pointsto _ (* when x /= y *) -> Top
   | (Pointsto _|Null), Range _ -> assert false(*; Top *)
   | Range _, (Pointsto _|Null) -> assert false(*; Top *)
+  | Array, (Range _| Null| Pointsto _) -> assert false(*; Top *)
+  | (Range _| Null| Pointsto _), Array -> assert false(*; Top *)
   | Null, Null -> Null
-  | Null, Pointsto _ -> Top
+  | Null, Pointsto _ -> assert false;(*Top*)
   | Pointsto _, Null -> Top
+  | Array, Array -> Array
 
 let normalize = function
   | Range Interval.Empty -> Bottom
@@ -66,9 +72,12 @@ let meet a b = match (a, b) with
   | Pointsto _, Pointsto _ (* when x /= y *) -> Bottom
   | (Pointsto _|Null), Range _ -> assert false(*; Bottom *)
   | Range _, (Pointsto _|Null) -> assert false(*; Bottom *)
+  | Array, (Range _| Null| Pointsto _) -> assert false(*; Bottom *)
+  | (Range _| Null| Pointsto _), Array -> assert false(*; Bottom *)
   | Null, Null -> Null
   | Null, Pointsto _ -> Bottom
   | Pointsto _, Null -> Bottom
+  | Array, Array -> Array
 
 let to_string = function
   | Top            -> "T"
@@ -76,12 +85,13 @@ let to_string = function
   | Pointsto (a,o) -> "→ " ^ Pcomp.Print.addr a ^ "@" ^ Range.dom.to_string o
   | Null           -> "Null"
   | Bottom         -> "⊥"
+  | Array          -> "array"
 
 let is_in_range a b = function
   | Top -> false
   | Bottom -> true
   | Range r -> Range.dom.is_in_range a b r
-  | Pointsto _ | Null -> invalid_arg "ptr+range ∷ is_in_range"
+  | Pointsto _ | Null | Array -> invalid_arg "ptr+range ∷ is_in_range"
 
 let unsafe_map2_range op x y = match (x,y) with
   | Top, _ -> Top
@@ -140,13 +150,14 @@ let eval env addr e =
       begin
         let (r1,a1) = eval e1 in (* pointer *)
         let (r2,a2) = eval e2 in (* offset *)
-        let r = match (r1, r2) with
-          | (Pointsto (lv,_), Top)      -> Pointsto (lv, Range.dom.top)
-          | (Pointsto (lv,o), Range ro) -> Pointsto (lv, Interval.plus o ro)
+        let (r,a) = match (r1, r2) with
+          (*| (Top, _) -> Top,[loc,Alarm.Ptr_OOB, None]*)
+          | (Pointsto (lv,_), Top)      -> Pointsto (lv, Range.dom.top),[]
+          | (Pointsto (lv,o), Range ro) -> Pointsto (lv, Interval.plus o ro),[]
           | _ -> invalid_arg ( "ptr+range ∷ eval ∷ PlusPtr ("
                              ^ to_string r1 ^ ", " ^ to_string r2 ^ ")"
                              )
-        in (r, a1@a2)
+        in (r, a@a1@a2)
       end
   | e ->
       let reason = "ptr+range : eval " ^ Pcomp.Print.exp e in
@@ -198,12 +209,20 @@ let update_check (sz   :(Prog.addr -> int))
                  (loc  : Newspeak.location)
                  : 'a -> Alarm.t list
   = function
-    | Null | Range _ -> []
+    | Null -> []
+    | Range _ -> []
     | Pointsto (x,o) ->
         let s = sz x in
         if (Interval.(<=%) o (Interval.from_bounds 0 (s - 1)))
           then []
-          else [loc, Alarm.Ptr_OOB,None]
+          else [( loc
+                , Alarm.Ptr_OOB
+                , Some ( Range.dom.to_string o
+                       ^ " </= [0;"
+                       ^ string_of_int (s - 1)
+                       ^ "]"
+                       )
+                )]
     | Top -> [loc, Alarm.Assertion_failed "update check on Top", None]
     | x -> invalid_arg ("ptr+range ∷ update_check ∷ " ^ to_string x)
 
@@ -218,5 +237,5 @@ let dom =
   ; eval        = eval
   ; guard       = guard
   ; update      = Some update_check
-  ; top_array   = fun _ -> Top
+  ; top_array   = fun _n -> Array
   }

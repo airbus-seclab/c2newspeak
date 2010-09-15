@@ -26,8 +26,22 @@ type 'a t =
   | Interval of 'a * 'a
   | Empty
 
+let to_string =
+  let string_of_inf x =
+    if      x = max_int then "+oo"
+    else if x = min_int then "-oo"
+    else string_of_int x
+  in
+  function
+    | Empty -> "(bot)"
+    | Interval (a, b) when a = min_int && b = max_int -> "(top)"
+    | Interval (a, b) when a = b -> "{" ^ string_of_int a ^ "}"
+    | Interval (a, b)            -> "[" ^ string_of_inf a ^ ";"
+                                        ^ string_of_inf b ^ "]"
+
 let from_bounds a b =
-  assert (a <= b);
+  if (a > b) then
+    assert false;
   Interval (a, b)
 
 let top_int = from_bounds min_int max_int
@@ -45,7 +59,7 @@ let join r1 r2 =
   match (r1, r2) with
     | Empty, _ -> r2
     | Interval _, Empty -> r1
-    | Interval (l1, u1), Interval (l2, u2) -> Interval (min l1 l2, max u1 u2)
+    | Interval (l1, u1), Interval (l2, u2) -> from_bounds (min l1 l2) (max u1 u2)
             
 let meet x1 x2 = match (x1, x2) with
   | Interval (l1, u1), Interval (l2, u2) ->
@@ -71,31 +85,36 @@ let widen x1 x2 = match (x1, x2) with
 let is_infinite x =
   x == max_int || x == min_int
 
-let add_overflow n x =
-  if (is_infinite x) then x
-  else x + n
+let add_overflow x y =
+  match (is_infinite x,is_infinite y) with
+    | false, false -> x + y
+    | false, true -> y
+    | true, false -> x
+    | true, true -> assert false
 
 let plus x1 x2 = match (x1, x2) with
   | Interval (l1, u1), Interval (l2, u2) ->
-      from_bounds (add_overflow l1 l2) (add_overflow u1 u2)
+      let x = add_overflow l1 l2 in
+      let y = add_overflow u1 u2 in
+      if (x > y) then
+        print_endline
+          ( "["
+          ^ string_of_int x
+          ^ ";"
+          ^ string_of_int y
+          ^ "]"
+          );
+      from_bounds x y
   | Empty, _ | _, Empty -> Empty
+
+let neg_overflow n =
+  if      n = min_int then max_int
+  else if n = max_int then min_int
+  else - n
 
 let neg = function
   | Empty -> Empty
-  | Interval (a, b) -> from_bounds (- b) (- a)
-
-let to_string =
-  let string_of_inf x =
-    if      x = max_int then "+oo"
-    else if x = min_int then "-oo"
-    else string_of_int x
-  in
-  function
-    | Empty -> "(bot)"
-    | Interval (a, b) when a = min_int && b = max_int -> "(top)"
-    | Interval (a, b) when a = b -> "{" ^ string_of_int a ^ "}"
-    | Interval (a, b)            -> "[" ^ string_of_inf a ^ ";"
-                                        ^ string_of_inf b ^ "]"
+  | Interval (a, b) -> from_bounds (neg_overflow b) (neg_overflow a)
 
 (* safe mult *)
 
