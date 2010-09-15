@@ -52,14 +52,14 @@ let join ?(with_widening=false) a b = match (a, b) with
   | Pointsto _, Null -> Top
 
 let normalize = function
-  | Range None -> Bottom
+  | Range Interval.Empty -> Bottom
   | x -> x
 
 let meet a b = match (a, b) with
   | Top, y -> y
   | x, Top -> x
-  | (Bottom|Range None), _ -> Bottom
-  | _, (Bottom|Range None) -> Bottom
+  | (Bottom|Range Interval.Empty), _ -> Bottom
+  | _, (Bottom|Range Interval.Empty) -> Bottom
   | Range x, Range y -> normalize (Range (Range.dom.meet x y))
   | Pointsto (x,ox), Pointsto (y,oy) when x = y ->
       Pointsto (x, Range.dom.meet ox oy)
@@ -117,8 +117,8 @@ let eval env addr e =
           else
             begin
               match (r1, r2) with
-                |   Range (Some (a, b))
-                  , Range (Some (c, d))
+                |   Range (Interval.Interval (a, b))
+                  , Range (Interval.Interval (c, d))
                       when a = b
                        &&  b = c
                        &&  c = d
@@ -180,11 +180,12 @@ let guard env addr_of =
   |      Op (Eq, Lval (v,_), Const (CInt n))  -> [v, meet (singleton n)]
   |      Op (Gt, Const (CInt n), Lval (v,_))  -> [v, meet (range min_int (n-1))]
   | Not (Op (Gt, Const (CInt n), Lval (v,_))) -> [v, meet (range n max_int)]
-  | Not (Op (Eq, Lval (v,_), Const (CInt n))) -> [ v
-                                                 , function
-                                                   | Range (Some(x,y)) when x = y && x = n -> Bottom
-                                                   | r -> r
-                                                 ]
+  | Not (Op (Eq, Lval (v,_), Const (CInt n))) ->
+      [ v
+      , function
+        | Range (Interval.Interval(x,y)) when x = y && x = n -> Bottom
+        | r -> r
+      ]
   | Op (Gt, Op (PlusPtr _loc, AddrOf var, off), (Lval (ptr, _) as lv)) ->
       rewrite_guard (Op (Gt, off, lv)) addr_of var (env ptr)
   | Not (Op (Gt, Op(PlusPtr _loc1, AddrOf (var), off), (Lval (ptr, _) as lv))) ->

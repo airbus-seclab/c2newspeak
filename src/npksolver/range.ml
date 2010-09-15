@@ -25,9 +25,9 @@
 open Interval
 open Utils
 
-let top = Some (min_int, max_int)
+let top = top_int
 
-let bottom = None
+let bottom = bottom_int
 
 let is_in_range a b r =
   r <=% from_bounds a b
@@ -45,17 +45,16 @@ let eval lookup _addr x =
   | Op (Plus,  e1, e2) -> Alarm.combine plus (eval e1) (eval e2)
   | Op (Minus, e1, e2) -> Alarm.combine plus (eval e1) ((Arrow.first neg) (eval e2))
   | Not e' -> begin match fst (eval e') with
-                           | Some (0,0)            -> bool_true
-                           | Some (a,_) when a > 0 -> bool_false
-                           | Some (_,b) when b < 0 -> bool_false
+                           | Interval (0,0)            -> bool_true
+                           | Interval (a,_) when a > 0 -> bool_false
+                           | Interval (_,b) when b < 0 -> bool_false
                            | _                     -> bool_top
               end, []
   | Op (Eq, e1, e2) -> Alarm.combine (fun r1  r2 ->
-                           if meet r1 r2 = None then bool_false
+                           if meet r1 r2 = bottom then bool_false
                            else begin match (r1, r2) with
-                           | Some (a, b), Some (c, d) when a = b
-                                                       &&  b = c
-                                                       &&  c = d -> bool_true
+                           | Interval (a, b), Interval (c, d)
+                               when a = b &&  b = c &&  c = d -> bool_true
                            | _ -> bool_top
                            end
                       ) (eval e1) (eval e2)
@@ -88,7 +87,7 @@ let guard _ _ e =
   | Not (Op (Gt, Lval (v,_), Const (CInt n))) -> [v, meet (from_bounds min_int n)]
   | Not (Op (Gt, Const (CInt n), Lval (v,_))) -> [v, meet (from_bounds n max_int)]
   | Not (Op (Eq, Lval (v,_), Const (CInt n))) -> [v, function
-                                                 | Some(x,y) when x = y && x = n -> None
+                                                 | Interval(x,y) when x = y && x = n -> bottom
                                                  | r -> r
                                                  ]
   | _ -> if Options.get Options.verbose then

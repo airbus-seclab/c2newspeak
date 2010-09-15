@@ -22,11 +22,16 @@
 
 (** @author Etienne Millon <etienne.millon@eads.net> *)
 
-type 'a t = ('a * 'a) option
+type 'a t =
+  private
+    | Interval of 'a * 'a
+    | Empty
+
+val top_int : int t
+
+val bottom_int : int t
 
 val from_bounds : 'a -> 'a -> 'a t
-
-val empty : 'a t
 
 val meet : 'a t -> 'a t -> 'a t
 
