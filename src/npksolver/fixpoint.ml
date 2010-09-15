@@ -34,6 +34,7 @@ let on_var (lv:Prog.lval)
 
 let rec eval_stmt cs dom loc stmt x = match stmt with
   | Cfg.Nop -> x
+  | Cfg.Reloop -> x
   | Cfg.Init vs ->
           Pmap.foldi (fun v typ r ->
               Box.meet (Box.singleton
@@ -91,7 +92,7 @@ let f_horwitz dom funcs x =
       List.map (fun (dest, stmt, loc) ->
        let g = eval_stmt callstack dom loc stmt in
        let r =
-         if Options.get Options.widening then
+         if (stmt = Cfg.Reloop && Options.get Options.widening) then
            fun xo -> Box.widen xo (g xo)
          else
            g

@@ -28,6 +28,7 @@ type nodeid = string * node (* function name, node *)
 
 type stmt =
   | Nop
+  | Reloop (* like Nop but widening/reducing may occur here *)
   | Set   of Prog.lval * Prog.exp * Newspeak.location
   | Guard of Prog.exp
   | Push  of Prog.typ

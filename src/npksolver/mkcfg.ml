@@ -28,6 +28,7 @@ open Utils.Maybe
 
 let print_stmt = function
   | Cfg.Nop             -> "(nop)"
+  | Cfg.Reloop          -> "(reloop)"
   | Cfg.Set (lv, exp,_) -> Pcomp.Print.lval lv ^ " <- " ^ Pcomp.Print.exp exp
   | Cfg.Guard exp       -> "[ " ^ Pcomp.Print.exp exp ^ " ]"
   | Cfg.Push  _sz       -> "(push)"
@@ -108,7 +109,7 @@ let rec process_stmt (stmt, loc) c =
   | InfLoop b ->
       let btm = lbl_next c.lbl in
       let c' = process_blk b c.alist btm in
-      update c ~new_edges:((btm >--<>--> c'.lbl) ::c'.edges)
+      update c ~new_edges:((btm >--<(Cfg.Reloop,Newspeak.unknown_loc)>--> c'.lbl) ::c'.edges)
                ~label:c'.lbl
   | Select (b1, b2) ->
       let c1 = process_blk b1 c.alist jnode in
@@ -257,6 +258,7 @@ let to_string prg =
   in
   let stmt = function
     | Cfg.Nop -> "Nop"
+    | Cfg.Reloop -> "Reloop"
     | Cfg.Set (l, e, _loc) -> "S " ^ Pcomp.Print.lval l ^ " <- " ^ Pcomp.Print.exp e
     | Cfg.Guard e -> "G " ^ Pcomp.Print.exp e
     | Cfg.Push ty -> "Push " ^ Pcomp.Print.typ ty
