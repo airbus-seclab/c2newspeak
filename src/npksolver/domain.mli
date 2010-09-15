@@ -52,6 +52,8 @@ type 'a t =
                                                   * called.
                                                   *)
   ; update : 'a update_check option
+  ; top_array : int -> 'a                       (** Return an array with
+                                                  * only `n` top elements *)
   }
 
 (**
@@ -59,6 +61,12 @@ type 'a t =
  * For example, const Range.com 0 = [0;0], etc.
  *)
 val const : 'a t -> int -> 'a
+
+(**
+  * For scalar types, returns a logical zero (0/NULL), or an array filled with
+  * zeroes.
+  *)
+val nil : 'a t -> typ:Prog.typ -> 'a
 
 (**
  * Packed abstract domain.

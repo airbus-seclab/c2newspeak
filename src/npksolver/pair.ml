@@ -108,5 +108,6 @@ let make da db =
   ; guard     = guard     da db
   ; update    = Some (update    da db)
   ; is_in_range = is_in_range da db
+  ; top_array = fun n -> Some (da.top_array n, db.top_array n)
   }
 

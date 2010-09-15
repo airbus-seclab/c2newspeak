@@ -48,6 +48,8 @@ type 'a t =
                                                   * called.
                                                   *)
   ; update : 'a update_check option
+  ; top_array : int -> 'a                       (** Return an array with
+                                                  * only `n` top elements *)
   }
 
 type 't scope =
@@ -62,8 +64,17 @@ let pack imp =
 let with_dom p e =
   p.open_dom e
 
-let const dom n =
+(* value must not raise any alarms as they will be ignored *)
+let const_eval dom v =
   let empty_env _ =
     invalid_arg "empty_environment"
   in
-  fst (dom.eval empty_env empty_env (Prog.Const (Prog.CInt n)))
+  fst (dom.eval empty_env empty_env v)
+
+let const dom n =
+  const_eval dom (Prog.Const (Prog.CInt n))
+
+let nil dom ~typ = match typ with
+  | Prog.Int -> const dom 0
+  | Prog.Ptr -> const_eval dom (Prog.Const Prog.Nil)
+  | Prog.Array (_ty, n) -> dom.top_array n

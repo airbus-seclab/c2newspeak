@@ -24,6 +24,14 @@
 
 open Domain
 
+let on_var (lv:Prog.lval)
+           (f:'a       -> 'a)
+           :  'a Box.t -> 'a Box.t
+  = fun box ->
+  let old_val = Box.environment box lv in
+  let new_val = f old_val in
+  Box.set_var lv new_val box
+
 let rec eval_stmt cs dom loc stmt x = match stmt with
   | Cfg.Nop -> x
   | Cfg.Init vs ->
@@ -31,7 +39,7 @@ let rec eval_stmt cs dom loc stmt x = match stmt with
               Box.meet (Box.singleton
                            dom ~typ
                            (Prog.G v)
-                           (const dom 0)
+                           (nil dom ~typ)
                        )
                        r
             ) vs x

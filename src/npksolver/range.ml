@@ -106,5 +106,6 @@ let dom =
   ; Domain.guard       = guard
   ; Domain.update      = None
   ; Domain.is_in_range = is_in_range
+  ; Domain.top_array   = fun _ -> top
   }
 

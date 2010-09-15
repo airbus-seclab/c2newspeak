@@ -217,4 +217,5 @@ let dom =
   ; eval        = eval
   ; guard       = guard
   ; update      = Some update_check
+  ; top_array   = fun _ -> Top
   }

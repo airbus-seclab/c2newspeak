@@ -117,4 +117,5 @@ let dom =
   ; Domain.eval      = eval
   ; Domain.guard     = guard
   ; Domain.update    = None
+  ; Domain.top_array = fun _ -> Top
   }
