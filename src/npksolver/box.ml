@@ -147,22 +147,45 @@ let widen xo yo =
                  })
        (S.merge ((S.dom x.store).widen) x.store y.store)
 
+let rec eval_with_box x e =
+  let dom = S.dom x.store in
+  dom.eval (environment (Some x))
+           (addr_of     (Some x))
+           e
 
-let rec addr_convert ?(check=fun _ _ _ -> ()) esp =
+and addr_convert ?(check=fun _ _ _ -> ()) x =
+  let dom = S.dom x.store in
+  let esp = x.esp in
   function
     | Prog.L n -> Prog.Stack (esp - n)
     | Prog.G s -> Prog.Heap  s
     | Prog.Shift (l, e, loc) ->
-        let addr_base = addr_convert esp l in
+        let addr_base = addr_convert x l in
         check e addr_base loc;
         addr_base
+    | Prog.Deref (e, _sz) ->
+        begin
+          let (r, alrms) = eval_with_box x e in
+          List.iter Alarm.emit alrms;
+          match dom.where_does_it_point r with
+            | Where_on addr -> addr
+            | Where_nowhere -> invalid_arg "box ∷ addr_convert ∷ Not a pointer"
+            | Where_on_null -> invalid_arg "box ∷ addr_convert ∷ Null pointer dereference"
+            | Where_I_dont_know -> invalid_arg "box ∷ addr_convert ∷ Top pointer"
+        end
 
-let addr_of_ck ?check xo l =
+and environment bx v =
+  let addr = addr_of bx v in
+  match bx with
+  | Some x -> S.assoc addr x.store
+  | None -> invalid_arg "environment : bottom"
+
+and addr_of_ck ?check xo l =
   match xo with
   | None -> invalid_arg "box.addr_of : no values"
-  | Some x -> addr_convert ?check x.esp l
+  | Some x -> addr_convert ?check x l
 
-let addr_of xo l = addr_of_ck xo l
+and addr_of xo l = addr_of_ck xo l
 
 let typeof x addr = match x with
   | None -> invalid_arg "typeof : bottom"
@@ -179,7 +202,12 @@ let get_size x addr =
   Pcomp.size_of_typ ty
 
 let singleton dom v ~typ r =
-  let addr = addr_convert 0 v in
+  let zero_store =
+    { esp = 0
+    ; store = S.empty dom
+    ; typ = Pmap.empty
+    } in
+  let addr = addr_convert zero_store v in
   Some { store = S.singleton dom addr r
        ; esp   = 0
        ; typ   = Pmap.add addr typ initial_typ
@@ -189,12 +217,6 @@ let guard var f xo =
   let addr = addr_of xo var in
   xo >>= fun x ->
   fmap (fun s -> { x with store = s }) (S.replace addr f (x.store))
-
-let rec environment bx v =
-  let addr = addr_of bx v in
-  match bx with
-  | Some x -> S.assoc addr x.store
-  | None -> invalid_arg "environment : bottom"
 
 (*
  * TODO 

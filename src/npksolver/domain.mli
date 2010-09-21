@@ -28,6 +28,12 @@ type 'a update_check = (Prog.addr -> int) (* size mapping           *)
                      -> 'a                (* new value evaluated    *)
                      -> Alarm.t list      (* alarms to report       *)
 
+type pointed_address =
+  | Where_nowhere
+  | Where_on_null
+  | Where_on of Prog.addr
+  | Where_I_dont_know
+
 (**
  * Unpacked abstract domain.
  *)
@@ -54,6 +60,7 @@ type 'a t =
   ; update : 'a update_check option
   ; top_array : int -> 'a                       (** Return an array with
                                                   * only `n` top elements *)
+  ; where_does_it_point : 'a -> pointed_address
   }
 
 (**

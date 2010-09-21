@@ -117,5 +117,6 @@ let dom =
   ; Domain.eval      = eval
   ; Domain.guard     = guard
   ; Domain.update    = None
-  ; Domain.top_array = fun _ -> Top
+  ; Domain.top_array = (fun _ -> Top)
+  ; Domain.where_does_it_point = (fun _ -> Domain.Where_I_dont_know)
   }

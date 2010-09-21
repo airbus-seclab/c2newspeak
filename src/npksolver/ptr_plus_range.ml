@@ -224,7 +224,16 @@ let update_check (sz   :(Prog.addr -> int))
                        )
                 )]
     | Top -> [loc, Alarm.Assertion_failed "update check on Top", None]
+    | Array -> []
     | x -> invalid_arg ("ptr+range ∷ update_check ∷ " ^ to_string x)
+
+let where_does_it_point = function
+  | Top   -> Where_I_dont_know
+  | Array -> Where_I_dont_know
+  | Null -> Where_on_null
+  | Bottom -> Where_nowhere
+  | Range _ -> Where_nowhere
+  | Pointsto (addr, _) -> Where_on addr
 
 let dom =
   { top         = Top
@@ -237,5 +246,6 @@ let dom =
   ; eval        = eval
   ; guard       = guard
   ; update      = Some update_check
-  ; top_array   = fun _n -> Array
+  ; top_array   = (fun _n -> Array)
+  ; where_does_it_point = where_does_it_point
   }

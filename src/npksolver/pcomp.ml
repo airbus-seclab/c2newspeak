@@ -28,7 +28,7 @@ let print_loc chan loc =
   output_string chan (Newspeak.string_of_loc loc)
 
 let fail loc x =
-  Printf.printf "%a : %s\n" print_loc loc x;
+  Printf.printf "Compilation error : %a : %s\n" print_loc loc x;
   exit 3
 
 let check_scalar_type loc = function
@@ -80,10 +80,10 @@ let rec pcomp_exp loc = function
   | e -> fail loc ("Invalid expression : " ^ Lowspeak.string_of_exp e)
 
 and pcomp_var loc = function
-  | Global s     -> Prog.G s
-  | Local  n     -> Prog.L n
-  | Shift (v, e) -> Prog.Shift (pcomp_var loc v, pcomp_exp loc e, loc)
-  | Deref  _ -> fail loc "Pointer dereference"
+  | Global s      -> Prog.G s
+  | Local  n      -> Prog.L n
+  | Shift (v, e)  -> Prog.Shift (pcomp_var loc v, pcomp_exp loc e, loc)
+  | Deref (e, sz) -> Prog.Deref (pcomp_exp loc e, sz)
 
 let rec pcomp_stmt (sk, loc) =
   let (sk', ann) = match sk with
@@ -183,9 +183,10 @@ module Print = struct
     | PlusPtr _ -> "+ptr"
 
   let rec lval = function
-    | L n              -> ":"^string_of_int n
+    | L n              -> Printf.sprintf ":%d" n
     | G x              -> x
-    | Shift (v, e, _l) -> lval v ^ "[" ^ exp e ^ "]"
+    | Shift (v, e, _l) -> Printf.sprintf "%s[%s]" (lval v) (exp e)
+    | Deref (e, sz)    -> Printf.sprintf "*(%d)(%s)" sz (exp e)
 
   and exp = function
     | Const (CInt c) -> string_of_int c

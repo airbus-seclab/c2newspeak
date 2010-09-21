@@ -105,6 +105,6 @@ let dom =
   ; Domain.guard       = guard
   ; Domain.update      = None
   ; Domain.is_in_range = is_in_range
-  ; Domain.top_array   = fun _ -> top
+  ; Domain.top_array = (fun _ -> top)
+  ; Domain.where_does_it_point = (fun _ -> Domain.Where_I_dont_know)
   }
-

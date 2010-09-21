@@ -164,5 +164,6 @@ let make dom =
   ; guard       = guard dom
   ; update      = Some (ptr_update dom)
   ; is_in_range = (fun _ _ _ -> false)
-  ; top_array   = fun _n -> top dom
+  ; top_array   = (fun _n -> top dom)
+  ; where_does_it_point = (fun _ -> Where_I_dont_know)
   }
