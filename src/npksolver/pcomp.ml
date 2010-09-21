@@ -24,16 +24,17 @@
 open Lowspeak
 module N = Newspeak
 
-let abort s =
-  prerr_endline s;
-  exit 3
+let print_loc chan loc =
+  output_string chan (Newspeak.string_of_loc loc)
 
-let fail loc x = abort (Newspeak.string_of_loc loc ^ " : " ^ x)
+let fail loc x =
+  Printf.printf "%a : %s\n" print_loc loc x;
+  exit 3
 
 let check_scalar_type loc = function
   | N.Int (N.Signed, 32) -> ()
   | N.Ptr -> ()
-  | N.Int (N.Signed, sz)  -> fail loc ("Bad int size (" ^ string_of_int sz ^ ")")
+  | N.Int (N.Signed, sz)  -> fail loc (Printf.sprintf "Bad int size (%d)" sz)
   | N.Int (N.Unsigned, _) -> fail loc "Unsigned value"
   | _ -> fail loc "Bad scalar"
 
@@ -193,9 +194,8 @@ module Print = struct
     | Lval (v,_) -> lval v
     | Not e -> "!" ^ exp e
     | Op (op, e1, e2) -> exp e1 ^ binop op ^ exp e2
-    | Belongs ((a, b), _, e) -> "Belongs(" ^ string_of_int a
-                                        ^ ";" ^ string_of_int b
-                                        ^ ")[" ^ exp e ^ "]"
+    | Belongs ((a, b), _, e) ->
+        Printf.sprintf "Belongs(%d;%d)[%s]" a b (exp e)
 
   let stmtk = function
     | Set (v, e) -> lval v ^ " = " ^ exp e
@@ -215,7 +215,6 @@ module Print = struct
   let rec typ = function
     | Int -> "Int"
     | Ptr -> "Ptr"
-    | Array (ty, n) -> typ ty ^ "[" ^ string_of_int n ^ "]"
-
+    | Array (ty, n) -> Printf.sprintf "%s[%d]" (typ ty) n 
 
 end

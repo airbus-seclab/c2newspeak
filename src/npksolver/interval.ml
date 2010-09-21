@@ -27,7 +27,7 @@ type 'a t =
   | Empty
 
 let to_string =
-  let string_of_inf x =
+  let p_int () x =
     if      x = max_int then "+oo"
     else if x = min_int then "-oo"
     else string_of_int x
@@ -35,13 +35,11 @@ let to_string =
   function
     | Empty -> "(bot)"
     | Interval (a, b) when a = min_int && b = max_int -> "(top)"
-    | Interval (a, b) when a = b -> "{" ^ string_of_int a ^ "}"
-    | Interval (a, b)            -> "[" ^ string_of_inf a ^ ";"
-                                        ^ string_of_inf b ^ "]"
+    | Interval (a, b) when a = b -> Printf.sprintf "{%d}" a
+    | Interval (a, b)            -> Printf.sprintf "[%a;%a]" p_int a p_int b
 
 let from_bounds a b =
-  if (a > b) then
-    assert false;
+  assert (a <= b);
   Interval (a, b)
 
 let top_int = from_bounds min_int max_int
@@ -96,14 +94,6 @@ let plus x1 x2 = match (x1, x2) with
   | Interval (l1, u1), Interval (l2, u2) ->
       let x = add_overflow l1 l2 in
       let y = add_overflow u1 u2 in
-      if (x > y) then
-        print_endline
-          ( "["
-          ^ string_of_int x
-          ^ ";"
-          ^ string_of_int y
-          ^ "]"
-          );
       from_bounds x y
   | Empty, _ | _, Empty -> Empty
 

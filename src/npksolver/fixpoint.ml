@@ -97,7 +97,7 @@ let f_horwitz (dom:'abs Domain.t) funcs x =
       let (_,func) = Pmap.find f funcs in
       List.map (fun (dest, stmt, loc) ->
        if Options.get Options.verbose then begin
-         prerr_string ("Refreshing " ^ fst dest^ ":" ^ string_of_int (snd dest) ^ " : ");
+         Printf.eprintf "Refreshing %s:%d : \n" (fst dest) (snd dest);
          prerr_endline (Mkcfg.print_stmt stmt)
        end;
        let g = eval_stmt callstack dom loc stmt in

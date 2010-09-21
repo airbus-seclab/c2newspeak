@@ -148,8 +148,9 @@ let ptr_update dom size_of loc new_value =
       if (dom.is_in_range 0 sz new_value.offset) then
         []
       else
-        alarm ~reason:(dom.to_string new_value.offset
-               ^ " </= [0;" ^ string_of_int sz ^ "]") ()
+        let reason = Printf.sprintf "%s </= [0;%d]"
+                (dom.to_string new_value.offset) sz in
+        alarm ~reason ()
   end
 
 let make dom =
