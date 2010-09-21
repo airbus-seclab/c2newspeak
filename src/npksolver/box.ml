@@ -126,27 +126,26 @@ let join xo yo =
     | None   , _      -> yo
     | _      , None   -> xo
     | Some x , Some y ->
-        S.merge (S.dom x.store).join x.store y.store >>= fun s ->
-        return
-          { x with store = s
-          ;        typ   = Pmap.merge x.typ y.typ
-          }
+        fmap ( fun s -> { x with store = s
+                        ;        typ   = Pmap.merge x.typ y.typ
+                        })
+             (S.merge (S.dom x.store).join x.store y.store)
 
 let meet xo yo =
   xo >>= fun x ->
   yo >>= fun y ->
-  S.merge ((S.dom x.store).meet) x.store y.store >>= fun s ->
-  return { x with store = s
-         ;         typ  = Pmap.merge x.typ y.typ
-         }
+  fmap (fun s -> { x with store = s
+                 ;         typ  = Pmap.merge x.typ y.typ
+                 })
+       (S.merge ((S.dom x.store).meet) x.store y.store)
 
 let widen xo yo =
   xo >>= fun x ->
   yo >>= fun y ->
-  S.merge ((S.dom x.store).widen) x.store y.store >>= fun s ->
-  return { x with store = s
-         ;        typ   = Pmap.merge x.typ y.typ
-         }
+  fmap (fun s -> { x with store = s
+                 ;         typ  = Pmap.merge x.typ y.typ
+                 })
+       (S.merge ((S.dom x.store).widen) x.store y.store)
 
 
 let rec addr_convert ?(check=fun _ _ _ -> ()) esp =
@@ -189,8 +188,7 @@ let singleton dom v ~typ r =
 let guard var f xo =
   let addr = addr_of xo var in
   xo >>= fun x ->
-  S.replace addr f (x.store) >>= fun s ->
-  return { x with store = s }
+  fmap (fun s -> { x with store = s }) (S.replace addr f (x.store))
 
 let rec environment bx v =
   let addr = addr_of bx v in
@@ -220,10 +218,15 @@ let set_var v r bx =
                  , Some (dom.to_string r^" </= [0;"^string_of_int size^"]"))
   in
   let addr = addr_of_ck ~check bx v in
-  S.merge (fun a _ -> a)
-          (S.singleton dom addr r)
-           x.store >>= fun s ->
-  return { x with store = s }
+  let merge_stores new_val old_val =
+    match Pmap.find addr x.typ with
+      | Prog.Ptr | Prog.Int -> new_val
+      | Prog.Array _ -> old_val (* FIXME it's not updated at all *)
+  in
+    fmap (fun s -> { x with store = s })
+         ( S.merge merge_stores
+                   (S.singleton dom addr r)
+                    x.store)
 
 let push ~typ =
   fmap (fun x ->
@@ -242,7 +245,7 @@ let pop xo =
 let to_string xo =
   maybe "(bot)"
     (fun x -> String.concat ", " (S.map (fun v r ->
-                Pcomp.Print.addr v^"->"^(S.dom x.store).to_string r)
+                Pcomp.Print.addr v^"="^(S.dom x.store).to_string r)
               x.store))
     xo
 
