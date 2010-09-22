@@ -42,6 +42,9 @@ let from_bounds a b =
   assert (a <= b);
   Interval (a, b)
 
+let with_size n =
+  from_bounds 0 (n-1)
+
 let top_int = from_bounds min_int max_int
 
 let bottom_int = Empty

@@ -27,6 +27,7 @@ type alarm_kind =
   | Array_OOB                   (** Array index out of bounds.            *)
   | Ptr_OOB                     (** Pointer offset out of bounds.         *)
   | Null_deref                  (** Null pointer dereference.             *)
+  | Ptr_bad_deref               (** Invalid pointer dereference.          *)
   | Assertion_failed of string  (** Generic error with a specific reason. *)
 
 type t = Newspeak.location * alarm_kind * string option

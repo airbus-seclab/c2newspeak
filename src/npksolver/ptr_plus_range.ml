@@ -213,7 +213,7 @@ let update_check (sz   :(Prog.addr -> int))
     | Range _ -> []
     | Pointsto (x,o) ->
         let s = sz x in
-        if (Interval.(<=%) o (Interval.from_bounds 0 (s - 1)))
+        if (Interval.(<=%) o (Interval.with_size s))
           then []
           else [( loc
                 , Alarm.Ptr_OOB
@@ -233,7 +233,7 @@ let where_does_it_point = function
   | Null -> Where_on_null
   | Bottom -> Where_nowhere
   | Range _ -> Where_nowhere
-  | Pointsto (addr, _) -> Where_on addr
+  | Pointsto (addr, off) -> Where_on (addr, off)
 
 let dom =
   { top         = Top

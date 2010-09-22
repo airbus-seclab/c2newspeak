@@ -33,6 +33,9 @@ val bottom_int : int t
 
 val from_bounds : 'a -> 'a -> 'a t
 
+(** `with_size n` = `from_bounds 0 (n-1)` *)
+val with_size : int -> int t
+
 val meet : 'a t -> 'a t -> 'a t
 
 val join : 'a t -> 'a t -> 'a t

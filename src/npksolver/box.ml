@@ -147,6 +147,20 @@ let widen xo yo =
                  })
        (S.merge ((S.dom x.store).widen) x.store y.store)
 
+let typeof x addr = match x with
+  | None -> invalid_arg "typeof : bottom"
+  | Some x ->
+      try
+        Pmap.find addr x.typ
+      with Not_found ->
+        invalid_arg ( "typeof : cannot find variable '"
+                    ^ Pcomp.Print.addr addr
+                    ^ "'" )
+
+let get_size x addr =
+  let ty = typeof x addr in
+  Pcomp.size_of_typ ty
+
 let rec eval_with_box x e =
   let dom = S.dom x.store in
   dom.eval (environment (Some x))
@@ -183,10 +197,13 @@ and addr_convert ?(check=fun _ _ _ -> ()) x =
           let (r, alrms) = eval_with_box x e in
           List.iter Alarm.emit alrms;
           match dom.where_does_it_point r with
-            | Where_on addr -> addr
             | Where_on_null -> null_ptr_deref loc
             | Where_I_dont_know -> top_ptr_deref ()
             | Where_nowhere -> invalid_arg "box ∷ addr_convert ∷ Not a pointer"
+            | Where_on (addr, off) ->
+                if not (Interval.(<=%) off (Interval.with_size (get_size (Some x) addr))) then
+                  Alarm.emit (loc, Alarm.Ptr_bad_deref, None);
+                addr (* FIXME it should actually return addr+off *)
         end
 
 and environment bx v =
@@ -201,20 +218,6 @@ and addr_of_ck ?check xo l =
   | Some x -> addr_convert ?check x l
 
 and addr_of xo l = addr_of_ck xo l
-
-let typeof x addr = match x with
-  | None -> invalid_arg "typeof : bottom"
-  | Some x ->
-      try
-        Pmap.find addr x.typ
-      with Not_found ->
-        invalid_arg ( "get_size : cannot find variable '"
-                    ^ Pcomp.Print.addr addr
-                    ^ "'" )
-
-let get_size x addr =
-  let ty = typeof x addr in
-  Pcomp.size_of_typ ty
 
 let singleton dom v ~typ r =
   let zero_store =

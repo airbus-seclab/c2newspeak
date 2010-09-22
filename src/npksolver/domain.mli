@@ -31,7 +31,7 @@ type 'a update_check = (Prog.addr -> int) (* size mapping           *)
 type pointed_address =
   | Where_nowhere
   | Where_on_null
-  | Where_on of Prog.addr
+  | Where_on of Prog.addr * int Interval.t
   | Where_I_dont_know
 
 (**
