@@ -47,7 +47,7 @@ and lval =
   | G     of string
   | L     of int
   | Shift of lval * exp * Newspeak.location
-  | Deref of exp * int
+  | Deref of exp * int * Newspeak.location
 
 and addr =
   | Stack of int

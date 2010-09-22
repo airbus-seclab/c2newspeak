@@ -83,7 +83,7 @@ and pcomp_var loc = function
   | Global s      -> Prog.G s
   | Local  n      -> Prog.L n
   | Shift (v, e)  -> Prog.Shift (pcomp_var loc v, pcomp_exp loc e, loc)
-  | Deref (e, sz) -> Prog.Deref (pcomp_exp loc e, sz)
+  | Deref (e, sz) -> Prog.Deref (pcomp_exp loc e, sz, loc)
 
 let rec pcomp_stmt (sk, loc) =
   let (sk', ann) = match sk with
@@ -186,7 +186,7 @@ module Print = struct
     | L n              -> Printf.sprintf ":%d" n
     | G x              -> x
     | Shift (v, e, _l) -> Printf.sprintf "%s[%s]" (lval v) (exp e)
-    | Deref (e, sz)    -> Printf.sprintf "*(%d)(%s)" sz (exp e)
+    | Deref (e, s, _l) -> Printf.sprintf "*(%d)(%s)" s (exp e)
 
   and exp = function
     | Const (CInt c) -> string_of_int c

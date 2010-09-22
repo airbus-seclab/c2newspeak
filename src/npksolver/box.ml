@@ -154,6 +154,15 @@ let rec eval_with_box x e =
            e
 
 and addr_convert ?(check=fun _ _ _ -> ()) x =
+  let null_ptr_deref loc =
+    Alarm.emit (loc, Alarm.Null_deref, None);
+    (* TODO
+     * Instead of exiting, it is possible to recover : for example, ignore
+     * the set_var or guard directive. However, it is not sound.
+     *)
+    print_endline "Cannot continue analysis.";
+    exit 4
+  in
   let dom = S.dom x.store in
   let esp = x.esp in
   function
@@ -163,14 +172,14 @@ and addr_convert ?(check=fun _ _ _ -> ()) x =
         let addr_base = addr_convert x l in
         check e addr_base loc;
         addr_base
-    | Prog.Deref (e, _sz) ->
+    | Prog.Deref (e, _sz, loc) ->
         begin
           let (r, alrms) = eval_with_box x e in
           List.iter Alarm.emit alrms;
           match dom.where_does_it_point r with
             | Where_on addr -> addr
+            | Where_on_null -> null_ptr_deref loc
             | Where_nowhere -> invalid_arg "box ∷ addr_convert ∷ Not a pointer"
-            | Where_on_null -> invalid_arg "box ∷ addr_convert ∷ Null pointer dereference"
             | Where_I_dont_know -> invalid_arg "box ∷ addr_convert ∷ Top pointer"
         end
 
