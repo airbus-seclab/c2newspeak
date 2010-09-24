@@ -32,7 +32,7 @@ npksolver.FILES= \
 		interval \
 		domain const range \
 		ptr_plus_range \
-		pair ptr_offset \
+		pair \
 		box cfg mkcfg \
 		fixpoint tap test npksolver
                   
