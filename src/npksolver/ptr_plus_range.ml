@@ -213,7 +213,8 @@ let update_check (sz   :(Prog.addr -> int))
     | Range _ -> []
     | Pointsto (x,o) ->
         let s = sz x in
-        if (Interval.(<=%) o (Interval.with_size s))
+        (* Note : a pointer may point to end of region + 1, hence [0;s] *)
+        if (Interval.(<=%) o (Interval.from_bounds 0 s))
           then []
           else [( loc
                 , Alarm.Ptr_OOB
