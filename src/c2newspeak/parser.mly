@@ -247,9 +247,10 @@ translation_unit:
 ;;
 
 function_prologue:
-  declaration_specifiers 
+  declaration_specifiers
   function_declarator                       { ($1, $2) }
 ;;
+
 
 function_declarator:
   pointer direct_declarator                { 

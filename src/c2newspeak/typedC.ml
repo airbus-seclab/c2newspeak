@@ -188,61 +188,6 @@ let deref_typ t =
       Ptr t -> t
     | _ -> Npkcontext.report_error "CoreC.deref_typ" "pointer type expected"
 
-let rec equals_typ t1 t2 = 
-  match (t1, t2) with
-    | (Int k1, Int k2)
-    | (Bitfield (k1, _), Bitfield (k2, _)) -> k1 = k2
-    | (Ptr t1, Ptr t2)
-    | (Array (t1, _), Array (t2, _)) -> equals_typ t1 t2
-    | (Fun ft1, Fun ft2) -> equals_ftyp ft1 ft2
-    | (Comp c1, Comp c2) -> c1 == c2
-    | _ -> t1 = t2
-	  
-and equals_ftyp (args1, ret1) (args2, ret2) =
-  let b =
-    match (args1, args2) with
-	(Some args1, Some args2) -> 
-	  (List.for_all2 (fun (t1, _) (t2, _) -> equals_typ t1 t2) args1 args2)
-      | (None, None) -> true
-      | _ -> false
-  in
-    b && (equals_typ ret1 ret2)
-
-let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
-  let equals (t1, _) (t2, _) = equals_typ t1 t2 in
-(* TODO???
-  let equals (t1, _) (t2, _) =  
-    match (t1, t2) with  
-      | (Ptr Fun _, Ptr Fun _) -> true  
-      | (Ptr _, Ptr _) -> true  
-      | _ -> t1 = t2  
-  in  
-    *)
-  let args_t =  
-    match (args_t1, args_t2) with  
-        (None, args_t) | (args_t, None) -> args_t  
-      | (Some args_t1, Some args_t2) ->
-	  let eq = 
-	    try List.for_all2 equals args_t1 args_t2 
-	    with Invalid_argument _ -> false
-	  in
-            if not eq then begin
-              Npkcontext.report_error "Csyntax.min_ftyp"
-		"different argument types for function"
-            end;
-            Some args_t1
-  in
-    if (not (equals_typ ret_t1 ret_t2)) then begin
-      Npkcontext.report_error "Csyntax.min_ftyp" 
-	"different return types for function"
-    end;
-    (args_t, ret_t1)
-
-let rec min_typ t1 t2 =
-  match (t1, t2) with
-      (Array (_, None), Array _) -> t2
-    | _ -> t1
-
 let rec string_of_exp e =
   match e with
       Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
@@ -286,11 +231,20 @@ let rec string_of_typ t =
 	  sign^"int"^(string_of_int sz)
     | Bitfield _ -> "Bitfield"
     | Float _ -> "Float"
-    | Ptr _ -> "Ptr"
+    | Ptr t' -> "Ptr "^(string_of_typ t')
     | Array _ -> "Array"
-    | Comp _ -> "Comp"
+    | Comp cmp -> (string_of_aux_cmp cmp)
     | Fun ft -> string_of_ftyp ft
     | Va_arg -> "Va_arg"
+
+and string_of_aux_cmp cmp =
+  match cmp with
+      Unknown s            -> "(Unknown struct or union "^ s^")"
+    | Known (l, is_struct) -> 
+	let start = if is_struct then "struct" else "union" in
+	let l' = List.map (fun (s, t) -> (string_of_typ t)^" "^s^"; ") l in
+	let fields = List.fold_left (fun s s' -> s'^s) "" (List.rev l') in
+	start^" {"^fields^"}"
 
 and string_of_ftyp (args_t, ret_t) =
   let args_t = 
@@ -306,6 +260,56 @@ and string_of_args_t x =
       (t, _)::[] -> string_of_typ t
     | (t, _)::tl -> (string_of_typ t)^", "^(string_of_args_t tl)
     | [] -> "void"
+
+let rec equals_typ t1 t2 = 
+  match (t1, t2) with
+    | (Int k1, Int k2)
+    | (Bitfield (k1, _), Bitfield (k2, _)) -> k1 = k2
+    | (Ptr t1, Ptr t2)
+    | (Array (t1, _), Array (t2, _)) -> equals_typ t1 t2
+    | (Fun ft1, Fun ft2) -> equals_ftyp ft1 ft2
+    | (Comp c1, Comp c2) -> c1 = c2
+    | _ -> t1 = t2
+	  
+and equals_ftyp (args1, ret1) (args2, ret2) =
+  let b =
+    match (args1, args2) with
+	(Some args1, Some args2) -> 
+	  (List.for_all2 (fun (t1, _) (t2, _) -> equals_typ t1 t2) args1 args2)
+      | (None, None) -> true
+      | _ -> false
+  in
+    b && (equals_typ ret1 ret2)
+
+let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =  
+  let equals (t1, _) (t2, _) = equals_typ t1 t2 in
+
+  let args_t =  
+    match (args_t1, args_t2) with  
+        (None, args_t) | (args_t, None) -> args_t  
+      | (Some args_t1, Some args_t2) ->
+	  let eq = 
+	    try List.for_all2 equals args_t1 args_t2 
+	    with Invalid_argument _ -> false
+	  in
+            if not eq then begin
+              Npkcontext.report_error "TypedC.min_ftyp"
+		"different argument types for function"
+            end;
+            Some args_t1
+  in
+    if (not (equals_typ ret_t1 ret_t2)) then begin
+      Npkcontext.report_error "TypedC.min_ftyp" 
+	"different return types for function"
+    end;
+    (args_t, ret_t1)
+
+let rec min_typ t1 t2 =
+  match (t1, t2) with
+      (Array (_, None), Array _) -> t2
+    | _ -> t1
+
+
 	
 let promote k = 
   match k with
