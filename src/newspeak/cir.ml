@@ -497,6 +497,7 @@ let eval_exp e =
     match e with
 	Const (CInt i) -> Nat.to_big_int i
       | Binop (op, e1, e2) -> apply_bop op (eval_exp e1) (eval_exp e2)
+      | Unop (Cast (_, Int k), Unop (Cast (Int k', _), Const (CInt n))) when k = k' -> Nat.to_big_int n
       | Unop (Coerce b, e) -> 
 	  let i = eval_exp e in
 	    if Newspeak.belongs (Nat.of_big_int i) b then i 
