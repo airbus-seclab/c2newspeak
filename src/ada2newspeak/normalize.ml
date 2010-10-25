@@ -915,12 +915,12 @@ and build_init_stmt (x,exp,loc) =
 	    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
 	in
 	let power powep = 
-	  let (eee,ttt) = normalize_exp ~expected_type:t_lv powep in 
-	    match eee with  
+	  let (exp, typ) = normalize_exp ~expected_type:t_lv powep in 
+	    match exp with  
 		Ast.Binary (Ast.Power, (Ast.CInt x,_),(Ast.CInt y, _)) -> 
-		  (Ast.CInt (ne_pas_dupliquer x y), ttt)
+		  (Ast.CInt (ne_pas_dupliquer x y), typ)
 	      | Ast.Binary (Ast.Power, (Ast.CFloat x,_),( Ast.CInt y,_)) ->
-		  (Ast.CFloat (x ** (float_of_int(Nat.to_int y))), ttt)
+		  (Ast.CFloat (x ** (float_of_int(Nat.to_int y))), typ)
 	      | _ ->  Npkcontext.report_error "build_init_stmt"
 		  "Impossible case"
 	in
@@ -1191,8 +1191,8 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		(* id[aggr_k] <- aggr_v *)
 		let key   = normalize_exp aggr_k in			
 		  match aggr_v with
-			 Aggregate (NamedAggr ((AggrField f, xxx)::[])) ->
-			   let value = normalize_exp xxx in	
+			 Aggregate (NamedAggr ((AggrField f, va)::[])) ->
+			   let value = normalize_exp va in	
 			   let array_lv = Ast.ArrayAccess (nlv, [key]) in 
 			   let (off, tf) = T.record_field tc f in		
 			     Ast.Assign (Ast.RecordAccess
@@ -1289,8 +1289,8 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 	(* id.aggr_fld <- aggr_v *)
 	let (off, tf) = T.record_field t_lv aggr_fld in				  	  match aggr_val with
 	      Aggregate (NamedAggr ((AggrOthers,   
-			 Aggregate (NamedAggr ((AggrOthers, xxx)::[])))::[])) 
-	    |  Aggregate (NamedAggr ((AggrOthers, xxx)::[])) ->
+			 Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
+	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) ->
 		 if (T.is_array tf) then 
 		   begin
 		     let c, ids = T.extract_array_types tf in
@@ -1301,10 +1301,10 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		     ) ids 
 		     in
 		     let record_lv = Ast.RecordAccess (nlv, off, tf) in
-		     let affected = match xxx with  
+		     let affected = match va with  
 			 CInt _ 
 		       | CFloat _  
-		       | Lval (Var _ ) -> normalize_exp ~expected_type:c xxx
+		       | Lval (Var _ ) -> normalize_exp ~expected_type:c va
 		       | _ -> Npkcontext.report_error "normalize:assign aggregate"
 			   "Expected an integer or a float"
 		     in
