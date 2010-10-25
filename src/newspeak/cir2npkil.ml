@@ -274,7 +274,7 @@ let translate src_lang prog fnames =
 	  
   let translate_glbdecl x (t, loc, init) =
     Npkcontext.set_loc loc;
-    let t = translate_typ t in
+    let t = translate_typ t in 
       Hashtbl.add glbdecls x (t, loc, init, false)
   in
 
@@ -289,7 +289,7 @@ let translate src_lang prog fnames =
   let flag_glb x = 
     try  
       let (t, loc, init, _) = Hashtbl.find glbdecls x in
-	Hashtbl.replace glbdecls x (t, loc, init, true)
+ 	Hashtbl.replace glbdecls x (t, loc, init, true)
     with Not_found -> 
       Npkcontext.report_error "Cir2npkil.flag_glb" ("illegal use of " ^ x ^ " (undefined type)" )
       
