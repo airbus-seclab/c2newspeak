@@ -23,19 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: TypedC should be exactly Csyntax + types only!!!! *)
-(* TODO: -> Parsing -> BareC -> Typing -> TypedC 
-   -> Implicit casts addition, side-effects elimination, boolean expression
-   normalization, redundant expressions/statements removal 
-   -> CoreC -> optional Goto eliminatination *)
 open Csyntax
 module Nat = Newspeak.Nat
 module C = TypedC
 
-(* TODO: remove put in csyntax2CoreC *)
-(* TODO: code cleanup: find a way to factor this with create_cstr
-   in Npkil *)
-(* TODO: find a way to cleanup code, this is also present in firstpass!! *)
+
 let seq_of_string str =
   let len = String.length str in
   let res = ref [(None, Data (exp_of_char '\x00'))] in
@@ -151,21 +143,22 @@ let process fname globals =
   in
 
   let update_fdecl s (args, ret) =
-    let update t =
+    let rec update t =
       match t with 
 	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
-	| C.Ptr (C.Comp C.Unknown s') when s = s' -> C.Ptr (C.Comp (find_compdef s))
+	| C.Comp (C.Known (l, is_struct)) -> C.Comp (C.Known (List.map (fun (s, t) -> (s, update t)) l, is_struct))
+	| C.Ptr t'                          -> C.Ptr (update t')
 	| _                                 -> t
     in
     let args' = 
       match args with 
-	  Some args -> Some (List.map (fun (t, x) -> update t, x) args)
+	  Some args -> Some (List.map (fun (t, x) ->update t, x) args)
 	| None -> None
     in
     let ret' = update ret in
       args', ret'
   in
-let update_struct_type s t =
+  let update_struct_type s t =
     let new_type = find_compdef s in
     let rec update t = 
       match t with 
@@ -183,7 +176,7 @@ let update_struct_type s t =
       update t
   in
   let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
-    let t' = 
+    let rec update t =
       match t with 
 	  C.Comp (C.Unknown s') when s = s'       -> C.Comp (find_compdef s)
 	| C.Comp t                                -> C.Comp (update_struct_type s t)
@@ -191,6 +184,7 @@ let update_struct_type s t =
 	| C.Ptr (C.Comp t)                        -> C.Ptr (C.Comp (update_struct_type s t))
 	| _                                       -> t
     in 
+    let t' = update t in
     let v = ((n, t', static, extern, init), loc) in 
     let i, _ = Hashtbl.find symbtbl x in (* useless : can only be global *)
       Hashtbl.replace symbtbl x (i, t');
