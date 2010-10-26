@@ -168,6 +168,9 @@ let translate compil_unit =
       | And, C.Scalar _ -> translate_and e1 e2
       | Or , C.Scalar _ -> translate_or  e1 e2
 
+      (* | Power ,_ -> (\*TO DO test 2nd postif when fst integer cf p.93*\) *)
+      (* 	  C.Binop(N.     , c1, c2) *)
+	  
       | (Power | Mod ) ,_ ->
           Npkcontext.report_error "Firstpass.translate_binop"
             "run-time operator not implemented"

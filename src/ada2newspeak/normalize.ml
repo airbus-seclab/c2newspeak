@@ -386,7 +386,7 @@ and make_arg_list args spec =
                 )
                 ar;
             []
-      | (None   , e)::tl -> e::(extract_positional_parameters tl)
+      | (None , e)::tl -> e::(extract_positional_parameters tl)
   in
 
   let make_arg arg exp =
@@ -541,24 +541,49 @@ and normalize_fcall (n, params) =
   (* Maybe this indexed expression is an array-value *)
   let n = make_name_of_lval n in
   let n = mangle_sname n in
-  try
-    let (sc,(act_name,spec,top)) = Sym.find_subprogram ~silent:true gtbl n in
-    let t = match top with
-    | None -> Npkcontext.report_error "normalize_exp"
-              "Expected function, got procedure"
-    | Some top -> top
-    in
-    let norm_args = List.map normalize_arg params in
-    let effective_args = make_arg_list norm_args spec in
-    Ast.FunctionCall(sc, act_name, effective_args, t),t
-  with Not_found ->
-    begin
-      let (sc,(act_id, t,_)) = Sym.find_variable gtbl n in
-      let tc = fst (T.extract_array_types t) in
-      let params' = List.map snd params in
-      let lv = Ast.Var (sc, act_id, t) in
-      Ast.Lval (Ast.ArrayAccess(lv, List.map normalize_exp params')),tc
-    end
+    try
+      let (sc,(act_name,spec,top)) = 
+	Sym.find_subprogram ~silent:true gtbl n in
+      let t = match top with
+	| None -> Npkcontext.report_error "normalize_exp"
+            "Expected function, got procedure"
+	| Some top -> top
+      in
+      let norm_args = List.map normalize_arg params in
+      let effective_args = make_arg_list norm_args spec in
+	Ast.FunctionCall(sc, act_name, effective_args, t),t
+    with Not_found ->
+      try 
+	(*To do double checked because conversion de tablo
+	  contraint/non contraint cf 8.2 *)
+	begin
+	  let (sc,(act_id, t,_)) = Sym.find_variable gtbl n in
+	  let tc = fst (T.extract_array_types t) in
+	  let params' = List.map snd params in
+	  let lv = Ast.Var (sc, act_id, t) in
+	    Ast.Lval (Ast.ArrayAccess(lv, List.map normalize_exp params'))
+	      ,tc
+	end
+      with Invalid_argument _ | Not_found ->
+      	try
+      	  let   (_, cast_t) = Sym.find_type gtbl n in
+      	    if (compare (List.length params) 1 <> 0) then begin    
+      	      Npkcontext.report_error "normalize_fcall"
+      		"Cast only handled for single variable"
+	    end
+      	    else
+      	      let param =  List.hd params in
+      	      let (_,( norm_exp, arg_t))= normalize_arg param in
+      		if (not (T.is_compatible cast_t arg_t))
+		then print_endline  ( "\nL = "
+      		      ^ T.print cast_t
+      		      ^ "\nR = "
+      		      ^ T.print arg_t
+      		    )
+		;
+		norm_exp,  cast_t
+      	with Not_found ->
+      	  raise Not_found
 
 and eval_range (exp1, exp2) =
   let norm_exp1 = normalize_exp exp1
@@ -768,14 +793,14 @@ and normalize_basic_decl item loc =
         match exp with
         | Aggregate _ ->
             List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
-            Ast.Constant
+	    Ast.Constant
         | _ ->
           try
             let normexp = normalize_exp ~expected_type:t exp in
-            let value = Eval.eval_static normexp gtbl in
+	    let value = Eval.eval_static normexp gtbl in
               List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
                         ident_list;
-              Ast.StaticVal value
+	       Ast.StaticVal value
           with
             | Eval.NonStaticExpression -> List.iter
                                       (fun x -> Sym.add_variable gtbl x loc t
@@ -877,11 +902,65 @@ and normalize_lval ?(force = false) ?expected_type = function
 and build_init_stmt (x,exp,loc) =
   match exp with
   | None -> None
-  | Some def ->
-      Some (normalize_block ~force_lval:true [Assign(Var x, def), loc])
-
+  | Some def -> 
+      begin
+	let (lv', t_lv) = normalize_lval ~force:true (Var x) in
+	let ne_pas_dupliquer a b =
+	  let a = Nat.to_big_int a
+	  and b = Nat.to_big_int b in
+	    if Big_int.sign_big_int b < 0
+	    then begin
+	      Npkcontext.report_error "Eval"
+		"Integer exponents should be strictly positive."
+	    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
+	in
+	let power powep = 
+	  let (exp, typ) = normalize_exp ~expected_type:t_lv powep in 
+	    match exp with  
+		Ast.Binary (Ast.Power, (Ast.CInt x,_),(Ast.CInt y, _)) -> 
+		  (Ast.CInt (ne_pas_dupliquer x y), typ)
+	      | Ast.Binary (Ast.Power, (Ast.CFloat x,_),( Ast.CInt y,_)) ->
+		  (Ast.CFloat (x ** (float_of_int(Nat.to_int y))), typ)
+	      | _ ->  Npkcontext.report_error "build_init_stmt"
+		  "Impossible case"
+	in
+	  match def with 
+	      Binary (Power, _, _) ->
+		let (e', t_exp) = power def in
+		  if (not (T.is_compatible t_lv t_exp)) then
+		    begin
+		      Npkcontext.report_error "normalize_instr"
+			"Incompatible types in build_init_stmt";
+		    end;
+		  Some [Ast.Assign( lv'
+				      , (e',t_exp)
+				  ), loc]
+		    
+	    | Unary (UMinus,  Binary (Power, a, b)) ->
+		let (power_def, t_exp)  =  power (Binary (Power, a, b) ) in 
+		let zero =
+		  if (T.is_integer t_exp) then
+		    Ast.CInt (Nat.zero)
+		  else if (T.is_float t_exp) then
+		    Ast.CFloat (0.0)
+		  else Npkcontext.report_error "build_init_stmt"
+		    "Unary minus defined for integer and floating-point types"
+		in
+		let e' = Ast.Binary(Ast.Minus, (zero,t_exp), (power_def,t_exp)) in
+		  if (not (T.is_compatible t_lv t_exp)) then
+		    begin
+		      Npkcontext.report_error "normalize_instr"
+			"Incompatible types in build_init_stmt";
+		    end;
+		  Some [Ast.Assign( lv'
+				      , (e',t_exp)
+				  ), loc]
+		    
+	    | _ -> Some (normalize_block ~force_lval:true [Assign(Var x, def), loc])
+      end
+	
 (**
- * The optional parameter return_type helps disambiguate return_statements :
+ *The optional parameter return_type helps disambiguate return_statements :
  * while translating a block in a function, it is set to this function's
  * return type.
  * When translating other blocks, it shall be set to None.
@@ -891,10 +970,10 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
   match instr with
   | NullInstr    -> []
   | ReturnSimple -> [Ast.ReturnSimple, loc]
-  | Assign(lv, Aggregate (NamedAggr bare_assoc_list)) ->
+  | Assign(lv, Aggregate (NamedAggr bare_assoc_list)) -> 
       let (nlv, tlv) = normalize_lval lv in
       normalize_assign_aggregate nlv tlv bare_assoc_list loc
-  | Assign(lv, Aggregate (PositionalAggr exp_list)) ->
+  | Assign(lv, Aggregate (PositionalAggr exp_list)) -> 
       let (lv', t_lv) = normalize_lval lv in
       let ti = match T.extract_array_types t_lv with
       | (_, [i]) -> i
@@ -1007,7 +1086,25 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                       Sym.exit_context gtbl;
                       [Ast.Block (ndp, norm_block), loc]
 
+
+
+
 and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
+  let  handle_others r_lv aff prefs_idx lists_idx =
+    let res = ref [] in 
+    let rec handle_others_aux ps_idx  ls_idx  = 
+      match ls_idx with 		      
+	  [] -> res:= (Ast.Assign (Ast.ArrayAccess
+				     (r_lv, ps_idx), aff),
+		       loc
+		      ) ::!res  
+	| hd::tl  -> List.iter (fun x -> 
+				  handle_others_aux (x::ps_idx) tl
+			       ) hd
+    in
+      handle_others_aux prefs_idx  lists_idx;
+      !res
+  in
   let array_case _ =
     let module NatSet = Set.Make (Newspeak.Nat) in
     (*
@@ -1036,7 +1133,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
               let e' = compute_val e in
               ((e', value)::kvl, None)
             end
-        | AggrRange (e1, e2) ->
+        | AggrRange (e1, e2) -> 
             begin
               if others_exp <> None then
                 Npkcontext.report_error "normalize"
@@ -1065,38 +1162,89 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
      *   - compute missing elements
      *   - replace 'others' with them
      *)
-    let ti = match T.extract_array_types t_lv with
-    | (_, [i]) -> i
-    | _ -> Npkcontext.report_error "aggregate"
-             "Unexpected matrix type"
-    in
-    let other_list = match others_opt with
-      | None         -> []
-      | Some oth_exp ->
-          begin
-            let all_values  = T.all_values ti in
-            let mk_set l =
-              List.fold_left (fun x y -> NatSet.add y x)
-                             NatSet.empty l
-            in
-            let all_values_set = mk_set all_values in
-            let defined_values_set =
-              mk_set (List.map fst assoc_list)
-            in
-            let missing_others =
-              NatSet.elements (NatSet.diff all_values_set
-                                           defined_values_set)
-            in
-            List.rev_map (function x -> (CInt x, oth_exp)) missing_others
-          end
-    in
-    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
-    List.rev_map (fun (aggr_k, aggr_v) ->
-      (* id[aggr_k] <- aggr_v *)
-      let key   = normalize_exp aggr_k in
-      let value = normalize_exp aggr_v in
-      Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
-    ) (other_list @ assoc_list')
+      match T.extract_array_types t_lv with
+	| (tc, [ti]) -> begin (*code deplace cf plus bas*)
+	    let other_list = match others_opt with
+	      | None         -> []
+	      | Some oth_exp ->
+		  begin
+		    let all_values  = T.all_values ti in
+		    let mk_set l =
+		      List.fold_left (fun x y -> NatSet.add y x)
+                        NatSet.empty l
+		    in
+		    let all_values_set = mk_set all_values in
+		    let defined_values_set =
+		      mk_set (List.map fst assoc_list)
+		    in
+		    let missing_others =
+		      NatSet.elements (NatSet.diff all_values_set
+                                         defined_values_set)
+		    in
+		      List.rev_map (function x -> (CInt x, oth_exp)) missing_others
+		  end
+	    in
+	    let assoc_list' =
+	      List.map (fun (x,y) -> CInt x,y) assoc_list in
+	      
+	      List.rev_map (fun (aggr_k, aggr_v) ->
+		(* id[aggr_k] <- aggr_v *)
+		let key   = normalize_exp aggr_k in			
+		  match aggr_v with
+			 Aggregate (NamedAggr ((AggrField f, va)::[])) ->
+			   let value = normalize_exp va in	
+			   let array_lv = Ast.ArrayAccess (nlv, [key]) in 
+			   let (off, tf) = T.record_field tc f in		
+			     Ast.Assign (Ast.RecordAccess
+					   (array_lv, off, tf), value), loc
+			       
+		       | Aggregate (NamedAggr ((AggrExp _, _)::[])) ->
+			   Npkcontext.report_error "normalize_assign_aggregate"
+			     "Array with aggregate expression not done yet"
+			     
+		       | _ ->    let value =  normalize_exp aggr_v in
+			   Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
+			   ) (other_list @ assoc_list') 
+		
+	  end
+	(*TO DO: remove 'c' in what follows (cf above)*)
+	| (c, twotwolist) when (compare (List.length twotwolist) 2 = 0) ->     
+	    (*MATRIX 2*2: we only handle case with "others" and nothing else *) 
+	    let only_has_others assoc others = 
+	      match (assoc, others) with
+		  ([], Some hd) -> begin
+		    match hd with 
+			Aggregate(NamedAggr((AggrOthers, xx)::[]))-> Some xx
+		      | _ -> None
+		  end
+		| _ -> None
+	    in 
+	      begin
+		match (only_has_others assoc_list others_opt ) with
+		    Some xx -> 
+		      let affected = match xx with  
+			  CInt _ 
+			| CFloat _  
+			| Lval (Var _) ->
+			    normalize_exp ~expected_type:c xx
+			| _ -> Npkcontext.report_error "normalize:assign aggregate"
+			    "Expected an Integer or a Float"
+		      in
+		      let all_values = List.map (
+			fun x ->
+			  let vals = T.all_values x in
+			    List.map (fun y -> (Ast.CInt y,x)) vals
+		      )  twotwolist
+		      in
+			handle_others nlv affected [] (List.rev all_values)
+			  
+		  | _ ->  Npkcontext.report_error "aggregate"
+		      "matrix type case not handled"
+	      end
+	| _ ->
+	    Npkcontext.report_error "aggregate"
+              "Unexpected type"
+	    
     (* end of array_case *)
   in
   let record_case _ =
@@ -1136,13 +1284,46 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
             List.map (fun f -> (f, other_exp)) missing_others
           end
     in
-    List.rev_map (fun (aggr_fld, aggr_val) ->
-      (* id.aggr_fld <- aggr_v *)
-      let (off, tf) = T.record_field t_lv aggr_fld in
-      let v = normalize_exp ~expected_type:tf aggr_val in
-      Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc
-    ) (assoc_list @ other_list)
-    (* end of record_case *)
+      List.flatten 
+   	(List.rev_map (fun (aggr_fld, aggr_val) ->
+	(* id.aggr_fld <- aggr_v *)
+	let (off, tf) = T.record_field t_lv aggr_fld in				  	  match aggr_val with
+	      Aggregate (NamedAggr ((AggrOthers,   
+			 Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
+	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) ->
+		 if (T.is_array tf) then 
+		   begin
+		     let c, ids = T.extract_array_types tf in
+		     let all_values = List.map (
+		       fun x ->
+			 let vals = T.all_values x in
+			   List.map (fun y -> (Ast.CInt y,x)) vals
+		     ) ids 
+		     in
+		     let record_lv = Ast.RecordAccess (nlv, off, tf) in
+		     let affected = match va with  
+			 CInt _ 
+		       | CFloat _  
+		       | Lval (Var _ ) -> normalize_exp ~expected_type:c va
+		       | _ -> Npkcontext.report_error "normalize:assign aggregate"
+			   "Expected an integer or a float"
+		     in
+		      	 handle_others record_lv affected [] (List.rev all_values)
+	              end
+
+		 else
+		   let v = normalize_exp ~expected_type:tf aggr_val in
+		     [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]  
+
+
+		 
+	    | _ -> 
+		(*cas ususel *)
+		let v = normalize_exp ~expected_type:tf aggr_val in
+		  [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]
+	)
+	   (assoc_list @ other_list) )
+	(* end of record_case *)
   in
     if      T.is_array  t_lv then array_case  ()
     else if T.is_record t_lv then record_case ()
