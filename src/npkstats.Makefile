@@ -26,7 +26,7 @@
 
 TARGET=npkstats
 DIRS=newspeak/ npkstats/
-FILES=version newspeak/temps newspeak/config newspeak/EBigInt newspeak/newspeak newspeak/lowspeak\
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak newspeak/lowspeak\
       newspeak/npkcontext newspeak/npk2lpk npkstats/maxcount npkstats/funstats \
       npkstats/npkstats
 LIBX=nums.cmxa str.cmxa
