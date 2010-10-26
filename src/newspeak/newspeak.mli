@@ -66,8 +66,8 @@ module Nat: sig
       @raise Invalid_argument "Newspeak.Nat.to_int" otherwise. *)
   val to_int: t -> int
 
-  val of_big_int: Big_int.big_int -> t
-  val to_big_int: t -> Big_int.big_int
+  val of_big_int: EBigInt.big_int -> t
+  val to_big_int: t -> EBigInt.big_int
 
   val add: t -> t -> t
   val mul: t -> t -> t

@@ -29,7 +29,7 @@ DIRS=$(CILDIR) utils newspeak ada2newspeak
 LIBX=unix.cmxa str.cmxa nums.cmxa 
 
 newspeak.FILES=\
-	temps config newspeak lowspeak npkcontext npk2lpk \
+	temps config eBigInt newspeak lowspeak npkcontext npk2lpk \
 	npkil cir cir2npkil linker
 
 ada2newspeak.FILES=  \

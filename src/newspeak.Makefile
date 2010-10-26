@@ -24,14 +24,15 @@
 # email: charles.hymans@penjili.org
 #
 
-INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/newspeak.cmi newspeak/lowspeak.cmi \
+INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
+		newspeak/newspeak.cmi newspeak/lowspeak.cmi \
 	      newspeak/npkcontext.cmi newspeak/npk2lpk.cmi \
 	      newspeak.cma newspeak.cmxa newspeak.a
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
 
-FILES=version newspeak/temps newspeak/config newspeak/newspeak  \
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak  \
       newspeak/lowspeak newspeak/npkcontext newspeak/npk2lpk
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))

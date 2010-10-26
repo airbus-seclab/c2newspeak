@@ -29,54 +29,54 @@ struct
       
   let zero = "0"
   let one = "1"
-  let of_big_int = Big_int.string_of_big_int
-  let to_big_int = Big_int.big_int_of_string
+  let of_big_int = EBigInt.string_of_big_int
+  let to_big_int = EBigInt.big_int_of_string
   let of_int x = string_of_int x
   let to_int x = 
     let i = to_big_int x in
-    if not (Big_int.is_int_big_int i) 
+    if not (EBigInt.is_int_big_int i) 
     then invalid_arg "Newspeak.Nat.to_int";
-    Big_int.int_of_big_int i
+    EBigInt.int_of_big_int i
 
   let apply_big_int_op op x y =
-    let x = Big_int.big_int_of_string x in
-    let y = Big_int.big_int_of_string y in
+    let x = EBigInt.big_int_of_string x in
+    let y = EBigInt.big_int_of_string y in
     let z = op x y in
-      Big_int.string_of_big_int z
+      EBigInt.string_of_big_int z
 
-  let add = apply_big_int_op Big_int.add_big_int
+  let add = apply_big_int_op EBigInt.add_big_int
 
-  let sub = apply_big_int_op Big_int.sub_big_int
+  let sub = apply_big_int_op EBigInt.sub_big_int
 
-  let mul = apply_big_int_op Big_int.mult_big_int
+  let mul = apply_big_int_op EBigInt.mult_big_int
 
-  let div = apply_big_int_op Big_int.div_big_int
+  let div = apply_big_int_op EBigInt.div_big_int
 
   let neg x = 
-    let x = Big_int.big_int_of_string x in
-    let y = Big_int.minus_big_int x in
-      Big_int.string_of_big_int y
+    let x = EBigInt.big_int_of_string x in
+    let y = EBigInt.minus_big_int x in
+      EBigInt.string_of_big_int y
 
   let add_int i x = 
-    let x = Big_int.big_int_of_string x in
-    let y = Big_int.add_int_big_int i x in
-      Big_int.string_of_big_int y
+    let x = EBigInt.big_int_of_string x in
+    let y = EBigInt.add_int_big_int i x in
+      EBigInt.string_of_big_int y
 
   let mul_int i x = 
-    let x = Big_int.big_int_of_string x in
-    let y = Big_int.mult_int_big_int i x in
-      Big_int.string_of_big_int y
+    let x = EBigInt.big_int_of_string x in
+    let y = EBigInt.mult_int_big_int i x in
+      EBigInt.string_of_big_int y
 
   let shift_left x n =
-    let x = Big_int.big_int_of_string x in
-    let y = Big_int.power_int_positive_int 2 n in
-    let z = Big_int.mult_big_int x y in
-      Big_int.string_of_big_int z
+    let x = EBigInt.big_int_of_string x in
+    let y = EBigInt.power_int_positive_int 2 n in
+    let z = EBigInt.mult_big_int x y in
+      EBigInt.string_of_big_int z
 
   let compare x y = 
-    let x = Big_int.big_int_of_string x in
-    let y = Big_int.big_int_of_string y in
-      Big_int.compare_big_int x y
+    let x = EBigInt.big_int_of_string x in
+    let y = EBigInt.big_int_of_string y in
+      EBigInt.compare_big_int x y
 
   let to_string x = x
   let of_string x = x

@@ -26,7 +26,7 @@
 
 TARGET=npknull
 DIRS=newspeak/ utils/ npkfuns/ npknull/
-FILES=version newspeak/temps newspeak/config newspeak/newspeak newspeak/lowspeak \
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak newspeak/lowspeak \
       newspeak/npkcontext newspeak/npk2lpk \
       utils/listUtils utils/strSet \
       npkfuns/glbCollect \
