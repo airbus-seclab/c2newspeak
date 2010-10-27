@@ -8,7 +8,7 @@
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
+  This library is distributed in the hope that it wil be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
@@ -575,14 +575,16 @@ and normalize_fcall (n, params) =
       	      let param =  List.hd params in
       	      let (_,( norm_exp, arg_t))= normalize_arg param in
       		if (not (T.is_compatible cast_t arg_t))
-		then print_endline  ( "\nL = "
+		then 
+		  Npkcontext.report_error ("incompatible types") 
+		    ( "\nL = "
       		      ^ T.print cast_t
       		      ^ "\nR = "
       		      ^ T.print arg_t
       		    )
-		;
-		norm_exp,  cast_t
-      	with Not_found ->
+		else 
+		   norm_exp,  cast_t
+	with Not_found ->
       	  raise Not_found
 
 and eval_range (exp1, exp2) =
@@ -593,34 +595,32 @@ and eval_range (exp1, exp2) =
        let val1 = Eval.eval_static norm_exp1 gtbl in
        let val2 = Eval.eval_static norm_exp2 gtbl in
        let contrainte =  match (val1, val2) with
-         | (T.FloatVal(f1),T.FloatVal(f2)) ->
-             if f1 <= f2
-             then FloatRangeConstraint (f1, f2)
-             else
-               Npkcontext.report_error
-                 "Ada_normalize.normalize_contrainte"
-                 "null range not accepted"
+	 | (T.FloatVal f1, T.FloatVal f2) when f1 <= f2 ->
+	     FloatRangeConstraint (f1, f2)
 
-         | (T.IntVal(i1), T.IntVal(i2)) ->
-             if (Nat.compare i1 i2) <= 0
-             then
-               IntegerRangeConstraint(i1, i2)
-             else
-               Npkcontext.report_error
-                 "Ada_normalize.normalize_contrainte"
-                 "null range not accepted"
-
-         | (T.BoolVal(b1), T.BoolVal(b2)) ->
+	 | (T.FloatVal _, T.FloatVal _) ->          
+             Npkcontext.report_error
+               "Ada_normalize.normalize_contrainte"
+               "null range not accepted"	     
+	       
+	 | (T.IntVal i1, T.IntVal i2) when  (Nat.compare i1 i2) <= 0 ->
+             IntegerRangeConstraint(i1, i2)
+   
+	 | (T.IntVal _, T.IntVal _) -> 
+	     Npkcontext.report_error
+               "Ada_normalize.normalize_contrainte"
+               "null range not accepted"
+	      
+         | (T.BoolVal b1, T.BoolVal b2) when  b1 <= b2 ->
              let i1 = nat_of_bool b1
-             and i2 = nat_of_bool b2
-             in
-               if b1 <= b2
-               then IntegerRangeConstraint(i1, i2)
-               else
-                 Npkcontext.report_error
-                   "Ada_normalize.normalize_contrainte"
-                   "null range not accepted"
-
+             and i2 = nat_of_bool b2 
+	     in
+               IntegerRangeConstraint(i1, i2)
+         | (T.BoolVal _, T.BoolVal _) ->
+             Npkcontext.report_error
+               "Ada_normalize.normalize_contrainte"
+               "null range not accepted"
+	       
          | _ ->
              (* ce cas n'est pas cense se produire :
                 on a verifie que les deux bornes sont de meme
@@ -651,7 +651,7 @@ and normalize_typ_decl ident typ_decl loc =
                                                  ~no_storage:true
       ) symbs;
       ()
-  | DerivedType(subtyp_ind) ->
+  | DerivedType subtyp_ind ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
       let new_t = T.new_derived t in
@@ -726,8 +726,8 @@ and parse_extern_specification name =
   let norm_spec = (normalization spec_ast) in
   Npkcontext.print_debug "Done parsing extern specification file";
   match norm_spec with
-    | (_, Ast.Spec(spec), loc) -> (spec, loc)
-    | (_, Ast.Body(_), _) -> Npkcontext.report_error
+    | (_, Ast.Spec spec, loc) -> (spec, loc)
+    | (_, Ast.Body _, _) -> Npkcontext.report_error
         "normalize.parse_extern_specification"
           "internal error : specification expected, body found"
 
@@ -774,7 +774,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
 
 and normalize_basic_decl item loc =
   match item with
-  | UseDecl(use_clause) -> Sym.add_use gtbl use_clause; []
+  | UseDecl use_clause -> Sym.add_use gtbl use_clause; []
   | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
@@ -786,7 +786,7 @@ and normalize_basic_decl item loc =
                        , build_init_stmt (ident, def, loc)
                        )
       ) ident_list
-  | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
+  | ObjectDecl(ident_list,subtyp_ind, Some exp, Constant) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
       let status = begin
@@ -822,7 +822,7 @@ and normalize_basic_decl item loc =
   | TypeDecl(id,typ_decl) ->
       normalize_typ_decl id typ_decl loc;
       []
-  | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
+  | SpecDecl spec -> [Ast.SpecDecl(normalize_spec spec)]
   | NumberDecl(ident, exp) ->
       begin
         try
@@ -868,9 +868,9 @@ and normalize_package_spec (name, list_decl) =
   (name, norm_spec)
 
 and normalize_spec spec = match spec with
-  | SubprogramSpec(subprogr_spec) -> Ast.SubProgramSpec(
+  | SubprogramSpec subprogr_spec -> Ast.SubProgramSpec(
         normalize_sub_program_spec subprogr_spec ~addparam:false)
-  | PackageSpec(package_spec) ->
+  | PackageSpec package_spec ->
       Ast.PackageSpec(normalize_package_spec package_spec)
 
 and normalize_lval ?(force = false) ?expected_type = function
@@ -946,7 +946,11 @@ and build_init_stmt (x,exp,loc) =
 		  else Npkcontext.report_error "build_init_stmt"
 		    "Unary minus defined for integer and floating-point types"
 		in
-		let e' = Ast.Binary(Ast.Minus, (zero,t_exp), (power_def,t_exp)) in
+		let e' = Ast.Binary(Ast.Minus, 
+				    (zero,t_exp), 
+				    (power_def,t_exp)
+				   ) 
+		in
 		  if (not (T.is_compatible t_lv t_exp)) then
 		    begin
 		      Npkcontext.report_error "normalize_instr"
@@ -1011,7 +1015,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                    , (e',t_exp)
                    ), loc]
       end
-  | Return(exp) -> [Ast.Return(normalize_exp ?expected_type:return_type
+  | Return exp -> [Ast.Return(normalize_exp ?expected_type:return_type
                                exp), loc]
   | If(exp, instr_then, instr_else) ->
       [Ast.If( normalize_exp ~expected_type:T.boolean exp
@@ -1181,7 +1185,8 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		      NatSet.elements (NatSet.diff all_values_set
                                          defined_values_set)
 		    in
-		      List.rev_map (function x -> (CInt x, oth_exp)) missing_others
+		      List.rev_map (function x -> (CInt x, oth_exp)) 
+			missing_others
 		  end
 	    in
 	    let assoc_list' =
@@ -1208,8 +1213,9 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		
 	  end
 	(*TO DO: remove 'c' in what follows (cf above)*)
-	| (c, twotwolist) when (compare (List.length twotwolist) 2 = 0) ->     
-	    (*MATRIX 2*2: we only handle case with "others" and nothing else *) 
+	| (c, duolist) when (compare(List.length duolist) 2 = 0) ->     
+	    (*MATRIX 2 dimensions:
+	      we only handle case with "others" and nothing else *) 
 	    let only_has_others assoc others = 
 	      match (assoc, others) with
 		  ([], Some hd) -> begin
@@ -1227,14 +1233,15 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 			| CFloat _  
 			| Lval (Var _) ->
 			    normalize_exp ~expected_type:c xx
-			| _ -> Npkcontext.report_error "normalize:assign aggregate"
+			| _ -> Npkcontext.report_error 
+			    "normalize:assign aggregate"
 			    "Expected an Integer or a Float"
 		      in
 		      let all_values = List.map (
 			fun x ->
 			  let vals = T.all_values x in
 			    List.map (fun y -> (Ast.CInt y,x)) vals
-		      )  twotwolist
+		      )  duolist
 		      in
 			handle_others nlv affected [] (List.rev all_values)
 			  
@@ -1285,50 +1292,46 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
           end
     in
       List.flatten 
-   	(List.rev_map (fun (aggr_fld, aggr_val) ->
+   	(List.rev_map (
+	   fun (aggr_fld, aggr_val) ->
 	(* id.aggr_fld <- aggr_v *)
-	let (off, tf) = T.record_field t_lv aggr_fld in				  	  match aggr_val with
-	      Aggregate (NamedAggr ((AggrOthers,   
-			 Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
-	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) ->
-		 if (T.is_array tf) then 
-		   begin
-		     let c, ids = T.extract_array_types tf in
-		     let all_values = List.map (
-		       fun x ->
-			 let vals = T.all_values x in
-			   List.map (fun y -> (Ast.CInt y,x)) vals
-		     ) ids 
-		     in
-		     let record_lv = Ast.RecordAccess (nlv, off, tf) in
-		     let affected = match va with  
-			 CInt _ 
-		       | CFloat _  
-		       | Lval (Var _ ) -> normalize_exp ~expected_type:c va
-		       | _ -> Npkcontext.report_error "normalize:assign aggregate"
-			   "Expected an integer or a float"
-		     in
-		      	 handle_others record_lv affected [] (List.rev all_values)
-	              end
-
-		 else
-		   let v = normalize_exp ~expected_type:tf aggr_val in
-		     [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]  
-
-
-		 
-	    | _ -> 
-		(*cas ususel *)
+	 let (off, tf) = T.record_field t_lv aggr_fld in
+	   match aggr_val with
+	       Aggregate (NamedAggr ((AggrOthers,   
+	          Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
+	    |  Aggregate (NamedAggr ((AggrOthers,va)::[])) when
+		 (T.is_array tf) ->
+		 let c, ids = T.extract_array_types tf in
+		 let all_values = List.map (
+		   fun x ->
+		     let vals = T.all_values x in
+		       List.map (fun y -> (Ast.CInt y,x)) vals
+		 ) ids 
+		 in
+		 let record_lv = Ast.RecordAccess (nlv, off, tf) in
+		 let affected = match va with  
+		     CInt _ 
+		   | CFloat _  
+		   | Lval (Var _ ) -> normalize_exp ~expected_type:c va
+		   | _ -> Npkcontext.report_error "normalize:assign aggregate"
+		       "Expected an integer or a float"
+		 in
+		   handle_others record_lv affected [] (List.rev all_values)
+	    |  Aggregate(NamedAggr((AggrOthers, _)::[])) -> 
+		 let v = normalize_exp ~expected_type:tf aggr_val in
+		   [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]  
+		     
+	    | _ -> (*'general' case*)
 		let v = normalize_exp ~expected_type:tf aggr_val in
 		  [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]
-	)
+	 )
 	   (assoc_list @ other_list) )
 	(* end of record_case *)
   in
     if      T.is_array  t_lv then array_case  ()
     else if T.is_record t_lv then record_case ()
     else Npkcontext.report_error "normalize_assign_aggregate"
-           "Expecting an array or a record as lvalue"
+      "Expecting an array or a record as lvalue"
 
 and normalize_block ?return_type ?(force_lval = false) block =
   List.flatten (List.map (normalize_instr ?return_type ~force_lval) block)
@@ -1336,7 +1339,7 @@ and normalize_block ?return_type ?(force_lval = false) block =
 and normalize_decl_part decl_part =
   let normalize_decl_items items =
     List.map (function
-      | BasicDecl(basic),loc ->
+      | BasicDecl(basic), loc ->
           begin
             Npkcontext.set_loc loc;
               List.map (fun x -> Ast.BasicDecl x,loc)
