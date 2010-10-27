@@ -218,7 +218,7 @@ let translate fname (globals, fundecls, spec) =
 
 	| (Data (e, t1), _) -> 
 	    (* TODO: should I be using translate_set here too??? *)
-	    let e = translate_exp (e, t1) in
+	    let e = translate_exp false (e, t1) in
 	    let (e, _) = cast (e, t1) t in
 	      res := (o, translate_typ t, e)::!res;
 	      t
@@ -349,7 +349,7 @@ let translate fname (globals, fundecls, spec) =
 	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
 	    (* TODO: inefficient: t is translated twice *)
-	    let e = translate_exp (exp_of_int 0, int_typ) in
+	    let e = translate_exp false (exp_of_int 0, int_typ) in
 	    let (e, t) = cast (e, int_typ) t in
 	      res := (o, translate_typ t, e)::!res
 	| Float _ -> 
@@ -426,10 +426,10 @@ let translate fname (globals, fundecls, spec) =
 	  (* TODO: think about this is_array, a bit hacky!! *)
 	  let lv = translate_lv e in
 	  let n = translate_array_len len in
-	  let i = translate_exp (idx, idx_t) in
+	  let i = translate_exp false (idx, idx_t) in
 	    translate_array_access (lv, t, n) (i, idx_t)
 
-      | Deref (e, t) -> deref (translate_exp (e, t), t)
+      | Deref (e, t) -> deref (translate_exp false (e, t), t)
 
       | OpExp (op, (lv, t), is_after) -> 
 	  let loc = Npkcontext.get_loc () in
@@ -480,10 +480,10 @@ let translate fname (globals, fundecls, spec) =
 	C.Shift (lv, o)
     with Exit -> 
       let e = C.remove_fst_deref lv in
-      let e = translate_binop (Plus, Ptr t) (e, Ptr t) i in
+      let e = translate_binop false (Plus, Ptr t) (e, Ptr t) i in
 	deref e
 
-  and translate_exp (e, t) =
+  and translate_exp is_sz (e, t) =
     let rec translate e =
       match e with
 	  Cst (c, _) -> C.Const c
@@ -503,7 +503,7 @@ let translate fname (globals, fundecls, spec) =
 	      AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ)), t') 
 	    in
 	      (*Cas AddrOf Access, the access is check to detected integers*)  
-	    let access  = translate_exp e in
+	    let access  = translate_exp is_sz e in
 	      check_index_type access (snd e);
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
 		
@@ -512,10 +512,10 @@ let translate fname (globals, fundecls, spec) =
 	| Unop x -> C.Unop (translate_unop x)
 		
 	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
-	    let e1 = translate_exp (e1, t1) in
-	    let e2 = translate_exp (e2, t2) in
+	    let e1 = translate_exp is_sz (e1, t1) in
+	    let e2 = translate_exp is_sz (e2, t2) in
 	      (* TODO: remove need for typ in translate_binop !!! *)
-	    let (e, _) = translate_binop (op, t) (e1, t1) (e2, t2) in
+	    let (e, _) = translate_binop is_sz (op, t) (e1, t1) (e2, t2) in
 	      e
 		
 	| IfExp (c, (e1, _), (e2, _), t) -> begin
@@ -542,7 +542,7 @@ let translate fname (globals, fundecls, spec) =
 	      C.exp_of_int sz
 		
 	| Cast ((e, t1), t2) -> 
-	    let e = translate_exp (e, t1) in
+	    let e = translate_exp is_sz (e, t1) in
 	    let (e, _) = cast (e, t1) t2 in
 	      e
 
@@ -585,7 +585,7 @@ let translate fname (globals, fundecls, spec) =
   and translate_funexp e =
     match e with
 	Fname x -> C.Fname x
-      | FunDeref e -> C.FunDeref (translate_exp e)
+      | FunDeref e -> C.FunDeref (translate_exp false e)
 
 
   and deref (e, t) =
@@ -607,7 +607,7 @@ let translate fname (globals, fundecls, spec) =
 
   and translate_set ((lv, lv_t), op, (e, e_t)) =
     let lv = translate_lv lv in
-    let e = translate_exp (e, e_t) in
+    let e = translate_exp false (e, e_t) in
     let t' = translate_typ lv_t in
     let (lv, e) =
       match op with
@@ -615,7 +615,7 @@ let translate fname (globals, fundecls, spec) =
 	| Some op -> 
 	    let (pref, lv', post) = C.normalize_lv lv in
 	    let e' = (C.Lval (lv', t'), lv_t) in
-	    let e = translate_binop op e' (e, e_t) in
+	    let e = translate_binop false op e' (e, e_t) in
 	    let lv = C.BlkLv (post, C.BlkLv (pref, lv', false), true) in
 	      if (post <> []) then begin
 		Npkcontext.report_warning "Firstpass.translate_set" 
@@ -646,7 +646,7 @@ let translate fname (globals, fundecls, spec) =
     match x with
 	(e, t)::tl -> 
 	  let (args, sz) = translate_va_args tl in
-	  let e = translate_exp (e, t) in
+	  let e = translate_exp false (e, t) in
 	    ((e, t)::args, size_of t + sz)
       | [] -> ([], 0)
 
@@ -654,7 +654,7 @@ let translate fname (globals, fundecls, spec) =
     let rec translate_args args args_t =
       match (args, args_t) with
 	  ([], (Va_arg, id)::[]) ->
-	    let e = translate_exp (exp_of_int 0, int_typ) in
+	    let e = translate_exp false (exp_of_int 0, int_typ) in
 	    let (e, _) = cast (e, int_typ) (Ptr char_typ) in
 	      (e::[], (Va_arg, id)::[])
 	| (_, (Va_arg, id)::[]) -> 
@@ -668,7 +668,7 @@ let translate fname (globals, fundecls, spec) =
 	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
 
 	| ((e, t1)::args, (t2, id)::args_t) ->
-	    let e = translate_exp (e, t1) in
+	    let e = translate_exp false (e, t1) in
 	    let (e, t2) = cast (e, t1) t2 in
 	    let (args, args_t) = translate_args args args_t in
 	      (e::args, (t2, id)::args_t)
@@ -700,7 +700,7 @@ let translate fname (globals, fundecls, spec) =
       let (o', t, sz) =
 	match t with
 	    Bitfield ((s, n), sz) ->
-	      let sz = translate_exp (sz, int_typ) in
+	      let sz = translate_exp false (sz, int_typ) in
 	      let sz = Nat.to_int (C.eval_exp sz) in
 		if sz > n then begin
 		  Npkcontext.report_error "Firstpass.process_struct_fields"
@@ -748,7 +748,7 @@ let translate fname (globals, fundecls, spec) =
       | Ptr _ -> N.Ptr
       | Va_arg -> N.Ptr
       | Bitfield ((s, n), sz) -> 
-	  let sz = translate_exp (sz, int_typ) in
+	  let sz = translate_exp false (sz, int_typ) in
 	  let sz = Nat.to_int (C.eval_exp sz) in
 	    if sz > n then begin
 	      Npkcontext.report_error "Firstpass.process_struct_fields"
@@ -785,7 +785,7 @@ let translate fname (globals, fundecls, spec) =
     match x with
 	None -> None
       | Some e -> 
-	  let e = translate_exp (e, int_typ) in
+	  let e = translate_exp true (e, int_typ) in
 	  let i = 
 	    try Nat.to_int (C.eval_exp e) 
 	    with Invalid_argument _ -> 
@@ -850,7 +850,7 @@ let translate fname (globals, fundecls, spec) =
     let rec translate x =
       match x with
 	  (Exp (e, t), _)::[] when ends_with_exp -> 
-	    let e = translate_exp (e, t) in
+	    let e = translate_exp false (e, t) in
 	      (([], []), Some (e, t))
 	    
 	| (LocalDecl (x, d), loc)::body -> begin
@@ -914,7 +914,7 @@ let translate fname (globals, fundecls, spec) =
 	    translate_stmt (If (c, blk1, blk2), loc)
 
       | _ -> 
-	  let e = translate_exp (e, t) in
+	  let e = translate_exp false (e, t) in
 	    (C.Exp e, loc)::[]
 
 	(* type and translate_stmt *)
@@ -962,7 +962,7 @@ let translate fname (globals, fundecls, spec) =
 	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
 
       | CSwitch (e, choices, default) -> 
-	  let e = translate_exp e in
+	  let e = translate_exp false e in
 	  let (last_lbl, switch) = translate_switch choices in
 	  let default_action = (C.Goto default_lbl, loc)::[] in
 	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
@@ -1016,7 +1016,7 @@ let translate fname (globals, fundecls, spec) =
 	    translate_guard (IfExp (c, (IfExp (fst t1, t2, f2, t), t), 
 				    (IfExp (fst f1, t2, f2, t), t), t))
 	| IfExp (c, (t, _), (f, _), _) -> 
-	    let c = translate_exp (c, int_typ) in
+	    let c = translate_exp false (c, int_typ) in
 	    let (pref, c, post) = C.normalize_exp c in
 	    let guard_c = (C.Guard c, loc) in
 	    let guard_not_c = (C.Guard (C.Unop (K.Not, c)), loc) in
@@ -1045,7 +1045,7 @@ let translate fname (globals, fundecls, spec) =
 	      else (body@br1, body@br2)
 
 	| e -> 
-	    let e = translate_exp (e, int_typ) in
+	    let e = translate_exp false (e, int_typ) in
 	    let (pref, e, post) = C.normalize_exp e in
 	    let guard_e = pref@(C.Guard e, loc)::post in
 	    let guard_not_e = pref@(C.Guard (C.Unop (K.Not, e)), loc)::post in
@@ -1059,7 +1059,7 @@ let translate fname (globals, fundecls, spec) =
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
-	  let e = translate_exp (e, int_typ) in
+	  let e = translate_exp false (e, int_typ) in
 	  let t = translate_scalar_typ int_typ in
 	  let (lbl, tl) = translate_switch tl in
 	  let lbl = if body = [] then lbl else lbl+1 in
@@ -1075,7 +1075,7 @@ let translate fname (globals, fundecls, spec) =
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
-  and normalize_binop (op, t) (e1, t1) (e2, t2) =
+  and normalize_binop is_sz (op, t) (e1, t1) (e2, t2) =
     let cast e t = fst (cast e t) in
       match (op, t1, t2) with
 (* TODO: this should be put in the typing phase!! *)
@@ -1083,7 +1083,7 @@ let translate fname (globals, fundecls, spec) =
 (* Maybe possible to just have to do two casts!! *)
 	| (Minus, Ptr _, Int _) -> 
 	    let e2 = 
-	      translate_binop (Minus, t2) (C.exp_of_int 0, t2) (e2, t2) 
+	      translate_binop is_sz (Minus, t2) (C.exp_of_int 0, t2) (e2, t2) 
 	    in
  	      (Plus, (e1, t1), e2)
 		
@@ -1115,9 +1115,9 @@ let translate fname (globals, fundecls, spec) =
 	      
 	| _ -> (op, (e1, t1), (e2, t2))
 	    
-  and translate_binop (op, t) e1 e2 =
+  and translate_binop is_sz (op, t) e1 e2 =
     (* TODO: think about it, maybe there are nicer ways to write this!!!*)
-    let (op, (e1, t1), (e2, t2)) = normalize_binop (op, t) e1 e2 in
+    let (op, (e1, t1), (e2, t2)) = normalize_binop is_sz (op, t) e1 e2 in
     let t = 
       match op with
 	  Gt|Eq -> int_typ
@@ -1166,7 +1166,8 @@ let translate fname (globals, fundecls, spec) =
     let e2 = 
       match (op, t) with
 	  (N.PlusPI, Ptr t) -> 
-	    let step = C.exp_of_int (size_of t) in
+	    if is_sz then e2
+	    else let step = C.exp_of_int (size_of t) in
 	      C.Binop (N.MultI, e2, step)
 	| _ -> e2
     in
@@ -1185,7 +1186,7 @@ let translate fname (globals, fundecls, spec) =
       (e, t)
 
   and translate_unop (op, t, e) = 
-    let e = translate_exp (e, t) in
+    let e = translate_exp false (e, t) in
     let e = 
       match (op, t) with
 	  (Not, Ptr _) -> 

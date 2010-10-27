@@ -908,11 +908,11 @@ and build_init_stmt (x,exp,loc) =
 	let ne_pas_dupliquer a b =
 	  let a = Nat.to_big_int a
 	  and b = Nat.to_big_int b in
-	    if Big_int.sign_big_int b < 0
+	    if EBigInt.sign_big_int b < 0
 	    then begin
 	      Npkcontext.report_error "Eval"
 		"Integer exponents should be strictly positive."
-	    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
+	    end else Nat.of_big_int (EBigInt.power_big_int_positive_big_int a b)
 	in
 	let power powep = 
 	  let (exp, typ) = normalize_exp ~expected_type:t_lv powep in 

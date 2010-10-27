@@ -26,7 +26,7 @@
 
 TARGET=npktests
 DIRS=newspeak/ utils/ npknull/ npktests/
-FILES=version newspeak/temps newspeak/config newspeak/newspeak utils/listUtils \
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak utils/listUtils \
       npknull/memloc npknull/exceptions npknull/subst \
       npknull/fieldInsensitivePtrOffs \
       npktests/npktests

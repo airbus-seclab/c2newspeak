@@ -35,14 +35,14 @@ exception NonStaticExpression
 let (^%) a b =
   let a = Nat.to_big_int a
   and b = Nat.to_big_int b in
-    if Big_int.sign_big_int b < 0
+    if EBigInt.sign_big_int b < 0
     then begin
       Npkcontext.report_error "Eval"
         "Integer exponents should be strictly positive."
-    end else Nat.of_big_int (Big_int.power_big_int_positive_big_int a b)
+    end else Nat.of_big_int (EBigInt.power_big_int_positive_big_int a b)
 
 let mod_rem_aux ~is_mod na nb =
-  let module BI = Big_int in
+  let module BI = EBigInt in
   let a = Nat.to_big_int na in
   let b = Nat.to_big_int nb in
   let r_mod = BI.mod_big_int a b in
