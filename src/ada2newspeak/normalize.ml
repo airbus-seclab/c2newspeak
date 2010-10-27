@@ -575,16 +575,18 @@ and normalize_fcall (n, params) =
       	      let param =  List.hd params in
       	      let (_,( norm_exp, arg_t))= normalize_arg param in
       		if (not (T.is_compatible cast_t arg_t))
-		then print_endline  ( "\nL = "
+		then 
+		  Npkcontext.report_error ("incompatible types")
+		    ( "\nL = "
       		      ^ T.print cast_t
       		      ^ "\nR = "
       		      ^ T.print arg_t
       		    )
-		;
-		norm_exp,  cast_t
+		else
+		  norm_exp,  cast_t
       	with Not_found ->
       	  raise Not_found
-
+	    
 and eval_range (exp1, exp2) =
   let norm_exp1 = normalize_exp exp1
   and norm_exp2 = normalize_exp exp2 in
@@ -593,33 +595,31 @@ and eval_range (exp1, exp2) =
        let val1 = Eval.eval_static norm_exp1 gtbl in
        let val2 = Eval.eval_static norm_exp2 gtbl in
        let contrainte =  match (val1, val2) with
-         | (T.FloatVal(f1),T.FloatVal(f2)) ->
-             if f1 <= f2
-             then FloatRangeConstraint (f1, f2)
-             else
-               Npkcontext.report_error
-                 "Ada_normalize.normalize_contrainte"
-                 "null range not accepted"
+	 | (T.FloatVal f1, T.FloatVal f2) when f1 <= f2 ->
+	     FloatRangeConstraint (f1, f2)
 
-         | (T.IntVal(i1), T.IntVal(i2)) ->
-             if (Nat.compare i1 i2) <= 0
-             then
-               IntegerRangeConstraint(i1, i2)
-             else
-               Npkcontext.report_error
-                 "Ada_normalize.normalize_contrainte"
-                 "null range not accepted"
-
-         | (T.BoolVal(b1), T.BoolVal(b2)) ->
+	 | (T.FloatVal _, T.FloatVal _) ->          
+             Npkcontext.report_error
+               "Ada_normalize.normalize_contrainte"
+               "null range not accepted"	     
+	       
+	 | (T.IntVal i1, T.IntVal i2) when  (Nat.compare i1 i2) <= 0 ->
+             IntegerRangeConstraint(i1, i2)
+   
+	 | (T.IntVal _, T.IntVal _) -> 
+	     Npkcontext.report_error
+               "Ada_normalize.normalize_contrainte"
+               "null range not accepted"
+	      
+         | (T.BoolVal b1, T.BoolVal b2) when  b1 <= b2 ->
              let i1 = nat_of_bool b1
-             and i2 = nat_of_bool b2
-             in
-               if b1 <= b2
-               then IntegerRangeConstraint(i1, i2)
-               else
-                 Npkcontext.report_error
-                   "Ada_normalize.normalize_contrainte"
-                   "null range not accepted"
+             and i2 = nat_of_bool b2 
+	     in
+               IntegerRangeConstraint(i1, i2)
+         | (T.BoolVal _, T.BoolVal _) ->
+             Npkcontext.report_error
+               "Ada_normalize.normalize_contrainte"
+               "null range not accepted"
 
          | _ ->
              (* ce cas n'est pas cense se produire :
@@ -651,7 +651,7 @@ and normalize_typ_decl ident typ_decl loc =
                                                  ~no_storage:true
       ) symbs;
       ()
-  | DerivedType(subtyp_ind) ->
+  | DerivedType subtyp_ind ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
       let new_t = T.new_derived t in
@@ -726,7 +726,7 @@ and parse_extern_specification name =
   let norm_spec = (normalization spec_ast) in
   Npkcontext.print_debug "Done parsing extern specification file";
   match norm_spec with
-    | (_, Ast.Spec(spec), loc) -> (spec, loc)
+    | (_, Ast.Spec spec, loc) -> (spec, loc)
     | (_, Ast.Body(_), _) -> Npkcontext.report_error
         "normalize.parse_extern_specification"
           "internal error : specification expected, body found"
@@ -774,7 +774,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
 
 and normalize_basic_decl item loc =
   match item with
-  | UseDecl(use_clause) -> Sym.add_use gtbl use_clause; []
+  | UseDecl use_clause  -> Sym.add_use gtbl use_clause; []
   | ObjectDecl(ident_list,subtyp_ind,def, Variable) ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
@@ -822,7 +822,7 @@ and normalize_basic_decl item loc =
   | TypeDecl(id,typ_decl) ->
       normalize_typ_decl id typ_decl loc;
       []
-  | SpecDecl(spec) -> [Ast.SpecDecl(normalize_spec spec)]
+  | SpecDecl spec -> [Ast.SpecDecl(normalize_spec spec)]
   | NumberDecl(ident, exp) ->
       begin
         try
@@ -847,10 +847,74 @@ and normalize_basic_decl item loc =
                               ( "Ignoring representation clause "
                               ^ "for '" ^ id ^ "'");
                               []
-  | GenericInstanciation (_,n,_) -> Npkcontext.report_warning "normalize"
-                                      ("ignoring generic instanciation of '"
-                                      ^ name_to_string n ^ "'");
-                                    []
+  | GenericInstanciation  (ident , names, actuals) when
+      ((compare (List.length names) 1  = 0) &&
+       (compare(List.hd names) "unchecked_conversion" = 0)) -> 
+     
+      (*CODE un peu DUPLIQUER !!!*)
+(*      let normalize_params param_list =
+	List.map
+          (fun param ->
+             if  (param.mode <> In)
+             then Npkcontext.report_error
+               "Normalize.normalize_params"
+               ( "invalid parameter mode : functions can only have"
+		 ^ " \"in\" parameters");
+             if (param.default_value <> None && param.mode <> In) then
+               Npkcontext.report_error "Normalize.normalize_params"
+		 "default values are only allowed for \"in\" parameters";
+             { Ast.formal_name = param.formal_name
+             ; Ast.param_type  = subtyp_to_adatyp param.param_type
+             }
+          )
+          param_list
+      in*)
+      begin
+	match actuals with 
+	    (Some "SOURCE", Lval(Var s_t))::(Some "TARGET", Lval(Var t_t))::[] -> 
+	      begin
+		print_endline "-- cool --";
+		(*	let norm_name = normalize_ident_cur ident in*)
+		(*	let source_t = 
+			Ada_utils.may subtyp_to_adatyp (Some [t_t]) in*)
+		  
+		let ret_t = Ada_utils.may subtyp_to_adatyp (Some [t_t]) in
+
+		let source = {
+		 formal_name = "SOURCE";
+		  mode  = In;
+		  param_type = [s_t]; (*TO DO casser la list '.' *)
+		  default_value = None
+		} 
+		  
+		in
+		  
+		let param_list =  source::[] in 
+		  (*add target *)
+		  
+		  Sym.add_subprogram gtbl ident param_list ret_t;
+		  []
+		    (*[Ast.Subprogram ( 
+		      norm_name, normalize_params param_list, ret_t )
+		      ]
+		    *)
+	      end
+	  | _ ->  Npkcontext.report_warning "normalize"
+              ("ignoring generic instanciation of ") ; 
+	      []
+      end
+	
+      | GenericInstanciation _ -> Npkcontext.report_warning "normalize"
+        ("ignoring generic instanciation of ") ; 
+	 []
+
+
+
+
+
+
+
+
 
 
 and normalize_package_spec (name, list_decl) =
@@ -868,9 +932,9 @@ and normalize_package_spec (name, list_decl) =
   (name, norm_spec)
 
 and normalize_spec spec = match spec with
-  | SubprogramSpec(subprogr_spec) -> Ast.SubProgramSpec(
+  | SubprogramSpec subprogr_spec -> Ast.SubProgramSpec(
         normalize_sub_program_spec subprogr_spec ~addparam:false)
-  | PackageSpec(package_spec) ->
+  | PackageSpec package_spec ->
       Ast.PackageSpec(normalize_package_spec package_spec)
 
 and normalize_lval ?(force = false) ?expected_type = function
@@ -1289,9 +1353,8 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 	(* id.aggr_fld <- aggr_v *)
 	let (off, tf) = T.record_field t_lv aggr_fld in				  	  match aggr_val with
 	      Aggregate (NamedAggr ((AggrOthers,   
-			 Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
-	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) ->
-		 if (T.is_array tf) then 
+		Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
+	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) when (T.is_array tf) ->
 		   begin
 		     let c, ids = T.extract_array_types tf in
 		     let all_values = List.map (
@@ -1310,12 +1373,6 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		     in
 		      	 handle_others record_lv affected [] (List.rev all_values)
 	              end
-
-		 else
-		   let v = normalize_exp ~expected_type:tf aggr_val in
-		     [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]  
-
-
 		 
 	    | _ -> 
 		(*cas ususel *)
