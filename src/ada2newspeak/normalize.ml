@@ -850,64 +850,36 @@ and normalize_basic_decl item loc =
   | GenericInstanciation  (ident , names, actuals) when
       ((compare (List.length names) 1  = 0) &&
        (compare(List.hd names) "unchecked_conversion" = 0)) -> 
-     
-      (*CODE un peu DUPLIQUER !!!*)
-(*      let normalize_params param_list =
-	List.map
-          (fun param ->
-             if  (param.mode <> In)
-             then Npkcontext.report_error
-               "Normalize.normalize_params"
-               ( "invalid parameter mode : functions can only have"
-		 ^ " \"in\" parameters");
-             if (param.default_value <> None && param.mode <> In) then
-               Npkcontext.report_error "Normalize.normalize_params"
-		 "default values are only allowed for \"in\" parameters";
-             { Ast.formal_name = param.formal_name
-             ; Ast.param_type  = subtyp_to_adatyp param.param_type
-             }
-          )
-          param_list
-      in*)
       begin
 	match actuals with 
-	    (Some "SOURCE", Lval(Var s_t))::(Some "TARGET", Lval(Var t_t))::[] -> 
+	    (Some "source", Lval src)::(Some "target", Lval tgt)::[] -> 
 	      begin
-		print_endline "-- cool --";
-		(*	let norm_name = normalize_ident_cur ident in*)
-		(*	let source_t = 
-			Ada_utils.may subtyp_to_adatyp (Some [t_t]) in*)
-		  
-		let ret_t = Ada_utils.may subtyp_to_adatyp (Some [t_t]) in
-
+		let src_t =  make_name_of_lval src in	  
+		let tgt_t =  make_name_of_lval tgt in
+		let r_t = Ada_utils.may subtyp_to_adatyp(Some tgt_t) in		  
 		let source = {
-		 formal_name = "SOURCE";
+		  formal_name = "SOURCE";
 		  mode  = In;
-		  param_type = [s_t]; (*TO DO casser la list '.' *)
+		  param_type = src_t;
 		  default_value = None
 		} 
-		  
-		in
-		  
+		in		  
 		let param_list =  source::[] in 
 		  (*add target *)
-		  
-		  Sym.add_subprogram gtbl ident param_list ret_t;
+		  Sym.add_subprogram gtbl ident param_list r_t;
 		  []
-		    (*[Ast.Subprogram ( 
-		      norm_name, normalize_params param_list, ret_t )
-		      ]
-		    *)
 	      end
-	  | _ ->  Npkcontext.report_warning "normalize"
+	  | _ -> 
+	      Npkcontext.report_warning "normalize"
               ("ignoring generic instanciation of ") ; 
 	      []
       end
 	
-      | GenericInstanciation _ -> Npkcontext.report_warning "normalize"
-        ("ignoring generic instanciation of ") ; 
-	 []
-
+  | GenericInstanciation _ -> 
+      Npkcontext.report_warning "normalize"
+	("ignoring generic instanciation of ") ; 
+      []
+	
 
 
 
