@@ -181,7 +181,7 @@ let rec generate_stmt (sk, loc) =
             | Some r -> Some (generate_lv r)
             | None   -> None
           in
-          N.Call (args, ft, fn, rets)
+            N.Call (args, ft, fn, rets)
       | Goto lbl -> N.Goto lbl
       | DoWith (body, lbl, action) ->
           let body = List.map generate_stmt body in

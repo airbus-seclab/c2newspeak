@@ -117,7 +117,7 @@ let translate prog =
   let prefix_args loc f ft args args_ids =
     let rec add args =
       match args with
-        | (arg::args, t::args_t, x::args_ids) -> 
+          (arg::args, t::args_t, x::args_ids) -> 
             push tmp_var;
             let set = begin match arg with
               | In    e -> Some (translate_set (Local tmp_var, e, t))
@@ -130,21 +130,23 @@ let translate prog =
               | Out   l
               | InOut l -> Some (translate_set (l, Lval (Local tmp_var, t), t))
             in
-            pop tmp_var;
-            let call_with_copyout = match copy_out with
-            | None   -> (call, loc)::[]
-            | Some c -> (call, loc)::(c, loc)::[]
-            in
-            let full_call = match set with
-            | None   -> call_with_copyout
-            | Some s -> (s, loc)::call_with_copyout
-            in
-            L.Decl (x, t, full_call)
+              pop tmp_var;
+              let call_with_copyout = 
+		match copy_out with
+		  | None   -> (call, loc)::[]
+		  | Some c -> (call, loc)::(c, loc)::[]
+              in
+              let full_call = match set with
+		| None   -> call_with_copyout
+		| Some s -> (s, loc)::call_with_copyout
+              in
+		L.Decl (x, t, full_call)
         | ([], [], []) -> L.Call (translate_fn f)
-        | _ -> Npkcontext.report_error "hpk2npk.prefix_args"
-                 "Mismatching number of parameters"
+        | _ -> 
+	    Npkcontext.report_error "hpk2npk.prefix_args"
+              "Mismatching number of parameters"
     in
-  let (args_t, _) = ft in
+    let (args_t, _) = ft in
       add (args, args_t, args_ids)
   in
 
@@ -166,7 +168,7 @@ let translate prog =
       match rets with
           (Some (Local v), Some _) 
             when Hashtbl.find env v = !stack_height -> 
-              add(None, None)
+              add (None, None)
         | _ -> add rets
     in
     let (_, rets_t) = ft in
@@ -196,7 +198,7 @@ let translate prog =
                   let fid = "fptr_call" in
                     (fid, default_args_ids fid (List.length args))
           in
-          suffix_rets fid loc f ft (args, rets) args_ids
+            suffix_rets fid loc f ft (args, rets) args_ids
       | DoWith (body, lbl, action) -> 
           let body = translate_blk body in
           let action = translate_blk action in

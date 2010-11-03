@@ -192,7 +192,7 @@ let translate fname (globals, fundecls, spec) =
 	lbl'
   in
 
-  let rec cast (e, t1) t2 = 	      
+  let rec cast (e, t1) t2 = 
     match t2 with
 	Comp (TypedC.Known (f, false)) 
 	  when not (TypedC.equals_typ t1 t2) ->

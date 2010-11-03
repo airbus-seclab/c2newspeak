@@ -232,13 +232,14 @@ let translate src_lang prog fnames =
       | Out   l -> K.Out   (translate_lv l)
       | InOut l -> K.InOut (translate_lv l)
 
-  and translate_call ret (ft, fn, args) =
+  and translate_call ret ((args_t, ret_t), fn, args) =
     let args = List.map translate_arg args in
-    let ft = translate_ftyp ft in
+    let ft = translate_ftyp (args_t, ret_t) in
     let fn = translate_fn fn in
-    let ret = match ret with
-      | Some r -> Some (translate_lv r)
-      | None   -> None
+    let ret = 
+      match ret with
+	| Some r -> Some (translate_lv r)
+	| None   -> None
     in
       K.Call (args, ft, fn, ret)
 

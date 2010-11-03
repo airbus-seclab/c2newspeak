@@ -26,7 +26,7 @@
 
 DIR=c2newspeak mult-files npkstats mem_opt npk2bytesz npkcheck \
     npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npktests npknull simpleai npksolver
+    npkflow npkfuns npktests npknull simpleai npksolver lowspeak
 
 .PHONY: $(DIR)
 

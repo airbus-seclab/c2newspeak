@@ -644,9 +644,11 @@ let cast (e, t) t' =
 	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
     | (_, Const (CInt i), Scalar (Int k))
 	when Newspeak.belongs i (Newspeak.domain_of_typ k) -> e
+(*
     | (Scalar Int k, _, Scalar Int k') 
 	when Newspeak.contains 
 	  (Newspeak.domain_of_typ k') (Newspeak.domain_of_typ k) -> e
+*)
     | (Scalar (Int _), _, Scalar (Int k)) -> 
 	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
     | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
