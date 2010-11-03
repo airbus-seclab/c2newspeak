@@ -80,6 +80,7 @@ val verb_ast : bool ref
 val verb_cir : bool ref
 val verb_npko : bool ref
 val verb_newspeak : bool ref
+val verb_lowspeak: bool ref
 
 val opt_checks: bool ref
 

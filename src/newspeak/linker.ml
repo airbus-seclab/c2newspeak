@@ -343,6 +343,12 @@ let link npkos =
         print_endline "---------------";
         Newspeak.dump prog_simpl;
         print_newline ()
+      end;
+      if !Npkcontext.verb_lowspeak then begin
+	print_endline "Lowspeak output";
+	print_endline "---------------";
+	Lowspeak.dump (Npk2lpk.translate prog_simpl);
+	print_newline ()
       end
 
 
