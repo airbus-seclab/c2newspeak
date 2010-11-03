@@ -63,7 +63,7 @@ let compile(fname:string):Npkil.t =
         Npkcontext.forget_loc ();
         log_progress (Post);
         let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
-          let t_3 = Unix.gettimeofday () in
+        let t_3 = Unix.gettimeofday () in
           let time_string a b =
             string_of_float (1000. *. (a -. b)) in
           List.iter Npkcontext.print_debug
