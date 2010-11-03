@@ -47,12 +47,7 @@ module Table = struct
 
     type 'a t = 'a list
 
-    let add e sy =
-      if (List.mem e sy) then
-        sy
-      else
-        e::sy
-
+    let add e sy = if (List.mem e sy) then sy else e::sy
 
     let iter = List.iter
 
@@ -198,8 +193,9 @@ module Table = struct
                 match p' h with
                   | None -> extract_unique p' t
                   | Some r -> if List.exists (fun x -> p' x <> None) t
-                              then None
-                              else Some r
+                              then 
+				None
+		              else Some r
               end
 
   let mkcast desc fn  ?(filter = fun _ -> true) lst  =

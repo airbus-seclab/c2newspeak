@@ -5,7 +5,8 @@
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
+normalize_context  License as published by the Free Software Foundation; either  (*Hashtbl.mem s.s_with x*)
+
   version 2.1 of the License, or (at your option) any later version.
 
   This library is distributed in the hope that it will be useful,
@@ -38,6 +39,8 @@ let (%-) = Nat.sub
 
 let gtbl = Sym.create ()
 
+let spec_tbl = Hashtbl.create 5
+
 (* Name-related functions *)
 
 let name_of_sp_spec = function
@@ -63,7 +66,7 @@ let rec make_name_of_lval = function
   | Var x -> [x]
   | SName (pf, tl) -> make_name_of_lval pf @ [tl]
   | _ -> invalid_arg "make_name_of_lval"
-
+      
 let subtyp_to_adatyp gtbl n =
   let n' = mangle_sname n in
   try
@@ -119,9 +122,9 @@ let rec resolve_selected ?expected_type n =
   let resolve_variable pkg id =
     begin
       try
-        let (sc,(act_id, t, ro)) = Sym.find_variable ?expected_type
+	let (sc,(act_id, t, ro)) = Sym.find_variable ?expected_type
                                              gtbl (pkg,id) in
-        SelectedVar(sc,act_id,t,ro)
+	  SelectedVar(sc,act_id,t,ro)
       with
       | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc , id , rt)
       | Sym.Variable_no_storage (t,v) -> SelectedConst (t, v)
@@ -492,11 +495,16 @@ and normalize_binop bop e1 e2 =
   | _ ->  let bop' = direct_op_trans bop in
           let expected_type =
           match (e1, e2) with
-          | Lval l1 , Lval l2 -> let v1 = make_name_of_lval l1 in
-                                 let v2 = make_name_of_lval l2 in
-                                 Sym.type_ovl_intersection gtbl
-                                      (ListUtils.last v1)
-                                      (ListUtils.last v2)
+          | Lval l1 , Lval l2 -> begin
+	      try
+		let v1 = make_name_of_lval l1 in
+		let v2 = make_name_of_lval l2 in
+                  Sym.type_ovl_intersection gtbl
+                    (ListUtils.last v1)
+                    (ListUtils.last v2)
+	      with _ -> None
+	    end
+		
           | _      , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
                                           Some (subtyp_to_adatyp n)
           | _               -> None
@@ -576,14 +584,24 @@ and normalize_fcall (n, params) =
       	      let (_,( norm_exp, arg_t))= normalize_arg param in
       		if (not (T.is_compatible cast_t arg_t))
 		then 
-		  Npkcontext.report_error ("incompatible types")
+		  (*WG  TO DO *)
+		  print_endline  ( "\nL = "
+      				   ^ T.print cast_t
+      				   ^ "\nR = "
+      				   ^ T.print arg_t
+      				 )
+		;
+		norm_exp,  cast_t
+		  (*
+		    Npkcontext.report_error ("incompatible types")
 		    ( "\nL = "
-      		      ^ T.print cast_t
-      		      ^ "\nR = "
-      		      ^ T.print arg_t
+      		    ^ T.print cast_t
+      		    ^ "\nR = "
+      		    ^ T.print arg_t
       		    )
-		else
-		  norm_exp,  cast_t
+		    else
+		    norm_exp,  cast_t
+		  *)
       	with Not_found ->
       	  raise Not_found
 	    
@@ -720,17 +738,17 @@ and add_representation_clause id aggr loc =
     ) aggr in
   T.handle_enum_repr_clause t assoc_list
 
-and parse_extern_specification name =
+and parse_extern_specification name  =
   Npkcontext.print_debug "Parsing extern specification file";
   let spec_ast = parse_specification name in
-  let norm_spec = (normalization spec_ast) in
-  Npkcontext.print_debug "Done parsing extern specification file";
-  match norm_spec with
-    | (_, Ast.Spec spec, loc) -> (spec, loc)
-    | (_, Ast.Body(_), _) -> Npkcontext.report_error
-        "normalize.parse_extern_specification"
-          "internal error : specification expected, body found"
-
+    let norm_spec = normalization spec_ast in
+      Npkcontext.print_debug "Done parsing extern specification file";
+      match norm_spec with
+	| (_, Ast.Spec spec, loc) -> (spec, loc)
+	| (_, Ast.Body(_), _) -> Npkcontext.report_error
+            "normalize.parse_extern_specification"
+              "internal error : specification expected, body found"
+	      
 and normalize_ident_cur ident =
   match (Sym.current gtbl) with
   | Some x -> [x;ident]
@@ -880,13 +898,6 @@ and normalize_basic_decl item loc =
 	("ignoring generic instanciation of ") ; 
       []
 	
-
-
-
-
-
-
-
 
 
 and normalize_package_spec (name, list_decl) =
@@ -1412,8 +1423,7 @@ and normalize_body body  = match body with
         Sym.set_current gtbl name;
         Sym.enter_context ~name ~desc:"Package body" gtbl;
         let ndp = normalize_decl_part decl_part in
-        let norm_spec = (nname,nspec)
-        in
+        let norm_spec = (nname,nspec) in
         check_package_body_against_spec ~body:ndp ~spec:norm_spec;
         Sym.reset_current gtbl;
         Sym.exit_context gtbl;
@@ -1430,15 +1440,15 @@ and add_extern_spec spec =
     Npkcontext.set_loc loc;
     match basic_decl with
       | Ast.ObjectDecl(ident, t, (Ast.Variable | Ast.Constant),_) ->
-          Sym.add_variable gtbl ident loc t
+	  Sym.add_variable gtbl ident loc t
       | Ast.ObjectDecl(ident, t, Ast.StaticVal value,_) ->
-          Sym.add_variable gtbl ident loc t ~value;
+	  Sym.add_variable gtbl ident loc t ~value;
       | Ast.NumberDecl(ident, value) ->
-          add_numberdecl ident value loc
+	  add_numberdecl ident value loc
       | Ast.SpecDecl _ -> ()
     in match spec with
       | Ast.SubProgramSpec _ -> ()
-      | Ast.PackageSpec(name, basic_decls) ->
+      | Ast.PackageSpec(name, basic_decls) -> 
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
           List.iter add_extern_basic_decl basic_decls;
@@ -1447,21 +1457,33 @@ and add_extern_spec spec =
           Sym.add_with gtbl name
 
 and normalize_context context =
-  List.fold_left (fun ctx item -> match item with
-    | With(nom, spec) ->
-        if (not (Sym.is_with gtbl nom)) then
-        begin
-          let (norm_spec, loc) = match spec with
-            | None   -> parse_extern_specification nom
-            | Some _ -> Npkcontext.report_error
-                "Ada_normalize.normalize_context"
-                  "internal error : spec provided"
-          in
-            add_extern_spec norm_spec;
-            Ast.With(nom, loc, Some(norm_spec, loc))::ctx
-        end
-        else ctx
-    | UseContext n  -> Sym.add_use gtbl n; ctx
+  List.fold_left (fun ctx item ->  match item with
+	| With(nom, spec) ->  
+	    if (not (Sym.is_with gtbl nom)) then
+	      begin 
+		let (norm_spec, loc) = match spec with
+		  | None   -> parse_extern_specification nom
+		  | Some _ -> Npkcontext.report_error
+		      "Ada_normalize.normalize_context"
+			"internal error : spec provided"
+		in
+		  add_extern_spec norm_spec;
+		  Hashtbl.add spec_tbl nom (norm_spec, loc);
+		  Ast.With(nom, loc, Some(norm_spec, loc))::ctx
+	      end
+	    else 
+		(*Etienne Millon = ctx*)
+		(*Not found for internal spec like  System *)
+		begin
+		  try 
+		    let ( ex_spec, lc)  =  Hashtbl.find spec_tbl nom in
+		      Ast.With(nom, lc, Some(ex_spec, lc))::ctx
+		  with 
+		      Not_found -> ctx
+		end
+	| UseContext n  ->  
+	    Sym.add_use gtbl n; 
+	    ctx 
   ) [] context
 
 (**
@@ -1471,12 +1493,13 @@ and normalize_context context =
  *   - transforms functions and type names to "package.ident" in their
  *     declarations.
  *)
-and normalization compil_unit =
+    
+and normalization compil_unit = 
   let cu_name = compilation_unit_name compil_unit in
   log_progress (Semcheck cu_name);
   let (context,lib_item,loc) = compil_unit in
   let norm_context = normalize_context context in
-  let norm_lib_item = normalize_lib_item lib_item loc in
+  let norm_lib_item = normalize_lib_item lib_item loc in 
   Npkcontext.forget_loc ();
   log_progress (Done(Semcheck cu_name));
   (norm_context ,norm_lib_item ,loc)

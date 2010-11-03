@@ -442,7 +442,7 @@ let translate compil_unit =
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
       | ObjectDecl(ident, subtyp, _, init_o) ->
-          let tr_typ = T.translate subtyp in
+	  let tr_typ = T.translate subtyp in
           let init =
             if extern() then None else init_o
           in
@@ -457,12 +457,13 @@ let translate compil_unit =
           translate_global_basic_declaration (basic, loc)
       | BodyDecl(body) -> translate_body body loc
 
-  and translate_spec spec = match spec with
-    | SubProgramSpec(subprog_spec) ->
+  and translate_spec spec = 
+    match spec with
+    | SubProgramSpec(subprog_spec) -> 
         ignore (translate_sub_program_spec subprog_spec )
     | PackageSpec (nom, basic_decl_list) ->
         curpkg := Some nom;
-        List.iter translate_global_basic_declaration basic_decl_list;
+	List.iter translate_global_basic_declaration basic_decl_list;
         curpkg := None
 
   and translate_body body loc =
