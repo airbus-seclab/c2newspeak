@@ -97,10 +97,9 @@ let rec pcomp_stmt (sk, loc) =
   | InfLoop b           ->
       let (s, a) = pcomp_blk b in
       [Prog.InfLoop s], a
-  | DoWith (b1, l)  ->
-      let (s1, a1) = pcomp_blk b1 in
-(* TODO: remove second argument of DoWith *)
-	[Prog.DoWith (s1, l, [])], a1
+  | DoWith (b, l)  ->
+      let (s, a) = pcomp_blk b in
+      [Prog.DoWith (s, l)], a
   | Goto l              -> [Prog.Goto l],[]
   | UserSpec [IdentToken "widen"] -> [],[Prog.Widening]
   | UserSpec [IdentToken "domain"; IdentToken d] -> [],[Prog.Domain d]

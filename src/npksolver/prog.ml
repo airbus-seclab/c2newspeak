@@ -37,7 +37,7 @@ and stmtkind =
   | Guard   of exp
   | Select  of blk * blk
   | InfLoop of blk
-  | DoWith  of blk * lbl * blk
+  | DoWith  of blk * lbl
   | Goto    of lbl
   | Decl    of blk * typ
   | Assert  of exp

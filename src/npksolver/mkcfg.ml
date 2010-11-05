@@ -120,11 +120,10 @@ let rec process_stmt (stmt, loc) c =
                          ::(top >--<>--> c2.lbl)
                          ::c1.edges
                           @c2.edges)
-  | DoWith (b1, lmid, b2) ->
-      let c2 = process_blk b2 c.alist jnode in
-      let c1 = process_blk b1 ((lmid, c2.lbl)::c.alist) c2.lbl in
+  | DoWith (b1, lmid) ->
+      let c1 = process_blk b1 ((lmid, jnode)::c.alist) jnode in
       update c ~label:c1.lbl
-               ~new_edges:(c1.edges@c2.edges)
+               ~new_edges:(c1.edges)
   | Goto l ->
       let lbl' = lbl_next c.lbl in
       let ljmp = List.assoc l c.alist in
