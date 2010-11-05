@@ -10,8 +10,7 @@ main() {
   do {
     int32 x;
     x =(int32) 3;
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 

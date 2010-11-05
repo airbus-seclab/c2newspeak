@@ -183,10 +183,10 @@ let rec generate_stmt (sk, loc) =
           in
             N.Call (args, ft, fn, rets)
       | Goto lbl -> N.Goto lbl
-      | DoWith (body, lbl, action) ->
+      | DoWith (body, lbl) ->
           let body = List.map generate_stmt body in
-          let action = List.map generate_stmt action in
-            N.DoWith (body, lbl, action)
+	    (* TODO: remove block from DoWith *)
+            N.DoWith (body, lbl, [])
       | UserSpec x -> N.UserSpec (List.map generate_token x)
   in 
     (new_sk, loc)

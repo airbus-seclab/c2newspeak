@@ -56,7 +56,7 @@ and stmtkind =
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * lbl * blk)
+  | DoWith of (blk * lbl)
   | Goto of lbl
   | Call of (arg list * ftyp * fn * lval option)
   | UserSpec of assertion
@@ -258,12 +258,10 @@ let dump_npko prog =
 		print_endline (align^"}")
 	    end
 	     
-      | DoWith  (body, lbl, action) ->
+      | DoWith  (body, lbl) ->
 	  print_endline "do {";
 	  dump_blk (align^"  ") body;
-	  print_endline (align^"} with lbl"^(string_of_int lbl)^": {");
-	  dump_blk (align^"  ") action;
-	  print_endline (align^"}")
+	  print_endline (align^"} with lbl"^(string_of_int lbl)^":");
 
       | Goto l -> print_endline ("goto "^(string_of_lbl l)^";")
 	    

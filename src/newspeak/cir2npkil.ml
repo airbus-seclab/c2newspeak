@@ -182,8 +182,7 @@ let translate src_lang prog fnames =
 	Block (body, None) -> translate_blk body
       | Block (body, Some lbl) ->
 	  let body = translate_blk body in
-	    (* TODO: remove block from DoWith *)
-	    (K.DoWith (body, lbl, []), loc)::[]
+	    (K.DoWith (body, lbl), loc)::[]
 
       | Set (lv, _, Call c) ->
 	  let call = translate_call (Some lv) c in
