@@ -343,7 +343,7 @@ let translate compil_unit =
                    @ (translate_block r)
            | Loop(NoScheme, body) ->
                let tr_body = translate_block body in
-                 (C.Block([C.Loop(tr_body), loc], Some (Params.brk_lbl,[])),loc)
+                 (C.Block([C.Loop(tr_body), loc], Some Params.brk_lbl),loc)
                  ::(translate_block r)
            | Loop(While(cond), body) ->
                translate_block
@@ -442,7 +442,7 @@ let translate compil_unit =
       | _        -> Npkcontext.report_error "mangle_sname"
                       "chain of selected names is too deep"
     in
-    let body = (C.Block (body_decl @ body,Some (Params.ret_lbl,[])), loc)::[] in
+    let body = (C.Block (body_decl @ body,Some Params.ret_lbl), loc)::[] in
       Hashtbl.replace fun_decls (translate_name (mangle_sname name))
                       (ret_id, args_ids, ftyp, body);
   in

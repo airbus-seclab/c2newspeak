@@ -74,7 +74,7 @@ and blk = stmt list
 and stmt = (stmtkind * location)
 
 and stmtkind =
-  | Block of (blk * (Newspeak.lbl * blk) option)   (* DoWith construct *)
+  | Block of (blk * Newspeak.lbl option)   (* DoWith construct *)
   | Goto of Newspeak.lbl
   | Decl of (typ * string)
   | Set of (lv * typ * exp)
@@ -176,12 +176,10 @@ and string_of_blk margin x =
 
 and string_of_stmt margin (x, _) =
   match x with
-    | Block (body, Some (lbl, action)) ->
+    | Block (body, Some lbl) ->
 	"{\n"
 	^(string_of_blk (margin^"  ") body)
-	^margin^"} with lbl"^(string_of_int lbl)^" {\n"
-	^(string_of_blk (margin^"  ") action)
-	^margin^"}"
+	^margin^"} with lbl"^(string_of_int lbl)
     | Goto lbl -> "goto lbl"^(string_of_int lbl)^";"
     | Decl (_, x) -> "typ "^x^";"
     | Set (lv, _, e) -> 
@@ -339,11 +337,6 @@ and normalize_stmt (x, loc) =
   match x with
       Block (body, lbl) -> 
 	let body = normalize_blk body in
-	let lbl = 
-	  match lbl with
-	      None -> None
-	    | Some (lbl, action) -> Some (lbl, normalize_blk action)
-	in
 	  (Block (body, lbl), loc)::[]
 
     | Goto _ | Decl _ -> (x, loc)::[]
@@ -575,14 +568,12 @@ let normalize x =
 	  in
 	    (body, used_lbls)
 
-      | (Block (body, Some (lbl, act_blk)), loc)::tl -> 
+      | (Block (body, Some lbl), loc)::tl -> 
 	  push_lbl lbl;
 	  let (body, used_lbls1) = set_scope_blk body in
-	  let used_lbls1 = Set.remove lbl used_lbls1 in
+	  let used_lbls = Set.remove lbl used_lbls1 in
 	  let decls = pop_lbl lbl in
-	  let (act_blk, used_lbls2) = set_scope_blk act_blk in
-	  let used_lbls = Set.union used_lbls1 used_lbls2 in
-	  let body = ((Block (body, Some (lbl, act_blk)), loc)::[]) in
+	  let body = ((Block (body, Some lbl), loc)::[]) in
 	  let body = 
 	    if Set.is_empty used_lbls then begin
 	      let body = List.rev_append decls body in
@@ -702,8 +693,7 @@ let is_large_blk x =
 
   and check_stmt x =
     match x with
-	Block (x, None) | Loop x -> check_blk x
-      | Block (x, Some (_, y)) -> check_blk x; check_blk y
+	Block (x, _) | Loop x -> check_blk x
       | Guard e -> check_exp e
       | Select (x, y) -> check_blk x; check_blk y
       | Switch (e, choices, x) -> 
@@ -764,9 +754,7 @@ let rec size_of_blk x = ListUtils.size_of size_of_stmt x
 
 and size_of_stmt (x, _) = 
   match x with
-      Block (body, None) -> 1 + (size_of_blk body)
-    | Block (body, Some (_, action)) -> 
-	1 + (size_of_blk body) + (size_of_blk action)
+      Block (body, _) -> 1 + (size_of_blk body)
     | Loop body -> 1 + (size_of_blk body)
     | Select (br1, br2) -> 1 + (size_of_blk br1) + (size_of_blk br2)
     | Switch (_, cases, default) -> 

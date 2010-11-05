@@ -180,10 +180,10 @@ let translate src_lang prog fnames =
     Npkcontext.set_loc loc;
     match x with
 	Block (body, None) -> translate_blk body
-      | Block (body, Some (lbl, action)) ->
+      | Block (body, Some lbl) ->
 	  let body = translate_blk body in
-	  let action = translate_blk action in
-	    (K.DoWith (body, lbl, action), loc)::[]
+	    (* TODO: remove block from DoWith *)
+	    (K.DoWith (body, lbl, []), loc)::[]
 
       | Set (lv, _, Call c) ->
 	  let call = translate_call (Some lv) c in
