@@ -113,7 +113,7 @@ and stmtkind =
   | Decl of (string * typ * blk)
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * lbl * blk)
+  | DoWith of (blk * lbl)
   | Goto of lbl
   | Call of (arg list * ftyp * funexp * lval option)
   | UserSpec of assertion
@@ -502,16 +502,12 @@ let string_of_blk offset x =
             dump_line "}"
           end
             
-      | DoWith (body, lbl, action) ->
+      | DoWith (body, lbl) ->
           dump_line_at loc "do {";
           incr_margin ();
           dump_blk body;
           decr_margin ();
-          dump_line ("} with lbl"^(string_of_int lbl)^": {");
-          incr_margin ();
-          dump_blk action;
-          decr_margin ();
-          dump_line "}"
+          dump_line ("} with lbl"^(string_of_int lbl)^":")
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
       | Call (args, _t, fn, ret) ->
@@ -651,19 +647,19 @@ object (self)
 
   method enter_stmtkind x =
     match x with
-        DoWith ((DoWith (_, lbl1, []), _)::[], lbl2, []) ->
+        DoWith ((DoWith (_, lbl1), _)::[], lbl2) ->
           self#bind lbl1 lbl1;
           self#bind lbl2 lbl1
-      | DoWith (_, lbl, _) -> self#bind lbl lbl
+      | DoWith (_, lbl) -> self#bind lbl lbl
       | _ -> ()
 
   method process_stmtkind x =
     match x with
       | Goto lbl -> Goto (self#find lbl)
-      | DoWith ((DoWith (body, lbl1, []), _)::[], _, []) ->
+      | DoWith ((DoWith (body, lbl1), _)::[], _) ->
           self#pop ();
           self#pop ();
-          DoWith (body, lbl1, [])
+          DoWith (body, lbl1)
       | DoWith _ -> 
           self#pop ();
           x
@@ -828,7 +824,7 @@ let simplify_gotos blk =
       match blk with
 	  [] -> false
 	| [Goto _, _] -> true
-	| [DoWith (body, _, []), _] -> last_is_goto body
+	| [DoWith (body, _), _] -> last_is_goto body
 	| _::tl -> last_is_goto tl
     in
     let rec has_no_guard blk =
@@ -837,12 +833,12 @@ let simplify_gotos blk =
 	| (s, _)::tl ->
 	    let b = 
 	      match s with
-		  Guard _                  -> false
-		| Select _                 -> false
-		| Decl (_, _, body)        -> has_no_guard body
-		| InfLoop blk              -> has_no_guard blk
-		| DoWith (blk, _, actions) -> (has_no_guard blk) && (has_no_guard actions)
-		| _                        -> true
+		  Guard _           -> false
+		| Select _          -> false
+		| Decl (_, _, body) -> has_no_guard body
+		| InfLoop blk       -> has_no_guard blk
+		| DoWith (blk, _)   -> has_no_guard blk
+		| _                 -> true
 	    in
 	      b && (has_no_guard tl)
     in
@@ -859,10 +855,10 @@ let simplify_gotos blk =
     
   and simplify_stmt (x, loc) =
     match x with
-        DoWith (body, lbl, action) -> 
+        DoWith (body, lbl) -> 
           let lbl' = new_lbl () in
             push lbl lbl';
-            simplify_dowith_goto loc (body, lbl', action)
+            simplify_dowith_goto loc (body, lbl')
 
       | _ -> (simplify_stmtkind x, loc)::[]
 
@@ -892,11 +888,11 @@ let simplify_gotos blk =
       try remove blk
       with Not_found -> blk
 
-  and simplify_dowith loc (body, lbl, action) =
+  and simplify_dowith loc (body, lbl) =
     match body with
-        (DoWith (body, lbl', []), _)::[] -> 
+        (DoWith (body, lbl'), _)::[] -> 
           push lbl' lbl;
-          let x = simplify_dowith_goto loc (body, lbl, []) in
+          let x = simplify_dowith_goto loc (body, lbl) in
             pop ();
             x
       | hd::tl -> 
@@ -905,16 +901,15 @@ let simplify_gotos blk =
               let tl = simplify_blk tl in
               let body = hd@tl in
                 pop ();
-                let action = simplify_blk action in
-                  (DoWith (body, lbl, action), loc)::[] 
-            end else hd@(simplify_dowith loc (tl, lbl, action))
+                (DoWith (body, lbl), loc)::[] 
+            end else hd@(simplify_dowith loc (tl, lbl))
       | [] -> 
           pop ();
           []
             
-  and simplify_dowith_goto loc (body, lbl, action) =
+  and simplify_dowith_goto loc (body, lbl) =
     let body = remove_final_goto lbl body in
-      simplify_dowith loc (body, lbl, action)
+      simplify_dowith loc (body, lbl)
   in
   let blk = simplify_blk blk in
     if not (LblSet.is_empty !used_lbls) 
@@ -955,10 +950,9 @@ let rec simplify_stmt actions (x, loc) =
       | InfLoop body ->
           let body = simplify_blk actions body in
             InfLoop body
-      | DoWith (body, l, action) -> 
+      | DoWith (body, l) -> 
           let body = simplify_blk actions body in
-          let action = simplify_blk actions action in
-            DoWith (body, l, action)
+            DoWith (body, l)
       | _ -> x
   in
   let stmt = ref x in
@@ -1014,9 +1008,9 @@ let has_goto lbl x =
 
   and has_goto (x, _) =
   match x with
-      Decl (_, _, body) | InfLoop body -> blk_has_goto body
+      Decl (_, _, body) | InfLoop body
+    | DoWith (body, _) -> blk_has_goto body
     | Select (body1, body2) -> (blk_has_goto body1) || (blk_has_goto body2)
-    | DoWith (body, _, action) -> (blk_has_goto body) && (blk_has_goto action)
     | Goto lbl' -> lbl = lbl'
     | _ -> false
   in
@@ -1034,10 +1028,10 @@ let split_loop lbl body =
 
 let rec normalize_loop blk =
   match blk with
-      (DoWith ([InfLoop body, loc], lbl, action), loc')::tl ->
+      (DoWith ([InfLoop body, loc], lbl), loc')::tl ->
         let (prefix, suffix) = split_loop lbl body in
         let body = prefix@[InfLoop (suffix@prefix), loc] in
-          (DoWith (body, lbl, action), loc')::(normalize_loop tl)
+          (DoWith (body, lbl), loc')::(normalize_loop tl)
     | hd::tl -> hd::(normalize_loop tl)
     | [] -> []
 
@@ -1180,14 +1174,9 @@ and build_stmtkind builder x =
       | Select (body1, body2) -> 
           Select (build_blk builder body1, build_blk builder body2)
               
-      | InfLoop body ->
-          let body = build_blk builder body in
-            InfLoop body
+      | InfLoop body -> InfLoop (build_blk builder body)
               
-      | DoWith (body, lbl, action) ->
-          let body = build_blk builder body in
-          let action = build_blk builder action in
-            DoWith (body, lbl, action)
+      | DoWith (body, lbl) -> DoWith (build_blk builder body, lbl)
               
       | Goto lbl -> Goto lbl
           
@@ -1445,9 +1434,7 @@ and visit_stmt visitor (x, loc) =
             visitor#set_loc loc;
             visit_blk visitor body2
         | InfLoop x -> visit_blk visitor x
-        | DoWith (body, _, action) -> 
-            visit_blk visitor body;
-            visit_blk visitor action
+        | DoWith (body, _) -> visit_blk visitor body
         | Goto _ -> ()
         | UserSpec assertion -> visit_assertion visitor assertion
     end else ()
@@ -1516,8 +1503,8 @@ let rec equal_stmt (x1, _) (x2, _) =
     | (Select (bl1, br1), Select (bl2, br2)) ->
          (equal_blk bl1 bl2) && (equal_blk br1 br2)
     | (InfLoop body1, InfLoop body2) -> equal_blk body1 body2
-    | (DoWith (body1, lbl1, action1), DoWith (body2, lbl2, action2)) ->
-        equal_blk body1 body2 && lbl1 = lbl2 && equal_blk action1 action2
+    | (DoWith (body1, lbl1), DoWith (body2, lbl2)) ->
+        equal_blk body1 body2 && lbl1 = lbl2
     | _ -> x1 = x2
   
 and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2

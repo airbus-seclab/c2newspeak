@@ -20,8 +20,7 @@ void main(void) {
           (615.c:27#13)^guard(! break.615.c:29#13.0_int32);
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

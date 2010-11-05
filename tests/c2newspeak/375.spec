@@ -24,8 +24,7 @@ void main(void) {
         (375.c:32#4)^guard((x_int32 ==_int32 0));
       }
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

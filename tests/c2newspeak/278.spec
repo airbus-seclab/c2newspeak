@@ -17,8 +17,7 @@ int32 g(void) {
         (278.c:32#4)^goto lbl1;
         (278.c:33#4)^y =(int32) 1;
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
   (278.c:36#2)^!return =(int32) x_int32;
 }

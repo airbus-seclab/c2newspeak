@@ -12,8 +12,7 @@ void main(void) {
      -->
       (213.c:29#2)^guard((tmp_cir!0_int32 ==_int32 0));
     }
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 

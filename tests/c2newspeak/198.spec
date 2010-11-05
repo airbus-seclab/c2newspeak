@@ -20,11 +20,9 @@ void main(void) {
           (198.c:28#2)^guard(! (10 > x_int32));
           (198.c:28#2)^goto lbl1;
         }
-      } with lbl2: {
-      }
+      } with lbl2:
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

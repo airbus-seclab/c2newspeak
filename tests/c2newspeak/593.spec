@@ -29,16 +29,13 @@ void main(void) {
                     (593.c:29#2)^goto lbl5;
                   }
                 }
-              } with lbl7: {
-              }
+              } with lbl7:
               (593.c:31#4)^i =(int32) 2;
               (593.c:32#4)^goto lbl4;
-            } with lbl6: {
-            }
+            } with lbl6:
             (593.c:35#4)^i =(int32) 1;
             (593.c:36#4)^goto lbl4;
-          } with lbl5: {
-          }
+          } with lbl5:
           (593.c:39#4)^goto!lbl =(uint32) 1;
           (593.c:39#4)^choose {
            -->
@@ -47,8 +44,7 @@ void main(void) {
            -->
             (593.c:39#4)^guard(! goto!lbl_int32);
           }
-        } with lbl4: {
-        }
+        } with lbl4:
         (593.c:28#1)^choose {
          -->
           (593.c:28#1)^guard(goto!lbl_int32);
@@ -57,8 +53,7 @@ void main(void) {
           (593.c:28#1)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

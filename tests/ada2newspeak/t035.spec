@@ -15,8 +15,7 @@ int32 t035.chose(int32 a, uint2 b) {
       (t035.adb:17#15)^!return =(int32) 1;
       (t035.adb:17#15)^goto lbl0;
     }
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 void t035.proc(void) {

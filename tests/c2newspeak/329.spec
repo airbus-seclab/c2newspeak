@@ -13,8 +13,7 @@ void main(void) {
       (329.c:29#2)^guard(! (tmp_cir!0_int32 ==_int32 1));
       (329.c:29#2)^goto lbl1;
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

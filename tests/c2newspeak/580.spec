@@ -28,8 +28,7 @@ void main(void) {
               (580.c:30#2)^guard(! goto!lbl_int32);
             }
           }
-        } with lbl4: {
-        }
+        } with lbl4:
         (580.c:28#1)^choose {
          -->
           (580.c:28#1)^guard(goto!lbl_int32);
@@ -38,8 +37,7 @@ void main(void) {
           (580.c:28#1)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

@@ -142,9 +142,7 @@ and scan_stmt env (x, loc) =
 	scan_blk env blk1; 
 	scan_blk env blk2
     | InfLoop body | Decl (_, _, body) -> scan_blk [] body
-    | DoWith (body, _, action) ->
-	scan_blk env body;
-	scan_blk env action
+    | DoWith (body, _) -> scan_blk env body
     | Goto _ | Call _ | Set _ | Copy _ | Guard _ | UserSpec _ -> ()
 
 let scan_fundef f fd = 
@@ -220,9 +218,8 @@ and scan2_stmt env (x, loc) =
     | InfLoop body ->
 	let _ = scan2_blk env body in 
 	  env
-    | DoWith (body, _, action) ->
+    | DoWith (body, _) ->
 	let _ = scan2_blk env body in
-	let _ = scan2_blk env action in
 	  env
     | Goto _ -> Env.empty
     | Set (lv, e, _) -> 

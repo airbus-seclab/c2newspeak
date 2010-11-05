@@ -18,8 +18,7 @@ void t027(void) {
         (t027.adb:9#10)^guard(! (0 > x_int32));
       }
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

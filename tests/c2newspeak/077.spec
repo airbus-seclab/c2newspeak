@@ -24,12 +24,10 @@ void main(void) {
          -->
           (077.c:31#4)^guard((x_int32 ==_int32 0));
         }
-      } with lbl3: {
-      }
+      } with lbl3:
       (077.c:29#22)^i =(int32) coerce[-2147483648,2147483647] (i_int32 + 1);
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

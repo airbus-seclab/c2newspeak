@@ -93,8 +93,7 @@ uint2 t250.!op+(uint2 left, uint2 right) {
         }
       }
     }
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 void t250.f(void) {

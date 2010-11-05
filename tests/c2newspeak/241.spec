@@ -14,8 +14,7 @@ void f(void) {
         (241.c:29#2)^goto lbl1;
       }
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 void g(void) {
@@ -32,8 +31,7 @@ void g(void) {
       }
       (241.c:39#4)^x =(int32) coerce[-2147483648,2147483647] (x_int32 + 1);
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

@@ -116,7 +116,7 @@ and stmtkind =
   | Decl of (string * typ * blk)
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * lbl * blk)
+  | DoWith of (blk * lbl)
   | Goto of lbl
   | Call of (arg list * ftyp * funexp * lval option)
   | UserSpec of assertion

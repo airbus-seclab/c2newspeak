@@ -13,8 +13,7 @@ void main(void) {
       (555.c:28#1)^guard(! (i_int32 ==_int32 0));
       (555.c:28#1)^goto lbl1;
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

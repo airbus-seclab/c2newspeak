@@ -20,11 +20,9 @@ void main(void) {
           (020.c:32#2)^goto lbl1;
         }
       }
-    } with lbl2: {
-    }
+    } with lbl2:
     (020.c:35#4)^x =(int32) 1;
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

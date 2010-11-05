@@ -14,8 +14,7 @@ void main(void) {
         (021.c:32#2)^guard(! (x_int32 ==_int32 1));
         (021.c:32#2)^goto lbl1;
       }
-    } with lbl2: {
-    }
+    } with lbl2:
     (021.c:34#4)^do {
       (021.c:34#4)^do {
         (021.c:39#4)^do {
@@ -35,21 +34,16 @@ void main(void) {
                 (021.c:34#4)^goto lbl4;
               }
             }
-          } with lbl6: {
-          }
+          } with lbl6:
           (021.c:36#6)^y =(int32) 2;
           (021.c:37#6)^goto lbl3;
-        } with lbl5: {
-        }
+        } with lbl5:
         (021.c:40#6)^y =(int32) 3;
         (021.c:41#6)^goto lbl3;
-      } with lbl4: {
-      }
+      } with lbl4:
       (021.c:44#6)^y =(int32) 4;
-    } with lbl3: {
-    }
-  } with lbl1: {
-  }
+    } with lbl3:
+  } with lbl1:
 }
 
 

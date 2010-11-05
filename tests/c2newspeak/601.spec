@@ -29,8 +29,7 @@ void main(void) {
                 (601.c:28#2)^guard(! (switch.601.c:28#2.0_uint32 ==_int32 0));
                 (601.c:28#2)^goto lbl4;
               }
-            } with lbl5: {
-            }
+            } with lbl5:
             (601.c:30#4)^goto!lbl =(uint32) 1;
             (601.c:30#4)^choose {
              -->
@@ -39,8 +38,7 @@ void main(void) {
              -->
               (601.c:30#4)^guard(! goto!lbl_int32);
             }
-          } with lbl4: {
-          }
+          } with lbl4:
           (601.c:32#4)^while (1) {
             (601.c:32#4)^choose {
              -->
@@ -50,8 +48,7 @@ void main(void) {
             }
             (601.c:33#4)^goto!lbl =(uint32) 0;
           }
-        } with lbl3: {
-        }
+        } with lbl3:
         (601.c:28#2)^choose {
          -->
           (601.c:28#2)^guard(goto!lbl_int32);
@@ -60,8 +57,7 @@ void main(void) {
           (601.c:28#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 
