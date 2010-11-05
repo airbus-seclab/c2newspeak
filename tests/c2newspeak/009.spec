@@ -14,7 +14,6 @@ int32 main(void) {
     }
     (009.c:36#2)^!return =(int32) 0;
   } with lbl0:
-  }
 }
 
 
