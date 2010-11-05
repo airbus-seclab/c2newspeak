@@ -46,9 +46,10 @@ let name_of_sp_spec spec =
   match spec with
     | Subprogram (x,_,_) -> x
 
-let name_of_synt_spec = function
-  | SubprogramSpec sps -> name_of_sp_spec sps
-  | PackageSpec (x,_) -> x
+let name_of_synt_spec spec = 
+  match spec with 
+    | SubprogramSpec sps -> name_of_sp_spec sps
+    | PackageSpec (x,_) -> x
 
 let compilation_unit_name (_, library_item, _) =
   match library_item with
@@ -56,18 +57,21 @@ let compilation_unit_name (_, library_item, _) =
     | Body (SubprogramBody (s, _, _)) -> name_of_sp_spec s
     | Body (PackageBody (n, _, _)) -> n
 
-let mangle_sname = function
-  | []       -> Npkcontext.report_error "mangle_sname" "unreachable"
+let mangle_sname names =
+  match names with 
+  | []       -> Npkcontext.report_error "mangle_sname" 
+                                        "unreachable"
   | x::[]    -> None  , x
   | x::y::[] -> Some x, y
   | _        -> Npkcontext.report_error "mangle_sname"
                   "chain of selected names is too deep"
 
-let rec make_name_of_lval = function
-  | Var x -> [x]
-  | SName (pf, tl) -> make_name_of_lval pf @ [tl]
-  | _ -> invalid_arg "make_name_of_lval"
-      
+let rec make_name_of_lval lv =
+  match lv with
+    | Var x -> [x]
+    | SName (pf, tl) -> make_name_of_lval pf @ [tl]
+    | _ -> invalid_arg "make_name_of_lval"
+	
 let subtyp_to_adatyp gtbl n =
   let n' = mangle_sname n in
   try
@@ -178,7 +182,7 @@ let find_body_for_spec ~specification ~bodylist =
   let match_ok s b = match (s,b) with
     | Ast.SpecDecl(Ast.SubProgramSpec sps),
         Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_)) -> sps = spsb
-    | Ast.ObjectDecl _ as x,Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
+    | Ast.ObjectDecl _ as x, Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
     | _ -> false
   in
   List.exists (function bd -> match_ok specification bd) bodylist
@@ -198,7 +202,8 @@ let check_package_body_against_spec ~body ~spec =
   let bodylist = List.map fst body_and_loc in
   (* Filter on specifications : only sp such as
    * filterspec sp = true will be checked.      *)
-  let filterspec = function
+  let filterspec basicdecl =
+    match basicdecl with 
     | Ast.NumberDecl _ | Ast.SpecDecl _ -> true
     | Ast.ObjectDecl _ -> false
   in
@@ -920,7 +925,8 @@ and normalize_spec spec = match spec with
   | PackageSpec package_spec ->
       Ast.PackageSpec(normalize_package_spec package_spec)
 
-and normalize_lval ?(force = false) ?expected_type = function
+and normalize_lval ?(force = false) ?expected_type synt_lv = 
+  match synt_lv with
   | (Var _ | SName _) as lv ->
       (* Only in write contexts *)
       begin match resolve_selected ?expected_type lv with
@@ -1171,38 +1177,40 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
                 ^ "should evaluate as integers")
       in
       List.fold_left (fun (kvl, others_exp) (selector, value) ->
-        let rec handle = function
-        | AggrExp e ->
-            begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, \"others\" shall be the last clause";
-              let e' = compute_val e in
-              ((e', value)::kvl, None)
-            end
-        | AggrRange (e1, e2) ->
-            begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, \"others\" shall be the last clause";
-              let e1' = compute_val e1 in
-              let e2' = compute_val e2 in
-              let rec interval a b =
-                if (Newspeak.Nat.compare b a < 0) then []
-                else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
-              in
-              (interval e1' e2') @ kvl, None
-            end
-        | AggrOthers ->
-            begin
-              if others_exp <> None then
-                Npkcontext.report_error "normalize"
-                "In an aggregate, there shall be only one \"others\" clause";
-              (kvl, Some value)
-            end
-        | AggrField f -> handle (AggrExp (Lval(Var f)))
-        in handle selector
-      ) ([],None) bare_assoc_list
+        let rec handle aggregate_sel = 
+	  match aggregate_sel with
+            | AggrExp e ->
+		begin
+		  if others_exp <> None then
+                    Npkcontext.report_error "normalize"
+                      "In an aggregate, \"others\" shall be the last clause";
+		  let e' = compute_val e in
+		    ((e', value)::kvl, None)
+		end
+            | AggrRange (e1, e2) ->
+		begin
+		  if others_exp <> None then
+                    Npkcontext.report_error "normalize"
+                      "In an aggregate, \"others\" shall be the last clause";
+		  let e1' = compute_val e1 in
+		  let e2' = compute_val e2 in
+		  let rec interval a b =
+                    if (Newspeak.Nat.compare b a < 0) then []
+                    else (a,value)::(interval (Newspeak.Nat.add_int 1 a) b)
+		  in
+		    (interval e1' e2') @ kvl, None
+		end
+            | AggrOthers ->
+		begin
+		  if others_exp <> None then
+                    Npkcontext.report_error "normalize"
+                      "In an aggregate, there shall be only one \"others\" clause";
+		  (kvl, Some value)
+		end
+            | AggrField f -> handle (AggrExp (Lval(Var f)))
+        in 
+	  handle selector
+	) ([],None) bare_assoc_list
     in
     (*
      * Now, using lv's type, we can :
