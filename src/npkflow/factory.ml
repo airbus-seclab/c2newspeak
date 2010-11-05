@@ -123,15 +123,12 @@ let build prog =
 	  let br2 = translate_blk j br2 in
 	    (F.Select (br1, br2), loc)::[]
       | InfLoop body -> (F.InfLoop (translate_blk j body), loc)::[]
-      | DoWith (body, lbl, []) -> 
+      | DoWith (body, lbl) -> 
 	  let body = translate_blk (lbl::j) body in
 	    (F.BlkLbl body, loc)::[]
       | Goto lbl -> (F.Goto (pos_of_lbl j lbl), loc)::[]
       | Call f -> (F.Call (translate_fn f), loc)::[]
       | UserSpec x -> (translate_assertion x, loc)::[]
-      | _ -> 
-	  invalid_arg ("Factory.translate_stmt: statement not handled yet: "
-		       ^(Lowspeak.string_of_stmt (x, loc)))
   in
 
   let translate_fundec f (_, body) =

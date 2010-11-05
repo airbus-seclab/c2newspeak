@@ -107,10 +107,7 @@ let count debug prog =
       | Decl (_, t, body) -> 
           let info = count_decl prog.ptr_sz t info in
             process_blk body info
-      | DoWith (body, _, action) -> 
-          let body_info = process_blk body info in
-          let action_info = process_blk action info in
-            max_stats body_info action_info
+      | DoWith (body, _) -> process_blk body info
       | Call (FunId f) -> 
           if List.mem f !fset then 
             begin

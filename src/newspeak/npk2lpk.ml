@@ -199,8 +199,7 @@ let translate prog =
                     (fid, default_args_ids fid (List.length args))
           in
             suffix_rets fid loc f ft (args, rets) args_ids
-(* TODO: remove block in DoWith for L *)
-      | DoWith (body, lbl) -> L.DoWith (translate_blk body, lbl, [])
+      | DoWith (body, lbl) -> L.DoWith (translate_blk body, lbl)
       | Goto lbl -> L.Goto lbl
       | Decl (x, t, body) -> 
           push x;

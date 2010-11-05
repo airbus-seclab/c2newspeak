@@ -117,9 +117,7 @@ let translate npk =
 	  translate_blk blk1;
 	  translate_blk blk2
       | InfLoop body -> translate_blk body
-      | DoWith (body, _, action) -> 
-	  translate_blk body;
-	  translate_blk action
+      | DoWith (body, _) -> translate_blk body
       | Goto _ | Guard _ | UserSpec _ -> ()
       | Call (FunId f) when not (Hashtbl.mem npk.fundecs f) -> 
 	  prerr_endline ("unknown function "^f^". Assuming empty body.")

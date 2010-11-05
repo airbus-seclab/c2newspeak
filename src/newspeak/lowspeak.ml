@@ -71,7 +71,7 @@ and stmtkind =
   | Decl of (string * N.typ * blk)
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * N.lbl * blk)
+  | DoWith of (blk * N.lbl)
   | Goto of N.lbl
   | Call of funexp
   | UserSpec of assertion
@@ -139,10 +139,9 @@ let bind_var x t body =
       | InfLoop body -> 
           let body = bind_in_blk n body in
             InfLoop body
-      | DoWith (body, lbl, action) -> 
+      | DoWith (body, lbl) -> 
           let body = bind_in_blk n body in
-          let action = bind_in_blk n action in
-            DoWith (body, lbl, action)
+            DoWith (body, lbl)
       | Call (FunDeref (e, t)) ->
           let e = bind_in_exp n e in
             Call (FunDeref (e, t))
@@ -360,16 +359,12 @@ let string_of_blk offset x =
             dump_line "}"
           end
             
-      | DoWith (body, lbl, action) ->
+      | DoWith (body, lbl) ->
           dump_line_at loc "do {";
           incr_margin ();
           dump_blk body;
           decr_margin ();
-          dump_line ("} with lbl"^(string_of_int lbl)^": {");
-          incr_margin ();
-          dump_blk action;
-          decr_margin ();
-          dump_line "}"
+          dump_line ("} with lbl"^(string_of_int lbl)^":")
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
           
@@ -584,9 +579,7 @@ and visit_stmt visitor (x, loc) =
             visitor#set_loc loc;
             visit_blk visitor body2
         | InfLoop x -> visit_blk visitor x
-        | DoWith (body, _, action) -> 
-            visit_blk visitor body;
-            visit_blk visitor action
+        | DoWith (body, _) -> visit_blk visitor body
         | Goto _ -> ()
         | UserSpec assertion -> visit_assertion visitor assertion
     end else ()
@@ -830,10 +823,10 @@ let simplify_gotos blk =
     
   and simplify_stmt (x, loc) =
     match x with
-        DoWith (body, lbl, action) -> 
+        DoWith (body, lbl) -> 
           let lbl' = new_lbl () in
             push lbl lbl';
-            simplify_dowith_goto loc (body, lbl', action)
+            simplify_dowith_goto loc (body, lbl')
 
       | _ -> (simplify_stmtkind x, loc)::[]
 
@@ -862,11 +855,11 @@ let simplify_gotos blk =
       try remove blk
       with Not_found -> blk
 
-  and simplify_dowith loc (body, lbl, action) =
+  and simplify_dowith loc (body, lbl) =
     match body with
-        (DoWith (body, lbl', []), _)::[] ->
+        (DoWith (body, lbl'), _)::[] ->
           push lbl' lbl;
-          let x = simplify_dowith_goto loc (body, lbl, []) in
+          let x = simplify_dowith_goto loc (body, lbl) in
             pop ();
             x
       | hd::tl -> 
@@ -875,16 +868,14 @@ let simplify_gotos blk =
               let tl = simplify_blk tl in
               let body = hd@tl in
                 pop ();
-                let action = simplify_blk action in
-                  (DoWith (body, lbl, action), loc)::[] 
-            end else hd@(simplify_dowith loc (tl, lbl, action))
+                (DoWith (body, lbl), loc)::[] 
+            end else hd@(simplify_dowith loc (tl, lbl))
       | [] -> 
           pop ();
           []
             
-  and simplify_dowith_goto loc (body, lbl, action) =
-    let body = remove_final_goto lbl body in
-      simplify_dowith loc (body, lbl, action)
+  and simplify_dowith_goto loc (body, lbl) =
+    simplify_dowith loc (remove_final_goto lbl body, lbl)
   in
     
   let blk = simplify_blk blk in
@@ -910,10 +901,7 @@ let rec simplify_stmt actions (x, loc) =
       | InfLoop body ->
           let body = simplify_blk actions body in
             InfLoop body
-      | DoWith (body, l, action) -> 
-          let body = simplify_blk actions body in
-          let action = simplify_blk actions action in
-            DoWith (body, l, action)
+      | DoWith (body, l) -> DoWith (simplify_blk actions body, l)
       | _ -> x
   in
   let stmt = ref x in
@@ -1131,10 +1119,7 @@ and build_stmtkind builder x =
           let body = build_blk builder body in
             InfLoop body
               
-      | DoWith (body, lbl, action) ->
-          let body = build_blk builder body in
-          let action = build_blk builder action in
-            DoWith (body, lbl, action)
+      | DoWith (body, lbl) -> DoWith (build_blk builder body, lbl)
               
       | Goto lbl -> Goto lbl
           
