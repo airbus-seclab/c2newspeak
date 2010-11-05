@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
-t392.adb
-void t392(void) {
-  (t392.adb:2#6)^float32 x;
-  (t392.adb:4#6)^x =(float32) (x_float32 *. x_float32);
+t391.adb
+void t391(void) {
+  (t391.adb:2#6)^int32 x;
+  (t391.adb:4#6)^x =(int32) belongs[-2147483648,2147483647] (x_int32 * x_int32);
 }
 
 

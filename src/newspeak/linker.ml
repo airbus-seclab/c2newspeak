@@ -181,7 +181,7 @@ let rec generate_stmt (sk, loc) =
             | Some r -> Some (generate_lv r)
             | None   -> None
           in
-          N.Call (args, ft, fn, rets)
+            N.Call (args, ft, fn, rets)
       | Goto lbl -> N.Goto lbl
       | DoWith (body, lbl, action) ->
           let body = List.map generate_stmt body in
@@ -343,6 +343,12 @@ let link npkos =
         print_endline "---------------";
         Newspeak.dump prog_simpl;
         print_newline ()
+      end;
+      if !Npkcontext.verb_lowspeak then begin
+	print_endline "Lowspeak output";
+	print_endline "---------------";
+	Lowspeak.dump (Npk2lpk.translate prog_simpl);
+	print_newline ()
       end
 
 

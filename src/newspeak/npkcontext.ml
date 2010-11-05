@@ -80,6 +80,7 @@ let verb_ast = ref false
 let verb_cir = ref false
 let verb_npko = ref false
 let verb_newspeak = ref false
+let verb_lowspeak = ref false
 let accept_transparent_union = ref true
 
 let verbose boolean () =
@@ -277,6 +278,9 @@ let argslist = [
 
   ("--print-newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");
+  
+  ("--print-lowspeak", Arg.Set verb_lowspeak,
+   "verbose option: displays Lowspeak output");
 
   ("--xml", Arg.Set_string xml_output,
    "gives the name of XML output file\n");
