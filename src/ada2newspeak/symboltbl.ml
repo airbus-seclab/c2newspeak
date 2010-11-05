@@ -414,22 +414,29 @@ let find_rec s f =
  *
  * Note that in the particular case where C = A (cycle), the recursive
  * call is (A -> A) and the circular dependency will be detected.
- *)
+ * 
+ * Issue of xxx renaming PACKy.xxx
+ *  (same string but different file) only allowed once
+*)
 let add_renaming_decl s new_name old_name =
   if ((None,new_name) = old_name) then
     Npkcontext.report_error "add_renaming_decl"
                   ( "Circular declaration detected for '" ^ new_name ^ "'.")
   else
-    Npkcontext.print_debug ( "renaming_declaration : "
-                           ^ new_name
-                           ^ " --> "
-                           ^ (match (fst old_name) with
-                             | None   -> ""
-                             | Some p -> p ^ "."
-                             )
-                           ^ (snd old_name)
-                           );
-    s.s_renaming <- (new_name,old_name)::s.s_renaming
+    if (List.mem new_name (List.map fst s.s_renaming)) then
+      Npkcontext.report_error "add_renaming_decl"
+        ( "Already renamed '"^ new_name ^ "'.")
+    else
+      Npkcontext.print_debug ( "renaming_declaration : "
+                               ^ new_name
+                               ^ " --> "
+                               ^ (match (fst old_name) with
+				    | None   -> ""
+				    | Some p -> p ^ "."
+				 )
+                               ^ (snd old_name)
+                             );
+     s.s_renaming <- (new_name,old_name)::s.s_renaming
 
 
 let enter_context ?name ?desc (s:t) =
@@ -541,12 +548,27 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
 		WG*)
 
 let rec find_variable s ?silent ?expected_type name =
+  let var_name = snd name in 
   try
-    find_variable s ?silent ?expected_type
-                  (List.assoc (snd name) s.s_renaming)
+    let nam_assoc = List.assoc var_name s.s_renaming in
+      (*Particular case: renaming with the same name: 
+	only allowed one-level deep*)
+      if (compare  var_name (snd nam_assoc) = 0) then
+	(fun (x,(n,y,_,z)) -> (x,(n,y,z)))
+	  (find_variable_value ?silent s ?expected_type nam_assoc) 
+      else
+	find_variable s ?silent ?expected_type nam_assoc
   with Not_found ->
-  (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
-  (find_variable_value ?silent s ?expected_type name)
+    (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
+      (find_variable_value ?silent s ?expected_type name) 
+
+(* try
+    find_variable s ?silent ?expected_type
+   (List.assoc (snd name) s.s_renaming)
+   with Not_found ->
+   (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
+   (find_variable_value ?silent s ?expected_type name) 
+*)
 
 let find_type s (package,n) =
   try

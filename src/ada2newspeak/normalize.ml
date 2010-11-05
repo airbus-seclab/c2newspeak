@@ -1261,18 +1261,8 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		(* id[aggr_k] <- aggr_v *)
 		let key   = normalize_exp aggr_k in			
 		  match aggr_v with
-		      (*OK pour un record a un composant do for more ....*)
 			 Aggregate (NamedAggr (ll)) when (are_all_flds ll) ->
-			   (* avant avec ll = [] ci dessus
-			      let value = normalize_exp va in	
-			      let array_lv = Ast.ArrayAccess (nlv, [key]) in 
-			      let (off, tf) = T.record_field tc f in		
-			      Ast.Assign (Ast.RecordAccess
-			      (array_lv, off, tf), value), loc
-			   *)
-			   
 			   let array_lv = Ast.ArrayAccess (nlv, [key]) in 
-
 			   let assign_filed  el  = 
 			     let (fld, value) = match el with 
 				 (AggrField f, v) -> (f,v) 

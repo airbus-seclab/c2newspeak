@@ -1,4 +1,6 @@
 with t395;
+--with t396; doit atre rajoute pour compiler
+--with t396;
 
 package body t394 is
    procedure pro is
