@@ -884,7 +884,7 @@ let translate fname (globals, fundecls, spec) =
       match tl with
 	  [] -> x
 	| (lbl, loc, blk)::tl -> 
-	    let blk = (C.Block (x, Some (lbl, [])), loc)::blk in
+	    let blk = (C.Block (x, Some lbl), loc)::blk in
 	      stitch (blk, tl)
     in
     let (blk, e) = translate x in
@@ -938,6 +938,7 @@ let translate fname (globals, fundecls, spec) =
 	  let blk2 = translate_blk blk2 in
 	    translate_if loc (e, blk1, blk2)
 
+(* TODO: why is it necessary to have a block construction with None? *)
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
       | DoWhile (body, e) when !Npkcontext.remove_do_loops ->
@@ -949,17 +950,17 @@ let translate fname (globals, fundecls, spec) =
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
-	  let body = (C.Block (body@guard, Some (cnt_lbl, [])), loc)::[] in
-	    (C.Block ((C.Loop body, loc)::[], Some (brk_lbl, [])), loc)::[]
+	  let body = (C.Block (body@guard, Some cnt_lbl), loc)::[] in
+	    (C.Block ((C.Loop body, loc)::[], Some brk_lbl), loc)::[]
 
       | For (init, e, body, suffix) ->
-	  let init = (C.Block (translate_blk init, Some (cnt_lbl, [])), loc) in
+	  let init = (C.Block (translate_blk init, Some cnt_lbl), loc) in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
 	  let body = translate_blk body in
-	  let body = (C.Block (guard@body, Some (cnt_lbl, [])), loc) in
+	  let body = (C.Block (guard@body, Some cnt_lbl), loc) in
 	  let suffix = translate_blk suffix in
 	  let loop = (C.Loop (body::suffix), loc) in
-	    (C.Block (init::loop::[], Some (brk_lbl, [])), loc)::[]
+	    (C.Block (init::loop::[], Some brk_lbl), loc)::[]
 
       | CSwitch (e, choices, default) -> 
 	  let e = translate_exp false e in
@@ -968,8 +969,8 @@ let translate fname (globals, fundecls, spec) =
 	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
 	  let body = translate_cases (last_lbl, switch) choices in
 	  let default = translate_blk default in
-	  let body = (C.Block (body, Some (default_lbl, [])), loc)::default in
-	    (C.Block (body, Some (brk_lbl, [])), loc)::[]
+	  let body = (C.Block (body, Some default_lbl), loc)::default in
+	    (C.Block (body, Some brk_lbl), loc)::[]
 
       | UserSpec x -> (translate_assertion loc x)::[]
 
@@ -1071,7 +1072,7 @@ let translate fname (globals, fundecls, spec) =
 	(_, [], _)::tl -> translate_cases (lbl, body) tl
       | (_, case, loc)::tl ->
 	  let case = translate_blk case in
-	  let body = (C.Block (body, Some (lbl, [])), loc)::case in
+	  let body = (C.Block (body, Some lbl), loc)::case in
 	    translate_cases (lbl-1, body) tl
       | [] -> body
 
@@ -1237,7 +1238,7 @@ let translate fname (globals, fundecls, spec) =
     in
     let formalids = add_formals ft in
     let body = translate_blk body in
-    let body = (C.Block (body, Some (ret_lbl, [])), loc)::[] in
+    let body = (C.Block (body, Some ret_lbl), loc)::[] in
       add_fundef f formalids body (translate_ftyp ft);
       current_fun := "";
       Hashtbl.clear lbl_tbl;

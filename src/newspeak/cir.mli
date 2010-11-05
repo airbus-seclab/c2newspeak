@@ -63,7 +63,7 @@ and blk = stmt list
 and stmt = (stmtkind * Newspeak.location)
 
 and stmtkind =
-    | Block of (blk * (Newspeak.lbl * blk) option)
+    | Block of (blk * Newspeak.lbl option)
     | Goto of Newspeak.lbl
     | Decl of (typ * string)
     | Set of (lv * typ * exp)
