@@ -42,17 +42,19 @@ let spec_tbl = Hashtbl.create 5
 
 (* Name-related functions *)
 
-let name_of_sp_spec = function
-  | Subprogram (x,_,_) -> x
+let name_of_sp_spec spec =
+  match spec with
+    | Subprogram (x,_,_) -> x
 
 let name_of_synt_spec = function
   | SubprogramSpec sps -> name_of_sp_spec sps
   | PackageSpec (x,_) -> x
 
-let compilation_unit_name = function
-  | (_, Spec s,_) -> name_of_synt_spec s
-  | (_, Body (SubprogramBody (s,_,_)),_) -> name_of_sp_spec s
-  | (_, Body (PackageBody (n,_,_)),_)    -> n
+let compilation_unit_name (_, library_item, _) =
+  match library_item with
+    | Spec s -> name_of_synt_spec s
+    | Body (SubprogramBody (s, _, _)) -> name_of_sp_spec s
+    | Body (PackageBody (n, _, _)) -> n
 
 let mangle_sname = function
   | []       -> Npkcontext.report_error "mangle_sname" "unreachable"
@@ -372,23 +374,22 @@ and make_arg_list args spec =
    *)
   let rec extract_positional_parameters ar =
     match ar with
-      |             []   -> []
+      | []   -> []
       | (Some  _, _)::_  ->
-        (* don't stop at first named argument : populate argtbl *)
-            List.iter
-                (function
-                   | None   , _ -> Npkcontext.report_error "normalize.fcall"
-                             "Named parameters shall follow positional ones"
-                   | Some id, e ->
-                        if (Hashtbl.mem argtbl id) then
-                            Npkcontext.report_error "normalize.fcall"
-                            ("Parameter " ^ id ^ " appears twice")
-                        else
-                            Hashtbl.add argtbl id e;
-                )
-                ar;
+	  let process_argument (x, e) =
+	    match x with
+              | None -> 
+		  Npkcontext.report_error "normalize.fcall"
+                    "Named parameters shall follow positional ones"
+              | Some id when Hashtbl.mem argtbl id ->
+                  Npkcontext.report_error "normalize.fcall"
+                    ("Parameter " ^ id ^ " appears twice")
+	      | Some id -> Hashtbl.add argtbl id e
+	  in
+            (* don't stop at first named argument : populate argtbl *)
+            List.iter process_argument ar;
             []
-      | (None , e)::tl -> e::(extract_positional_parameters tl)
+      | (None, e)::tl -> e::(extract_positional_parameters tl)
   in
 
   let make_arg arg exp =
@@ -1462,13 +1463,13 @@ and normalize_body body  = match body with
         check_package_body_against_spec ~body:ndp ~spec:norm_spec;
         Sym.reset_current gtbl;
         Sym.exit_context gtbl;
-        Ast.PackageBody(name, Some norm_spec, ndp)
+        Ast.PackageBody (name, Some norm_spec, ndp)
 
 and normalize_lib_item lib_item loc =
   Npkcontext.set_loc loc;
   match lib_item with
-    | Spec(spec) -> Ast.Spec(normalize_spec spec)
-    | Body(body) -> Ast.Body(normalize_body body)
+    | Spec spec -> Ast.Spec (normalize_spec spec)
+    | Body body -> Ast.Body (normalize_body body)
 
 and add_extern_spec spec =
   let add_extern_basic_decl (basic_decl, loc) =
@@ -1531,10 +1532,10 @@ and normalize_context context =
     
 and normalization compil_unit = 
   let cu_name = compilation_unit_name compil_unit in
-  log_progress (Semcheck cu_name);
-  let (context,lib_item,loc) = compil_unit in
-  let norm_context = normalize_context context in
-  let norm_lib_item = normalize_lib_item lib_item loc in 
-  Npkcontext.forget_loc ();
-  log_progress (Done(Semcheck cu_name));
-  (norm_context ,norm_lib_item ,loc)
+    log_progress (Semcheck cu_name);
+    let (context,lib_item,loc) = compil_unit in
+    let norm_context = normalize_context context in
+    let norm_lib_item = normalize_lib_item lib_item loc in 
+      Npkcontext.forget_loc ();
+      log_progress (Done(Semcheck cu_name));
+      (norm_context ,norm_lib_item ,loc)
