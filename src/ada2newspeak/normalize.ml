@@ -5,8 +5,7 @@
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
-normalize_context  License as published by the Free Software Foundation; either  (*Hashtbl.mem s.s_with x*)
-
+  normalize_context  License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
 
   This library is distributed in the hope that it will be useful,
@@ -809,7 +808,7 @@ and normalize_basic_decl item loc =
       let t = merge_types norm_subtyp_ind in
       let status = begin
         match exp with
-        | Aggregate _ ->
+        | Aggregate _ -> 
             List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
 	    Ast.Constant
         | _ ->
@@ -1017,10 +1016,10 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
   match instr with
   | NullInstr    -> []
   | ReturnSimple -> [Ast.ReturnSimple, loc]
-  | Assign(lv, Aggregate (NamedAggr bare_assoc_list)) -> 
+  | Assign(lv, Aggregate (NamedAggr bare_assoc_list)) ->
       let (nlv, tlv) = normalize_lval lv in
       normalize_assign_aggregate nlv tlv bare_assoc_list loc
-  | Assign(lv, Aggregate (PositionalAggr exp_list)) -> 
+  | Assign(lv, Aggregate (PositionalAggr exp_list)) ->
       let (lv', t_lv) = normalize_lval lv in
       let ti = match T.extract_array_types t_lv with
       | (_, [i]) -> i
@@ -1043,7 +1042,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)
   | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
                      "Statement looks like a procedure call but is not one"
-  | Assign(lv, exp) ->
+  | Assign(lv, exp) -> 
       begin
         let (lv', t_lv) = normalize_lval ~force:force_lval lv in
         let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
@@ -1180,7 +1179,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
               let e' = compute_val e in
               ((e', value)::kvl, None)
             end
-        | AggrRange (e1, e2) -> 
+        | AggrRange (e1, e2) ->
             begin
               if others_exp <> None then
                 Npkcontext.report_error "normalize"
@@ -1234,24 +1233,60 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 	    let assoc_list' =
 	      List.map (fun (x,y) -> CInt x,y) assoc_list in
 	      
-	      List.rev_map (fun (aggr_k, aggr_v) ->
+
+	      let rec are_all_flds ll = 
+		match ll with
+		    [] -> true
+		  | hd::tl -> match hd with
+			(AggrField _, _) ->  are_all_flds tl 
+		      | _ -> false
+			  
+	      in
+		
+	      (*List.rev_map (fun (aggr_k, aggr_v) ->*)
+		
+		List.rev (
+		List.flatten (
+		List.map (fun (aggr_k, aggr_v) ->
+	
 		(* id[aggr_k] <- aggr_v *)
 		let key   = normalize_exp aggr_k in			
 		  match aggr_v with
-			 Aggregate (NamedAggr ((AggrField f, va)::[])) ->
-			   let value = normalize_exp va in	
+		      (*OK pour un record a un composant do for more ....*)
+			 Aggregate (NamedAggr (ll)) when (are_all_flds ll) ->
+			   (* avant avec ll = [] ci dessus
+			      let value = normalize_exp va in	
+			      let array_lv = Ast.ArrayAccess (nlv, [key]) in 
+			      let (off, tf) = T.record_field tc f in		
+			      Ast.Assign (Ast.RecordAccess
+			      (array_lv, off, tf), value), loc
+			   *)
+			   
 			   let array_lv = Ast.ArrayAccess (nlv, [key]) in 
-			   let (off, tf) = T.record_field tc f in		
-			     Ast.Assign (Ast.RecordAccess
-					   (array_lv, off, tf), value), loc
-			       
+
+			   let assign_filed  el  = 
+			     let (fld, value) = match el with 
+				 (AggrField f, v) -> (f,v) 
+			       | _ ->  Npkcontext.report_error "normalize_assign_aggregate"
+				   "Unexpected case case"
+			     in
+			     let value = normalize_exp value in	
+			     let (off, tf) = T.record_field tc fld in
+			       Ast.Assign (Ast.RecordAccess
+					     (array_lv, off, tf), value), loc
+			   in
+			     List.map (fun x -> assign_filed x ) ll
+ 			       
 		       | Aggregate (NamedAggr ((AggrExp _, _)::[])) ->
 			   Npkcontext.report_error "normalize_assign_aggregate"
 			     "Array with aggregate expression not done yet"
-			     
-		       | _ ->    let value =  normalize_exp aggr_v in
-			   Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc
-			   ) (other_list @ assoc_list') 
+		       | _ -> 
+			   let value =  normalize_exp aggr_v in
+			   [Ast.Assign (Ast.ArrayAccess (nlv, [key]), value), loc]
+			 
+		) (other_list @ assoc_list') 
+		)
+		)
 		
 	  end
 	(*TO DO: remove 'c' in what follows (cf above)*)
