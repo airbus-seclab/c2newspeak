@@ -21,6 +21,7 @@
   email: etienne.millon AT gmail . com
 
 *)
+open Syntax_ada
 
 module T = Ada_types
 
@@ -199,11 +200,15 @@ module Table = struct
               end
 
   let mkcast desc fn  ?(filter = fun _ -> true) lst  =
-    if (List.length lst > 1) then
+
+    if ((List.length lst > 1) (*WG *) &&
+	  (compare desc "subprogram" <> 0)  
+	  (*WG *)) 
+    then
       begin
-        Npkcontext.print_debug ("Multiple interpretations for " ^ desc ^ " :");
-        List.iter (fun (_,x) -> Npkcontext.print_debug
-                                  ("\t" ^ print_symbol_join x)) lst
+	Npkcontext.print_debug ("Multiple interpretations for " ^ desc ^ " :");
+	List.iter (fun (_,x) -> Npkcontext.print_debug
+		     ("\t" ^ print_symbol_join x)) lst
       end;
     let fn' (wh,x) =
       match fn x with
@@ -247,9 +252,67 @@ module Table = struct
   let tbl_find_type tbl n =
     cast_t (find_symbols tbl n)
 
-  let tbl_find_subprogram tbl n =
-      (fun (wh,(x,y,z)) -> wh,(x,y,z))
-          (cast_s (find_symbols tbl n))
+
+ let tbl_find_subprogram_simple tbl n =
+   (fun (wh,(x,y,z)) -> wh,(x,y,z))
+     (cast_s (find_symbols tbl n))
+
+
+  let tbl_find_subprogram n_args my_find tbl n =
+    let filter_args  norm_args (_, (_, params, _)) = 
+      let lgth1 = List.length norm_args in
+      let lgth2 = List.length params in
+	if ((compare  lgth1 lgth2 <> 0) ||
+	      (List.exists (fun x -> match 
+			      fst x with Some _ -> true
+				|_ -> false) norm_args)
+	   )
+	then 
+	  error ("Symbtbl: looking for a subprogram use of "^
+		   "default param, or named not handled yet...")
+	else (*pas de param 'nommés': on check la compatibilité dans l'ordre*)
+	  begin
+	    if( List.for_all2 (fun x y -> 
+				 let act_typ = snd x in
+				 let for_typ = 
+				   let  n =
+				     match y.param_type with 
+				       | [] -> Npkcontext.report_error 
+					   "symboltbl:find_subprogram" "unreachable"
+				       | x::[]    -> None  , x
+				       | x::y::[] -> Some x, y
+					   
+				       | _ -> Npkcontext.report_error 
+					   "symboltbl:find_subprogram"
+					     "chain of selected names is too deep"
+				   in
+				     try 
+				       begin
+					 try
+					   snd (my_find  n)
+					 with Not_found -> Npkcontext.report_error
+					   ("Cannot find type '") ""
+				       end
+				     with Not_found ->
+				       Npkcontext.report_error "Symbtbl:not found" ""
+				 in
+				   T.is_compatible act_typ for_typ
+			      ) norm_args params
+	      )
+	    then
+	      true 
+	    else 
+	      false
+	  end      
+    in
+    let subs = find_symbols tbl n in
+      if (compare (List.length subs) 1 = 0)
+      then 
+	(fun (wh,(x,y,z)) -> wh,(x,y,z))
+          (cast_s subs)
+      else
+	(fun (wh,(x,y,z)) -> wh,(x,y,z))
+	  (cast_s ~filter:(fun x -> filter_args n_args x) subs)
 
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = match expected_type with
@@ -415,19 +478,20 @@ let find_rec s f =
  * Note that in the particular case where C = A (cycle), the recursive
  * call is (A -> A) and the circular dependency will be detected.
  * 
- * Issue of xxx renaming PACKy.xxx
- *  (same string but different file) only allowed once
 *)
 let add_renaming_decl s new_name old_name =
   if ((None,new_name) = old_name) then
     Npkcontext.report_error "add_renaming_decl"
                   ( "Circular declaration detected for '" ^ new_name ^ "'.")
   else
-    if (List.mem new_name (List.map fst s.s_renaming)) then
+    (*Following else should be removed at some point because multiple renaming is 
+      possible*-)
+      if (List.mem new_name (List.map fst s.s_renaming)) then
       Npkcontext.report_error "add_renaming_decl"
-        ( "Already renamed '"^ new_name ^ "'.")
-    else
-      Npkcontext.print_debug ( "renaming_declaration : "
+      ( "Already renamed '"^ new_name ^ "'.")
+      else
+     *)
+    Npkcontext.print_debug ( "renaming_declaration : "
                                ^ new_name
                                ^ " --> "
                                ^ (match (fst old_name) with
@@ -562,8 +626,8 @@ let rec find_variable s ?silent ?expected_type name =
     (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
       (find_variable_value ?silent s ?expected_type name) 
 
-(* try
-    find_variable s ?silent ?expected_type
+(* WG --try
+   find_variable s ?silent ?expected_type
    (List.assoc (snd name) s.s_renaming)
    with Not_found ->
    (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
@@ -575,12 +639,14 @@ let find_type s (package,n) =
     s_find "type" tbl_find_type s ?package n
   with Not_found -> error ("Cannot find type '" ^ n ^ "'")
 
-let rec find_subprogram s ?(silent = false) (package,n) =
+let rec find_subprogram s ?(silent = false) (package,n) norm_args t_find =
   try
-    find_subprogram s (List.assoc n s.s_renaming)
+    find_subprogram s (List.assoc n s.s_renaming) norm_args t_find 
+      (*WG LAter include spec here*)
   with Not_found ->
   try
-    s_find "subprogram" tbl_find_subprogram s ?package n
+    (*s_find "subprogram" tbl_find_subprogram s ?package n*)
+    s_find "subprogram" (tbl_find_subprogram norm_args t_find) s ?package n
   with Not_found -> if silent then
                       raise Not_found
                     else
@@ -588,7 +654,7 @@ let rec find_subprogram s ?(silent = false) (package,n) =
 
 let is_operator_overloaded s n =
   try begin
-    ignore (s_find "overloaded operator" tbl_find_subprogram s n);
+    ignore (s_find "overloaded operator" tbl_find_subprogram_simple s n);
     true
   end
   with Not_found -> false

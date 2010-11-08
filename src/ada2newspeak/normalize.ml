@@ -555,14 +555,17 @@ and normalize_fcall (n, params) =
   let n = make_name_of_lval n in
   let n = mangle_sname n in
     try
+      let norm_args = List.map normalize_arg params in
+      let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
+
       let (sc,(act_name,spec,top)) = 
-	Sym.find_subprogram ~silent:true gtbl n in
+	Sym.find_subprogram ~silent:true gtbl n norm_typs (fun x -> 
+				Symboltbl.find_type gtbl x) in
       let t = match top with
 	| None -> Npkcontext.report_error "normalize_exp"
             "Expected function, got procedure"
 	| Some top -> top
       in
-      let norm_args = List.map normalize_arg params in
       let effective_args = make_arg_list norm_args spec in
 	Ast.FunctionCall(sc, act_name, effective_args, t),t
     with Not_found ->
@@ -1041,9 +1044,14 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
   | LvalInstr(ParExp(lv, params)) ->
       let n = make_name_of_lval lv in
       let n = mangle_sname n in
-      let (sc,(act_name,spec,_)) = Sym.find_subprogram gtbl n in
+	(*use to be after find_sub*)
       let norm_args = List.map normalize_arg params in
-      let effective_args = make_arg_list norm_args spec in
+      let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
+      let (sc,(act_name,spec,_)) = 
+	(* Sym.find_subprogram gtbl n in*)
+	Sym.find_subprogram gtbl n norm_typs  (fun x -> 
+				Symboltbl.find_type gtbl x) in	  
+	let effective_args = make_arg_list norm_args spec in
       [Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)

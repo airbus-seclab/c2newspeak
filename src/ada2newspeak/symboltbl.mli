@@ -116,6 +116,8 @@ val find_type     :    t
 val find_subprogram : t
                     -> ?silent:bool
                     -> string option * string
+                    -> (string option * Ada_types.t) list
+                    -> ( string option * string -> scope * Ada_types.t)
     -> scope * (string * Syntax_ada.param list * Ada_types.t option)
 
 val is_operator_overloaded : t -> string -> bool
