@@ -18,8 +18,7 @@ void t026(void) {
       (t026.adb:7#10)^y =(int32) belongs[-2147483648,2147483647] (y_int32 + x_int32);
       (t026.adb:8#10)^x =(int32) belongs[-2147483648,2147483647] (x_int32 - 1);
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

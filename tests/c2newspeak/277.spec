@@ -14,8 +14,7 @@ void main(void) {
         (277.c:30#2)^guard(! (x_int32 ==_int32 0));
         (277.c:30#2)^goto lbl1;
       }
-    } with lbl2: {
-    }
+    } with lbl2:
     (277.c:32#4)^tmp_cir!0 <- g();
     (277.c:32#4)^choose {
      -->
@@ -23,8 +22,7 @@ void main(void) {
      -->
       (277.c:32#4)^guard((tmp_cir!0_int32 ==_int32 0));
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

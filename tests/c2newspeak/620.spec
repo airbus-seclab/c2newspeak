@@ -57,11 +57,9 @@ void main(void) {
                           }
                         }
                       }
-                    } with lbl8: {
-                    }
+                    } with lbl8:
                     (620.c:30#7)^goto lbl5;
-                  } with lbl7: {
-                  }
+                  } with lbl7:
                   (620.c:32#2)^goto!lbl =(uint32) 1;
                   (620.c:32#2)^choose {
                    -->
@@ -70,8 +68,7 @@ void main(void) {
                    -->
                     (620.c:32#2)^guard(! goto!lbl_int32);
                   }
-                } with lbl6: {
-                }
+                } with lbl6:
                 (620.c:34#2)^goto!lbl =(uint32) 1;
                 (620.c:34#2)^choose {
                  -->
@@ -80,8 +77,7 @@ void main(void) {
                  -->
                   (620.c:34#2)^guard(! goto!lbl_int32);
                 }
-              } with lbl5: {
-              }
+              } with lbl5:
               (620.c:28#2)^choose {
                -->
                 (620.c:28#2)^guard(goto!lbl_int32);
@@ -90,8 +86,7 @@ void main(void) {
                 (620.c:28#2)^goto lbl3;
               }
             }
-          } with lbl3: {
-          }
+          } with lbl3:
         }
         (620.c:28#2)^choose {
          -->
@@ -101,8 +96,7 @@ void main(void) {
           (620.c:28#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

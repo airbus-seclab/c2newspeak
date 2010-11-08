@@ -28,8 +28,7 @@ void main(void) {
             (594.c:29#2)^goto!lbl =(uint32) 0;
             (594.c:29#7)^i =(int32) 0;
           }
-        } with lbl3: {
-        }
+        } with lbl3:
         (594.c:31#2)^choose {
          -->
           (594.c:31#2)^guard(! (i_int32 ==_int32 0));
@@ -45,8 +44,7 @@ void main(void) {
           (594.c:31#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

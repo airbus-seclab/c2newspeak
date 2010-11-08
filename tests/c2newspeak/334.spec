@@ -28,8 +28,7 @@ void main(void) {
             }
             (334.c:31#4)^x =(int32) 0;
           }
-        } with lbl4: {
-        }
+        } with lbl4:
         (334.c:28#1)^choose {
          -->
           (334.c:28#1)^guard(goto!lbl_int32);
@@ -38,8 +37,7 @@ void main(void) {
           (334.c:28#1)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

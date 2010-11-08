@@ -27,8 +27,7 @@ void main(void) {
                 (621.c:27#13)^guard(! break.621.c:29#13.0_int32);
               }
             }
-          } with lbl4: {
-          }
+          } with lbl4:
           (621.c:27#13)^choose {
            -->
             (621.c:27#13)^guard(break.621.c:29#13.1_int32);
@@ -38,8 +37,7 @@ void main(void) {
             (621.c:27#13)^guard(! break.621.c:29#13.1_int32);
           }
         }
-      } with lbl1: {
-      }
+      } with lbl1:
     }
   }
 }

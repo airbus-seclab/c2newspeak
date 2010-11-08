@@ -232,12 +232,12 @@ let process glb_tbl prog =
 	  State.guard e env.height s
 	    (* TODO: change labels?? with the number of DoWith to traverse, 
 	       but harder to manipulate? *)
-      | DoWith (body, lbl, action) -> 
+      | DoWith (body, lbl) -> 
 	  push env lbl;
-	  let s1 = process_blk env body s in
-	  let s2 = pop env in
-	  let s2 = process_blk env action s2 in
-	    State.join s1 s2
+	  let s = process_blk env body s in
+	    (* TODO: the code for pop could be simplified *)
+	  let _ = pop env in
+	    s
       | Goto lbl -> 
 	  goto env lbl s;
 	  State.emptyset

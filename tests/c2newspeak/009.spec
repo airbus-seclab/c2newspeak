@@ -13,8 +13,7 @@ int32 main(void) {
       (009.c:33#2)^guard(! (10 > x_int32));
     }
     (009.c:36#2)^!return =(int32) 0;
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 

@@ -49,8 +49,7 @@ void main(void) {
               (606.c:32#4)^goto!lbl =(uint32) 0;
               (606.c:32#9)^i =(int32) 0;
             }
-          } with lbl5: {
-          }
+          } with lbl5:
         }
         (606.c:28#2)^goto!lbl =(uint32) 1;
         (606.c:28#2)^choose {
@@ -61,8 +60,7 @@ void main(void) {
           (606.c:28#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

@@ -37,7 +37,7 @@ c2newspeak.FILES=\
         pp_syntax pp_parser pp_lexer \
         csyntax typedC synthack gnuc parser lexer \
         goto_elimination \
-        csyntax2TypedC firstpass compiler \
+        csyntax2TypedC typedC2Cir compiler \
 	params c2newspeak
 
 FILES=version utils/listUtils \

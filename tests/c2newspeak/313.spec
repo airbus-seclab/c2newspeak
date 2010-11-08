@@ -16,8 +16,7 @@ void main(void) {
       }
       (313.c:29#4)^i =(int32) coerce[-2147483648,2147483647] (i_int32 + 1);
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

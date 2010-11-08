@@ -19,8 +19,7 @@ void main(void) {
          -->
           (617.c:27#13)^guard(! continue.617.c:29#13.0_int32);
         }
-      } with lbl3: {
-      }
+      } with lbl3:
     }
   }
 }

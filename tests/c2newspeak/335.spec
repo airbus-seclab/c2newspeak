@@ -23,8 +23,7 @@ void main(void) {
       }
       (335.c:38#16)^i =(int32) coerce[-2147483648,2147483647] (i_int32 + 1);
     }
-  } with lbl1: {
-  }
+  } with lbl1:
   (335.c:40#6)^i =(int32) 0;
   (335.c:40#2)^do {
     (335.c:40#2)^while (1) {
@@ -36,8 +35,7 @@ void main(void) {
         (335.c:40#2)^goto lbl4;
       }
     }
-  } with lbl4: {
-  }
+  } with lbl4:
   (335.c:42#2)^do {
     (335.c:42#2)^while (1) {
       (335.c:42#2)^choose {
@@ -48,8 +46,7 @@ void main(void) {
         (335.c:42#2)^goto lbl7;
       }
     }
-  } with lbl7: {
-  }
+  } with lbl7:
   (335.c:44#2)^while (1) {
   }
 }

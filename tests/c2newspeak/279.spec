@@ -16,8 +16,7 @@ int32 g(void) {
           (279.c:30#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
   (279.c:33#2)^!return =(int32) x_int32;
 }

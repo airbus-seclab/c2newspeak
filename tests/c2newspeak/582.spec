@@ -21,8 +21,7 @@ void main(void) {
               (582.c:28#2)^goto lbl3;
             }
           }
-        } with lbl3: {
-        }
+        } with lbl3:
         (582.c:28#2)^goto!lbl =(uint32) 1;
         (582.c:28#2)^choose {
          -->
@@ -32,8 +31,7 @@ void main(void) {
           (582.c:28#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

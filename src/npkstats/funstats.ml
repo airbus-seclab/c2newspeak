@@ -193,9 +193,7 @@ let collect prog =
           let env = process_blk env br1 in
             process_blk env br2
       | Guard e -> write_env (process_exp env e) env
-      | DoWith (body, _, action) -> 
-          let env = process_blk env body in
-            process_blk env action
+      | DoWith (body, _) -> process_blk env body
       | Call FunId f -> begin
           match process_fun f with
               Empty | Pure -> env

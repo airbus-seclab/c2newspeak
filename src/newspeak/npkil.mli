@@ -80,7 +80,7 @@ and stmtkind =
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * Newspeak.lbl * blk)
+  | DoWith of (blk * Newspeak.lbl)
   | Goto of Newspeak.lbl
       (* (in, type, function, out) *)
   | Call of (arg list * ftyp * fn * lval option)

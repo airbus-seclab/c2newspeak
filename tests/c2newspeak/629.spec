@@ -68,11 +68,9 @@ void main(void) {
                       (629.c:36#6)^guard(! goto!lbl1_int32);
                       (629.c:36#6)^goto lbl7;
                     }
-                  } with lbl8: {
-                  }
+                  } with lbl8:
                 }
-              } with lbl7: {
-              }
+              } with lbl7:
               (629.c:29#4)^do {
                 (629.c:30#6)^choose {
                  -->
@@ -82,8 +80,7 @@ void main(void) {
                  -->
                   (629.c:30#6)^guard(! continue.629.c:38#3.0_int32);
                 }
-              } with lbl6: {
-              }
+              } with lbl6:
             }
             (629.c:46#4)^goto!lbl2 =(uint32) 1;
             (629.c:46#4)^choose {
@@ -94,8 +91,7 @@ void main(void) {
               (629.c:46#4)^goto lbl2;
             }
           }
-        } with lbl2: {
-        }
+        } with lbl2:
       }
     }
   }

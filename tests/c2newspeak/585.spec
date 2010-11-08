@@ -33,8 +33,7 @@ void main(void) {
           (585.c:28#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

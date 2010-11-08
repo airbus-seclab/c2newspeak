@@ -15,11 +15,9 @@ void main(void) {
         }
         (060.c:32#4)^goto lbl0;
       }
-    } with lbl1: {
-    }
+    } with lbl1:
     (060.c:34#2)^x =(int32) 2;
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 

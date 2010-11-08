@@ -54,7 +54,7 @@ and stmtkind =
   | Decl of (string * Newspeak.typ * blk)
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * Newspeak.lbl * blk)
+  | DoWith of (blk * Newspeak.lbl)
   | Goto of Newspeak.lbl
   | Call of funexp
   | UserSpec of assertion

@@ -160,7 +160,7 @@ and process_stmtkind x =
 	let br2 = process_blk br2 in
 	  S.If (e, br1, br2)
     | Call f -> S.Call (process_funexp f)
-    | DoWith ((InfLoop ((Select loop_guard, _)::body), _)::[], lbl, []) -> 
+    | DoWith ((InfLoop ((Select loop_guard, _)::body), _)::[], lbl) -> 
 	let e = process_loop_guard lbl loop_guard in
 	let body = process_blk body in
 	  S.While (e, body)

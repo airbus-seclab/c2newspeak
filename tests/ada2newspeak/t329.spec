@@ -16,8 +16,7 @@ void t329(void) {
       }
       (t329.adb:11#7)^i =(int32) belongs[-2147483648,2147483647] (i_int32 + 1);
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

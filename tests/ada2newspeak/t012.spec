@@ -35,8 +35,7 @@ void t012(void) {
      -->
       (t012.adb:5#5)^guard(! (x_int32 > 2));
     }
-  } with lbl0: {
-  }
+  } with lbl0:
 }
 
 

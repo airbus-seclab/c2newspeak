@@ -13,11 +13,9 @@ void main(void) {
         (019.c:32#2)^guard(! (x_int32 ==_int32 2));
         (019.c:32#2)^goto lbl1;
       }
-    } with lbl2: {
-    }
+    } with lbl2:
     (019.c:34#4)^x =(int32) 1;
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

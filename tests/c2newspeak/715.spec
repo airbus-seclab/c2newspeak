@@ -12,8 +12,7 @@ void main(void) {
       (715.c:30#2)^guard(! (y_uint32 ==_int32 1));
       (715.c:30#2)^goto lbl1;
     }
-  } with lbl1: {
-  }
+  } with lbl1:
 }
 
 

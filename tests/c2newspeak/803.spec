@@ -27,8 +27,7 @@ void main(void) {
           (803.c:2#1)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
   }
 }
 

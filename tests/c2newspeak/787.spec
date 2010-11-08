@@ -24,8 +24,7 @@ void main(void) {
           (787.c:5#2)^goto lbl1;
         }
       }
-    } with lbl1: {
-    }
+    } with lbl1:
     (787.c:8#6)^q =(int32) 0;
   }
 }

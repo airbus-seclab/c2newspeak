@@ -31,11 +31,9 @@ void main(void) {
               (618.c:31#6)^guard(! goto!lbl_int32);
               (618.c:31#6)^goto lbl4;
             }
-          } with lbl5: {
-          }
+          } with lbl5:
         }
-      } with lbl4: {
-      }
+      } with lbl4:
       (618.c:27#4)^do {
         (618.c:28#6)^choose {
          -->
@@ -45,8 +43,7 @@ void main(void) {
          -->
           (618.c:28#6)^guard(! continue.618.c:31#13.0_int32);
         }
-      } with lbl3: {
-      }
+      } with lbl3:
     }
   }
 }

@@ -142,9 +142,8 @@ let process silent prog =
       | Guard e -> process_exp e
       | Decl (_, _, body) -> process_blk body
       | Select (br1, br2) -> Set.union (process_blk br1) (process_blk br2)
-      | InfLoop body -> process_blk body
-      | DoWith (body, _, action) -> 
-	  Set.union (process_blk body) (process_blk action)
+      | InfLoop body
+      | DoWith (body, _) -> process_blk body
       | Goto _ -> Set.empty
       | Call FunId f -> get_fun f
       | Call FunDeref _ -> 
