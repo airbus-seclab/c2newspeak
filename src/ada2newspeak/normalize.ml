@@ -76,7 +76,7 @@ let subtyp_to_adatyp gtbl n =
   let n' = mangle_sname n in
   try
     snd(Symboltbl.find_type gtbl n')
-  with Not_found ->
+  with Not_found -> 
     begin
       Npkcontext.report_warning "ST2AT"
         ( "Cannot find type '"
@@ -406,7 +406,7 @@ and make_arg_list args spec =
                   ( "Actual parameter with \"out\" or \"in out\" mode "
                   ^ "must be a left-value")
     in
-    (subtyp_to_adatyp arg.param_type, mode)
+      (subtyp_to_adatyp arg.param_type, mode)
   in
 
   (**
@@ -423,7 +423,7 @@ and make_arg_list args spec =
       :Ast.argument list =
           match pos_list, spec with
             |  [],_  -> (* end of positional parameters *)
-                        List.map (function x ->
+	         List.map (function x ->
                           let value =
                             ( try Hashtbl.find argtbl x.formal_name
                               with Not_found ->
@@ -446,7 +446,7 @@ and make_arg_list args spec =
       let pos      = extract_positional_parameters args in
       (* Step 2... *)
       let eff_args = merge_with_specification pos spec in
-      eff_args
+       eff_args
 
 (**
  * Normalize an actual argument.
@@ -557,7 +557,6 @@ and normalize_fcall (n, params) =
     try
       let norm_args = List.map normalize_arg params in
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
-
       let (sc,(act_name,spec,top)) = 
 	Sym.find_subprogram ~silent:true gtbl n norm_typs (fun x -> 
 				Symboltbl.find_type gtbl x) in
@@ -762,6 +761,37 @@ and normalize_ident_cur ident =
   | Some x -> [x;ident]
   | None   -> [ident]
 
+and normalize_params_cur param =
+  let is_basic_typ strs =
+    let is_basic str =
+      match str with
+	  "integer" | "float" | "boolean" -> true
+	| _ -> false
+    in
+      match strs with
+	| typ::[] -> is_basic typ  
+	| _ -> false
+  in
+    (*Potentially add pack*)
+  let add_pack pack param =
+     let p_typ = param.param_type in
+       if (is_basic_typ p_typ) then
+	 p_typ
+       else
+	 pack::p_typ	  
+  in
+
+    match (Sym.current gtbl) with
+      | Some x -> { 
+	  formal_name  = param.formal_name
+	  ; mode  = param.mode
+	    (*Add package name only if not a Standard type*)
+	  ; param_type = add_pack x param 
+	  ; default_value =  param.default_value
+	}
+      | None -> param
+	  
+	  
 and normalize_sub_program_spec subprog_spec ~addparam =
     let normalize_params param_list func =
       if addparam then
@@ -789,12 +819,14 @@ and normalize_sub_program_spec subprog_spec ~addparam =
         param_list
     in
     match subprog_spec with
-        | Subprogram(name,param_list,return_type) ->
+        | Subprogram(name,param_list,return_type) -> 
             let norm_name = normalize_ident_cur name in
+	    let norm_param_list = List.map normalize_params_cur param_list in
+	    (* Param type must be preceded by the package name see test t405*)
             let t = Ada_utils.may subtyp_to_adatyp return_type in
-            Sym.add_subprogram gtbl name param_list t;
+            Sym.add_subprogram gtbl name norm_param_list t;
             Ast.Subprogram ( norm_name
-                           , normalize_params param_list (return_type <> None)
+                           , normalize_params norm_param_list (return_type <> None)
                            , t
                            )
 
@@ -1050,8 +1082,10 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let (sc,(act_name,spec,_)) = 
 	(* Sym.find_subprogram gtbl n in*)
 	Sym.find_subprogram gtbl n norm_typs  (fun x -> 
-				Symboltbl.find_type gtbl x) in	  
+				Symboltbl.find_type gtbl x) in	 
+ 
 	let effective_args = make_arg_list norm_args spec in
+
       [Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)

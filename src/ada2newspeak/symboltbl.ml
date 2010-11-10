@@ -257,9 +257,8 @@ module Table = struct
    (fun (wh,(x,y,z)) -> wh,(x,y,z))
      (cast_s (find_symbols tbl n))
 
-
   let tbl_find_subprogram n_args my_find tbl n =
-    let filter_args  norm_args (_, (_, params, _)) = 
+    let filter_args norm_args (_, (_, params, _)) = 
       let lgth1 = List.length norm_args in
       let lgth2 = List.length params in
 	if ((compare  lgth1 lgth2 <> 0) ||
@@ -281,7 +280,6 @@ module Table = struct
 					   "symboltbl:find_subprogram" "unreachable"
 				       | x::[]    -> None  , x
 				       | x::y::[] -> Some x, y
-					   
 				       | _ -> Npkcontext.report_error 
 					   "symboltbl:find_subprogram"
 					     "chain of selected names is too deep"
@@ -484,25 +482,28 @@ let add_renaming_decl s new_name old_name =
     Npkcontext.report_error "add_renaming_decl"
                   ( "Circular declaration detected for '" ^ new_name ^ "'.")
   else
-    (*Following else should be removed at some point because multiple renaming is 
-      possible*-)
-      if (List.mem new_name (List.map fst s.s_renaming)) then
-      Npkcontext.report_error "add_renaming_decl"
-      ( "Already renamed '"^ new_name ^ "'.")
-      else
-     *)
-    Npkcontext.print_debug ( "renaming_declaration : "
-                               ^ new_name
-                               ^ " --> "
-                               ^ (match (fst old_name) with
-				    | None   -> ""
-				    | Some p -> p ^ "."
-				 )
-                               ^ (snd old_name)
-                             );
-     s.s_renaming <- (new_name,old_name)::s.s_renaming
-
-
+    (*Multiple renaming is possible: on ne le rajoute pas car s_renaming 
+    n'a pas l'info sur les types params et retour
+    on ne le rajoute pas pour ne pas boucler infiniment la recherche ulterieur*)
+    (*WG *)
+    if (List.mem new_name (List.map fst s.s_renaming)) then
+      Npkcontext.report_warning "add_renaming_decl"
+	( "Already renamed '"^ new_name ^ "'.")
+    else
+      (* dans le cas contraire (et seulement) on le rajoute*)
+      begin
+	Npkcontext.print_debug ( "renaming_declaration : "
+				 ^ new_name
+				 ^ " --> "
+				 ^ (match (fst old_name) with
+				      | None   -> ""
+				      | Some p -> p ^ "."
+				   )
+				 ^ (snd old_name)
+                               );
+	s.s_renaming <- (new_name,old_name)::s.s_renaming
+      end
+	
 let enter_context ?name ?desc (s:t) =
         Npkcontext.print_debug ( ">>>>>>> enter_context ("
                                ^ (match name with
@@ -639,19 +640,46 @@ let find_type s (package,n) =
     s_find "type" tbl_find_type s ?package n
   with Not_found -> error ("Cannot find type '" ^ n ^ "'")
 
-let rec find_subprogram s ?(silent = false) (package,n) norm_args t_find =
-  try
-    find_subprogram s (List.assoc n s.s_renaming) norm_args t_find 
-      (*WG LAter include spec here*)
-  with Not_found ->
-  try
-    (*s_find "subprogram" tbl_find_subprogram s ?package n*)
-    s_find "subprogram" (tbl_find_subprogram norm_args t_find) s ?package n
-  with Not_found -> if silent then
-                      raise Not_found
-                    else
-                      error ("Cannot find subprogram '" ^ n ^ "'")
 
+let rec find_subprogram s ?(silent = false) (pack,n) norm_args t_find =
+  try 
+    let ( p_opt, n_assoc) =  List.assoc n s.s_renaming in
+      if (compare n n_assoc = 0) then
+	match p_opt with 
+	    Some pck -> 
+	      s_find "subprogram" (tbl_find_subprogram norm_args t_find) s
+		~package:(pck) n_assoc
+	  | _ ->  (*WG should not happen *)
+	      s_find "subprogram" (tbl_find_subprogram norm_args t_find) s n_assoc
+      else
+	find_subprogram s (p_opt, n_assoc) norm_args t_find 
+  with Not_found ->
+     (*No need for tbl_find_subprogram here*)
+  	try 
+	  match pack with 
+	      Some pck -> 
+		s_find "subprogram" (tbl_find_subprogram norm_args t_find) s ~package:(pck) n 
+	    |_->s_find "subprogram" (tbl_find_subprogram norm_args t_find) s n 
+	       
+    with Not_found ->
+      if silent then
+	raise Not_found
+      else
+	error ("Cannot find subprogram '" ^ n ^ "'")
+	  
+  (*
+    try  
+    find_subprogram s (List.assoc n s.s_renaming) norm_args t_find 
+    with Not_found ->
+    try
+    s_find "subprogram" (tbl_find_subprogram norm_args t_find) s ?package n
+    with Not_found ->
+    if silent then
+    raise Not_found
+    else
+    error ("Cannot find subprogram '" ^ n ^ "'")
+  *)
+	
 let is_operator_overloaded s n =
   try begin
     ignore (s_find "overloaded operator" tbl_find_subprogram_simple s n);
