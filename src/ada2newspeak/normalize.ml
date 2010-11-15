@@ -954,16 +954,26 @@ and normalize_package_spec (name, list_decl) =
                 List.map (fun x -> (x,loc))
                        (normalize_basic_decl decl loc)
              ) decls) in
-(*WG *)
+(*WG 
   let norm_spec = normalize_decls list_decl in
-(*  let norm_spec = if (Hashtbl.mem name   ...) then []
-  else  normalize_decls list_decl*)
-(*WG*)
-
-  Sym.reset_current gtbl;
-  Sym.exit_context gtbl;
-  (name, norm_spec)
-
+*)
+  let norm_spec = 
+    if (Hashtbl.mem spec_tbl name) 
+    then 
+      []
+    else  
+      let n_spec = normalize_decls list_decl in
+      let spec =  Ast.PackageSpec (name, n_spec) in 
+	begin
+	  Hashtbl.add spec_tbl name (spec, Newspeak.unknown_loc);
+	  n_spec
+	end
+  in
+    (*WG*)
+    Sym.reset_current gtbl;
+    Sym.exit_context gtbl;
+    (name, norm_spec)
+      
 and normalize_spec spec = match spec with
   | SubprogramSpec subprogr_spec -> Ast.SubProgramSpec(
         normalize_sub_program_spec subprogr_spec ~addparam:false)
