@@ -121,7 +121,6 @@ and stmtkind =
 and arg =
   | In    of exp  (** Copy-in only (C style) *)
   | Out   of lval (** Copy-out only (no initializer) *)
-  | InOut of lval (** Copy-in + Copy-out *)
 
 and specs = assertion list
 
@@ -459,7 +458,7 @@ let string_of_assertion x =
 
 let string_of_actual_arg = function
   | In exp -> string_of_exp exp
-  | Out lv | InOut lv -> string_of_lval lv
+  | Out lv -> string_of_lval lv
 
 let string_of_actual_args =
   string_of_list string_of_actual_arg
@@ -516,13 +515,12 @@ let string_of_blk offset x =
 	    let collect_in_var x =
 	      match x with
 		  In e -> in_vars := (string_of_exp e)::!in_vars
-		| InOut lv -> in_vars := (string_of_lval lv)::!in_vars
 		| _ -> ()
 	    in
 	    let out_vars = ref [] in 
 	    let collect_out_var x =
 	      match x with
-		  Out lv | InOut lv -> 
+		  Out lv -> 
 		    out_vars := (string_of_lval lv)::!out_vars
 		| _ -> ()
 	    in
@@ -947,7 +945,6 @@ let rec simplify_stmt actions (x, loc) =
   let simplify_arg actions = function
     | In e     -> In    (simplify_exp  actions e)
     | Out lv   -> Out   (simplify_lval actions lv)
-    | InOut lv -> InOut (simplify_lval actions lv)
   in
   let simplify_funexp actions f =
     match f with
@@ -1224,7 +1221,6 @@ and build_stmtkind builder x =
 
 and build_arg builder = function
   | In exp   -> In    (build_exp builder exp)
-  | InOut lv -> InOut (build_lval builder lv)
   | Out lv   -> Out   (build_lval builder lv)
 
 and build_token builder x =
@@ -1468,7 +1464,7 @@ and visit_stmt visitor (x, loc) =
 
 and visit_arg visitor = function
   | In exp -> visit_exp visitor exp
-  | InOut lv | Out lv -> visit_lval visitor lv
+  | Out lv -> visit_lval visitor lv
 
 and visit_assertion visitor x = List.iter (visit_token visitor) x
 

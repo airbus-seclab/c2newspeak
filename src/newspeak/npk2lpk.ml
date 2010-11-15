@@ -121,14 +121,12 @@ let translate prog =
             push tmp_var;
             let set = begin match arg with
               | In    e -> Some (translate_set (Local tmp_var, e, t))
-              | InOut l -> Some (translate_set (Local tmp_var, Lval (l, t), t))
               | Out   _ -> None
             end in
             let call = add (args, args_t, args_ids) in
             let copy_out = match arg with
               | In    _ -> None
-              | Out   l
-              | InOut l -> Some (translate_set (l, Lval (Local tmp_var, t), t))
+              | Out   l -> Some (translate_set (l, Lval (Local tmp_var, t), t))
             in
               pop tmp_var;
               let call_with_copyout = 
