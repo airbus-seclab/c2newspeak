@@ -225,24 +225,27 @@ let translate src_lang prog fnames =
 	Fname f -> K.FunId f
       | FunDeref e -> K.FunDeref (translate_exp e)
       
-  and translate_arg arg =
-    match arg with
-      | In    e -> K.In  (translate_exp e)
-      | Out   (l, _) -> K.Out (translate_lv l)
-      | InOut l -> K.In (translate_exp (Lval l))
-
   and translate_args args =
-    let res = ref args in
-    let add_inout_as_out arg =
-      match arg with
-	  InOut lv -> res := (Out lv)::!res
-	| _ -> ()
+    let in_vars = ref [] in
+    let out_vars = ref [] in
+    let collect_in_var x =
+      match x with
+	| In e -> in_vars := (translate_exp e)::!in_vars
+	| InOut typ_lv -> in_vars := (translate_exp (Lval typ_lv))::!in_vars
+	| Out _ -> ()
     in
-      List.iter add_inout_as_out args;
-      List.map translate_arg !res
+    let collect_out_var x =
+      match x with
+	  Out (lv, _) | InOut (lv, _) -> 
+	    out_vars := (translate_lv lv)::!out_vars
+	| In _ -> ()
+    in
+      List.iter collect_in_var args;
+      List.iter collect_out_var args;
+      (List.rev !in_vars, List.rev !out_vars)
 
   and translate_call ret ((args_t, ret_t), fn, args) =
-    let args = translate_args args in
+    let (in_vars, out_vars) = translate_args args in
     let ft = translate_ftyp (args_t, ret_t) in
     let fn = translate_fn fn in
     let ret =
@@ -250,7 +253,7 @@ let translate src_lang prog fnames =
 	| Some r -> Some (translate_lv r)
 	| None   -> None
     in
-      K.Call (args, ft, fn, ret)
+      K.Call (in_vars, ft, fn, out_vars, ret)
 
   and translate_switch loc (e, cases, default) =
     let e = translate_exp e in

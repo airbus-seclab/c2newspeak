@@ -172,8 +172,14 @@ let rec generate_stmt (sk, loc) =
       | Select (body1, body2) ->
           N.Select (generate_blk body1, generate_blk body2)
       | InfLoop b -> N.InfLoop (List.map generate_stmt b)
-      | Call (args, ft, fn, rets) ->
-          let args = List.map generate_arg args in
+      | Call (in_vars, ft, fn, out_vars, rets) ->
+          let in_vars = 
+	    List.map (fun x -> N.In (generate_exp x)) in_vars 
+	  in
+	  let out_vars =
+	    List.map (fun x -> N.Out (generate_lv x)) out_vars
+	  in
+	  let args = in_vars@out_vars in
           let ft = generate_ftyp ft in
           let fn = generate_fn fn ft in
           let rets = match rets with

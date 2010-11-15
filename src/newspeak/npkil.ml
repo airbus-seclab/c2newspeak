@@ -58,9 +58,12 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl)
   | Goto of lbl
-  | Call of (arg list * ftyp * fn * lval option)
+(* TODO: remove return value *)
+(* in arguments, ftyp, fun exp, outputs, return value *)
+  | Call of (exp list * ftyp * fn * lval list * lval option)
   | UserSpec of assertion
 
+(* TODO: remove this type, unused *)
 and arg =
   | In    of exp  (* Copy-in only (C style) *)
   | Out   of lval (* Copy-out only (no initializer) *)
@@ -264,7 +267,7 @@ let dump_npko prog =
 
       | Goto l -> print_endline ("goto "^(string_of_lbl l)^";")
 	    
-      | Call (_, _, f, _) -> print_endline ((string_of_fn f)^";")
+      | Call (_, _, f, _, _) -> print_endline ((string_of_fn f)^";")
 	    
       | Guard b -> print_endline ("guard("^(string_of_exp b)^");")
 
