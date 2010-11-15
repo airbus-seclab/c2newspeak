@@ -172,11 +172,12 @@ let rec generate_stmt (sk, loc) =
 	  let out_vars = List.map generate_lv out_vars in
           let ft = generate_ftyp ft in
           let fn = generate_fn fn ft in
-          let rets = match rets with
-            | Some r -> Some (generate_lv r)
-            | None   -> None
+          let out_vars = 
+	    match rets with
+              | Some r -> (generate_lv r)::out_vars
+              | None   -> out_vars
           in
-            N.Call (in_vars, ft, fn, out_vars, rets)
+            N.Call (in_vars, ft, fn, out_vars)
       | Goto lbl -> N.Goto lbl
       | DoWith (body, lbl) ->
           let body = List.map generate_stmt body in

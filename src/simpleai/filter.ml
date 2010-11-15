@@ -100,7 +100,7 @@ and process_typed_lval (lv, t) =
   process_typ t;
   process_lval lv
   
-let process_funexp (_, ft, f, _, _) =
+let process_funexp (_, ft, f, _) =
   begin
     match ft with
       | [], None -> ()

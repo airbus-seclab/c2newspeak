@@ -157,11 +157,11 @@ let translate prog =
       add (args, args_t, args_ids)
   in
 
-  let suffix_rets fid loc f ft (args, rets) args_ids =
+  let suffix_rets fid loc f ft (args, ret_vars) args_ids =
     let add rets =
       match rets with
           (* TODO: should have one list instead of two here!!! *)
-          (Some lv, Some t) -> 
+          (lv::[], Some t) -> 
             push tmp_var;
             let e = Lval (Local tmp_var, t) in
             let set = translate_set (lv, e, t) in
@@ -169,19 +169,20 @@ let translate prog =
             let x = Temps.to_string (new_id ()) (Temps.Value_of fid) in
               pop tmp_var;
               L.Decl (x, t, (call, loc)::(set, loc)::[])
-        | _ -> prefix_args loc f ft args args_ids
+        | ([], _) -> prefix_args loc f ft args args_ids
+	| _ ->
+            Npkcontext.report_error "Npk2lpk.suffix_rets" 
+	      "case not implemented yet"
     in
     let add_fst rets =
       match rets with
-          (Some (Local v), Some _) 
-            when Hashtbl.find env v = !stack_height -> 
-              add (None, None)
+          ((Local v)::[], Some _) when Hashtbl.find env v = !stack_height -> 
+	    prefix_args loc f ft args args_ids
         | _ -> add rets
     in
-    let (_, rets_t) = ft in
     (* TODO: change ret_typ in ftyp so that it is a list *)
-    let rets = (rets, rets_t) in
-      add_fst rets
+    let (_, rets_t) = ft in
+      add_fst (ret_vars, rets_t)
   in
 
   let rec translate_blk x = List.map translate_stmt x 
@@ -190,7 +191,7 @@ let translate prog =
 
   and translate_stmtkind loc x = 
     match x with
-        Call (args, ft, f, _, rets) -> 
+        Call (args, ft, f, ret_vars) -> 
           let (fid, args_ids) = 
             match f with
                 FunId fid -> 
@@ -205,7 +206,7 @@ let translate prog =
                   let fid = "fptr_call" in
                     (fid, default_args_ids fid (List.length args))
           in
-            suffix_rets fid loc f ft (args, rets) args_ids
+            suffix_rets fid loc f ft (args, ret_vars) args_ids
       | DoWith (body, lbl) -> L.DoWith (translate_blk body, lbl)
       | Goto lbl -> L.Goto lbl
       | Decl (x, t, body) -> 

@@ -119,7 +119,11 @@ and stmtkind =
   | DoWith of (blk * lbl)
   | Goto of lbl
 (* TODO: maybe should use a record rather than a tuple? *)
-  | Call of (exp list * ftyp * funexp * lval list * lval option)
+(* TODO: shouldn't the type be together with the expressions and left values
+   rather than as a ftyp? 
+   think about it... *)
+(* arguments, function type, function expression, return left values *)
+  | Call of (exp list * ftyp * funexp * lval list)
   | UserSpec of assertion
 
 and specs = assertion list
