@@ -762,7 +762,7 @@ and normalize_ident_cur ident =
   | None   -> [ident]
 
 and normalize_params_cur param =
-  let is_basic_typ strs =
+  let is_basic_or_pre_typ strs =
     let is_basic str =
       match str with
 	  "integer" | "float" | "boolean" -> true
@@ -770,12 +770,17 @@ and normalize_params_cur param =
     in
       match strs with
 	| typ::[] -> is_basic typ  
-	| _ -> false
+	| l when (compare (List.length l) 2 = 0) -> true (*add non regression*)
+	| _ ->  Npkcontext.report_error "normalize_params_cur"
+                  "chain of selected names is too deep"
+	    
   in
-    (*Potentially add pack*)
+  (*This function adds packing name info in parameter type label
+    of specifications, requires: type is in standard, and type is 
+    not already precised by a package *)
   let add_pack pack param =
-     let p_typ = param.param_type in
-       if (is_basic_typ p_typ) then
+    let p_typ = param.param_type in
+       if (is_basic_or_pre_typ p_typ) then
 	 p_typ
        else
 	 pack::p_typ	  
@@ -941,6 +946,7 @@ and normalize_basic_decl item loc =
 
 
 and normalize_package_spec (name, list_decl) =
+  (*WG if already in spec_tbl ne rien faire *)
   Sym.set_current gtbl name;
   Sym.enter_context ~name ~desc:"Package spec" gtbl;
   let rec normalize_decls decls =
@@ -1579,3 +1585,4 @@ and normalization compil_unit =
       Npkcontext.forget_loc ();
       log_progress (Done(Semcheck cu_name));
       (norm_context ,norm_lib_item ,loc)
+	

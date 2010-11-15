@@ -5,7 +5,7 @@ procedure t405 is
    subtype T is T405a.TT;
    X: T;
 begin
-   T405a.Troc(p => X);
+   T405a.Troc( p => X);
 
 end t405;
 
