@@ -235,7 +235,7 @@ let translate src_lang prog fnames =
     let args = List.map translate_arg args in
     let ft = translate_ftyp (args_t, ret_t) in
     let fn = translate_fn fn in
-    let ret = 
+    let ret =
       match ret with
 	| Some r -> Some (translate_lv r)
 	| None   -> None

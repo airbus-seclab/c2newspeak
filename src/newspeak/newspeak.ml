@@ -512,11 +512,38 @@ let string_of_blk offset x =
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
       | Call (args, _t, fn, ret) ->
           begin
-            let ret_str = match ret with
-              | None -> ""
-              | Some r -> (string_of_lval r) ^ " <- "
+	    let in_vars = ref [] in
+	    let collect_in_var x =
+	      match x with
+		  In e -> in_vars := (string_of_exp e)::!in_vars
+		| InOut lv -> in_vars := (string_of_lval lv)::!in_vars
+		| _ -> ()
+	    in
+	    let out_vars = ref [] in 
+	    let collect_out_var x =
+	      match x with
+		  Out lv | InOut lv -> 
+		    out_vars := (string_of_lval lv)::!out_vars
+		| _ -> ()
+	    in
+	      begin
+		match ret with
+		    None -> ()
+		  | Some r -> out_vars := (string_of_lval r)::[]
+	      end;
+		List.iter collect_out_var args;
+		List.iter collect_in_var args;
+		
+            let ret_str = 
+	      match List.rev !out_vars with
+		| [] -> ""
+		| r::[] -> r ^ " <- "
+		| vars -> (string_of_list (fun x -> x) vars) ^ " <- "
             in
-            let result = ret_str ^ (string_of_funexp fn) ^ (string_of_actual_args args) ^ ";" in
+	    let arg_str = string_of_list (fun x -> x) (List.rev !in_vars) in
+            let result = 
+	      ret_str ^ (string_of_funexp fn) ^ arg_str ^ ";" 
+	    in
               dump_line_at loc result
           end
       | Select (body1, body2) ->
@@ -1198,7 +1225,7 @@ and build_stmtkind builder x =
 and build_arg builder = function
   | In exp   -> In    (build_exp builder exp)
   | InOut lv -> InOut (build_lval builder lv)
-  |   Out lv ->   Out (build_lval builder lv)
+  | Out lv   -> Out   (build_lval builder lv)
 
 and build_token builder x =
   match x with
