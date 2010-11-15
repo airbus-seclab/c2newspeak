@@ -946,7 +946,6 @@ and normalize_basic_decl item loc =
 
 
 and normalize_package_spec (name, list_decl) =
-  (*WG if already in spec_tbl ne rien faire *)
   Sym.set_current gtbl name;
   Sym.enter_context ~name ~desc:"Package spec" gtbl;
   let rec normalize_decls decls =
@@ -955,7 +954,12 @@ and normalize_package_spec (name, list_decl) =
                 List.map (fun x -> (x,loc))
                        (normalize_basic_decl decl loc)
              ) decls) in
+(*WG *)
   let norm_spec = normalize_decls list_decl in
+(*  let norm_spec = if (Hashtbl.mem name   ...) then []
+  else  normalize_decls list_decl*)
+(*WG*)
+
   Sym.reset_current gtbl;
   Sym.exit_context gtbl;
   (name, norm_spec)
