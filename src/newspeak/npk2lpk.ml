@@ -117,7 +117,15 @@ let translate prog =
   let prefix_args loc f ft args args_ids =
     let rec add args =
       match args with
-          (arg::args, t::args_t, x::args_ids) -> 
+	  (e::args, t::args_t, x::args_ids) ->
+	    push tmp_var;
+	    let set = translate_set (Local tmp_var, e, t) in
+	    let call = add (args, args_t, args_ids) in
+	      pop tmp_var;
+	      let full_call = (set, loc)::(call, loc)::[] in
+		L.Decl (x, t, full_call)
+(* TODO:         (arg::args, t::args_t, x::args_ids) -> *)
+(* TODO:
             push tmp_var;
             let set = begin match arg with
               | In    e -> Some (translate_set (Local tmp_var, e, t))
@@ -139,6 +147,7 @@ let translate prog =
 		| Some s -> (s, loc)::call_with_copyout
               in
 		L.Decl (x, t, full_call)
+*)
         | ([], [], []) -> L.Call (translate_fn f)
         | _ -> 
 	    Npkcontext.report_error "hpk2npk.prefix_args"
@@ -181,7 +190,7 @@ let translate prog =
 
   and translate_stmtkind loc x = 
     match x with
-        Call (args, ft, f, rets) -> 
+        Call (args, ft, f, _, rets) -> 
           let (fid, args_ids) = 
             match f with
                 FunId fid -> 

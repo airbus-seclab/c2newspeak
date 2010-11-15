@@ -100,11 +100,12 @@ and process_typed_lval (lv, t) =
   process_typ t;
   process_lval lv
   
-let process_funexp (_args, ft, f, _lvo) =
+let process_funexp (_, ft, f, _, _) =
   begin
     match ft with
       | [], None -> ()
-      | _ -> invalid_arg "Filter.process_funexp: only void -> void functions are allowed" 
+      | _ -> 
+	  invalid_arg "Filter.process_funexp: only void -> void functions are allowed" 
   end;
   match f with
       FunId f -> S.FunId f

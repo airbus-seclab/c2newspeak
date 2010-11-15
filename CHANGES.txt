@@ -1,2 +1,3 @@
+Split in and out arguments into two lists in Newspeak.
 Removed InOut argument in Newspeak call instruction. InOut arguments are now both In and Out arguments.
 Removed unused second block of DoWith construct.

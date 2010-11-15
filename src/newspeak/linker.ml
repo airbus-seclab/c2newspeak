@@ -148,11 +148,6 @@ let generate_global name (t, loc, storage, used) =
   end;
   Npkcontext.print_debug ("Global linked: "^name)
 
-let generate_arg arg =
-  match arg with
-    | In    e -> N.In    (generate_exp e)
-    | Out   l -> N.Out   (generate_lv l)
-
 let translate_set (lv, e, t) =
   match (t, e) with
       (Scalar t, _) -> N.Set (generate_lv lv, generate_exp e, t)
@@ -173,20 +168,15 @@ let rec generate_stmt (sk, loc) =
           N.Select (generate_blk body1, generate_blk body2)
       | InfLoop b -> N.InfLoop (List.map generate_stmt b)
       | Call (in_vars, ft, fn, out_vars, rets) ->
-          let in_vars = 
-	    List.map (fun x -> N.In (generate_exp x)) in_vars 
-	  in
-	  let out_vars =
-	    List.map (fun x -> N.Out (generate_lv x)) out_vars
-	  in
-	  let args = in_vars@out_vars in
+          let in_vars = List.map generate_exp in_vars in
+	  let out_vars = List.map generate_lv out_vars in
           let ft = generate_ftyp ft in
           let fn = generate_fn fn ft in
           let rets = match rets with
             | Some r -> Some (generate_lv r)
             | None   -> None
           in
-            N.Call (args, ft, fn, rets)
+            N.Call (in_vars, ft, fn, out_vars, rets)
       | Goto lbl -> N.Goto lbl
       | DoWith (body, lbl) ->
           let body = List.map generate_stmt body in
