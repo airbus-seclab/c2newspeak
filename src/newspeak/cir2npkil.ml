@@ -227,12 +227,22 @@ let translate src_lang prog fnames =
       
   and translate_arg arg =
     match arg with
-      | In    e -> K.In    (translate_exp e)
-      | Out   l -> K.Out   (translate_lv l)
-      | InOut l -> K.InOut (translate_lv l)
+      | In    e -> K.In  (translate_exp e)
+      | Out   l -> K.Out (translate_lv l)
+      | InOut l -> K.Out (translate_lv l)
+
+  and translate_args args =
+    let res = ref args in
+    let add_inout_as_out arg =
+      match arg with
+	  InOut lv -> res := (Out lv)::!res
+	| _ -> ()
+    in
+      List.iter add_inout_as_out args;
+      List.map translate_arg !res
 
   and translate_call ret ((args_t, ret_t), fn, args) =
-    let args = List.map translate_arg args in
+    let args = translate_args args in
     let ft = translate_ftyp (args_t, ret_t) in
     let fn = translate_fn fn in
     let ret =
