@@ -89,7 +89,6 @@ and stmtkind =
 and arg =
   | In    of exp  (* Copy-in only (C style) *)
   | Out   of lval (* Copy-out only (no initializer) *)
-  | InOut of lval (* Copy-in + Copy-out *)
 
 and vid = int
 

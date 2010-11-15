@@ -152,7 +152,6 @@ let generate_arg arg =
   match arg with
     | In    e -> N.In    (generate_exp e)
     | Out   l -> N.Out   (generate_lv l)
-    | InOut l -> N.InOut (generate_lv l)
 
 let translate_set (lv, e, t) =
   match (t, e) with
