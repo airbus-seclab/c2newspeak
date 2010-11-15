@@ -228,8 +228,8 @@ let translate src_lang prog fnames =
   and translate_arg arg =
     match arg with
       | In    e -> K.In  (translate_exp e)
-      | Out   l -> K.Out (translate_lv l)
-      | InOut l -> K.Out (translate_lv l)
+      | Out   (l, _) -> K.Out (translate_lv l)
+      | InOut l -> K.In (translate_exp (Lval l))
 
   and translate_args args =
     let res = ref args in
