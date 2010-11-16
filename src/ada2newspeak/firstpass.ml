@@ -232,26 +232,29 @@ let translate compil_unit =
 
             let tyexl = List.map2 (fun x y -> x,y) ti x_exps in
 
-            let exp_offset = List.fold_left (fun old_off (ty, exp) ->
-              (* FIXME rebase and check exp *)
-              let base = T.extract_base ty in
-              let exp' = T.check_exp ty exp in
-              let rebased_exp = if (base = Newspeak.Nat.zero) then exp'
-                                else C.Binop ( N.MinusI
-                                             , exp'
-                                             , (translate_nat base)
-                                             )
-              in
-              if old_off = translate_nat (Newspeak.Nat.zero) then rebased_exp
-              else
-              C.Binop ( N.PlusI
-                      , rebased_exp
-                      , C.Binop( N.MultI
-                               , translate_nat (T.length_of ty)
-                               , old_off
-                               )
-                      )
-            ) (translate_nat Newspeak.Nat.zero) tyexl in
+            let exp_offset = List.fold_left (
+	      fun old_off (ty, exp) ->
+		(* FIXME rebase and check exp *)
+		let base = T.extract_base ty in
+		let exp' = T.check_exp ty exp in
+		let rebased_exp = if (base = Newspeak.Nat.zero) then exp'
+		else C.Binop ( N.MinusI
+				 , exp'
+				   , (translate_nat base)
+			     )
+		in
+		  if old_off = translate_nat (Newspeak.Nat.zero) then rebased_exp
+		  else
+		    C.Binop ( N.PlusI
+				, rebased_exp
+				  , C.Binop( N.MultI
+					       , translate_nat (T.length_of ty)
+						 , old_off
+					   )
+			    )
+	    ) 
+	      (translate_nat Newspeak.Nat.zero) tyexl 
+	    in
             let offset = C.Binop( N.MultI
                                 , exp_offset
                                 , translate_int size_c

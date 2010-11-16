@@ -582,33 +582,32 @@ and normalize_fcall (n, params) =
       with Invalid_argument _ | Not_found ->
       	try
       	  let   (_, cast_t) = Sym.find_type gtbl n in
-      	    if (compare (List.length params) 1 <> 0) then begin    
+      	    if (compare (List.length params) 1 <> 0) then    
       	      Npkcontext.report_error "normalize_fcall"
       		"Cast only handled for single variable"
-	    end
-      	    else
-      	      let param =  List.hd params in
-      	      let (_,( norm_exp, arg_t))= normalize_arg param in
-      		if (not (T.is_compatible cast_t arg_t))
-		then 
-		  (*WG  TO DO *)
-		  print_endline  ( "\nL = "
-      				   ^ T.print cast_t
-      				   ^ "\nR = "
-      				   ^ T.print arg_t
-      				 )
-		;
-		norm_exp,  cast_t
-		  (*
-		    Npkcontext.report_error ("incompatible types")
-		    ( "\nL = "
-      		    ^ T.print cast_t
-      		    ^ "\nR = "
-      		    ^ T.print arg_t
-      		    )
-		    else
-		    norm_exp,  cast_t
-		  *)
+	    ;
+      	    let param =  List.hd params in
+      	    let (_,( norm_exp, arg_t))= normalize_arg param in
+      	      if (not (T.is_compatible cast_t arg_t))
+	      then 
+		(*WG  TO DO *)
+		print_endline  ( "\nL = "
+      				 ^ T.print cast_t
+      				 ^ "\nR = "
+      				 ^ T.print arg_t
+      			       )
+	      ;
+	      norm_exp,  cast_t
+		(*
+		  Npkcontext.report_error ("incompatible types")
+		  ( "\nL = "
+      		  ^ T.print cast_t
+      		  ^ "\nR = "
+      		  ^ T.print arg_t
+      		  )
+		  else
+		  norm_exp,  cast_t
+		*)
       	with Not_found ->
       	  raise Not_found
 	    
@@ -1083,16 +1082,37 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       normalize_assign_aggregate nlv tlv bare_assoc_list loc
   | Assign(lv, Aggregate (PositionalAggr exp_list)) ->
       let (lv', t_lv) = normalize_lval lv in
-      let ti = match T.extract_array_types t_lv with
-      | (_, [i]) -> i
-      | _ -> Npkcontext.report_error "normalize_instr" "unexpected matrix type"
+      let tc, ti = match T.extract_array_types t_lv with
+	| (c_t, [i]) -> c_t, i
+	| _ -> Npkcontext.report_error "normalize_instr" "unexpected matrix type"
       in
       let all_values  = T.all_values ti in
-      List.map2 (fun type_val exp ->
-        let k = insert_constant (T.IntVal type_val) in
-        let v = normalize_exp exp in
-        Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc
-      ) all_values exp_list
+	List.flatten (
+	  List.map2 (fun type_val exp ->
+		       let k = insert_constant (T.IntVal type_val) in
+			 match exp with 
+			     Aggregate (NamedAggr _) -> 
+			       Npkcontext.report_error "normalize_instr" 
+				 "NamedAggr as Array elemt not done yet "
+			   | Aggregate (PositionalAggr exps) ->
+			       (*CHECK tc is a record type t410*)
+			       (*TO DO: for matrix initialization: 
+				 build AggrExp for the selector*)
+			       (* *) 
+			       let nlv = Ast.ArrayAccess (lv', [k]) in
+				 (* let tlv = tc in *)
+			       let fields = T.all_record_fields tc in
+			       let assoc_list = List.map2 (fun x y ->
+							     (AggrField x,y)
+							  ) fields exps 
+			       in 
+  				 normalize_assign_aggregate nlv tc assoc_list loc
+			   | _ -> 
+			       let v = normalize_exp exp in       		  
+				 [Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc]
+		    ) all_values exp_list
+	)
+	  
   | LvalInstr(ParExp(lv, params)) ->
       let n = make_name_of_lval lv in
       let n = mangle_sname n in

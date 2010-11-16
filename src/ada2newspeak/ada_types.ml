@@ -1,6 +1,5 @@
 (*
-  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language
-  well-suited for static analysis.
+  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
 
   This library is free software; you can redistribute it and/or
@@ -436,19 +435,35 @@ let compute_constr t =
           t.range
         end
     | Float _ , Some (A.FloatRangeConstraint _) -> t.range
-    | Enumeration v,_
+    | Enumeration v, None
         when not (is_boolean t)->
           begin
             let v' = List.map (fun (_, y) ->
-              get_enum_litt_value t (IntVal (Newspeak.Nat.of_int y))) v in
+              get_enum_litt_value t (IntVal (Newspeak.Nat.of_int y))
+			      ) v in
             let (min, max) = match extrema v' with
             | IntVal x, IntVal y -> (x,y)
             | _ -> invalid_arg "compute_constr"
             in
             Some (A.IntegerRangeConstraint (min, max))
           end
-    | _ -> None
 
+    | Enumeration _, Some (A.IntegerRangeConstraint (min, max))
+        when not (is_boolean t)-> begin
+	(* TO DO check t is not in table clause representing*)
+	try
+	  let mapping = Hashtbl.find represtbl t in 
+	  let new_min = List.assoc (IntVal min) mapping in 
+	  let new_max = List.assoc (IntVal max) mapping in 
+	    match (new_min, new_max) with 
+		(IntVal mini, IntVal maxi) ->
+		  Some (A.IntegerRangeConstraint (mini, maxi))
+	      | _ -> invalid_arg "compute_constr represing clause not expected"
+	with Not_found -> 
+          Some (A.IntegerRangeConstraint (min, max))
+	end
+    | _ -> None
+	
 let all_values typ =
   let rec interval a b =
     if (Newspeak.Nat.compare b a < 0) then []
@@ -567,16 +582,16 @@ let record_field t fld =
   | Record l -> begin
                   let (off, result) = List.fold_left
                     (fun (off,found) (field,tf) ->
-                    if (found = None) then
-                      begin
-                        if field = fld then
-                          (off, Some tf)
-                        else
-                          (off + Cir.size_of_typ (translate tf), None)
-                      end
-                    else (* already found *)
-                      (off, found)
-                  ) (0, None) l in
+                       if (found = None) then
+			 begin
+                           if field = fld then
+                             (off, Some tf)
+                           else
+                             (off + Cir.size_of_typ (translate tf), None)
+			 end
+                       else (* already found *)
+			 (off, found)
+                    ) (0, None) l in
                   match result with
                   | Some r -> (off,r)
                   | None   -> Npkcontext.report_error "record_field"
