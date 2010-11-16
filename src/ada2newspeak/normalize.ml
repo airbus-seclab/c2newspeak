@@ -1091,10 +1091,11 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	  List.map2 (fun type_val exp ->
 		       let k = insert_constant (T.IntVal type_val) in
 			 match exp with 
-			     Aggregate (NamedAggr _) -> 
-			       Npkcontext.report_error "normalize_instr" 
-				 "NamedAggr as Array elemt not done yet "
-			   | Aggregate (PositionalAggr exps) ->
+			     Aggregate (NamedAggr  assoc_list) when (T.is_record tc) ->   
+			       let nlv = Ast.ArrayAccess (lv', [k]) in
+				 normalize_assign_aggregate nlv tc assoc_list loc
+
+			   | Aggregate (PositionalAggr exps) when (T.is_record tc) ->
 			       (*CHECK tc is a record type t410*)
 			       (*TO DO: for matrix initialization: 
 				 build AggrExp for the selector*)
@@ -1107,6 +1108,10 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 							  ) fields exps 
 			       in 
   				 normalize_assign_aggregate nlv tc assoc_list loc
+
+			   | Aggregate (PositionalAggr _) | Aggregate (NamedAggr _)  -> 
+			       Npkcontext.report_error "normalize_instr, Assign" 
+				 "array as compound not implemented yet"
 			   | _ -> 
 			       let v = normalize_exp exp in       		  
 				 [Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc]
