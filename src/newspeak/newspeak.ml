@@ -115,12 +115,10 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl)
   | Goto of lbl
-  | Call of (arg list * ftyp * funexp * lval option)
+(* arguments, type, function, return values *)
+(* TODO: remove optional return value! *)
+  | Call of (exp list * ftyp * funexp * lval list)
   | UserSpec of assertion
-
-and arg =
-  | In    of exp  (** Copy-in only (C style) *)
-  | Out   of lval (** Copy-out only (no initializer) *)
 
 and specs = assertion list
 
@@ -413,6 +411,8 @@ let rec string_of_lval lv =
     | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
 
+and string_of_args args = string_of_list string_of_exp args
+
 and string_of_exp e =
   match e with
       Const c -> string_of_cst c
@@ -455,13 +455,6 @@ let string_of_assertion x =
   let append_token x = res := !res^(string_of_token x)^" " in
     List.iter append_token x;
     !res
-
-let string_of_actual_arg = function
-  | In exp -> string_of_exp exp
-  | Out lv -> string_of_lval lv
-
-let string_of_actual_args =
-  string_of_list string_of_actual_arg
 
 let string_of_blk offset x =
   let buf = Buffer.create 80 in
@@ -509,36 +502,17 @@ let string_of_blk offset x =
           dump_line ("} with lbl"^(string_of_int lbl)^":")
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
-      | Call (args, _t, fn, ret) ->
+      | Call (args, _t, fn, ret_vars) ->
           begin
-	    let in_vars = ref [] in
-	    let collect_in_var x =
-	      match x with
-		  In e -> in_vars := (string_of_exp e)::!in_vars
-		| _ -> ()
-	    in
-	    let out_vars = ref [] in 
-	    let collect_out_var x =
-	      match x with
-		  Out lv -> 
-		    out_vars := (string_of_lval lv)::!out_vars
-		| _ -> ()
-	    in
-	      begin
-		match ret with
-		    None -> ()
-		  | Some r -> out_vars := (string_of_lval r)::[]
-	      end;
-		List.iter collect_out_var args;
-		List.iter collect_in_var args;
-		
+	    let in_vars = List.map string_of_exp args in
+	    let out_vars = List.map string_of_lval ret_vars in
             let ret_str = 
-	      match List.rev !out_vars with
+	      match out_vars with
 		| [] -> ""
 		| r::[] -> r ^ " <- "
-		| vars -> (string_of_list (fun x -> x) vars) ^ " <- "
+		| _ -> (string_of_list (fun x -> x) out_vars) ^ " <- "
             in
-	    let arg_str = string_of_list (fun x -> x) (List.rev !in_vars) in
+	    let arg_str = string_of_list (fun x -> x) in_vars in
             let result = 
 	      ret_str ^ (string_of_funexp fn) ^ arg_str ^ ";" 
 	    in
@@ -942,10 +916,6 @@ let simplify_gotos blk =
     blk
 
 let rec simplify_stmt actions (x, loc) =
-  let simplify_arg actions = function
-    | In e     -> In    (simplify_exp  actions e)
-    | Out lv   -> Out   (simplify_lval actions lv)
-  in
   let simplify_funexp actions f =
     match f with
       | FunId s -> FunId s
@@ -961,13 +931,11 @@ let rec simplify_stmt actions (x, loc) =
           let lv2 = simplify_lval actions lv2 in
             Copy (lv1, lv2, sz)
       | Guard b -> Guard (simplify_exp actions b)
-      | Call (args, ft, f, lvo) ->
-          let lvo' = match lvo with
-            | Some lv -> Some (simplify_lval actions lv)
-            | None -> None
-          in
+      | Call (args, ft, f, ret_vars) ->
           let f' = simplify_funexp actions f in
-          Call (List.map (simplify_arg actions) args, ft, f', lvo')
+	  let args = List.map (simplify_exp actions) args in
+	  let ret_vars = List.map (simplify_lval actions) ret_vars in
+            Call (args, ft, f', ret_vars)
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
       | Select (body1, body2) -> 
           Select (simplify_blk actions body1, simplify_blk actions body2)
@@ -1204,24 +1172,17 @@ and build_stmtkind builder x =
               
       | Goto lbl -> Goto lbl
           
-      | Call (args, ftyp, fn, ret) -> 
-          let args' = List.map (build_arg builder) args in
+      | Call (args, ftyp, fn, ret_vars) -> 
+          let args' = List.map (build_exp builder) args in
+	  let ret_vars = List.map (build_lval builder) ret_vars in
           let fn' = build_funexp builder fn in
-          let ret' = match ret with
-            | None -> None
-            | Some lv -> Some (build_lval builder lv)
-          in
-            Call (args', ftyp, fn', ret')
+            Call (args', ftyp, fn', ret_vars)
 
       | UserSpec assertion -> 
           let assertion = List.map (build_token builder) assertion in
             UserSpec assertion
   in
     builder#process_stmtkind x
-
-and build_arg builder = function
-  | In exp   -> In    (build_exp builder exp)
-  | Out lv   -> Out   (build_lval builder lv)
 
 and build_token builder x =
   match x with
@@ -1443,14 +1404,11 @@ and visit_stmt visitor (x, loc) =
         | Decl (_, t, body) -> 
             visit_typ visitor t;
             visit_blk visitor body
-        | Call (args, ftyp, fn, ret) ->
-            List.iter (visit_arg visitor) args;
+        | Call (args, ftyp, fn, ret_vars) ->
+            List.iter (visit_exp visitor) args;
+	    List.iter (visit_lval visitor) ret_vars;
             visit_ftyp visitor ftyp;
-            visit_funexp visitor fn;
-            begin match ret with
-              | None -> ()
-              | Some lv -> visit_lval visitor lv
-            end
+            visit_funexp visitor fn
         | Select (body1, body2) -> 
             visitor#set_loc loc;
             visit_blk visitor body1;
@@ -1461,10 +1419,6 @@ and visit_stmt visitor (x, loc) =
         | Goto _ -> ()
         | UserSpec assertion -> visit_assertion visitor assertion
     end else ()
-
-and visit_arg visitor = function
-  | In exp -> visit_exp visitor exp
-  | Out lv -> visit_lval visitor lv
 
 and visit_assertion visitor x = List.iter (visit_token visitor) x
 

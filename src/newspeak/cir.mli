@@ -102,9 +102,9 @@ and exp =
     | BlkExp of (blk * exp * bool)
 
 and arg =
-  | In    of exp  (* Copy-in only (C style) *)
-  | Out   of lv   (* Copy-out only (no initializer) *)
-  | InOut of lv   (* Copy-in + Copy-out *)
+  | In    of exp    (* Copy-in only (C style) *)
+  | Out   of typ_lv (* Copy-out only (no initializer) *)
+  | InOut of typ_lv (* Copy-in + Copy-out *)
 
 and funexp =
     | Fname of string

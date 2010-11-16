@@ -205,8 +205,13 @@ let translate compil_unit =
       let x_t = T.translate t in
       let x_arg = match arg with
       | In  e    -> C.In (T.check_exp t (translate_exp e))
-      | Out lv   -> C.Out (fst (translate_lv lv))
-      | InOut lv -> C.Out (fst (translate_lv lv))
+      | Out lv   -> 
+	  let (lv, t) = translate_lv lv in
+	    C.Out (lv, T.translate t)
+      | InOut lv -> 
+	  let (lv, t) = translate_lv lv in
+(* TODO: shouldn't it be InOut here? Do a test*)
+	    C.Out (lv, T.translate t)
       in
       (x_t, x_arg)
     in
@@ -227,7 +232,7 @@ let translate compil_unit =
         | ArrayAccess (lv, exps) ->
             let (x_lv,t_lv ) = translate_lv lv in
             let x_exps = List.map translate_exp exps in
-            let (tc,ti) = T.extract_array_types t_lv in
+            let (tc, ti) = T.extract_array_types t_lv in
             let size_c = C.size_of_typ (T.translate tc) in
 
             let tyexl = List.map2 (fun x y -> x,y) ti x_exps in
@@ -256,10 +261,10 @@ let translate compil_unit =
 	      (translate_nat Newspeak.Nat.zero) tyexl 
 	    in
             let offset = C.Binop( N.MultI
-                                , exp_offset
-                                , translate_int size_c
+                                    , exp_offset
+                                      , translate_int size_c
                                 ) in
-            C.Shift (x_lv, offset), tc
+              C.Shift (x_lv, offset), tc
         | RecordAccess (lv, off_pos, tf) ->
             let (record, _) = translate_lv lv in
             let offset = translate_int off_pos in

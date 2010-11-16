@@ -25,7 +25,7 @@
 
 COMMAND=$(C2NEWSPEAK) --print-lowspeak `[ -e $*.in ] && cat $*.in` $*.c
 
-TESTS = 000
+TESTS = 000 001
 
 PREREQ=%.c
 

@@ -118,12 +118,13 @@ and stmtkind =
   | InfLoop of blk
   | DoWith of (blk * lbl)
   | Goto of lbl
-  | Call of (arg list * ftyp * funexp * lval option)
+(* TODO: maybe should use a record rather than a tuple? *)
+(* TODO: shouldn't the type be together with the expressions and left values
+   rather than as a ftyp? 
+   think about it... *)
+(* arguments, function type, function expression, return left values *)
+  | Call of (exp list * ftyp * funexp * lval list)
   | UserSpec of assertion
-
-and arg =
-  | In    of exp  (** Copy-in only (C style) *)
-  | Out   of lval (** Copy-out only (no initializer) *)
 
 and specs = assertion list
 
@@ -261,6 +262,8 @@ val simplify: bool -> t -> t
 *)
 val string_of_loc : location -> string
 
+val string_of_args: exp list -> string
+
 (** [string_of_bounds r] returns the string representation of range [r]. *)
 val string_of_bounds : bounds -> string
 
@@ -282,7 +285,6 @@ val string_of_blk: blk -> string
 val string_of_binop: binop -> string
 
 val string_of_formal_args: (string * typ) list -> string
-val string_of_actual_args: arg list -> string
 val string_of_ret: typ option -> string
 val string_of_size_t: size_t -> string
 val string_of_lbl: lbl -> string

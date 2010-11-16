@@ -114,9 +114,9 @@ and exp =
     | BlkExp of (blk * exp * bool)
 
 and arg =
-  | In    of exp  (* Copy-in only (C style) *)
-  | Out   of lv   (* Copy-out only (no initializer) *)
-  | InOut of lv   (* Copy-in + Copy-out *)
+  | In    of exp    (* Copy-in only (C style) *)
+  | Out   of typ_lv (* Copy-out only (no initializer) *)
+  | InOut of typ_lv (* Copy-in + Copy-out *)
 
 and funexp =
     | Fname of string
@@ -427,7 +427,7 @@ and normalize_exp_post loc e t =
       
 and normalize_args loc args args_t =
   match (args, args_t) with
-    | ((Out lv)::args, t::args_t) -> 
+    | ((Out (lv, ot))::args, t::args_t) -> 
 	let (pref1, args) = normalize_args loc args args_t in
 	let (pref2, e) = normalize_exp_post loc (Lval (lv, t)) t in
         let lv' = begin match e with
@@ -435,7 +435,7 @@ and normalize_args loc args args_t =
         | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable"
         end in
 	let pref = concat_effects pref1 pref2 in
-	  (pref, (Out lv')::args)
+	  (pref, (Out (lv', ot))::args)
     | ((In e)::args, t::args_t) -> 
 	let (pref1, args) = normalize_args loc args args_t in
 	let (pref2, e) = normalize_exp_post loc e t in
