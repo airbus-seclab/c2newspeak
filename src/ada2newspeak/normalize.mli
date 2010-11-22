@@ -26,4 +26,6 @@
   Syntax_ada.subtyp_indication ->  Syntax_ada.subtyp_indication
 *)
 
+val init_bodies   : string list -> unit
+val bodies_to_add : unit ->  string list
 val normalization : Syntax_ada.compilation_unit -> Ast.compilation_unit

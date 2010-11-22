@@ -1,3 +1,4 @@
+Warning: t406a.ads:2#6: multiple definitions of global variable t406a.y, in file t406a.ads variable t406a.y should probably be extern accepted
 Newspeak output
 ---------------
 t406.adb

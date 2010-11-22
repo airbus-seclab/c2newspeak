@@ -1,4 +1,7 @@
-with T098;
+--with Text_IO;
+--use Text_IO;
+
+With T098;
 with T099, T096;
 use T098;
 
@@ -16,6 +19,7 @@ package body T097 is
 
       if (A)
       then
+--       Put ("yyyyyyyyyyyyyy");
          X := 2;
       end if;
       t099(0);

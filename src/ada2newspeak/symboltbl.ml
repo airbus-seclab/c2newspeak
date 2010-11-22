@@ -510,7 +510,8 @@ let enter_context ?name ?desc (s:t) =
                                     | Some n -> n
                                     | _      -> ""
                                  )
-                               ^ ")");
+                               ^ ")"
+			       );
         let create_context _ =
           begin
             let new_context = create_table ?desc (match name with None ->

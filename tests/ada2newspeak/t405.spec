@@ -1,3 +1,4 @@
+Warning: t405a.ads:2#6: multiple definitions of global variable t405a.y, in file t405a.ads variable t405a.y should probably be extern accepted
 Newspeak output
 ---------------
 t405.adb

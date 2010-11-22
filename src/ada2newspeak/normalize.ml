@@ -10,7 +10,7 @@
 
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+(Sym.is_with gtbl name  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
 
   You should have received a copy of the GNU Lesser General Public
@@ -39,6 +39,17 @@ let (%-) = Nat.sub
 let gtbl = Sym.create ()
 
 let spec_tbl = Hashtbl.create 5
+
+(*Normalization returns a list of files which body
+  has to be compile and normalized when only
+*)
+let body_tbl = ref[]
+
+let init_bodies bds = body_tbl:=bds
+
+let bodies_to_add() = !body_tbl
+
+
 
 (* Name-related functions *)
 
@@ -247,21 +258,28 @@ let extract_subprog_spec ast =
 
 let parse_specification name =
   let spec_name = name ^ ".ads" in
+  let body_name = name ^ ".adb" in
   let spec_ast =
     if Sys.file_exists spec_name
-    then
-      let res = File_parse.parse spec_name in
-	if (!Npkcontext.verb_ast) then
-          begin
-            print_endline "Abstract Syntax Tree (extern)";
-            print_endline "-----------------------------";
-            Print_syntax_ada.print_ast [res];
-            print_newline ();
-          end;
-	res
+    then 
+      begin
+	if ((Sys.file_exists body_name) && 
+	      (not ( List.mem body_name !body_tbl))) 
+	then
+	  body_tbl := body_name::!body_tbl
+	;
+	let res = File_parse.parse spec_name in
+	  if (!Npkcontext.verb_ast) then
+            begin
+              print_endline "Abstract Syntax Tree (extern)";
+              print_endline "-----------------------------";
+              Print_syntax_ada.print_ast [res];
+              print_newline ();
+ 	    end;
+	  res
+      end
     else
-      let body_name = name ^ ".adb" in
-        extract_subprog_spec (File_parse.parse body_name)
+      extract_subprog_spec (File_parse.parse body_name)
   in
     match spec_ast with
       | (_, Spec(_), _) -> spec_ast
@@ -317,7 +335,8 @@ let rec normalize_exp ?expected_type exp =
     | Lval lv ->
         begin
           match resolve_selected ?expected_type lv with
-          | SelectedVar   (sc, id,  t, _) -> Ast.Lval(Ast.Var(sc,id,t)) ,t
+          | SelectedVar   (sc, id,  t, _) -> 
+	      Ast.Lval(Ast.Var(sc,id,t)) ,t
           | SelectedFCall (sc, id, rt) -> Ast.FunctionCall (sc, id, [], rt), rt
           | SelectedConst (t,v) -> insert_constant ~t v
           | SelectedRecord (lv, off, tf) ->
@@ -777,7 +796,7 @@ and parse_extern_specification name  =
             "normalize.parse_extern_specification"
               "internal error : specification expected, body found"
 	      
-and normalize_ident_cur ident =
+and normalize_ident_cur ident = 
   match (Sym.current gtbl) with
   | Some x -> [x;ident]
   | None   -> [ident]
@@ -791,7 +810,8 @@ and normalize_params_cur param =
     in
       match strs with
 	| typ::[] -> is_basic typ  
-	| l when (compare (List.length l) 2 = 0) -> true (*add non regression*)
+	| l when (compare (List.length l) 2 = 0) -> true 
+	    (*add non regression*)
 	| _ ->  Npkcontext.report_error "normalize_params_cur"
                   "chain of selected names is too deep"
 	    
@@ -804,7 +824,7 @@ and normalize_params_cur param =
        if (is_basic_or_pre_typ p_typ) then
 	 p_typ
        else
-	 pack::p_typ	  
+	 pack::p_typ 	  
   in
 
     match (Sym.current gtbl) with
@@ -847,8 +867,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     match subprog_spec with
         | Subprogram(name,param_list,return_type) -> 
             let norm_name = normalize_ident_cur name in
-	    let norm_param_list = List.map normalize_params_cur param_list in
-	    (* Param type must be preceded by the package name see test t405*)
+	    let norm_param_list =
+	      List.map normalize_params_cur param_list in
+	      (* Param type must be preceded by the package name see test t405*)
             let t = Ada_utils.may subtyp_to_adatyp return_type in
             Sym.add_subprogram gtbl name norm_param_list t;
             Ast.Subprogram ( norm_name
@@ -979,13 +1000,18 @@ and normalize_package_spec (name, list_decl) =
   let norm_spec = normalize_decls list_decl in
 *)
   let norm_spec = 
-    if (Hashtbl.mem spec_tbl name) 
+    if  (Hashtbl.mem spec_tbl name)
     then 
-      []
+       match (Hashtbl.find spec_tbl name) with
+	   Ast.PackageSpec (_, n_spec),_ ->  n_spec
+	 | _ ->   Npkcontext.report_error "normalize_package_spec "
+             ("PAckage form in spec_tbl of" ^ name ^ "not as expected");
     else  
       let n_spec = normalize_decls list_decl in
       let spec =  Ast.PackageSpec (name, n_spec) in 
 	begin
+	  (*WG *) 
+	  Sym.add_with gtbl name;
 	  Hashtbl.add spec_tbl name (spec, Newspeak.unknown_loc);
 	  n_spec
 	end
@@ -1477,7 +1503,8 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
       List.flatten 
    	(List.rev_map (fun (aggr_fld, aggr_val) ->
 	(* id.aggr_fld <- aggr_v *)
-	let (off, tf) = T.record_field t_lv aggr_fld in				  	  match aggr_val with
+	let (off, tf) = T.record_field t_lv aggr_fld in	
+	  match aggr_val with
 	      Aggregate (NamedAggr ((AggrOthers,   
 		Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
 	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) when (T.is_array tf) ->
@@ -1594,13 +1621,18 @@ and add_extern_spec spec =
       | Ast.PackageSpec(name, basic_decls) -> 
           Sym.set_current gtbl name;
           Sym.enter_context ~name ~desc:"Package spec (extern)" gtbl;
-          List.iter add_extern_basic_decl basic_decls;
-          Sym.reset_current gtbl;
+          (*WG this package spec might have been added before*)
+	  (*adding if cond...*)
+	  if (not (Sym.is_with gtbl name)) then begin
+	    print_endline ("a ce moment "^(name)^"il n'est pas dnas with");
+	    List.iter add_extern_basic_decl basic_decls
+          end;
+	  Sym.reset_current gtbl;
           ignore (Sym.exit_context gtbl);
           Sym.add_with gtbl name
-
+	    
 and normalize_context context =
-  List.fold_left (fun ctx item ->  match item with
+  List.fold_left ( fun ctx item -> match item with
 	| With(nom, spec) ->  
 	    if (not (Sym.is_with gtbl nom)) then
 	      begin 
@@ -1614,17 +1646,17 @@ and normalize_context context =
 		  Hashtbl.add spec_tbl nom (norm_spec, loc);
 		  Ast.With(nom, loc, Some(norm_spec, loc))::ctx
 	      end
-	    else 
+	    else 	
 		(*Etienne Millon = ctx*)
-		(*Not found for internal spec like  System *)
-		begin
-		  try 
-		    let ( ex_spec, lc)  =  Hashtbl.find spec_tbl nom in
-		      Ast.With(nom, lc, Some(ex_spec, lc))::ctx
-		  with 
-		      Not_found -> ctx
-		end
-	| UseContext n  ->  
+		(*Not found for internal spec like  System *)	
+	      begin try 
+		let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
+		  Ast.With(nom, lc, Some(ex_spec, lc))::ctx
+	      with 
+		  Not_found -> ctx (*for System ... not an error*)
+	      end
+	
+	| UseContext n  -> 
 	    Sym.add_use gtbl n; 
 	    ctx 
   ) [] context

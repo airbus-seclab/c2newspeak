@@ -38,6 +38,10 @@ module Sym = Symboltbl
 
 open Ast
 
+let added_spec = ref[]
+let add_spec name =  added_spec:=name::!added_spec
+(*let f_is_with name = List.mem name !added_spec*)
+
 (** Builds a string from a name *)
 let string_of_name = Ada_utils.name_to_string
 
@@ -491,9 +495,15 @@ let translate compil_unit =
     | SubProgramSpec(subprog_spec) -> 
         ignore (translate_sub_program_spec subprog_spec )
     | PackageSpec (nom, basic_decl_list) ->
-        curpkg := Some nom;
-	List.iter translate_global_basic_declaration basic_decl_list;
-        curpkg := None
+	(*WG*)
+	(*print_endline ("nom de la spec :"^nom^(if (not (f_is_with nom)) then " pas deja present dans with" else "deja present"));  
+	  if (not (f_is_with  nom)) then begin
+	*)
+          curpkg := Some nom;
+	  List.iter translate_global_basic_declaration basic_decl_list;
+(*WG*)	  add_spec nom;
+          curpkg := None
+	(*end*)
 
   and translate_body body loc =
     Npkcontext.set_loc loc;
