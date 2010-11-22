@@ -310,7 +310,7 @@ let rec normalize_exp ?expected_type exp =
     | Lval(ParExp(n, params)) -> normalize_fcall (n, params)
     | Lval(PtrDeref _ as lv) -> let nlv, tlv = normalize_lval lv in
                                 Ast.Lval (nlv), tlv
-
+    (*TODO: improve this code for t412 *)
     | Lval (SName (ParExp(Var n, params), fld)) -> begin  
 	let lv = 
 	  match (normalize_fcall(Var n, params)) with
@@ -1029,12 +1029,22 @@ and normalize_spec spec = match spec with
 
 and normalize_lval ?(force = false) ?expected_type synt_lv = 
   match synt_lv with
-  | (Var _ | SName _) as lv ->
-      (* Only in write contexts *)
+      (*t414*)
+    | (SName (ParExp(Var _, _), _))  as arrec -> begin
+	let exp =  normalize_exp (Lval arrec) in
+	  match exp with
+	      Ast.Lval(Ast.RecordAccess _ as record_access), tf -> 
+		 record_access, tf
+	    | _ -> Npkcontext.report_error 
+		"normalize_lval" "Unexpected case"
+      end
+   
+    | (Var _ | SName _) as lv ->
+     (* Only in write contexts *)
       begin match resolve_selected ?expected_type lv with
       | SelectedVar    (sc, id,  t, ro) ->
           if (ro && not force) then
-          Npkcontext.report_error "normalize_instr"
+          Npkcontext.report_error "normalize_val"
              ("Invalid left value : '" ^ id ^ "' is read-only");
           Ast.Var  (sc, id, t), t
       | SelectedRecord (lv, off, tf) ->
