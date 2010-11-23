@@ -200,8 +200,7 @@ module Table = struct
               end
 
   let mkcast desc fn  ?(filter = fun _ -> true) lst  =
-
-    if ((List.length lst > 1) (*WG *) &&
+    if ((compare (List.length lst) 1 > 0) (*WG *) &&
 	  (compare desc "subprogram" <> 0)  
 	  (*WG *)) 
     then
@@ -245,10 +244,12 @@ module Table = struct
  ******************************************************************************)
 
   let rec find_symbols t id =
-    List.map (fun (wh,_,_,x) -> wh,x) (Symset.elements
-                                  (Symset.filter (fun (_,m,_,_) -> m = id)
-                                  t.t_tbl))
-
+    List.map (fun (wh,_,_,x) -> wh,x) (
+      Symset.elements
+        (Symset.filter (fun (_,m,_,_) -> m = id)
+           t.t_tbl)
+    )
+      
   let tbl_find_type tbl n =
     cast_t (find_symbols tbl n)
 
@@ -714,10 +715,31 @@ let type_ovl_intersection s n1 n2 =
       | Variable (_,t1,_,_,_), Variable (_,t2,_,_,_) -> t1 = t2
       | a, b -> a = b
     in
-    List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
+      List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
+  in   
+(*  Used to be:
+    let s1 = find_symbols (top s) n1 in
+    let s2 = find_symbols (top s) n2 in
+    Needs  more work than only 'find_symbols (top s) n1'...
+    because of case t415*)
+  let all_find_symbols stack name = 
+    let symb1 = Tree.fold (fun rf it ->
+	List.append rf (find_symbols it name)) [] stack.s_stack in
+    let context = ref (s_get_use stack) in 
+    let res = ref [] in
+      while (!context <> []) do
+	let p = (List.hd !context) in 
+	  context := List.tl !context;
+	  match (tbl_find_unit (library stack.s_stack) p) with
+	    | Some tbl -> res:=List.append !res (find_symbols tbl name)
+	    | None     -> ()
+      done;
+      List.append symb1 !res
   in
-  let s1 = find_symbols (top s) n1 in
-  let s2 = find_symbols (top s) n2 in
+  let s1 = all_find_symbols s n1 in
+  let s2 = all_find_symbols s n2 in
+  (*---------------*)
+   
   let inte = inter s1 s2 in
   let print_set set = "{"
                     ^ String.concat ", " (List.map (fun (_,x) ->
@@ -733,10 +755,12 @@ let type_ovl_intersection s n1 n2 =
                               " , R = " ^ print_set s2
                            )
                          );
-  if inte = [] then Some (T.new_unknown "from empty context intersection") else
-  try
-    match snd (cast_v inte) with
-    | Variable (_,r,_,_,_) -> Some r
-    | _ -> invalid_arg "type_ovl_inter"
-  with Not_found -> None
-
+    if inte = [] then 
+      Some (T.new_unknown "from empty context intersection") 
+    else
+      try
+	match snd (cast_v inte) with
+	  | Variable (_,r,_,_,_) -> Some r
+	  | _ -> invalid_arg "type_ovl_inter"
+      with Not_found -> None
+	

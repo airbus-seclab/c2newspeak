@@ -49,8 +49,6 @@ let init_bodies bds = body_tbl:=bds
 
 let bodies_to_add() = !body_tbl
 
-
-
 (* Name-related functions *)
 
 let name_of_sp_spec spec =
@@ -545,15 +543,17 @@ and normalize_binop bop e1 e2 =
 	      try
 		let v1 = make_name_of_lval l1 in
 		let v2 = make_name_of_lval l2 in
+		 (* print_endline  (" lval 1 =  "^(ListUtils.last v1));
+		    print_endline ( " lval 2 =  "^(ListUtils.last v2)); *)
                   Sym.type_ovl_intersection gtbl
                     (ListUtils.last v1)
                     (ListUtils.last v2)
 	      with _ -> None
 	    end
 		
-          | _      , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
+          | _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
                                           Some (subtyp_to_adatyp n)
-          | _               -> None
+          | _  -> None
           in
           let (e1',t1) = normalize_exp ?expected_type e1 in
           let (e2',t2) = normalize_exp ?expected_type e2 in
@@ -1662,8 +1662,7 @@ and normalize_context context =
 	      begin try 
 		let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
 		  Ast.With(nom, lc, Some(ex_spec, lc))::ctx
-	      with 
-		  Not_found -> ctx (*for System ... not an error*)
+	      with 		  Not_found -> ctx (*for System ... not an error*)
 	      end
 	
 	| UseContext n  -> 
