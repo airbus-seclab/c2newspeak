@@ -599,21 +599,21 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
                     then raise Not_found
                     else begin
 		      error ("Cannot find variable '" ^ n ^ "'"
-                               ^ (match expected_type with
-                                 | None   -> ""
-                                 | Some _ -> " with this expected type")
-			    ) 
+                             ^ (match expected_type with
+                                  | None   -> ""
+                                  | Some _ -> " with this expected type")
+			    )
 		    end
-		(*WG	       ^(match expected_type with
-                                 | None   -> ""
-                                 | Some t -> Ada_types.print  t)
-                  ^
-		  ( print s;	(*WG*)	     
-		  )
-		  )
-		  end
-		WG*)
-
+		      (*WG	       ^(match expected_type with
+                        | None   -> ""
+                        | Some t -> Ada_types.print  t)
+			^
+			( print s;	(*WG*)	     
+			)
+			)
+			end
+			WG*)
+		      
 let rec find_variable s ?silent ?expected_type name =
   let var_name = snd name in 
   try

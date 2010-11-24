@@ -1,7 +1,7 @@
 with T415a;
 Use T415a;
 
-package body t415 is
+package body T415  is
    procedure B (A : in T415a.T) is begin
       if (A = F) then
          null;

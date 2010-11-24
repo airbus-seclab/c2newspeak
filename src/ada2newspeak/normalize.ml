@@ -1236,10 +1236,13 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                                , fst (T.attr_get t "last"))
                            end
     in
+    let sub_typ_ind =  match range with 
+	DirectRange _   
+      | ArrayRange _    ->   (["standard";"integer"], None)
+      | SubtypeRange lv -> (make_name_of_lval lv, None)   
+    in
     let dp = [BasicDecl (ObjectDecl ( [iter]
-                         , ( ["standard";"integer"]
-                           , None
-                           )
+                         , sub_typ_ind
                          , Some (if is_rev then exp2 else exp1)
                          , Constant
                          )
