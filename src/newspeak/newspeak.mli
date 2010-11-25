@@ -262,6 +262,8 @@ val simplify: bool -> t -> t
 *)
 val string_of_loc : location -> string
 
+val string_of_unop: unop -> string
+
 val string_of_args: exp list -> string
 
 (** [string_of_bounds r] returns the string representation of range [r]. *)
