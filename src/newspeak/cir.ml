@@ -460,8 +460,40 @@ and normalize_blk x =
   match x with
       hd::tl -> (normalize_stmt hd)@(normalize_blk tl)
     | [] -> []
-	
-let eval_exp e =
+
+let is_mask op e1 e2 =
+    match op, e1, e2 with
+	BAnd _, _, Unop(BNot _, _) 
+      | BAnd _, Unop(BNot _, _), _ -> true
+      | _ 			   -> false
+
+
+let rec mask e1 e2 = 
+  let e1, e2 = 
+    match e1, e2 with
+	Unop(BNot _, e1'), e2  -> e1', e2
+      | e1, Unop(BNot _, e2') -> e1, e2'
+      | _, _ -> Npkcontext.report_error "Cir.eval_exp" "static expression expected"
+  in
+  let n1 = Nat.to_big_int (eval_exp e1) in
+  let n2 = 
+    try 
+      Nat.to_int (eval_exp e2) 
+    with _ -> Npkcontext.report_error "Cir.eval_exp" "static expression expected"
+  in
+  let l = [ 1; 3; 7; 15; 31; 63; 127; 
+      255; 511; 1023; 2047; 4095; 8191; 
+      16383; 32767; 65535; 131071; 262143; 
+      524287; 1048575; 2097151; 4194303; 8388607; 
+      16777215; 33554431; 67108863; 134217727; 
+      268435455; 536870911; 1073741823 ]
+  in
+  if List.mem n2 l then
+    let m = EBigInt.big_int_of_int (n2+1)  in
+      EBigInt.mult_big_int (EBigInt.div_big_int n1 m) m
+  else Npkcontext.report_error "Cir.eval_exp" "static expression expected"
+
+and eval_exp e =
   let apply_bop op v1 v2 =
     match op with
 	PlusI -> EBigInt.add_big_int v1 v2
@@ -502,7 +534,9 @@ let eval_exp e =
   let rec eval_exp e =
     match e with
 	Const (CInt i) -> Nat.to_big_int i
-      | Binop (op, e1, e2) -> apply_bop op (eval_exp e1) (eval_exp e2)
+      | Binop (op, e1, e2) -> 
+	  if is_mask op e1 e2 then mask e1 e2
+	  else apply_bop op (eval_exp e1) (eval_exp e2)
       | Unop (Cast (Ptr, Int _), e) -> eval_exp e
       | Unop (Cast (Int _, Ptr), e) -> eval_exp e
       | Unop (Coerce b, e) -> 
