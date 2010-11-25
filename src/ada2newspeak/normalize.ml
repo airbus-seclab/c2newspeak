@@ -1219,58 +1219,176 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                                 normalize_block ?return_type instrs),loc]
   | Loop(While(exp), instrs) -> [Ast.Loop(Ast.While(normalize_exp exp),
                    normalize_block ?return_type instrs), loc]
-  | Loop(For(iter, range, is_rev), block) ->
-    let (exp1, exp2) = match range with
-      | DirectRange (min, max) -> (min, max)
-      | ArrayRange n -> begin
-                          let n = make_name_of_lval n in
-                          let n = mangle_sname n in
-                          let (_,(_,t,_)) = Sym.find_variable gtbl n in
-                          ( fst (T.attr_get t "first")
-                          , fst (T.attr_get t "last"))
-                        end
-      | SubtypeRange lv -> begin
-                             let st = make_name_of_lval lv in
-                             let t = subtyp_to_adatyp st in
-                               ( fst (T.attr_get t "first")
-                               , fst (T.attr_get t "last"))
-                           end
-    in
-    let sub_typ_ind =  match range with 
-	DirectRange _   
-      | ArrayRange _    ->   (["standard";"integer"], None)
-      | SubtypeRange lv -> (make_name_of_lval lv, None)   
-    in
-    let dp = [BasicDecl (ObjectDecl ( [iter]
-                         , sub_typ_ind
-                         , Some (if is_rev then exp2 else exp1)
-                         , Constant
-                         )
-                  )
-          , loc]
-    in
-    Sym.enter_context gtbl;
-    let ndp = normalize_decl_part dp in
-    let nblock = normalize_block ?return_type block in
-    let loop =
-      [Ast.Loop
-          ( Ast.While
-            ( normalize_exp (if is_rev then Binary(Ge,Lval(Var iter),exp1)
-                                       else Binary(Le,Lval(Var iter),exp2))
-                             )
-             , nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
-                                    , normalize_exp( Binary((if is_rev
-                                                               then Minus
-                                                               else Plus)
-                                                   , Lval(Var iter)
-                                                   , CInt (Nat.one)))
-                                    )
-                      , loc]
-          )
-          , loc]
-    in
-    Sym.exit_context gtbl;
-    [Ast.Block (ndp, loop), loc]
+  | Loop(For(iter, range, is_rev), block) -> begin
+      let (exp1, exp2) = match range with
+	| DirectRange (min, max) -> (min, max)
+	| ArrayRange n -> begin
+            let n = make_name_of_lval n in
+            let n = mangle_sname n in
+            let (_,(_,t,_)) = Sym.find_variable gtbl n in
+              ( fst (T.attr_get t "first")
+                  , fst (T.attr_get t "last"))
+          end
+	| SubtypeRange lv -> begin
+            let st = make_name_of_lval lv in
+            let t = subtyp_to_adatyp st in
+              ( fst (T.attr_get t "first")
+                  , fst (T.attr_get t "last"))
+          end
+      in
+      let sub_typ_ind =  match range with 
+	  DirectRange _   
+	| ArrayRange _    ->   (["standard";"integer"], None)
+	| SubtypeRange lv -> (make_name_of_lval lv, None)   
+      in
+      let dp = [BasicDecl (ObjectDecl ( 
+			     [iter]
+			    , sub_typ_ind
+			    , Some (if is_rev then exp2 else exp1)
+                            , Constant
+                           )
+			  )
+		  , loc
+	       ]
+      in
+	Sym.enter_context gtbl;
+	let ndp = normalize_decl_part dp in
+	let nblock = normalize_block ?return_type block in
+	  
+	(*enum_case is different due to potential redefiniton 
+	  of value with Enumeration clause use*)
+	  (*TO DO FACTORIZE CODE *)
+	  match range with 
+	      (*when subtype is enumeration, iter++ will 
+		fail because iter has type enumeration(t417):
+		solution: create an integer, and an array
+		mapping it to representing clause
+	      *)
+	      SubtypeRange lv  ->  begin
+		let names = make_name_of_lval lv in
+		let ada =  subtyp_to_adatyp names in 
+		  match (T.extract_symbols ada, T.compute_int_constr ada) with 
+		      Some enums, None ->
+			let unrolled_loops = ref [] in
+			  List.iter  
+			    ( fun (x_str, _) -> 
+				unrolled_loops:=List.append !unrolled_loops
+				  ([Ast.Assign 
+				      ( 
+				        Ast.Var (Sym.Lexical, iter, ada)
+					  , normalize_exp(  Lval(Var x_str)))
+				      , loc
+				   ]@nblock 
+				  )
+			    )
+			    (if is_rev then
+			       List.rev enums else enums )
+			  ;
+			  Sym.exit_context gtbl;
+			  [Ast.Block (ndp, !unrolled_loops), loc]
+			      
+		    |   Some enums, Some (min, max) ->
+			  let sub_enums = List.filter 
+			    ( fun (_, v) ->
+				(compare   (Newspeak.Nat.to_int min) v <= 0) &&
+			        (compare v   (Newspeak.Nat.to_int max) <= 0)
+			    )
+			    enums 
+			  in
+			    let unrolled_loops = ref [] in
+			      List.iter  
+				( fun (x_str, _) -> 
+				unrolled_loops:=List.append !unrolled_loops
+				  ([Ast.Assign ( 
+				      Ast.Var (Sym.Lexical, iter, ada)
+					, normalize_exp(  Lval(Var x_str))
+				    )
+				      , loc
+				   ]@nblock 
+				  )
+			    ) (if is_rev then List.rev sub_enums else sub_enums );
+			  
+			  Sym.exit_context gtbl;
+			  [Ast.Block (ndp, !unrolled_loops), loc]
+			    
+		    | _ ->(* Npkcontext.report_error "normalize TO DO"
+			     "not an enumeration in: Loop(For(_, range,_)"*)
+			
+			let loop =[Ast.Loop ( Ast.While
+						( normalize_exp (if is_rev then 
+								   Binary(Ge,Lval(Var iter),exp1)
+								 else 
+								   Binary(Le,Lval(Var iter),exp2))
+						)
+						, nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
+									   , normalize_exp( 
+									     Binary(
+									       (if is_rev
+										then Minus
+										else Plus)
+										 , Lval(Var iter)
+										   , CInt (Nat.one)))
+								       )
+							      , loc]
+					    )
+				     , loc]
+			in
+			  Sym.exit_context gtbl;
+			  [Ast.Block (ndp, loop), loc]
+			   
+	      end
+	    | _ -> let loop =[Ast.Loop ( Ast.While
+		      ( normalize_exp (if is_rev then 
+					 Binary(Ge,Lval(Var iter),exp1)
+				       else 
+					 Binary(Le,Lval(Var iter),exp2))
+		      )
+		      , nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
+						 , normalize_exp( 
+						   Binary(
+						     (if is_rev
+						      then Minus
+						      else Plus)
+						       , Lval(Var iter)
+							 , CInt (Nat.one)))
+					     )
+				    , loc]
+				    )
+			     , loc]
+		in
+		  Sym.exit_context gtbl;
+		  [Ast.Block (ndp, loop), loc]
+		    
+
+
+
+    end
+      (*
+	let loop =[Ast.Loop
+        ( Ast.While
+	( normalize_exp (if is_rev then 
+	Binary(Ge,Lval(Var iter),exp1)
+        else 
+	Binary(Le,Lval(Var iter),exp2))
+        )
+	, nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
+	, normalize_exp( 
+	Binary(
+	(if is_rev
+	then Minus
+	else Plus)
+	, Lval(Var iter)
+        , CInt (Nat.one)))
+	)
+	, loc]
+        )
+        , loc]
+	in
+	Sym.exit_context gtbl;
+	[Ast.Block (ndp, loop), loc]
+      *)
+      
+      
   | Exit -> [Ast.Exit, loc]
   | Case (e, choices, default) ->
             [Ast.Case (normalize_exp e,
