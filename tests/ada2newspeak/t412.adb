@@ -8,7 +8,6 @@ procedure t412 is
    type T_T is array (I) of T_C;
 
    Ci:constant T_T :=((F => 5), (F => 8));
-
 begin
    Y := Ci(T1).F;
 

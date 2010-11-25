@@ -225,6 +225,10 @@ val is_unknown  : t -> bool (*  X                                  *)
  *  Translator  *
  ****************)
 
+(**compute the extrema of a type looking for extra constraints*)
+val compute_int_constr: t -> Newspeak.bounds option
+
+
 (** Compute the CIR type associated to some type. *)
 val translate : t -> Cir.typ
 

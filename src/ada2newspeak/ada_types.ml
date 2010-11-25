@@ -58,7 +58,7 @@ type t = {
 (* "type" in RM *)
 and base_t = {
   trait   : trait_t;
-  uid     : int;      (* Used to make derived types look different *)
+  uid     : int;     (* Used to make derived types look different *)
 }
 
 and range =
@@ -243,22 +243,47 @@ let get_reason t =
   | _ -> Npkcontext.report_error "get_reason"
           "assertion (is_unknown) failed"
 
+
+(**************************
+ * Representation clauses *
+ **************************)
+let represtbl : (t, (data_t * data_t) list) Hashtbl.t = Hashtbl.create 0
+
 let extract_symbols t =
   match t.base.trait with
-  | Enumeration v -> Some v
-  | _             -> None
-
+    | Enumeration v -> (* WG Some v*)
+	begin
+	  try 
+	    let mapping = Hashtbl.find represtbl t in
+	    let lg = List.length mapping in 
+	      if (compare lg (List.length v) <> 0) then
+		Npkcontext.report_error "extract symbols"
+		  "assertion (same length) failed"
+	      ;
+	      Some ( List.map 
+	       ( fun (x,y) -> 
+		   match y with 
+		       IntVal nat -> 
+			 (x, Newspeak.Nat.to_int nat)
+		     | _ ->   
+			 Npkcontext.report_error 
+			   "extract  symbols"
+			   "assertion (not intval) failed"
+	       ) 
+		  (List.map2 (fun (s,_) (n, _) -> (s,n)) v mapping)
+	      )
+	with 
+	    Not_found -> Some v
+	end
+    | _             -> None
+	
 let extract_access_type t =
   match t.base.trait with
   | Access te -> te
   | _ -> Npkcontext.report_error "extract_access_type"
            "This type is not an access type, it cannot be dereferenced"
 
-(**************************
- * Representation clauses *
- **************************)
 
-let represtbl : (t, (data_t * data_t) list) Hashtbl.t = Hashtbl.create 0
 
 let is_increasing l =
   match l with
@@ -282,6 +307,9 @@ let handle_enum_repr_clause t l =
   if not (is_increasing values_int) then
     Npkcontext.report_error "handle_enum_repr_clause"
       "In representation clause, values should be ordered";
+   (*print_endline"********"; List.iter print_endline values_got;
+     print_endline"--------"; List.iter print_endline values_expected;
+   *)
   if (values_got <> values_expected) then
     Npkcontext.report_error "handle_enum_repr_clause"
       "In representation clause, some litterals are missing";
@@ -463,6 +491,11 @@ let compute_constr t =
           Some (A.IntegerRangeConstraint (min, max))
 	end
     | _ -> None
+
+let compute_int_constr t = 
+  match (compute_constr t) with
+      Some (A.IntegerRangeConstraint(a, b)) -> Some (a,b)
+    | _ -> None
 	
 let all_values typ =
   let rec interval a b =
@@ -521,24 +554,25 @@ let rec translate t = match t.base.trait with
                                , minimal_size_signed a b
                                ))
   | Enumeration    v    -> begin
-                             let (min, max) = match (compute_constr t) with
-                               | Some (A.IntegerRangeConstraint (x,y))-> (x,y)
-                               | _ -> ( Newspeak.Nat.zero
-                                      , Newspeak.Nat.of_int
-                                          (snd (ListUtils.last v)))
-                             in
-                             let ikind =
-                               if (Newspeak.Nat.compare min
-                                     Newspeak.Nat.zero < 0) then
-                                 ( Newspeak.Signed
-                                 , minimal_size_signed min max)
-                               else
-                                 ( Newspeak.Unsigned
-                                 , minimal_size_unsigned max)
-                             in
-                               Cir.Scalar (Newspeak.Int ikind)
-                           end
-  | Float          d    -> Cir.Scalar (Newspeak.Float (float_size d))
+         let (min, max) = match (compute_constr t) with
+           | Some (A.IntegerRangeConstraint (x,y))-> (x,y)
+           | _ -> ( Newspeak.Nat.zero
+                      , Newspeak.Nat.of_int
+                        (snd (ListUtils.last v)))
+         in
+         let ikind =
+           if (Newspeak.Nat.compare min
+                 Newspeak.Nat.zero < 0) then
+             ( Newspeak.Signed
+                 , minimal_size_signed min max)
+           else
+             ( Newspeak.Unsigned
+                 , minimal_size_unsigned max)
+         in
+           Cir.Scalar (Newspeak.Int ikind)
+    end
+  | Float  d  -> 
+      Cir.Scalar (Newspeak.Float (float_size d))
   | Array        (c,is) ->
       begin
         match is with
