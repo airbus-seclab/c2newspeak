@@ -55,8 +55,10 @@ let translate npk =
 
   let translate_ftyp (args, ret) =
     match ret with
-	None -> args
-      | Some t -> t::args
+	[] -> args
+      | t::[] -> t::args
+(* TODO: handle this case *)
+      | _ -> invalid_arg "Build.translate_ftyp: case not handled yet"
   in
 
   let translate_args ftyp =

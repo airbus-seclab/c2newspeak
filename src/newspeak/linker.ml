@@ -71,8 +71,8 @@ and generate_field (offs, t) = (offs, generate_typ t)
 and generate_ftyp (args, ret) =
   let ret = 
     match ret with
-        None -> None
-      | Some t -> Some (generate_typ t)
+        None -> []
+      | Some t -> (generate_typ t)::[]
   in
     (List.map generate_typ args, ret)
 
@@ -209,8 +209,10 @@ let generate_fundecs fundecs =
     let ftyp = generate_ftyp ftyp in
     let ret_t = 
       match snd ftyp with
-	  None -> None
-	| Some t -> Some ("!return", t)
+	  [] -> []
+	| t::[] -> ("!return", t)::[]
+(* TODO: handle this case *)
+	| _ -> invalid_arg "Linker.generate_fundecs: case not handled yet"
     in      
       if Hashtbl.mem funspecs name then begin
         Npkcontext.report_error "Npklink.generate_funspecs" 

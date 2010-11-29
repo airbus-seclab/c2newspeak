@@ -96,7 +96,7 @@ type t = {
 
 and fundec = {
   args : (string * typ) list;
-  ret  : (string * typ) option;
+  ret  : (string * typ) list;
   body : blk;
 }
 
@@ -153,7 +153,7 @@ and cst =
   | CFloat of (float * string)
   | Nil
 
-and ftyp = typ list * typ option
+and ftyp = typ list * typ list
 
 and typ =
     Scalar of scalar_t
@@ -334,26 +334,26 @@ let string_of_list print l =
 let string_of_formal_arg (arg_name, typ) =
   string_of_typ typ ^ " " ^ arg_name
 
-let string_of_formal_args = function
-  | [] -> "(void)"
-  | l  -> string_of_list string_of_formal_arg l
-
 let string_of_ret ret =
   match ret with
-      None -> "void"
-    | Some (_, t) -> string_of_typ t
+      [] -> "void"
+    | l -> String.concat ", " (List.map (fun (_, t) -> string_of_typ t) l)
 
+let string_of_formal_args args = 
+  match args with
+      [] -> "(void)"
+    | l -> string_of_list string_of_formal_arg l
+(* TODO: uniformize/cleanup outputs functions *)
 let string_of_typ_list = function
-  |  []  -> "void"
-  | args -> string_of_list string_of_typ args 
+  | []  -> "void"
+  | args -> string_of_list string_of_typ args
+
+let string_of_ret_list = function
+  | []  -> "void"
+  | args -> String.concat ", " (List.map string_of_typ args)
 
 let string_of_ftyp (args, ret) = 
-  let ret = 
-    match ret with
-	None -> "void"
-      | Some t -> string_of_typ t
-  in
-    string_of_typ_list args ^ " -> " ^ ret
+  string_of_typ_list args ^ " -> " ^ string_of_ret_list ret
 
 let string_of_loc (fname, line, carac) = 
   if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
@@ -434,12 +434,12 @@ and string_of_exp e =
 let string_of_funexp f =
   match f with
       FunId fid -> fid
-    | FunDeref (exp, (args_t, Some ret_t)) ->
+    | FunDeref (exp, (args_t, [ret_t])) ->
         "["^(string_of_exp exp)^"]("^
           (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
-    | FunDeref (exp, ([], None)) ->
+    | FunDeref (exp, ([], _)) ->
         "["^(string_of_exp exp)^"]"
-    | FunDeref (exp, (args_t, None)) ->
+    | FunDeref (exp, (args_t, _)) ->
         "["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
 
 (* Actual dump *)
@@ -1102,21 +1102,14 @@ and build_ikind builder (sign, sz) =
     (sign, sz)
 
 and build_formal_ftyp builder (args, ret) =
-  let args = List.map (fun (s, t) -> s, build_typ builder t) args in
-  let ret =
-    match ret with
-        Some (var, t) -> Some (var, build_typ builder t)
-      | None -> None
-  in
+  let build_arg (x, t) = (x, build_typ builder t) in
+  let args = List.map build_arg args in
+  let ret = List.map build_arg ret in
     (args, ret)
 
 and build_ftyp builder (args, ret) =
   let args = List.map (build_typ builder) args in
-  let ret = 
-    match ret with
-        Some t -> Some (build_typ builder t)
-      | None -> None
-  in
+  let ret = List.map (build_typ builder) ret in
     (args, ret)
 
 and build_cell builder (o, t, e) =
@@ -1344,9 +1337,7 @@ let visit_typ visitor t =
 
 let visit_ftyp visitor (args, ret) =
   List.iter (visit_typ visitor) args;
-  match ret with
-      Some t -> visit_typ visitor t
-    | None -> ()
+  List.iter (visit_typ visitor) ret
 
 let rec visit_lval visitor x =
   let continue = visitor#process_lval x in
@@ -1437,14 +1428,9 @@ and visit_token builder x =
 let visit_fun visitor fid ft =
   let continue = visitor#process_fun fid ft in
   if continue then begin
-    let ret =
-      match ft.ret with
-	  None -> None
-	| Some (_, ret_t) -> Some ret_t
-    in
-      visit_ftyp visitor ((List.map snd ft.args), ret);
-      visit_blk visitor ft.body;
-      visitor#process_fun_after ()
+    visit_ftyp visitor ((List.map snd ft.args), List.map snd ft.ret);
+    visit_blk visitor ft.body;
+    visitor#process_fun_after ()
   end
 
 let visit_init visitor (_, _, e) = visit_exp visitor e

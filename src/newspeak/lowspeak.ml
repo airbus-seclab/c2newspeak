@@ -218,13 +218,7 @@ let string_of_args_t args =
           !res
     | [] -> "void"
 
-let string_of_ret_t ret =
-  match ret with
-      None -> "void"
-    | Some t -> string_of_typ t
-
-let string_of_ftyp (args, ret) = 
-    (string_of_args_t args) ^ " -> " ^ (string_of_ret_t ret)
+let string_of_ret_t ret = string_of_args_t ret
 
 let string_of_loc (fname, line, carac) = 
   if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
@@ -285,7 +279,7 @@ and string_of_exp e =
       Const c -> string_of_cst c
     | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_scalar t)
     | AddrOf lv -> "&("^(string_of_lval lv)^")"
-    | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp ft)^"}("^fid^")"
+    | AddrOfFun (fid, ft) -> "&_{"^(N.string_of_ftyp ft)^"}("^fid^")"
     | BinOp (op, e1, e2) ->
         "("^(string_of_exp e1)^" "^(string_of_binop op)^
           " "^(string_of_exp e2)^")"
@@ -296,11 +290,12 @@ and string_of_exp e =
 let string_of_funexp f =
   match f with
       FunId fid -> fid^"()"
-    | FunDeref (exp, (args_t, Some ret_t)) ->
+    | FunDeref (exp, (args_t, [ret_t])) ->
         "["^(string_of_exp exp)^"]("^
           (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
-    | FunDeref (exp, (args_t, None)) ->
+    | FunDeref (exp, (args_t, _)) ->
         "["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
+
 
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
@@ -504,9 +499,7 @@ let visit_typ visitor t =
 
 let visit_ftyp visitor (args, ret) =
   List.iter (visit_typ visitor) args;
-  match ret with
-      Some t -> visit_typ visitor t
-    | None -> ()
+  List.iter (visit_typ visitor) ret
 
 let rec visit_lval visitor x =
   let continue = visitor#process_lval x in
@@ -1055,11 +1048,7 @@ and build_ikind builder (sign, sz) =
 
 and build_ftyp builder (args, ret) =
   let args = List.map (build_typ builder) args in
-  let ret = 
-    match ret with
-        Some t -> Some (build_typ builder t)
-      | None -> None
-  in
+  let ret = List.map (build_typ builder) ret in
     (args, ret)
 
 and build_cell builder (o, t, e) =

@@ -72,9 +72,7 @@ let goto env lbl s =
   
 let height_of_ftyp (args, ret) = 
   let n = List.length args in
-    match ret with
-	None -> n - 1
-      | Some _ -> n
+    n + List.length ret - 1
 
 let rec create_locals env n =
   let rec create n =
@@ -84,9 +82,9 @@ let rec create_locals env n =
 
 let build_main_info ft s =
   match ft with
-      (_::_::[], Some _) -> 
+      (_::_::[], _::[]) -> 
 	State.set_pointsto (Memloc.of_local 2, 0) (Memloc.gen ()) s
-    | (_::_::[], None) -> 
+    | (_::_::[], []) -> 
 	State.set_pointsto (Memloc.of_local 1, 0) (Memloc.gen ()) s
     | ([], _) -> s
     | _ -> invalid_arg "Solver.add_main_info: unexpected type for main"

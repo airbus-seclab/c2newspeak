@@ -161,7 +161,7 @@ let translate prog =
     let add rets =
       match rets with
           (* TODO: should have one list instead of two here!!! *)
-          (lv::[], Some t) -> 
+          (lv::[], t::[]) -> 
             push tmp_var;
             let e = Lval (Local tmp_var, t) in
             let set = translate_set (lv, e, t) in
@@ -176,7 +176,7 @@ let translate prog =
     in
     let add_fst rets =
       match rets with
-          ((Local v)::[], Some _) when Hashtbl.find env v = !stack_height -> 
+          ((Local v)::[], _::[]) when Hashtbl.find env v = !stack_height -> 
 	    prefix_args loc f ft args args_ids
         | _ -> add rets
     in
@@ -230,13 +230,16 @@ let translate prog =
   let translate_fundec f fd =
     let ret_ids = 
       match fd.ret with
-	| None -> []
-	| Some (v, _) -> [v]
+	| [] -> []
+	| (v, _)::[] -> [v]
+(* TODO: remove this case *)
+	| _ -> invalid_arg "Npk2lpk.translate_fundec: case not handled yet"
     in
     let ret_t =
       match fd.ret with
-	  None -> None
-	| Some (_, t) -> Some t
+	  [] -> []
+	| (_, t)::[] -> t::[]
+	| _ -> invalid_arg "Npk2lpk.translate_fundec: case not handled yet"
     in
     let arg_ids = List.map fst fd.args in
     let ft = (List.map snd fd.args, ret_t) in

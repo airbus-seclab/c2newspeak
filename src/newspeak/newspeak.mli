@@ -99,7 +99,7 @@ type t = {
 
 and fundec = {
   args : (string * typ) list;
-  ret  : (string * typ) option;
+  ret  : (string * typ) list;
   body : blk;
 }
 
@@ -159,7 +159,7 @@ and cst =
   | CFloat of (float * string)
   | Nil
 
-and ftyp = typ list * typ option
+and ftyp = typ list * typ list
 
 and typ =
     Scalar of scalar_t
@@ -287,7 +287,7 @@ val string_of_blk: blk -> string
 val string_of_binop: binop -> string
 
 val string_of_formal_args: (string * typ) list -> string
-val string_of_ret: (string * typ) option -> string
+val string_of_ret: (string * typ) list -> string
 val string_of_size_t: size_t -> string
 val string_of_lbl: lbl -> string
 val string_of_assertion: assertion -> string
