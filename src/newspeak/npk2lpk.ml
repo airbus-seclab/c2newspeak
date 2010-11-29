@@ -229,14 +229,14 @@ let translate prog =
 
   let translate_fundec f fd =
     let ret_ids = 
-      match fd.ret with
+      match fd.rets with
 	| [] -> []
 	| (v, _)::[] -> [v]
 (* TODO: remove this case *)
 	| _ -> invalid_arg "Npk2lpk.translate_fundec: case not handled yet"
     in
     let ret_t =
-      match fd.ret with
+      match fd.rets with
 	  [] -> []
 	| (_, t)::[] -> t::[]
 	| _ -> invalid_arg "Npk2lpk.translate_fundec: case not handled yet"

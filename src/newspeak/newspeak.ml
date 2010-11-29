@@ -96,7 +96,7 @@ type t = {
 
 and fundec = {
   args : (string * typ) list;
-  ret  : (string * typ) list;
+  rets : (string * typ) list;
   body : blk;
 }
 
@@ -558,7 +558,7 @@ let string_of_blk offset x =
   
 let dump_fundec name fd =
   let str_args = string_of_formal_args fd.args in
-  let str_ret  = string_of_ret fd.ret in
+  let str_ret  = string_of_ret fd.rets in
     print_endline (str_ret ^ " " ^ name ^ str_args ^ " {");
     print_string (string_of_blk 2 fd.body);
     print_endline "}";
@@ -1064,9 +1064,9 @@ and build_gdecl builder (t, loc) =
     (t, loc)
 
 and build_fundec builder fd = 
-  let (args_t, ret_t) = build_formal_ftyp builder (fd.args, fd.ret) in
+  let (args_t, ret_t) = build_formal_ftyp builder (fd.args, fd.rets) in
     { args = args_t;
-      ret  = ret_t;
+      rets = ret_t;
       body = build_blk builder fd.body;
     }
 
@@ -1428,7 +1428,7 @@ and visit_token builder x =
 let visit_fun visitor fid ft =
   let continue = visitor#process_fun fid ft in
   if continue then begin
-    visit_ftyp visitor ((List.map snd ft.args), List.map snd ft.ret);
+    visit_ftyp visitor ((List.map snd ft.args), List.map snd ft.rets);
     visit_blk visitor ft.body;
     visitor#process_fun_after ()
   end

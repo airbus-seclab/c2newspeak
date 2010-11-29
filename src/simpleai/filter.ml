@@ -186,7 +186,7 @@ let process prog =
   in
 
   let process_fundec f fd = 
-    process_ftyp fd.args fd.ret;
+    process_ftyp fd.args fd.rets;
     let body = process_blk fd.body in
       Hashtbl.add fundecs f body
   in

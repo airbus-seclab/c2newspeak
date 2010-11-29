@@ -220,7 +220,7 @@ let generate_fundecs fundecs =
       end;
       Hashtbl.add funspecs name
         {
-          N.ret  = ret_t;
+          N.rets = ret_t;
           N.args = List.combine args (fst ftyp) ;
           N.body = body ;
         } ;

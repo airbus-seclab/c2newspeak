@@ -99,7 +99,7 @@ type t = {
 
 and fundec = {
   args : (string * typ) list;
-  ret  : (string * typ) list;
+  rets : (string * typ) list;
   body : blk;
 }
 
@@ -122,6 +122,8 @@ and stmtkind =
 (* TODO: shouldn't the type be together with the expressions and left values
    rather than as a ftyp? 
    think about it... *)
+(* TODO: think about it, but should put the typs in ftyp in the exp and lval
+   list (since the lists are supposed to have the same length) *)
 (* arguments, function type, function expression, return left values *)
   | Call of (exp list * ftyp * funexp * lval list)
   | UserSpec of assertion
@@ -159,6 +161,7 @@ and cst =
   | CFloat of (float * string)
   | Nil
 
+(* TODO: try to remove ftyp?? maybe not, it comes in handy *)
 and ftyp = typ list * typ list
 
 and typ =
