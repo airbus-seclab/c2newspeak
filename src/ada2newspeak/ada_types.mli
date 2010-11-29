@@ -70,6 +70,8 @@ val new_derived    : t -> t
 (** Constrained subtype. *)
 val new_constr     : t -> Syntax_ada.contrainte -> t
 
+(** Subtype deriving from a enumerated using representation clause. *)
+val new_enum     : t -> (string * int) list  -> t
 (**
  * Plain integer range.
  *)
@@ -109,7 +111,7 @@ val is_compatible : t -> t -> bool
 
 (* Precondition : (is_record t) *)
 val handle_enum_repr_clause : t -> (Newspeak.Nat.t * Newspeak.Nat.t) list
-                              -> unit
+                              -> t (*WG!!!unit*)
 
 (**
  * Fetch a value for an enumeration litteral.

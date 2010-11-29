@@ -43,7 +43,7 @@ module Table = struct
     val elements : 'a t -> 'a list
     val add : 'a -> 'a t -> 'a t
     val filter : ('a -> bool) -> 'a t -> 'a t
-
+      
   end = struct
 
     type 'a t = 'a list
@@ -167,6 +167,7 @@ module Table = struct
     adder (fun t -> Type t)
           "type"
 
+	    
   let add_subprogram tbl n params ret =
     adder (fun (params,ret) -> Subprogram (n,params,ret))
           "subprogram"
@@ -594,7 +595,7 @@ let s_find desc finder s ?package n =
 let find_variable_value s ?(silent = false) ?expected_type (package,n) =
   try
     s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
-            s ?package n
+      s ?package n
   with Not_found -> if silent
                     then raise Not_found
                     else begin
@@ -706,6 +707,56 @@ let add_variable s n loc ?value ?(no_storage = false) ?(ro = false) t =
 let add_type s n loc v =
   add_type (top s) n loc v (scope (top s))
 
+
+(*for Enumeration type redefining using the 'use ' clause*)
+let replace_type s n new_t =
+  let tabl = top s in
+  let removed = 
+    Symset.filter (fun (_,m,_,_) -> m <> n) tabl.t_tbl
+  in
+  let olds = 
+    Symset.filter (fun (_,m,_,_) -> m = n) tabl.t_tbl
+  in
+    match (Symset.elements olds) with 
+	[ (wh, m, lc, _)] ->
+	  tabl.t_tbl <- Symset.add (wh, m, lc, Type new_t) removed; 
+      | _ ->  error ("Replacing enumeration type failed "^n^
+		       "too many candidate found ("^
+		       (string_of_int(List.length(Symset.elements olds)))
+		    ^")"
+		    )
+	  
+
+
+(*for Enumeration type redefining using the 'use' clause*)
+let replace_typ_enum s (name,data) oldt newt  = 
+  let t = top s in
+  let enum_searched = 
+    Symset.filter ( 
+      fun ( _, _, _, z)  ->
+	match z with 
+	    Variable (str , typ, _, no_st, _) -> 	 
+	      (no_st && typ= oldt && str = name)
+	  | _ -> false
+    )  t.t_tbl 
+  in
+  let others = 
+    Symset.filter ( 
+      fun (_, _, _,  z)  ->
+	match z with 
+	    Variable (str , typ, _, no_st, _)  ->  
+	      (not no_st || not (typ = oldt) || not (str = name))
+	  | _ -> true
+    )  t.t_tbl 
+  in
+      match (Symset.elements  enum_searched ) with 
+	[(wh, m, lc, Variable (str,_,_, no_st, ro))] -> 
+	    t.t_tbl <- Symset.add (wh, m, lc, 
+		Variable (str, newt , Some data, no_st, ro)) others
+	| _ ->  error ("Replacing enumeration Value  failed")
+	  
+
+  
 let add_subprogram s n v rt =
   add_subprogram (top s) n v rt (scope (top s))
 
@@ -717,11 +768,9 @@ let type_ovl_intersection s n1 n2 =
     in
       List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
   in   
-(*  Used to be:
-    let s1 = find_symbols (top s) n1 in
-    let s2 = find_symbols (top s) n2 in
-    Needs  more work than only 'find_symbols (top s) n1'...
-    because of case t415*)
+    (*  Needs  more work than only 'find_symbols (top s) n1'...
+	see t415
+    *)
   let all_find_symbols stack name = 
     let symb1 = Tree.fold (fun rf it ->
 	List.append rf (find_symbols it name)) [] stack.s_stack in
@@ -738,7 +787,6 @@ let type_ovl_intersection s n1 n2 =
   in
   let s1 = all_find_symbols s n1 in
   let s2 = all_find_symbols s n2 in
-  (*---------------*)
    
   let inte = inter s1 s2 in
   let print_set set = "{"

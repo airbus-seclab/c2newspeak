@@ -124,6 +124,14 @@ val is_operator_overloaded : t -> string -> bool
 
 (** Add data.  *)
 val add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
+
+(*WG**)
+val replace_type : t -> string ->  Ada_types.t -> unit
+
+val replace_typ_enum : t -> (string*Ada_types.data_t )-> Ada_types.t -> Ada_types.t -> unit
+
+
+
 val add_variable : t -> string -> Newspeak.location
                      -> ?value:Ada_types.data_t
                      -> ?no_storage:bool

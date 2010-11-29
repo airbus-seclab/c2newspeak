@@ -101,7 +101,7 @@ let rec print t =
     | Univ_int    -> "Universal_integer"
     | Univ_real   -> "Universal_real"
     | Float   d -> "Float "  ^Newspeak.Nat.to_string d
-    | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"
+    | Enumeration v -> "Enum (length = "^string_of_int (List.length v)^")"^(String.concat "/" (List.map	(fun (x,v) ->  (x^" = "^(string_of_int v))) v))
     | Array (c,i) -> "Array {{ component = "
                   ^print c^"; index = "
                   ^String.concat "," (List.map print i)
@@ -190,6 +190,16 @@ let new_constr parent r =
     range = Some r ;
   }
 
+
+let new_enum parent en =
+  {
+    base = {
+      trait = Enumeration en;
+      uid = parent.base.uid;
+    };
+    range = parent.range ;
+  }
+
 let new_range c =
   let r = match c with
   | A.IntegerRangeConstraint (a,b) -> (a,b)
@@ -251,30 +261,31 @@ let represtbl : (t, (data_t * data_t) list) Hashtbl.t = Hashtbl.create 0
 
 let extract_symbols t =
   match t.base.trait with
-    | Enumeration v -> (* WG Some v*)
+    | Enumeration v  -> Some v
+	(* WG Some v
 	begin
 	  try 
-	    let mapping = Hashtbl.find represtbl t in
-	    let lg = List.length mapping in 
-	      if (compare lg (List.length v) <> 0) then
-		Npkcontext.report_error "extract symbols"
-		  "assertion (same length) failed"
-	      ;
-	      Some ( List.map 
-	       ( fun (x,y) -> 
-		   match y with 
-		       IntVal nat -> 
-			 (x, Newspeak.Nat.to_int nat)
-		     | _ ->   
-			 Npkcontext.report_error 
-			   "extract  symbols"
-			   "assertion (not intval) failed"
-	       ) 
-		  (List.map2 (fun (s,_) (n, _) -> (s,n)) v mapping)
-	      )
-	with 
-	    Not_found -> Some v
-	end
+	   let mapping = Hashtbl.find represtbl t in
+	   let lg = List.length mapping in 
+	   if (compare lg (List.length v) <> 0) then
+	   Npkcontext.report_error "extract symbols"
+	   "assertion (same length) failed"
+	   ;
+	   Some ( List.map 
+	   ( fun (x,y) -> 
+	   match y with 
+	   IntVal nat -> 
+	   (x, Newspeak.Nat.to_int nat)
+	   | _ ->   
+	   Npkcontext.report_error 
+	   "extract  symbols"
+	   "assertion (not intval) failed"
+	   ) 
+	   (List.map2 (fun (s,_) (n, _) -> (s,n)) v mapping)
+	   )
+	   with 
+	   Not_found -> Some v
+	   end*)
     | _             -> None
 	
 let extract_access_type t =
@@ -299,31 +310,44 @@ let handle_enum_repr_clause t l =
     | Enumeration v -> List.map (fun (_,x) -> Newspeak.Nat.of_int x) v
     | _ -> Npkcontext.report_error "handle_enum_repr_clause"
                            "This type is not an enumeration"
-  end in
-  if Hashtbl.mem represtbl t then
-    Npkcontext.report_error "handle_enum_repr_clause"
-            "A representation clause has already been given for this type";
-  let (values_got, values_int) = List.split l in
-  if not (is_increasing values_int) then
-    Npkcontext.report_error "handle_enum_repr_clause"
-      "In representation clause, values should be ordered";
-   (*print_endline"********"; List.iter print_endline values_got;
-     print_endline"--------"; List.iter print_endline values_expected;
-   *)
-  if (values_got <> values_expected) then
-    Npkcontext.report_error "handle_enum_repr_clause"
-      "In representation clause, some litterals are missing";
-  let mapping = List.map (fun (x,y) -> (IntVal x, IntVal y)) l in
-  Hashtbl.add represtbl t mapping
-  (* FIXME check if not frozen *)
-
-let rec get_enum_litt_value t x =
-  try
-    let l = Hashtbl.find represtbl t
-    in
+  end 
+  in
+    if Hashtbl.mem represtbl t then
+      Npkcontext.report_error "handle_enum_repr_clause"
+      "A representation clause has already been given for this type";
+    
+    let (values_got, values_int) = List.split l in
+      if not (is_increasing values_int) then
+	Npkcontext.report_error "handle_enum_repr_clause"
+	  "In representation clause, values should be ordered";
+      
+      if (values_got <> values_expected) then
+	Npkcontext.report_error "handle_enum_repr_clause"
+	  "In representation clause, some litterals are missing";
+      
+      let mapping = List.map (fun (x,y) -> (IntVal x, IntVal y)) l in
+	(*Building a new type with the use representation values*)
+      let new_en = 
+	begin match t.base.trait with
+	  | Enumeration v -> List.map2 
+	      (fun (x,_) got -> x, Newspeak.Nat.to_int got)
+		v  values_int 
+	  | _ -> Npkcontext.report_error "handle_enum_repr_clause"
+              "This type is not an enumeration"
+	end 
+      in
+      let upd_type =  new_enum t new_en in
+	Hashtbl.add represtbl upd_type mapping;
+	upd_type
+	  (* FIXME check if not frozen *)
+	  
+let  get_enum_litt_value _ x = x
+  (*
+    try let l = Hashtbl.find represtbl t in
     List.assoc x l
-  with Not_found ->
+    with Not_found ->  
     x
+  *)
 
 (*****************
  * Builtin types *
@@ -454,7 +478,7 @@ let extrema l =
     else                                (min, max)
   ) (h,h) t
 
-let compute_constr t =
+let compute_constr t = 
   match (t.base.trait, t.range) with
     | Signed (a,b), None -> Some (A.IntegerRangeConstraint(a, b))
     | Signed (a,b), Some (A.IntegerRangeConstraint(c,d)) ->
@@ -465,7 +489,7 @@ let compute_constr t =
     | Float _ , Some (A.FloatRangeConstraint _) -> t.range
     | Enumeration v, None
         when not (is_boolean t)->
-          begin
+	begin
             let v' = List.map (fun (_, y) ->
               get_enum_litt_value t (IntVal (Newspeak.Nat.of_int y))
 			      ) v in
@@ -477,18 +501,20 @@ let compute_constr t =
           end
 
     | Enumeration _, Some (A.IntegerRangeConstraint (min, max))
-        when not (is_boolean t)-> begin
-	(* TO DO check t is not in table clause representing*)
-	try
-	  let mapping = Hashtbl.find represtbl t in 
-	  let new_min = List.assoc (IntVal min) mapping in 
-	  let new_max = List.assoc (IntVal max) mapping in 
-	    match (new_min, new_max) with 
-		(IntVal mini, IntVal maxi) ->
-		  Some (A.IntegerRangeConstraint (mini, maxi))
-	      | _ -> invalid_arg "compute_constr represing clause not expected"
-	with Not_found -> 
-          Some (A.IntegerRangeConstraint (min, max))
+        when not (is_boolean t)-> begin	
+	  (* TO DO check t is not in table clause representing*)
+	  (*USELESS as represtbl .... *)
+	  try
+	    let mapping = Hashtbl.find represtbl t in 
+	    let new_min = List.assoc (IntVal min) mapping in 
+	    let new_max = List.assoc (IntVal max) mapping in 
+	      match (new_min, new_max) with 
+		  (IntVal mini, IntVal maxi) ->
+		    Some (A.IntegerRangeConstraint (mini, maxi))
+		| _ -> invalid_arg "compute_constr represing clause not expected"
+	  with Not_found ->	 
+	    
+            Some (A.IntegerRangeConstraint (min, max))
 	end
     | _ -> None
 
@@ -712,17 +738,18 @@ let check_exp t_ctx exp =
       | _         , None       -> c1
       | None      , _          -> c2
       |   Some (A.IntegerRangeConstraint(a,b))
-        , Some (A.IntegerRangeConstraint(c,d))
-          -> if (a <=% c && d <=% b) then None
-                                     else c1
+          , Some (A.IntegerRangeConstraint(c,d))
+            -> if (a <=% c && d <=% b) then None
+            else c1
       | _ -> Npkcontext.report_error "check_exp" "Float range constraint found"
   in
-  let extract_constr e = match e with
-  | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
-             , _
-             )
+  let extract_constr e = 
+    match e with
+    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
+		   , _
+               )
       -> Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
-  | _ -> None
+    | _ -> None
   in
   let constr =
     constr_combine (compute_constr t_ctx)

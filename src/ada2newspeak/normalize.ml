@@ -5,7 +5,7 @@
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
-  normalize_context  License as published by the Free Software Foundation; either
+  License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
 
   This library is distributed in the hope that it will be useful,
@@ -96,12 +96,20 @@ let subtyp_to_adatyp gtbl n =
 
 let merge_types gtbl (tp, cstr) =
   let t = subtyp_to_adatyp gtbl tp in
-  if (T.is_unknown t) then
+   if (T.is_unknown t) then
     Npkcontext.report_warning "merge_types"
-    ("merged subtype indication into unknown type (" ^ T.get_reason t ^ ")");
-  match cstr with
-  | None -> t
-  | Some c -> T.new_constr t c
+      ("merged subtype indication into unknown type (" ^ T.get_reason t ^ ")");  
+    
+    let t = 
+      match T.extract_symbols t with 
+	  Some enums ->  
+	    if (T.is_boolean t) then t else T.new_enum t enums 
+	| _ ->  t
+    in
+      
+      match cstr with
+	| None -> t
+	| Some c -> T.new_constr t c
 
 let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
@@ -133,7 +141,7 @@ type selected =
 
 
 let rec resolve_selected ?expected_type n =
-  let resolve_variable pkg id =
+ let resolve_variable pkg id =
     begin
       try
 	let (sc,(act_id, t, ro)) = Sym.find_variable ?expected_type
@@ -156,7 +164,8 @@ let rec resolve_selected ?expected_type n =
           SelectedRecord (lv , off, tf)
         with Not_found -> resolve_variable (Some pfx) fld
       end
-  | Var id -> resolve_variable None id
+  | Var id ->  
+      resolve_variable None id
   | SName (SName (Var _, _) as pf, z) -> begin
       match (resolve_selected pf) with
         | SelectedFCall _ 
@@ -330,7 +339,7 @@ let rec normalize_exp ?expected_type exp =
 	       " maybe a function case not implemented yet ")
       end
 	
-    | Lval lv ->
+    | Lval lv ->  
         begin
           match resolve_selected ?expected_type lv with
           | SelectedVar   (sc, id,  t, _) -> 
@@ -543,9 +552,7 @@ and normalize_binop bop e1 e2 =
 	      try
 		let v1 = make_name_of_lval l1 in
 		let v2 = make_name_of_lval l2 in
-		 (* print_endline  (" lval 1 =  "^(ListUtils.last v1));
-		    print_endline ( " lval 2 =  "^(ListUtils.last v2)); *)
-                  Sym.type_ovl_intersection gtbl
+	          Sym.type_ovl_intersection gtbl
                     (ListUtils.last v1)
                     (ListUtils.last v2)
 	      with _ -> None
@@ -653,6 +660,7 @@ and normalize_fcall (n, params) =
       	  raise Not_found
 	    
 and eval_range (exp1, exp2) =
+  
   let norm_exp1 = normalize_exp exp1
   and norm_exp2 = normalize_exp exp2 in
     (* on essaye d'evaluer les bornes *)
@@ -721,14 +729,14 @@ and normalize_typ_decl ident typ_decl loc =
       let t = merge_types norm_subtyp_ind in
       let new_t = T.new_derived t in
         Sym.add_type gtbl ident loc new_t;
-
+	
       begin
         match (T.extract_symbols t) with
           | None   -> ()
           | Some s ->
                 List.iter (fun (i,v) ->
                   let value = T.IntVal (Newspeak.Nat.of_int v) in
-                  Sym.add_variable gtbl i loc new_t ~value ~no_storage:true
+		   Sym.add_variable gtbl i loc new_t ~value ~no_storage:true
                 ) s
       end
   | IntegerRange(min, max) ->
@@ -783,7 +791,19 @@ and add_representation_clause id aggr loc =
         | _ -> Npkcontext.report_error "representation_clause"
                  "Expected an integer value for representation clause"
     ) aggr in
-  T.handle_enum_repr_clause t assoc_list
+  let repr_newtyp = T.handle_enum_repr_clause t assoc_list in
+
+    (*Replacing the type in the global value*)
+    Symboltbl.replace_type gtbl id repr_newtyp;
+
+
+    List.iter (fun x -> 
+		 Symboltbl.replace_typ_enum 
+		   gtbl x t repr_newtyp
+	      )
+      ( List.map2 (fun (x,_) (_,u) -> (x,T.IntVal u)) aggr assoc_list
+      ) 
+  
 
 and parse_extern_specification name  =
   Npkcontext.print_debug "Parsing extern specification file";
@@ -939,7 +959,7 @@ and normalize_basic_decl item loc =
              "eval_static.integer_exp"
              "expected static expression"
       end
-  | SubtypDecl(ident, subtyp_ind) ->
+  | SubtypDecl(ident, subtyp_ind) -> 
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
       []
@@ -1198,7 +1218,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       begin
         let (lv', t_lv) = normalize_lval ~force:force_lval lv in
         let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
-        if (not (T.is_compatible t_lv t_exp)) then
+	  if (not (T.is_compatible t_lv t_exp)) then
           begin
             Npkcontext.print_debug ("LV = " ^ T.print t_lv);
             Npkcontext.print_debug ("EX = " ^ T.print t_exp);
@@ -1241,153 +1261,120 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	| ArrayRange _    ->   (["standard";"integer"], None)
 	| SubtypeRange lv -> (make_name_of_lval lv, None)   
       in
-      let dp = [BasicDecl (ObjectDecl ( 
-			     [iter]
-			    , sub_typ_ind
-			    , Some (if is_rev then exp2 else exp1)
-                            , Constant
-                           )
-			  )
-		  , loc
-	       ]
-      in
-	Sym.enter_context gtbl;
-	let ndp = normalize_decl_part dp in
-	let nblock = normalize_block ?return_type block in
-	  
-	(*enum_case is different due to potential redefiniton 
+     	(*enum_case is different due to potential redefiniton 
 	  of value with Enumeration clause use*)
 	  (*TO DO FACTORIZE CODE *)
-	  match range with 
+
+
+      let basic_loop () = 
+	(*The while loop is possible with a counter incremention*)
+	let dp = [BasicDecl (ObjectDecl ( 
+			       [iter]
+				 , sub_typ_ind
+				   , Some (if is_rev then exp2 else exp1)
+				     , Constant
+			     )
+			    )
+		    , loc
+		 ]
+	in
+	  Sym.enter_context gtbl;
+	  let ndp = normalize_decl_part dp in 
+	  let nblock = normalize_block ?return_type block in
+	  let loop =[Ast.Loop ( Ast.While
+				  ( normalize_exp (if is_rev then 
+						     Binary(Ge,Lval(Var iter),exp1)
+						   else 
+						     Binary(Le,Lval(Var iter),exp2))
+				  )
+				  , nblock @ [Ast.Assign ( Ast.Var
+							     (Sym.Lexical,iter,T.integer)
+							     , normalize_exp( 
+							       Binary(
+								 (if is_rev
+								  then Minus
+								  else Plus)
+								   , Lval(Var iter)
+								     , CInt (Nat.one))))
+						, loc]
+			      )
+		       , loc]
+	  in  
+	    Sym.exit_context gtbl;
+	    [Ast.Block (ndp, loop), loc]
+      in
+	
+	match range with 
 	      (*when subtype is enumeration, iter++ will 
 		fail because iter has type enumeration(t417):
 		solution: create an integer, and an array
 		mapping it to representing clause
 	      *)
-	      SubtypeRange lv  ->  begin
-		let names = make_name_of_lval lv in
-		let ada =  subtyp_to_adatyp names in 
-		  match (T.extract_symbols ada, T.compute_int_constr ada) with 
-		      Some enums, None ->
-			let unrolled_loops = ref [] in
-			  List.iter  
-			    ( fun (x_str, _) -> 
-				unrolled_loops:=List.append !unrolled_loops
-				  ([Ast.Assign 
-				      ( 
-				        Ast.Var (Sym.Lexical, iter, ada)
-					  , normalize_exp(  Lval(Var x_str)))
-				      , loc
-				   ]@nblock 
-				  )
-			    )
-			    (if is_rev then
-			       List.rev enums else enums )
-			  ;
-			  Sym.exit_context gtbl;
-			  [Ast.Block (ndp, !unrolled_loops), loc]
-			      
-		    |   Some enums, Some (min, max) ->
-			  let sub_enums = List.filter 
-			    ( fun (_, v) ->
-				(compare   (Newspeak.Nat.to_int min) v <= 0) &&
-			        (compare v   (Newspeak.Nat.to_int max) <= 0)
-			    )
-			    enums 
-			  in
-			    let unrolled_loops = ref [] in
-			      List.iter  
-				( fun (x_str, _) -> 
-				unrolled_loops:=List.append !unrolled_loops
-				  ([Ast.Assign ( 
-				      Ast.Var (Sym.Lexical, iter, ada)
-					, normalize_exp(  Lval(Var x_str))
-				    )
-				      , loc
-				   ]@nblock 
-				  )
-			    ) (if is_rev then List.rev sub_enums else sub_enums );
-			  
-			  Sym.exit_context gtbl;
-			  [Ast.Block (ndp, !unrolled_loops), loc]
-			    
-		    | _ ->(* Npkcontext.report_error "normalize TO DO"
-			     "not an enumeration in: Loop(For(_, range,_)"*)
-			
-			let loop =[Ast.Loop ( Ast.While
-						( normalize_exp (if is_rev then 
-								   Binary(Ge,Lval(Var iter),exp1)
-								 else 
-								   Binary(Le,Lval(Var iter),exp2))
-						)
-						, nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
-									   , normalize_exp( 
-									     Binary(
-									       (if is_rev
-										then Minus
-										else Plus)
-										 , Lval(Var iter)
-										   , CInt (Nat.one)))
-								       )
-							      , loc]
-					    )
-				     , loc]
-			in
-			  Sym.exit_context gtbl;
-			  [Ast.Block (ndp, loop), loc]
+	      SubtypeRange lv  ->  
+		begin
+		  let names = make_name_of_lval lv in
+		  let ada =  subtyp_to_adatyp names in 
+		    match (T.extract_symbols ada, T.compute_int_constr ada) with 
+
+		    | Some _, None -> 
+			Npkcontext.report_error 
+			  "normalize in: Loop(For(_, range,_)"
+			  ("iteration sur type enum contraint"^
+			     " not implemented(cf t417)")
+
+		    |  Some enums, Some (min, max) ->
+			 let sub_enums = List.filter
+			   ( fun (_, v) ->
+			       (compare  (Newspeak.Nat.to_int min) v <= 0) &&
+			        (compare v (Newspeak.Nat.to_int max) <= 0)
+			   ) enums
+			 in
+			   (*no 'classical' incremention possible, bornes are known: unrolling*)
+			 let (init, tail) = if is_rev then
+			   let rev = List.rev sub_enums in
+			     Syntax_ada.CInt (Newspeak.Nat.of_int (snd (List.hd rev)))
+			       , List.tl rev
+			 else
+			   Syntax_ada.CInt (Newspeak.Nat.of_int(snd (List.hd sub_enums)))
+			     ,  List.tl sub_enums
+			 in
 			   
-	      end
-	    | _ -> let loop =[Ast.Loop ( Ast.While
-		      ( normalize_exp (if is_rev then 
-					 Binary(Ge,Lval(Var iter),exp1)
-				       else 
-					 Binary(Le,Lval(Var iter),exp2))
-		      )
-		      , nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
-						 , normalize_exp( 
-						   Binary(
-						     (if is_rev
-						      then Minus
-						      else Plus)
-						       , Lval(Var iter)
-							 , CInt (Nat.one)))
+			 let dp = [BasicDecl (ObjectDecl (
+						[iter]
+						  , sub_typ_ind
+						    , Some init
+						      , Constant
+					      )
 					     )
-				    , loc]
-				    )
-			     , loc]
-		in
-		  Sym.exit_context gtbl;
-		  [Ast.Block (ndp, loop), loc]
-		    
+				     , loc
+				  ]
+			 in
+			   Sym.enter_context gtbl;
+			   let ndp = normalize_decl_part dp in
+			   let nblock = normalize_block ?return_type block in
+			   let unrolled_loops = ref nblock in
+			     List.iter
+				 ( fun (x_str, _) ->
+				     unrolled_loops:=List.append !unrolled_loops
+				       ([Ast.Assign (
+					   Ast.Var (Sym.Lexical, iter, ada)
+					     , normalize_exp(  Lval(Var x_str))
+					 )
+					   , loc
+					]@nblock
+				       )
+				 ) tail;
+			     Sym.exit_context gtbl;
+			     [Ast.Block (ndp, !unrolled_loops), loc]
+				 
+		    | _ -> 
+			basic_loop ()
+		end
+	    | _ -> 	basic_loop ()
 
 
 
     end
-      (*
-	let loop =[Ast.Loop
-        ( Ast.While
-	( normalize_exp (if is_rev then 
-	Binary(Ge,Lval(Var iter),exp1)
-        else 
-	Binary(Le,Lval(Var iter),exp2))
-        )
-	, nblock @ [Ast.Assign ( Ast.Var (Sym.Lexical,iter,T.integer)
-	, normalize_exp( 
-	Binary(
-	(if is_rev
-	then Minus
-	else Plus)
-	, Lval(Var iter)
-        , CInt (Nat.one)))
-	)
-	, loc]
-        )
-        , loc]
-	in
-	Sym.exit_context gtbl;
-	[Ast.Block (ndp, loop), loc]
-      *)
-      
       
   | Exit -> [Ast.Exit, loc]
   | Case (e, choices, default) ->
@@ -1755,7 +1742,6 @@ and add_extern_spec spec =
           (*WG this package spec might have been added before*)
 	  (*adding if cond...*)
 	  if (not (Sym.is_with gtbl name)) then begin
-	    print_endline ("a ce moment "^(name)^"il n'est pas dnas with");
 	    List.iter add_extern_basic_decl basic_decls
           end;
 	  Sym.reset_current gtbl;
