@@ -96,7 +96,7 @@ type t = {
 
 and fundec = {
   args : (string * typ) list;
-  ret  : typ option;
+  ret  : (string * typ) option;
   body : blk;
 }
 
@@ -341,14 +341,19 @@ let string_of_formal_args = function
 let string_of_ret ret =
   match ret with
       None -> "void"
-    | Some t -> string_of_typ t
+    | Some (_, t) -> string_of_typ t
 
 let string_of_typ_list = function
   |  []  -> "void"
   | args -> string_of_list string_of_typ args 
 
 let string_of_ftyp (args, ret) = 
-  string_of_typ_list args ^ " -> " ^ (string_of_ret ret)
+  let ret = 
+    match ret with
+	None -> "void"
+      | Some t -> string_of_typ t
+  in
+    string_of_typ_list args ^ " -> " ^ ret
 
 let string_of_loc (fname, line, carac) = 
   if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
@@ -1100,7 +1105,7 @@ and build_formal_ftyp builder (args, ret) =
   let args = List.map (fun (s, t) -> s, build_typ builder t) args in
   let ret =
     match ret with
-        Some t -> Some (build_typ builder t)
+        Some (var, t) -> Some (var, build_typ builder t)
       | None -> None
   in
     (args, ret)
@@ -1432,9 +1437,14 @@ and visit_token builder x =
 let visit_fun visitor fid ft =
   let continue = visitor#process_fun fid ft in
   if continue then begin
-    visit_ftyp visitor ((List.map snd ft.args), ft.ret);
-    visit_blk visitor ft.body;
-    visitor#process_fun_after ()
+    let ret =
+      match ft.ret with
+	  None -> None
+	| Some (_, ret_t) -> Some ret_t
+    in
+      visit_ftyp visitor ((List.map snd ft.args), ret);
+      visit_blk visitor ft.body;
+      visitor#process_fun_after ()
   end
 
 let visit_init visitor (_, _, e) = visit_exp visitor e

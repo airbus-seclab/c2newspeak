@@ -228,12 +228,18 @@ let translate prog =
   in
 
   let translate_fundec f fd =
-    let ret_ids = match fd.ret with
-      | None -> []
-      | Some _ -> ["!return"]
+    let ret_ids = 
+      match fd.ret with
+	| None -> []
+	| Some (v, _) -> [v]
+    in
+    let ret_t =
+      match fd.ret with
+	  None -> None
+	| Some (_, t) -> Some t
     in
     let arg_ids = List.map fst fd.args in
-    let ft = (List.map snd fd.args, fd.ret) in
+    let ft = (List.map snd fd.args, ret_t) in
     List.iter push ret_ids;
     List.iter push arg_ids;
     let body = translate_blk fd.body in

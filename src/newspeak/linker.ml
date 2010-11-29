@@ -204,17 +204,21 @@ and generate_body body = List.map generate_stmt body
 
 let generate_fundecs fundecs =
   let funspecs = Hashtbl.create 100 in
-  let add_fundec (name, (_rets, args, ftyp, body)) =
+  let add_fundec (name, (_, args, ftyp, body)) =
     let body = generate_body body in
     let ftyp = generate_ftyp ftyp in
-      
+    let ret_t = 
+      match snd ftyp with
+	  None -> None
+	| Some t -> Some ("!return", t)
+    in      
       if Hashtbl.mem funspecs name then begin
         Npkcontext.report_error "Npklink.generate_funspecs" 
           ("function "^name^" declared twice")
       end;
       Hashtbl.add funspecs name
         {
-          N.ret  = snd ftyp;
+          N.ret  = ret_t;
           N.args = List.combine args (fst ftyp) ;
           N.body = body ;
         } ;
