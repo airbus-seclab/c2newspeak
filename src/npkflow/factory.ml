@@ -151,8 +151,8 @@ let build prog =
       append_args args;
       call := (F.Set (tainted_exp, tainted_exp), loc)::!call;
       match ret with
-	  Some _ -> (F.Decl (!call), loc)::[]
-	| None -> !call
+	| [] -> !call
+	| _ -> (F.Decl (!call), loc)::[]
   in
 
   let entry = build_entry () in

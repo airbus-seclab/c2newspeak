@@ -71,8 +71,8 @@ and generate_field (offs, t) = (offs, generate_typ t)
 and generate_ftyp (args, ret) =
   let ret = 
     match ret with
-        None -> None
-      | Some t -> Some (generate_typ t)
+        None -> []
+      | Some t -> (generate_typ t)::[]
   in
     (List.map generate_typ args, ret)
 
@@ -204,17 +204,23 @@ and generate_body body = List.map generate_stmt body
 
 let generate_fundecs fundecs =
   let funspecs = Hashtbl.create 100 in
-  let add_fundec (name, (_rets, args, ftyp, body)) =
+  let add_fundec (name, (_, args, ftyp, body)) =
     let body = generate_body body in
     let ftyp = generate_ftyp ftyp in
-      
+    let ret_t = 
+      match snd ftyp with
+	  [] -> []
+	| t::[] -> ("!return", t)::[]
+(* TODO: handle this case *)
+	| _ -> invalid_arg "Linker.generate_fundecs: case not handled yet"
+    in      
       if Hashtbl.mem funspecs name then begin
         Npkcontext.report_error "Npklink.generate_funspecs" 
           ("function "^name^" declared twice")
       end;
       Hashtbl.add funspecs name
         {
-          N.ret  = snd ftyp;
+          N.ret  = ret_t;
           N.args = List.combine args (fst ftyp) ;
           N.body = body ;
         } ;

@@ -201,7 +201,7 @@ object (this)
     Hashtbl.add funstats f current_counters;
     if !more_verb then 
       match (fst fdec) with
-          [], None -> void_fun <- void_fun + 1
+          ([], []) -> void_fun <- void_fun + 1
         | _, _ -> ()
     else ();
     true

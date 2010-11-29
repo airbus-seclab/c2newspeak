@@ -40,7 +40,7 @@ let process_typ t =
     | _ -> invalid_arg "Filter.process_typ: scalar type expected"
 
 let process_ftyp args ret =
-  if ret <> None then begin
+  if ret <> [] then begin
     invalid_arg "Filter.process_ftyp: function without return value expected"
   end;
   if args <> [] then begin
@@ -103,7 +103,7 @@ and process_typed_lval (lv, t) =
 let process_funexp (_, ft, f, _) =
   begin
     match ft with
-      | [], None -> ()
+      | [], [] -> ()
       | _ -> 
 	  invalid_arg "Filter.process_funexp: only void -> void functions are allowed" 
   end;
