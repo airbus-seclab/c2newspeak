@@ -117,7 +117,7 @@ and typ =
 
 and tmp_size_t = int option
 
-and ftyp = typ list * typ option
+and ftyp = typ list * typ list
 
 and field = offset * typ
 

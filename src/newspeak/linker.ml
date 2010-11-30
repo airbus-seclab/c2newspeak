@@ -68,13 +68,8 @@ let rec generate_typ t =
 
 and generate_field (offs, t) = (offs, generate_typ t)
 
-and generate_ftyp (args, ret) =
-  let ret = 
-    match ret with
-        None -> []
-      | Some t -> (generate_typ t)::[]
-  in
-    (List.map generate_typ args, ret)
+and generate_ftyp (args, rets) =
+    (List.map generate_typ args, List.map generate_typ rets)
 
 and generate_init_field (sz, sca, e) = 
   let e = generate_exp e in
@@ -185,8 +180,8 @@ let rec generate_stmt (sk, loc) =
 (* TODO: cleanup push this up in previous phase *)
 and generate_rets out_vars out_t =
   match (out_vars, out_t) with
-      (lv::[], Some t) -> (generate_lv lv, generate_typ t)::[]
-    | ([], None) -> []
+      (lv::[], t::[]) -> (generate_lv lv, generate_typ t)::[]
+    | ([], []) -> []
     | _ -> 
 	Npkcontext.report_error "Npklink.generate_rets" 
 	  "return variables: case not handled"

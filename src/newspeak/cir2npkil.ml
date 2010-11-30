@@ -83,8 +83,8 @@ let translate src_lang prog fnames =
     let args = args in
     let ret =
       match ret with
-	  Void -> None
-	| _ -> Some (translate_typ ret)
+	  Void -> []
+	| _ -> (translate_typ ret)::[]
     in
       (args, ret)
   in
@@ -260,8 +260,8 @@ let translate src_lang prog fnames =
 	  Some lv -> (Out (lv, ret_t), ret_t)::args
 	| None -> args
     in
-    let (in_vars, out_vars, _) = translate_args args in
-    let ft = translate_ftyp (args_t, ret_t) in
+    let (in_vars, out_vars, ft) = translate_args args in
+(*    let ft = translate_ftyp (args_t, ret_t) in *)
     let fn = translate_fn fn in
       K.Call (in_vars, ft, fn, out_vars)
 

@@ -66,7 +66,7 @@ and typ =
   | Array of (typ * tmp_size_t)
   | Region of (field list * size_t)
 
-and ftyp = typ list * typ option
+and ftyp = typ list * typ list
 
 and field = Newspeak.offset * typ
 
