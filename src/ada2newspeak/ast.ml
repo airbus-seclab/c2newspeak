@@ -148,12 +148,6 @@ and sub_program_spec =
 and package_spec = string
                  * (basic_declaration * Newspeak.location) list
 
-type context_clause = {
-  content: spec;
-  location: Newspeak.location;
-}
-      
-
-type compilation_unit = context_clause list
+type compilation_unit = (spec * Newspeak.location) list
                       * library_item
                       * Newspeak.location

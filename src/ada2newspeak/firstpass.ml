@@ -532,9 +532,9 @@ let translate compil_unit =
 
   let rec translate_context ctx =
 (* TODO: remove this anonymous function *)
-    List.iter (fun x ->
-		 Npkcontext.set_loc x.location;
-		 translate_spec x.content
+    List.iter (fun (content, location) ->
+		 Npkcontext.set_loc location;
+		 translate_spec content
 	      ) ctx
   in
 

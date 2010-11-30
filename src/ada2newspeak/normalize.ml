@@ -1750,34 +1750,23 @@ and normalize_context context =
 		     | With(nom, spec) ->  
 			 if (not (Sym.is_with gtbl nom)) then
 			   begin 
-			     let (norm_spec, loc) = match spec with
-			       | None   -> parse_extern_specification nom
-			       | Some _ -> Npkcontext.report_error
-				   "Ada_normalize.normalize_context"
-				     "internal error : spec provided"
+			     let (norm_spec, loc) = 
+			       match spec with
+				 | None   -> parse_extern_specification nom
+				 | Some _ -> Npkcontext.report_error
+				     "Ada_normalize.normalize_context"
+				       "internal error : spec provided"
 			     in
 			       add_extern_spec norm_spec;
 			       Hashtbl.add spec_tbl nom (norm_spec, loc);
-			       let context_clause = 
-				 { 
-				   Ast.location = loc;
-				   Ast.content = norm_spec
-				 }
-			       in
-				 context_clause::ctx
+			       (norm_spec, loc)::ctx
 			   end
 			 else 	
 			   (*Etienne Millon = ctx*)
 			   (*Not found for internal spec like  System *)	
 			   begin try 
-			     let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
-			     let context_clause = 
-			       {
-				 Ast.location = lc;
-				 Ast.content = ex_spec
-			       }
-			     in
-			       context_clause::ctx
+			     let with_clause = Hashtbl.find spec_tbl nom in
+			       with_clause::ctx
 			   with Not_found -> ctx (*for System ... not an error*)
 			   end
 			     
