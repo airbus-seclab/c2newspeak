@@ -89,18 +89,22 @@ end
     function definitions and the size of pointers. *)
 
 type t = {
-  fnames: file list;
-  globals: globals;
-  init: blk;
+  fnames: file list;                (** names of all files included for 
+					compilation *)
+  globals: globals;                 (** table of all declared global 
+					variables *)
+  init: blk;                        (** initialization block for globals *)
   fundecs: (fid, fundec) Hashtbl.t; (** table of all declared functions *)
   ptr_sz: size_t;                   (** size of pointers in number of bits *)
   src_lang: src_lang;
+                                    (** source language from the program 
+					was compiled *)
 }
 
 and fundec = {
-  args : (string * typ) list;
-  rets : (string * typ) list;
-  body : blk;
+  args : (string * typ) list; (** formal argument names and types *)
+  rets : (string * typ) list; (** formal return values names and types *)
+  body : blk;                 (** function body *)
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -119,11 +123,6 @@ and stmtkind =
   | DoWith of (blk * lbl)
   | Goto of lbl
 (* TODO: maybe should use a record rather than a tuple? *)
-(* TODO: shouldn't the type be together with the expressions and left values
-   rather than as a ftyp? 
-   think about it... *)
-(* TODO: think about it, but should put the typs in ftyp in the exp and lval
-   list (since the lists are supposed to have the same length) *)
 (* arguments, function type, function expression, return left values *)
   | Call of ((exp * typ) list * funexp * (lval * typ) list)
   | UserSpec of assertion
