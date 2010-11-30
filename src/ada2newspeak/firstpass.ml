@@ -391,8 +391,7 @@ let translate compil_unit =
 
   and add_params spec =
     let params = List.map (fun x -> x.formal_name) spec.arguments in
-(* TODO: remove unused first parameter *)
-      (params, (Params.ret_ident, params))
+      (Params.ret_ident, params)
 
   and translate_sub_program_spec spec =
     let params_typ = translate_param_list spec.arguments in
@@ -424,14 +423,13 @@ let translate compil_unit =
 
   and translate_declarative_part decl_part =
     List.fold_left (fun (decls,iblk) dp ->
-      let (ndecls,niblk) = translate_declarative_item dp
-      in
-      (decls @ ndecls),
-      (iblk  @ niblk )
-    ) ([],[]) decl_part
-
+		      let (ndecls,niblk) = translate_declarative_item dp in
+			(decls @ ndecls),
+		      (iblk  @ niblk )
+		   ) ([],[]) decl_part
+      
   and add_funbody subprogspec decl_part block loc =
-    let (_, (ret_id, args_ids)) = add_params subprogspec in
+    let (ret_id, args_ids) = add_params subprogspec in
     let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = translate_sub_program_spec subprogspec in
     let body = translate_block (init @ block) in
