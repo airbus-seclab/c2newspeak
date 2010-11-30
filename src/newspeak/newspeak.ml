@@ -117,7 +117,7 @@ and stmtkind =
   | Goto of lbl
 (* arguments, type, function, return values *)
 (* TODO: remove optional return value! *)
-  | Call of (exp list * ftyp * funexp * lval list)
+  | Call of ((exp * typ) list * funexp * (lval * typ) list)
   | UserSpec of assertion
 
 and specs = assertion list
@@ -153,6 +153,7 @@ and cst =
   | CFloat of (float * string)
   | Nil
 
+(* TODO: remove this type *)
 and ftyp = typ list * typ list
 
 and typ =
@@ -507,10 +508,10 @@ let string_of_blk offset x =
           dump_line ("} with lbl"^(string_of_int lbl)^":")
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
-      | Call (args, _t, fn, ret_vars) ->
+      | Call (args, fn, ret_vars) ->
           begin
-	    let in_vars = List.map string_of_exp args in
-	    let out_vars = List.map string_of_lval ret_vars in
+	    let in_vars = List.map (fun (x, _) -> string_of_exp x) args in
+	    let out_vars = List.map (fun (x, _) -> string_of_lval x) ret_vars in
             let ret_str = 
 	      match out_vars with
 		| [] -> ""
@@ -936,11 +937,15 @@ let rec simplify_stmt actions (x, loc) =
           let lv2 = simplify_lval actions lv2 in
             Copy (lv1, lv2, sz)
       | Guard b -> Guard (simplify_exp actions b)
-      | Call (args, ft, f, ret_vars) ->
+      | Call (args, f, ret_vars) ->
           let f' = simplify_funexp actions f in
-	  let args = List.map (simplify_exp actions) args in
-	  let ret_vars = List.map (simplify_lval actions) ret_vars in
-            Call (args, ft, f', ret_vars)
+	  let args = 
+	    List.map (fun (x, t) -> (simplify_exp actions x, t)) args 
+	  in
+	  let ret_vars = 
+	    List.map (fun (x, t) -> (simplify_lval actions x, t)) ret_vars 
+	  in
+            Call (args, f', ret_vars)
       | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
       | Select (body1, body2) -> 
           Select (simplify_blk actions body1, simplify_blk actions body2)
@@ -1170,11 +1175,13 @@ and build_stmtkind builder x =
               
       | Goto lbl -> Goto lbl
           
-      | Call (args, ftyp, fn, ret_vars) -> 
-          let args' = List.map (build_exp builder) args in
-	  let ret_vars = List.map (build_lval builder) ret_vars in
+      | Call (args, fn, ret_vars) -> 
+          let args' = List.map (fun (x, t) -> (build_exp builder x, t)) args in
+	  let ret_vars = 
+	    List.map (fun (x, t) -> (build_lval builder x, t)) ret_vars 
+	  in
           let fn' = build_funexp builder fn in
-            Call (args', ftyp, fn', ret_vars)
+            Call (args', fn', ret_vars)
 
       | UserSpec assertion -> 
           let assertion = List.map (build_token builder) assertion in
@@ -1400,11 +1407,18 @@ and visit_stmt visitor (x, loc) =
         | Decl (_, t, body) -> 
             visit_typ visitor t;
             visit_blk visitor body
-        | Call (args, ftyp, fn, ret_vars) ->
-            List.iter (visit_exp visitor) args;
-	    List.iter (visit_lval visitor) ret_vars;
-            visit_ftyp visitor ftyp;
-            visit_funexp visitor fn
+        | Call (args, fn, ret_vars) ->
+	    let visit_arg (x, t) = 
+	      visit_exp visitor x;
+	      visit_typ visitor t
+	    in
+	    let visit_ret (x, t) =
+	      visit_lval visitor x;
+	      visit_typ visitor t
+	    in
+              List.iter visit_arg args;
+	      List.iter visit_ret ret_vars;
+              visit_funexp visitor fn
         | Select (body1, body2) -> 
             visitor#set_loc loc;
             visit_blk visitor body1;

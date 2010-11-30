@@ -100,10 +100,10 @@ and process_typed_lval (lv, t) =
   process_typ t;
   process_lval lv
   
-let process_funexp (_, ft, f, _) =
+let process_funexp (args, f, rets) =
   begin
-    match ft with
-      | [], [] -> ()
+    match (args, rets) with
+      | ([], []) -> ()
       | _ -> 
 	  invalid_arg "Filter.process_funexp: only void -> void functions are allowed" 
   end;

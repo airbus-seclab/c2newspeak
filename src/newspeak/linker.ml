@@ -167,17 +167,13 @@ let rec generate_stmt (sk, loc) =
       | Select (body1, body2) ->
           N.Select (generate_blk body1, generate_blk body2)
       | InfLoop b -> N.InfLoop (List.map generate_stmt b)
-      | Call (in_vars, ft, fn, out_vars, rets) ->
-          let in_vars = List.map generate_exp in_vars in
-	  let out_vars = List.map generate_lv out_vars in
-          let ft = generate_ftyp ft in
+      | Call (in_vars, (in_t, out_t), fn, out_vars, rets) ->
+(* TODO: push this code up into previous phase *)
+	  let in_vars = generate_args in_vars in_t in
+	  let ft = generate_ftyp (in_t, out_t) in
           let fn = generate_fn fn ft in
-          let out_vars = 
-	    match rets with
-              | Some r -> (generate_lv r)::out_vars
-              | None   -> out_vars
-          in
-            N.Call (in_vars, ft, fn, out_vars)
+	  let out_vars = generate_rets out_vars out_t rets in
+            N.Call (in_vars, fn, out_vars)
       | Goto lbl -> N.Goto lbl
       | DoWith (body, lbl) ->
           let body = List.map generate_stmt body in
@@ -185,6 +181,25 @@ let rec generate_stmt (sk, loc) =
       | UserSpec x -> N.UserSpec (List.map generate_token x)
   in 
     (new_sk, loc)
+
+(* TODO: cleanup push this up in previous phase *)
+and generate_rets out_vars out_t rets =
+  match (out_vars, rets, out_t) with
+      (_, Some lv, Some t)
+    | (lv::[], _, Some t) -> (generate_lv lv, generate_typ t)::[]
+    | ([], None, None) -> []
+    | _ -> 
+	Npkcontext.report_error "Npklink.generate_rets" 
+	  "return variables: case not handled"
+
+and generate_args in_vars in_t =
+  match (in_vars, in_t) with
+      (e::in_vars, t::in_t) -> 
+	(generate_exp e, generate_typ t)::(generate_args in_vars in_t)
+    | ([], []) -> []
+    | _ -> 
+        Npkcontext.report_error "Npklink.generate_args" 
+          "unexpected case when generating arguments"
 
 and generate_token x =
   match x with

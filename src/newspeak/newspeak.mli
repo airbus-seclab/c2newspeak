@@ -125,7 +125,7 @@ and stmtkind =
 (* TODO: think about it, but should put the typs in ftyp in the exp and lval
    list (since the lists are supposed to have the same length) *)
 (* arguments, function type, function expression, return left values *)
-  | Call of (exp list * ftyp * funexp * lval list)
+  | Call of ((exp * typ) list * funexp * (lval * typ) list)
   | UserSpec of assertion
 
 and specs = assertion list
