@@ -38,6 +38,53 @@ type binary_op =
 | Or
 | Power
 
+type lval =
+  | Var          of Symboltbl.scope * string * Ada_types.t
+  | ArrayAccess  of lval
+                  * expression list
+  | RecordAccess of lval
+                  * int         (* offset *)
+                  * Ada_types.t (* Field type *)
+  | PtrDeref     of lval
+                  * Ada_types.t
+
+and expression = exp_value * Ada_types.t
+
+and exp_value =
+  | CInt         of Newspeak.Nat.t
+  | CFloat       of float
+  | CBool        of bool
+  | CChar        of int
+  | Lval         of lval
+  | Not          of expression
+  | Binary       of binary_op
+                  * expression
+                  * expression
+  | CondExp      of expression (** a ? b : c *)
+                  * expression
+                  * expression
+  | AddressOf    of lval
+                  * Ada_types.t
+  | FunctionCall of Symboltbl.scope * string
+                  * argument list
+                  * Ada_types.t (* return type *)
+
+and argument = Ada_types.t * arg_mode
+
+and arg_mode = 
+  | In    of expression
+  | Out   of lval
+  | InOut of lval
+
+type iteration_scheme =
+  | NoScheme
+  | While of expression
+
+type object_state =
+  | Variable
+  | Constant
+  | StaticVal of Ada_types.data_t (*constante statique*)
+
 type block = (instruction * Newspeak.location) list
 
 and instruction =
@@ -59,71 +106,24 @@ and instruction =
   | Block         of declarative_part
                    * block
 
-and lval =
-  | Var          of Symboltbl.scope * string * Ada_types.t
-  | ArrayAccess  of lval
-                  * expression list
-  | RecordAccess of lval
-                  * int         (* offset *)
-                  * Ada_types.t (* Field type *)
-  | PtrDeref     of lval
-                  * Ada_types.t
-
-and iteration_scheme =
-  | NoScheme
-  | While of expression
-
-and expression = exp_value * Ada_types.t
-
-and argument = Ada_types.t * arg_mode
-
-and arg_mode = 
-  | In    of expression
-  | Out   of lval
-  | InOut of lval
-
-and exp_value =
-  | CInt         of Newspeak.Nat.t
-  | CFloat       of float
-  | CBool        of bool
-  | CChar        of int
-  | Lval         of lval
-  | Not          of expression
-  | Binary       of binary_op
-                  * expression
-                  * expression
-  | CondExp      of expression (** a ? b : c *)
-                  * expression
-                  * expression
-  | AddressOf    of lval
-                  * Ada_types.t
-  | FunctionCall of Symboltbl.scope * string
-                  * argument list
-                  * Ada_types.t (* return type *)
-
 and declarative_part = (declarative_item * Newspeak.location) list
 
 and param = {
-        formal_name   : string;
-        param_type    : Ada_types.t;
+  formal_name   : string;
+  param_type    : Ada_types.t;
 }
 
-and  body =
+and body =
   | SubProgramBody of sub_program_spec
                     * declarative_part
                     * block
-  |    PackageBody of string
+  | PackageBody    of string
                     * package_spec option
                     * declarative_part
 
 and  declarative_item =
   | BasicDecl of basic_declaration
-  |  BodyDecl of body
-
-and object_state =
-  | Variable
-  | Constant
-  | StaticVal of Ada_types.data_t (*constante statique*)
+  | BodyDecl  of body
 
 and basic_declaration =
   | ObjectDecl      of string
