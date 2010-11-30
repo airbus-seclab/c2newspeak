@@ -53,11 +53,6 @@ let translate_resolved_name sc n = match sc with
   | Sym.Lexical      -> C.Local         n
   | Sym.In_package p -> C.Global (p ^ "." ^ n)
 
-let (extern, do_as_extern) =
-  let ext = ref false in
-    ((fun _ -> !ext),
-     (fun f arg -> ext := true; f arg ; ext := false))
-
 let translate_nat i =
   C.Const(C.CInt i)
 
@@ -69,6 +64,8 @@ let translate_int x =
  * Takes an Ada program as and returns a CIR tree.
  *)
 let translate compil_unit =
+  let extern = ref false in
+
   let fun_decls = Hashtbl.create 10 in
   let globals   = Hashtbl.create 10 in
   let init      = ref []            in
@@ -476,7 +473,7 @@ let translate compil_unit =
       | ObjectDecl(ident, subtyp, _, init_o) ->
 	  let tr_typ = T.translate subtyp in
           let init =
-            if extern() then None else init_o
+            if !extern then None else init_o
           in
           add_global loc tr_typ init ident
       | SpecDecl spec -> translate_spec spec
@@ -530,17 +527,16 @@ let translate compil_unit =
             "Rien a faire pour les specifications"
   in
 
-  let rec translate_context ctx =
-(* TODO: remove this anonymous function *)
-    List.iter (fun (content, location) ->
-		 Npkcontext.set_loc location;
-		 translate_spec content
-	      ) ctx
+  let translate_context (content, location) =
+    Npkcontext.set_loc location;
+    translate_spec content
   in
 
   let (ctx, lib_item, loc) = compil_unit in
     Npkcontext.set_loc loc;
-    do_as_extern translate_context ctx;
+    extern := true;
+    List.iter translate_context ctx;
+    extern := false;
     translate_library_item lib_item loc;
     Npkcontext.forget_loc ();
     { C.globals = globals; C.init = !init; C.fundecs = fun_decls }
