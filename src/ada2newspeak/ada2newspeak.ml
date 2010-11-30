@@ -29,6 +29,36 @@
 
 open Ada_utils
 
+let parse base_name =
+  let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
+    Npkcontext.forget_loc ();
+    if (!Npkcontext.verb_ast) then begin
+      print_endline "Abstract Syntax Tree";
+      print_endline "----------------------";
+      Print_syntax_ada.print_ast [ast];
+      print_newline ();
+    end;
+    ast
+
+let normalization fname ast =
+  let norm_tree = Normalize.normalization ast in
+    Ada_utils.log_progress (Translate fname);
+    norm_tree
+
+let firstpass_translate fname norm_tree =
+  Npkcontext.print_debug "Translating to CIR...";
+  let prog = Firstpass.translate norm_tree in
+(* TODO: simplify/remove? log_progress *)
+    log_progress (Done (Translate fname));
+    Npkcontext.forget_loc ();
+    prog
+
+let translate fname prog =
+  log_progress (Post);
+  let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
+    Npkcontext.forget_loc ();
+    tr_prog
+
 (**
  * Parse a file, compile it and translate it into a Npkil representation.
  *)
@@ -45,46 +75,32 @@ let compile (fname: string): Npkil.t =
       Sys.chdir dir_name
     end;
     let t_0 = Unix.gettimeofday () in
-    let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
+    let ast = parse base_name in
     let t_1 = Unix.gettimeofday () in
-      if (!Npkcontext.verb_ast) then begin
-        print_endline "Abstract Syntax Tree";
-        print_endline "----------------------";
-        Print_syntax_ada.print_ast [ast];
-        print_newline ();
+    let norm_tree = normalization fname ast in
+    let prog = firstpass_translate fname norm_tree in
+    let t_2 = Unix.gettimeofday () in
+    let tr_prog = translate fname prog in
+    let t_3 = Unix.gettimeofday () in
+    let time_string a b = string_of_float (1000. *. (a -. b)) in
+      List.iter Npkcontext.print_debug
+	["   , ^ ,          Phase       | Time spent (ms)"
+	;" .`  |  `.  ------------------+-----------------"
+	;" (   o   )    Lexing/Parsing  | " ^ time_string t_1 t_0
+	;" `  /    `    Translation     | " ^ time_string t_2 t_1
+	;"  ` ._. `     Linking         | " ^ time_string t_3 t_2
+	];
+      if dir_name <> "." then begin
+	Npkcontext.print_debug ("Changing directory : " ^ current_dir);
+	Sys.chdir current_dir
       end;
-      Npkcontext.forget_loc ();
-      let norm_tree = Normalize.normalization ast in
-	log_progress (Translate fname);
-	Npkcontext.print_debug "Translating to CIR...";
-	let prog = Firstpass.translate norm_tree in
-          log_progress (Done(Translate fname));
-          let t_2 = Unix.gettimeofday () in
-            Npkcontext.forget_loc ();
-            log_progress (Post);
-            let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
-            let t_3 = Unix.gettimeofday () in
-            let time_string a b = string_of_float (1000. *. (a -. b)) in
-              List.iter Npkcontext.print_debug
-		["   , ^ ,          Phase       | Time spent (ms)"
-		;" .`  |  `.  ------------------+-----------------"
-		;" (   o   )    Lexing/Parsing  | " ^ time_string t_1 t_0
-		;" `  /    `    Translation     | " ^ time_string t_2 t_1
-		;"  ` ._. `     Linking         | " ^ time_string t_3 t_2
-		];
-              Npkcontext.forget_loc ();
-              if dir_name <> "." then begin
-		Npkcontext.print_debug ("Changing directory : " ^ current_dir);
-		Sys.chdir current_dir
-              end;
-              if (!Npkcontext.verb_npko) then begin
-		print_endline "Newspeak Object output";
-		print_endline "----------------------";
-		Npkil.dump_npko tr_prog;
-		log_progress (Done Post);
-		print_newline ();
-              end;
-              tr_prog
+      if (!Npkcontext.verb_npko) then begin
+	print_endline "Newspeak Object output";
+	print_endline "----------------------";
+	Npkil.dump_npko tr_prog;
+	print_newline ();
+      end;
+      tr_prog
 
 
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
