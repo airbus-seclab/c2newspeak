@@ -228,30 +228,39 @@ let translate src_lang prog fnames =
   and translate_args args =
     let in_vars = ref [] in
     let out_vars = ref [] in
-    let collect_in_var x =
+    let args_t = ref [] in
+    let rets_t = ref [] in
+    let collect_in_var (x, t) =
       match x with
-	| In e -> in_vars := (translate_exp e)::!in_vars
-	| InOut typ_lv -> in_vars := (translate_exp (Lval typ_lv))::!in_vars
+	| In e -> 
+	    args_t := (translate_typ t)::!args_t;
+	    in_vars := (translate_exp e)::!in_vars
+	| InOut typ_lv -> 
+	    args_t := (translate_typ t)::!args_t;
+	    in_vars := (translate_exp (Lval typ_lv))::!in_vars
 	| Out _ -> ()
     in
-    let collect_out_var x =
+    let collect_out_var (x, t) =
       match x with
 	  Out (lv, _) | InOut (lv, _) -> 
+	    rets_t := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
 	| In _ -> ()
     in
       List.iter collect_in_var args;
       List.iter collect_out_var args;
-      (List.rev !in_vars, List.rev !out_vars)
+      let ft = (List.rev !args_t, List.rev !rets_t) in
+	(List.rev !in_vars, List.rev !out_vars, ft)
 
   and translate_call ret ((args_t, ret_t), fn, args) =
+    let args = List.combine args args_t in
     (* TODO: cleanup this is really a bit of a hack *)
     let args =
       match ret with
-	  Some lv -> (Out (lv, ret_t))::args
+	  Some lv -> (Out (lv, ret_t), ret_t)::args
 	| None -> args
     in
-    let (in_vars, out_vars) = translate_args args in
+    let (in_vars, out_vars, _) = translate_args args in
     let ft = translate_ftyp (args_t, ret_t) in
     let fn = translate_fn fn in
       K.Call (in_vars, ft, fn, out_vars)
