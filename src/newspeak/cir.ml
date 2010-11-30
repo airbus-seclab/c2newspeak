@@ -113,6 +113,7 @@ and exp =
     | Call of (ftyp * funexp * arg list)
     | BlkExp of (blk * exp * bool)
 
+(* TODO: should simplify cir!!! *)
 and arg =
   | In    of exp    (* Copy-in only (C style) *)
   | Out   of typ_lv (* Copy-out only (no initializer) *)
