@@ -180,11 +180,14 @@ let rec generate_stmt (sk, loc) =
 (* TODO: cleanup push this up in previous phase *)
 and generate_rets out_vars out_t =
   match (out_vars, out_t) with
-      (lv::[], t::[]) -> (generate_lv lv, generate_typ t)::[]
+      (lv::out_vars, t::out_t) -> 
+	(generate_lv lv, generate_typ t)::(generate_rets out_vars out_t)
     | ([], []) -> []
     | _ -> 
+(* TODO: clean code up so that this case doesn't need to be => change type
+   of Call in npkil *)
 	Npkcontext.report_error "Npklink.generate_rets" 
-	  "return variables: case not handled"
+	  "return variables: invalid case"
 
 and generate_args in_vars in_t =
   match (in_vars, in_t) with
