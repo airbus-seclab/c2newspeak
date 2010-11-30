@@ -143,10 +143,10 @@ and spec =
   |    PackageSpec of package_spec
 
 and context_clause =
-  | With       of string
-                * Newspeak.location
-                * (spec * Newspeak.location) option
-
+    (string
+     * Newspeak.location
+     * (spec * Newspeak.location) option)
+      
 and sub_program_spec =
   | Subprogram of Syntax_ada.name * param list * Ada_types.t option
 
@@ -156,5 +156,3 @@ and package_spec = string
 type compilation_unit = context_clause list
                       * library_item
                       * Newspeak.location
-
-type programme = compilation_unit list

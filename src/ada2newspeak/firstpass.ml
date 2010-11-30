@@ -532,16 +532,16 @@ let translate compil_unit =
   in
 
   let rec translate_context =
-    List.iter (function
-      | With(_, loc, spec) ->
-          Npkcontext.set_loc loc;
-          (match spec with
-            | Some(spec, _loc) ->
-                translate_spec spec
-            | None -> Npkcontext.report_error
-                "Firstpass.translate_context"
-                  "internal error : no specification provided")
-    );
+    List.iter (fun
+		 (_, loc, spec) ->
+		   Npkcontext.set_loc loc;
+		   (match spec with
+		      | Some(spec, _loc) ->
+			  translate_spec spec
+		      | None -> Npkcontext.report_error
+			  "Firstpass.translate_context"
+			    "internal error : no specification provided")
+	      );
   in
 
   let (ctx, lib_item, loc) = compil_unit in

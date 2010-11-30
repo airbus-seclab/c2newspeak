@@ -1757,15 +1757,15 @@ and normalize_context context =
 		in
 		  add_extern_spec norm_spec;
 		  Hashtbl.add spec_tbl nom (norm_spec, loc);
-		  Ast.With(nom, loc, Some(norm_spec, loc))::ctx
+		  (nom, loc, Some(norm_spec, loc))::ctx
 	      end
 	    else 	
 		(*Etienne Millon = ctx*)
 		(*Not found for internal spec like  System *)	
 	      begin try 
 		let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
-		  Ast.With(nom, lc, Some(ex_spec, lc))::ctx
-	      with 		  Not_found -> ctx (*for System ... not an error*)
+		  (nom, lc, Some(ex_spec, lc))::ctx
+	      with Not_found -> ctx (*for System ... not an error*)
 	      end
 	
 	| UseContext n  -> 
