@@ -74,22 +74,10 @@ let compile (fname: string): Npkil.t =
       Npkcontext.print_debug ("Changing directory : " ^ dir_name);
       Sys.chdir dir_name
     end;
-    let t_0 = Unix.gettimeofday () in
     let ast = parse base_name in
-    let t_1 = Unix.gettimeofday () in
     let norm_tree = normalization fname ast in
     let prog = firstpass_translate fname norm_tree in
-    let t_2 = Unix.gettimeofday () in
     let tr_prog = translate fname prog in
-    let t_3 = Unix.gettimeofday () in
-    let time_string a b = string_of_float (1000. *. (a -. b)) in
-      List.iter Npkcontext.print_debug
-	["   , ^ ,          Phase       | Time spent (ms)"
-	;" .`  |  `.  ------------------+-----------------"
-	;" (   o   )    Lexing/Parsing  | " ^ time_string t_1 t_0
-	;" `  /    `    Translation     | " ^ time_string t_2 t_1
-	;"  ` ._. `     Linking         | " ^ time_string t_3 t_2
-	];
       if dir_name <> "." then begin
 	Npkcontext.print_debug ("Changing directory : " ^ current_dir);
 	Sys.chdir current_dir
