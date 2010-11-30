@@ -114,8 +114,8 @@ let merge_types gtbl (tp, cstr) =
 let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
 
-let return_type_of subprogram = match subprogram with
-  | Ast.Subprogram (_,_,st) -> st
+(* TODO: change tuple into record *)
+let return_type_of (_, _, st) = st
 
 (**************************************************
  *                                                *
@@ -209,8 +209,7 @@ let find_body_for_spec ~specification ~bodylist =
 let name_of_spec spec = match spec with
   | Ast.ObjectDecl (i,_,_,_)
   | Ast.NumberDecl (i,_) -> i
-  | Ast.SpecDecl (Ast.SubProgramSpec (Ast.Subprogram (n,_,_)))
-      -> name_to_string n
+  | Ast.SpecDecl (Ast.SubProgramSpec (n,_,_)) -> name_to_string n
   | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> n
 
 let check_package_body_against_spec ~body ~spec =
@@ -888,10 +887,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
 	      (* Param type must be preceded by the package name see test t405*)
             let t = Ada_utils.may subtyp_to_adatyp return_type in
             Sym.add_subprogram gtbl name norm_param_list t;
-            Ast.Subprogram ( norm_name
-                           , normalize_params norm_param_list (return_type <> None)
-                           , t
-                           )
+              (norm_name
+              , normalize_params norm_param_list (return_type <> None)
+              , t)
 
 and normalize_basic_decl item loc =
   match item with

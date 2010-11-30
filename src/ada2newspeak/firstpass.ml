@@ -389,22 +389,15 @@ let translate compil_unit =
   and translate_param_list param_list =
     (List.map (fun p -> T.translate p.param_type) param_list)
 
-  and add_params subprog_spec =
-    let param_list =
-      match subprog_spec with
-        | Subprogram (_, param_list, _) -> param_list
-    in
+  and add_params (_, param_list, _) =
     let params = List.map (fun x -> x.formal_name) param_list in
-    (params, (Params.ret_ident, params))
+      (params, (Params.ret_ident, params))
 
-  and translate_sub_program_spec subprog_spec =
-    let (param_list, return_type) =
-      match subprog_spec with
-        | Subprogram(_,param_list,return_type) -> (param_list, return_type)
-    in let params_typ = translate_param_list param_list in
+  and translate_sub_program_spec (_, param_list, return_type) =
+    let params_typ = translate_param_list param_list in
       ( params_typ, ( match return_type with
-                      | None     -> C.Void
-                      | Some(st) -> T.translate st
+			| None     -> C.Void
+			| Some(st) -> T.translate st
                     )
       )
 
@@ -436,9 +429,7 @@ let translate compil_unit =
     ) ([],[]) decl_part
 
   and add_funbody subprogspec decl_part block loc =
-    let name = match subprogspec with
-      | Subprogram (n,_,_) -> n
-    in
+    let (name, _, _) = subprogspec in
     let (_, (ret_id, args_ids)) = add_params subprogspec in
     let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = translate_sub_program_spec subprogspec in

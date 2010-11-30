@@ -177,6 +177,7 @@ and instruction =
 
 (** Subprogram declaration *)
 and sub_program_spec =
+(* TODO: remove this unique case Subprogram *)
   | Subprogram of string * param list * subtyp option
 
 and object_state =

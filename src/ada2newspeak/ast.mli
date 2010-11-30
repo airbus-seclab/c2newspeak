@@ -142,8 +142,7 @@ and spec =
   | SubProgramSpec of sub_program_spec
   |    PackageSpec of package_spec
 
-and sub_program_spec =
-  | Subprogram of Syntax_ada.name * param list * Ada_types.t option
+and sub_program_spec = (Syntax_ada.name * param list * Ada_types.t option)
 
 and package_spec = string
                  * (basic_declaration * Newspeak.location) list
