@@ -69,7 +69,6 @@ let translate_int x =
  * Takes an Ada program as and returns a CIR tree.
  *)
 let translate compil_unit =
-
   let fun_decls = Hashtbl.create 10 in
   let globals   = Hashtbl.create 10 in
   let init      = ref []            in
@@ -532,15 +531,15 @@ let translate compil_unit =
   in
 
   let rec translate_context =
-    List.iter (fun
-		 (_, loc, spec) ->
-		   Npkcontext.set_loc loc;
-		   (match spec with
-		      | Some(spec, _loc) ->
-			  translate_spec spec
-		      | None -> Npkcontext.report_error
-			  "Firstpass.translate_context"
-			    "internal error : no specification provided")
+(* TODO: remove this anonymous function *)
+    List.iter (fun x ->
+		 Npkcontext.set_loc x.location;
+		 (match x.content with
+		    | Some(spec, _loc) ->
+			translate_spec spec
+		    | None -> Npkcontext.report_error
+			"Firstpass.translate_context"
+			  "internal error : no specification provided")
 	      );
   in
 

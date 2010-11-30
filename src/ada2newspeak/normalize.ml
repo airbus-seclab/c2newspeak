@@ -1745,33 +1745,48 @@ and add_extern_spec spec =
           Sym.add_with gtbl name
 	    
 and normalize_context context =
+(* TODO: explicit name of this anonymous function + cleanup code *)
   List.fold_left ( fun ctx item -> match item with
-	| With(nom, spec) ->  
-	    if (not (Sym.is_with gtbl nom)) then
-	      begin 
-		let (norm_spec, loc) = match spec with
-		  | None   -> parse_extern_specification nom
-		  | Some _ -> Npkcontext.report_error
-		      "Ada_normalize.normalize_context"
-			"internal error : spec provided"
-		in
-		  add_extern_spec norm_spec;
-		  Hashtbl.add spec_tbl nom (norm_spec, loc);
-		  (nom, loc, Some(norm_spec, loc))::ctx
-	      end
-	    else 	
-		(*Etienne Millon = ctx*)
-		(*Not found for internal spec like  System *)	
-	      begin try 
-		let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
-		  (nom, lc, Some(ex_spec, lc))::ctx
-	      with Not_found -> ctx (*for System ... not an error*)
-	      end
-	
-	| UseContext n  -> 
-	    Sym.add_use gtbl n; 
-	    ctx 
-  ) [] context
+		     | With(nom, spec) ->  
+			 if (not (Sym.is_with gtbl nom)) then
+			   begin 
+			     let (norm_spec, loc) = match spec with
+			       | None   -> parse_extern_specification nom
+			       | Some _ -> Npkcontext.report_error
+				   "Ada_normalize.normalize_context"
+				     "internal error : spec provided"
+			     in
+			       add_extern_spec norm_spec;
+			       Hashtbl.add spec_tbl nom (norm_spec, loc);
+			       let context_clause = 
+				 { 
+				   Ast.file_name = nom; 
+				   Ast.location = loc;
+				   Ast.content = Some(norm_spec, loc) 
+				 }
+			       in
+				 context_clause::ctx
+			   end
+			 else 	
+			   (*Etienne Millon = ctx*)
+			   (*Not found for internal spec like  System *)	
+			   begin try 
+			     let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
+			     let context_clause = 
+			       {
+				 Ast.file_name = nom;
+				 Ast.location = lc;
+				 Ast.content = Some (ex_spec, lc)
+			       }
+			     in
+			       context_clause::ctx
+			   with Not_found -> ctx (*for System ... not an error*)
+			   end
+			     
+		     | UseContext n  -> 
+			 Sym.add_use gtbl n; 
+			 ctx 
+		 ) [] context
 
 (**
  * Iterates through the abstract syntax tree, performing miscellaneous tasks.
@@ -1784,10 +1799,10 @@ and normalize_context context =
 and normalization compil_unit = 
   let cu_name = compilation_unit_name compil_unit in
     Npkcontext.print_debug ("Semantic checking " ^ cu_name ^ "...");
-    let (context,lib_item,loc) = compil_unit in
+    let (context, lib_item,loc) = compil_unit in
     let norm_context = normalize_context context in
     let norm_lib_item = normalize_lib_item lib_item loc in 
       Npkcontext.forget_loc ();
       Npkcontext.print_debug ("Done semantic checking " ^ cu_name);
-      (norm_context ,norm_lib_item ,loc)
+      (norm_context, norm_lib_item, loc)
 	
