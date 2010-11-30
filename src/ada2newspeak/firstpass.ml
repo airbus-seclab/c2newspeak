@@ -395,12 +395,12 @@ let translate compil_unit =
 
   and translate_sub_program_spec spec =
     let params_typ = translate_param_list spec.arguments in
-      (* TODO: clean this code up *)
-      ( params_typ, ( match spec.return_type with
-			| None     -> C.Void
-			| Some(st) -> T.translate st
-                    )
-      )
+    let return_typ =
+      match spec.return_type with
+	| None    -> C.Void
+	| Some st -> T.translate st
+    in
+      (params_typ, return_typ)
 
   and translate_basic_declaration basic loc = match basic with
     | ObjectDecl (id,t,_,blkopt) ->
