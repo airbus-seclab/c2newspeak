@@ -530,17 +530,13 @@ let translate compil_unit =
             "Rien a faire pour les specifications"
   in
 
-  let rec translate_context =
+  let rec translate_context ctx =
 (* TODO: remove this anonymous function *)
     List.iter (fun x ->
 		 Npkcontext.set_loc x.location;
-		 (match x.content with
-		    | Some(spec, _loc) ->
-			translate_spec spec
-		    | None -> Npkcontext.report_error
-			"Firstpass.translate_context"
-			  "internal error : no specification provided")
-	      );
+		 let (spec, _) = x.content in
+		   translate_spec spec
+	      ) ctx
   in
 
   let (ctx, lib_item, loc) = compil_unit in
