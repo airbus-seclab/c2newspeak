@@ -83,8 +83,8 @@ and stmtkind =
   | DoWith of (blk * Newspeak.lbl)
   | Goto of Newspeak.lbl
 (* TODO: remove return value *)
-(* in arguments, ftyp, fun exp, outputs, return value *)
-  | Call of (exp list * ftyp * fn * lval list * lval option)
+(* in arguments, ftyp, fun exp, outputs *)
+  | Call of (exp list * ftyp * fn * lval list)
   | UserSpec of assertion
 
 and arg =

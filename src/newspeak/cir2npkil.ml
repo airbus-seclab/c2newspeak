@@ -248,12 +248,12 @@ let translate src_lang prog fnames =
     let (in_vars, out_vars) = translate_args args in
     let ft = translate_ftyp (args_t, ret_t) in
     let fn = translate_fn fn in
-    let ret =
+    let out_vars =
       match ret with
-	| Some r -> Some (translate_lv r)
-	| None   -> None
+	| Some r -> (translate_lv r)::out_vars
+	| None   -> out_vars
     in
-      K.Call (in_vars, ft, fn, out_vars, ret)
+      K.Call (in_vars, ft, fn, out_vars)
 
   and translate_switch loc (e, cases, default) =
     let e = translate_exp e in

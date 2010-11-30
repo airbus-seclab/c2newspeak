@@ -167,12 +167,12 @@ let rec generate_stmt (sk, loc) =
       | Select (body1, body2) ->
           N.Select (generate_blk body1, generate_blk body2)
       | InfLoop b -> N.InfLoop (List.map generate_stmt b)
-      | Call (in_vars, (in_t, out_t), fn, out_vars, rets) ->
+      | Call (in_vars, (in_t, out_t), fn, out_vars) ->
 (* TODO: push this code up into previous phase *)
 	  let in_vars = generate_args in_vars in_t in
 	  let ft = generate_ftyp (in_t, out_t) in
           let fn = generate_fn fn ft in
-	  let out_vars = generate_rets out_vars out_t rets in
+	  let out_vars = generate_rets out_vars out_t in
             N.Call (in_vars, fn, out_vars)
       | Goto lbl -> N.Goto lbl
       | DoWith (body, lbl) ->
@@ -183,11 +183,10 @@ let rec generate_stmt (sk, loc) =
     (new_sk, loc)
 
 (* TODO: cleanup push this up in previous phase *)
-and generate_rets out_vars out_t rets =
-  match (out_vars, rets, out_t) with
-      (_, Some lv, Some t)
-    | (lv::[], _, Some t) -> (generate_lv lv, generate_typ t)::[]
-    | ([], None, None) -> []
+and generate_rets out_vars out_t =
+  match (out_vars, out_t) with
+      (lv::[], Some t) -> (generate_lv lv, generate_typ t)::[]
+    | ([], None) -> []
     | _ -> 
 	Npkcontext.report_error "Npklink.generate_rets" 
 	  "return variables: case not handled"
