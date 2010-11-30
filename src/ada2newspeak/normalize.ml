@@ -195,13 +195,14 @@ let rec resolve_selected ?expected_type n =
  *)
 let find_body_for_spec ~specification ~bodylist =
   (* Try to match a spec and a body *)
-  let match_ok s b = match (s,b) with
-    | Ast.SpecDecl(Ast.SubProgramSpec sps),
-        Ast.BodyDecl(Ast.SubProgramBody (spsb,_,_)) -> sps = spsb
-    | Ast.ObjectDecl _ as x, Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
-    | _ -> false
+  let match_ok s b = 
+    match (s,b) with
+      | Ast.SpecDecl(Ast.SubProgramSpec sps),
+	Ast.BodyDecl(Ast.SubProgramBody (spsb, _)) -> sps = spsb
+      | Ast.ObjectDecl _ as x, Ast.BasicDecl (Ast.ObjectDecl _ as y) -> x = y
+      | _ -> false
   in
-  List.exists (function bd -> match_ok specification bd) bodylist
+    List.exists (function bd -> match_ok specification bd) bodylist
 	
 let check_package_body_against_spec ~body ~spec =
   let (pkgname,spec_and_loc) = spec in
@@ -1376,11 +1377,12 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                   Ada_utils.may (fun x -> normalize_block ?return_type x)
                                 default
                   ),loc]
-  | Block (dp,blk) -> Sym.enter_context ~desc:"Declare block" gtbl;
-                      let ndp = normalize_decl_part dp in
-                      let norm_block = normalize_block ?return_type blk in
-                      Sym.exit_context gtbl;
-                      [Ast.Block (ndp, norm_block), loc]
+  | Block (dp,blk) -> 
+      Sym.enter_context ~desc:"Declare block" gtbl;
+      let ndp = normalize_decl_part dp in
+      let norm_block = normalize_block ?return_type blk in
+        Sym.exit_context gtbl;
+        [Ast.Block (ndp, norm_block), loc]
 
 
 
@@ -1689,9 +1691,9 @@ and normalize_body body  = match body with
 	let norm_block = normalize_block ?return_type block in
 	  Sym.exit_context gtbl;
 	  Sym.exit_context gtbl; (* params *)
-	  Ast.SubProgramBody( norm_subprog_decl
-				, norm_decl_part
-				  , norm_block)
+	  let current_loc = Npkcontext.get_loc () in
+	  let block = [(Ast.Block (norm_decl_part, norm_block), current_loc)] in
+	  Ast.SubProgramBody (norm_subprog_decl, block)
   | PackageBody(name, package_spec, decl_part) ->
       let (nname,nspec) = normalize_package_spec
         (with_default package_spec

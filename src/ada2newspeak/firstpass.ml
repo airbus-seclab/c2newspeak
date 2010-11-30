@@ -428,11 +428,10 @@ let translate compil_unit =
 		      (iblk  @ niblk )
 		   ) ([],[]) decl_part
       
-  and add_funbody subprogspec decl_part block loc =
+  and add_funbody subprogspec block loc =
     let (ret_id, args_ids) = add_params subprogspec in
-    let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = translate_sub_program_spec subprogspec in
-    let body = translate_block (init @ block) in
+    let body = translate_block block in
     let mangle_sname = function
       | []       -> Npkcontext.report_error "fstpass:mangle_sname" "unreachable"
       | x::[]    -> None  , x
@@ -440,7 +439,7 @@ let translate compil_unit =
       | _        -> Npkcontext.report_error "mangle_sname"
                       "chain of selected names is too deep"
     in
-    let body = (C.Block (body_decl @ body,Some Params.ret_lbl), loc)::[] in
+    let body = (C.Block (body, Some Params.ret_lbl), loc)::[] in
       Hashtbl.replace fun_decls (translate_name (mangle_sname subprogspec.name))
                       (ret_id, args_ids, ftyp, body);
   in
@@ -494,8 +493,8 @@ let translate compil_unit =
   and translate_body body loc =
     Npkcontext.set_loc loc;
     match body with
-      | SubProgramBody(subprog_decl,decl_part, block) ->
-          add_funbody subprog_decl decl_part block loc
+      | SubProgramBody(subprog_decl, block) ->
+          add_funbody subprog_decl block loc
       | PackageBody(name, package_spec, decl_part) ->
           curpkg := Some name;
           (match package_spec with

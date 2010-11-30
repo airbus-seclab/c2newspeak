@@ -114,9 +114,7 @@ and param = {
 }
 
 and body =
-  | SubProgramBody of sub_program_spec
-                    * declarative_part
-                    * block
+  | SubProgramBody of (sub_program_spec * block)
   | PackageBody    of string
                     * package_spec option
                     * declarative_part
