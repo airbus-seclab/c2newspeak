@@ -26,6 +26,7 @@
 *)
 
 open Syntax_ada
+(* TODO: try not to open Ada_utils *)
 open Ada_utils
 
 module Nat = Newspeak.Nat
@@ -114,9 +115,6 @@ let merge_types gtbl (tp, cstr) =
 let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
 
-(* TODO: change tuple into record *)
-let return_type_of (_, _, st) = st
-
 (**************************************************
  *                                                *
  *    Selected_name -> package/var, record, etc   *
@@ -204,14 +202,7 @@ let find_body_for_spec ~specification ~bodylist =
     | _ -> false
   in
   List.exists (function bd -> match_ok specification bd) bodylist
-
-(** Return the name for a specification. *)
-let name_of_spec spec = match spec with
-  | Ast.ObjectDecl (i,_,_,_)
-  | Ast.NumberDecl (i,_) -> i
-  | Ast.SpecDecl (Ast.SubProgramSpec (n,_,_)) -> name_to_string n
-  | Ast.SpecDecl (Ast.PackageSpec (n,_)) -> n
-
+	
 let check_package_body_against_spec ~body ~spec =
   let (pkgname,spec_and_loc) = spec in
   let (        body_and_loc) = body in
@@ -231,7 +222,7 @@ let check_package_body_against_spec ~body ~spec =
         then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
           ( "Body for package " ^ pkgname
           ^ " does not match its specification : cannot find a body for \""
-          ^ name_of_spec sp ^ "\"")
+          ^ Ast.name_of_spec sp ^ "\"")
       end
   ) speclist
 
@@ -854,43 +845,48 @@ and normalize_params_cur param =
 	  
 	  
 and normalize_sub_program_spec subprog_spec ~addparam =
-    let normalize_params param_list func =
-      if addparam then
-        Sym.enter_context ~desc:"SP body (parameters)" gtbl;
-      List.map
-        (fun param ->
-           if func && (param.mode <> In)
-           then Npkcontext.report_error
-              "Normalize.normalize_params"
-             ( "invalid parameter mode : functions can only have"
+  let normalize_params param_list func =
+    if addparam then
+      Sym.enter_context ~desc:"SP body (parameters)" gtbl;
+    List.map
+      (fun param ->
+         if func && (param.mode <> In)
+         then Npkcontext.report_error
+           "Normalize.normalize_params"
+           ( "invalid parameter mode : functions can only have"
              ^ " \"in\" parameters");
-           if (param.default_value <> None && param.mode <> In) then
-             Npkcontext.report_error "Normalize.normalize_params"
+         if (param.default_value <> None && param.mode <> In) then
+           Npkcontext.report_error "Normalize.normalize_params"
              "default values are only allowed for \"in\" parameters";
-           if addparam then begin
-              Sym.add_variable gtbl param.formal_name (Newspeak.unknown_loc)
-                                          (subtyp_to_adatyp param.param_type)
-                                          ~ro:(param.mode = In)
-              ;
-           end;
-           { Ast.formal_name = param.formal_name
-           ; Ast.param_type  = subtyp_to_adatyp param.param_type
-           }
-        )
-        param_list
-    in
+         if addparam then begin
+           Sym.add_variable gtbl param.formal_name (Newspeak.unknown_loc)
+             (subtyp_to_adatyp param.param_type)
+             ~ro:(param.mode = In)
+           ;
+         end;
+         { Ast.formal_name = param.formal_name
+         ; Ast.param_type  = subtyp_to_adatyp param.param_type
+         }
+      )
+      param_list
+  in
     match subprog_spec with
-        | Subprogram(name,param_list,return_type) -> 
-            let norm_name = normalize_ident_cur name in
-	    let norm_param_list =
-	      List.map normalize_params_cur param_list in
-	      (* Param type must be preceded by the package name see test t405*)
-            let t = Ada_utils.may subtyp_to_adatyp return_type in
+(* TODO: remove this unique union case *)
+      | Subprogram(name,param_list,return_type) -> 
+          let norm_name = normalize_ident_cur name in
+	  let norm_param_list = List.map normalize_params_cur param_list in
+	    (* Param type must be preceded by the package name see test t405*)
+          let t = Ada_utils.may subtyp_to_adatyp return_type in
             Sym.add_subprogram gtbl name norm_param_list t;
-              (norm_name
-              , normalize_params norm_param_list (return_type <> None)
-              , t)
-
+	    let arguments = 
+	      normalize_params norm_param_list (return_type <> None) 
+	    in
+              {
+		Ast.name = norm_name;
+		Ast.arguments = arguments;
+		Ast.return_type = t;
+	      }
+	      
 and normalize_basic_decl item loc =
   match item with
   | UseDecl use_clause  -> Sym.add_use gtbl use_clause; []
@@ -1037,7 +1033,7 @@ and normalize_package_spec (name, list_decl) =
       
 and normalize_spec spec = match spec with
   | SubprogramSpec subprogr_spec -> Ast.SubProgramSpec(
-        normalize_sub_program_spec subprogr_spec ~addparam:false)
+      normalize_sub_program_spec subprogr_spec ~addparam:false)
   | PackageSpec package_spec ->
       Ast.PackageSpec(normalize_package_spec package_spec)
 
@@ -1676,7 +1672,7 @@ and normalize_decl_part decl_part =
                                         ~bodylist:(List.map fst ndp)) then
                  Npkcontext.report_error "normalize_decl_part"
                                          ( "Declaration of \""
-                                         ^ (name_of_spec sp)
+                                         ^ (Ast.name_of_spec sp)
                                          ^ "\" requires completion")
             end
     | _ -> ()
@@ -1687,20 +1683,20 @@ and normalize_body body  = match body with
   | SubprogramBody(subprog_decl,decl_part,block) ->
       let norm_subprog_decl =
         normalize_sub_program_spec subprog_decl ~addparam:true in
-      Sym.enter_context ~desc:"SP body (locals)" gtbl;
-      let return_type = return_type_of norm_subprog_decl in
-      let norm_decl_part = normalize_decl_part decl_part in
-      let norm_block = normalize_block ?return_type block in
-      Sym.exit_context gtbl;
-      Sym.exit_context gtbl; (* params *)
-      Ast.SubProgramBody( norm_subprog_decl
-                        , norm_decl_part
-                        , norm_block)
+	Sym.enter_context ~desc:"SP body (locals)" gtbl;
+	let return_type = norm_subprog_decl.Ast.return_type in
+	let norm_decl_part = normalize_decl_part decl_part in
+	let norm_block = normalize_block ?return_type block in
+	  Sym.exit_context gtbl;
+	  Sym.exit_context gtbl; (* params *)
+	  Ast.SubProgramBody( norm_subprog_decl
+				, norm_decl_part
+				  , norm_block)
   | PackageBody(name, package_spec, decl_part) ->
       let (nname,nspec) = normalize_package_spec
-                              (with_default package_spec
-                                  (parse_package_specification name)
-                              )
+        (with_default package_spec
+           (parse_package_specification name)
+        )
       in
         Sym.set_current gtbl name;
         Sym.enter_context ~name ~desc:"Package body" gtbl;

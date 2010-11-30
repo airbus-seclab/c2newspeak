@@ -142,7 +142,12 @@ and spec =
   | SubProgramSpec of sub_program_spec
   |    PackageSpec of package_spec
 
-and sub_program_spec = (Syntax_ada.name * param list * Ada_types.t option)
+and sub_program_spec = {
+  name: Syntax_ada.name;
+  arguments: param list;
+(* TODO: think about it, but isn't ret redundant with out argument? *)
+  return_type: Ada_types.t option
+}
 
 and package_spec = string
                  * (basic_declaration * Newspeak.location) list
@@ -150,3 +155,7 @@ and package_spec = string
 type compilation_unit = (spec * Newspeak.location) list
                       * library_item
                       * Newspeak.location
+
+
+(** Return the name for a specification. *)
+val name_of_spec: basic_declaration -> string

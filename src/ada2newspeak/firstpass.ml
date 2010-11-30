@@ -389,13 +389,15 @@ let translate compil_unit =
   and translate_param_list param_list =
     (List.map (fun p -> T.translate p.param_type) param_list)
 
-  and add_params (_, param_list, _) =
-    let params = List.map (fun x -> x.formal_name) param_list in
+  and add_params spec =
+    let params = List.map (fun x -> x.formal_name) spec.arguments in
+(* TODO: remove unused first parameter *)
       (params, (Params.ret_ident, params))
 
-  and translate_sub_program_spec (_, param_list, return_type) =
-    let params_typ = translate_param_list param_list in
-      ( params_typ, ( match return_type with
+  and translate_sub_program_spec spec =
+    let params_typ = translate_param_list spec.arguments in
+      (* TODO: clean this code up *)
+      ( params_typ, ( match spec.return_type with
 			| None     -> C.Void
 			| Some(st) -> T.translate st
                     )
@@ -429,7 +431,6 @@ let translate compil_unit =
     ) ([],[]) decl_part
 
   and add_funbody subprogspec decl_part block loc =
-    let (name, _, _) = subprogspec in
     let (_, (ret_id, args_ids)) = add_params subprogspec in
     let (body_decl,init) = translate_declarative_part decl_part in
     let ftyp = translate_sub_program_spec subprogspec in
@@ -442,7 +443,7 @@ let translate compil_unit =
                       "chain of selected names is too deep"
     in
     let body = (C.Block (body_decl @ body,Some Params.ret_lbl), loc)::[] in
-      Hashtbl.replace fun_decls (translate_name (mangle_sname name))
+      Hashtbl.replace fun_decls (translate_name (mangle_sname subprogspec.name))
                       (ret_id, args_ids, ftyp, body);
   in
 
@@ -476,14 +477,14 @@ let translate compil_unit =
       | BasicDecl(basic) ->
           translate_global_basic_declaration (basic, loc)
       | BodyDecl(body) -> translate_body body loc
-
+	  
   and translate_spec spec = 
     match spec with
-    | SubProgramSpec(subprog_spec) -> 
-        ignore (translate_sub_program_spec subprog_spec )
-    | PackageSpec (nom, basic_decl_list) ->
-	(*WG*)
-	(*print_endline ("nom de la spec :"^nom^(if (not (f_is_with nom)) then " pas deja present dans with" else "deja present"));  
+      | SubProgramSpec(subprog_spec) -> 
+          ignore (translate_sub_program_spec subprog_spec )
+      | PackageSpec (nom, basic_decl_list) ->
+	  (*WG*)
+	  (*print_endline ("nom de la spec :"^nom^(if (not (f_is_with nom)) then " pas deja present dans with" else "deja present"));  
 	  if (not (f_is_with  nom)) then begin
 	*)
           curpkg := Some nom;
