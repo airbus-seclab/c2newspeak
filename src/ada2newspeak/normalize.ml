@@ -1760,7 +1760,6 @@ and normalize_context context =
 			       Hashtbl.add spec_tbl nom (norm_spec, loc);
 			       let context_clause = 
 				 { 
-				   Ast.file_name = nom; 
 				   Ast.location = loc;
 				   Ast.content = norm_spec
 				 }
@@ -1774,7 +1773,6 @@ and normalize_context context =
 			     let (ex_spec, lc) = Hashtbl.find spec_tbl nom in
 			     let context_clause = 
 			       {
-				 Ast.file_name = nom;
 				 Ast.location = lc;
 				 Ast.content = ex_spec
 			       }

@@ -149,7 +149,6 @@ and package_spec = string
                  * (basic_declaration * Newspeak.location) list
 
 type context_clause = {
-  file_name: string;
   content: spec;
   location: Newspeak.location;
 }
