@@ -116,7 +116,6 @@ and stmtkind =
   | DoWith of (blk * lbl)
   | Goto of lbl
 (* arguments, type, function, return values *)
-(* TODO: remove optional return value! *)
   | Call of ((exp * typ) list * funexp * (lval * typ) list)
   | UserSpec of assertion
 
