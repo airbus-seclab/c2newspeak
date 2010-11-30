@@ -150,7 +150,7 @@ and package_spec = string
 
 type context_clause = {
   file_name: string;
-  content: (spec * Newspeak.location);
+  content: spec;
   location: Newspeak.location
 }
       

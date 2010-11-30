@@ -1762,7 +1762,7 @@ and normalize_context context =
 				 { 
 				   Ast.file_name = nom; 
 				   Ast.location = loc;
-				   Ast.content = (norm_spec, loc) 
+				   Ast.content = norm_spec
 				 }
 			       in
 				 context_clause::ctx
@@ -1776,7 +1776,7 @@ and normalize_context context =
 			       {
 				 Ast.file_name = nom;
 				 Ast.location = lc;
-				 Ast.content = (ex_spec, lc)
+				 Ast.content = ex_spec
 			       }
 			     in
 			       context_clause::ctx
