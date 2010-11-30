@@ -1783,11 +1783,11 @@ and normalize_context context =
     
 and normalization compil_unit = 
   let cu_name = compilation_unit_name compil_unit in
-    log_progress (Semcheck cu_name);
+    Npkcontext.print_debug ("Semantic checking " ^ cu_name ^ "...");
     let (context,lib_item,loc) = compil_unit in
     let norm_context = normalize_context context in
     let norm_lib_item = normalize_lib_item lib_item loc in 
       Npkcontext.forget_loc ();
-      log_progress (Done(Semcheck cu_name));
+      Npkcontext.print_debug ("Done semantic checking " ^ cu_name);
       (norm_context ,norm_lib_item ,loc)
 	

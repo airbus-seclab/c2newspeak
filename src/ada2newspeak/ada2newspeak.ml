@@ -29,8 +29,9 @@
 
 open Ada_utils
 
-let parse base_name =
-  let (ast:Syntax_ada.compilation_unit) = File_parse.parse base_name in
+let parse fname =
+  Npkcontext.print_debug ("Parsing " ^ fname ^ "...");
+  let (ast:Syntax_ada.compilation_unit) = File_parse.parse fname in
     Npkcontext.forget_loc ();
     if (!Npkcontext.verb_ast) then begin
       print_endline "Abstract Syntax Tree";
@@ -38,23 +39,22 @@ let parse base_name =
       Print_syntax_ada.print_ast [ast];
       print_newline ();
     end;
+    Npkcontext.print_debug ("Done parsing " ^ fname);
     ast
 
 let normalization fname ast =
   let norm_tree = Normalize.normalization ast in
-    Ada_utils.log_progress (Translate fname);
+    Npkcontext.print_debug ("Translating " ^ fname ^ "...");
     norm_tree
 
 let firstpass_translate fname norm_tree =
   Npkcontext.print_debug "Translating to CIR...";
   let prog = Firstpass.translate norm_tree in
-(* TODO: simplify/remove? log_progress *)
-    log_progress (Done (Translate fname));
+    Npkcontext.print_debug ("Done translating " ^ fname);
     Npkcontext.forget_loc ();
     prog
 
 let translate fname prog =
-  log_progress (Post);
   let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
     Npkcontext.forget_loc ();
     tr_prog

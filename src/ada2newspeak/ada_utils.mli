@@ -30,23 +30,6 @@
  *)
 
 (**
- * This type, and the log_progress function are used to log compilation
- * progress to STDERR. Lines with "###PROGRESS###" are meant to be parsed
- * by some external script.
- *)
-type progress =
-  | Parsing   of string (* Name of file                  *)
-  | Semcheck  of string (* Name of compilation unit      *)
-  | Translate of string (* Name of compilation unit      *)
-  | Post                (* Everything after ada2newspeak *)
-  | Done of progress    (* When something is done        *)
-
-(**
- * Log progress, as explained in "progress".
- *)
-val log_progress : progress -> unit
-
-(**
  * Convert a boolean into a "native" integer.
  *)
 val nat_of_bool : bool -> Newspeak.Nat.t
