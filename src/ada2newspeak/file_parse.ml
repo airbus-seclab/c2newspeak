@@ -27,7 +27,7 @@
 
 open Ada_utils
 
-let parse (fname:string) :Syntax_ada.compilation_unit =
+let parse (fname:string): Syntax_ada.compilation_unit =
   log_progress (Parsing fname);
   let cin =
     try open_in fname

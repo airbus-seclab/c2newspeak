@@ -22,10 +22,8 @@
 
 *)
 
-(*val normalize_subtyp_indication:
-  Syntax_ada.subtyp_indication ->  Syntax_ada.subtyp_indication
-*)
-
+(* TODO: try to remove init_bodies and bodies_to_add *)
 val init_bodies   : string list -> unit
 val bodies_to_add : unit ->  string list
+
 val normalization : Syntax_ada.compilation_unit -> Ast.compilation_unit

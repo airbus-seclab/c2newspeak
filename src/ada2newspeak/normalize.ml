@@ -43,11 +43,11 @@ let spec_tbl = Hashtbl.create 5
 (*Normalization returns a list of files which body
   has to be compile and normalized when only
 *)
-let body_tbl = ref[]
+let body_tbl = ref []
 
-let init_bodies bds = body_tbl:=bds
+let init_bodies bds = body_tbl := bds
 
-let bodies_to_add() = !body_tbl
+let bodies_to_add () = !body_tbl
 
 (* Name-related functions *)
 
@@ -268,23 +268,19 @@ let parse_specification name =
   let body_name = name ^ ".adb" in
   let spec_ast =
     if Sys.file_exists spec_name
-    then 
-      begin
-	if ((Sys.file_exists body_name) && 
-	      (not ( List.mem body_name !body_tbl))) 
-	then
-	  body_tbl := body_name::!body_tbl
-	;
-	let res = File_parse.parse spec_name in
-	  if (!Npkcontext.verb_ast) then
-            begin
-              print_endline "Abstract Syntax Tree (extern)";
-              print_endline "-----------------------------";
-              Print_syntax_ada.print_ast [res];
-              print_newline ();
- 	    end;
-	  res
-      end
+    then begin
+      if ((Sys.file_exists body_name) && 
+	    (not ( List.mem body_name !body_tbl))) 
+      then body_tbl := body_name::!body_tbl;
+      let res = File_parse.parse spec_name in
+	if (!Npkcontext.verb_ast) then begin
+          print_endline "Abstract Syntax Tree (extern)";
+          print_endline "-----------------------------";
+          Print_syntax_ada.print_ast [res];
+          print_newline ();
+ 	end;
+	res
+    end
     else
       extract_subprog_spec (File_parse.parse body_name)
   in
