@@ -499,61 +499,93 @@ and normalize_binop bop e1 e2 =
       | Mod   -> Ast.Mod   | Power -> Ast.Power
       |_ -> invalid_arg "direct_op_trans"
   in
-  (* Is the operator overloaded ? *)
-  if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
+ (* Is the operator overloaded ?
+    if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
     let ovl_opname = make_operator_name bop in
-    normalize_exp (Lval(ParExp(Var ovl_opname,[(None,e1);(None,e2)])))
-  else
-  match bop with
-  (* Operators that does not exist in AST *)
-  | Lt     -> normalize_exp (          Binary(Gt, e2, e1) )
-  | Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
-  | Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
-  | Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
-  | Xor    -> let (e1',t1) = normalize_exp e1 in
-              let (e2',t2) = normalize_exp e2 in
+    normalize_exp (Lval(ParExp(Var ovl_opname,[(None,e1);(None,e2)]))) 
+    else  
+ *)
+    (* Is the operator overloaded ? *)
+    try
+     let norm_args = List.map (fun x -> (None,normalize_exp x)) [e1; e2] in
+     let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
+     let n = Ada_utils.make_operator_name bop in
+     let (sc,( act_name, spec, top)) = 
+       Sym.find_subprogram ~silent:true gtbl (None, n) norm_typs 
+	 (fun x -> Symboltbl.find_type gtbl x) 
+     in 
+       begin
+       	 let t = match top with
+	| None -> Npkcontext.report_error "normalize_"
+            "Expected function, got procedure"
+	| Some top ->
+	    top
+	 in
+	 let effective_args = make_arg_list norm_args spec in
+	 Ast.FunctionCall (sc, act_name, effective_args, t), t
+	   (*Ast.Binary (bop', (e1',t1), (e2',t2)),
+             TC.type_of_binop bop' t1 t2 
+	   *)
+       end
+
+    (*TODO clean this 'with _' *)
+    with _ -> 
+      match bop with
+	  (* Operators that does not exist in AST *)
+	| Lt     -> normalize_exp (          Binary(Gt, e2, e1) )
+	| Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
+	| Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
+	| Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
+	| Xor    -> 
+	    let (e1',t1) = normalize_exp e1 in
+            let (e2',t2) = normalize_exp e2 in
               Ast.CondExp ((e1',t1)
                           ,(Ast.Not(e2',t2),t2)
                           ,(e2',t2)
                           )
               ,TC.type_of_xor t1 t2
-  | OrElse -> let (e1',t1) = normalize_exp e1 in
-              let (e2',t2) = normalize_exp e2 in
-              Ast.CondExp ((e1',t1)
-                          ,(Ast.CBool true,T.boolean)
-                          ,(e2',t2)
+	| OrElse -> 
+	    let (e1',t1) = normalize_exp e1 in
+            let (e2',t2) = normalize_exp e2 in
+            Ast.CondExp ((e1',t1)
+                           ,(Ast.CBool true,T.boolean)
+                             ,(e2',t2)
                           )
               ,TC.type_of_binop Ast.Or t1 t2
-  | AndThen -> let (e1',t1) = normalize_exp e1 in
-               let (e2',t2) = normalize_exp e2 in
+	| AndThen -> 
+	    let (e1',t1) = normalize_exp e1 in
+            let (e2',t2) = normalize_exp e2 in
                Ast.CondExp ((e1',t1)
                            ,(e2',t2)
                            ,(Ast.CBool false,T.boolean)
                            )
                ,TC.type_of_binop Ast.And t1 t2
   (* Otherwise : direct translation *)
-  | _ ->  let bop' = direct_op_trans bop in
-          let expected_type =
-          match (e1, e2) with
-          | Lval l1 , Lval l2 -> begin
-	      try
-		let v1 = make_name_of_lval l1 in
-		let v2 = make_name_of_lval l2 in
-	          Sym.type_ovl_intersection gtbl
-                    (ListUtils.last v1)
-                    (ListUtils.last v2)
-	      with _ -> None
-	    end
+ 
+	| _ ->  
+	    let bop' = direct_op_trans bop in
+	    let expected_type =
+              match (e1, e2) with
+		| Lval l1 , Lval l2 -> begin
+		    try
+		      let v1 = make_name_of_lval l1 in
+		      let v2 = make_name_of_lval l2 in
+			Sym.type_ovl_intersection gtbl
+			  (ListUtils.last v1)
+			  (ListUtils.last v2)
+		    with _ -> None
+		  end
 		
-          | _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
-                                          Some (subtyp_to_adatyp n)
-          | _  -> None
-          in
-          let (e1',t1) = normalize_exp ?expected_type e1 in
-          let (e2',t2) = normalize_exp ?expected_type e2 in
-          Ast.Binary (bop', (e1',t1), (e2',t2)),
-          TC.type_of_binop bop' t1 t2
-
+		| _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
+                    Some (subtyp_to_adatyp n)
+		| _  -> None
+            in
+            let (e1',t1) = normalize_exp ?expected_type e1 in
+            let (e2',t2) = normalize_exp ?expected_type e2 in
+	      Ast.Binary (bop', (e1',t1), (e2',t2)),
+              TC.type_of_binop bop' t1 t2 
+	      
+	      
 and make_abs (exp,t) =
   let x = (exp,t) in
   let zero =
@@ -596,7 +628,7 @@ and normalize_fcall (n, params) =
 	Sym.find_subprogram ~silent:true gtbl n norm_typs (fun x -> 
 				Symboltbl.find_type gtbl x) in
       let t = match top with
-	| None -> Npkcontext.report_error "normalize_exp"
+	| None -> Npkcontext.report_error "normalize_fcall"
             "Expected function, got procedure"
 	| Some top -> top
       in
@@ -615,39 +647,69 @@ and normalize_fcall (n, params) =
 	      ,tc
 	end
       with Invalid_argument _ | Not_found ->
-      	try
-      	  let   (_, cast_t) = Sym.find_type gtbl n in
-      	    if (compare (List.length params) 1 <> 0) then    
-      	      Npkcontext.report_error "normalize_fcall"
-      		"Cast only handled for single variable"
-	    ;
-      	    let param =  List.hd params in
-      	    let (_,( norm_exp, arg_t))= normalize_arg param in
-      	      if (not (T.is_compatible cast_t arg_t))
-	      then 
-		(*WG  TO DO *)
-		print_endline  ( "\nL = "
-      				 ^ T.print cast_t
-      				 ^ "\nR = "
-      				 ^ T.print arg_t
-      			       )
+	try (*could be 'lv.field(1)', field a record field 
+	      (with array type) see t424
+	    *)
+	  match n with 
+	    | Some f, fld -> 
+		let (sc,(act_name, t,_)) = Sym.find_variable gtbl (None,f) in
+		  if (T.is_record t) then 
+		    let (off, tf) = T.record_field t fld in	
+		      if (T.is_array tf) then 
+			let tc = fst (T.extract_array_types tf) in
+			let params' = List.map snd params in
+			  if (compare (List.length params') 1 = 0) then
+			    Ast.Lval (
+			      Ast.ArrayAccess(  
+				Ast.RecordAccess
+				  ( Ast.Var(sc, act_name, t)
+				      , off
+					, tf
+				  )
+				  , List.map normalize_exp params'
+			      )
+			    ), tc
+			  else 
+			    Npkcontext.report_error "normalize_fcall"
+			      " f.ret(1) case, only handled for a 1-D array"
+		      else raise Not_found
+		  else raise Not_found
+		    
+	    | _ -> raise Not_found
+		
+	with _ ->   (*Variable not found in gtbl could be a 'cast' case*)
+      	  try
+      	    let   (_, cast_t) = Sym.find_type gtbl n in
+      	      if (compare (List.length params) 1 <> 0) then    
+      		Npkcontext.report_error "normalize_fcall"
+      		  "Cast only handled for single variable"
 	      ;
-	      norm_exp,  cast_t
-		(*
-		  Npkcontext.report_error ("incompatible types")
-		  ( "\nL = "
-      		  ^ T.print cast_t
-      		  ^ "\nR = "
-      		  ^ T.print arg_t
-      		  )
-		  else
-		  norm_exp,  cast_t
-		*)
-      	with Not_found ->
-      	  raise Not_found
-	    
+      	      let param =  List.hd params in
+      	      let (_,( norm_exp, arg_t))= normalize_arg param in
+      		if (not (T.is_compatible cast_t arg_t))
+		then 
+		  (*WG  TO DO *)
+		  print_endline  ( "\nL = "
+      				   ^ T.print cast_t
+      				   ^ "\nR = "
+      				   ^ T.print arg_t
+      				 )
+		;
+		norm_exp,  cast_t
+		  (*
+		    Npkcontext.report_error ("incompatible types")
+		    ( "\nL = "
+      		    ^ T.print cast_t
+      		    ^ "\nR = "
+      		    ^ T.print arg_t
+      		    )
+		    else
+		    norm_exp,  cast_t
+		  *)
+      	  with Not_found ->
+      	    raise Not_found
+	      
 and eval_range (exp1, exp2) =
-  
   let norm_exp1 = normalize_exp exp1
   and norm_exp2 = normalize_exp exp2 in
     (* on essaye d'evaluer les bornes *)
@@ -1206,20 +1268,23 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
   | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
                      "Statement looks like a procedure call but is not one"
   | Assign(lv, exp) -> 
-      begin
         let (lv', t_lv) = normalize_lval ~force:force_lval lv in
         let (e', t_exp) = normalize_exp ~expected_type:t_lv exp in
 	  if (not (T.is_compatible t_lv t_exp)) then
-          begin
+	    begin
             Npkcontext.print_debug ("LV = " ^ T.print t_lv);
             Npkcontext.print_debug ("EX = " ^ T.print t_exp);
             Npkcontext.report_error "normalize_instr"
               "Incompatible types in assignment";
           end;
-        [Ast.Assign( lv'
-                   , (e',t_exp)
-                   ), loc]
-      end
+	    (*The case of array affection, unrolling is necessary*)
+	
+              [Ast.Assign( lv'
+			     , (e',t_exp)
+			 ), loc]
+	 
+	    
+      
   | Return(exp) -> [Ast.Return(normalize_exp ?expected_type:return_type
                                exp), loc]
   | If(exp, instr_then, instr_else) ->
@@ -1254,8 +1319,6 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       in
      	(*enum_case is different due to potential redefiniton 
 	  of value with Enumeration clause use*)
-	  (*TO DO FACTORIZE CODE *)
-
 
       let basic_loop () = 
 	(*The while loop is possible with a counter incremention*)
@@ -1320,13 +1383,15 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			        (compare v (Newspeak.Nat.to_int max) <= 0)
 			   ) enums
 			 in
-			   (*no 'classical' incremention possible, bornes are known: unrolling*)
+			   (*no 'classical' incremention possible, 
+			     bornes are known: unrolling*)
 			 let (init, tail) = if is_rev then
 			   let rev = List.rev sub_enums in
 			     Syntax_ada.CInt (Newspeak.Nat.of_int (snd (List.hd rev)))
 			       , List.tl rev
 			 else
-			   Syntax_ada.CInt (Newspeak.Nat.of_int(snd (List.hd sub_enums)))
+			   Syntax_ada.CInt (
+			     Newspeak.Nat.of_int(snd (List.hd sub_enums)))
 			     ,  List.tl sub_enums
 			 in
 			   
@@ -1484,21 +1549,16 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 		      List.rev_map (function x -> (CInt x, oth_exp)) missing_others
 		  end
 	    in
-	    let assoc_list' =
-	      List.map (fun (x,y) -> CInt x,y) assoc_list in
-	      
-
-	      let rec are_all_flds ll = 
-		match ll with
-		    [] -> true
-		  | hd::tl -> match hd with
+	    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
+	    let rec are_all_flds ll = 
+	      match ll with
+		  [] -> true
+		| hd::tl -> match hd with
 			(AggrField _, _) ->  are_all_flds tl 
-		      | _ -> false
-			  
-	      in
-		
+		    | _ -> false
+	    in
+	
 	      (*List.rev_map (fun (aggr_k, aggr_v) ->*)
-		
 		List.rev (
 		List.flatten (
 		List.map (fun (aggr_k, aggr_v) ->

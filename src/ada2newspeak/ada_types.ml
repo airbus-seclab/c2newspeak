@@ -796,6 +796,7 @@ let is_compatible one another =
         | Univ_int   , Signed   _
         | Float    _ , Univ_real
         | Univ_real  , Float    _
+	| Array _, Array _  
             -> true
         | _ -> false
         )

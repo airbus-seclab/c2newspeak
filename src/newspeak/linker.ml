@@ -148,6 +148,8 @@ let translate_set (lv, e, t) =
       (Scalar t, _) -> N.Set (generate_lv lv, generate_exp e, t)
     | (Region (_, n), Lval (lv', _)) -> 
         N.Copy (generate_lv lv, generate_lv lv', n)
+    | (Array ( _, Some size_t),  Lval (lv', _)) ->
+	N.Copy ( generate_lv lv, generate_lv lv', size_t)
     | _ -> 
         Npkcontext.report_error "Linker.translate_set" 
           "translate_set not implemented yet"
