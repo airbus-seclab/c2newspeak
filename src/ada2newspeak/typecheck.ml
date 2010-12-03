@@ -64,10 +64,16 @@ let type_of_binop op t1 t2 = match op with
                     if not (T.is_numeric t1) then
                           error "Binary adding operator is not defined -- 4.5.3.(1)"
                     ;
+	(*	    print_endline "-------------binary minus/  adding ";
+		    print_endline (T.print  (T.coerce_types t1 t2));
+	*)
                     T.coerce_types t1 t2
   | Mult | Div -> expect ~desc:"binary multiplying" t1 t2;
                   if not (T.is_float t1 || T.is_integer t1) then
                     error "Multiplying operator is not defined -- 4.5.5.(2)";
+	(*	   print_endline "-----------------binary mul/div "; 
+		   print_endline (T.print  (T.coerce_types t1 t2));
+	*)
                   T.coerce_types t1 t2
   | Rem  | Mod -> expect ~desc:"binary multiplying" t1 t2;
                   if not (T.is_integer t1) then

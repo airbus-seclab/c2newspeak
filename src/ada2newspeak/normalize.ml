@@ -301,14 +301,14 @@ let rec normalize_exp ?expected_type exp =
                                 )
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CChar  x -> Ast.CChar  x,T.character
-    | Lval(ParExp(n, params)) -> normalize_fcall (n, params)
+    | Lval(ParExp(n, params)) -> normalize_fcall (n, params) expected_type
     | Lval(PtrDeref _ as lv) -> let nlv, tlv = normalize_lval lv in
                                 Ast.Lval (nlv), tlv
     (*TODO: improve this code for t412 *)
     | Lval (SName (ParExp(Var n, params), fld)) -> begin  
 	let lv = 
-	  match (normalize_fcall(Var n, params)) with
-	      (Ast.Lval lval, _) ->  lval
+	  match (normalize_fcall(Var n, params) expected_type ) with
+	      (Ast.Lval lval, _) -> lval
 	    | _ ->  Npkcontext.report_error "normalize_exp" "not a Lval"
 	in
 	  try
@@ -337,7 +337,7 @@ let rec normalize_exp ?expected_type exp =
               Ast.Lval(Ast.RecordAccess(lv, off, tf)), tf
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
-    | Binary(bop, e1, e2) -> normalize_binop bop e1 e2
+    | Binary(bop, e1, e2) -> normalize_binop bop e1 e2  expected_type
     | Qualified(lv, exp) -> let stn = make_name_of_lval lv in
                             let t = subtyp_to_adatyp stn in
                                 fst (normalize_exp ~expected_type:t exp),t
@@ -490,7 +490,8 @@ and make_arg_list args spec =
  *)
 and normalize_arg (id,e) = id,normalize_exp e
 
-and normalize_binop bop e1 e2 =
+and normalize_binop bop e1 e2 xpec =
+
   let direct_op_trans =
     function
       | Plus  -> Ast.Plus  | Minus -> Ast.Minus | Div   -> Ast.Div
@@ -499,93 +500,104 @@ and normalize_binop bop e1 e2 =
       | Mod   -> Ast.Mod   | Power -> Ast.Power
       |_ -> invalid_arg "direct_op_trans"
   in
- (* Is the operator overloaded ?
-    if (Sym.is_operator_overloaded gtbl (Ada_utils.make_operator_name bop)) then
-    let ovl_opname = make_operator_name bop in
-    normalize_exp (Lval(ParExp(Var ovl_opname,[(None,e1);(None,e2)]))) 
-    else  
- *)
-    (* Is the operator overloaded ? *)
-    try
-     let norm_args = List.map (fun x -> (None,normalize_exp x)) [e1; e2] in
-     let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
-     let n = Ada_utils.make_operator_name bop in
-     let (sc,( act_name, spec, top)) = 
-       Sym.find_subprogram ~silent:true gtbl (None, n) norm_typs 
-	 (fun x -> Symboltbl.find_type gtbl x) 
-     in 
-       begin
-       	 let t = match top with
-	| None -> Npkcontext.report_error "normalize_"
-            "Expected function, got procedure"
-	| Some top ->
-	    top
-	 in
-	 let effective_args = make_arg_list norm_args spec in
-	 Ast.FunctionCall (sc, act_name, effective_args, t), t
-	   (*Ast.Binary (bop', (e1',t1), (e2',t2)),
-             TC.type_of_binop bop' t1 t2 
-	   *)
-       end
-
-    (*TODO clean this 'with _' *)
-    with _ -> 
-      match bop with
-	  (* Operators that does not exist in AST *)
-	| Lt     -> normalize_exp (          Binary(Gt, e2, e1) )
-	| Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
-	| Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
-	| Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
-	| Xor    -> 
-	    let (e1',t1) = normalize_exp e1 in
-            let (e2',t2) = normalize_exp e2 in
-              Ast.CondExp ((e1',t1)
-                          ,(Ast.Not(e2',t2),t2)
-                          ,(e2',t2)
-                          )
+    match bop with
+	(* Operators that does not exist in AST *)
+      | Lt     -> normalize_exp (          Binary(Gt, e2, e1) )
+      | Le     -> normalize_exp (Unary(Not,Binary(Gt, e1, e2)))
+      | Ge     -> normalize_exp (Unary(Not,Binary(Gt, e2, e1)))
+      | Neq    -> normalize_exp (Unary(Not,Binary(Eq, e1, e2)))
+      | Xor    -> 
+	  let (e1',t1) = normalize_exp e1 in
+          let (e2',t2) = normalize_exp e2 in
+            Ast.CondExp ((e1',t1)
+                           ,(Ast.Not(e2',t2),t2)
+                             ,(e2',t2)
+                        )
               ,TC.type_of_xor t1 t2
-	| OrElse -> 
-	    let (e1',t1) = normalize_exp e1 in
-            let (e2',t2) = normalize_exp e2 in
+      | OrElse -> 
+	  let (e1',t1) = normalize_exp e1 in
+          let (e2',t2) = normalize_exp e2 in
             Ast.CondExp ((e1',t1)
                            ,(Ast.CBool true,T.boolean)
                              ,(e2',t2)
-                          )
+                        )
               ,TC.type_of_binop Ast.Or t1 t2
-	| AndThen -> 
-	    let (e1',t1) = normalize_exp e1 in
-            let (e2',t2) = normalize_exp e2 in
-               Ast.CondExp ((e1',t1)
+      | AndThen -> 
+	  let (e1',t1) = normalize_exp e1 in
+          let (e2',t2) = normalize_exp e2 in
+            Ast.CondExp ((e1',t1)
                            ,(e2',t2)
-                           ,(Ast.CBool false,T.boolean)
-                           )
-               ,TC.type_of_binop Ast.And t1 t2
-  (* Otherwise : direct translation *)
- 
-	| _ ->  
-	    let bop' = direct_op_trans bop in
-	    let expected_type =
-              match (e1, e2) with
-		| Lval l1 , Lval l2 -> begin
-		    try
-		      let v1 = make_name_of_lval l1 in
+                             ,(Ast.CBool false,T.boolean)
+                        )
+              ,TC.type_of_binop Ast.And t1 t2
+		
+      (* Otherwise : direct translation *)		
+      | _ ->  
+	  let bop' = direct_op_trans bop in
+	    (*TO DO unused !!!!!!!!!!!!*)
+	  let expected_type =
+            match (e1, e2) with
+	      | Lval l1 , Lval l2 -> begin
+		  try
+		    let v1 = make_name_of_lval l1 in
 		      let v2 = make_name_of_lval l2 in
 			Sym.type_ovl_intersection gtbl
 			  (ListUtils.last v1)
 			  (ListUtils.last v2)
 		    with _ -> None
 		  end
-		
-		| _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
-                    Some (subtyp_to_adatyp n)
-		| _  -> None
-            in
-            let (e1',t1) = normalize_exp ?expected_type e1 in
-            let (e2',t2) = normalize_exp ?expected_type e2 in
-	      Ast.Binary (bop', (e1',t1), (e2',t2)),
-              TC.type_of_binop bop' t1 t2 
-	      
-	      
+		  
+	      | _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
+                  Some (subtyp_to_adatyp n)
+	      | _ -> None
+          in
+  
+          let (e1',t1) = normalize_exp ?expected_type e1 in
+          let (e2',t2) = normalize_exp ?expected_type e2 in
+	  	      
+	    match xpec with
+		(*ca du Eq boolean *)
+	      | Some typtyptyp when (not (T.is_boolean typtyptyp)) -> begin
+		  try
+		    let norm_args =
+		      List.map (fun x -> (None,normalize_exp ?expected_type:xpec x)) [e1; e2] in
+	      	    let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
+		    let n = Ada_utils.make_operator_name bop in
+
+		    let (sc,( act_name, spec, top)) =
+		    
+		      Sym.find_subprogram ~silent:true gtbl (None, n) 
+			norm_typs xpec
+	      		(fun x -> Symboltbl.find_type gtbl x)
+	      		
+		    in
+		      begin
+	      		let t = match top with	
+			  | None -> Npkcontext.report_error "normalize_"
+	      		      "Expected function, got procedure"
+	      			
+			  | Some top -> top
+	      			
+			in
+	      		let effective_args = make_arg_list norm_args spec in
+
+	      		  Ast.FunctionCall (sc, act_name, effective_args, t), t
+	      		    
+		      end
+	      		(*TODO, no overloading has been found we are
+	      		  going back to 'normal' case *)
+		  with Not_found ->
+		      let tc = TC.type_of_binop bop' t1 t2  in
+		      Ast.Binary (bop', (e1',t1), (e2',t2)), tc
+		end
+	      | _  ->  
+	      	  (*TO DO ... check when this case can happen ..?*)
+	      	  (*on ne sait pas il faudrait peut
+	      	    aller voir dans les renamings   *)
+	      	  Ast.Binary (bop', (e1',t1), (e2',t2)),
+	      	  TC.type_of_binop bop' t1 t2
+		    
+		      
 and make_abs (exp,t) =
   let x = (exp,t) in
   let zero =
@@ -617,7 +629,7 @@ and normalize_uop uop exp =
      | UPlus  -> (ne,TC.type_of_uplus t)
      | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
-and normalize_fcall (n, params) =
+and normalize_fcall (n, params) expectedtype =
   (* Maybe this indexed expression is an array-value *)
   let n = make_name_of_lval n in
   let n = mangle_sname n in
@@ -625,8 +637,10 @@ and normalize_fcall (n, params) =
       let norm_args = List.map normalize_arg params in
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
       let (sc,(act_name,spec,top)) = 
-	Sym.find_subprogram ~silent:true gtbl n norm_typs (fun x -> 
-				Symboltbl.find_type gtbl x) in
+	Sym.find_subprogram 
+	  ~silent:true gtbl n norm_typs 
+	  expectedtype (fun x -> Symboltbl.find_type gtbl x) 
+      in
       let t = match top with
 	| None -> Npkcontext.report_error "normalize_fcall"
             "Expected function, got procedure"
@@ -688,7 +702,7 @@ and normalize_fcall (n, params) =
       	      let (_,( norm_exp, arg_t))= normalize_arg param in
       		if (not (T.is_compatible cast_t arg_t))
 		then 
-		  (*WG  TO DO *)
+		  (*WG  TO DO print_warning *)
 		  print_endline  ( "\nL = "
       				   ^ T.print cast_t
       				   ^ "\nR = "
@@ -1257,7 +1271,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
       let (sc,(act_name,spec,_)) = 
 	(* Sym.find_subprogram gtbl n in*)
-	Sym.find_subprogram gtbl n norm_typs  (fun x -> 
+	Sym.find_subprogram gtbl n norm_typs None (fun x -> 
 				Symboltbl.find_type gtbl x) in	 
  
 	let effective_args = make_arg_list norm_args spec in
@@ -1277,14 +1291,10 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
             Npkcontext.report_error "normalize_instr"
               "Incompatible types in assignment";
           end;
-	    (*The case of array affection, unrolling is necessary*)
-	
-              [Ast.Assign( lv'
-			     , (e',t_exp)
+	     [Ast.Assign( lv'
+			    , (e',t_exp)
 			 ), loc]
-	 
-	    
-      
+	
   | Return(exp) -> [Ast.Return(normalize_exp ?expected_type:return_type
                                exp), loc]
   | If(exp, instr_then, instr_else) ->

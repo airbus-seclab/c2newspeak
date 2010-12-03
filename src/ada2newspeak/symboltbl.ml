@@ -210,13 +210,14 @@ module Table = struct
 	List.iter (fun (_,x) -> Npkcontext.print_debug
 		     ("\t" ^ print_symbol_join x)) lst
       end;
+  
     let fn' (wh,x) =
       match fn x with
       | None -> None
       | Some y -> Some (wh,y)
     in
     match extract_unique ~filter fn' lst with
-      | None   -> error ("Ambiguous " ^ desc ^ " name")
+      | None   -> error ("Ambiguous " ^ desc ^ " name") 
       | Some x -> x
 
   let cast_v ?filter = mkcast "variable"
@@ -255,12 +256,21 @@ module Table = struct
     cast_t (find_symbols tbl n)
 
 
- let tbl_find_subprogram_simple tbl n =
+ let tbl_find_subprogram_simple tbl n = 
    (fun (wh,(x,y,z)) -> wh,(x,y,z))
      (cast_s (find_symbols tbl n))
 
-  let tbl_find_subprogram n_args my_find tbl n =
-    let filter_args norm_args (_, (_, params, _)) = 
+  let tbl_find_subprogram n_args xpect  my_find tbl n =
+  
+    let do_match xpect z = 
+      match (xpect, z) with 
+	  Some xpec, Some ret -> 
+	    T.is_compatible xpec ret
+	| None, None -> true
+	| _ -> false
+    in
+
+    let filter_args norm_args (_, (_, params, _))  =
       let lgth1 = List.length norm_args in
       let lgth2 = List.length params in
 	if ((compare  lgth1 lgth2 <> 0) ||
@@ -272,47 +282,75 @@ module Table = struct
 	  error ("Symbtbl: looking for a subprogram use of "^
 		   "default param, or named not handled yet...")
 	else (*pas de param 'nommés': on check la compatibilité dans l'ordre*)
-	  begin
-	    if( List.for_all2 (fun x y -> 
-				 let act_typ = snd x in
-				 let for_typ = 
-				   let  n =
-				     match y.param_type with 
-				       | [] -> Npkcontext.report_error 
-					   "symboltbl:find_subprogram" "unreachable"
-				       | x::[]    -> None  , x
-				       | x::y::[] -> Some x, y
-				       | _ -> Npkcontext.report_error 
-					   "symboltbl:find_subprogram"
-					     "chain of selected names is too deep"
-				   in
-				     try 
-				       begin
-					 try
-					   snd (my_find  n)
-					 with Not_found -> Npkcontext.report_error
-					   ("Cannot find type '") ""
-				       end
-				     with Not_found ->
-				       Npkcontext.report_error "Symbtbl:not found" ""
-				 in
-				   T.is_compatible act_typ for_typ
-			      ) norm_args params
-	      )
-	    then
-	      true 
-	    else 
-	      false
-	  end      
+	  (*comparing expected type and return type in compared lists*)
+	   List.for_all2 (
+	    fun x y -> 
+	      let act_typ = snd x in
+	      let for_typ = 
+		let  n =  match y.param_type with 
+		  | [] -> Npkcontext.report_error 
+		      "symboltbl:find_subprogram" "unreachable"
+		  | x::[]    -> None  , x
+		  | x::y::[] -> Some x, y
+		  | _ -> Npkcontext.report_error
+		      "symboltbl:find_subprogram"
+			"chain of selected names is too deep"
+		in
+		  try 
+		    begin
+		      try
+			snd (my_find  n)
+		      with Not_found -> Npkcontext.report_error
+			("Cannot find type '") ""
+		    end
+		  with Not_found ->
+		    Npkcontext.report_error "Symbtbl:not found" ""
+	      in
+		T.is_compatible act_typ for_typ
+	  ) norm_args params
     in
+      
     let subs = find_symbols tbl n in
-      if (compare (List.length subs) 1 = 0)
-      then 
+      (*Attention au cas de multiple avec des parametres par defaut*)
+    
+      if (compare (List.length subs) 1 = 0) then 
+      begin
+	try 
 	(fun (wh,(x,y,z)) -> wh,(x,y,z))
-          (cast_s subs)
+	(cast_s ~filter:(fun x -> 
+	    let (_, (_, _, z)) = x in 
+	     (filter_args n_args  x) && (do_match xpect z)
+			) subs
+	)
+	with _ -> 
+	  (fun (wh,(x,y,z)) -> wh,(x,y,z))  (cast_s subs)
+(*WG TO DO*)
+
+      end
       else
 	(fun (wh,(x,y,z)) -> wh,(x,y,z))
-	  (cast_s ~filter:(fun x -> filter_args n_args x) subs)
+	(cast_s ~filter:(fun x -> 
+	    let (_, (_, _, z)) = x in 
+	     (filter_args n_args  x) && (do_match xpect z)
+			) subs
+	)
+      (* peut etre un potentiel renaming mais dont les 
+	 args ne correspondent 
+	if (compare (List.length subs) 1 = 0)
+	then begin 
+	print_endline "____________________only one ___________";
+	(fun (wh,(x,y,z)) -> wh,(x,y,z))
+        (cast_s  subs)
+	end
+	else
+	(fun (wh,(x,y,z)) -> wh,(x,y,z))
+	(cast_s ~filter:(fun x -> 
+			     let (_, (_, _, z)) = x in 
+	(filter_args n_args  x) && (do_match xpect z)
+			  ) subs
+	)
+      *)
+
 
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = match expected_type with
@@ -564,6 +602,7 @@ let s_find_abs _desc f s p n =
   match tbl_find_unit (library s.s_stack) p with
     | Some tbl -> f tbl n
     | None     -> raise Not_found
+      
 
 (* raise Not_found *)
 let s_find desc finder s ?package n =
@@ -645,31 +684,42 @@ let find_type s (package,n) =
   with Not_found -> error ("Cannot find type '" ^ n ^ "'")
 
 
-let rec find_subprogram s ?(silent = false) (pack,n) norm_args t_find =
+let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
   try 
     let ( p_opt, n_assoc) =  List.assoc n s.s_renaming in
       if (compare n n_assoc = 0) then
+	begin 
+
 	match p_opt with 
 	    Some pck -> 
-	      s_find "subprogram" (tbl_find_subprogram norm_args t_find) s
+	      s_find "subprogram" 
+		(tbl_find_subprogram norm_args xpect t_find) s
 		~package:(pck) n_assoc
 	  | _ ->  (*WG should not happen *)
-	      s_find "subprogram" (tbl_find_subprogram norm_args t_find) s n_assoc
+	      s_find "subprogram" (tbl_find_subprogram norm_args xpect t_find) s n_assoc
+	end
       else
-	find_subprogram s (p_opt, n_assoc) norm_args t_find 
+	begin
+	  find_subprogram s (p_opt, n_assoc) norm_args  xpect t_find 
+	end
+
+	  
   with Not_found ->
-     (*No need for tbl_find_subprogram here*)
-  	try 
-	  match pack with 
-	      Some pck -> 
-		s_find "subprogram" (tbl_find_subprogram norm_args t_find) s ~package:(pck) n 
-	    |_->s_find "subprogram" (tbl_find_subprogram norm_args t_find) s n 
-	       
+    (*No need for tbl_find_subprogram here*)
+    try 
+      match pack with 
+	  Some pck ->  
+	    s_find "subprogram"
+	      (tbl_find_subprogram norm_args xpect t_find) s ~package:(pck) n 
+	      
+	|_-> s_find "subprogram" 
+	   (tbl_find_subprogram norm_args xpect t_find) s n  
+    
     with Not_found ->
-      if silent then
-	raise Not_found
-      else
-	error ("Cannot find subprogram '" ^ n ^ "'")
+	  if silent then
+	    raise Not_found
+	  else
+	    error ("Cannot find subprogram '" ^ n ^ "'")
 	  
   (*
     try  

@@ -786,7 +786,7 @@ let coerce_types a b =
   | Univ_int    , Signed   _ -> b
   | _ -> a
 
-let is_compatible one another =
+let rec is_compatible one another =
   if (is_unknown one || is_unknown another) then
     Npkcontext.report_warning "is_compatible"
         "testing compatibility against unknown type";
@@ -796,7 +796,14 @@ let is_compatible one another =
         | Univ_int   , Signed   _
         | Float    _ , Univ_real
         | Univ_real  , Float    _
-	| Array _, Array _  
             -> true
+	| Array (t1, ts1) , Array (t2, ts2) -> 
+	    (is_compatible t1 t2) &&
+	      List.for_all2 (fun x y ->
+		(is_compatible x y) &&
+		(compare (List.length (all_values x))  
+		         (List.length (all_values y)) = 0)
+	       ) ts1 ts2
+	       
         | _ -> false
         )
