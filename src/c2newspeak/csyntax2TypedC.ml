@@ -92,7 +92,7 @@ let process fname globals =
    Global should be made in TypedC right away... *)
   let add_local (t, x) = Hashtbl.add symbtbl x (C.Local x, t) in
 
-  let remove_var x = Hashtbl.remove symbtbl x in
+  let remove_local x = Hashtbl.remove symbtbl x in
 
   let replace_symbol_type x t =
     let (i, _) = Hashtbl.find symbtbl x in
@@ -104,7 +104,9 @@ let process fname globals =
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = Hashtbl.replace symbtbl x (C.Global name, t) in
+  let update_global x name t = 
+    Hashtbl.replace symbtbl x (C.Global name, t) 
+  in
 
   let add_formals (args_t, ret_t) =
     add_local (ret_t, Temps.return_value);
@@ -118,12 +120,12 @@ let process fname globals =
   in
 
   let remove_formals (args_t, _) =
-    remove_var Temps.return_value;
+    remove_local Temps.return_value;
 (* TODO: think about it, not nice to have this pattern match, since in
    a function declaration there are always arguments!! 
    None is not possible *)
     match args_t with
-	Some args_t -> List.iter (fun (_, x) -> remove_var x) args_t
+	Some args_t -> List.iter (fun (_, x) -> remove_local x) args_t
       | None -> ()
   in
 
@@ -522,16 +524,15 @@ let process fname globals =
 	  let t = translate_typ t in
 	  let t = complete_typ_with_init t init in
 	  let name = generate_global_name is_static x in
-	    if is_global then update_global x name t
-	    else if is_static || is_extern
-	    then Hashtbl.add symbtbl x (C.Global name, t)
+	    if is_global || is_static || is_extern then update_global x name t
 	    else add_local (t, x);
 	    let init =
 	      match init with
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
-	      (name, t, is_static, is_extern, init)
+	      (is_global || is_static || is_extern,
+	       (name, t, is_static, is_extern, init))
 
   and translate_edecl x e = Hashtbl.add symbtbl x (translate_exp e)
 
@@ -637,7 +638,7 @@ let process fname globals =
 	  Npkcontext.set_loc loc;
 	  translate_edecl x d;
 	  let (tl, e) = translate_blk_exp tl in
-	    remove_var x;
+	    remove_local x;
 	    (tl, e)
 (* TODO: find a way to factor this case with the next one and maybe 
    global declarations!! *)
@@ -647,15 +648,16 @@ let process fname globals =
 	  Npkcontext.report_accept_warning "Firstpass.translate"
 	    "function declaration within block" Npkcontext.DirtySyntax;
 	  let (tl, e) = translate_blk_exp tl in
-	    remove_var x;
+	    remove_local x;
 	    (tl, e)
 	  
 
       | (LocalDecl (x, VDecl d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  let decl = C.LocalDecl (x, translate_vdecl false loc x d) in
+	  let (is_global, v) = translate_vdecl false loc x d in
+	  let decl = C.LocalDecl (x, v) in
 	  let (tl, e) = translate_blk_exp tl in
-	    remove_var x;
+	    if not is_global then remove_local x;
 	    ((decl, loc)::tl, e)
 	      
       | (x, loc)::tl -> 
@@ -801,7 +803,8 @@ let process fname globals =
 	    translate_fdecl x ft is_static init
 
 	| GlbDecl (x, VDecl d) -> 
-	    glbdecls := (x, (translate_vdecl true loc x d, loc))::(!glbdecls)
+	    let (_, v) = translate_vdecl true loc x d in
+	      glbdecls := (x, (v, loc))::(!glbdecls)
 	      
 	| GlbUserSpec x -> specs := (translate_assertion x)::!specs
     in
