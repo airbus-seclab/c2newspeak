@@ -524,9 +524,7 @@ let process fname globals =
 	  let t = translate_typ d.t in
 	  let t = complete_typ_with_init t d.initialization in
 	  let name = generate_global_name d.is_static x in
-	    if is_global || d.is_static || d.is_extern 
-	    then update_global x name t
-	    else add_local (t, x);
+	    if is_global then update_global x name t else add_local (t, x);
 	    let init =
 	      match d.initialization with
 		  None -> None
@@ -660,10 +658,11 @@ let process fname globals =
 		    (tl, e)
 	      | _ -> 
 		  Npkcontext.set_loc loc;
-		  let v = translate_vdecl false loc x d in
+		  let is_global = d.is_static || d.is_extern in
+		  let v = translate_vdecl is_global loc x d in
 		  let decl = C.LocalDecl (x, v) in
 		  let (tl, e) = translate_blk_exp tl in
-		    if not (v.C.is_static || v.C.is_extern) then remove_local x;
+		    if not is_global then remove_local x;
 		    ((decl, loc)::tl, e)
 	  end
 	      
