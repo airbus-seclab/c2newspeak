@@ -757,22 +757,24 @@ let process fname globals =
 		
 	| GlbDecl (x, CDecl d) -> 
 	    translate_cdecl x d;
+	    let update_function_argument f (symb, t) l =
+	      let t' = 
+		match t with
+		    TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
+		  | _             -> t
+	      in
+		(f, (symb, t'))::l	      
+	    in
 	    (* updating the sig of fun whose one of the parameters is
 	       of the form C.Comp (Unknown ...) *)
-	    let fdecls = Hashtbl.fold (fun f (symb, t) l -> 
-					 let t' = 
-					   match t with
-					       TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
-					     | _             -> t
-					 in
-					   (f, (symb, t'))::l) symbtbl [] 
-	    in 
-	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) (List.rev fdecls); 
+	    (* TODO: think about this, but this must be costly *)
+	    let fdecls = Hashtbl.fold update_function_argument symbtbl [] in
+	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) fdecls;
 	      (* updating the type of struct type whose one of the field
 		 is of the form Ptr (C.Comp (Unknown ...)) *)
 	      let comps = Hashtbl.fold (fun x' v l ->
 					  let v' = update_struct_type x v in
-					  if v' = v then l else (x', v')::l
+					    if v' = v then l else (x', v')::l
 				       ) comptbl []
 	      in
 		List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps);
