@@ -224,15 +224,6 @@ let process fname globals =
       f'
   in
 
-  let translate_proto_ftyp f static (args, ret) =
-    if args = None then begin
-      Npkcontext.report_warning "Csyntax2TypedC.check_proto_ftyp" 
-	("incomplete prototype for function "^f)
-    end;
-    let _ = update_funsymb f static (args, ret) in
-      ()
-  in
-
   let refine_ftyp f (args_t, ret_t) actuals = 
     match args_t with
 	None -> 
@@ -490,8 +481,13 @@ let process fname globals =
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
       | _ -> 
-	  let ft = translate_ftyp ft in
-	    translate_proto_ftyp x is_static ft
+	  let (args, ret) = translate_ftyp ft in
+	    if args = None then begin
+	      Npkcontext.report_warning "Csyntax2TypedC.check_proto_ftyp" 
+		("incomplete prototype for function "^x)
+	    end;
+	    let _ = update_funsymb x is_static (args, ret) in
+	      ()
 
   and translate_vdecl is_global loc x (t, is_static, is_extern, init) =
     Npkcontext.set_loc loc;
@@ -739,7 +735,6 @@ let process fname globals =
     let glbdecls = ref [] in
     let fundecls = ref [] in
     let specs = ref [] in
-      
     
     let translate (x, loc) =
       Npkcontext.set_loc loc;
