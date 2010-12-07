@@ -39,17 +39,20 @@ and global =
   | GlbUserSpec of assertion
 
 and decl = 
-    VDecl of (typ * is_static * is_extern * init option)
+    VDecl of vdecl
   | EDecl of exp
 (* struct or union: composite *)
   | CDecl of (field_decl list * is_struct)
-  
+
+and vdecl = {
+  t: typ;
+  is_static: bool;
+  is_extern: bool;
+  initialization: init option
+}
+ 
 (* true for structure, false for union *)
 and is_struct = bool
-
-and is_extern = bool
-
-and is_static = bool
 
 and field_decl = (typ * string * Newspeak.location)
 

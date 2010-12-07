@@ -172,9 +172,16 @@ let preprocessing lbls stmts =
       let decl lbl =
 	let lbl' = fresh_lbl lbl in
 	let init = Data zero in
-	let vdecl = 
-	  LocalDecl (lbl', VDecl (uint_typ, false, false, Some init))
+	let d = 
+	  {
+	    t = uint_typ;
+	    is_static = false;
+	    is_extern = false;
+	    initialization = Some init
+	  }
 	in
+	  (* TODO: try to factor VDecl creations *)
+	let vdecl = LocalDecl (lbl', VDecl d) in
 	  (vdecl, l)
       in
       let stmts' = cond_addition stmts in
@@ -310,9 +317,16 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
       let init = Data zero in
       let after = ref [] in 
       let add (skind, var) =
-	let vdecl = 
-	  LocalDecl (var, VDecl (uint_typ, false, false, Some init))
+	(* TODO: factor VDecl creations *)
+	let d = 
+	  {
+	    t = uint_typ;
+	    is_static = false;
+	    is_extern = false;
+	    initialization = Some init
+	  }
 	in
+	let vdecl = LocalDecl (var, VDecl d) in
 	let set = Exp (Set (Var var, None, zero)) in
 	let if_blk = (set, lwhile)::[skind, lwhile] in
 	let if' = If (Var var, if_blk, []) in
@@ -768,7 +782,15 @@ and dowhile_in lbl l e before cond blk g_offset g_loc =
 and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
-  let declr = LocalDecl (tswitch, VDecl (uint_typ, false, false, None)) in
+  let d = 
+    { 
+      t = uint_typ;
+      is_static = false;
+      is_extern = false;
+      initialization = None
+    } 
+  in
+  let declr = LocalDecl (tswitch, VDecl d) in
   let tswitch = Var tswitch in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
@@ -1133,10 +1155,11 @@ let rec renaming_block_variables stmts =
 	| Sequence s -> Sequence (List.map (fun (s, i) -> (s, rinit i)) s)
     in
       match decl with
-	  VDecl (t, is, ie, init) -> begin 
-	    match init with 
+	  VDecl d -> begin 
+	    match d.initialization with 
 		None -> decl
-	      | Some init -> VDecl (t, is, ie, Some (rinit init))
+	      | Some init -> 
+		  VDecl { d with initialization = Some (rinit init) }
 	  end
 	| EDecl e -> EDecl (replace_exp e)
 	| _ -> decl

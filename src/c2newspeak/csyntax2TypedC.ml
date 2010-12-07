@@ -510,32 +510,33 @@ let process fname globals =
 	    let _ = update_funsymb x is_static (args, ret) in
 	      ()
 
-  and translate_vdecl is_global loc x (t, is_static, is_extern, init) =
+  and translate_vdecl is_global loc x d =
     Npkcontext.set_loc loc;
-    match init with
-	Some _ when is_extern -> 
+    match d.initialization with
+	Some _ when d.is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
-      | _ when is_static && is_extern -> 
+      | _ when d.is_static && d.is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
-	  let t = translate_typ t in
-	  let t = complete_typ_with_init t init in
-	  let name = generate_global_name is_static x in
-	    if is_global || is_static || is_extern then update_global x name t
+	  let t = translate_typ d.t in
+	  let t = complete_typ_with_init t d.initialization in
+	  let name = generate_global_name d.is_static x in
+	    if is_global || d.is_static || d.is_extern 
+	    then update_global x name t
 	    else add_local (t, x);
 	    let init =
-	      match init with
+	      match d.initialization with
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
 	      { 
 		C.name = name;
 		C.t = t;
-		C.is_static = is_static;
-		C.is_extern = is_extern;
+		C.is_static = d.is_static;
+		C.is_extern = d.is_extern;
 		C.initialization = init
 	      }
 
@@ -647,23 +648,24 @@ let process fname globals =
 	    (tl, e)
 (* TODO: find a way to factor this case with the next one and maybe 
    global declarations!! *)
-      | (LocalDecl (x, VDecl (Fun ft, is_static, _, init)), loc)::tl -> 
-	  Npkcontext.set_loc loc;
-	  translate_fdecl x ft is_static init;
-	  Npkcontext.report_accept_warning "Firstpass.translate"
-	    "function declaration within block" Npkcontext.DirtySyntax;
-	  let (tl, e) = translate_blk_exp tl in
-	    remove_local x;
-	    (tl, e)
-	  
-
-      | (LocalDecl (x, VDecl d), loc)::tl -> 
-	  Npkcontext.set_loc loc;
-	  let v = translate_vdecl false loc x d in
-	  let decl = C.LocalDecl (x, v) in
-	  let (tl, e) = translate_blk_exp tl in
-	    if not (v.C.is_static || v.C.is_extern) then remove_local x;
-	    ((decl, loc)::tl, e)
+      | (LocalDecl (x, VDecl d), loc)::tl -> begin
+	    match d.t with
+		Fun ft -> 
+		  Npkcontext.set_loc loc;
+		  translate_fdecl x ft d.is_static d.initialization;
+		  Npkcontext.report_accept_warning "Firstpass.translate"
+		    "function declaration within block" Npkcontext.DirtySyntax;
+		  let (tl, e) = translate_blk_exp tl in
+		    remove_local x;
+		    (tl, e)
+	      | _ -> 
+		  Npkcontext.set_loc loc;
+		  let v = translate_vdecl false loc x d in
+		  let decl = C.LocalDecl (x, v) in
+		  let (tl, e) = translate_blk_exp tl in
+		    if not (v.C.is_static || v.C.is_extern) then remove_local x;
+		    ((decl, loc)::tl, e)
+	  end
 	      
       | (x, loc)::tl -> 
 	  Npkcontext.set_loc loc;
@@ -804,12 +806,13 @@ let process fname globals =
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 
-	| GlbDecl (x, VDecl (Fun ft, is_static, _, init)) -> 
-	    translate_fdecl x ft is_static init
-
-	| GlbDecl (x, VDecl d) -> 
+	| GlbDecl (x, VDecl d) -> begin
+	    match d.t with
+		Fun ft -> translate_fdecl x ft d.is_static d.initialization
+	      | _ -> 
 	    let v = translate_vdecl true loc x d in
 	      glbdecls := (x, (v, loc))::(!glbdecls)
+	  end
 	      
 	| GlbUserSpec x -> specs := (translate_assertion x)::!specs
     in

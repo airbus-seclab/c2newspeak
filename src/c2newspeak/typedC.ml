@@ -55,10 +55,6 @@ and decl = {
   is_extern: bool;
   initialization: init option
 }
-  
-and is_extern = bool
-
-and is_static = bool
 
 and compdef = (field_decl list * is_struct)
 
