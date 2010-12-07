@@ -94,9 +94,9 @@ let process fname globals =
 
   let remove_var x = Hashtbl.remove symbtbl x in
 
-  let replace_symbol_type x t' =
+  let replace_symbol_type x t =
     let (i, _) = Hashtbl.find symbtbl x in
-      Hashtbl.replace symbtbl x (i, t')
+      Hashtbl.replace symbtbl x (i, t)
   in
 
 (* TODO: find a way to factor declare_global and add_local
@@ -520,8 +520,8 @@ let process fname globals =
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
-	  let name = generate_global_name is_static x in
 	  let t = complete_typ_with_init t init in
+	  let name = generate_global_name is_static x in
 	    if is_global then update_global x name t
 	    else if is_static || is_extern
 	    then Hashtbl.add symbtbl x (C.Global name, t)
