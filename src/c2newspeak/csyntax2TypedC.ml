@@ -104,9 +104,7 @@ let process fname globals =
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = 
-    Hashtbl.replace symbtbl x (C.Global name, t) 
-  in
+  let update_global x name t = Hashtbl.replace symbtbl x (C.Global name, t) in
 
   let add_formals (args_t, ret_t) =
     add_local (ret_t, Temps.return_value);
@@ -206,6 +204,7 @@ let process fname globals =
       (x, (v, loc))
   in
 
+(* TODO: think about this, but it seems to be costly!! *)
   let update_local_vdecls s =
     let vars, pvars = Hashtbl.fold (fun
       x (e, t) (vars, pvars) ->
@@ -217,11 +216,8 @@ let process fname globals =
 	   | _ -> vars, pvars) symbtbl ([], [])
     in
     let t' = C.Comp (find_compdef s) in
-      List.iter (fun x ->
-		   Hashtbl.replace symbtbl x (C.Local x, t')
-		) vars;
-      List.iter (fun x ->
-		   Hashtbl.replace symbtbl x (C.Local x, C.Ptr t')) pvars
+      List.iter (fun x -> replace_symbol_type x t') vars;
+      List.iter (fun x -> replace_symbol_type x (C.Ptr t')) pvars
   in
 
   let update_funtyp f ft1 =
