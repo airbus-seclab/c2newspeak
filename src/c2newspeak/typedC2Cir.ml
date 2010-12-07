@@ -822,16 +822,16 @@ let translate fname prog =
 	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
 	      "expression expected"
 
-  and translate_local_decl loc x (name, t, static, extern, init) =
-    if static || extern then begin
-      declare_global extern x name loc t init;
+  and translate_local_decl loc x d =
+    if d.is_static || d.is_extern then begin
+      declare_global d.is_extern x d.name loc d.t d.initialization;
       []
     end else begin
       (* TODO: see if more can be factored with translate_global_decl *) 
       let (init, t) = 
-	match init with
-	    None -> ([], t)
-	  | Some init -> translate_init t init
+	match d.initialization with
+	    None -> ([], d.t)
+	  | Some init -> translate_init d.t init
       in
       let v = C.Local x in
       let build_set (o, t, e) =
@@ -1248,12 +1248,12 @@ let translate fname prog =
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
 (* TODO: should be done in csyntax2CoreC *)
-  let translate_global (x, ((name, t, _, extern, init), loc)) =
+  let translate_global (x, (d, loc)) =
     Npkcontext.set_loc loc;
     (* TODO:TODO:TODO: remove static?? *)
     (* TODO:TODO:TODO: think about name and x difference, shouldn't there be 
        only normalized names in typedC? *)
-    declare_global extern x name loc t init
+    declare_global d.is_extern x d.name loc d.t d.initialization
   in
 
   let add_glbdecl name (t, loc, storage) =

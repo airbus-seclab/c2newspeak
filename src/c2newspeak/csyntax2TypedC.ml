@@ -190,7 +190,7 @@ let process fname globals =
       update t
   in
 
-  let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
+  let update_vdecl s (x, (v, loc)) =
     let rec update t =
       match t with
 	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
@@ -200,10 +200,10 @@ let process fname globals =
 	| C.Ptr (C.Comp t) -> C.Ptr (C.Comp (update_struct_type s t))
 	| _ -> t
     in 
-    let t' = update t in
-    let v = ((n, t', static, extern, init), loc) in
+    let t' = update v.C.t in
+    let v = { v with C.t = t' } in
       replace_symbol_type x t';
-      (x, v)
+      (x, (v, loc))
   in
 
   let update_local_vdecls s =
@@ -531,8 +531,13 @@ let process fname globals =
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
-	      (is_global || is_static || is_extern,
-	       (name, t, is_static, is_extern, init))
+	      { 
+		C.name = name;
+		C.t = t;
+		C.is_static = is_static;
+		C.is_extern = is_extern;
+		C.initialization = init
+	      }
 
   and translate_edecl x e = Hashtbl.add symbtbl x (translate_exp e)
 
@@ -654,10 +659,10 @@ let process fname globals =
 
       | (LocalDecl (x, VDecl d), loc)::tl -> 
 	  Npkcontext.set_loc loc;
-	  let (is_global, v) = translate_vdecl false loc x d in
+	  let v = translate_vdecl false loc x d in
 	  let decl = C.LocalDecl (x, v) in
 	  let (tl, e) = translate_blk_exp tl in
-	    if not is_global then remove_local x;
+	    if not (v.C.is_static || v.C.is_extern) then remove_local x;
 	    ((decl, loc)::tl, e)
 	      
       | (x, loc)::tl -> 
@@ -803,7 +808,7 @@ let process fname globals =
 	    translate_fdecl x ft is_static init
 
 	| GlbDecl (x, VDecl d) -> 
-	    let (_, v) = translate_vdecl true loc x d in
+	    let v = translate_vdecl true loc x d in
 	      glbdecls := (x, (v, loc))::(!glbdecls)
 	      
 	| GlbUserSpec x -> specs := (translate_assertion x)::!specs

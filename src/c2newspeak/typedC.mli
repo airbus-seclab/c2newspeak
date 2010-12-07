@@ -45,7 +45,13 @@ and spec_token =
     | LvalToken of typ_exp
     | CstToken of Cir.cst
 
-and decl = (string * typ * is_static * is_extern * init option)
+and decl = {
+  name: string;
+  t: typ;
+  is_static: bool;
+  is_extern: bool;
+  initialization: init option
+}
 
 and is_extern = bool
 
