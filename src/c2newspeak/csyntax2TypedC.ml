@@ -221,10 +221,10 @@ let process fname globals =
   in
 
   let update_funtyp f ft1 =
-    let (symb, t) = Hashtbl.find symbtbl f in
+    let (_, t) = Hashtbl.find symbtbl f in
     let ft2 = TypedC.ftyp_of_typ t in
     let ft = TypedC.min_ftyp ft1 ft2 in
-      Hashtbl.replace symbtbl f (symb, C.Fun ft)
+      replace_symbol_type f (C.Fun ft)
   in
 
   let update_funsymb f is_static ft =
