@@ -42,6 +42,7 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
+(* TODO: remove the maximum of occurences of symbtbl *)
 
 let process fname globals =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
@@ -237,7 +238,7 @@ let process fname globals =
 	end
     with Not_found -> 
       let f' = generate_global_name is_static f in 
-	Hashtbl.add symbtbl f (C.Global f', C.Fun ft);
+	update_global f f' (C.Fun ft);
 	f'
   in
 
