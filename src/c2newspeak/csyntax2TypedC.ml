@@ -798,4 +798,8 @@ let process fname globals =
    
   let (glbdecls, fundecls, specs) = translate_globals globals in
   let fundecls = List.map translate_fundecl fundecls in
-    (glbdecls, fundecls, specs)
+    {
+      TypedC.global_variables = glbdecls;
+      TypedC.function_declarations = fundecls;
+      TypedC.user_specifications = specs;
+    }

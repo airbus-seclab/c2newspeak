@@ -30,7 +30,11 @@
 *)
 module Nat = Newspeak.Nat
 
-type t = (string * glbinfo) list * (string * funinfo) list * assertion list
+type t = {
+  global_variables: (string * glbinfo) list;
+  function_declarations: (string * funinfo) list;
+  user_specifications: assertion list
+}
 
 and glbinfo = (decl * Newspeak.location)
 

@@ -132,7 +132,7 @@ and check_exp i =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate fname (globals, fundecls, spec) =
+let translate fname prog =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in
@@ -1271,9 +1271,11 @@ let translate fname (globals, fundecls, spec) =
    Or better: should do all typing first.
    Then compile.
 *)
-    init := List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) spec;
-    List.iter translate_global globals;
-    List.iter translate_fundecl fundecls;
+    init := 
+      List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) 
+	prog.user_specifications;
+    List.iter translate_global prog.global_variables;
+    List.iter translate_fundecl prog.function_declarations;
 (* TODO: optimization: could remove this phase if cir had a type 
    structure of name 
    and all the structures' type were in a hashtbl *)
