@@ -84,6 +84,8 @@ let process fname globals =
 	| Some init -> process (init, t)
   in
     
+(* TODO: think about it, but I am not sure the distinction between Local and 
+   Global should be made in TypedC right away... *)
   let add_local (t, x) = Hashtbl.add symbtbl x (C.Local x, t) in
 
   let remove_var x = Hashtbl.remove symbtbl x in
@@ -93,8 +95,7 @@ let process fname globals =
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = 
-    Hashtbl.replace symbtbl x (C.Global name, t) in
+  let update_global x name t = Hashtbl.replace symbtbl x (C.Global name, t) in
 
   let add_formals (args_t, ret_t) =
     add_local (ret_t, Temps.return_value);
@@ -208,6 +209,7 @@ let process fname globals =
       List.iter (fun x ->
 		   Hashtbl.replace symbtbl x (C.Local x, C.Ptr t')) pvars
   in
+
   let update_funtyp f ft1 =
     let (symb, t) = Hashtbl.find symbtbl f in
     let ft2 = TypedC.ftyp_of_typ t in
@@ -216,12 +218,17 @@ let process fname globals =
   in
 
   let update_funsymb f static ft =
-    let f' = if static then "!"^fname^"."^f else f in begin
-	try update_funtyp f ft
-	with Not_found -> 
-	  Hashtbl.add symbtbl f (C.Global f', C.Fun ft)
-      end;
-      f'
+    try 
+      update_funtyp f ft;
+      let (symb, _) = Hashtbl.find symbtbl f in begin
+	  match symb with
+	      C.Global x -> x
+	    | _ -> f
+	end
+    with Not_found -> 
+      let f' = if static then "!"^fname^"."^f else f in 
+	Hashtbl.add symbtbl f (C.Global f', C.Fun ft);
+	f'
   in
 
   let refine_ftyp f (args_t, ret_t) actuals = 
@@ -514,9 +521,7 @@ let process fname globals =
 	    in
 	      (name, t, is_static, is_extern, init)
 
-  and translate_edecl x e =
-    let (e, t) = translate_exp e in
-      Hashtbl.add symbtbl x (e, t)
+  and translate_edecl x e = Hashtbl.add symbtbl x (translate_exp e)
 
   and translate_cdecl x (fields, is_struct) =
     let fields = List.map translate_field_decl fields in
