@@ -56,15 +56,19 @@ let process fname globals =
   *)
   let static_cnt = ref 0 in
 
-  let get_static_name x =
-    let prefix = "!"^fname^"." in
-    let prefix = 
-      if !current_fun = "" then prefix else prefix^(!current_fun)^"."
-    in
-    let name = prefix^(string_of_int !static_cnt)^"."^x in
-      incr static_cnt;
-      name
+  let generate_global_name is_static x =
+    if is_static then begin
+      let prefix = "!"^fname^"." in
+      let prefix = 
+	if !current_fun = "" then prefix else prefix^(!current_fun)^"."
+      in
+      let counter = (string_of_int !static_cnt)^"." in
+      let name = prefix^counter^x in
+	incr static_cnt;
+	name
+    end else x
   in
+
   let complete_typ_with_init t init =
     let rec process (x, t) =
       match (x, t) with
@@ -89,6 +93,11 @@ let process fname globals =
   let add_local (t, x) = Hashtbl.add symbtbl x (C.Local x, t) in
 
   let remove_var x = Hashtbl.remove symbtbl x in
+
+  let replace_symbol_type x t' =
+    let (i, _) = Hashtbl.find symbtbl x in
+      Hashtbl.replace symbtbl x (i, t')
+  in
 
 (* TODO: find a way to factor declare_global and add_local
    maybe necessary to complete_typ_with_init in both cases...
@@ -117,6 +126,7 @@ let process fname globals =
 	Some args_t -> List.iter (fun (_, x) -> remove_var x) args_t
       | None -> ()
   in
+
   let find_symb x = 
     try Hashtbl.find symbtbl x
     with Not_found -> 
@@ -159,6 +169,7 @@ let process fname globals =
     let ret' = update ret in
       args', ret'
   in
+
   let update_struct_type s t =
     let new_type = find_compdef s in
     let rec update t = 
@@ -176,19 +187,20 @@ let process fname globals =
     in
       update t
   in
+
   let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
     let rec update t =
-      match t with 
-	  C.Comp (C.Unknown s') when s = s'       -> C.Comp (find_compdef s)
-	| C.Comp t                                -> C.Comp (update_struct_type s t)
-	| C.Ptr (C.Comp C.Unknown s') when s = s' -> C.Ptr (C.Comp (find_compdef s))
-	| C.Ptr (C.Comp t)                        -> C.Ptr (C.Comp (update_struct_type s t))
-	| _                                       -> t
+      match t with
+	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
+	| C.Comp t -> C.Comp (update_struct_type s t)
+	| C.Ptr (C.Comp C.Unknown s') when s = s' -> 
+	    C.Ptr (C.Comp (find_compdef s))
+	| C.Ptr (C.Comp t) -> C.Ptr (C.Comp (update_struct_type s t))
+	| _ -> t
     in 
     let t' = update t in
-    let v = ((n, t', static, extern, init), loc) in 
-    let i, _ = Hashtbl.find symbtbl x in (* useless : can only be global *)
-      Hashtbl.replace symbtbl x (i, t');
+    let v = ((n, t', static, extern, init), loc) in
+      replace_symbol_type x t';
       (x, v)
   in
 
@@ -217,7 +229,7 @@ let process fname globals =
       Hashtbl.replace symbtbl f (symb, C.Fun ft)
   in
 
-  let update_funsymb f static ft =
+  let update_funsymb f is_static ft =
     try 
       update_funtyp f ft;
       let (symb, _) = Hashtbl.find symbtbl f in begin
@@ -226,7 +238,7 @@ let process fname globals =
 	    | _ -> f
 	end
     with Not_found -> 
-      let f' = if static then "!"^fname^"."^f else f in 
+      let f' = generate_global_name is_static f in 
 	Hashtbl.add symbtbl f (C.Global f', C.Fun ft);
 	f'
   in
@@ -508,7 +520,7 @@ let process fname globals =
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
 	  let t = translate_typ t in
-	  let name = if is_static then get_static_name x else x in
+	  let name = generate_global_name is_static x in
 	  let t = complete_typ_with_init t init in
 	    if is_global then update_global x name t
 	    else if is_static || is_extern
